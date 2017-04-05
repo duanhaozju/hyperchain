@@ -42,7 +42,7 @@ func InitLog(conf *Config) {
 	}
 
 	backendStderr := initLogBackend()
-	if !conf.GetBool(LOG_FUMP_FILE) {
+	if !conf.GetBool(LOG_DUMP_FILE) {
 		logging.SetBackend(backendStderr)
 	} else {
 		closeLogFile = make(chan struct{})
@@ -102,7 +102,7 @@ func setNewLogFile(fileName string, backendStderr logging.LeveledBackend) {
 
 //initLogBackend init the backend info for logging.
 func initLogBackend() logging.LeveledBackend {
-	backend_stderr := logging.NewLogBackend(os.Stderr, "", 0)
+	backend_stderr := logging.NewLogBackend(os.Stdout, "", 0)
 	var format_stderr = logging.MustStringFormatter(consoleFormat)
 	backendFormatter := logging.NewBackendFormatter(backend_stderr, format_stderr)
 	backendStderr := logging.AddModuleLevel(backendFormatter)

@@ -202,16 +202,12 @@ func (pbft *pbftImpl) sendViewChange() events.Event {
 	msg := cMsgToPbMsg(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 
-	vcrte := &LocalEvent{
+	event := &LocalEvent{
 		Service:   VIEW_CHANGE_SERVICE,
 		EventType: VIEW_CHANGE_RESEND_TIMER_EVENT,
 	}
 
-	af := func(){
-		pbft.pbftEventQueue.Push(vcrte)
-	}
-
-	pbft.pbftTimerMgr.startTimer(VC_RESEND_TIMER, af)
+	pbft.pbftTimerMgr.startTimer(VC_RESEND_TIMER, event, pbft.pbftEventQueue)
 	return pbft.recvViewChange(vc)
 }
 
@@ -1014,6 +1010,7 @@ func (pbft *pbftImpl) stopNewViewTimer() {
 //startNewViewTimer stop all running new view timers and  start a new view timer
 func (pbft *pbftImpl) startNewViewTimer(timeout time.Duration, reason string) {
 	pbft.logger.Debugf("Replica %d starting new view timer for %s: %s", pbft.id, timeout, reason)
+	pbft.vcMgr.newViewTimerReason = reason
 	pbft.status.activeState(&pbft.status.timerActive)
 
 	event := &LocalEvent{
@@ -1021,11 +1018,7 @@ func (pbft *pbftImpl) startNewViewTimer(timeout time.Duration, reason string) {
 		EventType: VIEW_CHANGE_TIMER_EVENT,
 	}
 
-	af := func(){
-		pbft.pbftEventQueue.Push(event)
-	}
-
-	pbft.pbftTimerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, af)
+	pbft.pbftTimerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, event, pbft.pbftEventQueue)
 }
 
 //softstartNewViewTimer start a new view timer no matter how many existed new view timer
@@ -1039,11 +1032,7 @@ func (pbft *pbftImpl) softStartNewViewTimer(timeout time.Duration, reason string
 		EventType: VIEW_CHANGE_TIMER_EVENT,
 	}
 
-	af := func(){
-		pbft.pbftEventQueue.Push(event)
-	}
-
-	pbft.pbftTimerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, af)
+	pbft.pbftTimerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, event, pbft.pbftEventQueue)
 }
 
 //correctViewChange

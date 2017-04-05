@@ -18,7 +18,7 @@ func PutData(key string, value []byte, namespace string) error {
 	return db.Put([]byte("p2p."+key), value)
 }
 
-func PutBool(key string,value bool, namespace string) error {
+func PutBool(key string, value bool, namespace string) error {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return err
@@ -27,24 +27,25 @@ func PutBool(key string,value bool, namespace string) error {
 
 	if value {
 		persistValue = []byte("true")
-	}else{
+	} else {
 		persistValue = []byte("false")
 	}
 
 	return db.Put([]byte("p2p."+key), persistValue)
 }
 
-func GetBool(key string, namespace string) (bool,error){
+func GetBool(key string, namespace string) (bool, error) {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return false, err
 	}
-	persistKey,err := db.Get([]byte("p2p." + key))
-	if string(persistKey) == "true"{
-		return true,err
+	persistKey, err := db.Get([]byte("p2p." + key))
+	if string(persistKey) == "true" {
+		return true, err
 	}
-	return false,err
+	return false, err
 }
+
 //DelAllState: remove all state
 //func DelAllState() error {
 //	db, err := hyperdb.GetDBDatabase()
@@ -55,8 +56,8 @@ func GetBool(key string, namespace string) (bool,error){
 //}
 
 // DelState removes a key,value pair
-func DelData(key string) error {
-	db, err := hyperdb.GetDBDatabase()
+func DelData(key string, namespace string) error {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return err
 	}
@@ -64,8 +65,8 @@ func DelData(key string) error {
 }
 
 // ReadState retrieves a value to a key
-func GetData(key string) ([]byte, error) {
-	db, err := hyperdb.GetDBDatabase()
+func GetData(key string, namespace string) ([]byte, error) {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -73,8 +74,8 @@ func GetData(key string) ([]byte, error) {
 }
 
 // ReadStateSet retrieves all key-value pairs where the key starts with prefix
-func GetDataSet(prefix string) (map[string][]byte, error) {
-	db, err := hyperdb.GetDBDatabase()
+func GetDataSet(prefix string, namespace string) (map[string][]byte, error) {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}

@@ -6,7 +6,7 @@ package common
 //constants for logger key
 const (
 	LOG_FILE_DIR          = "global.logs.logsdir"
-	LOG_FUMP_FILE         = "global.logs.dumpfile"
+	LOG_DUMP_FILE 	      = "global.logs.dumpfile"
 	LOG_BASE_LOG_LEVEL    = "global.logs.loglevel"
 	LOG_NEW_FILE_INTERVAL = "global.logs.newLogFileInterval"
 	LOG_FILE_FORMAT       = "global.logs.file_format"
@@ -29,6 +29,7 @@ const (
 const (
 
 	NAMESPACE = "namespace.name"
+	DEFAULT_NAMESPACE = "system"
 	KEY_STORE_DIR = "global.account.keystoredir"
 	KEY_NODE_DIR  = "global.account.keynodesdir"
 	START_NAMESPACE = "global.namespace.start."

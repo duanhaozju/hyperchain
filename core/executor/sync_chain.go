@@ -8,13 +8,11 @@ import (
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"bytes"
+	"time"
 )
 
-// SendSyncRequest - send synchronization request to other nodes.
-func (executor *Executor) SendSyncRequest(ev event.ChainSyncReqEvent) {
-
+func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	executor.logger.Noticef("[Namespace = %s] send sync block request to fetch missing block, current height %d, target height %d", executor.namespace, edb.GetHeightOfChain(executor.namespace), ev.TargetHeight)
-
 	if executor.status.syncFlag.SyncTarget >= ev.TargetHeight || edb.GetHeightOfChain(executor.namespace) > ev.TargetHeight {
 		executor.logger.Errorf("[Namespace = %s] receive invalid state update request, just ignore it", executor.namespace)
 		executor.reject()
@@ -37,11 +35,32 @@ func (executor *Executor) SendSyncRequest(ev event.ChainSyncReqEvent) {
 	}
 
 	executor.updateSyncFlag(ev.TargetHeight, ev.TargetBlockHash, ev.TargetHeight)
+	executor.setLatestSyncDownstream(ev.TargetHeight)
 	executor.recordSyncPeers(ev.Replicas, ev.Id)
-	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, nil); err != nil {
-		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
-		executor.reject()
-		return
+
+	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
+	go executor.syncChainResendBackend()
+}
+
+func (executor *Executor) syncChainResendBackend() {
+	executor.status.syncFlag.ResendExit = make(chan bool)
+	ticker := time.NewTicker(executor.GetSyncResendInterval())
+	up, down := executor.getSyncReqArgs()
+	for {
+		select {
+		case <- executor.status.syncFlag.ResendExit:
+			return
+		case <-ticker.C:
+		        // resend
+			curUp, curDown := executor.getSyncReqArgs()
+			if curUp == up && curDown == down {
+				executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, up)
+				executor.SendSyncRequest(up, down)
+			} else {
+				up = curUp
+				down = curDown
+			}
+		}
 	}
 }
 
@@ -81,8 +100,27 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 				executor.addToSyncCache(block)
 			}
 		}
+		if executor.receiveAllRequiredBlocks() {
+			if executor.getLatestSyncDownstream() != edb.GetHeightOfChain(executor.namespace) {
+				prev := executor.getLatestSyncDownstream()
+				next := executor.calcuDownstream()
+				executor.SendSyncRequest(prev, next)
+			} else {
+				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
+			}
+		}
 		executor.processSyncBlocks()
 	}
+}
+
+// SendSyncRequest - send synchronization request to other nodes.
+func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
+	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream); err != nil {
+		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
+		executor.reject()
+		return
+	}
+	executor.recordSyncReqArgs(upstream, downstream)
 }
 
 // ApplyBlock - apply all transactions in block into state during the `state update` process.
@@ -244,6 +282,7 @@ func (executor *Executor) sendStateUpdatedEvent() {
 	// state update success
 	executor.PurgeCache()
 	executor.informConsensus(NOTIFY_SYNC_DONE, protos.StateUpdatedMessage{edb.GetHeightOfChain(executor.namespace)})
+	executor.setSyncChainExit()
 }
 
 // accpet - accept block synchronization result.
@@ -284,4 +323,22 @@ func (executor *Executor) isDemandSyncBlock(block *types.Block) bool {
 		return true
 	}
 	return false
+}
+
+// calcuDownstream - calculate a sync request downstream
+// if a node required to sync too much blocks one time, the huge chain sync request will be split to several small one.
+// a sync chain required block number can not more than `sync batch size` in config file.
+func (executor *Executor) calcuDownstream() uint64 {
+	total := executor.getLatestSyncDownstream() - edb.GetHeightOfChain(executor.namespace)
+	if total < executor.GetSyncMaxBatchSize() {
+		executor.setLatestSyncDownstream(edb.GetHeightOfChain(executor.namespace))
+	} else {
+		executor.setLatestSyncDownstream(executor.getLatestSyncDownstream() - executor.GetSyncMaxBatchSize())
+	}
+	executor.logger.Debugf("update temporarily downstream to %d", executor.getLatestSyncDownstream())
+	return executor.getLatestSyncDownstream()
+}
+
+func (executor *Executor) receiveAllRequiredBlocks() bool {
+	return executor.status.syncFlag.SyncDemandBlockNum == executor.getLatestSyncDownstream()
 }

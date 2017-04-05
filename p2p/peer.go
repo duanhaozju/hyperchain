@@ -6,7 +6,7 @@ package p2p
 import (
 	"errors"
 	"hyperchain/admittance"
-	pb "hyperchain/p2p/peermessage"
+	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/transport"
 	"strconv"
 	"sync"
@@ -333,6 +333,9 @@ func (peer *Peer) Close() error {
 	peer.InRetry = false
 	peer.KAVCount = 0
 	peer.RetryCount = 0
+	peer.StopKAV <- false
+	peer.StopRetry <- false
+
 	close(peer.StopKAV)
 	close(peer.StopRetry)
 	return peer.Connection.Close()

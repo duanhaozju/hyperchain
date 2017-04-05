@@ -27,8 +27,9 @@ func newHyperchain(argV *argT) *hyperchain {
 	}
 
 	globalConfig := common.NewConfig(hp.args.ConfigPath)
-	common.InitHyperLogger(globalConfig)
-	common.InitLog(globalConfig)
+	common.InitHyperLoggerManager(globalConfig)
+	//
+	//common.InitLog(globalConfig)
 
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
 	hp.hs = jsonrpc.GetHttpServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)

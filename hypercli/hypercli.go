@@ -8,6 +8,7 @@ import (
 	"hyperchain/hypercli/log"
 	"hyperchain/hypercli/namespace"
 	"hyperchain/hypercli/server"
+	"hyperchain/hypercli/node"
 
 	"os"
 	"time"
@@ -61,6 +62,11 @@ func initApp() {
 			Name:        "log",
 			Usage:       "log specific commands",
 			Subcommands: log.NewLogCMD(),
+		},
+		{
+			Name:        "node",
+			Usage:       "add/delete node specific commands",
+			Subcommands: node.NewNodeCMD(),
 		},
 	}
 

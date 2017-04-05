@@ -58,7 +58,11 @@ f_check_local_env(){
 # kill hyperchain process
 f_kill_process(){
     echo "kill the bind port process"
-#    ps -ax | grep hyperchain | grep -v grep | awk '{print $1}' |  xargs  kill -9
+    PID=`ps -ax | grep hyperchain | grep -v grep | awk '{print $1}'`
+    for pid in ${PID}
+    do
+        kill -9 ${pid}
+    done
 }
 
 # clear data
@@ -96,8 +100,8 @@ do
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
-    cp -rf  ${CONF_PATH}/namespaces/test/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/test/config/local_peerconfig.json
-    cp -rf  ${CONF_PATH}/namespaces/test/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/test/config/cert/
+#    cp -rf  ${CONF_PATH}/namespaces/test/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/test/config/local_peerconfig.json
+#    cp -rf  ${CONF_PATH}/namespaces/test/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/test/config/cert/
     cp -rf ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
 done
 }
@@ -107,13 +111,12 @@ f_all_in_one_cmd(){
 }
 
 f_x_in_linux_cmd(){
-    gnome-terminal -x bash -c "cd ${DUMP_PATH}/node${1} && ./hyperchain"
+    gnome-terminal -x bash -c "cd ${DUMP_PATH}/node${1} && ./hyperchain 2>error.log"
 }
 
 f_x_in_mac_cmd(){
-    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}' && ./hyperchain "'
+    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}' && ./hyperchain 2>error.log"'
 }
-
 
 # run process by os type
 f_run_process(){

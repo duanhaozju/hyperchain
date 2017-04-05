@@ -43,4 +43,5 @@ global:
         # start which namespaces when node starts
         start:
             global: true
-            test: false
+            ns1: false
+            ns2: false

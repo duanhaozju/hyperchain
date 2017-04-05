@@ -26,11 +26,15 @@ type ExecutorStatus struct {
 }
 
 type SyncFlag struct {
-	SyncDemandBlockNum  uint64   // the block num in sync process
-	SyncDemandBlockHash []byte   // the block hash in sync process
-	SyncTarget          uint64   // the target block number of this synchronization
-	SyncPeers           []uint64 // peers to fetch sync blocks
-	LocalId             uint64   // local node id
+	SyncDemandBlockNum  uint64     // the block num in sync process
+	SyncDemandBlockHash []byte     // the block hash in sync process
+	SyncTarget          uint64     // the target block number of this synchronization
+	SyncPeers           []uint64   // peers to fetch sync blocks
+	LocalId             uint64     // local node id
+	TempDownstream      uint64     // sync request low height, from calculation
+	LatestUpstream      uint64     // latest sync request high height
+	LatestDownstream    uint64     // latest sync request low height. always equal to `TempDownstream`
+	ResendExit          chan bool  // resend backend process notifier
 }
 
 func initializeExecutorStatus(executor *Executor) error {
@@ -223,6 +227,9 @@ func (executor *Executor) rollbackDone() {
 	executor.turnOnValidationSwitch()
 }
 
+/*
+	CHAIN SYNCHRONIZATION
+ */
 // waitUtilSyncAvailable - wait validation processor and commit processor become idle.
 func (executor *Executor) waitUtilSyncAvailable() {
 	executor.logger.Debugf("[Namespace = %s] wait util sync available", executor.namespace)
@@ -260,12 +267,41 @@ func (executor *Executor) clearSyncFlag() {
 	executor.status.syncFlag.SyncTarget = 0
 	executor.status.syncFlag.LocalId = 0
 	executor.status.syncFlag.SyncPeers = nil
+	executor.status.syncFlag.TempDownstream = 0
+	executor.status.syncFlag.LatestUpstream = 0
+	executor.status.syncFlag.LatestDownstream = 0
 }
 
 // recordSyncPeers - record peers id and self during the sync.
 func (executor *Executor) recordSyncPeers(peers []uint64, localId uint64) {
 	executor.status.syncFlag.SyncPeers = peers
 	executor.status.syncFlag.LocalId = localId
+}
+
+// recordSyncReqArgs - record current sync request's high height and low height.
+func (executor *Executor) recordSyncReqArgs(upstream, downstream uint64) {
+	atomic.StoreUint64(&executor.status.syncFlag.LatestUpstream, upstream)
+	atomic.StoreUint64(&executor.status.syncFlag.LatestDownstream, downstream)
+}
+
+// getSyncReqArgs - get latest sync request's high height and low height.
+func (executor *Executor) getSyncReqArgs() (uint64, uint64) {
+	return atomic.LoadUint64(&executor.status.syncFlag.LatestUpstream), atomic.LoadUint64(&executor.status.syncFlag.LatestDownstream)
+}
+
+func (executor *Executor) setSyncChainExit() {
+	executor.status.syncFlag.ResendExit <- true
+}
+
+// setLatestSyncDownstream - save latest sync request down stream.
+// return 0 if hasn't been set.
+func (executor *Executor) setLatestSyncDownstream(num uint64) {
+	executor.status.syncFlag.TempDownstream = num
+}
+
+// getLatestSyncDownstream - get latest sync request down stream
+func (executor *Executor) getLatestSyncDownstream() uint64 {
+	return executor.status.syncFlag.TempDownstream
 }
 
 // setValidationExit - notify validation backend process to exit.
