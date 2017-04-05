@@ -101,7 +101,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			}
 		}
 		if executor.receiveAllRequiredBlocks() {
-			if executor.getLatestSyncDownstream() == edb.GetHeightOfChain(executor.namespace) {
+			if executor.getLatestSyncDownstream() != edb.GetHeightOfChain(executor.namespace) {
 				prev := executor.getLatestSyncDownstream()
 				next := executor.calcuDownstream()
 				executor.SendSyncRequest(prev, next)
@@ -115,12 +115,12 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 
 // SendSyncRequest - send synchronization request to other nodes.
 func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
-
 	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream); err != nil {
 		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
 		executor.reject()
 		return
 	}
+	executor.recordSyncReqArgs(upstream, downstream)
 }
 
 // ApplyBlock - apply all transactions in block into state during the `state update` process.
@@ -282,6 +282,7 @@ func (executor *Executor) sendStateUpdatedEvent() {
 	// state update success
 	executor.PurgeCache()
 	executor.informConsensus(NOTIFY_SYNC_DONE, protos.StateUpdatedMessage{edb.GetHeightOfChain(executor.namespace)})
+	executor.setSyncChainExit()
 }
 
 // accpet - accept block synchronization result.

@@ -289,6 +289,10 @@ func (executor *Executor) getSyncReqArgs() (uint64, uint64) {
 	return atomic.LoadUint64(&executor.status.syncFlag.LatestUpstream), atomic.LoadUint64(&executor.status.syncFlag.LatestDownstream)
 }
 
+func (executor *Executor) setSyncChainExit() {
+	executor.status.syncFlag.ResendExit <- true
+}
+
 // setLatestSyncDownstream - save latest sync request down stream.
 // return 0 if hasn't been set.
 func (executor *Executor) setLatestSyncDownstream(num uint64) {
