@@ -77,8 +77,8 @@ global:
     ######################################################
     executor:
         sync_chain:
-            sync_batch_size: 1000
-            sync_resend_interval: 3m
+            sync_batch_size: 500
+            sync_resend_interval: 15m
         sync_replica:
             interval : 500s
             enable   : false
