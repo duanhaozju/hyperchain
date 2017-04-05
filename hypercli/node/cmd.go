@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package node
 
 import (
@@ -8,7 +10,6 @@ import (
 	"hyperchain/api/jsonrpc/core"
 	"strconv"
 )
-
 
 //NewNodeCMD new node related commands.
 func NewNodeCMD() []cli.Command {

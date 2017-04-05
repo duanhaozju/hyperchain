@@ -65,7 +65,7 @@ func initApp() {
 		},
 		{
 			Name:        "node",
-			Usage:       "add/del node specific commands",
+			Usage:       "add/delete node specific commands",
 			Subcommands: node.NewNodeCMD(),
 		},
 	}
