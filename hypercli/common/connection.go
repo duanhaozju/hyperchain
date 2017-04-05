@@ -72,5 +72,5 @@ func (cc *CmdClient) Call(cmd string) (*admin.CommandResult, error) {
 	}
 	result := string(body)
 	fmt.Printf(result)
-	return nil, nil
+	return &admin.CommandResult{Ok: true, Result: result}, nil
 }
