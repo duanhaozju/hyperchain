@@ -1,4 +1,4 @@
-package peerComm
+package common
 
 type PeerConfig struct {
 	SelfConfig  Self              `json:"self"`

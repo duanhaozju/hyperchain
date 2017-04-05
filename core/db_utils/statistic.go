@@ -12,7 +12,7 @@ import (
 // return : avg Millisecond
 func CalcCommitBatchAVGTime(namespace string, from, to uint64) (int64, int64) {
 	if from > to {
-		logger.Error("from less than to")
+		logger(namespace).Error("from less than to")
 		return -1, -1
 	}
 	var commit int64 = 0
@@ -20,7 +20,7 @@ func CalcCommitBatchAVGTime(namespace string, from, to uint64) (int64, int64) {
 	for i := from; i <= to; i++ {
 		block, err := GetBlockByNumber(namespace, i)
 		if err != nil {
-			logger.Error(err)
+			logger(namespace).Error(err)
 			return -1, -1
 		}
 		commit += block.CommitTime - block.Timestamp
@@ -39,7 +39,7 @@ func CalcCommitBatchAVGTime(namespace string, from, to uint64) (int64, int64) {
 // return : avg Millisecond
 func CalcResponseAVGTime(namespace string, from, to uint64) int64 {
 	if from > to && to != 0 {
-		logger.Error("from less than to")
+		logger(namespace).Error("from less than to")
 		return -1
 	}
 	var sum int64 = 0
@@ -47,7 +47,7 @@ func CalcResponseAVGTime(namespace string, from, to uint64) int64 {
 	for i := from; i <= to; i++ {
 		block, err := GetBlockByNumber(namespace, i)
 		if err != nil {
-			logger.Error(err)
+			logger(namespace).Error(err)
 			return -1
 		}
 		sum += (block.WriteTime - block.Timestamp) * int64(len(block.Transactions))
@@ -64,14 +64,14 @@ func CalcResponseAVGTime(namespace string, from, to uint64) int64 {
 
 func CalcEvmAVGTime(namespace string, from, to uint64) int64 {
 	if from > to {
-		logger.Error("from less than to")
+		logger(namespace).Error("from less than to")
 		return -1
 	}
 	var sum int64 = 0
 	for i := from; i <= to; i++ {
 		block, err := GetBlockByNumber(namespace, i)
 		if err != nil {
-			logger.Error(err)
+			logger(namespace).Error(err)
 			return -1
 		}
 		sum += (block.EvmTime - block.WriteTime) / int64(time.Microsecond)
@@ -88,7 +88,7 @@ func CalcEvmAVGTime(namespace string, from, to uint64) int64 {
 
 func CalBlockGenerateAvgTime(namespace string, from, to uint64) (int64, error) {
 	if from > to && to != 0 {
-		logger.Error("from less than to")
+		logger(namespace).Error("from less than to")
 		return -1, errors.New("from less than to")
 	}
 	var sum int64 = 0
@@ -96,7 +96,7 @@ func CalBlockGenerateAvgTime(namespace string, from, to uint64) (int64, error) {
 	for i := from; i <= to; i++ {
 		block, err := GetBlockByNumber(namespace, i)
 		if err != nil {
-			logger.Error(err)
+			logger(namespace).Error(err)
 			return -1, err
 		}
 		sum += (block.WriteTime - block.Timestamp) / int64(time.Millisecond)
@@ -120,7 +120,7 @@ func CalBlockGPS(namespace string, begin, end int64) (error, string) {
 	for i := uint64(1); i <= height; i++ {
 		block, err := GetBlockByNumber(namespace, i)
 		if err != nil {
-			logger.Error("Block not existed", err.Error())
+			logger(namespace).Error("Block not existed", err.Error())
 			return err, ""
 		}
 		if block.WriteTime > end {
@@ -145,7 +145,7 @@ func GetBlockWriteTime(namespace string, begin, end int64) (error, []string) {
 	for i := uint64(begin); i <= uint64(end); i++ {
 		block, err := GetBlockByNumber(namespace, i)
 		if err != nil {
-			logger.Error("Block not existed", err.Error())
+			logger(namespace).Error("Block not existed", err.Error())
 			return err, nil
 		}
 		info := fmt.Sprintf("Block Number: %d, Write Time: %s", i, time.Unix(0, block.WriteTime).Format("2006-01-02 15:04:05"))

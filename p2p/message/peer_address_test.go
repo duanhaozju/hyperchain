@@ -1,4 +1,4 @@
-package peermessage
+package message
 
 import (
 	"testing"

@@ -1,4 +1,4 @@
-package peermessage
+package message
 
 // Len is the number of elements in the collection.
 func (routers Routers) Len() int {

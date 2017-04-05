@@ -6,6 +6,7 @@ package pbft
 import (
 	"github.com/op/go-logging"
 	"time"
+	"hyperchain/consensus/events"
 )
 
 /**
@@ -32,7 +33,7 @@ func newTimerMgr(pbft *pbftImpl) *timerManager {
 	tm := &timerManager{
 		ttimers:        make(map[string]*titletimer),
 		requestTimeout: pbft.config.GetDuration(PBFT_REQUEST_TIMEOUT),
-		logger        : pbft.logger,
+		logger:         pbft.logger,
 	}
 
 	return tm
@@ -47,8 +48,15 @@ func (tm *timerManager) newTimer(tname string, d time.Duration) {
 	}
 }
 
-// startTimer init and start a timer by name
-func (tm *timerManager) startTimer(tname string, afterfunc func()) int {
+//Stop stop all timer managers.
+func (tm *timerManager) Stop() {
+	for timerName := range tm.ttimers {
+		tm.stopTimer(timerName)
+	}
+}
+
+//startTimer init and start a timer by name
+func (tm *timerManager) startTimer(tname string, event *LocalEvent, queue events.Queue) int {
 	tm.stopTimer(tname)
 	//logger.Errorf("Starting a new timer---%s", tname)
 
@@ -56,11 +64,12 @@ func (tm *timerManager) startTimer(tname string, afterfunc func()) int {
 	tm.ttimers[tname].alivecounts++
 
 	counts := len(tm.ttimers[tname].isActive)
-	//logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
+	//tm.logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
 
 	send := func() {
 		if tm.ttimers[tname].isActive[counts-1] {
-			afterfunc()
+			//tm.logger.Errorf("push the %dnd timer: %v with timeout: %v", counts, tname, tm.ttimers[tname].timeout)
+			queue.Push(event)
 		}
 	}
 	time.AfterFunc(tm.ttimers[tname].timeout, send)
@@ -68,7 +77,7 @@ func (tm *timerManager) startTimer(tname string, afterfunc func()) int {
 }
 
 // startTimerWithNewTT init and start a timer by name with new timeout
-func (tm *timerManager) startTimerWithNewTT(tname string, d time.Duration, afterfunc func()) int {
+func (tm *timerManager) startTimerWithNewTT(tname string, d time.Duration, event *LocalEvent, queue events.Queue) int {
 	tm.stopTimer(tname)
 	//logger.Errorf("Starting a new timer---%s with new duration %d", tname, d)
 
@@ -76,11 +85,12 @@ func (tm *timerManager) startTimerWithNewTT(tname string, d time.Duration, after
 	tm.ttimers[tname].alivecounts++
 
 	counts := len(tm.ttimers[tname].isActive)
-	//logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
+	//tm.logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
 
 	send := func() {
 		if tm.ttimers[tname].isActive[counts-1] {
-			afterfunc()
+			//tm.logger.Errorf("push the %dnd timer: %v with timeout: %v", counts, tname, d)
+			queue.Push(event)
 		}
 	}
 	time.AfterFunc(d, send)
@@ -94,16 +104,15 @@ func (tm *timerManager) stopTimer(tname string) {
 		return
 	}
 	//tm.logger.Errorf("Stoping timer---%s", tname)
-
+	//
 	//counts := len(tm.ttimers[tname].isActive)
-	//tm.logger.Errorf("Now exsits %d timer---%s", counts, tname)
+	//tm.logger.Errorf("Now exsits %d timer named---%s", counts, tname)
 
 	for i := range tm.ttimers[tname].isActive {
 		tm.ttimers[tname].isActive[i] = false
 	}
 
 	tm.ttimers[tname].alivecounts = 0
-
 }
 
 // stopOneTimer stop one timer by the timerName and index.

@@ -315,11 +315,7 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 				EventType: CORE_FIRST_REQUEST_TIMER_EVENT,
 			}
 
-			af := func(){
-				pbft.pbftEventQueue.Push(event)
-			}
-
-			pbft.pbftTimerMgr.startTimer(FIRST_REQUEST_TIMER, af)
+			pbft.pbftTimerMgr.startTimer(FIRST_REQUEST_TIMER, event, pbft.pbftEventQueue)
 		}
 		pbft.persistView(pbft.view)
 		pbft.helper.InformPrimary(primary)
@@ -350,7 +346,7 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 //4.recovery services
 
 func (pbft *pbftImpl) dispatchConsensusMsg(e events.Event) events.Event {
-	pbft.logger.Debugf("start processing consensus mesage")
+	pbft.logger.Debugf("start processing consensus message")
 	service := pbft.dispatchMsgToService(e)
 	switch service {
 	case CORE_PBFT_SERVICE:

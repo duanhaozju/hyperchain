@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/crypto"
 )
@@ -76,10 +75,6 @@ type scryptParamsJSON struct {
 	Salt  string `json:"salt"`
 }
 
-var log *logging.Logger // package-level logger
-func init() {
-	log = logging.MustGetLogger("key")
-}
 func newKey(am *AccountManager, rand io.Reader) (*Key, error) {
 	privKey, err := am.Encryption.GeneralKey()
 	if err != nil {
@@ -163,14 +158,3 @@ func KeyFileName(keyAddr []byte) string {
 	//return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr))
 	return fmt.Sprintf("%s", hex.EncodeToString(keyAddr))
 }
-
-//func toISO8601(t time.Time) string {
-//	//var tz string
-//	//name, offset := t.Zone()
-//	//if name == "UTC" {
-//	//	tz = "Z"
-//	//} else {
-//	//	tz = fmt.Sprintf("%03d00", offset/3600)
-//	//}
-//	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d%s", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond())
-//}

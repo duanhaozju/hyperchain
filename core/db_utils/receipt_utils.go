@@ -21,13 +21,13 @@ func GetReceipt(namespace string, txHash common.Hash) *types.ReceiptTrans {
 	var receiptWrapper types.ReceiptWrapper
 	err = proto.Unmarshal(data, &receiptWrapper)
 	if err != nil {
-		logger.Errorf("GetReceipt err:", err)
+		logger(namespace).Errorf("GetReceipt err:", err)
 		return nil
 	}
 	var receipt types.Receipt
 	err = proto.Unmarshal(receiptWrapper.Receipt, &receipt)
 	if err != nil {
-		logger.Errorf("GetReceipt err:", err)
+		logger(namespace).Errorf("GetReceipt err:", err)
 		return nil
 	}
 	return receipt.ToReceiptTrans()
@@ -42,11 +42,9 @@ func PersistReceipt(batch db.Batch, receipt *types.Receipt, flush bool, sync boo
 
 	err, data := encapsulateReceipt(receipt)
 	if err != nil {
-		logger.Error("wrapper receipt failed.")
 		return err, nil
 	}
 	if err := batch.Put(append(ReceiptsPrefix, receipt.TxHash...), data); err != nil {
-		logger.Error("Put receipt data into database failed! error msg, ", err.Error())
 		return err, nil
 	}
 	// flush to disk immediately
@@ -68,7 +66,6 @@ func encapsulateReceipt(receipt *types.Receipt) (error, []byte) {
 	receipt.Version = []byte(ReceiptVersion)
 	data, err := proto.Marshal(receipt)
 	if err != nil {
-		logger.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	wrapper := &types.ReceiptWrapper{
@@ -77,7 +74,6 @@ func encapsulateReceipt(receipt *types.Receipt) (error, []byte) {
 	}
 	data, err = proto.Marshal(wrapper)
 	if err != nil {
-		logger.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	return nil, data
@@ -108,7 +104,6 @@ func GetMarshalReceipt(receipt *types.Receipt) (error, []byte) {
 	receipt.Version = []byte(ReceiptVersion)
 	data, err := proto.Marshal(receipt)
 	if err != nil {
-		logger.Error("Invalid receipt struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	return nil, data

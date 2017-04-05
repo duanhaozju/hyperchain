@@ -3,61 +3,66 @@
 package executor
 
 import (
+	"errors"
+	"github.com/op/go-logging"
 	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
-	"hyperchain/hyperdb"
-	"hyperchain/manager/event"
 	"hyperchain/crypto"
-	"errors"
-	edb "hyperchain/core/db_utils"
+	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
-	"github.com/op/go-logging"
+	"hyperchain/manager/event"
 )
 
 var (
-	EmptyPointerErr = errors.New("nil pointer")
-	NoDefinedCaseErr= errors.New("no defined case")
+	EmptyPointerErr  = errors.New("nil pointer")
+	NoDefinedCaseErr = errors.New("no defined case")
 )
 
 type Executor struct {
-	namespace   string                // namespace tag
-	db          db.Database
-	archieveDb  db.Database
-	commonHash  crypto.CommonHash
-	encryption  crypto.Encryption
-	conf        *common.Config      // block configuration
-	status      ExecutorStatus
-	hashUtils   ExecutorHashUtil
-	cache       ExecutorCache
-	helper      *Helper
-	statedb     vm.Database
-	logger      *logging.Logger
+	namespace  string // namespace tag
+	db         db.Database
+	archieveDb db.Database
+	commonHash crypto.CommonHash
+	encryption crypto.Encryption
+	conf       *common.Config // block configuration
+	status     ExecutorStatus
+	hashUtils  ExecutorHashUtil
+	cache      ExecutorCache
+	helper     *Helper
+	statedb    vm.Database
+	logger     *logging.Logger
 }
 
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux) *Executor {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	helper := NewHelper(eventMux)
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
-	if err != nil {
-		return nil
-	}
-	archieveDb, err := hyperdb.GetArchieveDbByNamespace(namespace)
-	if err != nil {
-		return nil
-	}
+
 	executor := &Executor{
-		namespace:       namespace,
-		db:              db,
-		archieveDb:      archieveDb,
-		conf:            conf,
-		commonHash:      kec256Hash,
-		encryption:      encryption,
-		helper:          helper,
+		namespace:  namespace,
+		conf:       conf,
+		commonHash: kec256Hash,
+		encryption: encryption,
+		helper:     helper,
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
+	executor.initDb()
 	return executor
+}
+
+func (executor *Executor) initDb() {
+	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
+	if err != nil {
+		//return nil
+	}
+	executor.db = db
+	archieveDb, err := hyperdb.GetArchieveDbByNamespace(executor.namespace)
+	if err != nil {
+		//return nil
+	}
+	executor.archieveDb = archieveDb
 }
 
 // Start - start service.
@@ -78,6 +83,7 @@ func (executor *Executor) Status() {
 }
 
 func (executor *Executor) initialize() {
+	executor.initDb()
 	if err := initializeExecutorStatus(executor); err != nil {
 		executor.logger.Errorf("executor initiailize status failed. %s", err.Error())
 	}
@@ -93,7 +99,6 @@ func (executor *Executor) initialize() {
 	go executor.syncReplica()
 }
 
-
 // initializeExecutorStateDb - initialize statedb.
 func initializeExecutorStateDb(executor *Executor) error {
 	stateDb, err := executor.newStateDb()
@@ -104,6 +109,7 @@ func initializeExecutorStateDb(executor *Executor) error {
 	executor.statedb = stateDb
 	return nil
 }
+
 // NewStateDb - create a latest state.
 func (executor *Executor) newStateDb() (vm.Database, error) {
 	blk, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))

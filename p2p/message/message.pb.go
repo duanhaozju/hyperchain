@@ -14,7 +14,7 @@ It has these top-level messages:
 	PeerAddress
 	Signature
 */
-package peermessage
+package message
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"

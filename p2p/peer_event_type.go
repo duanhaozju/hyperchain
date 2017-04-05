@@ -2,7 +2,7 @@ package p2p
 
 import (
 	"time"
-	"hyperchain/p2p/peermessage"
+	"hyperchain/p2p/message"
 )
 
 type PendingEvent struct {
@@ -25,7 +25,7 @@ type RetryEvent struct {
 }
 
 type RecoveryEvent struct {
-	addr            *peermessage.PeerAddr
+	addr            *message.PeerAddr
 	recoveryTimeout time.Duration
 	recoveryTimes   int
 }

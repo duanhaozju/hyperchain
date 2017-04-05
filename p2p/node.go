@@ -9,13 +9,13 @@ import (
 	"google.golang.org/grpc"
 	"hyperchain/manager/event"
 	"hyperchain/admittance"
-	pb "hyperchain/p2p/peermessage"
+	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/transport"
 	"net"
 	"strconv"
 	"sync"
 	"time"
-	"hyperchain/p2p/peerComm"
+	pc "hyperchain/p2p/common"
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
@@ -26,19 +26,19 @@ type Node struct {
 	gRPCServer         *grpc.Server
 	higherEventManager *event.TypeMux
 	//common information
-	IsPrimary          bool
-	delayTable         map[int]int64
-	delayTableMutex    sync.RWMutex
-	DelayChan          chan UpdateTable
-	attendChan         chan int
-	PeersPool          *PeersPool
-	N                  int
-	DelayTableMutex    sync.Mutex
-	TM                 *transport.TransportManager
-	CM                 *admittance.CAManager
-	config             peerComm.Config
-	namespace 	   string
-	logger *logging.Logger
+	IsPrimary       bool
+	delayTable      map[int]int64
+	delayTableMutex sync.RWMutex
+	DelayChan       chan UpdateTable
+	attendChan      chan int
+	PeersPool       *PeersPool
+	N               int
+	DelayTableMutex sync.Mutex
+	TM              *transport.TransportManager
+	CM              *admittance.CAManager
+	config          pc.Config
+	namespace       string
+	logger          *logging.Logger
 }
 
 type UpdateTable struct {
@@ -47,8 +47,8 @@ type UpdateTable struct {
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TM *transport.TransportManager, peersPool *PeersPool, cm *admittance.CAManager, config peerComm.Config,namespace string) *Node {
-	logger := common.GetLogger(namespace,"node");
+func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TM *transport.TransportManager, peersPool *PeersPool, cm *admittance.CAManager, config pc.Config,namespace string) *Node {
+	logger := common.GetLogger(namespace,"p2p")
 	newNode := Node{
 		localAddr : localAddr,
 		TM : TM,
@@ -72,7 +72,7 @@ func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TM *transport
 }
 
 //监听节点状态更新线程
-func (node *Node) UpdateDelayTableThread() {
+func (node *Node) UpdateDelayTableThread() {//TODO: close pp
 	for v := range node.DelayChan {
 		if v.updateID > 0 {
 			node.delayTableMutex.Lock()
@@ -299,26 +299,27 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 }
 
 // StartServer start the gRPC server
-func (node *Node) StartServer() {
+func (node *Node) StartServer() error {
 	node.logger.Info("Starting the grpc listening server...")
 	lis, err := net.Listen("tcp", ":" + strconv.Itoa(node.localAddr.Port))
 	if err != nil {
 		node.logger.Fatalf("Failed to listen: %v", err)
 		node.logger.Fatal("PLEASE RESTART THE SERVER NODE!")
+		return err
 	}
 	opts := node.CM.GetGrpcServerOpts()
 	node.gRPCServer = grpc.NewServer(opts...)
-	//this.gRPCServer = grpc.NewServer()
 	pb.RegisterChatServer(node.gRPCServer, node)
 	node.logger.Info("Listening gRPC request...")
 	go node.gRPCServer.Serve(lis)
+	return nil
 }
 
 //StopServer stops the gRPC server gracefully. It stops the server to accept new
 // connections and RPCs and blocks until all the pending RPCs are finished.
 func (node *Node) StopServer() {
-	node.gRPCServer.GracefulStop()
-
+	//node.gRPCServer.GracefulStop()
+	node.gRPCServer.Stop()
 }
 
 func (node *Node) reverseConnect(msg *pb.Message) error {

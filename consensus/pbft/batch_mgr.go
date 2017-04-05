@@ -163,6 +163,10 @@ func (bm *batchManager) start()  {
 	bm.batchEventsManager.Start()
 }
 
+func (bm *batchManager) stop() {
+	bm.batchEventsManager.Stop()
+}
+
 func (bm *batchManager) batchStoreSize() int {
 	return len(bm.batchStore)
 }
@@ -200,11 +204,7 @@ func (pbft *pbftImpl) startBatchTimer()  {
 		EventType: CORE_BATCH_TIMER_EVENT,
 	}
 
-	af := func(){
-		pbft.reqEventQueue.Push(event)
-	}
-
-	pbft.pbftTimerMgr.startTimer(BATCH_TIMER, af)
+	pbft.pbftTimerMgr.startTimer(BATCH_TIMER, event, pbft.reqEventQueue)
 
 	pbft.batchMgr.batchTimerActive = true
 	pbft.logger.Debugf("Replica %d started the batch timer", pbft.id)

@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"hyperchain/common"
 )
 
 // PersistBlock - persist a block, using param to control whether flush to disk immediately.
@@ -21,11 +22,11 @@ func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool) (er
 	}
 	err, data := encapsulateBlock(block)
 	if err != nil {
-		logger.Errorf("wrapper block failed.")
+		//logger.Errorf("wrapper block failed.")
 		return err, nil
 	}
 	if err := batch.Put(append(BlockPrefix, block.BlockHash...), data); err != nil {
-		logger.Error("Put block data into database failed! error msg, ", err.Error())
+		//logger.Error("Put block data into database failed! error msg, ", err.Error())
 		return err, nil
 	}
 
@@ -53,7 +54,7 @@ func encapsulateBlock(block *types.Block) (error, []byte) {
 	block.Version = []byte(BlockVersion)
 	data, err := proto.Marshal(block)
 	if err != nil {
-		logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
+		//logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	wrapper := &types.BlockWrapper{
@@ -62,7 +63,7 @@ func encapsulateBlock(block *types.Block) (error, []byte) {
 	}
 	data, err = proto.Marshal(wrapper)
 	if err != nil {
-		logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
+		//logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	return nil, data
@@ -151,6 +152,7 @@ func DeleteBlockByNum(namepspace string, batch db.Batch, blockNum uint64, flush,
 func IsGenesisFinish(namespace string) bool {
 	_, err := GetBlockByNumber(namespace, 0)
 	if err != nil {
+		logger := common.GetLogger(namespace, "db_utils")
 		logger.Warning("missing genesis block")
 		return false
 	} else {
@@ -161,7 +163,7 @@ func blockTime(block *types.Block) {
 	times := block.WriteTime - block.Timestamp
 	f, err := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		logger.Notice("db.logger file create failed. err: " + err.Error())
+		//logger.Notice("db.logger file create failed. err: " + err.Error())
 	} else {
 		n, _ := f.Seek(0, os.SEEK_END)
 		currentTime := time.Now().Local()
@@ -180,7 +182,7 @@ func GetMarshalBlock(block *types.Block) (error, []byte) {
 	block.Version = []byte(BlockVersion)
 	data, err := proto.Marshal(block)
 	if err != nil {
-		logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
+		//logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	return nil, data

@@ -85,11 +85,7 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 		EventType: RECOVERY_RESTART_TIMER_EVENT,
 	}
 
-	af := func(){
-		pbft.pbftEventQueue.Push(event)
-	}
-
-	pbft.pbftTimerMgr.startTimer(RECOVERY_RESTART_TIMER, af)
+	pbft.pbftTimerMgr.startTimer(RECOVERY_RESTART_TIMER, event, pbft.pbftEventQueue)
 
 	chkpts := make(map[uint64]string)
 	for n, d := range pbft.storeMgr.chkpts {

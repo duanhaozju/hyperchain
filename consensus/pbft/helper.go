@@ -294,15 +294,9 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 		EventType: CORE_NULL_REQUEST_TIMER_EVENT,
 	}
 
-	af := func(){
-		pbft.pbftEventQueue.Push(event)
-	}
+	//pbft.logger.Errorf("replica: %d, primary: %d, reset null request timeout to %v", pbft.id, pbft.primary(pbft.view), timeout)
 
-	//pbft.logger.Errorf("null request time out is %v", pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
-	//pbft.logger.Errorf("request time out is %v", pbft.pbftTimerMgr.requestTimeout)
-	//pbft.logger.Errorf("reset null request timeout to %v", timeout)
-
-	pbft.pbftTimerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, af)
+	pbft.pbftTimerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, event, pbft.pbftEventQueue)
 }
 
 //stopFirstRequestTimer

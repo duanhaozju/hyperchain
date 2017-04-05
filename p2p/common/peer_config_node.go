@@ -1,4 +1,4 @@
-package peerComm
+package common
 
 type PeerConfigNodes struct {
 	ExternalAddress string `json:"external_address"`
