@@ -24,19 +24,6 @@ global:
         peers: "namespaces/template/config/local_peerconfig.json"
         genesis: "namespaces/template/config/genesis.json"
 
-        buckettree:
-            state:
-                size: 1000003
-                levelGroup: 5
-                cacheSize: 500    # 100 MB
-            storage:
-                size: 1000003
-                levelGroup: 5
-                cacheSize: 500    # 100 MB
-
-        replicainfo:
-                interval : 500s
-                enable   : false
         ratelimit:
                 enable   : true
                 txRatePeak : 100
@@ -86,6 +73,25 @@ global:
             common/hyper_logger: "NOTICE"
 
     ######################################################
+    # configs related to the executor                    #
+    ######################################################
+    executor:
+        sync_chain:
+            sync_batch_size: 500
+            sync_resend_interval: 15m
+        sync_replica:
+            interval : 500s
+            enable   : false
+        buckettree:
+            state:
+                size: 1000003
+                levelGroup: 5
+                cacheSize: 500    # 100 MB
+            storage:
+                size: 1000003
+                levelGroup: 5
+                cacheSize: 500    # 100 MB
+    ######################################################
     # configs related to the consensus                   #
     #                                                    #
     # 1. choose which consensus algorithm to use         #
@@ -95,3 +101,4 @@ global:
     consensus:
            algo: "PBFT"
            algo_config_path: "namespaces/template/config/pbft.yaml"
+
