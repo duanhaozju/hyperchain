@@ -884,11 +884,7 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 			EventType: RECOVERY_RESTART_TIMER_EVENT,
 		}
 
-		af := func(){
-			pbft.pbftEventQueue.Push(event)
-		}
-
-		pbft.pbftTimerMgr.startTimer(RECOVERY_RESTART_TIMER, af)
+		pbft.pbftTimerMgr.startTimer(RECOVERY_RESTART_TIMER, event, pbft.pbftEventQueue)
 
 		if pbft.storeMgr.highStateTarget == nil {
 			pbft.logger.Errorf("Try to fetch QPC, but highStateTarget is nil")
@@ -1333,11 +1329,7 @@ func (pbft *pbftImpl) processNegotiateView() error {
 		EventType: RECOVERY_NEGO_VIEW_RSP_TIMER_EVENT,
 	}
 
-	af := func(){
-		pbft.pbftEventQueue.Push(event)
-	}
-
-	pbft.pbftTimerMgr.startTimer(NEGO_VIEW_RSP_TIMER, af)
+	pbft.pbftTimerMgr.startTimer(NEGO_VIEW_RSP_TIMER, event, pbft.pbftEventQueue)
 
 	pbft.recoveryMgr.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 
@@ -1479,11 +1471,7 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 				EventType: RECOVERY_NEGO_VIEW_RSP_TIMER_EVENT,
 			}
 
-			af := func(){
-				pbft.pbftEventQueue.Push(event)
-			}
-
-			pbft.pbftTimerMgr.startTimer(NEGO_VIEW_RSP_TIMER, af)
+			pbft.pbftTimerMgr.startTimer(NEGO_VIEW_RSP_TIMER, event, pbft.pbftEventQueue)
 
 			pbft.logger.Warningf("pbft recv at least N-f nego-view responses, but cannot find same view from 2f+1.")
 		}
