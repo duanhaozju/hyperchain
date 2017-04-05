@@ -63,8 +63,8 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_BROADCAST_DEMAND:
 		executor.logger.Debug("inform p2p broadcast demand")
 		required := ChainSyncRequest{
-			RequiredNumber: executor.status.syncFlag.SyncTarget,
-			CurrentNumber:  edb.GetHeightOfChain(executor.namespace),
+			RequiredNumber: message[0].(uint64),
+			CurrentNumber:  message[1].(uint64),
 			PeerId:         executor.status.syncFlag.LocalId,
 		}
 		payload, err := proto.Marshal(&required)

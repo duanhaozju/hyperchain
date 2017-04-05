@@ -2,14 +2,14 @@ package hyperstate
 
 const (
 	STATEDB               = "state"
-	stateBucketSize       = "global.configs.buckettree.state.size"
-	stateBucketLevelGroup = "global.configs.buckettree.state.levelGroup"
-	stateBucketCacheSize  = "global.configs.buckettree.state.cacheSize"
+	stateBucketSize       = "global.executor.buckettree.state.size"
+	stateBucketLevelGroup = "global.executor.buckettree.state.levelGroup"
+	stateBucketCacheSize  = "global.executor.buckettree.state.cacheSize"
 
 	STATEOBJECT                 = "stateObject"
-	stateObjectBucketSize       = "global.configs.buckettree.storage.size"
-	stateObjectBucketLevelGroup = "global.configs.buckettree.storage.levelGroup"
-	stateObjectBucketCacheSize  = "global.configs.buckettree.storage.cacheSize"
+	stateObjectBucketSize       = "global.executor.buckettree.storage.size"
+	stateObjectBucketLevelGroup = "global.executor.buckettree.storage.levelGroup"
+	stateObjectBucketCacheSize  = "global.executor.buckettree.storage.cacheSize"
 )
 
 // GetBucketSize - get bucket size.

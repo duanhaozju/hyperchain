@@ -49,7 +49,6 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.initDb()
-	//executor.logger.Notice("archieve db", archieveDb)
 	return executor
 }
 
@@ -113,7 +112,6 @@ func initializeExecutorStateDb(executor *Executor) error {
 
 // NewStateDb - create a latest state.
 func (executor *Executor) newStateDb() (vm.Database, error) {
-	executor.logger.Notice("new state db", executor.archieveDb)
 	blk, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
