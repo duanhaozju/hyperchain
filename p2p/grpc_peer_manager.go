@@ -237,7 +237,7 @@ func (grpcmgr *GRPCPeerManager) allPeerAddr() []*pb.PeerAddr {
 		if p.ID == grpcmgr.localNode.GetNodeID() {
 			continue
 		}
-		addr := pb.NewPeerAddr(p.Address, p.Port, p.Port, p.ID)
+		addr := pb.NewPeerAddr(p.Address, p.Port, p.RPCPort, p.ID)
 		plist = append(plist, addr)
 	}
 	return plist
