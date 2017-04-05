@@ -89,7 +89,7 @@ db/*
 
 
 # keystore
-hyperchain
+# hyperchain
 
 *.tar
 
