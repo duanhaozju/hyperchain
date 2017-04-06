@@ -116,6 +116,9 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 
 // SendSyncRequest - send synchronization request to other nodes.
 func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
+	if executor.isSyncInExecution() == true {
+		return
+	}
 	peer := executor.status.syncFlag.SyncPeers[rand.Intn(len(executor.status.syncFlag.SyncPeers))]
 	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream, peer); err != nil {
 		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
@@ -190,6 +193,7 @@ func (executor *Executor) isBlockHashEqual(targetHash []byte) bool {
 func (executor *Executor) processSyncBlocks() {
 	if executor.status.syncFlag.SyncDemandBlockNum <= edb.GetHeightOfChain(executor.namespace) {
 		// get the first of SyncBlocks
+		executor.markSyncExecBegin()
 		lastBlk, err := edb.GetBlockByNumber(executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1)
 		if err != nil {
 			executor.logger.Errorf("[Namespace = %s] StateUpdate Failed!", executor.namespace)

@@ -34,6 +34,7 @@ type SyncFlag struct {
 	TempDownstream      uint64     // sync request low height, from calculation
 	LatestUpstream      uint64     // latest sync request high height
 	LatestDownstream    uint64     // latest sync request low height. always equal to `TempDownstream`
+	InExecution         uint32     // flag mark in execution
 	ResendExit          chan bool  // resend backend process notifier
 }
 
@@ -262,6 +263,7 @@ func (executor *Executor) updateSyncFlag(num uint64, hash []byte, target uint64)
 
 // clearSyncFlag - clear all sync flag fields.
 func (executor *Executor) clearSyncFlag() {
+	executor.markSyncExecFinish()
 	executor.status.syncFlag.SyncDemandBlockNum = 0
 	executor.status.syncFlag.SyncDemandBlockHash = nil
 	executor.status.syncFlag.SyncTarget = 0
@@ -302,6 +304,21 @@ func (executor *Executor) setLatestSyncDownstream(num uint64) {
 // getLatestSyncDownstream - get latest sync request down stream
 func (executor *Executor) getLatestSyncDownstream() uint64 {
 	return executor.status.syncFlag.TempDownstream
+}
+
+// markSyncExecBegin - set execution(sync) flag true
+func (executor *Executor) markSyncExecBegin() {
+	atomic.StoreUint32(&executor.status.syncFlag.InExecution, 1)
+}
+
+// markSyncExecFinish - set execution(sync) flag false
+func (executor *Executor) markSyncExecFinish() {
+	atomic.StoreUint32(&executor.status.syncFlag.InExecution, 0)
+}
+
+// isSyncInExecution - query execution(sync) flag
+func (executor *Executor) isSyncInExecution() bool {
+	return atomic.LoadUint32(&executor.status.syncFlag.InExecution) == 1
 }
 
 // setValidationExit - notify validation backend process to exit.
