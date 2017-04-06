@@ -18,7 +18,7 @@ import (
 var (
 	logPath   = ""
 	logStatus = false
-	dbType    = 001
+	dbType    = 0001
 )
 
 type stateDb int32
@@ -94,7 +94,7 @@ func InitDatabase(conf *common.Config, namespace string) error {
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
 	}
 
-	archieveDb, err := NewDatabase(conf, "Archieve", 001)
+	archieveDb, err := NewDatabase(conf, "Archieve", 0001)
 
 	if err != nil {
 		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
@@ -102,7 +102,7 @@ func InitDatabase(conf *common.Config, namespace string) error {
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
 	}
 
-	db1, err1 := NewDatabase(conf, "Consensus", 001)
+	db1, err1 := NewDatabase(conf, "Consensus", 0001)
 
 	if err1 != nil {
 		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))

@@ -219,7 +219,7 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 	if ns, ok := nr.namespaces[name]; ok {
 		return ns.Start()
 	}
-	logger.Errorf("No namespace instance for %s found")
+	logger.Errorf("No namespace instance for %s found", name)
 	return ErrInvalidNs
 }
 

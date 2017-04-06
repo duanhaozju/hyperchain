@@ -74,10 +74,12 @@ f_copy_tmp(){
         sed -i "" "s/namespaces\/template/namespaces\/${NS_NAME}/" ${NS_PATH}/${NS_NAME}/config/db.yaml
         sed -i "" "s/namespaces\/template/namespaces\/${NS_NAME}/" ${NS_PATH}/${NS_NAME}/config/global.yaml
         sed -i "" "s/namespaces\/template/namespaces\/${NS_NAME}/" ${NS_PATH}/${NS_NAME}/config/caconfig.toml
+        sed -i "" "s/nodes: 4/nodes: ${NS_MAXNODE}/" ${NS_PATH}/${NS_NAME}/config/pbft.yaml
     else
         sed -i "s/namespaces\/template/namespaces\/${NS_NAME}/g" ${NS_PATH}/${NS_NAME}/config/db.yaml
         sed -i "s/namespaces\/template/namespaces\/${NS_NAME}/" ${NS_PATH}/${NS_NAME}/config/global.yaml
         sed -i "s/namespaces\/template/namespaces\/${NS_NAME}/" ${NS_PATH}/${NS_NAME}/config/caconfig.toml
+        sed -i "s/nodes: 4/nodes: ${NS_MAXNODE}/" ${NS_PATH}/${NS_NAME}/config/pbft.yaml
     fi
 }
 
