@@ -120,6 +120,7 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 		return
 	}
 	peer := executor.status.syncFlag.SyncPeers[rand.Intn(len(executor.status.syncFlag.SyncPeers))]
+	executor.logger.Debugf("send sync req to %d, require [%d] to [%d]", peer, downstream, upstream)
 	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream, peer); err != nil {
 		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
 		executor.reject()
@@ -193,7 +194,6 @@ func (executor *Executor) isBlockHashEqual(targetHash []byte) bool {
 func (executor *Executor) processSyncBlocks() {
 	if executor.status.syncFlag.SyncDemandBlockNum <= edb.GetHeightOfChain(executor.namespace) {
 		// get the first of SyncBlocks
-		executor.markSyncExecBegin()
 		lastBlk, err := edb.GetBlockByNumber(executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1)
 		if err != nil {
 			executor.logger.Errorf("[Namespace = %s] StateUpdate Failed!", executor.namespace)
@@ -206,6 +206,7 @@ func (executor *Executor) processSyncBlocks() {
 			defer executor.syncDone()
 			// execute all received block at one time
 			for i := executor.status.syncFlag.SyncDemandBlockNum + 1; i <= executor.status.syncFlag.SyncTarget; i += 1 {
+				executor.markSyncExecBegin()
 				blk, err := edb.GetBlockByNumber(executor.namespace, i)
 				if err != nil {
 					executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
