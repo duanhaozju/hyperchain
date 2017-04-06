@@ -7,7 +7,7 @@ option java_outer_classname = "ContractProto";
 service Contract {
     //used tp execute contract method remotely
     rpc Execute (Request) returns (Response) {}
-    //used to detect the health state of ontract
+    //used to detect the health state of contract
     rpc HeartBeat(Request) returns (Response) {}
     //used to transfer data between hyperchain and contract
     //TODO:this args design isn't perfect
