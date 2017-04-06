@@ -2,33 +2,28 @@ package fsm
 
 import "github.com/looplab/fsm"
 
-func NewSyncFSM(callbacks map[string]func(e *fsm.Event)) *fsm.FSM {
+const (
+	SyncFSM_Init    = "init"
+	SyncFSM_Prepare = "prepare"
+	SyncFSM_Select  = "select"
+	SyncFSM_Wait    = "wait"
+	SyncFSM_Exec    = "exec"
+	SyncFSM_Done    = "done"
+)
+
+func NewSyncFSM(callbacks fsm.Callbacks) *fsm.FSM {
 	return fsm.NewFSM(
-		SyncStatus_INIT,
+		SyncFSM_Init,
 		fsm.Events{
-			{Name: SyncEvent_SELECT_PEER, Src: []string{SyncStatus_INIT}, Dst: SyncStatus_SELECT},
-			{Name: SyncEvent_SEND_REQ, Src: []string{SyncStatus_SELECT}, Dst: SyncStatus_WAIT},
-			{Name: SyncEvent_SEND_REQ, Src: []string{SyncStatus_WAIT}, Dst: SyncStatus_WAIT},
-			{Name: SyncEvent_RESEND_REQ, Src: []string{SyncStatus_WAIT}, Dst: SyncStatus_WAIT},
-			{Name: SyncEvent_RESELECT_PEER, Src: []string{SyncStatus_WAIT}, Dst: SyncStatus_SELECT},
-			{Name: SyncEvent_EXEC, Src: []string{SyncStatus_WAIT}, Dst: SyncStatus_EXEC},
-			{Name: SyncEvent_EXEC_DONE, Src: []string{SyncStatus_EXEC}, Dst: SyncStatus_DONE},
+			{Name: SyncEvent_INITIALIZE.String(), Src: []string{SyncFSM_Init}, Dst: SyncFSM_Prepare},
+			{Name: SyncEvent_SELECT_PEER.String(), Src: []string{SyncFSM_Prepare}, Dst: SyncFSM_Select},
+			{Name: SyncEvent_SEND_REQ.String(), Src: []string{SyncFSM_Select}, Dst: SyncFSM_Wait},
+			{Name: SyncEvent_SEND_REQ.String(), Src: []string{SyncFSM_Wait}, Dst: SyncFSM_Wait},
+			{Name: SyncEvent_RESEND_REQ.String(), Src: []string{SyncFSM_Wait}, Dst: SyncFSM_Wait},
+			{Name: SyncEvent_RESELECT_PEER.String(), Src: []string{SyncFSM_Wait}, Dst: SyncFSM_Select},
+			{Name: SyncEvent_EXEC.String(), Src: []string{SyncFSM_Wait}, Dst: SyncFSM_Exec},
+			{Name: SyncEvent_EXEC_DONE.String(), Src: []string{SyncFSM_Exec}, Dst: SyncFSM_Done},
 		},
-		fsm.Callbacks{
-			"enter_" + SyncStatus_INIT:   callbacks[SyncStatus_INIT],
-			"enter_" + SyncStatus_SELECT: callbacks[SyncStatus_SELECT],
-			"enter_" + SyncStatus_WAIT:   callbacks[SyncStatus_WAIT],
-			"enter_" + SyncStatus_EXEC:   callbacks[SyncStatus_EXEC],
-			"enter_" + SyncStatus_DONE:   callbacks[SyncStatus_DONE],
-			"enter_state": TraceEnter,
-			"leave_state": TraceLeave,
-		},
+		callbacks,
 	)
-}
-
-func TraceEnter(event *fsm.Event) {
-
-}
-func TraceLeave(event *fsm.Event) {
-
 }

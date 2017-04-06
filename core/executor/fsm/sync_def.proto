@@ -4,24 +4,14 @@ package fsm;
 message SyncEvent {
     enum Type {
         UNDEFINED      = 0;
-        SELECT_PEER    = 1;
-        RESELECT_PEER  = 2;
-        SEND_REQ       = 3;
-        RESEND_REQ     = 4;
-        EXEC           = 5;
-        EXEC_DONE      = 6;
+        INITIALIZE     = 1;
+        SELECT_PEER    = 2;
+        RESELECT_PEER  = 3;
+        SEND_REQ       = 4;
+        RESEND_REQ     = 5;
+        EXEC           = 6;
+        EXEC_DONE      = 7;
     }
     Type type = 1;
 }
 
-message SyncStatus {
-    enum Type {
-        UNDEFINED   = 0;
-        INIT        = 1;
-        SELECT      = 2;
-        WAIT        = 3;
-        EXEC        = 4;
-        DONE        = 5;
-    }
-    Type type  = 1;
-}
