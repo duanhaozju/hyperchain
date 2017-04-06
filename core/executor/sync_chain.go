@@ -289,7 +289,6 @@ func (executor *Executor) sendStateUpdatedEvent() {
 	// state update success
 	executor.PurgeCache()
 	executor.informConsensus(NOTIFY_SYNC_DONE, protos.StateUpdatedMessage{edb.GetHeightOfChain(executor.namespace)})
-	executor.setSyncChainExit()
 }
 
 // accpet - accept block synchronization result.

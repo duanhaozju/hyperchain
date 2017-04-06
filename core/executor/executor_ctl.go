@@ -264,6 +264,7 @@ func (executor *Executor) updateSyncFlag(num uint64, hash []byte, target uint64)
 // clearSyncFlag - clear all sync flag fields.
 func (executor *Executor) clearSyncFlag() {
 	executor.markSyncExecFinish()
+	executor.setSyncChainExit()
 	executor.status.syncFlag.SyncDemandBlockNum = 0
 	executor.status.syncFlag.SyncDemandBlockHash = nil
 	executor.status.syncFlag.SyncTarget = 0
