@@ -111,8 +111,9 @@ api/jsonrpc/Dashboard/node_modules
 scripts/mac_local.sh
 config/peerconfigs
 
-core/contract/java/target
-core/contract/java/*.iml
+core/contract/jcee/java/target
+core/contract/jcee/java/*.iml
+core/contract/jcee/java/.idea
 
 
 hypercli/hypercli
