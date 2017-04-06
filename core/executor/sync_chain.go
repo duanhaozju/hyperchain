@@ -9,6 +9,7 @@ import (
 	"hyperchain/manager/protos"
 	"bytes"
 	"time"
+	"math/rand"
 )
 
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
@@ -115,7 +116,8 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 
 // SendSyncRequest - send synchronization request to other nodes.
 func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
-	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream); err != nil {
+	peer := executor.status.syncFlag.SyncPeers[rand.Intn(len(executor.status.syncFlag.SyncPeers))]
+	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream, peer); err != nil {
 		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
 		executor.reject()
 		return

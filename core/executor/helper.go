@@ -74,7 +74,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		}
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,
-			Peers:   executor.status.syncFlag.SyncPeers,
+			Peers:   []uint64{message[2].(uint64)},
 			Type:    NOTIFY_BROADCAST_DEMAND,
 		})
 		return nil
