@@ -11,7 +11,7 @@ import (
 	"hyperchain/common"
 )
 
-type Storage map[common.Hash]common.Hash
+type Storage map[common.Hash][]byte
 
 func (self Storage) Copy() Storage {
 	cpy := make(Storage)
@@ -46,7 +46,7 @@ type StructLog struct {
 	GasCost *big.Int
 	Memory  []byte
 	Stack   []*big.Int
-	Storage map[common.Hash]common.Hash
+	Storage map[common.Hash][]byte
 	Depth   int
 	Err     error
 }
@@ -94,7 +94,7 @@ func (l *Logger) captureState(pc uint64, op OpCode, gas, cost *big.Int, memory *
 	switch op {
 	case SSTORE:
 		var (
-			value   = common.BigToHash(stack.data[stack.len()-2])
+			value   = common.BigToHash(stack.data[stack.len()-2]).Bytes()
 			address = common.BigToHash(stack.data[stack.len()-1])
 		)
 		l.changedValues[contract.Address()][address] = value
@@ -125,7 +125,7 @@ func (l *Logger) captureState(pc uint64, op OpCode, gas, cost *big.Int, memory *
 			storage = make(Storage)
 			// Get the contract account and loop over each storage entry. This may involve looping over
 			// the trie and is a very expensive process.
-			l.env.Db().GetAccount(contract.Address()).ForEachStorage(func(key, value common.Hash) bool {
+			l.env.Db().GetAccount(contract.Address()).ForEachStorage(func(key common.Hash, value []byte) bool {
 				storage[key] = value
 				// Return true, indicating we'd like to continue.
 				return true

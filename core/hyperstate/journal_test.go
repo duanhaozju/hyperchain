@@ -17,6 +17,7 @@ import (
 	"testing"
 	"testing/quick"
 	"github.com/op/go-logging"
+	"os"
 )
 
 var (
@@ -24,7 +25,12 @@ var (
 	logger     *logging.Logger
 )
 func init() {
-	logger = logging.MustGetLogger("test")
+	globalConfig := common.NewConfig(configPath)
+	//globalConfig.Set(common.NAMESPACE, "global")
+	//fmt.Println("start...")
+	common.InitHyperLoggerManager(globalConfig)
+	globalConfig.Set(common.NAMESPACE, "global")
+	common.InitHyperLogger(globalConfig)
 }
 type JournalSuite struct {
 }
@@ -49,10 +55,11 @@ func (suite *JournalSuite) TearDownTest(c *checker.C) {
 
 // Run once after all tests or benchmarks have finished running.
 func (suite *JournalSuite) TearDownSuite(c *checker.C) {
+	os.RemoveAll("namespaces")
 }
 
 func (suite *JournalSuite) TestSnapshotRandom(c *checker.C) {
-	config := &quick.Config{MaxCount: 1000}
+	config := &quick.Config{MaxCount: 30}
 	err := quick.Check((*snapshotTest).run, config)
 	if cerr, ok := err.(*quick.CheckError); ok {
 		test := cerr.In[0].(*snapshotTest)
@@ -110,10 +117,11 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 		{
 			name: "SetState",
 			fn: func(a testAction, s *StateDB) {
-				var key, val common.Hash
+				var key common.Hash
+				var val common.Hash
 				binary.BigEndian.PutUint16(key[:], uint16(a.args[0]))
 				binary.BigEndian.PutUint16(val[:], uint16(a.args[1]))
-				s.SetState(addr, key, val)
+				s.SetState(addr, key, val.Bytes(), 0)
 			},
 			args: make([]int64, 2),
 		},
@@ -246,7 +254,7 @@ func (test *snapshotTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
 		db, _        = mdb.NewMemDatabase()
-		state, _     = New(common.Hash{}, db, tutil.InitConfig(configPath), 10, logger)
+		state, _     = New(common.Hash{}, db, db, tutil.InitConfig(configPath), 10, "global")
 		snapshotRevs = make([]int, len(test.snapshots))
 		sindex       = 0
 	)
@@ -262,7 +270,7 @@ func (test *snapshotTest) run() bool {
 	// Revert all snapshots in reverse order. Each revert must yield a state
 	// that is equivalent to fresh state with all actions up the snapshot applied.
 	for sindex--; sindex >= 0; sindex-- {
-		checkstate, _ := New(common.Hash{}, db, tutil.InitConfig(configPath), 10, logger)
+		checkstate, _ := New(common.Hash{}, db, db, tutil.InitConfig(configPath), 10, "global")
 		for _, action := range test.actions[:test.snapshots[sindex]] {
 			action.fn(action, checkstate)
 		}

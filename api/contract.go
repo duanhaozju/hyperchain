@@ -272,7 +272,7 @@ func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]stri
 	if obj := stateDb.GetAccount(addr); obj == nil {
 		return nil, nil
 	} else {
-		cb := func(key, value common.Hash) bool {
+		cb := func(key common.Hash, value []byte) bool {
 			return true
 		}
 		storages := obj.ForEachStorage(cb)
@@ -281,7 +281,7 @@ func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]stri
 		}
 
 		for k, v := range storages {
-			mp[k.Hex()] = v.Hex()
+			mp[k.Hex()] = common.Bytes2Hex(v)
 		}
 	}
 	return mp, nil

@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"testing"
 	"testing/quick"
+	"os"
 )
 
 type RevertSuite struct {
@@ -36,10 +37,11 @@ func (suite *RevertSuite) TearDownTest(c *checker.C) {
 
 // Run once after all tests or benchmarks have finished running.
 func (suite *RevertSuite) TearDownSuite(c *checker.C) {
+	os.RemoveAll("namespaces")
 }
 
 func (suite *RevertSuite) TestRevertRandom(c *checker.C) {
-	config := &quick.Config{MaxCount: 1000}
+	config := &quick.Config{MaxCount: 30}
 	err := quick.Check((*revertTest).run, config)
 	if cerr, ok := err.(*quick.CheckError); ok {
 		test := cerr.In[0].(*revertTest)
@@ -102,9 +104,9 @@ func (test *revertTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
 		db, _         = mdb.NewMemDatabase()
-		state, _      = New(common.Hash{}, db, tutil.InitConfig(configPath), 10, logger)
+		state, _      = New(common.Hash{}, db, db, tutil.InitConfig(configPath), 10, "global")
 		checkDb, _    = mdb.NewMemDatabase()
-		checkState, _ = New(common.Hash{}, checkDb, tutil.InitConfig(configPath), 10, logger)
+		checkState, _ = New(common.Hash{}, checkDb, checkDb, tutil.InitConfig(configPath), 10, "global")
 		immediateRoot []byte
 	)
 

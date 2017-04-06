@@ -104,8 +104,8 @@ type Database interface {
 	AddRefund(*big.Int)
 	GetRefund() *big.Int
 
-	GetState(common.Address, common.Hash) (bool, common.Hash)
-	SetState(common.Address, common.Hash, common.Hash, int32)
+	GetState(common.Address, common.Hash) (bool, []byte)
+	SetState(common.Address, common.Hash, []byte, int32)
 
 	Delete(common.Address) bool
 	Exist(common.Address) bool
@@ -148,6 +148,6 @@ type Account interface {
 	Address() common.Address
 	ReturnGas(*big.Int, *big.Int)
 	SetCode(common.Hash, []byte)
-	ForEachStorage(cb func(key, value common.Hash) bool) map[common.Hash]common.Hash
+	ForEachStorage(cb func(key common.Hash, value []byte) bool) map[common.Hash][]byte
 	Value() *big.Int
 }
