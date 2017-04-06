@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "cn.hyperchain.protos";
+option java_outer_classname = "ContractProto";
+
+service Contract {
+    //used tp execute contract method remotely
+    rpc Execute (Request) returns (Response) {}
+    //used to detect the health state of ontract
+    rpc HeartBeat(Request) returns (Response) {}
+    //used to transfer data between hyperchain and contract
+    //TODO:this args design isn't perfect
+    rpc DataPipeline(stream Response) returns(stream Command) {}
+}
+
+message Request {
+    string txid   = 1;
+    string method = 2;
+    repeated bytes args = 3;
+}
+
+message Response {
+    string id    = 1;
+    bool  ok     = 2;
+    bytes result = 3;
+}
+
+//Used by contract to manipulate data stored at hyperchain
+message Command {
+    string id   = 1;
+    string name = 2;
+    string key  = 3;
+}
