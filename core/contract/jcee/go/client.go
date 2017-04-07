@@ -7,7 +7,6 @@ import (
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
 	pb "hyperchain/core/contract/jcee/protos"
-	"io"
 	"sync/atomic"
 )
 
@@ -23,7 +22,6 @@ type ContractExecutor interface {
 type contractExecutorImpl struct {
 	client  pb.ContractClient
 	conn    *grpc.ClientConn
-	stream  pb.Contract_DataPipelineClient
 	address string
 	logger  *logging.Logger
 	ledger  *LedgerProxy
@@ -41,6 +39,7 @@ func (cei *contractExecutorImpl) Execute(tx *pb.Request) (*pb.Response, error) {
 }
 
 func (cei *contractExecutorImpl) Start() error {
+	cei.close = new(int32)
 	atomic.StoreInt32(cei.close, 0)
 	conn, err := grpc.Dial(cei.address, grpc.WithInsecure())
 	if err != nil {
@@ -48,15 +47,6 @@ func (cei *contractExecutorImpl) Start() error {
 		return err
 	}
 	cei.client = pb.NewContractClient(conn)
-
-	stream, err := cei.client.DataPipeline(context.Background())
-	stream.Send(&pb.Response{Ok: true})
-	if err != nil {
-		cei.logger.Error(err)
-		return err
-	}
-	cei.stream = stream
-	go cei.dataPipeLine()
 	cei.conn = conn
 	return nil
 }
@@ -68,35 +58,4 @@ func (cei *contractExecutorImpl) Stop() error {
 
 func (cei *contractExecutorImpl) isActive() bool {
 	return atomic.LoadInt32(cei.close) == 0
-}
-
-func (cei *contractExecutorImpl) dataPipeLine() {
-	firstIter := true
-	for cei.isActive() {
-		cmd, err := cei.stream.Recv()
-		if err == io.EOF {
-			//TODO: add reconnect or restart the jcee logic here
-			return
-		}
-		if err != nil {
-			cei.logger.Fatalf("Failed to receive a note : %v", err)
-		}
-		cei.logger.Noticef("Got message %v", cmd)
-
-		if firstIter {
-			firstIter = false
-		} else {
-			data, err := cei.ledger.ProcessCommand(cmd)
-			r := &pb.Response{Ok:false, Result:[]byte("")}
-			if err == nil {
-				r.Ok = true
-				r.Result = data
-			}
-			err = cei.stream.Send(r)
-			if err != nil {
-				cei.logger.Errorf("send command resutlt to jcee error, %v", err)
-				//TODO: add reconnect or restart the jcee logic here
-			}
-		}
-	}
 }
