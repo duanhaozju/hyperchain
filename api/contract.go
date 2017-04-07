@@ -8,8 +8,8 @@ import (
 	"github.com/juju/ratelimit"
 	"hyperchain/common"
 	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/compiler"
+	"hyperchain/core/vm/evm"
+	"hyperchain/core/vm/evm/compiler"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/manager/event"
 	"hyperchain/manager"
@@ -369,7 +369,7 @@ func (contract *Contract) GetArchive(addr common.Address, date string) (map[stri
 	return stateDb.ShowArchive(addr, date), nil
 }
 
-func getBlockStateDb(namespace string, config *common.Config) (vm.Database, error) {
+func getBlockStateDb(namespace string, config *common.Config) (evm.Database, error) {
 	log := common.GetLogger(namespace, "api")
 	stateDB, err := NewStateDb(config, namespace)
 	if err != nil {
@@ -379,7 +379,7 @@ func getBlockStateDb(namespace string, config *common.Config) (vm.Database, erro
 	return stateDB, nil
 }
 
-func isContractAccount(stateDb vm.Database, addr common.Address) bool {
+func isContractAccount(stateDb evm.Database, addr common.Address) bool {
 	code := stateDb.GetCode(addr)
 	return code != nil
 }

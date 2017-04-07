@@ -10,7 +10,7 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/protos"
 	"time"
-	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm"
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
@@ -180,7 +180,7 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 		}
 		switch receipt.VmType {
 		case types.Receipt_EVM:
-			tmp := logs.(vm.Logs)
+			tmp := logs.(evm.Logs)
 			for _, log := range tmp {
 				log.BlockHash = blockHash
 				log.BlockNumber = blockNumber

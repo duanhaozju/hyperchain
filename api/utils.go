@@ -3,7 +3,7 @@ package api
 import (
 	"hyperchain/core/types"
 	"hyperchain/common"
-	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm"
 )
 
 
@@ -28,7 +28,7 @@ func TransitReceipt(receipt *types.Receipt, vmType types.Receipt_VmType) Receipt
 	tmp, _ := RetrieveLogs(receipt, vmType)
 	switch vmType {
 	case types.Receipt_EVM:
-		logs := tmp.(vm.Logs)
+		logs := tmp.(evm.Logs)
 		for _, log := range logs {
 			logsTrans = append(logsTrans, log.String())
 		}
@@ -53,7 +53,7 @@ func RetrieveLogs(r *types.Receipt, vmType types.Receipt_VmType) (interface{}, e
 	switch vmType {
 	case types.Receipt_EVM:
 		// EVM
-		return vm.DecodeLogs((*r).Logs)
+		return evm.DecodeLogs((*r).Logs)
 	case types.Receipt_JVM:
 		// JVM
 		return nil, nil

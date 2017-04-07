@@ -2,7 +2,7 @@ package executor
 
 import (
 	"hyperchain/core/types"
-	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm"
 )
 
 
@@ -19,7 +19,7 @@ func RetrieveLogs(r *types.Receipt, vmType int32) (interface{}, error) {
 	switch vmType {
 	case 0:
 		// EVM
-		return vm.DecodeLogs((*r).Logs)
+		return evm.DecodeLogs((*r).Logs)
 	case 1:
 		// JVM
 		return nil, nil
@@ -35,7 +35,7 @@ func SetLogs(r *types.Receipt, vmType int32, logs interface{}) error {
 	switch vmType {
 	case 0:
 		// EVM
-		tmp := logs.(vm.Logs)
+		tmp := logs.(evm.Logs)
 		buf, err = (&tmp).EncodeLogs()
 	case 1:
 		// JVM
