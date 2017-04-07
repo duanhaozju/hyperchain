@@ -32,6 +32,7 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
      */
     @Override
     public void execute(Request request, StreamObserver<Response> responseObserver) {
+
         Response r = Response.newBuilder().setOk(true).build();
         responseObserver.onNext(r);
         responseObserver.onCompleted();
