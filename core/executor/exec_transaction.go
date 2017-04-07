@@ -10,7 +10,7 @@ import (
 
 type Code []byte
 
-func (executor *Executor) ExecTransaction(tx *types.Transaction, env evm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
+func (executor *Executor) ExecTransaction(db evm.Database, tx *types.Transaction, idx int, blockNumber uint64) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
 		from     = common.BytesToAddress(tx.From)
 		to       = common.BytesToAddress(tx.To)
@@ -22,7 +22,8 @@ func (executor *Executor) ExecTransaction(tx *types.Transaction, env evm.Environ
 		op       = tv.GetOp()
 		vmType   = tv.GetVmType()
 	)
-
+	env := executor.initEnvironment(db, executor.getTempBlockNumber())
+	env.Db().StartRecord(tx.GetHash(), common.Hash{}, idx)
 	if valid := executor.checkPermission(env, from, to, op); !valid {
 		return nil, nil, common.Address{}, InvalidInvokePermissionErr("not enough permission to invocation")
 	}

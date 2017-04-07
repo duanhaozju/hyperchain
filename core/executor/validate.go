@@ -159,13 +159,11 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 	var validtxs []*types.Transaction
 	var receipts []*types.Receipt
 
-	env := executor.initEnvironment(executor.statedb, executor.getTempBlockNumber())
 	executor.initCalculator()
 	executor.statedb.MarkProcessStart(executor.getTempBlockNumber())
 	// execute transactions one by one
 	for i, tx := range txs {
-		executor.statedb.StartRecord(tx.GetHash(), common.Hash{}, i)
-		receipt, _, _, err := executor.ExecTransaction(tx, env)
+		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, executor.getTempBlockNumber())
 		if err != nil {
 			errType := executor.classifyInvalid(err)
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
