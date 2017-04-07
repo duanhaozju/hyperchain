@@ -10,8 +10,29 @@ service Contract {
     //used to detect the health state of ontract
     rpc HeartBeat(Request) returns (Response) {}
     //used to transfer data between hyperchain and contract
-    //TODO:this args design isn't perfect
-    rpc DataPipeline(stream Response) returns(stream Command) {}
+}
+
+service Ledger {
+    rpc Get(Key) returns (Value) {}
+    rpc Put(KeyValue) returns(Response) {}
+}
+
+message Key {
+    string namespace = 1;
+    string id = 2;
+    bytes k = 3;
+}
+
+message Value{
+    string id = 1;
+    bytes v   =2;
+}
+
+message KeyValue {
+    string namespace = 1;
+    string id = 2;
+    bytes k = 3;
+    bytes v = 4;
 }
 
 message Request {
@@ -24,11 +45,4 @@ message Response {
     string id    = 1;
     bool  ok     = 2;
     bytes result = 3;
-}
-
-//Used by contract to manipulate data stored at hyperchain
-message Command {
-    string id   = 1;
-    string name = 2;
-    string key  = 3;
 }

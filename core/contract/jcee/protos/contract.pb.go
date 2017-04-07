@@ -9,9 +9,11 @@ It is generated from these files:
 	contract.proto
 
 It has these top-level messages:
+	Key
+	Value
+	KeyValue
 	Request
 	Response
-	Command
 */
 package contract
 
@@ -35,6 +37,39 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+type Key struct {
+	Namespace string `protobuf:"bytes,1,opt,name=namespace" json:"namespace,omitempty"`
+	Id        string `protobuf:"bytes,2,opt,name=id" json:"id,omitempty"`
+	K         []byte `protobuf:"bytes,3,opt,name=k,proto3" json:"k,omitempty"`
+}
+
+func (m *Key) Reset()                    { *m = Key{} }
+func (m *Key) String() string            { return proto.CompactTextString(m) }
+func (*Key) ProtoMessage()               {}
+func (*Key) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
+type Value struct {
+	Id string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	V  []byte `protobuf:"bytes,2,opt,name=v,proto3" json:"v,omitempty"`
+}
+
+func (m *Value) Reset()                    { *m = Value{} }
+func (m *Value) String() string            { return proto.CompactTextString(m) }
+func (*Value) ProtoMessage()               {}
+func (*Value) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+type KeyValue struct {
+	Namespace string `protobuf:"bytes,1,opt,name=namespace" json:"namespace,omitempty"`
+	Id        string `protobuf:"bytes,2,opt,name=id" json:"id,omitempty"`
+	K         []byte `protobuf:"bytes,3,opt,name=k,proto3" json:"k,omitempty"`
+	V         []byte `protobuf:"bytes,4,opt,name=v,proto3" json:"v,omitempty"`
+}
+
+func (m *KeyValue) Reset()                    { *m = KeyValue{} }
+func (m *KeyValue) String() string            { return proto.CompactTextString(m) }
+func (*KeyValue) ProtoMessage()               {}
+func (*KeyValue) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
 type Request struct {
 	Txid   string   `protobuf:"bytes,1,opt,name=txid" json:"txid,omitempty"`
 	Method string   `protobuf:"bytes,2,opt,name=method" json:"method,omitempty"`
@@ -44,7 +79,7 @@ type Request struct {
 func (m *Request) Reset()                    { *m = Request{} }
 func (m *Request) String() string            { return proto.CompactTextString(m) }
 func (*Request) ProtoMessage()               {}
-func (*Request) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*Request) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
 
 type Response struct {
 	Id     string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
@@ -55,24 +90,14 @@ type Response struct {
 func (m *Response) Reset()                    { *m = Response{} }
 func (m *Response) String() string            { return proto.CompactTextString(m) }
 func (*Response) ProtoMessage()               {}
-func (*Response) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
-
-// Used by contract to manipulate data stored at hyperchain
-type Command struct {
-	Id   string `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
-	Name string `protobuf:"bytes,2,opt,name=name" json:"name,omitempty"`
-	Key  string `protobuf:"bytes,3,opt,name=key" json:"key,omitempty"`
-}
-
-func (m *Command) Reset()                    { *m = Command{} }
-func (m *Command) String() string            { return proto.CompactTextString(m) }
-func (*Command) ProtoMessage()               {}
-func (*Command) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (*Response) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
 func init() {
+	proto.RegisterType((*Key)(nil), "Key")
+	proto.RegisterType((*Value)(nil), "Value")
+	proto.RegisterType((*KeyValue)(nil), "KeyValue")
 	proto.RegisterType((*Request)(nil), "Request")
 	proto.RegisterType((*Response)(nil), "Response")
-	proto.RegisterType((*Command)(nil), "Command")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -90,9 +115,6 @@ type ContractClient interface {
 	Execute(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
 	// used to detect the health state of ontract
 	HeartBeat(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
-	// used to transfer data between hyperchain and contract
-	// TODO:this args design isn't perfect
-	DataPipeline(ctx context.Context, opts ...grpc.CallOption) (Contract_DataPipelineClient, error)
 }
 
 type contractClient struct {
@@ -121,37 +143,6 @@ func (c *contractClient) HeartBeat(ctx context.Context, in *Request, opts ...grp
 	return out, nil
 }
 
-func (c *contractClient) DataPipeline(ctx context.Context, opts ...grpc.CallOption) (Contract_DataPipelineClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Contract_serviceDesc.Streams[0], c.cc, "/Contract/DataPipeline", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &contractDataPipelineClient{stream}
-	return x, nil
-}
-
-type Contract_DataPipelineClient interface {
-	Send(*Response) error
-	Recv() (*Command, error)
-	grpc.ClientStream
-}
-
-type contractDataPipelineClient struct {
-	grpc.ClientStream
-}
-
-func (x *contractDataPipelineClient) Send(m *Response) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *contractDataPipelineClient) Recv() (*Command, error) {
-	m := new(Command)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 // Server API for Contract service
 
 type ContractServer interface {
@@ -159,9 +150,6 @@ type ContractServer interface {
 	Execute(context.Context, *Request) (*Response, error)
 	// used to detect the health state of ontract
 	HeartBeat(context.Context, *Request) (*Response, error)
-	// used to transfer data between hyperchain and contract
-	// TODO:this args design isn't perfect
-	DataPipeline(Contract_DataPipelineServer) error
 }
 
 func RegisterContractServer(s *grpc.Server, srv ContractServer) {
@@ -204,32 +192,6 @@ func _Contract_HeartBeat_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Contract_DataPipeline_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ContractServer).DataPipeline(&contractDataPipelineServer{stream})
-}
-
-type Contract_DataPipelineServer interface {
-	Send(*Command) error
-	Recv() (*Response, error)
-	grpc.ServerStream
-}
-
-type contractDataPipelineServer struct {
-	grpc.ServerStream
-}
-
-func (x *contractDataPipelineServer) Send(m *Command) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *contractDataPipelineServer) Recv() (*Response, error) {
-	m := new(Response)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 var _Contract_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "Contract",
 	HandlerType: (*ContractServer)(nil),
@@ -243,37 +205,130 @@ var _Contract_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Contract_HeartBeat_Handler,
 		},
 	},
-	Streams: []grpc.StreamDesc{
+	Streams:  []grpc.StreamDesc{},
+	Metadata: fileDescriptor0,
+}
+
+// Client API for Ledger service
+
+type LedgerClient interface {
+	Get(ctx context.Context, in *Key, opts ...grpc.CallOption) (*Value, error)
+	Put(ctx context.Context, in *KeyValue, opts ...grpc.CallOption) (*Response, error)
+}
+
+type ledgerClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewLedgerClient(cc *grpc.ClientConn) LedgerClient {
+	return &ledgerClient{cc}
+}
+
+func (c *ledgerClient) Get(ctx context.Context, in *Key, opts ...grpc.CallOption) (*Value, error) {
+	out := new(Value)
+	err := grpc.Invoke(ctx, "/Ledger/Get", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ledgerClient) Put(ctx context.Context, in *KeyValue, opts ...grpc.CallOption) (*Response, error) {
+	out := new(Response)
+	err := grpc.Invoke(ctx, "/Ledger/Put", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for Ledger service
+
+type LedgerServer interface {
+	Get(context.Context, *Key) (*Value, error)
+	Put(context.Context, *KeyValue) (*Response, error)
+}
+
+func RegisterLedgerServer(s *grpc.Server, srv LedgerServer) {
+	s.RegisterService(&_Ledger_serviceDesc, srv)
+}
+
+func _Ledger_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Key)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LedgerServer).Get(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Ledger/Get",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LedgerServer).Get(ctx, req.(*Key))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Ledger_Put_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(KeyValue)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LedgerServer).Put(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Ledger/Put",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LedgerServer).Put(ctx, req.(*KeyValue))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Ledger_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "Ledger",
+	HandlerType: (*LedgerServer)(nil),
+	Methods: []grpc.MethodDesc{
 		{
-			StreamName:    "DataPipeline",
-			Handler:       _Contract_DataPipeline_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
+			MethodName: "Get",
+			Handler:    _Ledger_Get_Handler,
+		},
+		{
+			MethodName: "Put",
+			Handler:    _Ledger_Put_Handler,
 		},
 	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: fileDescriptor0,
 }
 
 func init() { proto.RegisterFile("contract.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 273 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x74, 0x90, 0xc1, 0x4a, 0xc4, 0x30,
-	0x10, 0x86, 0x37, 0xed, 0xb2, 0x6d, 0x87, 0xba, 0x48, 0x10, 0x29, 0x7b, 0x2a, 0xb9, 0x58, 0x2f,
-	0x45, 0xf4, 0x01, 0x84, 0xae, 0x82, 0xde, 0x4a, 0xde, 0x20, 0xb6, 0x83, 0x2d, 0xdd, 0x26, 0x35,
-	0x49, 0x61, 0x17, 0x5f, 0x5e, 0x1a, 0xb3, 0x7a, 0x10, 0x6f, 0xff, 0x9f, 0x19, 0x3e, 0xbe, 0x09,
-	0x6c, 0x1b, 0x25, 0xad, 0x16, 0x8d, 0x2d, 0x27, 0xad, 0xac, 0x62, 0xaf, 0x10, 0x71, 0xfc, 0x98,
-	0xd1, 0x58, 0x4a, 0x61, 0x6d, 0x8f, 0x7d, 0x9b, 0x91, 0x9c, 0x14, 0x09, 0x77, 0x99, 0x5e, 0xc3,
-	0x66, 0x44, 0xdb, 0xa9, 0x36, 0x0b, 0xdc, 0xab, 0x6f, 0xcb, 0xae, 0xd0, 0xef, 0x26, 0x0b, 0xf3,
-	0xb0, 0x48, 0xb9, 0xcb, 0xac, 0x82, 0x98, 0xa3, 0x99, 0x94, 0x34, 0x48, 0xb7, 0x10, 0xfc, 0x90,
-	0x82, 0xbe, 0x5d, 0xba, 0x1a, 0x1c, 0x23, 0xe6, 0x81, 0x1a, 0x16, 0xae, 0x46, 0x33, 0x1f, 0x6c,
-	0x16, 0xe6, 0xa4, 0x48, 0xb9, 0x6f, 0xec, 0x11, 0xa2, 0xbd, 0x1a, 0x47, 0x21, 0xdb, 0x3f, 0x08,
-	0x0a, 0x6b, 0x29, 0x46, 0xf4, 0x22, 0x2e, 0xd3, 0x4b, 0x08, 0x07, 0x3c, 0x39, 0x46, 0xc2, 0x97,
-	0x78, 0xff, 0x09, 0xf1, 0xde, 0x5f, 0x48, 0x73, 0x88, 0x9e, 0x8f, 0xd8, 0xcc, 0x16, 0x69, 0x5c,
-	0xfa, 0x2b, 0x77, 0x49, 0x79, 0x96, 0x64, 0x2b, 0xca, 0x20, 0x79, 0x41, 0xa1, 0x6d, 0x85, 0xc2,
-	0xfe, 0xb7, 0x73, 0x0b, 0xe9, 0x93, 0xb0, 0xa2, 0xee, 0x27, 0x3c, 0xf4, 0x12, 0xe9, 0xef, 0x70,
-	0x17, 0x97, 0x5e, 0x96, 0xad, 0x0a, 0x72, 0x47, 0xaa, 0x1b, 0xb8, 0x6a, 0x64, 0xd9, 0x9d, 0x26,
-	0xd4, 0x4d, 0x27, 0x7a, 0xf9, 0xfd, 0xc7, 0xa6, 0xba, 0x38, 0x2b, 0xd5, 0x4b, 0xaf, 0xc9, 0xdb,
-	0xc6, 0x0d, 0x1e, 0xbe, 0x02, 0x00, 0x00, 0xff, 0xff, 0x0c, 0x91, 0xe2, 0x9c, 0x8e, 0x01, 0x00,
+	// 321 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xa4, 0x51, 0x4d, 0x6b, 0xeb, 0x30,
+	0x10, 0x8c, 0xec, 0x3c, 0xc7, 0x5e, 0xfc, 0x72, 0x10, 0xef, 0x15, 0x13, 0x5a, 0x30, 0x82, 0xd2,
+	0x9c, 0x74, 0x48, 0xef, 0x85, 0xba, 0x94, 0xb6, 0xa4, 0x07, 0x23, 0x4a, 0xef, 0xaa, 0xb3, 0x24,
+	0xc1, 0x89, 0xe5, 0x4a, 0x72, 0x88, 0xff, 0x7d, 0x89, 0x62, 0xf7, 0x83, 0xd2, 0x53, 0x6f, 0x3b,
+	0xab, 0xd9, 0xd9, 0xd1, 0x2c, 0x8c, 0x0b, 0x55, 0x59, 0x2d, 0x0b, 0xcb, 0x6b, 0xad, 0xac, 0x62,
+	0xd7, 0xe0, 0xcf, 0xb1, 0xa5, 0xa7, 0x10, 0x55, 0x72, 0x8b, 0xa6, 0x96, 0x05, 0x26, 0x24, 0x25,
+	0xd3, 0x48, 0x7c, 0x34, 0xe8, 0x18, 0xbc, 0xf5, 0x22, 0xf1, 0x5c, 0xdb, 0x5b, 0x2f, 0x68, 0x0c,
+	0xa4, 0x4c, 0xfc, 0x94, 0x4c, 0x63, 0x41, 0x4a, 0x76, 0x0e, 0x7f, 0x9e, 0xe5, 0xa6, 0xe9, 0x69,
+	0xe4, 0x33, 0x6d, 0xe7, 0xa6, 0x62, 0x41, 0x76, 0xec, 0x09, 0xc2, 0x39, 0xb6, 0x47, 0xe6, 0x2f,
+	0xd6, 0x1d, 0x55, 0x87, 0xbd, 0xea, 0x03, 0x8c, 0x04, 0xbe, 0x36, 0x68, 0x2c, 0xa5, 0x30, 0xb4,
+	0xfb, 0x77, 0x03, 0xae, 0xa6, 0x27, 0x10, 0x6c, 0xd1, 0xae, 0x54, 0x2f, 0xd7, 0xa1, 0x03, 0x57,
+	0xea, 0xa5, 0x49, 0xfc, 0xd4, 0x9f, 0xc6, 0xc2, 0xd5, 0x2c, 0x83, 0x50, 0xa0, 0xa9, 0x55, 0x65,
+	0xbe, 0x7f, 0x65, 0x0c, 0x9e, 0x2a, 0x9d, 0x46, 0x28, 0x3c, 0x55, 0x1e, 0x74, 0x35, 0x9a, 0x66,
+	0x63, 0x3b, 0x5f, 0x1d, 0x9a, 0xe5, 0x10, 0xde, 0x74, 0x01, 0xd3, 0x14, 0x46, 0xb7, 0x7b, 0x2c,
+	0x1a, 0x8b, 0x34, 0xe4, 0x9d, 0xc9, 0x49, 0xc4, 0xfb, 0x1d, 0x6c, 0x40, 0x19, 0x44, 0xf7, 0x28,
+	0xb5, 0xcd, 0x50, 0xda, 0x1f, 0x38, 0xb3, 0x2b, 0x08, 0x1e, 0x71, 0xb1, 0x44, 0x4d, 0xff, 0x83,
+	0x7f, 0x87, 0x96, 0x0e, 0xf9, 0x1c, 0xdb, 0x49, 0xc0, 0x5d, 0x92, 0x6c, 0x40, 0xcf, 0xc0, 0xcf,
+	0x1b, 0x4b, 0x23, 0xde, 0xa7, 0xfb, 0x65, 0x3e, 0xbb, 0x80, 0x7f, 0x45, 0xc5, 0x57, 0x6d, 0x8d,
+	0xba, 0x58, 0xc9, 0x75, 0x75, 0xbc, 0xbb, 0xc9, 0xfe, 0xf6, 0x3e, 0xf3, 0x03, 0xce, 0xc9, 0x4b,
+	0xe0, 0x1e, 0x2e, 0xdf, 0x02, 0x00, 0x00, 0xff, 0xff, 0x4c, 0x06, 0xee, 0x98, 0x22, 0x02, 0x00,
 	0x00,
 }
