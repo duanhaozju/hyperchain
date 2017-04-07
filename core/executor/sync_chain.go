@@ -55,8 +55,9 @@ func (executor *Executor) syncChainResendBackend() {
 		        // resend
 			curUp, curDown := executor.getSyncReqArgs()
 			if curUp == up && curDown == down {
-				executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, up)
-				executor.SendSyncRequest(up, down)
+				executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.status.syncFlag.SyncDemandBlockNum)
+				executor.SendSyncRequest(executor.status.syncFlag.SyncDemandBlockNum, down)
+				executor.recordSyncReqArgs(curUp, curDown)
 			} else {
 				up = curUp
 				down = curDown
