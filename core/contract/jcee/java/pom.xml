@@ -5,7 +5,13 @@
 
     <groupId>cn.hyperchain</groupId>
     <artifactId>hyperjvm</artifactId>
-    <version>1.5-SNAPSHOT</version>
+    <version>1.4-SNAPSHOT</version>
+
+
+    <properties>
+        <java.version>1.8</java.version>
+    </properties>
+
 
     <dependencies>
 
@@ -34,5 +40,51 @@
         </dependency>
 
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <outputDirectory>target/lib/</outputDirectory>
+                </configuration>
+
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>1.7</source>
+                    <target>1.7</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+
+
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <!--copy the dependency for this project-->
+                        <configuration>
+                            <outputDirectory>
+                                target/lib/
+                            </outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
 
 </project>
