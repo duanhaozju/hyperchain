@@ -52,14 +52,15 @@ public final class ContractProto {
       "(\t\022\n\n\002id\030\002 \001(\t\022\t\n\001k\030\003 \001(\014\"\036\n\005Value\022\n\n\002id" +
       "\030\001 \001(\t\022\t\n\001v\030\002 \001(\014\"?\n\010KeyValue\022\021\n\tnamespa" +
       "ce\030\001 \001(\t\022\n\n\002id\030\002 \001(\t\022\t\n\001k\030\003 \001(\014\022\t\n\001v\030\004 \001" +
-      "(\014\"5\n\007Request\022\014\n\004txid\030\001 \001(\t\022\016\n\006method\030\002 " +
-      "\001(\t\022\014\n\004args\030\003 \003(\014\"2\n\010Response\022\n\n\002id\030\001 \001(" +
-      "\t\022\n\n\002ok\030\002 \001(\010\022\016\n\006result\030\003 \001(\0142P\n\010Contrac" +
-      "t\022 \n\007Execute\022\010.Request\032\t.Response\"\000\022\"\n\tH" +
-      "eartBeat\022\010.Request\032\t.Response\"\0002>\n\006Ledge" +
-      "r\022\025\n\003Get\022\004.Key\032\006.Value\"\000\022\035\n\003Put\022\t.KeyVal",
-      "ue\032\t.Response\"\000B\'\n\024cn.hyperchain.protosB" +
-      "\rContractProtoP\001b\006proto3"
+      "(\014\"U\n\007Request\022\014\n\004txid\030\001 \001(\t\022\016\n\006method\030\002 " +
+      "\001(\t\022\021\n\tnamespace\030\003 \001(\t\022\013\n\003cid\030\004 \001(\t\022\014\n\004a" +
+      "rgs\030\005 \003(\014\"2\n\010Response\022\n\n\002id\030\001 \001(\t\022\n\n\002ok\030" +
+      "\002 \001(\010\022\016\n\006result\030\003 \001(\0142P\n\010Contract\022 \n\007Exe" +
+      "cute\022\010.Request\032\t.Response\"\000\022\"\n\tHeartBeat" +
+      "\022\010.Request\032\t.Response\"\0002>\n\006Ledger\022\025\n\003Get",
+      "\022\004.Key\032\006.Value\"\000\022\035\n\003Put\022\t.KeyValue\032\t.Res" +
+      "ponse\"\000B\'\n\024cn.hyperchain.protosB\rContrac" +
+      "tProtoP\001b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -96,7 +97,7 @@ public final class ContractProto {
     internal_static_Request_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Request_descriptor,
-        new java.lang.String[] { "Txid", "Method", "Args", });
+        new java.lang.String[] { "Txid", "Method", "Namespace", "Cid", "Args", });
     internal_static_Response_descriptor =
       getDescriptor().getMessageTypes().get(4);
     internal_static_Response_fieldAccessorTable = new

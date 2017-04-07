@@ -28,15 +28,35 @@ public interface RequestOrBuilder extends
       getMethodBytes();
 
   /**
-   * <code>repeated bytes args = 3;</code>
+   * <code>string namespace = 3;</code>
+   */
+  java.lang.String getNamespace();
+  /**
+   * <code>string namespace = 3;</code>
+   */
+  com.google.protobuf.ByteString
+      getNamespaceBytes();
+
+  /**
+   * <code>string cid = 4;</code>
+   */
+  java.lang.String getCid();
+  /**
+   * <code>string cid = 4;</code>
+   */
+  com.google.protobuf.ByteString
+      getCidBytes();
+
+  /**
+   * <code>repeated bytes args = 5;</code>
    */
   java.util.List<com.google.protobuf.ByteString> getArgsList();
   /**
-   * <code>repeated bytes args = 3;</code>
+   * <code>repeated bytes args = 5;</code>
    */
   int getArgsCount();
   /**
-   * <code>repeated bytes args = 3;</code>
+   * <code>repeated bytes args = 5;</code>
    */
   com.google.protobuf.ByteString getArgs(int index);
 }
