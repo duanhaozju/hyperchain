@@ -12,7 +12,6 @@ type LedgerProxy struct {
 }
 
 func (lp *LedgerProxy) ProcessCommand(cmd *contract.Command) ([]byte, error) {
-
-	//TODO: parse cmd and execute it
+	//TODO: parse cmd and execute it, mainly used to fetch data from db
 	return nil, errors.New("not implement yet")
 }

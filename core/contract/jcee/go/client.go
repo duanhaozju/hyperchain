@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 	pb "hyperchain/core/contract/jcee/protos"
 	"io"
+	"sync/atomic"
 )
 
 type ContractExecutor interface {
@@ -26,7 +27,7 @@ type contractExecutorImpl struct {
 	address string
 	logger  *logging.Logger
 	ledger  *LedgerProxy
-	close   bool
+	close   *int32
 }
 
 func NewContractExecutor() ContractExecutor {
@@ -40,6 +41,7 @@ func (cei *contractExecutorImpl) Execute(tx *pb.Request) (*pb.Response, error) {
 }
 
 func (cei *contractExecutorImpl) Start() error {
+	atomic.StoreInt32(cei.close, 0)
 	conn, err := grpc.Dial(cei.address, grpc.WithInsecure())
 	if err != nil {
 		cei.logger.Fatalf("did not connect: %v", err)
@@ -60,11 +62,12 @@ func (cei *contractExecutorImpl) Start() error {
 }
 
 func (cei *contractExecutorImpl) Stop() error {
+	atomic.StoreInt32(cei.close, 1)
 	return cei.conn.Close()
 }
 
 func (cei *contractExecutorImpl) isActive() bool {
-	return true
+	return atomic.LoadInt32(cei.close) == 0
 }
 
 func (cei *contractExecutorImpl) dataPipeLine() {
@@ -72,26 +75,28 @@ func (cei *contractExecutorImpl) dataPipeLine() {
 	for cei.isActive() {
 		cmd, err := cei.stream.Recv()
 		if err == io.EOF {
+			//TODO: add reconnect or restart the jcee logic here
 			return
 		}
 		if err != nil {
 			cei.logger.Fatalf("Failed to receive a note : %v", err)
 		}
-		cei.logger.Noticef("Got message %v", cmd.Name)
+		cei.logger.Noticef("Got message %v", cmd)
 
 		if firstIter {
 			firstIter = false
-			cei.logger.Noticef("Got message %v", cmd.Name)
 		} else {
 			data, err := cei.ledger.ProcessCommand(cmd)
+			r := &pb.Response{Ok:false, Result:[]byte("")}
+			if err == nil {
+				r.Ok = true
+				r.Result = data
+			}
+			err = cei.stream.Send(r)
 			if err != nil {
-				r := &pb.Response{Ok: true, Result: data}
-				cei.stream.Send(r)
-			} else {
-				r := &pb.Response{Ok: false, Result: []byte("")}
-				cei.stream.Send(r)
+				cei.logger.Errorf("send command resutlt to jcee error, %v", err)
+				//TODO: add reconnect or restart the jcee logic here
 			}
 		}
-
 	}
 }
