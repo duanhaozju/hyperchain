@@ -31,7 +31,7 @@ func NewLog(address common.Address, topics []common.Hash, data []byte, number ui
 }
 
 func (l *Log) String() string {
-	return fmt.Sprintf(`log: %x %x %x %x %d %x %d`, l.Address, l.Topics, l.Data, l.TxHash, l.TxIndex, l.BlockHash, l.Index)
+	return fmt.Sprintf(`{address: %x, topics: %x, data: %x, txhash: %x, txIndex: %d, blockHash: %x, blockNumber: %d}`, l.Address, l.Topics, l.Data, l.TxHash, l.TxIndex, l.BlockHash, l.Index)
 }
 
 func (l *Log) EncodeLog() ([]byte, error) {

@@ -10,6 +10,7 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/protos"
 	"time"
+	"hyperchain/core/vm"
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
@@ -172,15 +173,22 @@ func (executor *Executor) persistTransactions(batch db.Batch, transactions []*ty
 // during the validation, block number and block hash can be incorrect
 func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
 	for _, receipt := range receipts {
-		logs, err := receipt.RetrieveLogs()
+
+		logs, err := RetrieveLogs(receipt, int32(receipt.VmType))
 		if err != nil {
 			return err
 		}
-		for _, log := range logs {
-			log.BlockHash = blockHash
-			log.BlockNumber = blockNumber
+		switch receipt.VmType {
+		case types.Receipt_EVM:
+			tmp := logs.(vm.Logs)
+			for _, log := range tmp {
+				log.BlockHash = blockHash
+				log.BlockNumber = blockNumber
+			}
+			SetLogs(receipt, 0, tmp)
+		case types.Receipt_JVM:
+
 		}
-		receipt.SetLogs(logs)
 		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
 			return err
 		}

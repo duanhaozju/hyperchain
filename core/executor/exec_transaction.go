@@ -20,6 +20,7 @@ func (executor *Executor) ExecTransaction(tx *types.Transaction, env vm.Environm
 		gasPrice = tv.RetrieveGasPrice()
 		amount   = tv.RetrieveAmount()
 		op       = tv.GetOp()
+		vmType   = tv.GetVmType()
 	)
 
 	if valid := executor.checkPermission(env, from, to, op); !valid {
@@ -32,7 +33,7 @@ func (executor *Executor) ExecTransaction(tx *types.Transaction, env vm.Environm
 		ret, _, err = executor.Exec(env, &from, &to, data, gas, gasPrice, amount, op)
 	}
 
-	receipt = makeReceipt(env, addr, tx.GetHash(), gas, ret, err)
+	receipt = makeReceipt(env, vmType, addr, tx.GetHash(), gas, ret, err)
 	return receipt, ret, addr, err
 }
 
@@ -80,13 +81,13 @@ func (executor *Executor) checkPermission(env vm.Environment, from, to common.Ad
 }
 
 
-func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, gas *big.Int, ret []byte, err error) *types.Receipt {
-	receipt := types.NewReceipt(nil, gas)
+func makeReceipt(env vm.Environment, vmType types.TransactionValue_VmType, addr common.Address, txHash common.Hash, gas *big.Int, ret []byte, err error) *types.Receipt {
+	receipt := types.NewReceipt(nil, gas, int32(vmType))
 	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = txHash.Bytes()
 	receipt.GasUsed = 100000
 	receipt.Ret = ret
-	receipt.SetLogs(env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))
+	SetLogs(receipt, int32(vmType), env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))
 
 	if err != nil {
 		if !IsValueTransferErr(err) && !IsExecContractErr(err) &&!IsInvalidInvokePermissionErr(err) {

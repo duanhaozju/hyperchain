@@ -194,10 +194,11 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 
 type ReceiptResult struct {
 	TxHash          string        `json:"txHash"`
+	VmType          string        `json:"vmType"`
 	PostState       string        `json:"postState"`
 	ContractAddress string        `json:"contractAddress"`
 	Ret             string        `json:"ret"`
-	Log             []interface{} `json:"log"`
+	Log             []string      `json:"logs"`
 }
 
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.
@@ -208,16 +209,14 @@ func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult
 			//return nil, nil
 			return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("receipt by %#x", hash)}
 		}
-		logs := make([]interface{}, len(receipt.Logs))
-		for idx := range receipt.Logs {
-			logs[idx] = receipt.Logs[idx]
-		}
+		receiptTrans := TransitReceipt(receipt, receipt.VmType)
 		return &ReceiptResult{
-			TxHash:          receipt.TxHash,
-			PostState:       receipt.PostState,
-			ContractAddress: receipt.ContractAddress,
-			Ret:             receipt.Ret,
-			Log:             logs,
+			TxHash:          receiptTrans.TxHash,
+			VmType:          receiptTrans.VmType,
+			PostState:       receiptTrans.PostState,
+			ContractAddress: receiptTrans.ContractAddress,
+			Ret:             receiptTrans.Ret,
+			Log:             receiptTrans.Logs,
 		}, nil
 	} else if err != nil {
 		return nil, &common.CallbackError{Message:err.Error()}
