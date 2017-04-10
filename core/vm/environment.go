@@ -23,8 +23,6 @@ type RuleSet interface {
 // Environment is an EVM requirement and helper which allows access to outside
 // information such as states.
 type Environment interface {
-	// The current ruleset
-	RuleSet() RuleSet
 	// The state database
 	Db() Database
 	// Creates a restorable snapshot

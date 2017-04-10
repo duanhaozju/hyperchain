@@ -1,14 +1,13 @@
-package executor
-
+package evm
 import (
 	"hyperchain/common"
 	"hyperchain/core/crypto"
-	"hyperchain/core/vm/evm"
 	"hyperchain/core/vm/evm/params"
 	"math/big"
 	"hyperchain/core/types"
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
+	er "hyperchain/core/errors"
 )
 
 // Call executes within the given contract
@@ -49,11 +48,11 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	snapshotPreTransfer := env.MakeSnapshot()
 	if env.Depth() > int(params.CallCreateDepth.Int64()) {
 		caller.ReturnGas(gas, gasPrice)
-		return nil, common.Address{}, ExecContractErr(1, "Max call depth exceeded 1024")
+		return nil, common.Address{}, er.ExecContractErr(1, "Max call depth exceeded 1024")
 	}
 
 	if !env.CanTransfer(caller.Address(), value) {
-		return nil, common.Address{}, ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))
+		return nil, common.Address{}, er.ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))
 	}
 
 	var createAccount bool
@@ -84,12 +83,12 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 				if env.Db().GetStatus(to.Address()) == hyperstate.STATEOBJECT_STATUS_FROZON {
 					env.Logger().Warningf("try to freeze a frozen account %s", to.Address().Hex())
 					env.SetSnapshot(snapshotPreTransfer)
-					return nil, common.Address{}, ExecContractErr(1, "duplicate freeze operation")
+					return nil, common.Address{}, er.ExecContractErr(1, "duplicate freeze operation")
 				}
 				if env.Db().GetCode(to.Address()) == nil {
 					env.Logger().Warningf("try to freeze a non-contract account %s", to.Address().Hex())
 					env.SetSnapshot(snapshotPreTransfer)
-					return nil, common.Address{}, ExecContractErr(1, "freeze a non-contract account")
+					return nil, common.Address{}, er.ExecContractErr(1, "freeze a non-contract account")
 				}
 				env.Logger().Debugf("freeze account %s", to.Address().Hex())
 				env.Db().SetStatus(to.Address(), hyperstate.STATEOBJECT_STATUS_FROZON)
@@ -97,12 +96,12 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 				if env.Db().GetStatus(to.Address()) == hyperstate.STATEOBJECT_STATUS_NORMAL {
 					env.Logger().Warningf("try to unfreeze a normal account %s", to.Address().Hex())
 					env.SetSnapshot(snapshotPreTransfer)
-					return nil, common.Address{}, ExecContractErr(1, "duplicate unfreeze operation")
+					return nil, common.Address{}, er.ExecContractErr(1, "duplicate unfreeze operation")
 				}
 				if env.Db().GetCode(to.Address()) == nil {
 					env.Logger().Warningf("try to unfreeze a non-contract account %s", to.Address().Hex())
 					env.SetSnapshot(snapshotPreTransfer)
-					return nil, common.Address{}, ExecContractErr(1, "unfreeze a non-contract account")
+					return nil, common.Address{}, er.ExecContractErr(1, "unfreeze a non-contract account")
 				}
 				env.Logger().Debugf("unfreeze account %s", to.Address().Hex())
 				env.Db().SetStatus(to.Address(), hyperstate.STATEOBJECT_STATUS_NORMAL)
@@ -117,12 +116,12 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	if env.Db().GetStatus(to.Address()) != hyperstate.STATEOBJECT_STATUS_NORMAL {
 		env.Logger().Debugf("account %s has been frozen", to.Address().Hex())
 		env.SetSnapshot(snapshotPreTransfer)
-		return nil, common.Address{}, ExecContractErr(1, "Try to invoke a frozen contract")
+		return nil, common.Address{}, er.ExecContractErr(1, "Try to invoke a frozen contract")
 	}
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	contract := evm.NewContract(caller, to, value, gas, gasPrice, int32(op))
+	contract := NewContract(caller, to, value, gas, gasPrice, int32(op))
 	if isUpdate(op) {
 		// using the new code to execute
 		// otherwise errors could occur
@@ -144,7 +143,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		if contract.UseGas(dataGas) {
 			env.Db().SetCode(*address, ret)
 		} else {
-			err = evm.CodeStoreOutOfGasError
+			err = CodeStoreOutOfGasError
 		}
 		env.Db().AddDeployedContract(caller.Address(), *address)
 		env.Db().SetCreator(*address, caller.Address())
@@ -154,13 +153,13 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally
 	// when we're in homestead this also counts for code storage gas errors.
-	if err != nil && (env.RuleSet().IsHomestead(env.BlockNumber()) || err != evm.CodeStoreOutOfGasError) {
+	if err != nil && err != CodeStoreOutOfGasError {
 		contract.UseGas(contract.GetGas())
 		env.SetSnapshot(snapshotPreTransfer)
 		if createAccount {
-			err = ExecContractErr(0, "contract creation failed, error msg", err.Error())
+			err = er.ExecContractErr(0, "contract creation failed, error msg", err.Error())
 		} else {
-			err = ExecContractErr(1, "contract invocation failed, error msg:", err.Error())
+			err = er.ExecContractErr(1, "contract invocation failed, error msg:", err.Error())
 		}
 	}
 	// undo all changes during the contract code update
@@ -170,13 +169,13 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		// and this transaction is a update code operation
 		// replace contract code with given one
 		// undo all changes during the vm execution(construct function)
-		if err == nil || err != evm.CodeStoreOutOfGasError {
+		if err == nil || err != CodeStoreOutOfGasError {
 			dataGas := big.NewInt(int64(len(ret)))
 			dataGas.Mul(dataGas, params.CreateDataGas)
 			if contract.UseGas(dataGas) {
 				env.Db().SetCode(*address, ret)
 			} else {
-				err = evm.CodeStoreOutOfGasError
+				err = CodeStoreOutOfGasError
 			}
 		}
 	}
@@ -190,7 +189,7 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 	// limit.
 	if env.Depth() > int(params.CallCreateDepth.Int64()) {
 		caller.ReturnGas(gas, gasPrice)
-		return nil, common.Address{}, evm.DepthError
+		return nil, common.Address{}, DepthError
 	}
 
 	snapshot := env.MakeSnapshot()
@@ -203,7 +202,7 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 	}
 
 	// Iinitialise a new contract and make initialise the delegate values
-	contract := evm.NewContract(caller, to, value, gas, gasPrice, 0).AsDelegate()
+	contract := NewContract(caller, to, value, gas, gasPrice, 0).AsDelegate()
 	contract.SetCallCode(codeAddr, code)
 	defer contract.Finalise()
 

@@ -4,7 +4,6 @@ package evm
 
 import (
 	"math/big"
-	"hyperchain/core/vm"
 )
 
 type jumpPtr struct {
@@ -14,15 +13,9 @@ type jumpPtr struct {
 
 type vmJumpTable [256]jumpPtr
 
-func newJumpTable(ruleset vm.RuleSet, blockNumber *big.Int) vmJumpTable {
+func newJumpTable() vmJumpTable {
 	var jumpTable vmJumpTable
-
-	// when initialising a new VM execution we must first check the homestead
-	// changes.
-	if ruleset.IsHomestead(blockNumber) {
-		jumpTable[DELEGATECALL] = jumpPtr{opDelegateCall, true}
-	}
-
+	jumpTable[DELEGATECALL] = jumpPtr{opDelegateCall, true}
 	jumpTable[ADD] = jumpPtr{opAdd, true}
 	jumpTable[SUB] = jumpPtr{opSub, true}
 	jumpTable[MUL] = jumpPtr{opMul, true}

@@ -108,3 +108,4 @@ func GetMarshalReceipt(receipt *types.Receipt) (error, []byte) {
 	}
 	return nil, data
 }
+

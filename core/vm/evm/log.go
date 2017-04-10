@@ -98,6 +98,7 @@ func DecodeLog(buf []byte) (Log, error) {
 	return tmp, err
 }
 
+
 type Logs []*Log
 
 func (ls *Logs) EncodeLogs() ([]byte, error) {
@@ -108,6 +109,18 @@ func DecodeLogs(buf []byte) (Logs, error) {
 	var tmp Logs
 	err := json.Unmarshal(buf, &tmp)
 	return tmp, err
+}
+
+func ReAssign(buf []byte, blockNumber uint64, blockHash common.Hash) ([]byte, error) {
+	logs, err := DecodeLogs(buf)
+	if err != nil {
+		return nil, err
+	}
+	for _, log := range logs {
+		log.BlockNumber = blockNumber
+		log.BlockHash = blockHash
+	}
+	return logs.EncodeLogs()
 }
 
 type LogTrans struct {

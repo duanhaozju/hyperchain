@@ -509,9 +509,9 @@ func opCreate(instr instruction, pc *uint64, env vm.Environment, context vm.VmCo
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
 	// rule) and treat as an error, if the ruleset is frontier we must
 	// ignore this error and pretend the operation was successful.
-	if env.RuleSet().IsHomestead(env.BlockNumber()) && suberr == CodeStoreOutOfGasError {
-		stack.push(new(big.Int))
-	} else if suberr != nil && suberr != CodeStoreOutOfGasError {
+	//if env.RuleSet().IsHomestead(env.BlockNumber()) && suberr == CodeStoreOutOfGasError {
+	//	stack.push(new(big.Int))
+	if suberr != nil && suberr != CodeStoreOutOfGasError {
 		stack.push(new(big.Int))
 	} else {
 		stack.push(addr.Big())

@@ -1,4 +1,4 @@
-package executor
+package errors
 
 import "fmt"
 
@@ -38,6 +38,9 @@ func IsSignatureErr(e error) bool {
 /*
 	ExecContractError
  */
+// errType 0: create error
+// errType 1: invoke error
+
 type ExecContractError struct {
 	message string
 	errType int
@@ -80,4 +83,3 @@ func IsInvalidInvokePermissionErr(e error) bool {
 	_, ok := e.(*InvalidInvokePermissionError)
 	return ok
 }
-

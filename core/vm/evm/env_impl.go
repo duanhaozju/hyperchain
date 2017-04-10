@@ -1,12 +1,8 @@
-package executor
-
+package evm
 import (
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"hyperchain/core/state"
-	"hyperchain/core/vm/evm"
 	"math/big"
-	"hyperchain/hyperdb/db"
 	"hyperchain/core/types"
 	"github.com/op/go-logging"
 	"hyperchain/core/vm"
@@ -29,73 +25,25 @@ type Account struct {
 	Storage map[string]string
 }
 
-type Log struct {
-	AddressF string   `json:"address"`
-	DataF    string   `json:"data"`
-	TopicsF  []string `json:"topics"`
-	BloomF   string   `json:"bloom"`
-}
-
-func (self Log) Address() []byte      { return common.Hex2Bytes(self.AddressF) }
-func (self Log) Data() []byte         { return common.Hex2Bytes(self.DataF) }
-func (self Log) RlpData() interface{} { return nil }
-func (self Log) Topics() [][]byte {
-	t := make([][]byte, len(self.TopicsF))
-	for i, topic := range self.TopicsF {
-		t[i] = common.Hex2Bytes(topic)
-	}
-	return t
-}
-
-func StateObjectFromAccount(db db.Database, addr string, account Account) *state.StateObject {
-	obj := state.NewStateObject(common.HexToAddress(addr), nil)
-	obj.SetBalance(common.Big(account.Balance))
-
-	if common.IsHex(account.Code) {
-		account.Code = account.Code[2:]
-	}
-	obj.SetCode(common.Hash{}, common.Hex2Bytes(account.Code))
-	obj.SetNonce(common.Big(account.Nonce).Uint64())
-
-	return obj
-}
-
-type VmEnv struct {
-	CurrentCoinbase   string
-	CurrentDifficulty string
-	CurrentGasLimit   string
-	CurrentNumber     string
-	CurrentTimestamp  interface{}
-	PreviousHash      string
-}
-
-type VmTest struct {
-	Callcreates interface{}
-	//Env         map[string]string
-	Env           VmEnv
-	Exec          map[string]string
-	Transaction   map[string]string
-	Logs          []Log
-	Gas           string
-	Out           string
-	Post          map[string]Account
-	Pre           map[string]Account
-	PostStateRoot string
-}
-
-type RuleSet struct {
-	HomesteadBlock *big.Int
-	DAOForkBlock   *big.Int
-	DAOForkSupport bool
-}
-
-func (r RuleSet) IsHomestead(n *big.Int) bool {
-	return true
-	return n.Cmp(r.HomesteadBlock) >= 0
-}
+//type Log struct {
+//	AddressF string   `json:"address"`
+//	DataF    string   `json:"data"`
+//	TopicsF  []string `json:"topics"`
+//	BloomF   string   `json:"bloom"`
+//}
+//
+//func (self Log) Address() []byte      { return common.Hex2Bytes(self.AddressF) }
+//func (self Log) Data() []byte         { return common.Hex2Bytes(self.DataF) }
+//func (self Log) RlpData() interface{} { return nil }
+//func (self Log) Topics() [][]byte {
+//	t := make([][]byte, len(self.TopicsF))
+//	for i, topic := range self.TopicsF {
+//		t[i] = common.Hex2Bytes(topic)
+//	}
+//	return t
+//}
 
 type Env struct {
-	ruleSet    RuleSet
 	depth      int
 	state      vm.Database
 	Gas        *big.Int
@@ -106,38 +54,30 @@ type Env struct {
 	difficulty *big.Int
 	gasLimit   *big.Int
 
-	logs []evm.StructLog
+	logs       []StructLog
 	logger     *logging.Logger
 
 	vmTest bool
 
-	evm *evm.EVM
+	evm        *EVM
 }
 
-func NewEnv(ruleSet RuleSet, state vm.Database) *Env {
+func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger) *Env {
 	env := &Env{
-		ruleSet: ruleSet,
-		state:   state,
+		state:     state,
+		logger:    logger,
+		time:      common.Big(setting["currentTimestamp"]),
+		gasLimit:  common.Big(setting["currentGasLimit"]),
+		number:    common.Big(setting["currentNumber"]),
+		Gas:       new(big.Int),
 	}
-	return env
-}
-
-func NewEnvFromMap(ruleSet RuleSet, state vm.Database, envValues map[string]string, logger *logging.Logger) *Env {
-	env := NewEnv(ruleSet, state)
-	env.time = common.Big(envValues["currentTimestamp"])
-	env.gasLimit = common.Big(envValues["currentGasLimit"])
-	env.number = common.Big(envValues["currentNumber"])
-	env.Gas = new(big.Int)
-	env.evm = evm.New(env, evm.Config{
+	env.evm = New(env, Config{
 		EnableJit: EnableJit,
 		ForceJit:  ForceJit,
 	})
-	env.logger = logger
-
 	return env
 }
 
-func (self *Env) RuleSet() vm.RuleSet      { return self.ruleSet }
 func (self *Env) Vm() vm.Vm                { return self.evm }
 func (self *Env) Origin() common.Address   { return self.origin }
 func (self *Env) BlockNumber() *big.Int    { return self.number }
