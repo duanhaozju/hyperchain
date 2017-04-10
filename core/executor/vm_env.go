@@ -170,20 +170,20 @@ func (self *Env) Transfer(from, to vm.Account, amount *big.Int) {
 	Transfer(from, to, amount)
 }
 
-func (self *Env) Call(caller evm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int, op int32) ([]byte, error) {
+func (self *Env) Call(caller vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int, op int32) ([]byte, error) {
 	ret, err := Call(self, caller, addr, data, gas, price, value, types.TransactionValue_Opcode(op))
 	self.Gas = gas
 	return ret, err
 
 }
-func (self *Env) CallCode(caller evm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int) ([]byte, error) {
+func (self *Env) CallCode(caller vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int) ([]byte, error) {
 	return CallCode(self, caller, addr, data, gas, price, value)
 }
 
-func (self *Env) DelegateCall(caller evm.ContractRef, addr common.Address, data []byte, gas, price *big.Int) ([]byte, error) {
+func (self *Env) DelegateCall(caller vm.ContractRef, addr common.Address, data []byte, gas, price *big.Int) ([]byte, error) {
 	return DelegateCall(self, caller, addr, data, gas, price)
 }
 
-func (self *Env) Create(caller evm.ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error) {
+func (self *Env) Create(caller vm.ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error) {
 	return Create(self, caller, data, gas, price, value)
 }

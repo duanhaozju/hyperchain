@@ -57,13 +57,13 @@ type Environment interface {
 	// Set the current calling depth
 	SetDepth(i int)
 	// Call another contract
-	Call(me ContractRef, addr common.Address, data []byte, gas, price, value *big.Int, op int32) ([]byte, error)
+	Call(me vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int, op int32) ([]byte, error)
 	// Take another's contract code and execute within our own context
-	CallCode(me ContractRef, addr common.Address, data []byte, gas, price, value *big.Int) ([]byte, error)
+	CallCode(me vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int) ([]byte, error)
 	// Same as CallCode except sender and value is propagated from parent to child scope
-	DelegateCall(me ContractRef, addr common.Address, data []byte, gas, price *big.Int) ([]byte, error)
+	DelegateCall(me vm.ContractRef, addr common.Address, data []byte, gas, price *big.Int) ([]byte, error)
 	// Create a new contract
-	Create(me ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error)
+	Create(me vm.ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error)
 }
 
 // Vm is the basic interface for an implementation of the EVM.
