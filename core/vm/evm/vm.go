@@ -25,7 +25,7 @@ type Config struct {
 // The EVM will run the byte code VM or JIT VM based on the passed
 // configuration.
 type EVM struct {
-	env       Environment
+	env       vm.Environment
 	jumpTable vmJumpTable
 	cfg       Config
 
@@ -33,7 +33,7 @@ type EVM struct {
 }
 
 // New returns a new instance of the EVM.
-func New(env Environment, cfg Config) *EVM {
+func New(env vm.Environment, cfg Config) *EVM {
 	var logger *Logger
 	if cfg.Debug {
 		logger = newLogger(cfg.Logger, env)
@@ -204,7 +204,7 @@ func (evm *EVM) Run(context vm.VmContext, input []byte) (ret []byte, err error) 
 
 // calculateGasAndSize calculates the required given the opcode and stack items calculates the new memorysize for
 // the operation. This does not reduce gas or resizes the memory.
-func calculateGasAndSize(env Environment, context vm.VmContext, caller vm.ContractRef, op OpCode, statedb vm.Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
+func calculateGasAndSize(env vm.Environment, context vm.VmContext, caller vm.ContractRef, op OpCode, statedb vm.Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
 	var (
 		//gas                 = new(big.Int)
 		newMemSize *big.Int = new(big.Int)

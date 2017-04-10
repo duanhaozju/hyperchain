@@ -137,7 +137,7 @@ func NewEnvFromMap(ruleSet RuleSet, state vm.Database, envValues map[string]stri
 	return env
 }
 
-func (self *Env) RuleSet() evm.RuleSet      { return self.ruleSet }
+func (self *Env) RuleSet() vm.RuleSet      { return self.ruleSet }
 func (self *Env) Vm() vm.Vm                { return self.evm }
 func (self *Env) Origin() common.Address   { return self.origin }
 func (self *Env) BlockNumber() *big.Int    { return self.number }
@@ -146,7 +146,7 @@ func (self *Env) Time() *big.Int           { return self.time }
 func (self *Env) Difficulty() *big.Int     { return self.difficulty }
 func (self *Env) Db() vm.Database          { return self.state }
 func (self *Env) GasLimit() *big.Int       { return self.gasLimit }
-func (self *Env) VmType() evm.Type          { return evm.StdVmTy }
+func (self *Env) VmType() vm.Type          { return vm.StdVmTy }
 func (self *Env) Logger() *logging.Logger  { return self.logger}
 func (self *Env) GetHash(n uint64) common.Hash {
 	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))

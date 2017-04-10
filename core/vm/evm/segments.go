@@ -13,7 +13,7 @@ type jumpSeg struct {
 	gas *big.Int
 }
 
-func (j jumpSeg) do(program *Program, pc *uint64, env Environment, context vm.VmContext, memory *Memory, stack *stack) ([]byte, error) {
+func (j jumpSeg) do(program *Program, pc *uint64, env vm.Environment, context vm.VmContext, memory *Memory, stack *stack) ([]byte, error) {
 	if !context.UseGas(j.gas) {
 		return nil, OutOfGasError
 	}
@@ -31,7 +31,7 @@ type pushSeg struct {
 	gas  *big.Int
 }
 
-func (s pushSeg) do(program *Program, pc *uint64, env Environment, context vm.VmContext, memory *Memory, stack *stack) ([]byte, error) {
+func (s pushSeg) do(program *Program, pc *uint64, env vm.Environment, context vm.VmContext, memory *Memory, stack *stack) ([]byte, error) {
 	// Use the calculated gas. When insufficient gas is present, use all gas and return an
 	// Out Of Gas error
 	if !context.UseGas(s.gas) {

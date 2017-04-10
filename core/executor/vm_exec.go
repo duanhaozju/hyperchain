@@ -12,20 +12,20 @@ import (
 )
 
 // Call executes within the given contract
-func Call(env evm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, err error) {
+func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, err error) {
 	ret, _, err = exec(env, caller, &addr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value, op)
 	return ret, err
 }
 
 // CallCode executes the given address' code as the given contract address
-func CallCode(env evm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int) (ret []byte, err error) {
+func CallCode(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int) (ret []byte, err error) {
 	callerAddr := caller.Address()
 	ret, _, err = exec(env, caller, &callerAddr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value, 0)
 	return ret, err
 }
 
 // DelegateCall is equivalent to CallCode except that sender and value propagates from parent scope to child scope
-func DelegateCall(env evm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice *big.Int) (ret []byte, err error) {
+func DelegateCall(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice *big.Int) (ret []byte, err error) {
 	callerAddr := caller.Address()
 	originAddr := env.Origin()
 	callerValue := caller.Value()
@@ -34,7 +34,7 @@ func DelegateCall(env evm.Environment, caller vm.ContractRef, addr common.Addres
 }
 
 // Create creates a new contract with the given code
-func Create(env evm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
+func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
 	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value, 0)
 	if err != nil {
 		return nil, address, err
@@ -42,7 +42,7 @@ func Create(env evm.Environment, caller vm.ContractRef, code []byte, gas, gasPri
 	return ret, address, err
 }
 
-func exec(env evm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
+func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
 	virtualMachine := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -183,7 +183,7 @@ func exec(env evm.Environment, caller vm.ContractRef, address, codeAddr *common.
 	return ret, addr, err
 }
 
-func execDelegateCall(env evm.Environment, caller vm.ContractRef, originAddr, toAddr, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
+func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toAddr, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
 	//fmt.Println("execDelegateCall")
 	virtualMachine := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the

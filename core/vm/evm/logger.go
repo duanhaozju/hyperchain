@@ -60,12 +60,12 @@ type StructLog struct {
 type Logger struct {
 	cfg LogConfig
 
-	env           Environment
+	env           vm.Environment
 	changedValues map[common.Address]Storage
 }
 
 // newLogger returns a new logger
-func newLogger(cfg LogConfig, env Environment) *Logger {
+func newLogger(cfg LogConfig, env vm.Environment) *Logger {
 	return &Logger{
 		cfg:           cfg,
 		env:           env,

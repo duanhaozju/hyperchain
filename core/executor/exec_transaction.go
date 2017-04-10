@@ -3,7 +3,6 @@ package executor
 import (
 	"hyperchain/common"
 	"hyperchain/core/types"
-	"hyperchain/core/vm/evm"
 	"math/big"
 	"bytes"
 	"hyperchain/core/vm"
@@ -39,7 +38,7 @@ func (executor *Executor) ExecTransaction(db vm.Database, tx *types.Transaction,
 	return receipt, ret, addr, err
 }
 
-func (executor *Executor) Exec(vmenv evm.Environment, from, to *common.Address, data []byte, gas,
+func (executor *Executor) Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
 	var sender vm.Account
 
@@ -66,7 +65,7 @@ gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr co
 	return ret, addr, err
 }
 
-func (executor *Executor) checkPermission(env evm.Environment, from, to common.Address, op types.TransactionValue_Opcode) bool {
+func (executor *Executor) checkPermission(env vm.Environment, from, to common.Address, op types.TransactionValue_Opcode) bool {
 	if op == types.TransactionValue_UPDATE || op == types.TransactionValue_FREEZE || op == types.TransactionValue_UNFREEZE {
 		executor.logger.Debugf("caller address %s", from.Hex())
 		executor.logger.Debugf("callee address %s", from.Hex())
@@ -83,7 +82,7 @@ func (executor *Executor) checkPermission(env evm.Environment, from, to common.A
 }
 
 
-func makeReceipt(env evm.Environment, vmType types.TransactionValue_VmType, addr common.Address, txHash common.Hash, gas *big.Int, ret []byte, err error) *types.Receipt {
+func makeReceipt(env vm.Environment, vmType types.TransactionValue_VmType, addr common.Address, txHash common.Hash, gas *big.Int, ret []byte, err error) *types.Receipt {
 	receipt := types.NewReceipt(nil, gas, int32(vmType))
 	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = txHash.Bytes()

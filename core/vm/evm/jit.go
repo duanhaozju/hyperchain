@@ -276,11 +276,11 @@ func CompileProgram(program *Program) (err error) {
 
 // RunProgram runs the program given the environment and contract and returns an
 // error if the execution failed (non-consensus)
-func RunProgram(program *Program, env Environment, context vm.VmContext, input []byte) ([]byte, error) {
+func RunProgram(program *Program, env vm.Environment, context vm.VmContext, input []byte) ([]byte, error) {
 	return runProgram(program, 0, NewMemory(), newstack(), env, context, input)
 }
 
-func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env Environment, context vm.VmContext, input []byte) ([]byte, error) {
+func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env vm.Environment, context vm.VmContext, input []byte) ([]byte, error) {
 	context.SetInput(input)
 
 	var (
@@ -325,7 +325,7 @@ func validDest(dests map[uint64]struct{}, dest *big.Int) bool {
 
 // jitCalculateGasAndSize calculates the required given the opcode and stack items calculates the new memorysize for
 // the operation. This does not reduce gas or resizes the memory.
-func jitCalculateGasAndSize(env Environment, context vm.VmContext, instr instruction, statedb vm.Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
+func jitCalculateGasAndSize(env vm.Environment, context vm.VmContext, instr instruction, statedb vm.Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
 	var (
 		gas                 = new(big.Int)
 		newMemSize *big.Int = new(big.Int)
