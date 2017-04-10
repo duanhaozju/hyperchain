@@ -48,56 +48,43 @@ func New(env Environment, cfg Config) *EVM {
 }
 
 // Run loops and evaluates the contract's code with the given input data
-func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
-	// 1.设置虚拟机深度+1
+func (evm *EVM) Run(context vm.VmContext, input []byte) (ret []byte, err error) {
 	evm.env.SetDepth(evm.env.Depth() + 1)
 	defer evm.env.SetDepth(evm.env.Depth() - 1)
 
-	// 2.判断CodeAddr是否为空,如果不为空就去找已编译好的合约地址,然后运行该原生的智能合约
-	if contract.CodeAddr != nil {
-
-		//fmt.Println("the length is",len(Precompiled))
-		if p := Precompiled[contract.CodeAddr.Str()]; p != nil {
-			//fmt.Println("we have the codeAddr")
-			return evm.RunPrecompiled(p, input, contract)
+	if context.GetCodeAddr() != nil {
+		if p := Precompiled[context.GetCodeAddr().Str()]; p != nil {
+			return evm.RunPrecompiled(p, input, context)
 		}
-		//fmt.Println("the codeAddr is not exist")
 	}
-
-	// Don't bother with the execution if there's no code.
-	// 3.如果合约代码为空则返回空
-	if len(contract.Code) == 0 {
+	if len(context.GetCode()) == 0 {
 		return nil, nil
 	}
 
 	var (
-		codehash = crypto.Keccak256Hash(contract.Code) // codehash is used when doing jump dest caching
+		codehash = crypto.Keccak256Hash(context.GetCode()) // codehash is used when doing jump dest caching
 		program  *Program
 	)
-	// 4.如果可以使用JIT运行时编译
 	if evm.cfg.EnableJit {
 		// If the JIT is enabled check the status of the JIT program,
 		// if it doesn't exist compile a new program in a separate
 		// goroutine or wait for compilation to finish if the JIT is
 		// forced.
 		switch GetProgramStatus(codehash) {
-		// 判断是否已经可用,如果可用直接用找
 		case progReady:
-			return RunProgram(GetProgram(codehash), evm.env, contract, input)
+			return RunProgram(GetProgram(codehash), evm.env, context, input)
 		case progUnknown:
-			// 如果不可用,且强制jit,则顺序执行且立刻执行
 			if evm.cfg.ForceJit {
 				// Create and compile program
-				program = NewProgram(contract.Code)
+				program = NewProgram(context.GetCode())
 				perr := CompileProgram(program)
 				if perr == nil {
-					return RunProgram(program, evm.env, contract, input)
+					return RunProgram(program, evm.env, context, input)
 				}
 			} else {
-				// 否则可以另开一个线程
 				// create and compile the program. Compilation
 				// is done in a separate goroutine
-				program = NewProgram(contract.Code)
+				program = NewProgram(context.GetCode())
 				go func() {
 					err := CompileProgram(program)
 					if err != nil {
@@ -109,8 +96,8 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 	}
 
 	var (
-		caller     = contract.caller
-		code       = contract.Code
+		caller     = context.GetCaller()
+		code       = context.GetCode()
 		instrCount = 0
 
 		op      OpCode         // current opcode
@@ -124,8 +111,9 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 		// jump evaluates and checks whether the given jump destination is a valid one
 		// if valid move the `pc` otherwise return an error.
 		jump = func(from uint64, to *big.Int) error {
-			if !contract.jumpdests.has(codehash, code, to) {
-				nop := contract.GetOp(to.Uint64())
+			dests := context.GetJumpdests().(destinations)
+			if !dests.has(codehash, code, to) {
+				nop := context.GetOp(to.Uint64())
 				return fmt.Errorf("invalid jump destination (%v) %v", nop, to)
 			}
 
@@ -137,41 +125,27 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 		newMemSize *big.Int
 		cost       *big.Int
 	)
-	contract.Input = input
+	context.SetInput(input)
 
 	// User defer pattern to check for an error and, based on the error being nil or not, use all gas and return.
 	defer func() {
 		if err != nil && evm.cfg.Debug {
-			evm.logger.captureState(pc, op, contract.Gas, cost, mem, stack, contract, evm.env.Depth(), err)
+			evm.logger.captureState(pc, op, context.GetGas(), cost, mem, stack, context, evm.env.Depth(), err)
 		}
 	}()
 
-	// 一个指令一个指令执行
 	for ; ; instrCount++ {
-		/*
-			if EnableJit && it%100 == 0 {
-				if program != nil && progStatus(atomic.LoadInt32(&program.status)) == progReady {
-					// move execution
-					fmt.Println("moved", it)
-					glog.V(logger.Info).Infoln("Moved execution to JIT")
-					return runProgram(program, pc, mem, stack, evm.env, contract, input)
-				}
-			}
-		*/
-
 		// Get the memory location of pc
-		// 得到pc的内存地址
-		op = contract.GetOp(pc)
+		op = OpCode(context.GetOp(pc))
 		// calculate the new memory size and gas price for the current executing opcode
-		// 对当前执行的操作码计算新的内存大小和gas价格
-		newMemSize, cost, err = calculateGasAndSize(evm.env, contract, caller, op, statedb, mem, stack)
+		newMemSize, cost, err = calculateGasAndSize(evm.env, context, caller, op, statedb, mem, stack)
 		if err != nil {
 			return nil, err
 		}
 
 		// Use the calculated gas. When insufficient gas is present, use all gas and return an
 		// Out Of Gas error
-		if !contract.UseGas(cost) {
+		if !context.UseGas(cost) {
 			return nil, OutOfGasError
 		}
 
@@ -179,18 +153,18 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 		mem.Resize(newMemSize.Uint64())
 		// Add a log message
 		if evm.cfg.Debug {
-			evm.logger.captureState(pc, op, contract.Gas, cost, mem, stack, contract, evm.env.Depth(), nil)
+			evm.logger.captureState(pc, op, context.GetGas(), cost, mem, stack, context, evm.env.Depth(), nil)
 		}
 
 		if opPtr := evm.jumpTable[op]; opPtr.valid {
 			if opPtr.fn != nil {
-				opPtr.fn(instruction{}, &pc, evm.env, contract, mem, stack)
+				opPtr.fn(instruction{}, &pc, evm.env, context, mem, stack)
 				//log.Info("----------opPtr--------------0",op)
 			} else {
 				//log.Info("----------opPtr--------------1",op)
 				switch op {
 				case PC:
-					opPc(instruction{data: new(big.Int).SetUint64(pc)}, &pc, evm.env, contract, mem, stack)
+					opPc(instruction{data: new(big.Int).SetUint64(pc)}, &pc, evm.env, context, mem, stack)
 				case JUMP:
 					if err := jump(pc, stack.pop()); err != nil {
 						return nil, err
@@ -212,7 +186,7 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 					ret := mem.GetPtr(offset.Int64(), size.Int64())
 					return ret, nil
 				case SUICIDE:
-					opSuicide(instruction{}, nil, evm.env, contract, mem, stack)
+					opSuicide(instruction{}, nil, evm.env, context, mem, stack)
 
 					fallthrough
 				case STOP: // Stop the contract
@@ -230,7 +204,7 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 
 // calculateGasAndSize calculates the required given the opcode and stack items calculates the new memorysize for
 // the operation. This does not reduce gas or resizes the memory.
-func calculateGasAndSize(env Environment, contract *Contract, caller vm.ContractRef, op OpCode, statedb vm.Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
+func calculateGasAndSize(env Environment, context vm.VmContext, caller vm.ContractRef, op OpCode, statedb vm.Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
 	var (
 		//gas                 = new(big.Int)
 		newMemSize *big.Int = new(big.Int)
@@ -292,7 +266,7 @@ func calculateGasAndSize(env Environment, contract *Contract, caller vm.Contract
 	//}
 	//gas.Set(g)
 	case SUICIDE:
-		if !statedb.IsDeleted(contract.Address()) {
+		if !statedb.IsDeleted(context.Address()) {
 			statedb.AddRefund(params.SuicideRefundGas)
 		}
 	case MLOAD:
@@ -357,9 +331,9 @@ func calculateGasAndSize(env Environment, contract *Contract, caller vm.Contract
 }
 
 // RunPrecompile runs and evaluate the output of a precompiled contract defined in contracts.go
-func (evm *EVM) RunPrecompiled(p *PrecompiledAccount, input []byte, contract *Contract) (ret []byte, err error) {
+func (evm *EVM) RunPrecompiled(p *PrecompiledAccount, input []byte, context vm.VmContext) (ret []byte, err error) {
 	gas := p.Gas(len(input))
-	if contract.UseGas(gas) {
+	if context.UseGas(gas) {
 		ret = p.Call(input)
 		return ret, nil
 	} else {

@@ -51,7 +51,7 @@ type Environment interface {
 	// Adds a LOG to the state
 	AddLog(vm.Log)
 	// Type of the VM
-	Vm() Vm
+	Vm() vm.Vm
 	// Get the curret calling depth
 	Depth() int
 	// Set the current calling depth
@@ -64,13 +64,5 @@ type Environment interface {
 	DelegateCall(me vm.ContractRef, addr common.Address, data []byte, gas, price *big.Int) ([]byte, error)
 	// Create a new contract
 	Create(me vm.ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error)
-}
-
-// Vm is the basic interface for an implementation of the EVM.
-type Vm interface {
-	// Run should execute the given contract with the input given in in
-	// and return the contract execution return bytes or an error if it
-	// failed.
-	Run(c *Contract, in []byte) ([]byte, error)
 }
 

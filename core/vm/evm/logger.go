@@ -9,6 +9,7 @@ import (
 	"unicode"
 
 	"hyperchain/common"
+	"hyperchain/core/vm"
 )
 
 type Storage map[common.Hash][]byte
@@ -75,7 +76,7 @@ func newLogger(cfg LogConfig, env Environment) *Logger {
 // captureState logs a new structured log message and pushes it out to the environment
 //
 // captureState also tracks SSTORE ops to track dirty values.
-func (l *Logger) captureState(pc uint64, op OpCode, gas, cost *big.Int, memory *Memory, stack *stack, contract *Contract, depth int, err error) {
+func (l *Logger) captureState(pc uint64, op OpCode, gas, cost *big.Int, memory *Memory, stack *stack, context vm.VmContext, depth int, err error) {
 	// short circuit if no log collector is present
 	if l.cfg.Collector == nil {
 		return
@@ -83,8 +84,8 @@ func (l *Logger) captureState(pc uint64, op OpCode, gas, cost *big.Int, memory *
 
 	// initialise new changed values storage container for this contract
 	// if not present.
-	if l.changedValues[contract.Address()] == nil {
-		l.changedValues[contract.Address()] = make(Storage)
+	if l.changedValues[context.Address()] == nil {
+		l.changedValues[context.Address()] = make(Storage)
 	}
 
 	// capture SSTORE opcodes and determine the changed value and store
@@ -97,7 +98,7 @@ func (l *Logger) captureState(pc uint64, op OpCode, gas, cost *big.Int, memory *
 			value   = common.BigToHash(stack.data[stack.len()-2]).Bytes()
 			address = common.BigToHash(stack.data[stack.len()-1])
 		)
-		l.changedValues[contract.Address()][address] = value
+		l.changedValues[context.Address()][address] = value
 	}
 
 	// copy a snapstot of the current memory state to a new buffer
@@ -125,14 +126,14 @@ func (l *Logger) captureState(pc uint64, op OpCode, gas, cost *big.Int, memory *
 			storage = make(Storage)
 			// Get the contract account and loop over each storage entry. This may involve looping over
 			// the trie and is a very expensive process.
-			l.env.Db().GetAccount(contract.Address()).ForEachStorage(func(key common.Hash, value []byte) bool {
+			l.env.Db().GetAccount(context.Address()).ForEachStorage(func(key common.Hash, value []byte) bool {
 				storage[key] = value
 				// Return true, indicating we'd like to continue.
 				return true
 			})
 		} else {
 			// copy a snapshot of the current storage to a new container.
-			storage = l.changedValues[contract.Address()].Copy()
+			storage = l.changedValues[context.Address()].Copy()
 		}
 	}
 	// create a new snaptshot of the EVM.

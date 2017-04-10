@@ -276,12 +276,12 @@ func CompileProgram(program *Program) (err error) {
 
 // RunProgram runs the program given the environment and contract and returns an
 // error if the execution failed (non-consensus)
-func RunProgram(program *Program, env Environment, contract *Contract, input []byte) ([]byte, error) {
-	return runProgram(program, 0, NewMemory(), newstack(), env, contract, input)
+func RunProgram(program *Program, env Environment, context vm.VmContext, input []byte) ([]byte, error) {
+	return runProgram(program, 0, NewMemory(), newstack(), env, context, input)
 }
 
-func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env Environment, contract *Contract, input []byte) ([]byte, error) {
-	contract.Input = input
+func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env Environment, context vm.VmContext, input []byte) ([]byte, error) {
+	context.SetInput(input)
 
 	var (
 		pc         uint64 = program.mapping[pcstart]
@@ -297,7 +297,7 @@ func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env
 			return nil, fmt.Errorf("Invalid opcode 0x%x", instr.Op())
 		}
 
-		ret, err := instr.do(program, &pc, env, contract, mem, stack)
+		ret, err := instr.do(program, &pc, env, context, mem, stack)
 		if err != nil {
 			return nil, err
 		}
@@ -306,8 +306,7 @@ func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env
 			return ret, nil
 		}
 	}
-
-	contract.Input = nil
+	context.SetInput(nil)
 
 	return nil, nil
 }
@@ -326,7 +325,7 @@ func validDest(dests map[uint64]struct{}, dest *big.Int) bool {
 
 // jitCalculateGasAndSize calculates the required given the opcode and stack items calculates the new memorysize for
 // the operation. This does not reduce gas or resizes the memory.
-func jitCalculateGasAndSize(env Environment, contract *Contract, instr instruction, statedb vm.Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
+func jitCalculateGasAndSize(env Environment, context vm.VmContext, instr instruction, statedb vm.Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
 	var (
 		gas                 = new(big.Int)
 		newMemSize *big.Int = new(big.Int)
@@ -394,7 +393,7 @@ func jitCalculateGasAndSize(env Environment, contract *Contract, instr instructi
 	//}
 	//gas.Set(g)
 	case SUICIDE:
-		if !statedb.IsDeleted(contract.Address()) {
+		if !statedb.IsDeleted(context.Address()) {
 			statedb.AddRefund(params.SuicideRefundGas)
 		}
 	case MLOAD:

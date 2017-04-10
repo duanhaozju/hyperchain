@@ -36,7 +36,7 @@ type Contract struct {
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller vm.ContractRef, object vm.ContractRef, value, gas, price *big.Int, opcode int32) *Contract {
+func NewContract(caller vm.ContractRef, object vm.ContractRef, value, gas, price *big.Int, opcode int32) vm.VmContext {
 	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil, Opcode: opcode}
 
 	if parent, ok := caller.(*Contract); ok {
@@ -60,7 +60,7 @@ func NewContract(caller vm.ContractRef, object vm.ContractRef, value, gas, price
 
 // AsDelegate sets the contract to be a delegate call and returns the current
 // contract (for chaining calls)
-func (c *Contract) AsDelegate() *Contract {
+func (c *Contract) AsDelegate() vm.VmContext {
 	c.DelegateCall = true
 	// NOTE: caller must, at all times be a contract. It should never happen
 	// that caller is something other than a Contract.
@@ -69,8 +69,8 @@ func (c *Contract) AsDelegate() *Contract {
 }
 
 // GetOp returns the n'th element in the contract's byte array
-func (c *Contract) GetOp(n uint64) OpCode {
-	return OpCode(c.GetByte(n))
+func (c *Contract) GetOp(n uint64) byte {
+	return c.GetByte(n)
 }
 
 // GetByte returns the n'th byte in the contract's byte array
@@ -148,4 +148,36 @@ func (self *Contract) ForEachStorage(cb func(key common.Hash, value []byte) bool
 
 func (self *Contract) GetOpCode() int32 {
 	return self.Opcode
+}
+
+func (self *Contract) GetGas() *big.Int {
+	return self.Gas
+}
+
+func (self *Contract) GetCodeAddr() *common.Address {
+	return self.CodeAddr
+}
+
+func (self *Contract) GetCode() []byte {
+	return self.Code
+}
+
+func (self *Contract) GetCaller() vm.ContractRef {
+	return self.caller
+}
+
+func (self *Contract) GetJumpdests() interface{} {
+	return self.jumpdests
+}
+
+func (self *Contract) SetInput(input []byte) {
+	self.Input = input
+}
+
+func (self *Contract) GetInput() []byte {
+	return self.Input
+}
+
+func (self *Contract) GetPrice() *big.Int {
+	return self.Price
 }

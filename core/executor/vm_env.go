@@ -138,7 +138,7 @@ func NewEnvFromMap(ruleSet RuleSet, state vm.Database, envValues map[string]stri
 }
 
 func (self *Env) RuleSet() evm.RuleSet      { return self.ruleSet }
-func (self *Env) Vm() evm.Vm                { return self.evm }
+func (self *Env) Vm() vm.Vm                { return self.evm }
 func (self *Env) Origin() common.Address   { return self.origin }
 func (self *Env) BlockNumber() *big.Int    { return self.number }
 func (self *Env) Coinbase() common.Address { return self.coinbase }

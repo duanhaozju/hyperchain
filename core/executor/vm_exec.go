@@ -155,7 +155,7 @@ func exec(env evm.Environment, caller vm.ContractRef, address, codeAddr *common.
 	// above we revert to the snapshot and consume any gas remaining. Additionally
 	// when we're in homestead this also counts for code storage gas errors.
 	if err != nil && (env.RuleSet().IsHomestead(env.BlockNumber()) || err != evm.CodeStoreOutOfGasError) {
-		contract.UseGas(contract.Gas)
+		contract.UseGas(contract.GetGas())
 		env.SetSnapshot(snapshotPreTransfer)
 		if createAccount {
 			err = ExecContractErr(0, "contract creation failed, error msg", err.Error())
@@ -210,7 +210,7 @@ func execDelegateCall(env evm.Environment, caller vm.ContractRef, originAddr, to
 	ret, err = virtualMachine.Run(contract, input)
 	if err != nil {
 		// use all gas left in caller
-		contract.UseGas(contract.Gas)
+		contract.UseGas(contract.GetGas())
 
 		env.SetSnapshot(snapshot)
 	}
