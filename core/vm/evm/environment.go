@@ -78,8 +78,8 @@ type Vm interface {
 
 // Database is a EVM database for full state querying.
 type Database interface {
-	GetAccount(common.Address) Account
-	CreateAccount(common.Address) Account
+	GetAccount(common.Address) vm.Account
+	CreateAccount(common.Address) vm.Account
 
 	AddBalance(common.Address, *big.Int)
 	GetBalance(common.Address) *big.Int
@@ -126,7 +126,7 @@ type Database interface {
 	Commit() (common.Hash, error)
 	Reset() error
 	// Query
-	GetAccounts() map[string]Account
+	GetAccounts() map[string]vm.Account
 	Dump() []byte
 	GetTree() interface{}
 	// Atomic Related

@@ -6,6 +6,7 @@ import (
 	"hyperchain/core/vm/evm"
 	"math/big"
 	"bytes"
+	"hyperchain/core/vm"
 )
 
 type Code []byte
@@ -40,7 +41,7 @@ func (executor *Executor) ExecTransaction(db evm.Database, tx *types.Transaction
 
 func (executor *Executor) Exec(vmenv evm.Environment, from, to *common.Address, data []byte, gas,
 gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
-	var sender evm.Account
+	var sender vm.Account
 
 	if !(vmenv.Db().Exist(*from)) {
 		sender = vmenv.Db().CreateAccount(*from)

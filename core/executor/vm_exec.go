@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"hyperchain/core/types"
 	"hyperchain/core/hyperstate"
+	"hyperchain/core/vm"
 )
 
 // Call executes within the given contract
@@ -67,7 +68,7 @@ func exec(env evm.Environment, caller evm.ContractRef, address, codeAddr *common
 	}
 	var (
 		from = env.Db().GetAccount(caller.Address())
-		to   evm.Account
+		to   vm.Account
 	)
 	if createAccount {
 		to = env.Db().CreateAccount(*address)
@@ -194,7 +195,7 @@ func execDelegateCall(env evm.Environment, caller evm.ContractRef, originAddr, t
 
 	snapshot := env.MakeSnapshot()
 
-	var to evm.Account
+	var to vm.Account
 	if !env.Db().Exist(*toAddr) {
 		to = env.Db().CreateAccount(*toAddr)
 	} else {
