@@ -9,6 +9,7 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/core/types"
 	"github.com/op/go-logging"
+	"hyperchain/core/vm"
 )
 
 var (
@@ -150,7 +151,7 @@ func (self *Env) Logger() *logging.Logger  { return self.logger}
 func (self *Env) GetHash(n uint64) common.Hash {
 	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
 }
-func (self *Env) AddLog(log *evm.Log) {
+func (self *Env) AddLog(log vm.Log) {
 	self.state.AddLog(log)
 }
 func (self *Env) Depth() int     { return self.depth }

@@ -11,6 +11,7 @@ import (
 	"hyperchain/manager/protos"
 	"time"
 	"hyperchain/core/vm/evm"
+	"hyperchain/core/vm"
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
@@ -180,12 +181,14 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 		}
 		switch receipt.VmType {
 		case types.Receipt_EVM:
+			var res vm.Logs
 			tmp := logs.(evm.Logs)
 			for _, log := range tmp {
 				log.BlockHash = blockHash
 				log.BlockNumber = blockNumber
+				res = append(res, log)
 			}
-			SetLogs(receipt, 0, tmp)
+			SetLogs(receipt, 0, res)
 		case types.Receipt_JVM:
 
 		}

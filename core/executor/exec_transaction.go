@@ -22,7 +22,7 @@ func (executor *Executor) ExecTransaction(db evm.Database, tx *types.Transaction
 		op       = tv.GetOp()
 		vmType   = tv.GetVmType()
 	)
-	env := executor.initEnvironment(db, executor.getTempBlockNumber())
+	env := executor.initEnvironment(db, blockNumber)
 	env.Db().StartRecord(tx.GetHash(), common.Hash{}, idx)
 	if valid := executor.checkPermission(env, from, to, op); !valid {
 		return nil, nil, common.Address{}, InvalidInvokePermissionErr("not enough permission to invocation")

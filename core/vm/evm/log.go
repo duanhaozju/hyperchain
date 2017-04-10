@@ -20,6 +20,7 @@ type Log struct {
 	TxIndex     uint        `json:"TxIndex"`
 	BlockHash   common.Hash `json:"BlockHash"`
 	Index       uint        `json:"Index"`
+	Type        string      `json:"Type"`
 }
 
 // assign block number as 0 temporarily
@@ -27,13 +28,66 @@ type Log struct {
 // primary's seqNo may not equal to other's
 // correctly block number and block hash will be assigned in the commit phase
 func NewLog(address common.Address, topics []common.Hash, data []byte, number uint64) *Log {
-	return &Log{Address: address, Topics: topics, Data: data, BlockNumber: number}
+	return &Log{Address: address, Topics: topics, Data: data, BlockNumber: number, Type: "evm"}
 }
 
 func (l *Log) String() string {
-	return fmt.Sprintf(`{address: %x, topics: %x, data: %x, txhash: %x, txIndex: %d, blockHash: %x, blockNumber: %d}`, l.Address, l.Topics, l.Data, l.TxHash, l.TxIndex, l.BlockHash, l.Index)
+	return fmt.Sprintf(`{address: %x, topics: %x, data: %x, txhash: %x, txIndex: %d, blockHash: %x, blockNumber: %d, index: %d}`, l.Address, l.Topics, l.Data, l.TxHash, l.TxIndex, l.BlockHash, l.BlockNumber, l.Index)
 }
 
+/*
+	Attribute access
+ */
+func (l *Log) GetType() string {
+	return l.Type
+}
+
+func (l *Log) GetTxHash() common.Hash {
+	return l.TxHash
+}
+
+func (l *Log) GetBlockHash() common.Hash {
+	return l.BlockHash
+}
+
+func (l *Log) GetTxIndex() uint {
+	return l.TxIndex
+}
+
+func (l *Log) GetBlockNumber() uint64 {
+	return l.BlockNumber
+}
+
+func (l *Log) GetIndex() uint {
+	return l.Index
+}
+
+/*
+	Attribute setter
+ */
+
+func (l *Log) SetTxHash(hash common.Hash) {
+	l.TxHash = hash
+}
+
+func (l *Log) SetBlockHash(hash common.Hash) {
+	l.BlockHash = hash
+}
+
+func (l *Log) SetTxIndex(idx uint) {
+	l.TxIndex = idx
+}
+
+func (l *Log) SetBlockNumber(number uint64) {
+	l.BlockNumber = number
+}
+
+func (l *Log) SetIndex(idx uint) {
+	l.Index = idx
+}
+/*
+	Mist
+ */
 func (l *Log) EncodeLog() ([]byte, error) {
 	return json.Marshal(*l)
 }
