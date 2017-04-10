@@ -12,7 +12,7 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
-	"hyperchain/core/vm/evm"
+	"hyperchain/core/vm"
 )
 
 var (
@@ -31,7 +31,7 @@ type Executor struct {
 	hashUtils  ExecutorHashUtil
 	cache      ExecutorCache
 	helper     *Helper
-	statedb    evm.Database
+	statedb    vm.Database
 	logger     *logging.Logger
 }
 
@@ -111,7 +111,7 @@ func initializeExecutorStateDb(executor *Executor) error {
 }
 
 // NewStateDb - create a latest state.
-func (executor *Executor) newStateDb() (evm.Database, error) {
+func (executor *Executor) newStateDb() (vm.Database, error) {
 	blk, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))

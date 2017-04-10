@@ -11,7 +11,7 @@ import (
 
 type Code []byte
 
-func (executor *Executor) ExecTransaction(db evm.Database, tx *types.Transaction, idx int, blockNumber uint64) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
+func (executor *Executor) ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
 		from     = common.BytesToAddress(tx.From)
 		to       = common.BytesToAddress(tx.To)

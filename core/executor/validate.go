@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"sync"
+	"hyperchain/core/vm"
 )
 
 // represent a validation result
@@ -197,7 +198,7 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 }
 
 // initialize transaction execution environment
-func (executor *Executor) initEnvironment(state evm.Database, seqNo uint64) evm.Environment {
+func (executor *Executor) initEnvironment(state vm.Database, seqNo uint64) evm.Environment {
 	env := make(map[string]string)
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "200000000"

@@ -23,7 +23,7 @@ type Environment interface {
 	// The current ruleset
 	RuleSet() RuleSet
 	// The state database
-	Db() Database
+	Db() vm.Database
 	// Creates a restorable snapshot
 	MakeSnapshot() interface{}
 	// Set database to previous snapshot

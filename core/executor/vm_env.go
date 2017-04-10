@@ -97,7 +97,7 @@ func (r RuleSet) IsHomestead(n *big.Int) bool {
 type Env struct {
 	ruleSet    RuleSet
 	depth      int
-	state      evm.Database
+	state      vm.Database
 	Gas        *big.Int
 	origin     common.Address
 	coinbase   common.Address
@@ -114,7 +114,7 @@ type Env struct {
 	evm *evm.EVM
 }
 
-func NewEnv(ruleSet RuleSet, state evm.Database) *Env {
+func NewEnv(ruleSet RuleSet, state vm.Database) *Env {
 	env := &Env{
 		ruleSet: ruleSet,
 		state:   state,
@@ -122,7 +122,7 @@ func NewEnv(ruleSet RuleSet, state evm.Database) *Env {
 	return env
 }
 
-func NewEnvFromMap(ruleSet RuleSet, state evm.Database, envValues map[string]string, logger *logging.Logger) *Env {
+func NewEnvFromMap(ruleSet RuleSet, state vm.Database, envValues map[string]string, logger *logging.Logger) *Env {
 	env := NewEnv(ruleSet, state)
 	env.time = common.Big(envValues["currentTimestamp"])
 	env.gasLimit = common.Big(envValues["currentGasLimit"])
@@ -144,7 +144,7 @@ func (self *Env) BlockNumber() *big.Int    { return self.number }
 func (self *Env) Coinbase() common.Address { return self.coinbase }
 func (self *Env) Time() *big.Int           { return self.time }
 func (self *Env) Difficulty() *big.Int     { return self.difficulty }
-func (self *Env) Db() evm.Database          { return self.state }
+func (self *Env) Db() vm.Database          { return self.state }
 func (self *Env) GasLimit() *big.Int       { return self.gasLimit }
 func (self *Env) VmType() evm.Type          { return evm.StdVmTy }
 func (self *Env) Logger() *logging.Logger  { return self.logger}
