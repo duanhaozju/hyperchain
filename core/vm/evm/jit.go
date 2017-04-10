@@ -11,6 +11,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/evm/params"
+	"hyperchain/core/vm"
 )
 
 // progStatus is the type for the JIT program status.
@@ -325,7 +326,7 @@ func validDest(dests map[uint64]struct{}, dest *big.Int) bool {
 
 // jitCalculateGasAndSize calculates the required given the opcode and stack items calculates the new memorysize for
 // the operation. This does not reduce gas or resizes the memory.
-func jitCalculateGasAndSize(env Environment, contract *Contract, instr instruction, statedb Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
+func jitCalculateGasAndSize(env Environment, contract *Contract, instr instruction, statedb vm.Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
 	var (
 		gas                 = new(big.Int)
 		newMemSize *big.Int = new(big.Int)

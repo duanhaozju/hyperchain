@@ -219,7 +219,7 @@ func execDelegateCall(env evm.Environment, caller evm.ContractRef, originAddr, t
 }
 
 // generic transfer method
-func Transfer(from, to evm.Account, amount *big.Int) {
+func Transfer(from, to vm.Account, amount *big.Int) {
 	from.SubBalance(amount)
 	to.AddBalance(amount)
 }

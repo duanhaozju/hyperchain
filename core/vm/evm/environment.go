@@ -4,9 +4,7 @@ package evm
 
 import (
 	"math/big"
-
 	"hyperchain/common"
-	"hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
 	"hyperchain/core/vm"
 )
@@ -49,7 +47,7 @@ type Environment interface {
 	// Determines whether it's possible to transact
 	CanTransfer(from common.Address, balance *big.Int) bool
 	// Transfers amount from one account to the other
-	Transfer(from, to Account, amount *big.Int)
+	Transfer(from, to vm.Account, amount *big.Int)
 	// Adds a LOG to the state
 	AddLog(vm.Log)
 	// Type of the VM
@@ -76,79 +74,3 @@ type Vm interface {
 	Run(c *Contract, in []byte) ([]byte, error)
 }
 
-// Database is a EVM database for full state querying.
-type Database interface {
-	GetAccount(common.Address) vm.Account
-	CreateAccount(common.Address) vm.Account
-
-	AddBalance(common.Address, *big.Int)
-	GetBalance(common.Address) *big.Int
-
-	GetNonce(common.Address) uint64
-	SetNonce(common.Address, uint64)
-
-	GetCode(common.Address) []byte
-	SetCode(common.Address, []byte)
-
-	GetStatus(common.Address) int
-	SetStatus(common.Address, int)
-
-	AddDeployedContract(common.Address, common.Address)
-	GetDeployedContract(common.Address) []string
-
-	SetCreator(common.Address, common.Address)
-	GetCreator(common.Address) common.Address
-
-	SetCreateTime(common.Address, uint64)
-	GetCreateTime(common.Address) uint64
-
-	AddRefund(*big.Int)
-	GetRefund() *big.Int
-
-	GetState(common.Address, common.Hash) (bool, []byte)
-	SetState(common.Address, common.Hash, []byte, int32)
-
-	Delete(common.Address) bool
-	Exist(common.Address) bool
-	IsDeleted(common.Address) bool
-
-	// Log
-	StartRecord(common.Hash, common.Hash, int)
-	AddLog(log vm.Log)
-	GetLogs(hash common.Hash) vm.Logs
-	// Dump and Load
-	Snapshot() interface{}
-	RevertToSnapshot(interface{})
-	RevertToJournal(uint64, uint64, []byte, db.Batch) error
-	// Reset statuso
-	Purge()
-
-	Commit() (common.Hash, error)
-	Reset() error
-	// Query
-	GetAccounts() map[string]vm.Account
-	Dump() []byte
-	GetTree() interface{}
-	// Atomic Related
-	MarkProcessStart(uint64)
-	MarkProcessFinish(uint64)
-
-	FetchBatch(seqNo uint64) db.Batch
-	DeleteBatch(seqNo uint64)
-	MakeArchive(uint64)
-	ShowArchive(common.Address, string) map[string]map[string]string
-}
-
-// Account represents a contract or basic ethereum account.
-type Account interface {
-	SubBalance(amount *big.Int)
-	AddBalance(amount *big.Int)
-	SetBalance(*big.Int)
-	SetNonce(uint64)
-	Balance() *big.Int
-	Address() common.Address
-	ReturnGas(*big.Int, *big.Int)
-	SetCode(common.Hash, []byte)
-	ForEachStorage(cb func(key common.Hash, value []byte) bool) map[common.Hash][]byte
-	Value() *big.Int
-}

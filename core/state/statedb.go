@@ -12,6 +12,7 @@ import (
 	"hyperchain/tree/pmt"
 	"math/big"
 	"sync"
+	"hyperchain/core/vm"
 )
 
 var (
@@ -178,7 +179,7 @@ func (self *StateDB) GetLeastAccount() *StateObject {
 }
 
 // todo
-func (self *StateDB) SetLeastAccount(account *evm.Account) {
+func (self *StateDB) SetLeastAccount(account *vm.Account) {
 	//self.leastStateObject.abi = account.Address()
 }
 

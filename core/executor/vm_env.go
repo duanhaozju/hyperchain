@@ -166,7 +166,7 @@ func (self *Env) SetSnapshot(copy interface{}) {
 	self.state.RevertToSnapshot(copy)
 }
 
-func (self *Env) Transfer(from, to evm.Account, amount *big.Int) {
+func (self *Env) Transfer(from, to vm.Account, amount *big.Int) {
 	Transfer(from, to, amount)
 }
 
