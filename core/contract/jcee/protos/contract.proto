@@ -38,7 +38,9 @@ message KeyValue {
 message Request {
     string txid   = 1;
     string method = 2;
-    repeated bytes args = 3;
+    string namespace = 3;
+    string cid = 4;
+    repeated bytes args = 5;
 }
 
 message Response {
