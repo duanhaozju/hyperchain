@@ -1,0 +1,101 @@
+pragma solidity ^0.4.10;
+contract Demo {
+    struct User {
+            uint8   id;
+            uint    age;
+            bytes32 name;
+    }
+    bytes1   var1;
+    bytes1   var2;
+    address  var3;
+    bool     var4;
+    bool     var5;
+    uint8    var6;
+    uint8    var7;
+    uint16   var8;
+    uint16   var9;
+    uint     var10;
+
+    bytes   var11;
+    string  var12;
+    string  var13;
+
+    uint[10] var14;
+    mapping(uint => bytes32) var15;
+
+    User[] users;
+
+    function Demo() {
+        var1 = 'a';
+        var2 = 'b';
+        var3 = msg.sender;
+        var4 = true;
+        var5 = true;
+        var6 = 1;
+        var7 = 2;
+        var8 = 3;
+        var9 = 4;
+        var10 = 4;
+        var11 = "abcde";
+        var12 = "fghij"; // length  = 10
+        var13 = "klmnopqrstuvwxyzabcedfghijklmnopqrstuvwxyz"; // length = 42
+        var14[0] = 100;
+        var14[1] = 101;
+        var14[2] = 102;
+
+        var15[0] = "hello";
+        var15[1] = "world";
+
+        users.push(User(1, 10, "rong"));
+        users.push(User(1, 10, "jialei"));
+    }
+    function GetVar1() returns(bytes1) {
+    	return var1;
+    }
+    function GetVar2() returns(bytes1) {
+    	return var2;
+    }
+    function GetVar3() returns(address) {
+    	return var3;
+    }
+    function GetVar4() returns(bool) {
+    	return var4;
+    }
+    function GetVar5() returns(bool) {
+    	return var5;
+    }
+    function GetVar6() returns(uint8) {
+    	return var6;
+    }
+    function GetVar7() returns(uint8) {
+    	return var7;
+    }
+    function GetVar8() returns(uint16) {
+    	return var8;
+    }
+    function GetVar9() returns(uint16) {
+    	return var9;
+    }
+    function GetVar10() returns(uint) {
+    	return var10;
+    }
+    function GetVar11() returns(bytes) {
+    	return var11;
+    }
+    function GetVar12() returns(string) {
+    	return var12;
+    }
+    function GetVar13() returns(string) {
+    	return var13;
+    }
+    function GetVar14(uint8 idx) returns(uint) {
+    	return var14[idx];
+    }
+    function GetVar15(uint key) returns(bytes32) {
+    	return var15[key];
+    }
+    function GetUser(uint8 idx) returns(uint8, uint, bytes32) {
+    	return (users[idx].id, users[idx].age, users[idx].name);
+    }
+}
+

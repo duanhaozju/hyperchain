@@ -7,7 +7,6 @@ import (
 	checker "gopkg.in/check.v1"
 	"hyperchain/common"
 	tutil "hyperchain/core/test_util"
-	"hyperchain/core/vm"
 	"hyperchain/hyperdb/mdb"
 	"math"
 	"math/big"
@@ -23,9 +22,10 @@ import (
 var (
 	configPath = "../../configuration/namespaces/global/config/global.yaml"
 	logger     *logging.Logger
+	globalConfig *common.Config
 )
 func init() {
-	globalConfig := common.NewConfig(configPath)
+	globalConfig = common.NewConfig(configPath)
 	//globalConfig.Set(common.NAMESPACE, "global")
 	//fmt.Println("start...")
 	common.InitHyperLoggerManager(globalConfig)
@@ -185,16 +185,16 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 				s.Delete(addr)
 			},
 		},
-		{
-			name: "AddLog",
-			fn: func(a testAction, s *StateDB) {
-				data := make([]byte, 16)
-				binary.BigEndian.PutUint64(data, uint64(a.args[0]))
-				binary.BigEndian.PutUint64(data[8:], uint64(a.args[1]))
-				s.AddLog(&vm.Log{Address: addr, Data: data})
-			},
-			args: make([]int64, 2),
-		},
+		//{
+		//	name: "AddLog",
+		//	fn: func(a testAction, s *StateDB) {
+		//		data := make([]byte, 16)
+		//		binary.BigEndian.PutUint64(data, uint64(a.args[0]))
+		//		binary.BigEndian.PutUint64(data[8:], uint64(a.args[1]))
+		//		s.AddLog(testutils.GenerateEVMLog(addr, data))
+		//	},
+		//	args: make([]int64, 2),
+		//},
 	}
 	action := actions[r.Intn(len(actions))]
 	var nameargs []string
