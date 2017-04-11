@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"hyperchain/common"
+	"hyperchain/core/vm"
 )
+
 
 type Log struct {
 	// consensus fields
@@ -38,52 +40,64 @@ func (l *Log) String() string {
 /*
 	Attribute access
  */
-func (l *Log) GetType() string {
-	return l.Type
-}
 
-func (l *Log) GetTxHash() common.Hash {
-	return l.TxHash
+func (l *Log) GetAttribute(t int) interface{} {
+	switch t {
+	case vm.LogAttr_Address:
+		return l.Address
+	case vm.LogAttr_Topics:
+		return l.Topics
+	case vm.LogAttr_Data:
+		return l.Data
+	case vm.LogAttr_BlockNumber:
+		return l.BlockNumber
+	case vm.LogAttr_BlockHash:
+		return l.BlockHash
+	case vm.LogAttr_TxHash:
+		return l.TxHash
+	case vm.LogAttr_TxIndex:
+		return l.TxIndex
+	case vm.LogAttr_Index:
+		return l.Index
+	case vm.LogAttr_Type:
+		return l.Type
+	default:
+		return nil
+	}
 }
-
-func (l *Log) GetBlockHash() common.Hash {
-	return l.BlockHash
-}
-
-func (l *Log) GetTxIndex() uint {
-	return l.TxIndex
-}
-
-func (l *Log) GetBlockNumber() uint64 {
-	return l.BlockNumber
-}
-
-func (l *Log) GetIndex() uint {
-	return l.Index
-}
-
 /*
 	Attribute setter
  */
-
-func (l *Log) SetTxHash(hash common.Hash) {
-	l.TxHash = hash
-}
-
-func (l *Log) SetBlockHash(hash common.Hash) {
-	l.BlockHash = hash
-}
-
-func (l *Log) SetTxIndex(idx uint) {
-	l.TxIndex = idx
-}
-
-func (l *Log) SetBlockNumber(number uint64) {
-	l.BlockNumber = number
-}
-
-func (l *Log) SetIndex(idx uint) {
-	l.Index = idx
+func (l *Log) SetAttribute(t int, v interface{}) {
+	switch t {
+	case vm.LogAttr_Address:
+		tmp := v.(common.Address)
+		l.Address = tmp
+	case vm.LogAttr_Topics:
+		tmp := v.([]common.Hash)
+		l.Topics = tmp
+	case vm.LogAttr_Data:
+		tmp := v.([]byte)
+		l.Data = tmp
+	case vm.LogAttr_BlockNumber:
+		tmp := v.(uint64)
+		l.BlockNumber = tmp
+	case vm.LogAttr_BlockHash:
+		tmp := v.(common.Hash)
+		l.BlockHash = tmp
+	case vm.LogAttr_TxHash:
+		tmp := v.(common.Hash)
+		l.TxHash = tmp
+	case vm.LogAttr_TxIndex:
+		tmp := v.(uint)
+		l.TxIndex = tmp
+	case vm.LogAttr_Index:
+		tmp := v.(uint)
+		l.Index = tmp
+	case vm.LogAttr_Type:
+		tmp := v.(string)
+		l.Type = tmp
+	}
 }
 /*
 	Mist

@@ -1,21 +1,19 @@
 package vm
 
-import "hyperchain/common"
-
 type Log interface {
-	// getter
-	GetType() string
-	GetTxHash() common.Hash
-	GetBlockHash() common.Hash
-	GetTxIndex() uint
-	GetBlockNumber() uint64
-	GetIndex() uint
-	// setter
-	SetTxHash(common.Hash)
-	SetBlockHash(common.Hash)
-	SetTxIndex(uint)
-	SetBlockNumber(uint64)
-	SetIndex(uint)
+	SetAttribute(int, interface{})
+	GetAttribute(int) interface{}
 }
 
+const (
+	LogAttr_Address = iota
+	LogAttr_Topics
+	LogAttr_Data
+	LogAttr_BlockNumber
+	LogAttr_BlockHash
+	LogAttr_TxHash
+	LogAttr_TxIndex
+	LogAttr_Index
+	LogAttr_Type
+)
 type Logs []Log

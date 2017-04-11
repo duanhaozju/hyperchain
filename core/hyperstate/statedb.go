@@ -296,9 +296,9 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 // correctly block  hash will be assigned in the commit phase
 func (self *StateDB) AddLog(log vm.Log) {
 	self.journal.JournalList = append(self.journal.JournalList, &AddLogChange{Txhash: self.thash})
-	log.SetTxHash(self.thash)
-	log.SetTxIndex(uint(self.txIndex))
-	log.SetIndex(self.logSize)
+	log.SetAttribute(vm.LogAttr_TxHash, self.thash)
+	log.SetAttribute(vm.LogAttr_TxIndex, uint(self.txIndex))
+	log.SetAttribute(vm.LogAttr_Index, self.logSize)
 	self.logs[self.thash] = append(self.logs[self.thash], log)
 	self.logSize++
 }
