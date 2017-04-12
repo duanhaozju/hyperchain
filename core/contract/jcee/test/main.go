@@ -6,6 +6,11 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/core/contract/jcee/go"
 	pb "hyperchain/core/contract/jcee/protos"
+	"net"
+	"fmt"
+	"google.golang.org/grpc"
+	"time"
+	"strconv"
 )
 
 var logger *logging.Logger
@@ -18,22 +23,35 @@ func init() {
 	logger = logging.MustGetLogger("test")
 }
 
+func startServer()  {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", 50052))
+	if err != nil {
+		//log.Fatalf("failed to listen: %v", err)
+	}
+	grpcServer := grpc.NewServer()
+	pb.RegisterLedgerServer(grpcServer, jcee.NewLedgerProxy())
+	grpcServer.Serve(lis)
+}
+
 func main() {
+	go startServer()
 	exe := jcee.NewContractExecutor()
 	exe.Start()
+	for  i := 0; i < 10; i ++{
+		time.Sleep(3 * time.Second)
+		request := &pb.Request{
+			Txid:"tx000000" + strconv.Itoa(i),
+			Cid:"msc001",
+			Method:"invoke",
+			Args:[][]byte{[]byte("test"), []byte("wangxiaoyi")},
+		}
+		response, err := exe.Execute(request)
 
-	request := &pb.Request{
-		Cid:"msc001",
-		Method:"invoke",
-		Args:[][]byte{[]byte("test"), []byte("wangxiaoyi")},
+		if err!= nil {
+			logger.Error(err)
+		}
+		logger.Info(response)
 	}
-
-	response, err := exe.Execute(request)
-
-	if err!= nil {
-		logger.Error(err)
-	}
-	logger.Info(response)
 
 	x := make(chan bool)
 	<- x
