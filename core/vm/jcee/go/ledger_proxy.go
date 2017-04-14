@@ -5,7 +5,8 @@ package jcee
 import (
 	context "golang.org/x/net/context"
 	"fmt"
-	pb "hyperchain/core/contract/jcee/protos"
+	pb "hyperchain/core/vm/jcee/protos"
+	"hyperchain/core/vm"
 )
 
 //LedgerProxy used to manipulate data

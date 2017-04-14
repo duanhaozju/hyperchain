@@ -6,7 +6,7 @@ import (
 	"context"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
-	pb "hyperchain/core/contract/jcee/protos"
+	pb "hyperchain/core/vm/jcee/protos"
 	"sync/atomic"
 )
 
