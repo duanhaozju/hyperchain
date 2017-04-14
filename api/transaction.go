@@ -38,19 +38,27 @@ type Transaction struct {
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 // If type is Ptr or String, it is optional parameter
 type SendTxArgs struct {
-	From      common.Address  `json:"from"`
-	To        *common.Address `json:"to"`
-	Gas       *Number         `json:"gas"`
-	GasPrice  *Number         `json:"gasPrice"`
-	Value     *Number         `json:"value"`
-	Payload   string          `json:"payload"`
-	Signature string          `json:"signature"`
-	Timestamp int64           `json:"timestamp"`
+	From          common.Address  `json:"from"`
+	To            *common.Address `json:"to"`
+	Gas           *Number         `json:"gas"`
+	GasPrice      *Number         `json:"gasPrice"`
+	Value         *Number         `json:"value"`
+	Payload       string          `json:"payload"`
+	Signature     string          `json:"signature"`
+	Timestamp     int64           `json:"timestamp"`
 	// --- test -----
-	Request   *Number     `json:"request"`
-	Simulate  bool        `json:"simulate"`
-	Opcode    int32       `json:"opcode"`
-	Nonce     int64       `json:"nonce"`
+	Request       *Number     `json:"request"`
+	Simulate      bool        `json:"simulate"`
+	Opcode        int32       `json:"opcode"`
+	Nonce         int64       `json:"nonce"`
+
+	InvokeArgs
+}
+
+type InvokeArgs struct {
+	Type          string      `json:"type"`
+	MethodName    string      `json:"method_name"`
+	Args          []string    `json:"args"`
 }
 
 type TransactionResult struct {
@@ -140,7 +148,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	}
 
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
-		realArgs.Value.ToInt64(), nil, 0)
+		realArgs.Value.ToInt64(), nil, 0, 0)
 
 	value, err := proto.Marshal(txValue)
 
@@ -465,7 +473,7 @@ func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
 	payload := common.FromHex(realArgs.Payload)
 
-	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), payload, args.Opcode)
+	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), payload, args.Opcode, 0)
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {

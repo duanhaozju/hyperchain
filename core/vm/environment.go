@@ -12,13 +12,8 @@ const (
 	StdVmTy Type = iota // Default standard VM
 	JitVmTy             // LLVM JIT VM
 	MaxVmTy
+	JavaVmTy
 )
-
-// RuleSet is an interface that defines the current rule set during the
-// execution of the EVM instructions (e.g. whether it's homestead)
-type RuleSet interface {
-	IsHomestead(*big.Int) bool
-}
 
 // Environment is an EVM requirement and helper which allows access to outside
 // information such as states.

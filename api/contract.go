@@ -17,6 +17,7 @@ import (
 	"strconv"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/vm"
+	"strings"
 )
 
 type Contract struct {
@@ -54,22 +55,16 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	if err != nil {
 		return common.Hash{}, err
 	}
-
-	payload := common.FromHex(realArgs.Payload)
-
-	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
-		realArgs.Value.ToInt64(), payload, args.Opcode)
-
-	value, err := proto.Marshal(txValue)
+	txValue, err := constructTxValue(realArgs)
 	if err != nil {
 		return common.Hash{}, &common.CallbackError{Message:err.Error()}
 	}
 
 	if args.To == nil {
-		tx = types.NewTransaction(realArgs.From[:], nil, value, realArgs.Timestamp, realArgs.Nonce)
+		tx = types.NewTransaction(realArgs.From[:], nil, txValue, realArgs.Timestamp, realArgs.Nonce)
 
 	} else {
-		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
+		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], txValue, realArgs.Timestamp, realArgs.Nonce)
 	}
 
 	tx.Id = uint64(contract.eh.GetPeerManager().GetNodeId())
@@ -383,3 +378,35 @@ func isContractAccount(stateDb vm.Database, addr common.Address) bool {
 	code := stateDb.GetCode(addr)
 	return code != nil
 }
+
+func checkVmType(vmType string) int {
+	switch strings.ToLower(vmType) {
+	case "evm":
+		return 0
+	case "jvm":
+		return 1
+	default:
+		return -1
+	}
+}
+
+func constructTxValue(args SendTxArgs) ([]byte, error) {
+	var payload []byte
+	var err     error
+	var vmType  types.TransactionValue_VmType
+	switch strings.ToLower(args.Type) {
+	case "evm":
+		payload = common.FromHex(args.Payload)
+		vmType  = types.TransactionValue_EVM
+	case "jvm":
+		payload, err = types.ConstructInvokeArgs(args.MethodName, args.Args)
+		if err != nil {
+			return nil, err
+		}
+		vmType = types.TransactionValue_JVM
+	}
+	txValue := types.NewTransactionValue(args.GasPrice.ToInt64(), args.Gas.ToInt64(),
+		args.Value.ToInt64(), payload, args.Opcode, vmType)
+	return proto.Marshal(txValue)
+}
+
