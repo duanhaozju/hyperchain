@@ -22,8 +22,8 @@ public class ContractExecutor {
     }
 
     public Future<Response> execute(Task task) {
-        logger.info(task.toString());
-        logger.info(task instanceof Callable);
+//        logger.info(task.toString());
+//        logger.info(task instanceof Callable);
         return exec.submit(task);
     }
 }

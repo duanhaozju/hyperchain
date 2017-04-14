@@ -13,12 +13,12 @@ public class MySmartContract extends ContractBase {
     private final Logger logger = Logger.getLogger(MySmartContract.class.getSimpleName());
 
     public boolean Invoke(String funcName, List<String> args) {
-        logger.info("invoke function name: " + funcName);
+        //logger.info("invoke function name: " + funcName);
         switch (funcName) {
             case "test": {
                 this.test("invoke method:" + args.get(0));
-                String name = new String(ledger.get("name".getBytes()));
-                System.out.println("get name from ledger: " + name);
+                //String name = new String(ledger.get("name".getBytes()));
+                //System.out.println("get name from ledger: " + name);
                 return true;
             }
             default:
@@ -32,6 +32,7 @@ public class MySmartContract extends ContractBase {
     }
 
     public void test(String name) {
-        logger.info(name);
+        logger.info(getLedger().getContext().getId());
+        //logger.info("invoke in test");
     }
 }
