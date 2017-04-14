@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
-	"hyperchain/core/vm/jcee/go"
+	"hyperchain/core/vm/jcee/go/client"
+	lg "hyperchain/core/vm/jcee/go/ledger"
 	pb "hyperchain/core/vm/jcee/protos"
+	exec "hyperchain/core/executor"
 	"net"
 	"strconv"
 	"time"
@@ -30,7 +32,11 @@ func startServer() {
 		//log.Fatalf("failed to listen: %v", err)
 	}
 	grpcServer := grpc.NewServer()
-	pb.RegisterLedgerServer(grpcServer, jcee.NewLedgerProxy())
+	ledger := lg.NewLedgerProxy()
+	executor := exec.NewExecutor("global", nil, nil)
+	executor.Start()
+	ledger.Register("global", executor.FetchStateDb())
+	pb.RegisterLedgerServer(grpcServer, lg.NewLedgerProxy())
 	grpcServer.Serve(lis)
 }
 

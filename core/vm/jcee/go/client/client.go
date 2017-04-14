@@ -24,7 +24,6 @@ type contractExecutorImpl struct {
 	conn    *grpc.ClientConn
 	address string
 	logger  *logging.Logger
-	ledger  *LedgerProxy
 	close   *int32
 }
 
