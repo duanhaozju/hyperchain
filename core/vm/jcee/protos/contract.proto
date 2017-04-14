@@ -18,9 +18,8 @@ service Ledger {
 }
 
 message Key {
-    string namespace = 1;
-    string id = 2;
-    bytes k = 3;
+    LedgerContext context = 1;
+    bytes k = 2;
 }
 
 message Value{
@@ -29,22 +28,30 @@ message Value{
 }
 
 message KeyValue {
-    string namespace = 1;
-    string id = 2;
-    bytes k = 3;
-    bytes v = 4;
+    LedgerContext context = 1;
+    bytes k = 2;
+    bytes v = 3;
 }
 
 message Request {
-    string txid   = 1;
+    RequestContext context = 1;
     string method = 2;
-    string namespace = 3;
-    string cid = 4;
-    repeated bytes args = 5;
+    repeated bytes args = 3;
+}
+
+message LedgerContext {
+    string txid   = 1;
+    string namespace = 2;
+    string cid = 3;
+}
+
+message RequestContext {
+    string txid   = 1;
+    string namespace = 2;
+    string cid = 3;
 }
 
 message Response {
-    string id    = 1;
-    bool  ok     = 2;
-    bytes result = 3;
+    bool  ok     = 1;
+    bytes result = 2;
 }

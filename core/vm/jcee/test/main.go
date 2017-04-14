@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
+	exec "hyperchain/core/executor"
 	"hyperchain/core/vm/jcee/go/client"
 	lg "hyperchain/core/vm/jcee/go/ledger"
 	pb "hyperchain/core/vm/jcee/protos"
-	exec "hyperchain/core/executor"
 	"net"
 	"strconv"
 	"time"
@@ -49,8 +49,10 @@ func main() {
 	for i := 0; i < testNum; i++ {
 		//time.Sleep(3 * time.Second)
 		request := &pb.Request{
-			Txid:   "tx000000" + strconv.Itoa(i),
-			Cid:    "msc001",
+			Context: &pb.RequestContext{
+				Txid: "tx000000" + strconv.Itoa(i),
+				Cid:  "msc001",
+			},
 			Method: "invoke",
 			Args:   [][]byte{[]byte("test"), []byte("wangxiaoyi")},
 		}

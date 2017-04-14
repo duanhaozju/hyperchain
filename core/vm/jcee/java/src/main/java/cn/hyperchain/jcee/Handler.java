@@ -29,7 +29,7 @@ public class Handler {
     }
 
     public void query(Request request, StreamObserver<Response> responseObserver){
-        Task task = new QueryTask(cm.getContract(request.getCid()), request, constructContext(request));
+        Task task = new QueryTask(cm.getContract(request.getContext().getCid()), request, constructContext(request));
         Future<Response> future = executor.execute(task);
         Response response = null;
         try{
@@ -37,7 +37,7 @@ public class Handler {
         }catch (Exception e) {
             logger.error(e);
             response = Response.newBuilder().setOk(false)
-                    .setId(request.getTxid())
+                    //.setId(request.getTxid())
                     .setResult(ByteString.copyFromUtf8(e.getMessage()))
                     .build();
         }finally {
@@ -47,7 +47,7 @@ public class Handler {
     }
 
     public void invoke(Request request, StreamObserver<Response> responseObserver){
-        Task task = new InvokeTask(cm.getContract(request.getCid()), request, constructContext(request));
+        Task task = new InvokeTask(cm.getContract(request.getContext().getCid()), request, constructContext(request));
         Future<Response> future = executor.execute(task);
         Response response = null;
         try{
@@ -56,7 +56,7 @@ public class Handler {
             logger.error(e);
             e.printStackTrace();
             response = Response.newBuilder().setOk(false)
-                    .setId(request.getTxid())
+                    //.setId(request.getTxid())
                     .setResult(ByteString.copyFromUtf8(e.getMessage()))
                     .build();
         }finally {
@@ -78,6 +78,6 @@ public class Handler {
     }
 
     public Context constructContext(Request request) {
-        return new Context(request.getTxid());
+        return new Context(request.getContext().getTxid());
     }
 }

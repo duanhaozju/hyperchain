@@ -5,6 +5,7 @@
 package cn.hyperchain.jcee.ledger;
 
 import cn.hyperchain.protos.Key;
+import cn.hyperchain.protos.LedgerContext;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
 
@@ -21,9 +22,12 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     public byte[] get(byte[] key) {
+        LedgerContext context = LedgerContext.newBuilder().setCid(getContext().getId()).build();
         Key sendkey = Key.newBuilder()
-                .setId(getContext().getId())
-                .setIdBytes(ByteString.copyFrom(key))
+//                .setId(getContext().getId())
+                .setContext(context)
+                //.setIdBytes(ByteString.copyFrom(key))
+                .setK(ByteString.copyFrom(key))
                 .build();
         logger.info("Transaction id: " + getContext().getId());
         return client.get(sendkey).toByteArray();

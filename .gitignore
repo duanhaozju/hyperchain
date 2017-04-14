@@ -17,9 +17,9 @@ db/*
 build
 #hyperchain
 hyperchain.iml
-#core/vm/jcee/java/target
-#core/vm/jcee/java/*.iml
-#core/vm/jcee/java/.idea
+core/vm/jcee/java/target
+core/vm/jcee/java/*.iml
+core/vm/jcee/java/.idea
 hypercli/hypercli
 
 .DS_Store
