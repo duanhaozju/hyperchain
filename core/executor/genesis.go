@@ -5,7 +5,6 @@ import (
 	"github.com/buger/jsonparser"
 	"math/big"
 	"time"
-	"hyperchain/core/vm"
 	"hyperchain/core/hyperstate"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/common"
@@ -13,6 +12,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/hyperdb/db"
 	"hyperchain/hyperdb"
+	"hyperchain/core/vm"
 )
 
 const (

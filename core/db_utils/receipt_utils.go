@@ -9,7 +9,7 @@ import (
 )
 
 // GetReceipt returns a receipt by hash
-func GetReceipt(namespace string, txHash common.Hash) *types.ReceiptTrans {
+func GetReceipt(namespace string, txHash common.Hash) *types.Receipt {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return nil
@@ -30,7 +30,7 @@ func GetReceipt(namespace string, txHash common.Hash) *types.ReceiptTrans {
 		logger(namespace).Errorf("GetReceipt err:", err)
 		return nil
 	}
-	return receipt.ToReceiptTrans()
+	return &receipt
 }
 
 // Persist receipt content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
@@ -108,3 +108,4 @@ func GetMarshalReceipt(receipt *types.Receipt) (error, []byte) {
 	}
 	return nil, data
 }
+

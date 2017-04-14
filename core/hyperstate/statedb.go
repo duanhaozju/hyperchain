@@ -12,12 +12,12 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"hyperchain/common"
-	"hyperchain/core/vm"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
 	"hyperchain/tree/bucket"
 	"sync/atomic"
 	"github.com/op/go-logging"
+	"hyperchain/core/vm"
 )
 
 const (
@@ -294,11 +294,11 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 // doesn't assign block hash now
 // because the blcok hash hasn't been calculated
 // correctly block  hash will be assigned in the commit phase
-func (self *StateDB) AddLog(log *vm.Log) {
+func (self *StateDB) AddLog(log vm.Log) {
 	self.journal.JournalList = append(self.journal.JournalList, &AddLogChange{Txhash: self.thash})
-	log.TxHash = self.thash
-	log.TxIndex = uint(self.txIndex)
-	log.Index = self.logSize
+	log.SetAttribute(vm.LogAttr_TxHash, self.thash)
+	log.SetAttribute(vm.LogAttr_TxIndex, uint(self.txIndex))
+	log.SetAttribute(vm.LogAttr_Index, self.logSize)
 	self.logs[self.thash] = append(self.logs[self.thash], log)
 	self.logSize++
 }

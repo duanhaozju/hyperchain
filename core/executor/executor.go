@@ -8,11 +8,11 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/hyperstate"
-	"hyperchain/core/vm"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
+	"hyperchain/core/vm"
 )
 
 var (
