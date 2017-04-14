@@ -15,7 +15,7 @@ db/*
 
 # build vendor
 build
-
+hyperchain
 hyperchain.iml
 core/contract/jcee/java/target
 core/contract/jcee/java/*.iml
