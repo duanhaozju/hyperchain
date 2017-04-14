@@ -8,6 +8,7 @@ import cn.hyperchain.jcee.contract.ContractBase;
 import cn.hyperchain.jcee.contract.ContractHolder;
 import cn.hyperchain.jcee.contract.ContractInfo;
 import cn.hyperchain.jcee.contract.examples.c1.MySmartContract;
+import cn.hyperchain.jcee.contract.examples.sb.SimulateBank;
 import cn.hyperchain.jcee.ledger.HyperchainLedger;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -52,7 +53,8 @@ public class JceeServer implements IServer {
         JceeServer cs = new JceeServer();
         //TODO: fix this kind of contract add
         ContractInfo info = new ContractInfo("msc", "msc001", "Wang Xiaoyi");
-        ContractBase contract = new MySmartContract();
+        ContractBase contract = new SimulateBank("bank001", 001, true);
+        contract.setOwner(info.getOwner());
         contract.setLedger(new HyperchainLedger());
         ContractHolder holder = new ContractHolder(info, contract);
         cs.cgsi.getHandler().getContractMgr().addContract(holder);
