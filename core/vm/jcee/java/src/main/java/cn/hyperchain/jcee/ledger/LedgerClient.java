@@ -47,8 +47,9 @@ public class LedgerClient {
         channel.shutdownNow();
     }
 
-    public void put(KeyValue kv) {
+    public boolean put(KeyValue kv) {
         blockingStub.put(kv);
+        return true;
     }
 
     public Value get(Key key) {
