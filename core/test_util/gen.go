@@ -108,6 +108,6 @@ func GenContractTransactionRandomly(from, to, methodBin string) *types.Transacti
 		Timestamp: timestamp,
 		Nonce:     nonce,
 		Value: 	   value,
-		Signature: common.Hex2Bytes(strings.Split(args[7], " ")[1]),
+		Signature: common.Hex2Bytes(strings.Split(args[9], " ")[1]),
 	}
 }

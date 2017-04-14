@@ -124,3 +124,8 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 	}
 	return stateDb, nil
 }
+
+// FetchStateDb - fetch state db
+func (executor *Executor) FetchStateDb() vm.Database {
+	return executor.statedb
+}

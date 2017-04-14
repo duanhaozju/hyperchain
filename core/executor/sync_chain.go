@@ -132,7 +132,7 @@ func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *
 }
 
 func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
-	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
+	err, result := executor.ApplyTransactions(block.Transactions, nil, seqNo)
 	if err != nil {
 		return err, nil
 	}

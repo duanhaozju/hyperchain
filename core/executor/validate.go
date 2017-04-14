@@ -96,7 +96,7 @@ func (executor *Executor) process(validationEvent event.ValidationEvent, done fu
 	var invalidtxs []*types.InvalidTransactionRecord
 
 	invalidtxs, validtxs = executor.checkSign(validationEvent.Transactions)
-	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo)
+	err, validateResult := executor.ApplyTransactions(validtxs, invalidtxs, validationEvent.SeqNo)
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] process transaction batch #%d failed.", executor.namespace, validationEvent.SeqNo)
 		return err, false
@@ -153,7 +153,7 @@ func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidT
 }
 
 // applyTransactions - execute transactions one by one.
-func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *ValidationResultRecord) {
+func (executor *Executor) ApplyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *ValidationResultRecord) {
 	var validtxs []*types.Transaction
 	var receipts []*types.Receipt
 
