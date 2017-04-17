@@ -54,7 +54,7 @@ func (ctx *Context) GetOpCode() int32 {
 }
 
 func (ctx *Context) Caller() common.Address {
-	return common.Address{}
+	return ctx.caller.Address()
 }
 
 func (ctx *Context) GetCaller() vm.ContractRef {
