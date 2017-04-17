@@ -7,6 +7,7 @@ package cn.hyperchain.jcee;
 import cn.hyperchain.jcee.contract.ContractManager;
 import cn.hyperchain.jcee.executor.*;
 import cn.hyperchain.protos.Request;
+import cn.hyperchain.protos.RequestContext;
 import cn.hyperchain.protos.Response;
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
@@ -29,7 +30,7 @@ public class Handler {
     }
 
     public void query(Request request, StreamObserver<Response> responseObserver){
-        Task task = new QueryTask(cm.getContract(request.getCid()), request, constructContext(request));
+        Task task = new QueryTask(cm.getContract(request.getContext().getCid()), request, constructContext(request.getContext()));
         Future<Response> future = executor.execute(task);
         Response response = null;
         try{
@@ -37,7 +38,7 @@ public class Handler {
         }catch (Exception e) {
             logger.error(e);
             response = Response.newBuilder().setOk(false)
-                    .setId(request.getTxid())
+                    //.setId(request.getTxid())
                     .setResult(ByteString.copyFromUtf8(e.getMessage()))
                     .build();
         }finally {
@@ -47,7 +48,7 @@ public class Handler {
     }
 
     public void invoke(Request request, StreamObserver<Response> responseObserver){
-        Task task = new InvokeTask(cm.getContract(request.getCid()), request, constructContext(request));
+        Task task = new InvokeTask(cm.getContract(request.getContext().getCid()), request, constructContext(request.getContext()));
         Future<Response> future = executor.execute(task);
         Response response = null;
         try{
@@ -56,7 +57,7 @@ public class Handler {
             logger.error(e);
             e.printStackTrace();
             response = Response.newBuilder().setOk(false)
-                    .setId(request.getTxid())
+                    //.setId(request.getTxid())
                     .setResult(ByteString.copyFromUtf8(e.getMessage()))
                     .build();
         }finally {
@@ -77,7 +78,9 @@ public class Handler {
         return cm;
     }
 
-    public Context constructContext(Request request) {
-        return new Context(request.getTxid());
+    public Context constructContext(RequestContext context) {
+        Context ct = new Context(context.getTxid());
+        ct.setRequestContext(context);
+        return ct;
     }
 }

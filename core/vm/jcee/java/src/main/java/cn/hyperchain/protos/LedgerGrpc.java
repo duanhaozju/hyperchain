@@ -87,7 +87,7 @@ public class LedgerGrpc {
       asyncUnimplementedUnaryCall(METHOD_PUT, responseObserver);
     }
 
-     public io.grpc.ServerServiceDefinition bindService() {
+    @java.lang.Override public io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
             METHOD_GET,
@@ -119,7 +119,7 @@ public class LedgerGrpc {
       super(channel, callOptions);
     }
 
-    
+    @java.lang.Override
     protected LedgerStub build(io.grpc.Channel channel,
         io.grpc.CallOptions callOptions) {
       return new LedgerStub(channel, callOptions);
@@ -154,7 +154,7 @@ public class LedgerGrpc {
       super(channel, callOptions);
     }
 
-    
+    @java.lang.Override
     protected LedgerBlockingStub build(io.grpc.Channel channel,
         io.grpc.CallOptions callOptions) {
       return new LedgerBlockingStub(channel, callOptions);
@@ -187,7 +187,7 @@ public class LedgerGrpc {
       super(channel, callOptions);
     }
 
-    
+    @java.lang.Override
     protected LedgerFutureStub build(io.grpc.Channel channel,
         io.grpc.CallOptions callOptions) {
       return new LedgerFutureStub(channel, callOptions);
@@ -226,7 +226,7 @@ public class LedgerGrpc {
       this.methodId = methodId;
     }
 
-    
+    @java.lang.Override
     @java.lang.SuppressWarnings("unchecked")
     public void invoke(Req request, io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
@@ -243,7 +243,7 @@ public class LedgerGrpc {
       }
     }
 
-    
+    @java.lang.Override
     @java.lang.SuppressWarnings("unchecked")
     public io.grpc.stub.StreamObserver<Req> invoke(
         io.grpc.stub.StreamObserver<Resp> responseObserver) {

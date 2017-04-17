@@ -8,32 +8,25 @@ public interface KeyValueOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>string namespace = 1;</code>
+   * <code>.LedgerContext context = 1;</code>
    */
-  java.lang.String getNamespace();
+  boolean hasContext();
   /**
-   * <code>string namespace = 1;</code>
+   * <code>.LedgerContext context = 1;</code>
    */
-  com.google.protobuf.ByteString
-      getNamespaceBytes();
+  cn.hyperchain.protos.LedgerContext getContext();
+  /**
+   * <code>.LedgerContext context = 1;</code>
+   */
+  cn.hyperchain.protos.LedgerContextOrBuilder getContextOrBuilder();
 
   /**
-   * <code>string id = 2;</code>
-   */
-  java.lang.String getId();
-  /**
-   * <code>string id = 2;</code>
-   */
-  com.google.protobuf.ByteString
-      getIdBytes();
-
-  /**
-   * <code>bytes k = 3;</code>
+   * <code>bytes k = 2;</code>
    */
   com.google.protobuf.ByteString getK();
 
   /**
-   * <code>bytes v = 4;</code>
+   * <code>bytes v = 3;</code>
    */
   com.google.protobuf.ByteString getV();
 }

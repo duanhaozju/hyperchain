@@ -15,7 +15,6 @@ public  final class Response extends
     super(builder);
   }
   private Response() {
-    id_ = "";
     ok_ = false;
     result_ = com.google.protobuf.ByteString.EMPTY;
   }
@@ -45,18 +44,12 @@ public  final class Response extends
             }
             break;
           }
-          case 10: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            id_ = s;
-            break;
-          }
-          case 16: {
+          case 8: {
 
             ok_ = input.readBool();
             break;
           }
-          case 26: {
+          case 18: {
 
             result_ = input.readBytes();
             break;
@@ -84,53 +77,19 @@ public  final class Response extends
             cn.hyperchain.protos.Response.class, cn.hyperchain.protos.Response.Builder.class);
   }
 
-  public static final int ID_FIELD_NUMBER = 1;
-  private volatile java.lang.Object id_;
-  /**
-   * <code>string id = 1;</code>
-   */
-  public java.lang.String getId() {
-    java.lang.Object ref = id_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      id_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string id = 1;</code>
-   */
-  public com.google.protobuf.ByteString
-      getIdBytes() {
-    java.lang.Object ref = id_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      id_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
-  public static final int OK_FIELD_NUMBER = 2;
+  public static final int OK_FIELD_NUMBER = 1;
   private boolean ok_;
   /**
-   * <code>bool ok = 2;</code>
+   * <code>bool ok = 1;</code>
    */
   public boolean getOk() {
     return ok_;
   }
 
-  public static final int RESULT_FIELD_NUMBER = 3;
+  public static final int RESULT_FIELD_NUMBER = 2;
   private com.google.protobuf.ByteString result_;
   /**
-   * <code>bytes result = 3;</code>
+   * <code>bytes result = 2;</code>
    */
   public com.google.protobuf.ByteString getResult() {
     return result_;
@@ -148,14 +107,11 @@ public  final class Response extends
 
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!getIdBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, id_);
-    }
     if (ok_ != false) {
-      output.writeBool(2, ok_);
+      output.writeBool(1, ok_);
     }
     if (!result_.isEmpty()) {
-      output.writeBytes(3, result_);
+      output.writeBytes(2, result_);
     }
   }
 
@@ -164,16 +120,13 @@ public  final class Response extends
     if (size != -1) return size;
 
     size = 0;
-    if (!getIdBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, id_);
-    }
     if (ok_ != false) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBoolSize(2, ok_);
+        .computeBoolSize(1, ok_);
     }
     if (!result_.isEmpty()) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBytesSize(3, result_);
+        .computeBytesSize(2, result_);
     }
     memoizedSize = size;
     return size;
@@ -191,8 +144,6 @@ public  final class Response extends
     cn.hyperchain.protos.Response other = (cn.hyperchain.protos.Response) obj;
 
     boolean result = true;
-    result = result && getId()
-        .equals(other.getId());
     result = result && (getOk()
         == other.getOk());
     result = result && getResult()
@@ -207,8 +158,6 @@ public  final class Response extends
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + ID_FIELD_NUMBER;
-    hash = (53 * hash) + getId().hashCode();
     hash = (37 * hash) + OK_FIELD_NUMBER;
     hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
         getOk());
@@ -332,8 +281,6 @@ public  final class Response extends
     }
     public Builder clear() {
       super.clear();
-      id_ = "";
-
       ok_ = false;
 
       result_ = com.google.protobuf.ByteString.EMPTY;
@@ -360,7 +307,6 @@ public  final class Response extends
 
     public cn.hyperchain.protos.Response buildPartial() {
       cn.hyperchain.protos.Response result = new cn.hyperchain.protos.Response(this);
-      result.id_ = id_;
       result.ok_ = ok_;
       result.result_ = result_;
       onBuilt();
@@ -404,10 +350,6 @@ public  final class Response extends
 
     public Builder mergeFrom(cn.hyperchain.protos.Response other) {
       if (other == cn.hyperchain.protos.Response.getDefaultInstance()) return this;
-      if (!other.getId().isEmpty()) {
-        id_ = other.id_;
-        onChanged();
-      }
       if (other.getOk() != false) {
         setOk(other.getOk());
       }
@@ -440,84 +382,15 @@ public  final class Response extends
       return this;
     }
 
-    private java.lang.Object id_ = "";
-    /**
-     * <code>string id = 1;</code>
-     */
-    public java.lang.String getId() {
-      java.lang.Object ref = id_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        id_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string id = 1;</code>
-     */
-    public com.google.protobuf.ByteString
-        getIdBytes() {
-      java.lang.Object ref = id_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        id_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string id = 1;</code>
-     */
-    public Builder setId(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
-      id_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string id = 1;</code>
-     */
-    public Builder clearId() {
-      
-      id_ = getDefaultInstance().getId();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string id = 1;</code>
-     */
-    public Builder setIdBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
-      id_ = value;
-      onChanged();
-      return this;
-    }
-
     private boolean ok_ ;
     /**
-     * <code>bool ok = 2;</code>
+     * <code>bool ok = 1;</code>
      */
     public boolean getOk() {
       return ok_;
     }
     /**
-     * <code>bool ok = 2;</code>
+     * <code>bool ok = 1;</code>
      */
     public Builder setOk(boolean value) {
       
@@ -526,7 +399,7 @@ public  final class Response extends
       return this;
     }
     /**
-     * <code>bool ok = 2;</code>
+     * <code>bool ok = 1;</code>
      */
     public Builder clearOk() {
       
@@ -537,13 +410,13 @@ public  final class Response extends
 
     private com.google.protobuf.ByteString result_ = com.google.protobuf.ByteString.EMPTY;
     /**
-     * <code>bytes result = 3;</code>
+     * <code>bytes result = 2;</code>
      */
     public com.google.protobuf.ByteString getResult() {
       return result_;
     }
     /**
-     * <code>bytes result = 3;</code>
+     * <code>bytes result = 2;</code>
      */
     public Builder setResult(com.google.protobuf.ByteString value) {
       if (value == null) {
@@ -555,7 +428,7 @@ public  final class Response extends
       return this;
     }
     /**
-     * <code>bytes result = 3;</code>
+     * <code>bytes result = 2;</code>
      */
     public Builder clearResult() {
       

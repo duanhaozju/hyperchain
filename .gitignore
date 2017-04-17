@@ -15,11 +15,11 @@ db/*
 
 # build vendor
 build
-hyperchain
+#hyperchain
 hyperchain.iml
-core/contract/jcee/java/target
-core/contract/jcee/java/*.iml
-core/contract/jcee/java/.idea
+core/vm/jcee/java/target
+core/vm/jcee/java/*.iml
+core/vm/jcee/java/.idea
 hypercli/hypercli
 
 .DS_Store

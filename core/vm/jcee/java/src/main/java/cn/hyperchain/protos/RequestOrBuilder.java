@@ -8,14 +8,17 @@ public interface RequestOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>string txid = 1;</code>
+   * <code>.RequestContext context = 1;</code>
    */
-  java.lang.String getTxid();
+  boolean hasContext();
   /**
-   * <code>string txid = 1;</code>
+   * <code>.RequestContext context = 1;</code>
    */
-  com.google.protobuf.ByteString
-      getTxidBytes();
+  cn.hyperchain.protos.RequestContext getContext();
+  /**
+   * <code>.RequestContext context = 1;</code>
+   */
+  cn.hyperchain.protos.RequestContextOrBuilder getContextOrBuilder();
 
   /**
    * <code>string method = 2;</code>
@@ -28,35 +31,15 @@ public interface RequestOrBuilder extends
       getMethodBytes();
 
   /**
-   * <code>string namespace = 3;</code>
-   */
-  java.lang.String getNamespace();
-  /**
-   * <code>string namespace = 3;</code>
-   */
-  com.google.protobuf.ByteString
-      getNamespaceBytes();
-
-  /**
-   * <code>string cid = 4;</code>
-   */
-  java.lang.String getCid();
-  /**
-   * <code>string cid = 4;</code>
-   */
-  com.google.protobuf.ByteString
-      getCidBytes();
-
-  /**
-   * <code>repeated bytes args = 5;</code>
+   * <code>repeated bytes args = 3;</code>
    */
   java.util.List<com.google.protobuf.ByteString> getArgsList();
   /**
-   * <code>repeated bytes args = 5;</code>
+   * <code>repeated bytes args = 3;</code>
    */
   int getArgsCount();
   /**
-   * <code>repeated bytes args = 5;</code>
+   * <code>repeated bytes args = 3;</code>
    */
   com.google.protobuf.ByteString getArgs(int index);
 }

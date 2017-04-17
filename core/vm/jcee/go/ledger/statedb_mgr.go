@@ -4,7 +4,7 @@ import (
 	"hyperchain/core/vm"
 	"sync"
 	"errors"
-	"hyperchain/common"
+	//"hyperchain/common"
 )
 
 var (

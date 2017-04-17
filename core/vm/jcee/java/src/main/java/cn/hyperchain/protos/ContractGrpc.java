@@ -85,7 +85,7 @@ public class ContractGrpc {
 
     /**
      * <pre>
-     *used to detect the health state of ontract
+     *used to detect the health state of contract
      * </pre>
      */
     public void heartBeat(cn.hyperchain.protos.Request request,
@@ -93,7 +93,7 @@ public class ContractGrpc {
       asyncUnimplementedUnaryCall(METHOD_HEART_BEAT, responseObserver);
     }
 
-     public io.grpc.ServerServiceDefinition bindService() {
+    @java.lang.Override public io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
             METHOD_EXECUTE,
@@ -125,7 +125,7 @@ public class ContractGrpc {
       super(channel, callOptions);
     }
 
-    
+    @java.lang.Override
     protected ContractStub build(io.grpc.Channel channel,
         io.grpc.CallOptions callOptions) {
       return new ContractStub(channel, callOptions);
@@ -144,7 +144,7 @@ public class ContractGrpc {
 
     /**
      * <pre>
-     *used to detect the health state of ontract
+     *used to detect the health state of contract
      * </pre>
      */
     public void heartBeat(cn.hyperchain.protos.Request request,
@@ -166,7 +166,7 @@ public class ContractGrpc {
       super(channel, callOptions);
     }
 
-    
+    @java.lang.Override
     protected ContractBlockingStub build(io.grpc.Channel channel,
         io.grpc.CallOptions callOptions) {
       return new ContractBlockingStub(channel, callOptions);
@@ -184,7 +184,7 @@ public class ContractGrpc {
 
     /**
      * <pre>
-     *used to detect the health state of ontract
+     *used to detect the health state of contract
      * </pre>
      */
     public cn.hyperchain.protos.Response heartBeat(cn.hyperchain.protos.Request request) {
@@ -205,7 +205,7 @@ public class ContractGrpc {
       super(channel, callOptions);
     }
 
-    
+    @java.lang.Override
     protected ContractFutureStub build(io.grpc.Channel channel,
         io.grpc.CallOptions callOptions) {
       return new ContractFutureStub(channel, callOptions);
@@ -224,7 +224,7 @@ public class ContractGrpc {
 
     /**
      * <pre>
-     *used to detect the health state of ontract
+     *used to detect the health state of contract
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<cn.hyperchain.protos.Response> heartBeat(
@@ -250,7 +250,7 @@ public class ContractGrpc {
       this.methodId = methodId;
     }
 
-    
+    @java.lang.Override
     @java.lang.SuppressWarnings("unchecked")
     public void invoke(Req request, io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
@@ -267,7 +267,7 @@ public class ContractGrpc {
       }
     }
 
-    
+    @java.lang.Override
     @java.lang.SuppressWarnings("unchecked")
     public io.grpc.stub.StreamObserver<Req> invoke(
         io.grpc.stub.StreamObserver<Resp> responseObserver) {

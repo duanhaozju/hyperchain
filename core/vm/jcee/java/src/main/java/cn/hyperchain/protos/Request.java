@@ -15,10 +15,7 @@ public  final class Request extends
     super(builder);
   }
   private Request() {
-    txid_ = "";
     method_ = "";
-    namespace_ = "";
-    cid_ = "";
     args_ = java.util.Collections.emptyList();
   }
 
@@ -48,9 +45,16 @@ public  final class Request extends
             break;
           }
           case 10: {
-            java.lang.String s = input.readStringRequireUtf8();
+            cn.hyperchain.protos.RequestContext.Builder subBuilder = null;
+            if (context_ != null) {
+              subBuilder = context_.toBuilder();
+            }
+            context_ = input.readMessage(cn.hyperchain.protos.RequestContext.parser(), extensionRegistry);
+            if (subBuilder != null) {
+              subBuilder.mergeFrom(context_);
+              context_ = subBuilder.buildPartial();
+            }
 
-            txid_ = s;
             break;
           }
           case 18: {
@@ -60,21 +64,9 @@ public  final class Request extends
             break;
           }
           case 26: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            namespace_ = s;
-            break;
-          }
-          case 34: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            cid_ = s;
-            break;
-          }
-          case 42: {
-            if (!((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+            if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
               args_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
-              mutable_bitField0_ |= 0x00000010;
+              mutable_bitField0_ |= 0x00000004;
             }
             args_.add(input.readBytes());
             break;
@@ -87,7 +79,7 @@ public  final class Request extends
       throw new com.google.protobuf.InvalidProtocolBufferException(
           e).setUnfinishedMessage(this);
     } finally {
-      if (((mutable_bitField0_ & 0x00000010) == 0x00000010)) {
+      if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
         args_ = java.util.Collections.unmodifiableList(args_);
       }
       makeExtensionsImmutable();
@@ -106,38 +98,25 @@ public  final class Request extends
   }
 
   private int bitField0_;
-  public static final int TXID_FIELD_NUMBER = 1;
-  private volatile java.lang.Object txid_;
+  public static final int CONTEXT_FIELD_NUMBER = 1;
+  private cn.hyperchain.protos.RequestContext context_;
   /**
-   * <code>string txid = 1;</code>
+   * <code>.RequestContext context = 1;</code>
    */
-  public java.lang.String getTxid() {
-    java.lang.Object ref = txid_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      txid_ = s;
-      return s;
-    }
+  public boolean hasContext() {
+    return context_ != null;
   }
   /**
-   * <code>string txid = 1;</code>
+   * <code>.RequestContext context = 1;</code>
    */
-  public com.google.protobuf.ByteString
-      getTxidBytes() {
-    java.lang.Object ref = txid_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      txid_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
+  public cn.hyperchain.protos.RequestContext getContext() {
+    return context_ == null ? cn.hyperchain.protos.RequestContext.getDefaultInstance() : context_;
+  }
+  /**
+   * <code>.RequestContext context = 1;</code>
+   */
+  public cn.hyperchain.protos.RequestContextOrBuilder getContextOrBuilder() {
+    return getContext();
   }
 
   public static final int METHOD_FIELD_NUMBER = 2;
@@ -174,91 +153,23 @@ public  final class Request extends
     }
   }
 
-  public static final int NAMESPACE_FIELD_NUMBER = 3;
-  private volatile java.lang.Object namespace_;
-  /**
-   * <code>string namespace = 3;</code>
-   */
-  public java.lang.String getNamespace() {
-    java.lang.Object ref = namespace_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      namespace_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string namespace = 3;</code>
-   */
-  public com.google.protobuf.ByteString
-      getNamespaceBytes() {
-    java.lang.Object ref = namespace_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      namespace_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
-  public static final int CID_FIELD_NUMBER = 4;
-  private volatile java.lang.Object cid_;
-  /**
-   * <code>string cid = 4;</code>
-   */
-  public java.lang.String getCid() {
-    java.lang.Object ref = cid_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      cid_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string cid = 4;</code>
-   */
-  public com.google.protobuf.ByteString
-      getCidBytes() {
-    java.lang.Object ref = cid_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      cid_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
-  public static final int ARGS_FIELD_NUMBER = 5;
+  public static final int ARGS_FIELD_NUMBER = 3;
   private java.util.List<com.google.protobuf.ByteString> args_;
   /**
-   * <code>repeated bytes args = 5;</code>
+   * <code>repeated bytes args = 3;</code>
    */
   public java.util.List<com.google.protobuf.ByteString>
       getArgsList() {
     return args_;
   }
   /**
-   * <code>repeated bytes args = 5;</code>
+   * <code>repeated bytes args = 3;</code>
    */
   public int getArgsCount() {
     return args_.size();
   }
   /**
-   * <code>repeated bytes args = 5;</code>
+   * <code>repeated bytes args = 3;</code>
    */
   public com.google.protobuf.ByteString getArgs(int index) {
     return args_.get(index);
@@ -276,20 +187,14 @@ public  final class Request extends
 
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!getTxidBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, txid_);
+    if (context_ != null) {
+      output.writeMessage(1, getContext());
     }
     if (!getMethodBytes().isEmpty()) {
       com.google.protobuf.GeneratedMessageV3.writeString(output, 2, method_);
     }
-    if (!getNamespaceBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 3, namespace_);
-    }
-    if (!getCidBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 4, cid_);
-    }
     for (int i = 0; i < args_.size(); i++) {
-      output.writeBytes(5, args_.get(i));
+      output.writeBytes(3, args_.get(i));
     }
   }
 
@@ -298,17 +203,12 @@ public  final class Request extends
     if (size != -1) return size;
 
     size = 0;
-    if (!getTxidBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, txid_);
+    if (context_ != null) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(1, getContext());
     }
     if (!getMethodBytes().isEmpty()) {
       size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, method_);
-    }
-    if (!getNamespaceBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, namespace_);
-    }
-    if (!getCidBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, cid_);
     }
     {
       int dataSize = 0;
@@ -335,14 +235,13 @@ public  final class Request extends
     cn.hyperchain.protos.Request other = (cn.hyperchain.protos.Request) obj;
 
     boolean result = true;
-    result = result && getTxid()
-        .equals(other.getTxid());
+    result = result && (hasContext() == other.hasContext());
+    if (hasContext()) {
+      result = result && getContext()
+          .equals(other.getContext());
+    }
     result = result && getMethod()
         .equals(other.getMethod());
-    result = result && getNamespace()
-        .equals(other.getNamespace());
-    result = result && getCid()
-        .equals(other.getCid());
     result = result && getArgsList()
         .equals(other.getArgsList());
     return result;
@@ -355,14 +254,12 @@ public  final class Request extends
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + TXID_FIELD_NUMBER;
-    hash = (53 * hash) + getTxid().hashCode();
+    if (hasContext()) {
+      hash = (37 * hash) + CONTEXT_FIELD_NUMBER;
+      hash = (53 * hash) + getContext().hashCode();
+    }
     hash = (37 * hash) + METHOD_FIELD_NUMBER;
     hash = (53 * hash) + getMethod().hashCode();
-    hash = (37 * hash) + NAMESPACE_FIELD_NUMBER;
-    hash = (53 * hash) + getNamespace().hashCode();
-    hash = (37 * hash) + CID_FIELD_NUMBER;
-    hash = (53 * hash) + getCid().hashCode();
     if (getArgsCount() > 0) {
       hash = (37 * hash) + ARGS_FIELD_NUMBER;
       hash = (53 * hash) + getArgsList().hashCode();
@@ -485,16 +382,16 @@ public  final class Request extends
     }
     public Builder clear() {
       super.clear();
-      txid_ = "";
-
+      if (contextBuilder_ == null) {
+        context_ = null;
+      } else {
+        context_ = null;
+        contextBuilder_ = null;
+      }
       method_ = "";
 
-      namespace_ = "";
-
-      cid_ = "";
-
       args_ = java.util.Collections.emptyList();
-      bitField0_ = (bitField0_ & ~0x00000010);
+      bitField0_ = (bitField0_ & ~0x00000004);
       return this;
     }
 
@@ -519,13 +416,15 @@ public  final class Request extends
       cn.hyperchain.protos.Request result = new cn.hyperchain.protos.Request(this);
       int from_bitField0_ = bitField0_;
       int to_bitField0_ = 0;
-      result.txid_ = txid_;
+      if (contextBuilder_ == null) {
+        result.context_ = context_;
+      } else {
+        result.context_ = contextBuilder_.build();
+      }
       result.method_ = method_;
-      result.namespace_ = namespace_;
-      result.cid_ = cid_;
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
         args_ = java.util.Collections.unmodifiableList(args_);
-        bitField0_ = (bitField0_ & ~0x00000010);
+        bitField0_ = (bitField0_ & ~0x00000004);
       }
       result.args_ = args_;
       result.bitField0_ = to_bitField0_;
@@ -570,26 +469,17 @@ public  final class Request extends
 
     public Builder mergeFrom(cn.hyperchain.protos.Request other) {
       if (other == cn.hyperchain.protos.Request.getDefaultInstance()) return this;
-      if (!other.getTxid().isEmpty()) {
-        txid_ = other.txid_;
-        onChanged();
+      if (other.hasContext()) {
+        mergeContext(other.getContext());
       }
       if (!other.getMethod().isEmpty()) {
         method_ = other.method_;
         onChanged();
       }
-      if (!other.getNamespace().isEmpty()) {
-        namespace_ = other.namespace_;
-        onChanged();
-      }
-      if (!other.getCid().isEmpty()) {
-        cid_ = other.cid_;
-        onChanged();
-      }
       if (!other.args_.isEmpty()) {
         if (args_.isEmpty()) {
           args_ = other.args_;
-          bitField0_ = (bitField0_ & ~0x00000010);
+          bitField0_ = (bitField0_ & ~0x00000004);
         } else {
           ensureArgsIsMutable();
           args_.addAll(other.args_);
@@ -623,73 +513,121 @@ public  final class Request extends
     }
     private int bitField0_;
 
-    private java.lang.Object txid_ = "";
+    private cn.hyperchain.protos.RequestContext context_ = null;
+    private com.google.protobuf.SingleFieldBuilderV3<
+        cn.hyperchain.protos.RequestContext, cn.hyperchain.protos.RequestContext.Builder, cn.hyperchain.protos.RequestContextOrBuilder> contextBuilder_;
     /**
-     * <code>string txid = 1;</code>
+     * <code>.RequestContext context = 1;</code>
      */
-    public java.lang.String getTxid() {
-      java.lang.Object ref = txid_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        txid_ = s;
-        return s;
+    public boolean hasContext() {
+      return contextBuilder_ != null || context_ != null;
+    }
+    /**
+     * <code>.RequestContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.RequestContext getContext() {
+      if (contextBuilder_ == null) {
+        return context_ == null ? cn.hyperchain.protos.RequestContext.getDefaultInstance() : context_;
       } else {
-        return (java.lang.String) ref;
+        return contextBuilder_.getMessage();
       }
     }
     /**
-     * <code>string txid = 1;</code>
+     * <code>.RequestContext context = 1;</code>
      */
-    public com.google.protobuf.ByteString
-        getTxidBytes() {
-      java.lang.Object ref = txid_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        txid_ = b;
-        return b;
+    public Builder setContext(cn.hyperchain.protos.RequestContext value) {
+      if (contextBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        context_ = value;
+        onChanged();
       } else {
-        return (com.google.protobuf.ByteString) ref;
+        contextBuilder_.setMessage(value);
+      }
+
+      return this;
+    }
+    /**
+     * <code>.RequestContext context = 1;</code>
+     */
+    public Builder setContext(
+        cn.hyperchain.protos.RequestContext.Builder builderForValue) {
+      if (contextBuilder_ == null) {
+        context_ = builderForValue.build();
+        onChanged();
+      } else {
+        contextBuilder_.setMessage(builderForValue.build());
+      }
+
+      return this;
+    }
+    /**
+     * <code>.RequestContext context = 1;</code>
+     */
+    public Builder mergeContext(cn.hyperchain.protos.RequestContext value) {
+      if (contextBuilder_ == null) {
+        if (context_ != null) {
+          context_ =
+            cn.hyperchain.protos.RequestContext.newBuilder(context_).mergeFrom(value).buildPartial();
+        } else {
+          context_ = value;
+        }
+        onChanged();
+      } else {
+        contextBuilder_.mergeFrom(value);
+      }
+
+      return this;
+    }
+    /**
+     * <code>.RequestContext context = 1;</code>
+     */
+    public Builder clearContext() {
+      if (contextBuilder_ == null) {
+        context_ = null;
+        onChanged();
+      } else {
+        context_ = null;
+        contextBuilder_ = null;
+      }
+
+      return this;
+    }
+    /**
+     * <code>.RequestContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.RequestContext.Builder getContextBuilder() {
+      
+      onChanged();
+      return getContextFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.RequestContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.RequestContextOrBuilder getContextOrBuilder() {
+      if (contextBuilder_ != null) {
+        return contextBuilder_.getMessageOrBuilder();
+      } else {
+        return context_ == null ?
+            cn.hyperchain.protos.RequestContext.getDefaultInstance() : context_;
       }
     }
     /**
-     * <code>string txid = 1;</code>
+     * <code>.RequestContext context = 1;</code>
      */
-    public Builder setTxid(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
-      txid_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string txid = 1;</code>
-     */
-    public Builder clearTxid() {
-      
-      txid_ = getDefaultInstance().getTxid();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string txid = 1;</code>
-     */
-    public Builder setTxidBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
-      txid_ = value;
-      onChanged();
-      return this;
+    private com.google.protobuf.SingleFieldBuilderV3<
+        cn.hyperchain.protos.RequestContext, cn.hyperchain.protos.RequestContext.Builder, cn.hyperchain.protos.RequestContextOrBuilder> 
+        getContextFieldBuilder() {
+      if (contextBuilder_ == null) {
+        contextBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+            cn.hyperchain.protos.RequestContext, cn.hyperchain.protos.RequestContext.Builder, cn.hyperchain.protos.RequestContextOrBuilder>(
+                getContext(),
+                getParentForChildren(),
+                isClean());
+        context_ = null;
+      }
+      return contextBuilder_;
     }
 
     private java.lang.Object method_ = "";
@@ -761,172 +699,34 @@ public  final class Request extends
       return this;
     }
 
-    private java.lang.Object namespace_ = "";
-    /**
-     * <code>string namespace = 3;</code>
-     */
-    public java.lang.String getNamespace() {
-      java.lang.Object ref = namespace_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        namespace_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string namespace = 3;</code>
-     */
-    public com.google.protobuf.ByteString
-        getNamespaceBytes() {
-      java.lang.Object ref = namespace_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        namespace_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string namespace = 3;</code>
-     */
-    public Builder setNamespace(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
-      namespace_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string namespace = 3;</code>
-     */
-    public Builder clearNamespace() {
-      
-      namespace_ = getDefaultInstance().getNamespace();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string namespace = 3;</code>
-     */
-    public Builder setNamespaceBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
-      namespace_ = value;
-      onChanged();
-      return this;
-    }
-
-    private java.lang.Object cid_ = "";
-    /**
-     * <code>string cid = 4;</code>
-     */
-    public java.lang.String getCid() {
-      java.lang.Object ref = cid_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        cid_ = s;
-        return s;
-      } else {
-        return (java.lang.String) ref;
-      }
-    }
-    /**
-     * <code>string cid = 4;</code>
-     */
-    public com.google.protobuf.ByteString
-        getCidBytes() {
-      java.lang.Object ref = cid_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        cid_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-    /**
-     * <code>string cid = 4;</code>
-     */
-    public Builder setCid(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
-      cid_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string cid = 4;</code>
-     */
-    public Builder clearCid() {
-      
-      cid_ = getDefaultInstance().getCid();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string cid = 4;</code>
-     */
-    public Builder setCidBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
-      cid_ = value;
-      onChanged();
-      return this;
-    }
-
     private java.util.List<com.google.protobuf.ByteString> args_ = java.util.Collections.emptyList();
     private void ensureArgsIsMutable() {
-      if (!((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (!((bitField0_ & 0x00000004) == 0x00000004)) {
         args_ = new java.util.ArrayList<com.google.protobuf.ByteString>(args_);
-        bitField0_ |= 0x00000010;
+        bitField0_ |= 0x00000004;
        }
     }
     /**
-     * <code>repeated bytes args = 5;</code>
+     * <code>repeated bytes args = 3;</code>
      */
     public java.util.List<com.google.protobuf.ByteString>
         getArgsList() {
       return java.util.Collections.unmodifiableList(args_);
     }
     /**
-     * <code>repeated bytes args = 5;</code>
+     * <code>repeated bytes args = 3;</code>
      */
     public int getArgsCount() {
       return args_.size();
     }
     /**
-     * <code>repeated bytes args = 5;</code>
+     * <code>repeated bytes args = 3;</code>
      */
     public com.google.protobuf.ByteString getArgs(int index) {
       return args_.get(index);
     }
     /**
-     * <code>repeated bytes args = 5;</code>
+     * <code>repeated bytes args = 3;</code>
      */
     public Builder setArgs(
         int index, com.google.protobuf.ByteString value) {
@@ -939,7 +739,7 @@ public  final class Request extends
       return this;
     }
     /**
-     * <code>repeated bytes args = 5;</code>
+     * <code>repeated bytes args = 3;</code>
      */
     public Builder addArgs(com.google.protobuf.ByteString value) {
       if (value == null) {
@@ -951,7 +751,7 @@ public  final class Request extends
       return this;
     }
     /**
-     * <code>repeated bytes args = 5;</code>
+     * <code>repeated bytes args = 3;</code>
      */
     public Builder addAllArgs(
         java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
@@ -962,11 +762,11 @@ public  final class Request extends
       return this;
     }
     /**
-     * <code>repeated bytes args = 5;</code>
+     * <code>repeated bytes args = 3;</code>
      */
     public Builder clearArgs() {
       args_ = java.util.Collections.emptyList();
-      bitField0_ = (bitField0_ & ~0x00000010);
+      bitField0_ = (bitField0_ & ~0x00000004);
       onChanged();
       return this;
     }

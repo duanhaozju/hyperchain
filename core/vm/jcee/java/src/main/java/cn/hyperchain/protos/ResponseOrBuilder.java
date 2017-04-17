@@ -8,22 +8,12 @@ public interface ResponseOrBuilder extends
     com.google.protobuf.MessageOrBuilder {
 
   /**
-   * <code>string id = 1;</code>
-   */
-  java.lang.String getId();
-  /**
-   * <code>string id = 1;</code>
-   */
-  com.google.protobuf.ByteString
-      getIdBytes();
-
-  /**
-   * <code>bool ok = 2;</code>
+   * <code>bool ok = 1;</code>
    */
   boolean getOk();
 
   /**
-   * <code>bytes result = 3;</code>
+   * <code>bytes result = 2;</code>
    */
   com.google.protobuf.ByteString getResult();
 }

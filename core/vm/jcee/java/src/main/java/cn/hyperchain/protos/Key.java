@@ -15,8 +15,6 @@ public  final class Key extends
     super(builder);
   }
   private Key() {
-    namespace_ = "";
-    id_ = "";
     k_ = com.google.protobuf.ByteString.EMPTY;
   }
 
@@ -46,18 +44,19 @@ public  final class Key extends
             break;
           }
           case 10: {
-            java.lang.String s = input.readStringRequireUtf8();
+            cn.hyperchain.protos.LedgerContext.Builder subBuilder = null;
+            if (context_ != null) {
+              subBuilder = context_.toBuilder();
+            }
+            context_ = input.readMessage(cn.hyperchain.protos.LedgerContext.parser(), extensionRegistry);
+            if (subBuilder != null) {
+              subBuilder.mergeFrom(context_);
+              context_ = subBuilder.buildPartial();
+            }
 
-            namespace_ = s;
             break;
           }
           case 18: {
-            java.lang.String s = input.readStringRequireUtf8();
-
-            id_ = s;
-            break;
-          }
-          case 26: {
 
             k_ = input.readBytes();
             break;
@@ -85,78 +84,31 @@ public  final class Key extends
             cn.hyperchain.protos.Key.class, cn.hyperchain.protos.Key.Builder.class);
   }
 
-  public static final int NAMESPACE_FIELD_NUMBER = 1;
-  private volatile java.lang.Object namespace_;
+  public static final int CONTEXT_FIELD_NUMBER = 1;
+  private cn.hyperchain.protos.LedgerContext context_;
   /**
-   * <code>string namespace = 1;</code>
+   * <code>.LedgerContext context = 1;</code>
    */
-  public java.lang.String getNamespace() {
-    java.lang.Object ref = namespace_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      namespace_ = s;
-      return s;
-    }
+  public boolean hasContext() {
+    return context_ != null;
   }
   /**
-   * <code>string namespace = 1;</code>
+   * <code>.LedgerContext context = 1;</code>
    */
-  public com.google.protobuf.ByteString
-      getNamespaceBytes() {
-    java.lang.Object ref = namespace_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      namespace_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
+  public cn.hyperchain.protos.LedgerContext getContext() {
+    return context_ == null ? cn.hyperchain.protos.LedgerContext.getDefaultInstance() : context_;
+  }
+  /**
+   * <code>.LedgerContext context = 1;</code>
+   */
+  public cn.hyperchain.protos.LedgerContextOrBuilder getContextOrBuilder() {
+    return getContext();
   }
 
-  public static final int ID_FIELD_NUMBER = 2;
-  private volatile java.lang.Object id_;
-  /**
-   * <code>string id = 2;</code>
-   */
-  public java.lang.String getId() {
-    java.lang.Object ref = id_;
-    if (ref instanceof java.lang.String) {
-      return (java.lang.String) ref;
-    } else {
-      com.google.protobuf.ByteString bs = 
-          (com.google.protobuf.ByteString) ref;
-      java.lang.String s = bs.toStringUtf8();
-      id_ = s;
-      return s;
-    }
-  }
-  /**
-   * <code>string id = 2;</code>
-   */
-  public com.google.protobuf.ByteString
-      getIdBytes() {
-    java.lang.Object ref = id_;
-    if (ref instanceof java.lang.String) {
-      com.google.protobuf.ByteString b = 
-          com.google.protobuf.ByteString.copyFromUtf8(
-              (java.lang.String) ref);
-      id_ = b;
-      return b;
-    } else {
-      return (com.google.protobuf.ByteString) ref;
-    }
-  }
-
-  public static final int K_FIELD_NUMBER = 3;
+  public static final int K_FIELD_NUMBER = 2;
   private com.google.protobuf.ByteString k_;
   /**
-   * <code>bytes k = 3;</code>
+   * <code>bytes k = 2;</code>
    */
   public com.google.protobuf.ByteString getK() {
     return k_;
@@ -174,14 +126,11 @@ public  final class Key extends
 
   public void writeTo(com.google.protobuf.CodedOutputStream output)
                       throws java.io.IOException {
-    if (!getNamespaceBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 1, namespace_);
-    }
-    if (!getIdBytes().isEmpty()) {
-      com.google.protobuf.GeneratedMessageV3.writeString(output, 2, id_);
+    if (context_ != null) {
+      output.writeMessage(1, getContext());
     }
     if (!k_.isEmpty()) {
-      output.writeBytes(3, k_);
+      output.writeBytes(2, k_);
     }
   }
 
@@ -190,15 +139,13 @@ public  final class Key extends
     if (size != -1) return size;
 
     size = 0;
-    if (!getNamespaceBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, namespace_);
-    }
-    if (!getIdBytes().isEmpty()) {
-      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, id_);
+    if (context_ != null) {
+      size += com.google.protobuf.CodedOutputStream
+        .computeMessageSize(1, getContext());
     }
     if (!k_.isEmpty()) {
       size += com.google.protobuf.CodedOutputStream
-        .computeBytesSize(3, k_);
+        .computeBytesSize(2, k_);
     }
     memoizedSize = size;
     return size;
@@ -216,10 +163,11 @@ public  final class Key extends
     cn.hyperchain.protos.Key other = (cn.hyperchain.protos.Key) obj;
 
     boolean result = true;
-    result = result && getNamespace()
-        .equals(other.getNamespace());
-    result = result && getId()
-        .equals(other.getId());
+    result = result && (hasContext() == other.hasContext());
+    if (hasContext()) {
+      result = result && getContext()
+          .equals(other.getContext());
+    }
     result = result && getK()
         .equals(other.getK());
     return result;
@@ -232,10 +180,10 @@ public  final class Key extends
     }
     int hash = 41;
     hash = (19 * hash) + getDescriptor().hashCode();
-    hash = (37 * hash) + NAMESPACE_FIELD_NUMBER;
-    hash = (53 * hash) + getNamespace().hashCode();
-    hash = (37 * hash) + ID_FIELD_NUMBER;
-    hash = (53 * hash) + getId().hashCode();
+    if (hasContext()) {
+      hash = (37 * hash) + CONTEXT_FIELD_NUMBER;
+      hash = (53 * hash) + getContext().hashCode();
+    }
     hash = (37 * hash) + K_FIELD_NUMBER;
     hash = (53 * hash) + getK().hashCode();
     hash = (29 * hash) + unknownFields.hashCode();
@@ -356,10 +304,12 @@ public  final class Key extends
     }
     public Builder clear() {
       super.clear();
-      namespace_ = "";
-
-      id_ = "";
-
+      if (contextBuilder_ == null) {
+        context_ = null;
+      } else {
+        context_ = null;
+        contextBuilder_ = null;
+      }
       k_ = com.google.protobuf.ByteString.EMPTY;
 
       return this;
@@ -384,8 +334,11 @@ public  final class Key extends
 
     public cn.hyperchain.protos.Key buildPartial() {
       cn.hyperchain.protos.Key result = new cn.hyperchain.protos.Key(this);
-      result.namespace_ = namespace_;
-      result.id_ = id_;
+      if (contextBuilder_ == null) {
+        result.context_ = context_;
+      } else {
+        result.context_ = contextBuilder_.build();
+      }
       result.k_ = k_;
       onBuilt();
       return result;
@@ -428,13 +381,8 @@ public  final class Key extends
 
     public Builder mergeFrom(cn.hyperchain.protos.Key other) {
       if (other == cn.hyperchain.protos.Key.getDefaultInstance()) return this;
-      if (!other.getNamespace().isEmpty()) {
-        namespace_ = other.namespace_;
-        onChanged();
-      }
-      if (!other.getId().isEmpty()) {
-        id_ = other.id_;
-        onChanged();
+      if (other.hasContext()) {
+        mergeContext(other.getContext());
       }
       if (other.getK() != com.google.protobuf.ByteString.EMPTY) {
         setK(other.getK());
@@ -465,153 +413,132 @@ public  final class Key extends
       return this;
     }
 
-    private java.lang.Object namespace_ = "";
+    private cn.hyperchain.protos.LedgerContext context_ = null;
+    private com.google.protobuf.SingleFieldBuilderV3<
+        cn.hyperchain.protos.LedgerContext, cn.hyperchain.protos.LedgerContext.Builder, cn.hyperchain.protos.LedgerContextOrBuilder> contextBuilder_;
     /**
-     * <code>string namespace = 1;</code>
+     * <code>.LedgerContext context = 1;</code>
      */
-    public java.lang.String getNamespace() {
-      java.lang.Object ref = namespace_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        namespace_ = s;
-        return s;
+    public boolean hasContext() {
+      return contextBuilder_ != null || context_ != null;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.LedgerContext getContext() {
+      if (contextBuilder_ == null) {
+        return context_ == null ? cn.hyperchain.protos.LedgerContext.getDefaultInstance() : context_;
       } else {
-        return (java.lang.String) ref;
+        return contextBuilder_.getMessage();
       }
     }
     /**
-     * <code>string namespace = 1;</code>
+     * <code>.LedgerContext context = 1;</code>
      */
-    public com.google.protobuf.ByteString
-        getNamespaceBytes() {
-      java.lang.Object ref = namespace_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        namespace_ = b;
-        return b;
+    public Builder setContext(cn.hyperchain.protos.LedgerContext value) {
+      if (contextBuilder_ == null) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        context_ = value;
+        onChanged();
       } else {
-        return (com.google.protobuf.ByteString) ref;
+        contextBuilder_.setMessage(value);
       }
-    }
-    /**
-     * <code>string namespace = 1;</code>
-     */
-    public Builder setNamespace(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
-      namespace_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string namespace = 1;</code>
-     */
-    public Builder clearNamespace() {
-      
-      namespace_ = getDefaultInstance().getNamespace();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string namespace = 1;</code>
-     */
-    public Builder setNamespaceBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
-      namespace_ = value;
-      onChanged();
-      return this;
-    }
 
-    private java.lang.Object id_ = "";
+      return this;
+    }
     /**
-     * <code>string id = 2;</code>
+     * <code>.LedgerContext context = 1;</code>
      */
-    public java.lang.String getId() {
-      java.lang.Object ref = id_;
-      if (!(ref instanceof java.lang.String)) {
-        com.google.protobuf.ByteString bs =
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        id_ = s;
-        return s;
+    public Builder setContext(
+        cn.hyperchain.protos.LedgerContext.Builder builderForValue) {
+      if (contextBuilder_ == null) {
+        context_ = builderForValue.build();
+        onChanged();
       } else {
-        return (java.lang.String) ref;
+        contextBuilder_.setMessage(builderForValue.build());
+      }
+
+      return this;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public Builder mergeContext(cn.hyperchain.protos.LedgerContext value) {
+      if (contextBuilder_ == null) {
+        if (context_ != null) {
+          context_ =
+            cn.hyperchain.protos.LedgerContext.newBuilder(context_).mergeFrom(value).buildPartial();
+        } else {
+          context_ = value;
+        }
+        onChanged();
+      } else {
+        contextBuilder_.mergeFrom(value);
+      }
+
+      return this;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public Builder clearContext() {
+      if (contextBuilder_ == null) {
+        context_ = null;
+        onChanged();
+      } else {
+        context_ = null;
+        contextBuilder_ = null;
+      }
+
+      return this;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.LedgerContext.Builder getContextBuilder() {
+      
+      onChanged();
+      return getContextFieldBuilder().getBuilder();
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.LedgerContextOrBuilder getContextOrBuilder() {
+      if (contextBuilder_ != null) {
+        return contextBuilder_.getMessageOrBuilder();
+      } else {
+        return context_ == null ?
+            cn.hyperchain.protos.LedgerContext.getDefaultInstance() : context_;
       }
     }
     /**
-     * <code>string id = 2;</code>
+     * <code>.LedgerContext context = 1;</code>
      */
-    public com.google.protobuf.ByteString
-        getIdBytes() {
-      java.lang.Object ref = id_;
-      if (ref instanceof String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        id_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
+    private com.google.protobuf.SingleFieldBuilderV3<
+        cn.hyperchain.protos.LedgerContext, cn.hyperchain.protos.LedgerContext.Builder, cn.hyperchain.protos.LedgerContextOrBuilder> 
+        getContextFieldBuilder() {
+      if (contextBuilder_ == null) {
+        contextBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+            cn.hyperchain.protos.LedgerContext, cn.hyperchain.protos.LedgerContext.Builder, cn.hyperchain.protos.LedgerContextOrBuilder>(
+                getContext(),
+                getParentForChildren(),
+                isClean());
+        context_ = null;
       }
-    }
-    /**
-     * <code>string id = 2;</code>
-     */
-    public Builder setId(
-        java.lang.String value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  
-      id_ = value;
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string id = 2;</code>
-     */
-    public Builder clearId() {
-      
-      id_ = getDefaultInstance().getId();
-      onChanged();
-      return this;
-    }
-    /**
-     * <code>string id = 2;</code>
-     */
-    public Builder setIdBytes(
-        com.google.protobuf.ByteString value) {
-      if (value == null) {
-    throw new NullPointerException();
-  }
-  checkByteStringIsUtf8(value);
-      
-      id_ = value;
-      onChanged();
-      return this;
+      return contextBuilder_;
     }
 
     private com.google.protobuf.ByteString k_ = com.google.protobuf.ByteString.EMPTY;
     /**
-     * <code>bytes k = 3;</code>
+     * <code>bytes k = 2;</code>
      */
     public com.google.protobuf.ByteString getK() {
       return k_;
     }
     /**
-     * <code>bytes k = 3;</code>
+     * <code>bytes k = 2;</code>
      */
     public Builder setK(com.google.protobuf.ByteString value) {
       if (value == null) {
@@ -623,7 +550,7 @@ public  final class Key extends
       return this;
     }
     /**
-     * <code>bytes k = 3;</code>
+     * <code>bytes k = 2;</code>
      */
     public Builder clearK() {
       
