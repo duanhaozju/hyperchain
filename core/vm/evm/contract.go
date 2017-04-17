@@ -18,11 +18,11 @@ type Contract struct {
 	CallerAddress common.Address
 	caller        vm.ContractRef
 	self          vm.ContractRef
+	env           vm.Environment
 
 	jumpdests destinations // result of JUMPDEST analysis.
 
 	Code     []byte
-	ABI      []byte
 	Input    []byte
 	CodeAddr *common.Address
 
@@ -36,8 +36,8 @@ type Contract struct {
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller vm.ContractRef, object vm.ContractRef, value, gas, price *big.Int, opcode int32) vm.VmContext {
-	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil, Opcode: opcode}
+func NewContract(caller vm.ContractRef, object vm.ContractRef, value, gas, price *big.Int, opcode int32, env vm.Environment) vm.VmContext {
+	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil, Opcode: opcode, env: env}
 
 	if parent, ok := caller.(*Contract); ok {
 		// Reuse JUMPDEST analysis from parent context if available.
@@ -128,11 +128,6 @@ func (self *Contract) SetCode(hash common.Hash, code []byte) {
 	self.Code = code
 }
 
-// SetABI sets the ABI to the contract
-func (self *Contract) SetABI(abi []byte) {
-	self.ABI = abi
-}
-
 // SetCallCode sets the code of the contract and address of the backing data
 // object
 func (self *Contract) SetCallCode(addr *common.Address, code []byte) {
@@ -180,4 +175,63 @@ func (self *Contract) GetInput() []byte {
 
 func (self *Contract) GetPrice() *big.Int {
 	return self.Price
+}
+
+func (self *Contract) GetEnv() vm.Environment {
+	return self.env
+}
+
+func (self *Contract) GetAttribute(t int, k interface{}) interface{} {
+	switch t {
+	case vm.CtxAttr_Op:
+		tmp := k.(uint64)
+		return self.GetOp(tmp)
+	case vm.CtxAttr_Opcode:
+		return self.GetOpCode()
+	case vm.CtxAttr_Caller:
+		return self.GetCaller()
+	case vm.CtxAttr_CallerAddr:
+		return self.Caller()
+	case vm.CtxAttr_CodeAddr:
+		return self.GetCodeAddr()
+	case vm.CtxAttr_Code:
+		return self.GetCode()
+	case vm.CtxAttr_Env:
+		return self.GetEnv()
+	case vm.CtxAttr_Gas:
+		return self.GetGas()
+	case vm.CtxAttr_GasPrice:
+		return self.GetPrice()
+	case vm.CtxAttr_Input:
+		return self.GetInput()
+	default:
+		return nil
+	}
+}
+
+func (self *Contract) SetAttribute(t int, args ...interface{}) {
+	switch t {
+	case vm.CtxAttr_Input:
+		if len(args) != 1 {
+			return
+		}
+		if tmp, ok := args[0].([]byte); ok != false {
+			self.SetInput(tmp)
+		}
+	case vm.CtxAttr_Code:
+		if len(args) != 2 {
+			return
+		}
+		addr, ok := args[0].(*common.Address)
+		if ok == false {
+			return
+		}
+		code, ok := args[1].([]byte)
+		if ok == false {
+			return
+		}
+		self.SetCallCode(addr, code)
+	default:
+		return
+	}
 }

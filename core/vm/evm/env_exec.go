@@ -121,7 +121,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	contract := NewContract(caller, to, value, gas, gasPrice, int32(op))
+	contract := NewContract(caller, to, value, gas, gasPrice, int32(op), env)
 	if isUpdate(op) {
 		// using the new code to execute
 		// otherwise errors could occur
@@ -202,7 +202,7 @@ func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toA
 	}
 
 	// Iinitialise a new contract and make initialise the delegate values
-	contract := NewContract(caller, to, value, gas, gasPrice, 0).AsDelegate()
+	contract := NewContract(caller, to, value, gas, gasPrice, 0, env).AsDelegate()
 	contract.SetCallCode(codeAddr, code)
 	defer contract.Finalise()
 

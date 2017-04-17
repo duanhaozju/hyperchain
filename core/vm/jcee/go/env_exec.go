@@ -97,7 +97,8 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	ret, err = virtualMachine.Run(nil, input)
+	context := NewContext(caller, to, env)
+	ret, err = virtualMachine.Run(context, input)
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled

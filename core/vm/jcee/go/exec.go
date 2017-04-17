@@ -19,7 +19,7 @@ func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber
 		op       = tv.GetOp()
 
 	)
-	env := initEnvironment(db, blockNumber, logger, namespace)
+	env := initEnvironment(db, blockNumber, logger, namespace, tx.GetHash())
 	if env == nil {
 		return nil, nil, common.Address{}, er.ExecContractErr(1, "init environment failed")
 	}
@@ -29,7 +29,7 @@ func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber
 	}
 	if tx.To == nil {
 		// deploy
-		ret, addr, err := Exec(env, &from, &to, data, op)
+		ret, addr, err := Exec(env, &from, nil, data, op)
 		receipt := makeReceipt(env, addr, tx.GetHash(), ret, err)
 		return receipt, ret, addr, err
 	} else {
@@ -68,11 +68,11 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, op types.
 	return ret, addr, err
 }
 
-func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger, namespace string) vm.Environment {
+func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger, namespace string, txHash common.Hash) vm.Environment {
 	env := make(map[string]string)
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "200000000"
-	vmenv := NewEnv(state, env, logger, namespace)
+	vmenv := NewEnv(state, env, logger, namespace, txHash)
 	if vmenv == nil {
 		return nil
 	}
@@ -96,7 +96,7 @@ func checkPermission(env vm.Environment, from, to common.Address, op types.Trans
 }
 
 func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, ret []byte, err error) *types.Receipt {
-	// jvm receipt vmType = 0
+	// jvm receipt vmType = 1
 	receipt := types.NewReceipt(nil, nil, 1)
 	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = txHash.Bytes()

@@ -11,7 +11,7 @@ import (
 	"github.com/op/go-logging"
 )
 
-func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, logger *logging.Logger) (*types.Receipt, []byte, common.Address, error) {
+func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, logger *logging.Logger, namespace string) (*types.Receipt, []byte, common.Address, error) {
 	var (
 		from     = common.BytesToAddress(tx.From)
 		to       = common.BytesToAddress(tx.To)
@@ -22,7 +22,7 @@ func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber
 		amount   = tv.RetrieveAmount()
 		op       = tv.GetOp()
 	)
-	env := initEnvironment(db, blockNumber, logger)
+	env := initEnvironment(db, blockNumber, logger, namespace, tx.GetHash())
 	env.Db().StartRecord(tx.GetHash(), common.Hash{}, idx)
 	if valid := checkPermission(env, from, to, op); !valid {
 		return nil, nil, common.Address{}, er.InvalidInvokePermissionErr("not enough permission to invocation")
@@ -82,11 +82,11 @@ func checkPermission(env vm.Environment, from, to common.Address, op types.Trans
 	return true
 }
 
-func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger) vm.Environment {
+func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger, namespace string, txHash common.Hash) vm.Environment {
 	env := make(map[string]string)
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "200000000"
-	vmenv := NewEnv(state, env, logger)
+	vmenv := NewEnv(state, env, logger, namespace, txHash)
 	return vmenv
 }
 

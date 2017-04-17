@@ -42,6 +42,10 @@ type Environment interface {
 	VmType() Type
 	// Env logger
 	Logger() *logging.Logger
+	// Namespace
+	Namespace() string
+	// Current transaction hash
+	TransactionHash() common.Hash
 	// Determines whether it's possible to transact
 	CanTransfer(from common.Address, balance *big.Int) bool
 	// Transfers amount from one account to the other

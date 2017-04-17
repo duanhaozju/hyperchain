@@ -14,27 +14,42 @@ type Vm interface {
 	Run(c VmContext, in []byte) ([]byte, error)
 }
 
+const (
+	CtxAttr_Op = iota
+	CtxAttr_Opcode
+	CtxAttr_CallerAddr
+	CtxAttr_Caller
+	CtxAttr_CodeAddr
+	CtxAttr_Code
+	CtxAttr_Env
+	CtxAttr_Gas
+	CtxAttr_GasPrice
+	CtxAttr_Input
+)
 type VmContext interface {
+	ContractRef
 	AsDelegate() VmContext
+
 	GetOp(uint64) byte
-	GetByte(uint64) byte
-	Caller() common.Address
-	Finalise()
-	UseGas(*big.Int) bool
-	ReturnGas(*big.Int, *big.Int)
-	Address() common.Address
-	Value() *big.Int
-	SetCode(common.Hash, []byte)
-	SetABI([]byte)
-	SetCallCode(*common.Address, []byte)
-	ForEachStorage(func(common.Hash, []byte) bool) map[common.Hash][]byte
 	GetOpCode() int32
-	GetGas() *big.Int
-	GetCodeAddr() *common.Address
-	GetCode() []byte
+
+	Caller() common.Address
 	GetCaller() ContractRef
-	GetJumpdests() interface{}
+
+	UseGas(*big.Int) bool
+	GetGas() *big.Int
+	GetPrice() *big.Int
+
+	GetCode() []byte
+	SetCallCode(*common.Address, []byte)
+
 	SetInput([]byte)
 	GetInput() []byte
-	GetPrice() *big.Int
+
+	Finalise()
+	GetCodeAddr() *common.Address
+	GetJumpdests() interface{}
+	GetEnv()   Environment
+	GetAttribute(int, interface{}) interface{}
+	SetAttribute(int, ...interface{})
 }

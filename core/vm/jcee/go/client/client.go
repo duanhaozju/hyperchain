@@ -34,8 +34,10 @@ type contractExecutorImpl struct {
 }
 
 func NewContractExecutor() ContractExecutor {
-	Jvm := &contractExecutorImpl{address: "localhost:50051"}
-	Jvm.logger = logging.MustGetLogger("contract")
+	Jvm := &contractExecutorImpl{
+		address: "localhost:50051",
+		logger:  logging.MustGetLogger("contract"),
+	}
 	return Jvm
 }
 
@@ -64,8 +66,9 @@ func (cei *contractExecutorImpl) Stop() error {
 func (cei *contractExecutorImpl) isActive() bool {
 	return atomic.LoadInt32(cei.close) == 0
 }
-func (cei *contractExecutorImpl) Run(c vm.VmContext, in []byte) ([]byte, error) {
-	response, err := cei.Execute(nil)
+func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error) {
+	request := cei.parse(ctx, in)
+	response, err := cei.Execute(request)
 	if err != nil {
 		return nil, err
 	} else {
@@ -73,12 +76,18 @@ func (cei *contractExecutorImpl) Run(c vm.VmContext, in []byte) ([]byte, error) 
 	}
 }
 
-func (cei *contractExecutorImpl) parse(in []byte) *pb.Request {
+func (cei *contractExecutorImpl) parse(ctx vm.VmContext, in []byte) *pb.Request {
 	var args types.InvokeArgs
 	if err := proto.Unmarshal(in, &args); err != nil {
 		return nil
 	}
 	return &pb.Request{
-		Method: args.MethodName,
+		Context:  &pb.RequestContext{
+			Cid:         ctx.Address().Hex(),
+			Namespace:   ctx.GetEnv().Namespace(),
+			Txid:        ctx.GetEnv().TransactionHash().Hex(),
+		},
+		Method:   args.MethodName,
+		Args:     args.Args,
 	}
 }

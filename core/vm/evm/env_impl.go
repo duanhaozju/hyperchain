@@ -56,19 +56,21 @@ type Env struct {
 
 	logs       []StructLog
 	logger     *logging.Logger
-
-	vmTest bool
-
+	namespace  string
+	txHash     common.Hash
+	vmTest     bool
 	evm        *EVM
 }
 
-func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger) *Env {
+func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger, namespace string, txHash common.Hash) *Env {
 	env := &Env{
 		state:     state,
 		logger:    logger,
 		time:      common.Big(setting["currentTimestamp"]),
 		gasLimit:  common.Big(setting["currentGasLimit"]),
 		number:    common.Big(setting["currentNumber"]),
+		namespace: namespace,
+		txHash:    txHash,
 		Gas:       new(big.Int),
 	}
 	env.evm = New(env, Config{
@@ -88,6 +90,10 @@ func (self *Env) Db() vm.Database          { return self.state }
 func (self *Env) GasLimit() *big.Int       { return self.gasLimit }
 func (self *Env) VmType() vm.Type          { return vm.StdVmTy }
 func (self *Env) Logger() *logging.Logger  { return self.logger}
+func (self *Env) Namespace() string        { return self.namespace}
+func (self *Env) TransactionHash() common.Hash {
+	return self.txHash
+}
 func (self *Env) GetHash(n uint64) common.Hash {
 	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
 }

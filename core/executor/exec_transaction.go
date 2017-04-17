@@ -13,7 +13,7 @@ func (executor *Executor) ExecTransaction(db vm.Database, tx *types.Transaction,
 	tv := tx.GetTransactionValue()
 	switch tv.GetVmType() {
 	case types.TransactionValue_EVM:
-		return evm.ExecTransaction(db, tx, idx, blockNumber, executor.logger)
+		return evm.ExecTransaction(db, tx, idx, blockNumber, executor.logger, executor.namespace)
 	case types.TransactionValue_JVM:
 		return jvm.ExecTransaction(db, tx, idx, blockNumber, executor.logger, executor.namespace)
 	default:

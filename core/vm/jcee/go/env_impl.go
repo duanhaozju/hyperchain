@@ -26,18 +26,21 @@ type Env struct {
 	time       *big.Int
 	difficulty *big.Int
 	gasLimit   *big.Int
-
+	namespace  string
+	txHash     common.Hash
 	logger     *logging.Logger
 	jvm        vm.Vm
 }
 
-func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger, namespace string) *Env {
+func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger, namespace string, txHash common.Hash) *Env {
 	env := &Env{
 		state:     state,
 		logger:    logger,
 		time:      common.Big(setting["currentTimestamp"]),
 		gasLimit:  common.Big(setting["currentGasLimit"]),
 		number:    common.Big(setting["currentNumber"]),
+		namespace: namespace,
+		txHash:    txHash,
 		Gas:       new(big.Int),
 	}
 	env.jvm = jcee.ClientMgr.Get(namespace)
@@ -60,6 +63,10 @@ func (self *Env) Db() vm.Database          { return self.state }
 func (self *Env) GasLimit() *big.Int       { return nil}
 func (self *Env) VmType() vm.Type          { return vm.JavaVmTy }
 func (self *Env) Logger() *logging.Logger  { return self.logger}
+func (self *Env) Namespace() string        { return self.namespace}
+func (self *Env) TransactionHash() common.Hash {
+	return self.txHash
+}
 func (self *Env) GetHash(n uint64) common.Hash {
 	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
 }
