@@ -5,6 +5,8 @@ import (
 	"math/big"
 	"github.com/op/go-logging"
 	"hyperchain/core/vm"
+	"hyperchain/core/types"
+	"hyperchain/core/vm/jcee/go/client"
 )
 
 type Account struct {
@@ -29,7 +31,7 @@ type Env struct {
 	jvm        vm.Vm
 }
 
-func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger) *Env {
+func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger, namespace string) *Env {
 	env := &Env{
 		state:     state,
 		logger:    logger,
@@ -38,11 +40,10 @@ func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger
 		number:    common.Big(setting["currentNumber"]),
 		Gas:       new(big.Int),
 	}
-	// TODO new JVM executor
-	//env.evm = New(env, Config{
-	//	EnableJit: EnableJit,
-	//	ForceJit:  ForceJit,
-	//})
+	env.jvm = jcee.ClientMgr.Get(namespace)
+	if env.jvm == nil {
+		return nil
+	}
 	return env
 }
 
@@ -81,10 +82,11 @@ func (self *Env) SetSnapshot(copy interface{}) {
 
 // Deprecate
 func (self *Env) Transfer(from, to vm.Account, amount *big.Int) {
+	Transfer(from, to, amount)
 }
-// Deprecate
+
 func (self *Env) Call(caller vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int, op int32) ([]byte, error) {
-	return nil, nil
+	return Call(self, caller, addr, data, gas, price, value, types.TransactionValue_Opcode(op))
 
 }
 // Deprecate
