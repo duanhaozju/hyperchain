@@ -20,12 +20,12 @@ import org.apache.log4j.Logger;
  */
 public class JceeServer implements IServer {
     private static final Logger LOG = Logger.getLogger(JceeServer.class);
-    private final int port;
+    private int port;
     private Server server;
     private ContractGrpcServerImpl cgsi;
 
     public JceeServer(){
-        port = 50051;
+        // port = 50051;
         cgsi = new ContractGrpcServerImpl();
     }
     public void Start() {
@@ -50,12 +50,14 @@ public class JceeServer implements IServer {
 
     public static void main(String []args){
         LOG.info("Start JCEE server ...");
+
         JceeServer cs = new JceeServer();
+        cs.port = Integer.parseInt(args[0]);
         //TODO: fix this kind of contract add
         ContractInfo info = new ContractInfo("msc", "e81e714395549ba939403c7634172de21367f8b5", "Wang Xiaoyi");
         ContractBase contract = new SimulateBank("bank001", 001, true);
         contract.setOwner(info.getOwner());
-        contract.setLedger(new HyperchainLedger());
+        contract.setLedger(new HyperchainLedger(Integer.parseInt(args[1])));
         ContractHolder holder = new ContractHolder(info, contract);
         cs.cgsi.getHandler().getContractMgr().addContract(holder);
         cs.Start();

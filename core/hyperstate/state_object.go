@@ -269,21 +269,21 @@ func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 		delete(self.dirtyStorage, key)
 		if len(value) == 0 {
 			// delete
-			self.logger.Debugf("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
+			self.logger.Noticef("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
 			if err := db.Delete(CompositeStorageKey(self.address.Bytes(), key.Bytes())); err != nil {
 				return err
 			}
 			// put into archieve db
 			previous := self.archieveStorage[key]
 			if len(previous) != 0 {
-				self.logger.Debugf("flush dirty storage address [%s] add key: [%s] to archieve db, value [%s]", self.address.Hex(), key.Hex(), common.Bytes2Hex(previous))
+				self.logger.Noticef("flush dirty storage address [%s] add key: [%s] to archieve db, value [%s]", self.address.Hex(), key.Hex(), common.Bytes2Hex(previous))
 				if err := archieveDb.Put(CompositeArchieveStorageKey(self.address.Bytes(), key.Bytes()), previous); err != nil {
 					return err
 				}
 			}
 
 		} else {
-			self.logger.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", self.address.Hex(), key.Hex(), common.Bytes2Hex(value))
+			self.logger.Noticef("flush dirty storage address [%s] put item key: [%s], value [%s]", self.address.Hex(), key.Hex(), common.Bytes2Hex(value))
 			if err := db.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), value); err != nil {
 				return err
 			}

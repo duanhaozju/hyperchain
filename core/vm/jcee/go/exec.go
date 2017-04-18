@@ -9,6 +9,7 @@ import (
 	"bytes"
 	er "hyperchain/core/errors"
 	"hyperchain/core/vm/jcee/go/client"
+	"math/big"
 )
 
 func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, logger *logging.Logger, namespace string, jvmCli jcee.ContractExecutor) (*types.Receipt, []byte, common.Address, error) {
@@ -98,7 +99,7 @@ func checkPermission(env vm.Environment, from, to common.Address, op types.Trans
 
 func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, ret []byte, err error) *types.Receipt {
 	// jvm receipt vmType = 1
-	receipt := types.NewReceipt(nil, nil, 1)
+	receipt := types.NewReceipt(nil, big.NewInt(0), 1)
 	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = txHash.Bytes()
 	receipt.GasUsed = 100000

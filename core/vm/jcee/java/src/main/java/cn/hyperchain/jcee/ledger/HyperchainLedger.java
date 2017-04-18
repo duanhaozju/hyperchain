@@ -18,8 +18,8 @@ public class HyperchainLedger extends AbstractLedger{
 
     private static final Logger logger = Logger.getLogger(HyperchainLedger.class.getSimpleName());
     private LedgerClient client;
-    public HyperchainLedger(){
-        client = new LedgerClient("localhost", 50052);
+    public HyperchainLedger(int port){
+        client = new LedgerClient("localhost", port);
     }
 
     public byte[] get(byte[] key) {
@@ -45,7 +45,7 @@ public class HyperchainLedger extends AbstractLedger{
                 .newBuilder()
                 .setNamespace(getContext().getRequestContext().getNamespace())
                 .setTxid(getContext().getRequestContext().getTxid())
-                .setTxid(getContext().getRequestContext().getCid())
+                .setCid(getContext().getRequestContext().getCid())
                 .build();
     }
 }

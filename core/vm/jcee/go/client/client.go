@@ -12,6 +12,7 @@ import (
 	"hyperchain/core/types"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
+	"fmt"
 )
 
 type ContractExecutor interface {
@@ -34,9 +35,10 @@ type contractExecutorImpl struct {
 	close   *int32
 }
 
-func NewContractExecutor() ContractExecutor {
+func NewContractExecutor(conf *common.Config) ContractExecutor {
+	address := fmt.Sprintf("localhost:%d", conf.Get(common.C_JVM_PORT))
 	Jvm := &contractExecutorImpl{
-		address: "localhost:50051",
+		address: address,
 		logger:  logging.MustGetLogger("contract"),
 	}
 	return Jvm

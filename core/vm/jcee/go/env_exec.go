@@ -116,6 +116,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// above we revert to the snapshot and consume any gas remaining. Additionally
 	// when we're in homestead this also counts for code storage gas errors.
 	if err != nil {
+		env.Logger().Error("execute err", err.Error())
 		env.SetSnapshot(snapshotPreTransfer)
 		if createAccount {
 			err = er.ExecContractErr(0, "contract creation failed, error msg", err.Error())
@@ -123,6 +124,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 			err = er.ExecContractErr(1, "contract invocation failed, error msg:", err.Error())
 		}
 	}
+	env.Logger().Notice("execute result", common.Bytes2Hex(ret))
 	return ret, addr, err
 }
 

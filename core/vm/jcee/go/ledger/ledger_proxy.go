@@ -20,11 +20,13 @@ var (
 //LedgerProxy used to manipulate data
 type LedgerProxy struct {
 	stateMgr *StateManager
+	conf     *common.Config
 }
 
-func NewLedgerProxy() *LedgerProxy {
+func NewLedgerProxy(conf *common.Config) *LedgerProxy {
 	return &LedgerProxy{
 		stateMgr: NewStateManager(),
+		conf:     conf,
 	}
 }
 
@@ -37,7 +39,7 @@ func (lp *LedgerProxy) UnRegister(namespace string) error {
 }
 
 func (lp *LedgerProxy) Server() error {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", 50052))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", lp.conf.Get(common.C_LEDGER_PORT)))
 	if err != nil {
 		return err
 	}
@@ -48,11 +50,12 @@ func (lp *LedgerProxy) Server() error {
 }
 
 func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) {
+	fmt.Println("key", key.String())
 	exist, state := lp.stateMgr.GetStateDb(key.Context.Namespace)
 	if exist == false {
 		return nil, NamespaceNotExistErr
 	}
-	_, value := state.GetState(common.Address{}, common.BytesToHash(key.K))
+	_, value := state.GetState(common.HexToAddress(key.Context.Cid), common.BytesToHash(key.K))
 	v := &pb.Value{
 		V: value,
 	}
@@ -60,11 +63,12 @@ func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) 
 }
 
 func (lp *LedgerProxy) Put(ctx context.Context, kv *pb.KeyValue) (*pb.Response, error) {
+	fmt.Println("keyvalue", kv.String())
 	exist, state := lp.stateMgr.GetStateDb(kv.Context.Namespace)
 	if exist == false {
 		return nil, NamespaceNotExistErr
 	}
 	// TODO for extension leave a opcode field
-	state.SetState(common.Address{}, common.BytesToHash(kv.K), kv.V, 0)
-	return nil, nil
+	state.SetState(common.HexToAddress(kv.Context.Cid), common.BytesToHash(kv.K), kv.V, 0)
+	return &pb.Response{}, nil
 }

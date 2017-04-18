@@ -67,7 +67,7 @@ func newNsManager(conf *common.Config) *nsManagerImpl {
 	nr := &nsManagerImpl{
 		namespaces: make(map[string]Namespace),
 		conf:       conf,
-		jvmManager: NewJvmManager(),
+		jvmManager: NewJvmManager(conf),
 	}
 	nr.rwLock = new(sync.RWMutex)
 	err := nr.init()

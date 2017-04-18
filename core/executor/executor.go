@@ -48,7 +48,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 		commonHash:  kec256Hash,
 		encryption:  encryption,
 		helper:      helper,
-		jvmCli:      jcee.NewContractExecutor(),
+		jvmCli:      jcee.NewContractExecutor(conf),
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.initDb()

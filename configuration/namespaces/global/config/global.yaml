@@ -71,6 +71,7 @@ global:
             core: "NOTICE"
             hyperdb: "NOTICE"
             common/hyper_logger: "NOTICE"
+            hyperstate: "DEBUG"
 
     ######################################################
     # configs related to the executor                    #

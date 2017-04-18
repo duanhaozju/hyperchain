@@ -17,6 +17,7 @@ func (executor *Executor) ExecTransaction(db vm.Database, tx *types.Transaction,
 		return evm.ExecTransaction(db, tx, idx, blockNumber, executor.logger, executor.namespace)
 	case types.TransactionValue_JVM:
 		executor.logger.Notice("execute in jvm")
+		defer executor.logger.Notice("execute in jvm done")
 		return jvm.ExecTransaction(db, tx, idx, blockNumber, executor.logger, executor.namespace, executor.jvmCli)
 	default:
 		executor.logger.Warningf("try to execute a transaction with undefined vm type %s", tv.GetVmType().String())

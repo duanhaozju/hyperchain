@@ -26,7 +26,7 @@ const (
 	// whether turn on fake hash function
 	enableFakeHashFn = false
 	// whether to remove empty stateObject
-	deleteEmptyObjects = true
+	deleteEmptyObjects = false
 )
 
 type revision struct {
@@ -1028,7 +1028,7 @@ func (s *StateDB) commit(dbw db.Batch, archieveDb db.Batch, deleteEmptyObjects b
 		_, isDirty := s.stateObjectsDirty[addr]
 		switch {
 		case stateObject.suicided || (isDirty && deleteEmptyObjects && stateObject.empty()):
-			s.logger.Debugf("seqNo #%d, state object %s been suicide or clearing out for empty", s.curSeqNo, stateObject.address.Hex())
+			s.logger.Noticef("seqNo #%d, state object %s been suicide or clearing out for empty", s.curSeqNo, stateObject.address.Hex())
 			// If the object has been removed, don't bother syncing it
 			// and just mark it for deletion in the trie.
 			s.deleteStateObject(dbw, stateObject)
@@ -1040,7 +1040,7 @@ func (s *StateDB) commit(dbw db.Batch, archieveDb db.Batch, deleteEmptyObjects b
 			}
 		case isDirty:
 			// Write any contract code associated with the state object
-			s.logger.Debugf("seqNo #%d, state object %s been updated", s.curSeqNo, stateObject.address.Hex())
+			s.logger.Noticef("seqNo #%d, state object %s been updated", s.curSeqNo, stateObject.address.Hex())
 			if stateObject.code != nil && stateObject.dirtyCode {
 				if err := dbw.Put(CompositeCodeHash(stateObject.Address().Bytes(), stateObject.CodeHash()), stateObject.code); err != nil {
 					return common.Hash{}, err

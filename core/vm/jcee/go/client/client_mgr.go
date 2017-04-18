@@ -1,6 +1,9 @@
 package jcee
 
-import "sync"
+import (
+	"sync"
+	"hyperchain/common"
+)
 
 var ClientMgr *ClientManager
 var clientMgrOnce *sync.Once
@@ -12,12 +15,14 @@ func init() {
 type ClientManager struct {
 	clients map[string]ContractExecutor
 	lock    sync.RWMutex
+	conf    *common.Config
 }
 
-func NewClientManager() *ClientManager {
+func NewClientManager(conf *common.Config) *ClientManager {
 	clientMgrOnce.Do(func(){
 		ClientMgr = &ClientManager{
 			clients: make(map[string]ContractExecutor),
+			conf:    conf,
 		}
 	})
 	return ClientMgr
@@ -29,7 +34,7 @@ func (mgr *ClientManager) Register(namespace string) error {
 	if _, exist := mgr.clients[namespace]; exist == true {
 		return nil
 	} else {
-		client := NewContractExecutor()
+		client := NewContractExecutor(mgr.conf)
 		if err := client.Start(); err != nil {
 			return err
 		} else {
