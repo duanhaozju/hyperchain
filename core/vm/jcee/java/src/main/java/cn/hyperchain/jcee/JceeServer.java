@@ -13,6 +13,7 @@ import cn.hyperchain.jcee.ledger.HyperchainLedger;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.apache.log4j.Logger;
+import org.apache.log4j.spi.NOPLogger;
 
 /**
  * JceeServer
@@ -49,17 +50,33 @@ public class JceeServer implements IServer {
     }
 
     public static void main(String []args){
-        LOG.info("Start JCEE server ...");
+        final int localPorts[] = new int[] {50081, 50082, 50083, 50084};
+        final int ledgerPorts[] = new int[] {50051, 50052, 50053, 50054};
 
-        JceeServer cs = new JceeServer();
-        cs.port = Integer.parseInt(args[0]);
-        //TODO: fix this kind of contract add
-        ContractInfo info = new ContractInfo("msc", "e81e714395549ba939403c7634172de21367f8b5", "Wang Xiaoyi");
-        ContractBase contract = new SimulateBank("bank001", 001, true);
-        contract.setOwner(info.getOwner());
-        contract.setLedger(new HyperchainLedger(Integer.parseInt(args[1])));
-        ContractHolder holder = new ContractHolder(info, contract);
-        cs.cgsi.getHandler().getContractMgr().addContract(holder);
-        cs.Start();
+        for(int i = 0; i < localPorts.length; ++ i){
+            final int k = i;
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (true) {
+                        LOG.info("Start JCEE server ...");
+                        JceeServer cs = new JceeServer();
+                        cs.port = localPorts[k];
+                        //TODO: fix this kind of contract add
+                        ContractInfo info = new ContractInfo("msc", "e81e714395549ba939403c7634172de21367f8b5", "Wang Xiaoyi");
+                        ContractBase contract = new SimulateBank("bank001", 001, true);
+                        contract.setOwner(info.getOwner());
+                        contract.setLedger(new HyperchainLedger(ledgerPorts[k]));
+                        ContractHolder holder = new ContractHolder(info, contract);
+                        cs.cgsi.getHandler().getContractMgr().addContract(holder);
+                        cs.Start();
+                    }
+                }
+            }).start();
+        }
+
+
+
+
     }
 }
