@@ -8,6 +8,9 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/vm"
 	pb "hyperchain/core/vm/jcee/protos"
+	"google.golang.org/grpc"
+	"net"
+	"fmt"
 )
 
 var (
@@ -31,6 +34,17 @@ func (lp *LedgerProxy) Register(namespace string, db vm.Database) error {
 
 func (lp *LedgerProxy) UnRegister(namespace string) error {
 	return lp.stateMgr.UnReigister(namespace)
+}
+
+func (lp *LedgerProxy) Server() error {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", 50052))
+	if err != nil {
+		return err
+	}
+	grpcServer := grpc.NewServer()
+	pb.RegisterLedgerServer(grpcServer, lp)
+	grpcServer.Serve(lis)
+	return nil
 }
 
 func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) {

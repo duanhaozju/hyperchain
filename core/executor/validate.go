@@ -119,22 +119,22 @@ func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidT
 	// (1) check signature for each transaction
 	var wg sync.WaitGroup
 	var index []int
-	var mu sync.Mutex
+	// var mu sync.Mutex
 	for i := range txs {
 		wg.Add(1)
 		go func(i int) {
-			tx := txs[i]
-			if !tx.ValidateSign(executor.encryption, executor.commonHash) {
-				executor.logger.Warningf("[Namespace = %s] found invalid signature, send from : %d", executor.namespace, tx.Id)
-				mu.Lock()
-				invalidtxs = append(invalidtxs, &types.InvalidTransactionRecord{
-					Tx:      tx,
-					ErrType: types.InvalidTransactionRecord_SIGFAILED,
-					ErrMsg:  []byte("Invalid signature"),
-				})
-				index = append(index, i)
-				mu.Unlock()
-			}
+			//tx := txs[i]
+			//if !tx.ValidateSign(executor.encryption, executor.commonHash) {
+			//	executor.logger.Warningf("[Namespace = %s] found invalid signature, send from : %d", executor.namespace, tx.Id)
+			//	mu.Lock()
+			//	invalidtxs = append(invalidtxs, &types.InvalidTransactionRecord{
+			//		Tx:      tx,
+			//		ErrType: types.InvalidTransactionRecord_SIGFAILED,
+			//		ErrMsg:  []byte("Invalid signature"),
+			//	})
+			//	index = append(index, i)
+			//	mu.Unlock()
+			//}
 			wg.Done()
 		}(i)
 	}

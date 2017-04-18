@@ -11,6 +11,7 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/core/types"
 	"github.com/golang/protobuf/proto"
+	"hyperchain/common"
 )
 
 type ContractExecutor interface {
@@ -68,6 +69,7 @@ func (cei *contractExecutorImpl) isActive() bool {
 }
 func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error) {
 	request := cei.parse(ctx, in)
+	cei.logger.Notice("jvm invocation request %s", request.String())
 	response, err := cei.Execute(request)
 	if err != nil {
 		return nil, err
@@ -83,7 +85,7 @@ func (cei *contractExecutorImpl) parse(ctx vm.VmContext, in []byte) *pb.Request 
 	}
 	return &pb.Request{
 		Context:  &pb.RequestContext{
-			Cid:         ctx.Address().Hex(),
+			Cid:         common.HexToString(ctx.Address().Hex()),
 			Namespace:   ctx.GetEnv().Namespace(),
 			Txid:        ctx.GetEnv().TransactionHash().Hex(),
 		},

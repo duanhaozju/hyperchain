@@ -8,9 +8,10 @@ import (
 	"strconv"
 	"bytes"
 	er "hyperchain/core/errors"
+	"hyperchain/core/vm/jcee/go/client"
 )
 
-func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, logger *logging.Logger, namespace string) (*types.Receipt, []byte, common.Address, error) {
+func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, logger *logging.Logger, namespace string, jvmCli jcee.ContractExecutor) (*types.Receipt, []byte, common.Address, error) {
 	var (
 		from     = common.BytesToAddress(tx.From)
 		to       = common.BytesToAddress(tx.To)
@@ -19,7 +20,7 @@ func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber
 		op       = tv.GetOp()
 
 	)
-	env := initEnvironment(db, blockNumber, logger, namespace, tx.GetHash())
+	env := initEnvironment(db, blockNumber, logger, namespace, tx.GetHash(), jvmCli)
 	if env == nil {
 		return nil, nil, common.Address{}, er.ExecContractErr(1, "init environment failed")
 	}
@@ -68,11 +69,11 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, op types.
 	return ret, addr, err
 }
 
-func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger, namespace string, txHash common.Hash) vm.Environment {
+func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger, namespace string, txHash common.Hash, jvmCli jcee.ContractExecutor) vm.Environment {
 	env := make(map[string]string)
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "200000000"
-	vmenv := NewEnv(state, env, logger, namespace, txHash)
+	vmenv := NewEnv(state, env, logger, namespace, txHash, jvmCli)
 	if vmenv == nil {
 		return nil
 	}

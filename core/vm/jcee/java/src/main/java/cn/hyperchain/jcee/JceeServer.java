@@ -52,7 +52,7 @@ public class JceeServer implements IServer {
         LOG.info("Start JCEE server ...");
         JceeServer cs = new JceeServer();
         //TODO: fix this kind of contract add
-        ContractInfo info = new ContractInfo("msc", "msc001", "Wang Xiaoyi");
+        ContractInfo info = new ContractInfo("msc", "e81e714395549ba939403c7634172de21367f8b5", "Wang Xiaoyi");
         ContractBase contract = new SimulateBank("bank001", 001, true);
         contract.setOwner(info.getOwner());
         contract.setLedger(new HyperchainLedger());

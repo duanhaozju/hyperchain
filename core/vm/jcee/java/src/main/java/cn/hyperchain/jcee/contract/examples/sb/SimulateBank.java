@@ -34,7 +34,7 @@ public class SimulateBank extends ContractBase{
         switch (funcName) {
             case "issue":
                 return issue(args);
-            case "trasfer":
+            case "transfer":
                 return transfer(args);
             default:
                 logger.error("method " + funcName  + " not found!");

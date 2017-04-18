@@ -58,6 +58,7 @@ type NamespaceManager interface {
 type nsManagerImpl struct {
 	rwLock     *sync.RWMutex
 	namespaces map[string]Namespace
+	jvmManager *JvmManager
 	conf       *common.Config
 }
 
@@ -66,6 +67,7 @@ func newNsManager(conf *common.Config) *nsManagerImpl {
 	nr := &nsManagerImpl{
 		namespaces: make(map[string]Namespace),
 		conf:       conf,
+		jvmManager: NewJvmManager(),
 	}
 	nr.rwLock = new(sync.RWMutex)
 	err := nr.init()
@@ -115,12 +117,15 @@ func (nr *nsManagerImpl) init() error {
 func (nr *nsManagerImpl) Start() error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
-	for name, ns := range nr.namespaces {
-		err := ns.Start()
+	for name := range nr.namespaces {
+		err := nr.StartNamespace(name)
 		if err != nil {
 			logger.Errorf("namespace %s start failed, %v", name, err)
 			return err
 		}
+	}
+	if err := nr.jvmManager.ledgerProxy.Server(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -130,8 +135,8 @@ func (nr *nsManagerImpl) Stop() error {
 	logger.Noticef("Try to stop NamespaceManager ...")
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
-	for name, ns := range nr.namespaces {
-		err := ns.Stop()
+	for name := range nr.namespaces {
+		err := nr.StopNamespace(name)
 		if err != nil {
 			logger.Errorf("namespace %s stop failed, %v", name, err)
 			return err
@@ -217,9 +222,15 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
-		return ns.Start()
+		if err := ns.Start(); err != nil {
+			return err
+		} else {
+			nr.jvmManager.ledgerProxy.Register(name, ns.GetExecutor().FetchStateDb())
+			return nil
+		}
+
 	}
-	logger.Errorf("No namespace instance for %s found")
+	logger.Errorf("No namespace instance for %s found", name)
 	return ErrInvalidNs
 }
 
@@ -228,7 +239,12 @@ func (nr *nsManagerImpl) StopNamespace(name string) error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
-		return ns.Stop()
+		if err := ns.Stop(); err != nil {
+			return err
+		} else {
+			nr.jvmManager.ledgerProxy.UnRegister(name)
+			return nil
+		}
 	}
 	logger.Errorf("No namespace instance for %s found")
 	return ErrInvalidNs

@@ -48,6 +48,8 @@ public class Handler {
     }
 
     public void invoke(Request request, StreamObserver<Response> responseObserver){
+        logger.error("cid is " + request.getContext().getCid());
+        logger.error("contract is " + cm.getContract(request.getContext().getCid()));
         Task task = new InvokeTask(cm.getContract(request.getContext().getCid()), request, constructContext(request.getContext()));
         Future<Response> future = executor.execute(task);
         Response response = null;

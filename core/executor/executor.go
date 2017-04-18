@@ -13,6 +13,7 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
 	"hyperchain/core/vm"
+	"hyperchain/core/vm/jcee/go/client"
 )
 
 var (
@@ -21,18 +22,19 @@ var (
 )
 
 type Executor struct {
-	namespace  string // namespace tag
-	db         db.Database
-	archieveDb db.Database
-	commonHash crypto.CommonHash
-	encryption crypto.Encryption
-	conf       *common.Config // block configuration
-	status     ExecutorStatus
-	hashUtils  ExecutorHashUtil
-	cache      ExecutorCache
-	helper     *Helper
-	statedb    vm.Database
-	logger     *logging.Logger
+	namespace   string // namespace tag
+	db          db.Database
+	archieveDb  db.Database
+	commonHash  crypto.CommonHash
+	encryption  crypto.Encryption
+	conf        *common.Config // block configuration
+	status      ExecutorStatus
+	hashUtils   ExecutorHashUtil
+	cache       ExecutorCache
+	helper      *Helper
+	statedb     vm.Database
+	logger      *logging.Logger
+	jvmCli      jcee.ContractExecutor
 }
 
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux) *Executor {
@@ -41,11 +43,12 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 	helper := NewHelper(eventMux)
 
 	executor := &Executor{
-		namespace:  namespace,
-		conf:       conf,
-		commonHash: kec256Hash,
-		encryption: encryption,
-		helper:     helper,
+		namespace:   namespace,
+		conf:        conf,
+		commonHash:  kec256Hash,
+		encryption:  encryption,
+		helper:      helper,
+		jvmCli:      jcee.NewContractExecutor(),
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.initDb()
@@ -74,6 +77,7 @@ func (executor *Executor) Start() {
 // Stop - stop service.
 func (executor *Executor) Stop() {
 	executor.setExit()
+	executor.jvmCli.Stop()
 	executor.logger.Noticef("[Namespace = %s] executor stop", executor.namespace)
 }
 
@@ -93,6 +97,7 @@ func (executor *Executor) initialize() {
 	if err := initializeExecutorStateDb(executor); err != nil {
 		executor.logger.Errorf("executor initiailize state failed. %s", err.Error())
 	}
+	executor.jvmCli.Start()
 	// start to listen for process commit event or validation event
 	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()

@@ -10,7 +10,6 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus"
 	"hyperchain/consensus/csmgr"
-	//"hyperchain/core/db_utils"
 	"hyperchain/core/db_utils"
 	"hyperchain/core/executor"
 	"hyperchain/hyperdb"
@@ -41,6 +40,8 @@ type Namespace interface {
 	Name() string
 	//GetCAManager get CAManager by namespace name.
 	GetCAManager() *admittance.CAManager
+	//GetExecutor fetch executor module
+	GetExecutor() *executor.Executor
 }
 type NsState int
 
@@ -85,17 +86,16 @@ type namespaceImpl struct {
 	nsInfo *NamespaceInfo
 	status *Status
 
-	conf      *common.Config
-	eventMux  *event.TypeMux
-	consenter consensus.Consenter
-	caMgr     *admittance.CAManager
-	am        *accounts.AccountManager
-	eh        *manager.EventHub
-	grpcMgr   *p2p.GRPCPeerManager
-	executor  *executor.Executor
-
-	rpc     rpc.RequestProcessor
-	restart bool
+	conf         *common.Config
+	eventMux     *event.TypeMux
+	consenter    consensus.Consenter
+	caMgr        *admittance.CAManager
+	am           *accounts.AccountManager
+	eh           *manager.EventHub
+	grpcMgr      *p2p.GRPCPeerManager
+	executor     *executor.Executor
+	rpc         rpc.RequestProcessor
+	restart     bool
 }
 
 type API struct {
@@ -325,6 +325,9 @@ func (ns *namespaceImpl) Name() string {
 //GetCAManager get CAManager by namespace name.
 func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
 	return ns.caMgr
+}
+func (ns namespaceImpl) GetExecutor() *executor.Executor {
+	return ns.executor
 }
 
 //ProcessRequest process request under this namespace

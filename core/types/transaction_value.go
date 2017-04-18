@@ -3,8 +3,7 @@ package types
 import (
 	"hyperchain/common"
 	"math/big"
-	"encoding/json"
-	"encoding/hex"
+	"github.com/golang/protobuf/proto"
 )
 
 func (tv *TransactionValue) RetrievePayload() []byte {
@@ -26,13 +25,15 @@ func (tv *TransactionValue) RetrieveAmount() *big.Int {
 func ConstructInvokeArgs(method string, args []string) ([]byte, error) {
 	var tmp [][]byte
 	for _, arg := range args {
-		v, err := hex.DecodeString(arg)
-		if err != nil {
-			return nil, err
-		}
+		//v, err := hex.DecodeString(arg)
+		//if err != nil {
+		//	fmt.Println("error", err.Error())
+		//	return nil, err
+		//}
+		v := []byte(arg)
 		tmp = append(tmp, v)
 	}
-	return json.Marshal(&InvokeArgs{
+	return proto.Marshal(&InvokeArgs{
 		MethodName:   method,
 		Args:         tmp,
 	})

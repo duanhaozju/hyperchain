@@ -32,7 +32,7 @@ type Env struct {
 	jvm        vm.Vm
 }
 
-func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger, namespace string, txHash common.Hash) *Env {
+func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger, namespace string, txHash common.Hash, jvmCli jcee.ContractExecutor) *Env {
 	env := &Env{
 		state:     state,
 		logger:    logger,
@@ -43,10 +43,7 @@ func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger
 		txHash:    txHash,
 		Gas:       new(big.Int),
 	}
-	env.jvm = jcee.ClientMgr.Get(namespace)
-	if env.jvm == nil {
-		return nil
-	}
+	env.jvm = jvmCli
 	return env
 }
 

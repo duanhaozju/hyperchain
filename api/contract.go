@@ -48,7 +48,8 @@ func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common
 }
 
 func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace string) (common.Hash, error) {
-	log := common.GetLogger(namespace, "api")
+	// log := common.GetLogger(namespace, "api")
+
 
 	var tx *types.Transaction
 	realArgs, err := prepareExcute(args, txType)
@@ -77,12 +78,12 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 		return common.Hash{}, &common.RepeadedTxError{Message:"repeated tx"}
 	}
 
-	// Unsign Test
-	if !tx.ValidateSign(contract.eh.GetAccountManager().Encryption, kec256Hash) {
-		log.Error("invalid signature")
-		// ATTENTION, return invalid transactino directly
-		return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
-	}
+	//// Unsign Test
+	//if !tx.ValidateSign(contract.eh.GetAccountManager().Encryption, kec256Hash) {
+	//	log.Error("invalid signature")
+	//	// ATTENTION, return invalid transactino directly
+	//	return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
+	//}
 
 	go contract.eh.GetEventObject().Post(event.NewTxEvent{
 		Transaction: tx,
@@ -379,17 +380,6 @@ func isContractAccount(stateDb vm.Database, addr common.Address) bool {
 	return code != nil
 }
 
-func checkVmType(vmType string) int {
-	switch strings.ToLower(vmType) {
-	case "evm":
-		return 0
-	case "jvm":
-		return 1
-	default:
-		return -1
-	}
-}
-
 func constructTxValue(args SendTxArgs) ([]byte, error) {
 	var payload []byte
 	var err     error
@@ -399,8 +389,11 @@ func constructTxValue(args SendTxArgs) ([]byte, error) {
 		payload = common.FromHex(args.Payload)
 		vmType  = types.TransactionValue_EVM
 	case "jvm":
+		fmt.Println(args.MethodName)
+		fmt.Println(args.Args)
 		payload, err = types.ConstructInvokeArgs(args.MethodName, args.Args)
 		if err != nil {
+			fmt.Println("construct err")
 			return nil, err
 		}
 		vmType = types.TransactionValue_JVM

@@ -39,6 +39,13 @@ func (mgr *ClientManager) Register(namespace string) error {
 	}
 }
 
+func (mgr *ClientManager) UnRegister(namespace string) error {
+	mgr.lock.Lock()
+	defer mgr.lock.Unlock()
+	delete(mgr.clients, namespace)
+	return nil
+}
+
 func (mgr *ClientManager) Get(namespace string) ContractExecutor {
 	mgr.lock.RLock()
 	defer mgr.lock.RUnlock()
