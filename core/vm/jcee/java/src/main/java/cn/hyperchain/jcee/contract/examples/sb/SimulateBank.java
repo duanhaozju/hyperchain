@@ -5,6 +5,7 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.DoubleValue;
 import org.apache.log4j.Logger;
 
+import java.nio.charset.Charset;
 import java.util.List;
 
 /**
@@ -113,8 +114,9 @@ public class SimulateBank extends ContractBase{
         }
         try {
             byte[] data = ledger.get(args.get(0).getBytes());
+            logger.info(new String(data));
             if (data != null) {
-                return ByteString.copyFrom(data);
+                return ByteString.copyFrom(new String(data), Charset.defaultCharset());
             }else {
                 logger.error("getAccountBalance error");
             }

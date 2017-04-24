@@ -48,7 +48,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 		commonHash:  kec256Hash,
 		encryption:  encryption,
 		helper:      helper,
-		jvmCli:      jcee.NewContractExecutor(conf),
+		jvmCli:      jcee.NewContractExecutor(conf, namespace),
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.initDb()
@@ -76,8 +76,7 @@ func (executor *Executor) Start() {
 
 // Stop - stop service.
 func (executor *Executor) Stop() {
-	executor.setExit()
-	executor.jvmCli.Stop()
+	executor.finalize()
 	executor.logger.Noticef("[Namespace = %s] executor stop", executor.namespace)
 }
 
@@ -102,6 +101,11 @@ func (executor *Executor) initialize() {
 	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()
 	go executor.syncReplica()
+}
+
+func (executor *Executor) finalize() {
+	executor.setExit()
+	executor.jvmCli.Stop()
 }
 
 // initializeExecutorStateDb - initialize statedb.

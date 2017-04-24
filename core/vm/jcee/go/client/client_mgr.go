@@ -1,7 +1,14 @@
 package jcee
 
+import "sync"
+
+
+
+/*
+	Deprecated
+ */
+
 import (
-	"sync"
 	"hyperchain/common"
 )
 
@@ -34,7 +41,7 @@ func (mgr *ClientManager) Register(namespace string) error {
 	if _, exist := mgr.clients[namespace]; exist == true {
 		return nil
 	} else {
-		client := NewContractExecutor(mgr.conf)
+		client := NewContractExecutor(mgr.conf, namespace)
 		if err := client.Start(); err != nil {
 			return err
 		} else {

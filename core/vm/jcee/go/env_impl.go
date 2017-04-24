@@ -92,6 +92,7 @@ func (self *Env) SetSnapshot(copy interface{}) {
 func (self *Env) Transfer(from, to vm.Account, amount *big.Int) {
 }
 
+// Call java based contract invocation.
 func (self *Env) Call(caller vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int, op int32) ([]byte, error) {
 	return Call(self, caller, addr, data, gas, price, value, types.TransactionValue_Opcode(op))
 
@@ -107,7 +108,7 @@ func (self *Env) DelegateCall(caller vm.ContractRef, addr common.Address, data [
 	return nil, nil
 }
 
-// TODO
+// Create deploy a java based contract.
 func (self *Env) Create(caller vm.ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error) {
 	return nil, common.Address{}, nil
 }

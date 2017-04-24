@@ -35,6 +35,7 @@ public class Handler {
         Response response = null;
         try{
             response = future.get();
+            logger.info(response.getResult().toStringUtf8());
         }catch (Exception e) {
             logger.error(e);
             response = Response.newBuilder().setOk(false)

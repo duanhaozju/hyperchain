@@ -9,70 +9,63 @@ import (
 	pb "hyperchain/core/vm/jcee/protos"
 	"sync/atomic"
 	"hyperchain/core/vm"
-	"hyperchain/core/types"
-	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"fmt"
 )
 
 type ContractExecutor interface {
-	//Execute execute the contract cmd.
-	Execute(tx *pb.Request) (*pb.Response, error)
-	//Start start the contract executor.
+	// Start start the contract executor.
 	Start() error
-	//Stop stop the contract executor.
+	// Stop stop the contract executor.
 	Stop() error
-	//
+	// Run invoke contract, use `Execute` internally
 	Run(vm.VmContext, []byte) ([]byte, error)
-
 }
 
 type contractExecutorImpl struct {
-	client  pb.ContractClient
-	conn    *grpc.ClientConn
-	address string
-	logger  *logging.Logger
-	close   *int32
+	address    string
+	logger     *logging.Logger
+
+	client     pb.ContractClient
+	conn       *grpc.ClientConn
+
+	close      int32
+	maintainer *ConnMaintainer
 }
 
-func NewContractExecutor(conf *common.Config) ContractExecutor {
+func NewContractExecutor(conf *common.Config, namespace string) ContractExecutor {
 	address := fmt.Sprintf("localhost:%d", conf.Get(common.C_JVM_PORT))
 	Jvm := &contractExecutorImpl{
-		address: address,
-		logger:  logging.MustGetLogger("contract"),
+		address:    address,
+		logger:     common.GetLogger(namespace, "jvm"),
 	}
 	return Jvm
 }
 
-func (cei *contractExecutorImpl) Execute(tx *pb.Request) (*pb.Response, error) {
-	return cei.client.Execute(context.Background(), tx)
-}
 
 func (cei *contractExecutorImpl) Start() error {
-	cei.close = new(int32)
-	atomic.StoreInt32(cei.close, 0)
-	conn, err := grpc.Dial(cei.address, grpc.WithInsecure())
-	if err != nil {
-		cei.logger.Fatalf("did not connect: %v", err)
+	atomic.StoreInt32(&cei.close, 0)
+	cei.maintainer = NewConnMaintainer(cei, cei.logger)
+	if err := cei.maintainer.conn(); err != nil {
 		return err
 	}
-	cei.client = pb.NewContractClient(conn)
-	cei.conn = conn
+	go cei.maintainer.Serve()
 	return nil
 }
 
 func (cei *contractExecutorImpl) Stop() error {
-	atomic.StoreInt32(cei.close, 1)
+	atomic.StoreInt32(&cei.close, 1)
+	cei.maintainer.Exit()
 	return cei.conn.Close()
 }
 
 func (cei *contractExecutorImpl) isActive() bool {
-	return atomic.LoadInt32(cei.close) == 0
+	return atomic.LoadInt32(&cei.close) == 0
 }
+
 func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error) {
 	request := cei.parse(ctx, in)
-	cei.logger.Notice("jvm invocation request %s", request.String())
-	response, err := cei.Execute(request)
+	response, err := cei.execute(request)
 	if err != nil {
 		return nil, err
 	} else {
@@ -80,18 +73,14 @@ func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error
 	}
 }
 
-func (cei *contractExecutorImpl) parse(ctx vm.VmContext, in []byte) *pb.Request {
-	var args types.InvokeArgs
-	if err := proto.Unmarshal(in, &args); err != nil {
-		return nil
-	}
-	return &pb.Request{
-		Context:  &pb.RequestContext{
-			Cid:         common.HexToString(ctx.Address().Hex()),
-			Namespace:   ctx.GetEnv().Namespace(),
-			Txid:        ctx.GetEnv().TransactionHash().Hex(),
-		},
-		Method:   args.MethodName,
-		Args:     args.Args,
-	}
+
+// execute send invocation message to jvm server.
+func (cei *contractExecutorImpl) execute(tx *pb.Request) (*pb.Response, error) {
+	return cei.client.Execute(context.Background(), tx)
 }
+
+// heartbeat send health chech info to jvm server.
+func (cei *contractExecutorImpl) heartbeat() (*pb.Response, error) {
+	return cei.client.HeartBeat(context.Background(), &pb.Request{}, grpc.FailFast(true))
+}
+
