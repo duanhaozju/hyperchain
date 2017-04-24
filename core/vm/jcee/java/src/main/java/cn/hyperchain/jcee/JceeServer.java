@@ -31,7 +31,7 @@ public class JceeServer implements IServer {
         PropertyConfigurator.configure(props);
     }
 
-    private static final Logger logger = Logger.getLogger(LocalJceeServer.class);
+    private static final Logger logger = Logger.getLogger(JceeServer.class);
 
     private int localPort;
     private int ledgerPort;

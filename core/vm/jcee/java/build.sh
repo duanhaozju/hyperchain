@@ -12,6 +12,7 @@ mkdir hyperjvm
 mkdir hyperjvm/libs
 mkdir hyperjvm/bin
 mkdir hyperjvm/config
+mkdir hyperjvm/contracts
 
 echo "2. build the hyperjvm"
 mvn clean package
