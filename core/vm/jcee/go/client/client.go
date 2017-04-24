@@ -4,13 +4,13 @@ package jcee
 
 import (
 	"context"
+	"fmt"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
+	"hyperchain/common"
+	"hyperchain/core/vm"
 	pb "hyperchain/core/vm/jcee/protos"
 	"sync/atomic"
-	"hyperchain/core/vm"
-	"hyperchain/common"
-	"fmt"
 )
 
 type ContractExecutor interface {
@@ -66,6 +66,7 @@ func (cei *contractExecutorImpl) isActive() bool {
 func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error) {
 	request := cei.parse(ctx, in)
 	response, err := cei.execute(request)
+
 	if err != nil {
 		return nil, err
 	} else {

@@ -83,7 +83,7 @@
                         <!--copy the dependency for this project-->
                         <configuration>
                             <outputDirectory>
-                                target/lib/
+                                hyperjvm/libs/
                             </outputDirectory>
                         </configuration>
                     </execution>

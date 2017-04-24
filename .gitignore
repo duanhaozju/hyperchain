@@ -22,5 +22,7 @@ core/vm/jcee/java/*.iml
 core/vm/jcee/java/.idea
 hypercli/hypercli
 
+core/vm/jcee/java/hyperjvm
+
 .DS_Store
 core/.DSTORE

@@ -28,7 +28,7 @@ public class HyperchainLedger extends AbstractLedger{
                 .setK(ByteString.copyFrom(key))
                 .build();
         logger.info("Transaction id: " + getContext().getId());
-        return client.get(sendkey).toByteArray();
+        return client.get(sendkey).getV().toByteArray();
     }
 
     public boolean put(byte[] key, byte[] value) {
