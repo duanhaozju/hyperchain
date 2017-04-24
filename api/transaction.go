@@ -57,7 +57,7 @@ type SendTxArgs struct {
 
 type InvokeArgs struct {
 	Type          string      `json:"type"`
-	MethodName    string      `json:"method_name"`
+	MethodName    string      `json:"method"`
 	Args          []string    `json:"args"`
 }
 

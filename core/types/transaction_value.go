@@ -25,11 +25,6 @@ func (tv *TransactionValue) RetrieveAmount() *big.Int {
 func ConstructInvokeArgs(method string, args []string) ([]byte, error) {
 	var tmp [][]byte
 	for _, arg := range args {
-		//v, err := hex.DecodeString(arg)
-		//if err != nil {
-		//	fmt.Println("error", err.Error())
-		//	return nil, err
-		//}
 		v := []byte(arg)
 		tmp = append(tmp, v)
 	}

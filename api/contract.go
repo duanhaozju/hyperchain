@@ -389,11 +389,8 @@ func constructTxValue(args SendTxArgs) ([]byte, error) {
 		payload = common.FromHex(args.Payload)
 		vmType  = types.TransactionValue_EVM
 	case "jvm":
-		fmt.Println(args.MethodName)
-		fmt.Println(args.Args)
 		payload, err = types.ConstructInvokeArgs(args.MethodName, args.Args)
 		if err != nil {
-			fmt.Println("construct err")
 			return nil, err
 		}
 		vmType = types.TransactionValue_JVM
