@@ -11,6 +11,7 @@ echo "1. make dir hyperjvm"
 mkdir hyperjvm
 mkdir hyperjvm/libs
 mkdir hyperjvm/bin
+mkdir hyperjvm/config
 
 echo "2. build the hyperjvm"
 mvn clean package
@@ -19,7 +20,10 @@ cp target/lib/*  hyperjvm/libs/
 echo "3. clean target package"
 rm -rf target
 
-echo "4. copy the control scripts"
+echo "4. copy the control scripts and configurations"
 cp -rf bin/* hyperjvm/bin/
+
+cp -rf ./src/main/resources/* hyperjvm/config/
+
 
 echo "5. finish build hyperjvm"
