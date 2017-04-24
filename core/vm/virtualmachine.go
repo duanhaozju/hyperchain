@@ -50,6 +50,6 @@ type VmContext interface {
 	GetCodeAddr() *common.Address
 	GetJumpdests() interface{}
 	GetEnv()   Environment
-	GetAttribute(int, interface{}) interface{}
-	SetAttribute(int, ...interface{})
+	// GetAttribute(int, interface{}) interface{}
+	// SetAttribute(int, ...interface{})
 }

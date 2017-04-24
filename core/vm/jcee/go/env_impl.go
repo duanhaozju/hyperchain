@@ -42,8 +42,8 @@ func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger
 		namespace: namespace,
 		txHash:    txHash,
 		Gas:       new(big.Int),
+		jvm:       jvmCli,
 	}
-	env.jvm = jvmCli
 	return env
 }
 
@@ -61,17 +61,22 @@ func (self *Env) GasLimit() *big.Int       { return nil}
 func (self *Env) VmType() vm.Type          { return vm.JavaVmTy }
 func (self *Env) Logger() *logging.Logger  { return self.logger}
 func (self *Env) Namespace() string        { return self.namespace}
+
 func (self *Env) TransactionHash() common.Hash {
 	return self.txHash
 }
+
 func (self *Env) GetHash(n uint64) common.Hash {
 	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
 }
+
+// TODO for extension
 func (self *Env) AddLog(log vm.Log) {
 	self.state.AddLog(log)
 }
 func (self *Env) Depth() int     { return self.depth }
 func (self *Env) SetDepth(i int) { self.depth = i }
+
 // Deprecate
 func (self *Env) CanTransfer(from common.Address, balance *big.Int) bool {
 	return true
@@ -83,16 +88,15 @@ func (self *Env) SetSnapshot(copy interface{}) {
 	self.state.RevertToSnapshot(copy)
 }
 
-
 // Deprecate
 func (self *Env) Transfer(from, to vm.Account, amount *big.Int) {
-	Transfer(from, to, amount)
 }
 
 func (self *Env) Call(caller vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int, op int32) ([]byte, error) {
 	return Call(self, caller, addr, data, gas, price, value, types.TransactionValue_Opcode(op))
 
 }
+
 // Deprecate
 func (self *Env) CallCode(caller vm.ContractRef, addr common.Address, data []byte, gas, price, value *big.Int) ([]byte, error) {
 	return nil, nil
@@ -103,7 +107,7 @@ func (self *Env) DelegateCall(caller vm.ContractRef, addr common.Address, data [
 	return nil, nil
 }
 
-// Deprecate
+// TODO
 func (self *Env) Create(caller vm.ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error) {
 	return nil, common.Address{}, nil
 }

@@ -95,13 +95,8 @@ func (ctx *Context) GetCodeAddr() *common.Address {
 func (ctx *Context) GetJumpdests() interface{} {
 	return nil
 }
+
 func (ctx *Context) GetEnv() vm.Environment {
 	return ctx.env
-}
-func (ctx *Context) GetAttribute(int, interface{}) interface{} {
-	return nil
-}
-func (ctx *Context) SetAttribute(int, ...interface{}) {
-
 }
 

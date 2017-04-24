@@ -98,9 +98,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
 	context := NewContext(caller, to, env)
-	env.Logger().Notice("run in jvm")
 	ret, err = virtualMachine.Run(context, input)
-	env.Logger().Notice("run in jvm done")
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
@@ -116,7 +114,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// above we revert to the snapshot and consume any gas remaining. Additionally
 	// when we're in homestead this also counts for code storage gas errors.
 	if err != nil {
-		env.Logger().Error("execute err", err.Error())
 		env.SetSnapshot(snapshotPreTransfer)
 		if createAccount {
 			err = er.ExecContractErr(0, "contract creation failed, error msg", err.Error())
@@ -124,16 +121,10 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 			err = er.ExecContractErr(1, "contract invocation failed, error msg:", err.Error())
 		}
 	}
-	env.Logger().Notice("execute result", common.Bytes2Hex(ret))
 	return ret, addr, err
 }
 
 
-// generic transfer method
-func Transfer(from, to vm.Account, amount *big.Int) {
-	from.SubBalance(amount)
-	to.AddBalance(amount)
-}
 
 func isUpdate(opcode types.TransactionValue_Opcode) bool {
 	return opcode == types.TransactionValue_UPDATE
