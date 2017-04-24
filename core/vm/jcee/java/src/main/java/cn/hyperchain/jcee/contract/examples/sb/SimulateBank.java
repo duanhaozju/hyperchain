@@ -1,10 +1,12 @@
 package cn.hyperchain.jcee.contract.examples.sb;
 
 import cn.hyperchain.jcee.contract.ContractBase;
+import com.google.common.base.Utf8;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.DoubleValue;
 import org.apache.log4j.Logger;
 
+import java.nio.charset.Charset;
 import java.util.List;
 
 /**
@@ -114,7 +116,12 @@ public class SimulateBank extends ContractBase{
         try {
             byte[] data = ledger.get(args.get(0).getBytes());
             if (data != null) {
+                //return ByteString.copyFrom(new String(data), Charset.defaultCharset());
+
+                logger.info(new String(data));
+                //return ByteString.copyFrom(new String(data), Charset.defaultCharset());
                 return ByteString.copyFrom(data);
+                //return ByteString.copyFrom(new String("hello"), Charset.defaultCharset());
             }else {
                 logger.error("getAccountBalance error");
             }
