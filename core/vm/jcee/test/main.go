@@ -3,21 +3,23 @@
 package main
 
 import (
-	"fmt"
+	//"fmt"
 	"github.com/op/go-logging"
-	"google.golang.org/grpc"
-	"hyperchain/core/vm/jcee/go/client"
-	lg "hyperchain/core/vm/jcee/go/ledger"
-	pb "hyperchain/core/vm/jcee/protos"
-	"net"
-	"strconv"
-	"time"
+	//"google.golang.org/grpc"
+	//"hyperchain/core/vm/jcee/go/client"
+	//lg "hyperchain/core/vm/jcee/go/ledger"
+	//pb "hyperchain/core/vm/jcee/protos"
+	//"net"
+	//"strconv"
+	//"time"
 	"hyperchain/core/hyperstate"
 	"hyperchain/common"
 	"hyperchain/hyperdb/mdb"
 	"hyperchain/core/vm"
 	"os"
 	"path"
+	//"github.com/op/go-logging"
+	"fmt"
 )
 
 var logger *logging.Logger
@@ -46,51 +48,52 @@ func initDb() vm.Database {
 	return stateDb
 }
 
-func startServer() {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", 50052))
-	if err != nil {
-		fmt.Printf("failed to listen: %v\n", err)
-	}
-	grpcServer := grpc.NewServer()
-	ledger := lg.NewLedgerProxy()
-	ledger.Register("global", initDb())
-	pb.RegisterLedgerServer(grpcServer, ledger)
-	grpcServer.Serve(lis)
-}
+//func startServer() {
+//	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", 50052))
+//	if err != nil {
+//		fmt.Printf("failed to listen: %v\n", err)
+//	}
+//	grpcServer := grpc.NewServer()
+//	//ledger := lg.NewLedgerProxy()
+//	ledger.Register("global", initDb())
+//	pb.RegisterLedgerServer(grpcServer, ledger)
+//	grpcServer.Serve(lis)
+//}
 
 func main() {
-	go startServer()
-	exe := jcee.NewContractExecutor()
-	exe.Start()
-	testNum := 10 * 10000
-	t1 := time.Now()
-	for i := 0; i < testNum; i++ {
-		//time.Sleep(3 * time.Second)
-		request := &pb.Request{
-			Context: &pb.RequestContext{
-				Txid: "tx000000" + strconv.Itoa(i),
-				Namespace: "global",
-				Cid:  "e81e714395549ba939403c7634172de21367f8b5",
-			},
-			Method: "invoke",
-			Args:   [][]byte{[]byte("issue"), []byte("user1"), []byte("1000")},
-		}
-		response, err := exe.Execute(request)
-		//_, err := exe.Execute(request)
-
-		if err != nil {
-			logger.Error(err)
-		}
-		logger.Info(response)
-	}
-	t2 := time.Now()
-
-	//logger.Critical((testNum * 1.0) / t2.Sub(t1).Seconds())
-	a := (float64(1.0 * testNum)) / t2.Sub(t1).Seconds()
-	logger.Critical(a)
-
-	x := make(chan bool)
-	<-x
+	fmt.Println([]byte("100001"))
+	//go startServer()
+	//exe := jcee.NewContractExecutor()
+	//exe.Start()
+	//testNum := 10 * 10000
+	//t1 := time.Now()
+	//for i := 0; i < testNum; i++ {
+	//	//time.Sleep(3 * time.Second)
+	//	request := &pb.Request{
+	//		Context: &pb.RequestContext{
+	//			Txid: "tx000000" + strconv.Itoa(i),
+	//			Namespace: "global",
+	//			Cid:  "e81e714395549ba939403c7634172de21367f8b5",
+	//		},
+	//		Method: "invoke",
+	//		Args:   [][]byte{[]byte("issue"), []byte("user1"), []byte("1000")},
+	//	}
+	//	response, err := exe.Execute(request)
+	//	//_, err := exe.Execute(request)
+	//
+	//	if err != nil {
+	//		logger.Error(err)
+	//	}
+	//	logger.Info(response)
+	//}
+	//t2 := time.Now()
+	//
+	////logger.Critical((testNum * 1.0) / t2.Sub(t1).Seconds())
+	//a := (float64(1.0 * testNum)) / t2.Sub(t1).Seconds()
+	//logger.Critical(a)
+	//
+	//x := make(chan bool)
+	//<-x
 }
 
 func switchToExeLoc() string {

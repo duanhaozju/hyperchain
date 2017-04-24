@@ -4,15 +4,15 @@ package jcee
 
 import (
 	"context"
+	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
+	"hyperchain/common"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
 	pb "hyperchain/core/vm/jcee/protos"
 	"sync/atomic"
-	"hyperchain/core/vm"
-	"hyperchain/core/types"
-	"github.com/golang/protobuf/proto"
-	"hyperchain/common"
-	"fmt"
 )
 
 type ContractExecutor interface {
@@ -24,7 +24,6 @@ type ContractExecutor interface {
 	Stop() error
 	//
 	Run(vm.VmContext, []byte) ([]byte, error)
-
 }
 
 type contractExecutorImpl struct {
@@ -71,8 +70,13 @@ func (cei *contractExecutorImpl) isActive() bool {
 }
 func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error) {
 	request := cei.parse(ctx, in)
-	cei.logger.Notice("jvm invocation request %s", request.String())
+	fmt.Println("jvm invocation request", request.String())
 	response, err := cei.Execute(request)
+
+	fmt.Println("response", string(response.Result))
+
+	fmt.Println("response string", response.String())
+
 	if err != nil {
 		return nil, err
 	} else {
@@ -86,12 +90,12 @@ func (cei *contractExecutorImpl) parse(ctx vm.VmContext, in []byte) *pb.Request 
 		return nil
 	}
 	return &pb.Request{
-		Context:  &pb.RequestContext{
-			Cid:         common.HexToString(ctx.Address().Hex()),
-			Namespace:   ctx.GetEnv().Namespace(),
-			Txid:        ctx.GetEnv().TransactionHash().Hex(),
+		Context: &pb.RequestContext{
+			Cid:       common.HexToString(ctx.Address().Hex()),
+			Namespace: ctx.GetEnv().Namespace(),
+			Txid:      ctx.GetEnv().TransactionHash().Hex(),
 		},
-		Method:   args.MethodName,
-		Args:     args.Args,
+		Method: args.MethodName,
+		Args:   args.Args,
 	}
 }

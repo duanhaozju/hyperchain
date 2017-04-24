@@ -28,6 +28,7 @@ public class QueryTask extends Task{
 
         ByteString bs = contract.Query(funcName, args);
 
+
         Response.Builder builder = Response.newBuilder();
         Response rs;
         if(bs == null) {
