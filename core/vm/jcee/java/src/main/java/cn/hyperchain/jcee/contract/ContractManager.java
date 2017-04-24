@@ -45,14 +45,14 @@ public class ContractManager {
     //TODO: invoke after contract deploy, load related class into jvm
     public void addContract(ContractHolder holder) {
         String key = holder.getInfo().getId();
-        logger.error(contracts.toString());
+//        logger.error(contracts.toString());
         if(contracts.containsKey(key)) {
             logger.error(key + "existed!");
         }else {
             logger.info("register contract with id: " + key);
             contracts.put(key, holder);
         }
-        logger.error(contracts.toString());
+//        logger.error(contracts.toString());
     }
 
     public void deployContract(String contractPath, String contractName){

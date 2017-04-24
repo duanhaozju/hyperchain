@@ -109,7 +109,6 @@ public class SimulateBank extends ContractBase{
     }
 
     private ByteString getAccountBalance(List<String> args) {
-        //String accountA
         if(args.size() != 1) {
             logger.error("args num is invalid");
         }

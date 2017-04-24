@@ -14,7 +14,7 @@ mkdir hyperjvm/bin
 
 echo "2. build the hyperjvm"
 mvn clean package
-cp target/lib/*  hyperjvm/bin/
+cp target/lib/*  hyperjvm/libs/
 
 echo "3. clean target package"
 rm -rf target
