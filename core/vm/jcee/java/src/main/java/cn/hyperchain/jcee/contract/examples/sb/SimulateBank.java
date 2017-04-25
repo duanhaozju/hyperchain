@@ -1,12 +1,10 @@
 package cn.hyperchain.jcee.contract.examples.sb;
 
 import cn.hyperchain.jcee.contract.ContractBase;
-import com.google.common.base.Utf8;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.DoubleValue;
 import org.apache.log4j.Logger;
 
-import java.nio.charset.Charset;
 import java.util.List;
 
 /**
@@ -109,7 +107,6 @@ public class SimulateBank extends ContractBase{
     }
 
     private ByteString getAccountBalance(List<String> args) {
-        //String accountA
         if(args.size() != 1) {
             logger.error("args num is invalid");
         }

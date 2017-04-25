@@ -1,3 +1,9 @@
 #!/usr/bin/env bash
 
-java -cp "hyperjvm-1.4-SNAPSHOT.jar:../libs/*.jar" cn.hyperchain.jcee.JceeServer
+# TODO: Add memory control
+
+if [ "$#" -ne 2 ]; then
+    echo "please specify localPort and the ledger port"
+fi
+
+java -cp $(for i in ../libs/*.jar ; do echo -n $i: ; done).  cn.hyperchain.jcee.JceeServer $1 $2

@@ -140,6 +140,17 @@ f_run_process(){
     done
 }
 
+start_hyperjvm() {
+    cd ${PROJECT_PATH}/core/vm/jcee/java && ./build.sh
+    for j in  1 2 3 4
+    do
+        pwd
+        cp -rf ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${DUMP_PATH}/node$j/
+    done
+    cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
+    cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./local_start_hyperjvm.sh
+}
+
 f_sleep(){
     sleep ${1}s
 }
@@ -228,3 +239,4 @@ f_distribute $MAXPEERNUM
 
 # run hyperchain node
 f_run_process
+start_hyperjvm
