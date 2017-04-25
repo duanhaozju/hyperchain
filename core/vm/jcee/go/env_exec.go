@@ -17,6 +17,31 @@ func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input 
 }
 
 
+// Create creates a new contract with the given code
+func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
+	// static check
+	// precompile
+	// calculate hash
+	// etc
+	decompression(code, env.Namespace())
+	if valid := staticCheck(); !valid {
+		return nil, common.Address{}, er.ExecContractErr(0, InvalidSourceCodeErr)
+	}
+
+	if err := compile(); err != nil {
+		return nil, common.Address{}, er.ExecContractErr(0, CompileSourceCodeErr)
+	}
+
+	if _, err := signature("./namespaces/global/config/contracts/simulatebank"); err != nil {
+		return nil, common.Address{}, er.ExecContractErr(0, SigSourceCodeErr)
+	}
+	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value, 0)
+	if err != nil {
+		return nil, address, err
+	}
+	return ret, address, err
+}
+
 func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
 	virtualMachine := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
@@ -145,3 +170,4 @@ func isNormal(opcode types.TransactionValue_Opcode) bool {
 func isSpecialOperation(op types.TransactionValue_Opcode) bool {
 	return op == types.TransactionValue_UPDATE || op == types.TransactionValue_FREEZE || op == types.TransactionValue_UNFREEZE
 }
+

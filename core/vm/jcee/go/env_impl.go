@@ -110,5 +110,5 @@ func (self *Env) DelegateCall(caller vm.ContractRef, addr common.Address, data [
 
 // Create deploy a java based contract.
 func (self *Env) Create(caller vm.ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error) {
-	return nil, common.Address{}, nil
+	return Create(self, caller, data, gas, price, value)
 }

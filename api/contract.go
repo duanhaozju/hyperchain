@@ -56,7 +56,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	if err != nil {
 		return common.Hash{}, err
 	}
-	txValue, err := constructTxValue(realArgs)
+	txValue, err := constructTxValue(realArgs, txType)
 	if err != nil {
 		return common.Hash{}, &common.CallbackError{Message:err.Error()}
 	}
@@ -380,7 +380,7 @@ func isContractAccount(stateDb vm.Database, addr common.Address) bool {
 	return code != nil
 }
 
-func constructTxValue(args SendTxArgs) ([]byte, error) {
+func constructTxValue(args SendTxArgs, txType int) ([]byte, error) {
 	var payload []byte
 	var err     error
 	var vmType  types.TransactionValue_VmType
@@ -389,9 +389,15 @@ func constructTxValue(args SendTxArgs) ([]byte, error) {
 		payload = common.FromHex(args.Payload)
 		vmType  = types.TransactionValue_EVM
 	case "jvm":
-		payload, err = types.ConstructInvokeArgs(args.MethodName, args.Args)
-		if err != nil {
-			return nil, err
+		if txType == 1 {
+			// deploy
+			payload = []byte(args.Payload)
+		} else if txType == 2 {
+			// invoke
+			payload, err = types.ConstructInvokeArgs(args.MethodName, args.Args)
+			if err != nil {
+				return nil, err
+			}
 		}
 		vmType = types.TransactionValue_JVM
 	}
