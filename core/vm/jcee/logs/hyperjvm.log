@@ -18,3 +18,43 @@
  INFO main TestContractClassLoader - cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
  INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.A1
  INFO main TestContractClassLoader - ImplicitClass id is 2 and A1 id is 2
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ImplicitClass
+ INFO main TestContractClassLoader - cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.A1
+ INFO main TestContractClassLoader - ImplicitClass id is 2 and A1 id is 2
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ImplicitClass
+ INFO main TestContractClassLoader - cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.A1
+ INFO main TestContractClassLoader - ImplicitClass id is 2 and A1 id is 2
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ImplicitClass
+ INFO main TestContractClassLoader - cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.A1
+ INFO main TestContractClassLoader - ImplicitClass id is 2 and A1 id is 2
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ImplicitClass
+ INFO main TestContractClassLoader - cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.A1
+ INFO main TestContractClassLoader - ImplicitClass id is 2 and A1 id is 2
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ImplicitClass
+ INFO main TestContractClassLoader - cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.A1
+ INFO main TestContractClassLoader - ImplicitClass id is 2 and A1 id is 2
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ImplicitClass
+ INFO main TestContractClassLoader - cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.A1
+ INFO main TestContractClassLoader - ImplicitClass id is 2 and A1 id is 2
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ImplicitClass
+ INFO main TestContractClassLoader - cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.A1
+ INFO main TestContractClassLoader - ImplicitClass id is 2 and A1 id is 2
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.ImplicitClass
+ INFO main TestContractClassLoader - cn.hyperchain.jcee.contract.examples.c2.ReloadableContract
+ INFO main ContractClassLoader - add contract class name cn.hyperchain.jcee.contract.examples.c2.A1
+ INFO main TestContractClassLoader - ImplicitClass id is 2 and A1 id is 2
