@@ -11,8 +11,12 @@ import java.util.List;
 //ContractBase which is used as a skeleton of smart contract
 public abstract class ContractBase {
 
-    private String owner;
+    public ContractBase() {
 
+    }
+
+    private String owner;
+    private String cid;
     protected AbstractLedger ledger;
 
     public void setLedger(AbstractLedger ledger) {
@@ -29,6 +33,14 @@ public abstract class ContractBase {
 
     public String getOwner() {
         return owner;
+    }
+
+    public String getCid() {
+        return cid;
+    }
+
+    public void setCid(String cid) {
+        this.cid = cid;
     }
 
     /**

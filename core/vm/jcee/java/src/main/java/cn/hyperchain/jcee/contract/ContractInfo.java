@@ -9,9 +9,17 @@ import java.util.Date;
 //Contract represent a contract instance
 public class ContractInfo {
     private String name;
+    private String contractMainName; //fully-qualified java name
     private String id;
     private String owner;
     private String contractPath;
+    private String classPrefix;
+    private String namespace;
+
+    private Class []argClasses;
+    private Object[]args;
+
+    private String codeHash; // contract classes code hash
     private long createTime;
     private long modifyTime;
 
@@ -21,6 +29,10 @@ public class ContractInfo {
         this.owner = owner;
         this.createTime = new Date().getTime();
         this.modifyTime = this.createTime;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getName() {
@@ -51,12 +63,66 @@ public class ContractInfo {
         this.contractPath = contractPath;
     }
 
+    public String getClassPrefix() {
+        return classPrefix;
+    }
+
+    public void setClassPrefix(String classPrefix) {
+        this.classPrefix = classPrefix;
+    }
+
+    public String getNamespace() {
+        return namespace;
+    }
+
+    public void setNamespace(String namespace) {
+        this.namespace = namespace;
+    }
+
+    public void setCreateTime(long createTime) {
+        this.createTime = createTime;
+    }
+
+    public void setModifyTime(long modifyTime) {
+        this.modifyTime = modifyTime;
+    }
+
+    public String getContractMainName() {
+        return contractMainName;
+    }
+
+    public void setContractMainName(String contractMainName) {
+        this.contractMainName = contractMainName;
+    }
+
+    public Class[] getArgClasses() {
+        return argClasses;
+    }
+
+    public void setArgClasses(Class[] argClasses) {
+        this.argClasses = argClasses;
+    }
+
+    public Object[] getArgs() {
+        return args;
+    }
+
+    public void setArgs(Object[] args) {
+        this.args = args;
+    }
+
+    public void setOwner(String owner) {
+        this.owner = owner;
+    }
+
     @Override
     public String toString() {
-        return "Contract{" +
+        return "ContractInfo{" +
                 "name='" + name + '\'' +
                 ", id='" + id + '\'' +
                 ", owner='" + owner + '\'' +
+                ", contractPath='" + contractPath + '\'' +
+                ", classPrefix='" + classPrefix + '\'' +
                 ", createTime=" + createTime +
                 ", modifyTime=" + modifyTime +
                 '}';

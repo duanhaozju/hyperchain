@@ -19,10 +19,12 @@ public class ContractClassLoader extends ClassLoader{
     private static final Logger logger = Logger.getLogger(ContractClassLoader.class.getSimpleName());
     private String contractDir;
     private Set<String> contractNames;
+    private String classPrefix; // used to identify which classes load by this ContractClassLoader
 
-    public ContractClassLoader(String contractDir) {
-       this.contractDir = contractDir;
-       this.contractNames = new ConcurrentSet<>();
+    public ContractClassLoader(String contractDir, String classPrefix) {
+        this.classPrefix = classPrefix;
+        this.contractDir = contractDir;
+        this.contractNames = new ConcurrentSet<>();
     }
 
     public Class<?> load(String name) throws  ClassNotFoundException {
@@ -31,8 +33,7 @@ public class ContractClassLoader extends ClassLoader{
 
     @Override
     public Class<?> loadClass(String name) throws ClassNotFoundException {
-        //TODO: ADD class load check mechanism
-        if (name.startsWith("cn.hyperchain.jcee.contract.examples")){
+        if (name.startsWith(classPrefix)){
             logger.info("add contract class name " + name);
             contractNames.add(name);
         }
@@ -97,5 +98,13 @@ public class ContractClassLoader extends ClassLoader{
                throw new IOException("Invalid path");
         }
         return classData;
+    }
+
+    public String getClassPrefix() {
+        return classPrefix;
+    }
+
+    public void setClassPrefix(String classPrefix) {
+        this.classPrefix = classPrefix;
     }
 }
