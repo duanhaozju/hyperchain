@@ -6,6 +6,9 @@ import (
 	"github.com/urfave/cli"
 	"fmt"
 	"hyperchain/hypercli/common"
+	"os/exec"
+	"io/ioutil"
+	"encoding/hex"
 )
 
 //NewContractCMD new contract related commands.
@@ -20,7 +23,17 @@ func NewContractCMD() []cli.Command {
 				cli.StringFlag{
 					Name:  "deploycmd, c",
 					Value: "",
-					Usage: "setting the payload of deploy contract",
+					Usage: "specify the payload of deploy contract",
+				},
+				cli.StringFlag{
+					Name:  "jvm, j",
+					Value: "",
+					Usage: "specify the type how the contract is generated, j represented java",
+				},
+				cli.StringFlag{
+					Name:  "path, p",
+					Value: "",
+					Usage: "specify the contract file path",
 				},
 			},
 		},
@@ -53,7 +66,7 @@ func deploy(c *cli.Context) error {
 	} else {
 		deployParams := []string{"from", "nonce", "payload", "timestamp", "signature"}
 		method := "contract_deployContract"
-		deployCmd = getCmd(method, deployParams)
+		deployCmd = getCmd(method, deployParams, c)
 	}
 	fmt.Println(deployCmd)
 	client.Call(deployCmd)
@@ -69,7 +82,7 @@ func invoke(c *cli.Context) error {
 	} else {
 		invokeParams := []string{"from", "to", "nonce", "payload", "timestamp", "signature"}
 		method := "contract_invokeContract"
-		invokeCmd = getCmd(method, invokeParams)
+		invokeCmd = getCmd(method, invokeParams, c)
 	}
 	fmt.Println(invokeCmd)
 	client.Call(invokeCmd)
@@ -82,7 +95,7 @@ func destroy(c *cli.Context) error {
 	return nil
 }
 
-func getCmd(method string, deploy_params []string) string {
+func getCmd(method string, deploy_params []string, c *cli.Context) string {
 	var namespace string
 	fmt.Print("namespace: ")
 	fmt.Scanln(&namespace)
@@ -90,6 +103,10 @@ func getCmd(method string, deploy_params []string) string {
 	values := make([]string, len(deploy_params))
 	args := "[{"
 	for i, param := range deploy_params{
+		if param == "payload" && c.String("jvm") == "true" && c.String("path") != "" {
+			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, getPayloadFromPath(c.String("path")))
+			continue
+		}
 		fmt.Printf("%s: ", param)
 		fmt.Scanln(&values[i])
 		if i > 0 {
@@ -101,9 +118,46 @@ func getCmd(method string, deploy_params []string) string {
 			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, values[i])
 		}
 	}
+	if c.String("jvm") == "true" {
+		args = args + fmt.Sprint("\"type\":\"jvm\"")
+	}
 	args = args + "}]"
 
 	return fmt.Sprintf(
 		"{\"jsonrpc\":\"2.0\",\"namespace\":\"%s\",\"method\":\"%s\",\"params\":%s,\"id\":1}",
 		namespace, method, args)
+
+}
+
+func getPayloadFromPath (path string) string {
+	fmt.Println("start get payload from path...")
+	target := "contract.tar.gz"
+	compress(path, target)
+	buf, err := ioutil.ReadFile(target)
+	if err != nil {
+		fmt.Printf("Error in read compressed file: %s", target)
+		fmt.Println(err.Error())
+		return ""
+	}
+	payload := hex.EncodeToString(buf)
+	fmt.Println(payload)
+	delCompressedFile(target)
+
+	return payload
+}
+
+func compress(source, target string) {
+	command := exec.Command("tar", "-czf", target, source)
+	if err := command.Run(); err != nil {
+		fmt.Printf("Error in read compress specefied file: %s", source)
+		fmt.Println(err.Error())
+	}
+}
+
+func delCompressedFile(file string) {
+	command := exec.Command("rm", "-rf", file)
+	if err := command.Run(); err != nil {
+		fmt.Printf("Error in remove compressed file: %s", file)
+		fmt.Println(err.Error())
+	}
 }
