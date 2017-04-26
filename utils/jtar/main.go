@@ -51,7 +51,6 @@ func propertyCheck(path string) bool {
 	}
 	mClass := ps.GetString("main.class", NOT_EXIST)
 	if mClass == NOT_EXIST {
-		fmt.Println("no [main.class] property specified")
 		return false
 	}
 	prefix := ps.GetString("package.prefix", NOT_EXIST)
