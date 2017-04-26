@@ -27,7 +27,7 @@ timeout:
     batch: 1s
 
     # How long may a request(transaction batch) take between reception and execution, must be greater than the batch timeout
-    request: 3s
+    request: 6s
 
     # How long may a validate (transaction batch) process will take by local Validation
     validate: 1s

@@ -38,6 +38,7 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
             }
             case deploy: {
                 handler.deploy(request, responseObserver);
+                break;
             }
             default:
                 logger.error("method " + request.getMethod() + " is not implemented yet!");
