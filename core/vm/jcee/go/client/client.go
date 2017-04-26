@@ -48,7 +48,6 @@ func (cei *contractExecutorImpl) Start() error {
 	atomic.StoreInt32(&cei.close, 0)
 	cei.maintainer = NewConnMaintainer(cei, cei.logger)
 	if err := cei.maintainer.conn(); err != nil {
-		return err
 	}
 	go cei.maintainer.Serve()
 	return nil
@@ -80,11 +79,17 @@ func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error
 
 // execute send invocation message to jvm server.
 func (cei *contractExecutorImpl) execute(tx *pb.Request) (*pb.Response, error) {
+	if cei.client == nil {
+		return nil, errors.New("no client establish")
+	}
 	return cei.client.Execute(context.Background(), tx)
 }
 
 // heartbeat send health chech info to jvm server.
 func (cei *contractExecutorImpl) heartbeat() (*pb.Response, error) {
+	if cei.client == nil {
+		return nil, errors.New("no client establish")
+	}
 	return cei.client.HeartBeat(context.Background(), &pb.Request{}, grpc.FailFast(true))
 }
 
