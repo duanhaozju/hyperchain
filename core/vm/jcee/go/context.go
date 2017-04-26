@@ -11,13 +11,18 @@ type Context struct {
 	callee     vm.ContractRef
 	env        vm.Environment
 	code       []byte
+	isCreation bool
+	codePath   string
 }
 
-func NewContext(caller vm.ContractRef, callee vm.ContractRef, env vm.Environment) *Context {
+
+func NewContext(caller vm.ContractRef, callee vm.ContractRef, env vm.Environment, isCreation bool, codePath string) *Context {
 	return &Context{
 		caller:     caller,
 		callee:     callee,
 		env:        env,
+		isCreation: isCreation,
+		codePath:   codePath,
 	}
 }
 
@@ -75,6 +80,10 @@ func (ctx *Context) GetPrice() *big.Int {
 func (ctx *Context) GetCode() []byte {
 	return nil
 }
+
+func (ctx *Context) GetCodePath() string {
+	return ctx.codePath
+}
 func (ctx *Context) SetCallCode(*common.Address, []byte) {
 
 }
@@ -98,5 +107,10 @@ func (ctx *Context) GetJumpdests() interface{} {
 
 func (ctx *Context) GetEnv() vm.Environment {
 	return ctx.env
+}
+
+
+func (ctx *Context) IsCreation() bool {
+	return ctx.isCreation
 }
 

@@ -181,6 +181,15 @@ func (self *Contract) GetEnv() vm.Environment {
 	return self.env
 }
 
+func (self *Contract) IsCreation() bool {
+	return false
+}
+
+func (self *Contract) GetCodePath() string {
+	return ""
+}
+
+
 func (self *Contract) GetAttribute(t int, k interface{}) interface{} {
 	switch t {
 	case vm.CtxAttr_Op:

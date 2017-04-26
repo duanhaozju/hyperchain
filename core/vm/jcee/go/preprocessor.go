@@ -6,13 +6,10 @@ import (
 	"path"
 	"hyperchain/crypto"
 	"bytes"
-	"os"
-	"fmt"
- 	"archive/tar"
-	"io"
-	// "github.com/magiconair/properties"
+	command "os/exec"
 )
 
+var DecompressErr = "decompress source contract failed"
 var InvalidSourceCodeErr = "invalid source contract code"
 var CompileSourceCodeErr = "compile source contract failed"
 var SigSourceCodeErr = "generate signature for contract failed"
@@ -24,29 +21,47 @@ type ContractProperties struct {
 	ContractName string
 }
 
-func decompression(buf []byte, namespace string) {
-	r := bytes.NewReader(buf)
-	tr := tar.NewReader(r)
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			// end of tar archive
-			break
-		}
-		if err != nil {
-			fmt.Println("alalalal")
-		}
-		if isProperty(hdr.Name) {
-			fmt.Println(tr)
-		}
+func decompression(buf []byte) (string, error) {
+	hPath, err := getContractDir()
+	if err != nil {
+		return "", err
 	}
+	tmpDir, err := ioutil.TempDir(hPath, ContractPrefix)
+	if err != nil {
+		return "", err
+	}
+	err = ioutil.WriteFile(path.Join(tmpDir, CompressFileN), buf, 0644)
+	if err != nil {
+		return "", err
+	}
+
+	cmd := command.Command("tar", "-xzf", path.Join(tmpDir, CompressFileN), "-C", path.Join(tmpDir))
+	if err = cmd.Run(); err != nil {
+		return "", err
+	}
+
+	return tmpDir, nil
 }
 
 func staticCheck() bool {
 	return true
 }
 
-func compile() error {
+func compile(contractPath string) error {
+	binHome, err := getBinDir()
+	if err != nil {
+		return err
+	}
+	oldPath, err := cd(binHome, false)
+	if err != nil {
+		return err
+	}
+	defer cd(oldPath, false)
+
+	cmd := command.Command("./contract_compile.sh", contractPath, contractPath)
+	if err := cmd.Run(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -70,14 +85,8 @@ func signature(dirPath string) ([]byte, error) {
 	return sig, nil
 }
 
-func getContractHome(namespace string) (string, error) {
-	cur, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	suffix := fmt.Sprintf("namespaces/%s/contracts", namespace)
-	return path.Join(cur, suffix), nil
-}
+
+
 
 
 func isProperty(fn string) bool {

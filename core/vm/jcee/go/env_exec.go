@@ -12,7 +12,7 @@ import (
 
 // Call executes within the given contract
 func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, err error) {
-	ret, _, err = exec(env, caller, &addr, &addr, input, env.Db().GetCode(addr), gas, gasPrice, value, op)
+	ret, _, err = exec(env, caller, &addr, &addr, input, "", gas, gasPrice, value, op)
 	return ret, err
 }
 
@@ -23,26 +23,29 @@ func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPric
 	// precompile
 	// calculate hash
 	// etc
-	decompression(code, env.Namespace())
+	var cp  string
+	if cp, err = decompression(code); err != nil {
+		return nil, common.Address{}, er.ExecContractErr(0, DecompressErr, err.Error())
+	}
 	if valid := staticCheck(); !valid {
 		return nil, common.Address{}, er.ExecContractErr(0, InvalidSourceCodeErr)
 	}
 
-	if err := compile(); err != nil {
-		return nil, common.Address{}, er.ExecContractErr(0, CompileSourceCodeErr)
+	if err := compile(cp); err != nil {
+		return nil, common.Address{}, er.ExecContractErr(0, CompileSourceCodeErr, err.Error())
 	}
 
-	if _, err := signature("./namespaces/global/config/contracts/simulatebank"); err != nil {
-		return nil, common.Address{}, er.ExecContractErr(0, SigSourceCodeErr)
-	}
-	ret, address, err = exec(env, caller, nil, nil, nil, code, gas, gasPrice, value, 0)
+	//if _, err := signature("./namespaces/global/config/contracts/simulatebank"); err != nil {
+	//	return nil, common.Address{}, er.ExecContractErr(0, SigSourceCodeErr)
+	//}
+	ret, address, err = exec(env, caller, nil, nil, nil, cp, gas, gasPrice, value, 0)
 	if err != nil {
 		return nil, address, err
 	}
 	return ret, address, err
 }
 
-func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
+func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input []byte, code string, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
 	virtualMachine := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -122,7 +125,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	context := NewContext(caller, to, env)
+	context := NewContext(caller, to, env, createAccount, code)
 	ret, err = virtualMachine.Run(context, input)
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
