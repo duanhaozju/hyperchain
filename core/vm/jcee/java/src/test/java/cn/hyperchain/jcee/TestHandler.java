@@ -39,4 +39,22 @@ public class TestHandler {
         handler.deploy(request, null);
         Assert.assertEquals(true, handler.getContractMgr().getContract("cid0001").getCid().equals("cid0001"));
     }
+
+    @Test
+    public void testDeployWithoutConstructorArgs() {
+
+        String contractDir = TestHandler.class.getResource("/contracts").getPath();
+//        System.out.println(contractDir);
+        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl();
+        Handler handler = cgsi.getHandler();
+        Request request = Request.newBuilder()
+                .addArgs(ByteString.copyFrom(contractDir, Charset.defaultCharset()))
+                .setContext(RequestContext.newBuilder().setCid("cid0001")
+                        .setNamespace("global")
+                        .setTxid("tx001"))
+                .build();
+
+        handler.deploy(request, null);
+        Assert.assertEquals(true, handler.getContractMgr().getContract("cid0001").getCid().equals("cid0001"));
+    }
 }
