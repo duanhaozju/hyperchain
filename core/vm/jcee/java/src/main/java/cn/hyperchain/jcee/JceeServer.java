@@ -37,13 +37,13 @@ public class JceeServer implements IServer {
     private int ledgerPort;
     private Server server;
     private ContractGrpcServerImpl cgsi;
-    private AbstractLedger ledger;
 
     public JceeServer(int localPort, int ledgerPort){
         this.localPort = localPort;
         this.ledgerPort = ledgerPort;
         cgsi = new ContractGrpcServerImpl();
-        this.ledger = new HyperchainLedger(ledgerPort);
+        AbstractLedger ledger = new HyperchainLedger(ledgerPort);
+        this.cgsi.getHandler().getContractMgr().setLedger(ledger);
     }
     public void Start() {
         try {
