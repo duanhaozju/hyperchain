@@ -26,3 +26,5 @@ core/vm/jcee/java/hyperjvm
 
 .DS_Store
 core/.DSTORE
+
+logs
