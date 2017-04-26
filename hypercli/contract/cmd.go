@@ -103,15 +103,17 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 	values := make([]string, len(deploy_params))
 	args := "[{"
 	for i, param := range deploy_params{
+		if i > 0 {
+			args = args + ","
+		}
+
 		if param == "payload" && c.String("jvm") == "true" && c.String("path") != "" {
 			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, getPayloadFromPath(c.String("path")))
 			continue
 		}
 		fmt.Printf("%s: ", param)
 		fmt.Scanln(&values[i])
-		if i > 0 {
-			args = args + ","
-		}
+
 		if param == "nonce" || param == "timestamp" {
 			args = args + fmt.Sprintf("\"%s\":%s", param, values[i])
 		}else {
@@ -119,6 +121,7 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 		}
 	}
 	if c.String("jvm") == "true" {
+		args = args + ","
 		args = args + fmt.Sprint("\"type\":\"jvm\"")
 	}
 	args = args + "}]"
