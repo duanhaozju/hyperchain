@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"io/ioutil"
 	"encoding/hex"
+	"math/rand"
+	"time"
 )
 
 //NewContractCMD new contract related commands.
@@ -16,7 +18,7 @@ func NewContractCMD() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "deploy",
-			Aliases: []string{"-d"},
+			Aliases: []string{"d"},
 			Usage:   "Deploy a contract",
 			Action:  deploy,
 			Flags:   []cli.Flag{
@@ -25,15 +27,19 @@ func NewContractCMD() []cli.Command {
 					Value: "",
 					Usage: "specify the payload of deploy contract",
 				},
-				cli.StringFlag{
+				cli.BoolFlag{
 					Name:  "jvm, j",
-					Value: "",
-					Usage: "specify the type how the contract is generated, j represented java",
+					Usage: "specify how the contract is generated, false is solidity, true is jvm",
 				},
 				cli.StringFlag{
 					Name:  "path, p",
 					Value: "",
 					Usage: "specify the contract file path",
+				},
+				cli.StringFlag{
+					Name:  "namespace, n",
+					Value: "global",
+					Usage: "specify the namespace to deploy to, default is global",
 				},
 			},
 		},
@@ -96,9 +102,7 @@ func destroy(c *cli.Context) error {
 }
 
 func getCmd(method string, deploy_params []string, c *cli.Context) string {
-	var namespace string
-	fmt.Print("namespace: ")
-	fmt.Scanln(&namespace)
+	namespace := c.String("namespace")
 
 	values := make([]string, len(deploy_params))
 	args := "[{"
@@ -107,22 +111,46 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 			args = args + ","
 		}
 
-		if param == "payload" && c.String("jvm") == "true" && c.String("path") != "" {
+		if param == "payload" && c.Bool("jvm") && c.String("path") != "" {
 			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, getPayloadFromPath(c.String("path")))
 			continue
 		}
+		if param == "nonce" {
+			nonce := rand.Int63()
+			args = args + fmt.Sprintf("\"%s\":%d", param, nonce)
+			continue
+		}
+		if param == "timestamp" {
+			timestamp := time.Now().UnixNano()
+			args = args + fmt.Sprintf("\"%s\":%d", param, timestamp)
+			continue
+		}
+
+		//TODO generate from, to, signature automatically
+
 		fmt.Printf("%s: ", param)
 		fmt.Scanln(&values[i])
 
-		if param == "nonce" || param == "timestamp" {
-			args = args + fmt.Sprintf("\"%s\":%s", param, values[i])
-		}else {
-			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, values[i])
+		if param == "from" || values[i] == "" {
+			from := "17d806c92fa941b4b7a8ffffc58fa2f297a3bffc"
+			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, from)
+			continue
 		}
+		if param == "to" || values[i] == "" {
+			to := "0x3a3cae27d1b9fa931458b5b2a5247c5d67c75d61"
+			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, to)
+			continue
+		}
+		if param == "signature" || values[i] == "" {
+			sig := "0x19c0655d05b9c24f5567846528b81a25c48458a05f69f05cf8d6c46894b9f12a02af471031ba11f155e41adf42fca639b67fb7148ddec90e7628ec8af60c872c00"
+			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, sig)
+			continue
+		}
+
+		args = args + fmt.Sprintf("\"%s\":\"%s\"", param, values[i])
 	}
-	if c.String("jvm") == "true" {
-		args = args + ","
-		args = args + fmt.Sprint("\"type\":\"jvm\"")
+	if c.Bool("jvm") {
+		args = args + "," + fmt.Sprint("\"type\":\"jvm\"")
 	}
 	args = args + "}]"
 
@@ -133,7 +161,7 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 }
 
 func getPayloadFromPath (path string) string {
-	fmt.Println("start get payload from path...")
+	//fmt.Println("start get payload from path...")
 	target := "contract.tar.gz"
 	compress(path, target)
 	buf, err := ioutil.ReadFile(target)
@@ -143,7 +171,7 @@ func getPayloadFromPath (path string) string {
 		return ""
 	}
 	payload := hex.EncodeToString(buf)
-	fmt.Println(payload)
+	//fmt.Println(payload)
 	delCompressedFile(target)
 
 	return payload
