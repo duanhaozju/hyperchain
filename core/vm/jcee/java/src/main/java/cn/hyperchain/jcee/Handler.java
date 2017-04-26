@@ -178,7 +178,6 @@ public class Handler {
                     break;
                 case "long":
                     argClasses[i - 1] = long.class;
-//                    System.out.print(arg);
                     objectArgs[i - 1] = Long.parseLong(arg);
                     break;
                 case "float":
