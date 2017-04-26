@@ -7,6 +7,8 @@ import (
 	"hyperchain/crypto"
 	"bytes"
 	command "os/exec"
+	"path/filepath"
+	"os"
 )
 
 var DecompressErr = "decompress source contract failed"
@@ -37,6 +39,10 @@ func decompression(buf []byte) (string, error) {
 
 	cmd := command.Command("tar", "-xzf", path.Join(tmpDir, CompressFileN), "-C", path.Join(tmpDir))
 	if err = cmd.Run(); err != nil {
+		return "", err
+	}
+
+	if err = extractProperty(tmpDir); err != nil {
 		return "", err
 	}
 
@@ -95,4 +101,20 @@ func isProperty(fn string) bool {
 	} else {
 		return false
 	}
+}
+
+func extractProperty(dirPath string) error {
+	return filepath.Walk(dirPath,
+		func(path string, f os.FileInfo, err error) error {
+			if f == nil {
+				return err
+			}
+			if !f.IsDir() && strings.HasSuffix(f.Name(), "properties") {
+				cmd := command.Command("mv", path, dirPath)
+				if err := cmd.Run(); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
 }

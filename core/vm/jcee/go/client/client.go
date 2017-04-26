@@ -11,6 +11,7 @@ import (
 	"hyperchain/core/vm"
 	pb "hyperchain/core/vm/jcee/protos"
 	"sync/atomic"
+	"errors"
 )
 
 type ContractExecutor interface {
@@ -69,6 +70,8 @@ func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error
 
 	if err != nil {
 		return nil, err
+	} else if response.Ok == false {
+		return nil, errors.New("execute failed")
 	} else {
 		return response.Result, nil
 	}
