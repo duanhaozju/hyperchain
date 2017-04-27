@@ -146,13 +146,13 @@ start_hyperjvm() {
     done
     cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
 
-
     case "$_SYSTYPE" in
           MAC*)
                 osascript -e 'tell app "Terminal" to do script "cd '${DUMP_PATH}/node1/hyperjvm/bin/' && ./local_start_hyperjvm.sh"'
           ;;
           LINUX*)
-                gnome-terminal -x bash -c "cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./local_start_hyperjvm.sh"
+                cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./local_start_hyperjvm.sh
+          ;;
     esac
 }
 
