@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"math/rand"
 	"time"
+	"os"
 )
 
 //NewContractCMD new contract related commands.
@@ -60,9 +61,9 @@ func NewContractCMD() []cli.Command {
 			Action:  invoke,
 			Flags:   []cli.Flag{
 				cli.StringFlag{
-					Name:  "deploycmd, c",
+					Name:  "invokecmd, i",
 					Value: "",
-					Usage: "specify the payload of deploy contract",
+					Usage: "specify the payload of invoke contract",
 				},
 				cli.BoolFlag{
 					Name:  "jvm, j",
@@ -84,14 +85,26 @@ func NewContractCMD() []cli.Command {
 					Usage: "specify the deploy account",
 				},
 				cli.StringFlag{
-					Name:  "to, t",
-					Value: "0x3a3cae27d1b9fa931458b5b2a5247c5d67c75d61",
-					Usage: "specify the destination account",
-				},
-				cli.StringFlag{
 					Name:  "signature, s",
 					Value: "0x19c0655d05b9c24f5567846528b81a25c48458a05f69f05cf8d6c46894b9f12a02af471031ba11f155e41adf42fca639b67fb7148ddec90e7628ec8af60c872c00",
 					Usage: "specify the signature",
+				},
+
+				//args with no default value which must be specified by user
+				cli.StringFlag{
+					Name:  "to, t",
+					Value: "",
+					Usage: "specify the destination account",
+				},
+				cli.StringFlag{
+					Name:  "method, m",
+					Value: "",
+					Usage: "specify the method of invoke contract",
+				},
+				cli.StringFlag{
+					Name:  "args, a",
+					Value: "",
+					Usage: "specify the args of invoke contract",
 				},
 			},
 		},
@@ -114,7 +127,13 @@ func deploy(c *cli.Context) error {
 		deployCmd = getCmd(method, deployParams, c)
 	}
 	fmt.Println(deployCmd)
-	client.Call(deployCmd)
+	result, err := client.Call(deployCmd)
+	if err != nil {
+		fmt.Println("Error in call deploy cmd request")
+		fmt.Print(err)
+		os.Exit(1)
+	}
+	fmt.Println(result.Result)
 
 	return nil
 }
@@ -125,7 +144,7 @@ func invoke(c *cli.Context) error {
 	if c.String("invokecmd") != "" {
 		invokeCmd = c.String("invokecmd")
 	} else {
-		invokeParams := []string{"from", "to", "nonce", "payload", "timestamp", "signature"}
+		invokeParams := []string{"from", "to", "nonce", "payload", "timestamp", "signature", "method", "args"}
 		method := "contract_invokeContract"
 		invokeCmd = getCmd(method, invokeParams, c)
 	}
@@ -143,51 +162,117 @@ func destroy(c *cli.Context) error {
 func getCmd(method string, deploy_params []string, c *cli.Context) string {
 	namespace := c.String("namespace")
 
-	args := "[{"
+	params := "[{"
 	for i, param := range deploy_params{
 		if i > 0 {
-			args = args + ","
+			params = params + ","
 		}
+		switch param {
+		case "payload":
+			var payload string
+			if c.Bool("jvm") {
+				if method == "contract_invokeContract" {
+					payload = ""
+				} else {
+					if c.String("path") != "" {
+						payload = getPayloadFromPath(c.String("path"))
+					} else {
+						for {
+							var path string
+							fmt.Println("Please specify a non-empty contarct path:")
+							fmt.Scanln(&path)
+							if path != "" {
+								payload = getPayloadFromPath(path)
+								break
+							}
+						}
+					}
+				}
+			} else {
+				for {
+					fmt.Println("Please specify a non-empty contarct payload:")
+					fmt.Scanln(&payload)
+					if payload != "" {
+						break
+					}
+				}
+			}
+			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, payload)
 
-		if param == "payload" && c.Bool("jvm") && c.String("path") != "" {
-			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, getPayloadFromPath(c.String("path")))
-			continue
-		}
-		if param == "nonce" {
+		case "nonce":
 			nonce := rand.Int63()
-			args = args + fmt.Sprintf("\"%s\":%d", param, nonce)
-			continue
-		}
-		if param == "timestamp" {
+			params = params + fmt.Sprintf("\"%s\":%d", param, nonce)
+
+		case "timestamp":
 			timestamp := time.Now().UnixNano()
-			args = args + fmt.Sprintf("\"%s\":%d", param, timestamp)
-			continue
-		}
+			params = params + fmt.Sprintf("\"%s\":%d", param, timestamp)
 
-		//TODO generate from, to, signature automatically
+		//TODO generate from, signature automatically
+		case "from":
+			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, c.String("from"))
 
-		if param == "from" {
-			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, c.String("from"))
-			continue
-		}
-		if param == "to" {
-			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, c.String("to"))
-			continue
-		}
-		if param == "signature" {
-			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, c.String("signature"))
-			continue
+		case "signature":
+			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, c.String("signature"))
+
+		//below params must be input by user
+		case "to":
+			var to string
+			if c.String("to") != "" {
+				to = c.String("to")
+			} else {
+				for {
+					fmt.Println("Please specify a non-empty destination account:")
+					fmt.Scanln(&to)
+					if to != "" {
+						break
+					}
+				}
+			}
+			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, to)
+
+		case "method":
+			var method string
+			if c.String("method") != "" {
+				method = c.String("method")
+			} else {
+				for {
+					fmt.Println("Please specify a non-empty invoke method:")
+					fmt.Scanln(&method)
+					if method != "" {
+						break
+					}
+				}
+			}
+			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, method)
+
+		case "args":
+			var arg string
+			if c.String("args") != "" {
+				arg = c.String("args")
+			} else {
+				for {
+					fmt.Println("Please specify a non-empty invoke args:")
+					fmt.Scanln(&arg)
+					if arg != "" {
+						break
+					}
+				}
+			}
+			params = params + fmt.Sprintf("\"%s\":%s", param, arg)
+
+		default:
+			fmt.Printf("Invalid param name: %s\n", param)
+			os.Exit(1)
 		}
 	}
 	if c.Bool("jvm") {
-		args = args + "," + fmt.Sprint("\"type\":\"jvm\"")
+		params = params + "," + fmt.Sprint("\"type\":\"jvm\"")
 	}
-	args = args + "}]"
+	params = params + "}]"
 
 	return fmt.Sprintf(
 		"{\"jsonrpc\":\"2.0\",\"namespace\":\"%s\",\"method\":\"%s\",\"params\":%s,\"id\":1}",
-		namespace, method, args)
-
+		namespace, method, params)
 }
 
 func getPayloadFromPath (path string) string {
@@ -196,9 +281,9 @@ func getPayloadFromPath (path string) string {
 	compress(path, target)
 	buf, err := ioutil.ReadFile(target)
 	if err != nil {
-		fmt.Printf("Error in read compressed file: %s", target)
+		fmt.Printf("Error in read compressed file: %s\n", target)
 		fmt.Println(err.Error())
-		return ""
+		os.Exit(1)
 	}
 	payload := hex.EncodeToString(buf)
 	//fmt.Println(payload)
@@ -210,15 +295,18 @@ func getPayloadFromPath (path string) string {
 func compress(source, target string) {
 	command := exec.Command("tar", "-czf", target, source)
 	if err := command.Run(); err != nil {
-		fmt.Printf("Error in read compress specefied file: %s", source)
+		fmt.Printf("Error in read compress specefied file: %s\n", source)
 		fmt.Println(err.Error())
+		os.Exit(1)
+
 	}
 }
 
 func delCompressedFile(file string) {
 	command := exec.Command("rm", "-rf", file)
 	if err := command.Run(); err != nil {
-		fmt.Printf("Error in remove compressed file: %s", file)
+		fmt.Printf("Error in remove compressed file: %s\n", file)
 		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 }
