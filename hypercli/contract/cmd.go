@@ -12,7 +12,11 @@ import (
 	"math/rand"
 	"time"
 	"os"
+	"regexp"
+	"strings"
 )
+
+const frequency = 10
 
 //NewContractCMD new contract related commands.
 func NewContractCMD() []cli.Command {
@@ -126,14 +130,24 @@ func deploy(c *cli.Context) error {
 		method := "contract_deployContract"
 		deployCmd = getCmd(method, deployParams, c)
 	}
-	fmt.Println(deployCmd)
+	//fmt.Println(deployCmd)
 	result, err := client.Call(deployCmd)
 	if err != nil {
 		fmt.Println("Error in call deploy cmd request")
 		fmt.Print(err)
 		os.Exit(1)
 	}
-	fmt.Println(result.Result)
+
+	txHash := getTransactionHash(result.Result)
+	method := "tx_getTransactionReceipt"
+	gtrCmd := getTransactionReceiptCmd(method, txHash, c)
+	//fmt.Println(gtrCmd)
+	err = getTransactionReceipt(client, gtrCmd)
+	if err != nil {
+		fmt.Println("Error in call get transaction receipt")
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	return nil
 }
@@ -276,7 +290,6 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 }
 
 func getPayloadFromPath (path string) string {
-	//fmt.Println("start get payload from path...")
 	target := "contract.tar.gz"
 	compress(path, target)
 	buf, err := ioutil.ReadFile(target)
@@ -286,7 +299,6 @@ func getPayloadFromPath (path string) string {
 		os.Exit(1)
 	}
 	payload := hex.EncodeToString(buf)
-	//fmt.Println(payload)
 	delCompressedFile(target)
 
 	return payload
@@ -298,7 +310,6 @@ func compress(source, target string) {
 		fmt.Printf("Error in read compress specefied file: %s\n", source)
 		fmt.Println(err.Error())
 		os.Exit(1)
-
 	}
 }
 
@@ -309,4 +320,53 @@ func delCompressedFile(file string) {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+}
+
+func getTransactionHash (result interface{}) string {
+	if jrp, ok := result.(string); ok {
+		pat := `"result"\:".+"`
+		reg, err := regexp.Compile(pat)
+		if (err != nil ) {
+			fmt.Println("Error in compile regular expression")
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		strArr := reg.FindAllString(jrp, -1)
+		str := strArr[0][10:]
+		str = strings.TrimSuffix(str, "\"")
+		return str
+	} else {
+		fmt.Println("Error in assert interface to string !")
+		os.Exit(1)
+		return ""
+	}
+}
+
+func getTransactionReceiptCmd(method string, txHash string, c *cli.Context) string {
+	namespace := c.String("namespace")
+
+	return fmt.Sprintf(
+		"{\"jsonrpc\":\"2.0\",\"namespace\":\"%s\",\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",
+		namespace, method, txHash)
+}
+
+func getTransactionReceipt(client *common.CmdClient, cmd string) error {
+	for i:= 1; i<= frequency; i ++ {
+		response, err := client.Call(cmd)
+		if err != nil {
+			return err
+		} else {
+			if result, ok := response.Result.(string); !ok {
+				return fmt.Errorf("Error in assert interface to string !")
+			} else {
+				if strings.Contains(result, "SUCCESS") {
+					fmt.Print(result)
+					return nil
+				}
+			}
+		}
+		time.Sleep(1 * time.Second)
+	}
+
+	return fmt.Errorf("Cant't get transaction receipt after %v attempts", frequency)
 }
