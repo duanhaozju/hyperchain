@@ -41,18 +41,57 @@ func NewContractCMD() []cli.Command {
 					Value: "global",
 					Usage: "specify the namespace to deploy to, default is global",
 				},
+				cli.StringFlag{
+					Name:  "from, f",
+					Value: "17d806c92fa941b4b7a8ffffc58fa2f297a3bffc",
+					Usage: "specify the deploy account",
+				},
+				cli.StringFlag{
+					Name:  "signature, s",
+					Value: "0x19c0655d05b9c24f5567846528b81a25c48458a05f69f05cf8d6c46894b9f12a02af471031ba11f155e41adf42fca639b67fb7148ddec90e7628ec8af60c872c00",
+					Usage: "specify the signature",
+				},
 			},
 		},
 		{
 			Name:    "invoke",
-			Aliases: []string{"-i"},
+			Aliases: []string{"i"},
 			Usage:   "Invoke a contract method",
 			Action:  invoke,
 			Flags:   []cli.Flag{
 				cli.StringFlag{
-					Name:  "invokecmd, c",
+					Name:  "deploycmd, c",
 					Value: "",
-					Usage: "setting the payload of invoke contract",
+					Usage: "specify the payload of deploy contract",
+				},
+				cli.BoolFlag{
+					Name:  "jvm, j",
+					Usage: "specify how the contract is generated, false is solidity, true is jvm",
+				},
+				cli.StringFlag{
+					Name:  "path, p",
+					Value: "",
+					Usage: "specify the contract file path",
+				},
+				cli.StringFlag{
+					Name:  "namespace, n",
+					Value: "global",
+					Usage: "specify the namespace to deploy to, default is global",
+				},
+				cli.StringFlag{
+					Name:  "from, f",
+					Value: "17d806c92fa941b4b7a8ffffc58fa2f297a3bffc",
+					Usage: "specify the deploy account",
+				},
+				cli.StringFlag{
+					Name:  "to, t",
+					Value: "0x3a3cae27d1b9fa931458b5b2a5247c5d67c75d61",
+					Usage: "specify the destination account",
+				},
+				cli.StringFlag{
+					Name:  "signature, s",
+					Value: "0x19c0655d05b9c24f5567846528b81a25c48458a05f69f05cf8d6c46894b9f12a02af471031ba11f155e41adf42fca639b67fb7148ddec90e7628ec8af60c872c00",
+					Usage: "specify the signature",
 				},
 			},
 		},
@@ -104,7 +143,6 @@ func destroy(c *cli.Context) error {
 func getCmd(method string, deploy_params []string, c *cli.Context) string {
 	namespace := c.String("namespace")
 
-	values := make([]string, len(deploy_params))
 	args := "[{"
 	for i, param := range deploy_params{
 		if i > 0 {
@@ -128,26 +166,18 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 
 		//TODO generate from, to, signature automatically
 
-		fmt.Printf("%s: ", param)
-		fmt.Scanln(&values[i])
-
-		if param == "from" || values[i] == "" {
-			from := "17d806c92fa941b4b7a8ffffc58fa2f297a3bffc"
-			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, from)
+		if param == "from" {
+			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, c.String("from"))
 			continue
 		}
-		if param == "to" || values[i] == "" {
-			to := "0x3a3cae27d1b9fa931458b5b2a5247c5d67c75d61"
-			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, to)
+		if param == "to" {
+			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, c.String("to"))
 			continue
 		}
-		if param == "signature" || values[i] == "" {
-			sig := "0x19c0655d05b9c24f5567846528b81a25c48458a05f69f05cf8d6c46894b9f12a02af471031ba11f155e41adf42fca639b67fb7148ddec90e7628ec8af60c872c00"
-			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, sig)
+		if param == "signature" {
+			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, c.String("signature"))
 			continue
 		}
-
-		args = args + fmt.Sprintf("\"%s\":\"%s\"", param, values[i])
 	}
 	if c.Bool("jvm") {
 		args = args + "," + fmt.Sprint("\"type\":\"jvm\"")
