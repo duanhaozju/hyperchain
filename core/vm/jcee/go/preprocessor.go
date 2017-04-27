@@ -32,6 +32,7 @@ func decompression(buf []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	err = ioutil.WriteFile(path.Join(tmpDir, CompressFileN), buf, 0644)
 	if err != nil {
 		return "", err

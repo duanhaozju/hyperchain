@@ -8,6 +8,8 @@ import (
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
 	er "hyperchain/core/errors"
+	"os"
+	"github.com/golang/protobuf/proto"
 )
 
 // Call executes within the given contract
@@ -23,25 +25,37 @@ func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPric
 	// precompile
 	// calculate hash
 	// etc
+
+	var args types.InvokeArgs
+
+	if err = proto.Unmarshal(code, &args); err != nil {
+		return nil, common.Address{}, er.ExecContractErr(0, DecompressErr, err.Error())
+	}
+
+
 	var cp  string
-	if cp, err = decompression(code); err != nil {
+	if cp, err = decompression(args.Code); err != nil {
 		return nil, common.Address{}, er.ExecContractErr(0, DecompressErr, err.Error())
 	}
 	if valid := staticCheck(); !valid {
 		return nil, common.Address{}, er.ExecContractErr(0, InvalidSourceCodeErr)
 	}
 
-	if err := compile(cp); err != nil {
+	if err = compile(cp); err != nil {
 		return nil, common.Address{}, er.ExecContractErr(0, CompileSourceCodeErr, err.Error())
 	}
 
-	//if _, err := signature("./namespaces/global/config/contracts/simulatebank"); err != nil {
-	//	return nil, common.Address{}, er.ExecContractErr(0, SigSourceCodeErr)
-	//}
-	ret, address, err = exec(env, caller, nil, nil, nil, cp, gas, gasPrice, value, 0)
+	ret, address, err = exec(env, caller, nil, nil, code, cp, gas, gasPrice, value, 0)
 	if err != nil {
 		return nil, address, err
 	}
+	defer func() {
+		// clear invalid dir
+		env.Logger().Noticef("clear invalid contract dir %s", cp)
+		if err != nil {
+			os.RemoveAll(cp)
+		}
+	}()
 	return ret, address, err
 }
 
