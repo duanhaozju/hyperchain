@@ -15,7 +15,7 @@ mkdir hyperjvm/config
 mkdir hyperjvm/contracts
 
 echo "2. build the hyperjvm"
-mvn clean package
+mvn clean package -Dmaven.test.skip=true
 cp target/lib/*  hyperjvm/libs/
 
 echo "3. clean target package"

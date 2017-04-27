@@ -47,7 +47,7 @@ func fetchDataNodesFromDBByBucketKey(db db.Database, treePrefix string, bucketKe
 	//}
 
 	if err != nil {
-		panic("Get bucketKey error from db error ")
+		panic("Get bucketKey error from db error " + err.Error())
 	}
 	return dataNodes, nil
 }
