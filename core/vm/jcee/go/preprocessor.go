@@ -4,11 +4,12 @@ import (
 	"io/ioutil"
 	"strings"
 	"path"
-	"hyperchain/crypto"
 	"bytes"
 	command "os/exec"
 	"path/filepath"
 	"os"
+
+	"fmt"
 )
 
 var DecompressErr = "decompress source contract failed"
@@ -72,24 +73,28 @@ func compile(contractPath string) error {
 	return nil
 }
 
-func signature(dirPath string) ([]byte, error) {
+func combineCode(dirPath string) ([]byte, error) {
 	var buffer bytes.Buffer
-	files, err := ioutil.ReadDir(dirPath)
-
+	err := filepath.Walk(dirPath,
+		func(p string, f os.FileInfo, err error) error {
+			if f == nil {
+				return err
+			}
+			if !f.IsDir() && strings.HasSuffix(f.Name(), "class") {
+				fmt.Println(p)
+				buf, err := ioutil.ReadFile(p)
+				if err != nil {
+					return err
+				}
+				buffer.Write(buf)
+			}
+			return nil
+		})
 	if err != nil {
 		return nil, err
+	} else {
+		return buffer.Bytes(), nil
 	}
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), "class") {
-			buf, err := ioutil.ReadFile(path.Join(dirPath, file.Name()))
-			if err != nil {
-				return nil, err
-			}
-			buffer.Write(buf)
-		}
-	}
-	sig := crypto.Keccak256(buffer.Bytes())
-	return sig, nil
 }
 
 
