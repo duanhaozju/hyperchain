@@ -22,13 +22,14 @@ func (tv *TransactionValue) RetrieveAmount() *big.Int {
 	return new(big.Int).Set(big.NewInt(tv.Amount))
 }
 
-func ConstructInvokeArgs(method string, args []string) ([]byte, error) {
+func ConstructInvokeArgs(code []byte, method string, args []string) ([]byte, error) {
 	var tmp [][]byte
 	for _, arg := range args {
 		v := []byte(arg)
 		tmp = append(tmp, v)
 	}
 	return proto.Marshal(&InvokeArgs{
+		Code:         code,
 		MethodName:   method,
 		Args:         tmp,
 	})

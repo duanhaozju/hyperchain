@@ -26,6 +26,7 @@ message TransactionValue {
 }
 
 message InvokeArgs {
-    string methodName = 1;
-    repeated bytes args = 2;
+    bytes  code         = 1;
+    string methodName   = 2;
+    repeated bytes args = 3;
 }
