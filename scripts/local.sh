@@ -100,8 +100,6 @@ do
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
-#    cp -rf  ${CONF_PATH}/namespaces/test/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/test/config/local_peerconfig.json
-#    cp -rf  ${CONF_PATH}/namespaces/test/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/test/config/cert/
     cp -rf ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
 done
 }
@@ -148,7 +146,15 @@ start_hyperjvm() {
         cp -rf ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${DUMP_PATH}/node$j/
     done
     cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
-    cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./local_start_hyperjvm.sh
+
+
+    case "$_SYSTYPE" in
+          MAC*)
+                osascript -e 'tell app "Terminal" to do script "cd '${DUMP_PATH}/node1/hyperjvm/bin/' && ./local_start_hyperjvm.sh"'
+          ;;
+          LINUX*)
+                gnome-terminal -x bash -c "cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./local_start_hyperjvm.sh"
+    esac
 }
 
 f_sleep(){
@@ -238,5 +244,5 @@ fi
 f_distribute $MAXPEERNUM
 
 # run hyperchain node
-f_run_process
 start_hyperjvm
+f_run_process

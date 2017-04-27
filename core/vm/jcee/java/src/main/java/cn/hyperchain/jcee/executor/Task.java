@@ -28,6 +28,7 @@ public abstract class Task implements Callable<Response> {
         //called before execute;
         if(contract == null) {
             logger.error("contract is null");
+            return;
         }
         AbstractLedger ledger = contract.getLedger();
         if(ledger != null) {
