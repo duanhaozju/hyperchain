@@ -4,6 +4,7 @@
  */
 package cn.hyperchain.jcee;
 
+import cn.hyperchain.jcee.contract.ContractBase;
 import cn.hyperchain.jcee.contract.ContractInfo;
 import cn.hyperchain.jcee.contract.ContractManager;
 import cn.hyperchain.jcee.executor.*;
@@ -29,6 +30,8 @@ public class Handler {
     private ContractManager cm;
     private ContractExecutor executor;
 
+    enum TaskType {QUERY, INVOKE}
+
     public Handler(){
         cm = new ContractManager();
         executor = new ContractExecutor();
@@ -40,16 +43,23 @@ public class Handler {
      * @param responseObserver
      */
     public void query(Request request, StreamObserver<Response> responseObserver){
-        Task task = new QueryTask(cm.getContract(request.getContext().getCid()), request, constructContext(request.getContext()));
-        Future<Response> future = executor.execute(task);
         Response response = null;
+        Task task = constructTask(TaskType.QUERY, request);
+        if(task == null) {
+            response = Response.newBuilder().setOk(false)
+                    .setResult(ByteString.copyFromUtf8("contract with id " + request.getContext().getCid() + " is not found"))
+                    .build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+            return;
+        }
+        Future<Response> future = executor.execute(task);
         try{
             response = future.get();
-            logger.info(response.getResult().toStringUtf8());
+            logger.info("query result: " + response.getResult().toStringUtf8());
         }catch (Exception e) {
             logger.error(e);
             response = Response.newBuilder().setOk(false)
-                    //.setId(request.getTxid())
                     .setResult(ByteString.copyFromUtf8(e.getMessage()))
                     .build();
         }finally {
@@ -64,18 +74,25 @@ public class Handler {
      * @param responseObserver
      */
     public void invoke(Request request, StreamObserver<Response> responseObserver){
+        Response response = null;
         logger.debug("cid is " + request.getContext().getCid());
         logger.debug("contract is " + cm.getContract(request.getContext().getCid()));
-        Task task = new InvokeTask(cm.getContract(request.getContext().getCid()), request, constructContext(request.getContext()));
+        Task task = constructTask(TaskType.INVOKE, request);
+        if(task == null) {
+            response = Response.newBuilder().setOk(false)
+                    .setResult(ByteString.copyFromUtf8("contract with id " + request.getContext().getCid() + " is not found"))
+                    .build();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
+            return;
+        }
         Future<Response> future = executor.execute(task);
-        Response response = null;
         try{
             response = future.get();
         }catch (Exception e) {
             logger.error(e);
             e.printStackTrace();
             response = Response.newBuilder().setOk(false)
-                    //.setId(request.getTxid())
                     .setResult(ByteString.copyFromUtf8(e.getMessage()))
                     .build();
         }finally {
@@ -133,6 +150,25 @@ public class Handler {
             responseObserver.onNext(r);
             responseObserver.onCompleted();
         }
+    }
+
+    public Task constructTask(final TaskType type, final Request request) {
+        Task task = null;
+        String cid = request.getContext().getCid(); //TODO: check this earlier
+        ContractBase contract = cm.getContract(request.getContext().getCid());
+        if (contract == null) {
+            logger.warn("contract with id " + cid + " is not found!");
+            return task;
+        }
+        switch (type) {
+            case INVOKE:
+                task = new InvokeTask(contract, request, constructContext(request.getContext()));
+                break;
+            case QUERY:
+                task = new QueryTask(contract, request, constructContext(request.getContext()));
+                break;
+        }
+        return task;
     }
 
     public ContractManager getContractMgr() {
