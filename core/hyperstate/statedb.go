@@ -590,6 +590,10 @@ func (self *StateDB) GetTree() interface{} {
 	return self.bucketTree
 }
 
+func (self *StateDB) GetCurrentTxHash() common.Hash {
+	return self.thash
+}
+
 /*
  * SETTERS
  */

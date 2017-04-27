@@ -58,6 +58,7 @@ type Database interface {
 	GetAccounts() map[string]Account
 	Dump() []byte
 	GetTree() interface{}
+	GetCurrentTxHash() common.Hash
 	// Atomic Related
 	MarkProcessStart(uint64)
 	MarkProcessFinish(uint64)
