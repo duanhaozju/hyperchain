@@ -59,10 +59,10 @@ f_check_local_env(){
 f_kill_process(){
     echo "kill the bind port process"
     PID=`ps -ax | grep hyperchain | grep -v grep | awk '{print $1}'`
-    #for pid in ${PID}
-    #do
-        # kill -9 ${pid}
-    #done
+    if [ "$PID" != "" ]
+    then
+        ps -ax | grep hyperchain | grep -v grep | awk '{print $1}' | xargs kill -9
+    fi
 }
 
 # clear data

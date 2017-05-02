@@ -14,6 +14,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"path/filepath"
 )
 
 const frequency = 10
@@ -235,7 +236,7 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 				to = c.String("to")
 			} else {
 				for {
-					fmt.Println("Please specify a non-empty destination account:")
+					fmt.Println("Please specify a non-empty contractAddress:")
 					fmt.Scanln(&to)
 					if to != "" {
 						break
@@ -305,7 +306,16 @@ func getPayloadFromPath (path string) string {
 }
 
 func compress(source, target string) {
-	command := exec.Command("tar", "-czf", target, source)
+	//source path must be absolute path, so first convert source path to an absolute path
+	abs, err := filepath.Abs(source)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	dir, file := filepath.Split(abs)
+	// compress files to a tar.gz with only one-level path
+	command := exec.Command("tar", "-czf", target, "-C", dir, file)
 	if err := command.Run(); err != nil {
 		fmt.Printf("Error in read compress specefied file: %s\n", source)
 		fmt.Println(err.Error())
