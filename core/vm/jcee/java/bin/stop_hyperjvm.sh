@@ -6,5 +6,9 @@ if [ $# -eq 2 ]; then
     jps -ml | grep "cn.hyperchain.jcee.JceeServer $1 $2" | awk '{ print $1 }' | xargs kill -9
 else
     echo "kill all hyperjvm process"
-    jps -l | grep cn.hyperchain.jcee.JceeServer | awk '{ print $1 }' | xargs kill -9
+    PID=`jps -l | grep cn.hyperchain.jcee.JceeServer | awk '{ print $1 }'`
+    if [ "$PID" != "" ]
+    then
+        jps -l | grep cn.hyperchain.jcee.JceeServer | awk '{ print $1 }' | xargs kill -9
+    fi
 fi
