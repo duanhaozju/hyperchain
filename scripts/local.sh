@@ -59,10 +59,10 @@ f_check_local_env(){
 f_kill_process(){
     echo "kill the bind port process"
     PID=`ps -ax | grep hyperchain | grep -v grep | awk '{print $1}'`
-    #for pid in ${PID}
-    #do
-        # kill -9 ${pid}
-    #done
+    if [ "$PID" != "" ]
+    then
+        ps -ax | grep hyperchain | grep -v grep | awk '{print $1}' | xargs kill -9
+    fi
 }
 
 # clear data
@@ -142,18 +142,17 @@ start_hyperjvm() {
     cd ${PROJECT_PATH}/core/vm/jcee/java && ./build.sh
     for j in  1 2 3 4
     do
-        pwd
         cp -rf ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${DUMP_PATH}/node$j/
     done
     cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
-
 
     case "$_SYSTYPE" in
           MAC*)
                 osascript -e 'tell app "Terminal" to do script "cd '${DUMP_PATH}/node1/hyperjvm/bin/' && ./local_start_hyperjvm.sh"'
           ;;
           LINUX*)
-                gnome-terminal -x bash -c "cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./local_start_hyperjvm.sh"
+                cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./local_start_hyperjvm.sh
+          ;;
     esac
 }
 
