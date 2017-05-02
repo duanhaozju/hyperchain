@@ -43,7 +43,6 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 }
 
 func (executor *Executor) syncChainResendBackend() {
-	executor.status.syncFlag.ResendExit = make(chan bool)
 	ticker := time.NewTicker(executor.GetSyncResendInterval())
 	up, down := executor.getSyncReqArgs()
 	for {
