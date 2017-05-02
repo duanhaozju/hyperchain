@@ -17,6 +17,7 @@ public  final class Response extends
   private Response() {
     ok_ = false;
     result_ = com.google.protobuf.ByteString.EMPTY;
+    codeHash_ = "";
   }
 
   @java.lang.Override
@@ -52,6 +53,12 @@ public  final class Response extends
           case 18: {
 
             result_ = input.readBytes();
+            break;
+          }
+          case 26: {
+            java.lang.String s = input.readStringRequireUtf8();
+
+            codeHash_ = s;
             break;
           }
         }
@@ -95,6 +102,40 @@ public  final class Response extends
     return result_;
   }
 
+  public static final int CODEHASH_FIELD_NUMBER = 3;
+  private volatile java.lang.Object codeHash_;
+  /**
+   * <code>string codeHash = 3;</code>
+   */
+  public java.lang.String getCodeHash() {
+    java.lang.Object ref = codeHash_;
+    if (ref instanceof java.lang.String) {
+      return (java.lang.String) ref;
+    } else {
+      com.google.protobuf.ByteString bs = 
+          (com.google.protobuf.ByteString) ref;
+      java.lang.String s = bs.toStringUtf8();
+      codeHash_ = s;
+      return s;
+    }
+  }
+  /**
+   * <code>string codeHash = 3;</code>
+   */
+  public com.google.protobuf.ByteString
+      getCodeHashBytes() {
+    java.lang.Object ref = codeHash_;
+    if (ref instanceof java.lang.String) {
+      com.google.protobuf.ByteString b = 
+          com.google.protobuf.ByteString.copyFromUtf8(
+              (java.lang.String) ref);
+      codeHash_ = b;
+      return b;
+    } else {
+      return (com.google.protobuf.ByteString) ref;
+    }
+  }
+
   private byte memoizedIsInitialized = -1;
   public final boolean isInitialized() {
     byte isInitialized = memoizedIsInitialized;
@@ -113,6 +154,9 @@ public  final class Response extends
     if (!result_.isEmpty()) {
       output.writeBytes(2, result_);
     }
+    if (!getCodeHashBytes().isEmpty()) {
+      com.google.protobuf.GeneratedMessageV3.writeString(output, 3, codeHash_);
+    }
   }
 
   public int getSerializedSize() {
@@ -127,6 +171,9 @@ public  final class Response extends
     if (!result_.isEmpty()) {
       size += com.google.protobuf.CodedOutputStream
         .computeBytesSize(2, result_);
+    }
+    if (!getCodeHashBytes().isEmpty()) {
+      size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, codeHash_);
     }
     memoizedSize = size;
     return size;
@@ -148,6 +195,8 @@ public  final class Response extends
         == other.getOk());
     result = result && getResult()
         .equals(other.getResult());
+    result = result && getCodeHash()
+        .equals(other.getCodeHash());
     return result;
   }
 
@@ -163,6 +212,8 @@ public  final class Response extends
         getOk());
     hash = (37 * hash) + RESULT_FIELD_NUMBER;
     hash = (53 * hash) + getResult().hashCode();
+    hash = (37 * hash) + CODEHASH_FIELD_NUMBER;
+    hash = (53 * hash) + getCodeHash().hashCode();
     hash = (29 * hash) + unknownFields.hashCode();
     memoizedHashCode = hash;
     return hash;
@@ -285,6 +336,8 @@ public  final class Response extends
 
       result_ = com.google.protobuf.ByteString.EMPTY;
 
+      codeHash_ = "";
+
       return this;
     }
 
@@ -309,6 +362,7 @@ public  final class Response extends
       cn.hyperchain.protos.Response result = new cn.hyperchain.protos.Response(this);
       result.ok_ = ok_;
       result.result_ = result_;
+      result.codeHash_ = codeHash_;
       onBuilt();
       return result;
     }
@@ -355,6 +409,10 @@ public  final class Response extends
       }
       if (other.getResult() != com.google.protobuf.ByteString.EMPTY) {
         setResult(other.getResult());
+      }
+      if (!other.getCodeHash().isEmpty()) {
+        codeHash_ = other.codeHash_;
+        onChanged();
       }
       onChanged();
       return this;
@@ -433,6 +491,75 @@ public  final class Response extends
     public Builder clearResult() {
       
       result_ = getDefaultInstance().getResult();
+      onChanged();
+      return this;
+    }
+
+    private java.lang.Object codeHash_ = "";
+    /**
+     * <code>string codeHash = 3;</code>
+     */
+    public java.lang.String getCodeHash() {
+      java.lang.Object ref = codeHash_;
+      if (!(ref instanceof java.lang.String)) {
+        com.google.protobuf.ByteString bs =
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        codeHash_ = s;
+        return s;
+      } else {
+        return (java.lang.String) ref;
+      }
+    }
+    /**
+     * <code>string codeHash = 3;</code>
+     */
+    public com.google.protobuf.ByteString
+        getCodeHashBytes() {
+      java.lang.Object ref = codeHash_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        codeHash_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    /**
+     * <code>string codeHash = 3;</code>
+     */
+    public Builder setCodeHash(
+        java.lang.String value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  
+      codeHash_ = value;
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string codeHash = 3;</code>
+     */
+    public Builder clearCodeHash() {
+      
+      codeHash_ = getDefaultInstance().getCodeHash();
+      onChanged();
+      return this;
+    }
+    /**
+     * <code>string codeHash = 3;</code>
+     */
+    public Builder setCodeHashBytes(
+        com.google.protobuf.ByteString value) {
+      if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+      
+      codeHash_ = value;
       onChanged();
       return this;
     }
