@@ -8,8 +8,6 @@ import (
 	command "os/exec"
 	"path/filepath"
 	"os"
-
-	"fmt"
 )
 
 var DecompressErr = "decompress source contract failed"
@@ -60,13 +58,8 @@ func compile(contractPath string) error {
 	if err != nil {
 		return err
 	}
-	oldPath, err := cd(binHome, false)
-	if err != nil {
-		return err
-	}
-	defer cd(oldPath, false)
-
-	cmd := command.Command("./contract_compile.sh", contractPath, contractPath)
+	cmdPath := path.Join(binHome, "contract_compile.sh")
+	cmd := command.Command(cmdPath, contractPath, contractPath)
 	if err := cmd.Run(); err != nil {
 		return err
 	}
@@ -81,7 +74,6 @@ func combineCode(dirPath string) ([]byte, error) {
 				return err
 			}
 			if !f.IsDir() && strings.HasSuffix(f.Name(), "class") {
-				fmt.Println(p)
 				buf, err := ioutil.ReadFile(p)
 				if err != nil {
 					return err
