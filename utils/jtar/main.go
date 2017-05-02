@@ -11,18 +11,23 @@ import (
 	"hyperchain/common"
 )
 
-const NOT_EXIST = "not exist"
-
-var source = flag.String("s","", "java contract directory path")
-var target = flag.String("t","", "output path")
 
 func main() {
 	flag.Parse()
-	if !validationCheck(*source) {
+	if flag.NArg() < 2 {
+		PrintDefault()
+		return
+	}
+
+	// cmd := flag.Args()[0]
+	target := flag.Args()[0]
+	source := flag.Args()[1]
+
+	if !validationCheck(source) {
 		fmt.Println("invalid contract")
 	} else {
-		compress(*source, *target)
-		readToBytes(*target)
+		compress(source, target)
+		readToBytes(target)
 	}
 }
 
