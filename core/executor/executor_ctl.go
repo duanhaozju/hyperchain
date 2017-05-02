@@ -36,6 +36,7 @@ type SyncFlag struct {
 	LatestDownstream    uint64     // latest sync request low height. always equal to `TempDownstream`
 	InExecution         uint32     // flag mark in execution
 	ResendExit          chan bool  // resend backend process notifier
+	Oracle              *Oracle    // peer selector before send sync request, adhere `BEST PEER` algorithm
 }
 
 func initializeExecutorStatus(executor *Executor) error {

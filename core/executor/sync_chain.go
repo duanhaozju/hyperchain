@@ -9,7 +9,6 @@ import (
 	"hyperchain/manager/protos"
 	"bytes"
 	"time"
-	"math/rand"
 )
 
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
@@ -38,7 +37,7 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	executor.updateSyncFlag(ev.TargetHeight, ev.TargetBlockHash, ev.TargetHeight)
 	executor.setLatestSyncDownstream(ev.TargetHeight)
 	executor.recordSyncPeers(ev.Replicas, ev.Id)
-
+	executor.status.syncFlag.Oracle = NewOracle(ev.Replicas, executor.conf, executor.logger)
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
 	go executor.syncChainResendBackend()
 }
@@ -54,8 +53,9 @@ func (executor *Executor) syncChainResendBackend() {
 		case <-ticker.C:
 		        // resend
 			curUp, curDown := executor.getSyncReqArgs()
-			if curUp == up && curDown == down {
+			if curUp == up && curDown == down && !executor.isSyncInExecution() {
 				executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.status.syncFlag.SyncDemandBlockNum)
+				executor.status.syncFlag.Oracle.FeedBack(false)
 				executor.SendSyncRequest(executor.status.syncFlag.SyncDemandBlockNum, down)
 				executor.recordSyncReqArgs(curUp, curDown)
 			} else {
@@ -106,6 +106,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			if executor.getLatestSyncDownstream() != edb.GetHeightOfChain(executor.namespace) {
 				prev := executor.getLatestSyncDownstream()
 				next := executor.calcuDownstream()
+				executor.status.syncFlag.Oracle.FeedBack(true)
 				executor.SendSyncRequest(prev, next)
 			} else {
 				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
@@ -120,7 +121,8 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 	if executor.isSyncInExecution() == true {
 		return
 	}
-	peer := executor.status.syncFlag.SyncPeers[rand.Intn(len(executor.status.syncFlag.SyncPeers))]
+	peer := executor.status.syncFlag.Oracle.SelectPeer()
+	// peer := executor.status.syncFlag.SyncPeers[rand.Intn(len(executor.status.syncFlag.SyncPeers))]
 	executor.logger.Debugf("send sync req to %d, require [%d] to [%d]", peer, downstream, upstream)
 	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream, peer); err != nil {
 		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
