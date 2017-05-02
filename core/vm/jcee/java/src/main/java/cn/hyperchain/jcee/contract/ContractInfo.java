@@ -4,6 +4,7 @@
  */
 package cn.hyperchain.jcee.contract;
 
+import java.util.Arrays;
 import java.util.Date;
 
 //Contract represent a contract instance
@@ -115,14 +116,27 @@ public class ContractInfo {
         this.owner = owner;
     }
 
+    public String getCodeHash() {
+        return codeHash;
+    }
+
+    public void setCodeHash(String codeHash) {
+        this.codeHash = codeHash;
+    }
+
     @Override
     public String toString() {
         return "ContractInfo{" +
                 "name='" + name + '\'' +
+                ", contractMainName='" + contractMainName + '\'' +
                 ", id='" + id + '\'' +
                 ", owner='" + owner + '\'' +
                 ", contractPath='" + contractPath + '\'' +
                 ", classPrefix='" + classPrefix + '\'' +
+                ", namespace='" + namespace + '\'' +
+                ", argClasses=" + Arrays.toString(argClasses) +
+                ", args=" + Arrays.toString(args) +
+                ", codeHash='" + codeHash + '\'' +
                 ", createTime=" + createTime +
                 ", modifyTime=" + modifyTime +
                 '}';

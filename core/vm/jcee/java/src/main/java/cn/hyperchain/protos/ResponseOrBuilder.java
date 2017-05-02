@@ -16,4 +16,14 @@ public interface ResponseOrBuilder extends
    * <code>bytes result = 2;</code>
    */
   com.google.protobuf.ByteString getResult();
+
+  /**
+   * <code>string codeHash = 3;</code>
+   */
+  java.lang.String getCodeHash();
+  /**
+   * <code>string codeHash = 3;</code>
+   */
+  com.google.protobuf.ByteString
+      getCodeHashBytes();
 }

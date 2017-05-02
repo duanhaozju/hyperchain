@@ -54,4 +54,5 @@ message RequestContext {
 message Response {
     bool  ok     = 1;
     bytes result = 2;
+    string codeHash = 3;
 }
