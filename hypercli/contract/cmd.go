@@ -163,8 +163,25 @@ func invoke(c *cli.Context) error {
 		method := "contract_invokeContract"
 		invokeCmd = getCmd(method, invokeParams, c)
 	}
-	fmt.Println(invokeCmd)
-	client.Call(invokeCmd)
+	//fmt.Println(deployCmd)
+	result, err := client.Call(invokeCmd)
+	if err != nil {
+		fmt.Println("Error in call invoke cmd request")
+		fmt.Print(err)
+		os.Exit(1)
+	}
+
+	txHash := getTransactionHash(result.Result)
+	method := "tx_getTransactionReceipt"
+	gtrCmd := getTransactionReceiptCmd(method, txHash, c)
+	//fmt.Println(gtrCmd)
+	err = getTransactionReceipt(client, gtrCmd)
+	if err != nil {
+		fmt.Println("Error in call get transaction receipt")
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 
 	return nil
 }
@@ -290,7 +307,7 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 		namespace, method, params)
 }
 
-func getPayloadFromPath (path string) string {
+func getPayloadFromPath(path string) string {
 	target := "contract.tar.gz"
 	compress(path, target)
 	buf, err := ioutil.ReadFile(target)
@@ -332,7 +349,7 @@ func delCompressedFile(file string) {
 	}
 }
 
-func getTransactionHash (result interface{}) string {
+func getTransactionHash(result interface{}) string {
 	if jrp, ok := result.(string); ok {
 		pat := `"result"\:".+"`
 		reg, err := regexp.Compile(pat)
