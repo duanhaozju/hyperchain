@@ -144,7 +144,7 @@ start_hyperjvm() {
     do
         cp -rf ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${DUMP_PATH}/node$j/
     done
-    cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
+#    cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
 
 #    case "$_SYSTYPE" in
 #          MAC*)

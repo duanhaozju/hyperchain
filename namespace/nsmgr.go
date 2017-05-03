@@ -8,7 +8,6 @@ import (
 	"errors"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/core/vm/jcee"
 	"io/ioutil"
 	"sync"
 )
@@ -61,7 +60,7 @@ type nsManagerImpl struct {
 	namespaces map[string]Namespace
 	jvmManager *JvmManager
 	conf       *common.Config
-	hyperjvm   jcee.HyperVM
+	// hyperjvm   jcee.HyperVM
 }
 
 //NewNsManager new a namespace manager
@@ -111,7 +110,7 @@ func (nr *nsManagerImpl) init() error {
 			logger.Errorf("Invalid folder %v", d)
 		}
 	}
-	nr.hyperjvm = jcee.NewHyperJVM(nr.conf.GetInt(common.C_LEDGER_PORT), nr.conf.GetInt(common.C_JVM_PORT))
+	// nr.hyperjvm = jcee.NewHyperJVM(nr.conf.GetInt(common.C_LEDGER_PORT), nr.conf.GetInt(common.C_JVM_PORT))
 	return nil
 }
 
@@ -125,10 +124,10 @@ func (nr *nsManagerImpl) Start() error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 
-	err := nr.hyperjvm.Start()
-	if err != nil {
-		logger.Error(err)
-	}
+	// err := nr.hyperjvm.Start()
+	//if err != nil {
+	//	logger.Error(err)
+	//}
 
 	for name := range nr.namespaces {
 		err := nr.StartNamespace(name)
@@ -137,9 +136,11 @@ func (nr *nsManagerImpl) Start() error {
 			return err
 		}
 	}
-	if err := nr.jvmManager.ledgerProxy.Server(); err != nil {
+
+	if err := nr.jvmManager.Start(); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -155,10 +156,13 @@ func (nr *nsManagerImpl) Stop() error {
 			return err
 		}
 	}
-	err := nr.hyperjvm.Stop()
-	if err != nil {
+	// err := nr.hyperjvm.Stop()
+	// if err != nil {
+	//	logger.Errorf("Stop hyperjvm error %v", err)
+	//	return err
+	//}
+	if err := nr.jvmManager.Stop(); err != nil {
 		logger.Errorf("Stop hyperjvm error %v", err)
-		return err
 	}
 	logger.Noticef("NamespaceManager stopped!")
 	return nil

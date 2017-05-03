@@ -43,6 +43,7 @@ func (lp *LedgerProxy) UnRegister(namespace string) error {
 func (lp *LedgerProxy) Server() error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", lp.conf.Get(common.C_LEDGER_PORT)))
 	if err != nil {
+		fmt.Println(err.Error())
 		return err
 	}
 	grpcServer := grpc.NewServer()
