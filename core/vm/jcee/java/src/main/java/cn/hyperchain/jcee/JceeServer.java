@@ -24,7 +24,7 @@ public class JceeServer implements IServer {
     static {
         Properties props = new Properties();
         try {
-            props.load(new FileInputStream("./hyperjvm/config/log4j.properties"));
+            props.load(new FileInputStream("../config/log4j.properties"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -42,8 +42,7 @@ public class JceeServer implements IServer {
         this.localPort = localPort;
         this.ledgerPort = ledgerPort;
         cgsi = new ContractGrpcServerImpl();
-        AbstractLedger ledger = new HyperchainLedger(ledgerPort);
-        this.cgsi.getHandler().getContractMgr().setLedger(ledger);
+        cgsi.setLedgerPort(ledgerPort);
     }
     public void Start() {
         try {

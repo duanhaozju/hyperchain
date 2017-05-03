@@ -36,7 +36,6 @@ public class Handler {
 
     public Handler(){
         cm = new ContractManager();
-        executor = new ContractExecutor();
     }
 
     /**
@@ -252,5 +251,9 @@ public class Handler {
         String dir = info.getContractPath();
         byte[] code = IOHelper.readCode(dir);
         info.setCodeHash(HashFunction.computeCodeHash(code));
+    }
+
+    public void setExecutor(ContractExecutor executor) {
+        this.executor = executor;
     }
 }
