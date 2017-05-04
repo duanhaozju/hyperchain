@@ -4,7 +4,6 @@
  */
 package cn.hyperchain.jcee.executor;
 
-import cn.hyperchain.protos.LedgerContext;
 import cn.hyperchain.protos.RequestContext;
 
 //Context used to contain info shared among a session.

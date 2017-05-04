@@ -8,6 +8,9 @@ import cn.hyperchain.jcee.contract.ContractBase;
 import cn.hyperchain.jcee.contract.ContractInfo;
 import cn.hyperchain.jcee.contract.ContractManager;
 import cn.hyperchain.jcee.executor.*;
+import cn.hyperchain.jcee.ledger.AbstractLedger;
+import cn.hyperchain.jcee.ledger.HyperchainLedger;
+import cn.hyperchain.jcee.util.Errors;
 import cn.hyperchain.jcee.util.HashFunction;
 import cn.hyperchain.jcee.util.IOHelper;
 import cn.hyperchain.protos.Request;
@@ -25,18 +28,17 @@ import java.util.concurrent.Future;
 
 /**
  * Handler used to handle the real request
+ * a namespace has a handler to handle request within this namespace
  */
 public class Handler {
 
     private Logger logger = Logger.getLogger(Handler.class.getSimpleName());
     private ContractManager cm;
-    private ContractExecutor executor;
 
     enum TaskType {QUERY, INVOKE}
 
-    public Handler(){
-        cm = new ContractManager();
-        executor = new ContractExecutor();
+    public Handler(int ledgerPort){
+        cm = new ContractManager(ledgerPort);
     }
 
     /**
@@ -48,23 +50,15 @@ public class Handler {
         Response response = null;
         Task task = constructTask(TaskType.QUERY, request);
         if(task == null) {
-            response = Response.newBuilder().setOk(false)
-                    .setResult(ByteString.copyFromUtf8("contract with id " + request.getContext().getCid() + " is not found"))
-                    .build();
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
+            Errors.ReturnErrMsg("contract with id " + request.getContext().getCid() + " is not found", responseObserver);
             return;
         }
-        Future<Response> future = executor.execute(task);
         try{
-            response = future.get();
+            response = task.call();
             logger.info("query result: " + response.getResult().toStringUtf8());
         }catch (Exception e) {
             logger.error(e);
-            response = Response.newBuilder().setOk(false)
-                    .setResult(ByteString.copyFromUtf8(e.getMessage()))
-                    .setCodeHash(cm.getContractHolder(request.getContext().getCid()).getInfo().getCodeHash())
-                    .build();
+            Errors.ReturnErrMsg(e.getMessage(), responseObserver);
         }finally {
             responseObserver.onNext(response);
             responseObserver.onCompleted();
@@ -82,23 +76,14 @@ public class Handler {
         logger.debug("contract is " + cm.getContract(request.getContext().getCid()));
         Task task = constructTask(TaskType.INVOKE, request);
         if(task == null) {
-            response = Response.newBuilder().setOk(false)
-                    .setResult(ByteString.copyFromUtf8("contract with id " + request.getContext().getCid() + " is not found"))
-                    .build();
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
+            Errors.ReturnErrMsg("contract with id " + request.getContext().getCid() + " is not found", responseObserver);
             return;
         }
-        Future<Response> future = executor.execute(task);
         try{
-            response = future.get();
+            response = task.call();
         }catch (Exception e) {
             logger.error(e);
-            e.printStackTrace();
-            response = Response.newBuilder().setOk(false)
-                    .setResult(ByteString.copyFromUtf8(e.getMessage()))
-                    .setCodeHash(cm.getContractHolder(request.getContext().getCid()).getInfo().getCodeHash())
-                    .build();
+            Errors.ReturnErrMsg(e.getMessage(), responseObserver);
         }finally {
             responseObserver.onNext(response);
             responseObserver.onCompleted();
@@ -144,7 +129,6 @@ public class Handler {
                             .setOk(rs)
                             .setCodeHash(info.getCodeHash())
                             .build();
-                    //add code hash
                 } else {
                     r = Response.newBuilder().setCodeHash(info.getCodeHash()).setOk(rs).build();
                 }

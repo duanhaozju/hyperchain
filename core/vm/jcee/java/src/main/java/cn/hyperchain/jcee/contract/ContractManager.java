@@ -5,6 +5,7 @@
 package cn.hyperchain.jcee.contract;
 
 import cn.hyperchain.jcee.ledger.AbstractLedger;
+import cn.hyperchain.jcee.ledger.HyperchainLedger;
 import org.apache.log4j.Logger;
 
 import java.lang.reflect.Constructor;
@@ -13,14 +14,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * ContractManager manage the contract load and fetch
+ * A namespace has a independent contract manager,
  */
 public class ContractManager {
     private static Logger logger = Logger.getLogger(ContractManager.class.getSimpleName());
-
     private Map<String, ContractHolder> contracts;
+    //ledger is shared by contract with same namespace
     private AbstractLedger ledger;
-    public ContractManager(){
+    public ContractManager(int ledgerPort){
         contracts = new ConcurrentHashMap<String, ContractHolder>();
+        ledger = new HyperchainLedger(ledgerPort);
     }
 
     public ContractHolder getContractHolder(String cid) {

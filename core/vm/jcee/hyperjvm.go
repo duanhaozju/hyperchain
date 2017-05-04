@@ -7,7 +7,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"os/exec"
-	"strconv"
+	//"strconv"
 )
 
 //HyperVM general remote VM interface
@@ -27,19 +27,19 @@ type HyperJVM struct {
 //Start start the hyerjvm
 func (hjvm *HyperJVM) Start() error {
 	//exec.Command("cd ./hyperjvm/bin").Run()
-	hjvm.logger.Critical("try to start jvm")
-	cmd := exec.Command("./hyperjvm/bin/start_hyperjvm.sh", strconv.Itoa(hjvm.jceePort), strconv.Itoa(hjvm.ledgerPort))
-
-	hjvm.startCmd = cmd
-	err := hjvm.startCmd.Run()
-	output, _ := cmd.Output()
-	hjvm.logger.Error(string(output))
-	if err != nil {
-		hjvm.logger.Error(err)
-		return err
-	}
-
-	hjvm.logger.Info("execute start hyperjvm command successful")
+	//hjvm.logger.Critical("try to start jvm")
+	//cmd := exec.Command("./hyperjvm/bin/start_hyperjvm.sh", strconv.Itoa(hjvm.jceePort), strconv.Itoa(hjvm.ledgerPort))
+	//
+	//hjvm.startCmd = cmd
+	//err := hjvm.startCmd.Run()
+	//output, _ := cmd.Output()
+	//hjvm.logger.Error(string(output))
+	//if err != nil {
+	//	hjvm.logger.Error(err)
+	//	return err
+	//}
+	//
+	//hjvm.logger.Info("execute start hyperjvm command successful")
 	//exec.Command("cd ../../../").Run()
 	return nil
 }

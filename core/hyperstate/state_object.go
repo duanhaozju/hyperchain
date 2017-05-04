@@ -283,7 +283,7 @@ func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 			}
 
 		} else {
-			self.logger.Noticef("flush dirty storage address [%s] put item key: [%s], value [%s]", self.address.Hex(), key.Hex(), common.Bytes2Hex(value))
+			self.logger.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", self.address.Hex(), key.Hex(), common.Bytes2Hex(value))
 			if err := db.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), value); err != nil {
 				return err
 			}

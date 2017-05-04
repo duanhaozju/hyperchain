@@ -6,11 +6,11 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
-	"hyperchain/manager/event"
+	"hyperchain/core/vm/evm"
 	"hyperchain/hyperdb/db"
+	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"time"
-	"hyperchain/core/vm/evm"
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
@@ -88,7 +88,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	}
 	executor.logger.Noticef("Block number %d", block.Number)
 	executor.logger.Noticef("Block hash %s", hex.EncodeToString(block.BlockHash))
-	executor.logger.Notice(string(executor.statedb.Dump()))
+	executor.logger.Debugf(string(executor.statedb.Dump()))
 	// remove Cached Transactions which used to check transaction duplication
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
 	return nil
