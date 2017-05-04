@@ -391,10 +391,15 @@ func constructTxValue(args SendTxArgs, txType int) ([]byte, error) {
 	case "jvm":
 		if txType == 1 {
 			// deploy
-			payload = common.FromHex(args.Payload)
+			code := common.FromHex(args.Payload)
+			payload, err = types.ConstructInvokeArgs(code, args.MethodName, args.Args)
+			if err != nil {
+				return nil, err
+			}
+
 		} else if txType == 2 {
 			// invoke
-			payload, err = types.ConstructInvokeArgs(args.MethodName, args.Args)
+			payload, err = types.ConstructInvokeArgs(nil, args.MethodName, args.Args)
 			if err != nil {
 				return nil, err
 			}

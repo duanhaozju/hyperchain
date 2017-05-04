@@ -67,13 +67,13 @@ public final class ContractProto {
       "\014\"=\n\rLedgerContext\022\014\n\004txid\030\001 \001(\t\022\021\n\tname" +
       "space\030\002 \001(\t\022\013\n\003cid\030\003 \001(\t\">\n\016RequestConte" +
       "xt\022\014\n\004txid\030\001 \001(\t\022\021\n\tnamespace\030\002 \001(\t\022\013\n\003c" +
-      "id\030\003 \001(\t\"&\n\010Response\022\n\n\002ok\030\001 \001(\010\022\016\n\006resu",
-      "lt\030\002 \001(\0142P\n\010Contract\022 \n\007Execute\022\010.Reques" +
-      "t\032\t.Response\"\000\022\"\n\tHeartBeat\022\010.Request\032\t." +
-      "Response\"\0002>\n\006Ledger\022\025\n\003Get\022\004.Key\032\006.Valu" +
-      "e\"\000\022\035\n\003Put\022\t.KeyValue\032\t.Response\"\000B\'\n\024cn" +
-      ".hyperchain.protosB\rContractProtoP\001b\006pro" +
-      "to3"
+      "id\030\003 \001(\t\"8\n\010Response\022\n\n\002ok\030\001 \001(\010\022\016\n\006resu",
+      "lt\030\002 \001(\014\022\020\n\010codeHash\030\003 \001(\t2P\n\010Contract\022 " +
+      "\n\007Execute\022\010.Request\032\t.Response\"\000\022\"\n\tHear" +
+      "tBeat\022\010.Request\032\t.Response\"\0002>\n\006Ledger\022\025" +
+      "\n\003Get\022\004.Key\032\006.Value\"\000\022\035\n\003Put\022\t.KeyValue\032" +
+      "\t.Response\"\000B\'\n\024cn.hyperchain.protosB\rCo" +
+      "ntractProtoP\001b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -128,7 +128,7 @@ public final class ContractProto {
     internal_static_Response_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Response_descriptor,
-        new java.lang.String[] { "Ok", "Result", });
+        new java.lang.String[] { "Ok", "Result", "CodeHash", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

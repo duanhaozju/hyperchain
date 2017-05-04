@@ -24,7 +24,7 @@ public class JceeServer implements IServer {
     static {
         Properties props = new Properties();
         try {
-            props.load(new FileInputStream("../config/log4j.properties"));
+            props.load(new FileInputStream("./hyperjvm/config/log4j.properties"));
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -8,44 +8,61 @@ import (
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
 	er "hyperchain/core/errors"
+	"os"
+	"github.com/golang/protobuf/proto"
 )
 
 // Call executes within the given contract
 func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, err error) {
-	ret, _, err = exec(env, caller, &addr, &addr, input, "", gas, gasPrice, value, op)
+	ret, _, err = exec(env, caller, &addr, &addr, input, "", env.Db().GetCode(addr), gas, gasPrice, value, op)
 	return ret, err
 }
 
 
 // Create creates a new contract with the given code
-func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
+func Create(env vm.Environment, caller vm.ContractRef, buf []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
 	// static check
 	// precompile
 	// calculate hash
 	// etc
-	var cp  string
-	if cp, err = decompression(code); err != nil {
+
+	var args types.InvokeArgs
+	var codePath string
+	var code []byte
+
+	if err = proto.Unmarshal(buf, &args); err != nil {
+		return nil, common.Address{}, er.ExecContractErr(0, DecompressErr, err.Error())
+	}
+
+
+	if codePath, err = decompression(args.Code); err != nil {
 		return nil, common.Address{}, er.ExecContractErr(0, DecompressErr, err.Error())
 	}
 	if valid := staticCheck(); !valid {
 		return nil, common.Address{}, er.ExecContractErr(0, InvalidSourceCodeErr)
 	}
 
-	if err := compile(cp); err != nil {
+	if err = compile(codePath); err != nil {
 		return nil, common.Address{}, er.ExecContractErr(0, CompileSourceCodeErr, err.Error())
 	}
+	if code, err = combineCode(codePath); err != nil {
+		return nil, common.Address{}, er.ExecContractErr(0, SigSourceCodeErr, err.Error())
+	}
 
-	//if _, err := signature("./namespaces/global/config/contracts/simulatebank"); err != nil {
-	//	return nil, common.Address{}, er.ExecContractErr(0, SigSourceCodeErr)
-	//}
-	ret, address, err = exec(env, caller, nil, nil, nil, cp, gas, gasPrice, value, 0)
+	ret, address, err = exec(env, caller, nil, nil, buf, codePath, code, gas, gasPrice, value, 0)
 	if err != nil {
 		return nil, address, err
 	}
+	defer func() {
+		// clear invalid dir
+		if err != nil {
+			os.RemoveAll(codePath)
+		}
+	}()
 	return ret, address, err
 }
 
-func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input []byte, code string, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
+func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input []byte, codePath string, code []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
 	virtualMachine := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -125,14 +142,14 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	context := NewContext(caller, to, env, createAccount, code)
+	context := NewContext(caller, to, env, createAccount, codePath)
 	ret, err = virtualMachine.Run(context, input)
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
 	if err == nil && createAccount {
-		env.Db().SetCode(*address, ret)
+		env.Db().SetCode(*address, code)
 		env.Db().AddDeployedContract(caller.Address(), *address)
 		env.Db().SetCreator(*address, caller.Address())
 		env.Db().SetCreateTime(*address, env.BlockNumber().Uint64())

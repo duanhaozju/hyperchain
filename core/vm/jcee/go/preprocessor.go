@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"strings"
 	"path"
-	"hyperchain/crypto"
 	"bytes"
 	command "os/exec"
 	"path/filepath"
@@ -32,6 +31,7 @@ func decompression(buf []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	err = ioutil.WriteFile(path.Join(tmpDir, CompressFileN), buf, 0644)
 	if err != nil {
 		return "", err
@@ -58,37 +58,35 @@ func compile(contractPath string) error {
 	if err != nil {
 		return err
 	}
-	oldPath, err := cd(binHome, false)
-	if err != nil {
-		return err
-	}
-	defer cd(oldPath, false)
-
-	cmd := command.Command("./contract_compile.sh", contractPath, contractPath)
+	cmdPath := path.Join(binHome, "contract_compile.sh")
+	cmd := command.Command(cmdPath, contractPath, contractPath)
 	if err := cmd.Run(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func signature(dirPath string) ([]byte, error) {
+func combineCode(dirPath string) ([]byte, error) {
 	var buffer bytes.Buffer
-	files, err := ioutil.ReadDir(dirPath)
-
+	err := filepath.Walk(dirPath,
+		func(p string, f os.FileInfo, err error) error {
+			if f == nil {
+				return err
+			}
+			if !f.IsDir() && strings.HasSuffix(f.Name(), "class") {
+				buf, err := ioutil.ReadFile(p)
+				if err != nil {
+					return err
+				}
+				buffer.Write(buf)
+			}
+			return nil
+		})
 	if err != nil {
 		return nil, err
+	} else {
+		return buffer.Bytes(), nil
 	}
-	for _, file := range files {
-		if strings.HasSuffix(file.Name(), "class") {
-			buf, err := ioutil.ReadFile(path.Join(dirPath, file.Name()))
-			if err != nil {
-				return nil, err
-			}
-			buffer.Write(buf)
-		}
-	}
-	sig := crypto.Keccak256(buffer.Bytes())
-	return sig, nil
 }
 
 

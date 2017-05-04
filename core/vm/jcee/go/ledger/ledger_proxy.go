@@ -11,10 +11,12 @@ import (
 	"google.golang.org/grpc"
 	"net"
 	"fmt"
+	"strings"
 )
 
 var (
 	NamespaceNotExistErr = errors.New("namespace not exist")
+	InvalidRequestErr    = errors.New("invalid request permission")
 )
 
 //LedgerProxy used to manipulate data
@@ -41,6 +43,7 @@ func (lp *LedgerProxy) UnRegister(namespace string) error {
 func (lp *LedgerProxy) Server() error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", lp.conf.Get(common.C_LEDGER_PORT)))
 	if err != nil {
+		fmt.Println(err.Error())
 		return err
 	}
 	grpcServer := grpc.NewServer()
@@ -50,10 +53,12 @@ func (lp *LedgerProxy) Server() error {
 }
 
 func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) {
-	fmt.Println("key", key.String())
 	exist, state := lp.stateMgr.GetStateDb(key.Context.Namespace)
 	if exist == false {
 		return nil, NamespaceNotExistErr
+	}
+	if valid := lp.requestCheck(key.Context); !valid {
+		return nil, InvalidRequestErr
 	}
 	_, value := state.GetState(common.HexToAddress(key.Context.Cid), common.BytesToHash(key.K))
 	v := &pb.Value{
@@ -63,12 +68,26 @@ func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) 
 }
 
 func (lp *LedgerProxy) Put(ctx context.Context, kv *pb.KeyValue) (*pb.Response, error) {
-	fmt.Println("keyvalue", kv.String())
 	exist, state := lp.stateMgr.GetStateDb(kv.Context.Namespace)
 	if exist == false {
 		return nil, NamespaceNotExistErr
 	}
+	if valid := lp.requestCheck(kv.Context); !valid {
+		return nil, InvalidRequestErr
+	}
 	// TODO for extension leave a opcode field
 	state.SetState(common.HexToAddress(kv.Context.Cid), common.BytesToHash(kv.K), kv.V, 0)
 	return &pb.Response{}, nil
+}
+
+func (lp *LedgerProxy) requestCheck(ctx *pb.LedgerContext) bool {
+	exist, state := lp.stateMgr.GetStateDb(ctx.Namespace)
+	if exist == false {
+		return false
+	}
+	if strings.Compare(ctx.Txid, state.GetCurrentTxHash().Hex()) == 0 {
+		return true
+	} else {
+		return false
+	}
 }

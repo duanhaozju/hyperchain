@@ -11,6 +11,13 @@ import (
 // parse parse input data and encapsulate as a invocation request.
 func (cei *contractExecutorImpl) parse(ctx vm.VmContext, in []byte) *pb.Request {
 	if ctx.IsCreation() {
+		var args types.InvokeArgs
+		if err := proto.Unmarshal(in, &args); err != nil {
+			return nil
+		}
+		var iArgs [][]byte
+		iArgs = append(iArgs, []byte(ctx.GetCodePath()))
+		iArgs = append(iArgs, args.Args...)
 		return &pb.Request{
 			Context:  &pb.RequestContext{
 				Cid:         common.HexToString(ctx.Address().Hex()),
@@ -18,9 +25,8 @@ func (cei *contractExecutorImpl) parse(ctx vm.VmContext, in []byte) *pb.Request 
 				Txid:        ctx.GetEnv().TransactionHash().Hex(),
 			},
 			Method:   "deploy",
-			Args:     [][]byte{[]byte(ctx.GetCodePath())},
+			Args:     iArgs,
 		}
-
 	} else {
 		var args types.InvokeArgs
 		if err := proto.Unmarshal(in, &args); err != nil {
