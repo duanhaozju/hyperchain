@@ -46,12 +46,20 @@ func (mgr *JvmManager) Start() error {
 
 // Start turn off jvm service.
 func (mgr *JvmManager) Stop() error {
-	// TODO
+	if err := mgr.stopLedgerServer(); err != nil {
+		return err
+	}
+	if err := mgr.stopJvmServer(); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (mgr *JvmManager) startLedgerServer() error {
-	go mgr.ledgerProxy.Server()
+	err := mgr.ledgerProxy.Server()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -68,6 +76,22 @@ func (mgr *JvmManager) startJvmServer() error {
 		return err
 	}
 	mgr.logger.Info("execute start hyperjvm command successful")
+	return nil
+}
+
+func (mgr *JvmManager) stopLedgerServer() error {
+	mgr.ledgerProxy.StopServer()
+	mgr.logger.Info("stop ledger server success")
+	return nil
+}
+
+func (mgr *JvmManager) stopJvmServer() error {
+	if mgr.startCmd != nil {
+		if err := mgr.startCmd.Process.Kill(); err != nil {
+			return err
+		}
+		mgr.logger.Info("stop jvm server success")
+	}
 	return nil
 }
 

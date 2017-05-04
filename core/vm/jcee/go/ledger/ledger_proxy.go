@@ -23,6 +23,7 @@ var (
 type LedgerProxy struct {
 	stateMgr *StateManager
 	conf     *common.Config
+	server   *grpc.Server
 }
 
 func NewLedgerProxy(conf *common.Config) *LedgerProxy {
@@ -43,13 +44,17 @@ func (lp *LedgerProxy) UnRegister(namespace string) error {
 func (lp *LedgerProxy) Server() error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", lp.conf.Get(common.C_LEDGER_PORT)))
 	if err != nil {
-		fmt.Println(err.Error())
 		return err
 	}
 	grpcServer := grpc.NewServer()
 	pb.RegisterLedgerServer(grpcServer, lp)
-	grpcServer.Serve(lis)
+	go grpcServer.Serve(lis)
+	lp.server = grpcServer
 	return nil
+}
+
+func (lp *LedgerProxy) StopServer() {
+	lp.server.Stop()
 }
 
 func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) {
