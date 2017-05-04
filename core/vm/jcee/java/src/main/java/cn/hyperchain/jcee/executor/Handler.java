@@ -2,8 +2,9 @@
  * Hyperchain License
  * Copyright (C) 2016 The Hyperchain Authors.
  */
-package cn.hyperchain.jcee;
+package cn.hyperchain.jcee.executor;
 
+import cn.hyperchain.jcee.Constants;
 import cn.hyperchain.jcee.contract.ContractBase;
 import cn.hyperchain.jcee.contract.ContractInfo;
 import cn.hyperchain.jcee.contract.ContractManager;
@@ -115,7 +116,7 @@ public class Handler {
             info.setContractPath(contractPath);
             info.setClassPrefix(props.getProperty(Constants.CONTRACT_CLASS_SUPER_DIR));
             info.setContractMainName(props.getProperty(Constants.CONTRACT_MAIN_CLASS));
-            info.setId(request.getContext().getCid());
+            info.setCid(request.getContext().getCid());
             info.setNamespace(request.getContext().getNamespace());
             info.setCreateTime(System.currentTimeMillis());
             info.setModifyTime(info.getCreateTime());
@@ -142,6 +143,17 @@ public class Handler {
             responseObserver.onNext(r);
             responseObserver.onCompleted();
         }
+    }
+
+    public boolean deploy(ContractInfo info) {
+        if(info.getCodeHash() != null && !info.getCodeHash().equals("")){
+            String codeHash = caculateCodeHash(info.getContractPath());
+            if (!codeHash.equals(info.getCodeHash())) {
+                logger.error("code has been changed, origin hash: " + info.getCodeHash() + " current hash: " + codeHash);
+                return false;
+            }
+        }
+        return cm.deployContract(info);
     }
 
     public Task constructTask(final TaskType type, final Request request) {
@@ -182,42 +194,35 @@ public class Handler {
     public boolean extractConstructorArgs(ContractInfo info, List<ByteString> args) {
         int n = args.size();
         int i = 1, j = (n - i) / 2 + 1; // TODO: may not start from 1
-        Class argClasses[] = new Class[j - 1];
+        String argTypes[] = new String[j - 1];
         Object objectArgs[] = new Object[j - 1];
         while (j < n) {
             String className = args.get(i).toStringUtf8();
             String arg = args.get(j).toStringUtf8();
+            argTypes[i - 1] = className;
             switch (className){
                 case "boolean":
-                    argClasses[i - 1] = boolean.class;
                     objectArgs[i - 1] = arg == "true" ? true : false;
                     break;
                 case "char":
-                     argClasses[i - 1] = char.class;
                      objectArgs[i - 1] = arg.charAt(0);
                      break;
                 case "short":
-                    argClasses[i - 1] = short.class;
                     objectArgs[i - 1] = Short.parseShort(arg);
                     break;
                 case "int":
-                    argClasses[i - 1] = int.class;
                     objectArgs[i - 1] = Integer.parseInt(arg);
                     break;
                 case "long":
-                    argClasses[i - 1] = long.class;
                     objectArgs[i - 1] = Long.parseLong(arg);
                     break;
                 case "float":
-                    argClasses[i - 1] = float.class;
                     objectArgs[i - 1] = Float.parseFloat(arg);
                     break;
                 case "double":
-                    argClasses[i - 1] = double.class;
                     objectArgs[i - 1] = Double.parseDouble(arg);
                     break;
                 case "String":
-                    argClasses[i - 1] = String.class;
                     objectArgs[i - 1] = arg;
                     break;
                 default:
@@ -227,7 +232,7 @@ public class Handler {
             i ++;
             j ++;
         }
-        info.setArgClasses(argClasses);
+        info.setArgTypes(argTypes);
         info.setArgs(objectArgs);
         return true;
     }
@@ -236,5 +241,10 @@ public class Handler {
         String dir = info.getContractPath();
         byte[] code = IOHelper.readCode(dir);
         info.setCodeHash(HashFunction.computeCodeHash(code));
+    }
+
+    public String caculateCodeHash(String path) {
+        byte[] code = IOHelper.readCode(path);
+        return HashFunction.computeCodeHash(code);
     }
 }

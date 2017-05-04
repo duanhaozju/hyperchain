@@ -22,11 +22,12 @@ public class JceeServer implements IServer {
     static {
         Properties props = new Properties();
         try {
-            props.load(new FileInputStream("../config/log4j.properties"));
+            props.load(new FileInputStream("./hyperjvm/config/log4j.properties"));
+            PropertyConfigurator.configure(props);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        PropertyConfigurator.configure(props);
+
     }
 
     private static final Logger logger = Logger.getLogger(JceeServer.class);
@@ -41,6 +42,7 @@ public class JceeServer implements IServer {
     }
     public void Start() {
         try {
+            cgsi.init();
             logger.info("ContractServer start listening on port " + localPort);
             server = ServerBuilder.forPort(localPort)
                     .addService(cgsi)
@@ -48,6 +50,7 @@ public class JceeServer implements IServer {
             server.awaitTermination();
         }catch (Exception e) {
             logger.error(e);
+            e.printStackTrace();
         }
     }
 

@@ -1,8 +1,6 @@
 package cn.hyperchain.jcee;
 
-import cn.hyperchain.jcee.contract.TestContractClassLoader;
-import cn.hyperchain.jcee.ledger.AbstractLedger;
-import cn.hyperchain.jcee.ledger.HyperchainLedger;
+import cn.hyperchain.jcee.executor.Handler;
 import cn.hyperchain.protos.Request;
 import cn.hyperchain.protos.RequestContext;
 import com.google.protobuf.ByteString;
@@ -21,8 +19,8 @@ public class TestHandler {
 
         String contractDir = TestHandler.class.getResource("/contracts").getPath();
 //        System.out.println(contractDir);
-        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl();
-        Handler handler = cgsi.getHandler("global");
+        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl(123);
+        Handler handler = new Handler(123);
         Request request = Request.newBuilder()
                 .addArgs(ByteString.copyFrom(contractDir, Charset.defaultCharset()))
                 .addArgs(ByteString.copyFrom("String", Charset.defaultCharset()))
@@ -45,8 +43,8 @@ public class TestHandler {
 
         String contractDir = TestHandler.class.getResource("/contracts").getPath();
 //        System.out.println(contractDir);
-        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl();
-        Handler handler = cgsi.getHandler("global");
+        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl(123);
+        Handler handler = new Handler(123);
         Request request = Request.newBuilder()
                 .addArgs(ByteString.copyFrom(contractDir, Charset.defaultCharset()))
                 .setContext(RequestContext.newBuilder().setCid("cid0001")
