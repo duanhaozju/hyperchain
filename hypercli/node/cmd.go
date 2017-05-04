@@ -38,6 +38,16 @@ func NewNodeCMD() []cli.Command {
 					Value: "",
 					Usage: "setting the namespace to delete node from",
 				},
+				cli.StringFlag{
+					Name:  "host, h",
+					Value: "",
+					Usage: "setting the host ip to delete node from",
+				},
+				cli.StringFlag{
+					Name:  "port, p",
+					Value: "",
+					Usage: "setting the host port to delete node from",
+				},
 			},
 		},
 
@@ -63,10 +73,9 @@ func delNode(c *cli.Context) error {
 		fmt.Print("namespace: ")
 		fmt.Scanln(&namespace)
 	}
-	fmt.Print("ip: ")
-	fmt.Scanln(&ip)
-	fmt.Print("port: ")
-	fmt.Scanln(&port)
+
+	ip = common.GetNonEmptyValueByName(c, "host")
+	port = common.GetNonEmptyValueByName(c, "port")
 
 	nodehash, err := getDelNodeHash(namespace, ip, port)
 	if err != nil {
@@ -160,4 +169,20 @@ func sendDelNode(namespace, hash string, peers peerinfos) error{
 		}
 	}
 	return nil
+}
+
+func getNonEmptyValueByName(c *cli.Context, name string) string {
+	var value string
+	if c.String(name) != "" {
+		value = c.String("to")
+	} else {
+		for {
+			fmt.Printf("Please specify a non-empty %s:", name)
+			fmt.Scanln(&value)
+			if value != "" {
+				break
+			}
+		}
+	}
+	return value
 }
