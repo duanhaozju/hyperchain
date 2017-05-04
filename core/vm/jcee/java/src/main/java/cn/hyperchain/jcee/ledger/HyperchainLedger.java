@@ -7,6 +7,7 @@ package cn.hyperchain.jcee.ledger;
 import cn.hyperchain.protos.Key;
 import cn.hyperchain.protos.KeyValue;
 import cn.hyperchain.protos.LedgerContext;
+import cn.hyperchain.protos.Value;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
 
@@ -40,6 +41,15 @@ public class HyperchainLedger extends AbstractLedger{
         return client.put(kv);
     }
 
+    public Value fetch(byte[] key) {
+        Key sendkey = Key.newBuilder()
+                .setContext(getLedgerContext())
+                .setK(ByteString.copyFrom(key))
+                .build();
+        logger.info("Transaction id: " + getContext().getId());
+        return client.get(sendkey);
+    }
+
     public LedgerContext getLedgerContext(){
         return LedgerContext
                 .newBuilder()
@@ -47,5 +57,180 @@ public class HyperchainLedger extends AbstractLedger{
                 .setTxid(getContext().getRequestContext().getTxid())
                 .setCid(getContext().getRequestContext().getCid())
                 .build();
+    }
+
+
+    @Override
+    public boolean getBoolean(byte[] key) {
+        return Boolean.parseBoolean(fetch(key).getV().toStringUtf8());
+    }
+
+    @Override
+    public short getShort(byte[] key) {
+        return Short.parseShort(fetch(key).getV().toStringUtf8());
+    }
+
+    @Override
+    public char getChar(byte[] key) {
+        return fetch(key).getV().toStringUtf8().charAt(0);
+    }
+
+    @Override
+    public int getInt(byte[] key) {
+        return Integer.parseInt(fetch(key).getV().toStringUtf8());
+    }
+
+    @Override
+    public float getFloat(byte[] key) {
+        return Float.parseFloat(fetch(key).getV().toStringUtf8());
+    }
+
+    public double getDouble(byte[] key){
+        Value v = fetch(key);
+        return Double.parseDouble(v.getV().toStringUtf8());
+    }
+
+    @Override
+    public String getString(byte[] key) {
+        return fetch(key).getV().toStringUtf8();
+    }
+
+    @Override
+    public Object getObject(byte[] key) {
+        //TODO: get object, use model method
+        return null;
+    }
+
+    @Override
+    public byte[] get(String key) {
+        return get(key.getBytes());
+    }
+
+    @Override
+    public boolean getBoolean(String key) {
+        return getBoolean(key.getBytes());
+    }
+
+    @Override
+    public short getShort(String key) {
+        return getShort(key.getBytes());
+    }
+
+    @Override
+    public char getChar(String key) {
+        return getChar(key.getBytes());
+    }
+
+    @Override
+    public int getInt(String key) {
+        return getInt(key.getBytes());
+    }
+
+    @Override
+    public float getFloat(String key) {
+        return getFloat(key.getBytes());
+    }
+
+    @Override
+    public double getDouble(String key) {
+        return getDouble(key.getBytes());
+    }
+
+    @Override
+    public String getString(String key) {
+        return getString(key.getBytes());
+    }
+
+    @Override
+    public Object getObject(String key) {
+        //TODO: get object, use model method
+        return null;
+    }
+
+    @Override
+    public boolean put(byte[] key, boolean value) {
+        return put(key, Boolean.toString(value).getBytes());
+    }
+
+    @Override
+    public boolean put(byte[] key, short value) {
+        return put(key, Short.toString(value).getBytes());
+    }
+
+    @Override
+    public boolean put(byte[] key, char value) {
+        return put(key, Character.toString(value).getBytes());
+    }
+
+    @Override
+    public boolean put(byte[] key, int value) {
+        return put(key, Integer.toString(value).getBytes());
+    }
+
+    @Override
+    public boolean put(byte[] key, float value) {
+        return put(key, Float.toString(value).getBytes());
+    }
+
+    @Override
+    public boolean put(byte[] key, double value) {
+        return put(key, Double.toString(value).getBytes());
+    }
+
+    @Override
+    public boolean put(byte[] key, String value) {
+        return put(key, value.getBytes());
+    }
+
+    @Override
+    public boolean put(byte[] key, Object object) {
+//        return put(key);
+        //TODO: encode the object
+        return false;
+    }
+
+    @Override
+    public boolean put(String key, byte[] value) {
+        return put(key.getBytes(), value);
+    }
+
+    @Override
+    public boolean put(String key, boolean value) {
+        return put(key.getBytes(), value);
+    }
+
+    @Override
+    public boolean put(String key, short value) {
+        return put(key.getBytes(), value);
+    }
+
+    @Override
+    public boolean put(String key, char value) {
+        return put(key.getBytes(), value);
+    }
+
+    @Override
+    public boolean put(String key, int value) {
+        return put(key.getBytes(), value);
+    }
+
+    @Override
+    public boolean put(String key, float value) {
+        return put(key.getBytes(), value);
+    }
+
+    @Override
+    public boolean put(String key, double value) {
+        return put(key.getBytes(), value);
+    }
+
+    @Override
+    public boolean put(String key, String value) {
+        return put(key.getBytes(), value);
+    }
+
+    @Override
+    public boolean put(String key, Object object) {
+        return put(key.getBytes(), object);
     }
 }

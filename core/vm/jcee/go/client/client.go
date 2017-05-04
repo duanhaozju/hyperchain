@@ -67,12 +67,11 @@ func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error
 	request := cei.parse(ctx, in)
 	response, err := cei.execute(request)
 
-	cei.logger.Critical(response)
-
+	//cei.logger.Critical(response)
 	if err != nil {
 		return nil, err
 	} else if response.Ok == false {
-		return nil, errors.New("execute failed")
+		return nil, errors.New(string(response.Result))
 	} else {
 		return response.Result, nil
 	}

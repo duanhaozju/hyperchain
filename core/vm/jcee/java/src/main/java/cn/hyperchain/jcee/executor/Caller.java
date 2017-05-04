@@ -21,10 +21,13 @@ public class Caller {
     private Request request;
     private StreamObserver<Response> responseObserver;
 
-    public Caller(Handler handler, Request request, StreamObserver<Response> responseObserver) {
-        this.handler = handler;
+    public Caller(Request request, StreamObserver<Response> responseObserver) {
         this.request = request;
         this.responseObserver = responseObserver;
+    }
+
+    public void setHandler(Handler handler) {
+        this.handler = handler;
     }
 
     public String getNamespace () {

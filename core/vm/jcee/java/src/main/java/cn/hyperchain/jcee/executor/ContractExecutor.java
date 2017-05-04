@@ -4,23 +4,76 @@
  */
 package cn.hyperchain.jcee.executor;
 
-import cn.hyperchain.protos.Response;
 import org.apache.log4j.Logger;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.Map;
+import java.util.concurrent.*;
 
+/**
+ * Created by wangxiaoyi on 2017/5/3.
+ * dispatch call by namespace
+ */
 public class ContractExecutor {
+
     private static final Logger logger = Logger.getLogger(ContractExecutor.class.getSimpleName());
 
-    private ExecutorService exec;
+    private volatile boolean close;
+    private ExecutorService threadPool;
+    private Map<String, Executor> executors;
+    private ContractHandler contractHandler;
 
-    public ContractExecutor(){
-        exec = Executors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors());
+    public ContractExecutor(int ledgerPort) {
+        close = false;
+        executors = new ConcurrentHashMap<>();
+        threadPool = Executors.newCachedThreadPool();
+        contractHandler = new ContractHandler(ledgerPort);
     }
 
-    public Future<Response> execute(Task task) {
-        return exec.submit(task);
+    public void dispatch(Caller caller) throws InterruptedException {
+        String namespace = caller.getNamespace();
+        if (! contractHandler.hasHandlerForNamespace(namespace)) {
+            contractHandler.addHandler(namespace);
+            this.addExecutor(namespace);
+        }
+        caller.setHandler(contractHandler.get(namespace));
+        executors.get(namespace).Call(caller);
+    }
+
+    class Executor implements Runnable {
+
+        private BlockingQueue <Caller> callers;
+        private String namespace;
+
+        public Executor(String namespace) {
+            this.namespace = namespace;
+            this.callers = new LinkedBlockingQueue<>();
+        }
+
+        public void Call(Caller caller) throws InterruptedException{
+            callers.put(caller);
+        }
+
+        @Override
+        public void run() {
+            while (!close) {
+                try {
+                    Caller caller = callers.take();
+                    caller.Call();
+                }catch (InterruptedException ie) {
+                    logger.error(ie);
+                }
+            }
+        }
+    }
+
+    public void addExecutor(String namespace) {
+        Executor executor = new Executor(namespace);
+        this.executors.put(namespace, executor);
+        this.threadPool.submit(executor);
+    }
+
+    public void close() {
+        this.close = true;
+        this.threadPool.shutdown();
     }
 }

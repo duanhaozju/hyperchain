@@ -2,7 +2,6 @@ package cn.hyperchain.jcee.contract.examples.sb;
 
 import cn.hyperchain.jcee.contract.ContractBase;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.DoubleValue;
 import org.apache.log4j.Logger;
 
 import java.util.List;
@@ -58,7 +57,8 @@ public class SimulateBank extends ContractBase{
             case "getAccountBalance":
                 return getAccountBalance(args);
             default:
-                logger.error("method " + funcName  + " not found!");
+                String errMsg = "method " + funcName  + " not found!";
+                logger.error(errMsg);
         }
         return null;
     }
@@ -90,11 +90,11 @@ public class SimulateBank extends ContractBase{
             byte[] balance = ledger.get(accountA.getBytes());
 
             if(balance != null) {
-                double balanceA = DoubleValue.parseFrom(balance).getValue();
-                double balanceB = DoubleValue.parseFrom(ledger.get(accountB.getBytes())).getValue();
+                double balanceA = Double.parseDouble(new String(balance));
+                double balanceB = ledger.getDouble(accountB.getBytes());
                 if (balanceA >= num) {
-                    ledger.put(accountA.getBytes(), String.valueOf(balanceA - num).getBytes());
-                    ledger.put(accountB.getBytes(), String.valueOf(balanceB + num).getBytes());
+                    ledger.put(accountA, balanceA - num);
+                    ledger.put(accountB, balanceB + num);
                 }
             }else {
                 logger.error("get account " + accountA  + " balance error");
