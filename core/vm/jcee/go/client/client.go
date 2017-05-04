@@ -21,6 +21,8 @@ type ContractExecutor interface {
 	Stop() error
 	// Run invoke contract, use `Execute` internally
 	Run(vm.VmContext, []byte) ([]byte, error)
+	// Ping send ping package for healthy assurance
+	Ping() (*pb.Response, error)
 }
 
 type contractExecutorImpl struct {
@@ -67,8 +69,6 @@ func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error
 	request := cei.parse(ctx, in)
 	response, err := cei.execute(request)
 
-	cei.logger.Critical(response)
-
 	if err != nil {
 		return nil, err
 	} else if response.Ok == false {
@@ -78,6 +78,13 @@ func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error
 	}
 }
 
+func (cei *contractExecutorImpl) Ping() (*pb.Response, error){
+	return cei.heartbeat()
+}
+
+func (cei *contractExecutorImpl) Address() string {
+	return cei.address
+}
 
 // execute send invocation message to jvm server.
 func (cei *contractExecutorImpl) execute(tx *pb.Request) (*pb.Response, error) {
