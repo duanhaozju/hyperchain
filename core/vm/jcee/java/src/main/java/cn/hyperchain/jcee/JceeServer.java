@@ -4,8 +4,6 @@
  */
 package cn.hyperchain.jcee;
 
-import cn.hyperchain.jcee.ledger.AbstractLedger;
-import cn.hyperchain.jcee.ledger.HyperchainLedger;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.apache.log4j.Logger;
@@ -24,7 +22,7 @@ public class JceeServer implements IServer {
     static {
         Properties props = new Properties();
         try {
-            props.load(new FileInputStream("./hyperjvm/config/log4j.properties"));
+            props.load(new FileInputStream("../config/log4j.properties"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -34,16 +32,12 @@ public class JceeServer implements IServer {
     private static final Logger logger = Logger.getLogger(JceeServer.class);
 
     private int localPort;
-    private int ledgerPort;
     private Server server;
     private ContractGrpcServerImpl cgsi;
 
     public JceeServer(int localPort, int ledgerPort){
         this.localPort = localPort;
-        this.ledgerPort = ledgerPort;
-        cgsi = new ContractGrpcServerImpl();
-        AbstractLedger ledger = new HyperchainLedger(ledgerPort);
-        this.cgsi.getHandler().getContractMgr().setLedger(ledger);
+        cgsi = new ContractGrpcServerImpl(ledgerPort);
     }
     public void Start() {
         try {

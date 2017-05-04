@@ -275,6 +275,9 @@ func (ns *namespaceImpl) Stop() error {
 	if state != running {
 		ns.logger.Criticalf("namespace: %s not running now, need not to stop", ns.Name())
 	}
+	//5.stop peer manager
+	go ns.grpcMgr.Stop()
+
 	//1.stop request processor
 	ns.rpc.Stop()
 
@@ -286,9 +289,6 @@ func (ns *namespaceImpl) Stop() error {
 
 	//4.stop consensus service
 	ns.consenter.Close()
-
-	//5.stop peer manager
-	go ns.grpcMgr.Stop()
 
 	ns.status.setState(closed)
 	ns.logger.Notice()

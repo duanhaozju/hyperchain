@@ -151,7 +151,7 @@ func (hub *EventHub) listenTransactionEvent() {
 		case obj := <-hub.GetSubscription(SUB_TRANSACTION).Chan():
 			switch ev := obj.Data.(type) {
 			case event.NewTxEvent:
-				hub.logger.Notice("message middleware: [new tx]")
+				hub.logger.Debug("message middleware: [new tx]")
 				if ev.Simulate == true {
 					hub.executor.RunInSandBox(ev.Transaction)
 				} else {
