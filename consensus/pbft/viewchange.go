@@ -80,7 +80,7 @@ func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vc
 
 	// vcResendLimit
 	vcm.vcResendLimit = conf.GetInt(PBFT_VC_RESEND_LIMIT)
-	pbft.logger.Noticef("Replica %d set vcResendLimit %d", pbft.id, vcm.vcResendLimit)
+	pbft.logger.Debugf("Replica %d set vcResendLimit %d", pbft.id, vcm.vcResendLimit)
 	vcm.vcResendCount = 0
 
 	return vcm

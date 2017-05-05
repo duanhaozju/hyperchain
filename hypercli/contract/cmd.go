@@ -6,18 +6,14 @@ import (
 	"github.com/urfave/cli"
 	"fmt"
 	"hyperchain/hypercli/common"
-	"os/exec"
 	"io/ioutil"
 	"encoding/hex"
 	"math/rand"
 	"time"
 	"os"
-	"regexp"
-	"strings"
-	"path/filepath"
+	"hyperchain/core/types"
+	"hyperchain/api/jsonrpc/core"
 )
-
-const frequency = 10
 
 //NewContractCMD new contract related commands.
 func NewContractCMD() []cli.Command {
@@ -38,9 +34,9 @@ func NewContractCMD() []cli.Command {
 					Usage: "specify how the contract is generated, false is solidity, true is jvm",
 				},
 				cli.StringFlag{
-					Name:  "path, p",
+					Name:  "directory, d",
 					Value: "",
-					Usage: "specify the contract file path",
+					Usage: "specify the contract file directory",
 				},
 				cli.StringFlag{
 					Name:  "namespace, n",
@@ -49,13 +45,13 @@ func NewContractCMD() []cli.Command {
 				},
 				cli.StringFlag{
 					Name:  "from, f",
-					Value: "17d806c92fa941b4b7a8ffffc58fa2f297a3bffc",
+					Value: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
 					Usage: "specify the deploy account",
 				},
 				cli.StringFlag{
-					Name:  "signature, s",
-					Value: "0x19c0655d05b9c24f5567846528b81a25c48458a05f69f05cf8d6c46894b9f12a02af471031ba11f155e41adf42fca639b67fb7148ddec90e7628ec8af60c872c00",
-					Usage: "specify the signature",
+					Name:  "payload, p",
+					Value: "",
+					Usage: "specify the deploy contract payload",
 				},
 			},
 		},
@@ -75,24 +71,19 @@ func NewContractCMD() []cli.Command {
 					Usage: "specify how the contract is generated, false is solidity, true is jvm",
 				},
 				cli.StringFlag{
-					Name:  "path, p",
-					Value: "",
-					Usage: "specify the contract file path",
-				},
-				cli.StringFlag{
 					Name:  "namespace, n",
 					Value: "global",
 					Usage: "specify the namespace to deploy to, default is global",
 				},
 				cli.StringFlag{
 					Name:  "from, f",
-					Value: "17d806c92fa941b4b7a8ffffc58fa2f297a3bffc",
+					Value: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
 					Usage: "specify the deploy account",
 				},
 				cli.StringFlag{
-					Name:  "signature, s",
-					Value: "0x19c0655d05b9c24f5567846528b81a25c48458a05f69f05cf8d6c46894b9f12a02af471031ba11f155e41adf42fca639b67fb7148ddec90e7628ec8af60c872c00",
-					Usage: "specify the signature",
+					Name:  "payload, p",
+					Value: "",
+					Usage: "specify the invoke contract payload",
 				},
 
 				//args with no default value which must be specified by user
@@ -121,6 +112,7 @@ func NewContractCMD() []cli.Command {
 	}
 }
 
+// deploy implements deploy contract and return the transaction receipt
 func deploy(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	var deployCmd string
@@ -139,11 +131,8 @@ func deploy(c *cli.Context) error {
 		os.Exit(1)
 	}
 
-	txHash := getTransactionHash(result.Result)
-	method := "tx_getTransactionReceipt"
-	gtrCmd := getTransactionReceiptCmd(method, txHash, c)
-	//fmt.Println(gtrCmd)
-	err = getTransactionReceipt(client, gtrCmd)
+	txHash := getTransactionHash(result)
+	err = common.GetTransactionReceipt(txHash, c, client)
 	if err != nil {
 		fmt.Println("Error in call get transaction receipt")
 		fmt.Println(err)
@@ -153,6 +142,7 @@ func deploy(c *cli.Context) error {
 	return nil
 }
 
+// invoke implements invoke contract and return the transaction receipt
 func invoke(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	var invokeCmd string
@@ -171,28 +161,29 @@ func invoke(c *cli.Context) error {
 		os.Exit(1)
 	}
 
-	txHash := getTransactionHash(result.Result)
-	method := "tx_getTransactionReceipt"
-	gtrCmd := getTransactionReceiptCmd(method, txHash, c)
-	//fmt.Println(gtrCmd)
-	err = getTransactionReceipt(client, gtrCmd)
+	txHash := getTransactionHash(result)
+	err = common.GetTransactionReceipt(txHash, c, client)
 	if err != nil {
 		fmt.Println("Error in call get transaction receipt")
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-
 	return nil
 }
 
-func destroy(c *cli.Context) error {
+func destroy() error {
 	//TODO: implement destroy cmd
+	fmt.Println("Not support yet!")
 	return nil
 }
 
 func getCmd(method string, deploy_params []string, c *cli.Context) string {
 	namespace := c.String("namespace")
+	var from, to, payload, invokemethod, arg string
+	var nonce, timestamp, amount int64
+	var opcode int
+	var vmtype types.TransactionValue_VmType
 
 	params := "[{"
 	for i, param := range deploy_params{
@@ -206,91 +197,63 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 				if method == "contract_invokeContract" {
 					payload = ""
 				} else {
-					if c.String("path") != "" {
-						payload = getPayloadFromPath(c.String("path"))
+					if c.String("directory") != "" {
+						payload = getPayloadFromPath(c.String("directory"))
 					} else {
-						for {
-							var path string
-							fmt.Println("Please specify a non-empty contarct path:")
-							fmt.Scanln(&path)
-							if path != "" {
-								payload = getPayloadFromPath(path)
-								break
-							}
-						}
+						payload = common.GetNonEmptyValueByName(c, "directory")
 					}
 				}
 			} else {
-				for {
-					fmt.Println("Please specify a non-empty contarct payload:")
-					fmt.Scanln(&payload)
-					if payload != "" {
-						break
-					}
-				}
+				payload = common.GetNonEmptyValueByName(c, "payload")
 			}
 			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, payload)
 
 		case "nonce":
-			nonce := rand.Int63()
+			nonce = rand.Int63()
 			params = params + fmt.Sprintf("\"%s\":%d", param, nonce)
 
 		case "timestamp":
-			timestamp := time.Now().UnixNano()
+			timestamp = time.Now().UnixNano()
 			params = params + fmt.Sprintf("\"%s\":%d", param, timestamp)
 
-		//TODO generate from, signature automatically
 		case "from":
-			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, c.String("from"))
-
-		case "signature":
-			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, c.String("signature"))
+			from = c.String("from")
+			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, from)
 
 		//below params must be input by user
 		case "to":
-			var to string
-			if c.String("to") != "" {
-				to = c.String("to")
-			} else {
-				for {
-					fmt.Println("Please specify a non-empty contractAddress:")
-					fmt.Scanln(&to)
-					if to != "" {
-						break
-					}
-				}
-			}
+			to = common.GetNonEmptyValueByName(c, "to")
 			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, to)
 
-		case "method":
-			var method string
-			if c.String("method") != "" {
-				method = c.String("method")
+		// signature is generated automatically
+		case "signature":
+			amount = 0
+			opcode = 0
+			if c.Bool("jvm") {
+				vmtype = 1
 			} else {
-				for {
-					fmt.Println("Please specify a non-empty invoke method:")
-					fmt.Scanln(&method)
-					if method != "" {
-						break
-					}
-				}
+				vmtype = 0
 			}
-			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, method)
+			sig, err := common.GenSignature(from, to, timestamp, amount, payload, nonce, int32(opcode), vmtype)
+			if err != nil {
+				fmt.Println("Error in generate signature.")
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			signature := hex.EncodeToString(sig)
+			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, signature)
+
+		case "method":
+			if c.Bool("jvm") {
+				invokemethod = common.GetNonEmptyValueByName(c, "method")
+				params = params + fmt.Sprintf("\"%s\":\"%s\"", param, invokemethod)
+			}
 
 		case "args":
-			var arg string
-			if c.String("args") != "" {
-				arg = c.String("args")
-			} else {
-				for {
-					fmt.Println("Please specify a non-empty invoke args:")
-					fmt.Scanln(&arg)
-					if arg != "" {
-						break
-					}
-				}
+			if c.Bool("jvm") {
+				arg = common.GetNonEmptyValueByName(c, "args")
+				params = params + fmt.Sprintf("\"%s\":%s", param, arg)
 			}
-			params = params + fmt.Sprintf("\"%s\":%s", param, arg)
 
 		default:
 			fmt.Printf("Invalid param name: %s\n", param)
@@ -307,9 +270,9 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 		namespace, method, params)
 }
 
-func getPayloadFromPath(path string) string {
+func getPayloadFromPath(dir string) string {
 	target := "contract.tar.gz"
-	compress(path, target)
+	common.Compress(dir, target)
 	buf, err := ioutil.ReadFile(target)
 	if err != nil {
 		fmt.Printf("Error in read compressed file: %s\n", target)
@@ -317,83 +280,25 @@ func getPayloadFromPath(path string) string {
 		os.Exit(1)
 	}
 	payload := hex.EncodeToString(buf)
-	delCompressedFile(target)
+	common.DelCompressedFile(target)
 
 	return payload
 }
 
-func compress(source, target string) {
-	//source path must be absolute path, so first convert source path to an absolute path
-	abs, err := filepath.Abs(source)
+func getTransactionHash(result *jsonrpc.CommandResult) string {
+	response, err := common.GetJSONResponse(result)
 	if err != nil {
+		fmt.Println("Error in call get transaction hash from http response")
 		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	dir, file := filepath.Split(abs)
-	// compress files to a tar.gz with only one-level path
-	command := exec.Command("tar", "-czf", target, "-C", dir, file)
-	if err := command.Run(); err != nil {
-		fmt.Printf("Error in read compress specefied file: %s\n", source)
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-}
-
-func delCompressedFile(file string) {
-	command := exec.Command("rm", "-rf", file)
-	if err := command.Run(); err != nil {
-		fmt.Printf("Error in remove compressed file: %s\n", file)
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-}
-
-func getTransactionHash(result interface{}) string {
-	if jrp, ok := result.(string); ok {
-		pat := `"result"\:".+"`
-		reg, err := regexp.Compile(pat)
-		if (err != nil ) {
-			fmt.Println("Error in compile regular expression")
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		strArr := reg.FindAllString(jrp, -1)
-		str := strArr[0][10:]
-		str = strings.TrimSuffix(str, "\"")
-		return str
-	} else {
-		fmt.Println("Error in assert interface to string !")
 		os.Exit(1)
 		return ""
 	}
-}
 
-func getTransactionReceiptCmd(method string, txHash string, c *cli.Context) string {
-	namespace := c.String("namespace")
-
-	return fmt.Sprintf(
-		"{\"jsonrpc\":\"2.0\",\"namespace\":\"%s\",\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",
-		namespace, method, txHash)
-}
-
-func getTransactionReceipt(client *common.CmdClient, cmd string) error {
-	for i:= 1; i<= frequency; i ++ {
-		response, err := client.Call(cmd)
-		if err != nil {
-			return err
-		} else {
-			if result, ok := response.Result.(string); !ok {
-				return fmt.Errorf("Error in assert interface to string !")
-			} else {
-				if strings.Contains(result, "SUCCESS") {
-					fmt.Print(result)
-					return nil
-				}
-			}
-		}
-		time.Sleep(1 * time.Second)
+	if hash, ok := response.Result.(string); !ok {
+		fmt.Println("Error in call get transaction hash from http response")
+		fmt.Printf("rpc result: %v can't parse to string", response.Result)
+		return ""
+	} else {
+		return hash
 	}
-
-	return fmt.Errorf("Cant't get transaction receipt after %v attempts", frequency)
 }

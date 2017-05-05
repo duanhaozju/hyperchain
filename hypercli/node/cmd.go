@@ -6,7 +6,6 @@ import (
 	"github.com/urfave/cli"
 	"fmt"
 	"hyperchain/hypercli/common"
-	"encoding/json"
 	"hyperchain/api/jsonrpc/core"
 	"strconv"
 )
@@ -38,6 +37,16 @@ func NewNodeCMD() []cli.Command {
 					Value: "",
 					Usage: "setting the namespace to delete node from",
 				},
+				cli.StringFlag{
+					Name:  "host, h",
+					Value: "",
+					Usage: "setting the host ip to delete node from",
+				},
+				cli.StringFlag{
+					Name:  "port, p",
+					Value: "",
+					Usage: "setting the host port to delete node from",
+				},
 			},
 		},
 
@@ -49,8 +58,8 @@ type peerinfos struct {
 	ports []string
 }
 
-func addNode(c *cli.Context) error {
-	fmt.Println("start add node")
+func addNode() error {
+	fmt.Println("Not support yet!")
 	return nil
 }
 
@@ -63,10 +72,9 @@ func delNode(c *cli.Context) error {
 		fmt.Print("namespace: ")
 		fmt.Scanln(&namespace)
 	}
-	fmt.Print("ip: ")
-	fmt.Scanln(&ip)
-	fmt.Print("port: ")
-	fmt.Scanln(&port)
+
+	ip = common.GetNonEmptyValueByName(c, "host")
+	port = common.GetNonEmptyValueByName(c, "port")
 
 	nodehash, err := getDelNodeHash(namespace, ip, port)
 	if err != nil {
@@ -104,11 +112,7 @@ func getHttpResponse(namespace, ip, port, method, params string) (jsonrpc.JSONRe
 		return response, err
 	}
 
-	err = json.Unmarshal([]byte(result.Result.(string)), &response)
-	if err != nil {
-		return response, err
-	}
-	return response, nil
+	return common.GetJSONResponse(result)
 }
 
 func getDelNodeHash(namespace, ip, port string) (string, error) {
