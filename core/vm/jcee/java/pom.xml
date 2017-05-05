@@ -54,6 +54,18 @@
             <groupId>org.scorexfoundation</groupId>
             <artifactId>scrypto_2.11</artifactId>
             <version>1.2.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.sl4j</groupId>
+                    <artifactId>sl4j-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <version>1.18</version>
         </dependency>
 
     </dependencies>
@@ -111,7 +123,7 @@
                 <!--</configuration>-->
                 <!--<executions>-->
                     <!--<execution>-->
-                        <!--<id>assemble-all</id>-->
+                        <!--<cid>assemble-all</cid>-->
                         <!--<phase>package</phase>-->
                         <!--<goals>-->
                             <!--<goal>single</goal>-->

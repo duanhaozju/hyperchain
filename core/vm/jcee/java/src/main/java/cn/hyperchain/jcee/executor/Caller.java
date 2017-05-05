@@ -1,6 +1,5 @@
 package cn.hyperchain.jcee.executor;
 
-import cn.hyperchain.jcee.Handler;
 import cn.hyperchain.protos.Request;
 import cn.hyperchain.protos.Response;
 import io.grpc.stub.StreamObserver;

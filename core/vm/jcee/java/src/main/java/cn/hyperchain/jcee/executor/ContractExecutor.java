@@ -66,6 +66,10 @@ public class ContractExecutor {
         }
     }
 
+    public ContractHandler getContractHandler() {
+        return contractHandler;
+    }
+
     public void addExecutor(String namespace) {
         Executor executor = new Executor(namespace);
         this.executors.put(namespace, executor);

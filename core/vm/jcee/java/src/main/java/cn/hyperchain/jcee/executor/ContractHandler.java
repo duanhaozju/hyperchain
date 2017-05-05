@@ -4,7 +4,6 @@
  */
 package cn.hyperchain.jcee.executor;
 
-import cn.hyperchain.jcee.Handler;
 import org.apache.log4j.Logger;
 
 import java.util.Map;

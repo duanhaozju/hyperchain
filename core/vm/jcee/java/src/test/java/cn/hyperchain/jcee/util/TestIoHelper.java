@@ -1,9 +1,7 @@
 package cn.hyperchain.jcee.util;
 
-//import org.bouncycastle.util.encoders.Hex;
 import org.apache.commons.codec.binary.Hex;
 import org.junit.Test;
-
 
 /**
  * Created by wangxiaoyi on 2017/4/27.

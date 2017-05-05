@@ -7,3 +7,4 @@ if [ "$#" -ne 2 ]; then
 fi
 
 java -cp $(for i in hyperjvm/libs/*.jar ; do echo -n $i: ; done).  cn.hyperchain.jcee.JceeServer $1 $2 &
+

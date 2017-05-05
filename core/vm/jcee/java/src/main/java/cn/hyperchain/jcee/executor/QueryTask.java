@@ -37,7 +37,7 @@ public class QueryTask extends Task{
             builder.setOk(true);
             builder.setResult(bs);
         }
-        //builder.setId(request.getTxid());
+        //builder.setCid(request.getTxid());
         rs = builder.build();
         return rs;
     }
