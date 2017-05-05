@@ -6,19 +6,18 @@ package cn.hyperchain.jcee.executor;
 
 import cn.hyperchain.jcee.contract.ContractBase;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
-import cn.hyperchain.protos.Request;
-import cn.hyperchain.protos.Response;
+import cn.hyperchain.protos.ContractProto;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.Callable;
 
-public abstract class Task implements Callable<Response> {
+public abstract class Task implements Callable<ContractProto.Response> {
     private static final Logger logger = Logger.getLogger(Task.class.getSimpleName());
     protected ContractBase contract;
-    protected Request request;
+    protected ContractProto.Request request;
     protected Context context;
 
-    public Task(ContractBase contract, Request request, Context context) {
+    public Task(ContractBase contract, ContractProto.Request request, Context context) {
         this.contract = contract;
         this.request = request;
         this.context = context;
@@ -45,9 +44,9 @@ public abstract class Task implements Callable<Response> {
      * @throws Exception if unable to compute a result
      */
     @Override
-    public Response call() throws Exception {
+    public ContractProto.Response call() throws Exception {
         beforeExecute();
-        Response response = execute();
+        ContractProto.Response response = execute();
         afterExecute();
         return response;
     }
@@ -57,7 +56,7 @@ public abstract class Task implements Callable<Response> {
      * be implemented by the concrete method
      * @return executed result
      */
-    public abstract Response execute();
+    public abstract ContractProto.Response execute();
 
     public void afterExecute() throws Exception{
         //called after execute
