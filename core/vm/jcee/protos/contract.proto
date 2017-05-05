@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option java_multiple_files = true;
+option java_multiple_files = false;
 option java_package = "cn.hyperchain.protos";
 option java_outer_classname = "ContractProto";
 
@@ -12,15 +12,65 @@ service Contract {
     //used to transfer data between hyperchain and contract
 }
 
+message Request {
+    RequestContext context = 1;
+    string method = 2;
+    repeated bytes args = 3;
+}
+
+message Response {
+    bool  ok     = 1;
+    bytes result = 2;
+    string codeHash = 3;
+}
+
+
+message RequestContext {
+    string txid   = 1;
+    string namespace = 2;
+    string cid = 3;
+}
+
 service Ledger {
     rpc Get(Key) returns (Value) {}
     rpc Put(KeyValue) returns(Response) {}
+    rpc Delete(Key) returns(Response) {}
+
+    rpc BatchRead(BatchKey) returns(BathValue) {}
+    rpc BatchWrite(BatchKV) returns(Response) {}
+    rpc RangeQuery(Range) returns(BathValue) {}
 }
 
 message Key {
     LedgerContext context = 1;
     bytes k = 2;
 }
+
+//BatchKey used to fetch data by batch
+message BatchKey {
+    LedgerContext context = 1;
+    repeated bytes k = 2;
+}
+
+//BathKV bach result
+message BathValue {
+    string id = 1;
+    bool hasMore = 2;
+    repeated bytes v = 3;
+}
+
+message BatchKV {
+    LedgerContext context = 1;
+    repeated KeyValue kv = 2;
+}
+
+//Range specifiy query range
+message Range {
+    LedgerContext context = 1;
+    bytes start = 2;
+    bytes end = 3;
+}
+
 
 message Value{
     string id = 1;
@@ -33,26 +83,8 @@ message KeyValue {
     bytes v = 3;
 }
 
-message Request {
-    RequestContext context = 1;
-    string method = 2;
-    repeated bytes args = 3;
-}
-
 message LedgerContext {
     string txid   = 1;
     string namespace = 2;
     string cid = 3;
-}
-
-message RequestContext {
-    string txid   = 1;
-    string namespace = 2;
-    string cid = 3;
-}
-
-message Response {
-    bool  ok     = 1;
-    bytes result = 2;
-    string codeHash = 3;
 }
