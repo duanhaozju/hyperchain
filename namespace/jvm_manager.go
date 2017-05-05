@@ -104,7 +104,7 @@ func (mgr *JvmManager) stopJvmServer() error {
 
 func (mgr *JvmManager) startJvmServerDaemon() {
 	time.Sleep(10 * time.Second)
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
 
 	for {
 		select {
@@ -113,6 +113,7 @@ func (mgr *JvmManager) startJvmServerDaemon() {
 		case <- ticker.C:
 			if !mgr.checkJvmExist() {
 				mgr.restartJvmServer()
+				time.Sleep(4 * time.Second)
 			}
 		}
 	}
