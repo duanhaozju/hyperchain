@@ -25,6 +25,7 @@ f_help(){
     echo "  -k, --kill:     just kill all the processes"
     echo "  -d, --delete:   clear the old data or not; default: clear. add for not clear"
     echo "  -r, --rebuild:  rebuild the project or not; default: rebuild, add for not rebuild"
+    echo "  -c, --hypercli: rebuild hypercli or not; default: not rebuild, add for rebuild"
     echo "  -m, --mode:     choose the run mode; default: run many in many, add for many in one"
     echo "---------------------------------------------------"
     echo "Example for run many in one in mac without rebuild:"
@@ -86,11 +87,18 @@ fi
 cd ${PROJECT_PATH} && govendor build -o ${DUMP_PATH}/hyperchain -tags=embed
 }
 
+# rebuild hypercli
+f_rebuild_hypercli(){
+echo "Rebuild hypercli ..."
+cd ${CLI_PATH} && govendor build
+}
+
 # distribute node package
 f_distribute(){
 # cp the config files into nodes
 for (( j=1; j<=$1; j++ ))
 do
+    # distribute the project
     if [ ! -d "${DUMP_PATH}/node${j}" ];then
         mkdir -p ${DUMP_PATH}/node${j}
     fi
@@ -101,6 +109,16 @@ do
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
     cp -rf ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
+
+    # distribute hypercli
+    if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
+        mkdir ${DUMP_PATH}/node${j}/hypercli
+    fi
+    if [ ! -e "${CLI_PATH}/hypercli" ]; then
+        f_rebuild_hypercli
+    fi
+    cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
+    cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
 done
 }
 
@@ -184,6 +202,9 @@ CONF_PATH="${PROJECT_PATH}/configuration"
 # global config path
 GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/global.yaml"
 
+# hypercli root path
+CLI_PATH="${PROJECT_PATH}/hypercli"
+
 # peerconfig
 PEER_CONFIG_FILE_NAME=`confer read ${GLOBAL_CONFIG} global.configs.peers |sed 's/"//g'`
 PEER_CONFIG_FILE_NAME="configuration/"$PEER_CONFIG_FILE_NAME
@@ -196,8 +217,11 @@ echo "Node number is: ${MAXPEERNUM}"
 # delete data? default = true
 DELETEDATA=true
 
-# rebuild
+# rebuild the project or not? default = true
 REBUILD=true
+
+# rebuild hypercli or not? default = false
+HYPERCLI=false
 
 # 1.check local env
 f_check_local_env
@@ -217,6 +241,8 @@ do
         DELETEDATA=false; shift;;
     -r|--rebuild)
         REBUILD=false; shift;;
+    -c|--hypercli)
+        HYPERCLI=true; shift;;
     -m|--mode)
         MODE=true; shift;;
     --) shift; break;;
@@ -237,6 +263,10 @@ fi
 
 if  $REBUILD ; then
     f_rebuild
+fi
+
+if $HYPERCLI ; then
+    f_rebuild_hypercli
 fi
 
 # distribute files
