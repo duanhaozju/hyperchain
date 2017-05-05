@@ -11,9 +11,8 @@ import cn.hyperchain.jcee.executor.Caller;
 import cn.hyperchain.jcee.executor.ContractExecutor;
 import cn.hyperchain.jcee.util.Errors;
 import cn.hyperchain.protos.ContractGrpc;
-import cn.hyperchain.protos.Request;
-import cn.hyperchain.protos.RequestContext;
-import cn.hyperchain.protos.Response;
+
+import cn.hyperchain.protos.ContractProto;
 import io.grpc.stub.StreamObserver;
 import org.apache.log4j.Logger;
 
@@ -62,9 +61,9 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
      * @param responseObserver
      */
     @Override
-    public void execute(Request request, StreamObserver<Response> responseObserver) {
+    public void execute(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
 
-        RequestContext rc = request.getContext();
+        ContractProto.RequestContext rc = request.getContext();
         if (rc == null) {
             String err = "No request context specified!";
             logger.error(err);
@@ -93,8 +92,8 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
      * heartBeat method is globally shared
      */
     @Override
-    public void heartBeat(Request request, StreamObserver<Response> responseObserver) {
-        Response r = Response.newBuilder().setOk(true).build();
+    public void heartBeat(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+        ContractProto.Response r = ContractProto.Response.newBuilder().setOk(true).build();
         responseObserver.onNext(r);
         responseObserver.onCompleted();
     }

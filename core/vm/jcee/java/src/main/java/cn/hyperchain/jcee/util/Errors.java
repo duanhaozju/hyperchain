@@ -1,6 +1,6 @@
 package cn.hyperchain.jcee.util;
 
-import cn.hyperchain.protos.Response;
+import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
 import io.grpc.stub.StreamObserver;
 
@@ -15,8 +15,8 @@ public class Errors {
      * construct error msg and return to the invokeside
      * @param msg
      */
-    public static void ReturnErrMsg(String msg, StreamObserver<Response> responseObserver) {
-        Response response = Response.newBuilder()
+    public static void ReturnErrMsg(String msg, StreamObserver<ContractProto.Response> responseObserver) {
+        ContractProto.Response response = ContractProto.Response.newBuilder()
                 .setOk(false)
                 .setResult(ByteString.copyFrom(msg, Charset.defaultCharset()))
                 .build();

@@ -4,10 +4,7 @@
  */
 package cn.hyperchain.jcee.ledger;
 
-import cn.hyperchain.protos.Key;
-import cn.hyperchain.protos.KeyValue;
-import cn.hyperchain.protos.LedgerContext;
-import cn.hyperchain.protos.Value;
+import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
 
@@ -24,7 +21,7 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     public byte[] get(byte[] key) {
-        Key sendkey = Key.newBuilder()
+        ContractProto.Key sendkey = ContractProto.Key.newBuilder()
                 .setContext(getLedgerContext())
                 .setK(ByteString.copyFrom(key))
                 .build();
@@ -33,7 +30,7 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     public boolean put(byte[] key, byte[] value) {
-        KeyValue kv = KeyValue.newBuilder()
+        ContractProto.KeyValue kv = ContractProto.KeyValue.newBuilder()
                 .setContext(getLedgerContext())
                 .setK(ByteString.copyFrom(key))
                 .setV(ByteString.copyFrom(value))
@@ -41,8 +38,8 @@ public class HyperchainLedger extends AbstractLedger{
         return client.put(kv);
     }
 
-    public Value fetch(byte[] key) {
-        Key sendkey = Key.newBuilder()
+    public ContractProto.Value fetch(byte[] key) {
+        ContractProto.Key sendkey = ContractProto.Key.newBuilder()
                 .setContext(getLedgerContext())
                 .setK(ByteString.copyFrom(key))
                 .build();
@@ -50,8 +47,8 @@ public class HyperchainLedger extends AbstractLedger{
         return client.get(sendkey);
     }
 
-    public LedgerContext getLedgerContext(){
-        return LedgerContext
+    public ContractProto.LedgerContext getLedgerContext(){
+        return ContractProto.LedgerContext
                 .newBuilder()
                 .setNamespace(getContext().getRequestContext().getNamespace())
                 .setTxid(getContext().getRequestContext().getTxid())
@@ -86,7 +83,7 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     public double getDouble(byte[] key){
-        Value v = fetch(key);
+        ContractProto.Value v = fetch(key);
         return Double.parseDouble(v.getV().toStringUtf8());
     }
 

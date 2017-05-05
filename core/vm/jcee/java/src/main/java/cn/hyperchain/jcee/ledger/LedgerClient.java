@@ -4,10 +4,8 @@
  */
 package cn.hyperchain.jcee.ledger;
 
-import cn.hyperchain.protos.Key;
-import cn.hyperchain.protos.KeyValue;
+import cn.hyperchain.protos.ContractProto;
 import cn.hyperchain.protos.LedgerGrpc;
-import cn.hyperchain.protos.Value;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
@@ -47,12 +45,12 @@ public class LedgerClient {
         channel.shutdownNow();
     }
 
-    public boolean put(KeyValue kv) {
+    public boolean put(ContractProto.KeyValue kv) {
         blockingStub.put(kv);
         return true;
     }
 
-    public Value get(Key key) {
+    public ContractProto.Value get(ContractProto.Key key) {
         return blockingStub.get(key);
     }
 }

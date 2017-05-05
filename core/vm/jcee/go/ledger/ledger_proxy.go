@@ -4,13 +4,13 @@ package jcee
 
 import (
 	"errors"
+	"fmt"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 	"hyperchain/common"
 	"hyperchain/core/vm"
 	pb "hyperchain/core/vm/jcee/protos"
-	"google.golang.org/grpc"
 	"net"
-	"fmt"
 	"strings"
 )
 
@@ -84,6 +84,21 @@ func (lp *LedgerProxy) Put(ctx context.Context, kv *pb.KeyValue) (*pb.Response, 
 	// TODO for extension leave a opcode field
 	state.SetState(common.HexToAddress(kv.Context.Cid), common.BytesToHash(kv.K), kv.V, 0)
 	return &pb.Response{}, nil
+}
+
+//TODO: complete batch related rpc calls
+func (lp *LedgerProxy) BatchRead(ctx context.Context, in *pb.BatchKey) (*pb.BathValue, error) {
+	return nil, nil
+}
+func (lp *LedgerProxy) BatchWrite(ctx context.Context, in *pb.BatchKV) (*pb.Response, error) {
+	return nil, nil
+}
+func (lp *LedgerProxy) RangeQuery(ctx context.Context, in *pb.Range) (*pb.BathValue, error) {
+	return nil, nil
+}
+
+func (lp *LedgerProxy) Delete(ctx context.Context, in *pb.Key) (*pb.Response, error) {
+	return nil, nil
 }
 
 func (lp *LedgerProxy) requestCheck(ctx *pb.LedgerContext) bool {
