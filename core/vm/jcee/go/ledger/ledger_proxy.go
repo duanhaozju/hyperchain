@@ -67,6 +67,7 @@ func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) 
 	}
 	_, value := state.GetState(common.HexToAddress(key.Context.Cid), common.BytesToHash(key.K))
 	v := &pb.Value{
+		Id: key.Context.Txid,
 		V: value,
 	}
 	return v, nil
