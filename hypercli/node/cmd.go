@@ -6,7 +6,6 @@ import (
 	"github.com/urfave/cli"
 	"fmt"
 	"hyperchain/hypercli/common"
-	"encoding/json"
 	"hyperchain/api/jsonrpc/core"
 	"strconv"
 )
@@ -59,7 +58,7 @@ type peerinfos struct {
 	ports []string
 }
 
-func addNode(c *cli.Context) error {
+func addNode() error {
 	fmt.Println("start add node")
 	return nil
 }
@@ -113,11 +112,7 @@ func getHttpResponse(namespace, ip, port, method, params string) (jsonrpc.JSONRe
 		return response, err
 	}
 
-	err = json.Unmarshal([]byte(result.Result.(string)), &response)
-	if err != nil {
-		return response, err
-	}
-	return response, nil
+	return common.GetJSONResponse(result)
 }
 
 func getDelNodeHash(namespace, ip, port string) (string, error) {
@@ -169,20 +164,4 @@ func sendDelNode(namespace, hash string, peers peerinfos) error{
 		}
 	}
 	return nil
-}
-
-func getNonEmptyValueByName(c *cli.Context, name string) string {
-	var value string
-	if c.String(name) != "" {
-		value = c.String("to")
-	} else {
-		for {
-			fmt.Printf("Please specify a non-empty %s:", name)
-			fmt.Scanln(&value)
-			if value != "" {
-				break
-			}
-		}
-	}
-	return value
 }
