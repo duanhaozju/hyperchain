@@ -174,7 +174,18 @@ f_distribute(){
         cp -rf  ${NS_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/local_peerconfig.json
         cp -rf  ${NS_PATH}/${NS_NAME}/config/peerconfigs/node${j}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/cert/
         cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/${NS_NODES[$j]}
+
+        # distribute hypercli
+        if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
+            mkdir ${DUMP_PATH}/node${j}/hypercli
+        fi
+        if [ ! -e "${CLI_PATH}/hypercli" ]; then
+            f_rebuild_hypercli
+        fi
+        cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
+        cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
     done
+    rm -rf ${NS_PATH}
 }
 
 #####################################
@@ -201,6 +212,9 @@ NS_CONFIG_PATH="${GOPATH}/src/hyperchain/configuration"
 
 # config ns path
 NS_PATH="${PROJECT_PATH}/build/tmp"
+
+# hypercli root path
+CLI_PATH="${PROJECT_PATH}/hypercli"
 
 # exe by extra input params
 if [ $# -gt 0 ]; then
