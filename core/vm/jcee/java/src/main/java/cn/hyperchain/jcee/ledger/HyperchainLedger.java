@@ -56,6 +56,10 @@ public class HyperchainLedger extends AbstractLedger{
                 .build();
     }
 
+    public boolean batchRead(ContractProto.BatchKey key) {
+        return false;
+    }
+
 
     @Override
     public boolean getBoolean(byte[] key) {

@@ -67,7 +67,8 @@ public class LedgerClient {
     }
 
     public ContractProto.BathValue rangeQuery(ContractProto.Range range) {
-        return blockingStub.rangeQuery(range);
+        return null;
+        //return blockingStub.rangeQuery(range).;
     }
 
 }

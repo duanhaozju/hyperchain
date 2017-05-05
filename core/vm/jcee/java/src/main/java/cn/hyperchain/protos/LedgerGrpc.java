@@ -76,7 +76,7 @@ public class LedgerGrpc {
   public static final io.grpc.MethodDescriptor<cn.hyperchain.protos.ContractProto.Range,
       cn.hyperchain.protos.ContractProto.BathValue> METHOD_RANGE_QUERY =
       io.grpc.MethodDescriptor.create(
-          io.grpc.MethodDescriptor.MethodType.UNARY,
+          io.grpc.MethodDescriptor.MethodType.SERVER_STREAMING,
           generateFullMethodName(
               "Ledger", "RangeQuery"),
           io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Range.getDefaultInstance()),
@@ -190,7 +190,7 @@ public class LedgerGrpc {
                   this, METHODID_BATCH_WRITE)))
           .addMethod(
             METHOD_RANGE_QUERY,
-            asyncUnaryCall(
+            asyncServerStreamingCall(
               new MethodHandlers<
                 cn.hyperchain.protos.ContractProto.Range,
                 cn.hyperchain.protos.ContractProto.BathValue>(
@@ -261,7 +261,7 @@ public class LedgerGrpc {
      */
     public void rangeQuery(cn.hyperchain.protos.ContractProto.Range request,
         io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.BathValue> responseObserver) {
-      asyncUnaryCall(
+      asyncServerStreamingCall(
           getChannel().newCall(METHOD_RANGE_QUERY, getCallOptions()), request, responseObserver);
     }
   }
@@ -321,8 +321,9 @@ public class LedgerGrpc {
 
     /**
      */
-    public cn.hyperchain.protos.ContractProto.BathValue rangeQuery(cn.hyperchain.protos.ContractProto.Range request) {
-      return blockingUnaryCall(
+    public java.util.Iterator<cn.hyperchain.protos.ContractProto.BathValue> rangeQuery(
+        cn.hyperchain.protos.ContractProto.Range request) {
+      return blockingServerStreamingCall(
           getChannel(), METHOD_RANGE_QUERY, getCallOptions(), request);
     }
   }
@@ -383,14 +384,6 @@ public class LedgerGrpc {
         cn.hyperchain.protos.ContractProto.BatchKV request) {
       return futureUnaryCall(
           getChannel().newCall(METHOD_BATCH_WRITE, getCallOptions()), request);
-    }
-
-    /**
-     */
-    public com.google.common.util.concurrent.ListenableFuture<cn.hyperchain.protos.ContractProto.BathValue> rangeQuery(
-        cn.hyperchain.protos.ContractProto.Range request) {
-      return futureUnaryCall(
-          getChannel().newCall(METHOD_RANGE_QUERY, getCallOptions()), request);
     }
   }
 

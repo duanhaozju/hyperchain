@@ -127,8 +127,9 @@ func (lp *LedgerProxy) BatchWrite(ctx context.Context, batch *pb.BatchKV) (*pb.R
 	}
 	return &pb.Response{Ok: true}, nil
 }
-func (lp *LedgerProxy) RangeQuery(ctx context.Context, in *pb.Range) (*pb.BathValue, error) {
-	return nil, nil
+
+func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer) error  {
+	return nil
 }
 
 func (lp *LedgerProxy) Delete(ctx context.Context, in *pb.Key) (*pb.Response, error) {
