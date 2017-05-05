@@ -14,7 +14,7 @@ import (
 
 // Call executes within the given contract
 func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, err error) {
-	ret, _, err = exec(env, caller, &addr, &addr, input, "", env.Db().GetCode(addr), gas, gasPrice, value, op)
+	ret, _, err = exec(env, caller, &addr, &addr, input, "", nil, gas, gasPrice, value, op)
 	return ret, err
 }
 
@@ -142,7 +142,13 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
-	context := NewContext(caller, to, env, createAccount, codePath)
+	var codeHash common.Hash
+	if !createAccount {
+		codeHash = env.Db().GetCodeHash(to.Address())
+	} else {
+		codeHash = common.BytesToHash(crypto.Keccak256(code))
+	}
+	context := NewContext(caller, to, env, createAccount, codePath, codeHash)
 	ret, err = virtualMachine.Run(context, input)
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not

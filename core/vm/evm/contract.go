@@ -157,6 +157,10 @@ func (self *Contract) GetCode() []byte {
 	return self.Code
 }
 
+func (self *Contract) GetCodeHash() common.Hash {
+	return common.BytesToHash(self.Code)
+}
+
 func (self *Contract) GetCaller() vm.ContractRef {
 	return self.caller
 }

@@ -19,6 +19,8 @@ type Database interface {
 	GetCode(common.Address) []byte
 	SetCode(common.Address, []byte)
 
+	GetCodeHash(common.Address) common.Hash
+
 	GetStatus(common.Address) int
 	SetStatus(common.Address, int)
 

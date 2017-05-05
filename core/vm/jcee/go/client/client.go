@@ -25,6 +25,11 @@ type ContractExecutor interface {
 	Ping() (*pb.Response, error)
 }
 
+var (
+	JVMServerErr = errors.New("jvm server execute error")
+	CodeNotMatchErr = errors.New("execution code not match with ledger error")
+)
+
 type contractExecutorImpl struct {
 	address    string
 	logger     *logging.Logger
@@ -72,7 +77,9 @@ func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error
 	if err != nil {
 		return nil, err
 	} else if response.Ok == false {
-		return nil, errors.New(string(response.Result))
+		return nil, JVMServerErr
+	} else if !hexMatch(response.CodeHash, ctx.GetCodeHash().Hex()) {
+		return nil, CodeNotMatchErr
 	} else {
 		return response.Result, nil
 	}
