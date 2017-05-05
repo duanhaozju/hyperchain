@@ -76,14 +76,14 @@ func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) 
 func (lp *LedgerProxy) Put(ctx context.Context, kv *pb.KeyValue) (*pb.Response, error) {
 	exist, state := lp.stateMgr.GetStateDb(kv.Context.Namespace)
 	if exist == false {
-		return nil, NamespaceNotExistErr
+		return &pb.Response{Ok: false}, NamespaceNotExistErr
 	}
 	if valid := lp.requestCheck(kv.Context); !valid {
-		return nil, InvalidRequestErr
+		return &pb.Response{Ok: false}, InvalidRequestErr
 	}
 	// TODO for extension leave a opcode field
 	state.SetState(common.HexToAddress(kv.Context.Cid), common.BytesToHash(kv.K), kv.V, 0)
-	return &pb.Response{}, nil
+	return &pb.Response{Ok: true}, nil
 }
 
 //TODO: complete batch related rpc calls
