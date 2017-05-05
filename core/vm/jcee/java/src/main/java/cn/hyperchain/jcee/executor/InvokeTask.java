@@ -26,6 +26,7 @@ public class InvokeTask extends Task{
         }
         ContractProto.Response r = ContractProto.Response.newBuilder()
                 .setOk(contract.Invoke(funcName, args))
+                .setCodeHash(contract.getInfo().getCodeHash())
                 .build();
         return r;
     }

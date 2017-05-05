@@ -14,7 +14,7 @@ public abstract class ContractBase {
     public ContractBase() {
 
     }
-
+    private ContractInfo info;
     private String owner;
     private String cid;
     protected AbstractLedger ledger;
@@ -41,6 +41,14 @@ public abstract class ContractBase {
 
     public void setCid(String cid) {
         this.cid = cid;
+    }
+
+    public ContractInfo getInfo() {
+        return info;
+    }
+
+    public void setInfo(ContractInfo info) {
+        this.info = info;
     }
 
     /**

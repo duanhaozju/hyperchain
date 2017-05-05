@@ -37,6 +37,7 @@ public class QueryTask extends Task{
             builder.setResult(bs);
         }
         //builder.setCid(request.getTxid());
+        builder.setCodeHash(contract.getInfo().getCodeHash());
         rs = builder.build();
         return rs;
     }
