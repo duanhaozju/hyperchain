@@ -1,56 +1,63 @@
 package cn.hyperchain.jcee.contract.security;
 
-import jdk.internal.org.objectweb.asm.Opcodes;
-
-import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Created by Think on 4/26/17.
  */
 public class Rule {
-    public static final Map<String, String> allowedRules = new HashMap();
-    public static final Map<String, String> notAllowedRules = new HashMap();
-    public static final Map<String, String> notAllowedIORules = new HashMap();
-    public static final Map<String, String> notAllowedSysCallRules = new HashMap();
-    public static final Map<String, String> notAllowedThreadRules = new HashMap();
-    public static final Map<String, String> notAllowedNetRules = new HashMap();
-    public static final Map<String, String> notAllowedReflectRules = new HashMap();
+    private Map<String, Map<String, Map<String, String>>> interfaceRule;
+    private Map<String, Map<String, Map<String, String>>> superClassRule;
+    private Map<String, Map<String, Map<String, String>>> memberVariableRule;
+    private Map<String, Map<String, Map<String, String>>> methodDeclare;
+    private Map<String, Map<String, Map<String, String>>> methodVariable;
+    private Map<String, Map<String, Map<String, String>>> methodInstruction;
 
-    private static final String descIO = "not allow io operation.";
-    private static final String descSysCall = "not allow system call operation.";
-    private static final String descThread = "not allow thread(concurrent) operation.";
-    private static final String descNet = "not allow net operation.";
-    private static final String descReflect = "not allow reflect operation.";
+    public Map<String, Map<String, Map<String, String>>> getInterfaceRule() {
+        return interfaceRule;
+    }
 
-    static {
-        allowedRules.put(String.valueOf(Opcodes.ACC_FINAL), "allow final type member variables.");
+    public void setInterfaceRule(Map<String, Map<String, Map<String, String>>> interfaceRule) {
+        this.interfaceRule = interfaceRule;
+    }
 
-        notAllowedIORules.put("io", descIO);
-        notAllowedIORules.put("Readable", descIO);
-        notAllowedIORules.put("nio", descIO);
+    public Map<String, Map<String, Map<String, String>>> getSuperClassRule() {
+        return superClassRule;
+    }
 
-        notAllowedSysCallRules.put("Process", descSysCall);
-        notAllowedSysCallRules.put("ProcessBuilder", descSysCall);
-        notAllowedSysCallRules.put("ProcessBuilder$Redirect", descSysCall);
-        notAllowedSysCallRules.put("Runtime", descSysCall);
+    public void setSuperClassRule(Map<String, Map<String, Map<String, String>>> superClassRule) {
+        this.superClassRule = superClassRule;
+    }
 
-        notAllowedSysCallRules.put("Thread$State", descThread);
-        notAllowedThreadRules.put("Thread", descThread);
-        notAllowedThreadRules.put("Runnable", descThread);
-        notAllowedThreadRules.put("ThreadGroup", descThread);
-        notAllowedThreadRules.put("ThreadLocal", descThread);
-        notAllowedThreadRules.put("concurrent", descThread);
-        notAllowedThreadRules.put(String.valueOf(Opcodes.ACC_SYNCHRONIZED), descThread);
+    public Map<String, Map<String, Map<String, String>>> getMemberVariableRule() {
+        return memberVariableRule;
+    }
 
-        notAllowedNetRules.put("net", descNet);
+    public void setMemberVariableRule(Map<String, Map<String, Map<String, String>>> memberVariableRule) {
+        this.memberVariableRule = memberVariableRule;
+    }
 
-        notAllowedReflectRules.put("Class", descReflect);
+    public Map<String, Map<String, Map<String, String>>> getMethodDeclare() {
+        return methodDeclare;
+    }
 
-        notAllowedRules.putAll(notAllowedIORules);
-        notAllowedRules.putAll(notAllowedSysCallRules);
-        notAllowedRules.putAll(notAllowedThreadRules);
-        notAllowedRules.putAll(notAllowedNetRules);
-        notAllowedRules.putAll(notAllowedReflectRules);
+    public void setMethodDeclare(Map<String, Map<String, Map<String, String>>> methodDeclare) {
+        this.methodDeclare = methodDeclare;
+    }
+
+    public Map<String, Map<String, Map<String, String>>> getMethodVariable() {
+        return methodVariable;
+    }
+
+    public void setMethodVariable(Map<String, Map<String, Map<String, String>>> methodVariable) {
+        this.methodVariable = methodVariable;
+    }
+
+    public Map<String, Map<String, Map<String, String>>> getMethodInstruction() {
+        return methodInstruction;
+    }
+
+    public void setMethodInstruction(Map<String, Map<String, Map<String, String>>> methodInstruction) {
+        this.methodInstruction = methodInstruction;
     }
 }

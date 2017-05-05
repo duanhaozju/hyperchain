@@ -5,17 +5,17 @@ import cn.hyperchain.jcee.ledger.AbstractLedger;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
 
-import java.io.File;
 import java.util.List;
 
 /**
  * Created by Think on 4/27/17.
  */
-public class Contract4 extends ContractBase {
-    private static final Logger logger = Logger.getLogger(Contract4.class.getSimpleName());
+public class SyncContract2 extends ContractBase {
+    private static final Logger logger = Logger.getLogger(SyncContract2.class.getSimpleName());
 
-    public void send(){
-        File file = new File("");
+    public void error(){
+        synchronized(this){
+        }
     }
 
     @Override
@@ -23,7 +23,7 @@ public class Contract4 extends ContractBase {
         return null;
     }
 
-    public Contract4() {
+    public SyncContract2() {
         super();
     }
 

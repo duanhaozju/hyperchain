@@ -10,8 +10,8 @@ import java.util.List;
 /**
  * Created by Think on 4/27/17.
  */
-public class Contract3 extends ContractBase {
-    private static final Logger logger = Logger.getLogger(Contract3.class.getSimpleName());
+public class SyncContract extends ContractBase {
+    private static final Logger logger = Logger.getLogger(SyncContract.class.getSimpleName());
 
     public synchronized void send(){
 
@@ -22,7 +22,7 @@ public class Contract3 extends ContractBase {
         return null;
     }
 
-    public Contract3() {
+    public SyncContract() {
         super();
     }
 

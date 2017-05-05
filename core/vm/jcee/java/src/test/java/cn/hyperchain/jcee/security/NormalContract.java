@@ -10,9 +10,9 @@ import java.util.List;
 /**
  * Created by Think on 4/27/17.
  */
-public class Contract1 extends ContractBase {
+public class NormalContract extends ContractBase {
 
-        private static final Logger logger = Logger.getLogger(Contract1.class.getSimpleName());
+        private static final Logger logger = Logger.getLogger(NormalContract.class.getSimpleName());
 
         /**
          * Invoke smart contract method
