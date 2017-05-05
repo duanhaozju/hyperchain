@@ -46,11 +46,28 @@ public class LedgerClient {
     }
 
     public boolean put(ContractProto.KeyValue kv) {
-        blockingStub.put(kv);
-        return true;
+        ContractProto.Response response = blockingStub.put(kv);
+        return response.getOk();
     }
 
     public ContractProto.Value get(ContractProto.Key key) {
         return blockingStub.get(key);
     }
+
+    public boolean delete(ContractProto.Key key) {
+        return blockingStub.delete(key).getOk();
+    }
+
+    public boolean batchWrite(ContractProto.BatchKV bkv) {
+        return blockingStub.batchWrite(bkv).getOk();
+    }
+
+    public ContractProto.BathValue bathRead(ContractProto.BatchKey bk) {
+        return blockingStub.batchRead(bk);
+    }
+
+    public ContractProto.BathValue rangeQuery(ContractProto.Range range) {
+        return blockingStub.rangeQuery(range);
+    }
+
 }
