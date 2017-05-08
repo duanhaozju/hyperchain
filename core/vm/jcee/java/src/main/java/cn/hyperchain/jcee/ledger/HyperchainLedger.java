@@ -300,10 +300,10 @@ public class HyperchainLedger extends AbstractLedger{
                 ContractProto.KeyValue keyValue = ContractProto.KeyValue.newBuilder()
                         .setK(ByteString.copyFrom(kv.getKey()))
                         .setV(ByteString.copyFrom(kv.getValue()))
-                        .setContext(getLedgerContext())
                         .build();
                 builder.addKv(keyValue);
             }
+            builder.setContext(getLedgerContext());
             return builder.build();
         }
     }

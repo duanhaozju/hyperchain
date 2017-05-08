@@ -13,6 +13,8 @@ import (
 	"net"
 	"strings"
 	"hyperchain/hyperdb/db"
+	"github.com/op/go-logging"
+	"go-ethereum/logger"
 )
 
 var (
@@ -115,6 +117,7 @@ func (lp *LedgerProxy) BatchRead(ctx context.Context, batch *pb.BatchKey) (*pb.B
 	return response, nil
 }
 func (lp *LedgerProxy) BatchWrite(ctx context.Context, batch *pb.BatchKV) (*pb.Response, error) {
+	cid := batch.Context.Cid
 	exist, state := lp.stateMgr.GetStateDb(batch.Context.Namespace)
 	if exist == false {
 		return &pb.Response{Ok: false}, NamespaceNotExistErr
@@ -123,7 +126,7 @@ func (lp *LedgerProxy) BatchWrite(ctx context.Context, batch *pb.BatchKV) (*pb.R
 		return &pb.Response{Ok: false}, InvalidRequestErr
 	}
 	for _, kv := range batch.Kv {
-		state.SetState(common.HexToAddress(kv.Context.Cid), common.BytesToHash(kv.K), kv.V, 0)
+		state.SetState(common.HexToAddress(cid), common.BytesToHash(kv.K), kv.V, 0)
 	}
 	return &pb.Response{Ok: true}, nil
 }
