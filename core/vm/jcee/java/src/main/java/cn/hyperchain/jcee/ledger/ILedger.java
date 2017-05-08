@@ -12,7 +12,7 @@ public interface ILedger {
     BatchKey newBatchKey();
 
     //batchRead read data by batch
-    BatchValue batchRead(BatchKey key);
+    Batch batchRead(BatchKey key);
 
     BatchValue rangeQuery(byte[] start, byte[] end);
 
