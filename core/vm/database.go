@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"hyperchain/hyperdb/db"
 	"hyperchain/common"
+	"fmt"
 )
 
 type Database interface {
@@ -61,6 +62,9 @@ type Database interface {
 	Dump() []byte
 	GetTree() interface{}
 	GetCurrentTxHash() common.Hash
+	NewIterator(common.Address, *IterRange) (Iterator, error)
+
+
 	// Atomic Related
 	MarkProcessStart(uint64)
 	MarkProcessFinish(uint64)
@@ -69,4 +73,37 @@ type Database interface {
 	DeleteBatch(seqNo uint64)
 	MakeArchive(uint64)
 	ShowArchive(common.Address, string) map[string]map[string]string
+}
+
+type Iterator interface {
+	Next()    bool
+	Key()     []byte
+	Value()   []byte
+	Release()
+}
+
+type IterRange struct {
+	Start     *common.Hash
+	Limit     *common.Hash
+}
+
+func BytesPrefix(prefix []byte) *IterRange {
+	var limit []byte
+	for i := len(prefix) - 1; i >= 0; i-- {
+		c := prefix[i]
+		if c < 0xff {
+			limit = make([]byte, i+1)
+			copy(limit, prefix)
+			limit[i] = c + 1
+			break
+		}
+	}
+	startH := common.BytesToHash(prefix)
+	limitH := common.BytesToHash(limit)
+	fmt.Println("start", startH.Hex())
+	fmt.Println("end", limitH.Hex())
+	return &IterRange{
+		Start: &startH,
+		Limit: &limitH,
+	}
 }

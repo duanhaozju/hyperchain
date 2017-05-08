@@ -20,6 +20,10 @@ var (
 	InvalidRequestErr    = errors.New("invalid request permission")
 )
 
+const  (
+	BatchSize = 100
+)
+
 //LedgerProxy used to manipulate data
 type LedgerProxy struct {
 	stateMgr  *StateManager
@@ -129,15 +133,45 @@ func (lp *LedgerProxy) BatchWrite(ctx context.Context, batch *pb.BatchKV) (*pb.R
 }
 
 func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer) error  {
-	exist, _ := lp.stateMgr.GetStateDb(r.Context.Namespace)
+	exist, state := lp.stateMgr.GetStateDb(r.Context.Namespace)
 	if exist == false {
 		return NamespaceNotExistErr
 	}
 	if valid := lp.requestCheck(r.Context); !valid {
 		return InvalidRequestErr
 	}
-	// two part, from db or from memory cache
-
+	start := common.BytesToHash(r.Start)
+	limit := common.BytesToHash(r.End)
+	iterRange := vm.IterRange{
+		Start:   &start,
+		Limit:   &limit,
+	}
+	iter, err := state.NewIterator(common.BytesToAddress(common.FromHex(r.Context.Cid)), &iterRange)
+	if err != nil {
+		return err
+	}
+	cnt := 0
+	batchValue := pb.BathValue{
+		Id:  r.Context.Txid,
+	}
+	for iter.Next() {
+		batchValue.V = append(batchValue.V, iter.Value())
+		cnt += 1
+		if cnt == BatchSize {
+			batchValue.HasMore = true
+			if err := stream.Send(&batchValue); err != nil {
+				return err
+			}
+			cnt = 0
+			batchValue = pb.BathValue{
+				Id:  r.Context.Txid,
+			}
+		}
+	}
+	batchValue.HasMore = false
+	if err := stream.Send(&batchValue); err != nil {
+		return err
+	}
 	return nil
 }
 
