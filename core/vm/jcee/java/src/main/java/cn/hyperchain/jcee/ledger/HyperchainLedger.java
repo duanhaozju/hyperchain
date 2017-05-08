@@ -4,6 +4,7 @@
  */
 package cn.hyperchain.jcee.ledger;
 
+import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
@@ -59,11 +60,6 @@ public class HyperchainLedger extends AbstractLedger{
                 .build();
     }
 
-    public boolean batchRead(ContractProto.BatchKey key) {
-        return false;
-    }
-
-
     @Override
     public boolean getBoolean(byte[] key) {
         return Boolean.parseBoolean(fetch(key).getV().toStringUtf8());
@@ -99,10 +95,8 @@ public class HyperchainLedger extends AbstractLedger{
         return fetch(key).getV().toStringUtf8();
     }
 
-    @Override
-    public Object getObject(byte[] key) {
-        //TODO: get object, use model method
-        return null;
+    public  <T> T getObject(byte[] data, Class<T> clazz) {
+        return Bytes.toObject(data, clazz);
     }
 
     @Override
@@ -145,10 +139,8 @@ public class HyperchainLedger extends AbstractLedger{
         return getString(key.getBytes());
     }
 
-    @Override
-    public Object getObject(String key) {
-        //TODO: get object, use model method
-        return null;
+    public  <T> T getObject(String key, Class<T> clazz) {
+        return Bytes.toObject(key.getBytes(), clazz);
     }
 
     @Override
@@ -188,9 +180,7 @@ public class HyperchainLedger extends AbstractLedger{
 
     @Override
     public boolean put(byte[] key, Object object) {
-//        return put(key);
-        //TODO: encode the object
-        return false;
+        return put(key, Bytes.toByteArray(object));
     }
 
     @Override
