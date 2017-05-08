@@ -4,13 +4,17 @@
  */
 package cn.hyperchain.jcee.ledger;
 
-import cn.hyperchain.protos.ContractProto;
-
 public interface ILedger {
+    //newBatch create a new batch
+    Batch newBatch();
 
-    //write batch
-    boolean writeBatch(Batch batch);
+    //newBatchKey construct a batch key
+    BatchKey newBatchKey();
 
+    //batchRead read data by batch
+    BatchValue batchRead(BatchKey key);
+
+    BatchValue rangeQuery(byte[] start, byte[] end);
 
     byte[] get(byte[] key);
     boolean getBoolean(byte[] key);
