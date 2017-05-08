@@ -13,8 +13,6 @@ import (
 	"net"
 	"strings"
 	"hyperchain/hyperdb/db"
-	"github.com/op/go-logging"
-	"go-ethereum/logger"
 )
 
 var (
