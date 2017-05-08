@@ -265,18 +265,19 @@ func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 	// IMPORTANT root should calculate first
 	// otherwise dirty storage will be removed in persist phase
 	self.GenerateFingerPrintOfStorage()
+	self.logger.Debugf("begin to flush dirty storage")
 	for key, value := range self.dirtyStorage {
 		delete(self.dirtyStorage, key)
 		if len(value) == 0 {
 			// delete
-			self.logger.Noticef("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
+			self.logger.Debugf("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
 			if err := db.Delete(CompositeStorageKey(self.address.Bytes(), key.Bytes())); err != nil {
 				return err
 			}
 			// put into archieve db
 			previous := self.archieveStorage[key]
 			if len(previous) != 0 {
-				self.logger.Noticef("flush dirty storage address [%s] add key: [%s] to archieve db, value [%s]", self.address.Hex(), key.Hex(), common.Bytes2Hex(previous))
+				self.logger.Debugf("flush dirty storage address [%s] add key: [%s] to archieve db, value [%s]", self.address.Hex(), key.Hex(), common.Bytes2Hex(previous))
 				if err := archieveDb.Put(CompositeArchieveStorageKey(self.address.Bytes(), key.Bytes()), previous); err != nil {
 					return err
 				}

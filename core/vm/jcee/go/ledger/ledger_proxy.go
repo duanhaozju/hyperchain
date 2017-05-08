@@ -129,6 +129,15 @@ func (lp *LedgerProxy) BatchWrite(ctx context.Context, batch *pb.BatchKV) (*pb.R
 }
 
 func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer) error  {
+	exist, _ := lp.stateMgr.GetStateDb(r.Context.Namespace)
+	if exist == false {
+		return NamespaceNotExistErr
+	}
+	if valid := lp.requestCheck(r.Context); !valid {
+		return InvalidRequestErr
+	}
+	// two part, from db or from memory cache
+
 	return nil
 }
 
