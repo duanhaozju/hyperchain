@@ -5,6 +5,16 @@
 package cn.hyperchain.jcee.ledger;
 
 public interface ILedger {
+    //newBatch create a new batch
+    Batch newBatch();
+
+    //newBatchKey construct a batch key
+    BatchKey newBatchKey();
+
+    //batchRead read data by batch
+    BatchValue batchRead(BatchKey key);
+
+    BatchValue rangeQuery(byte[] start, byte[] end);
 
     byte[] get(byte[] key);
     boolean getBoolean(byte[] key);

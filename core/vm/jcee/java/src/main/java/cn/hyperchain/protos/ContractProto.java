@@ -8119,14 +8119,14 @@ public final class ContractProto {
       "\n\001v\030\003 \001(\014\"=\n\rLedgerContext\022\014\n\004txid\030\001 \001(\t" +
       "\022\021\n\tnamespace\030\002 \001(\t\022\013\n\003cid\030\003 \001(\t2P\n\010Cont" +
       "ract\022 \n\007Execute\022\010.Request\032\t.Response\"\000\022\"" +
-      "\n\tHeartBeat\022\010.Request\032\t.Response\"\0002\312\001\n\006L" +
+      "\n\tHeartBeat\022\010.Request\032\t.Response\"\0002\314\001\n\006L" +
       "edger\022\025\n\003Get\022\004.Key\032\006.Value\"\000\022\035\n\003Put\022\t.Ke",
       "yValue\032\t.Response\"\000\022\033\n\006Delete\022\004.Key\032\t.Re" +
       "sponse\"\000\022$\n\tBatchRead\022\t.BatchKey\032\n.BathV" +
       "alue\"\000\022#\n\nBatchWrite\022\010.BatchKV\032\t.Respons" +
-      "e\"\000\022\"\n\nRangeQuery\022\006.Range\032\n.BathValue\"\000B" +
-      "\'\n\024cn.hyperchain.protosB\rContractProtoP\000" +
-      "b\006proto3"
+      "e\"\000\022$\n\nRangeQuery\022\006.Range\032\n.BathValue\"\0000" +
+      "\001B\'\n\024cn.hyperchain.protosB\rContractProto" +
+      "P\000b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {

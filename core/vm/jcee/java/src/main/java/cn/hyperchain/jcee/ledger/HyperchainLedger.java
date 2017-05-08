@@ -8,6 +8,9 @@ import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * HyperchainLedger is an implementation of AbstractLedger
  * which store manipulate the data using remote hyperchain server.
@@ -15,9 +18,9 @@ import org.apache.log4j.Logger;
 public class HyperchainLedger extends AbstractLedger{
 
     private static final Logger logger = Logger.getLogger(HyperchainLedger.class.getSimpleName());
-    private LedgerClient client;
+    private LedgerClient ledgerClient;
     public HyperchainLedger(int port){
-        client = new LedgerClient("localhost", port);
+        ledgerClient = new LedgerClient("localhost", port);
     }
 
     public byte[] get(byte[] key) {
@@ -26,7 +29,7 @@ public class HyperchainLedger extends AbstractLedger{
                 .setK(ByteString.copyFrom(key))
                 .build();
         logger.info("Transaction id: " + getContext().getId());
-        return client.get(sendkey).getV().toByteArray();
+        return ledgerClient.get(sendkey).getV().toByteArray();
     }
 
     public boolean put(byte[] key, byte[] value) {
@@ -35,7 +38,7 @@ public class HyperchainLedger extends AbstractLedger{
                 .setK(ByteString.copyFrom(key))
                 .setV(ByteString.copyFrom(value))
                 .build();
-        return client.put(kv);
+        return ledgerClient.put(kv);
     }
 
     public ContractProto.Value fetch(byte[] key) {
@@ -44,7 +47,7 @@ public class HyperchainLedger extends AbstractLedger{
                 .setK(ByteString.copyFrom(key))
                 .build();
         logger.info("Transaction id: " + getContext().getId());
-        return client.get(sendkey);
+        return ledgerClient.get(sendkey);
     }
 
     public ContractProto.LedgerContext getLedgerContext(){
@@ -54,6 +57,10 @@ public class HyperchainLedger extends AbstractLedger{
                 .setTxid(getContext().getRequestContext().getTxid())
                 .setCid(getContext().getRequestContext().getCid())
                 .build();
+    }
+
+    public boolean batchRead(ContractProto.BatchKey key) {
+        return false;
     }
 
 
@@ -230,4 +237,89 @@ public class HyperchainLedger extends AbstractLedger{
     public boolean put(String key, Object object) {
         return put(key.getBytes(), object);
     }
+
+    @Override
+    public Batch newBatch() {
+        return new BatchImpl(this);
+    }
+
+    public boolean writeBatch(ContractProto.BatchKV batch) {
+        return ledgerClient.batchWrite(batch);
+    }
+
+    @Override
+    public BatchKey newBatchKey() {
+        return new BatchKeyImpl();
+    }
+
+    @Override
+    public Batch batchRead(BatchKey key) {
+        ContractProto.BathValue bv = ledgerClient.bathRead(toProtoBatchKey(key));
+        //TODO: transfer bv to batch
+        return null;
+    }
+
+    @Override
+    public Batch rangeQuery(byte[] start, byte[] end) {
+        return null;
+    }
+
+    class BatchImpl implements Batch{
+        private Map<byte[], byte[]> data;
+        private HyperchainLedger ledger;
+
+        public BatchImpl(HyperchainLedger ledger) {
+            data = new ConcurrentHashMap<>();
+            this.ledger = ledger;
+        }
+
+        @Override
+        public void put(byte[] key, byte[] value) {
+            data.put(key, value);
+        }
+
+        @Override
+        public void reset() {
+            data.clear();
+        }
+
+        @Override
+        public boolean commit() {
+            return ledger.writeBatch(this.toBatchKV());
+        }
+
+        public ContractProto.BatchKV toBatchKV() {
+            ContractProto.BatchKV.Builder builder  = ContractProto.BatchKV.newBuilder();
+            for(Map.Entry<byte[], byte[]> kv: data.entrySet()) {
+                ContractProto.KeyValue keyValue = ContractProto.KeyValue.newBuilder()
+                        .setK(ByteString.copyFrom(kv.getKey()))
+                        .setV(ByteString.copyFrom(kv.getValue()))
+                        .build();
+                builder.addKv(keyValue);
+            }
+            return builder.build();
+        }
+    }
+
+    private ContractProto.BatchKey toProtoBatchKey(BatchKey key) {
+        ContractProto.BatchKey cbk = null;
+        if (key instanceof BatchKeyImpl) {
+            cbk = ((BatchKeyImpl) key).builder.build();
+        }
+       return cbk;
+    }
+
+    class BatchKeyImpl implements BatchKey {
+        ContractProto.BatchKey.Builder builder;
+
+        public BatchKeyImpl() {
+            builder = ContractProto.BatchKey.newBuilder();
+        }
+
+        @Override
+        public void put(byte[] key) {
+            builder.addK(ByteString.copyFrom(key));
+        }
+    }
+
 }
