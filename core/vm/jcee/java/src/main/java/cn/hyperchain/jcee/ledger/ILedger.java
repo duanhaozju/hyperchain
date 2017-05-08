@@ -12,7 +12,7 @@ public interface ILedger {
     BatchKey newBatchKey();
 
     //batchRead read data by batch
-    BatchValue batchRead(BatchKey key);
+    Batch batchRead(BatchKey key);
 
     BatchValue rangeQuery(byte[] start, byte[] end);
 
@@ -24,7 +24,7 @@ public interface ILedger {
     float getFloat(byte[] key);
     double getDouble(byte[] key);
     String getString(byte[] key);
-    Object getObject(byte[] key);
+    <T> T getObject(byte[] key, Class<T> clazz);
 
     byte[] get(String key);
     boolean getBoolean(String key);
@@ -34,7 +34,7 @@ public interface ILedger {
     float getFloat(String key);
     double getDouble(String key);
     String getString(String key);
-    Object getObject(String key);
+    <T> T getObject(String key, Class<T> clazz);
 
     boolean put(byte[] key, byte[]value);
     boolean put(byte[] key, boolean value);
