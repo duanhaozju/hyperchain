@@ -275,6 +275,10 @@ public class HyperchainLedger extends AbstractLedger{
             this.ledger = ledger;
         }
 
+        public byte[] get(byte[] key) {
+            return this.data.get(key);
+        }
+
         @Override
         public void put(byte[] key, byte[] value) {
             data.put(key, value);
