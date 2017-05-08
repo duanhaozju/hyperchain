@@ -4,7 +4,6 @@ import (
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
 	"bytes"
-	"fmt"
 )
 
 type StorageIterator struct {
@@ -15,6 +14,7 @@ type StorageIterator struct {
 	dbIter     db.Iterator
 	idx        int
 	addr       common.Address
+	plexer     bool
 }
 
 func NewStorageIterator(obj *StateObject, begin, end common.Hash) *StorageIterator {
@@ -32,8 +32,7 @@ func NewStorageIterator(obj *StateObject, begin, end common.Hash) *StorageIterat
 		cacheKeys: cacheKeys,
 		begin:     begin,
 		end:       end,
-		// todo use range query as a replacement
-		dbIter:    obj.db.db.NewIterator(GetStorageKeyPrefix(obj.Address().Bytes())),
+		dbIter:    obj.db.db.Scan(CompositeStorageKey(obj.address.Bytes(), begin.Bytes()), CompositeStorageKey(obj.address.Bytes(), end.Bytes()),),
 		addr:      obj.address,
 		idx:       -1,
 	}
@@ -45,16 +44,15 @@ func (iter *StorageIterator) Next() bool {
 		return true
 	}
 	for {
-		fmt.Println("iter in db")
+		iter.plexer = true
 		if !iter.dbIter.Next() {
-			fmt.Println("iter done")
 			return false
 		}
 		tmp, b := SplitCompositeStorageKey(iter.addr.Bytes(), iter.dbIter.Key())
-
 		if b == false {
 			return false
 		}
+
 
 		if bytes.Compare(tmp, iter.end.Bytes()) > 0 {
 			return false
@@ -67,7 +65,7 @@ func (iter *StorageIterator) Next() bool {
 }
 
 func (iter *StorageIterator) Key() []byte {
-	if iter.idx < len(iter.cacheKeys) {
+	if !iter.plexer {
 		return iter.cacheKeys[iter.idx].Bytes()
 	} else {
 		tmp, _ := SplitCompositeStorageKey(iter.addr.Bytes(), iter.dbIter.Key())
@@ -76,7 +74,7 @@ func (iter *StorageIterator) Key() []byte {
 }
 
 func (iter *StorageIterator) Value() []byte {
-	if iter.idx < len(iter.cacheKeys) {
+	if !iter.plexer {
 		return iter.cache[iter.cacheKeys[iter.idx]]
 	} else {
 		return iter.dbIter.Value()

@@ -2,13 +2,14 @@ package state
 
 import (
 	"testing"
-	"hyperchain/hyperdb/mdb"
 	"fmt"
 	"hyperchain/core/hyperstate"
 	"hyperchain/common"
 	"os"
 	"path"
 	"math/big"
+	"hyperchain/hyperdb"
+	"hyperchain/core/db_utils"
 )
 
 var (
@@ -20,9 +21,11 @@ var (
 func TestStorageIterator(t *testing.T) {
 	opath := switchToExeLoc()
 	initLog()
-	defer switchBack(opath)
+	defer clearup(opath)
+	db_utils.InitDBForNamespace(globalConfig, "global")
+	hyperdb.StartDatabase(globalConfig, "global")
 
-	db, _ := mdb.NewMemDatabase()
+	db, _ := hyperdb.GetDBDatabaseByNamespace("global")
 	stateDb, _ := hyperstate.New(common.Hash{}, db, db, globalConfig, 0, "global")
 	stateDb.MarkProcessStart(1)
 	stateDb.CreateAccount(common.BytesToAddress([]byte("address001")))
@@ -46,8 +49,8 @@ func TestStorageIterator(t *testing.T) {
 
 	iter, _ := stateDb.NewIterator(common.BytesToAddress([]byte("address001")), common.BytesToHash([]byte("key0")), common.BytesToHash([]byte("key10")))
 	for iter.Next() {
-		fmt.Println(common.Bytes2Hex(iter.Key()))
-		fmt.Println(common.Bytes2Hex(iter.Value()))
+		fmt.Println("key", common.Bytes2Hex(iter.Key()))
+		fmt.Println("value", common.Bytes2Hex(iter.Value()))
 	}
 }
 
@@ -66,4 +69,9 @@ func initLog() {
 	common.InitHyperLoggerManager(globalConfig)
 	globalConfig.Set(common.NAMESPACE, "global")
 	common.InitHyperLogger(globalConfig)
+}
+
+func clearup(dir string) {
+	os.RemoveAll("./namespaces/global/data")
+	switchBack(dir)
 }

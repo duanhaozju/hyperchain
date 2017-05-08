@@ -97,6 +97,10 @@ func (db *MemDatabase) NewIterator(str []byte) db.Iterator {
 	return &iter
 }
 
+func (db *MemDatabase) Scan(begin, end []byte) db.Iterator {
+	return &Iter{}
+}
+
 func (iter *Iter) Next() bool {
 	for {
 		iter.index += 1
