@@ -62,6 +62,8 @@ public class SimulateBank extends ContractBase{
         switch (funcName) {
             case "getAccountBalance":
                 return getAccountBalance(args);
+            case "testRangeQuery":
+                return ByteString.copyFrom(Bytes.toByteArray(testRangeQuery(args)));
             default:
                 String errMsg = "method " + funcName  + " not found!";
                 logger.error(errMsg);
