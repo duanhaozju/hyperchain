@@ -13,6 +13,7 @@ public class ContractHolder {
     public ContractHolder(final ContractInfo info, final ContractBase contract) {
         this.info = info;
         this.contract = contract;
+        this.contract.setInfo(info);
     }
 
     public ContractHolder(final ContractInfo info, final ContractBase contract, ContractClassLoader loader) {

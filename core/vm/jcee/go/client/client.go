@@ -21,7 +21,14 @@ type ContractExecutor interface {
 	Stop() error
 	// Run invoke contract, use `Execute` internally
 	Run(vm.VmContext, []byte) ([]byte, error)
+	// Ping send ping package for healthy assurance
+	Ping() (*pb.Response, error)
 }
+
+var (
+	JVMServerErr = errors.New("jvm server execute error")
+	CodeNotMatchErr = errors.New("execution code not match with ledger error")
+)
 
 type contractExecutorImpl struct {
 	address    string
@@ -67,17 +74,24 @@ func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error
 	request := cei.parse(ctx, in)
 	response, err := cei.execute(request)
 
-	cei.logger.Critical(response)
-
 	if err != nil {
 		return nil, err
 	} else if response.Ok == false {
-		return nil, errors.New("execute failed")
+		return nil, JVMServerErr
+	} else if !hexMatch(response.CodeHash, ctx.GetCodeHash().Hex()) {
+		return nil, CodeNotMatchErr
 	} else {
 		return response.Result, nil
 	}
 }
 
+func (cei *contractExecutorImpl) Ping() (*pb.Response, error){
+	return cei.heartbeat()
+}
+
+func (cei *contractExecutorImpl) Address() string {
+	return cei.address
+}
 
 // execute send invocation message to jvm server.
 func (cei *contractExecutorImpl) execute(tx *pb.Request) (*pb.Response, error) {

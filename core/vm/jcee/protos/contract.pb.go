@@ -9,13 +9,17 @@ It is generated from these files:
 	contract.proto
 
 It has these top-level messages:
+	Request
+	Response
+	RequestContext
 	Key
+	BatchKey
+	BathValue
+	BatchKV
+	Range
 	Value
 	KeyValue
-	Request
 	LedgerContext
-	RequestContext
-	Response
 */
 package contract
 
@@ -39,6 +43,46 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
+type Request struct {
+	Context *RequestContext `protobuf:"bytes,1,opt,name=context" json:"context,omitempty"`
+	Method  string          `protobuf:"bytes,2,opt,name=method" json:"method,omitempty"`
+	Args    [][]byte        `protobuf:"bytes,3,rep,name=args,proto3" json:"args,omitempty"`
+}
+
+func (m *Request) Reset()                    { *m = Request{} }
+func (m *Request) String() string            { return proto.CompactTextString(m) }
+func (*Request) ProtoMessage()               {}
+func (*Request) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+
+func (m *Request) GetContext() *RequestContext {
+	if m != nil {
+		return m.Context
+	}
+	return nil
+}
+
+type Response struct {
+	Ok       bool   `protobuf:"varint,1,opt,name=ok" json:"ok,omitempty"`
+	Result   []byte `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"`
+	CodeHash string `protobuf:"bytes,3,opt,name=codeHash" json:"codeHash,omitempty"`
+}
+
+func (m *Response) Reset()                    { *m = Response{} }
+func (m *Response) String() string            { return proto.CompactTextString(m) }
+func (*Response) ProtoMessage()               {}
+func (*Response) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+type RequestContext struct {
+	Txid      string `protobuf:"bytes,1,opt,name=txid" json:"txid,omitempty"`
+	Namespace string `protobuf:"bytes,2,opt,name=namespace" json:"namespace,omitempty"`
+	Cid       string `protobuf:"bytes,3,opt,name=cid" json:"cid,omitempty"`
+}
+
+func (m *RequestContext) Reset()                    { *m = RequestContext{} }
+func (m *RequestContext) String() string            { return proto.CompactTextString(m) }
+func (*RequestContext) ProtoMessage()               {}
+func (*RequestContext) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
 type Key struct {
 	Context *LedgerContext `protobuf:"bytes,1,opt,name=context" json:"context,omitempty"`
 	K       []byte         `protobuf:"bytes,2,opt,name=k,proto3" json:"k,omitempty"`
@@ -47,9 +91,82 @@ type Key struct {
 func (m *Key) Reset()                    { *m = Key{} }
 func (m *Key) String() string            { return proto.CompactTextString(m) }
 func (*Key) ProtoMessage()               {}
-func (*Key) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (*Key) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
 
 func (m *Key) GetContext() *LedgerContext {
+	if m != nil {
+		return m.Context
+	}
+	return nil
+}
+
+// BatchKey used to fetch data by batch
+type BatchKey struct {
+	Context *LedgerContext `protobuf:"bytes,1,opt,name=context" json:"context,omitempty"`
+	K       [][]byte       `protobuf:"bytes,2,rep,name=k,proto3" json:"k,omitempty"`
+}
+
+func (m *BatchKey) Reset()                    { *m = BatchKey{} }
+func (m *BatchKey) String() string            { return proto.CompactTextString(m) }
+func (*BatchKey) ProtoMessage()               {}
+func (*BatchKey) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+
+func (m *BatchKey) GetContext() *LedgerContext {
+	if m != nil {
+		return m.Context
+	}
+	return nil
+}
+
+// BathKV bach result
+type BathValue struct {
+	Id      string   `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	HasMore bool     `protobuf:"varint,2,opt,name=hasMore" json:"hasMore,omitempty"`
+	V       [][]byte `protobuf:"bytes,3,rep,name=v,proto3" json:"v,omitempty"`
+}
+
+func (m *BathValue) Reset()                    { *m = BathValue{} }
+func (m *BathValue) String() string            { return proto.CompactTextString(m) }
+func (*BathValue) ProtoMessage()               {}
+func (*BathValue) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+
+type BatchKV struct {
+	Context *LedgerContext `protobuf:"bytes,1,opt,name=context" json:"context,omitempty"`
+	Kv      []*KeyValue    `protobuf:"bytes,2,rep,name=kv" json:"kv,omitempty"`
+}
+
+func (m *BatchKV) Reset()                    { *m = BatchKV{} }
+func (m *BatchKV) String() string            { return proto.CompactTextString(m) }
+func (*BatchKV) ProtoMessage()               {}
+func (*BatchKV) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+
+func (m *BatchKV) GetContext() *LedgerContext {
+	if m != nil {
+		return m.Context
+	}
+	return nil
+}
+
+func (m *BatchKV) GetKv() []*KeyValue {
+	if m != nil {
+		return m.Kv
+	}
+	return nil
+}
+
+// Range specifiy query range
+type Range struct {
+	Context *LedgerContext `protobuf:"bytes,1,opt,name=context" json:"context,omitempty"`
+	Start   []byte         `protobuf:"bytes,2,opt,name=start,proto3" json:"start,omitempty"`
+	End     []byte         `protobuf:"bytes,3,opt,name=end,proto3" json:"end,omitempty"`
+}
+
+func (m *Range) Reset()                    { *m = Range{} }
+func (m *Range) String() string            { return proto.CompactTextString(m) }
+func (*Range) ProtoMessage()               {}
+func (*Range) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+
+func (m *Range) GetContext() *LedgerContext {
 	if m != nil {
 		return m.Context
 	}
@@ -64,7 +181,7 @@ type Value struct {
 func (m *Value) Reset()                    { *m = Value{} }
 func (m *Value) String() string            { return proto.CompactTextString(m) }
 func (*Value) ProtoMessage()               {}
-func (*Value) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (*Value) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
 type KeyValue struct {
 	Context *LedgerContext `protobuf:"bytes,1,opt,name=context" json:"context,omitempty"`
@@ -75,27 +192,9 @@ type KeyValue struct {
 func (m *KeyValue) Reset()                    { *m = KeyValue{} }
 func (m *KeyValue) String() string            { return proto.CompactTextString(m) }
 func (*KeyValue) ProtoMessage()               {}
-func (*KeyValue) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (*KeyValue) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
 
 func (m *KeyValue) GetContext() *LedgerContext {
-	if m != nil {
-		return m.Context
-	}
-	return nil
-}
-
-type Request struct {
-	Context *RequestContext `protobuf:"bytes,1,opt,name=context" json:"context,omitempty"`
-	Method  string          `protobuf:"bytes,2,opt,name=method" json:"method,omitempty"`
-	Args    [][]byte        `protobuf:"bytes,3,rep,name=args,proto3" json:"args,omitempty"`
-}
-
-func (m *Request) Reset()                    { *m = Request{} }
-func (m *Request) String() string            { return proto.CompactTextString(m) }
-func (*Request) ProtoMessage()               {}
-func (*Request) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
-
-func (m *Request) GetContext() *RequestContext {
 	if m != nil {
 		return m.Context
 	}
@@ -111,38 +210,20 @@ type LedgerContext struct {
 func (m *LedgerContext) Reset()                    { *m = LedgerContext{} }
 func (m *LedgerContext) String() string            { return proto.CompactTextString(m) }
 func (*LedgerContext) ProtoMessage()               {}
-func (*LedgerContext) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
-
-type RequestContext struct {
-	Txid      string `protobuf:"bytes,1,opt,name=txid" json:"txid,omitempty"`
-	Namespace string `protobuf:"bytes,2,opt,name=namespace" json:"namespace,omitempty"`
-	Cid       string `protobuf:"bytes,3,opt,name=cid" json:"cid,omitempty"`
-}
-
-func (m *RequestContext) Reset()                    { *m = RequestContext{} }
-func (m *RequestContext) String() string            { return proto.CompactTextString(m) }
-func (*RequestContext) ProtoMessage()               {}
-func (*RequestContext) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
-
-type Response struct {
-	Ok       bool   `protobuf:"varint,1,opt,name=ok" json:"ok,omitempty"`
-	Result   []byte `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"`
-	CodeHash string `protobuf:"bytes,3,opt,name=codeHash" json:"codeHash,omitempty"`
-}
-
-func (m *Response) Reset()                    { *m = Response{} }
-func (m *Response) String() string            { return proto.CompactTextString(m) }
-func (*Response) ProtoMessage()               {}
-func (*Response) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+func (*LedgerContext) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
 
 func init() {
+	proto.RegisterType((*Request)(nil), "Request")
+	proto.RegisterType((*Response)(nil), "Response")
+	proto.RegisterType((*RequestContext)(nil), "RequestContext")
 	proto.RegisterType((*Key)(nil), "Key")
+	proto.RegisterType((*BatchKey)(nil), "BatchKey")
+	proto.RegisterType((*BathValue)(nil), "BathValue")
+	proto.RegisterType((*BatchKV)(nil), "BatchKV")
+	proto.RegisterType((*Range)(nil), "Range")
 	proto.RegisterType((*Value)(nil), "Value")
 	proto.RegisterType((*KeyValue)(nil), "KeyValue")
-	proto.RegisterType((*Request)(nil), "Request")
 	proto.RegisterType((*LedgerContext)(nil), "LedgerContext")
-	proto.RegisterType((*RequestContext)(nil), "RequestContext")
-	proto.RegisterType((*Response)(nil), "Response")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -151,7 +232,6 @@ var _ grpc.ClientConn
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-//const _ = grpc.SupportPackageIsVersion3
 
 // Client API for Contract service
 
@@ -259,6 +339,10 @@ var _Contract_serviceDesc = grpc.ServiceDesc{
 type LedgerClient interface {
 	Get(ctx context.Context, in *Key, opts ...grpc.CallOption) (*Value, error)
 	Put(ctx context.Context, in *KeyValue, opts ...grpc.CallOption) (*Response, error)
+	Delete(ctx context.Context, in *Key, opts ...grpc.CallOption) (*Response, error)
+	BatchRead(ctx context.Context, in *BatchKey, opts ...grpc.CallOption) (*BathValue, error)
+	BatchWrite(ctx context.Context, in *BatchKV, opts ...grpc.CallOption) (*Response, error)
+	RangeQuery(ctx context.Context, in *Range, opts ...grpc.CallOption) (Ledger_RangeQueryClient, error)
 }
 
 type ledgerClient struct {
@@ -287,11 +371,74 @@ func (c *ledgerClient) Put(ctx context.Context, in *KeyValue, opts ...grpc.CallO
 	return out, nil
 }
 
+func (c *ledgerClient) Delete(ctx context.Context, in *Key, opts ...grpc.CallOption) (*Response, error) {
+	out := new(Response)
+	err := grpc.Invoke(ctx, "/Ledger/Delete", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ledgerClient) BatchRead(ctx context.Context, in *BatchKey, opts ...grpc.CallOption) (*BathValue, error) {
+	out := new(BathValue)
+	err := grpc.Invoke(ctx, "/Ledger/BatchRead", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ledgerClient) BatchWrite(ctx context.Context, in *BatchKV, opts ...grpc.CallOption) (*Response, error) {
+	out := new(Response)
+	err := grpc.Invoke(ctx, "/Ledger/BatchWrite", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *ledgerClient) RangeQuery(ctx context.Context, in *Range, opts ...grpc.CallOption) (Ledger_RangeQueryClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Ledger_serviceDesc.Streams[0], c.cc, "/Ledger/RangeQuery", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &ledgerRangeQueryClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Ledger_RangeQueryClient interface {
+	Recv() (*BathValue, error)
+	grpc.ClientStream
+}
+
+type ledgerRangeQueryClient struct {
+	grpc.ClientStream
+}
+
+func (x *ledgerRangeQueryClient) Recv() (*BathValue, error) {
+	m := new(BathValue)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // Server API for Ledger service
 
 type LedgerServer interface {
 	Get(context.Context, *Key) (*Value, error)
 	Put(context.Context, *KeyValue) (*Response, error)
+	Delete(context.Context, *Key) (*Response, error)
+	BatchRead(context.Context, *BatchKey) (*BathValue, error)
+	BatchWrite(context.Context, *BatchKV) (*Response, error)
+	RangeQuery(*Range, Ledger_RangeQueryServer) error
 }
 
 func RegisterLedgerServer(s *grpc.Server, srv LedgerServer) {
@@ -334,6 +481,81 @@ func _Ledger_Put_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Ledger_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Key)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LedgerServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Ledger/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LedgerServer).Delete(ctx, req.(*Key))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Ledger_BatchRead_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchKey)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LedgerServer).BatchRead(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Ledger/BatchRead",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LedgerServer).BatchRead(ctx, req.(*BatchKey))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Ledger_BatchWrite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchKV)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LedgerServer).BatchWrite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Ledger/BatchWrite",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LedgerServer).BatchWrite(ctx, req.(*BatchKV))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Ledger_RangeQuery_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Range)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(LedgerServer).RangeQuery(m, &ledgerRangeQueryServer{stream})
+}
+
+type Ledger_RangeQueryServer interface {
+	Send(*BathValue) error
+	grpc.ServerStream
+}
+
+type ledgerRangeQueryServer struct {
+	grpc.ServerStream
+}
+
+func (x *ledgerRangeQueryServer) Send(m *BathValue) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 var _Ledger_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "Ledger",
 	HandlerType: (*LedgerServer)(nil),
@@ -346,37 +568,64 @@ var _Ledger_serviceDesc = grpc.ServiceDesc{
 			MethodName: "Put",
 			Handler:    _Ledger_Put_Handler,
 		},
+		{
+			MethodName: "Delete",
+			Handler:    _Ledger_Delete_Handler,
+		},
+		{
+			MethodName: "BatchRead",
+			Handler:    _Ledger_BatchRead_Handler,
+		},
+		{
+			MethodName: "BatchWrite",
+			Handler:    _Ledger_BatchWrite_Handler,
+		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "RangeQuery",
+			Handler:       _Ledger_RangeQuery_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: fileDescriptor0,
 }
 
 func init() { proto.RegisterFile("contract.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 381 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xac, 0x92, 0xd1, 0x8b, 0xd4, 0x30,
-	0x10, 0xc6, 0xaf, 0xed, 0xd9, 0x6d, 0xc7, 0xbd, 0x2a, 0x83, 0xca, 0xb2, 0x28, 0x94, 0x80, 0x58,
-	0x5f, 0xf2, 0xb0, 0x3e, 0xeb, 0xc3, 0x1e, 0xe2, 0xc1, 0x8a, 0x94, 0x28, 0x3e, 0x1b, 0xd3, 0xe1,
-	0x5a, 0x7a, 0xd7, 0xd4, 0x26, 0x3d, 0xb6, 0xff, 0xbd, 0x34, 0x6d, 0x4f, 0x56, 0xf1, 0x45, 0x7c,
-	0x9b, 0xc9, 0x7c, 0xf9, 0x65, 0x66, 0xf2, 0x41, 0xa2, 0x74, 0x63, 0x3b, 0xa9, 0x2c, 0x6f, 0x3b,
-	0x6d, 0x35, 0x7b, 0x0b, 0xc1, 0x81, 0x06, 0xcc, 0x60, 0x35, 0x16, 0xe8, 0x68, 0x37, 0x5e, 0xea,
-	0x65, 0x0f, 0x77, 0x09, 0xff, 0x48, 0xc5, 0x35, 0x75, 0x97, 0xd3, 0xa9, 0x58, 0xca, 0xb8, 0x06,
-	0xaf, 0xde, 0xf8, 0xa9, 0x97, 0xad, 0x85, 0x57, 0xb3, 0x97, 0xf0, 0xe0, 0xab, 0xbc, 0xe9, 0x09,
-	0x13, 0xf0, 0xab, 0xc2, 0xdd, 0x8d, 0x85, 0x5f, 0x15, 0xa3, 0xec, 0x6e, 0x91, 0xdd, 0xb1, 0x1c,
-	0xa2, 0x03, 0x0d, 0x93, 0xf2, 0x1f, 0x9f, 0x9a, 0x88, 0xc1, 0x42, 0xfc, 0x06, 0x2b, 0x41, 0x3f,
-	0x7a, 0x32, 0x16, 0x5f, 0xff, 0x0e, 0x7c, 0xc4, 0xe7, 0xd2, 0x1f, 0xc4, 0x67, 0x10, 0xde, 0x92,
-	0x2d, 0x75, 0xe1, 0xb0, 0xb1, 0x98, 0x33, 0x44, 0x38, 0x97, 0xdd, 0xb5, 0xd9, 0x04, 0x69, 0x90,
-	0xad, 0x85, 0x8b, 0xd9, 0x67, 0xb8, 0x38, 0xe9, 0x6b, 0x14, 0xd9, 0xe3, 0xfd, 0x90, 0x2e, 0xc6,
-	0xe7, 0x10, 0x37, 0xf2, 0x96, 0x4c, 0x2b, 0x15, 0xcd, 0xcc, 0x5f, 0x07, 0xf8, 0x18, 0x02, 0x55,
-	0x15, 0xae, 0xe9, 0x58, 0x8c, 0x21, 0xfb, 0x02, 0xc9, 0x69, 0x6f, 0xff, 0x85, 0xfa, 0x09, 0x22,
-	0x41, 0xa6, 0xd5, 0x8d, 0x71, 0x1f, 0xa1, 0x6b, 0x47, 0x8b, 0x84, 0xaf, 0xeb, 0x71, 0xe4, 0x8e,
-	0x4c, 0x7f, 0x63, 0xe7, 0x4d, 0xce, 0x19, 0x6e, 0x21, 0x52, 0xba, 0xa0, 0x2b, 0x69, 0xca, 0x19,
-	0x75, 0x9f, 0xef, 0x72, 0x88, 0x2e, 0x67, 0x9b, 0x60, 0x0a, 0xab, 0xf7, 0x47, 0x52, 0xbd, 0x25,
-	0x8c, 0x96, 0xbd, 0x6e, 0x63, 0xbe, 0xbc, 0xc7, 0xce, 0x90, 0x41, 0x7c, 0x45, 0xb2, 0xb3, 0x7b,
-	0x92, 0xf6, 0x2f, 0x9a, 0xdd, 0x3b, 0x08, 0xa7, 0x65, 0xe2, 0x53, 0x08, 0x3e, 0x90, 0xc5, 0x73,
-	0x7e, 0xa0, 0x61, 0x1b, 0x72, 0xe7, 0x09, 0x76, 0x86, 0x2f, 0x20, 0xc8, 0x7b, 0x8b, 0x31, 0x5f,
-	0x7c, 0x72, 0x72, 0x7f, 0xff, 0x0a, 0x9e, 0xa8, 0x86, 0x97, 0x43, 0x4b, 0x9d, 0x2a, 0x65, 0xd5,
-	0x4c, 0xee, 0x35, 0xfb, 0x8b, 0xa5, 0xcf, 0x7c, 0xcc, 0x73, 0xef, 0x7b, 0xe8, 0x0a, 0x6f, 0x7e,
-	0x06, 0x00, 0x00, 0xff, 0xff, 0xc6, 0x14, 0x17, 0xbf, 0xe8, 0x02, 0x00, 0x00,
+	// 528 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xac, 0x54, 0x41, 0x6f, 0xd3, 0x4c,
+	0x10, 0x8d, 0xed, 0xc6, 0xb1, 0xa7, 0x69, 0xbe, 0x4f, 0xa3, 0x82, 0x42, 0x00, 0x29, 0x5a, 0x40,
+	0x84, 0x8b, 0x85, 0xc2, 0x99, 0x8b, 0x03, 0xa2, 0x52, 0xa1, 0x0a, 0x0b, 0x2a, 0xe2, 0xc6, 0x62,
+	0x8f, 0xe2, 0xc8, 0xa9, 0x1d, 0x76, 0xd7, 0x51, 0xf2, 0x1f, 0xf9, 0x51, 0xc8, 0xeb, 0x75, 0xaa,
+	0x14, 0x38, 0xb4, 0xe2, 0x36, 0x6f, 0xc7, 0xfb, 0xf6, 0xcd, 0x9b, 0x19, 0xc3, 0x20, 0x29, 0x0b,
+	0x2d, 0x45, 0xa2, 0xa3, 0xb5, 0x2c, 0x75, 0xc9, 0xbe, 0x41, 0x8f, 0xd3, 0x8f, 0x8a, 0x94, 0xc6,
+	0x17, 0xd0, 0xab, 0x93, 0xb4, 0xd5, 0x43, 0x67, 0xec, 0x4c, 0x8e, 0xa7, 0xff, 0x45, 0x36, 0x35,
+	0x6b, 0x8e, 0x79, 0x9b, 0xc7, 0xfb, 0xe0, 0x5f, 0x91, 0xce, 0xca, 0x74, 0xe8, 0x8e, 0x9d, 0x49,
+	0xc8, 0x2d, 0x42, 0x84, 0x23, 0x21, 0x17, 0x6a, 0xe8, 0x8d, 0xbd, 0x49, 0x9f, 0x9b, 0x98, 0x5d,
+	0x40, 0xc0, 0x49, 0xad, 0xcb, 0x42, 0x11, 0x0e, 0xc0, 0x2d, 0x73, 0xc3, 0x1e, 0x70, 0xb7, 0xcc,
+	0x6b, 0x1e, 0x49, 0xaa, 0x5a, 0x69, 0xc3, 0xd3, 0xe7, 0x16, 0xe1, 0x08, 0x82, 0xa4, 0x4c, 0xe9,
+	0x4c, 0xa8, 0x6c, 0xe8, 0x99, 0x17, 0xf6, 0x98, 0x7d, 0x86, 0xc1, 0xa1, 0xac, 0xfa, 0x55, 0xbd,
+	0x5d, 0xa6, 0x86, 0x37, 0xe4, 0x26, 0xc6, 0x47, 0x10, 0x16, 0xe2, 0x8a, 0xd4, 0x5a, 0x24, 0x64,
+	0x45, 0x5e, 0x1f, 0xe0, 0xff, 0xe0, 0x25, 0xcb, 0xd4, 0x52, 0xd7, 0x21, 0x7b, 0x0d, 0xde, 0x39,
+	0xed, 0x70, 0x72, 0xd3, 0x83, 0x41, 0xf4, 0x9e, 0xd2, 0x05, 0xc9, 0xdf, 0x2c, 0xe8, 0x83, 0x93,
+	0x5b, 0xd5, 0x4e, 0xce, 0x62, 0x08, 0x62, 0xa1, 0x93, 0xec, 0x4e, 0x1c, 0x5e, 0xc3, 0x31, 0x83,
+	0x30, 0x16, 0x3a, 0xbb, 0x14, 0xab, 0xca, 0x38, 0xb5, 0xaf, 0xc8, 0x5d, 0xa6, 0x38, 0x84, 0x5e,
+	0x26, 0xd4, 0x87, 0x52, 0x36, 0xd5, 0x04, 0xbc, 0x85, 0x35, 0xc9, 0xc6, 0x1a, 0xee, 0x6c, 0xd8,
+	0x05, 0xf4, 0x1a, 0x21, 0x97, 0xb7, 0xd0, 0xf1, 0x00, 0xdc, 0x7c, 0x63, 0x84, 0x1c, 0x4f, 0xc3,
+	0xe8, 0x9c, 0x76, 0x46, 0x03, 0x77, 0xf3, 0x0d, 0xfb, 0x0a, 0x5d, 0x2e, 0x8a, 0x05, 0xdd, 0x82,
+	0xed, 0x14, 0xba, 0x4a, 0x0b, 0xd9, 0xf6, 0xb4, 0x01, 0xb5, 0xe5, 0x54, 0x34, 0x96, 0xf7, 0x79,
+	0x1d, 0xb2, 0x67, 0xd0, 0xfd, 0x73, 0xad, 0xa6, 0x22, 0x6b, 0xed, 0x86, 0xcd, 0x21, 0x68, 0x15,
+	0xdd, 0xb5, 0x3d, 0xad, 0x47, 0x96, 0xf1, 0x13, 0x9c, 0x1c, 0xdc, 0xfa, 0x17, 0x03, 0x34, 0x9d,
+	0x43, 0x30, 0xb3, 0xab, 0x85, 0x63, 0xe8, 0xbd, 0xdd, 0x52, 0x52, 0x69, 0xc2, 0xa0, 0xdd, 0xa1,
+	0x51, 0x18, 0xb5, 0x6b, 0xc0, 0x3a, 0xc8, 0x20, 0x3c, 0x23, 0x21, 0x75, 0x4c, 0x42, 0xff, 0xe5,
+	0x9b, 0xe9, 0x4f, 0x07, 0xfc, 0x46, 0x27, 0xde, 0x03, 0xef, 0x1d, 0x69, 0x3c, 0xaa, 0x7b, 0x33,
+	0xf2, 0x23, 0x63, 0x06, 0xeb, 0xe0, 0x63, 0xf0, 0xe6, 0x95, 0xc6, 0xeb, 0x96, 0x1d, 0x3e, 0xf2,
+	0x10, 0xfc, 0x37, 0xb4, 0x22, 0x4d, 0xf6, 0xe2, 0x41, 0xf2, 0xa9, 0x99, 0xb6, 0x24, 0xe3, 0x24,
+	0x52, 0x0c, 0xa3, 0x76, 0x7a, 0x47, 0x10, 0xed, 0x87, 0x90, 0x75, 0xf0, 0x09, 0x80, 0xc9, 0x7c,
+	0x91, 0x4b, 0x53, 0x8c, 0x9d, 0xad, 0x9b, 0x54, 0x60, 0x66, 0xe4, 0x63, 0x45, 0x72, 0x87, 0x7e,
+	0x64, 0xc0, 0x21, 0xd1, 0x4b, 0x27, 0x7e, 0x0e, 0xa7, 0x49, 0x11, 0x65, 0xbb, 0x35, 0xc9, 0x24,
+	0x13, 0xcb, 0xa2, 0xf9, 0x01, 0xa9, 0xf8, 0xa4, 0xb5, 0x6d, 0x5e, 0xe3, 0x79, 0xe7, 0xbb, 0x6f,
+	0x12, 0xaf, 0x7e, 0x05, 0x00, 0x00, 0xff, 0xff, 0x9e, 0x6a, 0x87, 0xc2, 0xab, 0x04, 0x00, 0x00,
 }

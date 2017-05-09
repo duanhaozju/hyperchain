@@ -7,8 +7,9 @@ import (
 	"os/exec"
 	"github.com/op/go-logging"
 	"strconv"
-	"os"
 	"path"
+	"time"
+	"fmt"
 )
 const (
 	BinHome  = "hyperjvm/bin"
@@ -22,6 +23,8 @@ type JvmManager struct {
 	startCmd         *exec.Cmd               // jvm start command
 	logger           *logging.Logger	 // logger
 	conf             *common.Config
+	exit             chan bool
+
 }
 
 func NewJvmManager(conf *common.Config) *JvmManager {
@@ -30,6 +33,7 @@ func NewJvmManager(conf *common.Config) *JvmManager {
 		jvmCli:          jcee.NewContractExecutor(conf, common.DEFAULT_NAMESPACE),
 		logger:          common.GetLogger(common.DEFAULT_LOG, "nsmgr"),
 		conf:            conf,
+		exit:            make(chan bool),
 	}
 }
 
@@ -41,17 +45,28 @@ func (mgr *JvmManager) Start() error {
 	if err := mgr.startJvmServer(); err != nil {
 		return err
 	}
+	go mgr.startLedgerServerDaemon()
+	go mgr.startJvmServerDaemon()
 	return nil
 }
 
 // Start turn off jvm service.
 func (mgr *JvmManager) Stop() error {
-	// TODO
+	if err := mgr.stopLedgerServer(); err != nil {
+		return err
+	}
+	if err := mgr.stopJvmServer(); err != nil {
+		return err
+	}
+	mgr.notifyToExit()
 	return nil
 }
 
 func (mgr *JvmManager) startLedgerServer() error {
-	go mgr.ledgerProxy.Server()
+	err := mgr.ledgerProxy.Server()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -71,15 +86,66 @@ func (mgr *JvmManager) startJvmServer() error {
 	return nil
 }
 
-func (mgr *JvmManager) backend() {
-
+func (mgr *JvmManager) stopLedgerServer() error {
+	mgr.ledgerProxy.StopServer()
+	mgr.logger.Info("stop ledger server success")
+	return nil
 }
 
-func getBinDir() (string, error) {
-	cur, err := os.Getwd()
-	if err != nil {
-		return "", err
+func (mgr *JvmManager) stopJvmServer() error {
+	if mgr.startCmd != nil {
+		if err := mgr.startCmd.Process.Kill(); err != nil {
+			return err
+		}
+		mgr.logger.Info("stop jvm server success")
 	}
-	return path.Join(cur, BinHome), nil
+	return nil
 }
 
+func (mgr *JvmManager) startJvmServerDaemon() {
+	time.Sleep(10 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
+
+	for {
+		select {
+		case <- mgr.exit:
+			return
+		case <- ticker.C:
+			if !mgr.checkJvmExist() {
+				mgr.restartJvmServer()
+				time.Sleep(4 * time.Second)
+			}
+		}
+	}
+}
+
+func (mgr *JvmManager) restartJvmServer() {
+	mgr.logger.Info("try to restart jvm server")
+	for  {
+		err := mgr.startJvmServer()
+		if err != nil {
+			mgr.logger.Info("start jvm server failed")
+			continue
+		}
+		break
+	}
+}
+
+func (mgr *JvmManager) startLedgerServerDaemon() {
+
+}
+
+func (mgr *JvmManager) notifyToExit() {
+	mgr.exit <- true
+}
+
+
+func (mgr *JvmManager) checkJvmExist() bool {
+	subcmd := fmt.Sprintf("-i:%d", mgr.conf.GetInt(common.C_JVM_PORT))
+	ret, err := exec.Command("lsof", subcmd).Output()
+	if err != nil || len(ret) == 0 {
+		return false
+	} else {
+		return true
+	}
+}

@@ -1,10 +1,7 @@
 package cn.hyperchain.jcee;
 
-import cn.hyperchain.jcee.contract.TestContractClassLoader;
-import cn.hyperchain.jcee.ledger.AbstractLedger;
-import cn.hyperchain.jcee.ledger.HyperchainLedger;
-import cn.hyperchain.protos.Request;
-import cn.hyperchain.protos.RequestContext;
+import cn.hyperchain.jcee.executor.Handler;
+import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
 import org.junit.Assert;
 import org.junit.Test;
@@ -21,9 +18,9 @@ public class TestHandler {
 
         String contractDir = TestHandler.class.getResource("/contracts").getPath();
 //        System.out.println(contractDir);
-        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl();
-        Handler handler = cgsi.getHandler();
-        Request request = Request.newBuilder()
+        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl(123);
+        Handler handler = new Handler(123);
+        ContractProto.Request request = ContractProto.Request.newBuilder()
                 .addArgs(ByteString.copyFrom(contractDir, Charset.defaultCharset()))
                 .addArgs(ByteString.copyFrom("String", Charset.defaultCharset()))
                 .addArgs(ByteString.copyFrom("long", Charset.defaultCharset()))
@@ -31,7 +28,7 @@ public class TestHandler {
                 .addArgs(ByteString.copyFrom("bank001", Charset.defaultCharset()))
                 .addArgs(ByteString.copyFrom("1", Charset.defaultCharset()))
                 .addArgs(ByteString.copyFrom("true", Charset.defaultCharset()))
-                .setContext(RequestContext.newBuilder().setCid("cid0001")
+                .setContext(ContractProto.RequestContext.newBuilder().setCid("cid0001")
                             .setNamespace("global")
                             .setTxid("tx001"))
                 .build();
@@ -45,11 +42,11 @@ public class TestHandler {
 
         String contractDir = TestHandler.class.getResource("/contracts").getPath();
 //        System.out.println(contractDir);
-        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl();
-        Handler handler = cgsi.getHandler();
-        Request request = Request.newBuilder()
+        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl(123);
+        Handler handler = new Handler(123);
+        ContractProto.Request request = ContractProto.Request.newBuilder()
                 .addArgs(ByteString.copyFrom(contractDir, Charset.defaultCharset()))
-                .setContext(RequestContext.newBuilder().setCid("cid0001")
+                .setContext(ContractProto.RequestContext.newBuilder().setCid("cid0001")
                         .setNamespace("global")
                         .setTxid("tx001"))
                 .build();

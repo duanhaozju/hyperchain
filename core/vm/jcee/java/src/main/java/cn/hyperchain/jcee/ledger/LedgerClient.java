@@ -4,12 +4,12 @@
  */
 package cn.hyperchain.jcee.ledger;
 
-import cn.hyperchain.protos.Key;
-import cn.hyperchain.protos.KeyValue;
+import cn.hyperchain.protos.ContractProto;
 import cn.hyperchain.protos.LedgerGrpc;
-import cn.hyperchain.protos.Value;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+
+import java.util.Iterator;
 
 public class LedgerClient {
     private String host;
@@ -47,12 +47,29 @@ public class LedgerClient {
         channel.shutdownNow();
     }
 
-    public boolean put(KeyValue kv) {
-        blockingStub.put(kv);
-        return true;
+    public boolean put(ContractProto.KeyValue kv) {
+        ContractProto.Response response = blockingStub.put(kv);
+        return response.getOk();
     }
 
-    public Value get(Key key) {
+    public ContractProto.Value get(ContractProto.Key key) {
         return blockingStub.get(key);
     }
+
+    public boolean delete(ContractProto.Key key) {
+        return blockingStub.delete(key).getOk();
+    }
+
+    public boolean batchWrite(ContractProto.BatchKV bkv) {
+        return blockingStub.batchWrite(bkv).getOk();
+    }
+
+    public ContractProto.BathValue bathRead(ContractProto.BatchKey bk) {
+        return blockingStub.batchRead(bk);
+    }
+
+    public Iterator<ContractProto.BathValue> rangeQuery(ContractProto.Range range) {
+        return blockingStub.rangeQuery(range);
+    }
+
 }

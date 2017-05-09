@@ -13,16 +13,18 @@ type Context struct {
 	code       []byte
 	isCreation bool
 	codePath   string
+	codeHash   common.Hash
 }
 
 
-func NewContext(caller vm.ContractRef, callee vm.ContractRef, env vm.Environment, isCreation bool, codePath string) *Context {
+func NewContext(caller vm.ContractRef, callee vm.ContractRef, env vm.Environment, isCreation bool, codePath string, codeHash common.Hash) *Context {
 	return &Context{
 		caller:     caller,
 		callee:     callee,
 		env:        env,
 		isCreation: isCreation,
 		codePath:   codePath,
+		codeHash:   codeHash,
 	}
 }
 
@@ -78,11 +80,15 @@ func (ctx *Context) GetPrice() *big.Int {
 }
 
 func (ctx *Context) GetCode() []byte {
-	return nil
+	return ctx.code
 }
 
 func (ctx *Context) GetCodePath() string {
 	return ctx.codePath
+}
+
+func (ctx *Context) GetCodeHash() common.Hash {
+	return ctx.codeHash
 }
 func (ctx *Context) SetCallCode(*common.Address, []byte) {
 

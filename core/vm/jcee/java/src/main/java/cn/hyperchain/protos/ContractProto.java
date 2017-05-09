@@ -14,41 +14,8084 @@ public final class ContractProto {
     registerAllExtensions(
         (com.google.protobuf.ExtensionRegistryLite) registry);
   }
-  static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_Key_descriptor;
-  static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_Key_fieldAccessorTable;
-  static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_Value_descriptor;
-  static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_Value_fieldAccessorTable;
-  static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_KeyValue_descriptor;
-  static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_KeyValue_fieldAccessorTable;
-  static final com.google.protobuf.Descriptors.Descriptor
+  public interface RequestOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:Request)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>.RequestContext context = 1;</code>
+     */
+    boolean hasContext();
+    /**
+     * <code>.RequestContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.RequestContext getContext();
+    /**
+     * <code>.RequestContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.RequestContextOrBuilder getContextOrBuilder();
+
+    /**
+     * <code>string method = 2;</code>
+     */
+    java.lang.String getMethod();
+    /**
+     * <code>string method = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getMethodBytes();
+
+    /**
+     * <code>repeated bytes args = 3;</code>
+     */
+    java.util.List<com.google.protobuf.ByteString> getArgsList();
+    /**
+     * <code>repeated bytes args = 3;</code>
+     */
+    int getArgsCount();
+    /**
+     * <code>repeated bytes args = 3;</code>
+     */
+    com.google.protobuf.ByteString getArgs(int index);
+  }
+  /**
+   * Protobuf type {@code Request}
+   */
+  public  static final class Request extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:Request)
+      RequestOrBuilder {
+    // Use Request.newBuilder() to construct.
+    private Request(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private Request() {
+      method_ = "";
+      args_ = java.util.Collections.emptyList();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private Request(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              cn.hyperchain.protos.ContractProto.RequestContext.Builder subBuilder = null;
+              if (context_ != null) {
+                subBuilder = context_.toBuilder();
+              }
+              context_ = input.readMessage(cn.hyperchain.protos.ContractProto.RequestContext.parser(), extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(context_);
+                context_ = subBuilder.buildPartial();
+              }
+
+              break;
+            }
+            case 18: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              method_ = s;
+              break;
+            }
+            case 26: {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+                args_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
+                mutable_bitField0_ |= 0x00000004;
+              }
+              args_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+          args_ = java.util.Collections.unmodifiableList(args_);
+        }
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Request_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Request_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.Request.class, cn.hyperchain.protos.ContractProto.Request.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int CONTEXT_FIELD_NUMBER = 1;
+    private cn.hyperchain.protos.ContractProto.RequestContext context_;
+    /**
+     * <code>.RequestContext context = 1;</code>
+     */
+    public boolean hasContext() {
+      return context_ != null;
+    }
+    /**
+     * <code>.RequestContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.RequestContext getContext() {
+      return context_ == null ? cn.hyperchain.protos.ContractProto.RequestContext.getDefaultInstance() : context_;
+    }
+    /**
+     * <code>.RequestContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.RequestContextOrBuilder getContextOrBuilder() {
+      return getContext();
+    }
+
+    public static final int METHOD_FIELD_NUMBER = 2;
+    private volatile java.lang.Object method_;
+    /**
+     * <code>string method = 2;</code>
+     */
+    public java.lang.String getMethod() {
+      java.lang.Object ref = method_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        method_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string method = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getMethodBytes() {
+      java.lang.Object ref = method_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        method_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int ARGS_FIELD_NUMBER = 3;
+    private java.util.List<com.google.protobuf.ByteString> args_;
+    /**
+     * <code>repeated bytes args = 3;</code>
+     */
+    public java.util.List<com.google.protobuf.ByteString>
+        getArgsList() {
+      return args_;
+    }
+    /**
+     * <code>repeated bytes args = 3;</code>
+     */
+    public int getArgsCount() {
+      return args_.size();
+    }
+    /**
+     * <code>repeated bytes args = 3;</code>
+     */
+    public com.google.protobuf.ByteString getArgs(int index) {
+      return args_.get(index);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (context_ != null) {
+        output.writeMessage(1, getContext());
+      }
+      if (!getMethodBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, method_);
+      }
+      for (int i = 0; i < args_.size(); i++) {
+        output.writeBytes(3, args_.get(i));
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (context_ != null) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, getContext());
+      }
+      if (!getMethodBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, method_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < args_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(args_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getArgsList().size();
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.Request)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.Request other = (cn.hyperchain.protos.ContractProto.Request) obj;
+
+      boolean result = true;
+      result = result && (hasContext() == other.hasContext());
+      if (hasContext()) {
+        result = result && getContext()
+            .equals(other.getContext());
+      }
+      result = result && getMethod()
+          .equals(other.getMethod());
+      result = result && getArgsList()
+          .equals(other.getArgsList());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasContext()) {
+        hash = (37 * hash) + CONTEXT_FIELD_NUMBER;
+        hash = (53 * hash) + getContext().hashCode();
+      }
+      hash = (37 * hash) + METHOD_FIELD_NUMBER;
+      hash = (53 * hash) + getMethod().hashCode();
+      if (getArgsCount() > 0) {
+        hash = (37 * hash) + ARGS_FIELD_NUMBER;
+        hash = (53 * hash) + getArgsList().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Request parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Request parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Request parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Request parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Request parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Request parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Request parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Request parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Request parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Request parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.Request prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code Request}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:Request)
+        cn.hyperchain.protos.ContractProto.RequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Request_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Request_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.Request.class, cn.hyperchain.protos.ContractProto.Request.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.Request.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        if (contextBuilder_ == null) {
+          context_ = null;
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+        method_ = "";
+
+        args_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000004);
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Request_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Request getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.Request.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.Request build() {
+        cn.hyperchain.protos.ContractProto.Request result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Request buildPartial() {
+        cn.hyperchain.protos.ContractProto.Request result = new cn.hyperchain.protos.ContractProto.Request(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (contextBuilder_ == null) {
+          result.context_ = context_;
+        } else {
+          result.context_ = contextBuilder_.build();
+        }
+        result.method_ = method_;
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          args_ = java.util.Collections.unmodifiableList(args_);
+          bitField0_ = (bitField0_ & ~0x00000004);
+        }
+        result.args_ = args_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.Request) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.Request)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.Request other) {
+        if (other == cn.hyperchain.protos.ContractProto.Request.getDefaultInstance()) return this;
+        if (other.hasContext()) {
+          mergeContext(other.getContext());
+        }
+        if (!other.getMethod().isEmpty()) {
+          method_ = other.method_;
+          onChanged();
+        }
+        if (!other.args_.isEmpty()) {
+          if (args_.isEmpty()) {
+            args_ = other.args_;
+            bitField0_ = (bitField0_ & ~0x00000004);
+          } else {
+            ensureArgsIsMutable();
+            args_.addAll(other.args_);
+          }
+          onChanged();
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.Request parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.Request) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private cn.hyperchain.protos.ContractProto.RequestContext context_ = null;
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.RequestContext, cn.hyperchain.protos.ContractProto.RequestContext.Builder, cn.hyperchain.protos.ContractProto.RequestContextOrBuilder> contextBuilder_;
+      /**
+       * <code>.RequestContext context = 1;</code>
+       */
+      public boolean hasContext() {
+        return contextBuilder_ != null || context_ != null;
+      }
+      /**
+       * <code>.RequestContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.RequestContext getContext() {
+        if (contextBuilder_ == null) {
+          return context_ == null ? cn.hyperchain.protos.ContractProto.RequestContext.getDefaultInstance() : context_;
+        } else {
+          return contextBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>.RequestContext context = 1;</code>
+       */
+      public Builder setContext(cn.hyperchain.protos.ContractProto.RequestContext value) {
+        if (contextBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          context_ = value;
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.RequestContext context = 1;</code>
+       */
+      public Builder setContext(
+          cn.hyperchain.protos.ContractProto.RequestContext.Builder builderForValue) {
+        if (contextBuilder_ == null) {
+          context_ = builderForValue.build();
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(builderForValue.build());
+        }
+
+        return this;
+      }
+      /**
+       * <code>.RequestContext context = 1;</code>
+       */
+      public Builder mergeContext(cn.hyperchain.protos.ContractProto.RequestContext value) {
+        if (contextBuilder_ == null) {
+          if (context_ != null) {
+            context_ =
+              cn.hyperchain.protos.ContractProto.RequestContext.newBuilder(context_).mergeFrom(value).buildPartial();
+          } else {
+            context_ = value;
+          }
+          onChanged();
+        } else {
+          contextBuilder_.mergeFrom(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.RequestContext context = 1;</code>
+       */
+      public Builder clearContext() {
+        if (contextBuilder_ == null) {
+          context_ = null;
+          onChanged();
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+
+        return this;
+      }
+      /**
+       * <code>.RequestContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.RequestContext.Builder getContextBuilder() {
+        
+        onChanged();
+        return getContextFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.RequestContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.RequestContextOrBuilder getContextOrBuilder() {
+        if (contextBuilder_ != null) {
+          return contextBuilder_.getMessageOrBuilder();
+        } else {
+          return context_ == null ?
+              cn.hyperchain.protos.ContractProto.RequestContext.getDefaultInstance() : context_;
+        }
+      }
+      /**
+       * <code>.RequestContext context = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.RequestContext, cn.hyperchain.protos.ContractProto.RequestContext.Builder, cn.hyperchain.protos.ContractProto.RequestContextOrBuilder> 
+          getContextFieldBuilder() {
+        if (contextBuilder_ == null) {
+          contextBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              cn.hyperchain.protos.ContractProto.RequestContext, cn.hyperchain.protos.ContractProto.RequestContext.Builder, cn.hyperchain.protos.ContractProto.RequestContextOrBuilder>(
+                  getContext(),
+                  getParentForChildren(),
+                  isClean());
+          context_ = null;
+        }
+        return contextBuilder_;
+      }
+
+      private java.lang.Object method_ = "";
+      /**
+       * <code>string method = 2;</code>
+       */
+      public java.lang.String getMethod() {
+        java.lang.Object ref = method_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          method_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string method = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getMethodBytes() {
+        java.lang.Object ref = method_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          method_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string method = 2;</code>
+       */
+      public Builder setMethod(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        method_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string method = 2;</code>
+       */
+      public Builder clearMethod() {
+        
+        method_ = getDefaultInstance().getMethod();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string method = 2;</code>
+       */
+      public Builder setMethodBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        method_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.util.List<com.google.protobuf.ByteString> args_ = java.util.Collections.emptyList();
+      private void ensureArgsIsMutable() {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+          args_ = new java.util.ArrayList<com.google.protobuf.ByteString>(args_);
+          bitField0_ |= 0x00000004;
+         }
+      }
+      /**
+       * <code>repeated bytes args = 3;</code>
+       */
+      public java.util.List<com.google.protobuf.ByteString>
+          getArgsList() {
+        return java.util.Collections.unmodifiableList(args_);
+      }
+      /**
+       * <code>repeated bytes args = 3;</code>
+       */
+      public int getArgsCount() {
+        return args_.size();
+      }
+      /**
+       * <code>repeated bytes args = 3;</code>
+       */
+      public com.google.protobuf.ByteString getArgs(int index) {
+        return args_.get(index);
+      }
+      /**
+       * <code>repeated bytes args = 3;</code>
+       */
+      public Builder setArgs(
+          int index, com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureArgsIsMutable();
+        args_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes args = 3;</code>
+       */
+      public Builder addArgs(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureArgsIsMutable();
+        args_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes args = 3;</code>
+       */
+      public Builder addAllArgs(
+          java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
+        ensureArgsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, args_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes args = 3;</code>
+       */
+      public Builder clearArgs() {
+        args_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000004);
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:Request)
+    }
+
+    // @@protoc_insertion_point(class_scope:Request)
+    private static final cn.hyperchain.protos.ContractProto.Request DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.Request();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Request getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<Request>
+        PARSER = new com.google.protobuf.AbstractParser<Request>() {
+      public Request parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new Request(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<Request> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Request> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.Request getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface ResponseOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:Response)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>bool ok = 1;</code>
+     */
+    boolean getOk();
+
+    /**
+     * <code>bytes result = 2;</code>
+     */
+    com.google.protobuf.ByteString getResult();
+
+    /**
+     * <code>string codeHash = 3;</code>
+     */
+    java.lang.String getCodeHash();
+    /**
+     * <code>string codeHash = 3;</code>
+     */
+    com.google.protobuf.ByteString
+        getCodeHashBytes();
+  }
+  /**
+   * Protobuf type {@code Response}
+   */
+  public  static final class Response extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:Response)
+      ResponseOrBuilder {
+    // Use Response.newBuilder() to construct.
+    private Response(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private Response() {
+      ok_ = false;
+      result_ = com.google.protobuf.ByteString.EMPTY;
+      codeHash_ = "";
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private Response(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+
+              ok_ = input.readBool();
+              break;
+            }
+            case 18: {
+
+              result_ = input.readBytes();
+              break;
+            }
+            case 26: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              codeHash_ = s;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Response_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Response_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.Response.class, cn.hyperchain.protos.ContractProto.Response.Builder.class);
+    }
+
+    public static final int OK_FIELD_NUMBER = 1;
+    private boolean ok_;
+    /**
+     * <code>bool ok = 1;</code>
+     */
+    public boolean getOk() {
+      return ok_;
+    }
+
+    public static final int RESULT_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString result_;
+    /**
+     * <code>bytes result = 2;</code>
+     */
+    public com.google.protobuf.ByteString getResult() {
+      return result_;
+    }
+
+    public static final int CODEHASH_FIELD_NUMBER = 3;
+    private volatile java.lang.Object codeHash_;
+    /**
+     * <code>string codeHash = 3;</code>
+     */
+    public java.lang.String getCodeHash() {
+      java.lang.Object ref = codeHash_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        codeHash_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string codeHash = 3;</code>
+     */
+    public com.google.protobuf.ByteString
+        getCodeHashBytes() {
+      java.lang.Object ref = codeHash_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        codeHash_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (ok_ != false) {
+        output.writeBool(1, ok_);
+      }
+      if (!result_.isEmpty()) {
+        output.writeBytes(2, result_);
+      }
+      if (!getCodeHashBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, codeHash_);
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (ok_ != false) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(1, ok_);
+      }
+      if (!result_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, result_);
+      }
+      if (!getCodeHashBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, codeHash_);
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.Response)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.Response other = (cn.hyperchain.protos.ContractProto.Response) obj;
+
+      boolean result = true;
+      result = result && (getOk()
+          == other.getOk());
+      result = result && getResult()
+          .equals(other.getResult());
+      result = result && getCodeHash()
+          .equals(other.getCodeHash());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + OK_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getOk());
+      hash = (37 * hash) + RESULT_FIELD_NUMBER;
+      hash = (53 * hash) + getResult().hashCode();
+      hash = (37 * hash) + CODEHASH_FIELD_NUMBER;
+      hash = (53 * hash) + getCodeHash().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Response parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Response parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Response parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Response parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Response parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Response parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Response parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Response parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Response parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Response parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.Response prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code Response}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:Response)
+        cn.hyperchain.protos.ContractProto.ResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Response_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Response_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.Response.class, cn.hyperchain.protos.ContractProto.Response.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.Response.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        ok_ = false;
+
+        result_ = com.google.protobuf.ByteString.EMPTY;
+
+        codeHash_ = "";
+
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Response_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Response getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.Response.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.Response build() {
+        cn.hyperchain.protos.ContractProto.Response result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Response buildPartial() {
+        cn.hyperchain.protos.ContractProto.Response result = new cn.hyperchain.protos.ContractProto.Response(this);
+        result.ok_ = ok_;
+        result.result_ = result_;
+        result.codeHash_ = codeHash_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.Response) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.Response)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.Response other) {
+        if (other == cn.hyperchain.protos.ContractProto.Response.getDefaultInstance()) return this;
+        if (other.getOk() != false) {
+          setOk(other.getOk());
+        }
+        if (other.getResult() != com.google.protobuf.ByteString.EMPTY) {
+          setResult(other.getResult());
+        }
+        if (!other.getCodeHash().isEmpty()) {
+          codeHash_ = other.codeHash_;
+          onChanged();
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.Response parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.Response) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private boolean ok_ ;
+      /**
+       * <code>bool ok = 1;</code>
+       */
+      public boolean getOk() {
+        return ok_;
+      }
+      /**
+       * <code>bool ok = 1;</code>
+       */
+      public Builder setOk(boolean value) {
+        
+        ok_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bool ok = 1;</code>
+       */
+      public Builder clearOk() {
+        
+        ok_ = false;
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.ByteString result_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes result = 2;</code>
+       */
+      public com.google.protobuf.ByteString getResult() {
+        return result_;
+      }
+      /**
+       * <code>bytes result = 2;</code>
+       */
+      public Builder setResult(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        result_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes result = 2;</code>
+       */
+      public Builder clearResult() {
+        
+        result_ = getDefaultInstance().getResult();
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object codeHash_ = "";
+      /**
+       * <code>string codeHash = 3;</code>
+       */
+      public java.lang.String getCodeHash() {
+        java.lang.Object ref = codeHash_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          codeHash_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string codeHash = 3;</code>
+       */
+      public com.google.protobuf.ByteString
+          getCodeHashBytes() {
+        java.lang.Object ref = codeHash_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          codeHash_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string codeHash = 3;</code>
+       */
+      public Builder setCodeHash(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        codeHash_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string codeHash = 3;</code>
+       */
+      public Builder clearCodeHash() {
+        
+        codeHash_ = getDefaultInstance().getCodeHash();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string codeHash = 3;</code>
+       */
+      public Builder setCodeHashBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        codeHash_ = value;
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:Response)
+    }
+
+    // @@protoc_insertion_point(class_scope:Response)
+    private static final cn.hyperchain.protos.ContractProto.Response DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.Response();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Response getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<Response>
+        PARSER = new com.google.protobuf.AbstractParser<Response>() {
+      public Response parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new Response(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<Response> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Response> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.Response getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface RequestContextOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:RequestContext)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>string txid = 1;</code>
+     */
+    java.lang.String getTxid();
+    /**
+     * <code>string txid = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getTxidBytes();
+
+    /**
+     * <code>string namespace = 2;</code>
+     */
+    java.lang.String getNamespace();
+    /**
+     * <code>string namespace = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getNamespaceBytes();
+
+    /**
+     * <code>string cid = 3;</code>
+     */
+    java.lang.String getCid();
+    /**
+     * <code>string cid = 3;</code>
+     */
+    com.google.protobuf.ByteString
+        getCidBytes();
+  }
+  /**
+   * Protobuf type {@code RequestContext}
+   */
+  public  static final class RequestContext extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:RequestContext)
+      RequestContextOrBuilder {
+    // Use RequestContext.newBuilder() to construct.
+    private RequestContext(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private RequestContext() {
+      txid_ = "";
+      namespace_ = "";
+      cid_ = "";
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private RequestContext(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              txid_ = s;
+              break;
+            }
+            case 18: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              namespace_ = s;
+              break;
+            }
+            case 26: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              cid_ = s;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_RequestContext_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_RequestContext_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.RequestContext.class, cn.hyperchain.protos.ContractProto.RequestContext.Builder.class);
+    }
+
+    public static final int TXID_FIELD_NUMBER = 1;
+    private volatile java.lang.Object txid_;
+    /**
+     * <code>string txid = 1;</code>
+     */
+    public java.lang.String getTxid() {
+      java.lang.Object ref = txid_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        txid_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string txid = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getTxidBytes() {
+      java.lang.Object ref = txid_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        txid_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int NAMESPACE_FIELD_NUMBER = 2;
+    private volatile java.lang.Object namespace_;
+    /**
+     * <code>string namespace = 2;</code>
+     */
+    public java.lang.String getNamespace() {
+      java.lang.Object ref = namespace_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        namespace_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string namespace = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getNamespaceBytes() {
+      java.lang.Object ref = namespace_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        namespace_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int CID_FIELD_NUMBER = 3;
+    private volatile java.lang.Object cid_;
+    /**
+     * <code>string cid = 3;</code>
+     */
+    public java.lang.String getCid() {
+      java.lang.Object ref = cid_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        cid_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string cid = 3;</code>
+     */
+    public com.google.protobuf.ByteString
+        getCidBytes() {
+      java.lang.Object ref = cid_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        cid_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (!getTxidBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, txid_);
+      }
+      if (!getNamespaceBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, namespace_);
+      }
+      if (!getCidBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, cid_);
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (!getTxidBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, txid_);
+      }
+      if (!getNamespaceBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, namespace_);
+      }
+      if (!getCidBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, cid_);
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.RequestContext)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.RequestContext other = (cn.hyperchain.protos.ContractProto.RequestContext) obj;
+
+      boolean result = true;
+      result = result && getTxid()
+          .equals(other.getTxid());
+      result = result && getNamespace()
+          .equals(other.getNamespace());
+      result = result && getCid()
+          .equals(other.getCid());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + TXID_FIELD_NUMBER;
+      hash = (53 * hash) + getTxid().hashCode();
+      hash = (37 * hash) + NAMESPACE_FIELD_NUMBER;
+      hash = (53 * hash) + getNamespace().hashCode();
+      hash = (37 * hash) + CID_FIELD_NUMBER;
+      hash = (53 * hash) + getCid().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.RequestContext parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.RequestContext parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.RequestContext parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.RequestContext parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.RequestContext parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.RequestContext parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.RequestContext parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.RequestContext parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.RequestContext parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.RequestContext parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.RequestContext prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code RequestContext}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:RequestContext)
+        cn.hyperchain.protos.ContractProto.RequestContextOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_RequestContext_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_RequestContext_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.RequestContext.class, cn.hyperchain.protos.ContractProto.RequestContext.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.RequestContext.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        txid_ = "";
+
+        namespace_ = "";
+
+        cid_ = "";
+
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_RequestContext_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.RequestContext getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.RequestContext.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.RequestContext build() {
+        cn.hyperchain.protos.ContractProto.RequestContext result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.RequestContext buildPartial() {
+        cn.hyperchain.protos.ContractProto.RequestContext result = new cn.hyperchain.protos.ContractProto.RequestContext(this);
+        result.txid_ = txid_;
+        result.namespace_ = namespace_;
+        result.cid_ = cid_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.RequestContext) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.RequestContext)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.RequestContext other) {
+        if (other == cn.hyperchain.protos.ContractProto.RequestContext.getDefaultInstance()) return this;
+        if (!other.getTxid().isEmpty()) {
+          txid_ = other.txid_;
+          onChanged();
+        }
+        if (!other.getNamespace().isEmpty()) {
+          namespace_ = other.namespace_;
+          onChanged();
+        }
+        if (!other.getCid().isEmpty()) {
+          cid_ = other.cid_;
+          onChanged();
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.RequestContext parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.RequestContext) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private java.lang.Object txid_ = "";
+      /**
+       * <code>string txid = 1;</code>
+       */
+      public java.lang.String getTxid() {
+        java.lang.Object ref = txid_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          txid_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string txid = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getTxidBytes() {
+        java.lang.Object ref = txid_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          txid_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string txid = 1;</code>
+       */
+      public Builder setTxid(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        txid_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string txid = 1;</code>
+       */
+      public Builder clearTxid() {
+        
+        txid_ = getDefaultInstance().getTxid();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string txid = 1;</code>
+       */
+      public Builder setTxidBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        txid_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object namespace_ = "";
+      /**
+       * <code>string namespace = 2;</code>
+       */
+      public java.lang.String getNamespace() {
+        java.lang.Object ref = namespace_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          namespace_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string namespace = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getNamespaceBytes() {
+        java.lang.Object ref = namespace_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          namespace_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string namespace = 2;</code>
+       */
+      public Builder setNamespace(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        namespace_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string namespace = 2;</code>
+       */
+      public Builder clearNamespace() {
+        
+        namespace_ = getDefaultInstance().getNamespace();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string namespace = 2;</code>
+       */
+      public Builder setNamespaceBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        namespace_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object cid_ = "";
+      /**
+       * <code>string cid = 3;</code>
+       */
+      public java.lang.String getCid() {
+        java.lang.Object ref = cid_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          cid_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string cid = 3;</code>
+       */
+      public com.google.protobuf.ByteString
+          getCidBytes() {
+        java.lang.Object ref = cid_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          cid_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string cid = 3;</code>
+       */
+      public Builder setCid(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        cid_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string cid = 3;</code>
+       */
+      public Builder clearCid() {
+        
+        cid_ = getDefaultInstance().getCid();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string cid = 3;</code>
+       */
+      public Builder setCidBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        cid_ = value;
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:RequestContext)
+    }
+
+    // @@protoc_insertion_point(class_scope:RequestContext)
+    private static final cn.hyperchain.protos.ContractProto.RequestContext DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.RequestContext();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.RequestContext getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<RequestContext>
+        PARSER = new com.google.protobuf.AbstractParser<RequestContext>() {
+      public RequestContext parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new RequestContext(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<RequestContext> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<RequestContext> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.RequestContext getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface KeyOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:Key)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    boolean hasContext();
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.LedgerContext getContext();
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder();
+
+    /**
+     * <code>bytes k = 2;</code>
+     */
+    com.google.protobuf.ByteString getK();
+  }
+  /**
+   * Protobuf type {@code Key}
+   */
+  public  static final class Key extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:Key)
+      KeyOrBuilder {
+    // Use Key.newBuilder() to construct.
+    private Key(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private Key() {
+      k_ = com.google.protobuf.ByteString.EMPTY;
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private Key(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              cn.hyperchain.protos.ContractProto.LedgerContext.Builder subBuilder = null;
+              if (context_ != null) {
+                subBuilder = context_.toBuilder();
+              }
+              context_ = input.readMessage(cn.hyperchain.protos.ContractProto.LedgerContext.parser(), extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(context_);
+                context_ = subBuilder.buildPartial();
+              }
+
+              break;
+            }
+            case 18: {
+
+              k_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Key_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Key_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.Key.class, cn.hyperchain.protos.ContractProto.Key.Builder.class);
+    }
+
+    public static final int CONTEXT_FIELD_NUMBER = 1;
+    private cn.hyperchain.protos.ContractProto.LedgerContext context_;
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public boolean hasContext() {
+      return context_ != null;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.LedgerContext getContext() {
+      return context_ == null ? cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder() {
+      return getContext();
+    }
+
+    public static final int K_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString k_;
+    /**
+     * <code>bytes k = 2;</code>
+     */
+    public com.google.protobuf.ByteString getK() {
+      return k_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (context_ != null) {
+        output.writeMessage(1, getContext());
+      }
+      if (!k_.isEmpty()) {
+        output.writeBytes(2, k_);
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (context_ != null) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, getContext());
+      }
+      if (!k_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, k_);
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.Key)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.Key other = (cn.hyperchain.protos.ContractProto.Key) obj;
+
+      boolean result = true;
+      result = result && (hasContext() == other.hasContext());
+      if (hasContext()) {
+        result = result && getContext()
+            .equals(other.getContext());
+      }
+      result = result && getK()
+          .equals(other.getK());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasContext()) {
+        hash = (37 * hash) + CONTEXT_FIELD_NUMBER;
+        hash = (53 * hash) + getContext().hashCode();
+      }
+      hash = (37 * hash) + K_FIELD_NUMBER;
+      hash = (53 * hash) + getK().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Key parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Key parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Key parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Key parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Key parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Key parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Key parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Key parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Key parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Key parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.Key prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code Key}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:Key)
+        cn.hyperchain.protos.ContractProto.KeyOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Key_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Key_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.Key.class, cn.hyperchain.protos.ContractProto.Key.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.Key.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        if (contextBuilder_ == null) {
+          context_ = null;
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+        k_ = com.google.protobuf.ByteString.EMPTY;
+
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Key_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Key getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.Key.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.Key build() {
+        cn.hyperchain.protos.ContractProto.Key result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Key buildPartial() {
+        cn.hyperchain.protos.ContractProto.Key result = new cn.hyperchain.protos.ContractProto.Key(this);
+        if (contextBuilder_ == null) {
+          result.context_ = context_;
+        } else {
+          result.context_ = contextBuilder_.build();
+        }
+        result.k_ = k_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.Key) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.Key)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.Key other) {
+        if (other == cn.hyperchain.protos.ContractProto.Key.getDefaultInstance()) return this;
+        if (other.hasContext()) {
+          mergeContext(other.getContext());
+        }
+        if (other.getK() != com.google.protobuf.ByteString.EMPTY) {
+          setK(other.getK());
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.Key parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.Key) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private cn.hyperchain.protos.ContractProto.LedgerContext context_ = null;
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder> contextBuilder_;
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public boolean hasContext() {
+        return contextBuilder_ != null || context_ != null;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContext getContext() {
+        if (contextBuilder_ == null) {
+          return context_ == null ? cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+        } else {
+          return contextBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder setContext(cn.hyperchain.protos.ContractProto.LedgerContext value) {
+        if (contextBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          context_ = value;
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder setContext(
+          cn.hyperchain.protos.ContractProto.LedgerContext.Builder builderForValue) {
+        if (contextBuilder_ == null) {
+          context_ = builderForValue.build();
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(builderForValue.build());
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder mergeContext(cn.hyperchain.protos.ContractProto.LedgerContext value) {
+        if (contextBuilder_ == null) {
+          if (context_ != null) {
+            context_ =
+              cn.hyperchain.protos.ContractProto.LedgerContext.newBuilder(context_).mergeFrom(value).buildPartial();
+          } else {
+            context_ = value;
+          }
+          onChanged();
+        } else {
+          contextBuilder_.mergeFrom(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder clearContext() {
+        if (contextBuilder_ == null) {
+          context_ = null;
+          onChanged();
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContext.Builder getContextBuilder() {
+        
+        onChanged();
+        return getContextFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder() {
+        if (contextBuilder_ != null) {
+          return contextBuilder_.getMessageOrBuilder();
+        } else {
+          return context_ == null ?
+              cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+        }
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder> 
+          getContextFieldBuilder() {
+        if (contextBuilder_ == null) {
+          contextBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder>(
+                  getContext(),
+                  getParentForChildren(),
+                  isClean());
+          context_ = null;
+        }
+        return contextBuilder_;
+      }
+
+      private com.google.protobuf.ByteString k_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes k = 2;</code>
+       */
+      public com.google.protobuf.ByteString getK() {
+        return k_;
+      }
+      /**
+       * <code>bytes k = 2;</code>
+       */
+      public Builder setK(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        k_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes k = 2;</code>
+       */
+      public Builder clearK() {
+        
+        k_ = getDefaultInstance().getK();
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:Key)
+    }
+
+    // @@protoc_insertion_point(class_scope:Key)
+    private static final cn.hyperchain.protos.ContractProto.Key DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.Key();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Key getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<Key>
+        PARSER = new com.google.protobuf.AbstractParser<Key>() {
+      public Key parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new Key(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<Key> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Key> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.Key getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface BatchKeyOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:BatchKey)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    boolean hasContext();
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.LedgerContext getContext();
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder();
+
+    /**
+     * <code>repeated bytes k = 2;</code>
+     */
+    java.util.List<com.google.protobuf.ByteString> getKList();
+    /**
+     * <code>repeated bytes k = 2;</code>
+     */
+    int getKCount();
+    /**
+     * <code>repeated bytes k = 2;</code>
+     */
+    com.google.protobuf.ByteString getK(int index);
+  }
+  /**
+   * <pre>
+   *BatchKey used to fetch data by batch
+   * </pre>
+   *
+   * Protobuf type {@code BatchKey}
+   */
+  public  static final class BatchKey extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:BatchKey)
+      BatchKeyOrBuilder {
+    // Use BatchKey.newBuilder() to construct.
+    private BatchKey(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private BatchKey() {
+      k_ = java.util.Collections.emptyList();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private BatchKey(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              cn.hyperchain.protos.ContractProto.LedgerContext.Builder subBuilder = null;
+              if (context_ != null) {
+                subBuilder = context_.toBuilder();
+              }
+              context_ = input.readMessage(cn.hyperchain.protos.ContractProto.LedgerContext.parser(), extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(context_);
+                context_ = subBuilder.buildPartial();
+              }
+
+              break;
+            }
+            case 18: {
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+                k_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
+                mutable_bitField0_ |= 0x00000002;
+              }
+              k_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+          k_ = java.util.Collections.unmodifiableList(k_);
+        }
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_BatchKey_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_BatchKey_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.BatchKey.class, cn.hyperchain.protos.ContractProto.BatchKey.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int CONTEXT_FIELD_NUMBER = 1;
+    private cn.hyperchain.protos.ContractProto.LedgerContext context_;
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public boolean hasContext() {
+      return context_ != null;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.LedgerContext getContext() {
+      return context_ == null ? cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder() {
+      return getContext();
+    }
+
+    public static final int K_FIELD_NUMBER = 2;
+    private java.util.List<com.google.protobuf.ByteString> k_;
+    /**
+     * <code>repeated bytes k = 2;</code>
+     */
+    public java.util.List<com.google.protobuf.ByteString>
+        getKList() {
+      return k_;
+    }
+    /**
+     * <code>repeated bytes k = 2;</code>
+     */
+    public int getKCount() {
+      return k_.size();
+    }
+    /**
+     * <code>repeated bytes k = 2;</code>
+     */
+    public com.google.protobuf.ByteString getK(int index) {
+      return k_.get(index);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (context_ != null) {
+        output.writeMessage(1, getContext());
+      }
+      for (int i = 0; i < k_.size(); i++) {
+        output.writeBytes(2, k_.get(i));
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (context_ != null) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, getContext());
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < k_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(k_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getKList().size();
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.BatchKey)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.BatchKey other = (cn.hyperchain.protos.ContractProto.BatchKey) obj;
+
+      boolean result = true;
+      result = result && (hasContext() == other.hasContext());
+      if (hasContext()) {
+        result = result && getContext()
+            .equals(other.getContext());
+      }
+      result = result && getKList()
+          .equals(other.getKList());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasContext()) {
+        hash = (37 * hash) + CONTEXT_FIELD_NUMBER;
+        hash = (53 * hash) + getContext().hashCode();
+      }
+      if (getKCount() > 0) {
+        hash = (37 * hash) + K_FIELD_NUMBER;
+        hash = (53 * hash) + getKList().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.BatchKey parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKey parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKey parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKey parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKey parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKey parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKey parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKey parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKey parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKey parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.BatchKey prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     *BatchKey used to fetch data by batch
+     * </pre>
+     *
+     * Protobuf type {@code BatchKey}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:BatchKey)
+        cn.hyperchain.protos.ContractProto.BatchKeyOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_BatchKey_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_BatchKey_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.BatchKey.class, cn.hyperchain.protos.ContractProto.BatchKey.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.BatchKey.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        if (contextBuilder_ == null) {
+          context_ = null;
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+        k_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_BatchKey_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.BatchKey getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.BatchKey.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.BatchKey build() {
+        cn.hyperchain.protos.ContractProto.BatchKey result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.BatchKey buildPartial() {
+        cn.hyperchain.protos.ContractProto.BatchKey result = new cn.hyperchain.protos.ContractProto.BatchKey(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (contextBuilder_ == null) {
+          result.context_ = context_;
+        } else {
+          result.context_ = contextBuilder_.build();
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          k_ = java.util.Collections.unmodifiableList(k_);
+          bitField0_ = (bitField0_ & ~0x00000002);
+        }
+        result.k_ = k_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.BatchKey) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.BatchKey)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.BatchKey other) {
+        if (other == cn.hyperchain.protos.ContractProto.BatchKey.getDefaultInstance()) return this;
+        if (other.hasContext()) {
+          mergeContext(other.getContext());
+        }
+        if (!other.k_.isEmpty()) {
+          if (k_.isEmpty()) {
+            k_ = other.k_;
+            bitField0_ = (bitField0_ & ~0x00000002);
+          } else {
+            ensureKIsMutable();
+            k_.addAll(other.k_);
+          }
+          onChanged();
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.BatchKey parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.BatchKey) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private cn.hyperchain.protos.ContractProto.LedgerContext context_ = null;
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder> contextBuilder_;
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public boolean hasContext() {
+        return contextBuilder_ != null || context_ != null;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContext getContext() {
+        if (contextBuilder_ == null) {
+          return context_ == null ? cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+        } else {
+          return contextBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder setContext(cn.hyperchain.protos.ContractProto.LedgerContext value) {
+        if (contextBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          context_ = value;
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder setContext(
+          cn.hyperchain.protos.ContractProto.LedgerContext.Builder builderForValue) {
+        if (contextBuilder_ == null) {
+          context_ = builderForValue.build();
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(builderForValue.build());
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder mergeContext(cn.hyperchain.protos.ContractProto.LedgerContext value) {
+        if (contextBuilder_ == null) {
+          if (context_ != null) {
+            context_ =
+              cn.hyperchain.protos.ContractProto.LedgerContext.newBuilder(context_).mergeFrom(value).buildPartial();
+          } else {
+            context_ = value;
+          }
+          onChanged();
+        } else {
+          contextBuilder_.mergeFrom(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder clearContext() {
+        if (contextBuilder_ == null) {
+          context_ = null;
+          onChanged();
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContext.Builder getContextBuilder() {
+        
+        onChanged();
+        return getContextFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder() {
+        if (contextBuilder_ != null) {
+          return contextBuilder_.getMessageOrBuilder();
+        } else {
+          return context_ == null ?
+              cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+        }
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder> 
+          getContextFieldBuilder() {
+        if (contextBuilder_ == null) {
+          contextBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder>(
+                  getContext(),
+                  getParentForChildren(),
+                  isClean());
+          context_ = null;
+        }
+        return contextBuilder_;
+      }
+
+      private java.util.List<com.google.protobuf.ByteString> k_ = java.util.Collections.emptyList();
+      private void ensureKIsMutable() {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+          k_ = new java.util.ArrayList<com.google.protobuf.ByteString>(k_);
+          bitField0_ |= 0x00000002;
+         }
+      }
+      /**
+       * <code>repeated bytes k = 2;</code>
+       */
+      public java.util.List<com.google.protobuf.ByteString>
+          getKList() {
+        return java.util.Collections.unmodifiableList(k_);
+      }
+      /**
+       * <code>repeated bytes k = 2;</code>
+       */
+      public int getKCount() {
+        return k_.size();
+      }
+      /**
+       * <code>repeated bytes k = 2;</code>
+       */
+      public com.google.protobuf.ByteString getK(int index) {
+        return k_.get(index);
+      }
+      /**
+       * <code>repeated bytes k = 2;</code>
+       */
+      public Builder setK(
+          int index, com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureKIsMutable();
+        k_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes k = 2;</code>
+       */
+      public Builder addK(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureKIsMutable();
+        k_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes k = 2;</code>
+       */
+      public Builder addAllK(
+          java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
+        ensureKIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, k_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes k = 2;</code>
+       */
+      public Builder clearK() {
+        k_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:BatchKey)
+    }
+
+    // @@protoc_insertion_point(class_scope:BatchKey)
+    private static final cn.hyperchain.protos.ContractProto.BatchKey DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.BatchKey();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.BatchKey getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<BatchKey>
+        PARSER = new com.google.protobuf.AbstractParser<BatchKey>() {
+      public BatchKey parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new BatchKey(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<BatchKey> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<BatchKey> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.BatchKey getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface BathValueOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:BathValue)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>string id = 1;</code>
+     */
+    java.lang.String getId();
+    /**
+     * <code>string id = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getIdBytes();
+
+    /**
+     * <code>bool hasMore = 2;</code>
+     */
+    boolean getHasMore();
+
+    /**
+     * <code>repeated bytes v = 3;</code>
+     */
+    java.util.List<com.google.protobuf.ByteString> getVList();
+    /**
+     * <code>repeated bytes v = 3;</code>
+     */
+    int getVCount();
+    /**
+     * <code>repeated bytes v = 3;</code>
+     */
+    com.google.protobuf.ByteString getV(int index);
+  }
+  /**
+   * <pre>
+   *BathKV bach result
+   * </pre>
+   *
+   * Protobuf type {@code BathValue}
+   */
+  public  static final class BathValue extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:BathValue)
+      BathValueOrBuilder {
+    // Use BathValue.newBuilder() to construct.
+    private BathValue(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private BathValue() {
+      id_ = "";
+      hasMore_ = false;
+      v_ = java.util.Collections.emptyList();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private BathValue(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              id_ = s;
+              break;
+            }
+            case 16: {
+
+              hasMore_ = input.readBool();
+              break;
+            }
+            case 26: {
+              if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+                v_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
+                mutable_bitField0_ |= 0x00000004;
+              }
+              v_.add(input.readBytes());
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
+          v_ = java.util.Collections.unmodifiableList(v_);
+        }
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_BathValue_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_BathValue_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.BathValue.class, cn.hyperchain.protos.ContractProto.BathValue.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int ID_FIELD_NUMBER = 1;
+    private volatile java.lang.Object id_;
+    /**
+     * <code>string id = 1;</code>
+     */
+    public java.lang.String getId() {
+      java.lang.Object ref = id_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        id_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string id = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getIdBytes() {
+      java.lang.Object ref = id_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        id_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int HASMORE_FIELD_NUMBER = 2;
+    private boolean hasMore_;
+    /**
+     * <code>bool hasMore = 2;</code>
+     */
+    public boolean getHasMore() {
+      return hasMore_;
+    }
+
+    public static final int V_FIELD_NUMBER = 3;
+    private java.util.List<com.google.protobuf.ByteString> v_;
+    /**
+     * <code>repeated bytes v = 3;</code>
+     */
+    public java.util.List<com.google.protobuf.ByteString>
+        getVList() {
+      return v_;
+    }
+    /**
+     * <code>repeated bytes v = 3;</code>
+     */
+    public int getVCount() {
+      return v_.size();
+    }
+    /**
+     * <code>repeated bytes v = 3;</code>
+     */
+    public com.google.protobuf.ByteString getV(int index) {
+      return v_.get(index);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (!getIdBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, id_);
+      }
+      if (hasMore_ != false) {
+        output.writeBool(2, hasMore_);
+      }
+      for (int i = 0; i < v_.size(); i++) {
+        output.writeBytes(3, v_.get(i));
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (!getIdBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, id_);
+      }
+      if (hasMore_ != false) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(2, hasMore_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < v_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(v_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getVList().size();
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.BathValue)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.BathValue other = (cn.hyperchain.protos.ContractProto.BathValue) obj;
+
+      boolean result = true;
+      result = result && getId()
+          .equals(other.getId());
+      result = result && (getHasMore()
+          == other.getHasMore());
+      result = result && getVList()
+          .equals(other.getVList());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + ID_FIELD_NUMBER;
+      hash = (53 * hash) + getId().hashCode();
+      hash = (37 * hash) + HASMORE_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getHasMore());
+      if (getVCount() > 0) {
+        hash = (37 * hash) + V_FIELD_NUMBER;
+        hash = (53 * hash) + getVList().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.BathValue parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.BathValue parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.BathValue parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.BathValue parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.BathValue parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.BathValue parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.BathValue parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.BathValue parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.BathValue parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.BathValue parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.BathValue prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     *BathKV bach result
+     * </pre>
+     *
+     * Protobuf type {@code BathValue}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:BathValue)
+        cn.hyperchain.protos.ContractProto.BathValueOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_BathValue_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_BathValue_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.BathValue.class, cn.hyperchain.protos.ContractProto.BathValue.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.BathValue.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        id_ = "";
+
+        hasMore_ = false;
+
+        v_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000004);
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_BathValue_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.BathValue getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.BathValue.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.BathValue build() {
+        cn.hyperchain.protos.ContractProto.BathValue result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.BathValue buildPartial() {
+        cn.hyperchain.protos.ContractProto.BathValue result = new cn.hyperchain.protos.ContractProto.BathValue(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        result.id_ = id_;
+        result.hasMore_ = hasMore_;
+        if (((bitField0_ & 0x00000004) == 0x00000004)) {
+          v_ = java.util.Collections.unmodifiableList(v_);
+          bitField0_ = (bitField0_ & ~0x00000004);
+        }
+        result.v_ = v_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.BathValue) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.BathValue)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.BathValue other) {
+        if (other == cn.hyperchain.protos.ContractProto.BathValue.getDefaultInstance()) return this;
+        if (!other.getId().isEmpty()) {
+          id_ = other.id_;
+          onChanged();
+        }
+        if (other.getHasMore() != false) {
+          setHasMore(other.getHasMore());
+        }
+        if (!other.v_.isEmpty()) {
+          if (v_.isEmpty()) {
+            v_ = other.v_;
+            bitField0_ = (bitField0_ & ~0x00000004);
+          } else {
+            ensureVIsMutable();
+            v_.addAll(other.v_);
+          }
+          onChanged();
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.BathValue parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.BathValue) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object id_ = "";
+      /**
+       * <code>string id = 1;</code>
+       */
+      public java.lang.String getId() {
+        java.lang.Object ref = id_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          id_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string id = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getIdBytes() {
+        java.lang.Object ref = id_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          id_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string id = 1;</code>
+       */
+      public Builder setId(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        id_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string id = 1;</code>
+       */
+      public Builder clearId() {
+        
+        id_ = getDefaultInstance().getId();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string id = 1;</code>
+       */
+      public Builder setIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        id_ = value;
+        onChanged();
+        return this;
+      }
+
+      private boolean hasMore_ ;
+      /**
+       * <code>bool hasMore = 2;</code>
+       */
+      public boolean getHasMore() {
+        return hasMore_;
+      }
+      /**
+       * <code>bool hasMore = 2;</code>
+       */
+      public Builder setHasMore(boolean value) {
+        
+        hasMore_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bool hasMore = 2;</code>
+       */
+      public Builder clearHasMore() {
+        
+        hasMore_ = false;
+        onChanged();
+        return this;
+      }
+
+      private java.util.List<com.google.protobuf.ByteString> v_ = java.util.Collections.emptyList();
+      private void ensureVIsMutable() {
+        if (!((bitField0_ & 0x00000004) == 0x00000004)) {
+          v_ = new java.util.ArrayList<com.google.protobuf.ByteString>(v_);
+          bitField0_ |= 0x00000004;
+         }
+      }
+      /**
+       * <code>repeated bytes v = 3;</code>
+       */
+      public java.util.List<com.google.protobuf.ByteString>
+          getVList() {
+        return java.util.Collections.unmodifiableList(v_);
+      }
+      /**
+       * <code>repeated bytes v = 3;</code>
+       */
+      public int getVCount() {
+        return v_.size();
+      }
+      /**
+       * <code>repeated bytes v = 3;</code>
+       */
+      public com.google.protobuf.ByteString getV(int index) {
+        return v_.get(index);
+      }
+      /**
+       * <code>repeated bytes v = 3;</code>
+       */
+      public Builder setV(
+          int index, com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureVIsMutable();
+        v_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes v = 3;</code>
+       */
+      public Builder addV(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureVIsMutable();
+        v_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes v = 3;</code>
+       */
+      public Builder addAllV(
+          java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
+        ensureVIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, v_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes v = 3;</code>
+       */
+      public Builder clearV() {
+        v_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000004);
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:BathValue)
+    }
+
+    // @@protoc_insertion_point(class_scope:BathValue)
+    private static final cn.hyperchain.protos.ContractProto.BathValue DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.BathValue();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.BathValue getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<BathValue>
+        PARSER = new com.google.protobuf.AbstractParser<BathValue>() {
+      public BathValue parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new BathValue(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<BathValue> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<BathValue> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.BathValue getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface BatchKVOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:BatchKV)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    boolean hasContext();
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.LedgerContext getContext();
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder();
+
+    /**
+     * <code>repeated .KeyValue kv = 2;</code>
+     */
+    java.util.List<cn.hyperchain.protos.ContractProto.KeyValue> 
+        getKvList();
+    /**
+     * <code>repeated .KeyValue kv = 2;</code>
+     */
+    cn.hyperchain.protos.ContractProto.KeyValue getKv(int index);
+    /**
+     * <code>repeated .KeyValue kv = 2;</code>
+     */
+    int getKvCount();
+    /**
+     * <code>repeated .KeyValue kv = 2;</code>
+     */
+    java.util.List<? extends cn.hyperchain.protos.ContractProto.KeyValueOrBuilder> 
+        getKvOrBuilderList();
+    /**
+     * <code>repeated .KeyValue kv = 2;</code>
+     */
+    cn.hyperchain.protos.ContractProto.KeyValueOrBuilder getKvOrBuilder(
+        int index);
+  }
+  /**
+   * Protobuf type {@code BatchKV}
+   */
+  public  static final class BatchKV extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:BatchKV)
+      BatchKVOrBuilder {
+    // Use BatchKV.newBuilder() to construct.
+    private BatchKV(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private BatchKV() {
+      kv_ = java.util.Collections.emptyList();
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private BatchKV(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              cn.hyperchain.protos.ContractProto.LedgerContext.Builder subBuilder = null;
+              if (context_ != null) {
+                subBuilder = context_.toBuilder();
+              }
+              context_ = input.readMessage(cn.hyperchain.protos.ContractProto.LedgerContext.parser(), extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(context_);
+                context_ = subBuilder.buildPartial();
+              }
+
+              break;
+            }
+            case 18: {
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+                kv_ = new java.util.ArrayList<cn.hyperchain.protos.ContractProto.KeyValue>();
+                mutable_bitField0_ |= 0x00000002;
+              }
+              kv_.add(
+                  input.readMessage(cn.hyperchain.protos.ContractProto.KeyValue.parser(), extensionRegistry));
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+          kv_ = java.util.Collections.unmodifiableList(kv_);
+        }
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_BatchKV_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_BatchKV_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.BatchKV.class, cn.hyperchain.protos.ContractProto.BatchKV.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int CONTEXT_FIELD_NUMBER = 1;
+    private cn.hyperchain.protos.ContractProto.LedgerContext context_;
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public boolean hasContext() {
+      return context_ != null;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.LedgerContext getContext() {
+      return context_ == null ? cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder() {
+      return getContext();
+    }
+
+    public static final int KV_FIELD_NUMBER = 2;
+    private java.util.List<cn.hyperchain.protos.ContractProto.KeyValue> kv_;
+    /**
+     * <code>repeated .KeyValue kv = 2;</code>
+     */
+    public java.util.List<cn.hyperchain.protos.ContractProto.KeyValue> getKvList() {
+      return kv_;
+    }
+    /**
+     * <code>repeated .KeyValue kv = 2;</code>
+     */
+    public java.util.List<? extends cn.hyperchain.protos.ContractProto.KeyValueOrBuilder> 
+        getKvOrBuilderList() {
+      return kv_;
+    }
+    /**
+     * <code>repeated .KeyValue kv = 2;</code>
+     */
+    public int getKvCount() {
+      return kv_.size();
+    }
+    /**
+     * <code>repeated .KeyValue kv = 2;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.KeyValue getKv(int index) {
+      return kv_.get(index);
+    }
+    /**
+     * <code>repeated .KeyValue kv = 2;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.KeyValueOrBuilder getKvOrBuilder(
+        int index) {
+      return kv_.get(index);
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (context_ != null) {
+        output.writeMessage(1, getContext());
+      }
+      for (int i = 0; i < kv_.size(); i++) {
+        output.writeMessage(2, kv_.get(i));
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (context_ != null) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, getContext());
+      }
+      for (int i = 0; i < kv_.size(); i++) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, kv_.get(i));
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.BatchKV)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.BatchKV other = (cn.hyperchain.protos.ContractProto.BatchKV) obj;
+
+      boolean result = true;
+      result = result && (hasContext() == other.hasContext());
+      if (hasContext()) {
+        result = result && getContext()
+            .equals(other.getContext());
+      }
+      result = result && getKvList()
+          .equals(other.getKvList());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasContext()) {
+        hash = (37 * hash) + CONTEXT_FIELD_NUMBER;
+        hash = (53 * hash) + getContext().hashCode();
+      }
+      if (getKvCount() > 0) {
+        hash = (37 * hash) + KV_FIELD_NUMBER;
+        hash = (53 * hash) + getKvList().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.BatchKV parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKV parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKV parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKV parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKV parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKV parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKV parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKV parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKV parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.BatchKV parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.BatchKV prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code BatchKV}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:BatchKV)
+        cn.hyperchain.protos.ContractProto.BatchKVOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_BatchKV_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_BatchKV_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.BatchKV.class, cn.hyperchain.protos.ContractProto.BatchKV.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.BatchKV.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getKvFieldBuilder();
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        if (contextBuilder_ == null) {
+          context_ = null;
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+        if (kvBuilder_ == null) {
+          kv_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
+        } else {
+          kvBuilder_.clear();
+        }
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_BatchKV_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.BatchKV getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.BatchKV.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.BatchKV build() {
+        cn.hyperchain.protos.ContractProto.BatchKV result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.BatchKV buildPartial() {
+        cn.hyperchain.protos.ContractProto.BatchKV result = new cn.hyperchain.protos.ContractProto.BatchKV(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (contextBuilder_ == null) {
+          result.context_ = context_;
+        } else {
+          result.context_ = contextBuilder_.build();
+        }
+        if (kvBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002)) {
+            kv_ = java.util.Collections.unmodifiableList(kv_);
+            bitField0_ = (bitField0_ & ~0x00000002);
+          }
+          result.kv_ = kv_;
+        } else {
+          result.kv_ = kvBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.BatchKV) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.BatchKV)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.BatchKV other) {
+        if (other == cn.hyperchain.protos.ContractProto.BatchKV.getDefaultInstance()) return this;
+        if (other.hasContext()) {
+          mergeContext(other.getContext());
+        }
+        if (kvBuilder_ == null) {
+          if (!other.kv_.isEmpty()) {
+            if (kv_.isEmpty()) {
+              kv_ = other.kv_;
+              bitField0_ = (bitField0_ & ~0x00000002);
+            } else {
+              ensureKvIsMutable();
+              kv_.addAll(other.kv_);
+            }
+            onChanged();
+          }
+        } else {
+          if (!other.kv_.isEmpty()) {
+            if (kvBuilder_.isEmpty()) {
+              kvBuilder_.dispose();
+              kvBuilder_ = null;
+              kv_ = other.kv_;
+              bitField0_ = (bitField0_ & ~0x00000002);
+              kvBuilder_ = 
+                com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
+                   getKvFieldBuilder() : null;
+            } else {
+              kvBuilder_.addAllMessages(other.kv_);
+            }
+          }
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.BatchKV parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.BatchKV) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private cn.hyperchain.protos.ContractProto.LedgerContext context_ = null;
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder> contextBuilder_;
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public boolean hasContext() {
+        return contextBuilder_ != null || context_ != null;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContext getContext() {
+        if (contextBuilder_ == null) {
+          return context_ == null ? cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+        } else {
+          return contextBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder setContext(cn.hyperchain.protos.ContractProto.LedgerContext value) {
+        if (contextBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          context_ = value;
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder setContext(
+          cn.hyperchain.protos.ContractProto.LedgerContext.Builder builderForValue) {
+        if (contextBuilder_ == null) {
+          context_ = builderForValue.build();
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(builderForValue.build());
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder mergeContext(cn.hyperchain.protos.ContractProto.LedgerContext value) {
+        if (contextBuilder_ == null) {
+          if (context_ != null) {
+            context_ =
+              cn.hyperchain.protos.ContractProto.LedgerContext.newBuilder(context_).mergeFrom(value).buildPartial();
+          } else {
+            context_ = value;
+          }
+          onChanged();
+        } else {
+          contextBuilder_.mergeFrom(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder clearContext() {
+        if (contextBuilder_ == null) {
+          context_ = null;
+          onChanged();
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContext.Builder getContextBuilder() {
+        
+        onChanged();
+        return getContextFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder() {
+        if (contextBuilder_ != null) {
+          return contextBuilder_.getMessageOrBuilder();
+        } else {
+          return context_ == null ?
+              cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+        }
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder> 
+          getContextFieldBuilder() {
+        if (contextBuilder_ == null) {
+          contextBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder>(
+                  getContext(),
+                  getParentForChildren(),
+                  isClean());
+          context_ = null;
+        }
+        return contextBuilder_;
+      }
+
+      private java.util.List<cn.hyperchain.protos.ContractProto.KeyValue> kv_ =
+        java.util.Collections.emptyList();
+      private void ensureKvIsMutable() {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+          kv_ = new java.util.ArrayList<cn.hyperchain.protos.ContractProto.KeyValue>(kv_);
+          bitField0_ |= 0x00000002;
+         }
+      }
+
+      private com.google.protobuf.RepeatedFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.KeyValue, cn.hyperchain.protos.ContractProto.KeyValue.Builder, cn.hyperchain.protos.ContractProto.KeyValueOrBuilder> kvBuilder_;
+
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public java.util.List<cn.hyperchain.protos.ContractProto.KeyValue> getKvList() {
+        if (kvBuilder_ == null) {
+          return java.util.Collections.unmodifiableList(kv_);
+        } else {
+          return kvBuilder_.getMessageList();
+        }
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public int getKvCount() {
+        if (kvBuilder_ == null) {
+          return kv_.size();
+        } else {
+          return kvBuilder_.getCount();
+        }
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.KeyValue getKv(int index) {
+        if (kvBuilder_ == null) {
+          return kv_.get(index);
+        } else {
+          return kvBuilder_.getMessage(index);
+        }
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public Builder setKv(
+          int index, cn.hyperchain.protos.ContractProto.KeyValue value) {
+        if (kvBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureKvIsMutable();
+          kv_.set(index, value);
+          onChanged();
+        } else {
+          kvBuilder_.setMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public Builder setKv(
+          int index, cn.hyperchain.protos.ContractProto.KeyValue.Builder builderForValue) {
+        if (kvBuilder_ == null) {
+          ensureKvIsMutable();
+          kv_.set(index, builderForValue.build());
+          onChanged();
+        } else {
+          kvBuilder_.setMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public Builder addKv(cn.hyperchain.protos.ContractProto.KeyValue value) {
+        if (kvBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureKvIsMutable();
+          kv_.add(value);
+          onChanged();
+        } else {
+          kvBuilder_.addMessage(value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public Builder addKv(
+          int index, cn.hyperchain.protos.ContractProto.KeyValue value) {
+        if (kvBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          ensureKvIsMutable();
+          kv_.add(index, value);
+          onChanged();
+        } else {
+          kvBuilder_.addMessage(index, value);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public Builder addKv(
+          cn.hyperchain.protos.ContractProto.KeyValue.Builder builderForValue) {
+        if (kvBuilder_ == null) {
+          ensureKvIsMutable();
+          kv_.add(builderForValue.build());
+          onChanged();
+        } else {
+          kvBuilder_.addMessage(builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public Builder addKv(
+          int index, cn.hyperchain.protos.ContractProto.KeyValue.Builder builderForValue) {
+        if (kvBuilder_ == null) {
+          ensureKvIsMutable();
+          kv_.add(index, builderForValue.build());
+          onChanged();
+        } else {
+          kvBuilder_.addMessage(index, builderForValue.build());
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public Builder addAllKv(
+          java.lang.Iterable<? extends cn.hyperchain.protos.ContractProto.KeyValue> values) {
+        if (kvBuilder_ == null) {
+          ensureKvIsMutable();
+          com.google.protobuf.AbstractMessageLite.Builder.addAll(
+              values, kv_);
+          onChanged();
+        } else {
+          kvBuilder_.addAllMessages(values);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public Builder clearKv() {
+        if (kvBuilder_ == null) {
+          kv_ = java.util.Collections.emptyList();
+          bitField0_ = (bitField0_ & ~0x00000002);
+          onChanged();
+        } else {
+          kvBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public Builder removeKv(int index) {
+        if (kvBuilder_ == null) {
+          ensureKvIsMutable();
+          kv_.remove(index);
+          onChanged();
+        } else {
+          kvBuilder_.remove(index);
+        }
+        return this;
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.KeyValue.Builder getKvBuilder(
+          int index) {
+        return getKvFieldBuilder().getBuilder(index);
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.KeyValueOrBuilder getKvOrBuilder(
+          int index) {
+        if (kvBuilder_ == null) {
+          return kv_.get(index);  } else {
+          return kvBuilder_.getMessageOrBuilder(index);
+        }
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public java.util.List<? extends cn.hyperchain.protos.ContractProto.KeyValueOrBuilder> 
+           getKvOrBuilderList() {
+        if (kvBuilder_ != null) {
+          return kvBuilder_.getMessageOrBuilderList();
+        } else {
+          return java.util.Collections.unmodifiableList(kv_);
+        }
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.KeyValue.Builder addKvBuilder() {
+        return getKvFieldBuilder().addBuilder(
+            cn.hyperchain.protos.ContractProto.KeyValue.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.KeyValue.Builder addKvBuilder(
+          int index) {
+        return getKvFieldBuilder().addBuilder(
+            index, cn.hyperchain.protos.ContractProto.KeyValue.getDefaultInstance());
+      }
+      /**
+       * <code>repeated .KeyValue kv = 2;</code>
+       */
+      public java.util.List<cn.hyperchain.protos.ContractProto.KeyValue.Builder> 
+           getKvBuilderList() {
+        return getKvFieldBuilder().getBuilderList();
+      }
+      private com.google.protobuf.RepeatedFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.KeyValue, cn.hyperchain.protos.ContractProto.KeyValue.Builder, cn.hyperchain.protos.ContractProto.KeyValueOrBuilder> 
+          getKvFieldBuilder() {
+        if (kvBuilder_ == null) {
+          kvBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
+              cn.hyperchain.protos.ContractProto.KeyValue, cn.hyperchain.protos.ContractProto.KeyValue.Builder, cn.hyperchain.protos.ContractProto.KeyValueOrBuilder>(
+                  kv_,
+                  ((bitField0_ & 0x00000002) == 0x00000002),
+                  getParentForChildren(),
+                  isClean());
+          kv_ = null;
+        }
+        return kvBuilder_;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:BatchKV)
+    }
+
+    // @@protoc_insertion_point(class_scope:BatchKV)
+    private static final cn.hyperchain.protos.ContractProto.BatchKV DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.BatchKV();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.BatchKV getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<BatchKV>
+        PARSER = new com.google.protobuf.AbstractParser<BatchKV>() {
+      public BatchKV parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new BatchKV(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<BatchKV> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<BatchKV> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.BatchKV getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface RangeOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:Range)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    boolean hasContext();
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.LedgerContext getContext();
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder();
+
+    /**
+     * <code>bytes start = 2;</code>
+     */
+    com.google.protobuf.ByteString getStart();
+
+    /**
+     * <code>bytes end = 3;</code>
+     */
+    com.google.protobuf.ByteString getEnd();
+  }
+  /**
+   * <pre>
+   *Range specifiy query range
+   * </pre>
+   *
+   * Protobuf type {@code Range}
+   */
+  public  static final class Range extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:Range)
+      RangeOrBuilder {
+    // Use Range.newBuilder() to construct.
+    private Range(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private Range() {
+      start_ = com.google.protobuf.ByteString.EMPTY;
+      end_ = com.google.protobuf.ByteString.EMPTY;
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private Range(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              cn.hyperchain.protos.ContractProto.LedgerContext.Builder subBuilder = null;
+              if (context_ != null) {
+                subBuilder = context_.toBuilder();
+              }
+              context_ = input.readMessage(cn.hyperchain.protos.ContractProto.LedgerContext.parser(), extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(context_);
+                context_ = subBuilder.buildPartial();
+              }
+
+              break;
+            }
+            case 18: {
+
+              start_ = input.readBytes();
+              break;
+            }
+            case 26: {
+
+              end_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Range_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Range_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.Range.class, cn.hyperchain.protos.ContractProto.Range.Builder.class);
+    }
+
+    public static final int CONTEXT_FIELD_NUMBER = 1;
+    private cn.hyperchain.protos.ContractProto.LedgerContext context_;
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public boolean hasContext() {
+      return context_ != null;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.LedgerContext getContext() {
+      return context_ == null ? cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder() {
+      return getContext();
+    }
+
+    public static final int START_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString start_;
+    /**
+     * <code>bytes start = 2;</code>
+     */
+    public com.google.protobuf.ByteString getStart() {
+      return start_;
+    }
+
+    public static final int END_FIELD_NUMBER = 3;
+    private com.google.protobuf.ByteString end_;
+    /**
+     * <code>bytes end = 3;</code>
+     */
+    public com.google.protobuf.ByteString getEnd() {
+      return end_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (context_ != null) {
+        output.writeMessage(1, getContext());
+      }
+      if (!start_.isEmpty()) {
+        output.writeBytes(2, start_);
+      }
+      if (!end_.isEmpty()) {
+        output.writeBytes(3, end_);
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (context_ != null) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, getContext());
+      }
+      if (!start_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, start_);
+      }
+      if (!end_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, end_);
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.Range)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.Range other = (cn.hyperchain.protos.ContractProto.Range) obj;
+
+      boolean result = true;
+      result = result && (hasContext() == other.hasContext());
+      if (hasContext()) {
+        result = result && getContext()
+            .equals(other.getContext());
+      }
+      result = result && getStart()
+          .equals(other.getStart());
+      result = result && getEnd()
+          .equals(other.getEnd());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasContext()) {
+        hash = (37 * hash) + CONTEXT_FIELD_NUMBER;
+        hash = (53 * hash) + getContext().hashCode();
+      }
+      hash = (37 * hash) + START_FIELD_NUMBER;
+      hash = (53 * hash) + getStart().hashCode();
+      hash = (37 * hash) + END_FIELD_NUMBER;
+      hash = (53 * hash) + getEnd().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Range parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Range parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Range parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Range parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Range parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Range parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Range parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Range parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Range parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Range parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.Range prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     *Range specifiy query range
+     * </pre>
+     *
+     * Protobuf type {@code Range}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:Range)
+        cn.hyperchain.protos.ContractProto.RangeOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Range_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Range_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.Range.class, cn.hyperchain.protos.ContractProto.Range.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.Range.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        if (contextBuilder_ == null) {
+          context_ = null;
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+        start_ = com.google.protobuf.ByteString.EMPTY;
+
+        end_ = com.google.protobuf.ByteString.EMPTY;
+
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Range_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Range getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.Range.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.Range build() {
+        cn.hyperchain.protos.ContractProto.Range result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Range buildPartial() {
+        cn.hyperchain.protos.ContractProto.Range result = new cn.hyperchain.protos.ContractProto.Range(this);
+        if (contextBuilder_ == null) {
+          result.context_ = context_;
+        } else {
+          result.context_ = contextBuilder_.build();
+        }
+        result.start_ = start_;
+        result.end_ = end_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.Range) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.Range)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.Range other) {
+        if (other == cn.hyperchain.protos.ContractProto.Range.getDefaultInstance()) return this;
+        if (other.hasContext()) {
+          mergeContext(other.getContext());
+        }
+        if (other.getStart() != com.google.protobuf.ByteString.EMPTY) {
+          setStart(other.getStart());
+        }
+        if (other.getEnd() != com.google.protobuf.ByteString.EMPTY) {
+          setEnd(other.getEnd());
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.Range parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.Range) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private cn.hyperchain.protos.ContractProto.LedgerContext context_ = null;
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder> contextBuilder_;
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public boolean hasContext() {
+        return contextBuilder_ != null || context_ != null;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContext getContext() {
+        if (contextBuilder_ == null) {
+          return context_ == null ? cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+        } else {
+          return contextBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder setContext(cn.hyperchain.protos.ContractProto.LedgerContext value) {
+        if (contextBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          context_ = value;
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder setContext(
+          cn.hyperchain.protos.ContractProto.LedgerContext.Builder builderForValue) {
+        if (contextBuilder_ == null) {
+          context_ = builderForValue.build();
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(builderForValue.build());
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder mergeContext(cn.hyperchain.protos.ContractProto.LedgerContext value) {
+        if (contextBuilder_ == null) {
+          if (context_ != null) {
+            context_ =
+              cn.hyperchain.protos.ContractProto.LedgerContext.newBuilder(context_).mergeFrom(value).buildPartial();
+          } else {
+            context_ = value;
+          }
+          onChanged();
+        } else {
+          contextBuilder_.mergeFrom(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder clearContext() {
+        if (contextBuilder_ == null) {
+          context_ = null;
+          onChanged();
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContext.Builder getContextBuilder() {
+        
+        onChanged();
+        return getContextFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder() {
+        if (contextBuilder_ != null) {
+          return contextBuilder_.getMessageOrBuilder();
+        } else {
+          return context_ == null ?
+              cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+        }
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder> 
+          getContextFieldBuilder() {
+        if (contextBuilder_ == null) {
+          contextBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder>(
+                  getContext(),
+                  getParentForChildren(),
+                  isClean());
+          context_ = null;
+        }
+        return contextBuilder_;
+      }
+
+      private com.google.protobuf.ByteString start_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes start = 2;</code>
+       */
+      public com.google.protobuf.ByteString getStart() {
+        return start_;
+      }
+      /**
+       * <code>bytes start = 2;</code>
+       */
+      public Builder setStart(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        start_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes start = 2;</code>
+       */
+      public Builder clearStart() {
+        
+        start_ = getDefaultInstance().getStart();
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.ByteString end_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes end = 3;</code>
+       */
+      public com.google.protobuf.ByteString getEnd() {
+        return end_;
+      }
+      /**
+       * <code>bytes end = 3;</code>
+       */
+      public Builder setEnd(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        end_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes end = 3;</code>
+       */
+      public Builder clearEnd() {
+        
+        end_ = getDefaultInstance().getEnd();
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:Range)
+    }
+
+    // @@protoc_insertion_point(class_scope:Range)
+    private static final cn.hyperchain.protos.ContractProto.Range DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.Range();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Range getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<Range>
+        PARSER = new com.google.protobuf.AbstractParser<Range>() {
+      public Range parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new Range(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<Range> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Range> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.Range getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface ValueOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:Value)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>string id = 1;</code>
+     */
+    java.lang.String getId();
+    /**
+     * <code>string id = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getIdBytes();
+
+    /**
+     * <code>bytes v = 2;</code>
+     */
+    com.google.protobuf.ByteString getV();
+  }
+  /**
+   * Protobuf type {@code Value}
+   */
+  public  static final class Value extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:Value)
+      ValueOrBuilder {
+    // Use Value.newBuilder() to construct.
+    private Value(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private Value() {
+      id_ = "";
+      v_ = com.google.protobuf.ByteString.EMPTY;
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private Value(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              id_ = s;
+              break;
+            }
+            case 18: {
+
+              v_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Value_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Value_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.Value.class, cn.hyperchain.protos.ContractProto.Value.Builder.class);
+    }
+
+    public static final int ID_FIELD_NUMBER = 1;
+    private volatile java.lang.Object id_;
+    /**
+     * <code>string id = 1;</code>
+     */
+    public java.lang.String getId() {
+      java.lang.Object ref = id_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        id_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string id = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getIdBytes() {
+      java.lang.Object ref = id_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        id_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int V_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString v_;
+    /**
+     * <code>bytes v = 2;</code>
+     */
+    public com.google.protobuf.ByteString getV() {
+      return v_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (!getIdBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, id_);
+      }
+      if (!v_.isEmpty()) {
+        output.writeBytes(2, v_);
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (!getIdBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, id_);
+      }
+      if (!v_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, v_);
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.Value)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.Value other = (cn.hyperchain.protos.ContractProto.Value) obj;
+
+      boolean result = true;
+      result = result && getId()
+          .equals(other.getId());
+      result = result && getV()
+          .equals(other.getV());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + ID_FIELD_NUMBER;
+      hash = (53 * hash) + getId().hashCode();
+      hash = (37 * hash) + V_FIELD_NUMBER;
+      hash = (53 * hash) + getV().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Value parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Value parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Value parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Value parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Value parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Value parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Value parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Value parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Value parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Value parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.Value prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code Value}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:Value)
+        cn.hyperchain.protos.ContractProto.ValueOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Value_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Value_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.Value.class, cn.hyperchain.protos.ContractProto.Value.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.Value.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        id_ = "";
+
+        v_ = com.google.protobuf.ByteString.EMPTY;
+
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Value_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Value getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.Value.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.Value build() {
+        cn.hyperchain.protos.ContractProto.Value result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Value buildPartial() {
+        cn.hyperchain.protos.ContractProto.Value result = new cn.hyperchain.protos.ContractProto.Value(this);
+        result.id_ = id_;
+        result.v_ = v_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.Value) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.Value)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.Value other) {
+        if (other == cn.hyperchain.protos.ContractProto.Value.getDefaultInstance()) return this;
+        if (!other.getId().isEmpty()) {
+          id_ = other.id_;
+          onChanged();
+        }
+        if (other.getV() != com.google.protobuf.ByteString.EMPTY) {
+          setV(other.getV());
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.Value parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.Value) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private java.lang.Object id_ = "";
+      /**
+       * <code>string id = 1;</code>
+       */
+      public java.lang.String getId() {
+        java.lang.Object ref = id_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          id_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string id = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getIdBytes() {
+        java.lang.Object ref = id_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          id_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string id = 1;</code>
+       */
+      public Builder setId(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        id_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string id = 1;</code>
+       */
+      public Builder clearId() {
+        
+        id_ = getDefaultInstance().getId();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string id = 1;</code>
+       */
+      public Builder setIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        id_ = value;
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.ByteString v_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes v = 2;</code>
+       */
+      public com.google.protobuf.ByteString getV() {
+        return v_;
+      }
+      /**
+       * <code>bytes v = 2;</code>
+       */
+      public Builder setV(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        v_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes v = 2;</code>
+       */
+      public Builder clearV() {
+        
+        v_ = getDefaultInstance().getV();
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:Value)
+    }
+
+    // @@protoc_insertion_point(class_scope:Value)
+    private static final cn.hyperchain.protos.ContractProto.Value DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.Value();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Value getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<Value>
+        PARSER = new com.google.protobuf.AbstractParser<Value>() {
+      public Value parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new Value(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<Value> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Value> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.Value getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface KeyValueOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:KeyValue)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    boolean hasContext();
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.LedgerContext getContext();
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder();
+
+    /**
+     * <code>bytes k = 2;</code>
+     */
+    com.google.protobuf.ByteString getK();
+
+    /**
+     * <code>bytes v = 3;</code>
+     */
+    com.google.protobuf.ByteString getV();
+  }
+  /**
+   * Protobuf type {@code KeyValue}
+   */
+  public  static final class KeyValue extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:KeyValue)
+      KeyValueOrBuilder {
+    // Use KeyValue.newBuilder() to construct.
+    private KeyValue(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private KeyValue() {
+      k_ = com.google.protobuf.ByteString.EMPTY;
+      v_ = com.google.protobuf.ByteString.EMPTY;
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private KeyValue(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              cn.hyperchain.protos.ContractProto.LedgerContext.Builder subBuilder = null;
+              if (context_ != null) {
+                subBuilder = context_.toBuilder();
+              }
+              context_ = input.readMessage(cn.hyperchain.protos.ContractProto.LedgerContext.parser(), extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(context_);
+                context_ = subBuilder.buildPartial();
+              }
+
+              break;
+            }
+            case 18: {
+
+              k_ = input.readBytes();
+              break;
+            }
+            case 26: {
+
+              v_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_KeyValue_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_KeyValue_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.KeyValue.class, cn.hyperchain.protos.ContractProto.KeyValue.Builder.class);
+    }
+
+    public static final int CONTEXT_FIELD_NUMBER = 1;
+    private cn.hyperchain.protos.ContractProto.LedgerContext context_;
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public boolean hasContext() {
+      return context_ != null;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.LedgerContext getContext() {
+      return context_ == null ? cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder() {
+      return getContext();
+    }
+
+    public static final int K_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString k_;
+    /**
+     * <code>bytes k = 2;</code>
+     */
+    public com.google.protobuf.ByteString getK() {
+      return k_;
+    }
+
+    public static final int V_FIELD_NUMBER = 3;
+    private com.google.protobuf.ByteString v_;
+    /**
+     * <code>bytes v = 3;</code>
+     */
+    public com.google.protobuf.ByteString getV() {
+      return v_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (context_ != null) {
+        output.writeMessage(1, getContext());
+      }
+      if (!k_.isEmpty()) {
+        output.writeBytes(2, k_);
+      }
+      if (!v_.isEmpty()) {
+        output.writeBytes(3, v_);
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (context_ != null) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, getContext());
+      }
+      if (!k_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, k_);
+      }
+      if (!v_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, v_);
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.KeyValue)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.KeyValue other = (cn.hyperchain.protos.ContractProto.KeyValue) obj;
+
+      boolean result = true;
+      result = result && (hasContext() == other.hasContext());
+      if (hasContext()) {
+        result = result && getContext()
+            .equals(other.getContext());
+      }
+      result = result && getK()
+          .equals(other.getK());
+      result = result && getV()
+          .equals(other.getV());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasContext()) {
+        hash = (37 * hash) + CONTEXT_FIELD_NUMBER;
+        hash = (53 * hash) + getContext().hashCode();
+      }
+      hash = (37 * hash) + K_FIELD_NUMBER;
+      hash = (53 * hash) + getK().hashCode();
+      hash = (37 * hash) + V_FIELD_NUMBER;
+      hash = (53 * hash) + getV().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.KeyValue parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.KeyValue parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.KeyValue parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.KeyValue parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.KeyValue parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.KeyValue parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.KeyValue parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.KeyValue parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.KeyValue parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.KeyValue parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.KeyValue prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code KeyValue}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:KeyValue)
+        cn.hyperchain.protos.ContractProto.KeyValueOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_KeyValue_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_KeyValue_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.KeyValue.class, cn.hyperchain.protos.ContractProto.KeyValue.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.KeyValue.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        if (contextBuilder_ == null) {
+          context_ = null;
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+        k_ = com.google.protobuf.ByteString.EMPTY;
+
+        v_ = com.google.protobuf.ByteString.EMPTY;
+
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_KeyValue_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.KeyValue getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.KeyValue.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.KeyValue build() {
+        cn.hyperchain.protos.ContractProto.KeyValue result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.KeyValue buildPartial() {
+        cn.hyperchain.protos.ContractProto.KeyValue result = new cn.hyperchain.protos.ContractProto.KeyValue(this);
+        if (contextBuilder_ == null) {
+          result.context_ = context_;
+        } else {
+          result.context_ = contextBuilder_.build();
+        }
+        result.k_ = k_;
+        result.v_ = v_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.KeyValue) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.KeyValue)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.KeyValue other) {
+        if (other == cn.hyperchain.protos.ContractProto.KeyValue.getDefaultInstance()) return this;
+        if (other.hasContext()) {
+          mergeContext(other.getContext());
+        }
+        if (other.getK() != com.google.protobuf.ByteString.EMPTY) {
+          setK(other.getK());
+        }
+        if (other.getV() != com.google.protobuf.ByteString.EMPTY) {
+          setV(other.getV());
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.KeyValue parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.KeyValue) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private cn.hyperchain.protos.ContractProto.LedgerContext context_ = null;
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder> contextBuilder_;
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public boolean hasContext() {
+        return contextBuilder_ != null || context_ != null;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContext getContext() {
+        if (contextBuilder_ == null) {
+          return context_ == null ? cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+        } else {
+          return contextBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder setContext(cn.hyperchain.protos.ContractProto.LedgerContext value) {
+        if (contextBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          context_ = value;
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder setContext(
+          cn.hyperchain.protos.ContractProto.LedgerContext.Builder builderForValue) {
+        if (contextBuilder_ == null) {
+          context_ = builderForValue.build();
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(builderForValue.build());
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder mergeContext(cn.hyperchain.protos.ContractProto.LedgerContext value) {
+        if (contextBuilder_ == null) {
+          if (context_ != null) {
+            context_ =
+              cn.hyperchain.protos.ContractProto.LedgerContext.newBuilder(context_).mergeFrom(value).buildPartial();
+          } else {
+            context_ = value;
+          }
+          onChanged();
+        } else {
+          contextBuilder_.mergeFrom(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder clearContext() {
+        if (contextBuilder_ == null) {
+          context_ = null;
+          onChanged();
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContext.Builder getContextBuilder() {
+        
+        onChanged();
+        return getContextFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder() {
+        if (contextBuilder_ != null) {
+          return contextBuilder_.getMessageOrBuilder();
+        } else {
+          return context_ == null ?
+              cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+        }
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder> 
+          getContextFieldBuilder() {
+        if (contextBuilder_ == null) {
+          contextBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder>(
+                  getContext(),
+                  getParentForChildren(),
+                  isClean());
+          context_ = null;
+        }
+        return contextBuilder_;
+      }
+
+      private com.google.protobuf.ByteString k_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes k = 2;</code>
+       */
+      public com.google.protobuf.ByteString getK() {
+        return k_;
+      }
+      /**
+       * <code>bytes k = 2;</code>
+       */
+      public Builder setK(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        k_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes k = 2;</code>
+       */
+      public Builder clearK() {
+        
+        k_ = getDefaultInstance().getK();
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.ByteString v_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes v = 3;</code>
+       */
+      public com.google.protobuf.ByteString getV() {
+        return v_;
+      }
+      /**
+       * <code>bytes v = 3;</code>
+       */
+      public Builder setV(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        v_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes v = 3;</code>
+       */
+      public Builder clearV() {
+        
+        v_ = getDefaultInstance().getV();
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:KeyValue)
+    }
+
+    // @@protoc_insertion_point(class_scope:KeyValue)
+    private static final cn.hyperchain.protos.ContractProto.KeyValue DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.KeyValue();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.KeyValue getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<KeyValue>
+        PARSER = new com.google.protobuf.AbstractParser<KeyValue>() {
+      public KeyValue parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new KeyValue(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<KeyValue> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<KeyValue> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.KeyValue getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface LedgerContextOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:LedgerContext)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>string txid = 1;</code>
+     */
+    java.lang.String getTxid();
+    /**
+     * <code>string txid = 1;</code>
+     */
+    com.google.protobuf.ByteString
+        getTxidBytes();
+
+    /**
+     * <code>string namespace = 2;</code>
+     */
+    java.lang.String getNamespace();
+    /**
+     * <code>string namespace = 2;</code>
+     */
+    com.google.protobuf.ByteString
+        getNamespaceBytes();
+
+    /**
+     * <code>string cid = 3;</code>
+     */
+    java.lang.String getCid();
+    /**
+     * <code>string cid = 3;</code>
+     */
+    com.google.protobuf.ByteString
+        getCidBytes();
+  }
+  /**
+   * Protobuf type {@code LedgerContext}
+   */
+  public  static final class LedgerContext extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:LedgerContext)
+      LedgerContextOrBuilder {
+    // Use LedgerContext.newBuilder() to construct.
+    private LedgerContext(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private LedgerContext() {
+      txid_ = "";
+      namespace_ = "";
+      cid_ = "";
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private LedgerContext(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              txid_ = s;
+              break;
+            }
+            case 18: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              namespace_ = s;
+              break;
+            }
+            case 26: {
+              java.lang.String s = input.readStringRequireUtf8();
+
+              cid_ = s;
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_LedgerContext_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_LedgerContext_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.LedgerContext.class, cn.hyperchain.protos.ContractProto.LedgerContext.Builder.class);
+    }
+
+    public static final int TXID_FIELD_NUMBER = 1;
+    private volatile java.lang.Object txid_;
+    /**
+     * <code>string txid = 1;</code>
+     */
+    public java.lang.String getTxid() {
+      java.lang.Object ref = txid_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        txid_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string txid = 1;</code>
+     */
+    public com.google.protobuf.ByteString
+        getTxidBytes() {
+      java.lang.Object ref = txid_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        txid_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int NAMESPACE_FIELD_NUMBER = 2;
+    private volatile java.lang.Object namespace_;
+    /**
+     * <code>string namespace = 2;</code>
+     */
+    public java.lang.String getNamespace() {
+      java.lang.Object ref = namespace_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        namespace_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string namespace = 2;</code>
+     */
+    public com.google.protobuf.ByteString
+        getNamespaceBytes() {
+      java.lang.Object ref = namespace_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        namespace_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int CID_FIELD_NUMBER = 3;
+    private volatile java.lang.Object cid_;
+    /**
+     * <code>string cid = 3;</code>
+     */
+    public java.lang.String getCid() {
+      java.lang.Object ref = cid_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        cid_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string cid = 3;</code>
+     */
+    public com.google.protobuf.ByteString
+        getCidBytes() {
+      java.lang.Object ref = cid_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        cid_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (!getTxidBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, txid_);
+      }
+      if (!getNamespaceBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, namespace_);
+      }
+      if (!getCidBytes().isEmpty()) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, cid_);
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (!getTxidBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, txid_);
+      }
+      if (!getNamespaceBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, namespace_);
+      }
+      if (!getCidBytes().isEmpty()) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, cid_);
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.LedgerContext)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.LedgerContext other = (cn.hyperchain.protos.ContractProto.LedgerContext) obj;
+
+      boolean result = true;
+      result = result && getTxid()
+          .equals(other.getTxid());
+      result = result && getNamespace()
+          .equals(other.getNamespace());
+      result = result && getCid()
+          .equals(other.getCid());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + TXID_FIELD_NUMBER;
+      hash = (53 * hash) + getTxid().hashCode();
+      hash = (37 * hash) + NAMESPACE_FIELD_NUMBER;
+      hash = (53 * hash) + getNamespace().hashCode();
+      hash = (37 * hash) + CID_FIELD_NUMBER;
+      hash = (53 * hash) + getCid().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.LedgerContext parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.LedgerContext parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.LedgerContext parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.LedgerContext parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.LedgerContext parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.LedgerContext parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.LedgerContext parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.LedgerContext parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.LedgerContext parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.LedgerContext parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.LedgerContext prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code LedgerContext}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:LedgerContext)
+        cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_LedgerContext_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_LedgerContext_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.LedgerContext.class, cn.hyperchain.protos.ContractProto.LedgerContext.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.LedgerContext.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        txid_ = "";
+
+        namespace_ = "";
+
+        cid_ = "";
+
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_LedgerContext_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.LedgerContext getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.LedgerContext build() {
+        cn.hyperchain.protos.ContractProto.LedgerContext result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.LedgerContext buildPartial() {
+        cn.hyperchain.protos.ContractProto.LedgerContext result = new cn.hyperchain.protos.ContractProto.LedgerContext(this);
+        result.txid_ = txid_;
+        result.namespace_ = namespace_;
+        result.cid_ = cid_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.LedgerContext) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.LedgerContext)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.LedgerContext other) {
+        if (other == cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance()) return this;
+        if (!other.getTxid().isEmpty()) {
+          txid_ = other.txid_;
+          onChanged();
+        }
+        if (!other.getNamespace().isEmpty()) {
+          namespace_ = other.namespace_;
+          onChanged();
+        }
+        if (!other.getCid().isEmpty()) {
+          cid_ = other.cid_;
+          onChanged();
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.LedgerContext parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.LedgerContext) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private java.lang.Object txid_ = "";
+      /**
+       * <code>string txid = 1;</code>
+       */
+      public java.lang.String getTxid() {
+        java.lang.Object ref = txid_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          txid_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string txid = 1;</code>
+       */
+      public com.google.protobuf.ByteString
+          getTxidBytes() {
+        java.lang.Object ref = txid_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          txid_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string txid = 1;</code>
+       */
+      public Builder setTxid(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        txid_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string txid = 1;</code>
+       */
+      public Builder clearTxid() {
+        
+        txid_ = getDefaultInstance().getTxid();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string txid = 1;</code>
+       */
+      public Builder setTxidBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        txid_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object namespace_ = "";
+      /**
+       * <code>string namespace = 2;</code>
+       */
+      public java.lang.String getNamespace() {
+        java.lang.Object ref = namespace_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          namespace_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string namespace = 2;</code>
+       */
+      public com.google.protobuf.ByteString
+          getNamespaceBytes() {
+        java.lang.Object ref = namespace_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          namespace_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string namespace = 2;</code>
+       */
+      public Builder setNamespace(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        namespace_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string namespace = 2;</code>
+       */
+      public Builder clearNamespace() {
+        
+        namespace_ = getDefaultInstance().getNamespace();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string namespace = 2;</code>
+       */
+      public Builder setNamespaceBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        namespace_ = value;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object cid_ = "";
+      /**
+       * <code>string cid = 3;</code>
+       */
+      public java.lang.String getCid() {
+        java.lang.Object ref = cid_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          cid_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string cid = 3;</code>
+       */
+      public com.google.protobuf.ByteString
+          getCidBytes() {
+        java.lang.Object ref = cid_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          cid_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string cid = 3;</code>
+       */
+      public Builder setCid(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        cid_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string cid = 3;</code>
+       */
+      public Builder clearCid() {
+        
+        cid_ = getDefaultInstance().getCid();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string cid = 3;</code>
+       */
+      public Builder setCidBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  checkByteStringIsUtf8(value);
+        
+        cid_ = value;
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:LedgerContext)
+    }
+
+    // @@protoc_insertion_point(class_scope:LedgerContext)
+    private static final cn.hyperchain.protos.ContractProto.LedgerContext DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.LedgerContext();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.LedgerContext getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<LedgerContext>
+        PARSER = new com.google.protobuf.AbstractParser<LedgerContext>() {
+      public LedgerContext parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new LedgerContext(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<LedgerContext> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<LedgerContext> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.LedgerContext getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_Request_descriptor;
-  static final 
+  private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_Request_fieldAccessorTable;
-  static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_LedgerContext_descriptor;
-  static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_LedgerContext_fieldAccessorTable;
-  static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_RequestContext_descriptor;
-  static final 
-    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_RequestContext_fieldAccessorTable;
-  static final com.google.protobuf.Descriptors.Descriptor
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_Response_descriptor;
-  static final 
+  private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_Response_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_RequestContext_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_RequestContext_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_Key_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Key_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_BatchKey_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_BatchKey_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_BathValue_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_BathValue_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_BatchKV_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_BatchKV_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_Range_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Range_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_Value_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Value_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_KeyValue_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_KeyValue_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_LedgerContext_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_LedgerContext_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -58,22 +8101,32 @@ public final class ContractProto {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\016contract.proto\"1\n\003Key\022\037\n\007context\030\001 \001(\013" +
-      "2\016.LedgerContext\022\t\n\001k\030\002 \001(\014\"\036\n\005Value\022\n\n\002" +
-      "id\030\001 \001(\t\022\t\n\001v\030\002 \001(\014\"A\n\010KeyValue\022\037\n\007conte" +
-      "xt\030\001 \001(\0132\016.LedgerContext\022\t\n\001k\030\002 \001(\014\022\t\n\001v" +
-      "\030\003 \001(\014\"I\n\007Request\022 \n\007context\030\001 \001(\0132\017.Req" +
-      "uestContext\022\016\n\006method\030\002 \001(\t\022\014\n\004args\030\003 \003(" +
-      "\014\"=\n\rLedgerContext\022\014\n\004txid\030\001 \001(\t\022\021\n\tname" +
-      "space\030\002 \001(\t\022\013\n\003cid\030\003 \001(\t\">\n\016RequestConte" +
-      "xt\022\014\n\004txid\030\001 \001(\t\022\021\n\tnamespace\030\002 \001(\t\022\013\n\003c" +
-      "id\030\003 \001(\t\"8\n\010Response\022\n\n\002ok\030\001 \001(\010\022\016\n\006resu",
-      "lt\030\002 \001(\014\022\020\n\010codeHash\030\003 \001(\t2P\n\010Contract\022 " +
-      "\n\007Execute\022\010.Request\032\t.Response\"\000\022\"\n\tHear" +
-      "tBeat\022\010.Request\032\t.Response\"\0002>\n\006Ledger\022\025" +
-      "\n\003Get\022\004.Key\032\006.Value\"\000\022\035\n\003Put\022\t.KeyValue\032" +
-      "\t.Response\"\000B\'\n\024cn.hyperchain.protosB\rCo" +
-      "ntractProtoP\001b\006proto3"
+      "\n\016contract.proto\"I\n\007Request\022 \n\007context\030\001" +
+      " \001(\0132\017.RequestContext\022\016\n\006method\030\002 \001(\t\022\014\n" +
+      "\004args\030\003 \003(\014\"8\n\010Response\022\n\n\002ok\030\001 \001(\010\022\016\n\006r" +
+      "esult\030\002 \001(\014\022\020\n\010codeHash\030\003 \001(\t\">\n\016Request" +
+      "Context\022\014\n\004txid\030\001 \001(\t\022\021\n\tnamespace\030\002 \001(\t" +
+      "\022\013\n\003cid\030\003 \001(\t\"1\n\003Key\022\037\n\007context\030\001 \001(\0132\016." +
+      "LedgerContext\022\t\n\001k\030\002 \001(\014\"6\n\010BatchKey\022\037\n\007" +
+      "context\030\001 \001(\0132\016.LedgerContext\022\t\n\001k\030\002 \003(\014" +
+      "\"3\n\tBathValue\022\n\n\002id\030\001 \001(\t\022\017\n\007hasMore\030\002 \001" +
+      "(\010\022\t\n\001v\030\003 \003(\014\"A\n\007BatchKV\022\037\n\007context\030\001 \001(",
+      "\0132\016.LedgerContext\022\025\n\002kv\030\002 \003(\0132\t.KeyValue" +
+      "\"D\n\005Range\022\037\n\007context\030\001 \001(\0132\016.LedgerConte" +
+      "xt\022\r\n\005start\030\002 \001(\014\022\013\n\003end\030\003 \001(\014\"\036\n\005Value\022" +
+      "\n\n\002id\030\001 \001(\t\022\t\n\001v\030\002 \001(\014\"A\n\010KeyValue\022\037\n\007co" +
+      "ntext\030\001 \001(\0132\016.LedgerContext\022\t\n\001k\030\002 \001(\014\022\t" +
+      "\n\001v\030\003 \001(\014\"=\n\rLedgerContext\022\014\n\004txid\030\001 \001(\t" +
+      "\022\021\n\tnamespace\030\002 \001(\t\022\013\n\003cid\030\003 \001(\t2P\n\010Cont" +
+      "ract\022 \n\007Execute\022\010.Request\032\t.Response\"\000\022\"" +
+      "\n\tHeartBeat\022\010.Request\032\t.Response\"\0002\314\001\n\006L" +
+      "edger\022\025\n\003Get\022\004.Key\032\006.Value\"\000\022\035\n\003Put\022\t.Ke",
+      "yValue\032\t.Response\"\000\022\033\n\006Delete\022\004.Key\032\t.Re" +
+      "sponse\"\000\022$\n\tBatchRead\022\t.BatchKey\032\n.BathV" +
+      "alue\"\000\022#\n\nBatchWrite\022\010.BatchKV\032\t.Respons" +
+      "e\"\000\022$\n\nRangeQuery\022\006.Range\032\n.BathValue\"\0000" +
+      "\001B\'\n\024cn.hyperchain.protosB\rContractProto" +
+      "P\000b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -87,48 +8140,72 @@ public final class ContractProto {
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
-    internal_static_Key_descriptor =
+    internal_static_Request_descriptor =
       getDescriptor().getMessageTypes().get(0);
+    internal_static_Request_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_Request_descriptor,
+        new java.lang.String[] { "Context", "Method", "Args", });
+    internal_static_Response_descriptor =
+      getDescriptor().getMessageTypes().get(1);
+    internal_static_Response_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_Response_descriptor,
+        new java.lang.String[] { "Ok", "Result", "CodeHash", });
+    internal_static_RequestContext_descriptor =
+      getDescriptor().getMessageTypes().get(2);
+    internal_static_RequestContext_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_RequestContext_descriptor,
+        new java.lang.String[] { "Txid", "Namespace", "Cid", });
+    internal_static_Key_descriptor =
+      getDescriptor().getMessageTypes().get(3);
     internal_static_Key_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Key_descriptor,
         new java.lang.String[] { "Context", "K", });
+    internal_static_BatchKey_descriptor =
+      getDescriptor().getMessageTypes().get(4);
+    internal_static_BatchKey_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_BatchKey_descriptor,
+        new java.lang.String[] { "Context", "K", });
+    internal_static_BathValue_descriptor =
+      getDescriptor().getMessageTypes().get(5);
+    internal_static_BathValue_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_BathValue_descriptor,
+        new java.lang.String[] { "Id", "HasMore", "V", });
+    internal_static_BatchKV_descriptor =
+      getDescriptor().getMessageTypes().get(6);
+    internal_static_BatchKV_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_BatchKV_descriptor,
+        new java.lang.String[] { "Context", "Kv", });
+    internal_static_Range_descriptor =
+      getDescriptor().getMessageTypes().get(7);
+    internal_static_Range_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_Range_descriptor,
+        new java.lang.String[] { "Context", "Start", "End", });
     internal_static_Value_descriptor =
-      getDescriptor().getMessageTypes().get(1);
+      getDescriptor().getMessageTypes().get(8);
     internal_static_Value_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Value_descriptor,
         new java.lang.String[] { "Id", "V", });
     internal_static_KeyValue_descriptor =
-      getDescriptor().getMessageTypes().get(2);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_KeyValue_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_KeyValue_descriptor,
         new java.lang.String[] { "Context", "K", "V", });
-    internal_static_Request_descriptor =
-      getDescriptor().getMessageTypes().get(3);
-    internal_static_Request_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_Request_descriptor,
-        new java.lang.String[] { "Context", "Method", "Args", });
     internal_static_LedgerContext_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(10);
     internal_static_LedgerContext_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_LedgerContext_descriptor,
         new java.lang.String[] { "Txid", "Namespace", "Cid", });
-    internal_static_RequestContext_descriptor =
-      getDescriptor().getMessageTypes().get(5);
-    internal_static_RequestContext_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_RequestContext_descriptor,
-        new java.lang.String[] { "Txid", "Namespace", "Cid", });
-    internal_static_Response_descriptor =
-      getDescriptor().getMessageTypes().get(6);
-    internal_static_Response_fieldAccessorTable = new
-      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_Response_descriptor,
-        new java.lang.String[] { "Ok", "Result", "CodeHash", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

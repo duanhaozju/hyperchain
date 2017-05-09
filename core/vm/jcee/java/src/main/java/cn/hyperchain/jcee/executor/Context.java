@@ -4,13 +4,13 @@
  */
 package cn.hyperchain.jcee.executor;
 
-import cn.hyperchain.protos.LedgerContext;
-import cn.hyperchain.protos.RequestContext;
+
+import cn.hyperchain.protos.ContractProto;
 
 //Context used to contain info shared among a session.
 public class Context {
     private String id;
-    private RequestContext requestContext;
+    private ContractProto.RequestContext requestContext;
 
     public Context(String id) {
         this.id = id;
@@ -24,11 +24,11 @@ public class Context {
         this.id = id;
     }
 
-    public RequestContext getRequestContext() {
+    public ContractProto.RequestContext getRequestContext() {
         return requestContext;
     }
 
-    public void setRequestContext(RequestContext requestContext) {
+    public void setRequestContext(ContractProto.RequestContext requestContext) {
         this.requestContext = requestContext;
     }
 }

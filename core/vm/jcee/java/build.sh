@@ -13,6 +13,8 @@ mkdir hyperjvm/libs
 mkdir hyperjvm/bin
 mkdir hyperjvm/config
 mkdir hyperjvm/contracts
+mkdir hyperjvm/meta
+touch  hyperjvm/meta/meta.yaml
 
 echo "2. build the hyperjvm"
 mvn clean package -Dmaven.test.skip=true

@@ -41,6 +41,7 @@ type VmContext interface {
 	GetPrice() *big.Int
 
 	GetCode() []byte
+	GetCodeHash() common.Hash
 	SetCallCode(*common.Address, []byte)
 
 	SetInput([]byte)

@@ -4,14 +4,15 @@ package jcee
 
 import (
 	"errors"
+	"fmt"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 	"hyperchain/common"
 	"hyperchain/core/vm"
 	pb "hyperchain/core/vm/jcee/protos"
-	"google.golang.org/grpc"
 	"net"
-	"fmt"
 	"strings"
+	"hyperchain/hyperdb/db"
 )
 
 var (
@@ -21,14 +22,22 @@ var (
 
 //LedgerProxy used to manipulate data
 type LedgerProxy struct {
-	stateMgr *StateManager
-	conf     *common.Config
+	stateMgr  *StateManager
+	conf      *common.Config
+	server    *grpc.Server
+	iterStack map[string]*Iterator
+}
+
+type Iterator struct {
+	dbIter     db.Iterator
+	stateIdx   int
 }
 
 func NewLedgerProxy(conf *common.Config) *LedgerProxy {
 	return &LedgerProxy{
-		stateMgr: NewStateManager(),
-		conf:     conf,
+		stateMgr:   NewStateManager(),
+		conf:       conf,
+		iterStack:  make(map[string]*Iterator),
 	}
 }
 
@@ -43,13 +52,17 @@ func (lp *LedgerProxy) UnRegister(namespace string) error {
 func (lp *LedgerProxy) Server() error {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", lp.conf.Get(common.C_LEDGER_PORT)))
 	if err != nil {
-		fmt.Println(err.Error())
 		return err
 	}
 	grpcServer := grpc.NewServer()
 	pb.RegisterLedgerServer(grpcServer, lp)
-	grpcServer.Serve(lis)
+	go grpcServer.Serve(lis)
+	lp.server = grpcServer
 	return nil
+}
+
+func (lp *LedgerProxy) StopServer() {
+	lp.server.Stop()
 }
 
 func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) {
@@ -62,6 +75,7 @@ func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) 
 	}
 	_, value := state.GetState(common.HexToAddress(key.Context.Cid), common.BytesToHash(key.K))
 	v := &pb.Value{
+		Id: key.Context.Txid,
 		V: value,
 	}
 	return v, nil
@@ -70,14 +84,65 @@ func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) 
 func (lp *LedgerProxy) Put(ctx context.Context, kv *pb.KeyValue) (*pb.Response, error) {
 	exist, state := lp.stateMgr.GetStateDb(kv.Context.Namespace)
 	if exist == false {
-		return nil, NamespaceNotExistErr
+		return &pb.Response{Ok: false}, NamespaceNotExistErr
 	}
 	if valid := lp.requestCheck(kv.Context); !valid {
+		return &pb.Response{Ok: false}, InvalidRequestErr
+	}
+	state.SetState(common.HexToAddress(kv.Context.Cid), common.BytesToHash(kv.K), kv.V, 0)
+	return &pb.Response{Ok: true}, nil
+}
+
+func (lp *LedgerProxy) BatchRead(ctx context.Context, batch *pb.BatchKey) (*pb.BathValue, error) {
+	exist, state := lp.stateMgr.GetStateDb(batch.Context.Namespace)
+	if exist == false {
+		return nil, NamespaceNotExistErr
+	}
+	if valid := lp.requestCheck(batch.Context); !valid {
 		return nil, InvalidRequestErr
 	}
-	// TODO for extension leave a opcode field
-	state.SetState(common.HexToAddress(kv.Context.Cid), common.BytesToHash(kv.K), kv.V, 0)
-	return &pb.Response{}, nil
+	response := &pb.BathValue{}
+	for _, key := range batch.K {
+		exist, value := state.GetState(common.HexToAddress(batch.Context.Cid), common.BytesToHash(key))
+		if exist == true {
+			response.V = append(response.V, value)
+		} else {
+			response.V = append(response.V, nil)
+		}
+	}
+	response.HasMore = false
+	response.Id = batch.Context.Txid
+	return response, nil
+}
+func (lp *LedgerProxy) BatchWrite(ctx context.Context, batch *pb.BatchKV) (*pb.Response, error) {
+	cid := batch.Context.Cid
+	exist, state := lp.stateMgr.GetStateDb(batch.Context.Namespace)
+	if exist == false {
+		return &pb.Response{Ok: false}, NamespaceNotExistErr
+	}
+	if valid := lp.requestCheck(batch.Context); !valid {
+		return &pb.Response{Ok: false}, InvalidRequestErr
+	}
+	for _, kv := range batch.Kv {
+		state.SetState(common.HexToAddress(cid), common.BytesToHash(kv.K), kv.V, 0)
+	}
+	return &pb.Response{Ok: true}, nil
+}
+
+func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer) error  {
+	return nil
+}
+
+func (lp *LedgerProxy) Delete(ctx context.Context, in *pb.Key) (*pb.Response, error) {
+	exist, state := lp.stateMgr.GetStateDb(in.Context.Namespace)
+	if exist == false {
+		return &pb.Response{Ok: false}, NamespaceNotExistErr
+	}
+	if valid := lp.requestCheck(in.Context); !valid {
+		return &pb.Response{Ok: false}, InvalidRequestErr
+	}
+	state.SetState(common.HexToAddress(in.Context.Cid), common.BytesToHash(in.K), nil, 0)
+	return &pb.Response{Ok: true}, nil
 }
 
 func (lp *LedgerProxy) requestCheck(ctx *pb.LedgerContext) bool {

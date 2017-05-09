@@ -60,7 +60,6 @@ type nsManagerImpl struct {
 	namespaces map[string]Namespace
 	jvmManager *JvmManager
 	conf       *common.Config
-	// hyperjvm   jcee.HyperVM
 }
 
 //NewNsManager new a namespace manager
@@ -110,24 +109,14 @@ func (nr *nsManagerImpl) init() error {
 			logger.Errorf("Invalid folder %v", d)
 		}
 	}
-	// nr.hyperjvm = jcee.NewHyperJVM(nr.conf.GetInt(common.C_LEDGER_PORT), nr.conf.GetInt(common.C_JVM_PORT))
 	return nil
 }
 
 //Start start namespace registry service.
 //which will also start all namespace in this Namespace Registry
 func (nr *nsManagerImpl) Start() error {
-	//go func() {
-
-	//}()
-
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
-
-	// err := nr.hyperjvm.Start()
-	//if err != nil {
-	//	logger.Error(err)
-	//}
 
 	for name := range nr.namespaces {
 		err := nr.StartNamespace(name)

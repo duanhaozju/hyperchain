@@ -1,6 +1,6 @@
 package cn.hyperchain.jcee.util;
 
-import org.bouncycastle.util.encoders.Hex;
+import org.apache.commons.codec.binary.Hex;
 import org.junit.Test;
 
 /**
@@ -12,7 +12,7 @@ public class TestIoHelper {
     public void testReadCode() {
         String contractDir = TestIoHelper.class.getResource("/contracts").getPath();
         byte [] data = IOHelper.readCode(contractDir);
-        System.out.println(Hex.toHexString(data));
+        System.out.println(Hex.encodeHexString(data));
         System.out.println(HashFunction.computeCodeHash(data));
     }
 
@@ -20,6 +20,6 @@ public class TestIoHelper {
     public void testCodeReadOrder() {
         String dir = TestIoHelper.class.getResource("/").getPath();
         byte [] data = IOHelper.readCode(dir);
-        System.out.println(Hex.toHexString(data));
+        System.out.println(Hex.encodeHexString(data));
     }
 }

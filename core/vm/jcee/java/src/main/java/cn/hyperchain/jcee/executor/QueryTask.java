@@ -5,8 +5,7 @@
 package cn.hyperchain.jcee.executor;
 
 import cn.hyperchain.jcee.contract.ContractBase;
-import cn.hyperchain.protos.Request;
-import cn.hyperchain.protos.Response;
+import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
 
 import java.util.LinkedList;
@@ -14,12 +13,12 @@ import java.util.List;
 
 public class QueryTask extends Task{
 
-    public QueryTask(ContractBase contract, Request request, Context context) {
+    public QueryTask(ContractBase contract, ContractProto.Request request, Context context) {
         super(contract, request, context);
     }
 
     @Override
-    public Response execute() {
+    public ContractProto.Response execute() {
         String funcName = request.getArgs(0).toStringUtf8();
         List<String> args = new LinkedList<>();
         for(int i = 1; i < request.getArgsList().size(); ++ i){
@@ -29,15 +28,16 @@ public class QueryTask extends Task{
         ByteString bs = contract.Query(funcName, args);
 
 
-        Response.Builder builder = Response.newBuilder();
-        Response rs;
+        ContractProto.Response.Builder builder = ContractProto.Response.newBuilder();
+        ContractProto.Response rs;
         if(bs == null) {
             builder.setOk(false);
         }else {
             builder.setOk(true);
             builder.setResult(bs);
         }
-        //builder.setId(request.getTxid());
+        //builder.setCid(request.getTxid());
+        builder.setCodeHash(contract.getInfo().getCodeHash());
         rs = builder.build();
         return rs;
     }

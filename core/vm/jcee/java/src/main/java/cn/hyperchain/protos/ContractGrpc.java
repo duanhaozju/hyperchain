@@ -28,23 +28,23 @@ public class ContractGrpc {
 
   // Static method descriptors that strictly reflect the proto.
   @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/1901")
-  public static final io.grpc.MethodDescriptor<cn.hyperchain.protos.Request,
-      cn.hyperchain.protos.Response> METHOD_EXECUTE =
+  public static final io.grpc.MethodDescriptor<cn.hyperchain.protos.ContractProto.Request,
+      cn.hyperchain.protos.ContractProto.Response> METHOD_EXECUTE =
       io.grpc.MethodDescriptor.create(
           io.grpc.MethodDescriptor.MethodType.UNARY,
           generateFullMethodName(
               "Contract", "Execute"),
-          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.Request.getDefaultInstance()),
-          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.Response.getDefaultInstance()));
+          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Request.getDefaultInstance()),
+          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Response.getDefaultInstance()));
   @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/1901")
-  public static final io.grpc.MethodDescriptor<cn.hyperchain.protos.Request,
-      cn.hyperchain.protos.Response> METHOD_HEART_BEAT =
+  public static final io.grpc.MethodDescriptor<cn.hyperchain.protos.ContractProto.Request,
+      cn.hyperchain.protos.ContractProto.Response> METHOD_HEART_BEAT =
       io.grpc.MethodDescriptor.create(
           io.grpc.MethodDescriptor.MethodType.UNARY,
           generateFullMethodName(
               "Contract", "HeartBeat"),
-          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.Request.getDefaultInstance()),
-          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.Response.getDefaultInstance()));
+          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Request.getDefaultInstance()),
+          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Response.getDefaultInstance()));
 
   /**
    * Creates a new async stub that supports all call types for the service
@@ -78,8 +78,8 @@ public class ContractGrpc {
      *used tp execute contract method remotely
      * </pre>
      */
-    public void execute(cn.hyperchain.protos.Request request,
-        io.grpc.stub.StreamObserver<cn.hyperchain.protos.Response> responseObserver) {
+    public void execute(cn.hyperchain.protos.ContractProto.Request request,
+        io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response> responseObserver) {
       asyncUnimplementedUnaryCall(METHOD_EXECUTE, responseObserver);
     }
 
@@ -88,8 +88,8 @@ public class ContractGrpc {
      *used to detect the health state of contract
      * </pre>
      */
-    public void heartBeat(cn.hyperchain.protos.Request request,
-        io.grpc.stub.StreamObserver<cn.hyperchain.protos.Response> responseObserver) {
+    public void heartBeat(cn.hyperchain.protos.ContractProto.Request request,
+        io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response> responseObserver) {
       asyncUnimplementedUnaryCall(METHOD_HEART_BEAT, responseObserver);
     }
 
@@ -99,15 +99,15 @@ public class ContractGrpc {
             METHOD_EXECUTE,
             asyncUnaryCall(
               new MethodHandlers<
-                cn.hyperchain.protos.Request,
-                cn.hyperchain.protos.Response>(
+                cn.hyperchain.protos.ContractProto.Request,
+                cn.hyperchain.protos.ContractProto.Response>(
                   this, METHODID_EXECUTE)))
           .addMethod(
             METHOD_HEART_BEAT,
             asyncUnaryCall(
               new MethodHandlers<
-                cn.hyperchain.protos.Request,
-                cn.hyperchain.protos.Response>(
+                cn.hyperchain.protos.ContractProto.Request,
+                cn.hyperchain.protos.ContractProto.Response>(
                   this, METHODID_HEART_BEAT)))
           .build();
     }
@@ -136,8 +136,8 @@ public class ContractGrpc {
      *used tp execute contract method remotely
      * </pre>
      */
-    public void execute(cn.hyperchain.protos.Request request,
-        io.grpc.stub.StreamObserver<cn.hyperchain.protos.Response> responseObserver) {
+    public void execute(cn.hyperchain.protos.ContractProto.Request request,
+        io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response> responseObserver) {
       asyncUnaryCall(
           getChannel().newCall(METHOD_EXECUTE, getCallOptions()), request, responseObserver);
     }
@@ -147,8 +147,8 @@ public class ContractGrpc {
      *used to detect the health state of contract
      * </pre>
      */
-    public void heartBeat(cn.hyperchain.protos.Request request,
-        io.grpc.stub.StreamObserver<cn.hyperchain.protos.Response> responseObserver) {
+    public void heartBeat(cn.hyperchain.protos.ContractProto.Request request,
+        io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response> responseObserver) {
       asyncUnaryCall(
           getChannel().newCall(METHOD_HEART_BEAT, getCallOptions()), request, responseObserver);
     }
@@ -177,7 +177,7 @@ public class ContractGrpc {
      *used tp execute contract method remotely
      * </pre>
      */
-    public cn.hyperchain.protos.Response execute(cn.hyperchain.protos.Request request) {
+    public cn.hyperchain.protos.ContractProto.Response execute(cn.hyperchain.protos.ContractProto.Request request) {
       return blockingUnaryCall(
           getChannel(), METHOD_EXECUTE, getCallOptions(), request);
     }
@@ -187,7 +187,7 @@ public class ContractGrpc {
      *used to detect the health state of contract
      * </pre>
      */
-    public cn.hyperchain.protos.Response heartBeat(cn.hyperchain.protos.Request request) {
+    public cn.hyperchain.protos.ContractProto.Response heartBeat(cn.hyperchain.protos.ContractProto.Request request) {
       return blockingUnaryCall(
           getChannel(), METHOD_HEART_BEAT, getCallOptions(), request);
     }
@@ -216,8 +216,8 @@ public class ContractGrpc {
      *used tp execute contract method remotely
      * </pre>
      */
-    public com.google.common.util.concurrent.ListenableFuture<cn.hyperchain.protos.Response> execute(
-        cn.hyperchain.protos.Request request) {
+    public com.google.common.util.concurrent.ListenableFuture<cn.hyperchain.protos.ContractProto.Response> execute(
+        cn.hyperchain.protos.ContractProto.Request request) {
       return futureUnaryCall(
           getChannel().newCall(METHOD_EXECUTE, getCallOptions()), request);
     }
@@ -227,8 +227,8 @@ public class ContractGrpc {
      *used to detect the health state of contract
      * </pre>
      */
-    public com.google.common.util.concurrent.ListenableFuture<cn.hyperchain.protos.Response> heartBeat(
-        cn.hyperchain.protos.Request request) {
+    public com.google.common.util.concurrent.ListenableFuture<cn.hyperchain.protos.ContractProto.Response> heartBeat(
+        cn.hyperchain.protos.ContractProto.Request request) {
       return futureUnaryCall(
           getChannel().newCall(METHOD_HEART_BEAT, getCallOptions()), request);
     }
@@ -255,12 +255,12 @@ public class ContractGrpc {
     public void invoke(Req request, io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
         case METHODID_EXECUTE:
-          serviceImpl.execute((cn.hyperchain.protos.Request) request,
-              (io.grpc.stub.StreamObserver<cn.hyperchain.protos.Response>) responseObserver);
+          serviceImpl.execute((cn.hyperchain.protos.ContractProto.Request) request,
+              (io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response>) responseObserver);
           break;
         case METHODID_HEART_BEAT:
-          serviceImpl.heartBeat((cn.hyperchain.protos.Request) request,
-              (io.grpc.stub.StreamObserver<cn.hyperchain.protos.Response>) responseObserver);
+          serviceImpl.heartBeat((cn.hyperchain.protos.ContractProto.Request) request,
+              (io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response>) responseObserver);
           break;
         default:
           throw new AssertionError();

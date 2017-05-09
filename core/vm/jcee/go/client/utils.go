@@ -6,6 +6,7 @@ import (
 	"hyperchain/core/types"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
+	"strings"
 )
 
 // parse parse input data and encapsulate as a invocation request.
@@ -43,5 +44,15 @@ func (cei *contractExecutorImpl) parse(ctx vm.VmContext, in []byte) *pb.Request 
 		}
 
 	}
+}
+
+func hexMatch(str1, str2 string) bool {
+	if strings.HasPrefix(str1, "0x") {
+		str1 = str1[2:]
+	}
+	if strings.HasPrefix(str2, "0x") {
+		str2 = str2[2:]
+	}
+	return str1 == str2
 }
 
