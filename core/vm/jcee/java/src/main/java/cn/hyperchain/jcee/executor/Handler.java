@@ -4,8 +4,8 @@
  */
 package cn.hyperchain.jcee.executor;
 
-import cn.hyperchain.jcee.Constants;
-import cn.hyperchain.jcee.contract.ContractBase;
+import cn.hyperchain.jcee.common.Constants;
+import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.contract.ContractInfo;
 import cn.hyperchain.jcee.contract.ContractManager;
 import cn.hyperchain.jcee.util.Errors;
@@ -34,30 +34,6 @@ public class Handler {
 
     public Handler(int ledgerPort){
         cm = new ContractManager(ledgerPort);
-    }
-
-    /**
-     * handle query method
-     * @param request query request
-     * @param responseObserver
-     */
-    public void query(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver){
-        ContractProto.Response response = null;
-        Task task = constructTask(TaskType.QUERY, request);
-        if(task == null) {
-            Errors.ReturnErrMsg("contract with id " + request.getContext().getCid() + " is not found", responseObserver);
-            return;
-        }
-        try{
-            response = task.call();
-            logger.info("query result: " + response.getResult().toStringUtf8());
-        }catch (Exception e) {
-            logger.error(e);
-            Errors.ReturnErrMsg(e.getMessage(), responseObserver);
-        }finally {
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-        }
     }
 
     /**
@@ -153,7 +129,7 @@ public class Handler {
     public Task constructTask(final TaskType type, final ContractProto.Request request) {
         Task task = null;
         String cid = request.getContext().getCid(); //TODO: check this earlier
-        ContractBase contract = cm.getContract(request.getContext().getCid());
+        ContractTemplate contract = cm.getContract(request.getContext().getCid());
         if (contract == null) {
             logger.warn("contract with id " + cid + " is not found!");
             return task;
@@ -161,9 +137,6 @@ public class Handler {
         switch (type) {
             case INVOKE:
                 task = new InvokeTask(contract, request, constructContext(request.getContext()));
-                break;
-            case QUERY:
-                task = new QueryTask(contract, request, constructContext(request.getContext()));
                 break;
         }
         return task;

@@ -9,7 +9,6 @@ import org.apache.log4j.Logger;
  */
 public class Caller {
 
-    private final String query = "query";
     private final String invoke = "invoke";
     private final String deploy = "deploy";
 
@@ -34,10 +33,6 @@ public class Caller {
 
     public void Call() {
         switch (request.getMethod()) {
-            case query:{
-                handler.query(request, responseObserver);
-                break;
-            }
             case invoke: {
                 handler.invoke(request, responseObserver);
                 break;

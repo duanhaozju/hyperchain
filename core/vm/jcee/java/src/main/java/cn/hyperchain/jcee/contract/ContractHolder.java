@@ -7,16 +7,16 @@ package cn.hyperchain.jcee.contract;
 //ContractHolder contains a contract info and the contract instance
 public class ContractHolder {
     private ContractInfo info;
-    private ContractBase contract;
+    private ContractTemplate contract;
     private ContractClassLoader loader;
 
-    public ContractHolder(final ContractInfo info, final ContractBase contract) {
+    public ContractHolder(final ContractInfo info, final ContractTemplate contract) {
         this.info = info;
         this.contract = contract;
         this.contract.setInfo(info);
     }
 
-    public ContractHolder(final ContractInfo info, final ContractBase contract, ContractClassLoader loader) {
+    public ContractHolder(final ContractInfo info, final ContractTemplate contract, ContractClassLoader loader) {
         this.info = info;
         this.contract = contract;
         this.loader = loader;
@@ -30,11 +30,11 @@ public class ContractHolder {
         this.info = info;
     }
 
-    public ContractBase getContract() {
+    public ContractTemplate getContract() {
         return contract;
     }
 
-    public void setContract(ContractBase contract) {
+    public void setContract(ContractTemplate contract) {
         this.contract = contract;
     }
 }

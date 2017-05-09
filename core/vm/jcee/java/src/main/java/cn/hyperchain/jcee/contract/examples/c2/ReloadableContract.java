@@ -1,6 +1,7 @@
 package cn.hyperchain.jcee.contract.examples.c2;
 
-import cn.hyperchain.jcee.contract.ContractBase;
+import cn.hyperchain.jcee.common.ExecuteResult;
+import cn.hyperchain.jcee.contract.ContractTemplate;
 import com.google.protobuf.ByteString;
 
 import java.util.List;
@@ -8,7 +9,7 @@ import java.util.List;
 /**
  * Created by wangxiaoyi on 2017/4/13.
  */
-public class ReloadableContract extends ContractBase {
+public class ReloadableContract extends ContractTemplate {
 
     private ImplicitClass ic;
 
@@ -17,26 +18,14 @@ public class ReloadableContract extends ContractBase {
     }
 
     /**
-     * Invoke smart contract method
+     * invoke smart contract method
      *
      * @param funcName function name user defined in contract
      * @param args     arguments of funcName
      */
     @Override
-    public boolean Invoke(String funcName, List<String> args) {
-        return false;
-    }
-
-    /**
-     * Query data stored in the smart contract
-     *
-     * @param funcName function name
-     * @param args     function related arguments
-     * @return the query result
-     */
-    @Override
-    public ByteString Query(String funcName, List<String> args) {
-        return null;
+    public ExecuteResult invoke(String funcName, List<String> args) {
+        return result(false);
     }
 
     @Override

@@ -20,10 +20,6 @@ public class ContractHandler {
         this.ledgerPort = ledgerPort;
     }
 
-//    public Future<Response> execute(Task task) {
-//        return exec.submit(task);
-//    }
-
     public void addHandler(String namespace) {
         Handler handler = new Handler(ledgerPort);
         handlers.put(namespace, handler);

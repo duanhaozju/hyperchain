@@ -1,6 +1,7 @@
 package cn.hyperchain.jcee.contract.examples.sb;
 
-import cn.hyperchain.jcee.contract.ContractBase;
+import cn.hyperchain.jcee.common.ExecuteResult;
+import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.Batch;
 import cn.hyperchain.jcee.ledger.BatchKey;
 import cn.hyperchain.jcee.ledger.BatchValue;
@@ -13,7 +14,7 @@ import java.util.List;
 /**
  * Created by wangxiaoyi on 2017/4/14.
  */
-public class SimulateBank extends ContractBase{
+public class SimulateBank extends ContractTemplate {
     private static final Logger logger = Logger.getLogger(SimulateBank.class.getSimpleName());
 
     private String bankName;
@@ -29,13 +30,13 @@ public class SimulateBank extends ContractBase{
     }
 
     /**
-     * Invoke smart contract method
+     * invoke smart contract method
      *
      * @param funcName function name user defined in contract
      * @param args     arguments of funcName
      */
     @Override
-    public boolean Invoke(String funcName, List<String> args) {
+    public ExecuteResult invoke(String funcName, List<String> args) {
         switch (funcName) {
             case "issue":
                 return issue(args);
@@ -43,40 +44,25 @@ public class SimulateBank extends ContractBase{
                 return transfer(args);
             case "transferByBatch":
                 return transferByBatch(args);
-            default:
-                logger.error("method " + funcName  + " not found!");
-
-        }
-        return false;
-    }
-
-    /**
-     * Query data stored in the smart contract
-     *
-     * @param funcName function name
-     * @param args     function related arguments
-     * @return the query result
-     */
-    @Override
-    public ByteString Query(String funcName, List<String> args) {
-        switch (funcName) {
             case "getAccountBalance":
                 return getAccountBalance(args);
             case "testRangeQuery":
-                return ByteString.copyFrom(Bytes.toByteArray(testRangeQuery(args)));
+                return testRangeQuery(args);
             case "testDelete":
-                return ByteString.copyFrom(Bytes.toByteArray(testDelete(args)));
+                return testDelete(args);
             default:
-                String errMsg = "method " + funcName  + " not found!";
-                logger.error(errMsg);
+                String err = "method " + funcName  + " not found!";
+                logger.error(err);
+                return new ExecuteResult(false, err);
+
         }
-        return null;
     }
 
     //String account, double num
-    private boolean issue(List<String> args) {
+    private ExecuteResult issue(List<String> args) {
         if(args.size() != 2) {
             logger.error("args num is invalid");
+            return result(false, "args num is invalid");
         }
         logger.info("account: " + args.get(0));
         logger.info("num: " + args.get(1));
@@ -84,12 +70,13 @@ public class SimulateBank extends ContractBase{
         boolean rs = ledger.put(args.get(0).getBytes(), args.get(1).getBytes());
         if(rs == false) {
             logger.error("issue func error");
+            return result(false, "put data error");
         }
-        return true;
+        return result(true);
     }
 
     //String accountA, String accountB, double num
-    private boolean transfer(List<String> args) {
+    private ExecuteResult transfer(List<String> args) {
         try {
             String accountA = args.get(0);
             String accountB = args.get(1);
@@ -104,18 +91,19 @@ public class SimulateBank extends ContractBase{
                     ledger.put(accountB, balanceB + num);
                 }
             }else {
-                logger.error("get account " + accountA  + " balance error");
-                return false;
+                String msg = "get account " + accountA  + " balance error";
+                logger.error(msg);
+                return result(false, msg);
             }
 
         }catch (Exception e) {
             e.printStackTrace();
         }
 
-        return true;
+        return result(true);
     }
 
-    private ByteString getAccountBalance(List<String> args) {
+    private ExecuteResult getAccountBalance(List<String> args) {
         if(args.size() != 1) {
             logger.error("args num is invalid");
         }
@@ -123,19 +111,21 @@ public class SimulateBank extends ContractBase{
             byte[] data = ledger.get(args.get(0).getBytes());
             logger.info(new String(data));
             if (data != null) {
-                return ByteString.copyFrom(data);
+                return result(true, data);
             }else {
-                logger.error("getAccountBalance error");
+                String msg = "getAccountBalance error no data found for" + args.get(0);
+                logger.error(msg);
+                return result(false, msg);
             }
         }catch (Exception e) {
             e.printStackTrace();
+            return result(false, e);
         }
-        return null;
     }
 
     //1.test read batch
     //2.test write batch
-    private boolean transferByBatch(List<String> args) {
+    private ExecuteResult transferByBatch(List<String> args) {
         if(args.size() != 3) {
             logger.error("args num is invalid");
         }
@@ -148,28 +138,28 @@ public class SimulateBank extends ContractBase{
         Batch batch = ledger.batchRead(bk);
         byte[] ba = batch.get(A);
         if (ba == null) {
-            return false;
+            return result(false, args.get(0) + " no account");
         }
         double abalance = Bytes.toDouble(ba);
         byte[] bb = batch.get(B);
         if (bb == null) {
-            return false;
+            return result(false, args.get(1) + " no account");
         }
 
         double bbalance = Bytes.toDouble(bb);
         double amount = Bytes.toDouble(args.get(2).getBytes());
         if (abalance < abalance) {
-            return false;
+            return result(false, args.get(0) + " balance is not enough");
         }
 
         Batch wb = ledger.newBatch();
         wb.put(A, Bytes.toByteArray(abalance - amount));
         wb.put(B, Bytes.toByteArray(bbalance + abalance));
-        return wb.commit();
+        return result(wb.commit());
     }
 
     //testRangeQuery
-    private boolean testRangeQuery(List<String> args) {
+    private ExecuteResult testRangeQuery(List<String> args) {
         Batch batch = ledger.newBatch();
         String keyPrefix = "bk-";
         int count = 10009;
@@ -184,18 +174,18 @@ public class SimulateBank extends ContractBase{
             bv.next();
             bvCount ++;
         }
-        return bvCount == count;
+        return result(bvCount == count);
     }
 
-    public boolean testDelete(List<String> args) {
+    public ExecuteResult testDelete(List<String> args) {
         String key = "key-001";
         String value = "vvv";
-        if (ledger.put(key, value) == false) return false;
+        if (ledger.put(key, value) == false) return result(false);
         logger.info("put success");
-        if (ledger.delete(key) == false) return false;
+        if (ledger.delete(key) == false) return result(false);
         logger.info("delete success");
         String getV = ledger.getString(key);
         logger.info("get deleted value is " + getV);
-        return getV.isEmpty();
+        return result(getV.isEmpty());
     }
 }

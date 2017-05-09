@@ -4,7 +4,8 @@
  */
 package cn.hyperchain.jcee.executor;
 
-import cn.hyperchain.jcee.contract.ContractBase;
+import cn.hyperchain.jcee.common.ExecuteResult;
+import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.protos.ContractProto;
 
 import java.util.LinkedList;
@@ -12,7 +13,7 @@ import java.util.List;
 
 public class InvokeTask extends Task{
 
-    public InvokeTask(ContractBase contract, ContractProto.Request request, Context context) {
+    public InvokeTask(ContractTemplate contract, ContractProto.Request request, Context context) {
         super(contract, request, context);
     }
 
@@ -24,8 +25,11 @@ public class InvokeTask extends Task{
         for(int i = 1; i < request.getArgsList().size(); ++ i){
             args.add(request.getArgs(i).toStringUtf8());
         }
+        ExecuteResult result = contract.invoke(funcName, args);
+
         ContractProto.Response r = ContractProto.Response.newBuilder()
-                .setOk(contract.Invoke(funcName, args))
+                .setOk(result.isSuccess())
+                .setResult(result.getResultByteString())
                 .setCodeHash(contract.getInfo().getCodeHash())
                 .build();
         return r;

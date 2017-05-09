@@ -31,7 +31,7 @@ public class ContractManager {
         return contracts.get(cid);
     }
 
-    public ContractBase getContract(String cid) {
+    public ContractTemplate getContract(String cid) {
         logger.debug(contracts.toString());
         logger.debug("cid is " + cid);
         ContractHolder holder = contracts.get(cid);
@@ -66,7 +66,7 @@ public class ContractManager {
         logger.debug("contract info, " + info.toString());
 
         ContractClassLoader classLoader = new ContractClassLoader(info.getContractPath(), info.getClassPrefix());
-        ContractBase contract = null;
+        ContractTemplate contract = null;
         try {
             Class contractClass = classLoader.load(info.getContractMainName());
             Object ins = newInstance(contractClass, info.getArgClasses(), info.getArgs());
@@ -74,7 +74,7 @@ public class ContractManager {
                 logger.error("init contract for " + info.getName() + " faield");
                 return false;
             }
-            contract = (ContractBase) ins;
+            contract = (ContractTemplate) ins;
             contract.setCid(info.getCid());
             contract.setOwner(info.getOwner());
             contract.setLedger(ledger);
