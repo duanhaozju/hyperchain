@@ -64,6 +64,8 @@ public class SimulateBank extends ContractBase{
                 return getAccountBalance(args);
             case "testRangeQuery":
                 return ByteString.copyFrom(Bytes.toByteArray(testRangeQuery(args)));
+            case "testDelete":
+                return ByteString.copyFrom(Bytes.toByteArray(testDelete(args)));
             default:
                 String errMsg = "method " + funcName  + " not found!";
                 logger.error(errMsg);
@@ -183,5 +185,17 @@ public class SimulateBank extends ContractBase{
             bvCount ++;
         }
         return bvCount == count;
+    }
+
+    public boolean testDelete(List<String> args) {
+        String key = "key-001";
+        String value = "vvv";
+        if (ledger.put(key, value) == false) return false;
+        logger.info("put success");
+        if (ledger.delete(key) == false) return false;
+        logger.info("delete success");
+        String getV = ledger.getString(key);
+        logger.info("get deleted value is " + getV);
+        return getV.isEmpty();
     }
 }
