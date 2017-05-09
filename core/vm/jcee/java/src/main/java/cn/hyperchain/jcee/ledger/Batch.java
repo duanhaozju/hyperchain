@@ -8,6 +8,8 @@ public interface Batch {
     //Put keyvalue into the batch
     void put(byte[] key, byte[]value);
 
+    byte[] get(byte[] key);
+
     //Clear data in batch
     void reset();
 

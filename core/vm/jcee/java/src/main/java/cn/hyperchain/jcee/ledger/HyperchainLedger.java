@@ -4,11 +4,12 @@
  */
 package cn.hyperchain.jcee.ledger;
 
+import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
 
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -59,11 +60,6 @@ public class HyperchainLedger extends AbstractLedger{
                 .build();
     }
 
-    public boolean batchRead(ContractProto.BatchKey key) {
-        return false;
-    }
-
-
     @Override
     public boolean getBoolean(byte[] key) {
         return Boolean.parseBoolean(fetch(key).getV().toStringUtf8());
@@ -99,10 +95,8 @@ public class HyperchainLedger extends AbstractLedger{
         return fetch(key).getV().toStringUtf8();
     }
 
-    @Override
-    public Object getObject(byte[] key) {
-        //TODO: get object, use model method
-        return null;
+    public  <T> T getObject(byte[] data, Class<T> clazz) {
+        return Bytes.toObject(data, clazz);
     }
 
     @Override
@@ -145,10 +139,8 @@ public class HyperchainLedger extends AbstractLedger{
         return getString(key.getBytes());
     }
 
-    @Override
-    public Object getObject(String key) {
-        //TODO: get object, use model method
-        return null;
+    public  <T> T getObject(String key, Class<T> clazz) {
+        return Bytes.toObject(key.getBytes(), clazz);
     }
 
     @Override
@@ -188,9 +180,7 @@ public class HyperchainLedger extends AbstractLedger{
 
     @Override
     public boolean put(byte[] key, Object object) {
-//        return put(key);
-        //TODO: encode the object
-        return false;
+        return put(key, Bytes.toByteArray(object));
     }
 
     @Override
@@ -255,13 +245,25 @@ public class HyperchainLedger extends AbstractLedger{
     @Override
     public Batch batchRead(BatchKey key) {
         ContractProto.BathValue bv = ledgerClient.bathRead(toProtoBatchKey(key));
-        //TODO: transfer bv to batch
-        return null;
+        Batch batch = this.newBatch();
+        List<ByteString> values = bv.getVList();
+        List<byte[]> keys = key.getKeys();
+        int i = 0;
+        for (byte[] k: keys) {
+            batch.put(k, values.get(i).toByteArray());
+            i ++;
+        }
+        return batch;
     }
 
     @Override
-    public Batch rangeQuery(byte[] start, byte[] end) {
-        return null;
+    public BatchValue rangeQuery(byte[] start, byte[] end) {
+        ContractProto.Range range = ContractProto.Range.newBuilder()
+                .setStart(ByteString.copyFrom(start))
+                .setEnd(ByteString.copyFrom(end))
+                .setContext(getLedgerContext())
+                .build();
+        return new BathValueImpl(ledgerClient.rangeQuery(range));
     }
 
     class BatchImpl implements Batch{
@@ -271,6 +273,10 @@ public class HyperchainLedger extends AbstractLedger{
         public BatchImpl(HyperchainLedger ledger) {
             data = new ConcurrentHashMap<>();
             this.ledger = ledger;
+        }
+
+        public byte[] get(byte[] key) {
+            return this.data.get(key);
         }
 
         @Override
@@ -297,6 +303,7 @@ public class HyperchainLedger extends AbstractLedger{
                         .build();
                 builder.addKv(keyValue);
             }
+            builder.setContext(getLedgerContext());
             return builder.build();
         }
     }
@@ -304,21 +311,63 @@ public class HyperchainLedger extends AbstractLedger{
     private ContractProto.BatchKey toProtoBatchKey(BatchKey key) {
         ContractProto.BatchKey cbk = null;
         if (key instanceof BatchKeyImpl) {
-            cbk = ((BatchKeyImpl) key).builder.build();
+            cbk = ((BatchKeyImpl) key).builder
+                    .setContext(getLedgerContext())
+                    .build();
         }
        return cbk;
     }
 
     class BatchKeyImpl implements BatchKey {
         ContractProto.BatchKey.Builder builder;
+        List<byte[]> keys;
 
         public BatchKeyImpl() {
+            keys = new LinkedList<>();//TODO: remove the duplicate keys
             builder = ContractProto.BatchKey.newBuilder();
         }
 
         @Override
         public void put(byte[] key) {
+            keys.add(key);
             builder.addK(ByteString.copyFrom(key));
+        }
+
+        @Override
+        public List<byte[]> getKeys() {
+            return this.keys;
+        }
+    }
+
+    class BathValueImpl implements BatchValue {
+
+        Iterator<ContractProto.BathValue> rangeBatchValue;
+        Iterator<ByteString> currBatchValue;
+
+        public BathValueImpl(Iterator<ContractProto.BathValue> rangeBatchValue){
+            this.rangeBatchValue = rangeBatchValue;
+        }
+
+        @Override
+        public byte[] next() {
+            if (hasNext()) {
+                return currBatchValue.next().toByteArray();
+            }else {
+                throw new NoSuchElementException("No more value to display");
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+            if (currBatchValue == null) {
+                currBatchValue = rangeBatchValue.next().getVList().iterator();
+            }
+            if (currBatchValue.hasNext()) return true;
+            if (rangeBatchValue.hasNext()) {
+                currBatchValue = rangeBatchValue.next().getVList().iterator();
+                return currBatchValue.hasNext();
+            }
+            return false;
         }
     }
 

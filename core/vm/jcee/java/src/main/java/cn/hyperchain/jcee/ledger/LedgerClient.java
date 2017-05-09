@@ -9,6 +9,8 @@ import cn.hyperchain.protos.LedgerGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
+import java.util.Iterator;
+
 public class LedgerClient {
     private String host;
     private int port;
@@ -66,9 +68,8 @@ public class LedgerClient {
         return blockingStub.batchRead(bk);
     }
 
-    public ContractProto.BathValue rangeQuery(ContractProto.Range range) {
-        return null;
-        //return blockingStub.rangeQuery(range).;
+    public Iterator<ContractProto.BathValue> rangeQuery(ContractProto.Range range) {
+        return blockingStub.rangeQuery(range);
     }
 
 }
