@@ -36,6 +36,23 @@ public class Handler {
         cm = new ContractManager(ledgerPort);
     }
 
+
+    public void destroy(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+        logger.info("process request " + request);
+    }
+
+    public void freeze(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+        logger.info("process request " + request);
+    }
+
+    public void unfreeze(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+        logger.info("process request " + request);
+    }
+
+    public void update(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+        logger.info("process request " + request);
+    }
+
     /**
      * invoke the contract method
      * @param request invoke method

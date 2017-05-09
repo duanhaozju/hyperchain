@@ -5,6 +5,7 @@
 package cn.hyperchain.jcee.contract;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.apache.log4j.Logger;
 
 import java.util.Arrays;
@@ -12,6 +13,7 @@ import java.util.Date;
 
 //Contract represent a contract instance
 @Data
+@NoArgsConstructor
 public class ContractInfo {
     private static final Logger logger = Logger.getLogger(ContractInfo.class.getSimpleName());
     private String name;
@@ -28,8 +30,7 @@ public class ContractInfo {
     private String codeHash; // contract classes code hash
     private long createTime;
     private long modifyTime;
-
-    public ContractInfo() {}
+    private ContractState state;
 
     public ContractInfo(String name, String id, String owner) {
         this.name = name;

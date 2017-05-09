@@ -1,5 +1,6 @@
 package cn.hyperchain.jcee.executor;
 
+import cn.hyperchain.jcee.util.Errors;
 import cn.hyperchain.protos.ContractProto;
 import io.grpc.stub.StreamObserver;
 import org.apache.log4j.Logger;
@@ -8,9 +9,6 @@ import org.apache.log4j.Logger;
  * Created by wangxiaoyi on 2017/5/3.
  */
 public class Caller {
-
-    private final String invoke = "invoke";
-    private final String deploy = "deploy";
 
     private static final Logger logger = Logger.getLogger(Caller.class.getSimpleName());
 
@@ -32,17 +30,51 @@ public class Caller {
     }
 
     public void Call() {
-        switch (request.getMethod()) {
-            case invoke: {
-                handler.invoke(request, responseObserver);
-                break;
+        logger.info("request method " + request.getMethod());
+        try {
+            switch (CallType.valueOf(request.getMethod())) {
+                case invoke: {
+                    handler.invoke(request, responseObserver);
+                    break;
+                }
+                case deploy: {
+                    handler.deploy(request, responseObserver);
+                    break;
+                }
+                case freeze: {
+                    handler.freeze(request, responseObserver);
+                    break;
+                }
+
+                case unfreeze: {
+                    handler.unfreeze(request, responseObserver);
+                    break;
+                }
+
+                case destroy: {
+                    handler.destroy(request, responseObserver);
+                    break;
+                }
+
+                case update: {
+                    handler.update(request, responseObserver);
+                    break;
+                }
             }
-            case deploy: {
-                handler.deploy(request, responseObserver);
-                break;
-            }
-            default:
-                logger.error("method " + request.getMethod() + " is not implemented yet!");
+        }catch (IllegalArgumentException iae){
+            String msg = "method " + request.getMethod() + " is not implemented yet!";
+            logger.error(iae.getMessage());
+            Errors.ReturnErrMsg(msg, responseObserver);
         }
+
+    }
+
+    enum CallType {
+        deploy,
+        invoke,
+        update,
+        freeze,
+        unfreeze,
+        destroy
     }
 }

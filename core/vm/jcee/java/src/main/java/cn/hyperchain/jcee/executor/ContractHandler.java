@@ -21,6 +21,7 @@ public class ContractHandler {
     }
 
     public void addHandler(String namespace) {
+        logger.info("Add handler for namespace " + namespace);
         Handler handler = new Handler(ledgerPort);
         handlers.put(namespace, handler);
     }
