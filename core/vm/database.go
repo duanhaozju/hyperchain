@@ -4,7 +4,6 @@ import (
 	"math/big"
 	"hyperchain/hyperdb/db"
 	"hyperchain/common"
-	"fmt"
 )
 
 type Database interface {
@@ -100,8 +99,6 @@ func BytesPrefix(prefix []byte) *IterRange {
 	}
 	startH := common.BytesToHash(prefix)
 	limitH := common.BytesToHash(limit)
-	fmt.Println("start", startH.Hex())
-	fmt.Println("end", limitH.Hex())
 	return &IterRange{
 		Start: &startH,
 		Limit: &limitH,
