@@ -997,6 +997,7 @@ func (s *StateDB) CommitBatch(deleteEmptyObjects bool) (root common.Hash, batch 
 	curSeqNo := atomic.LoadUint64(&s.curSeqNo)
 	batch = s.FetchBatch(curSeqNo)
 	archieveBatch := s.FetchArchieveBatch(curSeqNo)
+	s.logger.Debugf("fetch batch no (%d) to commit", curSeqNo)
 	root, _ = s.commit(batch, archieveBatch, deleteEmptyObjects)
 	return root, batch
 }
@@ -1128,4 +1129,21 @@ func (self *StateDB) ShowArchive(address common.Address, date string) map[string
 		m[common.Bytes2Hex(k)] = common.Bytes2Hex(iter.Value())
 	}
 	return storages
+}
+
+func (self *StateDB) NewIterator(addr common.Address, slice *vm.IterRange) (vm.Iterator, error) {
+	stateObject := self.GetStateObject(addr)
+	if stateObject != nil {
+		self.logger.Debug("hyper statedb set state find state object in live objects")
+		var iter vm.Iterator
+		if slice == nil {
+			iter = NewStorageIterator(stateObject, nil, nil)
+		} else {
+			iter = NewStorageIterator(stateObject, slice.Start, slice.Limit)
+		}
+		return iter, nil
+	} else {
+		self.logger.Warningf("state object %s doesn't exist or has been suicide", addr.Hex())
+		return nil, nil
+	}
 }
