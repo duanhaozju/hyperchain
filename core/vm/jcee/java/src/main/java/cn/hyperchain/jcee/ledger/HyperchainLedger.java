@@ -30,7 +30,10 @@ public class HyperchainLedger extends AbstractLedger{
                 .setK(ByteString.copyFrom(key))
                 .build();
         logger.info("Transaction id: " + getContext().getId());
-        return ledgerClient.get(sendkey).getV().toByteArray();
+
+        ByteString v = ledgerClient.get(sendkey).getV();
+        if (v == null || v.isEmpty()) return null;
+        return v.toByteArray();
     }
 
     public boolean put(byte[] key, byte[] value) {
@@ -58,6 +61,20 @@ public class HyperchainLedger extends AbstractLedger{
                 .setTxid(getContext().getRequestContext().getTxid())
                 .setCid(getContext().getRequestContext().getCid())
                 .build();
+    }
+
+    @Override
+    public boolean delete(byte[] key) {
+        ContractProto.Key ck = ContractProto.Key.newBuilder()
+                .setContext(getLedgerContext())
+                .setK(ByteString.copyFrom(key))
+                .build();
+        return ledgerClient.delete(ck);
+    }
+
+    @Override
+    public boolean delete(String key) {
+        return delete(key.getBytes());
     }
 
     @Override
@@ -92,7 +109,9 @@ public class HyperchainLedger extends AbstractLedger{
 
     @Override
     public String getString(byte[] key) {
-        return fetch(key).getV().toStringUtf8();
+        ContractProto.Value v = fetch(key);
+//        logger.info("fetch: " + v);
+        return v.getV().toStringUtf8();
     }
 
     public  <T> T getObject(byte[] data, Class<T> clazz) {

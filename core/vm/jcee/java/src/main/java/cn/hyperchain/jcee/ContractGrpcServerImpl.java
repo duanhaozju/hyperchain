@@ -41,11 +41,13 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
         ContractsMeta meta = metaDB.load();
         if (meta != null) {
             Map<String, Map<String, ContractInfo>> infoMap = meta.getContractInfo();
+
             for (Map.Entry<String, Map<String, ContractInfo>> entry : infoMap.entrySet()) {
                 String namespace = entry.getKey();
                 Map<String, ContractInfo> contractInfoMap = entry.getValue();
                 contractExecutor.addExecutor(namespace);
                 contractExecutor.getContractHandler().addHandler(namespace);
+
                 for (Map.Entry<String, ContractInfo> infoEntry : contractInfoMap.entrySet()) {
                     ContractInfo info = infoEntry.getValue();
                     boolean rs = contractExecutor.getContractHandler().get(namespace).deploy(info);
@@ -63,19 +65,8 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
     @Override
     public void execute(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
 
-        ContractProto.RequestContext rc = request.getContext();
-        if (rc == null) {
-            String err = "No request context specified!";
-            logger.error(err);
-            Errors.ReturnErrMsg(err, responseObserver);
-        }
+        if(!pass(request, responseObserver)) return;
 
-        String namespace = rc.getNamespace();
-        if (namespace == null || namespace.length() == 0) { //TODO: validate the namespace
-            String err = "No valid namespace specified!";
-            logger.error(err);
-            Errors.ReturnErrMsg(err, responseObserver);
-        }
         Caller caller = new Caller(request, responseObserver);
         try {
             contractExecutor.dispatch(caller);
@@ -84,6 +75,42 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
             logger.error(ie.getMessage());
             Errors.ReturnErrMsg(ie.getMessage(), responseObserver);
         }
+    }
+
+    //pass validate the request header.
+    public boolean pass(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+        ContractProto.RequestContext rc = request.getContext();
+        String err;
+        if (rc == null) {
+            err = "No request context specified!";
+            logger.error(err);
+            Errors.ReturnErrMsg(err, responseObserver);
+            return false;
+        }
+
+        String namespace = rc.getNamespace();
+        if (namespace == null || namespace.length() == 0) {
+            //TODO: validate the existence of namespace
+            err = "No valid namespace specified!";
+            logger.error(err);
+            Errors.ReturnErrMsg(err, responseObserver);
+            return false;
+        }
+
+        if (rc.getCid() == null || rc.getCid().isEmpty()) {
+            err = "No cid specified";
+            logger.error(err);
+            Errors.ReturnErrMsg(err, responseObserver);
+            return false;
+        }
+
+        if (rc.getTxid() == null || rc.getTxid().isEmpty()) {
+            err = "No cid specified";
+            logger.error(err);
+            Errors.ReturnErrMsg(err, responseObserver);
+            return false;
+        }
+        return true;
     }
 
     /**

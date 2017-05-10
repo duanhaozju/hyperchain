@@ -5,6 +5,7 @@
 package cn.hyperchain.jcee.db;
 
 import cn.hyperchain.jcee.contract.ContractInfo;
+import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 
@@ -19,7 +20,8 @@ import java.nio.file.Paths;
  */
 public class MetaDB {
     private static final Logger logger = Logger.getLogger(MetaDB.class);
-    private final String path = "./hyperjvm/meta/meta.yaml";
+    @Setter
+    private String path = "./hyperjvm/meta/meta.yaml";
     private static ContractsMeta metaData;
 
     private static volatile  MetaDB db = new MetaDB();
@@ -63,5 +65,12 @@ public class MetaDB {
         }
         metaData.addContractInfo(info);
         store(metaData);
+    }
+
+    public void remove(ContractInfo info) {
+        if (metaData != null) {
+            metaData.removeContractInfo(info);
+            store(metaData);
+        }
     }
 }

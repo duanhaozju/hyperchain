@@ -4,7 +4,7 @@
  */
 package cn.hyperchain.jcee.executor;
 
-import cn.hyperchain.jcee.contract.ContractBase;
+import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
 import cn.hyperchain.protos.ContractProto;
 import org.apache.log4j.Logger;
@@ -13,11 +13,11 @@ import java.util.concurrent.Callable;
 
 public abstract class Task implements Callable<ContractProto.Response> {
     private static final Logger logger = Logger.getLogger(Task.class.getSimpleName());
-    protected ContractBase contract;
+    protected ContractTemplate contract;
     protected ContractProto.Request request;
     protected Context context;
 
-    public Task(ContractBase contract, ContractProto.Request request, Context context) {
+    public Task(ContractTemplate contract, ContractProto.Request request, Context context) {
         this.contract = contract;
         this.request = request;
         this.context = context;

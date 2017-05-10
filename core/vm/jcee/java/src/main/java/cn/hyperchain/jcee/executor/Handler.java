@@ -4,8 +4,9 @@
  */
 package cn.hyperchain.jcee.executor;
 
-import cn.hyperchain.jcee.Constants;
-import cn.hyperchain.jcee.contract.ContractBase;
+import cn.hyperchain.jcee.common.Constants;
+import cn.hyperchain.jcee.contract.ContractState;
+import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.contract.ContractInfo;
 import cn.hyperchain.jcee.contract.ContractManager;
 import cn.hyperchain.jcee.util.Errors;
@@ -36,27 +37,76 @@ public class Handler {
         cm = new ContractManager(ledgerPort);
     }
 
+    public void freeze(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+        ContractProto.Response response;
+        String cid = request.getContext().getCid();
+        logger.info("System try to freeze contract with id " + cid);
+        ContractInfo info = cm.getContractInfoByCid(cid);
+        String err;
+        if (info == null) {
+            err = "freeze contract failed, contract with id " + cid + " is nonexistent";
+            logger.error(err);
+            Errors.ReturnErrMsg(err, responseObserver);
+        }
+        if (info.getState() != ContractState.FREEZE) {
+            info.setState(ContractState.FREEZE);
+        }
+        response = ContractProto.Response.newBuilder()
+                .setOk(true)
+                .setCodeHash(info.getCodeHash())
+                .build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
+
+    public void unfreeze(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+        ContractProto.Response response;
+        String cid = request.getContext().getCid();
+        logger.info("System try to unfreeze contract with id " + cid);
+        String err;
+        ContractInfo info = cm.getContractInfoByCid(cid);
+        if(info == null) {
+            err = "unfreeze contract failed, contract with id " + cid + " is nonexistent";
+            logger.error(err);
+            Errors.ReturnErrMsg(err, responseObserver);
+        }
+        info.setState(ContractState.NORMAL);
+        response = ContractProto.Response.newBuilder()
+                .setOk(true)
+                .setCodeHash(info.getCodeHash())
+                .build();
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+    }
+
+
+    public void destroy(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+        /**
+         * 1.remove the contract object from ContractManager
+         */
+        if(checkContractExistence(request, responseObserver)) {
+              String cid = request.getContext().getCid();
+              cm.destroyContract(cid);
+        }
+    }
+
     /**
-     * handle query method
-     * @param request query request
+     * update a contract is much more complex
+     * 1.destroy old contract
+     * 2.load new contract class and register which into the handler and ContractManager
+     * @warn we should keep the update function args the same as deploy function args except for
+     * @param request
      * @param responseObserver
      */
-    public void query(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver){
-        ContractProto.Response response = null;
-        Task task = constructTask(TaskType.QUERY, request);
-        if(task == null) {
-            Errors.ReturnErrMsg("contract with id " + request.getContext().getCid() + " is not found", responseObserver);
-            return;
-        }
-        try{
-            response = task.call();
-            logger.info("query result: " + response.getResult().toStringUtf8());
-        }catch (Exception e) {
-            logger.error(e);
-            Errors.ReturnErrMsg(e.getMessage(), responseObserver);
-        }finally {
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
+    public void update(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+
+        if (checkContractExistence(request, responseObserver)) {
+            //1.destroy old contract
+            String cid = request.getContext().getCid();
+            cm.destroyContract(cid);
+
+            //2.deploy new contract
+            destroy(request, responseObserver);
         }
     }
 
@@ -104,7 +154,7 @@ public class Handler {
             e.printStackTrace();
         }
         ContractInfo info = null;
-        ContractProto.Response r = null;
+        ContractProto.Response r;
         if (props != null) {
             info = new ContractInfo(props.getProperty(Constants.CONTRACT_NAME), request.getContext().getCid(), "0xx");
             info.setContractPath(contractPath);
@@ -153,7 +203,7 @@ public class Handler {
     public Task constructTask(final TaskType type, final ContractProto.Request request) {
         Task task = null;
         String cid = request.getContext().getCid(); //TODO: check this earlier
-        ContractBase contract = cm.getContract(request.getContext().getCid());
+        ContractTemplate contract = cm.getContract(request.getContext().getCid());
         if (contract == null) {
             logger.warn("contract with id " + cid + " is not found!");
             return task;
@@ -161,9 +211,6 @@ public class Handler {
         switch (type) {
             case INVOKE:
                 task = new InvokeTask(contract, request, constructContext(request.getContext()));
-                break;
-            case QUERY:
-                task = new QueryTask(contract, request, constructContext(request.getContext()));
                 break;
         }
         return task;
@@ -240,5 +287,18 @@ public class Handler {
     public String caculateCodeHash(String path) {
         byte[] code = IOHelper.readCode(path);
         return HashFunction.computeCodeHash(code);
+    }
+
+    public boolean checkContractExistence(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+        String cid = request.getContext().getCid();
+        String err;
+        ContractInfo info = cm.getContractInfoByCid(cid);
+        if(info == null) {
+            err = "operate contract failed, contract with id " + cid + " is nonexistent";
+            logger.error(err);
+            Errors.ReturnErrMsg(err, responseObserver);
+            return false;
+        }
+        return true;
     }
 }

@@ -1,25 +1,24 @@
 package jvm
 
 import (
-	"hyperchain/core/types"
-	"hyperchain/common"
-	"github.com/op/go-logging"
-	"hyperchain/core/vm"
-	"strconv"
 	"bytes"
+	"github.com/op/go-logging"
+	"hyperchain/common"
 	er "hyperchain/core/errors"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
 	"hyperchain/core/vm/jcee/go/client"
 	"math/big"
+	"strconv"
 )
 
 func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, logger *logging.Logger, namespace string, jvmCli jcee.ContractExecutor) (*types.Receipt, []byte, common.Address, error) {
 	var (
-		from     = common.BytesToAddress(tx.From)
-		to       = common.BytesToAddress(tx.To)
-		tv       = tx.GetTransactionValue()
-		data     = tv.RetrievePayload()
-		op       = tv.GetOp()
-
+		from = common.BytesToAddress(tx.From)
+		to   = common.BytesToAddress(tx.To)
+		tv   = tx.GetTransactionValue()
+		data = tv.RetrievePayload()
+		op   = tv.GetOp()
 	)
 	env := initEnvironment(db, blockNumber, logger, namespace, tx.GetHash(), jvmCli)
 	if env == nil {
@@ -42,7 +41,6 @@ func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber
 	}
 }
 
-
 func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
 	var sender vm.Account
 
@@ -58,13 +56,13 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, op types.
 		ret, addr, err = vmenv.Create(sender, data, nil, nil, nil)
 		if err != nil {
 			ret = nil
-			vmenv.Logger().Error("VM create err:", err)
+			vmenv.Logger().Errorf("VM create err: %v", err)
 		}
 	} else {
 
 		ret, err = vmenv.Call(sender, *to, data, nil, nil, nil, int32(op))
 		if err != nil {
-			vmenv.Logger().Error("VM call err:", err)
+			vmenv.Logger().Errorf("VM call err: %v", err)
 		}
 	}
 	return ret, addr, err
@@ -115,7 +113,7 @@ func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, re
 	//receipt.Logs = buf
 
 	if err != nil {
-		if !er.IsValueTransferErr(err) && !er.IsExecContractErr(err) &&!er.IsInvalidInvokePermissionErr(err) {
+		if !er.IsValueTransferErr(err) && !er.IsExecContractErr(err) && !er.IsInvalidInvokePermissionErr(err) {
 			receipt.Status = types.Receipt_FAILED
 			receipt.Message = []byte(err.Error())
 		}
