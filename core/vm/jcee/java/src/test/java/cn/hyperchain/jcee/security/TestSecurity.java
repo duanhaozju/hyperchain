@@ -17,6 +17,7 @@ public class TestSecurity {
     private String threadContract = "/ThreadContract.class";
     private String syncContract = "/SyncContract.class";
     private String reflectContract = "/ReflectContract.class";
+    private String reflectContract2 = "/ReflectContract2.class";
     private String concurrentContract = "/ConcurrentContract.class";
     private String netContract = "/NetContract.class";
     private String syncContract2 = "/SyncContract2.class";
@@ -30,6 +31,7 @@ public class TestSecurity {
         Assert.assertTrue(byteCodeChecker.pass(getClass(contractDir + normalContract)));
         ByteCodeChecker byteCodeChecker1 = new ByteCodeChecker();
         Assert.assertTrue(byteCodeChecker1.pass(getClass(contractDir + normalContract)));
+        Assert.assertFalse(byteCodeChecker1.passAll(contractDir ));
     }
 
     @Test
@@ -57,15 +59,20 @@ public class TestSecurity {
     public void testReflectContract() {
         String contractDir = System.getProperty("user.dir") + dir;
         ByteCodeChecker byteCodeChecker = new ByteCodeChecker(contractDir + userPath);
-        byteCodeChecker.pass(contractDir + reflectContract);
         Assert.assertFalse(byteCodeChecker.pass(contractDir + reflectContract));
+    }
+
+    @Test
+    public void testReflectContract2() {
+        String contractDir = System.getProperty("user.dir") + dir;
+        ByteCodeChecker byteCodeChecker = new ByteCodeChecker(contractDir + userPath);
+        Assert.assertFalse(byteCodeChecker.pass(contractDir + reflectContract2));
     }
 
     @Test
     public void testConcurrentContract() {
         String contractDir = System.getProperty("user.dir") + dir;
         ByteCodeChecker byteCodeChecker = new ByteCodeChecker(contractDir + userPath);
-        byteCodeChecker.pass(contractDir + concurrentContract);
         Assert.assertFalse(byteCodeChecker.pass(contractDir + concurrentContract));
     }
 
@@ -73,7 +80,6 @@ public class TestSecurity {
     public void testNetContract() {
         String contractDir = System.getProperty("user.dir") + dir;
         ByteCodeChecker byteCodeChecker = new ByteCodeChecker(contractDir + userPath);
-        byteCodeChecker.pass(contractDir + netContract);
         Assert.assertFalse(byteCodeChecker.pass(contractDir + netContract));
     }
 
@@ -81,7 +87,6 @@ public class TestSecurity {
     public void testSyncContract2() {
         String contractDir = System.getProperty("user.dir") + dir;
         ByteCodeChecker byteCodeChecker = new ByteCodeChecker(contractDir + userPath);
-        byteCodeChecker.pass(contractDir + syncContract2);
         Assert.assertFalse(byteCodeChecker.pass(contractDir + syncContract2));
     }
 

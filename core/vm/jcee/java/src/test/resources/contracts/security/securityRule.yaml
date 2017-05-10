@@ -32,6 +32,8 @@ methodVariable:
     class:
 methodInstruction:
   allowedRule:
+    class:
     opCode:
   notAllowedRule:
+    class:
     opCode:

@@ -67,11 +67,11 @@ public class ByteCodeChecker implements Checker {
         if (interfaceIsOk(systemRule, cn) && superClassIsOk(systemRule, cn) &&
                 memberVariableKeyWordIsOk(systemRule, cn) && memberVariableClassIsOk(systemRule, cn) &&
                 methodDeclareIsOk(systemRule, cn) && methodVariableIsOk(systemRule, cn) &&
-                methodInstructionIsOk(systemRule, cn) &&
+                methodInstructionOpCodeIsOk(systemRule, cn) && methodInstructionDescIsOk(systemRule, cn) &&
                 interfaceIsOk(userRule, cn) && superClassIsOk(userRule, cn) &&
                 memberVariableKeyWordIsOk(userRule, cn) && memberVariableClassIsOk(userRule, cn) &&
                 methodDeclareIsOk(userRule, cn) && methodVariableIsOk(userRule, cn) &&
-                methodInstructionIsOk(userRule, cn)) {
+                methodInstructionOpCodeIsOk(userRule, cn) && methodInstructionDescIsOk(userRule, cn)) {
             return true;
         }
         return false;
@@ -87,11 +87,11 @@ public class ByteCodeChecker implements Checker {
             if (interfaceIsOk(systemRule, cn) && superClassIsOk(systemRule, cn) &&
                     memberVariableKeyWordIsOk(systemRule, cn) && memberVariableClassIsOk(systemRule, cn) &&
                     methodDeclareIsOk(systemRule, cn) && methodVariableIsOk(systemRule, cn) &&
-                    methodInstructionIsOk(systemRule, cn) &&
+                    methodInstructionOpCodeIsOk(systemRule, cn) && methodInstructionDescIsOk(systemRule, cn) &&
                     interfaceIsOk(userRule, cn) && superClassIsOk(userRule, cn) &&
                     memberVariableKeyWordIsOk(userRule, cn) && memberVariableClassIsOk(userRule, cn) &&
                     methodDeclareIsOk(userRule, cn) && methodVariableIsOk(userRule, cn) &&
-                    methodInstructionIsOk(userRule, cn)) {
+                    methodInstructionOpCodeIsOk(userRule, cn) && methodInstructionDescIsOk(userRule, cn)) {
                 return true;
             }
         } catch (IOException e) {
@@ -372,24 +372,24 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
-    private boolean methodInstructionIsOk(Rule rule, ClassNode cn) {
+    private boolean methodInstructionOpCodeIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
             return true;
         }
-        Map<String, String> classOfAllowedRule = rule.getMethodInstruction().get(allowedRule).get(opCodeType);
-        Map<String, String> classOfNotAllowedRule = rule.getMethodInstruction().get(notAllowedRule).get(opCodeType);
+        Map<String, String> opCodeOfAllowedRule = rule.getMethodInstruction().get(allowedRule).get(opCodeType);
+        Map<String, String> opCodeOfNotAllowedRule = rule.getMethodInstruction().get(notAllowedRule).get(opCodeType);
         List<MethodNode> methodNodes = cn.methods;
-        if (classOfAllowedRule == null && classOfNotAllowedRule == null) {
-            logger.info("check method instruction true!");
+        if (opCodeOfAllowedRule == null && opCodeOfNotAllowedRule == null) {
+            logger.info("check method instruction opcode true!");
             return true;
-        } else if (classOfAllowedRule != null) {
+        } else if (opCodeOfAllowedRule != null) {
             for (MethodNode methodNode : methodNodes) {
                 InsnList insnList = methodNode.instructions;
                 for (int i = 0; i < insnList.size(); ++i) {
                     int opCodeNum = insnList.get(i).getOpcode();
-                    boolean flag = containsClass(classOfAllowedRule, getOpCode(opCodeNum));
+                    boolean flag = containsClass(opCodeOfAllowedRule, getOpCode(opCodeNum));
                     if (!flag) {
-                        logger.info("check method instruction false!" + " method instruction name: " + getOpCode(opCodeNum));
+                        logger.info("check method instruction opcode false!" + " method name: " + methodNode.name + " method instruction opCode name: " + getOpCode(opCodeNum));
                         return false;
                     }
                 }
@@ -401,14 +401,59 @@ public class ByteCodeChecker implements Checker {
                 InsnList insnList = methodNode.instructions;
                 for (int i = 0; i < insnList.size(); ++i) {
                     int opCodeNum = insnList.get(i).getOpcode();
-                    boolean flag = containsClass(classOfNotAllowedRule, getOpCode(opCodeNum));
+                    boolean flag = containsClass(opCodeOfNotAllowedRule, getOpCode(opCodeNum));
                     if (flag) {
-                        logger.info("check method instruction false!" + " method name: " + methodNode.name + " method instruction name: " + getOpCode(opCodeNum));
+                        logger.info("check method instruction opcode false!" + " method name: " + methodNode.name + " method instruction opCode name: " + getOpCode(opCodeNum));
                         return false;
                     }
                 }
             }
-            logger.info("check method instruction true!");
+            logger.info("check method instruction opcode true!");
+            return true;
+        }
+    }
+
+    private boolean methodInstructionDescIsOk(Rule rule, ClassNode cn) {
+        if (rule == null) {
+            return true;
+        }
+        Map<String, String> descOfAllowedRule = rule.getMethodInstruction().get(allowedRule).get(classType);
+        Map<String, String> descOfNotAllowedRule = rule.getMethodInstruction().get(notAllowedRule).get(classType);
+        List<MethodNode> methodNodes = cn.methods;
+        if (descOfAllowedRule == null && descOfNotAllowedRule == null) {
+            logger.info("check method instruction desc true!");
+            return true;
+        } else if (descOfAllowedRule != null) {
+            for (MethodNode methodNode : methodNodes) {
+                InsnList insnList = methodNode.instructions;
+                for (int i = 0; i < insnList.size(); ++i) {
+                    if (insnList.get(i) instanceof MethodInsnNode) {
+                        MethodInsnNode methodInsnNode = (MethodInsnNode)insnList.get(i);
+                        boolean flag = containsClass(descOfAllowedRule, methodInsnNode.desc);
+                        if (!flag) {
+                            logger.info("check method instruction desc false!" + " method name: " + methodNode.name + " method instruction desc name: " + methodInsnNode.desc);
+                            return false;
+                        }
+                    }
+                }
+            }
+            logger.info("check method instruction desc true!");
+            return true;
+        } else {
+            for (MethodNode methodNode : methodNodes) {
+                InsnList insnList = methodNode.instructions;
+                for (int i = 0; i < insnList.size(); ++i) {
+                    if (insnList.get(i) instanceof MethodInsnNode) {
+                        MethodInsnNode methodInsnNode = (MethodInsnNode)insnList.get(i);
+                        boolean flag = containsClass(descOfNotAllowedRule, methodInsnNode.desc);
+                        if (flag) {
+                            logger.info("check method instruction desc false!" + " method name: " + methodNode.name + " method instruction desc name: " + methodInsnNode.desc);
+                            return false;
+                        }
+                    }
+                }
+            }
+            logger.info("check method instruction desc true!");
             return true;
         }
     }
