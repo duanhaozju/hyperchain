@@ -204,7 +204,7 @@ type ContractPermissionError struct {
 }
 
 func (e *ContractPermissionError) Code() int {
-	return -32008
+	return -32009
 }
 
 func (e *ContractPermissionError) Error() string {

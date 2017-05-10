@@ -37,13 +37,12 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	executor.updateSyncFlag(ev.TargetHeight, ev.TargetBlockHash, ev.TargetHeight)
 	executor.setLatestSyncDownstream(ev.TargetHeight)
 	executor.recordSyncPeers(ev.Replicas, ev.Id)
-
+	executor.status.syncFlag.Oracle = NewOracle(ev.Replicas, executor.conf, executor.logger)
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
 	go executor.syncChainResendBackend()
 }
 
 func (executor *Executor) syncChainResendBackend() {
-	executor.status.syncFlag.ResendExit = make(chan bool)
 	ticker := time.NewTicker(executor.GetSyncResendInterval())
 	up, down := executor.getSyncReqArgs()
 	for {
@@ -53,9 +52,11 @@ func (executor *Executor) syncChainResendBackend() {
 		case <-ticker.C:
 		        // resend
 			curUp, curDown := executor.getSyncReqArgs()
-			if curUp == up && curDown == down {
-				executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, up)
-				executor.SendSyncRequest(up, down)
+			if curUp == up && curDown == down && !executor.isSyncInExecution() {
+				executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.status.syncFlag.SyncDemandBlockNum)
+				executor.status.syncFlag.Oracle.FeedBack(false)
+				executor.SendSyncRequest(executor.status.syncFlag.SyncDemandBlockNum, down)
+				executor.recordSyncReqArgs(curUp, curDown)
 			} else {
 				up = curUp
 				down = curDown
@@ -104,6 +105,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			if executor.getLatestSyncDownstream() != edb.GetHeightOfChain(executor.namespace) {
 				prev := executor.getLatestSyncDownstream()
 				next := executor.calcuDownstream()
+				executor.status.syncFlag.Oracle.FeedBack(true)
 				executor.SendSyncRequest(prev, next)
 			} else {
 				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
@@ -115,7 +117,13 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 
 // SendSyncRequest - send synchronization request to other nodes.
 func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
-	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream); err != nil {
+	if executor.isSyncInExecution() == true {
+		return
+	}
+	peer := executor.status.syncFlag.Oracle.SelectPeer()
+	// peer := executor.status.syncFlag.SyncPeers[rand.Intn(len(executor.status.syncFlag.SyncPeers))]
+	executor.logger.Debugf("send sync req to %d, require [%d] to [%d]", peer, downstream, upstream)
+	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream, peer); err != nil {
 		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
 		executor.reject()
 		return
@@ -200,6 +208,7 @@ func (executor *Executor) processSyncBlocks() {
 			defer executor.syncDone()
 			// execute all received block at one time
 			for i := executor.status.syncFlag.SyncDemandBlockNum + 1; i <= executor.status.syncFlag.SyncTarget; i += 1 {
+				executor.markSyncExecBegin()
 				blk, err := edb.GetBlockByNumber(executor.namespace, i)
 				if err != nil {
 					executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
@@ -282,7 +291,6 @@ func (executor *Executor) sendStateUpdatedEvent() {
 	// state update success
 	executor.PurgeCache()
 	executor.informConsensus(NOTIFY_SYNC_DONE, protos.StateUpdatedMessage{edb.GetHeightOfChain(executor.namespace)})
-	executor.setSyncChainExit()
 }
 
 // accpet - accept block synchronization result.

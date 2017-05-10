@@ -6,6 +6,11 @@ import (
 	"github.com/urfave/cli"
 	"fmt"
 	"hyperchain/hypercli/common"
+	"encoding/hex"
+	"math/rand"
+	"time"
+	"os"
+	"hyperchain/api/jsonrpc/core"
 )
 
 //NewContractCMD new contract related commands.
@@ -13,27 +18,64 @@ func NewContractCMD() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "deploy",
-			Aliases: []string{"-d"},
+			Aliases: []string{"d"},
 			Usage:   "Deploy a contract",
 			Action:  deploy,
 			Flags:   []cli.Flag{
 				cli.StringFlag{
-					Name:  "deploycmd, c",
+					Name:  "deploycmd, d",
 					Value: "",
-					Usage: "setting the payload of deploy contract",
+					Usage: "specify the payload of deploy contract",
+				},
+				cli.StringFlag{
+					Name:  "namespace, n",
+					Value: "global",
+					Usage: "specify the namespace to deploy to, default is global",
+				},
+				cli.StringFlag{
+					Name:  "from, f",
+					Value: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
+					Usage: "specify the deploy account",
+				},
+				cli.StringFlag{
+					Name:  "payload, p",
+					Value: "",
+					Usage: "specify the deploy contract payload",
 				},
 			},
 		},
 		{
 			Name:    "invoke",
-			Aliases: []string{"-i"},
+			Aliases: []string{"i"},
 			Usage:   "Invoke a contract method",
 			Action:  invoke,
 			Flags:   []cli.Flag{
 				cli.StringFlag{
-					Name:  "invokecmd, c",
+					Name:  "invokecmd, i",
 					Value: "",
-					Usage: "setting the payload of invoke contract",
+					Usage: "specify the payload of invoke contract",
+				},
+				cli.StringFlag{
+					Name:  "namespace, n",
+					Value: "global",
+					Usage: "specify the namespace to deploy to, default is global",
+				},
+				cli.StringFlag{
+					Name:  "from, f",
+					Value: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
+					Usage: "specify the deploy account",
+				},
+				cli.StringFlag{
+					Name:  "payload, p",
+					Value: "",
+					Usage: "specify the invoke contract payload",
+				},
+
+				//args with no default value which must be specified by user
+				cli.StringFlag{
+					Name:  "to, t",
+					Value: "",
+					Usage: "specify the destination account",
 				},
 			},
 		},
@@ -45,6 +87,7 @@ func NewContractCMD() []cli.Command {
 	}
 }
 
+// deploy implements deploy contract and return the transaction receipt
 func deploy(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	var deployCmd string
@@ -53,14 +96,28 @@ func deploy(c *cli.Context) error {
 	} else {
 		deployParams := []string{"from", "nonce", "payload", "timestamp", "signature"}
 		method := "contract_deployContract"
-		deployCmd = getCmd(method, deployParams)
+		deployCmd = getCmd(method, deployParams, c)
 	}
-	fmt.Println(deployCmd)
-	client.Call(deployCmd)
+	//fmt.Println(deployCmd)
+	result, err := client.Call(deployCmd)
+	if err != nil {
+		fmt.Println("Error in call deploy cmd request")
+		fmt.Print(err)
+		os.Exit(1)
+	}
+
+	txHash := getTransactionHash(result)
+	err = common.GetTransactionReceipt(txHash, c, client)
+	if err != nil {
+		fmt.Println("Error in call get transaction receipt")
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	return nil
 }
 
+// invoke implements invoke contract and return the transaction receipt
 func invoke(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	var invokeCmd string
@@ -69,41 +126,106 @@ func invoke(c *cli.Context) error {
 	} else {
 		invokeParams := []string{"from", "to", "nonce", "payload", "timestamp", "signature"}
 		method := "contract_invokeContract"
-		invokeCmd = getCmd(method, invokeParams)
+		invokeCmd = getCmd(method, invokeParams, c)
 	}
-	fmt.Println(invokeCmd)
-	client.Call(invokeCmd)
+	//fmt.Println(invokeCmd)
+	result, err := client.Call(invokeCmd)
+	if err != nil {
+		fmt.Println("Error in call invoke cmd request")
+		fmt.Print(err)
+		os.Exit(1)
+	}
+
+	txHash := getTransactionHash(result)
+	err = common.GetTransactionReceipt(txHash, c, client)
+	if err != nil {
+		fmt.Println("Error in call get transaction receipt")
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	return nil
 }
 
-func destroy(c *cli.Context) error {
-	//TODO: implement destroy cmd
+func destroy() error {
+	fmt.Println("Not support yet!")
 	return nil
 }
 
-func getCmd(method string, deploy_params []string) string {
-	var namespace string
-	fmt.Print("namespace: ")
-	fmt.Scanln(&namespace)
+// getCmd returns the expected jsonrpc command from specified method and deploy_params
+func getCmd(method string, deploy_params []string, c *cli.Context) string {
+	namespace := c.String("namespace")
+	var from, to, payload string
+	var nonce, timestamp, amount int64
+	var opcode int
 
-	values := make([]string, len(deploy_params))
-	args := "[{"
+	params := "[{"
 	for i, param := range deploy_params{
-		fmt.Printf("%s: ", param)
-		fmt.Scanln(&values[i])
 		if i > 0 {
-			args = args + ","
+			params = params + ","
 		}
-		if param == "nonce" || param == "timestamp" {
-			args = args + fmt.Sprintf("\"%s\":%s", param, values[i])
-		}else {
-			args = args + fmt.Sprintf("\"%s\":\"%s\"", param, values[i])
+		switch param {
+		case "payload":
+			payload = common.GetNonEmptyValueByName(c, "payload")
+			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, payload)
+
+		case "nonce":
+			nonce = rand.Int63()
+			params = params + fmt.Sprintf("\"%s\":%d", param, nonce)
+
+		case "timestamp":
+			timestamp = time.Now().UnixNano()
+			params = params + fmt.Sprintf("\"%s\":%d", param, timestamp)
+
+		case "from":
+			from = c.String("from")
+			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, from)
+
+		//below params must be input by user
+		case "to":
+			to = common.GetNonEmptyValueByName(c, "to")
+			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, to)
+
+		// signature is generated automatically
+		case "signature":
+			amount = 0
+			opcode = 0
+			sig, err := common.GenSignature(from, to, timestamp, amount, payload, nonce, int32(opcode))
+			if err != nil {
+				fmt.Println("Error in generate signature.")
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			signature := hex.EncodeToString(sig)
+			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, signature)
+
+		default:
+			fmt.Printf("Invalid param name: %s\n", param)
+			os.Exit(1)
 		}
 	}
-	args = args + "}]"
+	params = params + "}]"
 
 	return fmt.Sprintf(
 		"{\"jsonrpc\":\"2.0\",\"namespace\":\"%s\",\"method\":\"%s\",\"params\":%s,\"id\":1}",
-		namespace, method, args)
+		namespace, method, params)
+}
+
+// getTransactionHash gets the hash of the transaction from the json-format return value
+func getTransactionHash (result *jsonrpc.CommandResult) string {
+	response, err := common.GetJSONResponse(result)
+	if err != nil {
+		fmt.Println("Error in call get transaction hash from http response")
+		fmt.Println(err)
+		os.Exit(1)
+		return ""
+	}
+
+	if hash, ok := response.Result.(string); !ok {
+		fmt.Println("Error in call get transaction hash from http response")
+		fmt.Printf("rpc result: %v can't parse to string", response.Result)
+		return ""
+	} else {
+		return hash
+	}
 }

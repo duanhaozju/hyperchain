@@ -38,10 +38,13 @@ func NewSLDB(conf *common.Config) (*SuperLevelDB, error) {
 	}
 
 	db, err := leveldb.OpenFile(filepath, nil)
-	if err != nil {
-		panic(err.Error())
-	}
 	log := common.GetLogger(conf.GetString(common.NAMESPACE), module)
+	if err != nil {
+		//panic(err.Error())
+		log.Error(err.Error())
+		return nil, err
+
+	}
 	index := NewKeyIndex(conf, "defaultNS", db, pa.Join(filepath, "index", "index.bloom.dat"))
 	index.logger = log
 	index.Init()
@@ -111,6 +114,8 @@ func (sldb *SuperLevelDB) DestroyByRange(start, end []byte) error {
 }
 
 func (sldb *SuperLevelDB) Close() {
+	sldb.index.Persist()
+	sldb.db.Close()
 	sldb.closed <- true
 }
 

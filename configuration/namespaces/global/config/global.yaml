@@ -23,6 +23,7 @@ global:
         caconfig: "namespaces/global/config/caconfig.toml"
         peers: "namespaces/global/config/local_peerconfig.json"
         genesis: "namespaces/global/config/genesis.json"
+        static_peers: "namespaces/global/config/static_peers.json"
 
         ratelimit:
                 enable   : true
@@ -77,8 +78,8 @@ global:
     ######################################################
     executor:
         sync_chain:
-            sync_batch_size: 500
-            sync_resend_interval: 15m
+            sync_batch_size: 10
+            sync_resend_interval: 10s
         sync_replica:
             interval : 500s
             enable   : false
