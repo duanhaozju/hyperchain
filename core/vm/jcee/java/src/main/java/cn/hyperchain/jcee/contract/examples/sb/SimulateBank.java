@@ -1,3 +1,7 @@
+/**
+ * Hyperchain License
+ * Copyright (C) 2016 The Hyperchain Authors.
+ */
 package cn.hyperchain.jcee.contract.examples.sb;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
@@ -6,7 +10,6 @@ import cn.hyperchain.jcee.ledger.Batch;
 import cn.hyperchain.jcee.ledger.BatchKey;
 import cn.hyperchain.jcee.ledger.BatchValue;
 import cn.hyperchain.jcee.util.Bytes;
-import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
 
 import java.util.List;

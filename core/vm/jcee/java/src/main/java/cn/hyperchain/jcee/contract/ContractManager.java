@@ -7,6 +7,8 @@ package cn.hyperchain.jcee.contract;
 import cn.hyperchain.jcee.db.MetaDB;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
 import cn.hyperchain.jcee.ledger.HyperchainLedger;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.log4j.Logger;
 
 import java.lang.reflect.Constructor;
@@ -21,14 +23,12 @@ public class ContractManager {
     private static Logger logger = Logger.getLogger(ContractManager.class.getSimpleName());
     private Map<String, ContractHolder> contracts;
     //ledger is shared by contract with same namespace
+    @Setter
+    @Getter
     private AbstractLedger ledger;
     public ContractManager(int ledgerPort){
-        contracts = new ConcurrentHashMap<String, ContractHolder>();
+        contracts = new ConcurrentHashMap<>();
         ledger = new HyperchainLedger(ledgerPort);
-    }
-
-    public ContractHolder getContractHolder(String cid) {
-        return contracts.get(cid);
     }
 
     public ContractTemplate getContract(String cid) {
@@ -39,12 +39,28 @@ public class ContractManager {
         return holder.getContract();
     }
 
+    public ContractInfo getContractInfoByCid(String cid) {
+        if (contracts.containsKey(cid)) {
+            return contracts.get(cid).getInfo();
+        }
+        return null;
+    }
+
     public void removeContract(String cid){
         contracts.remove(cid);
     }
 
-    public void destroyContract(){
-        //TODO: remove and unload the class from jvm
+    public void destroyContract(String cid){
+        ContractInfo info = getContractInfoByCid(cid);
+        removeContract(cid);
+        MetaDB db = MetaDB.getDb();
+        if (db != null) {
+            db.remove(info);
+        }
+    }
+
+    public boolean containsContract(String cid) {
+        return contracts.containsKey(cid);
     }
 
     public void addContract(ContractHolder holder) {
@@ -92,14 +108,6 @@ public class ContractManager {
         }else {
             return false;
         }
-    }
-
-    public AbstractLedger getLedger() {
-        return ledger;
-    }
-
-    public void setLedger(AbstractLedger ledger) {
-        this.ledger = ledger;
     }
 
     public Object newInstance(Class clazz, Class[] argClasses, Object[] args) {

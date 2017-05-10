@@ -6,6 +6,7 @@ package cn.hyperchain.jcee.contract;
 
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Synchronized;
 import org.apache.log4j.Logger;
 
 import java.util.Arrays;
@@ -30,6 +31,7 @@ public class ContractInfo {
     private String codeHash; // contract classes code hash
     private long createTime;
     private long modifyTime;
+
     private ContractState state;
 
     public ContractInfo(String name, String id, String owner) {
@@ -38,6 +40,14 @@ public class ContractInfo {
         this.owner = owner;
         this.createTime = new Date().getTime();
         this.modifyTime = this.createTime;
+    }
+
+    public synchronized  void setState(ContractState state) {
+        this.state = state;
+    }
+
+    public synchronized ContractState getState() {
+        return this.state;
     }
 
     public Class[] getArgClasses() {

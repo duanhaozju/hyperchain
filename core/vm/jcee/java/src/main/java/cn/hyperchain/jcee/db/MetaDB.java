@@ -66,4 +66,11 @@ public class MetaDB {
         metaData.addContractInfo(info);
         store(metaData);
     }
+
+    public void remove(ContractInfo info) {
+        if (metaData != null) {
+            metaData.removeContractInfo(info);
+            store(metaData);
+        }
+    }
 }

@@ -30,7 +30,7 @@ public class Caller {
     }
 
     public void Call() {
-        logger.info("request method " + request.getMethod());
+        logger.debug("request method " + request.getMethod());
         try {
             switch (CallType.valueOf(request.getMethod())) {
                 case invoke: {

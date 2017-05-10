@@ -1,6 +1,8 @@
 package cn.hyperchain.jcee.db;
 
 import cn.hyperchain.jcee.contract.ContractInfo;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -9,6 +11,9 @@ import java.util.Map;
  * Created by wangxiaoyi on 2017/5/4.
  */
 public class ContractsMeta {
+
+    @Getter
+    @Setter
     private Map<String, Map<String, ContractInfo>> contractInfo;
 
     public ContractsMeta() {
@@ -39,12 +44,14 @@ public class ContractsMeta {
         }
     }
 
-    public Map<String, Map<String, ContractInfo>> getContractInfo() {
-        return contractInfo;
-    }
-
-    public void setContractInfo(Map<String, Map<String, ContractInfo>> contractInfo) {
-        this.contractInfo = contractInfo;
+    public synchronized void removeContractInfo(ContractInfo info) {
+        String namespace = info.getNamespace();
+        String cid = info.getCid();
+        Map<String, ContractInfo> infoMap = contractInfo.get(namespace);
+        infoMap.remove(cid);
+        if (infoMap.size() == 0) {
+            contractInfo.remove(namespace);
+        }
     }
 
     @Override
