@@ -20,11 +20,18 @@ public class HyperchainLedger extends AbstractLedger{
 
     private static final Logger logger = Logger.getLogger(HyperchainLedger.class.getSimpleName());
     private LedgerClient ledgerClient;
+    private JcsCache jcsCache;
     public HyperchainLedger(int port){
         ledgerClient = new LedgerClient("localhost", port);
+        jcsCache = new JcsCache();
     }
 
     public byte[] get(byte[] key) {
+        byte[] data = jcsCache.retrieveFromCache(key);
+        if(data != null){
+            return data;
+        }
+
         ContractProto.Key sendkey = ContractProto.Key.newBuilder()
                 .setContext(getLedgerContext())
                 .setK(ByteString.copyFrom(key))
@@ -42,15 +49,28 @@ public class HyperchainLedger extends AbstractLedger{
                 .setK(ByteString.copyFrom(key))
                 .setV(ByteString.copyFrom(value))
                 .build();
-        return ledgerClient.put(kv);
+
+        boolean success = ledgerClient.put(kv);
+        if(success){
+            jcsCache.putInCache(key,value);
+        }
+        return success;
     }
 
     public ContractProto.Value fetch(byte[] key) {
+        byte[] data = jcsCache.retrieveFromCache(key);
+        if(data!=null){
+            ContractProto.Value recvValue = ContractProto.Value.newBuilder()
+                    .setV(ByteString.copyFrom(data))
+                    .build();
+            return recvValue;
+        }
         ContractProto.Key sendkey = ContractProto.Key.newBuilder()
                 .setContext(getLedgerContext())
                 .setK(ByteString.copyFrom(key))
                 .build();
         logger.info("Transaction id: " + getContext().getId());
+
         return ledgerClient.get(sendkey);
     }
 
