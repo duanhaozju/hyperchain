@@ -177,6 +177,7 @@ public class SimulateBank extends ContractTemplate {
             bv.next();
             bvCount ++;
         }
+        logger.info(bvCount == count);
         return result(bvCount == count);
     }
 
