@@ -4,6 +4,8 @@
  */
 package cn.hyperchain.jcee.contract;
 
+import cn.hyperchain.jcee.contract.security.ByteCodeChecker;
+import cn.hyperchain.jcee.contract.security.Checker;
 import cn.hyperchain.jcee.db.MetaDB;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
 import cn.hyperchain.jcee.ledger.HyperchainLedger;
@@ -12,6 +14,8 @@ import lombok.Setter;
 import org.apache.log4j.Logger;
 
 import java.lang.reflect.Constructor;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -22,6 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ContractManager {
     private static Logger logger = Logger.getLogger(ContractManager.class.getSimpleName());
     private Map<String, ContractHolder> contracts;
+    private List<Checker> checkers;
+
     //ledger is shared by contract with same namespace
     @Setter
     @Getter
@@ -29,6 +35,8 @@ public class ContractManager {
     public ContractManager(int ledgerPort){
         contracts = new ConcurrentHashMap<>();
         ledger = new HyperchainLedger(ledgerPort);
+        checkers = new LinkedList<>();
+        checkers.add(new ByteCodeChecker());
     }
 
     public ContractTemplate getContract(String cid) {
@@ -73,14 +81,27 @@ public class ContractManager {
         }
     }
 
+    public boolean isSourceSafe(String path) {
+        for (Checker checker : checkers) {
+            boolean isSafe = checker.passAll(path);
+            if (!isSafe) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /**
      * deployContract deploy contract by the contract info
      * @param info contract info
      * @return status of deploy
      */
     public boolean deployContract(ContractInfo info){
-        logger.debug("contract info, " + info.toString());
 
+        if (! isSourceSafe(info.getContractPath())) {
+            return false;
+        }
+        logger.debug("contract info, " + info.toString());
         ContractClassLoader classLoader = new ContractClassLoader(info.getContractPath(), info.getClassPrefix());
         ContractTemplate contract = null;
         try {
