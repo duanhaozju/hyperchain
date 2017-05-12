@@ -20,7 +20,6 @@ const (
 type JvmManager struct {
 	ledgerProxy      *ledger.LedgerProxy     // ledger server handler, use to support ledger service
 	jvmCli           jcee.ContractExecutor   // system jvm client, for health maintain
-	startCmd         *exec.Cmd               // jvm start command
 	logger           *logging.Logger	 // logger
 	conf             *common.Config
 	exit             chan bool
@@ -76,8 +75,7 @@ func (mgr *JvmManager) startJvmServer() error {
 		return err
 	}
 	cmd := exec.Command(path.Join(binHome, StartShell), strconv.Itoa(mgr.conf.GetInt(common.C_JVM_PORT)), strconv.Itoa(mgr.conf.GetInt(common.C_LEDGER_PORT)))
-	mgr.startCmd = cmd
-	err = mgr.startCmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		mgr.logger.Error(err)
 		return err
@@ -93,12 +91,17 @@ func (mgr *JvmManager) stopLedgerServer() error {
 }
 
 func (mgr *JvmManager) stopJvmServer() error {
-	if mgr.startCmd != nil {
-		if err := mgr.startCmd.Process.Kill(); err != nil {
-			return err
-		}
-		mgr.logger.Info("stop jvm server success")
+	binHome, err := getBinDir()
+	if err != nil {
+		return err
 	}
+	cmd := exec.Command(path.Join(binHome, StopShell), strconv.Itoa(mgr.conf.GetInt(common.C_JVM_PORT)), strconv.Itoa(mgr.conf.GetInt(common.C_LEDGER_PORT)))
+	err = cmd.Run()
+	if err != nil {
+		mgr.logger.Error(err)
+		return err
+	}
+	mgr.logger.Info("execute stop hyperjvm successful")
 	return nil
 }
 

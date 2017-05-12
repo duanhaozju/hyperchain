@@ -66,6 +66,10 @@ func (self *LDBDatabase) NewIterator(prefix []byte) db.Iterator {
 	return self.db.NewIterator(util.BytesPrefix(prefix), nil)
 }
 
+func (self *LDBDatabase) Scan(begin, end []byte) db.Iterator {
+	return self.db.NewIterator(&util.Range{Start: begin, Limit: end}, nil)
+}
+
 func (self *LDBDatabase) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
 	return self.db.NewIterator(util.BytesPrefix(prefix), nil)
 }

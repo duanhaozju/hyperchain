@@ -8,11 +8,19 @@ import cn.hyperchain.protos.ContractProto;
 import cn.hyperchain.protos.LedgerGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.Iterator;
 
 public class LedgerClient {
+
+    @Setter
+    @Getter
     private String host;
+
+    @Getter
+    @Setter
     private int port;
 
     private final ManagedChannel channel;
@@ -25,22 +33,6 @@ public class LedgerClient {
                 .usePlaintext(true)
                 .build();
         this.blockingStub = LedgerGrpc.newBlockingStub(channel);
-    }
-
-    public String getHost() {
-        return host;
-    }
-
-    public void setHost(String host) {
-        this.host = host;
-    }
-
-    public int getPort() {
-        return port;
-    }
-
-    public void setPort(int port) {
-        this.port = port;
     }
 
     public void shutdown(){
@@ -71,5 +63,4 @@ public class LedgerClient {
     public Iterator<ContractProto.BathValue> rangeQuery(ContractProto.Range range) {
         return blockingStub.rangeQuery(range);
     }
-
 }

@@ -1,6 +1,8 @@
 package cn.hyperchain.jcee.db;
 
 import cn.hyperchain.jcee.contract.ContractInfo;
+import cn.hyperchain.jcee.contract.ContractState;
+import lombok.*;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -15,6 +17,7 @@ public class TestMetaDB {
         info.setContractPath("path/to/contract");
         info.setClassPrefix("cn.hyperchain.jcee.contract.examples.sb");
         info.setNamespace("namespace_global");
+        info.setState(ContractState.NORMAL);
 
 //        Class[] cls = new Class[] {String.class, Integer.class};
 //        info.setArgClasses(cls);
@@ -25,30 +28,12 @@ public class TestMetaDB {
 //        MetaDB metaDB = new MetaDB(TestMetaDB.class.getResource("/meta/meta.yaml").getPath());
 
         MetaDB metaDB = MetaDB.getDb();
+        metaDB.setPath(TestMetaDB.class.getResource("/meta/meta.yaml").getPath());
         ContractsMeta contractsMeta = new ContractsMeta();
         contractsMeta.addContractInfo(info);
         metaDB.store(contractsMeta);
 
         ContractsMeta loadMeta = metaDB.load();
         Assert.assertEquals(loadMeta.toString(), contractsMeta.toString());
-
-    }
-
-    class  A {
-        int a;
-
-        public A(){}
-
-        public int getA() {
-            return a;
-        }
-
-        public void setA(int a) {
-            this.a = a;
-        }
-
-        public A(int a) {
-            this.a = a;
-        }
     }
 }

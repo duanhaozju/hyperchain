@@ -20,6 +20,10 @@ var (
 	InvalidRequestErr    = errors.New("invalid request permission")
 )
 
+const  (
+	BatchSize = 100
+)
+
 //LedgerProxy used to manipulate data
 type LedgerProxy struct {
 	stateMgr  *StateManager
@@ -115,7 +119,6 @@ func (lp *LedgerProxy) BatchRead(ctx context.Context, batch *pb.BatchKey) (*pb.B
 	return response, nil
 }
 func (lp *LedgerProxy) BatchWrite(ctx context.Context, batch *pb.BatchKV) (*pb.Response, error) {
-	cid := batch.Context.Cid
 	exist, state := lp.stateMgr.GetStateDb(batch.Context.Namespace)
 	if exist == false {
 		return &pb.Response{Ok: false}, NamespaceNotExistErr
@@ -124,12 +127,51 @@ func (lp *LedgerProxy) BatchWrite(ctx context.Context, batch *pb.BatchKV) (*pb.R
 		return &pb.Response{Ok: false}, InvalidRequestErr
 	}
 	for _, kv := range batch.Kv {
-		state.SetState(common.HexToAddress(cid), common.BytesToHash(kv.K), kv.V, 0)
+		state.SetState(common.HexToAddress(batch.Context.Cid), common.BytesToHash(kv.K), kv.V, 0)
 	}
 	return &pb.Response{Ok: true}, nil
 }
 
 func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer) error  {
+	exist, state := lp.stateMgr.GetStateDb(r.Context.Namespace)
+	if exist == false {
+		return NamespaceNotExistErr
+	}
+	if valid := lp.requestCheck(r.Context); !valid {
+		return InvalidRequestErr
+	}
+	start := common.BytesToHash(r.Start)
+	limit := common.BytesToHash(r.End)
+	iterRange := vm.IterRange{
+		Start:   &start,
+		Limit:   &limit,
+	}
+	iter, err := state.NewIterator(common.BytesToAddress(common.FromHex(r.Context.Cid)), &iterRange)
+	if err != nil {
+		return err
+	}
+	cnt := 0
+	batchValue := pb.BathValue{
+		Id:  r.Context.Txid,
+	}
+	for iter.Next() {
+		batchValue.V = append(batchValue.V, iter.Value())
+		cnt += 1
+		if cnt == BatchSize {
+			batchValue.HasMore = true
+			if err := stream.Send(&batchValue); err != nil {
+				return err
+			}
+			cnt = 0
+			batchValue = pb.BathValue{
+				Id:  r.Context.Txid,
+			}
+		}
+	}
+	batchValue.HasMore = false
+	if err := stream.Send(&batchValue); err != nil {
+		return err
+	}
 	return nil
 }
 

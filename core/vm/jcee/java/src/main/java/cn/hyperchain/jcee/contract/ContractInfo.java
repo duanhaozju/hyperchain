@@ -4,12 +4,17 @@
  */
 package cn.hyperchain.jcee.contract;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.Synchronized;
 import org.apache.log4j.Logger;
 
 import java.util.Arrays;
 import java.util.Date;
 
 //Contract represent a contract instance
+@Data
+@NoArgsConstructor
 public class ContractInfo {
     private static final Logger logger = Logger.getLogger(ContractInfo.class.getSimpleName());
     private String name;
@@ -27,7 +32,7 @@ public class ContractInfo {
     private long createTime;
     private long modifyTime;
 
-    public ContractInfo() {}
+    private ContractState state;
 
     public ContractInfo(String name, String id, String owner) {
         this.name = name;
@@ -37,100 +42,12 @@ public class ContractInfo {
         this.modifyTime = this.createTime;
     }
 
-    public void setCid(String cid) {
-        this.cid = cid;
+    public synchronized  void setState(ContractState state) {
+        this.state = state;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public String getCid() {
-        return cid;
-    }
-
-    public String getOwner() {
-        return owner;
-    }
-
-    public long getCreateTime() {
-        return createTime;
-    }
-
-    public long getModifyTime() {
-        return modifyTime;
-    }
-
-    public String getContractPath() {
-        return contractPath;
-    }
-
-    public void setContractPath(String contractPath) {
-        this.contractPath = contractPath;
-    }
-
-    public String getClassPrefix() {
-        return classPrefix;
-    }
-
-    public void setClassPrefix(String classPrefix) {
-        this.classPrefix = classPrefix;
-    }
-
-    public String getNamespace() {
-        return namespace;
-    }
-
-    public void setNamespace(String namespace) {
-        this.namespace = namespace;
-    }
-
-    public void setCreateTime(long createTime) {
-        this.createTime = createTime;
-    }
-
-    public void setModifyTime(long modifyTime) {
-        this.modifyTime = modifyTime;
-    }
-
-    public String getContractMainName() {
-        return contractMainName;
-    }
-
-    public void setContractMainName(String contractMainName) {
-        this.contractMainName = contractMainName;
-    }
-
-    public String[] getArgTypes() {
-        return argTypes;
-    }
-
-    public void setArgTypes(String[] argTypes) {
-        this.argTypes = argTypes;
-    }
-
-    public Object[] getArgs() {
-        return args;
-    }
-
-    public void setArgs(Object[] args) {
-        this.args = args;
-    }
-
-    public void setOwner(String owner) {
-        this.owner = owner;
-    }
-
-    public String getCodeHash() {
-        return codeHash;
-    }
-
-    public void setCodeHash(String codeHash) {
-        this.codeHash = codeHash;
-    }
-
-    public void setName(String name) {
-        this.name = name;
+    public synchronized ContractState getState() {
+        return this.state;
     }
 
     public Class[] getArgClasses() {

@@ -20,11 +20,8 @@ public class ContractHandler {
         this.ledgerPort = ledgerPort;
     }
 
-//    public Future<Response> execute(Task task) {
-//        return exec.submit(task);
-//    }
-
     public void addHandler(String namespace) {
+        logger.info("Add handler for namespace " + namespace);
         Handler handler = new Handler(ledgerPort);
         handlers.put(namespace, handler);
     }

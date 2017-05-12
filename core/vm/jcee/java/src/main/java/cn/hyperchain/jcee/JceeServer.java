@@ -66,6 +66,7 @@ public class JceeServer implements IServer {
             logger.error("Invalid start args, need localPort and ledgerPort");
             System.exit(1);
         }
+
         int localPort = Integer.parseInt(args[0]);
         int ledgerPort = Integer.parseInt(args[1]);
         JceeServer server = new JceeServer(localPort, ledgerPort);

@@ -1,4 +1,4 @@
-package cn.hyperchain.jcee;
+package cn.hyperchain.jcee.common;
 
 /**
  * Created by wangxiaoyi on 2017/4/25.

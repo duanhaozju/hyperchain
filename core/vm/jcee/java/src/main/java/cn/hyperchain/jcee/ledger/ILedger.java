@@ -14,7 +14,12 @@ public interface ILedger {
     //batchRead read data by batch
     Batch batchRead(BatchKey key);
 
+    //rangeQuery query data by range
     BatchValue rangeQuery(byte[] start, byte[] end);
+
+    //delete data
+    boolean delete(byte[] key);
+    boolean delete(String key);
 
     byte[] get(byte[] key);
     boolean getBoolean(byte[] key);
@@ -56,4 +61,3 @@ public interface ILedger {
     boolean put(String key, String value);
     boolean put(String key, Object object);
 }
-
