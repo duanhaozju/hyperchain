@@ -106,8 +106,10 @@ public class ByteCodeChecker implements Checker {
         List<String> classFiles = getAllClassFile(absoluteDirPath);
         for (String classFile: classFiles) {
             if (!pass(classFile)) {
+                logger.warn(classFile + " is not safe!");
                 return false;
             }
+            logger.info(classFile + " is safe!");
         }
         return true;
     }
