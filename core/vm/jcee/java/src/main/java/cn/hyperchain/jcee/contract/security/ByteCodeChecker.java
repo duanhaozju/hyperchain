@@ -26,9 +26,8 @@ import java.util.Map;
 public class ByteCodeChecker implements Checker {
 
     private static final Logger logger = Logger.getLogger(ByteCodeChecker.class.getSimpleName());
-    private Rule systemRule;
-    private Rule userRule;
-    private static final String systemRulePath = System.getProperty("user.dir") + "/src/main/resources/securityRule.yaml";
+    private Rule rule;
+    private static final String systemRulePath = "./hyperjvm/config/systemSecurityRule.yaml";
     private static final String allowedRule = "allowedRule";
     private static final String notAllowedRule = "notAllowedRule";
     private static final String keywordType = "keyword";
@@ -41,8 +40,7 @@ public class ByteCodeChecker implements Checker {
         YAMLFactory yamlFactory = new YAMLFactory();
         ObjectMapper objectMapper = new ObjectMapper(yamlFactory);
         try {
-            this.systemRule = objectMapper.readValue(new File(systemRulePath), Rule.class);
-            this.userRule = objectMapper.readValue(new File(userRulePath), Rule.class);
+            this.rule = objectMapper.readValue(new File(systemRulePath), Rule.class);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -52,9 +50,9 @@ public class ByteCodeChecker implements Checker {
         YAMLFactory yamlFactory = new YAMLFactory();
         ObjectMapper objectMapper = new ObjectMapper(yamlFactory);
         try {
-            this.systemRule = objectMapper.readValue(new File(systemRulePath), Rule.class);
+            this.rule = objectMapper.readValue(new File(systemRulePath), Rule.class);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
         }
     }
 
@@ -64,14 +62,10 @@ public class ByteCodeChecker implements Checker {
         ClassNode cn = new ClassNode();
         reader.accept(cn, 0);
 
-        if (interfaceIsOk(systemRule, cn) && superClassIsOk(systemRule, cn) &&
-                memberVariableKeyWordIsOk(systemRule, cn) && memberVariableClassIsOk(systemRule, cn) &&
-                methodDeclareIsOk(systemRule, cn) && methodVariableIsOk(systemRule, cn) &&
-                methodInstructionOpCodeIsOk(systemRule, cn) && methodInstructionDescIsOk(systemRule, cn) &&
-                interfaceIsOk(userRule, cn) && superClassIsOk(userRule, cn) &&
-                memberVariableKeyWordIsOk(userRule, cn) && memberVariableClassIsOk(userRule, cn) &&
-                methodDeclareIsOk(userRule, cn) && methodVariableIsOk(userRule, cn) &&
-                methodInstructionOpCodeIsOk(userRule, cn) && methodInstructionDescIsOk(userRule, cn)) {
+        if (interfaceIsOk(rule, cn) && superClassIsOk(rule, cn) &&
+                memberVariableKeyWordIsOk(rule, cn) && memberVariableClassIsOk(rule, cn) &&
+                methodDeclareIsOk(rule, cn) && methodVariableIsOk(rule, cn) &&
+                methodInstructionOpCodeIsOk(rule, cn) && methodInstructionDescIsOk(rule, cn)) {
             return true;
         }
         return false;
@@ -84,14 +78,10 @@ public class ByteCodeChecker implements Checker {
             ClassReader reader = new ClassReader(new FileInputStream(file));
             ClassNode cn = new ClassNode();
             reader.accept(cn, 0);
-            if (interfaceIsOk(systemRule, cn) && superClassIsOk(systemRule, cn) &&
-                    memberVariableKeyWordIsOk(systemRule, cn) && memberVariableClassIsOk(systemRule, cn) &&
-                    methodDeclareIsOk(systemRule, cn) && methodVariableIsOk(systemRule, cn) &&
-                    methodInstructionOpCodeIsOk(systemRule, cn) && methodInstructionDescIsOk(systemRule, cn) &&
-                    interfaceIsOk(userRule, cn) && superClassIsOk(userRule, cn) &&
-                    memberVariableKeyWordIsOk(userRule, cn) && memberVariableClassIsOk(userRule, cn) &&
-                    methodDeclareIsOk(userRule, cn) && methodVariableIsOk(userRule, cn) &&
-                    methodInstructionOpCodeIsOk(userRule, cn) && methodInstructionDescIsOk(userRule, cn)) {
+            if (interfaceIsOk(rule, cn) && superClassIsOk(rule, cn) &&
+                    memberVariableKeyWordIsOk(rule, cn) && memberVariableClassIsOk(rule, cn) &&
+                    methodDeclareIsOk(rule, cn) && methodVariableIsOk(rule, cn) &&
+                    methodInstructionOpCodeIsOk(rule, cn) && methodInstructionDescIsOk(rule, cn)) {
                 return true;
             }
         } catch (IOException e) {
@@ -116,13 +106,14 @@ public class ByteCodeChecker implements Checker {
 
     private boolean interfaceIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
+            logger.warn("no rule found!");
             return true;
         }
         Map<String, String> classOfAllowedRule = rule.getInterfaceRule().get(allowedRule).get(classType);
         Map<String, String> classOfNotAllowedRule = rule.getInterfaceRule().get(notAllowedRule).get(classType);
         List<String> interfaces = cn.interfaces;
         if (classOfAllowedRule == null && classOfNotAllowedRule == null) {
-            logger.info("check interface true!");
+            logger.debug("check interface true!");
             return true;
         } else if (classOfAllowedRule != null) {
             for (String interfacee : interfaces) {
@@ -132,7 +123,7 @@ public class ByteCodeChecker implements Checker {
                     return false;
                 }
             }
-            logger.info("check interface true!");
+            logger.debug("check interface true!");
             return true;
         } else {
             for (String interfacee : interfaces) {
@@ -142,20 +133,21 @@ public class ByteCodeChecker implements Checker {
                     return false;
                 }
             }
-            logger.info("check interface true!");
+            logger.debug("check interface true!");
             return true;
         }
     }
 
     private boolean superClassIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
+            logger.warn("no rule found!");
             return true;
         }
         Map<String, String> classOfAllowedRule = rule.getSuperClassRule().get(allowedRule).get(classType);
         Map<String, String> classOfNotAllowedRule = rule.getSuperClassRule().get(notAllowedRule).get(classType);
         String superClass = cn.superName;
         if (classOfAllowedRule == null && classOfNotAllowedRule == null) {
-            logger.info("check super class true!");
+            logger.debug("check super class true!");
             return true;
         } else if (classOfAllowedRule != null) {
             boolean flag = containsClass(classOfAllowedRule, superClass);
@@ -170,6 +162,7 @@ public class ByteCodeChecker implements Checker {
 
     private boolean memberVariableKeyWordIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
+            logger.warn("no rule found!");
             return true;
         }
         Map<String, String> classOfMustAllowedRule = rule.getMemberVariableRule().get(allowedRule).get(mustKeywordType);
@@ -197,7 +190,7 @@ public class ByteCodeChecker implements Checker {
             }
         }
         if (classOfAllowedRule == null && classOfNotAllowedRule == null) {
-            logger.info("check class member variable keyword true!");
+            logger.debug("check class member variable keyword true!");
             return true;
         }
         if (classOfAllowedRule != null) {
@@ -213,7 +206,7 @@ public class ByteCodeChecker implements Checker {
                     access -= temp;
                 }
             }
-            logger.info("check class member variable keyword true!");
+            logger.debug("check class member variable keyword true!");
             return true;
         } else {
             for (FieldNode fieldNode : fields) {
@@ -228,20 +221,21 @@ public class ByteCodeChecker implements Checker {
                     access -= temp;
                 }
             }
-            logger.info("check class member variable keyword true!");
+            logger.debug("check class member variable keyword true!");
             return true;
         }
     }
 
     private boolean memberVariableClassIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
+            logger.warn("no rule found!");
             return true;
         }
         Map<String, String> classOfAllowedRule = rule.getMemberVariableRule().get(allowedRule).get(classType);
         Map<String, String> classOfNotAllowedRule = rule.getMemberVariableRule().get(notAllowedRule).get(classType);
         List<FieldNode> fields = cn.fields;
         if (classOfAllowedRule == null && classOfNotAllowedRule == null) {
-            logger.info("check class member variable class true!");
+            logger.debug("check class member variable class true!");
             return true;
         } else if (classOfAllowedRule != null) {
             for (FieldNode fieldNode : fields) {
@@ -252,7 +246,7 @@ public class ByteCodeChecker implements Checker {
                     return false;
                 }
             }
-            logger.info("check class member variable class true!");
+            logger.debug("check class member variable class true!");
             return true;
         } else {
             for (FieldNode fieldNode : fields) {
@@ -263,13 +257,14 @@ public class ByteCodeChecker implements Checker {
                     return false;
                 }
             }
-            logger.info("check class member variable class true!");
+            logger.debug("check class member variable class true!");
             return true;
         }
     }
 
     private boolean methodDeclareIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
+            logger.warn("no rule found!");
             return true;
         }
         Map<String, String> classOfMustAllowedRule = rule.getMethodDeclare().get(allowedRule).get(mustKeywordType);
@@ -297,7 +292,7 @@ public class ByteCodeChecker implements Checker {
             }
         }
         if (classOfAllowedRule == null && classOfNotAllowedRule == null) {
-            logger.info("check method declare true!");
+            logger.debug("check method declare true!");
             return true;
         }
         if (classOfAllowedRule != null) {
@@ -313,7 +308,7 @@ public class ByteCodeChecker implements Checker {
                     access -= temp;
                 }
             }
-            logger.info("check method declare true!");
+            logger.debug("check method declare true!");
             return true;
         } else {
             for (MethodNode methodNode : methodNodes) {
@@ -328,20 +323,21 @@ public class ByteCodeChecker implements Checker {
                     access -= temp;
                 }
             }
-            logger.info("check method declare true!");
+            logger.debug("check method declare true!");
             return true;
         }
     }
 
     private boolean methodVariableIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
+            logger.warn("no rule found!");
             return true;
         }
         Map<String, String> classOfAllowedRule = rule.getMethodVariable().get(allowedRule).get(classType);
         Map<String, String> classOfNotAllowedRule = rule.getMethodVariable().get(notAllowedRule).get(classType);
         List<MethodNode> methodNodes = cn.methods;
         if (classOfAllowedRule == null && classOfNotAllowedRule == null) {
-            logger.info("check method variable true!");
+            logger.debug("check method variable true!");
             return true;
         } else if (classOfAllowedRule != null) {
             for (MethodNode methodNode : methodNodes) {
@@ -355,7 +351,7 @@ public class ByteCodeChecker implements Checker {
                     }
                 }
             }
-            logger.info("check method variable true!");
+            logger.debug("check method variable true!");
             return true;
         } else {
             for (MethodNode methodNode : methodNodes) {
@@ -369,20 +365,21 @@ public class ByteCodeChecker implements Checker {
                     }
                 }
             }
-            logger.info("check method variable true!");
+            logger.debug("check method variable true!");
             return true;
         }
     }
 
     private boolean methodInstructionOpCodeIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
+            logger.warn("no rule found!");
             return true;
         }
         Map<String, String> opCodeOfAllowedRule = rule.getMethodInstruction().get(allowedRule).get(opCodeType);
         Map<String, String> opCodeOfNotAllowedRule = rule.getMethodInstruction().get(notAllowedRule).get(opCodeType);
         List<MethodNode> methodNodes = cn.methods;
         if (opCodeOfAllowedRule == null && opCodeOfNotAllowedRule == null) {
-            logger.info("check method instruction opcode true!");
+            logger.debug("check method instruction opcode true!");
             return true;
         } else if (opCodeOfAllowedRule != null) {
             for (MethodNode methodNode : methodNodes) {
@@ -396,7 +393,7 @@ public class ByteCodeChecker implements Checker {
                     }
                 }
             }
-            logger.info("check method instruction true!");
+            logger.debug("check method instruction true!");
             return true;
         } else {
             for (MethodNode methodNode : methodNodes) {
@@ -410,20 +407,21 @@ public class ByteCodeChecker implements Checker {
                     }
                 }
             }
-            logger.info("check method instruction opcode true!");
+            logger.debug("check method instruction opcode true!");
             return true;
         }
     }
 
     private boolean methodInstructionDescIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
+            logger.warn("no rule found!");
             return true;
         }
         Map<String, String> descOfAllowedRule = rule.getMethodInstruction().get(allowedRule).get(classType);
         Map<String, String> descOfNotAllowedRule = rule.getMethodInstruction().get(notAllowedRule).get(classType);
         List<MethodNode> methodNodes = cn.methods;
         if (descOfAllowedRule == null && descOfNotAllowedRule == null) {
-            logger.info("check method instruction desc true!");
+            logger.debug("check method instruction desc true!");
             return true;
         } else if (descOfAllowedRule != null) {
             for (MethodNode methodNode : methodNodes) {
@@ -439,7 +437,7 @@ public class ByteCodeChecker implements Checker {
                     }
                 }
             }
-            logger.info("check method instruction desc true!");
+            logger.debug("check method instruction desc true!");
             return true;
         } else {
             for (MethodNode methodNode : methodNodes) {
@@ -455,7 +453,7 @@ public class ByteCodeChecker implements Checker {
                     }
                 }
             }
-            logger.info("check method instruction desc true!");
+            logger.debug("check method instruction desc true!");
             return true;
         }
     }

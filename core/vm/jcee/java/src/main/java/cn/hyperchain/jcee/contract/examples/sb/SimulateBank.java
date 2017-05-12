@@ -20,17 +20,7 @@ import java.util.List;
 public class SimulateBank extends ContractTemplate {
     private static final Logger logger = Logger.getLogger(SimulateBank.class.getSimpleName());
 
-    private String bankName;
-    private long bankNum;
-    private boolean isValid;
-
     public SimulateBank() {}
-
-    public SimulateBank(String bankName, long bankNum, boolean isValid){
-        this.bankName = bankName;
-        this.bankNum = bankNum;
-        this.isValid = isValid;
-    }
 
     /**
      * invoke smart contract method
