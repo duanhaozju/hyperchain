@@ -137,7 +137,10 @@ func Reset() {
 
 // IsEnabledFor returns true if the logger is enabled for the given level.
 func (l *Logger) IsEnabledFor(level Level) bool {
-	return defaultBackend.IsEnabledFor(level, l.Module)
+	if defaultBackend != nil {
+		return defaultBackend.IsEnabledFor(level, l.Module)
+	}
+	return false
 }
 
 func (l *Logger) log(lvl Level, format *string, args ...interface{}) {
