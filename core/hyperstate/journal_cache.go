@@ -60,6 +60,7 @@ func (cache *JournalCache) Fetch (address common.Address) *StateObject {
 		data:	  account,
 		cachedStorage: make(Storage),
 		dirtyStorage: make(Storage),
+		logger:  cache.logger,
 	}
 	cache.stateObjects[address] = obj
 	return obj
