@@ -1,6 +1,7 @@
 package cn.hyperchain.jcee.security;
 
-import cn.hyperchain.jcee.contract.ContractBase;
+import cn.hyperchain.jcee.common.ExecuteResult;
+import cn.hyperchain.jcee.contract.ContractTemplate;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.DoubleValue;
 import org.apache.log4j.Logger;
@@ -10,49 +11,16 @@ import java.util.List;
 /**
  * Created by Think on 4/27/17.
  */
-public class NormalContract extends ContractBase {
+public class NormalContract extends ContractTemplate {
 
         private static final Logger logger = Logger.getLogger(NormalContract.class.getSimpleName());
 
-        /**
-         * Invoke smart contract method
-         *
-         * @param funcName function name user defined in contract
-         * @param args     arguments of funcName
-         */
-        @Override
-        public boolean Invoke(String funcName, List<String> args) {
-            switch (funcName) {
-                case "issue":
-                    return issue(args);
-                case "transfer":
-                    return transfer(args);
-                default:
-                    logger.error("method " + funcName  + " not found!");
+    @Override
+    public ExecuteResult invoke(String funcName, List<String> args) {
+        return null;
+    }
 
-            }
-            return false;
-        }
-
-        /**
-         * Query data stored in the smart contract
-         *
-         * @param funcName function name
-         * @param args     function related arguments
-         * @return the query result
-         */
-        @Override
-        public ByteString Query(String funcName, List<String> args) {
-            switch (funcName) {
-                case "getAccountBalance":
-                    return getAccountBalance(args);
-                default:
-                    logger.error("method " + funcName  + " not found!");
-            }
-            return null;
-        }
-
-        //String account, double num
+    //String account, double num
         private boolean issue(List<String> args) {
             if(args.size() != 2) {
                 logger.error("args num is invalid");

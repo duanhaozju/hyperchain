@@ -1,6 +1,7 @@
 package cn.hyperchain.jcee.security;
 
-import cn.hyperchain.jcee.contract.ContractBase;
+import cn.hyperchain.jcee.common.ExecuteResult;
+import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
@@ -12,17 +13,12 @@ import java.util.concurrent.Executors;
 /**
  * Created by Think on 4/27/17.
  */
-public class ConcurrentContract extends ContractBase {
+public class ConcurrentContract extends ContractTemplate {
     private static final Logger logger = Logger.getLogger(ConcurrentContract.class.getSimpleName());
 
     public void error(){
         Executor executor = Executors.newFixedThreadPool(4);
         executor.toString();
-    }
-
-    @Override
-    public ByteString Query(String funcName, List<String> args) {
-        return null;
     }
 
     public ConcurrentContract() {
@@ -60,7 +56,7 @@ public class ConcurrentContract extends ContractBase {
     }
 
     @Override
-    public boolean Invoke(String funcName, List<String> args) {
-        return false;
+    public ExecuteResult invoke(String funcName, List<String> args) {
+        return null;
     }
 }

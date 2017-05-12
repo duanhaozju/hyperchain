@@ -1,6 +1,7 @@
 package cn.hyperchain.jcee.security;
 
-import cn.hyperchain.jcee.contract.ContractBase;
+import cn.hyperchain.jcee.common.ExecuteResult;
+import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
@@ -11,16 +12,11 @@ import java.util.List;
 /**
  * Created by Think on 4/27/17.
  */
-public class IOContract extends ContractBase {
+public class IOContract extends ContractTemplate {
     private static final Logger logger = Logger.getLogger(IOContract.class.getSimpleName());
 
     public void send(){
         File file = new File("");
-    }
-
-    @Override
-    public ByteString Query(String funcName, List<String> args) {
-        return null;
     }
 
     public IOContract() {
@@ -58,7 +54,7 @@ public class IOContract extends ContractBase {
     }
 
     @Override
-    public boolean Invoke(String funcName, List<String> args) {
-        return false;
+    public ExecuteResult invoke(String funcName, List<String> args) {
+        return null;
     }
 }

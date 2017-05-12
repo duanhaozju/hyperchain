@@ -1,6 +1,7 @@
 package cn.hyperchain.jcee.security;
 
-import cn.hyperchain.jcee.contract.ContractBase;
+import cn.hyperchain.jcee.common.ExecuteResult;
+import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
@@ -10,7 +11,7 @@ import java.util.List;
 /**
  * Created by Think on 5/5/17.
  */
-public class ReflectContract2 extends ContractBase {
+public class ReflectContract2 extends ContractTemplate {
     private static final Logger logger = Logger.getLogger(ReflectContract2.class.getSimpleName());
 
     public void error(){
@@ -19,11 +20,6 @@ public class ReflectContract2 extends ContractBase {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    @Override
-    public ByteString Query(String funcName, List<String> args) {
-        return null;
     }
 
     @Override
@@ -57,7 +53,7 @@ public class ReflectContract2 extends ContractBase {
     }
 
     @Override
-    public boolean Invoke(String funcName, List<String> args) {
-        return false;
+    public ExecuteResult invoke(String funcName, List<String> args) {
+        return null;
     }
 }
