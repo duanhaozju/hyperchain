@@ -20,13 +20,11 @@ import (
 // Use GetLogger to get a logger
 // Use SetLogLevel to set the logger's level
 
-var logger = logging.MustGetLogger("commonLogger")
+var commonLogger = logging.MustGetLogger("commonLogger")
 var hyperLoggers map[string]*HyperLogger
 var rwMutex sync.RWMutex
 var once sync.Once
 var defaultLogLevel = "INFO"
-var defaultConsoleFormat = `[%{module}]%{color}[%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}`
-var defaultFileFormat = `[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}`
 
 type HyperLogger struct {
 	conf               *Config
@@ -78,17 +76,11 @@ func InitHyperLoggerManager(conf *Config) {
 	hyperLoggers[name] = hl
 	rwMutex.Unlock()
 
-	logger = GetLogger(DEFAULT_NAMESPACE, "common")
+	commonLogger = GetLogger(DEFAULT_NAMESPACE, "common")
 }
 
 //InitHyperLogger init the whole logging system.
 func InitHyperLogger(conf *Config) (*HyperLogger, error) {
-	//once.Do(func() {
-	//	hyperLoggers = make(map[string]*HyperLogger)
-	//})
-	//if !conf.ContainsKey(NAMESPACE) {
-	//	conf.Set(NAMESPACE, DEFAULT_NAMESPACE)
-	//}
 	hyperLogger := newHyperLogger(conf)
 	if hyperLogger == nil {
 		return nil, errors.New("Init Hyperlogger error: nil return")
@@ -111,31 +103,32 @@ func InitHyperLogger(conf *Config) (*HyperLogger, error) {
 //GetLogger getLogger with specific namespace and module.
 func GetLogger(namespace string, module string) *logging.Logger {
 	ml := getModuleLogger(namespace, module)
-	var logger *logging.Logger
+	var tmpLogger *logging.Logger
 	if ml == nil {
 		// dynamically loaded module
 		hl, err := getHyperlogger(namespace)
 		if err != nil {
-			return nil
+			commonLogger.Error(err)
+			commonLogger.Errorf("%s namespace logger not initialized using common logger instead!")
+			return commonLogger
 		}
 
 		// add new module logger
 		compositeName := getCompositeModuleName(namespace, module)
 
-		if err != nil {
-			return nil
-		}
 		newMl, err := hl.addNewLogger(compositeName, hl.currentFile,
 			hl.fileFormat, hl.consoleFormat, hl.baseLevel, hl.writeToFile)
 		if err != nil {
-			return nil
+			commonLogger.Error(err)
+			commonLogger.Errorf("add new logger failed using common logger instead!")
+			return commonLogger
 		}
-		logger = newMl.logger
+		tmpLogger = newMl.logger
 	} else {
-		logger = ml.logger
+		tmpLogger = ml.logger
 	}
 
-	return logger
+	return tmpLogger
 }
 
 //SetLogLevel set log level by specific namespace module and the level provided by user.
@@ -162,7 +155,7 @@ func GetLogLevel(namespace, module string) (string, error) {
 func CloseHyperlogger(namespace string) error {
 	hl, err := getHyperlogger(namespace)
 	if err != nil {
-		logger.Errorf("Close Namespace Error: %s", err.Error())
+		commonLogger.Errorf("Close Namespace Error: %s", err.Error())
 		return err
 	}
 	hl.closeLogFile <- struct{}{}
@@ -208,7 +201,7 @@ func (hl *HyperLogger) init() {
 
 	baseLevel := conf.GetString(LOG_BASE_LOG_LEVEL)
 	if baseLevel == "" {
-		logger.Noticef("Invalid logging level: %s, using %s as default!", baseLevel, defaultLogLevel)
+		commonLogger.Noticef("Invalid logging level: %s, using %s as default!", baseLevel, defaultLogLevel)
 		hl.baseLevel = defaultLogLevel
 	} else {
 		hl.baseLevel = baseLevel
@@ -237,7 +230,7 @@ func (hl *HyperLogger) init() {
 		_, err := hl.addNewLogger(compositeName, file, fileFormat, consoleFormat,
 			cast.ToString(l), hl.writeToFile)
 		if err != nil {
-			logger.Critical("init error")
+			commonLogger.Critical("init error")
 		}
 	}
 
@@ -277,7 +270,7 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 	file, _ := os.Create(fileName)
 
 	if hl.moduleLoggers == nil {
-		logger.Critical("moduleLoggers nil")
+		commonLogger.Critical("moduleLoggers nil")
 		return
 	}
 	hl.moduleLoggersMutex.RLock()
@@ -300,11 +293,11 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 				ml.setNewLogFile(file, hl.fileFormat)
 			}
 			hl.moduleLoggersMutex.RUnlock()
-			logger.Infof("Change log file, new log file name: %s", fileName)
+			commonLogger.Infof("Change log file, new log file name: %s", fileName)
 			hl.currentFile.Close()
 			hl.currentFile = file
 		case <-hl.closeLogFile:
-			logger.Info("Close logger service")
+			commonLogger.Info("Close logger service")
 			hl.currentFile.Close()
 			return
 		}
@@ -315,20 +308,20 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 func getModuleLogger(namespace, module string) *moduleLogger {
 	hl, err := getHyperlogger(namespace)
 	if err != nil {
-		logger.Critical("GetLogger error: hyperloger nil")
+		commonLogger.Critical("GetLogger error: hyperloger nil")
 		return nil
 	}
 	compositeName := getCompositeModuleName(namespace, module)
 
 	if hl.moduleLoggers == nil {
-		logger.Critical("getLogger error: moduleLoggers nil")
+		commonLogger.Critical("getLogger error: moduleLoggers nil")
 		return nil
 	}
 
 	hl.moduleLoggersMutex.RLock()
 	ml, ok := hl.moduleLoggers[compositeName]
 	if !ok {
-		logger.Debugf("module %s not exist", compositeName)
+		commonLogger.Debugf("module %s not exist", compositeName)
 	}
 	hl.moduleLoggersMutex.RUnlock()
 	return ml
