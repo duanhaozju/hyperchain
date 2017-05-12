@@ -51,6 +51,7 @@ public class JceeServer implements IServer {
         }catch (Exception e) {
             logger.error(e);
             e.printStackTrace();
+            System.exit(-1);
         }
     }
 
