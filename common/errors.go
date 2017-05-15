@@ -187,18 +187,6 @@ func (e *RepeadedTxError) Error() string {
 	return e.Message
 }
 
-type NamespaceNotFound struct {
-	Name    string
-}
-
-func (e *NamespaceNotFound) Code() int {
-	return -32008
-}
-
-func (e *NamespaceNotFound) Error() string {
-	return fmt.Sprintf("The namespace '%s' does not exist", e.Name)
-}
-
 type ContractPermissionError struct {
 	Message    string
 }
@@ -209,6 +197,42 @@ func (e *ContractPermissionError) Code() int {
 
 func (e *ContractPermissionError) Error() string {
 	return fmt.Sprintf("The contract invocation permission not enough '%s'", e.Message)
+}
+
+type AccountNotExistError struct {
+	Message    string
+}
+
+func (e *AccountNotExistError) Code() int {
+	return -32009
+}
+
+func (e *AccountNotExistError) Error() string {
+	return fmt.Sprintf("The account dose not exist '%s'", e.Message)
+}
+
+type NamespaceNotFound struct {
+	Name    string
+}
+
+func (e *NamespaceNotFound) Code() int {
+	return -32010
+}
+
+func (e *NamespaceNotFound) Error() string {
+	return fmt.Sprintf("The namespace '%s' does not exist", e.Name)
+}
+
+type NoBlockGeneratedError struct {
+	Message    string
+}
+
+func (e *NoBlockGeneratedError) Code() int {
+	return -32011
+}
+
+func (e *NoBlockGeneratedError) Error() string {
+	return fmt.Sprintf(e.Message)
 }
 
 type UnauthorizedError struct {
