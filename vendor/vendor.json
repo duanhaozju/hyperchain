@@ -176,6 +176,12 @@
 			"revisionTime": "2013-11-06T22:25:44Z"
 		},
 		{
+			"checksumSHA1": "M/4iS6UiRR4OsxnJpNMoxHHCDVo=",
+			"path": "github.com/looplab/fsm",
+			"revision": "bcc3636384ce80a109a6039432b30ff5b82476ee",
+			"revisionTime": "2017-04-04T09:40:36Z"
+		},
+		{
 			"checksumSHA1": "S6PDDQMYaKwLDIP/NsRYb4FRAqQ=",
 			"path": "github.com/magiconair/properties",
 			"revision": "61b492c03cf472e0c6419be5899b8e0dc28b1b88",

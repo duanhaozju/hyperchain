@@ -25,6 +25,7 @@ f_help(){
     echo "  -k, --kill:     just kill all the processes"
     echo "  -d, --delete:   clear the old data or not; default: clear. add for not clear"
     echo "  -r, --rebuild:  rebuild the project or not; default: rebuild, add for not rebuild"
+    echo "  -c, --hypercli: rebuild hypercli or not; default: not rebuild, add for rebuild"
     echo "  -m, --mode:     choose the run mode; default: run many in many, add for many in one"
     echo "---------------------------------------------------"
     echo "Example for run many in one in mac without rebuild:"
@@ -89,6 +90,12 @@ f_rebuild(){
         rm ${DUMP_PATH}/hyperchain
     fi
     cd ${PROJECT_PATH} && govendor build -o ${DUMP_PATH}/hyperchain -tags=embed
+}
+
+# rebuild hypercli
+f_rebuild_hypercli(){
+echo "Rebuild hypercli ..."
+cd ${CLI_PATH} && govendor build
 }
 
 f_all_in_one_cmd(){
@@ -157,14 +164,20 @@ CONF_PATH="${PROJECT_PATH}/configuration"
 # global config path
 GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/global.yaml"
 
+# hypercli root path
+CLI_PATH="${PROJECT_PATH}/hypercli"
+
 # peerconfig
 PEER_CONFIG_FILE=${PROJECT_PATH}/scripts/namespace/config/global.yaml
 
 # delete data? default = true
 DELETEDATA=true
 
-# rebuild
+# rebuild the project or not? default = true
 REBUILD=true
+
+# rebuild hypercli or not? default = false
+HYPERCLI=false
 
 # 1.check local env
 f_check_local_env
@@ -190,6 +203,8 @@ do
     -r|--rebuild)
         REBUILD=false;
         shift;;
+    -c|--hypercli)
+        HYPERCLI=true; shift;;
     -m|--mode)
         MODE=true;
         shift;;
@@ -210,6 +225,10 @@ fi
 # handle rebuild issues
 if  $REBUILD ; then
     f_rebuild
+fi
+
+if $HYPERCLI ; then
+    f_rebuild_hypercli
 fi
 
 # distribute files
