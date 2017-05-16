@@ -65,6 +65,18 @@ func (flt *Filter) AddHash(hash common.Hash) {
 	flt.hashes = append(flt.hashes, hash)
 }
 
+func (flt *Filter) ClearHash() {
+	flt.hashes = nil
+}
+
 func (flt *Filter) AddLog(log *vm.Log) {
 	flt.logs = append(flt.logs, log)
+}
+
+func (flt *Filter) Clearlog() {
+	flt.logs = nil
+}
+
+func (flt *Filter) ResetDeadline() {
+	flt.deadline.Reset(deadline)
 }

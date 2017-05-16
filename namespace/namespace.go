@@ -87,6 +87,7 @@ type namespaceImpl struct {
 
 	conf      *common.Config
 	eventMux  *event.TypeMux
+	filterMux *event.TypeMux
 	consenter consensus.Consenter
 	caMgr     *admittance.CAManager
 	am        *accounts.AccountManager
@@ -120,11 +121,12 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 		lock:  new(sync.RWMutex),
 	}
 	ns := &namespaceImpl{
-		nsInfo:   ninfo,
-		status:   status,
-		conf:     conf,
-		eventMux: new(event.TypeMux),
-		restart:  false,
+		nsInfo:    ninfo,
+		status:    status,
+		conf:      conf,
+		eventMux:  new(event.TypeMux),
+		filterMux: new(event.TypeMux),
+		restart:   false,
 	}
 	ns.logger = common.GetLogger(name, "namespace")
 	return ns, nil
@@ -170,7 +172,7 @@ func (ns *namespaceImpl) init() error {
 	ns.am = am
 
 	//6.init block pool to save block
-	executor := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux)
+	executor := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux)
 	if executor == nil {
 		return errors.New("Initialize Executor failed")
 	}
@@ -179,7 +181,7 @@ func (ns *namespaceImpl) init() error {
 	ns.executor = executor
 
 	//7. init eventhub
-	eh := manager.New(ns.Name(), ns.eventMux, executor, ns.grpcMgr, consenter, am, cm)
+	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, executor, ns.grpcMgr, consenter, am, cm)
 	ns.eh = eh
 	ns.status.setState(initialized)
 

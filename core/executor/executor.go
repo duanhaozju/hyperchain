@@ -18,6 +18,7 @@ import (
 var (
 	EmptyPointerErr  = errors.New("nil pointer")
 	NoDefinedCaseErr = errors.New("no defined case")
+	InvalidParams    = errors.New("invalid params")
 )
 
 type Executor struct {
@@ -35,10 +36,10 @@ type Executor struct {
 	logger     *logging.Logger
 }
 
-func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux) *Executor {
+func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) *Executor {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	helper := NewHelper(eventMux)
+	helper := NewHelper(eventMux, filterMux)
 
 	executor := &Executor{
 		namespace:  namespace,
