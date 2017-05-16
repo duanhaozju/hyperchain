@@ -26,6 +26,11 @@ const (
 	NOTIFY_TRANSIT_BLOCK
 )
 
+
+const (
+	FILTER_NEW_BLOCK = iota
+)
+
 const (
 	IDENTIFIER_VALIDATION = iota
 	IDENTIFIER_COMMIT

@@ -96,6 +96,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	// executor.logger.Notice(string(executor.statedb.Dump()))
 	// remove Cached Transactions which used to check transaction duplication
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
+	executor.sendFilterEvent(FILTER_NEW_BLOCK, block)
 	return nil
 }
 

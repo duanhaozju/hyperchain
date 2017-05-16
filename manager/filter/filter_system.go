@@ -51,7 +51,7 @@ func NewEventSystem(mux *event.TypeMux) *EventSystem {
 		installC:   make(chan *subscription),
 		uninstallC: make(chan *subscription),
 	}
-
+	go m.eventLoop()
 	return m
 }
 
@@ -60,8 +60,7 @@ func NewEventSystem(mux *event.TypeMux) *EventSystem {
 func (es *EventSystem) eventLoop() {
 	var (
 		index = make(filterIndex)
-		sub   = es.mux.Subscribe()
-		// sub   = es.mux.Subscribe(core.PendingLogsEvent{}, core.RemovedLogsEvent{}, []*types.Log{}, core.TxPreEvent{}, core.ChainEvent{})
+		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{})
 	)
 
 	for i := UnknownSubscription; i < LastIndexSubscription; i++ {
@@ -86,11 +85,19 @@ func (es *EventSystem) eventLoop() {
 }
 
 // broadcast event to filters that match criteria.
-func (es *EventSystem) broadcast(filters filterIndex, ev *event.Event) {
-	if ev == nil {
+func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
+	if obj == nil {
 		return
 	}
 	// dispatch all events
+	switch ev := obj.Data.(type) {
+	case event.FilterNewBlockEvent:
+		for _, f := range filters[BlocksSubscription] {
+			if obj.Time.After(f.created) {
+				f.hashes <- common.BytesToHash(ev.Block.BlockHash)
+			}
+		}
+	}
 }
 
 // subscribe installs the subscription in the event broadcast loop.
@@ -101,13 +108,13 @@ func (es *EventSystem) subscribe(sub *subscription) *Subscription {
 }
 
 
-func (es *EventSystem) NewBlockSubscription() *Subscription {
+func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash) *Subscription {
 	sub := &subscription{
 		id:        NewFilterID(),
 		typ:       BlocksSubscription,
 		created:   time.Now(),
 		logs:      make(chan []*vm.Log),
-		hashes:    make(chan common.Hash),
+		hashes:    blockC,
 		installed: make(chan struct{}),
 		err:       make(chan error),
 	}

@@ -9,17 +9,23 @@ import (
 	er "hyperchain/core/errors"
 )
 type Helper struct {
-	msgQ *event.TypeMux
+	innerMux        *event.TypeMux
+	externalMux     *event.TypeMux
 }
 
-func NewHelper(msgQ *event.TypeMux) *Helper {
+func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *Helper {
 	return &Helper{
-		msgQ: msgQ,
+		innerMux:       innerMux,
+		externalMux:    externalMux,
 	}
 }
 
-func (helper *Helper) Post(ev interface{}) {
-	helper.msgQ.Post(ev)
+func (helper *Helper) PostInner(ev interface{}) {
+	helper.innerMux.Post(ev)
+}
+
+func (helper *Helper) PostExternal(ev interface{}) {
+	helper.externalMux.Post(ev)
 }
 
 func checkParams(expect []reflect.Kind, params ...interface{}) bool {
@@ -43,7 +49,7 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		if !ok {
 			return er.InvalidParamsErr
 		}
-		executor.helper.Post(event.ExecutorToConsensusEvent{
+		executor.helper.PostInner(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_REMOVE_CACHE,
 		})
@@ -53,7 +59,7 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		if !ok {
 			return er.InvalidParamsErr
 		}
-		executor.helper.Post(event.ExecutorToConsensusEvent{
+		executor.helper.PostInner(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_VALIDATION_RES,
 		})
@@ -63,7 +69,7 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		if !ok {
 			return er.InvalidParamsErr
 		}
-		executor.helper.Post(event.ExecutorToConsensusEvent{
+		executor.helper.PostInner(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_VC_DONE,
 		})
@@ -73,7 +79,7 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		if !ok {
 			return er.InvalidParamsErr
 		}
-		executor.helper.Post(event.ExecutorToConsensusEvent{
+		executor.helper.PostInner(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_SYNC_DONE,
 		})
@@ -101,7 +107,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Errorf("sync chain request marshal message failed")
 			return err
 		}
-		executor.helper.Post(event.ExecutorToP2PEvent{
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Peers:   []uint64{message[2].(uint64)},
 			Type:    NOTIFY_BROADCAST_DEMAND,
@@ -122,7 +128,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Error("marshal block failed")
 			return err
 		}
-		executor.helper.Post(event.ExecutorToP2PEvent{
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_UNICAST_BLOCK,
 			Peers:   []uint64{message[1].(uint64)},
@@ -142,7 +148,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Error("marshal invalid record error")
 			return err
 		}
-		executor.helper.Post(event.ExecutorToP2PEvent{
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_UNICAST_INVALID,
 			Peers:   []uint64{r.Tx.Id},
@@ -163,7 +169,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Error("broadcast demand block, marshal message failed")
 			return err
 		}
-		executor.helper.Post(event.ExecutorToP2PEvent{
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload:  payload,
 			Type:     NOTIFY_BROADCAST_SINGLE,
 			Peers:    executor.status.syncFlag.SyncPeers,
@@ -179,7 +185,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			return er.InvalidParamsErr
 		}
 		payload, _ := proto.Marshal(chain)
-		executor.helper.Post(event.ExecutorToP2PEvent{
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_SYNC_REPLICA,
 		})
@@ -192,5 +198,19 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return er.NoDefinedCaseErr
 	}
 	return nil
+}
+
+func (executor *Executor) sendFilterEvent(informType int, message ...interface{}) error {
+	switch informType {
+	case FILTER_NEW_BLOCK:
+		if len(message) != 1 {
+			return er.InvalidParamsErr
+		}
+		blk := message[0].(*types.Block)
+		executor.helper.PostExternal(event.FilterNewBlockEvent{blk})
+		return nil
+	default:
+		return er.NoDefinedCaseErr
+	}
 }
 
