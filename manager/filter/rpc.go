@@ -5,15 +5,15 @@ import (
 	"encoding/hex"
 	"math/rand"
 	"strings"
+	"time"
 )
 
 var (
 	idGeneratorLock sync.Mutex
-	randSeed        rand.Source
 )
 
 func init() {
-	randSeed = rand.NewSource(99)
+	rand.Seed(time.Now().UnixNano())
 }
 
 
