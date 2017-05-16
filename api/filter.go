@@ -7,7 +7,6 @@ import (
 	"sync"
 	flt "hyperchain/manager/filter"
 	"time"
-	"fmt"
 	"hyperchain/core/vm"
 )
 
@@ -114,7 +113,7 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 		}
 	}
 
-	return []interface{}{}, fmt.Errorf("filter not found")
+	return []interface{}{}, &common.SubNotExistError{Message: "required subscription does not existed or has expired"}
 }
 
 // returnHashes is a helper that will return an empty hash array case the given hash array is nil,
