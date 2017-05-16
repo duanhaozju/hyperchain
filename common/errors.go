@@ -211,6 +211,19 @@ func (e *ContractPermissionError) Error() string {
 	return fmt.Sprintf("The contract invocation permission not enough '%s'", e.Message)
 }
 
+type SubNotExistError struct {
+	Message string
+}
+
+func (e *SubNotExistError) Code() int {
+	return -32010
+}
+
+func (e *SubNotExistError) Error() string {
+	return e.Message
+}
+
+
 type UnauthorizedError struct {
 }
 
