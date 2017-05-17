@@ -209,6 +209,13 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		blk := message[0].(*types.Block)
 		executor.helper.PostExternal(event.FilterNewBlockEvent{blk})
 		return nil
+	case FILTER_NEW_LOG:
+		if len(message) != 1 {
+			return er.InvalidParamsErr
+		}
+		logs := message[0].([]*types.Log)
+		executor.helper.PostExternal(event.FilterNewLogEvent{logs})
+		return nil
 	default:
 		return er.NoDefinedCaseErr
 	}

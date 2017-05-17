@@ -5,6 +5,7 @@ import (
 	"sync"
 	"hyperchain/core/vm"
 	"hyperchain/common"
+	"math/big"
 )
 
 type subscription struct {
@@ -21,10 +22,10 @@ type subscription struct {
 
 // FilterCriteria represents a request to create a new filter.
 type FilterCriteria struct {
-	FromBlock uint64
-	ToBlock   uint64
-	Addresses []common.Address
-	Topics    [][]common.Hash
+	FromBlock *big.Int          `json:"fromBlock"`
+	ToBlock   *big.Int          `json:"toBlock"`
+	Addresses []common.Address  `json:"addresses"`
+	Topics    [][]common.Hash   `json:"topics"`
 }
 
 // Subscription is created when the client registers itself for a particular event.

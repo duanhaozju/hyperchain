@@ -6,6 +6,7 @@ import (
 	"time"
 	"hyperchain/core/vm"
 	"hyperchain/common"
+	"fmt"
 )
 
 // Type determines the kind of filter and is used to put the filter in to
@@ -23,6 +24,11 @@ const (
 	BlocksSubscription
 	// LastSubscription keeps track of the last index
 	LastIndexSubscription
+)
+
+const (
+	LatestBlock           int64 = -1
+	EarliestBlockNumber   int64 = 0
 )
 
 var (
@@ -60,7 +66,7 @@ func NewEventSystem(mux *event.TypeMux) *EventSystem {
 func (es *EventSystem) eventLoop() {
 	var (
 		index = make(filterIndex)
-		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{})
+		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{})
 	)
 
 	for i := UnknownSubscription; i < LastIndexSubscription; i++ {
@@ -97,6 +103,17 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 				f.hashes <- common.BytesToHash(ev.Block.BlockHash)
 			}
 		}
+	case event.FilterNewLogEvent:
+		for _, f := range filters[LogsSubscription] {
+			if obj.Time.After(f.created) {
+				// filter logs
+				ret := filterLogs(ev.Logs, &f.logsCrit)
+				if len(ret) != 0 {
+					f.logs <- ret
+				}
+			}
+		}
+
 	}
 }
 
@@ -116,6 +133,24 @@ func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash, isVerbose b
 		created:   time.Now(),
 		logs:      make(chan []*vm.Log),
 		hashes:    blockC,
+		installed: make(chan struct{}),
+		err:       make(chan error),
+	}
+	return es.subscribe(sub)
+}
+
+func (es *EventSystem) NewLogSubscription(logsCrit FilterCriteria, logC chan []*vm.Log) *Subscription {
+	fmt.Println("############## [Criterias] ##############")
+	fmt.Println("from block:", logsCrit.FromBlock)
+	fmt.Println("to block:", logsCrit.ToBlock)
+	sub := &subscription{
+		id:        NewFilterID(),
+		verbose:   true,
+		typ:       LogsSubscription,
+		created:   time.Now(),
+		logsCrit:  logsCrit,
+		logs:      logC,
+		hashes:    make(chan common.Hash),
 		installed: make(chan struct{}),
 		err:       make(chan error),
 	}
