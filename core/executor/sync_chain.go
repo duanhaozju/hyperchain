@@ -9,6 +9,7 @@ import (
 	"hyperchain/manager/protos"
 	"bytes"
 	"time"
+	"hyperchain/core/vm"
 )
 
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
@@ -140,6 +141,7 @@ func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *
 }
 
 func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
+	var filterLogs []*vm.Log
 	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
 	if err != nil {
 		return err, nil
@@ -148,9 +150,12 @@ func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *
 	if err := executor.persistTransactions(batch, block.Transactions, seqNo); err != nil {
 		return err, nil
 	}
-	if err, _ := executor.persistReceipts(batch, result.Receipts, seqNo, common.BytesToHash(block.BlockHash)); err != nil {
+	if err, logs := executor.persistReceipts(batch, result.Receipts, seqNo, common.BytesToHash(block.BlockHash)); err != nil {
 		return err, nil
+	} else {
+		filterLogs = logs
 	}
+	executor.storeFilterData(result, block, filterLogs)
 	return nil, result
 }
 
@@ -226,7 +231,7 @@ func (executor *Executor) processSyncBlocks() {
 						return
 					} else {
 						// commit modified changes in this block and update chain.
-						executor.accpet(blk.Number)
+						executor.accpet(blk.Number, result)
 					}
 				}
 			}
@@ -294,11 +299,12 @@ func (executor *Executor) sendStateUpdatedEvent() {
 }
 
 // accpet - accept block synchronization result.
-func (executor *Executor) accpet(seqNo uint64) {
+func (executor *Executor) accpet(seqNo uint64, result *ValidationResultRecord) {
 	batch := executor.statedb.FetchBatch(seqNo)
 	edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false)
 	batch.Write()
 	executor.statedb.MarkProcessFinish(seqNo)
+	executor.feedback(result.Block, result.Logs)
 }
 
 // reject - reject state update result.
@@ -349,4 +355,10 @@ func (executor *Executor) calcuDownstream() uint64 {
 
 func (executor *Executor) receiveAllRequiredBlocks() bool {
 	return executor.status.syncFlag.SyncDemandBlockNum == executor.getLatestSyncDownstream()
+}
+
+// storeFilterData - store filter data in record temporarily, avoid re-generated when using.
+func (executor *Executor) storeFilterData(record *ValidationResultRecord, block *types.Block, logs []*vm.Log) {
+	record.Block = block
+	record.Logs = logs
 }

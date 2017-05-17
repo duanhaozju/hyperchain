@@ -22,6 +22,12 @@ type ValidationResultRecord struct {
 	Receipts    []*types.Receipt                  // receipt list
 	SeqNo       uint64                            // temp block number for this batch
 	VID         uint64                            // validation ID. may larger than SeqNo
+	FilterData
+}
+
+type FilterData struct {
+	Block      *types.Block
+	Logs       []*vm.Log
 }
 
 func (executor *Executor) Validate(validationEvent event.ValidationEvent) {

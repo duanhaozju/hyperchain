@@ -158,14 +158,20 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		if len(message) != 1 {
 			return InvalidParams
 		}
-		blk := message[0].(*types.Block)
+		blk, ok := message[0].(*types.Block)
+		if ok == false {
+			return InvalidParams
+		}
 		executor.helper.PostExternal(event.FilterNewBlockEvent{blk})
 		return nil
 	case FILTER_NEW_LOG:
 		if len(message) != 1 {
 			return InvalidParams
 		}
-		logs := message[0].([]*vm.Log)
+		logs, ok := message[0].([]*vm.Log)
+		if ok == false {
+			return InvalidParams
+		}
 		executor.helper.PostExternal(event.FilterNewLogEvent{logs})
 		return nil
 	default:
