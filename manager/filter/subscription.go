@@ -9,6 +9,7 @@ import (
 
 type subscription struct {
 	id        string
+	verbose   bool
 	typ       Type
 	created   time.Time
 	logsCrit  FilterCriteria

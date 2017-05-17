@@ -108,9 +108,10 @@ func (es *EventSystem) subscribe(sub *subscription) *Subscription {
 }
 
 
-func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash) *Subscription {
+func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash, isVerbose bool) *Subscription {
 	sub := &subscription{
 		id:        NewFilterID(),
+		verbose:   isVerbose,
 		typ:       BlocksSubscription,
 		created:   time.Now(),
 		logs:      make(chan []*vm.Log),

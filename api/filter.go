@@ -8,6 +8,7 @@ import (
 	flt "hyperchain/manager/filter"
 	"time"
 	"hyperchain/core/vm"
+	edb "hyperchain/core/db_utils"
 )
 
 type PublicFilterAPI struct {
@@ -57,10 +58,10 @@ func (api *PublicFilterAPI) timeoutLoop() {
 
 // NewBlockFilter creates a filter that fetches blocks that are imported into the chain.
 // It is part of the filter package since polling goes with getFilterChanges.
-func (api *PublicFilterAPI) NewBlockSubscription() string {
+func (api *PublicFilterAPI) NewBlockSubscription(isVerbose bool) string {
 	var (
 		blockC   = make(chan common.Hash)
-		blockSub = api.events.NewBlockSubscription(blockC)
+		blockSub = api.events.NewBlockSubscription(blockC, isVerbose)
 	)
 	api.filtersMu.Lock()
 	api.filters[blockSub.ID] = flt.NewFilter(flt.BlocksSubscription, blockSub, flt.FilterCriteria{})
@@ -107,9 +108,28 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 
 		switch f.GetType() {
 		case flt.BlocksSubscription:
-			hashes := f.GetHashes()
-			f.ClearHash()
-			return returnHashes(hashes), nil
+			if f.GetVerbose() {
+				var ret []*BlockResult
+				hashes := f.GetHashes()
+				defer f.ClearHash()
+				for _, hash := range hashes {
+					block, err := edb.GetBlock(api.namespace, hash.Bytes())
+					if err != nil {
+						api.log.Warningf("missing block data (#%s)", hash.Hex())
+					} else {
+						if wrappedBlock, err := outputBlockResult(api.namespace, block, true); err == nil {
+							ret = append(ret, wrappedBlock)
+						} else {
+							api.log.Warningf("wrapper block data (#%s) failed", hash.Hex())
+						}
+					}
+				}
+				return ret, nil
+			} else {
+				hashes := f.GetHashes()
+				defer f.ClearHash()
+				return returnHashes(hashes), nil
+			}
 		}
 	}
 
