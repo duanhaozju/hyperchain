@@ -116,6 +116,17 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 	return []interface{}{}, &common.SubNotExistError{Message: "required subscription does not existed or has expired"}
 }
 
+func (api *PublicFilterAPI) UnSubscription(id string) error {
+	api.filtersMu.Lock()
+	defer api.filtersMu.Unlock()
+	if f, found := api.filters[id]; found {
+		f.GetSubsctiption().Unsubscribe()
+		delete(api.filters, id)
+		return nil
+	}
+	return &common.SubNotExistError{Message: "required subscription does not existed or has expired"}
+}
+
 // returnHashes is a helper that will return an empty hash array case the given hash array is nil,
 // otherwise the given hashes array is returned.
 func returnHashes(hashes []common.Hash) []common.Hash {
