@@ -73,8 +73,8 @@ func (flt *Filter) ClearHash() {
 	flt.hashes = nil
 }
 
-func (flt *Filter) AddLog(log *vm.Log) {
-	flt.logs = append(flt.logs, log)
+func (flt *Filter) AddLog(log []*vm.Log) {
+	flt.logs = append(flt.logs, log...)
 }
 
 func (flt *Filter) Clearlog() {
@@ -83,4 +83,55 @@ func (flt *Filter) Clearlog() {
 
 func (flt *Filter) ResetDeadline() {
 	flt.deadline.Reset(deadline)
+}
+
+// filterLogs creates a slice of logs matching the given criteria.
+func filterLogs(logs []*vm.Log, logCrit *FilterCriteria) []*vm.Log {
+	var ret []*vm.Log
+	Logs:
+	for _, log := range logs {
+		if logCrit.FromBlock != nil && logCrit.FromBlock.Int64() >= 0 && logCrit.FromBlock.Uint64() > log.BlockNumber {
+			continue
+		}
+		if logCrit.ToBlock != nil && logCrit.ToBlock.Int64() >= 0 && logCrit.ToBlock.Uint64() < log.BlockNumber {
+			continue
+		}
+
+		if len(logCrit.Addresses) > 0 && !includes(logCrit.Addresses, log.Address) {
+			continue
+		}
+
+		// If the to filtered topics is greater than the amount of topics in logs, skip.
+		if len(logCrit.Topics) > len(log.Topics) {
+			continue Logs
+		}
+
+		for i, topics := range logCrit.Topics {
+			var match bool
+			for _, topic := range topics {
+				// common.Hash{} is a match all (wildcard)
+				if (topic == common.Hash{}) || log.Topics[i] == topic {
+					match = true
+					break
+				}
+			}
+
+			if !match {
+				continue Logs
+			}
+		}
+		ret = append(ret, log)
+	}
+
+	return ret
+}
+
+func includes(addresses []common.Address, a common.Address) bool {
+	for _, addr := range addresses {
+		if addr == a {
+			return true
+		}
+	}
+
+	return false
 }

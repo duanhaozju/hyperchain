@@ -148,7 +148,7 @@ func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *
 	if err := executor.persistTransactions(batch, block.Transactions, seqNo); err != nil {
 		return err, nil
 	}
-	if err := executor.persistReceipts(batch, result.Receipts, seqNo, common.BytesToHash(block.BlockHash)); err != nil {
+	if err, _ := executor.persistReceipts(batch, result.Receipts, seqNo, common.BytesToHash(block.BlockHash)); err != nil {
 		return err, nil
 	}
 	return nil, result

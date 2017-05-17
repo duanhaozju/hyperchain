@@ -88,6 +88,37 @@ func (api *PublicFilterAPI) NewBlockSubscription(isVerbose bool) string {
 	return blockSub.ID
 }
 
+func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string {
+	var (
+		logC     = make(chan []*vm.Log)
+		logSub   = api.events.NewLogSubscription(crit, logC)
+	)
+	api.filtersMu.Lock()
+	api.filters[logSub.ID] = flt.NewFilter(flt.LogsSubscription, logSub, crit)
+	api.filtersMu.Unlock()
+
+	go func() {
+		for {
+			select {
+			case b := <-logC:
+				api.filtersMu.Lock()
+				if f, found := api.filters[logSub.ID]; found {
+					f.AddLog(b)
+				}
+				api.filtersMu.Unlock()
+			case <-logSub.Err():
+				api.filtersMu.Lock()
+				delete(api.filters, logSub.ID)
+				api.filtersMu.Unlock()
+				return
+			}
+		}
+	}()
+
+	return logSub.ID
+
+}
+
 // GetFilterChanges returns the logs for the filter with the given id since
 // last time is was called. This can be used for polling.
 //
@@ -130,6 +161,10 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 				defer f.ClearHash()
 				return returnHashes(hashes), nil
 			}
+		case flt.LogsSubscription:
+			logs := f.GetLogs()
+			defer f.Clearlog()
+			return returnLogs(logs), nil
 		}
 	}
 
@@ -158,10 +193,11 @@ func returnHashes(hashes []common.Hash) []common.Hash {
 
 // returnLogs is a helper that will return an empty log array in case the given logs array is nil,
 // otherwise the given logs array is returned.
-func returnLogs(logs []*vm.Log) []*vm.Log {
+func returnLogs(logs []*vm.Log) []vm.LogTrans {
 	if logs == nil {
-		return []*vm.Log{}
+		return []vm.LogTrans{}
 	}
-	return logs
+	_logs := vm.Logs(logs)
+	return _logs.ToLogsTrans()
 }
 

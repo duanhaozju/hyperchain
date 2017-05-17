@@ -28,6 +28,7 @@ const (
 
 const (
 	FILTER_NEW_BLOCK = iota
+	FILTER_NEW_LOG
 )
 
 const (

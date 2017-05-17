@@ -5,6 +5,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
+	"hyperchain/core/vm"
 )
 type Helper struct {
 	innerMux        *event.TypeMux
@@ -159,6 +160,13 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		}
 		blk := message[0].(*types.Block)
 		executor.helper.PostExternal(event.FilterNewBlockEvent{blk})
+		return nil
+	case FILTER_NEW_LOG:
+		if len(message) != 1 {
+			return InvalidParams
+		}
+		logs := message[0].([]*vm.Log)
+		executor.helper.PostExternal(event.FilterNewLogEvent{logs})
 		return nil
 	default:
 		return NoDefinedCaseErr
