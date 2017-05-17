@@ -57,6 +57,10 @@ func (flt *Filter) GetCriteria() FilterCriteria {
 	return flt.crit
 }
 
+func (flt *Filter) GetVerbose() bool {
+	return flt.s.f.verbose
+}
+
 /*
 	Setter
  */
