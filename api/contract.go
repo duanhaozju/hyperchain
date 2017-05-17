@@ -151,6 +151,11 @@ func (contract *Contract) GetCode(addr common.Address) (string, error) {
 		return "", err
 	}
 
+	acc := stateDb.GetAccount(addr)
+	if acc == nil {
+		return "", &common.AccountNotExistError{Message: addr.Hex()}
+	}
+
 	return fmt.Sprintf(`0x%x`, stateDb.GetCode(addr)), nil
 }
 
@@ -159,9 +164,13 @@ func (contract *Contract) GetCode(addr common.Address) (string, error) {
 func (contract *Contract) GetContractCountByAddr(addr common.Address) (*Number, error) {
 
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
-
 	if err != nil {
 		return nil, err
+	}
+
+	acc := stateDb.GetAccount(addr)
+	if acc == nil {
+		return nil, &common.AccountNotExistError{Message: addr.Hex()}
 	}
 
 	return NewUint64ToNumber(stateDb.GetNonce(addr)), nil
@@ -270,7 +279,7 @@ func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]stri
 	mp := make(map[string]string)
 
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return nil, nil
+		return nil, &common.AccountNotExistError{Message: addr.Hex()}
 	} else {
 		cb := func(key, value common.Hash) bool {
 			return true
@@ -294,7 +303,7 @@ func (contract *Contract) GetDeployedList(addr common.Address) ([]string, error)
 		return nil, err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return nil, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+		return nil, &common.AccountNotExistError{Message: addr.Hex()}
 	} else {
 		return stateDb.GetDeployedContract(addr), nil
 	}
@@ -307,7 +316,7 @@ func (contract *Contract) GetCreator(addr common.Address) (common.Address, error
 		return common.Address{}, err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return common.Address{}, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+		return common.Address{}, &common.AccountNotExistError{Message: addr.Hex()}
 	} else {
 		if !isContractAccount(stateDb, addr) {
 			return common.Address{}, nil
@@ -323,7 +332,7 @@ func (contract *Contract) GetStatus(addr common.Address) (string, error) {
 		return "", err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return "", &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+		return "", &common.AccountNotExistError{Message: addr.Hex()}
 	} else {
 		status :=  stateDb.GetStatus(addr)
 		if !isContractAccount(stateDb, addr) {
@@ -347,7 +356,7 @@ func (contract *Contract) GetCreateTime(addr common.Address) (string, error) {
 		return "", err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return "", &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+		return "", &common.AccountNotExistError{Message: addr.Hex()}
 	} else {
 		if !isContractAccount(stateDb, addr) {
 			return "", nil
@@ -366,6 +375,11 @@ func (contract *Contract) GetArchive(addr common.Address, date string) (map[stri
 	if err != nil {
 		return nil, err
 	}
+
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return nil, &common.AccountNotExistError{Message: addr.Hex()}
+	}
+
 	return stateDb.ShowArchive(addr, date), nil
 }
 
