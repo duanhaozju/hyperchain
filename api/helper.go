@@ -92,3 +92,9 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	}
 	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, archieveDb, conf, height, namespace)
 }
+
+func substr(str string, start int, end int) string {
+	rs := []rune(str)
+
+	return string(rs[start:end])
+}
