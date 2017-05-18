@@ -7,6 +7,7 @@
   "local_ip":"127.0.0.1",
   "jsonrpc_port":8084,
   "restful_port":9004,
+  "websocket_port":10004,
   "introducer_ip":"127.0.0.1",
   "introducer_port":8001,
   "introducer_id":1

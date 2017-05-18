@@ -38,10 +38,12 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	grpcPort := peerViper.GetInt("self.grpc_port")
 	jsonrpcPort := peerViper.GetInt("self.jsonrpc_port")
 	restfulPort := peerViper.GetInt("self.restful_port")
+	wsPort := peerViper.GetInt("self.websocket_port")
 
 	conf.Set(common.C_NODE_ID, nodeID)
 	conf.Set(common.C_HTTP_PORT, jsonrpcPort)
 	conf.Set(common.C_REST_PORT, restfulPort)
+	conf.Set(common.C_WEBSOCKET_PORT, wsPort)
 	conf.Set(common.C_GRPC_PORT, grpcPort)
 	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
 	conf.Set(common.C_GLOBAL_CONFIG_PATH, nsConfigPath)
@@ -49,6 +51,7 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	if strings.HasSuffix(path, "/"+DEFAULT_NAMESPACE+"/config") {
 		nr.conf.Set(common.C_HTTP_PORT, jsonrpcPort)
 		nr.conf.Set(common.C_REST_PORT, restfulPort)
+		nr.conf.Set(common.C_WEBSOCKET_PORT, wsPort)
 	}
 
 	return conf

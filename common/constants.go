@@ -22,6 +22,7 @@ const (
 	C_GRPC_PORT          = "global.grpc_port"
 	C_HTTP_PORT          = "global.http_port"
 	C_REST_PORT          = "global.rest_port"
+	C_WEBSOCKET_PORT     = "global.websocket_port"
 	C_PEER_CONFIG_PATH   = "global.peerconfigs.path"
 	C_GLOBAL_CONFIG_PATH = "global.globalconfig.path"
 )

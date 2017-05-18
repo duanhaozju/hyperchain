@@ -13,7 +13,7 @@ import (
 
 type hyperchain struct {
 	nsMgr       namespace.NamespaceManager
-	hs          jsonrpc.HttpServer
+	rpcServer   jsonrpc.RPCServer
 	stopFlag    chan bool
 	restartFlag chan bool
 	args        *argT
@@ -32,7 +32,7 @@ func newHyperchain(argV *argT) *hyperchain {
 	//common.InitLog(globalConfig)
 
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
-	hp.hs = jsonrpc.GetHttpServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)
+	hp.rpcServer = jsonrpc.GetRPCServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)
 
 	logger = common.GetLogger(common.DEFAULT_LOG, "main")
 	return hp
@@ -41,7 +41,7 @@ func newHyperchain(argV *argT) *hyperchain {
 func (h *hyperchain) start() {
 	logger.Critical("Hyperchain server start...")
 	h.nsMgr.Start()
-	go h.hs.Start()
+	go h.rpcServer.Start()()
 	go CheckLicense(h.stopFlag)
 	logger.Critical("Hyperchain server started")
 }
@@ -50,7 +50,7 @@ func (h *hyperchain) stop() {
 	logger.Critical("Hyperchain server stop...")
 	h.nsMgr.Stop()
 	time.Sleep(3 * time.Second)
-	h.hs.Stop()
+	h.rpcServer.Stop()
 	logger.Critical("Hyperchain server stopped")
 }
 

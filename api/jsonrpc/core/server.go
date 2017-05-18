@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"encoding/json"
-	"github.com/op/go-logging"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
@@ -19,11 +18,11 @@ import (
 	"fmt"
 )
 
-var log *logging.Logger // package-level logger
-
 const (
 	stopPendingRequestTimeout             = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
 	OptionMethodInvocation    CodecOption = 1 << iota       // OptionMethodInvocation is an indication that the codec supports RPC method calls
+	// OptionSubscriptions is an indication that the codec suports RPC notifications
+	OptionSubscriptions = 1 << iota // support pub sub
 	adminService                          = "admin"
 )
 

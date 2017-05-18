@@ -106,6 +106,7 @@ f_gen_config(){
         grpc_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.grpc_port`
         jsonrpc_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.jsonrpc_port`
         restful_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.restful_port`
+        websocket_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.websocket_port`
         introducer_ip=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.introducer_ip`
         introducer_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.introducer_port`
         introducer_id=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.introducer_id`
@@ -119,6 +120,7 @@ f_gen_config(){
         echo "  \"local_ip\":\"127.0.0.1\","            >>${peerconfig}
         echo "  \"jsonrpc_port\":$jsonrpc_port,"        >>${peerconfig}
         echo "  \"restful_port\":$restful_port,"        >>${peerconfig}
+        echo "  \"websocket_port\":$websocket_port,"    >>${peerconfig}
         echo "  \"introducer_ip\":\"$introducer_ip\","  >>${peerconfig}
         echo "  \"introducer_port\":$introducer_port,"  >>${peerconfig}
         echo "  \"introducer_id\":$introducer_id"       >>${peerconfig}
