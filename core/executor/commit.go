@@ -78,8 +78,14 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 		executor.logger.Errorf("persist block #%d into database failed.", block.Number, err.Error())
 		return err
 	}
-	edb.UpdateChain(executor.namespace, batch, block, false, false, false)
-	batch.Write()
+	if err := edb.UpdateChain(executor.namespace, batch, block, false, false, false); err != nil {
+		executor.logger.Errorf("update chain to #%d failed.", block.Number, err.Error())
+		return err
+	}
+	if err := batch.Write(); err != nil {
+		executor.logger.Errorf("commit #%d changes failed.", block.Number, err.Error())
+		return err
+	}
 	executor.statedb.MarkProcessFinish(record.SeqNo)
 	executor.statedb.MakeArchive(record.SeqNo)
 	if block.Number%10 == 0 && block.Number != 0 {

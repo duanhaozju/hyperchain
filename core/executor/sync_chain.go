@@ -226,7 +226,10 @@ func (executor *Executor) processSyncBlocks() {
 						return
 					} else {
 						// commit modified changes in this block and update chain.
-						executor.accpet(blk.Number)
+						if err := executor.accpet(blk.Number); err != nil {
+							executor.reject()
+							return
+						}
 					}
 				}
 			}
@@ -294,11 +297,18 @@ func (executor *Executor) sendStateUpdatedEvent() {
 }
 
 // accpet - accept block synchronization result.
-func (executor *Executor) accpet(seqNo uint64) {
+func (executor *Executor) accpet(seqNo uint64) error {
 	batch := executor.statedb.FetchBatch(seqNo)
-	edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false)
-	batch.Write()
+	if err := edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false); err != nil {
+		executor.logger.Errorf("update chain to (#%d) failed, err: %s", err.Error())
+		return err
+	}
+	if err := batch.Write(); err != nil {
+		executor.logger.Errorf("commit (#%d) changes failed, err: %s", err.Error())
+		return err
+	}
 	executor.statedb.MarkProcessFinish(seqNo)
+	return nil
 }
 
 // reject - reject state update result.
