@@ -14,6 +14,7 @@ type NodeArgs struct {
 }
 
 type Node struct {
+	namespace   string
 	eh *manager.EventHub
 }
 
@@ -26,8 +27,9 @@ type NodeResult struct {
 	LatestBlock interface{} `json:"latestBlock"` //newest block of current block
 }
 
-func NewPublicNodeAPI(eh *manager.EventHub) *Node {
+func NewPublicNodeAPI(namespace string, eh *manager.EventHub) *Node {
 	return &Node{
+		namespace:   namespace,
 		eh: eh,
 	}
 }
@@ -56,4 +58,8 @@ func (node *Node) DelNode(args NodeArgs) (string, error) {
 		Payload: []byte(args.NodeHash),
 	})
 	return "successful request", nil
+}
+
+func (node *Node) GetNamespace() (string, error) {
+	return node.namespace, nil
 }

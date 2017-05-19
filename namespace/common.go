@@ -65,7 +65,7 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 		"node": {
 			Srvname: "node",
 			Version: "0.4",
-			Service: api.NewPublicNodeAPI(ns.eh),
+			Service: api.NewPublicNodeAPI(namespace, ns.eh),
 			Public:  true,
 		},
 		"block": {
