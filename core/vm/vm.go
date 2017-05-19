@@ -82,7 +82,7 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 		switch GetProgramStatus(codehash) {
 		// 判断是否已经可用,如果可用直接用找
 		case progReady:
-			return RunProgram(GetProgram(codehash), evm.env, contract, input)
+			return RunProgram(evm, GetProgram(codehash), evm.env, contract, input)
 		case progUnknown:
 			// 如果不可用,且强制jit,则顺序执行且立刻执行
 			if evm.cfg.ForceJit {
@@ -90,7 +90,7 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 				program = NewProgram(contract.Code)
 				perr := CompileProgram(program)
 				if perr == nil {
-					return RunProgram(program, evm.env, contract, input)
+					return RunProgram(evm, program, evm.env, contract, input)
 				}
 			} else {
 				// 否则可以另开一个线程

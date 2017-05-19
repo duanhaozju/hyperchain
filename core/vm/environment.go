@@ -53,6 +53,8 @@ type Environment interface {
 	AddLog(*Log)
 	// Type of the VM
 	Vm() Vm
+	// Dump vm runtime logs for debug
+	DumpStructLog()
 	// Get the curret calling depth
 	Depth() int
 	// Set the current calling depth

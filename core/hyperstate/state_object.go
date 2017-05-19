@@ -637,6 +637,8 @@ func (self *StateObject) removeDeployedContract(address common.Address) bool {
 }
 
 func (self *StateObject) archieve(key common.Hash, originValue, value common.Hash) {
+	// TODO some embedded small variable's deletion can not be capture right now
+	// TODO @Rongjialei fix this
 	if (value == common.Hash{}) {
 		self.archieveStorage[key] = originValue
 	}

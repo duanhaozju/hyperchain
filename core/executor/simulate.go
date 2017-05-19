@@ -14,9 +14,7 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction) error {
 		return err
 	}
 	// initialize execution environment
-	fakeBlockNumber := edb.GetHeightOfChain(executor.namespace) + 1
-	sandBox := executor.initEnvironment(statedb, fakeBlockNumber)
-	receipt, _, _, err := executor.ExecTransaction(tx, sandBox)
+	receipt, _, _, err := executor.ExecTransaction(tx, statedb)
 	if err != nil {
 		errType := executor.classifyInvalid(err)
 		t := &types.InvalidTransactionRecord{

@@ -12,13 +12,15 @@ import (
 )
 
 var (
-	ForceJit  bool
-	EnableJit bool
+	ForceJit     bool
+	EnableJit    bool
+	EnableDebug  bool
 )
 
 func init() {
 	EnableJit = true
 	ForceJit = true
+	EnableDebug = false
 }
 
 type Account struct {
@@ -105,7 +107,7 @@ type Env struct {
 	difficulty *big.Int
 	gasLimit   *big.Int
 
-	logs []vm.StructLog
+	logs       []vm.StructLog
 	logger     *logging.Logger
 
 	vmTest bool
@@ -127,10 +129,23 @@ func NewEnvFromMap(ruleSet RuleSet, state vm.Database, envValues map[string]stri
 	env.gasLimit = common.Big(envValues["currentGasLimit"])
 	env.number = common.Big(envValues["currentNumber"])
 	env.Gas = new(big.Int)
-	env.evm = vm.New(env, vm.Config{
-		EnableJit: EnableJit,
-		ForceJit:  ForceJit,
-	})
+	var cfg vm.Config
+	if EnableDebug {
+		cfg = vm.Config{
+			EnableJit: EnableJit,
+			ForceJit:  ForceJit,
+			Debug:     EnableDebug,
+			Logger:    vm.LogConfig{
+				Collector: env,
+			},
+		}
+	} else {
+		cfg = vm.Config{
+			EnableJit: EnableJit,
+			ForceJit:  ForceJit,
+		}
+	}
+	env.evm = vm.New(env, cfg)
 	env.logger = logger
 
 	return env
@@ -158,6 +173,14 @@ func (self *Env) SetDepth(i int) { self.depth = i }
 func (self *Env) CanTransfer(from common.Address, balance *big.Int) bool {
 	return self.state.GetBalance(from).Cmp(balance) >= 0
 }
+func (self *Env) AddStructLog(log vm.StructLog) {
+	self.logs = append(self.logs, log)
+}
+func (self *Env) DumpStructLog() {
+	vm.StdErrFormat(self.logs)
+}
+
+
 func (self *Env) MakeSnapshot() interface{} {
 	return self.state.Snapshot()
 }

@@ -10,7 +10,7 @@ import (
 
 type Code []byte
 
-func (executor *Executor) ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
+func (executor *Executor) ExecTransaction(tx *types.Transaction, stateDb vm.Database) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
 		from     = common.BytesToAddress(tx.From)
 		to       = common.BytesToAddress(tx.To)
@@ -22,6 +22,7 @@ func (executor *Executor) ExecTransaction(tx *types.Transaction, env vm.Environm
 		op       = tv.GetOp()
 	)
 
+	env := executor.initEnvironment(stateDb, executor.getTempBlockNumber())
 	if valid := executor.checkPermission(env, from, to, op); !valid {
 		return nil, nil, common.Address{}, InvalidInvokePermissionErr("not enough permission to invocation")
 	}
@@ -31,7 +32,9 @@ func (executor *Executor) ExecTransaction(tx *types.Transaction, env vm.Environm
 	} else {
 		ret, _, err = executor.Exec(env, &from, &to, data, gas, gasPrice, amount, op)
 	}
-
+	if err == nil && EnableDebug {
+		env.DumpStructLog()
+	}
 	receipt = makeReceipt(env, addr, tx.GetHash(), gas, ret, err)
 	return receipt, ret, addr, err
 }
