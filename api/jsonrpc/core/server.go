@@ -16,6 +16,7 @@ import (
 	"strings"
 	"reflect"
 	"fmt"
+	"sync"
 )
 
 const (
@@ -59,6 +60,9 @@ type RPCService struct {
 // requests until the codec returns an error when reading a request (in most cases
 // an EOF). It executes requests in parallel when singleShot is false.
 func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecOption) error {
+
+	var pend sync.WaitGroup
+
 	defer func() {
 		if err := recover(); err != nil {
 			const size = 64 << 10
@@ -88,9 +92,15 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 	// test if the server is ordered to stop
 	for atomic.LoadInt32(&s.run) == 1 {
 		reqs, batch, err := s.readRequest(codec)
+		// If a parsing error occurred, send an error
 		if err != nil {
-			log.Debugf("%v\n", err)
-			codec.Write(s.CreateErrorResponse(nil, "", err))
+			// If a parsing error occurred, send an error
+			if err.Error() != "EOF" {
+				log.Debug(fmt.Sprintf("read error %v\n", err))
+				codec.Write(s.CreateErrorResponse(nil, "", err))
+			}
+			// Error or end of stream, wait for requests and tear down
+			pend.Wait()
 			return nil
 		}
 
@@ -123,8 +133,20 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			}
 			return nil
 		}
-		s.handleReqs(ctx, codec, reqs)
-		return nil
+
+		if singleShot {
+			s.handleReqs(ctx, codec, reqs)
+			return nil
+		}
+
+		// For multi-shot connections, start a goroutine to serve and loop back
+		pend.Add(1)
+
+		go func() {
+			defer pend.Done()
+			s.handleReqs(ctx, codec, reqs)
+		}()
+
 	}
 	return nil
 }
