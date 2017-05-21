@@ -23,7 +23,7 @@ var (
 type Executor struct {
 	namespace  string // namespace tag
 	db         db.Database
-	archieveDb db.Database
+	archiveDb  db.Database
 	commonHash crypto.CommonHash
 	encryption crypto.Encryption
 	conf       *common.Config // block configuration
@@ -62,7 +62,7 @@ func (executor *Executor) initDb() {
 	if err != nil {
 		//return nil
 	}
-	executor.archieveDb = archieveDb
+	executor.archiveDb = archieveDb
 }
 
 // Start - start service.
@@ -117,7 +117,7 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 		executor.logger.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
 		return nil, err
 	}
-	stateDb, err := hyperstate.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.archieveDb, executor.conf, edb.GetHeightOfChain(executor.namespace), executor.namespace)
+	stateDb, err := hyperstate.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.archiveDb, executor.conf, edb.GetHeightOfChain(executor.namespace), executor.namespace)
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] new stateDb failed, err : %s", executor.namespace, err.Error())
 		return nil, err
