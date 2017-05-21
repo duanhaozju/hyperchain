@@ -3,6 +3,13 @@
 
 package common
 
+const (
+	OP_UPDATE  = 1
+	OP_FREEZE  = 2
+	OP_UNFREEZE = 3
+	OP_ARCHIVE = 100
+)
+
 //constants for logger key
 const (
 	LOG_FILE_DIR          = "global.logs.logsdir"
