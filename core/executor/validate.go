@@ -36,6 +36,11 @@ func (executor *Executor) listenValidationEvent() {
 		case <- executor.getExit(IDENTIFIER_VALIDATION):
 			executor.logger.Notice("validation backend exit")
 			return
+		case v := <- executor.getSuspend(IDENTIFIER_VALIDATION):
+			if v {
+				executor.logger.Notice("pause validation process")
+				executor.pauseValidation()
+			}
 		case ev := <- executor.fetchValidationEvent():
 			if executor.isReadyToValidation() {
 				if success := executor.processValidationEvent(ev, executor.processValidationDone); success == false {
@@ -279,6 +284,15 @@ func (executor *Executor) dealEmptyBlock(res *ValidationResultRecord, ev event.V
 	if ev.IsPrimary {
 		executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: ev.SeqNo})
 		executor.throwInvalidTransactionBack(res.InvalidTxs)
+	}
+}
+
+func (executor *Executor) pauseValidation() {
+	for {
+		if v := <-executor.getSuspend(IDENTIFIER_VALIDATION); !v {
+			executor.logger.Notice("un-pause validation process")
+			return
+		}
 	}
 }
 

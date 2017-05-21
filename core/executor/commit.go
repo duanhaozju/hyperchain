@@ -23,6 +23,11 @@ func (executor *Executor) listenCommitEvent() {
 		case <-executor.getExit(IDENTIFIER_COMMIT):
 			executor.logger.Notice("commit backend exit")
 			return
+		case v := <-executor.getSuspend(IDENTIFIER_COMMIT):
+			if v {
+				executor.logger.Notice("pause commit process")
+				executor.pauseCommit()
+			}
 		case ev := <-executor.fetchCommitEvent():
 			if success := executor.processCommitEvent(ev, executor.processCommitDone); success == false {
 				executor.logger.Errorf("commit block #%d failed, system crush down.", ev.SeqNo)
@@ -207,5 +212,14 @@ func (executor *Executor) StoreInvalidTransaction(payload []byte) {
 	if err != nil {
 		executor.logger.Error("save invalid transaction record failed,", err.Error())
 		return
+	}
+}
+
+func (executor *Executor) pauseCommit() {
+	for {
+		if v := <-executor.getSuspend(IDENTIFIER_COMMIT); !v {
+			executor.logger.Notice("un-pause commit process")
+			return
+		}
 	}
 }

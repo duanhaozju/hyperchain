@@ -19,10 +19,15 @@ type ExecutorStatus struct {
 	demandSeqNo         uint64       // current demand seqNo for validation
 	tempBlockNumber     uint64       // temporarily block number
 	lastValidationState atomic.Value // latest state root hash
-	syncFlag            SyncFlag     // store temp variables during chain sync
 	validationExit      chan bool    // validation exit notifier
 	commitExit          chan bool    // commit exit notifier
 	replicaSyncExit     chan bool    // replica sync exit notifier
+
+	validationSuspend   chan bool     // validation suspend notifier
+	commitSuspend       chan bool     // commit suspend notifier
+	syncReplicaSuspend  chan bool     // replica sync suspend notifier
+
+	syncFlag            SyncFlag     // store temp variables during chain sync
 }
 
 type SyncFlag struct {
@@ -43,6 +48,10 @@ func initializeExecutorStatus(executor *Executor) error {
 	executor.status.validationExit = make(chan bool)
 	executor.status.commitExit = make(chan bool)
 	executor.status.replicaSyncExit = make(chan bool)
+
+	executor.status.validationSuspend = make(chan bool)
+	executor.status.commitSuspend = make(chan bool)
+	executor.status.syncReplicaSuspend = make(chan bool)
 
 	currentChain := edb.GetChainCopy(executor.namespace)
 	executor.initDemand(currentChain.Height + 1)
@@ -372,4 +381,38 @@ func (executor *Executor) getExit(identifier int) chan bool {
 		return executor.getReplicaSyncExit()
 	}
 	return nil
+}
+
+func (executor *Executor) getSuspend(identifier int) chan bool {
+	switch identifier {
+	case IDENTIFIER_VALIDATION:
+		return executor.status.validationSuspend
+	case IDENTIFIER_COMMIT:
+		return executor.status.commitSuspend
+	case IDENTIFIER_REPLICA_SYNC:
+		return executor.status.syncReplicaSuspend
+	}
+	return nil
+}
+
+func (executor *Executor) setSuspend(identifier int) {
+	switch identifier {
+	case IDENTIFIER_VALIDATION:
+		executor.status.validationSuspend <- true
+	case IDENTIFIER_COMMIT:
+		executor.status.commitSuspend <- true
+	case IDENTIFIER_REPLICA_SYNC:
+		executor.status.syncReplicaSuspend <- true
+	}
+}
+
+func (executor *Executor) unsetSuspend(identifier int) {
+	switch identifier {
+	case IDENTIFIER_VALIDATION:
+		executor.status.validationSuspend <- false
+	case IDENTIFIER_COMMIT:
+		executor.status.commitSuspend <- false
+	case IDENTIFIER_REPLICA_SYNC:
+		executor.status.syncReplicaSuspend <- false
+	}
 }

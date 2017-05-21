@@ -124,3 +124,4 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 	}
 	return stateDb, nil
 }
+
