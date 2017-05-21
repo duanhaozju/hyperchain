@@ -128,5 +128,13 @@ type ExecutorToP2PEvent struct {
 	Peers   []uint64
 }
 
+/*
+	Admin events
+ */
+
+type SnapshotEvent struct {
+	BlockNumber  uint64
+}
+
 
 
