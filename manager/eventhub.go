@@ -17,6 +17,8 @@ import (
 	"hyperchain/manager/protos"
 	"hyperchain/p2p"
 	"time"
+
+	flt "hyperchain/manager/filter"
 )
 
 const (
@@ -44,29 +46,35 @@ type EventHub struct {
 	consenter      consensus.Consenter
 	accountManager *accounts.AccountManager
 	eventMux       *event.TypeMux
+	filterMux      *event.TypeMux
 	// subscription
 	subscriptions map[int]event.Subscription
+
+	filterSystem  *flt.EventSystem
+
 	initType      int
 	logger        *logging.Logger
 	close         chan bool
 }
 
-func New(namespace string, eventMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
-	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, consenter, am)
+func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
+	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, filterMux, consenter, am)
 	return eventHub
 }
 
-func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
+func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, filterMux *event.TypeMux, consenter consensus.Consenter,
 	am *accounts.AccountManager) *EventHub {
 	hub := &EventHub{
 		namespace:      namespace,
 		executor:       executor,
 		eventMux:       eventMux,
+		filterMux:      filterMux,
 		consenter:      consenter,
 		peerManager:    peerManager,
 		accountManager: am,
 		subscriptions:  make(map[int]event.Subscription),
 		close:          make(chan bool),
+		filterSystem:   flt.NewEventSystem(filterMux),
 	}
 	hub.logger = common.GetLogger(namespace, "eventhub")
 	hub.Subscribe()
@@ -108,6 +116,10 @@ func (hub *EventHub) GetExecutor() *executor.Executor {
 
 func (hub *EventHub) GetAccountManager() *accounts.AccountManager {
 	return hub.accountManager
+}
+
+func (hub *EventHub) GetFilterSystem() *flt.EventSystem {
+	return hub.filterSystem
 }
 
 func (hub *EventHub) Subscribe() {
@@ -217,7 +229,7 @@ func (hub *EventHub) listenMiscellaneousEvent() {
 				hub.executor.SyncChain(ev)
 			case event.SnapshotEvent:
 				hub.logger.Debugf("message middleware: [snapshot request]")
-				hub.executor.Snapshot(ev)
+				// TODO
 			}
 		}
 	}

@@ -25,6 +25,12 @@ const (
 	NOTIFY_SYNC_REPLICA
 )
 
+
+const (
+	FILTER_NEW_BLOCK = iota
+	FILTER_NEW_LOG
+)
+
 const (
 	IDENTIFIER_VALIDATION = iota
 	IDENTIFIER_COMMIT

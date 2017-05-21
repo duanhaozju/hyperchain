@@ -10,6 +10,7 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/protos"
 	"time"
+	"hyperchain/core/vm"
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
@@ -70,14 +71,17 @@ func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) 
 
 // writeBlock - flush a block into disk.
 func (executor *Executor) writeBlock(block *types.Block, record *ValidationResultRecord) error {
+	var filterLogs []*vm.Log
 	batch := executor.statedb.FetchBatch(record.SeqNo)
 	if err := executor.persistTransactions(batch, block.Transactions, block.Number); err != nil {
 		executor.logger.Errorf("persist transactions of #%d failed.", block.Number)
 		return err
 	}
-	if err := executor.persistReceipts(batch, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
+	if err, ret := executor.persistReceipts(batch, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
 		executor.logger.Errorf("persist receipts of #%d failed.", block.Number)
 		return err
+	} else {
+		filterLogs = ret
 	}
 	if err, _ := edb.PersistBlock(batch, block, false, false); err != nil {
 		executor.logger.Errorf("persist block #%d into database failed.", block.Number, err.Error())
@@ -101,6 +105,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	// executor.logger.Notice(string(executor.statedb.Dump()))
 	// remove Cached Transactions which used to check transaction duplication
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
+	go executor.feedback(block, filterLogs)
 	return nil
 }
 
@@ -181,22 +186,25 @@ func (executor *Executor) persistTransactions(batch db.Batch, transactions []*ty
 
 // re assign block hash and block number to transaction executor.loggers
 // during the validation, block number and block hash can be incorrect
-func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
+func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) (error, []*vm.Log) {
+	var filterLogs []*vm.Log
 	for _, receipt := range receipts {
 		logs, err := receipt.RetrieveLogs()
 		if err != nil {
-			return err
+			return err, nil
 		}
 		for _, log := range logs {
 			log.BlockHash = blockHash
 			log.BlockNumber = blockNumber
+			filterLogs = append(filterLogs, log)
+			executor.logger.Critical(log.String())
 		}
 		receipt.SetLogs(logs)
 		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
-			return err
+			return err, nil
 		}
 	}
-	return nil
+	return nil, filterLogs
 }
 
 // save the invalid transaction into database for client query
@@ -220,6 +228,16 @@ func (executor *Executor) pauseCommit() {
 		if v := <-executor.getSuspend(IDENTIFIER_COMMIT); !v {
 			executor.logger.Notice("un-pause commit process")
 			return
+		}
+	}
+}
+func (executor *Executor) feedback(block *types.Block, filterLogs []*vm.Log) {
+	if err := executor.sendFilterEvent(FILTER_NEW_BLOCK, block); err != nil {
+		executor.logger.Warningf("send new block event failed. error detail: %s", err.Error())
+	}
+	if len(filterLogs) > 0 {
+		if err := executor.sendFilterEvent(FILTER_NEW_LOG, filterLogs); err != nil {
+			executor.logger.Warningf("send new log event failed. error detail: %s", err.Error())
 		}
 	}
 }

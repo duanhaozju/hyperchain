@@ -12,7 +12,7 @@ const LatestBlockNumber uint64 = 0
 
 type SnapshotRegistry struct {
 	namespace  string
-	rq         map[uint]struct{}
+	rq         map[uint64]struct{}
 	rqLock     sync.RWMutex
 	logger     *logging.Logger
 }
@@ -20,7 +20,7 @@ type SnapshotRegistry struct {
 func NewSnapshotRegistry(namespace string, logger *logging.Logger) *SnapshotRegistry {
 	return &SnapshotRegistry{
 		namespace:  namespace,
-		rq:         make(map[uint]struct{}),
+		rq:         make(map[uint64]struct{}),
 		logger:     logger,
 	}
 }
