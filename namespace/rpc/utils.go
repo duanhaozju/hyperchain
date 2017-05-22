@@ -4,24 +4,10 @@ package rpc
 
 import (
 	"golang.org/x/net/context"
-	"math/big"
 	"reflect"
 	"unicode"
 	"unicode/utf8"
-	"encoding/binary"
-	"bufio"
-	"time"
-	"encoding/hex"
-	"strings"
-	"math/rand"
-	crand "crypto/rand"
-	"sync"
 	"hyperchain/common"
-)
-
-var (
-	subscriptionIDGenMu sync.Mutex
-	subscriptionIDGen   = idGenerator()
 )
 
 // Is this an exported - upper case - name?
@@ -68,20 +54,6 @@ func formatName(name string) string {
 		ret[0] = unicode.ToLower(ret[0])
 	}
 	return string(ret)
-}
-
-var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
-
-// Indication if this type should be serialized in hex
-func isHexNum(t reflect.Type) bool {
-	if t == nil {
-		return false
-	}
-	for t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	return t == bigIntType
 }
 
 var subscriptionType = reflect.TypeOf((*common.Subscription)(nil)).Elem()
@@ -198,38 +170,4 @@ METHODS:
 	}
 
 	return callbacks, subscriptions
-}
-
-// idGenerator helper utility that generates a (pseudo) random sequence of
-// bytes that are used to generate identifiers.
-func idGenerator() *rand.Rand {
-	if seed, err := binary.ReadVarint(bufio.NewReader(crand.Reader)); err == nil {
-		return rand.New(rand.NewSource(seed))
-	}
-	return rand.New(rand.NewSource(int64(time.Now().Nanosecond())))
-}
-
-// NewID generates a identifier that can be used as an identifier in the RPC interface.
-// e.g. filter and subscription identifier.
-func NewID() common.ID {
-	subscriptionIDGenMu.Lock()
-	defer subscriptionIDGenMu.Unlock()
-
-	id := make([]byte, 16)
-	for i := 0; i < len(id); i += 7 {
-		val := subscriptionIDGen.Int63()
-		for j := 0; i+j < len(id) && j < 7; j++ {
-			id[i+j] = byte(val)
-			val >>= 8
-		}
-	}
-
-	rpcId := hex.EncodeToString(id)
-	// rpc ID's are RPC quantities, no leading zero's and 0 is 0x0
-	rpcId = strings.TrimLeft(rpcId, "0")
-	if rpcId == "" {
-		rpcId = "0"
-	}
-
-	return common.ID("0x" + rpcId)
 }
