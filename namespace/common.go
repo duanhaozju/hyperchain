@@ -9,6 +9,16 @@ import (
 	"strings"
 )
 
+// API describes the set of methods offered over the RPC interface
+type API struct {
+	Srvname string      // srvname under which the rpc methods of Service are exposed
+	Version string      // api version
+	Service interface{} // receiver instance which holds the methods
+	Public  bool        // indication if the methods must be considered safe for public use
+}
+
+var Apis map[string]*API
+
 //constructConfigFromDir read all info needed by
 func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	var conf *common.Config

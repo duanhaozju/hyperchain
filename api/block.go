@@ -9,6 +9,7 @@ import (
 	"hyperchain/core/types"
 	"github.com/op/go-logging"
 	"context"
+	"hyperchain/api/jsonrpc/core"
 )
 
 type Block struct {
@@ -372,10 +373,10 @@ func (blk *Block) QueryWriteTime(args IntervalArgs) (*StatisticResult, error) {
 }
 
 // ===================== test ================
-func (blk *Block) TestSub(ctx context.Context) (*common.Subscription, error) {
-	notifier, supported := common.NotifierFromContext(ctx)
+func (blk *Block) TestSub(ctx context.Context) (*jsonrpc.Subscription, error) {
+	notifier, supported := jsonrpc.NotifierFromContext(ctx)
 	if !supported {
-		return &common.Subscription{}, common.ErrNotificationsUnsupported
+		return &jsonrpc.Subscription{}, jsonrpc.ErrNotificationsUnsupported
 	}
 
 	rpcSub := notifier.CreateSubscription()

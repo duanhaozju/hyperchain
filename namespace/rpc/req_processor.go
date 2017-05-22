@@ -10,6 +10,7 @@ import (
 	"hyperchain/common"
 	"reflect"
 	"strings"
+	"hyperchain/api/jsonrpc/core"
 )
 
 type RequestProcessor interface {
@@ -123,7 +124,7 @@ func (jrpi *JsonRpcProcessorImpl) checkRequestParams(req *common.RPCRequest) *se
 	var ok bool
 	var svc *service
 
-	if req.IsPubSub && strings.HasSuffix(req.Method, common.UnsubscribeMethodSuffix) {
+	if req.IsPubSub && strings.HasSuffix(req.Method, jsonrpc.UnsubscribeMethodSuffix) {
 		sr = &serverRequest{id: req.Id, isUnsubscribe: true}
 		argTypes := []reflect.Type{reflect.TypeOf("")} // expect subscription id as first arg
 		if args, err := jrpi.ParseRequestArguments(argTypes, req.Params); err == nil {
@@ -253,12 +254,12 @@ func (jrpi *JsonRpcProcessorImpl) handle(ctx context.Context, req *serverRequest
 
 	if req.isUnsubscribe { // cancel subscription, first param must be the subscription id
 		if len(req.args) >= 1 && req.args[0].Kind() == reflect.String {
-			notifier, supported := common.NotifierFromContext(ctx)
+			notifier, supported := jsonrpc.NotifierFromContext(ctx)
 			if !supported { // interface doesn't support subscriptions (e.g. http)
-				return jrpi.CreateErrorResponse(&req.id, &common.CallbackError{Message: common.ErrNotificationsUnsupported.Error()}), nil
+				return jrpi.CreateErrorResponse(&req.id, &common.CallbackError{Message: jsonrpc.ErrNotificationsUnsupported.Error()}), nil
 			}
 
-			subid := common.ID(req.args[0].String())
+			subid := jsonrpc.ID(req.args[0].String())
 			if err := notifier.Unsubscribe(subid); err != nil {
 				return jrpi.CreateErrorResponse(&req.id, &common.CallbackError{Message: err.Error()}), nil
 			}
@@ -276,8 +277,8 @@ func (jrpi *JsonRpcProcessorImpl) handle(ctx context.Context, req *serverRequest
 
 		// active the subscription after the sub id was successfully sent to the client
 		activateSub := func() {
-			notifier, _ := common.NotifierFromContext(ctx)
-			notifier.Activate(subid, req.svcname)
+			notifier, _ := jsonrpc.NotifierFromContext(ctx)
+			notifier.Activate(subid, req.svcname, jrpi.namespace)
 		}
 
 		return jrpi.CreateResponse(req.id, subid), activateSub
@@ -343,7 +344,7 @@ func (jrpi *JsonRpcProcessorImpl) CreateErrorResponseWithInfo(id interface{}, er
 }
 
 // createSubscription will call the subscription callback and returns the subscription id or error.
-func (jrpi *JsonRpcProcessorImpl) createSubscription(ctx context.Context, req *serverRequest) (common.ID, error) {
+func (jrpi *JsonRpcProcessorImpl) createSubscription(ctx context.Context, req *serverRequest) (jsonrpc.ID, error) {
 	// subscription have as first argument the context following optional arguments
 	args := []reflect.Value{req.callb.rcvr, reflect.ValueOf(ctx)}
 	args = append(args, req.args...)
@@ -353,5 +354,23 @@ func (jrpi *JsonRpcProcessorImpl) createSubscription(ctx context.Context, req *s
 		return "", reply[1].Interface().(error)
 	}
 
-	return reply[0].Interface().(*common.Subscription).ID, nil
+	return reply[0].Interface().(*jsonrpc.Subscription).ID, nil
+}
+
+// CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
+func CreateNotification(subid, service, namespace string, event interface{}) *common.RPCNotification {
+	//if isHexNum(reflect.TypeOf(event)) {
+	//	return &common.RPCNotification{Version: jsonrpcVersion, Method: namespace + common.NotificationMethodSuffix,
+	//		Params: jsonSubscription{Subscription: subid, Result: fmt.Sprintf(`%#x`, event)}}
+	//}
+	//
+	//return &jsonNotification{Version: jsonrpcVersion, Method: namespace + notificationMethodSuffix,
+	//	Params: jsonSubscription{Subscription: subid, Result: event}}
+	return &common.RPCNotification{
+		Namespace: namespace,
+		Service: service,
+		SubId: subid,
+		Result: event,
+
+	}
 }

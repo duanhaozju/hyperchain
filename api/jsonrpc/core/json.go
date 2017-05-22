@@ -52,6 +52,7 @@ type jsonNotification struct {
 	Version string           `json:"jsonrpc"`
 	Method  string           `json:"method"`
 	Params  jsonSubscription `json:"params"`
+	Namespace string          `json:"namespace"`
 }
 
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It

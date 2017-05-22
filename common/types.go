@@ -223,3 +223,16 @@ type RPCResponse struct {
 	Reply interface{}
 	Error RPCError
 }
+
+//type RPCSubscription struct {
+//	SubId     string
+//	Service   string
+//	Result    interface{} `json:"result,omitempty"`
+//}
+
+type RPCNotification struct {
+	Namespace string
+	SubId     string
+	Service   string
+	Result    interface{}
+}

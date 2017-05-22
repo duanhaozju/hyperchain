@@ -1,9 +1,7 @@
-package common
+package jsonrpc
 
 import (
-	//"context"
 	"errors"
-	//"sync"
 	"sync"
 	"context"
 	"fmt"
@@ -20,6 +18,7 @@ const (
 	SubscribeMethodSuffix    = "_subscribe"
 	NotificationMethodSuffix = "_subscription"
 	UnsubscribeMethodSuffix  = "_unsubscribe"
+	NotificationMethodSuffix = "_subscription"
 )
 
 var (
@@ -41,13 +40,14 @@ type ID string
 // this subscription to wait for an unsubscribe request for the client, see Err().
 type Subscription struct {
 	ID        ID
-	service string
-	err       chan error // closed on unsubscribe
+	Service string
+	Namespace string
+	Err       chan error // closed on unsubscribe
 }
 
 // Err returns a channel that is closed when the client send an unsubscribe request.
 func (s *Subscription) Err() <-chan error {
-	return s.err
+	return s.Err
 }
 
 // notifierKey is used to store a notifier within the connection context.
@@ -85,23 +85,23 @@ func NotifierFromContext(ctx context.Context) (*Notifier, bool) {
 // are dropped until the subscription is marked as active. This is done
 // by the RPC server after the subscription ID is send to the client.
 func (n *Notifier) CreateSubscription() *Subscription {
-	s := &Subscription{ID: NewID(), err: make(chan error)}
+	s := &Subscription{ID: NewID(), Err: make(chan error)}
 	n.subMu.Lock()
 	fmt.Println(s.ID)
 	n.inactive[s.ID] = s
 	n.subMu.Unlock()
 	return s
 }
-//
-//// Notify sends a notification to the client with the given data as payload.
-//// If an error occurs the RPC connection is closed and the error is returned.
+
+// Notify sends a notification to the client with the given data as payload.
+// If an error occurs the RPC connection is closed and the error is returned.
 //func (n *Notifier) Notify(id ID, data interface{}) error {
 //	n.subMu.RLock()
 //	defer n.subMu.RUnlock()
 //
 //	sub, active := n.active[id]
 //	if active {
-//		notification := n.codec.CreateNotification(string(id), sub.namespace, data)
+//		notification := CreateNotification(string(id), sub.Service, sub.Namespace, data)
 //		if err := n.codec.Write(notification); err != nil {
 //			n.codec.Close()
 //			return err
@@ -109,7 +109,7 @@ func (n *Notifier) CreateSubscription() *Subscription {
 //	}
 //	return nil
 //}
-//
+
 //// Closed returns a channel that is closed when the RPC connection is closed.
 //func (n *Notifier) Closed() <-chan interface{} {
 //	return n.codec.Closed()
@@ -121,7 +121,7 @@ func (n *Notifier) Unsubscribe(id ID) error {
 	n.subMu.Lock()
 	defer n.subMu.Unlock()
 	if s, found := n.active[id]; found {
-		close(s.err)
+		close(s.Err)
 		delete(n.active, id)
 		return nil
 	}
@@ -132,11 +132,12 @@ func (n *Notifier) Unsubscribe(id ID) error {
 // notifications are dropped. This method is called by the RPC server after
 // the subscription ID was sent to client. This prevents notifications being
 // send to the client before the subscription ID is send to the client.
-func (n *Notifier) Activate(id ID, namespace string) {
+func (n *Notifier) Activate(id ID, service string, namespace string) {
 	n.subMu.Lock()
 	defer n.subMu.Unlock()
 	if sub, found := n.inactive[id]; found {
-		sub.service = namespace
+		sub.Service = service
+		sub.Namespace = namespace
 		n.active[id] = sub
 		delete(n.inactive, id)
 	}
