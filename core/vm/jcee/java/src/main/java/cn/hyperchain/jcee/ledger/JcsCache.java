@@ -5,6 +5,9 @@ import org.apache.commons.jcs.access.CacheAccess;
 import org.apache.commons.jcs.access.exception.CacheException;
 import org.apache.log4j.Logger;
 
+import java.io.IOException;
+import java.util.Properties;
+
 /**
  * Created by huhu on 2017/5/11.
  */
@@ -16,10 +19,15 @@ public class JcsCache implements Cache{
 
     public JcsCache(){
         try {
+            Properties properties = new Properties();
+            properties.load(getClass().getResourceAsStream("./hyperjvm/config/cache.properties"));
+            JCS.setConfigProperties(properties);
             cache = JCS.getInstance("default");
         }
         catch (CacheException e){
             logger.info(String.format( "Problem initializing cache: %s", e.getMessage()));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
