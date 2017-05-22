@@ -120,9 +120,9 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 			return
 		}
 
-		defer conn.Close()
+		//defer conn.Close()
 
-		for {
+		//for {
 			_, nr, err := conn.NextReader()
 
 			if err != nil {
@@ -130,19 +130,19 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 					log.Error(err)
 				}
 				// TODO 是否需要做错误返回？
-				break
+				//break
 			}
 
 			nw, err := conn.NextWriter(websocket.TextMessage)
 			if err != nil {
 				// TODO 同上
 				log.Error(err)
-				break
+				//break
 			}
 
 			codec := NewJSONCodec(&httpReadWriteCloser{nr, nw}, r, srv.namespaceMgr)
 
 			srv.ServeCodec(codec, OptionMethodInvocation|OptionSubscriptions)
-		}
+		//}
 	}
 }

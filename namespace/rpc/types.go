@@ -12,7 +12,7 @@ type callback struct {
 	argTypes []reflect.Type 	// input argument types
 	hasCtx   bool           	// method's first argument is a context (not included in argTypes)
 	errPos   int            	// err return idx, of -1 when method cannot return error
-	// isSubscribe bool           // indication if the callback is a subscription
+	isSubscribe bool           // indication if the callback is a subscription
 }
 
 // service represents a registered object
@@ -31,7 +31,7 @@ type serverRequest struct {
 	rcvr    reflect.Value
 	callb   *callback
 	args    []reflect.Value
-	//isUnsubscribe bool
+	isUnsubscribe bool
 	err     common.RPCError
 }
 

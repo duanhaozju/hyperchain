@@ -14,11 +14,12 @@ import (
 	//"hyperchain/core/crypto/primitives"
 	"hyperchain/namespace"
 	"github.com/pkg/errors"
+	"fmt"
 )
 
 const (
-	JSONRPCVersion         = "2.0"
-	serviceMethodSeparator = "_"
+	JSONRPCVersion           = "2.0"
+	serviceMethodSeparator 	 = "_"
 )
 
 // JSON-RPC request
@@ -141,7 +142,6 @@ func (c *jsonCodec) ReadRequestHeaders() ([]*common.RPCRequest, bool, common.RPC
 
 	var incomingMsg json.RawMessage
 	if err := c.d.Decode(&incomingMsg); err != nil {
-		log.Error(err)
 		return nil, false, &common.InvalidRequestError{Message: err.Error()}
 	}
 	if isBatch(incomingMsg) {
@@ -177,6 +177,29 @@ func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, comm
 	}
 	if err := checkReqId(in.Id); err != nil {
 		return nil, false, &common.InvalidMessageError{Message:err.Error()}
+	}
+
+	// subscribe are special, they will always use `subscribeMethod` as first param in the payload
+	if strings.HasSuffix(in.Method, common.SubscribeMethodSuffix) {
+		reqs := []*common.RPCRequest{{Id: &in.Id, IsPubSub: true}}
+		if len(in.Payload) > 0 {
+			// first param must be subscription name
+			var subscribeMethod [1]string
+			if err := json.Unmarshal(in.Payload, &subscribeMethod); err != nil {
+				log.Debug(fmt.Sprintf("Unable to parse subscription method: %v\n", err))
+				return nil, false, &common.InvalidRequestError{Message: "Unable to parse subscription request"}
+			}
+
+			reqs[0].Service, reqs[0].Method = strings.TrimSuffix(in.Method, common.SubscribeMethodSuffix), subscribeMethod[0]
+			reqs[0].Params = in.Payload
+			return reqs, false, nil
+		}
+		return nil, false, &common.InvalidRequestError{Message: "Unable to parse subscription request"}
+	}
+
+	if strings.HasSuffix(in.Method, common.UnsubscribeMethodSuffix) {
+		return []*common.RPCRequest{{Id: &in.Id, IsPubSub: true,
+			Method: in.Method, Params: in.Payload}}, false, nil
 	}
 
 	// regular RPC call

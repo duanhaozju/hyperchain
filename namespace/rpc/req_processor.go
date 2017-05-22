@@ -9,6 +9,7 @@ import (
 	"hyperchain/api"
 	"hyperchain/common"
 	"reflect"
+	"strings"
 )
 
 type RequestProcessor interface {
@@ -122,8 +123,37 @@ func (jrpi *JsonRpcProcessorImpl) checkRequestParams(req *common.RPCRequest) *se
 	var ok bool
 	var svc *service
 
+	if req.IsPubSub && strings.HasSuffix(req.Method, common.UnsubscribeMethodSuffix) {
+		sr = &serverRequest{id: req.Id, isUnsubscribe: true}
+		argTypes := []reflect.Type{reflect.TypeOf("")} // expect subscription id as first arg
+		if args, err := jrpi.ParseRequestArguments(argTypes, req.Params); err == nil {
+			sr.args = args
+		} else {
+			sr.err = &common.InvalidParamsError{Message: err.Error()}
+		}
+		return sr
+	}
+
 	if svc, ok = jrpi.services[req.Service]; !ok { // rpc method isn't available
 		sr = &serverRequest{id: req.Id, err: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
+		return sr
+	}
+
+	if req.IsPubSub { // eth_subscribe, r.method contains the subscription method name
+		if callb, ok := svc.subscriptions[req.Method]; ok {
+			sr = &serverRequest{id: req.Id, svcname: svc.name, callb: callb}
+			if req.Params != nil && len(callb.argTypes) > 0 {
+				argTypes := []reflect.Type{reflect.TypeOf("")}
+				argTypes = append(argTypes, callb.argTypes...)
+				if args, err := jrpi.ParseRequestArguments(argTypes, req.Params); err == nil {
+					sr.args = args[1:] // first one is service.method name which isn't an actual argument
+				} else {
+					sr.err = &common.InvalidParamsError{Message: err.Error()}
+				}
+			}
+		} else {
+			 sr = &serverRequest{id: req.Id, err: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
+		}
 		return sr
 	}
 
@@ -221,6 +251,38 @@ func (jrpi *JsonRpcProcessorImpl) handle(ctx context.Context, req *serverRequest
 		return jrpi.CreateErrorResponse(&req.id, req.err), nil
 	}
 
+	if req.isUnsubscribe { // cancel subscription, first param must be the subscription id
+		if len(req.args) >= 1 && req.args[0].Kind() == reflect.String {
+			notifier, supported := common.NotifierFromContext(ctx)
+			if !supported { // interface doesn't support subscriptions (e.g. http)
+				return jrpi.CreateErrorResponse(&req.id, &common.CallbackError{Message: common.ErrNotificationsUnsupported.Error()}), nil
+			}
+
+			subid := common.ID(req.args[0].String())
+			if err := notifier.Unsubscribe(subid); err != nil {
+				return jrpi.CreateErrorResponse(&req.id, &common.CallbackError{Message: err.Error()}), nil
+			}
+
+			return jrpi.CreateResponse(req.id, true), nil
+		}
+		return jrpi.CreateErrorResponse(&req.id, &common.InvalidParamsError{Message: "Expected subscription id as first argument"}), nil
+	}
+
+	if req.callb.isSubscribe {
+		subid, err := jrpi.createSubscription(ctx, req)
+		if err != nil {
+			return jrpi.CreateErrorResponse(&req.id, &common.CallbackError{Message: err.Error()}), nil
+		}
+
+		// active the subscription after the sub id was successfully sent to the client
+		activateSub := func() {
+			notifier, _ := common.NotifierFromContext(ctx)
+			notifier.Activate(subid, req.svcname)
+		}
+
+		return jrpi.CreateResponse(req.id, subid), activateSub
+	}
+
 	// regular RPC call, prepare arguments
 	if len(req.args) != len(req.callb.argTypes) {
 		err := &common.InvalidParamsError{
@@ -278,4 +340,18 @@ func (jrpi *JsonRpcProcessorImpl) CreateErrorResponseWithInfo(id interface{}, er
 		Reply:     info,
 		Error:     err,
 	}
+}
+
+// createSubscription will call the subscription callback and returns the subscription id or error.
+func (jrpi *JsonRpcProcessorImpl) createSubscription(ctx context.Context, req *serverRequest) (common.ID, error) {
+	// subscription have as first argument the context following optional arguments
+	args := []reflect.Value{req.callb.rcvr, reflect.ValueOf(ctx)}
+	args = append(args, req.args...)
+	reply := req.callb.method.Func.Call(args)
+
+	if !reply[1].IsNil() { // subscription creation failed
+		return "", reply[1].Interface().(error)
+	}
+
+	return reply[0].Interface().(*common.Subscription).ID, nil
 }

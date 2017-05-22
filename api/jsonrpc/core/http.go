@@ -3,11 +3,11 @@
 package jsonrpc
 
 import (
-	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/logs"
+	//"github.com/astaxie/beego"
+	//"github.com/astaxie/beego/logs"
 	"github.com/rs/cors"
 
-	"hyperchain/api/rest/routers"
+	//"hyperchain/api/rest/routers"
 	"hyperchain/common"
 	"hyperchain/namespace"
 
@@ -16,7 +16,7 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strconv"
+	//"strconv"
 	"time"
 )
 
@@ -156,21 +156,21 @@ func newHttpHandler(srv *Server) http.HandlerFunc {
 	}
 }
 
-func startRestService(srv *Server) {
-	config := srv.namespaceMgr.GlobalConfig()
-	restPort := config.GetInt(common.C_REST_PORT)
-	logsPath := config.GetString(common.LOG_DUMP_FILE_DIR)
-
-	// rest service
-	routers.NewRouter()
-	beego.BConfig.CopyRequestBody = true
-	beego.SetLogFuncCall(true)
-
-	logs.SetLogger(logs.AdapterFile, `{"filename": "`+logsPath+"/RESTful-API-"+strconv.Itoa(restPort)+"-"+time.Now().Format("2006-01-02 15:04:05")+`"}`)
-	beego.BeeLogger.DelLogger("console")
-
-	beego.Run("0.0.0.0:" + strconv.Itoa(restPort))
-}
+//func startRestService(srv *Server) {
+//	config := srv.namespaceMgr.GlobalConfig()
+//	restPort := config.GetInt(common.C_REST_PORT)
+//	logsPath := config.GetString(common.LOG_DUMP_FILE_DIR)
+//
+//	// rest service
+//	routers.NewRouter()
+//	beego.BConfig.CopyRequestBody = true
+//	beego.SetLogFuncCall(true)
+//
+//	logs.SetLogger(logs.AdapterFile, `{"filename": "`+logsPath+"/RESTful-API-"+strconv.Itoa(restPort)+"-"+time.Now().Format("2006-01-02 15:04:05")+`"}`)
+//	beego.BeeLogger.DelLogger("console")
+//
+//	beego.Run("0.0.0.0:" + strconv.Itoa(restPort))
+//}
 
 type StoppableListener struct {
 	*net.TCPListener          //Wrapped listener

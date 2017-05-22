@@ -81,6 +81,14 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	// if the codec supports notification include a notifier that callbacks can use
+	// to send notification to clients. It is thight to the codec/connection. If the
+	// connection is closed the notifier will stop and cancels all active subscriptions.
+	if options&OptionSubscriptions == OptionSubscriptions {
+		//ctx = context.WithValue(ctx, common.NotifierKey{}, common.NewNotifier(codec))
+		ctx = context.WithValue(ctx, common.NotifierKey{}, common.NewNotifier())
+	}
+
 	s.codecsMu.Lock()
 	if atomic.LoadInt32(&s.run) != 1 { // server stopped
 		s.codecsMu.Unlock()
