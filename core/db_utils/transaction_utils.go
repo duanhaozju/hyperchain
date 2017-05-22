@@ -289,6 +289,24 @@ func GetAllDiscardTransaction(namespace string) ([]*types.InvalidTransactionReco
 	return ts, err
 }
 
+func DeleteAllDiscardTransaction(db db.Database, batch db.Batch, flush, sync bool) error {
+	iter := db.NewIterator(InvalidTransactionPrefix)
+	defer iter.Release()
+	for iter.Next() {
+		batch.Delete(iter.Key())
+	}
+	err := iter.Error()
+	// flush to disk immediately
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return err
+}
+
 func GetDiscardTransaction(namespace string, key []byte) (*types.InvalidTransactionRecord, error) {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {

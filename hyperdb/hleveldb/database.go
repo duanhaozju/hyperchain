@@ -13,7 +13,6 @@ import (
 	pa "path/filepath"
 	"os/exec"
 	"path/filepath"
-	"path"
 	"os"
 )
 
@@ -45,6 +44,10 @@ func NewLDBDataBase(conf *common.Config,filepath string) (*LDBDatabase, error) {
 		path: filepath,
 		db:   db,
 	}, err
+}
+
+func LDBDataBasePath(conf *common.Config) string {
+	return conf.GetString(LEVEL_DB_PATH)
 }
 
 // Put sets value for the given key, if the key exists, it will overwrite
@@ -111,9 +114,7 @@ func (db *LDBDatabase) NewBatch() db.Batch {
 	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
 }
 
-func (db *LDBDatabase) Backup(id string) error {
-	dbPrefix := filepath.Dir(db.path)
-	backupPath := path.Join(dbPrefix, id)
+func (db *LDBDatabase) Backup(backupPath string) error {
 	backupDir := filepath.Dir(backupPath)
 	if err := os.MkdirAll(backupDir, 0777); err != nil {
 		return err

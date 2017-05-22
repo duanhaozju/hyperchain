@@ -216,6 +216,22 @@ func GetDBConsensusByNamespace(namespace string) (db.Database, error) {
 	return dbMgr.dbMap[name].db, nil
 }
 
+func GetDatabaseHome(conf *common.Config) string {
+	dbType := conf.GetInt(db_type)
+	switch dbType {
+	case ldb_db:
+		return hleveldb.LDBDataBasePath(conf)
+	case super_level_db:
+		return sldb.SLDBPath(conf)
+	default:
+		return ""
+	}
+}
+
+func GetDatabaseType(conf *common.Config) int {
+	return conf.GetInt(db_type)
+}
+
 func NewDatabase(conf *common.Config, path string, dbType int) (db.Database, error) {
 	switch dbType {
 	case ldb_db:

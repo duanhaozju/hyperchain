@@ -5,6 +5,8 @@ import (
 	edb "hyperchain/core/db_utils"
 	"github.com/op/go-logging"
 	"sync"
+	"hyperchain/hyperdb"
+	"path"
 )
 
 const LatestBlockNumber uint64 = 0
@@ -89,7 +91,7 @@ func (registry *SnapshotRegistry) handle(number uint64) {
 	if ev, existed := registry.rq[number]; existed == true {
 		// TODO archive logic here
 		registry.logger.Noticef("start to snapshot at (block #%d) for filter (%s)", number, ev.FilterId)
-		if err := registry.makeSnapshot(ev.FilterId); err != nil {
+		if err := registry.makeSnapshot(ev.FilterId, number); err != nil {
 			registry.feedback(false, ev, MakeSnapshotFailedErr)
 		} else {
 			registry.feedback(true, ev, EmptyMessage)
@@ -98,20 +100,88 @@ func (registry *SnapshotRegistry) handle(number uint64) {
 	}
 }
 
-func (registry *SnapshotRegistry) makeSnapshot(filterId string) error {
+func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) error {
 	registry.executor.setSuspend(IDENTIFIER_COMMIT)
 	defer registry.executor.unsetSuspend(IDENTIFIER_COMMIT)
-
-	fId := registry.snapshotId(filterId)
-	fName := "snapshots/" + fId
-	if err := registry.executor.db.Backup(fName); err != nil {
+	if err := registry.duplicate(filterId); err != nil {
 		return err
 	}
-
+	if err := registry.removeImpurity(filterId, number); err != nil {
+		return err
+	}
+	if err := registry.compress(filterId); err != nil {
+		return err
+	}
+	if err := registry.manifest(filterId); err != nil {
+		return err
+	}
 	return nil
 }
 
+func (registry *SnapshotRegistry) duplicate(filterId string) error {
+	conf := registry.executor.conf
+	fId := registry.snapshotId(filterId)
+	sPath := registry.snapshotPath(hyperdb.GetDatabaseHome(conf), fId)
+	if err := registry.executor.db.Backup(sPath); err != nil {
+		return err
+	}
+	return nil
+}
 
+func (registry *SnapshotRegistry) removeImpurity(filterId string, number uint64) error {
+	conf := registry.executor.conf
+	sPath := registry.snapshotPath(hyperdb.GetDatabaseHome(conf), filterId)
+	localDb, err := hyperdb.NewDatabase(conf, sPath, hyperdb.GetDatabaseType(conf))
+	if err != nil {
+		return err
+	}
+	batch := localDb.NewBatch()
+	var i uint64 = 0
+	for ; i <= number; i += 1 {
+		// TODO read block from backup is the best
+		// TODO @Rongjialei fix me
+		block, err := edb.GetBlockByNumber(registry.executor.namespace, i)
+		if err != nil {
+			registry.logger.Errorf("miss block %d ,error msg %s", i, err.Error())
+			continue
+		}
+
+		for _, tx := range block.Transactions {
+			if err := edb.DeleteTransaction(batch, tx.GetHash().Bytes(), false, false); err != nil {
+				registry.logger.Errorf("[Namespace = %s] delete useless tx in block %d failed, error msg %s", registry.executor.namespace, i, err.Error())
+			}
+			if err := edb.DeleteReceipt(batch, tx.GetHash().Bytes(), false, false); err != nil {
+				registry.logger.Errorf("[Namespace = %s] delete useless receipt in block %d failed, error msg %s", registry.executor.namespace, i, err.Error())
+			}
+		}
+		// delete block
+		if err := edb.DeleteBlockByNum(registry.executor.namespace, batch, i, false, false); err != nil {
+			registry.logger.Errorf("[Namespace = %s] delete useless block %d failed, error msg %s", registry.executor.namespace, i, err.Error())
+		}
+	}
+	if err := edb.DeleteAllDiscardTransaction(localDb, batch, false, false); err != nil {
+		registry.logger.Errorf("[Namespace = %s] delete useless invalid records failed, error msg %s", registry.executor.namespace, err.Error())
+	}
+	if err := edb.RemoveChain(batch, false, false); err != nil {
+		registry.logger.Errorf("[Namespace = %s] delete useless chain data , error msg %s", registry.executor.namespace, err.Error())
+	}
+	if err := edb.DeleteAllJournals(localDb, batch, false, false); err != nil {
+		registry.logger.Errorf("[Namespace = %s] delete useless journal failed, error msg %s", registry.executor.namespace, err.Error())
+	}
+	if err := batch.Write(); err != nil {
+		registry.logger.Errorf("[Namespace = %s] flush batch for deletion, error msg %s", registry.executor.namespace, err.Error())
+	}
+	registry.logger.Noticef("remove useless from snapshot %s success.", filterId)
+	return nil
+}
+
+func (registry *SnapshotRegistry) compress(filterId string) error {
+	return nil
+}
+
+func (registry *SnapshotRegistry) manifest(filterId string) error {
+	return nil
+}
 
 func (registry *SnapshotRegistry) checkRequest(event event.SnapshotEvent) bool {
 	if event.BlockNumber == LatestBlockNumber {
@@ -138,6 +208,10 @@ func (registry *SnapshotRegistry) exit() {
 
 func (registry *SnapshotRegistry) snapshotId(filterId string) string {
 	return "SNAPSHOT_" + filterId
+}
+
+func (registry *SnapshotRegistry) snapshotPath(base string, filterID string) string {
+	return path.Join(base, "snapshots", filterID)
 }
 
 

@@ -13,7 +13,6 @@ import (
 	"hyperchain/hyperdb/db"
 	pa "path/filepath"
 	"time"
-	"path"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -62,6 +61,10 @@ func NewSLDB(conf *common.Config) (*SuperLevelDB, error) {
 	}
 	go sldb.dumpIndexByInterval(conf.GetDuration(sldb_index_dump_interval))
 	return sldb, err
+}
+
+func SLDBPath(conf *common.Config) string {
+	return conf.GetString(sldb_path)
 }
 
 //Put put key value data into the database.
@@ -168,9 +171,7 @@ func (sldb *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
 	}
 }
 
-func (sb *SuperLevelDB) Backup(id string) error {
-	dbPrefix := filepath.Dir(sb.path)
-	backupPath := path.Join(dbPrefix, id)
+func (sb *SuperLevelDB) Backup(backupPath string) error {
 	backupDir := filepath.Dir(backupPath)
 	if err := os.MkdirAll(backupDir, 0777); err != nil {
 		return err

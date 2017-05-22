@@ -10,6 +10,11 @@ const (
 	OP_ARCHIVE = 100
 )
 
+const (
+	DB_LEVELDB int = iota
+	DB_SLDB
+)
+
 //constants for logger key
 const (
 	LOG_FILE_DIR          = "global.logs.logsdir"

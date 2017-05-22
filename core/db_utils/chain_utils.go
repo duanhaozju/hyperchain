@@ -281,6 +281,20 @@ func UpdateChainByBlcokNum(namespace string, batch db.Batch, blockNumber uint64,
 	return UpdateChain(namespace, batch, block, block.Number == 0, flush, sync)
 }
 
+func RemoveChain(batch db.Batch, flush bool, sync bool) error {
+	if err := batch.Delete(ChainKey); err != nil {
+		return err
+	}
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return nil
+}
+
 // WaitUtilHeightChan get chain from channel. if channel is empty, the func will be blocked
 func GetChainUntil(namespace string) *types.Chain {
 	chain := chains.GetChain(namespace)
