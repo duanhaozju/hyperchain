@@ -29,6 +29,7 @@ var (
 	TxMetaSuffix             = []byte{0x01}
 
 	JournalPrefix            = []byte("-journal")
+	SnapshotPrefix           = []byte("-snapshot")
 )
 
 func InitDBForNamespace(conf *common.Config, namespace string) error{

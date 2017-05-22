@@ -7,6 +7,9 @@ import (
 	"sync"
 	"hyperchain/hyperdb"
 	"path"
+	"time"
+	"agile/utils/common"
+	"encoding/json"
 )
 
 const LatestBlockNumber uint64 = 0
@@ -14,6 +17,13 @@ const LatestBlockNumber uint64 = 0
 const InvalidSnapshotReqErr = "invalid snapshot request"
 const MakeSnapshotFailedErr = "make snapshot failed"
 const EmptyMessage = ""
+
+type Manifest struct {
+	Height     uint64    `json:"height"`
+	FilterId   string    `json:"filterId"`
+	Checksum   string    `json:"checksum"`
+	Date       string    `json:"date"`
+}
 
 // snapshot service's entry point
 func (executor *Executor) Snapshot(ev event.SnapshotEvent) {
@@ -89,11 +99,12 @@ func (registry *SnapshotRegistry) handle(number uint64) {
 	registry.rqLock.Lock()
 	defer registry.rqLock.Unlock()
 	if ev, existed := registry.rq[number]; existed == true {
-		// TODO archive logic here
 		registry.logger.Noticef("start to snapshot at (block #%d) for filter (%s)", number, ev.FilterId)
 		if err := registry.makeSnapshot(ev.FilterId, number); err != nil {
+			registry.logger.Noticef("snapshot at (block #%d) for filter (%s) failed", number, ev.FilterId)
 			registry.feedback(false, ev, MakeSnapshotFailedErr)
 		} else {
+			registry.logger.Noticef("snapshot at (block #%d) for filter (%s) success", number, ev.FilterId)
 			registry.feedback(true, ev, EmptyMessage)
 		}
 		delete(registry.rq, number)
@@ -112,7 +123,7 @@ func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) e
 	if err := registry.compress(filterId); err != nil {
 		return err
 	}
-	if err := registry.manifest(filterId); err != nil {
+	if err := registry.manifest(filterId, number); err != nil {
 		return err
 	}
 	return nil
@@ -135,6 +146,7 @@ func (registry *SnapshotRegistry) removeImpurity(filterId string, number uint64)
 	if err != nil {
 		return err
 	}
+	defer localDb.Close()
 	batch := localDb.NewBatch()
 	var i uint64 = 0
 	for ; i <= number; i += 1 {
@@ -179,7 +191,37 @@ func (registry *SnapshotRegistry) compress(filterId string) error {
 	return nil
 }
 
-func (registry *SnapshotRegistry) manifest(filterId string) error {
+func (registry *SnapshotRegistry) manifest(filterId string, number uint64) error {
+	conf := registry.executor.conf
+	sPath := registry.snapshotPath(hyperdb.GetDatabaseHome(conf), filterId)
+	localDb, err := hyperdb.NewDatabase(conf, sPath, hyperdb.GetDatabaseType(conf))
+	if err != nil {
+		return err
+	}
+
+	batch := localDb.NewBatch()
+	d := time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05")
+	blk, err := edb.GetBlockByNumber(registry.namespace, number)
+	if err != nil {
+		return err
+	}
+	manifest := &Manifest{
+		Height:      number,
+		FilterId:    filterId,
+		Checksum:    common.Bytes2Hex(blk.MerkleRoot),
+		Date:        d,
+	}
+
+	buf, err := json.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+	if err := edb.PersistSnapshot(batch, number, buf, false, false); err != nil {
+		return err
+	}
+	if err := batch.Write(); err != nil {
+		return err
+	}
 	return nil
 }
 
