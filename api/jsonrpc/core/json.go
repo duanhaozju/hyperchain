@@ -181,7 +181,7 @@ func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, comm
 	}
 
 	// subscribe are special, they will always use `subscribeMethod` as first param in the payload
-	if strings.HasSuffix(in.Method, common.SubscribeMethodSuffix) {
+	if strings.HasSuffix(in.Method, SubscribeMethodSuffix) {
 		reqs := []*common.RPCRequest{{Id: &in.Id, IsPubSub: true}}
 		if len(in.Payload) > 0 {
 			// first param must be subscription name
@@ -191,14 +191,14 @@ func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, comm
 				return nil, false, &common.InvalidRequestError{Message: "Unable to parse subscription request"}
 			}
 
-			reqs[0].Service, reqs[0].Method = strings.TrimSuffix(in.Method, common.SubscribeMethodSuffix), subscribeMethod[0]
+			reqs[0].Service, reqs[0].Method = strings.TrimSuffix(in.Method, SubscribeMethodSuffix), subscribeMethod[0]
 			reqs[0].Params = in.Payload
 			return reqs, false, nil
 		}
 		return nil, false, &common.InvalidRequestError{Message: "Unable to parse subscription request"}
 	}
 
-	if strings.HasSuffix(in.Method, common.UnsubscribeMethodSuffix) {
+	if strings.HasSuffix(in.Method, UnsubscribeMethodSuffix) {
 		return []*common.RPCRequest{{Id: &in.Id, IsPubSub: true,
 			Method: in.Method, Params: in.Payload}}, false, nil
 	}
