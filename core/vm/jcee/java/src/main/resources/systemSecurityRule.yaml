@@ -1,0 +1,123 @@
+---
+interfaceRule:
+  allowedRule:
+    class:
+  notAllowedRule:
+    class:
+      java/io: "not allow io operation."
+      java/lang/Readable: "not allow io operation."
+      java/nio: "not allow io operation."
+      java/lang/Process: "not allow system call operation."
+      java/lang/ProcessBuilder: "not allow system call operation."
+      java/lang/ProcessBuilder$Redirect: "not allow system call operation."
+      java/lang/Runtime: "not allow system call operation."
+      java/lang/Thread$State: "not allow thread(concurrent) operation."
+      java/lang/Thread: "not allow thread(concurrent) operation."
+      java/lang/Runnable: "not allow thread(concurrent) operation."
+      java/lang/ThreadGroup: "not allow thread(concurrent) operation."
+      java/lang/ThreadLocal: "not allow thread(concurrent) operation."
+      java/util/concurrent: "not allow thread(concurrent) operation."
+      java/net: "not allow net operation."
+      javax/net: "not allow net operation."
+      java/lang/Class: "not allow reflect operation."
+superClassRule:
+  allowedRule:
+    class:
+  notAllowedRule:
+    class:
+      java/io: "not allow io operation."
+      java/lang/Readable: "not allow io operation."
+      java/nio: "not allow io operation."
+      java/lang/Process: "not allow system call operation."
+      java/lang/ProcessBuilder: "not allow system call operation."
+      java/lang/ProcessBuilder$Redirect: "not allow system call operation."
+      java/lang/Runtime: "not allow system call operation."
+      java/lang/Thread$State: "not allow thread(concurrent) operation."
+      java/lang/Thread: "not allow thread(concurrent) operation."
+      java/lang/Runnable: "not allow thread(concurrent) operation."
+      java/lang/ThreadGroup: "not allow thread(concurrent) operation."
+      java/lang/ThreadLocal: "not allow thread(concurrent) operation."
+      java/util/concurrent: "not allow thread(concurrent) operation."
+      java/net: "not allow net operation."
+      javax/net: "not allow net operation."
+      java/lang/Class: "not allow reflect operation."
+memberVariableRule:
+  allowedRule:
+    mustKeyword:
+      "final": "allow final type member variables."
+    keyword:
+    class:
+  notAllowedRule:
+    mustKeyword:
+    keyword:
+    class:
+      java/io: "not allow io operation."
+      java/lang/Readable: "not allow io operation."
+      java/nio: "not allow io operation."
+      java/lang/Process: "not allow system call operation."
+      java/lang/ProcessBuilder: "not allow system call operation."
+      java/lang/ProcessBuilder$Redirect: "not allow system call operation."
+      java/lang/Runtime: "not allow system call operation."
+      java/lang/Thread$State: "not allow thread(concurrent) operation."
+      java/lang/Thread: "not allow thread(concurrent) operation."
+      java/lang/Runnable: "not allow thread(concurrent) operation."
+      java/lang/ThreadGroup: "not allow thread(concurrent) operation."
+      java/lang/ThreadLocal: "not allow thread(concurrent) operation."
+      java/util/concurrent: "not allow thread(concurrent) operation."
+      java/net: "not allow net operation."
+      javax/net: "not allow net operation."
+      java/lang/Class: "not allow reflect operation."
+methodDeclare:
+  allowedRule:
+    mustKeyword:
+    keyword:
+  notAllowedRule:
+    mustKeyword:
+      synchronized : "not allow concurrent operation."
+    keyword:
+methodVariable:
+  allowedRule:
+    class:
+  notAllowedRule:
+    class:
+      java/io: "not allow io operation."
+      java/lang/Readable: "not allow io operation."
+      java/nio: "not allow io operation."
+      java/lang/Process: "not allow system call operation."
+      java/lang/ProcessBuilder: "not allow system call operation."
+      java/lang/ProcessBuilder$Redirect: "not allow system call operation."
+      java/lang/Runtime: "not allow system call operation."
+      java/lang/Thread$State: "not allow thread(concurrent) operation."
+      java/lang/Thread: "not allow thread(concurrent) operation."
+      java/lang/Runnable: "not allow thread(concurrent) operation."
+      java/lang/ThreadGroup: "not allow thread(concurrent) operation."
+      java/lang/ThreadLocal: "not allow thread(concurrent) operation."
+      java/util/concurrent: "not allow thread(concurrent) operation."
+      java/net: "not allow net operation."
+      javax/net: "not allow net operation."
+      java/lang/Class: "not allow reflect operation."
+methodInstruction:
+  allowedRule:
+    class:
+    opCode:
+  notAllowedRule:
+    class:
+      java/io: "not allow io operation."
+      java/lang/Readable: "not allow io operation."
+      java/nio: "not allow io operation."
+      java/lang/Process: "not allow system call operation."
+      java/lang/ProcessBuilder: "not allow system call operation."
+      java/lang/ProcessBuilder$Redirect: "not allow system call operation."
+      java/lang/Runtime: "not allow system call operation."
+      java/lang/Thread$State: "not allow thread(concurrent) operation."
+      java/lang/Thread: "not allow thread(concurrent) operation."
+      java/lang/Runnable: "not allow thread(concurrent) operation."
+      java/lang/ThreadGroup: "not allow thread(concurrent) operation."
+      java/lang/ThreadLocal: "not allow thread(concurrent) operation."
+      java/util/concurrent: "not allow thread(concurrent) operation."
+      java/net: "not allow net operation."
+      javax/net: "not allow net operation."
+      java/lang/Class: "not allow reflect operation."
+    opCode:
+      monitorenter: "not allow sync opeation."
+      monitorexit: "not allow sync opeation."

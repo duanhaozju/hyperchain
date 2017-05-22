@@ -9,4 +9,6 @@ package cn.hyperchain.jcee.contract.security;
  */
 public interface Checker {
     boolean pass(byte[] clazz);
+    boolean pass(String absoluteClassPath);
+    boolean passAll(String absoluteDirPath);
 }
