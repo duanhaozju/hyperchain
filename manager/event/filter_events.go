@@ -12,3 +12,14 @@ type FilterNewBlockEvent struct {
 type FilterNewLogEvent struct {
 	Logs    []*vm.Log
 }
+
+
+/*
+	Archive
+ */
+
+type FilterArchiveResultEvent struct {
+	FilterId string
+	Success  bool
+	Message  string
+}

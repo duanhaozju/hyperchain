@@ -119,6 +119,11 @@ func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string
 
 }
 
+// TODO
+func (api *PublicFilterAPI) NewSnapshotSubscription(number uint64) string {
+	return ""
+}
+
 // GetFilterChanges returns the logs for the filter with the given id since
 // last time is was called. This can be used for polling.
 //

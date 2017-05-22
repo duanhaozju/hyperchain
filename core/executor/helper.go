@@ -174,6 +174,28 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		}
 		executor.helper.PostExternal(event.FilterNewLogEvent{logs})
 		return nil
+	case FILTER_SNAPSHOT_RESULT:
+		if len(message) != 3 {
+			return InvalidParams
+		}
+		isSuccess, ok := message[0].(bool)
+		if ok == false {
+			return InvalidParams
+		}
+		filterId, ok := message[1].(string)
+		if ok == false {
+			return InvalidParams
+		}
+		msg, ok := message[2].(string)
+		if ok == false {
+			return InvalidParams
+		}
+		executor.helper.PostExternal(event.FilterArchiveResultEvent{
+			FilterId:   filterId,
+			Success:    isSuccess,
+			Message:    msg,
+		})
+		return nil
 	default:
 		return NoDefinedCaseErr
 	}

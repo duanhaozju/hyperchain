@@ -313,7 +313,7 @@ func (executor *Executor) accpet(seqNo uint64, result *ValidationResultRecord) e
 		return err
 	}
 	executor.statedb.MarkProcessFinish(seqNo)
-	executor.feedback(result.Block, result.Logs)
+	executor.filterFeedback(result.Block, result.Logs)
 	return nil
 }
 

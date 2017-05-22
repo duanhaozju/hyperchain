@@ -4,6 +4,7 @@ import (
 	"hyperchain/manager"
 	"hyperchain/common"
 	"hyperchain/manager/event"
+	flt "hyperchain/manager/filter"
 )
 
 type AdminPublicAPI struct {
@@ -23,8 +24,13 @@ func NewPublicAdminAPI(namespace string, eh *manager.EventHub, config *common.Co
 	}
 }
 
-func (admin *AdminPublicAPI) Snapshot(blockNumber uint64) {
+func (admin *AdminPublicAPI) Snapshot(blockNumber uint64) string {
 	log := common.GetLogger(admin.namespace, "api")
-	log.Debugf("receive snapshot rpc command, params: (block number #%d)", blockNumber)
-	admin.eh.GetEventObject().Post(event.SnapshotEvent{BlockNumber: blockNumber})
+	filterId := flt.NewFilterID()
+	log.Debugf("receive snapshot rpc command, params: (block number #%d), filterId: (%s)", blockNumber, filterId)
+	admin.eh.GetEventObject().Post(event.SnapshotEvent{
+		FilterId:    filterId,
+		BlockNumber: blockNumber,
+	})
+	return filterId
 }

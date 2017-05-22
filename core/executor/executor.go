@@ -22,21 +22,22 @@ var (
 )
 
 type Executor struct {
-	namespace  string // namespace tag
-	db         db.Database
-	archiveDb  db.Database
-	commonHash crypto.CommonHash
-	encryption crypto.Encryption
-	conf       *common.Config // block configuration
-	status     ExecutorStatus
-	hashUtils  ExecutorHashUtil
-	cache      ExecutorCache
-	helper     *Helper
-	statedb    vm.Database
-	logger     *logging.Logger
+	namespace   string // namespace tag
+	db          db.Database
+	archiveDb   db.Database
+	commonHash  crypto.CommonHash
+	encryption  crypto.Encryption
+	conf        *common.Config // block configuration
+	status      ExecutorStatus
+	hashUtils   ExecutorHashUtil
+	cache       ExecutorCache
+	helper      *Helper
+	statedb     vm.Database
+	logger      *logging.Logger
+	snapshotReg *SnapshotRegistry
 }
 
-func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) *Executor {
+func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) (*Executor, error) {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	helper := NewHelper(eventMux, filterMux)
@@ -49,33 +50,45 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 		helper:     helper,
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
-	executor.initDb()
-	return executor
+	executor.snapshotReg = NewSnapshotRegistry(namespace, executor.logger, executor)
+	// TODO doesn't know why to add this statement here.
+	// TODO ask @Rongjialei to fix this.
+	if err := executor.initDb(); err != nil {
+		return nil, err
+	}
+	return executor, nil
 }
 
-func (executor *Executor) initDb() {
+func (executor *Executor) initDb() error {
 	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
-		//return nil
+		return err
 	}
 	executor.db = db
 	archieveDb, err := hyperdb.GetArchieveDbByNamespace(executor.namespace)
 	if err != nil {
-		//return nil
+		return err
 	}
 	executor.archiveDb = archieveDb
+	return nil
 }
 
 // Start - start service.
-func (executor *Executor) Start() {
-	executor.initialize()
+func (executor *Executor) Start() error {
+	if err := executor.initialize(); err != nil {
+		return  err
+	}
 	executor.logger.Noticef("[Namespace = %s]  executor start", executor.namespace)
+	return nil
 }
 
 // Stop - stop service.
-func (executor *Executor) Stop() {
-	executor.setExit()
+func (executor *Executor) Stop() error {
+	if err := executor.finailize(); err != nil {
+		return err
+	}
 	executor.logger.Noticef("[Namespace = %s] executor stop", executor.namespace)
+	return nil
 }
 
 // Status - obtain executor status.
@@ -83,21 +96,41 @@ func (executor *Executor) Status() {
 
 }
 
-func (executor *Executor) initialize() {
-	executor.initDb()
+func (executor *Executor) initialize() error {
+	if err := executor.initDb(); err != nil {
+		executor.logger.Errorf("executor initiailize db failed. %s", err.Error())
+		return err
+	}
 	if err := initializeExecutorStatus(executor); err != nil {
 		executor.logger.Errorf("executor initiailize status failed. %s", err.Error())
+		return err
 	}
 	if err := initializeExecutorCache(executor); err != nil {
 		executor.logger.Errorf("executor initiailize cache failed. %s", err.Error())
+		return err
 	}
 	if err := initializeExecutorStateDb(executor); err != nil {
 		executor.logger.Errorf("executor initiailize state failed. %s", err.Error())
+		return err
+	}
+	if err := executor.snapshotReg.Start(); err != nil {
+		executor.logger.Errorf("executor initiailize snapshot registry failed. %s", err.Error())
+		return err
 	}
 	// start to listen for process commit event or validation event
 	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()
 	go executor.syncReplica()
+	return nil
+}
+
+// setExit - notify all backend to exit.
+func (executor *Executor) finailize() error {
+	go executor.setValidationExit()
+	go executor.setCommitExit()
+	go executor.setReplicaSyncExit()
+	go executor.snapshotReg.Stop()
+	return nil
 }
 
 // initializeExecutorStateDb - initialize statedb.

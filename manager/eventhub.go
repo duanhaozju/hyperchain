@@ -229,7 +229,7 @@ func (hub *EventHub) listenMiscellaneousEvent() {
 				hub.executor.SyncChain(ev)
 			case event.SnapshotEvent:
 				hub.logger.Debugf("message middleware: [snapshot request]")
-				// TODO
+				hub.executor.Snapshot(ev)
 			}
 		}
 	}

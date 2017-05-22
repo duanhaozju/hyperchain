@@ -363,12 +363,6 @@ func (executor *Executor) getReplicaSyncExit() chan bool {
 	return executor.status.replicaSyncExit
 }
 
-// setExit - notify all backend to exit.
-func (executor *Executor) setExit() {
-	go executor.setValidationExit()
-	go executor.setCommitExit()
-	go executor.setReplicaSyncExit()
-}
 
 // getExit - get exit status.
 func (executor *Executor) getExit(identifier int) chan bool {

@@ -105,7 +105,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	// executor.logger.Notice(string(executor.statedb.Dump()))
 	// remove Cached Transactions which used to check transaction duplication
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
-	go executor.feedback(block, filterLogs)
+	go executor.filterFeedback(block, filterLogs)
 	return nil
 }
 
@@ -231,13 +231,15 @@ func (executor *Executor) pauseCommit() {
 		}
 	}
 }
-func (executor *Executor) feedback(block *types.Block, filterLogs []*vm.Log) {
+func (executor *Executor) filterFeedback(block *types.Block, filterLogs []*vm.Log) {
 	if err := executor.sendFilterEvent(FILTER_NEW_BLOCK, block); err != nil {
 		executor.logger.Warningf("send new block event failed. error detail: %s", err.Error())
 	}
+	go executor.snapshotReg.notifyNewBlock(block.Number)
 	if len(filterLogs) > 0 {
 		if err := executor.sendFilterEvent(FILTER_NEW_LOG, filterLogs); err != nil {
 			executor.logger.Warningf("send new log event failed. error detail: %s", err.Error())
 		}
 	}
 }
+

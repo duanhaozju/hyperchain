@@ -11,6 +11,10 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/common"
 	pa "path/filepath"
+	"os/exec"
+	"path/filepath"
+	"path"
+	"os"
 )
 
 const (
@@ -107,6 +111,20 @@ func (db *LDBDatabase) NewBatch() db.Batch {
 	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
 }
 
+func (db *LDBDatabase) Backup(id string) error {
+	dbPrefix := filepath.Dir(db.path)
+	backupPath := path.Join(dbPrefix, id)
+	backupDir := filepath.Dir(backupPath)
+	if err := os.MkdirAll(backupDir, 0777); err != nil {
+		return err
+	}
+	cmd := exec.Command("cp", "-rf", db.path, backupPath)
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
 // The Batch for LevelDB
 // ldbBatch implements the Batch interface
 type ldbBatch struct {
@@ -134,3 +152,4 @@ func (b *ldbBatch) Write() error {
 func (b *ldbBatch) Len() int {
 	return b.b.Len()
 }
+

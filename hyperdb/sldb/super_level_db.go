@@ -13,6 +13,10 @@ import (
 	"hyperchain/hyperdb/db"
 	pa "path/filepath"
 	"time"
+	"path"
+	"os"
+	"os/exec"
+	"path/filepath"
 )
 
 const (
@@ -162,6 +166,20 @@ func (sldb *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
 			return
 		}
 	}
+}
+
+func (sb *SuperLevelDB) Backup(id string) error {
+	dbPrefix := filepath.Dir(sb.path)
+	backupPath := path.Join(dbPrefix, id)
+	backupDir := filepath.Dir(backupPath)
+	if err := os.MkdirAll(backupDir, 0777); err != nil {
+		return err
+	}
+	cmd := exec.Command("cp", "-rf", sb.path, backupPath)
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return nil
 }
 
 //batch related functions

@@ -133,6 +133,7 @@ type ExecutorToP2PEvent struct {
  */
 
 type SnapshotEvent struct {
+	FilterId     string
 	BlockNumber  uint64
 }
 

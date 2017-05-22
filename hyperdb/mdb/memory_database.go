@@ -82,6 +82,10 @@ func (db *MemDatabase) Delete(key []byte) error {
 
 func (db *MemDatabase) Close() {}
 
+func (db *MemDatabase) Backup(id string) error {
+	return nil
+}
+
 type Iter struct {
 	index int
 	ptr   *MemDatabase
