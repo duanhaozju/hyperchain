@@ -137,5 +137,9 @@ type SnapshotEvent struct {
 	BlockNumber  uint64
 }
 
+type DeleteSnapshotEvent struct {
+	FilterId    string
+}
+
 
 

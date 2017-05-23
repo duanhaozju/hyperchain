@@ -15,8 +15,11 @@ import (
 
 const LatestBlockNumber uint64 = 0
 
-const InvalidSnapshotReqErr = "invalid snapshot request"
-const MakeSnapshotFailedErr = "make snapshot failed"
+const InvalidSnapshotReqErr   = "invalid snapshot request"
+const MakeSnapshotFailedErr   = "make snapshot failed"
+const SnapshotNotExistErr     = "snapshot doesn't exist"
+const DeleteSnapshotErr       = "delete snapshot failed"
+
 const EmptyMessage = ""
 
 
@@ -24,6 +27,10 @@ const EmptyMessage = ""
 // snapshot service's entry point
 func (executor *Executor) Snapshot(ev event.SnapshotEvent) {
 	executor.snapshotReg.Snapshot(ev)
+}
+
+func (executor *Executor) DeleteSnapshot(ev event.DeleteSnapshotEvent) {
+	executor.snapshotReg.DeleteSnapshot(ev)
 }
 
 // snapshot manager
@@ -66,12 +73,27 @@ func (registry *SnapshotRegistry) Stop() error {
 
 func (registry *SnapshotRegistry) Snapshot(event event.SnapshotEvent) {
 	if !registry.checkRequest(event) {
-		registry.feedback(false, event, InvalidSnapshotReqErr)
+		registry.feedback(FILTER_SNAPSHOT_RESULT, false, event.FilterId, InvalidSnapshotReqErr)
 	} else {
 		if registry.isExecuteImmediate(event) {
 			registry.executeImmediately(event)
 		} else {
 			registry.addRequest(event)
+		}
+	}
+}
+
+func (registry *SnapshotRegistry) DeleteSnapshot(event event.DeleteSnapshotEvent) {
+	// TODO add request check
+	// TODO @Rongjialei fix me
+	if !registry.rwc.Contain(event.FilterId) {
+		registry.feedback(FILTER_DELETE_SNAPSHOT, false, event.FilterId, SnapshotNotExistErr)
+	} else {
+		if err := registry.deleteSnapshot(event.FilterId); err != nil {
+			registry.feedback(FILTER_DELETE_SNAPSHOT, false, event.FilterId, DeleteSnapshotErr)
+		}
+		if err := registry.rwc.Delete(event.FilterId); err != nil {
+			registry.feedback(FILTER_DELETE_SNAPSHOT, false, event.FilterId, DeleteSnapshotErr)
 		}
 	}
 }
@@ -84,10 +106,10 @@ func (registry *SnapshotRegistry) executeImmediately(ev event.SnapshotEvent) {
 	height := edb.GetHeightOfChain(registry.namespace)
 	if err := registry.makeSnapshot(ev.FilterId, height); err != nil {
 		registry.logger.Noticef("snapshot at (block #%d) for filter (%s) failed", height, ev.FilterId)
-		registry.feedback(false, ev, MakeSnapshotFailedErr)
+		registry.feedback(FILTER_SNAPSHOT_RESULT, false, ev.FilterId, MakeSnapshotFailedErr)
 	} else {
 		registry.logger.Noticef("snapshot at (block #%d) for filter (%s) success", height, ev.FilterId)
-		registry.feedback(true, ev, EmptyMessage)
+		registry.feedback(FILTER_SNAPSHOT_RESULT, true, ev.FilterId, EmptyMessage)
 	}
 }
 
@@ -116,10 +138,10 @@ func (registry *SnapshotRegistry) handle(number uint64) {
 		registry.logger.Noticef("start to snapshot at (block #%d) for filter (%s)", number, ev.FilterId)
 		if err := registry.makeSnapshot(ev.FilterId, number); err != nil {
 			registry.logger.Noticef("snapshot at (block #%d) for filter (%s) failed", number, ev.FilterId)
-			registry.feedback(false, ev, MakeSnapshotFailedErr)
+			registry.feedback(FILTER_SNAPSHOT_RESULT, false, ev.FilterId, MakeSnapshotFailedErr)
 		} else {
 			registry.logger.Noticef("snapshot at (block #%d) for filter (%s) success", number, ev.FilterId)
-			registry.feedback(true, ev, EmptyMessage)
+			registry.feedback(FILTER_SNAPSHOT_RESULT, true, ev.FilterId, EmptyMessage)
 		}
 		delete(registry.rq, number)
 	}
@@ -234,6 +256,18 @@ func (registry *SnapshotRegistry) manifest(filterId string, number uint64) error
 	return nil
 }
 
+func (registry *SnapshotRegistry) deleteSnapshot(filterId string) error {
+	conf := registry.executor.conf
+	fId := registry.snapshotId(filterId)
+	sPath := registry.snapshotPath(hyperdb.GetDatabaseHome(conf), fId)
+	localCmd := cmd.Command("rm", "-rf", sPath + ".tar.gz")
+	if err := localCmd.Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+
 func (registry *SnapshotRegistry) checkRequest(event event.SnapshotEvent) bool {
 	if event.BlockNumber == LatestBlockNumber {
 		return true
@@ -253,8 +287,8 @@ func (registry *SnapshotRegistry) notifyNewBlock(number uint64) {
 	registry.newBlockC <- number
 }
 
-func (registry *SnapshotRegistry) feedback(isSuccess bool, ev event.SnapshotEvent, message string) {
-	registry.executor.sendFilterEvent(FILTER_SNAPSHOT_RESULT, isSuccess, ev.FilterId, message)
+func (registry *SnapshotRegistry) feedback(t int, isSuccess bool, filterId string, message string) {
+	registry.executor.sendFilterEvent(t, isSuccess, filterId, message)
 }
 
 func (registry *SnapshotRegistry) exit() {

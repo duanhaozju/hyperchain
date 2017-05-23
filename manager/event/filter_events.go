@@ -18,7 +18,13 @@ type FilterNewLogEvent struct {
 	Archive
  */
 
-type FilterArchiveResultEvent struct {
+type FilterSnapshotEvent struct {
+	FilterId string
+	Success  bool
+	Message  string
+}
+
+type FilterDeleteSnapshotEvent struct {
 	FilterId string
 	Success  bool
 	Message  string

@@ -240,10 +240,22 @@ type SubNotExistError struct {
 }
 
 func (e *SubNotExistError) Code() int {
-	return -32010
+	return -32012
 }
 
 func (e *SubNotExistError) Error() string {
+	return e.Message
+}
+
+type SnapshotErr struct {
+	Message string
+}
+
+func (e *SnapshotErr) Code() int {
+	return -32013
+}
+
+func (e *SnapshotErr) Error() string {
 	return e.Message
 }
 

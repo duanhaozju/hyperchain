@@ -190,7 +190,29 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		if ok == false {
 			return InvalidParams
 		}
-		executor.helper.PostExternal(event.FilterArchiveResultEvent{
+		executor.helper.PostExternal(event.FilterSnapshotEvent{
+			FilterId:   filterId,
+			Success:    isSuccess,
+			Message:    msg,
+		})
+		return nil
+	case FILTER_DELETE_SNAPSHOT:
+		if len(message) != 3 {
+			return InvalidParams
+		}
+		isSuccess, ok := message[0].(bool)
+		if ok == false {
+			return InvalidParams
+		}
+		filterId, ok := message[1].(string)
+		if ok == false {
+			return InvalidParams
+		}
+		msg, ok := message[2].(string)
+		if ok == false {
+			return InvalidParams
+		}
+		executor.helper.PostExternal(event.FilterDeleteSnapshotEvent{
 			FilterId:   filterId,
 			Success:    isSuccess,
 			Message:    msg,

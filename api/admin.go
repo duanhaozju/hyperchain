@@ -41,12 +41,23 @@ func (admin *AdminPublicAPI) Snapshot(blockNumber uint64) string {
 	})
 	return filterId
 }
+// TODO snapshot callback
 
 func (admin *AdminPublicAPI) ListSnapshot() (common.Manifests, error) {
 	manifestHandler := common.NewManifestHandler(getManifestPath(admin.config))
 	if err, manifests := manifestHandler.List(); err != nil {
-		return nil, err
+		return nil, &common.SnapshotErr{Message: err.Error()}
 	} else {
 		return manifests, nil
 	}
 }
+
+func (admin *AdminPublicAPI) DeleteSnapshot(filterId string) string {
+	log := common.GetLogger(admin.namespace, "api")
+	log.Debugf("receive delete snapshot rpc command, filterId: (%s)", filterId)
+	admin.eh.GetEventObject().Post(event.DeleteSnapshotEvent{
+		FilterId:    filterId,
+	})
+	return filterId
+}
+// TODO delete snapshot callback

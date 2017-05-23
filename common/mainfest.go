@@ -19,6 +19,15 @@ type Manifests []Manifest
 /*
 	Manifest manipulator
  */
+
+type ManifestRWC interface {
+	Read(string) (error, Manifest)
+	Write(Manifest) error
+	List() (error, Manifests)
+	Delete(string) error
+	Contain(string) bool
+}
+
 type ManifestHandler struct {
 	filePath    string
 }
@@ -27,13 +36,6 @@ func NewManifestHandler(fName string) *ManifestHandler {
 	return &ManifestHandler{
 		filePath: fName,
 	}
-}
-
-type ManifestRWC interface {
-	Read(string) (error, Manifest)
-	Write(Manifest) error
-	List() (error, Manifests)
-	Delete(string) error
 }
 
 func (rwc *ManifestHandler) Read(id string) (error, Manifest) {
@@ -112,5 +114,22 @@ func (rwc *ManifestHandler) Delete(id string) error {
 	} else {
 		return ManifestNotExistErr
 	}
+}
+
+func (rwc *ManifestHandler) Contain(id string) bool {
+	buf, err := ioutil.ReadFile(rwc.filePath)
+	if err != nil {
+		return false
+	}
+	var manifests Manifests
+	if err := json.Unmarshal(buf, &manifests); err != nil {
+		return false
+	}
+	for _, manifest := range manifests {
+		if manifest.FilterId == id {
+			return true
+		}
+	}
+	return false
 }
 
