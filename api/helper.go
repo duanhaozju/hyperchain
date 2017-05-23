@@ -26,11 +26,16 @@ const (
 	paillpublickeyN       = "global.configs.hmpublickey.N"
 	paillpublickeynsquare = "global.configs.hmpublickey.Nsquare"
 	paillpublickeyG       = "global.configs.hmpublickey.G"
+	archiveManifestPath   = "global.executor.archive.manifest"
 )
 
 // getRateLimitEnable - get rate limit switch value
 func getRateLimitEnable(conf *common.Config) bool {
 	return conf.GetBool(rateLimitEnable)
+}
+
+func getManifestPath(conf *common.Config) string {
+	return conf.GetString(archiveManifestPath)
 }
 
 // getRateLimitPeak - get rate limit peak value

@@ -14,6 +14,13 @@ type AdminPublicAPI struct {
 	isPublic  bool
 }
 
+type Manifest struct {
+	Height     uint64    `json:"height"`
+	FilterId   string    `json:"filterId"`
+	MerkleRoot string    `json:"merkleRoot"`
+	Date       string    `json:"date"`
+}
+
 
 func NewPublicAdminAPI(namespace string, eh *manager.EventHub, config *common.Config) *AdminPublicAPI {
 	return &AdminPublicAPI{
@@ -33,4 +40,13 @@ func (admin *AdminPublicAPI) Snapshot(blockNumber uint64) string {
 		BlockNumber: blockNumber,
 	})
 	return filterId
+}
+
+func (admin *AdminPublicAPI) ListSnapshot() (common.Manifests, error) {
+	manifestHandler := common.NewManifestHandler(getManifestPath(admin.config))
+	if err, manifests := manifestHandler.List(); err != nil {
+		return nil, err
+	} else {
+		return manifests, nil
+	}
 }
