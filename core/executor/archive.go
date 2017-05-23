@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"errors"
 	cmd "os/exec"
+	"path/filepath"
 )
 
 const LatestBlockNumber uint64 = 0
@@ -216,7 +217,7 @@ func (registry *SnapshotRegistry) removeImpurity(filterId string, number uint64)
 
 func (registry *SnapshotRegistry) compress(filterId string) error {
 	path := registry.snapshotPath(hyperdb.GetDatabaseHome(registry.executor.conf), registry.snapshotId(filterId))
-	localCmd := cmd.Command("tar", "-czvf", path + ".tar.gz", path)
+	localCmd := cmd.Command("tar", "-C" , filepath.Dir(path), "-czvf", path + ".tar.gz", filepath.Base(path))
 	if err := localCmd.Run(); err != nil {
 		return err
 	}
