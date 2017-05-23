@@ -19,6 +19,8 @@ const (
 	syncChainBatchSize          = "global.executor.sync_chain.sync_batch_size"
 	syncChainResendInterval     = "global.executor.sync_chain.sync_resend_interval"
 
+	archiveManifestPath         = "global.executor.archive.manifest"
+
 )
 
 // GetBucketSize - get bucket size.
@@ -76,4 +78,8 @@ func (executor *Executor) GetSyncMaxBatchSize() uint64 {
 
 func (executor *Executor) GetSyncResendInterval() time.Duration {
 	return executor.conf.GetDuration(syncChainResendInterval)
+}
+
+func (executor *Executor) GetManifestPath() string {
+	return executor.conf.GetString(archiveManifestPath)
 }

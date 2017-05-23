@@ -24,7 +24,6 @@ global:
         peers: "namespaces/global/config/local_peerconfig.json"
         genesis: "namespaces/global/config/genesis.json"
         static_peers: "namespaces/global/config/static_peers.json"
-
         ratelimit:
                 enable   : true
                 txRatePeak : 100
@@ -83,6 +82,8 @@ global:
         sync_replica:
             interval : 500s
             enable   : false
+        archive:
+            manifest: "./namespaces/global/data/manifest.json"
         buckettree:
             state:
                 size: 1000003

@@ -8,8 +8,10 @@ import (
 	"hyperchain/hyperdb"
 	"path"
 	"time"
-	"agile/utils/common"
+	"hyperchain/common"
 	"encoding/json"
+	"io/ioutil"
+	"errors"
 )
 
 const LatestBlockNumber uint64 = 0
@@ -18,12 +20,16 @@ const InvalidSnapshotReqErr = "invalid snapshot request"
 const MakeSnapshotFailedErr = "make snapshot failed"
 const EmptyMessage = ""
 
+var ManifestNotExistErr   = errors.New("manifest not existed")
+
 type Manifest struct {
 	Height     uint64    `json:"height"`
 	FilterId   string    `json:"filterId"`
-	Checksum   string    `json:"checksum"`
+	MerkleRoot string    `json:"merkleRoot"`
 	Date       string    `json:"date"`
 }
+
+type Manifests []Manifest
 
 // snapshot service's entry point
 func (executor *Executor) Snapshot(ev event.SnapshotEvent) {
@@ -39,6 +45,8 @@ type SnapshotRegistry struct {
 	newBlockC  chan uint64
 	exitC      chan struct{}
 	executor   *Executor
+	mu         sync.Mutex
+	rwc        ManifestRWC
 }
 
 func NewSnapshotRegistry(namespace string, logger *logging.Logger, executor *Executor) *SnapshotRegistry {
@@ -49,6 +57,7 @@ func NewSnapshotRegistry(namespace string, logger *logging.Logger, executor *Exe
 		newBlockC:  make(chan uint64),
 		exitC:      make(chan struct{}),
 		executor:   executor,
+		rwc:        NewManifestHandler(executor.GetManifestPath()),
 	}
 }
 
@@ -69,7 +78,11 @@ func (registry *SnapshotRegistry) Snapshot(event event.SnapshotEvent) {
 	if !registry.checkRequest(event) {
 		registry.feedback(false, event, InvalidSnapshotReqErr)
 	} else {
-		registry.addRequest(event)
+		if registry.isExecuteImmediate(event) {
+			registry.executeImmediately(event)
+		} else {
+			registry.addRequest(event)
+		}
 	}
 }
 
@@ -112,6 +125,9 @@ func (registry *SnapshotRegistry) handle(number uint64) {
 }
 
 func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) error {
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+
 	registry.executor.setSuspend(IDENTIFIER_COMMIT)
 	defer registry.executor.unsetSuspend(IDENTIFIER_COMMIT)
 	if err := registry.duplicate(filterId); err != nil {
@@ -141,8 +157,7 @@ func (registry *SnapshotRegistry) duplicate(filterId string) error {
 
 func (registry *SnapshotRegistry) removeImpurity(filterId string, number uint64) error {
 	conf := registry.executor.conf
-	sPath := registry.snapshotPath(hyperdb.GetDatabaseHome(conf), filterId)
-	localDb, err := hyperdb.NewDatabase(conf, sPath, hyperdb.GetDatabaseType(conf))
+	localDb, err := hyperdb.NewDatabase(conf, registry.snapshotId(filterId), hyperdb.GetDatabaseType(conf))
 	if err != nil {
 		return err
 	}
@@ -192,34 +207,18 @@ func (registry *SnapshotRegistry) compress(filterId string) error {
 }
 
 func (registry *SnapshotRegistry) manifest(filterId string, number uint64) error {
-	conf := registry.executor.conf
-	sPath := registry.snapshotPath(hyperdb.GetDatabaseHome(conf), filterId)
-	localDb, err := hyperdb.NewDatabase(conf, sPath, hyperdb.GetDatabaseType(conf))
-	if err != nil {
-		return err
-	}
-
-	batch := localDb.NewBatch()
-	d := time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05")
 	blk, err := edb.GetBlockByNumber(registry.namespace, number)
 	if err != nil {
 		return err
 	}
-	manifest := &Manifest{
+	d := time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05")
+	manifest := Manifest{
 		Height:      number,
 		FilterId:    filterId,
-		Checksum:    common.Bytes2Hex(blk.MerkleRoot),
+		MerkleRoot:  common.Bytes2Hex(blk.MerkleRoot),
 		Date:        d,
 	}
-
-	buf, err := json.Marshal(manifest)
-	if err != nil {
-		return err
-	}
-	if err := edb.PersistSnapshot(batch, number, buf, false, false); err != nil {
-		return err
-	}
-	if err := batch.Write(); err != nil {
+	if err := registry.rwc.Write(manifest); err != nil {
 		return err
 	}
 	return nil
@@ -234,6 +233,21 @@ func (registry *SnapshotRegistry) checkRequest(event event.SnapshotEvent) bool {
 		return false
 	}
 	return true
+}
+
+func (registry *SnapshotRegistry) isExecuteImmediate(event event.SnapshotEvent) bool {
+	return event.BlockNumber == LatestBlockNumber
+}
+
+func (registry *SnapshotRegistry) executeImmediately(ev event.SnapshotEvent) {
+	height := edb.GetHeightOfChain(registry.namespace)
+	if err := registry.makeSnapshot(ev.FilterId, height); err != nil {
+		registry.logger.Noticef("snapshot at (block #%d) for filter (%s) failed", height, ev.FilterId)
+		registry.feedback(false, ev, MakeSnapshotFailedErr)
+	} else {
+		registry.logger.Noticef("snapshot at (block #%d) for filter (%s) success", height, ev.FilterId)
+		registry.feedback(true, ev, EmptyMessage)
+	}
 }
 
 func (registry *SnapshotRegistry) notifyNewBlock(number uint64) {
@@ -256,4 +270,99 @@ func (registry *SnapshotRegistry) snapshotPath(base string, filterID string) str
 	return path.Join(base, "snapshots", filterID)
 }
 
+
+type ManifestRWC interface {
+	Read(string) (error, Manifest)
+	Write(Manifest) error
+	List() (error, Manifests)
+	Delete(string) error
+}
+
+type ManifestHandler struct {
+	filePath    string
+}
+
+func NewManifestHandler(fName string) *ManifestHandler {
+	return &ManifestHandler{
+		filePath: fName,
+	}
+}
+
+func (rwc *ManifestHandler) Read(id string) (error, Manifest) {
+	buf, err := ioutil.ReadFile(rwc.filePath)
+	if err != nil {
+		return err, Manifest{}
+	}
+	var manifests Manifests
+	if err := json.Unmarshal(buf, &manifests); err != nil {
+		return err, Manifest{}
+	}
+	for _, manifest := range manifests {
+		if id == manifest.FilterId {
+			return nil, manifest
+		}
+	}
+	return ManifestNotExistErr, Manifest{}
+}
+
+func (rwc *ManifestHandler) Write(manifest Manifest) error {
+	buf, _ := ioutil.ReadFile(rwc.filePath)
+	var manifests Manifests
+	if len(buf) != 0 {
+		if err := json.Unmarshal(buf, &manifests); err != nil {
+			return err
+		}
+	}
+	manifests = append(manifests, manifest)
+	if buf, err := json.MarshalIndent(manifests, "", "   "); err != nil {
+		return err
+	} else {
+		if err := ioutil.WriteFile(rwc.filePath, buf, 0644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (rwc *ManifestHandler) List() (error, Manifests) {
+	buf, err := ioutil.ReadFile(rwc.filePath)
+	if err != nil {
+		return err, nil
+	}
+	var manifests Manifests
+	if err := json.Unmarshal(buf, &manifests); err != nil {
+		return err, nil
+	}
+	return nil, manifests
+}
+
+func (rwc *ManifestHandler) Delete(id string) error {
+	var deleted bool
+	buf, err := ioutil.ReadFile(rwc.filePath)
+	if err != nil {
+		return err
+	}
+	var manifests Manifests
+	if err := json.Unmarshal(buf, &manifests); err != nil {
+		return err
+	}
+	for idx, manifest := range manifests {
+		if manifest.FilterId == id {
+			manifests = append(manifests[:idx], manifests[idx+1:]...)
+			deleted = true
+		}
+	}
+	if deleted {
+		if buf, err := json.MarshalIndent(manifests, "", "   "); err != nil {
+			return err
+		} else {
+			if err := ioutil.WriteFile(rwc.filePath, buf, 0644); err != nil {
+				return err
+			}
+			return nil
+		}
+	} else {
+		return ManifestNotExistErr
+	}
+}
 
