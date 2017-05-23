@@ -5,7 +5,7 @@ import org.apache.commons.jcs.access.CacheAccess;
 import org.apache.commons.jcs.access.exception.CacheException;
 import org.apache.log4j.Logger;
 
-import java.io.IOException;
+import java.io.*;
 import java.util.Properties;
 
 /**
@@ -20,7 +20,7 @@ public class JcsCache implements Cache{
     public JcsCache(){
         try {
             Properties properties = new Properties();
-            properties.load(getClass().getResourceAsStream("./hyperjvm/config/cache.properties"));
+            properties.load(new FileInputStream("./hyperjvm/config/cache.properties"));
             JCS.setConfigProperties(properties);
             cache = JCS.getInstance("default");
         }
@@ -34,6 +34,7 @@ public class JcsCache implements Cache{
     public void putInCache(byte[]key, byte[]value){
         try{
             cache.put( key, value);
+            logger.info("cache size after put:"+size());
         }
         catch ( CacheException e){
             logger.info(String.format( "Problem putting object in the cache, for key %s%n%s",key, e.getMessage()));
