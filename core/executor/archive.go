@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"errors"
+	cmd "os/exec"
 )
 
 const LatestBlockNumber uint64 = 0
@@ -214,7 +215,15 @@ func (registry *SnapshotRegistry) removeImpurity(filterId string, number uint64)
 }
 
 func (registry *SnapshotRegistry) compress(filterId string) error {
-
+	path := registry.snapshotPath(hyperdb.GetDatabaseHome(registry.executor.conf), registry.snapshotId(filterId))
+	localCmd := cmd.Command("tar", "-czvf", path + ".tar.gz", path)
+	if err := localCmd.Run(); err != nil {
+		return err
+	}
+	localCmd = cmd.Command("rm", "-rf", path)
+	if err := localCmd.Run(); err != nil {
+		return err
+	}
 	return nil
 }
 
