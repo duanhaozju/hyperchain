@@ -36,7 +36,7 @@ func (executor *Executor) Snapshot(ev event.SnapshotEvent) {
 	executor.snapshotReg.Snapshot(ev)
 }
 
-
+// snapshot manager
 type SnapshotRegistry struct {
 	namespace  string
 	rq         map[uint64]event.SnapshotEvent
@@ -90,6 +90,17 @@ func (registry *SnapshotRegistry) Snapshot(event event.SnapshotEvent) {
 /*
 	Internal functions
  */
+func (registry *SnapshotRegistry) executeImmediately(ev event.SnapshotEvent) {
+	height := edb.GetHeightOfChain(registry.namespace)
+	if err := registry.makeSnapshot(ev.FilterId, height); err != nil {
+		registry.logger.Noticef("snapshot at (block #%d) for filter (%s) failed", height, ev.FilterId)
+		registry.feedback(false, ev, MakeSnapshotFailedErr)
+	} else {
+		registry.logger.Noticef("snapshot at (block #%d) for filter (%s) success", height, ev.FilterId)
+		registry.feedback(true, ev, EmptyMessage)
+	}
+}
+
 func (registry *SnapshotRegistry) addRequest(event event.SnapshotEvent) {
 	registry.rqLock.Lock()
 	defer registry.rqLock.Unlock()
@@ -157,7 +168,7 @@ func (registry *SnapshotRegistry) duplicate(filterId string) error {
 
 func (registry *SnapshotRegistry) removeImpurity(filterId string, number uint64) error {
 	conf := registry.executor.conf
-	localDb, err := hyperdb.NewDatabase(conf, registry.snapshotId(filterId), hyperdb.GetDatabaseType(conf))
+	localDb, err := hyperdb.NewDatabase(conf, path.Join("snapshots", registry.snapshotId(filterId)), hyperdb.GetDatabaseType(conf))
 	if err != nil {
 		return err
 	}
@@ -203,6 +214,7 @@ func (registry *SnapshotRegistry) removeImpurity(filterId string, number uint64)
 }
 
 func (registry *SnapshotRegistry) compress(filterId string) error {
+
 	return nil
 }
 
@@ -239,17 +251,6 @@ func (registry *SnapshotRegistry) isExecuteImmediate(event event.SnapshotEvent) 
 	return event.BlockNumber == LatestBlockNumber
 }
 
-func (registry *SnapshotRegistry) executeImmediately(ev event.SnapshotEvent) {
-	height := edb.GetHeightOfChain(registry.namespace)
-	if err := registry.makeSnapshot(ev.FilterId, height); err != nil {
-		registry.logger.Noticef("snapshot at (block #%d) for filter (%s) failed", height, ev.FilterId)
-		registry.feedback(false, ev, MakeSnapshotFailedErr)
-	} else {
-		registry.logger.Noticef("snapshot at (block #%d) for filter (%s) success", height, ev.FilterId)
-		registry.feedback(true, ev, EmptyMessage)
-	}
-}
-
 func (registry *SnapshotRegistry) notifyNewBlock(number uint64) {
 	registry.newBlockC <- number
 }
@@ -271,6 +272,9 @@ func (registry *SnapshotRegistry) snapshotPath(base string, filterID string) str
 }
 
 
+/*
+	Manifest manipulator
+ */
 type ManifestRWC interface {
 	Read(string) (error, Manifest)
 	Write(Manifest) error
