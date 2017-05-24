@@ -43,6 +43,15 @@ func (admin *AdminPublicAPI) Snapshot(blockNumber uint64) string {
 }
 // TODO snapshot callback
 
+func (admin *AdminPublicAPI) ReadSnapshot(filterId string) (common.Manifest, error) {
+	manifestHandler := common.NewManifestHandler(getManifestPath(admin.config))
+	if err, manifest := manifestHandler.Read(filterId); err != nil {
+		return common.Manifest{}, &common.SnapshotErr{Message: err.Error()}
+	} else {
+		return manifest, nil
+	}
+}
+
 func (admin *AdminPublicAPI) ListSnapshot() (common.Manifests, error) {
 	manifestHandler := common.NewManifestHandler(getManifestPath(admin.config))
 	if err, manifests := manifestHandler.List(); err != nil {
