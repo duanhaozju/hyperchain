@@ -150,15 +150,14 @@ func (registry *SnapshotRegistry) handle(number uint64) {
 func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) error {
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
-
 	registry.executor.setSuspend(IDENTIFIER_COMMIT)
 	defer registry.executor.unsetSuspend(IDENTIFIER_COMMIT)
 	if err := registry.duplicate(filterId); err != nil {
 		return err
 	}
-	//if err := registry.removeImpurity(filterId, number); err != nil {
-	//	return err
-	//}
+	if err := registry.removeImpurity(filterId, number); err != nil {
+		return err
+	}
 	if err := registry.compress(filterId); err != nil {
 		return err
 	}
