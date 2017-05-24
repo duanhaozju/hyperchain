@@ -146,7 +146,8 @@ fs_help(){
 # kill all the process
 fs_kill_process(){
     for server_address in ${SERVER_ADDR[@]}; do
-        ssh hyperchain@$server_address " ps ax | grep hyperchain | awk '{print \$1}' | xargs kill -9"
+        echo "kill process on ${server_address}"
+        ssh hyperchain@$server_address " pkill hyperchain"
         #ssh -T hyperchain@$server_address "if [ x\"`ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'`\" != \"x\" ]; then echo \"kill process \" && ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 ; else echo no hyperchain process runing ;fi"
         # ssh -T hyperchain@$server_address "ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 >& /dev/null"
 
@@ -244,13 +245,13 @@ fs_distribute_the_binary(){
         mkdir /home/hyperchain/
     fi
     source ~/.bashrc && \
-    cd go/src/hyperchain && \
-    govendor build && \
-    mv hyperchain /home/hyperchain/
+    cd go/src/hyperchain/scripts && \
+    ./local.sh -n && \
+    mv /home/hyperchain/go/src/hyperchain/build/hyperchain /home/hyperchain/
 EOF
 	echo "Send the config files to primary:"
 	cd $HYPERCHAIN_DIR/scripts
-	scp -r ../config/ hyperchain@$PRIMARY:$HPC_PRI_HYPERCHAIN_HOME
+#	scp -r ../config/ hyperchain@$PRIMARY:$HPC_PRI_HYPERCHAIN_HOME
 	scp ./sub_scripts/server_deploy.sh hyperchain@$PRIMARY:$HPC_PRI_HYPERCHAIN_HOME
 
     echo "Primary send files to others:"
@@ -258,7 +259,7 @@ EOF
 }
 
 # peer configs dir
-PEER_CONFIGS_DIR="$HYPERCHAIN_DIR/config/peerconfigs"
+PEER_CONFIGS_DIR="$HYPERCHAIN_DIR/configuration/namespaces/global/config/peerconfigs"
 fs__generate_node_peer_configs(){
     if [ ! -d $PEER_CONFIGS_DIR ]; then
         mkdir $PEER_CONFIGS_DIR
@@ -295,7 +296,7 @@ fs_gen_and_distribute_peerconfig(){
 
 # modifiy the global config value
 fs_modifi_global(){
-    confer write $HYPERCHAIN_DIR/config/global.yaml $PEER_CONFIGS_DIR/global.yaml global.configs.peers "config/peerconfig.json" -t string -y
+    confer write $HYPERCHAIN_DIR/configuration/global.yaml $PEER_CONFIGS_DIR/global.yaml global.configs.peers "config/peerconfig.json" -t string -y
 }
 
 # Run all the nodes
@@ -303,7 +304,7 @@ fs_modifi_global(){
 fs_run_N_terminals_linux(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain \""
+        gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/node${ni} && ./hyperchain \""
         ni=`expr $ni + 1`
     done
 }
@@ -382,8 +383,9 @@ fi
 if $REBUILD; then
     fs_distribute_the_binary
 fi
-fs_modifi_global
-fs_gen_and_distribute_peerconfig
+
+#fs_modifi_global
+#fs_gen_and_distribute_peerconfig
 echo "Running nodes"
 if $MODE; then
     fs_run_one_terminal
