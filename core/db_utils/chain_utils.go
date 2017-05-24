@@ -6,7 +6,10 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"sync"
+	"errors"
 )
+
+var ChainNotExistErr = errors.New("chain doesn't exist")
 
 // memChain manage safe chain
 type memChain struct {
@@ -279,6 +282,15 @@ func UpdateChainByBlcokNum(namespace string, batch db.Batch, blockNumber uint64,
 		return err
 	}
 	return UpdateChain(namespace, batch, block, block.Number == 0, flush, sync)
+}
+
+func UpdateGenesisTag(namespace string, genesis uint64, batch db.Batch, flush bool, sync bool) error {
+	chain := chains.GetChain(namespace)
+	if chain == nil {
+		return ChainNotExistErr
+	}
+	chain.data.Genesis = genesis
+	return putChain(batch, &chain.data, flush, sync)
 }
 
 func RemoveChain(batch db.Batch, flush bool, sync bool) error {
