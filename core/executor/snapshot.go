@@ -156,9 +156,9 @@ func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) e
 	if err := registry.duplicate(filterId); err != nil {
 		return err
 	}
-	if err := registry.removeImpurity(filterId, number); err != nil {
-		return err
-	}
+	//if err := registry.removeImpurity(filterId, number); err != nil {
+	//	return err
+	//}
 	if err := registry.compress(filterId); err != nil {
 		return err
 	}
@@ -249,6 +249,7 @@ func (registry *SnapshotRegistry) manifest(filterId string, number uint64) error
 		FilterId:    filterId,
 		MerkleRoot:  common.Bytes2Hex(blk.MerkleRoot),
 		Date:        d,
+		Namespace:   registry.namespace,
 	}
 	if err := registry.rwc.Write(manifest); err != nil {
 		return err

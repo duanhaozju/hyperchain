@@ -13,6 +13,7 @@ type Manifest struct {
 	FilterId   string    `json:"filterId"`
 	MerkleRoot string    `json:"merkleRoot"`
 	Date       string    `json:"date"`
+	Namespace  string    `json:"namespace"`
 }
 
 type Manifests []Manifest

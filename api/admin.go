@@ -14,13 +14,6 @@ type AdminPublicAPI struct {
 	isPublic  bool
 }
 
-type Manifest struct {
-	Height     uint64    `json:"height"`
-	FilterId   string    `json:"filterId"`
-	MerkleRoot string    `json:"merkleRoot"`
-	Date       string    `json:"date"`
-}
-
 
 func NewPublicAdminAPI(namespace string, eh *manager.EventHub, config *common.Config) *AdminPublicAPI {
 	return &AdminPublicAPI{
@@ -43,12 +36,22 @@ func (admin *AdminPublicAPI) Snapshot(blockNumber uint64) string {
 }
 // TODO snapshot callback
 
-func (admin *AdminPublicAPI) ReadSnapshot(filterId string) (common.Manifest, error) {
+func (admin *AdminPublicAPI) ReadSnapshot(filterId string, verbose bool) (interface{}, error) {
 	manifestHandler := common.NewManifestHandler(getManifestPath(admin.config))
-	if err, manifest := manifestHandler.Read(filterId); err != nil {
-		return common.Manifest{}, &common.SnapshotErr{Message: err.Error()}
-	} else {
+	var manifest common.Manifest
+	var err error
+	if err, manifest = manifestHandler.Read(filterId); err != nil {
+		return nil, &common.SnapshotErr{Message: err.Error()}
+	}
+	if !verbose {
 		return manifest, nil
+	} else {
+		// return whole world state
+		stateDb, err := NewSnapshotStateDb(admin.config, manifest.FilterId, common.Hex2Bytes(manifest.MerkleRoot), manifest.Height, manifest.Namespace)
+		if err != nil {
+			return nil, &common.SnapshotErr{Message: err.Error()}
+		}
+		return string(stateDb.Dump()), nil
 	}
 }
 
