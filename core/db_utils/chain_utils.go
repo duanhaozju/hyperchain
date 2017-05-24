@@ -310,6 +310,8 @@ func WriteChainChan(namespace string) {
 
 // putChain put chain database
 func putChain(batch db.Batch, t *types.Chain, flush bool, sync bool) error {
+	// assign version tag
+	t.Version = []byte(ChainVersion)
 	data, err := proto.Marshal(t)
 	if err != nil {
 		return err

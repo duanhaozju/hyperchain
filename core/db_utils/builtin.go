@@ -17,6 +17,7 @@ const (
 	BlockVersion       = "1.2"
 	ReceiptVersion     = "1.2"
 	TransactionVersion = "1.2"
+	ChainVersion       = "1.2"
 )
 
 var (
