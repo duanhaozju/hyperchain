@@ -1125,3 +1125,49 @@ func (self *StateDB) ShowArchive(address common.Address, date string) map[string
 	}
 	return storages
 }
+
+
+func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
+	dirtyStateObjects := bucket.NewKVMap()
+	accountIter := s.db.NewIterator([]byte(accountIdentifier))
+	defer accountIter.Release()
+	for accountIter.Next() {
+		addr, ok := SplitCompositeAccountKey(accountIter.Key())
+		if ok == false {
+			continue
+		}
+		address := common.BytesToAddress(addr)
+		var account Account
+		err := json.Unmarshal(accountIter.Value(), &account)
+		if err != nil {
+			return common.Hash{}, err
+		}
+		stateObject := newObject(s, address, account, s.MarkStateObjectDirty, true, SetupBucketConfig(s.GetBucketSize(STATEOBJECT), s.GetBucketLevelGroup(STATEOBJECT), s.GetBucketCacheSize(STATEOBJECT)), s.logger)
+		dirtyStorage := bucket.NewKVMap()
+		iter := stateObject.db.db.NewIterator(GetStorageKeyPrefix(stateObject.address.Bytes()))
+		for iter.Next() {
+			key, ok := SplitCompositeStorageKey(stateObject.address.Bytes(), iter.Key())
+			if ok == false {
+				continue
+			}
+			valueCopy := make([]byte, len(iter.Value()))
+			copy(valueCopy, iter.Value())
+			dirtyStorage[common.BytesToHash(key).Hex()] = valueCopy
+		}
+		stateObject.bucketTree.PrepareWorkingSet(dirtyStorage, big.NewInt(0))
+		hash, err := stateObject.bucketTree.ComputeCryptoHash()
+		if err != nil {
+			return common.Hash{}, err
+		}
+		stateObject.SetRoot(common.BytesToHash(hash))
+		valueOfStateObject, _ := stateObject.MarshalJSON()
+		dirtyStateObjects[stateObject.address.Hex()] = valueOfStateObject
+		iter.Release()
+	}
+	s.bucketTree.PrepareWorkingSet(dirtyStateObjects, big.NewInt(0))
+	hash, err := s.bucketTree.ComputeCryptoHash()
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return common.BytesToHash(hash), nil
+}

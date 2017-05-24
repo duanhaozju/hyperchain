@@ -14,7 +14,6 @@ import (
 	pa "path/filepath"
 	"time"
 	"os"
-	"os/exec"
 	"path/filepath"
 )
 
@@ -171,14 +170,30 @@ func (sldb *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
 	}
 }
 
-func (sb *SuperLevelDB) Backup(backupPath string) error {
+func (sb *SuperLevelDB) MakeSnapshot(backupPath string, fields []string) error {
 	backupDir := filepath.Dir(backupPath)
 	if err := os.MkdirAll(backupDir, 0777); err != nil {
 		return err
 	}
-	cmd := exec.Command("cp", "-rf", sb.path, backupPath)
-	if err := cmd.Run(); err != nil {
+	backupDb, err := leveldb.OpenFile(backupPath, nil)
+	defer backupDb.Close()
+	if err != nil {
 		return err
+	}
+	snapshot, err := sb.db.GetSnapshot()
+	defer snapshot.Release()
+	if err != nil {
+		return err
+	}
+	for _, field := range fields {
+		iter := snapshot.NewIterator(util.BytesPrefix([]byte(field)), nil)
+		for iter.Next() {
+			if err := backupDb.Put(iter.Key(), iter.Value(), nil); err != nil {
+				iter.Release()
+				return err
+			}
+		}
+		iter.Release()
 	}
 	return nil
 }

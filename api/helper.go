@@ -11,9 +11,6 @@ import (
 	edb "hyperchain/core/db_utils"
 	"hyperchain/hyperdb"
 	"path"
-	"os/exec"
-	"io/ioutil"
-	"fmt"
 )
 
 const (
@@ -103,19 +100,7 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 }
 
 func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte, height uint64, namespace string) (vm.Database, error) {
-	tmpDir, err := ioutil.TempDir(hyperdb.GetDatabaseHome(conf), "tmp")
-	if err != nil {
-		return nil, err
-	}
-	fmt.Println(tmpDir)
-	snapshotPath := path.Join(hyperdb.GetDatabaseHome(conf), "snapshots", "SNAPSHOT_" + filterId + ".tar.gz")
-	localCmd := exec.Command("tar", "-zxvf", snapshotPath, "-C", tmpDir)
-	if err := localCmd.Run(); err != nil {
-		return nil, err
-	}
-
-	fmt.Println(path.Join(tmpDir, "SNAPSHOT_" + filterId))
-	db, err := hyperdb.NewDatabase(conf, path.Join(tmpDir, "SNAPSHOT_" + filterId), hyperdb.GetDatabaseType(conf))
+	db, err := hyperdb.NewDatabase(conf, path.Join("snapshots", "SNAPSHOT_" + filterId), hyperdb.GetDatabaseType(conf))
 	if err != nil {
 		return nil, err
 	}

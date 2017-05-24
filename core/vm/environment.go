@@ -138,6 +138,8 @@ type Database interface {
 	DeleteBatch(seqNo uint64)
 	MakeArchive(uint64)
 	ShowArchive(common.Address, string) map[string]map[string]string
+
+	RecomputeCryptoHash() (common.Hash, error)
 }
 
 // Account represents a contract or basic ethereum account.

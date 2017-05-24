@@ -10,7 +10,8 @@ import (
 	"time"
 	"hyperchain/common"
 	cmd "os/exec"
-	"path/filepath"
+	"hyperchain/core/hyperstate"
+	"errors"
 )
 
 const LatestBlockNumber uint64 = 0
@@ -21,6 +22,8 @@ const SnapshotNotExistErr     = "snapshot doesn't exist"
 const DeleteSnapshotErr       = "delete snapshot failed"
 
 const EmptyMessage = ""
+
+var   SnapshotContentInvalidErr = errors.New("snapshot content invalid")
 
 
 
@@ -150,15 +153,7 @@ func (registry *SnapshotRegistry) handle(number uint64) {
 func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) error {
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
-	registry.executor.setSuspend(IDENTIFIER_COMMIT)
-	defer registry.executor.unsetSuspend(IDENTIFIER_COMMIT)
 	if err := registry.duplicate(filterId); err != nil {
-		return err
-	}
-	if err := registry.removeImpurity(filterId, number); err != nil {
-		return err
-	}
-	if err := registry.compress(filterId); err != nil {
 		return err
 	}
 	if err := registry.manifest(filterId, number); err != nil {
@@ -171,67 +166,7 @@ func (registry *SnapshotRegistry) duplicate(filterId string) error {
 	conf := registry.executor.conf
 	fId := registry.snapshotId(filterId)
 	sPath := registry.snapshotPath(hyperdb.GetDatabaseHome(conf), fId)
-	if err := registry.executor.db.Backup(sPath); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (registry *SnapshotRegistry) removeImpurity(filterId string, number uint64) error {
-	conf := registry.executor.conf
-	localDb, err := hyperdb.NewDatabase(conf, path.Join("snapshots", registry.snapshotId(filterId)), hyperdb.GetDatabaseType(conf))
-	if err != nil {
-		return err
-	}
-	defer localDb.Close()
-	batch := localDb.NewBatch()
-	var i uint64 = 0
-	for ; i <= number; i += 1 {
-		// TODO read block from backup is the best
-		// TODO @Rongjialei fix me
-		block, err := edb.GetBlockByNumber(registry.executor.namespace, i)
-		if err != nil {
-			registry.logger.Errorf("miss block %d ,error msg %s", i, err.Error())
-			continue
-		}
-
-		for _, tx := range block.Transactions {
-			if err := edb.DeleteTransaction(batch, tx.GetHash().Bytes(), false, false); err != nil {
-				registry.logger.Errorf("[Namespace = %s] delete useless tx in block %d failed, error msg %s", registry.executor.namespace, i, err.Error())
-			}
-			if err := edb.DeleteReceipt(batch, tx.GetHash().Bytes(), false, false); err != nil {
-				registry.logger.Errorf("[Namespace = %s] delete useless receipt in block %d failed, error msg %s", registry.executor.namespace, i, err.Error())
-			}
-		}
-		// delete block
-		if err := edb.DeleteBlockByNum(registry.executor.namespace, batch, i, false, false); err != nil {
-			registry.logger.Errorf("[Namespace = %s] delete useless block %d failed, error msg %s", registry.executor.namespace, i, err.Error())
-		}
-	}
-	if err := edb.DeleteAllDiscardTransaction(localDb, batch, false, false); err != nil {
-		registry.logger.Errorf("[Namespace = %s] delete useless invalid records failed, error msg %s", registry.executor.namespace, err.Error())
-	}
-	if err := edb.RemoveChain(batch, false, false); err != nil {
-		registry.logger.Errorf("[Namespace = %s] delete useless chain data , error msg %s", registry.executor.namespace, err.Error())
-	}
-	if err := edb.DeleteAllJournals(localDb, batch, false, false); err != nil {
-		registry.logger.Errorf("[Namespace = %s] delete useless journal failed, error msg %s", registry.executor.namespace, err.Error())
-	}
-	if err := batch.Write(); err != nil {
-		registry.logger.Errorf("[Namespace = %s] flush batch for deletion, error msg %s", registry.executor.namespace, err.Error())
-	}
-	registry.logger.Noticef("remove useless from snapshot %s success.", filterId)
-	return nil
-}
-
-func (registry *SnapshotRegistry) compress(filterId string) error {
-	path := registry.snapshotPath(hyperdb.GetDatabaseHome(registry.executor.conf), registry.snapshotId(filterId))
-	localCmd := cmd.Command("tar", "-C" , filepath.Dir(path), "-czvf", path + ".tar.gz", filepath.Base(path))
-	if err := localCmd.Run(); err != nil {
-		return err
-	}
-	localCmd = cmd.Command("rm", "-rf", path)
-	if err := localCmd.Run(); err != nil {
+	if err := registry.executor.db.MakeSnapshot(sPath, registry.retrieveSnapshotFileds()); err != nil {
 		return err
 	}
 	return nil
@@ -242,11 +177,15 @@ func (registry *SnapshotRegistry) manifest(filterId string, number uint64) error
 	if err != nil {
 		return err
 	}
+	hash, err := registry.genHashTag(filterId, common.BytesToHash(blk.MerkleRoot), number)
+	if err != nil || hash != common.BytesToHash(blk.MerkleRoot) {
+		return SnapshotContentInvalidErr
+	}
 	d := time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05")
 	manifest := common.Manifest{
 		Height:      number,
 		FilterId:    filterId,
-		MerkleRoot:  common.Bytes2Hex(blk.MerkleRoot),
+		MerkleRoot:  hash.Hex(),
 		Date:        d,
 		Namespace:   registry.namespace,
 	}
@@ -256,11 +195,30 @@ func (registry *SnapshotRegistry) manifest(filterId string, number uint64) error
 	return nil
 }
 
+func (registry *SnapshotRegistry) genHashTag(filterId string, compareTag common.Hash, height uint64) (common.Hash, error) {
+	localDb, err := hyperdb.NewDatabase(registry.executor.conf, path.Join("snapshots", registry.snapshotId(filterId)), hyperdb.GetDatabaseType(registry.executor.conf))
+	defer localDb.Close()
+	if err != nil {
+		return common.Hash{}, err
+	}
+	localState, err := hyperstate.New(compareTag, localDb, nil, registry.executor.conf, height, registry.executor.namespace)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	curhash, err := localState.RecomputeCryptoHash()
+	registry.logger.Noticef("full quantity calculation, snapshot world state hash (%s)", curhash.Hex())
+	if err != nil {
+		return common.Hash{}, err
+	} else {
+		return curhash, nil
+	}
+}
+
 func (registry *SnapshotRegistry) deleteSnapshot(filterId string) error {
 	conf := registry.executor.conf
 	fId := registry.snapshotId(filterId)
 	sPath := registry.snapshotPath(hyperdb.GetDatabaseHome(conf), fId)
-	localCmd := cmd.Command("rm", "-rf", sPath + ".tar.gz")
+	localCmd := cmd.Command("rm", "-rf", sPath)
 	if err := localCmd.Run(); err != nil {
 		return err
 	}
@@ -303,6 +261,17 @@ func (registry *SnapshotRegistry) snapshotPath(base string, filterID string) str
 	return path.Join(base, "snapshots", filterID)
 }
 
+func (registry *SnapshotRegistry) retrieveSnapshotFileds() []string {
+	return []string{
+		// world state related
+		"-storage",
+		"-account",
+		"-code",
+		// bucket tree related
+		"-bucket",
+		"BucketNode",
+	}
+}
 
 
 

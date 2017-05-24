@@ -82,7 +82,7 @@ func (db *MemDatabase) Delete(key []byte) error {
 
 func (db *MemDatabase) Close() {}
 
-func (db *MemDatabase) Backup(id string) error {
+func (db *MemDatabase) MakeSnapshot(string, []string) error {
 	return nil
 }
 

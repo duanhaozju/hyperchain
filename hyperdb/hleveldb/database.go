@@ -11,7 +11,6 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/common"
 	pa "path/filepath"
-	"os/exec"
 	"path/filepath"
 	"os"
 )
@@ -114,14 +113,30 @@ func (db *LDBDatabase) NewBatch() db.Batch {
 	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
 }
 
-func (db *LDBDatabase) Backup(backupPath string) error {
+func (db *LDBDatabase) MakeSnapshot(backupPath string, fields []string) error {
 	backupDir := filepath.Dir(backupPath)
 	if err := os.MkdirAll(backupDir, 0777); err != nil {
 		return err
 	}
-	cmd := exec.Command("cp", "-rf", db.path, backupPath)
-	if err := cmd.Run(); err != nil {
+	backupDb, err := leveldb.OpenFile(backupPath, nil)
+	defer backupDb.Close()
+	if err != nil {
 		return err
+	}
+	snapshot, err := db.db.GetSnapshot()
+	defer snapshot.Release()
+	if err != nil {
+		return err
+	}
+	for _, field := range fields {
+		iter := snapshot.NewIterator(util.BytesPrefix([]byte(field)), nil)
+		for iter.Next() {
+			if err := backupDb.Put(iter.Key(), iter.Value(), nil); err != nil {
+				iter.Release()
+				return err
+			}
+		}
+		iter.Release()
 	}
 	return nil
 }
