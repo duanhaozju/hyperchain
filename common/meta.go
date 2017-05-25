@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"encoding/json"
+	"os"
 )
 
 var ManifestNotExistErr   = errors.New("manifest not existed")
@@ -134,3 +135,59 @@ func (rwc *ManifestHandler) Contain(id string) bool {
 	return false
 }
 
+/*
+	Archive Meta
+ */
+type ArchiveMeta struct {
+	Height          uint64     `json:"height"`
+	TransactionN    uint64     `json:"transactionNumber"`
+	ReceiptN        uint64     `json:"receiptNumber"`
+	InvalidTxN      uint64     `json:"invalidTxNumber"`
+	LatestUpdate    string     `json:"latestUpdate"`
+}
+
+type ArchiveMetaRWC interface {
+	Read() (error, ArchiveMeta)
+	Write(ArchiveMeta) error
+	Exist() bool
+}
+
+type ArchiveMetaHandler struct {
+	filePath    string
+}
+
+func NewArchiveMetaHandler(fName string) *ArchiveMetaHandler {
+	return &ArchiveMetaHandler{
+		filePath: fName,
+	}
+}
+
+func (rwc *ArchiveMetaHandler) Read() (error, ArchiveMeta) {
+	buf, err := ioutil.ReadFile(rwc.filePath)
+	if err != nil {
+		return err, ArchiveMeta{}
+	}
+	var meta ArchiveMeta
+	if err := json.Unmarshal(buf, &meta); err != nil {
+		return err, ArchiveMeta{}
+	}
+	return nil, meta
+}
+
+func (rwc *ArchiveMetaHandler) Write(meta ArchiveMeta) error {
+	if buf, err := json.MarshalIndent(meta, "", "   "); err != nil {
+		return err
+	} else {
+		if err := ioutil.WriteFile(rwc.filePath, buf, 0644); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (rwc *ArchiveMetaHandler) Exist() bool {
+	if _, err := os.Stat(rwc.filePath); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}

@@ -6,6 +6,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
+	"time"
 )
 
 func (executor *Executor) Archive(event event.ArchiveEvent) {
@@ -18,6 +19,7 @@ type ArchiveManager struct {
 	registry   *SnapshotRegistry
 	namespace  string
 	logger     *logging.Logger
+	rwc        common.ArchiveMetaRWC
 }
 
 func NewArchiveManager(namespace string, executor *Executor, registry *SnapshotRegistry, logger *logging.Logger) *ArchiveManager {
@@ -26,8 +28,10 @@ func NewArchiveManager(namespace string, executor *Executor, registry *SnapshotR
 		executor:  executor,
 		registry:  registry,
 		logger:    logger,
+		rwc:       common.NewArchiveMetaHandler(executor.GetArchiveMetaPath()),
 	}
 }
+
 
 /*
 	External Functions
@@ -57,6 +61,24 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 	olBatch := mgr.executor.db.NewBatch()
 	avBatch := mgr.executor.archiveDb.NewBatch()
 
+	var meta common.ArchiveMeta
+
+	if mgr.rwc.Exist() {
+		if err, lmeta := mgr.rwc.Read(); err != nil {
+			return err
+		} else {
+			meta = lmeta
+		}
+	}
+	if meta.Height >= curGenesis {
+		mgr.logger.Warningf("archive database, chain height (#%d) larger than current genesis (#%d)", meta.Height, curGenesis)
+		// TODO
+	} else if meta.Height < curGenesis - 1 {
+		mgr.logger.Warningf("archive database, chain height (#%d) not continuous with current genesis (#%d)", meta.Height, curGenesis)
+		// TODO
+	}
+
+	var txc, rectc uint64
 	for i := curGenesis; i < manifest.Height; i += 1 {
 		block, err := edb.GetBlockByNumber(mgr.namespace, i)
 		if err != nil {
@@ -76,6 +98,8 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 			if err, _ := edb.PersistTransaction(avBatch, tx, false, false); err != nil {
 				mgr.logger.Errorf("[Namespace = %s] archive tx in block %d to historic database failed, error msg %s", mgr.namespace, i, err.Error())
 				return err
+			} else {
+				txc += 1
 			}
 			// persist transaction meta data
 			meta := &types.TransactionMeta{
@@ -89,6 +113,8 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 			if err, _ := edb.PersistReceipt(avBatch, receipt, false, false); err != nil {
 				mgr.logger.Errorf("[Namespace = %s] archive receipt in block %d to historic database failed, error msg %s", mgr.namespace, i, err.Error())
 				return err
+			} else {
+				rectc += 1
 			}
 		}
 		// delete block
@@ -119,6 +145,18 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 		mgr.logger.Errorf("[Namespace = %s] flush to online database failed, error msg %s", mgr.namespace,  err.Error())
 		return err
 	}
+
+	if err := mgr.rwc.Write(common.ArchiveMeta{
+		Height:           manifest.Height - 1,
+		TransactionN:     meta.TransactionN + txc,
+		ReceiptN:         meta.ReceiptN + rectc,
+		InvalidTxN:       meta.InvalidTxN,   // TODO
+		LatestUpdate:     time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05"),
+	}); err != nil {
+		mgr.logger.Errorf("[Namespace = %s] update meta failed. error msg %s", mgr.namespace,  err.Error())
+		return err
+	}
+
 	return nil
 }
 

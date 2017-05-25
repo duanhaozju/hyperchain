@@ -12,15 +12,12 @@ const (
 	stateObjectBucketSize       = "global.executor.buckettree.storage.size"
 	stateObjectBucketLevelGroup = "global.executor.buckettree.storage.levelGroup"
 	stateObjectBucketCacheSize  = "global.executor.buckettree.storage.cacheSize"
-
 	syncReplicaInterval         = "global.executor.sync_replica.interval"
 	syncReplicaEnable           = "global.executor.sync_replica.enable"
-
 	syncChainBatchSize          = "global.executor.sync_chain.sync_batch_size"
 	syncChainResendInterval     = "global.executor.sync_chain.sync_resend_interval"
-
-	archiveManifestPath         = "global.executor.archive.manifest"
-
+	snapshotManifestPath        = "global.executor.archive.manifest"
+	archiveMetaPath             = "global.executor.archive.archiveMeta"
 )
 
 // GetBucketSize - get bucket size.
@@ -81,5 +78,9 @@ func (executor *Executor) GetSyncResendInterval() time.Duration {
 }
 
 func (executor *Executor) GetManifestPath() string {
-	return executor.conf.GetString(archiveManifestPath)
+	return executor.conf.GetString(snapshotManifestPath)
+}
+
+func (executor *Executor) GetArchiveMetaPath() string {
+	return executor.conf.GetString(archiveMetaPath)
 }

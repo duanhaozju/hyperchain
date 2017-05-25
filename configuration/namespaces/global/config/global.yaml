@@ -83,7 +83,8 @@ global:
             interval : 500s
             enable   : false
         archive:
-            manifest: "./namespaces/global/data/manifest.json"
+            manifest: "./namespaces/global/data/snapshot_manifest.json"
+            archiveMeta: "./namespaces/global/data/archive_meta.json""
         buckettree:
             state:
                 size: 1000003
