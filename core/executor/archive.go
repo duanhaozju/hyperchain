@@ -7,6 +7,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"time"
+	"fmt"
 )
 
 func (executor *Executor) Archive(event event.ArchiveEvent) {
@@ -70,6 +71,12 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 			meta = lmeta
 		}
 	}
+
+	fmt.Println("old meta")
+	fmt.Println(meta)
+	fmt.Println("old genesis")
+	fmt.Println(curGenesis)
+
 	if meta.Height >= curGenesis {
 		mgr.logger.Warningf("archive database, chain height (#%d) larger than current genesis (#%d)", meta.Height, curGenesis)
 		// TODO
@@ -78,7 +85,12 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 		// TODO
 	}
 
-	var txc, rectc uint64
+	var txc, rectc, ic uint64
+	var tb, te int64
+	if err, tb, te = mgr.getTimestampRange(curGenesis, manifest.Height); err != nil {
+		mgr.logger.Errorf("[Namespace = %s] get timestamp range failed, error msg %s", mgr.namespace, err.Error())
+		return err
+	}
 	for i := curGenesis; i < manifest.Height; i += 1 {
 		block, err := edb.GetBlockByNumber(mgr.namespace, i)
 		if err != nil {
@@ -132,6 +144,12 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 		mgr.logger.Errorf("[Namespace = %s] archive useless journals failed, error msg %s", mgr.namespace,  err.Error())
 		return err
 	}
+	// delete invalid records
+	if err, ic = edb.DumpDiscardTransactionInRange(mgr.executor.db, olBatch, avBatch, tb, te, false, false); err != nil {
+		mgr.logger.Errorf("[Namespace = %s] archive useless invalid records failed, error msg %s", mgr.namespace,  err.Error())
+		return err
+	}
+
 	// update chain
 	if err := edb.UpdateGenesisTag(mgr.namespace, manifest.Height, olBatch, false, false); err != nil {
 		mgr.logger.Errorf("[Namespace = %s] update chain genesis field failed, error msg %s", mgr.namespace,  err.Error())
@@ -145,12 +163,24 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 		mgr.logger.Errorf("[Namespace = %s] flush to online database failed, error msg %s", mgr.namespace,  err.Error())
 		return err
 	}
+	fmt.Println("latest meta")
+	fmt.Println(common.ArchiveMeta{
+		Height:           manifest.Height - 1,
+		TransactionN:     meta.TransactionN + txc,
+		ReceiptN:         meta.ReceiptN + rectc,
+		InvalidTxN:       meta.InvalidTxN + ic,
+		LatestUpdate:     time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05"),
+	})
+
+	fmt.Println("latest genesis")
+	_, curGenesis = edb.GetGenesisTag(mgr.namespace)
+	fmt.Println(curGenesis)
 
 	if err := mgr.rwc.Write(common.ArchiveMeta{
 		Height:           manifest.Height - 1,
 		TransactionN:     meta.TransactionN + txc,
 		ReceiptN:         meta.ReceiptN + rectc,
-		InvalidTxN:       meta.InvalidTxN,   // TODO
+		InvalidTxN:       meta.InvalidTxN + ic,
 		LatestUpdate:     time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05"),
 	}); err != nil {
 		mgr.logger.Errorf("[Namespace = %s] update meta failed. error msg %s", mgr.namespace,  err.Error())
@@ -162,4 +192,17 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 
 func (mgr *ArchiveManager) feedback(isSuccess bool, filterId string, message string) {
 	mgr.executor.sendFilterEvent(FILTER_ARCHIVE, isSuccess, filterId, message)
+}
+
+
+func (mgr *ArchiveManager) getTimestampRange(begin, end uint64) (error, int64, int64) {
+	bk, err := edb.GetBlockByNumber(mgr.namespace, begin)
+	if err != nil {
+		return err, 0, 0
+	}
+	ek, err := edb.GetBlockByNumber(mgr.namespace, begin)
+	if err != nil {
+		return err, 0, 0
+	}
+	return nil, bk.CommitTime, ek.CommitTime
 }

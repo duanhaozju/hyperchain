@@ -288,17 +288,23 @@ func UpdateGenesisTag(namespace string, genesis uint64, batch db.Batch, flush bo
 	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return ChainNotExistErr
+	} else {
+		chain.lock.Lock()
+		defer chain.lock.Unlock()
+		chain.data.Genesis = genesis
+		return putChain(batch, &chain.data, flush, sync)
 	}
-	chain.data.Genesis = genesis
-	return putChain(batch, &chain.data, flush, sync)
 }
 
 func GetGenesisTag(namespace string) (error, uint64) {
 	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return ChainNotExistErr, 0
+	} else {
+		chain.lock.RLock()
+		defer chain.lock.RUnlock()
+		return nil, chain.data.Genesis
 	}
-	return nil, chain.data.Genesis
 }
 
 func RemoveChain(batch db.Batch, flush bool, sync bool) error {
