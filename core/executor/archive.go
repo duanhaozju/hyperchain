@@ -72,11 +72,6 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 		}
 	}
 
-	fmt.Println("old meta")
-	fmt.Println(meta)
-	fmt.Println("old genesis")
-	fmt.Println(curGenesis)
-
 	if meta.Height >= curGenesis {
 		mgr.logger.Warningf("archive database, chain height (#%d) larger than current genesis (#%d)", meta.Height, curGenesis)
 		// TODO
@@ -163,18 +158,6 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 		mgr.logger.Errorf("[Namespace = %s] flush to online database failed, error msg %s", mgr.namespace,  err.Error())
 		return err
 	}
-	fmt.Println("latest meta")
-	fmt.Println(common.ArchiveMeta{
-		Height:           manifest.Height - 1,
-		TransactionN:     meta.TransactionN + txc,
-		ReceiptN:         meta.ReceiptN + rectc,
-		InvalidTxN:       meta.InvalidTxN + ic,
-		LatestUpdate:     time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05"),
-	})
-
-	fmt.Println("latest genesis")
-	_, curGenesis = edb.GetGenesisTag(mgr.namespace)
-	fmt.Println(curGenesis)
 
 	if err := mgr.rwc.Write(common.ArchiveMeta{
 		Height:           manifest.Height - 1,
