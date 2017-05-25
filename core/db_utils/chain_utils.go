@@ -293,6 +293,14 @@ func UpdateGenesisTag(namespace string, genesis uint64, batch db.Batch, flush bo
 	return putChain(batch, &chain.data, flush, sync)
 }
 
+func GetGenesisTag(namespace string) (error, uint64) {
+	chain := chains.GetChain(namespace)
+	if chain == nil {
+		return ChainNotExistErr
+	}
+	return nil, chain.data.Genesis
+}
+
 func RemoveChain(batch db.Batch, flush bool, sync bool) error {
 	if err := batch.Delete(ChainKey); err != nil {
 		return err

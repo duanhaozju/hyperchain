@@ -17,6 +17,7 @@ import (
 const LatestBlockNumber uint64 = 0
 
 const InvalidSnapshotReqErr   = "invalid snapshot request"
+const InvalidDeletionReqErr   = "invalid snapshot deletion request"
 const MakeSnapshotFailedErr   = "make snapshot failed"
 const SnapshotNotExistErr     = "snapshot doesn't exist"
 const DeleteSnapshotErr       = "delete snapshot failed"
@@ -75,7 +76,7 @@ func (registry *SnapshotRegistry) Stop() error {
 }
 
 func (registry *SnapshotRegistry) Snapshot(event event.SnapshotEvent) {
-	if !registry.checkRequest(event) {
+	if !registry.checkSnapshotRequest(event) {
 		registry.feedback(FILTER_SNAPSHOT_RESULT, false, event.FilterId, InvalidSnapshotReqErr)
 	} else {
 		if registry.isExecuteImmediate(event) {
@@ -87,16 +88,18 @@ func (registry *SnapshotRegistry) Snapshot(event event.SnapshotEvent) {
 }
 
 func (registry *SnapshotRegistry) DeleteSnapshot(event event.DeleteSnapshotEvent) {
-	// TODO add request check
-	// TODO @Rongjialei fix me
-	if !registry.rwc.Contain(event.FilterId) {
-		registry.feedback(FILTER_DELETE_SNAPSHOT, false, event.FilterId, SnapshotNotExistErr)
+	if !registry.checkDeletionRequest(event) {
+		registry.feedback(FILTER_DELETE_SNAPSHOT, false, event.FilterId, InvalidDeletionReqErr)
 	} else {
-		if err := registry.deleteSnapshot(event.FilterId); err != nil {
-			registry.feedback(FILTER_DELETE_SNAPSHOT, false, event.FilterId, DeleteSnapshotErr)
-		}
-		if err := registry.rwc.Delete(event.FilterId); err != nil {
-			registry.feedback(FILTER_DELETE_SNAPSHOT, false, event.FilterId, DeleteSnapshotErr)
+		if !registry.rwc.Contain(event.FilterId) {
+			registry.feedback(FILTER_DELETE_SNAPSHOT, false, event.FilterId, SnapshotNotExistErr)
+		} else {
+			if err := registry.deleteSnapshot(event.FilterId); err != nil {
+				registry.feedback(FILTER_DELETE_SNAPSHOT, false, event.FilterId, DeleteSnapshotErr)
+			}
+			if err := registry.rwc.Delete(event.FilterId); err != nil {
+				registry.feedback(FILTER_DELETE_SNAPSHOT, false, event.FilterId, DeleteSnapshotErr)
+			}
 		}
 	}
 }
@@ -226,7 +229,7 @@ func (registry *SnapshotRegistry) deleteSnapshot(filterId string) error {
 }
 
 
-func (registry *SnapshotRegistry) checkRequest(event event.SnapshotEvent) bool {
+func (registry *SnapshotRegistry) checkSnapshotRequest(event event.SnapshotEvent) bool {
 	if event.BlockNumber == LatestBlockNumber {
 		return true
 	}
@@ -234,6 +237,23 @@ func (registry *SnapshotRegistry) checkRequest(event event.SnapshotEvent) bool {
 	if event.BlockNumber < chainHeight {
 		return false
 	}
+	return true
+}
+
+func (registry *SnapshotRegistry) checkDeletionRequest(event event.DeleteSnapshotEvent) bool {
+	// TODO add request check
+	// TODO @Rongjialei fix me
+	//err, manifest := registry.rwc.Read(event.FilterId)
+	//if err != nil {
+	//	return false
+	//}
+	//err, curGenesis := edb.GetGenesisTag(registry.namespace)
+	//if err != nil {
+	//	return false
+	//}
+	//if curGenesis <= manifest.Height {
+	//	return false
+	//}
 	return true
 }
 
