@@ -11,20 +11,8 @@ import (
 	"hyperchain/common"
 	cmd "os/exec"
 	"hyperchain/core/hyperstate"
-	"errors"
 )
 
-const LatestBlockNumber uint64 = 0
-
-const InvalidSnapshotReqErr   = "invalid snapshot request"
-const InvalidDeletionReqErr   = "invalid snapshot deletion request"
-const MakeSnapshotFailedErr   = "make snapshot failed"
-const SnapshotNotExistErr     = "snapshot doesn't exist"
-const DeleteSnapshotErr       = "delete snapshot failed"
-
-const EmptyMessage = ""
-
-var   SnapshotContentInvalidErr = errors.New("snapshot content invalid")
 
 
 

@@ -307,6 +307,24 @@ func DeleteAllDiscardTransaction(db db.Database, batch db.Batch, flush, sync boo
 	return err
 }
 
+func DeleteDiscardTransactionInRange(db db.Database, batch db.Batch, flush, sync bool) error {
+	// flush to disk immediately
+	iter := db.NewIterator(InvalidTransactionPrefix)
+	defer iter.Release()
+	for iter.Next() {
+		batch.Delete(iter.Key())
+	}
+	err := iter.Error()
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return err
+}
+
 func GetDiscardTransaction(namespace string, key []byte) (*types.InvalidTransactionRecord, error) {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {

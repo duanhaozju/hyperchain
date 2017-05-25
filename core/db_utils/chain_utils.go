@@ -296,7 +296,7 @@ func UpdateGenesisTag(namespace string, genesis uint64, batch db.Batch, flush bo
 func GetGenesisTag(namespace string) (error, uint64) {
 	chain := chains.GetChain(namespace)
 	if chain == nil {
-		return ChainNotExistErr
+		return ChainNotExistErr, 0
 	}
 	return nil, chain.data.Genesis
 }

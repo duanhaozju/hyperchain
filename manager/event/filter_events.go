@@ -29,3 +29,9 @@ type FilterDeleteSnapshotEvent struct {
 	Success  bool
 	Message  string
 }
+
+type FilterArchive struct {
+	FilterId string
+	Success  bool
+	Message  string
+}

@@ -1,5 +1,7 @@
 package executor
 
+import "errors"
+
 const (
 	COMMITQUEUESIZE = 1024
 	VALIDATEQUEUESIZE = 1024
@@ -31,6 +33,8 @@ const (
 	FILTER_NEW_LOG
 	FILTER_SNAPSHOT_RESULT
 	FILTER_DELETE_SNAPSHOT
+
+	FILTER_ARCHIVE
 )
 
 const (
@@ -38,3 +42,16 @@ const (
 	IDENTIFIER_COMMIT
 	IDENTIFIER_REPLICA_SYNC
 )
+
+const LatestBlockNumber uint64 = 0
+
+const InvalidSnapshotReqErr   = "invalid snapshot request"
+const InvalidDeletionReqErr   = "invalid snapshot deletion request"
+const MakeSnapshotFailedErr   = "make snapshot failed"
+const SnapshotNotExistErr     = "snapshot doesn't exist"
+const DeleteSnapshotErr       = "delete snapshot failed"
+
+const ArchiveFailedErr        = "archive failed"
+
+const EmptyMessage = ""
+var   SnapshotContentInvalidErr = errors.New("snapshot content invalid")

@@ -23,14 +23,14 @@ func DeleteAllJournals(db db.Database, batch db.Batch, flush, sync bool) error {
 	return err
 }
 
-func PersistSnapshot(batch db.Batch, number uint64, buf []byte, flush, sync bool) error {
-	// check pointer value
-	if buf == nil || batch == nil {
-		return EmptyPointerErr
-	}
-	keyNum := strconv.FormatUint(number, 10)
-	if err := batch.Put(append(SnapshotPrefix, []byte(keyNum)...), buf); err != nil {
-		return err
+// DeleteJournalInRange delete journals in range [start, end)
+func DeleteJournalInRange(batch db.Batch, start uint64, end uint64, flush, sync bool) error {
+	for i := start; i < end; i += 1 {
+		s := strconv.FormatUint(i, 10)
+		key := append([]byte(JournalPrefix), []byte(s)...)
+		if err := batch.Delete(key); err != nil {
+			return err
+		}
 	}
 	if flush {
 		if sync {
@@ -42,12 +42,4 @@ func PersistSnapshot(batch db.Batch, number uint64, buf []byte, flush, sync bool
 	return nil
 }
 
-func GetSnapshot(db db.Database, number uint64) ([]byte, error) {
-	keyNum := strconv.FormatUint(number, 10)
-	if buf, err := db.Get(append(SnapshotPrefix, []byte(keyNum)...)); err != nil {
-		return nil, err
-	} else {
-		return buf, err
-	}
-}
 

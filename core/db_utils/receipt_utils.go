@@ -33,6 +33,31 @@ func GetReceipt(namespace string, txHash common.Hash) *types.ReceiptTrans {
 	return receipt.ToReceiptTrans()
 }
 
+// GetReceipt returns a receipt by hash
+func GetRawReceipt(namespace string, txHash common.Hash) *types.Receipt {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	if err != nil {
+		return nil
+	}
+	data, _ := db.Get(append(ReceiptsPrefix, txHash[:]...))
+	if len(data) == 0 {
+		return nil
+	}
+	var receiptWrapper types.ReceiptWrapper
+	err = proto.Unmarshal(data, &receiptWrapper)
+	if err != nil {
+		logger(namespace).Errorf("GetReceipt err:", err)
+		return nil
+	}
+	var receipt types.Receipt
+	err = proto.Unmarshal(receiptWrapper.Receipt, &receipt)
+	if err != nil {
+		logger(namespace).Errorf("GetReceipt err:", err)
+		return nil
+	}
+	return &receipt
+}
+
 // Persist receipt content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
 func PersistReceipt(batch db.Batch, receipt *types.Receipt, flush bool, sync bool) (error, []byte) {
 	// check pointer value
