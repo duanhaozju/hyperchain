@@ -5,7 +5,13 @@ import (
 	edb "hyperchain/core/db_utils"
 	"github.com/op/go-logging"
 	"hyperchain/core/types"
+	"hyperchain/manager/event"
 )
+
+func (executor *Executor) Archive(event event.ArchiveEvent) {
+	executor.archiveMgr.Archive(event.FilterId)
+}
+
 
 type ArchiveManager struct {
 	executor   *Executor

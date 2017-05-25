@@ -101,3 +101,13 @@ func (admin *AdminPublicAPI) CheckSnapshot(filterId string) (bool, error) {
 	}
 	return true, nil
 }
+
+func (admin *AdminPublicAPI) Archive(filterId string) (string) {
+	log := common.GetLogger(admin.namespace, "api")
+	log.Debugf("receive archive command, params: filterId: (%s)", filterId)
+	admin.eh.GetEventObject().Post(event.ArchiveEvent{
+		FilterId:    filterId,
+	})
+	return filterId
+
+}

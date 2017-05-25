@@ -132,7 +132,7 @@ func (hub *EventHub) Subscribe() {
 	hub.subscriptions[SUB_PEERMAINTAIN] = hub.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.DelPeerEvent{}, event.BroadcastDelPeerEvent{})
 	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InformPrimaryEvent{}, event.VCResetEvent{}, event.ChainSyncReqEvent{},
-		event.SnapshotEvent{}, event.DeleteSnapshotEvent{})
+		event.SnapshotEvent{}, event.DeleteSnapshotEvent{}, event.ArchiveEvent{})
 	hub.subscriptions[SUB_EXEC] = hub.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{})
 	hub.subscriptions[SUB_TRANSACTION] = hub.eventMux.Subscribe(event.NewTxEvent{})
 }
@@ -234,6 +234,9 @@ func (hub *EventHub) listenMiscellaneousEvent() {
 			case event.DeleteSnapshotEvent:
 				hub.logger.Debugf("message middleware: [delete snapshot request]")
 				hub.executor.DeleteSnapshot(ev)
+			case event.ArchiveEvent:
+				hub.logger.Debugf("message middleware: [archive request]")
+				hub.executor.Archive(ev)
 			}
 		}
 	}

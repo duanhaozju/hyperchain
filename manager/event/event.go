@@ -141,5 +141,7 @@ type DeleteSnapshotEvent struct {
 	FilterId    string
 }
 
-
+type ArchiveEvent struct {
+	FilterId    string
+}
 
