@@ -85,6 +85,8 @@ global:
         archive:
             manifest: "./namespaces/global/data/snapshot_manifest.json"
             archiveMeta: "./namespaces/global/data/archive_meta.json"
+            force_consistency: false
+            threshold: 100
         buckettree:
             state:
                 size: 1000003

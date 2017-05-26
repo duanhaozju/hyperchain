@@ -18,6 +18,8 @@ const (
 	syncChainResendInterval     = "global.executor.sync_chain.sync_resend_interval"
 	snapshotManifestPath        = "global.executor.archive.manifest"
 	archiveMetaPath             = "global.executor.archive.archiveMeta"
+	archiveForceConsistency     = "global.executor.archive.force_consistency"
+	archiveThreshold            = "global.executor.archive.threshold"
 )
 
 // GetBucketSize - get bucket size.
@@ -83,4 +85,12 @@ func (executor *Executor) GetManifestPath() string {
 
 func (executor *Executor) GetArchiveMetaPath() string {
 	return executor.conf.GetString(archiveMetaPath)
+}
+
+func (executor *Executor) IsArchiveForceConsistency() bool {
+	return executor.conf.GetBool(archiveForceConsistency)
+}
+
+func (executor *Executor) GetArchiveThreshold() int {
+	return executor.conf.GetInt(archiveThreshold)
 }

@@ -55,3 +55,4 @@ const ArchiveFailedErr        = "archive failed"
 
 const EmptyMessage = ""
 var   SnapshotContentInvalidErr = errors.New("snapshot content invalid")
+var   ArchiveRequestNotSatisfiedErr = errors.New("archive request not satisfied with requirement")

@@ -229,19 +229,17 @@ func (registry *SnapshotRegistry) checkSnapshotRequest(event event.SnapshotEvent
 }
 
 func (registry *SnapshotRegistry) checkDeletionRequest(event event.DeleteSnapshotEvent) bool {
-	// TODO add request check
-	// TODO @Rongjialei fix me
-	//err, manifest := registry.rwc.Read(event.FilterId)
-	//if err != nil {
-	//	return false
-	//}
-	//err, curGenesis := edb.GetGenesisTag(registry.namespace)
-	//if err != nil {
-	//	return false
-	//}
-	//if curGenesis <= manifest.Height {
-	//	return false
-	//}
+	err, manifest := registry.rwc.Read(event.FilterId)
+	if err != nil {
+		return false
+	}
+	err, curGenesis := edb.GetGenesisTag(registry.namespace)
+	if err != nil {
+		return false
+	}
+	if curGenesis == manifest.Height {
+		return false
+	}
 	return true
 }
 

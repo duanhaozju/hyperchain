@@ -7,7 +7,6 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"time"
-	"fmt"
 )
 
 func (executor *Executor) Archive(event event.ArchiveEvent) {
@@ -72,12 +71,15 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 		}
 	}
 
+	if !mgr.checkRequest(manifest, meta) {
+		mgr.logger.Warningf("archive request not satisfied with requirement")
+		return ArchiveRequestNotSatisfiedErr
+	}
+
 	if meta.Height >= curGenesis {
 		mgr.logger.Warningf("archive database, chain height (#%d) larger than current genesis (#%d)", meta.Height, curGenesis)
-		// TODO
 	} else if meta.Height < curGenesis - 1 {
 		mgr.logger.Warningf("archive database, chain height (#%d) not continuous with current genesis (#%d)", meta.Height, curGenesis)
-		// TODO
 	}
 
 	var txc, rectc, ic uint64
@@ -177,7 +179,6 @@ func (mgr *ArchiveManager) feedback(isSuccess bool, filterId string, message str
 	mgr.executor.sendFilterEvent(FILTER_ARCHIVE, isSuccess, filterId, message)
 }
 
-
 func (mgr *ArchiveManager) getTimestampRange(begin, end uint64) (error, int64, int64) {
 	bk, err := edb.GetBlockByNumber(mgr.namespace, begin)
 	if err != nil {
@@ -188,4 +189,24 @@ func (mgr *ArchiveManager) getTimestampRange(begin, end uint64) (error, int64, i
 		return err, 0, 0
 	}
 	return nil, bk.CommitTime, ek.CommitTime
+}
+
+// check archive request is valid
+// 1. specified snapshot is safe enough to do archive operation (snapshot.Height + threshold < height)
+// 2. archive db is continuous with current blockchain (optional)
+func (mgr *ArchiveManager) checkRequest(manifest common.Manifest, meta common.ArchiveMeta) bool {
+	curHeigit := edb.GetHeightOfChain(mgr.namespace)
+	err, genesis := edb.GetGenesisTag(mgr.namespace)
+	if err != nil {
+		return false
+	}
+	if curHeigit < uint64(mgr.executor.GetArchiveThreshold()) + manifest.Height {
+		return false
+	}
+	if mgr.executor.IsArchiveForceConsistency() {
+		if genesis != meta.Height + 1 {
+			return false
+		}
+	}
+	return true
 }
