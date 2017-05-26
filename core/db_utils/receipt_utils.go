@@ -14,22 +14,7 @@ func GetReceipt(namespace string, txHash common.Hash) *types.ReceiptTrans {
 	if err != nil {
 		return nil
 	}
-	data, _ := db.Get(append(ReceiptsPrefix, txHash[:]...))
-	if len(data) == 0 {
-		return nil
-	}
-	var receiptWrapper types.ReceiptWrapper
-	err = proto.Unmarshal(data, &receiptWrapper)
-	if err != nil {
-		logger(namespace).Errorf("GetReceipt err:", err)
-		return nil
-	}
-	var receipt types.Receipt
-	err = proto.Unmarshal(receiptWrapper.Receipt, &receipt)
-	if err != nil {
-		logger(namespace).Errorf("GetReceipt err:", err)
-		return nil
-	}
+	receipt := GetReceiptFunc(db, txHash)
 	return receipt.ToReceiptTrans()
 }
 
@@ -39,20 +24,22 @@ func GetRawReceipt(namespace string, txHash common.Hash) *types.Receipt {
 	if err != nil {
 		return nil
 	}
+	return GetReceiptFunc(db, txHash)
+}
+
+func GetReceiptFunc(db db.Database, txHash common.Hash) *types.Receipt {
 	data, _ := db.Get(append(ReceiptsPrefix, txHash[:]...))
 	if len(data) == 0 {
 		return nil
 	}
 	var receiptWrapper types.ReceiptWrapper
-	err = proto.Unmarshal(data, &receiptWrapper)
+	err := proto.Unmarshal(data, &receiptWrapper)
 	if err != nil {
-		logger(namespace).Errorf("GetReceipt err:", err)
 		return nil
 	}
 	var receipt types.Receipt
 	err = proto.Unmarshal(receiptWrapper.Receipt, &receipt)
 	if err != nil {
-		logger(namespace).Errorf("GetReceipt err:", err)
 		return nil
 	}
 	return &receipt

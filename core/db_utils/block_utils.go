@@ -71,11 +71,16 @@ func encapsulateBlock(block *types.Block) (error, []byte) {
 
 // GetBlockHash - retrieve block hash with related block number.
 func GetBlockHash(namespace string, blockNumber uint64) ([]byte, error) {
-	keyNum := strconv.FormatInt(int64(blockNumber), 10)
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}
+	return GetBlockHashFunc(db, blockNumber)
+}
+
+// GetBlockHashFunc - retrieve block with specific db.
+func GetBlockHashFunc(db db.Database, blockNumber uint64) ([]byte, error) {
+	keyNum := strconv.FormatInt(int64(blockNumber), 10)
 	return db.Get(append(BlockNumPrefix, keyNum...))
 }
 
@@ -85,6 +90,11 @@ func GetBlock(namespace string, key []byte) (*types.Block, error) {
 	if err != nil {
 		return nil, err
 	}
+	return GetBlockFunc(db, key)
+}
+
+// GetBlockFunc - retrieve block with specific db.
+func GetBlockFunc(db db.Database, key []byte) (*types.Block, error) {
 	var wrapper types.BlockWrapper
 	var block types.Block
 	key = append(BlockPrefix, key...)
@@ -108,6 +118,15 @@ func GetBlockByNumber(namespace string, blockNumber uint64) (*types.Block, error
 		return nil, err
 	}
 	return GetBlock(namespace, hash)
+}
+
+// GetBlockByNumberFunc - retrieve block via block number with specific db.
+func GetBlockByNumberFunc(db db.Database, blockNumber uint64) (*types.Block, error) {
+	hash, err := GetBlockHashFunc(db, blockNumber)
+	if err != nil {
+		return nil, err
+	}
+	return GetBlockFunc(db, hash)
 }
 
 // DeleteBlock - delete a block via hash.
@@ -159,6 +178,8 @@ func IsGenesisFinish(namespace string) bool {
 		return true
 	}
 }
+
+// BlockTime - for metric
 func blockTime(block *types.Block) {
 	times := block.WriteTime - block.Timestamp
 	f, err := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
