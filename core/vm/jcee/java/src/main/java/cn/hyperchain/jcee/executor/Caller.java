@@ -65,8 +65,11 @@ public class Caller {
             String msg = "method " + request.getMethod() + " is not implemented yet!";
             logger.error(iae.getMessage());
             Errors.ReturnErrMsg(msg, responseObserver);
+        }catch (Exception e) {
+            String msg = "method " + request.getMethod() + " execute failed" + e.getMessage();
+            logger.error(msg);
+            Errors.ReturnErrMsg(msg, responseObserver);
         }
-
     }
 
     enum CallType {
