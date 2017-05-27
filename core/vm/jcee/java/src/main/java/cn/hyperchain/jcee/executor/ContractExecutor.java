@@ -22,11 +22,11 @@ public class ContractExecutor {
     private Map<String, Executor> executors;
     private ContractHandler contractHandler;
 
-    public ContractExecutor(int ledgerPort) {
+    public ContractExecutor() {
         close = false;
         executors = new ConcurrentHashMap<>();
         threadPool = Executors.newCachedThreadPool();
-        contractHandler = new ContractHandler(ledgerPort);
+        contractHandler = ContractHandler.getContractHandler();
     }
 
     public void dispatch(Caller caller) throws InterruptedException {
@@ -61,6 +61,8 @@ public class ContractExecutor {
                     caller.Call();
                 }catch (InterruptedException ie) {
                     logger.error(ie);
+                }catch (Exception e) {
+                    logger.error(e);
                 }
             }
         }

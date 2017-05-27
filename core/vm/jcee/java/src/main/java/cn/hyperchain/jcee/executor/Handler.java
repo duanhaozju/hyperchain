@@ -47,6 +47,7 @@ public class Handler {
             err = "freeze contract failed, contract with id " + cid + " is nonexistent";
             logger.error(err);
             Errors.ReturnErrMsg(err, responseObserver);
+            return;
         }
         if (info.getState() != ContractState.FREEZE) {
             info.setState(ContractState.FREEZE);
@@ -69,6 +70,7 @@ public class Handler {
             err = "unfreeze contract failed, contract with id " + cid + " is nonexistent";
             logger.error(err);
             Errors.ReturnErrMsg(err, responseObserver);
+            return;
         }
         info.setState(ContractState.NORMAL);
         response = ContractProto.Response.newBuilder()
@@ -126,12 +128,12 @@ public class Handler {
         }
         try{
             response = task.call();
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
         }catch (Exception e) {
             logger.error(e);
             Errors.ReturnErrMsg(e.getMessage(), responseObserver);
-        }finally {
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
+            return;
         }
     }
 

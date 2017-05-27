@@ -12,6 +12,7 @@ import cn.hyperchain.jcee.ledger.BatchValue;
 import cn.hyperchain.jcee.util.Bytes;
 import org.apache.log4j.Logger;
 
+import java.util.LinkedList;
 import java.util.List;
 
 /**
@@ -43,6 +44,9 @@ public class SimulateBank extends ContractTemplate {
                 return testRangeQuery(args);
             case "testDelete":
                 return testDelete(args);
+            case "testInvokeContract":
+                logger.info("testInvokeContract");
+                return testInvokeContract(args);
             default:
                 String err = "method " + funcName  + " not found!";
                 logger.error(err);
@@ -181,5 +185,12 @@ public class SimulateBank extends ContractTemplate {
         String getV = ledger.getString(key);
         logger.info("get deleted value is " + getV);
         return result(getV.isEmpty());
+    }
+
+    public ExecuteResult testInvokeContract(List<String> args) {
+        logger.info(args.toString());
+        List<String> arg = new LinkedList<>();
+        arg.add("hello, invoke contract!");
+        return invokeContract("global", "bbe2b6412ccf633222374de8958f2acc76cda9c9", "test", arg);
     }
 }
