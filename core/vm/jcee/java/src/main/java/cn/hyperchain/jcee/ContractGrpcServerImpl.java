@@ -25,8 +25,8 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
 
     private static final Logger logger = Logger.getLogger(ContractGrpcServerImpl.class.getSimpleName());
 
-    public ContractGrpcServerImpl(int ledgerPort) {
-        contractExecutor = new ContractExecutor(ledgerPort);
+    public ContractGrpcServerImpl() {
+        contractExecutor = new ContractExecutor();
     }
 
     public void init() {
