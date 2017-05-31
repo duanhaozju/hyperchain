@@ -15,7 +15,24 @@ import (
 
 // Call executes within the given contract
 func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, err error) {
-	ret, _, err = exec(env, caller, &addr, &addr, input, "", nil, gas, gasPrice, value, op)
+	if isUpdate(op) {
+		err, codeDigest, codePath, msg := prepare(input)
+		if err != nil {
+			return nil, er.ExecContractErr(1, msg, err.Error())
+		}
+		ret, _, err = exec(env, caller, nil, nil, input, codePath, codeDigest, gas, gasPrice, value, op)
+		if err != nil {
+			return ret, err
+		}
+		defer func() {
+			// clear invalid dir
+			if err != nil {
+				os.RemoveAll(codePath)
+			}
+		}()
+	} else {
+		ret, _, err = exec(env, caller, &addr, &addr, input, "", nil, gas, gasPrice, value, op)
+	}
 	return ret, err
 }
 
@@ -124,7 +141,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// EVM. The contract is a scoped environment for this execution context
 	// only.
 	var codeHash common.Hash
-	if !createAccount {
+	if !createAccount && !updateAccount {
 		codeHash = env.Db().GetCodeHash(to.Address())
 	} else {
 		codeHash = common.BytesToHash(crypto.Keccak256(codeDigest))
@@ -135,8 +152,10 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
-	if err == nil && createAccount {
+	if err == nil && (createAccount || updateAccount) {
 		env.Db().SetCode(*address, codeDigest)
+	}
+	if err != nil  && createAccount {
 		env.Db().AddDeployedContract(caller.Address(), *address)
 		env.Db().SetCreator(*address, caller.Address())
 		env.Db().SetCreateTime(*address, env.BlockNumber().Uint64())
