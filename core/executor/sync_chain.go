@@ -34,11 +34,16 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 			}
 		}
 	}
-
+	err, ctx := executor.analysisEvent(ev)
+	if err != nil {
+		executor.logger.Infof("[Namespace = %s] create synchronization context failed, send state updated event", executor.namespace)
+		executor.sendStateUpdatedEvent()
+	}
 	executor.updateSyncFlag(ev.TargetHeight, ev.TargetBlockHash, ev.TargetHeight)
 	executor.setLatestSyncDownstream(ev.TargetHeight)
 	executor.recordSyncPeers(executor.fetchRepliceIds(ev), ev.Id)
-	executor.status.syncFlag.Oracle = NewOracle(executor.fetchRepliceIds(ev), executor.conf, executor.logger)
+	executor.status.syncFlag.Oracle = NewOracle(ctx, executor.conf, executor.logger)
+
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
 	go executor.syncChainResendBackend()
 }
@@ -122,7 +127,6 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 		return
 	}
 	peer := executor.status.syncFlag.Oracle.SelectPeer()
-	// peer := executor.status.syncFlag.SyncPeers[rand.Intn(len(executor.status.syncFlag.SyncPeers))]
 	executor.logger.Debugf("send sync req to %d, require [%d] to [%d]", peer, downstream, upstream)
 	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream, peer); err != nil {
 		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
@@ -320,6 +324,7 @@ func (executor *Executor) accpet(seqNo uint64, result *ValidationResultRecord) e
 // reject - reject state update result.
 func (executor *Executor) reject() {
 	executor.cache.syncCache.Purge()
+	// clear all useless stuff
 	batch := executor.db.NewBatch()
 	for i := edb.GetHeightOfChain(executor.namespace) + 1; i <= executor.status.syncFlag.SyncTarget; i += 1 {
 		// delete persisted blocks number larger than chain height
@@ -380,4 +385,27 @@ func (executor *Executor) fetchRepliceIds(event event.ChainSyncReqEvent) []uint6
 		ret = append(ret, r.Id)
 	}
 	return ret
+}
+
+func (executor *Executor) analysisEvent(event event.ChainSyncReqEvent) (error, *ChainSyncContext) {
+	var fullPeers []uint64
+	var partPeers []PartPeer
+	err, localGenesis := edb.GetGenesisTag(executor.namespace)
+	if err != nil {
+		return err, nil
+	}
+	for _, r := range event.Replicas {
+		if r.Genesis <= localGenesis {
+			fullPeers = append(fullPeers, r.Id)
+		} else {
+			partPeers = append(partPeers, PartPeer{
+				Id:        r.Id,
+				Genesis:   r.Genesis,
+			})
+		}
+	}
+	return nil, &ChainSyncContext{
+		FullPeers:     fullPeers,
+		PartPeers:     partPeers,
+	}
 }

@@ -28,6 +28,7 @@ type ExecutorStatus struct {
 	syncReplicaSuspend  chan bool     // replica sync suspend notifier
 
 	syncFlag            SyncFlag     // store temp variables during chain sync
+	syncCtx             ChainSyncContext // synchronization context
 }
 
 type SyncFlag struct {

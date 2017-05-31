@@ -15,9 +15,11 @@ type Oracle struct {
 	peers           []uint64
 	staticPeers     []uint64
 	score           map[uint64]int64
+	genesis         map[uint64]uint64
 	conf            *common.Config
 	latestSelected  uint64
 	logger          *logging.Logger
+	ctx             *ChainSyncContext
 }
 
 type StaticPeer struct {
@@ -31,14 +33,20 @@ type StaticPeers struct {
 	peers     []StaticPeer `json:"static_peers,omitempty"`
 }
 
-func NewOracle(peers []uint64, conf *common.Config, logger *logging.Logger) *Oracle {
+func NewOracle(ctx *ChainSyncContext, conf *common.Config, logger *logging.Logger) *Oracle {
 	// assign init score
 	score := make(map[uint64]int64)
-	for _, peer := range peers {
+	genesis := make(map[uint64]uint64)
+	for _, peer := range ctx.PartPeers {
 		score[peer] = 0
+		genesis[peer] = peer.Genesis
+	}
+	for _, peer := range ctx.FullPeers {
+		score[peer] = 10
+		genesis[peer] = 0
 	}
 	oracle := &Oracle{
-		peers:       peers,
+		genesis:     genesis,
 		conf:        conf,
 		score:       score,
 		logger:      logger,
@@ -46,25 +54,23 @@ func NewOracle(peers []uint64, conf *common.Config, logger *logging.Logger) *Ora
 	staticPeers := oracle.ReadStaticPeer(oracle.conf.GetString(staticPeerFile))
 	logger.Debug("read static peers from configuration", staticPeers)
 	for _, peer := range staticPeers {
-		if contains(peers, peer) {
+		if contains(ctx.PartPeers, peer) {
 			oracle.staticPeers = append(oracle.staticPeers, peer)
+			oracle.score[peer] = 5
+		} else if contains(ctx.FullPeers, peer) {
+			oracle.staticPeers = append(oracle.staticPeers, peer)
+			oracle.score[peer] = 15
 		}
 	}
-	logger.Debug("static peers", oracle.staticPeers)
+	logger.Debug("peer's scoreboard", oracle.score)
 	return oracle
 }
 func (oracle *Oracle) SelectPeer() uint64 {
 	var max int64 = int64(math.MinInt64)
 	var bPeer uint64
-	// select static peer first
-	// if a static peer's score less than -5, drop it
-	for _, p := range oracle.staticPeers {
-		if oracle.score[p] > -5 {
-			oracle.latestSelected = p
-			oracle.logger.Debugf("select static peer %d to send sync req", p)
-			return p
-		}
-	}
+	defer func() {
+		oracle.ctx.NewGenesis = oracle.genesis[oracle.latestSelected]
+	}()
 	// select other with higest score
 	for peer, score := range oracle.score {
 		if max < score {
