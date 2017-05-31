@@ -28,6 +28,28 @@ public class MySmartContract extends ContractTemplate {
         return result(false);
     }
 
+    /**
+     * openInvoke provide a interface to be invoked by other contracts
+     *
+     * @param funcName contract name
+     * @param args     arguments
+     * @return {@link ExecuteResult}
+     */
+    @Override
+    protected ExecuteResult openInvoke(String funcName, List<String> args) {
+        switch (funcName) {
+            case "test": {
+                this.test("invoke method:" + args.get(0));
+                //String name = new String(ledger.get("name".getBytes()));
+                //System.out.println("get name from ledger: " + name);
+                return result(true);
+            }
+            default:
+                logger.error("no such method found");
+        }
+        return result(false);
+    }
+
     public void test(String name) {
         logger.info(getLedger().getContext().getId());
         //logger.info("invoke in test");

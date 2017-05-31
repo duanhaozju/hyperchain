@@ -74,7 +74,7 @@ public class ContractManager {
     public void addContract(ContractHolder holder) {
         String key = holder.getInfo().getCid();
         if(contracts.containsKey(key)) {
-            logger.error(key + "existed!");
+            logger.error(key + " existed!");
         }else {
             logger.info("register contract with id: " + key);
             contracts.put(key, holder);

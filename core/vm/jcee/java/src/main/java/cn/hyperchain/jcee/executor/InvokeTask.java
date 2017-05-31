@@ -19,11 +19,12 @@ public class InvokeTask extends Task{
 
     @Override
     public ContractProto.Response execute() {
+        System.out.println(request.getArgsCount());
         String funcName = request.getArgs(0).toStringUtf8();
 
         List<String> args = new LinkedList<>();
-        for(int i = 1; i < request.getArgsList().size(); ++ i){
-            args.add(request.getArgs(i).toStringUtf8());
+        for(int i = 0; i < request.getArgsList().size(); ++ i){
+            if (i > 0) args.add(request.getArgs(i).toStringUtf8());
         }
         ExecuteResult result = contract.invoke(funcName, args);
 
