@@ -37,8 +37,8 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 
 	executor.updateSyncFlag(ev.TargetHeight, ev.TargetBlockHash, ev.TargetHeight)
 	executor.setLatestSyncDownstream(ev.TargetHeight)
-	executor.recordSyncPeers(ev.Replicas, ev.Id)
-	executor.status.syncFlag.Oracle = NewOracle(ev.Replicas, executor.conf, executor.logger)
+	executor.recordSyncPeers(executor.fetchRepliceIds(ev), ev.Id)
+	executor.status.syncFlag.Oracle = NewOracle(executor.fetchRepliceIds(ev), executor.conf, executor.logger)
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
 	go executor.syncChainResendBackend()
 }
@@ -371,4 +371,13 @@ func (executor *Executor) receiveAllRequiredBlocks() bool {
 func (executor *Executor) storeFilterData(record *ValidationResultRecord, block *types.Block, logs []*vm.Log) {
 	record.Block = block
 	record.Logs = logs
+}
+
+
+func (executor *Executor) fetchRepliceIds(event event.ChainSyncReqEvent) []uint64 {
+	var ret []uint64
+	for _, r := range event.Replicas {
+		ret = append(ret, r.Id)
+	}
+	return ret
 }

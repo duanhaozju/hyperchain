@@ -43,8 +43,10 @@ func (mgr *ArchiveManager) Archive(filterId string) {
 	} else {
 		_, manifest = mgr.registry.rwc.Read(filterId)
 		if err := mgr.migrate(manifest); err != nil {
+			mgr.logger.Noticef("archive for (filter %s) failed, detail %s", filterId, err.Error())
 			mgr.feedback(false, filterId, ArchiveFailedErr)
 		} else {
+			mgr.logger.Noticef("archive for (filter %s) success", filterId)
 			mgr.feedback(true, filterId, EmptyMessage)
 		}
 	}
