@@ -13,6 +13,7 @@ import (
 	"os"
 	"hyperchain/core/types"
 	"hyperchain/api/jsonrpc/core"
+	"strconv"
 )
 
 //NewContractCMD new contract related commands.
@@ -20,7 +21,6 @@ func NewContractCMD() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "deploy",
-			Aliases: []string{"d"},
 			Usage:   "Deploy a contract",
 			Action:  deploy,
 			Flags:   []cli.Flag{
@@ -57,7 +57,6 @@ func NewContractCMD() []cli.Command {
 		},
 		{
 			Name:    "invoke",
-			Aliases: []string{"i"},
 			Usage:   "Invoke a contract method",
 			Action:  invoke,
 			Flags:   []cli.Flag{
@@ -105,6 +104,54 @@ func NewContractCMD() []cli.Command {
 			},
 		},
 		{
+			Name:    "maintain",
+			Usage:   "Invoke a contract method",
+			Action:  maintain,
+			Flags:   []cli.Flag{
+				cli.StringFlag{
+					Name:  "maintaincmd, m",
+					Value: "",
+					Usage: "specify the payload of maintain contract",
+				},
+				cli.BoolFlag{
+					Name:  "jvm, j",
+					Usage: "specify how the contract is generated, false is solidity, true is jvm",
+				},
+				cli.StringFlag{
+					Name:  "directory, d",
+					Value: "",
+					Usage: "specify the contract file directory",
+				},
+				cli.StringFlag{
+					Name:  "namespace, n",
+					Value: "global",
+					Usage: "specify the namespace to maintain, default is global",
+				},
+				cli.StringFlag{
+					Name:  "from, f",
+					Value: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
+					Usage: "specify the maintain account",
+				},
+				cli.StringFlag{
+					Name:  "payload, p",
+					Value: "",
+					Usage: "specify the maintain contract payload",
+				},
+
+				//args with no default value which must be specified by user
+				cli.StringFlag{
+					Name:  "to, t",
+					Value: "",
+					Usage: "specify the destination account",
+				},
+				cli.StringFlag{
+					Name:  "opcode, o",
+					Value: "",
+					Usage: "specify the opcode",
+				},
+			},
+		},
+		{
 			Name:    "destroy",
 			Usage:   "Destroy a contract",
 			Action:  destroy,
@@ -127,9 +174,10 @@ func deploy(c *cli.Context) error {
 	result, err := client.Call(deployCmd)
 	if err != nil {
 		fmt.Println("Error in call deploy cmd request")
-		fmt.Print(err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
+	//fmt.Println(result.Result)
 
 	txHash := getTransactionHash(result)
 	err = common.GetTransactionReceipt(txHash, c, client)
@@ -153,13 +201,45 @@ func invoke(c *cli.Context) error {
 		method := "contract_invokeContract"
 		invokeCmd = getCmd(method, invokeParams, c)
 	}
-	//fmt.Println(deployCmd)
+	//fmt.Println(invokeCmd)
 	result, err := client.Call(invokeCmd)
 	if err != nil {
 		fmt.Println("Error in call invoke cmd request")
-		fmt.Print(err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
+	//fmt.Println(result.Result)
+
+	txHash := getTransactionHash(result)
+	err = common.GetTransactionReceipt(txHash, c, client)
+	if err != nil {
+		fmt.Println("Error in call get transaction receipt")
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	return nil
+}
+
+// maintain implements maintain methods with specified opcode and return the transaction receipt
+func maintain(c *cli.Context) error {
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+	var maintainCmd string
+	if c.String("maintaincmd") != "" {
+		maintainCmd = c.String("maintaincmd")
+	} else {
+		invokeParams := []string{"from", "to", "nonce", "payload", "timestamp", "signature", "opcode"}
+		method := "contract_maintainContract"
+		maintainCmd = getCmd(method, invokeParams, c)
+	}
+	//fmt.Println(maintainCmd)
+	result, err := client.Call(maintainCmd)
+	if err != nil {
+		fmt.Println("Error in call maintain cmd request")
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	//fmt.Print(result.Result)
 
 	txHash := getTransactionHash(result)
 	err = common.GetTransactionReceipt(txHash, c, client)
@@ -184,6 +264,16 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 	var nonce, timestamp, amount int64
 	var opcode int
 	var vmtype types.TransactionValue_VmType
+	var err error
+
+	if method == "contract_maintainContract" {
+		opcode, err = strconv.Atoi(common.GetNonEmptyValueByName(c, "opcode"))
+		if err != nil {
+			fmt.Println("Error in convert input opcode to int.")
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
 
 	params := "[{"
 	for i, param := range deploy_params{
@@ -194,14 +284,15 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 		case "payload":
 			var payload string
 			if c.Bool("jvm") {
-				if method == "contract_invokeContract" {
-					payload = ""
-				} else {
+				if method == "contract_deployContract" || opcode == 1 {
 					if c.String("directory") != "" {
 						payload = getPayloadFromPath(c.String("directory"))
 					} else {
-						payload = common.GetNonEmptyValueByName(c, "directory")
+						dir := common.GetNonEmptyValueByName(c, "directory")
+						payload = getPayloadFromPath(dir)
 					}
+				} else {
+					payload = ""
 				}
 			} else {
 				payload = common.GetNonEmptyValueByName(c, "payload")
@@ -225,10 +316,12 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 			to = common.GetNonEmptyValueByName(c, "to")
 			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, to)
 
+		case "opcode":
+			params = params + fmt.Sprintf("\"%s\":%d", param, int32(opcode))
+
 		// signature is generated automatically
 		case "signature":
 			amount = 0
-			opcode = 0
 			if c.Bool("jvm") {
 				vmtype = 1
 			} else {
