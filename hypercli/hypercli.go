@@ -68,6 +68,11 @@ func initApp() {
 			Usage:       "add/delete node specific commands",
 			Subcommands: node.NewNodeCMD(),
 		},
+		{
+			Name:        "jvm",
+			Usage:       "jvm specific commands",
+			Subcommands: server.NewJvmCMD(),
+		},
 	}
 
 }
