@@ -12,6 +12,7 @@ import (
 	pb "hyperchain/core/vm/jcee/protos"
 	"sync/atomic"
 	"errors"
+	"time"
 )
 
 type ContractExecutor interface {
@@ -39,6 +40,11 @@ type contractExecutorImpl struct {
 
 	close      int32
 	maintainer *ConnMaintainer
+}
+
+type executeRs struct {
+	Response *pb.Response
+	Err error
 }
 
 func NewContractExecutor(conf *common.Config, namespace string) ContractExecutor {
@@ -77,7 +83,7 @@ func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error
 	if err != nil {
 		return nil, err
 	} else if response.Ok == false {
-		return nil, JVMServerErr
+		return nil, errors.New(string(response.Result))
 	} else if !hexMatch(response.CodeHash, ctx.GetCodeHash().Hex()) {
 		return nil, CodeNotMatchErr
 	} else {
@@ -98,7 +104,17 @@ func (cei *contractExecutorImpl) execute(tx *pb.Request) (*pb.Response, error) {
 	if cei.client == nil {
 		return nil, errors.New("no client establish")
 	}
-	return cei.client.Execute(context.Background(), tx)
+	er := make(chan *executeRs)
+	go func() {
+		r, err := cei.client.Execute(context.Background(), tx)
+		er <- &executeRs{r, err}
+	}()
+	select {
+	case <- time.Tick(5 * time.Second):
+		return &pb.Response{Ok:false, Result:[]byte("hyperjvm execute timeout")}, errors.New("execute timeout")
+	case rs := <- er:
+		return rs.Response, rs.Err
+	}
 }
 
 // heartbeat send health chech info to jvm server.
