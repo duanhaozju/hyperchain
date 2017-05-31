@@ -77,6 +77,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 
 	var createAccount bool
+	var updateAccount bool
 	// create address
 	if address == nil {
 		// Create a new account on the state
@@ -85,6 +86,9 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		addr = crypto.CreateAddress(caller.Address(), nonce)
 		address = &addr
 		createAccount = true
+	}
+	if isUpdate(op) {
+		updateAccount = true
 	}
 	var (
 		// from = env.Db().GetAccount(caller.Address())
@@ -148,7 +152,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	} else {
 		codeHash = common.BytesToHash(crypto.Keccak256(code))
 	}
-	context := NewContext(caller, to, env, createAccount, codePath, codeHash)
+	context := NewContext(caller, to, env, createAccount, updateAccount, codePath, codeHash)
 	ret, err = virtualMachine.Run(context, input)
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not

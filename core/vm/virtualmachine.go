@@ -53,6 +53,7 @@ type VmContext interface {
 	GetEnv()   Environment
 
 	IsCreation() bool
+	IsUpdate() bool
 	GetCodePath() string
 	// GetAttribute(int, interface{}) interface{}
 	// SetAttribute(int, ...interface{})

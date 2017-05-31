@@ -189,6 +189,10 @@ func (self *Contract) IsCreation() bool {
 	return false
 }
 
+func (self *Contract) IsUpdate() bool {
+	return false
+}
+
 func (self *Contract) GetCodePath() string {
 	return ""
 }

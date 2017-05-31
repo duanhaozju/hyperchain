@@ -28,6 +28,23 @@ func (cei *contractExecutorImpl) parse(ctx vm.VmContext, in []byte) *pb.Request 
 			Method:   "deploy",
 			Args:     iArgs,
 		}
+	} else if ctx.IsUpdate() {
+		var args types.InvokeArgs
+		if err := proto.Unmarshal(in, &args); err != nil {
+			return nil
+		}
+		var iArgs [][]byte
+		iArgs = append(iArgs, []byte(ctx.GetCodePath()))
+		iArgs = append(iArgs, args.Args...)
+		return &pb.Request{
+			Context:  &pb.RequestContext{
+				Cid:         common.HexToString(ctx.Address().Hex()),
+				Namespace:   ctx.GetEnv().Namespace(),
+				Txid:        ctx.GetEnv().TransactionHash().Hex(),
+			},
+			Method:   "update",
+			Args:     iArgs,
+		}
 	} else {
 		var args types.InvokeArgs
 		if err := proto.Unmarshal(in, &args); err != nil {

@@ -12,17 +12,19 @@ type Context struct {
 	env        vm.Environment
 	code       []byte
 	isCreation bool
+	isUpdate   bool
 	codePath   string
 	codeHash   common.Hash
 }
 
 
-func NewContext(caller vm.ContractRef, callee vm.ContractRef, env vm.Environment, isCreation bool, codePath string, codeHash common.Hash) *Context {
+func NewContext(caller vm.ContractRef, callee vm.ContractRef, env vm.Environment, isCreation bool, isUpdate bool, codePath string, codeHash common.Hash) *Context {
 	return &Context{
 		caller:     caller,
 		callee:     callee,
 		env:        env,
 		isCreation: isCreation,
+		isUpdate:   isUpdate,
 		codePath:   codePath,
 		codeHash:   codeHash,
 	}
@@ -120,3 +122,6 @@ func (ctx *Context) IsCreation() bool {
 	return ctx.isCreation
 }
 
+func (ctx *Context) IsUpdate() bool {
+	return ctx.isUpdate
+}
