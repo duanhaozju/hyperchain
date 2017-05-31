@@ -34,12 +34,7 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 			}
 		}
 	}
-	ctx := executor.analysisEvent(ev)
-	executor.updateSyncFlag(ev.TargetHeight, ev.TargetBlockHash, ev.TargetHeight)
-	executor.setLatestSyncDownstream(ev.TargetHeight)
-	executor.recordSyncPeers(executor.fetchRepliceIds(ev), ev.Id)
-	executor.status.syncFlag.Oracle = NewOracle(ctx, executor.conf, executor.logger)
-
+	executor.syncInitialize(ev)
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
 	go executor.syncChainResendBackend()
 }
@@ -57,6 +52,7 @@ func (executor *Executor) syncChainResendBackend() {
 			if curUp == up && curDown == down && !executor.isSyncInExecution() {
 				executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.status.syncFlag.SyncDemandBlockNum)
 				executor.status.syncFlag.Oracle.FeedBack(false)
+				executor.status.syncCtx.SetCurrentPeer(executor.status.syncFlag.Oracle.SelectPeer())
 				executor.SendSyncRequest(executor.status.syncFlag.SyncDemandBlockNum, down)
 				executor.recordSyncReqArgs(curUp, curDown)
 			} else {
@@ -105,9 +101,10 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 		}
 		if executor.receiveAllRequiredBlocks() {
 			if executor.getLatestSyncDownstream() != edb.GetHeightOfChain(executor.namespace) {
+				executor.status.syncFlag.Oracle.FeedBack(true)
+				executor.status.syncCtx.SetCurrentPeer(executor.status.syncFlag.Oracle.SelectPeer())
 				prev := executor.getLatestSyncDownstream()
 				next := executor.calcuDownstream()
-				executor.status.syncFlag.Oracle.FeedBack(true)
 				executor.SendSyncRequest(prev, next)
 			} else {
 				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
@@ -122,8 +119,8 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 	if executor.isSyncInExecution() == true {
 		return
 	}
-	peer := executor.status.syncFlag.Oracle.SelectPeer()
-	executor.logger.Debugf("send sync req to %d, require [%d] to [%d]", peer, downstream, upstream)
+	peer := executor.status.syncCtx.GetCurrentPeer()
+	executor.logger.Noticef("send sync req to %d, require [%d] to [%d]", peer, downstream, upstream)
 	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream, peer); err != nil {
 		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
 		executor.reject()
@@ -356,11 +353,25 @@ func (executor *Executor) isDemandSyncBlock(block *types.Block) bool {
 func (executor *Executor) calcuDownstream() uint64 {
 	total := executor.getLatestSyncDownstream() - edb.GetHeightOfChain(executor.namespace)
 	if total < executor.GetSyncMaxBatchSize() {
-		executor.setLatestSyncDownstream(edb.GetHeightOfChain(executor.namespace))
+		_, genesis := executor.status.syncCtx.GetCurrentGenesis()
+		if genesis > edb.GetHeightOfChain(executor.namespace) {
+			executor.setLatestSyncDownstream(genesis)
+			executor.logger.Notice("update temporarily downstream with peer's genesis")
+		} else {
+			executor.setLatestSyncDownstream(edb.GetHeightOfChain(executor.namespace))
+			executor.logger.Notice("update temporarily downstream with current chain height")
+		}
 	} else {
-		executor.setLatestSyncDownstream(executor.getLatestSyncDownstream() - executor.GetSyncMaxBatchSize())
+		_, genesis := executor.status.syncCtx.GetCurrentGenesis()
+		if genesis > executor.getLatestSyncDownstream() - executor.GetSyncMaxBatchSize() {
+			executor.setLatestSyncDownstream(genesis)
+			executor.logger.Notice("update temporarily downstream with peer's genesis")
+		} else {
+			executor.setLatestSyncDownstream(executor.getLatestSyncDownstream() - executor.GetSyncMaxBatchSize())
+			executor.logger.Notice("update temporarily downstream with last temp downstream")
+		}
 	}
-	executor.logger.Debugf("update temporarily downstream to %d", executor.getLatestSyncDownstream())
+	executor.logger.Noticef("update temporarily downstream to %d", executor.getLatestSyncDownstream())
 	return executor.getLatestSyncDownstream()
 }
 
@@ -383,22 +394,17 @@ func (executor *Executor) fetchRepliceIds(event event.ChainSyncReqEvent) []uint6
 	return ret
 }
 
-func (executor *Executor) analysisEvent(event event.ChainSyncReqEvent) *ChainSyncContext {
-	var fullPeers []uint64
-	var partPeers []PartPeer
-	curHeight := edb.GetHeightOfChain(executor.namespace)
-	for _, r := range event.Replicas {
-		if r.Genesis <= curHeight {
-			fullPeers = append(fullPeers, r.Id)
-		} else {
-			partPeers = append(partPeers, PartPeer{
-				Id:        r.Id,
-				Genesis:   r.Genesis,
-			})
-		}
-	}
-	return &ChainSyncContext{
-		FullPeers:     fullPeers,
-		PartPeers:     partPeers,
-	}
+// syncinitialize initialize sync context and status.
+func (executor *Executor) syncInitialize(ev event.ChainSyncReqEvent) {
+	ctx := NewChainSyncContext(executor.namespace, ev)
+	executor.status.syncCtx = ctx
+
+	executor.updateSyncFlag(ev.TargetHeight, ev.TargetBlockHash, ev.TargetHeight)
+	executor.setLatestSyncDownstream(ev.TargetHeight)
+	executor.recordSyncPeers(executor.fetchRepliceIds(ev), ev.Id)
+	executor.status.syncFlag.Oracle = NewOracle(ctx, executor.conf, executor.logger)
+	firstPeer := executor.status.syncFlag.Oracle.SelectPeer()
+	ctx.SetCurrentPeer(firstPeer)
 }
+
+

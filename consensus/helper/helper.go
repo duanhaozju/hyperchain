@@ -99,7 +99,7 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 		TargetBlockHash: blockHash,
 		Replicas:        []event.SyncReplica{
 			{
-				Id:       0,
+				Id:       1,
 				Height:   0,
 				Genesis:  0,
 			},
