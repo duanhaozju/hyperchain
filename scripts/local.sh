@@ -105,10 +105,11 @@ do
     if [ -d "${DUMP_PATH}/node${j}/namespaces" ];then
         rm -rf ${DUMP_PATH}/node${j}/namespaces
     fi
+
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
-    cp -rf ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
+    cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
 
     # distribute hypercli
     if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
@@ -119,6 +120,17 @@ do
     fi
     cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
     cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
+
+    BIN_PATH=${DUMP_PATH}/node${j}/bin
+    # distribute bin
+    if [ -d ${BIN_PATH} ];then
+        rm -rf ${BIN_PATH}
+    fi
+    mkdir -p ${BIN_PATH}
+    cp ${PROJECT_PATH}/scripts/sub_scripts/start.sh ${BIN_PATH}
+    cp ${PROJECT_PATH}/scripts/sub_scripts/stop.sh ${BIN_PATH}
+    cp ${PROJECT_PATH}/scripts/sub_scripts/stop.sh ${BIN_PATH}/stop_local.sh
+    sed -i "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
 done
 }
 
@@ -127,11 +139,11 @@ f_all_in_one_cmd(){
 }
 
 f_x_in_linux_cmd(){
-    gnome-terminal -x bash -c "cd ${DUMP_PATH}/node${1} && ./hyperchain 2>error.log"
+    gnome-terminal -x bash -c "cd $DUMP_PATH/node${1}/bin && ./start.sh"
 }
 
 f_x_in_mac_cmd(){
-    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}' && ./hyperchain 2>error.log"'
+    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/bin' && ./start.sh"'
 }
 
 # run process by os type
