@@ -59,10 +59,10 @@ f_check_local_env(){
 # kill hyperchain process
 f_kill_process(){
     echo "kill the bind port process"
-    PID=`ps -ax | grep hyperchain | grep -v grep | awk '{print $1}'`
+    PID=`ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}'`
     if [ "$PID" != "" ]
     then
-        ps -ax | grep hyperchain | grep -v grep | awk '{print $1}' | xargs kill -9
+        ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}' | xargs kill -9
     fi
 }
 
@@ -223,6 +223,9 @@ REBUILD=true
 # rebuild hypercli or not? default = false
 HYPERCLI=false
 
+# run process or not? default = true
+RUN=true
+
 # 1.check local env
 f_check_local_env
 
@@ -245,6 +248,8 @@ do
         HYPERCLI=true; shift;;
     -m|--mode)
         MODE=true; shift;;
+    -n|--run)
+        RUN=false; shift;;
     --) shift; break;;
     -*) help; exit 1;;
     *) break;;
@@ -274,4 +279,7 @@ f_distribute $MAXPEERNUM
 
 # run hyperchain node
 start_hyperjvm
-f_run_process
+
+if ${RUN}; then
+    f_run_process
+fi

@@ -104,11 +104,14 @@ f_gen_config(){
         is_vp=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.is_vp`
         is_vp=$(echo ${is_vp} | tr A-Z a-z)
         grpc_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.grpc_port`
+        ip=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.ip`
         jsonrpc_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.jsonrpc_port`
         restful_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.restful_port`
         introducer_ip=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.introducer_ip`
         introducer_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.introducer_port`
         introducer_id=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.introducer_id`
+        jvm_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.jvm_port`
+        ledger_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.ledger_port`
 
         echo "{"                                        >>${peerconfig}
         echo "  \"self\":{"                             >>${peerconfig}
@@ -116,12 +119,14 @@ f_gen_config(){
         echo "  \"is_vp\":$is_vp,"                      >>${peerconfig}
         echo "  \"node_id\":$node_id,"                  >>${peerconfig}
         echo "  \"grpc_port\":$grpc_port,"              >>${peerconfig}
-        echo "  \"local_ip\":\"127.0.0.1\","            >>${peerconfig}
+        echo "  \"local_ip\":\"$ip\","                  >>${peerconfig}
         echo "  \"jsonrpc_port\":$jsonrpc_port,"        >>${peerconfig}
         echo "  \"restful_port\":$restful_port,"        >>${peerconfig}
         echo "  \"introducer_ip\":\"$introducer_ip\","  >>${peerconfig}
         echo "  \"introducer_port\":$introducer_port,"  >>${peerconfig}
-        echo "  \"introducer_id\":$introducer_id"       >>${peerconfig}
+        echo "  \"introducer_id\":$introducer_id,"      >>${peerconfig}
+        echo "  \"jvm_port\":$jvm_port,"                >>${peerconfig}
+        echo "  \"ledger_port\":$ledger_port"           >>${peerconfig}
         echo " },"                                      >>${peerconfig}
         echo "  \"maxpeernode\":$NS_MAXNODE,"           >>${peerconfig}
         echo "  \"nodes\":["                            >>${peerconfig}
@@ -173,7 +178,7 @@ f_distribute(){
         cp -rf  ${NS_PATH}/${NS_NAME}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}
         cp -rf  ${NS_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/local_peerconfig.json
         cp -rf  ${NS_PATH}/${NS_NAME}/config/peerconfigs/node${j}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/cert/
-        cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/${NS_NODES[$j]}
+#        cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/${NS_NODES[$j]}
 
         # distribute hypercli
         if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then

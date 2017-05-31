@@ -4,6 +4,9 @@
  */
 package cn.hyperchain.jcee.executor;
 
+import cn.hyperchain.jcee.util.Errors;
+import cn.hyperchain.protos.ContractProto;
+import io.grpc.stub.StreamObserver;
 import org.apache.log4j.Logger;
 
 import java.util.Map;
@@ -55,14 +58,50 @@ public class ContractExecutor {
 
         @Override
         public void run() {
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+
             while (!close) {
+
+                Caller caller = null;
+                FutureTask<String> futureTask = null;
                 try {
-                    Caller caller = callers.take();
-                    caller.Call();
-                }catch (InterruptedException ie) {
-                    logger.error(ie);
-                }catch (Exception e) {
-                    logger.error(e);
+                    caller = callers.take();
+                    if(executor.isShutdown()){
+                        executor = Executors.newSingleThreadExecutor();
+                        logger.info("new executor after shutdown");
+
+                    }
+                    Caller finalCaller = caller;
+                    futureTask =
+                            new FutureTask<String>(new Callable<String>() {//使用Callable接口作为构造参数
+                                public String call() {
+                                    finalCaller.Call();
+                                    return "finish call";
+                                }});
+                    executor.execute(futureTask);
+
+                    String result = futureTask.get(4000, TimeUnit.MILLISECONDS);
+                    logger.info("Current call result:"+result);
+                }catch (TimeoutException e) {
+                    logger.error("Current call result :Time out");
+                    futureTask.cancel(true);
+                    if(caller == null){
+                        logger.error("caller is null");
+                    }
+                    Errors.ReturnErrMsg(e.toString(),caller.getResponseObserver());
+
+                }catch (Exception e){
+                    futureTask.cancel(true);
+                    if(caller == null){
+                        logger.error("caller is null");
+                    }
+                    Errors.ReturnErrMsg(e.toString(),caller.getResponseObserver());
+                }finally {
+                    if(futureTask.isCancelled()){
+                        executor.shutdown();
+                        logger.info("executor shutdown");
+
+                    }
                 }
             }
         }
