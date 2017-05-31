@@ -3,6 +3,7 @@ package cn.hyperchain.jcee.executor;
 import cn.hyperchain.jcee.util.Errors;
 import cn.hyperchain.protos.ContractProto;
 import io.grpc.stub.StreamObserver;
+import lombok.Getter;
 import org.apache.log4j.Logger;
 
 /**
@@ -13,7 +14,9 @@ public class Caller {
     private static final Logger logger = Logger.getLogger(Caller.class.getSimpleName());
 
     private Handler handler;
+    @Getter
     private ContractProto.Request request;
+    @Getter
     private StreamObserver<ContractProto.Response> responseObserver;
 
     public Caller(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {

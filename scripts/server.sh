@@ -145,9 +145,12 @@ fs_help(){
 }
 # kill all the process
 fs_kill_process(){
+    ni=1
     for server_address in ${SERVER_ADDR[@]}; do
         echo "kill process on ${server_address}"
         ssh hyperchain@$server_address " pkill hyperchain"
+        ssh hyperchain@$server_address " cd /home/hyperchain/node${ni}/hyperjvm/bin && ./stop_hyperjvm.sh  "
+        ni=`expr $ni + 1`
         #ssh -T hyperchain@$server_address "if [ x\"`ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'`\" != \"x\" ]; then echo \"kill process \" && ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 ; else echo no hyperchain process runing ;fi"
         # ssh -T hyperchain@$server_address "ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 >& /dev/null"
 
@@ -304,7 +307,7 @@ fs_modifi_global(){
 fs_run_N_terminals_linux(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/node${ni} && ./hyperchain \""
+        gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/node${ni} && ./hyperchain 2>error.log \""
         ni=`expr $ni + 1`
     done
 }
@@ -312,7 +315,7 @@ fs_run_N_terminals_linux(){
 fs_run_N_terminals_mac(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/ && cp -rf ./config/keystore ./build/ && ./hyperchain \""'
+        osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/node'${ni}' && ./hyperchain \""'
         ni=`expr $ni + 1`
     done
 }
@@ -330,7 +333,7 @@ fs_run_one_terminal(){
 fs_delete_data(){
     echo "Delete all the old data"
     for server_address in ${SERVER_ADDR[@]}; do
-        ssh -T hyperchain@$server_address "rm -rf build"
+        ssh -T hyperchain@$server_address "rm -rf /home/hyperchain/node*"
     done
 }
 
@@ -363,10 +366,10 @@ do
     esac
 done
 
-#echo "run this script first time? $FIRST"
-#echo "delete the data? $DELETEDATA"
-#echo "rebuild and redistribute binary? $REBUILD"
-#echo "server env,true: suse,false: centos: $SERVER_ENV"
+echo "run this script first time? $FIRST"
+echo "delete the data? $DELETEDATA"
+echo "rebuild and redistribute binary? $REBUILD"
+echo "server env,true: suse,false: centos: $SERVER_ENV"
 
 if $FIRST; then
     fs_add_ssh_key_into_primary
@@ -379,13 +382,13 @@ fs_kill_process
 if $DELETEDATA; then
     fs_delete_data
 fi
-
+#
 if $REBUILD; then
     fs_distribute_the_binary
 fi
 
-#fs_modifi_global
-#fs_gen_and_distribute_peerconfig
+fs_modifi_global
+fs_gen_and_distribute_peerconfig
 echo "Running nodes"
 if $MODE; then
     fs_run_one_terminal

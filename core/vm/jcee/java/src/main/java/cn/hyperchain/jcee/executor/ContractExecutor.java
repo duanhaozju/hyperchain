@@ -55,14 +55,41 @@ public class ContractExecutor {
 
         @Override
         public void run() {
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+
             while (!close) {
+
+                Caller caller = null;
+                FutureTask<String> futureTask = null;
                 try {
-                    Caller caller = callers.take();
-                    caller.Call();
-                }catch (InterruptedException ie) {
-                    logger.error(ie);
-                }catch (Exception e) {
-                    logger.error(e);
+                    caller = callers.take();
+                    if(executor.isShutdown()){
+                        executor = Executors.newSingleThreadExecutor();
+                    }
+                    Caller finalCaller = caller;
+                    futureTask =
+                            new FutureTask<String>(new Callable<String>() {//使用Callable接口作为构造参数
+                                public String call() {
+                                    finalCaller.Call();
+                                    return "finish call";
+                                }});
+                    executor.execute(futureTask);
+
+                    String result = futureTask.get(1000, TimeUnit.MILLISECONDS);
+                    logger.debug("Current call result:"+result);
+                }catch (TimeoutException e) {
+                    logger.error("Current call result :Time out");
+                    futureTask.cancel(true);
+                    //todo: caller if null
+                    Errors.ReturnErrMsg(e.getMessage(),caller.getResponseObserver());
+
+                }catch (Exception e){
+                    futureTask.cancel(true);
+                    Errors.ReturnErrMsg(e.getMessage(),caller.getResponseObserver());
+                }finally {
+                    if(Thread.currentThread().isInterrupted()){
+                        executor.shutdown();
+                    }
                 }
             }
         }

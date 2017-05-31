@@ -34,7 +34,7 @@ public class JcsCache implements Cache{
     public void putInCache(byte[]key, byte[]value){
         try{
             cache.put( key, value);
-            logger.info("cache size after put:"+size());
+            logger.debug("cache size after put:"+size());
         }
         catch ( CacheException e){
             logger.info(String.format( "Problem putting object in the cache, for key %s%n%s",key, e.getMessage()));
