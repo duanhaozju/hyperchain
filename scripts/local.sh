@@ -130,7 +130,11 @@ do
     cp ${PROJECT_PATH}/scripts/sub_scripts/start.sh ${BIN_PATH}
     cp ${PROJECT_PATH}/scripts/sub_scripts/stop.sh ${BIN_PATH}
     cp ${PROJECT_PATH}/scripts/sub_scripts/stop.sh ${BIN_PATH}/stop_local.sh
-    sed -i "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
+    if [ ${_SYSTYPE} = "MAC" ]; then
+        sed -i "" "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
+    else
+        sed -i "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
+    fi
 done
 }
 
