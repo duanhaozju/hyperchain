@@ -10,6 +10,7 @@ import (
 	er "hyperchain/core/errors"
 	"os"
 	"github.com/golang/protobuf/proto"
+	"errors"
 )
 
 // Call executes within the given contract
@@ -21,35 +22,11 @@ func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input 
 
 // Create creates a new contract with the given code
 func Create(env vm.Environment, caller vm.ContractRef, buf []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
-	// static check
-	// precompile
-	// calculate hash
-	// etc
-
-	var args types.InvokeArgs
-	var codePath string
-	var code []byte
-
-	if err = proto.Unmarshal(buf, &args); err != nil {
-		return nil, common.Address{}, er.ExecContractErr(0, DecompressErr, err.Error())
+	err, codeDigest, codePath, msg := prepare(buf)
+	if err != nil {
+		return nil, common.Address{}, er.ExecContractErr(0, msg, err.Error())
 	}
-
-
-	if codePath, err = decompression(args.Code); err != nil {
-		return nil, common.Address{}, er.ExecContractErr(0, DecompressErr, err.Error())
-	}
-	if valid := staticCheck(); !valid {
-		return nil, common.Address{}, er.ExecContractErr(0, InvalidSourceCodeErr)
-	}
-
-	if err = compile(codePath); err != nil {
-		return nil, common.Address{}, er.ExecContractErr(0, CompileSourceCodeErr, err.Error())
-	}
-	if code, err = combineCode(codePath); err != nil {
-		return nil, common.Address{}, er.ExecContractErr(0, SigSourceCodeErr, err.Error())
-	}
-
-	ret, address, err = exec(env, caller, nil, nil, buf, codePath, code, gas, gasPrice, value, 0)
+	ret, address, err = exec(env, caller, nil, nil, buf, codePath, codeDigest, gas, gasPrice, value, 0)
 	if err != nil {
 		return nil, address, err
 	}
@@ -62,7 +39,7 @@ func Create(env vm.Environment, caller vm.ContractRef, buf []byte, gas, gasPrice
 	return ret, address, err
 }
 
-func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input []byte, codePath string, code []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
+func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input []byte, codePath string, codeDigest []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
 	virtualMachine := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -150,7 +127,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	if !createAccount {
 		codeHash = env.Db().GetCodeHash(to.Address())
 	} else {
-		codeHash = common.BytesToHash(crypto.Keccak256(code))
+		codeHash = common.BytesToHash(crypto.Keccak256(codeDigest))
 	}
 	context := NewContext(caller, to, env, createAccount, updateAccount, codePath, codeHash)
 	ret, err = virtualMachine.Run(context, input)
@@ -159,7 +136,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
 	if err == nil && createAccount {
-		env.Db().SetCode(*address, code)
+		env.Db().SetCode(*address, codeDigest)
 		env.Db().AddDeployedContract(caller.Address(), *address)
 		env.Db().SetCreator(*address, caller.Address())
 		env.Db().SetCreateTime(*address, env.BlockNumber().Uint64())
@@ -179,7 +156,35 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	return ret, addr, err
 }
 
+func prepare(buf []byte) (error, []byte, string, string) {
+	// static check
+	// precompile
+	// calculate hash
+	// etc
+	var args types.InvokeArgs
+	var codePath string
+	var codeDigest []byte
+	var err  error
 
+	if err = proto.Unmarshal(buf, &args); err != nil {
+		return err, codeDigest, codePath, DecompressErr
+	}
+
+	if codePath, err = decompression(args.Code); err != nil {
+		return err, codeDigest, codePath, DecompressErr
+	}
+	if valid := staticCheck(); !valid {
+		return errors.New("static code scan failed"), codeDigest, codePath, InvalidSourceCodeErr
+	}
+
+	if err = compile(codePath); err != nil {
+		return err, codeDigest, codePath, CompileSourceCodeErr
+	}
+	if codeDigest, err = combineCode(codePath); err != nil {
+		return err, codeDigest, codePath, SigSourceCodeErr
+	}
+	return nil, codeDigest, codePath, ""
+}
 
 func isUpdate(opcode types.TransactionValue_Opcode) bool {
 	return opcode == types.TransactionValue_UPDATE
