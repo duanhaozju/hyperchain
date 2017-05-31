@@ -399,7 +399,8 @@ func constructTxValue(args SendTxArgs, txType int) ([]byte, error) {
 
 		} else if txType == 2 {
 			// invoke
-			payload, err = types.ConstructInvokeArgs(nil, args.MethodName, args.Args)
+			code := common.FromHex(args.Payload)
+			payload, err = types.ConstructInvokeArgs(code, args.MethodName, args.Args)
 			if err != nil {
 				return nil, err
 			}
