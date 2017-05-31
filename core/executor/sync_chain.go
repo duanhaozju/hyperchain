@@ -34,11 +34,7 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 			}
 		}
 	}
-	err, ctx := executor.analysisEvent(ev)
-	if err != nil {
-		executor.logger.Infof("[Namespace = %s] create synchronization context failed, send state updated event", executor.namespace)
-		executor.sendStateUpdatedEvent()
-	}
+	ctx := executor.analysisEvent(ev)
 	executor.updateSyncFlag(ev.TargetHeight, ev.TargetBlockHash, ev.TargetHeight)
 	executor.setLatestSyncDownstream(ev.TargetHeight)
 	executor.recordSyncPeers(executor.fetchRepliceIds(ev), ev.Id)
@@ -387,15 +383,12 @@ func (executor *Executor) fetchRepliceIds(event event.ChainSyncReqEvent) []uint6
 	return ret
 }
 
-func (executor *Executor) analysisEvent(event event.ChainSyncReqEvent) (error, *ChainSyncContext) {
+func (executor *Executor) analysisEvent(event event.ChainSyncReqEvent) *ChainSyncContext {
 	var fullPeers []uint64
 	var partPeers []PartPeer
-	err, localGenesis := edb.GetGenesisTag(executor.namespace)
-	if err != nil {
-		return err, nil
-	}
+	curHeight := edb.GetHeightOfChain(executor.namespace)
 	for _, r := range event.Replicas {
-		if r.Genesis <= localGenesis {
+		if r.Genesis <= curHeight {
 			fullPeers = append(fullPeers, r.Id)
 		} else {
 			partPeers = append(partPeers, PartPeer{
@@ -404,7 +397,7 @@ func (executor *Executor) analysisEvent(event event.ChainSyncReqEvent) (error, *
 			})
 		}
 	}
-	return nil, &ChainSyncContext{
+	return &ChainSyncContext{
 		FullPeers:     fullPeers,
 		PartPeers:     partPeers,
 	}

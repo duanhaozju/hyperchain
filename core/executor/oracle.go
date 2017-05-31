@@ -12,8 +12,6 @@ const (
 	staticPeerFile = "global.configs.static_peers"
 )
 type Oracle struct {
-	peers           []uint64
-	staticPeers     []uint64
 	score           map[uint64]int64
 	genesis         map[uint64]uint64
 	conf            *common.Config
@@ -37,13 +35,19 @@ func NewOracle(ctx *ChainSyncContext, conf *common.Config, logger *logging.Logge
 	// assign init score
 	score := make(map[uint64]int64)
 	genesis := make(map[uint64]uint64)
-	for _, peer := range ctx.PartPeers {
-		score[peer] = 0
-		genesis[peer] = peer.Genesis
-	}
-	for _, peer := range ctx.FullPeers {
-		score[peer] = 10
-		genesis[peer] = 0
+
+	if len(ctx.FullPeers) == 0 {
+		for _, peer := range ctx.PartPeers {
+			score[peer] = 0
+			genesis[peer] = peer.Genesis
+		}
+		ctx.UpdateGenesis = true
+	} else {
+		for _, peer := range ctx.FullPeers {
+			score[peer] = 0
+			genesis[peer] = 0
+		}
+		ctx.UpdateGenesis = false
 	}
 	oracle := &Oracle{
 		genesis:     genesis,
@@ -54,15 +58,11 @@ func NewOracle(ctx *ChainSyncContext, conf *common.Config, logger *logging.Logge
 	staticPeers := oracle.ReadStaticPeer(oracle.conf.GetString(staticPeerFile))
 	logger.Debug("read static peers from configuration", staticPeers)
 	for _, peer := range staticPeers {
-		if contains(ctx.PartPeers, peer) {
-			oracle.staticPeers = append(oracle.staticPeers, peer)
-			oracle.score[peer] = 5
-		} else if contains(ctx.FullPeers, peer) {
-			oracle.staticPeers = append(oracle.staticPeers, peer)
-			oracle.score[peer] = 15
+		if _, exist := score[peer]; exist == true {
+			oracle.score[peer] += 5
 		}
 	}
-	logger.Debug("peer's scoreboard", oracle.score)
+	oracle.PrintScoreboard()
 	return oracle
 }
 func (oracle *Oracle) SelectPeer() uint64 {
@@ -128,5 +128,12 @@ func (oracle *Oracle) decScore() {
 		oracle.score[oracle.latestSelected] = oracle.score[oracle.latestSelected] - 1
 	} else {
 		oracle.score[oracle.latestSelected] = oracle.score[oracle.latestSelected] * 2
+	}
+}
+
+func (oracle *Oracle) PrintScoreboard() {
+	oracle.logger.Debug("<====== scoreboard =======>")
+	for pId, score := range oracle.score {
+		oracle.logger.Debugf("<====== peer (id #%d), score (#%d) =======>", pId, score)
 	}
 }
