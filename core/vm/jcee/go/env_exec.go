@@ -155,7 +155,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	if err == nil && (createAccount || updateAccount) {
 		env.Db().SetCode(*address, codeDigest)
 	}
-	if err != nil  && createAccount {
+	if err == nil && createAccount {
 		env.Db().AddDeployedContract(caller.Address(), *address)
 		env.Db().SetCreator(*address, caller.Address())
 		env.Db().SetCreateTime(*address, env.BlockNumber().Uint64())
