@@ -4,6 +4,9 @@
  */
 package cn.hyperchain.jcee.executor;
 
+import cn.hyperchain.jcee.util.Errors;
+import cn.hyperchain.protos.ContractProto;
+import io.grpc.stub.StreamObserver;
 import org.apache.log4j.Logger;
 
 import java.util.Map;
@@ -65,6 +68,8 @@ public class ContractExecutor {
                     caller = callers.take();
                     if(executor.isShutdown()){
                         executor = Executors.newSingleThreadExecutor();
+                        logger.info("new executor after shutdown");
+
                     }
                     Caller finalCaller = caller;
                     futureTask =
@@ -75,20 +80,27 @@ public class ContractExecutor {
                                 }});
                     executor.execute(futureTask);
 
-                    String result = futureTask.get(1000, TimeUnit.MILLISECONDS);
-                    logger.debug("Current call result:"+result);
+                    String result = futureTask.get(4000, TimeUnit.MILLISECONDS);
+                    logger.info("Current call result:"+result);
                 }catch (TimeoutException e) {
                     logger.error("Current call result :Time out");
                     futureTask.cancel(true);
-                    //todo: caller if null
-                    Errors.ReturnErrMsg(e.getMessage(),caller.getResponseObserver());
+                    if(caller == null){
+                        logger.error("caller is null");
+                    }
+                    Errors.ReturnErrMsg(e.toString(),caller.getResponseObserver());
 
                 }catch (Exception e){
                     futureTask.cancel(true);
-                    Errors.ReturnErrMsg(e.getMessage(),caller.getResponseObserver());
+                    if(caller == null){
+                        logger.error("caller is null");
+                    }
+                    Errors.ReturnErrMsg(e.toString(),caller.getResponseObserver());
                 }finally {
-                    if(Thread.currentThread().isInterrupted()){
+                    if(futureTask.isCancelled()){
                         executor.shutdown();
+                        logger.info("executor shutdown");
+
                     }
                 }
             }
