@@ -13,14 +13,13 @@ import (
 	"hyperchain/hyperdb"
 )
 
-
 // StoreState stores a key,value pair
 func StoreState(namespace string, key string, value []byte) error {
 	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
 	if err != nil {
 		return err
 	}
-	return db.Put([]byte("consensus." + key), value)
+	return db.Put([]byte("consensus."+key), value)
 }
 
 //DelAllState: remove all state

@@ -3,21 +3,22 @@
 package pbft
 
 import (
+	"encoding/base64"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/consensus/events"
-	"encoding/base64"
 	"hyperchain/consensus/helper/persist"
 )
+
 /**
-	This file contains recovery related issues
- */
+This file contains recovery related issues
+*/
 
 type recoveryManager struct {
-	recoveryToSeqNo	       *uint64				 // recoveryToSeqNo is the target seqNo expected to recover to
-	rcRspStore             map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
-	rcPQCSenderStore       map[uint64]bool			 // rcPQCSenderStore store those who sent PQC info to self
-	recvNewViewInRecovery  bool				 // recvNewViewInRecovery record whether receive new view during recovery
-	negoViewRspStore       map[uint64]*NegotiateViewResponse // track replicaId, viewNo.
+	recoveryToSeqNo       *uint64                           // recoveryToSeqNo is the target seqNo expected to recover to
+	rcRspStore            map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
+	rcPQCSenderStore      map[uint64]bool                   // rcPQCSenderStore store those who sent PQC info to self
+	recvNewViewInRecovery bool                              // recvNewViewInRecovery record whether receive new view during recovery
+	negoViewRspStore      map[uint64]*NegotiateViewResponse // track replicaId, viewNo.
 }
 
 type blkIdx struct {
@@ -25,7 +26,7 @@ type blkIdx struct {
 	hash   string
 }
 
-func newRecoveryMgr() *recoveryManager  {
+func newRecoveryMgr() *recoveryManager {
 	rm := &recoveryManager{}
 
 	rm.recoveryToSeqNo = nil
@@ -99,7 +100,6 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 	return nil
 }
 
-
 // recvRcry process incoming proactive recovery message
 func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 
@@ -122,7 +122,7 @@ func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 		Chkpts:        chkpts,
 		BlockHeight:   height,
 		LastBlockHash: curHash,
-		Genesis: genesis,
+		Genesis:       genesis,
 	}
 
 	rcMsg, err := proto.Marshal(rc)
@@ -207,8 +207,8 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.recoveryMgr.recoveryToSeqNo = nil
 
 		return &LocalEvent{
-			Service:RECOVERY_SERVICE,
-			EventType:RECOVERY_DONE_EVENT,
+			Service:   RECOVERY_SERVICE,
+			EventType: RECOVERY_DONE_EVENT,
 		}
 	}
 
@@ -242,7 +242,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.stateTransfer(target)
 		return nil
 	} else if !pbft.status.getState(&pbft.status.skipInProgress) && !pbft.status.getState(&pbft.status.inVcReset) {
-		pbft.helper.VcReset(n+1)
+		pbft.helper.VcReset(n + 1)
 		//state := &LocalEvent{
 		//	Service:CORE_PBFT_SERVICE,
 		//	EventType:CORE_STATE_UPDATE_EVENT,
@@ -273,16 +273,16 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []r
 			peers, ok := chkpts[chkptIdx]
 			if ok {
 				replica := replicaInfo{
-					id: from,
-					height: rsp.BlockHeight,
+					id:      from,
+					height:  rsp.BlockHeight,
 					genesis: rsp.Genesis,
 				}
 				peers[replica] = true
 			} else {
 				peers = make(map[replicaInfo]bool)
 				replica := replicaInfo{
-					id: from,
-					height: rsp.BlockHeight,
+					id:      from,
+					height:  rsp.BlockHeight,
 					genesis: rsp.Genesis,
 				}
 				peers[replica] = true

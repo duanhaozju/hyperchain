@@ -5,61 +5,61 @@ package pbft
 
 import (
 	"hyperchain/consensus/events"
-	"time"
 	"hyperchain/core/types"
+	"time"
 
-	"hyperchain/common"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"hyperchain/common"
 )
 
 // batchManager manage basic batch issues
 // exp:
 // 	1.pushEvent
 //      2.batch events timer management
-type batchManager struct{
-	batchSize        	int
-	batchStore       	[]*types.Transaction            //ordered message batch
-	batchEventsManager  	events.Manager //pbft.batchManager => batchManager
-	batchTimerActive 	bool
+type batchManager struct {
+	batchSize          int
+	batchStore         []*types.Transaction //ordered message batch
+	batchEventsManager events.Manager       //pbft.batchManager => batchManager
+	batchTimerActive   bool
 }
 
 //batchValidator used to manager batch validate issues.
 type batchValidator struct {
-	vid                 	uint64                       // track the validate sequence number
-	lastVid             	uint64                       // track the last validate batch seqNo
-	currentVid          	*uint64                      // track the current validate batch seqNo
+	vid        uint64  // track the validate sequence number
+	lastVid    uint64  // track the last validate batch seqNo
+	currentVid *uint64 // track the current validate batch seqNo
 
-	validatedBatchStore 	map[string]*TransactionBatch // track the validated transaction batch
-	cacheValidatedBatch 	map[string]*cacheBatch       // track the cached validated batch
+	validatedBatchStore map[string]*TransactionBatch // track the validated transaction batch
+	cacheValidatedBatch map[string]*cacheBatch       // track the cached validated batch
 
-	validateTimer		events.Timer
-	validateTimeout		time.Duration
-	preparedCert            map[msgID]string             // track the prepared cert to help validate
+	validateTimer   events.Timer
+	validateTimeout time.Duration
+	preparedCert    map[msgID]string // track the prepared cert to help validate
 
-	pbftId                  uint64
+	pbftId uint64
 }
 
-func (bv *batchValidator) setVid(vid uint64)  {
+func (bv *batchValidator) setVid(vid uint64) {
 	bv.vid = vid
 }
 
 //incVid increase vid.
-func (bv *batchValidator) incVid()  {
+func (bv *batchValidator) incVid() {
 	bv.vid = bv.vid + 1
 }
 
-func (bv *batchValidator) setLastVid(lvid uint64)  {
+func (bv *batchValidator) setLastVid(lvid uint64) {
 	bv.lastVid = lvid
 }
 
 //saveToCVB save the cacheBatch into cacheValidatedBatch.
-func (bv *batchValidator) saveToCVB(digest string, cb *cacheBatch)  {
+func (bv *batchValidator) saveToCVB(digest string, cb *cacheBatch) {
 	bv.cacheValidatedBatch[digest] = cb
 }
 
 //saveToVBS save the transaction into validatedBatchStore.
-func (bv *batchValidator) saveToVBS(digest string, tx *TransactionBatch)  {
+func (bv *batchValidator) saveToVBS(digest string, tx *TransactionBatch) {
 	bv.validatedBatchStore[digest] = tx
 }
 
@@ -76,12 +76,12 @@ func (bv *batchValidator) containsInVBS(digest string) bool {
 }
 
 //update lastVid  and currentVid
-func (bv *batchValidator) updateLCVid()  {
+func (bv *batchValidator) updateLCVid() {
 	bv.lastVid = *bv.currentVid
 	bv.currentVid = nil
 }
 
-func (bv *batchValidator) setCurrentVid(cvid *uint64)  {
+func (bv *batchValidator) setCurrentVid(cvid *uint64) {
 	bv.currentVid = cvid
 }
 
@@ -101,17 +101,17 @@ func (bv *batchValidator) getTxBatchFromVBS(digest string) *TransactionBatch {
 }
 
 //deleteCacheFromCVB delete cacheBatch from cachedValidatedBatch.
-func (bv *batchValidator) deleteCacheFromCVB(digest string)  {
+func (bv *batchValidator) deleteCacheFromCVB(digest string) {
 	delete(bv.cacheValidatedBatch, digest)
 }
 
 //deleteTxFromVBS delete transaction from validatedBatchStore.
-func (bv *batchValidator) deleteTxFromVBS(digest string)  {
+func (bv *batchValidator) deleteTxFromVBS(digest string) {
 	delete(bv.validatedBatchStore, digest)
 }
 
 //emptyVBS empty the validatedBatchStore.
-func (bv *batchValidator) emptyVBS()  {
+func (bv *batchValidator) emptyVBS() {
 	bv.validatedBatchStore = make(map[string]*TransactionBatch)
 }
 
@@ -119,7 +119,6 @@ func (bv *batchValidator) emptyVBS()  {
 func (bv *batchValidator) vbsSize() int {
 	return len(bv.validatedBatchStore)
 }
-
 
 func newBatchValidator(pbft *pbftImpl) *batchValidator {
 
@@ -148,7 +147,7 @@ func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 		panic(fmt.Errorf("Cannot parse batch timeout: %s", err))
 	}
 
-	if batchTimeout >= pbft.pbftTimerMgr.requestTimeout {//TODO: change the pbftTimerMgr to batchTimerMgr
+	if batchTimeout >= pbft.pbftTimerMgr.requestTimeout { //TODO: change the pbftTimerMgr to batchTimerMgr
 		pbft.pbftTimerMgr.requestTimeout = 3 * batchTimeout / 2
 		pbft.logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", pbft.pbftTimerMgr.requestTimeout)
 	}
@@ -159,7 +158,7 @@ func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 	return bm
 }
 
-func (bm *batchManager) start()  {
+func (bm *batchManager) start() {
 	bm.batchEventsManager.Start()
 }
 
@@ -171,19 +170,19 @@ func (bm *batchManager) batchStoreSize() int {
 	return len(bm.batchStore)
 }
 
-func (bm *batchManager) isBatchStoreEmpty() bool  {
+func (bm *batchManager) isBatchStoreEmpty() bool {
 	return bm.batchStoreSize() == 0
 }
 
-func (bm *batchManager) setBatchStore(bs []*types.Transaction)  {
+func (bm *batchManager) setBatchStore(bs []*types.Transaction) {
 	bm.batchStore = bs
 }
 
-func (bm *batchManager) addTransaction(tx *types.Transaction)  {
+func (bm *batchManager) addTransaction(tx *types.Transaction) {
 	bm.batchStore = append(bm.batchStore, tx)
 }
 
-func (bm *batchManager) isBatchTimerActive() bool  {
+func (bm *batchManager) isBatchTimerActive() bool {
 	return bm.batchTimerActive
 }
 
@@ -192,13 +191,13 @@ func (bm *batchManager) canSendBatch() bool {
 }
 
 //pushEvent push the event into the batch events queue.
-func (bm *batchManager) pushEvent(event interface{})  {
+func (bm *batchManager) pushEvent(event interface{}) {
 	//pbft.logger.Debugf("send event into batch event queue, %v", event)
 	bm.batchEventsManager.Queue() <- event
 }
 
 //startBatchTimer stop the batch event timer.
-func (pbft *pbftImpl) startBatchTimer()  {
+func (pbft *pbftImpl) startBatchTimer() {
 	event := &LocalEvent{
 		Service:   CORE_PBFT_SERVICE,
 		EventType: CORE_BATCH_TIMER_EVENT,
