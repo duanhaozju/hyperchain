@@ -1,10 +1,10 @@
 #used to generate namespace config files
 
 namespace: global
-maxpeernode: 7
+maxpeernode: 4
 
 node1:
-    ip: 127.0.0.1
+    ip: 172.16.0.11
     node_id: 1
     is_origin: true
     is_vp: true
@@ -14,76 +14,47 @@ node1:
     introducer_ip: 127.0.0.1
     introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051
 
 node2:
-    ip: 127.0.0.1
+    ip: 172.16.0.12
     node_id: 2
     is_origin: true
     is_vp: true
-    grpc_port: 8002
-    jsonrpc_port: 8082
-    restful_port: 9002
-    introducer_ip: 127.0.0.1
+    grpc_port: 8001
+    jsonrpc_port: 8081
+    restful_port: 9001
+    introducer_ip: 172.16.0.11
     introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051
 
 node3:
-    ip: 127.0.0.1
+    ip: 172.16.0.13
     node_id: 3
     is_origin: true
     is_vp: true
-    grpc_port: 8003
-    jsonrpc_port: 8083
-    restful_port: 9003
-    introducer_ip: 127.0.0.1
+    grpc_port: 8001
+    jsonrpc_port: 8081
+    restful_port: 9001
+    introducer_ip: 172.16.0.11
     introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051
 
 node4:
-    ip: 127.0.0.1
+    ip: 172.16.0.14
     node_id: 4
     is_origin: true
     is_vp: true
-    grpc_port: 8004
-    jsonrpc_port: 8084
-    restful_port: 9004
-    introducer_ip: 127.0.0.1
+    grpc_port: 8001
+    jsonrpc_port: 8081
+    restful_port: 9001
+    introducer_ip: 172.16.0.11
     introducer_port: 8001
     introducer_id: 1
-
-node5:
-    ip: 127.0.0.1
-    node_id: 5
-    is_origin: true
-    is_vp: true
-    grpc_port: 8005
-    jsonrpc_port: 8085
-    restful_port: 9005
-    introducer_ip: 127.0.0.1
-    introducer_port: 8001
-    introducer_id: 1
-
-node6:
-    ip: 127.0.0.1
-    node_id: 6
-    is_origin: true
-    is_vp: true
-    grpc_port: 8006
-    jsonrpc_port: 8086
-    restful_port: 9006
-    introducer_ip: 127.0.0.1
-    introducer_port: 8001
-    introducer_id: 1
-
-node7:
-    ip: 127.0.0.1
-    node_id: 7
-    is_origin: true
-    is_vp: true
-    grpc_port: 8007
-    jsonrpc_port: 8087
-    restful_port: 9007
-    introducer_ip: 127.0.0.1
-    introducer_port: 8001
-    introducer_id: 1
-
+    jvm_port: 50081
+    ledger_port: 50051

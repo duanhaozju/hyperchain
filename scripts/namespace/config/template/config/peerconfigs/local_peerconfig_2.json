@@ -9,7 +9,9 @@
   "restful_port":9002,
   "introducer_ip":"127.0.0.1",
   "introducer_port":8001,
-  "introducer_id":1
+  "introducer_id":1,
+  "jvm_port":50082,
+  "ledger_port":50052
  },
   "maxpeernode":4,
   "nodes":[

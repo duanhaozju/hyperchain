@@ -20,11 +20,18 @@ public class HyperchainLedger extends AbstractLedger{
 
     private static final Logger logger = Logger.getLogger(HyperchainLedger.class.getSimpleName());
     private LedgerClient ledgerClient;
+    private Cache cache;
     public HyperchainLedger(int port){
         ledgerClient = new LedgerClient("localhost", port);
+        cache = new JcsCache();
     }
 
     public byte[] get(byte[] key) {
+        byte[] data = cache.retrieveFromCache(key);
+        if(data != null){
+            return data;
+        }
+
         ContractProto.Key sendkey = ContractProto.Key.newBuilder()
                 .setContext(getLedgerContext())
                 .setK(ByteString.copyFrom(key))
@@ -32,7 +39,11 @@ public class HyperchainLedger extends AbstractLedger{
         logger.info("Transaction id: " + getContext().getId());
 
         ByteString v = ledgerClient.get(sendkey).getV();
-        if (v == null || v.isEmpty()) return null;
+        if (v == null || v.isEmpty()){
+            cache.putInCache(key,null);
+            return null;
+        }
+        cache.putInCache(key,v.toByteArray());
         return v.toByteArray();
     }
 
@@ -42,16 +53,31 @@ public class HyperchainLedger extends AbstractLedger{
                 .setK(ByteString.copyFrom(key))
                 .setV(ByteString.copyFrom(value))
                 .build();
-        return ledgerClient.put(kv);
+
+        boolean success = ledgerClient.put(kv);
+        if(success){
+            cache.putInCache(key,value);
+        }
+        return success;
     }
 
     public ContractProto.Value fetch(byte[] key) {
+        byte[] data = cache.retrieveFromCache(key);
+        if(data!=null){
+            ContractProto.Value recvValue = ContractProto.Value.newBuilder()
+                    .setV(ByteString.copyFrom(data))
+                    .build();
+            return recvValue;
+        }
         ContractProto.Key sendkey = ContractProto.Key.newBuilder()
                 .setContext(getLedgerContext())
                 .setK(ByteString.copyFrom(key))
                 .build();
         logger.info("Transaction id: " + getContext().getId());
-        return ledgerClient.get(sendkey);
+
+        ContractProto.Value value = ledgerClient.get(sendkey);
+        cache.putInCache(key,value.toByteArray());
+        return value;
     }
 
     public ContractProto.LedgerContext getLedgerContext(){
@@ -69,7 +95,11 @@ public class HyperchainLedger extends AbstractLedger{
                 .setContext(getLedgerContext())
                 .setK(ByteString.copyFrom(key))
                 .build();
-        return ledgerClient.delete(ck);
+        boolean success = ledgerClient.delete(ck);
+        if(success){
+            cache.removeFromCache(key);
+        }
+        return success;
     }
 
     @Override
@@ -253,7 +283,19 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     public boolean writeBatch(ContractProto.BatchKV batch) {
-        return ledgerClient.batchWrite(batch);
+
+        boolean success = ledgerClient.batchWrite(batch);
+        if(success){
+            int count = batch.getKvCount();
+            for(int i =0;i<count;i++){
+                ContractProto.KeyValue data = batch.getKv(i);
+                byte[] key = data.getK().toByteArray();
+                byte[] value = data.getV().toByteArray();
+                cache.putInCache(key, value);
+            }
+        }
+
+        return success;
     }
 
     @Override
@@ -263,12 +305,23 @@ public class HyperchainLedger extends AbstractLedger{
 
     @Override
     public Batch batchRead(BatchKey key) {
-        ContractProto.BathValue bv = ledgerClient.bathRead(toProtoBatchKey(key));
         Batch batch = this.newBatch();
-        List<ByteString> values = bv.getVList();
         List<byte[]> keys = key.getKeys();
+        BatchKey bk = newBatchKey();
+
+        for(byte[] k: keys){
+            byte[] value = cache.retrieveFromCache(k);
+            if(value!=null){
+                batch.put(k,value);
+            }
+            else {
+                bk.put(k);
+            }
+        }
+        ContractProto.BathValue bv = ledgerClient.bathRead(toProtoBatchKey(bk));
+        List<ByteString> values = bv.getVList();
         int i = 0;
-        for (byte[] k: keys) {
+        for (byte[] k: bk.getKeys()) {
             batch.put(k, values.get(i).toByteArray());
             i ++;
         }

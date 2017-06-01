@@ -1,48 +1,23 @@
 global:
-  account:
-    keynodesdir: ./build/keynodes
-    keystoredir: ./build/keystore
   configs:
-    buckettree:
-      state:
-        cachesize: 500
-        levelgroup: 5
-        size: 1000003
-      storage:
-        cachesize: 500
-        levelgroup: 5
-        size: 1000003
-    caconfig: config/caconfig.toml
-    genesis: config/genesis.json
-    hmpublickey:
-      g: "90976693534933209671098397317966944738726332459523400324197777885595356310417"
-      "n": "14315727801779002117"
-      nsquare: "204940062494628260128356353732290481689"
-    license: config/LICENSE
-    pbft: config/pbft.yaml
     peers: config/peerconfig.json
-    ratelimit:
-      contractfillrate: 0.5ms
-      contractratepeak: 100
-      enable: true
-      txfillrate: 0.5ms
-      txratepeak: 100
-    replicainfo:
-      enable: false
-      interval: 500s
-  dbconfig: ./config/db.yaml
   logs:
+    console_format: '%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile}
+      %{message} %{color:reset}'
     dumpfile: true
+    file_format: '[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}'
     loglevel: NOTICE
-    logsdir: ./build/logs
+    logsdir: ./logs
     module:
       consensus: NOTICE
       core: NOTICE
+      eventhub: NOTICE
       hyperdb: NOTICE
       p2p: NOTICE
     newlogfileinterval: 24h
-  structure:
-    state: hyperstate
-  version:
-    blockversion: "1.0"
-    transactionversion: "1.0"
+  namespace:
+    start:
+      global: true
+      ns1: false
+      ns2: false
+  nsconfigrootpath: ./namespaces
