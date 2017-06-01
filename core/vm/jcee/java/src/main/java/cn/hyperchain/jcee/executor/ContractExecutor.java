@@ -81,7 +81,7 @@ public class ContractExecutor {
                     executor.execute(futureTask);
 
                     String result = futureTask.get(4000, TimeUnit.MILLISECONDS);
-                    logger.info("Current call result:"+result);
+//                    logger.info("Current call result:"+result);
                 }catch (TimeoutException e) {
                     logger.error("Current call result :Time out");
                     futureTask.cancel(true);

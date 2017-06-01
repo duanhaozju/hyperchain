@@ -59,7 +59,7 @@ func NewContractCMD() []cli.Command {
 		},
 		{
 			Name:    "invoke",
-			Usage:   "Invoke a contract method",
+			Usage:   "Invoke a contract",
 			Action:  invoke,
 			Flags:   append(commonFlags, []cli.Flag{
 				cli.StringFlag{
@@ -88,7 +88,7 @@ func NewContractCMD() []cli.Command {
 		},
 		{
 			Name:    "update",
-			Usage:   "Update a contract method",
+			Usage:   "Update a contract",
 			Action:  update,
 			Flags:   append(commonFlags, []cli.Flag{
 				cli.StringFlag{
@@ -110,7 +110,7 @@ func NewContractCMD() []cli.Command {
 		},
 		{
 			Name:    "frozen",
-			Usage:   "Frozen a contract method",
+			Usage:   "Frozen a contract",
 			Action:  frozen,
 			Flags:   append(commonFlags, []cli.Flag{
 				cli.StringFlag{
@@ -127,7 +127,7 @@ func NewContractCMD() []cli.Command {
 		},
 		{
 			Name:    "unfrozen",
-			Usage:   "Unfrozen a contract method",
+			Usage:   "Unfrozen a contract",
 			Action:  unfrozen,
 			Flags:   append(commonFlags, []cli.Flag{
 				cli.StringFlag{
@@ -144,7 +144,7 @@ func NewContractCMD() []cli.Command {
 		},
 		{
 			Name:    "destroy",
-			Usage:   "Destroy a contract method",
+			Usage:   "Destroy a contract",
 			Action:  destroy,
 			Flags:   append(commonFlags, []cli.Flag{
 				cli.StringFlag{
