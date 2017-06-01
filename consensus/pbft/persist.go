@@ -342,7 +342,7 @@ func (pbft *pbftImpl) restoreLastSeqNo() {
 func (pbft *pbftImpl) getLastSeqNo() (uint64, error) {
 
 	var err error
-	h := persist.GetHeightofChain(pbft.namespace)
+	h := persist.GetHeightOfChain(pbft.namespace)
 	if h == 0 {
 		err = errors.Errorf("Height of chain is 0")
 		return h, err

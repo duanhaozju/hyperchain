@@ -258,6 +258,10 @@ func (pbft *pbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 	}
 }
 
+func (pbft *pbftImpl) getGenesisInfo() uint64 {
+	_, genesis := persist.GetGenesisOfChain(pbft.namespace)
+	return genesis
+}
 // =============================================================================
 // helper functions for timer
 // =============================================================================
