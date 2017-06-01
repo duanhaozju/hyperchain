@@ -5,6 +5,7 @@
 package cn.hyperchain.jcee.contract.examples.sb;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
+import cn.hyperchain.jcee.common.exception.NotExistException;
 import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.Batch;
 import cn.hyperchain.jcee.ledger.BatchKey;
@@ -94,7 +95,8 @@ public class SimulateBank extends ContractTemplate {
             }
 
         }catch (Exception e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
+            return result(false, e.getMessage());
         }
 
         return result(true);
@@ -182,8 +184,13 @@ public class SimulateBank extends ContractTemplate {
         logger.info("put success");
         if (ledger.delete(key) == false) return result(false);
         logger.info("delete success");
-        String getV = ledger.getString(key);
-        logger.info("get deleted value is " + getV);
+        String getV = null;
+        try {
+            getV = ledger.getString(key);
+            logger.info("get deleted value is " + getV);
+        } catch (NotExistException e) {
+            logger.error(e.getMessage());
+        }
         return result(getV.isEmpty());
     }
 

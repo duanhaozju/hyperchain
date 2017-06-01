@@ -4,6 +4,8 @@
  */
 package cn.hyperchain.jcee.ledger;
 
+import cn.hyperchain.jcee.common.exception.NotExistException;
+
 public interface ILedger {
     //newBatch create a new batch
     Batch newBatch();
@@ -21,24 +23,24 @@ public interface ILedger {
     boolean delete(byte[] key);
     boolean delete(String key);
 
-    byte[] get(byte[] key);
-    boolean getBoolean(byte[] key);
-    short getShort(byte[] key);
-    char getChar(byte[] key);
-    int getInt(byte[] key);
-    float getFloat(byte[] key);
-    double getDouble(byte[] key);
-    String getString(byte[] key);
+    byte[] get(byte[] key) throws NotExistException;
+    boolean getBoolean(byte[] key) throws NotExistException;
+    short getShort(byte[] key) throws NotExistException;
+    char getChar(byte[] key) throws NotExistException;
+    int getInt(byte[] key) throws NotExistException;
+    float getFloat(byte[] key) throws NotExistException;
+    double getDouble(byte[] key) throws NotExistException;
+    String getString(byte[] key) throws NotExistException;
     <T> T getObject(byte[] key, Class<T> clazz);
 
-    byte[] get(String key);
-    boolean getBoolean(String key);
-    short getShort(String key);
-    char getChar(String key);
-    int getInt(String key);
-    float getFloat(String key);
-    double getDouble(String key);
-    String getString(String key);
+    byte[] get(String key) throws NotExistException;
+    boolean getBoolean(String key) throws NotExistException;
+    short getShort(String key) throws NotExistException;
+    char getChar(String key) throws NotExistException;
+    int getInt(String key) throws NotExistException;
+    float getFloat(String key) throws NotExistException;
+    double getDouble(String key) throws NotExistException;
+    String getString(String key) throws NotExistException;
     <T> T getObject(String key, Class<T> clazz);
 
     boolean put(byte[] key, byte[]value);
