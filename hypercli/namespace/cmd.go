@@ -14,7 +14,6 @@ func NewNamespaceCMD() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "startNsMgr",
-			Aliases: []string{"s"},
 			Usage:   "start the namespace manager",
 			Action:  start,
 		},

@@ -25,8 +25,9 @@ const (
 	C_PEER_CONFIG_PATH   = "global.peerconfigs.path"
 	C_GLOBAL_CONFIG_PATH = "global.globalconfig.path"
 
-	C_JVM_PORT          = "global.jvm_port"
-	C_LEDGER_PORT       = "global.ledger_port"
+	C_JVM_PORT           = "global.jvm_port"
+	C_LEDGER_PORT        = "global.ledger_port"
+	C_JVM_START          = "global.hypervm.jvm"
 )
 
 const (

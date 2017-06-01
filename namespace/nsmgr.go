@@ -40,6 +40,12 @@ type NamespaceManager interface {
 	Register(name string) error
 	//DeRegister de-register namespace from system by name.
 	DeRegister(name string) error
+	//StartJvm start jvm manager
+	StartJvm() error
+	//StopJvm stop jvm manager
+	StopJvm() error
+	//RestartJvm restart jvm manager
+	RestartJvm() error
 	//GetNamespaceByName get namespace instance by name.
 	GetNamespaceByName(name string) Namespace
 	//ProcessRequest process received request
@@ -126,8 +132,10 @@ func (nr *nsManagerImpl) Start() error {
 		}
 	}
 
-	if err := nr.jvmManager.Start(); err != nil {
-		return err
+	if nr.conf.GetBool(common.C_JVM_START) == true {
+		if err := nr.jvmManager.Start(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -275,4 +283,31 @@ func (nr *nsManagerImpl) RestartNamespace(name string) error {
 //GlobalConfig global configuration of the system.
 func (nr *nsManagerImpl) GlobalConfig() *common.Config {
 	return nr.conf
+}
+
+//StartJvm starts the jvm manager
+func (nr *nsManagerImpl) StartJvm() error {
+	if err := nr.jvmManager.Start(); err != nil {
+		return err
+	}
+	return nil
+}
+
+//StopJvm stops the jvm manager
+func (nr *nsManagerImpl) StopJvm() error {
+	if err := nr.jvmManager.Stop(); err != nil {
+		return err
+	}
+	return nil
+}
+
+//RestartJvm restarts the jvm manager
+func (nr *nsManagerImpl) RestartJvm() error {
+	if err := nr.jvmManager.Stop(); err != nil {
+		return err
+	}
+	if err := nr.jvmManager.Start(); err != nil {
+		return err
+	}
+	return nil
 }
