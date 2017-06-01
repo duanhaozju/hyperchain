@@ -11,8 +11,10 @@ message SessionMessage {
         BROADCAST_SINGLE_BLK = 4;
         UNICAST_BLK = 5;
         SYNC_REQ = 6;
-        ADD_PEER = 7;
-        DEL_PEER = 8;
+        SYNC_WORLD_STATE = 7;
+        SEND_WORLD_STATE = 8;
+        ADD_PEER = 9;
+        DEL_PEER = 10;
     }
     Type type = 1;
     bytes payload = 2;

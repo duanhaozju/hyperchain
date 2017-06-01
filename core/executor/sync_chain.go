@@ -66,10 +66,32 @@ func (executor *Executor) syncChainResendBackend() {
 // ReceiveSyncRequest - receive synchronization request from some nodes, and send back request blocks.
 func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 	var request ChainSyncRequest
-	proto.Unmarshal(payload, &request)
+	if err := proto.Unmarshal(payload, &request); err != nil {
+		executor.logger.Error("unmarshal sync request failed.")
+		return
+	}
 	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
 		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
 	}
+}
+
+func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
+	var request WorldStateSyncRequest
+	if err := proto.Unmarshal(payload, &request); err != nil {
+		executor.logger.Warning("unmarshal world state sync request failed.")
+		return
+	}
+	err, manifest := executor.snapshotReg.rwc.Search(request.Target)
+	if err != nil {
+		executor.logger.Warning("required snapshot doesn't exist")
+		return
+	}
+	if err := executor.snapshotReg.CompressSnapshot(manifest.FilterId); err != nil {
+		executor.logger.Warning("compress snapshot failed")
+		return
+	}
+	// TODO Stream communication is a better way
+	// TODO @Rongjialei please fix me
 }
 
 // ReceiveSyncBlocks - receive request synchronization blocks from others.
@@ -108,10 +130,23 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 				executor.SendSyncRequest(prev, next)
 			} else {
 				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
+				// TODO
+				if executor.status.syncCtx.UpdateGenesis {
+
+				}
 			}
 		}
 		executor.processSyncBlocks()
 	}
+}
+
+func (executor *Executor) ReceiveWorldState(payload []byte) {
+	var packet WorldStateContext
+	if err := proto.Unmarshal(payload, &packet); err != nil {
+		executor.logger.Warning("unmarshal world state packet failed.")
+		return
+	}
+	// apply
 }
 
 // SendSyncRequest - send synchronization request to other nodes.
@@ -255,6 +290,10 @@ func (executor *Executor) SendSyncRequestForSingle(number uint64) {
 	executor.informP2P(NOTIFY_BROADCAST_SINGLE, number)
 }
 
+func (executor *Executor) SendSyncRequestForWorldState(number uint64) {
+	executor.informP2P(NOTIFY_REQUEST_WORLD_STATE, number)
+}
+
 // updateSyncDemand - update next demand block number and block hash.
 func (executor *Executor) updateSyncDemand(block *types.Block) error {
 	var tmp = block.Number - 1
@@ -355,7 +394,8 @@ func (executor *Executor) calcuDownstream() uint64 {
 	if total < executor.GetSyncMaxBatchSize() {
 		_, genesis := executor.status.syncCtx.GetCurrentGenesis()
 		if genesis > edb.GetHeightOfChain(executor.namespace) {
-			executor.setLatestSyncDownstream(genesis)
+			// genesis block is also required
+			executor.setLatestSyncDownstream(genesis - 1)
 			executor.logger.Notice("update temporarily downstream with peer's genesis")
 		} else {
 			executor.setLatestSyncDownstream(edb.GetHeightOfChain(executor.namespace))
@@ -364,7 +404,8 @@ func (executor *Executor) calcuDownstream() uint64 {
 	} else {
 		_, genesis := executor.status.syncCtx.GetCurrentGenesis()
 		if genesis > executor.getLatestSyncDownstream() - executor.GetSyncMaxBatchSize() {
-			executor.setLatestSyncDownstream(genesis)
+			// genesis block is also required
+			executor.setLatestSyncDownstream(genesis - 1)
 			executor.logger.Notice("update temporarily downstream with peer's genesis")
 		} else {
 			executor.setLatestSyncDownstream(executor.getLatestSyncDownstream() - executor.GetSyncMaxBatchSize())

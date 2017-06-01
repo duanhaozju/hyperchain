@@ -28,6 +28,7 @@ type ManifestRWC interface {
 	List() (error, Manifests)
 	Delete(string) error
 	Contain(string) bool
+	Search(uint64) (error, Manifest)
 }
 
 type ManifestHandler struct {
@@ -135,6 +136,23 @@ func (rwc *ManifestHandler) Contain(id string) bool {
 	return false
 }
 
+func (rwc *ManifestHandler) Search(height uint64) (error, Manifest) {
+	buf, err := ioutil.ReadFile(rwc.filePath)
+	if err != nil {
+		return err, Manifest{}
+	}
+	var manifests Manifests
+	if err := json.Unmarshal(buf, &manifests); err != nil {
+		return err, Manifest{}
+	}
+	for _, manifest := range manifests {
+		if manifest.Height == height {
+			return nil, manifest
+		}
+	}
+	return ManifestNotExistErr, Manifest{}
+}
+
 /*
 	Archive Meta
  */
@@ -191,3 +209,4 @@ func (rwc *ArchiveMetaHandler) Exist() bool {
 	}
 	return true
 }
+

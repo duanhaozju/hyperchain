@@ -7,3 +7,12 @@ message ChainSyncRequest{
     uint64  requiredNumber = 2;
     uint64  peerId         = 3;
 }
+
+message WorldStateSyncRequest {
+    uint64  target   = 1;
+    uint64  peerId   = 2;
+}
+
+message WorldStateContext {
+    bytes  payload = 1;
+}

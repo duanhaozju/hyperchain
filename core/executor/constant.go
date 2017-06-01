@@ -24,6 +24,8 @@ const (
 	NOTIFY_BROADCAST_DEMAND
 	NOTIFY_UNICAST_BLOCK
 	NOTIFY_BROADCAST_SINGLE
+	NOTIFY_REQUEST_WORLD_STATE
+	NOTIFY_SEND_WORLD_STATE
 	NOTIFY_SYNC_REPLICA
 )
 
@@ -56,3 +58,4 @@ const ArchiveFailedErr        = "archive failed"
 const EmptyMessage = ""
 var   SnapshotContentInvalidErr = errors.New("snapshot content invalid")
 var   ArchiveRequestNotSatisfiedErr = errors.New("archive request not satisfied with requirement")
+var   SnapshotDoesntExistErr = errors.New("snapshot does not exist")

@@ -146,6 +146,55 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			Type:    NOTIFY_SYNC_REPLICA,
 		})
 		return nil
+	case NOTIFY_REQUEST_WORLD_STATE:
+		executor.logger.Debug("inform p2p sync world state")
+		if len(message) != 1 {
+			return InvalidParams
+		}
+		number, ok := message[0].(uint64)
+		if ok == false {
+			return InvalidParams
+		}
+		request := &WorldStateSyncRequest{
+			Target: number,
+			PeerId: executor.status.syncFlag.LocalId,
+		}
+		payload, err := proto.Marshal(request)
+		if err != nil {
+			return MarshalFailedErr
+		}
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
+			Payload: payload,
+			Type:    NOTIFY_REQUEST_WORLD_STATE,
+			Peers:   []uint64{executor.status.syncCtx.GetCurrentPeer()},
+		})
+		return nil
+	case NOTIFY_SEND_WORLD_STATE:
+		executor.logger.Debug("inform p2p sync world state")
+		if len(message) != 2 {
+			return InvalidParams
+		}
+		path, ok := message[0].(string)
+		if ok == false {
+			return InvalidParams
+		}
+		peerId, ok := message[0].(uint64)
+		if ok == false {
+			return InvalidParams
+		}
+
+		packet := &WorldStateContext{
+			Payload: []byte(path),
+		}
+		payload, err := proto.Marshal(packet)
+		if err != nil {
+			return MarshalFailedErr
+		}
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
+			Payload: payload,
+			Type:    NOTIFY_SEND_WORLD_STATE,
+			Peers:   []uint64{peerId},
+		})
 	default:
 		return NoDefinedCaseErr
 	}

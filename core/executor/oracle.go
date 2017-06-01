@@ -128,8 +128,8 @@ func (oracle *Oracle) decScore() {
 }
 
 func (oracle *Oracle) PrintScoreboard() {
-	oracle.logger.Debug("<====== scoreboard =======>")
+	oracle.logger.Notice("<====== scoreboard =======>")
 	for pId, score := range oracle.score {
-		oracle.logger.Debugf("<====== peer (id #%d), score (#%d) =======>", pId, score)
+		oracle.logger.Noticef("<====== peer (id #%d), score (#%d) =======>", pId, score)
 	}
 }

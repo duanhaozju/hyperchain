@@ -5,7 +5,6 @@ import (
 	"hyperchain/manager/event"
 
 	"github.com/pkg/errors"
-	"fmt"
 )
 
 type PartPeer struct {
@@ -28,19 +27,19 @@ func NewChainSyncContext(namespace string, event event.ChainSyncReqEvent) *Chain
 	curHeight := edb.GetHeightOfChain(namespace)
 	for _, r := range event.Replicas {
 		if r.Genesis <= curHeight {
-			fmt.Println("append fullpeer: ", r.Id)
 			fullPeers = append(fullPeers, r.Id)
 		} else {
-			fmt.Println("append partpeer: ", r.Id)
 			partPeers = append(partPeers, PartPeer{
 				Id:        r.Id,
 				Genesis:   r.Genesis,
 			})
 		}
 	}
+	updateGenesis := (len(fullPeers) == 0)
 	return &ChainSyncContext{
 		FullPeers:     fullPeers,
 		PartPeers:     partPeers,
+		UpdateGenesis: updateGenesis,
 	}
 }
 

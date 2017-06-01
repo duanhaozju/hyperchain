@@ -19,6 +19,7 @@ var (
 	EmptyPointerErr  = errors.New("nil pointer")
 	NoDefinedCaseErr = errors.New("no defined case")
 	InvalidParams    = errors.New("invalid params")
+	MarshalFailedErr = errors.New("marshal failed")
 )
 
 type Executor struct {
