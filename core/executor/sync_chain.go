@@ -10,6 +10,11 @@ import (
 	"bytes"
 	"time"
 	"hyperchain/core/vm"
+	"io/ioutil"
+	"hyperchain/hyperdb"
+	cmd "os/exec"
+	"path"
+	"path/filepath"
 )
 
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
@@ -54,13 +59,14 @@ func (executor *Executor) syncChainResendBackend() {
 					executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.status.syncFlag.SyncDemandBlockNum)
 					executor.status.syncFlag.Oracle.FeedBack(false)
 					executor.status.syncCtx.SetCurrentPeer(executor.status.syncFlag.Oracle.SelectPeer())
+					// TODO change peer may triggle context switch
 					executor.SendSyncRequest(executor.status.syncFlag.SyncDemandBlockNum, down)
 					executor.recordSyncReqArgs(curUp, curDown)
 				} else {
 					up = curUp
 					down = curDown
 				}
-			} else {
+			} else if executor.status.syncCtx.GetResendMode() == ResendMode_WorldState {
 				// TODO different resend strategy for world state
 			}
 		}
@@ -96,9 +102,10 @@ func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
 	}
 
 	if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE, executor.snapshotReg.CompressedSnapshotPath(manifest.FilterId), request.PeerId); err != nil {
-		executor.logger.Warningf("send world state (#%s) back to %d failed", manifest.FilterId, request.PeerId)
+		executor.logger.Warningf("send world state (#%s) back to (%d) failed", manifest.FilterId, request.PeerId)
 		return
 	}
+	executor.logger.Noticef("send world state (#%s) back to (%d) success", manifest.FilterId, request.PeerId)
 }
 
 // ReceiveSyncBlocks - receive request synchronization blocks from others.
@@ -136,9 +143,10 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 				next := executor.calcuDownstream()
 				executor.SendSyncRequest(prev, next)
 			} else {
-				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
+				executor.logger.Noticef("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
 				if executor.status.syncCtx.UpdateGenesis {
 					// receive world state
+					executor.logger.Notice("send request to fetch world state for status transition")
 					executor.status.syncCtx.SetResendMode(ResendMode_WorldState)
 					executor.SendSyncRequestForWorldState(executor.status.syncFlag.SyncDemandBlockNum + 1)
 				} else {
@@ -150,12 +158,33 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 }
 
 func (executor *Executor) ReceiveWorldState(payload []byte) {
+	executor.logger.Noticef("receive world state")
 	var packet WorldStateContext
 	if err := proto.Unmarshal(payload, &packet); err != nil {
 		executor.logger.Warning("unmarshal world state packet failed.")
 		return
 	}
 	// apply
+	tmp, err := ioutil.TempDir(hyperdb.GetDatabaseHome(executor.conf), "WORLD_STATE")
+	if err != nil {
+		executor.logger.Warning("create temp dir for world state failed")
+		return
+	}
+
+	//defer func() {
+	//	os.RemoveAll(tmp)
+	//}()
+
+	fPath := path.Join(tmp, "world_state.tar.gz")
+	if err := ioutil.WriteFile(fPath, packet.Payload, 0644); err != nil {
+		executor.logger.Warning("write network packet to compress file failed")
+		return
+	}
+	localCmd := cmd.Command("tar", "-C", filepath.Dir(fPath), "-zxvf", filepath.Base(fPath))
+	if err := localCmd.Run(); err != nil {
+		executor.logger.Warning("uncompress world state failed")
+		return
+	}
 }
 
 // SendSyncRequest - send synchronization request to other nodes.

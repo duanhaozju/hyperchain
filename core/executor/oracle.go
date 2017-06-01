@@ -70,7 +70,7 @@ func (oracle *Oracle) SelectPeer() uint64 {
 		// TODO fake selection
 		// TODO ask @Rongjialei fix this
 		bPeer = oracle.ctx.PartPeers[0].Id
-		oracle.logger.Notice("select peer from `PartPeer` collections")
+		oracle.logger.Noticef("select peer %d from `PartPeer` collections", bPeer)
 	} else {
 		for peer, score := range oracle.score {
 			if max < score {
@@ -78,10 +78,9 @@ func (oracle *Oracle) SelectPeer() uint64 {
 				max = score
 			}
 		}
-		oracle.logger.Notice("select peer from `FullPeer` collections")
+		oracle.logger.Noticef("select peer %d from `FullPeer` collections", bPeer)
 	}
 	oracle.latestSelected = bPeer
-	oracle.logger.Noticef("select peer %d to send sync req", bPeer)
 	return bPeer
 }
 func (oracle *Oracle) FeedBack(success bool) {
@@ -132,4 +131,5 @@ func (oracle *Oracle) PrintScoreboard() {
 	for pId, score := range oracle.score {
 		oracle.logger.Noticef("<====== peer (id #%d), score (#%d) =======>", pId, score)
 	}
+	oracle.logger.Notice("<======     end    =======>")
 }
