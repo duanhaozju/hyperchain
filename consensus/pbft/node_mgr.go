@@ -676,7 +676,7 @@ func (pbft *pbftImpl) recvUpdateN(update *UpdateN) events.Event {
 	return pbft.processUpdateN()
 }
 
-func (pbft *pbftImpl) primaryProcessUpdateN(initialCp ViewChange_C, replicas []uint64, update *UpdateN) events.Event {
+func (pbft *pbftImpl) primaryProcessUpdateN(initialCp ViewChange_C, replicas []replicaInfo, update *UpdateN) events.Event {
 	var newReqBatchMissing bool
 
 	speculativeLastExec := pbft.exec.lastExec
@@ -1074,7 +1074,7 @@ func (pbft *pbftImpl) getAgreeUpdates() (agrees []*AgreeUpdateN) {
 	return
 }
 
-func (pbft *pbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (checkpoint ViewChange_C, ok bool, replicas []uint64) {
+func (pbft *pbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (checkpoint ViewChange_C, ok bool, replicas []replicaInfo) {
 	checkpoints := make(map[ViewChange_C][]*AgreeUpdateN)
 	for _, agree := range aset {
 		for _, c := range agree.Cset { // TODO, verify that we strip duplicate checkpoints from this set
@@ -1113,9 +1113,13 @@ func (pbft *pbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (ch
 		}
 
 		if checkpoint.SequenceNumber <= idx.SequenceNumber {
-			replicas = make([]uint64, len(vcList))
+			replicas = make([]replicaInfo, len(vcList))
 			for i, vc := range vcList {
-				replicas[i] = vc.ReplicaId
+				replicas[i] = replicaInfo{
+					id: vc.ReplicaId,
+					height: vc.H,
+					genesis: vc.Genesis,
+				}
 			}
 
 			checkpoint = idx

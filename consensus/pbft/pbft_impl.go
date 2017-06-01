@@ -16,6 +16,7 @@ import (
 	"hyperchain/manager/protos"
 	"sync/atomic"
 	"github.com/op/go-logging"
+	"hyperchain/manager/event"
 )
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
@@ -948,14 +949,16 @@ func (pbft *pbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 	id, _ := proto.Marshal(info)
 	idAsString := byteToString(id)
 	seqNo := n
+	genesis := pbft.getGenesisInfo()
 
-	pbft.logger.Infof("Replica %d preparing checkpoint for view=%d/seqNo=%d and b64 id of %s",
-		pbft.id, pbft.view, seqNo, idAsString)
+	pbft.logger.Infof("Replica %d preparing checkpoint for view=%d/seqNo=%d and b64Id=%s/genesis=%d",
+		pbft.id, pbft.view, seqNo, idAsString, genesis)
 
 	chkpt := &Checkpoint{
 		SequenceNumber: seqNo,
 		ReplicaId:      pbft.id,
 		Id:             idAsString,
+		Genesis:		genesis,
 	}
 	pbft.storeMgr.saveCheckpoint(seqNo, idAsString)
 
@@ -1137,11 +1140,15 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 func (pbft *pbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 
 	// Only ever invoked for the first weak cert, so guaranteed to be f+1
-	checkpointMembers := make([]uint64, pbft.f + 1)
+	checkpointMembers := make([]replicaInfo, pbft.f + 1)
 	i := 0
 	for testChkpt := range pbft.storeMgr.checkpointStore {
 		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.Id == chkpt.Id {
-			checkpointMembers[i] = testChkpt.ReplicaId
+			checkpointMembers[i] = replicaInfo{
+				id: testChkpt.ReplicaId,
+				height: testChkpt.SequenceNumber,
+				genesis: testChkpt.Genesis,
+			}
 			pbft.logger.Debugf("Replica %d adding replica %d (handle %v) to weak cert", pbft.id, testChkpt.ReplicaId, checkpointMembers[i])
 			i++
 		}
@@ -1297,7 +1304,7 @@ func (pbft *pbftImpl) resubmitRequestBatches() {
 	}
 }
 
-func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []uint64) {
+func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []replicaInfo) {
 	info := &protos.BlockchainInfo{}
 	err := proto.Unmarshal(id, info)
 	if err != nil {
@@ -1310,9 +1317,17 @@ func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []uint64) {
 }
 
 // updateState attempts to synchronize state to a particular target, implicitly calls rollback if needed
-func (pbft *pbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, replicaId []uint64) {
-
-	pbft.helper.UpdateState(pbft.id, info.Height, info.CurrentBlockHash, replicaId) // TODO: stateUpdateEvent
+func (pbft *pbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, replicas []replicaInfo) {
+	targets := make([]event.SyncReplica, len(replicas))
+	for _, replica := range replicas {
+		target := event.SyncReplica{
+			Id: replica.id,
+			Height: replica.height,
+			Genesis: replica.genesis,
+		}
+		targets = append(targets, target)
+	}
+	pbft.helper.UpdateState(pbft.id, info.Height, info.CurrentBlockHash, targets) // TODO: stateUpdateEvent
 
 }
 

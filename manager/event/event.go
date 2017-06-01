@@ -28,6 +28,7 @@ type SyncReplica struct {
 	Height  uint64
 	Genesis uint64
 }
+
 type ChainSyncReqEvent struct{
 	Id              uint64
 	TargetHeight    uint64

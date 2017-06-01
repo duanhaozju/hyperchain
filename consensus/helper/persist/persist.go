@@ -93,6 +93,10 @@ func GetBlockHeightAndHash(namespace string) (uint64, string) {
 	return bcInfo.Height, hash
 }
 
-func GetHeightofChain(namespace string) uint64 {
+func GetHeightOfChain(namespace string) uint64 {
 	return ndb.GetHeightOfChain(namespace)
+}
+
+func GetGenesisOfChain(namespace string) (error, uint64) {
+	return ndb.GetGenesisTag(namespace)
 }

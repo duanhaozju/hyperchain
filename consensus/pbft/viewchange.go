@@ -478,7 +478,7 @@ func (pbft *pbftImpl) processNewView() events.Event {
 }
 
 //primaryProcessNewView
-func (pbft *pbftImpl) primaryProcessNewView(initialCp ViewChange_C, replicas []uint64, nv *NewView) events.Event {
+func (pbft *pbftImpl) primaryProcessNewView(initialCp ViewChange_C, replicas []replicaInfo, nv *NewView) events.Event {
 	var newReqBatchMissing bool
 
 	speculativeLastExec := pbft.exec.lastExec
@@ -773,7 +773,7 @@ func (pbft *pbftImpl) getViewChanges() (vset []*ViewChange) {
 	return
 }
 
-func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint ViewChange_C, ok bool, replicas []uint64) {
+func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint ViewChange_C, ok bool, replicas []replicaInfo) {
 	checkpoints := make(map[ViewChange_C][]*ViewChange)
 	for _, vc := range vset {
 		for _, c := range vc.Cset {
@@ -815,9 +815,13 @@ func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 		}
 
 		if checkpoint.SequenceNumber <= idx.SequenceNumber {
-			replicas = make([]uint64, len(vcList))
+			replicas = make([]replicaInfo, len(vcList))
 			for i, vc := range vcList {
-				replicas[i] = vc.ReplicaId
+				replicas[i] = replicaInfo{
+					id: vc.ReplicaId,
+					height: vc.H,
+					genesis: vc.Genesis,
+				}
 			}
 
 			checkpoint = idx

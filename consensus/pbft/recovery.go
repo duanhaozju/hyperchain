@@ -60,7 +60,7 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 
 	pbft.recoveryMgr.recoveryToSeqNo = nil
 	// update watermarks
-	height := persist.GetHeightofChain(pbft.namespace)
+	height := persist.GetHeightOfChain(pbft.namespace)
 	pbft.moveWatermarks(height)
 
 	pbft.recoveryMgr.rcRspStore = make(map[uint64]*RecoveryResponse)
@@ -115,12 +115,14 @@ func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 	}
 
 	height, curHash := persist.GetBlockHeightAndHash(pbft.namespace)
+	genesis := pbft.getGenesisInfo()
 
 	rc := &RecoveryResponse{
 		ReplicaId:     pbft.id,
 		Chkpts:        chkpts,
 		BlockHeight:   height,
 		LastBlockHash: curHash,
+		Genesis: genesis,
 	}
 
 	rcMsg, err := proto.Marshal(rc)
@@ -256,11 +258,11 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 }
 
 // findHighestChkptQuorum finds highest one of chkpts which achieve quorum
-func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []uint64, find bool, chkptBehind bool) {
+func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []replicaInfo, find bool, chkptBehind bool) {
 
 	pbft.logger.Debugf("Replica %d now enter findHighestChkptQuorum", pbft.id)
 
-	chkpts := make(map[cidx]map[uint64]bool)
+	chkpts := make(map[cidx]map[replicaInfo]bool)
 
 	for from, rsp := range pbft.recoveryMgr.rcRspStore {
 		for chkptN, chkptD := range rsp.GetChkpts() {
@@ -270,10 +272,20 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []u
 			}
 			peers, ok := chkpts[chkptIdx]
 			if ok {
-				peers[from] = true
+				replica := replicaInfo{
+					id: from,
+					height: rsp.BlockHeight,
+					genesis: rsp.Genesis,
+				}
+				peers[replica] = true
 			} else {
-				peers = make(map[uint64]bool)
-				peers[from] = true
+				peers = make(map[replicaInfo]bool)
+				replica := replicaInfo{
+					id: from,
+					height: rsp.BlockHeight,
+					genesis: rsp.Genesis,
+				}
+				peers[replica] = true
 				chkpts[chkptIdx] = peers
 			}
 		}
@@ -297,7 +309,7 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []u
 				}
 				n = ci.n
 				d = ci.d
-				replicas = make([]uint64, 0, len(peers))
+				replicas = make([]replicaInfo, len(peers))
 				for peer := range peers {
 					replicas = append(replicas, peer)
 				}
@@ -338,7 +350,7 @@ func (pbft *pbftImpl) findLastExecQuorum() (lastExec uint64, hash string, find b
 }
 
 // fetchRecoveryPQC fetch PQC info after receive stateUpdated event
-func (pbft *pbftImpl) fetchRecoveryPQC(peers []uint64) events.Event {
+func (pbft *pbftImpl) fetchRecoveryPQC(peers []replicaInfo) events.Event {
 
 	pbft.logger.Debugf("Replica %d now fetchRecoveryPQC", pbft.id)
 
@@ -365,8 +377,8 @@ func (pbft *pbftImpl) fetchRecoveryPQC(peers []uint64) events.Event {
 	}
 
 	for _, dest := range peers {
-		msg := cMsgToPbMsg(conMsg, dest)
-		pbft.helper.InnerUnicast(msg, dest)
+		msg := cMsgToPbMsg(conMsg, dest.id)
+		pbft.helper.InnerUnicast(msg, dest.id)
 	}
 
 	return nil

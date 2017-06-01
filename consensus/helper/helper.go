@@ -20,7 +20,7 @@ type Stack interface {
 	InnerBroadcast(msg *pb.Message) error
 	InnerUnicast(msg *pb.Message, to uint64) error
 	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
-	UpdateState(myId uint64, height uint64, blockHash []byte, replicaId []uint64) error
+	UpdateState(myId uint64, height uint64, blockHash []byte, replicaId []event.SyncReplica) error
 	ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
 	VcReset(seqNo uint64) error
 	InformPrimary(primary uint64) error
@@ -89,7 +89,7 @@ func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, t
 }
 
 // UpdateState transfers the UpdateStateEvent to outer
-func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, replicaId []uint64) error {
+func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, replicaId []event.SyncReplica) error {
 	// TODO fill replicas field
 	// TODO Ask @Huangfanglei to fix this
 
