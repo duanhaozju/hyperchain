@@ -4,6 +4,7 @@
  */
 package cn.hyperchain.jcee.ledger;
 
+import cn.hyperchain.jcee.common.exception.NotExistException;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
@@ -26,7 +27,7 @@ public class HyperchainLedger extends AbstractLedger{
         cache = new JcsCache();
     }
 
-    public byte[] get(byte[] key) {
+    public byte[] get(byte[] key) throws NotExistException {
         byte[] data = cache.retrieveFromCache(key);
         if(data != null){
             return data;
@@ -41,7 +42,7 @@ public class HyperchainLedger extends AbstractLedger{
         ByteString v = ledgerClient.get(sendkey).getV();
         if (v == null || v.isEmpty()){
             cache.putInCache(key,null);
-            return null;
+            throw new NotExistException(new String(key));
         }
         cache.putInCache(key,v.toByteArray());
         return v.toByteArray();
@@ -108,39 +109,57 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     @Override
-    public boolean getBoolean(byte[] key) {
-        return Boolean.parseBoolean(fetch(key).getV().toStringUtf8());
-    }
-
-    @Override
-    public short getShort(byte[] key) {
-        return Short.parseShort(fetch(key).getV().toStringUtf8());
-    }
-
-    @Override
-    public char getChar(byte[] key) {
-        return fetch(key).getV().toStringUtf8().charAt(0);
-    }
-
-    @Override
-    public int getInt(byte[] key) {
-        return Integer.parseInt(fetch(key).getV().toStringUtf8());
-    }
-
-    @Override
-    public float getFloat(byte[] key) {
-        return Float.parseFloat(fetch(key).getV().toStringUtf8());
-    }
-
-    public double getDouble(byte[] key){
+    public boolean getBoolean(byte[] key) throws NotExistException {
         ContractProto.Value v = fetch(key);
+        if (v.getV().isEmpty())
+            throw new NotExistException(new String(key));
+        return Boolean.parseBoolean(v.getV().toStringUtf8());
+    }
+
+    @Override
+    public short getShort(byte[] key) throws NotExistException {
+        ContractProto.Value v = fetch(key);
+        if (v.getV().isEmpty())
+            throw new NotExistException(new String(key));
+        return Short.parseShort(v.getV().toStringUtf8());
+    }
+
+    @Override
+    public char getChar(byte[] key) throws NotExistException {
+        ContractProto.Value v = fetch(key);
+        if (v.getV().isEmpty())
+            throw new NotExistException(new String(key));
+        return v.getV().toStringUtf8().charAt(0);
+    }
+
+    @Override
+    public int getInt(byte[] key) throws NotExistException {
+        ContractProto.Value v = fetch(key);
+        if (v.getV().isEmpty())
+            throw new NotExistException(new String(key));
+        return Integer.parseInt(v.getV().toStringUtf8());
+    }
+
+    @Override
+    public float getFloat(byte[] key) throws NotExistException {
+        ContractProto.Value v = fetch(key);
+        if (v.getV().isEmpty())
+            throw new NotExistException(new String(key));
+        return Float.parseFloat(v.getV().toStringUtf8());
+    }
+
+    public double getDouble(byte[] key) throws NotExistException {
+        ContractProto.Value v = fetch(key);
+        if (v.getV().isEmpty())
+            throw new NotExistException(new String(key));
         return Double.parseDouble(v.getV().toStringUtf8());
     }
 
     @Override
-    public String getString(byte[] key) {
+    public String getString(byte[] key) throws NotExistException {
         ContractProto.Value v = fetch(key);
-//        logger.info("fetch: " + v);
+        if (v.getV().isEmpty())
+            throw new NotExistException(new String(key));
         return v.getV().toStringUtf8();
     }
 
@@ -149,42 +168,42 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     @Override
-    public byte[] get(String key) {
+    public byte[] get(String key) throws NotExistException {
         return get(key.getBytes());
     }
 
     @Override
-    public boolean getBoolean(String key) {
+    public boolean getBoolean(String key) throws NotExistException {
         return getBoolean(key.getBytes());
     }
 
     @Override
-    public short getShort(String key) {
+    public short getShort(String key) throws NotExistException {
         return getShort(key.getBytes());
     }
 
     @Override
-    public char getChar(String key) {
+    public char getChar(String key) throws NotExistException {
         return getChar(key.getBytes());
     }
 
     @Override
-    public int getInt(String key) {
+    public int getInt(String key) throws NotExistException {
         return getInt(key.getBytes());
     }
 
     @Override
-    public float getFloat(String key) {
+    public float getFloat(String key) throws NotExistException {
         return getFloat(key.getBytes());
     }
 
     @Override
-    public double getDouble(String key) {
+    public double getDouble(String key) throws NotExistException {
         return getDouble(key.getBytes());
     }
 
     @Override
-    public String getString(String key) {
+    public String getString(String key) throws NotExistException {
         return getString(key.getBytes());
     }
 
