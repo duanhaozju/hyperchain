@@ -9,53 +9,53 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
+	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"sync/atomic"
-	"github.com/op/go-logging"
-	"hyperchain/manager/event"
 )
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
 type pbftImpl struct {
-	namespace	string
-	activeView     uint32                       // view change happening
-	f              int                          // max. number of faults we can tolerate
-	N              int                          // max.number of validators in the network
-	h              uint64                       // low watermark
-	id             uint64                       // replica ID; PBFT `i`
-	K              uint64                       // checkpoint period
-	logMultiplier  uint64                       // use this value to calculate log size : k*logMultiplier
-	L              uint64                       // log size
-	seqNo          uint64                       // PBFT "n", strictly monotonic increasing sequence number
-	view           uint64                       // current view
-	nvInitialSeqNo uint64                       // initial seqNo in a new view
+	namespace      string
+	activeView     uint32 // view change happening
+	f              int    // max. number of faults we can tolerate
+	N              int    // max.number of validators in the network
+	h              uint64 // low watermark
+	id             uint64 // replica ID; PBFT `i`
+	K              uint64 // checkpoint period
+	logMultiplier  uint64 // use this value to calculate log size : k*logMultiplier
+	L              uint64 // log size
+	seqNo          uint64 // PBFT "n", strictly monotonic increasing sequence number
+	view           uint64 // current view
+	nvInitialSeqNo uint64 // initial seqNo in a new view
 
-	status         PbftStatus                       // basic status of pbft
+	status PbftStatus // basic status of pbft
 
-	batchMgr       *batchManager                // manage batch related issues
-	batchVdr       *batchValidator             // manage batch validate issues
-	pbftTimerMgr   *timerManager                // manage pbft event timers
-	storeMgr       *storeManager                // manage storage
-	nodeMgr        *nodeManager                 // manage node delete or add
-	recoveryMgr    *recoveryManager             // manage recovery issues
-	vcMgr          *vcManager                   // manage viewchange issues
-	exec           *executor                    // manage transaction exec
+	batchMgr     *batchManager    // manage batch related issues
+	batchVdr     *batchValidator  // manage batch validate issues
+	pbftTimerMgr *timerManager    // manage pbft event timers
+	storeMgr     *storeManager    // manage storage
+	nodeMgr      *nodeManager     // manage node delete or add
+	recoveryMgr  *recoveryManager // manage recovery issues
+	vcMgr        *vcManager       // manage viewchange issues
+	exec         *executor        // manage transaction exec
 
-	helper         helper.Stack
-	reqStore       *requestStore                // received messages
-	duplicator     map[uint64]*transactionStore // currently executing request
+	helper     helper.Stack
+	reqStore   *requestStore                // received messages
+	duplicator map[uint64]*transactionStore // currently executing request
 
-	pbftManager    events.Manager               // manage pbft event
+	pbftManager events.Manager // manage pbft event
 
-	reqEventQueue  events.Queue                 // transfer request transactions
-	pbftEventQueue events.Queue                 // transfer PBFT related event
+	reqEventQueue  events.Queue // transfer request transactions
+	pbftEventQueue events.Queue // transfer PBFT related event
 
 	config *common.Config
-	logger         *logging.Logger
+	logger *logging.Logger
 }
 
 //newPBFT init the PBFT instance
@@ -288,11 +288,11 @@ func (pbft *pbftImpl) trySendPrePrepares() {
 
 	pbft.logger.Debugf("Replica %d attempting to call sendPrePrepare", pbft.id)
 
-	for stopTry := false; !stopTry;  {
+	for stopTry := false; !stopTry; {
 		if find, txBatch, digest := pbft.findNextPrePrepareBatch(); find {
 			pbft.sendPrePrepare(txBatch, digest)
 			pbft.maybeSendCommit(digest, pbft.view, pbft.seqNo)
-		}else {
+		} else {
 			stopTry = true
 		}
 	}
@@ -311,7 +311,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			continue
 		}
 
-		if cache.vid != pbft.batchVdr.lastVid + 1 {
+		if cache.vid != pbft.batchVdr.lastVid+1 {
 			pbft.logger.Debugf("Primary %d hasn't done with last send pre-prepare, vid=%d",
 				pbft.batchVdr.pbftId, pbft.batchVdr.lastVid)
 			continue
@@ -336,7 +336,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 		}
 
 		if !pbft.inWV(pbft.view, n) {
-			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because " +
+			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because "+
 				"it is out of sequence numbers", pbft.id, digest)
 			continue
 		}
@@ -387,7 +387,7 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 	pbft.helper.InnerBroadcast(msg)
 	pbft.batchVdr.updateLCVid()
 
-	pbft .softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
+	pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
 
 }
 
@@ -436,7 +436,7 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 	}
 
 	if pbft.status.checkStatesAnd(pbft.status.negCurrentState(&pbft.status.skipInProgress),
-				      pbft.status.negCurrentState(&pbft.status.inRecovery)) {
+		pbft.status.negCurrentState(&pbft.status.inRecovery)) {
 		pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout,
 			fmt.Sprintf("new pre-prepare for request batch view=%d/seqNo=%d, hash=%s", preprep.View, preprep.SequenceNumber, preprep.BatchDigest))
 	}
@@ -629,7 +629,7 @@ func (pbft *pbftImpl) commitTransactions() {
 	pbft.logger.Debugf("Replica %d attempting to commitTransactions", pbft.id)
 
 	for hasTxToExec := true; hasTxToExec; {
-		if find, idx, cert := pbft.findNextCommitTx(); find{
+		if find, idx, cert := pbft.findNextCommitTx(); find {
 			digest := cert.digest
 			if digest == "" {
 				pbft.logger.Infof("Replica %d executing null request for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
@@ -641,7 +641,7 @@ func (pbft *pbftImpl) commitTransactions() {
 			}
 			cert.sentExecute = true
 			pbft.afterCommitTx(idx)
-		}else {
+		} else {
 			hasTxToExec = false
 		}
 	}
@@ -670,7 +670,7 @@ func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
 			continue
 		}
 
-		if idx.n != pbft.exec.lastExec + 1 {
+		if idx.n != pbft.exec.lastExec+1 {
 			pbft.logger.Debugf("Replica %d hasn't done with last execute %d, seq=%d", pbft.id, pbft.exec.lastExec, idx.n)
 			//break
 			continue
@@ -719,12 +719,12 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 				pbft.recoveryMgr.recoveryToSeqNo = nil
 				pbft.pbftTimerMgr.stopTimer(RECOVERY_RESTART_TIMER)
 				go pbft.pbftEventQueue.Push(&LocalEvent{
-					Service:RECOVERY_SERVICE,
-					EventType:RECOVERY_DONE_EVENT,
+					Service:   RECOVERY_SERVICE,
+					EventType: RECOVERY_DONE_EVENT,
 				})
 			}
 		}
-		if pbft.exec.lastExec % pbft.K == 0 {
+		if pbft.exec.lastExec%pbft.K == 0 {
 			bcInfo := pbft.getBlockchainInfo()
 			height := bcInfo.Height
 			if height == pbft.exec.lastExec {
@@ -759,7 +759,7 @@ func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) error {
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 ||
 		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
-		pbft.status.checkStatesOr(pbft.status.getState(&pbft.status.inNegoView),pbft.status.getState(&pbft.status.inRecovery)){
+		pbft.status.checkStatesOr(pbft.status.getState(&pbft.status.inNegoView), pbft.status.getState(&pbft.status.inRecovery)) {
 		pbft.reqStore.storeOutstanding(tx)
 		return nil
 	}
@@ -874,8 +874,8 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 			pbft.recoveryMgr.recoveryToSeqNo = nil
 			pbft.pbftTimerMgr.stopTimer(RECOVERY_RESTART_TIMER)
 			go pbft.pbftEventQueue.Push(&LocalEvent{
-				Service:RECOVERY_SERVICE,
-				EventType:RECOVERY_DONE_EVENT,
+				Service:   RECOVERY_SERVICE,
+				EventType: RECOVERY_DONE_EVENT,
 			})
 			return nil
 		}
@@ -898,7 +898,7 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 		pbft.storeMgr.certStore = make(map[msgID]*msgCert)
 		pbft.fetchRecoveryPQC(peers)
 		return nil
-	}else {
+	} else {
 		pbft.executeAfterStateUpdate()
 	}
 
@@ -941,7 +941,7 @@ func (pbft *pbftImpl) executeAfterStateUpdate() {
 
 func (pbft *pbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 
-	if n % pbft.K != 0 {
+	if n%pbft.K != 0 {
 		pbft.logger.Errorf("Attempted to checkpoint a sequence number (%d) which is not a multiple of the checkpoint interval (%d)", n, pbft.K)
 		return
 	}
@@ -958,7 +958,7 @@ func (pbft *pbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 		SequenceNumber: seqNo,
 		ReplicaId:      pbft.id,
 		Id:             idAsString,
-		Genesis:		genesis,
+		Genesis:        genesis,
 	}
 	pbft.storeMgr.saveCheckpoint(seqNo, idAsString)
 
@@ -1016,7 +1016,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	pbft.logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
 		pbft.id, cert.chkptCount, chkpt.SequenceNumber, chkpt.Id)
 
-	if cert.chkptCount == pbft.f + 1 {
+	if cert.chkptCount == pbft.f+1 {
 		// We do have a weak cert
 		pbft.witnessCheckpointWeakCert(chkpt)
 	}
@@ -1040,7 +1040,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 		pbft.logger.Debugf("Replica %d found checkpoint quorum for seqNo %d, digest %s, but it has not reached this checkpoint itself yet",
 			pbft.id, chkpt.SequenceNumber, chkpt.Id)
 		if pbft.status.getState(&pbft.status.skipInProgress) {
-			logSafetyBound := pbft.h + pbft.L / 2
+			logSafetyBound := pbft.h + pbft.L/2
 			// As an optimization, if we are more than half way out of our log and in state transfer, move our watermarks so we don't lose track of the network
 			// if needed, state transfer will restart on completion to a more recent point in time
 			if chkpt.SequenceNumber >= logSafetyBound {
@@ -1066,7 +1066,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 }
 
 // used in view-change to fetch missing assigned, non-checkpointed requests
-func (pbft *pbftImpl) fetchRequestBatches() (error) {
+func (pbft *pbftImpl) fetchRequestBatches() error {
 
 	for digest := range pbft.storeMgr.missingReqBatches {
 		frb := &FetchRequestBatch{
@@ -1103,7 +1103,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 
 		// If f+1 other replicas have reported checkpoints that were (at one time) outside our watermarks
 		// we need to check to see if we have fallen behind.
-		if len(pbft.storeMgr.hChkpts) >= pbft.f + 1 {
+		if len(pbft.storeMgr.hChkpts) >= pbft.f+1 {
 			chkptSeqNumArray := make([]uint64, len(pbft.storeMgr.hChkpts))
 			index := 0
 			for replicaID, hChkpt := range pbft.storeMgr.hChkpts {
@@ -1118,7 +1118,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 			// If f+1 nodes have issued checkpoints above our high water mark, then
 			// we will never record 2f+1 checkpoints for that sequence number, we are out of date
 			// (This is because all_replicas - missed - me = 3f+1 - f - 1 = 2f)
-			if m := chkptSeqNumArray[len(chkptSeqNumArray) - (pbft.f + 1)]; m > H {
+			if m := chkptSeqNumArray[len(chkptSeqNumArray)-(pbft.f+1)]; m > H {
 				pbft.logger.Warningf("Replica %d is out of date, f+1 nodes agree checkpoint with seqNo %d exists but our high water mark is %d", pbft.id, chkpt.SequenceNumber, H)
 				// Discard all our requests, as we will never know which were executed, to be addressed in #394
 				pbft.batchVdr.emptyVBS()
@@ -1140,13 +1140,13 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 func (pbft *pbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 
 	// Only ever invoked for the first weak cert, so guaranteed to be f+1
-	checkpointMembers := make([]replicaInfo, pbft.f + 1)
+	checkpointMembers := make([]replicaInfo, pbft.f+1)
 	i := 0
 	for testChkpt := range pbft.storeMgr.checkpointStore {
 		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.Id == chkpt.Id {
 			checkpointMembers[i] = replicaInfo{
-				id: testChkpt.ReplicaId,
-				height: testChkpt.SequenceNumber,
+				id:      testChkpt.ReplicaId,
+				height:  testChkpt.SequenceNumber,
 				genesis: testChkpt.Genesis,
 			}
 			pbft.logger.Debugf("Replica %d adding replica %d (handle %v) to weak cert", pbft.id, testChkpt.ReplicaId, checkpointMembers[i])
@@ -1281,7 +1281,7 @@ func (pbft *pbftImpl) resubmitRequestBatches() {
 
 	var submissionOrder []*TransactionBatch
 
-	outer:
+outer:
 	for d, reqBatch := range pbft.storeMgr.outstandingReqBatches {
 		for _, cert := range pbft.storeMgr.certStore {
 			if cert.digest == d {
@@ -1321,8 +1321,8 @@ func (pbft *pbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, rep
 	targets := make([]event.SyncReplica, len(replicas))
 	for _, replica := range replicas {
 		target := event.SyncReplica{
-			Id: replica.id,
-			Height: replica.height,
+			Id:      replica.id,
+			Height:  replica.height,
 			Genesis: replica.genesis,
 		}
 		targets = append(targets, target)
@@ -1439,7 +1439,7 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 		// Reason for not using '≥ pbft.N-pbft.f': if self is wrong, then we are impossible to find 2f+1 same view
 		// can we find same view from 2f+1 peers?
 		type resp struct {
-			n uint64
+			n    uint64
 			view uint64
 			//routers string
 		}
@@ -1477,8 +1477,8 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}
 			return &LocalEvent{
-				Service:RECOVERY_SERVICE,
-				EventType:RECOVERY_NEGO_VIEW_DONE_EVENT,
+				Service:   RECOVERY_SERVICE,
+				EventType: RECOVERY_NEGO_VIEW_DONE_EVENT,
 			}
 		} else if len(pbft.recoveryMgr.negoViewRspStore) >= 2*pbft.f+2 {
 			event := &LocalEvent{

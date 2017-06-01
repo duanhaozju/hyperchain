@@ -4,8 +4,8 @@
 package pbft
 
 /**
-	This file defines the structs uesd in PBFT
- */
+This file defines the structs uesd in PBFT
+*/
 
 //Preprepare index
 type qidx struct {
@@ -18,7 +18,6 @@ type cidx struct {
 	n uint64
 	d string
 }
-
 
 type msgID struct { // our index through certStore
 	v uint64
@@ -51,13 +50,11 @@ type chkptCert struct {
 	chkptCount int
 }
 
-
 //viewchange index
 type vcidx struct {
 	v  uint64 //view
 	id uint64 //replica id
 }
-
 
 type cacheBatch struct {
 	batch *TransactionBatch
@@ -84,7 +81,6 @@ type aidx struct {
 	n    int64
 	id   uint64
 	flag bool
-
 }
 
 type uidx struct {

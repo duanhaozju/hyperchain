@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"hyperchain/consensus/helper/persist"
 
-	"github.com/golang/protobuf/proto"
 	"encoding/base64"
 	"encoding/binary"
+	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 )
 
@@ -203,7 +203,7 @@ func (pbft *pbftImpl) persistRequestBatch(digest string) {
 }
 
 func (pbft *pbftImpl) persistDelRequestBatch(digest string) {
-	persist.DelState(pbft.namespace, "reqBatch." + digest)
+	persist.DelState(pbft.namespace, "reqBatch."+digest)
 }
 
 func (pbft *pbftImpl) persistDelAllRequestBatches() {

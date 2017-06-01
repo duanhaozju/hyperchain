@@ -11,8 +11,8 @@ import (
 )
 
 type executor struct {
-	lastExec         uint64
-	currentExec      *uint64
+	lastExec    uint64
+	currentExec *uint64
 }
 
 func newExecutor() *executor {
@@ -20,11 +20,11 @@ func newExecutor() *executor {
 	return exec
 }
 
-func (e *executor) setLastExec(l uint64)  {
+func (e *executor) setLastExec(l uint64) {
 	e.lastExec = l
 }
 
-func (e *executor) setCurrentExec(c *uint64)  {
+func (e *executor) setCurrentExec(c *uint64) {
 	e.currentExec = c
 }
 
@@ -32,7 +32,7 @@ func (e *executor) setCurrentExec(c *uint64)  {
 var eventCreators map[ConsensusMessage_Type]func() interface{}
 
 //msgToEvent transfer ConsensusMessage to the related event.
-func (pbft *pbftImpl) msgToEvent (msg *ConsensusMessage) (interface{}, error) {
+func (pbft *pbftImpl) msgToEvent(msg *ConsensusMessage) (interface{}, error) {
 
 	event := eventCreators[msg.Type]().(proto.Message)
 	err := proto.Unmarshal(msg.Payload, event)
@@ -46,7 +46,7 @@ func (pbft *pbftImpl) msgToEvent (msg *ConsensusMessage) (interface{}, error) {
 
 //dispatchMsgToService dispatch messgae to the related services.
 //TODO: refactor consensus message format
-func (pbft *pbftImpl) dispatchMsgToService(e events.Event) int  {
+func (pbft *pbftImpl) dispatchMsgToService(e events.Event) int {
 	switch e.(type) {
 	//core PBFT service
 	case *TransactionBatch:
@@ -177,7 +177,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.status.inActiveState(&pbft.status.vcHandled)
 		pbft.logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)
-		if pbft.status.getState(&pbft.status.isNewNode){
+		if pbft.status.getState(&pbft.status.isNewNode) {
 			pbft.sendReadyForN()
 			return nil
 		}
@@ -292,7 +292,7 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 		if pbft.recoveryMgr.recvNewViewInRecovery {
 			pbft.logger.Noticef("#  Replica %d find itself received NewView during Recovery"+
 				", will restart negotiate view", pbft.id)
-			pbft.status.activeState(&pbft.status.inRecovery,&pbft.status.inNegoView)
+			pbft.status.activeState(&pbft.status.inRecovery, &pbft.status.inNegoView)
 			pbft.recoveryMgr.recvNewViewInRecovery = false
 			pbft.restartNegoView()
 			return nil

@@ -5,31 +5,31 @@ package pbft
 import (
 	"encoding/base64"
 	"fmt"
-	"reflect"
-	"hyperchain/consensus/events"
 	"github.com/golang/protobuf/proto"
+	"hyperchain/consensus/events"
+	"reflect"
 	"time"
 
-	"hyperchain/common"
 	"github.com/syndtr/goleveldb/leveldb/errors"
+	"hyperchain/common"
 	"sync/atomic"
 )
 
 //view change manager
 type vcManager struct {
-	vcResendLimit      int                       // vcResendLimit indicates a replica's view change resending upbound.
-	vcResendCount      int                       // vcResendCount represent times of same view change info resend
-	viewChangePeriod   uint64                    // period between automatic view changes
-	viewChangeSeqNo    uint64                    // next seqNo to perform view change TODO: NO usage
-	lastNewViewTimeout time.Duration             // last timeout we used during this view change
-	newViewTimerReason string                    // what triggered the timer
+	vcResendLimit      int           // vcResendLimit indicates a replica's view change resending upbound.
+	vcResendCount      int           // vcResendCount represent times of same view change info resend
+	viewChangePeriod   uint64        // period between automatic view changes
+	viewChangeSeqNo    uint64        // next seqNo to perform view change TODO: NO usage
+	lastNewViewTimeout time.Duration // last timeout we used during this view change
+	newViewTimerReason string        // what triggered the timer
 
-	qlist		   map[qidx]*ViewChange_PQ
-	plist		   map[uint64]*ViewChange_PQ
+	qlist map[qidx]*ViewChange_PQ
+	plist map[uint64]*ViewChange_PQ
 
-	newViewStore       map[uint64]*NewView       	// track last new-view we received or sent
-	viewChangeStore    map[vcidx]*ViewChange     	// track view-change messages
-	vcResetStore       map[FinishVcReset]bool 	// track vcReset message from others
+	newViewStore    map[uint64]*NewView    // track last new-view we received or sent
+	viewChangeStore map[vcidx]*ViewChange  // track view-change messages
+	vcResetStore    map[FinishVcReset]bool // track vcReset message from others
 
 }
 
@@ -48,7 +48,7 @@ func (pbft *pbftImpl) dispatchViewChangeMsg(e events.Event) events.Event {
 		if atomic.LoadUint32(&pbft.activeView) == 0 {
 			return pbft.recvFinishVcReset(et)
 		}
-		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1  {
+		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 {
 			return pbft.recvFinishUpdate(et)
 		}
 		return nil
@@ -279,7 +279,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 	}
 
 	// We only enter this if there are enough view change messages greater than our current view
-	if len(replicas) >= pbft.f + 1 {
+	if len(replicas) >= pbft.f+1 {
 		pbft.logger.Warningf("Replica %d received f+1 view-change messages, triggering view-change to view %d",
 			pbft.id, minView)
 		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
@@ -301,8 +301,8 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 		pbft.startNewViewTimer(pbft.vcMgr.lastNewViewTimeout, "new view change")
 		pbft.vcMgr.lastNewViewTimeout = 2 * pbft.vcMgr.lastNewViewTimeout
 		return &LocalEvent{
-			Service:VIEW_CHANGE_SERVICE,
-			EventType:VIEW_CHANGE_QUORUM_EVENT,
+			Service:   VIEW_CHANGE_SERVICE,
+			EventType: VIEW_CHANGE_QUORUM_EVENT,
 		}
 	}
 
@@ -536,7 +536,7 @@ func (vcm *vcManager) updateViewChangeSeqNo(seqNo, K, id uint64) {
 		return
 	}
 	// Ensure the view change always occurs at a checkpoint boundary
-	vcm.viewChangeSeqNo = seqNo + vcm.viewChangePeriod * K - seqNo % K
+	vcm.viewChangeSeqNo = seqNo + vcm.viewChangePeriod*K - seqNo%K
 	//logger.Debugf("Replica %d updating view change sequence number to %d", id, vcm.viewChangeSeqNo)
 }
 
@@ -626,7 +626,7 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 	pbft.stopNewViewTimer()
 	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
 
-	delete(pbft.vcMgr.newViewStore, pbft.view - 1)
+	delete(pbft.vcMgr.newViewStore, pbft.view-1)
 	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
 	pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.exec.lastExec = pbft.h
@@ -655,8 +655,8 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 	}
 
 	return &LocalEvent{
-		Service:VIEW_CHANGE_SERVICE,
-		EventType:VIEW_CHANGED_EVENT,
+		Service:   VIEW_CHANGE_SERVICE,
+		EventType: VIEW_CHANGED_EVENT,
 	}
 }
 
@@ -734,8 +734,8 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 	}
 
 	return &LocalEvent{
-		Service:VIEW_CHANGE_SERVICE,
-		EventType:VIEW_CHANGED_EVENT,
+		Service:   VIEW_CHANGE_SERVICE,
+		EventType: VIEW_CHANGED_EVENT,
 	}
 }
 
@@ -761,8 +761,8 @@ func (pbft *pbftImpl) finishViewChange() events.Event {
 	pbft.helper.InnerUnicast(msg, primary)
 	pbft.logger.Debugf("Replica %d send FinishVcReset to primary %d", pbft.id, primary)
 	return &LocalEvent{
-		Service:VIEW_CHANGE_SERVICE,
-		EventType:VIEW_CHANGED_EVENT,
+		Service:   VIEW_CHANGE_SERVICE,
+		EventType: VIEW_CHANGED_EVENT,
 	}
 }
 
@@ -818,8 +818,8 @@ func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 			replicas = make([]replicaInfo, len(vcList))
 			for i, vc := range vcList {
 				replicas[i] = replicaInfo{
-					id: vc.ReplicaId,
-					height: vc.H,
+					id:      vc.ReplicaId,
+					height:  vc.H,
 					genesis: vc.Genesis,
 				}
 			}
@@ -839,7 +839,7 @@ func (pbft *pbftImpl) assignSequenceNumbers(vset []*ViewChange, h uint64) (msgLi
 
 	// "for all n such that h < n <= h + L"
 nLoop:
-	for n := h + 1; n <= h + pbft.L; n++ {
+	for n := h + 1; n <= h+pbft.L; n++ {
 		// "∃m ∈ S..."
 		for _, m := range vset {
 			// "...with <n,d,v> ∈ m.P"
@@ -875,7 +875,7 @@ nLoop:
 					}
 				}
 
-				if quorum < pbft.f + 1 {
+				if quorum < pbft.f+1 {
 					continue
 				}
 
@@ -1042,7 +1042,7 @@ func (pbft *pbftImpl) softStartNewViewTimer(timeout time.Duration, reason string
 //correctViewChange
 func (pbft *pbftImpl) correctViewChange(vc *ViewChange) bool {
 	for _, p := range append(vc.Pset, vc.Qset...) {
-		if !(p.View < vc.View && p.SequenceNumber > vc.H && p.SequenceNumber <= vc.H + pbft.L) {
+		if !(p.View < vc.View && p.SequenceNumber > vc.H && p.SequenceNumber <= vc.H+pbft.L) {
 			pbft.logger.Debugf("Replica %d invalid p entry in view-change: vc(v:%d h:%d) p(v:%d n:%d)",
 				pbft.id, vc.View, vc.H, p.View, p.SequenceNumber)
 			return false
@@ -1050,7 +1050,7 @@ func (pbft *pbftImpl) correctViewChange(vc *ViewChange) bool {
 	}
 
 	for _, c := range vc.Cset {
-		if !(c.SequenceNumber >= vc.H && c.SequenceNumber <= vc.H + pbft.L) {
+		if !(c.SequenceNumber >= vc.H && c.SequenceNumber <= vc.H+pbft.L) {
 			pbft.logger.Debugf("Replica %d invalid c entry in view-change: vc(v:%d h:%d) c(n:%d)",
 				pbft.id, vc.View, vc.H, c.SequenceNumber)
 			return false
@@ -1061,7 +1061,7 @@ func (pbft *pbftImpl) correctViewChange(vc *ViewChange) bool {
 }
 
 //beforeSendVC operations before send view change
-func (pbft *pbftImpl) beforeSendVC() error{
+func (pbft *pbftImpl) beforeSendVC() error {
 	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to send view change, but it's in nego-view", pbft.id)
 		return errors.New("node is in nego view now!")
@@ -1075,7 +1075,7 @@ func (pbft *pbftImpl) beforeSendVC() error{
 	pbft.stopNewViewTimer()
 
 	delete(pbft.vcMgr.newViewStore, pbft.view)
-	pbft.view ++
+	pbft.view++
 	atomic.StoreUint32(&pbft.activeView, 0)
 
 	pbft.vcMgr.plist = pbft.calcPSet()

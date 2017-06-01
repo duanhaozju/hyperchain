@@ -5,8 +5,8 @@ package pbft
 
 import (
 	"github.com/op/go-logging"
-	"time"
 	"hyperchain/consensus/events"
+	"time"
 )
 
 /**

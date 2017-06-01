@@ -3,34 +3,34 @@ package pbft
 import (
 	"hyperchain/manager/protos"
 
+	"encoding/base64"
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/consensus/events"
-	"time"
-	"sync/atomic"
-	"fmt"
-	"encoding/base64"
-	"reflect"
 	ndb "hyperchain/core/db_utils"
+	"reflect"
+	"sync/atomic"
+	"time"
 )
 
 /**
-	Node control issues
- */
+Node control issues
+*/
 
 // nodeManager add node or delete node.
 type nodeManager struct {
-	localKey	 string				// track new node's local key (payload from local)
-	addNodeCertStore map[string]*addNodeCert	// track the received add node agree message
-	delNodeCertStore map[string]*delNodeCert	// track the received add node agree message
+	localKey         string                  // track new node's local key (payload from local)
+	addNodeCertStore map[string]*addNodeCert // track the received add node agree message
+	delNodeCertStore map[string]*delNodeCert // track the received add node agree message
 
-	routers		 []byte				// track the vp replicas' routers
-	inUpdatingN	 uint32				// track if there are updating
-	updateTimer 	 events.Timer
-	updateTimeout	 time.Duration			// time limit for N-f agree on update n
-	agreeUpdateStore map[aidx]*AgreeUpdateN		// track agree-update-n message
-	updateStore	 map[uidx]*UpdateN		// track last update-n we received or sent
-	updateTarget	 uidx				// track the new view after update
-	updateCertStore	 map[msgID]updateCert		// track the local certStore that needed during update
+	routers          []byte // track the vp replicas' routers
+	inUpdatingN      uint32 // track if there are updating
+	updateTimer      events.Timer
+	updateTimeout    time.Duration          // time limit for N-f agree on update n
+	agreeUpdateStore map[aidx]*AgreeUpdateN // track agree-update-n message
+	updateStore      map[uidx]*UpdateN      // track last update-n we received or sent
+	updateTarget     uidx                   // track the new view after update
+	updateCertStore  map[msgID]updateCert   // track the local certStore that needed during update
 }
 
 func newNodeMgr() *nodeManager {
@@ -78,7 +78,7 @@ func (pbft *pbftImpl) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 		return nil
 	}
 
-	pbft.status.activeState(&pbft.status.isNewNode,&pbft.status.inAddingNode)
+	pbft.status.activeState(&pbft.status.isNewNode, &pbft.status.inAddingNode)
 	pbft.persistNewNode(uint64(1))
 	key := string(msg.Payload)
 	pbft.nodeMgr.localKey = key
@@ -137,7 +137,6 @@ func (pbft *pbftImpl) recvLocalRouters(routers []byte) {
 	pbft.nodeMgr.routers = routers
 
 }
-
 
 // Repica broadcast addnode message for new node
 func (pbft *pbftImpl) sendAgreeAddNode(key string) {
@@ -389,12 +388,12 @@ func (pbft *pbftImpl) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 
 	// broadcast the updateN message
 	agree := &AgreeUpdateN{
-		Flag:		true,
-		ReplicaId:	pbft.id,
-		Key:		ready.Key,
-		N:			n,
-		View:		view,
-		H:			pbft.h,
+		Flag:      true,
+		ReplicaId: pbft.id,
+		Key:       ready.Key,
+		N:         n,
+		View:      view,
+		H:         pbft.h,
 	}
 
 	if pbft.primary(pbft.view) == pbft.id {
@@ -428,8 +427,8 @@ func (pbft *pbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) events.Event {
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
-		Type:		ConsensusMessage_AGREE_UPDATE_N,
-		Payload:	payload,
+		Type:    ConsensusMessage_AGREE_UPDATE_N,
+		Payload: payload,
 	}
 	msg := cMsgToPbMsg(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
@@ -460,13 +459,13 @@ func (pbft *pbftImpl) sendAgreeUpdateNforDel(key string, routerHash string) erro
 	n, view := pbft.getDelNV(cert.delId)
 
 	agree := &AgreeUpdateN{
-		Flag:		false,
-		ReplicaId:	pbft.id,
-		Key:		key,
-		RouterHash:	routerHash,
-		N:			n,
-		View:		view,
-		H:			pbft.h,
+		Flag:       false,
+		ReplicaId:  pbft.id,
+		Key:        key,
+		RouterHash: routerHash,
+		N:          n,
+		View:       view,
+		H:          pbft.h,
 	}
 
 	pbft.agreeUpdateHelper(agree)
@@ -479,8 +478,8 @@ func (pbft *pbftImpl) sendAgreeUpdateNforDel(key string, routerHash string) erro
 		return nil
 	}
 	consensusMsg := &ConsensusMessage{
-		Type:		ConsensusMessage_AGREE_UPDATE_N,
-		Payload:	payload,
+		Type:    ConsensusMessage_AGREE_UPDATE_N,
+		Payload: payload,
 	}
 	msg := cMsgToPbMsg(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
@@ -514,13 +513,13 @@ func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 	}
 
 	key := aidx{
-		v:	agree.View,
-		n:	agree.N,
-		id:	agree.ReplicaId,
+		v:    agree.View,
+		n:    agree.N,
+		id:   agree.ReplicaId,
 		flag: agree.Flag,
 	}
 	if _, ok := pbft.nodeMgr.agreeUpdateStore[key]; ok {
-		pbft.logger.Warningf("Replica %d already has a agree-update-n message" +
+		pbft.logger.Warningf("Replica %d already has a agree-update-n message"+
 			" for view=%d/n=%d from replica %d", pbft.id, agree.View, agree.N, agree.ReplicaId)
 		return nil
 	}
@@ -562,10 +561,10 @@ func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 	pbft.logger.Debugf("Replica %d now has %d agree-update requests for view=%d/n=%d", pbft.id, quorum, agree.View, agree.N)
 
 	if quorum >= pbft.allCorrectReplicasQuorum() {
-		pbft.nodeMgr.updateTarget = uidx{v:agree.View, n:agree.N, flag:agree.Flag, key:agree.Key}
+		pbft.nodeMgr.updateTarget = uidx{v: agree.View, n: agree.N, flag: agree.Flag, key: agree.Key}
 		return &LocalEvent{
-			Service:NODE_MGR_SERVICE,
-			EventType:NODE_MGR_AGREE_UPDATEN_QUORUM_EVENT,
+			Service:   NODE_MGR_SERVICE,
+			EventType: NODE_MGR_AGREE_UPDATEN_QUORUM_EVENT,
 		}
 	}
 
@@ -655,9 +654,9 @@ func (pbft *pbftImpl) recvUpdateN(update *UpdateN) events.Event {
 
 	key := uidx{
 		flag: update.Flag,
-		key: update.Key,
-		n: update.N,
-		v: update.View,
+		key:  update.Key,
+		n:    update.N,
+		v:    update.View,
 	}
 	pbft.nodeMgr.updateStore[key] = update
 
@@ -829,12 +828,12 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 
 	for idx, cert := range pbft.storeMgr.certStore {
 		if idx.v == pbft.view {
-			tmpId := msgID{n:idx.n, v:update.View}
+			tmpId := msgID{n: idx.n, v: update.View}
 			tmpCert := updateCert{
-				digest: cert.digest,
+				digest:      cert.digest,
 				sentPrepare: cert.sentPrepare,
-				validated: cert.validated,
-				sentCommit: cert.sentCommit,
+				validated:   cert.validated,
+				sentCommit:  cert.sentCommit,
 				sentExecute: cert.sentExecute,
 			}
 			pbft.nodeMgr.updateCertStore[tmpId] = tmpCert
@@ -862,7 +861,7 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 	}
 
 	for idx := range pbft.nodeMgr.agreeUpdateStore {
-		if (idx.v == update.View && idx.n == update.N && idx.flag == update.Flag) {
+		if idx.v == update.View && idx.n == update.N && idx.flag == update.Flag {
 			delete(pbft.nodeMgr.agreeUpdateStore, idx)
 		}
 	}
@@ -870,7 +869,7 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 	pbft.nodeMgr.addNodeCertStore = make(map[string]*addNodeCert)
 	pbft.nodeMgr.delNodeCertStore = make(map[string]*delNodeCert)
 
-	if !pbft.status.getState(&pbft.status.skipInProgress)&&
+	if !pbft.status.getState(&pbft.status.skipInProgress) &&
 		!pbft.status.getState(&pbft.status.inVcReset) {
 		pbft.helper.VcReset(backenVid)
 		pbft.status.activeState(&pbft.status.inVcReset)
@@ -887,8 +886,8 @@ func (pbft *pbftImpl) sendFinishUpdate() events.Event {
 
 	finish := &FinishVcReset{
 		ReplicaId: pbft.id,
-		View: pbft.view,
-		LowH: pbft.h,
+		View:      pbft.view,
+		LowH:      pbft.h,
 	}
 
 	payload, err := proto.Marshal(finish)
@@ -994,9 +993,9 @@ func (pbft *pbftImpl) agreeUpdateHelper(agree *AgreeUpdateN) {
 	}
 
 	for n, id := range pbft.storeMgr.chkpts {
-		agree.Cset = append(agree.Cset, &ViewChange_C {
+		agree.Cset = append(agree.Cset, &ViewChange_C{
 			SequenceNumber: n,
-			Id:		id,
+			Id:             id,
 		})
 	}
 
@@ -1116,8 +1115,8 @@ func (pbft *pbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (ch
 			replicas = make([]replicaInfo, len(vcList))
 			for i, vc := range vcList {
 				replicas[i] = replicaInfo{
-					id: vc.ReplicaId,
-					height: vc.H,
+					id:      vc.ReplicaId,
+					height:  vc.H,
 					genesis: vc.Genesis,
 				}
 			}
@@ -1136,7 +1135,7 @@ func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uin
 	maxN := h + 1
 
 	// "for all n such that h < n <= h + L"
-	nLoop:
+nLoop:
 	for n := h + 1; n <= h+pbft.L; n++ {
 		// "∃m ∈ S..."
 		for _, m := range aset {
@@ -1144,7 +1143,7 @@ func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uin
 			for _, em := range m.Pset {
 				quorum := 0
 				// "A1. ∃2f+1 messages m' ∈ S"
-				mpLoop:
+			mpLoop:
 				for _, mp := range aset {
 					if mp.H >= n {
 						continue
@@ -1187,7 +1186,7 @@ func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uin
 
 		quorum := 0
 		// "else if ∃2f+1 messages m ∈ S"
-		nullLoop:
+	nullLoop:
 		for _, m := range aset {
 			// "m.P has no entry"
 			for _, em := range m.Pset {

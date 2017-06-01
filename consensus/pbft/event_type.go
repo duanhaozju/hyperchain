@@ -2,7 +2,6 @@
 //Copyright (C) 2016 The Hyperchain Authors.
 package pbft
 
-
 // returnRequestBatchEvent is sent by pbft when we are forwarded a request
 //type returnRequestBatchEvent *TransactionBatch
 
