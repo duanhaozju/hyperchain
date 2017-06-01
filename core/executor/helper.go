@@ -6,6 +6,7 @@ import (
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
+	"io/ioutil"
 )
 type Helper struct {
 	innerMux        *event.TypeMux
@@ -183,8 +184,14 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			return InvalidParams
 		}
 
+		ctx, err := ioutil.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		// TODO Stream communication is a better way
+		// TODO @Rongjialei please fix me
 		packet := &WorldStateContext{
-			Payload: []byte(path),
+			Payload: ctx,
 		}
 		payload, err := proto.Marshal(packet)
 		if err != nil {

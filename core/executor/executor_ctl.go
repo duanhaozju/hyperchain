@@ -41,6 +41,7 @@ type SyncFlag struct {
 	LatestUpstream      uint64     // latest sync request high height
 	LatestDownstream    uint64     // latest sync request low height. always equal to `TempDownstream`
 	InExecution         uint32     // flag mark in execution
+	ResendMode          uint32     // sync request resend context
 	ResendExit          chan bool  // resend backend process notifier
 	Oracle              *Oracle    // peer selector before send sync request, adhere `BEST PEER` algorithm
 }

@@ -5,12 +5,18 @@ import (
 	"hyperchain/manager/event"
 
 	"github.com/pkg/errors"
+	"sync/atomic"
 )
 
 type PartPeer struct {
 	Id      uint64
 	Genesis uint64
 }
+
+const (
+	ResendMode_Block uint32 = iota
+	ResendMode_WorldState
+)
 
 type ChainSyncContext struct {
 	FullPeers       []uint64          // peers list which contains all required blocks
@@ -19,6 +25,8 @@ type ChainSyncContext struct {
 
 	CurrentPeer     uint64
 	CurrentGenesis  uint64
+
+	ResendMode      uint32
 }
 
 func NewChainSyncContext(namespace string, event event.ChainSyncReqEvent) *ChainSyncContext {
@@ -91,4 +99,11 @@ func (ctx *ChainSyncContext) GetGenesis(pid uint64) (error, uint64) {
 	return errors.New("no genesis exist"), 0
 }
 
+func (ctx *ChainSyncContext) SetResendMode(mode uint32) {
+	atomic.StoreUint32(&ctx.ResendMode, mode)
+}
+
+func (ctx *ChainSyncContext) GetResendMode() uint32 {
+	return atomic.LoadUint32(&ctx.ResendMode)
+}
 

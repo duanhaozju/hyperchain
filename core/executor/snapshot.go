@@ -97,6 +97,10 @@ func (registry *SnapshotRegistry) CompressSnapshot(filterId string) error {
 	return registry.compress(filterId)
 }
 
+func (registry *SnapshotRegistry) CompressedSnapshotPath(filterId string) string {
+	return path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "snapshots", registry.snapshotId(filterId) + ".tar.gz")
+}
+
 
 /*
 	Internal functions

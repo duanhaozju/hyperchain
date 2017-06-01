@@ -48,16 +48,20 @@ func (executor *Executor) syncChainResendBackend() {
 			return
 		case <-ticker.C:
 		        // resend
-			curUp, curDown := executor.getSyncReqArgs()
-			if curUp == up && curDown == down && !executor.isSyncInExecution() {
-				executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.status.syncFlag.SyncDemandBlockNum)
-				executor.status.syncFlag.Oracle.FeedBack(false)
-				executor.status.syncCtx.SetCurrentPeer(executor.status.syncFlag.Oracle.SelectPeer())
-				executor.SendSyncRequest(executor.status.syncFlag.SyncDemandBlockNum, down)
-				executor.recordSyncReqArgs(curUp, curDown)
+			if executor.status.syncCtx.GetResendMode() == ResendMode_Block {
+				curUp, curDown := executor.getSyncReqArgs()
+				if curUp == up && curDown == down && !executor.isSyncInExecution() {
+					executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.status.syncFlag.SyncDemandBlockNum)
+					executor.status.syncFlag.Oracle.FeedBack(false)
+					executor.status.syncCtx.SetCurrentPeer(executor.status.syncFlag.Oracle.SelectPeer())
+					executor.SendSyncRequest(executor.status.syncFlag.SyncDemandBlockNum, down)
+					executor.recordSyncReqArgs(curUp, curDown)
+				} else {
+					up = curUp
+					down = curDown
+				}
 			} else {
-				up = curUp
-				down = curDown
+				// TODO different resend strategy for world state
 			}
 		}
 	}
@@ -90,8 +94,11 @@ func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
 		executor.logger.Warning("compress snapshot failed")
 		return
 	}
-	// TODO Stream communication is a better way
-	// TODO @Rongjialei please fix me
+
+	if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE, executor.snapshotReg.CompressedSnapshotPath(manifest.FilterId), request.PeerId); err != nil {
+		executor.logger.Warningf("send world state (#%s) back to %d failed", manifest.FilterId, request.PeerId)
+		return
+	}
 }
 
 // ReceiveSyncBlocks - receive request synchronization blocks from others.
@@ -130,13 +137,15 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 				executor.SendSyncRequest(prev, next)
 			} else {
 				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
-				// TODO
 				if executor.status.syncCtx.UpdateGenesis {
-
+					// receive world state
+					executor.status.syncCtx.SetResendMode(ResendMode_WorldState)
+					executor.SendSyncRequestForWorldState(executor.status.syncFlag.SyncDemandBlockNum + 1)
+				} else {
+					executor.processSyncBlocks()
 				}
 			}
 		}
-		executor.processSyncBlocks()
 	}
 }
 
