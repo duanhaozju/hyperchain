@@ -108,7 +108,7 @@ public class Handler {
             cm.destroyContract(cid);
 
             //2.deploy new contract
-            destroy(request, responseObserver);
+            deploy(request, responseObserver);
         }
     }
 
@@ -293,6 +293,7 @@ public class Handler {
 
     public boolean checkContractExistence(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
         String cid = request.getContext().getCid();
+        logger.info(cid);
         String err;
         ContractInfo info = cm.getContractInfoByCid(cid);
         if(info == null) {

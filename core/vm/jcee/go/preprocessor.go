@@ -107,7 +107,7 @@ func extractProperty(dirPath string) error {
 			if f == nil {
 				return err
 			}
-			if !f.IsDir() && strings.HasSuffix(f.Name(), "properties") {
+			if !f.IsDir() && (strings.HasSuffix(f.Name(), "properties") || strings.HasSuffix(f.Name(), "yaml") ) {
 				cmd := command.Command("mv", path, dirPath)
 				if err := cmd.Run(); err != nil {
 					return err

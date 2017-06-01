@@ -20,7 +20,7 @@ func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input 
 		if err != nil {
 			return nil, er.ExecContractErr(1, msg, err.Error())
 		}
-		ret, _, err = exec(env, caller, nil, nil, input, codePath, codeDigest, gas, gasPrice, value, op)
+		ret, _, err = exec(env, caller, &addr, &addr, input, codePath, codeDigest, gas, gasPrice, value, op)
 		if err != nil {
 			return ret, err
 		}
@@ -143,22 +143,30 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	var codeHash common.Hash
 	if !createAccount && !updateAccount {
 		codeHash = env.Db().GetCodeHash(to.Address())
+		env.Logger().Debugf("retrieve codehash from statedb, codeHash %s", codeHash.Hex())
 	} else {
 		codeHash = common.BytesToHash(crypto.Keccak256(codeDigest))
+		env.Logger().Debugf("calculate codehash from code digest, codeHash %s", codeHash.Hex())
 	}
 	context := NewContext(caller, to, env, createAccount, updateAccount, codePath, codeHash)
 	ret, err = virtualMachine.Run(context, input)
+
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not
 	// be stored due to not enough gas set an error and let it be handled
 	// by the error checking condition below.
-	if err == nil && (createAccount || updateAccount) {
-		env.Db().SetCode(*address, codeDigest)
-	}
 	if err == nil && createAccount {
+		env.Db().SetCode(*address, codeDigest)
 		env.Db().AddDeployedContract(caller.Address(), *address)
 		env.Db().SetCreator(*address, caller.Address())
 		env.Db().SetCreateTime(*address, env.BlockNumber().Uint64())
+	}
+
+	if err == nil && updateAccount {
+		// revert all modifications in state
+		env.SetSnapshot(snapshotPreTransfer)
+		// TODO
+		env.Db().SetCode(*address, codeDigest)
 	}
 
 	// When an error was returned by the EVM or when setting the creation code

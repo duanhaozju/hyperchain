@@ -49,8 +49,6 @@ func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common
 
 func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace string) (common.Hash, error) {
 	// log := common.GetLogger(namespace, "api")
-
-
 	var tx *types.Transaction
 	realArgs, err := prepareExcute(args, txType)
 	if err != nil {
@@ -399,6 +397,12 @@ func constructTxValue(args SendTxArgs, txType int) ([]byte, error) {
 
 		} else if txType == 2 {
 			// invoke
+			payload, err = types.ConstructInvokeArgs(nil, args.MethodName, args.Args)
+			if err != nil {
+				return nil, err
+			}
+		} else if txType == 4 {
+			// update
 			code := common.FromHex(args.Payload)
 			payload, err = types.ConstructInvokeArgs(code, args.MethodName, args.Args)
 			if err != nil {
