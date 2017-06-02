@@ -1318,7 +1318,7 @@ func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []replicaInfo) {
 
 // updateState attempts to synchronize state to a particular target, implicitly calls rollback if needed
 func (pbft *pbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, replicas []replicaInfo) {
-	targets := make([]event.SyncReplica, len(replicas))
+	var targets []event.SyncReplica
 	for _, replica := range replicas {
 		target := event.SyncReplica{
 			Id:      replica.id,
