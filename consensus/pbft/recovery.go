@@ -92,9 +92,16 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 	for n, d := range pbft.storeMgr.chkpts {
 		chkpts[n] = d
 	}
+
+	height, curHash := persist.GetBlockHeightAndHash(pbft.namespace)
+	genesis := pbft.getGenesisInfo()
+
 	rc := &RecoveryResponse{
 		ReplicaId: pbft.id,
 		Chkpts:    chkpts,
+		BlockHeight:   height,
+		LastBlockHash: curHash,
+		Genesis:       genesis,
 	}
 	pbft.recvRecoveryRsp(rc)
 	return nil
@@ -309,7 +316,7 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []r
 				}
 				n = ci.n
 				d = ci.d
-				replicas = make([]replicaInfo, len(peers))
+				replicas = make([]replicaInfo, 0, len(peers))
 				for peer := range peers {
 					replicas = append(replicas, peer)
 				}
