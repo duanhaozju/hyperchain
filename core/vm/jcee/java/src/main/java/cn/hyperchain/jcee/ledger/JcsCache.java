@@ -33,6 +33,7 @@ public class JcsCache implements Cache{
 
     public void putInCache(byte[]key, byte[]value){
         try{
+            logger.debug("put in cache "+new String(value));
             cache.put( key, value);
             logger.debug("cache size after put:"+size());
         }

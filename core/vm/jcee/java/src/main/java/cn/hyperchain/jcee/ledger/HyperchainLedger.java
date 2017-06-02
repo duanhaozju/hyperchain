@@ -37,11 +37,11 @@ public class HyperchainLedger extends AbstractLedger{
                 .setContext(getLedgerContext())
                 .setK(ByteString.copyFrom(key))
                 .build();
-        logger.info("Transaction id: " + getContext().getId());
+        logger.debug("Transaction id: " + getContext().getId());
 
         ByteString v = ledgerClient.get(sendkey).getV();
+
         if (v == null || v.isEmpty()){
-            cache.putInCache(key,null);
             throw new NotExistException(new String(key));
         }
         cache.putInCache(key,v.toByteArray());
@@ -55,8 +55,10 @@ public class HyperchainLedger extends AbstractLedger{
                 .setV(ByteString.copyFrom(value))
                 .build();
 
+        logger.info("the value put in ledger "+ByteString.copyFrom(value));
         boolean success = ledgerClient.put(kv);
         if(success){
+            logger.info("the value put in cache "+value.toString());
             cache.putInCache(key,value);
         }
         return success;
@@ -163,7 +165,11 @@ public class HyperchainLedger extends AbstractLedger{
         return v.getV().toStringUtf8();
     }
 
-    public  <T> T getObject(byte[] data, Class<T> clazz) {
+    public  <T> T getObject(byte[] key, Class<T> clazz) {
+        byte[] data = get(key);
+        if(data == null){
+            return null;
+        }
         return Bytes.toObject(data, clazz);
     }
 
@@ -208,7 +214,11 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     public  <T> T getObject(String key, Class<T> clazz) {
-        return Bytes.toObject(key.getBytes(), clazz);
+        byte[] data = get(key);
+        if(data == null){
+            return null;
+        }
+        return Bytes.toObject(data, clazz);
     }
 
     @Override
