@@ -22,7 +22,7 @@ func NewTestAPI(namespace string) *Test {
 }
 
 // ===================== test ================
-func (blk *Test) TestSub(ctx context.Context) (*common.Subscription, error) {
+func (blk *Test) TestSub(ctx context.Context) (common.ID, error) {
 	notifier, supported := jsonrpc.NotifierFromContext(ctx)
 	if !supported {
 		return &common.Subscription{}, jsonrpc.ErrNotificationsUnsupported
@@ -49,6 +49,6 @@ func (blk *Test) TestSub(ctx context.Context) (*common.Subscription, error) {
 	//	}
 	//}()
 
-	return rpcSub, nil
+	return rpcSub.ID, nil
 }
 
