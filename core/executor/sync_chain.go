@@ -10,14 +10,12 @@ import (
 	"bytes"
 	"time"
 	"hyperchain/core/vm"
-	"io/ioutil"
-	"hyperchain/hyperdb"
-	cmd "os/exec"
-	"path"
-	"path/filepath"
-	"os"
 )
 
+
+/*
+	Sync chain initiator
+ */
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	executor.logger.Noticef("[Namespace = %s] send sync block request to fetch missing block, current height %d, target height %d", executor.namespace, edb.GetHeightOfChain(executor.namespace), ev.TargetHeight)
 	if executor.status.syncFlag.SyncTarget >= ev.TargetHeight || edb.GetHeightOfChain(executor.namespace) > ev.TargetHeight {
@@ -72,41 +70,6 @@ func (executor *Executor) syncChainResendBackend() {
 			}
 		}
 	}
-}
-
-// ReceiveSyncRequest - receive synchronization request from some nodes, and send back request blocks.
-func (executor *Executor) ReceiveSyncRequest(payload []byte) {
-	var request ChainSyncRequest
-	if err := proto.Unmarshal(payload, &request); err != nil {
-		executor.logger.Error("unmarshal sync request failed.")
-		return
-	}
-	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
-		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
-	}
-}
-
-func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
-	var request WsRequest
-	if err := proto.Unmarshal(payload, &request); err != nil {
-		executor.logger.Warning("unmarshal world state sync request failed.")
-		return
-	}
-	err, manifest := executor.snapshotReg.rwc.Search(request.Target)
-	if err != nil {
-		executor.logger.Warning("required snapshot doesn't exist")
-		return
-	}
-	if err := executor.snapshotReg.CompressSnapshot(manifest.FilterId); err != nil {
-		executor.logger.Warning("compress snapshot failed")
-		return
-	}
-
-	if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE, executor.snapshotReg.CompressedSnapshotPath(manifest.FilterId), request.PeerId); err != nil {
-		executor.logger.Warningf("send world state (#%s) back to (%d) failed, err msg %s", manifest.FilterId, request.PeerId, err.Error())
-		return
-	}
-	executor.logger.Noticef("send world state (#%s) back to (%d) success", manifest.FilterId, request.PeerId)
 }
 
 // ReceiveSyncBlocks - receive request synchronization blocks from others.
@@ -173,40 +136,55 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 	}
 }
 
-func (executor *Executor) ReceiveWorldState(payload []byte) {
-	executor.logger.Noticef("receive world state")
-	var packet WsContext
-	if err := proto.Unmarshal(payload, &packet); err != nil {
+func (executor *Executor) ReceiveWsHandshake(payload []byte) {
+	var hs WsHandshake
+	if err := proto.Unmarshal(payload, &hs); err != nil {
 		executor.logger.Warning("unmarshal world state packet failed.")
 		return
 	}
-	// apply
-	tmp, err := ioutil.TempDir(hyperdb.GetDatabaseHome(executor.conf), "WORLD_STATE")
-	if err != nil {
-		executor.logger.Warning("create temp dir for world state failed")
+	executor.status.syncCtx.hs = hs
+	// send back ack
+	ack := executor.constructWsAck(&hs, 0, WsAck_OK, nil)
+	if err := executor.informP2P(NOTIFY_SEND_WS_ACK, ack); err != nil {
+		executor.logger.Warning("send ws ack failed")
 		return
 	}
+}
 
-	defer func() {
-		os.RemoveAll(tmp)
-	}()
-
-	cPath := path.Join(tmp, "ws.tar.gz")
-	if err := ioutil.WriteFile(cPath, packet.Payload, 0644); err != nil {
-		executor.logger.Warning("write network packet to compress file failed")
-		return
-	}
-	localCmd := cmd.Command("tar", "-C", filepath.Dir(cPath), "-zxvf", cPath)
-	if err := localCmd.Run(); err != nil {
-		executor.logger.Warning("uncompress world state failed")
-		return
-	}
-	fPath := path.Join(tmp, "ws")
-	// apply world state
-	if err := executor.applyWorldState(fPath); err != nil {
-		executor.logger.Errorf("apply world state failed, error msg %s", err.Error())
-		return
-	}
+func (executor *Executor) ReceiveWorldState(payload []byte) {
+	executor.logger.Noticef("receive world state")
+	//var packet WsContext
+	//if err := proto.Unmarshal(payload, &packet); err != nil {
+	//	executor.logger.Warning("unmarshal world state packet failed.")
+	//	return
+	//}
+	//// apply
+	//tmp, err := ioutil.TempDir(hyperdb.GetDatabaseHome(executor.conf), "WORLD_STATE")
+	//if err != nil {
+	//	executor.logger.Warning("create temp dir for world state failed")
+	//	return
+	//}
+	//
+	//defer func() {
+	//	os.RemoveAll(tmp)
+	//}()
+	//
+	//cPath := path.Join(tmp, "ws.tar.gz")
+	//if err := ioutil.WriteFile(cPath, packet.Payload, 0644); err != nil {
+	//	executor.logger.Warning("write network packet to compress file failed")
+	//	return
+	//}
+	//localCmd := cmd.Command("tar", "-C", filepath.Dir(cPath), "-zxvf", cPath)
+	//if err := localCmd.Run(); err != nil {
+	//	executor.logger.Warning("uncompress world state failed")
+	//	return
+	//}
+	//fPath := path.Join(tmp, "ws")
+	//// apply world state
+	//if err := executor.applyWorldState(fPath); err != nil {
+	//	executor.logger.Errorf("apply world state failed, error msg %s", err.Error())
+	//	return
+	//}
 }
 
 // SendSyncRequest - send synchronization request to other nodes.
@@ -486,7 +464,6 @@ func (executor *Executor) storeFilterData(record *ValidationResultRecord, block 
 	record.Logs = logs
 }
 
-
 func (executor *Executor) fetchRepliceIds(event event.ChainSyncReqEvent) []uint64 {
 	var ret []uint64
 	for _, r := range event.Replicas {
@@ -512,4 +489,91 @@ func (executor *Executor) applyWorldState(path string) error {
 	return nil
 }
 
+/*
+	Sync chain Receiver
+ */
+// ReceiveSyncRequest - receive synchronization request from some nodes, and send back request blocks.
+func (executor *Executor) ReceiveSyncRequest(payload []byte) {
+	var request ChainSyncRequest
+	if err := proto.Unmarshal(payload, &request); err != nil {
+		executor.logger.Error("unmarshal sync request failed.")
+		return
+	}
+	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
+		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
+	}
+}
+
+// ReceiveWorldStateSyncRequest - receive ws request, send back handshake packet first time.
+func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
+	var request WsRequest
+	if err := proto.Unmarshal(payload, &request); err != nil {
+		executor.logger.Warning("unmarshal world state sync request failed.")
+		return
+	}
+	err, manifest := executor.snapshotReg.rwc.Search(request.Target)
+	if err != nil {
+		executor.logger.Warning("required snapshot doesn't exist")
+		return
+	}
+	if err := executor.snapshotReg.CompressSnapshot(manifest.FilterId); err != nil {
+		executor.logger.Warning("compress snapshot failed")
+		return
+	}
+	hs := executor.constructWsHandshake(request, manifest.FilterId, 0, 0)
+	if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE_HANDSHAKE, hs); err != nil {
+		executor.logger.Warningf("send world state (#%s) back to (%d) failed, err msg %s", manifest.FilterId, request.InitiatorId, err.Error())
+		return
+	}
+	executor.logger.Noticef("send world state (#%s) back to (%d) success", manifest.FilterId, request.InitiatorId)
+}
+
+func (executor *Executor) ReceiveWsAck(payload []byte) {
+	var ack WsAck
+	if err := proto.Unmarshal(payload, &ack); err != nil {
+		executor.logger.Warning("unmarshal ws ack failed.")
+		return
+	}
+	if ack.Status == WsAck_OK {
+		if string(ack.Message) == "Done" {
+			// remove compressed file
+		} else {
+			// send next one
+
+		}
+	} else {
+		// resend
+	}
+
+}
+
+/*
+	Net Packets
+ */
+func (executor *Executor) constructWsHandshake(req WsRequest, filterId string, size uint64, pn uint64) *WsHandshake {
+	return &WsHandshake{
+		Ctx:          &WsContext{
+			FilterId:     filterId,
+			InitiatorId:  req.ReceiverId,
+			ReceiverId:   req.InitiatorId,
+		},
+		Height:       req.Target,
+		Size:         size,
+		PacketSize:   uint64(executor.GetWsPacketMaxSize()),
+		PacketNum:    pn,
+	}
+}
+
+func (executor *Executor) constructWsAck(hs *WsHandshake, packetId uint64, status WsAck_STATUS, message []byte) *WsAck {
+	return &WsAck{
+		Ctx:       &WsContext{
+			FilterId:      hs.Ctx.FilterId,
+			InitiatorId:   hs.Ctx.ReceiverId,
+			ReceiverId:    hs.Ctx.InitiatorId,
+		},
+		PacketId:  packetId,
+		Status:    status,
+		Message:   message,
+	}
+}
 

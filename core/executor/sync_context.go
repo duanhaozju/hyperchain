@@ -28,6 +28,9 @@ type ChainSyncContext struct {
 	CurrentGenesis  uint64
 
 	ResendMode      uint32
+
+	// WS related
+	hs              WsHandshake
 }
 
 func NewChainSyncContext(namespace string, event event.ChainSyncReqEvent) *ChainSyncContext {

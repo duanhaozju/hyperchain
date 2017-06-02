@@ -405,9 +405,15 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 	case executor.NOTIFY_REQUEST_WORLD_STATE:
 		hub.logger.Debugf("message middleware: [request world state]")
 		hub.send(m.SessionMessage_SYNC_WORLD_STATE, ev.Payload, ev.Peers)
+	case executor.NOTIFY_SEND_WORLD_STATE_HANDSHAKE:
+		hub.logger.Debugf("message middleware: [send world state handshake packet]")
+		hub.send(m.SessionMessage_SEND_WS_HS, ev.Payload, ev.Peers)
 	case executor.NOTIFY_SEND_WORLD_STATE:
 		hub.logger.Debugf("message middleware: [request world state]")
 		hub.send(m.SessionMessage_SEND_WORLD_STATE, ev.Payload, ev.Peers)
+	case executor.NOTIFY_SEND_WS_ACK:
+		hub.logger.Debugf("message middleware: [send ws ack]")
+		hub.send(m.SessionMessage_SEND_WS_ACK, ev.Payload, ev.Peers)
 	}
 }
 
@@ -442,6 +448,10 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 		hub.executor.ReceiveWorldStateSyncRequest(message.Payload)
 	case m.SessionMessage_SEND_WORLD_STATE:
 		hub.executor.ReceiveWorldState(message.Payload)
+	case m.SessionMessage_SEND_WS_HS:
+		hub.executor.ReceiveWsHandshake(message.Payload)
+	case m.SessionMessage_SEND_WS_ACK:
+
 	default:
 		hub.logger.Error("receive a undefined session event")
 	}

@@ -8,22 +8,41 @@ message ChainSyncRequest{
     uint64  peerId         = 3;
 }
 
-message WsRequest {
-    uint64  target   = 1;
-    uint64  peerId   = 2;
+message WsContext {
+    string  filterId      = 1;
+    uint64  initiatorId   = 2;
+    uint64  receiverId    = 3;
 }
 
-message WsContext {
-    bytes  payload = 1;
+message WsRequest {
+    uint64  target        = 1;
+    uint64  initiatorId   = 2;
+    uint64  receiverId    = 3;
 }
 
 message WsHandshake {
-    bytes   string    = 1;
-    uint64  size      = 2;
-    uint64  batchLen  = 3;
-    uint64  packetNum = 4;
+    WsContext ctx           = 1;
+    uint64    height        = 2;  // related chain height
+    uint64    size          = 3;  // totally world state size
+    uint64    packetSize    = 4;  // packet max size
+    uint64    packetNum     = 5;  // packet number
 }
 
-message WsHandshakeAck {
-   uint64  peerId = 1;
+message Ws {
+    WsContext  ctx            = 1;
+    uint64     packetId       = 2;
+    uint64     packetSize     = 3;
+    bytes      payload        = 4;
+}
+
+
+message WsAck {
+   WsContext  ctx           = 1;
+   uint64     packetId      = 2;  // received packet id
+   enum STATUS {
+        OK       = 0;
+        FAILED   = 1;
+   }
+   STATUS     status        = 3;  // received packet status
+   bytes      message       = 4;  // received detail message
 }

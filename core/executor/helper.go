@@ -157,8 +157,9 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			return InvalidParams
 		}
 		request := &WsRequest{
-			Target: number,
-			PeerId: executor.status.syncFlag.LocalId,
+			Target:      number,
+			InitiatorId: executor.status.syncFlag.LocalId,
+			ReceiverId:  executor.status.syncCtx.GetCurrentPeer(),
 		}
 		payload, err := proto.Marshal(request)
 		if err != nil {
@@ -168,6 +169,44 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			Payload: payload,
 			Type:    NOTIFY_REQUEST_WORLD_STATE,
 			Peers:   []uint64{executor.status.syncCtx.GetCurrentPeer()},
+		})
+		return nil
+	case NOTIFY_SEND_WORLD_STATE_HANDSHAKE:
+		executor.logger.Debug("inform p2p send world state handshake packet")
+		if len(message) != 1 {
+			return InvalidParams
+		}
+		hs, ok := message[0].(*WsHandshake)
+		if ok == false {
+			return InvalidParams
+		}
+		payload, err := proto.Marshal(hs)
+		if err != nil {
+			return MarshalFailedErr
+		}
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
+			Payload: payload,
+			Type:    NOTIFY_SEND_WORLD_STATE_HANDSHAKE,
+			Peers:   []uint64{hs.Ctx.ReceiverId},
+		})
+		return nil
+	case NOTIFY_SEND_WS_ACK:
+		executor.logger.Debug("inform p2p send ws handshake ack")
+		if len(message) != 1 {
+			return InvalidParams
+		}
+		ack, ok := message[0].(*WsAck)
+		if ok == false {
+			return InvalidParams
+		}
+		payload, err := proto.Marshal(ack)
+		if err != nil {
+			return MarshalFailedErr
+		}
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
+			Payload: payload,
+			Type:    NOTIFY_SEND_WS_ACK,
+			Peers:   []uint64{ack.Ctx.ReceiverId},
 		})
 		return nil
 	case NOTIFY_SEND_WORLD_STATE:
@@ -184,14 +223,14 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			return InvalidParams
 		}
 
-		ctx, err := ioutil.ReadFile(path)
+		_, err := ioutil.ReadFile(path)
 		if err != nil {
 			return err
 		}
 		// TODO Stream communication is a better way
 		// TODO @Rongjialei please fix me
 		packet := &WsContext{
-			Payload: ctx,
+			//Payload: ctx,
 		}
 		payload, err := proto.Marshal(packet)
 		if err != nil {
