@@ -27,22 +27,23 @@ public class ByteCodeChecker implements Checker {
 
     private static final Logger logger = Logger.getLogger(ByteCodeChecker.class.getSimpleName());
     private Rule rule;
-    private static final String systemRulePath = "./hyperjvm/config/systemSecurityRule.yaml";
-    private static final String allowedRule = "allowedRule";
-    private static final String notAllowedRule = "notAllowedRule";
-    private static final String keywordType = "keyword";
-    private static final String mustKeywordType = "mustKeyword";
-    private static final String classType = "class";
-    private static final String opCodeType = "opCode";
-    private static final String classSuffix = ".class";
+    private String systemRulePath = "./hyperjvm/config/systemSecurityRule.yaml";
+    private String allowedRule = "allowedRule";
+    private String notAllowedRule = "notAllowedRule";
+    private String keywordType = "keyword";
+    private String mustKeywordType = "mustKeyword";
+    private String classType = "class";
+    private String opCodeType = "opCode";
+    private String classSuffix = ".class";
+    private String contractTemplate = "cn/hyperchain/jcee/contract/ContractTemplate";
 
     public ByteCodeChecker (String userRulePath) {
         YAMLFactory yamlFactory = new YAMLFactory();
         ObjectMapper objectMapper = new ObjectMapper(yamlFactory);
         try {
-            this.rule = objectMapper.readValue(new File(systemRulePath), Rule.class);
+            this.rule = objectMapper.readValue(new File(userRulePath), Rule.class);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
         }
     }
 
@@ -56,19 +57,31 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
+    private boolean judge(ClassNode cn) {
+        if (isContract(cn)) {
+            if (interfaceIsOk(rule, cn) && superClassIsOk(rule, cn) &&
+                    memberVariableKeyWordIsOk(rule, cn) && memberVariableClassIsOk(rule, cn) &&
+                    methodDeclareIsOk(rule, cn) && methodVariableIsOk(rule, cn) &&
+                    methodInstructionOpCodeIsOk(rule, cn) && methodInstructionDescIsOk(rule, cn)) {
+                return true;
+            }
+        } else {
+            if (interfaceIsOk(rule, cn) && superClassIsOk(rule, cn) &&
+                    memberVariableClassIsOk(rule, cn) &&
+                    methodDeclareIsOk(rule, cn) && methodVariableIsOk(rule, cn) &&
+                    methodInstructionOpCodeIsOk(rule, cn) && methodInstructionDescIsOk(rule, cn)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public boolean pass(byte[] clazz) {
         ClassReader reader = new ClassReader(clazz);
         ClassNode cn = new ClassNode();
         reader.accept(cn, 0);
-
-        if (interfaceIsOk(rule, cn) && superClassIsOk(rule, cn) &&
-                memberVariableKeyWordIsOk(rule, cn) && memberVariableClassIsOk(rule, cn) &&
-                methodDeclareIsOk(rule, cn) && methodVariableIsOk(rule, cn) &&
-                methodInstructionOpCodeIsOk(rule, cn) && methodInstructionDescIsOk(rule, cn)) {
-            return true;
-        }
-        return false;
+        return judge(cn);
     }
 
     @Override
@@ -78,15 +91,10 @@ public class ByteCodeChecker implements Checker {
             ClassReader reader = new ClassReader(new FileInputStream(file));
             ClassNode cn = new ClassNode();
             reader.accept(cn, 0);
-            if (interfaceIsOk(rule, cn) && superClassIsOk(rule, cn) &&
-                    memberVariableKeyWordIsOk(rule, cn) && memberVariableClassIsOk(rule, cn) &&
-                    methodDeclareIsOk(rule, cn) && methodVariableIsOk(rule, cn) &&
-                    methodInstructionOpCodeIsOk(rule, cn) && methodInstructionDescIsOk(rule, cn)) {
-                return true;
-            }
+            return judge(cn);
         } catch (IOException e) {
             logger.info("read file fail!");
-            e.printStackTrace();
+            logger.error(e.getMessage());
         }
         return false;
     }
@@ -158,6 +166,14 @@ public class ByteCodeChecker implements Checker {
             logger.info("check super class " + String.valueOf(!flag) + "!" + " super class name: " + superClass);
             return !flag;
         }
+    }
+
+    private boolean isContract(ClassNode cn) {
+        String superClass = cn.superName;
+        if (contractTemplate.equals(superClass)) {
+            return true;
+        }
+        return false;
     }
 
     private boolean memberVariableKeyWordIsOk(Rule rule, ClassNode cn) {
