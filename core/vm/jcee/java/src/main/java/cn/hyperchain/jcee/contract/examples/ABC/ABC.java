@@ -196,6 +196,7 @@ public class ABC extends ContractTemplate {
                         params.add(account.getBusinessBankNum());
                         params.add(draftNum);
                         params.add("SU00");
+
                         return acceptByAccount(params);
                     }
                 }
