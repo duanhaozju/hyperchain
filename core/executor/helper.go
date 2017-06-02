@@ -156,7 +156,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		if ok == false {
 			return InvalidParams
 		}
-		request := &WorldStateSyncRequest{
+		request := &WsRequest{
 			Target: number,
 			PeerId: executor.status.syncFlag.LocalId,
 		}
@@ -190,7 +190,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		}
 		// TODO Stream communication is a better way
 		// TODO @Rongjialei please fix me
-		packet := &WorldStateContext{
+		packet := &WsContext{
 			Payload: ctx,
 		}
 		payload, err := proto.Marshal(packet)

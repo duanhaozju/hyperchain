@@ -8,11 +8,22 @@ message ChainSyncRequest{
     uint64  peerId         = 3;
 }
 
-message WorldStateSyncRequest {
+message WsRequest {
     uint64  target   = 1;
     uint64  peerId   = 2;
 }
 
-message WorldStateContext {
+message WsContext {
     bytes  payload = 1;
+}
+
+message WsHandshake {
+    bytes   string    = 1;
+    uint64  size      = 2;
+    uint64  batchLen  = 3;
+    uint64  packetNum = 4;
+}
+
+message WsHandshakeAck {
+   uint64  peerId = 1;
 }

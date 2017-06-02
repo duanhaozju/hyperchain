@@ -15,6 +15,7 @@ import (
 	cmd "os/exec"
 	"path"
 	"path/filepath"
+	"os"
 )
 
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
@@ -86,7 +87,7 @@ func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 }
 
 func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
-	var request WorldStateSyncRequest
+	var request WsRequest
 	if err := proto.Unmarshal(payload, &request); err != nil {
 		executor.logger.Warning("unmarshal world state sync request failed.")
 		return
@@ -174,7 +175,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 
 func (executor *Executor) ReceiveWorldState(payload []byte) {
 	executor.logger.Noticef("receive world state")
-	var packet WorldStateContext
+	var packet WsContext
 	if err := proto.Unmarshal(payload, &packet); err != nil {
 		executor.logger.Warning("unmarshal world state packet failed.")
 		return
@@ -186,18 +187,24 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 		return
 	}
 
-	//defer func() {
-	//	os.RemoveAll(tmp)
-	//}()
+	defer func() {
+		os.RemoveAll(tmp)
+	}()
 
-	fPath := path.Join(tmp, "world_state.tar.gz")
-	if err := ioutil.WriteFile(fPath, packet.Payload, 0644); err != nil {
+	cPath := path.Join(tmp, "ws.tar.gz")
+	if err := ioutil.WriteFile(cPath, packet.Payload, 0644); err != nil {
 		executor.logger.Warning("write network packet to compress file failed")
 		return
 	}
-	localCmd := cmd.Command("tar", "-C", filepath.Dir(fPath), "-zxvf", fPath)
+	localCmd := cmd.Command("tar", "-C", filepath.Dir(cPath), "-zxvf", cPath)
 	if err := localCmd.Run(); err != nil {
 		executor.logger.Warning("uncompress world state failed")
+		return
+	}
+	fPath := path.Join(tmp, "ws")
+	// apply world state
+	if err := executor.applyWorldState(fPath); err != nil {
+		executor.logger.Errorf("apply world state failed, error msg %s", err.Error())
 		return
 	}
 }
@@ -499,6 +506,10 @@ func (executor *Executor) syncInitialize(ev event.ChainSyncReqEvent) {
 	executor.status.syncFlag.Oracle = NewOracle(ctx, executor.conf, executor.logger)
 	firstPeer := executor.status.syncFlag.Oracle.SelectPeer()
 	ctx.SetCurrentPeer(firstPeer)
+}
+
+func (executor *Executor) applyWorldState(path string) error {
+	return nil
 }
 
 
