@@ -26,8 +26,8 @@ serverhostoverride = "hyperchain.cn"
 
 [check]
 # check the ecert and rcert signature during the connect progress
-certsign = true
+certsign = false
 # check the tcert during the request process
-tcert  = true
+tcert  = false
 # check the ercert and rcert
-ercert = true
+ercert = false

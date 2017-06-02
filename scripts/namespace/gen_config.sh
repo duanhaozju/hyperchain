@@ -52,7 +52,7 @@ f_get_nodes(){
 # help prompt message
 f_help(){
     echo "gen_config.sh helper:"
-    echo "specify namespace config file name to generate and distribute nodes dirs"
+    echo "specify namespace config file name to generate and distribute nodes dirs, must specify only one namespace"
     echo "---------------------------------------------------"
     echo "Example for generate and distribute a namespace:"
     echo "./gen_config ns1"
@@ -96,6 +96,9 @@ f_gen_config(){
         cp -r ${TMP_PATH}/config/peerconfigs/node1/* ${NS_PATH}/${NS_NAME}/config/peerconfigs/${NS_NODES[$i]}/
 
         peerconfig=${NS_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${i}.json
+        if [ -e ${peerconfig} ]; then
+            rm -rf ${peerconfig}
+        fi
         touch ${peerconfig}
         ip=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.ip`
         node_id=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.node_id`
@@ -173,12 +176,18 @@ f_distribute(){
             echo "delete existed title namespace files in dir ${NS_NODES[$j]}"
             rm -rf ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}
         fi
-        mkdir ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}
+        mkdir -p ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}
 
         cp -rf  ${NS_PATH}/${NS_NAME}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}
-        cp -rf  ${NS_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/local_peerconfig.json
+        if ${LOCAL}; then
+            cp -rf  ${NS_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/local_peerconfig.json
+            cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/${NS_NODES[$j]}
+        else
+            cp -rf  ${NS_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/peerconfig.json
+
+        fi
+
         cp -rf  ${NS_PATH}/${NS_NAME}/config/peerconfigs/node${j}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/cert/
-#        cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/${NS_NODES[$j]}
 
         # distribute hypercli
         if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
@@ -218,21 +227,27 @@ NS_CONFIG_PATH="${GOPATH}/src/hyperchain/configuration"
 # config ns path
 NS_PATH="${PROJECT_PATH}/build/tmp"
 
+# generate local peer config or not
+LOCAL=false
+
 # hypercli root path
 CLI_PATH="${PROJECT_PATH}/hypercli"
 
-# exe by extra input params
-if [ $# -gt 0 ]; then
+# parse the flags
+while [ $# -gt 0 ]
+do
     case "$1" in
     -h|--help)
         f_help; exit 0;;
+    -l|--local)
+        LOCAL=true; shift;;
     -*) f_help; exit 1;;
-    *) NS_CONFIG_FILE="${PROJECT_PATH}/scripts/namespace/config/$1${NS_CONFIG_SUFFIX}";;
+    *) NS_CONFIG_FILE="${PROJECT_PATH}/scripts/namespace/config/$1${NS_CONFIG_SUFFIX}"; shift;;
+	--) shift; break;;
+	-*) help; exit 1;;
+	*) break;;
     esac
-else
-    echo "not enough params, at least one param"
-    exit 1
-fi
+done
 
 # 1.check local env
 f_check_local_env

@@ -98,6 +98,11 @@ echo "Rebuild hypercli ..."
 cd ${CLI_PATH} && govendor build
 }
 
+# modify peerconfig.json to local_peerconfig.json in global.yaml
+f_modif_global(){
+    sed -i "s/\/peerconfig.json/\/local_peerconfig.json/g" ${PROJECT_PATH}/scripts/namespace/config/template/config/global.yaml
+}
+
 f_all_in_one_cmd(){
     cd $DUMP_PATH/node${1} && ./hyperchain -o ${1} -l 800${1} -t 808${1} -f 900${1} &
 }
@@ -228,6 +233,8 @@ if  $REBUILD ; then
     f_rebuild
 fi
 
+f_modif_global
+
 if $HYPERCLI ; then
     f_rebuild_hypercli
 fi
@@ -235,7 +242,7 @@ fi
 # distribute files
 for ns in $NS
 do
-    ${PROJECT_PATH}/scripts/namespace/gen_config.sh ${ns}
+    ${PROJECT_PATH}/scripts/namespace/gen_config.sh -l ${ns}
 done
 
 # run hyperchain node
