@@ -204,6 +204,16 @@ func PP(value []byte) string {
 	return fmt.Sprintf("%x...%x", value[:4], value[len(value)-4])
 }
 
+// API describes the set of methods offered over the RPC interface
+type API struct {
+	Srvname string      // srvname under which the rpc methods of Service are exposed
+	Version string      // api version
+	Service interface{} // receiver instance which holds the methods
+	Public  bool        // indication if the methods must be considered safe for public use
+}
+
+var Apis map[string]*API
+
 // rpcRequest represents a raw incoming RPC request
 type RPCRequest struct {
 	Service   string
@@ -222,6 +232,7 @@ type RPCResponse struct {
 	//Reply []reflect.Value
 	Reply interface{}
 	Error RPCError
+	IsPubSub  bool
 }
 
 //type RPCSubscription struct {
@@ -232,7 +243,24 @@ type RPCResponse struct {
 
 type RPCNotification struct {
 	Namespace string
-	SubId     string
+	SubId     ID
 	Service   string
 	Result    interface{}
+}
+
+// ID defines a pseudo random number that is used to identify RPC subscriptions.
+type ID string
+
+// a Subscription is created by a notifier and tight to that notifier. The client can use
+// this subscription to wait for an unsubscribe request for the client, see Err().
+type Subscription struct {
+	ID        ID
+	Service string
+	Namespace string
+	Err       chan error // closed on unsubscribe
+}
+
+// Err returns a channel that is closed when the client send an unsubscribe request.
+func (s *Subscription) Err() <-chan error {
+	return s.Err
 }

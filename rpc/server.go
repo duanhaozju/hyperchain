@@ -6,10 +6,8 @@ import (
 	"runtime"
 	"sync/atomic"
 	"time"
-
 	"encoding/json"
 	"github.com/syndtr/goleveldb/leveldb/errors"
-	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
 	"hyperchain/common"
 	"hyperchain/namespace"
@@ -17,6 +15,7 @@ import (
 	"reflect"
 	"fmt"
 	"sync"
+	"context"
 )
 
 const (
@@ -86,7 +85,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 	// connection is closed the notifier will stop and cancels all active subscriptions.
 	if options&OptionSubscriptions == OptionSubscriptions {
 		//ctx = context.WithValue(ctx, common.NotifierKey{}, common.NewNotifier(codec))
-		ctx = context.WithValue(ctx, NotifierKey{}, NewNotifier())
+		ctx = context.WithValue(ctx, NotifierKey{}, NewNotifier(codec))
 	}
 
 	s.codecsMu.Lock()
@@ -308,7 +307,16 @@ func (s *Server) handleChannelReq(req *common.RPCRequest) interface{} {
 		if response.Error != nil {
 			return s.CreateErrorResponse(response.Id, response.Namespace, response.Error)
 		} else if response.Reply != nil {
+			if response.IsPubSub {
+				// active the subscription after the sub id was successfully sent to the client
+				//activateSub := func() {
+					notifier, _ := NotifierFromContext(req.Ctx)
+					notifier.Activate(response.Reply.(common.ID), req.Service, req.Namespace)
+				//}
+			}
+
 			return s.CreateResponse(response.Id, response.Namespace, response.Reply)
+
 		} else {
 			return s.CreateResponse(response.Id, response.Namespace, nil)
 		}

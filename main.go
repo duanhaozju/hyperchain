@@ -5,10 +5,10 @@ package main
 import (
 	"github.com/mkideal/cli"
 	"github.com/op/go-logging"
-	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"time"
+	"hyperchain/rpc"
 )
 
 type hyperchain struct {

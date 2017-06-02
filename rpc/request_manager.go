@@ -1,6 +1,9 @@
 package jsonrpc
 
-import "hyperchain/common"
+import (
+	"hyperchain/common"
+	"context"
+)
 
 type Receiver interface {
 	handleChannelReq (rq *common.RPCRequest) interface{}

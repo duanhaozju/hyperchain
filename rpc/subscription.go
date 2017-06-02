@@ -12,6 +12,7 @@ import (
 	"strings"
 	crand "crypto/rand"
 	"math/rand"
+	"hyperchain/common"
 )
 
 const (
@@ -33,22 +34,22 @@ var (
 	ErrSubscriptionNotFound = errors.New("subscription not found")
 )
 
-// ID defines a pseudo random number that is used to identify RPC subscriptions.
-type ID string
-
-// a Subscription is created by a notifier and tight to that notifier. The client can use
-// this subscription to wait for an unsubscribe request for the client, see Err().
-type Subscription struct {
-	ID        ID
-	Service string
-	Namespace string
-	Err       chan error // closed on unsubscribe
-}
-
-// Err returns a channel that is closed when the client send an unsubscribe request.
-func (s *Subscription) Err() <-chan error {
-	return s.Err
-}
+//// ID defines a pseudo random number that is used to identify RPC subscriptions.
+//type ID string
+//
+//// a Subscription is created by a notifier and tight to that notifier. The client can use
+//// this subscription to wait for an unsubscribe request for the client, see Err().
+//type Subscription struct {
+//	ID        ID
+//	Service string
+//	Namespace string
+//	Err       chan error // closed on unsubscribe
+//}
+//
+//// Err returns a channel that is closed when the client send an unsubscribe request.
+//func (s *Subscription) Err() <-chan error {
+//	return s.Err
+//}
 
 // notifierKey is used to store a notifier within the connection context.
 type NotifierKey struct{}
@@ -56,21 +57,21 @@ type NotifierKey struct{}
 // Notifier is tight to a RPC connection that supports subscriptions.
 // Server callbacks use the notifier to send notifications.
 type Notifier struct {
-	//codec    ServerCodec
+	codec    ServerCodec
 	subMu    sync.RWMutex // guards active and inactive maps
 	stopped  bool
-	active   map[ID]*Subscription
-	inactive map[ID]*Subscription
+	active   map[common.ID]*common.Subscription
+	inactive map[common.ID]*common.Subscription
 }
 
 // newNotifier creates a new notifier that can be used to send subscription
 // notifications to the client.
-//func newNotifier(codec ServerCodec) *Notifier {
-func NewNotifier() *Notifier {
+func NewNotifier(codec ServerCodec) *Notifier {
+//func NewNotifier() *Notifier {
 	return &Notifier{
-		//codec:    codec,
-		active:   make(map[ID]*Subscription),
-		inactive: make(map[ID]*Subscription),
+		codec:    codec,
+		active:   make(map[common.ID]*common.Subscription),
+		inactive: make(map[common.ID]*common.Subscription),
 	}
 }
 
@@ -84,8 +85,8 @@ func NotifierFromContext(ctx context.Context) (*Notifier, bool) {
 // RPC connection. By default subscriptions are inactive and notifications
 // are dropped until the subscription is marked as active. This is done
 // by the RPC server after the subscription ID is send to the client.
-func (n *Notifier) CreateSubscription() *Subscription {
-	s := &Subscription{ID: NewID(), Err: make(chan error)}
+func (n *Notifier) CreateSubscription() *common.Subscription {
+	s := &common.Subscription{ID: NewID(), Err: make(chan error)}
 	n.subMu.Lock()
 	fmt.Println(s.ID)
 	n.inactive[s.ID] = s
@@ -95,20 +96,20 @@ func (n *Notifier) CreateSubscription() *Subscription {
 
 // Notify sends a notification to the client with the given data as payload.
 // If an error occurs the RPC connection is closed and the error is returned.
-//func (n *Notifier) Notify(id ID, data interface{}) error {
-//	n.subMu.RLock()
-//	defer n.subMu.RUnlock()
-//
-//	sub, active := n.active[id]
-//	if active {
-//		notification := CreateNotification(string(id), sub.Service, sub.Namespace, data)
-//		if err := n.codec.Write(notification); err != nil {
-//			n.codec.Close()
-//			return err
-//		}
-//	}
-//	return nil
-//}
+func (n *Notifier) Notify(id common.ID, data interface{}) error {
+	n.subMu.RLock()
+	defer n.subMu.RUnlock()
+
+	sub, active := n.active[id]
+	if active {
+		notification := n.codec.CreateNotification(string(id), sub.Service, sub.Namespace, data)
+		if err := n.codec.Write(notification); err != nil {
+			n.codec.Close()
+			return err
+		}
+	}
+	return nil
+}
 
 //// Closed returns a channel that is closed when the RPC connection is closed.
 //func (n *Notifier) Closed() <-chan interface{} {
@@ -117,7 +118,7 @@ func (n *Notifier) CreateSubscription() *Subscription {
 //
 // unsubscribe a subscription.
 // If the subscription could not be found ErrSubscriptionNotFound is returned.
-func (n *Notifier) Unsubscribe(id ID) error {
+func (n *Notifier) Unsubscribe(id common.ID) error {
 	n.subMu.Lock()
 	defer n.subMu.Unlock()
 	if s, found := n.active[id]; found {
@@ -132,7 +133,7 @@ func (n *Notifier) Unsubscribe(id ID) error {
 // notifications are dropped. This method is called by the RPC server after
 // the subscription ID was sent to client. This prevents notifications being
 // send to the client before the subscription ID is send to the client.
-func (n *Notifier) Activate(id ID, service string, namespace string) {
+func (n *Notifier) Activate(id common.ID, service string, namespace string) {
 	n.subMu.Lock()
 	defer n.subMu.Unlock()
 	if sub, found := n.inactive[id]; found {
@@ -154,7 +155,7 @@ func idGenerator() *rand.Rand {
 
 // NewID generates a identifier that can be used as an identifier in the RPC interface.
 // e.g. filter and subscription identifier.
-func NewID() ID {
+func NewID() common.ID {
 	subscriptionIDGenMu.Lock()
 	defer subscriptionIDGenMu.Unlock()
 
@@ -174,5 +175,5 @@ func NewID() ID {
 		rpcId = "0"
 	}
 
-	return ID("0x" + rpcId)
+	return common.ID("0x" + rpcId)
 }
