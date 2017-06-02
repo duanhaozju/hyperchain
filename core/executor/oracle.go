@@ -51,6 +51,7 @@ func NewOracle(ctx *ChainSyncContext, conf *common.Config, logger *logging.Logge
 		score:             score,
 		logger:            logger,
 		needUpdateGenesis: needUpdateGenesis,
+		ctx:               ctx,
 	}
 	staticPeers := oracle.ReadStaticPeer(oracle.conf.GetString(staticPeerFile))
 	logger.Debug("read static peers from configuration", staticPeers)

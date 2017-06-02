@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	"sync/atomic"
-	"fmt"
 )
 
 type PartPeer struct {
@@ -37,10 +36,8 @@ func NewChainSyncContext(namespace string, event event.ChainSyncReqEvent) *Chain
 	curHeight := edb.GetHeightOfChain(namespace)
 	for _, r := range event.Replicas {
 		if r.Genesis <= curHeight {
-			fmt.Println("append peer", r.Id, "to fullpeer")
 			fullPeers = append(fullPeers, r.Id)
 		} else {
-			fmt.Println("append peer", r.Id, "to fullpeer")
 			partPeers = append(partPeers, PartPeer{
 				Id:        r.Id,
 				Genesis:   r.Genesis,

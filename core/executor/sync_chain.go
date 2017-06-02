@@ -102,7 +102,7 @@ func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
 	}
 
 	if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE, executor.snapshotReg.CompressedSnapshotPath(manifest.FilterId), request.PeerId); err != nil {
-		executor.logger.Warningf("send world state (#%s) back to (%d) failed", manifest.FilterId, request.PeerId)
+		executor.logger.Warningf("send world state (#%s) back to (%d) failed, err msg %s", manifest.FilterId, request.PeerId, err.Error())
 		return
 	}
 	executor.logger.Noticef("send world state (#%s) back to (%d) success", manifest.FilterId, request.PeerId)
@@ -136,17 +136,32 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			}
 		}
 		if executor.receiveAllRequiredBlocks() {
-			if executor.getLatestSyncDownstream() != edb.GetHeightOfChain(executor.namespace) {
+			executor.logger.Debug("receive a batch of blocks")
+			var needNextFetch bool
+			if !executor.status.syncCtx.UpdateGenesis {
+				if executor.getLatestSyncDownstream() != edb.GetHeightOfChain(executor.namespace) {
+					executor.logger.Debug("current downstream not equal to chain height")
+					needNextFetch = true
+				}
+			} else {
+				_, genesis := executor.status.syncCtx.GetCurrentGenesis()
+				if executor.getLatestSyncDownstream() != genesis - 1 {
+					executor.logger.Debug("current downstream not equal to genesis")
+					needNextFetch = true
+				}
+			}
+			if needNextFetch {
+				executor.logger.Debug("still have some blocks to fetch")
 				executor.status.syncFlag.Oracle.FeedBack(true)
 				executor.status.syncCtx.SetCurrentPeer(executor.status.syncFlag.Oracle.SelectPeer())
 				prev := executor.getLatestSyncDownstream()
 				next := executor.calcuDownstream()
 				executor.SendSyncRequest(prev, next)
 			} else {
-				executor.logger.Noticef("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
+				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
 				if executor.status.syncCtx.UpdateGenesis {
 					// receive world state
-					executor.logger.Notice("send request to fetch world state for status transition")
+					executor.logger.Debug("send request to fetch world state for status transition")
 					executor.status.syncCtx.SetResendMode(ResendMode_WorldState)
 					executor.SendSyncRequestForWorldState(executor.status.syncFlag.SyncDemandBlockNum + 1)
 				} else {
@@ -180,7 +195,7 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 		executor.logger.Warning("write network packet to compress file failed")
 		return
 	}
-	localCmd := cmd.Command("tar", "-C", filepath.Dir(fPath), "-zxvf", filepath.Base(fPath))
+	localCmd := cmd.Command("tar", "-C", filepath.Dir(fPath), "-zxvf", fPath)
 	if err := localCmd.Run(); err != nil {
 		executor.logger.Warning("uncompress world state failed")
 		return

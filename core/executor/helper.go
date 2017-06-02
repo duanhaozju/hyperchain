@@ -179,7 +179,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		if ok == false {
 			return InvalidParams
 		}
-		peerId, ok := message[0].(uint64)
+		peerId, ok := message[1].(uint64)
 		if ok == false {
 			return InvalidParams
 		}

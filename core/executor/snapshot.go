@@ -230,7 +230,7 @@ func (registry *SnapshotRegistry) compress(filterId string) error {
 		return SnapshotDoesntExistErr
 	}
 	spath := path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "snapshots", registry.snapshotId(filterId))
-	localCmd := cmd.Command("tar", "-C", filepath.Dir(spath), "-czvf", filepath.Base(spath), registry.snapshotId(filterId) + "tar.gz")
+	localCmd := cmd.Command("tar", "-C", filepath.Dir(spath), "-czvf", spath + ".tar.gz", registry.snapshotId(filterId))
 	if err := localCmd.Run(); err != nil {
 		return err
 	}
