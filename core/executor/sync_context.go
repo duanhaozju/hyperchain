@@ -31,6 +31,7 @@ type ChainSyncContext struct {
 
 	// WS related
 	hs              WsHandshake
+	wsHome          string
 }
 
 func NewChainSyncContext(namespace string, event event.ChainSyncReqEvent) *ChainSyncContext {
@@ -109,5 +110,13 @@ func (ctx *ChainSyncContext) SetResendMode(mode uint32) {
 
 func (ctx *ChainSyncContext) GetResendMode() uint32 {
 	return atomic.LoadUint32(&ctx.ResendMode)
+}
+
+func (ctx *ChainSyncContext) SetWsHome(p string) {
+	ctx.wsHome = p
+}
+
+func (ctx *ChainSyncContext) GetWsHome() string {
+	return ctx.wsHome
 }
 

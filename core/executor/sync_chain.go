@@ -11,6 +11,11 @@ import (
 	"time"
 	"hyperchain/core/vm"
 	"os"
+	"path"
+	"hyperchain/hyperdb"
+	"io/ioutil"
+	"fmt"
+	"errors"
 )
 
 
@@ -146,6 +151,15 @@ func (executor *Executor) ReceiveWsHandshake(payload []byte) {
 	executor.logger.Noticef("receive ws handshake, content: [ total size (#%d), packet num (#%d), max packet size (#%d)",
 		hs.Size, hs.PacketNum, hs.PacketSize)
 	executor.status.syncCtx.hs = hs
+
+	// make `receive home`
+	p := path.Join(hyperdb.GetDatabaseHome(executor.conf), "ws", "ws_" + hs.Ctx.FilterId)
+	err := os.MkdirAll(p, 0777)
+	if err != nil {
+		executor.logger.Warningf("make ws home for %s failed", hs.Ctx.FilterId)
+		return
+	}
+	executor.status.syncCtx.SetWsHome(p)
 	// send back ack
 	ack := executor.constructWsAck(hs.Ctx, 0, WsAck_OK, nil)
 	if err := executor.informP2P(NOTIFY_SEND_WS_ACK, ack); err != nil {
@@ -163,8 +177,37 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 		return
 	}
 
-	store := func(payload []byte, packetId uint64, filterId string) {
-		executor.logger.Noticef("receive ws (#%s) fragment (#%d)", filterId, packetId)
+	store := func(payload []byte, packetId uint64, filterId string) error {
+		// TODO add checksum
+		// GRPC will prevent packet to be modified
+		executor.logger.Noticef("receive ws (#%s) fragment (#%d), size (#%d)", filterId, packetId, len(payload))
+		fname := fmt.Sprintf("ws_%d.tar.gz", packetId)
+		if err := ioutil.WriteFile(path.Join(executor.status.syncCtx.GetWsHome(), fname), payload, 0644); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	assemble := func() error {
+		hs := executor.status.syncCtx.hs
+		var i uint64 = 1;
+		fd, err := os.OpenFile(path.Join(executor.status.syncCtx.GetWsHome(), "ws.tar.gz"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+		if err != nil {
+			return err
+		}
+		for ; i <= hs.PacketNum; i += 1 {
+			fname := fmt.Sprintf("ws_%d.tar.gz", i)
+			buf, err := ioutil.ReadFile(path.Join(executor.status.syncCtx.GetWsHome(), fname))
+			if err != nil {
+				return err
+			}
+			n, err := fd.Write(buf)
+			if n != len(buf) || err != nil {
+				return errors.New("assmble ws file failed")
+			}
+		}
+		fd.Close()
+		return nil
 	}
 
 	if ws.PacketId == executor.status.syncCtx.hs.PacketNum {
@@ -176,6 +219,9 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 			return
 		}
 		executor.logger.Notice("receive all ws packet, begin to assemble")
+		if err := assemble(); err != nil {
+			executor.logger.Errorf("assemble failed, err detail %s", err.Error())
+		}
 	} else {
 		store(ws.Payload, ws.PacketId, ws.Ctx.FilterId)
 		ack := executor.constructWsAck(ws.Ctx, ws.PacketId, WsAck_OK, nil)
@@ -557,9 +603,9 @@ func (executor *Executor) ReceiveWsAck(payload []byte) {
 		if err != nil {
 			return
 		}
-		n, ctx, err := reader.ReatAt(int64(shardId))
+		n, ctx, err := reader.ReadAt(int64(shardId))
 		if n > 0 {
-			ws := executor.constrcutWs(&ack, shardId, uint64(n), ctx)
+			ws := executor.constrcutWs(&ack, shardId, uint64(n), ctx[:n])
 			if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE, ws); err != nil {
 				return
 			}
@@ -616,6 +662,7 @@ func (executor *Executor) constructWsAck(ctx *WsContext, packetId uint64, status
 }
 
 func (executor *Executor) constrcutWs(ack *WsAck, packetId uint64, packetSize uint64, payload []byte) *Ws {
+	executor.logger.Noticef("construct ws packet with %d size", len(payload))
 	return &Ws{
 		Ctx:       &WsContext{
 			FilterId:      ack.Ctx.FilterId,
