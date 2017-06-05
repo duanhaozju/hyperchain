@@ -10,6 +10,7 @@ import (
 	"os"
 	"github.com/fsnotify/fsnotify"
 	"sync"
+	"go-ethereum/logger"
 )
 
 type Config struct {
@@ -95,6 +96,8 @@ func (cf *Config) ContainsKey(key string) bool {
 
 // MergeConfig merge config by the config file path
 func (cf *Config) MergeConfig(configPath string) (*Config, error) {
+	cf.lock.Lock()
+	defer cf.lock.Unlock()
 	logger := GetLogger(DEFAULT_LOG, "common")
 	f, err := os.Open(configPath)
 	if err != nil {
