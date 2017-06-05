@@ -47,17 +47,22 @@ const (
 	IDENTIFIER_REPLICA_SYNC
 )
 
-const LatestBlockNumber uint64 = 0
+const (
+	LatestBlockNumber       uint64 = 0
+	// WsShardLen              = 2 * 1024 * 1024 // 2MB
+	WsShardLen              = 1024 // 1KB
 
-const InvalidSnapshotReqErr   = "invalid snapshot request"
-const InvalidDeletionReqErr   = "invalid snapshot deletion request"
-const MakeSnapshotFailedErr   = "make snapshot failed"
-const SnapshotNotExistErr     = "snapshot doesn't exist"
-const DeleteSnapshotErr       = "delete snapshot failed"
+	InvalidSnapshotReqErr   = "invalid snapshot request"
+	InvalidDeletionReqErr   = "invalid snapshot deletion request"
+	MakeSnapshotFailedErr   = "make snapshot failed"
+	SnapshotNotExistErr     = "snapshot doesn't exist"
+	DeleteSnapshotErr       = "delete snapshot failed"
+	ArchiveFailedErr        = "archive failed"
+	EmptyMessage            = ""
+)
 
-const ArchiveFailedErr        = "archive failed"
-
-const EmptyMessage = ""
-var   SnapshotContentInvalidErr = errors.New("snapshot content invalid")
-var   ArchiveRequestNotSatisfiedErr = errors.New("archive request not satisfied with requirement")
-var   SnapshotDoesntExistErr = errors.New("snapshot does not exist")
+var (
+   	SnapshotContentInvalidErr = errors.New("snapshot content invalid")
+   	ArchiveRequestNotSatisfiedErr = errors.New("archive request not satisfied with requirement")
+   	SnapshotDoesntExistErr = errors.New("snapshot does not exist")
+)

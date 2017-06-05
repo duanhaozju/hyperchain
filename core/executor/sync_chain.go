@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"time"
 	"hyperchain/core/vm"
+	"os"
 )
 
 
@@ -115,7 +116,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 				}
 			}
 			if needNextFetch {
-				executor.logger.Debug("still have some blocks to fetch")
+				executor.logger.Notice("still have some blocks to fetch")
 				executor.status.syncFlag.Oracle.FeedBack(true)
 				executor.status.syncCtx.SetCurrentPeer(executor.status.syncFlag.Oracle.SelectPeer())
 				prev := executor.getLatestSyncDownstream()
@@ -125,7 +126,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
 				if executor.status.syncCtx.UpdateGenesis {
 					// receive world state
-					executor.logger.Debug("send request to fetch world state for status transition")
+					executor.logger.Notice("send request to fetch world state for status transition")
 					executor.status.syncCtx.SetResendMode(ResendMode_WorldState)
 					executor.SendSyncRequestForWorldState(executor.status.syncFlag.SyncDemandBlockNum + 1)
 				} else {
@@ -142,49 +143,48 @@ func (executor *Executor) ReceiveWsHandshake(payload []byte) {
 		executor.logger.Warning("unmarshal world state packet failed.")
 		return
 	}
+	executor.logger.Noticef("receive ws handshake, content: [ total size (#%d), packet num (#%d), max packet size (#%d)",
+		hs.Size, hs.PacketNum, hs.PacketSize)
 	executor.status.syncCtx.hs = hs
 	// send back ack
-	ack := executor.constructWsAck(&hs, 0, WsAck_OK, nil)
+	ack := executor.constructWsAck(hs.Ctx, 0, WsAck_OK, nil)
 	if err := executor.informP2P(NOTIFY_SEND_WS_ACK, ack); err != nil {
 		executor.logger.Warning("send ws ack failed")
 		return
 	}
+	executor.logger.Noticef("send ws ack (#%d) success", ack.PacketId)
 }
 
 func (executor *Executor) ReceiveWorldState(payload []byte) {
-	executor.logger.Noticef("receive world state")
-	//var packet WsContext
-	//if err := proto.Unmarshal(payload, &packet); err != nil {
-	//	executor.logger.Warning("unmarshal world state packet failed.")
-	//	return
-	//}
-	//// apply
-	//tmp, err := ioutil.TempDir(hyperdb.GetDatabaseHome(executor.conf), "WORLD_STATE")
-	//if err != nil {
-	//	executor.logger.Warning("create temp dir for world state failed")
-	//	return
-	//}
-	//
-	//defer func() {
-	//	os.RemoveAll(tmp)
-	//}()
-	//
-	//cPath := path.Join(tmp, "ws.tar.gz")
-	//if err := ioutil.WriteFile(cPath, packet.Payload, 0644); err != nil {
-	//	executor.logger.Warning("write network packet to compress file failed")
-	//	return
-	//}
-	//localCmd := cmd.Command("tar", "-C", filepath.Dir(cPath), "-zxvf", cPath)
-	//if err := localCmd.Run(); err != nil {
-	//	executor.logger.Warning("uncompress world state failed")
-	//	return
-	//}
-	//fPath := path.Join(tmp, "ws")
-	//// apply world state
-	//if err := executor.applyWorldState(fPath); err != nil {
-	//	executor.logger.Errorf("apply world state failed, error msg %s", err.Error())
-	//	return
-	//}
+	executor.logger.Noticef("receive ws packet")
+	var ws Ws
+	if err := proto.Unmarshal(payload, &ws); err != nil {
+		executor.logger.Warning("unmarshal world state packet failed.")
+		return
+	}
+
+	store := func(payload []byte, packetId uint64, filterId string) {
+		executor.logger.Noticef("receive ws (#%s) fragment (#%d)", filterId, packetId)
+	}
+
+	if ws.PacketId == executor.status.syncCtx.hs.PacketNum {
+		// the last packet
+		store(ws.Payload, ws.PacketId, ws.Ctx.FilterId)
+		ack := executor.constructWsAck(ws.Ctx, ws.PacketId, WsAck_OK, []byte("Done"))
+		if err := executor.informP2P(NOTIFY_SEND_WS_ACK, ack); err != nil {
+			executor.logger.Warning("send ws ack failed")
+			return
+		}
+		executor.logger.Notice("receive all ws packet, begin to assemble")
+	} else {
+		store(ws.Payload, ws.PacketId, ws.Ctx.FilterId)
+		ack := executor.constructWsAck(ws.Ctx, ws.PacketId, WsAck_OK, nil)
+		if err := executor.informP2P(NOTIFY_SEND_WS_ACK, ack); err != nil {
+			executor.logger.Warning("send ws ack failed")
+			return
+		}
+		executor.logger.Noticef("send ws (#%s) ack (#%d) success", ack.Ctx.FilterId, ack.PacketId)
+	}
 }
 
 // SendSyncRequest - send synchronization request to other nodes.
@@ -329,6 +329,7 @@ func (executor *Executor) SendSyncRequestForSingle(number uint64) {
 }
 
 func (executor *Executor) SendSyncRequestForWorldState(number uint64) {
+	executor.logger.Noticef("send req to fetch world state at height (#%d)", number)
 	executor.informP2P(NOTIFY_REQUEST_WORLD_STATE, number)
 }
 
@@ -507,25 +508,35 @@ func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 // ReceiveWorldStateSyncRequest - receive ws request, send back handshake packet first time.
 func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
 	var request WsRequest
+	var fsize int64
 	if err := proto.Unmarshal(payload, &request); err != nil {
 		executor.logger.Warning("unmarshal world state sync request failed.")
 		return
 	}
+	executor.logger.Noticef("receive world state sync req, required (#%d)", request.Target)
 	err, manifest := executor.snapshotReg.rwc.Search(request.Target)
 	if err != nil {
 		executor.logger.Warning("required snapshot doesn't exist")
 		return
 	}
-	if err := executor.snapshotReg.CompressSnapshot(manifest.FilterId); err != nil {
+	if err, size := executor.snapshotReg.CompressSnapshot(manifest.FilterId); err != nil {
 		executor.logger.Warning("compress snapshot failed")
 		return
+	} else {
+		fsize = size
 	}
-	hs := executor.constructWsHandshake(request, manifest.FilterId, 0, 0)
+
+	n := fsize / int64(WsShardLen)
+	if fsize % int64(WsShardLen) > 0 {
+		n += 1
+	}
+	hs := executor.constructWsHandshake(request, manifest.FilterId, uint64(fsize), uint64(n))
 	if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE_HANDSHAKE, hs); err != nil {
 		executor.logger.Warningf("send world state (#%s) back to (%d) failed, err msg %s", manifest.FilterId, request.InitiatorId, err.Error())
 		return
 	}
-	executor.logger.Noticef("send world state (#%s) back to (%d) success", manifest.FilterId, request.InitiatorId)
+	executor.logger.Noticef("send world state (#%s) handshake back to (%d) success, total size %d, total packet num %d, max packet size %d",
+		manifest.FilterId, request.InitiatorId, hs.Size, hs.PacketNum, hs.PacketSize)
 }
 
 func (executor *Executor) ReceiveWsAck(payload []byte) {
@@ -534,15 +545,42 @@ func (executor *Executor) ReceiveWsAck(payload []byte) {
 		executor.logger.Warning("unmarshal ws ack failed.")
 		return
 	}
+	remove := func(filterId string) {
+		fpath := executor.snapshotReg.CompressedSnapshotPath(ack.Ctx.FilterId)
+		os.Remove(fpath)
+	}
+
+	sendWs := func(shardId uint64, filterId string, ws *WsAck) {
+		fpath := executor.snapshotReg.CompressedSnapshotPath(filterId)
+		err, reader := common.NewSectionReader(fpath, WsShardLen)
+		defer reader.Close()
+		if err != nil {
+			return
+		}
+		n, ctx, err := reader.ReatAt(int64(shardId))
+		if n > 0 {
+			ws := executor.constrcutWs(&ack, shardId, uint64(n), ctx)
+			if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE, ws); err != nil {
+				return
+			}
+			executor.logger.Noticef("send ws(#%s) packet (#%d), packet size (#%d) to peer (#%d) success", ws.Ctx.FilterId, ws.PacketId, ws.PacketSize, ws.Ctx.ReceiverId)
+		} else if n == 0 && err != nil {
+			// TODO handler invalid ws req
+			return
+		}
+	}
+
 	if ack.Status == WsAck_OK {
 		if string(ack.Message) == "Done" {
 			// remove compressed file
+			remove(ack.Ctx.FilterId)
 		} else {
 			// send next one
-
+			sendWs(ack.PacketId + 1, ack.Ctx.FilterId, &ack)
 		}
 	} else {
 		// resend
+		sendWs(ack.PacketId, ack.Ctx.FilterId, &ack)
 	}
 
 }
@@ -559,21 +597,34 @@ func (executor *Executor) constructWsHandshake(req WsRequest, filterId string, s
 		},
 		Height:       req.Target,
 		Size:         size,
-		PacketSize:   uint64(executor.GetWsPacketMaxSize()),
+		PacketSize:   uint64(WsShardLen),
 		PacketNum:    pn,
 	}
 }
 
-func (executor *Executor) constructWsAck(hs *WsHandshake, packetId uint64, status WsAck_STATUS, message []byte) *WsAck {
+func (executor *Executor) constructWsAck(ctx *WsContext, packetId uint64, status WsAck_STATUS, message []byte) *WsAck {
 	return &WsAck{
 		Ctx:       &WsContext{
-			FilterId:      hs.Ctx.FilterId,
-			InitiatorId:   hs.Ctx.ReceiverId,
-			ReceiverId:    hs.Ctx.InitiatorId,
+			FilterId:      ctx.FilterId,
+			InitiatorId:   ctx.ReceiverId,
+			ReceiverId:    ctx.InitiatorId,
 		},
 		PacketId:  packetId,
 		Status:    status,
 		Message:   message,
+	}
+}
+
+func (executor *Executor) constrcutWs(ack *WsAck, packetId uint64, packetSize uint64, payload []byte) *Ws {
+	return &Ws{
+		Ctx:       &WsContext{
+			FilterId:      ack.Ctx.FilterId,
+			InitiatorId:   ack.Ctx.ReceiverId,
+			ReceiverId:    ack.Ctx.InitiatorId,
+		},
+		PacketId:    packetId,
+		PacketSize:  packetSize,
+		Payload:     payload,
 	}
 }
 

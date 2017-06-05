@@ -12,6 +12,7 @@ import (
 	cmd "os/exec"
 	"hyperchain/core/hyperstate"
 	"path/filepath"
+	"os"
 )
 
 
@@ -93,7 +94,7 @@ func (registry *SnapshotRegistry) DeleteSnapshot(event event.DeleteSnapshotEvent
 	}
 }
 
-func (registry *SnapshotRegistry) CompressSnapshot(filterId string) error {
+func (registry *SnapshotRegistry) CompressSnapshot(filterId string) (error, int64) {
 	return registry.compress(filterId)
 }
 
@@ -225,16 +226,24 @@ func (registry *SnapshotRegistry) deleteSnapshot(filterId string) error {
 	return nil
 }
 
-func (registry *SnapshotRegistry) compress(filterId string) error {
+func (registry *SnapshotRegistry) compress(filterId string) (error, int64) {
 	if !registry.rwc.Contain(filterId) {
-		return SnapshotDoesntExistErr
+		return SnapshotDoesntExistErr, 0
 	}
 	spath := path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "snapshots", registry.snapshotId(filterId))
 	localCmd := cmd.Command("tar", "-C", filepath.Dir(spath), "-czvf", spath + ".tar.gz", registry.snapshotId(filterId))
 	if err := localCmd.Run(); err != nil {
-		return err
+		return err, 0
 	}
-	return nil
+	fd, err := os.OpenFile(spath + ".tar.gz", os.O_RDONLY, 0644)
+	if err != nil {
+		return err, 0
+	}
+	stat, err := fd.Stat()
+	if err != nil {
+		return err, 0
+	}
+	return nil, stat.Size()
 }
 
 

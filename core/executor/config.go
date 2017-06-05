@@ -95,6 +95,3 @@ func (executor *Executor) GetArchiveThreshold() int {
 	return executor.conf.GetInt(archiveThreshold)
 }
 
-func (executor *Executor) GetWsPacketMaxSize() int64 {
-	return executor.conf.GetInt64(archiveThreshold)
-}

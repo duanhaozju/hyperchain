@@ -451,7 +451,7 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 	case m.SessionMessage_SEND_WS_HS:
 		hub.executor.ReceiveWsHandshake(message.Payload)
 	case m.SessionMessage_SEND_WS_ACK:
-
+		hub.executor.ReceiveWsAck(message.Payload)
 	default:
 		hub.logger.Error("receive a undefined session event")
 	}

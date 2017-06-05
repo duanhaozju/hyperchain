@@ -6,7 +6,6 @@ import (
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
-	"io/ioutil"
 )
 type Helper struct {
 	innerMux        *event.TypeMux
@@ -148,7 +147,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		})
 		return nil
 	case NOTIFY_REQUEST_WORLD_STATE:
-		executor.logger.Debug("inform p2p sync world state")
+		executor.logger.Notice("inform p2p sync world state")
 		if len(message) != 1 {
 			return InvalidParams
 		}
@@ -172,7 +171,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		})
 		return nil
 	case NOTIFY_SEND_WORLD_STATE_HANDSHAKE:
-		executor.logger.Debug("inform p2p send world state handshake packet")
+		executor.logger.Notice("inform p2p send world state handshake packet")
 		if len(message) != 1 {
 			return InvalidParams
 		}
@@ -191,7 +190,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		})
 		return nil
 	case NOTIFY_SEND_WS_ACK:
-		executor.logger.Debug("inform p2p send ws handshake ack")
+		executor.logger.Notice("inform p2p send ws ack")
 		if len(message) != 1 {
 			return InvalidParams
 		}
@@ -210,36 +209,22 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		})
 		return nil
 	case NOTIFY_SEND_WORLD_STATE:
-		executor.logger.Debug("inform p2p sync world state")
-		if len(message) != 2 {
+		executor.logger.Notice("inform p2p sync world state")
+		if len(message) != 1 {
 			return InvalidParams
 		}
-		path, ok := message[0].(string)
+		ws, ok := message[0].(*Ws)
 		if ok == false {
 			return InvalidParams
 		}
-		peerId, ok := message[1].(uint64)
-		if ok == false {
-			return InvalidParams
-		}
-
-		_, err := ioutil.ReadFile(path)
-		if err != nil {
-			return err
-		}
-		// TODO Stream communication is a better way
-		// TODO @Rongjialei please fix me
-		packet := &WsContext{
-			//Payload: ctx,
-		}
-		payload, err := proto.Marshal(packet)
+		payload, err := proto.Marshal(ws)
 		if err != nil {
 			return MarshalFailedErr
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_SEND_WORLD_STATE,
-			Peers:   []uint64{peerId},
+			Peers:   []uint64{ws.Ctx.ReceiverId},
 		})
 	default:
 		return NoDefinedCaseErr
