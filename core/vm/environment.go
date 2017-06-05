@@ -140,6 +140,7 @@ type Database interface {
 	ShowArchive(common.Address, string) map[string]map[string]string
 
 	RecomputeCryptoHash() (common.Hash, error)
+	ResetToTarget(uint64, common.Hash)
 }
 
 // Account represents a contract or basic ethereum account.

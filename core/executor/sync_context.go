@@ -20,9 +20,10 @@ const (
 )
 
 type ChainSyncContext struct {
-	FullPeers       []uint64          // peers list which contains all required blocks
-	PartPeers       []PartPeer        // peers list which just has a part of required blocks
-	UpdateGenesis   bool              // whether transit genesis status via network data
+	FullPeers          []uint64          // peers list which contains all required blocks
+	PartPeers          []PartPeer        // peers list which just has a part of required blocks
+	UpdateGenesis      bool              // whether transit genesis status via network data
+	GenesisTranstioned bool
 
 	CurrentPeer     uint64
 	CurrentGenesis  uint64
@@ -30,8 +31,8 @@ type ChainSyncContext struct {
 	ResendMode      uint32
 
 	// WS related
-	hs              WsHandshake
-	wsHome          string
+	hs                 WsHandshake
+	wsHome             string
 }
 
 func NewChainSyncContext(namespace string, event event.ChainSyncReqEvent) *ChainSyncContext {
@@ -118,5 +119,13 @@ func (ctx *ChainSyncContext) SetWsHome(p string) {
 
 func (ctx *ChainSyncContext) GetWsHome() string {
 	return ctx.wsHome
+}
+
+func (ctx *ChainSyncContext) SetTranstioned() {
+	ctx.GenesisTranstioned = true
+}
+
+func (ctx *ChainSyncContext) GetTranstioned() bool {
+	return ctx.GenesisTranstioned
 }
 

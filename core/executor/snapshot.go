@@ -167,7 +167,7 @@ func (registry *SnapshotRegistry) duplicate(filterId string) error {
 	conf := registry.executor.conf
 	fId := registry.snapshotId(filterId)
 	sPath := registry.snapshotPath(hyperdb.GetDatabaseHome(conf), fId)
-	if err := registry.executor.db.MakeSnapshot(sPath, registry.retrieveSnapshotFileds()); err != nil {
+	if err := registry.executor.db.MakeSnapshot(sPath, registry.RetrieveSnapshotFileds()); err != nil {
 		return err
 	}
 	return nil
@@ -297,7 +297,7 @@ func (registry *SnapshotRegistry) snapshotPath(base string, filterID string) str
 	return path.Join(base, "snapshots", filterID)
 }
 
-func (registry *SnapshotRegistry) retrieveSnapshotFileds() []string {
+func (registry *SnapshotRegistry) RetrieveSnapshotFileds() []string {
 	return []string{
 		// world state related
 		"-storage",

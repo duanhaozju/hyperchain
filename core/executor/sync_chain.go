@@ -16,6 +16,8 @@ import (
 	"io/ioutil"
 	"fmt"
 	"errors"
+	cmd "os/exec"
+	"path/filepath"
 )
 
 
@@ -221,7 +223,20 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 		executor.logger.Notice("receive all ws packet, begin to assemble")
 		if err := assemble(); err != nil {
 			executor.logger.Errorf("assemble failed, err detail %s", err.Error())
+			return
 		}
+
+		_, nGenesis := executor.status.syncCtx.GetCurrentGenesis()
+		newGenesis, err := edb.GetBlockByNumber(executor.namespace, nGenesis)
+		if err != nil {
+			return
+		}
+		if err := executor.applyWorldState(path.Join(executor.status.syncCtx.GetWsHome(), "ws.tar.gz"), ws.Ctx.FilterId, common.BytesToHash(newGenesis.MerkleRoot)); err != nil {
+			executor.logger.Errorf("apply ws failed, err detail %s", err.Error())
+			return
+		}
+		executor.status.syncCtx.SetTranstioned()
+		executor.processSyncBlocks()
 	} else {
 		store(ws.Payload, ws.PacketId, ws.Ctx.FilterId)
 		ack := executor.constructWsAck(ws.Ctx, ws.PacketId, WsAck_OK, nil)
@@ -315,20 +330,39 @@ func (executor *Executor) isBlockHashEqual(targetHash []byte) bool {
 
 // processSyncBlocks - execute all received block one by one.
 func (executor *Executor) processSyncBlocks() {
-	if executor.status.syncFlag.SyncDemandBlockNum <= edb.GetHeightOfChain(executor.namespace) {
+	if executor.status.syncFlag.SyncDemandBlockNum <= edb.GetHeightOfChain(executor.namespace) || executor.status.syncCtx.GenesisTranstioned {
 		// get the first of SyncBlocks
-		lastBlk, err := edb.GetBlockByNumber(executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1)
-		if err != nil {
-			executor.logger.Errorf("[Namespace = %s] StateUpdate Failed!", executor.namespace)
-			executor.reject()
-			return
+		checker := func() bool {
+			lastBlk, err := edb.GetBlockByNumber(executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1)
+			if err != nil {
+				return false
+			}
+			if bytes.Compare(lastBlk.ParentHash, edb.GetLatestBlockHash(executor.namespace)) != 0 {
+				return false
+			}
+			return true
 		}
-		// check the latest block in local's correctness
-		if bytes.Compare(lastBlk.ParentHash, edb.GetLatestBlockHash(executor.namespace)) == 0  {
+		if !executor.status.syncCtx.UpdateGenesis && !checker() {
+			if err := executor.CutdownBlock(executor.status.syncFlag.SyncDemandBlockNum); err != nil {
+				executor.logger.Errorf("[Namespace = %s] cut down block %d failed.", executor.namespace, executor.status.syncFlag.SyncDemandBlockNum)
+				executor.reject()
+				return
+			}
+			executor.SendSyncRequestForSingle(executor.status.syncFlag.SyncDemandBlockNum)
+			return
+		} else {
 			executor.waitUtilSyncAvailable()
 			defer executor.syncDone()
 			// execute all received block at one time
-			for i := executor.status.syncFlag.SyncDemandBlockNum + 1; i <= executor.status.syncFlag.SyncTarget; i += 1 {
+			var low uint64
+			if executor.status.syncCtx.UpdateGenesis {
+				_, low = executor.status.syncCtx.GetCurrentGenesis()
+				low += 1
+			} else {
+				low = executor.status.syncFlag.SyncDemandBlockNum + 1;
+			}
+
+			for i := low; i <= executor.status.syncFlag.SyncTarget; i += 1 {
 				executor.markSyncExecBegin()
 				blk, err := edb.GetBlockByNumber(executor.namespace, i)
 				if err != nil {
@@ -339,6 +373,7 @@ func (executor *Executor) processSyncBlocks() {
 				} else {
 					// set temporary block number as block number since block number is already here
 					executor.initDemand(blk.Number)
+					executor.stateTranstion(blk.Number + 1, common.BytesToHash(blk.MerkleRoot))
 					err, result := executor.ApplyBlock(blk, blk.Number)
 					if err != nil || executor.assertApplyResult(blk, result) == false {
 						executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
@@ -357,14 +392,6 @@ func (executor *Executor) processSyncBlocks() {
 			executor.initDemand(executor.status.syncFlag.SyncTarget + 1)
 			executor.clearSyncFlag()
 			executor.sendStateUpdatedEvent()
-		} else {
-			// the highest block in local is invalid, request the block
-			if err := executor.CutdownBlock(lastBlk.Number - 1); err != nil {
-				executor.logger.Errorf("[Namespace = %s] cut down block %d failed.", executor.namespace, lastBlk.Number - 1)
-				executor.reject()
-				return
-			}
-			executor.SendSyncRequestForSingle(lastBlk.Number - 1)
 		}
 	}
 }
@@ -532,7 +559,34 @@ func (executor *Executor) syncInitialize(ev event.ChainSyncReqEvent) {
 	ctx.SetCurrentPeer(firstPeer)
 }
 
-func (executor *Executor) applyWorldState(path string) error {
+func (executor *Executor) applyWorldState(fPath string, filterId string, root common.Hash) error {
+	uncompressCmd := cmd.Command("tar", "-zxvf", fPath, "-C", filepath.Dir(fPath))
+	if err := uncompressCmd.Run(); err != nil {
+		return err
+	}
+	dbPath := path.Join("ws", "ws_" + filterId, "SNAPSHOT_" + filterId)
+	wsDb, err := hyperdb.NewDatabase(executor.conf, dbPath, hyperdb.GetDatabaseType(executor.conf))
+	if err != nil {
+		return err
+	}
+	defer wsDb.Close()
+
+	// TODO just for test
+	// TODO ATOMIC ASSURANCE
+	entries := executor.snapshotReg.RetrieveSnapshotFileds()
+	for _, entry := range entries {
+		iter := wsDb.NewIterator([]byte(entry))
+		for iter.Next() {
+			executor.db.Put(iter.Key(), iter.Value())
+		}
+		iter.Release()
+	}
+	hash, err := executor.statedb.RecomputeCryptoHash()
+	if err != nil || hash != root {
+		return ApplyWsErr
+	}
+
+	executor.logger.Noticef("apply ws pieces (%s) success", filterId)
 	return nil
 }
 

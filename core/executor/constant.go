@@ -65,4 +65,5 @@ var (
    	SnapshotContentInvalidErr = errors.New("snapshot content invalid")
    	ArchiveRequestNotSatisfiedErr = errors.New("archive request not satisfied with requirement")
    	SnapshotDoesntExistErr = errors.New("snapshot does not exist")
+	ApplyWsErr = errors.New("apply world state failed")
 )

@@ -76,6 +76,10 @@ func (executor *Executor) initDemand(num uint64) {
 	executor.status.tempBlockNumber = num
 }
 
+func (executor *Executor) stateTranstion(id uint64, root common.Hash) {
+	executor.statedb.ResetToTarget(id, root)
+}
+
 // Demand block number
 func (executor *Executor) incDemandNumber() {
 	executor.status.demandNumber += 1
