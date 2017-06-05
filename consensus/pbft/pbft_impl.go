@@ -1563,7 +1563,7 @@ func (pbft *pbftImpl) recvRemoveCache(vid uint64) bool {
 		pbft.logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
 			pbft.dupLock.Lock()
 			delete(pbft.duplicator, id)
-			pbft.dupLock.RUnlock()
+			pbft.dupLock.Unlock()
 	}
 
 	return ok
