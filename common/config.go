@@ -10,7 +10,6 @@ import (
 	"os"
 	"github.com/fsnotify/fsnotify"
 	"sync"
-	"go-ethereum/logger"
 )
 
 type Config struct {

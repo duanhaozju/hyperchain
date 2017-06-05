@@ -281,7 +281,9 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 	}
 
 	pbft.batchVdr.vid = n
+	pbft.dupLock.Lock()
 	pbft.duplicator[n] = txStore
+	pbft.dupLock.Unlock()
 
 	pbft.logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d, batch size: %d", pbft.id, pbft.view, pbft.batchVdr.vid, txStore.Len())
 	pbft.helper.ValidateBatch(newBatch.Batch, newBatch.Timestamp, n, pbft.view, true)
@@ -326,7 +328,11 @@ func (pbft *pbftImpl) preValidate(idx msgID) bool {
 		return true
 	}
 	pbft.logger.Debugf("Backup %d cache duplicator for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+
+	pbft.dupLock.Lock()
 	pbft.duplicator[idx.n] = txStore
+	pbft.dupLock.Unlock()
+
 	pbft.execValidate(cert.prePrepare.TransactionBatch, idx)
 	cert.sentValidate = true
 
