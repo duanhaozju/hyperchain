@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"io/ioutil"
 	"os"
+	"bytes"
 )
 
 func init() {
@@ -23,21 +24,21 @@ func TestSectionReader_ReatAt(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	if _, _, err := reader.ReatAt(0); err == nil {
+	if _, _, err := reader.ReadAt(0); err == nil {
 		t.Error("read at 0 shard, expect failure")
 	}
 
-	if _, _, err := reader.ReatAt(1); err != nil {
+	if _, _, err := reader.ReadAt(1); err != nil {
 		t.Error("read at 1 shard, expect no failure")
 	}
-	if len, _, err := reader.ReatAt(101); len != 5 || err == nil || err.Error() != "EOF" {
+	if len, _, err := reader.ReadAt(101); len != 5 || err == nil || err.Error() != "EOF" {
 		t.Error("read at the last shard, expect EOF error")
 	}
 }
 
 func TestSectionReader_ReadNext(t *testing.T) {
-	var filesize int64 = 10005
-	var shardLen int64 = 100
+	var filesize int64 = 1000005
+	var shardLen int64 = 1000
 	buf := RandStringRunes(int(filesize))
 	ioutil.WriteFile("tmp", buf, 0644)
 	defer os.Remove("tmp")
@@ -52,8 +53,9 @@ func TestSectionReader_ReadNext(t *testing.T) {
 	}
 	t.Log("total iter count", iterCnt)
 	var i int64 = 0
+	var newBuf []byte
 	for ; i < iterCnt; i += 1 {
-		len, _, err := reader.ReadNext()
+		len, ctx, err := reader.ReadNext()
 		t.Logf("(iter %d) content len(#%d)", i, len)
 		if err != nil && len == 0 {
 			t.Error(err.Error())
@@ -64,8 +66,12 @@ func TestSectionReader_ReadNext(t *testing.T) {
 				t.Error("shard len not satisfy")
 			}
 		}
+		newBuf = append(newBuf, ctx[:len]...)
 	}
 	reader.Close()
+	if bytes.Compare(buf, newBuf) != 0 {
+		t.Error("different content")
+	}
 }
 
 var letterBytes = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")

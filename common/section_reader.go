@@ -66,14 +66,14 @@ func (sectionReader *SectionReader) ReadNext() (n int, buf []byte, err error) {
 		return
 	}
 
-	buf = make([]byte, sectionReader.shardLen + 1)
+	buf = make([]byte, sectionReader.shardLen)
 	offset := sectionReader.latestShard * sectionReader.shardLen
 	_reader := io.NewSectionReader(sectionReader.fd, offset, sectionReader.shardLen)
 	n, err = _reader.Read(buf)
 	return
 }
 
-func (sectionReader *SectionReader) ReatAt(sid int64) (int, []byte, error) {
+func (sectionReader *SectionReader) ReadAt(sid int64) (int, []byte, error) {
 	sectionReader.latestShard = sid - 1
 	return sectionReader.ReadNext()
 }
