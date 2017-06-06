@@ -75,6 +75,7 @@ type Vm interface {
 	// and return the contract execution return bytes or an error if it
 	// failed.
 	Run(c *Contract, in []byte) ([]byte, error)
+	Finalise()
 }
 
 // Database is a EVM database for full state querying.

@@ -131,7 +131,9 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		contract.SetCallCode(codeAddr, code)
 	}
 	defer contract.Finalise()
+	defer evm.Finalise()
 
+	// evm finalise
 	ret, err = evm.Run(contract, input)
 	// if the contract creation ran successfully and no errors were returned
 	// calculate the gas required to store the code. If the code could not

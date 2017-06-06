@@ -9,6 +9,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
+	"os"
 )
 
 // Config are the configuration options for the EVM
@@ -363,5 +364,18 @@ func (evm *EVM) RunPrecompiled(p *PrecompiledAccount, input []byte, contract *Co
 		return ret, nil
 	} else {
 		return nil, OutOfGasError
+	}
+}
+
+func (evm *EVM) Finalise() {
+	if evm.cfg.Debug {
+		fmt.Fprintf(os.Stdout, "[[   Dirty Accounts %08d:   ]]\n", len(evm.logger.changedValues))
+		for addr, entries := range evm.logger.changedValues {
+			fmt.Fprintf(os.Stdout, "### address %s ###\n", addr.Hex())
+			for key, value := range entries {
+				fmt.Fprintf(os.Stdout, "%s => %s\n", key.Hex(), value.Hex())
+			}
+			fmt.Fprint(os.Stdout, "### done ###\n")
+		}
 	}
 }
