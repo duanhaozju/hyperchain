@@ -14,15 +14,15 @@ global:
     ##########################
 
     account:
-        keystoredir: "namespaces/global/config/keystore"
-        keynodesdir: "namespaces/global/config/keynodes"
+        keystoredir: "namespaces/template/config/keystore"
+        keynodesdir: "namespaces/template/config/keynodes"
 
-    dbConfig: "namespaces/global/config/db.yaml"
+    dbConfig: "namespaces/template/config/db.yaml"
 
     configs:
-        caconfig: "namespaces/global/config/caconfig.toml"
-        peers: "namespaces/global/config/peerconfig.json"
-        genesis: "namespaces/global/config/genesis.json"
+        caconfig: "namespaces/template/config/caconfig.toml"
+        peers: "namespaces/template/config/local_peerconfig.json"
+        genesis: "namespaces/template/config/genesis.json"
 
         ratelimit:
                 enable   : true
@@ -58,7 +58,7 @@ global:
         newLogFileInterval: 10s  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
                                 # such as "300ms", "2h45m".
 
-        logsdir: "./namespaces/global/data/logs"
+        logsdir: "./namespaces/template/data/logs"
         # default loglevel for all modules which can be override by module level log setting
         loglevel: "NOTICE"
         file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
@@ -101,5 +101,5 @@ global:
     ######################################################
     consensus:
            algo: "PBFT"
-           algo_config_path: "namespaces/global/config/pbft.yaml"
+           algo_config_path: "namespaces/template/config/pbft.yaml"
 

@@ -89,6 +89,7 @@ f_gen_config(){
 
     for ((i=1; i<= $NS_MAXNODE; i++)); do
         # create cert dir if not exist
+#        echo "generate peerconfig of ${NS_NODES[$i]}"
         if [ -d ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/${NS_NODES[$i]} ]; then
             rm -rf ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/${NS_NODES[$i]}
         fi
@@ -163,6 +164,7 @@ f_distribute(){
     # cp the config files into nodes
     for (( j=1; j<=$NS_MAXNODE; j++ ))
     do
+#        echo "distribute config files of node${j}"
         if [ ! -d "${DUMP_PATH}/${NS_NODES[$j]}/namespaces" ]; then
             mkdir -p ${DUMP_PATH}/${NS_NODES[$j]}/namespaces
         fi
@@ -181,6 +183,7 @@ f_distribute(){
         cp -rf  ${BUILD_TMP_PATH}/${NS_NAME}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}
         if ${LOCAL}; then
             cp -rf  ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/local_peerconfig.json
+            cp ${DUMP_PATH}/hyperchain ${DUMP_PATH}/${NS_NODES[$j]}
         else
             cp -rf  ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/peerconfig.json
 
@@ -192,7 +195,6 @@ f_distribute(){
         if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
             mkdir ${DUMP_PATH}/node${j}/hypercli
         fi
-        f_rebuild_hypercli
         cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
         cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
     done
@@ -268,6 +270,9 @@ f_copy_tmp
 
 # 4.generate new config files
 f_gen_config
+
+# 5.rebuild hypercli
+f_rebuild_hypercli
 
 # 5.distribute config files to corresponding nodes
 f_distribute

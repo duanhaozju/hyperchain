@@ -103,6 +103,14 @@ f_modif_global(){
     sed -i "s/\/peerconfig.json/\/local_peerconfig.json/g" ${PROJECT_PATH}/scripts/namespace/config/template/config/global.yaml
 }
 
+start_hyperjvm() {
+    cd ${PROJECT_PATH}/core/vm/jcee/java && ./build.sh
+    for j in  1 2 3 4
+    do
+        cp -rf ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${DUMP_PATH}/node$j/
+    done
+}
+
 f_all_in_one_cmd(){
     cd $DUMP_PATH/node${1} && ./hyperchain -o ${1} -l 800${1} -t 808${1} -f 900${1} &
 }
@@ -244,6 +252,9 @@ for ns in $NS
 do
     ${PROJECT_PATH}/scripts/namespace/gen_config.sh -l ${ns}
 done
+
+# run hyperchain node
+start_hyperjvm
 
 # run hyperchain node
 f_run_process
