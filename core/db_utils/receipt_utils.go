@@ -15,6 +15,9 @@ func GetReceipt(namespace string, txHash common.Hash) *types.ReceiptTrans {
 		return nil
 	}
 	receipt := GetReceiptFunc(db, txHash)
+	if receipt == nil {
+		return nil
+	}
 	return receipt.ToReceiptTrans()
 }
 
