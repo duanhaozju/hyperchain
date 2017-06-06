@@ -3,50 +3,58 @@
 namespace: ns1
 maxpeernode: 4
 
-node2:
+node1:
     ip: 127.0.0.1
     node_id: 1
     is_origin: true
     is_vp: true
     grpc_port: 8011
-    jsonrpc_port: 8082
-    restful_port: 9011
+    jsonrpc_port: 8081
+    restful_port: 9001
     introducer_ip: 127.0.0.1
-    introducer_port: 8011
+    introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051
 
-node3:
+node2:
     ip: 127.0.0.1
     node_id: 2
     is_origin: true
     is_vp: true
     grpc_port: 8012
-    jsonrpc_port: 8083
-    restful_port: 9012
-    introducer_ip: 127.0.0.1
-    introducer_port: 8011
+    jsonrpc_port: 8082
+    restful_port: 9001
+    introducer_ip: 172.16.0.11
+    introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50082
+    ledger_port: 50052
 
-node4:
+node3:
     ip: 127.0.0.1
     node_id: 3
     is_origin: true
     is_vp: true
     grpc_port: 8013
-    jsonrpc_port: 8084
-    restful_port: 9013
-    introducer_ip: 127.0.0.1
-    introducer_port: 8011
+    jsonrpc_port: 8083
+    restful_port: 9001
+    introducer_ip: 172.16.0.11
+    introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50083
+    ledger_port: 50053
 
-node5:
+node4:
     ip: 127.0.0.1
     node_id: 4
     is_origin: true
     is_vp: true
     grpc_port: 8014
-    jsonrpc_port: 8085
-    restful_port: 9014
-    introducer_ip: 127.0.0.1
-    introducer_port: 8011
+    jsonrpc_port: 8084
+    restful_port: 9001
+    introducer_ip: 172.16.0.11
+    introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50084
+    ledger_port: 50054

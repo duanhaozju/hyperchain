@@ -147,13 +147,10 @@ fs_help(){
 fs_kill_process(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        echo "kill process on ${server_address}"
-        ssh hyperchain@$server_address " pkill hyperchain"
-        ssh hyperchain@$server_address " cd /home/hyperchain/node${ni}/hyperjvm/bin && ./stop_hyperjvm.sh  "
-        ni=`expr $ni + 1`
-        #ssh -T hyperchain@$server_address "if [ x\"`ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'`\" != \"x\" ]; then echo \"kill process \" && ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 ; else echo no hyperchain process runing ;fi"
-        # ssh -T hyperchain@$server_address "ps aux | grep 'hyperchain -o' | grep -v grep | awk '{print \$2}'| xargs kill -9 >& /dev/null"
-
+        echo "kill process in ${server_address}"
+        ssh hyperchain@${server_address} "pkill hyperchain"
+        ssh hyperchain@${server_address} " cd /home/hyperchain/node${ni}/hyperjvm/bin && ./stop_hyperjvm.sh  "
+        ni=`expr ${ni} + 1`
     done
    }
 
@@ -222,7 +219,7 @@ HPC_PRI_HYPERCHAIN_DIR="/home/hyperchain/go/src/hyperchain"
 HPC_OTHER_HYPERCHAIN_DIR="/home/hyperchain"
 fs_distribute_the_binary(){
     echo "Send the project to primary:"
-    cd $GOPATH/src/
+    cd ${GOPATH}/src/
     if [ -d "hyperchain/build" ]; then
         rm -rf hyperchain/build
     fi
@@ -230,9 +227,9 @@ fs_distribute_the_binary(){
         rm hyperchain.tar.gz
     fi
     tar -zcf hyperchain.tar.gz ./hyperchain
-    scp hyperchain.tar.gz hyperchain@$PRIMARY:$HPC_PRI_HYPERCHAIN_HOME
+    scp hyperchain.tar.gz hyperchain@${PRIMARY}:${HPC_PRI_HYPERCHAIN_HOME}
     ssh hyperchain@$PRIMARY "rm -rf $HPC_PRI_HYPERCHAIN_DIR"
-    ssh hyperchain@$PRIMARY "tar -C $HPC_PRI_HYPERCHAIN_GO_SRC -xzf hyperchain.tar.gz"
+    ssh hyperchain@$PRIMARY "tar -C $HPC_PRI_HYPERCHAIN_GO_SRC -zxmf hyperchain.tar.gz"
     echo "Primary build the project:"
 	ssh -T hyperchain@$PRIMARY <<EOF
     if ! type go > /dev/null; then
@@ -248,75 +245,92 @@ fs_distribute_the_binary(){
         mkdir /home/hyperchain/
     fi
     source ~/.bashrc && \
-    cd go/src/hyperchain/scripts && \
-    ./local.sh -n && \
-    mv /home/hyperchain/go/src/hyperchain/build/hyperchain /home/hyperchain/
+    cd go/src/hyperchain && \
+    govendor build -tags=embed && \
+    mv hyperchain /home/hyperchain/
 EOF
-	echo "Send the config files to primary:"
-	cd $HYPERCHAIN_DIR/scripts
-#	scp -r ../config/ hyperchain@$PRIMARY:$HPC_PRI_HYPERCHAIN_HOME
-	scp ./sub_scripts/server_deploy.sh hyperchain@$PRIMARY:$HPC_PRI_HYPERCHAIN_HOME
+    scp innerserverlist.txt hyperchain@${PRIMARY}:${HPC_PRI_HYPERCHAIN_HOME}
+	scp ${HYPERCHAIN_DIR}/scripts/sub_scripts/server_deploy.sh hyperchain@${PRIMARY}:${HPC_PRI_HYPERCHAIN_HOME}
 
-    echo "Primary send files to others:"
-	ssh hyperchain@$PRIMARY "chmod a+x server_deploy.sh && bash server_deploy.sh ${MAXNODE}"
-}
-
-# peer configs dir
-PEER_CONFIGS_DIR="$HYPERCHAIN_DIR/configuration/namespaces/global/config/peerconfigs"
-fs__generate_node_peer_configs(){
-    if [ ! -d $PEER_CONFIGS_DIR ]; then
-        mkdir $PEER_CONFIGS_DIR
-    fi
-	for (( id = 1; id <= $MAXNODE; id++)); do
-        confer hpc serverlist.txt innerserverlist.txt $PEER_CONFIGS_DIR/peerconfig_$id.json $id
-    done
-}
-
-# distribute the peerconfigs
-# 1. please ensure the peerconfig generate is currectly
-# 2. please ensure the primary distribute is finished!
-fs__distribute_peerconfigs(){
-    ni=1
-    for server_address in ${SERVER_ADDR[@]}; do
-    	ssh -T hyperchain@$server_address <<EOF
-    if [ ! -d $HPC_OTHER_HYPERCHAIN_DIR/config/ ]; then
-        mkdir $HPC_OTHER_HYPERCHAIN_DIR/config/
-    fi
-EOF
-         scp  $PEER_CONFIGS_DIR/peerconfig_$ni.json hyperchain@$server_address:$HPC_OTHER_HYPERCHAIN_DIR/config/peerconfig.json
-         scp $PEER_CONFIGS_DIR/global.yaml hyperchain@$server_address:$HPC_OTHER_HYPERCHAIN_DIR/config/global.yaml
-        ni=`expr $ni + 1`
-    done
-}
-
-#
-# generate the peer configs and dirstribute it
-fs_gen_and_distribute_peerconfig(){
-    fs__generate_node_peer_configs
-    fs__distribute_peerconfigs
-    #rm -rf $PEER_CONFIGS_DIR
+    echo "Primary send binary to others:"
+	ssh hyperchain@${PRIMARY} "chmod a+x server_deploy.sh && bash server_deploy.sh ${MAXNODE}"
 }
 
 # modifiy the global config value
 fs_modifi_global(){
-    confer write $HYPERCHAIN_DIR/configuration/global.yaml $PEER_CONFIGS_DIR/global.yaml global.configs.peers "config/peerconfig.json" -t string -y
+    if [ ${_SYSTYPE} = "MAC" ]; then
+        sed -i "" "s/local_peerconfig.json/peerconfig.json/g" ${HYPERCHAIN_DIR}/scripts/namespace/config/template/config/global.yaml
+    else
+        sed -i "s/local_peerconfig.json/peerconfig.json/g" ${HYPERCHAIN_DIR}/scripts/namespace/config/template/config/global.yaml
+    fi
 }
 
+# generate the peer configs and distribute it
+fs_gen_and_distribute_peerconfig(){
+    fs__generate_node_peer_configs
+    fs__distribute_peerconfigs
+}
+
+# generate peer configs
+fs__generate_node_peer_configs(){
+    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh global
+}
+
+# distribute config files
+fs__distribute_peerconfigs(){
+    ni=1
+    for server_address in ${SERVER_ADDR[@]}; do
+    echo "distribute config files to ${server_address}"
+    ssh -T hyperchain@${server_address} <<EOF
+    if [ -d ${HPC_OTHER_HYPERCHAIN_DIR}/node${ni} ]; then
+        rm -rf ${HPC_OTHER_HYPERCHAIN_DIR}/node${ni}
+    fi
+EOF
+
+#    copy config files
+    cd ${GOPATH}/src/hyperchain/build
+    tar cvzf node${ni}.tar.gz node${ni}
+    scp node${ni}.tar.gz hyperchain@${server_address}:${HPC_OTHER_HYPERCHAIN_DIR}
+    ssh -T hyperchain@${server_address} <<EOF
+    if [ -d ${HPC_OTHER_HYPERCHAIN_DIR}/node${ni} ]; then
+        rm -rf ${HPC_OTHER_HYPERCHAIN_DIR}/node${ni}
+    fi
+    tar zxvmf node${ni}.tar.gz
+    cp ${HPC_OTHER_HYPERCHAIN_DIR}/hyperchain ${HPC_OTHER_HYPERCHAIN_DIR}/node${ni}
+EOF
+    rm -rf node${ni}.tar.gz
+    ((ni+=1))
+done
+}
+
+# Build jvm in local machine and then distribute to servers
+fs_distribute_jvm(){
+    echo "build hyperjvm in local"
+    cd ${PROJECT_PATH}/core/vm/jcee/java && ./build.sh
+
+    ni=1
+    for server_address in ${SERVER_ADDR[@]}; do
+        echo "distribute hyperjvm to ${server_address}"
+        scp -r ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm hyperchain@${server_address}:/home/hyperchain/node${ni}
+        ni=`expr ${ni} + 1`
+    done
+}
 # Run all the nodes
 # Open N Terminals in linux
 fs_run_N_terminals_linux(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        gnome-terminal -x bash -c "ssh hyperchain@$server_address \" cd /home/hyperchain/node${ni} && ./hyperchain 2>error.log \""
-        ni=`expr $ni + 1`
+        gnome-terminal -x bash -c \
+        "ssh hyperchain@$server_address \" cd /home/hyperchain/node${ni} && ./hyperchain \""
+        ni=`expr ${ni} + 1`
     done
 }
 # Open N Terminals in mac
 fs_run_N_terminals_mac(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'$server_address' \" cd /home/hyperchain/node'${ni}' && ./hyperchain \""'
-        ni=`expr $ni + 1`
+        osascript -e 'tell app "Terminal" to do script "ssh hyperchain@'${server_address}' \" cd /home/hyperchain/node'${ni}' && ./hyperchain \""'
+        ni=`expr ${ni} + 1`
     done
 }
 
@@ -324,16 +338,18 @@ fs_run_N_terminals_mac(){
 fs_run_one_terminal(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        ssh -T hyperchain@$server_address "./hyperchain" &
-        ni=`expr $ni + 1`
+        ssh -T hyperchain@${server_address} "./hyperchain" &
+        ni=`expr ${ni} + 1`
     done
 }
 
 # clean the data
 fs_delete_data(){
     echo "Delete all the old data"
+    ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        ssh -T hyperchain@$server_address "rm -rf /home/hyperchain/node*"
+        ssh -T hyperchain@${server_address} "rm -rf node${ni}"
+        ni=`expr ${ni} + 1`
     done
 }
 
@@ -341,6 +357,8 @@ fs_delete_data(){
 ######################
 # RUN ALL PROGRAMS
 #####################
+
+PROJECT_PATH="${GOPATH}/src/hyperchain"
 
 # parse the flags
 while [ $# -gt 0 ]
@@ -366,12 +384,12 @@ do
     esac
 done
 
-echo "run this script first time? $FIRST"
-echo "delete the data? $DELETEDATA"
-echo "rebuild and redistribute binary? $REBUILD"
-echo "server env,true: suse,false: centos: $SERVER_ENV"
+#echo "run this script first time? $FIRST"
+#echo "delete the data? $DELETEDATA"
+#echo "rebuild and redistribute binary? $REBUILD"
+#echo "server env,true: suse,false: centos: $SERVER_ENV"
 
-if $FIRST; then
+if ${FIRST}; then
     fs_add_ssh_key_into_primary
     fs_add_ssh_key_form_primary_to_others
     exit 0
@@ -379,18 +397,23 @@ fi
 # kill all processes
 fs_kill_process
 
-if $DELETEDATA; then
+if ${DELETEDATA}; then
     fs_delete_data
 fi
-#
-if $REBUILD; then
+
+if ${REBUILD}; then
     fs_distribute_the_binary
 fi
 
 fs_modifi_global
+
 fs_gen_and_distribute_peerconfig
+
+fs_distribute_jvm
+
 echo "Running nodes"
-if $MODE; then
+
+if ${MODE}; then
     fs_run_one_terminal
 else
     if [ "${_SYSTYPE}x" == "MACx" ]; then
