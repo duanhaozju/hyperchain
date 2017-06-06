@@ -19,7 +19,6 @@ const (
 	SubscribeMethodSuffix    = "_subscribe"
 	NotificationMethodSuffix = "_subscription"
 	UnsubscribeMethodSuffix  = "_unsubscribe"
-	NotificationMethodSuffix = "_subscription"
 )
 
 var (
@@ -68,10 +67,48 @@ type Notifier struct {
 // notifications to the client.
 func NewNotifier(codec ServerCodec) *Notifier {
 //func NewNotifier() *Notifier {
-	return &Notifier{
-		codec:    codec,
-		active:   make(map[common.ID]*common.Subscription),
-		inactive: make(map[common.ID]*common.Subscription),
+	notifier := &Notifier{
+			codec:    codec,
+			active:   make(map[common.ID]*common.Subscription),
+			inactive: make(map[common.ID]*common.Subscription),
+		    }
+	go notifier.eventloop()
+	return notifier
+}
+
+func (n *Notifier) eventloop() {
+	subchan := common.GetSubChan()
+	for {
+		select {
+			case ctx := <- subchan.CtxChan:
+				fmt.Println("has got 'context'")
+				n.codec.Write("has got context")
+				notifier, supported := NotifierFromContext(ctx)
+				if !supported {
+					//return &common.Subscription{}, ErrNotificationsUnsupported
+					subchan.Err <- ErrNotificationsUnsupported
+				}
+
+				rpcSub := notifier.CreateSubscription()
+				fmt.Println("start create subscription")
+				subchan.SubscriptionChan <- rpcSub
+			case nd := <- common.GetSubChan().NotifyDataChan:
+				fmt.Printf("ready to send feedback: %#v\n", nd)
+				n.codec.Write("ready to send feedback")
+				id := nd.SubID
+				data := nd.Data
+
+				sub, active := n.active[id]
+				if active {
+					notification := n.codec.CreateNotification(id, sub.Service, sub.Namespace, data)
+					if err := n.codec.Write(notification); err != nil {
+						fmt.Errorf("%v",err)
+						n.codec.Close()
+						//return err
+					}
+				}
+
+		}
 	}
 }
 
@@ -86,7 +123,7 @@ func NotifierFromContext(ctx context.Context) (*Notifier, bool) {
 // are dropped until the subscription is marked as active. This is done
 // by the RPC server after the subscription ID is send to the client.
 func (n *Notifier) CreateSubscription() *common.Subscription {
-	s := &common.Subscription{ID: NewID(), Err: make(chan error)}
+	s := &common.Subscription{ID: NewID(), Error: make(chan error)}
 	n.subMu.Lock()
 	fmt.Println(s.ID)
 	n.inactive[s.ID] = s
@@ -96,13 +133,18 @@ func (n *Notifier) CreateSubscription() *common.Subscription {
 
 // Notify sends a notification to the client with the given data as payload.
 // If an error occurs the RPC connection is closed and the error is returned.
-func (n *Notifier) Notify(id common.ID, data interface{}) error {
+//func (n *Notifier) Notify(id common.ID, data interface{}) error {
+func (n *Notifier) Notify() error {
 	n.subMu.RLock()
 	defer n.subMu.RUnlock()
 
+	nd := <- common.GetSubChan().NotifyDataChan
+	id := nd.SubID
+	data := nd.Data
+
 	sub, active := n.active[id]
 	if active {
-		notification := n.codec.CreateNotification(string(id), sub.Service, sub.Namespace, data)
+		notification := n.codec.CreateNotification(id, sub.Service, sub.Namespace, data)
 		if err := n.codec.Write(notification); err != nil {
 			n.codec.Close()
 			return err
@@ -122,7 +164,7 @@ func (n *Notifier) Unsubscribe(id common.ID) error {
 	n.subMu.Lock()
 	defer n.subMu.Unlock()
 	if s, found := n.active[id]; found {
-		close(s.Err)
+		close(s.Error)
 		delete(n.active, id)
 		return nil
 	}

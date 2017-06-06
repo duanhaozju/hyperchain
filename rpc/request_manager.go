@@ -2,7 +2,6 @@ package jsonrpc
 
 import (
 	"hyperchain/common"
-	"context"
 )
 
 type Receiver interface {

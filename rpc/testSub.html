@@ -32,7 +32,7 @@ window.onload = function () {
     };
 
     if (window["WebSocket"]) {
-        conn = new WebSocket("ws://localhost:10002");
+        conn = new WebSocket("ws://localhost:10001");
         console.log("connect ",conn," ...")
         conn.onclose = function (evt) {
             var item = document.createElement("div");
@@ -98,7 +98,8 @@ body {
 <div id="log"></div>
 <form id="form">
     <input type="submit" value="Send" />
-    <input type="text" id="msg" size="64" value='{"jsonrpc":"2.0","method": "block_subscribe","id": 1,"namespace":"global","params":["testSub", {}]}'/>
+    <input type="text" id="msg" size="64" value='{"jsonrpc":"2.0","method": "sub_subscribe","id": 1,"namespace":"global","params":["newTxTest", {}]}'/>
+    <!--<input type="text" id="msg" size="64" value='{"jsonrpc":"2.0","method": "sub_newBlockSubscription","id": 1,"namespace":"global","params":[false]}'/>-->
 </form>
 </body>
 </html>

@@ -122,7 +122,7 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 
 		//defer conn.Close()
 
-		//for {
+		for {
 			_, nr, err := conn.NextReader()
 
 			if err != nil {
@@ -143,6 +143,6 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 			codec := NewJSONCodec(&httpReadWriteCloser{nr, nw}, r, srv.namespaceMgr)
 
 			srv.ServeCodec(codec, OptionMethodInvocation|OptionSubscriptions)
-		//}
+		}
 	}
 }

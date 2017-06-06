@@ -9,6 +9,8 @@ import (
 	"time"
 	"hyperchain/core/vm"
 	edb "hyperchain/core/db_utils"
+	"context"
+	"fmt"
 )
 
 type PublicFilterAPI struct {
@@ -19,9 +21,10 @@ type PublicFilterAPI struct {
 	events      *flt.EventSystem
 	filtersMu   sync.Mutex
 	filters     map[string]*flt.Filter
+	subchan     *common.Subchan
 }
 
-func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config) *PublicFilterAPI {
+func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config, subchan *common.Subchan) *PublicFilterAPI {
 	log := common.GetLogger(namespace, "api")
 	api := &PublicFilterAPI{
 		namespace:   namespace,
@@ -30,6 +33,7 @@ func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config)
 		log:         log,
 		events:      eh.GetFilterSystem(),
 		filters:     make(map[string]*flt.Filter),
+		subchan:     subchan,
 	}
 	go api.timeoutLoop()
 	return api
@@ -199,5 +203,55 @@ func returnLogs(logs []*vm.Log) []vm.LogTrans {
 	}
 	_logs := vm.Logs(logs)
 	return _logs.ToLogsTrans()
+}
+
+// ===================== test ================
+func (api *PublicFilterAPI) NewTxTest(ctx context.Context) (common.ID, error) {
+
+	// todo 1. 对于订阅请求，往common包的subchan管道传入ctx，一定要将管道锁住，直到值被读出来以后才解锁（缺点：无法并发处理）
+	// todo 这样的话得用三个管道，一个ctx，一个subid，一个告知通知的管道。是否可以用事件系统来替代？
+
+	api.subchan.Mux.Lock()
+	fmt.Println("ready to deal with 'context'")
+	api.subchan.CtxChan <- ctx
+
+	select {
+	case err := <- api.subchan.Err:
+		api.subchan.Mux.Unlock()
+		return common.ID(""), err
+	case rpcSub := <- api.subchan.SubscriptionChan:
+		api.subchan.Mux.Unlock()
+		fmt.Println("created subscription")
+
+		go func() {
+			//txHashes := make(chan common.Hash)
+			//pendingTxSub := api.events.SubscribePendingTxEvents(txHashes)
+
+			blockC   := make(chan common.Hash)
+			blockSub := api.events.NewBlockSubscription(blockC, false)
+
+			for {
+				select {
+				case h := <-blockC:
+					fmt.Println("receive block")
+				        payload := common.NotifyPayload{
+						SubID: rpcSub.ID,
+						Data:  h,
+					}
+				        api.subchan.NotifyDataChan <- payload
+					//notifier.Notify(rpcSub.ID, h)
+				case <-rpcSub.Err():
+					blockSub.Unsubscribe()
+					return
+				//case <-notifier.Closed():
+				//	pendingTxSub.Unsubscribe()
+				//	return
+				}
+			}
+		}()
+
+		return rpcSub.ID, nil
+	}
+
 }
 

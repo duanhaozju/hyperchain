@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"context"
+	"hyperchain/api"
 )
 
 const (
@@ -23,13 +24,13 @@ type RequestProcessor interface {
 
 type JsonRpcProcessorImpl struct {
 	namespace string
-	apis      map[string]*common.API
+	apis      map[string]*api.API
 	services  serviceRegistry // map hpc to methods of hpc
 	log       *logging.Logger
 }
 
 //NewJsonRpcProcessorImpl new an instance of JsonRpcProcessorImpl with namespace and apis
-func NewJsonRpcProcessorImpl(namespace string, apis map[string]*common.API) *JsonRpcProcessorImpl {
+func NewJsonRpcProcessorImpl(namespace string, apis map[string]*api.API) *JsonRpcProcessorImpl {
 	jpri := &JsonRpcProcessorImpl{
 		namespace: namespace,
 		apis:      apis,

@@ -320,8 +320,8 @@ func (s *Server) handleChannelReq(req *common.RPCRequest) interface{} {
 		} else {
 			return s.CreateResponse(response.Id, response.Namespace, nil)
 		}
-	} else if response, ok := r.(*common.RPCNotification); ok{
-		return s.CreateNotification(response.SubId, response.Service, response.Namespace, nil)
+	//} else if response, ok := r.(*common.RPCNotification); ok{
+	//	return s.CreateNotification(response.SubId, response.Service, response.Namespace, nil)
 	} else {
 		log.Errorf("response type invalid, resp: %v\n")
 		return s.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"response type invalid!"})
@@ -345,15 +345,4 @@ func (s *Server) CreateErrorResponse(id interface{}, name string, err common.RPC
 // info is optional and contains additional information about the error. When an empty string is passed it is ignored.
 func (s *Server) CreateErrorResponseWithInfo(id interface{}, name string, err common.RPCError, info interface{}) interface{} {
 	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
-}
-
-// CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
-func (s *Server) CreateNotification(subid, service, namespace string, event interface{}) interface{} {
-	if isHexNum(reflect.TypeOf(event)) {
-		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace, Method: service + NotificationMethodSuffix,
-			Params: jsonSubscription{Subscription: subid, Result: fmt.Sprintf(`%#x`, event)}}
-	}
-
-	return &jsonNotification{Version: JSONRPCVersion, Method: namespace + NotificationMethodSuffix,
-		Params: jsonSubscription{Subscription: subid, Result: event}}
 }

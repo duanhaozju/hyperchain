@@ -76,11 +76,13 @@ func (es *EventSystem) eventLoop() {
 	for {
 		select {
 		case ev, active := <-sub.Chan():
+			fmt.Println("start to notify")
 			if !active { // system stopped
 				return
 			}
 			es.broadcast(index, ev)
 		case f := <-es.installC:
+			fmt.Printf("register event %v\n", f.typ)
 			index[f.typ][f.id] = f
 			close(f.installed)
 		case f := <-es.uninstallC:
@@ -99,6 +101,7 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 	switch ev := obj.Data.(type) {
 	case event.FilterNewBlockEvent:
 		for _, f := range filters[BlocksSubscription] {
+			fmt.Printf("block hash: %v", ev.Block.BlockHash)
 			if obj.Time.After(f.created) {
 				f.hashes <- common.BytesToHash(ev.Block.BlockHash)
 			}

@@ -3,12 +3,12 @@
 package rpc
 
 import (
-	"golang.org/x/net/context"
 	"reflect"
 	"unicode"
 	"unicode/utf8"
 	"hyperchain/common"
 	"math/big"
+	"context"
 )
 
 var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
@@ -48,8 +48,7 @@ func isContextType(t reflect.Type) bool {
 	for t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
-	//return t == contextType
-	return t.String() == contextType.String()
+	return t == contextType
 }
 
 var errorType = reflect.TypeOf((*error)(nil)).Elem()
@@ -81,6 +80,16 @@ func isSubscriptionType(t reflect.Type) bool {
 	return t == subscriptionType
 }
 
+var IDType = reflect.TypeOf((*common.ID)(nil)).Elem()
+
+// isIDType returns an indication if the given t is of ID or *ID type
+func isIDType(t reflect.Type) bool {
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return t == IDType
+}
+
 // isPubSub tests whether the given method has as as first argument a context.Context
 // and returns the pair (Subscription, error)
 func isPubSub(methodType reflect.Type) bool {
@@ -90,7 +99,7 @@ func isPubSub(methodType reflect.Type) bool {
 	}
 
 	return isContextType(methodType.In(1)) &&
-		isSubscriptionType(methodType.Out(0)) &&
+		isIDType(methodType.Out(0)) &&
 		isErrorType(methodType.Out(1))
 }
 
@@ -118,8 +127,7 @@ METHODS:
 
 		firstArg := 1
 		numIn := mtype.NumIn()
-		//if numIn >= 2 && mtype.In(1) == contextType {
-		if numIn >= 2 && mtype.In(1).String() == contextType.String() {
+		if numIn >= 2 && mtype.In(1) == contextType {
 			h.hasCtx = true
 			firstArg = 2
 		}

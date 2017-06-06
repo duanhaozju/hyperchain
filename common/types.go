@@ -13,6 +13,7 @@ import (
 	"math/rand"
 	"reflect"
 	"strings"
+	"sync"
 )
 
 const (
@@ -205,14 +206,14 @@ func PP(value []byte) string {
 }
 
 // API describes the set of methods offered over the RPC interface
-type API struct {
-	Srvname string      // srvname under which the rpc methods of Service are exposed
-	Version string      // api version
-	Service interface{} // receiver instance which holds the methods
-	Public  bool        // indication if the methods must be considered safe for public use
-}
-
-var Apis map[string]*API
+//type API struct {
+//	Srvname string      // srvname under which the rpc methods of Service are exposed
+//	Version string      // api version
+//	Service interface{} // receiver instance which holds the methods
+//	Public  bool        // indication if the methods must be considered safe for public use
+//}
+//
+//var Apis map[string]*API
 
 // rpcRequest represents a raw incoming RPC request
 type RPCRequest struct {
@@ -257,10 +258,30 @@ type Subscription struct {
 	ID        ID
 	Service string
 	Namespace string
-	Err       chan error // closed on unsubscribe
+	Error       chan error // closed on unsubscribe
 }
 
 // Err returns a channel that is closed when the client send an unsubscribe request.
 func (s *Subscription) Err() <-chan error {
-	return s.Err
+	return s.Error
 }
+
+type Subchan struct {
+	Mux               sync.Mutex
+	CtxChan           chan context.Context
+	SubscriptionChan  chan *Subscription
+	NotifyDataChan    chan NotifyPayload
+	Err		  chan error
+}
+
+type NotifyPayload struct {
+	SubID ID
+	Data  interface{}
+}
+
+var subchan *Subchan = &Subchan{
+	CtxChan: 	  make(chan context.Context),
+	SubscriptionChan: make(chan *Subscription),
+	NotifyDataChan:   make(chan NotifyPayload),
+}
+func GetSubChan() (*Subchan) {return subchan}
