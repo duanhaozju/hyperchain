@@ -7,5 +7,6 @@ import java.util.List;
  */
 public interface BatchKey {
     void put(byte[] key);
+    void put(String key);
     List<byte[]> getKeys();
 }

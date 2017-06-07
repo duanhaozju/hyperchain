@@ -4,6 +4,7 @@ import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.Batch;
 import cn.hyperchain.jcee.ledger.BatchKey;
+import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.util.Bytes;
 import org.apache.log4j.Logger;
 
@@ -70,7 +71,8 @@ public class ABC extends ContractTemplate {
 //            logger.error(msg);
 //            return result(false, msg);
 //        }
-        if(ledger.get(accountPrefix +accountNumber) != null ){
+        Result result = ledger.get(accountPrefix +accountNumber);
+        if(!result.isEmpty() ){
             msg = "the accountNumber exists";
             logger.error(msg);
             return result(false,msg);
@@ -102,14 +104,27 @@ public class ABC extends ContractTemplate {
         String orderDueTime = args.get(9);
         String msg;
 
-        Account buy = ledger.getObject(accountPrefix+buyerAccountNum,Account.class);
+        Result result = ledger.get(accountPrefix+buyerAccountNum);
+        Account buy = null;
+        if(!result.isEmpty()){
+            buy = result.toObeject(Account.class);
+        }
         logger.info("the buyer num get from ledger is "+buy.getAccountNumber());
 
-        Account sell = ledger.getObject(accountPrefix+sellerAccountNum,Account.class);
+        result = ledger.get(accountPrefix+sellerAccountNum);
+        Account sell= null;
+        if(!result.isEmpty()){
+            sell = result.toObeject(Account.class);
+        }
         logger.info("the seller num get from ledger is "+sell.getAccountNumber());
 
         logger.info("the order key "+orderPrefix+orderNum);
-        Order data = ledger.getObject(orderPrefix+orderNum,Order.class);
+
+        result = ledger.get(orderPrefix+orderNum);
+        Order data= null;
+        if(!result.isEmpty()){
+            data = result.toObeject(Order.class);
+        }
         logger.info("get data from ledger");
         if(data != null){
             msg = "the order has been published";
@@ -159,23 +174,34 @@ public class ABC extends ContractTemplate {
         String msg;
 
         logger.info("the order key "+orderPrefix+orderNum);
-        Order order = ledger.getObject(orderPrefix+orderNum,Order.class);
-        if(order == null){
+
+        Result result = ledger.get(orderPrefix+orderNum);
+        if(result.isEmpty()){
             msg = "the order has not been published";
             logger.error(msg);
             return result(false, msg);
         }
+        Order order = null;
+        if(!result.isEmpty()){
+            order = result.toObeject(Order.class);
+        }
+
         if(order.getAmount() < amount + order.getDraftAmount()){
             msg = "order amount error";
             logger.error(msg);
             return result(false,msg);
         }
-        Account account = ledger.getObject(accountPrefix+drawerId,Account.class);
-        if(account == null){
+        result = ledger.get(accountPrefix+drawerId);
+        if(result.isEmpty()){
             msg = "drawer account error";
             logger.error(msg);
             return result(false, msg);
         }
+        Account account = null;
+        if(!result.isEmpty()){
+            account = result.toObeject(Account.class);
+        }
+
         if(judgeAcceptor(acceptorId, draftType)){
             if(judgePayee(payeeId)){
                 Draft draft = new Draft(draftNum,draftType,amount,issueDraftApplyDate,
@@ -211,12 +237,16 @@ public class ABC extends ContractTemplate {
 
     public ExecuteResult getDraft(List<String> args){
         String draftNum = args.get(0);
-        Draft draft = ledger.getObject(draftPrefix+draftNum,Draft.class);
-        if(draft == null){
+        Result result = ledger.get(draftPrefix+draftNum);
+
+        if(result.isEmpty()){
             String msg = "draft is null";
             logger.error(msg);
             return result(false,msg);
         }
+
+        Draft draft = result.toObeject(Draft.class);
+
         logger.info(draft.getDraftNum());
         logger.info(draft.getFirstOwner());
         logger.info(draft.getSecondOwner());
@@ -242,12 +272,16 @@ public class ABC extends ContractTemplate {
             logger.equals(msg);
             return result(false,msg);
         }
-        Draft draft = ledger.getObject(draftPrefix+draftNum,Draft.class);
-        if(draft == null){
+
+        Result result = ledger.get(draftPrefix+draftNum);
+
+        if(result.isEmpty()){
             msg = "draft is not exist";
             logger.error(msg);
             return result(false,msg);
         }
+
+        Draft draft = result.toObeject(Draft.class);
         if(!draft.getDraftStatus().equals("020001")){
             msg = "draft status is not satisfied";
             logger.error(msg);
@@ -258,7 +292,12 @@ public class ABC extends ContractTemplate {
             logger.equals(msg);
             return result(false,msg);
         }
-        Order order = ledger.getObject(orderPrefix+draft.getOrderNum(),Order.class);
+
+        result = ledger.get(orderPrefix+draft.getOrderNum());
+        Order order = null;
+        if(!result.isEmpty()){
+            order = result.toObeject(Order.class);
+        }
         if(responseType.equals("SU01")){
             draft.setDraftStatus("000002");
             order.setDraftAmount(order.getDraftAmount()+draft.getAmount());
@@ -288,7 +327,11 @@ public class ABC extends ContractTemplate {
             }
 
             if(draft.isAutoReceiveDraft()){
-                Account account = ledger.getObject(accountPrefix +draft.getDrawerId(),Account.class);
+                result = ledger.get(accountPrefix +draft.getDrawerId());
+                Account account = null;
+                if(!result.isEmpty()){
+                    account = result.toObeject(Account.class);
+                }
                 ExecuteResult result1 = receiveDraftApply(draft,draft.getDrawerId(),
                         account.getName(),account.getBusinessBankNum());
                 if(!result1.isSuccess()){
@@ -332,7 +375,12 @@ public class ABC extends ContractTemplate {
     }
 
     public boolean judgeAccountCorrect(String accountNum,String name,String businessBankNum){
-        Account account = ledger.getObject(accountPrefix +accountNum,Account.class);
+
+        Result result = ledger.get(accountPrefix +accountNum);
+        Account account = null;
+        if(!result.isEmpty()){
+            account = result.toObeject(Account.class);
+        }
         if(account == null){
             return false;
         }
@@ -343,7 +391,12 @@ public class ABC extends ContractTemplate {
     }
 
     public boolean judgeAcceptor(String acceptorId, String draftType){
-        Account acceptor =  ledger.getObject(accountPrefix +acceptorId,Account.class);
+
+        Result result = ledger.get(accountPrefix +acceptorId);
+        Account acceptor = null;
+        if(!result.isEmpty()){
+            acceptor = result.toObeject(Account.class);
+        }
         if(acceptor == null){
             return false;
         }
@@ -357,7 +410,11 @@ public class ABC extends ContractTemplate {
     }
 
     public boolean judgePayee(String payeeId){
-        Account payee = ledger.getObject(accountPrefix +payeeId,Account.class);
+        Result result = ledger.get(accountPrefix +payeeId);
+        Account payee = null;
+        if(!result.isEmpty()){
+            payee = result.toObeject(Account.class);
+        }
         if(payee == null || payee.getAccountType().equals("RC00")){
             return false;
         }
