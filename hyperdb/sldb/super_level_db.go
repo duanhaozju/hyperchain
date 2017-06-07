@@ -30,12 +30,12 @@ type SuperLevelDB struct {
 	logger *logging.Logger
 }
 
-func NewSLDB(conf *common.Config) (*SuperLevelDB, error) {
-	var filepath = ""
+func NewSLDB(conf *common.Config, path string) (*SuperLevelDB, error) {
+	var filepath = path
 	if conf != nil {
 		if conf != nil {
-			filepath = pa.Join(conf.GetString(sldb_path), filepath)
-			filepath = conf.GetString(sldb_path)
+			filepath = pa.Join(conf.GetString(sldb_path), path)
+			conf.Set(sldb_path, filepath)
 		}
 	}
 

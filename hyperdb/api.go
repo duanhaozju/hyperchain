@@ -237,9 +237,7 @@ func NewDatabase(conf *common.Config, path string, dbType int) (db.Database, err
 	case ldb_db:
 		return hleveldb.NewLDBDataBase(conf, path)
 	case super_level_db:
-		// TODO add path as a parameters
-		// TODO ask @Wangxiaoyi to fix this
-		return sldb.NewSLDB(conf)
+		return sldb.NewSLDB(conf, path)
 	default:
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
 	}
