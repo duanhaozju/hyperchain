@@ -56,3 +56,5 @@ echo "3-3. build jar."
 cd hyperjvm/sdk
 jar -cvf hyperjvm-sdk-1.0.jar cn
 
+echo "3-4. rm class."
+rm -rf cn
