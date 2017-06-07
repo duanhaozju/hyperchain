@@ -5,9 +5,6 @@
 package cn.hyperchain.jcee.ledger;
 
 
-import cn.hyperchain.jcee.common.exception.NotExistException;
-
-
 public interface ILedger {
     //newBatch create a new batch
     Batch newBatch();
