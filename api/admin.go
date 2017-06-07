@@ -8,7 +8,7 @@ import (
 	edb "hyperchain/core/db_utils"
 )
 
-type AdminPublicAPI struct {
+type ArchivePublicAPI struct {
 	eh        *manager.EventHub
 	namespace string
 	config    *common.Config
@@ -16,8 +16,8 @@ type AdminPublicAPI struct {
 }
 
 
-func NewPublicAdminAPI(namespace string, eh *manager.EventHub, config *common.Config) *AdminPublicAPI {
-	return &AdminPublicAPI{
+func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.Config) *ArchivePublicAPI {
+	return &ArchivePublicAPI{
 		namespace: namespace,
 		eh:        eh,
 		config:    config,
@@ -25,7 +25,7 @@ func NewPublicAdminAPI(namespace string, eh *manager.EventHub, config *common.Co
 	}
 }
 
-func (admin *AdminPublicAPI) Snapshot(blockNumber uint64) string {
+func (admin *ArchivePublicAPI) Snapshot(blockNumber uint64) string {
 	log := common.GetLogger(admin.namespace, "api")
 	filterId := flt.NewFilterID()
 	log.Debugf("receive snapshot rpc command, params: (block number #%d), filterId: (%s)", blockNumber, filterId)
@@ -37,7 +37,7 @@ func (admin *AdminPublicAPI) Snapshot(blockNumber uint64) string {
 }
 // TODO snapshot callback
 
-func (admin *AdminPublicAPI) ReadSnapshot(filterId string, verbose bool) (interface{}, error) {
+func (admin *ArchivePublicAPI) ReadSnapshot(filterId string, verbose bool) (interface{}, error) {
 	manifestHandler := common.NewManifestHandler(getManifestPath(admin.config))
 	var manifest common.Manifest
 	var err error
@@ -57,7 +57,7 @@ func (admin *AdminPublicAPI) ReadSnapshot(filterId string, verbose bool) (interf
 	}
 }
 
-func (admin *AdminPublicAPI) ListSnapshot() (common.Manifests, error) {
+func (admin *ArchivePublicAPI) ListSnapshot() (common.Manifests, error) {
 	manifestHandler := common.NewManifestHandler(getManifestPath(admin.config))
 	if err, manifests := manifestHandler.List(); err != nil {
 		return nil, &common.SnapshotErr{Message: err.Error()}
@@ -66,7 +66,7 @@ func (admin *AdminPublicAPI) ListSnapshot() (common.Manifests, error) {
 	}
 }
 
-func (admin *AdminPublicAPI) DeleteSnapshot(filterId string) string {
+func (admin *ArchivePublicAPI) DeleteSnapshot(filterId string) string {
 	log := common.GetLogger(admin.namespace, "api")
 	log.Debugf("receive delete snapshot rpc command, filterId: (%s)", filterId)
 	admin.eh.GetEventObject().Post(event.DeleteSnapshotEvent{
@@ -76,7 +76,7 @@ func (admin *AdminPublicAPI) DeleteSnapshot(filterId string) string {
 }
 // TODO delete snapshot callback
 
-func (admin *AdminPublicAPI) CheckSnapshot(filterId string) (bool, error) {
+func (admin *ArchivePublicAPI) CheckSnapshot(filterId string) (bool, error) {
 	manifestHandler := common.NewManifestHandler(getManifestPath(admin.config))
 	var manifest common.Manifest
 	var err error
@@ -102,7 +102,7 @@ func (admin *AdminPublicAPI) CheckSnapshot(filterId string) (bool, error) {
 	return true, nil
 }
 
-func (admin *AdminPublicAPI) Archive(filterId string) (string) {
+func (admin *ArchivePublicAPI) Archive(filterId string) (string) {
 	log := common.GetLogger(admin.namespace, "api")
 	log.Debugf("receive archive command, params: filterId: (%s)", filterId)
 	admin.eh.GetEventObject().Post(event.ArchiveEvent{
