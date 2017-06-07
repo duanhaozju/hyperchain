@@ -28,6 +28,7 @@ type SuperLevelDB struct {
 	index  Index
 	closed chan bool
 	logger *logging.Logger
+	conf   *common.Config
 }
 
 func NewSLDB(conf *common.Config, path string) (*SuperLevelDB, error) {
@@ -35,7 +36,6 @@ func NewSLDB(conf *common.Config, path string) (*SuperLevelDB, error) {
 	if conf != nil {
 		if conf != nil {
 			filepath = pa.Join(conf.GetString(sldb_path), path)
-			conf.Set(sldb_path, filepath)
 		}
 	}
 
@@ -47,7 +47,7 @@ func NewSLDB(conf *common.Config, path string) (*SuperLevelDB, error) {
 		return nil, err
 
 	}
-	index := NewKeyIndex(conf, "defaultNS", db, pa.Join(filepath, "index", "index.bloom.dat"))
+	index := NewKeyIndex(conf, "defaultNS", db, pa.Join(filepath, "index"))
 	index.logger = log
 	index.Init()
 	index.conf = conf
@@ -57,6 +57,7 @@ func NewSLDB(conf *common.Config, path string) (*SuperLevelDB, error) {
 		index:  index,
 		closed: make(chan bool),
 		logger: log,
+		conf:   conf,
 	}
 	go sldb.dumpIndexByInterval(conf.GetDuration(sldb_index_dump_interval))
 	return sldb, err
@@ -175,7 +176,10 @@ func (sb *SuperLevelDB) MakeSnapshot(backupPath string, fields []string) error {
 	if err := os.MkdirAll(backupDir, 0777); err != nil {
 		return err
 	}
-	backupDb, err := leveldb.OpenFile(backupPath, nil)
+	//backupDb, err := leveldb.OpenFile(backupPath, nil)
+
+	backupDb, err := NewSLDB(sb.conf, backupPath)
+
 	if err != nil {
 		return err
 	}
@@ -190,7 +194,7 @@ func (sb *SuperLevelDB) MakeSnapshot(backupPath string, fields []string) error {
 	for _, field := range fields {
 		iter := snapshot.NewIterator(util.BytesPrefix([]byte(field)), nil)
 		for iter.Next() {
-			if err := backupDb.Put(iter.Key(), iter.Value(), nil); err != nil {
+			if err := backupDb.Put(iter.Key(), iter.Value()); err != nil {
 				iter.Release()
 				return err
 			}

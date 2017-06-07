@@ -24,6 +24,7 @@ const (
 type LDBDatabase struct {
 	path string
 	db   *leveldb.DB
+	conf *common.Config
 }
 
 // NewLDBDataBase new a LDBDatabase instance
@@ -42,6 +43,7 @@ func NewLDBDataBase(conf *common.Config,filepath string) (*LDBDatabase, error) {
 	return &LDBDatabase{
 		path: filepath,
 		db:   db,
+		conf: conf,
 	}, err
 }
 
@@ -118,7 +120,7 @@ func (db *LDBDatabase) MakeSnapshot(backupPath string, fields []string) error {
 	if err := os.MkdirAll(backupDir, 0777); err != nil {
 		return err
 	}
-	backupDb, err := leveldb.OpenFile(backupPath, nil)
+	backupDb, err := NewLDBDataBase(db.conf, backupPath)
 	if err != nil {
 		return err
 	}
@@ -133,7 +135,7 @@ func (db *LDBDatabase) MakeSnapshot(backupPath string, fields []string) error {
 	for _, field := range fields {
 		iter := snapshot.NewIterator(util.BytesPrefix([]byte(field)), nil)
 		for iter.Next() {
-			if err := backupDb.Put(iter.Key(), iter.Value(), nil); err != nil {
+			if err := backupDb.Put(iter.Key(), iter.Value()); err != nil {
 				iter.Release()
 				return err
 			}
