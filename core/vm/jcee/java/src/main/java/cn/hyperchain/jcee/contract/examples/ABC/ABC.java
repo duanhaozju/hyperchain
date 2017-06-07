@@ -1,3 +1,7 @@
+/**
+ * Hyperchain License
+ * Copyright (C) 2016 The Hyperchain Authors.
+ */
 package cn.hyperchain.jcee.contract.examples.ABC;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
@@ -55,16 +59,6 @@ public class ABC extends ContractTemplate {
         String phoneNum = args.get(8);
         String msg;
 
-//        if(!IDTypes.contains(IDType)){
-//            msg = "IDType is wrong";
-//            logger.error(msg);
-//            return result(false, msg);
-//        }
-//        if(!accountType.contains(accountType)){
-//            msg = "accountType is wrong";
-//            logger.error(msg);
-//            return result(false, msg);
-//        }
         Result result = ledger.get(accountPrefix +accountNumber);
         if(!result.isEmpty() ){
             msg = "the accountNumber exists";
@@ -414,6 +408,4 @@ public class ABC extends ContractTemplate {
         }
         return true;
     }
-
-
 }

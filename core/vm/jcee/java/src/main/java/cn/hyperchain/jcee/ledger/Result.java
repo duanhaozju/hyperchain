@@ -1,3 +1,7 @@
+/**
+ * Hyperchain License
+ * Copyright (C) 2016 The Hyperchain Authors.
+ */
 package cn.hyperchain.jcee.ledger;
 
 import cn.hyperchain.jcee.common.exception.ResultNotExistException;

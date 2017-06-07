@@ -2,6 +2,7 @@ package cn.hyperchain.jcee.security;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
+import cn.hyperchain.jcee.ledger.Result;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.DoubleValue;
 import org.apache.log4j.Logger;
@@ -44,11 +45,12 @@ public class NormalContract extends ContractTemplate {
                 String accountA = args.get(0);
                 String accountB = args.get(1);
                 double num = Double.valueOf(args.get(2));
-                byte[] balance = ledger.get(accountA.getBytes());
 
-                if(balance != null) {
-                    double balanceA = DoubleValue.parseFrom(balance).getValue();
-                    double balanceB = DoubleValue.parseFrom(ledger.get(accountB.getBytes())).getValue();
+                Result result = ledger.get(accountA);
+
+                if(!result.isEmpty()) {
+                    double balanceA = result.toDouble();
+                    double balanceB = ledger.get(accountB.getBytes()).toDouble();
                     if (balanceA >= num) {
                         ledger.put(accountA.getBytes(), String.valueOf(balanceA - num).getBytes());
                         ledger.put(accountB.getBytes(), String.valueOf(balanceB + num).getBytes());
@@ -70,10 +72,9 @@ public class NormalContract extends ContractTemplate {
                 logger.error("args num is invalid");
             }
             try {
-                byte[] data = ledger.get(args.get(0).getBytes());
-                logger.info(new String(data));
-                if (data != null) {
-                    return ByteString.copyFrom(data);
+                Result result = ledger.get(args.get(0));
+                if (!result.isEmpty()) {
+                    return result.getValue();
                 }else {
                     logger.error("getAccountBalance error");
                 }

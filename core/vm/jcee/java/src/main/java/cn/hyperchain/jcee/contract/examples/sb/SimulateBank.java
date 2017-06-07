@@ -193,7 +193,7 @@ public class SimulateBank extends ContractTemplate {
 
         Result result = ledger.get(key);
         if(!result.isEmpty()){
-            getV = result.transferToString();
+            getV = result.toString();
             logger.info("get deleted value is " + getV);
         }
         else {
