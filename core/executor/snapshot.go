@@ -157,7 +157,10 @@ func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) e
 	if err := registry.duplicate(filterId); err != nil {
 		return err
 	}
-	if err := registry.manifest(filterId, number); err != nil {
+	if err := registry.pushBlock(filterId, number); err != nil {
+		return err
+	}
+	if err := registry.writeMeta(filterId, number); err != nil {
 		return err
 	}
 	return nil
@@ -173,7 +176,26 @@ func (registry *SnapshotRegistry) duplicate(filterId string) error {
 	return nil
 }
 
-func (registry *SnapshotRegistry) manifest(filterId string, number uint64) error {
+func (registry *SnapshotRegistry) pushBlock(filterId string, number uint64) error {
+	blk, err := edb.GetBlockByNumber(registry.namespace, number)
+	if err != nil {
+		return err
+	}
+	p := path.Join("snapshots", filterId)
+	sdb, err := hyperdb.NewDatabase(registry.executor.conf, p, hyperdb.GetDatabaseType(registry.executor.conf))
+	if err != nil {
+		return err
+	}
+	defer sdb.Close()
+	wb := sdb.NewBatch()
+	err, _ = edb.PersistBlock(wb, blk, true, true)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (registry *SnapshotRegistry) writeMeta(filterId string, number uint64) error {
 	blk, err := edb.GetBlockByNumber(registry.namespace, number)
 	if err != nil {
 		return err
