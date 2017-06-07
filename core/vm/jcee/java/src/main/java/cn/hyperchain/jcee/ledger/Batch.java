@@ -7,6 +7,8 @@ package cn.hyperchain.jcee.ledger;
 public interface Batch {
     //Put keyvalue into the batch
     void put(byte[] key, byte[]value);
+    void put(byte[] key, Object value);
+    void put(String key, byte[] value);
     void put(String key, Object value);
 
     Result get(byte[] key);

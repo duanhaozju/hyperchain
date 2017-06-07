@@ -285,8 +285,18 @@ public class HyperchainLedger extends AbstractLedger{
         }
 
         @Override
+        public void put(byte[] key, Object value) {
+            put(key, Bytes.toByteArray(value));
+        }
+
+        @Override
         public void put(String key, Object value){
             put(key.getBytes(), Bytes.toByteArray(value));
+        }
+
+        @Override
+        public void put(String key, byte[] value){
+            put(key.getBytes(), value);
         }
 
         @Override
