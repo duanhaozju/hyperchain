@@ -35,7 +35,7 @@ func NewSLDB(conf *common.Config, path string) (*SuperLevelDB, error) {
 	if conf != nil {
 		if conf != nil {
 			filepath = pa.Join(conf.GetString(sldb_path), path)
-			conf.Set(sldb_path, filepath)
+			// conf.Set(sldb_path, filepath)
 		}
 	}
 
