@@ -26,24 +26,8 @@ public interface ILedger {
     boolean delete(String key);
 
     Result get(byte[] key);
-//    boolean getBoolean(byte[] key) throws NotExistException;
-//    short getShort(byte[] key);
-//    char getChar(byte[] key);
-//    int getInt(byte[] key);
-//    float getFloat(byte[] key);
-//    double getDouble(byte[] key);
-//    String getString(byte[] key);
-//    <T> T getObject(byte[] key, Class<T> clazz);
 
     Result get(String key);
-//    boolean getBoolean(String key);
-//    short getShort(String key);
-//    char getChar(String key);
-//    int getInt(String key);
-//    float getFloat(String key);
-//    double getDouble(String key);
-//    String getString(String key);
-//    <T> T getObject(String key, Class<T> clazz);
 
     boolean put(byte[] key, byte[]value);
     boolean put(byte[] key, boolean value);

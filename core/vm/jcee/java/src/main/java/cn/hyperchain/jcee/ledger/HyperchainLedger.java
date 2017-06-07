@@ -41,7 +41,7 @@ public class HyperchainLedger extends AbstractLedger{
         ByteString v = ledgerClient.get(sendkey).getV();
 
         if (v == null || v.isEmpty()){
-            return null;
+            return new Result(v);
         }
         cache.putInCache(key,v.toByteArray());
         return new Result(v);
@@ -261,7 +261,7 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     class BatchImpl implements Batch{
-        private Map<byte[], byte[]> data;
+        private Map<byte[], Result> data;
         private HyperchainLedger ledger;
 
         public BatchImpl(HyperchainLedger ledger) {
@@ -269,28 +269,24 @@ public class HyperchainLedger extends AbstractLedger{
             this.ledger = ledger;
         }
 
-        public byte[] get(byte[] key) {
+        public Result get(byte[] key) {
             return this.data.get(key);
         }
 
         @Override
-        public <T> T get(String key, Class<T> clazz){
-            byte[] data = this.data.get(key.getBytes());
-            if(data == null){
-                return null;
-            }
-            return Bytes.toObject(data, clazz);
+        public Result get(String key){
+            return this.data.get(key.getBytes());
         }
 
 
         @Override
         public void put(byte[] key, byte[] value) {
-            data.put(key, value);
+            data.put(key, new Result(ByteString.copyFrom(value)));
         }
 
         @Override
         public void put(String key, Object value){
-            data.put(key.getBytes(), Bytes.toByteArray(value));
+            put(key.getBytes(), Bytes.toByteArray(value));
         }
 
         @Override
@@ -305,10 +301,10 @@ public class HyperchainLedger extends AbstractLedger{
 
         public ContractProto.BatchKV toBatchKV() {
             ContractProto.BatchKV.Builder builder  = ContractProto.BatchKV.newBuilder();
-            for(Map.Entry<byte[], byte[]> kv: data.entrySet()) {
+            for(Map.Entry<byte[], Result> kv: data.entrySet()) {
                 ContractProto.KeyValue keyValue = ContractProto.KeyValue.newBuilder()
                         .setK(ByteString.copyFrom(kv.getKey()))
-                        .setV(ByteString.copyFrom(kv.getValue()))
+                        .setV(kv.getValue().getValue())
                         .build();
                 builder.addKv(keyValue);
             }

@@ -9,8 +9,8 @@ public interface Batch {
     void put(byte[] key, byte[]value);
     void put(String key, Object value);
 
-    byte[] get(byte[] key);
-    <T> T get(String key, Class<T> clazz);
+    Result get(byte[] key);
+    Result get(String key);
 
     //Clear data in batch
     void reset();

@@ -139,9 +139,9 @@ public class ABC extends ContractTemplate {
         bk.put(sellerKey);
         Batch batch = ledger.batchRead(bk);
 
-        byte[] buyerAccount = batch.get(buyerKey);
-        byte[] sellerAccount = batch.get(sellerKey);
-        if(buyerAccount == null || sellerAccount == null){
+        Result buyer = batch.get(buyerKey);
+        Result seller = batch.get(sellerKey);
+        if(buyer.isEmpty() || seller.isEmpty()){
             msg = "the buyer account or seller account does not exist";
             logger.error(msg);
             return result(false,msg);
