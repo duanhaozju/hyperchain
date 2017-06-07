@@ -96,7 +96,7 @@ public class ContractManager {
      * @param info contract info
      * @return status of deploy
      */
-    public boolean deployContract(ContractInfo info){
+    public boolean deployContract(ContractInfo info) throws ClassNotFoundException{
 
         if (! isSourceSafe(info.getContractPath())) {
             return false;
@@ -104,20 +104,17 @@ public class ContractManager {
         logger.debug("contract info, " + info.toString());
         ContractClassLoader classLoader = new ContractClassLoader(info.getContractPath(), info.getClassPrefix());
         ContractTemplate contract = null;
-        try {
-            Class contractClass = classLoader.load(info.getContractMainName());
-            Object ins = newInstance(contractClass, info.getArgClasses(), info.getArgs());
-            if (ins == null) {
-                logger.error("init contract for " + info.getName() + " faield");
-                return false;
-            }
+
+        Class contractClass = classLoader.load(info.getContractMainName());
+        Object ins = newInstance(contractClass, info.getArgClasses(), info.getArgs());
+        if (ins == null) {
+            logger.error("init contract for " + info.getName() + " faield");
+            return false;
+        }
             contract = (ContractTemplate) ins;
             contract.setCid(info.getCid());
             contract.setOwner(info.getOwner());
             contract.setLedger(ledger);
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
         if (contract != null) {
             ContractHolder holder = new ContractHolder(info, contract);
             addContract(holder);

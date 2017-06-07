@@ -156,7 +156,7 @@ public class Handler {
             e.printStackTrace();
         }
         ContractInfo info = null;
-        ContractProto.Response r;
+        ContractProto.Response r = null;
         if (props != null) {
             info = new ContractInfo(props.getProperty(Constants.CONTRACT_NAME), request.getContext().getCid(), "0xx");
             info.setContractPath(contractPath);
@@ -170,14 +170,19 @@ public class Handler {
             boolean extractSuccess = extractConstructorArgs(info, request.getArgsList());
             if (extractSuccess) {
                 logger.debug(info);
-                boolean rs = cm.deployContract(info);
-                if (rs == true) {
-                    r = ContractProto.Response.newBuilder()
-                            .setOk(rs)
-                            .setCodeHash(info.getCodeHash())
-                            .build();
-                } else {
-                    r = ContractProto.Response.newBuilder().setCodeHash(info.getCodeHash()).setOk(rs).build();
+                try {
+                    boolean rs = cm.deployContract(info);
+                    if (rs == true) {
+                        r = ContractProto.Response.newBuilder()
+                                .setOk(rs)
+                                .setCodeHash(info.getCodeHash())
+                                .build();
+                    } else {
+                        Errors.ReturnErrMsg("deploy failed ", responseObserver);
+                    }
+                }catch (ClassNotFoundException cnfe){
+                    logger.error(cnfe);
+                    Errors.ReturnErrMsg(cnfe.getMessage(), responseObserver);
                 }
             }else {
                 r = ContractProto.Response.newBuilder().setOk(false).setCodeHash(info.getCodeHash()).build();
@@ -191,7 +196,7 @@ public class Handler {
         }
     }
 
-    public boolean deploy(ContractInfo info) {
+    public boolean deploy(ContractInfo info) throws ClassNotFoundException{
         if(info.getCodeHash() != null && !info.getCodeHash().equals("")){
             String codeHash = caculateCodeHash(info.getContractPath());
             if (!codeHash.equals(info.getCodeHash())) {

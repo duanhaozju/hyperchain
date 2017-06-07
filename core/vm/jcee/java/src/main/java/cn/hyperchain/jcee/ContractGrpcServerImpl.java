@@ -50,7 +50,12 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
 
                 for (Map.Entry<String, ContractInfo> infoEntry : contractInfoMap.entrySet()) {
                     ContractInfo info = infoEntry.getValue();
-                    boolean rs = contractExecutor.getContractHandler().get(namespace).deploy(info);
+                    boolean rs = false;
+                    try {
+                        rs = contractExecutor.getContractHandler().get(namespace).deploy(info);
+                    }catch (ClassNotFoundException e) {
+                        logger.error(e);
+                    }
                     if (rs == false) {
                         logger.error("reload contract for " + infoEntry.getValue().getCid() + " not success");
                     }
