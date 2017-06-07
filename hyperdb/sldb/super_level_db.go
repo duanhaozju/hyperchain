@@ -176,15 +176,17 @@ func (sb *SuperLevelDB) MakeSnapshot(backupPath string, fields []string) error {
 		return err
 	}
 	backupDb, err := leveldb.OpenFile(backupPath, nil)
+	if err != nil {
+		return err
+	}
 	defer backupDb.Close()
-	if err != nil {
-		return err
-	}
+
 	snapshot, err := sb.db.GetSnapshot()
-	defer snapshot.Release()
 	if err != nil {
 		return err
 	}
+	defer snapshot.Release()
+
 	for _, field := range fields {
 		iter := snapshot.NewIterator(util.BytesPrefix([]byte(field)), nil)
 		for iter.Next() {
