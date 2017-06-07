@@ -23,11 +23,11 @@ public class HyperchainLedger extends AbstractLedger{
     private Cache cache;
     public HyperchainLedger(int port){
         ledgerClient = new LedgerClient("localhost", port);
-        cache = new JcsCache();
+        cache = new HyperCache();
     }
 
     public Result get(byte[] key) {
-        byte[] data = cache.retrieveFromCache(key);
+        byte[] data = cache.get(key);
         if(data != null){
             return new Result(ByteString.copyFrom(data));
         }
@@ -43,7 +43,7 @@ public class HyperchainLedger extends AbstractLedger{
         if (v == null || v.isEmpty()){
             return new Result(v);
         }
-        cache.putInCache(key,v.toByteArray());
+        cache.put(key,v.toByteArray());
         return new Result(v);
     }
 
@@ -62,13 +62,13 @@ public class HyperchainLedger extends AbstractLedger{
         boolean success = ledgerClient.put(kv);
         if(success){
             logger.info("the value put in cache "+value.toString());
-            cache.putInCache(key,value);
+            cache.put(key,value);
         }
         return success;
     }
 
     public ContractProto.Value fetch(byte[] key) {
-        byte[] data = cache.retrieveFromCache(key);
+        byte[] data = cache.get(key);
         if(data!=null){
             ContractProto.Value recvValue = ContractProto.Value.newBuilder()
                     .setV(ByteString.copyFrom(data))
@@ -82,7 +82,7 @@ public class HyperchainLedger extends AbstractLedger{
         logger.info("Transaction id: " + getContext().getId());
 
         ContractProto.Value value = ledgerClient.get(sendkey);
-        cache.putInCache(key,value.toByteArray());
+        cache.put(key,value.toByteArray());
         return value;
     }
 
@@ -103,7 +103,7 @@ public class HyperchainLedger extends AbstractLedger{
                 .build();
         boolean success = ledgerClient.delete(ck);
         if(success){
-            cache.removeFromCache(key);
+            cache.delete(key);
         }
         return success;
     }
@@ -213,7 +213,7 @@ public class HyperchainLedger extends AbstractLedger{
                 ContractProto.KeyValue data = batch.getKv(i);
                 byte[] key = data.getK().toByteArray();
                 byte[] value = data.getV().toByteArray();
-                cache.putInCache(key, value);
+                cache.put(key, value);
             }
         }
 
@@ -232,7 +232,7 @@ public class HyperchainLedger extends AbstractLedger{
         BatchKey bk = newBatchKey();
 
         for(byte[] k: keys){
-            byte[] value = cache.retrieveFromCache(k);
+            byte[] value = cache.get(k);
             if(value!=null){
                 batch.put(k,value);
             }

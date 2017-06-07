@@ -15,13 +15,13 @@ import java.util.Properties;
 /**
  * Created by huhu on 2017/5/11.
  */
-public class JcsCache implements Cache{
+public class HyperCache implements Cache{
 
     private CacheAccess<byte[], byte[]> cache = null;
     private static final Logger logger = Logger.getLogger(HyperchainLedger.class.getSimpleName());
 
 
-    public JcsCache(){
+    public HyperCache(){ //TODO: fix cache key may mix problem !!!
         try {
             Properties properties = new Properties();
             properties.load(new FileInputStream("./hyperjvm/config/cache.properties"));
@@ -35,7 +35,7 @@ public class JcsCache implements Cache{
         }
     }
 
-    public void putInCache(byte[]key, byte[]value){
+    public void put(byte[]key, byte[]value){
         try{
             logger.debug("put in cache "+new String(value));
             cache.put( key, value);
@@ -46,12 +46,12 @@ public class JcsCache implements Cache{
         }
     }
 
-    public byte[] retrieveFromCache(byte[] key)
+    public byte[] get(byte[] key)
     {
         return cache.get(key);
     }
 
-    public void removeFromCache(byte[] key){
+    public void delete(byte[] key){
         cache.remove(key);
     }
 
