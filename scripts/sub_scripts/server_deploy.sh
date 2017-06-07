@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+USERNAME="satoshi"
+
 # DIRS
 CURRENT_DIR=`pwd`
-HYPERCHAIN_DIR="/home/hyperchain"
+HYPERCHAIN_DIR="/home/${USERNAME}"
 
 if [ ! -f innerserverlist.txt ]; then
     echo "innerserverlist.txt is not exists!"
@@ -24,7 +26,7 @@ while IFS='' read -r line || [[ -n "$line" ]]; do
 done < innerserverlist.txt
 
 scpfile() {
-    scp ${HYPERCHAIN_DIR}/hyperchain hyperchain@$1:${HYPERCHAIN_DIR}
+    scp ${HYPERCHAIN_DIR}/hyperchain ${USERNAME}@$1:${HYPERCHAIN_DIR}
 }
 
 for server_address in ${SERVER_ADDR[@]}; do
