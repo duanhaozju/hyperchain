@@ -20,13 +20,16 @@ echo "2. build the hyperjvm"
 mvn clean package -Dmaven.test.skip=true
 cp target/lib/*  hyperjvm/libs/
 
-echo "3. clean target package"
+echo "3. build the hyperjvm sdk"
+./build_sdk.sh
+
+echo "4. clean target package"
 rm -rf target
 
-echo "4. copy the control scripts and configurations"
+echo "5. copy the control scripts and configurations"
 cp -rf bin/* hyperjvm/bin/
 
 cp -rf ./src/main/resources/* hyperjvm/config/
 
 
-echo "5. finish build hyperjvm"
+echo "6. finish build hyperjvm"
