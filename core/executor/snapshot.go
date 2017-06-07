@@ -181,7 +181,7 @@ func (registry *SnapshotRegistry) pushBlock(filterId string, number uint64) erro
 	if err != nil {
 		return err
 	}
-	p := path.Join("snapshots", filterId)
+	p := path.Join("snapshots", registry.snapshotId(filterId))
 	sdb, err := hyperdb.NewDatabase(registry.executor.conf, p, hyperdb.GetDatabaseType(registry.executor.conf))
 	if err != nil {
 		return err
