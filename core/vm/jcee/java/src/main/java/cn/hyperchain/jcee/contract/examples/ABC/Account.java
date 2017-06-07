@@ -18,12 +18,11 @@ public class Account {
     private String businessBankName;
     private String addr;
     private String phoneNum;
-    private String modifyTime;
 
     public Account(){}
 
     public Account(String accountNumber,String name,String ID,String IDType,String accountType,
-                   String businessBankNum,String businessBankName,String addr,String phoneNum,String modifyTime){
+                   String businessBankNum,String businessBankName,String addr,String phoneNum){
         this.accountNumber = accountNumber;
         this.name = name;
         this.ID = ID;
@@ -33,7 +32,6 @@ public class Account {
         this.businessBankName = businessBankName;
         this.addr = addr;
         this.phoneNum = phoneNum;
-        this.modifyTime = modifyTime;
     }
 
     public String getAccountNumber() {
@@ -108,12 +106,5 @@ public class Account {
         this.phoneNum = phoneNum;
     }
 
-    public String getModifyTime() {
-        return modifyTime;
-    }
-
-    public void setModifyTime(String modifyTime) {
-        this.modifyTime = modifyTime;
-    }
 }
 

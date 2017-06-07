@@ -8,9 +8,7 @@ import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.util.Bytes;
 import org.apache.log4j.Logger;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -19,7 +17,6 @@ import java.util.List;
 public class ABC extends ContractTemplate {
 
     private static final Logger logger = Logger.getLogger(ABC.class.getSimpleName());
-    private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     private static final String accountPrefix = "account_";
     private static final String orderPrefix = "order_";
@@ -58,9 +55,6 @@ public class ABC extends ContractTemplate {
         String phoneNum = args.get(8);
         String msg;
 
-        long time = System.currentTimeMillis();
-        String modifyTime = sdf.format(new Date(time));
-
 //        if(!IDTypes.contains(IDType)){
 //            msg = "IDType is wrong";
 //            logger.error(msg);
@@ -78,7 +72,7 @@ public class ABC extends ContractTemplate {
             return result(false,msg);
         }
         Account account = new Account(accountNumber,name,ID,IDType,accountType,
-                businessBankNum,businessBankName,addr,phoneNum,modifyTime);
+                businessBankNum,businessBankName,addr,phoneNum);
         logger.info("the account key is "+ accountPrefix +accountNumber);
         logger.info("the account value is "+ Bytes.toByteArray(account));
         if(ledger.put(accountPrefix +accountNumber,account) == false){
