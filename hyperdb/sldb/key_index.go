@@ -45,6 +45,7 @@ type KeyIndex struct {
 	lastStartKeyPrefix []byte
 	currStartKeyPrefix []byte
 	bloomPath          string
+	bloomDir           string
 	conf               *common.Config
 	logger             *logging.Logger
 }
@@ -59,7 +60,8 @@ func NewKeyIndex(conf *common.Config, ns string, db *leveldb.DB, path string) *K
 		bf:            filter,
 		db:            db,
 		keyPrefix:     []byte(ns + "_bloom_key."),
-		bloomPath:     path,
+		bloomPath:     path + "/bloom.dat",
+		bloomDir:      path,
 		keyPrefixLock: new(sync.RWMutex),
 	}
 	return index
@@ -204,7 +206,8 @@ func (ki *KeyIndex) dropPreviousKey() error {
 }
 
 func (ki *KeyIndex) persistBloom() error {
-	bloomDir := ki.conf.GetString(sldb_index_dir)
+	bloomDir := ki.bloomDir
+	ki.logger.Criticalf("sldb dir: %s ", bloomDir)
 	_, error := os.Stat(bloomDir)
 	if !(error == nil || os.IsExist(error)) {
 		err := os.MkdirAll(bloomDir, 0777)

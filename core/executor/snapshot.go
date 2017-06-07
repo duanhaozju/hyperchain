@@ -167,9 +167,7 @@ func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) e
 }
 
 func (registry *SnapshotRegistry) duplicate(filterId string) error {
-	conf := registry.executor.conf
-	fId := registry.snapshotId(filterId)
-	sPath := registry.snapshotPath(hyperdb.GetDatabaseHome(conf), fId)
+	sPath := path.Join("snapshots", registry.snapshotId(filterId))
 	if err := registry.executor.db.MakeSnapshot(sPath, registry.RetrieveSnapshotFileds()); err != nil {
 		return err
 	}
