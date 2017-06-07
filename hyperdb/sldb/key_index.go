@@ -237,10 +237,13 @@ func (ki *KeyIndex) persistBloom() error {
 	ki.keyPrefixLock.Lock()
 	defer ki.keyPrefixLock.Unlock()
 	err = ki.db.Put(ki.lastStartKey(), ki.currStartKeyPrefix, nil)
+	if err != nil {
+		return err
+	}
 	ki.lastStartKeyPrefix = ki.currStartKeyPrefix
 	ki.currStartKeyPrefix = ki.checkPointKey()
 	ki.keyPrefix = ki.currStartKeyPrefix
-	return err
+	return nil
 }
 
 //BloomFilter just for test now
