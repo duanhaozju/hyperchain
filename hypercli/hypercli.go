@@ -12,6 +12,7 @@ import (
 
 	"os"
 	"time"
+	"hyperchain/hypercli/db"
 )
 
 var app *cli.App
@@ -67,6 +68,11 @@ func initApp() {
 			Name:        "node",
 			Usage:       "add/delete node specific commands",
 			Subcommands: node.NewNodeCMD(),
+		},
+		{
+			Name:        "db",
+			Usage:       "db related commands",
+			Subcommands: db.NewDBCMD(),
 		},
 	}
 
