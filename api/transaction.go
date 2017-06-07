@@ -38,19 +38,20 @@ type Transaction struct {
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 // If type is Ptr or String, it is optional parameter
 type SendTxArgs struct {
-	From      common.Address  `json:"from"`
-	To        *common.Address `json:"to"`
-	Gas       *Number         `json:"gas"`
-	GasPrice  *Number         `json:"gasPrice"`
-	Value     *Number         `json:"value"`
-	Payload   string          `json:"payload"`
-	Signature string          `json:"signature"`
-	Timestamp int64           `json:"timestamp"`
+	From       common.Address  `json:"from"`
+	To         *common.Address `json:"to"`
+	Gas        *Number         `json:"gas"`
+	GasPrice   *Number         `json:"gasPrice"`
+	Value      *Number         `json:"value"`
+	Payload    string          `json:"payload"`
+	Signature  string          `json:"signature"`
+	Timestamp  int64           `json:"timestamp"`
 	// --- test -----
-	Request   *Number     `json:"request"`
-	Simulate  bool        `json:"simulate"`
-	Opcode    int32       `json:"opcode"`
-	Nonce     int64       `json:"nonce"`
+	Request    *Number         `json:"request"`
+	Simulate   bool            `json:"simulate"`
+	Opcode     int32           `json:"opcode"`
+	Nonce      int64           `json:"nonce"`
+	SnapshotId string          `json:"snapshotId"`
 }
 
 type TransactionResult struct {
@@ -121,7 +122,9 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	}
 	if txType == 1 && (args.Payload == "" || args.Payload == "0x"){
 		return SendTxArgs{}, &common.InvalidParamsError{Message:"contract code is empty"}
-
+	}
+	if args.SnapshotId != "" && args.Simulate != true {
+		return SendTxArgs{}, &common.InvalidParamsError{Message:"can not query history ledger without `simulate` mode"}
 	}
 	return args, nil
 }
@@ -174,6 +177,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 			go tran.eh.GetEventObject().Post(event.NewTxEvent{
 				Transaction: tx,
 				Simulate:    args.Simulate,
+				SnapshotId:    args.SnapshotId,
 			})
 		}
 	} else {
@@ -187,6 +191,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 		go tran.eh.GetEventObject().Post(event.NewTxEvent{
 			Transaction: tx,
 			Simulate:    args.Simulate,
+			SnapshotId:    args.SnapshotId,
 		})
 	}
 	return tx.GetHash(), nil

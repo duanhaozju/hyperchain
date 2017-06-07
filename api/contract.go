@@ -90,8 +90,9 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	}
 
 	go contract.eh.GetEventObject().Post(event.NewTxEvent{
-		Transaction: tx,
-		Simulate:    args.Simulate,
+		Transaction:   tx,
+		Simulate:      args.Simulate,
+		SnapshotId:    args.SnapshotId,
 	})
 	return tx.GetHash(), nil
 

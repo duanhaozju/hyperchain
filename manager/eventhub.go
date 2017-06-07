@@ -166,7 +166,7 @@ func (hub *EventHub) listenTransactionEvent() {
 			case event.NewTxEvent:
 				hub.logger.Debugf("message middleware: [new tx]")
 				if ev.Simulate == true {
-					hub.executor.RunInSandBox(ev.Transaction)
+					hub.executor.RunInSandBox(ev.Transaction, ev.SnapshotId)
 				} else {
 					hub.consenter.RecvLocal(ev.Transaction)
 				}

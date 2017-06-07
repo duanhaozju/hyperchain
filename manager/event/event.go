@@ -14,7 +14,8 @@ type BroadcastConsensusEvent struct{ Payload []byte }
 //general tx local
 type NewTxEvent struct {
 	Transaction *types.Transaction
-	Simulate bool
+	Simulate    bool
+	SnapshotId  string
 }
 
 type TxUniqueCastEvent struct {

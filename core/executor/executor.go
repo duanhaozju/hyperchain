@@ -13,6 +13,7 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
+	"path"
 )
 
 var (
@@ -145,6 +146,34 @@ func initializeExecutorStateDb(executor *Executor) error {
 	}
 	executor.statedb = stateDb
 	return nil
+}
+
+func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, error, func()) {
+	// never forget to close db
+	if err, manifest := executor.snapshotReg.rwc.Read(snapshotId); err != nil {
+		return nil, err, nil
+	} else {
+		blk, err := edb.GetBlockByNumber(executor.namespace, manifest.Height)
+		if err != nil {
+			return nil, err, nil
+		}
+
+		db, err := hyperdb.NewDatabase(executor.conf, path.Join("snapshots", "SNAPSHOT_" + snapshotId), hyperdb.GetDatabaseType(executor.conf))
+		if err != nil {
+			return nil, err, nil
+		}
+
+		closeDb := func() {
+			db.Close()
+		}
+
+		stateDb, err := hyperstate.New(common.BytesToHash(blk.MerkleRoot), db, nil, executor.conf, manifest.Height, executor.namespace)
+		return stateDb, err, closeDb
+	}
+}
+
+func (executor *Executor) closeDb() {
+
 }
 
 // NewStateDb - create a latest state.
