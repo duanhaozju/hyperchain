@@ -2,14 +2,14 @@
  * Hyperchain License
  * Copyright (C) 2016 The Hyperchain Authors.
  */
-package cn.hyperchain.jcee.contract.examples.sb;
+package cn.hyperchain.jcee.contract.examples.sb.src;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
-import cn.hyperchain.jcee.common.exception.NotExistException;
 import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.Batch;
 import cn.hyperchain.jcee.ledger.BatchKey;
 import cn.hyperchain.jcee.ledger.BatchValue;
+import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.util.Bytes;
 import org.apache.log4j.Logger;
 
@@ -79,15 +79,21 @@ public class SimulateBank extends ContractTemplate {
             String accountA = args.get(0);
             String accountB = args.get(1);
             double num = Double.valueOf(args.get(2));
-            byte[] balance = ledger.get(accountA.getBytes());
 
-            if(balance != null) {
-                double balanceA = Double.parseDouble(new String(balance));
-                double balanceB = ledger.getDouble(accountB.getBytes());
-                if (balanceA >= num) {
-                    ledger.put(accountA, balanceA - num);
-                    ledger.put(accountB, balanceB + num);
+            Result result = ledger.get(accountA.getBytes());
+
+            if(!result.isEmpty()) {
+                double balanceA = result.toDouble();
+                result = ledger.get(accountB.getBytes());
+                double balanceB ;
+                if(!result.isEmpty()){
+                    balanceB = result.toDouble();
+                    if (balanceA >= num) {
+                        ledger.put(accountA, balanceA - num);
+                        ledger.put(accountB, balanceB + num);
+                    }
                 }
+
             }else {
                 String msg = "get account " + accountA  + " balance error";
                 logger.error(msg);
@@ -107,10 +113,9 @@ public class SimulateBank extends ContractTemplate {
             logger.error("args num is invalid");
         }
         try {
-            byte[] data = ledger.get(args.get(0).getBytes());
-            logger.info(new String(data));
-            if (data != null) {
-                return result(true, data);
+            Result result = ledger.get(args.get(0).getBytes());
+            if (!result.isEmpty()) {
+                return result(true, result.toDouble());
             }else {
                 String msg = "getAccountBalance error no data found for" + args.get(0);
                 logger.error(msg);
@@ -135,17 +140,17 @@ public class SimulateBank extends ContractTemplate {
         bk.put(A);
         bk.put(B);
         Batch batch = ledger.batchRead(bk);
-        byte[] ba = batch.get(A);
-        if (ba == null) {
+        Result ba = batch.get(A);
+        if (ba.isEmpty()) {
             return result(false, args.get(0) + " no account");
         }
-        double abalance = Bytes.toDouble(ba);
-        byte[] bb = batch.get(B);
-        if (bb == null) {
+        double abalance = ba.toDouble();
+        Result bb = batch.get(B);
+        if (bb.isEmpty()) {
             return result(false, args.get(1) + " no account");
         }
 
-        double bbalance = Bytes.toDouble(bb);
+        double bbalance = bb.toDouble();
         double amount = Bytes.toDouble(args.get(2).getBytes());
         if (abalance < abalance) {
             return result(false, args.get(0) + " balance is not enough");
@@ -185,11 +190,14 @@ public class SimulateBank extends ContractTemplate {
         if (ledger.delete(key) == false) return result(false);
         logger.info("delete success");
         String getV = null;
-        try {
-            getV = ledger.getString(key);
+
+        Result result = ledger.get(key);
+        if(!result.isEmpty()){
+            getV = result.toString();
             logger.info("get deleted value is " + getV);
-        } catch (NotExistException e) {
-            logger.error(e.getMessage());
+        }
+        else {
+            logger.error("the value try to delete is empty");
         }
         return result(getV.isEmpty());
     }

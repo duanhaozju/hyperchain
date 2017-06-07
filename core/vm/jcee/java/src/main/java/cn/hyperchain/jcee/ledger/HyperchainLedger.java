@@ -4,7 +4,6 @@
  */
 package cn.hyperchain.jcee.ledger;
 
-import cn.hyperchain.jcee.common.exception.NotExistException;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
@@ -24,28 +23,32 @@ public class HyperchainLedger extends AbstractLedger{
     private Cache cache;
     public HyperchainLedger(int port){
         ledgerClient = new LedgerClient("localhost", port);
-        cache = new JcsCache();
+        cache = new HyperCache();
     }
 
-    public byte[] get(byte[] key) throws NotExistException {
-        byte[] data = cache.retrieveFromCache(key);
+    public Result get(byte[] key) {
+        byte[] data = cache.get(key);
         if(data != null){
-            return data;
+            return new Result(ByteString.copyFrom(data));
         }
 
         ContractProto.Key sendkey = ContractProto.Key.newBuilder()
                 .setContext(getLedgerContext())
                 .setK(ByteString.copyFrom(key))
                 .build();
-        logger.info("Transaction id: " + getContext().getId());
+        logger.debug("Transaction id: " + getContext().getId());
 
         ByteString v = ledgerClient.get(sendkey).getV();
+
         if (v == null || v.isEmpty()){
-            cache.putInCache(key,null);
-            throw new NotExistException(new String(key));
+            return new Result(v);
         }
-        cache.putInCache(key,v.toByteArray());
-        return v.toByteArray();
+        cache.put(key,v.toByteArray());
+        return new Result(v);
+    }
+
+    public Result get(String key){
+        return get(key.getBytes());
     }
 
     public boolean put(byte[] key, byte[] value) {
@@ -55,15 +58,17 @@ public class HyperchainLedger extends AbstractLedger{
                 .setV(ByteString.copyFrom(value))
                 .build();
 
+        logger.info("the value put in ledger "+ByteString.copyFrom(value));
         boolean success = ledgerClient.put(kv);
         if(success){
-            cache.putInCache(key,value);
+            logger.info("the value put in cache "+value.toString());
+            cache.put(key,value);
         }
         return success;
     }
 
     public ContractProto.Value fetch(byte[] key) {
-        byte[] data = cache.retrieveFromCache(key);
+        byte[] data = cache.get(key);
         if(data!=null){
             ContractProto.Value recvValue = ContractProto.Value.newBuilder()
                     .setV(ByteString.copyFrom(data))
@@ -77,7 +82,7 @@ public class HyperchainLedger extends AbstractLedger{
         logger.info("Transaction id: " + getContext().getId());
 
         ContractProto.Value value = ledgerClient.get(sendkey);
-        cache.putInCache(key,value.toByteArray());
+        cache.put(key,value.toByteArray());
         return value;
     }
 
@@ -98,7 +103,7 @@ public class HyperchainLedger extends AbstractLedger{
                 .build();
         boolean success = ledgerClient.delete(ck);
         if(success){
-            cache.removeFromCache(key);
+            cache.delete(key);
         }
         return success;
     }
@@ -108,108 +113,6 @@ public class HyperchainLedger extends AbstractLedger{
         return delete(key.getBytes());
     }
 
-    @Override
-    public boolean getBoolean(byte[] key) throws NotExistException {
-        ContractProto.Value v = fetch(key);
-        if (v.getV().isEmpty())
-            throw new NotExistException(new String(key));
-        return Boolean.parseBoolean(v.getV().toStringUtf8());
-    }
-
-    @Override
-    public short getShort(byte[] key) throws NotExistException {
-        ContractProto.Value v = fetch(key);
-        if (v.getV().isEmpty())
-            throw new NotExistException(new String(key));
-        return Short.parseShort(v.getV().toStringUtf8());
-    }
-
-    @Override
-    public char getChar(byte[] key) throws NotExistException {
-        ContractProto.Value v = fetch(key);
-        if (v.getV().isEmpty())
-            throw new NotExistException(new String(key));
-        return v.getV().toStringUtf8().charAt(0);
-    }
-
-    @Override
-    public int getInt(byte[] key) throws NotExistException {
-        ContractProto.Value v = fetch(key);
-        if (v.getV().isEmpty())
-            throw new NotExistException(new String(key));
-        return Integer.parseInt(v.getV().toStringUtf8());
-    }
-
-    @Override
-    public float getFloat(byte[] key) throws NotExistException {
-        ContractProto.Value v = fetch(key);
-        if (v.getV().isEmpty())
-            throw new NotExistException(new String(key));
-        return Float.parseFloat(v.getV().toStringUtf8());
-    }
-
-    public double getDouble(byte[] key) throws NotExistException {
-        ContractProto.Value v = fetch(key);
-        if (v.getV().isEmpty())
-            throw new NotExistException(new String(key));
-        return Double.parseDouble(v.getV().toStringUtf8());
-    }
-
-    @Override
-    public String getString(byte[] key) throws NotExistException {
-        ContractProto.Value v = fetch(key);
-        if (v.getV().isEmpty())
-            throw new NotExistException(new String(key));
-        return v.getV().toStringUtf8();
-    }
-
-    public  <T> T getObject(byte[] data, Class<T> clazz) {
-        return Bytes.toObject(data, clazz);
-    }
-
-    @Override
-    public byte[] get(String key) throws NotExistException {
-        return get(key.getBytes());
-    }
-
-    @Override
-    public boolean getBoolean(String key) throws NotExistException {
-        return getBoolean(key.getBytes());
-    }
-
-    @Override
-    public short getShort(String key) throws NotExistException {
-        return getShort(key.getBytes());
-    }
-
-    @Override
-    public char getChar(String key) throws NotExistException {
-        return getChar(key.getBytes());
-    }
-
-    @Override
-    public int getInt(String key) throws NotExistException {
-        return getInt(key.getBytes());
-    }
-
-    @Override
-    public float getFloat(String key) throws NotExistException {
-        return getFloat(key.getBytes());
-    }
-
-    @Override
-    public double getDouble(String key) throws NotExistException {
-        return getDouble(key.getBytes());
-    }
-
-    @Override
-    public String getString(String key) throws NotExistException {
-        return getString(key.getBytes());
-    }
-
-    public  <T> T getObject(String key, Class<T> clazz) {
-        return Bytes.toObject(key.getBytes(), clazz);
-    }
 
     @Override
     public boolean put(byte[] key, boolean value) {
@@ -310,7 +213,7 @@ public class HyperchainLedger extends AbstractLedger{
                 ContractProto.KeyValue data = batch.getKv(i);
                 byte[] key = data.getK().toByteArray();
                 byte[] value = data.getV().toByteArray();
-                cache.putInCache(key, value);
+                cache.put(key, value);
             }
         }
 
@@ -329,7 +232,7 @@ public class HyperchainLedger extends AbstractLedger{
         BatchKey bk = newBatchKey();
 
         for(byte[] k: keys){
-            byte[] value = cache.retrieveFromCache(k);
+            byte[] value = cache.get(k);
             if(value!=null){
                 batch.put(k,value);
             }
@@ -358,7 +261,7 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     class BatchImpl implements Batch{
-        private Map<byte[], byte[]> data;
+        private Map<byte[], Result> data;
         private HyperchainLedger ledger;
 
         public BatchImpl(HyperchainLedger ledger) {
@@ -366,13 +269,34 @@ public class HyperchainLedger extends AbstractLedger{
             this.ledger = ledger;
         }
 
-        public byte[] get(byte[] key) {
+        public Result get(byte[] key) {
             return this.data.get(key);
         }
 
         @Override
+        public Result get(String key){
+            return this.data.get(key.getBytes());
+        }
+
+
+        @Override
         public void put(byte[] key, byte[] value) {
-            data.put(key, value);
+            data.put(key, new Result(ByteString.copyFrom(value)));
+        }
+
+        @Override
+        public void put(byte[] key, Object value) {
+            put(key, Bytes.toByteArray(value));
+        }
+
+        @Override
+        public void put(String key, Object value){
+            put(key.getBytes(), Bytes.toByteArray(value));
+        }
+
+        @Override
+        public void put(String key, byte[] value){
+            put(key.getBytes(), value);
         }
 
         @Override
@@ -387,10 +311,10 @@ public class HyperchainLedger extends AbstractLedger{
 
         public ContractProto.BatchKV toBatchKV() {
             ContractProto.BatchKV.Builder builder  = ContractProto.BatchKV.newBuilder();
-            for(Map.Entry<byte[], byte[]> kv: data.entrySet()) {
+            for(Map.Entry<byte[], Result> kv: data.entrySet()) {
                 ContractProto.KeyValue keyValue = ContractProto.KeyValue.newBuilder()
                         .setK(ByteString.copyFrom(kv.getKey()))
-                        .setV(ByteString.copyFrom(kv.getValue()))
+                        .setV(kv.getValue().getValue())
                         .build();
                 builder.addKv(keyValue);
             }
@@ -422,6 +346,10 @@ public class HyperchainLedger extends AbstractLedger{
         public void put(byte[] key) {
             keys.add(key);
             builder.addK(ByteString.copyFrom(key));
+        }
+
+        public void put(String key){
+            put(key.getBytes());
         }
 
         @Override

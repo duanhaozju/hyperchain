@@ -18,7 +18,7 @@ public class TestHandler {
 
         String contractDir = TestHandler.class.getResource("/contracts").getPath();
 //        System.out.println(contractDir);
-        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl(123);
+        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl();
         Handler handler = new Handler(123);
         ContractProto.Request request = ContractProto.Request.newBuilder()
                 .addArgs(ByteString.copyFrom(contractDir, Charset.defaultCharset()))
@@ -42,7 +42,7 @@ public class TestHandler {
 
         String contractDir = TestHandler.class.getResource("/contracts").getPath();
 //        System.out.println(contractDir);
-        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl(123);
+        ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl();
         Handler handler = new Handler(123);
         ContractProto.Request request = ContractProto.Request.newBuilder()
                 .addArgs(ByteString.copyFrom(contractDir, Charset.defaultCharset()))

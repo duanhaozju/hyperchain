@@ -1,3 +1,7 @@
+/**
+ * Hyperchain License
+ * Copyright (C) 2016 The Hyperchain Authors.
+ */
 package cn.hyperchain.jcee.ledger;
 
 import java.util.List;
@@ -7,5 +11,6 @@ import java.util.List;
  */
 public interface BatchKey {
     void put(byte[] key);
+    void put(String key);
     List<byte[]> getKeys();
 }

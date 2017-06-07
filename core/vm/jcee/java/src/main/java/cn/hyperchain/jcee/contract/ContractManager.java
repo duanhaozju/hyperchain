@@ -98,9 +98,9 @@ public class ContractManager {
      */
     public boolean deployContract(ContractInfo info) throws ClassNotFoundException{
 
-        if (! isSourceSafe(info.getContractPath())) {
-            return false;
-        }
+//        if (! isSourceSafe(info.getContractPath())) {
+//            return false;
+//        }
         logger.debug("contract info, " + info.toString());
         ContractClassLoader classLoader = new ContractClassLoader(info.getContractPath(), info.getClassPrefix());
         ContractTemplate contract = null;
