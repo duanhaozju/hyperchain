@@ -62,14 +62,14 @@ public class ByteCodeChecker implements Checker {
             if (interfaceIsOk(rule, cn) && superClassIsOk(rule, cn) &&
                     memberVariableKeyWordIsOk(rule, cn) && memberVariableClassIsOk(rule, cn) &&
                     methodDeclareIsOk(rule, cn) && methodVariableIsOk(rule, cn) &&
-                    methodInstructionOpCodeIsOk(rule, cn) && methodInstructionDescIsOk(rule, cn)) {
+                    methodInstructionOpCodeIsOk(rule, cn) && methodInstructionOwnerAndNameIsOk(rule, cn)) {
                 return true;
             }
         } else {
             if (interfaceIsOk(rule, cn) && superClassIsOk(rule, cn) &&
                     memberVariableClassIsOk(rule, cn) &&
                     methodDeclareIsOk(rule, cn) && methodVariableIsOk(rule, cn) &&
-                    methodInstructionOpCodeIsOk(rule, cn) && methodInstructionDescIsOk(rule, cn)) {
+                    methodInstructionOpCodeIsOk(rule, cn) && methodInstructionOwnerAndNameIsOk(rule, cn)) {
                 return true;
             }
         }
@@ -159,11 +159,19 @@ public class ByteCodeChecker implements Checker {
             return true;
         } else if (classOfAllowedRule != null) {
             boolean flag = containsClass(classOfAllowedRule, superClass);
-            logger.info("check super class " + String.valueOf(flag) + "!" + " super class name: " + superClass);
+            if (flag) {
+                logger.debug("check super class " + String.valueOf(flag) + "!" + " super class name: " + superClass);
+            } else {
+                logger.info("check super class " + String.valueOf(flag) + "!" + " super class name: " + superClass);
+            }
             return flag;
         } else {
             boolean flag = containsClass(classOfNotAllowedRule, superClass);
-            logger.info("check super class " + String.valueOf(!flag) + "!" + " super class name: " + superClass);
+            if (!flag) {
+                logger.debug("check super class " + String.valueOf(!flag) + "!" + " super class name: " + superClass);
+            } else {
+                logger.info("check super class " + String.valueOf(!flag) + "!" + " super class name: " + superClass);
+            }
             return !flag;
         }
     }
@@ -428,7 +436,7 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
-    private boolean methodInstructionDescIsOk(Rule rule, ClassNode cn) {
+    private boolean methodInstructionOwnerAndNameIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
             logger.warn("no rule found!");
             return true;
@@ -445,9 +453,9 @@ public class ByteCodeChecker implements Checker {
                 for (int i = 0; i < insnList.size(); ++i) {
                     if (insnList.get(i) instanceof MethodInsnNode) {
                         MethodInsnNode methodInsnNode = (MethodInsnNode)insnList.get(i);
-                        boolean flag = containsClass(descOfAllowedRule, methodInsnNode.desc);
+                        boolean flag = containsClass(descOfAllowedRule, methodInsnNode.owner + methodInsnNode.name);
                         if (!flag) {
-                            logger.info("check method instruction desc false!" + " method name: " + methodNode.name + " method instruction desc name: " + methodInsnNode.desc);
+                            logger.info("check method instruction false!" + " method instruction desc: " + methodInsnNode.desc + " method instruction owner: " + methodInsnNode.owner + " method instruction name: " + methodInsnNode.name);
                             return false;
                         }
                     }
@@ -461,9 +469,9 @@ public class ByteCodeChecker implements Checker {
                 for (int i = 0; i < insnList.size(); ++i) {
                     if (insnList.get(i) instanceof MethodInsnNode) {
                         MethodInsnNode methodInsnNode = (MethodInsnNode)insnList.get(i);
-                        boolean flag = containsClass(descOfNotAllowedRule, methodInsnNode.desc);
+                        boolean flag = containsClass(descOfNotAllowedRule, methodInsnNode.owner + "/" + methodInsnNode.name);
                         if (flag) {
-                            logger.info("check method instruction desc false!" + " method name: " + methodNode.name + " method instruction desc name: " + methodInsnNode.desc);
+                            logger.info("check method instruction false!" + " method instruction desc: " + methodInsnNode.desc + " method instruction owner: " + methodInsnNode.owner + " method instruction name: " + methodInsnNode.name);
                             return false;
                         }
                     }

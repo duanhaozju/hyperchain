@@ -12,9 +12,6 @@ function initClass() {
     util="target/classes/cn/hyperchain/jcee/util"
     sdkUtil="hyperjvm/sdk/cn/hyperchain/jcee/util"
 
-    log="target/classes/cn/hyperchain/jcee/log"
-    sdkLog="hyperjvm/sdk/cn/hyperchain/jcee/log"
-
     mkdir -p ${sdkContract}
     echo "${contract}/ContractTemplate.class"
     cp "${contract}/ContractTemplate.class" ${sdkContract}
@@ -25,20 +22,13 @@ function initClass() {
     cp "${ledger}/Batch.class" ${sdkLedger}
     cp "${ledger}/BatchKey.class" ${sdkLedger}
     cp "${ledger}/BatchValue.class" ${sdkLedger}
+    cp "${ledger}/Result.class" ${sdkLedger}
 
     mkdir -p ${sdkCommon}
     cp "${common}/ExecuteResult.class" ${sdkCommon}
 
-    mkdir -p "${sdkCommon}/exception"
-    cp "${common}/exception/NotExistException.class" "${sdkCommon}/exception"
-    cp "${common}/exception/HyperjvmException.class" "${sdkCommon}/exception"
-
     mkdir -p ${sdkUtil}
     cp "${util}/Bytes.class" ${sdkUtil}
-
-    mkdir -p ${sdkLog}
-    cp "${log}/Logger.class" ${sdkLog}
-    cp "${log}/LoggerImpl.class" ${sdkLog}
 }
 
 if [ -e hyperjvm/sdk ]; then
@@ -53,8 +43,11 @@ echo "3-2. paste needed class."
 initClass
 
 echo "3-3. build jar."
+cp hyperjvm/libs/log4j-1.2.17.jar hyperjvm/sdk
 cd hyperjvm/sdk
-jar -cvf hyperjvm-sdk-1.0.jar cn
+jar -xvf log4j-1.2.17.jar
+jar -cvf hyperjvm-sdk-1.0.jar cn org
 
 echo "3-4. rm class."
-rm -rf cn
+rm -rf cn org META-INF
+rm log4j-1.2.17.jar

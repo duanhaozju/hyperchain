@@ -116,7 +116,7 @@ func (mgr *JvmManager) startJvmServerDaemon() {
 		case <- ticker.C:
 			if !mgr.checkJvmExist() {
 				mgr.restartJvmServer()
-				time.Sleep(4 * time.Second)
+				time.Sleep(10 * time.Second)
 			}
 		}
 	}
@@ -124,13 +124,9 @@ func (mgr *JvmManager) startJvmServerDaemon() {
 
 func (mgr *JvmManager) restartJvmServer() {
 	mgr.logger.Info("try to restart jvm server")
-	for  {
-		err := mgr.startJvmServer()
-		if err != nil {
-			mgr.logger.Info("start jvm server failed")
-			continue
-		}
-		break
+	err := mgr.startJvmServer()
+	if err != nil {
+		mgr.logger.Errorf("start jvm server failed. %v", err.Error())
 	}
 }
 

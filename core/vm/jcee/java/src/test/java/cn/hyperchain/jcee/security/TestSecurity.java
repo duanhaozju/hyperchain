@@ -22,6 +22,8 @@ public class TestSecurity {
     private String netContract = "/NetContract.class";
     private String syncContract2 = "/SyncContract2.class";
     private String normalData = "/NormalData.class";
+    private String timeContract = "/TimeContract.class";
+    private String timeContract2 = "/TimeContract2.class";
 
     private String userPath = "/securityRule.yaml";
 
@@ -114,6 +116,24 @@ public class TestSecurity {
         ByteCodeChecker userByteCodeChecker = new ByteCodeChecker(contractDir + userPath);
         Assert.assertTrue(systemByteCodeChecker.pass(contractDir + normalData));
         Assert.assertTrue(userByteCodeChecker.pass(contractDir + normalData));
+    }
+
+    @Test
+    public void testTimeContract() {
+        String contractDir = System.getProperty("user.dir") + dir;
+        ByteCodeChecker systemByteCodeChecker = new ByteCodeChecker();
+        ByteCodeChecker userByteCodeChecker = new ByteCodeChecker(contractDir + userPath);
+        Assert.assertFalse(systemByteCodeChecker.pass(contractDir + timeContract));
+        Assert.assertTrue(userByteCodeChecker.pass(contractDir + timeContract));
+    }
+
+    @Test
+    public void testTimeContract2() {
+        String contractDir = System.getProperty("user.dir") + dir;
+        ByteCodeChecker systemByteCodeChecker = new ByteCodeChecker();
+        ByteCodeChecker userByteCodeChecker = new ByteCodeChecker(contractDir + userPath);
+        Assert.assertFalse(systemByteCodeChecker.pass(contractDir + timeContract2));
+        Assert.assertTrue(userByteCodeChecker.pass(contractDir + timeContract2));
     }
 
     public byte[] getClass(String path) {

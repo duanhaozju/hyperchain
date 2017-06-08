@@ -3,20 +3,18 @@ package cn.hyperchain.jcee.security;
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
-
-import java.io.File;
 import java.util.List;
 
 /**
  * Created by Think on 4/27/17.
  */
-public class IOContract extends ContractTemplate {
+public class TimeContract extends ContractTemplate {
 
-    public void send(){
-        File file = new File("");
+    public void error(){
+        System.currentTimeMillis();
     }
 
-    public IOContract() {
+    public TimeContract() {
         super();
     }
 

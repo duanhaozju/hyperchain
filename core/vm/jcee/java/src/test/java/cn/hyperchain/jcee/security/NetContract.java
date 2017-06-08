@@ -3,8 +3,6 @@ package cn.hyperchain.jcee.security;
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
-import com.google.protobuf.ByteString;
-import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -15,7 +13,6 @@ import java.util.List;
  * Created by Think on 5/5/17.
  */
 public class NetContract extends ContractTemplate {
-    private static final Logger logger = Logger.getLogger(IOContract.class.getSimpleName());
 
     public void error(){
         try {

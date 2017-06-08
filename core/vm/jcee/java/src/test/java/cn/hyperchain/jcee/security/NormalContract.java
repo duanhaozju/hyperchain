@@ -4,8 +4,6 @@ import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.Result;
 import com.google.protobuf.ByteString;
-import com.google.protobuf.DoubleValue;
-import org.apache.log4j.Logger;
 
 import java.util.List;
 
@@ -13,8 +11,6 @@ import java.util.List;
  * Created by Think on 4/27/17.
  */
 public class NormalContract extends ContractTemplate {
-
-        private static final Logger logger = Logger.getLogger(NormalContract.class.getSimpleName());
 
     @Override
     public ExecuteResult invoke(String funcName, List<String> args) {

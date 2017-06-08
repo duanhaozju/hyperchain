@@ -11,7 +11,6 @@ import cn.hyperchain.jcee.ledger.BatchKey;
 import cn.hyperchain.jcee.ledger.BatchValue;
 import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.util.Bytes;
-import org.apache.log4j.Logger;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -20,7 +19,6 @@ import java.util.List;
  * Created by wangxiaoyi on 2017/4/14.
  */
 public class SimulateBank extends ContractTemplate {
-    private static final Logger logger = Logger.getLogger(SimulateBank.class.getSimpleName());
 
     public SimulateBank() {}
 

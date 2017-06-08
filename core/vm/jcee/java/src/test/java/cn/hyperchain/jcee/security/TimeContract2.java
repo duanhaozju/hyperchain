@@ -4,19 +4,19 @@ import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
 
-import java.io.File;
+import java.text.SimpleDateFormat;
 import java.util.List;
 
 /**
  * Created by Think on 4/27/17.
  */
-public class IOContract extends ContractTemplate {
+public class TimeContract2 extends ContractTemplate {
 
-    public void send(){
-        File file = new File("");
+    public void error(){
+        new SimpleDateFormat("yyyy-mm-dd");
     }
 
-    public IOContract() {
+    public TimeContract2() {
         super();
     }
 
