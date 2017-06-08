@@ -11,8 +11,6 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/common"
 	pa "path/filepath"
-	"path/filepath"
-	"os"
 )
 
 const (
@@ -116,10 +114,6 @@ func (db *LDBDatabase) NewBatch() db.Batch {
 }
 
 func (db *LDBDatabase) MakeSnapshot(backupPath string, fields []string) error {
-	backupDir := filepath.Dir(backupPath)
-	if err := os.MkdirAll(backupDir, 0777); err != nil {
-		return err
-	}
 	backupDb, err := NewLDBDataBase(db.conf, backupPath)
 	if err != nil {
 		return err

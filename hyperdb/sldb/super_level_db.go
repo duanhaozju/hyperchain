@@ -13,8 +13,6 @@ import (
 	"hyperchain/hyperdb/db"
 	pa "path/filepath"
 	"time"
-	"os"
-	"path/filepath"
 )
 
 const (
@@ -172,14 +170,7 @@ func (sldb *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
 }
 
 func (sb *SuperLevelDB) MakeSnapshot(backupPath string, fields []string) error {
-	backupDir := filepath.Dir(backupPath)
-	if err := os.MkdirAll(backupDir, 0777); err != nil {
-		return err
-	}
-	//backupDb, err := leveldb.OpenFile(backupPath, nil)
-
 	backupDb, err := NewSLDB(sb.conf, backupPath)
-
 	if err != nil {
 		return err
 	}
