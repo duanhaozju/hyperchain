@@ -60,11 +60,12 @@ func newDataNodeCache(treePrefix string, maxSizeMBs int, logger *logging.Logger)
 		logger.Infof("Constructing datanode-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
 	if globalDataNodeCache.isEnable {
-		if globalDataNodeCache.cacheMap[treePrefix] == nil {
-			globalDataNodeCache.cacheMap[treePrefix], _ = lru.New(GlobalDataNodeCacheSize)
+		if c := globalDataNodeCache.Get(treePrefix); c == nil {
+			c, _ := lru.New(GlobalDataNodeCacheSize)
+			globalDataNodeCache.Add(treePrefix, c)
 		} else {
-			dataNodeCache := &DataNodeCache{TreePrefix: treePrefix, c: globalDataNodeCache.cacheMap[treePrefix], maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled, logger: logger}
-			globalDataNodeCache.cacheMap[treePrefix] = nil
+			dataNodeCache := &DataNodeCache{TreePrefix: treePrefix, c: c, maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled, logger: logger}
+			globalDataNodeCache.Add(treePrefix, nil)
 			return dataNodeCache
 		}
 	}
