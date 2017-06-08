@@ -2,11 +2,8 @@
  * Hyperchain License
  * Copyright (C) 2016 The Hyperchain Authors.
  */
-package cn.hyperchain.jcee.contract.examples.ABC;
+package cn.hyperchain.jcee.contract.examples.ABC.src;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 /**
  * Created by huhu on 2017/5/31.

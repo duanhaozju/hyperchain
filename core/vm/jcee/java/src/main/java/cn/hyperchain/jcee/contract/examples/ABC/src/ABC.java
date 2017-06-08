@@ -2,7 +2,7 @@
  * Hyperchain License
  * Copyright (C) 2016 The Hyperchain Authors.
  */
-package cn.hyperchain.jcee.contract.examples.ABC;
+package cn.hyperchain.jcee.contract.examples.ABC.src;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
