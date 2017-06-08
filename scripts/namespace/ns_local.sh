@@ -65,10 +65,10 @@ f_check_local_env(){
 f_kill_process(){
     echo "kill the bind port process"
     PID=`ps -ax | grep hyperchain | grep -v grep | awk '{print $1}'`
-    for pid in ${PID}
-    do
-        kill -9 ${pid}
-    done
+    if [ "$PID" != "" ]
+    then
+        ps -ax | grep hyperchain | grep -v grep | awk '{print $1}' | xargs kill -9
+    fi
 }
 
 # clear data
@@ -96,6 +96,11 @@ f_rebuild(){
 f_rebuild_hypercli(){
 echo "Rebuild hypercli ..."
 cd ${CLI_PATH} && govendor build
+}
+
+# modify peerconfig.json to local_peerconfig.json in global.yaml
+f_modif_global(){
+    sed -i "s/\/peerconfig.json/\/local_peerconfig.json/g" ${PROJECT_PATH}/scripts/namespace/config/template/config/global.yaml
 }
 
 f_all_in_one_cmd(){
@@ -204,7 +209,8 @@ do
         REBUILD=false;
         shift;;
     -c|--hypercli)
-        HYPERCLI=true; shift;;
+        HYPERCLI=true;
+        shift;;
     -m|--mode)
         MODE=true;
         shift;;
@@ -227,6 +233,8 @@ if  $REBUILD ; then
     f_rebuild
 fi
 
+f_modif_global
+
 if $HYPERCLI ; then
     f_rebuild_hypercli
 fi
@@ -234,7 +242,7 @@ fi
 # distribute files
 for ns in $NS
 do
-    ${PROJECT_PATH}/scripts/namespace/gen_config.sh ${ns}
+    ${PROJECT_PATH}/scripts/namespace/gen_config.sh -l ${ns}
 done
 
 # run hyperchain node

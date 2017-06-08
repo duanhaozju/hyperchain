@@ -114,5 +114,10 @@ config/peerconfigs
 core/contract/java/target
 core/contract/java/*.iml
 
-
 hypercli/hypercli
+
+scripts/serverlist.txt
+scripts/innerserverlist.txt
+scripts/namespace/config/*.yaml
+
+core/vm/jcee/

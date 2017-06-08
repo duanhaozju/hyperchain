@@ -52,50 +52,54 @@ f_get_nodes(){
 # help prompt message
 f_help(){
     echo "gen_config.sh helper:"
-    echo "specify namespace config file name to generate and distribute nodes dirs"
+    echo "specify namespace config file name to generate and distribute nodes dirs, must specify only one namespace"
     echo "---------------------------------------------------"
     echo "Example for generate and distribute a namespace:"
     echo "./gen_config ns1"
 }
 
 f_copy_tmp(){
-    if [ -d ${NS_PATH}/${NS_NAME} ]; then
+    if [ -d ${BUILD_TMP_PATH}/${NS_NAME} ]; then
         echo "delete existed title namespace config root files '${NS_NAME}'..."
-        rm -rf ${NS_PATH}/${NS_NAME}
+        rm -rf ${BUILD_TMP_PATH}/${NS_NAME}
     fi
     echo "create namespace directory '${NS_NAME}'..."
-    mkdir -p ${NS_PATH}/${NS_NAME}
+    mkdir -p ${BUILD_TMP_PATH}/${NS_NAME}
 
     # copy template config
-    cp -r ${TMP_PATH}/* ${NS_PATH}/${NS_NAME}/
+    cp -r ${TMP_PATH}/* ${BUILD_TMP_PATH}/${NS_NAME}/
 
     # global is the template namespace name
     if [ ${_SYSTYPE} = "MAC" ]; then
-        sed -i "" "s/namespaces\/template/namespaces\/${NS_NAME}/" ${NS_PATH}/${NS_NAME}/config/db.yaml
-        sed -i "" "s/namespaces\/template/namespaces\/${NS_NAME}/" ${NS_PATH}/${NS_NAME}/config/global.yaml
-        sed -i "" "s/namespaces\/template/namespaces\/${NS_NAME}/" ${NS_PATH}/${NS_NAME}/config/caconfig.toml
-        sed -i "" "s/nodes: 4/nodes: ${NS_MAXNODE}/" ${NS_PATH}/${NS_NAME}/config/pbft.yaml
+        sed -i "" "s/namespaces\/template/namespaces\/${NS_NAME}/" ${BUILD_TMP_PATH}/${NS_NAME}/config/db.yaml
+        sed -i "" "s/namespaces\/template/namespaces\/${NS_NAME}/" ${BUILD_TMP_PATH}/${NS_NAME}/config/global.yaml
+        sed -i "" "s/namespaces\/template/namespaces\/${NS_NAME}/" ${BUILD_TMP_PATH}/${NS_NAME}/config/caconfig.toml
+        sed -i "" "s/nodes: 4/nodes: ${NS_MAXNODE}/" ${BUILD_TMP_PATH}/${NS_NAME}/config/pbft.yaml
     else
-        sed -i "s/namespaces\/template/namespaces\/${NS_NAME}/g" ${NS_PATH}/${NS_NAME}/config/db.yaml
-        sed -i "s/namespaces\/template/namespaces\/${NS_NAME}/" ${NS_PATH}/${NS_NAME}/config/global.yaml
-        sed -i "s/namespaces\/template/namespaces\/${NS_NAME}/" ${NS_PATH}/${NS_NAME}/config/caconfig.toml
-        sed -i "s/nodes: 4/nodes: ${NS_MAXNODE}/" ${NS_PATH}/${NS_NAME}/config/pbft.yaml
+        sed -i "s/namespaces\/template/namespaces\/${NS_NAME}/g" ${BUILD_TMP_PATH}/${NS_NAME}/config/db.yaml
+        sed -i "s/namespaces\/template/namespaces\/${NS_NAME}/" ${BUILD_TMP_PATH}/${NS_NAME}/config/global.yaml
+        sed -i "s/namespaces\/template/namespaces\/${NS_NAME}/" ${BUILD_TMP_PATH}/${NS_NAME}/config/caconfig.toml
+        sed -i "s/nodes: 4/nodes: ${NS_MAXNODE}/" ${BUILD_TMP_PATH}/${NS_NAME}/config/pbft.yaml
     fi
 }
 
 f_gen_config(){
     # remove useless local {peerconfig}
-    rm -rf ${NS_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_*
+    rm -rf ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_*
 
     for ((i=1; i<= $NS_MAXNODE; i++)); do
         # create cert dir if not exist
-        if [ -d ${NS_PATH}/${NS_NAME}/config/peerconfigs/${NS_NODES[$i]} ]; then
-            rm -rf ${NS_PATH}/${NS_NAME}/config/peerconfigs/${NS_NODES[$i]}
+#        echo "generate peerconfig of ${NS_NODES[$i]}"
+        if [ -d ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/${NS_NODES[$i]} ]; then
+            rm -rf ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/${NS_NODES[$i]}
         fi
-        mkdir ${NS_PATH}/${NS_NAME}/config/peerconfigs/${NS_NODES[$i]}
-        cp -r ${TMP_PATH}/config/peerconfigs/node1/* ${NS_PATH}/${NS_NAME}/config/peerconfigs/${NS_NODES[$i]}/
+        mkdir ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/${NS_NODES[$i]}
+        cp -r ${TMP_PATH}/config/peerconfigs/node1/* ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/${NS_NODES[$i]}/
 
-        peerconfig=${NS_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${i}.json
+        peerconfig=${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${i}.json
+        if [ -e ${peerconfig} ]; then
+            rm -rf ${peerconfig}
+        fi
         touch ${peerconfig}
         ip=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.ip`
         node_id=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.node_id`
@@ -104,6 +108,7 @@ f_gen_config(){
         is_vp=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.is_vp`
         is_vp=$(echo ${is_vp} | tr A-Z a-z)
         grpc_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.grpc_port`
+        ip=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.ip`
         jsonrpc_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.jsonrpc_port`
         restful_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.restful_port`
         introducer_ip=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.introducer_ip`
@@ -116,12 +121,12 @@ f_gen_config(){
         echo "  \"is_vp\":$is_vp,"                      >>${peerconfig}
         echo "  \"node_id\":$node_id,"                  >>${peerconfig}
         echo "  \"grpc_port\":$grpc_port,"              >>${peerconfig}
-        echo "  \"local_ip\":\"127.0.0.1\","            >>${peerconfig}
+        echo "  \"local_ip\":\"$ip\","                  >>${peerconfig}
         echo "  \"jsonrpc_port\":$jsonrpc_port,"        >>${peerconfig}
         echo "  \"restful_port\":$restful_port,"        >>${peerconfig}
         echo "  \"introducer_ip\":\"$introducer_ip\","  >>${peerconfig}
         echo "  \"introducer_port\":$introducer_port,"  >>${peerconfig}
-        echo "  \"introducer_id\":$introducer_id"       >>${peerconfig}
+        echo "  \"introducer_id\":$introducer_id"      >>${peerconfig}
         echo " },"                                      >>${peerconfig}
         echo "  \"maxpeernode\":$NS_MAXNODE,"           >>${peerconfig}
         echo "  \"nodes\":["                            >>${peerconfig}
@@ -155,6 +160,7 @@ f_distribute(){
     # cp the config files into nodes
     for (( j=1; j<=$NS_MAXNODE; j++ ))
     do
+#        echo "distribute config files of node${j}"
         if [ ! -d "${DUMP_PATH}/${NS_NODES[$j]}/namespaces" ]; then
             mkdir -p ${DUMP_PATH}/${NS_NODES[$j]}/namespaces
         fi
@@ -168,26 +174,33 @@ f_distribute(){
             echo "delete existed title namespace files in dir ${NS_NODES[$j]}"
             rm -rf ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}
         fi
-        mkdir ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}
+        mkdir -p ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}
 
-        cp -rf  ${NS_PATH}/${NS_NAME}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}
-        cp -rf  ${NS_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/local_peerconfig.json
-        cp -rf  ${NS_PATH}/${NS_NAME}/config/peerconfigs/node${j}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/cert/
-        cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/${NS_NODES[$j]}
+        cp -rf  ${BUILD_TMP_PATH}/${NS_NAME}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}
+        if ${LOCAL}; then
+            cp -rf  ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/local_peerconfig.json
+            cp ${DUMP_PATH}/hyperchain ${DUMP_PATH}/${NS_NODES[$j]}
+        else
+            cp -rf  ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/peerconfig.json
+
+        fi
+
+        cp -rf  ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/node${j}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/cert/
 
         # distribute hypercli
         if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
             mkdir ${DUMP_PATH}/node${j}/hypercli
         fi
-        if [ ! -e "${CLI_PATH}/hypercli" ]; then
-            f_rebuild_hypercli
-        fi
         cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
         cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
     done
-    rm -rf ${NS_PATH}
+        rm -rf ${BUILD_TMP_PATH}
 }
 
+f_rebuild_hypercli(){
+    cd ${PROJECT_PATH}/hypercli
+    govendor build
+}
 #####################################
 #                                   #
 #  MAIN INVOKE AREA                 #
@@ -211,23 +224,29 @@ NS_CONFIG_FILE=""
 NS_CONFIG_PATH="${GOPATH}/src/hyperchain/configuration"
 
 # config ns path
-NS_PATH="${PROJECT_PATH}/build/tmp"
+BUILD_TMP_PATH="${PROJECT_PATH}/build/tmp"
+
+# generate local peer config or not
+LOCAL=false
 
 # hypercli root path
 CLI_PATH="${PROJECT_PATH}/hypercli"
 
-# exe by extra input params
-if [ $# -gt 0 ]; then
+# parse the flags
+while [ $# -gt 0 ]
+do
     case "$1" in
     -h|--help)
         f_help; exit 0;;
+    -l|--local)
+        LOCAL=true; shift;;
     -*) f_help; exit 1;;
-    *) NS_CONFIG_FILE="${PROJECT_PATH}/scripts/namespace/config/$1${NS_CONFIG_SUFFIX}";;
+    *) NS_CONFIG_FILE="${PROJECT_PATH}/scripts/namespace/config/$1${NS_CONFIG_SUFFIX}"; shift;;
+	--) shift; break;;
+	-*) help; exit 1;;
+	*) break;;
     esac
-else
-    echo "not enough params, at least one param"
-    exit 1
-fi
+done
 
 # 1.check local env
 f_check_local_env
@@ -247,6 +266,9 @@ f_copy_tmp
 
 # 4.generate new config files
 f_gen_config
+
+# 5.rebuild hypercli
+f_rebuild_hypercli
 
 # 5.distribute config files to corresponding nodes
 f_distribute

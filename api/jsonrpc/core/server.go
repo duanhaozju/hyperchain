@@ -240,6 +240,7 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 			var rm *requestManager
 			if _, ok := s.requestMgr[name]; !ok {
 				rm = NewRequestManager(name, s)
+				s.requestMgr[name] = rm
 				rm.Start()
 			}else {
 				rm = s.requestMgr[name]

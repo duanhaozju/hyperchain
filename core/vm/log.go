@@ -76,7 +76,7 @@ func (ls Logs) ToLogsTrans() []LogTrans {
 		}
 		ret[idx] = LogTrans{
 			Address:     log.Address.Hex(),
-			Data:        common.BytesToHash(log.Data).Hex(),
+			Data:        common.Bytes2Hex(log.Data),
 			BlockNumber: log.BlockNumber,
 			BlockHash:   log.BlockHash.Hex(),
 			Topics:      topics,
