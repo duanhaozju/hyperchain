@@ -3,8 +3,6 @@ package cn.hyperchain.jcee.security;
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
-import com.google.protobuf.ByteString;
-import org.apache.log4j.Logger;
 
 import java.util.List;
 
@@ -12,7 +10,6 @@ import java.util.List;
  * Created by Think on 4/27/17.
  */
 public class SyncContract extends ContractTemplate {
-    private static final Logger logger = Logger.getLogger(SyncContract.class.getSimpleName());
 
     public synchronized void send(){
 

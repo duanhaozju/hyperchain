@@ -3,8 +3,6 @@ package cn.hyperchain.jcee.security;
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
-import com.google.protobuf.ByteString;
-import org.apache.log4j.Logger;
 
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -14,7 +12,6 @@ import java.util.concurrent.Executors;
  * Created by Think on 4/27/17.
  */
 public class ConcurrentContract extends ContractTemplate {
-    private static final Logger logger = Logger.getLogger(ConcurrentContract.class.getSimpleName());
 
     public void error(){
         Executor executor = Executors.newFixedThreadPool(4);

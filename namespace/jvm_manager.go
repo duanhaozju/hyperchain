@@ -116,7 +116,7 @@ func (mgr *JvmManager) startJvmServerDaemon() {
 		case <- ticker.C:
 			if !mgr.checkJvmExist() {
 				mgr.restartJvmServer()
-				time.Sleep(20 * time.Second)
+				time.Sleep(10 * time.Second)
 			}
 		}
 	}

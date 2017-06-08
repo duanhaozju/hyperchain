@@ -22,7 +22,7 @@ public abstract class ContractTemplate {
     private String owner;
     private String cid;
     protected AbstractLedger ledger;
-    private Logger logger = Logger.getLogger(ContractTemplate.class);
+    protected Logger logger = Logger.getLogger(this.getClass().getSimpleName());
 
     /**
      * invoke smart contract method
