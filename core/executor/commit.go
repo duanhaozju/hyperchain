@@ -10,7 +10,6 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/protos"
 	"time"
-	cm "hyperchain/core/executor/common"
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
@@ -21,7 +20,7 @@ func (executor *Executor) listenCommitEvent() {
 	executor.logger.Notice("commit backend start")
 	for {
 		select {
-		case <-executor.getExit(cm.IDENTIFIER_COMMIT):
+		case <-executor.getExit(IDENTIFIER_COMMIT):
 			executor.logger.Notice("commit backend exit")
 			return
 		case ev := <-executor.fetchCommitEvent():
@@ -96,7 +95,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	executor.logger.Noticef("Block hash %s", hex.EncodeToString(block.BlockHash))
 	// executor.logger.Notice(string(executor.statedb.Dump()))
 	// remove Cached Transactions which used to check transaction duplication
-	executor.informConsensus(cm.NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
+	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
 	return nil
 }
 

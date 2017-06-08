@@ -1,6 +1,6 @@
 syntax="proto3";
 
-package message;
+package executor;
 
 message ChainSyncRequest{
     uint64  currentNumber  = 1;
