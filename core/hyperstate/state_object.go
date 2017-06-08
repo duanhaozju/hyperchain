@@ -491,7 +491,7 @@ func (self *StateObject) Creator() common.Address {
 func (self *StateObject) SetCreator(addr common.Address) {
 	self.db.journal.JournalList = append(self.db.journal.JournalList, &SetCreatorChange{
 		Account: &self.address,
-		Prev:    &self.data.Creator,
+		Prev:    self.data.Creator,
 	})
 	self.setCreator(addr)
 }
