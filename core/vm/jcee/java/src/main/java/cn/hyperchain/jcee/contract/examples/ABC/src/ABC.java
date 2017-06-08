@@ -10,7 +10,6 @@ import cn.hyperchain.jcee.ledger.Batch;
 import cn.hyperchain.jcee.ledger.BatchKey;
 import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.util.Bytes;
-import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,8 +18,6 @@ import java.util.List;
  * Created by huhu on 2017/5/31.
  */
 public class ABC extends ContractTemplate {
-
-    private static final Logger logger = Logger.getLogger(ABC.class.getSimpleName());
 
     private static final String accountPrefix = "account_";
     private static final String orderPrefix = "order_";
