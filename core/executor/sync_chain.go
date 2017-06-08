@@ -565,7 +565,7 @@ func (executor *Executor) applyWorldState(fPath string, filterId string, root co
 		return err
 	}
 	dbPath := path.Join("ws", "ws_" + filterId, "SNAPSHOT_" + filterId)
-	wsDb, err := hyperdb.NewDatabase(executor.conf, dbPath, hyperdb.GetDatabaseType(executor.conf))
+	wsDb, err := hyperdb.NewDatabase(executor.conf, dbPath, hyperdb.GetDatabaseType(executor.conf), executor.namespace)
 	if err != nil {
 		return err
 	}

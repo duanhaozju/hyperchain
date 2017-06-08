@@ -100,7 +100,7 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 }
 
 func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte, height uint64, namespace string) (vm.Database, error) {
-	db, err := hyperdb.NewDatabase(conf, path.Join("snapshots", "SNAPSHOT_" + filterId), hyperdb.GetDatabaseType(conf))
+	db, err := hyperdb.NewDatabase(conf, path.Join("snapshots", "SNAPSHOT_" + filterId), hyperdb.GetDatabaseType(conf), namespace)
 	if err != nil {
 		return nil, err
 	}

@@ -158,7 +158,7 @@ func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, er
 			return nil, err, nil
 		}
 
-		db, err := hyperdb.NewDatabase(executor.conf, path.Join("snapshots", "SNAPSHOT_" + snapshotId), hyperdb.GetDatabaseType(executor.conf))
+		db, err := hyperdb.NewDatabase(executor.conf, path.Join("snapshots", "SNAPSHOT_" + snapshotId), hyperdb.GetDatabaseType(executor.conf), executor.namespace)
 		if err != nil {
 			return nil, err, nil
 		}

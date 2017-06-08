@@ -10,6 +10,7 @@ type Database interface {
 	NewBatch() Batch
 	NewIterator(prefix []byte) Iterator
 	MakeSnapshot(string, []string) error
+	Namespace() string
 }
 
 type Batch interface {

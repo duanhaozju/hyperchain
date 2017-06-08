@@ -23,6 +23,7 @@ type LDBDatabase struct {
 	path string
 	db   *leveldb.DB
 	conf *common.Config
+	namespace string
 }
 
 // NewLDBDataBase new a LDBDatabase instance
@@ -33,7 +34,7 @@ type LDBDatabase struct {
 // DB can be recovered with Recover function.
 // the return *LDBDatabase is goruntine-safe
 // the LDBDataBase instance must be close after use, by calling Close method
-func NewLDBDataBase(conf *common.Config,filepath string) (*LDBDatabase, error) {
+func NewLDBDataBase(conf *common.Config,filepath string, namespace string) (*LDBDatabase, error) {
 	if conf!=nil {
 		filepath= pa.Join(conf.GetString(LEVEL_DB_PATH), filepath)
 	}
@@ -42,6 +43,7 @@ func NewLDBDataBase(conf *common.Config,filepath string) (*LDBDatabase, error) {
 		path: filepath,
 		db:   db,
 		conf: conf,
+		namespace:     namespace,
 	}, err
 }
 
@@ -74,6 +76,10 @@ func (self *LDBDatabase) NewIterator(prefix []byte) db.Iterator {
 
 func (self *LDBDatabase) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
 	return self.db.NewIterator(util.BytesPrefix(prefix), nil)
+}
+
+func (self *LDBDatabase) Namespace() string {
+	return self.namespace
 }
 
 //Destroy, clean the whole database,
@@ -114,7 +120,7 @@ func (db *LDBDatabase) NewBatch() db.Batch {
 }
 
 func (db *LDBDatabase) MakeSnapshot(backupPath string, fields []string) error {
-	backupDb, err := NewLDBDataBase(db.conf, backupPath)
+	backupDb, err := NewLDBDataBase(db.conf, backupPath, db.namespace)
 	if err != nil {
 		return err
 	}

@@ -180,7 +180,7 @@ func (registry *SnapshotRegistry) pushBlock(filterId string, number uint64) erro
 		return err
 	}
 	p := path.Join("snapshots", registry.snapshotId(filterId))
-	sdb, err := hyperdb.NewDatabase(registry.executor.conf, p, hyperdb.GetDatabaseType(registry.executor.conf))
+	sdb, err := hyperdb.NewDatabase(registry.executor.conf, p, hyperdb.GetDatabaseType(registry.executor.conf), registry.namespace)
 	if err != nil {
 		return err
 	}
@@ -217,7 +217,7 @@ func (registry *SnapshotRegistry) writeMeta(filterId string, number uint64) erro
 }
 
 func (registry *SnapshotRegistry) genHashTag(filterId string, compareTag common.Hash, height uint64) (common.Hash, error) {
-	localDb, err := hyperdb.NewDatabase(registry.executor.conf, path.Join("snapshots", registry.snapshotId(filterId)), hyperdb.GetDatabaseType(registry.executor.conf))
+	localDb, err := hyperdb.NewDatabase(registry.executor.conf, path.Join("snapshots", registry.snapshotId(filterId)), hyperdb.GetDatabaseType(registry.executor.conf), registry.namespace)
 	defer localDb.Close()
 	if err != nil {
 		return common.Hash{}, err

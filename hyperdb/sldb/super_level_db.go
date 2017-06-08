@@ -27,9 +27,11 @@ type SuperLevelDB struct {
 	closed chan bool
 	logger *logging.Logger
 	conf   *common.Config
+	namespace string
 }
 
-func NewSLDB(conf *common.Config, path string) (*SuperLevelDB, error) {
+
+func NewSLDB(conf *common.Config, path string, namespace string) (*SuperLevelDB, error) {
 	var filepath = path
 	if conf != nil {
 		if conf != nil {
@@ -56,6 +58,7 @@ func NewSLDB(conf *common.Config, path string) (*SuperLevelDB, error) {
 		closed: make(chan bool),
 		logger: log,
 		conf:   conf,
+		namespace:   namespace,
 	}
 	go sldb.dumpIndexByInterval(conf.GetDuration(sldb_index_dump_interval))
 	return sldb, err
@@ -101,6 +104,10 @@ func (sldb *SuperLevelDB) NewIteratorWithPrefix(prefix []byte) db.Iterator {
 //warning: bad performance if too many data in the db
 func (sldb *SuperLevelDB) Destroy() error {
 	return sldb.DestroyByRange(nil, nil)
+}
+
+func (sldb *SuperLevelDB) Namespace() string {
+	return sldb.namespace
 }
 
 //DestroyByRange, clean data which key in range [start, end)
@@ -170,7 +177,7 @@ func (sldb *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
 }
 
 func (sb *SuperLevelDB) MakeSnapshot(backupPath string, fields []string) error {
-	backupDb, err := NewSLDB(sb.conf, backupPath)
+	backupDb, err := NewSLDB(sb.conf, backupPath, sb.namespace)
 	if err != nil {
 		return err
 	}
