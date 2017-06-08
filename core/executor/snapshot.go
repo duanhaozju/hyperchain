@@ -213,6 +213,18 @@ func (registry *SnapshotRegistry) writeMeta(filterId string, number uint64) erro
 	if err := registry.rwc.Write(manifest); err != nil {
 		return err
 	}
+
+	p := path.Join("snapshots", registry.snapshotId(filterId))
+	sdb, err := hyperdb.NewDatabase(registry.executor.conf, p, hyperdb.GetDatabaseType(registry.executor.conf), registry.namespace)
+	if err != nil {
+		return err
+	}
+	defer sdb.Close()
+
+	if err := edb.PersistSnapshotMeta(sdb.NewBatch(), &manifest, true, true); err != nil {
+		return err
+	}
+
 	return nil
 }
 
