@@ -5,7 +5,6 @@ import (
 	"hyperchain/common"
 	"sync/atomic"
 	"hyperchain/core/types"
-	cm "hyperchain/core/executor/common"
 )
 
 type ExecutorCache struct {
@@ -31,8 +30,8 @@ func initializeExecutorCache(executor *Executor) error {
 	executor.cache.syncCache = syncCache
 	replicaCache, _ := common.NewCache()
 	executor.cache.replicaInfoCache = replicaCache
-	executor.cache.validationEventC = make(chan event.ValidationEvent, cm.VALIDATEQUEUESIZE)
-	executor.cache.commitEventC = make(chan event.CommitEvent, cm.COMMITQUEUESIZE)
+	executor.cache.validationEventC = make(chan event.ValidationEvent, VALIDATEQUEUESIZE)
+	executor.cache.commitEventC = make(chan event.CommitEvent, COMMITQUEUESIZE)
 	return nil
 }
 
