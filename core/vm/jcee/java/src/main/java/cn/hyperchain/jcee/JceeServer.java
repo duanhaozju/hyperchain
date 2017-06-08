@@ -43,11 +43,11 @@ public class JceeServer implements IServer {
     }
     public void Start() {
         try {
-            cgsi.init();
             logger.info("ContractServer start listening on port " + localPort);
             server = ServerBuilder.forPort(localPort)
                     .addService(cgsi)
                     .build().start();
+            cgsi.init();
             server.awaitTermination();
         }catch (Exception e) {
             logger.error(e);

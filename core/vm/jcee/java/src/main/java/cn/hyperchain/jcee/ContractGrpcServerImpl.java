@@ -19,25 +19,32 @@ import org.apache.log4j.Logger;
 import java.util.Map;
 
 public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
-    private final String global = "global";
     private ContractExecutor contractExecutor;
     private MetaDB metaDB;
+    private volatile State state;
 
     private static final Logger logger = Logger.getLogger(ContractGrpcServerImpl.class.getSimpleName());
 
     public ContractGrpcServerImpl() {
         contractExecutor = new ContractExecutor();
+        state = State.initialized;
     }
 
     public void init() {
+        state = State.starting;
         metaDB = MetaDB.getDb();
         if (metaDB != null) {
-            recovery();
+           boolean success = recovery();
+           if (!success) {
+                logger.error("HyperJVM recovery failed!");
+           }
+           state = State.running;
         }
     }
 
-    public void recovery() {
+    public boolean recovery() {
         // reload pre-deployed contracts
+        // TODO: try multi_thread recovery
         ContractsMeta meta = metaDB.load();
         if (meta != null) {
             Map<String, Map<String, ContractInfo>> infoMap = meta.getContractInfo();
@@ -62,6 +69,7 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
                 }
             }
         }
+        return true;
     }
     /**
      * @param request
@@ -69,16 +77,17 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
      */
     @Override
     public void execute(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
-
-        if(!pass(request, responseObserver)) return;
-
-        Caller caller = new Caller(request, responseObserver);
-        try {
-            contractExecutor.dispatch(caller);
-
-        }catch (InterruptedException ie) {
-            logger.error(ie.getMessage());
-            Errors.ReturnErrMsg(ie.getMessage(), responseObserver);
+        if (state == State.running) {
+            if (!pass(request, responseObserver)) return;
+            Caller caller = new Caller(request, responseObserver);
+            try {
+                contractExecutor.dispatch(caller);
+            } catch (InterruptedException ie) {
+                logger.error(ie.getMessage());
+                Errors.ReturnErrMsg(ie.getMessage(), responseObserver);
+            }
+        }else {
+            Errors.ReturnErrMsg("HyperVM can not execute request now, current state is " + state, responseObserver);
         }
     }
 
@@ -128,5 +137,10 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
         ContractProto.Response r = ContractProto.Response.newBuilder().setOk(true).build();
         responseObserver.onNext(r);
         responseObserver.onCompleted();
+    }
+
+    //ContractGrpcServerImpl state
+    enum State {
+        initialized, starting, running, stopped
     }
 }
