@@ -5,6 +5,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
+	msg "hyperchain/core/executor/message"
+	cm "hyperchain/core/executor/common"
 )
 type Helper struct {
 	msgQ *event.TypeMux
@@ -23,33 +25,33 @@ func (helper *Helper) Post(ev interface{}) {
 // informConsensus - communicate with consensus module.
 func (executor *Executor) informConsensus(informType int, message interface{}) error {
 	switch informType {
-	case NOTIFY_REMOVE_CACHE:
+	case cm.NOTIFY_REMOVE_CACHE:
 		executor.logger.Debug("inform consenus remove cache")
 		msg := message.(protos.RemoveCache)
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
-			Type:    NOTIFY_REMOVE_CACHE,
+			Type:    cm.NOTIFY_REMOVE_CACHE,
 		})
-	case NOTIFY_VALIDATION_RES:
+	case cm.NOTIFY_VALIDATION_RES:
 		executor.logger.Debugf("[Namespace = %s] inform consenus validation result", executor.namespace)
 		msg := message.(protos.ValidatedTxs)
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
-			Type:    NOTIFY_VALIDATION_RES,
+			Type:    cm.NOTIFY_VALIDATION_RES,
 		})
-	case NOTIFY_VC_DONE:
+	case cm.NOTIFY_VC_DONE:
 		executor.logger.Debug("inform consenus vc done")
 		msg := message.(protos.VcResetDone)
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
-			Type:    NOTIFY_VC_DONE,
+			Type:    cm.NOTIFY_VC_DONE,
 		})
-	case NOTIFY_SYNC_DONE:
+	case cm.NOTIFY_SYNC_DONE:
 		executor.logger.Debug("inform consenus sync done")
 		msg := message.(protos.StateUpdatedMessage)
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
-			Type:    NOTIFY_SYNC_DONE,
+			Type:    cm.NOTIFY_SYNC_DONE,
 		})
 	default:
 		return NoDefinedCaseErr
@@ -60,9 +62,9 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 // informP2P - communicate with p2p module.
 func (executor *Executor) informP2P(informType int, message ...interface{}) error {
 	switch informType {
-	case NOTIFY_BROADCAST_DEMAND:
+	case cm.NOTIFY_BROADCAST_DEMAND:
 		executor.logger.Debug("inform p2p broadcast demand")
-		required := ChainSyncRequest{
+		required := msg.ChainSyncRequest{
 			RequiredNumber: message[0].(uint64),
 			CurrentNumber:  message[1].(uint64),
 			PeerId:         executor.status.syncFlag.LocalId,
@@ -75,10 +77,10 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Peers:   []uint64{message[2].(uint64)},
-			Type:    NOTIFY_BROADCAST_DEMAND,
+			Type:    cm.NOTIFY_BROADCAST_DEMAND,
 		})
 		return nil
-	case NOTIFY_UNICAST_BLOCK:
+	case cm.NOTIFY_UNICAST_BLOCK:
 		executor.logger.Debug("inform p2p unicast block")
 		id := message[0].(uint64)
 		peerId := message[1].(uint64)
@@ -94,11 +96,11 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		}
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,
-			Type:    NOTIFY_UNICAST_BLOCK,
+			Type:    cm.NOTIFY_UNICAST_BLOCK,
 			Peers:   []uint64{peerId},
 		})
 		return nil
-	case NOTIFY_UNICAST_INVALID:
+	case cm.NOTIFY_UNICAST_INVALID:
 		executor.logger.Debug("inform p2p unicast invalid tx")
 		r := message[0].(*types.InvalidTransactionRecord)
 		payload, err := proto.Marshal(r)
@@ -108,14 +110,14 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		}
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,
-			Type:    NOTIFY_UNICAST_INVALID,
+			Type:    cm.NOTIFY_UNICAST_INVALID,
 			Peers:   []uint64{r.Tx.Id},
 		})
 		return nil
-	case NOTIFY_BROADCAST_SINGLE:
+	case cm.NOTIFY_BROADCAST_SINGLE:
 		executor.logger.Debug("inform p2p broadcast single demand")
 		id := message[0].(uint64)
-		request := ChainSyncRequest{
+		request := msg.ChainSyncRequest{
 			RequiredNumber: id,
 			CurrentNumber:  edb.GetHeightOfChain(executor.namespace),
 			PeerId:         executor.status.syncFlag.LocalId,
@@ -127,16 +129,16 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		}
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload:  payload,
-			Type:     NOTIFY_BROADCAST_SINGLE,
+			Type:     cm.NOTIFY_BROADCAST_SINGLE,
 			Peers:    executor.status.syncFlag.SyncPeers,
 		})
 		return nil
-	case NOTIFY_SYNC_REPLICA:
+	case cm.NOTIFY_SYNC_REPLICA:
 		executor.logger.Debug("inform p2p sync replica")
 		payload, _ := proto.Marshal(message[0].(*types.Chain))
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,
-			Type:    NOTIFY_SYNC_REPLICA,
+			Type:    cm.NOTIFY_SYNC_REPLICA,
 		})
 		return nil
 	default:

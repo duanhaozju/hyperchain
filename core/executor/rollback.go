@@ -5,6 +5,7 @@ import (
 	"hyperchain/manager/protos"
 	"hyperchain/hyperdb/db"
 	edb "hyperchain/core/db_utils"
+	cm "hyperchain/core/executor/common"
 )
 
 // reset blockchain to a stable checkpoint status when `viewchange` occur
@@ -32,7 +33,7 @@ func (executor *Executor) Rollback(ev event.VCResetEvent) {
 	edb.UpdateChainByBlcokNum(executor.namespace, batch, ev.SeqNo - 1, false, false)
 	batch.Write()
 	executor.initDemand(ev.SeqNo)
-	executor.informConsensus(NOTIFY_VC_DONE, protos.VcResetDone{SeqNo: ev.SeqNo})
+	executor.informConsensus(cm.NOTIFY_VC_DONE, protos.VcResetDone{SeqNo: ev.SeqNo})
 }
 
 // CutdownBlock remove a block and reset blockchain status to the last status.

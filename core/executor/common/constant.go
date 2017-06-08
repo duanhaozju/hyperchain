@@ -1,4 +1,4 @@
-package executor
+package common
 
 const (
 	COMMITQUEUESIZE = 1024

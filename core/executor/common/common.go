@@ -1,5 +1,4 @@
-package executor
-
+package common
 
 var RemoveLessThan = func(key interface{}, iterKey interface{}) bool {
 	id := key.(uint64)

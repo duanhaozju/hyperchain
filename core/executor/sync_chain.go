@@ -9,6 +9,8 @@ import (
 	"hyperchain/manager/protos"
 	"bytes"
 	"time"
+	"hyperchain/core/executor/message"
+	cm "hyperchain/core/executor/common"
 )
 
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
@@ -67,10 +69,10 @@ func (executor *Executor) syncChainResendBackend() {
 
 // ReceiveSyncRequest - receive synchronization request from some nodes, and send back request blocks.
 func (executor *Executor) ReceiveSyncRequest(payload []byte) {
-	var request ChainSyncRequest
+	var request message.ChainSyncRequest
 	proto.Unmarshal(payload, &request)
 	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
-		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
+		executor.informP2P(cm.NOTIFY_UNICAST_BLOCK, i, request.PeerId)
 	}
 }
 
@@ -123,7 +125,7 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 	peer := executor.status.syncFlag.Oracle.SelectPeer()
 	// peer := executor.status.syncFlag.SyncPeers[rand.Intn(len(executor.status.syncFlag.SyncPeers))]
 	executor.logger.Debugf("send sync req to %d, require [%d] to [%d]", peer, downstream, upstream)
-	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream, peer); err != nil {
+	if err := executor.informP2P(cm.NOTIFY_BROADCAST_DEMAND, upstream, downstream, peer); err != nil {
 		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
 		executor.reject()
 		return
@@ -250,7 +252,7 @@ func (executor *Executor) processSyncBlocks() {
 
 // broadcastDemandBlock - send block request message to others for demand block.
 func (executor *Executor) SendSyncRequestForSingle(number uint64) {
-	executor.informP2P(NOTIFY_BROADCAST_SINGLE, number)
+	executor.informP2P(cm.NOTIFY_BROADCAST_SINGLE, number)
 }
 
 // updateSyncDemand - update next demand block number and block hash.
@@ -293,7 +295,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 func (executor *Executor) sendStateUpdatedEvent() {
 	// state update success
 	executor.PurgeCache()
-	executor.informConsensus(NOTIFY_SYNC_DONE, protos.StateUpdatedMessage{edb.GetHeightOfChain(executor.namespace)})
+	executor.informConsensus(cm.NOTIFY_SYNC_DONE, protos.StateUpdatedMessage{edb.GetHeightOfChain(executor.namespace)})
 }
 
 // accpet - accept block synchronization result.

@@ -17,6 +17,7 @@ import (
 	"hyperchain/manager/protos"
 	"hyperchain/p2p"
 	"time"
+	cm "hyperchain/core/executor/common"
 )
 
 const (
@@ -333,16 +334,16 @@ func (hub *EventHub) NegotiateView() {
 
 func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
 	switch ev.Type {
-	case executor.NOTIFY_REMOVE_CACHE:
+	case cm.NOTIFY_REMOVE_CACHE:
 		hub.logger.Debugf("message middleware: [remove cache]")
 		hub.consenter.RecvLocal(ev.Payload)
-	case executor.NOTIFY_VC_DONE:
+	case cm.NOTIFY_VC_DONE:
 		hub.logger.Debugf("message middleware: [vc done]")
 		hub.invokePbftLocal(pbft.VIEW_CHANGE_SERVICE, pbft.VIEW_CHANGE_VC_RESET_DONE_EVENT, ev.Payload)
-	case executor.NOTIFY_VALIDATION_RES:
+	case cm.NOTIFY_VALIDATION_RES:
 		hub.logger.Debugf("message middleware: [validation result]")
 		hub.invokePbftLocal(pbft.CORE_PBFT_SERVICE, pbft.CORE_VALIDATED_TXS_EVENT, ev.Payload)
-	case executor.NOTIFY_SYNC_DONE:
+	case cm.NOTIFY_SYNC_DONE:
 		hub.logger.Debugf("message middleware: [sync done]")
 		hub.invokePbftLocal(pbft.CORE_PBFT_SERVICE, pbft.CORE_STATE_UPDATE_EVENT, ev.Payload)
 	}
@@ -350,10 +351,10 @@ func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEve
 
 func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 	switch ev.Type {
-	case executor.NOTIFY_BROADCAST_DEMAND:
+	case cm.NOTIFY_BROADCAST_DEMAND:
 		hub.logger.Debugf("message middleware: [broadcast demand]")
 		hub.send(m.SessionMessage_SYNC_REQ, ev.Payload, ev.Peers)
-	case executor.NOTIFY_UNICAST_INVALID:
+	case cm.NOTIFY_UNICAST_INVALID:
 		hub.logger.Debugf("message middleware: [unicast invalid tx]")
 		peerId := ev.Peers[0]
 		if peerId == uint64(hub.peerManager.GetNodeId()) {
@@ -361,13 +362,13 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		} else {
 			hub.send(m.SessionMessage_UNICAST_INVALID, ev.Payload, ev.Peers)
 		}
-	case executor.NOTIFY_BROADCAST_SINGLE:
+	case cm.NOTIFY_BROADCAST_SINGLE:
 		hub.logger.Debugf("message middleware: [broadcast single]")
 		hub.send(m.SessionMessage_BROADCAST_SINGLE_BLK, ev.Payload, ev.Peers)
-	case executor.NOTIFY_UNICAST_BLOCK:
+	case cm.NOTIFY_UNICAST_BLOCK:
 		hub.logger.Debugf("message middleware: [unicast block]")
 		hub.send(m.SessionMessage_UNICAST_BLK, ev.Payload, ev.Peers)
-	case executor.NOTIFY_SYNC_REPLICA:
+	case cm.NOTIFY_SYNC_REPLICA:
 		hub.logger.Debugf("message middleware: [sync replica]")
 		chain := &types.Chain{}
 		proto.Unmarshal(ev.Payload, chain)

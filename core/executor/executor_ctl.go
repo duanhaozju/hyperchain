@@ -6,6 +6,7 @@ import (
 	"hyperchain/tree/bucket"
 	"sync/atomic"
 	"time"
+	cm "hyperchain/core/executor/common"
 )
 
 type ExecutorStatus struct {
@@ -132,18 +133,18 @@ func (executor *Executor) retrieveStateHash() common.Hash {
 // turnOffValidationSwitch - turn on validation switch, executor will process received event.
 func (executor *Executor) turnOnValidationSwitch() {
 	executor.logger.Debugf("[Namespace = %s] turn on validation switch", executor.namespace)
-	atomic.StoreInt32(&executor.status.validateBehaveFlag, VALIDATION_NORMAL)
+	atomic.StoreInt32(&executor.status.validateBehaveFlag, cm.VALIDATION_NORMAL)
 }
 
 // turnOffValidationSwitch - turn off validation switch, executor will drop all received event when the switch turn off.
 func (executor *Executor) turnOffValidationSwitch() {
 	executor.logger.Debugf("[Namespace = %s] turn off validation switch", executor.namespace)
-	atomic.StoreInt32(&executor.status.validateBehaveFlag, VALIDATION_IGNORE)
+	atomic.StoreInt32(&executor.status.validateBehaveFlag, cm.VALIDATION_IGNORE)
 }
 
 // isReadyToValidation - check whether executor is ready to process validation event.
 func (executor *Executor) isReadyToValidation() bool {
-	if atomic.LoadInt32(&executor.status.validateBehaveFlag) == VALIDATION_NORMAL {
+	if atomic.LoadInt32(&executor.status.validateBehaveFlag) == cm.VALIDATION_NORMAL {
 		return true
 	}
 	return false
@@ -152,25 +153,25 @@ func (executor *Executor) isReadyToValidation() bool {
 // markValidationBusy - mark executor is in validation.
 func (executor *Executor) markValidationBusy() {
 	executor.logger.Debugf("[Namespace = %s] mark validation busy", executor.namespace)
-	atomic.StoreInt32(&executor.status.validateInProgress, BUSY)
+	atomic.StoreInt32(&executor.status.validateInProgress, cm.BUSY)
 }
 
 // markValidationBusy - mark executor is idle.
 func (executor *Executor) markValidationIdle() {
 	executor.logger.Debugf("[Namespace = %s] mark validation idle", executor.namespace)
-	atomic.StoreInt32(&executor.status.validateInProgress, IDLE)
+	atomic.StoreInt32(&executor.status.validateInProgress, cm.IDLE)
 }
 
 // markCommitBusy - mark executor is in commit.
 func (executor *Executor) markCommitBusy() {
 	executor.logger.Debugf("[Namespace = %s] mark commit busy", executor.namespace)
-	atomic.StoreInt32(&executor.status.commitInProgress, BUSY)
+	atomic.StoreInt32(&executor.status.commitInProgress, cm.BUSY)
 }
 
 // markCommitIdle - mark executor is idle.
 func (executor *Executor) markCommitIdle() {
 	executor.logger.Debugf("[Namespace = %s] mark commit idle", executor.namespace)
-	atomic.StoreInt32(&executor.status.commitInProgress, IDLE)
+	atomic.StoreInt32(&executor.status.commitInProgress, cm.IDLE)
 }
 
 // waitUtilValidationIdle - suspend thread util all validations event has been process done.
@@ -181,7 +182,7 @@ func (executor *Executor) waitUtilValidationIdle() {
 	for {
 		select {
 		case <-ticker.C:
-			if atomic.LoadInt32(&executor.status.validateQueueLen) == 0 && atomic.LoadInt32(&executor.status.validateInProgress) == IDLE {
+			if atomic.LoadInt32(&executor.status.validateQueueLen) == 0 && atomic.LoadInt32(&executor.status.validateInProgress) == cm.IDLE {
 				return
 			} else {
 				continue
@@ -198,7 +199,7 @@ func (executor *Executor) wailUtilCommitIdle() {
 	for {
 		select {
 		case <-ticker.C:
-			if atomic.LoadInt32(&executor.status.commitQueueLen) == 0 && atomic.LoadInt32(&executor.status.commitInProgress) == IDLE {
+			if atomic.LoadInt32(&executor.status.commitQueueLen) == 0 && atomic.LoadInt32(&executor.status.commitInProgress) == cm.IDLE {
 				return
 			} else {
 				continue
@@ -364,11 +365,11 @@ func (executor *Executor) setExit() {
 // getExit - get exit status.
 func (executor *Executor) getExit(identifier int) chan bool {
 	switch identifier {
-	case IDENTIFIER_VALIDATION:
+	case cm.IDENTIFIER_VALIDATION:
 		return executor.getValidationExit()
-	case IDENTIFIER_COMMIT:
+	case cm.IDENTIFIER_COMMIT:
 		return executor.getCommitExit()
-	case IDENTIFIER_REPLICA_SYNC:
+	case cm.IDENTIFIER_REPLICA_SYNC:
 		return executor.getReplicaSyncExit()
 	}
 	return nil
