@@ -45,3 +45,4 @@ global:
             global: true
             ns1: false
             ns2: false
+            ns3: false

@@ -1038,7 +1038,7 @@ func (pbft *pbftImpl) softStartNewViewTimer(timeout time.Duration, reason string
 //correctViewChange
 func (pbft *pbftImpl) correctViewChange(vc *ViewChange) bool {
 	for _, p := range append(vc.Pset, vc.Qset...) {
-		if !(p.View < vc.View && p.SequenceNumber > vc.H && p.SequenceNumber <= vc.H + pbft.L) {
+		if !(p.View < vc.View && p.SequenceNumber > vc.H) {
 			pbft.logger.Debugf("Replica %d invalid p entry in view-change: vc(v:%d h:%d) p(v:%d n:%d)",
 				pbft.id, vc.View, vc.H, p.View, p.SequenceNumber)
 			return false
@@ -1046,7 +1046,7 @@ func (pbft *pbftImpl) correctViewChange(vc *ViewChange) bool {
 	}
 
 	for _, c := range vc.Cset {
-		if !(c.SequenceNumber >= vc.H && c.SequenceNumber <= vc.H + pbft.L) {
+		if !(c.SequenceNumber >= vc.H) {
 			pbft.logger.Debugf("Replica %d invalid c entry in view-change: vc(v:%d h:%d) c(n:%d)",
 				pbft.id, vc.View, vc.H, c.SequenceNumber)
 			return false

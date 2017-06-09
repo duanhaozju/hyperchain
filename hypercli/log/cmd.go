@@ -38,7 +38,8 @@ func setLevel(c *cli.Context) error {
 		return common.ErrInvalidArgsNum
 	}
 
-	client.InvokeCmd(cmd)
+	result := client.InvokeCmd(cmd)
+	fmt.Print(result.Result)
 	return nil
 }
 
@@ -52,6 +53,7 @@ func getLevel(c *cli.Context) error {
 		fmt.Println(common.ErrInvalidArgsNum)
 		return common.ErrInvalidArgsNum
 	}
-	client.InvokeCmd(cmd)
+	result := client.InvokeCmd(cmd)
+	fmt.Print(result.Result)
 	return nil
 }
