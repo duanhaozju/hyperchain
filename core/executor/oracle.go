@@ -70,8 +70,12 @@ func (oracle *Oracle) SelectPeer() uint64 {
 	if oracle.needUpdateGenesis {
 		// TODO fake selection
 		// TODO ask @Rongjialei fix this
-		bPeer = oracle.ctx.PartPeers[0].Id
-		oracle.logger.Noticef("select peer %d from `PartPeer` collections", bPeer)
+		if len(oracle.ctx.PartPeers) > 0 {
+			bPeer = oracle.ctx.PartPeers[0].Id
+			oracle.logger.Noticef("select peer %d from `PartPeer` collections", bPeer)
+		} else {
+			return 0
+		}
 	} else {
 		for peer, score := range oracle.score {
 			if max < score {

@@ -39,10 +39,11 @@ func NewChainSyncContext(namespace string, event event.ChainSyncReqEvent) *Chain
 	var fullPeers []uint64
 	var partPeers []PartPeer
 	curHeight := edb.GetHeightOfChain(namespace)
+	target := event.TargetHeight
 	for _, r := range event.Replicas {
 		if r.Genesis <= curHeight {
 			fullPeers = append(fullPeers, r.Id)
-		} else {
+		} else if r.Genesis <= target {
 			partPeers = append(partPeers, PartPeer{
 				Id:        r.Id,
 				Genesis:   r.Genesis,

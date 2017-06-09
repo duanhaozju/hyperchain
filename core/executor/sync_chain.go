@@ -57,6 +57,10 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 		executor.logger.Noticef("World state transition is not support, while there is no required blocks over the blockchain network. system exit")
 		os.Exit(1)
 	}
+	if len(executor.status.syncCtx.GetFullPeersId()) == 0 && len(executor.status.syncCtx.GetPartPeersId()) == 0 {
+		executor.logger.Noticef("while there is no satisfied peers over the blockchain network to make chain synchronization, hold on some time to retry. system exit")
+		os.Exit(1)
+	}
 
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
 	go executor.syncChainResendBackend()
@@ -73,7 +77,7 @@ func (executor *Executor) syncChainResendBackend() {
 		        // resend
 			if executor.status.syncCtx.GetResendMode() == ResendMode_Block {
 				curUp, curDown := executor.getSyncReqArgs()
-				if curUp == up && curDown == down && !executor.isSyncInExecution() {
+				if curUp == up && curDown == down {
 					executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.status.syncFlag.SyncDemandBlockNum)
 					executor.status.syncFlag.Oracle.FeedBack(false)
 					executor.status.syncCtx.SetCurrentPeer(executor.status.syncFlag.Oracle.SelectPeer())
@@ -392,7 +396,6 @@ func (executor *Executor) processSyncBlocks() {
 		}
 
 		for i := low; i <= executor.status.syncFlag.SyncTarget; i += 1 {
-			executor.markSyncExecBegin()
 			blk, err := edb.GetBlockByNumber(executor.namespace, i)
 			if err != nil {
 				executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
