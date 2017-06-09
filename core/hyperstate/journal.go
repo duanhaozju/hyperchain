@@ -248,7 +248,7 @@ type (
 	}
 	SetCreatorChange struct {
 		Account *common.Address `json:"account,omitempty"`
-		Prev    *common.Address `json:"prev,omitempty"`
+		Prev    common.Address `json:"prev,omitempty"`
 		Type    string          `json:"type,omitempty"`
 	}
 	SetCreateTimeChange struct {
@@ -691,11 +691,11 @@ func (ch *DeployedContractChange) GetType() string {
 func (ch *SetCreatorChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		if obj := s.GetStateObject(*ch.Account); obj != nil {
-			obj.setCreator(*ch.Prev)
+			obj.setCreator(ch.Prev)
 		}
 	} else {
 		if obj := cache.Fetch(*ch.Account); obj != nil {
-			obj.setCreator(*ch.Prev)
+			obj.setCreator(ch.Prev)
 		}
 	}
 }

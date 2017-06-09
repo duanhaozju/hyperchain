@@ -60,7 +60,7 @@ func (ml *moduleLogger) setLogLevel(level string) {
 	ml.level = level
 	l, _ := logging.LogLevel(level)
 	if ml.backend == nil {
-		logger.Critical("setLogLevel Error: backend nil")
+		commonLogger.Critical("setLogLevel Error: backend nil")
 		return
 	}
 	ml.backend.SetLevel(l, ml.compositeName)

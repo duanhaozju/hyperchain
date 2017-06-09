@@ -27,10 +27,10 @@ var (
 	leveldbPath          = "./build/leveldb"
 )
 
-func NewLevelLruDB(conf *common.Config,filepath string) (*levelLruDatabase, error) {
+func NewLevelLruDB(conf *common.Config,filepath string, ns string) (*levelLruDatabase, error) {
 
 
-	leveldb, err :=NewLDBDataBase(conf,filepath)
+	leveldb, err :=NewLDBDataBase(conf,filepath, ns)
 	if err != nil {
 		log.Noticef("NewLDBDataBase(%v) fail. err is %v. \n", leveldbPath, err.Error())
 		return nil, err
@@ -45,9 +45,9 @@ func NewLevelLruDB(conf *common.Config,filepath string) (*levelLruDatabase, erro
 	return &levelLruDatabase{leveldb: leveldb, cache: cache, dbStatus: true}, nil
 }
 
-func NewLevelLruDBWithP(conf *common.Config,filepath string) (*levelLruDatabase, error) {
+func NewLevelLruDBWithP(conf *common.Config,filepath string, ns string) (*levelLruDatabase, error) {
 
-	leveldb, err :=NewLDBDataBase(conf,filepath)
+	leveldb, err :=NewLDBDataBase(conf,filepath, ns)
 	if err != nil {
 		log.Noticef("NewLDBDataBase(%v) fail. err is %v. \n", leveldbPath, err.Error())
 		return nil, err

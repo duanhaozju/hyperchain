@@ -81,12 +81,14 @@ func (pbft *pbftImpl) checkDuplicateInBlock(tx *types.Transaction, txStore *tran
 // check if a tx is duplicate in cache
 func (pbft *pbftImpl) checkDuplicateInCache(tx *types.Transaction) (exist bool) {
 	exist = false
+	pbft.dupLock.RLock()
 	for _, txStore := range pbft.duplicator {
 		if txStore != nil && pbft.checkDuplicateInBlock(tx, txStore) {
 			exist = true
 			break
 		}
 	}
+	pbft.dupLock.RUnlock()
 	return
 }
 
@@ -126,11 +128,13 @@ func (pbft *pbftImpl) removeDuplicate(txBatch *TransactionBatch) (newBatch *Tran
 func (pbft *pbftImpl) rebuildDuplicator() {
 	temp := make(map[uint64]*transactionStore)
 	dv := pbft.batchVdr.vid - pbft.h
+	pbft.dupLock.Lock()
 	for i, txStore := range pbft.duplicator {
 		temp[i-dv] = txStore
 	}
 	pbft.duplicator = temp
 	pbft.clearDuplicator()
+	pbft.dupLock.Unlock()
 }
 
 // replica clear the duplicator after view change

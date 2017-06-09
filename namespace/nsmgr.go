@@ -115,12 +115,14 @@ func (nr *nsManagerImpl) init() error {
 func (nr *nsManagerImpl) Start() error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
-	for name, ns := range nr.namespaces {
-		err := ns.Start()
-		if err != nil {
-			logger.Errorf("namespace %s start failed, %v", name, err)
-			return err
-		}
+	for _, ns := range nr.namespaces {
+		go func(ns Namespace){
+			err := ns.Start()
+			if err != nil {
+				//logger.Errorf("namespace %s start failed, %v", name, err)
+				return
+			}
+		}(ns)
 	}
 	return nil
 }

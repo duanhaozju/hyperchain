@@ -291,7 +291,7 @@ func (ns *namespaceImpl) Stop() error {
 	go ns.grpcMgr.Stop()
 
 	ns.status.setState(closed)
-	ns.logger.Notice()
+	//ns.logger.Notice()
 	//close related database
 	hyperdb.StopDatabase(ns.Name())
 

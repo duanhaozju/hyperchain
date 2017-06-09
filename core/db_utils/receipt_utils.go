@@ -52,7 +52,7 @@ func PersistReceipt(batch db.Batch, receipt *types.Receipt, flush bool, sync boo
 		if sync {
 			batch.Write()
 		} else {
-			go batch.Write()
+			go batch.Write() //TODO: async
 		}
 	}
 	return nil, data

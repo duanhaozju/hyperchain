@@ -22,7 +22,7 @@
     },
     {
       "id":2,
-      "address":"127.0.0.2",
+      "address":"127.0.0.1",
       "external_address":"127.0.0.1",
       "port":8002,
       "rpc_port":8082
