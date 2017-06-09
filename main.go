@@ -9,6 +9,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"time"
+	"hyperchain/p2p"
 )
 
 type hyperchain struct {

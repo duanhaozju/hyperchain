@@ -1,0 +1,28 @@
+// author: chenquan
+// date: 17-6-9
+// last modified:
+// last Modified Author: zhangkejie
+// change log:fix the cert and signature
+//
+// message defination for network transaction
+//
+syntax="proto3";
+
+package hts;
+
+message Certificate{
+    // From the message source
+    int64 Ver        = 1;
+    int64 ID         = 2;
+    bytes Hostname   = 3;
+    bytes Body       = 4;
+    bytes Signature  = 5;
+
+    //MsgType message type during data transfer
+    enum CertType {
+        ECERT = 0;
+        RCERT = 1;
+        TCERT = 2;
+    }
+}
+

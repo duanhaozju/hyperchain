@@ -1,0 +1,6 @@
+self:
+  hostname: node1:8001
+routes:
+  - node2:8002
+  - node3:8003
+  - node4:8004

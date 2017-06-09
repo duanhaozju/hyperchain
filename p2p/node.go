@@ -18,7 +18,8 @@ import (
 	pc "hyperchain/p2p/common"
 	"fmt"
 	"github.com/op/go-logging"
-	"hyperchain/common"
+	"hyperchain/p2p/network"
+	"hyperchain/p2p/msg"
 )
 
 type Node struct {
@@ -39,6 +40,9 @@ type Node struct {
 	config          pc.Config
 	namespace       string
 	logger          *logging.Logger
+	// release 1.3
+	server *network.Server
+	router MsgRouter
 }
 
 type UpdateTable struct {
@@ -47,40 +51,16 @@ type UpdateTable struct {
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TM *transport.TransportManager, peersPool *PeersPool, cm *admittance.CAManager, config pc.Config,namespace string) *Node {
-	logger := common.GetLogger(namespace,"p2p")
-	newNode := Node{
-		localAddr : localAddr,
-		TM : TM,
-		CM : cm,
-		higherEventManager : hEventManager,
-		PeersPool : peersPool,
-		attendChan : make(chan int, 1000),
-		delayTable : make(map[int]int64),
-		DelayChan : make(chan UpdateTable),
-		config : config,
-		namespace:namespace,
-		logger:logger,
+func NewNode() *Node {
+	return Node{
+		server : network.Server{},
 	}
-
-	//listen the update
-	go newNode.UpdateDelayTableThread()
-
-	logger.Debug("NODE START...")
-	logger.Debugf("LOCAL NODE INFO:\nID: %d\nIP: %s\nPORT: %d\nHASH: %s", localAddr.ID, localAddr.IP, localAddr.Port, localAddr.Hash)
-	return &newNode
 }
 
-//监听节点状态更新线程
-func (node *Node) UpdateDelayTableThread() {//TODO: close pp
-	for v := range node.DelayChan {
-		if v.updateID > 0 {
-			node.delayTableMutex.Lock()
-			node.delayTable[v.updateID] = v.updateTime
-			node.delayTableMutex.Unlock()
-		}
-
-	}
+func(node *Node)Start(){
+	node.server.RegisterSlot(pb.Message_HELLO,msg.NewHelloHandler(node.router.BlackHole()))
+	node.server.RegisterSlot(pb.Message_KEEPALIVE,msg.NewKeepAliveHandler(node.router.BlackHole()))
+	node.server.StartServer()
 }
 
 //新节点需要监听相应的attend类型

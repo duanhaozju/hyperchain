@@ -1,0 +1,38 @@
+//
+// command rotoc -I=../../../:. --go_out=plugins=grpc:. *.proto
+
+syntax="proto3";
+
+package network;
+
+import "hyperchain/p2p/message/message.proto";
+
+service Chat {
+    // dibi data tranfer
+    rpc Chat(stream message.Message) returns(stream message.Message){}
+
+    /*
+      Client                                               Server
+
+      ClientHello                  -------->
+                                                      ServerHello
+                                                     Certificate*
+                                               ServerKeyExchange*
+                                              CertificateRequest*
+                                   <--------      ServerHelloDone
+      Certificate*
+      ClientKeyExchange
+      CertificateVerify*
+      [ChangeCipherSpec]
+      Finished                     -------->
+                                               [ChangeCipherSpec]
+                                   <--------             Finished
+      Application Data             <------->     Application Data
+    */
+    // Greeting doube arrow greeting message transfer
+    rpc Greeting(message.Message)returns(message.Message){}
+
+    // Wisper Transfer the the node health infomation
+    rpc Wisper(message.Message)returns(message.Message){}
+
+}

@@ -8,16 +8,17 @@
 //
 syntax="proto3";
 
-package peermessage;
+package message;
 
+import "hyperchain/p2p/hts/certificate.proto";
 
 message Message{
     // From the message source 
-    PeerAddress From     = 1;
+    bytes From           = 1;
     MsgType MessageType  = 2;
     bytes  Payload       = 3;
-    Signature Signature  = 4;
-    int64 MsgTimeStamp   = 5;
+    int64 MsgTimeStamp   = 4;
+    hts.Certificate Cert = 5;
 
     //MsgType message type during data transfer 
     enum MsgType {
@@ -40,13 +41,6 @@ message Message{
     }
 }
 
-
-// Routers table this is the router table which for transfer
-message Routers {
-    repeated PeerAddress routers = 1;
-}
-
-
 //PeerAddress the peer address
 message PeerAddress {
         string IP      =   1;
@@ -57,14 +51,4 @@ message PeerAddress {
         bool IsPrimary =   6;
 }
 
-message Signature{
-    bytes ECert = 1;
-    bytes RCert = 2;
-    bytes Signature = 3;
-}
 
-
-service Chat {
-    // double arrow data tranfer
-    rpc Chat(Message) returns(Message){}
-}
