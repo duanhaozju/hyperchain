@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strconv"
 	"sync"
-	cm "hyperchain/core/executor/common"
 )
 
 // represent a validation result
@@ -34,7 +33,7 @@ func (executor *Executor) listenValidationEvent() {
 	executor.logger.Notice("validation backend start")
 	for {
 		select {
-		case <- executor.getExit(cm.IDENTIFIER_VALIDATION):
+		case <- executor.getExit(IDENTIFIER_VALIDATION):
 			executor.logger.Notice("validation backend exit")
 			return
 		case ev := <- executor.fetchValidationEvent():
@@ -74,7 +73,7 @@ func (executor *Executor) processPendingValidationEvent(done func()) bool {
 					return false
 				} else {
 					executor.incDemandSeqNo()
-					executor.cache.pendingValidationEventQ.RemoveWithCond(ev.SeqNo, cm.RemoveLessThan)
+					executor.cache.pendingValidationEventQ.RemoveWithCond(ev.SeqNo, RemoveLessThan)
 				}
 			} else {
 				break
@@ -250,7 +249,7 @@ func (executor *Executor) resetStateDb() {
 // throwInvalidTransactionBack - send all invalid transaction to its birth place.
 func (executor *Executor) throwInvalidTransactionBack(invalidtxs []*types.InvalidTransactionRecord) {
 	for _, t := range invalidtxs {
-		executor.informP2P(cm.NOTIFY_UNICAST_INVALID, t)
+		executor.informP2P(NOTIFY_UNICAST_INVALID, t)
 	}
 }
 
@@ -267,7 +266,7 @@ func (executor *Executor) saveValidationResult(res *ValidationResultRecord, ev e
 
 // sendValidationResult - send validation result to consensus module.
 func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev event.ValidationEvent, hash common.Hash) {
-	executor.informConsensus(cm.NOTIFY_VALIDATION_RES, protos.ValidatedTxs{
+	executor.informConsensus(NOTIFY_VALIDATION_RES, protos.ValidatedTxs{
 		Transactions: res.ValidTxs,
 		SeqNo:        ev.SeqNo,
 		View:         ev.View,
@@ -279,7 +278,7 @@ func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev e
 // dealEmptyBlock - deal with empty block.
 func (executor *Executor) dealEmptyBlock(res *ValidationResultRecord, ev event.ValidationEvent) {
 	if ev.IsPrimary {
-		executor.informConsensus(cm.NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: ev.SeqNo})
+		executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: ev.SeqNo})
 		executor.throwInvalidTransactionBack(res.InvalidTxs)
 	}
 }
