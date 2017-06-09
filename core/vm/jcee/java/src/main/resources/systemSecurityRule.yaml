@@ -1,4 +1,5 @@
 ---
+#interface rule
 interfaceRule:
   allowedRule:
     class:
@@ -38,6 +39,7 @@ interfaceRule:
       java/util/spi/CalendarDataProvider: "not allow time related class or operation."
       java/util/spi/CalendarNameProvider: "not allow time related class or operation."
       java/util/spi/TimeZoneNameProvider: "not allow time related class or operation."
+#super class rule
 superClassRule:
   allowedRule:
     class:
@@ -77,6 +79,7 @@ superClassRule:
       java/util/spi/CalendarDataProvider: "not allow time related class or operation."
       java/util/spi/CalendarNameProvider: "not allow time related class or operation."
       java/util/spi/TimeZoneNameProvider: "not allow time related class or operation."
+#class member variable rule about type
 memberVariableRule:
   allowedRule:
     mustKeyword:
@@ -121,6 +124,7 @@ memberVariableRule:
       java/util/spi/CalendarDataProvider: "not allow time related class or operation."
       java/util/spi/CalendarNameProvider: "not allow time related class or operation."
       java/util/spi/TimeZoneNameProvider: "not allow time related class or operation."
+#method declare about which have synchronized
 methodDeclare:
   allowedRule:
     mustKeyword:
@@ -129,6 +133,7 @@ methodDeclare:
     mustKeyword:
       synchronized : "not allow concurrent operation."
     keyword:
+#variable in method
 methodVariable:
   allowedRule:
     class:
@@ -150,7 +155,6 @@ methodVariable:
       java/net: "not allow net related class or operation."
       javax/net: "not allow net related class or operation."
       javax.xml.ws.spi.http: "not allow net related class or operation."
-      java/lang/Class: "not allow reflect related class or operation."
       java/lang/System/currentTimeMillis: "not allow time related class or operation."
       java/util/Date: "not allow time related class or operation."
       java/sql/Date: "not allow time related class or operation."
@@ -168,6 +172,7 @@ methodVariable:
       java/util/spi/CalendarDataProvider: "not allow time related class or operation."
       java/util/spi/CalendarNameProvider: "not allow time related class or operation."
       java/util/spi/TimeZoneNameProvider: "not allow time related class or operation."
+#method that is in the method like 'int get(){ int a = list.get(0); return a;' and not allow synchronized description like 'synchronized(this){...}'
 methodInstruction:
   allowedRule:
     class:

@@ -37,6 +37,10 @@ public class ByteCodeChecker implements Checker {
     private String classSuffix = ".class";
     private String contractTemplate = "cn/hyperchain/jcee/contract/ContractTemplate";
 
+    /**
+     * construct ByteCodeChecker using rule that user self define.
+     * @param userRulePath rule that user define.
+     */
     public ByteCodeChecker (String userRulePath) {
         YAMLFactory yamlFactory = new YAMLFactory();
         ObjectMapper objectMapper = new ObjectMapper(yamlFactory);
@@ -47,6 +51,10 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
+    /**
+     * construct ByteCodeChecker using rule that system define.
+     * The system rule con not be edited by user.
+     */
     public ByteCodeChecker () {
         YAMLFactory yamlFactory = new YAMLFactory();
         ObjectMapper objectMapper = new ObjectMapper(yamlFactory);
@@ -57,6 +65,11 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
+    /**
+     * judge the class which is satisfied the rule through judge interface, class, variable, function and so on.
+     * @param cn
+     * @return if class is satisfied, return true, or else return false
+     */
     private boolean judge(ClassNode cn) {
         if (isContract(cn)) {
             if (interfaceIsOk(rule, cn) && superClassIsOk(rule, cn) &&
@@ -76,6 +89,11 @@ public class ByteCodeChecker implements Checker {
         return false;
     }
 
+    /**
+     * judge the class which is satisfied the rule.
+     * @param clazz java class byte code
+     * @return if class is satisfied, return true, or else return false
+     */
     @Override
     public boolean pass(byte[] clazz) {
         ClassReader reader = new ClassReader(clazz);
@@ -84,6 +102,11 @@ public class ByteCodeChecker implements Checker {
         return judge(cn);
     }
 
+    /**
+     * judge the class which is satisfied the rule
+     * @param absoluteClassPath java class path
+     * @return if class is satisfied, return true, or else return false
+     */
     @Override
     public boolean pass(String absoluteClassPath) {
         File file = new File(absoluteClassPath);
@@ -99,6 +122,11 @@ public class ByteCodeChecker implements Checker {
         return false;
     }
 
+    /**
+     * judge all classes which are satisfied the rule
+     * @param absoluteDirPath class dir
+     * @return if all classes is satisfied, return true, or else return false
+     */
     @Override
     public boolean passAll(String absoluteDirPath) {
         List<String> classFiles = getAllClassFile(absoluteDirPath);
@@ -112,6 +140,12 @@ public class ByteCodeChecker implements Checker {
         return true;
     }
 
+    /**
+     * check class's interface whether satisfy the rule.
+     * @param rule rule that class should satisfy
+     * @param cn ClassNode type, from asm, using for checking byte code.
+     * @return if class's interface satisfy the rule, return true, or else return false
+     */
     private boolean interfaceIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
             logger.warn("no rule found!");
@@ -146,6 +180,12 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
+    /**
+     * check class's super class whether satisfy the rule.
+     * @param rule rule that class should satisfy
+     * @param cn ClassNode type, from asm, using for checking byte code.
+     * @return if class's super class satisfy the rule, return true, or else return false
+     */
     private boolean superClassIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
             logger.warn("no rule found!");
@@ -176,6 +216,12 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
+    /**
+     * judge the class whether is contract.
+     * If the class extends 'ContractTemplate', then return true, otherwise return false.
+     * @param cn
+     * @return
+     */
     private boolean isContract(ClassNode cn) {
         String superClass = cn.superName;
         if (contractTemplate.equals(superClass)) {
@@ -184,6 +230,13 @@ public class ByteCodeChecker implements Checker {
         return false;
     }
 
+    /**
+     * check class's member variable desc(like public, private, static, final...) whether satisfy the rule.
+     * In system rule, the class's member variable must final.
+     * @param rule rule that class's member variable should satisfy
+     * @param cn ClassNode type, from asm, using for checking byte code.
+     * @return if class's member variable satisfy the rule, return true, or else return false
+     */
     private boolean memberVariableKeyWordIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
             logger.warn("no rule found!");
@@ -221,6 +274,7 @@ public class ByteCodeChecker implements Checker {
             for (FieldNode fieldNode : fields) {
                 int access = fieldNode.access;
                 while (access > 0) {
+                    //get the max num(2 multiple) less than access.(like if access is 10, the max num is 2^3=8)
                     double temp = Math.pow(2, getExp(access));
                     boolean flag = containsOpcode(classOfAllowedRule, (int)temp);
                     if (!flag) {
@@ -250,6 +304,12 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
+    /**
+     * check class's member variable class type(like String, File...) whether satisfy the rule.
+     * @param rule rule that class's member variable should satisfy
+     * @param cn ClassNode type, from asm, using for checking byte code.
+     * @return if class's member variable satisfy the rule, return true, or else return false
+     */
     private boolean memberVariableClassIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
             logger.warn("no rule found!");
@@ -286,6 +346,12 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
+    /**
+     * check class's method declare(like public synchronized get(i)...) whether satisfy the rule.
+     * @param rule rule that class's method declare should satisfy
+     * @param cn ClassNode type, from asm, using for checking byte code.
+     * @return if class's method declare satisfy the rule, return true, or else return false
+     */
     private boolean methodDeclareIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
             logger.warn("no rule found!");
@@ -352,6 +418,12 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
+    /**
+     * check class's method variable(like File file = new File("")...) whether satisfy the rule.
+     * @param rule rule that class's method variable should satisfy
+     * @param cn ClassNode type, from asm, using for checking byte code.
+     * @return if class's method variable satisfy the rule, return true, or else return false
+     */
     private boolean methodVariableIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
             logger.warn("no rule found!");
@@ -394,6 +466,12 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
+    /**
+     * check the code in class's method(like synchronized(this){...}) whether satisfy the rule.
+     * @param rule rule that the code in class's method should satisfy
+     * @param cn ClassNode type, from asm, using for checking byte code.
+     * @return if the code in class's method satisfy the rule, return true, or else return false
+     */
     private boolean methodInstructionOpCodeIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
             logger.warn("no rule found!");
@@ -436,6 +514,12 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
+    /**
+     * check the method(including static method) in class's method(like num = list.get(i)...) whether satisfy the rule.
+     * @param rule rule that the code in class's method should satisfy
+     * @param cn ClassNode type, from asm, using for checking byte code.
+     * @return if the code in class's method satisfy the rule, return true, or else return false
+     */
     private boolean methodInstructionOwnerAndNameIsOk(Rule rule, ClassNode cn) {
         if (rule == null) {
             logger.warn("no rule found!");
@@ -482,6 +566,12 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
+    /**
+     * check all access flags(like Opcodes.ACC_PUBLIC) whether in rule.
+     * @param rule rule that the access flags should satisfy
+     * @param access access flag
+     * @return if satisfy, return true, otherwise return false.
+     */
     private boolean containsAllOpcode(Map<String, String> rule, int access) {
         Map<Integer, String> tempMap = new HashMap<>();
         for (Map.Entry<String, String> entry: rule.entrySet()) {
@@ -499,6 +589,12 @@ public class ByteCodeChecker implements Checker {
         }
     }
 
+    /**
+     * check the access flags(like Opcodes.ACC_FINAL) whether in rule.
+     * @param rule rule that the access flags should satisfy
+     * @param access access flag
+     * @return if satisfy, return true, otherwise return false.
+     */
     private boolean containsOpcode(Map<String, String> rule, int access) {
         if (rule.containsKey(getOpCode(access))) {
                 return true;
@@ -524,6 +620,11 @@ public class ByteCodeChecker implements Checker {
         return exp;
     }
 
+    /**
+     * get all class files from directory.
+     * @param absoluteDirPath directory path
+     * @return all class files
+     */
     private List<String> getAllClassFile(String absoluteDirPath) {
         List<String> classFiles = new ArrayList<>();
         File dir = new File(absoluteDirPath);
