@@ -15,13 +15,12 @@ It has these top-level messages:
 	PrePrepare
 	Prepare
 	Commit
-	BlockInfo
 	Checkpoint
 	ViewChange
 	NewView
 	FinishVcReset
 	FetchRequestBatch
-	negotiateView
+	NegotiateView
 	NegotiateViewResponse
 	RecoveryInit
 	RecoveryResponse
@@ -34,6 +33,7 @@ It has these top-level messages:
 	ReadyForN
 	AgreeUpdateN
 	UpdateN
+	FinishUpdate
 */
 package pbft
 
@@ -77,6 +77,7 @@ const (
 	ConsensusMessage_READY_FOR_N             ConsensusMessage_Type = 18
 	ConsensusMessage_AGREE_UPDATE_N          ConsensusMessage_Type = 19
 	ConsensusMessage_UPDATE_N                ConsensusMessage_Type = 20
+	ConsensusMessage_FINISH_UPDATE           ConsensusMessage_Type = 21
 )
 
 var ConsensusMessage_Type_name = map[int32]string{
@@ -101,6 +102,7 @@ var ConsensusMessage_Type_name = map[int32]string{
 	18: "READY_FOR_N",
 	19: "AGREE_UPDATE_N",
 	20: "UPDATE_N",
+	21: "FINISH_UPDATE",
 }
 var ConsensusMessage_Type_value = map[string]int32{
 	"TRANSACTION":             0,
@@ -124,6 +126,7 @@ var ConsensusMessage_Type_value = map[string]int32{
 	"READY_FOR_N":             18,
 	"AGREE_UPDATE_N":          19,
 	"UPDATE_N":                20,
+	"FINISH_UPDATE":           21,
 }
 
 func (x ConsensusMessage_Type) String() string {
@@ -156,14 +159,22 @@ func (m *ConsensusMessage) GetPayload() []byte {
 }
 
 type TransactionBatch struct {
-	Batch     []*types.Transaction `protobuf:"bytes,1,rep,name=batch" json:"batch,omitempty"`
-	Timestamp int64                `protobuf:"varint,2,opt,name=timestamp" json:"timestamp,omitempty"`
+	Version   []byte               `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Batch     []*types.Transaction `protobuf:"bytes,2,rep,name=batch" json:"batch,omitempty"`
+	Timestamp int64                `protobuf:"varint,3,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *TransactionBatch) Reset()                    { *m = TransactionBatch{} }
 func (m *TransactionBatch) String() string            { return proto.CompactTextString(m) }
 func (*TransactionBatch) ProtoMessage()               {}
 func (*TransactionBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+func (m *TransactionBatch) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *TransactionBatch) GetBatch() []*types.Transaction {
 	if m != nil {
@@ -180,8 +191,10 @@ func (m *TransactionBatch) GetTimestamp() int64 {
 }
 
 type ReturnRequestBatch struct {
-	Batch  *TransactionBatch `protobuf:"bytes,1,opt,name=batch" json:"batch,omitempty"`
-	Digest string            `protobuf:"bytes,2,opt,name=digest" json:"digest,omitempty"`
+	Version   []byte            `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Digest    string            `protobuf:"bytes,2,opt,name=digest" json:"digest,omitempty"`
+	Batch     *TransactionBatch `protobuf:"bytes,3,opt,name=batch" json:"batch,omitempty"`
+	Timestamp int64             `protobuf:"varint,4,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *ReturnRequestBatch) Reset()                    { *m = ReturnRequestBatch{} }
@@ -189,9 +202,9 @@ func (m *ReturnRequestBatch) String() string            { return proto.CompactTe
 func (*ReturnRequestBatch) ProtoMessage()               {}
 func (*ReturnRequestBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
-func (m *ReturnRequestBatch) GetBatch() *TransactionBatch {
+func (m *ReturnRequestBatch) GetVersion() []byte {
 	if m != nil {
-		return m.Batch
+		return m.Version
 	}
 	return nil
 }
@@ -203,18 +216,41 @@ func (m *ReturnRequestBatch) GetDigest() string {
 	return ""
 }
 
+func (m *ReturnRequestBatch) GetBatch() *TransactionBatch {
+	if m != nil {
+		return m.Batch
+	}
+	return nil
+}
+
+func (m *ReturnRequestBatch) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type PrePrepare struct {
-	View             uint64            `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
-	SequenceNumber   uint64            `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
-	BatchDigest      string            `protobuf:"bytes,3,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
-	TransactionBatch *TransactionBatch `protobuf:"bytes,4,opt,name=transaction_batch,json=transactionBatch" json:"transaction_batch,omitempty"`
-	ReplicaId        uint64            `protobuf:"varint,5,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Version          []byte            `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	View             uint64            `protobuf:"varint,2,opt,name=view" json:"view,omitempty"`
+	SequenceNumber   uint64            `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
+	BatchDigest      string            `protobuf:"bytes,4,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
+	TransactionBatch *TransactionBatch `protobuf:"bytes,5,opt,name=transaction_batch,json=transactionBatch" json:"transaction_batch,omitempty"`
+	ReplicaId        uint64            `protobuf:"varint,6,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Timestamp        int64             `protobuf:"varint,7,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *PrePrepare) Reset()                    { *m = PrePrepare{} }
 func (m *PrePrepare) String() string            { return proto.CompactTextString(m) }
 func (*PrePrepare) ProtoMessage()               {}
 func (*PrePrepare) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *PrePrepare) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *PrePrepare) GetView() uint64 {
 	if m != nil {
@@ -251,17 +287,33 @@ func (m *PrePrepare) GetReplicaId() uint64 {
 	return 0
 }
 
+func (m *PrePrepare) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type Prepare struct {
-	View           uint64 `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
-	SequenceNumber uint64 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
-	BatchDigest    string `protobuf:"bytes,3,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
-	ReplicaId      uint64 `protobuf:"varint,4,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Version        []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	View           uint64 `protobuf:"varint,2,opt,name=view" json:"view,omitempty"`
+	SequenceNumber uint64 `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
+	BatchDigest    string `protobuf:"bytes,4,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
+	ReplicaId      uint64 `protobuf:"varint,5,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Timestamp      int64  `protobuf:"varint,6,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *Prepare) Reset()                    { *m = Prepare{} }
 func (m *Prepare) String() string            { return proto.CompactTextString(m) }
 func (*Prepare) ProtoMessage()               {}
 func (*Prepare) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+
+func (m *Prepare) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *Prepare) GetView() uint64 {
 	if m != nil {
@@ -291,17 +343,33 @@ func (m *Prepare) GetReplicaId() uint64 {
 	return 0
 }
 
+func (m *Prepare) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type Commit struct {
-	View           uint64 `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
-	SequenceNumber uint64 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
-	BatchDigest    string `protobuf:"bytes,3,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
-	ReplicaId      uint64 `protobuf:"varint,4,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Version        []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	View           uint64 `protobuf:"varint,2,opt,name=view" json:"view,omitempty"`
+	SequenceNumber uint64 `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
+	BatchDigest    string `protobuf:"bytes,4,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
+	ReplicaId      uint64 `protobuf:"varint,5,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Timestamp      int64  `protobuf:"varint,6,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *Commit) Reset()                    { *m = Commit{} }
 func (m *Commit) String() string            { return proto.CompactTextString(m) }
 func (*Commit) ProtoMessage()               {}
 func (*Commit) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+
+func (m *Commit) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *Commit) GetView() uint64 {
 	if m != nil {
@@ -331,40 +399,32 @@ func (m *Commit) GetReplicaId() uint64 {
 	return 0
 }
 
-type BlockInfo struct {
-	BlockNumber uint64 `protobuf:"varint,1,opt,name=block_number,json=blockNumber" json:"block_number,omitempty"`
-	BlockHash   []byte `protobuf:"bytes,2,opt,name=block_hash,json=blockHash,proto3" json:"block_hash,omitempty"`
-}
-
-func (m *BlockInfo) Reset()                    { *m = BlockInfo{} }
-func (m *BlockInfo) String() string            { return proto.CompactTextString(m) }
-func (*BlockInfo) ProtoMessage()               {}
-func (*BlockInfo) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
-
-func (m *BlockInfo) GetBlockNumber() uint64 {
+func (m *Commit) GetTimestamp() int64 {
 	if m != nil {
-		return m.BlockNumber
+		return m.Timestamp
 	}
 	return 0
 }
 
-func (m *BlockInfo) GetBlockHash() []byte {
-	if m != nil {
-		return m.BlockHash
-	}
-	return nil
-}
-
 type Checkpoint struct {
-	SequenceNumber uint64 `protobuf:"varint,1,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
-	ReplicaId      uint64 `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
-	Id             string `protobuf:"bytes,3,opt,name=id" json:"id,omitempty"`
+	Version        []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	SequenceNumber uint64 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
+	ReplicaId      uint64 `protobuf:"varint,3,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Id             string `protobuf:"bytes,4,opt,name=id" json:"id,omitempty"`
+	Timestamp      int64  `protobuf:"varint,5,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *Checkpoint) Reset()                    { *m = Checkpoint{} }
 func (m *Checkpoint) String() string            { return proto.CompactTextString(m) }
 func (*Checkpoint) ProtoMessage()               {}
-func (*Checkpoint) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+func (*Checkpoint) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+
+func (m *Checkpoint) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *Checkpoint) GetSequenceNumber() uint64 {
 	if m != nil {
@@ -387,20 +447,36 @@ func (m *Checkpoint) GetId() string {
 	return ""
 }
 
+func (m *Checkpoint) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type ViewChange struct {
-	View      uint64           `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
-	H         uint64           `protobuf:"varint,2,opt,name=h" json:"h,omitempty"`
-	Cset      []*ViewChange_C  `protobuf:"bytes,3,rep,name=cset" json:"cset,omitempty"`
-	Pset      []*ViewChange_PQ `protobuf:"bytes,4,rep,name=pset" json:"pset,omitempty"`
-	Qset      []*ViewChange_PQ `protobuf:"bytes,5,rep,name=qset" json:"qset,omitempty"`
-	ReplicaId uint64           `protobuf:"varint,6,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
-	Signature []byte           `protobuf:"bytes,7,opt,name=signature,proto3" json:"signature,omitempty"`
+	Version   []byte           `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	View      uint64           `protobuf:"varint,2,opt,name=view" json:"view,omitempty"`
+	H         uint64           `protobuf:"varint,3,opt,name=h" json:"h,omitempty"`
+	Cset      []*ViewChange_C  `protobuf:"bytes,4,rep,name=cset" json:"cset,omitempty"`
+	Pset      []*ViewChange_PQ `protobuf:"bytes,5,rep,name=pset" json:"pset,omitempty"`
+	Qset      []*ViewChange_PQ `protobuf:"bytes,6,rep,name=qset" json:"qset,omitempty"`
+	ReplicaId uint64           `protobuf:"varint,7,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Signature []byte           `protobuf:"bytes,8,opt,name=signature,proto3" json:"signature,omitempty"`
+	Timestamp int64            `protobuf:"varint,9,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *ViewChange) Reset()                    { *m = ViewChange{} }
 func (m *ViewChange) String() string            { return proto.CompactTextString(m) }
 func (*ViewChange) ProtoMessage()               {}
-func (*ViewChange) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
+func (*ViewChange) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+
+func (m *ViewChange) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *ViewChange) GetView() uint64 {
 	if m != nil {
@@ -451,6 +527,13 @@ func (m *ViewChange) GetSignature() []byte {
 	return nil
 }
 
+func (m *ViewChange) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 // This message should go away and become a checkpoint once replica_id is removed
 type ViewChange_C struct {
 	SequenceNumber uint64 `protobuf:"varint,1,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
@@ -460,7 +543,7 @@ type ViewChange_C struct {
 func (m *ViewChange_C) Reset()                    { *m = ViewChange_C{} }
 func (m *ViewChange_C) String() string            { return proto.CompactTextString(m) }
 func (*ViewChange_C) ProtoMessage()               {}
-func (*ViewChange_C) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8, 0} }
+func (*ViewChange_C) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7, 0} }
 
 func (m *ViewChange_C) GetSequenceNumber() uint64 {
 	if m != nil {
@@ -485,7 +568,7 @@ type ViewChange_PQ struct {
 func (m *ViewChange_PQ) Reset()                    { *m = ViewChange_PQ{} }
 func (m *ViewChange_PQ) String() string            { return proto.CompactTextString(m) }
 func (*ViewChange_PQ) ProtoMessage()               {}
-func (*ViewChange_PQ) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8, 1} }
+func (*ViewChange_PQ) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7, 1} }
 
 func (m *ViewChange_PQ) GetSequenceNumber() uint64 {
 	if m != nil {
@@ -509,16 +592,25 @@ func (m *ViewChange_PQ) GetView() uint64 {
 }
 
 type NewView struct {
-	View      uint64            `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
-	Vset      []*ViewChange     `protobuf:"bytes,2,rep,name=vset" json:"vset,omitempty"`
-	Xset      map[uint64]string `protobuf:"bytes,3,rep,name=xset" json:"xset,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	ReplicaId uint64            `protobuf:"varint,4,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Version   []byte            `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	View      uint64            `protobuf:"varint,2,opt,name=view" json:"view,omitempty"`
+	Vset      []*ViewChange     `protobuf:"bytes,3,rep,name=vset" json:"vset,omitempty"`
+	Xset      map[uint64]string `protobuf:"bytes,4,rep,name=xset" json:"xset,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ReplicaId uint64            `protobuf:"varint,5,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Timestamp int64             `protobuf:"varint,6,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *NewView) Reset()                    { *m = NewView{} }
 func (m *NewView) String() string            { return proto.CompactTextString(m) }
 func (*NewView) ProtoMessage()               {}
-func (*NewView) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+func (*NewView) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
+
+func (m *NewView) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *NewView) GetView() uint64 {
 	if m != nil {
@@ -548,16 +640,32 @@ func (m *NewView) GetReplicaId() uint64 {
 	return 0
 }
 
+func (m *NewView) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type FinishVcReset struct {
-	ReplicaId uint64 `protobuf:"varint,1,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
-	View      uint64 `protobuf:"varint,2,opt,name=view" json:"view,omitempty"`
-	LowH      uint64 `protobuf:"varint,3,opt,name=low_h,json=lowH" json:"low_h,omitempty"`
+	Version   []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	ReplicaId uint64 `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	View      uint64 `protobuf:"varint,3,opt,name=view" json:"view,omitempty"`
+	H         uint64 `protobuf:"varint,4,opt,name=h" json:"h,omitempty"`
+	Timestamp int64  `protobuf:"varint,5,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *FinishVcReset) Reset()                    { *m = FinishVcReset{} }
 func (m *FinishVcReset) String() string            { return proto.CompactTextString(m) }
 func (*FinishVcReset) ProtoMessage()               {}
-func (*FinishVcReset) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+func (*FinishVcReset) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+
+func (m *FinishVcReset) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *FinishVcReset) GetReplicaId() uint64 {
 	if m != nil {
@@ -573,22 +681,38 @@ func (m *FinishVcReset) GetView() uint64 {
 	return 0
 }
 
-func (m *FinishVcReset) GetLowH() uint64 {
+func (m *FinishVcReset) GetH() uint64 {
 	if m != nil {
-		return m.LowH
+		return m.H
+	}
+	return 0
+}
+
+func (m *FinishVcReset) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
 	}
 	return 0
 }
 
 type FetchRequestBatch struct {
-	BatchDigest string `protobuf:"bytes,1,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
-	ReplicaId   uint64 `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Version     []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	BatchDigest string `protobuf:"bytes,2,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
+	ReplicaId   uint64 `protobuf:"varint,3,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Timestamp   int64  `protobuf:"varint,4,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *FetchRequestBatch) Reset()                    { *m = FetchRequestBatch{} }
 func (m *FetchRequestBatch) String() string            { return proto.CompactTextString(m) }
 func (*FetchRequestBatch) ProtoMessage()               {}
-func (*FetchRequestBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+func (*FetchRequestBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+
+func (m *FetchRequestBatch) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *FetchRequestBatch) GetBatchDigest() string {
 	if m != nil {
@@ -604,14 +728,30 @@ func (m *FetchRequestBatch) GetReplicaId() uint64 {
 	return 0
 }
 
+func (m *FetchRequestBatch) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type NegotiateView struct {
-	ReplicaId uint64 `protobuf:"varint,1,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Version   []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	ReplicaId uint64 `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Timestamp int64  `protobuf:"varint,3,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *NegotiateView) Reset()                    { *m = NegotiateView{} }
 func (m *NegotiateView) String() string            { return proto.CompactTextString(m) }
 func (*NegotiateView) ProtoMessage()               {}
-func (*NegotiateView) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+func (*NegotiateView) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+
+func (m *NegotiateView) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *NegotiateView) GetReplicaId() uint64 {
 	if m != nil {
@@ -620,17 +760,33 @@ func (m *NegotiateView) GetReplicaId() uint64 {
 	return 0
 }
 
+func (m *NegotiateView) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type NegotiateViewResponse struct {
-	ReplicaId uint64 `protobuf:"varint,1,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
-	View      uint64 `protobuf:"varint,2,opt,name=view" json:"view,omitempty"`
-	N         uint64 `protobuf:"varint,3,opt,name=n" json:"n,omitempty"`
-	Routers   []byte `protobuf:"bytes,4,opt,name=routers,proto3" json:"routers,omitempty"`
+	Version   []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	ReplicaId uint64 `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	View      uint64 `protobuf:"varint,3,opt,name=view" json:"view,omitempty"`
+	N         uint64 `protobuf:"varint,4,opt,name=n" json:"n,omitempty"`
+	Routers   []byte `protobuf:"bytes,5,opt,name=routers,proto3" json:"routers,omitempty"`
+	Timestamp int64  `protobuf:"varint,6,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *NegotiateViewResponse) Reset()                    { *m = NegotiateViewResponse{} }
 func (m *NegotiateViewResponse) String() string            { return proto.CompactTextString(m) }
 func (*NegotiateViewResponse) ProtoMessage()               {}
-func (*NegotiateViewResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
+func (*NegotiateViewResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+
+func (m *NegotiateViewResponse) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *NegotiateViewResponse) GetReplicaId() uint64 {
 	if m != nil {
@@ -660,14 +816,30 @@ func (m *NegotiateViewResponse) GetRouters() []byte {
 	return nil
 }
 
+func (m *NegotiateViewResponse) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type RecoveryInit struct {
-	ReplicaId uint64 `protobuf:"varint,1,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Version   []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	ReplicaId uint64 `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Timestamp int64  `protobuf:"varint,3,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *RecoveryInit) Reset()                    { *m = RecoveryInit{} }
 func (m *RecoveryInit) String() string            { return proto.CompactTextString(m) }
 func (*RecoveryInit) ProtoMessage()               {}
-func (*RecoveryInit) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{14} }
+func (*RecoveryInit) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{13} }
+
+func (m *RecoveryInit) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *RecoveryInit) GetReplicaId() uint64 {
 	if m != nil {
@@ -676,17 +848,33 @@ func (m *RecoveryInit) GetReplicaId() uint64 {
 	return 0
 }
 
+func (m *RecoveryInit) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type RecoveryResponse struct {
-	ReplicaId     uint64            `protobuf:"varint,1,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
-	Chkpts        map[uint64]string `protobuf:"bytes,2,rep,name=chkpts" json:"chkpts,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	BlockHeight   uint64            `protobuf:"varint,3,opt,name=blockHeight" json:"blockHeight,omitempty"`
-	LastBlockHash string            `protobuf:"bytes,4,opt,name=lastBlockHash" json:"lastBlockHash,omitempty"`
+	Version       []byte            `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	ReplicaId     uint64            `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Chkpts        map[uint64]string `protobuf:"bytes,3,rep,name=chkpts" json:"chkpts,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	BlockHeight   uint64            `protobuf:"varint,4,opt,name=blockHeight" json:"blockHeight,omitempty"`
+	LastBlockHash string            `protobuf:"bytes,5,opt,name=lastBlockHash" json:"lastBlockHash,omitempty"`
+	Timestamp     int64             `protobuf:"varint,6,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *RecoveryResponse) Reset()                    { *m = RecoveryResponse{} }
 func (m *RecoveryResponse) String() string            { return proto.CompactTextString(m) }
 func (*RecoveryResponse) ProtoMessage()               {}
-func (*RecoveryResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{15} }
+func (*RecoveryResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{14} }
+
+func (m *RecoveryResponse) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *RecoveryResponse) GetReplicaId() uint64 {
 	if m != nil {
@@ -716,15 +904,31 @@ func (m *RecoveryResponse) GetLastBlockHash() string {
 	return ""
 }
 
+func (m *RecoveryResponse) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type RecoveryFetchPQC struct {
-	ReplicaId uint64 `protobuf:"varint,1,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
-	H         uint64 `protobuf:"varint,2,opt,name=h" json:"h,omitempty"`
+	Version   []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	ReplicaId uint64 `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	H         uint64 `protobuf:"varint,3,opt,name=h" json:"h,omitempty"`
+	Timestamp int64  `protobuf:"varint,4,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *RecoveryFetchPQC) Reset()                    { *m = RecoveryFetchPQC{} }
 func (m *RecoveryFetchPQC) String() string            { return proto.CompactTextString(m) }
 func (*RecoveryFetchPQC) ProtoMessage()               {}
-func (*RecoveryFetchPQC) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{16} }
+func (*RecoveryFetchPQC) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{15} }
+
+func (m *RecoveryFetchPQC) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *RecoveryFetchPQC) GetReplicaId() uint64 {
 	if m != nil {
@@ -740,17 +944,33 @@ func (m *RecoveryFetchPQC) GetH() uint64 {
 	return 0
 }
 
+func (m *RecoveryFetchPQC) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type RecoveryReturnPQC struct {
-	ReplicaId uint64        `protobuf:"varint,1,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
-	PrepreSet []*PrePrepare `protobuf:"bytes,2,rep,name=prepre_set,json=prepreSet" json:"prepre_set,omitempty"`
-	PreSent   []bool        `protobuf:"varint,3,rep,packed,name=pre_sent,json=preSent" json:"pre_sent,omitempty"`
-	CmtSent   []bool        `protobuf:"varint,4,rep,packed,name=cmt_sent,json=cmtSent" json:"cmt_sent,omitempty"`
+	Version   []byte        `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	ReplicaId uint64        `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	PrepreSet []*PrePrepare `protobuf:"bytes,3,rep,name=prepre_set,json=prepreSet" json:"prepre_set,omitempty"`
+	PreSent   []bool        `protobuf:"varint,4,rep,packed,name=pre_sent,json=preSent" json:"pre_sent,omitempty"`
+	CmtSent   []bool        `protobuf:"varint,5,rep,packed,name=cmt_sent,json=cmtSent" json:"cmt_sent,omitempty"`
+	Timestamp int64         `protobuf:"varint,6,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *RecoveryReturnPQC) Reset()                    { *m = RecoveryReturnPQC{} }
 func (m *RecoveryReturnPQC) String() string            { return proto.CompactTextString(m) }
 func (*RecoveryReturnPQC) ProtoMessage()               {}
-func (*RecoveryReturnPQC) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{17} }
+func (*RecoveryReturnPQC) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{16} }
+
+func (m *RecoveryReturnPQC) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *RecoveryReturnPQC) GetReplicaId() uint64 {
 	if m != nil {
@@ -780,14 +1000,29 @@ func (m *RecoveryReturnPQC) GetCmtSent() []bool {
 	return nil
 }
 
+func (m *RecoveryReturnPQC) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type Pset struct {
-	Set []*Prepare `protobuf:"bytes,1,rep,name=set" json:"set,omitempty"`
+	Version []byte     `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Set     []*Prepare `protobuf:"bytes,2,rep,name=set" json:"set,omitempty"`
 }
 
 func (m *Pset) Reset()                    { *m = Pset{} }
 func (m *Pset) String() string            { return proto.CompactTextString(m) }
 func (*Pset) ProtoMessage()               {}
-func (*Pset) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{18} }
+func (*Pset) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{17} }
+
+func (m *Pset) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *Pset) GetSet() []*Prepare {
 	if m != nil {
@@ -797,13 +1032,21 @@ func (m *Pset) GetSet() []*Prepare {
 }
 
 type Cset struct {
-	Set []*Commit `protobuf:"bytes,1,rep,name=set" json:"set,omitempty"`
+	Version []byte    `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Set     []*Commit `protobuf:"bytes,2,rep,name=set" json:"set,omitempty"`
 }
 
 func (m *Cset) Reset()                    { *m = Cset{} }
 func (m *Cset) String() string            { return proto.CompactTextString(m) }
 func (*Cset) ProtoMessage()               {}
-func (*Cset) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{19} }
+func (*Cset) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{18} }
+
+func (m *Cset) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *Cset) GetSet() []*Commit {
 	if m != nil {
@@ -813,14 +1056,23 @@ func (m *Cset) GetSet() []*Commit {
 }
 
 type AddNode struct {
-	ReplicaId uint64 `protobuf:"varint,1,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
-	Key       string `protobuf:"bytes,2,opt,name=key" json:"key,omitempty"`
+	Version   []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	ReplicaId uint64 `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Key       string `protobuf:"bytes,3,opt,name=key" json:"key,omitempty"`
+	Timestamp int64  `protobuf:"varint,4,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *AddNode) Reset()                    { *m = AddNode{} }
 func (m *AddNode) String() string            { return proto.CompactTextString(m) }
 func (*AddNode) ProtoMessage()               {}
-func (*AddNode) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{20} }
+func (*AddNode) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{19} }
+
+func (m *AddNode) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *AddNode) GetReplicaId() uint64 {
 	if m != nil {
@@ -836,16 +1088,32 @@ func (m *AddNode) GetKey() string {
 	return ""
 }
 
+func (m *AddNode) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type DelNode struct {
-	ReplicaId  uint64 `protobuf:"varint,1,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
-	Key        string `protobuf:"bytes,2,opt,name=key" json:"key,omitempty"`
-	RouterHash string `protobuf:"bytes,3,opt,name=router_hash,json=routerHash" json:"router_hash,omitempty"`
+	Version    []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	ReplicaId  uint64 `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Key        string `protobuf:"bytes,3,opt,name=key" json:"key,omitempty"`
+	RouterHash string `protobuf:"bytes,4,opt,name=router_hash,json=routerHash" json:"router_hash,omitempty"`
+	Timestamp  int64  `protobuf:"varint,5,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *DelNode) Reset()                    { *m = DelNode{} }
 func (m *DelNode) String() string            { return proto.CompactTextString(m) }
 func (*DelNode) ProtoMessage()               {}
-func (*DelNode) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{21} }
+func (*DelNode) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{20} }
+
+func (m *DelNode) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *DelNode) GetReplicaId() uint64 {
 	if m != nil {
@@ -868,15 +1136,31 @@ func (m *DelNode) GetRouterHash() string {
 	return ""
 }
 
+func (m *DelNode) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type ReadyForN struct {
+	Version   []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
 	ReplicaId uint64 `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
 	Key       string `protobuf:"bytes,3,opt,name=key" json:"key,omitempty"`
+	Timestamp int64  `protobuf:"varint,4,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *ReadyForN) Reset()                    { *m = ReadyForN{} }
 func (m *ReadyForN) String() string            { return proto.CompactTextString(m) }
 func (*ReadyForN) ProtoMessage()               {}
-func (*ReadyForN) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{22} }
+func (*ReadyForN) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{21} }
+
+func (m *ReadyForN) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *ReadyForN) GetReplicaId() uint64 {
 	if m != nil {
@@ -892,23 +1176,39 @@ func (m *ReadyForN) GetKey() string {
 	return ""
 }
 
+func (m *ReadyForN) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type AgreeUpdateN struct {
-	Flag       bool             `protobuf:"varint,1,opt,name=flag" json:"flag,omitempty"`
-	ReplicaId  uint64           `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
-	Key        string           `protobuf:"bytes,3,opt,name=key" json:"key,omitempty"`
-	RouterHash string           `protobuf:"bytes,4,opt,name=routerHash" json:"routerHash,omitempty"`
-	N          int64            `protobuf:"varint,5,opt,name=n" json:"n,omitempty"`
-	View       uint64           `protobuf:"varint,6,opt,name=view" json:"view,omitempty"`
-	H          uint64           `protobuf:"varint,7,opt,name=h" json:"h,omitempty"`
-	Cset       []*ViewChange_C  `protobuf:"bytes,8,rep,name=cset" json:"cset,omitempty"`
-	Pset       []*ViewChange_PQ `protobuf:"bytes,9,rep,name=pset" json:"pset,omitempty"`
-	Qset       []*ViewChange_PQ `protobuf:"bytes,10,rep,name=qset" json:"qset,omitempty"`
+	Version    []byte           `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Flag       bool             `protobuf:"varint,2,opt,name=flag" json:"flag,omitempty"`
+	ReplicaId  uint64           `protobuf:"varint,3,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Key        string           `protobuf:"bytes,4,opt,name=key" json:"key,omitempty"`
+	RouterHash string           `protobuf:"bytes,5,opt,name=routerHash" json:"routerHash,omitempty"`
+	N          int64            `protobuf:"varint,6,opt,name=n" json:"n,omitempty"`
+	View       uint64           `protobuf:"varint,7,opt,name=view" json:"view,omitempty"`
+	H          uint64           `protobuf:"varint,8,opt,name=h" json:"h,omitempty"`
+	Cset       []*ViewChange_C  `protobuf:"bytes,9,rep,name=cset" json:"cset,omitempty"`
+	Pset       []*ViewChange_PQ `protobuf:"bytes,10,rep,name=pset" json:"pset,omitempty"`
+	Qset       []*ViewChange_PQ `protobuf:"bytes,11,rep,name=qset" json:"qset,omitempty"`
+	Timestamp  int64            `protobuf:"varint,12,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *AgreeUpdateN) Reset()                    { *m = AgreeUpdateN{} }
 func (m *AgreeUpdateN) String() string            { return proto.CompactTextString(m) }
 func (*AgreeUpdateN) ProtoMessage()               {}
-func (*AgreeUpdateN) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{23} }
+func (*AgreeUpdateN) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{22} }
+
+func (m *AgreeUpdateN) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *AgreeUpdateN) GetFlag() bool {
 	if m != nil {
@@ -980,20 +1280,36 @@ func (m *AgreeUpdateN) GetQset() []*ViewChange_PQ {
 	return nil
 }
 
+func (m *AgreeUpdateN) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 type UpdateN struct {
-	Flag      bool              `protobuf:"varint,1,opt,name=flag" json:"flag,omitempty"`
-	ReplicaId uint64            `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
-	Key       string            `protobuf:"bytes,3,opt,name=key" json:"key,omitempty"`
-	N         int64             `protobuf:"varint,4,opt,name=n" json:"n,omitempty"`
-	View      uint64            `protobuf:"varint,5,opt,name=view" json:"view,omitempty"`
-	Aset      []*AgreeUpdateN   `protobuf:"bytes,6,rep,name=aset" json:"aset,omitempty"`
-	Xset      map[uint64]string `protobuf:"bytes,7,rep,name=xset" json:"xset,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Version   []byte            `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	Flag      bool              `protobuf:"varint,2,opt,name=flag" json:"flag,omitempty"`
+	ReplicaId uint64            `protobuf:"varint,3,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Key       string            `protobuf:"bytes,4,opt,name=key" json:"key,omitempty"`
+	N         int64             `protobuf:"varint,5,opt,name=n" json:"n,omitempty"`
+	View      uint64            `protobuf:"varint,6,opt,name=view" json:"view,omitempty"`
+	Aset      []*AgreeUpdateN   `protobuf:"bytes,7,rep,name=aset" json:"aset,omitempty"`
+	Xset      map[uint64]string `protobuf:"bytes,8,rep,name=xset" json:"xset,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Timestamp int64             `protobuf:"varint,9,opt,name=timestamp" json:"timestamp,omitempty"`
 }
 
 func (m *UpdateN) Reset()                    { *m = UpdateN{} }
 func (m *UpdateN) String() string            { return proto.CompactTextString(m) }
 func (*UpdateN) ProtoMessage()               {}
-func (*UpdateN) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{24} }
+func (*UpdateN) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{23} }
+
+func (m *UpdateN) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
 
 func (m *UpdateN) GetFlag() bool {
 	if m != nil {
@@ -1044,6 +1360,61 @@ func (m *UpdateN) GetXset() map[uint64]string {
 	return nil
 }
 
+func (m *UpdateN) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
+type FinishUpdate struct {
+	Version   []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
+	ReplicaId uint64 `protobuf:"varint,2,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	View      uint64 `protobuf:"varint,3,opt,name=view" json:"view,omitempty"`
+	H         uint64 `protobuf:"varint,4,opt,name=h" json:"h,omitempty"`
+	Timestamp int64  `protobuf:"varint,5,opt,name=timestamp" json:"timestamp,omitempty"`
+}
+
+func (m *FinishUpdate) Reset()                    { *m = FinishUpdate{} }
+func (m *FinishUpdate) String() string            { return proto.CompactTextString(m) }
+func (*FinishUpdate) ProtoMessage()               {}
+func (*FinishUpdate) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{24} }
+
+func (m *FinishUpdate) GetVersion() []byte {
+	if m != nil {
+		return m.Version
+	}
+	return nil
+}
+
+func (m *FinishUpdate) GetReplicaId() uint64 {
+	if m != nil {
+		return m.ReplicaId
+	}
+	return 0
+}
+
+func (m *FinishUpdate) GetView() uint64 {
+	if m != nil {
+		return m.View
+	}
+	return 0
+}
+
+func (m *FinishUpdate) GetH() uint64 {
+	if m != nil {
+		return m.H
+	}
+	return 0
+}
+
+func (m *FinishUpdate) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
 func init() {
 	proto.RegisterType((*ConsensusMessage)(nil), "pbft.consensus_message")
 	proto.RegisterType((*TransactionBatch)(nil), "pbft.transaction_batch")
@@ -1051,7 +1422,6 @@ func init() {
 	proto.RegisterType((*PrePrepare)(nil), "pbft.pre_prepare")
 	proto.RegisterType((*Prepare)(nil), "pbft.prepare")
 	proto.RegisterType((*Commit)(nil), "pbft.commit")
-	proto.RegisterType((*BlockInfo)(nil), "pbft.block_info")
 	proto.RegisterType((*Checkpoint)(nil), "pbft.checkpoint")
 	proto.RegisterType((*ViewChange)(nil), "pbft.view_change")
 	proto.RegisterType((*ViewChange_C)(nil), "pbft.view_change.C")
@@ -1072,96 +1442,101 @@ func init() {
 	proto.RegisterType((*ReadyForN)(nil), "pbft.ready_for_n")
 	proto.RegisterType((*AgreeUpdateN)(nil), "pbft.agree_update_n")
 	proto.RegisterType((*UpdateN)(nil), "pbft.update_n")
+	proto.RegisterType((*FinishUpdate)(nil), "pbft.finish_update")
 	proto.RegisterEnum("pbft.ConsensusMessage_Type", ConsensusMessage_Type_name, ConsensusMessage_Type_value)
 }
 
 func init() { proto.RegisterFile("messages.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 1356 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xc4, 0x57, 0x4b, 0x73, 0xe3, 0xc4,
-	0x16, 0xbe, 0xb2, 0xe5, 0xd7, 0xb1, 0xe3, 0x91, 0x3b, 0xb9, 0x13, 0xdf, 0xdc, 0x79, 0x04, 0xf1,
-	0x88, 0x17, 0xe0, 0x4c, 0x0d, 0x0b, 0x1e, 0x43, 0x51, 0x78, 0x64, 0x65, 0xec, 0x82, 0x91, 0x9d,
-	0xb6, 0xe6, 0x55, 0x40, 0x75, 0x29, 0x52, 0xc7, 0x52, 0xc5, 0x96, 0x34, 0x92, 0x9c, 0xe0, 0x2d,
-	0x1b, 0xd8, 0xb0, 0x61, 0xcb, 0x8e, 0xbf, 0xc3, 0x8e, 0x9f, 0x42, 0xf1, 0x03, 0xa8, 0x6e, 0xc9,
-	0x8e, 0x2c, 0xa7, 0xc6, 0x99, 0x29, 0x0a, 0x76, 0xea, 0xd3, 0x5f, 0x9f, 0xf3, 0x7d, 0xa7, 0x4f,
-	0xf7, 0x69, 0x41, 0x7d, 0x4a, 0xc3, 0xd0, 0x18, 0xd3, 0xb0, 0xed, 0x07, 0x5e, 0xe4, 0x21, 0xd1,
-	0x3f, 0x39, 0x8d, 0xf6, 0x0e, 0xec, 0xb9, 0x4f, 0x03, 0xd3, 0x36, 0x1c, 0xf7, 0xd0, 0xf4, 0x02,
-	0x7a, 0x18, 0xcd, 0x7d, 0x1a, 0x1e, 0x46, 0x81, 0xe1, 0x86, 0x86, 0x19, 0x39, 0x9e, 0x1b, 0xc3,
-	0xe5, 0x3f, 0xf3, 0xd0, 0x30, 0x3d, 0x37, 0xa4, 0x6e, 0x38, 0x0b, 0x49, 0xe2, 0x0b, 0xdd, 0x03,
-	0x91, 0x2d, 0x68, 0x0a, 0xfb, 0x42, 0xab, 0x7e, 0xff, 0x56, 0x9b, 0xf9, 0x6c, 0xaf, 0xc1, 0xda,
-	0xfa, 0xdc, 0xa7, 0x98, 0x23, 0x51, 0x13, 0x4a, 0xbe, 0x31, 0x9f, 0x78, 0x86, 0xd5, 0xcc, 0xed,
-	0x0b, 0xad, 0x1a, 0x5e, 0x0c, 0xe5, 0x9f, 0xf3, 0x20, 0x32, 0x20, 0xba, 0x01, 0x55, 0x1d, 0x77,
-	0xb4, 0x51, 0x47, 0xd1, 0xfb, 0x03, 0x4d, 0xfa, 0x0f, 0x33, 0x0c, 0xb1, 0x4a, 0x86, 0x58, 0x1d,
-	0x76, 0xb0, 0x2a, 0x09, 0xa8, 0x0a, 0xa5, 0xc5, 0x20, 0x87, 0x00, 0x8a, 0xca, 0xe0, 0xf1, 0xe3,
-	0xbe, 0x2e, 0xe5, 0x51, 0x1d, 0x40, 0xe9, 0xa9, 0xca, 0x97, 0xc3, 0x41, 0x5f, 0xd3, 0x25, 0x91,
-	0xad, 0x7c, 0xda, 0x57, 0x9f, 0x11, 0xa5, 0xd7, 0xd1, 0x1e, 0xa9, 0x52, 0x01, 0xd5, 0xa0, 0xac,
-	0xa9, 0xcf, 0x08, 0x33, 0x4a, 0x45, 0x84, 0xa0, 0x7e, 0xd4, 0xd7, 0xfa, 0xa3, 0x1e, 0x79, 0xaa,
-	0x60, 0x75, 0xa4, 0xea, 0x52, 0x09, 0xed, 0xc2, 0xf6, 0x11, 0xd6, 0x95, 0x1e, 0xc1, 0xea, 0xf1,
-	0x13, 0x75, 0xa4, 0x93, 0x87, 0x1d, 0x5d, 0xe9, 0x49, 0x65, 0xd4, 0x84, 0x1d, 0xac, 0xea, 0x4f,
-	0xb0, 0x96, 0x99, 0xa9, 0x30, 0x37, 0x9a, 0xfa, 0x68, 0xa0, 0xf7, 0x3b, 0xba, 0x1a, 0xbb, 0x06,
-	0xf4, 0x7f, 0xd8, 0x5d, 0xb5, 0x11, 0xac, 0x8e, 0x86, 0x03, 0x6d, 0xa4, 0x4a, 0x55, 0xd4, 0x80,
-	0x2d, 0xac, 0x2a, 0x83, 0xa7, 0x2a, 0x7e, 0x41, 0xfa, 0x5a, 0x5f, 0x97, 0x6a, 0xe8, 0xbf, 0xd0,
-	0x58, 0x9a, 0x96, 0xc8, 0x2d, 0x74, 0x13, 0xd0, 0xd2, 0x7c, 0xa4, 0x32, 0x5a, 0xc7, 0x43, 0x45,
-	0xaa, 0x33, 0x96, 0x29, 0x38, 0x67, 0xc5, 0x26, 0x6e, 0x30, 0x81, 0x9d, 0x6e, 0x97, 0x68, 0x83,
-	0xae, 0x2a, 0x49, 0x6c, 0xd4, 0x55, 0xbf, 0x8a, 0x47, 0x0d, 0x96, 0x0d, 0xac, 0x76, 0xba, 0x2f,
-	0xc8, 0xd1, 0x00, 0x13, 0x4d, 0x42, 0x8c, 0x78, 0xe7, 0x11, 0x56, 0x55, 0xf2, 0x64, 0xd8, 0x65,
-	0x3c, 0x35, 0x69, 0x9b, 0x2d, 0x59, 0x8e, 0x76, 0xe4, 0xaf, 0xa1, 0x91, 0xaa, 0x05, 0x72, 0x62,
-	0x44, 0xa6, 0x8d, 0x5a, 0x50, 0xe0, 0x1f, 0x4d, 0x61, 0x3f, 0xdf, 0xaa, 0xde, 0x47, 0x6d, 0x5e,
-	0x34, 0x6d, 0xfd, 0x12, 0x88, 0x63, 0x00, 0xba, 0x05, 0x95, 0xc8, 0x99, 0xd2, 0x30, 0x32, 0xa6,
-	0x3e, 0xdf, 0xef, 0x3c, 0xbe, 0x34, 0xc8, 0xdf, 0xc2, 0x4e, 0x40, 0xa3, 0x59, 0xe0, 0x92, 0x80,
-	0xbe, 0x9c, 0xd1, 0x30, 0x4a, 0xfc, 0x7f, 0x70, 0xe9, 0x5f, 0x68, 0x55, 0xef, 0xef, 0xc6, 0x65,
-	0xb5, 0xc6, 0x63, 0x11, 0xe4, 0x26, 0x14, 0x2d, 0x67, 0x4c, 0xc3, 0x88, 0x47, 0xa8, 0xe0, 0x64,
-	0x24, 0xff, 0x2e, 0x40, 0xd5, 0x0f, 0x28, 0xf1, 0x03, 0xea, 0x1b, 0x01, 0x45, 0x08, 0xc4, 0x73,
-	0x87, 0x5e, 0x70, 0xaf, 0x22, 0xe6, 0xdf, 0xe8, 0x00, 0x6e, 0x84, 0x2c, 0xb6, 0x6b, 0x52, 0xe2,
-	0xce, 0xa6, 0x27, 0x34, 0xe0, 0x4e, 0x44, 0x5c, 0x5f, 0x98, 0x35, 0x6e, 0x45, 0x6f, 0x41, 0x8d,
-	0x47, 0x23, 0x49, 0xa8, 0x3c, 0x0f, 0x55, 0xe5, 0xb6, 0x2e, 0x37, 0xa1, 0xee, 0x15, 0xb9, 0x6a,
-	0x8a, 0xaf, 0x96, 0x20, 0xa5, 0x4c, 0x0f, 0xb9, 0x9a, 0xdb, 0x00, 0x01, 0xf5, 0x27, 0x8e, 0x69,
-	0x10, 0xc7, 0x6a, 0x16, 0x38, 0x99, 0x4a, 0x62, 0xe9, 0x5b, 0xf2, 0x8f, 0x02, 0x94, 0xfe, 0x29,
-	0x41, 0xab, 0x54, 0xc4, 0x2c, 0x95, 0x1f, 0x04, 0x28, 0x9a, 0xde, 0x74, 0xea, 0x44, 0xff, 0x36,
-	0x13, 0x0d, 0xe0, 0x64, 0xe2, 0x99, 0x67, 0xc4, 0x71, 0x4f, 0x3d, 0xee, 0x8f, 0x8f, 0x92, 0xa8,
-	0x31, 0xa9, 0x2a, 0xb7, 0x25, 0x21, 0x6f, 0x2f, 0x16, 0xd8, 0x46, 0x68, 0x27, 0x17, 0x51, 0x85,
-	0x5b, 0x7a, 0x46, 0x68, 0xcb, 0x16, 0x80, 0x69, 0x53, 0xf3, 0xcc, 0xf7, 0x1c, 0x37, 0xba, 0x4a,
-	0x88, 0x70, 0xa5, 0x90, 0x55, 0x96, 0xb9, 0x0c, 0x4b, 0x54, 0x87, 0x9c, 0x63, 0x25, 0xea, 0x72,
-	0x8e, 0x25, 0xff, 0x94, 0x87, 0x2a, 0xcb, 0x14, 0x31, 0x6d, 0xc3, 0x1d, 0x5f, 0xbd, 0x9d, 0x35,
-	0x10, 0xec, 0xc4, 0x93, 0x60, 0xa3, 0x03, 0x10, 0xcd, 0x90, 0xb2, 0x0c, 0xb1, 0x73, 0xb7, 0x1d,
-	0x17, 0x55, 0xca, 0x45, 0x5b, 0xc1, 0x1c, 0x80, 0x5a, 0x20, 0xfa, 0x0c, 0x28, 0x72, 0xe0, 0xce,
-	0x3a, 0x70, 0x78, 0x8c, 0x39, 0x82, 0x21, 0x5f, 0x32, 0x64, 0xe1, 0x55, 0x48, 0x86, 0xc8, 0xa8,
-	0x2b, 0x66, 0xd5, 0xdd, 0x82, 0x4a, 0xe8, 0x8c, 0x5d, 0x23, 0x9a, 0x05, 0xb4, 0x59, 0x8a, 0x33,
-	0xba, 0x34, 0xec, 0x7d, 0x06, 0x82, 0x72, 0xfd, 0x44, 0x66, 0x32, 0xb5, 0x67, 0x41, 0x6e, 0x78,
-	0x7c, 0xfd, 0xe5, 0xd9, 0x82, 0xca, 0xad, 0x17, 0xd4, 0x22, 0xd7, 0xf9, 0xcb, 0x5c, 0xcb, 0xbf,
-	0x09, 0x50, 0x76, 0xe9, 0x05, 0xe1, 0x89, 0xbf, 0x6a, 0x33, 0xde, 0x05, 0xf1, 0x9c, 0xe5, 0x2a,
-	0xc7, 0x73, 0xd5, 0x58, 0xcb, 0x15, 0xe6, 0xd3, 0xe8, 0x7d, 0x10, 0xbf, 0xbb, 0xdc, 0xa5, 0x66,
-	0x0c, 0x5b, 0x38, 0x6e, 0x3f, 0x0f, 0x69, 0xa4, 0xba, 0x51, 0x30, 0xc7, 0x1c, 0xb5, 0xa1, 0xb4,
-	0xf7, 0x3e, 0x82, 0xca, 0x72, 0x05, 0x92, 0x20, 0x7f, 0x46, 0xe7, 0x09, 0x27, 0xf6, 0x89, 0x76,
-	0xa0, 0x70, 0x6e, 0x4c, 0x66, 0x34, 0xd1, 0x18, 0x0f, 0x3e, 0xcd, 0x7d, 0x2c, 0xc8, 0xcf, 0xa1,
-	0x7e, 0xea, 0xb8, 0x4e, 0x68, 0x93, 0x73, 0x13, 0xd3, 0xf5, 0x48, 0x42, 0x76, 0x03, 0x17, 0x8a,
-	0x73, 0x29, 0xc5, 0xdb, 0x50, 0x98, 0x78, 0x17, 0xc4, 0x5e, 0xe4, 0x69, 0xe2, 0x5d, 0xf4, 0xe4,
-	0x67, 0xb0, 0x7d, 0x4a, 0x59, 0x7a, 0x57, 0x6f, 0xed, 0x6c, 0xd6, 0x85, 0x4d, 0xc7, 0x38, 0x7b,
-	0x40, 0xe4, 0x43, 0xa8, 0xbb, 0x74, 0xec, 0x45, 0x8e, 0x11, 0xd1, 0x78, 0x17, 0x5e, 0x4d, 0x59,
-	0x8e, 0x60, 0x77, 0x75, 0x01, 0x09, 0x68, 0xe8, 0xb3, 0xe7, 0xc7, 0x9b, 0x88, 0xad, 0x81, 0xe0,
-	0x26, 0x42, 0x05, 0x97, 0x3d, 0x54, 0x02, 0x6f, 0x16, 0xd1, 0x20, 0xe4, 0x9b, 0x52, 0xc3, 0x8b,
-	0xa1, 0xdc, 0x86, 0xad, 0x80, 0x9a, 0xde, 0x39, 0x0d, 0xe6, 0xc4, 0x71, 0x9d, 0x4d, 0x89, 0x95,
-	0xff, 0x10, 0xa0, 0xb1, 0x5c, 0x70, 0x5d, 0x82, 0x0f, 0xa0, 0x68, 0xda, 0x67, 0x7e, 0x14, 0x26,
-	0xd5, 0xf6, 0x76, 0x5c, 0x46, 0x6b, 0x7e, 0xda, 0x0a, 0x47, 0xc5, 0x15, 0x95, 0x2c, 0x41, 0xfb,
-	0x10, 0xdf, 0x76, 0x3d, 0xea, 0x8c, 0xed, 0x28, 0xd1, 0x94, 0x36, 0xa1, 0x77, 0x60, 0x6b, 0x62,
-	0x84, 0xd1, 0xc3, 0xc5, 0x95, 0xc7, 0x35, 0x56, 0xf0, 0xaa, 0x71, 0xef, 0x13, 0xa8, 0xa6, 0xdc,
-	0xbf, 0x56, 0xf9, 0x7d, 0x91, 0xd2, 0xcc, 0xab, 0x65, 0x78, 0xac, 0x6c, 0xd2, 0xbc, 0x72, 0xd9,
-	0xc9, 0xbf, 0x08, 0x80, 0x52, 0x72, 0xd9, 0x3b, 0xe1, 0x1a, 0x3e, 0xee, 0x01, 0xb0, 0xf6, 0x18,
-	0x50, 0xb2, 0x76, 0x52, 0x53, 0x6f, 0x01, 0x5c, 0x89, 0x41, 0x23, 0x1a, 0xa1, 0xff, 0x41, 0x39,
-	0x86, 0xbb, 0xf1, 0x91, 0x2d, 0xe3, 0x12, 0x9f, 0x71, 0xf9, 0x94, 0x39, 0x8d, 0xe2, 0x29, 0x31,
-	0x9e, 0x32, 0xa7, 0x11, 0x9b, 0x92, 0x0f, 0x40, 0x1c, 0xb2, 0x43, 0x75, 0x17, 0xf2, 0x2c, 0x50,
-	0xfc, 0x12, 0xda, 0x5a, 0x06, 0xe2, 0x41, 0xd8, 0x8c, 0xfc, 0x1e, 0x88, 0x0a, 0x03, 0xde, 0x49,
-	0x03, 0x6b, 0x8b, 0x97, 0x32, 0xeb, 0x9e, 0x31, 0xee, 0x01, 0x94, 0x0d, 0xcb, 0x22, 0xae, 0x67,
-	0x6d, 0xac, 0x8d, 0x64, 0x1f, 0xe2, 0x9c, 0xb3, 0x4f, 0xf9, 0x1b, 0x28, 0x5b, 0x74, 0xf2, 0x66,
-	0x8b, 0xd1, 0x5d, 0xa8, 0xc6, 0xa5, 0x1d, 0x77, 0xc3, 0xf8, 0xda, 0x85, 0xd8, 0xc4, 0xdb, 0xe1,
-	0xe7, 0x50, 0x0d, 0xa8, 0x61, 0xcd, 0xc9, 0xa9, 0x17, 0x10, 0x77, 0x53, 0x9b, 0x4b, 0x02, 0xe4,
-	0x2f, 0xd9, 0xfd, 0x9a, 0x83, 0xba, 0x31, 0x0e, 0x28, 0x25, 0x33, 0xdf, 0x62, 0x47, 0xd5, 0x65,
-	0xe7, 0xef, 0x74, 0x62, 0x8c, 0x39, 0xbd, 0x32, 0xe6, 0xdf, 0xaf, 0xed, 0x17, 0xdd, 0x81, 0x14,
-	0xcb, 0xa4, 0x82, 0x53, 0x96, 0xf8, 0x40, 0x17, 0xf8, 0xab, 0x53, 0x70, 0x97, 0x47, 0xbe, 0x98,
-	0x6d, 0xaf, 0xa5, 0x6c, 0x7b, 0x2d, 0x5f, 0xb7, 0xbd, 0x56, 0xae, 0xdd, 0x5e, 0x61, 0x53, 0x7b,
-	0x95, 0xbf, 0xcf, 0x41, 0xf9, 0xef, 0x4d, 0x0f, 0x97, 0x2f, 0x66, 0xe5, 0x17, 0x52, 0xf2, 0x5b,
-	0x20, 0x1a, 0x8c, 0x5d, 0x31, 0xcd, 0x6e, 0x75, 0xa7, 0x30, 0x47, 0x2c, 0x7b, 0x5a, 0x29, 0xdd,
-	0xd3, 0x16, 0x98, 0x6c, 0x4f, 0x7b, 0xe3, 0xa6, 0x75, 0x52, 0xe4, 0x3f, 0x9b, 0x1f, 0xfe, 0x15,
-	0x00, 0x00, 0xff, 0xff, 0x83, 0x8b, 0xb7, 0x6f, 0xad, 0x0e, 0x00, 0x00,
+	// 1422 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xd4, 0x58, 0x4d, 0x77, 0xdb, 0x44,
+	0x17, 0x7e, 0x25, 0xcb, 0x5f, 0xd7, 0x8e, 0xab, 0x4c, 0xd2, 0xc6, 0x6f, 0x28, 0x6d, 0x08, 0x70,
+	0x9a, 0x05, 0xb8, 0x3d, 0x65, 0xc1, 0xe7, 0x02, 0x57, 0x56, 0x1a, 0x1f, 0xa8, 0xec, 0x4c, 0xd4,
+	0x96, 0xae, 0xe6, 0x28, 0xf2, 0xc4, 0xd6, 0x49, 0x2c, 0xa9, 0x92, 0x9c, 0xd6, 0x6b, 0x16, 0x7c,
+	0x6c, 0xd8, 0xc0, 0x8e, 0x2d, 0x1b, 0x0e, 0xbf, 0x80, 0x0d, 0x6c, 0xf8, 0x05, 0xec, 0xf8, 0x35,
+	0x9c, 0x99, 0x91, 0x1d, 0x59, 0x36, 0x72, 0xda, 0x94, 0xf6, 0xb0, 0xf3, 0xdc, 0x79, 0x34, 0xf7,
+	0xb9, 0xcf, 0xbd, 0x77, 0xe6, 0x26, 0x50, 0x1b, 0xd2, 0x30, 0xb4, 0xfa, 0x34, 0x6c, 0xf8, 0x81,
+	0x17, 0x79, 0x48, 0xf1, 0x0f, 0x8f, 0xa2, 0xcd, 0x1b, 0x83, 0xb1, 0x4f, 0x03, 0x7b, 0x60, 0x39,
+	0xee, 0x4d, 0xdb, 0x0b, 0xe8, 0xcd, 0x68, 0xec, 0xd3, 0xf0, 0x66, 0x14, 0x58, 0x6e, 0x68, 0xd9,
+	0x91, 0xe3, 0xb9, 0x02, 0xbe, 0xfd, 0x95, 0x02, 0xab, 0xb6, 0xe7, 0x86, 0xd4, 0x0d, 0x47, 0x21,
+	0x89, 0xcf, 0x42, 0xb7, 0x40, 0x61, 0x1f, 0xd4, 0xa5, 0x2d, 0x69, 0xa7, 0x76, 0xfb, 0x6a, 0x83,
+	0x9d, 0xd9, 0x98, 0x83, 0x35, 0xcc, 0xb1, 0x4f, 0x31, 0x47, 0xa2, 0x3a, 0x14, 0x7d, 0x6b, 0x7c,
+	0xe2, 0x59, 0xbd, 0xba, 0xbc, 0x25, 0xed, 0x54, 0xf1, 0x64, 0xb9, 0xfd, 0x53, 0x0e, 0x14, 0x06,
+	0x44, 0x97, 0xa0, 0x62, 0xe2, 0xa6, 0x71, 0xd0, 0xd4, 0xcc, 0x76, 0xc7, 0x50, 0xff, 0xc7, 0x0c,
+	0x5d, 0xac, 0x93, 0x2e, 0xd6, 0xbb, 0x4d, 0xac, 0xab, 0x12, 0xaa, 0x40, 0x71, 0xb2, 0x90, 0x11,
+	0x40, 0x41, 0xeb, 0xdc, 0xbb, 0xd7, 0x36, 0xd5, 0x1c, 0xaa, 0x01, 0x68, 0x7b, 0xba, 0xf6, 0x59,
+	0xb7, 0xd3, 0x36, 0x4c, 0x55, 0x61, 0x5f, 0x3e, 0x68, 0xeb, 0x0f, 0x89, 0xb6, 0xd7, 0x34, 0xee,
+	0xea, 0x6a, 0x1e, 0x55, 0xa1, 0x64, 0xe8, 0x0f, 0x09, 0x33, 0xaa, 0x05, 0x84, 0xa0, 0xb6, 0xdb,
+	0x36, 0xda, 0x07, 0x7b, 0xe4, 0x81, 0x86, 0xf5, 0x03, 0xdd, 0x54, 0x8b, 0x68, 0x03, 0xd6, 0x76,
+	0xb1, 0xa9, 0xed, 0x11, 0xac, 0xef, 0xdf, 0xd7, 0x0f, 0x4c, 0x72, 0xa7, 0x69, 0x6a, 0x7b, 0x6a,
+	0x09, 0xd5, 0x61, 0x1d, 0xeb, 0xe6, 0x7d, 0x6c, 0xa4, 0x76, 0xca, 0xec, 0x18, 0x43, 0xbf, 0xdb,
+	0x31, 0xdb, 0x4d, 0x53, 0x17, 0x47, 0x03, 0x7a, 0x0d, 0x36, 0x66, 0x6d, 0x04, 0xeb, 0x07, 0xdd,
+	0x8e, 0x71, 0xa0, 0xab, 0x15, 0xb4, 0x0a, 0x2b, 0x58, 0xd7, 0x3a, 0x0f, 0x74, 0xfc, 0x88, 0xb4,
+	0x8d, 0xb6, 0xa9, 0x56, 0xd1, 0x65, 0x58, 0x9d, 0x9a, 0xa6, 0xc8, 0x15, 0x74, 0x05, 0xd0, 0xd4,
+	0xbc, 0xab, 0x33, 0x5a, 0xfb, 0x5d, 0x4d, 0xad, 0x31, 0x96, 0x09, 0x38, 0x67, 0xc5, 0x36, 0x2e,
+	0xb1, 0x00, 0x9b, 0xad, 0x16, 0x31, 0x3a, 0x2d, 0x5d, 0x55, 0xd9, 0xaa, 0xa5, 0x7f, 0x2e, 0x56,
+	0xab, 0x4c, 0x0d, 0xac, 0x37, 0x5b, 0x8f, 0xc8, 0x6e, 0x07, 0x13, 0x43, 0x45, 0x8c, 0x78, 0xf3,
+	0x2e, 0xd6, 0x75, 0x72, 0xbf, 0xdb, 0x62, 0x3c, 0x0d, 0x75, 0x8d, 0x7d, 0x32, 0x5d, 0xad, 0x33,
+	0xa6, 0xb1, 0x42, 0xc2, 0xa8, 0x5e, 0xde, 0x1e, 0xc1, 0x6a, 0xa2, 0x3c, 0xc8, 0xa1, 0x15, 0xd9,
+	0x03, 0x96, 0xd6, 0x53, 0x1a, 0x84, 0x8e, 0xe7, 0xf2, 0x5a, 0xa8, 0xe2, 0xc9, 0x12, 0xed, 0x40,
+	0x9e, 0x43, 0xea, 0xf2, 0x56, 0x6e, 0xa7, 0x72, 0x1b, 0x35, 0x78, 0x85, 0x35, 0xcc, 0xb3, 0x23,
+	0xb0, 0x00, 0xa0, 0xab, 0x50, 0x8e, 0x9c, 0x21, 0x0d, 0x23, 0x6b, 0xe8, 0xd7, 0x73, 0x5b, 0xd2,
+	0x4e, 0x0e, 0x9f, 0x19, 0xb6, 0x7f, 0x90, 0x60, 0x3d, 0xa0, 0xd1, 0x28, 0x70, 0x49, 0x40, 0x1f,
+	0x8f, 0x68, 0x18, 0x2d, 0x75, 0x7d, 0x05, 0x0a, 0x3d, 0xa7, 0x4f, 0xc3, 0x88, 0x97, 0x5a, 0x19,
+	0xc7, 0x2b, 0xf4, 0xee, 0x84, 0x12, 0x73, 0x52, 0xb9, 0xbd, 0x21, 0xca, 0x76, 0x2e, 0xa8, 0x85,
+	0xbc, 0x94, 0x34, 0xaf, 0x6f, 0x65, 0xa8, 0xf8, 0x01, 0x25, 0x7e, 0x40, 0x7d, 0x2b, 0xa0, 0x19,
+	0x74, 0x10, 0x28, 0xa7, 0x0e, 0x7d, 0xc2, 0xc9, 0x28, 0x98, 0xff, 0x46, 0x37, 0xe0, 0x52, 0xc8,
+	0xa2, 0x71, 0x6d, 0x4a, 0xdc, 0xd1, 0xf0, 0x90, 0x06, 0x9c, 0x94, 0x82, 0x6b, 0x13, 0xb3, 0xc1,
+	0xad, 0xe8, 0x0d, 0xa8, 0x72, 0x36, 0x24, 0x8e, 0x48, 0xe1, 0x11, 0x55, 0xb8, 0xad, 0x25, 0xc2,
+	0x6a, 0x2d, 0x48, 0x4c, 0x3d, 0x9f, 0x1d, 0xa2, 0x9a, 0x30, 0xdd, 0xe1, 0xd1, 0xbe, 0x0e, 0x10,
+	0x50, 0xff, 0xc4, 0xb1, 0x2d, 0xe2, 0xf4, 0xea, 0x05, 0x4e, 0xa6, 0x1c, 0x5b, 0xda, 0xbd, 0x59,
+	0x31, 0x8a, 0x69, 0x31, 0x7e, 0x97, 0xa0, 0xf8, 0xea, 0x85, 0x98, 0x0d, 0x21, 0x9f, 0x19, 0x42,
+	0x21, 0x1d, 0xc2, 0x6f, 0x12, 0x14, 0x6c, 0x6f, 0x38, 0x74, 0xa2, 0xff, 0x6a, 0x04, 0x3f, 0x4a,
+	0x00, 0xf6, 0x80, 0xda, 0xc7, 0xbe, 0xe7, 0xb8, 0x59, 0x51, 0x2c, 0x60, 0x2c, 0x2f, 0x64, 0x3c,
+	0x4b, 0x27, 0x97, 0xa6, 0x53, 0x03, 0xd9, 0xe9, 0xc5, 0x61, 0xc8, 0x4e, 0x8a, 0x5e, 0x3e, 0x4d,
+	0xef, 0x8f, 0x1c, 0x54, 0x98, 0x60, 0xc4, 0x1e, 0x58, 0x6e, 0xff, 0x59, 0xeb, 0xa4, 0x0a, 0xd2,
+	0x20, 0x66, 0x20, 0x0d, 0xd0, 0x0d, 0x50, 0xec, 0x90, 0x32, 0x09, 0xd9, 0xdd, 0xb2, 0x26, 0xaa,
+	0x3c, 0x71, 0x78, 0x43, 0xc3, 0x1c, 0x80, 0x76, 0x40, 0xf1, 0x19, 0x30, 0xcf, 0x81, 0xeb, 0xf3,
+	0xc0, 0xee, 0x3e, 0xe6, 0x08, 0x86, 0x7c, 0xcc, 0x90, 0x85, 0x2c, 0x24, 0x43, 0xa4, 0x54, 0x29,
+	0x2e, 0x48, 0x52, 0xe8, 0xf4, 0x5d, 0x2b, 0x1a, 0x05, 0xb4, 0x5e, 0xe2, 0x91, 0x9d, 0x19, 0x66,
+	0x35, 0x2a, 0xa7, 0x34, 0xda, 0xfc, 0x04, 0x24, 0x6d, 0x51, 0x7a, 0xa4, 0x85, 0xe9, 0x11, 0xfa,
+	0xe7, 0x26, 0xfa, 0x6f, 0xf6, 0x40, 0xee, 0xee, 0x9f, 0xff, 0xf3, 0x74, 0x3d, 0xca, 0xf3, 0xf5,
+	0x38, 0xc9, 0x44, 0xee, 0x2c, 0x13, 0xdb, 0x5f, 0xca, 0x50, 0x72, 0xe9, 0x13, 0xc2, 0xd3, 0xf2,
+	0x6c, 0x49, 0x7c, 0x1b, 0x94, 0x53, 0xa6, 0x71, 0x8e, 0x6b, 0xbc, 0x3a, 0xa7, 0x31, 0xe6, 0xdb,
+	0xe8, 0x1d, 0x50, 0x9e, 0x9e, 0x65, 0xb7, 0x2e, 0x60, 0x13, 0x97, 0x8d, 0x2f, 0x42, 0x1a, 0xe9,
+	0x6e, 0x14, 0x8c, 0x31, 0x47, 0x5d, 0xa8, 0x67, 0x36, 0xdf, 0x87, 0xf2, 0xf4, 0x3c, 0xa4, 0x42,
+	0xee, 0x98, 0x8e, 0x63, 0xb5, 0xd8, 0x4f, 0xb4, 0x0e, 0xf9, 0x53, 0xeb, 0x64, 0x44, 0x63, 0x6d,
+	0xc4, 0xe2, 0x23, 0xf9, 0x03, 0x69, 0xfb, 0x1b, 0x09, 0x6a, 0x47, 0x8e, 0xeb, 0x84, 0x03, 0x72,
+	0x6a, 0x63, 0xca, 0x88, 0xfc, 0xb3, 0x16, 0xb3, 0x14, 0xe5, 0x34, 0xc5, 0x05, 0x2a, 0x8b, 0x7a,
+	0x57, 0x26, 0xf5, 0x9e, 0xdd, 0x59, 0xdf, 0x49, 0xb0, 0x76, 0x44, 0x59, 0x26, 0xcf, 0xfb, 0x42,
+	0x9e, 0x23, 0xf5, 0x4b, 0x7a, 0x3f, 0xfb, 0x71, 0xec, 0x43, 0xcd, 0xa5, 0x7d, 0x2f, 0x72, 0xac,
+	0x88, 0x2e, 0x2b, 0x94, 0x25, 0xe2, 0x64, 0x4f, 0x07, 0xbf, 0x48, 0xb0, 0x31, 0xeb, 0x89, 0x04,
+	0x34, 0xf4, 0xd9, 0x24, 0xfa, 0xc2, 0xf3, 0xe1, 0x4e, 0xf2, 0xe1, 0xb2, 0xa3, 0x03, 0x6f, 0x14,
+	0xd1, 0x20, 0xe4, 0xd9, 0xa8, 0xe2, 0xc9, 0x72, 0xc9, 0x15, 0x7d, 0x04, 0x2b, 0x01, 0xb5, 0xbd,
+	0x53, 0x1a, 0x8c, 0x89, 0xe3, 0x3a, 0xd1, 0xbf, 0x25, 0xcb, 0xcf, 0x32, 0xac, 0x4e, 0x1d, 0x5d,
+	0x5c, 0x90, 0x8f, 0xa1, 0x60, 0x0f, 0x8e, 0xfd, 0x28, 0x8c, 0x3b, 0xf7, 0x4d, 0xd1, 0x92, 0x73,
+	0x1e, 0x1a, 0x1a, 0x47, 0x89, 0xee, 0x8c, 0x3f, 0x41, 0x5b, 0x50, 0x39, 0x3c, 0xf1, 0xec, 0xe3,
+	0x3d, 0xea, 0xf4, 0x07, 0x51, 0xac, 0x61, 0xd2, 0x84, 0xde, 0x82, 0x95, 0x13, 0x2b, 0x8c, 0xee,
+	0x70, 0x93, 0x15, 0x8a, 0xe1, 0xa5, 0x8c, 0x67, 0x8d, 0x4b, 0x1a, 0xf9, 0x43, 0xa8, 0x24, 0x9c,
+	0x3f, 0x53, 0x2b, 0x3f, 0x4d, 0x68, 0xc5, 0xdb, 0xa8, 0xbb, 0xaf, 0x3d, 0xbf, 0x56, 0xb3, 0x0f,
+	0x55, 0x76, 0x9b, 0xfc, 0x29, 0x01, 0x4a, 0x88, 0xc8, 0x86, 0xdc, 0x0b, 0xf9, 0xbe, 0x05, 0xc0,
+	0xa6, 0xb0, 0x80, 0x92, 0xb9, 0x5b, 0x36, 0x31, 0xaa, 0xe2, 0xb2, 0x00, 0x1d, 0xd0, 0x08, 0xfd,
+	0x1f, 0x4a, 0x02, 0xee, 0x8a, 0xeb, 0xb6, 0x84, 0x8b, 0x7c, 0xc7, 0xe5, 0x5b, 0xf6, 0x30, 0x12,
+	0x5b, 0x79, 0xb1, 0x65, 0x0f, 0x23, 0xbe, 0x95, 0x5d, 0xe4, 0x4d, 0x50, 0xba, 0xd9, 0xf7, 0xe1,
+	0x75, 0xc8, 0x31, 0x82, 0xe2, 0x2f, 0x83, 0x95, 0x29, 0x41, 0x4e, 0x8e, 0xed, 0x6c, 0x7f, 0x0a,
+	0x8a, 0x96, 0x7d, 0xc4, 0xb5, 0xe4, 0x11, 0xd5, 0xc9, 0x1f, 0xa0, 0x6c, 0x7c, 0x13, 0x27, 0x84,
+	0x50, 0xb2, 0x7a, 0x3d, 0xe2, 0x7a, 0xbd, 0x0b, 0xd4, 0x7d, 0x5c, 0x45, 0xe2, 0x85, 0xe5, 0x55,
+	0x94, 0x9d, 0xcf, 0xef, 0x25, 0x28, 0xf5, 0xe8, 0xc9, 0x0b, 0xf7, 0x7a, 0x1d, 0x2a, 0xe2, 0x7e,
+	0x21, 0x03, 0xd6, 0x1e, 0x62, 0xe2, 0x02, 0x61, 0x9a, 0xef, 0x8d, 0xb9, 0xf7, 0xe1, 0x14, 0x2a,
+	0x01, 0xb5, 0x7a, 0x63, 0x72, 0xe4, 0x05, 0xc4, 0x7d, 0x79, 0x72, 0xfc, 0x25, 0x43, 0xcd, 0xea,
+	0x07, 0x94, 0x92, 0x91, 0xdf, 0x63, 0xf7, 0xb3, 0x9b, 0x3d, 0x2f, 0x1c, 0x9d, 0x58, 0x7d, 0xee,
+	0xb5, 0x84, 0xf9, 0xef, 0x65, 0x6f, 0x50, 0xcc, 0x47, 0x39, 0xe3, 0x73, 0x0d, 0x12, 0xaa, 0xc4,
+	0xd7, 0x48, 0x52, 0x27, 0x7e, 0x8b, 0x8b, 0x82, 0x95, 0xce, 0x46, 0x94, 0x62, 0xfa, 0xdd, 0x2d,
+	0xa5, 0xe7, 0xcc, 0xf2, 0x79, 0xe7, 0x4c, 0x38, 0xf7, 0x9c, 0x59, 0x59, 0x3a, 0x67, 0xce, 0x88,
+	0x5b, 0x4d, 0x8b, 0xfb, 0xab, 0x0c, 0xa5, 0x97, 0x25, 0x2b, 0x97, 0x2d, 0x9f, 0x96, 0xad, 0x90,
+	0x90, 0x6d, 0x07, 0x14, 0x8b, 0x45, 0x55, 0x4c, 0x46, 0x35, 0x9b, 0x7b, 0xcc, 0x11, 0xd3, 0xe1,
+	0xae, 0x94, 0x1c, 0xee, 0x26, 0x98, 0xb9, 0xe1, 0x2e, 0x7b, 0x5c, 0x7e, 0xee, 0xe9, 0xed, 0x6b,
+	0x09, 0x56, 0xe2, 0xe9, 0x4d, 0xb8, 0x7e, 0x65, 0xc3, 0xdb, 0x61, 0x81, 0xff, 0x9f, 0xed, 0xbd,
+	0xbf, 0x03, 0x00, 0x00, 0xff, 0xff, 0x6b, 0x89, 0x70, 0x7e, 0xa8, 0x13, 0x00, 0x00,
 }

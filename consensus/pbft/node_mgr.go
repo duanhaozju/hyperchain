@@ -59,6 +59,8 @@ func (pbft *pbftImpl) dispatchNodeMgrMsg(e events.Event) events.Event {
 		return pbft.recvUpdateN(et)
 	case *AgreeUpdateN:
 		return pbft.recvAgreeUpdateN(et)
+	case *FinishUpdate:
+		return pbft.recvFinishUpdate(et)
 	}
 	return nil
 }
@@ -888,7 +890,7 @@ func (pbft *pbftImpl) sendFinishUpdate() events.Event {
 	finish := &FinishVcReset{
 		ReplicaId: pbft.id,
 		View: pbft.view,
-		LowH: pbft.h,
+		H: pbft.h,
 	}
 
 	payload, err := proto.Marshal(finish)
@@ -911,7 +913,7 @@ func (pbft *pbftImpl) sendFinishUpdate() events.Event {
 	}
 }
 
-func (pbft *pbftImpl) recvFinishUpdate(finish *FinishVcReset) events.Event {
+func (pbft *pbftImpl) recvFinishUpdate(finish *FinishUpdate) events.Event {
 	if pbft.primary(pbft.view) != pbft.id {
 		pbft.logger.Warningf("Replica %d is not primary, but received others FinishUpdate", pbft.id)
 		return nil

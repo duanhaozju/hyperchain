@@ -286,7 +286,7 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 	timeout := pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
 	if pbft.primary(pbft.view) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
-		timeout += pbft.pbftTimerMgr.requestTimeout
+		timeout = 3 * timeout + pbft.pbftTimerMgr.requestTimeout
 	}
 
 	event := &LocalEvent{
@@ -407,4 +407,23 @@ func (pbft *pbftImpl) isCommitLegal(commit *Commit) bool  {
 		return false
 	}
 	return true
+}
+
+func (pbft *pbftImpl) parseCertStore() {
+	tmpStore := make(map[msgID]*msgCert)
+	for idx := range pbft.storeMgr.certStore {
+		cert := pbft.storeMgr.getCert(idx.v, idx.n)
+		if cert.prePrepare != nil {
+			cert.prePrepare.View = pbft.view
+		}
+		for prep := range cert.prepare {
+			prep.View = pbft.view
+		}
+		for cmt := range cert.commit {
+			cmt.View = pbft.view
+		}
+		idx.v = pbft.view
+		tmpStore[msgID{pbft.view, idx.n}] = cert
+	}
+	pbft.storeMgr.certStore = tmpStore
 }

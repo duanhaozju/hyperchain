@@ -94,10 +94,9 @@ type uidx struct {
 	key  string
 }
 
-type updateCert struct {
+type certSet struct {
 	digest      string
 	sentPrepare bool
-	validated   bool
 	sentCommit  bool
 	sentExecute bool
 }

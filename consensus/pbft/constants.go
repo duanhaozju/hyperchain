@@ -44,6 +44,8 @@ const (
 	PBFT_NULLREQUEST_TIMEOUT = "timeout.nullrequest"
 	PBFT_FIRST_REQUEST_TIMEOUT = "timeout.firstrequest"
 
+	CLEAN_VIEW_CHANGE_TIMEOUT = "timeout.cleanviewchange"
+
 	PBFT_ADD_NODE_TIMEOUT = "timeout.addnode"
 	PBFT_DEL_NODE_TIMEOUT = "timeout.delnode"
 	PBFT_UPDATE_TIMEOUT = "timeout.updateTimeout"

@@ -50,6 +50,7 @@ func (pbft *pbftImpl) initMsgEventMap()  {
 	eventCreators[ConsensusMessage_UPDATE_N] =  func() interface{} {return &UpdateN{}}
 	eventCreators[ConsensusMessage_AGREE_UPDATE_N] =  func() interface{} {return &AgreeUpdateN{}}
 	eventCreators[ConsensusMessage_FINISH_VCRESET] =  func() interface{} {return &FinishVcReset{}}
+	eventCreators[ConsensusMessage_FINISH_UPDATE] = func() interface{} {return &FinishUpdate{}}
 }
 
 //initStatus configs basic status when starts up

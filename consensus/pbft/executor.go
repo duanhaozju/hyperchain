@@ -97,6 +97,8 @@ func (pbft *pbftImpl) dispatchMsgToService(e events.Event) int  {
 		return NODE_MGR_SERVICE
 	case *AgreeUpdateN:
 		return NODE_MGR_SERVICE
+	case *FinishUpdate:
+		return NODE_MGR_SERVICE
 	default:
 		return NOT_SUPPORT_SERVICE
 

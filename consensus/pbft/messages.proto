@@ -44,52 +44,59 @@ message consensus_message {
         READY_FOR_N = 18;
         AGREE_UPDATE_N = 19;
         UPDATE_N = 20;
+        FINISH_UPDATE = 21;
     }
     Type type = 1;
     bytes payload = 2;
 }
 
 message transaction_batch {
-    repeated types.Transaction batch = 1;
-    int64 timestamp = 2;
+    bytes version = 1;
+    repeated types.Transaction batch = 2;
+    int64 timestamp = 3;
 }
 
 message return_request_batch {
-    transaction_batch batch = 1;
+    bytes version = 1;
     string digest = 2;
+    transaction_batch batch = 3;
+    int64 timestamp = 4;
 }
 
 message pre_prepare {
-    uint64 view = 1;
-    uint64 sequence_number = 2;
-    string batch_digest = 3;
-    transaction_batch transaction_batch = 4;
-    uint64 replica_id = 5;
+    bytes version = 1;
+    uint64 view = 2;
+    uint64 sequence_number = 3;
+    string batch_digest = 4;
+    transaction_batch transaction_batch = 5;
+    uint64 replica_id = 6;
+    int64 timestamp = 7;
 }
 
 message prepare {
-    uint64 view = 1;
-    uint64 sequence_number = 2;
-    string batch_digest = 3;
-    uint64 replica_id = 4;
+    bytes version = 1;
+    uint64 view = 2;
+    uint64 sequence_number = 3;
+    string batch_digest = 4;
+    uint64 replica_id = 5;
+    int64 timestamp = 6;
 }
 
 message commit {
-    uint64 view = 1;
-    uint64 sequence_number = 2;
-    string batch_digest = 3;
-    uint64 replica_id = 4;
-}
-
-message block_info {
-    uint64 block_number = 1;
-    bytes block_hash = 2;
+    bytes version = 1;
+    uint64 view = 2;
+    uint64 sequence_number = 3;
+    string batch_digest = 4;
+    uint64 replica_id = 5;
+    int64 timestamp = 6;
 }
 
 message checkpoint {
-    uint64 sequence_number = 1;
-    uint64 replica_id = 2;
-    string id = 3;
+    bytes version = 1;
+    uint64 sequence_number = 2;
+    uint64 replica_id = 3;
+    string id = 4;
+    int64 timestamp = 5;
 }
 
 message view_change {
@@ -104,110 +111,150 @@ message view_change {
         uint64 view = 3;
     }
 
-    uint64 view = 1;
-    uint64 h = 2;
-    repeated C cset = 3;
-    repeated PQ pset = 4;
-    repeated PQ qset = 5;
-    uint64 replica_id = 6;
-    bytes signature = 7;
+    bytes version = 1;
+    uint64 view = 2;
+    uint64 h = 3;
+    repeated C cset = 4;
+    repeated PQ pset = 5;
+    repeated PQ qset = 6;
+    uint64 replica_id = 7;
+    bytes signature = 8;
+    int64 timestamp = 9;
 }
 
 message new_view {
-    uint64 view = 1;
-    repeated view_change vset = 2;
-    map<uint64, string> xset = 3;
-    uint64 replica_id = 4;
+    bytes version = 1;
+    uint64 view = 2;
+    repeated view_change vset = 3;
+    map<uint64, string> xset = 4;
+    uint64 replica_id = 5;
+    int64 timestamp = 6;
 }
 
 message finish_vcReset {
-    uint64 replica_id = 1;
-    uint64 view = 2;
-    uint64 low_h = 3;
+    bytes version = 1;
+    uint64 replica_id = 2;
+    uint64 view = 3;
+    uint64 h = 4;
+    int64 timestamp = 5;
 }
 
 message fetch_request_batch {
-    string batch_digest = 1;
-    uint64 replica_id = 2;
+    bytes version = 1;
+    string batch_digest = 2;
+    uint64 replica_id = 3;
+    int64 timestamp = 4;
 }
 
 message negotiate_view {
-    uint64 replica_id = 1;
+    bytes version = 1;
+    uint64 replica_id = 2;
+    int64 timestamp = 3;
 }
 
 message negotiate_view_response {
-    uint64 replica_id = 1;
-    uint64 view = 2;
-    uint64 n = 3;
-    bytes routers = 4;
+    bytes version = 1;
+    uint64 replica_id = 2;
+    uint64 view = 3;
+    uint64 n = 4;
+    bytes routers = 5;
+    int64 timestamp = 6;
 }
 
 message recovery_init {
-    uint64 replica_id = 1;
+    bytes version = 1;
+    uint64 replica_id = 2;
+    int64 timestamp = 3;
 }
 
 message recovery_response {
-    uint64               replica_id    = 1;
-    map<uint64, string>  chkpts        = 2;
-    uint64               blockHeight      = 3;
-    string               lastBlockHash = 4;
+    bytes version = 1;
+    uint64               replica_id    = 2;
+    map<uint64, string>  chkpts        = 3;
+    uint64               blockHeight   = 4;
+    string               lastBlockHash = 5;
+    int64 timestamp = 6;
 }
 
 message recovery_fetchPQC {
-    uint64 replica_id = 1;
-    uint64 h          = 2;
+    bytes version = 1;
+    uint64 replica_id = 2;
+    uint64 h          = 3;
+    int64 timestamp = 4;
 }
 
 message recovery_returnPQC {
-    uint64                  replica_id = 1;
-    repeated pre_prepare    prepre_set = 2;
-    repeated bool           pre_sent   = 3;
-    repeated bool           cmt_sent   = 4;
+    bytes version = 1;
+    uint64                  replica_id = 2;
+    repeated pre_prepare    prepre_set = 3;
+    repeated bool           pre_sent   = 4;
+    repeated bool           cmt_sent   = 5;
+    int64 timestamp = 6;
 }
 
 message Pset {
-    repeated prepare set = 1;
+    bytes version = 1;
+    repeated prepare set = 2;
 }
 
 message Cset {
-    repeated commit set = 1;
+    bytes version = 1;
+    repeated commit set = 2;
 }
 
 message add_node {
-    uint64 replica_id = 1;
-    string key = 2;
+    bytes version = 1;
+    uint64 replica_id = 2;
+    string key = 3;
+    int64 timestamp = 4;
 }
 
 message del_node {
-    uint64 replica_id = 1;
-    string key = 2;
-    string router_hash = 3;
+    bytes version = 1;
+    uint64 replica_id = 2;
+    string key = 3;
+    string router_hash = 4;
+    int64 timestamp = 5;
 }
 
 message ready_for_n {
+    bytes version = 1;
     uint64 replica_id = 2;
     string key = 3;
+    int64 timestamp = 4;
 }
 
 message agree_update_n {
-    bool flag = 1;
-    uint64 replica_id = 2;
-    string key = 3;
-    string routerHash = 4;
-    int64 n = 5;
-    uint64 view = 6;
-    uint64 h = 7;
-    repeated view_change.C cset = 8;
-    repeated view_change.PQ pset = 9;
-    repeated view_change.PQ qset = 10;
+    bytes version = 1;
+    bool flag = 2;
+    uint64 replica_id = 3;
+    string key = 4;
+    string routerHash = 5;
+    int64 n = 6;
+    uint64 view = 7;
+    uint64 h = 8;
+    repeated view_change.C cset = 9;
+    repeated view_change.PQ pset = 10;
+    repeated view_change.PQ qset = 11;
+    int64 timestamp = 12;
 }
 
 message update_n {
-    bool flag = 1;
+    bytes version = 1;
+    bool flag = 2;
+    uint64 replica_id = 3;
+    string key = 4;
+    int64 n = 5;
+    uint64 view = 6;
+    repeated agree_update_n aset = 7;
+    map<uint64, string> xset = 8;
+    int64 timestamp = 9;
+}
+
+message finish_update {
+    bytes version = 1;
     uint64 replica_id = 2;
-    string key = 3;
-    int64 n = 4;
-    uint64 view = 5;
-    repeated agree_update_n aset = 6;
-    map<uint64, string> xset = 7;
+    uint64 view = 3;
+    uint64 h = 4;
+    int64 timestamp = 5;
 }
