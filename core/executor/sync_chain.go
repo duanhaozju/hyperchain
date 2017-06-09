@@ -50,7 +50,14 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 			}
 		}
 	}
+
 	executor.syncInitialize(ev)
+
+	if executor.status.syncCtx.UpdateGenesis && !executor.IsSyncWsEable() {
+		executor.logger.Noticef("World state transition is not support, while there is no required blocks over the blockchain network. system exit")
+		os.Exit(1)
+	}
+
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
 	go executor.syncChainResendBackend()
 }
