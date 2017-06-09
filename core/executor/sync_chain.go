@@ -110,7 +110,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 				executor.status.syncFlag.Oracle.FeedBack(true)
 				executor.SendSyncRequest(prev, next)
 			} else {
-				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
+				executor.logger.Noticef("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
 			}
 		}
 		executor.processSyncBlocks()
@@ -206,6 +206,10 @@ func (executor *Executor) processSyncBlocks() {
 		}
 		// check the latest block in local's correctness
 		latestBlk, _ := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
+
+		executor.logger.Noticef("compare latest block %d hash, correct %s, current %s",
+			latestBlk.Number, common.Bytes2Hex(lastBlk.ParentHash), common.Bytes2Hex(latestBlk.BlockHash))
+
 		if bytes.Compare(lastBlk.ParentHash, latestBlk.BlockHash) == 0  {
 			executor.waitUtilSyncAvailable()
 			defer executor.syncDone()
@@ -247,7 +251,11 @@ func (executor *Executor) processSyncBlocks() {
 				return
 			}
 			executor.logger.Noticef("cutdown block #%d success", latestBlk.Number)
-			executor.SendSyncRequestForSingle(lastBlk.Number - 1)
+
+			prev := executor.getLatestSyncDownstream()
+			next := executor.calcuDownstream()
+			executor.status.syncFlag.Oracle.FeedBack(true)
+			executor.SendSyncRequest(prev, next)
 		}
 	}
 }
