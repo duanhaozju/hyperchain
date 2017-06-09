@@ -129,9 +129,9 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 		EvmTime:     time.Now().UnixNano(),
 	}
 	newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
-	//copy(newBlock.Transactions, record.ValidTxs)
+	copy(newBlock.Transactions, record.ValidTxs)
 	// TODO: why copy it?
-	newBlock.Transactions = record.ValidTxs
+	//newBlock.Transactions = record.ValidTxs
 	newBlock.BlockHash = newBlock.Hash().Bytes()
 	return newBlock
 }
