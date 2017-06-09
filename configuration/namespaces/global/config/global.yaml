@@ -79,6 +79,7 @@ global:
         sync_chain:
             sync_batch_size: 10
             sync_resend_interval: 10s
+            sync_ws_enable: false
         sync_replica:
             interval : 500s
             enable   : false
@@ -86,7 +87,7 @@ global:
             manifest: "./namespaces/global/data/snapshot_manifest.json"
             archiveMeta: "./namespaces/global/data/archive_meta.json"
             force_consistency: false
-            threshold: 100
+            threshold: 0
         buckettree:
             state:
                 size: 1000003
