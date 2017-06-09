@@ -18,6 +18,7 @@ import (
 	"hyperchain/tree/bucket"
 	"sync/atomic"
 	"github.com/op/go-logging"
+	cm "hyperchain/core/common"
 )
 
 const (
@@ -1170,4 +1171,79 @@ func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
 		return common.Hash{}, err
 	}
 	return common.BytesToHash(hash), nil
+}
+
+
+func (s *StateDB) Apply(db db.Database, batch db.Batch, expect common.Hash) error {
+	entryPrefixes := cm.RetrieveSnapshotFileds()
+	for _, entry := range entryPrefixes {
+		if entry == "-account" {
+			iter := db.NewIterator([]byte(entry))
+			for iter.Next() {
+				blob, success := SplitCompositeAccountKey(iter.Key())
+				if !success {
+					continue
+				}
+				var account Account
+				err := Unmarshal(iter.Value(), &account)
+				if err != nil {
+					continue
+				}
+				addr := common.BytesToAddress(blob)
+				obj := newObject(s, addr, account, s.MarkStateObjectDirty, true, SetupBucketConfig(s.GetBucketSize(STATEOBJECT), s.GetBucketLevelGroup(STATEOBJECT), s.GetBucketCacheSize(STATEOBJECT)), s.logger)
+				s.setStateObject(obj)
+				obj.onDirty(addr)
+			}
+			iter.Release()
+		} else if entry == "-storage" {
+			iter := db.NewIterator([]byte(entry))
+			for iter.Next() {
+				blob, success := RetrieveAddrFromStorageKey(iter.Key())
+				if !success {
+					continue
+				}
+				addr := common.BytesToAddress(blob)
+				blob, success = SplitCompositeStorageKey(addr.Bytes(), iter.Key())
+				if !success {
+					continue
+				}
+				key := common.BytesToHash(blob)
+				value := common.BytesToHash(iter.Value())
+				s.SetState(addr, key, value, 0)
+			}
+			iter.Release()
+		} else if entry == "-code" {
+			iter := db.NewIterator([]byte(entry))
+			for iter.Next() {
+				blob, success := RetrieveAddrFromCodeHash(iter.Key())
+				if !success {
+					continue
+				}
+				addr := common.BytesToAddress(blob)
+				blob, success = SplitCompositeCodeHash(addr.Bytes(), iter.Key())
+				if !success {
+					continue
+				}
+				codeHash := blob
+				obj := s.GetStateObject(addr)
+				if obj == nil {
+					continue
+				}
+				if bytes.Compare(codeHash, obj.CodeHash()) != 0 {
+					continue
+				}
+				s.SetCode(addr, iter.Value())
+			}
+			iter.Release()
+		}
+	}
+
+	tmpHash, err := s.commit(batch, batch, deleteEmptyObjects)
+	if err != nil {
+		return err
+	}
+	if tmpHash != expect {
+		return errors.New("different hash compared with recorded")
+	}
+	return nil
 }

@@ -142,6 +142,8 @@ type Database interface {
 
 	RecomputeCryptoHash() (common.Hash, error)
 	ResetToTarget(uint64, common.Hash)
+
+	Apply(db.Database, db.Batch, common.Hash) error
 }
 
 // Account represents a contract or basic ethereum account.

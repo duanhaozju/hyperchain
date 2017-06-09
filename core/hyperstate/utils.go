@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"strconv"
 	"time"
+	"hyperchain/common"
 )
 
 const (
@@ -42,6 +43,17 @@ func SplitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) {
 		return key[prefixLen:], true
+	} else {
+		return nil, false
+	}
+}
+
+func RetrieveAddrFromStorageKey(key []byte) ([]byte, bool) {
+	// Address is const 20byte length
+	prefix := []byte(storageIdentifier)
+	prefixLen := len(prefix)
+	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen + common.AddressLength {
+		return key[prefixLen: prefixLen + common.AddressLength], true
 	} else {
 		return nil, false
 	}
@@ -93,6 +105,27 @@ func GetArchieveDate(address []byte, key []byte) ([]byte, bool) {
 func CompositeCodeHash(address []byte, codeHash []byte) []byte {
 	ret := append([]byte(codeIdentifier), address...)
 	return append(ret, codeHash...)
+}
+
+func SplitCompositeCodeHash(address []byte, key []byte) ([]byte, bool) {
+	prefix := append([]byte(codeIdentifier), address...)
+	prefixLen := len(prefix)
+	if bytes.HasPrefix(key, prefix) && len(key) >= prefixLen {
+		return key[prefixLen:], true
+	} else {
+		return nil, false
+	}
+}
+
+func RetrieveAddrFromCodeHash(key []byte) ([]byte, bool) {
+	// Address is const 20byte length
+	prefix := []byte(codeIdentifier)
+	prefixLen := len(prefix)
+	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen + common.AddressLength {
+		return key[prefixLen: prefixLen + common.AddressLength], true
+	} else {
+		return nil, false
+	}
 }
 
 /*

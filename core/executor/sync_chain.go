@@ -18,7 +18,6 @@ import (
 	"errors"
 	cmd "os/exec"
 	"path/filepath"
-	cm "hyperchain/core/common"
 )
 
 
@@ -81,7 +80,6 @@ func (executor *Executor) syncChainResendBackend() {
 					executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.status.syncFlag.SyncDemandBlockNum)
 					executor.status.syncFlag.Oracle.FeedBack(false)
 					executor.status.syncCtx.SetCurrentPeer(executor.status.syncFlag.Oracle.SelectPeer())
-					// TODO change peer may triggle context switch
 					executor.SendSyncRequest(executor.status.syncFlag.SyncDemandBlockNum, down)
 					executor.recordSyncReqArgs(curUp, curDown)
 				} else {
@@ -232,7 +230,6 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 	}
 
 	store := func(payload []byte, packetId uint64, filterId string) error {
-		// TODO add checksum
 		// GRPC will prevent packet to be modified
 		executor.logger.Noticef("receive ws (#%s) fragment (#%d), size (#%d)", filterId, packetId, len(payload))
 		fname := fmt.Sprintf("ws_%d.tar.gz", packetId)
@@ -405,7 +402,7 @@ func (executor *Executor) processSyncBlocks() {
 			} else {
 				// set temporary block number as block number since block number is already here
 				executor.initDemand(blk.Number)
-				executor.stateTranstion(blk.Number + 1, common.BytesToHash(blk.MerkleRoot))
+				executor.stateTransition(blk.Number + 1, common.BytesToHash(blk.MerkleRoot))
 				err, result := executor.ApplyBlock(blk, blk.Number)
 				if err != nil || executor.assertApplyResult(blk, result) == false {
 					executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
@@ -597,26 +594,19 @@ func (executor *Executor) applyWorldState(fPath string, filterId string, root co
 	}
 	defer wsDb.Close()
 
-	// TODO just for test
-	// TODO ATOMIC ASSURANCE
 	writeBatch := executor.db.NewBatch()
-	entries := cm.RetrieveSnapshotFileds()
-	for _, entry := range entries {
-		iter := wsDb.NewIterator([]byte(entry))
-		for iter.Next() {
-			writeBatch.Put(iter.Key(), iter.Value())
-		}
-		iter.Release()
+
+	if err := executor.statedb.Apply(wsDb, writeBatch, root); err != nil {
+		return err
 	}
 
-	writeBatch.Write()
-
-	hash, err := executor.statedb.RecomputeCryptoHash()
-	if err != nil || hash != root {
-		return ApplyWsErr
+	if err := edb.UpdateGenesisTag(executor.namespace, genesis, writeBatch, false, false); err != nil {
+		return err
 	}
 
-	edb.UpdateGenesisTag(executor.namespace, genesis, writeBatch, true, true)
+	if err := writeBatch.Write(); err != nil {
+		return err
+	}
 
 	executor.logger.Noticef("apply ws pieces (%s) success", filterId)
 	return nil
