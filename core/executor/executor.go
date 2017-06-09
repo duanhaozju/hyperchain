@@ -49,6 +49,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.initDb()
+	executor.MockTest_DirtyBlocks()
 	return executor
 }
 

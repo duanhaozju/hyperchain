@@ -205,7 +205,8 @@ func (executor *Executor) processSyncBlocks() {
 			return
 		}
 		// check the latest block in local's correctness
-		if bytes.Compare(lastBlk.ParentHash, edb.GetLatestBlockHash(executor.namespace)) == 0  {
+		latestBlk, _ := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
+		if bytes.Compare(lastBlk.ParentHash, latestBlk.BlockHash) == 0  {
 			executor.waitUtilSyncAvailable()
 			defer executor.syncDone()
 			// execute all received block at one time
@@ -245,6 +246,7 @@ func (executor *Executor) processSyncBlocks() {
 				executor.reject()
 				return
 			}
+			executor.logger.Noticef("cutdown block #%d success", latestBlk.Number)
 			executor.SendSyncRequestForSingle(lastBlk.Number - 1)
 		}
 	}
