@@ -60,7 +60,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 	if err := executor.initDb(); err != nil {
 		return nil, err
 	}
-	executor.MockTest_DirtyBlocks()
+	// executor.MockTest_DirtyBlocks()
 	return executor, nil
 }
 

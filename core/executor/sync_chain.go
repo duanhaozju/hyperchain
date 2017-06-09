@@ -272,7 +272,7 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 		if err != nil {
 			return
 		}
-		if err := executor.applyWorldState(path.Join(executor.status.syncCtx.GetWsHome(), "ws.tar.gz"), ws.Ctx.FilterId, common.BytesToHash(newGenesis.MerkleRoot)); err != nil {
+		if err := executor.applyWorldState(path.Join(executor.status.syncCtx.GetWsHome(), "ws.tar.gz"), ws.Ctx.FilterId, common.BytesToHash(newGenesis.MerkleRoot), newGenesis.Number); err != nil {
 			executor.logger.Errorf("apply ws failed, err detail %s", err.Error())
 			return
 		}
@@ -575,7 +575,7 @@ func (executor *Executor) syncInitialize(ev event.ChainSyncReqEvent) {
 	ctx.SetCurrentPeer(firstPeer)
 }
 
-func (executor *Executor) applyWorldState(fPath string, filterId string, root common.Hash) error {
+func (executor *Executor) applyWorldState(fPath string, filterId string, root common.Hash, genesis uint64) error {
 	uncompressCmd := cmd.Command("tar", "-zxvf", fPath, "-C", filepath.Dir(fPath))
 	if err := uncompressCmd.Run(); err != nil {
 		return err
@@ -589,18 +589,24 @@ func (executor *Executor) applyWorldState(fPath string, filterId string, root co
 
 	// TODO just for test
 	// TODO ATOMIC ASSURANCE
+	writeBatch := executor.db.NewBatch()
 	entries := cm.RetrieveSnapshotFileds()
 	for _, entry := range entries {
 		iter := wsDb.NewIterator([]byte(entry))
 		for iter.Next() {
-			executor.db.Put(iter.Key(), iter.Value())
+			writeBatch.Put(iter.Key(), iter.Value())
 		}
 		iter.Release()
 	}
+
+	writeBatch.Write()
+
 	hash, err := executor.statedb.RecomputeCryptoHash()
 	if err != nil || hash != root {
 		return ApplyWsErr
 	}
+
+	edb.UpdateGenesisTag(executor.namespace, genesis, writeBatch, true, true)
 
 	executor.logger.Noticef("apply ws pieces (%s) success", filterId)
 	return nil

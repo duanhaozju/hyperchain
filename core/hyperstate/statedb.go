@@ -868,7 +868,7 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 
 	journalCache := NewJournalCache(self.db, self.logger)
 	for i := currentHeight; i >= targetHeight+1; i -= 1 {
-		self.logger.Criticalf("undo changes for #%d", i)
+		self.logger.Debugf("undo changes for #%d", i)
 		j, err := self.db.Get(CompositeJournalKey(uint64(i)))
 		if err != nil {
 			self.logger.Warningf("get journal in database for #%d failed. make sure #%d doesn't have state change",
@@ -882,7 +882,7 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 		}
 		// undo journal in reverse
 		for j := len(journal.JournalList) - 1; j >= 0; j -= 1 {
-			self.logger.Noticef("journal %s", journal.JournalList[j].String())
+			self.logger.Debugf("journal %s", journal.JournalList[j].String())
 			journal.JournalList[j].Undo(self, journalCache, batch, true)
 			if journal.JournalList[j].GetType() == StorageHashChangeType {
 				tmp := journal.JournalList[j].(*StorageHashChange)
