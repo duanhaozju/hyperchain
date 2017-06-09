@@ -58,10 +58,10 @@ public class HyperchainLedger extends AbstractLedger{
                 .setV(ByteString.copyFrom(value))
                 .build();
 
-        logger.info("the value put in ledger "+ByteString.copyFrom(value));
+        logger.debug("the value put in ledger "+ByteString.copyFrom(value));
         boolean success = ledgerClient.put(kv);
         if(success){
-            logger.info("the value put in cache "+value.toString());
+            logger.debug("the value put in cache "+value.toString());
             cache.put(key,value);
         }
         return success;

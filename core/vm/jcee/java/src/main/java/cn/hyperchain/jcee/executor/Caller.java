@@ -73,7 +73,7 @@ public class Caller {
             logger.error(iae.getMessage());
             Errors.ReturnErrMsg(msg, responseObserver);
         }catch (Exception e) {
-            String msg = "method " + request.getMethod() + " execute failed" + e.getMessage();
+            String msg = "method " + request.getMethod() + " execute failed " + e.getMessage();
             logger.error(msg);
             Errors.ReturnErrMsg(msg, responseObserver);
         }
