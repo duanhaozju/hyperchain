@@ -108,6 +108,7 @@ func CalBlockGenerateAvgTime(namespace string, from, to uint64) (int64, error) {
 
 func CalBlockGPS(namespace string, begin, end int64) (error, string) {
 	height := GetHeightOfChain(namespace)
+	_, tag := GetGenesisTag(namespace)
 
 	var s string
 	s = s + "start time:" + time.Unix(0, begin).Format("2006-01-02 15:04:05") + ";"
@@ -117,7 +118,7 @@ func CalBlockGPS(namespace string, begin, end int64) (error, string) {
 	var blockCounter float64 = 0
 	var txCounter float64 = 0
 	var blockNum uint64 = 0
-	for i := uint64(1); i <= height; i++ {
+	for i := tag; i <= height; i++ {
 		block, err := GetBlockByNumber(namespace, i)
 		if err != nil {
 			logger(namespace).Error("Block not existed", err.Error())
