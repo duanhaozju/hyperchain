@@ -68,10 +68,10 @@ func (oracle *Oracle) SelectPeer() uint64 {
 	var bPeer uint64
 	// select other with higest score
 	if oracle.needUpdateGenesis {
-		// TODO fake selection
-		// TODO ask @Rongjialei fix this
+		// Simple selection, use the peer has lowest genesis as target peer,
+		// target peer will never change during the sync.
 		if len(oracle.ctx.PartPeers) > 0 {
-			bPeer = oracle.ctx.PartPeers[0].Id
+			bPeer = Min(oracle.ctx.PartPeers)
 			oracle.logger.Noticef("select peer %d from `PartPeer` collections", bPeer)
 		} else {
 			return 0
@@ -137,4 +137,16 @@ func (oracle *Oracle) PrintScoreboard() {
 		oracle.logger.Noticef("<====== peer (id #%d), score (#%d) =======>", pId, score)
 	}
 	oracle.logger.Notice("<======     end    =======>")
+}
+
+func Min(peers []PartPeer) uint64 {
+	var genesis uint64 = math.MaxUint64
+	var peer PartPeer
+	for _, p := range peers {
+		if p.Genesis < genesis {
+			genesis = p.Genesis
+			peer = p
+		}
+	}
+	return peer.Id
 }
