@@ -11,6 +11,7 @@ var ManifestNotExistErr   = errors.New("manifest not existed")
 
 type Manifest struct {
 	Height     uint64    `json:"height"`
+	BlockHash  string    `json:"hash"`
 	FilterId   string    `json:"filterId"`
 	MerkleRoot string    `json:"merkleRoot"`
 	Date       string    `json:"date"`

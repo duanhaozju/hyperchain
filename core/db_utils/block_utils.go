@@ -120,6 +120,11 @@ func GetBlockByNumber(namespace string, blockNumber uint64) (*types.Block, error
 	return GetBlock(namespace, hash)
 }
 
+func GetLatestBlock(namespace string) (*types.Block, error) {
+	height := GetHeightOfChain(namespace)
+	return GetBlockByNumber(namespace, height)
+}
+
 // GetBlockByNumberFunc - retrieve block via block number with specific db.
 func GetBlockByNumberFunc(db db.Database, blockNumber uint64) (*types.Block, error) {
 	hash, err := GetBlockHashFunc(db, blockNumber)
@@ -169,9 +174,14 @@ func DeleteBlockByNum(namepspace string, batch db.Batch, blockNum uint64, flush,
 
 // IsGenesisFinish - check whether genesis block has been mined into blockchain
 func IsGenesisFinish(namespace string) bool {
-	_, err := GetBlockByNumber(namespace, 0)
+	logger := common.GetLogger(namespace, "db_utils")
+	err, tag := GetGenesisTag(namespace)
 	if err != nil {
-		logger := common.GetLogger(namespace, "db_utils")
+		return false
+	}
+	logger.Notice("tag", tag)
+	_, err = GetBlockByNumber(namespace, tag)
+	if err != nil {
 		logger.Warning("missing genesis block")
 		return false
 	} else {

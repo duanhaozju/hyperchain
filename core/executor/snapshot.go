@@ -13,6 +13,7 @@ import (
 	"hyperchain/core/hyperstate"
 	"path/filepath"
 	"os"
+	cm "hyperchain/core/common"
 )
 
 
@@ -168,7 +169,7 @@ func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) e
 
 func (registry *SnapshotRegistry) duplicate(filterId string) error {
 	sPath := path.Join("snapshots", registry.snapshotId(filterId))
-	if err := registry.executor.db.MakeSnapshot(sPath, registry.RetrieveSnapshotFileds()); err != nil {
+	if err := registry.executor.db.MakeSnapshot(sPath, cm.RetrieveSnapshotFileds()); err != nil {
 		return err
 	}
 	return nil
@@ -205,6 +206,7 @@ func (registry *SnapshotRegistry) writeMeta(filterId string, number uint64) erro
 	d := time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05")
 	manifest := common.Manifest{
 		Height:      number,
+		BlockHash:   common.Bytes2Hex(blk.BlockHash),
 		FilterId:    filterId,
 		MerkleRoot:  hash.Hex(),
 		Date:        d,
@@ -328,18 +330,5 @@ func (registry *SnapshotRegistry) snapshotId(filterId string) string {
 func (registry *SnapshotRegistry) snapshotPath(base string, filterID string) string {
 	return path.Join(base, "snapshots", filterID)
 }
-
-func (registry *SnapshotRegistry) RetrieveSnapshotFileds() []string {
-	return []string{
-		// world state related
-		"-storage",
-		"-account",
-		"-code",
-		// bucket tree related
-		"-bucket",
-		"BucketNode",
-	}
-}
-
 
 

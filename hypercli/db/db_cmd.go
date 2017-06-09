@@ -4,6 +4,7 @@ import (
 	"github.com/op/go-logging"
 	"github.com/urfave/cli"
 	"os"
+	"hyperchain/core/executor/restore"
 )
 
 var logger *logging.Logger
@@ -37,14 +38,17 @@ func NewDBCMD() []cli.Command {
 }
 
 func recover(c *cli.Context) error {
-	path := c.String("path")
-	if path == "" {
-		logger.Notice("empty file path")
-		os.Exit(1)
-	}
 	return nil
 }
 
 func dump(c *cli.Context) error {
 	return nil
+}
+
+func initialize() {
+	//
+}
+
+func finalize() {
+
 }

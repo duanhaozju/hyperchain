@@ -121,7 +121,7 @@ func (ctx *ChainSyncContext) GetWsHome() string {
 	return ctx.wsHome
 }
 
-func (ctx *ChainSyncContext) SetTranstioned() {
+func (ctx *ChainSyncContext) SetTransitioned() {
 	ctx.GenesisTranstioned = true
 }
 

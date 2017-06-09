@@ -18,12 +18,16 @@ import (
 	"errors"
 	cmd "os/exec"
 	"path/filepath"
+	cm "hyperchain/core/common"
 )
 
 
 /*
 	Sync chain initiator
  */
+
+// SyncChain receive chain sync request from consensus module,
+// trigger to sync.
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	executor.logger.Noticef("[Namespace = %s] send sync block request to fetch missing block, current height %d, target height %d", executor.namespace, edb.GetHeightOfChain(executor.namespace), ev.TargetHeight)
 	if executor.status.syncFlag.SyncTarget >= ev.TargetHeight || edb.GetHeightOfChain(executor.namespace) > ev.TargetHeight {
@@ -82,6 +86,48 @@ func (executor *Executor) syncChainResendBackend() {
 
 // ReceiveSyncBlocks - receive request synchronization blocks from others.
 func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
+
+	checkNeedMore := func() bool {
+		var needNextFetch bool
+		if !executor.status.syncCtx.UpdateGenesis {
+			if executor.getLatestSyncDownstream() != edb.GetHeightOfChain(executor.namespace) {
+				executor.logger.Notice("current downstream not equal to chain height")
+				needNextFetch = true
+			}
+		} else {
+			_, genesis := executor.status.syncCtx.GetCurrentGenesis()
+			if executor.getLatestSyncDownstream() != genesis - 1 {
+				executor.logger.Notice("current downstream not equal to genesis")
+				needNextFetch = true
+			}
+		}
+		return needNextFetch
+	}
+
+	checker := func() bool {
+		lastBlk, err := edb.GetBlockByNumber(executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1)
+		if err != nil {
+			return false
+		}
+		latestBlk, err := edb.GetLatestBlock(executor.namespace)
+		if err != nil {
+			return false
+		}
+		if bytes.Compare(lastBlk.ParentHash, latestBlk.BlockHash) != 0 {
+			return false
+		}
+		return true
+	}
+
+	reqNext := func() {
+		executor.logger.Notice("still have some blocks to fetch")
+		executor.status.syncFlag.Oracle.FeedBack(true)
+		executor.status.syncCtx.SetCurrentPeer(executor.status.syncFlag.Oracle.SelectPeer())
+		prev := executor.getLatestSyncDownstream()
+		next := executor.calcuDownstream()
+		executor.SendSyncRequest(prev, next)
+	}
+
 	if executor.status.syncFlag.SyncDemandBlockNum != 0 {
 		block := &types.Block{}
 		proto.Unmarshal(payload, block)
@@ -108,36 +154,31 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			}
 		}
 		if executor.receiveAllRequiredBlocks() {
-			executor.logger.Debug("receive a batch of blocks")
-			var needNextFetch bool
-			if !executor.status.syncCtx.UpdateGenesis {
-				if executor.getLatestSyncDownstream() != edb.GetHeightOfChain(executor.namespace) {
-					executor.logger.Debug("current downstream not equal to chain height")
-					needNextFetch = true
-				}
-			} else {
-				_, genesis := executor.status.syncCtx.GetCurrentGenesis()
-				if executor.getLatestSyncDownstream() != genesis - 1 {
-					executor.logger.Debug("current downstream not equal to genesis")
-					needNextFetch = true
-				}
-			}
+			executor.logger.Notice("receive a batch of blocks")
+			needNextFetch := checkNeedMore()
 			if needNextFetch {
-				executor.logger.Notice("still have some blocks to fetch")
-				executor.status.syncFlag.Oracle.FeedBack(true)
-				executor.status.syncCtx.SetCurrentPeer(executor.status.syncFlag.Oracle.SelectPeer())
-				prev := executor.getLatestSyncDownstream()
-				next := executor.calcuDownstream()
-				executor.SendSyncRequest(prev, next)
+				reqNext()
 			} else {
-				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
+				executor.logger.Noticef("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
 				if executor.status.syncCtx.UpdateGenesis {
 					// receive world state
 					executor.logger.Notice("send request to fetch world state for status transition")
 					executor.status.syncCtx.SetResendMode(ResendMode_WorldState)
 					executor.SendSyncRequestForWorldState(executor.status.syncFlag.SyncDemandBlockNum + 1)
 				} else {
-					executor.processSyncBlocks()
+					// check
+					if checker() {
+						executor.status.syncCtx.SetResendMode(ResendMode_Nope)
+						executor.processSyncBlocks()
+					} else {
+						if err := executor.CutdownBlock(executor.status.syncFlag.SyncDemandBlockNum); err != nil {
+							executor.logger.Errorf("[Namespace = %s] cut down block %d failed.", executor.namespace, executor.status.syncFlag.SyncDemandBlockNum)
+							executor.reject()
+							return
+						}
+						executor.logger.Noticef("cutdown block #%d", executor.status.syncFlag.SyncDemandBlockNum)
+						reqNext()
+					}
 				}
 			}
 		}
@@ -235,7 +276,7 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 			executor.logger.Errorf("apply ws failed, err detail %s", err.Error())
 			return
 		}
-		executor.status.syncCtx.SetTranstioned()
+		executor.status.syncCtx.SetTransitioned()
 		executor.processSyncBlocks()
 	} else {
 		store(ws.Payload, ws.PacketId, ws.Ctx.FilterId)
@@ -332,67 +373,47 @@ func (executor *Executor) isBlockHashEqual(targetHash []byte) bool {
 func (executor *Executor) processSyncBlocks() {
 	if executor.status.syncFlag.SyncDemandBlockNum <= edb.GetHeightOfChain(executor.namespace) || executor.status.syncCtx.GenesisTranstioned {
 		// get the first of SyncBlocks
-		checker := func() bool {
-			lastBlk, err := edb.GetBlockByNumber(executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1)
-			if err != nil {
-				return false
-			}
-			if bytes.Compare(lastBlk.ParentHash, edb.GetLatestBlockHash(executor.namespace)) != 0 {
-				return false
-			}
-			return true
+		executor.waitUtilSyncAvailable()
+		defer executor.syncDone()
+		// execute all received block at one time
+		var low uint64
+		if executor.status.syncCtx.UpdateGenesis {
+			_, low = executor.status.syncCtx.GetCurrentGenesis()
+			low += 1
+		} else {
+			low = executor.status.syncFlag.SyncDemandBlockNum + 1;
 		}
-		if !executor.status.syncCtx.UpdateGenesis && !checker() {
-			if err := executor.CutdownBlock(executor.status.syncFlag.SyncDemandBlockNum); err != nil {
-				executor.logger.Errorf("[Namespace = %s] cut down block %d failed.", executor.namespace, executor.status.syncFlag.SyncDemandBlockNum)
+
+		for i := low; i <= executor.status.syncFlag.SyncTarget; i += 1 {
+			executor.markSyncExecBegin()
+			blk, err := edb.GetBlockByNumber(executor.namespace, i)
+			if err != nil {
+				executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
+					executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1, executor.status.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))
 				executor.reject()
 				return
-			}
-			executor.SendSyncRequestForSingle(executor.status.syncFlag.SyncDemandBlockNum)
-			return
-		} else {
-			executor.waitUtilSyncAvailable()
-			defer executor.syncDone()
-			// execute all received block at one time
-			var low uint64
-			if executor.status.syncCtx.UpdateGenesis {
-				_, low = executor.status.syncCtx.GetCurrentGenesis()
-				low += 1
 			} else {
-				low = executor.status.syncFlag.SyncDemandBlockNum + 1;
-			}
-
-			for i := low; i <= executor.status.syncFlag.SyncTarget; i += 1 {
-				executor.markSyncExecBegin()
-				blk, err := edb.GetBlockByNumber(executor.namespace, i)
-				if err != nil {
+				// set temporary block number as block number since block number is already here
+				executor.initDemand(blk.Number)
+				executor.stateTranstion(blk.Number + 1, common.BytesToHash(blk.MerkleRoot))
+				err, result := executor.ApplyBlock(blk, blk.Number)
+				if err != nil || executor.assertApplyResult(blk, result) == false {
 					executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
 						executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1, executor.status.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))
 					executor.reject()
 					return
 				} else {
-					// set temporary block number as block number since block number is already here
-					executor.initDemand(blk.Number)
-					executor.stateTranstion(blk.Number + 1, common.BytesToHash(blk.MerkleRoot))
-					err, result := executor.ApplyBlock(blk, blk.Number)
-					if err != nil || executor.assertApplyResult(blk, result) == false {
-						executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
-							executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1, executor.status.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))
+					// commit modified changes in this block and update chain.
+					if err := executor.accpet(blk.Number, result); err != nil {
 						executor.reject()
 						return
-					} else {
-						// commit modified changes in this block and update chain.
-						if err := executor.accpet(blk.Number, result); err != nil {
-							executor.reject()
-							return
-						}
 					}
 				}
 			}
-			executor.initDemand(executor.status.syncFlag.SyncTarget + 1)
-			executor.clearSyncFlag()
-			executor.sendStateUpdatedEvent()
 		}
+		executor.initDemand(executor.status.syncFlag.SyncTarget + 1)
+		executor.clearSyncFlag()
+		executor.sendStateUpdatedEvent()
 	}
 }
 
@@ -502,28 +523,23 @@ func (executor *Executor) isDemandSyncBlock(block *types.Block) bool {
 // if a node required to sync too much blocks one time, the huge chain sync request will be split to several small one.
 // a sync chain required block number can not more than `sync batch size` in config file.
 func (executor *Executor) calcuDownstream() uint64 {
-	total := executor.getLatestSyncDownstream() - edb.GetHeightOfChain(executor.namespace)
-	if total < executor.GetSyncMaxBatchSize() {
+	if executor.status.syncCtx.UpdateGenesis {
 		_, genesis := executor.status.syncCtx.GetCurrentGenesis()
-		if genesis > edb.GetHeightOfChain(executor.namespace) {
-			// genesis block is also required
+		total := executor.getLatestSyncDownstream() - genesis + 1
+		if total < executor.GetSyncMaxBatchSize() {
 			executor.setLatestSyncDownstream(genesis - 1)
-			executor.logger.Notice("update temporarily downstream with peer's genesis")
-		} else {
-			executor.setLatestSyncDownstream(edb.GetHeightOfChain(executor.namespace))
-			executor.logger.Notice("update temporarily downstream with current chain height")
-		}
-	} else {
-		_, genesis := executor.status.syncCtx.GetCurrentGenesis()
-		if genesis > executor.getLatestSyncDownstream() - executor.GetSyncMaxBatchSize() {
-			// genesis block is also required
-			executor.setLatestSyncDownstream(genesis - 1)
-			executor.logger.Notice("update temporarily downstream with peer's genesis")
 		} else {
 			executor.setLatestSyncDownstream(executor.getLatestSyncDownstream() - executor.GetSyncMaxBatchSize())
-			executor.logger.Notice("update temporarily downstream with last temp downstream")
+		}
+	} else {
+		total := executor.getLatestSyncDownstream() - edb.GetHeightOfChain(executor.namespace)
+		if total < executor.GetSyncMaxBatchSize() {
+			executor.setLatestSyncDownstream(edb.GetHeightOfChain(executor.namespace))
+		} else {
+			executor.setLatestSyncDownstream(executor.getLatestSyncDownstream() - executor.GetSyncMaxBatchSize())
 		}
 	}
+
 	executor.logger.Noticef("update temporarily downstream to %d", executor.getLatestSyncDownstream())
 	return executor.getLatestSyncDownstream()
 }
@@ -573,7 +589,7 @@ func (executor *Executor) applyWorldState(fPath string, filterId string, root co
 
 	// TODO just for test
 	// TODO ATOMIC ASSURANCE
-	entries := executor.snapshotReg.RetrieveSnapshotFileds()
+	entries := cm.RetrieveSnapshotFileds()
 	for _, entry := range entries {
 		iter := wsDb.NewIterator([]byte(entry))
 		for iter.Next() {
