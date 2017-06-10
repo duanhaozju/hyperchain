@@ -94,8 +94,8 @@ func (l *Logger) captureState(pc uint64, op OpCode, gas, cost *big.Int, memory *
 	switch op {
 	case SSTORE:
 		var (
-			value   = common.BigToHash(stack.data[stack.len()-1])
-			address = common.BigToHash(stack.data[stack.len()-2])
+			value   = common.BigToHash(stack.data[stack.len()-2])
+			address = common.BigToHash(stack.data[stack.len()-1])
 		)
 		l.changedValues[contract.Address()][address] = value
 	}

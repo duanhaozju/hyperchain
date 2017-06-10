@@ -11,6 +11,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
+	"io"
 )
 
 // progStatus is the type for the JIT program status.
@@ -297,11 +298,12 @@ func runProgram(evm *EVM, program *Program, pcstart uint64, mem *Memory, stack *
 			return nil, fmt.Errorf("Invalid opcode 0x%x", instr.Op())
 		}
 
+		if evm.cfg.Debug {
+			evm.logger.captureState(pc, instr.Op(), contract.Gas, big.NewInt(0), mem, stack, contract, evm.env.Depth(), nil)
+		}
+
 		ret, err := instr.do(program, &pc, env, contract, mem, stack)
 
-		if evm.cfg.Debug {
-			evm.logger.captureState(pc, instr.Op(), contract.Gas, big.NewInt(0), mem, stack, contract, evm.env.Depth(), err)
-		}
 		if err != nil {
 			return nil, err
 		}
@@ -316,6 +318,13 @@ func runProgram(evm *EVM, program *Program, pcstart uint64, mem *Memory, stack *
 	return nil, nil
 }
 
+func PrintProgram(program *Program, writer io.Writer) {
+	fmt.Fprint(writer, "[[  Print Compiled program detail  ]]\n")
+	fmt.Fprint(writer, ">>>>>  Instructions \n")
+	for idx, instr := range program.instructions {
+		fmt.Fprintf(writer, "(%d) opcode :%s\n", idx, instr.Op().String())
+	}
+}
 // validDest checks if the given destination is a valid one given the
 // destination table of the program
 func validDest(dests map[uint64]struct{}, dest *big.Int) bool {

@@ -90,6 +90,9 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 				// Create and compile program
 				program = NewProgram(contract.Code)
 				perr := CompileProgram(program)
+				if evm.cfg.Debug {
+					PrintProgram(program, os.Stdout)
+				}
 				if perr == nil {
 					return RunProgram(evm, program, evm.env, contract, input)
 				}
