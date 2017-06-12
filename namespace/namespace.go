@@ -111,7 +111,7 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 	}
 
 	nsInfo, err := NewNamespaceInfo(conf.GetString(common.PEER_CONFIG_PATH), name, common.GetLogger(name, "namespace"))
-	nsInfo.PrintInfo()
+	//nsInfo.PrintInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +232,6 @@ func (ns *namespaceImpl) Start() error {
 	switch initType {
 	case 0:
 		{
-
 			ns.passRouters()
 			ns.negotiateView()
 		} // TODO: add other init type
