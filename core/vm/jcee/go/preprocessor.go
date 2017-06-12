@@ -8,6 +8,7 @@ import (
 	command "os/exec"
 	"path/filepath"
 	"os"
+	"fmt"
 )
 
 var DecompressErr = "decompress source contract failed"
@@ -44,6 +45,9 @@ func decompression(buf []byte) (string, error) {
 
 	if err = extractProperty(tmpDir); err != nil {
 		return "", err
+	}
+	if err = moveFromTarDir(tmpDir); err != nil{
+		return "",err
 	}
 
 	return tmpDir, nil
@@ -109,10 +113,28 @@ func extractProperty(dirPath string) error {
 			}
 			if !f.IsDir() && (strings.HasSuffix(f.Name(), "properties") || strings.HasSuffix(f.Name(), "yaml") ) {
 				cmd := command.Command("mv", path, dirPath)
+
 				if err := cmd.Run(); err != nil {
 					return err
 				}
 			}
 			return nil
 		})
+}
+func moveFromTarDir(dirPath string) error {
+	dir_list,_ := ioutil.ReadDir(dirPath)
+	var tmpDir string
+
+
+	for _,dir := range dir_list{
+		tmpDir = dir.Name()
+		err := os.Rename(dirPath + "/" + tmpDir, dirPath)
+		fmt.Println(err)
+	}
+	//cmd := command.Command("mv",dirPath+"/"+tmpDir+"/*",dirPath)
+	//fmt.Println(dirPath+"/"+tmpDir+"/*")
+	//if err := cmd.Run(); err != nil {
+	//	return err
+	//}
+	return nil
 }
