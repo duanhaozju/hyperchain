@@ -87,6 +87,7 @@ public class ContractExecutor {
                     futureTask.cancel(true);
                     if(caller == null){
                         logger.error("caller is null");
+                        continue;
                     }
                     Errors.ReturnErrMsg(e.toString(),caller.getResponseObserver());
 
@@ -94,6 +95,7 @@ public class ContractExecutor {
                     futureTask.cancel(true);
                     if(caller == null){
                         logger.error("caller is null");
+                        continue;
                     }
                     Errors.ReturnErrMsg(e.toString(),caller.getResponseObserver());
                 }finally {
