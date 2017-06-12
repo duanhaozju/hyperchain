@@ -12,6 +12,7 @@ func (pbft *pbftImpl) initTimers() {
 	pbft.pbftTimerMgr.newTimer(NEGO_VIEW_RSP_TIMER, pbft.config.GetDuration(PBFT_NEGOVIEW_TIMEOUT))
 	pbft.pbftTimerMgr.newTimer(RECOVERY_RESTART_TIMER, pbft.config.GetDuration(PBFT_RECOVERY_TIMEOUT))
 	pbft.pbftTimerMgr.newTimer(BATCH_TIMER, pbft.config.GetDuration(PBFT_BATCH_TIMEOUT))
+	pbft.pbftTimerMgr.newTimer(CLEAN_VIEW_CHANGE_TIMER, pbft.config.GetDuration(PBFT_BATCH_TIMEOUT))
 	//pbft.pbftTimerMgr.newTimer(ADD_NODE_TIMER, pbft.config.GetDuration(PBFT_ADD_NODE_TIMEOUT))
 	//pbft.pbftTimerMgr.newTimer(DEL_NODE_TIMER, pbft.config.GetDuration(PBFT_DEL_NODE_TIMEOUT))
 	//pbft.pbftTimerMgr.newTimer(UPDATE_TIMER, pbft.config.GetDuration(PBFT_UPDATE_TIMEOUT))

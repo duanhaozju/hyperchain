@@ -43,6 +43,6 @@ global:
         # start which namespaces when node starts
         start:
             global: true
-            ns1: false
-            ns2: false
-            ns3: false
+            ns1: true
+            ns2: true
+            ns3: true

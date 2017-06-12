@@ -116,15 +116,16 @@ func (pbft *pbftImpl) restartNegoView() {
 
 func (pbft *pbftImpl) recvNegoView(nv *NegotiateView) events.Event {
 	if atomic.LoadUint32(&pbft.activeView) == 0 {
+		pbft.logger.Warningf("Replica %d is in viewChange, reject negoView from replica %d", pbft.id, nv.ReplicaId)
 		return nil
 	}
 	sender := nv.ReplicaId
 	pbft.logger.Debugf("Replica %d receive nego_view from %d", pbft.id, sender)
 
-	if pbft.nodeMgr.routers == nil {
-		pbft.logger.Debugf("Replica %d ignore nego_view from %d since has not received local msg", pbft.id, sender)
-		return nil
-	}
+	//if pbft.nodeMgr.routers == nil {
+	//	pbft.logger.Debugf("Replica %d ignore nego_view from %d since has not received local msg", pbft.id, sender)
+	//	return nil
+	//}
 
 	negoViewRsp := &NegotiateViewResponse{
 		ReplicaId: pbft.id,
@@ -142,8 +143,8 @@ func (pbft *pbftImpl) recvNegoView(nv *NegotiateView) events.Event {
 		Payload: payload,
 	}
 	msg := cMsgToPbMsg(consensusMsg, pbft.id)
-	pbft.logger.Debugf("Replica %d send nego_view_rsp to replica %d, for view=%d/N=%d", pbft.id, sender, pbft.view, pbft.N)
 	pbft.helper.InnerUnicast(msg, sender)
+	pbft.logger.Debugf("Replica %d send nego-view response to replica %d, for view=%d/N=%d", pbft.id, sender, pbft.view, pbft.N)
 	return nil
 }
 
@@ -214,6 +215,7 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			if atomic.LoadUint32(&pbft.activeView) == 0 {
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}
+			pbft.parseSpecifyCertStore()
 			return &LocalEvent{
 				Service:RECOVERY_SERVICE,
 				EventType:RECOVERY_NEGO_VIEW_DONE_EVENT,
@@ -333,7 +335,7 @@ func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 // recvRcryRsp process other replicas' feedback as with initRecovery
 func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 
-	pbft.logger.Debugf("Replica %d now recvRecoveryRsp from replica %d", pbft.id, rsp.ReplicaId)
+	pbft.logger.Debugf("Replica %d now recvRecoveryRsp from replica %d for block height=%d", pbft.id, rsp.ReplicaId, rsp.BlockHeight)
 
 	if !pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Debugf("Replica %d finished recovery, ignore recovery response", pbft.id)
@@ -341,12 +343,11 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	}
 	from := rsp.ReplicaId
 	if _, ok := pbft.recoveryMgr.rcRspStore[from]; ok {
-		pbft.logger.Debugf("Replica %d receive duplicate recovery response from replica %d, ignore it", pbft.id, from)
-		return nil
+		pbft.logger.Debugf("Replica %d receive recovery response again from replica %d, replace it with height: %d", pbft.id, from, rsp.BlockHeight)
 	}
 	pbft.recoveryMgr.rcRspStore[from] = rsp
 
-	if len(pbft.recoveryMgr.rcRspStore) <= 2*pbft.f+1 {
+	if len(pbft.recoveryMgr.rcRspStore) < 2*pbft.f+1 {
 		// Reason for not using '≤ pbft.N-pbft.f': if N==5, we are require more than we need
 		pbft.logger.Debugf("Replica %d recv recoveryRsp from replica %d, rsp count: %d, not "+
 			"beyond %d", pbft.id, rsp.ReplicaId, len(pbft.recoveryMgr.rcRspStore), 2*pbft.f+1)
@@ -391,8 +392,8 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	if lastExec == selfLastExec && curHash == selfCurHash {
 		pbft.logger.Debugf("Replica %d in recovery same lastExec: %d, "+
 			"same block hash: %s, fast catch up", pbft.id, selfLastExec, curHash)
-		pbft.status.inActiveState(&pbft.status.inRecovery)
-		pbft.recoveryMgr.recoveryToSeqNo = nil
+		//pbft.status.inActiveState(&pbft.status.inRecovery)
+		//pbft.recoveryMgr.recoveryToSeqNo = nil
 		pbft.seqNo = selfLastExec
 		pbft.exec.lastExec = selfLastExec
 		pbft.batchVdr.vid = selfLastExec
@@ -440,7 +441,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.moveWatermarks(n)
 		pbft.stateTransfer(target)
 	} else if !pbft.status.getState(&pbft.status.skipInProgress) && !pbft.status.getState(&pbft.status.inVcReset) {
-		pbft.helper.VcReset(n+1)
+		pbft.helper.VcReset(selfLastExec+1)
 		pbft.status.activeState(&pbft.status.inVcReset)
 	} else {
 		pbft.logger.Debugf("Replica %d try to recovery but find itself in state update", pbft.id)
@@ -536,7 +537,7 @@ func (pbft *pbftImpl) fetchRecoveryPQC(peers []uint64) events.Event {
 	pbft.logger.Debugf("Replica %d now fetchRecoveryPQC", pbft.id)
 
 	if peers == nil {
-		pbft.logger.Errorf("Replica %d try to fetchRecoveryPQC, but target peers are nil")
+		pbft.logger.Errorf("Replica %d try to fetchRecoveryPQC, but target peers are nil", pbft.id)
 		return nil
 	}
 
@@ -582,8 +583,12 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 	cmts := make([]bool, csLen)
 	i := 0
 	for msgId, msgCert := range pbft.storeMgr.certStore {
-		if msgId.n > h && msgId.n <= pbft.h+pbft.L {
-			prepres[i] = msgCert.prePrepare
+		if msgId.n > h && msgId.n <= pbft.exec.lastExec {
+			if msgCert.prePrepare == nil {
+				prepres[i] = &PrePrepare{}
+			} else {
+				prepres[i] = msgCert.prePrepare
+			}
 			pres[i] = msgCert.sentPrepare
 			cmts[i] = msgCert.sentCommit
 			i = i + 1
@@ -598,7 +603,7 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 
 	payload, err := proto.Marshal(rcReturn)
 	if err != nil {
-		pbft.logger.Errorf("recovery response marshal error")
+		pbft.logger.Errorf("recovery response marshal error: &v", err)
 		return nil
 	}
 	msg := &ConsensusMessage{
@@ -640,19 +645,21 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 	for i := 0; i < len(PQCInfo.PrepreSet); i++ {
 		preprep := prepreSet[i]
 		// recv preprepare
-		cert := pbft.storeMgr.getCert(preprep.View, preprep.SequenceNumber)
-		if cert.digest != preprep.BatchDigest {
-			payload, err := proto.Marshal(preprep)
-			if err != nil {
-				pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-				return false
-			}
+		if len(preprep.BatchDigest) != 0 {
+			cert := pbft.storeMgr.getCert(preprep.View, preprep.SequenceNumber)
+			if cert.digest != preprep.BatchDigest {
+				payload, err := proto.Marshal(preprep)
+				if err != nil {
+					pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
+					return false
+				}
 
-			redo_preprep := &ConsensusMessage{
-				Type:    ConsensusMessage_PRE_PREPARE,
-				Payload: payload,
+				redo_preprep := &ConsensusMessage{
+					Type:    ConsensusMessage_PRE_PREPARE,
+					Payload: payload,
+				}
+				go pbft.pbftEventQueue.Push(redo_preprep)
 			}
-			go pbft.pbftEventQueue.Push(redo_preprep)
 		}
 		// recv prepare
 		if preSent[i] {
