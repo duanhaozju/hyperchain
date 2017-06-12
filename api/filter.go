@@ -1,36 +1,36 @@
 package api
 
 import (
-	"hyperchain/manager"
-	"hyperchain/common"
 	"github.com/op/go-logging"
-	"sync"
-	flt "hyperchain/manager/filter"
-	"time"
-	"hyperchain/core/vm"
+	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/core/vm"
+	"hyperchain/manager"
 	"hyperchain/manager/event"
+	flt "hyperchain/manager/filter"
+	"sync"
+	"time"
 )
 
 type PublicFilterAPI struct {
-	namespace   string
-	eh          *manager.EventHub
-	config      *common.Config
-	log         *logging.Logger
-	events      *flt.EventSystem
-	filtersMu   sync.Mutex
-	filters     map[string]*flt.Filter
+	namespace string
+	eh        *manager.EventHub
+	config    *common.Config
+	log       *logging.Logger
+	events    *flt.EventSystem
+	filtersMu sync.Mutex
+	filters   map[string]*flt.Filter
 }
 
 func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config) *PublicFilterAPI {
 	log := common.GetLogger(namespace, "api")
 	api := &PublicFilterAPI{
-		namespace:   namespace,
-		eh:          eh,
-		config:      config,
-		log:         log,
-		events:      eh.GetFilterSystem(),
-		filters:     make(map[string]*flt.Filter),
+		namespace: namespace,
+		eh:        eh,
+		config:    config,
+		log:       log,
+		events:    eh.GetFilterSystem(),
+		filters:   make(map[string]*flt.Filter),
 	}
 	go api.timeoutLoop()
 	return api
@@ -91,8 +91,8 @@ func (api *PublicFilterAPI) NewBlockSubscription(isVerbose bool) string {
 
 func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string {
 	var (
-		logC     = make(chan []*vm.Log)
-		logSub   = api.events.NewLogSubscription(crit, logC)
+		logC   = make(chan []*vm.Log)
+		logSub = api.events.NewLogSubscription(crit, logC)
 	)
 	api.filtersMu.Lock()
 	api.filters[logSub.ID] = flt.NewFilter(flt.LogsSubscription, logSub, crit)
@@ -122,7 +122,7 @@ func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string
 
 func (api *PublicFilterAPI) NewSnapshotSubscription() string {
 	var (
-		ch   = make(chan interface{})
+		ch  = make(chan interface{})
 		sub = api.events.NewCommonSubscription(ch, false)
 	)
 	api.filtersMu.Lock()
@@ -239,4 +239,3 @@ func returnLogs(logs []*vm.Log) []vm.LogTrans {
 	_logs := vm.Logs(logs)
 	return _logs.ToLogsTrans()
 }
-

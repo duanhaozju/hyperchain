@@ -8,21 +8,22 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"hyperchain/hyperdb/db"
 	"hyperchain/common"
+	"hyperchain/hyperdb/db"
 	pa "path/filepath"
 )
 
 const (
 	LEVEL_DB_PATH = "dbConfig.leveldbPath"
 )
+
 // the Database for LevelDB
 // LDBDatabase implements the DataBase interface
 
 type LDBDatabase struct {
-	path string
-	db   *leveldb.DB
-	conf *common.Config
+	path      string
+	db        *leveldb.DB
+	conf      *common.Config
 	namespace string
 }
 
@@ -34,16 +35,16 @@ type LDBDatabase struct {
 // DB can be recovered with Recover function.
 // the return *LDBDatabase is goruntine-safe
 // the LDBDataBase instance must be close after use, by calling Close method
-func NewLDBDataBase(conf *common.Config,filepath string, namespace string) (*LDBDatabase, error) {
-	if conf!=nil {
-		filepath= pa.Join(conf.GetString(LEVEL_DB_PATH), filepath)
+func NewLDBDataBase(conf *common.Config, filepath string, namespace string) (*LDBDatabase, error) {
+	if conf != nil {
+		filepath = pa.Join(conf.GetString(LEVEL_DB_PATH), filepath)
 	}
 	db, err := leveldb.OpenFile(filepath, nil)
 	return &LDBDatabase{
-		path: filepath,
-		db:   db,
-		conf: conf,
-		namespace:     namespace,
+		path:      filepath,
+		db:        db,
+		conf:      conf,
+		namespace: namespace,
 	}, err
 }
 
@@ -172,4 +173,3 @@ func (b *ldbBatch) Write() error {
 func (b *ldbBatch) Len() int {
 	return b.b.Len()
 }
-

@@ -7,12 +7,12 @@ import (
 	"hyperchain/hypercli/contract"
 	"hyperchain/hypercli/log"
 	"hyperchain/hypercli/namespace"
-	"hyperchain/hypercli/server"
 	"hyperchain/hypercli/node"
+	"hyperchain/hypercli/server"
 
+	"hyperchain/hypercli/db"
 	"os"
 	"time"
-	"hyperchain/hypercli/db"
 )
 
 var app *cli.App

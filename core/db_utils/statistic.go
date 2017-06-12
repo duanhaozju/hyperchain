@@ -1,10 +1,10 @@
 package db_utils
 
 import (
-	"time"
-	"fmt"
 	"errors"
+	"fmt"
 	"strconv"
+	"time"
 )
 
 //CalcCommitAVGTime calculates block average commit time
@@ -60,7 +60,6 @@ func CalcResponseAVGTime(namespace string, from, to uint64) int64 {
 		return sum / (length * int64(time.Millisecond))
 	}
 }
-
 
 func CalcEvmAVGTime(namespace string, from, to uint64) int64 {
 	if from > to {

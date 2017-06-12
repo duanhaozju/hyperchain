@@ -180,15 +180,12 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.status.inActiveState(&pbft.status.vcHandled)
 		pbft.logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/height=%d", pbft.id, primary, pbft.view, pbft.exec.lastExec)
-		if pbft.status.getState(&pbft.status.isNewNode){
-		pbft.logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/h=%d", pbft.id, primary, pbft.view, pbft.h)
 		if pbft.status.getState(&pbft.status.isNewNode) {
 			pbft.sendReadyForN()
 			return nil
 		}
 		pbft.processRequestsDuringViewChange()
 		pbft.rebuildCertStore()
-
 	case VIEW_CHANGE_RESEND_TIMER_EVENT:
 		if atomic.LoadUint32(&pbft.activeView) == 1 {
 			pbft.logger.Warningf("Replica %d had its view change resend timer expire but it's in an active view, this is benign but may indicate a bug", pbft.id)
@@ -221,14 +218,14 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 		if pbft.status.getState(&pbft.status.inRecovery) {
 			var event protos.VcResetDone
 			var ok bool
-			if event, ok = e.Event.(protos.VcResetDone) ; !ok {
+			if event, ok = e.Event.(protos.VcResetDone); !ok {
 				return nil
 			}
 			seqNo = event.SeqNo
-			if seqNo - 1 == *pbft.recoveryMgr.recoveryToSeqNo {
+			if seqNo-1 == *pbft.recoveryMgr.recoveryToSeqNo {
 				return &LocalEvent{
-					Service:RECOVERY_SERVICE,
-					EventType:RECOVERY_DONE_EVENT,
+					Service:   RECOVERY_SERVICE,
+					EventType: RECOVERY_DONE_EVENT,
 				}
 			} else {
 				state := &stateUpdatedEvent{seqNo: seqNo - 1}
@@ -240,8 +237,8 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			return nil
 		}
 
-		if seqNo != pbft.exec.lastExec + 1 {
-			pbft.logger.Warningf("Replica %d finds error in VcResetDone, expect=%d, but get=%d", pbft.id, pbft.exec.lastExec + 1, seqNo)
+		if seqNo != pbft.exec.lastExec+1 {
+			pbft.logger.Warningf("Replica %d finds error in VcResetDone, expect=%d, but get=%d", pbft.id, pbft.exec.lastExec+1, seqNo)
 			return nil
 		}
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/crypto"
@@ -11,7 +12,6 @@ import (
 	"hyperchain/tree/bucket"
 	"math/big"
 	"sort"
-	"github.com/op/go-logging"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -67,10 +67,10 @@ type StateObject struct {
 	// by StateDB.Commit.
 	dbErr error
 
-	code             Code    // contract bytecode, which gets set when code is loaded
-	cachedStorage    Storage // Storage entry cache to avoid duplicate reads
-	dirtyStorage     Storage // Storage entries that need to be flushed to disk
-	archieveStorage  Storage // Storage entries that need to be flushed to disk
+	code            Code    // contract bytecode, which gets set when code is loaded
+	cachedStorage   Storage // Storage entry cache to avoid duplicate reads
+	dirtyStorage    Storage // Storage entries that need to be flushed to disk
+	archieveStorage Storage // Storage entries that need to be flushed to disk
 
 	bucketTree *bucket.BucketTree     // a bucket tree use to calculate fingerprint of storage efficiency
 	bucketConf map[string]interface{} // bucket tree config

@@ -1,11 +1,11 @@
 package db_utils
 
 import (
+	"encoding/json"
+	"hyperchain/common"
+	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"strconv"
-	"hyperchain/common"
-	"encoding/json"
-	"hyperchain/hyperdb"
 )
 
 func DeleteAllJournals(db db.Database, batch db.Batch, flush, sync bool) error {
@@ -45,11 +45,11 @@ func DeleteJournalInRange(batch db.Batch, start uint64, end uint64, flush, sync 
 	return nil
 }
 
-func PersistSnapshotMeta(batch db.Batch, meta *common.Manifest, flush, sync bool) error  {
+func PersistSnapshotMeta(batch db.Batch, meta *common.Manifest, flush, sync bool) error {
 	if batch == nil || meta == nil {
 		return EmptyPointerErr
 	}
-	blob,  err := json.Marshal(meta)
+	blob, err := json.Marshal(meta)
 	if err != nil {
 		return err
 	}
@@ -86,5 +86,3 @@ func GetSnapshotMetaFunc(db db.Database) (*common.Manifest, error) {
 	}
 	return &meta, nil
 }
-
-

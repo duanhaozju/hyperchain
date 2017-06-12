@@ -7,4 +7,3 @@ import (
 var (
 	kec256Hash = crypto.NewKeccak256Hash("keccak256")
 )
-

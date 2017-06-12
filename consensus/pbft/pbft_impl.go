@@ -9,31 +9,31 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
-	"sync/atomic"
 	"sync"
-	"github.com/op/go-logging"
+	"sync/atomic"
 )
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
 type pbftImpl struct {
-	namespace	string
-	activeView     uint32                       // view change happening
-	f              int                          // max. number of faults we can tolerate
-	N              int                          // max.number of validators in the network
-	h              uint64                       // low watermark
-	id             uint64                       // replica ID; PBFT `i`
-	K              uint64                       // checkpoint period
-	logMultiplier  uint64                       // use this value to calculate log size : k*logMultiplier
-	L              uint64                       // log size
-	seqNo          uint64                       // PBFT "n", strictly monotonic increasing sequence number
-	view           uint64                       // current view
-	nvInitialSeqNo uint64                       // initial seqNo in a new view
+	namespace      string
+	activeView     uint32 // view change happening
+	f              int    // max. number of faults we can tolerate
+	N              int    // max.number of validators in the network
+	h              uint64 // low watermark
+	id             uint64 // replica ID; PBFT `i`
+	K              uint64 // checkpoint period
+	logMultiplier  uint64 // use this value to calculate log size : k*logMultiplier
+	L              uint64 // log size
+	seqNo          uint64 // PBFT "n", strictly monotonic increasing sequence number
+	view           uint64 // current view
+	nvInitialSeqNo uint64 // initial seqNo in a new view
 	cachedlimit    int
 
 	status PbftStatus // basic status of pbft
@@ -57,9 +57,9 @@ type pbftImpl struct {
 	pbftEventQueue events.Queue // transfer PBFT related event
 
 	config *common.Config
-	logger         *logging.Logger
+	logger *logging.Logger
 
-	dupLock        *sync.RWMutex
+	dupLock *sync.RWMutex
 }
 
 //newPBFT init the PBFT instance
@@ -354,7 +354,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 		}
 
 		if !pbft.inWV(pbft.view, n) {
-			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because " +
+			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because "+
 				"batch seqNo=%d is out of sequence numbers", pbft.id, digest, n)
 			pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
 			pbft.batchVdr.currentVid = nil
@@ -764,7 +764,7 @@ func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) events.Event {
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 ||
 		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
-		pbft.status.checkStatesOr(&pbft.status.inNegoView, &pbft.status.inRecovery){
+		pbft.status.checkStatesOr(&pbft.status.inNegoView, &pbft.status.inRecovery) {
 		pbft.reqStore.storeOutstanding(tx)
 		return nil
 	}
@@ -1052,7 +1052,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 			if pbft.status.getState(&pbft.status.inRecovery) {
 				pbft.moveWatermarks(chkpt.SequenceNumber)
 			} else {
-				logSafetyBound := pbft.h + pbft.L / 2
+				logSafetyBound := pbft.h + pbft.L/2
 				// As an optimization, if we are more than half way out of our log and in state transfer, move our watermarks so we don't lose track of the network
 				// if needed, state transfer will restart on completion to a more recent point in time
 				if chkpt.SequenceNumber >= logSafetyBound {
@@ -1131,7 +1131,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 			// If f+1 nodes have issued checkpoints above our high water mark, then
 			// we will never record 2f+1 checkpoints for that sequence number, we are out of date
 			// (This is because all_replicas - missed - me = 3f+1 - f - 1 = 2f)
-			if m := chkptSeqNumArray[len(chkptSeqNumArray) - (pbft.f + 1)]; m > H {
+			if m := chkptSeqNumArray[len(chkptSeqNumArray)-(pbft.f+1)]; m > H {
 				if pbft.exec.lastExec >= chkpt.SequenceNumber {
 					pbft.logger.Warningf("Replica %d is ahead of others, waiting others catch up", pbft.id)
 					return true
@@ -1438,12 +1438,12 @@ func (pbft *pbftImpl) recvRemoveCache(vid uint64) bool {
 	pbft.dupLock.RUnlock()
 	if ok {
 		pbft.logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
-			pbft.dupLock.Lock()
-			delete(pbft.duplicator, id)
-			pbft.dupLock.Unlock()
+		pbft.dupLock.Lock()
+		delete(pbft.duplicator, id)
+		pbft.dupLock.Unlock()
 	}
 
-	if vid % pbft.K == 0 {
+	if vid%pbft.K == 0 {
 		pbft.dupLock.Lock()
 		for tmp := range pbft.duplicator {
 			if tmp < id {

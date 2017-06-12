@@ -1,12 +1,12 @@
 package filter
 
 import (
-	"hyperchain/manager/event"
 	"errors"
-	"time"
-	"hyperchain/core/vm"
-	"hyperchain/common"
 	"fmt"
+	"hyperchain/common"
+	"hyperchain/core/vm"
+	"hyperchain/manager/event"
+	"time"
 )
 
 // Type determines the kind of filter and is used to put the filter in to
@@ -30,22 +30,22 @@ const (
 )
 
 const (
-	LatestBlock           int64 = -1
-	EarliestBlockNumber   int64 = 0
+	LatestBlock         int64 = -1
+	EarliestBlockNumber int64 = 0
 )
 
 var (
 	ErrInvalidSubscriptionID = errors.New("invalid id")
 )
 
-
 type filterIndex map[Type]map[string]*subscription
+
 // EventSystem creates subscriptions, processes events and broadcasts them to the
 // subscription which match the subscription criteria.
 type EventSystem struct {
-	mux           *event.TypeMux
-	installC      chan  *subscription
-	uninstallC    chan  *subscription
+	mux        *event.TypeMux
+	installC   chan *subscription
+	uninstallC chan *subscription
 }
 
 // NewEventSystem creates a new manager that listens for event on the given mux,
@@ -56,14 +56,13 @@ type EventSystem struct {
 // or by stopping the given mux.
 func NewEventSystem(mux *event.TypeMux) *EventSystem {
 	m := &EventSystem{
-		mux:       mux,
+		mux:        mux,
 		installC:   make(chan *subscription),
 		uninstallC: make(chan *subscription),
 	}
 	go m.eventLoop()
 	return m
 }
-
 
 // eventLoop (un)installs filters and processes mux events.
 func (es *EventSystem) eventLoop() {
@@ -144,7 +143,6 @@ func (es *EventSystem) subscribe(sub *subscription) *Subscription {
 	<-sub.installed
 	return &Subscription{ID: sub.id, f: sub, es: es}
 }
-
 
 func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash, isVerbose bool) *Subscription {
 	sub := &subscription{

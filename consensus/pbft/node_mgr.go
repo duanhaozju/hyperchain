@@ -3,14 +3,14 @@ package pbft
 import (
 	"hyperchain/manager/protos"
 
+	"encoding/base64"
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/consensus/events"
-	"time"
-	"sync/atomic"
-	"fmt"
-	"encoding/base64"
-	"reflect"
 	ndb "hyperchain/core/db_utils"
+	"reflect"
+	"sync/atomic"
+	"time"
 )
 
 /**
@@ -23,14 +23,14 @@ type nodeManager struct {
 	addNodeCertStore map[string]*addNodeCert // track the received add node agree message
 	delNodeCertStore map[string]*delNodeCert // track the received add node agree message
 
-	routers		  []byte				// track the vp replicas' routers
-	inUpdatingN	  uint32				// track if there are updating
-	updateTimer 	  events.Timer
-	updateTimeout	  time.Duration			// time limit for N-f agree on update n
-	agreeUpdateStore  map[aidx]*AgreeUpdateN		// track agree-update-n message
-	updateStore	  map[uidx]*UpdateN		// track last update-n we received or sent
-	updateTarget	  uidx				// track the new view after update
-	updateCertStore	  map[msgID]*updateCert		// track the local certStore that needed during update
+	routers           []byte // track the vp replicas' routers
+	inUpdatingN       uint32 // track if there are updating
+	updateTimer       events.Timer
+	updateTimeout     time.Duration          // time limit for N-f agree on update n
+	agreeUpdateStore  map[aidx]*AgreeUpdateN // track agree-update-n message
+	updateStore       map[uidx]*UpdateN      // track last update-n we received or sent
+	updateTarget      uidx                   // track the new view after update
+	updateCertStore   map[msgID]*updateCert  // track the local certStore that needed during update
 	finishUpdateStore map[FinishUpdate]bool
 }
 
@@ -828,11 +828,11 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 	tmpStore := make(map[msgID]*updateCert)
 	for idx, cert := range pbft.storeMgr.certStore {
 		if idx.n > pbft.h {
-			tmpId := msgID{n:idx.n, v:update.View}
+			tmpId := msgID{n: idx.n, v: update.View}
 			tmpCert := &updateCert{
-				digest: cert.digest,
+				digest:      cert.digest,
 				sentPrepare: cert.sentPrepare,
-				sentCommit: cert.sentCommit,
+				sentCommit:  cert.sentCommit,
 				sentExecute: cert.sentExecute,
 			}
 			tmpStore[tmpId] = tmpCert
@@ -1008,11 +1008,11 @@ func (pbft *pbftImpl) rebuildCertStoreForUpdate() {
 		batch, ok := pbft.batchVdr.validatedBatchStore[vc.digest]
 		if pbft.primary(pbft.view) == pbft.id && ok {
 			preprep := &PrePrepare{
-				View: idx.v,
-				SequenceNumber: idx.n,
-				BatchDigest: vc.digest,
+				View:             idx.v,
+				SequenceNumber:   idx.n,
+				BatchDigest:      vc.digest,
 				TransactionBatch: batch,
-				ReplicaId: pbft.id,
+				ReplicaId:        pbft.id,
 			}
 			cert.digest = vc.digest
 			cert.prePrepare = preprep
@@ -1036,10 +1036,10 @@ func (pbft *pbftImpl) rebuildCertStoreForUpdate() {
 		}
 		if pbft.primary(pbft.view) != pbft.id && vc.sentPrepare {
 			prep := &Prepare{
-				View: idx.v,
+				View:           idx.v,
 				SequenceNumber: idx.n,
-				BatchDigest: vc.digest,
-				ReplicaId: pbft.id,
+				BatchDigest:    vc.digest,
+				ReplicaId:      pbft.id,
 			}
 			cert.prepare[*prep] = true
 			cert.sentPrepare = true
@@ -1061,10 +1061,10 @@ func (pbft *pbftImpl) rebuildCertStoreForUpdate() {
 		}
 		if vc.sentCommit {
 			cmt := &Commit{
-				View: idx.v,
+				View:           idx.v,
 				SequenceNumber: idx.n,
-				BatchDigest: vc.digest,
-				ReplicaId: pbft.id,
+				BatchDigest:    vc.digest,
+				ReplicaId:      pbft.id,
 			}
 			cert.commit[*cmt] = true
 			cert.sentValidate = true

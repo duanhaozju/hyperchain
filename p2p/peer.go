@@ -16,10 +16,10 @@ import (
 	"google.golang.org/grpc"
 	//"fmt"
 	"fmt"
-	"hyperchain/common"
-	"hyperchain/manager/event"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"hyperchain/common"
+	"hyperchain/manager/event"
 )
 
 var (
@@ -367,7 +367,7 @@ func (peer *Peer) newMsg(payload []byte, msgType pb.Message_MsgType) *pb.Message
 func (peer *Peer) setKey(msg *pb.Message) error {
 	//verify the rcert and set the status
 	if err := peer.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From)); err != nil {
-peer.logger.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID, err)
+		peer.logger.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID, err)
 		return errors.New(fmt.Sprintf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID, err))
 	}
 	return nil

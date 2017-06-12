@@ -4,10 +4,10 @@ package api
 
 import (
 	"fmt"
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
-	"github.com/op/go-logging"
 )
 
 type Block struct {
@@ -41,10 +41,10 @@ func NewPublicBlockAPI(namespace string) *Block {
 }
 
 type IntervalArgs struct {
-	From 		*BlockNumber `json:"from"`
-	To   		*BlockNumber `json:"to"`
-	ContractAddr 	*common.Address `json:"address"`
-	MethodID	string `json:"methodID"`
+	From         *BlockNumber    `json:"from"`
+	To           *BlockNumber    `json:"to"`
+	ContractAddr *common.Address `json:"address"`
+	MethodID     string          `json:"methodID"`
 }
 
 type IntervalTime struct {

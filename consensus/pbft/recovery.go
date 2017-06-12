@@ -169,7 +169,7 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 		// Reason for not using '≥ pbft.N-pbft.f': if self is wrong, then we are impossible to find 2f+1 same view
 		// can we find same view from 2f+1 peers?
 		type resp struct {
-			n uint64
+			n    uint64
 			view uint64
 			//routers string
 		}
@@ -218,8 +218,8 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			}
 			pbft.parseSpecifyCertStore()
 			return &LocalEvent{
-				Service:RECOVERY_SERVICE,
-				EventType:RECOVERY_NEGO_VIEW_DONE_EVENT,
+				Service:   RECOVERY_SERVICE,
+				EventType: RECOVERY_NEGO_VIEW_DONE_EVENT,
 			}
 		} else if spFind {
 			pbft.pbftTimerMgr.stopTimer(NEGO_VIEW_RSP_TIMER)
@@ -231,8 +231,8 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}
 			return &LocalEvent{
-				Service:RECOVERY_SERVICE,
-				EventType:RECOVERY_NEGO_VIEW_DONE_EVENT,
+				Service:   RECOVERY_SERVICE,
+				EventType: RECOVERY_NEGO_VIEW_DONE_EVENT,
 			}
 		}
 	}
@@ -282,8 +282,8 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 	genesis := pbft.getGenesisInfo()
 
 	rc := &RecoveryResponse{
-		ReplicaId: pbft.id,
-		Chkpts:    chkpts,
+		ReplicaId:     pbft.id,
+		Chkpts:        chkpts,
 		BlockHeight:   height,
 		LastBlockHash: curHash,
 		Genesis:       genesis,
@@ -452,7 +452,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.moveWatermarks(n)
 		pbft.stateTransfer(target)
 	} else if !pbft.status.getState(&pbft.status.skipInProgress) && !pbft.status.getState(&pbft.status.inVcReset) {
-		pbft.helper.VcReset(selfLastExec+1)
+		pbft.helper.VcReset(selfLastExec + 1)
 		pbft.status.activeState(&pbft.status.inVcReset)
 	} else {
 		pbft.logger.Debugf("Replica %d try to recovery but find itself in state update", pbft.id)

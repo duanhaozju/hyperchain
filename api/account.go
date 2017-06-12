@@ -39,7 +39,7 @@ func (acc *Account) NewAccountAPI(password string) (common.Address, error) {
 	ac, err := am.NewAccount(password)
 	if err != nil {
 		log.Errorf("New Account error,%v", err)
-		return common.Address{}, &common.CallbackError{Message:err.Error()}
+		return common.Address{}, &common.CallbackError{Message: err.Error()}
 	}
 	return ac.Address, nil
 }
@@ -61,7 +61,7 @@ func (acc *Account) UnlockAccount(args UnlockParas) (bool, error) {
 	ac := accounts.Account{Address: args.Address, File: am.KeyStore.JoinPath(s)}
 	err := am.Unlock(ac, args.Password)
 	if err != nil {
-		return false, &common.InvalidParamsError{Message:"incorrect address or password!"}
+		return false, &common.InvalidParamsError{Message: "incorrect address or password!"}
 	}
 	return true, nil
 }
@@ -93,11 +93,11 @@ func (acc *Account) GetBalance(addr common.Address) (string, error) {
 		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 		} else {
-			return "", &common.LeveldbNotFoundError{Message:"stateobject, the account may not exist"}
+			return "", &common.LeveldbNotFoundError{Message: "stateobject, the account may not exist"}
 		}
 	} else if err != nil {
 		return "", &common.CallbackError{Message: err.Error()}
 	} else {
-		return "", &common.LeveldbNotFoundError{Message:"statedb"}
+		return "", &common.LeveldbNotFoundError{Message: "statedb"}
 	}
 }

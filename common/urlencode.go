@@ -4,6 +4,7 @@ import "strconv"
 
 type encoding int
 type EscapeError string
+
 const (
 	encodePath encoding = 1 + iota
 	encodeHost
@@ -11,6 +12,7 @@ const (
 	encodeQueryComponent
 	encodeFragment
 )
+
 func (e EscapeError) Error() string {
 	return "invalid URL escape " + strconv.Quote(string(e))
 }
@@ -201,13 +203,13 @@ func DecodeEscapeCompontent(encoded string) (string, error) {
 	return unescape(encoded, encodeFragment)
 }
 
-func TransportEncode(str string) string{
+func TransportEncode(str string) string {
 	b := []byte(str)
 	return ToHex(b)
 }
 
-func TransportDecode(str string) string{
-	if len(str)>=2 && str[0:2] == "0x" {
+func TransportDecode(str string) string {
+	if len(str) >= 2 && str[0:2] == "0x" {
 		str = str[2:]
 	}
 	b := Hex2Bytes(str)

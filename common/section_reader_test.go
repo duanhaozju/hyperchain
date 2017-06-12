@@ -1,12 +1,12 @@
 package common
 
 import (
+	"bytes"
+	"io/ioutil"
+	"math/rand"
+	"os"
 	"testing"
 	"time"
-	"math/rand"
-	"io/ioutil"
-	"os"
-	"bytes"
 )
 
 func init() {
@@ -48,7 +48,7 @@ func TestSectionReader_ReadNext(t *testing.T) {
 		t.Error(err.Error())
 	}
 	iterCnt := filesize / shardLen
-	if filesize % shardLen > 0 {
+	if filesize%shardLen > 0 {
 		iterCnt += 1
 	}
 	t.Log("total iter count", iterCnt)
@@ -60,7 +60,7 @@ func TestSectionReader_ReadNext(t *testing.T) {
 		if err != nil && len == 0 {
 			t.Error(err.Error())
 		}
-		if i == iterCnt - 1 {
+		if i == iterCnt-1 {
 		} else {
 			if int64(len) != shardLen {
 				t.Error("shard len not satisfy")

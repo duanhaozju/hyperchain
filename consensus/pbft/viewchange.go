@@ -27,11 +27,11 @@ type vcManager struct {
 	qlist map[qidx]*ViewChange_PQ
 	plist map[uint64]*ViewChange_PQ
 
-	newViewStore       map[uint64]*NewView       	// track last new-view we received or sent
-	viewChangeStore    map[vcidx]*ViewChange     	// track view-change messages
-	vcResetStore       map[FinishVcReset]bool 	// track vcReset message from others
-	vcCertStore	   map[msgID]*certSet
-	cleanVcTimeout	   time.Duration
+	newViewStore    map[uint64]*NewView    // track last new-view we received or sent
+	viewChangeStore map[vcidx]*ViewChange  // track view-change messages
+	vcResetStore    map[FinishVcReset]bool // track vcReset message from others
+	vcCertStore     map[msgID]*certSet
+	cleanVcTimeout  time.Duration
 }
 
 //dispatchViewChangeMsg dispatch view change consensus messages from other peers.
@@ -71,9 +71,9 @@ func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vc
 		pbft.logger.Criticalf("Cannot parse clean out-of-data view change message timeout: %s", err)
 	}
 	nvTimeout := pbft.pbftTimerMgr.getTimeoutValue(NEW_VIEW_TIMER)
-	if vcm.cleanVcTimeout < 6 * nvTimeout {
+	if vcm.cleanVcTimeout < 6*nvTimeout {
 		vcm.cleanVcTimeout = 6 * nvTimeout
-		pbft.logger.Criticalf("Replica %d set timeout of cleaning out-of-time view change message to %v since it's to short", pbft.id, 6 * nvTimeout)
+		pbft.logger.Criticalf("Replica %d set timeout of cleaning out-of-time view change message to %v since it's to short", pbft.id, 6*nvTimeout)
 	}
 
 	vcm.viewChangePeriod = uint64(0)
@@ -284,7 +284,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 	replicas := make(map[uint64]bool)
 	minView := uint64(0)
 	for idx := range pbft.vcMgr.viewChangeStore {
-		if vc.Timestamp + int64(pbft.pbftTimerMgr.getTimeoutValue(CLEAN_VIEW_CHANGE_TIMER)) < time.Now().UnixNano() {
+		if vc.Timestamp+int64(pbft.pbftTimerMgr.getTimeoutValue(CLEAN_VIEW_CHANGE_TIMER)) < time.Now().UnixNano() {
 			pbft.logger.Warningf("Replica %d dropped an out-of-time view change message from replica %d", pbft.id, vc.ReplicaId)
 			delete(pbft.vcMgr.viewChangeStore, idx)
 			continue
@@ -322,7 +322,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 		pbft.pbftTimerMgr.stopTimer(VC_RESEND_TIMER)
 		pbft.startNewViewTimer(pbft.vcMgr.lastNewViewTimeout, "new view change")
 		pbft.vcMgr.lastNewViewTimeout = 2 * pbft.vcMgr.lastNewViewTimeout
-		if pbft.vcMgr.lastNewViewTimeout > 5 * pbft.pbftTimerMgr.getTimeoutValue(NEW_VIEW_TIMER) {
+		if pbft.vcMgr.lastNewViewTimeout > 5*pbft.pbftTimerMgr.getTimeoutValue(NEW_VIEW_TIMER) {
 			pbft.vcMgr.lastNewViewTimeout = 5 * pbft.pbftTimerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 		}
 		return &LocalEvent{
@@ -657,9 +657,9 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 		if idx.n > pbft.h {
 			tmpId := msgID{idx.n, pbft.view}
 			tmpCert := &certSet{
-				digest: cert.digest,
+				digest:      cert.digest,
 				sentPrepare: cert.sentPrepare,
-				sentCommit: cert.sentCommit,
+				sentCommit:  cert.sentCommit,
 				sentExecute: cert.sentExecute,
 			}
 			tmpStore[tmpId] = tmpCert
@@ -816,11 +816,11 @@ func (pbft *pbftImpl) rebuildCertStore() {
 		batch, ok := pbft.batchVdr.validatedBatchStore[vc.digest]
 		if pbft.primary(pbft.view) == pbft.id && ok {
 			preprep := &PrePrepare{
-				View: idx.v,
-				SequenceNumber: idx.n,
-				BatchDigest: vc.digest,
+				View:             idx.v,
+				SequenceNumber:   idx.n,
+				BatchDigest:      vc.digest,
 				TransactionBatch: batch,
-				ReplicaId: pbft.id,
+				ReplicaId:        pbft.id,
 			}
 			cert.digest = vc.digest
 			cert.prePrepare = preprep
@@ -844,10 +844,10 @@ func (pbft *pbftImpl) rebuildCertStore() {
 		}
 		if pbft.primary(pbft.view) != pbft.id && vc.sentPrepare {
 			prep := &Prepare{
-				View: idx.v,
+				View:           idx.v,
 				SequenceNumber: idx.n,
-				BatchDigest: vc.digest,
-				ReplicaId: pbft.id,
+				BatchDigest:    vc.digest,
+				ReplicaId:      pbft.id,
 			}
 			cert.prepare[*prep] = true
 			cert.sentPrepare = true
@@ -869,10 +869,10 @@ func (pbft *pbftImpl) rebuildCertStore() {
 		}
 		if vc.sentCommit {
 			cmt := &Commit{
-				View: idx.v,
+				View:           idx.v,
 				SequenceNumber: idx.n,
-				BatchDigest: vc.digest,
-				ReplicaId: pbft.id,
+				BatchDigest:    vc.digest,
+				ReplicaId:      pbft.id,
 			}
 			cert.commit[*cmt] = true
 			cert.sentValidate = true
@@ -899,7 +899,6 @@ func (pbft *pbftImpl) rebuildCertStore() {
 		}
 	}
 }
-
 
 func (pbft *pbftImpl) finishViewChange() events.Event {
 

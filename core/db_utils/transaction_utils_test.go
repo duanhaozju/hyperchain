@@ -1,12 +1,12 @@
 package db_utils
 
 import (
-	"testing"
-	"hyperchain/hyperdb"
-	"reflect"
-	"hyperchain/core/types"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/test_util"
+	"hyperchain/core/types"
+	"hyperchain/hyperdb"
+	"reflect"
+	"testing"
 )
 
 // TestGetTransaction tests for GetTransaction
@@ -27,7 +27,7 @@ func TestGetTransaction(t *testing.T) {
 		if string(tr.Signature) != string(trans.Signature) {
 			t.Errorf("%s not equal %s, TestGetTransaction fail", string(tr.Signature), string(trans.Signature))
 		}
-		if res, _ :=JudgeTransactionExist(hyperdb.defaut_namespace, key); res != true {
+		if res, _ := JudgeTransactionExist(hyperdb.defaut_namespace, key); res != true {
 			t.Errorf("%s not equal %s, TestGetTransaction fail", string(tr.Signature), string(trans.Signature))
 		}
 	}

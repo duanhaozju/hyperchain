@@ -8,12 +8,12 @@ import (
 	"github.com/juju/ratelimit"
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
-	"hyperchain/manager/event"
 	"hyperchain/manager"
+	"hyperchain/manager/event"
 	"time"
-	edb "hyperchain/core/db_utils"
 )
 
 const (
@@ -26,7 +26,6 @@ var (
 	kec256Hash = crypto.NewKeccak256Hash("keccak256")
 )
 
-
 type Transaction struct {
 	namespace   string
 	eh          *manager.EventHub
@@ -38,20 +37,20 @@ type Transaction struct {
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 // If type is Ptr or String, it is optional parameter
 type SendTxArgs struct {
-	From       common.Address  `json:"from"`
-	To         *common.Address `json:"to"`
-	Gas        *Number         `json:"gas"`
-	GasPrice   *Number         `json:"gasPrice"`
-	Value      *Number         `json:"value"`
-	Payload    string          `json:"payload"`
-	Signature  string          `json:"signature"`
-	Timestamp  int64           `json:"timestamp"`
+	From      common.Address  `json:"from"`
+	To        *common.Address `json:"to"`
+	Gas       *Number         `json:"gas"`
+	GasPrice  *Number         `json:"gasPrice"`
+	Value     *Number         `json:"value"`
+	Payload   string          `json:"payload"`
+	Signature string          `json:"signature"`
+	Timestamp int64           `json:"timestamp"`
 	// --- test -----
-	Request    *Number         `json:"request"`
-	Simulate   bool            `json:"simulate"`
-	Opcode     int32           `json:"opcode"`
-	Nonce      int64           `json:"nonce"`
-	SnapshotId string          `json:"snapshotId"`
+	Request    *Number `json:"request"`
+	Simulate   bool    `json:"simulate"`
+	Opcode     int32   `json:"opcode"`
+	Nonce      int64   `json:"nonce"`
+	SnapshotId string  `json:"snapshotId"`
 }
 
 type TransactionResult struct {
@@ -103,28 +102,28 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 		args.GasPrice = NewInt64ToNumber(defaustGasPrice)
 	}
 	if args.From.Hex() == (common.Address{}).Hex() {
-		return SendTxArgs{}, &common.InvalidParamsError{Message:"address 'from' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "address 'from' is invalid"}
 	}
 	if (txType == 0 || txType == 2 || txType == 4) && args.To == nil {
-		return SendTxArgs{}, &common.InvalidParamsError{Message:"address 'to' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "address 'to' is invalid"}
 	}
 	if args.Timestamp <= 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
-		return SendTxArgs{}, &common.InvalidParamsError{Message:"'timestamp' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "'timestamp' is invalid"}
 	}
 	if txType != 3 && args.Signature == "" {
-		return SendTxArgs{}, &common.InvalidParamsError{Message:"'signature' can't be empty"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "'signature' can't be empty"}
 	}
 	if args.Nonce <= 0 {
-		return SendTxArgs{}, &common.InvalidParamsError{Message:"'nonce' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "'nonce' is invalid"}
 	}
 	if txType == 4 && args.Opcode == 1 && (args.Payload == "" || args.Payload == "0x") {
-		return SendTxArgs{}, &common.InvalidParamsError{Message:"contract code is empty"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "contract code is empty"}
 	}
-	if txType == 1 && (args.Payload == "" || args.Payload == "0x"){
-		return SendTxArgs{}, &common.InvalidParamsError{Message:"contract code is empty"}
+	if txType == 1 && (args.Payload == "" || args.Payload == "0x") {
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "contract code is empty"}
 	}
 	if args.SnapshotId != "" && args.Simulate != true {
-		return SendTxArgs{}, &common.InvalidParamsError{Message:"can not query history ledger without `simulate` mode"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "can not query history ledger without `simulate` mode"}
 	}
 	return args, nil
 }
@@ -133,7 +132,7 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 // if the sender's balance is enough, return tx hash
 func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(tran.config) && tran.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{Message:"system is too busy to response "}
+		return common.Hash{}, &common.SystemTooBusyError{Message: "system is too busy to response "}
 	}
 	var tx *types.Transaction
 
@@ -161,7 +160,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	var exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash)
 
 	if exist {
-		return common.Hash{}, &common.RepeadedTxError{Message:"repeated tx"}
+		return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx"}
 	}
 
 	if args.Request != nil {
@@ -172,12 +171,12 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 			if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
 				tran.log.Error("invalid signature")
 				// ATTENTION, return invalid transactino directly
-				return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
+				return common.Hash{}, &common.SignatureInvalidError{Message: "invalid signature"}
 			}
 			go tran.eh.GetEventObject().Post(event.NewTxEvent{
 				Transaction: tx,
 				Simulate:    args.Simulate,
-				SnapshotId:    args.SnapshotId,
+				SnapshotId:  args.SnapshotId,
 			})
 		}
 	} else {
@@ -185,13 +184,13 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 		if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
 			tran.log.Error("invalid signature")
 			// ATTENTION, return invalid transactino directly
-			return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
+			return common.Hash{}, &common.SignatureInvalidError{Message: "invalid signature"}
 		}
 
 		go tran.eh.GetEventObject().Post(event.NewTxEvent{
 			Transaction: tx,
 			Simulate:    args.Simulate,
-			SnapshotId:    args.SnapshotId,
+			SnapshotId:  args.SnapshotId,
 		})
 	}
 	return tx.GetHash(), nil
@@ -211,7 +210,7 @@ func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult
 		receipt := edb.GetReceipt(tran.namespace, hash)
 		if receipt == nil {
 			//return nil, nil
-			return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("receipt by %#x", hash)}
+			return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("receipt by %#x", hash)}
 		}
 		logs := make([]interface{}, len(receipt.Logs))
 		for idx := range receipt.Logs {
@@ -225,20 +224,20 @@ func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult
 			Log:             logs,
 		}, nil
 	} else if err != nil {
-		return nil, &common.CallbackError{Message:err.Error()}
+		return nil, &common.CallbackError{Message: err.Error()}
 	} else {
 		if errType == types.InvalidTransactionRecord_SIGFAILED {
-			return nil, &common.SignatureInvalidError{Message:errType.String()}
+			return nil, &common.SignatureInvalidError{Message: errType.String()}
 		} else if errType == types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED {
-			return nil, &common.ContractDeployError{Message:errType.String()}
+			return nil, &common.ContractDeployError{Message: errType.String()}
 		} else if errType == types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED {
-			return nil, &common.ContractInvokeError{Message:errType.String()}
+			return nil, &common.ContractInvokeError{Message: errType.String()}
 		} else if errType == types.InvalidTransactionRecord_OUTOFBALANCE {
-			return nil, &common.OutofBalanceError{Message:errType.String()}
+			return nil, &common.OutofBalanceError{Message: errType.String()}
 		} else if errType == types.InvalidTransactionRecord_INVALID_PERMISSION {
-			return nil, &common.ContractPermissionError{Message:errType.String()}
+			return nil, &common.ContractPermissionError{Message: errType.String()}
 		} else {
-			return nil, &common.CallbackError{Message:errType.String()}
+			return nil, &common.CallbackError{Message: errType.String()}
 		}
 	}
 
@@ -274,10 +273,10 @@ func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) 
 
 	reds, err := edb.GetAllDiscardTransaction(tran.namespace)
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{Message:"discard transactions"}
+		return nil, &common.LeveldbNotFoundError{Message: "discard transactions"}
 	} else if err != nil {
 		tran.log.Errorf("GetAllDiscardTransaction error: %v", err)
-		return nil, &common.CallbackError{Message:err.Error()}
+		return nil, &common.CallbackError{Message: err.Error()}
 	}
 
 	var transactions []*TransactionResult
@@ -298,10 +297,10 @@ func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*Transac
 
 	red, err := edb.GetDiscardTransaction(tran.namespace, hash.Bytes())
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("discard transaction by %#x", hash)}
+		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("discard transaction by %#x", hash)}
 	} else if err != nil {
 		tran.log.Errorf("GetDiscardTransaction error: %v", err)
-		return nil, &common.CallbackError{Message:err.Error()}
+		return nil, &common.CallbackError{Message: err.Error()}
 	}
 
 	return outputTransaction(red, tran.namespace, tran.log)
@@ -314,7 +313,7 @@ func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionRes
 	if err != nil && err.Error() == leveldb_not_found_error {
 		return tran.getDiscardTransactionByHash(hash)
 	} else if err != nil {
-		return nil, &common.CallbackError{Message:err.Error()}
+		return nil, &common.CallbackError{Message: err.Error()}
 	}
 
 	return outputTransaction(tx, tran.namespace, tran.log)
@@ -324,21 +323,21 @@ func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionRes
 func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
 	//return nil, errors.New("hahaha")
 	if common.EmptyHash(hash) == true {
-		return nil, &common.InvalidParamsError{Message:"Invalid hash"}
+		return nil, &common.InvalidParamsError{Message: "Invalid hash"}
 	}
 
 	block, err := edb.GetBlock(tran.namespace, hash[:])
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %#x", hash)}
+		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("block by %#x", hash)}
 	} else if err != nil {
 		tran.log.Errorf("%v", err)
-		return nil, &common.CallbackError{Message:err.Error()}
+		return nil, &common.CallbackError{Message: err.Error()}
 	}
 
 	txCount := len(block.Transactions)
 
 	if index.ToInt() >= txCount {
-		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("transaction, this block contains %v transactions, but the index %v is out of range", txCount, index)}
+		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("transaction, this block contains %v transactions, but the index %v is out of range", txCount, index)}
 	}
 
 	if index.ToInt() >= 0 && index.ToInt() < txCount {
@@ -361,16 +360,16 @@ func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, inde
 
 	block, err := edb.GetBlockByNumber(tran.namespace, blknumber)
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %d", n)}
+		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("block by %d", n)}
 	} else if err != nil {
 		tran.log.Errorf("%v", err)
-		return nil, &common.CallbackError{Message:err.Error()}
+		return nil, &common.CallbackError{Message: err.Error()}
 	}
 
 	txCount := len(block.Transactions)
 
 	if index.ToInt() >= txCount {
-		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("transaction, this block contains %v transactions, but the index %v is out of range", txCount, index)}
+		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("transaction, this block contains %v transactions, but the index %v is out of range", txCount, index)}
 	}
 
 	if index.ToInt() >= 0 && index.ToInt() < txCount {
@@ -386,8 +385,8 @@ func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, inde
 // GetTransactionsByTime returns the transactions for the given time duration.
 func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
-	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0{
-		return nil, &common.InvalidParamsError{Message:"Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
+	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0 {
+		return nil, &common.InvalidParamsError{Message: "Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
 	}
 
 	currentChain := edb.GetChainCopy(tran.namespace)
@@ -422,15 +421,15 @@ func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*Transactio
 func (tran *Transaction) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
 
 	if common.EmptyHash(hash) == true {
-		return nil, &common.InvalidParamsError{Message:"Invalid hash"}
+		return nil, &common.InvalidParamsError{Message: "Invalid hash"}
 	}
 
 	block, err := edb.GetBlock(tran.namespace, hash[:])
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %#x", hash)}
+		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("block by %#x", hash)}
 	} else if err != nil {
 		tran.log.Errorf("%v", err)
-		return nil, &common.CallbackError{Message:err.Error()}
+		return nil, &common.CallbackError{Message: err.Error()}
 	}
 
 	txCount := len(block.Transactions)
@@ -448,10 +447,10 @@ func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*Numbe
 
 	block, err := edb.GetBlockByNumber(tran.namespace, blknumber)
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by number %#x", n)}
+		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("block by number %#x", n)}
 	} else if err != nil {
 		tran.log.Errorf("%v", err)
-		return nil, &common.CallbackError{Message:err.Error()}
+		return nil, &common.CallbackError{Message: err.Error()}
 	}
 
 	txCount := len(block.Transactions)
@@ -475,7 +474,7 @@ func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
-		return common.Hash{}, &common.CallbackError{Message:err.Error()}
+		return common.Hash{}, &common.CallbackError{Message: err.Error()}
 	}
 
 	if args.To == nil {
@@ -552,7 +551,6 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 	contractAddr := args.ContractAddr.Hex()
 	var lastBlockNum uint64
 
-
 	for from <= realArgs.to {
 
 		block, err := getBlockByNumber(tran.namespace, from, false)
@@ -571,8 +569,7 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 				return nil, &common.CallbackError{Message: err.Error()}
 			}
 
-
-			if to == contractAddr && to != "0x0000000000000000000000000000000000000000"{
+			if to == contractAddr && to != "0x0000000000000000000000000000000000000000" {
 				if args.MethodID != "" {
 					if substr(txResult.Payload, 2, 10) == args.MethodID {
 						txCounts++
@@ -602,41 +599,41 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 	}
 
 	return struct {
-		Count     	*Number `json:"count,"`
-		LastIndex 	*Number   `json:"lastIndex"`
-		LastBlockNum 	*BlockNumber `json:"lastBlockNum"`
+		Count        *Number      `json:"count,"`
+		LastIndex    *Number      `json:"lastIndex"`
+		LastBlockNum *BlockNumber `json:"lastBlockNum"`
 	}{
-		Count:     NewIntToNumber(txCounts),
-		LastIndex: NewIntToNumber(lastIndex),
+		Count:        NewIntToNumber(txCounts),
+		LastIndex:    NewIntToNumber(lastIndex),
 		LastBlockNum: Uint64ToBlockNumber(lastBlockNum),
 	}, nil
 
 }
 
 type PagingArgs struct {
-	BlkNumber      BlockNumber	`json:"blkNumber"`
-	MaxBlkNumber   BlockNumber	`json:"maxBlkNumber"`
-	MinBlkNumber   BlockNumber 	`json:"minBlkNumber"`
-	TxIndex        Number		`json:"txIndex"`
-	Separated      Number		`json:"separated"`
-	PageSize       Number		`json:"pageSize"`
-	ContainCurrent bool		`json:"containCurrent"`
-	ContractAddr   *common.Address	`json:"address"`
-	MethodID       string           `json:"methodID"`
+	BlkNumber      BlockNumber     `json:"blkNumber"`
+	MaxBlkNumber   BlockNumber     `json:"maxBlkNumber"`
+	MinBlkNumber   BlockNumber     `json:"minBlkNumber"`
+	TxIndex        Number          `json:"txIndex"`
+	Separated      Number          `json:"separated"`
+	PageSize       Number          `json:"pageSize"`
+	ContainCurrent bool            `json:"containCurrent"`
+	ContractAddr   *common.Address `json:"address"`
+	MethodID       string          `json:"methodID"`
 }
 
 type pagingArgs struct {
-	pageSize 	int
-	minBlkNumber 	uint64
-	maxBlkNumber 	uint64
-	contractAddr 	*common.Address
-	methodId 	string
+	pageSize     int
+	minBlkNumber uint64
+	maxBlkNumber uint64
+	contractAddr *common.Address
+	methodId     string
 }
 
-func preparePagingArgs(args PagingArgs) (PagingArgs, error){
+func preparePagingArgs(args PagingArgs) (PagingArgs, error) {
 	if args.PageSize == 0 {
 		return PagingArgs{}, &common.InvalidParamsError{"'pageSize' can't be zero or empty"}
-	} else if args.Separated % args.PageSize != 0 {
+	} else if args.Separated%args.PageSize != 0 {
 		return PagingArgs{}, &common.InvalidParamsError{"invalid 'pageSize' or 'separated'"}
 	} else if args.BlkNumber < args.MinBlkNumber || args.BlkNumber > args.MaxBlkNumber {
 		return PagingArgs{}, &common.InvalidParamsError{fmt.Sprintf("'blkNumber' is out of range, it must be in the range %d to %d", args.MinBlkNumber, args.MaxBlkNumber)}
@@ -649,7 +646,7 @@ func preparePagingArgs(args PagingArgs) (PagingArgs, error){
 	return args, nil
 }
 
-func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}, error){
+func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}, error) {
 
 	realArgs, err := preparePagingArgs(args)
 	if err != nil {
@@ -659,11 +656,11 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 	txs := make([]interface{}, 0)
 
 	// to comfirm start position
-	blkNumber, err := prepareBlockNumber(realArgs.BlkNumber, tran.namespace)	// 3
+	blkNumber, err := prepareBlockNumber(realArgs.BlkNumber, tran.namespace) // 3
 	if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
 	}
-	index := realArgs.TxIndex.ToInt()		// 10
+	index := realArgs.TxIndex.ToInt() // 10
 	separated := realArgs.Separated.ToInt()
 	contractAddr := realArgs.ContractAddr
 	txCounts := 0
@@ -701,7 +698,6 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 			index = 0
 		}
 
-
 		if !isFirstTx && index == 0 {
 			txCounts_temp = txCounts + blockTxCount
 		} else {
@@ -717,7 +713,7 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 			index = blockTxCount - 1
 			txCounts = txCounts_temp
 		} else {
-			index = separated - txCounts + index -1
+			index = separated - txCounts + index - 1
 			txCounts += index + 1
 		}
 
@@ -732,9 +728,9 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 
 		blockTxCount := block.TxCounts.ToInt()
 
-		if index < blockTxCount - 1 {
+		if index < blockTxCount-1 {
 			index++
-		} else if index == blockTxCount - 1 {
+		} else if index == blockTxCount-1 {
 			blkNumber++
 			index = 0
 		} else {
@@ -754,15 +750,15 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 	}
 
 	return tran.getNextPagingTransactions(txs, blkNumber, index, pagingArgs{
-		pageSize: realArgs.PageSize.ToInt(),
+		pageSize:     realArgs.PageSize.ToInt(),
 		minBlkNumber: min,
 		maxBlkNumber: max,
 		contractAddr: realArgs.ContractAddr,
-		methodId: realArgs.MethodID,
+		methodId:     realArgs.MethodID,
 	})
 }
 
-func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}, error){
+func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}, error) {
 
 	realArgs, err := preparePagingArgs(args)
 	if err != nil {
@@ -772,11 +768,11 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 	txs := make([]interface{}, 0)
 
 	// to comfirm end position
-	blkNumber, err := prepareBlockNumber(realArgs.BlkNumber, tran.namespace)	// 3
+	blkNumber, err := prepareBlockNumber(realArgs.BlkNumber, tran.namespace) // 3
 	if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
 	}
-	index := realArgs.TxIndex.ToInt()		// 40
+	index := realArgs.TxIndex.ToInt() // 40
 	separated := realArgs.Separated.ToInt()
 	txCounts := 0
 	contractAddr := realArgs.ContractAddr
@@ -800,7 +796,7 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 		}
 
 		// filter
-		if filteredTxsByAddr, err := tran.filterTransactionsByAddress(block.Transactions[: index], contractAddr); err != nil {
+		if filteredTxsByAddr, err := tran.filterTransactionsByAddress(block.Transactions[:index], contractAddr); err != nil {
 			return nil, err
 		} else if realArgs.MethodID != "" {
 
@@ -816,7 +812,6 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 		if filtedTxsCount != blockTxCount {
 			index = filtedTxsCount
 		}
-
 
 		txCounts += index
 		if txCounts < separated {
@@ -863,15 +858,15 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 	}
 
 	return tran.getPrevPagingTransactions(txs, blkNumber, index, pagingArgs{
-		pageSize: realArgs.PageSize.ToInt(),
+		pageSize:     realArgs.PageSize.ToInt(),
 		minBlkNumber: min,
 		maxBlkNumber: max,
 		contractAddr: realArgs.ContractAddr,
-		methodId: realArgs.MethodID,
+		methodId:     realArgs.MethodID,
 	})
 }
 
-func (tran *Transaction) getNextPagingTransactions(txs []interface{}, currentNumber uint64, currentIndex int, constant pagingArgs) ([]interface{}, error){
+func (tran *Transaction) getNextPagingTransactions(txs []interface{}, currentNumber uint64, currentIndex int, constant pagingArgs) ([]interface{}, error) {
 	//log.Notice("===== enter getNextPagingTransactions =======\n")
 	//log.Noticef("当前交易量 %v: \n", len(txs))
 	//log.Noticef("当前区块号 %v: \n", currentNumber)
@@ -894,15 +889,14 @@ func (tran *Transaction) getNextPagingTransactions(txs []interface{}, currentNum
 
 	var flag bool
 	if currentIndex == 0 {
-		flag = blockTxCount <= constant.pageSize - len(txs)
+		flag = blockTxCount <= constant.pageSize-len(txs)
 	} else {
-		flag = blockTxCount - (currentIndex + 1) <= constant.pageSize - len(txs)
+		flag = blockTxCount-(currentIndex+1) <= constant.pageSize-len(txs)
 	}
 
+	if flag {
 
-	if (flag) {
-
-		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[currentIndex : ], constant.contractAddr); err != nil {
+		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[currentIndex:], constant.contractAddr); err != nil {
 			return nil, err
 		} else {
 			if constant.methodId != "" {
@@ -918,12 +912,11 @@ func (tran *Transaction) getNextPagingTransactions(txs []interface{}, currentNum
 			}
 		}
 
-
 		return tran.getNextPagingTransactions(txs, currentNumber, 0, constant)
 	} else {
 		index := currentIndex + constant.pageSize - len(txs)
 
-		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[currentIndex : index], constant.contractAddr); err != nil {
+		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[currentIndex:index], constant.contractAddr); err != nil {
 			return nil, err
 		} else {
 			if constant.methodId != "" {
@@ -941,14 +934,14 @@ func (tran *Transaction) getNextPagingTransactions(txs []interface{}, currentNum
 	}
 }
 
-func (tran *Transaction) getPrevPagingTransactions(txs []interface{}, currentNumber uint64, currentIndex int, constant pagingArgs) ([]interface{}, error){
+func (tran *Transaction) getPrevPagingTransactions(txs []interface{}, currentNumber uint64, currentIndex int, constant pagingArgs) ([]interface{}, error) {
 
 	//log.Notice("===== enter getPrevPagingTransactions =======\n")
 	//log.Noticef("当前交易量 %v: \n", len(txs))
 	//log.Noticef("当前区块号 %v: \n", currentNumber)
 	//log.Noticef("当前交易索引 %v: \n", currentIndex)
 
-	if len(txs) == constant.pageSize || currentNumber < constant.minBlkNumber || currentNumber == 0{
+	if len(txs) == constant.pageSize || currentNumber < constant.minBlkNumber || currentNumber == 0 {
 		return txs, nil
 	}
 
@@ -961,10 +954,7 @@ func (tran *Transaction) getPrevPagingTransactions(txs []interface{}, currentNum
 		currentIndex = blk.TxCounts.ToInt() - 1
 	}
 
-
-
-	if currentIndex + 1 <= constant.pageSize - len(txs) {
-
+	if currentIndex+1 <= constant.pageSize-len(txs) {
 
 		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[:currentIndex+1], constant.contractAddr); err != nil {
 			return nil, err
@@ -988,8 +978,7 @@ func (tran *Transaction) getPrevPagingTransactions(txs []interface{}, currentNum
 
 		index := currentIndex - (constant.pageSize - len(txs)) + 1
 
-
-		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[index: currentIndex+1], constant.contractAddr); err != nil {
+		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[index:currentIndex+1], constant.contractAddr); err != nil {
 			return nil, err
 		} else {
 			if constant.methodId != "" {
@@ -1048,7 +1037,7 @@ func outputTransaction(trans interface{}, namespace string, log *logging.Logger)
 	case *types.Transaction:
 		if err := proto.Unmarshal(t.Value, &txValue); err != nil {
 			log.Errorf("%v", err)
-			return nil, &common.CallbackError{Message:err.Error()}
+			return nil, &common.CallbackError{Message: err.Error()}
 		}
 
 		txHash := t.GetHash()
@@ -1073,30 +1062,30 @@ func outputTransaction(trans interface{}, namespace string, log *logging.Logger)
 				Payload:     common.ToHex(txValue.Payload),
 			}
 		} else if err != nil && err.Error() == leveldb_not_found_error {
-			return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %d", bn)}
+			return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("block by %d", bn)}
 		} else if err != nil {
-			return nil, &common.CallbackError{Message:err.Error()}
+			return nil, &common.CallbackError{Message: err.Error()}
 		}
 
 	case *types.InvalidTransactionRecord:
 		if err := proto.Unmarshal(t.Tx.Value, &txValue); err != nil {
 			log.Errorf("%v", err)
-			return nil, &common.CallbackError{Message:err.Error()}
+			return nil, &common.CallbackError{Message: err.Error()}
 		}
 		txHash := t.Tx.GetHash()
 		txRes = &TransactionResult{
-			Version:     string(t.Tx.Version),
-			Hash:        txHash,
-			From:        common.BytesToAddress(t.Tx.From),
-			To:          common.BytesToAddress(t.Tx.To),
-			Amount:      NewInt64ToNumber(txValue.Amount),
-			Nonce:       t.Tx.Nonce,
+			Version: string(t.Tx.Version),
+			Hash:    txHash,
+			From:    common.BytesToAddress(t.Tx.From),
+			To:      common.BytesToAddress(t.Tx.To),
+			Amount:  NewInt64ToNumber(txValue.Amount),
+			Nonce:   t.Tx.Nonce,
 			//Gas: 		NewInt64ToNumber(txValue.GasLimit),
 			//GasPrice: 	NewInt64ToNumber(txValue.Price),
-			Timestamp:   t.Tx.Timestamp,
-			Payload:     common.ToHex(txValue.Payload),
-			Invalid:     true,
-			InvalidMsg:  t.ErrType.String(),
+			Timestamp:  t.Tx.Timestamp,
+			Payload:    common.ToHex(txValue.Payload),
+			Invalid:    true,
+			InvalidMsg: t.ErrType.String(),
 		}
 	}
 

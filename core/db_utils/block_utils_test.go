@@ -1,9 +1,9 @@
 package db_utils
 
 import (
-	"testing"
-	"hyperchain/hyperdb"
 	"hyperchain/core/test_util"
+	"hyperchain/hyperdb"
+	"testing"
 )
 
 // TestPutBlock tests for PutBlock
@@ -11,7 +11,7 @@ func TestPersistBlock(t *testing.T) {
 	logger.Info("test =============> > > TestPersistBlock")
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err,_ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
 		logger.Fatal(err)
 	}

@@ -16,4 +16,3 @@ func (self *Block) Hash() common.Hash {
 		self.MerkleRoot,
 	})
 }
-

@@ -10,15 +10,15 @@ import (
 	"encoding/json"
 	"github.com/deckarep/golang-set"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"hyperchain/common"
+	cm "hyperchain/core/common"
 	"hyperchain/core/vm"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
 	"hyperchain/tree/bucket"
 	"sync/atomic"
-	"github.com/op/go-logging"
-	cm "hyperchain/core/common"
 )
 
 const (
@@ -69,15 +69,15 @@ type StateDB struct {
 	curSeqNo    uint64 // current seqNo in process
 	oldestSeqNo uint64 // oldest seqNo in content cache cache
 	// atomic related
-	batchCache      *common.Cache // use to store batch handler for different block process
-	archieveCache   *common.Cache // use to store batch handler for different block process
-	contentCache    *common.Cache // use to store modification set for different block process
+	batchCache    *common.Cache // use to store batch handler for different block process
+	archieveCache *common.Cache // use to store batch handler for different block process
+	contentCache  *common.Cache // use to store modification set for different block process
 
-	logger      *logging.Logger
+	logger *logging.Logger
 }
 
 // New - Create a new state from a given root
-func New(root common.Hash, db db.Database,  archieveDb db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
+func New(root common.Hash, db db.Database, archieveDb db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
 	logger := common.GetLogger(namespace, "state")
 	csc, _ := lru.New(codeSizeCacheSize)
 	// initialize bucket tree
@@ -1103,7 +1103,6 @@ func isPrecompiledAccount(address common.Address) bool {
 	}
 }
 
-
 func (self *StateDB) ShowArchive(address common.Address, date string) map[string]map[string]string {
 	storages := make(map[string]map[string]string)
 	iter := self.archieveDb.NewIterator(GetArchieveStorageKeyWithDatePrefix(address.Bytes(), []byte(date)))
@@ -1118,7 +1117,7 @@ func (self *StateDB) ShowArchive(address common.Address, date string) map[string
 			continue
 		}
 		m, existed := storages[string(d)]
-		if existed ==  false {
+		if existed == false {
 			m = make(map[string]string)
 			storages[string(d)] = m
 		}
@@ -1126,7 +1125,6 @@ func (self *StateDB) ShowArchive(address common.Address, date string) map[string
 	}
 	return storages
 }
-
 
 func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
 	dirtyStateObjects := bucket.NewKVMap()
@@ -1172,7 +1170,6 @@ func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
 	}
 	return common.BytesToHash(hash), nil
 }
-
 
 func (s *StateDB) Apply(db db.Database, batch db.Batch, expect common.Hash) error {
 	entryPrefixes := cm.RetrieveSnapshotFileds()

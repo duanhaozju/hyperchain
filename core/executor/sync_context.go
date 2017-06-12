@@ -23,25 +23,25 @@ const (
 /*
 	chain synchronization context
 	// TODO merge other flags related to `sync` here
- */
+*/
 type ChainSyncContext struct {
-	FullPeers          []uint64          // peers list which contains all required blocks. experiential this type peer has
-	                                     // higher priority to make chain synchronization
-	PartPeers          []PartPeer        // peers list which just has a part of required blocks. If this type peer be chosen as target
-					     // chain synchronization must through world state transition
-	CurrentPeer     uint64               // current sync target peer id
-	CurrentGenesis  uint64               // target peer's genesis tag
-	ResendMode      uint32               // resend mode. All include (1) block (2) world state req (3) world state piece
+	FullPeers []uint64 // peers list which contains all required blocks. experiential this type peer has
+	// higher priority to make chain synchronization
+	PartPeers []PartPeer // peers list which just has a part of required blocks. If this type peer be chosen as target
+	// chain synchronization must through world state transition
+	CurrentPeer    uint64 // current sync target peer id
+	CurrentGenesis uint64 // target peer's genesis tag
+	ResendMode     uint32 // resend mode. All include (1) block (2) world state req (3) world state piece
 
-	UpdateGenesis      bool              // whether world state transition is necessary. If target peer chose from `partpeer` collections, this flag is `True`
-	GenesisTranstioned bool              // whether world state transition has finished
-	Handshaked         bool              // whether world state transition handshake has received
-	ReceiveAll         bool              // whether all content has received
-	WorldStatePieceId  uint64            // represent current demand world state piece id
+	UpdateGenesis      bool   // whether world state transition is necessary. If target peer chose from `partpeer` collections, this flag is `True`
+	GenesisTranstioned bool   // whether world state transition has finished
+	Handshaked         bool   // whether world state transition handshake has received
+	ReceiveAll         bool   // whether all content has received
+	WorldStatePieceId  uint64 // represent current demand world state piece id
 
 	// WS related
-	hs                 *WsHandshake
-	wsHome             string
+	hs     *WsHandshake
+	wsHome string
 }
 
 func NewChainSyncContext(namespace string, event event.ChainSyncReqEvent) *ChainSyncContext {
@@ -54,8 +54,8 @@ func NewChainSyncContext(namespace string, event event.ChainSyncReqEvent) *Chain
 			fullPeers = append(fullPeers, r.Id)
 		} else if r.Genesis <= target {
 			partPeers = append(partPeers, PartPeer{
-				Id:        r.Id,
-				Genesis:   r.Genesis,
+				Id:      r.Id,
+				Genesis: r.Genesis,
 			})
 		}
 	}

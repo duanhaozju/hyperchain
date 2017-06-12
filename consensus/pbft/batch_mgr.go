@@ -8,8 +8,6 @@ import (
 	"hyperchain/core/types"
 	"time"
 
-	"fmt"
-	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 )
 

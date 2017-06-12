@@ -7,8 +7,6 @@ import (
 	"hyperchain/crypto"
 )
 
-
-
 func GetHash(needHashString string) string {
 	hasher := crypto.NewKeccak256Hash("keccak256Haner")
 	return hex.EncodeToString(hasher.ByteHash([]byte(needHashString)).Bytes())

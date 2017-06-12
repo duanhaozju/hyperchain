@@ -6,10 +6,10 @@ import (
 	"github.com/spf13/viper"
 
 	"fmt"
-	"time"
-	"os"
 	"github.com/fsnotify/fsnotify"
+	"os"
 	"sync"
+	"time"
 )
 
 type Config struct {
@@ -106,8 +106,8 @@ func (cf *Config) MergeConfig(configPath string) (*Config, error) {
 	cf.conf.MergeConfig(f)
 	return cf, nil
 }
+
 //OnConfigChange register function to invoke when config file change
-func (cf *Config) OnConfigChange(run func(in fsnotify.Event))  {
+func (cf *Config) OnConfigChange(run func(in fsnotify.Event)) {
 	cf.conf.OnConfigChange(run)
 }
-

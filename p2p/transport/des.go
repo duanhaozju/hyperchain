@@ -1,8 +1,8 @@
 package transport
 
 import (
-	"crypto/des"
 	"crypto/cipher"
+	"crypto/des"
 )
 
 // 3DES加密
@@ -33,7 +33,6 @@ func DesEncrypt(origData, key []byte) ([]byte, error) {
 	return crypted, nil
 }
 
-
 // 3DES解密
 func TripleDesDecrypt8(crypted, key []byte) ([]byte, error) {
 	block, err := des.NewTripleDESCipher(key)
@@ -61,4 +60,3 @@ func DesDecrypt(crypted, key []byte) ([]byte, error) {
 	// origData = ZeroUnPadding(origData)
 	return origData, nil
 }
-

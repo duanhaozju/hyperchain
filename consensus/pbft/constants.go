@@ -23,9 +23,9 @@ const (
 	RECOVERY_RESTART_TIMER = "recoveryRestartTimer" // recoveryRestartTimer track how long a recovery is finished and fires if needed
 
 	CLEAN_VIEW_CHANGE_TIMER = "cleanViewChangeTimer"
-	ADD_NODE_TIMER = "addNodeTimer" //track timeout for del node responses
-	DEL_NODE_TIMER = "delNodeTimer" //track timeout for new node responses
-	UPDATE_TIMER   = "updateTimer"  // track timeout for N-f agree on update n
+	ADD_NODE_TIMER          = "addNodeTimer" //track timeout for del node responses
+	DEL_NODE_TIMER          = "delNodeTimer" //track timeout for new node responses
+	UPDATE_TIMER            = "updateTimer"  // track timeout for N-f agree on update n
 
 	// constant PBFT configuration keys
 
@@ -37,7 +37,7 @@ const (
 	PBFT_RECOVERY_TIMEOUT          = "timeout.recovery"
 	PBFT_VIEWCHANGE_TIMEOUT        = "timeout.viewchange"
 	PBFT_RESEND_VIEWCHANGE_TIMEOUT = "timeout.resendviewchange"
-	PBFT_CLEAN_VIEWCHANGE_TIMEOUT = "timeout.cleanviewchange"
+	PBFT_CLEAN_VIEWCHANGE_TIMEOUT  = "timeout.cleanviewchange"
 
 	PBFT_BATCH_TIMEOUT    = "timeout.batch"
 	PBFT_REQUEST_TIMEOUT  = "timeout.request"

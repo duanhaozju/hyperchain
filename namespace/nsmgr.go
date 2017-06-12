@@ -110,7 +110,7 @@ func (nr *nsManagerImpl) Start() error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	for _, ns := range nr.namespaces {
-		go func(ns Namespace){
+		go func(ns Namespace) {
 			err := ns.Start()
 			if err != nil {
 				//logger.Errorf("namespace %s start failed, %v", name, err)

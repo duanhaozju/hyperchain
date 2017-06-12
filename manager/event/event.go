@@ -30,7 +30,7 @@ type SyncReplica struct {
 	Genesis uint64
 }
 
-type ChainSyncReqEvent struct{
+type ChainSyncReqEvent struct {
 	Id              uint64
 	TargetHeight    uint64
 	TargetBlockHash []byte
@@ -104,17 +104,16 @@ type BroadcastDelPeerEvent struct {
 	Payload []byte
 }
 
-
 /*
 	Non verified peer events definition
- */
+*/
 
 type VerifiedBlock struct {
-	Payload  []byte
+	Payload []byte
 }
 
 type ReceiveVerifiedBlock struct {
-	Payload  []byte
+	Payload []byte
 }
 
 type NegoRoutersEvent struct {
@@ -123,7 +122,7 @@ type NegoRoutersEvent struct {
 
 /*
 	Executor events
- */
+*/
 type ExecutorToConsensusEvent struct {
 	Payload interface{}
 	Type    int
@@ -137,18 +136,17 @@ type ExecutorToP2PEvent struct {
 
 /*
 	Admin events
- */
+*/
 
 type SnapshotEvent struct {
-	FilterId     string
-	BlockNumber  uint64
+	FilterId    string
+	BlockNumber uint64
 }
 
 type DeleteSnapshotEvent struct {
-	FilterId    string
+	FilterId string
 }
 
 type ArchiveEvent struct {
-	FilterId    string
+	FilterId string
 }
-

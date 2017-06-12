@@ -114,7 +114,7 @@ message view_change {
     uint64 replica_id = 6;
     bytes signature = 7;
     uint64 genesis = 8;
-    int64 timestamp = 8;
+    int64 timestamp = 9;
 }
 
 message new_view {

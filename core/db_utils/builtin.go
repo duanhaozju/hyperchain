@@ -2,10 +2,10 @@ package db_utils
 
 import (
 	"errors"
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/hyperdb"
 	"strconv"
-	"github.com/op/go-logging"
 )
 
 var (
@@ -29,11 +29,11 @@ var (
 	BlockNumPrefix           = []byte("blockNum-")
 	TxMetaSuffix             = []byte{0x01}
 
-	JournalPrefix            = []byte("-journal")
-	SnapshotPrefix           = []byte("-snapshot")
+	JournalPrefix  = []byte("-journal")
+	SnapshotPrefix = []byte("-snapshot")
 )
 
-func InitDBForNamespace(conf *common.Config, namespace string) error{
+func InitDBForNamespace(conf *common.Config, namespace string) error {
 	dbConfigPath := conf.GetString(common.DB_CONFIG_PATH)
 	conf.MergeConfig(dbConfigPath)
 	hyperdb.SetDBConfig(dbConfigPath, strconv.Itoa(conf.GetInt(common.C_NODE_ID)))
@@ -45,6 +45,6 @@ func InitDBForNamespace(conf *common.Config, namespace string) error{
 	return err
 }
 
-func logger(namespace string) *logging.Logger  {
+func logger(namespace string) *logging.Logger {
 	return common.GetLogger(namespace, "core/db_utils")
 }

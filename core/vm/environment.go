@@ -5,9 +5,9 @@ package vm
 import (
 	"math/big"
 
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
-	"github.com/op/go-logging"
 )
 
 // RuleSet is an interface that defines the current rule set during the

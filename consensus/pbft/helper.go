@@ -100,7 +100,7 @@ func (pbft *pbftImpl) getAddNV() (n int64, v uint64) {
 	if pbft.view < uint64(pbft.N) {
 		v = pbft.view + uint64(n)
 	} else {
-		v = pbft.view / uint64(pbft.N) * uint64(pbft.N + 1) + pbft.view % uint64(pbft.N)
+		v = pbft.view/uint64(pbft.N)*uint64(pbft.N+1) + pbft.view%uint64(pbft.N)
 	}
 
 	return
@@ -368,7 +368,7 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 	timeout := pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
 	if pbft.primary(pbft.view) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
-		timeout = 3 * timeout + pbft.pbftTimerMgr.requestTimeout
+		timeout = 3*timeout + pbft.pbftTimerMgr.requestTimeout
 	}
 
 	event := &LocalEvent{

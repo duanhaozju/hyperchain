@@ -2,8 +2,8 @@ package bucket
 
 import (
 	"fmt"
-	"hash/fnv"
 	"github.com/op/go-logging"
+	"hash/fnv"
 )
 
 // ConfigNumBuckets - config name 'numBuckets' as it appears in yaml file

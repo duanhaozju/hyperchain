@@ -17,9 +17,10 @@ func IsValueTransferErr(e error) bool {
 	_, ok := e.(*ValueTransferError)
 	return ok
 }
+
 /*
 	SignatureError
- */
+*/
 type SignatureError struct {
 	message string
 }
@@ -37,7 +38,7 @@ func IsSignatureErr(e error) bool {
 
 /*
 	ExecContractError
- */
+*/
 type ExecContractError struct {
 	message string
 	errType int
@@ -64,7 +65,7 @@ func IsExecContractErr(e error) bool {
 
 /*
 	InvalidInvokePermissionError
- */
+*/
 type InvalidInvokePermissionError struct {
 	message string
 }
@@ -80,4 +81,3 @@ func IsInvalidInvokePermissionErr(e error) bool {
 	_, ok := e.(*InvalidInvokePermissionError)
 	return ok
 }
-

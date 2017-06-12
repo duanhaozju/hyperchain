@@ -35,14 +35,14 @@ type msgCert struct {
 	sentCommit   bool
 	commit       map[Commit]bool
 	sentExecute  bool
-	pStored	     bool
-	cStored	     bool
+	pStored      bool
+	cStored      bool
 }
 
 type updateCert struct {
-	digest string
+	digest      string
 	sentPrepare bool
-	sentCommit bool
+	sentCommit  bool
 	sentExecute bool
 }
 

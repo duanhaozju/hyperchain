@@ -47,11 +47,11 @@ func (pbft *pbftImpl) initMsgEventMap() {
 	eventCreators[ConsensusMessage_ADD_NODE] = func() interface{} { return &AddNode{} }
 	eventCreators[ConsensusMessage_DEL_NODE] = func() interface{} { return &DelNode{} }
 
-	eventCreators[ConsensusMessage_READY_FOR_N] =  func() interface{} {return &ReadyForN{}}
-	eventCreators[ConsensusMessage_UPDATE_N] =  func() interface{} {return &UpdateN{}}
-	eventCreators[ConsensusMessage_AGREE_UPDATE_N] =  func() interface{} {return &AgreeUpdateN{}}
-	eventCreators[ConsensusMessage_FINISH_VCRESET] =  func() interface{} {return &FinishVcReset{}}
-	eventCreators[ConsensusMessage_FINISH_UPDATE] = func() interface{} {return &FinishUpdate{}}
+	eventCreators[ConsensusMessage_READY_FOR_N] = func() interface{} { return &ReadyForN{} }
+	eventCreators[ConsensusMessage_UPDATE_N] = func() interface{} { return &UpdateN{} }
+	eventCreators[ConsensusMessage_AGREE_UPDATE_N] = func() interface{} { return &AgreeUpdateN{} }
+	eventCreators[ConsensusMessage_FINISH_VCRESET] = func() interface{} { return &FinishVcReset{} }
+	eventCreators[ConsensusMessage_FINISH_UPDATE] = func() interface{} { return &FinishUpdate{} }
 }
 
 //initStatus configs basic status when starts up

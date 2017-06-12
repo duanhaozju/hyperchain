@@ -21,7 +21,6 @@ const (
 	archiveMetaPath             = "global.executor.archive.archiveMeta"
 	archiveForceConsistency     = "global.executor.archive.force_consistency"
 	archiveThreshold            = "global.executor.archive.threshold"
-
 )
 
 // GetBucketSize - get bucket size.
@@ -100,4 +99,3 @@ func (executor *Executor) GetArchiveThreshold() int {
 func (executor *Executor) IsSyncWsEable() bool {
 	return executor.conf.GetBool(syncWsEable)
 }
-

@@ -3,6 +3,7 @@
 package sldb
 
 import (
+	"github.com/op/go-logging"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/willf/bloom"
@@ -12,7 +13,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/op/go-logging"
 )
 
 const (

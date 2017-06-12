@@ -11,25 +11,27 @@ import (
 	"hyperchain/hyperdb/mdb"
 	"math"
 	//"math/big"
+	"github.com/op/go-logging"
+	"hyperchain/core/vm"
+	"math/big"
 	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
 	"testing/quick"
-	"github.com/op/go-logging"
-	"math/big"
-	"hyperchain/core/vm"
 )
 
 var (
 	configPath = "../../configuration/namespaces/global/config/global.yaml"
 	logger     *logging.Logger
 )
+
 func init() {
 	common.InitHyperLoggerManager(tutil.InitConfig(configPath))
 	logger = common.GetLogger("test", "state")
 	logger.IsEnabledFor(logging.CRITICAL)
 }
+
 type JournalSuite struct {
 }
 

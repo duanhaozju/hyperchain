@@ -3,7 +3,7 @@ package jsonrpc
 import "hyperchain/common"
 
 type Receiver interface {
-	handleChannelReq (rq *common.RPCRequest) interface{}
+	handleChannelReq(rq *common.RPCRequest) interface{}
 }
 
 type requestManager struct {
@@ -14,7 +14,7 @@ type requestManager struct {
 	exit      chan interface{}
 }
 
-func NewRequestManager(namespace string, s* Server) *requestManager {
+func NewRequestManager(namespace string, s *Server) *requestManager {
 	return &requestManager{
 		namespace: namespace,
 		receiver:  s,
@@ -24,23 +24,23 @@ func NewRequestManager(namespace string, s* Server) *requestManager {
 	}
 }
 
-func (rm *requestManager)Start() {
+func (rm *requestManager) Start() {
 	log.Debug("start a new jsonrpc request manager")
 	go rm.Loop()
 }
 
-func (rm *requestManager)Stop() {
+func (rm *requestManager) Stop() {
 	close(rm.exit)
 }
 
-func (rm *requestManager)ProcessRequest(request *common.RPCRequest) {
-	rm.response <- rm.receiver.handleChannelReq(request)//TODO: add timeout detect
+func (rm *requestManager) ProcessRequest(request *common.RPCRequest) {
+	rm.response <- rm.receiver.handleChannelReq(request) //TODO: add timeout detect
 }
 
-func (rm *requestManager)Loop(){
+func (rm *requestManager) Loop() {
 	for {
 		select {
-		case request := <- rm.requests:
+		case request := <-rm.requests:
 			rm.ProcessRequest(request)
 		case <-rm.exit:
 			log.Debugf("Close jsonrpc request queue of namespace: %v", rm.namespace)

@@ -1,8 +1,8 @@
 package manager
 
 import (
-	"hyperchain/consensus/pbft"
 	"github.com/golang/protobuf/proto"
+	"hyperchain/consensus/pbft"
 	m "hyperchain/manager/message"
 )
 
@@ -47,4 +47,3 @@ func (hub *EventHub) send(t m.SessionMessage_Type, message []byte, peers []uint6
 		hub.peerManager.SendMsgToPeers(ctx, peers)
 	}
 }
-

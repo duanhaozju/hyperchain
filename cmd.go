@@ -1,9 +1,9 @@
 package main
 
 import (
-	res "hyperchain/core/executor/restore"
-	"hyperchain/common"
 	"fmt"
+	"hyperchain/common"
+	res "hyperchain/core/executor/restore"
 	"hyperchain/hyperdb"
 )
 
