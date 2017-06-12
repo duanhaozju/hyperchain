@@ -22,8 +22,11 @@ const (
 	TransactionsSubscription
 	// BlocksSubscription queries hashes for blocks that are imported
 	BlocksSubscription
+	// SnapshotSubscription queries snapshot behavious result
 	SnapshotSubscription
+	// DelSnapshotSubscription queries del snapshot behavious result
 	DelSnapshotSubscription
+	// ArchiveSubscription queries chain's archive behavious result
 	ArchiveSubscription
 	// LastSubscription keeps track of the last index
 	LastIndexSubscription
