@@ -15,23 +15,32 @@ type PartPeer struct {
 
 const (
 	ResendMode_Block uint32 = iota
-	ResendMode_WorldState
+	ResendMode_WorldState_Hs
+	ResendMode_WorldState_Piece
 	ResendMode_Nope
 )
 
+/*
+	chain synchronization context
+	// TODO merge other flags related to `sync` here
+ */
 type ChainSyncContext struct {
-	FullPeers          []uint64          // peers list which contains all required blocks
-	PartPeers          []PartPeer        // peers list which just has a part of required blocks
-	UpdateGenesis      bool              // whether transit genesis status via network data
-	GenesisTranstioned bool
+	FullPeers          []uint64          // peers list which contains all required blocks. experiential this type peer has
+	                                     // higher priority to make chain synchronization
+	PartPeers          []PartPeer        // peers list which just has a part of required blocks. If this type peer be chosen as target
+					     // chain synchronization must through world state transition
+	CurrentPeer     uint64               // current sync target peer id
+	CurrentGenesis  uint64               // target peer's genesis tag
+	ResendMode      uint32               // resend mode. All include (1) block (2) world state req (3) world state piece
 
-	CurrentPeer     uint64
-	CurrentGenesis  uint64
-
-	ResendMode      uint32
+	UpdateGenesis      bool              // whether world state transition is necessary. If target peer chose from `partpeer` collections, this flag is `True`
+	GenesisTranstioned bool              // whether world state transition has finished
+	Handshaked         bool              // whether world state transition handshake has received
+	ReceiveAll         bool              // whether all content has received
+	WorldStatePieceId  uint64            // represent current demand world state piece id
 
 	// WS related
-	hs                 WsHandshake
+	hs                 *WsHandshake
 	wsHome             string
 }
 
@@ -130,3 +139,16 @@ func (ctx *ChainSyncContext) GetTranstioned() bool {
 	return ctx.GenesisTranstioned
 }
 
+func (ctx *ChainSyncContext) RecordWsHandshake(hs *WsHandshake) {
+	ctx.hs = hs
+	ctx.Handshaked = true
+	ctx.SetResendMode(ResendMode_WorldState_Piece)
+}
+
+func (ctx *ChainSyncContext) SetWsId(id uint64) {
+	atomic.StoreUint64(&ctx.WorldStatePieceId, id)
+}
+
+func (ctx *ChainSyncContext) GetWsId() uint64 {
+	return atomic.LoadUint64(&ctx.WorldStatePieceId)
+}

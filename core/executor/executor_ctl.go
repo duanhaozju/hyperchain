@@ -289,6 +289,8 @@ func (executor *Executor) clearSyncFlag() {
 	executor.status.syncFlag.TempDownstream = 0
 	executor.status.syncFlag.LatestUpstream = 0
 	executor.status.syncFlag.LatestDownstream = 0
+	executor.status.syncCtx = nil
+	executor.status.syncFlag.Oracle = nil
 }
 
 // recordSyncPeers - record peers id and self during the sync.

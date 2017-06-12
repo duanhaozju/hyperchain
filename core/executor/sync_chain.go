@@ -53,11 +53,11 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	executor.syncInitialize(ev)
 
 	if executor.status.syncCtx.UpdateGenesis && !executor.IsSyncWsEable() {
-		executor.logger.Noticef("World state transition is not support, while there is no required blocks over the blockchain network. system exit")
+		executor.logger.Noticef("World state transition is not supported, chain synchronization can not been arcieved since there has no required blocks over the network. system exit")
 		os.Exit(1)
 	}
 	if len(executor.status.syncCtx.GetFullPeersId()) == 0 && len(executor.status.syncCtx.GetPartPeersId()) == 0 {
-		executor.logger.Noticef("while there is no satisfied peers over the blockchain network to make chain synchronization, hold on some time to retry. system exit")
+		executor.logger.Noticef("There is no satisfied peers over the blockchain network to make chain synchronization, hold on some time to retry. system exit")
 		os.Exit(1)
 	}
 
@@ -86,8 +86,14 @@ func (executor *Executor) syncChainResendBackend() {
 					up = curUp
 					down = curDown
 				}
-			} else if executor.status.syncCtx.GetResendMode() == ResendMode_WorldState {
-				// TODO different resend strategy for world state
+			} else if executor.status.syncCtx.GetResendMode() == ResendMode_WorldState_Hs {
+				executor.SendSyncRequestForWorldState(executor.status.syncFlag.SyncDemandBlockNum + 1)
+			} else if executor.status.syncCtx.GetResendMode() == ResendMode_WorldState_Piece {
+				ack := executor.constructWsAck(executor.status.syncCtx.hs.Ctx, executor.status.syncCtx.GetWsId(), WsAck_OK, nil)
+				if err := executor.informP2P(NOTIFY_SEND_WS_ACK, ack); err != nil {
+					executor.logger.Warning("send ws ack failed")
+					return
+				}
 			}
 		}
 	}
@@ -172,7 +178,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 				if executor.status.syncCtx.UpdateGenesis {
 					// receive world state
 					executor.logger.Notice("send request to fetch world state for status transition")
-					executor.status.syncCtx.SetResendMode(ResendMode_WorldState)
+					executor.status.syncCtx.SetResendMode(ResendMode_WorldState_Hs)
 					executor.SendSyncRequestForWorldState(executor.status.syncFlag.SyncDemandBlockNum + 1)
 				} else {
 					// check
@@ -195,14 +201,18 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 }
 
 func (executor *Executor) ReceiveWsHandshake(payload []byte) {
+	if executor.status.syncCtx.Handshaked {
+		return
+	}
 	var hs WsHandshake
 	if err := proto.Unmarshal(payload, &hs); err != nil {
 		executor.logger.Warning("unmarshal world state packet failed.")
 		return
 	}
-	executor.logger.Noticef("receive ws handshake, content: [ total size (#%d), packet num (#%d), max packet size (#%d)",
+	executor.logger.Noticef("receive ws handshake, content: [ total size (#%d), packet num (#%d), max packet size (#%d) ]",
 		hs.Size, hs.PacketNum, hs.PacketSize)
-	executor.status.syncCtx.hs = hs
+
+	executor.status.syncCtx.RecordWsHandshake(&hs)
 
 	// make `receive home`
 	p := path.Join(hyperdb.GetDatabaseHome(executor.conf), "ws", "ws_" + hs.Ctx.FilterId)
@@ -213,7 +223,7 @@ func (executor *Executor) ReceiveWsHandshake(payload []byte) {
 	}
 	executor.status.syncCtx.SetWsHome(p)
 	// send back ack
-	ack := executor.constructWsAck(hs.Ctx, 0, WsAck_OK, nil)
+	ack := executor.constructWsAck(hs.Ctx, executor.status.syncCtx.GetWsId(), WsAck_OK, nil)
 	if err := executor.informP2P(NOTIFY_SEND_WS_ACK, ack); err != nil {
 		executor.logger.Warning("send ws ack failed")
 		return
@@ -261,7 +271,7 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 		return nil
 	}
 
-	if ws.PacketId == executor.status.syncCtx.hs.PacketNum {
+	if ws.PacketId == executor.status.syncCtx.hs.PacketNum && !executor.status.syncCtx.ReceiveAll {
 		// the last packet
 		store(ws.Payload, ws.PacketId, ws.Ctx.FilterId)
 		ack := executor.constructWsAck(ws.Ctx, ws.PacketId, WsAck_OK, []byte("Done"))
@@ -269,6 +279,9 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 			executor.logger.Warning("send ws ack failed")
 			return
 		}
+		executor.status.syncCtx.SetResendMode(ResendMode_Nope)
+		executor.status.syncCtx.ReceiveAll = true
+
 		executor.logger.Notice("receive all ws packet, begin to assemble")
 		if err := assemble(); err != nil {
 			executor.logger.Errorf("assemble failed, err detail %s", err.Error())
@@ -286,7 +299,7 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 		}
 		executor.status.syncCtx.SetTransitioned()
 		executor.processSyncBlocks()
-	} else {
+	} else if ws.PacketId == executor.status.syncCtx.GetWsId() + 1 {
 		store(ws.Payload, ws.PacketId, ws.Ctx.FilterId)
 		ack := executor.constructWsAck(ws.Ctx, ws.PacketId, WsAck_OK, nil)
 		if err := executor.informP2P(NOTIFY_SEND_WS_ACK, ack); err != nil {
@@ -294,6 +307,7 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 			return
 		}
 		executor.logger.Noticef("send ws (#%s) ack (#%d) success", ack.Ctx.FilterId, ack.PacketId)
+		executor.status.syncCtx.SetWsId(ws.PacketId)
 	}
 }
 
@@ -303,7 +317,7 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 		return
 	}
 	peer := executor.status.syncCtx.GetCurrentPeer()
-	executor.logger.Noticef("send sync req to %d, require [%d] to [%d]", peer, downstream, upstream)
+	executor.logger.Debugf("send sync req to %d, require [%d] to [%d]", peer, downstream, upstream)
 	if err := executor.informP2P(NOTIFY_BROADCAST_DEMAND, upstream, downstream, peer); err != nil {
 		executor.logger.Errorf("[Namespace = %s] send sync req failed.", executor.namespace)
 		executor.reject()
