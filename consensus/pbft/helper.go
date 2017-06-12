@@ -45,7 +45,7 @@ func (pbft *pbftImpl) isPrimary() (bool, uint64) {
 
 // Is the sequence number between watermarks?
 func (pbft *pbftImpl) inW(n uint64) bool {
-	return n > pbft.h && n-pbft.h <= pbft.L
+	return n > pbft.h
 }
 
 // Is the view right? And is the sequence number between watermarks?

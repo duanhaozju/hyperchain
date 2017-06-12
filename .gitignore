@@ -115,6 +115,7 @@ core/contract/java/target
 core/contract/java/*.iml
 
 hypercli/hypercli
+.token
 
 scripts/serverlist.txt
 scripts/innerserverlist.txt

@@ -140,6 +140,8 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 	}
 	newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
 	copy(newBlock.Transactions, record.ValidTxs)
+	// TODO: why copy it?
+	//newBlock.Transactions = record.ValidTxs
 	newBlock.BlockHash = newBlock.Hash().Bytes()
 	return newBlock
 }
@@ -199,6 +201,7 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 			filterLogs = append(filterLogs, log)
 			executor.logger.Critical(log.String())
 		}
+		//TODO: why need a iterate to find the final blockHash and blockNumber
 		receipt.SetLogs(logs)
 		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
 			return err, nil

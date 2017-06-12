@@ -275,6 +275,9 @@ fs_gen_and_distribute_peerconfig(){
 # generate peer configs
 fs__generate_node_peer_configs(){
     ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh global
+    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh ns1
+    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh ns2
+    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh ns3
 }
 
 # distribute config files
