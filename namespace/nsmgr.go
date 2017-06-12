@@ -14,12 +14,6 @@ import (
 
 var logger *logging.Logger
 
-var (
-	ErrInvalidNs   = errors.New("namespace/nsmgr: invalid namespace")
-	ErrCannotNewNs = errors.New("namespace/nsmgr: can not new namespace")
-	ErrNsClosed    = errors.New("namespace/nsmgr: namespace closed")
-)
-
 const (
 	DEFAULT_NAMESPACE  = "global"
 	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
