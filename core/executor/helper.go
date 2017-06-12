@@ -25,28 +25,40 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 	switch informType {
 	case NOTIFY_REMOVE_CACHE:
 		executor.logger.Debug("inform consenus remove cache")
-		msg := message.(protos.RemoveCache)
+		msg, ok := message.(protos.RemoveCache)
+		if !ok {
+			return InvalidParamsErr
+		}
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_REMOVE_CACHE,
 		})
 	case NOTIFY_VALIDATION_RES:
 		executor.logger.Debugf("[Namespace = %s] inform consenus validation result", executor.namespace)
-		msg := message.(protos.ValidatedTxs)
+		msg, ok := message.(protos.ValidatedTxs)
+		if !ok {
+			return InvalidParamsErr
+		}
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_VALIDATION_RES,
 		})
 	case NOTIFY_VC_DONE:
 		executor.logger.Debug("inform consenus vc done")
-		msg := message.(protos.VcResetDone)
+		msg, ok := message.(protos.VcResetDone)
+		if !ok {
+			return InvalidParamsErr
+		}
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_VC_DONE,
 		})
 	case NOTIFY_SYNC_DONE:
 		executor.logger.Debug("inform consenus sync done")
-		msg := message.(protos.StateUpdatedMessage)
+		msg, ok := message.(protos.StateUpdatedMessage)
+		if !ok {
+			return InvalidParamsErr
+		}
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_SYNC_DONE,
@@ -62,9 +74,20 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	switch informType {
 	case NOTIFY_BROADCAST_DEMAND:
 		executor.logger.Debug("inform p2p broadcast demand")
+		if len(message) != 2 {
+			return InvalidParamsErr
+		}
+		requiredNumber, ok := message[0].(uint64)
+		if !ok {
+			return InvalidParamsErr
+		}
+		currentNumber, ok := message[1].(uint64)
+		if !ok {
+			return InvalidParamsErr
+		}
 		required := ChainSyncRequest{
-			RequiredNumber: message[0].(uint64),
-			CurrentNumber:  message[1].(uint64),
+			RequiredNumber: requiredNumber,
+			CurrentNumber:  currentNumber,
 			PeerId:         executor.status.syncFlag.LocalId,
 		}
 		payload, err := proto.Marshal(&required)
@@ -80,8 +103,17 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return nil
 	case NOTIFY_UNICAST_BLOCK:
 		executor.logger.Debug("inform p2p unicast block")
-		id := message[0].(uint64)
-		peerId := message[1].(uint64)
+		if len(message) != 2 {
+			return InvalidParamsErr
+		}
+		id, ok := message[0].(uint64)
+		if !ok {
+			return InvalidParamsErr
+		}
+		peerId, ok := message[1].(uint64)
+		if !ok {
+			return InvalidParamsErr
+		}
 		block, err := edb.GetBlockByNumber(executor.namespace, id)
 		if err != nil {
 			executor.logger.Errorf("no demand block number: %d", id)
@@ -100,7 +132,13 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return nil
 	case NOTIFY_UNICAST_INVALID:
 		executor.logger.Debug("inform p2p unicast invalid tx")
-		r := message[0].(*types.InvalidTransactionRecord)
+		if len(message) != 1 {
+			return InvalidParamsErr
+		}
+		r, ok := message[0].(*types.InvalidTransactionRecord)
+		if !ok {
+			return InvalidParamsErr
+		}
 		payload, err := proto.Marshal(r)
 		if err != nil {
 			executor.logger.Error("marshal invalid record error")
@@ -114,7 +152,13 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return nil
 	case NOTIFY_BROADCAST_SINGLE:
 		executor.logger.Debug("inform p2p broadcast single demand")
-		id := message[0].(uint64)
+		if len(message) != 1 {
+			return InvalidParamsErr
+		}
+		id, ok := message[0].(uint64)
+		if !ok {
+			return InvalidParamsErr
+		}
 		request := ChainSyncRequest{
 			RequiredNumber: id,
 			CurrentNumber:  edb.GetHeightOfChain(executor.namespace),
@@ -133,12 +177,23 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return nil
 	case NOTIFY_SYNC_REPLICA:
 		executor.logger.Debug("inform p2p sync replica")
-		payload, _ := proto.Marshal(message[0].(*types.Chain))
+		if len(message) != 0 {
+			return InvalidParamsErr
+		}
+		chain, ok := message[0].(*types.Chain)
+		if !ok {
+			return InvalidParamsErr
+		}
+		payload, _ := proto.Marshal(chain)
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_SYNC_REPLICA,
 		})
 		return nil
+	case NOTIFY_TRANSIT_BLOCK:
+		executor.logger.Debug("inform p2p to transit commited block")
+		return nil
+
 	default:
 		return NoDefinedCaseErr
 	}
