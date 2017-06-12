@@ -22,6 +22,9 @@ const (
 	TransactionsSubscription
 	// BlocksSubscription queries hashes for blocks that are imported
 	BlocksSubscription
+	SnapshotSubscription
+	DelSnapshotSubscription
+	ArchiveSubscription
 	// LastSubscription keeps track of the last index
 	LastIndexSubscription
 )
@@ -66,7 +69,8 @@ func NewEventSystem(mux *event.TypeMux) *EventSystem {
 func (es *EventSystem) eventLoop() {
 	var (
 		index = make(filterIndex)
-		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{})
+		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{}, event.FilterArchive{},
+			event.FilterSnapshotEvent{}, event.FilterDeleteSnapshotEvent{})
 	)
 
 	for i := UnknownSubscription; i < LastIndexSubscription; i++ {
@@ -113,7 +117,24 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 				}
 			}
 		}
-
+	case event.FilterSnapshotEvent:
+		for _, f := range filters[SnapshotSubscription] {
+			if obj.Time.After(f.created) {
+				f.extra <- ev
+			}
+		}
+	case event.FilterDeleteSnapshotEvent:
+		for _, f := range filters[DelSnapshotSubscription] {
+			if obj.Time.After(f.created) {
+				f.extra <- ev
+			}
+		}
+	case event.FilterArchive:
+		for _, f := range filters[ArchiveSubscription] {
+			if obj.Time.After(f.created) {
+				f.extra <- ev
+			}
+		}
 	}
 }
 
@@ -133,6 +154,7 @@ func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash, isVerbose b
 		created:   time.Now(),
 		logs:      make(chan []*vm.Log),
 		hashes:    blockC,
+		extra:     make(chan interface{}),
 		installed: make(chan struct{}),
 		err:       make(chan error),
 	}
@@ -151,6 +173,23 @@ func (es *EventSystem) NewLogSubscription(logsCrit FilterCriteria, logC chan []*
 		logsCrit:  logsCrit,
 		logs:      logC,
 		hashes:    make(chan common.Hash),
+		extra:     make(chan interface{}),
+		installed: make(chan struct{}),
+		err:       make(chan error),
+	}
+	return es.subscribe(sub)
+}
+
+func (es *EventSystem) NewCommonSubscription(ch chan interface{}, verbose bool) *Subscription {
+	sub := &subscription{
+		id:        NewFilterID(),
+		verbose:   verbose,
+		typ:       SnapshotSubscription,
+		created:   time.Now(),
+		logsCrit:  FilterCriteria{},
+		logs:      make(chan []*vm.Log),
+		hashes:    make(chan common.Hash),
+		extra:     ch,
 		installed: make(chan struct{}),
 		err:       make(chan error),
 	}

@@ -16,6 +16,7 @@ type subscription struct {
 	logsCrit  FilterCriteria
 	logs      chan []*vm.Log
 	hashes    chan common.Hash
+	extra     chan interface{}
 	installed chan struct{} // closed when the filter is installed
 	err       chan error    // closed when the filter is uninstalled
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 	"hyperchain/core/vm"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/manager/event"
 )
 
 type PublicFilterAPI struct {
@@ -119,9 +120,33 @@ func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string
 
 }
 
-// TODO
-func (api *PublicFilterAPI) NewSnapshotSubscription(number uint64) string {
-	return ""
+func (api *PublicFilterAPI) NewSnapshotSubscription() string {
+	var (
+		ch   = make(chan interface{})
+		sub = api.events.NewCommonSubscription(ch, false)
+	)
+	api.filtersMu.Lock()
+	api.filters[sub.ID] = flt.NewFilter(flt.SnapshotSubscription, sub, flt.FilterCriteria{})
+	api.filtersMu.Unlock()
+
+	go func() {
+		for {
+			select {
+			case ev := <-ch:
+				api.filtersMu.Lock()
+				if f, found := api.filters[sub.ID]; found {
+					f.AddData(ev)
+				}
+				api.filtersMu.Unlock()
+			case <-sub.Err():
+				api.filtersMu.Lock()
+				delete(api.filters, sub.ID)
+				api.filtersMu.Unlock()
+				return
+			}
+		}
+	}()
+	return sub.ID
 }
 
 // GetFilterChanges returns the logs for the filter with the given id since
@@ -170,6 +195,15 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 			logs := f.GetLogs()
 			defer f.Clearlog()
 			return returnLogs(logs), nil
+		case flt.SnapshotSubscription:
+			datas := f.GetData()
+			var ret []event.FilterSnapshotEvent
+			for _, d := range datas {
+				if val, ok := d.(event.FilterSnapshotEvent); ok {
+					ret = append(ret, val)
+				}
+			}
+			return ret, nil
 		}
 	}
 

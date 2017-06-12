@@ -16,8 +16,9 @@ type Filter struct {
 	typ      Type
 	deadline *time.Timer // filter is inactiv when deadline triggers
 	hashes   []common.Hash
-	crit     FilterCriteria
 	logs     []*vm.Log
+	data     []interface{}
+	crit     FilterCriteria
 	s        *Subscription // associated subscription in event system
 }
 
@@ -43,6 +44,10 @@ func (flt *Filter) GetHashes() []common.Hash {
 
 func (flt *Filter) GetLogs() []*vm.Log {
 	return flt.logs
+}
+
+func (flt *Filter) GetData() []interface{} {
+	return flt.data
 }
 
 func (flt *Filter) GetSubsctiption() *Subscription {
@@ -79,6 +84,14 @@ func (flt *Filter) AddLog(log []*vm.Log) {
 
 func (flt *Filter) Clearlog() {
 	flt.logs = nil
+}
+
+func (flt *Filter) AddData(d interface{}) {
+	flt.data = append(flt.data, d)
+}
+
+func (flt *Filter) ClearData() {
+	flt.data = nil
 }
 
 func (flt *Filter) ResetDeadline() {
