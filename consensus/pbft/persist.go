@@ -10,6 +10,7 @@ import (
 	"encoding/binary"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
+	"strconv"
 )
 
 func (pbft *pbftImpl) persistQSet(preprep *PrePrepare) {
@@ -161,7 +162,6 @@ func (pbft *pbftImpl) restoreCert() {
 		cert := pbft.storeMgr.getCert(idx.v, idx.n)
 		cert.prePrepare = q
 		cert.digest = q.BatchDigest
-
 		pbft.batchVdr.validatedBatchStore[cert.digest] = q.GetTransactionBatch()
 	}
 
@@ -174,7 +174,6 @@ func (pbft *pbftImpl) restoreCert() {
 				cert.sentPrepare = true
 			}
 		}
-		cert.prepareCount = len(cert.prepare)
 	}
 
 	cset, _ := pbft.restoreCSet()
@@ -188,8 +187,35 @@ func (pbft *pbftImpl) restoreCert() {
 				cert.sentCommit = true
 			}
 		}
-		cert.commitCount = len(cert.commit)
 	}
+}
+
+func (pbft *pbftImpl) parseSpecifyCertStore() {
+	tmpStore := make(map[msgID]*msgCert)
+	for idx := range pbft.storeMgr.certStore {
+		cert := pbft.storeMgr.getCert(idx.v, idx.n)
+		if cert.prePrepare != nil {
+			cert.prePrepare.View = pbft.view
+		}
+		preps := make(map[Prepare]bool)
+		for prep := range cert.prepare {
+			delete(cert.prepare, prep)
+			prep.View = pbft.view
+			preps[prep] = true
+		}
+		cert.prepare = preps
+		cmts := make(map[Commit]bool)
+		for cmt := range cert.commit {
+			delete(cert.commit, cmt)
+			cmt.View = pbft.view
+			cmts[cmt] = true
+		}
+		cert.commit = cmts
+		delete(pbft.storeMgr.certStore, idx)
+		idx.v = pbft.view
+		tmpStore[idx] = cert
+	}
+	pbft.storeMgr.certStore = tmpStore
 }
 
 func (pbft *pbftImpl) persistRequestBatch(digest string) {
@@ -264,9 +290,34 @@ func (pbft *pbftImpl) persistDellLocalKey() {
 	persist.DelState(pbft.namespace, key)
 }
 
+func (pbft *pbftImpl) restoreView(view string) {
+	v := uint64(0)
+	if view != "" {
+		intValue, err := strconv.Atoi(view)
+		if err == nil {
+			v = uint64(intValue)
+		}
+	}
+	b, err := persist.ReadState(pbft.namespace, "view")
+	if err == nil {
+		bb := binary.LittleEndian.Uint64(b)
+		if view == "" || v == bb {
+			pbft.view = bb
+		} else {
+			pbft.view = v
+			pbft.parseSpecifyCertStore()
+		}
+		pbft.logger.Noticef("========= restore view %d =======", pbft.view)
+	} else {
+		pbft.logger.Noticef("Replica %d could not restore view: %s", pbft.id, err)
+	}
+}
+
 func (pbft *pbftImpl) restoreState() {
 
 	pbft.restoreCert()
+
+	pbft.restoreView("")
 
 	chkpts, err := persist.ReadStateSet(pbft.namespace, "chkpt.")
 	if err == nil {
@@ -287,15 +338,6 @@ func (pbft *pbftImpl) restoreState() {
 		pbft.moveWatermarks(highSeq)
 	} else {
 		pbft.logger.Warningf("Replica %d could not restore checkpoints: %s", pbft.id, err)
-	}
-
-	b, err := persist.ReadState(pbft.namespace, "view")
-	if err == nil {
-		view := binary.LittleEndian.Uint64(b)
-		pbft.view = view
-		pbft.logger.Noticef("========= restore view %d =======", view)
-	} else {
-		pbft.logger.Noticef("Replica %d could not restore view: %s", pbft.id, err)
 	}
 
 	n, err := persist.ReadState(pbft.namespace, "nodes")

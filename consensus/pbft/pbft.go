@@ -70,7 +70,7 @@ func (pbft *pbftImpl) RecvMsg(e []byte) error {
 func (pbft *pbftImpl) RecvLocal(msg interface{}) error {
 	if negoView, ok := msg.(*protos.Message); ok {
 		if negoView.Type == protos.Message_NEGOTIATE_VIEW {
-			return pbft.processNegotiateView()
+			return pbft.initNegoView()
 		}
 		return nil
 	} else {
