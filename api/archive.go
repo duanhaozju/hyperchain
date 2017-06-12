@@ -35,7 +35,15 @@ func (admin *ArchivePublicAPI) Snapshot(blockNumber uint64) string {
 	})
 	return filterId
 }
-// TODO snapshot callback
+
+func (admin *ArchivePublicAPI) QuerySnapshotExist(filterId string) bool {
+	manifestHandler := common.NewManifestHandler(getManifestPath(admin.config))
+	if manifestHandler.Contain(filterId) {
+		return true
+	} else {
+		return false
+	}
+}
 
 func (admin *ArchivePublicAPI) ReadSnapshot(filterId string, verbose bool) (interface{}, error) {
 	manifestHandler := common.NewManifestHandler(getManifestPath(admin.config))
@@ -74,7 +82,6 @@ func (admin *ArchivePublicAPI) DeleteSnapshot(filterId string) string {
 	})
 	return filterId
 }
-// TODO delete snapshot callback
 
 func (admin *ArchivePublicAPI) CheckSnapshot(filterId string) (bool, error) {
 	manifestHandler := common.NewManifestHandler(getManifestPath(admin.config))
