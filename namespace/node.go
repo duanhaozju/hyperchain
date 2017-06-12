@@ -43,9 +43,9 @@ type NamespaceInfo struct {
 //NewNamespaceInfo new namespace info by peerconfig file.
 func NewNamespaceInfo(peerConfigPath, namespace string, logger *logging.Logger) (*NamespaceInfo, error)  {
 	ni := &NamespaceInfo{
-		name:namespace,
-		logger:logger,
-		lock:&sync.RWMutex{},
+		name:   namespace,
+		logger: logger,
+		lock:   &sync.RWMutex{},
 	}
 	return ni, ni.init(peerConfigPath, namespace)
 }
@@ -53,7 +53,7 @@ func NewNamespaceInfo(peerConfigPath, namespace string, logger *logging.Logger) 
 //if add node or delete node, this method must be invoked.
 func (ni *NamespaceInfo) init(peerConfigPath, namespace string) error {
 	ni.lock.Lock()
-	defer ni.lock.RUnlock()
+	defer ni.lock.Unlock()
 	config := common.NewConfigReader(peerConfigPath, namespace)
 	if (config == nil) {
 		return errors.New("can not read config file " + peerConfigPath)
