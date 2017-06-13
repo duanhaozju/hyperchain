@@ -208,7 +208,12 @@ func (executor *Executor) processSyncBlocks() {
 			return
 		}
 		// check the latest block in local's correctness
-		if bytes.Compare(lastBlk.ParentHash, edb.GetLatestBlockHash(executor.namespace)) == 0  {
+		latestBlk, _ := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
+
+		executor.logger.Debugf("compare latest block %d hash, correct %s, current %s",
+			latestBlk.Number, common.Bytes2Hex(lastBlk.ParentHash), common.Bytes2Hex(latestBlk.BlockHash))
+
+		if bytes.Compare(lastBlk.ParentHash, latestBlk.BlockHash) == 0  {
 			executor.waitUtilSyncAvailable()
 			defer executor.syncDone()
 			// execute all received block at one time
@@ -231,7 +236,10 @@ func (executor *Executor) processSyncBlocks() {
 						return
 					} else {
 						// commit modified changes in this block and update chain.
-						executor.accpet(blk.Number, result)
+						if err := executor.accpet(blk.Number, result); err != nil {
+							executor.reject()
+							return
+						}
 					}
 				}
 			}
@@ -245,7 +253,12 @@ func (executor *Executor) processSyncBlocks() {
 				executor.reject()
 				return
 			}
-			executor.SendSyncRequestForSingle(lastBlk.Number - 1)
+			executor.logger.Debugf("cutdown block #%d success", latestBlk.Number)
+
+			prev := executor.getLatestSyncDownstream()
+			next := executor.calcuDownstream()
+			executor.status.syncFlag.Oracle.FeedBack(true)
+			executor.SendSyncRequest(prev, next)
 		}
 	}
 }
@@ -299,12 +312,19 @@ func (executor *Executor) sendStateUpdatedEvent() {
 }
 
 // accpet - accept block synchronization result.
-func (executor *Executor) accpet(seqNo uint64, result *ValidationResultRecord) {
+func (executor *Executor) accpet(seqNo uint64, result *ValidationResultRecord) error {
 	batch := executor.statedb.FetchBatch(seqNo)
-	edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false)
-	batch.Write()
+	if err := edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false); err != nil {
+		executor.logger.Errorf("update chain to (#%d) failed, err: %s", err.Error())
+		return err
+	}
+	if err := batch.Write(); err != nil {
+		executor.logger.Errorf("commit (#%d) changes failed, err: %s", err.Error())
+		return err
+	}
 	executor.statedb.MarkProcessFinish(seqNo)
 	executor.feedback(result.Block, result.Logs)
+	return nil
 }
 
 // reject - reject state update result.

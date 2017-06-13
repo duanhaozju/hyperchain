@@ -21,14 +21,15 @@ const (
 )
 
 type SuperLevelDB struct {
-	path   string
-	db     *leveldb.DB
-	index  Index
-	closed chan bool
-	logger *logging.Logger
+	path      string
+	db        *leveldb.DB
+	index     Index
+	closed    chan bool
+	logger    *logging.Logger
+	namespace string
 }
 
-func NewSLDB(conf *common.Config) (*SuperLevelDB, error) {
+func NewSLDB(conf *common.Config, namespace string) (*SuperLevelDB, error) {
 	var filepath = ""
 	if conf != nil {
 		if conf != nil {
@@ -38,20 +39,24 @@ func NewSLDB(conf *common.Config) (*SuperLevelDB, error) {
 	}
 
 	db, err := leveldb.OpenFile(filepath, nil)
-	if err != nil {
-		panic(err.Error())
-	}
 	log := common.GetLogger(conf.GetString(common.NAMESPACE), module)
+	if err != nil {
+		//panic(err.Error())
+		log.Error(err.Error())
+		return nil, err
+
+	}
 	index := NewKeyIndex(conf, "defaultNS", db, pa.Join(filepath, "index", "index.bloom.dat"))
 	index.logger = log
 	index.Init()
 	index.conf = conf
 	sldb := &SuperLevelDB{
-		path:   filepath,
-		db:     db,
-		index:  index,
-		closed: make(chan bool),
-		logger: log,
+		path:        filepath,
+		db:          db,
+		index:       index,
+		closed:      make(chan bool),
+		logger:      log,
+		namespace:   namespace,
 	}
 	go sldb.dumpIndexByInterval(conf.GetDuration(sldb_index_dump_interval))
 	return sldb, err
@@ -95,6 +100,10 @@ func (sldb *SuperLevelDB) Destroy() error {
 	return sldb.DestroyByRange(nil, nil)
 }
 
+func (sldb *SuperLevelDB) Namespace() string {
+	return sldb.namespace
+}
+
 //DestroyByRange, clean data which key in range [start, end)
 func (sldb *SuperLevelDB) DestroyByRange(start, end []byte) error {
 	if bytes.Compare(start, end) > 0 {
@@ -111,6 +120,8 @@ func (sldb *SuperLevelDB) DestroyByRange(start, end []byte) error {
 }
 
 func (sldb *SuperLevelDB) Close() {
+	sldb.index.Persist()
+	sldb.db.Close()
 	sldb.closed <- true
 }
 

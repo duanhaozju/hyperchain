@@ -25,6 +25,7 @@ f_help(){
     echo "  -k, --kill:     just kill all the processes"
     echo "  -d, --delete:   clear the old data or not; default: clear. add for not clear"
     echo "  -r, --rebuild:  rebuild the project or not; default: rebuild, add for not rebuild"
+    echo "  -c, --hypercli: rebuild hypercli or not; default: not rebuild, add for rebuild"
     echo "  -m, --mode:     choose the run mode; default: run many in many, add for many in one"
     echo "---------------------------------------------------"
     echo "Example for run many in one in mac without rebuild:"
@@ -64,10 +65,10 @@ f_check_local_env(){
 f_kill_process(){
     echo "kill the bind port process"
     PID=`ps -ax | grep hyperchain | grep -v grep | awk '{print $1}'`
-    for pid in ${PID}
-    do
-        kill -9 ${pid}
-    done
+    if [ "$PID" != "" ]
+    then
+        ps -ax | grep hyperchain | grep -v grep | awk '{print $1}' | xargs kill -9
+    fi
 }
 
 # clear data
@@ -89,6 +90,17 @@ f_rebuild(){
         rm ${DUMP_PATH}/hyperchain
     fi
     cd ${PROJECT_PATH} && govendor build -o ${DUMP_PATH}/hyperchain -tags=embed
+}
+
+# rebuild hypercli
+f_rebuild_hypercli(){
+echo "Rebuild hypercli ..."
+cd ${CLI_PATH} && govendor build
+}
+
+# modify peerconfig.json to local_peerconfig.json in global.yaml
+f_modif_global(){
+    sed -i "s/\/peerconfig.json/\/local_peerconfig.json/g" ${PROJECT_PATH}/scripts/namespace/config/template/config/global.yaml
 }
 
 f_all_in_one_cmd(){
@@ -157,14 +169,20 @@ CONF_PATH="${PROJECT_PATH}/configuration"
 # global config path
 GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/global.yaml"
 
+# hypercli root path
+CLI_PATH="${PROJECT_PATH}/hypercli"
+
 # peerconfig
 PEER_CONFIG_FILE=${PROJECT_PATH}/scripts/namespace/config/global.yaml
 
 # delete data? default = true
 DELETEDATA=true
 
-# rebuild
+# rebuild the project or not? default = true
 REBUILD=true
+
+# rebuild hypercli or not? default = false
+HYPERCLI=false
 
 # 1.check local env
 f_check_local_env
@@ -190,6 +208,9 @@ do
     -r|--rebuild)
         REBUILD=false;
         shift;;
+    -c|--hypercli)
+        HYPERCLI=true;
+        shift;;
     -m|--mode)
         MODE=true;
         shift;;
@@ -212,10 +233,16 @@ if  $REBUILD ; then
     f_rebuild
 fi
 
+f_modif_global
+
+if $HYPERCLI ; then
+    f_rebuild_hypercli
+fi
+
 # distribute files
 for ns in $NS
 do
-    ${PROJECT_PATH}/scripts/namespace/gen_config.sh ${ns}
+    ${PROJECT_PATH}/scripts/namespace/gen_config.sh -l ${ns}
 done
 
 # run hyperchain node

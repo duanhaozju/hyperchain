@@ -20,12 +20,14 @@ type MemDatabase struct {
 	key   []string
 	value [][]byte
 	lock  sync.RWMutex
+	ns    string
 }
 
 func NewMemDatabase() (*MemDatabase, error) {
 	return &MemDatabase{
 		key:   nil,
 		value: nil,
+		ns:    "",
 	}, nil
 }
 
@@ -78,6 +80,10 @@ func (db *MemDatabase) Delete(key []byte) error {
 		}
 	}
 	return nil
+}
+
+func (db *MemDatabase) Namespace() string {
+	return db.ns
 }
 
 func (db *MemDatabase) Close() {}

@@ -14,12 +14,6 @@ import (
 
 var logger *logging.Logger
 
-var (
-	ErrInvalidNs   = errors.New("namespace/nsmgr: invalid namespace")
-	ErrCannotNewNs = errors.New("namespace/nsmgr: can not new namespace")
-	ErrNsClosed    = errors.New("namespace/nsmgr: namespace closed")
-)
-
 const (
 	DEFAULT_NAMESPACE  = "global"
 	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
@@ -115,12 +109,14 @@ func (nr *nsManagerImpl) init() error {
 func (nr *nsManagerImpl) Start() error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
-	for name, ns := range nr.namespaces {
-		err := ns.Start()
-		if err != nil {
-			logger.Errorf("namespace %s start failed, %v", name, err)
-			return err
-		}
+	for _, ns := range nr.namespaces {
+		go func(ns Namespace){
+			err := ns.Start()
+			if err != nil {
+				//logger.Errorf("namespace %s start failed, %v", name, err)
+				return
+			}
+		}(ns)
 	}
 	return nil
 }

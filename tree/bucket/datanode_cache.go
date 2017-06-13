@@ -16,30 +16,41 @@ var (
 
 
 func init() {
-	globalDataNodeCache = &GlobalDataNodeCache{cacheMap: make(map[string]*lru.Cache), isEnable: IsEnabledGlobal}
+	globalDataNodeCache = &GlobalDataNodeCache{cacheMap: make(map[string]map[string]*lru.Cache), isEnable: IsEnabledGlobal}
 }
 
 type GlobalDataNodeCache struct {
-	cacheMap map[string]*lru.Cache
+	cacheMap map[string]map[string]*lru.Cache
 	isEnable bool
 	lock     sync.RWMutex
 }
 func (globalDataNodeCache *GlobalDataNodeCache) ClearAllCache() {
-	globalDataNodeCache.cacheMap = make(map[string]*lru.Cache)
+	globalDataNodeCache.cacheMap = make(map[string]map[string]*lru.Cache)
 }
 
 // Get - get a cache from global cache thread safely.
-func (globalDataNodeCache *GlobalDataNodeCache) Get(prefix string) *lru.Cache {
+func (globalDataNodeCache *GlobalDataNodeCache) Get(namespace, prefix string) *lru.Cache {
 	globalDataNodeCache.lock.RLock()
 	defer globalDataNodeCache.lock.RUnlock()
-	return globalDataNodeCache.cacheMap[prefix]
+	cs, existed := globalDataNodeCache.cacheMap[namespace]
+	if existed == false {
+		return nil
+	}
+	return cs[prefix]
 }
 
 // Add - add a new cache into global cache thread safely.
-func (globalDataNodeCache *GlobalDataNodeCache) Add(prefix string, cache *lru.Cache) {
+func (globalDataNodeCache *GlobalDataNodeCache) Add(namespace, prefix string, cache *lru.Cache) {
 	globalDataNodeCache.lock.Lock()
 	defer globalDataNodeCache.lock.Unlock()
-	globalDataNodeCache.cacheMap[prefix] = cache
+
+	if cs, existed := globalDataNodeCache.cacheMap[namespace]; existed == false {
+		tmp := make(map[string]*lru.Cache)
+		tmp[prefix] = cache
+		globalDataNodeCache.cacheMap[namespace] = tmp
+	} else {
+		cs[prefix] = cache
+	}
 }
 
 type DataNodeCache struct {
@@ -52,7 +63,7 @@ type DataNodeCache struct {
 	logger     *logging.Logger
 }
 
-func newDataNodeCache(treePrefix string, maxSizeMBs int, logger *logging.Logger) *DataNodeCache {
+func newDataNodeCache(treePrefix string, maxSizeMBs int, logger *logging.Logger, ns string) *DataNodeCache {
 	isEnabled := true
 	if maxSizeMBs <= 0 {
 		isEnabled = false
@@ -60,11 +71,12 @@ func newDataNodeCache(treePrefix string, maxSizeMBs int, logger *logging.Logger)
 		logger.Infof("Constructing datanode-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
 	}
 	if globalDataNodeCache.isEnable {
-		if globalDataNodeCache.cacheMap[treePrefix] == nil {
-			globalDataNodeCache.cacheMap[treePrefix], _ = lru.New(GlobalDataNodeCacheSize)
+		if c := globalDataNodeCache.Get(ns, treePrefix); c == nil {
+			c, _ := lru.New(GlobalDataNodeCacheSize)
+			globalDataNodeCache.Add(ns, treePrefix, c)
 		} else {
-			dataNodeCache := &DataNodeCache{TreePrefix: treePrefix, c: globalDataNodeCache.cacheMap[treePrefix], maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled, logger: logger}
-			globalDataNodeCache.cacheMap[treePrefix] = nil
+			dataNodeCache := &DataNodeCache{TreePrefix: treePrefix, c: c, maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled, logger: logger}
+			globalDataNodeCache.Add(ns, treePrefix, nil)
 			return dataNodeCache
 		}
 	}
@@ -90,10 +102,10 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(db db.Database, buck
 
 	// step 2.
 	if globalDataNodeCache.isEnable {
-		cache := globalDataNodeCache.Get(dataNodeCache.TreePrefix)
+		cache := globalDataNodeCache.Get(db.Namespace(), dataNodeCache.TreePrefix)
 		if cache == nil {
 			cache, _ = lru.New(GlobalDataNodeCacheSize)
-			globalDataNodeCache.Add(dataNodeCache.TreePrefix, cache)
+			globalDataNodeCache.Add(db.Namespace(), dataNodeCache.TreePrefix, cache)
 		}
 		value, ok = cache.Get(bucketKey)
 		if ok {
@@ -120,11 +132,11 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(db db.Database, buck
 			dataNodeCache.c.Add(bucketKey, dataNodes)
 		}
 		if globalDataNodeCache.isEnable {
-			if globalDataNodeCache.Get(dataNodeCache.TreePrefix) == nil {
+			if globalDataNodeCache.Get(db.Namespace(), dataNodeCache.TreePrefix) == nil {
 				cache, _ := lru.New(GlobalDataNodeCacheSize)
-				globalDataNodeCache.Add(dataNodeCache.TreePrefix, cache)
+				globalDataNodeCache.Add(db.Namespace(), dataNodeCache.TreePrefix, cache)
 			}
-			cache := globalDataNodeCache.Get(dataNodeCache.TreePrefix)
+			cache := globalDataNodeCache.Get(db.Namespace(), dataNodeCache.TreePrefix)
 			cache.Add(bucketKey, dataNodes)
 		}
 		return dataNodes, nil

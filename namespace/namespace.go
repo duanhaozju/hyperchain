@@ -71,13 +71,6 @@ func (s *Status) getState() NsState {
 	return state
 }
 
-//NamespaceInfo basic information of this namespace.
-type NamespaceInfo struct {
-	name    string
-	members []string //member ips list
-	desc    string
-}
-
 //namespaceImpl implementation of Namespace
 type namespaceImpl struct {
 	logger *logging.Logger
@@ -112,16 +105,19 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 		return nil, err
 	}
 
-	ninfo := &NamespaceInfo{
-		name: name,
-	}
 	status := &Status{
 		state: initnew,
 		desc:  "startting",
 		lock:  new(sync.RWMutex),
 	}
+
+	nsInfo, err := NewNamespaceInfo(conf.GetString(common.PEER_CONFIG_PATH), name, common.GetLogger(name, "namespace"))
+	//nsInfo.PrintInfo()
+	if err != nil {
+		return nil, err
+	}
 	ns := &namespaceImpl{
-		nsInfo:    ninfo,
+		nsInfo:    nsInfo,
 		status:    status,
 		conf:      conf,
 		eventMux:  new(event.TypeMux),
@@ -238,7 +234,6 @@ func (ns *namespaceImpl) Start() error {
 	switch initType {
 	case 0:
 		{
-
 			ns.passRouters()
 			ns.negotiateView()
 		} // TODO: add other init type
@@ -293,7 +288,7 @@ func (ns *namespaceImpl) Stop() error {
 	go ns.grpcMgr.Stop()
 
 	ns.status.setState(closed)
-	ns.logger.Notice()
+	//ns.logger.Notice()
 	//close related database
 	hyperdb.StopDatabase(ns.Name())
 

@@ -107,7 +107,7 @@ func Uint64ToBlockNumber(n uint64) *BlockNumber {
 }
 
 func (n BlockNumber) BlockNumberToUint64(latest uint64) (uint64, error) {
-	input := string(n)
+	input := strings.TrimSpace(string(n))
 	in := new(big.Int)
 	_, ok := in.SetString(input, 0)
 

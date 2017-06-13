@@ -72,7 +72,7 @@ func (bucketTree *BucketTree) Initialize(configs map[string]interface{}) error {
 	}
 	bucketTree.bucketCache = newBucketCache(bucketTree.treePrefix, bucketCacheMaxSize, bucketTree.logger)
 	bucketTree.bucketCache.loadAllBucketNodesFromDB()
-	bucketTree.dataNodeCache = newDataNodeCache(bucketTree.treePrefix, bucketCacheMaxSize, bucketTree.logger)
+	bucketTree.dataNodeCache = newDataNodeCache(bucketTree.treePrefix, bucketCacheMaxSize, bucketTree.logger, bucketTree.db.Namespace())
 	bucketTree.treeHashMap = make(map[*big.Int][]byte)
 	return nil
 }
@@ -339,12 +339,12 @@ func (bucketTree *BucketTree) updateDataNodeCache(bucketKey BucketKey, newDataNo
 		bucketTree.dataNodeCache.c.Add(bucketKey, newDataNodes)
 	}
 	if globalDataNodeCache.isEnable {
-		cache := globalDataNodeCache.Get(bucketTree.treePrefix)
+		cache := globalDataNodeCache.Get(bucketTree.db.Namespace(), bucketTree.treePrefix)
 		if cache == nil {
 			cache, _ = lru.New(GlobalDataNodeCacheSize)
 		}
 		cache.Add(bucketKey, newDataNodes)
-		globalDataNodeCache.Add(bucketTree.treePrefix, cache)
+		globalDataNodeCache.Add(bucketTree.db.Namespace(), bucketTree.treePrefix, cache)
 	}
 
 }
