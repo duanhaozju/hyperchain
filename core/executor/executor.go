@@ -34,6 +34,7 @@ type Executor struct {
 	helper     *Helper
 	statedb    vm.Database
 	logger     *logging.Logger
+	exception  ExceptionHandler
 }
 
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) *Executor {
@@ -47,6 +48,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 		commonHash: kec256Hash,
 		encryption: encryption,
 		helper:     helper,
+		exception:  NewExceptionHandler(helper),
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.initDb()

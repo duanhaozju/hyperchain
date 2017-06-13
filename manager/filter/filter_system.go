@@ -21,6 +21,8 @@ const (
 	TransactionsSubscription
 	// BlocksSubscription queries hashes for blocks that are imported
 	BlocksSubscription
+	// ExceptionSubscription capture all system exception events.
+	ExceptionSubscription
 	// LastSubscription keeps track of the last index
 	LastIndexSubscription
 )
@@ -64,7 +66,7 @@ func NewEventSystem(mux *event.TypeMux) *EventSystem {
 func (es *EventSystem) eventLoop() {
 	var (
 		index = make(filterIndex)
-		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{})
+		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{}, event.FilterException{})
 	)
 
 	for i := UnknownSubscription; i < LastIndexSubscription; i++ {
@@ -111,7 +113,15 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 				}
 			}
 		}
-
+	case event.FilterException:
+		for _, f := range filters[ExceptionSubscription] {
+			if obj.Time.After(f.created) {
+				// filter logs
+				if filterException(ev, &f.crit) {
+					f.extra <- ev
+				}
+			}
+		}
 	}
 }
 

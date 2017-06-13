@@ -9,6 +9,7 @@ import (
 	"time"
 	"hyperchain/core/vm"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/manager/event"
 )
 
 type PublicFilterAPI struct {
@@ -119,6 +120,35 @@ func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string
 
 }
 
+func (api *PublicFilterAPI) NewExceptionSubscription(crit flt.FilterCriteria) string {
+	var (
+		ch     = make(chan interface{})
+		sub   = api.events.NewCommonSubscription(ch, false, flt.ExceptionSubscription, crit)
+	)
+	api.filtersMu.Lock()
+	api.filters[sub.ID] = flt.NewFilter(flt.ExceptionSubscription, sub, crit)
+	api.filtersMu.Unlock()
+
+	go func() {
+		for {
+			select {
+			case d := <-ch:
+				api.filtersMu.Lock()
+				if f, found := api.filters[sub.ID]; found {
+					f.AddData(d)
+				}
+				api.filtersMu.Unlock()
+			case <-sub.Err():
+				api.filtersMu.Lock()
+				delete(api.filters, sub.ID)
+				api.filtersMu.Unlock()
+				return
+			}
+		}
+	}()
+	return sub.ID
+}
+
 // GetFilterChanges returns the logs for the filter with the given id since
 // last time is was called. This can be used for polling.
 //
@@ -165,6 +195,10 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 			logs := f.GetLogs()
 			defer f.Clearlog()
 			return returnLogs(logs), nil
+		case flt.ExceptionSubscription:
+			data := f.GetData()
+			defer f.ClearData()
+			return returnException(data), nil
 		}
 	}
 
@@ -201,3 +235,15 @@ func returnLogs(logs []*vm.Log) []vm.LogTrans {
 	return _logs.ToLogsTrans()
 }
 
+func returnException(data []interface{}) []event.FilterException {
+	if len(data) == 0 {
+		return []event.FilterException{}
+	}
+	var ret []event.FilterException
+	for _, d := range data {
+		if val, ok := d.(event.FilterException); ok {
+			ret = append(ret, val)
+		}
+	}
+	return ret
+}

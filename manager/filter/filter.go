@@ -4,6 +4,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/vm"
 	"time"
+	"hyperchain/manager/event"
 )
 
 var (
@@ -137,6 +138,10 @@ Logs:
 	}
 
 	return ret
+}
+
+func filterException(exception event.FilterException, crit *FilterCriteria) bool {
+	return true
 }
 
 func includes(addresses []common.Address, a common.Address) bool {
