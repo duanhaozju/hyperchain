@@ -10,6 +10,7 @@ syntax="proto3";
 
 package message;
 
+import "hyperchain/p2p/message/msg_type.proto";
 import "hyperchain/p2p/hts/certificate.proto";
 
 message Message{
@@ -19,36 +20,5 @@ message Message{
     bytes  Payload       = 3;
     int64 MsgTimeStamp   = 4;
     hts.Certificate Cert = 5;
-
-    //MsgType message type during data transfer 
-    enum MsgType {
-        HELLO               = 0;
-        HELLO_RESPONSE      = 1;
-        HELLOREVERSE        = 2;
-        HELLOREVERSE_RESPONSE = 3;
-        INTRODUCE           = 4;
-        INTRODUCE_RESPONSE  = 5;
-        ATTEND              = 6;
-        ATTEND_RESPONSE     = 7;
-        ATTEND_NOTIFY       = 8;
-        ATTEND_NOTIFY_RESPONSE = 9;
-        RESPONSE            = 10;
-        KEEPALIVE           = 11;
-        PENDING             = 12;
-        RECONNECT           = 13;
-        RECONNECT_RESPONSE  = 14;
-        SESSION             = 15;
-    }
 }
-
-//PeerAddress the peer address
-message PeerAddress {
-        string IP      =   1;
-        int32  Port    =   2;
-        int32  RPCPort =   3;
-        string Hash    =   4;
-        int32 ID       =   5;
-        bool IsPrimary =   6;
-}
-
 
