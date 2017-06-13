@@ -80,7 +80,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 		block := &types.Block{}
 		proto.Unmarshal(payload, block)
 		// store blocks into database only, not process them.
-		if !executor.verifyBlockIntegrity(block) {
+		if !VerifyBlockIntegrity(block) {
 			executor.logger.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, block.Number)
 			return
 		}
@@ -334,14 +334,6 @@ func (executor *Executor) reject() {
 	executor.clearStatedb()
 	executor.clearSyncFlag()
 	executor.sendStateUpdatedEvent()
-}
-
-// verifyBlockIntegrity - make sure block content doesn't change.
-func (executor *Executor) verifyBlockIntegrity(block *types.Block) bool {
-	if bytes.Compare(block.BlockHash, block.Hash().Bytes()) == 0 {
-		return true
-	}
-	return false
 }
 
 // isDemandSyncBlock - check whether is the demand sync block.

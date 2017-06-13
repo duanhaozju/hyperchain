@@ -1,6 +1,9 @@
 package executor
 
-import "fmt"
+import (
+	"fmt"
+	"errors"
+)
 
 type ValueTransferError struct {
 	message string
@@ -80,4 +83,15 @@ func IsInvalidInvokePermissionErr(e error) bool {
 	_, ok := e.(*InvalidInvokePermissionError)
 	return ok
 }
+
+
+/*
+	Constant errors
+ */
+var (
+	InvalidParamsErr = errors.New("invalid params")
+	NoDefinedCaseErr = errors.New("no defined case")
+	EmptyPointerErr  = errors.New("nil pointer")
+)
+
 
