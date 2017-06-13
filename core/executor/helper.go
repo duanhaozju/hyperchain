@@ -5,6 +5,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
+	"reflect"
 )
 type Helper struct {
 	msgQ *event.TypeMux
@@ -18,6 +19,18 @@ func NewHelper(msgQ *event.TypeMux) *Helper {
 
 func (helper *Helper) Post(ev interface{}) {
 	helper.msgQ.Post(ev)
+}
+
+func checkParams(expect []reflect.Kind, params ...interface{}) bool {
+	if len(expect) != len(params) {
+		return false
+	}
+	for idx, typ := range expect {
+		if typ != reflect.TypeOf(params[idx]).Kind() {
+			return false
+		}
+	}
+	return true
 }
 
 // informConsensus - communicate with consensus module.
@@ -74,20 +87,12 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	switch informType {
 	case NOTIFY_BROADCAST_DEMAND:
 		executor.logger.Debug("inform p2p broadcast demand")
-		if len(message) != 2 {
-			return InvalidParamsErr
-		}
-		requiredNumber, ok := message[0].(uint64)
-		if !ok {
-			return InvalidParamsErr
-		}
-		currentNumber, ok := message[1].(uint64)
-		if !ok {
+		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64, reflect.Uint64}, message...) {
 			return InvalidParamsErr
 		}
 		required := ChainSyncRequest{
-			RequiredNumber: requiredNumber,
-			CurrentNumber:  currentNumber,
+			RequiredNumber: message[0].(uint64),
+			CurrentNumber:  message[1].(uint64),
 			PeerId:         executor.status.syncFlag.LocalId,
 		}
 		payload, err := proto.Marshal(&required)
@@ -103,20 +108,12 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return nil
 	case NOTIFY_UNICAST_BLOCK:
 		executor.logger.Debug("inform p2p unicast block")
-		if len(message) != 2 {
+		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64}, message...) {
 			return InvalidParamsErr
 		}
-		id, ok := message[0].(uint64)
-		if !ok {
-			return InvalidParamsErr
-		}
-		peerId, ok := message[1].(uint64)
-		if !ok {
-			return InvalidParamsErr
-		}
-		block, err := edb.GetBlockByNumber(executor.namespace, id)
+		block, err := edb.GetBlockByNumber(executor.namespace, message[0].(uint64))
 		if err != nil {
-			executor.logger.Errorf("no demand block number: %d", id)
+			executor.logger.Errorf("no demand block number: %d", message[0].(uint64))
 			return err
 		}
 		payload, err := proto.Marshal(block)
@@ -127,7 +124,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_UNICAST_BLOCK,
-			Peers:   []uint64{peerId},
+			Peers:   []uint64{message[1].(uint64)},
 		})
 		return nil
 	case NOTIFY_UNICAST_INVALID:
@@ -152,15 +149,11 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return nil
 	case NOTIFY_BROADCAST_SINGLE:
 		executor.logger.Debug("inform p2p broadcast single demand")
-		if len(message) != 1 {
-			return InvalidParamsErr
-		}
-		id, ok := message[0].(uint64)
-		if !ok {
+		if !checkParams([]reflect.Kind{reflect.Uint64}, message...) {
 			return InvalidParamsErr
 		}
 		request := ChainSyncRequest{
-			RequiredNumber: id,
+			RequiredNumber: message[0].(uint64),
 			CurrentNumber:  edb.GetHeightOfChain(executor.namespace),
 			PeerId:         executor.status.syncFlag.LocalId,
 		}

@@ -80,7 +80,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 		block := &types.Block{}
 		proto.Unmarshal(payload, block)
 		// store blocks into database only, not process them.
-		if VerifyBlockIntegrity(block) {
+		if !VerifyBlockIntegrity(block) {
 			executor.logger.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, block.Number)
 			return
 		}
