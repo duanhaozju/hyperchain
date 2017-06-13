@@ -6,15 +6,16 @@ import (
 	"github.com/spf13/viper"
 	"fmt"
 	"hyperchain/common"
+	"hyperchain/p2p/utils"
 )
 func init(){
-	conf := common.NewConfig("../test/global.yaml")
+	conf := common.NewConfig(utils.GetProjectPath() + "/src/hyperchain/p2p/test/global.yaml")
 	common.InitHyperLogger(conf)
 }
 
 func TestHyperNet_InitServer(t *testing.T) {
 	config := viper.New()
-	config.SetConfigFile("../test/global.yaml");
+	config.SetConfigFile(utils.GetProjectPath() + "/src/hyperchain/p2p/test/global.yaml");
 	err := config.ReadInConfig()
 	if err != nil{
 		t.Fail()
@@ -27,5 +28,4 @@ func TestHyperNet_InitServer(t *testing.T) {
 	hypernet.InitServer(50012)
 	<- time.After(3* time.Second)
 	t.Log("Success!")
-
 }

@@ -14,13 +14,10 @@ type HyperNet struct {
 	server *Server
 	clients map[string]*Client
 	idClientMap map[string]string
-	idClientMapLock sync.Mutex
+	idClientMapLock *sync.Mutex
+	hostnameClientMap map[string]*Client
+	hostnameClientMapLock *sync.Mutex
 	stateMachine *fsm.FSM
-}
-
-func init(){
-	globalConfig := common.NewConfig("../test/global.yaml")
-	common.InitHyperLoggerManager(globalConfig)
 }
 
 func NewHyperNet(config *viper.Viper) (*HyperNet,error){
@@ -32,6 +29,10 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 	net :=  &HyperNet{
 		dns:dns,
 		server:NewServer(),
+		idClientMap:make(map[string]string),
+		hostnameClientMap:make(map[string]*Client),
+		idClientMapLock:new(sync.Mutex),
+		hostnameClientMapLock:new(sync.Mutex),
 	}
 	net.stateMachine = fsm.NewFSM(
 		"created",
@@ -51,6 +52,46 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 func (hyperNet *HyperNet)InitServer(port int){
 	go hyperNet.server.StartServer(port)
 }
+
+//Connect to specific host endpoint
+func (hyperNet *HyperNet)Connect(hostname string) error{
+	addr,err := hyperNet.dns.GetDNS(hostname)
+	fmt.Println("connect to ",addr)
+	if err != nil {
+		fmt.Errorf("get dns failed, err : %s \n",err.Error())
+		return err
+	}
+	client := NewClient(addr)
+	err = client.Connect()
+	if err != nil{
+		return err
+	}
+	hyperNet.hostnameClientMapLock.Lock()
+	if oldClient,ok := hyperNet.hostnameClientMap[hostname]; ok{
+		oldClient.Close()
+		delete(hyperNet.hostnameClientMap,hostname)
+	}
+	hyperNet.hostnameClientMap[hostname] = client
+	hyperNet.hostnameClientMapLock.Unlock()
+	fmt.Printf("success connect to %s \n",hostname)
+	return nil
+}
+
+//Disconnect to specific endpoint and delete the client from map
+func (hyperNet *HyperNet)DisConnect(hostname string)(err  error){
+	hyperNet.hostnameClientMapLock.Lock()
+	defer hyperNet.hostnameClientMapLock.Unlock()
+	if client, ok := hyperNet.hostnameClientMap[hostname];ok{
+		err = client.Close()
+		delete(hyperNet.hostnameClientMap,hostname)
+	}
+	if err != nil {
+		fmt.Printf("disconnect %s with somewrong, err: %s",hostname,err.Error())
+	}
+	fmt.Printf("disconnect %s successfully \n",hostname)
+  	return
+}
+
 
 //Bind the higher layer identifier
 func (hyperNet *HyperNet)Bind(identifier string, hostname string){

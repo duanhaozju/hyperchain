@@ -1,34 +1,38 @@
-package network
+package network_test
 
 import (
-	"testing"
-	"github.com/stretchr/testify/assert"
+	. "hyperchain/p2p/network"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
-
-func TestParseRoute(t *testing.T) {
-	hostname1,port1,err1 := ParseRoute("node1:8081")
-	assert.Equal(t,err1,nil)
-	assert.Equal(t,hostname1,"node1")
-	assert.Equal(t,port1,8081)
-
-	hostname2,port2,err2 := ParseRoute("node1asdaq23qasdasdjaksdfhjkahsdfjkh:8081")
-	assert.Equal(t,err2,nil)
-	assert.Equal(t,hostname2,"node1asdaq23qasdasdjaksdfhjkahsdfjkh")
-	assert.Equal(t,port2,8081)
-
-	hostname3,port3,err3 := ParseRoute("node3:8000021223181")
-	assert.Equal(t,err3,nil)
-	assert.Equal(t,hostname3,"node3")
-	assert.Equal(t,port3,8000021223181)
-
-	hostname4,port4,err4 := ParseRoute("node3err")
-	assert.Equal(t,err4,errInvalidRoute)
-	assert.Equal(t,hostname4,"")
-	assert.Equal(t,port4,0)
-
-	hostname5,port5,err5 := ParseRoute("node3err:asd")
-	assert.NotNil(t,err5)
-	assert.Equal(t,hostname5,"")
-	assert.Equal(t,port5,0)
-
+type testCase struct {
+	src string
+	want string
+	wantport int
 }
+
+var _ = Describe("Net", func() {
+	var testcases1 = []testCase{
+		{"127.0.0.1:8081", "127.0.0.1",8081},
+		{"localhost:8081", "localhost",8081},
+		{"172.16.10.10:12121", "172.16.10.10",12121},
+	}
+	_ = []testCase{
+		{"127.0.0.18081", "",0},
+		{"hellow8081", "",0},
+		{"hellow:whwe", "",0},
+	}
+	Describe("parse the dns item",func(){
+		Context("with some correctly items",func(){
+			for _,kase := range testcases1{
+				It("this should be collectly",func(){
+					hostname,port,err := ParseRoute(kase.src)
+					Expect(hostname).To(Equal(kase.want))
+					Expect(port).To(Equal(kase.wantport))
+					Expect(err).To(BeNil())
+			})
+			}
+
+		})
+	})
+})

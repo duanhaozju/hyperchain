@@ -3,40 +3,35 @@ package network
 import (
 	"testing"
 	"hyperchain/p2p/utils"
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 
 
 func TestDNSResolver_ListHosts(t *testing.T) {
-	dnsr,err := NewDNSResolver(utils.GetProjectPath() + "/src/hyperchain/configuration/namespaces/hosts.yaml");
+	dnsr,err := NewDNSResolver(utils.GetProjectPath() + "/src/hyperchain/p2p/test/conf/hosts.yaml");
 	if err !=nil{
-		t.Error("failed")
-		t.Error(err)
+		t.Error("failed",err)
+		t.FailNow()
 	}
 	// TODO should checkout the dnsr is nil or not
 	dnsr.ListHosts()
 }
 
 func TestDNSResolver_ListHosts2(t *testing.T) {
-	dnsr,err := NewDNSResolver(utils.GetProjectPath() + "/src/hyperchain/configuration/namespaces/hosts.yaml");
+	dnsr,err := NewDNSResolver(utils.GetProjectPath() + "/src/hyperchain/p2p/test/conf/hosts.yaml");
 	if err !=nil{
-		t.Error(err)
-		t.Fail()
+		t.Fatal(err)
 	}
-	// TODO should checkout the dnsr is nil or not
-	hostname,port,err := ParseRoute("node1:8081")
-	if err != nil{
-		t.Error(err)
-		t.Fail()
-	}
-	ip,err := dnsr.GetDNS(hostname)
+	ip,err := dnsr.GetDNS("node1")
 	if err !=nil{
-		t.Error(err)
-		t.Fail()
+		t.Fatal(err)
 	}
-	assert.Equal(t,ip,"127.0.0.1")
-	assert.Equal(t,port,8081)
-
+	assert.Equal(t,"127.0.0.1:50012",ip)
+	ip2,err := dnsr.GetDNS("node2")
+	if err !=nil{
+		t.Fatal(err)
+	}
+	assert.Equal(t,"localhost:50012",ip2)
 }
 

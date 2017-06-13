@@ -1,0 +1,4 @@
+global:
+    #namespace config dir root path
+    p2p:
+        hosts: "./conf/hosts.yaml"
