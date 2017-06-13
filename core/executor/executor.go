@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"errors"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
@@ -13,12 +12,6 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
-)
-
-var (
-	EmptyPointerErr  = errors.New("nil pointer")
-	NoDefinedCaseErr = errors.New("no defined case")
-	InvalidParams    = errors.New("invalid params")
 )
 
 type Executor struct {
