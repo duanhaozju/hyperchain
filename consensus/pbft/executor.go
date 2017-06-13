@@ -216,13 +216,14 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			return pbft.sendFinishUpdate()
 		}
 		var seqNo uint64
+		var event protos.VcResetDone
+		var ok bool
+		if event, ok = e.Event.(protos.VcResetDone) ; !ok {
+			pbft.logger.Error("type assert error!")
+			return nil
+		}
+		seqNo = event.SeqNo
 		if pbft.status.getState(&pbft.status.inRecovery) {
-			var event protos.VcResetDone
-			var ok bool
-			if event, ok = e.Event.(protos.VcResetDone) ; !ok {
-				return nil
-			}
-			seqNo = event.SeqNo
 			if seqNo - 1 == *pbft.recoveryMgr.recoveryToSeqNo {
 				return &LocalEvent{
 					Service:RECOVERY_SERVICE,
