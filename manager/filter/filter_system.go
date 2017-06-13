@@ -6,6 +6,7 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/manager/event"
 	"time"
+	"fmt"
 )
 
 // Type determines the kind of filter and is used to put the filter in to
@@ -153,6 +154,7 @@ func (es *EventSystem) NewLogSubscription(logsCrit FilterCriteria, logC chan []*
 		verbose:   true,
 		typ:       LogsSubscription,
 		created:   time.Now(),
+		// TODO support block tag filter
 		crit:      logsCrit,
 		logs:      logC,
 		hashes:    make(chan common.Hash),
@@ -164,6 +166,14 @@ func (es *EventSystem) NewLogSubscription(logsCrit FilterCriteria, logC chan []*
 }
 
 func (es *EventSystem) NewCommonSubscription(ch chan interface{}, verbose bool, typ Type, crit FilterCriteria) *Subscription {
+	fmt.Println("============= criteria ============")
+	fmt.Println(crit.Modules)
+	fmt.Println(crit.ModulesExclude)
+	fmt.Println(crit.SubType)
+	fmt.Println(crit.SubTypeExclude)
+	fmt.Println(crit.Code)
+	fmt.Println(crit.CodeExclude)
+
 	sub := &subscription{
 		id:        NewFilterID(),
 		verbose:   verbose,

@@ -24,14 +24,14 @@ const (
 
 const (
 	// definition format: <ExceptionCode> + <Module> + <SubType>
-	ExceptionCode_Executor_Viewchange uint = iota
+	ExceptionCode_Executor_Viewchange int =  -1 * iota
 	// etc ...
 )
 
 type FilterException struct {
 	Module    string
 	SubType   string
-	ErrorCode uint
+	ErrorCode int
 	Message   string
 	Date      time.Time
 }

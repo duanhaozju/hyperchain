@@ -28,6 +28,13 @@ type FilterCriteria struct {
 	ToBlock   *big.Int         `json:"toBlock"`
 	Addresses []common.Address `json:"addresses"`
 	Topics    [][]common.Hash  `json:"topics"`
+	// exception criteria
+	Modules        []string    `json:"modules"`
+	ModulesExclude []string    `json:"modules_exclude"`
+	SubType        []string    `json:"subtypes"`
+	SubTypeExclude []string    `json:"subtypes_exclude"`
+	Code           []int       `json:"error_codes"`
+	CodeExclude    []int       `json:"error_codes_exclude"`
 }
 
 // Subscription is created when the client registers itself for a particular event.
