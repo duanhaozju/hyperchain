@@ -1,9 +1,9 @@
 package filter
 
 import (
-	"time"
 	"hyperchain/common"
 	"hyperchain/core/vm"
+	"time"
 )
 
 var (
@@ -16,8 +16,9 @@ type Filter struct {
 	typ      Type
 	deadline *time.Timer // filter is inactiv when deadline triggers
 	hashes   []common.Hash
-	crit     FilterCriteria
 	logs     []*vm.Log
+	data     []interface{}
+	crit     FilterCriteria
 	s        *Subscription // associated subscription in event system
 }
 
@@ -32,7 +33,7 @@ func NewFilter(typ Type, sub *Subscription, crit FilterCriteria) *Filter {
 
 /*
 	Getter
- */
+*/
 func (flt *Filter) GetDeadLine() *time.Timer {
 	return flt.deadline
 }
@@ -43,6 +44,10 @@ func (flt *Filter) GetHashes() []common.Hash {
 
 func (flt *Filter) GetLogs() []*vm.Log {
 	return flt.logs
+}
+
+func (flt *Filter) GetData() []interface{} {
+	return flt.data
 }
 
 func (flt *Filter) GetSubsctiption() *Subscription {
@@ -63,7 +68,7 @@ func (flt *Filter) GetVerbose() bool {
 
 /*
 	Setter
- */
+*/
 
 func (flt *Filter) AddHash(hash common.Hash) {
 	flt.hashes = append(flt.hashes, hash)
@@ -81,6 +86,14 @@ func (flt *Filter) Clearlog() {
 	flt.logs = nil
 }
 
+func (flt *Filter) AddData(d interface{}) {
+	flt.data = append(flt.data, d)
+}
+
+func (flt *Filter) ClearData() {
+	flt.data = nil
+}
+
 func (flt *Filter) ResetDeadline() {
 	flt.deadline.Reset(deadline)
 }
@@ -88,7 +101,7 @@ func (flt *Filter) ResetDeadline() {
 // filterLogs creates a slice of logs matching the given criteria.
 func filterLogs(logs []*vm.Log, logCrit *FilterCriteria) []*vm.Log {
 	var ret []*vm.Log
-	Logs:
+Logs:
 	for _, log := range logs {
 		if logCrit.FromBlock != nil && logCrit.FromBlock.Int64() >= 0 && logCrit.FromBlock.Uint64() > log.BlockNumber {
 			continue

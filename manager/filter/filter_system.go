@@ -1,12 +1,11 @@
 package filter
 
 import (
-	"hyperchain/manager/event"
 	"errors"
-	"time"
-	"hyperchain/core/vm"
 	"hyperchain/common"
-	"fmt"
+	"hyperchain/core/vm"
+	"hyperchain/manager/event"
+	"time"
 )
 
 // Type determines the kind of filter and is used to put the filter in to
@@ -27,22 +26,22 @@ const (
 )
 
 const (
-	LatestBlock           int64 = -1
-	EarliestBlockNumber   int64 = 0
+	LatestBlock         int64 = -1
+	EarliestBlockNumber int64 = 0
 )
 
 var (
 	ErrInvalidSubscriptionID = errors.New("invalid id")
 )
 
-
 type filterIndex map[Type]map[string]*subscription
+
 // EventSystem creates subscriptions, processes events and broadcasts them to the
 // subscription which match the subscription criteria.
 type EventSystem struct {
-	mux           *event.TypeMux
-	installC      chan  *subscription
-	uninstallC    chan  *subscription
+	mux        *event.TypeMux
+	installC   chan *subscription
+	uninstallC chan *subscription
 }
 
 // NewEventSystem creates a new manager that listens for event on the given mux,
@@ -53,14 +52,13 @@ type EventSystem struct {
 // or by stopping the given mux.
 func NewEventSystem(mux *event.TypeMux) *EventSystem {
 	m := &EventSystem{
-		mux:       mux,
+		mux:        mux,
 		installC:   make(chan *subscription),
 		uninstallC: make(chan *subscription),
 	}
 	go m.eventLoop()
 	return m
 }
-
 
 // eventLoop (un)installs filters and processes mux events.
 func (es *EventSystem) eventLoop() {
@@ -107,7 +105,7 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 		for _, f := range filters[LogsSubscription] {
 			if obj.Time.After(f.created) {
 				// filter logs
-				ret := filterLogs(ev.Logs, &f.logsCrit)
+				ret := filterLogs(ev.Logs, &f.crit)
 				if len(ret) != 0 {
 					f.logs <- ret
 				}
@@ -124,7 +122,6 @@ func (es *EventSystem) subscribe(sub *subscription) *Subscription {
 	return &Subscription{ID: sub.id, f: sub, es: es}
 }
 
-
 func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash, isVerbose bool) *Subscription {
 	sub := &subscription{
 		id:        NewFilterID(),
@@ -133,6 +130,7 @@ func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash, isVerbose b
 		created:   time.Now(),
 		logs:      make(chan []*vm.Log),
 		hashes:    blockC,
+		extra:     make(chan interface{}),
 		installed: make(chan struct{}),
 		err:       make(chan error),
 	}
@@ -140,17 +138,31 @@ func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash, isVerbose b
 }
 
 func (es *EventSystem) NewLogSubscription(logsCrit FilterCriteria, logC chan []*vm.Log) *Subscription {
-	fmt.Println("############## [Criterias] ##############")
-	fmt.Println("from block:", logsCrit.FromBlock)
-	fmt.Println("to block:", logsCrit.ToBlock)
 	sub := &subscription{
 		id:        NewFilterID(),
 		verbose:   true,
 		typ:       LogsSubscription,
 		created:   time.Now(),
-		logsCrit:  logsCrit,
+		crit:      logsCrit,
 		logs:      logC,
 		hashes:    make(chan common.Hash),
+		extra:     make(chan interface{}),
+		installed: make(chan struct{}),
+		err:       make(chan error),
+	}
+	return es.subscribe(sub)
+}
+
+func (es *EventSystem) NewCommonSubscription(ch chan interface{}, verbose bool, typ Type, crit FilterCriteria) *Subscription {
+	sub := &subscription{
+		id:        NewFilterID(),
+		verbose:   verbose,
+		typ:       typ,
+		created:   time.Now(),
+		crit:      crit,
+		logs:      make(chan []*vm.Log),
+		hashes:    make(chan common.Hash),
+		extra:     ch,
 		installed: make(chan struct{}),
 		err:       make(chan error),
 	}
