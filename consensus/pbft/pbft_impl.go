@@ -830,7 +830,7 @@ func (pbft *pbftImpl) processRequestsDuringRecovery() {
 	}
 }
 
-func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
+func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error {
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvStateUpdatedEvent, but it's in nego-view", pbft.id)
@@ -839,28 +839,28 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et *stateUpdatedEvent) error {
 
 	pbft.status.inActiveState(&pbft.status.stateTransferring)
 	// If state transfer did not complete successfully, or if it did not reach our low watermark, do it again
-	if et.seqNo < pbft.h {
-		pbft.logger.Warningf("Replica %d recovered to seqNo %d but our low watermark has moved to %d", pbft.id, et.seqNo, pbft.h)
+	if et.SeqNo < pbft.h {
+		pbft.logger.Warningf("Replica %d recovered to seqNo %d but our low watermark has moved to %d", pbft.id, et.SeqNo, pbft.h)
 		if pbft.storeMgr.highStateTarget == nil {
 			pbft.logger.Debugf("Replica %d has no state targets, cannot resume state transfer yet", pbft.id)
-		} else if et.seqNo < pbft.storeMgr.highStateTarget.seqNo {
+		} else if et.SeqNo < pbft.storeMgr.highStateTarget.seqNo {
 			pbft.logger.Debugf("Replica %d has state target for %d, transferring", pbft.id, pbft.storeMgr.highStateTarget.seqNo)
 			pbft.retryStateTransfer(nil)
 		} else {
-			pbft.logger.Debugf("Replica %d has no state target above %d, highest is %d", pbft.id, et.seqNo, pbft.storeMgr.highStateTarget.seqNo)
+			pbft.logger.Debugf("Replica %d has no state target above %d, highest is %d", pbft.id, et.SeqNo, pbft.storeMgr.highStateTarget.seqNo)
 		}
 		return nil
 	}
 
-	pbft.logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", pbft.id, et.seqNo)
+	pbft.logger.Infof("Replica %d application caught up via state transfer, lastExec now %d", pbft.id, et.SeqNo)
 	// XXX create checkpoint
-	pbft.seqNo = et.seqNo
-	pbft.exec.setLastExec(et.seqNo)
-	pbft.batchVdr.setVid(et.seqNo)
-	pbft.batchVdr.setLastVid(et.seqNo)
+	pbft.seqNo = et.SeqNo
+	pbft.exec.setLastExec(et.SeqNo)
+	pbft.batchVdr.setVid(et.SeqNo)
+	pbft.batchVdr.setLastVid(et.SeqNo)
 	bcInfo := pbft.getCurrentBlockInfo()
 	id, _ := proto.Marshal(bcInfo)
-	pbft.persistCheckpoint(et.seqNo, id)
+	pbft.persistCheckpoint(et.SeqNo, id)
 	pbft.moveWatermarks(pbft.exec.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.status.inActiveState(&pbft.status.skipInProgress)
 	pbft.validateState()
