@@ -8,6 +8,7 @@ import (
 	command "os/exec"
 	"path/filepath"
 	"os"
+	"sort"
 )
 
 var DecompressErr = "decompress source contract failed"
@@ -64,6 +65,7 @@ func compile(contractPath string) error {
 
 func combineCode(dirPath string) ([]byte, error) {
 	var buffer bytes.Buffer
+	classData := make(map[string][]byte)
 	err := filepath.Walk(dirPath,
 		func(p string, f os.FileInfo, err error) error {
 			if f == nil {
@@ -74,13 +76,22 @@ func combineCode(dirPath string) ([]byte, error) {
 				if err != nil {
 					return err
 				}
-				buffer.Write(buf)
+				classData[f.Name()] = buf
+				//buffer.Write(buf)
 			}
 			return nil
 		})
 	if err != nil {
 		return nil, err
 	} else {
+		var keys []string
+		for k := range classData {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			buffer.Write(classData[k])
+		}
 		return buffer.Bytes(), nil
 	}
 }

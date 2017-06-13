@@ -10,6 +10,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Created by wangxiaoyi on 2017/4/27.
@@ -25,6 +27,9 @@ public class IOHelper {
     public static synchronized byte[] readCode(String srcDir) {
         final ByteArrayOutputStream codes = new ByteArrayOutputStream();
         final Path path = Paths.get(srcDir);
+
+        TreeMap<String, byte[]> classData = new TreeMap<>();
+
         FileVisitor<Path> fv = new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
@@ -32,7 +37,8 @@ public class IOHelper {
                 if (file.getFileName().toString().endsWith(".class")){
                     logger.info("reading data from " + file.getFileName());
                     byte[] data = Files.readAllBytes(file);
-                    codes.write(data);
+//                    codes.write(data);
+                    classData.put(file.getFileName().toString(), data);
                 }
                 return FileVisitResult.CONTINUE;
             }
@@ -40,10 +46,14 @@ public class IOHelper {
 
         try {
             Files.walkFileTree(path, fv);
+            for (Map.Entry<String, byte[]> data : classData.entrySet()) {
+                logger.debug(data.getKey());
+                codes.write(data.getValue());
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         return codes.toByteArray();
     }
 }
