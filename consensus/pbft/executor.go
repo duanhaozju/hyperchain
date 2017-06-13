@@ -148,7 +148,7 @@ func (pbft *pbftImpl) handleCorePbftEvent(e *LocalEvent) events.Event {
 		return pbft.sendViewChange()
 
 	case CORE_STATE_UPDATE_EVENT:
-		pbft.recvStateUpdatedEvent(e.Event.(*stateUpdatedEvent))
+		pbft.recvStateUpdatedEvent(e.Event.(protos.StateUpdatedMessage))
 		return nil
 
 	case CORE_VALIDATED_TXS_EVENT:
@@ -215,20 +215,21 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			return pbft.sendFinishUpdate()
 		}
 		var seqNo uint64
+		var event protos.VcResetDone
+		var ok bool
+		if event, ok = e.Event.(protos.VcResetDone) ; !ok {
+			pbft.logger.Error("type assert error!")
+			return nil
+		}
+		seqNo = event.SeqNo
 		if pbft.status.getState(&pbft.status.inRecovery) {
-			var event protos.VcResetDone
-			var ok bool
-			if event, ok = e.Event.(protos.VcResetDone); !ok {
-				return nil
-			}
-			seqNo = event.SeqNo
-			if seqNo-1 == *pbft.recoveryMgr.recoveryToSeqNo {
+			if seqNo - 1 == *pbft.recoveryMgr.recoveryToSeqNo {
 				return &LocalEvent{
 					Service:   RECOVERY_SERVICE,
 					EventType: RECOVERY_DONE_EVENT,
 				}
 			} else {
-				state := &stateUpdatedEvent{seqNo: seqNo - 1}
+				state := protos.StateUpdatedMessage{SeqNo: seqNo - 1}
 				return pbft.recvStateUpdatedEvent(state)
 			}
 		}
