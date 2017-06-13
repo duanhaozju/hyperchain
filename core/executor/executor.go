@@ -29,6 +29,7 @@ type Executor struct {
 	statedb    vm.Database
 	logger     *logging.Logger
 	jvmCli     jvm.ContractExecutor
+	exception  ExceptionHandler
 }
 
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) *Executor {
@@ -43,6 +44,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 		encryption: encryption,
 		helper:     helper,
 		jvmCli:     jvm.NewContractExecutor(conf, namespace),
+		exception:  NewExceptionHandler(helper),
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.initDb()
