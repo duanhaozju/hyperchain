@@ -204,9 +204,9 @@ func prepare(buf []byte) (error, []byte, string, string) {
 		return errors.New("static code scan failed"), codeDigest, codePath, InvalidSourceCodeErr
 	}
 
-	if err = compile(codePath); err != nil {
-		return err, codeDigest, codePath, CompileSourceCodeErr
-	}
+	//if err = compile(codePath); err != nil {
+	//	return err, codeDigest, codePath, CompileSourceCodeErr
+	//}
 	if codeDigest, err = combineCode(codePath); err != nil {
 		return err, codeDigest, codePath, SigSourceCodeErr
 	}

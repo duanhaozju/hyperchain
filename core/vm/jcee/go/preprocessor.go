@@ -37,12 +37,8 @@ func decompression(buf []byte) (string, error) {
 		return "", err
 	}
 
-	cmd := command.Command("tar", "-xzf", path.Join(tmpDir, CompressFileN), "-C", path.Join(tmpDir))
+	cmd := command.Command("tar", "-xf", path.Join(tmpDir, CompressFileN), "-C", path.Join(tmpDir), "--strip-components=1")
 	if err = cmd.Run(); err != nil {
-		return "", err
-	}
-
-	if err = extractProperty(tmpDir); err != nil {
 		return "", err
 	}
 
@@ -89,30 +85,10 @@ func combineCode(dirPath string) ([]byte, error) {
 	}
 }
 
-
-
-
-
 func isProperty(fn string) bool {
 	if strings.HasSuffix(fn, ".properties") {
 		return true
 	} else {
 		return false
 	}
-}
-
-func extractProperty(dirPath string) error {
-	return filepath.Walk(dirPath,
-		func(path string, f os.FileInfo, err error) error {
-			if f == nil {
-				return err
-			}
-			if !f.IsDir() && (strings.HasSuffix(f.Name(), "properties") || strings.HasSuffix(f.Name(), "yaml") ) {
-				cmd := command.Command("mv", path, dirPath)
-				if err := cmd.Run(); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
 }
