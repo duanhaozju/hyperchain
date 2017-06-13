@@ -2,7 +2,6 @@ package filter
 
 import (
 	"errors"
-	"fmt"
 	"hyperchain/common"
 	"hyperchain/core/vm"
 	"hyperchain/manager/event"
@@ -28,6 +27,8 @@ const (
 	DelSnapshotSubscription
 	// ArchiveSubscription queries chain's archive behavious result
 	ArchiveSubscription
+	// ExceptionSubscription capture all system exception events.
+	ExceptionSubscription
 	// LastSubscription keeps track of the last index
 	LastIndexSubscription
 )
@@ -71,7 +72,7 @@ func NewEventSystem(mux *event.TypeMux) *EventSystem {
 func (es *EventSystem) eventLoop() {
 	var (
 		index = make(filterIndex)
-		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{}, event.FilterArchive{},
+		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{}, event.FilterException{},event.FilterArchive{},
 			event.FilterSnapshotEvent{}, event.FilterDeleteSnapshotEvent{})
 	)
 
@@ -113,7 +114,7 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 		for _, f := range filters[LogsSubscription] {
 			if obj.Time.After(f.created) {
 				// filter logs
-				ret := filterLogs(ev.Logs, &f.logsCrit)
+				ret := filterLogs(ev.Logs, &f.crit)
 				if len(ret) != 0 {
 					f.logs <- ret
 				}
@@ -135,6 +136,15 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 		for _, f := range filters[ArchiveSubscription] {
 			if obj.Time.After(f.created) {
 				f.extra <- ev
+			}
+		}
+	case event.FilterException:
+		for _, f := range filters[ExceptionSubscription] {
+			if obj.Time.After(f.created) {
+				// filter logs
+				if filterException(ev, &f.crit) {
+					f.extra <- ev
+				}
 			}
 		}
 	}
@@ -163,15 +173,13 @@ func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash, isVerbose b
 }
 
 func (es *EventSystem) NewLogSubscription(logsCrit FilterCriteria, logC chan []*vm.Log) *Subscription {
-	fmt.Println("############## [Criterias] ##############")
-	fmt.Println("from block:", logsCrit.FromBlock)
-	fmt.Println("to block:", logsCrit.ToBlock)
 	sub := &subscription{
 		id:        NewFilterID(),
 		verbose:   true,
 		typ:       LogsSubscription,
 		created:   time.Now(),
-		logsCrit:  logsCrit,
+		// TODO support block tag filter
+		crit:      logsCrit,
 		logs:      logC,
 		hashes:    make(chan common.Hash),
 		extra:     make(chan interface{}),
@@ -181,13 +189,13 @@ func (es *EventSystem) NewLogSubscription(logsCrit FilterCriteria, logC chan []*
 	return es.subscribe(sub)
 }
 
-func (es *EventSystem) NewCommonSubscription(ch chan interface{}, verbose bool) *Subscription {
+func (es *EventSystem) NewCommonSubscription(ch chan interface{}, verbose bool, typ Type, crit FilterCriteria) *Subscription {
 	sub := &subscription{
 		id:        NewFilterID(),
 		verbose:   verbose,
-		typ:       SnapshotSubscription,
+		typ:       typ,
 		created:   time.Now(),
-		logsCrit:  FilterCriteria{},
+		crit:      crit,
 		logs:      make(chan []*vm.Log),
 		hashes:    make(chan common.Hash),
 		extra:     ch,

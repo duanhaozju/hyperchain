@@ -38,6 +38,7 @@ type Executor struct {
 	logger      *logging.Logger
 	snapshotReg *SnapshotRegistry
 	archiveMgr  *ArchiveManager
+	exception  ExceptionHandler
 }
 
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) (*Executor, error) {
@@ -51,6 +52,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 		commonHash: kec256Hash,
 		encryption: encryption,
 		helper:     helper,
+		exception:  NewExceptionHandler(helper),
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.snapshotReg = NewSnapshotRegistry(namespace, executor.logger, executor)

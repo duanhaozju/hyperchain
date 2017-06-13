@@ -4,6 +4,8 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/vm"
 	"time"
+	"hyperchain/manager/event"
+	"reflect"
 )
 
 var (
@@ -137,6 +139,52 @@ Logs:
 	}
 
 	return ret
+}
+
+func filterException(ev event.FilterException, crit *FilterCriteria) bool {
+	include := func(include []interface{}, exclude []interface{}, val interface{}) bool {
+		if len(include) == 0 {
+			if len(exclude) == 0 {
+				// if no include, exclude collection been specfied, just regard the crit as a wildcard
+				return true
+			} else {
+				for _, e := range exclude {
+					if reflect.DeepEqual(e, val) {
+						return false
+					}
+				}
+				return true
+			}
+		} else {
+			// the effect of include is larger than exclude
+			for _, e := range include {
+				if reflect.DeepEqual(e, val) {
+					return true
+				}
+			}
+			return false
+		}
+	}
+	convertStringArray := func(in []string) []interface{} {
+		ret := make([]interface{}, len(in))
+		for idx, val := range in {
+			ret[idx] = val
+		}
+		return ret
+	}
+	convertIntArray := func(in []int) []interface{} {
+		ret := make([]interface{}, len(in))
+		for idx, val := range in {
+			ret[idx] = val
+		}
+		return ret
+	}
+	if include(convertStringArray(crit.Modules), convertStringArray(crit.ModulesExclude), ev.Module) &&
+		include(convertStringArray(crit.SubType), convertStringArray(crit.SubTypeExclude), ev.SubType) &&
+		include(convertIntArray(crit.Code), convertIntArray(crit.CodeExclude), ev.ErrorCode) {
+		return true
+	}
+	return false
 }
 
 func includes(addresses []common.Address, a common.Address) bool {

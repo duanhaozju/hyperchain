@@ -13,7 +13,7 @@ type subscription struct {
 	verbose   bool
 	typ       Type
 	created   time.Time
-	logsCrit  FilterCriteria
+	crit      FilterCriteria
 	logs      chan []*vm.Log
 	hashes    chan common.Hash
 	extra     chan interface{}
@@ -23,10 +23,18 @@ type subscription struct {
 
 // FilterCriteria represents a request to create a new filter.
 type FilterCriteria struct {
+	// vm log criteria
 	FromBlock *big.Int         `json:"fromBlock"`
 	ToBlock   *big.Int         `json:"toBlock"`
 	Addresses []common.Address `json:"addresses"`
 	Topics    [][]common.Hash  `json:"topics"`
+	// exception criteria
+	Modules        []string    `json:"modules"`
+	ModulesExclude []string    `json:"modules_exclude"`
+	SubType        []string    `json:"subtypes"`
+	SubTypeExclude []string    `json:"subtypes_exclude"`
+	Code           []int       `json:"error_codes"`
+	CodeExclude    []int       `json:"error_codes_exclude"`
 }
 
 // Subscription is created when the client registers itself for a particular event.

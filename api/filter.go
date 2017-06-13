@@ -122,20 +122,46 @@ func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string
 
 func (api *PublicFilterAPI) NewSnapshotSubscription() string {
 	var (
-		ch  = make(chan interface{})
-		sub = api.events.NewCommonSubscription(ch, false)
+		ch = make(chan interface{})
+		sub = api.events.NewCommonSubscription(ch, false, flt.SnapshotSubscription, flt.FilterCriteria{})
 	)
 	api.filtersMu.Lock()
 	api.filters[sub.ID] = flt.NewFilter(flt.SnapshotSubscription, sub, flt.FilterCriteria{})
+	go func() {
+		for {
+			select {
+			case d := <-ch:
+				api.filtersMu.Lock()
+				if f, found := api.filters[sub.ID]; found {
+					f.AddData(d)
+				}
+				api.filtersMu.Unlock()
+			case <-sub.Err():
+				api.filtersMu.Lock()
+				delete(api.filters, sub.ID)
+				api.filtersMu.Unlock()
+				return
+			}
+		}
+	}()
+	return sub.ID
+}
+func (api *PublicFilterAPI) NewExceptionSubscription(crit flt.FilterCriteria) string {
+	var (
+		ch     = make(chan interface{})
+		sub   = api.events.NewCommonSubscription(ch, false, flt.ExceptionSubscription, crit)
+	)
+	api.filtersMu.Lock()
+	api.filters[sub.ID] = flt.NewFilter(flt.ExceptionSubscription, sub, crit)
 	api.filtersMu.Unlock()
 
 	go func() {
 		for {
 			select {
-			case ev := <-ch:
+			case d := <-ch:
 				api.filtersMu.Lock()
 				if f, found := api.filters[sub.ID]; found {
-					f.AddData(ev)
+					f.AddData(d)
 				}
 				api.filtersMu.Unlock()
 			case <-sub.Err():
@@ -204,6 +230,10 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 				}
 			}
 			return ret, nil
+		case flt.ExceptionSubscription:
+			data := f.GetData()
+			defer f.ClearData()
+			return returnException(data), nil
 		}
 	}
 
@@ -238,4 +268,17 @@ func returnLogs(logs []*vm.Log) []vm.LogTrans {
 	}
 	_logs := vm.Logs(logs)
 	return _logs.ToLogsTrans()
+}
+
+func returnException(data []interface{}) []event.FilterException {
+	if len(data) == 0 {
+		return []event.FilterException{}
+	}
+	var ret []event.FilterException
+	for _, d := range data {
+		if val, ok := d.(event.FilterException); ok {
+			ret = append(ret, val)
+		}
+	}
+	return ret
 }
