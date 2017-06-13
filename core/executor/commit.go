@@ -78,8 +78,14 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 		executor.logger.Errorf("persist block #%d into database failed.", block.Number, err.Error())
 		return err
 	}
-	edb.UpdateChain(executor.namespace, batch, block, false, false, false)
-	batch.Write()
+	if err := edb.UpdateChain(executor.namespace, batch, block, false, false, false); err != nil {
+		executor.logger.Errorf("update chain to #%d failed.", block.Number, err.Error())
+		return err
+	}
+	if err := batch.Write(); err != nil {
+		executor.logger.Errorf("commit #%d changes failed.", block.Number, err.Error())
+		return err
+	}
 	executor.statedb.MarkProcessFinish(record.SeqNo)
 	executor.statedb.MakeArchive(record.SeqNo)
 	if block.Number%10 == 0 && block.Number != 0 {
@@ -124,6 +130,8 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 	}
 	newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
 	copy(newBlock.Transactions, record.ValidTxs)
+	// TODO: why copy it?
+	//newBlock.Transactions = record.ValidTxs
 	newBlock.BlockHash = newBlock.Hash().Bytes()
 	return newBlock
 }
@@ -180,6 +188,7 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 			log.BlockHash = blockHash
 			log.BlockNumber = blockNumber
 		}
+		//TODO: why need a iterate to find the final blockHash and blockNumber
 		receipt.SetLogs(logs)
 		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
 			return err

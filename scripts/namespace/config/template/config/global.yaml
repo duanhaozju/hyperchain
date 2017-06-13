@@ -21,7 +21,7 @@ global:
 
     configs:
         caconfig: "namespaces/template/config/caconfig.toml"
-        peers: "namespaces/template/config/local_peerconfig.json"
+        peers: "namespaces/template/config/peerconfig.json"
         genesis: "namespaces/template/config/genesis.json"
 
         ratelimit:

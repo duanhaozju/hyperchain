@@ -87,14 +87,14 @@ func InitDatabase(conf *common.Config, namespace string) error {
 		return errors.New("Try to init inited db " + namespace)
 	}
 
-	db, err := NewDatabase(conf, "blockchain", dbType)
+	db, err := NewDatabase(conf, "blockchain", dbType, namespace)
 	if err != nil {
 		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
 		log.Error(err.Error())
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
 	}
 
-	archieveDb, err := NewDatabase(conf, "Archieve", 0001)
+	archieveDb, err := NewDatabase(conf, "Archieve", 0001, namespace)
 
 	if err != nil {
 		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
@@ -102,7 +102,7 @@ func InitDatabase(conf *common.Config, namespace string) error {
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
 	}
 
-	db1, err1 := NewDatabase(conf, "Consensus", 0001)
+	db1, err1 := NewDatabase(conf, "Consensus", 0001, namespace)
 
 	if err1 != nil {
 		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
@@ -216,12 +216,12 @@ func GetDBConsensusByNamespace(namespace string) (db.Database, error) {
 	return dbMgr.dbMap[name].db, nil
 }
 
-func NewDatabase(conf *common.Config, path string, dbType int) (db.Database, error) {
+func NewDatabase(conf *common.Config, path string, dbType int, namespace string) (db.Database, error) {
 	switch dbType {
 	case ldb_db:
-		return hleveldb.NewLDBDataBase(conf, path)
+		return hleveldb.NewLDBDataBase(conf, path, namespace)
 	case super_level_db:
-		return sldb.NewSLDB(conf)
+		return sldb.NewSLDB(conf, namespace)
 	default:
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
 	}

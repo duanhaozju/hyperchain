@@ -16,6 +16,7 @@ import (
 	"hyperchain/manager/protos"
 	"sync/atomic"
 	"github.com/op/go-logging"
+	"sync"
 )
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
@@ -55,6 +56,8 @@ type pbftImpl struct {
 
 	config *common.Config
 	logger         *logging.Logger
+
+	dupLock        *sync.RWMutex
 }
 
 //newPBFT init the PBFT instance
@@ -104,6 +107,8 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) (*pbftImpl
 	// initialize state transfer
 	pbft.nodeMgr = newNodeMgr()
 	pbft.duplicator = make(map[uint64]*transactionStore)
+	pbft.dupLock = &sync.RWMutex{}
+
 	pbft.batchMgr = newBatchManager(config, pbft) // init after pbftEventQueue
 	// new batch manager
 	pbft.batchVdr = newBatchValidator(pbft)
@@ -1551,10 +1556,14 @@ func (pbft *pbftImpl) recvRemoveCache(vid uint64) bool {
 		return true
 	}
 	id := vid - 10
+	pbft.dupLock.RLock()
 	_, ok := pbft.duplicator[id]
+	pbft.dupLock.RUnlock()
 	if ok {
 		pbft.logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
-		delete(pbft.duplicator, id)
+			pbft.dupLock.Lock()
+			delete(pbft.duplicator, id)
+			pbft.dupLock.Unlock()
 	}
 
 	return ok
