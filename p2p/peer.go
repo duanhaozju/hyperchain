@@ -20,6 +20,7 @@ import (
 	"hyperchain/manager/event"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"hyperchain/p2p/network"
 )
 
 var (
@@ -44,6 +45,8 @@ type Peer struct {
 	eventMux    *event.TypeMux
 	eventSub    event.Subscription
 	logger  *logging.Logger
+
+	// release 1.3 feature
 }
 
 // NewPeer to create a Peer which with a connection
@@ -67,7 +70,17 @@ func NewPeer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TM *transport.Transp
 
 //connect connect method must call after newPeer
 func (peer *Peer) Connect(payload []byte, msgType pb.Message_MsgType, isSign bool, callback func(*pb.Message) (interface{}, error)) (interface{}, error) {
-	peer.eventSub = peer.eventMux.Subscribe(KeepAliveEvent{}, RetryEvent{}, SelfNarrateEvent{}, RecoveryEvent{}, CloseEvent{}, PendingEvent{})
+	client := network.NewClient()
+	client.Connect()
+	helloMsg := pb.Message{
+		MessageType:pb.Message_HELLO,
+		Payload:[]byte("hello msg"),
+	}
+	outmsg,err :=client.Greeting(helloMsg)
+	if err != nil{
+
+	}
+
 	opts := peer.CM.GetGrpcClientOpts()
 	opts = append(opts, grpc.FailOnNonTempDialError(true))
 	conn, err := grpc.Dial(peer.PeerAddr.IP+":"+strconv.Itoa(peer.PeerAddr.Port), opts...)

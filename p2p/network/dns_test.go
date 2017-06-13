@@ -30,7 +30,7 @@ func TestDNSResolver_ListHosts2(t *testing.T) {
 		t.Error(err)
 		t.Fail()
 	}
-	ip,err := dnsr.GetIP(hostname)
+	ip,err := dnsr.GetDNS(hostname)
 	if err !=nil{
 		t.Error(err)
 		t.Fail()

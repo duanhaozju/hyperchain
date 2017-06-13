@@ -2,11 +2,9 @@ package p2p
 
 import (
 	"github.com/abiosoft/ishell"
-	"golang.org/x/crypto/sha3"
 	"hyperchain/p2p/network"
-	"github.com/ethereum/go-ethereum/event"
-	"sync"
 	"hyperchain/common"
+	"github.com/spf13/viper"
 )
 
 type P2PManager interface {
@@ -23,14 +21,27 @@ type P2PManager interface {
 	consume() error
 }
 
-var once sync.Once
 var p2pManager P2PManager
-func GetP2PManager(config *common.Config) P2PManager{
-	once.Do(func(){
-			p2pManager = newP2PManager(config)
-		})
+var logger = common.GetLogger(common.DEFAULT_LOG, "p2p")
+
+type P2PManagerImpl struct {
+	config *viper.Viper
+
+}
+
+func StartUpP2PManager(config *viper.Viper){
+	if p2pManager != nil {
+		logger.Fatal("P2P Manager Already been setuped.")
+	}
+
+
+}
+
+func GetP2PManager() P2PManager{
+	p2pManager = newP2PManager()
 	return p2pManager
 }
+
 func newP2PManager(config *common.Config) P2PManager{
 	return &p2pManagerImpl{
 
@@ -49,17 +60,17 @@ func(p2pmgr *p2pManagerImpl) Bind(namespace string,innerID string,peerid string,
 
 }
 
-func (p2pmgr *p2pManagerImpl) Register(namespace string,identifier string,peerID string) error{
-	hasher := sha3.New256()
-	hasher.Write([]byte(namespace))
-	hasher.Write([]byte(identifier))
-	hash := hasher.Sum(nil)
-	peer,err := p2pmgr.peerMap.Get(peerID)
-	if err != nil{
-		return err
-	}
-
-}
+//func (p2pmgr *p2pManagerImpl) Register(namespace string,identifier string,peerID string) error{
+//	hasher := sha3.New256()
+//	hasher.Write([]byte(namespace))
+//	hasher.Write([]byte(identifier))
+//	//hash := hasher.Sum(nil)
+//	//peer,err := p2pmgr.peerMap.Get(peerID)
+//	//if err != nil{
+//	//	return err
+//	//}
+//
+//}
 
 func (p2pmgr p2pManagerImpl) startNode(){
 

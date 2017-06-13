@@ -9,7 +9,7 @@ import (
 )
 
 func TestClient_Chat(t *testing.T) {
-	cl := NewClient()
+	cl := NewClient("127.0.0.1:8081")
 	cl.Connect()
 	go cl.Chat()
 	go func(){
@@ -36,5 +36,4 @@ func TestClient_Chat(t *testing.T) {
 	//for t := range time.Tick(time.Second){
 	//	fmt.Println(" tick",t.UnixNano())
 	//}
-	<-Close
 }

@@ -154,6 +154,10 @@ func (ns *namespaceImpl) init() error {
 		ns.logger.Error(err)
 		return err
 	}
+	// here should be GetP2PManager(ns.conf,ns.eventMux,cm)
+
+
+
 	ns.grpcMgr = grpcPeerMgr
 
 	//4.init pbft consensus

@@ -45,9 +45,9 @@ func (dnsr *DNSResolver)ListHosts(){
 	}
 }
 
-func (dnsr *DNSResolver)GetIP(hostname string) (string,error){
-	if ip,ok := dnsr.DNSItems[hostname]; ok{
-		return ip,nil
+func (dnsr *DNSResolver)GetDNS(hostname string) (string,error){
+	if dnsitem,ok := dnsr.DNSItems[hostname]; ok{
+		return dnsitem,nil
 	}
 	return "",errHostnameNotFoud
 }

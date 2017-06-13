@@ -2,7 +2,6 @@ package msg
 
 import (
 	pb "hyperchain/p2p/message"
-	"fmt"
 )
 
 type MsgHandler interface{
@@ -11,9 +10,9 @@ type MsgHandler interface{
 }
 
 type BidiHandler interface {
-	Recive() <-chan *pb.Message
+	Recive() chan<- *pb.Message
 	Process()
-	TearDown()
+	Teardown()
 }
 
 type SingleHandler interface {

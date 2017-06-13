@@ -9,7 +9,7 @@ type KeepaliveMsgHandler struct {
 }
 
 func NewKeepAliveHandler(blackHole <-chan *pb.Message)*HelloMsgHandler{
-	return HelloMsgHandler{
+	return &HelloMsgHandler{
 		msgChan:make(chan *pb.Message, 100000),
 	}
 }
@@ -25,7 +25,7 @@ func (keepAliveHandler  *KeepaliveMsgHandler) Teardown() {
 }
 
 func (keepAliveHandler  *KeepaliveMsgHandler)Recive() <- chan *pb.Message{
-	return <- keepAliveHandler.msgChan
+	return  keepAliveHandler.msgChan
 }
 
 func (keepaliveHandler  *KeepaliveMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){

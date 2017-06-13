@@ -2,7 +2,6 @@ package network
 
 import (
 	"hyperchain/p2p/message"
-	"time"
 	"fmt"
 	"net"
 	"google.golang.org/grpc"
@@ -17,15 +16,27 @@ type Server struct {
 	slots map[message.Message_MsgType]msg.MsgHandler
 }
 
+func NewServer() *Server{
+	return &Server{
+		slots:make(map[message.Message_MsgType]msg.MsgHandler),
+	}
+}
+
 // StartServer start the gRPC server
 func (s *Server) StartServer(port int) error {
 	lis, err := net.Listen("tcp", ":" + strconv.Itoa(port))
 	if err != nil {
 		return err
 	}
-	 s.server = grpc.NewServer()
+
+	s.server = grpc.NewServer()
+
+	if s.server == nil{
+		return errors.New("s.server is nil")
+	}
+
 	RegisterChatServer(s.server,*s)
-	fmt.Println(" listen on port " + strconv.Itoa(port))
+	fmt.Println("listen on port " + strconv.Itoa(port))
 	s.server.Serve(lis)
 
 	return nil
@@ -59,7 +70,11 @@ func (s Server) Chat(ccServer Chat_ChatServer) error{
 				return err
 			}
 			go func(in *message.Message){
-				s.slots[in.MessageType].Recive() <- in
+				if s,ok := s.slots[in.MessageType];ok{
+					s.Recive() <- in
+				} else {
+					logger.Info("Ingore unknow message type: %v \n",in.MessageType)
+				}
 			}(in)
 		}
 	return nil

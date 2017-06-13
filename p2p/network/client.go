@@ -6,37 +6,44 @@ import (
 	"fmt"
 	"golang.org/x/net/context"
 	"time"
+	"hyperchain/p2p/hts"
 )
 
 type Client struct {
+	addr string
 	conn *grpc.ClientConn
 	client ChatClient
 	MsgChan chan *message.Message
+	hts hts.HTS
 }
 
-func NewClient() *Client{
+func NewClient(addr string) *Client{
 	return &Client{
 		MsgChan: make(chan *message.Message,100000),
+		addr: addr,
 	}
 }
 
-func(c *Client)Connect(){
-	conn, err := grpc.Dial("127.0.0.1:50012",grpc.WithInsecure())
+func(c *Client)Connect() error{
+	conn, err := grpc.Dial(c.addr,grpc.WithInsecure())
 	if err != nil {
+		logger.Errorf("cannot create the connection to addr: %s \n",c.addr)
 		fmt.Printf("err: %v",err)
 		if conn != nil{
 			conn.Close()
-
 		}
-		return
+		return err
 	}
 	c.conn = conn
 	c.client = NewChatClient(conn)
+	return nil
 }
-var Close chan struct{}
-func init(){
-	Close=make(chan struct{} )
+
+func(c *Client)Close() error{
+	return c.conn.Close()
 }
+
+
 func(c *Client)Chat() (error){
 	if c.client == nil{
 		fmt.Printf("the client is nil %v \n",c.client)
@@ -47,15 +54,6 @@ func(c *Client)Chat() (error){
 		fmt.Printf("cannot create stream! %v \n" ,err)
 		return err
 	}
-	go func(){
-		for msg := range c.MsgChan{
-			fmt.Println("actual send", string(msg.Payload), time.Now().UnixNano())
-			err := stream.Send(msg)
-			if err != nil{
-				fmt.Errorf(err.Error())
-			}
-		}
-	}()
 	for msg := range c.MsgChan{
 		fmt.Println("actual send", string(msg.Payload), time.Now().UnixNano())
 		err := stream.Send(msg)
@@ -64,15 +62,14 @@ func(c *Client)Chat() (error){
 		}
 	}
 
-	fmt.Println("client chat closed")
-	close(Close)
-return nil
+	return nil
 }
+
 // Greeting doube arrow greeting message transfer
-func(c *Client)Greeting(ctx context.Context, in *message.Message, opts ...grpc.CallOption) (*message.Message, error){
-	return nil,nil
+func(c *Client)Greeting(in *message.Message) (*message.Message, error){
+	return c.client.Greeting(context.Background(),in)
 }
 // Wisper Transfer the the node health infomation
-func(c *Client)Wisper(ctx context.Context, in *message.Message, opts ...grpc.CallOption) (*message.Message, error){
-	return nil,nil
+func(c *Client)Wisper(in *message.Message) (*message.Message, error){
+	return c.client.Wisper(context.Background(),in)
 }

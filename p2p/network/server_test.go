@@ -4,14 +4,17 @@ import (
 	"testing"
 	"hyperchain/p2p/message"
 	"fmt"
+	"hyperchain/p2p/msg"
 )
 
 func TestServer_Chat(t *testing.T) {
 	s := &Server{}
 	helloChan := make(chan *message.Message,100000)
 	keepaliveChan := make(chan *message.Message,100000)
-	s.RegisterSlot(message.Message_HELLO,&helloChan)
-	s.RegisterSlot(message.Message_KEEPALIVE,&keepaliveChan)
+	helloHandler := msg.NewHelloHandler(helloChan)
+	keepaliveHandler := msg.NewKeepAliveHandler(keepaliveChan)
+	s.RegisterSlot(message.Message_HELLO,helloHandler)
+	s.RegisterSlot(message.Message_KEEPALIVE,keepaliveHandler)
 	go s.StartServer(50012)
 
 	closeChan := make(chan struct{})
