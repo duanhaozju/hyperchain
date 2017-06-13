@@ -1,23 +1,20 @@
 package executor
 
 import (
-	"hyperchain/manager/event"
-	edb "hyperchain/core/db_utils"
 	"github.com/op/go-logging"
-	"sync"
-	"hyperchain/hyperdb"
-	"path"
-	"time"
 	"hyperchain/common"
-	cmd "os/exec"
-	"hyperchain/core/hyperstate"
-	"path/filepath"
-	"os"
 	cm "hyperchain/core/common"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/core/hyperstate"
+	"hyperchain/hyperdb"
+	"hyperchain/manager/event"
+	"os"
+	cmd "os/exec"
+	"path"
+	"path/filepath"
+	"sync"
+	"time"
 )
-
-
-
 
 // snapshot service's entry point
 func (executor *Executor) Snapshot(ev event.SnapshotEvent) {
@@ -30,32 +27,32 @@ func (executor *Executor) DeleteSnapshot(ev event.DeleteSnapshotEvent) {
 
 // snapshot manager
 type SnapshotRegistry struct {
-	namespace  string
-	rq         map[uint64]event.SnapshotEvent
-	rqLock     sync.RWMutex
-	logger     *logging.Logger
-	newBlockC  chan uint64
-	exitC      chan struct{}
-	executor   *Executor
-	mu         sync.Mutex
-	rwc        common.ManifestRWC
+	namespace string
+	rq        map[uint64]event.SnapshotEvent
+	rqLock    sync.RWMutex
+	logger    *logging.Logger
+	newBlockC chan uint64
+	exitC     chan struct{}
+	executor  *Executor
+	mu        sync.Mutex
+	rwc       common.ManifestRWC
 }
 
 func NewSnapshotRegistry(namespace string, logger *logging.Logger, executor *Executor) *SnapshotRegistry {
 	return &SnapshotRegistry{
-		namespace:  namespace,
-		rq:         make(map[uint64]event.SnapshotEvent),
-		logger:     logger,
-		newBlockC:  make(chan uint64),
-		exitC:      make(chan struct{}),
-		executor:   executor,
-		rwc:        common.NewManifestHandler(executor.GetManifestPath()),
+		namespace: namespace,
+		rq:        make(map[uint64]event.SnapshotEvent),
+		logger:    logger,
+		newBlockC: make(chan uint64),
+		exitC:     make(chan struct{}),
+		executor:  executor,
+		rwc:       common.NewManifestHandler(executor.GetManifestPath()),
 	}
 }
 
 /*
 	External functions
- */
+*/
 func (registry *SnapshotRegistry) Start() error {
 	go registry.listen()
 	return nil
@@ -100,13 +97,12 @@ func (registry *SnapshotRegistry) CompressSnapshot(filterId string) (error, int6
 }
 
 func (registry *SnapshotRegistry) CompressedSnapshotPath(filterId string) string {
-	return path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "snapshots", registry.snapshotId(filterId) + ".tar.gz")
+	return path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "snapshots", registry.snapshotId(filterId)+".tar.gz")
 }
-
 
 /*
 	Internal functions
- */
+*/
 func (registry *SnapshotRegistry) executeImmediately(ev event.SnapshotEvent) {
 	height := edb.GetHeightOfChain(registry.namespace)
 	if err := registry.makeSnapshot(ev.FilterId, height); err != nil {
@@ -128,9 +124,9 @@ func (registry *SnapshotRegistry) addRequest(event event.SnapshotEvent) {
 func (registry *SnapshotRegistry) listen() {
 	for {
 		select {
-		case <- registry.exitC:
+		case <-registry.exitC:
 			return
-		case n := <- registry.newBlockC:
+		case n := <-registry.newBlockC:
 			registry.handle(n)
 		}
 	}
@@ -205,12 +201,12 @@ func (registry *SnapshotRegistry) writeMeta(filterId string, number uint64) erro
 	}
 	d := time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05")
 	manifest := common.Manifest{
-		Height:      number,
-		BlockHash:   common.Bytes2Hex(blk.BlockHash),
-		FilterId:    filterId,
-		MerkleRoot:  hash.Hex(),
-		Date:        d,
-		Namespace:   registry.namespace,
+		Height:     number,
+		BlockHash:  common.Bytes2Hex(blk.BlockHash),
+		FilterId:   filterId,
+		MerkleRoot: hash.Hex(),
+		Date:       d,
+		Namespace:  registry.namespace,
 	}
 	if err := registry.rwc.Write(manifest); err != nil {
 		return err
@@ -265,11 +261,11 @@ func (registry *SnapshotRegistry) compress(filterId string) (error, int64) {
 		return SnapshotDoesntExistErr, 0
 	}
 	spath := path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "snapshots", registry.snapshotId(filterId))
-	localCmd := cmd.Command("tar", "-C", filepath.Dir(spath), "-czvf", spath + ".tar.gz", registry.snapshotId(filterId))
+	localCmd := cmd.Command("tar", "-C", filepath.Dir(spath), "-czvf", spath+".tar.gz", registry.snapshotId(filterId))
 	if err := localCmd.Run(); err != nil {
 		return err, 0
 	}
-	fd, err := os.OpenFile(spath + ".tar.gz", os.O_RDONLY, 0644)
+	fd, err := os.OpenFile(spath+".tar.gz", os.O_RDONLY, 0644)
 	if err != nil {
 		return err, 0
 	}
@@ -279,7 +275,6 @@ func (registry *SnapshotRegistry) compress(filterId string) (error, int64) {
 	}
 	return nil, stat.Size()
 }
-
 
 func (registry *SnapshotRegistry) checkSnapshotRequest(event event.SnapshotEvent) bool {
 	if event.BlockNumber == LatestBlockNumber {
@@ -320,7 +315,7 @@ func (registry *SnapshotRegistry) feedback(t int, isSuccess bool, filterId strin
 }
 
 func (registry *SnapshotRegistry) exit() {
-	registry.exitC <- struct {}{}
+	registry.exitC <- struct{}{}
 }
 
 func (registry *SnapshotRegistry) snapshotId(filterId string) string {
@@ -330,5 +325,3 @@ func (registry *SnapshotRegistry) snapshotId(filterId string) string {
 func (registry *SnapshotRegistry) snapshotPath(base string, filterID string) string {
 	return path.Join(base, "snapshots", filterID)
 }
-
-

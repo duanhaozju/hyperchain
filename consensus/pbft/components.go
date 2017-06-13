@@ -30,13 +30,20 @@ type msgCert struct {
 	prePrepare   *PrePrepare
 	sentPrepare  bool
 	prepare      map[Prepare]bool
-	prepareCount int
 	sentValidate bool
 	validated    bool
 	sentCommit   bool
 	commit       map[Commit]bool
-	commitCount  int
 	sentExecute  bool
+	pStored      bool
+	cStored      bool
+}
+
+type updateCert struct {
+	digest      string
+	sentPrepare bool
+	sentCommit  bool
+	sentExecute bool
 }
 
 //Checkpoint id
@@ -90,10 +97,9 @@ type uidx struct {
 	key  string
 }
 
-type updateCert struct {
+type certSet struct {
 	digest      string
 	sentPrepare bool
-	validated   bool
 	sentCommit  bool
 	sentExecute bool
 }

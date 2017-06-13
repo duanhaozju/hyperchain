@@ -21,15 +21,14 @@ const (
 )
 
 type SuperLevelDB struct {
-	path   string
-	db     *leveldb.DB
-	index  Index
-	closed chan bool
-	logger *logging.Logger
-	conf   *common.Config
+	path      string
+	db        *leveldb.DB
+	index     Index
+	closed    chan bool
+	logger    *logging.Logger
+	conf      *common.Config
 	namespace string
 }
-
 
 func NewSLDB(conf *common.Config, path string, namespace string) (*SuperLevelDB, error) {
 	var filepath = path
@@ -52,13 +51,13 @@ func NewSLDB(conf *common.Config, path string, namespace string) (*SuperLevelDB,
 	index.Init()
 	index.conf = conf
 	sldb := &SuperLevelDB{
-		path:   filepath,
-		db:     db,
-		index:  index,
-		closed: make(chan bool),
-		logger: log,
-		conf:   conf,
-		namespace:   namespace,
+		path:      filepath,
+		db:        db,
+		index:     index,
+		closed:    make(chan bool),
+		logger:    log,
+		conf:      conf,
+		namespace: namespace,
 	}
 	go sldb.dumpIndexByInterval(conf.GetDuration(sldb_index_dump_interval))
 	return sldb, err

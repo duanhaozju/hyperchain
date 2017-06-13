@@ -3,11 +3,11 @@ package executor
 import (
 	"hyperchain/common"
 	"hyperchain/core/crypto"
+	"hyperchain/core/hyperstate"
+	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/params"
 	"math/big"
-	"hyperchain/core/types"
-	"hyperchain/core/hyperstate"
 )
 
 // Call executes within the given contract
@@ -112,7 +112,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 	/*
 		RUN VM
-	 */
+	*/
 	if env.Db().GetStatus(to.Address()) != hyperstate.STATEOBJECT_STATUS_NORMAL {
 		env.Logger().Debugf("account %s has been frozen", to.Address().Hex())
 		env.SetSnapshot(snapshotPreTransfer)

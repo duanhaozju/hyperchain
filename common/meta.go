@@ -1,27 +1,28 @@
 package common
 
 import (
+	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"encoding/json"
 	"os"
 )
 
-var ManifestNotExistErr   = errors.New("manifest not existed")
+var ManifestNotExistErr = errors.New("manifest not existed")
 
 type Manifest struct {
-	Height     uint64    `json:"height"`
-	BlockHash  string    `json:"hash"`
-	FilterId   string    `json:"filterId"`
-	MerkleRoot string    `json:"merkleRoot"`
-	Date       string    `json:"date"`
-	Namespace  string    `json:"namespace"`
+	Height     uint64 `json:"height"`
+	BlockHash  string `json:"hash"`
+	FilterId   string `json:"filterId"`
+	MerkleRoot string `json:"merkleRoot"`
+	Date       string `json:"date"`
+	Namespace  string `json:"namespace"`
 }
 
 type Manifests []Manifest
+
 /*
 	Manifest manipulator
- */
+*/
 
 type ManifestRWC interface {
 	Read(string) (error, Manifest)
@@ -33,7 +34,7 @@ type ManifestRWC interface {
 }
 
 type ManifestHandler struct {
-	filePath    string
+	filePath string
 }
 
 func NewManifestHandler(fName string) *ManifestHandler {
@@ -156,13 +157,13 @@ func (rwc *ManifestHandler) Search(height uint64) (error, Manifest) {
 
 /*
 	Archive Meta
- */
+*/
 type ArchiveMeta struct {
-	Height          uint64     `json:"height"`
-	TransactionN    uint64     `json:"transactionNumber"`
-	ReceiptN        uint64     `json:"receiptNumber"`
-	InvalidTxN      uint64     `json:"invalidTxNumber"`
-	LatestUpdate    string     `json:"latestUpdate"`
+	Height       uint64 `json:"height"`
+	TransactionN uint64 `json:"transactionNumber"`
+	ReceiptN     uint64 `json:"receiptNumber"`
+	InvalidTxN   uint64 `json:"invalidTxNumber"`
+	LatestUpdate string `json:"latestUpdate"`
 }
 
 type ArchiveMetaRWC interface {
@@ -172,7 +173,7 @@ type ArchiveMetaRWC interface {
 }
 
 type ArchiveMetaHandler struct {
-	filePath    string
+	filePath string
 }
 
 func NewArchiveMetaHandler(fName string) *ArchiveMetaHandler {
@@ -210,4 +211,3 @@ func (rwc *ArchiveMetaHandler) Exist() bool {
 	}
 	return true
 }
-

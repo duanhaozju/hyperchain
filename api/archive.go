@@ -1,11 +1,11 @@
 package api
 
 import (
-	"hyperchain/manager"
 	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/manager"
 	"hyperchain/manager/event"
 	flt "hyperchain/manager/filter"
-	edb "hyperchain/core/db_utils"
 )
 
 type ArchivePublicAPI struct {
@@ -14,7 +14,6 @@ type ArchivePublicAPI struct {
 	config    *common.Config
 	isPublic  bool
 }
-
 
 func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.Config) *ArchivePublicAPI {
 	return &ArchivePublicAPI{
@@ -78,7 +77,7 @@ func (admin *ArchivePublicAPI) DeleteSnapshot(filterId string) string {
 	log := common.GetLogger(admin.namespace, "api")
 	log.Debugf("receive delete snapshot rpc command, filterId: (%s)", filterId)
 	admin.eh.GetEventObject().Post(event.DeleteSnapshotEvent{
-		FilterId:    filterId,
+		FilterId: filterId,
 	})
 	return filterId
 }
@@ -109,11 +108,11 @@ func (admin *ArchivePublicAPI) CheckSnapshot(filterId string) (bool, error) {
 	return true, nil
 }
 
-func (admin *ArchivePublicAPI) Archive(filterId string) (string) {
+func (admin *ArchivePublicAPI) Archive(filterId string) string {
 	log := common.GetLogger(admin.namespace, "api")
 	log.Debugf("receive archive command, params: filterId: (%s)", filterId)
 	admin.eh.GetEventObject().Post(event.ArchiveEvent{
-		FilterId:    filterId,
+		FilterId: filterId,
 	})
 	return filterId
 

@@ -1,22 +1,22 @@
 package executor
 
 import (
-	"io/ioutil"
 	"github.com/buger/jsonparser"
-	"math/big"
-	"time"
-	"hyperchain/core/vm"
-	"hyperchain/core/hyperstate"
-	edb "hyperchain/core/db_utils"
 	"hyperchain/common"
-	"strconv"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/core/hyperstate"
 	"hyperchain/core/types"
-	"hyperchain/hyperdb/db"
+	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
+	"hyperchain/hyperdb/db"
+	"io/ioutil"
+	"math/big"
+	"strconv"
+	"time"
 )
 
 const (
-	genesisPath  = "global.configs.genesis"
+	genesisPath = "global.configs.genesis"
 )
 
 // CreateInitBlock - create genesis for a specific namespace.

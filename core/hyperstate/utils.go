@@ -2,9 +2,9 @@ package hyperstate
 
 import (
 	"bytes"
+	"hyperchain/common"
 	"strconv"
 	"time"
-	"hyperchain/common"
 )
 
 const (
@@ -52,8 +52,8 @@ func RetrieveAddrFromStorageKey(key []byte) ([]byte, bool) {
 	// Address is const 20byte length
 	prefix := []byte(storageIdentifier)
 	prefixLen := len(prefix)
-	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen + common.AddressLength {
-		return key[prefixLen: prefixLen + common.AddressLength], true
+	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen+common.AddressLength {
+		return key[prefixLen : prefixLen+common.AddressLength], true
 	} else {
 		return nil, false
 	}
@@ -92,7 +92,7 @@ func GetArchieveDate(address []byte, key []byte) ([]byte, bool) {
 	prefix := append([]byte(storageIdentifier), address...)
 	prefixLen := len(prefix) + 8
 	if bytes.HasPrefix(key, prefix) && len(key) >= prefixLen {
-		return key[len(prefix): prefixLen], true
+		return key[len(prefix):prefixLen], true
 	} else {
 		return nil, false
 	}
@@ -121,8 +121,8 @@ func RetrieveAddrFromCodeHash(key []byte) ([]byte, bool) {
 	// Address is const 20byte length
 	prefix := []byte(codeIdentifier)
 	prefixLen := len(prefix)
-	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen + common.AddressLength {
-		return key[prefixLen: prefixLen + common.AddressLength], true
+	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen+common.AddressLength {
+		return key[prefixLen : prefixLen+common.AddressLength], true
 	} else {
 		return nil, false
 	}

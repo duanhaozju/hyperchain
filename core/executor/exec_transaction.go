@@ -1,11 +1,11 @@
 package executor
 
 import (
+	"bytes"
 	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"math/big"
-	"bytes"
 )
 
 type Code []byte
@@ -40,7 +40,7 @@ func (executor *Executor) ExecTransaction(tx *types.Transaction, stateDb vm.Data
 }
 
 func (executor *Executor) Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
-gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
+	gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
 	var sender vm.Account
 
 	if !(vmenv.Db().Exist(*from)) {
@@ -82,7 +82,6 @@ func (executor *Executor) checkPermission(env vm.Environment, from, to common.Ad
 	return true
 }
 
-
 func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, gas *big.Int, ret []byte, err error) *types.Receipt {
 	receipt := types.NewReceipt(nil, gas)
 	receipt.ContractAddress = addr.Bytes()
@@ -92,7 +91,7 @@ func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, ga
 	receipt.SetLogs(env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))
 
 	if err != nil {
-		if !IsValueTransferErr(err) && !IsExecContractErr(err) &&!IsInvalidInvokePermissionErr(err) {
+		if !IsValueTransferErr(err) && !IsExecContractErr(err) && !IsInvalidInvokePermissionErr(err) {
 			receipt.Status = types.Receipt_FAILED
 			receipt.Message = []byte(err.Error())
 		}
@@ -102,4 +101,3 @@ func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, ga
 	}
 	return receipt
 }
-

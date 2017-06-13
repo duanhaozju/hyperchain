@@ -81,7 +81,7 @@ func (executor *Executor) initDb() error {
 // Start - start service.
 func (executor *Executor) Start() error {
 	if err := executor.initialize(); err != nil {
-		return  err
+		return err
 	}
 	executor.logger.Noticef("[Namespace = %s]  executor start", executor.namespace)
 	return nil
@@ -159,7 +159,7 @@ func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, er
 			return nil, err, nil
 		}
 
-		db, err := hyperdb.NewDatabase(executor.conf, path.Join("snapshots", "SNAPSHOT_" + snapshotId), hyperdb.GetDatabaseType(executor.conf), executor.namespace)
+		db, err := hyperdb.NewDatabase(executor.conf, path.Join("snapshots", "SNAPSHOT_"+snapshotId), hyperdb.GetDatabaseType(executor.conf), executor.namespace)
 		if err != nil {
 			return nil, err, nil
 		}
@@ -187,4 +187,3 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 	}
 	return stateDb, nil
 }
-

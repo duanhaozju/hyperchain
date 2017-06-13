@@ -1,16 +1,18 @@
 package executor
 
 import (
-	"hyperchain/common"
-	"math"
-	"io/ioutil"
-	"os"
 	"encoding/json"
 	"github.com/op/go-logging"
+	"hyperchain/common"
+	"io/ioutil"
+	"math"
+	"os"
 )
+
 const (
 	staticPeerFile = "global.configs.static_peers"
 )
+
 type Oracle struct {
 	score             map[uint64]int64
 	conf              *common.Config
@@ -21,14 +23,14 @@ type Oracle struct {
 }
 
 type StaticPeer struct {
-	ID               uint64  `json:"id,omitempty"`
-	LocalAddress     string  `json:"local_address,omitempty"`
-	RemoteAddress    string  `json:"remote_address,omitempty"`
-	Port             uint    `json:"port,omitempty"`
+	ID            uint64 `json:"id,omitempty"`
+	LocalAddress  string `json:"local_address,omitempty"`
+	RemoteAddress string `json:"remote_address,omitempty"`
+	Port          uint   `json:"port,omitempty"`
 }
 
 type StaticPeers struct {
-	peers     []StaticPeer `json:"static_peers,omitempty"`
+	peers []StaticPeer `json:"static_peers,omitempty"`
 }
 
 func NewOracle(ctx *ChainSyncContext, conf *common.Config, logger *logging.Logger) *Oracle {
@@ -101,7 +103,7 @@ func (oracle *Oracle) ReadStaticPeer(path string) []uint64 {
 	}
 	if buf, err := ioutil.ReadFile(path); err == nil {
 		var peers []StaticPeer
-		var ret   []uint64
+		var ret []uint64
 		err := json.Unmarshal(buf, &peers)
 		if err != nil {
 			oracle.logger.Error(err.Error())
@@ -116,12 +118,12 @@ func (oracle *Oracle) ReadStaticPeer(path string) []uint64 {
 }
 
 func (oracle *Oracle) incScore() {
-	oracle.logger.Debugf("increase peer %d score from %d to %d", oracle.latestSelected, oracle.score[oracle.latestSelected], oracle.score[oracle.latestSelected] + 1)
+	oracle.logger.Debugf("increase peer %d score from %d to %d", oracle.latestSelected, oracle.score[oracle.latestSelected], oracle.score[oracle.latestSelected]+1)
 	oracle.score[oracle.latestSelected] = oracle.score[oracle.latestSelected] + 1
 }
 
 func (oracle *Oracle) decScore() {
-	oracle.logger.Debugf("increase peer %d score from %d to %d", oracle.latestSelected, oracle.score[oracle.latestSelected], oracle.score[oracle.latestSelected] - 1)
+	oracle.logger.Debugf("increase peer %d score from %d to %d", oracle.latestSelected, oracle.score[oracle.latestSelected], oracle.score[oracle.latestSelected]-1)
 	if oracle.score[oracle.latestSelected] > 10 {
 		oracle.score[oracle.latestSelected] = oracle.score[oracle.latestSelected] / 2
 	} else if oracle.score[oracle.latestSelected] > -10 {

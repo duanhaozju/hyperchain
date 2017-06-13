@@ -61,10 +61,10 @@ func (h *hyperchain) restart() {
 
 type argT struct {
 	cli.Helper
-	ConfigPath     string `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
-	RestoreEnable  bool   `cli:"r,restore" usage:"enable restore system status from dumpfile"`
-	SId            string `cli:"s,sid" usage:"use to specify snapshot" dft:""`
-	Namespace      string `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
+	ConfigPath    string `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
+	RestoreEnable bool   `cli:"r,restore" usage:"enable restore system status from dumpfile"`
+	SId           string `cli:"s,sid" usage:"use to specify snapshot" dft:""`
+	Namespace     string `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
 }
 
 var (

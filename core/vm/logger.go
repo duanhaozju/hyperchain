@@ -160,7 +160,7 @@ func StdErrFormat(logs []StructLog) {
 		// const maxMem = 10
 		addr := 0
 		fmt.Fprintln(os.Stdout, "MEM =", len(log.Memory))
-		for i := 0; i+16 <= len(log.Memory) /*&& addr < maxMem*/; i += 16 {
+		for i := 0; i+16 <= len(log.Memory); /*&& addr < maxMem*/ i += 16 {
 			data := log.Memory[i : i+16]
 			str := fmt.Sprintf("%04d: % x  ", addr*16, data)
 			for _, r := range data {

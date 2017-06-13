@@ -1,10 +1,10 @@
 package db_utils
 
 import (
-	"hyperchain/hyperdb"
-	"testing"
-	"reflect"
 	"hyperchain/core/test_util"
+	"hyperchain/hyperdb"
+	"reflect"
+	"testing"
 )
 
 func TestGetLatestBlockHashOfChain(t *testing.T) {

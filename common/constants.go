@@ -4,10 +4,10 @@
 package common
 
 const (
-	OP_UPDATE  = 1
-	OP_FREEZE  = 2
+	OP_UPDATE   = 1
+	OP_FREEZE   = 2
 	OP_UNFREEZE = 3
-	OP_ARCHIVE = 100
+	OP_ARCHIVE  = 100
 )
 
 const (
@@ -18,13 +18,13 @@ const (
 //constants for logger key
 const (
 	LOG_FILE_DIR          = "global.logs.logsdir"
-	LOG_DUMP_FILE 	      = "global.logs.dumpfile"
+	LOG_DUMP_FILE         = "global.logs.dumpfile"
 	LOG_BASE_LOG_LEVEL    = "global.logs.loglevel"
 	LOG_NEW_FILE_INTERVAL = "global.logs.newLogFileInterval"
 	LOG_FILE_FORMAT       = "global.logs.file_format"
 	LOG_CONSOLE_FORMAT    = "global.logs.console_format"
 	LOG_MODULE_KEY        = "global.logs.module"
-	DEFAULT_LOG        = "system"
+	DEFAULT_LOG           = "system"
 )
 
 //constants for input args
@@ -39,12 +39,11 @@ const (
 )
 
 const (
-
-	NAMESPACE = "namespace.name"
+	NAMESPACE         = "namespace.name"
 	DEFAULT_NAMESPACE = "system"
-	KEY_STORE_DIR = "global.account.keystoredir"
-	KEY_NODE_DIR  = "global.account.keynodesdir"
-	START_NAMESPACE = "global.namespace.start."
+	KEY_STORE_DIR     = "global.account.keystoredir"
+	KEY_NODE_DIR      = "global.account.keynodesdir"
+	START_NAMESPACE   = "global.namespace.start."
 
 	LOG_DUMP_FILE_FLAG = "global.logs.dumpfile"
 	LOG_DUMP_FILE_DIR  = "global.logs.logsdir"

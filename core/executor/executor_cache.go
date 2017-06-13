@@ -1,10 +1,10 @@
 package executor
 
 import (
-	"hyperchain/manager/event"
 	"hyperchain/common"
-	"sync/atomic"
 	"hyperchain/core/types"
+	"hyperchain/manager/event"
+	"sync/atomic"
 )
 
 type ExecutorCache struct {
@@ -17,8 +17,8 @@ type ExecutorCache struct {
 }
 
 type Peer struct {
-	Ip     string
-	Port   int32
+	Ip   string
+	Port int32
 }
 
 func initializeExecutorCache(executor *Executor) error {
@@ -67,7 +67,7 @@ func (executor *Executor) pendingValidationEventQLen() int {
 func (executor *Executor) clearPendingValidationEventQ() {
 	length := executor.pendingValidationEventQLen()
 	executor.cache.pendingValidationEventQ.Purge()
-	atomic.AddInt32(&executor.status.validateQueueLen, -1 * int32(length))
+	atomic.AddInt32(&executor.status.validateQueueLen, -1*int32(length))
 }
 
 // addValidationResult - save a validation result to cache.

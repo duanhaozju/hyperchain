@@ -1,14 +1,14 @@
 package db_utils
 
 import (
-	"hyperchain/hyperdb"
-	"testing"
-	"reflect"
-	"os"
 	"fmt"
 	"hyperchain/common"
-	"strconv"
 	"hyperchain/core/test_util"
+	"hyperchain/hyperdb"
+	"os"
+	"reflect"
+	"strconv"
+	"testing"
 )
 
 func TestGetVersionOfBlock(t *testing.T) {
@@ -190,9 +190,6 @@ func TestGetEvmTimeOfBlock(t *testing.T) {
 	}
 	deleteTestData()
 }
-
-
-
 
 func InitDataBase() {
 	conf := common.NewConfig("../../configuration/namespaces/global/config/global.yaml")

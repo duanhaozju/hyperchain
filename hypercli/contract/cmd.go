@@ -3,14 +3,14 @@
 package contract
 
 import (
-	"github.com/urfave/cli"
-	"fmt"
-	"hyperchain/hypercli/common"
 	"encoding/hex"
-	"math/rand"
-	"time"
-	"os"
+	"fmt"
+	"github.com/urfave/cli"
 	"hyperchain/api/jsonrpc/core"
+	"hyperchain/hypercli/common"
+	"math/rand"
+	"os"
+	"time"
 )
 
 //NewContractCMD new contract related commands.
@@ -21,7 +21,7 @@ func NewContractCMD() []cli.Command {
 			Aliases: []string{"d"},
 			Usage:   "Deploy a contract",
 			Action:  deploy,
-			Flags:   []cli.Flag{
+			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "deploycmd, d",
 					Value: "",
@@ -49,7 +49,7 @@ func NewContractCMD() []cli.Command {
 			Aliases: []string{"i"},
 			Usage:   "Invoke a contract method",
 			Action:  invoke,
-			Flags:   []cli.Flag{
+			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "invokecmd, i",
 					Value: "",
@@ -80,9 +80,9 @@ func NewContractCMD() []cli.Command {
 			},
 		},
 		{
-			Name:    "destroy",
-			Usage:   "Destroy a contract",
-			Action:  destroy,
+			Name:   "destroy",
+			Usage:  "Destroy a contract",
+			Action: destroy,
 		},
 	}
 }
@@ -160,7 +160,7 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 	var opcode int
 
 	params := "[{"
-	for i, param := range deploy_params{
+	for i, param := range deploy_params {
 		if i > 0 {
 			params = params + ","
 		}
@@ -212,7 +212,7 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 }
 
 // getTransactionHash gets the hash of the transaction from the json-format return value
-func getTransactionHash (result *jsonrpc.CommandResult) string {
+func getTransactionHash(result *jsonrpc.CommandResult) string {
 	response, err := common.GetJSONResponse(result)
 	if err != nil {
 		fmt.Println("Error in call get transaction hash from http response")

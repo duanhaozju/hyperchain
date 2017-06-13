@@ -1,9 +1,9 @@
 package filter
 
 import (
-	"time"
 	"hyperchain/common"
 	"hyperchain/core/vm"
+	"time"
 )
 
 var (
@@ -33,7 +33,7 @@ func NewFilter(typ Type, sub *Subscription, crit FilterCriteria) *Filter {
 
 /*
 	Getter
- */
+*/
 func (flt *Filter) GetDeadLine() *time.Timer {
 	return flt.deadline
 }
@@ -68,7 +68,7 @@ func (flt *Filter) GetVerbose() bool {
 
 /*
 	Setter
- */
+*/
 
 func (flt *Filter) AddHash(hash common.Hash) {
 	flt.hashes = append(flt.hashes, hash)
@@ -101,7 +101,7 @@ func (flt *Filter) ResetDeadline() {
 // filterLogs creates a slice of logs matching the given criteria.
 func filterLogs(logs []*vm.Log, logCrit *FilterCriteria) []*vm.Log {
 	var ret []*vm.Log
-	Logs:
+Logs:
 	for _, log := range logs {
 		if logCrit.FromBlock != nil && logCrit.FromBlock.Int64() >= 0 && logCrit.FromBlock.Uint64() > log.BlockNumber {
 			continue

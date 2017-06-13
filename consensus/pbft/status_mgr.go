@@ -22,6 +22,7 @@ type PbftStatus struct {
 	vcHandled         int32 // track if replica handled the vc after receive newview
 	newNodeReady      int32
 	updateHandled     int32
+	vcToRecovery      int32
 }
 
 //activeState sets the states to true
@@ -47,20 +48,24 @@ func (status PbftStatus) getState(stateName *int32) bool {
 	return atomic.LoadInt32(stateName) == ON
 }
 
+func toBool(stateName *int32) bool {
+	return atomic.LoadInt32(stateName) == ON
+}
+
 //checkStatesAnd checks the result of several status and each other
-func (status PbftStatus) checkStatesAnd(stateName ...bool) bool {
+func (status PbftStatus) checkStatesAnd(stateName ...*int32) bool {
 	var rs bool = true
 	for _, s := range stateName {
-		rs = rs && s
+		rs = rs && toBool(s)
 	}
 	return rs
 }
 
 //checkStatesAnd checks the result of several status or each other
-func (status PbftStatus) checkStatesOr(stateName ...bool) bool {
+func (status PbftStatus) checkStatesOr(stateName ...*int32) bool {
 	var rs bool = false
 	for _, s := range stateName {
-		rs = rs || s
+		rs = rs || toBool(s)
 	}
 	return rs
 }

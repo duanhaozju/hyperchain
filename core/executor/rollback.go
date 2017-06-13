@@ -1,10 +1,10 @@
 package executor
 
 import (
+	edb "hyperchain/core/db_utils"
+	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
-	"hyperchain/hyperdb/db"
-	edb "hyperchain/core/db_utils"
 )
 
 // reset blockchain to a stable checkpoint status when `viewchange` occur
@@ -15,11 +15,11 @@ func (executor *Executor) Rollback(ev event.VCResetEvent) {
 	executor.logger.Noticef("[Namespace = %s] receive vc reset event, required revert to %d", executor.namespace, ev.SeqNo-1)
 	batch := executor.db.NewBatch()
 	// revert state
-	if err := executor.revertState(batch, ev.SeqNo - 1); err != nil {
+	if err := executor.revertState(batch, ev.SeqNo-1); err != nil {
 		return
 	}
 	// Delete related transaction, receipt, txmeta, and block itself in a specific range
-	if err := executor.cutdownChain(batch, ev.SeqNo - 1); err != nil {
+	if err := executor.cutdownChain(batch, ev.SeqNo-1); err != nil {
 		executor.logger.Errorf("[Namespace = %s] remove block && transaction in range %d to %d failed.", ev.SeqNo, edb.GetHeightOfChain(executor.namespace))
 		return
 	}
@@ -29,7 +29,7 @@ func (executor *Executor) Rollback(ev event.VCResetEvent) {
 		return
 	}
 	// Reset chain
-	edb.UpdateChainByBlcokNum(executor.namespace, batch, ev.SeqNo - 1, false, false)
+	edb.UpdateChainByBlcokNum(executor.namespace, batch, ev.SeqNo-1, false, false)
 	batch.Write()
 	executor.initDemand(ev.SeqNo)
 	executor.informConsensus(NOTIFY_VC_DONE, protos.VcResetDone{SeqNo: ev.SeqNo})
@@ -43,7 +43,7 @@ func (executor *Executor) CutdownBlock(number uint64) error {
 	executor.logger.Noticef("[Namespace = %s] cutdown block, required revert to %d", executor.namespace, number)
 	// 2. revert state
 	batch := executor.db.NewBatch()
-	if err := executor.revertState(batch, number - 1); err != nil {
+	if err := executor.revertState(batch, number-1); err != nil {
 		return err
 	}
 	// 3. remove block releted data
@@ -57,7 +57,7 @@ func (executor *Executor) CutdownBlock(number uint64) error {
 		return err
 	}
 	// 5. reset chain data
-	edb.UpdateChainByBlcokNum(executor.namespace, batch, number - 1, false, false)
+	edb.UpdateChainByBlcokNum(executor.namespace, batch, number-1, false, false)
 	// flush all modified to disk
 	batch.Write()
 	executor.logger.Noticef("[Namespace = %s] cut down block #%d success. remove all related transactions, receipts, state changes and block together.", executor.namespace, number)
@@ -66,11 +66,11 @@ func (executor *Executor) CutdownBlock(number uint64) error {
 }
 
 func (executor *Executor) cutdownChain(batch db.Batch, targetHeight uint64) error {
-	return executor.cutdownChainByRange(batch, targetHeight + 1, edb.GetHeightOfChain(executor.namespace))
+	return executor.cutdownChainByRange(batch, targetHeight+1, edb.GetHeightOfChain(executor.namespace))
 }
 
 // cutdownChainByRange - remove block, tx, receipt in range.
-func (executor *Executor) cutdownChainByRange(batch db.Batch, from, to uint64) error  {
+func (executor *Executor) cutdownChainByRange(batch db.Batch, from, to uint64) error {
 	for i := from; i <= to; i += 1 {
 		block, err := edb.GetBlockByNumber(executor.namespace, i)
 		if err != nil {
@@ -113,4 +113,3 @@ func (executor *Executor) clearUncommittedData(batch db.Batch) error {
 	executor.statedb.Purge()
 	return nil
 }
-

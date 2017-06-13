@@ -2,13 +2,13 @@ package db_utils
 
 import (
 	"github.com/golang/protobuf/proto"
+	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"os"
 	"strconv"
 	"time"
-	"hyperchain/common"
 )
 
 // PersistBlock - persist a block, using param to control whether flush to disk immediately.

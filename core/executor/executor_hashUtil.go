@@ -1,16 +1,16 @@
 package executor
 
 import (
-	"hyperchain/core/types"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/core/types"
 )
 
 type ExecutorHashUtil struct {
-	transactionCalculator interface{}         // a batch of transactions calculator
-	receiptCalculator     interface{}         // a batch of receipts calculator
-	transactionBuffer     [][]byte            // transaction buffer
-	receiptBuffer         [][]byte            // receipt buffer
+	transactionCalculator interface{} // a batch of transactions calculator
+	receiptCalculator     interface{} // a batch of receipts calculator
+	transactionBuffer     [][]byte    // transaction buffer
+	receiptBuffer         [][]byte    // receipt buffer
 }
 
 func (executor *Executor) initTransactionHashCalculator() {

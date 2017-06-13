@@ -1,20 +1,20 @@
 package executor
 
 import (
-	"hyperchain/common"
-	"hyperchain/crypto"
-	"hyperchain/core/state"
-	"hyperchain/core/vm"
-	"math/big"
-	"hyperchain/hyperdb/db"
-	"hyperchain/core/types"
 	"github.com/op/go-logging"
+	"hyperchain/common"
+	"hyperchain/core/state"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
+	"hyperchain/crypto"
+	"hyperchain/hyperdb/db"
+	"math/big"
 )
 
 var (
-	ForceJit     bool
-	EnableJit    bool
-	EnableDebug  bool
+	ForceJit    bool
+	EnableJit   bool
+	EnableDebug bool
 )
 
 func init() {
@@ -107,8 +107,8 @@ type Env struct {
 	difficulty *big.Int
 	gasLimit   *big.Int
 
-	logs       []vm.StructLog
-	logger     *logging.Logger
+	logs   []vm.StructLog
+	logger *logging.Logger
 
 	vmTest bool
 
@@ -135,7 +135,7 @@ func NewEnvFromMap(ruleSet RuleSet, state vm.Database, envValues map[string]stri
 			EnableJit: EnableJit,
 			ForceJit:  ForceJit,
 			Debug:     EnableDebug,
-			Logger:    vm.LogConfig{
+			Logger: vm.LogConfig{
 				Collector: env,
 			},
 		}
@@ -161,7 +161,7 @@ func (self *Env) Difficulty() *big.Int     { return self.difficulty }
 func (self *Env) Db() vm.Database          { return self.state }
 func (self *Env) GasLimit() *big.Int       { return self.gasLimit }
 func (self *Env) VmType() vm.Type          { return vm.StdVmTy }
-func (self *Env) Logger() *logging.Logger  { return self.logger}
+func (self *Env) Logger() *logging.Logger  { return self.logger }
 func (self *Env) GetHash(n uint64) common.Hash {
 	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
 }
@@ -179,7 +179,6 @@ func (self *Env) AddStructLog(log vm.StructLog) {
 func (self *Env) DumpStructLog() {
 	vm.StdErrFormat(self.logs)
 }
-
 
 func (self *Env) MakeSnapshot() interface{} {
 	return self.state.Snapshot()

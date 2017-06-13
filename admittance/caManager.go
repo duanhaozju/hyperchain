@@ -3,24 +3,24 @@ package admittance
 import (
 	"crypto/ecdsa"
 	"crypto/x509"
+	"fmt"
+	"github.com/op/go-logging"
 	"github.com/pkg/errors"
+	"github.com/spf13/viper"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"hyperchain/common"
 	"hyperchain/core/crypto/primitives"
 	"io/ioutil"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc"
-	"github.com/op/go-logging"
-	"hyperchain/common"
 	"time"
-	"github.com/spf13/viper"
-	"fmt"
 )
 
 var (
-	errDecPubKey = errors.New("cannot decode the public string,please encode the public string as right hex string")
-	errParsePubKey = errors.New("cannot parse the request publickey, please check the public string.")
-	errParseCert = errors.New("cannot parse the cert pem, please check your cert pem string.")
-	errGenTCert = errors.New("cannot generate the tcert, please check your public key, if not work, please contract the hyperchain maintainer")
-	errDERToPEM = errors.New("cannot convert the der format cert into pem format.")
+	errDecPubKey        = errors.New("cannot decode the public string,please encode the public string as right hex string")
+	errParsePubKey      = errors.New("cannot parse the request publickey, please check the public string.")
+	errParseCert        = errors.New("cannot parse the cert pem, please check your cert pem string.")
+	errGenTCert         = errors.New("cannot generate the tcert, please check your public key, if not work, please contract the hyperchain maintainer")
+	errDERToPEM         = errors.New("cannot convert the der format cert into pem format.")
 	errFailedVerifySign = errors.New("Verify the Cert Signature failed, please use the correctly certificate")
 )
 
@@ -32,18 +32,19 @@ type key struct {
 	priKey     interface{}
 	prikeybyte []byte
 }
+
 //CAManager this struct is for Certificate Auth manager
 type CAManager struct {
-	eCaCert               *cert
-	eCert                 *cert
-	rCaCert               *cert
-	rCert                 *cert
-	tCacert               *cert
-	eCertPri              *key
+	eCaCert  *cert
+	eCert    *cert
+	rCaCert  *cert
+	rCert    *cert
+	tCacert  *cert
+	eCertPri *key
 	//check flags
-	checkERCert           bool
-	checkTCert            bool
-	checkCertSign         bool
+	checkERCert   bool
+	checkTCert    bool
+	checkCertSign bool
 
 	// TLS part
 	tlsCA                 string
@@ -51,17 +52,17 @@ type CAManager struct {
 	tlsCertPriv           string
 	tlsServerHostOverride string
 	//security options
-	enableTls             bool
-	EnableSymmetrical     bool
+	enableTls         bool
+	EnableSymmetrical bool
 
 	//those options just put here temporary
-	RetryTimeLimit    int
-	RecoveryTimeLimit int
+	RetryTimeLimit     int
+	RecoveryTimeLimit  int
 	KeepAliveTimeLimit int
-	KeepAliveInterval time.Duration
-	RetryTimeout time.Duration
-	RecoveryTimeout time.Duration
-	logger     *logging.Logger
+	KeepAliveInterval  time.Duration
+	RetryTimeout       time.Duration
+	RecoveryTimeout    time.Duration
+	logger             *logging.Logger
 }
 
 var caManager *CAManager
@@ -79,18 +80,18 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	recoveryTimeLimit := conf.GetInt("global.connection.recoveryTimeLimit")
 	keepAliveTimeLimit := conf.GetInt("global.connection.keepAliveTimeLimit")
 	keepAliveIntervals := conf.GetString("global.connection.keepAliveInterval")
-	keepAliveInterval,err  := time.ParseDuration(keepAliveIntervals)
+	keepAliveInterval, err := time.ParseDuration(keepAliveIntervals)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("cannot parse the keep alive time duration,val: %v",keepAliveInterval))
+		return nil, errors.New(fmt.Sprintf("cannot parse the keep alive time duration,val: %v", keepAliveInterval))
 	}
 	retryTimeouts := conf.GetString("global.connection.retryTimeout")
-	retryTimeout,err  := time.ParseDuration(retryTimeouts)
+	retryTimeout, err := time.ParseDuration(retryTimeouts)
 	if err != nil {
 		return nil, errors.New("cannot parse the retry timeout time duration")
 	}
 
 	recoveryTimeouts := conf.GetString("global.connection.retryTimeout")
-	recoveryTimeout,err  := time.ParseDuration(recoveryTimeouts)
+	recoveryTimeout, err := time.ParseDuration(recoveryTimeouts)
 	if err != nil {
 		return nil, errors.New("cannot parse the recovery timeout time duration")
 	}
@@ -126,32 +127,32 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	}
 
 	return &CAManager{
-		eCaCert:eca,
-		eCert:ecert,
-		eCertPri:ecertpriv,
-		rCaCert:rca,
-		rCert:rcert,
-		tCacert:ecert,
-		checkCertSign:config.GetBool("check.certsign"),
-		checkERCert:config.GetBool("check.ercert"),
-		checkTCert:config.GetBool("check.tcert"),
-		tlsCA:config.GetString("tlscert.ca"),
-		tlsCert:config.GetString("tlscert.cert"),
-		tlsCertPriv:config.GetString("tlscert.priv"),
-		tlsServerHostOverride:config.GetString("tlscert.serverhostoverride"),
-		enableTls:enableTLS,
-		EnableSymmetrical:enableSymmetrical,
-		RetryTimeLimit:retryTimeLimit,
-		RecoveryTimeLimit:recoveryTimeLimit,
-		KeepAliveTimeLimit:keepAliveTimeLimit,
-		KeepAliveInterval:keepAliveInterval,
-		RetryTimeout:retryTimeout,
-		RecoveryTimeout:recoveryTimeout,
-		logger:logger,
-
-	},nil
+		eCaCert:               eca,
+		eCert:                 ecert,
+		eCertPri:              ecertpriv,
+		rCaCert:               rca,
+		rCert:                 rcert,
+		tCacert:               ecert,
+		checkCertSign:         config.GetBool("check.certsign"),
+		checkERCert:           config.GetBool("check.ercert"),
+		checkTCert:            config.GetBool("check.tcert"),
+		tlsCA:                 config.GetString("tlscert.ca"),
+		tlsCert:               config.GetString("tlscert.cert"),
+		tlsCertPriv:           config.GetString("tlscert.priv"),
+		tlsServerHostOverride: config.GetString("tlscert.serverhostoverride"),
+		enableTls:             enableTLS,
+		EnableSymmetrical:     enableSymmetrical,
+		RetryTimeLimit:        retryTimeLimit,
+		RecoveryTimeLimit:     recoveryTimeLimit,
+		KeepAliveTimeLimit:    keepAliveTimeLimit,
+		KeepAliveInterval:     keepAliveInterval,
+		RetryTimeout:          retryTimeout,
+		RecoveryTimeout:       recoveryTimeout,
+		logger:                logger,
+	}, nil
 
 }
+
 //Generate a TCert for SDK client.
 func (cm *CAManager) GenTCert(publicKey string) (string, error) {
 	pubpem := common.TransportDecode(publicKey)
@@ -181,7 +182,7 @@ func (cm *CAManager) GenTCert(publicKey string) (string, error) {
 //TCert 需要用为其签发的ECert来验证，但是在没有TCERT的时候只能够用
 //ECert 进行充当TCERT 所以需要用ECA.CERT 即ECA.CA 作为根证书进行验证
 //VerifyTCert verify the TCert is valid or not
-func (cm *CAManager)VerifyTCert(tcertPEM string) (bool, error) {
+func (cm *CAManager) VerifyTCert(tcertPEM string) (bool, error) {
 	// if check TCert flag is false, default return true
 	if !cm.checkTCert {
 		return true, nil
@@ -202,7 +203,7 @@ func (cm *CAManager)VerifyTCert(tcertPEM string) (bool, error) {
 // verify the ecert is valid or not
 func (cm *CAManager) VerifyECert(ecertPEM string) (bool, error) {
 	if !cm.checkERCert {
-		return true,nil
+		return true, nil
 	}
 	// if SDK hasn't TCert it can use the ecert to send the transaction
 	// but if the switch is off, this will not check the ecert is valid or not.
@@ -243,10 +244,11 @@ func (cm *CAManager) VerifyCertSign(certPEM string, msg, sign []byte) (bool, err
 	}
 	return result, nil
 }
+
 //VerifyRCert verify the rcert is valid or not
 func (cm *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
 	if cm.checkERCert {
-		return true,nil
+		return true, nil
 	}
 	rcert, err := primitives.ParseCertificate(rcertPEM)
 	if err != nil {
@@ -258,14 +260,14 @@ func (cm *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
 
 /**
   tls ca get dial opts and server opts part
- */
+*/
 
 //GetGrpcClientOpts get GrpcClient options
 func (cm *CAManager) GetGrpcClientOpts() []grpc.DialOption {
 	var opts []grpc.DialOption
-	if !cm.enableTls{
+	if !cm.enableTls {
 		cm.logger.Warning("disable Client TLS")
-		opts = append(opts,grpc.WithInsecure())
+		opts = append(opts, grpc.WithInsecure())
 		return opts
 	}
 	creds, err := credentials.NewClientTLSFromFile(cm.tlsCA, cm.tlsServerHostOverride)
@@ -279,7 +281,7 @@ func (cm *CAManager) GetGrpcClientOpts() []grpc.DialOption {
 //GetGrpcServerOpts get server grpc options
 func (cm *CAManager) GetGrpcServerOpts() []grpc.ServerOption {
 	var opts []grpc.ServerOption
-	if !cm.enableTls{
+	if !cm.enableTls {
 		cm.logger.Warning("disable Server TLS")
 		return opts
 	}
@@ -331,8 +333,8 @@ func readCert(path string) (*cert, error) {
 		return nil, err
 	}
 	return &cert{
-		x509cert:certs,
-		certByte:certb,
+		x509cert: certs,
+		certByte: certb,
 	}, nil
 }
 
@@ -347,7 +349,7 @@ func readKey(path string) (*key, error) {
 		return nil, errors.New("cannot parse the caprivatekey")
 	}
 	return &key{
-		priKey:priKey,
-		prikeybyte:keyb,
+		priKey:     priKey,
+		prikeybyte: keyb,
 	}, nil
 }

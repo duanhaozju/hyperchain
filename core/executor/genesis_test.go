@@ -1,15 +1,15 @@
 package executor
 
 import (
+	"bytes"
 	"github.com/davecgh/go-spew/spew"
 	checker "gopkg.in/check.v1"
-	"os"
-	tutil "hyperchain/core/test_util"
-	edb "hyperchain/core/db_utils"
-	"bytes"
-	"testing"
-	"path"
 	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
+	tutil "hyperchain/core/test_util"
+	"os"
+	"path"
+	"testing"
 )
 
 type GenesisSuite struct {
@@ -27,6 +27,7 @@ func init() {
 func TestGenesis(t *testing.T) {
 	checker.TestingT(t)
 }
+
 // Run once when the suite starts running.
 func (suite *GenesisSuite) SetUpSuite(c *checker.C) {
 	// initialize block pool
@@ -71,4 +72,3 @@ func (suite *GenesisSuite) TestInitGenesis(c *checker.C) {
 		c.Error("chain height not equal with 0")
 	}
 }
-

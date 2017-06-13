@@ -1,15 +1,15 @@
 package main
 
 import (
-	"time"
-	"io/ioutil"
-	"regexp"
-	"strings"
+	"fmt"
 	"hyperchain/common"
 	"hyperchain/p2p/transport"
-	"strconv"
-	"fmt"
+	"io/ioutil"
+	"regexp"
 	"runtime"
+	"strconv"
+	"strings"
+	"time"
 )
 
 const (
@@ -35,7 +35,6 @@ func CheckLicense(exit chan bool) {
 	}
 }
 
-
 // isLicenseExpired - check whether license is expired.
 func isLicenseExpired() (expired bool) {
 	var err error
@@ -60,7 +59,7 @@ func isLicenseExpired() (expired bool) {
 	}
 	pattern, _ := regexp.Compile("Identification: (.*)")
 	identification := pattern.FindString(string(license))[16:]
-	ctx, err := transport.TripleDesDec([]byte(privateKey),common.Hex2Bytes(identification))
+	ctx, err := transport.TripleDesDec([]byte(privateKey), common.Hex2Bytes(identification))
 	if err != nil {
 		fmt.Println("invalid license.")
 		expired = true

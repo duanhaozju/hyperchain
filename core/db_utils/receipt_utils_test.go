@@ -1,10 +1,10 @@
 package db_utils
 
 import (
-	"testing"
-	"hyperchain/hyperdb"
 	"hyperchain/common"
 	"hyperchain/core/test_util"
+	"hyperchain/hyperdb"
+	"testing"
 )
 
 func TestGetReceipt(t *testing.T) {

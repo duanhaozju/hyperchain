@@ -1,17 +1,17 @@
 package common
 
 import (
-	"fmt"
-	"github.com/urfave/cli"
-	"hyperchain/core/types"
-	"github.com/golang/protobuf/proto"
-	"hyperchain/common"
-	"hyperchain/accounts"
-	"hyperchain/crypto"
 	"encoding/json"
-	"hyperchain/api/jsonrpc/core"
-	"strings"
 	"errors"
+	"fmt"
+	"github.com/golang/protobuf/proto"
+	"github.com/urfave/cli"
+	"hyperchain/accounts"
+	"hyperchain/api/jsonrpc/core"
+	"hyperchain/common"
+	"hyperchain/core/types"
+	"hyperchain/crypto"
+	"strings"
 	"time"
 )
 
@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	kec256Hash       = crypto.NewKeccak256Hash("keccak256")
+	kec256Hash = crypto.NewKeccak256Hash("keccak256")
 )
 
 // GetNonEmptyValueByName first finds the value from cli flags, if not found,
@@ -58,7 +58,7 @@ func GetJSONResponse(result *jsonrpc.CommandResult) (jsonrpc.JSONResponse, error
 }
 
 // GenSignature generates the transaction signature by many params ...
-func GenSignature(from string, to string, timestamp int64, amount int64, payload string, nonce int64, opcode int32) ([]byte, error){
+func GenSignature(from string, to string, timestamp int64, amount int64, payload string, nonce int64, opcode int32) ([]byte, error) {
 	conf := common.NewConfig("./keyconfigs/cli.yaml")
 	conf.Set(common.C_NODE_ID, 1)
 
@@ -97,7 +97,7 @@ func getTransactionReceiptCmd(txHash string, c *cli.Context) string {
 func GetTransactionReceipt(txHash string, c *cli.Context, client *CmdClient) error {
 	cmd := getTransactionReceiptCmd(txHash, c)
 
-	for i:= 1; i<= frequency; i ++ {
+	for i := 1; i <= frequency; i++ {
 		response, err := client.Call(cmd)
 		if err != nil {
 			return err

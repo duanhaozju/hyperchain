@@ -3,13 +3,15 @@ package bucket
 import (
 	"sync"
 	//"time"
-	"unsafe"
-	"hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
+	"hyperchain/hyperdb/db"
+	"unsafe"
 )
+
 const (
 	HASHLEN = 20
 )
+
 var defaultBucketCacheMaxSize = 100 // MBs
 
 // We can create a cache and keep all the bucket nodes pre-loaded.

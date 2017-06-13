@@ -5,9 +5,9 @@ import (
 	"errors"
 	"github.com/hashicorp/golang-lru"
 	"github.com/op/go-logging"
+	"hyperchain/hyperdb/db"
 	"math/big"
 	"sync"
-	"hyperchain/hyperdb/db"
 )
 
 var (
@@ -313,8 +313,6 @@ func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch db.B
 	}
 }
 
-
-
 // TODO test
 func (bucketTree *BucketTree) updateCacheWithoutPersist(currentBlockNum *big.Int) {
 	value, ok := bucketTree.treeHashMap[currentBlockNum]
@@ -431,8 +429,6 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch db.Batch, currentBl
 			continue
 		}
 
-
-
 		bucketTree.PrepareWorkingSet(keyValueMap, big.NewInt(i))
 		bucketTree.AddChangesForPersistence(writeBatch, big.NewInt(i))
 
@@ -456,10 +452,8 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch db.Batch, currentBl
 	return nil
 }
 
-func (bucketTree *BucketTree) ClearAllCache(){
+func (bucketTree *BucketTree) ClearAllCache() {
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache = bucketTree.bucketCache.clearAllCache()
 	globalDataNodeCache.ClearAllCache()
 }
-
-

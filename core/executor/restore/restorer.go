@@ -1,17 +1,17 @@
 package restore
 
 import (
+	"errors"
+	"fmt"
 	"hyperchain/common"
-	"hyperchain/hyperdb"
+	cm "hyperchain/core/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/hyperstate"
-	cm "hyperchain/core/common"
+	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
-	"errors"
 	"os"
 	"path"
 	"strings"
-	"fmt"
 )
 
 var (
@@ -27,9 +27,9 @@ type Handler struct {
 
 func NewRestorer(conf *common.Config, db db.Database, ns string) *Handler {
 	return &Handler{
-		conf:    conf,
-		db:      db,
-		ns:      ns,
+		conf: conf,
+		db:   db,
+		ns:   ns,
 	}
 }
 
@@ -38,7 +38,7 @@ func (handler *Handler) Restore(sid string) error {
 	if exist, _ := checkExist(sid, handler.conf); exist == false {
 		return FileNotExsitErr
 	}
-	p := path.Join("snapshots", "SNAPSHOT_" + sid)
+	p := path.Join("snapshots", "SNAPSHOT_"+sid)
 	sdb, err := hyperdb.NewDatabase(handler.conf, p, hyperdb.GetDatabaseType(handler.conf), handler.ns)
 	if err != nil {
 		return err
@@ -102,10 +102,14 @@ func (handler *Handler) Restore(sid string) error {
 }
 
 func checkExist(id string, conf *common.Config) (bool, error) {
-	p := path.Join(hyperdb.GetDatabaseHome(conf), "snapshots", "SNAPSHOT_" + id)
+	p := path.Join(hyperdb.GetDatabaseHome(conf), "snapshots", "SNAPSHOT_"+id)
 	_, err := os.Stat(p)
-	if err == nil { return true, nil }
-	if os.IsNotExist(err) { return false, nil }
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
 	return true, nil
 }
 

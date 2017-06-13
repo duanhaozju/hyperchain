@@ -1,29 +1,28 @@
 package executor
 
 import (
-	"hyperchain/common"
-	"hyperchain/core/types"
-	edb "hyperchain/core/db_utils"
+	"bytes"
+	"errors"
+	"fmt"
 	"github.com/golang/protobuf/proto"
+	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
+	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
-	"bytes"
-	"time"
-	"hyperchain/core/vm"
-	"os"
-	"path"
-	"hyperchain/hyperdb"
 	"io/ioutil"
-	"fmt"
-	"errors"
+	"os"
 	cmd "os/exec"
+	"path"
 	"path/filepath"
+	"time"
 )
-
 
 /*
 	Sync chain initiator
- */
+*/
 
 // SyncChain receive chain sync request from consensus module,
 // trigger to sync.
@@ -70,10 +69,10 @@ func (executor *Executor) syncChainResendBackend() {
 	up, down := executor.getSyncReqArgs()
 	for {
 		select {
-		case <- executor.status.syncFlag.ResendExit:
+		case <-executor.status.syncFlag.ResendExit:
 			return
 		case <-ticker.C:
-		        // resend
+			// resend
 			if executor.status.syncCtx.GetResendMode() == ResendMode_Block {
 				curUp, curDown := executor.getSyncReqArgs()
 				if curUp == up && curDown == down {
@@ -111,7 +110,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			}
 		} else {
 			_, genesis := executor.status.syncCtx.GetCurrentGenesis()
-			if executor.getLatestSyncDownstream() != genesis - 1 {
+			if executor.getLatestSyncDownstream() != genesis-1 {
 				executor.logger.Notice("current downstream not equal to genesis")
 				needNextFetch = true
 			}
@@ -120,7 +119,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 	}
 
 	checker := func() bool {
-		lastBlk, err := edb.GetBlockByNumber(executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1)
+		lastBlk, err := edb.GetBlockByNumber(executor.namespace, executor.status.syncFlag.SyncDemandBlockNum+1)
 		if err != nil {
 			return false
 		}
@@ -215,7 +214,7 @@ func (executor *Executor) ReceiveWsHandshake(payload []byte) {
 	executor.status.syncCtx.RecordWsHandshake(&hs)
 
 	// make `receive home`
-	p := path.Join(hyperdb.GetDatabaseHome(executor.conf), "ws", "ws_" + hs.Ctx.FilterId)
+	p := path.Join(hyperdb.GetDatabaseHome(executor.conf), "ws", "ws_"+hs.Ctx.FilterId)
 	err := os.MkdirAll(p, 0777)
 	if err != nil {
 		executor.logger.Warningf("make ws home for %s failed", hs.Ctx.FilterId)
@@ -251,7 +250,7 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 
 	assemble := func() error {
 		hs := executor.status.syncCtx.hs
-		var i uint64 = 1;
+		var i uint64 = 1
 		fd, err := os.OpenFile(path.Join(executor.status.syncCtx.GetWsHome(), "ws.tar.gz"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
 		if err != nil {
 			return err
@@ -299,7 +298,7 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 		}
 		executor.status.syncCtx.SetTransitioned()
 		executor.processSyncBlocks()
-	} else if ws.PacketId == executor.status.syncCtx.GetWsId() + 1 {
+	} else if ws.PacketId == executor.status.syncCtx.GetWsId()+1 {
 		store(ws.Payload, ws.PacketId, ws.Ctx.FilterId)
 		ack := executor.constructWsAck(ws.Ctx, ws.PacketId, WsAck_OK, nil)
 		if err := executor.informP2P(NOTIFY_SEND_WS_ACK, ack); err != nil {
@@ -403,24 +402,24 @@ func (executor *Executor) processSyncBlocks() {
 			_, low = executor.status.syncCtx.GetCurrentGenesis()
 			low += 1
 		} else {
-			low = executor.status.syncFlag.SyncDemandBlockNum + 1;
+			low = executor.status.syncFlag.SyncDemandBlockNum + 1
 		}
 
 		for i := low; i <= executor.status.syncFlag.SyncTarget; i += 1 {
 			blk, err := edb.GetBlockByNumber(executor.namespace, i)
 			if err != nil {
 				executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
-					executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1, executor.status.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))
+					executor.namespace, executor.status.syncFlag.SyncDemandBlockNum+1, executor.status.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))
 				executor.reject()
 				return
 			} else {
 				// set temporary block number as block number since block number is already here
 				executor.initDemand(blk.Number)
-				executor.stateTransition(blk.Number + 1, common.BytesToHash(blk.MerkleRoot))
+				executor.stateTransition(blk.Number+1, common.BytesToHash(blk.MerkleRoot))
 				err, result := executor.ApplyBlock(blk, blk.Number)
 				if err != nil || executor.assertApplyResult(blk, result) == false {
 					executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
-						executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1, executor.status.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))
+						executor.namespace, executor.status.syncFlag.SyncDemandBlockNum+1, executor.status.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))
 					executor.reject()
 					return
 				} else {
@@ -601,7 +600,7 @@ func (executor *Executor) applyWorldState(fPath string, filterId string, root co
 	if err := uncompressCmd.Run(); err != nil {
 		return err
 	}
-	dbPath := path.Join("ws", "ws_" + filterId, "SNAPSHOT_" + filterId)
+	dbPath := path.Join("ws", "ws_"+filterId, "SNAPSHOT_"+filterId)
 	wsDb, err := hyperdb.NewDatabase(executor.conf, dbPath, hyperdb.GetDatabaseType(executor.conf), executor.namespace)
 	if err != nil {
 		return err
@@ -628,7 +627,7 @@ func (executor *Executor) applyWorldState(fPath string, filterId string, root co
 
 /*
 	Sync chain Receiver
- */
+*/
 // ReceiveSyncRequest - receive synchronization request from some nodes, and send back request blocks.
 func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 	var request ChainSyncRequest
@@ -663,7 +662,7 @@ func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
 	}
 
 	n := fsize / int64(WsShardLen)
-	if fsize % int64(WsShardLen) > 0 {
+	if fsize%int64(WsShardLen) > 0 {
 		n += 1
 	}
 	hs := executor.constructWsHandshake(request, manifest.FilterId, uint64(fsize), uint64(n))
@@ -712,7 +711,7 @@ func (executor *Executor) ReceiveWsAck(payload []byte) {
 			remove(ack.Ctx.FilterId)
 		} else {
 			// send next one
-			sendWs(ack.PacketId + 1, ack.Ctx.FilterId, &ack)
+			sendWs(ack.PacketId+1, ack.Ctx.FilterId, &ack)
 		}
 	} else {
 		// resend
@@ -723,45 +722,44 @@ func (executor *Executor) ReceiveWsAck(payload []byte) {
 
 /*
 	Net Packets
- */
+*/
 func (executor *Executor) constructWsHandshake(req WsRequest, filterId string, size uint64, pn uint64) *WsHandshake {
 	return &WsHandshake{
-		Ctx:          &WsContext{
-			FilterId:     filterId,
-			InitiatorId:  req.ReceiverId,
-			ReceiverId:   req.InitiatorId,
+		Ctx: &WsContext{
+			FilterId:    filterId,
+			InitiatorId: req.ReceiverId,
+			ReceiverId:  req.InitiatorId,
 		},
-		Height:       req.Target,
-		Size:         size,
-		PacketSize:   uint64(WsShardLen),
-		PacketNum:    pn,
+		Height:     req.Target,
+		Size:       size,
+		PacketSize: uint64(WsShardLen),
+		PacketNum:  pn,
 	}
 }
 
 func (executor *Executor) constructWsAck(ctx *WsContext, packetId uint64, status WsAck_STATUS, message []byte) *WsAck {
 	return &WsAck{
-		Ctx:       &WsContext{
-			FilterId:      ctx.FilterId,
-			InitiatorId:   ctx.ReceiverId,
-			ReceiverId:    ctx.InitiatorId,
+		Ctx: &WsContext{
+			FilterId:    ctx.FilterId,
+			InitiatorId: ctx.ReceiverId,
+			ReceiverId:  ctx.InitiatorId,
 		},
-		PacketId:  packetId,
-		Status:    status,
-		Message:   message,
+		PacketId: packetId,
+		Status:   status,
+		Message:  message,
 	}
 }
 
 func (executor *Executor) constrcutWs(ack *WsAck, packetId uint64, packetSize uint64, payload []byte) *Ws {
 	executor.logger.Noticef("construct ws packet with %d size", len(payload))
 	return &Ws{
-		Ctx:       &WsContext{
-			FilterId:      ack.Ctx.FilterId,
-			InitiatorId:   ack.Ctx.ReceiverId,
-			ReceiverId:    ack.Ctx.InitiatorId,
+		Ctx: &WsContext{
+			FilterId:    ack.Ctx.FilterId,
+			InitiatorId: ack.Ctx.ReceiverId,
+			ReceiverId:  ack.Ctx.InitiatorId,
 		},
-		PacketId:    packetId,
-		PacketSize:  packetSize,
-		Payload:     payload,
+		PacketId:   packetId,
+		PacketSize: packetSize,
+		Payload:    payload,
 	}
 }
-

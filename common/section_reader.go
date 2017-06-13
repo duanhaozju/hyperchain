@@ -1,9 +1,9 @@
 package common
 
 import (
-	"os"
-	"io"
 	"errors"
+	"io"
+	"os"
 )
 
 type SectionReader struct {
@@ -45,10 +45,10 @@ func NewSectionReader(filePath string, shardLen int64) (error, *SectionReader) {
 	}
 
 	return nil, &SectionReader{
-		filePath:  filePath,
-		shardLen:  shardLen,
-		fd:        fd,
-		shardNum:  shardNum,
+		filePath: filePath,
+		shardLen: shardLen,
+		fd:       fd,
+		shardNum: shardNum,
 	}
 }
 
@@ -84,13 +84,9 @@ func (sectionReader *SectionReader) Close() {
 	}
 }
 
-
 func (sectionReader *SectionReader) check(sid int64) bool {
 	if sid == 0 || sid > sectionReader.shardNum {
 		return false
 	}
 	return true
 }
-
-
-

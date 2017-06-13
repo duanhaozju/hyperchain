@@ -1,14 +1,14 @@
 package hyperstate
 
 import (
-	"hyperchain/common"
-	"hyperchain/tree/bucket"
-	"hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
+	"hyperchain/common"
+	"hyperchain/hyperdb/db"
+	"hyperchain/tree/bucket"
 )
 
 const (
-	WORKINGSET_TYPE_STATE = 0
+	WORKINGSET_TYPE_STATE       = 0
 	WORKINGSET_TYPE_STATEOBJECT = 1
 )
 
@@ -20,14 +20,13 @@ type JournalCache struct {
 	logger                 *logging.Logger
 }
 
-
 func NewJournalCache(db db.Database, logger *logging.Logger) *JournalCache {
 	return &JournalCache{
-		db:                       db,
-		logger:                   logger,
-		stateObjects:             make(map[common.Address]*StateObject),
-		stateWorkingSet:          bucket.NewKVMap(),
-		stateObjectsWorkingSet:   make(map[common.Address]bucket.K_VMap),
+		db:                     db,
+		logger:                 logger,
+		stateObjects:           make(map[common.Address]*StateObject),
+		stateWorkingSet:        bucket.NewKVMap(),
+		stateObjectsWorkingSet: make(map[common.Address]bucket.K_VMap),
 	}
 }
 
@@ -37,7 +36,7 @@ func (cache *JournalCache) Add(stateObject *StateObject) {
 
 // Fetch - fetch a object with specific address.
 // load from database if not hit in cache.
-func (cache *JournalCache) Fetch (address common.Address) *StateObject {
+func (cache *JournalCache) Fetch(address common.Address) *StateObject {
 	if obj, existed := cache.stateObjects[address]; existed == true {
 		return obj
 	}
@@ -56,11 +55,11 @@ func (cache *JournalCache) Fetch (address common.Address) *StateObject {
 	// Insert into the live set.
 	cache.logger.Debugf("find state object %s in database, add it to live objects", address.Hex())
 	obj := &StateObject{
-		address: address,
-		data:	  account,
+		address:       address,
+		data:          account,
 		cachedStorage: make(Storage),
-		dirtyStorage: make(Storage),
-		logger:cache.logger,
+		dirtyStorage:  make(Storage),
+		logger:        cache.logger,
 	}
 	cache.stateObjects[address] = obj
 	return obj

@@ -4,21 +4,21 @@ package p2p
 
 import (
 	"errors"
+	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"hyperchain/manager/event"
 	"hyperchain/admittance"
+	"hyperchain/common"
+	"hyperchain/manager/event"
+	pc "hyperchain/p2p/common"
 	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/transport"
 	"net"
 	"strconv"
 	"sync"
 	"time"
-	pc "hyperchain/p2p/common"
-	"fmt"
-	"github.com/op/go-logging"
-	"hyperchain/common"
 )
 
 type Node struct {
@@ -47,20 +47,20 @@ type UpdateTable struct {
 }
 
 // NewChatServer return a NewChatServer which can offer a gRPC server single instance mode
-func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TM *transport.TransportManager, peersPool *PeersPool, cm *admittance.CAManager, config pc.Config,namespace string) *Node {
-	logger := common.GetLogger(namespace,"p2p")
+func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TM *transport.TransportManager, peersPool *PeersPool, cm *admittance.CAManager, config pc.Config, namespace string) *Node {
+	logger := common.GetLogger(namespace, "p2p")
 	newNode := Node{
-		localAddr : localAddr,
-		TM : TM,
-		CM : cm,
-		higherEventManager : hEventManager,
-		PeersPool : peersPool,
-		attendChan : make(chan int, 1000),
-		delayTable : make(map[int]int64),
-		DelayChan : make(chan UpdateTable),
-		config : config,
-		namespace:namespace,
-		logger:logger,
+		localAddr:          localAddr,
+		TM:                 TM,
+		CM:                 cm,
+		higherEventManager: hEventManager,
+		PeersPool:          peersPool,
+		attendChan:         make(chan int, 1000),
+		delayTable:         make(map[int]int64),
+		DelayChan:          make(chan UpdateTable),
+		config:             config,
+		namespace:          namespace,
+		logger:             logger,
 	}
 
 	//listen the update
@@ -72,7 +72,7 @@ func NewNode(localAddr *pb.PeerAddr, hEventManager *event.TypeMux, TM *transport
 }
 
 //监听节点状态更新线程
-func (node *Node) UpdateDelayTableThread() {//TODO: close pp
+func (node *Node) UpdateDelayTableThread() { //TODO: close pp
 	for v := range node.DelayChan {
 		if v.updateID > 0 {
 			node.delayTableMutex.Lock()
@@ -95,13 +95,15 @@ func (n *Node) attendNoticeProcess(N int) {
 		flag := <-n.attendChan
 		n.logger.Debug("attend flag: ", flag, " num: ", num)
 		switch flag {
-		case 1: {
-			num++
-		}
-		case 2:{
-			//isPrimaryConnectFlag =true
-			num++
-		}
+		case 1:
+			{
+				num++
+			}
+		case 2:
+			{
+				//isPrimaryConnectFlag =true
+				num++
+			}
 		}
 		if num >= (N - f) {
 			n.logger.Debug("new node has online ,post already in chain event")
@@ -128,7 +130,7 @@ func (node *Node) GetNodeID() int {
 	return node.localAddr.ID
 }
 
-func (node *Node)printMsg(msg *pb.Message) {
+func (node *Node) printMsg(msg *pb.Message) {
 	switch msg.MessageType {
 	case pb.Message_HELLO:
 	case pb.Message_HELLO_RESPONSE:
@@ -151,141 +153,150 @@ func (node *Node)printMsg(msg *pb.Message) {
 // Chat Implements the ServerSide Function
 func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
 	response := &pb.Message{
-		MessageType:pb.Message_RESPONSE,
-		MsgTimeStamp:time.Now().UnixNano(),
-		From:node.localAddr.ToPeerAddress(),
-		Payload:[]byte("empty"),
+		MessageType:  pb.Message_RESPONSE,
+		MsgTimeStamp: time.Now().UnixNano(),
+		From:         node.localAddr.ToPeerAddress(),
+		Payload:      []byte("empty"),
 	}
 	//verify the msg cert first
 	if f, e := node.TM.VerifyMsg(msg); !f || e != nil {
-		return response, errors.New(fmt.Sprintf("cannot verify ecert or cert signture (verify node %d, err :%v)", node.localAddr.ID,e))
+		return response, errors.New(fmt.Sprintf("cannot verify ecert or cert signture (verify node %d, err :%v)", node.localAddr.ID, e))
 	}
 	// TODO pre handle
 	//handle the message
 	switch msg.MessageType {
-	case pb.Message_HELLO:{
-		response.MessageType = pb.Message_HELLO_RESPONSE
-		// hello msg will not accept the nvp peer connect
-		// so if a nvp peer connect to node, here will return a error
-		if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
-			return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
-		}
-		err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
-		if err != nil {
-			return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
-		}
-		response.Payload = node.TM.GetLocalPublicKey()
+	case pb.Message_HELLO:
+		{
+			response.MessageType = pb.Message_HELLO_RESPONSE
+			// hello msg will not accept the nvp peer connect
+			// so if a nvp peer connect to node, here will return a error
+			if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
+				return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
+			}
+			err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
+			if err != nil {
+				return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
+			}
+			response.Payload = node.TM.GetLocalPublicKey()
 
-	}
-	case pb.Message_HELLOREVERSE:{
-		response.MessageType = pb.Message_HELLOREVERSE_RESPONSE
-		// hello reverse msg  accept the nvp peer connect
-		// so if a nvp peer connect to node, this should set the nvp peer into nvp peers pool
-		if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
-			//TODO set the peer into nvo peers pool
-			return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
 		}
-		err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
-		if err != nil {
-			return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
+	case pb.Message_HELLOREVERSE:
+		{
+			response.MessageType = pb.Message_HELLOREVERSE_RESPONSE
+			// hello reverse msg  accept the nvp peer connect
+			// so if a nvp peer connect to node, this should set the nvp peer into nvp peers pool
+			if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
+				//TODO set the peer into nvo peers pool
+				return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
+			}
+			err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
+			if err != nil {
+				return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
+			}
+			//every times get the public key is same
+			response.Payload = node.TM.GetLocalPublicKey()
 		}
-		//every times get the public key is same
-		response.Payload = node.TM.GetLocalPublicKey()
-	}
-	case pb.Message_RECONNECT:{
-		response.MessageType = pb.Message_RECONNECT_RESPONSE
-		// hello reverse msg  accept the nvp peer connect
-		// so if a nvp peer connect to node, this should set the nvp peer into nvp peers pool
-		if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
-			//TODO set the peer into nvo peers pool
-			return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
-		}
-		err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
-		if err != nil {
-			return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
-		}
-		//every times get the public key is same
-		response.Payload = node.TM.GetLocalPublicKey()
-		go node.reverseConnect(msg)
+	case pb.Message_RECONNECT:
+		{
+			response.MessageType = pb.Message_RECONNECT_RESPONSE
+			// hello reverse msg  accept the nvp peer connect
+			// so if a nvp peer connect to node, this should set the nvp peer into nvp peers pool
+			if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
+				//TODO set the peer into nvo peers pool
+				return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
+			}
+			err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
+			if err != nil {
+				return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
+			}
+			//every times get the public key is same
+			response.Payload = node.TM.GetLocalPublicKey()
+			go node.reverseConnect(msg)
 
-	}
-	case pb.Message_INTRODUCE:{
-		//TODO 验证签名
-		//返回路由表信息
-		response.MessageType = pb.Message_INTRODUCE_RESPONSE
-		routers := node.PeersPool.ToRoutingTable()
-		response.Payload, _ = proto.Marshal(&routers)
-	}
-	case pb.Message_ATTEND:{
-		//新节点全部连接上之后通知
-		go node.higherEventManager.Post(event.NewPeerEvent{
-			Payload: msg.Payload,
-		})
-		response.MessageType = pb.Message_ATTEND_RESPONSE
-		// hello reverse msg  accept the nvp peer connect
-		// so if a nvp peer connect to node, this should set the nvp peer into nvp peers pool
-		if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
-			//TODO set the peer into nvo peers pool
-			return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
 		}
-		err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
-		if err != nil {
-			return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
+	case pb.Message_INTRODUCE:
+		{
+			//TODO 验证签名
+			//返回路由表信息
+			response.MessageType = pb.Message_INTRODUCE_RESPONSE
+			routers := node.PeersPool.ToRoutingTable()
+			response.Payload, _ = proto.Marshal(&routers)
 		}
-		//every times get the public key is same
-		response.Payload = node.TM.GetLocalPublicKey()
+	case pb.Message_ATTEND:
+		{
+			//新节点全部连接上之后通知
+			go node.higherEventManager.Post(event.NewPeerEvent{
+				Payload: msg.Payload,
+			})
+			response.MessageType = pb.Message_ATTEND_RESPONSE
+			// hello reverse msg  accept the nvp peer connect
+			// so if a nvp peer connect to node, this should set the nvp peer into nvp peers pool
+			if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
+				//TODO set the peer into nvo peers pool
+				return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
+			}
+			err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
+			if err != nil {
+				return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
+			}
+			//every times get the public key is same
+			response.Payload = node.TM.GetLocalPublicKey()
 
-	}
-	case pb.Message_ATTEND_NOTIFY:{
-		// here need to judge if update
-		//if primary
-		if string(msg.Payload) == "true" {
-			node.attendChan <- 2
-		} else {
-			node.attendChan <- 1
 		}
-		response.MessageType = pb.Message_ATTEND_NOTIFY_RESPONSE
-		// hello reverse msg  accept the nvp peer connect
-		// so if a nvp peer connect to node, this should set the nvp peer into nvp peers pool
-		if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
-			//TODO set the peer into nvo peers pool
-			return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
-		}
-		err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
-		if err != nil {
-			return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
-		}
-		//every times get the public key is same
-		response.Payload = node.TM.GetLocalPublicKey()
+	case pb.Message_ATTEND_NOTIFY:
+		{
+			// here need to judge if update
+			//if primary
+			if string(msg.Payload) == "true" {
+				node.attendChan <- 2
+			} else {
+				node.attendChan <- 1
+			}
+			response.MessageType = pb.Message_ATTEND_NOTIFY_RESPONSE
+			// hello reverse msg  accept the nvp peer connect
+			// so if a nvp peer connect to node, this should set the nvp peer into nvp peers pool
+			if f, e := node.TM.VerifyRCert(msg); !f || e != nil {
+				//TODO set the peer into nvo peers pool
+				return response, errors.New(fmt.Sprintf("NVP Peer is not allow to send a hello message,peer id: %d", msg.From.ID))
+			}
+			err := node.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From))
+			if err != nil {
+				return response, errors.New(fmt.Sprintf("Cannot complate nego share secret (peer %d)", msg.From.ID))
+			}
+			//every times get the public key is same
+			response.Payload = node.TM.GetLocalPublicKey()
 
-	}
-	case pb.Message_SESSION:{
-		node.logger.Infof("Get a session msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
-		transferData, err := node.TM.Decrypt(msg.Payload, pb.RecoverPeerAddr(msg.From))
-		if err != nil {
-			node.logger.Errorf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err)
-			return response, errors.New(fmt.Sprintf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
 		}
-		go node.higherEventManager.Post(event.SessionEvent{
-			Message:  transferData,
-		})
-		payload := []byte("GOT_A_SESSION_MESSAGE")
-		rpayload,err := node.TM.Encrypt(payload,pb.RecoverPeerAddr(msg.From))
-		if err != nil{
-			return nil, errors.New(fmt.Sprintf("Sync message encrypt error message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
+	case pb.Message_SESSION:
+		{
+			node.logger.Infof("Get a session msg from %d (ip: %s, port: %d) ", msg.From.ID, msg.From.IP, msg.From.Port)
+			transferData, err := node.TM.Decrypt(msg.Payload, pb.RecoverPeerAddr(msg.From))
+			if err != nil {
+				node.logger.Errorf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err)
+				return response, errors.New(fmt.Sprintf("cannot decrypt the message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
+			}
+			go node.higherEventManager.Post(event.SessionEvent{
+				Message: transferData,
+			})
+			payload := []byte("GOT_A_SESSION_MESSAGE")
+			rpayload, err := node.TM.Encrypt(payload, pb.RecoverPeerAddr(msg.From))
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("Sync message encrypt error message(%d -> %d),%v", msg.From.ID, node.localAddr.ID, err))
+			}
+			response.Payload = rpayload
 		}
-		response.Payload = rpayload
-	}
-	case pb.Message_KEEPALIVE:{
-		node.logger.Debugf("Get a keep alive msg from %d (ip: %s, port: %d) ",msg.From.ID,msg.From.IP,msg.From.Port)
-		//客户端会发来keepAlive请求,返回response即可
-		// client may send a keep alive request, just response A response type message,if node is not ready, send a pending status message
-		response.MessageType = pb.Message_RESPONSE
-		response.Payload = []byte("RESPONSE FROM SERVER")
-	}
-	case pb.Message_PENDING:{
-		node.logger.Warning("Got a PADDING Message")
-	}
+	case pb.Message_KEEPALIVE:
+		{
+			node.logger.Debugf("Get a keep alive msg from %d (ip: %s, port: %d) ", msg.From.ID, msg.From.IP, msg.From.Port)
+			//客户端会发来keepAlive请求,返回response即可
+			// client may send a keep alive request, just response A response type message,if node is not ready, send a pending status message
+			response.MessageType = pb.Message_RESPONSE
+			response.Payload = []byte("RESPONSE FROM SERVER")
+		}
+	case pb.Message_PENDING:
+		{
+			node.logger.Warning("Got a PADDING Message")
+		}
 	default:
 		node.logger.Warningf("ignore a unknown message : %v, content", msg.MessageType, string(msg.Payload))
 		return response, errors.New(fmt.Sprintf("ignore a unknown message : %v, content: %s", msg.MessageType, string(msg.Payload)))
@@ -301,7 +312,7 @@ func (node *Node) Chat(ctx context.Context, msg *pb.Message) (*pb.Message, error
 // StartServer start the gRPC server
 func (node *Node) StartServer() error {
 	node.logger.Info("Starting the grpc listening server...")
-	lis, err := net.Listen("tcp", ":" + strconv.Itoa(node.localAddr.Port))
+	lis, err := net.Listen("tcp", ":"+strconv.Itoa(node.localAddr.Port))
 	if err != nil {
 		node.logger.Fatalf("Failed to listen: %v", err)
 		node.logger.Fatal("PLEASE RESTART THE SERVER NODE!")
@@ -328,17 +339,17 @@ func (node *Node) reverseConnect(msg *pb.Message) error {
 	reAddr := pb.NewPeerAddr(node.config.GetIP(reNodeID), node.config.GetPort(reNodeID), node.config.GetRPCPort(reNodeID), reNodeID)
 	peer, err := node.PeersPool.GetPeerByHash(msg.From.Hash)
 	if err != nil {
-		node.logger.Criticalf("cannot get the old peer ID: %d",msg.From.ID)
-		peer := NewPeer(reAddr,node.localAddr,node.TM,node.CM,node.namespace)
-		_,err := peer.Connect(node.TM.GetLocalPublicKey(),pb.Message_RECONNECT,true,peer.ReconnectHandler)
-		if err != nil{
-			node.logger.Criticalf("cannot create a new peer again, please chekc the peer (id: %d)",msg.From.ID)
+		node.logger.Criticalf("cannot get the old peer ID: %d", msg.From.ID)
+		peer := NewPeer(reAddr, node.localAddr, node.TM, node.CM, node.namespace)
+		_, err := peer.Connect(node.TM.GetLocalPublicKey(), pb.Message_RECONNECT, true, peer.ReconnectHandler)
+		if err != nil {
+			node.logger.Criticalf("cannot create a new peer again, please chekc the peer (id: %d)", msg.From.ID)
 		}
 	} else {
 		go peer.eventMux.Post(RecoveryEvent{
-			addr:reAddr,
-			recoveryTimeout:node.CM.RecoveryTimeout,
-			recoveryTimes:0,
+			addr:            reAddr,
+			recoveryTimeout: node.CM.RecoveryTimeout,
+			recoveryTimes:   0,
 		})
 	}
 	return nil

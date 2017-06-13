@@ -45,4 +45,3 @@ func RecoverPeerAddr(peerAddress *PeerAddress) *PeerAddr {
 	pa.Port = int(peerAddress.Port)
 	return &pa
 }
-

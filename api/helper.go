@@ -3,14 +3,14 @@ package api
 import (
 	"errors"
 	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
 	"hyperchain/crypto/hmEncryption"
-	"math/big"
-	"time"
-	edb "hyperchain/core/db_utils"
 	"hyperchain/hyperdb"
+	"math/big"
 	"path"
+	"time"
 )
 
 const (
@@ -100,7 +100,7 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 }
 
 func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte, height uint64, namespace string) (vm.Database, error) {
-	db, err := hyperdb.NewDatabase(conf, path.Join("snapshots", "SNAPSHOT_" + filterId), hyperdb.GetDatabaseType(conf), namespace)
+	db, err := hyperdb.NewDatabase(conf, path.Join("snapshots", "SNAPSHOT_"+filterId), hyperdb.GetDatabaseType(conf), namespace)
 	if err != nil {
 		return nil, err
 	}

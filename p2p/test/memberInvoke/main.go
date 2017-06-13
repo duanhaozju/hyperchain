@@ -2,21 +2,21 @@ package main
 
 import "fmt"
 
-type ABC struct{
+type ABC struct {
 	name string
 }
 
-func (abc *ABC)say(){
+func (abc *ABC) say() {
 	fmt.Println(abc.name)
 }
 
-func (abc *ABC)Handle(foo func()){
+func (abc *ABC) Handle(foo func()) {
 	foo()
 }
 
-func main(){
+func main() {
 	abc := ABC{
-		name :"zhangshan",
+		name: "zhangshan",
 	}
 	abc.Handle(abc.say)
 }

@@ -41,6 +41,3 @@ func TestGetLogger(t *testing.T) {
 	log.Debug("DEBUG")
 	log.Info("INFO")
 }
-
-
-

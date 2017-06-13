@@ -6,11 +6,11 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
-	"hyperchain/manager/event"
+	"hyperchain/core/vm"
 	"hyperchain/hyperdb/db"
+	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"time"
-	"hyperchain/core/vm"
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
@@ -245,4 +245,3 @@ func (executor *Executor) filterFeedback(block *types.Block, filterLogs []*vm.Lo
 		}
 	}
 }
-

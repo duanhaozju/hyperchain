@@ -2,18 +2,17 @@ package bucket
 
 import (
 	"github.com/hashicorp/golang-lru"
-	"sync"
-	"hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
+	"hyperchain/hyperdb/db"
+	"sync"
 )
 
 var (
 	DefaultDataNodeCacheMaxSize = 400000
 	GlobalDataNodeCacheSize     = 400000
-	IsEnabledGlobal = true
+	IsEnabledGlobal             = true
 	globalDataNodeCache         *GlobalDataNodeCache
 )
-
 
 func init() {
 	globalDataNodeCache = &GlobalDataNodeCache{cacheMap: make(map[string]map[string]*lru.Cache), isEnable: IsEnabledGlobal}
@@ -24,6 +23,7 @@ type GlobalDataNodeCache struct {
 	isEnable bool
 	lock     sync.RWMutex
 }
+
 func (globalDataNodeCache *GlobalDataNodeCache) ClearAllCache() {
 	globalDataNodeCache.cacheMap = make(map[string]map[string]*lru.Cache)
 }

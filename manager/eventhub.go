@@ -50,11 +50,11 @@ type EventHub struct {
 	// subscription
 	subscriptions map[int]event.Subscription
 
-	filterSystem  *flt.EventSystem
+	filterSystem *flt.EventSystem
 
-	initType      int
-	logger        *logging.Logger
-	close         chan bool
+	initType int
+	logger   *logging.Logger
+	close    chan bool
 }
 
 func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {

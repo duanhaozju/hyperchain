@@ -1,12 +1,12 @@
 package db_utils
 
 import (
+	"errors"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"sync"
-	"errors"
 )
 
 var ChainNotExistErr = errors.New("chain doesn't exist")
@@ -44,7 +44,7 @@ func (chains *memChains) GetChain(namespace string) *memChain {
 }
 
 var (
-	chains *memChains
+	chains         *memChains
 	chainsInitOnce sync.Once
 )
 
@@ -372,4 +372,3 @@ func getChain(namespace string) (*types.Chain, error) {
 	}
 	return &chain, nil
 }
-

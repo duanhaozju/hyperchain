@@ -11,8 +11,8 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/hyperdb/hleveldb"
 	"hyperchain/hyperdb/sldb"
-	"sync"
 	"strconv"
+	"sync"
 )
 
 var (

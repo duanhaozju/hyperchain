@@ -1,21 +1,23 @@
 package executor
+
 import (
-	"hyperchain/manager/event"
-	"hyperchain/manager/protos"
 	"github.com/golang/protobuf/proto"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
+	"hyperchain/manager/event"
+	"hyperchain/manager/protos"
 )
+
 type Helper struct {
-	innerMux        *event.TypeMux
-	externalMux     *event.TypeMux
+	innerMux    *event.TypeMux
+	externalMux *event.TypeMux
 }
 
 func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *Helper {
 	return &Helper{
-		innerMux:       innerMux,
-		externalMux:    externalMux,
+		innerMux:    innerMux,
+		externalMux: externalMux,
 	}
 }
 
@@ -133,9 +135,9 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			return err
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
-			Payload:  payload,
-			Type:     NOTIFY_BROADCAST_SINGLE,
-			Peers:    executor.status.syncFlag.SyncPeers,
+			Payload: payload,
+			Type:    NOTIFY_BROADCAST_SINGLE,
+			Peers:   executor.status.syncFlag.SyncPeers,
 		})
 		return nil
 	case NOTIFY_SYNC_REPLICA:
@@ -271,9 +273,9 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 			return InvalidParams
 		}
 		executor.helper.PostExternal(event.FilterSnapshotEvent{
-			FilterId:   filterId,
-			Success:    isSuccess,
-			Message:    msg,
+			FilterId: filterId,
+			Success:  isSuccess,
+			Message:  msg,
 		})
 		return nil
 	case FILTER_DELETE_SNAPSHOT:
@@ -293,9 +295,9 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 			return InvalidParams
 		}
 		executor.helper.PostExternal(event.FilterDeleteSnapshotEvent{
-			FilterId:   filterId,
-			Success:    isSuccess,
-			Message:    msg,
+			FilterId: filterId,
+			Success:  isSuccess,
+			Message:  msg,
 		})
 		return nil
 	case FILTER_ARCHIVE:
@@ -315,13 +317,12 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 			return InvalidParams
 		}
 		executor.helper.PostExternal(event.FilterArchive{
-			FilterId:   filterId,
-			Success:    isSuccess,
-			Message:    msg,
+			FilterId: filterId,
+			Success:  isSuccess,
+			Message:  msg,
 		})
 		return nil
 	default:
 		return NoDefinedCaseErr
 	}
 }
-

@@ -1,10 +1,10 @@
 package filter
 
 import (
-	"sync"
 	"encoding/hex"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -16,13 +16,11 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-
 // idGenerator helper utility that generates a (pseudo) random sequence of
 // bytes that are used to generate identifiers.
 func GenerateID() int64 {
 	return rand.Int63()
 }
-
 
 func NewFilterID() string {
 	idGeneratorLock.Lock()
@@ -42,6 +40,5 @@ func NewFilterID() string {
 	if rpcId == "" {
 		rpcId = "0"
 	}
-	return  "0x" + rpcId
+	return "0x" + rpcId
 }
-

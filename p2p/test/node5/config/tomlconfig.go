@@ -1,15 +1,15 @@
 package config
 
 import (
+	"bytes"
+	"fmt"
 	"github.com/terasum/viper"
 	"io/ioutil"
-	"fmt"
-	"bytes"
 )
 
-func ReadToml(filepath string){
+func ReadToml(filepath string) {
 	viper.SetConfigType("TOML")
-	configByte,err := ioutil.ReadFile(filepath)
+	configByte, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		panic(err)
 	}
@@ -18,7 +18,7 @@ func ReadToml(filepath string){
 	fmt.Println(eca)
 }
 
-func WriteConfig(filepath string){
+func WriteConfig(filepath string) {
 	viper := viper.New()
 	viper.SetConfigFile(filepath)
 	err := viper.ReadInConfig()
@@ -26,10 +26,9 @@ func WriteConfig(filepath string){
 		panic(err)
 	}
 	fmt.Println(viper.Get("ecert"))
-	viper.Set("name","test")
+	viper.Set("name", "test")
 	viper.WriteConfigAs("configagain.toml")
 	viper.WriteConfigAs("configagain.yaml")
 	viper.WriteConfigAs("configagain.json")
-
 
 }

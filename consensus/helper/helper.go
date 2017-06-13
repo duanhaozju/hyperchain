@@ -160,7 +160,7 @@ func (h *helper) BroadcastAddNode(msg *pb.Message) error {
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(broadcastEvent)
+	h.msgQ.Post(broadcastEvent)
 
 	return nil
 }
@@ -179,7 +179,7 @@ func (h *helper) BroadcastDelNode(msg *pb.Message) error {
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(broadcastEvent)
+	h.msgQ.Post(broadcastEvent)
 
 	return nil
 }

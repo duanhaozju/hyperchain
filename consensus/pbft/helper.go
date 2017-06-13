@@ -48,6 +48,11 @@ func (pbft *pbftImpl) inW(n uint64) bool {
 	return n > pbft.h
 }
 
+// Is the view right?
+func (pbft *pbftImpl) inV(v uint64) bool {
+	return pbft.view == v
+}
+
 // Is the view right? And is the sequence number between watermarks?
 func (pbft *pbftImpl) inWV(v uint64, n uint64) bool {
 	return pbft.view == v && pbft.inW(n)
@@ -95,7 +100,7 @@ func (pbft *pbftImpl) getAddNV() (n int64, v uint64) {
 	if pbft.view < uint64(pbft.N) {
 		v = pbft.view + uint64(n)
 	} else {
-		v = pbft.view + uint64(n) + 1
+		v = pbft.view/uint64(pbft.N)*uint64(pbft.N+1) + pbft.view%uint64(pbft.N)
 	}
 
 	return
@@ -112,6 +117,41 @@ func (pbft *pbftImpl) getDelNV(del uint64) (n int64, v uint64) {
 	}
 
 	return
+}
+
+func (pbft *pbftImpl) handleCachedTxs(cache map[uint64]*transactionStore) {
+	for vid, batch := range cache {
+		if vid < pbft.h {
+			continue
+		}
+		for batch.Len() != 0 {
+			temp := batch.order.Front().Value
+			txc, ok := interface{}(temp).(transactionContainer)
+			if !ok {
+				pbft.logger.Error("type assert error:", temp)
+				return
+			}
+			tx := txc.tx
+			if tx != nil {
+				pbft.reqStore.storeOutstanding(tx)
+			}
+			batch.remove(tx)
+		}
+	}
+}
+
+func (pbft *pbftImpl) cleanAllCache() {
+
+	for idx := range pbft.storeMgr.certStore {
+		delete(pbft.storeMgr.certStore, idx)
+		pbft.persistDelQPCSet(idx.v, idx.n)
+	}
+
+	pbft.vcMgr.viewChangeStore = make(map[vcidx]*ViewChange)
+	pbft.vcMgr.newViewStore = make(map[uint64]*NewView)
+	pbft.vcMgr.vcResetStore = make(map[FinishVcReset]bool)
+	pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
+
 }
 
 // =============================================================================
@@ -176,10 +216,29 @@ func (pbft *pbftImpl) prepared(digest string, v uint64, n uint64) bool {
 
 	cert := pbft.storeMgr.certStore[msgID{v, n}]
 
-	pbft.logger.Debugf("Replica %d prepare count for view=%d/seqNo=%d: %d",
-		pbft.id, v, n, cert.prepareCount)
+	if cert == nil {
+		return false
+	}
 
-	return cert.prepareCount >= pbft.preparedReplicasQuorum()
+	prepCount := len(cert.prepare)
+
+	pbft.logger.Debugf("Replica %d prepare count for view=%d/seqNo=%d: %d",
+		pbft.id, v, n, prepCount)
+
+	return prepCount >= pbft.preparedReplicasQuorum()
+}
+
+func (pbft *pbftImpl) onlyPrepared(digest string, v uint64, n uint64) bool {
+
+	cert := pbft.storeMgr.certStore[msgID{v, n}]
+
+	if cert == nil {
+		return false
+	}
+
+	prepCount := len(cert.prepare)
+
+	return prepCount >= pbft.preparedReplicasQuorum()
 }
 
 func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
@@ -194,10 +253,28 @@ func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
 		return false
 	}
 
-	pbft.logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
-		pbft.id, v, n, cert.commitCount)
+	cmtCount := len(cert.commit)
 
-	return cert.commitCount >= pbft.intersectionQuorum()
+	pbft.logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
+		pbft.id, v, n, cmtCount)
+
+	return cmtCount >= pbft.intersectionQuorum()
+}
+
+func (pbft *pbftImpl) onlyCommitted(digest string, v uint64, n uint64) bool {
+
+	cert := pbft.storeMgr.certStore[msgID{v, n}]
+
+	if cert == nil {
+		return false
+	}
+
+	cmtCount := len(cert.commit)
+
+	pbft.logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
+		pbft.id, v, n, cmtCount)
+
+	return cmtCount >= pbft.committedReplicasQuorum()
 }
 
 // =============================================================================
@@ -291,7 +368,7 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 	timeout := pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
 	if pbft.primary(pbft.view) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
-		timeout += pbft.pbftTimerMgr.requestTimeout
+		timeout = 3*timeout + pbft.pbftTimerMgr.requestTimeout
 	}
 
 	event := &LocalEvent{
@@ -382,12 +459,12 @@ func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool {
 
 	if !pbft.inWV(prep.View, prep.SequenceNumber) {
 		if prep.SequenceNumber != pbft.h && !pbft.status.getState(&pbft.status.skipInProgress) {
-			pbft.logger.Warningf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
-				pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
+			pbft.logger.Warningf("Replica %d ignoring prepare from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
+				pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal
-			pbft.logger.Debugf("Replica %d ignoring prepare for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
-				pbft.id, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
+			pbft.logger.Debugf("Replica %d ignoring prepare from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
+				pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber, pbft.view, pbft.h)
 		}
 
 		return false
@@ -407,9 +484,28 @@ func (pbft *pbftImpl) isCommitLegal(commit *Commit) bool {
 			pbft.logger.Warningf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		} else {
 			// This is perfectly normal
-			pbft.logger.Debugf("Replica %d ignoring commit for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
+			pbft.logger.Debugf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, pbft.view, pbft.h)
 		}
 		return false
 	}
 	return true
+}
+
+func (pbft *pbftImpl) parseCertStore() {
+	tmpStore := make(map[msgID]*msgCert)
+	for idx := range pbft.storeMgr.certStore {
+		cert := pbft.storeMgr.getCert(idx.v, idx.n)
+		if cert.prePrepare != nil {
+			cert.prePrepare.View = pbft.view
+		}
+		for prep := range cert.prepare {
+			prep.View = pbft.view
+		}
+		for cmt := range cert.commit {
+			cmt.View = pbft.view
+		}
+		idx.v = pbft.view
+		tmpStore[msgID{pbft.view, idx.n}] = cert
+	}
+	pbft.storeMgr.certStore = tmpStore
 }

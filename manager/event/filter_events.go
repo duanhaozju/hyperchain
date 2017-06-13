@@ -10,13 +10,12 @@ type FilterNewBlockEvent struct {
 }
 
 type FilterNewLogEvent struct {
-	Logs    []*vm.Log
+	Logs []*vm.Log
 }
-
 
 /*
 	Archive
- */
+*/
 
 type FilterSnapshotEvent struct {
 	FilterId string

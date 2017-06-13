@@ -92,8 +92,8 @@ func ECDSAVerifyTransport(verKey *ecdsa.PublicKey, msg, signature []byte) (bool,
 		return false, err
 	}
 
-	h:=sha256.New()
-	digest := make([]byte,32)
+	h := sha256.New()
+	digest := make([]byte, 32)
 	h.Write(msg)
 	h.Sum(digest[:0])
 	return ecdsa.Verify(verKey, digest, ecdsaSignature.R, ecdsaSignature.S), nil

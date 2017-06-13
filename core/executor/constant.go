@@ -3,7 +3,7 @@ package executor
 import "errors"
 
 const (
-	COMMITQUEUESIZE = 1024
+	COMMITQUEUESIZE   = 1024
 	VALIDATEQUEUESIZE = 1024
 
 	VALIDATION_NORMAL = 0
@@ -31,7 +31,6 @@ const (
 	NOTIFY_SYNC_REPLICA
 )
 
-
 const (
 	FILTER_NEW_BLOCK = iota
 	FILTER_NEW_LOG
@@ -48,22 +47,22 @@ const (
 )
 
 const (
-	LatestBlockNumber       uint64 = 0
+	LatestBlockNumber uint64 = 0
 	// WsShardLen              = 2 * 1024 * 1024 // 2MB
-	WsShardLen              = 1024 // 1KB
+	WsShardLen = 1024 // 1KB
 
-	InvalidSnapshotReqErr   = "invalid snapshot request"
-	InvalidDeletionReqErr   = "invalid snapshot deletion request"
-	MakeSnapshotFailedErr   = "make snapshot failed"
-	SnapshotNotExistErr     = "snapshot doesn't exist"
-	DeleteSnapshotErr       = "delete snapshot failed"
-	ArchiveFailedErr        = "archive failed"
-	EmptyMessage            = ""
+	InvalidSnapshotReqErr = "invalid snapshot request"
+	InvalidDeletionReqErr = "invalid snapshot deletion request"
+	MakeSnapshotFailedErr = "make snapshot failed"
+	SnapshotNotExistErr   = "snapshot doesn't exist"
+	DeleteSnapshotErr     = "delete snapshot failed"
+	ArchiveFailedErr      = "archive failed"
+	EmptyMessage          = ""
 )
 
 var (
-   	SnapshotContentInvalidErr = errors.New("snapshot content invalid")
-   	ArchiveRequestNotSatisfiedErr = errors.New("archive request not satisfied with requirement")
-   	SnapshotDoesntExistErr = errors.New("snapshot does not exist")
-	ApplyWsErr = errors.New("apply world state failed")
+	SnapshotContentInvalidErr     = errors.New("snapshot content invalid")
+	ArchiveRequestNotSatisfiedErr = errors.New("archive request not satisfied with requirement")
+	SnapshotDoesntExistErr        = errors.New("snapshot does not exist")
+	ApplyWsErr                    = errors.New("apply world state failed")
 )

@@ -5,8 +5,8 @@ package namespace
 import (
 	"fmt"
 	"github.com/urfave/cli"
-	"hyperchain/hypercli/common"
 	admin "hyperchain/api/jsonrpc/core"
+	"hyperchain/hypercli/common"
 )
 
 //NewNamespaceCMD new namespace related

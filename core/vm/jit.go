@@ -325,6 +325,7 @@ func PrintProgram(program *Program, writer io.Writer) {
 		fmt.Fprintf(writer, "(%d) opcode :%s\n", idx, instr.Op().String())
 	}
 }
+
 // validDest checks if the given destination is a valid one given the
 // destination table of the program
 func validDest(dests map[uint64]struct{}, dest *big.Int) bool {

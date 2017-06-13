@@ -248,7 +248,7 @@ type (
 	}
 	SetCreatorChange struct {
 		Account *common.Address `json:"account,omitempty"`
-		Prev    common.Address `json:"prev,omitempty"`
+		Prev    common.Address  `json:"prev,omitempty"`
 		Type    string          `json:"type,omitempty"`
 	}
 	SetCreateTimeChange struct {

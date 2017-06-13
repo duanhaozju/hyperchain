@@ -23,27 +23,27 @@ type ExecutorStatus struct {
 	commitExit          chan bool    // commit exit notifier
 	replicaSyncExit     chan bool    // replica sync exit notifier
 
-	validationSuspend   chan bool     // validation suspend notifier
-	commitSuspend       chan bool     // commit suspend notifier
-	syncReplicaSuspend  chan bool     // replica sync suspend notifier
+	validationSuspend  chan bool // validation suspend notifier
+	commitSuspend      chan bool // commit suspend notifier
+	syncReplicaSuspend chan bool // replica sync suspend notifier
 
-	syncFlag            SyncFlag     // store temp variables during chain sync
-	syncCtx             *ChainSyncContext // synchronization context
+	syncFlag SyncFlag          // store temp variables during chain sync
+	syncCtx  *ChainSyncContext // synchronization context
 }
 
 type SyncFlag struct {
-	SyncDemandBlockNum  uint64     // the block num in sync process
-	SyncDemandBlockHash []byte     // the block hash in sync process
-	SyncTarget          uint64     // the target block number of this synchronization
-	SyncPeers           []uint64   // peers to fetch sync blocks
-	LocalId             uint64     // local node id
-	TempDownstream      uint64     // sync request low height, from calculation
-	LatestUpstream      uint64     // latest sync request high height
-	LatestDownstream    uint64     // latest sync request low height. always equal to `TempDownstream`
-	InExecution         uint32     // flag mark in execution
-	ResendMode          uint32     // sync request resend context
-	ResendExit          chan bool  // resend backend process notifier
-	Oracle              *Oracle    // peer selector before send sync request, adhere `BEST PEER` algorithm
+	SyncDemandBlockNum  uint64    // the block num in sync process
+	SyncDemandBlockHash []byte    // the block hash in sync process
+	SyncTarget          uint64    // the target block number of this synchronization
+	SyncPeers           []uint64  // peers to fetch sync blocks
+	LocalId             uint64    // local node id
+	TempDownstream      uint64    // sync request low height, from calculation
+	LatestUpstream      uint64    // latest sync request high height
+	LatestDownstream    uint64    // latest sync request low height. always equal to `TempDownstream`
+	InExecution         uint32    // flag mark in execution
+	ResendMode          uint32    // sync request resend context
+	ResendExit          chan bool // resend backend process notifier
+	Oracle              *Oracle   // peer selector before send sync request, adhere `BEST PEER` algorithm
 }
 
 func initializeExecutorStatus(executor *Executor) error {
@@ -246,7 +246,7 @@ func (executor *Executor) rollbackDone() {
 
 /*
 	CHAIN SYNCHRONIZATION
- */
+*/
 // waitUtilSyncAvailable - wait validation processor and commit processor become idle.
 func (executor *Executor) waitUtilSyncAvailable() {
 	executor.logger.Debugf("[Namespace = %s] wait util sync available", executor.namespace)
@@ -369,7 +369,6 @@ func (executor *Executor) setReplicaSyncExit() {
 func (executor *Executor) getReplicaSyncExit() chan bool {
 	return executor.status.replicaSyncExit
 }
-
 
 // getExit - get exit status.
 func (executor *Executor) getExit(identifier int) chan bool {

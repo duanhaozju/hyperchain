@@ -59,12 +59,11 @@ func HomeDir() string {
 	return ""
 }
 
-
 func GetGoPath() string {
 	env := os.Getenv("GOPATH")
 	l := strings.Split(env, ":")
 	if len(l) > 1 {
-		return l[len(l) - 1]
+		return l[len(l)-1]
 	}
 	return l[0]
 }

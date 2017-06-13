@@ -3,13 +3,13 @@ package executor
 import (
 	"github.com/davecgh/go-spew/spew"
 	checker "gopkg.in/check.v1"
+	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
 	tutil "hyperchain/core/test_util"
-	"testing"
 	"hyperchain/core/types"
 	"os"
 	"path"
-	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	"testing"
 )
 
 type ValidationSuite struct {
@@ -72,5 +72,3 @@ func (suite *ValidationSuite) TestCheckSign(c *checker.C) {
 	c.Assert(txs[0].GetHash().Hex(), checker.Equals, ctxs[2].GetHash().Hex())
 	c.Assert(txs[1].GetHash().Hex(), checker.Equals, ctxs[3].GetHash().Hex())
 }
-
-
