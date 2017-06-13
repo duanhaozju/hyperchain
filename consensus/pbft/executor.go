@@ -148,7 +148,7 @@ func (pbft *pbftImpl) handleCorePbftEvent(e *LocalEvent) events.Event {
 		return pbft.sendViewChange()
 
 	case CORE_STATE_UPDATE_EVENT:
-		pbft.recvStateUpdatedEvent(e.Event.(protos.StateUpdatedMessage))
+		pbft.recvStateUpdatedEvent(e.Event.(*stateUpdatedEvent))
 		return nil
 
 	case CORE_VALIDATED_TXS_EVENT:
@@ -228,7 +228,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 					EventType: RECOVERY_DONE_EVENT,
 				}
 			} else {
-				state := protos.StateUpdatedMessage{SeqNo: seqNo - 1}
+				state := &stateUpdatedEvent{seqNo: seqNo - 1}
 				return pbft.recvStateUpdatedEvent(state)
 			}
 		}
