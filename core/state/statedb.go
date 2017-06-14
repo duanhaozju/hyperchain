@@ -7,7 +7,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm"
 	"hyperchain/hyperdb/db"
 	"hyperchain/tree/pmt"
 	"math/big"
@@ -170,23 +170,23 @@ func (self *StateDB) Exist(addr common.Address) bool {
 	return self.GetStateObject(addr) != nil
 }
 
-func (self *StateDB) GetAccount(addr common.Address) vm.Account {
+func (self *StateDB) GetAccount(addr common.Address) evm.Account {
 	return self.GetStateObject(addr)
 }
 
-func (self *StateDB) GetLeastAccount() vm.Account {
+func (self *StateDB) GetLeastAccount() evm.Account {
 	return self.leastStateObject
 }
 
 // todo
-func (self *StateDB) SetLeastAccount(account *vm.Account) {
+func (self *StateDB) SetLeastAccount(account *evm.Account) {
 	//self.leastStateObject.abi = account.Address()
 }
 
 // return all StateObject saved in the trie instead of in CACHE
-func (self *StateDB) GetAccounts() map[string]vm.Account {
+func (self *StateDB) GetAccounts() map[string]evm.Account {
 	// return self.stateObjects
-	ret := make(map[string]vm.Account)
+	ret := make(map[string]evm.Account)
 	it := self.trie.Iterator()
 	for it.Next() {
 		addr := self.trie.GetKey(it.Key)
@@ -395,7 +395,7 @@ func (self *StateDB) CreateStateObject(addr common.Address) *StateObject {
 	return newSo
 }
 
-func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
+func (self *StateDB) CreateAccount(addr common.Address) evm.Account {
 	return self.CreateStateObject(addr)
 }
 

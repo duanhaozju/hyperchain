@@ -1,0 +1,219 @@
+---
+#interface rule
+interfaceRule:
+  allowedRule:
+    class:
+  notAllowedRule:
+    class:
+      java/io: "not allow io related class or operation."
+      java/lang/Readable: "not allow io related class or operation."
+      java/nio: "not allow io related class or operation."
+      java/lang/Process: "not allow system call related class or operation."
+      java/lang/ProcessBuilder: "not allow system call related class or operation."
+      java/lang/ProcessBuilder$Redirect: "not allow system call related class or operation."
+      java/lang/Runtime: "not allow system call related class or operation."
+      java/lang/Thread$State: "not allow thread(concurrent) related class or operation."
+      java/lang/Thread: "not allow thread(concurrent) related class or operation."
+      java/lang/Runnable: "not allow thread(concurrent) related class or operation."
+      java/lang/ThreadGroup: "not allow thread(concurrent) related class or operation."
+      java/lang/ThreadLocal: "not allow thread(concurrent) related class or operation."
+      java/util/concurrent: "not allow thread(concurrent) related class or operation."
+      java/net: "not allow net related class or operation."
+      javax/net: "not allow net related class or operation."
+      javax.xml.ws.spi.http: "not allow net related class or operation."
+      java/lang/Class: "not allow reflect related class or operation."
+      java/lang/System/currentTimeMillis: "not allow time related class or operation."
+      java/util/Date: "not allow time related class or operation."
+      java/sql/Date: "not allow time related class or operation."
+      java/sql/Time: "not allow time related class or operation."
+      java/sql/Timestamp: "not allow time related class or operation."
+      java/text/DateFormat: "not allow time related class or operation."
+      java/text/DateFormatSymbols: "not allow time related class or operation."
+      java/text/SimpleDateFormat: "not allow time related class or operation."
+      java/time: "not allow time related class or operation."
+      java/util/Calendar: "not allow time related class or operation."
+      java/util/Date: "not allow time related class or operation."
+      java/util/GregorianCalendar: "not allow time related class or operation."
+      java/util/SimpleTimeZone: "not allow time related class or operation."
+      java/util/TimeZone: "not allow time related class or operation."
+      java/util/spi/CalendarDataProvider: "not allow time related class or operation."
+      java/util/spi/CalendarNameProvider: "not allow time related class or operation."
+      java/util/spi/TimeZoneNameProvider: "not allow time related class or operation."
+#super class rule
+superClassRule:
+  allowedRule:
+    class:
+  notAllowedRule:
+    class:
+      java/io: "not allow io related class or operation."
+      java/lang/Readable: "not allow io related class or operation."
+      java/nio: "not allow io related class or operation."
+      java/lang/Process: "not allow system call related class or operation."
+      java/lang/ProcessBuilder: "not allow system call related class or operation."
+      java/lang/ProcessBuilder$Redirect: "not allow system call related class or operation."
+      java/lang/Runtime: "not allow system call related class or operation."
+      java/lang/Thread$State: "not allow thread(concurrent) related class or operation."
+      java/lang/Thread: "not allow thread(concurrent) related class or operation."
+      java/lang/Runnable: "not allow thread(concurrent) related class or operation."
+      java/lang/ThreadGroup: "not allow thread(concurrent) related class or operation."
+      java/lang/ThreadLocal: "not allow thread(concurrent) related class or operation."
+      java/util/concurrent: "not allow thread(concurrent) related class or operation."
+      java/net: "not allow net related class or operation."
+      javax/net: "not allow net related class or operation."
+      javax.xml.ws.spi.http: "not allow net related class or operation."
+      java/lang/Class: "not allow reflect related class or operation."
+      java/lang/System/currentTimeMillis: "not allow time related class or operation."
+      java/util/Date: "not allow time related class or operation."
+      java/sql/Date: "not allow time related class or operation."
+      java/sql/Time: "not allow time related class or operation."
+      java/sql/Timestamp: "not allow time related class or operation."
+      java/text/DateFormat: "not allow time related class or operation."
+      java/text/DateFormatSymbols: "not allow time related class or operation."
+      java/text/SimpleDateFormat: "not allow time related class or operation."
+      java/time: "not allow time related class or operation."
+      java/util/Calendar: "not allow time related class or operation."
+      java/util/Date: "not allow time related class or operation."
+      java/util/GregorianCalendar: "not allow time related class or operation."
+      java/util/SimpleTimeZone: "not allow time related class or operation."
+      java/util/TimeZone: "not allow time related class or operation."
+      java/util/spi/CalendarDataProvider: "not allow time related class or operation."
+      java/util/spi/CalendarNameProvider: "not allow time related class or operation."
+      java/util/spi/TimeZoneNameProvider: "not allow time related class or operation."
+#class member variable rule about type
+memberVariableRule:
+  allowedRule:
+    mustKeyword:
+      "final": "allow final type member variables."
+    keyword:
+    class:
+  notAllowedRule:
+    mustKeyword:
+    keyword:
+    class:
+      java/io: "not allow io related class or operation."
+      java/lang/Readable: "not allow io related class or operation."
+      java/nio: "not allow io related class or operation."
+      java/lang/Process: "not allow system call related class or operation."
+      java/lang/ProcessBuilder: "not allow system call related class or operation."
+      java/lang/ProcessBuilder$Redirect: "not allow system call related class or operation."
+      java/lang/Runtime: "not allow system call related class or operation."
+      java/lang/Thread$State: "not allow thread(concurrent) related class or operation."
+      java/lang/Thread: "not allow thread(concurrent) related class or operation."
+      java/lang/Runnable: "not allow thread(concurrent) related class or operation."
+      java/lang/ThreadGroup: "not allow thread(concurrent) related class or operation."
+      java/lang/ThreadLocal: "not allow thread(concurrent) related class or operation."
+      java/util/concurrent: "not allow thread(concurrent) related class or operation."
+      java/net: "not allow net related class or operation."
+      javax/net: "not allow net related class or operation."
+      javax.xml.ws.spi.http: "not allow net related class or operation."
+      java/lang/Class: "not allow reflect related class or operation."
+      java/lang/System/currentTimeMillis: "not allow time related class or operation."
+      java/util/Date: "not allow time related class or operation."
+      java/sql/Date: "not allow time related class or operation."
+      java/sql/Time: "not allow time related class or operation."
+      java/sql/Timestamp: "not allow time related class or operation."
+      java/text/DateFormat: "not allow time related class or operation."
+      java/text/DateFormatSymbols: "not allow time related class or operation."
+      java/text/SimpleDateFormat: "not allow time related class or operation."
+      java/time: "not allow time related class or operation."
+      java/util/Calendar: "not allow time related class or operation."
+      java/util/Date: "not allow time related class or operation."
+      java/util/GregorianCalendar: "not allow time related class or operation."
+      java/util/SimpleTimeZone: "not allow time related class or operation."
+      java/util/TimeZone: "not allow time related class or operation."
+      java/util/spi/CalendarDataProvider: "not allow time related class or operation."
+      java/util/spi/CalendarNameProvider: "not allow time related class or operation."
+      java/util/spi/TimeZoneNameProvider: "not allow time related class or operation."
+#method declare about which have synchronized
+methodDeclare:
+  allowedRule:
+    mustKeyword:
+    keyword:
+  notAllowedRule:
+    mustKeyword:
+      synchronized : "not allow concurrent operation."
+    keyword:
+#variable in method
+methodVariable:
+  allowedRule:
+    class:
+  notAllowedRule:
+    class:
+      java/io: "not allow io related class or operation."
+      java/lang/Readable: "not allow io related class or operation."
+      java/nio: "not allow io related class or operation."
+      java/lang/Process: "not allow system call related class or operation."
+      java/lang/ProcessBuilder: "not allow system call related class or operation."
+      java/lang/ProcessBuilder$Redirect: "not allow system call related class or operation."
+      java/lang/Runtime: "not allow system call related class or operation."
+      java/lang/Thread$State: "not allow thread(concurrent) related class or operation."
+      java/lang/Thread: "not allow thread(concurrent) related class or operation."
+      java/lang/Runnable: "not allow thread(concurrent) related class or operation."
+      java/lang/ThreadGroup: "not allow thread(concurrent) related class or operation."
+      java/lang/ThreadLocal: "not allow thread(concurrent) related class or operation."
+      java/util/concurrent: "not allow thread(concurrent) related class or operation."
+      java/net: "not allow net related class or operation."
+      javax/net: "not allow net related class or operation."
+      javax.xml.ws.spi.http: "not allow net related class or operation."
+      java/lang/System/currentTimeMillis: "not allow time related class or operation."
+      java/util/Date: "not allow time related class or operation."
+      java/sql/Date: "not allow time related class or operation."
+      java/sql/Time: "not allow time related class or operation."
+      java/sql/Timestamp: "not allow time related class or operation."
+      java/text/DateFormat: "not allow time related class or operation."
+      java/text/DateFormatSymbols: "not allow time related class or operation."
+      java/text/SimpleDateFormat: "not allow time related class or operation."
+      java/time: "not allow time related class or operation."
+      java/util/Calendar: "not allow time related class or operation."
+      java/util/Date: "not allow time related class or operation."
+      java/util/GregorianCalendar: "not allow time related class or operation."
+      java/util/SimpleTimeZone: "not allow time related class or operation."
+      java/util/TimeZone: "not allow time related class or operation."
+      java/util/spi/CalendarDataProvider: "not allow time related class or operation."
+      java/util/spi/CalendarNameProvider: "not allow time related class or operation."
+      java/util/spi/TimeZoneNameProvider: "not allow time related class or operation."
+#method that is in the method like 'int get(){ int a = list.get(0); return a;' and not allow synchronized description like 'synchronized(this){...}'
+methodInstruction:
+  allowedRule:
+    class:
+    opCode:
+  notAllowedRule:
+    class:
+      java/io: "not allow io related class or operation."
+      java/lang/Readable: "not allow io related class or operation."
+      java/nio: "not allow io related class or operation."
+      java/lang/Process: "not allow system call related class or operation."
+      java/lang/ProcessBuilder: "not allow system call related class or operation."
+      java/lang/ProcessBuilder$Redirect: "not allow system call related class or operation."
+      java/lang/Runtime: "not allow system call related class or operation."
+      java/lang/Thread$State: "not allow thread(concurrent) related class or operation."
+      java/lang/Thread: "not allow thread(concurrent) related class or operation."
+      java/lang/Runnable: "not allow thread(concurrent) related class or operation."
+      java/lang/ThreadGroup: "not allow thread(concurrent) related class or operation."
+      java/lang/ThreadLocal: "not allow thread(concurrent) related class or operation."
+      java/util/concurrent: "not allow thread(concurrent) related class or operation."
+      java/net: "not allow net related class or operation."
+      javax/net: "not allow net related class or operation."
+      javax.xml.ws.spi.http: "not allow net related class or operation."
+      java/lang/Class: "not allow reflect related class or operation."
+      java/lang/System/currentTimeMillis: "not allow time related class or operation."
+      java/util/Date: "not allow time related class or operation."
+      java/sql/Date: "not allow time related class or operation."
+      java/sql/Time: "not allow time related class or operation."
+      java/sql/Timestamp: "not allow time related class or operation."
+      java/text/DateFormat: "not allow time related class or operation."
+      java/text/DateFormatSymbols: "not allow time related class or operation."
+      java/text/SimpleDateFormat: "not allow time related class or operation."
+      java/time: "not allow time related class or operation."
+      java/util/Calendar: "not allow time related class or operation."
+      java/util/Date: "not allow time related class or operation."
+      java/util/GregorianCalendar: "not allow time related class or operation."
+      java/util/SimpleTimeZone: "not allow time related class or operation."
+      java/util/TimeZone: "not allow time related class or operation."
+      java/util/spi/CalendarDataProvider: "not allow time related class or operation."
+      java/util/spi/CalendarNameProvider: "not allow time related class or operation."
+      java/util/spi/TimeZoneNameProvider: "not allow time related class or operation."
+
+    opCode:
+      monitorenter: "not allow sync related class or operation."
+      monitorexit: "not allow sync related class or operation."

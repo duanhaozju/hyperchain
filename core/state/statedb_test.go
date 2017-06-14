@@ -6,7 +6,7 @@ import (
 	"bytes"
 	"fmt"
 	"hyperchain/common"
-	"hyperchain/core/vm"
+	"hyperchain/core/evm"
 	"hyperchain/hyperdb"
 	"math/big"
 	"reflect"
@@ -189,11 +189,11 @@ func TestLog(t *testing.T) {
 	ti := 1
 	state := setup()
 	state.StartRecord(thash, bhash, ti)
-	var log *vm.Log
+	var log *evm.Log
 	var topic []common.Hash
 	topic = append(topic, common.Hash{})
 	topic = append(topic, common.Hash{})
-	log = vm.NewLog(toAddr([]byte{0x01}), topic, []byte{1}, uint64(1))
+	log = evm.NewLog(toAddr([]byte{0x01}), topic, []byte{1}, uint64(1))
 	state.AddLog(log)
 	if len(state.Logs()) != 1 {
 		t.Error("state addlog error")
