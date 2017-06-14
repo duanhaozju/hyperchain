@@ -170,11 +170,11 @@ func (self *StateDB) Exist(addr common.Address) bool {
 	return self.GetStateObject(addr) != nil
 }
 
-func (self *StateDB) GetAccount(addr common.Address) vm.Account {
+func (self *StateDB) GetAccount(addr common.Address) *StateObject{
 	return self.GetStateObject(addr)
 }
 
-func (self *StateDB) GetLeastAccount() vm.Account {
+func (self *StateDB) GetLeastAccount() *StateObject {
 	return self.leastStateObject
 }
 
@@ -184,9 +184,9 @@ func (self *StateDB) SetLeastAccount(account *vm.Account) {
 }
 
 // return all StateObject saved in the trie instead of in CACHE
-func (self *StateDB) GetAccounts() map[string]vm.Account {
+func (self *StateDB) GetAccounts() map[string]*StateObject {
 	// return self.stateObjects
-	ret := make(map[string]vm.Account)
+	ret := make(map[string]*StateObject)
 	it := self.trie.Iterator()
 	for it.Next() {
 		addr := self.trie.GetKey(it.Key)
@@ -395,7 +395,7 @@ func (self *StateDB) CreateStateObject(addr common.Address) *StateObject {
 	return newSo
 }
 
-func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
+func (self *StateDB) CreateAccount(addr common.Address) *StateObject {
 	return self.CreateStateObject(addr)
 }
 

@@ -226,7 +226,7 @@ type (
 	StorageChange struct {
 		Account  *common.Address `json:"account,omitempty"`
 		Key      common.Hash     `json:"key,omitempty"`
-		Prevalue common.Hash     `json:"prevalue,omitempty"`
+		Prevalue []byte          `json:"prevalue,omitempty"`
 		Exist    bool            `json:"exist,omitempty"`
 		Type     string          `json:"type,omitempty"`
 	}
@@ -515,7 +515,7 @@ func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, w
 }
 func (ch *StorageChange) String() string {
 	var str string
-	str = fmt.Sprintf("journal [storageChange] %s previous key %s  previous value %s \n", ch.Account.Hex(), ch.Key.Hex(), ch.Prevalue.Hex())
+	str = fmt.Sprintf("journal [storageChange] %s previous key %s  previous value %s \n", ch.Account.Hex(), ch.Key.Hex(), common.Bytes2Hex(ch.Prevalue))
 	return str
 }
 func (ch *StorageChange) Marshal() ([]byte, error) {

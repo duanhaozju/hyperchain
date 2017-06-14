@@ -424,18 +424,18 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 }
 
 // get a storage entry in stateObject
-func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Hash) {
+func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, []byte) {
 	// Prefer `live` object
 	var liveObj *StateObject
 	if obj := self.stateObjects[a]; obj != nil {
 		liveObj = obj
 		if obj.suicided {
-			return false, common.Hash{}
+			return false, nil
 		} else {
 			existed, value := obj.GetState(b)
 			// if storage entry exist in live object's storage cache
 			if existed {
-				self.logger.Debugf("get state for %s in live objects, key %s, value %s", a.Hex(), b.Hex(), value.Hex())
+				self.logger.Debugf("get state for %s in live objects, key %s, value %s", a.Hex(), b.Hex(), common.Bytes2Hex(value))
 				return true, value
 			}
 		}
@@ -451,11 +451,11 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 			content := res.(map[common.Address]*StateObject)
 			if obj := content[a]; obj != nil {
 				if obj.suicided {
-					return false, common.Hash{}
+					return false, nil
 				} else {
 					existed, value := obj.GetState(b)
 					if existed {
-						self.logger.Debugf("get state for %s in content cache, key %s, value %s", a.Hex(), b.Hex(), value.Hex())
+						self.logger.Debugf("get state for %s in content cache, key %s, value %s", a.Hex(), b.Hex(), common.Bytes2Hex(value))
 						if liveObj == nil {
 							// save obj itself to current cache
 							self.setStateObject(obj)
@@ -474,16 +474,16 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 	if existed {
 		// add related obj to live cache
 		if liveObj == nil {
-			self.logger.Debugf("get state for %s in database, key %s, value %s, add to live state object's storage cache", a.Hex(), b.Hex(), value.Hex())
+			self.logger.Debugf("get state for %s in database, key %s, value %s, add to live state object's storage cache", a.Hex(), b.Hex(), common.Bytes2Hex(value))
 			// Load the object from the database.
 			data, err := self.db.Get(CompositeAccountKey(a.Bytes()))
 			if err != nil {
-				return false, common.Hash{}
+				return false, nil
 			}
 			var account Account
 			err = Unmarshal(data, &account)
 			if err != nil {
-				return false, common.Hash{}
+				return false, nil
 			}
 			// Insert into the live set.
 			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)), self.logger)
@@ -491,13 +491,13 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 			self.setStateObject(obj)
 		} else {
 			// save into live obj's cache storage avoid disk cost for next fetch
-			self.logger.Debugf("get state for %s in database, key %s, value %s, add %s to live objects", a.Hex(), b.Hex(), value.Hex(), a.Hex())
+			self.logger.Debugf("get state for %s in database, key %s, value %s, add %s to live objects", a.Hex(), b.Hex(), common.Bytes2Hex(value), a.Hex())
 			liveObj.cachedStorage[b] = value
 		}
 		return true, value
 	}
 	self.logger.Debugf("find state for %s %s failed", a.Hex(), b.Hex())
-	return false, common.Hash{}
+	return false, nil
 }
 
 // GetDeployedContract return deployed contract list.
@@ -635,7 +635,7 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) {
 }
 
 // set a storage entry to a state object
-func (self *StateDB) SetState(addr common.Address, key common.Hash, value common.Hash, opcode int32) {
+func (self *StateDB) SetState(addr common.Address, key common.Hash, value []byte, opcode int32) {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
 		self.logger.Debug("hyper statedb set state find state object in live objects")

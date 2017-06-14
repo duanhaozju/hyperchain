@@ -468,14 +468,13 @@ func opMstore8(instr instruction, pc *uint64, env vm.Environment, contract *Cont
 func opSload(instr instruction, pc *uint64, env vm.Environment, contract *Contract, memory *Memory, stack *stack) {
 	loc := common.BigToHash(stack.pop())
 	_, val := env.Db().GetState(contract.Address(), loc)
-	stack.push(val.Big())
+	stack.push(common.BytesToHash(val).Big())
 }
 
 func opSstore(instr instruction, pc *uint64, env vm.Environment, contract *Contract, memory *Memory, stack *stack) {
 	loc := common.BigToHash(stack.pop())
 	val := stack.pop()
-	env.Db().SetState(contract.Address(), loc, common.BigToHash(val), contract.GetOpCode())
-
+	env.Db().SetState(contract.Address(), loc, val.Bytes(), contract.GetOpCode())
 }
 
 func opJump(instr instruction, pc *uint64, env vm.Environment, contract *Contract, memory *Memory, stack *stack) {

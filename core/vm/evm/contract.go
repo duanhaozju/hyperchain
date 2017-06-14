@@ -143,7 +143,7 @@ func (self *Contract) SetCallCode(addr *common.Address, code []byte) {
 
 // EachStorage iterates the contract's storage and calls a method for every key
 // value pair.
-func (self *Contract) ForEachStorage(cb func(key, value common.Hash) bool) map[common.Hash]common.Hash {
+func (self *Contract) ForEachStorage(cb func(key common.Hash, value []byte) bool) map[common.Hash][]byte {
 	return self.caller.ForEachStorage(cb)
 }
 

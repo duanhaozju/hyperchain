@@ -4,6 +4,7 @@ import (
 	"math/big"
 	"hyperchain/common"
 )
+
 // Account represents a contract or basic ethereum account.
 type Account interface {
 	SubBalance(amount *big.Int)
@@ -14,7 +15,7 @@ type Account interface {
 	Address() common.Address
 	ReturnGas(*big.Int, *big.Int)
 	SetCode(common.Hash, []byte)
-	ForEachStorage(cb func(key, value common.Hash) bool) map[common.Hash]common.Hash
+	ForEachStorage(cb func(key common.Hash, value []byte) bool) map[common.Hash][]byte
 	Value() *big.Int
 }
 
@@ -24,5 +25,5 @@ type ContractRef interface {
 	Address() common.Address
 	Value() *big.Int
 	SetCode(common.Hash, []byte)
-	ForEachStorage(callback func(key, value common.Hash) bool) map[common.Hash]common.Hash
+	ForEachStorage(callback func(key common.Hash, value []byte) bool) map[common.Hash][]byte
 }

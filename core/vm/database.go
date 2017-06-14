@@ -35,8 +35,8 @@ type Database interface {
 	AddRefund(*big.Int)
 	GetRefund() *big.Int
 
-	GetState(common.Address, common.Hash) (bool, common.Hash)
-	SetState(common.Address, common.Hash, common.Hash, int32)
+	GetState(common.Address, common.Hash) (bool, []byte)
+	SetState(common.Address, common.Hash, []byte, int32)
 
 	Delete(common.Address) bool
 	Exist(common.Address) bool
