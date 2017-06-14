@@ -10,13 +10,6 @@ import (
 )
 
 // Type is the VM type accepted by **NewVm**
-type Type byte
-
-const (
-	StdVmTy Type = iota // Default standard VM
-	JitVmTy             // LLVM JIT VM
-	MaxVmTy
-)
 
 var (
 	Pow256 = common.BigPow(2, 256) // Pow256 is 2**256
