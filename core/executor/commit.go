@@ -10,7 +10,6 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/protos"
 	"time"
-	"hyperchain/core/vm"
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
@@ -66,7 +65,7 @@ func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) 
 
 // writeBlock - flush a block into disk.
 func (executor *Executor) writeBlock(block *types.Block, record *ValidationResultRecord) error {
-	var filterLogs []*vm.Log
+	var filterLogs []*types.Log
 	batch := executor.statedb.FetchBatch(record.SeqNo)
 	if err := executor.persistTransactions(batch, block.Transactions, block.Number); err != nil {
 		executor.logger.Errorf("persist transactions of #%d failed.", block.Number)
@@ -194,8 +193,9 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 			log.BlockHash = blockHash
 			log.BlockNumber = blockNumber
 			filterLogs = append(filterLogs, log)
-			executor.logger.Critical(log.String())
 		}
+		// why need a iterate to find the final blockHash and blockNumber
+		// @Duanhao Since blockhash is not certain during the validation. Therefore correct blockhash has to be assigned during commit stage.
 		receipt.SetLogs(logs)
 		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
 			return err, nil

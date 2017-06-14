@@ -2,10 +2,10 @@ package filter
 
 import (
 	"hyperchain/common"
-	"hyperchain/core/vm"
 	"time"
 	"hyperchain/manager/event"
 	"reflect"
+	"hyperchain/core/types"
 )
 
 var (
@@ -18,7 +18,7 @@ type Filter struct {
 	typ      Type
 	deadline *time.Timer // filter is inactiv when deadline triggers
 	hashes   []common.Hash
-	logs     []*vm.Log
+	logs     []*types.Log
 	data     []interface{}
 	crit     FilterCriteria
 	s        *Subscription // associated subscription in event system
@@ -44,7 +44,7 @@ func (flt *Filter) GetHashes() []common.Hash {
 	return flt.hashes
 }
 
-func (flt *Filter) GetLogs() []*vm.Log {
+func (flt *Filter) GetLogs() []*types.Log {
 	return flt.logs
 }
 
@@ -80,7 +80,7 @@ func (flt *Filter) ClearHash() {
 	flt.hashes = nil
 }
 
-func (flt *Filter) AddLog(log []*vm.Log) {
+func (flt *Filter) AddLog(log []*types.Log) {
 	flt.logs = append(flt.logs, log...)
 }
 
@@ -101,8 +101,8 @@ func (flt *Filter) ResetDeadline() {
 }
 
 // filterLogs creates a slice of logs matching the given criteria.
-func filterLogs(logs []*vm.Log, logCrit *FilterCriteria) []*vm.Log {
-	var ret []*vm.Log
+func filterLogs(logs []*types.Log, logCrit *FilterCriteria) []*types.Log {
+	var ret []*types.Log
 Logs:
 	for _, log := range logs {
 		if logCrit.FromBlock != nil && logCrit.FromBlock.Int64() >= 0 && logCrit.FromBlock.Uint64() > log.BlockNumber {

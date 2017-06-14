@@ -7,9 +7,9 @@ import (
 	"sync"
 	flt "hyperchain/manager/filter"
 	"time"
-	"hyperchain/core/vm"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/manager/event"
+	"hyperchain/core/types"
 )
 
 type PublicFilterAPI struct {
@@ -91,7 +91,7 @@ func (api *PublicFilterAPI) NewBlockSubscription(isVerbose bool) string {
 
 func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string {
 	var (
-		logC     = make(chan []*vm.Log)
+		logC     = make(chan []*types.Log)
 		logSub   = api.events.NewLogSubscription(crit, logC)
 	)
 	api.filtersMu.Lock()
@@ -227,11 +227,11 @@ func returnHashes(hashes []common.Hash) []common.Hash {
 
 // returnLogs is a helper that will return an empty log array in case the given logs array is nil,
 // otherwise the given logs array is returned.
-func returnLogs(logs []*vm.Log) []vm.LogTrans {
+func returnLogs(logs []*types.Log) []types.LogTrans {
 	if logs == nil {
-		return []vm.LogTrans{}
+		return []types.LogTrans{}
 	}
-	_logs := vm.Logs(logs)
+	_logs := types.Logs(logs)
 	return _logs.ToLogsTrans()
 }
 
