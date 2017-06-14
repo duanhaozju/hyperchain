@@ -3,10 +3,10 @@ package filter
 import (
 	"errors"
 	"hyperchain/common"
-	"hyperchain/core/vm"
 	"hyperchain/manager/event"
 	"time"
 	"fmt"
+	"hyperchain/core/types"
 )
 
 // Type determines the kind of filter and is used to put the filter in to
@@ -139,7 +139,7 @@ func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash, isVerbose b
 		verbose:   isVerbose,
 		typ:       BlocksSubscription,
 		created:   time.Now(),
-		logs:      make(chan []*vm.Log),
+		logs:      make(chan []*types.Log),
 		hashes:    blockC,
 		extra:     make(chan interface{}),
 		installed: make(chan struct{}),
@@ -148,7 +148,7 @@ func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash, isVerbose b
 	return es.subscribe(sub)
 }
 
-func (es *EventSystem) NewLogSubscription(logsCrit FilterCriteria, logC chan []*vm.Log) *Subscription {
+func (es *EventSystem) NewLogSubscription(logsCrit FilterCriteria, logC chan []*types.Log) *Subscription {
 	sub := &subscription{
 		id:        NewFilterID(),
 		verbose:   true,
@@ -180,7 +180,7 @@ func (es *EventSystem) NewCommonSubscription(ch chan interface{}, verbose bool, 
 		typ:       typ,
 		created:   time.Now(),
 		crit:      crit,
-		logs:      make(chan []*vm.Log),
+		logs:      make(chan []*types.Log),
 		hashes:    make(chan common.Hash),
 		extra:     ch,
 		installed: make(chan struct{}),

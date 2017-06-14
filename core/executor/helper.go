@@ -6,7 +6,6 @@ import (
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
 	"reflect"
-	"hyperchain/core/vm"
 )
 type Helper struct {
 	innerMux        *event.TypeMux
@@ -216,7 +215,7 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		if len(message) != 1 {
 			return InvalidParamsErr
 		}
-		logs, ok := message[0].([]*vm.Log)
+		logs, ok := message[0].([]*types.Log)
 		if ok == false {
 			return InvalidParamsErr
 		}

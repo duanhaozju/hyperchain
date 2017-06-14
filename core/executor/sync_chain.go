@@ -9,7 +9,6 @@ import (
 	"hyperchain/manager/protos"
 	"bytes"
 	"time"
-	"hyperchain/core/vm"
 )
 
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
@@ -141,7 +140,7 @@ func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *
 }
 
 func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
-	var filterLogs []*vm.Log
+	var filterLogs []*types.Log
 	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
 	if err != nil {
 		return err, nil
@@ -370,7 +369,7 @@ func (executor *Executor) receiveAllRequiredBlocks() bool {
 }
 
 // storeFilterData - store filter data in record temporarily, avoid re-generated when using.
-func (executor *Executor) storeFilterData(record *ValidationResultRecord, block *types.Block, logs []*vm.Log) {
+func (executor *Executor) storeFilterData(record *ValidationResultRecord, block *types.Block, logs []*types.Log) {
 	record.Block = block
 	record.Logs = logs
 }
