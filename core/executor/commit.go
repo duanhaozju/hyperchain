@@ -6,7 +6,6 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
-	"hyperchain/core/vm"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
@@ -71,7 +70,7 @@ func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) 
 
 // writeBlock - flush a block into disk.
 func (executor *Executor) writeBlock(block *types.Block, record *ValidationResultRecord) error {
-	var filterLogs []*vm.Log
+	var filterLogs []*types.Log
 	batch := executor.statedb.FetchBatch(record.SeqNo)
 	if err := executor.persistTransactions(batch, block.Transactions, block.Number); err != nil {
 		executor.logger.Errorf("persist transactions of #%d failed.", block.Number)
@@ -188,8 +187,8 @@ func (executor *Executor) persistTransactions(batch db.Batch, transactions []*ty
 
 // re assign block hash and block number to transaction executor.loggers
 // during the validation, block number and block hash can be incorrect
-func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) (error, []*vm.Log) {
-	var filterLogs []*vm.Log
+func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) (error, []*types.Log) {
+	var filterLogs []*types.Log
 	for _, receipt := range receipts {
 		logs, err := receipt.RetrieveLogs()
 		if err != nil {
@@ -199,9 +198,9 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 			log.BlockHash = blockHash
 			log.BlockNumber = blockNumber
 			filterLogs = append(filterLogs, log)
-			executor.logger.Critical(log.String())
 		}
-		//TODO: why need a iterate to find the final blockHash and blockNumber
+		// why need a iterate to find the final blockHash and blockNumber
+		// @Duanhao Since blockhash is not certain during the validation. Therefore correct blockhash has to be assigned during commit stage.
 		receipt.SetLogs(logs)
 		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
 			return err, nil
@@ -234,7 +233,7 @@ func (executor *Executor) pauseCommit() {
 		}
 	}
 }
-func (executor *Executor) filterFeedback(block *types.Block, filterLogs []*vm.Log) {
+func (executor *Executor) filterFeedback(block *types.Block, filterLogs []*types.Log) {
 	if err := executor.sendFilterEvent(FILTER_NEW_BLOCK, block); err != nil {
 		executor.logger.Warningf("send new block event failed. error detail: %s", err.Error())
 	}

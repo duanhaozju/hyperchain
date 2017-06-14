@@ -3,13 +3,13 @@ package api
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	"sync"
+	flt "hyperchain/manager/filter"
+	"time"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/core/vm"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
-	flt "hyperchain/manager/filter"
-	"sync"
-	"time"
+	"hyperchain/core/types"
 )
 
 type PublicFilterAPI struct {
@@ -91,8 +91,8 @@ func (api *PublicFilterAPI) NewBlockSubscription(isVerbose bool) string {
 
 func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string {
 	var (
-		logC   = make(chan []*vm.Log)
-		logSub = api.events.NewLogSubscription(crit, logC)
+		logC     = make(chan []*types.Log)
+		logSub   = api.events.NewLogSubscription(crit, logC)
 	)
 	api.filtersMu.Lock()
 	api.filters[logSub.ID] = flt.NewFilter(flt.LogsSubscription, logSub, crit)
@@ -262,11 +262,11 @@ func returnHashes(hashes []common.Hash) []common.Hash {
 
 // returnLogs is a helper that will return an empty log array in case the given logs array is nil,
 // otherwise the given logs array is returned.
-func returnLogs(logs []*vm.Log) []vm.LogTrans {
+func returnLogs(logs []*types.Log) []types.LogTrans {
 	if logs == nil {
-		return []vm.LogTrans{}
+		return []types.LogTrans{}
 	}
-	_logs := vm.Logs(logs)
+	_logs := types.Logs(logs)
 	return _logs.ToLogsTrans()
 }
 

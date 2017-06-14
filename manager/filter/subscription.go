@@ -2,10 +2,10 @@ package filter
 
 import (
 	"hyperchain/common"
-	"hyperchain/core/vm"
 	"math/big"
 	"sync"
 	"time"
+	"hyperchain/core/types"
 )
 
 type subscription struct {
@@ -14,7 +14,7 @@ type subscription struct {
 	typ       Type
 	created   time.Time
 	crit      FilterCriteria
-	logs      chan []*vm.Log
+	logs      chan []*types.Log
 	hashes    chan common.Hash
 	extra     chan interface{}
 	installed chan struct{} // closed when the filter is installed

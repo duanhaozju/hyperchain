@@ -4,7 +4,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
-	"hyperchain/core/vm"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"reflect"
@@ -179,7 +178,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return nil
 	case NOTIFY_SYNC_REPLICA:
 		executor.logger.Debug("inform p2p sync replica")
-		if len(message) != 0 {
+		if len(message) != 1 {
 			return InvalidParamsErr
 		}
 		chain, ok := message[0].(*types.Chain)
@@ -293,7 +292,7 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		if len(message) != 1 {
 			return InvalidParamsErr
 		}
-		logs, ok := message[0].([]*vm.Log)
+		logs, ok := message[0].([]*types.Log)
 		if ok == false {
 			return InvalidParamsErr
 		}

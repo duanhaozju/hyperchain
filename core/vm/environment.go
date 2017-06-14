@@ -8,6 +8,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
+	"hyperchain/core/types"
 )
 
 // RuleSet is an interface that defines the current rule set during the
@@ -50,7 +51,7 @@ type Environment interface {
 	// Transfers amount from one account to the other
 	Transfer(from, to Account, amount *big.Int)
 	// Adds a LOG to the state
-	AddLog(*Log)
+	AddLog(*types.Log)
 	// Type of the VM
 	Vm() Vm
 	// Dump vm runtime logs for debug
@@ -116,8 +117,8 @@ type Database interface {
 
 	// Log
 	StartRecord(common.Hash, common.Hash, int)
-	AddLog(log *Log)
-	GetLogs(hash common.Hash) Logs
+	AddLog(log *types.Log)
+	GetLogs(hash common.Hash) types.Logs
 	// Dump and Load
 	Snapshot() interface{}
 	RevertToSnapshot(interface{})

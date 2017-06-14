@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package vm
+package types
 
 import (
 	checker "gopkg.in/check.v1"
@@ -11,7 +11,7 @@ import (
 type LogSuite struct {
 }
 
-func Test(t *testing.T) {
+func TestVmLog(t *testing.T) {
 	checker.TestingT(t)
 }
 
@@ -64,7 +64,7 @@ func NewTestLogTrans() LogTrans {
 	lt := LogTrans{
 		Address:     common.StringToAddress("123456").Hex(),
 		Topics:      topics,
-		Data:        common.BytesToHash([]byte("data")).Hex(),
+		Data:        common.Bytes2Hex([]byte("data")),
 		BlockNumber: 123,
 		TxHash:      common.StringToHash("txhash").Hex(),
 		TxIndex:     2,
@@ -112,3 +112,4 @@ func CheckTranEqual(lt1, lt2 LogTrans, c *checker.C) {
 	c.Assert(lt1.BlockHash, checker.DeepEquals, lt2.BlockHash)
 	c.Assert(lt1.Index, checker.DeepEquals, lt2.Index)
 }
+

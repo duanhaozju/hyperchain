@@ -26,8 +26,8 @@ type ValidationResultRecord struct {
 }
 
 type FilterData struct {
-	Block *types.Block
-	Logs  []*vm.Log
+	Block      *types.Block
+	Logs       []*types.Log
 }
 
 func (executor *Executor) Validate(validationEvent event.ValidationEvent) {

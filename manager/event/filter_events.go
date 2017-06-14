@@ -2,7 +2,6 @@ package event
 
 import (
 	"hyperchain/core/types"
-	"hyperchain/core/vm"
 	"time"
 )
 
@@ -11,7 +10,7 @@ type FilterNewBlockEvent struct {
 }
 
 type FilterNewLogEvent struct {
-	Logs []*vm.Log
+	Logs []*types.Log
 }
 
 /*
