@@ -391,6 +391,22 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		})
 		hub.broadcast(BROADCAST_VP, m.SessionMessage_SYNC_REPLICA, payload)
 		hub.executor.ReceiveReplicaInfo(payload)
+	case executor.NOTIFY_TRANSIT_BLOCK:
+		hub.logger.Debug("message middleware: [transit block]")
+		hub.broadcast(BROADCAST_NVP, m.SessionMessage_TRANSIT_BLOCK, ev.Payload)
+	case executor.NOTIFY_NVP_SYNC:
+		hub.logger.Debug("message middleware: [NVP sync]")
+		syncMsg := &executor.ChainSyncRequest{}
+		proto.Unmarshal(ev.Payload, syncMsg)
+		syncMsg.PeerHash = hub.peerManager.GetLocalNodeHash()
+		//payload, err := proto.Marshal(syncMsg)
+		//if err != nil {
+		//	hub.logger.Error("message middleware: SendNVPSyncRequest marshal message failed")
+		//	return
+		//}
+		//vp := hub.peerManager.GetVPPeers()
+		//r := rand.New(rand.NewSource(time.Now().UnixNano()))
+		//hub.send(m.SessionMessage_SYNC_REQ, payload, vp[r.Intn(len(vp))])
 	}
 }
 
@@ -412,7 +428,12 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 	case m.SessionMessage_DEL_PEER:
 		hub.consenter.RecvMsg(message.Payload)
 	case m.SessionMessage_UNICAST_BLK:
-		hub.executor.ReceiveSyncBlocks(message.Payload)
+		isNVP := hub.isNVP(uint64(hub.peerManager.GetNodeId()))
+		if isNVP {
+			hub.executor.GetNVP().ReceiveBlock(message.Payload)
+		} else {
+			hub.executor.ReceiveSyncBlocks(message.Payload)
+		}
 	case m.SessionMessage_UNICAST_INVALID:
 		hub.executor.StoreInvalidTransaction(message.Payload)
 	case m.SessionMessage_SYNC_REPLICA:
@@ -421,7 +442,21 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 		fallthrough
 	case m.SessionMessage_SYNC_REQ:
 		hub.executor.ReceiveSyncRequest(message.Payload)
+	case m.SessionMessage_TRANSIT_BLOCK:
+		hub.executor.GetNVP().ReceiveBlock(message.Payload)
 	default:
 		hub.logger.Error("receive a undefined session event")
 	}
+}
+
+func (hub *EventHub) isNVP(localId uint64) bool {
+	isNVP := true
+	VPPeers := hub.peerManager.GetVPPeers()
+	for _, peer := range VPPeers {
+		if localId == uint64(peer.PeerAddr.ID) {
+			isNVP = false
+			break
+		}
+	}
+	return isNVP
 }

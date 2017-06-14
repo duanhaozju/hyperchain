@@ -72,6 +72,7 @@ func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 	var request ChainSyncRequest
 	proto.Unmarshal(payload, &request)
 	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
+		//todo hash
 		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
 	}
 }
@@ -139,15 +140,15 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 }
 
 // ApplyBlock - apply all transactions in block into state during the `state update` process.
-func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
+func (executor *Executor) ApplyBlock(block *types.Block, seqNo, tempBlockNumber uint64) (error, *ValidationResultRecord) {
 	if block.Transactions == nil {
 		return er.EmptyPointerErr, nil
 	}
-	return executor.applyBlock(block, seqNo)
+	return executor.applyBlock(block, seqNo, tempBlockNumber)
 }
 
-func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
-	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
+func (executor *Executor) applyBlock(block *types.Block, seqNo, tempBlockNumber uint64) (error, *ValidationResultRecord) {
+	err, result := executor.applyTransactions(block.Transactions, nil, seqNo, tempBlockNumber)
 	if err != nil {
 		return err, nil
 	}
@@ -230,7 +231,7 @@ func (executor *Executor) processSyncBlocks() {
 				} else {
 					// set temporary block number as block number since block number is already here
 					executor.initDemand(blk.Number)
-					err, result := executor.ApplyBlock(blk, blk.Number)
+					err, result := executor.ApplyBlock(blk, blk.Number, executor.getTempBlockNumber())
 					if err != nil || executor.assertApplyResult(blk, result) == false {
 						executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
 							executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1, executor.status.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))

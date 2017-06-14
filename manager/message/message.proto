@@ -13,6 +13,7 @@ message SessionMessage {
         SYNC_REQ = 6;
         ADD_PEER = 7;
         DEL_PEER = 8;
+        TRANSIT_BLOCK = 9;
     }
     Type type = 1;
     bytes payload = 2;
