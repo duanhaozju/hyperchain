@@ -3,14 +3,14 @@ package executor
 import (
 	"hyperchain/common"
 	"hyperchain/core/types"
-	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm"
 	"math/big"
 	"bytes"
 )
 
 type Code []byte
 
-func (executor *Executor) ExecTransaction(tx *types.Transaction, env vm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
+func (executor *Executor) ExecTransaction(tx *types.Transaction, env evm.Environment) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	var (
 		from     = common.BytesToAddress(tx.From)
 		to       = common.BytesToAddress(tx.To)
@@ -36,9 +36,9 @@ func (executor *Executor) ExecTransaction(tx *types.Transaction, env vm.Environm
 	return receipt, ret, addr, err
 }
 
-func (executor *Executor) Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
+func (executor *Executor) Exec(vmenv evm.Environment, from, to *common.Address, data []byte, gas,
 gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
-	var sender vm.Account
+	var sender evm.Account
 
 	if !(vmenv.Db().Exist(*from)) {
 		sender = vmenv.Db().CreateAccount(*from)
@@ -63,7 +63,7 @@ gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr co
 	return ret, addr, err
 }
 
-func (executor *Executor) checkPermission(env vm.Environment, from, to common.Address, op types.TransactionValue_Opcode) bool {
+func (executor *Executor) checkPermission(env evm.Environment, from, to common.Address, op types.TransactionValue_Opcode) bool {
 	if op == types.TransactionValue_UPDATE || op == types.TransactionValue_FREEZE || op == types.TransactionValue_UNFREEZE {
 		executor.logger.Debugf("caller address %s", from.Hex())
 		executor.logger.Debugf("callee address %s", from.Hex())
@@ -80,7 +80,7 @@ func (executor *Executor) checkPermission(env vm.Environment, from, to common.Ad
 }
 
 
-func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, gas *big.Int, ret []byte, err error) *types.Receipt {
+func makeReceipt(env evm.Environment, addr common.Address, txHash common.Hash, gas *big.Int, ret []byte, err error) *types.Receipt {
 	receipt := types.NewReceipt(nil, gas)
 	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = txHash.Bytes()

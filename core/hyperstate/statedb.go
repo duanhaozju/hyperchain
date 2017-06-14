@@ -12,7 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"hyperchain/common"
-	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
 	"hyperchain/tree/bucket"
@@ -339,7 +339,7 @@ func (self *StateDB) Empty(addr common.Address) bool {
 }
 
 // Get account by address
-func (self *StateDB) GetAccount(addr common.Address) vm.Account {
+func (self *StateDB) GetAccount(addr common.Address) evm.Account {
 	ret := self.GetStateObject(addr)
 	if ret != nil {
 		return ret
@@ -349,8 +349,8 @@ func (self *StateDB) GetAccount(addr common.Address) vm.Account {
 }
 
 // Get all account in database
-func (self *StateDB) GetAccounts() map[string]vm.Account {
-	ret := make(map[string]vm.Account)
+func (self *StateDB) GetAccounts() map[string]evm.Account {
+	ret := make(map[string]evm.Account)
 	iter := self.db.NewIterator([]byte(accountIdentifier))
 	for iter.Next() {
 		addr, ok := SplitCompositeAccountKey(iter.Key())
@@ -788,7 +788,7 @@ func (self *StateDB) createObject(addr common.Address) (newobj, prev *StateObjec
 //   2. tx_create(sha(account ++ nonce)) (note that this gets the address of 1)
 //
 // Carrying over the balance ensures that Ether doesn't disappear.
-func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
+func (self *StateDB) CreateAccount(addr common.Address) evm.Account {
 	new, prev := self.createObject(addr)
 	if prev != nil {
 		new.setBalance(prev.data.Balance)
