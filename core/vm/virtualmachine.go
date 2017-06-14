@@ -6,7 +6,6 @@ type Vm interface {
 	// failed.
 	Run(c VmContext, in []byte) ([]byte, error)
 }
-
-type VmContext interface {
-
-}
+// Just a symbolic interface
+// virtual machine use type assert to convert to real type.
+type VmContext interface {}
