@@ -383,9 +383,6 @@ func constructTxValue(args SendTxArgs, txType int) ([]byte, error) {
 	var err     error
 	var vmType  types.TransactionValue_VmType
 	switch strings.ToLower(args.Type) {
-	case "evm":
-		payload = common.FromHex(args.Payload)
-		vmType  = types.TransactionValue_EVM
 	case "jvm":
 		if txType == 1 {
 			// deploy
@@ -410,6 +407,9 @@ func constructTxValue(args SendTxArgs, txType int) ([]byte, error) {
 			}
 		}
 		vmType = types.TransactionValue_JVM
+	default:
+		payload = common.FromHex(args.Payload)
+		vmType  = types.TransactionValue_EVM
 	}
 	txValue := types.NewTransactionValue(args.GasPrice.ToInt64(), args.Gas.ToInt64(),
 		args.Value.ToInt64(), payload, args.Opcode, vmType)
