@@ -94,6 +94,12 @@
 			"revisionTime": "2016-08-16T05:15:41Z"
 		},
 		{
+			"checksumSHA1": "6ZxSmrIx3Jd15aou16oG0HPylP4=",
+			"path": "github.com/gogo/protobuf/proto",
+			"revision": "efccd33a0c20aa078705571d5ddbfa14c8395a63",
+			"revisionTime": "2017-06-06T14:43:17Z"
+		},
+		{
 			"checksumSHA1": "d9PxF1XQGLMJZRct2R8qVM/eYlE=",
 			"path": "github.com/hashicorp/golang-lru",
 			"revision": "0a025b7e63adc15a622f29b0b2c4c3848243bbf6",
@@ -160,6 +166,12 @@
 			"revisionTime": "2016-08-22T21:41:45Z"
 		},
 		{
+			"checksumSHA1": "Eekmlo4wOMh+dUei9kXIz0etKn4=",
+			"path": "github.com/instana/golang-sensor",
+			"revision": "dd3b6b166b5c5a4527ea0317bc470c36e22054ca",
+			"revisionTime": "2017-05-19T15:31:20Z"
+		},
+		{
 			"checksumSHA1": "sKheT5xw89Tbu2Q071FQO27CVmE=",
 			"path": "github.com/juju/ratelimit",
 			"revision": "77ed1c8a01217656d2080ad51981f6e99adaa177",
@@ -205,6 +217,36 @@
 			"path": "github.com/op/go-logging",
 			"revision": "970db520ece77730c7e4724c61121037378659d9",
 			"revisionTime": "2016-03-15T20:05:05Z"
+		},
+		{
+			"checksumSHA1": "HxZk1VWHKzU4xdyhe0Jvu7UOwjM=",
+			"path": "github.com/opentracing/basictracer-go",
+			"revision": "1b32af207119a14b1b231d451df3ed04a72efebf",
+			"revisionTime": "2016-09-29T22:04:58Z"
+		},
+		{
+			"checksumSHA1": "bvLGShW2gTFyRs7kHShIczVuR1c=",
+			"path": "github.com/opentracing/basictracer-go/wire",
+			"revision": "1b32af207119a14b1b231d451df3ed04a72efebf",
+			"revisionTime": "2016-09-29T22:04:58Z"
+		},
+		{
+			"checksumSHA1": "wCBBku+/rkHOsEOst7qTpUbmSfA=",
+			"path": "github.com/opentracing/opentracing-go",
+			"revision": "eaaf4e1eeb7a5373b38e70901270c83577dc6fb9",
+			"revisionTime": "2017-05-06T18:27:58Z"
+		},
+		{
+			"checksumSHA1": "XPOyfxsryU1pByZESwduVu9OEQU=",
+			"path": "github.com/opentracing/opentracing-go/ext",
+			"revision": "eaaf4e1eeb7a5373b38e70901270c83577dc6fb9",
+			"revisionTime": "2017-05-06T18:27:58Z"
+		},
+		{
+			"checksumSHA1": "+rbKrafLHDnrQFgeWawo9tfZhV4=",
+			"path": "github.com/opentracing/opentracing-go/log",
+			"revision": "eaaf4e1eeb7a5373b38e70901270c83577dc6fb9",
+			"revisionTime": "2017-05-06T18:27:58Z"
 		},
 		{
 			"checksumSHA1": "8Y05Pz7onrQPcVWW6JStSsYRh6E=",
