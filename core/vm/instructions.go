@@ -9,6 +9,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/params"
+	"hyperchain/core/types"
 )
 
 type programInstruction interface {
@@ -442,7 +443,7 @@ func opLog(instr instruction, pc *uint64, env Environment, contract *Contract, m
 	}
 
 	d := memory.Get(mStart.Int64(), mSize.Int64())
-	log := NewLog(contract.Address(), topics, d, env.BlockNumber().Uint64())
+	log := types.NewLog(contract.Address(), topics, d, env.BlockNumber().Uint64())
 	env.AddLog(log)
 }
 
@@ -617,7 +618,7 @@ func makeLog(size int) instrFn {
 		}
 
 		d := memory.Get(mStart.Int64(), mSize.Int64())
-		log := NewLog(contract.Address(), topics, d, env.BlockNumber().Uint64())
+		log := types.NewLog(contract.Address(), topics, d, env.BlockNumber().Uint64())
 		env.AddLog(log)
 	}
 }
