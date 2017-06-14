@@ -2,17 +2,17 @@ package executor
 
 import (
 	"github.com/buger/jsonparser"
-	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
-	"hyperchain/core/hyperstate"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
 	"io/ioutil"
 	"math/big"
-	"strconv"
 	"time"
+	"hyperchain/core/vm/evm"
+	"hyperchain/core/hyperstate"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/common"
+	"hyperchain/core/types"
+	"hyperchain/hyperdb"
+	"hyperchain/hyperdb/db"
+	"strconv"
 )
 
 const (
@@ -75,7 +75,7 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 }
 
 // NewStateDb - create a empty stateDb handler.
-func NewStateDb(conf *common.Config, db db.Database, namespace string) (vm.Database, error) {
+func NewStateDb(conf *common.Config, db db.Database, namespace string) (evm.Database, error) {
 	archieveDb, err := hyperdb.GetArchieveDbByNamespace(namespace)
 	if err != nil {
 		return nil, err

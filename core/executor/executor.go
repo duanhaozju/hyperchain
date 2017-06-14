@@ -7,7 +7,7 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/hyperstate"
-	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
@@ -26,11 +26,11 @@ type Executor struct {
 	hashUtils   ExecutorHashUtil
 	cache       ExecutorCache
 	helper      *Helper
-	statedb     vm.Database
+	statedb     evm.Database
 	logger      *logging.Logger
 	snapshotReg *SnapshotRegistry
 	archiveMgr  *ArchiveManager
-	exception  ExceptionHandler
+	exception   ExceptionHandler
 }
 
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) (*Executor, error) {
@@ -143,7 +143,7 @@ func initializeExecutorStateDb(executor *Executor) error {
 	return nil
 }
 
-func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, error, func()) {
+func (executor *Executor) initHistoryStateDb(snapshotId string) (evm.Database, error, func()) {
 	// never forget to close db
 	if err, manifest := executor.snapshotReg.rwc.Read(snapshotId); err != nil {
 		return nil, err, nil
@@ -168,7 +168,7 @@ func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, er
 }
 
 // NewStateDb - create a latest state.
-func (executor *Executor) newStateDb() (vm.Database, error) {
+func (executor *Executor) newStateDb() (evm.Database, error) {
 	blk, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))

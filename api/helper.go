@@ -5,7 +5,7 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/hyperstate"
-	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/hyperdb"
 	"math/big"
@@ -82,7 +82,7 @@ func getPaillierPublickey(config *common.Config) hmEncryption.PaillierPublickey 
 	}
 }
 
-func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
+func NewStateDb(conf *common.Config, namespace string) (evm.Database, error) {
 	height := edb.GetHeightOfChain(namespace)
 	latestBlk, err := edb.GetBlockByNumber(namespace, height)
 	if err != nil {
@@ -99,7 +99,7 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, archieveDb, conf, height, namespace)
 }
 
-func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte, height uint64, namespace string) (vm.Database, error) {
+func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte, height uint64, namespace string) (evm.Database, error) {
 	db, err := hyperdb.NewDatabase(conf, path.Join("snapshots", "SNAPSHOT_"+filterId), hyperdb.GetDatabaseType(conf), namespace)
 	if err != nil {
 		return nil, err
