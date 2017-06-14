@@ -9,6 +9,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"time"
+	"github.com/instana/golang-sensor"
 )
 
 type hyperchain struct {
@@ -73,6 +74,15 @@ func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
 		hp := newHyperchain(argv)
+
+		options := &instana.Options{
+			Service:"hyperchain",
+			AgentHost:"127.0.0.1",
+			AgentPort:8989,
+			LogLevel:instana.Debug,
+		}
+		instana.InitSensor(options)
+
 		hp.start()
 		for {
 			select {

@@ -18,6 +18,7 @@ import (
 	"hyperchain/tree/bucket"
 	"sync/atomic"
 	"github.com/op/go-logging"
+	"hyperchain/core/types"
 )
 
 const (
@@ -51,7 +52,7 @@ type StateDB struct {
 
 	thash, bhash common.Hash
 	txIndex      int
-	logs         map[common.Hash]vm.Logs
+	logs         map[common.Hash]types.Logs
 	logSize      uint
 
 	// Journal of state modifications. This is the backbone of
@@ -94,7 +95,7 @@ func New(root common.Hash, db db.Database,  archieveDb db.Database, bktConf *com
 		stateObjects:      make(map[common.Address]*StateObject),
 		stateObjectsDirty: make(map[common.Address]struct{}),
 		refund:            new(big.Int),
-		logs:              make(map[common.Hash]vm.Logs),
+		logs:              make(map[common.Hash]types.Logs),
 		bktConf:           bktConf,
 		bucketTree:        bucketTree,
 		batchCache:        batchCache,
@@ -134,7 +135,7 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 		stateObjects:      make(map[common.Address]*StateObject),
 		stateObjectsDirty: make(map[common.Address]struct{}),
 		refund:            new(big.Int),
-		logs:              make(map[common.Hash]vm.Logs),
+		logs:              make(map[common.Hash]types.Logs),
 		bktConf:           self.bktConf,
 		bucketTree:        bucketTree,
 	}
@@ -169,7 +170,7 @@ func (self *StateDB) Reset() error {
 	self.thash = common.Hash{}
 	self.bhash = common.Hash{}
 	self.txIndex = 0
-	self.logs = make(map[common.Hash]vm.Logs)
+	self.logs = make(map[common.Hash]types.Logs)
 	self.logSize = 0
 	return nil
 }
@@ -221,7 +222,7 @@ func (self *StateDB) Purge() {
 	self.thash = common.Hash{}
 	self.bhash = common.Hash{}
 	self.txIndex = 0
-	self.logs = make(map[common.Hash]vm.Logs)
+	self.logs = make(map[common.Hash]types.Logs)
 	self.logSize = 0
 }
 
@@ -294,7 +295,7 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 // doesn't assign block hash now
 // because the blcok hash hasn't been calculated
 // correctly block  hash will be assigned in the commit phase
-func (self *StateDB) AddLog(log *vm.Log) {
+func (self *StateDB) AddLog(log *types.Log) {
 	self.journal.JournalList = append(self.journal.JournalList, &AddLogChange{Txhash: self.thash})
 	log.TxHash = self.thash
 	log.TxIndex = uint(self.txIndex)
@@ -304,13 +305,13 @@ func (self *StateDB) AddLog(log *vm.Log) {
 }
 
 // obtain logs by transaction hash
-func (self *StateDB) GetLogs(hash common.Hash) vm.Logs {
+func (self *StateDB) GetLogs(hash common.Hash) types.Logs {
 	return self.logs[hash]
 }
 
 // get all logs in state
-func (self *StateDB) Logs() vm.Logs {
-	var logs vm.Logs
+func (self *StateDB) Logs() types.Logs {
+	var logs types.Logs
 	for _, lgs := range self.logs {
 		logs = append(logs, lgs...)
 	}
@@ -809,7 +810,7 @@ func (self *StateDB) Copy() *StateDB {
 		stateObjects:      make(map[common.Address]*StateObject, len(self.stateObjectsDirty)),
 		stateObjectsDirty: make(map[common.Address]struct{}, len(self.stateObjectsDirty)),
 		refund:            new(big.Int).Set(self.refund),
-		logs:              make(map[common.Hash]vm.Logs, len(self.logs)),
+		logs:              make(map[common.Hash]types.Logs, len(self.logs)),
 		logSize:           self.logSize,
 	}
 	// Copy the dirty states and logs
@@ -818,7 +819,7 @@ func (self *StateDB) Copy() *StateDB {
 		state.stateObjectsDirty[addr] = struct{}{}
 	}
 	for hash, logs := range self.logs {
-		state.logs[hash] = make(vm.Logs, len(logs))
+		state.logs[hash] = make(types.Logs, len(logs))
 		copy(state.logs[hash], logs)
 	}
 	return state
