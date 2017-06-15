@@ -67,7 +67,7 @@ func (executor *Executor) Start() {
 
 // Stop - stop service.
 func (executor *Executor) Stop() {
-	executor.setExit()
+	executor.finalize()
 	executor.logger.Noticef("[Namespace = %s] executor stop", executor.namespace)
 }
 
@@ -91,6 +91,10 @@ func (executor *Executor) initialize() {
 	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()
 	go executor.syncReplica()
+}
+
+func (executor *Executor) finalize() {
+	executor.setExit()
 }
 
 // initializeExecutorStateDb - initialize statedb.

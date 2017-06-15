@@ -1,12 +1,8 @@
-package executor
-
+package evm
 import (
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"hyperchain/core/state"
-	"hyperchain/core/vm/evm"
 	"math/big"
-	"hyperchain/hyperdb/db"
 	"hyperchain/core/types"
 	"github.com/op/go-logging"
 	"hyperchain/core/vm"
@@ -45,19 +41,6 @@ func (self Log) Topics() [][]byte {
 		t[i] = common.Hex2Bytes(topic)
 	}
 	return t
-}
-
-func StateObjectFromAccount(db db.Database, addr string, account Account) *state.StateObject {
-	obj := state.NewStateObject(common.HexToAddress(addr), nil)
-	obj.SetBalance(common.Big(account.Balance))
-
-	if common.IsHex(account.Code) {
-		account.Code = account.Code[2:]
-	}
-	obj.SetCode(common.Hash{}, common.Hex2Bytes(account.Code))
-	obj.SetNonce(common.Big(account.Nonce).Uint64())
-
-	return obj
 }
 
 type VmEnv struct {
@@ -106,34 +89,30 @@ type Env struct {
 	difficulty *big.Int
 	gasLimit   *big.Int
 
-	logs       []evm.StructLog
+	logs       []StructLog
 	logger     *logging.Logger
-
+	namespace  string
+	txHash     common.Hash
 	vmTest     bool
-
-	evm        *evm.EVM
+	evm        *EVM
 }
 
-func NewEnv(ruleSet RuleSet, state vm.Database) *Env {
+
+func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger, namespace string, txHash common.Hash) *Env {
 	env := &Env{
-		ruleSet: ruleSet,
-		state:   state,
+		state:     state,
+		logger:    logger,
+		time:      common.Big(setting["currentTimestamp"]),
+		gasLimit:  common.Big(setting["currentGasLimit"]),
+		number:    common.Big(setting["currentNumber"]),
+		namespace: namespace,
+		txHash:    txHash,
+		Gas:       new(big.Int),
 	}
-	return env
-}
-
-func NewEnvFromMap(ruleSet RuleSet, state vm.Database, envValues map[string]string, logger *logging.Logger) *Env {
-	env := NewEnv(ruleSet, state)
-	env.time = common.Big(envValues["currentTimestamp"])
-	env.gasLimit = common.Big(envValues["currentGasLimit"])
-	env.number = common.Big(envValues["currentNumber"])
-	env.Gas = new(big.Int)
-	env.evm = evm.New(env, evm.Config{
+	env.evm = New(env, Config{
 		EnableJit: EnableJit,
 		ForceJit:  ForceJit,
 	})
-	env.logger = logger
-
 	return env
 }
 
@@ -148,6 +127,10 @@ func (self *Env) Db() vm.Database          { return self.state }
 func (self *Env) GasLimit() *big.Int       { return self.gasLimit }
 func (self *Env) VmType() vm.Type          { return vm.StdVmTy }
 func (self *Env) Logger() *logging.Logger  { return self.logger}
+func (self *Env) Namespace() string        { return self.namespace}
+func (self *Env) TransactionHash() common.Hash {
+	return self.txHash
+}
 func (self *Env) GetHash(n uint64) common.Hash {
 	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
 }
