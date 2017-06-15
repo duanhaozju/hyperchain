@@ -150,7 +150,6 @@ fs_kill_process(){
     for server_address in ${SERVER_ADDR[@]}; do
         echo "kill process in ${server_address}"
         ssh ${USERNAME}@${server_address} "pkill hyperchain"
-        ssh ${USERNAME}@${server_address} " cd /home/${USERNAME}/node${ni}/hyperjvm/bin && ./stop_hyperjvm.sh  "
         ni=`expr ${ni} + 1`
     done
    }
@@ -314,6 +313,7 @@ fs_distribute_jvm(){
     for server_address in ${SERVER_ADDR[@]}; do
         echo "distribute hyperjvm to ${server_address}"
         scp -r ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${USERNAME}@${server_address}:/home/${USERNAME}/node${ni}
+        ssh ${USERNAME}@${server_address} " cd /home/${USERNAME}/node${ni}/hyperjvm/bin && ./stop_hyperjvm.sh"
         ni=`expr ${ni} + 1`
     done
 }
