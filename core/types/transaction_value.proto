@@ -17,4 +17,9 @@ message TransactionValue {
             ARCHIVE = 100;
     }
 	Opcode op = 8;
+	enum VmType {
+          EVM = 0;
+          JVM = 1;
+    }
+    VmType vmType = 9;
 }
