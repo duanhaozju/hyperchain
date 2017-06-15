@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 
-set -e
+USERNAME="hyperchain"
+PASSWD="hyperchain"
 
+set -e
 if [ ! -f "/usr/bin/expect" ];then
 echo "hasn't install expect,please install expect mannualy: 'apt-get install expect'"
 exit 1
 fi
-
-USERNAME="satoshi"
-PASSWD="hyperchain"
 
 while IFS='' read -r line || [[ -n "$line" ]]; do
    SERVER_ADDR+=" ${line}"
