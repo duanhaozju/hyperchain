@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package jcee
+package jvm
 
 import (
 	"context"
@@ -29,6 +29,7 @@ type ContractExecutor interface {
 var (
 	JVMServerErr = errors.New("jvm server execute error")
 	CodeNotMatchErr = errors.New("execution code not match with ledger error")
+	ContextTypeErr = errors.New("mismatch when do context type convert")
 )
 
 type contractExecutorImpl struct {
@@ -77,14 +78,18 @@ func (cei *contractExecutorImpl) isActive() bool {
 }
 
 func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error) {
-	request := cei.parse(ctx, in)
+	context, ok := ctx.(*Context)
+	if !ok {
+		return nil, ContextTypeErr
+	}
+	request := Parse(context, in)
 	response, err := cei.execute(request)
 
 	if err != nil {
 		return nil, err
 	} else if response.Ok == false {
 		return nil, errors.New(string(response.Result))
-	} else if !hexMatch(response.CodeHash, ctx.GetCodeHash().Hex()) {
+	} else if !hexMatch(response.CodeHash, context.GetCodeHash().Hex()) {
 		return nil, CodeNotMatchErr
 	} else {
 		return response.Result, nil

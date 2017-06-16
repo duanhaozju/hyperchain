@@ -94,6 +94,10 @@ func (sldb *SuperLevelDB) NewIteratorWithPrefix(prefix []byte) db.Iterator {
 	return sldb.db.NewIterator(util.BytesPrefix(prefix), nil)
 }
 
+func (sldb *SuperLevelDB) Scan(begin, end []byte) db.Iterator {
+	return sldb.db.NewIterator(&util.Range{Start: begin, Limit: end}, nil)
+}
+
 //Destroy, clean the whole database,
 //warning: bad performance if too many data in the db
 func (sldb *SuperLevelDB) Destroy() error {

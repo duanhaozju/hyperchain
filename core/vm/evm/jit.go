@@ -288,15 +288,10 @@ func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env
 		instrCount        = 0
 	)
 
-	homestead := env.RuleSet().IsHomestead(env.BlockNumber())
 	for pc < uint64(len(program.instructions)) {
 		instrCount++
 
 		instr := program.instructions[pc]
-		if instr.Op() == DELEGATECALL && !homestead {
-			return nil, fmt.Errorf("Invalid opcode 0x%x", instr.Op())
-		}
-
 		ret, err := instr.do(program, &pc, env, contract, mem, stack)
 		if err != nil {
 			return nil, err

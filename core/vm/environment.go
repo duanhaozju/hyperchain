@@ -13,6 +13,7 @@ const (
 	StdVmTy Type = iota // Default standard VM
 	JitVmTy             // LLVM JIT VM
 	MaxVmTy
+	JavaVmTy
 )
 
 // RuleSet is an interface that defines the current rule set during the
@@ -24,8 +25,6 @@ type RuleSet interface {
 // Environment is an EVM requirement and helper which allows access to outside
 // information such as states.
 type Environment interface {
-	// The current ruleset
-	RuleSet() RuleSet
 	// The state database
 	Db() Database
 	// Creates a restorable snapshot
@@ -50,6 +49,10 @@ type Environment interface {
 	VmType() Type
 	// Env logger
 	Logger() *logging.Logger
+	// Namespace
+	Namespace() string
+	// Current transaction hash
+	TransactionHash() common.Hash
 	// Determines whether it's possible to transact
 	CanTransfer(from common.Address, balance *big.Int) bool
 	// Transfers amount from one account to the other
@@ -71,5 +74,4 @@ type Environment interface {
 	// Create a new contract
 	Create(me ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error)
 }
-
 

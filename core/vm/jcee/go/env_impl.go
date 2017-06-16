@@ -6,7 +6,6 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/core/vm"
 	"hyperchain/core/types"
-	"hyperchain/core/vm/jcee/go/client"
 )
 
 type Account struct {
@@ -32,7 +31,7 @@ type Env struct {
 	jvm        vm.Vm
 }
 
-func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger, namespace string, txHash common.Hash, jvmCli jcee.ContractExecutor) *Env {
+func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger, namespace string, txHash common.Hash, jvmCli ContractExecutor) *Env {
 	env := &Env{
 		state:     state,
 		logger:    logger,
@@ -70,8 +69,7 @@ func (self *Env) GetHash(n uint64) common.Hash {
 	return common.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
 }
 
-// TODO for extension
-func (self *Env) AddLog(log vm.Log) {
+func (self *Env) AddLog(log *types.Log) {
 	self.state.AddLog(log)
 }
 func (self *Env) Depth() int     { return self.depth }

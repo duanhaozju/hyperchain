@@ -12,6 +12,7 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
 	"hyperchain/core/vm"
+	"hyperchain/core/vm/jcee/go"
 )
 
 type Executor struct {
@@ -27,6 +28,7 @@ type Executor struct {
 	helper     *Helper
 	statedb    vm.Database
 	logger     *logging.Logger
+	jvmCli     jvm.ContractExecutor
 }
 
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux) *Executor {
@@ -40,6 +42,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 		commonHash: kec256Hash,
 		encryption: encryption,
 		helper:     helper,
+		jvmCli:     jvm.NewContractExecutor(conf, namespace),
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.initDb()
@@ -95,6 +98,7 @@ func (executor *Executor) initialize() {
 
 func (executor *Executor) finalize() {
 	executor.setExit()
+	executor.jvmCli.Stop()
 }
 
 // initializeExecutorStateDb - initialize statedb.
@@ -121,4 +125,9 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 		return nil, err
 	}
 	return stateDb, nil
+}
+
+// FetchStateDb - fetch state db
+func (executor *Executor) FetchStateDb() vm.Database {
+	return executor.statedb
 }

@@ -591,6 +591,10 @@ func (self *StateDB) GetTree() interface{} {
 	return self.bucketTree
 }
 
+func (self *StateDB) GetCurrentTxHash() common.Hash {
+	return self.thash
+}
+
 /*
  * SETTERS
  */
@@ -1125,4 +1129,21 @@ func (self *StateDB) ShowArchive(address common.Address, date string) map[string
 		m[common.Bytes2Hex(k)] = common.Bytes2Hex(iter.Value())
 	}
 	return storages
+}
+
+func (self *StateDB) NewIterator(addr common.Address, slice *vm.IterRange) (vm.Iterator, error) {
+	stateObject := self.GetStateObject(addr)
+	if stateObject != nil {
+		self.logger.Debug("hyper statedb set state find state object in live objects")
+		var iter vm.Iterator
+		if slice == nil {
+			iter = NewStorageIterator(stateObject, nil, nil)
+		} else {
+			iter = NewStorageIterator(stateObject, slice.Start, slice.Limit)
+		}
+		return iter, nil
+	} else {
+		self.logger.Warningf("state object %s doesn't exist or has been suicide", addr.Hex())
+		return nil, nil
+	}
 }

@@ -1,4 +1,4 @@
-package jcee
+package jvm
 
 import (
 	"github.com/looplab/fsm"

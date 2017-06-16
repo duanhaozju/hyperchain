@@ -2,11 +2,11 @@ package vm
 
 import (
 	"math/big"
+	"hyperchain/hyperdb/db"
 	"hyperchain/common"
 	"hyperchain/core/types"
-	"hyperchain/hyperdb/db"
 )
-// Database is a EVM database for full state querying.
+
 type Database interface {
 	GetAccount(common.Address) Account
 	CreateAccount(common.Address) Account
@@ -19,6 +19,8 @@ type Database interface {
 
 	GetCode(common.Address) []byte
 	SetCode(common.Address, []byte)
+
+	GetCodeHash(common.Address) common.Hash
 
 	GetStatus(common.Address) int
 	SetStatus(common.Address, int)
@@ -59,6 +61,10 @@ type Database interface {
 	GetAccounts() map[string]Account
 	Dump() []byte
 	GetTree() interface{}
+	GetCurrentTxHash() common.Hash
+	NewIterator(common.Address, *IterRange) (Iterator, error)
+
+
 	// Atomic Related
 	MarkProcessStart(uint64)
 	MarkProcessFinish(uint64)
@@ -69,3 +75,33 @@ type Database interface {
 	ShowArchive(common.Address, string) map[string]map[string]string
 }
 
+type Iterator interface {
+	Next()    bool
+	Key()     []byte
+	Value()   []byte
+	Release()
+}
+
+type IterRange struct {
+	Start     *common.Hash
+	Limit     *common.Hash
+}
+
+func BytesPrefix(prefix []byte) *IterRange {
+	var limit []byte
+	for i := len(prefix) - 1; i >= 0; i-- {
+		c := prefix[i]
+		if c < 0xff {
+			limit = make([]byte, i+1)
+			copy(limit, prefix)
+			limit[i] = c + 1
+			break
+		}
+	}
+	startH := common.BytesToHash(prefix)
+	limitH := common.BytesToHash(limit)
+	return &IterRange{
+		Start: &startH,
+		Limit: &limitH,
+	}
+}

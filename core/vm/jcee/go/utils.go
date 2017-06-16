@@ -1,16 +1,59 @@
-package jcee
+package jvm
 
 import (
-	"hyperchain/core/vm"
-	pb "hyperchain/core/vm/jcee/protos"
-	"hyperchain/core/types"
-	"github.com/golang/protobuf/proto"
-	"hyperchain/common"
+	"os"
+	"path"
 	"strings"
+	"hyperchain/core/types"
+	"github.com/gogo/protobuf/proto"
+	pb "hyperchain/core/vm/jcee/protos"
+	"hyperchain/common"
 )
 
+const (
+	ContractHome   = "hyperjvm/contracts"
+	BinHome        = "hyperjvm/bin"
+	ContractPrefix = "contract"
+	CompressFileN  = "contract.tar.gz"
+)
+
+
+func getContractDir() (string, error) {
+	cur, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	return path.Join(cur, ContractHome), nil
+}
+
+func getBinDir() (string, error) {
+	cur, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	return path.Join(cur, BinHome), nil
+}
+
+func cd(target string, relative bool) (string, error)  {
+	cur, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	if relative {
+		err := os.Chdir(path.Join(cur, target))
+		if err != nil {
+			return "", err
+		}
+	} else {
+		err := os.Chdir(target)
+		if err != nil {
+			return "", err
+		}
+	}
+	return cur, nil
+}
 // parse parse input data and encapsulate as a invocation request.
-func (cei *contractExecutorImpl) parse(ctx vm.VmContext, in []byte) *pb.Request {
+func Parse(ctx *Context, in []byte) *pb.Request {
 	if ctx.IsCreation() {
 		var args types.InvokeArgs
 		if err := proto.Unmarshal(in, &args); err != nil {
