@@ -321,6 +321,9 @@ func (ns *namespaceImpl) Name() string {
 func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
 	return ns.caMgr
 }
+func (ns namespaceImpl) GetExecutor() *executor.Executor {
+	return ns.executor
+}
 
 //ProcessRequest process request under this namespace
 func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {

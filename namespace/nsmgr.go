@@ -34,6 +34,12 @@ type NamespaceManager interface {
 	Register(name string) error
 	//DeRegister de-register namespace from system by name.
 	DeRegister(name string) error
+	//StartJvm start jvm manager
+	StartJvm() error
+	//StopJvm stop jvm manager
+	StopJvm() error
+	//RestartJvm restart jvm manager
+	RestartJvm() error
 	//GetNamespaceByName get namespace instance by name.
 	GetNamespaceByName(name string) Namespace
 	//ProcessRequest process received request
@@ -52,6 +58,7 @@ type NamespaceManager interface {
 type nsManagerImpl struct {
 	rwLock     *sync.RWMutex
 	namespaces map[string]Namespace
+	jvmManager *JvmManager
 	conf       *common.Config
 }
 
@@ -60,6 +67,7 @@ func newNsManager(conf *common.Config) *nsManagerImpl {
 	nr := &nsManagerImpl{
 		namespaces: make(map[string]Namespace),
 		conf:       conf,
+		jvmManager: NewJvmManager(conf),
 	}
 	nr.rwLock = new(sync.RWMutex)
 	err := nr.init()
@@ -118,6 +126,13 @@ func (nr *nsManagerImpl) Start() error {
 			}
 		}(ns)
 	}
+
+	if nr.conf.GetBool(common.C_JVM_START) == true {
+		if err := nr.jvmManager.Start(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -132,6 +147,14 @@ func (nr *nsManagerImpl) Stop() error {
 			logger.Errorf("namespace %s stop failed, %v", name, err)
 			return err
 		}
+	}
+	// err := nr.hyperjvm.Stop()
+	// if err != nil {
+	//	logger.Errorf("Stop hyperjvm error %v", err)
+	//	return err
+	//}
+	if err := nr.jvmManager.Stop(); err != nil {
+		logger.Errorf("Stop hyperjvm error %v", err)
 	}
 	logger.Noticef("NamespaceManager stopped!")
 	return nil
@@ -213,7 +236,13 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
-		return ns.Start()
+		if err := ns.Start(); err != nil {
+			return err
+		} else {
+			nr.jvmManager.ledgerProxy.Register(name, ns.GetExecutor().FetchStateDb())
+			return nil
+		}
+
 	}
 	logger.Errorf("No namespace instance for %s found", name)
 	return ErrInvalidNs
@@ -224,7 +253,12 @@ func (nr *nsManagerImpl) StopNamespace(name string) error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
-		return ns.Stop()
+		if err := ns.Stop(); err != nil {
+			return err
+		} else {
+			nr.jvmManager.ledgerProxy.UnRegister(name)
+			return nil
+		}
 	}
 	logger.Errorf("No namespace instance for %s found")
 	return ErrInvalidNs
@@ -244,4 +278,31 @@ func (nr *nsManagerImpl) RestartNamespace(name string) error {
 //GlobalConfig global configuration of the system.
 func (nr *nsManagerImpl) GlobalConfig() *common.Config {
 	return nr.conf
+}
+
+//StartJvm starts the jvm manager
+func (nr *nsManagerImpl) StartJvm() error {
+	if err := nr.jvmManager.Start(); err != nil {
+		return err
+	}
+	return nil
+}
+
+//StopJvm stops the jvm manager
+func (nr *nsManagerImpl) StopJvm() error {
+	if err := nr.jvmManager.Stop(); err != nil {
+		return err
+	}
+	return nil
+}
+
+//RestartJvm restarts the jvm manager
+func (nr *nsManagerImpl) RestartJvm() error {
+	if err := nr.jvmManager.Stop(); err != nil {
+		return err
+	}
+	if err := nr.jvmManager.Start(); err != nil {
+		return err
+	}
+	return nil
 }
