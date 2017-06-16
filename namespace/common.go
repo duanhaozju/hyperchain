@@ -47,6 +47,8 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	conf.Set(common.C_GRPC_PORT, peerViper.GetInt("self.grpc_port"))
 	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
 	conf.Set(common.C_GLOBAL_CONFIG_PATH, nsConfigPath)
+	conf.Set(common.C_JVM_PORT, peerViper.GetInt("self.jvm_port"))
+	conf.Set(common.C_LEDGER_PORT, peerViper.GetInt("self.ledger_port"))
 
 	if strings.HasSuffix(path, "/"+DEFAULT_NAMESPACE+"/config") {
 		nr.conf.Set(common.C_HTTP_PORT, peerViper.GetInt("self.jsonrpc_port"))

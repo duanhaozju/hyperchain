@@ -577,20 +577,19 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 		pbft.logger.Errorf("Replica %d receives fetch QPC request, but its pbft.h ≥ highwatermark", pbft.id)
 		return nil
 	}
-	csLen := len(pbft.storeMgr.certStore) //certStore len
-	prepres := make([]*PrePrepare, csLen)
-	pres := make([]bool, csLen)
-	cmts := make([]bool, csLen)
+	var prepres []*PrePrepare
+	var pres []bool
+	var cmts []bool
 	i := 0
 	for msgId, msgCert := range pbft.storeMgr.certStore {
 		if msgId.n > h && msgId.n <= pbft.exec.lastExec {
 			if msgCert.prePrepare == nil {
-				prepres[i] = &PrePrepare{}
+				prepres = append(prepres, &PrePrepare{})
 			} else {
-				prepres[i] = msgCert.prePrepare
+				prepres = append(prepres, msgCert.prePrepare)
 			}
-			pres[i] = msgCert.sentPrepare
-			cmts[i] = msgCert.sentCommit
+			pres = append(pres, msgCert.sentPrepare)
+			cmts = append(cmts, msgCert.sentCommit)
 			i = i + 1
 		}
 	}

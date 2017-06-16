@@ -844,7 +844,7 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 
 	for idx, cert := range pbft.nodeMgr.updateCertStore {
 		if idx.n > pbft.h {
-			tmpId := msgID{idx.n, update.View}
+			tmpId := msgID{v:update.View, n:idx.n}
 			tmpStore[tmpId] = cert
 		}
 	}

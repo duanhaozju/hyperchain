@@ -1,3 +1,5 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
 package common
 
 import (
@@ -13,6 +15,9 @@ import (
 	"strings"
 	"errors"
 	"time"
+	"path/filepath"
+	"os"
+	"os/exec"
 )
 
 const (
@@ -58,15 +63,14 @@ func GetJSONResponse(result *jsonrpc.CommandResult) (jsonrpc.JSONResponse, error
 }
 
 // GenSignature generates the transaction signature by many params ...
-func GenSignature(from string, to string, timestamp int64, amount int64, payload string, nonce int64, opcode int32) ([]byte, error){
+func GenSignature(from string, to string, timestamp int64, amount int64, payload string, nonce int64, opcode int32, vmtype types.TransactionValue_VmType) ([]byte, error){
 	conf := common.NewConfig("./keyconfigs/cli.yaml")
 	conf.Set(common.C_NODE_ID, 1)
 
 	am := accounts.NewAccountManager(conf)
 
 	payload = common.StringToHex(payload)
-	// TODO @Duanhao use different vm type
-	txValue := types.NewTransactionValue(int64(defaultGasPrice), int64(defaultGas), amount, common.FromHex(payload), opcode, types.TransactionValue_EVM)
+	txValue := types.NewTransactionValue(int64(defaultGasPrice), int64(defaultGas), amount, common.FromHex(payload), opcode, vmtype)
 	value, _ := proto.Marshal(txValue)
 	var tx *types.Transaction
 	if to == "" {
@@ -116,4 +120,31 @@ func GetTransactionReceipt(txHash string, c *cli.Context, client *CmdClient) err
 	}
 
 	return fmt.Errorf("Cant't get transaction receipt after %v attempts", frequency)
+}
+
+func Compress(source, target string) {
+	//source path must be absolute path, so first convert source path to an absolute path
+	abs, err := filepath.Abs(source)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	dir, file := filepath.Split(abs)
+	// compress files to a tar.gz with only one-level path
+	command := exec.Command("tar", "-czf", target, "-C", dir, file)
+	if err := command.Run(); err != nil {
+		fmt.Printf("Error in read compress specefied file: %s\n", source)
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+}
+
+func DelCompressedFile(file string) {
+	command := exec.Command("rm", "-rf", file)
+	if err := command.Run(); err != nil {
+		fmt.Printf("Error in remove compressed file: %s\n", file)
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
 }
