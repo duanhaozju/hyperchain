@@ -217,6 +217,33 @@ func (adm *Administrator) restartHttpServer(cmd *Command) *CommandResult {
 	return &CommandResult{Ok: true, Result: "restart http successful."}
 }
 
+func (adm *Administrator) startJvmServer(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
+	if err := adm.NsMgr.StartJvm(); err != nil {
+		log.Notice(err)
+		return &CommandResult{Ok: false, Result: err.Error()}
+	}
+	return &CommandResult{Ok: true, Result: "start jvm successful."}
+}
+
+func (adm *Administrator) stopJvmServer(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
+	if err := adm.NsMgr.StopJvm(); err != nil {
+		log.Notice(err)
+		return &CommandResult{Ok: false, Result: err.Error()}
+	}
+	return &CommandResult{Ok: true, Result: "stop jvm successful."}
+}
+
+func (adm *Administrator) restartJvmServer(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd)
+	if err := adm.NsMgr.RestartJvm(); err != nil {
+		log.Notice(err)
+		return &CommandResult{Ok: false, Result: err.Error()}
+	}
+	return &CommandResult{Ok: true, Result: "restart jvm successful."}
+}
+
 func (adm *Administrator) Init() {
 	adm.CmdExecutor = make(map[string]func(command *Command) *CommandResult)
 	adm.CmdExecutor["stopServer"] = adm.stopServer
@@ -237,4 +264,8 @@ func (adm *Administrator) Init() {
 	adm.CmdExecutor["startHttpServer"] = adm.startHttpServer
 	adm.CmdExecutor["stopHttpServer"] = adm.stopHttpServer
 	adm.CmdExecutor["restartHttpServer"] = adm.restartHttpServer
+
+	adm.CmdExecutor["startJvmServer"] = adm.startJvmServer
+	adm.CmdExecutor["stopJvmServer"] = adm.stopJvmServer
+	adm.CmdExecutor["restartJvmServer"] = adm.restartJvmServer
 }
