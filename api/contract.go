@@ -18,6 +18,7 @@ import (
 	"strconv"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/vm"
+	"strings"
 )
 
 type Contract struct {
@@ -59,7 +60,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	payload := common.FromHex(realArgs.Payload)
 
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
-		realArgs.Value.ToInt64(), payload, args.Opcode, types.TransactionValue_EVM)
+		realArgs.Value.ToInt64(), payload, args.Opcode, parseVmType(realArgs.VmType))
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
@@ -397,4 +398,13 @@ func getBlockStateDb(namespace string, config *common.Config) (vm.Database, erro
 func isContractAccount(stateDb vm.Database, addr common.Address) bool {
 	code := stateDb.GetCode(addr)
 	return code != nil
+}
+
+func parseVmType(vmType string) types.TransactionValue_VmType {
+	switch strings.ToLower(vmType) {
+	case "jvm":
+		return types.TransactionValue_JVM
+	default:
+		return types.TransactionValue_EVM
+	}
 }

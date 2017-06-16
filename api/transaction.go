@@ -51,6 +51,7 @@ type SendTxArgs struct {
 	Simulate  bool        `json:"simulate"`
 	Opcode    int32       `json:"opcode"`
 	Nonce     int64       `json:"nonce"`
+	VmType    string      `json:"type"`
 }
 
 type TransactionResult struct {
