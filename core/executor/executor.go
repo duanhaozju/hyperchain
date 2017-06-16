@@ -94,6 +94,7 @@ func (executor *Executor) initialize() {
 	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()
 	go executor.syncReplica()
+	executor.jvmCli.Start()
 }
 
 func (executor *Executor) finalize() {
