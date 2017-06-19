@@ -224,11 +224,12 @@ type (
 		Type    string          `json:"type,omitempty"`
 	}
 	StorageChange struct {
-		Account  *common.Address `json:"account,omitempty"`
-		Key      common.Hash     `json:"key,omitempty"`
-		Prevalue []byte          `json:"prevalue,omitempty"`
-		Exist    bool            `json:"exist,omitempty"`
-		Type     string          `json:"type,omitempty"`
+		Account    *common.Address `json:"account,omitempty"`
+		Key        common.Hash     `json:"key,omitempty"`
+		Prevalue   []byte          `json:"prevalue,omitempty"`
+		Exist      bool            `json:"exist,omitempty"`
+		LastModify uint64          `json:"brith,omitempty"`
+		Type       string          `json:"type,omitempty"`
 	}
 	CodeChange struct {
 		Account  *common.Address `json:"account,omitempty"`
@@ -496,6 +497,7 @@ func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, w
 		if ch.Exist {
 			if obj := s.GetStateObject(*ch.Account); obj != nil {
 				obj.setState(ch.Key, ch.Prevalue)
+				obj.updateStorageLastModify(ch.Key, ch.LastModify)
 			}
 		} else {
 			if obj := s.GetStateObject(*ch.Account); obj != nil {
