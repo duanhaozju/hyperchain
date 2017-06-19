@@ -300,13 +300,12 @@ func (pp *PeersPool) SetConnectionByHash(hash string, conn *grpc.ClientConn) err
 	pp.peers[hash].Connection = conn
 	return nil
 }
-func (pp *PeersPool) SetClientByHash(hash string, client pb.ChatClient) error {
+func (pp *PeersPool) SetClientByHash(hash string, client string) error {
 	//TODO check error
 	if pp.peers == nil {
 		pp.peers = make(map[string]*Peer)
 	}
 	if _, ok := pp.peers[hash]; ok {
-		pp.peers[hash].Client = client
 		return nil
 	} else {
 		panic("cannot set")

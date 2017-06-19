@@ -1,10 +1,13 @@
 package p2p
 
 import (
-	"github.com/abiosoft/ishell"
 	"hyperchain/p2p/network"
-	"hyperchain/common"
 	"github.com/spf13/viper"
+	"hyperchain/manager/event"
+	"github.com/pkg/errors"
+	"fmt"
+	"hyperchain/common"
+	"sync"
 )
 
 type P2PManager interface {
@@ -16,47 +19,84 @@ type P2PManager interface {
 
 	Register(namespace string,identifier string,peerID string) error
 
-	Produce(namespace string,identifier string,msg []byte) error
-
-	consume() error
+	GetPeerManager(conf *viper.Viper)(PeerManager,error)
+}
+type p2pManagerImpl struct {
+	hypernet network.HyperNet
+	conf *viper.Viper
 }
 
-var p2pManager P2PManager
-var logger = common.GetLogger(common.DEFAULT_LOG, "p2p")
+var once sync.Once
+var p2pManager *p2pManagerImpl
+//var logger = common.GetLogger(common.DEFAULT_LOG, "p2p")
 
-type P2PManagerImpl struct {
-	config *viper.Viper
-
-}
-
-func StartUpP2PManager(config *viper.Viper){
-	if p2pManager != nil {
-		logger.Fatal("P2P Manager Already been setuped.")
+func GetP2PManager(conpath string)*PeerManager{
+	if p2pManager == nil{
+		once.Do(func() {
+			p2pManager = newP2PManager(conpath)
+		})
 	}
-
-
-}
-
-func GetP2PManager() P2PManager{
-	p2pManager = newP2PManager()
 	return p2pManager
 }
 
-func newP2PManager(config *common.Config) P2PManager{
-	return &p2pManagerImpl{
-
+func newP2PManager(conpath string)*p2pManagerImpl{
+	if p2pManager != nil{
+		return p2pManager
 	}
+	vip := viper.New()
+	vip.SetConfigFile(conpath)
+	err := vip.ReadInConfig()
+	if err != nil{
+		return err
+	}
+	return &p2pManagerImpl{
+		hypernet:network.NewHyperNet(vip),
+		conf:vip,
+	}
+	//TODO setup the p2pManager
+	return nil
 }
 
-type p2pManagerImpl struct {
-	 shell *ishell.Shell
-	 node *Node
-	 peerMap PeerMap
-	dnsResolver *network.DNSResolver
-
+func (mgr *p2pManagerImpl)StartUp() (err error) {
+	// if there are something wrong cause a panic,
+	// here will recover
+	defer func() {
+		if r := recover();r != nil{
+			err = r
+		}
+	}()
+	err = mgr.hypernet.InitServer()
+	err = mgr.hypernet.InitClients()
+	return
 }
 
-func(p2pmgr *p2pManagerImpl) Bind(namespace string,innerID string,peerid string,tmux *event.TypeMux){
+//GetPeerManager this function is global access available, every namespace
+//should use this function to get a peer manager, and then, the peer manager
+//can supply all the high level methods.
+//the interface method are same as hyperchain version 1.2, so all the high level
+//interface needn't modify.
+func GetPeerManager(namespace string, config *common.Config,eventMux *event.TypeMux) (PeerManager,error){
+	if &p2pManager == nil{
+		return nil,errors.New("the P2P manager hasn't been initlized, Fatal error")
+	}
+	peerconf := viper.New()
+	peerconf.SetConfigFile(config.GetString("global.p2p.hosts"))
+	if err := peerconf.ReadInConfig(); err != nil{
+		return nil,err
+	}
+	return p2pManager.GetPeerManager(namespace,peerconf)
+}
+
+func (p2pmgr *p2pManagerImpl) GetPeerManager(namespace string,conf *viper.Viper)(*peerManagerImpl,error){
+	//TODO return a namespace's peer manager instance
+	routers := conf.GetStringSlice("nodes")
+	for route := range routers{
+		fmt.Println(route)
+	}
+	return nil,nil
+}
+
+func(p2pmgr *p2pManagerImpl) bind(namespace string,innerID string,peerid string,tmux *event.TypeMux){
 
 }
 

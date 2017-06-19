@@ -4,6 +4,9 @@ import (
 	"os"
 	"strings"
 	"path/filepath"
+	"hyperchain/crypto/sha3"
+	"strconv"
+	"hyperchain/common"
 )
 
 func GetProjectPath() string{
@@ -11,7 +14,7 @@ func GetProjectPath() string{
 	if strings.Contains(gopath,":"){
 		gopath = strings.Split(gopath,":")[0]
 	}
-	return gopath
+	return gopath + "/src/hyperchain"
 }
 
 func GetCurrentDirectory() (string,error){
@@ -21,4 +24,11 @@ func GetCurrentDirectory() (string,error){
 	}
 	return strings.Replace(dir, "\\", "/", -1),nil
 
+}
+
+func GetPeerHash(namespace string,id int) string{
+	hasher := sha3.NewKeccak256()
+	ids := strconv.Itoa(id)
+	hasher.Write([]byte(namespace+ids))
+	return common.ToHex(hasher.Sum(nil))
 }

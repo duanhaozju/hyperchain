@@ -39,7 +39,9 @@ global:
             hyperdb: "NOTICE"
             eventhub: "NOTICE"
     p2p:
-        hosts: "../test/hosts.yaml"
+        hosts: "./hosts.yaml"
+        port: 50012
+        retrytime: 3s
     namespace:
         # start which namespaces when node starts
         start:

@@ -1,7 +1,7 @@
 self:
   id: 1
   hostname: node1
-routes:
+nodes:
   -
     id: 2
     hostname: node2

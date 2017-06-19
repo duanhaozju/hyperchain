@@ -23,9 +23,9 @@ type PeerManager interface {
 // MsgSender Send msg to others peer
 type MsgSender interface {
 	// broadcast information to peers
-	BroadcastPeers(payLoad []byte)
+	Broadcast(payLoad []byte)
 	// send a message to specific peer  UNICAST
-	SendMsgToPeers(payLoad []byte, peerList []uint64)
+	SendMsg(payLoad []byte, peerList []uint64)
 }
 
 // AddNode
@@ -47,11 +47,11 @@ type DeleteNode interface {
 // InfoGetter get the peer info to manager
 type InfoGetter interface {
 	// get the all peer list to broadcast
-	GetAllPeers() []*Peer
-	GetAllPeersWithTemp() []*Peer
-	GetVPPeers() []*Peer
+	GetAllPeers() []*peer
+	GetAllPeersWithTemp() []*peer
+	GetVPPeers() []*peer
 	// get local node instance
-	GetLocalNode() *Node
+	//GetLocalNode() *Node
 	// Get local node id
 	GetNodeId() int
 	//get the peer information of all nodes.

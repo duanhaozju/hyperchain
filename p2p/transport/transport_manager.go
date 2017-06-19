@@ -6,7 +6,6 @@ import (
 	"crypto/cipher"
 	"crypto/des"
 	"crypto/ecdsa"
-	"crypto/elliptic"
 	"errors"
 	"fmt"
 	"github.com/op/go-logging"
@@ -14,8 +13,8 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/crypto/primitives"
 	pb "hyperchain/p2p/message"
-	"hyperchain/p2p/transport/ecdh"
 	"sync"
+	"hyperchain/p2p/hts/crypto/ecdh"
 )
 
 // Init the log setting
@@ -71,7 +70,6 @@ func NewTransportManager(cm *admittance.CAManager, namespace string) (*Transport
 		decAlgo = pureDec
 	}
 	return &TransportManager{
-		ecdh:          ecdh.NewEllipticECDH(elliptic.P256()),
 		privateKey:    privateKey,
 		publicKey:     publicKey,
 		shareSecTable: make(map[string]*sharedSecret),

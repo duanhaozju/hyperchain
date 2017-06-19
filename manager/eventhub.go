@@ -74,13 +74,21 @@ func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.
 }
 
 func (hub *EventHub) Start() {
+	//REVIEW none of p2p module business
 	go hub.listenValidateEvent()
+	//REVIEW none of p2p module business
 	go hub.listenCommitEvent()
+	//TODO  here has some peerManager's method
 	go hub.listenConsensusEvent()
+	//TODO here has some dispatch message to p2p module
 	go hub.listenExecutorEvent()
+	//TODO here has a setPrimary method of p2p module [ok]
 	go hub.listenMiscellaneousEvent()
+	//TODO here has a mount of broadcast method of p2p module [todo]
 	go hub.listenPeerMaintainEvent()
+	//REVIEW here has some p2p response message dispatch methods.
 	go hub.listenSessionEvent()
+	//REVIEW none of p2p module duty
 	go hub.listenTransactionEvent()
 }
 
@@ -235,6 +243,7 @@ func (hub *EventHub) listenConsensusEvent() {
 				hub.send(m.SessionMessage_FOWARD_TX, ev.Payload, []uint64{ev.PeerId})
 			case event.NegoRoutersEvent:
 				hub.logger.Debugf("message middleware: [negotiate routers]")
+				hub.logger.Critical("[p2p] temp log, this shouldn't invoke, UpdateAllRoutingTable")
 				hub.peerManager.UpdateAllRoutingTable(ev.Payload)
 			}
 
@@ -259,6 +268,7 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 			case event.DelPeerEvent:
 				hub.logger.Debugf("message middleware: [delete peer]")
 				payload := ev.Payload
+				//TODO unSupport method temp @chenquan
 				routerHash, id, del := hub.peerManager.GetRouterHashifDelete(string(payload))
 				msg := &protos.DelNodeMessage{
 					DelPayload: payload,
@@ -274,10 +284,12 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 				hub.logger.Debugf("message middleware: [update routing table]")
 				if ev.Type == true {
 					// add a peer
+					//TODO unSupport method temp @chenquan
 					hub.peerManager.UpdateRoutingTable(ev.Payload)
 					hub.PassRouters()
 				} else {
 					// remove a peer
+					//TODO unSupport method temp @chenquan
 					hub.peerManager.DeleteNode(string(ev.Payload))
 					hub.PassRouters()
 				}
@@ -285,6 +297,7 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 				hub.logger.Debugf("message middleware: [already in chain]")
 				if hub.initType == 1 {
 					hub.peerManager.SetOnline()
+					//TODO unsupport method @chenquan
 					payload := hub.peerManager.GetLocalAddressPayload()
 					hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_NEW_NODE_EVENT, &protos.NewNodeMessage{payload})
 					hub.PassRouters()
@@ -306,6 +319,7 @@ func (hub *EventHub) listenExecutorEvent() {
 			case event.ExecutorToConsensusEvent:
 				hub.dispatchExecutorToConsensus(ev)
 			case event.ExecutorToP2PEvent:
+				//TODO there are somethis to fix @chenquan
 				hub.dispatchExecutorToP2P(ev)
 			}
 
@@ -371,11 +385,12 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		hub.logger.Debugf("message middleware: [sync replica]")
 		chain := &types.Chain{}
 		proto.Unmarshal(ev.Payload, chain)
-		addr := hub.peerManager.GetLocalNode().GetNodeAddr()
+		// TODO FIX this! @chenquan
+		//addr := hub.peerManager.GetLocalNode().GetNodeAddr()
 		payload, _ := proto.Marshal(&types.ReplicaInfo{
 			Chain:     chain,
-			Ip:        []byte(addr.IP),
-			Port:      int32(addr.Port),
+			//Ip:        []byte(addr.IP),
+			//Port:      int32(addr.Port),
 			Namespace: []byte(hub.namespace),
 		})
 		hub.broadcast(BROADCAST_VP, m.SessionMessage_SYNC_REPLICA, payload)

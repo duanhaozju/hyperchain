@@ -30,7 +30,7 @@ func (hub *EventHub) broadcast(bType int, t m.SessionMessage_Type, message []byt
 		case BROADCAST_NVP:
 			fallthrough
 		case BROADCAST_ALL:
-			hub.peerManager.BroadcastPeers(ctx)
+			hub.peerManager.Broadcast(ctx)
 		}
 	}
 }
@@ -44,7 +44,7 @@ func (hub *EventHub) send(t m.SessionMessage_Type, message []byte, peers []uint6
 		hub.logger.Errorf("marshal message %d failed.", t)
 		return
 	} else {
-		hub.peerManager.SendMsgToPeers(ctx, peers)
+		hub.peerManager.SendMsg(ctx, peers)
 	}
 }
 

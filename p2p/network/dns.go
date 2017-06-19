@@ -3,7 +3,6 @@ package network
 import (
 	"github.com/spf13/viper"
 	"github.com/pkg/errors"
-	"fmt"
 	"strings"
 )
 var (
@@ -39,10 +38,12 @@ func (dnsr *DNSResolver)resolveHosts(){
 	}
 }
 
-func (dnsr *DNSResolver)ListHosts(){
-	for hostname,ip := range dnsr.DNSItems{
-		fmt.Println(hostname,ip)
+func (dnsr *DNSResolver)ListHosts()[]string{
+	list:=make([]string,0)
+	for hostname,_ := range dnsr.DNSItems{
+		list = append(list,hostname)
 	}
+	return list
 }
 
 func (dnsr *DNSResolver)GetDNS(hostname string) (string,error){

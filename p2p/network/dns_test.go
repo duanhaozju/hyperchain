@@ -9,7 +9,7 @@ import (
 
 
 func TestDNSResolver_ListHosts(t *testing.T) {
-	dnsr,err := NewDNSResolver(utils.GetProjectPath() + "/src/hyperchain/p2p/test/conf/hosts.yaml");
+	dnsr,err := NewDNSResolver(utils.GetProjectPath() + "/p2p/test/conf/hosts.yaml");
 	if err !=nil{
 		t.Error("failed",err)
 		t.FailNow()
@@ -19,7 +19,7 @@ func TestDNSResolver_ListHosts(t *testing.T) {
 }
 
 func TestDNSResolver_ListHosts2(t *testing.T) {
-	dnsr,err := NewDNSResolver(utils.GetProjectPath() + "/src/hyperchain/p2p/test/conf/hosts.yaml");
+	dnsr,err := NewDNSResolver(utils.GetProjectPath() + "/p2p/test/conf/hosts.yaml");
 	if err !=nil{
 		t.Fatal(err)
 	}

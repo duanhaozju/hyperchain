@@ -1,4 +1,4 @@
-package p2p
+package msg
 
 import (
 	"hyperchain/manager/event"
@@ -6,9 +6,9 @@ import (
 )
 
 type MsgRouter interface {
-	Register(namespace string,*event.TypeMux)error
+	Register(namespace string,eventMux *event.TypeMux)error
 	DeRegister(namespace string)error
-	BlackHole() <-chan *message.Message
+	BlackHole() chan<- *message.Message
 	// Notice this method should run in go routine
 	Distribute() error
 }

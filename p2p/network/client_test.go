@@ -6,26 +6,9 @@ import (
 	. "github.com/onsi/gomega"
 	"hyperchain/p2p/message"
 	"fmt"
-	"hyperchain/p2p/msg"
-	"time"
 )
 
 var _ = Describe("Client", func() {
-	var server *Server
-	BeforeEach(func(){
-		server = NewServer()
-	})
-	JustBeforeEach(func(){
-		time.After(time.Second)
-		err := server.StartServer(50012)
-		if err != nil{
-			fmt.Println(err)
-		}
-		Expect(err).To(BeNil())
-	})
-	AfterEach(func(){
-		server.StopServer()
-	})
 	Describe("Client connect",func(){
 		Context("when create a client and connect to server",func(){
 			It("client should return non-error",func(){
@@ -66,24 +49,41 @@ var _ = Describe("Client", func() {
 
 		})
 		Context("When chat with a stronger server",func(){
-			BeforeEach(func(){
-				server := NewServer()
-				fmt.Println("this should fun for setup a stronger server")
-				blackHoleChain := make(chan *message.Message)
-				helloHandler := msg.NewHelloHandler(blackHoleChain)
-				err := server.RegisterSlot(message.Message_HELLO,helloHandler)
-				Expect(err).To(BeNil())
-			})
 			It("client should got a non-error response",func(){
-				client := NewClient("127.0.0.1:50012")
+				client := NewClient("127.0.0.1:50013")
 				Expect(client.Connect()).To(BeNil())
 				msg := &message.Message{
 					MessageType:message.Message_HELLO,
 				}
 				response,err := client.Greeting(msg)
-				Expect(response).To(BeNil())
-				Expect(err.Error()).To(Equal(BeNil()))
+				Expect(err).To(BeNil())
+				Expect(response.MessageType).To(Equal(message.Message_HELLO_RESPONSE))
 			})
 		})
 	})
+
+	//Describe("Client BenchMark",func(){
+	//	Context("with a weak server",func(){
+	//		Measure("Greeting Method should be at least in 100000 op/s",func(b Benchmarker){
+	//			var client *Client
+	//			var msg *message.Message
+	//			fmt.Println("init the before each")
+	//			client = NewClient("127.0.0.1:50013)")
+	//			Expect(client.Connect()).To(BeNil())
+	//			msg = &message.Message{
+	//				MessageType:message.Message_HELLO,
+	//			}
+	//			runtime := b.Time("runtime", func() {
+	//				output,err :=  client.Wisper(msg)
+	//				Expect(err).To(BeNil())
+	//				Expect(output.MessageType).To(Equal(message.Message_HELLO))
+	//			})
+	//
+	//			Ω(runtime.Seconds()).Should(BeNumerically("<", 0.2), "SomethingHard() shouldn't take too long.")
+	//
+	//			//b.RecordValue("disk usage (in MB)", HowMuchDiskSpaceDidYouUse())
+	//		},100)
+	//
+	//	})
+	//})
 })

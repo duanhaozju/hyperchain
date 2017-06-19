@@ -28,5 +28,8 @@ func (helloMsgh *HelloMsgHandler)Recive() chan<- *pb.Message{
 }
 
 func (helloMsgh *HelloMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
-	return msg,nil
+	rsp  := &pb.Message{
+		MessageType:pb.Message_HELLO_RESPONSE,
+	}
+	return rsp,nil
 }

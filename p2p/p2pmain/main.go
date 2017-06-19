@@ -5,11 +5,12 @@ import (
 	"hyperchain/p2p/network"
 	"github.com/spf13/viper"
 	"time"
+	"hyperchain/p2p/utils"
 )
 
 func createNetwork()error{
 	conf := viper.New()
-	conf.SetConfigFile("./conf/global.yaml");
+	conf.SetConfigFile(utils.GetProjectPath()+"/p2p/test/conf/global.yaml");
 	err := conf.ReadInConfig()
 	if err != nil{
 		fmt.Errorf("readin config failed, err: %v \n",err);
