@@ -117,14 +117,14 @@ func (nr *nsManagerImpl) init() error {
 func (nr *nsManagerImpl) Start() error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
-	for _, ns := range nr.namespaces {
-		go func(ns Namespace){
-			err := ns.Start()
+
+	for name := range nr.namespaces {
+		go func(name string) {
+			err := nr.StartNamespace(name)
 			if err != nil {
-				//logger.Errorf("namespace %s start failed, %v", name, err)
-				return
+				logger.Errorf("namespace %s start failed, %v", name, err)
 			}
-		}(ns)
+		}(name)
 	}
 
 	if nr.conf.GetBool(common.C_JVM_START) == true {
@@ -141,8 +141,8 @@ func (nr *nsManagerImpl) Stop() error {
 	logger.Noticef("Try to stop NamespaceManager ...")
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
-	for name, ns := range nr.namespaces {
-		err := ns.Stop()
+	for name := range nr.namespaces {
+		err := nr.StopNamespace(name)
 		if err != nil {
 			logger.Errorf("namespace %s stop failed, %v", name, err)
 			return err

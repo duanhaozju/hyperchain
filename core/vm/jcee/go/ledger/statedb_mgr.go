@@ -36,7 +36,6 @@ func (mgr *StateManager) GetStateDb(namespace string) (bool, vm.Database) {
 func (mgr *StateManager) Register(namespace string, stateDb vm.Database) error {
 	mgr.lock.Lock()
 	defer mgr.lock.Unlock()
-
 	if _, exist := mgr.stateDbs[namespace]; exist == true {
 		return DuplicateReigistErr
 	} else {
