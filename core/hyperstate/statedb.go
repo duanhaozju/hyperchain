@@ -720,11 +720,12 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 			content := res.(map[common.Address]*StateObject)
 			if obj := content[addr]; obj != nil {
 				if obj.suicided {
-					self.logger.Debugf("search state object %x in the content cache, but it has been suicide", addr)
+					self.logger.Noticef("search state object %x in the content cache, but it has been suicide", addr)
 					return nil
 				}
-				self.logger.Debugf("search state object %x in the content cache, add it to live objects", addr)
+				self.logger.Noticef("search state object %x in the content cache, add it to live objects", addr)
 				self.setStateObject(obj)
+				self.logger.Criticalf("obj found from cached collection. totally with %d elements", len(obj.cachedStorage))
 				return obj
 			}
 		}
