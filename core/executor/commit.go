@@ -180,16 +180,16 @@ func (executor *Executor) persistTransactions(batch db.Batch, transactions []*ty
 // during the validation, block number and block hash can be incorrect
 func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
 	for _, receipt := range receipts {
-		logs, err := receipt.RetrieveLogs()
-		if err != nil {
-			return err
-		}
-		for _, log := range logs {
-			log.BlockHash = blockHash
-			log.BlockNumber = blockNumber
-		}
-		//TODO: why need a iterate to find the final blockHash and blockNumber
-		receipt.SetLogs(logs)
+		//logs, err := receipt.RetrieveLogs()
+		//if err != nil {
+		//	return err
+		//}
+		//for _, log := range logs {
+		//	log.BlockHash = blockHash
+		//	log.BlockNumber = blockNumber
+		//}
+		////TODO: why need a iterate to find the final blockHash and blockNumber
+		//receipt.SetLogs(logs)
 		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
 			return err
 		}
