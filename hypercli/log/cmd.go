@@ -14,13 +14,11 @@ func NewLogCMD() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "getLevel",
-			Aliases: []string{"-g"},
 			Usage:   "getLevel get a logger's level",
 			Action:  getLevel,
 		},
 		{
 			Name:    "setLevel",
-			Aliases: []string{"-s"},
 			Usage:   "setLevel set a logger's level",
 			Action:  setLevel,
 		},
@@ -38,8 +36,7 @@ func setLevel(c *cli.Context) error {
 		return common.ErrInvalidArgsNum
 	}
 
-	result := client.InvokeCmd(cmd)
-	fmt.Print(result.Result)
+	client.InvokeCmd(cmd)
 	return nil
 }
 
@@ -53,7 +50,6 @@ func getLevel(c *cli.Context) error {
 		fmt.Println(common.ErrInvalidArgsNum)
 		return common.ErrInvalidArgsNum
 	}
-	result := client.InvokeCmd(cmd)
-	fmt.Print(result.Result)
+	client.InvokeCmd(cmd)
 	return nil
 }

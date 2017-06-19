@@ -41,5 +41,8 @@ timeout:
     # How long to wait for a view change quorum before resending (the same) view change
     resendviewchange: 10s
 
+    # How long to clean out-of-data view change message
+    cleanviewchange: 30s
+
     # How long may a update-n take
     update: 4s

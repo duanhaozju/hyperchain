@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+USERNAME="hyperchain"
+PASSWD="hyperchain"
 # debug flag
 #set -evx
 ################
@@ -114,8 +117,6 @@ SERVER_ENV=true
 # false: open many terminals, true: output all logs in one terminal
 MODE=false
 
-USERNAME="satoshi"
-PASSWD="hyperchain"
 PRIMARY=`head -1 ./serverlist.txt`
 MAXNODE=`cat serverlist.txt | wc -l`
 
@@ -300,6 +301,7 @@ EOF
         rm -rf ${HPC_OTHER_HYPERCHAIN_DIR}/node${ni}
     fi
     tar zxvmf node${ni}.tar.gz
+    rm -rf node${ni}.tar.gz
     cp ${HPC_OTHER_HYPERCHAIN_DIR}/hyperchain ${HPC_OTHER_HYPERCHAIN_DIR}/node${ni}
 EOF
     rm -rf node${ni}.tar.gz

@@ -44,6 +44,7 @@ message consensus_message {
         READY_FOR_N = 18;
         AGREE_UPDATE_N = 19;
         UPDATE_N = 20;
+        FINISH_UPDATE = 21;
     }
     Type type = 1;
     bytes payload = 2;
@@ -111,6 +112,7 @@ message view_change {
     repeated PQ qset = 5;
     uint64 replica_id = 6;
     bytes signature = 7;
+    int64 timestamp = 8;
 }
 
 message new_view {
@@ -210,4 +212,10 @@ message update_n {
     uint64 view = 5;
     repeated agree_update_n aset = 6;
     map<uint64, string> xset = 7;
+}
+
+message finish_update {
+    uint64 replica_id = 1;
+    uint64 view = 2;
+    uint64 low_h = 3;
 }

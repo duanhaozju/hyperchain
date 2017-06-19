@@ -26,7 +26,7 @@ func (a *transactionStore) Len() int {
 
 func (a *transactionStore) wrapTransaction(tx *types.Transaction) transactionContainer {
 	return transactionContainer{
-		key: string(tx.TransactionHash),
+		key: byteToString(tx.TransactionHash),
 		tx:  tx,
 	}
 }
@@ -113,9 +113,9 @@ func (pbft *pbftImpl) removeDuplicate(txBatch *TransactionBatch) (newBatch *Tran
 	newBatch = &TransactionBatch{Timestamp: txBatch.Timestamp}
 	txStore = newTransactionStore()
 	for _, tx := range txBatch.Batch {
-		key := hex.EncodeToString(tx.TransactionHash)
+		key := byteToString(tx.TransactionHash)
 		if txStore.has(key) || pbft.checkDuplicateInCache(tx) {
-			pbft.logger.Warningf("Primary %d received duplicate transaction %v", pbft.id, tx)
+			pbft.logger.Warningf("Primary %d received duplicate transaction hash %v", pbft.id, key)
 		} else {
 			txStore.add(tx)
 			newBatch.Batch = append(newBatch.Batch, tx)

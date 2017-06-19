@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
+
+USERNAME="hyperchain"
+
 set -e
-
-USERNAME="satoshi"
-
 # DIRS
 CURRENT_DIR=`pwd`
 HYPERCHAIN_DIR="/home/${USERNAME}"

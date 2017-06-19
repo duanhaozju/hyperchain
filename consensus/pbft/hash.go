@@ -43,9 +43,3 @@ func byteToString(data []byte) (re string) {
 	re = base64.StdEncoding.EncodeToString(data)
 	return
 }
-
-func stringToByte(data string) (re []byte, err error) {
-
-	re, err = base64.StdEncoding.DecodeString(data)
-	return
-}
