@@ -9,7 +9,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"time"
-	"hyperchain/p2p"
+	"fmt"
 )
 
 type hyperchain struct {
@@ -41,7 +41,7 @@ func newHyperchain(argV *argT) *hyperchain {
 
 func (h *hyperchain) start() {
 	logger.Critical("Hyperchain server start...")
-	h.nsMgr.Start()
+	go h.nsMgr.Start()
 	go h.hs.Start()
 	go CheckLicense(h.stopFlag)
 	logger.Critical("Hyperchain server started")
@@ -72,6 +72,11 @@ var (
 
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered in f", r)
+			}
+		}()
 		argv := ctx.Argv().(*argT)
 		hp := newHyperchain(argv)
 		hp.start()

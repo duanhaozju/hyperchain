@@ -3,8 +3,8 @@ package executor
 import (
 	"hyperchain/common"
 	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/params"
+	"hyperchain/core/vm/evm"
+	"hyperchain/core/vm/evm/params"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"sort"
@@ -199,7 +199,7 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 }
 
 // initialize transaction execution environment
-func (executor *Executor) initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
+func (executor *Executor) initEnvironment(state evm.Database, seqNo uint64) evm.Environment {
 	env := make(map[string]string)
 	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
 	env["currentGasLimit"] = "200000000"

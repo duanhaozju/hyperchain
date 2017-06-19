@@ -3,7 +3,6 @@ package types
 import (
 	"fmt"
 	"hyperchain/common"
-	"hyperchain/core/vm"
 	"math/big"
 	"strconv"
 )
@@ -18,12 +17,12 @@ type ReceiptTrans struct {
 	Ret               string         `json:"ret"`
 	Status            Receipt_STATUS `json:"status"`
 	Message           string         `json:"message"`
-	Logs              []vm.LogTrans  `json:"logs"`
+	Logs              []LogTrans  `json:"logs"`
 }
 
 func (receipt Receipt) ToReceiptTrans() (receiptTrans *ReceiptTrans) {
 	logs, err := receipt.RetrieveLogs()
-	var logsValue []vm.LogTrans
+	var logsValue []LogTrans
 	if err != nil {
 		logsValue = nil
 	} else {
@@ -51,11 +50,11 @@ func NewReceipt(root []byte, cumulativeGasUsed *big.Int) *Receipt {
 	return &Receipt{PostState: common.CopyBytes(root), CumulativeGasUsed: i64}
 }
 
-func (r *Receipt) RetrieveLogs() (vm.Logs, error) {
-	return vm.DecodeLogs((*r).Logs)
+func (r *Receipt) RetrieveLogs() (Logs, error) {
+	return DecodeLogs((*r).Logs)
 }
 
-func (r *Receipt) SetLogs(logs vm.Logs) error {
+func (r *Receipt) SetLogs(logs Logs) error {
 	buf, err := (&logs).EncodeLogs()
 	if err != nil {
 		return err

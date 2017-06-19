@@ -27,19 +27,22 @@ timeout:
     batch: 1s
 
     # How long may a request(transaction batch) take between reception and execution, must be greater than the batch timeout
-    request: 3s
+    request: 6s
 
     # How long may a validate (transaction batch) process will take by local Validation
     validate: 1s
 
     # Primary send it to inform aliveness, must be greater than request timeout
-    nullrequest: 4s
+    nullrequest: 6s
 
     # How long may a view change take
-    viewchange: 4s
+    viewchange: 8s
 
     # How long to wait for a view change quorum before resending (the same) view change
     resendviewchange: 10s
+
+    # How long to clean out-of-data view change message
+    cleanviewchange: 30s
 
     # How long may a update-n take
     update: 4s

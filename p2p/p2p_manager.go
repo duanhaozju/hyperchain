@@ -5,6 +5,7 @@ import (
 	"hyperchain/p2p/network"
 	"hyperchain/common"
 	"github.com/spf13/viper"
+	"hyperchain/manager/event"
 )
 
 type P2PManager interface {
