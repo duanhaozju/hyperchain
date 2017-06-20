@@ -154,7 +154,7 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 			if err != nil {
 				// TODO 同上
 				log.Error(err)
-				//break
+				break
 			}
 
 

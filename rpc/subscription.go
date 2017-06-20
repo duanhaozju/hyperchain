@@ -71,12 +71,12 @@ func NewNotifier(codec ServerCodec) *Notifier {
 			active:   make(map[common.ID]*common.Subscription),
 			inactive: make(map[common.ID]*common.Subscription),
 		    }
-	go notifier.eventloop()
+	go eventloop()
 	return notifier
 }
 
-func (n *Notifier) eventloop() {
-	//subchan := common.GetSubChan()
+func eventloop() {
+
 	for {
 		select {
 			case ctx := <- common.CtxChan:
@@ -85,15 +85,15 @@ func (n *Notifier) eventloop() {
 				log.Debugf("current system SubCtxChan length = %v\n", len(common.SubCtxChan))
 				notifier, supported := NotifierFromContext(ctx)
 				if !supported {
-					//return &common.Subscription{}, ErrNotificationsUnsupported
 					subchan.Err <- ErrNotificationsUnsupported
+					continue
 				}
-				//notifier = notifierFromCtx
+
 				rpcSub := notifier.CreateSubscription()
 				log.Debugf("create subscription %v\n", rpcSub.ID)
 				subchan.SubscriptionChan <- rpcSub
-				//append(subchan.SubIDs, rpcSub.ID)
-				go dataListener(ctx)
+
+				go dataListener(subchan, notifier)
 			//case nd := <- common.GetSubChan().NotifyDataChan:
 			//	//notifyMux.Lock()
 			//	fmt.Printf("ready to send feedback: %#v\n", nd)
@@ -120,13 +120,8 @@ func (n *Notifier) eventloop() {
 	}
 }
 
-func dataListener(ctx context.Context) {
-	subchan := common.GetSubChan(ctx)
-	notifier, supported := NotifierFromContext(ctx)
-	if !supported {
-		//return &common.Subscription{}, ErrNotificationsUnsupported
-		subchan.Err <- ErrNotificationsUnsupported
-	}
+//func dataListener(ctx context.Context) {
+func dataListener(subchan *common.Subchan, notifier *Notifier) {
 
 	for {
 		select {
@@ -151,6 +146,8 @@ func dataListener(ctx context.Context) {
 				notifier.Unsubscribe(id)
 				break
 				//common.DelSubChan(ctx) // todo 如果是退订某个事件，不应该删除上下文
+			case <-subchan.Err:
+				break
 		}
 
 	}

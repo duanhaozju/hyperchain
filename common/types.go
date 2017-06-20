@@ -274,7 +274,7 @@ type Subchan struct {
 	SubscriptionChan  chan *Subscription
 	NotifyDataChan    chan NotifyPayload
 	Closed	          chan bool	// connection close
-	Err		  chan error
+	Err		  chan error	// context error
 	Unsubscribe       chan ID	// event unsubscribe
 }
 
@@ -309,5 +309,8 @@ func GetSubChan(ctx context.Context) (*Subchan) {
 }
 
 func DelSubChan(ctx context.Context) {
+	// todo 1. 有可能不存在， 2. 释放资源，是否需要加锁？
+	//close(SubCtxChan[ctx].Closed)
+	close(SubCtxChan[ctx].Err)
 	delete(SubCtxChan, ctx)
 }

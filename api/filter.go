@@ -212,12 +212,13 @@ func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
 	api.filtersMu.Lock()
 	defer api.filtersMu.Unlock()
 
-	api.log.Debug("ready to deal with newBlock event")
+	api.log.Debug("ready to deal with newBlock event request")
 	common.CtxChan <- ctx
 
 	select {
 		case err := <- common.GetSubChan(ctx).Err:
 			//api.subchan.Mux.Unlock()
+			common.DelSubChan(ctx)
 			return common.ID(""), err
 		case rpcSub := <- common.GetSubChan(ctx).SubscriptionChan:
 			//api.subchan.Mux.Unlock()
