@@ -3,6 +3,7 @@ package bucket
 import (
 	"errors"
 	hdb "hyperchain/hyperdb/db"
+	"hyperchain/common"
 )
 
 type rawKey []byte
@@ -29,6 +30,7 @@ func fetchBucketNodeFromDB(db hdb.Database, treePrefix string, bucketKey *Bucket
 // TODO it need to be tested
 func fetchDataNodesFromDBByBucketKey(db hdb.Database, treePrefix string, bucketKey *BucketKey) (dataNodes DataNodes, err error) {
 	dataNodesValue, err := db.Get(append([]byte(treePrefix), append([]byte(DataNodesPrefix), bucketKey.getEncodedBytes()...)...))
+	log := common.GetLogger(db.Namespace(), "bucket")
 	if err != nil {
 		if err.Error() == hdb.DB_NOT_FOUND.Error() {
 			return dataNodes, nil

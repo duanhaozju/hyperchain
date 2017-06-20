@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
 )
 
 type BucketNode struct {
@@ -77,7 +78,7 @@ func (bucketNode *BucketNode) mergeBucketNode(anotherBucketNode *BucketNode) {
 	}
 }
 
-func (bucketNode *BucketNode) computeCryptoHash() []byte {
+func (bucketNode *BucketNode) computeCryptoHash(log *logging.Logger) []byte {
 	bucketNode.lock.RLock()
 	defer bucketNode.lock.RUnlock()
 	cryptoHashContent := []byte{}

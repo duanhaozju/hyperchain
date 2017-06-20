@@ -3,6 +3,7 @@ package bucket
 import (
 	"fmt"
 	"hash/fnv"
+	"github.com/op/go-logging"
 )
 
 // ConfigNumBuckets - config name 'numBuckets' as it appears in yaml file
@@ -46,7 +47,7 @@ type config struct {
 	dataNodeCacheMaxSize   int
 }
 
-func initConfig(configs map[string]interface{}) {
+func initConfig(log *logging.Logger, configs map[string]interface{}) {
 	log.Infof("configs passed during initialization = %#v", configs)
 
 	numBuckets, ok := configs[ConfigNumBuckets].(int)
@@ -127,7 +128,6 @@ func (config *config) getNumBucketsAtLowestLevel() int {
 }
 
 func (config *config) computeParentBucketNumber(bucketNumber int) int {
-	log.Debugf("Computing parent bucket number for bucketNumber [%d]", bucketNumber)
 	parentBucketNumber := bucketNumber / config.getMaxGroupingAtEachLevel()
 	if bucketNumber%config.getMaxGroupingAtEachLevel() != 0 {
 		parentBucketNumber++

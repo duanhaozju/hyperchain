@@ -24,7 +24,6 @@ func newBucketCache(treePrefix string, maxBucketCacheSize int) *BucketCache {
 		isEnabled = false
 		return &BucketCache{TreePrefix: treePrefix, isEnabled: isEnabled}
 	} else {
-		log.Infof("Constructing bucket-cache with max bucket cache size = [%d]", maxBucketCacheSize)
 		cache,_ := lru.New(maxBucketCacheSize)
 		return &BucketCache{TreePrefix: treePrefix, cache: cache, isEnabled: isEnabled}
 	}
