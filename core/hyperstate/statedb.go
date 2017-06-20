@@ -80,9 +80,11 @@ type StateDB struct {
 func New(root common.Hash, db db.Database,  archieveDb db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
 	logger := common.GetLogger(namespace, "state")
 	csc, _ := lru.New(codeSizeCacheSize)
+	// initialize global cache of bucket tree
+	bucket.NewGlobalDataNodeCache(bktConf.GetInt(GlobalDataNodeCacheLength),bktConf.GetInt(GlobalDataNodeCacheSize))
 	// initialize bucket tree
 	bucketPrefix, _ := CompositeStateBucketPrefix()
-	bucketTree := bucket.NewBucketTree(db, string(bucketPrefix), logger)
+	bucketTree := bucket.NewBucketTree(db, string(bucketPrefix))
 	// initialize cache
 	batchCache, _ := common.NewCache()
 	contentCache, _ := common.NewCache()
@@ -103,7 +105,7 @@ func New(root common.Hash, db db.Database,  archieveDb db.Database, bktConf *com
 		archieveCache:     archieveCache,
 		logger:            logger,
 	}
-	err := bucketTree.Initialize(SetupBucketConfig(state.GetBucketSize(STATEDB), state.GetBucketLevelGroup(STATEDB), state.GetBucketCacheSize(STATEDB)))
+	err := bucketTree.Initialize(SetupBucketConfig(state.GetBucketSize(STATEDB), state.GetBucketLevelGroup(STATEDB), state.GetBucketCacheSize(STATEDB), state.GetDataNodeCacheSize(STATEDB)))
 	curHash, err := bucketTree.ComputeCryptoHash()
 	logger.Debugf("latest state root %s", common.Bytes2Hex(curHash))
 	if err != nil {
@@ -127,7 +129,7 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	bucketPrefix, _ := CompositeStateBucketPrefix()
-	bucketTree := bucket.NewBucketTree(self.db, string(bucketPrefix), self.logger)
+	bucketTree := bucket.NewBucketTree(self.db, string(bucketPrefix))
 	state := &StateDB{
 		db:                self.db,
 		codeSizeCache:     self.codeSizeCache,
@@ -139,7 +141,7 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 		bktConf:           self.bktConf,
 		bucketTree:        bucketTree,
 	}
-	bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB), self.GetBucketCacheSize(STATEDB)))
+	bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB), self.GetBucketCacheSize(STATEDB), self.GetDataNodeCacheSize(STATEDB)))
 	return state, nil
 }
 
@@ -486,7 +488,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, []byte) {
 				return false, nil
 			}
 			// Insert into the live set.
-			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)), self.logger)
+			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT), self.GetDataNodeCacheSize(STATEOBJECT)), self.logger)
 			obj.cachedStorage[b] = value
 			self.setStateObject(obj)
 		} else {
@@ -723,9 +725,9 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 					self.logger.Noticef("search state object %x in the content cache, but it has been suicide", addr)
 					return nil
 				}
-				self.logger.Noticef("search state object %x in the content cache, add it to live objects", addr)
+				self.logger.Debugf("search state object %x in the content cache, add it to live objects", addr)
+				self.logger.Debugf("obj found from cached collection. totally with %d elements", len(obj.cachedStorage))
 				self.setStateObject(obj)
-				self.logger.Criticalf("obj found from cached collection. totally with %d elements", len(obj.cachedStorage))
 				return obj
 			}
 		}
@@ -743,7 +745,7 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 	}
 	// Insert into the live set.
 	self.logger.Debugf("find state object %x in database, add it to live objects", addr)
-	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)), self.logger)
+	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT), self.GetDataNodeCacheSize(STATEOBJECT)), self.logger)
 	self.setStateObject(obj)
 	return obj
 }
@@ -771,7 +773,7 @@ func (self *StateDB) MarkStateObjectDirty(addr common.Address) {
 // the given address, it is overwritten and returned as the second return value.
 func (self *StateDB) createObject(addr common.Address) (newobj, prev *StateObject) {
 	prev = self.GetStateObject(addr)
-	newobj = newObject(self, addr, Account{}, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)), self.logger)
+	newobj = newObject(self, addr, Account{}, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT), self.GetDataNodeCacheSize(STATEOBJECT)), self.logger)
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		self.logger.Infof("(+) %x\n", addr)
@@ -907,8 +909,8 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 	for addr := range dirtyStateObjectSet.Iter() {
 		address := addr.(common.Address)
 		prefix, _ := CompositeStorageBucketPrefix(address.Hex())
-		bucketTree := bucket.NewBucketTree(self.db, string(prefix), self.logger)
-		bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)))
+		bucketTree := bucket.NewBucketTree(self.db, string(prefix))
+		bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT), self.GetDataNodeCacheSize(STATEOBJECT)))
 		bucketTree.ClearAllCache()
 		// don't flush into disk util all operations finish
 		bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(WORKINGSET_TYPE_STATEOBJECT, address), big.NewInt(0))
@@ -925,7 +927,7 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 	}
 	// revert state bucket tree
 	tree := self.bucketTree
-	tree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB), self.GetBucketCacheSize(STATEDB)))
+	tree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB), self.GetBucketCacheSize(STATEDB), self.GetDataNodeCacheSize(STATEDB)))
 	tree.ClearAllCache()
 	// don't flush into disk util all operations finish
 	tree.PrepareWorkingSet(journalCache.GetWorkingSet(WORKINGSET_TYPE_STATE, common.Address{}), big.NewInt(0))

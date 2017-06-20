@@ -3,7 +3,6 @@ package bucket
 import (
 	"fmt"
 	"hash/fnv"
-	"github.com/op/go-logging"
 )
 
 // ConfigNumBuckets - config name 'numBuckets' as it appears in yaml file
@@ -15,12 +14,26 @@ const ConfigMaxGroupingAtEachLevel = "maxGroupingAtEachLevel"
 // ConfigHashFunction - config name 'hashFunction'. This is not exposed in yaml file. This configuration is used for testing with custom hash-function
 const ConfigHashFunction = "hashFunction"
 
+// ConfigBucketCacheMaxSize - config name 'bucketCacheMaxSize' as it appears in yaml file
+const ConfigBucketCacheMaxSize = "bucketCacheMaxSize"
+
+// ConfigDataNodeCacheMaxSize - config name 'dataNodeCacheMaxSize' as it appears in yaml file
+const ConfigDataNodeCacheMaxSize = "dataNodeCacheMaxSize"
+
+
 // DefaultNumBuckets - total buckets
 const DefaultNumBuckets = 19
 
 // DefaultMaxGroupingAtEachLevel - Number of max buckets to group at each level.
 // Grouping is started from left. The last group may have less buckets
 const DefaultMaxGroupingAtEachLevel = 10
+
+// DefaultBucketCacheMaxSize - the cache of bucket
+const DefaultBucketCacheMaxSize = 20
+
+// DefaultDataNodeCacheMaxSize - the cache of dataNodes
+const DefaultDataNodesCacheMaxSize = 40
+
 
 var conf *config
 
@@ -29,10 +42,12 @@ type config struct {
 	lowestLevel            int
 	levelToNumBucketsMap   map[int]int
 	hashFunc               hashFunc
+	bucketCacheMaxSize     int
+	dataNodeCacheMaxSize   int
 }
 
-func initConfig(configs map[string]interface{}, logger *logging.Logger) {
-	logger.Infof("configs passed during initialization = %#v", configs)
+func initConfig(configs map[string]interface{}) {
+	log.Infof("configs passed during initialization = %#v", configs)
 
 	numBuckets, ok := configs[ConfigNumBuckets].(int)
 	if !ok {
@@ -48,12 +63,24 @@ func initConfig(configs map[string]interface{}, logger *logging.Logger) {
 	if !ok {
 		hashFunction = fnvHash
 	}
-	conf = newConfig(numBuckets, maxGroupingAtEachLevel, hashFunction)
-	logger.Infof("Initializing bucket tree state implemetation with configurations %+v", conf)
+
+	bucketCacheMaxSize, ok := configs[ConfigBucketCacheMaxSize].(int)
+	if !ok {
+		bucketCacheMaxSize = DefaultBucketCacheMaxSize
+	}
+
+	dataNodeCacheMaxSize, ok := configs[ConfigDataNodeCacheMaxSize].(int)
+	if !ok {
+		dataNodeCacheMaxSize = DefaultDataNodesCacheMaxSize
+	}
+
+	conf = newConfig(numBuckets, maxGroupingAtEachLevel, hashFunction,bucketCacheMaxSize,dataNodeCacheMaxSize)
+	log.Infof("Initializing bucket tree state implemetation with configurations %+v", conf)
 }
 
-func newConfig(numBuckets int, maxGroupingAtEachLevel int, hashFunc hashFunc) *config {
-	conf := &config{maxGroupingAtEachLevel, -1, make(map[int]int), hashFunc}
+func newConfig(numBuckets int, maxGroupingAtEachLevel int, hashFunc hashFunc,bucketCacheMaxSize,dataNodeCacheMaxSize int) *config {
+	conf := &config{ maxGroupingAtEachLevel, -1, make(map[int]int), hashFunc,
+		bucketCacheMaxSize, dataNodeCacheMaxSize }
 	currentLevel := 0
 	numBucketAtCurrentLevel := numBuckets
 	levelInfoMap := make(map[int]int)
@@ -100,6 +127,7 @@ func (config *config) getNumBucketsAtLowestLevel() int {
 }
 
 func (config *config) computeParentBucketNumber(bucketNumber int) int {
+	log.Debugf("Computing parent bucket number for bucketNumber [%d]", bucketNumber)
 	parentBucketNumber := bucketNumber / config.getMaxGroupingAtEachLevel()
 	if bucketNumber%config.getMaxGroupingAtEachLevel() != 0 {
 		parentBucketNumber++

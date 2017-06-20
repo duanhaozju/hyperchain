@@ -44,6 +44,7 @@ func UnmarshalDataNodes(prefix string, bucketKey *BucketKey, data []byte, v inte
 	buffer := proto.NewBuffer(data)
 	length, err := buffer.DecodeFixed64()
 	if err != nil {
+		log.Errorf("decode datanodes failed")
 		return err
 	}
 	for i := 0; i < int(length); i++ {
