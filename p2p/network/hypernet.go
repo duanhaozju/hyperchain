@@ -30,7 +30,14 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 	if config == nil{
 		return nil,errors.New("Readin host config failed, the viper instance is nil")
 	}
-	dns,err := NewDNSResolver(config.GetString("global.p2p.hosts"))
+
+	hostconf := config.GetString("global.p2p.hosts")
+	if !common.FileExist(hostconf){
+		fmt.Errorf("pfile not exist")
+		return nil,errors.New(fmt.Sprintf("connot find the hosts config file: %s",hostconf))
+	}
+
+	dns,err := NewDNSResolver(hostconf)
 	if err != nil {
 		return nil,err
 	}

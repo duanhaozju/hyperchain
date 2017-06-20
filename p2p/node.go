@@ -2,6 +2,6 @@ package p2p
 
 import "hyperchain/p2p/info"
 
-type node struct {
+type Node struct {
 	info *info.Info
 }

@@ -8,6 +8,7 @@ import (
 	"hyperchain/p2p/utils"
 	"hyperchain/p2p/message"
 	"github.com/spf13/viper"
+	"hyperchain/manager/event"
 )
 
 type peerManagerImpl struct {
@@ -18,22 +19,20 @@ type peerManagerImpl struct {
 	idHostMap cmap.ConcurrentMap
 	hyperNet  *network.HyperNet
 
-	node *node
-	ppool *PeersPool
+	node      *Node
+	peerPool  *PeersPool
+
+	eventHub  *event.TypeMux
 }
 //todo rename new function
-func NewPeerManagerImpl(namespace string,peerconfig string) (*peerManagerImpl, error) {
+func NewPeerManagerImpl(namespace string,peercnf *viper.Viper,ev *event.TypeMux, net *network.HyperNet) (*peerManagerImpl, error) {
 	pmi :=  &peerManagerImpl{
 		namespace:       namespace,
 		idHostMap:     cmap.New(),
+		eventHub:ev,
+		hyperNet:net,
 	}
-	conf := viper.New()
-	conf.SetConfigFile(peerconfig)
-	err := conf.ReadInConfig()
-	if err != nil{
-		return nil,err
-	}
-	nodemaps  := conf.Get("nodes").([]interface{})
+	nodemaps  := peercnf.Get("nodes").([]interface{})
 	for _,item := range nodemaps{
 		var err error
 		var id int
@@ -125,7 +124,7 @@ func (pmgr *peerManagerImpl)SetPrimary(_id uint64) error{
 		pmgr.node.info.SetPrimary(true)
 		flag = true
 	}
-	for _,peer := range pmgr.ppool.GetIterator(){
+	for _,peer := range pmgr.peerPool.GetIterator(){
 		if peer.info.GetID() == id {
 			flag = true
 			peer.info.SetPrimary(true)

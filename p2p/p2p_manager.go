@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 	"fmt"
 	"hyperchain/common"
-	"sync"
 )
 
 type P2PManager interface {
@@ -19,50 +18,60 @@ type P2PManager interface {
 
 	Register(namespace string,identifier string,peerID string) error
 
-	GetPeerManager(conf *viper.Viper)(PeerManager,error)
+	GetPeerManager(namespace string,conf *viper.Viper,eventMux *event.TypeMux)(PeerManager,error)
 }
+
+
 type p2pManagerImpl struct {
-	hypernet network.HyperNet
+	hypernet *network.HyperNet
 	conf *viper.Viper
 }
 
-var once sync.Once
 var p2pManager *p2pManagerImpl
 //var logger = common.GetLogger(common.DEFAULT_LOG, "p2p")
 
-func GetP2PManager(conpath string)*PeerManager{
+
+func GetP2PManager(vip *viper.Viper)(P2PManager,error){
+	var err error
 	if p2pManager == nil{
-		once.Do(func() {
-			p2pManager = newP2PManager(conpath)
-		})
+		p2pManager,err = newP2PManager(vip)
+		if err != nil{
+			return nil,errors.New(fmt.Sprintf("there something wrong when get p2pmanager: %s",err.Error()))
+		}
 	}
-	return p2pManager
+	return p2pManager,nil
 }
 
-func newP2PManager(conpath string)*p2pManagerImpl{
+//ClearP2PManager clear the global p2pmanger, this is for test
+func ClearP2PManager()error{
 	if p2pManager != nil{
-		return p2pManager
+		p2pManager = nil
 	}
-	vip := viper.New()
-	vip.SetConfigFile(conpath)
-	err := vip.ReadInConfig()
-	if err != nil{
-		return err
-	}
-	return &p2pManagerImpl{
-		hypernet:network.NewHyperNet(vip),
-		conf:vip,
-	}
-	//TODO setup the p2pManager
 	return nil
 }
+func newP2PManager(vip *viper.Viper)(*p2pManagerImpl,error){
+	if p2pManager != nil{
+		return p2pManager,nil
+	}
+	net,err :=network.NewHyperNet(vip)
+	if err !=nil{
+		return nil,err
+	}
+	p2pmgr :=  &p2pManagerImpl{
+		hypernet:net,
+		conf:vip,
+	}
+	p2pmgr.Start()
 
-func (mgr *p2pManagerImpl)StartUp() (err error) {
+	return p2pmgr,nil
+}
+
+func (mgr *p2pManagerImpl)Start() (err error) {
 	// if there are something wrong cause a panic,
 	// here will recover
 	defer func() {
 		if r := recover();r != nil{
-			err = r
+			err = r.(error)
 		}
 	}()
 	err = mgr.hypernet.InitServer()
@@ -75,43 +84,45 @@ func (mgr *p2pManagerImpl)StartUp() (err error) {
 //can supply all the high level methods.
 //the interface method are same as hyperchain version 1.2, so all the high level
 //interface needn't modify.
-func GetPeerManager(namespace string, config *common.Config,eventMux *event.TypeMux) (PeerManager,error){
+func GetPeerManager(namespace string, peerConfpath string,eventMux *event.TypeMux) (PeerManager,error){
 	if &p2pManager == nil{
 		return nil,errors.New("the P2P manager hasn't been initlized, Fatal error")
 	}
-	peerconf := viper.New()
-	peerconf.SetConfigFile(config.GetString("global.p2p.hosts"))
-	if err := peerconf.ReadInConfig(); err != nil{
-		return nil,err
+
+	if !common.FileExist(peerConfpath){
+		return nil,errors.New(fmt.Sprintf("connot find the peer config file %s", peerConfpath))
 	}
-	return p2pManager.GetPeerManager(namespace,peerconf)
-}
 
-func (p2pmgr *p2pManagerImpl) GetPeerManager(namespace string,conf *viper.Viper)(*peerManagerImpl,error){
-	//TODO return a namespace's peer manager instance
-	routers := conf.GetStringSlice("nodes")
-	for route := range routers{
-		fmt.Println(route)
+	peerConf := viper.New()
+	peerConf.SetConfigFile(peerConfpath)
+	err := peerConf.ReadInConfig()
+	if err != nil{
+		return nil,errors.New(fmt.Sprintf("connot readin the config file %s ,err: %s", peerConfpath,err.Error()))
 	}
-	return nil,nil
+
+	return p2pManager.GetPeerManager(namespace, peerConf,eventMux)
 }
 
-func(p2pmgr *p2pManagerImpl) bind(namespace string,innerID string,peerid string,tmux *event.TypeMux){
+
+//GetPeerManager get a peermanager instance, every namespace has an independent instance
+func (p2pmgr *p2pManagerImpl) GetPeerManager(namespace string,peerConf *viper.Viper,eventMux *event.TypeMux)(PeerManager,error){
+	return NewPeerManagerImpl(namespace,peerConf,eventMux)
+}
+
+
+//Stop stop services under this namespace.
+func(p2pmgr *p2pManagerImpl)Stop() error{
+	return nil
+}
+
+//Restart restart services under this namespace.
+func(p2pmgr *p2pManagerImpl)Restart() error{
+	return nil
+}
+
+
+func(p2pmgr *p2pManagerImpl)Register(namespace string,identifier string,peerID string) error{
+	return nil
 
 }
 
-//func (p2pmgr *p2pManagerImpl) Register(namespace string,identifier string,peerID string) error{
-//	hasher := sha3.New256()
-//	hasher.Write([]byte(namespace))
-//	hasher.Write([]byte(identifier))
-//	//hash := hasher.Sum(nil)
-//	//peer,err := p2pmgr.peerMap.Get(peerID)
-//	//if err != nil{
-//	//	return err
-//	//}
-//
-//}
-
-func (p2pmgr p2pManagerImpl) startNode(){
-
-}

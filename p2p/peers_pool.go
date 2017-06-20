@@ -3,24 +3,31 @@ package p2p
 import (
 	"sync"
 	"github.com/pkg/errors"
+	"github.com/orcaman/concurrent-map"
+	"hyperchain/p2p/utils"
+	"fmt"
 )
 
 type PeersPool struct {
-	rwMutex *sync.RWMutex
-	peers map[int]*peer
+	namespace string
+	vpPool cmap.ConcurrentMap
+	nvpPool cmap.ConcurrentMap
+	//put the exist peers into this exist
+	existMap cmap.ConcurrentMap
 }
 
-func NewPeersPool()*PeersPool {
+func NewPeersPool(namespace string)*PeersPool {
 	return &PeersPool{
-		rwMutex:new(sync.RWMutex),
-		peers:make(map[int]*peer),
+		namespace:namespace,
+		vpPool:cmap.New(),
+		nvpPool:cmap.New(),
+		existMap:cmap.New(),
 	}
 }
 
 func (pool *PeersPool)GetIterator()[]*peer{
-	pool.rwMutex.RLock()
-	defer pool.rwMutex.RUnlock()
 	peerList := make([]*peer,0)
+
 	for _,value := range pool.peers{
 		peerList = append(peerList,value)
 	}
@@ -28,20 +35,29 @@ func (pool *PeersPool)GetIterator()[]*peer{
 }
 
 //add a peer into peers pool instance
-func (pool *PeersPool)AddPeer(id int,p *peer)error{
-	pool.rwMutex.Lock()
-	defer pool.rwMutex.Unlock()
-	if _,ok := pool.peers[id];ok {
-		return errors.New("this peer already in peers pool")
+func (pool *PeersPool)AddVPPeer(id int,p *peer)error{
+	hash := utils.GetPeerHash(pool.namespace,id)
+	if tipe,ok := pool.existMap.Get(hash);ok{
+		return errors.New(fmt.Sprintf("this peer already in peers pool type: [%s]",tipe.(string)))
 	}
-	pool.peers[id] = p
+	pool.vpPool.Set(hash,p)
+	pool.existMap.Set(hash,"VP")
+	return nil
+}
+
+//add a peer into peers pool instance
+func (pool *PeersPool)AddNVPPeer(id int,p *peer)error{
+	hash := utils.GetPeerHash(pool.namespace,id)
+	if tipe,ok := pool.existMap.Get(hash);ok{
+		return errors.New(fmt.Sprintf("this peer already in peers pool type: [%s]",tipe.(string)))
+	}
+	pool.nvpPool.Set(hash,p)
+	pool.existMap.Set(hash,"NVP")
 	return nil
 }
 
 //delete a peer from peers pool instance
 func(pool *PeersPool)DeletePeer(id int)error{
-	pool.rwMutex.Lock()
-	defer pool.rwMutex.Unlock()
 	if _,ok := pool.peers[id];!ok {
 		return  nil
 	}
