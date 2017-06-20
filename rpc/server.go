@@ -58,7 +58,7 @@ type RPCService struct {
 // If singleShot is true it will process a single request, otherwise it will handle
 // requests until the codec returns an error when reading a request (in most cases
 // an EOF). It executes requests in parallel when singleShot is false.
-func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecOption) error {
+func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecOption, ctx context.Context) error {
 
 	var pend sync.WaitGroup
 
@@ -77,16 +77,21 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 		return
 	}()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// if the codec supports notification include a notifier that callbacks can use
-	// to send notification to clients. It is thight to the codec/connection. If the
-	// connection is closed the notifier will stop and cancels all active subscriptions.
-	if options&OptionSubscriptions == OptionSubscriptions {
-		//ctx = context.WithValue(ctx, common.NotifierKey{}, common.NewNotifier(codec))
-		ctx = context.WithValue(ctx, NotifierKey{}, NewNotifier(codec))
-	}
+	//ctx, cancel := context.WithCancel(context.Background())
+	//
+	////defer func() {
+	////	fmt.Println("context cancel()")
+	////	cancel()
+	////}()
+	//defer cancel()
+	//
+	//// if the codec supports notification include a notifier that callbacks can use
+	//// to send notification to clients. It is thight to the codec/connection. If the
+	//// connection is closed the notifier will stop and cancels all active subscriptions.
+	//if options&OptionSubscriptions == OptionSubscriptions {
+	//	//ctx = context.WithValue(ctx, common.NotifierKey{}, common.NewNotifier(codec))
+	//	ctx = context.WithValue(ctx, NotifierKey{}, NewNotifier(codec))
+	//}
 
 	s.codecsMu.Lock()
 	if atomic.LoadInt32(&s.run) != 1 { // server stopped
@@ -190,16 +195,18 @@ func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
 // ServeCodec reads incoming requests from codec, calls the appropriate callback and writes the
 // response back using the given codec. It will block until the codec is closed or the server is
 // stopped. In either case the codec is closed.
-func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
+func (s *Server) ServeCodec(codec ServerCodec, options CodecOption, ctx context.Context) {
 	defer codec.Close()
-	s.serveRequest(codec, false, options)
+	s.serveRequest(codec, false, options, ctx)
 }
 
 // ServeSingleRequest reads and processes a single RPC request from the given codec. It will not
 // close the codec unless a non-recoverable error has occurred. Note, this method will return after
 // a single request has been processed!
 func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
-	s.serveRequest(codec, true, options)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s.serveRequest(codec, true, options, ctx)
 }
 
 // Stop will stop reading new requests, wait for stopPendingRequestTimeout to allow pending requests to finish,
@@ -311,7 +318,7 @@ func (s *Server) handleChannelReq(req *common.RPCRequest) interface{} {
 				// active the subscription after the sub id was successfully sent to the client
 				//activateSub := func() {
 					notifier, _ := NotifierFromContext(req.Ctx)
-					notifier.Activate(response.Reply.(common.ID), req.Service, req.Namespace)
+					notifier.Activate(response.Reply.(common.ID), req.Service, req.Method, req.Namespace)
 				//}
 			}
 

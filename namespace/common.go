@@ -69,8 +69,6 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 
 func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 
-	subch := common.GetSubChan()
-
 	return map[string]*api.API{
 		"tx": {
 			Srvname: "tx",
@@ -111,7 +109,7 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 		"sub": {
 			Srvname: "sub",
 			Version: "0.4",
-			Service: api.NewFilterAPI(namespace, ns.eh, ns.conf, subch),
+			Service: api.NewFilterAPI(namespace, ns.eh, ns.conf),
 		},
 	}
 }

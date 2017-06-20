@@ -150,7 +150,7 @@ func newHttpHandler(srv *Server) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("content-type", "application/json")
-		codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr)
+		codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr, nil)
 		defer codec.Close()
 		srv.ServeSingleRequest(codec, OptionMethodInvocation)
 	}

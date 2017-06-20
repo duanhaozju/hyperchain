@@ -10,12 +10,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	//"crypto/ecdsa"
-	//"hyperchain/core/crypto/primitives"
 	"hyperchain/namespace"
 	"github.com/pkg/errors"
 	"fmt"
 	"reflect"
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -68,10 +67,11 @@ type jsonCodec struct {
 	rw     io.ReadWriteCloser // connection
 	req    *http.Request
 	nr     namespace.NamespaceManager
+	conn   *websocket.Conn
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.NamespaceManager) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.NamespaceManager, conn *websocket.Conn) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
 	return &jsonCodec{
@@ -81,6 +81,7 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 		rw: rwc,
 		req: req,
 		nr: nr,
+		conn: conn,
 	}
 }
 
@@ -183,7 +184,6 @@ func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, comm
 
 	// subscribe are special, they will always use `subscribeMethod` as first param in the payload
 	if strings.HasSuffix(in.Method, SubscribeMethodSuffix) {
-		fmt.Println("==== parseRequest(): this is subsribe =======")
 		reqs := []*common.RPCRequest{{Id: &in.Id, IsPubSub: true}}
 		if len(in.Payload) > 0 {
 			// first param must be subscription name
@@ -195,7 +195,6 @@ func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, comm
 
 			reqs[0].Service, reqs[0].Method = strings.TrimSuffix(in.Method, SubscribeMethodSuffix), subscribeMethod[0]
 			reqs[0].Params = in.Payload
-			fmt.Printf("%#v\n",reqs[0])
 			return reqs, false, nil
 		}
 		return nil, false, &common.InvalidRequestError{Message: "Unable to parse subscription request"}
@@ -254,18 +253,47 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool,
 func (c *jsonCodec) Write(res interface{}) error {
 	c.encMu.Lock()
 	defer c.encMu.Unlock()
-	fmt.Printf("Write: %#v\n", res)
+
 	return c.e.Encode(res)
 }
 
+func (c *jsonCodec) WriteNotify(res interface{}) error {
+	c.encMu.Lock()
+	defer c.encMu.Unlock()
+	log.Debug("======== enter WriteNotify ==========")
+	nw, err := c.conn.NextWriter(websocket.TextMessage)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	if b, err := json.Marshal(res); err != nil {
+		log.Error(err)
+		return err
+	} else {
+		if _, err = nw.Write(b); err != nil {
+			log.Error(err)
+			return err
+		}
+	}
+
+	if err := nw.Close(); err != nil {
+		log.Error(err)
+		return err
+	}
+	return nil
+}
+
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
-func (s *jsonCodec) CreateNotification(subid common.ID, service, namespace string, event interface{}) interface{} {
+func (s *jsonCodec) CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{} {
 	if isHexNum(reflect.TypeOf(event)) {
-		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace, Method: service + NotificationMethodSuffix,
+		//return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace, Method: service + NotificationMethodSuffix,
+		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace, Method: service + serviceMethodSeparator + method,
 			Params: jsonSubscription{Subscription: fmt.Sprintf(`%s`, subid), Result: fmt.Sprintf(`%#x`, event)}}
 	}
 
-	return &jsonNotification{Version: JSONRPCVersion, Method: namespace + NotificationMethodSuffix,
+	//return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace, Method: service + NotificationMethodSuffix,
+	return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace, Method: service + serviceMethodSeparator + method,
 		Params: jsonSubscription{Subscription: fmt.Sprintf(`%s`, subid), Result: event}}
 }
 

@@ -39,9 +39,20 @@ window.onload = function () {
             item.innerHTML = "<b>Connection closed.</b>";
             appendLog(item);
         };
+        var count = 0
         conn.onmessage = function (evt) {
             console.log("received message！")
             console.log(evt)
+            if (count == 0) {
+                var info1 = document.createElement("div");
+                info1.innerText = "==== You have subscribed an event: ====";
+                appendLog(info1);
+            } else if (count == 1) {
+                var info2 = document.createElement("div");
+                info2.innerText = "==== The notification message follows: =====";
+                appendLog(info2);
+            }
+            count++
             var messages = evt.data.split('\n');
             for (var i = 0; i < messages.length; i++) {
                 var item = document.createElement("div");
@@ -98,7 +109,7 @@ body {
 <div id="log"></div>
 <form id="form">
     <input type="submit" value="Send" />
-    <input type="text" id="msg" size="64" value='{"jsonrpc":"2.0","method": "sub_subscribe","id": 1,"namespace":"global","params":["newTxTest", {}]}'/>
+    <input type="text" id="msg" size="64" value='{"jsonrpc":"2.0","method": "sub_subscribe","id": 1,"namespace":"global","params":["newBlock", {}]}'/>
     <!--<input type="text" id="msg" size="64" value='{"jsonrpc":"2.0","method": "sub_newBlockSubscription","id": 1,"namespace":"global","params":[false]}'/>-->
 </form>
 </body>

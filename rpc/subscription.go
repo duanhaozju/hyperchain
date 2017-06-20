@@ -4,7 +4,6 @@ import (
 	"errors"
 	"sync"
 	"context"
-	"fmt"
 	"encoding/binary"
 	"bufio"
 	"time"
@@ -77,39 +76,85 @@ func NewNotifier(codec ServerCodec) *Notifier {
 }
 
 func (n *Notifier) eventloop() {
-	subchan := common.GetSubChan()
+	//subchan := common.GetSubChan()
 	for {
 		select {
-			case ctx := <- subchan.CtxChan:
-				fmt.Println("has got 'context'")
-				n.codec.Write("has got context")
+			case ctx := <- common.CtxChan:
+				log.Debug("receive context")
+				subchan := common.GetSubChan(ctx)
+				log.Debugf("current system SubCtxChan length = %v\n", len(common.SubCtxChan))
 				notifier, supported := NotifierFromContext(ctx)
 				if !supported {
 					//return &common.Subscription{}, ErrNotificationsUnsupported
 					subchan.Err <- ErrNotificationsUnsupported
 				}
-
+				//notifier = notifierFromCtx
 				rpcSub := notifier.CreateSubscription()
-				fmt.Println("start create subscription")
+				log.Debugf("create subscription %v\n", rpcSub.ID)
 				subchan.SubscriptionChan <- rpcSub
-			case nd := <- common.GetSubChan().NotifyDataChan:
-				fmt.Printf("ready to send feedback: %#v\n", nd)
-				n.codec.Write("ready to send feedback")
-				id := nd.SubID
-				data := nd.Data
-
-				sub, active := n.active[id]
-				if active {
-					notification := n.codec.CreateNotification(id, sub.Service, sub.Namespace, data)
-					if err := n.codec.Write(notification); err != nil {
-						fmt.Errorf("%v",err)
-						n.codec.Close()
-						//return err
-					}
-				}
+				//append(subchan.SubIDs, rpcSub.ID)
+				go dataListener(ctx)
+			//case nd := <- common.GetSubChan().NotifyDataChan:
+			//	//notifyMux.Lock()
+			//	fmt.Printf("ready to send feedback: %#v\n", nd)
+			//	id := nd.SubID
+			//	data := nd.Data
+			//	fmt.Printf("%v\n",notifier)
+			//	fmt.Printf("%v\n",len(notifier.active))
+			//	sub, active := notifier.active[id]
+			//	fmt.Printf("len(n.active) = %v, subID: %v,  active = %v\n", len(notifier.active), id, active)
+			//	for  k, v := range notifier.active {
+			//		fmt.Printf("k=%v, v=%v\n", k, v)
+			//	}
+			//	if active {
+			//		notification := notifier.codec.CreateNotification(id, sub.Service, sub.Method, sub.Namespace, data)
+			//		if err := notifier.codec.WriteNotify(notification); err != nil {
+			//			fmt.Errorf("%v",err)
+			//			notifier.codec.Close()
+			//			//return err
+			//		}
+			//	}
+			//	//notifyMux.Unlock()
 
 		}
 	}
+}
+
+func dataListener(ctx context.Context) {
+	subchan := common.GetSubChan(ctx)
+	notifier, supported := NotifierFromContext(ctx)
+	if !supported {
+		//return &common.Subscription{}, ErrNotificationsUnsupported
+		subchan.Err <- ErrNotificationsUnsupported
+	}
+
+	for {
+		select {
+			case nd := <- subchan.NotifyDataChan:
+			//notifyMux.Lock()
+				log.Debugf("ready to send feedback: %#v\n", nd.SubID)
+				id := nd.SubID
+				data := nd.Data
+				sub, active := notifier.active[id]
+				log.Debugf("len(n.active) = %v, subID: %v,  active = %v\n", len(notifier.active), id, active)
+
+				if active {
+					notification := notifier.codec.CreateNotification(id, sub.Service, sub.Method, sub.Namespace, data)
+					if err := notifier.codec.WriteNotify(notification); err != nil {
+						log.Errorf("%v",err)
+						notifier.codec.Close()
+						//return err
+					}
+				}
+			case id := <-subchan.Unsubscribe:
+				log.Debugf("notifier unsubscribe %v \n", id)
+				notifier.Unsubscribe(id)
+				break
+				//common.DelSubChan(ctx) // todo 如果是退订某个事件，不应该删除上下文
+		}
+
+	}
+
 }
 
 // NotifierFromContext returns the Notifier value stored in ctx, if any.
@@ -125,7 +170,6 @@ func NotifierFromContext(ctx context.Context) (*Notifier, bool) {
 func (n *Notifier) CreateSubscription() *common.Subscription {
 	s := &common.Subscription{ID: NewID(), Error: make(chan error)}
 	n.subMu.Lock()
-	fmt.Println(s.ID)
 	n.inactive[s.ID] = s
 	n.subMu.Unlock()
 	return s
@@ -134,30 +178,30 @@ func (n *Notifier) CreateSubscription() *common.Subscription {
 // Notify sends a notification to the client with the given data as payload.
 // If an error occurs the RPC connection is closed and the error is returned.
 //func (n *Notifier) Notify(id common.ID, data interface{}) error {
-func (n *Notifier) Notify() error {
-	n.subMu.RLock()
-	defer n.subMu.RUnlock()
+//func (n *Notifier) Notify() error {
+//	n.subMu.RLock()
+//	defer n.subMu.RUnlock()
+//
+//	nd := <- common.GetSubChan().NotifyDataChan
+//	id := nd.SubID
+//	data := nd.Data
+//
+//	sub, active := n.active[id]
+//	if active {
+//		notification := n.codec.CreateNotification(id, sub.Service, sub.Method, sub.Namespace, data)
+//		if err := n.codec.Write(notification); err != nil {
+//			n.codec.Close()
+//			return err
+//		}
+//	}
+//	return nil
+//}
 
-	nd := <- common.GetSubChan().NotifyDataChan
-	id := nd.SubID
-	data := nd.Data
-
-	sub, active := n.active[id]
-	if active {
-		notification := n.codec.CreateNotification(id, sub.Service, sub.Namespace, data)
-		if err := n.codec.Write(notification); err != nil {
-			n.codec.Close()
-			return err
-		}
-	}
-	return nil
-}
-
-//// Closed returns a channel that is closed when the RPC connection is closed.
+// Closed returns a channel that is closed when the RPC connection is closed.
 //func (n *Notifier) Closed() <-chan interface{} {
 //	return n.codec.Closed()
 //}
-//
+
 // unsubscribe a subscription.
 // If the subscription could not be found ErrSubscriptionNotFound is returned.
 func (n *Notifier) Unsubscribe(id common.ID) error {
@@ -175,11 +219,12 @@ func (n *Notifier) Unsubscribe(id common.ID) error {
 // notifications are dropped. This method is called by the RPC server after
 // the subscription ID was sent to client. This prevents notifications being
 // send to the client before the subscription ID is send to the client.
-func (n *Notifier) Activate(id common.ID, service string, namespace string) {
+func (n *Notifier) Activate(id common.ID, service, method, namespace string) {
 	n.subMu.Lock()
 	defer n.subMu.Unlock()
 	if sub, found := n.inactive[id]; found {
 		sub.Service = service
+		sub.Method = method
 		sub.Namespace = namespace
 		n.active[id] = sub
 		delete(n.inactive, id)

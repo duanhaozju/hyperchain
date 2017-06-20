@@ -257,6 +257,7 @@ type ID string
 type Subscription struct {
 	ID        ID
 	Service string
+	Method  string
 	Namespace string
 	Error       chan error // closed on unsubscribe
 }
@@ -266,12 +267,15 @@ func (s *Subscription) Err() <-chan error {
 	return s.Error
 }
 
+
+
 type Subchan struct {
 	Mux               sync.Mutex
-	CtxChan           chan context.Context
 	SubscriptionChan  chan *Subscription
 	NotifyDataChan    chan NotifyPayload
+	Closed	          chan bool	// connection close
 	Err		  chan error
+	Unsubscribe       chan ID	// event unsubscribe
 }
 
 type NotifyPayload struct {
@@ -279,9 +283,31 @@ type NotifyPayload struct {
 	Data  interface{}
 }
 
-var subchan *Subchan = &Subchan{
-	CtxChan: 	  make(chan context.Context),
-	SubscriptionChan: make(chan *Subscription),
-	NotifyDataChan:   make(chan NotifyPayload),
+var SubCtxChan map[context.Context]*Subchan = make(map[context.Context]*Subchan)
+var CtxChan chan context.Context = make(chan context.Context)
+var mux sync.Mutex
+
+func GetSubChan(ctx context.Context) (*Subchan) {
+	mux.Lock()
+	defer mux.Unlock()
+
+	if subchan, ok := SubCtxChan[ctx]; ok {
+		return subchan
+	} else {
+		subchan := &Subchan{
+			SubscriptionChan: make(chan *Subscription),
+			NotifyDataChan:   make(chan NotifyPayload),
+			Closed:           make(chan bool),
+			Err:              make(chan error),
+			Unsubscribe:      make(chan ID),
+		}
+
+		SubCtxChan[ctx] = subchan
+
+		return subchan
+	}
 }
-func GetSubChan() (*Subchan) {return subchan}
+
+func DelSubChan(ctx context.Context) {
+	delete(SubCtxChan, ctx)
+}

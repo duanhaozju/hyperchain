@@ -10,7 +10,6 @@ import (
 	"hyperchain/core/vm"
 	edb "hyperchain/core/db_utils"
 	"context"
-	"fmt"
 )
 
 type PublicFilterAPI struct {
@@ -21,19 +20,20 @@ type PublicFilterAPI struct {
 	events      *flt.EventSystem
 	filtersMu   sync.Mutex
 	filters     map[string]*flt.Filter
-	subchan     *common.Subchan
+	subscriptions      map[context.Context][]*flt.Subscription
 }
 
-func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config, subchan *common.Subchan) *PublicFilterAPI {
+//func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config, subchan *common.Subchan) *PublicFilterAPI {
+func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config) *PublicFilterAPI {
 	log := common.GetLogger(namespace, "api")
 	api := &PublicFilterAPI{
-		namespace:   namespace,
-		eh:          eh,
-		config:      config,
-		log:         log,
-		events:      eh.GetFilterSystem(),
-		filters:     make(map[string]*flt.Filter),
-		subchan:     subchan,
+		namespace:   	namespace,
+		eh:          	eh,
+		config:      	config,
+		log:         	log,
+		events:     	eh.GetFilterSystem(),
+		filters:     	make(map[string]*flt.Filter),
+		subscriptions:	make(map[context.Context][]*flt.Subscription, 0),
 	}
 	go api.timeoutLoop()
 	return api
@@ -206,52 +206,61 @@ func returnLogs(logs []*vm.Log) []vm.LogTrans {
 }
 
 // ===================== test ================
-func (api *PublicFilterAPI) NewTxTest(ctx context.Context) (common.ID, error) {
+func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
 
-	// todo 1. 对于订阅请求，往common包的subchan管道传入ctx，一定要将管道锁住，直到值被读出来以后才解锁（缺点：无法并发处理）
-	// todo 这样的话得用三个管道，一个ctx，一个subid，一个告知通知的管道。是否可以用事件系统来替代？
+	//api.subchan.Mux.Lock()
+	api.filtersMu.Lock()
+	defer api.filtersMu.Unlock()
 
-	api.subchan.Mux.Lock()
-	fmt.Println("ready to deal with 'context'")
-	api.subchan.CtxChan <- ctx
+	api.log.Debug("ready to deal with newBlock event")
+	common.CtxChan <- ctx
 
 	select {
-	case err := <- api.subchan.Err:
-		api.subchan.Mux.Unlock()
-		return common.ID(""), err
-	case rpcSub := <- api.subchan.SubscriptionChan:
-		api.subchan.Mux.Unlock()
-		fmt.Println("created subscription")
+		case err := <- common.GetSubChan(ctx).Err:
+			//api.subchan.Mux.Unlock()
+			return common.ID(""), err
+		case rpcSub := <- common.GetSubChan(ctx).SubscriptionChan:
+			//api.subchan.Mux.Unlock()
+			api.log.Debugf("receive subscription %v\n", rpcSub.ID)
 
-		go func() {
-			//txHashes := make(chan common.Hash)
-			//pendingTxSub := api.events.SubscribePendingTxEvents(txHashes)
+			go func() {
 
-			blockC   := make(chan common.Hash)
-			blockSub := api.events.NewBlockSubscription(blockC, false)
+				blockC   := make(chan common.Hash)
+				blockSub := api.events.NewBlockSubscription(blockC, false)
+				api.subscriptions[ctx] = append(api.subscriptions[ctx], blockSub)
 
-			for {
-				select {
-				case h := <-blockC:
-					fmt.Println("receive block")
-				        payload := common.NotifyPayload{
-						SubID: rpcSub.ID,
-						Data:  h,
+				for {
+					select {
+					case h := <-blockC:
+						api.log.Debugf("receive block %v\n", h.Hex())
+						payload := common.NotifyPayload{
+							SubID: rpcSub.ID,
+							Data:  h,
+						}
+
+						common.GetSubChan(ctx).NotifyDataChan <- payload
+						//notifier.Notify(rpcSub.ID, h)
+					case <-rpcSub.Err(): // todo 暂时没用到，但是这里也要改,以及subchan的err的处理; 管道重构，不直接引用管道，而是方法返回
+						blockSub.Unsubscribe()
+						//common.GetSubChan(ctx).Unsubscribe <- rpcSub.ID
+						return
+					case <-common.GetSubChan(ctx).Closed: // connection close, unsubscribe all the subscription in this context
+						api.log.Debug("the websocket connection closed, release resource")
+						api.unsubscribe(ctx)
+						common.DelSubChan(ctx) // delete the communication channel of this context
+						return
 					}
-				        api.subchan.NotifyDataChan <- payload
-					//notifier.Notify(rpcSub.ID, h)
-				case <-rpcSub.Err():
-					blockSub.Unsubscribe()
-					return
-				//case <-notifier.Closed():
-				//	pendingTxSub.Unsubscribe()
-				//	return
 				}
-			}
-		}()
+			}()
 
-		return rpcSub.ID, nil
+			return rpcSub.ID, nil
 	}
 
 }
 
+func (api *PublicFilterAPI) unsubscribe(ctx context.Context) {
+	for _,sub := range api.subscriptions[ctx] {
+		sub.Unsubscribe()
+	}
+	delete(api.subscriptions, ctx)
+}

@@ -9,6 +9,7 @@ import (
 	"net"
 	"io"
 	"net/url"
+	"context"
 )
 
 const (
@@ -119,8 +120,24 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 			log.Error(err)
 			return
 		}
-
+		log.Debugf("new websocket connection %p", conn)
 		//defer conn.Close()
+
+
+		//ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(context.Background())
+		defer func() {
+			log.Debugf("cancel context and close websocket connection %p",conn)
+			common.GetSubChan(ctx).Closed <- true
+			cancel()
+			conn.Close()
+		}()
+
+		//if options&OptionSubscriptions == OptionSubscriptions {
+			//ctx = context.WithValue(ctx, common.NotifierKey{}, common.NewNotifier(codec))
+			notifier := NewNotifier(&jsonCodec{})
+			ctx = context.WithValue(ctx, NotifierKey{}, notifier)
+		//}
 
 		for {
 			_, nr, err := conn.NextReader()
@@ -130,7 +147,7 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 					log.Error(err)
 				}
 				// TODO 是否需要做错误返回？
-				//break
+				break
 			}
 
 			nw, err := conn.NextWriter(websocket.TextMessage)
@@ -140,9 +157,10 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 				//break
 			}
 
-			codec := NewJSONCodec(&httpReadWriteCloser{nr, nw}, r, srv.namespaceMgr)
 
-			srv.ServeCodec(codec, OptionMethodInvocation|OptionSubscriptions)
+			codec := NewJSONCodec(&httpReadWriteCloser{nr, nw}, r, srv.namespaceMgr, conn)
+			notifier.codec = codec
+			srv.ServeCodec(codec, OptionMethodInvocation|OptionSubscriptions, ctx)
 		}
 	}
 }
