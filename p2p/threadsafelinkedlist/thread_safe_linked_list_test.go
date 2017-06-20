@@ -13,16 +13,18 @@ func TestNewTSLinkedList(t *testing.T) {
 
 func TestThreadSafeLinkedList_Insert(t *testing.T) {
 	list := NewTSLinkedList("head")
-	list.Insert(1,"second")
-	assert.Equal(t,list.capacity,int32(2))
+	list.Insert(0,"second")
+	assert.Equal(t,list.GetCapcity(),int32(2))
 	list.Walk()
 }
 
 func TestThreadSafeLinkedList_Insert2(t *testing.T) {
 	list := NewTSLinkedList("head")
-	list.Insert(1,"second")
-	list.Insert(2,"three")
-	assert.Equal(t,list.capacity,int32(3))
+	err := list.Insert(0,"second")
+	assert.Nil(t,err)
+	err = list.Insert(1,"three")
+	assert.Nil(t,err)
+	assert.Equal(t,list.GetCapcity(),int32(3))
 	list.Walk()
 }
 
@@ -31,7 +33,7 @@ func TestThreadSafeLinkedList_Insert3(t *testing.T) {
 	list.Insert(0,"second")
 	list.Insert(1,"three")
 	list.Insert(1,"append three")
-	assert.Equal(t,list.capacity,int32(4))
+	assert.Equal(t,list.GetCapcity(),int32(4))
 	list.Walk()
 }
 
@@ -41,17 +43,22 @@ func TestThreadSafeLinkedList_Insert4(t *testing.T) {
 	list.Insert(1,"three")
 	list.Insert(1,"replace three")
 	list.Insert(2,"replace four")
-	assert.Equal(t,list.capacity,int32(5))
+	assert.Equal(t,list.GetCapcity(),int32(5))
 	list.Walk()
 }
 
+func TestThreadSafeLinkedList_Insert5(t *testing.T) {
+	list := NewTSLinkedList("head")
+	err := list.Insert(1,"second")
+	assert.NotNil(t,err)
+}
 func TestThreadSafeLinkedList_Remove(t *testing.T) {
 	list := NewTSLinkedList("head")
 	list.Insert(0,"second")
 	list.Insert(1,"three")
 	list.Insert(1,"replace three")
 	list.Insert(2,"replace four")
-	assert.Equal(t,list.capacity,int32(5))
+	assert.Equal(t,list.GetCapcity(),int32(5))
 	list.Walk()
 	v,e := list.Remove(2)
 	assert.Nil(t,e)
@@ -88,7 +95,7 @@ func TestThreadSafeLinkedList_Contains(t *testing.T) {
 	list.Insert(1,"three")
 	list.Insert(1,"replace three")
 	list.Insert(2,"replace four")
-	assert.Equal(t,list.capacity,int32(5))
+	assert.Equal(t,list.GetCapcity(),int32(5))
 	list.Walk()
 	idx,e := list.Contains("three")
 	assert.Nil(t,e)
