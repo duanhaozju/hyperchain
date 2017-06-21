@@ -277,11 +277,11 @@ func CompileProgram(program *Program) (err error) {
 
 // RunProgram runs the program given the environment and contract and returns an
 // error if the execution failed (non-consensus)
-func RunProgram(evm *EVM, program *Program, env Environment, contract *Contract, input []byte) ([]byte, error) {
+func RunProgram(evm *EVM, program *Program, env vm.Environment, contract *Contract, input []byte) ([]byte, error) {
 	return runProgram(evm, program, 0, NewMemory(), newstack(), env, contract, input)
 }
 
-func runProgram(evm *EVM, program *Program, pcstart uint64, mem *Memory, stack *stack, env Environment, contract *Contract, input []byte) ([]byte, error) {
+func runProgram(evm *EVM, program *Program, pcstart uint64, mem *Memory, stack *stack, env vm.Environment, contract *Contract, input []byte) ([]byte, error) {
 	contract.Input = input
 
 	var (
@@ -392,9 +392,9 @@ func jitCalculateGasAndSize(env vm.Environment, contract *Contract, instr instru
 		// 1. From a zero-value address to a non-zero value         (NEW VALUE)
 		// 2. From a non-zero value address to a zero-value address (DELETE)
 		// 3. From a non-zero to a non-zero                         (CHANGE)
-		if common.EmptyHash(val) && !common.EmptyHash(common.BigToHash(y)) {
+		if len(val) == 0 && !common.EmptyHash(common.BigToHash(y)) {
 			g = params.SstoreSetGas
-		} else if !common.EmptyHash(val) && common.EmptyHash(common.BigToHash(y)) {
+		} else if len(val) != 0 && common.EmptyHash(common.BigToHash(y)) {
 			statedb.AddRefund(params.SstoreRefundGas)
 
 			g = params.SstoreClearGas

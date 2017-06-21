@@ -195,7 +195,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_REQUEST_WORLD_STATE:
 		executor.logger.Notice("inform p2p sync world state")
 		if !checkParams([]reflect.Kind{reflect.Uint64}, message...) {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		request := &WsRequest{
 			Target:      message[0].(uint64),
@@ -204,7 +204,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		}
 		payload, err := proto.Marshal(request)
 		if err != nil {
-			return MarshalFailedErr
+			return er.MarshalFailedErr
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
@@ -215,15 +215,15 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_SEND_WORLD_STATE_HANDSHAKE:
 		executor.logger.Notice("inform p2p send world state handshake packet")
 		if len(message) != 1 {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		hs, ok := message[0].(*WsHandshake)
 		if ok == false {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		payload, err := proto.Marshal(hs)
 		if err != nil {
-			return MarshalFailedErr
+			return er.MarshalFailedErr
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
@@ -234,15 +234,15 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_SEND_WS_ACK:
 		executor.logger.Notice("inform p2p send ws ack")
 		if len(message) != 1 {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		ack, ok := message[0].(*WsAck)
 		if ok == false {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		payload, err := proto.Marshal(ack)
 		if err != nil {
-			return MarshalFailedErr
+			return er.MarshalFailedErr
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
@@ -253,15 +253,15 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_SEND_WORLD_STATE:
 		executor.logger.Notice("inform p2p sync world state")
 		if len(message) != 1 {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		ws, ok := message[0].(*Ws)
 		if ok == false {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		payload, err := proto.Marshal(ws)
 		if err != nil {
-			return MarshalFailedErr
+			return er.MarshalFailedErr
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
@@ -301,7 +301,7 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		return nil
 	case FILTER_SNAPSHOT_RESULT:
 		if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		executor.helper.PostExternal(event.FilterSnapshotEvent{
 			FilterId: message[1].(string),
@@ -311,7 +311,7 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		return nil
 	case FILTER_DELETE_SNAPSHOT:
 		if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		executor.helper.PostExternal(event.FilterDeleteSnapshotEvent{
 			FilterId: message[1].(string),
@@ -321,7 +321,7 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		return nil
 	case FILTER_ARCHIVE:
 		if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		executor.helper.PostExternal(event.FilterArchive{
 			FilterId: message[1].(string),

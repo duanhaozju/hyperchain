@@ -376,7 +376,7 @@ func (evm *EVM) RunPrecompiled(p *PrecompiledAccount, input []byte, contract *Co
 	}
 }
 
-func (evm *EVM) Finalise() {
+func (evm *EVM) Finalize() {
 	if evm.cfg.Debug {
 		fmt.Fprintf(os.Stdout, "[[   Dirty Accounts %08d:   ]]\n", len(evm.logger.changedValues))
 		for addr, entries := range evm.logger.changedValues {

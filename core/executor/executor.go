@@ -19,7 +19,7 @@ import (
 type Executor struct {
 	namespace  string // namespace tag
 	db         db.Database
-	archieveDb db.Database
+	archiveDb  db.Database
 	commonHash crypto.CommonHash
 	encryption crypto.Encryption
 	conf       *common.Config // block configuration
@@ -27,7 +27,7 @@ type Executor struct {
 	hashUtils  ExecutorHashUtil
 	cache      ExecutorCache
 	helper     *Helper
-	statedb    evm.Database
+	statedb    vm.Database
 	logger     *logging.Logger
 	exception  ExceptionHandler
 	jvmCli     jvm.ContractExecutor
@@ -147,7 +147,7 @@ func initializeExecutorStateDb(executor *Executor) error {
 	return nil
 }
 
-func (executor *Executor) initHistoryStateDb(snapshotId string) (evm.Database, error, func()) {
+func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, error, func()) {
 	// never forget to close db
 	if err, manifest := executor.snapshotReg.rwc.Read(snapshotId); err != nil {
 		return nil, err, nil

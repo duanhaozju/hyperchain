@@ -21,9 +21,6 @@ const ConfigNumBuckets = "numBuckets"
 // ConfigMaxGroupingAtEachLevel - config name 'maxGroupingAtEachLevel' as it appears in yaml file
 const ConfigMaxGroupingAtEachLevel = "maxGroupingAtEachLevel"
 
-// ConfigCacheSize - config name "bucketCacheSize" as it appears in yaml file
-const ConfigCacheSize = "bucketCacheSize"
-
 // ConfigBucketCacheMaxSize - config name 'bucketCacheMaxSize' as it appears in yaml file
 const ConfigBucketCacheMaxSize = "bucketCacheMaxSize"
 

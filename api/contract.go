@@ -8,7 +8,6 @@ import (
 	"github.com/juju/ratelimit"
 	"hyperchain/common"
 	"hyperchain/core/types"
-	"hyperchain/core/vm/evm"
 	"hyperchain/core/vm/evm/compiler"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/manager/event"
@@ -17,6 +16,8 @@ import (
 	"time"
 	"strconv"
 	edb "hyperchain/core/db_utils"
+	"strings"
+	"hyperchain/core/vm"
 )
 
 type Contract struct {

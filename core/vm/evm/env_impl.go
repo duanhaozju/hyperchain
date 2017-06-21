@@ -2,15 +2,9 @@ package evm
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/core/state"
 	"hyperchain/core/types"
-	"hyperchain/crypto"
-	"hyperchain/core/vm/evm"
 	"hyperchain/crypto"
 	"math/big"
-	"hyperchain/hyperdb/db"
-	"hyperchain/core/types"
-	"github.com/op/go-logging"
 	"hyperchain/core/vm"
 )
 
@@ -117,34 +111,23 @@ func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger
 		txHash:    txHash,
 		Gas:       new(big.Int),
 	}
-	return env
-}
-
-func NewEnvFromMap(ruleSet RuleSet, state evm.Database, envValues map[string]string, logger *logging.Logger) *Env {
-	env := NewEnv(ruleSet, state)
-	env.time = common.Big(envValues["currentTimestamp"])
-	env.gasLimit = common.Big(envValues["currentGasLimit"])
-	env.number = common.Big(envValues["currentNumber"])
-	env.Gas = new(big.Int)
-	var cfg evm.Config
+	var cfg Config
 	if EnableDebug {
-		cfg = evm.Config{
+		cfg = Config{
 			EnableJit: EnableJit,
 			ForceJit:  ForceJit,
 			Debug:     EnableDebug,
-			Logger:    evm.LogConfig{
+			Logger:    LogConfig{
 				Collector: env,
 			},
 		}
 	} else {
-		cfg = evm.Config{
+		cfg = Config{
 			EnableJit: EnableJit,
 			ForceJit:  ForceJit,
 		}
 	}
-	env.evm = evm.New(env, cfg)
-	env.logger = logger
-
+	env.evm = New(env, cfg)
 	return env
 }
 
@@ -174,11 +157,11 @@ func (self *Env) SetDepth(i int) { self.depth = i }
 func (self *Env) CanTransfer(from common.Address, balance *big.Int) bool {
 	return self.state.GetBalance(from).Cmp(balance) >= 0
 }
-func (self *Env) AddStructLog(log evm.StructLog) {
+func (self *Env) AddStructLog(log StructLog) {
 	self.logs = append(self.logs, log)
 }
 func (self *Env) DumpStructLog() {
-	evm.StdErrFormat(self.logs)
+	StdErrFormat(self.logs)
 }
 
 func (self *Env) MakeSnapshot() interface{} {

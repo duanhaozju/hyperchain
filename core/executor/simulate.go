@@ -4,13 +4,13 @@ import (
 	"github.com/golang/protobuf/proto"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
-	"hyperchain/core/vm/evm"
+	"hyperchain/core/vm"
 )
 
 // run transaction in a sandbox
 // execution result will not been add to database
 func (executor *Executor) RunInSandBox(tx *types.Transaction, snapshotId string) error {
-	var statedb evm.Database
+	var statedb vm.Database
 	var err error
 	var callback func()
 	if snapshotId == "" {

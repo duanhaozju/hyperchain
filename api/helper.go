@@ -10,8 +10,6 @@ import (
 	"math/big"
 	"path"
 	"time"
-	edb "hyperchain/core/db_utils"
-	"hyperchain/hyperdb"
 	"hyperchain/core/vm"
 )
 
@@ -101,7 +99,7 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, archieveDb, conf, height, namespace)
 }
 
-func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte, height uint64, namespace string) (evm.Database, error) {
+func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte, height uint64, namespace string) (vm.Database, error) {
 	db, err := hyperdb.NewDatabase(conf, path.Join("snapshots", "SNAPSHOT_"+filterId), hyperdb.GetDatabaseType(conf), namespace)
 	if err != nil {
 		return nil, err

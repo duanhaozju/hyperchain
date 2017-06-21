@@ -14,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	cm "hyperchain/core/common"
-	"hyperchain/core/vm/evm"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
 	"hyperchain/tree/bucket"
@@ -1150,7 +1149,7 @@ func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
 		if err != nil {
 			return common.Hash{}, err
 		}
-		stateObject := newObject(s, address, account, s.MarkStateObjectDirty, true, SetupBucketConfig(s.GetBucketSize(STATEOBJECT), s.GetBucketLevelGroup(STATEOBJECT), s.GetBucketCacheSize(STATEOBJECT)), s.logger)
+		stateObject := newObject(s, address, account, s.MarkStateObjectDirty, true, SetupBucketConfig(s.GetBucketSize(STATEOBJECT), s.GetBucketLevelGroup(STATEOBJECT), s.GetBucketCacheSize(STATEOBJECT), s.GetDataNodeCacheSize(STATEOBJECT)), s.logger)
 		dirtyStorage := bucket.NewKVMap()
 		iter := stateObject.db.db.NewIterator(GetStorageKeyPrefix(stateObject.address.Bytes()))
 		for iter.Next() {
@@ -1196,7 +1195,7 @@ func (s *StateDB) Apply(db db.Database, batch db.Batch, expect common.Hash) erro
 					continue
 				}
 				addr := common.BytesToAddress(blob)
-				obj := newObject(s, addr, account, s.MarkStateObjectDirty, true, SetupBucketConfig(s.GetBucketSize(STATEOBJECT), s.GetBucketLevelGroup(STATEOBJECT), s.GetBucketCacheSize(STATEOBJECT)), s.logger)
+				obj := newObject(s, addr, account, s.MarkStateObjectDirty, true, SetupBucketConfig(s.GetBucketSize(STATEOBJECT), s.GetBucketLevelGroup(STATEOBJECT), s.GetBucketCacheSize(STATEOBJECT), s.GetDataNodeCacheSize(STATEOBJECT)), s.logger)
 				s.setStateObject(obj)
 				obj.onDirty(addr)
 			}
@@ -1214,8 +1213,9 @@ func (s *StateDB) Apply(db db.Database, batch db.Batch, expect common.Hash) erro
 					continue
 				}
 				key := common.BytesToHash(blob)
-				value := common.BytesToHash(iter.Value())
-				s.SetState(addr, key, value, 0)
+				val := make([]byte, len(iter.Value()))
+				copy(val, iter.Value())
+				s.SetState(addr, key, val, 0)
 			}
 			iter.Release()
 		} else if entry == "-code" {
