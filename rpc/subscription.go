@@ -53,11 +53,11 @@ func NewNotifier(codec ServerCodec) *Notifier {
 			active:   make(map[common.ID]*common.Subscription),
 			inactive: make(map[common.ID]*common.Subscription),
 		    }
-	go eventloop()
+	go waittingReq()
 	return notifier
 }
 
-func eventloop() {
+func waittingReq() {
 
 	for {
 		select {
@@ -75,13 +75,13 @@ func eventloop() {
 				log.Debugf("create subscription %v\n", rpcSub.ID)
 				subchan.SubscriptionChan <- rpcSub
 
-				go dataListener(subchan, notifier, rpcSub)
+				go waittingSubData(subchan, notifier, rpcSub)
 
 		}
 	}
 }
 
-func dataListener(subchan *common.Subchan, notifier *Notifier, rpcSub *common.Subscription) {
+func waittingSubData(subchan *common.Subchan, notifier *Notifier, rpcSub *common.Subscription) {
 
 	for {
 		select {
