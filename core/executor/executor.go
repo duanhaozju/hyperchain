@@ -123,6 +123,7 @@ func (executor *Executor) initialize() error {
 	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()
 	go executor.syncReplica()
+	go executor.jvmCli.Start()
 	return nil
 }
 
