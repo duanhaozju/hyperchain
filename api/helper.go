@@ -5,12 +5,14 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/hyperstate"
-	"hyperchain/core/vm/evm"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/hyperdb"
 	"math/big"
 	"path"
 	"time"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/hyperdb"
+	"hyperchain/core/vm"
 )
 
 const (
@@ -82,7 +84,7 @@ func getPaillierPublickey(config *common.Config) hmEncryption.PaillierPublickey 
 	}
 }
 
-func NewStateDb(conf *common.Config, namespace string) (evm.Database, error) {
+func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	height := edb.GetHeightOfChain(namespace)
 	latestBlk, err := edb.GetBlockByNumber(namespace, height)
 	if err != nil {

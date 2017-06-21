@@ -71,6 +71,7 @@ global:
             core: "NOTICE"
             hyperdb: "NOTICE"
             common/hyper_logger: "NOTICE"
+            hyperstate: "DEBUG"
 
     ######################################################
     # configs related to the executor                    #
@@ -89,14 +90,19 @@ global:
             force_consistency: false
             threshold: 0
         buckettree:
+            global:
+                globalDataNodeCacheSize: 10000
+                globalDataNodeCacheLength: 20
             state:
                 size: 1000003
                 levelGroup: 5
-                cacheSize: 500    # 100 MB
+                bucketCacheSize: 100000
+                dataNodeCacheSize: 100000
             storage:
                 size: 1000003
                 levelGroup: 5
-                cacheSize: 500    # 100 MB
+                bucketCacheSize: 100000
+                dataNodeCacheSize: 100000
     ######################################################
     # configs related to the consensus                   #
     #                                                    #

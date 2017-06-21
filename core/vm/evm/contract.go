@@ -6,16 +6,9 @@ import (
 	"math/big"
 
 	"hyperchain/common"
+	"hyperchain/core/vm"
 )
 
-// ContractRef is a reference to the contract's backing object
-type ContractRef interface {
-	ReturnGas(*big.Int, *big.Int)
-	Address() common.Address
-	Value() *big.Int
-	SetCode(common.Hash, []byte)
-	ForEachStorage(callback func(key, value common.Hash) bool) map[common.Hash]common.Hash
-}
 
 // Contract represents an ethereum contract in the state database. It contains
 // the the contract code, calling arguments. Contract implements ContractRef
@@ -24,8 +17,8 @@ type Contract struct {
 	// contract. However when the "call method" is delegated this value
 	// needs to be initialised to that of the caller's caller.
 	CallerAddress common.Address
-	caller        ContractRef
-	self          ContractRef
+	caller        vm.ContractRef
+	self          vm.ContractRef
 
 	jumpdests destinations // result of JUMPDEST analysis.
 
@@ -44,7 +37,7 @@ type Contract struct {
 }
 
 // NewContract returns a new contract environment for the execution of EVM.
-func NewContract(caller ContractRef, object ContractRef, value, gas, price *big.Int, opcode int32) *Contract {
+func NewContract(caller vm.ContractRef, object vm.ContractRef, value, gas, price *big.Int, opcode int32) *Contract {
 	c := &Contract{CallerAddress: caller.Address(), caller: caller, self: object, Args: nil, Opcode: opcode}
 
 	if parent, ok := caller.(*Contract); ok {
@@ -155,7 +148,7 @@ func (self *Contract) SetCallCode(addr *common.Address, code []byte) {
 
 // EachStorage iterates the contract's storage and calls a method for every key
 // value pair.
-func (self *Contract) ForEachStorage(cb func(key, value common.Hash) bool) map[common.Hash]common.Hash {
+func (self *Contract) ForEachStorage(cb func(key common.Hash, value []byte) bool) map[common.Hash][]byte {
 	return self.caller.ForEachStorage(cb)
 }
 

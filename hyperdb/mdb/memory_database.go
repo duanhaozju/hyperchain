@@ -6,6 +6,7 @@ import (
 	"errors"
 	"hyperchain/hyperdb/db"
 	"sync"
+	"hyperchain/common"
 )
 
 //CopyBytes Copy and return []byte.
@@ -35,7 +36,7 @@ func (db *MemDatabase) Put(key []byte, value []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
-	db.key = append(db.key, string(key))
+	db.key = append(db.key, common.Bytes2Hex(key))
 	db.value = append(db.value, value)
 	return nil
 }
@@ -51,7 +52,7 @@ func (db *MemDatabase) Get(key []byte) ([]byte, error) {
 	defer db.lock.RUnlock()
 
 	for k, v := range db.key {
-		if v == string(key) {
+		if v == common.Bytes2Hex(key) {
 			return db.value[k], nil
 		}
 	}
@@ -74,7 +75,7 @@ func (db *MemDatabase) Delete(key []byte) error {
 	defer db.lock.Unlock()
 
 	for k, v := range db.key {
-		if v == string(key) {
+		if v == common.Bytes2Hex(key) {
 			db.key = append(db.key[0:k], db.key[k+1:len(db.key)]...)
 			db.value = append(db.value[0:k], db.value[k+1:len(db.value)]...)
 		}
@@ -102,8 +103,12 @@ func (db *MemDatabase) NewIterator(str []byte) db.Iterator {
 	var iter Iter
 	iter.index = -1
 	iter.ptr = db
-	iter.str = string(str)
+	iter.str = common.Bytes2Hex(str)
 	return &iter
+}
+
+func (db *MemDatabase) Scan(begin, end []byte) db.Iterator {
+	return &Iter{}
 }
 
 func (iter *Iter) Next() bool {
@@ -180,18 +185,24 @@ func (b *memBatch) Write() error {
 
 	b.db.lock.Lock()
 	defer b.db.lock.Unlock()
-
+	var isUpdate bool
 	for _, kv := range b.writes {
 		if kv.v != nil {
 			for idx, k := range b.db.key {
-				if k == string(kv.k) {
+				if k == common.Bytes2Hex(kv.k) {
 					b.db.value[idx] = kv.v
+					isUpdate = true
 					break
 				}
 			}
+			if !isUpdate {
+				b.db.key = append(b.db.key, common.Bytes2Hex(kv.k))
+				b.db.value = append(b.db.value, kv.v)
+			}
+			isUpdate = false
 		} else {
 			for idx, k := range b.db.key {
-				if k == string(kv.k) {
+				if k == common.Bytes2Hex(kv.k) {
 					b.db.key = append(b.db.key[0:idx], b.db.key[idx+1:len(b.db.key)]...)
 					b.db.value = append(b.db.value[0:idx], b.db.value[idx+1:len(b.db.value)]...)
 					break

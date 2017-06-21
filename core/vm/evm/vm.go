@@ -10,6 +10,7 @@ import (
 	"hyperchain/core/crypto"
 	"os"
 	"hyperchain/core/vm/evm/params"
+	"hyperchain/core/vm"
 )
 
 // Config are the configuration options for the EVM
@@ -25,7 +26,7 @@ type Config struct {
 // The EVM will run the byte code VM or JIT VM based on the passed
 // configuration.
 type EVM struct {
-	env       Environment
+	env       vm.Environment
 	jumpTable vmJumpTable
 	cfg       Config
 
@@ -33,7 +34,7 @@ type EVM struct {
 }
 
 // New returns a new instance of the EVM.
-func New(env Environment, cfg Config) *EVM {
+func New(env vm.Environment, cfg Config) *EVM {
 	var logger *Logger
 	if cfg.Debug {
 		logger = newLogger(cfg.Logger, env)
@@ -41,14 +42,19 @@ func New(env Environment, cfg Config) *EVM {
 
 	return &EVM{
 		env:       env,
-		jumpTable: newJumpTable(env.RuleSet(), env.BlockNumber()),
+		jumpTable: newJumpTable(),
 		cfg:       cfg,
 		logger:    logger,
 	}
 }
 
 // Run loops and evaluates the contract's code with the given input data
-func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
+func (evm *EVM) Run(context vm.VmContext, input []byte) (ret []byte, err error) {
+	var contract *Contract
+	var ok bool
+	if contract, ok = context.(*Contract); !ok {
+		return nil, nil
+	}
 	// 1.设置虚拟机深度+1
 	evm.env.SetDepth(evm.env.Depth() + 1)
 	defer evm.env.SetDepth(evm.env.Depth() - 1)
@@ -233,7 +239,7 @@ func (evm *EVM) Run(contract *Contract, input []byte) (ret []byte, err error) {
 
 // calculateGasAndSize calculates the required given the opcode and stack items calculates the new memorysize for
 // the operation. This does not reduce gas or resizes the memory.
-func calculateGasAndSize(env Environment, contract *Contract, caller ContractRef, op OpCode, statedb Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
+func calculateGasAndSize(env vm.Environment, contract *Contract, caller vm.ContractRef, op OpCode, statedb vm.Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
 	var (
 		//gas                 = new(big.Int)
 		newMemSize *big.Int = new(big.Int)

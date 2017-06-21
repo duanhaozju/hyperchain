@@ -7,30 +7,32 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/hyperstate"
-	"hyperchain/core/vm/evm"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
 	"path"
+	"hyperchain/core/vm"
+	"hyperchain/core/vm/jcee/go"
 )
 
 type Executor struct {
-	namespace   string // namespace tag
-	db          db.Database
-	archiveDb   db.Database
-	commonHash  crypto.CommonHash
-	encryption  crypto.Encryption
-	conf        *common.Config // block configuration
-	status      ExecutorStatus
-	hashUtils   ExecutorHashUtil
-	cache       ExecutorCache
-	helper      *Helper
-	statedb     evm.Database
-	logger      *logging.Logger
+	namespace  string // namespace tag
+	db         db.Database
+	archieveDb db.Database
+	commonHash crypto.CommonHash
+	encryption crypto.Encryption
+	conf       *common.Config // block configuration
+	status     ExecutorStatus
+	hashUtils  ExecutorHashUtil
+	cache      ExecutorCache
+	helper     *Helper
+	statedb    evm.Database
+	logger     *logging.Logger
+	exception  ExceptionHandler
+	jvmCli     jvm.ContractExecutor
 	snapshotReg *SnapshotRegistry
 	archiveMgr  *ArchiveManager
-	exception   ExceptionHandler
 }
 
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) (*Executor, error) {
@@ -44,6 +46,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 		commonHash: kec256Hash,
 		encryption: encryption,
 		helper:     helper,
+		jvmCli:     jvm.NewContractExecutor(conf, namespace),
 		exception:  NewExceptionHandler(helper),
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
@@ -129,6 +132,7 @@ func (executor *Executor) finailize() error {
 	go executor.setCommitExit()
 	go executor.setReplicaSyncExit()
 	go executor.snapshotReg.Stop()
+	go executor.jvmCli.Stop()
 	return nil
 }
 
@@ -168,7 +172,7 @@ func (executor *Executor) initHistoryStateDb(snapshotId string) (evm.Database, e
 }
 
 // NewStateDb - create a latest state.
-func (executor *Executor) newStateDb() (evm.Database, error) {
+func (executor *Executor) newStateDb() (vm.Database, error) {
 	blk, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
@@ -180,4 +184,9 @@ func (executor *Executor) newStateDb() (evm.Database, error) {
 		return nil, err
 	}
 	return stateDb, nil
+}
+
+// FetchStateDb - fetch state db
+func (executor *Executor) FetchStateDb() vm.Database {
+	return executor.statedb
 }

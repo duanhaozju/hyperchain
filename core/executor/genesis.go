@@ -1,22 +1,22 @@
 package executor
 
 import (
-	"github.com/buger/jsonparser"
 	"io/ioutil"
+	"github.com/buger/jsonparser"
 	"math/big"
 	"time"
-	"hyperchain/core/vm/evm"
 	"hyperchain/core/hyperstate"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
 	"strconv"
+	"hyperchain/core/types"
+	"hyperchain/hyperdb/db"
+	"hyperchain/hyperdb"
+	"hyperchain/core/vm"
 )
 
 const (
-	genesisPath = "global.configs.genesis"
+	genesisPath  = "global.configs.genesis"
 )
 
 // CreateInitBlock - create genesis for a specific namespace.
@@ -75,7 +75,7 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 }
 
 // NewStateDb - create a empty stateDb handler.
-func NewStateDb(conf *common.Config, db db.Database, namespace string) (evm.Database, error) {
+func NewStateDb(conf *common.Config, db db.Database, namespace string) (vm.Database, error) {
 	archieveDb, err := hyperdb.GetArchieveDbByNamespace(namespace)
 	if err != nil {
 		return nil, err

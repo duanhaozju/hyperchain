@@ -2,7 +2,10 @@
 //Copyright (C) 2016 The Hyperchain Authors.
 package evm
 
-import "math/big"
+import (
+	"math/big"
+	"hyperchain/core/vm"
+)
 
 type jumpSeg struct {
 	pos uint64
@@ -10,7 +13,7 @@ type jumpSeg struct {
 	gas *big.Int
 }
 
-func (j jumpSeg) do(program *Program, pc *uint64, env Environment, contract *Contract, memory *Memory, stack *stack) ([]byte, error) {
+func (j jumpSeg) do(program *Program, pc *uint64, env vm.Environment, contract *Contract, memory *Memory, stack *stack) ([]byte, error) {
 	if !contract.UseGas(j.gas) {
 		return nil, OutOfGasError
 	}
@@ -28,7 +31,7 @@ type pushSeg struct {
 	gas  *big.Int
 }
 
-func (s pushSeg) do(program *Program, pc *uint64, env Environment, contract *Contract, memory *Memory, stack *stack) ([]byte, error) {
+func (s pushSeg) do(program *Program, pc *uint64, env vm.Environment, contract *Contract, memory *Memory, stack *stack) ([]byte, error) {
 	// Use the calculated gas. When insufficient gas is present, use all gas and return an
 	// Out Of Gas error
 	if !contract.UseGas(s.gas) {

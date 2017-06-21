@@ -2,20 +2,21 @@ package bucket
 
 import (
 	"errors"
-	"hyperchain/hyperdb/db"
+	hdb "hyperchain/hyperdb/db"
+	"hyperchain/common"
 )
 
 type rawKey []byte
 
 // TODO test
-func fetchBucketNodeFromDB(db db.Database, treePrefix string, bucketKey *BucketKey) (*BucketNode, error) {
+func fetchBucketNodeFromDB(db hdb.Database, treePrefix string, bucketKey *BucketKey) (*BucketNode, error) {
 	//nodeKey := bucketKey.getEncodedBytes(treePrefix)
 	nodeKey := append([]byte(BucketNodePrefix), []byte(treePrefix)...)
 	nodeKey = append(nodeKey, bucketKey.getEncodedBytes()...)
 	nodeBytes, err := db.Get(nodeKey)
 
 	if err != nil {
-		if err.Error() == "leveldb: not found" {
+		if err.Error() == hdb.DB_NOT_FOUND.Error() {
 			return nil, nil
 		}
 		return nil, err
@@ -27,12 +28,14 @@ func fetchBucketNodeFromDB(db db.Database, treePrefix string, bucketKey *BucketK
 }
 
 // TODO it need to be tested
-func fetchDataNodesFromDBByBucketKey(db db.Database, treePrefix string, bucketKey *BucketKey) (dataNodes DataNodes, err error) {
+func fetchDataNodesFromDBByBucketKey(db hdb.Database, treePrefix string, bucketKey *BucketKey) (dataNodes DataNodes, err error) {
 	dataNodesValue, err := db.Get(append([]byte(treePrefix), append([]byte(DataNodesPrefix), bucketKey.getEncodedBytes()...)...))
+	log := common.GetLogger(db.Namespace(), "bucket")
 	if err != nil {
-		if err.Error() == ErrNotFound.Error() {
+		if err.Error() == hdb.DB_NOT_FOUND.Error() {
 			return dataNodes, nil
 		}
+		log.Errorf("DB get bucketKey ", bucketKey, "error is", err)
 		panic("Get bucketKey error from db error ")
 	}
 	if dataNodesValue == nil || len(dataNodesValue) <= len(DataNodesPrefix)+1 {
@@ -47,6 +50,7 @@ func fetchDataNodesFromDBByBucketKey(db db.Database, treePrefix string, bucketKe
 	//}
 
 	if err != nil {
+		log.Errorf("Marshal dataNodesValue error", err)
 		panic("Get bucketKey error from db error ")
 	}
 	return dataNodes, nil

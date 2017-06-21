@@ -89,14 +89,12 @@ func (acc *Account) GetAccounts() []*AccountResult {
 
 // GetBalance returns account balance for given account address.
 func (acc *Account) GetBalance(addr common.Address) (string, error) {
-	if stateDB, err := NewStateDb(acc.config, acc.namespace); err == nil && stateDB != nil {
+	if stateDB, err := NewStateDb(acc.config, acc.namespace); err != nil {
 		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 		} else {
 			return "", &common.LeveldbNotFoundError{Message: "stateobject, the account may not exist"}
 		}
-	} else if err != nil {
-		return "", &common.CallbackError{Message: err.Error()}
 	} else {
 		return "", &common.LeveldbNotFoundError{Message: "statedb"}
 	}

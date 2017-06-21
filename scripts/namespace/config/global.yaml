@@ -4,49 +4,57 @@ namespace: global
 maxpeernode: 4
 
 node1:
-    ip: 192.168.1.4
+    ip: 172.16.0.11
     node_id: 1
     is_origin: true
     is_vp: true
     grpc_port: 8001
     jsonrpc_port: 8081
     restful_port: 9001
-    introducer_ip: 192.168.1.4
+    introducer_ip: 172.16.0.11
     introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051
 
 node2:
-    ip: 192.168.1.5
+    ip: 172.16.0.12
     node_id: 2
     is_origin: true
     is_vp: true
     grpc_port: 8001
     jsonrpc_port: 8081
     restful_port: 9001
-    introducer_ip: 192.168.1.4
+    introducer_ip: 172.16.0.11
     introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051
 
 node3:
-    ip: 192.168.1.6
+    ip: 172.16.0.13
     node_id: 3
     is_origin: true
     is_vp: true
     grpc_port: 8001
     jsonrpc_port: 8081
     restful_port: 9001
-    introducer_ip: 192.168.1.4
+    introducer_ip: 172.16.0.11
     introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051
 
 node4:
-    ip: 192.168.1.7
+    ip: 172.16.0.14
     node_id: 4
     is_origin: true
     is_vp: true
     grpc_port: 8001
     jsonrpc_port: 8081
     restful_port: 9001
-    introducer_ip: 192.168.1.4
+    introducer_ip: 172.16.0.11
     introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051

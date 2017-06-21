@@ -22,11 +22,11 @@ type JournalCache struct {
 
 func NewJournalCache(db db.Database, logger *logging.Logger) *JournalCache {
 	return &JournalCache{
-		db:                     db,
-		logger:                 logger,
-		stateObjects:           make(map[common.Address]*StateObject),
-		stateWorkingSet:        bucket.NewKVMap(),
-		stateObjectsWorkingSet: make(map[common.Address]bucket.K_VMap),
+		db:                       db,
+		logger:                   logger,
+		stateObjects:             make(map[common.Address]*StateObject),
+		stateWorkingSet:          bucket.NewKVMap(),
+		stateObjectsWorkingSet:   make(map[common.Address]bucket.K_VMap),
 	}
 }
 
@@ -80,11 +80,11 @@ func (cache *JournalCache) Flush(batch db.Batch) error {
 			workingSet := bucket.NewKVMap()
 			for key, value := range stateObject.dirtyStorage {
 				delete(stateObject.dirtyStorage, key)
-				if (value == common.Hash{}) {
+				if len(value) == 0 {
 					// delete
 					workingSet[key.Hex()] = nil
 				} else {
-					workingSet[key.Hex()] = value.Bytes()
+					workingSet[key.Hex()] = value
 				}
 			}
 			cache.deleteStateObject(batch, stateObject)
@@ -96,7 +96,7 @@ func (cache *JournalCache) Flush(batch db.Batch) error {
 			workingSet := bucket.NewKVMap()
 			for key, value := range stateObject.dirtyStorage {
 				delete(stateObject.dirtyStorage, key)
-				if (value == common.Hash{}) {
+				if len(value) == 0 {
 					// delete
 					cache.logger.Debugf("flush dirty storage address [%s] delete item key: [%s]", stateObject.address.Hex(), key.Hex())
 					if err := batch.Delete(CompositeStorageKey(stateObject.address.Bytes(), key.Bytes())); err != nil {
@@ -104,11 +104,11 @@ func (cache *JournalCache) Flush(batch db.Batch) error {
 					}
 					workingSet[key.Hex()] = nil
 				} else {
-					cache.logger.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", stateObject.address.Hex(), key.Hex(), value.Hex())
-					if err := batch.Put(CompositeStorageKey(stateObject.address.Bytes(), key.Bytes()), value.Bytes()); err != nil {
+					cache.logger.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", stateObject.address.Hex(), key.Hex(), common.Bytes2Hex(value))
+					if err := batch.Put(CompositeStorageKey(stateObject.address.Bytes(), key.Bytes()), value); err != nil {
 						return err
 					}
-					workingSet[key.Hex()] = value.Bytes()
+					workingSet[key.Hex()] = value
 				}
 			}
 			// Update the object in the main account trie.

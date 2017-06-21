@@ -40,6 +40,8 @@ type Namespace interface {
 	Name() string
 	//GetCAManager get CAManager by namespace name.
 	GetCAManager() *admittance.CAManager
+	//GetExecutor fetch executor module
+	GetExecutor() *executor.Executor
 }
 type NsState int
 
@@ -322,6 +324,9 @@ func (ns *namespaceImpl) Name() string {
 //GetCAManager get CAManager by namespace name.
 func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
 	return ns.caMgr
+}
+func (ns namespaceImpl) GetExecutor() *executor.Executor {
+	return ns.executor
 }
 
 //ProcessRequest process request under this namespace

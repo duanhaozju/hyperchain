@@ -24,6 +24,12 @@ const ConfigMaxGroupingAtEachLevel = "maxGroupingAtEachLevel"
 // ConfigCacheSize - config name "bucketCacheSize" as it appears in yaml file
 const ConfigCacheSize = "bucketCacheSize"
 
+// ConfigBucketCacheMaxSize - config name 'bucketCacheMaxSize' as it appears in yaml file
+const ConfigBucketCacheMaxSize = "bucketCacheMaxSize"
+
+// ConfigDataNodeCacheMaxSize - config name 'dataNodeCacheMaxSize' as it appears in yaml file
+const ConfigDataNodeCacheMaxSize = "dataNodeCacheMaxSize"
+
 /*
 	Storage
 */
@@ -155,11 +161,12 @@ func CompositeStorageBucketPrefix(address string) ([]byte, bool) {
 }
 
 // construct bucket tree configuration
-func SetupBucketConfig(size int, levelGroup int, cacheSize int) map[string]interface{} {
+func SetupBucketConfig(size, levelGroup, bucketCacheMaxSize, dataNodeCacheMaxSize int) map[string]interface{} {
 	ret := make(map[string]interface{})
 	ret[ConfigNumBuckets] = size
 	ret[ConfigMaxGroupingAtEachLevel] = levelGroup
-	ret[ConfigCacheSize] = cacheSize
+	ret[ConfigBucketCacheMaxSize] = bucketCacheMaxSize
+	ret[ConfigDataNodeCacheMaxSize] = dataNodeCacheMaxSize
 	return ret
 }
 

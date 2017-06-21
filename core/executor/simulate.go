@@ -28,7 +28,8 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction, snapshotId string)
 		}
 	}()
 	// initialize execution environment
-	receipt, _, _, err := executor.ExecTransaction(tx, statedb)
+	fakeBlockNumber := edb.GetHeightOfChain(executor.namespace) + 1
+	receipt, _, _, err := executor.ExecTransaction(statedb, tx, 0, fakeBlockNumber)
 	if err != nil {
 		errType := executor.classifyInvalid(err)
 		t := &types.InvalidTransactionRecord{

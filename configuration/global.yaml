@@ -39,6 +39,9 @@ global:
             hyperdb: "NOTICE"
             eventhub: "NOTICE"
 
+    hypervm:
+        jvm: true
+
     namespace:
         # start which namespaces when node starts
         start:

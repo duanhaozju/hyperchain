@@ -12,6 +12,7 @@ import (
 	"hyperchain/core/crypto"
 	"io"
 	"hyperchain/core/vm/evm/params"
+	"hyperchain/core/vm"
 )
 
 // progStatus is the type for the JIT program status.
@@ -288,16 +289,10 @@ func runProgram(evm *EVM, program *Program, pcstart uint64, mem *Memory, stack *
 		instrCount        = 0
 	)
 
-	homestead := env.RuleSet().IsHomestead(env.BlockNumber())
-
 	for pc < uint64(len(program.instructions)) {
 		instrCount++
 
 		instr := program.instructions[pc]
-		if instr.Op() == DELEGATECALL && !homestead {
-			return nil, fmt.Errorf("Invalid opcode 0x%x", instr.Op())
-		}
-
 		if evm.cfg.Debug {
 			evm.logger.captureState(pc, instr.Op(), contract.Gas, big.NewInt(0), mem, stack, contract, evm.env.Depth(), nil)
 		}
@@ -340,7 +335,7 @@ func validDest(dests map[uint64]struct{}, dest *big.Int) bool {
 
 // jitCalculateGasAndSize calculates the required given the opcode and stack items calculates the new memorysize for
 // the operation. This does not reduce gas or resizes the memory.
-func jitCalculateGasAndSize(env Environment, contract *Contract, instr instruction, statedb Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
+func jitCalculateGasAndSize(env vm.Environment, contract *Contract, instr instruction, statedb vm.Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
 	var (
 		gas                 = new(big.Int)
 		newMemSize *big.Int = new(big.Int)

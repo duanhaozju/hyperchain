@@ -11,6 +11,7 @@ type Database interface {
 	NewIterator(prefix []byte) Iterator
 	MakeSnapshot(string, []string) error
 	Namespace() string
+	Scan(begin, end []byte) Iterator
 }
 
 type Batch interface {

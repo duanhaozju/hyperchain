@@ -9,6 +9,7 @@ import (
 	"unicode"
 
 	"hyperchain/common"
+	"hyperchain/core/vm"
 )
 
 type Storage map[common.Hash]common.Hash
@@ -59,12 +60,12 @@ type StructLog struct {
 type Logger struct {
 	cfg LogConfig
 
-	env           Environment
+	env           vm.Environment
 	changedValues map[common.Address]Storage
 }
 
 // newLogger returns a new logger
-func newLogger(cfg LogConfig, env Environment) *Logger {
+func newLogger(cfg LogConfig, env vm.Environment) *Logger {
 	return &Logger{
 		cfg:           cfg,
 		env:           env,
@@ -125,8 +126,8 @@ func (l *Logger) captureState(pc uint64, op OpCode, gas, cost *big.Int, memory *
 			storage = make(Storage)
 			// Get the contract account and loop over each storage entry. This may involve looping over
 			// the trie and is a very expensive process.
-			l.env.Db().GetAccount(contract.Address()).ForEachStorage(func(key, value common.Hash) bool {
-				storage[key] = value
+			l.env.Db().GetAccount(contract.Address()).ForEachStorage(func(key common.Hash, value []byte) bool {
+				storage[key] = common.BytesToHash(value)
 				// Return true, indicating we'd like to continue.
 				return true
 			})

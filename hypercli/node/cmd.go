@@ -15,7 +15,6 @@ func NewNodeCMD() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "add",
-			Aliases: []string{"-a"},
 			Usage:   "add a new node to specified namespace",
 			Action:  addNode,
 			Flags: []cli.Flag{
@@ -28,7 +27,6 @@ func NewNodeCMD() []cli.Command {
 		},
 		{
 			Name:    "delete",
-			Aliases: []string{"-d"},
 			Usage:   "delete a node from specified namespace",
 			Action:  delNode,
 			Flags: []cli.Flag{
@@ -58,7 +56,7 @@ type peerinfos struct {
 }
 
 func addNode() error {
-	fmt.Println("start add node")
+	fmt.Println("Not support yet!")
 	return nil
 }
 

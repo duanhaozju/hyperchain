@@ -1,0 +1,39 @@
+---
+interfaceRule:
+  allowedRule:
+    class:
+  notAllowedRule:
+    class:
+superClassRule:
+  allowedRule:
+    class:
+  notAllowedRule:
+    class:
+memberVariableRule:
+  allowedRule:
+    mustKeyword:
+    keyword:
+    class:
+  notAllowedRule:
+    mustKeyword:
+    keyword:
+    class:
+methodDeclare:
+  allowedRule:
+    mustKeyword:
+    keyword:
+  notAllowedRule:
+    mustKeyword:
+    keyword:
+methodVariable:
+  allowedRule:
+    class:
+  notAllowedRule:
+    class:
+methodInstruction:
+  allowedRule:
+    class:
+    opCode:
+  notAllowedRule:
+    class:
+    opCode:

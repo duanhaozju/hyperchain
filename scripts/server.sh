@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+USERNAME="hyperchain"
+PASSWD="hyperchain"
 # debug flag
 #set -evx
 ################
@@ -114,8 +117,6 @@ SERVER_ENV=true
 # false: open many terminals, true: output all logs in one terminal
 MODE=false
 
-USERNAME="satoshi"
-PASSWD="hyperchain"
 PRIMARY=`head -1 ./serverlist.txt`
 MAXNODE=`cat serverlist.txt | wc -l`
 
@@ -300,6 +301,7 @@ EOF
         rm -rf ${HPC_OTHER_HYPERCHAIN_DIR}/node${ni}
     fi
     tar zxvmf node${ni}.tar.gz
+    rm -rf node${ni}.tar.gz
     cp ${HPC_OTHER_HYPERCHAIN_DIR}/hyperchain ${HPC_OTHER_HYPERCHAIN_DIR}/node${ni}
 EOF
     rm -rf node${ni}.tar.gz
@@ -307,6 +309,19 @@ EOF
 done
 }
 
+# Build jvm in local machine and then distribute to servers
+fs_distribute_jvm(){
+    echo "build hyperjvm in local"
+    cd ${PROJECT_PATH}/core/vm/jcee/java && ./build.sh
+
+    ni=1
+    for server_address in ${SERVER_ADDR[@]}; do
+        echo "distribute hyperjvm to ${server_address}"
+        scp -r ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${USERNAME}@${server_address}:/home/${USERNAME}/node${ni}
+        ssh ${USERNAME}@${server_address} " cd /home/${USERNAME}/node${ni}/hyperjvm/bin && ./stop_hyperjvm.sh"
+        ni=`expr ${ni} + 1`
+    done
+}
 # Run all the nodes
 # Open N Terminals in linux
 fs_run_N_terminals_linux(){
@@ -406,6 +421,8 @@ fi
 fs_modifi_global
 
 fs_gen_and_distribute_peerconfig
+
+fs_distribute_jvm
 
 fs_delete_files
 

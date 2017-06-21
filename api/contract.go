@@ -7,16 +7,16 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/ratelimit"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/core/vm/evm"
 	"hyperchain/core/vm/evm/compiler"
 	"hyperchain/crypto/hmEncryption"
-	"hyperchain/manager"
 	"hyperchain/manager/event"
+	"hyperchain/manager"
 	"math/big"
-	"strconv"
 	"time"
+	"strconv"
+	edb "hyperchain/core/db_utils"
 )
 
 type Contract struct {
@@ -58,7 +58,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	payload := common.FromHex(realArgs.Payload)
 
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
-		realArgs.Value.ToInt64(), payload, args.Opcode)
+		realArgs.Value.ToInt64(), payload, args.Opcode, parseVmType(realArgs.VmType))
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
@@ -282,7 +282,7 @@ func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]stri
 	if obj := stateDb.GetAccount(addr); obj == nil {
 		return nil, &common.AccountNotExistError{Message: addr.Hex()}
 	} else {
-		cb := func(key, value common.Hash) bool {
+		cb := func(key common.Hash, value []byte) bool {
 			return true
 		}
 		storages := obj.ForEachStorage(cb)
@@ -291,7 +291,7 @@ func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]stri
 		}
 
 		for k, v := range storages {
-			mp[k.Hex()] = v.Hex()
+			mp[k.Hex()] = common.Bytes2Hex(v)
 		}
 	}
 	return mp, nil
@@ -384,7 +384,7 @@ func (contract *Contract) GetArchive(addr common.Address, date string) (map[stri
 	return stateDb.ShowArchive(addr, date), nil
 }
 
-func getBlockStateDb(namespace string, config *common.Config) (evm.Database, error) {
+func getBlockStateDb(namespace string, config *common.Config) (vm.Database, error) {
 	log := common.GetLogger(namespace, "api")
 	stateDB, err := NewStateDb(config, namespace)
 	if err != nil {
@@ -394,7 +394,16 @@ func getBlockStateDb(namespace string, config *common.Config) (evm.Database, err
 	return stateDB, nil
 }
 
-func isContractAccount(stateDb evm.Database, addr common.Address) bool {
+func isContractAccount(stateDb vm.Database, addr common.Address) bool {
 	code := stateDb.GetCode(addr)
 	return code != nil
+}
+
+func parseVmType(vmType string) types.TransactionValue_VmType {
+	switch strings.ToLower(vmType) {
+	case "jvm":
+		return types.TransactionValue_JVM
+	default:
+		return types.TransactionValue_EVM
+	}
 }

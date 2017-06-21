@@ -89,13 +89,14 @@ func NewTransaction(from []byte, to []byte, value []byte, timestamp int64, nonce
 	return transaction
 }
 
-func NewTransactionValue(price, gasLimit, amount int64, payload []byte, opcode int32) *TransactionValue {
+func NewTransactionValue(price, gasLimit, amount int64, payload []byte, opcode int32, vmType TransactionValue_VmType) *TransactionValue {
 	return &TransactionValue{
 		Price:    price,
 		GasLimit: gasLimit,
 		Amount:   amount,
 		Payload:  payload,
 		Op:       TransactionValue_Opcode(opcode),
+		VmType:   vmType,
 	}
 }
 

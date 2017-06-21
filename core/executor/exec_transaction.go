@@ -1,103 +1,27 @@
 package executor
 
 import (
-	"bytes"
 	"hyperchain/common"
 	"hyperchain/core/types"
+	"hyperchain/core/vm"
 	"hyperchain/core/vm/evm"
-	"math/big"
+	"hyperchain/core/vm/jcee/go"
+	er "hyperchain/core/errors"
 )
 
-type Code []byte
-
-func (executor *Executor) ExecTransaction(tx *types.Transaction, stateDb evm.Database) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
-	var (
-		from     = common.BytesToAddress(tx.From)
-		to       = common.BytesToAddress(tx.To)
-		tv       = tx.GetTransactionValue()
-		data     = tv.RetrievePayload()
-		gas      = big.NewInt(100000000)
-		gasPrice = tv.RetrieveGasPrice()
-		amount   = tv.RetrieveAmount()
-		op       = tv.GetOp()
-	)
-
-	env := executor.initEnvironment(stateDb, executor.getTempBlockNumber())
-	if valid := executor.checkPermission(env, from, to, op); !valid {
-		return nil, nil, common.Address{}, InvalidInvokePermissionErr("not enough permission to invocation")
+func (executor *Executor) ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64) (*types.Receipt, []byte, common.Address, error) {
+	tv := tx.GetTransactionValue()
+	switch tv.GetVmType() {
+	case types.TransactionValue_EVM:
+		executor.logger.Debug("execute in evm")
+		return evm.ExecTransaction(db, tx, idx, blockNumber, executor.logger, executor.namespace)
+	case types.TransactionValue_JVM:
+		executor.logger.Debug("execute in jvm")
+		return jvm.ExecTransaction(db, tx, idx, blockNumber, executor.logger, executor.namespace, executor.jvmCli)
+	default:
+		executor.logger.Warningf("try to execute a transaction with undefined vm type %s", tv.GetVmType().String())
+		return nil, nil, common.Address{}, er.ExecContractErr(1, "undefined vm type")
 	}
-
-	if tx.To == nil {
-		ret, addr, err = executor.Exec(env, &from, nil, data, gas, gasPrice, amount, op)
-	} else {
-		ret, _, err = executor.Exec(env, &from, &to, data, gas, gasPrice, amount, op)
-	}
-	if err == nil && EnableDebug {
-		env.DumpStructLog()
-	}
-	receipt = makeReceipt(env, addr, tx.GetHash(), gas, ret, err)
-	return receipt, ret, addr, err
-}
-
-func (executor *Executor) Exec(vmenv evm.Environment, from, to *common.Address, data []byte, gas,
-gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
-	var sender evm.Account
-	if !(vmenv.Db().Exist(*from)) {
-		sender = vmenv.Db().CreateAccount(*from)
-	} else {
-		sender = vmenv.Db().GetAccount(*from)
-	}
-
-	contractCreation := (nil == to)
-
-	if contractCreation {
-		ret, addr, err = vmenv.Create(sender, data, gas, gasPrice, value)
-		if err != nil {
-			ret = nil
-			executor.logger.Error("VM create err:", err)
-		}
-	} else {
-		ret, err = vmenv.Call(sender, *to, data, gas, gasPrice, value, int32(op))
-		if err != nil {
-			executor.logger.Error("VM call err:", err)
-		}
-	}
-	return ret, addr, err
-}
-
-func (executor *Executor) checkPermission(env evm.Environment, from, to common.Address, op types.TransactionValue_Opcode) bool {
-	if op == types.TransactionValue_UPDATE || op == types.TransactionValue_FREEZE || op == types.TransactionValue_UNFREEZE {
-		executor.logger.Debugf("caller address %s", from.Hex())
-		executor.logger.Debugf("callee address %s", from.Hex())
-		if bytes.Compare(to.Bytes(), nil) == 0 {
-			return false
-		}
-		if bytes.Compare(from.Bytes(), env.Db().GetCreator(to).Bytes()) != 0 {
-			executor.logger.Errorf("only contract owner %s can do `update`, `freeze` or `unfreeze` operations. %s doesn't has enough permission",
-				env.Db().GetCreator(to).Hex(), from.Hex())
-			return false
-		}
-	}
-	return true
 }
 
 
-func makeReceipt(env evm.Environment, addr common.Address, txHash common.Hash, gas *big.Int, ret []byte, err error) *types.Receipt {
-	receipt := types.NewReceipt(nil, gas)
-	receipt.ContractAddress = addr.Bytes()
-	receipt.TxHash = txHash.Bytes()
-	receipt.GasUsed = 100000
-	receipt.Ret = ret
-	receipt.SetLogs(env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))
-
-	if err != nil {
-		if !IsValueTransferErr(err) && !IsExecContractErr(err) && !IsInvalidInvokePermissionErr(err) {
-			receipt.Status = types.Receipt_FAILED
-			receipt.Message = []byte(err.Error())
-		}
-	} else {
-		receipt.Status = types.Receipt_SUCCESS
-		receipt.Message = nil
-	}
-	return receipt
-}

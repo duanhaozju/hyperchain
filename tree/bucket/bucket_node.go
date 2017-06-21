@@ -78,7 +78,7 @@ func (bucketNode *BucketNode) mergeBucketNode(anotherBucketNode *BucketNode) {
 	}
 }
 
-func (bucketNode *BucketNode) computeCryptoHash(logger *logging.Logger) []byte {
+func (bucketNode *BucketNode) computeCryptoHash(log *logging.Logger) []byte {
 	bucketNode.lock.RLock()
 	defer bucketNode.lock.RUnlock()
 	cryptoHashContent := []byte{}
@@ -86,20 +86,20 @@ func (bucketNode *BucketNode) computeCryptoHash(logger *logging.Logger) []byte {
 	for i, childCryptoHash := range bucketNode.childrenCryptoHash {
 		if childCryptoHash != nil {
 			numChildren++
-			logger.Debugf("Appending crypto-hash for child bucket = [%s]", bucketNode.bucketKey.getChildKey(i))
+			log.Debugf("Appending crypto-hash for child bucket = [%s]", bucketNode.bucketKey.getChildKey(i))
 			cryptoHashContent = append(cryptoHashContent, childCryptoHash...)
 		}
 	}
 	if numChildren == 0 {
-		logger.Debugf("Returning <nil> crypto-hash of bucket = [%s] - because, it has not children", bucketNode.bucketKey)
+		log.Debugf("Returning <nil> crypto-hash of bucket = [%s] - because, it has not children", bucketNode.bucketKey)
 		bucketNode.markedForDeletion = true
 		return nil
 	}
 	if numChildren == 1 {
-		logger.Debugf("Propagating crypto-hash of single child node for bucket = [%s]", bucketNode.bucketKey)
+		log.Debugf("Propagating crypto-hash of single child node for bucket = [%s]", bucketNode.bucketKey)
 		return cryptoHashContent
 	}
-	logger.Debugf("Computing crypto-hash for bucket [%s] by merging [%d] children", bucketNode.bucketKey, numChildren)
+	log.Debugf("Computing crypto-hash for bucket [%s] by merging [%d] children", bucketNode.bucketKey, numChildren)
 	if bucketNode.bucketKey.level <= 2 {
 		return ComputeCryptoHash(cryptoHashContent)
 	} else {

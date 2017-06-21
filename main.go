@@ -9,6 +9,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"time"
+	"fmt"
 )
 
 type hyperchain struct {
@@ -39,7 +40,7 @@ func newHyperchain(argV *argT, conf *common.Config) *hyperchain {
 
 func (h *hyperchain) start() {
 	logger.Critical("Hyperchain server start...")
-	h.nsMgr.Start()
+	go h.nsMgr.Start()
 	go h.hs.Start()
 	go CheckLicense(h.stopFlag)
 	logger.Critical("Hyperchain server started")
@@ -73,6 +74,11 @@ var (
 
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Recovered in f", r)
+			}
+		}()
 		argv := ctx.Argv().(*argT)
 
 		globalConfig := common.NewConfig(argv.ConfigPath)

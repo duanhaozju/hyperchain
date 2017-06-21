@@ -3,86 +3,163 @@
 package contract
 
 import (
-	"encoding/hex"
-	"fmt"
 	"github.com/urfave/cli"
-	"hyperchain/api/jsonrpc/core"
+	"fmt"
 	"hyperchain/hypercli/common"
+	"io/ioutil"
+	"encoding/hex"
 	"math/rand"
-	"os"
 	"time"
+	"os"
+	"hyperchain/core/types"
+	"hyperchain/api/jsonrpc/core"
+	"strings"
+	"github.com/golang/protobuf/proto"
 )
+
+var commonFlags = []cli.Flag{
+	cli.BoolFlag{
+		Name:  "jvm, j",
+		Usage: "specify how the contract is generated, false is solidity, true is jvm",
+	},
+	cli.StringFlag{
+		Name:  "namespace, n",
+		Value: "global",
+		Usage: "specify the namespace, default is global",
+	},
+	cli.StringFlag{
+		Name:  "from, f",
+		Value: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
+		Usage: "specify the account",
+	},
+	cli.StringFlag{
+		Name:  "payload, p",
+		Value: "",
+		Usage: "specify the contract payload",
+	},
+}
 
 //NewContractCMD new contract related commands.
 func NewContractCMD() []cli.Command {
 	return []cli.Command{
 		{
 			Name:    "deploy",
-			Aliases: []string{"d"},
 			Usage:   "Deploy a contract",
 			Action:  deploy,
-			Flags: []cli.Flag{
+			Flags:   append(commonFlags, []cli.Flag{
 				cli.StringFlag{
-					Name:  "deploycmd, d",
+					Name:  "deploycmd, c",
 					Value: "",
 					Usage: "specify the payload of deploy contract",
 				},
 				cli.StringFlag{
-					Name:  "namespace, n",
-					Value: "global",
-					Usage: "specify the namespace to deploy to, default is global",
-				},
-				cli.StringFlag{
-					Name:  "from, f",
-					Value: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
-					Usage: "specify the deploy account",
-				},
-				cli.StringFlag{
-					Name:  "payload, p",
+					Name:  "directory, d",
 					Value: "",
-					Usage: "specify the deploy contract payload",
+					Usage: "specify the contract file directory",
 				},
-			},
+			}...),
 		},
 		{
 			Name:    "invoke",
-			Aliases: []string{"i"},
-			Usage:   "Invoke a contract method",
+			Usage:   "Invoke a contract",
 			Action:  invoke,
-			Flags: []cli.Flag{
+			Flags:   append(commonFlags, []cli.Flag{
 				cli.StringFlag{
-					Name:  "invokecmd, i",
+					Name:  "invokecmd, c",
 					Value: "",
 					Usage: "specify the payload of invoke contract",
-				},
-				cli.StringFlag{
-					Name:  "namespace, n",
-					Value: "global",
-					Usage: "specify the namespace to deploy to, default is global",
-				},
-				cli.StringFlag{
-					Name:  "from, f",
-					Value: "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd",
-					Usage: "specify the deploy account",
-				},
-				cli.StringFlag{
-					Name:  "payload, p",
-					Value: "",
-					Usage: "specify the invoke contract payload",
 				},
 
 				//args with no default value which must be specified by user
 				cli.StringFlag{
 					Name:  "to, t",
 					Value: "",
-					Usage: "specify the destination account",
+					Usage: "specify the contract address",
 				},
-			},
+				cli.StringFlag{
+					Name:  "method, m",
+					Value: "",
+					Usage: "specify the method of invoke contract",
+				},
+				cli.StringFlag{
+					Name:  "args, a",
+					Value: "",
+					Usage: "specify the args of invoke contract",
+				},
+			}...),
 		},
 		{
-			Name:   "destroy",
-			Usage:  "Destroy a contract",
-			Action: destroy,
+			Name:    "update",
+			Usage:   "Update a contract",
+			Action:  update,
+			Flags:   append(commonFlags, []cli.Flag{
+				cli.StringFlag{
+					Name:  "updatecmd, c",
+					Value: "",
+					Usage: "specify the payload of update contract",
+				},
+				cli.StringFlag{
+					Name:  "to, t",
+					Value: "",
+					Usage: "specify the contract address",
+				},
+				cli.StringFlag{
+					Name:  "directory, d",
+					Value: "",
+					Usage: "specify the contract file directory",
+				},
+			}...),
+		},
+		{
+			Name:    "frozen",
+			Usage:   "Frozen a contract",
+			Action:  frozen,
+			Flags:   append(commonFlags, []cli.Flag{
+				cli.StringFlag{
+					Name:  "frozencmd, c",
+					Value: "",
+					Usage: "specify the payload of frozen contract",
+				},
+				cli.StringFlag{
+					Name:  "to, t",
+					Value: "",
+					Usage: "specify the contract address",
+				},
+			}...),
+		},
+		{
+			Name:    "unfrozen",
+			Usage:   "Unfrozen a contract",
+			Action:  unfrozen,
+			Flags:   append(commonFlags, []cli.Flag{
+				cli.StringFlag{
+					Name:  "unfrozencmd, c",
+					Value: "",
+					Usage: "specify the payload of unfrozen contract",
+				},
+				cli.StringFlag{
+					Name:  "to, t",
+					Value: "",
+					Usage: "specify the contract address",
+				},
+			}...),
+		},
+		{
+			Name:    "destroy",
+			Usage:   "Destroy a contract",
+			Action:  destroy,
+			Flags:   append(commonFlags, []cli.Flag{
+				cli.StringFlag{
+					Name:  "destorycmd, c",
+					Value: "",
+					Usage: "specify the payload of destory contract",
+				},
+				cli.StringFlag{
+					Name:  "to, t",
+					Value: "",
+					Usage: "specify the contract address",
+				},
+			}...),
 		},
 	}
 }
@@ -94,17 +171,18 @@ func deploy(c *cli.Context) error {
 	if c.String("deploycmd") != "" {
 		deployCmd = c.String("deploycmd")
 	} else {
-		deployParams := []string{"from", "nonce", "payload", "timestamp", "signature"}
+		deployParams := []string{"from", "payload"}
 		method := "contract_deployContract"
-		deployCmd = getCmd(method, deployParams, c)
+		deployCmd = getCmd(method, deployParams, 0, c)
 	}
 	//fmt.Println(deployCmd)
 	result, err := client.Call(deployCmd)
 	if err != nil {
 		fmt.Println("Error in call deploy cmd request")
-		fmt.Print(err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
+	//fmt.Println(result.Result)
 
 	txHash := getTransactionHash(result)
 	err = common.GetTransactionReceipt(txHash, c, client)
@@ -124,17 +202,18 @@ func invoke(c *cli.Context) error {
 	if c.String("invokecmd") != "" {
 		invokeCmd = c.String("invokecmd")
 	} else {
-		invokeParams := []string{"from", "to", "nonce", "payload", "timestamp", "signature"}
+		invokeParams := []string{"from", "to", "payload", "method", "args"}
 		method := "contract_invokeContract"
-		invokeCmd = getCmd(method, invokeParams, c)
+		invokeCmd = getCmd(method, invokeParams, 0, c)
 	}
 	//fmt.Println(invokeCmd)
 	result, err := client.Call(invokeCmd)
 	if err != nil {
 		fmt.Println("Error in call invoke cmd request")
-		fmt.Print(err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
+	//fmt.Println(result.Result)
 
 	txHash := getTransactionHash(result)
 	err = common.GetTransactionReceipt(txHash, c, client)
@@ -147,35 +226,108 @@ func invoke(c *cli.Context) error {
 	return nil
 }
 
-func destroy() error {
-	fmt.Println("Not support yet!")
+// update updates the contract
+func update(c *cli.Context) error {
+	if err := maintain(c, 1, "updatecmd") ; err != nil {
+		fmt.Println("Error in update contract!")
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	return nil
 }
 
-// getCmd returns the expected jsonrpc command from specified method and deploy_params
-func getCmd(method string, deploy_params []string, c *cli.Context) string {
+// frozen frozen the contract
+func frozen(c *cli.Context) error {
+	if err := maintain(c, 2, "frozencmd") ; err != nil {
+		fmt.Println("Error in frozen contract!")
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	return nil
+}
+
+// unfrozen unfrozen the contract
+func unfrozen(c *cli.Context) error {
+	if err := maintain(c, 3, "unfrozencmd") ; err != nil {
+		fmt.Println("Error in unfrozen contract!")
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	return nil
+}
+
+// destroy destroys the contract
+func destroy(c *cli.Context) error {
+	if err := maintain(c, 4, "updatecmd") ; err != nil {
+		fmt.Println("Error in destroy contract!")
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	return nil
+}
+
+// maintain implements maintain methods with specified opcode and return the transaction receipt
+func maintain(c *cli.Context, opcode int32, maintainMethod string) error {
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+	var maintainCmd string
+	if c.String(maintainMethod) != "" {
+		maintainCmd = c.String(maintainMethod)
+	} else {
+		maintainParams := []string{"from", "to", "payload", "opcode"}
+		method := "contract_maintainContract"
+		maintainCmd = getCmd(method, maintainParams, opcode, c)
+	}
+	//fmt.Println(maintainCmd)
+	result, err := client.Call(maintainCmd)
+	if err != nil {
+		fmt.Printf("Error in call %s request\n", maintainCmd)
+		return err
+	}
+	//fmt.Print(result.Result)
+
+	txHash := getTransactionHash(result)
+	err = common.GetTransactionReceipt(txHash, c, client)
+	if err != nil {
+		fmt.Println("Error in call get transaction receipt")
+		return err
+	}
+
+	return nil
+}
+
+func getCmd(method string, deploy_params []string, opcode int32, c *cli.Context) string {
 	namespace := c.String("namespace")
-	var from, to, payload string
+	var from, to, invokemethod, arg string
 	var nonce, timestamp, amount int64
-	var opcode int
+	var vmtype types.TransactionValue_VmType
+	var code []byte
+	var args [][]byte
+
+	if method == "contract_invokeContract" {
+		invokemethod = "invoke"
+	}
 
 	params := "[{"
-	for i, param := range deploy_params {
-		if i > 0 {
+	for i, param := range deploy_params{
+		if i > 0 && param != "payload" && param != "method" && param != "args" {
 			params = params + ","
 		}
 		switch param {
 		case "payload":
-			payload = common.GetNonEmptyValueByName(c, "payload")
-			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, payload)
-
-		case "nonce":
-			nonce = rand.Int63()
-			params = params + fmt.Sprintf("\"%s\":%d", param, nonce)
-
-		case "timestamp":
-			timestamp = time.Now().UnixNano()
-			params = params + fmt.Sprintf("\"%s\":%d", param, timestamp)
+			if c.Bool("jvm") {
+				if method == "contract_deployContract" || opcode == 1 {
+					if c.String("directory") != "" {
+						code = getPayloadFromPath(c.String("directory"))
+					} else {
+						dir := common.GetNonEmptyValueByName(c, "directory")
+						code = getPayloadFromPath(dir)
+					}
+				} else {
+					code = []byte{}
+				}
+			} else {
+				code = []byte(common.GetNonEmptyValueByName(c, "payload"))
+			}
 
 		case "from":
 			from = c.String("from")
@@ -186,24 +338,69 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 			to = common.GetNonEmptyValueByName(c, "to")
 			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, to)
 
-		// signature is generated automatically
-		case "signature":
-			amount = 0
-			opcode = 0
-			sig, err := common.GenSignature(from, to, timestamp, amount, payload, nonce, int32(opcode))
-			if err != nil {
-				fmt.Println("Error in generate signature.")
-				fmt.Println(err)
-				os.Exit(1)
+		case "opcode":
+			params = params + fmt.Sprintf("\"%s\":%d", param, opcode)
+
+		case "method":
+			if c.Bool("jvm") {
+				invokemethod = common.GetNonEmptyValueByName(c, "method")
 			}
-			signature := hex.EncodeToString(sig)
-			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, signature)
+
+		case "args":
+			if c.Bool("jvm") {
+				arg = common.GetNonEmptyValueByName(c, "args")
+				tmp := strings.Fields(arg)
+				for _, a := range tmp {
+					args = append(args, []byte(a))
+				}
+			}
 
 		default:
 			fmt.Printf("Invalid param name: %s\n", param)
 			os.Exit(1)
 		}
 	}
+	if c.Bool("jvm") {
+		params = params + "," + fmt.Sprint("\"type\":\"jvm\"")
+	}
+
+	// generate nonce
+	nonce = rand.Int63()
+	params = params + "," + fmt.Sprintf("\"nonce\":%d", nonce)
+
+	// generate timestamp
+	timestamp = time.Now().UnixNano()
+	params = params + "," + fmt.Sprintf("\"timestamp\":%d", timestamp)
+
+	// generate payload
+	payload := &types.InvokeArgs{
+		Code:       code,
+		MethodName: invokemethod,
+		Args:       args,
+	}
+	invokeArgs, err := proto.Marshal(payload)
+	if err != nil {
+		fmt.Println("Marsh error: ", err.Error())
+	}
+	params = params + "," + fmt.Sprintf("\"payload\":\"%s\"", hex.EncodeToString(invokeArgs))
+
+	// generate signature
+	amount = 0
+	if c.Bool("jvm") {
+		vmtype = 1
+	} else {
+		vmtype = 0
+	}
+	sig, err := common.GenSignature(from, to, timestamp, amount, hex.EncodeToString(invokeArgs), nonce, opcode, vmtype)
+	if err != nil {
+		fmt.Println("Error in generate signature.")
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	signature := hex.EncodeToString(sig)
+	params = params + "," + fmt.Sprintf("\"signature\":\"%s\"", signature)
+
+	// end of params
 	params = params + "}]"
 
 	return fmt.Sprintf(
@@ -211,7 +408,20 @@ func getCmd(method string, deploy_params []string, c *cli.Context) string {
 		namespace, method, params)
 }
 
-// getTransactionHash gets the hash of the transaction from the json-format return value
+func getPayloadFromPath(dir string) []byte {
+	target := "contract.tar.gz"
+	common.Compress(dir, target)
+	buf, err := ioutil.ReadFile(target)
+	if err != nil {
+		fmt.Printf("Error in read compressed file: %s\n", target)
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	common.DelCompressedFile(target)
+
+	return buf
+}
+
 func getTransactionHash(result *jsonrpc.CommandResult) string {
 	response, err := common.GetJSONResponse(result)
 	if err != nil {
@@ -222,8 +432,8 @@ func getTransactionHash(result *jsonrpc.CommandResult) string {
 	}
 
 	if hash, ok := response.Result.(string); !ok {
-		fmt.Println("Error in call get transaction hash from http response")
-		fmt.Printf("rpc result: %v can't parse to string", response.Result)
+		fmt.Println("Error in call get transaction hash from http response:")
+		fmt.Printf("rpc result: %v can't parse to string\n", response.Result)
 		return ""
 	} else {
 		return hash
