@@ -204,6 +204,16 @@ func PP(value []byte) string {
 	return fmt.Sprintf("%x...%x", value[:4], value[len(value)-4])
 }
 
+// API describes the set of methods offered over the RPC interface
+//type API struct {
+//	Srvname string      // srvname under which the rpc methods of Service are exposed
+//	Version string      // api version
+//	Service interface{} // receiver instance which holds the methods
+//	Public  bool        // indication if the methods must be considered safe for public use
+//}
+//
+//var Apis map[string]*API
+
 // rpcRequest represents a raw incoming RPC request
 type RPCRequest struct {
 	Service   string
@@ -222,4 +232,13 @@ type RPCResponse struct {
 	//Reply []reflect.Value
 	Reply interface{}
 	Error RPCError
+	IsPubSub  bool
+	IsUnsub   bool
+}
+
+type RPCNotification struct {
+	Namespace string
+	SubId     ID
+	Service   string
+	Result    interface{}
 }

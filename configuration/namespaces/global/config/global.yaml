@@ -72,6 +72,7 @@ global:
             hyperdb: "NOTICE"
             common/hyper_logger: "NOTICE"
             hyperstate: "DEBUG"
+            api: "DEBUG"
 
     ######################################################
     # configs related to the executor                    #

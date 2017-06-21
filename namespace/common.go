@@ -10,6 +10,16 @@ import (
 	"strings"
 )
 
+// API describes the set of methods offered over the RPC interface
+type API struct {
+	Srvname string      // srvname under which the rpc methods of Service are exposed
+	Version string      // api version
+	Service interface{} // receiver instance which holds the methods
+	Public  bool        // indication if the methods must be considered safe for public use
+}
+
+var Apis map[string]*API
+
 var (
 	ErrInvalidNs         = errors.New("namespace/nsmgr: invalid namespace")
 	ErrCannotNewNs       = errors.New("namespace/nsmgr: can not new namespace")
@@ -53,6 +63,7 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	if strings.HasSuffix(path, "/"+DEFAULT_NAMESPACE+"/config") {
 		nr.conf.Set(common.C_HTTP_PORT, peerViper.GetInt("self.jsonrpc_port"))
 		nr.conf.Set(common.C_REST_PORT, peerViper.GetInt("self.restful_port"))
+		nr.conf.Set(common.C_WEBSOCKET_PORT, peerViper.GetInt("self.websocket_port"))
 	}
 
 	return conf

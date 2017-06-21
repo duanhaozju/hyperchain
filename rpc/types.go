@@ -27,8 +27,13 @@ type ServerCodec interface {
 	CheckHttpHeaders(namespace string) common.RPCError
 	// Read next request
 	ReadRequestHeaders() ([]*common.RPCRequest, bool, common.RPCError)
+
+	CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{}
+
 	// Write msg to client.
 	Write(interface{}) error
+
+	WriteNotify(interface{}) error
 	// Close underlying data stream
 	Close()
 	// Closed when underlying connection is closed

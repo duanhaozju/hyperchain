@@ -101,15 +101,7 @@ func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, re
 	receipt.TxHash = txHash.Bytes()
 	receipt.GasUsed = 100000
 	receipt.Ret = ret
-
-	// TODO vm log support
-	//logs := env.Db().GetLogs(common.BytesToHash(receipt.TxHash))
-	//var tmp Logs
-	//for _, l := range logs {
-	//	tmp = append(tmp, l.(*Log))
-	//}
-	//buf, _ := (&tmp).EncodeLogs()
-	//receipt.Logs = buf
+	receipt.SetLogs(env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))
 
 	if err != nil {
 		if !er.IsValueTransferErr(err) && !er.IsExecContractErr(err) && !er.IsInvalidInvokePermissionErr(err) {

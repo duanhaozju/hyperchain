@@ -10,6 +10,7 @@ import (
 	"hyperchain/manager"
 	"hyperchain/manager/event"
 	"hyperchain/core/types"
+	"context"
 )
 
 type PublicFilterAPI struct {
@@ -281,4 +282,54 @@ func returnException(data []interface{}) []event.FilterException {
 		}
 	}
 	return ret
+}
+
+// ===================== test ================
+func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
+
+	//api.subchan.Mux.Lock()
+	api.filtersMu.Lock()
+	defer api.filtersMu.Unlock()
+
+	api.log.Debug("ready to deal with newBlock event request")
+	common.CtxChan <- ctx
+
+	subchan := common.GetSubChan(ctx)
+
+	select {
+	case err := <- subchan.Err:
+		return common.ID(""), err
+	case rpcSub := <- common.GetSubChan(ctx).SubscriptionChan:
+	//api.subchan.Mux.Unlock()
+		api.log.Debugf("receive subscription %v\n", rpcSub.ID)
+
+		go func() {
+
+			blockC   := make(chan common.Hash)
+			blockSub := api.events.NewBlockSubscription(blockC, false)
+
+			for {
+				select {
+				case h := <-blockC:
+					api.log.Debugf("receive block %v\n", h.Hex())
+					payload := common.NotifyPayload{
+						SubID: rpcSub.ID,
+						Data:  h,
+					}
+
+					subchan.NotifyDataChan <- payload
+				case <-rpcSub.Err():
+					blockSub.Unsubscribe()
+					return
+				case <-subchan.Closed(): // connection close, unsubscribe all the subscription in this context
+					api.log.Debug("the websocket connection closed, release resource")
+					blockSub.Unsubscribe()
+					return
+				}
+			}
+		}()
+
+		return rpcSub.ID, nil
+	}
+
 }

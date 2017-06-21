@@ -6,24 +6,23 @@ import (
 	"runtime"
 	"sync/atomic"
 	"time"
-
 	"encoding/json"
 	"fmt"
-	"github.com/op/go-logging"
 	"github.com/syndtr/goleveldb/leveldb/errors"
-	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"reflect"
 	"strings"
+	"sync"
+	"context"
 )
-
-var log *logging.Logger // package-level logger
 
 const (
 	stopPendingRequestTimeout             = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
 	OptionMethodInvocation    CodecOption = 1 << iota       // OptionMethodInvocation is an indication that the codec supports RPC method calls
+	// OptionSubscriptions is an indication that the codec suports RPC notifications
+	OptionSubscriptions = 1 << iota // support pub sub
 	adminService                          = "admin"
 )
 
@@ -59,7 +58,10 @@ type RPCService struct {
 // If singleShot is true it will process a single request, otherwise it will handle
 // requests until the codec returns an error when reading a request (in most cases
 // an EOF). It executes requests in parallel when singleShot is false.
-func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecOption) error {
+func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecOption, ctx context.Context) error {
+
+	var pend sync.WaitGroup
+
 	defer func() {
 		if err := recover(); err != nil {
 			const size = 64 << 10
@@ -75,8 +77,21 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 		return
 	}()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	//ctx, cancel := context.WithCancel(context.Background())
+	//
+	////defer func() {
+	////	fmt.Println("context cancel()")
+	////	cancel()
+	////}()
+	//defer cancel()
+	//
+	//// if the codec supports notification include a notifier that callbacks can use
+	//// to send notification to clients. It is thight to the codec/connection. If the
+	//// connection is closed the notifier will stop and cancels all active subscriptions.
+	//if options&OptionSubscriptions == OptionSubscriptions {
+	//	//ctx = context.WithValue(ctx, common.NotifierKey{}, common.NewNotifier(codec))
+	//	ctx = context.WithValue(ctx, NotifierKey{}, NewNotifier(codec))
+	//}
 
 	s.codecsMu.Lock()
 	if atomic.LoadInt32(&s.run) != 1 { // server stopped
@@ -89,9 +104,15 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 	// test if the server is ordered to stop
 	for atomic.LoadInt32(&s.run) == 1 {
 		reqs, batch, err := s.readRequest(codec)
+		// If a parsing error occurred, send an error
 		if err != nil {
-			log.Debugf("%v\n", err)
-			codec.Write(s.CreateErrorResponse(nil, "", err))
+			// If a parsing error occurred, send an error
+			if err.Error() != "EOF" {
+				log.Debug(fmt.Sprintf("read error %v\n", err))
+				codec.Write(s.CreateErrorResponse(nil, "", err))
+			}
+			// Error or end of stream, wait for requests and tear down
+			pend.Wait()
 			return nil
 		}
 
@@ -124,8 +145,20 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			}
 			return nil
 		}
-		s.handleReqs(ctx, codec, reqs)
-		return nil
+
+		if singleShot {
+			s.handleReqs(ctx, codec, reqs)
+			return nil
+		}
+
+		// For multi-shot connections, start a goroutine to serve and loop back
+		pend.Add(1)
+
+		go func() {
+			defer pend.Done()
+			s.handleReqs(ctx, codec, reqs)
+		}()
+
 	}
 	return nil
 }
@@ -162,16 +195,18 @@ func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
 // ServeCodec reads incoming requests from codec, calls the appropriate callback and writes the
 // response back using the given codec. It will block until the codec is closed or the server is
 // stopped. In either case the codec is closed.
-func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
+func (s *Server) ServeCodec(codec ServerCodec, options CodecOption, ctx context.Context) {
 	defer codec.Close()
-	s.serveRequest(codec, false, options)
+	s.serveRequest(codec, false, options, ctx)
 }
 
 // ServeSingleRequest reads and processes a single RPC request from the given codec. It will not
 // close the codec unless a non-recoverable error has occurred. Note, this method will return after
 // a single request has been processed!
 func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
-	s.serveRequest(codec, true, options)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s.serveRequest(codec, true, options, ctx)
 }
 
 // Stop will stop reading new requests, wait for stopPendingRequestTimeout to allow pending requests to finish,
@@ -280,10 +315,30 @@ func (s *Server) handleChannelReq(req *common.RPCRequest) interface{} {
 		if response.Error != nil {
 			return s.CreateErrorResponse(response.Id, response.Namespace, response.Error)
 		} else if response.Reply != nil {
+			if response.IsPubSub {
+				notifier, supported := NotifierFromContext(req.Ctx)
+				if !supported { // interface doesn't support subscriptions (e.g. http)
+					return s.CreateErrorResponse(response.Id, response.Namespace, &common.CallbackError{Message: ErrNotificationsUnsupported.Error()})
+				}
+
+				if response.IsUnsub {
+					subid := response.Reply.(common.ID)
+					if err := notifier.Unsubscribe(subid); err != nil {
+						return s.CreateErrorResponse(response.Id, response.Namespace, &common.CallbackError{Message: err.Error()})
+					}
+					return s.CreateResponse(response.Id, response.Namespace, true)
+				} else {
+					// active the subscription after the sub id was successfully sent to the client
+					notifier.Activate(response.Reply.(common.ID), req.Service, req.Method, req.Namespace)
+				}
+			}
 			return s.CreateResponse(response.Id, response.Namespace, response.Reply)
+
 		} else {
 			return s.CreateResponse(response.Id, response.Namespace, nil)
 		}
+	//} else if response, ok := r.(*common.RPCNotification); ok{
+	//	return s.CreateNotification(response.SubId, response.Service, response.Namespace, nil)
 	} else {
 		log.Errorf("response type invalid, resp: %v\n")
 		return s.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message: "response type invalid!"})

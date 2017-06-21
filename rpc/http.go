@@ -3,11 +3,11 @@
 package jsonrpc
 
 import (
-	"github.com/astaxie/beego"
-	"github.com/astaxie/beego/logs"
+	//"github.com/astaxie/beego"
+	//"github.com/astaxie/beego/logs"
 	"github.com/rs/cors"
 
-	"hyperchain/api/rest/routers"
+	//"hyperchain/api/rest/routers"
 	"hyperchain/common"
 	"hyperchain/namespace"
 
@@ -16,8 +16,7 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"strconv"
-	"sync"
+	//"strconv"
 	"time"
 )
 
@@ -27,18 +26,8 @@ const (
 
 var (
 	StoppedError = errors.New("Listener stopped")
-	hs           HttpServer
-	once         sync.Once
+	hs           RPCServer
 )
-
-type HttpServer interface {
-	//Start start the http service.
-	Start() error
-	//Stop the http service.
-	Stop() error
-	//Restart the http service.
-	Restart() error
-}
 
 type httpServerImpl struct {
 	nsMgr        namespace.NamespaceManager
@@ -47,16 +36,14 @@ type httpServerImpl struct {
 	stopListener *StoppableListener
 }
 
-func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) HttpServer {
-	once.Do(func() {
+func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) RPCServer {
+	if hs == nil {
 		hs = newHttpServer(nr, stopHp, restartHp)
-	})
+	}
 	return hs
 }
 
 func newHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) *httpServerImpl {
-	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
-
 	hi := &httpServerImpl{
 		nsMgr: nr,
 		stop:  make(chan bool),
@@ -76,9 +63,9 @@ func (hi *httpServerImpl) Start() error {
 		AllowedMethods: []string{"POST", "GET"},
 	})
 	hi.rpcServer.Start()
-	handler := c.Handler(newJsonHttpHandler(hi.rpcServer))
+	handler := c.Handler(newHttpHandler(hi.rpcServer))
 
-	t1 := time.Now()
+	//t1 := time.Now()
 	var err error
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", httpPort))
 	if err != nil {
@@ -89,13 +76,15 @@ func (hi *httpServerImpl) Start() error {
 		return err
 	}
 
-	err = http.Serve(hi.stopListener, handler)
+	go http.Serve(hi.stopListener, handler)
+	// TODO 可能要换成下面的代码
+	//err = http.Serve(hi.stopListener, handler)
 
-	t2 := time.Now()
-	if err != nil && t2.Sub(t1) < 2*time.Second {
-		log.Errorf("start http service error %v", err)
-		return err
-	}
+	//t2 := time.Now()
+	//if err != nil && t2.Sub(t1) < 2*time.Second {
+	//	log.Errorf("start http service error %v", err)
+	//	return err
+	//}
 
 	log.Critical("http service closed and release the binding port")
 	return nil
@@ -143,13 +132,6 @@ func (hi *httpServerImpl) Restart() error {
 	return nil
 }
 
-type RateLimitConfig struct {
-	Enable           bool
-	TxFillRate       time.Duration
-	TxRatePeak       int64
-	ContractFillRate time.Duration
-	ContractRatePeak int64
-}
 type httpReadWrite struct {
 	io.Reader
 	io.Writer
@@ -159,7 +141,7 @@ func (hrw *httpReadWrite) Close() error {
 	return nil
 }
 
-func newJsonHttpHandler(srv *Server) http.HandlerFunc {
+func newHttpHandler(srv *Server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.ContentLength > maxHTTPRequestContentLength {
 			http.Error(w,
@@ -168,27 +150,27 @@ func newJsonHttpHandler(srv *Server) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("content-type", "application/json")
-		codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr)
+		codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr, nil)
 		defer codec.Close()
 		srv.ServeSingleRequest(codec, OptionMethodInvocation)
 	}
 }
 
-func startRestService(srv *Server) {
-	config := srv.namespaceMgr.GlobalConfig()
-	restPort := config.GetInt(common.C_REST_PORT)
-	logsPath := config.GetString(common.LOG_DUMP_FILE_DIR)
-
-	// rest service
-	routers.NewRouter()
-	beego.BConfig.CopyRequestBody = true
-	beego.SetLogFuncCall(true)
-
-	logs.SetLogger(logs.AdapterFile, `{"filename": "`+logsPath+"/RESTful-API-"+strconv.Itoa(restPort)+"-"+time.Now().Format("2006-01-02 15:04:05")+`"}`)
-	beego.BeeLogger.DelLogger("console")
-
-	beego.Run("0.0.0.0:" + strconv.Itoa(restPort))
-}
+//func startRestService(srv *Server) {
+//	config := srv.namespaceMgr.GlobalConfig()
+//	restPort := config.GetInt(common.C_REST_PORT)
+//	logsPath := config.GetString(common.LOG_DUMP_FILE_DIR)
+//
+//	// rest service
+//	routers.NewRouter()
+//	beego.BConfig.CopyRequestBody = true
+//	beego.SetLogFuncCall(true)
+//
+//	logs.SetLogger(logs.AdapterFile, `{"filename": "`+logsPath+"/RESTful-API-"+strconv.Itoa(restPort)+"-"+time.Now().Format("2006-01-02 15:04:05")+`"}`)
+//	beego.BeeLogger.DelLogger("console")
+//
+//	beego.Run("0.0.0.0:" + strconv.Itoa(restPort))
+//}
 
 type StoppableListener struct {
 	*net.TCPListener          //Wrapped listener

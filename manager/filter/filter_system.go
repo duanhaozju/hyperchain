@@ -6,6 +6,7 @@ import (
 	"hyperchain/manager/event"
 	"time"
 	"hyperchain/core/types"
+	"github.com/op/go-logging"
 )
 
 // Type determines the kind of filter and is used to put the filter in to
@@ -40,6 +41,8 @@ const (
 
 var (
 	ErrInvalidSubscriptionID = errors.New("invalid id")
+	log 	     *logging.Logger // package-level logger
+
 )
 
 type filterIndex map[Type]map[string]*subscription
@@ -59,6 +62,7 @@ type EventSystem struct {
 // The returned manager has a loop that needs to be stopped with the Stop function
 // or by stopping the given mux.
 func NewEventSystem(mux *event.TypeMux) *EventSystem {
+	log = common.GetLogger(common.DEFAULT_LOG, "filter")
 	m := &EventSystem{
 		mux:        mux,
 		installC:   make(chan *subscription),
@@ -83,11 +87,13 @@ func (es *EventSystem) eventLoop() {
 	for {
 		select {
 		case ev, active := <-sub.Chan():
+			log.Debugf("start to notify, active = %v\n", active)
 			if !active { // system stopped
 				return
 			}
 			es.broadcast(index, ev)
 		case f := <-es.installC:
+			log.Debugf("register event %v\n", f.typ)
 			index[f.typ][f.id] = f
 			close(f.installed)
 		case f := <-es.uninstallC:
@@ -106,6 +112,7 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 	switch ev := obj.Data.(type) {
 	case event.FilterNewBlockEvent:
 		for _, f := range filters[BlocksSubscription] {
+			log.Debugf("block hash: %v\n", ev.Block.BlockHash)
 			if obj.Time.After(f.created) {
 				f.hashes <- common.BytesToHash(ev.Block.BlockHash)
 			}

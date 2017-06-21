@@ -197,10 +197,7 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 		for _, log := range logs {
 			log.BlockHash = blockHash
 			log.BlockNumber = blockNumber
-			filterLogs = append(filterLogs, log)
 		}
-		// why need a iterate to find the final blockHash and blockNumber
-		// @Duanhao Since blockhash is not certain during the validation. Therefore correct blockhash has to be assigned during commit stage.
 		receipt.SetLogs(logs)
 		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
 			return err, nil
