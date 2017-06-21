@@ -7,8 +7,9 @@ import (
 	"sync"
 	flt "hyperchain/manager/filter"
 	"time"
-	"hyperchain/core/vm"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/manager/event"
+	"hyperchain/core/types"
 	"context"
 )
 
@@ -22,16 +23,15 @@ type PublicFilterAPI struct {
 	filters     map[string]*flt.Filter
 }
 
-//func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config, subchan *common.Subchan) *PublicFilterAPI {
 func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config) *PublicFilterAPI {
 	log := common.GetLogger(namespace, "api")
 	api := &PublicFilterAPI{
-		namespace:   	namespace,
-		eh:          	eh,
-		config:      	config,
-		log:         	log,
-		events:     	eh.GetFilterSystem(),
-		filters:     	make(map[string]*flt.Filter),
+		namespace:   namespace,
+		eh:          eh,
+		config:      config,
+		log:         log,
+		events:      eh.GetFilterSystem(),
+		filters:     make(map[string]*flt.Filter),
 	}
 	go api.timeoutLoop()
 	return api
@@ -92,7 +92,7 @@ func (api *PublicFilterAPI) NewBlockSubscription(isVerbose bool) string {
 
 func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string {
 	var (
-		logC     = make(chan []*vm.Log)
+		logC     = make(chan []*types.Log)
 		logSub   = api.events.NewLogSubscription(crit, logC)
 	)
 	api.filtersMu.Lock()
@@ -119,6 +119,35 @@ func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string
 
 	return logSub.ID
 
+}
+
+func (api *PublicFilterAPI) NewExceptionSubscription(crit flt.FilterCriteria) string {
+	var (
+		ch     = make(chan interface{})
+		sub   = api.events.NewCommonSubscription(ch, false, flt.ExceptionSubscription, crit)
+	)
+	api.filtersMu.Lock()
+	api.filters[sub.ID] = flt.NewFilter(flt.ExceptionSubscription, sub, crit)
+	api.filtersMu.Unlock()
+
+	go func() {
+		for {
+			select {
+			case d := <-ch:
+				api.filtersMu.Lock()
+				if f, found := api.filters[sub.ID]; found {
+					f.AddData(d)
+				}
+				api.filtersMu.Unlock()
+			case <-sub.Err():
+				api.filtersMu.Lock()
+				delete(api.filters, sub.ID)
+				api.filtersMu.Unlock()
+				return
+			}
+		}
+	}()
+	return sub.ID
 }
 
 // GetFilterChanges returns the logs for the filter with the given id since
@@ -167,6 +196,10 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 			logs := f.GetLogs()
 			defer f.Clearlog()
 			return returnLogs(logs), nil
+		case flt.ExceptionSubscription:
+			data := f.GetData()
+			defer f.ClearData()
+			return returnException(data), nil
 		}
 	}
 
@@ -195,12 +228,25 @@ func returnHashes(hashes []common.Hash) []common.Hash {
 
 // returnLogs is a helper that will return an empty log array in case the given logs array is nil,
 // otherwise the given logs array is returned.
-func returnLogs(logs []*vm.Log) []vm.LogTrans {
+func returnLogs(logs []*types.Log) []types.LogTrans {
 	if logs == nil {
-		return []vm.LogTrans{}
+		return []types.LogTrans{}
 	}
-	_logs := vm.Logs(logs)
+	_logs := types.Logs(logs)
 	return _logs.ToLogsTrans()
+}
+
+func returnException(data []interface{}) []event.FilterException {
+	if len(data) == 0 {
+		return []event.FilterException{}
+	}
+	var ret []event.FilterException
+	for _, d := range data {
+		if val, ok := d.(event.FilterException); ok {
+			ret = append(ret, val)
+		}
+	}
+	return ret
 }
 
 // ===================== test ================
@@ -216,39 +262,39 @@ func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
 	subchan := common.GetSubChan(ctx)
 
 	select {
-		case err := <- subchan.Err:
-			return common.ID(""), err
-		case rpcSub := <- common.GetSubChan(ctx).SubscriptionChan:
-			//api.subchan.Mux.Unlock()
-			api.log.Debugf("receive subscription %v\n", rpcSub.ID)
+	case err := <- subchan.Err:
+		return common.ID(""), err
+	case rpcSub := <- common.GetSubChan(ctx).SubscriptionChan:
+	//api.subchan.Mux.Unlock()
+		api.log.Debugf("receive subscription %v\n", rpcSub.ID)
 
-			go func() {
+		go func() {
 
-				blockC   := make(chan common.Hash)
-				blockSub := api.events.NewBlockSubscription(blockC, false)
+			blockC   := make(chan common.Hash)
+			blockSub := api.events.NewBlockSubscription(blockC, false)
 
-				for {
-					select {
-					case h := <-blockC:
-						api.log.Debugf("receive block %v\n", h.Hex())
-						payload := common.NotifyPayload{
-							SubID: rpcSub.ID,
-							Data:  h,
-						}
-
-						subchan.NotifyDataChan <- payload
-					case <-rpcSub.Err():
-						blockSub.Unsubscribe()
-						return
-					case <-subchan.Closed(): // connection close, unsubscribe all the subscription in this context
-						api.log.Debug("the websocket connection closed, release resource")
-						blockSub.Unsubscribe()
-						return
+			for {
+				select {
+				case h := <-blockC:
+					api.log.Debugf("receive block %v\n", h.Hex())
+					payload := common.NotifyPayload{
+						SubID: rpcSub.ID,
+						Data:  h,
 					}
-				}
-			}()
 
-			return rpcSub.ID, nil
+					subchan.NotifyDataChan <- payload
+				case <-rpcSub.Err():
+					blockSub.Unsubscribe()
+					return
+				case <-subchan.Closed(): // connection close, unsubscribe all the subscription in this context
+					api.log.Debug("the websocket connection closed, release resource")
+					blockSub.Unsubscribe()
+					return
+				}
+			}
+		}()
+
+		return rpcSub.ID, nil
 	}
 
 }

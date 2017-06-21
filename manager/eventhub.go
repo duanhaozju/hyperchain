@@ -30,6 +30,7 @@ const (
 	SUB_EXEC
 	SUB_SESSION
 	SUB_TRANSACTION
+	SUB_NVP
 )
 
 const (
@@ -93,7 +94,9 @@ func (hub *EventHub) Start() {
 }
 
 func (hub *EventHub) Stop() {
-	hub.close <- true
+	for i := 0; i < len(hub.subscriptions); i += 1 {
+		hub.close <- true
+	}
 	hub.logger.Noticef("event hub stopped!")
 }
 

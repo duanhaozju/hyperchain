@@ -4,12 +4,12 @@ import (
 	"errors"
 	"hyperchain/common"
 	"hyperchain/core/hyperstate"
-	"hyperchain/core/vm"
 	"hyperchain/crypto/hmEncryption"
 	"math/big"
 	"time"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/hyperdb"
+	"hyperchain/core/vm"
 )
 
 const (
@@ -91,4 +91,10 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 		return nil, err
 	}
 	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, archieveDb, conf, height, namespace)
+}
+
+func substr(str string, start int, end int) string {
+	rs := []rune(str)
+
+	return string(rs[start:end])
 }

@@ -12,12 +12,13 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/pkg/errors"
 	"hyperchain/common"
-	"hyperchain/core/vm"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
 	"hyperchain/tree/bucket"
 	"sync/atomic"
 	"github.com/op/go-logging"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
 )
 
 const (
@@ -51,7 +52,7 @@ type StateDB struct {
 
 	thash, bhash common.Hash
 	txIndex      int
-	logs         map[common.Hash]vm.Logs
+	logs         map[common.Hash]types.Logs
 	logSize      uint
 
 	// Journal of state modifications. This is the backbone of
@@ -79,9 +80,11 @@ type StateDB struct {
 func New(root common.Hash, db db.Database,  archieveDb db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
 	logger := common.GetLogger(namespace, "state")
 	csc, _ := lru.New(codeSizeCacheSize)
+	// initialize global cache of bucket tree
+	bucket.NewGlobalDataNodeCache(bktConf.GetInt(GlobalDataNodeCacheLength),bktConf.GetInt(GlobalDataNodeCacheSize))
 	// initialize bucket tree
 	bucketPrefix, _ := CompositeStateBucketPrefix()
-	bucketTree := bucket.NewBucketTree(db, string(bucketPrefix), logger)
+	bucketTree := bucket.NewBucketTree(db, string(bucketPrefix))
 	// initialize cache
 	batchCache, _ := common.NewCache()
 	contentCache, _ := common.NewCache()
@@ -94,7 +97,7 @@ func New(root common.Hash, db db.Database,  archieveDb db.Database, bktConf *com
 		stateObjects:      make(map[common.Address]*StateObject),
 		stateObjectsDirty: make(map[common.Address]struct{}),
 		refund:            new(big.Int),
-		logs:              make(map[common.Hash]vm.Logs),
+		logs:              make(map[common.Hash]types.Logs),
 		bktConf:           bktConf,
 		bucketTree:        bucketTree,
 		batchCache:        batchCache,
@@ -102,7 +105,7 @@ func New(root common.Hash, db db.Database,  archieveDb db.Database, bktConf *com
 		archieveCache:     archieveCache,
 		logger:            logger,
 	}
-	err := bucketTree.Initialize(SetupBucketConfig(state.GetBucketSize(STATEDB), state.GetBucketLevelGroup(STATEDB), state.GetBucketCacheSize(STATEDB)))
+	err := bucketTree.Initialize(SetupBucketConfig(state.GetBucketSize(STATEDB), state.GetBucketLevelGroup(STATEDB), state.GetBucketCacheSize(STATEDB), state.GetDataNodeCacheSize(STATEDB)))
 	curHash, err := bucketTree.ComputeCryptoHash()
 	logger.Debugf("latest state root %s", common.Bytes2Hex(curHash))
 	if err != nil {
@@ -126,7 +129,7 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 	self.lock.Lock()
 	defer self.lock.Unlock()
 	bucketPrefix, _ := CompositeStateBucketPrefix()
-	bucketTree := bucket.NewBucketTree(self.db, string(bucketPrefix), self.logger)
+	bucketTree := bucket.NewBucketTree(self.db, string(bucketPrefix))
 	state := &StateDB{
 		db:                self.db,
 		codeSizeCache:     self.codeSizeCache,
@@ -134,11 +137,11 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 		stateObjects:      make(map[common.Address]*StateObject),
 		stateObjectsDirty: make(map[common.Address]struct{}),
 		refund:            new(big.Int),
-		logs:              make(map[common.Hash]vm.Logs),
+		logs:              make(map[common.Hash]types.Logs),
 		bktConf:           self.bktConf,
 		bucketTree:        bucketTree,
 	}
-	bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB), self.GetBucketCacheSize(STATEDB)))
+	bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB), self.GetBucketCacheSize(STATEDB), self.GetDataNodeCacheSize(STATEDB)))
 	return state, nil
 }
 
@@ -169,7 +172,7 @@ func (self *StateDB) Reset() error {
 	self.thash = common.Hash{}
 	self.bhash = common.Hash{}
 	self.txIndex = 0
-	self.logs = make(map[common.Hash]vm.Logs)
+	self.logs = make(map[common.Hash]types.Logs)
 	self.logSize = 0
 	return nil
 }
@@ -221,7 +224,7 @@ func (self *StateDB) Purge() {
 	self.thash = common.Hash{}
 	self.bhash = common.Hash{}
 	self.txIndex = 0
-	self.logs = make(map[common.Hash]vm.Logs)
+	self.logs = make(map[common.Hash]types.Logs)
 	self.logSize = 0
 }
 
@@ -294,7 +297,7 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 // doesn't assign block hash now
 // because the blcok hash hasn't been calculated
 // correctly block  hash will be assigned in the commit phase
-func (self *StateDB) AddLog(log *vm.Log) {
+func (self *StateDB) AddLog(log *types.Log) {
 	self.journal.JournalList = append(self.journal.JournalList, &AddLogChange{Txhash: self.thash})
 	log.TxHash = self.thash
 	log.TxIndex = uint(self.txIndex)
@@ -304,13 +307,13 @@ func (self *StateDB) AddLog(log *vm.Log) {
 }
 
 // obtain logs by transaction hash
-func (self *StateDB) GetLogs(hash common.Hash) vm.Logs {
+func (self *StateDB) GetLogs(hash common.Hash) types.Logs {
 	return self.logs[hash]
 }
 
 // get all logs in state
-func (self *StateDB) Logs() vm.Logs {
-	var logs vm.Logs
+func (self *StateDB) Logs() types.Logs {
+	var logs types.Logs
 	for _, lgs := range self.logs {
 		logs = append(logs, lgs...)
 	}
@@ -423,18 +426,18 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 }
 
 // get a storage entry in stateObject
-func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Hash) {
+func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, []byte) {
 	// Prefer `live` object
 	var liveObj *StateObject
 	if obj := self.stateObjects[a]; obj != nil {
 		liveObj = obj
 		if obj.suicided {
-			return false, common.Hash{}
+			return false, nil
 		} else {
 			existed, value := obj.GetState(b)
 			// if storage entry exist in live object's storage cache
 			if existed {
-				self.logger.Debugf("get state for %s in live objects, key %s, value %s", a.Hex(), b.Hex(), value.Hex())
+				self.logger.Debugf("get state for %s in live objects, key %s, value %s", a.Hex(), b.Hex(), common.Bytes2Hex(value))
 				return true, value
 			}
 		}
@@ -450,11 +453,11 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 			content := res.(map[common.Address]*StateObject)
 			if obj := content[a]; obj != nil {
 				if obj.suicided {
-					return false, common.Hash{}
+					return false, nil
 				} else {
 					existed, value := obj.GetState(b)
 					if existed {
-						self.logger.Debugf("get state for %s in content cache, key %s, value %s", a.Hex(), b.Hex(), value.Hex())
+						self.logger.Debugf("get state for %s in content cache, key %s, value %s", a.Hex(), b.Hex(), common.Bytes2Hex(value))
 						if liveObj == nil {
 							// save obj itself to current cache
 							self.setStateObject(obj)
@@ -473,30 +476,30 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, common.Has
 	if existed {
 		// add related obj to live cache
 		if liveObj == nil {
-			self.logger.Debugf("get state for %s in database, key %s, value %s, add to live state object's storage cache", a.Hex(), b.Hex(), value.Hex())
+			self.logger.Debugf("get state for %s in database, key %s, value %s, add to live state object's storage cache", a.Hex(), b.Hex(), common.Bytes2Hex(value))
 			// Load the object from the database.
 			data, err := self.db.Get(CompositeAccountKey(a.Bytes()))
 			if err != nil {
-				return false, common.Hash{}
+				return false, nil
 			}
 			var account Account
 			err = Unmarshal(data, &account)
 			if err != nil {
-				return false, common.Hash{}
+				return false, nil
 			}
 			// Insert into the live set.
-			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)), self.logger)
+			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT), self.GetDataNodeCacheSize(STATEOBJECT)), self.logger)
 			obj.cachedStorage[b] = value
 			self.setStateObject(obj)
 		} else {
 			// save into live obj's cache storage avoid disk cost for next fetch
-			self.logger.Debugf("get state for %s in database, key %s, value %s, add %s to live objects", a.Hex(), b.Hex(), value.Hex(), a.Hex())
+			self.logger.Debugf("get state for %s in database, key %s, value %s, add %s to live objects", a.Hex(), b.Hex(), common.Bytes2Hex(value), a.Hex())
 			liveObj.cachedStorage[b] = value
 		}
 		return true, value
 	}
 	self.logger.Debugf("find state for %s %s failed", a.Hex(), b.Hex())
-	return false, common.Hash{}
+	return false, nil
 }
 
 // GetDeployedContract return deployed contract list.
@@ -590,6 +593,10 @@ func (self *StateDB) GetTree() interface{} {
 	return self.bucketTree
 }
 
+func (self *StateDB) GetCurrentTxHash() common.Hash {
+	return self.thash
+}
+
 /*
  * SETTERS
  */
@@ -634,7 +641,7 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) {
 }
 
 // set a storage entry to a state object
-func (self *StateDB) SetState(addr common.Address, key common.Hash, value common.Hash, opcode int32) {
+func (self *StateDB) SetState(addr common.Address, key common.Hash, value []byte, opcode int32) {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
 		self.logger.Debug("hyper statedb set state find state object in live objects")
@@ -715,10 +722,11 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 			content := res.(map[common.Address]*StateObject)
 			if obj := content[addr]; obj != nil {
 				if obj.suicided {
-					self.logger.Debugf("search state object %x in the content cache, but it has been suicide", addr)
+					self.logger.Noticef("search state object %x in the content cache, but it has been suicide", addr)
 					return nil
 				}
 				self.logger.Debugf("search state object %x in the content cache, add it to live objects", addr)
+				self.logger.Debugf("obj found from cached collection. totally with %d elements", len(obj.cachedStorage))
 				self.setStateObject(obj)
 				return obj
 			}
@@ -737,7 +745,7 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 	}
 	// Insert into the live set.
 	self.logger.Debugf("find state object %x in database, add it to live objects", addr)
-	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)), self.logger)
+	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT), self.GetDataNodeCacheSize(STATEOBJECT)), self.logger)
 	self.setStateObject(obj)
 	return obj
 }
@@ -765,7 +773,7 @@ func (self *StateDB) MarkStateObjectDirty(addr common.Address) {
 // the given address, it is overwritten and returned as the second return value.
 func (self *StateDB) createObject(addr common.Address) (newobj, prev *StateObject) {
 	prev = self.GetStateObject(addr)
-	newobj = newObject(self, addr, Account{}, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)), self.logger)
+	newobj = newObject(self, addr, Account{}, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT), self.GetDataNodeCacheSize(STATEOBJECT)), self.logger)
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		self.logger.Infof("(+) %x\n", addr)
@@ -809,7 +817,7 @@ func (self *StateDB) Copy() *StateDB {
 		stateObjects:      make(map[common.Address]*StateObject, len(self.stateObjectsDirty)),
 		stateObjectsDirty: make(map[common.Address]struct{}, len(self.stateObjectsDirty)),
 		refund:            new(big.Int).Set(self.refund),
-		logs:              make(map[common.Hash]vm.Logs, len(self.logs)),
+		logs:              make(map[common.Hash]types.Logs, len(self.logs)),
 		logSize:           self.logSize,
 	}
 	// Copy the dirty states and logs
@@ -818,7 +826,7 @@ func (self *StateDB) Copy() *StateDB {
 		state.stateObjectsDirty[addr] = struct{}{}
 	}
 	for hash, logs := range self.logs {
-		state.logs[hash] = make(vm.Logs, len(logs))
+		state.logs[hash] = make(types.Logs, len(logs))
 		copy(state.logs[hash], logs)
 	}
 	return state
@@ -901,8 +909,8 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 	for addr := range dirtyStateObjectSet.Iter() {
 		address := addr.(common.Address)
 		prefix, _ := CompositeStorageBucketPrefix(address.Hex())
-		bucketTree := bucket.NewBucketTree(self.db, string(prefix), self.logger)
-		bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT)))
+		bucketTree := bucket.NewBucketTree(self.db, string(prefix))
+		bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT), self.GetDataNodeCacheSize(STATEOBJECT)))
 		bucketTree.ClearAllCache()
 		// don't flush into disk util all operations finish
 		bucketTree.PrepareWorkingSet(journalCache.GetWorkingSet(WORKINGSET_TYPE_STATEOBJECT, address), big.NewInt(0))
@@ -919,7 +927,7 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 	}
 	// revert state bucket tree
 	tree := self.bucketTree
-	tree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB), self.GetBucketCacheSize(STATEDB)))
+	tree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB), self.GetBucketCacheSize(STATEDB), self.GetDataNodeCacheSize(STATEDB)))
 	tree.ClearAllCache()
 	// don't flush into disk util all operations finish
 	tree.PrepareWorkingSet(journalCache.GetWorkingSet(WORKINGSET_TYPE_STATE, common.Address{}), big.NewInt(0))
@@ -1124,4 +1132,21 @@ func (self *StateDB) ShowArchive(address common.Address, date string) map[string
 		m[common.Bytes2Hex(k)] = common.Bytes2Hex(iter.Value())
 	}
 	return storages
+}
+
+func (self *StateDB) NewIterator(addr common.Address, slice *vm.IterRange) (vm.Iterator, error) {
+	stateObject := self.GetStateObject(addr)
+	if stateObject != nil {
+		self.logger.Debug("hyper statedb set state find state object in live objects")
+		var iter vm.Iterator
+		if slice == nil {
+			iter = NewStorageIterator(stateObject, nil, nil)
+		} else {
+			iter = NewStorageIterator(stateObject, slice.Start, slice.Limit)
+		}
+		return iter, nil
+	} else {
+		self.logger.Warningf("state object %s doesn't exist or has been suicide", addr.Hex())
+		return nil, nil
+	}
 }

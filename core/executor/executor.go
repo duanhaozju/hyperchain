@@ -3,22 +3,16 @@
 package executor
 
 import (
-	"errors"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/hyperstate"
-	"hyperchain/core/vm"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
-)
-
-var (
-	EmptyPointerErr  = errors.New("nil pointer")
-	NoDefinedCaseErr = errors.New("no defined case")
-	InvalidParams    = errors.New("invalid params")
+	"hyperchain/core/vm"
+	"hyperchain/core/vm/jcee/go"
 )
 
 type Executor struct {
@@ -34,6 +28,8 @@ type Executor struct {
 	helper     *Helper
 	statedb    vm.Database
 	logger     *logging.Logger
+	jvmCli     jvm.ContractExecutor
+	exception  ExceptionHandler
 }
 
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) *Executor {
@@ -47,6 +43,8 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 		commonHash: kec256Hash,
 		encryption: encryption,
 		helper:     helper,
+		jvmCli:     jvm.NewContractExecutor(conf, namespace),
+		exception:  NewExceptionHandler(helper),
 	}
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.initDb()
@@ -74,7 +72,7 @@ func (executor *Executor) Start() {
 
 // Stop - stop service.
 func (executor *Executor) Stop() {
-	executor.setExit()
+	executor.finalize()
 	executor.logger.Noticef("[Namespace = %s] executor stop", executor.namespace)
 }
 
@@ -98,6 +96,12 @@ func (executor *Executor) initialize() {
 	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()
 	go executor.syncReplica()
+	executor.jvmCli.Start()
+}
+
+func (executor *Executor) finalize() {
+	executor.setExit()
+	executor.jvmCli.Stop()
 }
 
 // initializeExecutorStateDb - initialize statedb.
@@ -124,4 +128,9 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 		return nil, err
 	}
 	return stateDb, nil
+}
+
+// FetchStateDb - fetch state db
+func (executor *Executor) FetchStateDb() vm.Database {
+	return executor.statedb
 }

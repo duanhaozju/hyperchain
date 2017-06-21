@@ -1,11 +1,11 @@
 package filter
 
 import (
-	"time"
-	"sync"
-	"hyperchain/core/vm"
 	"hyperchain/common"
 	"math/big"
+	"sync"
+	"time"
+	"hyperchain/core/types"
 )
 
 type subscription struct {
@@ -13,19 +13,28 @@ type subscription struct {
 	verbose   bool
 	typ       Type
 	created   time.Time
-	logsCrit  FilterCriteria
-	logs      chan []*vm.Log
+	crit      FilterCriteria
+	logs      chan []*types.Log
 	hashes    chan common.Hash
+	extra     chan interface{}
 	installed chan struct{} // closed when the filter is installed
 	err       chan error    // closed when the filter is uninstalled
 }
 
 // FilterCriteria represents a request to create a new filter.
 type FilterCriteria struct {
-	FromBlock *big.Int          `json:"fromBlock"`
-	ToBlock   *big.Int          `json:"toBlock"`
-	Addresses []common.Address  `json:"addresses"`
-	Topics    [][]common.Hash   `json:"topics"`
+	// vm log criteria
+	FromBlock *big.Int         `json:"fromBlock"`
+	ToBlock   *big.Int         `json:"toBlock"`
+	Addresses []common.Address `json:"addresses"`
+	Topics    [][]common.Hash  `json:"topics"`
+	// exception criteria
+	Modules        []string    `json:"modules"`
+	ModulesExclude []string    `json:"modules_exclude"`
+	SubType        []string    `json:"subtypes"`
+	SubTypeExclude []string    `json:"subtypes_exclude"`
+	Code           []int       `json:"error_codes"`
+	CodeExclude    []int       `json:"error_codes_exclude"`
 }
 
 // Subscription is created when the client registers itself for a particular event.
@@ -35,6 +44,7 @@ type Subscription struct {
 	es        *EventSystem
 	unsubOnce sync.Once
 }
+
 // Err returns a channel that is closed when unsubscribed.
 func (sub *Subscription) Err() <-chan error {
 	return sub.f.err
@@ -43,7 +53,7 @@ func (sub *Subscription) Err() <-chan error {
 // Unsubscribe uninstalls the subscription from the event broadcast loop.
 func (sub *Subscription) Unsubscribe() {
 	sub.unsubOnce.Do(func() {
-		uninstallLoop:
+	uninstallLoop:
 		for {
 			// write uninstall request and consume logs/hashes. This prevents
 			// the eventLoop broadcast method to deadlock when writing to the

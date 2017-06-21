@@ -4,49 +4,49 @@ namespace: ns1
 maxpeernode: 4
 
 node2:
-    ip: 127.0.0.1
+    ip: 172.16.0.12
     node_id: 1
     is_origin: true
     is_vp: true
-    grpc_port: 8011
-    jsonrpc_port: 8082
-    restful_port: 9011
-    introducer_ip: 127.0.0.1
-    introducer_port: 8011
+    grpc_port: 8002
+    jsonrpc_port: 8081
+    restful_port: 9002
+    introducer_ip: 172.16.0.12
+    introducer_port: 8002
     introducer_id: 1
 
 node3:
-    ip: 127.0.0.1
+    ip: 172.16.0.13
     node_id: 2
     is_origin: true
     is_vp: true
-    grpc_port: 8012
-    jsonrpc_port: 8083
-    restful_port: 9012
-    introducer_ip: 127.0.0.1
-    introducer_port: 8011
+    grpc_port: 8002
+    jsonrpc_port: 8081
+    restful_port: 9002
+    introducer_ip: 172.16.0.12
+    introducer_port: 8002
     introducer_id: 1
 
 node4:
-    ip: 127.0.0.1
+    ip: 172.16.0.14
     node_id: 3
     is_origin: true
     is_vp: true
-    grpc_port: 8013
-    jsonrpc_port: 8084
-    restful_port: 9013
-    introducer_ip: 127.0.0.1
-    introducer_port: 8011
+    grpc_port: 8002
+    jsonrpc_port: 8081
+    restful_port: 9002
+    introducer_ip: 172.16.0.12
+    introducer_port: 8002
     introducer_id: 1
 
-node5:
-    ip: 127.0.0.1
+node1:
+    ip: 172.16.0.11
     node_id: 4
     is_origin: true
     is_vp: true
-    grpc_port: 8014
-    jsonrpc_port: 8085
-    restful_port: 9014
-    introducer_ip: 127.0.0.1
-    introducer_port: 8011
+    grpc_port: 8002
+    jsonrpc_port: 8081
+    restful_port: 9002
+    introducer_ip: 172.16.0.12
+    introducer_port: 8002
     introducer_id: 1

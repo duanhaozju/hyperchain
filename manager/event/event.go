@@ -114,6 +114,10 @@ type NegoRoutersEvent struct {
 	Payload []byte
 }
 
+type CommitedBlockEvent struct {
+	Payload []byte
+}
+
 /*
 	Executor events
  */
@@ -127,6 +131,7 @@ type ExecutorToP2PEvent struct {
 	Type    int
 	Peers   []uint64
 }
+
 
 
 

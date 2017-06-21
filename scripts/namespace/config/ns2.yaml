@@ -1,64 +1,52 @@
 #used to generate namespace config files
 
 namespace: ns2
-maxpeernode: 5
+maxpeernode: 4
 
 node3:
-    ip: 127.0.0.1
+    ip: 172.16.0.13
     node_id: 1
     is_origin: true
     is_vp: true
-    grpc_port: 8021
-    jsonrpc_port: 8083
-    restful_port: 9021
-    introducer_ip: 127.0.0.1
-    introducer_port: 8021
+    grpc_port: 8003
+    jsonrpc_port: 8081
+    restful_port: 9003
+    introducer_ip: 172.16.0.13
+    introducer_port: 8003
     introducer_id: 1
 
 node4:
-    ip: 127.0.0.1
+    ip: 172.16.0.14
     node_id: 2
     is_origin: true
     is_vp: true
-    grpc_port: 8022
-    jsonrpc_port: 8084
-    restful_port: 9022
-    introducer_ip: 127.0.0.1
-    introducer_port: 8021
+    grpc_port: 8003
+    jsonrpc_port: 8081
+    restful_port: 9003
+    introducer_ip: 172.16.0.13
+    introducer_port: 8003
     introducer_id: 1
 
-node5:
-    ip: 127.0.0.1
+node1:
+    ip: 172.16.0.11
     node_id: 3
     is_origin: true
     is_vp: true
-    grpc_port: 8023
-    jsonrpc_port: 8085
-    restful_port: 9023
-    introducer_ip: 127.0.0.1
-    introducer_port: 8021
+    grpc_port: 8003
+    jsonrpc_port: 8081
+    restful_port: 9003
+    introducer_ip: 172.16.0.13
+    introducer_port: 8003
     introducer_id: 1
 
-node6:
-    ip: 127.0.0.1
+node2:
+    ip: 172.16.0.12
     node_id: 4
     is_origin: true
     is_vp: true
-    grpc_port: 8024
-    jsonrpc_port: 8086
-    restful_port: 9024
-    introducer_ip: 127.0.0.1
-    introducer_port: 8021
-    introducer_id: 1
-
-node7:
-    ip: 127.0.0.1
-    node_id: 5
-    is_origin: true
-    is_vp: true
-    grpc_port: 8025
-    jsonrpc_port: 8087
-    restful_port: 9025
-    introducer_ip: 127.0.0.1
-    introducer_port: 8021
+    grpc_port: 8003
+    jsonrpc_port: 8081
+    restful_port: 9003
+    introducer_ip: 172.16.0.13
+    introducer_port: 8003
     introducer_id: 1

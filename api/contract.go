@@ -1,4 +1,5 @@
 //Hyperchain License
+
 //Copyright (C) 2016 The Hyperchain Authors.
 package api
 
@@ -8,8 +9,7 @@ import (
 	"github.com/juju/ratelimit"
 	"hyperchain/common"
 	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/compiler"
+	"hyperchain/core/vm/evm/compiler"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/manager/event"
 	"hyperchain/manager"
@@ -17,6 +17,8 @@ import (
 	"time"
 	"strconv"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/core/vm"
+	"strings"
 )
 
 type Contract struct {
@@ -58,7 +60,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	payload := common.FromHex(realArgs.Payload)
 
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
-		realArgs.Value.ToInt64(), payload, args.Opcode)
+		realArgs.Value.ToInt64(), payload, args.Opcode, parseVmType(realArgs.VmType))
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
@@ -151,6 +153,11 @@ func (contract *Contract) GetCode(addr common.Address) (string, error) {
 		return "", err
 	}
 
+	acc := stateDb.GetAccount(addr)
+	if acc == nil {
+		return "", &common.AccountNotExistError{Message: addr.Hex()}
+	}
+
 	return fmt.Sprintf(`0x%x`, stateDb.GetCode(addr)), nil
 }
 
@@ -159,9 +166,13 @@ func (contract *Contract) GetCode(addr common.Address) (string, error) {
 func (contract *Contract) GetContractCountByAddr(addr common.Address) (*Number, error) {
 
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
-
 	if err != nil {
 		return nil, err
+	}
+
+	acc := stateDb.GetAccount(addr)
+	if acc == nil {
+		return nil, &common.AccountNotExistError{Message: addr.Hex()}
 	}
 
 	return NewUint64ToNumber(stateDb.GetNonce(addr)), nil
@@ -270,9 +281,9 @@ func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]stri
 	mp := make(map[string]string)
 
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return nil, nil
+		return nil, &common.AccountNotExistError{Message: addr.Hex()}
 	} else {
-		cb := func(key, value common.Hash) bool {
+		cb := func(key common.Hash, value []byte) bool {
 			return true
 		}
 		storages := obj.ForEachStorage(cb)
@@ -281,7 +292,7 @@ func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]stri
 		}
 
 		for k, v := range storages {
-			mp[k.Hex()] = v.Hex()
+			mp[k.Hex()] = common.Bytes2Hex(v)
 		}
 	}
 	return mp, nil
@@ -294,7 +305,7 @@ func (contract *Contract) GetDeployedList(addr common.Address) ([]string, error)
 		return nil, err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return nil, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+		return nil, &common.AccountNotExistError{Message: addr.Hex()}
 	} else {
 		return stateDb.GetDeployedContract(addr), nil
 	}
@@ -307,7 +318,7 @@ func (contract *Contract) GetCreator(addr common.Address) (common.Address, error
 		return common.Address{}, err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return common.Address{}, &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+		return common.Address{}, &common.AccountNotExistError{Message: addr.Hex()}
 	} else {
 		if !isContractAccount(stateDb, addr) {
 			return common.Address{}, nil
@@ -323,7 +334,7 @@ func (contract *Contract) GetStatus(addr common.Address) (string, error) {
 		return "", err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return "", &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+		return "", &common.AccountNotExistError{Message: addr.Hex()}
 	} else {
 		status :=  stateDb.GetStatus(addr)
 		if !isContractAccount(stateDb, addr) {
@@ -347,7 +358,7 @@ func (contract *Contract) GetCreateTime(addr common.Address) (string, error) {
 		return "", err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return "", &common.LeveldbNotFoundError{Message:"account doesn't exist"}
+		return "", &common.AccountNotExistError{Message: addr.Hex()}
 	} else {
 		if !isContractAccount(stateDb, addr) {
 			return "", nil
@@ -366,6 +377,11 @@ func (contract *Contract) GetArchive(addr common.Address, date string) (map[stri
 	if err != nil {
 		return nil, err
 	}
+
+	if obj := stateDb.GetAccount(addr); obj == nil {
+		return nil, &common.AccountNotExistError{Message: addr.Hex()}
+	}
+
 	return stateDb.ShowArchive(addr, date), nil
 }
 
@@ -382,4 +398,13 @@ func getBlockStateDb(namespace string, config *common.Config) (vm.Database, erro
 func isContractAccount(stateDb vm.Database, addr common.Address) bool {
 	code := stateDb.GetCode(addr)
 	return code != nil
+}
+
+func parseVmType(vmType string) types.TransactionValue_VmType {
+	switch strings.ToLower(vmType) {
+	case "jvm":
+		return types.TransactionValue_JVM
+	default:
+		return types.TransactionValue_EVM
+	}
 }

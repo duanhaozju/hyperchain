@@ -20,8 +20,9 @@ const (
 // LDBDatabase implements the DataBase interface
 
 type LDBDatabase struct {
-	path string
-	db   *leveldb.DB
+	path      string
+	db        *leveldb.DB
+	namespace string
 }
 
 // NewLDBDataBase new a LDBDatabase instance
@@ -32,14 +33,15 @@ type LDBDatabase struct {
 // DB can be recovered with Recover function.
 // the return *LDBDatabase is goruntine-safe
 // the LDBDataBase instance must be close after use, by calling Close method
-func NewLDBDataBase(conf *common.Config,filepath string) (*LDBDatabase, error) {
+func NewLDBDataBase(conf *common.Config,filepath string, namespace string) (*LDBDatabase, error) {
 	if conf!=nil {
 		filepath= pa.Join(conf.GetString(LEVEL_DB_PATH), filepath)
 	}
 	db, err := leveldb.OpenFile(filepath, nil)
 	return &LDBDatabase{
-		path: filepath,
-		db:   db,
+		path:          filepath,
+		db:            db,
+		namespace:     namespace,
 	}, err
 }
 
@@ -66,8 +68,16 @@ func (self *LDBDatabase) NewIterator(prefix []byte) db.Iterator {
 	return self.db.NewIterator(util.BytesPrefix(prefix), nil)
 }
 
+func (self *LDBDatabase) Scan(begin, end []byte) db.Iterator {
+	return self.db.NewIterator(&util.Range{Start: begin, Limit: end}, nil)
+}
+
 func (self *LDBDatabase) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
 	return self.db.NewIterator(util.BytesPrefix(prefix), nil)
+}
+
+func (self *LDBDatabase) Namespace() string {
+	return self.namespace
 }
 
 //Destroy, clean the whole database,

@@ -7,11 +7,12 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/core/vm"
 	"hyperchain/hyperdb/db"
 	"hyperchain/tree/pmt"
 	"math/big"
 	"sync"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
 )
 
 var (
@@ -65,7 +66,7 @@ type StateDB struct {
 	refund           *big.Int
 	thash, bhash     common.Hash
 	txIndex          int
-	logs             map[common.Hash]vm.Logs
+	logs             map[common.Hash]types.Logs
 	logSize          uint
 	leastStateObject *StateObject
 	lock             sync.Mutex
@@ -83,7 +84,7 @@ func New(root common.Hash, db db.Database) (*StateDB, error) {
 		stateObjects:     make(map[string]*StateObject),
 		stateObjectDirty: make(map[common.Address]struct{}),
 		refund:           new(big.Int),
-		logs:             make(map[common.Hash]vm.Logs),
+		logs:             make(map[common.Hash]types.Logs),
 	}, nil
 
 }
@@ -98,7 +99,7 @@ func (self *StateDB) New(root common.Hash) (*StateDB, error) {
 		stateObjects:     make(map[string]*StateObject),
 		stateObjectDirty: make(map[common.Address]struct{}),
 		refund:           new(big.Int),
-		logs:             make(map[common.Hash]vm.Logs),
+		logs:             make(map[common.Hash]types.Logs),
 	}, nil
 }
 
@@ -119,7 +120,7 @@ func (self *StateDB) ResetTo(root common.Hash) error {
 	self.stateObjectDirty = make(map[common.Address]struct{})
 	self.thash = common.Hash{}
 	self.bhash = common.Hash{}
-	self.logs = make(map[common.Hash]vm.Logs)
+	self.logs = make(map[common.Hash]types.Logs)
 	self.logSize = 0
 	self.refund = new(big.Int)
 	// if reset we will clear all stateObjectSizeCache
@@ -136,7 +137,7 @@ func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 // doesn't assign block hash now
 // because the blcok hash hasn't been calculated
 // correctly block  and block hash will be assigned in the commit phase
-func (self *StateDB) AddLog(log *vm.Log) {
+func (self *StateDB) AddLog(log *types.Log) {
 	log.TxHash = self.thash
 	log.TxIndex = uint(self.txIndex)
 	log.Index = self.logSize
@@ -144,12 +145,12 @@ func (self *StateDB) AddLog(log *vm.Log) {
 	self.logSize++
 }
 
-func (self *StateDB) GetLogs(hash common.Hash) vm.Logs {
+func (self *StateDB) GetLogs(hash common.Hash) types.Logs {
 	return self.logs[hash]
 }
 
-func (self *StateDB) Logs() vm.Logs {
-	var logs vm.Logs
+func (self *StateDB) Logs() types.Logs {
+	var logs types.Logs
 	for _, lgs := range self.logs {
 		logs = append(logs, lgs...)
 	}
@@ -169,11 +170,11 @@ func (self *StateDB) Exist(addr common.Address) bool {
 	return self.GetStateObject(addr) != nil
 }
 
-func (self *StateDB) GetAccount(addr common.Address) vm.Account {
+func (self *StateDB) GetAccount(addr common.Address) *StateObject{
 	return self.GetStateObject(addr)
 }
 
-func (self *StateDB) GetLeastAccount() vm.Account {
+func (self *StateDB) GetLeastAccount() *StateObject {
 	return self.leastStateObject
 }
 
@@ -183,9 +184,9 @@ func (self *StateDB) SetLeastAccount(account *vm.Account) {
 }
 
 // return all StateObject saved in the trie instead of in CACHE
-func (self *StateDB) GetAccounts() map[string]vm.Account {
+func (self *StateDB) GetAccounts() map[string]*StateObject {
 	// return self.stateObjects
-	ret := make(map[string]vm.Account)
+	ret := make(map[string]*StateObject)
 	it := self.trie.Iterator()
 	for it.Next() {
 		addr := self.trie.GetKey(it.Key)
@@ -394,7 +395,7 @@ func (self *StateDB) CreateStateObject(addr common.Address) *StateObject {
 	return newSo
 }
 
-func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
+func (self *StateDB) CreateAccount(addr common.Address) *StateObject {
 	return self.CreateStateObject(addr)
 }
 
@@ -413,7 +414,7 @@ func (self *StateDB) Copy() *StateDB {
 	state.refund.Set(self.refund)
 
 	for hash, logs := range self.logs {
-		state.logs[hash] = make(vm.Logs, len(logs))
+		state.logs[hash] = make(types.Logs, len(logs))
 		copy(state.logs[hash], logs)
 	}
 	state.logSize = self.logSize

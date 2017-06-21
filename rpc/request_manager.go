@@ -36,7 +36,7 @@ func (rm *requestManager)Stop() {
 }
 
 func (rm *requestManager)ProcessRequest(request *common.RPCRequest) {
-	rm.response <- rm.receiver.handleChannelReq(request)
+	rm.response <- rm.receiver.handleChannelReq(request)//TODO: add timeout detect
 }
 
 func (rm *requestManager)Loop(){

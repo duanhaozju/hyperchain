@@ -41,18 +41,20 @@ func NewPublicBlockAPI(namespace string) *Block {
 }
 
 type IntervalArgs struct {
-	From *BlockNumber `json:"from"`
-	To   *BlockNumber `json:"to"`
-}
-
-type intArgs struct {
-	from uint64
-	to   uint64
+	From 		*BlockNumber `json:"from"`
+	To   		*BlockNumber `json:"to"`
+	ContractAddr 	*common.Address `json:"address"`
+	MethodID	string `json:"methodID"`
 }
 
 type IntervalTime struct {
 	StartTime int64 `json:"startTime"`
 	Endtime   int64 `json:"endTime"`
+}
+
+type intArgs struct {
+	from uint64
+	to   uint64
 }
 
 // If the client send BlockNumber "",it will convert to 0.If client send BlockNumber 0,it will return error
@@ -183,7 +185,7 @@ func latestBlock(namespace string) (*BlockResult, error) {
 	lastestBlkHeight := edb.GetChainCopy(namespace).Height
 
 	if lastestBlkHeight == 0 {
-		return nil, &common.InvalidParamsError{Message: "There is no block generated!"}
+		return nil, &common.NoBlockGeneratedError{Message: "There is no block generated!"}
 	}
 
 	return getBlockByNumber(namespace, lastestBlkHeight, false)
@@ -197,7 +199,8 @@ func getBlockByNumber(namespace string, number uint64, isPlain bool) (*BlockResu
 		return nil, &common.CallbackError{Message: err.Error()}
 	} else {
 		if edb.GetHeightOfChain(namespace) == 0 {
-			return nil, nil
+			//return nil, nil
+			return nil, &common.NoBlockGeneratedError{Message: "There is no block generated!"}
 		}
 		return outputBlockResult(namespace, blk, isPlain)
 	}

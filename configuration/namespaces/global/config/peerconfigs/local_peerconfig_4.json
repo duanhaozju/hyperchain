@@ -10,7 +10,9 @@
   "websocket_port":10004,
   "introducer_ip":"127.0.0.1",
   "introducer_port":8001,
-  "introducer_id":1
+  "introducer_id":1,
+  "jvm_port":50084,
+  "ledger_port":50054
  },
   "maxpeernode":4,
   "nodes":[

@@ -1,7 +1,7 @@
 #used to generate namespace config files
 
 namespace: global
-maxpeernode: 7
+maxpeernode: 4
 
 node1:
     ip: 127.0.0.1
@@ -15,6 +15,8 @@ node1:
     introducer_ip: 127.0.0.1
     introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051
 
 node2:
     ip: 127.0.0.1
@@ -28,6 +30,8 @@ node2:
     introducer_ip: 127.0.0.1
     introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50082
+    ledger_port: 50052
 
 node3:
     ip: 127.0.0.1
@@ -41,6 +45,8 @@ node3:
     introducer_ip: 127.0.0.1
     introducer_port: 8001
     introducer_id: 1
+    jvm_port: 50083
+    ledger_port: 50053
 
 node4:
     ip: 127.0.0.1
@@ -54,4 +60,5 @@ node4:
     introducer_ip: 127.0.0.1
     introducer_port: 8001
     introducer_id: 1
-
+    jvm_port: 50084
+    ledger_port: 50054

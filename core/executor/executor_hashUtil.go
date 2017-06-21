@@ -4,6 +4,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
+	er "hyperchain/core/errors"
 )
 
 type ExecutorHashUtil struct {
@@ -29,7 +30,7 @@ func (executor *Executor) initCalculator() {
 // calculate a batch of transaction
 func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Transaction, flush bool) (common.Hash, error) {
 	if transaction == nil && flush == false {
-		return common.Hash{}, EmptyPointerErr
+		return common.Hash{}, er.EmptyPointerErr
 	}
 	if flush == false {
 		err, data := edb.GetMarshalTransaction(transaction)
@@ -53,7 +54,7 @@ func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Tr
 func (executor *Executor) calculateReceiptFingerprint(receipt *types.Receipt, flush bool) (common.Hash, error) {
 	// 1. marshal receipt to byte slice
 	if receipt == nil && flush == false {
-		return common.Hash{}, EmptyPointerErr
+		return common.Hash{}, er.EmptyPointerErr
 	}
 	if flush == false {
 		err, data := edb.GetMarshalReceipt(receipt)

@@ -3,6 +3,7 @@
 package namespace
 
 import (
+	"errors"
 	"github.com/spf13/viper"
 	"hyperchain/api"
 	"hyperchain/common"
@@ -19,6 +20,14 @@ type API struct {
 
 var Apis map[string]*API
 
+var (
+	ErrInvalidNs         = errors.New("namespace/nsmgr: invalid namespace")
+	ErrCannotNewNs       = errors.New("namespace/nsmgr: can not new namespace")
+	ErrNsClosed          = errors.New("namespace/nsmgr: namespace closed")
+	ErrNodeNotFound      = errors.New("namespace/node: nod not found")
+	ErrIllegalNodeConfig = errors.New("namespace/node: illegal node config")
+)
+
 //constructConfigFromDir read all info needed by
 func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	var conf *common.Config
@@ -34,7 +43,6 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	} else {
 		conf = common.NewConfig(nsConfigPath)
 	}
-
 	// init peer configurations
 	peerConfigPath := conf.GetString("global.configs.peers")
 	peerViper := viper.New()
@@ -43,32 +51,25 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 	if err != nil {
 		logger.Errorf("err %v", err)
 	}
-	//TODO: Refactor these codes later
-	nodeID := peerViper.GetInt("self.node_id")
-	grpcPort := peerViper.GetInt("self.grpc_port")
-	jsonrpcPort := peerViper.GetInt("self.jsonrpc_port")
-	restfulPort := peerViper.GetInt("self.restful_port")
-	wsPort := peerViper.GetInt("self.websocket_port")
-
-	conf.Set(common.C_NODE_ID, nodeID)
-	conf.Set(common.C_HTTP_PORT, jsonrpcPort)
-	conf.Set(common.C_REST_PORT, restfulPort)
-	conf.Set(common.C_WEBSOCKET_PORT, wsPort)
-	conf.Set(common.C_GRPC_PORT, grpcPort)
+	conf.Set(common.C_NODE_ID, peerViper.GetInt("self.node_id"))
+	conf.Set(common.C_HTTP_PORT, peerViper.GetInt("self.jsonrpc_port"))
+	conf.Set(common.C_REST_PORT, peerViper.GetInt("self.restful_port"))
+	conf.Set(common.C_GRPC_PORT, peerViper.GetInt("self.grpc_port"))
 	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
 	conf.Set(common.C_GLOBAL_CONFIG_PATH, nsConfigPath)
+	conf.Set(common.C_JVM_PORT, peerViper.GetInt("self.jvm_port"))
+	conf.Set(common.C_LEDGER_PORT, peerViper.GetInt("self.ledger_port"))
 
 	if strings.HasSuffix(path, "/"+DEFAULT_NAMESPACE+"/config") {
-		nr.conf.Set(common.C_HTTP_PORT, jsonrpcPort)
-		nr.conf.Set(common.C_REST_PORT, restfulPort)
-		nr.conf.Set(common.C_WEBSOCKET_PORT, wsPort)
+		nr.conf.Set(common.C_HTTP_PORT, peerViper.GetInt("self.jsonrpc_port"))
+		nr.conf.Set(common.C_REST_PORT, peerViper.GetInt("self.restful_port"))
+		nr.conf.Set(common.C_WEBSOCKET_PORT, peerViper.GetInt("self.websocket_port"))
 	}
 
 	return conf
 }
 
 func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
-
 	return map[string]*api.API{
 		"tx": {
 			Srvname: "tx",
@@ -79,7 +80,7 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 		"node": {
 			Srvname: "node",
 			Version: "0.4",
-			Service: api.NewPublicNodeAPI(ns.eh),
+			Service: api.NewPublicNodeAPI(namespace, ns.eh),
 			Public:  true,
 		},
 		"block": {

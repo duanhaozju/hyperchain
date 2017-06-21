@@ -9,7 +9,7 @@ import (
 	"hyperchain/manager/protos"
 	"bytes"
 	"time"
-	"hyperchain/core/vm"
+	er "hyperchain/core/errors"
 )
 
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
@@ -81,7 +81,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 		block := &types.Block{}
 		proto.Unmarshal(payload, block)
 		// store blocks into database only, not process them.
-		if !executor.verifyBlockIntegrity(block) {
+		if !VerifyBlockIntegrity(block) {
 			executor.logger.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, block.Number)
 			return
 		}
@@ -135,13 +135,13 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 // ApplyBlock - apply all transactions in block into state during the `state update` process.
 func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
 	if block.Transactions == nil {
-		return EmptyPointerErr, nil
+		return er.EmptyPointerErr, nil
 	}
 	return executor.applyBlock(block, seqNo)
 }
 
 func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
-	var filterLogs []*vm.Log
+	var filterLogs []*types.Log
 	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
 	if err != nil {
 		return err, nil
@@ -208,7 +208,12 @@ func (executor *Executor) processSyncBlocks() {
 			return
 		}
 		// check the latest block in local's correctness
-		if bytes.Compare(lastBlk.ParentHash, edb.GetLatestBlockHash(executor.namespace)) == 0  {
+		latestBlk, _ := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
+
+		executor.logger.Debugf("compare latest block %d hash, correct %s, current %s",
+			latestBlk.Number, common.Bytes2Hex(lastBlk.ParentHash), common.Bytes2Hex(latestBlk.BlockHash))
+
+		if bytes.Compare(lastBlk.ParentHash, latestBlk.BlockHash) == 0  {
 			executor.waitUtilSyncAvailable()
 			defer executor.syncDone()
 			// execute all received block at one time
@@ -231,7 +236,10 @@ func (executor *Executor) processSyncBlocks() {
 						return
 					} else {
 						// commit modified changes in this block and update chain.
-						executor.accpet(blk.Number, result)
+						if err := executor.accpet(blk.Number, result); err != nil {
+							executor.reject()
+							return
+						}
 					}
 				}
 			}
@@ -245,7 +253,12 @@ func (executor *Executor) processSyncBlocks() {
 				executor.reject()
 				return
 			}
-			executor.SendSyncRequestForSingle(lastBlk.Number - 1)
+			executor.logger.Debugf("cutdown block #%d success", latestBlk.Number)
+
+			prev := executor.getLatestSyncDownstream()
+			next := executor.calcuDownstream()
+			executor.status.syncFlag.Oracle.FeedBack(true)
+			executor.SendSyncRequest(prev, next)
 		}
 	}
 }
@@ -299,12 +312,19 @@ func (executor *Executor) sendStateUpdatedEvent() {
 }
 
 // accpet - accept block synchronization result.
-func (executor *Executor) accpet(seqNo uint64, result *ValidationResultRecord) {
+func (executor *Executor) accpet(seqNo uint64, result *ValidationResultRecord) error {
 	batch := executor.statedb.FetchBatch(seqNo)
-	edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false)
-	batch.Write()
+	if err := edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false); err != nil {
+		executor.logger.Errorf("update chain to (#%d) failed, err: %s", err.Error())
+		return err
+	}
+	if err := batch.Write(); err != nil {
+		executor.logger.Errorf("commit (#%d) changes failed, err: %s", err.Error())
+		return err
+	}
 	executor.statedb.MarkProcessFinish(seqNo)
 	executor.feedback(result.Block, result.Logs)
+	return nil
 }
 
 // reject - reject state update result.
@@ -320,14 +340,6 @@ func (executor *Executor) reject() {
 	executor.clearStatedb()
 	executor.clearSyncFlag()
 	executor.sendStateUpdatedEvent()
-}
-
-// verifyBlockIntegrity - make sure block content doesn't change.
-func (executor *Executor) verifyBlockIntegrity(block *types.Block) bool {
-	if bytes.Compare(block.BlockHash, block.Hash().Bytes()) == 0 {
-		return true
-	}
-	return false
 }
 
 // isDemandSyncBlock - check whether is the demand sync block.
@@ -358,7 +370,7 @@ func (executor *Executor) receiveAllRequiredBlocks() bool {
 }
 
 // storeFilterData - store filter data in record temporarily, avoid re-generated when using.
-func (executor *Executor) storeFilterData(record *ValidationResultRecord, block *types.Block, logs []*vm.Log) {
+func (executor *Executor) storeFilterData(record *ValidationResultRecord, block *types.Block, logs []*types.Log) {
 	record.Block = block
 	record.Logs = logs
 }

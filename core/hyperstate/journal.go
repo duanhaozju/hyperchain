@@ -224,11 +224,12 @@ type (
 		Type    string          `json:"type,omitempty"`
 	}
 	StorageChange struct {
-		Account  *common.Address `json:"account,omitempty"`
-		Key      common.Hash     `json:"key,omitempty"`
-		Prevalue common.Hash     `json:"prevalue,omitempty"`
-		Exist    bool            `json:"exist,omitempty"`
-		Type     string          `json:"type,omitempty"`
+		Account    *common.Address `json:"account,omitempty"`
+		Key        common.Hash     `json:"key,omitempty"`
+		Prevalue   []byte          `json:"prevalue,omitempty"`
+		Exist      bool            `json:"exist,omitempty"`
+		LastModify uint64          `json:"brith,omitempty"`
+		Type       string          `json:"type,omitempty"`
 	}
 	CodeChange struct {
 		Account  *common.Address `json:"account,omitempty"`
@@ -248,7 +249,7 @@ type (
 	}
 	SetCreatorChange struct {
 		Account *common.Address `json:"account,omitempty"`
-		Prev    *common.Address `json:"prev,omitempty"`
+		Prev    common.Address `json:"prev,omitempty"`
 		Type    string          `json:"type,omitempty"`
 	}
 	SetCreateTimeChange struct {
@@ -496,6 +497,7 @@ func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, w
 		if ch.Exist {
 			if obj := s.GetStateObject(*ch.Account); obj != nil {
 				obj.setState(ch.Key, ch.Prevalue)
+				obj.updateStorageLastModify(ch.Key, ch.LastModify)
 			}
 		} else {
 			if obj := s.GetStateObject(*ch.Account); obj != nil {
@@ -515,7 +517,7 @@ func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, w
 }
 func (ch *StorageChange) String() string {
 	var str string
-	str = fmt.Sprintf("journal [storageChange] %s previous key %s  previous value %s \n", ch.Account.Hex(), ch.Key.Hex(), ch.Prevalue.Hex())
+	str = fmt.Sprintf("journal [storageChange] %s previous key %s  previous value %s \n", ch.Account.Hex(), ch.Key.Hex(), common.Bytes2Hex(ch.Prevalue))
 	return str
 }
 func (ch *StorageChange) Marshal() ([]byte, error) {
@@ -691,11 +693,11 @@ func (ch *DeployedContractChange) GetType() string {
 func (ch *SetCreatorChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
 	if !writeThrough {
 		if obj := s.GetStateObject(*ch.Account); obj != nil {
-			obj.setCreator(*ch.Prev)
+			obj.setCreator(ch.Prev)
 		}
 	} else {
 		if obj := cache.Fetch(*ch.Account); obj != nil {
-			obj.setCreator(*ch.Prev)
+			obj.setCreator(ch.Prev)
 		}
 	}
 }

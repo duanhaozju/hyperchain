@@ -9,8 +9,6 @@ import (
 	"hyperchain/core/types"
 
 	"hyperchain/common"
-	"fmt"
-	"github.com/golang/protobuf/proto"
 )
 
 // batchManager manage basic batch issues
@@ -145,7 +143,7 @@ func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 	var err error
 	batchTimeout, err := time.ParseDuration(conf.GetString(PBFT_BATCH_TIMEOUT))
 	if err != nil {
-		panic(fmt.Errorf("Cannot parse batch timeout: %s", err))
+		pbft.logger.Criticalf("Cannot parse batch timeout: %s", err)
 	}
 
 	if batchTimeout >= pbft.pbftTimerMgr.requestTimeout {//TODO: change the pbftTimerMgr to batchTimerMgr
@@ -214,11 +212,11 @@ func (pbft *pbftImpl) startBatchTimer()  {
 func (pbft *pbftImpl) stopBatchTimer() {
 	pbft.pbftTimerMgr.stopTimer(BATCH_TIMER)
 	pbft.batchMgr.batchTimerActive = false
-	pbft.logger.Debugf("Replica %d stpbftped the batch timer", pbft.id)
+	pbft.logger.Debugf("Replica %d stoped the batch timer", pbft.id)
 }
 
 //sendBatchRequest send batch request into pbft event queue.
-func (pbft *pbftImpl) sendBatchRequest() error {
+func (pbft *pbftImpl) sendBatch() events.Event {
 	pbft.stopBatchTimer()
 
 	if pbft.batchMgr.isBatchStoreEmpty() {
@@ -230,27 +228,27 @@ func (pbft *pbftImpl) sendBatchRequest() error {
 		Batch:     pbft.batchMgr.batchStore,
 		Timestamp: time.Now().UnixNano(),
 	}
-	payload, err := proto.Marshal(reqBatch)
-	if err != nil {
-		pbft.logger.Errorf("ConsensusMessage_TRANSACTION Marshal Error", err)
-		return nil
-	}
-
-	consensusMsg := &ConsensusMessage{
-		Type:    ConsensusMessage_TRANSACTION,
-		Payload: payload,
-	}
+	//payload, err := proto.Marshal(reqBatch)
+	//if err != nil {
+	//	pbft.logger.Errorf("ConsensusMessage_TRANSACTION Marshal Error", err)
+	//	return nil
+	//}
+	//
+	//consensusMsg := &ConsensusMessage{
+	//	Type:    ConsensusMessage_TRANSACTION,
+	//	Payload: payload,
+	//}
 
 	pbft.batchMgr.setBatchStore(nil)
 	pbft.logger.Infof("Creating batch with %d requests", len(reqBatch.Batch))
 
-	go pbft.reqEventQueue.Push(consensusMsg)
-
-	return nil
+	//go pbft.reqEventQueue.Push(consensusMsg)
+	//return nil
+	return reqBatch
 }
 
 // recvTransaction receive transaction from client.
-func (pbft *pbftImpl) recvTransaction(tx *types.Transaction) error {
+func (pbft *pbftImpl) recvTransaction(tx *types.Transaction) events.Event {
 	pbft.batchMgr.addTransaction(tx)
 
 	if !pbft.batchMgr.isBatchTimerActive() {
@@ -258,7 +256,7 @@ func (pbft *pbftImpl) recvTransaction(tx *types.Transaction) error {
 	}
 
 	if pbft.batchMgr.canSendBatch() {
-		return pbft.sendBatchRequest()
+		return pbft.sendBatch()
 	}
 
 	return nil
@@ -281,7 +279,9 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 	}
 
 	pbft.batchVdr.vid = n
+	pbft.dupLock.Lock()
 	pbft.duplicator[n] = txStore
+	pbft.dupLock.Unlock()
 
 	pbft.logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d, batch size: %d", pbft.id, pbft.view, pbft.batchVdr.vid, txStore.Len())
 	pbft.helper.ValidateBatch(newBatch.Batch, newBatch.Timestamp, n, pbft.view, true)
@@ -291,7 +291,7 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 func (pbft *pbftImpl) validatePending() {
 
 	if pbft.batchVdr.currentVid != nil {
-		pbft.logger.Debugf("Backup %d not attempting to send validate because it is currently validate %d", pbft.id, pbft.batchVdr.currentVid)
+		pbft.logger.Debugf("Backup %d not attempting to send validate because it is currently validate %d", pbft.id, *pbft.batchVdr.currentVid)
 		return
 	}
 
@@ -326,7 +326,11 @@ func (pbft *pbftImpl) preValidate(idx msgID) bool {
 		return true
 	}
 	pbft.logger.Debugf("Backup %d cache duplicator for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+
+	pbft.dupLock.Lock()
 	pbft.duplicator[idx.n] = txStore
+	pbft.dupLock.Unlock()
+
 	pbft.execValidate(cert.prePrepare.TransactionBatch, idx)
 	cert.sentValidate = true
 

@@ -3,13 +3,11 @@ package executor
 import (
 	"hyperchain/common"
 	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/params"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"sort"
-	"strconv"
 	"sync"
+	er "hyperchain/core/errors"
 )
 
 // represent a validation result
@@ -27,7 +25,7 @@ type ValidationResultRecord struct {
 
 type FilterData struct {
 	Block      *types.Block
-	Logs       []*vm.Log
+	Logs       []*types.Log
 }
 
 func (executor *Executor) Validate(validationEvent event.ValidationEvent) {
@@ -165,13 +163,11 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 	var validtxs []*types.Transaction
 	var receipts []*types.Receipt
 
-	env := executor.initEnvironment(executor.statedb, executor.getTempBlockNumber())
 	executor.initCalculator()
 	executor.statedb.MarkProcessStart(executor.getTempBlockNumber())
 	// execute transactions one by one
 	for i, tx := range txs {
-		executor.statedb.StartRecord(tx.GetHash(), common.Hash{}, i)
-		receipt, _, _, err := executor.ExecTransaction(tx, env)
+		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, executor.getTempBlockNumber())
 		if err != nil {
 			errType := executor.classifyInvalid(err)
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
@@ -204,28 +200,19 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 	}
 }
 
-// initialize transaction execution environment
-func (executor *Executor) initEnvironment(state vm.Database, seqNo uint64) vm.Environment {
-	env := make(map[string]string)
-	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
-	env["currentGasLimit"] = "200000000"
-	vmenv := NewEnvFromMap(RuleSet{params.MainNetHomesteadBlock, params.MainNetDAOForkBlock, true}, state, env, executor.logger)
-	return vmenv
-}
-
 // classifyInvalid - classify invalid transaction via error type.
 func (executor *Executor) classifyInvalid(err error) types.InvalidTransactionRecord_ErrType {
 	var errType types.InvalidTransactionRecord_ErrType
-	if IsValueTransferErr(err) {
+	if er.IsValueTransferErr(err) {
 		errType = types.InvalidTransactionRecord_OUTOFBALANCE
-	} else if IsExecContractErr(err) {
-		tmp := err.(*ExecContractError)
+	} else if er.IsExecContractErr(err) {
+		tmp := err.(*er.ExecContractError)
 		if tmp.GetType() == 0 {
 			errType = types.InvalidTransactionRecord_DEPLOY_CONTRACT_FAILED
 		} else if tmp.GetType() == 1 {
 			errType = types.InvalidTransactionRecord_INVOKE_CONTRACT_FAILED
 		}
-	} else if IsInvalidInvokePermissionErr(err) {
+	} else if er.IsInvalidInvokePermissionErr(err) {
 		errType = types.InvalidTransactionRecord_INVALID_PERMISSION
 	}
 	return errType

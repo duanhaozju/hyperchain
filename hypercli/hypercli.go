@@ -19,7 +19,7 @@ var app *cli.App
 func initApp() {
 	app = cli.NewApp()
 	app.Name = "hypercli"
-	app.Version = "1.3.0"
+	app.Version = "1.4.0"
 	app.Compiled = time.Now()
 	app.Usage = "Hyperchain command line client"
 	app.Description = "Run 'hypercli COMMAND --help' for more information on a command"
@@ -67,6 +67,11 @@ func initApp() {
 			Name:        "node",
 			Usage:       "add/delete node specific commands",
 			Subcommands: node.NewNodeCMD(),
+		},
+		{
+			Name:        "jvm",
+			Usage:       "jvm specific commands",
+			Subcommands: server.NewJvmCMD(),
 		},
 	}
 
