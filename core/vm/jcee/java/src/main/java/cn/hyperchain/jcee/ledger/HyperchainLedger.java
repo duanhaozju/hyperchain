@@ -28,9 +28,10 @@ public class HyperchainLedger extends AbstractLedger{
 
     public Result get(byte[] key) {
         String realK = getContext().getRequestContext().getNamespace()+"_"+
-                getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(key);
+                getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(key).toStringUtf8();
         byte[] data = cache.get(realK.getBytes());
         if(data != null){
+            logger.debug("hit cache in ledger get");
             return new Result(ByteString.copyFrom(data));
         }
 
@@ -61,12 +62,11 @@ public class HyperchainLedger extends AbstractLedger{
                 .build();
 
         String realK = getContext().getRequestContext().getNamespace()+"_"+
-                getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(key);
+                getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(key).toStringUtf8();
 
         logger.debug("the value put in ledger "+ByteString.copyFrom(value));
         boolean success = ledgerClient.put(kv);
         if(success){
-            logger.debug("the value put in cache "+value.toString());
             cache.put(realK.getBytes(),value);
         }
         return success;
@@ -74,7 +74,7 @@ public class HyperchainLedger extends AbstractLedger{
 
     public ContractProto.Value fetch(byte[] key) {
         String realK = getContext().getRequestContext().getNamespace()+"_"+
-                getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(key);
+                getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(key).toStringUtf8();
 
         byte[] data = cache.get(realK.getBytes());
         if(data!=null){
@@ -112,7 +112,7 @@ public class HyperchainLedger extends AbstractLedger{
         boolean success = ledgerClient.delete(ck);
         if(success){
             String realK = getContext().getRequestContext().getNamespace()+"_"+
-                    getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(key);
+                    getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(key).toStringUtf8();
 
             cache.delete(realK.getBytes());
         }
@@ -225,7 +225,7 @@ public class HyperchainLedger extends AbstractLedger{
                 byte[] key = data.getK().toByteArray();
                 byte[] value = data.getV().toByteArray();
                 String realK = getContext().getRequestContext().getNamespace()+"_"+
-                        getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(key);
+                        getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(key).toStringUtf8();
 
                 cache.put(realK.getBytes(), value);
             }
@@ -247,11 +247,12 @@ public class HyperchainLedger extends AbstractLedger{
 
         for(byte[] k: keys){
             String realK = getContext().getRequestContext().getNamespace()+"_"+
-                    getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(k);
+                    getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(k).toStringUtf8();
 
             byte[] value = cache.get(realK.getBytes());
             if(value!=null){
                 batch.put(k,value);
+                logger.debug("hit in cache");
             }
             else {
                 bk.put(k);
@@ -262,6 +263,7 @@ public class HyperchainLedger extends AbstractLedger{
         int i = 0;
         for (byte[] k: bk.getKeys()) {
             batch.put(k, values.get(i).toByteArray());
+            cache.put(k,values.get(i).toByteArray());
             i ++;
         }
         return batch;
