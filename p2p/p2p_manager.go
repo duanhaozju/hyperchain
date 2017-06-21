@@ -106,7 +106,7 @@ func GetPeerManager(namespace string, peerConfpath string,eventMux *event.TypeMu
 
 //GetPeerManager get a peermanager instance, every namespace has an independent instance
 func (p2pmgr *p2pManagerImpl) GetPeerManager(namespace string,peerConf *viper.Viper,eventMux *event.TypeMux)(PeerManager,error){
-	return NewPeerManagerImpl(namespace,peerConf,eventMux)
+	return NewPeerManagerImpl(namespace,peerConf,eventMux,p2pmgr.hypernet)
 }
 
 

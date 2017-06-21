@@ -66,9 +66,8 @@ func (list *ThreadSafeLinkedList)Insert(index int32, item interface{})error{
 	curr = list.head
 
 	//找到需要插入index
-	for curr.index < index{
+	for curr.index < index && curr.next != nil{
 		curr = curr.next
-
 	}
 	// 0   1   2   3
 	// p   c   c.n
@@ -83,8 +82,7 @@ func (list *ThreadSafeLinkedList)Insert(index int32, item interface{})error{
 		// 将在该节点之后的节点index全部加1
 		for(curr != nil){
 			atomic.AddInt32(&curr.index,1)
-			curr = curr.next
-		}
+			curr = curr.next }
 		atomic.AddInt32(&list.capacity,1)
 		return nil
 	}else{
@@ -114,7 +112,7 @@ func (list *ThreadSafeLinkedList)Remove(index int32)(interface{},error){
 
 	curr := list.head
 	prev := list.head
-	for curr.index < index{
+	for curr.index < index && curr.next != nil{
 		prev = curr
 		curr = curr.next
 	}
@@ -142,7 +140,7 @@ func (list *ThreadSafeLinkedList)Find(index int32)(interface{},error){
 	if index > list.tail.index{
 		return nil,errors.New("the index large than list size")
 	}
-	for curr.index < index{
+	for curr.index < index && curr.next != nil{
 		curr = curr.next
 	}
 
