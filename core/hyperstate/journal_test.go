@@ -19,6 +19,7 @@ import (
 	"github.com/op/go-logging"
 	"math/big"
 	"hyperchain/core/evm"
+	"hyperchain/core/types"
 )
 
 var (
@@ -187,7 +188,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 				data := make([]byte, 16)
 				binary.BigEndian.PutUint64(data, uint64(a.args[0]))
 				binary.BigEndian.PutUint64(data[8:], uint64(a.args[1]))
-				s.AddLog(&evm.Log{Address: addr, Data: data})
+				s.AddLog(&types.Log{Address: addr, Data: data})
 			},
 			args: make([]int64, 2),
 		},
