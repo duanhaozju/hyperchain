@@ -127,8 +127,8 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 		//ctx, cancel := context.WithCancel(context.Background())
 		ctx, cancel := context.WithCancel(context.Background())
 		defer func() {
-			log.Debugf("cancel context and close websocket connection %p",conn)
-			common.GetSubChan(ctx).Closed <- true
+			log.Debugf("cancel the context and close websocket connection %p, release resource",conn)
+			common.GetSubChan(ctx).Close()
 			cancel()
 			conn.Close()
 		}()

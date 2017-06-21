@@ -32,23 +32,6 @@ var (
 	ErrSubscriptionNotFound = errors.New("subscription not found")
 )
 
-//// ID defines a pseudo random number that is used to identify RPC subscriptions.
-//type ID string
-//
-//// a Subscription is created by a notifier and tight to that notifier. The client can use
-//// this subscription to wait for an unsubscribe request for the client, see Err().
-//type Subscription struct {
-//	ID        ID
-//	Service string
-//	Namespace string
-//	Err       chan error // closed on unsubscribe
-//}
-//
-//// Err returns a channel that is closed when the client send an unsubscribe request.
-//func (s *Subscription) Err() <-chan error {
-//	return s.Err
-//}
-
 // notifierKey is used to store a notifier within the connection context.
 type NotifierKey struct{}
 
@@ -65,7 +48,6 @@ type Notifier struct {
 // newNotifier creates a new notifier that can be used to send subscription
 // notifications to the client.
 func NewNotifier(codec ServerCodec) *Notifier {
-//func NewNotifier() *Notifier {
 	notifier := &Notifier{
 			codec:    codec,
 			active:   make(map[common.ID]*common.Subscription),
@@ -93,40 +75,19 @@ func eventloop() {
 				log.Debugf("create subscription %v\n", rpcSub.ID)
 				subchan.SubscriptionChan <- rpcSub
 
-				go dataListener(subchan, notifier)
-			//case nd := <- common.GetSubChan().NotifyDataChan:
-			//	//notifyMux.Lock()
-			//	fmt.Printf("ready to send feedback: %#v\n", nd)
-			//	id := nd.SubID
-			//	data := nd.Data
-			//	fmt.Printf("%v\n",notifier)
-			//	fmt.Printf("%v\n",len(notifier.active))
-			//	sub, active := notifier.active[id]
-			//	fmt.Printf("len(n.active) = %v, subID: %v,  active = %v\n", len(notifier.active), id, active)
-			//	for  k, v := range notifier.active {
-			//		fmt.Printf("k=%v, v=%v\n", k, v)
-			//	}
-			//	if active {
-			//		notification := notifier.codec.CreateNotification(id, sub.Service, sub.Method, sub.Namespace, data)
-			//		if err := notifier.codec.WriteNotify(notification); err != nil {
-			//			fmt.Errorf("%v",err)
-			//			notifier.codec.Close()
-			//			//return err
-			//		}
-			//	}
-			//	//notifyMux.Unlock()
+				go dataListener(subchan, notifier, rpcSub)
 
 		}
 	}
 }
 
-//func dataListener(ctx context.Context) {
-func dataListener(subchan *common.Subchan, notifier *Notifier) {
+func dataListener(subchan *common.Subchan, notifier *Notifier, rpcSub *common.Subscription) {
 
 	for {
 		select {
 			case nd := <- subchan.NotifyDataChan:
-			//notifyMux.Lock()
+				// sends a notification to the client with the given data as payload.
+				// If an error occurs the RPC connection is closed.
 				log.Debugf("ready to send feedback: %#v\n", nd.SubID)
 				id := nd.SubID
 				data := nd.Data
@@ -141,13 +102,13 @@ func dataListener(subchan *common.Subchan, notifier *Notifier) {
 						//return err
 					}
 				}
-			case id := <-subchan.Unsubscribe:
-				log.Debugf("notifier unsubscribe %v \n", id)
-				notifier.Unsubscribe(id)
-				break
-				//common.DelSubChan(ctx) // todo 如果是退订某个事件，不应该删除上下文
 			case <-subchan.Err:
-				break
+				log.Debug("quit data listener")
+				return
+			case <-rpcSub.Err():
+				// If the subscription is unsubscribed, quit its data listener.
+				log.Debug("quit data listener")
+				return
 		}
 
 	}
@@ -171,28 +132,6 @@ func (n *Notifier) CreateSubscription() *common.Subscription {
 	n.subMu.Unlock()
 	return s
 }
-
-// Notify sends a notification to the client with the given data as payload.
-// If an error occurs the RPC connection is closed and the error is returned.
-//func (n *Notifier) Notify(id common.ID, data interface{}) error {
-//func (n *Notifier) Notify() error {
-//	n.subMu.RLock()
-//	defer n.subMu.RUnlock()
-//
-//	nd := <- common.GetSubChan().NotifyDataChan
-//	id := nd.SubID
-//	data := nd.Data
-//
-//	sub, active := n.active[id]
-//	if active {
-//		notification := n.codec.CreateNotification(id, sub.Service, sub.Method, sub.Namespace, data)
-//		if err := n.codec.Write(notification); err != nil {
-//			n.codec.Close()
-//			return err
-//		}
-//	}
-//	return nil
-//}
 
 // Closed returns a channel that is closed when the RPC connection is closed.
 //func (n *Notifier) Closed() <-chan interface{} {

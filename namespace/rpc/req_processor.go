@@ -255,22 +255,15 @@ func (jrpi *JsonRpcProcessorImpl) handle(ctx context.Context, req *serverRequest
 		return jrpi.CreateErrorResponse(&req.id, req.err), nil
 	}
 
-	//if req.isUnsubscribe { // cancel subscription, first param must be the subscription id
-	//	if len(req.args) >= 1 && req.args[0].Kind() == reflect.String {
-	//		notifier, supported := jsonrpc.NotifierFromContext(ctx)
-	//		if !supported { // interface doesn't support subscriptions (e.g. http)
-	//			return jrpi.CreateErrorResponse(&req.id, &common.CallbackError{Message: jsonrpc.ErrNotificationsUnsupported.Error()}), nil
-	//		}
-	//
-	//		subid := common.ID(req.args[0].String())
-	//		if err := notifier.Unsubscribe(subid); err != nil {
-	//			return jrpi.CreateErrorResponse(&req.id, &common.CallbackError{Message: err.Error()}), nil
-	//		}
-	//
-	//		return jrpi.CreateResponse(req.id, true), nil
-	//	}
-	//	return jrpi.CreateErrorResponse(&req.id, &common.InvalidParamsError{Message: "Expected subscription id as first argument"}), nil
-	//}
+	if req.isUnsubscribe { // cancel subscription, first param must be the subscription id
+		if len(req.args) >= 1 && req.args[0].Kind() == reflect.String {
+			cres := jrpi.CreateResponse(req.id, common.ID(req.args[0].String()))
+			cres.IsUnsub = true
+
+			return cres, nil
+		}
+		return jrpi.CreateErrorResponse(&req.id, &common.InvalidParamsError{Message: "Expected subscription id as first argument"}), nil
+	}
 
 	if req.callb.isSubscribe {
 		subid, err := jrpi.createSubscription(ctx, req)
@@ -278,16 +271,7 @@ func (jrpi *JsonRpcProcessorImpl) handle(ctx context.Context, req *serverRequest
 			return jrpi.CreateErrorResponse(&req.id, &common.CallbackError{Message: err.Error()}), nil
 		}
 
-		// active the subscription after the sub id was successfully sent to the client
-		//activateSub := func() {
-		//	notifier, _ := jsonrpc.NotifierFromContext(ctx)
-		//	notifier.Activate(subid, req.svcname, jrpi.namespace)
-		//}
-		//
-		//return jrpi.CreateResponse(req.id, subid), activateSub
-
 		return jrpi.CreateResponse(req.id, subid), nil
-		//return jrpi.CreateNotification(subid, req.svcname, jrpi.namespace, subid), nil
 	}
 
 	// regular RPC call, prepare arguments

@@ -315,13 +315,22 @@ func (s *Server) handleChannelReq(req *common.RPCRequest) interface{} {
 			return s.CreateErrorResponse(response.Id, response.Namespace, response.Error)
 		} else if response.Reply != nil {
 			if response.IsPubSub {
-				// active the subscription after the sub id was successfully sent to the client
-				//activateSub := func() {
-					notifier, _ := NotifierFromContext(req.Ctx)
-					notifier.Activate(response.Reply.(common.ID), req.Service, req.Method, req.Namespace)
-				//}
-			}
+				notifier, supported := NotifierFromContext(req.Ctx)
+				if !supported { // interface doesn't support subscriptions (e.g. http)
+					return s.CreateErrorResponse(response.Id, response.Namespace, &common.CallbackError{Message: ErrNotificationsUnsupported.Error()})
+				}
 
+				if response.IsUnsub {
+					subid := response.Reply.(common.ID)
+					if err := notifier.Unsubscribe(subid); err != nil {
+						return s.CreateErrorResponse(response.Id, response.Namespace, &common.CallbackError{Message: err.Error()})
+					}
+					return s.CreateResponse(response.Id, response.Namespace, true)
+				} else {
+					// active the subscription after the sub id was successfully sent to the client
+					notifier.Activate(response.Reply.(common.ID), req.Service, req.Method, req.Namespace)
+				}
+			}
 			return s.CreateResponse(response.Id, response.Namespace, response.Reply)
 
 		} else {

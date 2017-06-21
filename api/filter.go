@@ -20,7 +20,6 @@ type PublicFilterAPI struct {
 	events      *flt.EventSystem
 	filtersMu   sync.Mutex
 	filters     map[string]*flt.Filter
-	subscriptions      map[context.Context][]*flt.Subscription
 }
 
 //func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config, subchan *common.Subchan) *PublicFilterAPI {
@@ -33,7 +32,6 @@ func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config)
 		log:         	log,
 		events:     	eh.GetFilterSystem(),
 		filters:     	make(map[string]*flt.Filter),
-		subscriptions:	make(map[context.Context][]*flt.Subscription, 0),
 	}
 	go api.timeoutLoop()
 	return api
@@ -215,10 +213,10 @@ func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
 	api.log.Debug("ready to deal with newBlock event request")
 	common.CtxChan <- ctx
 
+	subchan := common.GetSubChan(ctx)
+
 	select {
-		case err := <- common.GetSubChan(ctx).Err:
-			//api.subchan.Mux.Unlock()
-			common.DelSubChan(ctx)
+		case err := <- subchan.Err:
 			return common.ID(""), err
 		case rpcSub := <- common.GetSubChan(ctx).SubscriptionChan:
 			//api.subchan.Mux.Unlock()
@@ -228,7 +226,6 @@ func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
 
 				blockC   := make(chan common.Hash)
 				blockSub := api.events.NewBlockSubscription(blockC, false)
-				api.subscriptions[ctx] = append(api.subscriptions[ctx], blockSub)
 
 				for {
 					select {
@@ -239,16 +236,13 @@ func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
 							Data:  h,
 						}
 
-						common.GetSubChan(ctx).NotifyDataChan <- payload
-						//notifier.Notify(rpcSub.ID, h)
-					case <-rpcSub.Err(): // todo 暂时没用到，但是这里也要改,以及subchan的err的处理; 管道重构，不直接引用管道，而是方法返回
+						subchan.NotifyDataChan <- payload
+					case <-rpcSub.Err():
 						blockSub.Unsubscribe()
-						//common.GetSubChan(ctx).Unsubscribe <- rpcSub.ID
 						return
-					case <-common.GetSubChan(ctx).Closed: // connection close, unsubscribe all the subscription in this context
+					case <-subchan.Closed(): // connection close, unsubscribe all the subscription in this context
 						api.log.Debug("the websocket connection closed, release resource")
-						api.unsubscribe(ctx)
-						common.DelSubChan(ctx) // delete the communication channel of this context
+						blockSub.Unsubscribe()
 						return
 					}
 				}
@@ -257,11 +251,4 @@ func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
 			return rpcSub.ID, nil
 	}
 
-}
-
-func (api *PublicFilterAPI) unsubscribe(ctx context.Context) {
-	for _,sub := range api.subscriptions[ctx] {
-		sub.Unsubscribe()
-	}
-	delete(api.subscriptions, ctx)
 }

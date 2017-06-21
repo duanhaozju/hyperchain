@@ -13,7 +13,6 @@ import (
 	"math/rand"
 	"reflect"
 	"strings"
-	"sync"
 )
 
 const (
@@ -234,83 +233,12 @@ type RPCResponse struct {
 	Reply interface{}
 	Error RPCError
 	IsPubSub  bool
+	IsUnsub   bool
 }
-
-//type RPCSubscription struct {
-//	SubId     string
-//	Service   string
-//	Result    interface{} `json:"result,omitempty"`
-//}
 
 type RPCNotification struct {
 	Namespace string
 	SubId     ID
 	Service   string
 	Result    interface{}
-}
-
-// ID defines a pseudo random number that is used to identify RPC subscriptions.
-type ID string
-
-// a Subscription is created by a notifier and tight to that notifier. The client can use
-// this subscription to wait for an unsubscribe request for the client, see Err().
-type Subscription struct {
-	ID        ID
-	Service string
-	Method  string
-	Namespace string
-	Error       chan error // closed on unsubscribe
-}
-
-// Err returns a channel that is closed when the client send an unsubscribe request.
-func (s *Subscription) Err() <-chan error {
-	return s.Error
-}
-
-
-
-type Subchan struct {
-	Mux               sync.Mutex
-	SubscriptionChan  chan *Subscription
-	NotifyDataChan    chan NotifyPayload
-	Closed	          chan bool	// connection close
-	Err		  chan error	// context error
-	Unsubscribe       chan ID	// event unsubscribe
-}
-
-type NotifyPayload struct {
-	SubID ID
-	Data  interface{}
-}
-
-var SubCtxChan map[context.Context]*Subchan = make(map[context.Context]*Subchan)
-var CtxChan chan context.Context = make(chan context.Context)
-var mux sync.Mutex
-
-func GetSubChan(ctx context.Context) (*Subchan) {
-	mux.Lock()
-	defer mux.Unlock()
-
-	if subchan, ok := SubCtxChan[ctx]; ok {
-		return subchan
-	} else {
-		subchan := &Subchan{
-			SubscriptionChan: make(chan *Subscription),
-			NotifyDataChan:   make(chan NotifyPayload),
-			Closed:           make(chan bool),
-			Err:              make(chan error),
-			Unsubscribe:      make(chan ID),
-		}
-
-		SubCtxChan[ctx] = subchan
-
-		return subchan
-	}
-}
-
-func DelSubChan(ctx context.Context) {
-	// todo 1. 有可能不存在， 2. 释放资源，是否需要加锁？
-	//close(SubCtxChan[ctx].Closed)
-	close(SubCtxChan[ctx].Err)
-	delete(SubCtxChan, ctx)
 }
