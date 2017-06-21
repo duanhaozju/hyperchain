@@ -4,6 +4,7 @@
  */
 package cn.hyperchain.jcee.ledger;
 
+import com.google.protobuf.ByteString;
 import org.apache.commons.jcs.JCS;
 import org.apache.commons.jcs.access.CacheAccess;
 import org.apache.commons.jcs.access.exception.CacheException;
@@ -17,7 +18,7 @@ import java.util.Properties;
  */
 public class HyperCache implements Cache{
 
-    private CacheAccess<byte[], byte[]> cache = null;
+    private CacheAccess<ByteString, byte[]> cache = null;
     private static final Logger logger = Logger.getLogger(HyperchainLedger.class.getSimpleName());
 
 
@@ -38,7 +39,7 @@ public class HyperCache implements Cache{
     public void put(byte[]key, byte[]value){
         try{
             logger.debug("put in cache "+new String(value));
-            cache.put( key, value);
+            cache.put( ByteString.copyFrom(key), value);
             logger.debug("cache size after put:"+size());
         }
         catch ( CacheException e){
@@ -48,11 +49,12 @@ public class HyperCache implements Cache{
 
     public byte[] get(byte[] key)
     {
-        return cache.get(key);
+//        logger.info("try to get from cache for key "+new String(key));
+        return cache.get(ByteString.copyFrom(key));
     }
 
     public void delete(byte[] key){
-        cache.remove(key);
+        cache.remove(ByteString.copyFrom(key));
     }
 
     public int size(){
