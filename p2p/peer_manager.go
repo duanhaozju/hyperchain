@@ -46,12 +46,6 @@ type DeleteNode interface {
 
 // InfoGetter get the peer info to manager
 type InfoGetter interface {
-	// get the all peer list to broadcast
-	GetAllPeers() []*peer
-	GetAllPeersWithTemp() []*peer
-	GetVPPeers() []*peer
-	// get local node instance
-	//GetLocalNode() *Node
 	// Get local node id
 	GetNodeId() int
 	//get the peer information of all nodes.

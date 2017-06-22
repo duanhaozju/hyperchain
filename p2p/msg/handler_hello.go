@@ -4,32 +4,33 @@ import "fmt"
 import pb "hyperchain/p2p/message"
 
 type HelloMsgHandler struct {
-	msgChan chan *pb.Message
+	mchan chan *pb.Message
 }
 
-func NewHelloHandler(blackHole chan<- *pb.Message)*HelloMsgHandler{
+func NewHelloHandler(blackHole chan *pb.Message)*HelloMsgHandler{
 	return &HelloMsgHandler{
-		msgChan:make(chan *pb.Message, 100000),
+		mchan:blackHole,
 	}
 }
 
 func (hellloMsgh  *HelloMsgHandler) Process() {
-	for msg := range hellloMsgh.msgChan {
+	for msg := range hellloMsgh.mchan {
 		 fmt.Println("got a hello message", string(msg.Payload))
 		}
 }
 
 func (hellloMsgh  *HelloMsgHandler) Teardown() {
-	close(hellloMsgh.msgChan)
+	//TODO THIS is UN Allowed, because reciver cannot close the mchan
+	close(hellloMsgh.mchan)
 }
 
-func (helloMsgh *HelloMsgHandler)Recive() chan<- *pb.Message{
-	return helloMsgh.msgChan
+func (helloMsgh *HelloMsgHandler)Receive() chan<- *pb.Message{
+	return helloMsgh.mchan
 }
 
 func (helloMsgh *HelloMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
 	rsp  := &pb.Message{
-		MessageType:pb.Message_HELLO_RESPONSE,
+		MessageType:pb.MsgType_HELLO,
 	}
 	return rsp,nil
 }

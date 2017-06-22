@@ -10,7 +10,7 @@ type MsgHandler interface{
 }
 
 type BidiHandler interface {
-	Recive() chan<- *pb.Message
+	Receive() chan<- interface{}
 	Process()
 	Teardown()
 }

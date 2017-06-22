@@ -144,6 +144,9 @@ func (ns *namespaceImpl) init() error {
 	}
 	ns.caMgr = cm
 
+	// N
+	N := 4
+
 	//3. init peer manager to start grpc server and client
 	peerMgr, err := p2p.GetPeerManager(ns.Name(),ns.conf,ns.eventMux)
 	if err != nil {
@@ -228,17 +231,25 @@ func (ns *namespaceImpl) Start() error {
 	ns.eh.Start()
 	//4.start grpc manager
 	// TODO fix this, if need go or not @chenquan
-	go ns.peerMgr.Start()
+	ns.peerMgr.Start()
 
 	initType := <-ns.peerMgr.GetInitType()
 	switch initType {
-	case 0:
+	case p2p.START_NORMAL:
 		{
 			ns.passRouters()
 			ns.negotiateView()
 		} // TODO: add other init type
+	case p2p.START_ADDNEW:{
+		//TODO
+		ns.logger.Errorf("unimplements init type %v", initType)
+	}
+	case p2p.START_RECONNECT:{
+		//TODO
+		ns.logger.Errorf("unimplements init type %v", initType)
+	}
 	default:
-		ns.logger.Errorf("invalid initType %v", initType)
+		ns.logger.Errorf("unimplements init type %v", initType)
 	}
 	//5.start request processor
 	ns.rpc.Start()

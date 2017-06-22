@@ -1,66 +1,87 @@
 package p2p
 
 import (
-	"sync"
 	"github.com/pkg/errors"
 	"github.com/orcaman/concurrent-map"
 	"hyperchain/p2p/utils"
 	"fmt"
+	"hyperchain/p2p/threadsafelinkedlist"
 )
+
+var (	_VP_FLAG = "VP"
+	_NVP_FLAG= "NVP")
 
 type PeersPool struct {
 	namespace string
-	vpPool cmap.ConcurrentMap
+	vpPool *threadsafelinkedlist.ThreadSafeLinkedList
+	//nvp hasn't id so use map to storage it
 	nvpPool cmap.ConcurrentMap
 	//put the exist peers into this exist
 	existMap cmap.ConcurrentMap
 }
 
+//NewPeersPool new a peers pool
 func NewPeersPool(namespace string)*PeersPool {
 	return &PeersPool{
 		namespace:namespace,
-		vpPool:cmap.New(),
+		vpPool:nil,
 		nvpPool:cmap.New(),
 		existMap:cmap.New(),
 	}
 }
 
-func (pool *PeersPool)GetIterator()[]*peer{
-	peerList := make([]*peer,0)
-
-	for _,value := range pool.peers{
-		peerList = append(peerList,value)
+//AddVPPeer add a peer into peers pool instance
+func (pool *PeersPool)AddVPPeer(id int,p *Peer)error{
+	_id := id - 1
+	if pool.vpPool == nil{
+		if _id != 0{
+			return errors.New(fmt.Sprintf("the vp peers pool is empty, could not add index: %d peer",id))
+		}
+		pool.vpPool = threadsafelinkedlist.NewTSLinkedList(p)
+		return nil
 	}
-	return peerList
-}
-
-//add a peer into peers pool instance
-func (pool *PeersPool)AddVPPeer(id int,p *peer)error{
+	err := pool.vpPool.Insert(int32(_id),p)
+	if err != nil{
+		return err
+	}
 	hash := utils.GetPeerHash(pool.namespace,id)
-	if tipe,ok := pool.existMap.Get(hash);ok{
-		return errors.New(fmt.Sprintf("this peer already in peers pool type: [%s]",tipe.(string)))
-	}
-	pool.vpPool.Set(hash,p)
-	pool.existMap.Set(hash,"VP")
+	pool.existMap.Set(hash,_VP_FLAG)
 	return nil
 }
 
-//add a peer into peers pool instance
-func (pool *PeersPool)AddNVPPeer(id int,p *peer)error{
+//AddNVPPeer add a peer into peers pool instance
+func (pool *PeersPool)AddNVPPeer(id int,p *Peer)error{
 	hash := utils.GetPeerHash(pool.namespace,id)
 	if tipe,ok := pool.existMap.Get(hash);ok{
 		return errors.New(fmt.Sprintf("this peer already in peers pool type: [%s]",tipe.(string)))
 	}
 	pool.nvpPool.Set(hash,p)
-	pool.existMap.Set(hash,"NVP")
+	pool.existMap.Set(hash,_NVP_FLAG)
 	return nil
 }
 
-//delete a peer from peers pool instance
-func(pool *PeersPool)DeletePeer(id int)error{
-	if _,ok := pool.peers[id];!ok {
-		return  nil
+//GetPeers get all peer list
+func (pool *PeersPool)GetPeers()[]*Peer {
+	list := make([]*Peer,0)
+	if pool.vpPool == nil{
+		return list
 	}
-	delete(pool.peers,id)
-	return nil
+	l := pool.vpPool.Iter()
+	for _,item := range l{
+		list = append(list,item.(*Peer))
+	}
+	return list
+}
+
+//DeleteVPPeer delete a peer from peers pool instance
+func(pool *PeersPool)DeleteVPPeer(id int)error{
+	_,err := pool.vpPool.Remove(int32(id))
+	return err
+}
+
+//DeleteNVPPeer delete the nvp peer
+func(pool *PeersPool)DeleteNVPPeer(hash string){
+	if _,ok := pool.nvpPool.Get(hash);ok{
+		pool.nvpPool.Remove(hash)
+	}
 }

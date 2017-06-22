@@ -10,13 +10,13 @@ syntax="proto3";
 
 package message;
 
-import "hyperchain/p2p/message/msg_type.proto";
 import "hyperchain/p2p/hts/certificate.proto";
+import "hyperchain/p2p/message/endpoint.proto";
+import "hyperchain/p2p/message/msg_type.proto";
 
 message Message{
-    // From the message source 
-    bytes From           = 1;
-    MsgType MessageType  = 2;
+    MsgType MessageType  = 1;
+    Endpoint From        = 2;
     bytes  Payload       = 3;
     int64 MsgTimeStamp   = 4;
     hts.Certificate Cert = 5;

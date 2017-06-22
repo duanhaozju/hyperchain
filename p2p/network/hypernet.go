@@ -5,11 +5,12 @@ import (
 	"hyperchain/common"
 	"github.com/looplab/fsm"
 	"fmt"
-	"hyperchain/p2p/message"
 	"github.com/orcaman/concurrent-map"
 	"github.com/pkg/errors"
 	"github.com/oleiade/lane"
 	"time"
+	"hyperchain/p2p/msg"
+	pb "hyperchain/p2p/message"
 )
 
 var logger = common.GetLogger(common.DEFAULT_LOG, "hypernet")
@@ -33,7 +34,7 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 
 	hostconf := config.GetString("global.p2p.hosts")
 	if !common.FileExist(hostconf){
-		fmt.Errorf("pfile not exist")
+		fmt.Errorf("hosts config file not exist: %s",hostconf)
 		return nil,errors.New(fmt.Sprintf("connot find the hosts config file: %s",hostconf))
 	}
 
@@ -64,6 +65,12 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 		return nil,err
 	}
 	return net,nil
+}
+
+//Register server msg handler
+//ensure this before than init server
+func (hn *HyperNet)RegisterHandler(filed string,msgType pb.MsgType,handler msg.MsgHandler)error{
+	return hn.server.RegisterSlot(filed,msgType,handler)
 }
 
 //InitServer start self hypernet server listening server
@@ -124,13 +131,16 @@ func (hn *HyperNet)Connect(hostname string) error{
 		return err
 	}
 	client := NewClient(addr)
-	err = client.Connect()
 	if err != nil{
 		return err
 	}
 	if oldClient,ok := hn.hostClientMap.Get(hostname); ok{
 		oldClient.(*Client).Close()
 		hn.hostClientMap.Remove(hostname)
+	}
+	err = client.Connect(nil)
+	if err != nil{
+		return err
 	}
 	hn.hostClientMap.Set(hostname,client)
 	logger.Infof("success connect to %s \n",hostname)
@@ -158,15 +168,16 @@ func (hyperNet *HyperNet)HealthCheck(){
 	// TODO NetWork Health check
 }
 
-func (hypernet *HyperNet)Chat(hostname string,msg *message.Message)error{
+func (hypernet *HyperNet)Chat(hostname string,msg pb.Message)error{
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
-		client.(*Client).MsgChan <- msg
+		client.(*Client).MsgChan <- &msg
 		return nil
 	}
 	return errors.New("the host hasn't been initialized.")
 }
 
-func (hypernet *HyperNet)Greeting(hostname string,msg *message.Message)(*message.Message,error){
+func (hypernet *HyperNet)Greeting(hostname string,msg *pb.Message)(*pb.Message,error){
+
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
 		return client.(*Client).Greeting(msg)
 	}
@@ -174,9 +185,18 @@ func (hypernet *HyperNet)Greeting(hostname string,msg *message.Message)(*message
 
 }
 
-func (hypernet *HyperNet)Whisper(hostname string,msg *message.Message)(*message.Message,error){
+func (hypernet *HyperNet)Whisper(hostname string,msg pb.Message)(*pb.Message,error){
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
-			return client.(*Client).Wisper(msg)
+			return client.(*Client).Wisper(&msg)
 		}
 		return nil,errors.New("the host hasn't been initialized.")
+}
+
+func(hypernet *HyperNet)Stop(){
+	for item := range hypernet.clients.IterBuffered() {
+		client := item.Val.(*Client)
+		client.Close()
+		fmt.Println("close client: ",item.Key)
+	}
+	hypernet.server.server.GracefulStop()
 }

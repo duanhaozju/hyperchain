@@ -13,6 +13,12 @@ type ThreadSafeLinkedList struct {
 	tail *listNode
 	capacity int32
 	rwlock *sync.RWMutex
+	// this is this current safe snap shot
+	// it should be update when mark is false
+	snapshot []interface{}
+	// when insert or remove, this should be mark as false
+	mark bool
+	markLock *sync.RWMutex
 }
 
 func NewTSLinkedList(head interface{})*ThreadSafeLinkedList{
@@ -22,6 +28,8 @@ func NewTSLinkedList(head interface{})*ThreadSafeLinkedList{
 		tail:headnode,
 		rwlock:new(sync.RWMutex),
 		capacity:int32(1),
+		mark:false,
+		markLock:new(sync.RWMutex),
 	}
 }
 
@@ -45,18 +53,58 @@ func (list *ThreadSafeLinkedList)Walk(){
 	fmt.Println()
 }
 
+func (list *ThreadSafeLinkedList)IterSlow()[]interface{}{
+	// list.mark is false
+	list.rwlock.RLock()
+	defer list.rwlock.RUnlock()
+	curr := list.head
+	var l []interface{}
+	for curr != nil{
+		l = append(l,curr.value)
+		curr = curr.next
+	}
+	return l
+}
+
+
+// Iter get a iterator for this linked list,
+// this use a snap_shoot for thread safe,
+// improve iter performance
+func (list *ThreadSafeLinkedList)Iter() []interface{}{
+	list.markLock.RLock()
+	if list.mark {
+		s := list.snapshot
+		list.markLock.RUnlock()
+		return s
+	}
+	list.markLock.RUnlock()
+	// list.mark is false
+	list.markLock.Lock()
+	defer list.markLock.Unlock()
+	list.rwlock.RLock()
+	defer list.rwlock.RUnlock()
+	curr := list.head
+	var l []interface{}
+	for curr != nil{
+		l = append(l,curr.value)
+		curr = curr.next
+	}
+	list.snapshot = l
+	list.mark = true
+	return list.snapshot
+}
 
 //Insert a element after the index, all elements' index after the index will add 1
 func (list *ThreadSafeLinkedList)Insert(index int32, item interface{})error{
 	list.rwlock.Lock()
 	defer list.rwlock.Unlock()
+	list.markLock.Lock()
+	defer list.markLock.Unlock()
+	list.mark = false
 	// 前驱，当前
 	var curr *listNode
-	if index > list.tail.index {
-		return errors.New("===")
-	}
-	if index == list.tail.index{
-		newNode := newListNode(list.tail,nil,item,index + 1)
+	if index >= list.tail.index{
+		newNode := newListNode(list.tail,nil,item,list.tail.index + 1)
 		list.tail.next = newNode
 		list.tail = newNode
 		atomic.AddInt32(&list.capacity,1)
@@ -88,16 +136,17 @@ func (list *ThreadSafeLinkedList)Insert(index int32, item interface{})error{
 	}else{
 		return errors.New("cannot find the index elements")
 	}
-
-
-
-
 }
 
 //Remove the index element and return the removed element
 func (list *ThreadSafeLinkedList)Remove(index int32)(interface{},error){
 	list.rwlock.Lock()
 	defer list.rwlock.Unlock()
+
+	list.markLock.Lock()
+	defer list.markLock.Unlock()
+	list.mark = false
+
 	if index > list.tail.index {
 		return nil,errors.New("the index larger than list size")
 	}

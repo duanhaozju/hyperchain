@@ -3,35 +3,32 @@ package network
 import (
 	"testing"
 	"hyperchain/p2p/utils"
-	"github.com/stretchr/testify/assert"
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 
 
 func TestDNSResolver_ListHosts(t *testing.T) {
+	Convey("Dns Reslover list all dns items",t ,func() {
 	dnsr,err := NewDNSResolver(utils.GetProjectPath() + "/p2p/test/conf/hosts.yaml");
-	if err !=nil{
-		t.Error("failed",err)
-		t.FailNow()
-	}
-	// TODO should checkout the dnsr is nil or not
-	dnsr.ListHosts()
+		So(err,ShouldBeNil)
+		dnsList := dnsr.ListHosts()
+		So(len(dnsList),ShouldEqual,4)
+	})
+
 }
 
 func TestDNSResolver_ListHosts2(t *testing.T) {
-	dnsr,err := NewDNSResolver(utils.GetProjectPath() + "/p2p/test/conf/hosts.yaml");
-	if err !=nil{
-		t.Fatal(err)
-	}
-	ip,err := dnsr.GetDNS("node1")
-	if err !=nil{
-		t.Fatal(err)
-	}
-	assert.Equal(t,"127.0.0.1:50012",ip)
-	ip2,err := dnsr.GetDNS("node2")
-	if err !=nil{
-		t.Fatal(err)
-	}
-	assert.Equal(t,"localhost:50012",ip2)
+	Convey("Parse DNS Item",t, func() {
+		dnsr,err1 := NewDNSResolver(utils.GetProjectPath() + "/p2p/test/conf/hosts.yaml");
+		So(err1,ShouldBeNil)
+		ip,err2 := dnsr.GetDNS("node1")
+		So(err2,ShouldBeNil)
+		So(ip,ShouldEqual,"127.0.0.1:50012")
+		ip2,err3 := dnsr.GetDNS("node2")
+		So(err3,ShouldBeNil)
+		So(ip2,ShouldEqual,"localhost:50012")
+	})
+
 }
 

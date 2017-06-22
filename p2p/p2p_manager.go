@@ -16,7 +16,6 @@ type P2PManager interface {
 	//Restart restart services under this namespace.
 	Restart() error
 
-	Register(namespace string,identifier string,peerID string) error
 
 	GetPeerManager(namespace string,conf *viper.Viper,eventMux *event.TypeMux)(PeerManager,error)
 }
@@ -45,6 +44,7 @@ func GetP2PManager(vip *viper.Viper)(P2PManager,error){
 //ClearP2PManager clear the global p2pmanger, this is for test
 func ClearP2PManager()error{
 	if p2pManager != nil{
+		p2pManager.hypernet.Stop()
 		p2pManager = nil
 	}
 	return nil
@@ -112,17 +112,12 @@ func (p2pmgr *p2pManagerImpl) GetPeerManager(namespace string,peerConf *viper.Vi
 
 //Stop stop services under this namespace.
 func(p2pmgr *p2pManagerImpl)Stop() error{
+	p2pmgr.hypernet.Stop()
 	return nil
 }
 
 //Restart restart services under this namespace.
 func(p2pmgr *p2pManagerImpl)Restart() error{
 	return nil
-}
-
-
-func(p2pmgr *p2pManagerImpl)Register(namespace string,identifier string,peerID string) error{
-	return nil
-
 }
 

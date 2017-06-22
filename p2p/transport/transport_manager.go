@@ -86,7 +86,7 @@ func (tm *TransportManager) GetLocalPublicKey() []byte {
 }
 
 //NegoShareSecret negotiate share secret
-func (tm *TransportManager) NegoShareSecret(remotePub []byte, addr *pb.PeerAddr) error {
+func (tm *TransportManager) NegoShareSecret(remotePub []byte, addr *pb.Endpoint) error {
 	remotePubKey, success := tm.ecdh.Unmarshal(remotePub)
 	if !success {
 		tm.logger.Error("unmarshal the remote share public key failed")
@@ -99,7 +99,7 @@ func (tm *TransportManager) NegoShareSecret(remotePub []byte, addr *pb.PeerAddr)
 		tm.logger.Error("generate the share secret failed.")
 		return errors.New("generate the share secret failed.")
 	}
-	tm.shareSecTable[addr.Hash] = &sharedSecret{
+	tm.shareSecTable[string(addr.UUID)] = &sharedSecret{
 		shareSec:         shareSec,
 		remotePubkey:     remotePubKey,
 		remotePubkeyByte: remotePub,
@@ -108,44 +108,44 @@ func (tm *TransportManager) NegoShareSecret(remotePub []byte, addr *pb.PeerAddr)
 }
 
 //Encrypt the message
-func (tm *TransportManager) Encrypt(message []byte, addr *pb.PeerAddr) ([]byte, error) {
-	if shareSecret, ok := tm.shareSecTable[addr.Hash]; ok {
+func (tm *TransportManager) Encrypt(message []byte, addr *pb.Endpoint) ([]byte, error) {
+	if shareSecret, ok := tm.shareSecTable[string(addr.UUID)]; ok {
 		return tm.encAlgo(shareSecret.shareSec, message)
 	}
-	return nil, errors.New(fmt.Sprintf("can not get a shared secret for peer %d", addr.ID))
+	return nil, errors.New(fmt.Sprintf("can not get a shared secret for peer %d", addr.Hostname))
 }
 
 //decryption the message
-func (tm *TransportManager) Decrypt(message []byte, addr *pb.PeerAddr) ([]byte, error) {
-	if shareSecret, ok := tm.shareSecTable[addr.Hash]; ok {
+func (tm *TransportManager) Decrypt(message []byte, addr *pb.Endpoint) ([]byte, error) {
+	if shareSecret, ok := tm.shareSecTable[string(addr.UUID)]; ok {
 		return tm.decAlgo(shareSecret.shareSec, message)
 	}
-	return nil, errors.New(fmt.Sprintf("can not get a shared secret for peer %d", addr.ID))
+	return nil, errors.New(fmt.Sprintf("can not get a shared secret for peer %d", addr.Hostname))
 }
 
 //SignMsg use the certificate's public sign the msg
 func (tm *TransportManager) SignMsg(msg *pb.Message) (pb.Message, error) {
-	sign := &pb.Signature{}
+	//sign := &pb.Signature{}
 	retmsg := pb.Message{
 		From:         msg.From,
 		Payload:      msg.Payload,
 		MsgTimeStamp: msg.MsgTimeStamp,
 		MessageType:  msg.MessageType,
-		Signature:    sign,
+		//Signature:    sign,
 	}
-	retmsg.Signature.ECert = tm.cm.GetECertByte()
-	retmsg.Signature.RCert = tm.cm.GetRCertByte()
+	//retmsg.Signature.ECert = tm.cm.GetECertByte()
+	//retmsg.Signature.RCert = tm.cm.GetRCertByte()
 	if !tm.cm.IsCheckSign() {
 		return retmsg, nil
 	}
 	ecdsaEncrypto := primitives.NewEcdsaEncrypto("ecdsa")
-	signa, err := ecdsaEncrypto.Sign(msg.Payload, tm.cm.GetECertPrivKey())
+	_, err := ecdsaEncrypto.Sign(msg.Payload, tm.cm.GetECertPrivKey())
 	// stupid bug 20170321!
 	if err != nil {
 		tm.logger.Critical(err)
 		return retmsg, err
 	}
-	retmsg.Signature.Signature = signa
+	//retmsg.Signature.Signature = signa
 	return retmsg, nil
 }
 
@@ -154,27 +154,29 @@ func (tm *TransportManager) VerifyMsg(msg *pb.Message) (bool, error) {
 	if !tm.cm.IsCheckSign() {
 		return true, nil
 	}
-	if msg.Signature == nil {
-		tm.logger.Warning("The msg Signature is nil, msg from", msg.From.ID)
-		return false, errors.New("invalid signature")
-	}
+	//if msg.Signature == nil {
+	//	tm.logger.Warning("The msg Signature is nil, msg from", msg.From.ID)
+	//	return false, errors.New("invalid signature")
+	//}
 	//1. check the ECert is valid or not
-	f, e := tm.cm.VerifyECert(string(msg.Signature.ECert))
-	if e != nil {
-		return f, e
-	}
+	//f, e := tm.cm.VerifyECert(string(msg.Signature.ECert))
+	//if e != nil {
+	//	return f, e
+	//}
 	//2. check the signature is valid or not
-	return tm.cm.VerifyCertSign(string(msg.Signature.ECert), msg.Payload, msg.Signature.Signature)
+	//return tm.cm.VerifyCertSign(string(msg.Signature.ECert), msg.Payload, msg.Signature.Signature)
+	return true,nil
 }
 
 func (tm *TransportManager) VerifyRCert(msg *pb.Message) (bool, error) {
-	if msg.Signature == nil || msg.Signature.RCert == nil {
-		tm.logger.Warning("The msg Signature is nil, msg from", msg.From.ID)
-		return false, errors.New("invalid msg, signature is nil,or signature.rcert is nil")
-	}
-	rcertb := msg.Signature.RCert
+	//if msg.Signature == nil || msg.Signature.RCert == nil {
+	//	tm.logger.Warning("The msg Signature is nil, msg from", msg.From.ID)
+	//	return false, errors.New("invalid msg, signature is nil,or signature.rcert is nil")
+	//}
+	//rcertb := msg.Signature.RCert
 	//再验证证书合法性
-	return tm.cm.VerifyRCert(string(rcertb))
+	//return tm.cm.VerifyRCert(string(rcertb))
+	return true,nil
 }
 
 // 3DES encryption algorithm implements

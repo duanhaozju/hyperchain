@@ -2,23 +2,21 @@ syntax="proto3";
 
 package message;
 
-message MsgType{
-    enum type{
-        HELLO               = 0;
-        HELLO_RESPONSE      = 1;
-        HELLOREVERSE        = 2;
-        HELLOREVERSE_RESPONSE = 3;
-        INTRODUCE           = 4;
-        INTRODUCE_RESPONSE  = 5;
-        ATTEND              = 6;
-        ATTEND_RESPONSE     = 7;
-        ATTEND_NOTIFY       = 8;
-        ATTEND_NOTIFY_RESPONSE = 9;
-        RESPONSE            = 10;
-        KEEPALIVE           = 11;
-        PENDING             = 12;
-        RECONNECT           = 13;
-        RECONNECT_RESPONSE  = 14;
-        SESSION             = 15;
-    }
+enum MsgType{
+    HELLO               = 0;
+    HELLO_RESPONSE      = 1;
+    HELLOREVERSE        = 2;
+    HELLOREVERSE_RESPONSE = 3;
+    INTRODUCE           = 4;
+    INTRODUCE_RESPONSE  = 5;
+    ATTEND              = 6;
+    ATTEND_RESPONSE     = 7;
+    ATTEND_NOTIFY       = 8;
+    ATTEND_NOTIFY_RESPONSE = 9;
+    RESPONSE            = 10;
+    KEEPALIVE           = 11;
+    PENDING             = 12;
+    RECONNECT           = 13;
+    RECONNECT_RESPONSE  = 14;
+    SESSION             = 15;
 }

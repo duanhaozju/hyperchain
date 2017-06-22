@@ -197,3 +197,73 @@ func BenchmarkThreadSafeLinkedList_Contains(b *testing.B) {
 	}
 }
 
+func TestThreadSafeLinkedList_Iter(t *testing.T) {
+	//setup code
+	list := NewTSLinkedList("head")
+	list.Insert(0,"second")
+	list.Insert(1,"three")
+	list.Insert(1,"replace three")
+	list.Insert(2,"replace four")
+	l := list.Iter()
+	assert.Equal(t,5,len(l))
+}
+
+func TestThreadSafeLinkedList_Iter2(t *testing.T) {
+	//setup code
+	list := NewTSLinkedList("head")
+	list.Insert(0,"second")
+	list.Insert(1,"three")
+	list.Insert(1,"replace three")
+	list.Insert(2,"replace four")
+	t.Run("Parallel run 1", func(t *testing.T) {
+		t.Parallel()
+		l1 := list.Iter()
+		assert.Equal(t,5,len(l1))
+	})
+	t.Run("Parallel run 2", func(t *testing.T) {
+		t.Parallel()
+		l2 := list.Iter()
+		assert.Equal(t,5,len(l2))
+	})
+	t.Run("Parallel run 3", func(t *testing.T) {
+		t.Parallel()
+		l3 := list.Iter()
+		assert.Equal(t,5,len(l3))
+	})
+}
+func TestThreadSafeLinkedList_IterSlow(t *testing.T) {
+	//setup code
+	list := NewTSLinkedList("head")
+	list.Insert(0,"second")
+	list.Insert(1,"three")
+	list.Insert(1,"replace three")
+	list.Insert(2,"replace four")
+	l := list.IterSlow()
+	assert.Equal(t,5,len(l))
+}
+
+func BenchmarkThreadSafeLinkedList_Iter(b *testing.B) {
+	//setup code
+	list := NewTSLinkedList("head")
+	for i:=0;i<100000;i++{
+		list.Insert(list.GetCapcity() - 1,"test")
+	}
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next(){
+			list.Iter()
+		}
+	})
+}
+
+func BenchmarkThreadSafeLinkedList_IterSlow(b *testing.B) {
+	//setup code
+	list := NewTSLinkedList("head")
+	for i:=0;i<100000;i++{
+		list.Insert(list.GetCapcity() - 1,"test")
+	}
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next(){
+			list.IterSlow()
+		}
+	})
+}

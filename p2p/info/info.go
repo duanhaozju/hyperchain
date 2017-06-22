@@ -1,20 +1,46 @@
 package info
 
-import "sync"
+import (
+	"sync"
+	"hyperchain/crypto/sha3"
+	"hyperchain/common"
+)
 
 type Info struct {
 	rwmutex *sync.RWMutex
 	id int
 	isPrimary bool
+	hostname string
+	namespace string
+	hash string
 }
 
-func NewInfo(id int)*Info {
+func NewInfo(id int,hostname string,namespcace string)*Info {
+	h := sha3.NewKeccak256()
+	h.Write([]byte(namespcace))
+	hash := h.Sum([]byte(hostname))
 	return &Info{
 		rwmutex:new(sync.RWMutex),
 		id:id,
 		isPrimary:false,
+		hostname:hostname,
+		hash:common.Bytes2Hex(hash),
 	}
 }
+
+func (i *Info)GetHash()string{
+	i.rwmutex.RLock()
+	defer i.rwmutex.RUnlock()
+	return i.hash
+}
+
+
+func(i *Info)GetHostName(hostname string){
+	i.rwmutex.RLock()
+	defer i.rwmutex.RUnlock()
+	i.hostname = hostname
+}
+
 //get nodeID
 func(i *Info)SetID(id int){
 	i.rwmutex.Lock()

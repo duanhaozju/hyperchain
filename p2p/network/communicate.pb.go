@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package net is a generated protocol buffer package.
+Package network is a generated protocol buffer package.
 
 It is generated from these files:
 	communicate.proto
@@ -15,7 +15,7 @@ package network
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import message "hyperchain/p2p/message"
+import message2 "hyperchain/p2p/message"
 
 import (
 	context "golang.org/x/net/context"
@@ -47,9 +47,9 @@ type ChatClient interface {
 	// dibi data tranfer
 	Chat(ctx context.Context, opts ...grpc.CallOption) (Chat_ChatClient, error)
 	// Greeting doube arrow greeting message transfer
-	Greeting(ctx context.Context, in *message.Message, opts ...grpc.CallOption) (*message.Message, error)
+	Greeting(ctx context.Context, in *message2.Message, opts ...grpc.CallOption) (*message2.Message, error)
 	// Wisper Transfer the the node health infomation
-	Wisper(ctx context.Context, in *message.Message, opts ...grpc.CallOption) (*message.Message, error)
+	Whisper(ctx context.Context, in *message2.Message, opts ...grpc.CallOption) (*message2.Message, error)
 }
 
 type chatClient struct {
@@ -61,7 +61,7 @@ func NewChatClient(cc *grpc.ClientConn) ChatClient {
 }
 
 func (c *chatClient) Chat(ctx context.Context, opts ...grpc.CallOption) (Chat_ChatClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Chat_serviceDesc.Streams[0], c.cc, "/net.Chat/Chat", opts...)
+	stream, err := grpc.NewClientStream(ctx, &_Chat_serviceDesc.Streams[0], c.cc, "/network.Chat/Chat", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +70,8 @@ func (c *chatClient) Chat(ctx context.Context, opts ...grpc.CallOption) (Chat_Ch
 }
 
 type Chat_ChatClient interface {
-	Send(*message.Message) error
-	Recv() (*message.Message, error)
+	Send(*message2.Message) error
+	Recv() (*message2.Message, error)
 	grpc.ClientStream
 }
 
@@ -79,30 +79,30 @@ type chatChatClient struct {
 	grpc.ClientStream
 }
 
-func (x *chatChatClient) Send(m *message.Message) error {
+func (x *chatChatClient) Send(m *message2.Message) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *chatChatClient) Recv() (*message.Message, error) {
-	m := new(message.Message)
+func (x *chatChatClient) Recv() (*message2.Message, error) {
+	m := new(message2.Message)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
-func (c *chatClient) Greeting(ctx context.Context, in *message.Message, opts ...grpc.CallOption) (*message.Message, error) {
-	out := new(message.Message)
-	err := grpc.Invoke(ctx, "/net.Chat/Greeting", in, out, c.cc, opts...)
+func (c *chatClient) Greeting(ctx context.Context, in *message2.Message, opts ...grpc.CallOption) (*message2.Message, error) {
+	out := new(message2.Message)
+	err := grpc.Invoke(ctx, "/network.Chat/Greeting", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *chatClient) Wisper(ctx context.Context, in *message.Message, opts ...grpc.CallOption) (*message.Message, error) {
-	out := new(message.Message)
-	err := grpc.Invoke(ctx, "/net.Chat/Wisper", in, out, c.cc, opts...)
+func (c *chatClient) Whisper(ctx context.Context, in *message2.Message, opts ...grpc.CallOption) (*message2.Message, error) {
+	out := new(message2.Message)
+	err := grpc.Invoke(ctx, "/network.Chat/Whisper", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +115,9 @@ type ChatServer interface {
 	// dibi data tranfer
 	Chat(Chat_ChatServer) error
 	// Greeting doube arrow greeting message transfer
-	Greeting(context.Context, *message.Message) (*message.Message, error)
+	Greeting(context.Context, *message2.Message) (*message2.Message, error)
 	// Wisper Transfer the the node health infomation
-	Wisper(context.Context, *message.Message) (*message.Message, error)
+	Whisper(context.Context, *message2.Message) (*message2.Message, error)
 }
 
 func RegisterChatServer(s *grpc.Server, srv ChatServer) {
@@ -129,8 +129,8 @@ func _Chat_Chat_Handler(srv interface{}, stream grpc.ServerStream) error {
 }
 
 type Chat_ChatServer interface {
-	Send(*message.Message) error
-	Recv() (*message.Message, error)
+	Send(*message2.Message) error
+	Recv() (*message2.Message, error)
 	grpc.ServerStream
 }
 
@@ -138,12 +138,12 @@ type chatChatServer struct {
 	grpc.ServerStream
 }
 
-func (x *chatChatServer) Send(m *message.Message) error {
+func (x *chatChatServer) Send(m *message2.Message) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *chatChatServer) Recv() (*message.Message, error) {
-	m := new(message.Message)
+func (x *chatChatServer) Recv() (*message2.Message, error) {
+	m := new(message2.Message)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (x *chatChatServer) Recv() (*message.Message, error) {
 }
 
 func _Chat_Greeting_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(message.Message)
+	in := new(message2.Message)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -160,34 +160,34 @@ func _Chat_Greeting_Handler(srv interface{}, ctx context.Context, dec func(inter
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/net.Chat/Greeting",
+		FullMethod: "/network.Chat/Greeting",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServer).Greeting(ctx, req.(*message.Message))
+		return srv.(ChatServer).Greeting(ctx, req.(*message2.Message))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Chat_Wisper_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(message.Message)
+func _Chat_Whisper_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(message2.Message)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ChatServer).Wisper(ctx, in)
+		return srv.(ChatServer).Whisper(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/net.Chat/Wisper",
+		FullMethod: "/network.Chat/Whisper",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServer).Wisper(ctx, req.(*message.Message))
+		return srv.(ChatServer).Whisper(ctx, req.(*message2.Message))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 var _Chat_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "net.Chat",
+	ServiceName: "network.Chat",
 	HandlerType: (*ChatServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -195,8 +195,8 @@ var _Chat_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Chat_Greeting_Handler,
 		},
 		{
-			MethodName: "Wisper",
-			Handler:    _Chat_Wisper_Handler,
+			MethodName: "Whisper",
+			Handler:    _Chat_Whisper_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
@@ -213,14 +213,14 @@ var _Chat_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("communicate.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 136 bytes of a gzipped FileDescriptorProto
+	// 144 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0x12, 0x4c, 0xce, 0xcf, 0xcd,
-	0x2d, 0xcd, 0xcb, 0x4c, 0x4e, 0x2c, 0x49, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0xce,
-	0x4b, 0x2d, 0x91, 0x52, 0xc9, 0xa8, 0x2c, 0x48, 0x2d, 0x4a, 0xce, 0x48, 0xcc, 0xcc, 0xd3, 0x2f,
-	0x30, 0x2a, 0xd0, 0xcf, 0x4d, 0x2d, 0x2e, 0x4e, 0x4c, 0x4f, 0x85, 0xd1, 0x10, 0xa5, 0x46, 0xb3,
-	0x18, 0xb9, 0x58, 0x9c, 0x33, 0x12, 0x4b, 0x84, 0x0c, 0xa0, 0xb4, 0x80, 0x1e, 0x4c, 0x81, 0x2f,
-	0x84, 0x96, 0xc2, 0x10, 0x51, 0x62, 0xd0, 0x60, 0x34, 0x60, 0x14, 0x32, 0xe0, 0xe2, 0x70, 0x2f,
-	0x4a, 0x4d, 0x2d, 0xc9, 0xcc, 0x4b, 0x27, 0x4e, 0x97, 0x90, 0x1e, 0x17, 0x5b, 0x78, 0x66, 0x71,
-	0x41, 0x6a, 0x11, 0x71, 0xea, 0x93, 0xd8, 0xc0, 0x6e, 0x34, 0x06, 0x04, 0x00, 0x00, 0xff, 0xff,
-	0x89, 0xdb, 0x2e, 0xa4, 0xe3, 0x00, 0x00, 0x00,
+	0x2d, 0xcd, 0xcb, 0x4c, 0x4e, 0x2c, 0x49, 0xd5, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0xcf,
+	0x4b, 0x2d, 0x29, 0xcf, 0x2f, 0xca, 0x96, 0x52, 0xc8, 0xa8, 0x2c, 0x48, 0x2d, 0x4a, 0xce, 0x48,
+	0xcc, 0xcc, 0xd3, 0x2f, 0x30, 0x2a, 0xd0, 0xcf, 0x4d, 0x2d, 0x2e, 0x4e, 0x4c, 0x4f, 0xd5, 0xcf,
+	0x2d, 0x4e, 0x87, 0x28, 0x35, 0x9a, 0xcd, 0xc8, 0xc5, 0xe2, 0x9c, 0x91, 0x58, 0x22, 0x64, 0x00,
+	0xa5, 0x05, 0xf4, 0xa0, 0x8a, 0xf4, 0x7c, 0x21, 0xb4, 0x14, 0x86, 0x88, 0x12, 0x83, 0x06, 0xa3,
+	0x01, 0xa3, 0x90, 0x01, 0x17, 0x87, 0x7b, 0x51, 0x6a, 0x6a, 0x49, 0x66, 0x5e, 0x3a, 0x71, 0xba,
+	0x84, 0xf4, 0xb9, 0xd8, 0xc3, 0x33, 0x32, 0x8b, 0x0b, 0x52, 0x8b, 0x88, 0xd3, 0x90, 0xc4, 0x06,
+	0x76, 0xa4, 0x31, 0x20, 0x00, 0x00, 0xff, 0xff, 0x7f, 0x7d, 0xcc, 0xe4, 0xe4, 0x00, 0x00, 0x00,
 }
