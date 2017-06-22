@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/crypto"
@@ -11,7 +12,6 @@ import (
 	"hyperchain/tree/bucket"
 	"math/big"
 	"sort"
-	"github.com/op/go-logging"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -67,11 +67,11 @@ type StateObject struct {
 	// by StateDB.Commit.
 	dbErr error
 
-	code             Code    // contract bytecode, which gets set when code is loaded
-	cachedStorage    Storage // Storage entry cache to avoid duplicate reads
-	dirtyStorage     Storage // Storage entries that need to be flushed to disk
-	archieveStorage  Storage // Storage entries that need to be flushed to disk
-	evictList        map[common.Hash]uint64 // record storage lasted modify block number
+	code            Code    // contract bytecode, which gets set when code is loaded
+	cachedStorage   Storage // Storage entry cache to avoid duplicate reads
+	dirtyStorage    Storage // Storage entries that need to be flushed to disk
+	archieveStorage Storage // Storage entries that need to be flushed to disk
+	evictList       map[common.Hash]uint64 // record storage lasted modify block number
 
 	bucketTree *bucket.BucketTree     // a bucket tree use to calculate fingerprint of storage efficiency
 	bucketConf map[string]interface{} // bucket tree config
@@ -674,6 +674,7 @@ func (self *StateObject) archieve(key common.Hash, originValue, value []byte) {
 func (self *StateObject) isArchieve(opcode int32) bool {
 	return opcode == OPCODE_ARCHIEVE
 }
+
 
 func (self *StateObject) onEvict(done chan struct{}) {
 	defer func() {

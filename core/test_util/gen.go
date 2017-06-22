@@ -1,16 +1,15 @@
 package test_util
 
 import (
-	"hyperchain/core/types"
-	"os/exec"
-	"os"
-	"path"
-	"strings"
-	"hyperchain/common"
-	"strconv"
 	"github.com/golang/protobuf/proto"
+	"hyperchain/common"
+	"hyperchain/core/types"
+	"os"
+	"os/exec"
+	"path"
+	"strconv"
+	"strings"
 )
-
 
 func GenTransferTransactionRandomly() *types.Transaction {
 	owd, _ := os.Getwd()
@@ -87,7 +86,7 @@ func DeployContract(from, contractBin string) *types.Transaction {
 		To:        nil,
 		Timestamp: timestamp,
 		Nonce:     nonce,
-		Value: 	   value,
+		Value:     value,
 		Signature: common.Hex2Bytes(strings.Split(args[8], " ")[1]),
 	}
 }
@@ -107,7 +106,7 @@ func GenContractTransactionRandomly(from, to, methodBin string) *types.Transacti
 		To:        common.Hex2Bytes(strings.Split(args[3], " ")[1]),
 		Timestamp: timestamp,
 		Nonce:     nonce,
-		Value: 	   value,
+		Value:     value,
 		Signature: common.Hex2Bytes(strings.Split(args[7], " ")[1]),
 	}
 }

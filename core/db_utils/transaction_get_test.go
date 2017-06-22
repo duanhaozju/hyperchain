@@ -1,9 +1,9 @@
 package db_utils
 
 import (
+	"hyperchain/core/test_util"
 	"hyperchain/hyperdb"
 	"testing"
-	"hyperchain/core/test_util"
 )
 
 func TestGetVersionOfTransaction(t *testing.T) {

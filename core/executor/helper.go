@@ -1,22 +1,24 @@
 package executor
+
 import (
-	"hyperchain/manager/event"
-	"hyperchain/manager/protos"
 	"github.com/golang/protobuf/proto"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
+	"hyperchain/manager/event"
+	"hyperchain/manager/protos"
 	"reflect"
 	er "hyperchain/core/errors"
 )
+
 type Helper struct {
-	innerMux        *event.TypeMux
-	externalMux     *event.TypeMux
+	innerMux    *event.TypeMux
+	externalMux *event.TypeMux
 }
 
 func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *Helper {
 	return &Helper{
-		innerMux:       innerMux,
-		externalMux:    externalMux,
+		innerMux:    innerMux,
+		externalMux: externalMux,
 	}
 }
 
@@ -170,9 +172,9 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			return err
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
-			Payload:  payload,
-			Type:     NOTIFY_BROADCAST_SINGLE,
-			Peers:    executor.status.syncFlag.SyncPeers,
+			Payload: payload,
+			Type:    NOTIFY_BROADCAST_SINGLE,
+			Peers:   executor.status.syncFlag.SyncPeers,
 		})
 		return nil
 	case NOTIFY_SYNC_REPLICA:
@@ -190,10 +192,85 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			Type:    NOTIFY_SYNC_REPLICA,
 		})
 		return nil
+	case NOTIFY_REQUEST_WORLD_STATE:
+		executor.logger.Notice("inform p2p sync world state")
+		if !checkParams([]reflect.Kind{reflect.Uint64}, message...) {
+			return er.InvalidParamsErr
+		}
+		request := &WsRequest{
+			Target:      message[0].(uint64),
+			InitiatorId: executor.status.syncFlag.LocalId,
+			ReceiverId:  executor.status.syncCtx.GetCurrentPeer(),
+		}
+		payload, err := proto.Marshal(request)
+		if err != nil {
+			return er.MarshalFailedErr
+		}
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
+			Payload: payload,
+			Type:    NOTIFY_REQUEST_WORLD_STATE,
+			Peers:   []uint64{executor.status.syncCtx.GetCurrentPeer()},
+		})
+		return nil
+	case NOTIFY_SEND_WORLD_STATE_HANDSHAKE:
+		executor.logger.Notice("inform p2p send world state handshake packet")
+		if len(message) != 1 {
+			return er.InvalidParamsErr
+		}
+		hs, ok := message[0].(*WsHandshake)
+		if ok == false {
+			return er.InvalidParamsErr
+		}
+		payload, err := proto.Marshal(hs)
+		if err != nil {
+			return er.MarshalFailedErr
+		}
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
+			Payload: payload,
+			Type:    NOTIFY_SEND_WORLD_STATE_HANDSHAKE,
+			Peers:   []uint64{hs.Ctx.ReceiverId},
+		})
+		return nil
+	case NOTIFY_SEND_WS_ACK:
+		executor.logger.Notice("inform p2p send ws ack")
+		if len(message) != 1 {
+			return er.InvalidParamsErr
+		}
+		ack, ok := message[0].(*WsAck)
+		if ok == false {
+			return er.InvalidParamsErr
+		}
+		payload, err := proto.Marshal(ack)
+		if err != nil {
+			return er.MarshalFailedErr
+		}
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
+			Payload: payload,
+			Type:    NOTIFY_SEND_WS_ACK,
+			Peers:   []uint64{ack.Ctx.ReceiverId},
+		})
+		return nil
+	case NOTIFY_SEND_WORLD_STATE:
+		executor.logger.Notice("inform p2p sync world state")
+		if len(message) != 1 {
+			return er.InvalidParamsErr
+		}
+		ws, ok := message[0].(*Ws)
+		if ok == false {
+			return er.InvalidParamsErr
+		}
+		payload, err := proto.Marshal(ws)
+		if err != nil {
+			return er.MarshalFailedErr
+		}
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
+			Payload: payload,
+			Type:    NOTIFY_SEND_WORLD_STATE,
+			Peers:   []uint64{ws.Ctx.ReceiverId},
+		})
 	case NOTIFY_TRANSIT_BLOCK:
 		executor.logger.Debug("inform p2p to transit commited block")
 		return nil
-
 	default:
 		return er.NoDefinedCaseErr
 	}
@@ -222,8 +299,37 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		}
 		executor.helper.PostExternal(event.FilterNewLogEvent{logs})
 		return nil
+	case FILTER_SNAPSHOT_RESULT:
+		if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
+			return er.InvalidParamsErr
+		}
+		executor.helper.PostExternal(event.FilterSnapshotEvent{
+			FilterId: message[1].(string),
+			Success:  message[0].(bool),
+			Message:  message[2].(string),
+		})
+		return nil
+	case FILTER_DELETE_SNAPSHOT:
+		if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
+			return er.InvalidParamsErr
+		}
+		executor.helper.PostExternal(event.FilterDeleteSnapshotEvent{
+			FilterId: message[1].(string),
+			Success:  message[0].(bool),
+			Message:  message[2].(string),
+		})
+		return nil
+	case FILTER_ARCHIVE:
+		if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
+			return er.InvalidParamsErr
+		}
+		executor.helper.PostExternal(event.FilterArchive{
+			FilterId: message[1].(string),
+			Success:  message[0].(bool),
+			Message:  message[2].(string),
+		})
+		return nil
 	default:
 		return er.NoDefinedCaseErr
 	}
 }
-

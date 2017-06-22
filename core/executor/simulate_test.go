@@ -1,22 +1,22 @@
 package executor
 
 import (
-	"github.com/pkg/errors"
-	"testing"
-	"hyperchain/common"
-	"os"
 	"github.com/davecgh/go-spew/spew"
-	"path"
-	"hyperchain/core/test_util"
+	"github.com/pkg/errors"
+	"hyperchain/common"
 	"hyperchain/core/db_utils"
+	"hyperchain/core/test_util"
 	"hyperchain/core/types"
+	"os"
+	"path"
 	"strconv"
+	"testing"
 )
 
 const (
-	namespace             = "testing"
-	configPath            = "configuration/namespaces/global/config/global.yaml"
-	dbConfigPath          = "configuration/namespaces/global/config/db.yaml"
+	namespace    = "testing"
+	configPath   = "configuration/namespaces/global/config/global.yaml"
+	dbConfigPath = "configuration/namespaces/global/config/db.yaml"
 )
 
 var (
@@ -28,7 +28,7 @@ func init() {
 	spew.Config.DisableMethods = true
 }
 
-func initialize() (string, *Executor){
+func initialize() (string, *Executor) {
 	owd, _ := os.Getwd()
 	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain"))
 	os.RemoveAll("./build")
@@ -56,7 +56,7 @@ func TestSimulateForTransfer(t *testing.T) {
 	deleteTestData(owd)
 }
 
-func TestSimulateForInvalidTransfer(t *testing.T)  {
+func TestSimulateForInvalidTransfer(t *testing.T) {
 	owd, executor := initialize()
 	if err := simulateForInvalidTransfer(executor); err != nil {
 		t.Error("TestSimulateForInvalidTransafer fail" + err.Error())
@@ -145,7 +145,7 @@ func simulateContractTransfer(executor *Executor) error {
 	batch.Write()
 
 	// create user1
-	transaction = test_util.GenContractTransactionRandomly("", "0x" + common.Bytes2Hex(receiptOfDeployContract.ContractAddress), "0x328592e2696e646976696475616c5f3000000000000000000000000000000000000000006e616d650000000000000000000000000000000000000000000000000000000070686f6e654e756d62657200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000186a0")
+	transaction = test_util.GenContractTransactionRandomly("", "0x"+common.Bytes2Hex(receiptOfDeployContract.ContractAddress), "0x328592e2696e646976696475616c5f3000000000000000000000000000000000000000006e616d650000000000000000000000000000000000000000000000000000000070686f6e654e756d62657200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000186a0")
 	transaction.TransactionHash = transaction.Hash().Bytes()
 	executor.statedb.StartRecord(transaction.GetHash(), common.Hash{}, 0)
 	receipt, _, _, err := ExecTransaction(transaction, env)
@@ -159,7 +159,7 @@ func simulateContractTransfer(executor *Executor) error {
 	batch.Write()
 
 	// create user2
-	transaction = test_util.GenContractTransactionRandomly("", "0x" + common.Bytes2Hex(receiptOfDeployContract.ContractAddress), "0x328592e2696e646976696475616c5f3100000000000000000000000000000000000000006e616d650000000000000000000000000000000000000000000000000000000070686f6e654e756d62657200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000186a0")
+	transaction = test_util.GenContractTransactionRandomly("", "0x"+common.Bytes2Hex(receiptOfDeployContract.ContractAddress), "0x328592e2696e646976696475616c5f3100000000000000000000000000000000000000006e616d650000000000000000000000000000000000000000000000000000000070686f6e654e756d62657200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000186a0")
 	transaction.TransactionHash = transaction.Hash().Bytes()
 	executor.statedb.StartRecord(transaction.GetHash(), common.Hash{}, 0)
 	receipt, _, _, err = ExecTransaction(transaction, env)
@@ -173,7 +173,7 @@ func simulateContractTransfer(executor *Executor) error {
 	batch.Write()
 
 	// contract transfer
-	transaction = test_util.GenContractTransactionRandomly("", "0x" + common.Bytes2Hex(receiptOfDeployContract.ContractAddress), "0xae9f75e3696e646976696475616c5f300000000000000000000000000000000000000000696e646976696475616c5f3100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001")
+	transaction = test_util.GenContractTransactionRandomly("", "0x"+common.Bytes2Hex(receiptOfDeployContract.ContractAddress), "0xae9f75e3696e646976696475616c5f300000000000000000000000000000000000000000696e646976696475616c5f3100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001")
 	transaction.TransactionHash = transaction.Hash().Bytes()
 	executor.statedb.StartRecord(transaction.GetHash(), common.Hash{}, 0)
 	receipt, _, _, err = ExecTransaction(transaction, env)

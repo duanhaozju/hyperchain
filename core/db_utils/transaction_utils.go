@@ -15,6 +15,10 @@ func GetInvaildTxErrType(namespace string, key []byte) (types.InvalidTransaction
 	if err != nil {
 		return -1, err
 	}
+	return GetInvalidTxErrTypeFunc(db, key)
+}
+
+func GetInvalidTxErrTypeFunc(db db.Database, key []byte) (types.InvalidTransactionRecord_ErrType, error) {
 	var invalidTx types.InvalidTransactionRecord
 	keyFact := append(InvalidTransactionPrefix, key...)
 	data, err := db.Get(keyFact)
@@ -31,6 +35,10 @@ func GetTransaction(namespace string, key []byte) (*types.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
+	return GetTransactionFunc(db, key)
+}
+
+func GetTransactionFunc(db db.Database, key []byte) (*types.Transaction, error) {
 	if key == nil {
 		return nil, EmptyPointerErr
 	}
@@ -43,7 +51,6 @@ func GetTransaction(namespace string, key []byte) (*types.Transaction, error) {
 	}
 	err = proto.Unmarshal(data, &wrapper)
 	if err != nil {
-		logger(namespace).Errorf("GetTransaction err:", err)
 		return &transaction, err
 	}
 	err = proto.Unmarshal(wrapper.Transaction, &transaction)
@@ -148,6 +155,10 @@ func GetAllTransaction(namespace string) ([]*types.Transaction, error) {
 	if err != nil {
 		return nil, err
 	}
+	return GetAllTransactionFunc(db)
+}
+
+func GetAllTransactionFunc(db db.Database) ([]*types.Transaction, error) {
 	var ts []*types.Transaction = make([]*types.Transaction, 0)
 	iter := db.NewIterator(TransactionPrefix)
 	for iter.Next() {
@@ -159,8 +170,9 @@ func GetAllTransaction(namespace string) ([]*types.Transaction, error) {
 		ts = append(ts, &transaction)
 	}
 	iter.Release()
-	err = iter.Error()
+	err := iter.Error()
 	return ts, err
+
 }
 
 // Judge whether a transaction has been saved in database
@@ -230,13 +242,16 @@ func GetTxWithBlock(namespace string, key []byte) (uint64, int64) {
 	if err != nil {
 		return 0, 0
 	}
+	return GetTxWithBlockFunc(db, key)
+}
+
+func GetTxWithBlockFunc(db db.Database, key []byte) (uint64, int64) {
 	dataMeta, _ := db.Get(append(key, TxMetaSuffix...))
 	if len(dataMeta) == 0 {
 		return 0, 0
 	}
 	meta := &types.TransactionMeta{}
 	if err := proto.Unmarshal(dataMeta, meta); err != nil {
-		logger(namespace).Error(err)
 		return 0, 0
 	}
 	return meta.BlockIndex, meta.Index
@@ -276,6 +291,10 @@ func GetAllDiscardTransaction(namespace string) ([]*types.InvalidTransactionReco
 	if err != nil {
 		return nil, err
 	}
+	return GetAllDiscardTransactionFunc(db)
+}
+
+func GetAllDiscardTransactionFunc(db db.Database) ([]*types.InvalidTransactionRecord, error) {
 	var ts []*types.InvalidTransactionRecord = make([]*types.InvalidTransactionRecord, 0)
 	iter := db.NewIterator(InvalidTransactionPrefix)
 	for iter.Next() {
@@ -285,8 +304,56 @@ func GetAllDiscardTransaction(namespace string) ([]*types.InvalidTransactionReco
 		ts = append(ts, &t)
 	}
 	iter.Release()
-	err = iter.Error()
+	err := iter.Error()
 	return ts, err
+}
+
+func DeleteAllDiscardTransaction(db db.Database, batch db.Batch, flush, sync bool) error {
+	iter := db.NewIterator(InvalidTransactionPrefix)
+	defer iter.Release()
+	for iter.Next() {
+		batch.Delete(iter.Key())
+	}
+	err := iter.Error()
+	// flush to disk immediately
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return err
+}
+
+func DumpDiscardTransactionInRange(db db.Database, batch db.Batch, dumpBatch db.Batch, start, end int64, flush, sync bool) (error, uint64) {
+	// flush to disk immediately
+	iter := db.NewIterator(InvalidTransactionPrefix)
+	defer iter.Release()
+	var cnt uint64
+	for iter.Next() {
+		var t types.InvalidTransactionRecord
+		value := iter.Value()
+		if err := proto.Unmarshal(value, &t); err != nil {
+			continue
+		}
+		if t.Tx != nil && t.Tx.Timestamp < end && t.Tx.Timestamp >= start {
+			cnt += 1
+			batch.Delete(iter.Key())
+			dumpBatch.Put(iter.Key(), iter.Value())
+		}
+	}
+	err := iter.Error()
+	if flush {
+		if sync {
+			batch.Write()
+			dumpBatch.Write()
+		} else {
+			go batch.Write()
+			go dumpBatch.Write()
+		}
+	}
+	return err, cnt
 }
 
 func GetDiscardTransaction(namespace string, key []byte) (*types.InvalidTransactionRecord, error) {
@@ -294,6 +361,10 @@ func GetDiscardTransaction(namespace string, key []byte) (*types.InvalidTransact
 	if err != nil {
 		return nil, err
 	}
+	return GetDiscardTransactionFunc(db, key)
+}
+
+func GetDiscardTransactionFunc(db db.Database, key []byte) (*types.InvalidTransactionRecord, error) {
 	var invalidTransaction types.InvalidTransactionRecord
 	keyFact := append(InvalidTransactionPrefix, key...)
 	data, err := db.Get(keyFact)

@@ -91,6 +91,7 @@ message checkpoint {
     uint64 sequence_number = 1;
     uint64 replica_id = 2;
     string id = 3;
+    uint64 genesis = 4;
 }
 
 message view_change {
@@ -112,7 +113,8 @@ message view_change {
     repeated PQ qset = 5;
     uint64 replica_id = 6;
     bytes signature = 7;
-    int64 timestamp = 8;
+    uint64 genesis = 8;
+    int64 timestamp = 9;
 }
 
 message new_view {
@@ -151,8 +153,9 @@ message recovery_init {
 message recovery_response {
     uint64               replica_id    = 1;
     map<uint64, string>  chkpts        = 2;
-    uint64               blockHeight      = 3;
+    uint64               blockHeight   = 3;
     string               lastBlockHash = 4;
+    uint64               genesis       = 5;
 }
 
 message recovery_fetchPQC {
@@ -202,6 +205,7 @@ message agree_update_n {
     repeated view_change.C cset = 8;
     repeated view_change.PQ pset = 9;
     repeated view_change.PQ qset = 10;
+    uint64 genesis =11;
 }
 
 message update_n {

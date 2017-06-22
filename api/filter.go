@@ -1,37 +1,37 @@
 package api
 
 import (
-	"hyperchain/manager"
-	"hyperchain/common"
 	"github.com/op/go-logging"
+	"hyperchain/common"
 	"sync"
 	flt "hyperchain/manager/filter"
 	"time"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/manager"
 	"hyperchain/manager/event"
 	"hyperchain/core/types"
 	"context"
 )
 
 type PublicFilterAPI struct {
-	namespace   string
-	eh          *manager.EventHub
-	config      *common.Config
-	log         *logging.Logger
-	events      *flt.EventSystem
-	filtersMu   sync.Mutex
-	filters     map[string]*flt.Filter
+	namespace string
+	eh        *manager.EventHub
+	config    *common.Config
+	log       *logging.Logger
+	events    *flt.EventSystem
+	filtersMu sync.Mutex
+	filters   map[string]*flt.Filter
 }
 
 func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config) *PublicFilterAPI {
 	log := common.GetLogger(namespace, "api")
 	api := &PublicFilterAPI{
-		namespace:   namespace,
-		eh:          eh,
-		config:      config,
-		log:         log,
-		events:      eh.GetFilterSystem(),
-		filters:     make(map[string]*flt.Filter),
+		namespace: namespace,
+		eh:        eh,
+		config:    config,
+		log:       log,
+		events:    eh.GetFilterSystem(),
+		filters:   make(map[string]*flt.Filter),
 	}
 	go api.timeoutLoop()
 	return api
@@ -121,6 +121,32 @@ func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string
 
 }
 
+func (api *PublicFilterAPI) NewSnapshotSubscription() string {
+	var (
+		ch = make(chan interface{})
+		sub = api.events.NewCommonSubscription(ch, false, flt.SnapshotSubscription, flt.FilterCriteria{})
+	)
+	api.filtersMu.Lock()
+	api.filters[sub.ID] = flt.NewFilter(flt.SnapshotSubscription, sub, flt.FilterCriteria{})
+	go func() {
+		for {
+			select {
+			case d := <-ch:
+				api.filtersMu.Lock()
+				if f, found := api.filters[sub.ID]; found {
+					f.AddData(d)
+				}
+				api.filtersMu.Unlock()
+			case <-sub.Err():
+				api.filtersMu.Lock()
+				delete(api.filters, sub.ID)
+				api.filtersMu.Unlock()
+				return
+			}
+		}
+	}()
+	return sub.ID
+}
 func (api *PublicFilterAPI) NewExceptionSubscription(crit flt.FilterCriteria) string {
 	var (
 		ch     = make(chan interface{})
@@ -196,6 +222,15 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 			logs := f.GetLogs()
 			defer f.Clearlog()
 			return returnLogs(logs), nil
+		case flt.SnapshotSubscription:
+			datas := f.GetData()
+			var ret []event.FilterSnapshotEvent
+			for _, d := range datas {
+				if val, ok := d.(event.FilterSnapshotEvent); ok {
+					ret = append(ret, val)
+				}
+			}
+			return ret, nil
 		case flt.ExceptionSubscription:
 			data := f.GetData()
 			defer f.ClearData()

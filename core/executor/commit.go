@@ -6,8 +6,8 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
-	"hyperchain/manager/event"
 	"hyperchain/hyperdb/db"
+	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"time"
 )
@@ -23,6 +23,11 @@ func (executor *Executor) listenCommitEvent() {
 		case <-executor.getExit(IDENTIFIER_COMMIT):
 			executor.logger.Notice("commit backend exit")
 			return
+		case v := <-executor.getSuspend(IDENTIFIER_COMMIT):
+			if v {
+				executor.logger.Notice("pause commit process")
+				executor.pauseCommit()
+			}
 		case ev := <-executor.fetchCommitEvent():
 			if success := executor.processCommitEvent(ev, executor.processCommitDone); success == false {
 				executor.logger.Errorf("commit block #%d failed, system crush down.", ev.SeqNo)
@@ -99,7 +104,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	// executor.logger.Notice(string(executor.statedb.Dump()))
 	// remove Cached Transactions which used to check transaction duplication
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
-	go executor.feedback(block, filterLogs)
+	go executor.filterFeedback(block, filterLogs)
 	return nil
 }
 
@@ -192,10 +197,7 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 		for _, log := range logs {
 			log.BlockHash = blockHash
 			log.BlockNumber = blockNumber
-			filterLogs = append(filterLogs, log)
 		}
-		// why need a iterate to find the final blockHash and blockNumber
-		// @Duanhao Since blockhash is not certain during the validation. Therefore correct blockhash has to be assigned during commit stage.
 		receipt.SetLogs(logs)
 		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
 			return err, nil
@@ -220,10 +222,19 @@ func (executor *Executor) StoreInvalidTransaction(payload []byte) {
 	}
 }
 
-func (executor *Executor) feedback(block *types.Block, filterLogs []*types.Log) {
+func (executor *Executor) pauseCommit() {
+	for {
+		if v := <-executor.getSuspend(IDENTIFIER_COMMIT); !v {
+			executor.logger.Notice("un-pause commit process")
+			return
+		}
+	}
+}
+func (executor *Executor) filterFeedback(block *types.Block, filterLogs []*types.Log) {
 	if err := executor.sendFilterEvent(FILTER_NEW_BLOCK, block); err != nil {
 		executor.logger.Warningf("send new block event failed. error detail: %s", err.Error())
 	}
+	go executor.snapshotReg.notifyNewBlock(block.Number)
 	if len(filterLogs) > 0 {
 		if err := executor.sendFilterEvent(FILTER_NEW_LOG, filterLogs); err != nil {
 			executor.logger.Warningf("send new log event failed. error detail: %s", err.Error())

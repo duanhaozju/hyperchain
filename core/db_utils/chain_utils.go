@@ -1,12 +1,15 @@
 package db_utils
 
 import (
+	"errors"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"sync"
 )
+
+var ChainNotExistErr = errors.New("chain doesn't exist")
 
 // memChain manage safe chain
 type memChain struct {
@@ -41,7 +44,7 @@ func (chains *memChains) GetChain(namespace string) *memChain {
 }
 
 var (
-	chains *memChains
+	chains         *memChains
 	chainsInitOnce sync.Once
 )
 
@@ -281,6 +284,43 @@ func UpdateChainByBlcokNum(namespace string, batch db.Batch, blockNumber uint64,
 	return UpdateChain(namespace, batch, block, block.Number == 0, flush, sync)
 }
 
+func UpdateGenesisTag(namespace string, genesis uint64, batch db.Batch, flush bool, sync bool) error {
+	chain := chains.GetChain(namespace)
+	if chain == nil {
+		return ChainNotExistErr
+	} else {
+		chain.lock.Lock()
+		defer chain.lock.Unlock()
+		chain.data.Genesis = genesis
+		return putChain(batch, &chain.data, flush, sync)
+	}
+}
+
+func GetGenesisTag(namespace string) (error, uint64) {
+	chain := chains.GetChain(namespace)
+	if chain == nil {
+		return ChainNotExistErr, 0
+	} else {
+		chain.lock.RLock()
+		defer chain.lock.RUnlock()
+		return nil, chain.data.Genesis
+	}
+}
+
+func RemoveChain(batch db.Batch, flush bool, sync bool) error {
+	if err := batch.Delete(ChainKey); err != nil {
+		return err
+	}
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return nil
+}
+
 // WaitUtilHeightChan get chain from channel. if channel is empty, the func will be blocked
 func GetChainUntil(namespace string) *types.Chain {
 	chain := chains.GetChain(namespace)
@@ -296,6 +336,8 @@ func WriteChainChan(namespace string) {
 
 // putChain put chain database
 func putChain(batch db.Batch, t *types.Chain, flush bool, sync bool) error {
+	// assign version tag
+	t.Version = []byte(ChainVersion)
 	data, err := proto.Marshal(t)
 	if err != nil {
 		return err
@@ -330,4 +372,3 @@ func getChain(namespace string) (*types.Chain, error) {
 	}
 	return &chain, nil
 }
-

@@ -20,19 +20,18 @@ type hyperchain struct {
 	args        *argT
 }
 
-func newHyperchain(argV *argT) *hyperchain {
+func newHyperchain(argV *argT, conf *common.Config) *hyperchain {
 	hp := &hyperchain{
 		stopFlag:    make(chan bool),
 		restartFlag: make(chan bool),
 		args:        argV,
 	}
 
-	globalConfig := common.NewConfig(hp.args.ConfigPath)
-	common.InitHyperLoggerManager(globalConfig)
+	common.InitHyperLoggerManager(conf)
 	//
 	//common.InitLog(globalConfig)
 
-	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
+	hp.nsMgr = namespace.GetNamespaceManager(conf)
 	hp.rpcServer = jsonrpc.GetRPCServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)
 
 	logger = common.GetLogger(common.DEFAULT_LOG, "main")
@@ -63,7 +62,10 @@ func (h *hyperchain) restart() {
 
 type argT struct {
 	cli.Helper
-	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
+	ConfigPath    string `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
+	RestoreEnable bool   `cli:"r,restore" usage:"enable restore system status from dumpfile"`
+	SId           string `cli:"s,sid" usage:"use to specify snapshot" dft:""`
+	Namespace     string `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
 }
 
 var (
@@ -78,17 +80,28 @@ func main() {
 			}
 		}()
 		argv := ctx.Argv().(*argT)
-		hp := newHyperchain(argv)
-		hp.start()
-		for {
-			select {
-			case <-hp.stopFlag:
-				hp.stop()
-				return nil
-			case <-hp.restartFlag:
-				hp.restart()
-			}
+
+		globalConfig := common.NewConfig(argv.ConfigPath)
+
+		hp := newHyperchain(argv, globalConfig)
+		switch {
+		case argv.RestoreEnable:
+			restore(globalConfig, argv.SId, argv.Namespace)
+		default:
+			run(hp)
 		}
 		return nil
 	})
+}
+
+func run(inst *hyperchain) {
+	inst.start()
+	for {
+		select {
+		case <-inst.stopFlag:
+			inst.stop()
+		case <-inst.restartFlag:
+			inst.restart()
+		}
+	}
 }

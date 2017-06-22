@@ -524,4 +524,3 @@ func (self *StateDB) Snapshot() *StateDB {
 func (self *StateDB) RevertToSnapshot(statedb *StateDB) {
 	self.Set(statedb)
 }
-

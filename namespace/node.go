@@ -5,8 +5,8 @@ package namespace
 
 import (
 	"github.com/op/go-logging"
-	"hyperchain/p2p/common"
 	"github.com/pkg/errors"
+	"hyperchain/p2p/common"
 	"sync"
 )
 
@@ -21,27 +21,27 @@ type Node struct {
 
 func NewNode(id, grpc, rpc int, addr, extAddr string) *Node {
 	return &Node{
-		Id:id,
-		Addr:addr,
-		ExternalAddr:extAddr,
-		GrpcPort:grpc,
-		RpcPort:rpc,
+		Id:           id,
+		Addr:         addr,
+		ExternalAddr: extAddr,
+		GrpcPort:     grpc,
+		RpcPort:      rpc,
 	}
 }
 
 //NamespaceInfo basic information of this namespace.
 type NamespaceInfo struct {
-	name       string
-	desc       string
-	logger     *logging.Logger
+	name   string
+	desc   string
+	logger *logging.Logger
 
-	nodes map[int]*Node
+	nodes  map[int]*Node
 	config *common.ConfigReader
-	lock        *sync.RWMutex
+	lock   *sync.RWMutex
 }
 
 //NewNamespaceInfo new namespace info by peerconfig file.
-func NewNamespaceInfo(peerConfigPath, namespace string, logger *logging.Logger) (*NamespaceInfo, error)  {
+func NewNamespaceInfo(peerConfigPath, namespace string, logger *logging.Logger) (*NamespaceInfo, error) {
 	ni := &NamespaceInfo{
 		name:   namespace,
 		logger: logger,
@@ -55,7 +55,7 @@ func (ni *NamespaceInfo) init(peerConfigPath, namespace string) error {
 	ni.lock.Lock()
 	defer ni.lock.Unlock()
 	config := common.NewConfigReader(peerConfigPath, namespace)
-	if (config == nil) {
+	if config == nil {
 		return errors.New("can not read config file " + peerConfigPath)
 	}
 	ni.config = config
@@ -112,7 +112,7 @@ func (ni *NamespaceInfo) AddNode(node *Node) error {
 	return nil
 }
 
-func (ni *NamespaceInfo) PrintInfo()  {
+func (ni *NamespaceInfo) PrintInfo() {
 	ni.lock.RLock()
 	defer ni.lock.RUnlock()
 	for _, node := range ni.nodes {

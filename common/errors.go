@@ -94,11 +94,8 @@ func (e *ShutdownError) Error() string {
 	return "server is shutting down"
 }
 
-
-
-
 // JSONRPC ERRORS
-type JSONRPCError interface{
+type JSONRPCError interface {
 	Code() int
 	Error() string
 }
@@ -188,7 +185,7 @@ func (e *RepeadedTxError) Error() string {
 }
 
 type ContractPermissionError struct {
-	Message    string
+	Message string
 }
 
 func (e *ContractPermissionError) Code() int {
@@ -200,7 +197,7 @@ func (e *ContractPermissionError) Error() string {
 }
 
 type AccountNotExistError struct {
-	Message    string
+	Message string
 }
 
 func (e *AccountNotExistError) Code() int {
@@ -212,7 +209,7 @@ func (e *AccountNotExistError) Error() string {
 }
 
 type NamespaceNotFound struct {
-	Name    string
+	Name string
 }
 
 func (e *NamespaceNotFound) Code() int {
@@ -224,7 +221,7 @@ func (e *NamespaceNotFound) Error() string {
 }
 
 type NoBlockGeneratedError struct {
-	Message    string
+	Message string
 }
 
 func (e *NoBlockGeneratedError) Code() int {
@@ -240,13 +237,24 @@ type SubNotExistError struct {
 }
 
 func (e *SubNotExistError) Code() int {
-	return -32010
+	return -32012
 }
 
 func (e *SubNotExistError) Error() string {
 	return e.Message
 }
 
+type SnapshotErr struct {
+	Message string
+}
+
+func (e *SnapshotErr) Code() int {
+	return -32013
+}
+
+func (e *SnapshotErr) Error() string {
+	return e.Message
+}
 
 type UnauthorizedError struct {
 }

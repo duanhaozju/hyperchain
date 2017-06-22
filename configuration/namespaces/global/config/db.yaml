@@ -25,7 +25,7 @@ dbConfig:
             dir: "./namespaces/global/data/sldb/index"
             bloombit: 100000000
             hashnum: 3
-            dumpinterval: 24h
+            dumpinterval: 4s
     ########################### end configurations of sldb ##########################
 
 

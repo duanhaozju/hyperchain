@@ -8,20 +8,22 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"hyperchain/hyperdb/db"
 	"hyperchain/common"
+	"hyperchain/hyperdb/db"
 	pa "path/filepath"
 )
 
 const (
 	LEVEL_DB_PATH = "dbConfig.leveldbPath"
 )
+
 // the Database for LevelDB
 // LDBDatabase implements the DataBase interface
 
 type LDBDatabase struct {
 	path      string
 	db        *leveldb.DB
+	conf      *common.Config
 	namespace string
 }
 
@@ -33,16 +35,21 @@ type LDBDatabase struct {
 // DB can be recovered with Recover function.
 // the return *LDBDatabase is goruntine-safe
 // the LDBDataBase instance must be close after use, by calling Close method
-func NewLDBDataBase(conf *common.Config,filepath string, namespace string) (*LDBDatabase, error) {
-	if conf!=nil {
-		filepath= pa.Join(conf.GetString(LEVEL_DB_PATH), filepath)
+func NewLDBDataBase(conf *common.Config, filepath string, namespace string) (*LDBDatabase, error) {
+	if conf != nil {
+		filepath = pa.Join(conf.GetString(LEVEL_DB_PATH), filepath)
 	}
 	db, err := leveldb.OpenFile(filepath, nil)
 	return &LDBDatabase{
-		path:          filepath,
-		db:            db,
-		namespace:     namespace,
+		path:      filepath,
+		db:        db,
+		conf:      conf,
+		namespace: namespace,
 	}, err
+}
+
+func LDBDataBasePath(conf *common.Config) string {
+	return conf.GetString(LEVEL_DB_PATH)
 }
 
 // Put sets value for the given key, if the key exists, it will overwrite
@@ -115,6 +122,32 @@ func (self *LDBDatabase) LDB() *leveldb.DB {
 // it allows batch-operation
 func (db *LDBDatabase) NewBatch() db.Batch {
 	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
+}
+
+func (db *LDBDatabase) MakeSnapshot(backupPath string, fields []string) error {
+	backupDb, err := NewLDBDataBase(db.conf, backupPath, db.namespace)
+	if err != nil {
+		return err
+	}
+	defer backupDb.Close()
+
+	snapshot, err := db.db.GetSnapshot()
+	if err != nil {
+		return err
+	}
+	defer snapshot.Release()
+
+	for _, field := range fields {
+		iter := snapshot.NewIterator(util.BytesPrefix([]byte(field)), nil)
+		for iter.Next() {
+			if err := backupDb.Put(iter.Key(), iter.Value()); err != nil {
+				iter.Release()
+				return err
+			}
+		}
+		iter.Release()
+	}
+	return nil
 }
 
 // The Batch for LevelDB

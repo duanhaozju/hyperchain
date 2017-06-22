@@ -3,12 +3,13 @@ package api
 import (
 	"errors"
 	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
 	"hyperchain/core/hyperstate"
 	"hyperchain/crypto/hmEncryption"
-	"math/big"
-	"time"
-	edb "hyperchain/core/db_utils"
 	"hyperchain/hyperdb"
+	"math/big"
+	"path"
+	"time"
 	"hyperchain/core/vm"
 )
 
@@ -26,11 +27,16 @@ const (
 	paillpublickeyN       = "global.configs.hmpublickey.N"
 	paillpublickeynsquare = "global.configs.hmpublickey.Nsquare"
 	paillpublickeyG       = "global.configs.hmpublickey.G"
+	archiveManifestPath   = "global.executor.archive.manifest"
 )
 
 // getRateLimitEnable - get rate limit switch value
 func getRateLimitEnable(conf *common.Config) bool {
 	return conf.GetBool(rateLimitEnable)
+}
+
+func getManifestPath(conf *common.Config) string {
+	return conf.GetString(archiveManifestPath)
 }
 
 // getRateLimitPeak - get rate limit peak value
@@ -91,6 +97,14 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 		return nil, err
 	}
 	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, archieveDb, conf, height, namespace)
+}
+
+func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte, height uint64, namespace string) (vm.Database, error) {
+	db, err := hyperdb.NewDatabase(conf, path.Join("snapshots", "SNAPSHOT_"+filterId), hyperdb.GetDatabaseType(conf), namespace)
+	if err != nil {
+		return nil, err
+	}
+	return hyperstate.New(common.BytesToHash(merkleRoot), db, nil, conf, height, namespace)
 }
 
 func substr(str string, start int, end int) string {

@@ -37,10 +37,15 @@ func (executor *Executor) listenValidationEvent() {
 	executor.logger.Notice("validation backend start")
 	for {
 		select {
-		case <- executor.getExit(IDENTIFIER_VALIDATION):
+		case <-executor.getExit(IDENTIFIER_VALIDATION):
 			executor.logger.Notice("validation backend exit")
 			return
-		case ev := <- executor.fetchValidationEvent():
+		case v := <-executor.getSuspend(IDENTIFIER_VALIDATION):
+			if v {
+				executor.logger.Notice("pause validation process")
+				executor.pauseValidation()
+			}
+		case ev := <-executor.fetchValidationEvent():
 			if executor.isReadyToValidation() {
 				if success := executor.processValidationEvent(ev, executor.processValidationDone); success == false {
 					executor.logger.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
@@ -70,7 +75,7 @@ func (executor *Executor) processValidationEvent(validationEvent event.Validatio
 func (executor *Executor) processPendingValidationEvent(done func()) bool {
 	if executor.cache.pendingValidationEventQ.Len() > 0 {
 		// there is still some events remain.
-		for  {
+		for {
 			if executor.cache.pendingValidationEventQ.Contains(executor.getDemandSeqNo()) {
 				ev, _ := executor.fetchPendingValidationEvent(executor.getDemandSeqNo())
 				if _, success := executor.process(ev, done); success == false {
@@ -276,4 +281,11 @@ func (executor *Executor) dealEmptyBlock(res *ValidationResultRecord, ev event.V
 	}
 }
 
-
+func (executor *Executor) pauseValidation() {
+	for {
+		if v := <-executor.getSuspend(IDENTIFIER_VALIDATION); !v {
+			executor.logger.Notice("un-pause validation process")
+			return
+		}
+	}
+}

@@ -51,11 +51,11 @@ type EventHub struct {
 	// subscription
 	subscriptions map[int]event.Subscription
 
-	filterSystem  *flt.EventSystem
+	filterSystem *flt.EventSystem
 
-	initType      int
-	logger        *logging.Logger
-	close         chan bool
+	initType int
+	logger   *logging.Logger
+	close    chan bool
 }
 
 func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
@@ -134,7 +134,8 @@ func (hub *EventHub) Subscribe() {
 	hub.subscriptions[SUB_COMMIT] = hub.eventMux.Subscribe(event.CommitEvent{})
 	hub.subscriptions[SUB_PEERMAINTAIN] = hub.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.DelPeerEvent{}, event.BroadcastDelPeerEvent{})
-	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InformPrimaryEvent{}, event.VCResetEvent{}, event.ChainSyncReqEvent{})
+	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InformPrimaryEvent{}, event.VCResetEvent{}, event.ChainSyncReqEvent{},
+		event.SnapshotEvent{}, event.DeleteSnapshotEvent{}, event.ArchiveEvent{})
 	hub.subscriptions[SUB_EXEC] = hub.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{})
 	hub.subscriptions[SUB_TRANSACTION] = hub.eventMux.Subscribe(event.NewTxEvent{})
 }
@@ -168,7 +169,7 @@ func (hub *EventHub) listenTransactionEvent() {
 			case event.NewTxEvent:
 				hub.logger.Debugf("message middleware: [new tx]")
 				if ev.Simulate == true {
-					hub.executor.RunInSandBox(ev.Transaction)
+					hub.executor.RunInSandBox(ev.Transaction, ev.SnapshotId)
 				} else {
 					hub.consenter.RecvLocal(ev.Transaction)
 				}
@@ -230,6 +231,15 @@ func (hub *EventHub) listenMiscellaneousEvent() {
 			case event.ChainSyncReqEvent:
 				hub.logger.Debugf("message middleware: [chain sync request]")
 				hub.executor.SyncChain(ev)
+			case event.SnapshotEvent:
+				hub.logger.Debugf("message middleware: [snapshot request]")
+				hub.executor.Snapshot(ev)
+			case event.DeleteSnapshotEvent:
+				hub.logger.Debugf("message middleware: [delete snapshot request]")
+				hub.executor.DeleteSnapshot(ev)
+			case event.ArchiveEvent:
+				hub.logger.Debugf("message middleware: [archive request]")
+				hub.executor.Archive(ev)
 			}
 		}
 	}
@@ -395,6 +405,18 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		})
 		hub.broadcast(BROADCAST_VP, m.SessionMessage_SYNC_REPLICA, payload)
 		hub.executor.ReceiveReplicaInfo(payload)
+	case executor.NOTIFY_REQUEST_WORLD_STATE:
+		hub.logger.Debugf("message middleware: [request world state]")
+		hub.send(m.SessionMessage_SYNC_WORLD_STATE, ev.Payload, ev.Peers)
+	case executor.NOTIFY_SEND_WORLD_STATE_HANDSHAKE:
+		hub.logger.Debugf("message middleware: [send world state handshake packet]")
+		hub.send(m.SessionMessage_SEND_WS_HS, ev.Payload, ev.Peers)
+	case executor.NOTIFY_SEND_WORLD_STATE:
+		hub.logger.Debugf("message middleware: [request world state]")
+		hub.send(m.SessionMessage_SEND_WORLD_STATE, ev.Payload, ev.Peers)
+	case executor.NOTIFY_SEND_WS_ACK:
+		hub.logger.Debugf("message middleware: [send ws ack]")
+		hub.send(m.SessionMessage_SEND_WS_ACK, ev.Payload, ev.Peers)
 	}
 }
 
@@ -425,6 +447,14 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 		fallthrough
 	case m.SessionMessage_SYNC_REQ:
 		hub.executor.ReceiveSyncRequest(message.Payload)
+	case m.SessionMessage_SYNC_WORLD_STATE:
+		hub.executor.ReceiveWorldStateSyncRequest(message.Payload)
+	case m.SessionMessage_SEND_WORLD_STATE:
+		hub.executor.ReceiveWorldState(message.Payload)
+	case m.SessionMessage_SEND_WS_HS:
+		hub.executor.ReceiveWsHandshake(message.Payload)
+	case m.SessionMessage_SEND_WS_ACK:
+		hub.executor.ReceiveWsAck(message.Payload)
 	default:
 		hub.logger.Error("receive a undefined session event")
 	}

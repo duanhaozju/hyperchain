@@ -11,25 +11,27 @@ import (
 	"hyperchain/hyperdb/mdb"
 	"math"
 	//"math/big"
+	"github.com/op/go-logging"
+	"math/big"
 	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
 	"testing/quick"
-	"github.com/op/go-logging"
-	"math/big"
-	"hyperchain/core/evm"
+	"hyperchain/core/types"
 )
 
 var (
 	configPath = "../../configuration/namespaces/global/config/global.yaml"
 	logger     *logging.Logger
 )
+
 func init() {
 	common.InitHyperLoggerManager(tutil.InitConfig(configPath))
 	logger = common.GetLogger("test", "state")
 	logger.IsEnabledFor(logging.CRITICAL)
 }
+
 type JournalSuite struct {
 }
 
@@ -187,7 +189,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 				data := make([]byte, 16)
 				binary.BigEndian.PutUint64(data, uint64(a.args[0]))
 				binary.BigEndian.PutUint64(data[8:], uint64(a.args[1]))
-				s.AddLog(&evm.Log{Address: addr, Data: data})
+				s.AddLog(&types.Log{Address: addr, Data: data})
 			},
 			args: make([]int64, 2),
 		},

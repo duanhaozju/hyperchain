@@ -1,31 +1,31 @@
 package db_utils
 
 import (
+	"hyperchain/core/test_util"
 	"hyperchain/core/types"
-	"testing"
 	"hyperchain/hyperdb"
 	"reflect"
-	"hyperchain/core/test_util"
+	"testing"
 )
 
 var chain = types.Chain{
-	LatestBlockHash : []byte("00000000000000000000000000000002"),
-	ParentBlockHash : []byte("00000000000000000000000000000001"),
-	Height         : 2,
-	RequiredBlockNum : 3,
-	RequireBlockHash : []byte("00000000000000000000000000000003"),
-	RecoveryNum      : 2,
-	CurrentTxSum     : 100,
+	LatestBlockHash:  []byte("00000000000000000000000000000002"),
+	ParentBlockHash:  []byte("00000000000000000000000000000001"),
+	Height:           2,
+	RequiredBlockNum: 3,
+	RequireBlockHash: []byte("00000000000000000000000000000003"),
+	RecoveryNum:      2,
+	CurrentTxSum:     100,
 }
 
 var mC = memChain{
-	data    :chain,
-	cpChan  : make(chan types.Chain),
-	txDelta : 10,
+	data:    chain,
+	cpChan:  make(chan types.Chain),
+	txDelta: 10,
 }
 
-var mCs = memChains {
-	chains : make(map[string]*memChain),
+var mCs = memChains{
+	chains: make(map[string]*memChain),
 }
 
 //TestInitializeChain tests for InitializeChain
@@ -45,7 +45,7 @@ func TestInitializeChain(t *testing.T) {
 	}
 
 	SetLatestBlockHash(hyperdb.defaut_namespace, []byte("00000 00000 00000 00000 00000 00000 04"))
-	if string(GetLatestBlockHash(hyperdb.defaut_namespace)) != "00000 00000 00000 00000 00000 00000 04"{
+	if string(GetLatestBlockHash(hyperdb.defaut_namespace)) != "00000 00000 00000 00000 00000 00000 04" {
 		t.Errorf("SetLatestBlockHash and GetLatestBlockHash fail")
 	}
 

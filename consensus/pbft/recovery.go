@@ -3,22 +3,23 @@
 package pbft
 
 import (
+	"encoding/base64"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/consensus/events"
-	"encoding/base64"
 	"hyperchain/consensus/helper/persist"
 	"sync/atomic"
 )
+
 /**
-	This file contains recovery related issues
- */
+This file contains recovery related issues
+*/
 
 type recoveryManager struct {
-	recoveryToSeqNo	       *uint64				 // recoveryToSeqNo is the target seqNo expected to recover to
-	rcRspStore             map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
-	rcPQCSenderStore       map[uint64]bool			 // rcPQCSenderStore store those who sent PQC info to self
-	recvNewViewInRecovery  bool				 // recvNewViewInRecovery record whether receive new view during recovery
-	negoViewRspStore       map[uint64]*NegotiateViewResponse // track replicaId, viewNo.
+	recoveryToSeqNo       *uint64                           // recoveryToSeqNo is the target seqNo expected to recover to
+	rcRspStore            map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
+	rcPQCSenderStore      map[uint64]bool                   // rcPQCSenderStore store those who sent PQC info to self
+	recvNewViewInRecovery bool                              // recvNewViewInRecovery record whether receive new view during recovery
+	negoViewRspStore      map[uint64]*NegotiateViewResponse // track replicaId, viewNo.
 }
 
 type blkIdx struct {
@@ -26,7 +27,7 @@ type blkIdx struct {
 	hash   string
 }
 
-func newRecoveryMgr() *recoveryManager  {
+func newRecoveryMgr() *recoveryManager {
 	rm := &recoveryManager{}
 	rm.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 	rm.recoveryToSeqNo = nil
@@ -168,7 +169,7 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 		// Reason for not using '≥ pbft.N-pbft.f': if self is wrong, then we are impossible to find 2f+1 same view
 		// can we find same view from 2f+1 peers?
 		type resp struct {
-			n uint64
+			n    uint64
 			view uint64
 			//routers string
 		}
@@ -217,8 +218,8 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			}
 			pbft.parseSpecifyCertStore()
 			return &LocalEvent{
-				Service:RECOVERY_SERVICE,
-				EventType:RECOVERY_NEGO_VIEW_DONE_EVENT,
+				Service:   RECOVERY_SERVICE,
+				EventType: RECOVERY_NEGO_VIEW_DONE_EVENT,
 			}
 		} else if spFind {
 			pbft.pbftTimerMgr.stopTimer(NEGO_VIEW_RSP_TIMER)
@@ -230,8 +231,8 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}
 			return &LocalEvent{
-				Service:RECOVERY_SERVICE,
-				EventType:RECOVERY_NEGO_VIEW_DONE_EVENT,
+				Service:   RECOVERY_SERVICE,
+				EventType: RECOVERY_NEGO_VIEW_DONE_EVENT,
 			}
 		}
 	}
@@ -245,7 +246,7 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 
 	pbft.recoveryMgr.recoveryToSeqNo = nil
 	// update watermarks
-	height := persist.GetHeightofChain(pbft.namespace)
+	height := persist.GetHeightOfChain(pbft.namespace)
 	pbft.moveWatermarks(height)
 
 	pbft.recoveryMgr.rcRspStore = make(map[uint64]*RecoveryResponse)
@@ -272,12 +273,20 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 
 	pbft.pbftTimerMgr.startTimer(RECOVERY_RESTART_TIMER, event, pbft.pbftEventQueue)
 
+	chkpts := make(map[uint64]string)
+	for n, d := range pbft.storeMgr.chkpts {
+		chkpts[n] = d
+	}
+
 	height, curHash := persist.GetBlockHeightAndHash(pbft.namespace)
+	genesis := pbft.getGenesisInfo()
+
 	rc := &RecoveryResponse{
-		ReplicaId: pbft.id,
-		Chkpts:    pbft.storeMgr.chkpts,
+		ReplicaId:     pbft.id,
+		Chkpts:        chkpts,
 		BlockHeight:   height,
 		LastBlockHash: curHash,
+		Genesis:       genesis,
 	}
 	pbft.recvRecoveryRsp(rc)
 	return nil
@@ -307,12 +316,14 @@ func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 	}
 
 	height, curHash := persist.GetBlockHeightAndHash(pbft.namespace)
+	genesis := pbft.getGenesisInfo()
 
 	rc := &RecoveryResponse{
 		ReplicaId:     pbft.id,
 		Chkpts:        pbft.storeMgr.chkpts,
 		BlockHeight:   height,
 		LastBlockHash: curHash,
+		Genesis:       genesis,
 	}
 
 	rcMsg, err := proto.Marshal(rc)
@@ -441,7 +452,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.moveWatermarks(n)
 		pbft.stateTransfer(target)
 	} else if !pbft.status.getState(&pbft.status.skipInProgress) && !pbft.status.getState(&pbft.status.inVcReset) {
-		pbft.helper.VcReset(selfLastExec+1)
+		pbft.helper.VcReset(selfLastExec + 1)
 		pbft.status.activeState(&pbft.status.inVcReset)
 	} else {
 		pbft.logger.Debugf("Replica %d try to recovery but find itself in state update", pbft.id)
@@ -450,11 +461,11 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 }
 
 // findHighestChkptQuorum finds highest one of chkpts which achieve quorum
-func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []uint64, find bool, chkptBehind bool) {
+func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []replicaInfo, find bool, chkptBehind bool) {
 
 	pbft.logger.Debugf("Replica %d now enter findHighestChkptQuorum", pbft.id)
 
-	chkpts := make(map[cidx]map[uint64]bool)
+	chkpts := make(map[cidx]map[replicaInfo]bool)
 
 	for from, rsp := range pbft.recoveryMgr.rcRspStore {
 		for chkptN, chkptD := range rsp.GetChkpts() {
@@ -464,10 +475,20 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []u
 			}
 			peers, ok := chkpts[chkptIdx]
 			if ok {
-				peers[from] = true
+				replica := replicaInfo{
+					id:      from,
+					height:  rsp.BlockHeight,
+					genesis: rsp.Genesis,
+				}
+				peers[replica] = true
 			} else {
-				peers = make(map[uint64]bool)
-				peers[from] = true
+				peers = make(map[replicaInfo]bool)
+				replica := replicaInfo{
+					id:      from,
+					height:  rsp.BlockHeight,
+					genesis: rsp.Genesis,
+				}
+				peers[replica] = true
 				chkpts[chkptIdx] = peers
 			}
 		}
@@ -491,7 +512,7 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []u
 				}
 				n = ci.n
 				d = ci.d
-				replicas = make([]uint64, 0, len(peers))
+				replicas = make([]replicaInfo, 0, len(peers))
 				for peer := range peers {
 					replicas = append(replicas, peer)
 				}
@@ -532,7 +553,7 @@ func (pbft *pbftImpl) findLastExecQuorum() (lastExec uint64, hash string, find b
 }
 
 // fetchRecoveryPQC fetch PQC info after receive stateUpdated event
-func (pbft *pbftImpl) fetchRecoveryPQC(peers []uint64) events.Event {
+func (pbft *pbftImpl) fetchRecoveryPQC(peers []replicaInfo) events.Event {
 
 	pbft.logger.Debugf("Replica %d now fetchRecoveryPQC", pbft.id)
 
@@ -559,8 +580,8 @@ func (pbft *pbftImpl) fetchRecoveryPQC(peers []uint64) events.Event {
 	}
 
 	for _, dest := range peers {
-		msg := cMsgToPbMsg(conMsg, dest)
-		pbft.helper.InnerUnicast(msg, dest)
+		msg := cMsgToPbMsg(conMsg, dest.id)
+		pbft.helper.InnerUnicast(msg, dest.id)
 	}
 
 	return nil

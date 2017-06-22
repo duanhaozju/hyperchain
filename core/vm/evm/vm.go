@@ -8,6 +8,7 @@ import (
 
 	"hyperchain/common"
 	"hyperchain/core/crypto"
+	"os"
 	"hyperchain/core/vm/evm/params"
 	"hyperchain/core/vm"
 )
@@ -88,15 +89,18 @@ func (evm *EVM) Run(context vm.VmContext, input []byte) (ret []byte, err error) 
 		switch GetProgramStatus(codehash) {
 		// 判断是否已经可用,如果可用直接用找
 		case progReady:
-			return RunProgram(GetProgram(codehash), evm.env, contract, input)
+			return RunProgram(evm, GetProgram(codehash), evm.env, contract, input)
 		case progUnknown:
 			// 如果不可用,且强制jit,则顺序执行且立刻执行
 			if evm.cfg.ForceJit {
 				// Create and compile program
 				program = NewProgram(contract.Code)
 				perr := CompileProgram(program)
+				if evm.cfg.Debug {
+					PrintProgram(program, os.Stdout)
+				}
 				if perr == nil {
-					return RunProgram(program, evm.env, contract, input)
+					return RunProgram(evm, program, evm.env, contract, input)
 				}
 			} else {
 				// 否则可以另开一个线程
@@ -369,5 +373,18 @@ func (evm *EVM) RunPrecompiled(p *PrecompiledAccount, input []byte, contract *Co
 		return ret, nil
 	} else {
 		return nil, OutOfGasError
+	}
+}
+
+func (evm *EVM) Finalize() {
+	if evm.cfg.Debug {
+		fmt.Fprintf(os.Stdout, "[[   Dirty Accounts %08d:   ]]\n", len(evm.logger.changedValues))
+		for addr, entries := range evm.logger.changedValues {
+			fmt.Fprintf(os.Stdout, "### address %s ###\n", addr.Hex())
+			for key, value := range entries {
+				fmt.Fprintf(os.Stdout, "%s => %s\n", key.Hex(), value.Hex())
+			}
+			fmt.Fprint(os.Stdout, "### done ###\n")
+		}
 	}
 }

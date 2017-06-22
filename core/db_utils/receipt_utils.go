@@ -14,23 +14,38 @@ func GetReceipt(namespace string, txHash common.Hash) *types.ReceiptTrans {
 	if err != nil {
 		return nil
 	}
+	receipt := GetReceiptFunc(db, txHash)
+	if receipt == nil {
+		return nil
+	}
+	return receipt.ToReceiptTrans()
+}
+
+// GetReceipt returns a receipt by hash
+func GetRawReceipt(namespace string, txHash common.Hash) *types.Receipt {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	if err != nil {
+		return nil
+	}
+	return GetReceiptFunc(db, txHash)
+}
+
+func GetReceiptFunc(db db.Database, txHash common.Hash) *types.Receipt {
 	data, _ := db.Get(append(ReceiptsPrefix, txHash[:]...))
 	if len(data) == 0 {
 		return nil
 	}
 	var receiptWrapper types.ReceiptWrapper
-	err = proto.Unmarshal(data, &receiptWrapper)
+	err := proto.Unmarshal(data, &receiptWrapper)
 	if err != nil {
-		logger(namespace).Errorf("GetReceipt err:", err)
 		return nil
 	}
 	var receipt types.Receipt
 	err = proto.Unmarshal(receiptWrapper.Receipt, &receipt)
 	if err != nil {
-		logger(namespace).Errorf("GetReceipt err:", err)
 		return nil
 	}
-	return receipt.ToReceiptTrans()
+	return &receipt
 }
 
 // Persist receipt content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false

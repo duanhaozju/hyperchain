@@ -1,19 +1,26 @@
 package main
 
 import (
-	"time"
-	"io/ioutil"
-	"regexp"
-	"strings"
+	"fmt"
 	"hyperchain/common"
 	"hyperchain/p2p/transport"
+	"io/ioutil"
+	"regexp"
+	"runtime"
 	"strconv"
-	"fmt"
+	"strings"
+	"time"
 )
 
 const (
 	LICENSE_PATH = "./LICENSE"
 )
+
+func init() {
+	// this ensures that license checker always hit in `os thread` to avoid jmuping to other threads
+	// since in this approach, working directory will not be affected by other operators.
+	runtime.LockOSThread()
+}
 
 func CheckLicense(exit chan bool) {
 	ticker := time.NewTicker(10 * time.Second)
@@ -27,7 +34,6 @@ func CheckLicense(exit chan bool) {
 		}
 	}
 }
-
 
 // isLicenseExpired - check whether license is expired.
 func isLicenseExpired() (expired bool) {
@@ -53,7 +59,7 @@ func isLicenseExpired() (expired bool) {
 	}
 	pattern, _ := regexp.Compile("Identification: (.*)")
 	identification := pattern.FindString(string(license))[16:]
-	ctx, err := transport.TripleDesDec([]byte(privateKey),common.Hex2Bytes(identification))
+	ctx, err := transport.TripleDesDec([]byte(privateKey), common.Hex2Bytes(identification))
 	if err != nil {
 		fmt.Println("invalid license.")
 		expired = true

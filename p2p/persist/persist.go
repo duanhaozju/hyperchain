@@ -11,7 +11,7 @@ import (
 
 // StoreState stores a key,value pair
 func PutData(key string, value []byte, namespace string) error {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
 	if err != nil {
 		return err
 	}
@@ -19,7 +19,7 @@ func PutData(key string, value []byte, namespace string) error {
 }
 
 func PutBool(key string, value bool, namespace string) error {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
 	if err != nil {
 		return err
 	}
@@ -35,7 +35,7 @@ func PutBool(key string, value bool, namespace string) error {
 }
 
 func GetBool(key string, namespace string) (bool, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
 	if err != nil {
 		return false, err
 	}
@@ -57,7 +57,7 @@ func GetBool(key string, namespace string) (bool, error) {
 
 // DelState removes a key,value pair
 func DelData(key string, namespace string) error {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func DelData(key string, namespace string) error {
 
 // ReadState retrieves a value to a key
 func GetData(key string, namespace string) ([]byte, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func GetData(key string, namespace string) ([]byte, error) {
 
 // ReadStateSet retrieves all key-value pairs where the key starts with prefix
 func GetDataSet(prefix string, namespace string) (map[string][]byte, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}

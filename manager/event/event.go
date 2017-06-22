@@ -14,7 +14,8 @@ type BroadcastConsensusEvent struct{ Payload []byte }
 //general tx local
 type NewTxEvent struct {
 	Transaction *types.Transaction
-	Simulate bool
+	Simulate    bool
+	SnapshotId  string
 }
 
 type TxUniqueCastEvent struct {
@@ -23,11 +24,17 @@ type TxUniqueCastEvent struct {
 }
 
 //node receive checkpoint sync event and then,check db and send block require request to peers
-type ChainSyncReqEvent struct{
+type SyncReplica struct {
+	Id      uint64
+	Height  uint64
+	Genesis uint64
+}
+
+type ChainSyncReqEvent struct {
 	Id              uint64
 	TargetHeight    uint64
 	TargetBlockHash []byte
-	Replicas        []uint64
+	Replicas        []SyncReplica
 }
 
 type SessionEvent struct {
@@ -97,17 +104,16 @@ type BroadcastDelPeerEvent struct {
 	Payload []byte
 }
 
-
 /*
 	Non verified peer events definition
- */
+*/
 
 type VerifiedBlock struct {
-	Payload  []byte
+	Payload []byte
 }
 
 type ReceiveVerifiedBlock struct {
-	Payload  []byte
+	Payload []byte
 }
 
 type NegoRoutersEvent struct {
@@ -120,7 +126,7 @@ type CommitedBlockEvent struct {
 
 /*
 	Executor events
- */
+*/
 type ExecutorToConsensusEvent struct {
 	Payload interface{}
 	Type    int
@@ -132,6 +138,19 @@ type ExecutorToP2PEvent struct {
 	Peers   []uint64
 }
 
+/*
+	Admin events
+*/
 
+type SnapshotEvent struct {
+	FilterId    string
+	BlockNumber uint64
+}
 
+type DeleteSnapshotEvent struct {
+	FilterId string
+}
 
+type ArchiveEvent struct {
+	FilterId string
+}

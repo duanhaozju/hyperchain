@@ -2,6 +2,7 @@
 ////Copyright (C) 2016 The Hyperchain Authors.
 //
 package pbft
+
 //
 //import (
 //	"testing"

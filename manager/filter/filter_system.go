@@ -5,7 +5,6 @@ import (
 	"hyperchain/common"
 	"hyperchain/manager/event"
 	"time"
-	"fmt"
 	"hyperchain/core/types"
 	"github.com/op/go-logging"
 )
@@ -23,6 +22,12 @@ const (
 	TransactionsSubscription
 	// BlocksSubscription queries hashes for blocks that are imported
 	BlocksSubscription
+	// SnapshotSubscription queries snapshot behavious result
+	SnapshotSubscription
+	// DelSnapshotSubscription queries del snapshot behavious result
+	DelSnapshotSubscription
+	// ArchiveSubscription queries chain's archive behavious result
+	ArchiveSubscription
 	// ExceptionSubscription capture all system exception events.
 	ExceptionSubscription
 	// LastSubscription keeps track of the last index
@@ -71,7 +76,8 @@ func NewEventSystem(mux *event.TypeMux) *EventSystem {
 func (es *EventSystem) eventLoop() {
 	var (
 		index = make(filterIndex)
-		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{}, event.FilterException{})
+		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{}, event.FilterException{},event.FilterArchive{},
+			event.FilterSnapshotEvent{}, event.FilterDeleteSnapshotEvent{})
 	)
 
 	for i := UnknownSubscription; i < LastIndexSubscription; i++ {
@@ -119,6 +125,24 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 				if len(ret) != 0 {
 					f.logs <- ret
 				}
+			}
+		}
+	case event.FilterSnapshotEvent:
+		for _, f := range filters[SnapshotSubscription] {
+			if obj.Time.After(f.created) {
+				f.extra <- ev
+			}
+		}
+	case event.FilterDeleteSnapshotEvent:
+		for _, f := range filters[DelSnapshotSubscription] {
+			if obj.Time.After(f.created) {
+				f.extra <- ev
+			}
+		}
+	case event.FilterArchive:
+		for _, f := range filters[ArchiveSubscription] {
+			if obj.Time.After(f.created) {
+				f.extra <- ev
 			}
 		}
 	case event.FilterException:
@@ -173,14 +197,6 @@ func (es *EventSystem) NewLogSubscription(logsCrit FilterCriteria, logC chan []*
 }
 
 func (es *EventSystem) NewCommonSubscription(ch chan interface{}, verbose bool, typ Type, crit FilterCriteria) *Subscription {
-	fmt.Println("============= criteria ============")
-	fmt.Println(crit.Modules)
-	fmt.Println(crit.ModulesExclude)
-	fmt.Println(crit.SubType)
-	fmt.Println(crit.SubTypeExclude)
-	fmt.Println(crit.Code)
-	fmt.Println(crit.CodeExclude)
-
 	sub := &subscription{
 		id:        NewFilterID(),
 		verbose:   verbose,

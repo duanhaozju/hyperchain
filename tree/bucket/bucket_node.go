@@ -2,9 +2,9 @@ package bucket
 
 import (
 	"fmt"
-	"sync"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"sync"
 )
 
 type BucketNode struct {
@@ -24,10 +24,10 @@ type MemBucketNode struct {
 func newBucketNode(bucketKey *BucketKey) *BucketNode {
 	maxChildren := conf.getMaxGroupingAtEachLevel()
 	return &BucketNode{
-		bucketKey: bucketKey,
-		childrenCryptoHash:make([][]byte, maxChildren),
-		childrenUpdated:make([]bool, maxChildren),
-		markedForDeletion:false,
+		bucketKey:          bucketKey,
+		childrenCryptoHash: make([][]byte, maxChildren),
+		childrenUpdated:    make([]bool, maxChildren),
+		markedForDeletion:  false,
 	}
 }
 

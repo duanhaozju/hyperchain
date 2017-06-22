@@ -24,7 +24,6 @@ global:
         peers: "namespaces/global/config/local_peerconfig.json"
         genesis: "namespaces/global/config/genesis.json"
         static_peers: "namespaces/global/config/static_peers.json"
-
         ratelimit:
                 enable   : true
                 txRatePeak : 100
@@ -80,11 +79,17 @@ global:
     ######################################################
     executor:
         sync_chain:
-            sync_batch_size: 500
-            sync_resend_interval: 15m
+            sync_batch_size: 10
+            sync_resend_interval: 10s
+            sync_ws_enable: false
         sync_replica:
             interval : 500s
             enable   : false
+        archive:
+            manifest: "./namespaces/global/data/snapshot_manifest.json"
+            archiveMeta: "./namespaces/global/data/archive_meta.json"
+            force_consistency: false
+            threshold: 0
         buckettree:
             global:
                 globalDataNodeCacheSize: 10000

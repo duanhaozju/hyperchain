@@ -19,30 +19,41 @@ type ExecutorStatus struct {
 	demandSeqNo         uint64       // current demand seqNo for validation
 	tempBlockNumber     uint64       // temporarily block number
 	lastValidationState atomic.Value // latest state root hash
-	syncFlag            SyncFlag     // store temp variables during chain sync
 	validationExit      chan bool    // validation exit notifier
 	commitExit          chan bool    // commit exit notifier
 	replicaSyncExit     chan bool    // replica sync exit notifier
+
+	validationSuspend  chan bool // validation suspend notifier
+	commitSuspend      chan bool // commit suspend notifier
+	syncReplicaSuspend chan bool // replica sync suspend notifier
+
+	syncFlag SyncFlag          // store temp variables during chain sync
+	syncCtx  *ChainSyncContext // synchronization context
 }
 
 type SyncFlag struct {
-	SyncDemandBlockNum  uint64     // the block num in sync process
-	SyncDemandBlockHash []byte     // the block hash in sync process
-	SyncTarget          uint64     // the target block number of this synchronization
-	SyncPeers           []uint64   // peers to fetch sync blocks
-	LocalId             uint64     // local node id
-	TempDownstream      uint64     // sync request low height, from calculation
-	LatestUpstream      uint64     // latest sync request high height
-	LatestDownstream    uint64     // latest sync request low height. always equal to `TempDownstream`
-	InExecution         uint32     // flag mark in execution
-	ResendExit          chan bool  // resend backend process notifier
-	Oracle              *Oracle    // peer selector before send sync request, adhere `BEST PEER` algorithm
+	SyncDemandBlockNum  uint64    // the block num in sync process
+	SyncDemandBlockHash []byte    // the block hash in sync process
+	SyncTarget          uint64    // the target block number of this synchronization
+	SyncPeers           []uint64  // peers to fetch sync blocks
+	LocalId             uint64    // local node id
+	TempDownstream      uint64    // sync request low height, from calculation
+	LatestUpstream      uint64    // latest sync request high height
+	LatestDownstream    uint64    // latest sync request low height. always equal to `TempDownstream`
+	InExecution         uint32    // flag mark in execution
+	ResendMode          uint32    // sync request resend context
+	ResendExit          chan bool // resend backend process notifier
+	Oracle              *Oracle   // peer selector before send sync request, adhere `BEST PEER` algorithm
 }
 
 func initializeExecutorStatus(executor *Executor) error {
 	executor.status.validationExit = make(chan bool)
 	executor.status.commitExit = make(chan bool)
 	executor.status.replicaSyncExit = make(chan bool)
+
+	executor.status.validationSuspend = make(chan bool)
+	executor.status.commitSuspend = make(chan bool)
+	executor.status.syncReplicaSuspend = make(chan bool)
 
 	currentChain := edb.GetChainCopy(executor.namespace)
 	executor.initDemand(currentChain.Height + 1)
@@ -63,6 +74,10 @@ func (executor *Executor) initDemand(num uint64) {
 	executor.status.demandNumber = num
 	executor.status.demandSeqNo = num
 	executor.status.tempBlockNumber = num
+}
+
+func (executor *Executor) stateTransition(id uint64, root common.Hash) {
+	executor.statedb.ResetToTarget(id, root)
 }
 
 // Demand block number
@@ -231,7 +246,7 @@ func (executor *Executor) rollbackDone() {
 
 /*
 	CHAIN SYNCHRONIZATION
- */
+*/
 // waitUtilSyncAvailable - wait validation processor and commit processor become idle.
 func (executor *Executor) waitUtilSyncAvailable() {
 	executor.logger.Debugf("[Namespace = %s] wait util sync available", executor.namespace)
@@ -265,7 +280,6 @@ func (executor *Executor) updateSyncFlag(num uint64, hash []byte, target uint64)
 
 // clearSyncFlag - clear all sync flag fields.
 func (executor *Executor) clearSyncFlag() {
-	executor.markSyncExecFinish()
 	executor.setSyncChainExit()
 	executor.status.syncFlag.SyncDemandBlockNum = 0
 	executor.status.syncFlag.SyncDemandBlockHash = nil
@@ -275,6 +289,8 @@ func (executor *Executor) clearSyncFlag() {
 	executor.status.syncFlag.TempDownstream = 0
 	executor.status.syncFlag.LatestUpstream = 0
 	executor.status.syncFlag.LatestDownstream = 0
+	executor.status.syncCtx = nil
+	executor.status.syncFlag.Oracle = nil
 }
 
 // recordSyncPeers - record peers id and self during the sync.
@@ -354,13 +370,6 @@ func (executor *Executor) getReplicaSyncExit() chan bool {
 	return executor.status.replicaSyncExit
 }
 
-// setExit - notify all backend to exit.
-func (executor *Executor) setExit() {
-	go executor.setValidationExit()
-	go executor.setCommitExit()
-	go executor.setReplicaSyncExit()
-}
-
 // getExit - get exit status.
 func (executor *Executor) getExit(identifier int) chan bool {
 	switch identifier {
@@ -372,4 +381,38 @@ func (executor *Executor) getExit(identifier int) chan bool {
 		return executor.getReplicaSyncExit()
 	}
 	return nil
+}
+
+func (executor *Executor) getSuspend(identifier int) chan bool {
+	switch identifier {
+	case IDENTIFIER_VALIDATION:
+		return executor.status.validationSuspend
+	case IDENTIFIER_COMMIT:
+		return executor.status.commitSuspend
+	case IDENTIFIER_REPLICA_SYNC:
+		return executor.status.syncReplicaSuspend
+	}
+	return nil
+}
+
+func (executor *Executor) setSuspend(identifier int) {
+	switch identifier {
+	case IDENTIFIER_VALIDATION:
+		executor.status.validationSuspend <- true
+	case IDENTIFIER_COMMIT:
+		executor.status.commitSuspend <- true
+	case IDENTIFIER_REPLICA_SYNC:
+		executor.status.syncReplicaSuspend <- true
+	}
+}
+
+func (executor *Executor) unsetSuspend(identifier int) {
+	switch identifier {
+	case IDENTIFIER_VALIDATION:
+		executor.status.validationSuspend <- false
+	case IDENTIFIER_COMMIT:
+		executor.status.commitSuspend <- false
+	case IDENTIFIER_REPLICA_SYNC:
+		executor.status.syncReplicaSuspend <- false
+	}
 }

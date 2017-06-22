@@ -12,13 +12,15 @@ const (
 	stateObjectBucketSize       = "global.executor.buckettree.storage.size"
 	stateObjectBucketLevelGroup = "global.executor.buckettree.storage.levelGroup"
 	stateObjectBucketCacheSize  = "global.executor.buckettree.storage.cacheSize"
-
 	syncReplicaInterval         = "global.executor.sync_replica.interval"
 	syncReplicaEnable           = "global.executor.sync_replica.enable"
-
 	syncChainBatchSize          = "global.executor.sync_chain.sync_batch_size"
 	syncChainResendInterval     = "global.executor.sync_chain.sync_resend_interval"
-
+	syncWsEable                 = "global.executor.sync_chain.sync_ws_enable"
+	snapshotManifestPath        = "global.executor.archive.manifest"
+	archiveMetaPath             = "global.executor.archive.archiveMeta"
+	archiveForceConsistency     = "global.executor.archive.force_consistency"
+	archiveThreshold            = "global.executor.archive.threshold"
 )
 
 // GetBucketSize - get bucket size.
@@ -76,4 +78,24 @@ func (executor *Executor) GetSyncMaxBatchSize() uint64 {
 
 func (executor *Executor) GetSyncResendInterval() time.Duration {
 	return executor.conf.GetDuration(syncChainResendInterval)
+}
+
+func (executor *Executor) GetManifestPath() string {
+	return executor.conf.GetString(snapshotManifestPath)
+}
+
+func (executor *Executor) GetArchiveMetaPath() string {
+	return executor.conf.GetString(archiveMetaPath)
+}
+
+func (executor *Executor) IsArchiveForceConsistency() bool {
+	return executor.conf.GetBool(archiveForceConsistency)
+}
+
+func (executor *Executor) GetArchiveThreshold() int {
+	return executor.conf.GetInt(archiveThreshold)
+}
+
+func (executor *Executor) IsSyncWsEable() bool {
+	return executor.conf.GetBool(syncWsEable)
 }

@@ -1,4 +1,5 @@
 package config
+
 import "testing"
 
 func TestReadToml(t *testing.T) {

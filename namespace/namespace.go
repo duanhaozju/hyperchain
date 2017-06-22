@@ -3,7 +3,6 @@
 package namespace
 
 import (
-	"errors"
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/admittance"
@@ -163,9 +162,10 @@ func (ns *namespaceImpl) init() error {
 	ns.am = am
 
 	//6.init block pool to save block
-	executor := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux)
-	if executor == nil {
-		return errors.New("Initialize Executor failed")
+	executor, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux)
+	if err != nil {
+		logger.Errorf("init Executor for namespace %s error, %v", ns.Name(), err)
+		return err
 	}
 
 	executor.CreateInitBlock(ns.conf)

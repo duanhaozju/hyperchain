@@ -10,7 +10,29 @@ type FilterNewBlockEvent struct {
 }
 
 type FilterNewLogEvent struct {
-	Logs    []*types.Log
+	Logs []*types.Log
+}
+
+/*
+	Archive
+*/
+
+type FilterSnapshotEvent struct {
+	FilterId string
+	Success  bool
+	Message  string
+}
+
+type FilterDeleteSnapshotEvent struct {
+	FilterId string
+	Success  bool
+	Message  string
+}
+
+type FilterArchive struct {
+	FilterId string
+	Success  bool
+	Message  string
 }
 
 const (

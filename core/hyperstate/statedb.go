@@ -10,13 +10,14 @@ import (
 	"encoding/json"
 	"github.com/deckarep/golang-set"
 	lru "github.com/hashicorp/golang-lru"
+	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"hyperchain/common"
+	cm "hyperchain/core/common"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
 	"hyperchain/tree/bucket"
 	"sync/atomic"
-	"github.com/op/go-logging"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 )
@@ -69,15 +70,15 @@ type StateDB struct {
 	curSeqNo    uint64 // current seqNo in process
 	oldestSeqNo uint64 // oldest seqNo in content cache cache
 	// atomic related
-	batchCache      *common.Cache // use to store batch handler for different block process
-	archieveCache   *common.Cache // use to store batch handler for different block process
-	contentCache    *common.Cache // use to store modification set for different block process
+	batchCache    *common.Cache // use to store batch handler for different block process
+	archieveCache *common.Cache // use to store batch handler for different block process
+	contentCache  *common.Cache // use to store modification set for different block process
 
-	logger      *logging.Logger
+	logger *logging.Logger
 }
 
 // New - Create a new state from a given root
-func New(root common.Hash, db db.Database,  archieveDb db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
+func New(root common.Hash, db db.Database, archieveDb db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
 	logger := common.GetLogger(namespace, "state")
 	csc, _ := lru.New(codeSizeCacheSize)
 	// initialize global cache of bucket tree
@@ -1110,7 +1111,6 @@ func isPrecompiledAccount(address common.Address) bool {
 	}
 }
 
-
 func (self *StateDB) ShowArchive(address common.Address, date string) map[string]map[string]string {
 	storages := make(map[string]map[string]string)
 	iter := self.archieveDb.NewIterator(GetArchieveStorageKeyWithDatePrefix(address.Bytes(), []byte(date)))
@@ -1125,13 +1125,133 @@ func (self *StateDB) ShowArchive(address common.Address, date string) map[string
 			continue
 		}
 		m, existed := storages[string(d)]
-		if existed ==  false {
+		if existed == false {
 			m = make(map[string]string)
 			storages[string(d)] = m
 		}
 		m[common.Bytes2Hex(k)] = common.Bytes2Hex(iter.Value())
 	}
 	return storages
+}
+
+func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
+	dirtyStateObjects := bucket.NewKVMap()
+	accountIter := s.db.NewIterator([]byte(accountIdentifier))
+	defer accountIter.Release()
+	for accountIter.Next() {
+		addr, ok := SplitCompositeAccountKey(accountIter.Key())
+		if ok == false {
+			continue
+		}
+		address := common.BytesToAddress(addr)
+		var account Account
+		err := json.Unmarshal(accountIter.Value(), &account)
+		if err != nil {
+			return common.Hash{}, err
+		}
+		stateObject := newObject(s, address, account, s.MarkStateObjectDirty, true, SetupBucketConfig(s.GetBucketSize(STATEOBJECT), s.GetBucketLevelGroup(STATEOBJECT), s.GetBucketCacheSize(STATEOBJECT), s.GetDataNodeCacheSize(STATEOBJECT)), s.logger)
+		dirtyStorage := bucket.NewKVMap()
+		iter := stateObject.db.db.NewIterator(GetStorageKeyPrefix(stateObject.address.Bytes()))
+		for iter.Next() {
+			key, ok := SplitCompositeStorageKey(stateObject.address.Bytes(), iter.Key())
+			if ok == false {
+				continue
+			}
+			valueCopy := make([]byte, len(iter.Value()))
+			copy(valueCopy, iter.Value())
+			dirtyStorage[common.BytesToHash(key).Hex()] = valueCopy
+		}
+		stateObject.bucketTree.PrepareWorkingSet(dirtyStorage, big.NewInt(0))
+		hash, err := stateObject.bucketTree.ComputeCryptoHash()
+		if err != nil {
+			return common.Hash{}, err
+		}
+		stateObject.SetRoot(common.BytesToHash(hash))
+		valueOfStateObject, _ := stateObject.MarshalJSON()
+		dirtyStateObjects[stateObject.address.Hex()] = valueOfStateObject
+		iter.Release()
+	}
+	s.bucketTree.PrepareWorkingSet(dirtyStateObjects, big.NewInt(0))
+	hash, err := s.bucketTree.ComputeCryptoHash()
+	if err != nil {
+		return common.Hash{}, err
+	}
+	return common.BytesToHash(hash), nil
+}
+
+func (s *StateDB) Apply(db db.Database, batch db.Batch, expect common.Hash) error {
+	entryPrefixes := cm.RetrieveSnapshotFileds()
+	for _, entry := range entryPrefixes {
+		if entry == "-account" {
+			iter := db.NewIterator([]byte(entry))
+			for iter.Next() {
+				blob, success := SplitCompositeAccountKey(iter.Key())
+				if !success {
+					continue
+				}
+				var account Account
+				err := Unmarshal(iter.Value(), &account)
+				if err != nil {
+					continue
+				}
+				addr := common.BytesToAddress(blob)
+				obj := newObject(s, addr, account, s.MarkStateObjectDirty, true, SetupBucketConfig(s.GetBucketSize(STATEOBJECT), s.GetBucketLevelGroup(STATEOBJECT), s.GetBucketCacheSize(STATEOBJECT), s.GetDataNodeCacheSize(STATEOBJECT)), s.logger)
+				s.setStateObject(obj)
+				obj.onDirty(addr)
+			}
+			iter.Release()
+		} else if entry == "-storage" {
+			iter := db.NewIterator([]byte(entry))
+			for iter.Next() {
+				blob, success := RetrieveAddrFromStorageKey(iter.Key())
+				if !success {
+					continue
+				}
+				addr := common.BytesToAddress(blob)
+				blob, success = SplitCompositeStorageKey(addr.Bytes(), iter.Key())
+				if !success {
+					continue
+				}
+				key := common.BytesToHash(blob)
+				val := make([]byte, len(iter.Value()))
+				copy(val, iter.Value())
+				s.SetState(addr, key, val, 0)
+			}
+			iter.Release()
+		} else if entry == "-code" {
+			iter := db.NewIterator([]byte(entry))
+			for iter.Next() {
+				blob, success := RetrieveAddrFromCodeHash(iter.Key())
+				if !success {
+					continue
+				}
+				addr := common.BytesToAddress(blob)
+				blob, success = SplitCompositeCodeHash(addr.Bytes(), iter.Key())
+				if !success {
+					continue
+				}
+				codeHash := blob
+				obj := s.GetStateObject(addr)
+				if obj == nil {
+					continue
+				}
+				if bytes.Compare(codeHash, obj.CodeHash()) != 0 {
+					continue
+				}
+				s.SetCode(addr, iter.Value())
+			}
+			iter.Release()
+		}
+	}
+
+	tmpHash, err := s.commit(batch, batch, deleteEmptyObjects)
+	if err != nil {
+		return err
+	}
+	if tmpHash != expect {
+		return errors.New("different hash compared with recorded")
+	}
+	return nil
 }
 
 func (self *StateDB) NewIterator(addr common.Address, slice *vm.IterRange) (vm.Iterator, error) {

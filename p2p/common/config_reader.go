@@ -5,11 +5,11 @@ package common
 
 import (
 	"encoding/json"
+	"github.com/op/go-logging"
+	"hyperchain/common"
 	pb "hyperchain/p2p/message"
 	"io/ioutil"
 	"sync"
-	"github.com/op/go-logging"
-	"hyperchain/common"
 )
 
 type ConfigReader struct {
@@ -19,7 +19,7 @@ type ConfigReader struct {
 	maxNode   int
 	path      string
 	writeLock sync.Mutex
-	logger *logging.Logger
+	logger    *logging.Logger
 }
 
 // TODO return a error next to the configReader or throw a panic

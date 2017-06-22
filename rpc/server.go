@@ -7,13 +7,13 @@ import (
 	"sync/atomic"
 	"time"
 	"encoding/json"
+	"fmt"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"gopkg.in/fatih/set.v0"
 	"hyperchain/common"
 	"hyperchain/namespace"
-	"strings"
 	"reflect"
-	"fmt"
+	"strings"
 	"sync"
 	"context"
 )
@@ -265,7 +265,7 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 	for _, req := range reqs {
 		req.Ctx = ctx
 
-		go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}){
+		go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}) {
 			name := request.Namespace
 			if err := codec.CheckHttpHeaders(name); err != nil {
 				log.Errorf("CheckHttpHeaders error: %v", err)
@@ -277,17 +277,17 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 				rm = NewRequestManager(name, s)
 				s.requestMgr[name] = rm
 				rm.Start()
-			}else {
+			} else {
 				rm = s.requestMgr[name]
 			}
 			rm.requests <- request
-			result <- (<- rm.response)
+			result <- (<-rm.response)
 			return
 		}(s, req, codec, result)
 	}
 
 	for i := 0; i < number; i++ {
-		response[i] = <- result
+		response[i] = <-result
 	}
 
 	if number == 1 {
@@ -308,7 +308,7 @@ func (s *Server) handleChannelReq(req *common.RPCRequest) interface{} {
 	r := s.namespaceMgr.ProcessRequest(req.Namespace, req)
 	if r == nil {
 		log.Debug("No process result")
-		return s.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"no process result"})
+		return s.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message: "no process result"})
 	}
 
 	if response, ok := r.(*common.RPCResponse); ok {
@@ -341,7 +341,7 @@ func (s *Server) handleChannelReq(req *common.RPCRequest) interface{} {
 	//	return s.CreateNotification(response.SubId, response.Service, response.Namespace, nil)
 	} else {
 		log.Errorf("response type invalid, resp: %v\n")
-		return s.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"response type invalid!"})
+		return s.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message: "response type invalid!"})
 	}
 }
 

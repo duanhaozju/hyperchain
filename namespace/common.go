@@ -112,5 +112,10 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 			Version: "0.4",
 			Service: api.NewFilterAPI(namespace, ns.eh, ns.conf),
 		},
+		"archive": {
+			Srvname: "archive",
+			Version: "0.4",
+			Service: api.NewPublicArchiveAPI(namespace, ns.eh, ns.conf),
+		},
 	}
 }

@@ -13,10 +13,9 @@ type bucketTreeDelta struct {
 
 func newBucketTreeDelta() *bucketTreeDelta {
 	return &bucketTreeDelta{
-		byLevel:make(map[int]byBucketNumber),
+		byLevel: make(map[int]byBucketNumber),
 	}
 }
-
 
 func (bucketTreeDelta *bucketTreeDelta) getOrCreateBucketNode(bucketKey *BucketKey) *BucketNode {
 	bucketTreeDelta.lock.Lock()

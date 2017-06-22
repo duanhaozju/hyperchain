@@ -1,79 +1,93 @@
 package executor
 
 import (
-	"hyperchain/common"
-	"math"
-	"io/ioutil"
-	"os"
 	"encoding/json"
 	"github.com/op/go-logging"
+	"hyperchain/common"
+	"io/ioutil"
+	"math"
+	"os"
 )
+
 const (
 	staticPeerFile = "global.configs.static_peers"
 )
+
 type Oracle struct {
-	peers           []uint64
-	staticPeers     []uint64
-	score           map[uint64]int64
-	conf            *common.Config
-	latestSelected  uint64
-	logger          *logging.Logger
+	score             map[uint64]int64
+	conf              *common.Config
+	latestSelected    uint64
+	logger            *logging.Logger
+	ctx               *ChainSyncContext
+	needUpdateGenesis bool
 }
 
 type StaticPeer struct {
-	ID               uint64  `json:"id,omitempty"`
-	LocalAddress     string  `json:"local_address,omitempty"`
-	RemoteAddress    string  `json:"remote_address,omitempty"`
-	Port             uint    `json:"port,omitempty"`
+	ID            uint64 `json:"id,omitempty"`
+	LocalAddress  string `json:"local_address,omitempty"`
+	RemoteAddress string `json:"remote_address,omitempty"`
+	Port          uint   `json:"port,omitempty"`
 }
 
 type StaticPeers struct {
-	peers     []StaticPeer `json:"static_peers,omitempty"`
+	peers []StaticPeer `json:"static_peers,omitempty"`
 }
 
-func NewOracle(peers []uint64, conf *common.Config, logger *logging.Logger) *Oracle {
+func NewOracle(ctx *ChainSyncContext, conf *common.Config, logger *logging.Logger) *Oracle {
 	// assign init score
 	score := make(map[uint64]int64)
-	for _, peer := range peers {
-		score[peer] = 0
+	var needUpdateGenesis bool
+	if len(ctx.FullPeers) == 0 {
+		for _, peer := range ctx.PartPeers {
+			score[peer.Id] = 0
+		}
+		needUpdateGenesis = true
+	} else {
+		for _, peer := range ctx.FullPeers {
+			score[peer] = 0
+		}
+		needUpdateGenesis = false
 	}
 	oracle := &Oracle{
-		peers:       peers,
-		conf:        conf,
-		score:       score,
-		logger:      logger,
+		conf:              conf,
+		score:             score,
+		logger:            logger,
+		needUpdateGenesis: needUpdateGenesis,
+		ctx:               ctx,
 	}
 	staticPeers := oracle.ReadStaticPeer(oracle.conf.GetString(staticPeerFile))
 	logger.Debug("read static peers from configuration", staticPeers)
 	for _, peer := range staticPeers {
-		if contains(peers, peer) {
-			oracle.staticPeers = append(oracle.staticPeers, peer)
+		if _, exist := score[peer]; exist == true {
+			oracle.score[peer] += 10
 		}
 	}
-	logger.Debug("static peers", oracle.staticPeers)
+	oracle.PrintScoreboard()
 	return oracle
 }
 func (oracle *Oracle) SelectPeer() uint64 {
 	var max int64 = int64(math.MinInt64)
 	var bPeer uint64
-	// select static peer first
-	// if a static peer's score less than -5, drop it
-	for _, p := range oracle.staticPeers {
-		if oracle.score[p] > -5 {
-			oracle.latestSelected = p
-			oracle.logger.Debugf("select static peer %d to send sync req", p)
-			return p
-		}
-	}
 	// select other with higest score
-	for peer, score := range oracle.score {
-		if max < score {
-			bPeer = peer
-			max = score
+	if oracle.needUpdateGenesis {
+		// Simple selection, use the peer has lowest genesis as target peer,
+		// target peer will never change during the sync.
+		if len(oracle.ctx.PartPeers) > 0 {
+			bPeer = Min(oracle.ctx.PartPeers)
+			oracle.logger.Noticef("select peer %d from `PartPeer` collections", bPeer)
+		} else {
+			return 0
 		}
+	} else {
+		for peer, score := range oracle.score {
+			if max < score {
+				bPeer = peer
+				max = score
+			}
+		}
+		oracle.logger.Noticef("select peer %d from `FullPeer` collections", bPeer)
 	}
 	oracle.latestSelected = bPeer
-	oracle.logger.Debugf("select peer %d to send sync req", bPeer)
 	return bPeer
 }
 func (oracle *Oracle) FeedBack(success bool) {
@@ -89,7 +103,7 @@ func (oracle *Oracle) ReadStaticPeer(path string) []uint64 {
 	}
 	if buf, err := ioutil.ReadFile(path); err == nil {
 		var peers []StaticPeer
-		var ret   []uint64
+		var ret []uint64
 		err := json.Unmarshal(buf, &peers)
 		if err != nil {
 			oracle.logger.Error(err.Error())
@@ -102,20 +116,14 @@ func (oracle *Oracle) ReadStaticPeer(path string) []uint64 {
 	oracle.logger.Debug("invalid static peers configuration file")
 	return nil
 }
-func contains(s []uint64, e uint64) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
+
 func (oracle *Oracle) incScore() {
-	oracle.logger.Debugf("increase peer %d score from %d to %d", oracle.latestSelected, oracle.score[oracle.latestSelected], oracle.score[oracle.latestSelected] + 1)
+	oracle.logger.Debugf("increase peer %d score from %d to %d", oracle.latestSelected, oracle.score[oracle.latestSelected], oracle.score[oracle.latestSelected]+1)
 	oracle.score[oracle.latestSelected] = oracle.score[oracle.latestSelected] + 1
 }
+
 func (oracle *Oracle) decScore() {
-	oracle.logger.Debugf("increase peer %d score from %d to %d", oracle.latestSelected, oracle.score[oracle.latestSelected], oracle.score[oracle.latestSelected] - 1)
+	oracle.logger.Debugf("increase peer %d score from %d to %d", oracle.latestSelected, oracle.score[oracle.latestSelected], oracle.score[oracle.latestSelected]-1)
 	if oracle.score[oracle.latestSelected] > 10 {
 		oracle.score[oracle.latestSelected] = oracle.score[oracle.latestSelected] / 2
 	} else if oracle.score[oracle.latestSelected] > -10 {
@@ -123,4 +131,24 @@ func (oracle *Oracle) decScore() {
 	} else {
 		oracle.score[oracle.latestSelected] = oracle.score[oracle.latestSelected] * 2
 	}
+}
+
+func (oracle *Oracle) PrintScoreboard() {
+	oracle.logger.Notice("<====== scoreboard =======>")
+	for pId, score := range oracle.score {
+		oracle.logger.Noticef("<====== peer (id #%d), score (#%d) =======>", pId, score)
+	}
+	oracle.logger.Notice("<======     end    =======>")
+}
+
+func Min(peers []PartPeer) uint64 {
+	var genesis uint64 = math.MaxUint64
+	var peer PartPeer
+	for _, p := range peers {
+		if p.Genesis < genesis {
+			genesis = p.Genesis
+			peer = p
+		}
+	}
+	return peer.Id
 }

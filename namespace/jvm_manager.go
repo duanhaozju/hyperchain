@@ -142,9 +142,14 @@ func (mgr *JvmManager) notifyToExit() {
 
 func (mgr *JvmManager) checkJvmExist() bool {
 	subcmd := fmt.Sprintf("-i:%d", mgr.conf.GetInt(common.C_JVM_PORT))
-	ret, err := exec.Command("lsof", subcmd).Output()
+	ret, err := exec.Command("/usr/sbin/lsof", subcmd).Output()
 	if err != nil || len(ret) == 0 {
-		return false
+		if err == nil {
+			return false
+		}else {
+			mgr.logger.Error(err.Error())
+			return true
+		}
 	} else {
 		return true
 	}

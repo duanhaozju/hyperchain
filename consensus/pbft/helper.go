@@ -3,11 +3,11 @@
 package pbft
 
 import (
-	"time"
 	"fmt"
+	"time"
 
-	"hyperchain/manager/protos"
 	"hyperchain/consensus/helper/persist"
+	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 	"sync/atomic"
@@ -38,7 +38,7 @@ func (pbft *pbftImpl) primary(v uint64) uint64 {
 }
 
 //isPrimary is current PBFT node the primary?
-func (pbft *pbftImpl) isPrimary() (bool, uint64)  {
+func (pbft *pbftImpl) isPrimary() (bool, uint64) {
 	primary := pbft.primary(pbft.view)
 	return primary == pbft.id, primary
 }
@@ -100,7 +100,7 @@ func (pbft *pbftImpl) getAddNV() (n int64, v uint64) {
 	if pbft.view < uint64(pbft.N) {
 		v = pbft.view + uint64(n)
 	} else {
-		v = pbft.view / uint64(pbft.N) * uint64(pbft.N + 1) + pbft.view % uint64(pbft.N)
+		v = pbft.view/uint64(pbft.N)*uint64(pbft.N+1) + pbft.view%uint64(pbft.N)
 	}
 
 	return
@@ -110,10 +110,10 @@ func (pbft *pbftImpl) getDelNV(del uint64) (n int64, v uint64) {
 
 	n = int64(pbft.N) - 1
 	if pbft.primary(pbft.view) > del {
-		v = pbft.view % uint64(pbft.N) - 1 + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
+		v = pbft.view%uint64(pbft.N) - 1 + (uint64(pbft.N)-1)*(pbft.view/uint64(pbft.N)+1)
 	} else {
 		pbft.logger.Debug("N: ", pbft.N, " view: ", pbft.view, " del: ", del)
-		v = pbft.view % uint64(pbft.N) + (uint64(pbft.N) - 1) * (pbft.view / uint64(pbft.N) + 1)
+		v = pbft.view%uint64(pbft.N) + (uint64(pbft.N)-1)*(pbft.view/uint64(pbft.N)+1)
 	}
 
 	return
@@ -320,7 +320,7 @@ func (pbft *pbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
 	preBlkHash := bcInfo.ParentBlockHash
 
 	return &protos.BlockchainInfo{
-		Height:	           height,
+		Height:            height,
 		CurrentBlockHash:  curBlkHash,
 		PreviousBlockHash: preBlkHash,
 	}
@@ -333,6 +333,11 @@ func (pbft *pbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 		CurrentBlockHash:  curHash,
 		PreviousBlockHash: prevHash,
 	}
+}
+
+func (pbft *pbftImpl) getGenesisInfo() uint64 {
+	_, genesis := persist.GetGenesisOfChain(pbft.namespace)
+	return genesis
 }
 
 // =============================================================================
@@ -363,7 +368,7 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 	timeout := pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
 	if pbft.primary(pbft.view) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
-		timeout = 3 * timeout + pbft.pbftTimerMgr.requestTimeout
+		timeout = 3*timeout + pbft.pbftTimerMgr.requestTimeout
 	}
 
 	event := &LocalEvent{
@@ -377,7 +382,7 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 }
 
 //stopFirstRequestTimer
-func (pbft *pbftImpl) stopFirstRequestTimer()  {
+func (pbft *pbftImpl) stopFirstRequestTimer() {
 	if ok, _ := pbft.isPrimary(); !ok {
 		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
 	}
@@ -426,12 +431,12 @@ func (pbft *pbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 
 	if !pbft.inWV(preprep.View, preprep.SequenceNumber) {
 		if preprep.SequenceNumber != pbft.h && !pbft.status.getState(&pbft.status.skipInProgress) {
-			pbft.logger.Warningf("Replica %d pre-prepare view different, or sequence number outside " +
+			pbft.logger.Warningf("Replica %d pre-prepare view different, or sequence number outside "+
 				"watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
 				pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
 		} else {
 			// This is perfectly normal
-			pbft.logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: " +
+			pbft.logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: "+
 				"preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
 				pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
 		}
@@ -441,7 +446,7 @@ func (pbft *pbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 }
 
 //isPrepareLegal both PBFT state Prepare message are legal.
-func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool  {
+func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool {
 	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvPrepare, but it's in nego-view", pbft.id)
 		return false
@@ -468,7 +473,7 @@ func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool  {
 }
 
 //isPrepareLegal both PBFT state Commit message are legal.
-func (pbft *pbftImpl) isCommitLegal(commit *Commit) bool  {
+func (pbft *pbftImpl) isCommitLegal(commit *Commit) bool {
 	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvCommit, but it's in nego-view", pbft.id)
 		return false

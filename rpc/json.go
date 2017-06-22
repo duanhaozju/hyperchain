@@ -10,8 +10,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"hyperchain/namespace"
+	//"crypto/ecdsa"
+	//"hyperchain/core/crypto/primitives"
 	"github.com/pkg/errors"
+	"hyperchain/namespace"
 	"fmt"
 	"reflect"
 	"github.com/gorilla/websocket"
@@ -76,12 +78,12 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 	d.UseNumber()
 	return &jsonCodec{
 		closed: make(chan interface{}),
-		d: d,
-		e: json.NewEncoder(rwc),
-		rw: rwc,
-		req: req,
-		nr: nr,
-		conn: conn,
+		d:      d,
+		e:      json.NewEncoder(rwc),
+		rw:     rwc,
+		req:    req,
+		nr:     nr,
+		conn:   conn,
 	}
 }
 
@@ -176,10 +178,10 @@ func checkReqId(reqId json.RawMessage) error {
 func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, common.RPCError) {
 	var in JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
-		return nil, false, &common.InvalidMessageError{Message:err.Error()}
+		return nil, false, &common.InvalidMessageError{Message: err.Error()}
 	}
 	if err := checkReqId(in.Id); err != nil {
-		return nil, false, &common.InvalidMessageError{Message:err.Error()}
+		return nil, false, &common.InvalidMessageError{Message: err.Error()}
 	}
 
 	// subscribe are special, they will always use `subscribeMethod` as first param in the payload
@@ -208,7 +210,7 @@ func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, comm
 	// regular RPC call
 	elems := strings.Split(in.Method, serviceMethodSeparator)
 	if len(elems) != 2 {
-		return nil, false, &common.MethodNotFoundError{Service:in.Method, Method:""}
+		return nil, false, &common.MethodNotFoundError{Service: in.Method, Method: ""}
 	}
 
 	if len(in.Payload) == 0 {
@@ -223,13 +225,13 @@ func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, comm
 func parseBatchRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, common.RPCError) {
 	var in []JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
-		return nil, false, &common.InvalidMessageError{Message:err.Error()}
+		return nil, false, &common.InvalidMessageError{Message: err.Error()}
 	}
 
 	requests := make([]*common.RPCRequest, len(in))
 	for i, r := range in {
 		if err := checkReqId(r.Id); err != nil {
-			return nil, false, &common.InvalidMessageError{Message:err.Error()}
+			return nil, false, &common.InvalidMessageError{Message: err.Error()}
 		}
 
 		id := &in[i].Id

@@ -1,16 +1,16 @@
 package db_utils
 
 import (
-	"hyperchain/hyperdb"
-	"testing"
-	"hyperchain/core/test_util"
 	"gopkg.in/check.v1"
+	"hyperchain/core/test_util"
 	"hyperchain/core/types"
-	"reflect"
+	"hyperchain/hyperdb"
 	"math/rand"
+	"reflect"
+	"strconv"
+	"testing"
 	"testing/quick"
 	"time"
-	"strconv"
 )
 
 func Test(t *testing.T) {
@@ -212,8 +212,6 @@ func GetEvmTimeOfBlock() int64 {
 	return block.EvmTime
 }
 
-
-
 // using quick for unit test
 func (blockSuite) Generate(r *rand.Rand, size int) reflect.Value {
 	str := "blockHash" + strconv.Itoa(time.Now().Local().Nanosecond())
@@ -231,14 +229,14 @@ func (blockSuite) Generate(r *rand.Rand, size int) reflect.Value {
 		CommitTime:   time.Now().Local().UnixNano(),
 		EvmTime:      time.Now().Local().UnixNano(),
 	}
-	block := blockSuite{block:blockCases}
+	block := blockSuite{block: blockCases}
 	return reflect.ValueOf(block)
 }
 
 func runBlockTest(block blockSuite) bool {
 	InitDataBase()
 	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err,_ := PersistBlock(db.NewBatch(), &block.block, true, true)
+	err, _ := PersistBlock(db.NewBatch(), &block.block, true, true)
 	if err != nil {
 		return false
 	}

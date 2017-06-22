@@ -39,7 +39,7 @@ const (
 	default_namespace = "global"
 	blockchain        = "blockchain"
 	consensus         = "consensus"
-	archieve          = "Archieve"
+	archive           = "archive"
 
 	// state
 	closed stateDb = iota
@@ -119,7 +119,7 @@ func InitDatabase(conf *common.Config, namespace string) error {
 		db:    db1,
 	}
 
-	dbMgr.dbMap[getArchieveDbName(namespace)] = &DBInstance{
+	dbMgr.dbMap[getArchiveDbName(namespace)] = &DBInstance{
 		state: opened,
 		db:    archieveDb,
 	}
@@ -146,9 +146,9 @@ func StopDatabase(namespace string) error {
 		delete(dbMgr.dbMap, getConsensusDbName(namespace))
 	}
 
-	if db, ok := dbMgr.dbMap[getArchieveDbName(namespace)]; ok {
+	if db, ok := dbMgr.dbMap[getArchiveDbName(namespace)]; ok {
 		db.db.Close()
-		delete(dbMgr.dbMap, getArchieveDbName(namespace))
+		delete(dbMgr.dbMap, getArchiveDbName(namespace))
 	}
 	return nil
 }
@@ -186,15 +186,15 @@ func GetArchieveDbByNamespace(namespace string) (db.Database, error) {
 	log := getLogger(namespace)
 	dbMgr.dbSync.RLock()
 	defer dbMgr.dbSync.RUnlock()
-	name := getArchieveDbName(namespace)
+	name := getArchiveDbName(namespace)
 	if _, ok := dbMgr.dbMap[name]; !ok {
 		log.Notice(fmt.Sprintf("GetDBArchiveByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespace fail beacause dbMgr[%v] has not been inited \n", namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBArchiveByNamespace fail beacause dbMgr[%v] has not been inited \n", namespace))
 	}
 
 	if dbMgr.dbMap[name].db == nil {
 		log.Notice(fmt.Sprintf("GetDBArchiveByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespace fail beacause dbMgr[%v] has not been inited \n", namespace))
+		return nil, errors.New(fmt.Sprintf("GetDBArchiveByNamespace fail beacause dbMgr[%v] has not been inited \n", namespace))
 	}
 	return dbMgr.dbMap[name].db, nil
 }
@@ -216,12 +216,28 @@ func GetDBConsensusByNamespace(namespace string) (db.Database, error) {
 	return dbMgr.dbMap[name].db, nil
 }
 
+func GetDatabaseHome(conf *common.Config) string {
+	dbType := conf.GetInt(db_type)
+	switch dbType {
+	case ldb_db:
+		return hleveldb.LDBDataBasePath(conf)
+	case super_level_db:
+		return sldb.SLDBPath(conf)
+	default:
+		return ""
+	}
+}
+
+func GetDatabaseType(conf *common.Config) int {
+	return conf.GetInt(db_type)
+}
+
 func NewDatabase(conf *common.Config, path string, dbType int, namespace string) (db.Database, error) {
 	switch dbType {
 	case ldb_db:
 		return hleveldb.NewLDBDataBase(conf, path, namespace)
 	case super_level_db:
-		return sldb.NewSLDB(conf, namespace)
+		return sldb.NewSLDB(conf, path, namespace)
 	default:
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
 	}
@@ -246,8 +262,8 @@ func getDbName(namespace string) string {
 }
 
 //getDbName get ordinary db composite name by namespace.
-func getArchieveDbName(namespace string) string {
-	return namespace + archieve
+func getArchiveDbName(namespace string) string {
+	return namespace + archive
 }
 
 func getLogger(namespace string) *logging.Logger {
