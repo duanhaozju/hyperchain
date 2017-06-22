@@ -101,7 +101,6 @@ func (wssi *wsServerImpl) isOriginAllowed(origin string) bool {
 		}
 	}
 
-
 	return  false
 }
 
@@ -121,23 +120,22 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 			return
 		}
 		log.Debugf("new websocket connection %p", conn)
-		//defer conn.Close()
 
-
-		//ctx, cancel := context.WithCancel(context.Background())
 		ctx, cancel := context.WithCancel(context.Background())
-		defer func() {
-			log.Debugf("cancel the context and close websocket connection %p, release resource",conn)
-			common.GetSubChan(ctx).Close()
-			cancel()
-			conn.Close()
-		}()
 
 		//if options&OptionSubscriptions == OptionSubscriptions {
-			//ctx = context.WithValue(ctx, common.NotifierKey{}, common.NewNotifier(codec))
-			notifier := NewNotifier(&jsonCodec{})
+			notifier := NewNotifier()
 			ctx = context.WithValue(ctx, NotifierKey{}, notifier)
+			notifier.subchan = common.GetSubChan(ctx)
 		//}
+
+		defer func() {
+			notifier.subchan.Close()
+			notifier.Close()
+			cancel()
+			conn.Close()
+			log.Debugf("cancel the context and close websocket connection %p, release resource",conn)
+		}()
 
 		for {
 			_, nr, err := conn.NextReader()

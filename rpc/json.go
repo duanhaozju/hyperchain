@@ -260,7 +260,7 @@ func (c *jsonCodec) Write(res interface{}) error {
 func (c *jsonCodec) WriteNotify(res interface{}) error {
 	c.encMu.Lock()
 	defer c.encMu.Unlock()
-	log.Debug("======== enter WriteNotify ==========")
+
 	nw, err := c.conn.NextWriter(websocket.TextMessage)
 	if err != nil {
 		log.Error(err)
@@ -281,6 +281,7 @@ func (c *jsonCodec) WriteNotify(res interface{}) error {
 		log.Error(err)
 		return err
 	}
+	log.Debug("** finish writting notification to client **")
 	return nil
 }
 

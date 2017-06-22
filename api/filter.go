@@ -252,21 +252,18 @@ func returnException(data []interface{}) []event.FilterException {
 // ===================== test ================
 func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
 
-	//api.subchan.Mux.Lock()
 	api.filtersMu.Lock()
 	defer api.filtersMu.Unlock()
 
 	api.log.Debug("ready to deal with newBlock event request")
 	common.CtxChan <- ctx
-
 	subchan := common.GetSubChan(ctx)
 
 	select {
 	case err := <- subchan.Err:
 		return common.ID(""), err
-	case rpcSub := <- common.GetSubChan(ctx).SubscriptionChan:
-	//api.subchan.Mux.Unlock()
-		api.log.Debugf("receive subscription %v\n", rpcSub.ID)
+	case rpcSub := <- subchan.SubscriptionChan:
+		api.log.Debugf("receive subscription %v", rpcSub.ID)
 
 		go func() {
 
@@ -276,17 +273,17 @@ func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
 			for {
 				select {
 				case h := <-blockC:
-					api.log.Debugf("receive block %v\n", h.Hex())
+					api.log.Debugf("receive block %v", h.Hex())
 					payload := common.NotifyPayload{
 						SubID: rpcSub.ID,
 						Data:  h,
 					}
 
 					subchan.NotifyDataChan <- payload
-				case <-rpcSub.Err():
+				case <-rpcSub.Err():	 // unsubscribe
 					blockSub.Unsubscribe()
 					return
-				case <-subchan.Closed(): // connection close, unsubscribe all the subscription in this context
+				case <-subchan.Closed(): // connection close
 					api.log.Debug("the websocket connection closed, release resource")
 					blockSub.Unsubscribe()
 					return
