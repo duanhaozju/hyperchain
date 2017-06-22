@@ -1,8 +1,12 @@
 package db
 
+import "errors"
+
 var (
 	logPath  = ""
 	grpcPort = 8001
+	// TODO @ZSX return common not found error later
+	DB_NOT_FOUND =errors.New("leveldb: not found")
 )
 
 func GetLogPath() string {

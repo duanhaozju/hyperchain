@@ -1,16 +1,10 @@
 package bucket
 
 import (
-	"sync"
-	//"time"
-	"unsafe"
+	"github.com/hashicorp/golang-lru"
 	"hyperchain/hyperdb/db"
-	"github.com/op/go-logging"
 )
-const (
-	HASHLEN = 20
-)
-var defaultBucketCacheMaxSize = 100 // MBs
+
 
 // We can create a cache and keep all the bucket nodes pre-loaded.
 // Since, the bucket nodes do not contain actual data and max possible
@@ -20,102 +14,64 @@ var defaultBucketCacheMaxSize = 100 // MBs
 type BucketCache struct {
 	TreePrefix string
 	isEnabled  bool
-	c          map[BucketKey]*BucketNode
-	lock       sync.RWMutex
-	size       uint64
-	maxSize    uint64
-	logger     *logging.Logger
+	cache      *lru.Cache
 }
 
-func newBucketCache(treePrefix string, maxSizeMBs int, logger *logging.Logger) *BucketCache {
+func newBucketCache(treePrefix string, maxBucketCacheSize int) *BucketCache {
 	isEnabled := true
-	if maxSizeMBs <= 0 {
+	//log.Noticef("BucketCache Size is [%d]",maxBucketCacheSize)
+	if maxBucketCacheSize <= 0 {
 		isEnabled = false
+		return &BucketCache{TreePrefix: treePrefix, isEnabled: isEnabled}
 	} else {
-		logger.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", maxSizeMBs)
+		cache,_ := lru.New(maxBucketCacheSize)
+		return &BucketCache{TreePrefix: treePrefix, cache: cache, isEnabled: isEnabled}
 	}
-	return &BucketCache{TreePrefix: treePrefix, c: make(map[BucketKey]*BucketNode), maxSize: uint64(maxSizeMBs * 1024 * 1024), isEnabled: isEnabled, logger: logger}
 }
 
-func (cache *BucketCache) clearAllCache() *BucketCache {
-	isEnabled := true
-	if cache.isEnabled {
-	} else {
-		cache.logger.Infof("Constructing bucket-cache with max bucket cache size = [%d] MBs", cache.maxSize)
-	}
-	tmp := &BucketCache{TreePrefix: cache.TreePrefix, c: make(map[BucketKey]*BucketNode), maxSize: uint64(cache.maxSize), isEnabled: isEnabled}
-	return tmp
+func (bucketCache *BucketCache) clearAllCache(){
+	bucketCache.cache.Purge()
 }
 
 // TODO cache will be done later
-func (cache *BucketCache) loadAllBucketNodesFromDB() {
-	if !cache.isEnabled {
+func (bucketCache *BucketCache) loadAllBucketNodesFromDB() {
+	if !bucketCache.isEnabled {
 		return
 	}
 }
 
-func (cache *BucketCache) putWithoutLock(key BucketKey, node *BucketNode) {
-	if !cache.isEnabled {
+func (bucketCache *BucketCache) put(key BucketKey, node *BucketNode) {
+	if !bucketCache.isEnabled {
 		return
 	}
 	node.markedForDeletion = false
 	node.childrenUpdated = nil
-	existingNode, ok := cache.c[key]
-	size := uint64(0)
-	if ok {
-		size = node.size() - existingNode.size()
-		cache.size += size
-		if cache.size > cache.maxSize {
-			delete(cache.c, key)
-			cache.size -= (key.size() + existingNode.size())
-		} else {
-			cache.c[key] = node
-		}
-	} else {
-		size = node.size()
-		cache.size += size
-		if cache.size > cache.maxSize {
-			return
-		}
-		cache.c[key] = node
-	}
+	bucketCache.cache.Add(key,node)
 }
 
 // TODO performance status should be done
-func (cache *BucketCache) get(db db.Database, key BucketKey) (*BucketNode, error) {
-	//defer perfstat.UpdateTimeStat("timeSpent", time.Now())
-	if !cache.isEnabled {
-		return fetchBucketNodeFromDB(db, cache.TreePrefix, &key)
+func (bucketCache *BucketCache) fetchBucketNodeFromCache(db db.Database, key BucketKey) (*BucketNode, error) {
+	if !bucketCache.isEnabled {
+		return fetchBucketNodeFromDB(db, bucketCache.TreePrefix, &key)
 	}
-	cache.lock.RLock()
-	defer cache.lock.RUnlock()
-	bucketNode := cache.c[key]
-	if bucketNode == nil {
-		return fetchBucketNodeFromDB(db, cache.TreePrefix, &key)
+	bucketNodeValue,ok := bucketCache.cache.Get(key)
+	if ok {
+		return bucketNodeValue.(*BucketNode),nil
 	}
-	return bucketNode, nil
+	bucketNode,err := fetchBucketNodeFromDB(db, bucketCache.TreePrefix, &key)
+	if err != nil{
+		return nil,err
+	}else {
+		//cache.c.Add(key,bucketNode)
+		return bucketNode,nil
+	}
+
 }
 
-func (cache *BucketCache) removeWithoutLock(key BucketKey) {
-	if !cache.isEnabled {
+func (bucketCache *BucketCache) remove(key BucketKey) {
+	if !bucketCache.isEnabled {
 		return
 	}
-	node, ok := cache.c[key]
-	if ok {
-		cache.size -= (key.size() + node.size())
-		delete(cache.c, key)
-	}
+	bucketCache.cache.Remove(key)
 }
 
-func (bk BucketKey) size() uint64 {
-	return uint64(unsafe.Sizeof(bk))
-}
-
-func (bNode *BucketNode) size() uint64 {
-	size := uint64(unsafe.Sizeof(*bNode))
-	length := len(bNode.childrenCryptoHash)
-	if length > 0 {
-		size += uint64(length * HASHLEN)
-	}
-	return size
-}

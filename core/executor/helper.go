@@ -6,6 +6,7 @@ import (
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
 	"reflect"
+	er "hyperchain/core/errors"
 )
 type Helper struct {
 	msgQ *event.TypeMux
@@ -40,7 +41,7 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		executor.logger.Debug("inform consenus remove cache")
 		msg, ok := message.(protos.RemoveCache)
 		if !ok {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
@@ -50,7 +51,7 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		executor.logger.Debugf("[Namespace = %s] inform consenus validation result", executor.namespace)
 		msg, ok := message.(protos.ValidatedTxs)
 		if !ok {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
@@ -60,7 +61,7 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		executor.logger.Debug("inform consenus vc done")
 		msg, ok := message.(protos.VcResetDone)
 		if !ok {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
@@ -70,14 +71,14 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		executor.logger.Debug("inform consenus sync done")
 		msg, ok := message.(protos.StateUpdatedMessage)
 		if !ok {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		executor.helper.Post(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_SYNC_DONE,
 		})
 	default:
-		return NoDefinedCaseErr
+		return er.NoDefinedCaseErr
 	}
 	return nil
 }
@@ -88,7 +89,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_BROADCAST_DEMAND:
 		executor.logger.Debug("inform p2p broadcast demand")
 		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64, reflect.Uint64}, message...) {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		required := ChainSyncRequest{
 			RequiredNumber: message[0].(uint64),
@@ -109,7 +110,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_UNICAST_BLOCK:
 		executor.logger.Debug("inform p2p unicast block")
 		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64}, message...) {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		block, err := edb.GetBlockByNumber(executor.namespace, message[0].(uint64))
 		if err != nil {
@@ -130,11 +131,11 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_UNICAST_INVALID:
 		executor.logger.Debug("inform p2p unicast invalid tx")
 		if len(message) != 1 {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		r, ok := message[0].(*types.InvalidTransactionRecord)
 		if !ok {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		payload, err := proto.Marshal(r)
 		if err != nil {
@@ -150,7 +151,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_BROADCAST_SINGLE:
 		executor.logger.Debug("inform p2p broadcast single demand")
 		if !checkParams([]reflect.Kind{reflect.Uint64}, message...) {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		request := ChainSyncRequest{
 			RequiredNumber: message[0].(uint64),
@@ -171,11 +172,11 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_SYNC_REPLICA:
 		executor.logger.Debug("inform p2p sync replica")
 		if len(message) != 1 {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		chain, ok := message[0].(*types.Chain)
 		if !ok {
-			return InvalidParamsErr
+			return er.InvalidParamsErr
 		}
 		payload, _ := proto.Marshal(chain)
 		executor.helper.Post(event.ExecutorToP2PEvent{
@@ -188,7 +189,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return nil
 
 	default:
-		return NoDefinedCaseErr
+		return er.NoDefinedCaseErr
 	}
 	return nil
 }

@@ -29,6 +29,7 @@ It has these top-level messages:
 	InvalidTransactionRecords
 	TransactionMeta
 	TransactionValue
+	InvokeArgs
 	TransactionWrapper
 */
 package types

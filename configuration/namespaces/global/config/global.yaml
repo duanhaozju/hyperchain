@@ -85,14 +85,19 @@ global:
             interval : 500s
             enable   : false
         buckettree:
+            global:
+                globalDataNodeCacheSize: 10000
+                globalDataNodeCacheLength: 20
             state:
                 size: 1000003
                 levelGroup: 5
-                cacheSize: 500    # 100 MB
+                bucketCacheSize: 100000
+                dataNodeCacheSize: 100000
             storage:
                 size: 1000003
                 levelGroup: 5
-                cacheSize: 500    # 100 MB
+                bucketCacheSize: 100000
+                dataNodeCacheSize: 100000
     ######################################################
     # configs related to the consensus                   #
     #                                                    #

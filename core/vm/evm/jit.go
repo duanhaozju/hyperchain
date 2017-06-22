@@ -11,6 +11,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/crypto"
 	"hyperchain/core/vm/evm/params"
+	"hyperchain/core/vm"
 )
 
 // progStatus is the type for the JIT program status.
@@ -275,11 +276,11 @@ func CompileProgram(program *Program) (err error) {
 
 // RunProgram runs the program given the environment and contract and returns an
 // error if the execution failed (non-consensus)
-func RunProgram(program *Program, env Environment, contract *Contract, input []byte) ([]byte, error) {
+func RunProgram(program *Program, env vm.Environment, contract *Contract, input []byte) ([]byte, error) {
 	return runProgram(program, 0, NewMemory(), newstack(), env, contract, input)
 }
 
-func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env Environment, contract *Contract, input []byte) ([]byte, error) {
+func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env vm.Environment, contract *Contract, input []byte) ([]byte, error) {
 	contract.Input = input
 
 	var (
@@ -287,15 +288,10 @@ func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env
 		instrCount        = 0
 	)
 
-	homestead := env.RuleSet().IsHomestead(env.BlockNumber())
 	for pc < uint64(len(program.instructions)) {
 		instrCount++
 
 		instr := program.instructions[pc]
-		if instr.Op() == DELEGATECALL && !homestead {
-			return nil, fmt.Errorf("Invalid opcode 0x%x", instr.Op())
-		}
-
 		ret, err := instr.do(program, &pc, env, contract, mem, stack)
 		if err != nil {
 			return nil, err
@@ -325,7 +321,7 @@ func validDest(dests map[uint64]struct{}, dest *big.Int) bool {
 
 // jitCalculateGasAndSize calculates the required given the opcode and stack items calculates the new memorysize for
 // the operation. This does not reduce gas or resizes the memory.
-func jitCalculateGasAndSize(env Environment, contract *Contract, instr instruction, statedb Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
+func jitCalculateGasAndSize(env vm.Environment, contract *Contract, instr instruction, statedb vm.Database, mem *Memory, stack *stack) (*big.Int, *big.Int, error) {
 	var (
 		gas                 = new(big.Int)
 		newMemSize *big.Int = new(big.Int)

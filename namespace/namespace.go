@@ -41,6 +41,8 @@ type Namespace interface {
 	Name() string
 	//GetCAManager get CAManager by namespace name.
 	GetCAManager() *admittance.CAManager
+	//GetExecutor fetch executor module
+	GetExecutor() *executor.Executor
 }
 type NsState int
 

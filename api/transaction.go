@@ -51,6 +51,7 @@ type SendTxArgs struct {
 	Simulate  bool        `json:"simulate"`
 	Opcode    int32       `json:"opcode"`
 	Nonce     int64       `json:"nonce"`
+	VmType    string      `json:"type"`
 }
 
 type TransactionResult struct {
@@ -140,7 +141,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	}
 
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
-		realArgs.Value.ToInt64(), nil, 0)
+		realArgs.Value.ToInt64(), nil, 0, types.TransactionValue_EVM)
 
 	value, err := proto.Marshal(txValue)
 
@@ -194,6 +195,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 
 type ReceiptResult struct {
 	TxHash          string        `json:"txHash"`
+	VmType          string        `json:"vmType"`
 	PostState       string        `json:"postState"`
 	ContractAddress string        `json:"contractAddress"`
 	Ret             string        `json:"ret"`
@@ -214,6 +216,7 @@ func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult
 		}
 		return &ReceiptResult{
 			TxHash:          receipt.TxHash,
+			VmType:          receipt.VmType,
 			PostState:       receipt.PostState,
 			ContractAddress: receipt.ContractAddress,
 			Ret:             receipt.Ret,
@@ -466,7 +469,7 @@ func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
 	payload := common.FromHex(realArgs.Payload)
 
-	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), payload, args.Opcode)
+	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), payload, args.Opcode, types.TransactionValue_EVM)
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {

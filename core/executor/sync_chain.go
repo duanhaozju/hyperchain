@@ -9,6 +9,7 @@ import (
 	"hyperchain/manager/protos"
 	"bytes"
 	"time"
+	er "hyperchain/core/errors"
 )
 
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
@@ -134,7 +135,7 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 // ApplyBlock - apply all transactions in block into state during the `state update` process.
 func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
 	if block.Transactions == nil {
-		return EmptyPointerErr, nil
+		return er.EmptyPointerErr, nil
 	}
 	return executor.applyBlock(block, seqNo)
 }

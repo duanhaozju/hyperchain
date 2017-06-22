@@ -3,13 +3,14 @@ package namespace
 import (
 	ledger "hyperchain/core/vm/jcee/go/ledger"
 	"hyperchain/common"
-	"hyperchain/core/vm/jcee/go/client"
 	"os/exec"
 	"github.com/op/go-logging"
 	"strconv"
 	"path"
 	"time"
 	"fmt"
+	"hyperchain/core/vm/jcee/go"
+	"os"
 )
 const (
 	BinHome  = "hyperjvm/bin"
@@ -19,7 +20,7 @@ const (
 
 type JvmManager struct {
 	ledgerProxy      *ledger.LedgerProxy     // ledger server handler, use to support ledger service
-	jvmCli           jcee.ContractExecutor   // system jvm client, for health maintain
+	jvmCli           jvm.ContractExecutor   // system jvm client, for health maintain
 	logger           *logging.Logger	 // logger
 	conf             *common.Config
 	exit             chan bool
@@ -29,7 +30,7 @@ type JvmManager struct {
 func NewJvmManager(conf *common.Config) *JvmManager {
 	return &JvmManager{
 		ledgerProxy:     ledger.NewLedgerProxy(conf),
-		jvmCli:          jcee.NewContractExecutor(conf, common.DEFAULT_NAMESPACE),
+		jvmCli:          jvm.NewContractExecutor(conf, common.DEFAULT_NAMESPACE),
 		logger:          common.GetLogger(common.DEFAULT_LOG, "nsmgr"),
 		conf:            conf,
 		exit:            make(chan bool),
@@ -141,10 +142,23 @@ func (mgr *JvmManager) notifyToExit() {
 
 func (mgr *JvmManager) checkJvmExist() bool {
 	subcmd := fmt.Sprintf("-i:%d", mgr.conf.GetInt(common.C_JVM_PORT))
-	ret, err := exec.Command("lsof", subcmd).Output()
+	ret, err := exec.Command("/usr/sbin/lsof", subcmd).Output()
 	if err != nil || len(ret) == 0 {
-		return false
+		if err == nil {
+			return false
+		}else {
+			mgr.logger.Error(err.Error())
+			return true
+		}
 	} else {
 		return true
 	}
+}
+
+func getBinDir() (string, error) {
+	cur, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+	return path.Join(cur, BinHome), nil
 }

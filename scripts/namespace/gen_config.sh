@@ -114,6 +114,8 @@ f_gen_config(){
         introducer_ip=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.introducer_ip`
         introducer_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.introducer_port`
         introducer_id=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.introducer_id`
+        jvm_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.jvm_port`
+        ledger_port=`cat ${NS_CONFIG_FILE} | shyaml get-value ${NS_NODES[$i]}.ledger_port`
 
         echo "{"                                        >>${peerconfig}
         echo "  \"self\":{"                             >>${peerconfig}
@@ -126,7 +128,9 @@ f_gen_config(){
         echo "  \"restful_port\":$restful_port,"        >>${peerconfig}
         echo "  \"introducer_ip\":\"$introducer_ip\","  >>${peerconfig}
         echo "  \"introducer_port\":$introducer_port,"  >>${peerconfig}
-        echo "  \"introducer_id\":$introducer_id"      >>${peerconfig}
+        echo "  \"introducer_id\":$introducer_id,"      >>${peerconfig}
+        echo "  \"jvm_port\":$jvm_port,"                >>${peerconfig}
+        echo "  \"ledger_port\":$ledger_port"           >>${peerconfig}
         echo " },"                                      >>${peerconfig}
         echo "  \"maxpeernode\":$NS_MAXNODE,"           >>${peerconfig}
         echo "  \"nodes\":["                            >>${peerconfig}

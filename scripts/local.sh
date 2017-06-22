@@ -59,11 +59,11 @@ f_check_local_env(){
 # kill hyperchain process
 f_kill_process(){
     echo "kill the bind port process"
-    PID=`ps -ax | grep hyperchain | grep -v grep | awk '{print $1}'`
-    for pid in ${PID}
-    do
-        kill -9 ${pid}
-    done
+    PID=`ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}'`
+    if [ "$PID" != "" ]
+    then
+        ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}' | xargs kill -9
+    fi
 }
 
 # clear data
@@ -105,10 +105,11 @@ do
     if [ -d "${DUMP_PATH}/node${j}/namespaces" ];then
         rm -rf ${DUMP_PATH}/node${j}/namespaces
     fi
+
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
-    cp -rf ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
+    cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
 
     # distribute hypercli
     if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
@@ -119,6 +120,21 @@ do
     fi
     cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
     cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
+
+    BIN_PATH=${DUMP_PATH}/node${j}/bin
+    # distribute bin
+    if [ -d ${BIN_PATH} ];then
+        rm -rf ${BIN_PATH}
+    fi
+    mkdir -p ${BIN_PATH}
+    cp ${PROJECT_PATH}/scripts/sub_scripts/start.sh ${BIN_PATH}
+    cp ${PROJECT_PATH}/scripts/sub_scripts/stop.sh ${BIN_PATH}
+    cp ${PROJECT_PATH}/scripts/sub_scripts/stop.sh ${BIN_PATH}/stop_local.sh
+    if [ ${_SYSTYPE} = "MAC" ]; then
+        sed -i "" "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
+    else
+        sed -i "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
+    fi
 done
 }
 
@@ -127,11 +143,11 @@ f_all_in_one_cmd(){
 }
 
 f_x_in_linux_cmd(){
-    gnome-terminal -x bash -c "cd ${DUMP_PATH}/node${1} && ./hyperchain 2>error.log"
+    gnome-terminal -x bash -c "cd $DUMP_PATH/node${1}/bin && ./start.sh"
 }
 
 f_x_in_mac_cmd(){
-    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}' && ./hyperchain 2>error.log"'
+    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/bin' && ./start.sh"'
 }
 
 # run process by os type
@@ -154,6 +170,24 @@ f_run_process(){
           ;;
         esac
     done
+}
+
+start_hyperjvm() {
+    cd ${PROJECT_PATH}/core/vm/jcee/java && ./build.sh
+    for j in  1 2 3 4
+    do
+        cp -rf ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${DUMP_PATH}/node$j/
+    done
+#    cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
+#
+#    case "$_SYSTYPE" in
+#          MAC*)
+#                osascript -e 'tell app "Terminal" to do script "cd '${DUMP_PATH}/node1/hyperjvm/bin/' && ./local_start_hyperjvm.sh"'
+#          ;;
+#          LINUX*)
+#                cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./local_start_hyperjvm.sh
+#          ;;
+#    esac
 }
 
 f_sleep(){
@@ -205,6 +239,9 @@ REBUILD=true
 # rebuild hypercli or not? default = false
 HYPERCLI=false
 
+# run process or not? default = true
+RUN=true
+
 # 1.check local env
 f_check_local_env
 
@@ -227,6 +264,8 @@ do
         HYPERCLI=true; shift;;
     -m|--mode)
         MODE=true; shift;;
+    -n|--run)
+        RUN=false; shift;;
     --) shift; break;;
     -*) help; exit 1;;
     *) break;;
@@ -255,4 +294,8 @@ fi
 f_distribute $MAXPEERNUM
 
 # run hyperchain node
-f_run_process
+start_hyperjvm
+
+if ${RUN}; then
+    f_run_process
+fi
