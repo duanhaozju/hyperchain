@@ -1,7 +1,8 @@
-package cn.hyperchain.jcee.contract.examples.sb.src;
+package cn.hyperchain.jcee.contract.examples.sb;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
+import cn.hyperchain.jcee.contract.examples.sb.src.SimulateBank;
 import cn.hyperchain.jcee.mock.MockServer;
 
 import java.util.ArrayList;
@@ -31,10 +32,20 @@ public class SimulateBankTest {
         System.out.println(result.getResult());
 
     }
+
+    public static void testDelete(){
+        server.invoke("testDelete",Arrays.asList(new String[]{}));
+    }
+
+    public static void testRangeQuery(){
+        server.invoke("testRangeQuery",Arrays.asList(new String[]{}));
+    }
     public static void main(String[] args) {
         SimulateBank sb = new SimulateBank();
         deploy(sb);
-        testIssueAndGetBalance();
+//        testIssueAndGetBalance();
+//        testRangeQuery();
+        testDelete();
     }
 
 }

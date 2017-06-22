@@ -346,6 +346,7 @@ public class HyperchainLedger extends AbstractLedger{
                         .build();
                 builder.addKv(keyValue);
             }
+            builder.setContext(getLedgerContext());
             return builder.build();
         }
     }
@@ -395,9 +396,10 @@ public class HyperchainLedger extends AbstractLedger{
         }
 
         @Override
-        public byte[] next() {
+        public Result next() {
             if (hasNext()) {
-                return currBatchValue.next().toByteArray();
+                byte[] data = currBatchValue.next().toByteArray();
+                return new Result(ByteString.copyFrom(data));
             }else {
                 throw new NoSuchElementException("No more value to display");
             }

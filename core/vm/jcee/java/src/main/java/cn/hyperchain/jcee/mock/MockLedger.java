@@ -5,16 +5,15 @@ import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 
 /**
  * Created by huhu on 2017/6/21.
  */
 public class MockLedger extends AbstractLedger {
     private Cache cache;
+    private TreeMap<ByteKey, Result> data;
+
     public MockLedger(){
         cache = new HyperCache();
     }
@@ -24,16 +23,30 @@ public class MockLedger extends AbstractLedger {
     }
 
     class BatchImpl implements Batch{
-        private Map<ByteKey, Result> data;
         private MockLedger ledger;
 
         public BatchImpl(MockLedger ledger) {
-            data = new ConcurrentHashMap<>();
+            Comparator<ByteKey> comparator = new Comparator<ByteKey>() {
+                @Override
+                public int compare(ByteKey o1, ByteKey o2) {
+                    byte[] left = o1.getKey();
+                    byte[] right = o2.getKey();
+                    for (int i = 0, j = 0; i < left.length && j < right.length; i++, j++) {
+                        int a = (left[i] & 0xff);
+                        int b = (right[j] & 0xff);
+                        if (a != b) {
+                            return a - b;
+                        }
+                    }
+                    return left.length - right.length;
+                }
+            };
+            data = new TreeMap<ByteKey,Result>(comparator);
             this.ledger = ledger;
         }
 
         public Result get(byte[] key) {
-            Result result = this.data.get(new ByteKey(key));
+            Result result = data.get(new ByteKey(key));
             if(result == null){
                 return new Result(ByteString.EMPTY);
             }
@@ -152,7 +165,40 @@ public class MockLedger extends AbstractLedger {
 
     @Override
     public BatchValue rangeQuery(byte[] start, byte[] end) {
-        return null;
+
+        SortedMap<ByteKey, Result> treemapincl = new TreeMap<ByteKey, Result>();
+        try{
+            treemapincl = data.subMap(new ByteKey(start),new ByteKey(end));
+        }catch (IllegalArgumentException e){
+            return new BathValueImpl(treemapincl);
+        }
+        return new BathValueImpl(treemapincl);
+    }
+
+    class BathValueImpl implements BatchValue {
+
+        SortedMap<ByteKey, Result> subMap;
+        Iterator<Map.Entry<ByteKey, Result>> iterator;
+
+        public BathValueImpl(SortedMap<ByteKey, Result> sortedMap){
+            this.subMap = sortedMap;
+            iterator = sortedMap.entrySet().iterator();
+        }
+
+        @Override
+        public Result next() {
+            if (hasNext()) {
+//                return currBatchValue.next().toByteArray();
+                return iterator.next().getValue();
+            }else {
+                throw new NoSuchElementException("No more value to display");
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+            return iterator.hasNext();
+        }
     }
 
     @Override
