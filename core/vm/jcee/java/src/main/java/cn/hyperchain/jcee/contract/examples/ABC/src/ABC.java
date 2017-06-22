@@ -29,6 +29,8 @@ public class ABC extends ContractTemplate {
         switch (funcName){
             case "newAccount":
                 return newAccount(args);
+            case "getAccount":
+                return getAccount(args);
             case "pubOrderInfo":
                 return pubOrderInfo(args);
             case "issueDraftApply":
@@ -38,7 +40,7 @@ public class ABC extends ContractTemplate {
             case "getDraft":
                 return getDraft(args);
             default:
-                return result(false,funcName+"does not exist");
+                return result(false,funcName+" does not exist");
 
         }
     }
@@ -72,6 +74,21 @@ public class ABC extends ContractTemplate {
         }
 
         return result(true);
+    }
+
+    public ExecuteResult getAccount(List<String> args){
+        String accountNumber = args.get(0);
+        Result result = ledger.get(accountPrefix +accountNumber);
+        String msg;
+        if(result.isEmpty() ){
+            msg = "the accountNumber does not exist";
+            logger.error(msg);
+            return result(false,msg);
+        }
+        Account account = result.toObeject(Account.class);
+
+        return result(true,account);
+
     }
 
     public ExecuteResult pubOrderInfo(List<String> args){
@@ -271,15 +288,27 @@ public class ABC extends ContractTemplate {
         ledger.put(account1.getAccountNumber(),account1);
         ledger.put(account2.getAccountNumber(),account2);
 
-        logger.info(ledger.get("A1").toString());
+        result = ledger.get("A1");
+        if(!result.isEmpty()){
+            Account account = result.toObeject(Account.class);
+            logger.info(account.getAccountNumber());
+        }
 
         BatchKey bk = ledger.newBatchKey();
-        bk.put("A1");
-        bk.put("A2");
+        byte[] key1 = "A1".getBytes();
+        byte[] key2 = "A2".getBytes();
+        bk.put(key1);
+        bk.put(key2);
 
         Batch batch = ledger.batchRead(bk);
 
-        logger.info(batch.get("A1").toString());
+        result = batch.get(key1);
+        if(!result.isEmpty()){
+            Account account = result.toObeject(Account.class);
+            logger.info(account.getAccountNumber());
+        }
+
+//        logger.info(batch.get("A1").toString());
         return result(true);
     }
 
