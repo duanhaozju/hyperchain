@@ -1,13 +1,12 @@
-package cn.hyperchain.jcee.contract.examples.sb;
+package cn.hyperchain.jcee.mock.test;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.contract.examples.sb.src.SimulateBank;
 import cn.hyperchain.jcee.mock.MockServer;
+import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * Created by huhu on 2017/6/21.
@@ -15,6 +14,8 @@ import java.util.List;
 public class SimulateBankTest {
 
     private static MockServer server = new MockServer();
+    protected static Logger logger = Logger.getLogger(SimulateBankTest.class);
+
 
     public static String deploy(ContractTemplate ct){
         String cid = server.deploy(ct);
@@ -29,7 +30,7 @@ public class SimulateBankTest {
         server.invoke("issue",Arrays.asList(issueArgs));
 
         ExecuteResult result = server.invoke("getAccountBalance",Arrays.asList(getArgs));
-        System.out.println(result.getResult());
+        logger.info(result.getResult());
 
     }
 
@@ -43,8 +44,8 @@ public class SimulateBankTest {
     public static void main(String[] args) {
         SimulateBank sb = new SimulateBank();
         deploy(sb);
-//        testIssueAndGetBalance();
-//        testRangeQuery();
+        testIssueAndGetBalance();
+        testRangeQuery();
         testDelete();
     }
 

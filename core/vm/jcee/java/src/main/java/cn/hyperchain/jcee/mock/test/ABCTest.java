@@ -1,10 +1,9 @@
-package cn.hyperchain.jcee.contract.examples.ABC;
+package cn.hyperchain.jcee.mock.test;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.contract.examples.ABC.src.ABC;
 import cn.hyperchain.jcee.contract.examples.ABC.src.Account;
-import cn.hyperchain.jcee.contract.examples.sb.src.SimulateBank;
 import cn.hyperchain.jcee.mock.MockServer;
 
 import java.util.Arrays;
@@ -60,8 +59,8 @@ public class ABCTest {
     public static void main(String[] args) {
         ABC abc = new ABC();
         deploy(abc);
-//        testNewAndGetAccount();
-//        testIssueDraft();
+        testNewAndGetAccount();
+        testIssueDraft();
         testBatch();
     }
 }
