@@ -24,7 +24,7 @@ public class MockLedger extends AbstractLedger {
     }
 
     class BatchImpl implements Batch{
-        private Map<byte[], Result> data;
+        private Map<ByteKey, Result> data;
         private MockLedger ledger;
 
         public BatchImpl(MockLedger ledger) {
@@ -33,22 +33,25 @@ public class MockLedger extends AbstractLedger {
         }
 
         public Result get(byte[] key) {
-            return this.data.get(key);
+            Result result = this.data.get(new ByteKey(key));
+            if(result == null){
+                return new Result(ByteString.EMPTY);
+            }
+            return result;
         }
 
         @Override
         public Result get(String key){
-            byte[] k = key.getBytes();
-            return this.data.get(k);
+            return get(key.getBytes());
         }
 
 
         @Override
         public void put(byte[] key, byte[] value) {
             if(value == null || value.length == 0 ){
-                data.put(key,new Result(ByteString.EMPTY));
+                data.put(new ByteKey(key),new Result(ByteString.EMPTY));
             }else {
-                data.put(key, new Result(ByteString.copyFrom(value)));
+                data.put(new ByteKey(key), new Result(ByteString.copyFrom(value)));
             }
         }
 
@@ -79,9 +82,9 @@ public class MockLedger extends AbstractLedger {
 
         public ContractProto.BatchKV toBatchKV() {
             ContractProto.BatchKV.Builder builder  = ContractProto.BatchKV.newBuilder();
-            for(Map.Entry<byte[], Result> kv: data.entrySet()) {
+            for(Map.Entry<ByteKey, Result> kv: data.entrySet()) {
                 ContractProto.KeyValue keyValue = ContractProto.KeyValue.newBuilder()
-                        .setK(ByteString.copyFrom(kv.getKey()))
+                        .setK(ByteString.copyFrom(kv.getKey().getKey()))
                         .setV(kv.getValue().getValue())
                         .build();
                 builder.addKv(keyValue);

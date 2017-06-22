@@ -51,10 +51,15 @@ public class ABCTest {
 
 
     }
+
+    public static void testBatch(){
+        server.invoke("testBatch",Arrays.asList(new String[]{}));
+    }
     public static void main(String[] args) {
         ABC abc = new ABC();
         deploy(abc);
 //        testNewAndGetAccount();
-        testIssueDraft();
+//        testIssueDraft();
+        testBatch();
     }
 }
