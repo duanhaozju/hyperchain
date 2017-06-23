@@ -33,12 +33,12 @@ func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Tr
 		return common.Hash{}, er.EmptyPointerErr
 	}
 	if flush == false {
-		err, data := edb.GetMarshalTransaction(transaction)
+		// put transaction to buffer temporarily
+		data, err := edb.EncodeTransaction(transaction)
 		if err != nil {
-			executor.logger.Errorf("[Namespace = %s] invalid transaction struct to marshal! error msg, ", executor.namespace, err.Error())
+			executor.logger.Errorf("[Namespace = %s] invalid receipt struct to marshal! error msg, ", executor.namespace, err.Error())
 			return common.Hash{}, err
 		}
-		// put transaction to buffer temporarily
 		executor.hashUtils.transactionBuffer = append(executor.hashUtils.transactionBuffer, data)
 		return common.Hash{}, nil
 	} else {
@@ -57,7 +57,7 @@ func (executor *Executor) calculateReceiptFingerprint(receipt *types.Receipt, fl
 		return common.Hash{}, er.EmptyPointerErr
 	}
 	if flush == false {
-		err, data := edb.GetMarshalReceipt(receipt)
+		data, err := edb.EncodeReceipt(receipt)
 		if err != nil {
 			executor.logger.Errorf("[Namespace = %s] invalid receipt struct to marshal! error msg, ", executor.namespace, err.Error())
 			return common.Hash{}, err

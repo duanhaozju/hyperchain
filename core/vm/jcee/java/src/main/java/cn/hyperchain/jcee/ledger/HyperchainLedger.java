@@ -4,6 +4,7 @@
  */
 package cn.hyperchain.jcee.ledger;
 
+import cn.hyperchain.jcee.mock.MockLedger;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
@@ -280,7 +281,7 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     class BatchImpl implements Batch{
-        private Map<byte[], Result> data;
+        private Map<ByteKey, Result> data;
         private HyperchainLedger ledger;
 
         public BatchImpl(HyperchainLedger ledger) {
@@ -289,7 +290,12 @@ public class HyperchainLedger extends AbstractLedger{
         }
 
         public Result get(byte[] key) {
-            return this.data.get(key);
+            Result result = this.data.get(new ByteKey(key));
+
+            if(result == null){
+                return new Result(ByteString.EMPTY);
+            }
+            return result;
         }
 
         @Override
@@ -297,10 +303,13 @@ public class HyperchainLedger extends AbstractLedger{
             return this.data.get(key.getBytes());
         }
 
-
         @Override
         public void put(byte[] key, byte[] value) {
-            data.put(key, new Result(ByteString.copyFrom(value)));
+            if(value == null || value.length == 0 ){
+                data.put(new ByteKey(key),new Result(ByteString.EMPTY));
+            }else {
+                data.put(new ByteKey(key), new Result(ByteString.copyFrom(value)));
+            }
         }
 
         @Override
@@ -330,9 +339,9 @@ public class HyperchainLedger extends AbstractLedger{
 
         public ContractProto.BatchKV toBatchKV() {
             ContractProto.BatchKV.Builder builder  = ContractProto.BatchKV.newBuilder();
-            for(Map.Entry<byte[], Result> kv: data.entrySet()) {
+            for(Map.Entry<ByteKey, Result> kv: data.entrySet()) {
                 ContractProto.KeyValue keyValue = ContractProto.KeyValue.newBuilder()
-                        .setK(ByteString.copyFrom(kv.getKey()))
+                        .setK(ByteString.copyFrom(kv.getKey().getKey()))
                         .setV(kv.getValue().getValue())
                         .build();
                 builder.addKv(keyValue);
@@ -387,9 +396,10 @@ public class HyperchainLedger extends AbstractLedger{
         }
 
         @Override
-        public byte[] next() {
+        public Result next() {
             if (hasNext()) {
-                return currBatchValue.next().toByteArray();
+                byte[] data = currBatchValue.next().toByteArray();
+                return new Result(ByteString.copyFrom(data));
             }else {
                 throw new NoSuchElementException("No more value to display");
             }

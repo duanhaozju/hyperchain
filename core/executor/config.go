@@ -1,6 +1,9 @@
 package executor
 
-import "time"
+import (
+	"time"
+	"hyperchain/common"
+)
 
 const (
 	STATEDB               = "state"
@@ -76,4 +79,8 @@ func (executor *Executor) GetSyncMaxBatchSize() uint64 {
 
 func (executor *Executor) GetSyncResendInterval() time.Duration {
 	return executor.conf.GetDuration(syncChainResendInterval)
+}
+
+func (executor *Executor) isJvmEnable() bool {
+	return executor.conf.GetBool(common.C_JVM_START)
 }
