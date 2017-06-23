@@ -34,13 +34,13 @@ func GetReceipt(namespace string, txHash common.Hash) *types.ReceiptTrans {
 }
 
 // Persist receipt content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
-func PersistReceipt(batch db.Batch, receipt *types.Receipt, flush bool, sync bool) (error, []byte) {
+func PersistReceipt(batch db.Batch, receipt *types.Receipt, flush bool, sync bool, extra ...interface{}) (error, []byte) {
 	// check pointer value
 	if receipt == nil || batch == nil {
 		return EmptyPointerErr, nil
 	}
 
-	err, data := encapsulateReceipt(receipt)
+	err, data := encapsulateReceipt(receipt, extra...)
 	if err != nil {
 		return err, nil
 	}
@@ -59,17 +59,24 @@ func PersistReceipt(batch db.Batch, receipt *types.Receipt, flush bool, sync boo
 }
 
 // encapsulateReceipt - encapsulate receipt with a wrapper for specify receipt structure version.
-func encapsulateReceipt(receipt *types.Receipt) (error, []byte) {
+func encapsulateReceipt(receipt *types.Receipt, extra ...interface{}) (error, []byte) {
+	version := ReceiptVersion
 	if receipt == nil {
 		return EmptyPointerErr, nil
 	}
-	receipt.Version = []byte(ReceiptVersion)
+	if len(extra) > 0 {
+		// parse version
+		if tmp, ok := extra[0].(string); ok {
+			version = tmp
+		}
+	}
+	receipt.Version = []byte(version)
 	data, err := proto.Marshal(receipt)
 	if err != nil {
 		return err, nil
 	}
 	wrapper := &types.ReceiptWrapper{
-		ReceiptVersion: []byte(ReceiptVersion),
+		ReceiptVersion: []byte(version),
 		Receipt:        data,
 	}
 	data, err = proto.Marshal(wrapper)

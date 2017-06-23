@@ -51,12 +51,12 @@ func GetTransaction(namespace string, key []byte) (*types.Transaction, error) {
 }
 
 // Persist transaction content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
-func PersistTransaction(batch db.Batch, transaction *types.Transaction, flush bool, sync bool) (error, []byte) {
+func PersistTransaction(batch db.Batch, transaction *types.Transaction, flush bool, sync bool, extra ...interface{}) (error, []byte) {
 	// check pointer value
 	if transaction == nil || batch == nil {
 		return EmptyPointerErr, nil
 	}
-	err, data := encapsulateTransaction(transaction)
+	err, data := encapsulateTransaction(transaction, extra...)
 	if err != nil {
 		return err, nil
 	}
@@ -75,17 +75,24 @@ func PersistTransaction(batch db.Batch, transaction *types.Transaction, flush bo
 }
 
 // wrap transaction
-func encapsulateTransaction(transaction *types.Transaction) (error, []byte) {
+func encapsulateTransaction(transaction *types.Transaction, extra ...interface{}) (error, []byte) {
+	version := TransactionVersion
 	if transaction == nil {
 		return EmptyPointerErr, nil
 	}
-	transaction.Version = []byte(TransactionVersion)
+	if len(extra) > 0 {
+		// parse version
+		if tmp, ok := extra[0].(string); ok {
+			version = tmp
+		}
+	}
+	transaction.Version = []byte(version)
 	data, err := proto.Marshal(transaction)
 	if err != nil {
 		return err, nil
 	}
 	wrapper := &types.TransactionWrapper{
-		TransactionVersion: []byte(TransactionVersion),
+		TransactionVersion: []byte(version),
 		Transaction:        data,
 	}
 	data, err = proto.Marshal(wrapper)
@@ -96,14 +103,14 @@ func encapsulateTransaction(transaction *types.Transaction) (error, []byte) {
 }
 
 // Persist transactions content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
-func PersistTransactions(batch db.Batch, transactions []*types.Transaction, version string, flush bool, sync bool) error {
+func PersistTransactions(batch db.Batch, transactions []*types.Transaction, version string, flush bool, sync bool, extra ...interface{}) error {
 	// check pointer value
 	if transactions == nil || batch == nil {
 		return EmptyPointerErr
 	}
 	// process
 	for _, transaction := range transactions {
-		err, data := encapsulateTransaction(transaction)
+		err, data := encapsulateTransaction(transaction, extra...)
 		if err != nil {
 			return err
 		}

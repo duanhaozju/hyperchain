@@ -161,8 +161,16 @@ func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 
 func (executor *Executor) persistTransactions(batch db.Batch, transactions []*types.Transaction, blockNumber uint64) error {
 	for i, transaction := range transactions {
-		if err, _ := edb.PersistTransaction(batch, transaction, false, false); err != nil {
-			return err
+		if transaction.Version != nil {
+			// transaction has add version tag, use original version tag
+			if err, _ := edb.PersistTransaction(batch, transaction, false, false, string(transaction.Version)); err != nil {
+				return err
+			}
+		} else {
+			// use default version tag
+			if err, _ := edb.PersistTransaction(batch, transaction, false, false); err != nil {
+				return err
+			}
 		}
 		// persist transaction meta data
 		meta := &types.TransactionMeta{
@@ -188,10 +196,16 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 			log.BlockHash = blockHash
 			log.BlockNumber = blockNumber
 		}
-		//TODO: why need a iterate to find the final blockHash and blockNumber
 		receipt.SetLogs(logs)
-		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
-			return err
+
+		if receipt.Version != nil {
+			if err, _ := edb.PersistReceipt(batch, receipt, false, false, string(receipt.Version)); err != nil {
+				return err
+			}
+		} else {
+			if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
