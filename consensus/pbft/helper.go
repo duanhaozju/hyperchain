@@ -143,8 +143,10 @@ func (pbft *pbftImpl) handleCachedTxs(cache map[uint64]*transactionStore) {
 func (pbft *pbftImpl) cleanAllCache() {
 
 	for idx := range pbft.storeMgr.certStore {
-		delete(pbft.storeMgr.certStore, idx)
-		pbft.persistDelQPCSet(idx.v, idx.n)
+		if idx.n > pbft.exec.lastExec {
+			delete(pbft.storeMgr.certStore, idx)
+			pbft.persistDelQPCSet(idx.v, idx.n)
+		}
 	}
 
 	pbft.vcMgr.viewChangeStore = make(map[vcidx]*ViewChange)
