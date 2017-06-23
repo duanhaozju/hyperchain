@@ -8,6 +8,7 @@ import (
 	"sort"
 	"sync"
 	er "hyperchain/core/errors"
+	"fmt"
 )
 
 // represent a validation result
@@ -172,7 +173,7 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 			continue
 		}
 		executor.calculateTransactionsFingerprint(tx, false)
-		executor.calculateReceiptFingerprint(receipt, false)
+		executor.calculateReceiptFingerprint(tx, receipt, false)
 		receipts = append(receipts, receipt)
 		validtxs = append(validtxs, tx)
 	}
@@ -181,6 +182,9 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 		executor.logger.Errorf("[Namespace = %s] submit validation result failed.", executor.namespace, err.Error())
 		return err, nil
 	}
+	fmt.Println("merkle root", common.Bytes2Hex(merkleRoot))
+	fmt.Println("tx root", common.Bytes2Hex(txRoot))
+	fmt.Println("receipt root", common.Bytes2Hex(receiptRoot))
 	executor.resetStateDb()
 	executor.logger.Debugf("[Namespace = %s] validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
 		executor.namespace, executor.getTempBlockNumber(), seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
@@ -223,7 +227,7 @@ func (executor *Executor) submitValidationResult() (error, []byte, []byte, []byt
 	merkleRoot := root.Bytes()
 	res, _ := executor.calculateTransactionsFingerprint(nil, true)
 	txRoot := res.Bytes()
-	res, _ = executor.calculateReceiptFingerprint(nil, true)
+	res, _ = executor.calculateReceiptFingerprint(nil, nil, true)
 	receiptRoot := res.Bytes()
 	executor.recordStateHash(root)
 	return nil, merkleRoot, txRoot, receiptRoot
