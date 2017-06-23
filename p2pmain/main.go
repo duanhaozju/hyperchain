@@ -20,6 +20,8 @@ func main(){
 	p2pManager,err := p2p.GetP2PManager(vip)
 	if err != nil{
 		panic("failed")
+	}else{
+		fmt.Println("p2p manager initlized.")
 	}
 
 	ev := new(event.TypeMux)

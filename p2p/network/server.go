@@ -96,11 +96,11 @@ func (s Server) Chat(ccServer Chat_ChatServer) error{
 		}
 		go func(in *pb.Message){
 			fmt.Printf("chat got a message %+v \n",in)
-			if in.From == nil || in.From.Filed == nil{
+			if in.From == nil || in.From.Field == nil{
 				logger.Errorf("this msg (%+v) hasn't it's from filed, reject! \n",in)
 				return
 			}
-			slot,err := s.slots.GetSlot(string(in.From.Filed))
+			slot,err := s.slots.GetSlot(string(in.From.Field))
 			if err != nil{
 				logger.Info("got a unkown filed message: %v \n",in.MessageType)
 				return
@@ -123,10 +123,10 @@ func (s Server) Greeting(ctx context.Context, msg *pb.Message) (*pb.Message, err
 	if s.slots == nil{
 		return nil,errors.New(fmt.Sprintf("this server (%s) hasn't register any handler.cannot handle this massage",s.hostname))
 	}
-	if msg.From == nil || msg.From.Filed == nil{
+	if msg.From == nil || msg.From.Field == nil{
 		return nil,errors.New(fmt.Sprintf("this msg (%+v) hasn't it's from filed, reject!",msg))
 	}
-	slot,err := s.slots.GetSlot(string(msg.From.Filed))
+	slot,err := s.slots.GetSlot(string(msg.From.Field))
 	if err != nil{
 		return nil,err
 	}
@@ -147,10 +147,10 @@ func(s Server) Whisper(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	if s.slots == nil{
 		return nil,errors.New(fmt.Sprintf("this server (%s) hasn't register any handler.cannot handle this massage",s.hostname))
 	}
-	if msg.From == nil || msg.From.Filed == nil{
+	if msg.From == nil || msg.From.Field == nil{
 		return nil,errors.New(fmt.Sprintf("this msg (%+v) hasn't it's from filed, reject!",msg))
 	}
-	solt,err := s.slots.GetSlot(string(msg.From.Filed))
+	solt,err := s.slots.GetSlot(string(msg.From.Field))
 	if err != nil{
 		return nil,err
 	}

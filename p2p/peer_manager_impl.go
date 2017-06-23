@@ -29,6 +29,9 @@ type peerManagerImpl struct {
 }
 //todo rename new function
 func NewPeerManagerImpl(namespace string,peercnf *viper.Viper,ev *event.TypeMux, net *network.HyperNet) (*peerManagerImpl, error) {
+	if net == nil{
+		return nil,errors.New("the P2P manager hasn't initlized.")
+	}
 	N := peercnf.GetInt("self.N")
 	if N < 4 {
 		return nil, errors.New(fmt.Sprintf("invalid N: %d", N))

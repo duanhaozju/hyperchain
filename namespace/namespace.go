@@ -21,6 +21,8 @@ import (
 	"hyperchain/p2p"
 	"sync"
 	"time"
+	"fmt"
+	"github.com/terasum/lettor/utils"
 )
 
 //Namespace represent the namespace instance
@@ -113,7 +115,7 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 	}
 
 	nsInfo, err := NewNamespaceInfo(conf.GetString(common.PEER_CONFIG_PATH), name, common.GetLogger(name, "namespace"))
-	//nsInfo.PrintInfo()
+	nsInfo.PrintInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -146,11 +148,17 @@ func (ns *namespaceImpl) init() error {
 	}
 	ns.caMgr = cm
 
-	// N
-	N := 4
+
+	peerconf := ns.conf.GetString(common.PEER_CONFIG13_PATH)
+	if !utils.Exist(peerconf) {
+		panic("cannot find the peer config")
+	}
+	fmt.Println("peerconf path is",peerconf)
+	//peerconf := "/home/chenquan/Workspace/go/src/hyperchain/p2p/test/peerconfig.yaml"
 
 	//3. init peer manager to start grpc server and client
-	peerMgr, err := p2p.GetPeerManager(ns.Name(),ns.conf,ns.eventMux)
+	logger.Warning("getPeerManager for",ns.Name())
+	peerMgr, err := p2p.GetPeerManager(ns.Name(),peerconf,ns.eventMux)
 	if err != nil {
 		ns.logger.Error(err)
 		return err
@@ -235,24 +243,29 @@ func (ns *namespaceImpl) Start() error {
 	// TODO fix this, if need go or not @chenquan
 	ns.peerMgr.Start()
 
-	initType := <-ns.peerMgr.GetInitType()
-	switch initType {
-	case p2p.START_NORMAL:
-		{
-			ns.passRouters()
-			ns.negotiateView()
-		} // TODO: add other init type
-	case p2p.START_ADDNEW:{
-		//TODO
-		ns.logger.Errorf("unimplements init type %v", initType)
-	}
-	case p2p.START_RECONNECT:{
-		//TODO
-		ns.logger.Errorf("unimplements init type %v", initType)
-	}
-	default:
-		ns.logger.Errorf("unimplements init type %v", initType)
-	}
+	fmt.Println("start insert")
+	//initType := initType<-ns.peerMgr.GetInitType()
+	fmt.Println("get!")
+	<- time.After(20 * time.Second)
+	ns.passRouters()
+	ns.negotiateView()
+	//switch initType {
+	//case p2p.START_NORMAL:
+	//	{
+	//		ns.passRouters()
+	//		ns.negotiateView()
+	//	} // TODO: add other init type
+	//case p2p.START_ADDNEW:{
+	//	//TODO
+	//	ns.logger.Errorf("unimplements init type %v", initType)
+	//}
+	//case p2p.START_RECONNECT:{
+	//	//TODO
+	//	ns.logger.Errorf("unimplements init type %v", initType)
+	//}
+	//default:
+	//	ns.logger.Errorf("unimplements init type %v", initType)
+	//}
 	//5.start request processor
 	ns.rpc.Start()
 	ns.status.setState(running)

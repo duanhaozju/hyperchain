@@ -108,6 +108,10 @@ do
 
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
+    #peerconfig.yaml
+    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.yaml
+    #namespace's global
+    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/global_${j}.yaml ${DUMP_PATH}/node${j}/global.yaml
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
     cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
 
@@ -286,15 +290,15 @@ if  $REBUILD ; then
     f_rebuild
 fi
 
-if $HYPERCLI ; then
-    f_rebuild_hypercli
-fi
+#if $HYPERCLI ; then
+#    f_rebuild_hypercli
+#fi
 
 # distribute files
 f_distribute $MAXPEERNUM
 
 # run hyperchain node
-start_hyperjvm
+#start_hyperjvm
 
 if ${RUN}; then
     f_run_process

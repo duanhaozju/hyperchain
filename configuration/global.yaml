@@ -40,7 +40,7 @@ global:
             eventhub: "NOTICE"
 
     hypervm:
-        jvm: true
+        jvm: false
 
     namespace:
         # start which namespaces when node starts

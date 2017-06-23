@@ -9,12 +9,15 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"time"
+	"hyperchain/p2p"
+	"github.com/spf13/viper"
 	"fmt"
 )
 
 type hyperchain struct {
 	nsMgr       namespace.NamespaceManager
 	hs          jsonrpc.HttpServer
+	p2pmgr 	    p2p.P2PManager
 	stopFlag    chan bool
 	restartFlag chan bool
 	args        *argT
@@ -29,6 +32,24 @@ func newHyperchain(argV *argT) *hyperchain {
 
 	globalConfig := common.NewConfig(hp.args.ConfigPath)
 	common.InitHyperLoggerManager(globalConfig)
+	//P2P module MUST Start before namespace server
+	vip := viper.New()
+	vip.SetConfigFile(hp.args.ConfigPath)
+	err := vip.ReadInConfig()
+	if err != nil{
+		panic(err)
+	}
+	//vip.Set("global.p2p.hosts", utils.GetProjectPath()+"/p2p/test/hosts.yaml")
+	//vip.Set("global.p2p.retrytime", "3s")
+	//vip.Set("global.p2p.port",50019)
+	p2pManager,err  := p2p.GetP2PManager(vip)
+	if err != nil{
+		panic(err)
+	}else {
+		fmt.Println("p2pmanager started.")
+	}
+	hp.p2pmgr = p2pManager
+
 	//
 	//common.InitLog(globalConfig)
 
@@ -72,11 +93,11 @@ var (
 
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("Recovered in f", r)
-			}
-		}()
+		//defer func() {
+		//	if r := recover(); r != nil {
+		//		fmt.Println("Recovered in f", r)
+		//	}
+		//}()
 		argv := ctx.Argv().(*argT)
 		hp := newHyperchain(argv)
 		hp.start()

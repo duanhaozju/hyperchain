@@ -1,0 +1,50 @@
+###########################################################
+#  _   _                        ____ _           _        #
+# | | | |_   _ _ __   ___ _ __ / ___| |__   __ _(_)_ __   #
+# | |_| | | | | '_ \ / _ \ '__| |   | '_ \ / _\` | | '_ \ #
+# |  _  | |_| | |_) |  __/ |  | |___| | | | (_| | | | | | #
+# |_| |_|\__, | .__/ \___|_|   \____|_| |_|\__,_|_|_| |_| #
+#        |___/|_|                                         #
+###########################################################
+
+global:
+    #namespace config dir root path
+    nsConfigRootPath: "./namespaces"
+
+    ######################################################
+    # config log's level by module                       #
+    #                                                    #
+    # CRITICAL ERROR WARNING NOTICE INFO DEBUG           #
+    # high <------------- log level -------> low         #
+    #                                                    #
+    ######################################################
+    logs:
+        # dump the log file or not
+        dumpfile: true
+        newLogFileInterval: 24h  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+                                 # such as "300ms", "2h45m".
+
+        logsdir: "./logs"
+
+        loglevel: "NOTICE"
+        # default loglevel for all modules which can be override by module level log setting
+        file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
+        console_format: "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
+
+        module:
+            #set log level by module
+            p2p: "NOTICE"
+            consensus: "NOTICE"
+            core: "NOTICE"
+            hyperdb: "NOTICE"
+            eventhub: "NOTICE"
+    p2p:
+        hosts: "./hosts.yaml"
+        port: 50014
+        retrytime: 3s
+    namespace:
+        # start which namespaces when node starts
+        start:
+            global: true
+            ns1: false
+            ns2: false

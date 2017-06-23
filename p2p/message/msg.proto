@@ -11,8 +11,8 @@ syntax="proto3";
 package message;
 
 import "hyperchain/p2p/hts/certificate.proto";
-import "hyperchain/p2p/message/endpoint.proto";
-import "hyperchain/p2p/message/msg_type.proto";
+import "endpoint.proto";
+import "msg_type.proto";
 
 message Message{
     MsgType MessageType  = 1;

@@ -18,7 +18,7 @@ func init(){
 		env = strings.Split(env,":")[0]
 	}
 	projectPath = env+"/src/hyperchain"
-	conf = NewConfigReader(projectPath+"/p2p/peerComm/test/test_peerconfig.json")
+	//conf = NewConfigReader(projectPath+"/p2p/peerComm/test/test_peerconfig.json")
 
 }
 
@@ -105,29 +105,29 @@ func TestConfigReader_IsVP(t *testing.T) {
 func TestConfigReader_GetMaxPeerNumber(t *testing.T) {
 	assert.Equal(t,conf.MaxNum(),7)
 }
-
-func TestConfigReader_DelNodesAndPersist(t *testing.T) {
-	peerlist := make(map[string]message.PeerAddr)
-	p1 := message.NewPeerAddr("127.0.0.1", 8005, 8085, 5)
-	p2 := message.NewPeerAddr("127.0.0.1", 8006, 8086, 6)
-	p3 := message.NewPeerAddr("127.0.0.1", 8007, 8087, 7)
-	peerlist[p1.Hash] = *p1
-	peerlist[p2.Hash] = *p2
-	peerlist[p3.Hash] = *p3
-	conf := NewConfigReader("./test/local_peerconfig.json")
-	conf.DelNodesAndPersist(peerlist)
-	assert.Equal(t,conf.MaxNum(),4)
-}
-
-func TestConfigReader_AddNodesAndPersist(t *testing.T) {
-peerlist := make(map[string]message.PeerAddr)
-	p1 := message.NewPeerAddr("127.0.0.1", 8005, 8085, 5)
-	p2 := message.NewPeerAddr("127.0.0.1", 8006, 8086, 6)
-	p3 := message.NewPeerAddr("127.0.0.1", 8007, 8087, 7)
-	peerlist[p1.Hash] = *p1
-	peerlist[p2.Hash] = *p2
-	peerlist[p3.Hash] = *p3
-	conf := NewConfigReader("./test/local_peerconfig.json")
-	conf.AddNodesAndPersist(peerlist)
-	assert.Equal(t,conf.MaxNum(),7)
-}
+//
+//func TestConfigReader_DelNodesAndPersist(t *testing.T) {
+//	peerlist := make(map[string]message.PeerAddr)
+//	p1 := message.NewPeerAddr("127.0.0.1", 8005, 8085, 5)
+//	p2 := message.NewPeerAddr("127.0.0.1", 8006, 8086, 6)
+//	p3 := message.NewPeerAddr("127.0.0.1", 8007, 8087, 7)
+//	peerlist[p1.Hash] = *p1
+//	peerlist[p2.Hash] = *p2
+//	peerlist[p3.Hash] = *p3
+//	conf := NewConfigReader("./test/local_peerconfig.json")
+//	conf.DelNodesAndPersist(peerlist)
+//	assert.Equal(t,conf.MaxNum(),4)
+//}
+//
+//func TestConfigReader_AddNodesAndPersist(t *testing.T) {
+//peerlist := make(map[string]message.PeerAddr)
+//	p1 := message.NewPeerAddr("127.0.0.1", 8005, 8085, 5)
+//	p2 := message.NewPeerAddr("127.0.0.1", 8006, 8086, 6)
+//	p3 := message.NewPeerAddr("127.0.0.1", 8007, 8087, 7)
+//	peerlist[p1.Hash] = *p1
+//	peerlist[p2.Hash] = *p2
+//	peerlist[p3.Hash] = *p3
+//	conf := NewConfigReader("./test/local_peerconfig.json")
+//	conf.AddNodesAndPersist(peerlist)
+//	assert.Equal(t,conf.MaxNum(),7)
+//}

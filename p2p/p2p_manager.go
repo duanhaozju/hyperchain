@@ -26,33 +26,32 @@ type p2pManagerImpl struct {
 	conf *viper.Viper
 }
 
-var p2pManager *p2pManagerImpl
+var globalP2PManager *p2pManagerImpl
 //var logger = common.GetLogger(common.DEFAULT_LOG, "p2p")
 
 
 func GetP2PManager(vip *viper.Viper)(P2PManager,error){
-	var err error
-	if p2pManager == nil{
-		p2pManager,err = newP2PManager(vip)
+	if globalP2PManager == nil{
+		p2pManager,err := newP2PManager(vip)
 		if err != nil{
+			fmt.Errorf("fatal error %s",err.Error())
 			return nil,errors.New(fmt.Sprintf("there something wrong when get p2pmanager: %s",err.Error()))
 		}
+		globalP2PManager = p2pManager
+
 	}
-	return p2pManager,nil
+	return globalP2PManager,nil
 }
 
 //ClearP2PManager clear the global p2pmanger, this is for test
 func ClearP2PManager()error{
-	if p2pManager != nil{
-		p2pManager.hypernet.Stop()
-		p2pManager = nil
+	if globalP2PManager != nil{
+		globalP2PManager.hypernet.Stop()
+		globalP2PManager = nil
 	}
 	return nil
 }
 func newP2PManager(vip *viper.Viper)(*p2pManagerImpl,error){
-	if p2pManager != nil{
-		return p2pManager,nil
-	}
 	net,err :=network.NewHyperNet(vip)
 	if err !=nil{
 		return nil,err
@@ -85,7 +84,7 @@ func (mgr *p2pManagerImpl)Start() (err error) {
 //the interface method are same as hyperchain version 1.2, so all the high level
 //interface needn't modify.
 func GetPeerManager(namespace string, peerConfpath string,eventMux *event.TypeMux) (PeerManager,error){
-	if &p2pManager == nil{
+	if globalP2PManager == nil{
 		return nil,errors.New("the P2P manager hasn't been initlized, Fatal error")
 	}
 
@@ -99,13 +98,15 @@ func GetPeerManager(namespace string, peerConfpath string,eventMux *event.TypeMu
 	if err != nil{
 		return nil,errors.New(fmt.Sprintf("connot readin the config file %s ,err: %s", peerConfpath,err.Error()))
 	}
-
-	return p2pManager.GetPeerManager(namespace, peerConf,eventMux)
+	return globalP2PManager.GetPeerManager(namespace, peerConf,eventMux)
 }
 
 
 //GetPeerManager get a peermanager instance, every namespace has an independent instance
 func (p2pmgr *p2pManagerImpl) GetPeerManager(namespace string,peerConf *viper.Viper,eventMux *event.TypeMux)(PeerManager,error){
+	if p2pmgr == nil{
+		return nil,errors.New("the p2p manager hasn't initlized, please check this.")
+	}
 	return NewPeerManagerImpl(namespace,peerConf,eventMux,p2pmgr.hypernet)
 }
 

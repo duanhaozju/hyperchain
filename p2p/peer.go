@@ -37,7 +37,7 @@ func NewPeer(namespace string,hostname string,id int,net *network.HyperNet)*Peer
 func (peer *Peer)Chat(in *pb.Message) (*pb.Message, error){
 	//here will wrapper the message
 	in.From = &pb.Endpoint{
-		Filed : []byte(peer.namespace),
+		Field : []byte(peer.namespace),
 		Hostname : []byte(peer.hostname),
 		UUID : []byte(peer.info.GetHash()),
 		Version : 13,
