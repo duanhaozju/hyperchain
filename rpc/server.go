@@ -273,6 +273,8 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 				return
 			}
 			var rm *requestManager
+
+			s.reqMgrMu.Lock()
 			if _, ok := s.requestMgr[name]; !ok {
 				rm = NewRequestManager(name, s)
 				s.requestMgr[name] = rm
@@ -280,6 +282,8 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 			} else {
 				rm = s.requestMgr[name]
 			}
+			s.reqMgrMu.Unlock()
+
 			rm.requests <- request
 			result <- (<-rm.response)
 			return

@@ -5,7 +5,7 @@ package node
 import (
 	"fmt"
 	"github.com/urfave/cli"
-	"hyperchain/api/jsonrpc/core"
+	"hyperchain/rpc"
 	"hyperchain/hypercli/common"
 	"strconv"
 )

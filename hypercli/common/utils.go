@@ -11,7 +11,7 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/crypto"
 	"encoding/json"
-	"hyperchain/api/jsonrpc/core"
+	"hyperchain/rpc"
 	"strings"
 	"errors"
 	"time"
