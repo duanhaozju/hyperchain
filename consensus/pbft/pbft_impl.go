@@ -1022,12 +1022,12 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	pbft.logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
 		pbft.id, cert.chkptCount, chkpt.SequenceNumber, chkpt.Id)
 
-	if cert.chkptCount == pbft.f + 1 {
+	if cert.chkptCount == pbft.oneCorrectQuorum() {
 		// We do have a weak cert
 		pbft.witnessCheckpointWeakCert(chkpt)
 	}
 
-	if cert.chkptCount < pbft.intersectionQuorum() {
+	if cert.chkptCount < pbft.commonCaseQuorum() {
 		// We do not have a quorum yet
 		return nil
 	}
@@ -1113,7 +1113,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 
 		// If f+1 other replicas have reported checkpoints that were (at one time) outside our watermarks
 		// we need to check to see if we have fallen behind.
-		if len(pbft.storeMgr.hChkpts) >= pbft.f + 1 {
+		if len(pbft.storeMgr.hChkpts) >= pbft.oneCorrectQuorum() {
 			chkptSeqNumArray := make([]uint64, len(pbft.storeMgr.hChkpts))
 			index := 0
 			for replicaID, hChkpt := range pbft.storeMgr.hChkpts {
@@ -1128,7 +1128,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 			// If f+1 nodes have issued checkpoints above our high water mark, then
 			// we will never record 2f+1 checkpoints for that sequence number, we are out of date
 			// (This is because all_replicas - missed - me = 3f+1 - f - 1 = 2f)
-			if m := chkptSeqNumArray[len(chkptSeqNumArray) - (pbft.f + 1)]; m > H {
+			if m := chkptSeqNumArray[len(chkptSeqNumArray) - pbft.oneCorrectQuorum()]; m > H {
 				if pbft.exec.lastExec >= chkpt.SequenceNumber {
 					pbft.logger.Warningf("Replica %d is ahead of others, waiting others catch up", pbft.id)
 					return true
@@ -1154,7 +1154,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 func (pbft *pbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 
 	// Only ever invoked for the first weak cert, so guaranteed to be f+1
-	checkpointMembers := make([]uint64, pbft.f + 1)
+	checkpointMembers := make([]uint64, pbft.oneCorrectQuorum())
 	i := 0
 	for testChkpt := range pbft.storeMgr.checkpointStore {
 		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.Id == chkpt.Id {

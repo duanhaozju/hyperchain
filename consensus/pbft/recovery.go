@@ -163,7 +163,7 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 
 	pbft.recoveryMgr.negoViewRspStore[nvr.ReplicaId] = nvr
 
-	if len(pbft.recoveryMgr.negoViewRspStore) >= 2*pbft.f+1 {
+	if len(pbft.recoveryMgr.negoViewRspStore) >= pbft.commonCaseQuorum() {
 		// Reason for not using '> pbft.N-pbft.f': if N==5, we are require more than we need
 		// Reason for not using '≥ pbft.N-pbft.f': if self is wrong, then we are impossible to find 2f+1 same view
 		// can we find same view from 2f+1 peers?
@@ -194,7 +194,7 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			}
 		}
 		for rs, count := range viewCount {
-			if count >= uint64(2*pbft.f) && rs.view != pbft.view {
+			if count >= uint64(pbft.commonCaseQuorum()-1) && rs.view != pbft.view {
 				spFind = true
 				view = rs.view
 				n = int(rs.n)
@@ -347,10 +347,10 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	}
 	pbft.recoveryMgr.rcRspStore[from] = rsp
 
-	if len(pbft.recoveryMgr.rcRspStore) < 2*pbft.f+1 {
+	if len(pbft.recoveryMgr.rcRspStore) < pbft.commonCaseQuorum() {
 		// Reason for not using '≤ pbft.N-pbft.f': if N==5, we are require more than we need
 		pbft.logger.Debugf("Replica %d recv recoveryRsp from replica %d, rsp count: %d, not "+
-			"beyond %d", pbft.id, rsp.ReplicaId, len(pbft.recoveryMgr.rcRspStore), 2*pbft.f+1)
+			"beyond %d", pbft.id, rsp.ReplicaId, len(pbft.recoveryMgr.rcRspStore), pbft.commonCaseQuorum())
 		return nil
 	}
 
@@ -483,7 +483,7 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []u
 	// In this case, others will move watermarks sooner or later.
 	// Hopefully, we find only one chkpt which reaches 2f+1 and this chkpt is their pbft.h
 	for ci, peers := range chkpts {
-		if len(peers) >= pbft.minimumCorrectQuorum() {
+		if len(peers) >= pbft.oneCorrectQuorum() {
 			find = true
 			if ci.n >= n {
 				if ci.n > n {
@@ -520,7 +520,7 @@ func (pbft *pbftImpl) findLastExecQuorum() (lastExec uint64, hash string, find b
 			lastExecs[idx] = replicas
 		}
 
-		if len(lastExecs[idx]) >= pbft.minimumCorrectQuorum() {
+		if len(lastExecs[idx]) >= pbft.oneCorrectQuorum() {
 			lastExec = idx.height
 			hash = idx.hash
 			find = true
@@ -632,7 +632,7 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 	}
 	pbft.recoveryMgr.rcPQCSenderStore[sender] = true
 
-	if len(pbft.recoveryMgr.rcPQCSenderStore) > pbft.f+1 {
+	if len(pbft.recoveryMgr.rcPQCSenderStore) > pbft.oneCorrectQuorum() {
 		pbft.logger.Debugf("Replica %d already receive %d returnPQC", pbft.id, len(pbft.recoveryMgr.rcPQCSenderStore))
 		pbft.pbftTimerMgr.stopTimer(RECOVERY_RESTART_TIMER)
 	}

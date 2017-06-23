@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"sync/atomic"
+	"math"
 )
 
 // =============================================================================
@@ -156,30 +157,18 @@ func (pbft *pbftImpl) cleanAllCache() {
 
 }
 
-// =============================================================================
-// prepare/commit quorum checks helper
-// =============================================================================
-
-func (pbft *pbftImpl) preparedReplicasQuorum() int {
-	return (2 * pbft.f)
-}
-
-func (pbft *pbftImpl) committedReplicasQuorum() int {
-	return (2*pbft.f + 1)
-}
-
-// intersectionQuorum returns the number of replicas that have to
-// agree to guarantee that at least one correct replica is shared by
-// two intersection quora
-func (pbft *pbftImpl) intersectionQuorum() int {
-	return (pbft.N + pbft.f + 2) / 2
+// When N=3F+1, this should be 2F+1 (N-F)
+// More generally, we need every two common case quorum of size X to intersect in at least F+1
+// hence 2X>=N+F+1
+func (pbft *pbftImpl) commonCaseQuorum() int {
+	return int(math.Ceil(float64(pbft.N+pbft.f+1)/float64(2)))
 }
 
 func (pbft *pbftImpl) allCorrectReplicasQuorum() int {
 	return (pbft.N - pbft.f)
 }
 
-func (pbft *pbftImpl) minimumCorrectQuorum() int {
+func (pbft *pbftImpl) oneCorrectQuorum() int {
 	return pbft.f + 1
 }
 
@@ -227,7 +216,7 @@ func (pbft *pbftImpl) prepared(digest string, v uint64, n uint64) bool {
 	pbft.logger.Debugf("Replica %d prepare count for view=%d/seqNo=%d: %d",
 		pbft.id, v, n, prepCount)
 
-	return prepCount >= pbft.preparedReplicasQuorum()
+	return prepCount >= pbft.commonCaseQuorum()-1
 }
 
 func (pbft *pbftImpl) onlyPrepared(digest string, v uint64, n uint64) bool {
@@ -240,7 +229,7 @@ func (pbft *pbftImpl) onlyPrepared(digest string, v uint64, n uint64) bool {
 
 	prepCount := len(cert.prepare)
 
-	return prepCount >= pbft.preparedReplicasQuorum()
+	return prepCount >= pbft.commonCaseQuorum()-1
 }
 
 func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
@@ -260,7 +249,7 @@ func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
 	pbft.logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
 		pbft.id, v, n, cmtCount)
 
-	return cmtCount >= pbft.intersectionQuorum()
+	return cmtCount >= pbft.commonCaseQuorum()
 }
 
 func (pbft *pbftImpl) onlyCommitted(digest string, v uint64, n uint64) bool {
@@ -276,7 +265,7 @@ func (pbft *pbftImpl) onlyCommitted(digest string, v uint64, n uint64) bool {
 	pbft.logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
 		pbft.id, v, n, cmtCount)
 
-	return cmtCount >= pbft.committedReplicasQuorum()
+	return cmtCount >= pbft.commonCaseQuorum()
 }
 
 // =============================================================================

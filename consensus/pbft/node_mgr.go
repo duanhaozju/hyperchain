@@ -254,7 +254,7 @@ func (pbft *pbftImpl) maybeUpdateTableForAdd(key string) error {
 	}
 
 	cert := pbft.getAddNodeCert(key)
-	if cert.addCount < pbft.committedReplicasQuorum() {
+	if cert.addCount < pbft.commonCaseQuorum() {
 		return nil
 	}
 
@@ -535,7 +535,7 @@ func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 	}
 
 	// We only enter this if there are enough agree-update-n messages but locally not inUpdateN
-	if agree.Flag && len(replicas) > pbft.f+1 && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
+	if agree.Flag && len(replicas) > pbft.oneCorrectQuorum() && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
 		pbft.logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForAdd",
 			pbft.id)
 		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
@@ -544,7 +544,7 @@ func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 	}
 
 	// We only enter this if there are enough agree-update-n messages but locally not inUpdateN
-	if !agree.Flag && len(replicas) >= pbft.f+1 && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
+	if !agree.Flag && len(replicas) >= pbft.oneCorrectQuorum() && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
 		pbft.logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForDel",
 			pbft.id)
 		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
@@ -1206,7 +1206,7 @@ func (pbft *pbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (ch
 
 	for idx, vcList := range checkpoints {
 		// need weak certificate for the checkpoint
-		if len(vcList) <= pbft.f { // type casting necessary to match types
+		if len(vcList) < pbft.oneCorrectQuorum() { // type casting necessary to match types
 			pbft.logger.Debugf("Replica %d has no weak certificate for n:%d, vcList was %d long",
 				pbft.id, idx.SequenceNumber, len(vcList))
 			continue
@@ -1222,7 +1222,7 @@ func (pbft *pbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (ch
 			}
 		}
 
-		if quorum < pbft.intersectionQuorum() {
+		if quorum < pbft.commonCaseQuorum() {
 			pbft.logger.Debugf("Replica %d has no quorum for n:%d", pbft.id, idx.SequenceNumber)
 			continue
 		}
@@ -1269,7 +1269,7 @@ func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uin
 					quorum++
 				}
 
-				if quorum < pbft.intersectionQuorum() {
+				if quorum < pbft.commonCaseQuorum() {
 					continue
 				}
 
@@ -1284,7 +1284,7 @@ func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uin
 					}
 				}
 
-				if quorum < pbft.f+1 {
+				if quorum < pbft.oneCorrectQuorum() {
 					continue
 				}
 
@@ -1309,7 +1309,7 @@ func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uin
 			quorum++
 		}
 
-		if quorum >= pbft.intersectionQuorum() {
+		if quorum >= pbft.commonCaseQuorum() {
 			// "then select the null request for number n"
 			msgList[n] = ""
 
@@ -1328,56 +1328,6 @@ func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uin
 	}
 
 	return
-}
-
-func (pbft *pbftImpl) sendPrePrepareForUpdate(reqBatch *TransactionBatch, digest string) {
-	pbft.logger.Debugf("Replica %d is primary, issuing pre-prepare for request batch %s", pbft.id, digest)
-	n := pbft.seqNo + 1
-
-	for _, cert := range pbft.storeMgr.certStore { // check for other PRE-PREPARE for same digest, but different seqNo
-		if p := cert.prePrepare; p != nil {
-			if p.View == pbft.view && p.SequenceNumber != n && p.BatchDigest == digest && digest != "" {
-				// This will happen if primary receive same digest result of txs
-				// It may result in DDos attack
-				pbft.logger.Warningf("Other pre-prepare found with same digest but different seqNo: %d instead of %d", p.SequenceNumber, n)
-				delete(pbft.batchVdr.validatedBatchStore, digest)
-				return
-			}
-		}
-	}
-
-	pbft.logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
-	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
-	pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
-	pbft.seqNo = n
-	preprep := &PrePrepare{
-		View:             pbft.view,
-		SequenceNumber:   n,
-		BatchDigest:      digest,
-		TransactionBatch: reqBatch,
-		ReplicaId:        pbft.id,
-	}
-	cert := pbft.storeMgr.getCert(pbft.view, n)
-	cert.prePrepare = preprep
-	cert.digest = digest
-	cert.sentValidate = true
-	cert.validated = true
-	pbft.persistQSet(preprep)
-
-	payload, err := proto.Marshal(preprep)
-	if err != nil {
-		pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-		return
-	}
-
-	consensusMsg := &ConsensusMessage{
-		Type:    ConsensusMessage_PRE_PREPARE,
-		Payload: payload,
-	}
-	msg := cMsgToPbMsg(consensusMsg, pbft.id)
-	pbft.helper.InnerBroadcast(msg)
-
-	pbft.maybeSendCommit(digest, pbft.view, n)
 }
 
 func (pbft *pbftImpl) processRequestsDuringUpdatingN() {

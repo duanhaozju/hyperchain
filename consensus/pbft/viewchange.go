@@ -301,7 +301,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 	}
 
 	// We only enter this if there are enough view change messages greater than our current view
-	if len(replicas) >= pbft.f + 1 {
+	if len(replicas) >= pbft.oneCorrectQuorum() {
 		pbft.logger.Warningf("Replica %d received f+1 view-change messages, triggering view-change to view %d",
 			pbft.id, minView)
 		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
@@ -588,8 +588,8 @@ outer:
 				}
 			}
 
-			if quorum < pbft.intersectionQuorum() {
-				pbft.logger.Debugf("Replica %d missing quorum of commit certificate for seqNo=%d, only has %d of %d", pbft.id, seqNo, quorum, pbft.intersectionQuorum())
+			if quorum < pbft.commonCaseQuorum() {
+				pbft.logger.Debugf("Replica %d missing quorum of commit certificate for seqNo=%d, only has %d of %d", pbft.id, seqNo, quorum, pbft.commonCaseQuorum())
 				continue
 			}
 
@@ -950,7 +950,7 @@ func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 
 	for idx, vcList := range checkpoints {
 		// need weak certificate for the checkpoint
-		if len(vcList) <= pbft.f {
+		if len(vcList) < pbft.oneCorrectQuorum() {
 			// type casting necessary to match types
 			pbft.logger.Debugf("Replica %d has no weak certificate for n:%d, vcList was %d long",
 				pbft.id, idx.SequenceNumber, len(vcList))
@@ -967,7 +967,7 @@ func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 			}
 		}
 
-		if quorum < pbft.intersectionQuorum() {
+		if quorum < pbft.commonCaseQuorum() {
 			pbft.logger.Debugf("Replica %d has no quorum for n:%d", pbft.id, idx.SequenceNumber)
 			continue
 		}
@@ -1014,7 +1014,7 @@ nLoop:
 					quorum++
 				}
 
-				if quorum < pbft.intersectionQuorum() {
+				if quorum < pbft.commonCaseQuorum() {
 					continue
 				}
 
@@ -1029,7 +1029,7 @@ nLoop:
 					}
 				}
 
-				if quorum < pbft.f + 1 {
+				if quorum < pbft.oneCorrectQuorum() {
 					continue
 				}
 
@@ -1054,7 +1054,7 @@ nLoop:
 			quorum++
 		}
 
-		if quorum >= pbft.intersectionQuorum() {
+		if quorum >= pbft.commonCaseQuorum() {
 			// "then select the null request for number n"
 			msgList[n] = ""
 
