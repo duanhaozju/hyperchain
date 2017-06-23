@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+#set -e
 # set environment
 f_set_env(){
     case "$OSTYPE" in
@@ -58,12 +58,13 @@ f_check_local_env(){
 
 # kill hyperchain process
 f_kill_process(){
-    echo "kill the bind port process"
-    PID=`ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}'`
-    if [ "$PID" != "" ]
-    then
-        ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}' | xargs kill -9
-    fi
+    #echo "kill the bind port process"
+    #PID=`ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}'`
+    #if [ "$PID" != "" ]
+    #then
+    #    ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}' | xargs kill -9
+    #fi
+	pkill hyperchain
 }
 
 # clear data
@@ -108,11 +109,14 @@ do
 
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
+    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/ns1/config/local_peerconfig.json
     #peerconfig.yaml
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.yaml
+    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/ns1/config/peerconfig.yaml
     #namespace's global
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/global_${j}.yaml ${DUMP_PATH}/node${j}/global.yaml
     cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
+    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/cert/
     cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
 
     # distribute hypercli

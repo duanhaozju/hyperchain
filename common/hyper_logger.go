@@ -58,6 +58,7 @@ func InitHyperLoggerManager(conf *Config) {
 	}
 
 	fileFormat := conf.GetString(LOG_FILE_FORMAT)
+	fmt.Println("1:file format", fileFormat)
 	hl.fileFormat = fileFormat
 	consoleFormat := conf.GetString(LOG_CONSOLE_FORMAT)
 	hl.consoleFormat = consoleFormat
@@ -208,6 +209,7 @@ func (hl *HyperLogger) init() {
 	}
 
 	fileFormat := conf.GetString(LOG_FILE_FORMAT)
+	fmt.Println("2: ", fileFormat)
 	hl.fileFormat = fileFormat
 	consoleFormat := conf.GetString(LOG_CONSOLE_FORMAT)
 	hl.consoleFormat = consoleFormat
