@@ -42,8 +42,12 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 		commonHash: kec256Hash,
 		encryption: encryption,
 		helper:     helper,
-		jvmCli:     jvm.NewContractExecutor(conf, namespace),
 	}
+
+	if executor.isJvmEnable() {
+		executor.jvmCli = jvm.NewContractExecutor(conf, namespace)
+	}
+
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.initDb()
 	return executor
@@ -94,12 +98,17 @@ func (executor *Executor) initialize() {
 	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()
 	go executor.syncReplica()
-	executor.jvmCli.Start()
+
+	if executor.isJvmEnable() {
+		executor.jvmCli.Start()
+	}
 }
 
 func (executor *Executor) finalize() {
 	executor.setExit()
-	executor.jvmCli.Stop()
+	if executor.isJvmEnable() {
+		executor.jvmCli.Stop()
+	}
 }
 
 // initializeExecutorStateDb - initialize statedb.
