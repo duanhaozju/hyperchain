@@ -5,6 +5,7 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	er "hyperchain/core/errors"
+	"hyperchain/core/db_utils/codec/v1.2"
 )
 
 type ExecutorHashUtil struct {
@@ -33,12 +34,23 @@ func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Tr
 		return common.Hash{}, er.EmptyPointerErr
 	}
 	if flush == false {
-		// put transaction to buffer temporarily
-		data, err := edb.EncodeTransaction(transaction)
+		var data []byte
+		var err  error
+		switch string(transaction.Version) {
+		case "1.0":
+			fallthrough
+		case "1.1":
+			fallthrough
+		case "1.2":
+			data, err = v1_2.EncodeTransaction(transaction)
+		case "1.3":
+			data, err = edb.EncodeTransaction(transaction)
+		}
 		if err != nil {
 			executor.logger.Errorf("[Namespace = %s] invalid receipt struct to marshal! error msg, ", executor.namespace, err.Error())
 			return common.Hash{}, err
 		}
+		// put transaction to buffer temporarily
 		executor.hashUtils.transactionBuffer = append(executor.hashUtils.transactionBuffer, data)
 		return common.Hash{}, nil
 	} else {
@@ -57,7 +69,18 @@ func (executor *Executor) calculateReceiptFingerprint(receipt *types.Receipt, fl
 		return common.Hash{}, er.EmptyPointerErr
 	}
 	if flush == false {
-		data, err := edb.EncodeReceipt(receipt)
+		var data []byte
+		var err  error
+		switch string(receipt.Version) {
+		case "1.0":
+			fallthrough
+		case "1.1":
+			fallthrough
+		case "1.2":
+			data, err = v1_2.EncodeReceipt(receipt)
+		case "1.3":
+			data, err = edb.EncodeReceipt(receipt)
+		}
 		if err != nil {
 			executor.logger.Errorf("[Namespace = %s] invalid receipt struct to marshal! error msg, ", executor.namespace, err.Error())
 			return common.Hash{}, err
