@@ -6,6 +6,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
+	"encoding/json"
 )
 
 // GetInvaildTxErrType - gets ErrType of invalid tx
@@ -315,5 +316,19 @@ func GetDiscardTransaction(namespace string, key []byte) (*types.InvalidTransact
 func EncodeTransaction(transaction *types.Transaction) ([]byte, error) {
 	// There use transaction's signature directly
 	// Since the same signature means the consensus field of both are equal.
-	return transaction.Signature, nil
+	type ConsensusTransaction struct {
+		From            []byte      `json:"from,omitempty"`
+		To              []byte      `json:"to,omitempty"`
+		Value           []byte      `json:"value,omitempty"`
+		Timestamp       int64       `json:"timestamp,omitempty"`
+		Nonce           int64       `json:"nonce,omitempty"`
+	}
+
+	return json.Marshal(ConsensusTransaction{
+		From:       transaction.From,
+		To:         transaction.To,
+		Value:      transaction.Value,
+		Timestamp:  transaction.Timestamp,
+		Nonce:      transaction.Nonce,
+	})
 }

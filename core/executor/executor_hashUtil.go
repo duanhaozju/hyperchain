@@ -6,7 +6,6 @@ import (
 	edb "hyperchain/core/db_utils"
 	er "hyperchain/core/errors"
 	"hyperchain/core/db_utils/codec/v1.2"
-	"fmt"
 )
 
 type ExecutorHashUtil struct {
@@ -44,7 +43,6 @@ func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Tr
 			fallthrough
 		case "1.2":
 			data, err = v1_2.EncodeTransaction(transaction)
-			fmt.Println("tx data", common.Bytes2Hex(data))
 		case "1.3":
 			data, err = edb.EncodeTransaction(transaction)
 		}
@@ -80,7 +78,6 @@ func (executor *Executor) calculateReceiptFingerprint(tx *types.Transaction, rec
 			fallthrough
 		case "1.2":
 			data, err = v1_2.EncodeReceipt(receipt)
-			fmt.Println("receipt data", common.Bytes2Hex(data))
 		case "1.3":
 			data, err = edb.EncodeReceipt(receipt)
 		}
