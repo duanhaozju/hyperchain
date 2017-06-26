@@ -22,6 +22,7 @@ type Client struct {
 	connCloser  func(v interface{}) error
 }
 
+
 func NewClient(addr string) (*Client,error){
 	connCreator := func() (interface{}, error) { return grpc.Dial(addr,grpc.WithInsecure())}
 	connCloser  := func(v interface{}) error { return v.(*grpc.ClientConn).Close() }

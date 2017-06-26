@@ -121,7 +121,6 @@ func (hn *HyperNet)retry() error{
 	return nil
 }
 
-
 //Connect to specific host endpoint
 func (hn *HyperNet)Connect(hostname string) error{
 	addr,err := hn.dns.GetDNS(hostname)

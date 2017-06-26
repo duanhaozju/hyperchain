@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"fmt"
 	"hyperchain/common"
+	"github.com/abiosoft/ishell"
 )
 
 
@@ -28,6 +29,7 @@ type P2PManager interface {
 type p2pManagerImpl struct {
 	hypernet *network.HyperNet
 	conf *viper.Viper
+	shell *ishell.Shell
 }
 
 var globalP2PManager *p2pManagerImpl
@@ -41,7 +43,6 @@ func GetP2PManager(vip *viper.Viper)(P2PManager,error){
 			return nil,errors.New(fmt.Sprintf("there something wrong when get p2pmanager: %s",err.Error()))
 		}
 		globalP2PManager = p2pManager
-
 	}
 	return globalP2PManager,nil
 }
