@@ -186,7 +186,7 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			} else {
 				viewCount[ret] = uint64(1)
 			}
-			if viewCount[ret] >= pbft.commonCaseQuorum() {
+			if viewCount[ret] >= uint64(pbft.commonCaseQuorum()) {
 				// yes we find the view
 				result = ret
 				canFind = true
