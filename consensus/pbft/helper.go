@@ -344,17 +344,17 @@ func (pbft *pbftImpl) startTimerIfOutstandingRequests() {
 			}
 			return digests
 		}()
-		pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
-	} else if pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
+		pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
+	} else if pbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
 		pbft.nullReqTimerReset()
 	}
 }
 
 func (pbft *pbftImpl) nullReqTimerReset() {
-	timeout := pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
+	timeout := pbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
 	if pbft.primary(pbft.view) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
-		timeout = 3 * timeout + pbft.pbftTimerMgr.requestTimeout
+		timeout = 3 * timeout + pbft.timerMgr.requestTimeout
 	}
 
 	event := &LocalEvent{
@@ -364,13 +364,13 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 
 	//pbft.logger.Errorf("replica: %d, primary: %d, reset null request timeout to %v", pbft.id, pbft.primary(pbft.view), timeout)
 
-	pbft.pbftTimerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, event, pbft.pbftEventQueue)
+	pbft.timerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, event, pbft.pbftEventQueue)
 }
 
 //stopFirstRequestTimer
 func (pbft *pbftImpl) stopFirstRequestTimer()  {
 	if ok, _ := pbft.isPrimary(); !ok {
-		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
+		pbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 	}
 }
 

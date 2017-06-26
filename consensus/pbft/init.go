@@ -5,14 +5,15 @@ package pbft
 
 //initTimers creates timers when start up
 func (pbft *pbftImpl) initTimers() {
-	pbft.pbftTimerMgr.newTimer(VC_RESEND_TIMER, pbft.config.GetDuration(PBFT_RESEND_VIEWCHANGE_TIMEOUT))
-	pbft.pbftTimerMgr.newTimer(NULL_REQUEST_TIMER, pbft.config.GetDuration(PBFT_NULLREQUEST_TIMEOUT))
-	pbft.pbftTimerMgr.newTimer(NEW_VIEW_TIMER, pbft.config.GetDuration(PBFT_VIEWCHANGE_TIMEOUT))
-	pbft.pbftTimerMgr.newTimer(FIRST_REQUEST_TIMER, pbft.config.GetDuration(PBFT_FIRST_REQUEST_TIMEOUT))
-	pbft.pbftTimerMgr.newTimer(NEGO_VIEW_RSP_TIMER, pbft.config.GetDuration(PBFT_NEGOVIEW_TIMEOUT))
-	pbft.pbftTimerMgr.newTimer(RECOVERY_RESTART_TIMER, pbft.config.GetDuration(PBFT_RECOVERY_TIMEOUT))
-	pbft.pbftTimerMgr.newTimer(BATCH_TIMER, pbft.config.GetDuration(PBFT_BATCH_TIMEOUT))
-	pbft.pbftTimerMgr.newTimer(CLEAN_VIEW_CHANGE_TIMER, pbft.config.GetDuration(PBFT_BATCH_TIMEOUT))
+	pbft.timerMgr.newTimer(VC_RESEND_TIMER, pbft.config.GetDuration(PBFT_RESEND_VIEWCHANGE_TIMEOUT))
+	pbft.timerMgr.newTimer(NULL_REQUEST_TIMER, pbft.config.GetDuration(PBFT_NULLREQUEST_TIMEOUT))
+	pbft.timerMgr.newTimer(NEW_VIEW_TIMER, pbft.config.GetDuration(PBFT_VIEWCHANGE_TIMEOUT))
+	pbft.timerMgr.newTimer(FIRST_REQUEST_TIMER, pbft.config.GetDuration(PBFT_FIRST_REQUEST_TIMEOUT))
+	pbft.timerMgr.newTimer(NEGO_VIEW_RSP_TIMER, pbft.config.GetDuration(PBFT_NEGOVIEW_TIMEOUT))
+	pbft.timerMgr.newTimer(RECOVERY_RESTART_TIMER, pbft.config.GetDuration(PBFT_RECOVERY_TIMEOUT))
+	pbft.timerMgr.newTimer(BATCH_TIMER, pbft.config.GetDuration(PBFT_BATCH_TIMEOUT))
+	pbft.timerMgr.newTimer(CLEAN_VIEW_CHANGE_TIMER, pbft.config.GetDuration(PBFT_BATCH_TIMEOUT))
+	pbft.timerMgr.newTimer(VALIDATE_TIMER, pbft.config.GetDuration(PBFT_VALIDATE_TIMEOUT))
 	//pbft.pbftTimerMgr.newTimer(ADD_NODE_TIMER, pbft.config.GetDuration(PBFT_ADD_NODE_TIMEOUT))
 	//pbft.pbftTimerMgr.newTimer(DEL_NODE_TIMER, pbft.config.GetDuration(PBFT_DEL_NODE_TIMEOUT))
 	//pbft.pbftTimerMgr.newTimer(UPDATE_TIMER, pbft.config.GetDuration(PBFT_UPDATE_TIMEOUT))

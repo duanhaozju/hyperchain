@@ -395,9 +395,9 @@ func (pbft *pbftImpl) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 		Flag:		true,
 		ReplicaId:	pbft.id,
 		Key:		ready.Key,
-		N:			n,
+		N:		n,
 		View:		view,
-		H:			pbft.h,
+		H:		pbft.h,
 	}
 
 	return pbft.sendAgreeUpdateNForAdd(agree)
@@ -463,9 +463,9 @@ func (pbft *pbftImpl) sendAgreeUpdateNforDel(key string, routerHash string) erro
 		ReplicaId:	pbft.id,
 		Key:		key,
 		RouterHash:	routerHash,
-		N:			n,
+		N:		n,
 		View:		view,
-		H:			pbft.h,
+		H:		pbft.h,
 	}
 
 	pbft.agreeUpdateHelper(agree)
@@ -489,8 +489,8 @@ func (pbft *pbftImpl) sendAgreeUpdateNforDel(key string, routerHash string) erro
 
 func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 
-	pbft.logger.Debugf("Replica %d received agree-update-n from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
-		pbft.id, agree.ReplicaId, agree.View, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
+	pbft.logger.Debugf("Replica %d received agree-update-n from replica %d, v:%d, n:%d, flag:%v, h:%d, |C|:%d, |P|:%d, |Q|:%d",
+		pbft.id, agree.ReplicaId, agree.View, agree.N, agree.Flag, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 {
 		pbft.logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in view-change", pbft.id)
@@ -538,7 +538,7 @@ func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 	if agree.Flag && len(replicas) > pbft.oneCorrectQuorum() && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
 		pbft.logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForAdd",
 			pbft.id)
-		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
+		pbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 		agree.ReplicaId = pbft.id
 		return pbft.sendAgreeUpdateNForAdd(agree)
 	}
@@ -547,7 +547,7 @@ func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 	if !agree.Flag && len(replicas) >= pbft.oneCorrectQuorum() && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
 		pbft.logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForDel",
 			pbft.id)
-		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
+		pbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 		agree.ReplicaId = pbft.id
 		return pbft.sendAgreeUpdateNforDel(agree.Key, agree.RouterHash)
 	}
@@ -824,7 +824,7 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 	pbft.status.activeState(&pbft.status.updateHandled)
 
 	pbft.stopNewViewTimer()
-	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
+	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 
 	tmpStore := make(map[msgID]*updateCert)
 	for idx, cert := range pbft.storeMgr.certStore {
@@ -923,8 +923,8 @@ func (pbft *pbftImpl) recvFinishUpdate(finish *FinishUpdate) events.Event {
 	}
 
 	if finish.View != pbft.view {
-		pbft.logger.Warningf("Replica %d received finishUpdate from replica %d, expect view=%d, but get view=%d", pbft.id, pbft.view, finish.View)
-		return nil
+		pbft.logger.Warningf("Replica %d received FinishUpdate from replica %d, expect view=%d, but get view=%d", pbft.id, finish.ReplicaId, pbft.view, finish.View)
+		// We don't ignore it as there may be delay during receiveUpdate from primary between new node and other non-primary old replicas
 	}
 
 	pbft.logger.Debugf("Replica %d received FinishUpdate from replica %d, view=%d/h=%d", pbft.id, finish.ReplicaId, finish.View, finish.LowH)
@@ -950,7 +950,15 @@ func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 			hasPrimary = true
 		}
 	}
-	if quorum < pbft.allCorrectReplicasQuorum() || !hasPrimary {
+
+	if quorum < pbft.allCorrectReplicasQuorum() {
+		pbft.logger.Debugf("Replica %d doesn't has arrive quorum FinishUpdate, expect=%d, got=%d",
+			pbft.id, pbft.allCorrectReplicasQuorum(), quorum)
+		return nil
+	}
+	if !hasPrimary {
+		pbft.logger.Debugf("Replica %d doesn't receive FinishUpdate from primary %d",
+			pbft.id, pbft.primary(pbft.view))
 		return nil
 	}
 
