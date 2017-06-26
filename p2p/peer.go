@@ -40,13 +40,15 @@ func (peer *Peer)Chat(in *pb.Message) (*pb.Message, error){
 		Field : []byte(peer.namespace),
 		Hostname : []byte(peer.hostname),
 		UUID : []byte(peer.info.GetHash()),
-		Version : 13,
+		Version : P2P_MODULE_DEV_VERSION,
 	}
-	response,err := peer.net.Greeting(peer.hostname,in)
+	//TODO here should change to Chat method
+	//TODO change as bidi stream transfer method
+	resp,err := peer.net.Whisper(peer.hostname,in)
 	if err != nil{
 		return nil,err
 	}
-	return response,nil
+	return resp,nil
 }
 
 //Greeting send a single message to remote peer

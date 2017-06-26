@@ -5,15 +5,15 @@ package message;
 message Endpoint{
     int64 Version  = 1;
     bytes Hostname = 2;
-    bytes IP = 3;
     bytes Field = 4;
-    int64 Port     = 5;
     bytes UUID     = 6;
     Extend Extend    = 7;
 }
 
 message Extend{
-    int64 LastTimestamp = 1;
-    bytes Status = 2;
-    bytes Extends = 3;
+    bytes IP = 1;
+    int64 Port     = 2;
+    int64 LastTimestamp = 3;
+    bytes Status = 4;
+    bytes Extends = 5;
 }

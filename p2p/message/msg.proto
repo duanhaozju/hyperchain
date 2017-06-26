@@ -17,8 +17,8 @@ import "msg_type.proto";
 message Message{
     MsgType MessageType  = 1;
     Endpoint From        = 2;
-    bytes  Payload       = 3;
-    int64 MsgTimeStamp   = 4;
+    bytes    Payload     = 3;
+    int64    TimeStamp   = 4;
     hts.Certificate Cert = 5;
 }
 

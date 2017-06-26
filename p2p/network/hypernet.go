@@ -130,7 +130,7 @@ func (hn *HyperNet)Connect(hostname string) error{
 		logger.Errorf("get dns failed, err : %s \n",err.Error())
 		return err
 	}
-	client := NewClient(addr)
+	client,err  := NewClient(addr)
 	if err != nil{
 		return err
 	}
@@ -168,9 +168,9 @@ func (hyperNet *HyperNet)HealthCheck(){
 	// TODO NetWork Health check
 }
 
-func (hypernet *HyperNet)Chat(hostname string,msg pb.Message)error{
+func (hypernet *HyperNet)Chat(hostname string,msg *pb.Message)error{
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
-		client.(*Client).MsgChan <- &msg
+		client.(*Client).MsgChan <- msg
 		return nil
 	}
 	return errors.New("the host hasn't been initialized.")
@@ -185,9 +185,9 @@ func (hypernet *HyperNet)Greeting(hostname string,msg *pb.Message)(*pb.Message,e
 
 }
 
-func (hypernet *HyperNet)Whisper(hostname string,msg pb.Message)(*pb.Message,error){
+func (hypernet *HyperNet)Whisper(hostname string,msg *pb.Message)(*pb.Message,error){
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
-			return client.(*Client).Wisper(&msg)
+			return client.(*Client).Wisper(msg)
 		}
 		return nil,errors.New("the host hasn't been initialized.")
 }

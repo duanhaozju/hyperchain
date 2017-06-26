@@ -10,6 +10,7 @@ import (
 	"hyperchain/p2p/msg"
 )
 
+
 type peerManagerImpl struct {
 	namespace string
 	// here use the concurrent map to keep thread safe
@@ -22,11 +23,12 @@ type peerManagerImpl struct {
 
 	eventHub  *event.TypeMux
 	blackHole chan interface{}
-	NodeNum         int
+	nodeNum   int
 	selfID    int
 
-	initType chan int
+	initType  chan int
 }
+
 //todo rename new function
 func NewPeerManagerImpl(namespace string,peercnf *viper.Viper,ev *event.TypeMux, net *network.HyperNet) (*peerManagerImpl, error) {
 	if net == nil{
@@ -53,7 +55,7 @@ func NewPeerManagerImpl(namespace string,peercnf *viper.Viper,ev *event.TypeMux,
 		selfID:selfID,
 		peerPool:NewPeersPool(namespace),
 		node:NewNode(namespace,selfID,selfHostname,net),
-		NodeNum:N,
+		nodeNum:N,
 		blackHole:make(chan interface{}),
 		initType:make(chan int,1),
 	}
@@ -136,10 +138,7 @@ func (pmgr *peerManagerImpl) SendMsg(payload []byte, peers []uint64) {
 		if int(id-1) > size {
 			continue
 		}
-		msg := &pb.Message{
-			MessageType:pb.MsgType_SESSION,
-			Payload:payload,
-		}
+		msg := pb.NewMsg(pb.MsgType_SESSION,payload)
 		peerList[int(id-1)].Chat(msg)
 	}
 
@@ -151,10 +150,7 @@ func (pmgr *peerManagerImpl) Broadcast(payload []byte) {
 	peerList := pmgr.peerPool.GetPeers()
 	for _,p := range peerList{
 		// this is un thread safe, because this,is a pointer
-		msg := &pb.Message{
-			MessageType:pb.MsgType_SESSION,
-			Payload:payload,
-		}
+		msg := pb.NewMsg(pb.MsgType_SESSION,payload)
 		_,err := p.Chat(msg)
 		if err != nil{
 			fmt.Printf("err: %s \n",err.Error())
@@ -189,10 +185,17 @@ func (pmgr *peerManagerImpl)SetPrimary(_id uint64) error{
 func (pmgr *peerManagerImpl)GetLocalNodeHash() string {
 	return pmgr.node.info.GetHash()
 }
+//GetVPPeers return all vp peers
+func (pmgr *peerManagerImpl)GetVPPeers() []*Peer {
+	return pmgr.peerPool.GetPeers()
+}
 
-
-
-func (pmgr *peerManagerImpl)Stop(){}
+/////////////////////////////
+// TODO UnImplements
+////////////////////////////
+func (pmgr *peerManagerImpl)Stop(){
+	//TODO
+}
 
 func (pmgr *peerManagerImpl)GetInitType() <-chan int{
 	c := make(chan int)
@@ -217,11 +220,10 @@ func (pmgr *peerManagerImpl)SetOnline(){
 	return
 }
 
-
-
 func (pmgr *peerManagerImpl)GetRouterHashifDelete(hash string) (string, uint64, uint64){
 	return "",1,1
 }
+
 func (pmgr *peerManagerImpl)DeleteNode(hash string) error { // if self {...} else{...}
 	return nil
 }
@@ -231,18 +233,18 @@ func (pmgr *peerManagerImpl)DeleteNode(hash string) error { // if self {...} els
 func (pmgr *peerManagerImpl)GetAllPeers() []*Peer {
 	return nil
 }
+
 func (pmgr *peerManagerImpl)GetAllPeersWithTemp() []*Peer {
 	return nil
 }
-func (pmgr *peerManagerImpl)GetVPPeers() []*Peer {
-	return nil
-}
+
 // get local node instance
 //GetLocalNode() *Node
 // Get local node id
 func (pmgr *peerManagerImpl)GetNodeId() int{
 	return 1;
 }
+
 //get the peer information of all nodes.
 func (pmgr *peerManagerImpl)GetPeerInfo() PeerInfos{
 	return PeerInfos{}

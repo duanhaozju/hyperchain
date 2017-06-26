@@ -129,7 +129,7 @@ func (tm *TransportManager) SignMsg(msg *pb.Message) (pb.Message, error) {
 	retmsg := pb.Message{
 		From:         msg.From,
 		Payload:      msg.Payload,
-		MsgTimeStamp: msg.MsgTimeStamp,
+		TimeStamp:    msg.TimeStamp,
 		MessageType:  msg.MessageType,
 		//Signature:    sign,
 	}

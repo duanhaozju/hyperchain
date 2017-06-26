@@ -8,21 +8,42 @@ import (
 	"time"
 	"hyperchain/p2p/hts"
 	"github.com/pkg/errors"
+	"github.com/silenceper/pool"
 )
 
 type Client struct {
 	addr string
 	conn *grpc.ClientConn
+	connPool pool.Pool
 	client ChatClient
 	MsgChan chan *pb.Message
 	hts hts.HTS
+	connCreator func() (interface{}, error)
+	connCloser  func(v interface{}) error
 }
 
-func NewClient(addr string) *Client{
+func NewClient(addr string) (*Client,error){
+	connCreator := func() (interface{}, error) { return grpc.Dial(addr,grpc.WithInsecure())}
+	connCloser  := func(v interface{}) error { return v.(*grpc.ClientConn).Close() }
+	poolConfig := &pool.PoolConfig{
+		InitialCap: 2,
+		MaxCap:     10,
+		Factory:    connCreator,
+		Close:      connCloser,
+		//链接最大空闲时间，超过该时间的链接 将会关闭，可避免空闲时链接EOF，自动失效的问题
+		IdleTimeout: 15 * time.Second,
+	}
+	p, err := pool.NewChannelPool(poolConfig)
+	if err != nil {
+		return nil,err
+	}
 	return &Client{
 		MsgChan: make(chan *pb.Message,100000),
 		addr: addr,
-	}
+		connCreator:connCreator,
+		connCloser:connCloser,
+		connPool:p,
+	},nil
 }
 
 func(c *Client)Connect(client ChatClient) error{
@@ -30,16 +51,16 @@ func(c *Client)Connect(client ChatClient) error{
 		c.client = client
 		return nil
 	}
-	//TODO hea
-	conn, err := grpc.Dial(c.addr,grpc.WithInsecure())
+
+	//get a connection from pool
+	v, err := c.connPool.Get()
 	if err != nil {
-		logger.Errorf("cannot create the connection to addr: %s \n",c.addr)
+		logger.Errorf("cannot get a connection from connection pool: %s \n",c.addr)
 		fmt.Printf("err: %v",err)
-		if conn != nil{
-			conn.Close()
-		}
 		return err
 	}
+	//do something
+	conn:=v.(*grpc.ClientConn)
 	c.conn = conn
 	c.client = NewChatClient(conn)
 	return nil
