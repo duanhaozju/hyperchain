@@ -324,7 +324,7 @@ func EncodeTransaction(transaction *types.Transaction) ([]byte, error) {
 		Nonce           int64       `json:"nonce,omitempty"`
 	}
 
-	return json.Marshal(ConsensusTransaction{
+	return json.Marshal(&ConsensusTransaction{
 		From:       transaction.From,
 		To:         transaction.To,
 		Value:      transaction.Value,

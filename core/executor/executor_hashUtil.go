@@ -43,7 +43,7 @@ func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Tr
 			fallthrough
 		case "1.2":
 			data, err = v1_2.EncodeTransaction(transaction)
-		case "1.3":
+		default:
 			data, err = edb.EncodeTransaction(transaction)
 		}
 		if err != nil {
@@ -78,7 +78,7 @@ func (executor *Executor) calculateReceiptFingerprint(tx *types.Transaction, rec
 			fallthrough
 		case "1.2":
 			data, err = v1_2.EncodeReceipt(receipt)
-		case "1.3":
+		default:
 			data, err = edb.EncodeReceipt(receipt)
 		}
 		if err != nil {
