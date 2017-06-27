@@ -13,9 +13,6 @@ public class Event {
     @Getter
     private String name;
 
-    @Getter
-    private long timestamp;
-
     private Map<String, String> atrributes;
 
     @Getter
@@ -23,7 +20,6 @@ public class Event {
 
     public Event(String name) {
         this.name = name;
-        this.timestamp = System.currentTimeMillis();
     }
 
     public Event(String name, String... topics) {
