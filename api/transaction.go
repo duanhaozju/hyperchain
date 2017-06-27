@@ -291,6 +291,37 @@ func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) 
 	return transactions, nil
 }
 
+// GetDiscardTransactionsByTime returns the invalid transactions for the given time duration.
+func (tran *Transaction) GetDiscardTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
+
+	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0{
+		return nil, &common.InvalidParamsError{Message: "Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
+	}
+
+	reds, err := edb.GetAllDiscardTransaction(tran.namespace)
+	if err != nil && err.Error() == leveldb_not_found_error {
+		return nil, &common.LeveldbNotFoundError{Message: "discard transactions"}
+	} else if err != nil {
+		tran.log.Errorf("GetDiscardTransactionsByTime error: %v", err)
+		return nil, &common.CallbackError{Message: err.Error()}
+	}
+
+	var transactions []*TransactionResult
+
+	for _, red := range reds {
+		if red.Tx.Timestamp <= args.Endtime && red.Tx.Timestamp >= args.StartTime {
+			if ts, err := outputTransaction(red, tran.namespace, tran.log); err != nil {
+				return nil, err
+			} else {
+				transactions = append(transactions, ts)
+			}
+		}
+
+	}
+
+	return transactions, nil
+}
+
 // getDiscardTransactionByHash returns the invalid transaction for the given transaction hash.
 func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 
