@@ -45,16 +45,18 @@ type JSONResponse struct {
 
 // JSON-RPC notification payload
 type jsonSubscription struct {
-	Subscription string      `json:"subscription"`
-	Result       interface{} `json:"result,omitempty"`
+	Event        	string		`json:"event"`
+	Subscription 	string      	`json:"subscription"`
+	Data       	interface{} 	`json:"data,omitempty"`
 }
 
 // JSON-RPC notification
 type jsonNotification struct {
-	Version string           `json:"jsonrpc"`
-	Method  string           `json:"method"`
-	Params  jsonSubscription `json:"params"`
-	Namespace string          `json:"namespace"`
+	Version 	string           	`json:"jsonrpc"`
+	//Method  	string           	`json:"method"`
+	//Params  	jsonSubscription 	`json:"params"`
+	Namespace 	string          	`json:"namespace"`
+	Result    	jsonSubscription	`json:"result"`
 }
 
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It
@@ -291,13 +293,13 @@ func (c *jsonCodec) WriteNotify(res interface{}) error {
 func (s *jsonCodec) CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{} {
 	if isHexNum(reflect.TypeOf(event)) {
 		//return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace, Method: service + NotificationMethodSuffix,
-		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace, Method: service + serviceMethodSeparator + method,
-			Params: jsonSubscription{Subscription: fmt.Sprintf(`%s`, subid), Result: fmt.Sprintf(`%#x`, event)}}
+		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace,
+			Result: jsonSubscription{Subscription: fmt.Sprintf(`%s`, subid), Data: fmt.Sprintf(`%#x`, event)}}
 	}
 
 	//return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace, Method: service + NotificationMethodSuffix,
-	return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace, Method: service + serviceMethodSeparator + method,
-		Params: jsonSubscription{Subscription: fmt.Sprintf(`%s`, subid), Result: event}}
+	return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace,
+		Result: jsonSubscription{Event: method, Subscription: fmt.Sprintf(`%s`, subid), Data: event}}
 }
 
 // Close the underlying connection

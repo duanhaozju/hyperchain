@@ -44,13 +44,7 @@ window.onload = function () {
             console.log("received message！")
             console.log(evt)
             var datajson = JSON.parse(evt.data);
-             if (datajson.method) {
-                 // 通知
-                 var info2 = document.createElement("div");
-                 info2.innerText = "==== The notification message follows: =====";
-                 info2.style.color = "cornflowerblue"
-                 appendLog(info2);
-             } else {
+             if (datajson.code == 0) {
                  // 请求的正常返回，result为true是退订，否则是订阅
                  if (datajson.result == true || datajson.result == "true") {
                      var info3 = document.createElement("div");
@@ -63,6 +57,12 @@ window.onload = function () {
                      info1.style.color = "green"
                      appendLog(info1);
                  }
+             } else {
+                 // 通知
+                 var info2 = document.createElement("div");
+                 info2.innerText = "==== The notification message follows: =====";
+                 info2.style.color = "cornflowerblue"
+                 appendLog(info2);
              }
 
 
