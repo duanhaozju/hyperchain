@@ -18,6 +18,7 @@ function initClass() {
     mkdir -p ${sdkContract}
     echo "${contract}/ContractTemplate.class"
     cp "${contract}/ContractTemplate.class" ${sdkContract}
+    cp "${contract}/Event.class" ${sdkContract}
 
     mkdir -p ${sdkLedger}
     cp "${ledger}/ILedger.class" ${sdkLedger}
