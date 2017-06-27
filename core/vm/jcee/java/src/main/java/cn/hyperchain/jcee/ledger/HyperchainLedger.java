@@ -6,7 +6,9 @@ package cn.hyperchain.jcee.ledger;
 
 import cn.hyperchain.jcee.contract.Event;
 import cn.hyperchain.jcee.mock.MockLedger;
+import cn.hyperchain.jcee.util.Base64Coder;
 import cn.hyperchain.jcee.util.Bytes;
+import cn.hyperchain.jcee.util.Coder;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
@@ -24,9 +26,11 @@ public class HyperchainLedger extends AbstractLedger{
     private static final Logger logger = Logger.getLogger(HyperchainLedger.class.getSimpleName());
     private LedgerClient ledgerClient;
     private Cache cache;
+    private Coder coder;
     public HyperchainLedger(int port){
         ledgerClient = new LedgerClient("localhost", port);
         cache = new HyperCache();
+        coder = new Base64Coder();
     }
 
     public Result get(byte[] key) {
@@ -79,7 +83,7 @@ public class HyperchainLedger extends AbstractLedger{
     public boolean post(Event event) {
         ContractProto.Event.Builder eventBuilder = ContractProto.Event.newBuilder()
                 .setContext(getLedgerContext())
-                .setBody(ByteString.copyFrom(event.toString(), Charset.defaultCharset()));
+                .setBody(ByteString.copyFrom(coder.encode(event.toString()), Charset.defaultCharset()));
 
         Set<String> topics = event.getTopics();
         List<ByteString> topics1 = new LinkedList<>();

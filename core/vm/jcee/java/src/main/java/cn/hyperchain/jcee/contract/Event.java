@@ -1,6 +1,8 @@
 package cn.hyperchain.jcee.contract;
 
 
+import cn.hyperchain.jcee.util.Base64Coder;
+import cn.hyperchain.jcee.util.Coder;
 import com.google.gson.Gson;
 import lombok.Getter;
 
