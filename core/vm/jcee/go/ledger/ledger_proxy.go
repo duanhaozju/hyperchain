@@ -13,6 +13,7 @@ import (
 	"net"
 	"strings"
 	"hyperchain/hyperdb/db"
+	"hyperchain/core/types"
 )
 
 var (
@@ -189,17 +190,22 @@ func (lp *LedgerProxy) Delete(ctx context.Context, in *pb.Key) (*pb.Response, er
 
 func (lp *LedgerProxy) Post(ctx context.Context, event *pb.Event) (*pb.Response, error) {
 
-	logger := common.GetLogger(event.Context.Namespace, "jcee")
-	logger.Criticalf("Receive event: %v", event)
+	exist, state := lp.stateMgr.GetStateDb(event.Context.Namespace)
+	if exist == false {
+		return &pb.Response{Ok: false}, NamespaceNotExistErr
+	}
+	if valid := lp.requestCheck(event.Context); !valid {
+		return &pb.Response{Ok: false}, InvalidRequestErr
+	}
 
-	//FYI
-	//types.Log{
-	//	Address:event.GetContext().Cid,
-	//	Topics:event.Topics,
-	//	Data:event.Body,
-	//}
+	var topics []common.Hash
+	for _, topic := range event.Topics {
+		topics = append(topics, common.BytesToHash(topic))
+	}
 
-	//TODO: implement this
+	log := types.NewLog(common.HexToAddress(event.Context.Cid), topics, event.Body, 0, types.LogVmType_JVM)
+	state.AddLog(log)
+
 	return &pb.Response{
 		Ok:true,
 	}, nil

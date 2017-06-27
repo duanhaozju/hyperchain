@@ -444,7 +444,7 @@ func opLog(instr instruction, pc *uint64, env vm.Environment, contract *Contract
 	}
 
 	d := memory.Get(mStart.Int64(), mSize.Int64())
-	log := types.NewLog(contract.Address(), topics, d, env.BlockNumber().Uint64())
+	log := types.NewLog(contract.Address(), topics, d, env.BlockNumber().Uint64(), types.LogVmType_EVM)
 	env.AddLog(log)
 }
 
@@ -616,7 +616,7 @@ func makeLog(size int) instrFn {
 		}
 
 		d := memory.Get(mStart.Int64(), mSize.Int64())
-		log := types.NewLog(contract.Address(), topics, d, env.BlockNumber().Uint64())
+		log := types.NewLog(contract.Address(), topics, d, env.BlockNumber().Uint64(), types.LogVmType_EVM)
 		env.AddLog(log)
 	}
 }
