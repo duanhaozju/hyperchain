@@ -57,9 +57,7 @@ public class TestHyperCache {
                 Result result = new Result(ByteString.copyFrom(hc.get(realK)));
                 Assert.assertEquals(result.toString(),value);
             }
-
         }
-
     }
 
     @Test
@@ -78,4 +76,5 @@ public class TestHyperCache {
         byte[] b2 = bs2.toByteArray();
         System.out.println(b1.equals(b2));
     }
+
 }

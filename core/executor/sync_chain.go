@@ -144,7 +144,10 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 
 	if executor.status.syncFlag.SyncDemandBlockNum != 0 {
 		block := &types.Block{}
-		proto.Unmarshal(payload, block)
+		if err := proto.Unmarshal(payload, block); err != nil {
+			executor.logger.Warning("receive a block but unmarshal failed")
+			return
+		}
 		// store blocks into database only, not process them.
 		if !VerifyBlockIntegrity(block) {
 			executor.logger.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, block.Number)
@@ -154,7 +157,9 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			executor.logger.Debugf("[Namespace = %s] receive block #%d  hash %s", executor.namespace, block.Number, common.BytesToHash(block.BlockHash).Hex())
 			// is demand
 			if executor.isDemandSyncBlock(block) {
-				edb.PersistBlock(executor.db.NewBatch(), block, true, true)
+				// received block's struct definition may different from current
+				// for backward compatibility, store with original version tag.
+				edb.PersistBlock(executor.db.NewBatch(), block, true, true, string(block.Version))
 				if err := executor.updateSyncDemand(block); err != nil {
 					executor.logger.Errorf("[Namespace = %s] update sync demand failed.", executor.namespace)
 					executor.reject()

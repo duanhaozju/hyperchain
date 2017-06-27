@@ -94,7 +94,7 @@ func (pbft *pbftImpl) RecvLocal(msg interface{}) error {
 //Start start the consensus service
 func (pbft *pbftImpl) Start() {
 	pbft.logger.Noticef("--------PBFT starting, nodeID: %d--------", pbft.id)
-	pbft.pbftTimerMgr = newTimerMgr(pbft)
+	pbft.timerMgr = newTimerMgr(pbft)
 	pbft.initTimers()
 	pbft.initStatus()
 
@@ -110,7 +110,7 @@ func (pbft *pbftImpl) Start() {
 	pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)
 	pbft.batchMgr.start()
 
-	pbft.pbftTimerMgr.makeRequestTimeoutLegal()
+	pbft.timerMgr.makeRequestTimeoutLegal()
 
 	pbft.logger.Noticef("======== PBFT finish start, nodeID: %d", pbft.id)
 }
@@ -118,13 +118,13 @@ func (pbft *pbftImpl) Start() {
 //Close close the consenter service
 func (pbft *pbftImpl) Close() {
 	pbft.logger.Notice("PBFT stop event process service")
-	pbft.pbftTimerMgr.Stop()
+	pbft.timerMgr.Stop()
 	pbft.batchMgr.stop()
 	pbft.pbftManager.Stop()
 
 	pbft.logger.Notice("PBFT clear some resources")
 
-	pbft.vcMgr = newVcManager(pbft.pbftTimerMgr, pbft, pbft.config)
+	pbft.vcMgr = newVcManager(pbft.timerMgr, pbft, pbft.config)
 	pbft.storeMgr = newStoreMgr()
 	pbft.nodeMgr = newNodeMgr()
 

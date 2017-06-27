@@ -49,6 +49,11 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 		jvmCli:     jvm.NewContractExecutor(conf, namespace),
 		exception:  NewExceptionHandler(helper),
 	}
+
+	if executor.isJvmEnable() {
+		executor.jvmCli = jvm.NewContractExecutor(conf, namespace)
+	}
+
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.snapshotReg = NewSnapshotRegistry(namespace, executor.logger, executor)
 	executor.archiveMgr = NewArchiveManager(namespace, executor, executor.snapshotReg, executor.logger)
@@ -123,7 +128,9 @@ func (executor *Executor) initialize() error {
 	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()
 	go executor.syncReplica()
-	go executor.jvmCli.Start()
+	if executor.isJvmEnable() {
+		executor.jvmCli.Start()
+	}
 	return nil
 }
 
@@ -133,7 +140,9 @@ func (executor *Executor) finailize() error {
 	go executor.setCommitExit()
 	go executor.setReplicaSyncExit()
 	go executor.snapshotReg.Stop()
-	go executor.jvmCli.Stop()
+	if executor.isJvmEnable() {
+		executor.jvmCli.Stop()
+	}
 	return nil
 }
 

@@ -1,6 +1,9 @@
 package executor
 
-import "time"
+import (
+	"time"
+	"hyperchain/common"
+)
 
 const (
 	STATEDB               = "state"
@@ -98,4 +101,8 @@ func (executor *Executor) GetArchiveThreshold() int {
 
 func (executor *Executor) IsSyncWsEable() bool {
 	return executor.conf.GetBool(syncWsEable)
+}
+
+func (executor *Executor) isJvmEnable() bool {
+	return executor.conf.GetBool(common.C_JVM_START)
 }

@@ -135,50 +135,43 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 
 	// evm finalise
 	ret, err = virtualMachine.Run(contract, input)
-	// if the contract creation ran successfully and no errors were returned
-	// calculate the gas required to store the code. If the code could not
-	// be stored due to not enough gas set an error and let it be handled
-	// by the error checking condition below.
-	if err == nil && createAccount {
+
+	if err == nil && (createAccount || isUpdate(op)) {
 		dataGas := big.NewInt(int64(len(ret)))
 		dataGas.Mul(dataGas, params.CreateDataGas)
-		if contract.UseGas(dataGas) {
-			env.Db().SetCode(*address, ret)
-		} else {
-			err = CodeStoreOutOfGasError
+		switch {
+		case createAccount:
+			if contract.UseGas(dataGas) {
+				env.Db().SetCode(*address, ret)
+				env.Db().AddDeployedContract(caller.Address(), *address)
+				env.Db().SetCreator(*address, caller.Address())
+				env.Db().SetCreateTime(*address, env.BlockNumber().Uint64())
+			} else {
+				err = CodeStoreOutOfGasError
+			}
+		case isUpdate(op):
+			// if code ran successfully and no errors were returned
+			// and this transaction is a update code operation
+			// replace contract code with given one
+			// undo all changes during the vm execution(construct function)
+			env.SetSnapshot(snapshotPreTransfer)
+			if contract.UseGas(dataGas) {
+				env.Db().SetCode(*address, ret)
+			} else {
+				err = CodeStoreOutOfGasError
+			}
 		}
-		env.Db().AddDeployedContract(caller.Address(), *address)
-		env.Db().SetCreator(*address, caller.Address())
-		env.Db().SetCreateTime(*address, env.BlockNumber().Uint64())
 	}
-
 	// When an error was returned by the EVM or when setting the creation code
 	// above we revert to the snapshot and consume any gas remaining. Additionally
 	// when we're in homestead this also counts for code storage gas errors.
-	if err != nil && err != CodeStoreOutOfGasError {
+	if err != nil {
 		contract.UseGas(contract.Gas)
 		env.SetSnapshot(snapshotPreTransfer)
 		if createAccount {
 			err = er.ExecContractErr(0, "contract creation failed, error msg", err.Error())
 		} else {
 			err = er.ExecContractErr(1, "contract invocation failed, error msg:", err.Error())
-		}
-	}
-	// undo all changes during the contract code update
-	if isUpdate(op) {
-		env.SetSnapshot(snapshotPreTransfer)
-		// if code ran successfully and no errors were returned
-		// and this transaction is a update code operation
-		// replace contract code with given one
-		// undo all changes during the vm execution(construct function)
-		if err == nil || err != CodeStoreOutOfGasError {
-			dataGas := big.NewInt(int64(len(ret)))
-			dataGas.Mul(dataGas, params.CreateDataGas)
-			if contract.UseGas(dataGas) {
-				env.Db().SetCode(*address, ret)
-			} else {
-				err = CodeStoreOutOfGasError
-			}
 		}
 	}
 	return ret, addr, err

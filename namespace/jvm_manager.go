@@ -24,7 +24,7 @@ type JvmManager struct {
 	logger           *logging.Logger	 // logger
 	conf             *common.Config
 	exit             chan bool
-
+	lsofPath         string
 }
 
 func NewJvmManager(conf *common.Config) *JvmManager {
@@ -141,8 +141,22 @@ func (mgr *JvmManager) notifyToExit() {
 
 
 func (mgr *JvmManager) checkJvmExist() bool {
+	if len(mgr.lsofPath) == 0 {
+		path, err := exec.LookPath("lsof")
+		logger.Debugf(path)
+		if err != nil {
+			logger.Error(err)
+			return true
+		}
+		if len(path) == 0 {
+			logger.Error("no lsof found on this machine")
+			return true
+		}
+		mgr.lsofPath = path
+	}
+
 	subcmd := fmt.Sprintf("-i:%d", mgr.conf.GetInt(common.C_JVM_PORT))
-	ret, err := exec.Command("/usr/sbin/lsof", subcmd).Output()
+	ret, err := exec.Command(mgr.lsofPath, subcmd).Output()
 	if err != nil || len(ret) == 0 {
 		if err == nil {
 			return false

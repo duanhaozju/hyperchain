@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	defaultGas              int64 = 10000
+	defaultGas              int64 = 100000000
 	defaustGasPrice         int64 = 10000
 	leveldb_not_found_error       = "leveldb: not found"
 )

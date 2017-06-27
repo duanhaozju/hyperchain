@@ -29,6 +29,8 @@ public class ABC extends ContractTemplate {
         switch (funcName){
             case "newAccount":
                 return newAccount(args);
+            case "getAccount":
+                return getAccount(args);
             case "pubOrderInfo":
                 return pubOrderInfo(args);
             case "issueDraftApply":
@@ -37,10 +39,39 @@ public class ABC extends ContractTemplate {
                 return acceptByAccount(args);
             case "getDraft":
                 return getDraft(args);
+            case "testBatch":
+                return testBatch(args);
             default:
-                return result(false,funcName+"does not exist");
+                return result(false,funcName+" does not exist");
 
         }
+    }
+
+    public ExecuteResult testBatch(List<String> args){
+        Account account1 = new Account("A1","1","1","1","1","1","1","1","1");
+        Account account2 = new Account("A2","1","1","1","1","1","1","1","1");
+
+        byte[] key1 = account1.getAccountNumber().getBytes();
+        byte[] key2 = account2.getAccountNumber().getBytes();
+        ledger.put("A1",account1);
+        ledger.put("A2",account2);
+
+        logger.info(ledger.get("A1").toObeject(Account.class).getAccountNumber());
+
+        BatchKey bk = ledger.newBatchKey();
+        bk.put(key1);
+        bk.put(key2);
+        Batch batch = ledger.batchRead(bk);
+        logger.info(batch.get(key1).toObeject(Account.class).getAccountNumber());
+
+        //abnormal
+        Result result = batch.get("A11");
+        if(result.isEmpty()){
+            logger.info("the value is empty");
+        }
+        return result(true);
+
+
     }
 
     public ExecuteResult newAccount(List<String> args){
@@ -72,6 +103,21 @@ public class ABC extends ContractTemplate {
         }
 
         return result(true);
+    }
+
+    public ExecuteResult getAccount(List<String> args){
+        String accountNumber = args.get(0);
+        Result result = ledger.get(accountPrefix +accountNumber);
+        String msg;
+        if(result.isEmpty() ){
+            msg = "the accountNumber does not exist";
+            logger.error(msg);
+            return result(false,msg);
+        }
+        Account account = result.toObeject(Account.class);
+
+        return result(true,account);
+
     }
 
     public ExecuteResult pubOrderInfo(List<String> args){
@@ -271,15 +317,12 @@ public class ABC extends ContractTemplate {
         ledger.put(account1.getAccountNumber(),account1);
         ledger.put(account2.getAccountNumber(),account2);
 
-        logger.info(ledger.get("A1").toString());
+        result = ledger.get("A1");
+        if(!result.isEmpty()){
+            Account account = result.toObeject(Account.class);
+            logger.info(account.getAccountNumber());
+        }
 
-        BatchKey bk = ledger.newBatchKey();
-        bk.put("A1");
-        bk.put("A2");
-
-        Batch batch = ledger.batchRead(bk);
-
-        logger.info(batch.get("A1").toString());
         return result(true);
     }
 
