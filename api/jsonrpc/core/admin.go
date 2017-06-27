@@ -200,24 +200,6 @@ func (adm *Administrator) setLevel(cmd *Command) *CommandResult {
 	return &CommandResult{Ok: true, Result: rs}
 }
 
-func (adm *Administrator) startHttpServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	go hs.Start()
-	return &CommandResult{Ok: true, Result: "start http successful."}
-}
-
-func (adm *Administrator) stopHttpServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	hs.Stop()
-	return &CommandResult{Ok: true, Result: "stop http successful."}
-}
-
-func (adm *Administrator) restartHttpServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	go hs.Restart()
-	return &CommandResult{Ok: true, Result: "restart http successful."}
-}
-
 func (adm *Administrator) startJvmServer(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	if err := adm.NsMgr.StartJvm(); err != nil {
@@ -261,10 +243,6 @@ func (adm *Administrator) Init() {
 
 	adm.CmdExecutor["getLevel"] = adm.getLevel
 	adm.CmdExecutor["setLevel"] = adm.setLevel
-
-	adm.CmdExecutor["startHttpServer"] = adm.startHttpServer
-	adm.CmdExecutor["stopHttpServer"] = adm.stopHttpServer
-	adm.CmdExecutor["restartHttpServer"] = adm.restartHttpServer
 
 	adm.CmdExecutor["startJvmServer"] = adm.startJvmServer
 	adm.CmdExecutor["stopJvmServer"] = adm.stopJvmServer
