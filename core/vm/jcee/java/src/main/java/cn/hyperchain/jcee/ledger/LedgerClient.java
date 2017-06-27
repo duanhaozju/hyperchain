@@ -63,4 +63,8 @@ public class LedgerClient {
     public Iterator<ContractProto.BathValue> rangeQuery(ContractProto.Range range) {
         return blockingStub.rangeQuery(range);
     }
+
+    public boolean post(ContractProto.Event event) {
+        return blockingStub.post(event).getOk();
+    }
 }

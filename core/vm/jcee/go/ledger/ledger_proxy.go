@@ -187,6 +187,24 @@ func (lp *LedgerProxy) Delete(ctx context.Context, in *pb.Key) (*pb.Response, er
 	return &pb.Response{Ok: true}, nil
 }
 
+func (lp *LedgerProxy) Post(ctx context.Context, event *pb.Event) (*pb.Response, error) {
+
+	logger := common.GetLogger(event.Context.Namespace, "jcee")
+	logger.Criticalf("Receive event: %v", event)
+
+	//FYI
+	//types.Log{
+	//	Address:event.GetContext().Cid,
+	//	Topics:event.Topics,
+	//	Data:event.Body,
+	//}
+
+	//TODO: implement this
+	return &pb.Response{
+		Ok:true,
+	}, nil
+}
+
 func (lp *LedgerProxy) requestCheck(ctx *pb.LedgerContext) bool {
 	exist, state := lp.stateMgr.GetStateDb(ctx.Namespace)
 	if exist == false {

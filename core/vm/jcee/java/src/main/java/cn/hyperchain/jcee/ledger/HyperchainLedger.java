@@ -4,12 +4,14 @@
  */
 package cn.hyperchain.jcee.ledger;
 
+import cn.hyperchain.jcee.contract.Event;
 import cn.hyperchain.jcee.mock.MockLedger;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
 
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -73,26 +75,19 @@ public class HyperchainLedger extends AbstractLedger{
         return success;
     }
 
-    public ContractProto.Value fetch(byte[] key) {
-        String realK = getContext().getRequestContext().getNamespace()+"_"+
-                getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(key).toStringUtf8();
-
-        byte[] data = cache.get(realK.getBytes());
-        if(data!=null){
-            ContractProto.Value recvValue = ContractProto.Value.newBuilder()
-                    .setV(ByteString.copyFrom(data))
-                    .build();
-            return recvValue;
-        }
-        ContractProto.Key sendkey = ContractProto.Key.newBuilder()
+    @Override
+    public boolean post(Event event) {
+        ContractProto.Event.Builder eventBuilder = ContractProto.Event.newBuilder()
                 .setContext(getLedgerContext())
-                .setK(ByteString.copyFrom(key))
-                .build();
-        logger.info("Transaction id: " + getContext().getId());
+                .setBody(ByteString.copyFrom(event.toString(), Charset.defaultCharset()));
 
-        ContractProto.Value value = ledgerClient.get(sendkey);
-        cache.put(realK.getBytes(),value.toByteArray());
-        return value;
+        Set<String> topics = event.getTopics();
+        List<ByteString> topics1 = new LinkedList<>();
+        for (String topic: topics) {
+            topics1.add(ByteString.copyFrom(topic, Charset.defaultCharset()));
+        }
+        eventBuilder.addAllTopics(topics1);
+        return ledgerClient.post(eventBuilder.build());
     }
 
     public ContractProto.LedgerContext getLedgerContext(){

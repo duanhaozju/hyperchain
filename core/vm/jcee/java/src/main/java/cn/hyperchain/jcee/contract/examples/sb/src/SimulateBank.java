@@ -6,6 +6,7 @@ package cn.hyperchain.jcee.contract.examples.sb.src;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
+import cn.hyperchain.jcee.contract.Event;
 import cn.hyperchain.jcee.ledger.Batch;
 import cn.hyperchain.jcee.ledger.BatchKey;
 import cn.hyperchain.jcee.ledger.BatchValue;
@@ -46,6 +47,8 @@ public class SimulateBank extends ContractTemplate {
             case "testInvokeContract":
                 logger.info("testInvokeContract");
                 return testInvokeContract(args);
+            case "testPostEvent":
+                return testPostEvent(args);
             default:
                 String err = "method " + funcName  + " not found!";
                 logger.error(err);
@@ -205,5 +208,19 @@ public class SimulateBank extends ContractTemplate {
         List<String> arg = new LinkedList<>();
         arg.add("hello, invoke contract!");
         return invokeContract("global", "bbe2b6412ccf633222374de8958f2acc76cda9c9", "test", arg);
+    }
+
+    public ExecuteResult testPostEvent(List<String> args) {
+        logger.info(args);
+        for (int i = 0; i < 10; i ++) {
+            Event event = new Event("event" + i);
+            event.addTopic("simulate_bank");
+            event.addTopic("test");
+            event.put("attr1", "value1");
+            event.put("attr2", "value2");
+            event.put("attr3", "value3");
+            ledger.post(event);
+        }
+        return result(true);
     }
 }
