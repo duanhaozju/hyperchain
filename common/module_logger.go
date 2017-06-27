@@ -16,6 +16,10 @@ type moduleLogger struct {
 	backend		logging.LeveledBackend
 }
 
+var (
+	BackendNil  	= errors.New("setLogLevel Error: backend nil")
+)
+
 // newModuleLogger return a moduleLogger pointer with backend binded.
 func newModuleLogger(compositeName string, file *os.File,
 fileFormat string, consoleFormat string, logLevel string, writeFile bool) *moduleLogger {
@@ -52,18 +56,22 @@ fileFormat string, consoleFormat string, logLevel string, writeFile bool) *modul
 }
 
 // setLogLevel set both file log and console log to given level.
-func (ml *moduleLogger) setLogLevel(level string) {
+func (ml *moduleLogger) setLogLevel(level string) error {
 	if ml.level == level {
-		return
+		return nil
 	}
 
 	ml.level = level
-	l, _ := logging.LogLevel(level)
+	l, err := logging.LogLevel(level)
+	if err != nil {
+		return err
+	}
 	if ml.backend == nil {
 		commonLogger.Critical("setLogLevel Error: backend nil")
-		return
+		return BackendNil
 	}
 	ml.backend.SetLevel(l, ml.compositeName)
+	return nil
 }
 
 // getLogLevel get level string of current module.

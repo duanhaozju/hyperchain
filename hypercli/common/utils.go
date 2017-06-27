@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"hyperchain/api/jsonrpc/core"
 	"strings"
-	"errors"
 	"time"
 	"path/filepath"
 	"os"
@@ -53,9 +52,9 @@ func GetNonEmptyValueByName(c *cli.Context, name string) string {
 }
 
 // GetJSONResponse returns a JSONResponse from http response result
-func GetJSONResponse(result *jsonrpc.CommandResult) (jsonrpc.JSONResponse, error) {
+func GetJSONResponse(result string) (jsonrpc.JSONResponse, error) {
 	var response jsonrpc.JSONResponse
-	err := json.Unmarshal([]byte(result.Result.(string)), &response)
+	err := json.Unmarshal([]byte(result), &response)
 	if err != nil {
 		return response, err
 	}
@@ -89,9 +88,8 @@ func GenSignature(from string, to string, timestamp int64, amount int64, payload
 }
 
 // getTransactionReceiptCmd returns the jsonrpc command of getTransactionReceipt
-func getTransactionReceiptCmd(txHash string, c *cli.Context) string {
+func getTransactionReceiptCmd(txHash string, namespace string) string {
 	method := "tx_getTransactionReceipt"
-	namespace := c.String("namespace")
 
 	return fmt.Sprintf(
 		"{\"jsonrpc\":\"2.0\",\"namespace\":\"%s\",\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",
@@ -99,21 +97,17 @@ func getTransactionReceiptCmd(txHash string, c *cli.Context) string {
 }
 
 // getTransactionReceipt try to get the transaction receipt 10 times, with 1s interval
-func GetTransactionReceipt(txHash string, c *cli.Context, client *CmdClient) error {
-	cmd := getTransactionReceiptCmd(txHash, c)
+func GetTransactionReceipt(txHash string, namespace string, client *CmdClient) error {
+	cmd := getTransactionReceiptCmd(txHash, namespace)
 
 	for i:= 1; i<= frequency; i ++ {
 		response, err := client.Call(cmd)
 		if err != nil {
 			return err
 		} else {
-			if result, ok := response.Result.(string); !ok {
-				return errors.New("Error in assert interface to string !")
-			} else {
-				if strings.Contains(result, "SUCCESS") {
-					fmt.Print(result)
-					return nil
-				}
+			if strings.Contains(response, "SUCCESS") {
+				fmt.Print(response)
+				return nil
 			}
 		}
 		time.Sleep(1 * time.Second)
