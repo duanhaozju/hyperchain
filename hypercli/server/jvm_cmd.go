@@ -36,10 +36,7 @@ func startJvm(c *cli.Context) error {
 		Args:       c.Args(),
 	}
 	result := client.InvokeCmd(cmd)
-	if result.Ok != true {
-		fmt.Printf("Failed to start jvm manager: %v", result.Result)
-	}
-	fmt.Print(result.Result)
+	fmt.Print(result)
 	return nil
 }
 
@@ -50,10 +47,7 @@ func stopJvm(c *cli.Context) error {
 		Args:       c.Args(),
 	}
 	result := client.InvokeCmd(cmd)
-	if result.Ok != true {
-		fmt.Printf("Failed to stop jvm manager: %v", result.Result)
-	}
-	fmt.Print(result.Result)
+	fmt.Print(result)
 	return nil
 }
 
@@ -64,9 +58,6 @@ func restartJvm(c *cli.Context) error {
 		Args:       c.Args(),
 	}
 	result := client.InvokeCmd(cmd)
-	if result.Ok != true {
-		fmt.Printf("Failed to restart jvm manager: %v", result.Result)
-	}
-	fmt.Print(result.Result)
+	fmt.Print(result)
 	return nil
 }

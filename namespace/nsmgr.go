@@ -10,6 +10,7 @@ import (
 	"hyperchain/common"
 	"io/ioutil"
 	"sync"
+	"os"
 )
 
 var logger *logging.Logger
@@ -173,12 +174,24 @@ func (nr *nsManagerImpl) List() (names []string) {
 //Register register a new namespace, by the new namespace config dir.
 func (nr *nsManagerImpl) Register(name string) error {
 	logger.Noticef("Register namespace: %s", name)
+	if _, ok := nr.namespaces[name]; ok {
+		logger.Warningf("namespace [%s] has been registered", name)
+		return ErrRegistered
+	}
 	configRootDir := nr.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
 		return errors.New("Namespace config root dir is not valid")
 	}
-	nsConfigDir := configRootDir + "/" + name + "/config"
-	nsConfig := nr.constructConfigFromDir(nsConfigDir)
+	nsRootPath := configRootDir + "/" + name
+	if _, err := os.Stat(nsRootPath); os.IsNotExist(err) {
+		logger.Errorf("namespace [%s] root path doesn't exist!", name)
+		return ErrNonExistConfig
+	}
+	nsConfigDir := nsRootPath + "/config"
+	nsConfig, err := nr.constructConfigFromDir(nsConfigDir)
+	if err != nil {
+		return err
+	}
 	nsConfig.Set(common.NAMESPACE, name)
 	delFlag := make(chan bool)
 	ns, err := GetNamespace(name, nsConfig, delFlag)
@@ -205,8 +218,8 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 			delete(nr.namespaces, name)
 			nr.rwLock.Unlock()
 		}
-
 	} else {
+		logger.Warningf("namespace %s not exist, please register first.", name)
 		return ErrInvalidNs
 	}
 	logger.Criticalf("namespace: %s stopped", name)

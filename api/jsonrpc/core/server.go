@@ -140,18 +140,21 @@ func splitRawMessage(args json.RawMessage) ([]string, error) {
 func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
 	if args, ok := req.Params.(json.RawMessage); !ok {
 		log.Critical("wrong type not json type")
-		return &common.RPCResponse{Reply: "invalid args"}
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.MethodNotFoundError{}}
 	} else {
 		args, err := splitRawMessage(args)
 		if err != nil {
-			return &common.RPCResponse{Reply: "invalid cmd"}
+			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidParamsError{}}
 		}
 		cmd := &Command{
 			MethodName: req.Method,
 			Args:       args,
 		}
 		rs := s.admin.CmdExecutor[req.Method](cmd)
-		return &common.RPCResponse{Reply: rs}
+		if rs.Ok == false {
+			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: rs.Error}
+		}
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Reply: rs.Result}
 	}
 
 }
