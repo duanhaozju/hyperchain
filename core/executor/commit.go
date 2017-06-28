@@ -11,7 +11,6 @@ import (
 	"hyperchain/manager/protos"
 	"time"
 	"github.com/pkg/errors"
-	"fmt"
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
@@ -204,12 +203,10 @@ func (executor *Executor) persistReceipts(batch db.Batch, transaction []*types.T
 		receipt.SetLogs(logs)
 
 		if transaction[idx].Version != nil {
-			fmt.Println("Debug1")
 			if err, _ := edb.PersistReceipt(batch, receipt, false, false, string(transaction[idx].Version)); err != nil {
 				return err
 			}
 		} else {
-			fmt.Println("Debug2")
 			if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
 				return err
 			}
