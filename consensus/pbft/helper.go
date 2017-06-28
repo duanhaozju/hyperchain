@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"sync/atomic"
+	"math"
 )
 
 // =============================================================================
@@ -143,8 +144,10 @@ func (pbft *pbftImpl) handleCachedTxs(cache map[uint64]*transactionStore) {
 func (pbft *pbftImpl) cleanAllCache() {
 
 	for idx := range pbft.storeMgr.certStore {
-		delete(pbft.storeMgr.certStore, idx)
-		pbft.persistDelQPCSet(idx.v, idx.n)
+		if idx.n > pbft.exec.lastExec {
+			delete(pbft.storeMgr.certStore, idx)
+			pbft.persistDelQPCSet(idx.v, idx.n)
+		}
 	}
 
 	pbft.vcMgr.viewChangeStore = make(map[vcidx]*ViewChange)
@@ -154,30 +157,18 @@ func (pbft *pbftImpl) cleanAllCache() {
 
 }
 
-// =============================================================================
-// prepare/commit quorum checks helper
-// =============================================================================
-
-func (pbft *pbftImpl) preparedReplicasQuorum() int {
-	return (2 * pbft.f)
-}
-
-func (pbft *pbftImpl) committedReplicasQuorum() int {
-	return (2*pbft.f + 1)
-}
-
-// intersectionQuorum returns the number of replicas that have to
-// agree to guarantee that at least one correct replica is shared by
-// two intersection quora
-func (pbft *pbftImpl) intersectionQuorum() int {
-	return (pbft.N + pbft.f + 2) / 2
+// When N=3F+1, this should be 2F+1 (N-F)
+// More generally, we need every two common case quorum of size X to intersect in at least F+1
+// hence 2X>=N+F+1
+func (pbft *pbftImpl) commonCaseQuorum() int {
+	return int(math.Ceil(float64(pbft.N+pbft.f+1)/float64(2)))
 }
 
 func (pbft *pbftImpl) allCorrectReplicasQuorum() int {
 	return (pbft.N - pbft.f)
 }
 
-func (pbft *pbftImpl) minimumCorrectQuorum() int {
+func (pbft *pbftImpl) oneCorrectQuorum() int {
 	return pbft.f + 1
 }
 
@@ -225,7 +216,7 @@ func (pbft *pbftImpl) prepared(digest string, v uint64, n uint64) bool {
 	pbft.logger.Debugf("Replica %d prepare count for view=%d/seqNo=%d: %d",
 		pbft.id, v, n, prepCount)
 
-	return prepCount >= pbft.preparedReplicasQuorum()
+	return prepCount >= pbft.commonCaseQuorum()-1
 }
 
 func (pbft *pbftImpl) onlyPrepared(digest string, v uint64, n uint64) bool {
@@ -238,7 +229,7 @@ func (pbft *pbftImpl) onlyPrepared(digest string, v uint64, n uint64) bool {
 
 	prepCount := len(cert.prepare)
 
-	return prepCount >= pbft.preparedReplicasQuorum()
+	return prepCount >= pbft.commonCaseQuorum()-1
 }
 
 func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
@@ -258,7 +249,7 @@ func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
 	pbft.logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
 		pbft.id, v, n, cmtCount)
 
-	return cmtCount >= pbft.intersectionQuorum()
+	return cmtCount >= pbft.commonCaseQuorum()
 }
 
 func (pbft *pbftImpl) onlyCommitted(digest string, v uint64, n uint64) bool {
@@ -274,7 +265,7 @@ func (pbft *pbftImpl) onlyCommitted(digest string, v uint64, n uint64) bool {
 	pbft.logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
 		pbft.id, v, n, cmtCount)
 
-	return cmtCount >= pbft.committedReplicasQuorum()
+	return cmtCount >= pbft.commonCaseQuorum()
 }
 
 // =============================================================================
@@ -353,17 +344,17 @@ func (pbft *pbftImpl) startTimerIfOutstandingRequests() {
 			}
 			return digests
 		}()
-		pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
-	} else if pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
+		pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
+	} else if pbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
 		pbft.nullReqTimerReset()
 	}
 }
 
 func (pbft *pbftImpl) nullReqTimerReset() {
-	timeout := pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
+	timeout := pbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
 	if pbft.primary(pbft.view) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
-		timeout = 3 * timeout + pbft.pbftTimerMgr.requestTimeout
+		timeout = 3 * timeout + pbft.timerMgr.requestTimeout
 	}
 
 	event := &LocalEvent{
@@ -373,13 +364,13 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 
 	//pbft.logger.Errorf("replica: %d, primary: %d, reset null request timeout to %v", pbft.id, pbft.primary(pbft.view), timeout)
 
-	pbft.pbftTimerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, event, pbft.pbftEventQueue)
+	pbft.timerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, event, pbft.pbftEventQueue)
 }
 
 //stopFirstRequestTimer
 func (pbft *pbftImpl) stopFirstRequestTimer()  {
 	if ok, _ := pbft.isPrimary(); !ok {
-		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
+		pbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 	}
 }
 

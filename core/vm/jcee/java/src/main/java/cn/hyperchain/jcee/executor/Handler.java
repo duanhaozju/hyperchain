@@ -179,6 +179,7 @@ public class Handler {
                                 .build();
                     } else {
                         Errors.ReturnErrMsg("deploy failed ", responseObserver);
+                        return;
                     }
                 }catch (ClassNotFoundException cnfe){
                     logger.error(cnfe);

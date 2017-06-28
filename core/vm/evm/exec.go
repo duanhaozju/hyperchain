@@ -17,11 +17,13 @@ func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber
 		to       = common.BytesToAddress(tx.To)
 		tv       = tx.GetTransactionValue()
 		data     = tv.RetrievePayload()
-		gas      = big.NewInt(100000000)
+		gas      = tv.RetrieveGas()
+		preGas   = tv.RetrieveGas()
 		gasPrice = tv.RetrieveGasPrice()
 		amount   = tv.RetrieveAmount()
 		op       = tv.GetOp()
 	)
+
 	env := initEnvironment(db, blockNumber, logger, namespace, tx.GetHash())
 	env.Db().StartRecord(tx.GetHash(), common.Hash{}, idx)
 	if valid := checkPermission(env, from, to, op); !valid {
@@ -34,7 +36,7 @@ func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber
 		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount, op)
 	}
 
-	receipt = makeReceipt(env, addr, tx.GetHash(), gas, ret, err)
+	receipt = makeReceipt(env, addr, tx.GetHash(), big.NewInt(0).Sub(preGas, gas), ret, err)
 	return receipt, ret, addr, err
 }
 
@@ -83,10 +85,10 @@ func checkPermission(env vm.Environment, from, to common.Address, op types.Trans
 
 
 func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, gas *big.Int, ret []byte, err error) *types.Receipt {
-	receipt := types.NewReceipt(nil, gas, 0)
+	receipt := types.NewReceipt(nil, 0)
 	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = txHash.Bytes()
-	receipt.GasUsed = 100000
+	receipt.GasUsed = gas.Int64()
 	receipt.Ret = ret
 	receipt.SetLogs(env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))
 

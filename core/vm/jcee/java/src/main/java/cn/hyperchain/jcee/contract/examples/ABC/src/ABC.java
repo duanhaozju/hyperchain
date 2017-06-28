@@ -355,7 +355,7 @@ public class ABC extends ContractTemplate {
 
         if(!judgeAccountCorrect(replyer,replyerName,replyerBankNum)){
             msg = "the replyer info is wrong";
-            logger.equals(msg);
+            logger.error(msg);
             return result(false,msg);
         }
 

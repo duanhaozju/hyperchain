@@ -1,5 +1,6 @@
 package cn.hyperchain.jcee.mock;
 
+import cn.hyperchain.jcee.contract.Event;
 import cn.hyperchain.jcee.ledger.*;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.protos.ContractProto;
@@ -318,5 +319,10 @@ public class MockLedger extends AbstractLedger {
     @Override
     public boolean put(String key, Object object) {
         return put(key.getBytes(), object);
+    }
+
+    @Override
+    public boolean post(Event event) {
+        return false;
     }
 }

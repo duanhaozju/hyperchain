@@ -1,10 +1,7 @@
 package types
 
 import (
-	"fmt"
 	"hyperchain/common"
-	"math/big"
-	"strconv"
 )
 
 //// ReceiptTrans are used to show in web.
@@ -44,12 +41,8 @@ func (receipt Receipt) ToReceiptTrans() (receiptTrans *ReceiptTrans) {
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
-func NewReceipt(root []byte, cumulativeGasUsed *big.Int, vmType int32) *Receipt {
-	i64, err := strconv.ParseInt(cumulativeGasUsed.String(), 10, 64)
-	if err != nil {
-		fmt.Println("the parseInt is wrong")
-	}
-	return &Receipt{PostState: common.CopyBytes(root), CumulativeGasUsed: i64, VmType: Receipt_VmType(vmType)}
+func NewReceipt(root []byte, vmType int32) *Receipt {
+	return &Receipt{PostState: common.CopyBytes(root), VmType: Receipt_VmType(vmType)}
 }
 
 func (r *Receipt) RetrieveLogs() (Logs, error) {

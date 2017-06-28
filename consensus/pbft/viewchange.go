@@ -70,7 +70,7 @@ func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vc
 	if err != nil {
 		pbft.logger.Criticalf("Cannot parse clean out-of-data view change message timeout: %s", err)
 	}
-	nvTimeout := pbft.pbftTimerMgr.getTimeoutValue(NEW_VIEW_TIMER)
+	nvTimeout := pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 	if vcm.cleanVcTimeout < 6 * nvTimeout {
 		vcm.cleanVcTimeout = 6 * nvTimeout
 		pbft.logger.Criticalf("Replica %d set timeout of cleaning out-of-time view change message to %v since it's to short", pbft.id, 6 * nvTimeout)
@@ -215,7 +215,7 @@ func (pbft *pbftImpl) sendViewChange() events.Event {
 		EventType: VIEW_CHANGE_RESEND_TIMER_EVENT,
 	}
 
-	pbft.pbftTimerMgr.startTimer(VC_RESEND_TIMER, event, pbft.pbftEventQueue)
+	pbft.timerMgr.startTimer(VC_RESEND_TIMER, event, pbft.pbftEventQueue)
 	return pbft.recvViewChange(vc)
 }
 
@@ -263,8 +263,8 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 
 	if pbft.vcMgr.vcResendCount >= pbft.vcMgr.vcResendLimit {
 		pbft.logger.Noticef("Replica %d view change resend reach upbound, try to recovery", pbft.id)
-		pbft.pbftTimerMgr.stopTimer(NEW_VIEW_TIMER)
-		pbft.pbftTimerMgr.stopTimer(VC_RESEND_TIMER)
+		pbft.timerMgr.stopTimer(NEW_VIEW_TIMER)
+		pbft.timerMgr.stopTimer(VC_RESEND_TIMER)
 		pbft.vcMgr.vcResendCount = 0
 		pbft.view--
 		pbft.status.activeState(&pbft.status.inNegoView, &pbft.status.inRecovery)
@@ -284,7 +284,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 	replicas := make(map[uint64]bool)
 	minView := uint64(0)
 	for idx := range pbft.vcMgr.viewChangeStore {
-		if vc.Timestamp + int64(pbft.pbftTimerMgr.getTimeoutValue(CLEAN_VIEW_CHANGE_TIMER)) < time.Now().UnixNano() {
+		if vc.Timestamp + int64(pbft.timerMgr.getTimeoutValue(CLEAN_VIEW_CHANGE_TIMER)) < time.Now().UnixNano() {
 			pbft.logger.Warningf("Replica %d dropped an out-of-time view change message from replica %d", pbft.id, vc.ReplicaId)
 			delete(pbft.vcMgr.viewChangeStore, idx)
 			continue
@@ -301,10 +301,10 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 	}
 
 	// We only enter this if there are enough view change messages greater than our current view
-	if len(replicas) >= pbft.f + 1 {
+	if len(replicas) >= pbft.oneCorrectQuorum() {
 		pbft.logger.Warningf("Replica %d received f+1 view-change messages, triggering view-change to view %d",
 			pbft.id, minView)
-		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
+		pbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 		// subtract one, because sendViewChange() increments
 		pbft.view = minView - 1
 		return pbft.sendViewChange()
@@ -319,11 +319,11 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 	pbft.logger.Debugf("Replica %d now has %d view change requests for view %d", pbft.id, quorum, pbft.view)
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 && vc.View == pbft.view && quorum >= pbft.allCorrectReplicasQuorum() {
-		pbft.pbftTimerMgr.stopTimer(VC_RESEND_TIMER)
+		pbft.timerMgr.stopTimer(VC_RESEND_TIMER)
 		pbft.startNewViewTimer(pbft.vcMgr.lastNewViewTimeout, "new view change")
 		pbft.vcMgr.lastNewViewTimeout = 2 * pbft.vcMgr.lastNewViewTimeout
-		if pbft.vcMgr.lastNewViewTimeout > 5 * pbft.pbftTimerMgr.getTimeoutValue(NEW_VIEW_TIMER) {
-			pbft.vcMgr.lastNewViewTimeout = 5 * pbft.pbftTimerMgr.getTimeoutValue(NEW_VIEW_TIMER)
+		if pbft.vcMgr.lastNewViewTimeout > 5 * pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER) {
+			pbft.vcMgr.lastNewViewTimeout = 5 * pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 		}
 		return &LocalEvent{
 			Service:VIEW_CHANGE_SERVICE,
@@ -588,8 +588,8 @@ outer:
 				}
 			}
 
-			if quorum < pbft.intersectionQuorum() {
-				pbft.logger.Debugf("Replica %d missing quorum of commit certificate for seqNo=%d, only has %d of %d", pbft.id, seqNo, quorum, pbft.intersectionQuorum())
+			if quorum < pbft.commonCaseQuorum() {
+				pbft.logger.Debugf("Replica %d missing quorum of commit certificate for seqNo=%d, only has %d of %d", pbft.id, seqNo, quorum, pbft.commonCaseQuorum())
 				continue
 			}
 
@@ -752,17 +752,8 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 		return nil
 	}
 
-	//if atomic.LoadUint32(&pbft.activeView) == 1 {
-	//	pbft.logger.Debugf("Replica %d in active view, ignore handleTail request", pbft.id)
-	//	return nil
-	//}
-	//
-	//if len(pbft.vcMgr.vcResetStore) < pbft.allCorrectReplicasQuorum()-1 {
-	//	return nil
-	//}
-
-	if pbft.status.getState(&pbft.status.inVcReset) {
-		pbft.logger.Debugf("Replica %d itself has not done with vcReset", pbft.id)
+	if pbft.status.getState(&pbft.status.inVcReset) && !pbft.status.getState(&pbft.status.skipInProgress) {
+		pbft.logger.Debugf("Replica %d itself has not done with vcReset and not in stateUpdate", pbft.id)
 		return nil
 	}
 
@@ -950,7 +941,7 @@ func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 
 	for idx, vcList := range checkpoints {
 		// need weak certificate for the checkpoint
-		if len(vcList) <= pbft.f {
+		if len(vcList) < pbft.oneCorrectQuorum() {
 			// type casting necessary to match types
 			pbft.logger.Debugf("Replica %d has no weak certificate for n:%d, vcList was %d long",
 				pbft.id, idx.SequenceNumber, len(vcList))
@@ -967,7 +958,7 @@ func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 			}
 		}
 
-		if quorum < pbft.intersectionQuorum() {
+		if quorum < pbft.commonCaseQuorum() {
 			pbft.logger.Debugf("Replica %d has no quorum for n:%d", pbft.id, idx.SequenceNumber)
 			continue
 		}
@@ -1014,7 +1005,7 @@ nLoop:
 					quorum++
 				}
 
-				if quorum < pbft.intersectionQuorum() {
+				if quorum < pbft.commonCaseQuorum() {
 					continue
 				}
 
@@ -1029,7 +1020,7 @@ nLoop:
 					}
 				}
 
-				if quorum < pbft.f + 1 {
+				if quorum < pbft.oneCorrectQuorum() {
 					continue
 				}
 
@@ -1054,7 +1045,7 @@ nLoop:
 			quorum++
 		}
 
-		if quorum >= pbft.intersectionQuorum() {
+		if quorum >= pbft.commonCaseQuorum() {
 			// "then select the null request for number n"
 			msgList[n] = ""
 
@@ -1162,7 +1153,7 @@ func (pbft *pbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) events.E
 func (pbft *pbftImpl) stopNewViewTimer() {
 	pbft.logger.Debugf("Replica %d stopping a running new view timer", pbft.id)
 	pbft.status.inActiveState(&pbft.status.timerActive)
-	pbft.pbftTimerMgr.stopTimer(NEW_VIEW_TIMER)
+	pbft.timerMgr.stopTimer(NEW_VIEW_TIMER)
 }
 
 //startNewViewTimer stop all running new view timers and  start a new view timer
@@ -1176,7 +1167,7 @@ func (pbft *pbftImpl) startNewViewTimer(timeout time.Duration, reason string) {
 		EventType: VIEW_CHANGE_TIMER_EVENT,
 	}
 
-	pbft.pbftTimerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, event, pbft.pbftEventQueue)
+	pbft.timerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, event, pbft.pbftEventQueue)
 }
 
 //softstartNewViewTimer start a new view timer no matter how many existed new view timer
@@ -1190,7 +1181,7 @@ func (pbft *pbftImpl) softStartNewViewTimer(timeout time.Duration, reason string
 		EventType: VIEW_CHANGE_TIMER_EVENT,
 	}
 
-	pbft.pbftTimerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, event, pbft.pbftEventQueue)
+	pbft.timerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, event, pbft.pbftEventQueue)
 }
 
 //correctViewChange
@@ -1227,7 +1218,7 @@ func (pbft *pbftImpl) beforeSendVC() error{
 	}
 
 	pbft.stopNewViewTimer()
-	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
+	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 
 	delete(pbft.vcMgr.newViewStore, pbft.view)
 	pbft.view ++

@@ -6,6 +6,24 @@ import (
 	"hyperchain/common"
 )
 
+const (
+	LogVmType_EVM = iota
+	LogVmType_JVM
+)
+
+type LogVmType int
+
+func (vmType LogVmType) String() string {
+	switch vmType {
+	case LogVmType_EVM:
+		return "EVM"
+	case LogVmType_JVM:
+		return "JVM"
+	default:
+		return ""
+	}
+}
+
 type Log struct {
 	// consensus fields
 	Address common.Address `json:"Address"`
@@ -18,14 +36,15 @@ type Log struct {
 	TxIndex     uint        `json:"TxIndex"`
 	BlockHash   common.Hash `json:"BlockHash"`
 	Index       uint        `json:"Index"`
+	Vm          LogVmType   `json:"Vm"`
 }
 
 // assign block number as 0 temporarily
 // because the blcok number in env is a seqNo actually
 // primary's seqNo may not equal to other's
 // correctly block number and block hash will be assigned in the commit phase
-func NewLog(address common.Address, topics []common.Hash, data []byte, number uint64) *Log {
-	return &Log{Address: address, Topics: topics, Data: data, BlockNumber: number}
+func NewLog(address common.Address, topics []common.Hash, data []byte, number uint64, vmType int) *Log {
+	return &Log{Address: address, Topics: topics, Data: data, BlockNumber: number, Vm: LogVmType(vmType)}
 }
 
 func (l *Log) String() string {
@@ -55,6 +74,7 @@ func DecodeLogs(buf []byte) (Logs, error) {
 }
 
 type LogTrans struct {
+	Vm          string
 	Address     string
 	Topics      []string
 	Data        string
@@ -72,9 +92,17 @@ func (ls Logs) ToLogsTrans() []LogTrans {
 		for ti, t := range log.Topics {
 			topics[ti] = t.Hex()
 		}
+		var data string
+		switch log.Vm {
+		case LogVmType_EVM:
+			data = common.Bytes2Hex(log.Data)
+		case LogVmType_JVM:
+			data = string(log.Data)
+		}
 		ret[idx] = LogTrans{
+			Vm:          log.Vm.String(),
 			Address:     log.Address.Hex(),
-			Data:        common.Bytes2Hex(log.Data),
+			Data:        data,
 			BlockNumber: log.BlockNumber,
 			BlockHash:   log.BlockHash.Hex(),
 			Topics:      topics,

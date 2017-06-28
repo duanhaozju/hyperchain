@@ -5,7 +5,13 @@
 package cn.hyperchain.jcee.ledger;
 
 
+import cn.hyperchain.jcee.contract.Event;
+
 public interface ILedger {
+
+    //post event to hyperchain
+    boolean post(Event event);
+
     //newBatch create a new batch
     Batch newBatch();
 
