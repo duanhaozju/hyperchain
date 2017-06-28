@@ -2,10 +2,12 @@ package types
 
 import (
 	"hyperchain/common"
+	"math/big"
 )
 
 //// ReceiptTrans are used to show in web.
 type ReceiptTrans struct {
+	Version           string         `json:"version"`
 	PostState         string         `json:"postState"`
 	CumulativeGasUsed int64          `json:"cumulativeGasUsed"`
 	TxHash            string         `json:"txHash"`
@@ -27,6 +29,7 @@ func (receipt Receipt) ToReceiptTrans() (receiptTrans *ReceiptTrans) {
 		logsValue = logs.ToLogsTrans()
 	}
 	return &ReceiptTrans{
+		Version:           string(receipt.Version),
 		GasUsed:           receipt.GasUsed,
 		PostState:         common.BytesToHash(receipt.PostState).Hex(),
 		ContractAddress:   common.BytesToAddress(receipt.ContractAddress).Hex(),
@@ -41,8 +44,8 @@ func (receipt Receipt) ToReceiptTrans() (receiptTrans *ReceiptTrans) {
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
-func NewReceipt(root []byte, vmType int32) *Receipt {
-	return &Receipt{PostState: common.CopyBytes(root), VmType: Receipt_VmType(vmType)}
+func NewReceipt(root []byte, cumulativeGasUsed *big.Int, vmType int32) *Receipt {
+	return &Receipt{PostState: common.CopyBytes(root), CumulativeGasUsed: cumulativeGasUsed.Int64(), VmType: Receipt_VmType(vmType)}
 }
 
 func (r *Receipt) RetrieveLogs() (Logs, error) {

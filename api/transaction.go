@@ -194,6 +194,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 }
 
 type ReceiptResult struct {
+	Version         string        `json:"version"`
 	TxHash          string        `json:"txHash"`
 	VmType          string        `json:"vmType"`
 	PostState       string        `json:"postState"`
@@ -215,6 +216,7 @@ func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult
 			logs[idx] = receipt.Logs[idx]
 		}
 		return &ReceiptResult{
+			Version:         receipt.Version,
 			TxHash:          receipt.TxHash,
 			VmType:          receipt.VmType,
 			PostState:       receipt.PostState,
