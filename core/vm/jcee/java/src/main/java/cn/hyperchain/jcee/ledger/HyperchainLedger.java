@@ -95,11 +95,13 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     public ContractProto.LedgerContext getLedgerContext(){
+//        logger.debug(getContext().getRequestContext());
         return ContractProto.LedgerContext
                 .newBuilder()
                 .setNamespace(getContext().getRequestContext().getNamespace())
                 .setTxid(getContext().getRequestContext().getTxid())
                 .setCid(getContext().getRequestContext().getCid())
+                .setBlockNumber(getContext().getRequestContext().getBlockNumber())
                 .build();
     }
 

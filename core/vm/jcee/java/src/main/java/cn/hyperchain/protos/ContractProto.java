@@ -1536,6 +1536,11 @@ public final class ContractProto {
      */
     com.google.protobuf.ByteString
         getCidBytes();
+
+    /**
+     * <code>uint64 blockNumber = 4;</code>
+     */
+    long getBlockNumber();
   }
   /**
    * Protobuf type {@code RequestContext}
@@ -1552,6 +1557,7 @@ public final class ContractProto {
       txid_ = "";
       namespace_ = "";
       cid_ = "";
+      blockNumber_ = 0L;
     }
 
     @java.lang.Override
@@ -1595,6 +1601,11 @@ public final class ContractProto {
               java.lang.String s = input.readStringRequireUtf8();
 
               cid_ = s;
+              break;
+            }
+            case 32: {
+
+              blockNumber_ = input.readUInt64();
               break;
             }
           }
@@ -1722,6 +1733,15 @@ public final class ContractProto {
       }
     }
 
+    public static final int BLOCKNUMBER_FIELD_NUMBER = 4;
+    private long blockNumber_;
+    /**
+     * <code>uint64 blockNumber = 4;</code>
+     */
+    public long getBlockNumber() {
+      return blockNumber_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -1743,6 +1763,9 @@ public final class ContractProto {
       if (!getCidBytes().isEmpty()) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, cid_);
       }
+      if (blockNumber_ != 0L) {
+        output.writeUInt64(4, blockNumber_);
+      }
     }
 
     public int getSerializedSize() {
@@ -1758,6 +1781,10 @@ public final class ContractProto {
       }
       if (!getCidBytes().isEmpty()) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, cid_);
+      }
+      if (blockNumber_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(4, blockNumber_);
       }
       memoizedSize = size;
       return size;
@@ -1781,6 +1808,8 @@ public final class ContractProto {
           .equals(other.getNamespace());
       result = result && getCid()
           .equals(other.getCid());
+      result = result && (getBlockNumber()
+          == other.getBlockNumber());
       return result;
     }
 
@@ -1797,6 +1826,9 @@ public final class ContractProto {
       hash = (53 * hash) + getNamespace().hashCode();
       hash = (37 * hash) + CID_FIELD_NUMBER;
       hash = (53 * hash) + getCid().hashCode();
+      hash = (37 * hash) + BLOCKNUMBER_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getBlockNumber());
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -1921,6 +1953,8 @@ public final class ContractProto {
 
         cid_ = "";
 
+        blockNumber_ = 0L;
+
         return this;
       }
 
@@ -1946,6 +1980,7 @@ public final class ContractProto {
         result.txid_ = txid_;
         result.namespace_ = namespace_;
         result.cid_ = cid_;
+        result.blockNumber_ = blockNumber_;
         onBuilt();
         return result;
       }
@@ -1998,6 +2033,9 @@ public final class ContractProto {
         if (!other.getCid().isEmpty()) {
           cid_ = other.cid_;
           onChanged();
+        }
+        if (other.getBlockNumber() != 0L) {
+          setBlockNumber(other.getBlockNumber());
         }
         onChanged();
         return this;
@@ -2228,6 +2266,32 @@ public final class ContractProto {
   checkByteStringIsUtf8(value);
         
         cid_ = value;
+        onChanged();
+        return this;
+      }
+
+      private long blockNumber_ ;
+      /**
+       * <code>uint64 blockNumber = 4;</code>
+       */
+      public long getBlockNumber() {
+        return blockNumber_;
+      }
+      /**
+       * <code>uint64 blockNumber = 4;</code>
+       */
+      public Builder setBlockNumber(long value) {
+        
+        blockNumber_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>uint64 blockNumber = 4;</code>
+       */
+      public Builder clearBlockNumber() {
+        
+        blockNumber_ = 0L;
         onChanged();
         return this;
       }
@@ -8078,6 +8142,11 @@ public final class ContractProto {
      */
     com.google.protobuf.ByteString
         getCidBytes();
+
+    /**
+     * <code>uint64 blockNumber = 4;</code>
+     */
+    long getBlockNumber();
   }
   /**
    * Protobuf type {@code LedgerContext}
@@ -8094,6 +8163,7 @@ public final class ContractProto {
       txid_ = "";
       namespace_ = "";
       cid_ = "";
+      blockNumber_ = 0L;
     }
 
     @java.lang.Override
@@ -8137,6 +8207,11 @@ public final class ContractProto {
               java.lang.String s = input.readStringRequireUtf8();
 
               cid_ = s;
+              break;
+            }
+            case 32: {
+
+              blockNumber_ = input.readUInt64();
               break;
             }
           }
@@ -8264,6 +8339,15 @@ public final class ContractProto {
       }
     }
 
+    public static final int BLOCKNUMBER_FIELD_NUMBER = 4;
+    private long blockNumber_;
+    /**
+     * <code>uint64 blockNumber = 4;</code>
+     */
+    public long getBlockNumber() {
+      return blockNumber_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -8285,6 +8369,9 @@ public final class ContractProto {
       if (!getCidBytes().isEmpty()) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, cid_);
       }
+      if (blockNumber_ != 0L) {
+        output.writeUInt64(4, blockNumber_);
+      }
     }
 
     public int getSerializedSize() {
@@ -8300,6 +8387,10 @@ public final class ContractProto {
       }
       if (!getCidBytes().isEmpty()) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, cid_);
+      }
+      if (blockNumber_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(4, blockNumber_);
       }
       memoizedSize = size;
       return size;
@@ -8323,6 +8414,8 @@ public final class ContractProto {
           .equals(other.getNamespace());
       result = result && getCid()
           .equals(other.getCid());
+      result = result && (getBlockNumber()
+          == other.getBlockNumber());
       return result;
     }
 
@@ -8339,6 +8432,9 @@ public final class ContractProto {
       hash = (53 * hash) + getNamespace().hashCode();
       hash = (37 * hash) + CID_FIELD_NUMBER;
       hash = (53 * hash) + getCid().hashCode();
+      hash = (37 * hash) + BLOCKNUMBER_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getBlockNumber());
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -8463,6 +8559,8 @@ public final class ContractProto {
 
         cid_ = "";
 
+        blockNumber_ = 0L;
+
         return this;
       }
 
@@ -8488,6 +8586,7 @@ public final class ContractProto {
         result.txid_ = txid_;
         result.namespace_ = namespace_;
         result.cid_ = cid_;
+        result.blockNumber_ = blockNumber_;
         onBuilt();
         return result;
       }
@@ -8540,6 +8639,9 @@ public final class ContractProto {
         if (!other.getCid().isEmpty()) {
           cid_ = other.cid_;
           onChanged();
+        }
+        if (other.getBlockNumber() != 0L) {
+          setBlockNumber(other.getBlockNumber());
         }
         onChanged();
         return this;
@@ -8773,6 +8875,32 @@ public final class ContractProto {
         onChanged();
         return this;
       }
+
+      private long blockNumber_ ;
+      /**
+       * <code>uint64 blockNumber = 4;</code>
+       */
+      public long getBlockNumber() {
+        return blockNumber_;
+      }
+      /**
+       * <code>uint64 blockNumber = 4;</code>
+       */
+      public Builder setBlockNumber(long value) {
+        
+        blockNumber_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>uint64 blockNumber = 4;</code>
+       */
+      public Builder clearBlockNumber() {
+        
+        blockNumber_ = 0L;
+        onChanged();
+        return this;
+      }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return this;
@@ -8894,31 +9022,32 @@ public final class ContractProto {
       "\n\016contract.proto\"I\n\007Request\022 \n\007context\030\001" +
       " \001(\0132\017.RequestContext\022\016\n\006method\030\002 \001(\t\022\014\n" +
       "\004args\030\003 \003(\014\"8\n\010Response\022\n\n\002ok\030\001 \001(\010\022\016\n\006r" +
-      "esult\030\002 \001(\014\022\020\n\010codeHash\030\003 \001(\t\">\n\016Request" +
+      "esult\030\002 \001(\014\022\020\n\010codeHash\030\003 \001(\t\"S\n\016Request" +
       "Context\022\014\n\004txid\030\001 \001(\t\022\021\n\tnamespace\030\002 \001(\t" +
-      "\022\013\n\003cid\030\003 \001(\t\"F\n\005Event\022\037\n\007context\030\001 \001(\0132" +
-      "\016.LedgerContext\022\016\n\006topics\030\002 \003(\014\022\014\n\004body\030" +
-      "\003 \001(\014\"1\n\003Key\022\037\n\007context\030\001 \001(\0132\016.LedgerCo" +
-      "ntext\022\t\n\001k\030\002 \001(\014\"6\n\010BatchKey\022\037\n\007context\030" +
-      "\001 \001(\0132\016.LedgerContext\022\t\n\001k\030\002 \003(\014\"3\n\tBath",
-      "Value\022\n\n\002id\030\001 \001(\t\022\017\n\007hasMore\030\002 \001(\010\022\t\n\001v\030" +
-      "\003 \003(\014\"A\n\007BatchKV\022\037\n\007context\030\001 \001(\0132\016.Ledg" +
-      "erContext\022\025\n\002kv\030\002 \003(\0132\t.KeyValue\"D\n\005Rang" +
-      "e\022\037\n\007context\030\001 \001(\0132\016.LedgerContext\022\r\n\005st" +
-      "art\030\002 \001(\014\022\013\n\003end\030\003 \001(\014\"\036\n\005Value\022\n\n\002id\030\001 " +
-      "\001(\t\022\t\n\001v\030\002 \001(\014\"A\n\010KeyValue\022\037\n\007context\030\001 " +
-      "\001(\0132\016.LedgerContext\022\t\n\001k\030\002 \001(\014\022\t\n\001v\030\003 \001(" +
-      "\014\"=\n\rLedgerContext\022\014\n\004txid\030\001 \001(\t\022\021\n\tname" +
-      "space\030\002 \001(\t\022\013\n\003cid\030\003 \001(\t2P\n\010Contract\022 \n\007" +
-      "Execute\022\010.Request\032\t.Response\"\000\022\"\n\tHeartB",
-      "eat\022\010.Request\032\t.Response\"\0002\351\001\n\006Ledger\022\025\n" +
-      "\003Get\022\004.Key\032\006.Value\"\000\022\035\n\003Put\022\t.KeyValue\032\t" +
-      ".Response\"\000\022\033\n\006Delete\022\004.Key\032\t.Response\"\000" +
-      "\022$\n\tBatchRead\022\t.BatchKey\032\n.BathValue\"\000\022#" +
-      "\n\nBatchWrite\022\010.BatchKV\032\t.Response\"\000\022$\n\nR" +
-      "angeQuery\022\006.Range\032\n.BathValue\"\0000\001\022\033\n\004Pos" +
-      "t\022\006.Event\032\t.Response\"\000B\'\n\024cn.hyperchain." +
-      "protosB\rContractProtoP\000b\006proto3"
+      "\022\013\n\003cid\030\003 \001(\t\022\023\n\013blockNumber\030\004 \001(\004\"F\n\005Ev" +
+      "ent\022\037\n\007context\030\001 \001(\0132\016.LedgerContext\022\016\n\006" +
+      "topics\030\002 \003(\014\022\014\n\004body\030\003 \001(\014\"1\n\003Key\022\037\n\007con" +
+      "text\030\001 \001(\0132\016.LedgerContext\022\t\n\001k\030\002 \001(\014\"6\n" +
+      "\010BatchKey\022\037\n\007context\030\001 \001(\0132\016.LedgerConte",
+      "xt\022\t\n\001k\030\002 \003(\014\"3\n\tBathValue\022\n\n\002id\030\001 \001(\t\022\017" +
+      "\n\007hasMore\030\002 \001(\010\022\t\n\001v\030\003 \003(\014\"A\n\007BatchKV\022\037\n" +
+      "\007context\030\001 \001(\0132\016.LedgerContext\022\025\n\002kv\030\002 \003" +
+      "(\0132\t.KeyValue\"D\n\005Range\022\037\n\007context\030\001 \001(\0132" +
+      "\016.LedgerContext\022\r\n\005start\030\002 \001(\014\022\013\n\003end\030\003 " +
+      "\001(\014\"\036\n\005Value\022\n\n\002id\030\001 \001(\t\022\t\n\001v\030\002 \001(\014\"A\n\010K" +
+      "eyValue\022\037\n\007context\030\001 \001(\0132\016.LedgerContext" +
+      "\022\t\n\001k\030\002 \001(\014\022\t\n\001v\030\003 \001(\014\"R\n\rLedgerContext\022" +
+      "\014\n\004txid\030\001 \001(\t\022\021\n\tnamespace\030\002 \001(\t\022\013\n\003cid\030" +
+      "\003 \001(\t\022\023\n\013blockNumber\030\004 \001(\0042P\n\010Contract\022 ",
+      "\n\007Execute\022\010.Request\032\t.Response\"\000\022\"\n\tHear" +
+      "tBeat\022\010.Request\032\t.Response\"\0002\351\001\n\006Ledger\022" +
+      "\025\n\003Get\022\004.Key\032\006.Value\"\000\022\035\n\003Put\022\t.KeyValue" +
+      "\032\t.Response\"\000\022\033\n\006Delete\022\004.Key\032\t.Response" +
+      "\"\000\022$\n\tBatchRead\022\t.BatchKey\032\n.BathValue\"\000" +
+      "\022#\n\nBatchWrite\022\010.BatchKV\032\t.Response\"\000\022$\n" +
+      "\nRangeQuery\022\006.Range\032\n.BathValue\"\0000\001\022\033\n\004P" +
+      "ost\022\006.Event\032\t.Response\"\000B\'\n\024cn.hyperchai" +
+      "n.protosB\rContractProtoP\000b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -8949,7 +9078,7 @@ public final class ContractProto {
     internal_static_RequestContext_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_RequestContext_descriptor,
-        new java.lang.String[] { "Txid", "Namespace", "Cid", });
+        new java.lang.String[] { "Txid", "Namespace", "Cid", "BlockNumber", });
     internal_static_Event_descriptor =
       getDescriptor().getMessageTypes().get(3);
     internal_static_Event_fieldAccessorTable = new
@@ -9003,7 +9132,7 @@ public final class ContractProto {
     internal_static_LedgerContext_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_LedgerContext_descriptor,
-        new java.lang.String[] { "Txid", "Namespace", "Cid", });
+        new java.lang.String[] { "Txid", "Namespace", "Cid", "BlockNumber", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

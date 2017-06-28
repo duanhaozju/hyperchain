@@ -47,7 +47,7 @@ func NewTestLog() Log {
 		common.StringToHash("topic2"),
 		common.StringToHash("topic3"),
 	}
-	log := NewLog(common.StringToAddress("123456"), topic, []byte("data"), 123, LogVmType_EVM)
+	log := NewLog(common.StringToAddress("123456"), topic, []byte("data"), 123)
 	(*log).BlockNumber = 123
 	(*log).TxHash = common.StringToHash("txhash")
 	(*log).TxIndex = 2

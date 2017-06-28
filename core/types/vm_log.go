@@ -36,15 +36,14 @@ type Log struct {
 	TxIndex     uint        `json:"TxIndex"`
 	BlockHash   common.Hash `json:"BlockHash"`
 	Index       uint        `json:"Index"`
-	Vm          LogVmType   `json:"Vm"`
 }
 
 // assign block number as 0 temporarily
 // because the blcok number in env is a seqNo actually
 // primary's seqNo may not equal to other's
 // correctly block number and block hash will be assigned in the commit phase
-func NewLog(address common.Address, topics []common.Hash, data []byte, number uint64, vmType int) *Log {
-	return &Log{Address: address, Topics: topics, Data: data, BlockNumber: number, Vm: LogVmType(vmType)}
+func NewLog(address common.Address, topics []common.Hash, data []byte, number uint64) *Log {
+	return &Log{Address: address, Topics: topics, Data: data, BlockNumber: 0}
 }
 
 func (l *Log) String() string {
@@ -74,7 +73,6 @@ func DecodeLogs(buf []byte) (Logs, error) {
 }
 
 type LogTrans struct {
-	Vm          string
 	Address     string
 	Topics      []string
 	Data        string
@@ -85,7 +83,7 @@ type LogTrans struct {
 	Index       uint
 }
 
-func (ls Logs) ToLogsTrans() []LogTrans {
+func (ls Logs) ToLogsTrans(typ Receipt_VmType) []LogTrans {
 	var ret = make([]LogTrans, len(ls))
 	for idx, log := range ls {
 		var topics = make([]string, len(log.Topics))
@@ -93,14 +91,13 @@ func (ls Logs) ToLogsTrans() []LogTrans {
 			topics[ti] = t.Hex()
 		}
 		var data string
-		switch log.Vm {
-		case LogVmType_EVM:
+		switch typ {
+		case Receipt_EVM:
 			data = common.Bytes2Hex(log.Data)
-		case LogVmType_JVM:
+		case Receipt_JVM:
 			data = string(log.Data)
 		}
 		ret[idx] = LogTrans{
-			Vm:          log.Vm.String(),
 			Address:     log.Address.Hex(),
 			Data:        data,
 			BlockNumber: log.BlockNumber,

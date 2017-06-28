@@ -10,6 +10,7 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/protos"
 	"time"
+	"github.com/pkg/errors"
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
@@ -70,7 +71,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 		executor.logger.Errorf("persist transactions of #%d failed.", block.Number)
 		return err
 	}
-	if err := executor.persistReceipts(batch, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
+	if err := executor.persistReceipts(batch, record.ValidTxs, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
 		executor.logger.Errorf("persist receipts of #%d failed.", block.Number)
 		return err
 	}
@@ -186,8 +187,11 @@ func (executor *Executor) persistTransactions(batch db.Batch, transactions []*ty
 
 // re assign block hash and block number to transaction executor.loggers
 // during the validation, block number and block hash can be incorrect
-func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
-	for _, receipt := range receipts {
+func (executor *Executor) persistReceipts(batch db.Batch, transaction []*types.Transaction, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
+	if len(transaction) != len(receipts) {
+		return errors.New("the number of transactions not equal to receipt")
+	}
+	for idx, receipt := range receipts {
 		logs, err := receipt.RetrieveLogs()
 		if err != nil {
 			return err
@@ -198,8 +202,8 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 		}
 		receipt.SetLogs(logs)
 
-		if receipt.Version != nil {
-			if err, _ := edb.PersistReceipt(batch, receipt, false, false, string(receipt.Version)); err != nil {
+		if transaction[idx].Version != nil {
+			if err, _ := edb.PersistReceipt(batch, receipt, false, false, string(transaction[idx].Version)); err != nil {
 				return err
 			}
 		} else {
