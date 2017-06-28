@@ -26,7 +26,7 @@ global:
 
         logsdir: "./logs"
 
-        loglevel: "NOTICE"
+        loglevel: "DEBUG"
         # default loglevel for all modules which can be override by module level log setting
         file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
         console_format: "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
@@ -34,10 +34,11 @@ global:
         module:
             #set log level by module
             p2p: "NOTICE"
-            consensus: "NOTICE"
+            consensus: "DEBUG"
             core: "NOTICE"
             hyperdb: "NOTICE"
-            eventhub: "NOTICE"
+            eventhub: "DEBUG"
+
 
     hypervm:
         jvm: false
@@ -47,5 +48,5 @@ global:
         start:
             global: true
             ns1: true
-            ns2: false
+            ns2: true
             ns3: false

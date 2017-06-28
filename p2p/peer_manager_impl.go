@@ -8,6 +8,8 @@ import (
 	"github.com/spf13/viper"
 	"hyperchain/manager/event"
 	"hyperchain/p2p/msg"
+	"hyperchain/p2p/info"
+	"hyperchain/p2p/threadsafelinkedlist"
 )
 
 
@@ -27,6 +29,9 @@ type peerManagerImpl struct {
 	selfID    int
 
 	initType  chan int
+
+	isonline *threadsafelinkedlist.SpinLock
+	isnew bool
 }
 
 //todo rename new function
@@ -44,6 +49,7 @@ func NewPeerManagerImpl(namespace string,peercnf *viper.Viper,ev *event.TypeMux,
 		return nil, errors.New(fmt.Sprintf("invalid self id: %d", selfID))
 	}
 	selfHostname := peercnf.GetString("self.hostname")
+	isnew:= peercnf.GetBool("self.new")
 	if selfHostname == ""{
 		return nil, errors.New(fmt.Sprintf("invalid self hostname: %s", selfHostname))
 	}
@@ -58,6 +64,8 @@ func NewPeerManagerImpl(namespace string,peercnf *viper.Viper,ev *event.TypeMux,
 		nodeNum:N,
 		blackHole:make(chan interface{}),
 		initType:make(chan int,1),
+		isonline:new(threadsafelinkedlist.SpinLock),
+		isnew:isnew,
 	}
 
 	nodemaps  := peercnf.Get("nodes").([]interface{})
@@ -95,8 +103,18 @@ func (pmgr *peerManagerImpl)Start() error{
 	//todo this for test
 	pmgr.Listening()
 	sessionHandler := msg.NewSessionHandler(pmgr.blackHole,pmgr.eventHub)
+	helloHandler := msg.NewHelloHandler(pmgr.blackHole,pmgr.eventHub)
+	attendHandler := msg.NewAttendHandler(pmgr.blackHole,pmgr.eventHub)
 	pmgr.node.Bind(pb.MsgType_SESSION,sessionHandler)
+	pmgr.node.Bind(pb.MsgType_HELLO,helloHandler)
+	pmgr.node.Bind(pb.MsgType_ATTEND,attendHandler)
 	pmgr.initType <- START_NORMAL
+	pmgr.SetOnline()
+	//new attend Process
+	if pmgr.isnew{
+		//this should wait until all nodes reverse connect to self.
+		pmgr.broadcast(pb.MsgType_ATTEND,[]byte(pmgr.GetLocalNodeHash()))
+	}
 	return nil
 }
 
@@ -111,7 +129,7 @@ func (pmgr *peerManagerImpl)Listening(){
 
 //bind the namespace+id -> hostname
 func (pmgr *peerManagerImpl) bind(namespace string, id int, hostname string) error {
-	newPeer := NewPeer(namespace,hostname,id,pmgr.hyperNet)
+	newPeer := NewPeer(namespace,hostname,id,pmgr.node.info,pmgr.hyperNet)
 	err := pmgr.peerPool.AddVPPeer(id,newPeer)
 	if err != nil{
 		return err
@@ -128,8 +146,15 @@ func (pmgr *peerManagerImpl) unBindAll() error {
 	return nil
 }
 
-//SendMsg send  message to specific hosts
 func (pmgr *peerManagerImpl) SendMsg(payload []byte, peers []uint64) {
+	pmgr.sendMsg(pb.MsgType_SESSION,payload,peers)
+}
+
+//SendMsg send  message to specific hosts
+func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType,payload []byte, peers []uint64) {
+	if !pmgr.isonline.IsLocked(){
+		return
+	}
 	//TODO here can be improved, such as pre-calculate the peers' hash
 	//TODO utils.GetHash will new a hasher every time, this waste of time.
 	peerList := pmgr.peerPool.GetPeers()
@@ -138,23 +163,42 @@ func (pmgr *peerManagerImpl) SendMsg(payload []byte, peers []uint64) {
 		if int(id-1) > size {
 			continue
 		}
-		msg := pb.NewMsg(pb.MsgType_SESSION,payload)
-		peerList[int(id-1)].Chat(msg)
+		if id == uint64(pmgr.node.info.GetID()){
+			continue
+		}
+		peer := peerList[int(id-1)]
+		if peer.info.Hostname == pmgr.node.info.Hostname{
+			continue
+		}
+		msg := pb.NewMsg(msgType,payload)
+		peer.Chat(msg)
 	}
 
 }
 
+func (pmgr *peerManagerImpl)Broadcast(payload []byte){
+	pmgr.broadcast(pb.MsgType_SESSION,payload)
+}
 //Broadcast message to all binding hosts
-func (pmgr *peerManagerImpl) Broadcast(payload []byte) {
+func (pmgr *peerManagerImpl) broadcast(msgType pb.MsgType,payload []byte) {
+	if !pmgr.isonline.IsLocked(){
+		return
+	}
 	// use IterBuffered for better performance
 	peerList := pmgr.peerPool.GetPeers()
 	for _,p := range peerList{
-		// this is un thread safe, because this,is a pointer
-		msg := pb.NewMsg(pb.MsgType_SESSION,payload)
-		_,err := p.Chat(msg)
-		if err != nil{
-			fmt.Printf("err: %s \n",err.Error())
-		}
+		go func(peer *Peer){
+			if peer.hostname == peer.local.Hostname{
+				return
+			}
+			// this is un thread safe, because this,is a pointer
+			msg := pb.NewMsg(msgType,payload)
+			_,err := peer.Chat(msg)
+			if err != nil{
+				fmt.Printf("hostname [%s](%s) chat err: send self %s \n",peer.hostname,peer.local.Hostname,err.Error())
+			}
+		}(p)
+
 	}
 }
 
@@ -205,19 +249,35 @@ func (pmgr *peerManagerImpl)GetInitType() <-chan int{
 // AddNode
 // update routing table when new peer's join request is accepted
 func (pmgr *peerManagerImpl)UpdateRoutingTable(payLoad []byte){
-	return
+	//unmarshal info
+	i := info.InfoUnmarshal(payLoad)
+	fmt.Println(i.Hostname)
+	fmt.Println(i.Namespace)
+	fmt.Println("update the route table")
+	err := pmgr.bind(i.Namespace,i.GetID(),i.GetHostName())
+	if err !=nil{
+		fmt.Errorf("cannot bind a new peer: %s",err.Error())
+		return
+	}
+	newPeer := NewPeer(pmgr.namespace,i.GetHostName(),i.GetID(),pmgr.node.info,pmgr.hyperNet)
+	err = pmgr.peerPool.AddVPPeer(i.GetID(),newPeer)
+	if err != nil{
+		fmt.Errorf("cannot bind a new peer: %s",err.Error())
+		return
+	}
 }
-
+//This method is DEPRECIATE.
 func (pmgr *peerManagerImpl)UpdateAllRoutingTable(routerPayload []byte){
+	//because new add node, it needn't negotiate view
 	return
 }
 
 func (pmgr *peerManagerImpl)GetLocalAddressPayload() []byte{
-	return nil
+	return pmgr.node.info.Serialize()
 }
 
 func (pmgr *peerManagerImpl)SetOnline(){
-	return
+	pmgr.isonline.TryLock()
 }
 
 func (pmgr *peerManagerImpl)GetRouterHashifDelete(hash string) (string, uint64, uint64){
@@ -231,18 +291,14 @@ func (pmgr *peerManagerImpl)DeleteNode(hash string) error { // if self {...} els
 // InfoGetter get the peer info to manager
 // get the all peer list to broadcast
 func (pmgr *peerManagerImpl)GetAllPeers() []*Peer {
-	return nil
-}
-
-func (pmgr *peerManagerImpl)GetAllPeersWithTemp() []*Peer {
-	return nil
+	return pmgr.peerPool.GetPeers()
 }
 
 // get local node instance
 //GetLocalNode() *Node
 // Get local node id
 func (pmgr *peerManagerImpl)GetNodeId() int{
-	return 1;
+	return pmgr.node.info.GetID()
 }
 
 //get the peer information of all nodes.
@@ -252,5 +308,12 @@ func (pmgr *peerManagerImpl)GetPeerInfo() PeerInfos{
 
 // use by new peer when join the chain dynamically only
 func (pmgr *peerManagerImpl)GetRouters() []byte{
-	return nil
+	b,e := pmgr.peerPool.Serlize()
+	if e != nil{
+		fmt.Errorf("cannot serialize the peerpool,err:%s \n",e.Error())
+		return nil
+	}
+	return b
 }
+
+

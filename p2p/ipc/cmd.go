@@ -9,16 +9,21 @@ type IPCCmd struct {
 	Args []string `json:"args"`
 }
 
-func getCmds()[]*ishell.Cmd{
-	handler := NewIPCHandler("./hpc.ipc")
+func getCmds(endpoint string)[]*ishell.Cmd{
+	handler := NewIPCHandler(endpoint)
 	return []*ishell.Cmd{
 		{
-			Name: "greet",
-			Help: "greet user",
+			Name: "network",
+			Help: `network commands:
+		network list	- show all connections and status
+		network connect [hostname@ip:port]	- create a new connection by hostname and addr
+		network close  [hostname]	- close the connection to hostname
+		network reconnect  [hostname]	- reconnect to hostname
+			`,
 			Func: handler.handle,
 		},
 		{
-			Name: "hello",
+			Name: "dn",
 			Help: "hello user",
 			Func: handler.handle,
 		},

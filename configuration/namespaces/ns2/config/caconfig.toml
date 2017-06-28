@@ -1,0 +1,33 @@
+# CA & CERT configs
+#
+# this config prepare  for ca & cert module
+# *.toml config file is batter than *.yaml
+# this config will never change by hyperchain
+# please ensure the file not end with the `/` (slash)
+#
+
+[ecert]
+ca = "namespaces/ns2/config/cert/eca.ca"
+cert = "namespaces/ns2/config/cert/ecert.cert"
+priv = "namespaces/ns2/config/cert/ecert.priv"
+
+[rcert]
+# if you do not have rcert, leave this item blank
+ca = "namespaces/ns2/config/cert/rca.ca"
+cert = "namespaces/ns2/config/cert/rcert.cert"
+priv = "namespaces/ns2/config/cert/rcert.priv"
+
+# the tls cert supply the transport layer security
+[tlscert]
+ca = "namespaces/ns2/config/cert/tlscert/tlsca.ca"
+cert = "namespaces/ns2/config/cert/tlscert/tls_peer1.cert"
+priv = "namespaces/ns2/config/cert/tlscert/tls_peer1.priv"
+serverhostoverride = "hyperchain.cn"
+
+[check]
+# check the ecert and rcert signature during the connect progress
+certsign = false
+# check the tcert during the request process
+tcert  = false
+# check the ercert and rcert
+ercert = false

@@ -15,6 +15,6 @@ func (s *SpinLock) IsLocked() bool{
 	return s.state == 1
 }
 
-func (s *SpinLock) UnLocked(){
+func (s *SpinLock) UnLock(){
 	s.state = 0
 }

@@ -7,6 +7,7 @@ import (
 	"hyperchain/crypto/sha3"
 	"strconv"
 	"hyperchain/common"
+	"net"
 )
 
 func GetProjectPath() string{
@@ -31,4 +32,33 @@ func GetPeerHash(namespace string,id int) string{
 	ids := strconv.Itoa(id)
 	hasher.Write([]byte(namespace+ids))
 	return common.ToHex(hasher.Sum(nil))
+}
+
+func IPcheck(ip string) bool {
+	trial := net.ParseIP(ip)
+	if trial == nil{
+		return false
+	}
+	if trial.To4() == nil {
+		return false
+	}else{
+		return true
+	}
+}
+
+// GetLocalIP returns the non loopback local IP of the host
+func GetLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return ""
 }

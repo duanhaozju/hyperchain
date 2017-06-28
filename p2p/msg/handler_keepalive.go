@@ -8,9 +8,9 @@ type KeepaliveMsgHandler struct {
 	msgChan chan *pb.Message
 }
 
-func NewKeepAliveHandler(blackHole <-chan *pb.Message)*HelloMsgHandler{
-	return &HelloMsgHandler{
-		mchan:make(chan *pb.Message, 100000),
+func NewKeepAliveHandler(blackHole <-chan *pb.Message)*KeepaliveMsgHandler{
+	return &KeepaliveMsgHandler{
+		msgChan:make(chan *pb.Message, 100000),
 	}
 }
 

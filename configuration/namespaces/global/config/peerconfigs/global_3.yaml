@@ -42,6 +42,7 @@ global:
         hosts: "./hosts.yaml"
         port: 50013
         retrytime: 3s
+        ipc: "hpc_3.ipc"
     namespace:
         # start which namespaces when node starts
         start:

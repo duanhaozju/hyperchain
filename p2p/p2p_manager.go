@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 	"fmt"
 	"hyperchain/common"
-	"github.com/abiosoft/ishell"
+	"hyperchain/p2p/ipc"
 )
 
 
@@ -29,7 +29,7 @@ type P2PManager interface {
 type p2pManagerImpl struct {
 	hypernet *network.HyperNet
 	conf *viper.Viper
-	shell *ishell.Shell
+	ipcShell *ipc.IPCServer
 }
 
 var globalP2PManager *p2pManagerImpl
@@ -61,12 +61,20 @@ func newP2PManager(vip *viper.Viper)(*p2pManagerImpl,error){
 	if err !=nil{
 		return nil,err
 	}
+	fmt.Println(vip.GetString("global.p2p.ipc"))
 	p2pmgr :=  &p2pManagerImpl{
 		hypernet:net,
 		conf:vip,
+		ipcShell:ipc.NEWIPCServer(vip.GetString("global.p2p.ipc")),
 	}
 	p2pmgr.Start()
-
+	fmt.Println("interactive ipc shell server listening...")
+	rc := ipc.NewRemoteCall()
+	ipc.RegisterFunc(rc,"network",p2pmgr.hypernet.Command)
+	err = p2pmgr.ipcShell.Start(rc)
+	if err != nil{
+		fmt.Println("cannot start ipc server",err)
+	}
 	return p2pmgr,nil
 }
 

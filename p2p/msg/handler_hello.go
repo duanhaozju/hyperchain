@@ -1,21 +1,26 @@
 package msg
 
 import "fmt"
-import pb "hyperchain/p2p/message"
+import (
+	pb "hyperchain/p2p/message"
+	"hyperchain/manager/event"
+)
 
 type HelloMsgHandler struct {
-	mchan chan *pb.Message
+	mchan chan  interface{}
+	ev *event.TypeMux
 }
 
-func NewHelloHandler(blackHole chan *pb.Message)*HelloMsgHandler{
+func NewHelloHandler(blackHole chan interface{},ev *event.TypeMux)*HelloMsgHandler{
 	return &HelloMsgHandler{
 		mchan:blackHole,
+		ev:ev,
 	}
 }
 
 func (hellloMsgh  *HelloMsgHandler) Process() {
 	for msg := range hellloMsgh.mchan {
-		 fmt.Println("got a hello message", string(msg.Payload))
+		 fmt.Println("got a hello message", string(msg.(*pb.Message).Payload))
 		}
 }
 
@@ -24,11 +29,12 @@ func (hellloMsgh  *HelloMsgHandler) Teardown() {
 	close(hellloMsgh.mchan)
 }
 
-func (helloMsgh *HelloMsgHandler)Receive() chan<- *pb.Message{
+func (helloMsgh *HelloMsgHandler)Receive() chan<- interface{}{
 	return helloMsgh.mchan
 }
 
 func (helloMsgh *HelloMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
+	fmt.Println("Got a hello message %+v", msg)
 	rsp  := &pb.Message{
 		MessageType:pb.MsgType_HELLO,
 	}

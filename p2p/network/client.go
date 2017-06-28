@@ -9,6 +9,7 @@ import (
 	"hyperchain/p2p/hts"
 	"github.com/pkg/errors"
 	"github.com/silenceper/pool"
+	"hyperchain/p2p/utils"
 )
 
 type Client struct {
@@ -21,6 +22,7 @@ type Client struct {
 	connCreator func() (interface{}, error)
 	connCloser  func(v interface{}) error
 }
+
 
 
 func NewClient(addr string) (*Client,error){
@@ -101,6 +103,7 @@ func(c *Client)Greeting(in *pb.Message) (*pb.Message, error){
 		fmt.Printf("the client is nil %v \n",c.client)
 		return nil,errors.New(fmt.Sprintf("the client is nil %v \n",c.client))
 	}
+	in.From.Extend.IP =[]byte(utils.GetLocalIP())
 	return c.client.Greeting(context.Background(),in)
 }
 // Wisper Transfer the the node health infomation

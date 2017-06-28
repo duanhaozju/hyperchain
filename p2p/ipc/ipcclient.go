@@ -1,14 +1,10 @@
 package ipc
 
 import (
-	"net"
-	"context"
+	"net/rpc"
 )
 
-func newIPCConnection(ctx context.Context, endpoint string)(net.Conn,error){
-	dialer := net.Dialer{
-		KeepAlive:tcpKeepAliveInterval,
-	}
-	return dialer.DialContext(ctx,"unix",endpoint)
+func newIPCConnection(endpoint string)(*rpc.Client,error){
+	return rpc.DialHTTP("unix",endpoint)
 }
 

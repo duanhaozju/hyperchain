@@ -12,6 +12,7 @@ import (
 	"hyperchain/p2p"
 	"github.com/spf13/viper"
 	"fmt"
+	"hyperchain/p2p/ipc"
 )
 
 type hyperchain struct {
@@ -29,6 +30,7 @@ func newHyperchain(argV *argT) *hyperchain {
 		restartFlag: make(chan bool),
 		args:        argV,
 	}
+
 
 	globalConfig := common.NewConfig(hp.args.ConfigPath)
 	common.InitHyperLoggerManager(globalConfig)
@@ -84,7 +86,9 @@ func (h *hyperchain) restart() {
 
 type argT struct {
 	cli.Helper
-	ConfigPath string `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
+	ConfigPath  string `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
+	IPCEndpoint string `cli:"ipc" usage:"ipc interactive shell attach endpoint" dft:"./hpc.ipc"`
+	Shell       bool `cli:"s,shell" usage:"start interactive shell" dft:"false"`
 }
 
 var (
@@ -93,12 +97,19 @@ var (
 
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
+		//TODO recover fix
 		//defer func() {
 		//	if r := recover(); r != nil {
 		//		fmt.Println("Recovered in f", r)
 		//	}
 		//}()
+
 		argv := ctx.Argv().(*argT)
+		if argv.Shell {
+		fmt.Println("Start hypernet interactive shell... > ",argv.IPCEndpoint)
+		ipc.IPCShell(argv.IPCEndpoint)
+		return nil
+		}
 		hp := newHyperchain(argv)
 		hp.start()
 		for {

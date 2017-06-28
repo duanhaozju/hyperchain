@@ -11,6 +11,9 @@ import (
 	"time"
 	"hyperchain/p2p/msg"
 	pb "hyperchain/p2p/message"
+	"hyperchain/p2p/utils"
+	"strings"
+	"strconv"
 )
 
 var logger = common.GetLogger(common.DEFAULT_LOG, "hypernet")
@@ -23,8 +26,12 @@ type HyperNet struct {
 	hostClientMap cmap.ConcurrentMap
 	stateMachine  *fsm.FSM
 
-	// failed handler
+	// failed queue
 	failedQueue   *lane.Queue
+	//reverse queue
+	reverseQueue  chan [2]string
+
+	listenPort string
 }
 
 func NewHyperNet(config *viper.Viper) (*HyperNet,error){
@@ -33,6 +40,11 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 	}
 
 	hostconf := config.GetString("global.p2p.hosts")
+	port_i := config.GetInt("global.p2p.port")
+	if port_i == 0{
+		return nil,errors.New("invalid grpc server port")
+	}
+	port:= ":" + strconv.Itoa(port_i)
 	if !common.FileExist(hostconf){
 		fmt.Errorf("hosts config file not exist: %s",hostconf)
 		return nil,errors.New(fmt.Sprintf("connot find the hosts config file: %s",hostconf))
@@ -42,12 +54,15 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 	if err != nil {
 		return nil,err
 	}
+	rq := make(chan [2]string)
 	net :=  &HyperNet{
 		dns:dns,
-		server:NewServer("hypernet"),
+		server:NewServer("hypernet",rq),
 		hostClientMap:cmap.New(),
 		failedQueue:lane.NewQueue(),
+		reverseQueue:rq,
 		conf:config,
+		listenPort:port,
 	}
 	net.stateMachine = fsm.NewFSM(
 		"created",
@@ -73,17 +88,80 @@ func (hn *HyperNet)RegisterHandler(filed string,msgType pb.MsgType,handler msg.M
 	return hn.server.RegisterSlot(filed,msgType,handler)
 }
 
+func (hn *HyperNet)Command(args []string,ret *[]string)error{
+	if len(args) < 1{
+		*ret = append(*ret,"please specific the network subcommand.")
+		return nil
+	}
+
+	switch args[0] {
+	case "list":{
+		*ret = append(*ret,"list all connections\n")
+		*ret = append(*ret,hn.dns.ListHosts()...)
+	}
+	case "connect":{
+		if len(args)<3{
+			*ret = append(*ret,"invalid connect parameters, format is `network connect [hostname] [ip:port]`",)
+			break
+		}
+		hostname := args[1]
+		ipaddr := args[2]
+		if !strings.Contains(ipaddr,":"){
+			*ret = append(*ret,fmt.Sprintf("%s is not a valid ipaddress, format is ipaddr:port",ipaddr))
+			break
+		}
+		ip := strings.Split(ipaddr,":")[0]
+
+		if !utils.IPcheck(ip){
+			*ret = append(*ret,fmt.Sprintf("%s is not a valid ipv4 address",ip))
+			break
+		}
+
+		port_s := strings.Split(ipaddr,":")[1]
+		port,err := strconv.Atoi(port_s)
+		if err != nil{
+			*ret = append(*ret,fmt.Sprintf("%s valid port",port_s))
+			break
+		}
+		*ret = append(*ret,fmt.Sprintf("connect to a new host: %s =>> %s:%d\n",hostname,ip,port))
+		// real connection part
+		//add dns item
+		err = hn.dns.AddItem(hostname,ipaddr)
+		if err != nil{
+			*ret = append(*ret,fmt.Sprintf("connect to %s failed, reason: %s",hostname,err.Error()))
+			break
+		}
+		err = hn.Connect(hostname)
+		if err != nil{
+			*ret = append(*ret,fmt.Sprintf("connect to %s failed, reason: %s",hostname,err.Error()))
+			break
+		}
+
+		*ret = append(*ret,fmt.Sprintf("connect to %s successful.",hostname))
+
+	}
+	case "close":{
+
+		*ret = append(*ret,"close the host connection")
+	}
+	case "reconnect":{
+		*ret = append(*ret,"reconnect to new host")
+	}
+	default:
+		*ret = append(*ret,fmt.Sprintf("unsupport subcommand `network %s`", args[0]))
+	}
+	return nil
+}
+
+
 //InitServer start self hypernet server listening server
 func (hn *HyperNet)InitServer()error{
-	port := hn.conf.GetInt("global.p2p.port")
-	if port == 0{
-		return errors.New("invalid grpc server port")
-	}
-	return hn.server.StartServer(port)
+	hn.reverse()
+	return hn.server.StartServer(hn.listenPort)
 }
 
 func (hn *HyperNet)InitClients()error{
-	for _,hostname := range hn.dns.ListHosts(){
+	for _,hostname := range hn.dns.listHostnames(){
 		logger.Info("Now connect to host:",hostname)
 		err := hn.Connect(hostname)
 		if err != nil{
@@ -121,6 +199,49 @@ func (hn *HyperNet)retry() error{
 	return nil
 }
 
+// if a connection failed, here will retry to connect the host name
+func (hn *HyperNet)reverse() error{
+	fmt.Println("start reverse process")
+	go func(h *HyperNet) {
+		for m := range h.reverseQueue{
+			hostname := m[0]
+			addr := m[0]
+			if _,ok := h.hostClientMap.Get(hostname);ok{
+				continue
+			}
+			fmt.Printf("reverse connect to hostname %s,addr %s \n",hostname,addr)
+			err := h.ConnectByAddr(hostname,addr)
+			if err !=nil{
+				logger.Error("there are something wrong when connect to host",hostname)
+				// TODO here should check the retry time duration, maybe is a nil
+				logger.Info("It will retry connect to host",hostname,"after ",hn.conf.GetDuration("global.p2p.retrytime"))
+			}else{
+				logger.Info("success reverse connect to host",hostname)
+			}
+			h.dns.AddItem(hostname,addr)
+		}
+	}(hn)
+	return nil
+}
+
+//Connect to specific host endpoint
+func (hn *HyperNet)ConnectByAddr(hostname,addr string) error{
+	client,err  := NewClient(addr)
+	if err != nil{
+		return err
+	}
+	if oldClient,ok := hn.hostClientMap.Get(hostname); ok{
+		oldClient.(*Client).Close()
+		hn.hostClientMap.Remove(hostname)
+	}
+	err = client.Connect(nil)
+	if err != nil{
+		return err
+	}
+	hn.hostClientMap.Set(hostname,client)
+	logger.Infof("success connect to %s \n",hostname)
+	return nil
+}
 //Connect to specific host endpoint
 func (hn *HyperNet)Connect(hostname string) error{
 	addr,err := hn.dns.GetDNS(hostname)
@@ -168,6 +289,7 @@ func (hyperNet *HyperNet)HealthCheck(){
 }
 
 func (hypernet *HyperNet)Chat(hostname string,msg *pb.Message)error{
+	hypernet.msgWrapper(msg)
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
 		client.(*Client).MsgChan <- msg
 		return nil
@@ -176,7 +298,7 @@ func (hypernet *HyperNet)Chat(hostname string,msg *pb.Message)error{
 }
 
 func (hypernet *HyperNet)Greeting(hostname string,msg *pb.Message)(*pb.Message,error){
-
+	hypernet.msgWrapper(msg)
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
 		return client.(*Client).Greeting(msg)
 	}
@@ -185,6 +307,8 @@ func (hypernet *HyperNet)Greeting(hostname string,msg *pb.Message)(*pb.Message,e
 }
 
 func (hypernet *HyperNet)Whisper(hostname string,msg *pb.Message)(*pb.Message,error){
+	//fmt.Printf("send msg => %s %+v\n",hostname,msg)
+	hypernet.msgWrapper(msg)
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
 			return client.(*Client).Wisper(msg)
 		}
@@ -198,4 +322,16 @@ func(hypernet *HyperNet)Stop(){
 		fmt.Println("close client: ",item.Key)
 	}
 	hypernet.server.server.GracefulStop()
+}
+
+
+func (hn *HyperNet)msgWrapper(msg *pb.Message){
+	if msg.From == nil{
+		msg.From = new(pb.Endpoint)
+	}
+	if msg.From.Extend == nil{
+		msg.From.Extend = new(pb.Extend)
+	}
+	msg.From.Extend.IP = []byte(utils.GetLocalIP() + hn.listenPort)
+
 }
