@@ -163,6 +163,7 @@ func (n *Notifier) Closed() <- chan interface{} {
 
 func (n *Notifier) Close() {
 	close(n.closed)
+	n.subchan.Close()
 }
 
 

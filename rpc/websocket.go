@@ -10,6 +10,8 @@ import (
 	"io"
 	"net/url"
 	"context"
+	"sync"
+	"time"
 )
 
 const (
@@ -23,9 +25,17 @@ var (
 )
 
 type wsServerImpl struct {
-	nsMgr          namespace.NamespaceManager
-	rpcServer      *Server
-	allowedOrigins []string
+
+	stopHp			chan bool
+	restartHp		chan bool
+	nr			namespace.NamespaceManager
+
+	wsConns			map[*websocket.Conn]*Notifier
+	wsConnsMux	       	sync.Mutex
+	wsHandler        	*Server
+	wsListener       	net.Listener
+	wsAllowedOrigins 	[]string		// allowedOrigins should be a comma-separated list of allowed origin URLs.
+					       // To allow connections with any origin, pass "*".
 }
 
 type httpReadWriteCloser struct {
@@ -35,75 +45,88 @@ type httpReadWriteCloser struct {
 
 func GetWSServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) RPCServer {
 	if wsS == nil {
-		wsS = newWSServer(nr, stopHp, restartHp)
+		wsS = &wsServerImpl{
+			stopHp: 		stopHp,
+			restartHp: 		restartHp,
+			nr: 			nr,
+			wsAllowedOrigins: 	[]string{"*"},
+			wsConns:		make(map[*websocket.Conn]*Notifier),
+		}
 	}
 	return wsS
 }
 
-func newWSServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) *wsServerImpl {
-	wssi := &wsServerImpl{
-		nsMgr: nr,
-		allowedOrigins: []string{"*"},
-	}
-	wssi.rpcServer = NewServer(nr, stopHp, restartHp)
-	return wssi
-}
-
+// Start starts the websocket RPC endpoint.
 func (wssi *wsServerImpl) Start() error{
 	log.Notice("start websocket service ...")
-	config := wssi.rpcServer.namespaceMgr.GlobalConfig()
+	config := wssi.nr.GlobalConfig()
 	wsPort := config.GetInt(common.C_WEBSOCKET_PORT)
 
 	var (
 		listener net.Listener
 		err      error
 	)
+
+	// start websocket listener
+	handler := NewServer(wssi.nr, wssi.stopHp, wssi.restartHp)
 	if listener, err = net.Listen("tcp", fmt.Sprintf(":%d", wsPort)); err != nil {
 		log.Errorf("%v",err)
 		return err
 	}
-	go wssi.newServer(wssi.rpcServer).Serve(listener)
+	go wssi.newWSServer(handler).Serve(listener)
 	log.Notice(fmt.Sprintf("WebSocket endpoint opened: ws://%s", fmt.Sprintf("%d", wsPort)))
 
-	// All listeners booted successfully
-	//n.wsEndpoint = endpoint
-	//n.wsListener = listener
-	//n.wsHandler = handler
+
+	wssi.wsListener = listener
+	wssi.wsHandler  = handler
+
 	return nil
 }
 
+// Stop terminates the websocket RPC endpoint.
 func (wssi *wsServerImpl) Stop() error {
+	log.Notice("stop websocket service ...")
+	if wssi.wsListener != nil {
+		wssi.wsListener.Close()
+		wssi.wsListener = nil
+	}
+
+	if wssi.wsHandler != nil {
+		wssi.wsHandler.Stop()
+		wssi.wsHandler = nil
+
+		time.Sleep(4 * time.Second)
+	}
+
+	// todo this loop may be wrapped by a lock
+	// close all the opened connection, and release its resource
+	for c, n := range wssi.wsConns {
+		wssi.closeConnection(n, c)
+	}
+
+	log.Notice("stopped websocket service")
+
 	return nil
 }
 
+// Restart restarts the websocket RPC endpoint.
 func (wssi *wsServerImpl) Restart() error {
+	log.Notice("restart websocket service ...")
+	if err := wssi.Stop(); err != nil {
+		return err
+	}
+	if err := wssi.Start(); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (wssi *wsServerImpl) newServer(srv *Server) *http.Server {
+// newWSServer creates a new websocket RPC server around an API provider.
+func (wssi *wsServerImpl) newWSServer(srv *Server) *http.Server {
 	return &http.Server{Handler: wssi.newWebsocketHandler(srv)}
 }
 
-func (wssi *wsServerImpl) isOriginAllowed(origin string) bool {
-	if origin == "" {
-		return false
-	}
-
-	if u, err := url.Parse(origin); err != nil {
-		return false
-	} else {
-		for _, o := range wssi.allowedOrigins {
-			if o == "*" {
-				return true
-			} else if o == u.Host {
-				return true
-			}
-		}
-	}
-
-	return  false
-}
-
+// newWebsocketHandler returns a handler that serves JSON-RPC to WebSocket connections.
 func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		upgrader := websocket.Upgrader{
@@ -124,41 +147,70 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 		ctx, cancel := context.WithCancel(context.Background())
 
 		//if options&OptionSubscriptions == OptionSubscriptions {
-			notifier := NewNotifier()
-			ctx = context.WithValue(ctx, NotifierKey{}, notifier)
-			notifier.subchan = common.GetSubChan(ctx)
+		notifier := NewNotifier()
+		ctx = context.WithValue(ctx, NotifierKey{}, notifier)
+		notifier.subchan = common.GetSubChan(ctx)
 		//}
 
+		wssi.wsConnsMux.Lock()
+		wssi.wsConns[conn] = notifier
+		wssi.wsConnsMux.Unlock()
+
 		defer func() {
-			notifier.subchan.Close()
-			notifier.Close()
+			wssi.closeConnection(notifier, conn)
 			cancel()
-			conn.Close()
-			log.Debugf("cancel the context and close websocket connection %p, release resource",conn)
 		}()
 
 		for {
 			_, nr, err := conn.NextReader()
-
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 					log.Error(err)
 				}
-				// TODO 是否需要做错误返回？
 				break
 			}
 
 			nw, err := conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				// TODO 同上
+				// TODO need write error
 				log.Error(err)
 				break
 			}
-
 
 			codec := NewJSONCodec(&httpReadWriteCloser{nr, nw}, r, srv.namespaceMgr, conn)
 			notifier.codec = codec
 			srv.ServeCodec(codec, OptionMethodInvocation|OptionSubscriptions, ctx)
 		}
 	}
+}
+
+func (wssi *wsServerImpl) isOriginAllowed(origin string) bool {
+	if origin == "" {
+		return false
+	}
+
+	if u, err := url.Parse(origin); err != nil {
+		return false
+	} else {
+		for _, o := range wssi.wsAllowedOrigins {
+			if o == "*" {
+				return true
+			} else if o == u.Host {
+				return true
+			}
+		}
+	}
+
+	return  false
+}
+
+func (wssi *wsServerImpl) closeConnection(notifier *Notifier, conn *websocket.Conn) {
+	log.Debugf("cancel the context and close websocket connection %p, release resource",conn)
+
+	notifier.Close()
+	conn.Close()
+
+	wssi.wsConnsMux.Lock()
+	delete(wssi.wsConns, conn)
+	wssi.wsConnsMux.Unlock()
 }

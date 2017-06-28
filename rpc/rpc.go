@@ -75,6 +75,14 @@ func (rsi *RPCServerImpl) Stop() error {
 	return nil
 }
 
+// Restart all rpc server
 func (rsi *RPCServerImpl) Restart() error {
+
+	if err := rsi.Stop(); err != nil {
+		return err
+	}
+	if err := rsi.Start(); err != nil {
+		return err
+	}
 	return nil
 }
