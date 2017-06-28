@@ -226,12 +226,6 @@ func (s *Server) Stop() {
 	}
 }
 
-func (s *Server) Start() {
-	if atomic.CompareAndSwapInt32(&s.run, 0, 1) {
-		log.Notice("RPC Server start initiatied")
-	}
-}
-
 // readRequest requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.

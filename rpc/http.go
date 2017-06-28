@@ -10,13 +10,10 @@ import (
 	//"hyperchain/api/rest/routers"
 	"hyperchain/common"
 	"hyperchain/namespace"
-
-	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	//"strconv"
 	"time"
 )
 
@@ -25,110 +22,85 @@ const (
 )
 
 var (
-	StoppedError = errors.New("Listener stopped")
 	hs           RPCServer
 )
 
 type httpServerImpl struct {
-	nsMgr        namespace.NamespaceManager
-	rpcServer    *Server
-	stop         chan bool
-	stopListener *StoppableListener
+	stopHp			chan bool
+	restartHp		chan bool
+	nr			namespace.NamespaceManager
+
+	httpListener 		net.Listener
+	httpHandler  		*Server
+	httpAllowedOrigins 	[]string
 }
 
 func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) RPCServer {
 	if hs == nil {
-		hs = newHttpServer(nr, stopHp, restartHp)
+		hs = &httpServerImpl{
+			nr: 			nr,
+			stopHp: 		stopHp,
+			restartHp: 		restartHp,
+			httpAllowedOrigins: 	[]string{"*"},
+		}
 	}
 	return hs
 }
 
-func newHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) *httpServerImpl {
-	hi := &httpServerImpl{
-		nsMgr: nr,
-		stop:  make(chan bool),
-	}
-	hi.rpcServer = NewServer(nr, stopHp, restartHp)
-	return hi
-}
-
-//Start start the http service, this method will block if the http
-//service start successful.
+// Start starts the http RPC endpoint.
 func (hi *httpServerImpl) Start() error {
 	log.Notice("start http service ...")
-	config := hi.rpcServer.namespaceMgr.GlobalConfig()
+	config := hi.nr.GlobalConfig()
 	httpPort := config.GetInt(common.C_HTTP_PORT)
-	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},
-		AllowedMethods: []string{"POST", "GET"},
-	})
-	hi.rpcServer.Start()
-	handler := c.Handler(newHttpHandler(hi.rpcServer))
 
-	//t1 := time.Now()
-	var err error
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", httpPort))
-	if err != nil {
-		return err
-	}
-	hi.stopListener, err = NewListener(listener)
+	var (
+		listener net.Listener
+		err      error
+	)
+
+	// start http listener
+	handler := NewServer(hi.nr, hi.stopHp, hi.restartHp)
+	listener, err = net.Listen("tcp", fmt.Sprintf(":%d", httpPort))
 	if err != nil {
 		return err
 	}
 
-	go http.Serve(hi.stopListener, handler)
-	// TODO 可能要换成下面的代码
-	//err = http.Serve(hi.stopListener, handler)
+	go newHTTPServer(hi.httpAllowedOrigins, handler).Serve(listener)
 
-	//t2 := time.Now()
-	//if err != nil && t2.Sub(t1) < 2*time.Second {
-	//	log.Errorf("start http service error %v", err)
-	//	return err
-	//}
+	hi.httpListener = listener
+	hi.httpHandler = handler
 
-	log.Critical("http service closed and release the binding port")
 	return nil
 }
 
-//Stop stop the http service, this method will wait for 3 seconds before stop.
+// Stop stops the http RPC endpoint.
 func (hi *httpServerImpl) Stop() error {
-	//TODO:Fix it, this stop method will not stop...
 	log.Notice("stop http service ...")
-	if hi.stopListener != nil {
-		hi.stopListener.Stop()
-		hi.stopListener.Close()
+	if hi.httpListener != nil {
+		hi.httpListener.Close()
+		hi.httpListener = nil
 	}
-	hi.rpcServer.Stop()
-	time.Sleep(4 * time.Second)
+
+	if hi.httpHandler != nil {
+		hi.httpHandler.Stop()
+		hi.httpHandler = nil
+		time.Sleep(4 * time.Second)
+	}
+
 	log.Notice("stopped http service")
 	return nil
 }
 
-//Restart restart the http service, this method will retry 5 times
-//until it start successful
+// Restart restarts the http RPC endpoint.
 func (hi *httpServerImpl) Restart() error {
-	hi.Stop()
-	go func() {
-		maxRetry := uint(5)
-		var i uint
-		for i = 1; i <= maxRetry; i++ {
-			log.Noticef("%d retry start http service ...", i)
-			beforeStart := time.Now()
-			err := hi.Start()
-			if err != nil {
-				afterStart := time.Now()
-				if afterStart.Sub(beforeStart) < 2*time.Second {
-					log.Errorf("Restart http error %v", err)
-					time.Sleep((1 << i) * time.Second)
-				} else {
-					return
-				}
-			}
-		}
-		if i > maxRetry {
-			log.Errorf("Restart times overflow!")
-		}
-	}()
+
+	log.Notice("restart http service ...")
+	if err := hi.Stop(); err != nil {
+		return err
+	}
+	if err := hi.Start(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -139,21 +111,6 @@ type httpReadWrite struct {
 
 func (hrw *httpReadWrite) Close() error {
 	return nil
-}
-
-func newHttpHandler(srv *Server) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.ContentLength > maxHTTPRequestContentLength {
-			http.Error(w,
-				fmt.Sprintf("content length too large (%d>%d)", r.ContentLength, maxHTTPRequestContentLength),
-				http.StatusRequestEntityTooLarge)
-			return
-		}
-		w.Header().Set("content-type", "application/json")
-		codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr, nil)
-		defer codec.Close()
-		srv.ServeSingleRequest(codec, OptionMethodInvocation)
-	}
 }
 
 //func startRestService(srv *Server) {
@@ -172,58 +129,41 @@ func newHttpHandler(srv *Server) http.HandlerFunc {
 //	beego.Run("0.0.0.0:" + strconv.Itoa(restPort))
 //}
 
-type StoppableListener struct {
-	*net.TCPListener          //Wrapped listener
-	stop             chan int //Channel used only to indicate listener should shutdown
-}
-
-func NewListener(l net.Listener) (*StoppableListener, error) {
-	tcpL, ok := l.(*net.TCPListener)
-
-	if !ok {
-		return nil, errors.New("Cannot wrap listener")
-	}
-	retval := &StoppableListener{}
-	retval.TCPListener = tcpL
-	retval.stop = make(chan int)
-
-	return retval, nil
-}
-
-func (sl *StoppableListener) Accept() (net.Conn, error) {
-	for {
-		//Wait up to one second for a new connection
-		sl.SetDeadline(time.Now().Add(time.Second))
-		newConn, err := sl.TCPListener.Accept()
-
-		//Check for the channel being closed
-		select {
-		case <-sl.stop:
-			log.Errorf("try close %v", err)
-			if err == nil {
-				log.Errorf("close")
-				err = newConn.Close()
-				log.Errorf("closed %v", err)
-			}
-			return nil, StoppedError
-		default:
-			//If the channel is still open, continue as normal
-		}
-
-		if err != nil {
-			netErr, ok := err.(net.Error)
-
-			//If this is a timeout, then continue to wait for
-			//new connections
-			if ok && netErr.Timeout() && netErr.Temporary() {
-				continue
-			}
-		}
-
-		return newConn, err
+// newHTTPServer creates a new http RPC server around an API provider.
+func newHTTPServer(cors []string, srv *Server) *http.Server {
+	return &http.Server{
+		Handler: newCorsHandler(srv, cors),
+		ReadTimeout:  time.Second,
+		WriteTimeout: time.Second,
 	}
 }
 
-func (sl *StoppableListener) Stop() {
-	close(sl.stop)
+func newCorsHandler(srv *Server, allowedOrigins []string) http.Handler {
+	// disable CORS support if user has not specified a custom CORS configuration
+	if len(allowedOrigins) == 0 {
+		return srv
+	}
+
+	c := cors.New(cors.Options{
+		AllowedOrigins: allowedOrigins,
+		AllowedMethods: []string{"POST", "GET"},
+		MaxAge:         600,
+		AllowedHeaders: []string{"*"},
+	})
+	return c.Handler(srv)
+}
+
+// ServeHTTP serves JSON-RPC requests over HTTP.
+func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	if r.ContentLength > maxHTTPRequestContentLength {
+		http.Error(w,
+			fmt.Sprintf("content length too large (%d>%d)", r.ContentLength, maxHTTPRequestContentLength),
+			http.StatusRequestEntityTooLarge)
+		return
+	}
+	w.Header().Set("content-type", "application/json")
+	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr, nil)
+	defer codec.Close()
+	srv.ServeSingleRequest(codec, OptionMethodInvocation)
 }
