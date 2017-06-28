@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 USERNAME="hyperchain"
 PASSWD="hyperchain"
@@ -276,9 +276,9 @@ fs_gen_and_distribute_peerconfig(){
 # generate peer configs
 fs__generate_node_peer_configs(){
     ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh global
-    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh ns1
-    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh ns2
-    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh ns3
+    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh -c ns1
+    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh -c ns2
+    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh -c ns3
 }
 
 # distribute config files
@@ -328,7 +328,7 @@ fs_run_N_terminals_linux(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
         gnome-terminal -x bash -c \
-        "ssh ${USERNAME}@$server_address \" cd /home/${USERNAME}/node${ni} && ./hyperchain 2>error.log \""
+        "ssh ${USERNAME}@$server_address \" export PATH=$PATH:/usr/sbin && cd /home/${USERNAME}/node${ni} && ./hyperchain 2>error.log \""
         ni=`expr ${ni} + 1`
     done
 }
