@@ -203,7 +203,7 @@ func (lp *LedgerProxy) Post(ctx context.Context, event *pb.Event) (*pb.Response,
 		topics = append(topics, common.BytesToHash(topic))
 	}
 
-	log := types.NewLog(common.HexToAddress(event.Context.Cid), topics, event.Body, 0, types.LogVmType_JVM)
+	log := types.NewLog(common.HexToAddress(event.Context.Cid), topics, event.Body, event.Context.BlockNumber, types.LogVmType_JVM)
 	state.AddLog(log)
 
 	return &pb.Response{
