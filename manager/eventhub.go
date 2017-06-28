@@ -125,7 +125,7 @@ func (hub *EventHub) Subscribe() {
 	// Session stuff
 	hub.subscriptions[SUB_SESSION] = hub.eventMux.Subscribe(event.SessionEvent{})
 	// Internal stuff
-	hub.subscriptions[SUB_CONSENSUS] = hub.eventMux.Subscribe(event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{}, event.NegoRoutersEvent{})
+	hub.subscriptions[SUB_CONSENSUS] = hub.eventMux.Subscribe(event.TxUniqueCastEvent{}, event.BroadcastConsensusEvent{})
 	hub.subscriptions[SUB_VALIDATION] = hub.eventMux.Subscribe(event.ValidationEvent{})
 	hub.subscriptions[SUB_COMMIT] = hub.eventMux.Subscribe(event.CommitEvent{})
 	hub.subscriptions[SUB_PEERMAINTAIN] = hub.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
@@ -244,10 +244,6 @@ func (hub *EventHub) listenConsensusEvent() {
 			case event.TxUniqueCastEvent:
 				hub.logger.Debugf("message middleware: [tx unicast]")
 				hub.send(m.SessionMessage_FOWARD_TX, ev.Payload, []uint64{ev.PeerId})
-			case event.NegoRoutersEvent:
-				hub.logger.Debugf("message middleware: [negotiate routers]")
-				hub.logger.Critical("[p2p] temp log, this shouldn't invoke, UpdateAllRoutingTable")
-				hub.peerManager.UpdateAllRoutingTable(ev.Payload)
 			}
 
 		}

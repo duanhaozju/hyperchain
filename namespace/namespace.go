@@ -240,33 +240,12 @@ func (ns *namespaceImpl) Start() error {
 	//3.start event hub
 	ns.eh.Start()
 	//4.start grpc manager
-	// TODO fix this, if need go or not @chenquan
 	ns.peerMgr.Start()
-
-	fmt.Println("start insert")
-	//initType := initType<-ns.peerMgr.GetInitType()
-	fmt.Println("get!")
-	<- time.After(5 * time.Second)
+	//5 consensue the routers
 	ns.passRouters()
+	//6. negotiateView
 	ns.negotiateView()
-	//switch initType {
-	//case p2p.START_NORMAL:
-	//	{
-	//		ns.passRouters()
-	//		ns.negotiateView()
-	//	} // TODO: add other init type
-	//case p2p.START_ADDNEW:{
-	//	//TODO
-	//	ns.logger.Errorf("unimplements init type %v", initType)
-	//}
-	//case p2p.START_RECONNECT:{
-	//	//TODO
-	//	ns.logger.Errorf("unimplements init type %v", initType)
-	//}
-	//default:
-	//	ns.logger.Errorf("unimplements init type %v", initType)
-	//}
-	//5.start request processor
+
 	ns.rpc.Start()
 	ns.status.setState(running)
 	ns.logger.Noticef("namespace: %s start successful", ns.Name())

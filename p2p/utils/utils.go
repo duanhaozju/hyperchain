@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"hyperchain/common"
 	"net"
+	"encoding/gob"
+	"bytes"
 )
 
 func GetProjectPath() string{
@@ -61,4 +63,20 @@ func GetLocalIP() string {
 		}
 	}
 	return ""
+}
+
+func DeepCopy(dst, src interface{}) error {
+	var buf bytes.Buffer
+	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
+		return err
+	}
+	return gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dst)
+}
+
+
+func Sha3(data []byte)(hash []byte){
+	hasher := sha3.NewKeccak256()
+	hasher.Write(data)
+	hash = hasher.Sum(nil)
+	return
 }

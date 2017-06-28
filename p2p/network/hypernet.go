@@ -201,7 +201,7 @@ func (hn *HyperNet)retry() error{
 
 // if a connection failed, here will retry to connect the host name
 func (hn *HyperNet)reverse() error{
-	fmt.Println("start reverse process")
+	logger.Info("start reverse process")
 	go func(h *HyperNet) {
 		for m := range h.reverseQueue{
 			hostname := m[0]
@@ -209,10 +209,10 @@ func (hn *HyperNet)reverse() error{
 			if _,ok := h.hostClientMap.Get(hostname);ok{
 				continue
 			}
-			fmt.Printf("reverse connect to hostname %s,addr %s \n",hostname,addr)
+			logger.Infof("reverse connect to hostname %s,addr %s \n",hostname,addr)
 			err := h.ConnectByAddr(hostname,addr)
 			if err !=nil{
-				logger.Error("there are something wrong when connect to host",hostname)
+				logger.Errorf("there are something wrong when connect to host: %s",hostname)
 				// TODO here should check the retry time duration, maybe is a nil
 				logger.Info("It will retry connect to host",hostname,"after ",hn.conf.GetDuration("global.p2p.retrytime"))
 			}else{
@@ -276,10 +276,10 @@ func (hn *HyperNet)DisConnect(hostname string)(err  error){
 		hn.hostClientMap.Remove(hostname)
 	}
 	if err != nil {
-		fmt.Printf("disconnect %s with somewrong, err: %s",hostname,err.Error())
+		logger.Errorf("disconnect %s with somewrong, err: %s",hostname,err.Error())
 		return
 	}
-	fmt.Printf("disconnect %s successfully \n",hostname)
+	logger.Infof("disconnect %s successfully \n",hostname)
   	return
 }
 
@@ -307,7 +307,7 @@ func (hypernet *HyperNet)Greeting(hostname string,msg *pb.Message)(*pb.Message,e
 }
 
 func (hypernet *HyperNet)Whisper(hostname string,msg *pb.Message)(*pb.Message,error){
-	//fmt.Printf("send msg => %s %+v\n",hostname,msg)
+	logger.Debugf("send msg => %s %+v\n",hostname,msg)
 	hypernet.msgWrapper(msg)
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
 			return client.(*Client).Wisper(msg)
@@ -319,7 +319,7 @@ func(hypernet *HyperNet)Stop(){
 	for item := range hypernet.clients.IterBuffered() {
 		client := item.Val.(*Client)
 		client.Close()
-		fmt.Println("close client: ",item.Key)
+		logger.Info("close client: ",item.Key)
 	}
 	hypernet.server.server.GracefulStop()
 }

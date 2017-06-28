@@ -213,3 +213,22 @@ func (list *ThreadSafeLinkedList)Contains(item interface{})(int32,error){
 	}
 	return -1,errors.New("Not found")
 }
+
+
+func (list *ThreadSafeLinkedList)Duplicate() (*ThreadSafeLinkedList,error){
+	if list == nil || list.capacity ==0{
+		return nil,errors.New("this list is nil or empty")
+	}
+	newlist := NewTSLinkedList(list.head.value)
+	list.rwlock.RLock()
+	defer list.rwlock.RUnlock()
+	if list.head.next == nil{
+		return newlist,nil
+	}
+	curr := list.head.next
+	for curr != nil{
+		newlist.Insert(curr.index,curr.value)
+		curr = curr.next
+	}
+	return newlist,nil
+}

@@ -80,12 +80,12 @@ func(c *Client)Close() error{
 
 func(c *Client)Chat() (error){
 	if c.client == nil{
-		fmt.Printf("the client is nil %v \n",c.client)
+		logger.Warningf("the client is nil %v \n",c.client)
 		return nil
 	}
 	stream,err := c.client.Chat(context.Background())
 	if err != nil{
-		fmt.Printf("cannot create stream! %v \n" ,err)
+		logger.Warningf("cannot create stream! %v \n" ,err)
 		return err
 	}
 	for msg := range c.MsgChan{
@@ -100,7 +100,7 @@ func(c *Client)Chat() (error){
 // Greeting doube arrow greeting message transfer
 func(c *Client)Greeting(in *pb.Message) (*pb.Message, error){
 	if c.client == nil{
-		fmt.Printf("the client is nil %v \n",c.client)
+		logger.Warningf("the client is nil %v \n",c.client)
 		return nil,errors.New(fmt.Sprintf("the client is nil %v \n",c.client))
 	}
 	in.From.Extend.IP =[]byte(utils.GetLocalIP())
@@ -109,7 +109,7 @@ func(c *Client)Greeting(in *pb.Message) (*pb.Message, error){
 // Wisper Transfer the the node health infomation
 func(c *Client)Wisper(in *pb.Message) (*pb.Message, error){
 	if c.client == nil{
-		fmt.Printf("the client is nil %v \n",c.client)
+		logger.Warningf("the client is nil %v \n",c.client)
 		return nil,errors.New(fmt.Sprintf("the client is nil %v \n",c.client))
 	}
 	return c.client.Whisper(context.Background(),in)

@@ -2,10 +2,10 @@ package info
 
 import (
 	"sync"
-	"hyperchain/crypto/sha3"
 	"hyperchain/common"
 	"encoding/json"
 	"fmt"
+	"hyperchain/p2p/utils"
 )
 
 type Info struct {
@@ -18,10 +18,8 @@ type Info struct {
 }
 
 func NewInfo(id int,hostname string,namespcace string)*Info {
-	fmt.Println("new info namespace:",namespcace)
-	h := sha3.NewKeccak256()
-	h.Write([]byte(namespcace))
-	hash := h.Sum([]byte(hostname))
+	fmt.Println("new info namespace:",namespcace,hostname,id)
+	hash := utils.Sha3([]byte(hostname+namespcace))
 	return &Info{
 		rwmutex:new(sync.RWMutex),
 		Id:id,

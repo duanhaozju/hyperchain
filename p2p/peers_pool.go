@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"hyperchain/p2p/threadsafelinkedlist"
 	"encoding/json"
+	"github.com/op/go-logging"
+	"hyperchain/common"
 )
 
 var (	_VP_FLAG = "VP"
@@ -19,6 +21,7 @@ type PeersPool struct {
 	nvpPool cmap.ConcurrentMap
 	//put the exist peers into this exist
 	existMap cmap.ConcurrentMap
+	logger *logging.Logger
 }
 
 //NewPeersPool new a peers pool
@@ -28,6 +31,7 @@ func NewPeersPool(namespace string)*PeersPool {
 		vpPool:nil,
 		nvpPool:cmap.New(),
 		existMap:cmap.New(),
+		logger:common.GetLogger(namespace,"p2p"),
 	}
 }
 
@@ -74,11 +78,84 @@ func (pool *PeersPool)GetPeers()[]*Peer {
 	return list
 }
 
+func (pool *PeersPool)GetPeersByHash(hash string)*Peer{
+	l := pool.vpPool.Iter()
+	for _,item := range l{
+		p := item.(*Peer)
+		if p.info.Hash == hash{
+			return p
+		}
+	}
+	return nil
+}
+
+func(pool *PeersPool)TryDelete(selfHash,delHash string)(routerhash string, selfnewid uint64,deleteid uint64,err error){
+	pool.logger.Critical("selfhash",selfHash,"delhash",delHash)
+	templist,err := pool.vpPool.Duplicate()
+	if err !=nil{
+		return
+	}
+	var delid int
+	for _,item := range templist.Iter(){
+		tempPeer := item.(*Peer)
+		if tempPeer.info.Hash == delHash{
+			pool.logger.Critical("<===> %+v",tempPeer.info)
+			delid = tempPeer.info.Id
+		}
+	}
+	_,err = templist.Remove(int32(delid-1))
+	if err != nil{
+		return
+	}
+
+	// update all peers id
+	for idx,item := range templist.Iter(){
+		tempPeer := item.(*Peer)
+		tempPeer.info.SetID(idx + 1)
+		if tempPeer.info.Hash == selfHash{
+			selfnewid = uint64(tempPeer.info.Id)
+		}
+
+	}
+
+	data := make([]string,0)
+	for _,item := range templist.Iter(){
+		peer := item.(*Peer)
+		data = append(data,string(peer.Serialize()))
+	}
+
+	pools := struct {
+		Routers []string `json:"routers"`
+	}{}
+	b,err := json.Marshal(pools)
+	if err != nil{
+		return
+	}
+	routerhash = common.ToHex(utils.Sha3(b))
+	deleteid = uint64(delid)
+	pool.logger.Criticalf("r %s,selfid: %d,deleteid: %d,e: %s",routerhash, selfnewid ,deleteid ,err)
+	return
+
+}
+
+
 //DeleteVPPeer delete a peer from peers pool instance
 func(pool *PeersPool)DeleteVPPeer(id int)error{
-	_,err := pool.vpPool.Remove(int32(id))
+	_,err := pool.vpPool.Remove(int32(id-1))
+	//update all peers id
+	for idx,item := range pool.vpPool.Iter(){
+		tempPeer := item.(*Peer)
+		tempPeer.info.SetID(idx + 1)
+	}
 	return err
 }
+
+func(pool *PeersPool)DeleteVPPeerByHash(hash string)error{
+	p := pool.GetPeersByHash(hash)
+	pool.logger.Critical("delete node",p.info.Id)
+	return pool.DeleteVPPeer(p.info.Id)
+}
+
 
 //DeleteNVPPeer delete the nvp peer
 func(pool *PeersPool)DeleteNVPPeer(hash string){

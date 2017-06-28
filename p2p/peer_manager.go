@@ -32,7 +32,6 @@ type MsgSender interface {
 type AddNode interface {
 	// update routing table when new peer's join request is accepted
 	UpdateRoutingTable(payLoad []byte)
-	UpdateAllRoutingTable(routerPayload []byte)
 	GetLocalAddressPayload() []byte
 	SetOnline()
 }

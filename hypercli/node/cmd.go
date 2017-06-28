@@ -36,7 +36,7 @@ func NewNodeCMD() []cli.Command {
 					Usage: "setting the namespace to delete node from",
 				},
 				cli.StringFlag{
-					Name:  "host, h",
+					Name:  "ip, i",
 					Value: "",
 					Usage: "setting the host ip to delete node from",
 				},
@@ -71,7 +71,7 @@ func delNode(c *cli.Context) error {
 		fmt.Scanln(&namespace)
 	}
 
-	ip = common.GetNonEmptyValueByName(c, "host")
+	ip = common.GetNonEmptyValueByName(c, "ip")
 	port = common.GetNonEmptyValueByName(c, "port")
 
 	nodehash, err := getDelNodeHash(namespace, ip, port)

@@ -41,9 +41,6 @@ func newHyperchain(argV *argT) *hyperchain {
 	if err != nil{
 		panic(err)
 	}
-	//vip.Set("global.p2p.hosts", utils.GetProjectPath()+"/p2p/test/hosts.yaml")
-	//vip.Set("global.p2p.retrytime", "3s")
-	//vip.Set("global.p2p.port",50019)
 	p2pManager,err  := p2p.GetP2PManager(vip)
 	if err != nil{
 		panic(err)
@@ -106,7 +103,7 @@ func main() {
 
 		argv := ctx.Argv().(*argT)
 		if argv.Shell {
-		fmt.Println("Start hypernet interactive shell... > ",argv.IPCEndpoint)
+		fmt.Println("Start hypernet interactive shell: ",argv.IPCEndpoint)
 		ipc.IPCShell(argv.IPCEndpoint)
 		return nil
 		}

@@ -11,7 +11,9 @@ import (
 )
 
 
+
 var (
+	glogger = common.GetLogger(common.DEFAULT_LOG,"p2p")
 	errP2PMGRNotInit = errors.New("The P2P manager hasn't been initlized, Fatal error")
 )
 
@@ -39,7 +41,7 @@ func GetP2PManager(vip *viper.Viper)(P2PManager,error){
 	if globalP2PManager == nil{
 		p2pManager,err := newP2PManager(vip)
 		if err != nil{
-			fmt.Errorf("fatal error %s",err.Error())
+			glogger.Errorf("fatal error %s",err.Error())
 			return nil,errors.New(fmt.Sprintf("there something wrong when get p2pmanager: %s",err.Error()))
 		}
 		globalP2PManager = p2pManager
@@ -68,12 +70,12 @@ func newP2PManager(vip *viper.Viper)(*p2pManagerImpl,error){
 		ipcShell:ipc.NEWIPCServer(vip.GetString("global.p2p.ipc")),
 	}
 	p2pmgr.Start()
-	fmt.Println("interactive ipc shell server listening...")
+	glogger.Info("interactive ipc shell server listening...")
 	rc := ipc.NewRemoteCall()
 	ipc.RegisterFunc(rc,"network",p2pmgr.hypernet.Command)
 	err = p2pmgr.ipcShell.Start(rc)
 	if err != nil{
-		fmt.Println("cannot start ipc server",err)
+		glogger.Fatalf("cannot start ipc server, err: %s",err.Error())
 	}
 	return p2pmgr,nil
 }

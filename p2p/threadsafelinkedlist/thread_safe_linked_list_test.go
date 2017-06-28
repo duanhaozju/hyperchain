@@ -242,6 +242,24 @@ func TestThreadSafeLinkedList_IterSlow(t *testing.T) {
 	assert.Equal(t,5,len(l))
 }
 
+
+func TestThreadSafeLinkedList_Duplicate(t *testing.T) {
+	list := NewTSLinkedList("head")
+	list.Insert(0,"second")
+	list.Insert(1,"three")
+	list.Insert(1,"replace three")
+	list.Insert(2,"replace four")
+	assert.Equal(t,list.GetCapcity(),int32(5))
+	list.Walk()
+	newlist,err := list.Duplicate()
+	assert.Nil(t,err)
+	newlist.Walk()
+	_,e := newlist.Contains("replace four")
+	assert.Nil(t,e)
+	assert.Equal(t,newlist.GetCapcity(),int32(5))
+}
+
+
 func BenchmarkThreadSafeLinkedList_Iter(b *testing.B) {
 	//setup code
 	list := NewTSLinkedList("head")

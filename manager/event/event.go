@@ -110,9 +110,6 @@ type ReceiveVerifiedBlock struct {
 	Payload  []byte
 }
 
-type NegoRoutersEvent struct {
-	Payload []byte
-}
 
 type CommitedBlockEvent struct {
 	Payload []byte
