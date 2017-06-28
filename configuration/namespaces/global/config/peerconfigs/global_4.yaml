@@ -8,6 +8,10 @@
 ###########################################################
 
 global:
+    jsonrpc_port: 8084
+    restful_port: 9004
+    jvm_port: 50084
+    ledger_port: 50054
     #namespace config dir root path
     nsConfigRootPath: "./namespaces"
 
@@ -39,8 +43,8 @@ global:
             hyperdb: "NOTICE"
             eventhub: "NOTICE"
     p2p:
-        hosts: "./hosts.yaml"
         port: 50014
+        hosts: "./hosts.yaml"
         retrytime: 3s
         ipc: "hpc_4.ipc"
     namespace:

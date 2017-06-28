@@ -182,7 +182,7 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 		return err, nil
 	}
 	executor.resetStateDb()
-	executor.logger.Debugf("[Namespace = %s] validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+	executor.logger.Criticalf("[Namespace = %s] validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
 		executor.namespace, executor.getTempBlockNumber(), seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &ValidationResultRecord{
 		TxRoot:      txRoot,

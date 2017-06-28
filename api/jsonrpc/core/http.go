@@ -70,7 +70,8 @@ func newHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp ch
 func (hi *httpServerImpl) Start() error {
 	log.Notice("start http service ...")
 	config := hi.rpcServer.namespaceMgr.GlobalConfig()
-	httpPort := config.GetInt(common.C_HTTP_PORT)
+	httpPort := config.GetInt("global.jsonrpc_port")
+	log.Noticef("http port is: %d", httpPort)
 	c := cors.New(cors.Options{
 		AllowedOrigins: []string{"*"},
 		AllowedMethods: []string{"POST", "GET"},

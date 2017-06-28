@@ -35,6 +35,9 @@ func (helloMsgh *HelloMsgHandler)Receive() chan<- interface{}{
 
 func (helloMsgh *HelloMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
 	fmt.Println("Got a hello message %+v", msg)
+	helloMsgh.ev.Post(event.NewPeerEvent{
+		Payload:msg.Payload,
+	})
 	rsp  := &pb.Message{
 		MessageType:pb.MsgType_HELLO,
 	}

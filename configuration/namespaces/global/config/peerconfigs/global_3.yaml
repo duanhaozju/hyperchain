@@ -8,6 +8,10 @@
 ###########################################################
 
 global:
+    jsonrpc_port: 8083
+    restful_port: 9003
+    jvm_port: 50083
+    ledger_port: 50053
     #namespace config dir root path
     nsConfigRootPath: "./namespaces"
 

@@ -10,14 +10,15 @@ import (
 
 type Info struct {
 	rwmutex   *sync.RWMutex
-	Id        int
+	Id        int `json:"id"`
 	isPrimary bool
-	Hostname  string
-	Namespace string
-	Hash      string
+	Hostname  string `json:"hostname"`
+	Namespace string `json:"namespace"`
+	Hash      string `json:"hash"`
 }
 
 func NewInfo(id int,hostname string,namespcace string)*Info {
+	fmt.Println("new info namespace:",namespcace)
 	h := sha3.NewKeccak256()
 	h.Write([]byte(namespcace))
 	hash := h.Sum([]byte(hostname))
@@ -27,6 +28,7 @@ func NewInfo(id int,hostname string,namespcace string)*Info {
 		isPrimary:false,
 		Hostname:hostname,
 		Hash:common.Bytes2Hex(hash),
+		Namespace:namespcace,
 	}
 }
 
@@ -82,6 +84,7 @@ func (i *Info)Serialize()[]byte{
 		fmt.Println(e)
 		return nil
 	}
+	fmt.Println("Info Serialize",string(b))
 	return b
 }
 
@@ -89,6 +92,7 @@ func InfoUnmarshal(raw []byte)*Info{
 	i := new(Info)
 	err := json.Unmarshal(raw,i)
 	if err != nil{
+		fmt.Errorf("cannnot unmarshal info %s",err.Error())
 		return nil
 	}
 	return i

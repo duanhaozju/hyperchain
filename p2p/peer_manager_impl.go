@@ -113,7 +113,8 @@ func (pmgr *peerManagerImpl)Start() error{
 	//new attend Process
 	if pmgr.isnew{
 		//this should wait until all nodes reverse connect to self.
-		pmgr.broadcast(pb.MsgType_ATTEND,[]byte(pmgr.GetLocalNodeHash()))
+		pmgr.broadcast(pb.MsgType_ATTEND,[]byte(pmgr.GetLocalAddressPayload()))
+		pmgr.eventHub.Post(event.AlreadyInChainEvent{})
 	}
 	return nil
 }
@@ -160,7 +161,8 @@ func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType,payload []byte, peers []
 	peerList := pmgr.peerPool.GetPeers()
 	size := len(peerList)
 	for _,id := range peers {
-		if int(id-1) > size {
+		//REVIEW here should ensure >= to avoid index out of range
+		if int(id-1) >= size {
 			continue
 		}
 		if id == uint64(pmgr.node.info.GetID()){
@@ -254,16 +256,14 @@ func (pmgr *peerManagerImpl)UpdateRoutingTable(payLoad []byte){
 	fmt.Println(i.Hostname)
 	fmt.Println(i.Namespace)
 	fmt.Println("update the route table")
-	err := pmgr.bind(i.Namespace,i.GetID(),i.GetHostName())
+	err := pmgr.bind(i.Namespace,i.Id,i.Hostname)
 	if err !=nil{
 		fmt.Errorf("cannot bind a new peer: %s",err.Error())
 		return
 	}
-	newPeer := NewPeer(pmgr.namespace,i.GetHostName(),i.GetID(),pmgr.node.info,pmgr.hyperNet)
-	err = pmgr.peerPool.AddVPPeer(i.GetID(),newPeer)
-	if err != nil{
-		fmt.Errorf("cannot bind a new peer: %s",err.Error())
-		return
+
+	for _,p := range pmgr.peerPool.GetPeers(){
+		fmt.Println("update table", p.hostname)
 	}
 }
 //This method is DEPRECIATE.

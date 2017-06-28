@@ -246,7 +246,7 @@ func (ns *namespaceImpl) Start() error {
 	fmt.Println("start insert")
 	//initType := initType<-ns.peerMgr.GetInitType()
 	fmt.Println("get!")
-	<- time.After(20 * time.Second)
+	<- time.After(5 * time.Second)
 	ns.passRouters()
 	ns.negotiateView()
 	//switch initType {

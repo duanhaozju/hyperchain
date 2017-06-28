@@ -205,7 +205,7 @@ func (hn *HyperNet)reverse() error{
 	go func(h *HyperNet) {
 		for m := range h.reverseQueue{
 			hostname := m[0]
-			addr := m[0]
+			addr := m[1]
 			if _,ok := h.hostClientMap.Get(hostname);ok{
 				continue
 			}

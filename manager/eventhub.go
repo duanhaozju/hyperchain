@@ -263,7 +263,7 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 		case obj := <-hub.GetSubscription(SUB_PEERMAINTAIN).Chan():
 			switch ev := obj.Data.(type) {
 			case event.NewPeerEvent:
-				hub.logger.Debugf("message middleware: [new peer]")
+				hub.logger.Critical("message middleware: [new peer]")
 				hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_ADD_NODE_EVENT, &protos.AddNodeMessage{ev.Payload})
 			case event.BroadcastNewPeerEvent:
 				hub.logger.Debugf("message middleware: [broadcast new peer]")
@@ -298,14 +298,11 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 				}
 			case event.AlreadyInChainEvent:
 				hub.logger.Debugf("message middleware: [already in chain]")
-				if hub.initType == 1 {
-					hub.peerManager.SetOnline()
 					//TODO unsupport method @chenquan
 					payload := hub.peerManager.GetLocalAddressPayload()
 					hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_NEW_NODE_EVENT, &protos.NewNodeMessage{payload})
 					hub.PassRouters()
 					hub.NegotiateView()
-				}
 			}
 
 		}

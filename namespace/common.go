@@ -8,6 +8,7 @@ import (
 	"hyperchain/api"
 	"hyperchain/common"
 	"strings"
+	"fmt"
 )
 
 var (
@@ -34,21 +35,32 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 		conf = common.NewConfig(nsConfigPath)
 	}
 	// init peer configurations
-	peerConfigPath := conf.GetString("global.configs.peers")
+	peerConfigPath := conf.GetString("global.configs.peers13")
 	peerViper := viper.New()
 	peerViper.SetConfigFile(peerConfigPath)
 	err := peerViper.ReadInConfig()
 	if err != nil {
 		logger.Errorf("err %v", err)
 	}
-	conf.Set(common.C_NODE_ID, peerViper.GetInt("self.node_id"))
-	conf.Set(common.C_HTTP_PORT, peerViper.GetInt("self.jsonrpc_port"))
-	conf.Set(common.C_REST_PORT, peerViper.GetInt("self.restful_port"))
-	conf.Set(common.C_GRPC_PORT, peerViper.GetInt("self.grpc_port"))
+	// global part
+	//conf.Set(common.C_HTTP_PORT,  nr.conf.GetInt("global.jsonrpc_port"))
+	nr.conf.Set(common.C_HTTP_PORT, nr.conf.GetInt("global.jsonrpc_port"))
+	//fmt.Println(conf.GetInt(common.C_HTTP_PORT))
+	//conf.Set(common.C_REST_PORT,  nr.conf.GetInt("global.restful_port"))
+	nr.conf.Set(common.C_REST_PORT, nr.conf.GetInt("global.restful_port"))
+	//fmt.Println(conf.GetInt(common.C_REST_PORT))
+	nr.conf.Set(common.C_GRPC_PORT,  nr.conf.GetInt("global.p2p.port"))
+	//fmt.Println(conf.GetInt(common.C_GRPC_PORT))
+	conf.Set(common.C_JVM_PORT,   nr.conf.GetInt("global.jvm_port"))
+	fmt.Println(conf.GetInt(common.C_JVM_PORT))
+	conf.Set(common.C_LEDGER_PORT,nr.conf.GetInt("global.ledger_port"))
+	fmt.Println(conf.GetInt(common.C_LEDGER_PORT))
+	// ns part
+	conf.Set(common.C_NODE_ID, peerViper.GetInt("self.id"))
+	fmt.Println(conf.GetInt(common.C_NODE_ID))
 	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
 	conf.Set(common.C_GLOBAL_CONFIG_PATH, nsConfigPath)
-	conf.Set(common.C_JVM_PORT, peerViper.GetInt("self.jvm_port"))
-	conf.Set(common.C_LEDGER_PORT, peerViper.GetInt("self.ledger_port"))
+
 
 	if strings.HasSuffix(path, "/"+DEFAULT_NAMESPACE+"/config") {
 		nr.conf.Set(common.C_HTTP_PORT, peerViper.GetInt("self.jsonrpc_port"))
