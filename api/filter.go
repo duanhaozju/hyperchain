@@ -285,7 +285,7 @@ func returnException(data []interface{}) []event.FilterException {
 	return ret
 }
 
-// ===================== test ================
+// ===================== webscoket event ================
 func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
 
 	api.filtersMu.Lock()
