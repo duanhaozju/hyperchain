@@ -16,6 +16,7 @@ import (
 
 	"hyperchain/common"
 	"hyperchain/core/crypto"
+	"path"
 )
 
 var (
@@ -65,6 +66,7 @@ type Solidity struct {
 	version     string
 	fullVersion string
 	legacy      bool
+	isSolcjs    bool
 }
 
 func NewCompiler(solcPath string) (sol *Solidity, err error) {
@@ -74,7 +76,10 @@ func NewCompiler(solcPath string) (sol *Solidity, err error) {
 	}
 	solcPath, err = exec.LookPath(solcPath)
 	if err != nil {
-		return
+		solcPath = "solcjs"
+		if solcPath, err = exec.LookPath(solcPath); err != nil {
+			return nil, &exec.Error{Name: "solc and solcjs", Err: exec.ErrNotFound}
+		}
 	}
 
 	cmd := exec.Command(solcPath, "--version")
@@ -95,6 +100,11 @@ func NewCompiler(solcPath string) (sol *Solidity, err error) {
 		fullVersion: fullVersion,
 		legacy:      legacy,
 	}
+
+	if strings.HasSuffix(sol.solcPath, "solcjs") {
+		sol.isSolcjs = true
+	}
+
 	//glog.V(logger.Info).Infoln(sol.Info())
 	return
 }
@@ -133,8 +143,25 @@ func (sol *Solidity) Compile(source string) (map[string]*Contract, error) {
 	compilerOptions := strings.Join(params, " ")
 
 	cmd := exec.Command(sol.solcPath, params...)
-	cmd.Stdin = strings.NewReader(source)
 	cmd.Stderr = stderr
+	if !sol.isSolcjs {
+		cmd.Stdin = strings.NewReader(source)
+
+	} else {
+		sourceFile, err := ioutil.TempFile(wd, "source")
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = sourceFile.Write([]byte(source))
+		if err != nil {
+			return nil, err
+		}
+
+		cmd.Dir = wd
+		cmd.Args = append(cmd.Args, path.Base(sourceFile.Name()))
+	}
+
 
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("solc: %v\n%s", err, string(stderr.Bytes()))
@@ -168,18 +195,22 @@ func (sol *Solidity) Compile(source string) (map[string]*Contract, error) {
 		}
 
 		var userdoc interface{}
-		if blob, err := ioutil.ReadFile(filepath.Join(wd, base+".docuser")); err != nil {
-			return nil, fmt.Errorf("solc: error reading user doc: %v", err)
-		} else if err = json.Unmarshal(blob, &userdoc); err != nil {
-			return nil, fmt.Errorf("solc: error parsing user doc: %v", err)
+		var devdoc interface{}
+
+		if !sol.isSolcjs {
+			if blob, err := ioutil.ReadFile(filepath.Join(wd, base+".docuser")); err != nil {
+				return nil, fmt.Errorf("solc: error reading user doc: %v", err)
+			} else if err = json.Unmarshal(blob, &userdoc); err != nil {
+				return nil, fmt.Errorf("solc: error parsing user doc: %v", err)
+			}
+
+			if blob, err := ioutil.ReadFile(filepath.Join(wd, base+".docdev")); err != nil {
+				return nil, fmt.Errorf("solc: error reading dev doc: %v", err)
+			} else if err = json.Unmarshal(blob, &devdoc); err != nil {
+				return nil, fmt.Errorf("solc: error parsing dev doc: %v", err)
+			}
 		}
 
-		var devdoc interface{}
-		if blob, err := ioutil.ReadFile(filepath.Join(wd, base+".docdev")); err != nil {
-			return nil, fmt.Errorf("solc: error reading dev doc: %v", err)
-		} else if err = json.Unmarshal(blob, &devdoc); err != nil {
-			return nil, fmt.Errorf("solc: error parsing dev doc: %v", err)
-		}
 		// Assemble the final contract
 		contracts[base] = &Contract{
 			Code: "0x" + string(binary),

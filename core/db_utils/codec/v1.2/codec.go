@@ -45,7 +45,7 @@ func EncodeReceipt(receipt *types.Receipt) ([]byte, error) {
 		CumulativeGasUsed: receipt.CumulativeGasUsed,
 		TxHash:            receipt.TxHash,
 		ContractAddress:   receipt.ContractAddress,
-		GasUsed:           receipt.GasUsed,
+		GasUsed:           100000, // For backward compatibility
 		Ret:               receipt.Ret,
 		Logs:              receipt.Logs,
 		Status:            v1_2_types.ReceiptV1_2_STATUS(receipt.Status),

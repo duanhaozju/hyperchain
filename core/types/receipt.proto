@@ -3,23 +3,23 @@ package types;
 
 message Receipt {
     bytes version = 1;
-    enum VmType {
-        EVM = 0;
-        JVM = 1;
-    }
-    VmType vmType = 2;
-	bytes PostState = 3;
-	int64 CumulativeGasUsed = 4;
-	bytes TxHash = 5;
-	bytes ContractAddress = 6;
-    int64 GasUsed = 7;
-    bytes Ret = 8;
-    bytes Logs = 9;
-    STATUS Status = 10;
-    bytes Message = 11;
+	bytes PostState = 2;
+	int64 CumulativeGasUsed = 3;
+	bytes TxHash = 4;
+	bytes ContractAddress = 5;
+    int64 GasUsed = 6;
+    bytes Ret = 7;
+    bytes Logs = 8;
+    STATUS Status = 9;
+    bytes Message = 10;
     enum STATUS {
         SUCCESS       = 0;
         FAILED        = 1;
     }
+    enum VmType {
+        EVM = 0;
+        JVM = 1;
+    }
+    VmType vmType = 11;
 }
 
