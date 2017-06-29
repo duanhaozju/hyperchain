@@ -78,10 +78,13 @@ func (rsi *RPCServerImpl) Stop() error {
 // Restart all rpc server
 func (rsi *RPCServerImpl) Restart() error {
 
-	if err := rsi.Stop(); err != nil {
+	// restart http server
+	if err := rsi.httpServer.Restart(); err != nil {
 		return err
 	}
-	if err := rsi.Start(); err != nil {
+
+	// restart websocket server
+	if err := rsi.wsServer.Restart(); err != nil {
 		return err
 	}
 	return nil
