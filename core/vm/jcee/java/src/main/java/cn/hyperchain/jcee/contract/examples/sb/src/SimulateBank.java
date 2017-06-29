@@ -6,6 +6,7 @@ package cn.hyperchain.jcee.contract.examples.sb.src;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
+import cn.hyperchain.jcee.contract.Event;
 import cn.hyperchain.jcee.ledger.Batch;
 import cn.hyperchain.jcee.ledger.BatchKey;
 import cn.hyperchain.jcee.ledger.BatchValue;
@@ -46,6 +47,8 @@ public class SimulateBank extends ContractTemplate {
             case "testInvokeContract":
                 logger.info("testInvokeContract");
                 return testInvokeContract(args);
+            case "testPostEvent":
+                return testPostEvent(args);
             default:
                 String err = "method " + funcName  + " not found!";
                 logger.error(err);
@@ -150,7 +153,7 @@ public class SimulateBank extends ContractTemplate {
 
         double bbalance = bb.toDouble();
         double amount = Bytes.toDouble(args.get(2).getBytes());
-        if (abalance < abalance) {
+        if (abalance < amount) {
             return result(false, args.get(0) + " balance is not enough");
         }
 
@@ -164,13 +167,13 @@ public class SimulateBank extends ContractTemplate {
     private ExecuteResult testRangeQuery(List<String> args) {
         Batch batch = ledger.newBatch();
         String keyPrefix = "bk-";
-        int count = 10009;
+        int count = 9;
         for (int i = 0; i < count; i ++) {
             batch.put((keyPrefix + i).getBytes(), (i + "").getBytes());
         }
         batch.commit();
 
-        BatchValue bv = ledger.rangeQuery("bk-0".getBytes(), "bk-10009".getBytes());
+        BatchValue bv = ledger.rangeQuery("bk-0".getBytes(), "bk-9".getBytes());
         int bvCount = 0;
         while (bv.hasNext()) {
             bv.next();
@@ -187,15 +190,15 @@ public class SimulateBank extends ContractTemplate {
         logger.info("put success");
         if (ledger.delete(key) == false) return result(false);
         logger.info("delete success");
-        String getV = null;
+        String getV = "";
 
         Result result = ledger.get(key);
         if(!result.isEmpty()){
             getV = result.toString();
-            logger.info("get deleted value is " + getV);
+            logger.error("get deleted value is " + getV);
         }
         else {
-            logger.error("the value try to delete is empty");
+            logger.info("the value has been deleted and is empty now");
         }
         return result(getV.isEmpty());
     }
@@ -205,5 +208,19 @@ public class SimulateBank extends ContractTemplate {
         List<String> arg = new LinkedList<>();
         arg.add("hello, invoke contract!");
         return invokeContract("global", "bbe2b6412ccf633222374de8958f2acc76cda9c9", "test", arg);
+    }
+
+    public ExecuteResult testPostEvent(List<String> args) {
+        logger.info(args);
+        for (int i = 0; i < 10; i ++) {
+            Event event = new Event("event" + i);
+            event.addTopic("simulate_bank");
+            event.addTopic("test");
+            event.put("attr1", "value1");
+            event.put("attr2", "value2");
+            event.put("attr3", "value3");
+            ledger.post(event);
+        }
+        return result(true);
     }
 }

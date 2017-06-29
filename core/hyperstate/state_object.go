@@ -342,7 +342,11 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 			if len(v) == 0 {
 				workingSet[k.Hex()] = nil
 			} else {
-				workingSet[k.Hex()] = v
+				if len(v) <= common.HashLength {
+					workingSet[k.Hex()] = common.BytesToHash(v).Bytes()
+				} else {
+					workingSet[k.Hex()] = v
+				}
 				self.logger.Debugf("working set key %s value %s", k.Hex(), common.Bytes2Hex(v))
 			}
 		}

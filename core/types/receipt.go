@@ -1,14 +1,13 @@
 package types
 
 import (
-	"fmt"
 	"hyperchain/common"
 	"math/big"
-	"strconv"
 )
 
 //// ReceiptTrans are used to show in web.
 type ReceiptTrans struct {
+	Version           string         `json:"version"`
 	PostState         string         `json:"postState"`
 	CumulativeGasUsed int64          `json:"cumulativeGasUsed"`
 	TxHash            string         `json:"txHash"`
@@ -27,9 +26,10 @@ func (receipt Receipt) ToReceiptTrans() (receiptTrans *ReceiptTrans) {
 	if err != nil {
 		logsValue = nil
 	} else {
-		logsValue = logs.ToLogsTrans()
+		logsValue = logs.ToLogsTrans(receipt.VmType)
 	}
 	return &ReceiptTrans{
+		Version:           string(receipt.Version),
 		GasUsed:           receipt.GasUsed,
 		PostState:         common.BytesToHash(receipt.PostState).Hex(),
 		ContractAddress:   common.BytesToAddress(receipt.ContractAddress).Hex(),
@@ -45,11 +45,7 @@ func (receipt Receipt) ToReceiptTrans() (receiptTrans *ReceiptTrans) {
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
 func NewReceipt(root []byte, cumulativeGasUsed *big.Int, vmType int32) *Receipt {
-	i64, err := strconv.ParseInt(cumulativeGasUsed.String(), 10, 64)
-	if err != nil {
-		fmt.Println("the parseInt is wrong")
-	}
-	return &Receipt{PostState: common.CopyBytes(root), CumulativeGasUsed: i64, VmType: Receipt_VmType(vmType)}
+	return &Receipt{PostState: common.CopyBytes(root), CumulativeGasUsed: cumulativeGasUsed.Int64(), VmType: Receipt_VmType(vmType)}
 }
 
 func (r *Receipt) RetrieveLogs() (Logs, error) {

@@ -11,30 +11,35 @@ import (
 	"strconv"
 )
 
+type Message struct {
+	From        common.Address
+	To          common.Address
+	Gas         *big.Int
+	GasPrice    *big.Int
+	Amount      *big.Int
+	Payload     []byte
+	Op          types.TransactionValue_Opcode
+}
+
 func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, logger *logging.Logger, namespace string) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
-	var (
-		from     = common.BytesToAddress(tx.From)
-		to       = common.BytesToAddress(tx.To)
-		tv       = tx.GetTransactionValue()
-		data     = tv.RetrievePayload()
-		gas      = big.NewInt(100000000)
-		gasPrice = tv.RetrieveGasPrice()
-		amount   = tv.RetrieveAmount()
-		op       = tv.GetOp()
-	)
+	message := setDefaults(tx)
 	env := initEnvironment(db, blockNumber, logger, namespace, tx.GetHash())
 	env.Db().StartRecord(tx.GetHash(), common.Hash{}, idx)
-	if valid := checkPermission(env, from, to, op); !valid {
+	if valid := checkPermission(env, message.From, message.To, message.Op); !valid {
 		return nil, nil, common.Address{}, er.InvalidInvokePermissionErr("not enough permission to invocation")
 	}
 
+	preGas := big.NewInt(0).Set(message.Gas)
+
 	if tx.To == nil {
-		ret, addr, err = Exec(env, &from, nil, data, gas, gasPrice, amount, op)
+		ret, addr, err = Exec(env, &message.From, nil, message.Payload, message.Gas,
+			message.GasPrice, message.Amount, message.Op)
 	} else {
-		ret, _, err = Exec(env, &from, &to, data, gas, gasPrice, amount, op)
+		ret, _, err = Exec(env, &message.From, &message.To, message.Payload, message.Gas,
+			message.GasPrice, message.Amount, message.Op)
 	}
 
-	receipt = makeReceipt(env, addr, tx.GetHash(), gas, ret, err)
+	receipt = makeReceipt(env, addr, tx.GetHash(), message.Gas, big.NewInt(0).Sub(preGas, message.Gas), ret, err)
 	return receipt, ret, addr, err
 }
 
@@ -82,11 +87,11 @@ func checkPermission(env vm.Environment, from, to common.Address, op types.Trans
 }
 
 
-func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, gas *big.Int, ret []byte, err error) *types.Receipt {
-	receipt := types.NewReceipt(nil, gas, 0)
+func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, gasRemained, gas *big.Int, ret []byte, err error) *types.Receipt {
+	receipt := types.NewReceipt(nil, gasRemained, 0)
 	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = txHash.Bytes()
-	receipt.GasUsed = 100000
+	receipt.GasUsed = gas.Int64()
 	receipt.Ret = ret
 	receipt.SetLogs(env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))
 
@@ -109,4 +114,35 @@ func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger, na
 	env["currentGasLimit"] = "200000000"
 	vmenv := NewEnv(state, env, logger, namespace, txHash)
 	return vmenv
+}
+
+func setDefaults(tx *types.Transaction) Message {
+	tv := tx.GetTransactionValue()
+	switch string(tx.Version) {
+	case "1.0":
+		fallthrough
+	case "1.1":
+		fallthrough
+	case "1.2":
+		return Message{
+			From:       common.BytesToAddress(tx.From),
+			To:         common.BytesToAddress(tx.To),
+			Gas:        big.NewInt(100000000),
+			GasPrice:   tv.RetrieveGasPrice(),
+			Amount:     tv.RetrieveAmount(),
+			Payload:    tv.RetrievePayload(),
+			Op:         tv.GetOp(),
+		}
+	default:
+		// Current version
+		return Message{
+			From:       common.BytesToAddress(tx.From),
+			To:         common.BytesToAddress(tx.To),
+			Gas:        tv.RetrieveGas(),
+			GasPrice:   tv.RetrieveGasPrice(),
+			Amount:     tv.RetrieveAmount(),
+			Payload:    tv.RetrievePayload(),
+			Op:         tv.GetOp(),
+		}
+	}
 }
