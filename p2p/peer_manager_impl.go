@@ -1,7 +1,6 @@
 package p2p
 
 import (
-	"fmt"
 	"github.com/pkg/errors"
 	"hyperchain/p2p/network"
 	pb "hyperchain/p2p/message"
@@ -13,7 +12,7 @@ import (
 	"hyperchain/common"
 	"github.com/op/go-logging"
 	"time"
-	"os"
+	"fmt"
 )
 
 
@@ -34,6 +33,8 @@ type peerManagerImpl struct {
 
 	isonline *threadsafelinkedlist.SpinLock
 	isnew bool
+
+	delchan chan bool
 
 	logger *logging.Logger
 }
@@ -70,6 +71,7 @@ func NewPeerManagerImpl(namespace string,peercnf *viper.Viper,ev *event.TypeMux,
 		blackHole:make(chan interface{}),
 		isonline:new(threadsafelinkedlist.SpinLock),
 		isnew:isnew,
+		delchan:delChan,
 		logger: logger,
 	}
 
@@ -244,12 +246,9 @@ func (pmgr *peerManagerImpl)GetVPPeers() []*Peer {
 }
 
 func (pmgr *peerManagerImpl)Stop(){
-	//TODO
-}
-
-func (pmgr *peerManagerImpl)GetInitType() <-chan int{
-	c := make(chan int)
-	return c
+	pmgr.logger.Criticalf("Unbind all slots...")
+	pmgr.SetOffline()
+	pmgr.node.UnBindAll()
 }
 
 // AddNode
@@ -257,9 +256,6 @@ func (pmgr *peerManagerImpl)GetInitType() <-chan int{
 func (pmgr *peerManagerImpl)UpdateRoutingTable(payLoad []byte){
 	//unmarshal info
 	i := info.InfoUnmarshal(payLoad)
-	pmgr.logger.Debug(i.Hostname)
-	pmgr.logger.Debug(i.Namespace)
-	pmgr.logger.Debug("update the route table")
 	err := pmgr.bind(i.Namespace,i.Id,i.Hostname)
 	if err !=nil{
 		pmgr.logger.Errorf("cannot bind a new peer: %s",err.Error())
@@ -277,6 +273,11 @@ func (pmgr *peerManagerImpl)GetLocalAddressPayload() []byte{
 func (pmgr *peerManagerImpl)SetOnline(){
 	pmgr.isonline.TryLock()
 }
+
+func (pmgr *peerManagerImpl)SetOffline() {
+	pmgr.isonline.UnLock()
+}
+
 //GetRouterHashifDelete returns after delete specific peer, the router table hash , self new id and the delete id
 func (pmgr *peerManagerImpl)GetRouterHashifDelete(hash string) (afterDelRouterHash string,selfNewId  uint64,delID uint64){
 	afterDelRouterHash,selfNewId,delID,err:=pmgr.peerPool.TryDelete(pmgr.GetLocalNodeHash(),hash)
@@ -289,12 +290,12 @@ func (pmgr *peerManagerImpl)GetRouterHashifDelete(hash string) (afterDelRouterHa
 func (pmgr *peerManagerImpl)DeleteNode(hash string) error { // if self {...} else{...}
 	pmgr.logger.Critical("DELENODE",hash)
 	if pmgr.node.info.Hash == hash{
-		pmgr.isonline.UnLock()
+		pmgr.Stop()
 		pmgr.logger.Critical(" WARNING!! THIS NODE HAS BEEN DELETED!")
 		pmgr.logger.Critical(" THIS NODE WILL STOP IN 3 SECONDS")
 		<- time.After(3*time.Second)
 		pmgr.logger.Critical("EXIT..")
-		pmgr.logger.Critical("Here should exit..")
+		pmgr.delchan <- true
 		//os.Exit(0)
 
 	}

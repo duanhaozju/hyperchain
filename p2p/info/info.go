@@ -4,9 +4,10 @@ import (
 	"sync"
 	"hyperchain/common"
 	"encoding/json"
-	"fmt"
 	"hyperchain/p2p/utils"
 )
+
+var logger = common.GetLogger(common.DEFAULT_LOG,"p2p")
 
 type Info struct {
 	rwmutex   *sync.RWMutex
@@ -18,7 +19,6 @@ type Info struct {
 }
 
 func NewInfo(id int,hostname string,namespcace string)*Info {
-	fmt.Println("new info namespace:",namespcace,hostname,id)
 	hash := utils.Sha3([]byte(hostname+namespcace))
 	return &Info{
 		rwmutex:new(sync.RWMutex),
@@ -79,10 +79,9 @@ func(i *Info)GetPrimary() bool{
 func (i *Info)Serialize()[]byte{
 	b,e := json.Marshal(i)
 	if e != nil{
-		fmt.Println(e)
+		logger.Errorf("serialize info err:%s \n",e.Error())
 		return nil
 	}
-	fmt.Println("Info Serialize",string(b))
 	return b
 }
 
@@ -90,7 +89,7 @@ func InfoUnmarshal(raw []byte)*Info{
 	i := new(Info)
 	err := json.Unmarshal(raw,i)
 	if err != nil{
-		fmt.Errorf("cannnot unmarshal info %s",err.Error())
+		logger.Errorf("cannnot unmarshal info %s",err.Error())
 		return nil
 	}
 	return i

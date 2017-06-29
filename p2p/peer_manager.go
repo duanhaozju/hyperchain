@@ -17,7 +17,6 @@ type PeerManager interface {
 	// initialize the peerManager which is for init the local node
 	Start() error
 	Stop()
-	GetInitType() <-chan int
 }
 
 // MsgSender Send msg to others peer

@@ -5,9 +5,9 @@ import (
 	"github.com/spf13/viper"
 	"hyperchain/manager/event"
 	"github.com/pkg/errors"
-	"fmt"
 	"hyperchain/common"
 	"hyperchain/p2p/ipc"
+	"fmt"
 )
 
 
@@ -24,7 +24,7 @@ type P2PManager interface {
 	//Restart restart services under this namespace.
 	Restart() error
 
-	GetPeerManager(namespace string,conf *viper.Viper,eventMux *event.TypeMux)(PeerManager,error)
+	GetPeerManager(namespace string,conf *viper.Viper,eventMux *event.TypeMux,delChan chan bool)(PeerManager,error)
 }
 
 
@@ -63,7 +63,6 @@ func newP2PManager(vip *viper.Viper)(*p2pManagerImpl,error){
 	if err !=nil{
 		return nil,err
 	}
-	fmt.Println(vip.GetString("global.p2p.ipc"))
 	p2pmgr :=  &p2pManagerImpl{
 		hypernet:net,
 		conf:vip,

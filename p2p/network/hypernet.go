@@ -16,7 +16,7 @@ import (
 	"strconv"
 )
 
-var logger = common.GetLogger(common.DEFAULT_LOG, "hypernet")
+var logger = common.GetLogger(common.DEFAULT_LOG, "p2p")
 
 type HyperNet struct {
 	conf          *viper.Viper
@@ -86,6 +86,10 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 //ensure this before than init server
 func (hn *HyperNet)RegisterHandler(filed string,msgType pb.MsgType,handler msg.MsgHandler)error{
 	return hn.server.RegisterSlot(filed,msgType,handler)
+}
+
+func (hn *HyperNet)DeRegisterHandlers(filed string){
+	hn.server.DeregisterSlots(filed)
 }
 
 func (hn *HyperNet)Command(args []string,ret *[]string)error{
@@ -307,7 +311,6 @@ func (hypernet *HyperNet)Greeting(hostname string,msg *pb.Message)(*pb.Message,e
 }
 
 func (hypernet *HyperNet)Whisper(hostname string,msg *pb.Message)(*pb.Message,error){
-	logger.Debugf("send msg => %s %+v\n",hostname,msg)
 	hypernet.msgWrapper(msg)
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
 			return client.(*Client).Wisper(msg)

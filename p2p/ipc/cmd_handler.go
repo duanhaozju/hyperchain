@@ -1,9 +1,9 @@
 package ipc
 
 import (
-	"fmt"
 	"github.com/abiosoft/ishell"
 	"strings"
+	"fmt"
 )
 
 type CMDHandler	struct {
@@ -22,7 +22,7 @@ func NewIPCHandler(endpoint string)*CMDHandler{
 func(handler *CMDHandler)handle(c *ishell.Context){
 	client,err := newIPCConnection(handler.ipcEndpoint)
 	if err != nil {
-		fmt.Printf("can't create IPC pipe, error: %s\n", err)
+		logger.Errorf("can't create IPC pipe, error: %s\n", err)
 		return
 	}
 	args := Args{
@@ -32,7 +32,7 @@ func(handler *CMDHandler)handle(c *ishell.Context){
 	ret := new(Ret)
 	err = client.Call("RemoteCall.Call",args,ret)
 	if err != nil{
-		fmt.Println(err)
+		logger.Errorf("error occures: %s",err.Error())
 		return
 	}
 	fmt.Println(strings.Join(ret.Rets," "))

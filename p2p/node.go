@@ -22,7 +22,13 @@ func NewNode(namespace string,id int,hostname string,net *network.HyperNet) *Nod
 	return node
 }
 
+//Bind msgType and handler for this namespace
 func (node *Node)Bind(msgType message.MsgType,handler msg.MsgHandler){
 		node.net.RegisterHandler(node.namespace,msgType,handler)
+}
+
+// UnBindAll all handlers.
+func (node *Node)UnBindAll(){
+		node.net.DeRegisterHandlers(node.namespace)
 }
 

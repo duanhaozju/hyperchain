@@ -2,8 +2,8 @@ package ipc
 
 import (
 	"sync"
-	"fmt"
 	"errors"
+	"fmt"
 )
 
 type Args struct {

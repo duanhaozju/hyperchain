@@ -8,7 +8,6 @@ import (
 	"hyperchain/api"
 	"hyperchain/common"
 	"strings"
-	"fmt"
 )
 
 var (
@@ -43,21 +42,13 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 		logger.Errorf("err %v", err)
 	}
 	// global part
-	//conf.Set(common.C_HTTP_PORT,  nr.conf.GetInt("global.jsonrpc_port"))
 	nr.conf.Set(common.C_HTTP_PORT, nr.conf.GetInt("global.jsonrpc_port"))
-	//fmt.Println(conf.GetInt(common.C_HTTP_PORT))
-	//conf.Set(common.C_REST_PORT,  nr.conf.GetInt("global.restful_port"))
 	nr.conf.Set(common.C_REST_PORT, nr.conf.GetInt("global.restful_port"))
-	//fmt.Println(conf.GetInt(common.C_REST_PORT))
 	nr.conf.Set(common.C_GRPC_PORT,  nr.conf.GetInt("global.p2p.port"))
-	//fmt.Println(conf.GetInt(common.C_GRPC_PORT))
 	conf.Set(common.C_JVM_PORT,   nr.conf.GetInt("global.jvm_port"))
-	fmt.Println(conf.GetInt(common.C_JVM_PORT))
 	conf.Set(common.C_LEDGER_PORT,nr.conf.GetInt("global.ledger_port"))
-	fmt.Println(conf.GetInt(common.C_LEDGER_PORT))
 	// ns part
 	conf.Set(common.C_NODE_ID, peerViper.GetInt("self.id"))
-	fmt.Println(conf.GetInt(common.C_NODE_ID))
 	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
 	conf.Set(common.C_GLOBAL_CONFIG_PATH, nsConfigPath)
 

@@ -5,7 +5,6 @@ import (
 	"net"
 	"path/filepath"
 	"time"
-	"fmt"
 	"net/http"
 	"net/rpc"
 )
@@ -34,11 +33,11 @@ func (server *IPCServer)Start(rcrecv interface{})error{
 	rpc.HandleHTTP()
 
 	if listener,err = server.listener();err != nil {
-		fmt.Println("some error occured",err.Error())
+		logger.Errorf("some error occured: %s",err.Error())
 		return err
 	}
 	if err != nil{
-		fmt.Println(err)
+		logger.Errorf("some error occured: %s",err.Error())
 		return err
 	}
 
@@ -58,7 +57,7 @@ func (server *IPCServer)listener()(net.Listener, error){
 	}
 
 	os.Remove(server.endpoint)
-	fmt.Println("start unix ipc server, ",server.endpoint)
+	logger.Noticef("start unix ipc server, ",server.endpoint)
 	l,err := net.Listen("unix",server.endpoint)
 	if err != nil{
 		return nil,err

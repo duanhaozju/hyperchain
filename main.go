@@ -11,8 +11,8 @@ import (
 	"time"
 	"hyperchain/p2p"
 	"github.com/spf13/viper"
-	"fmt"
 	"hyperchain/p2p/ipc"
+	"fmt"
 )
 
 type hyperchain struct {
@@ -44,8 +44,6 @@ func newHyperchain(argV *argT) *hyperchain {
 	p2pManager,err  := p2p.GetP2PManager(vip)
 	if err != nil{
 		panic(err)
-	}else {
-		fmt.Println("p2pmanager started.")
 	}
 	hp.p2pmgr = p2pManager
 
@@ -94,16 +92,15 @@ var (
 
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
-		//TODO recover fix
-		//defer func() {
-		//	if r := recover(); r != nil {
-		//		fmt.Println("Recovered in f", r)
-		//	}
-		//}()
+		defer func() {
+			if r := recover(); r != nil {
+				fmt.Println("Pannic: ", r)
+			}
+		}()
 
 		argv := ctx.Argv().(*argT)
 		if argv.Shell {
-		fmt.Println("Start hypernet interactive shell: ",argv.IPCEndpoint)
+		logger.Info("Start hypernet interactive shell: ",argv.IPCEndpoint)
 		ipc.IPCShell(argv.IPCEndpoint)
 		return nil
 		}

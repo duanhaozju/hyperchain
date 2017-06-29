@@ -21,7 +21,6 @@ import (
 	"hyperchain/p2p"
 	"sync"
 	"time"
-	"fmt"
 )
 
 //Namespace represent the namespace instance
@@ -154,8 +153,6 @@ func (ns *namespaceImpl) init() error {
 	if !common.FileExist(peerconf) {
 		panic("cannot find the peer config")
 	}
-	fmt.Println("peerconf path is",peerconf)
-	//peerconf := "/home/chenquan/Workspace/go/src/hyperchain/p2p/test/peerconfig.yaml"
 
 	//3. init peer manager to start grpc server and client
 	logger.Warning("getPeerManager for",ns.Name())
@@ -291,7 +288,7 @@ func (ns *namespaceImpl) Stop() error {
 	ns.consenter.Close()
 
 	//5.stop peer manager
-	go ns.peerMgr.Stop()
+	ns.peerMgr.Stop()
 
 	ns.status.setState(closed)
 	//ns.logger.Notice()

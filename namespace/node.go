@@ -116,7 +116,7 @@ func (ni *NamespaceInfo) PrintInfo()  {
 	ni.lock.RLock()
 	defer ni.lock.RUnlock()
 	for _, node := range ni.nodes {
-		ni.logger.Criticalf("node info %v ", node)
+		ni.logger.Debugf("node info %v ", node)
 	}
 }
 
