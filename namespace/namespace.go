@@ -92,6 +92,7 @@ type namespaceImpl struct {
 
 	rpc       rpc.RequestProcessor
 	restart   bool
+	delFlag   chan bool
 }
 
 type API struct {
@@ -101,7 +102,7 @@ type API struct {
 	Public  bool        // indication if the methods must be considered safe for public use
 }
 
-func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) {
+func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*namespaceImpl, error) {
 	// Init Hyperlogger
 	if _, err := common.InitHyperLogger(conf); err != nil {
 		return nil, err
@@ -124,6 +125,7 @@ func newNamespaceImpl(name string, conf *common.Config) (*namespaceImpl, error) 
 		conf:     conf,
 		eventMux: new(event.TypeMux),
 		restart:  false,
+		delFlag:  delFlag,
 	}
 	ns.logger = common.GetLogger(name, "namespace")
 	return ns, nil
@@ -157,7 +159,7 @@ func (ns *namespaceImpl) init() error {
 
 	//3. init peer manager to start grpc server and client
 	logger.Warning("getPeerManager for",ns.Name())
-	peerMgr, err := p2p.GetPeerManager(ns.Name(),peerconf,ns.eventMux)
+	peerMgr, err := p2p.GetPeerManager(ns.Name(),peerconf,ns.eventMux, ns.delFlag)
 	if err != nil {
 		ns.logger.Error(err)
 		return err
@@ -197,8 +199,8 @@ func (ns *namespaceImpl) init() error {
 	return nil
 }
 
-func GetNamespace(name string, conf *common.Config) (Namespace, error) {
-	ns, err := newNamespaceImpl(name, conf)
+func GetNamespace(name string, conf *common.Config, delFlag chan bool) (Namespace, error) {
+	ns, err := newNamespaceImpl(name, conf, delFlag)
 	if err != nil {
 		ns.logger.Errorf("namespace %s init error", name)
 		return ns, err
