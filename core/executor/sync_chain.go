@@ -36,6 +36,7 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	}
 
 	executor.updateSyncFlag(ev.TargetHeight, ev.TargetBlockHash, ev.TargetHeight)
+	executor.status.syncFlag.ResendExit = make(chan bool)
 	executor.setLatestSyncDownstream(ev.TargetHeight)
 	executor.recordSyncPeers(ev.Replicas, ev.Id)
 	executor.status.syncFlag.Oracle = NewOracle(ev.Replicas, executor.conf, executor.logger)
