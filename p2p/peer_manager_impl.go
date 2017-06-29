@@ -12,6 +12,8 @@ import (
 	"hyperchain/p2p/threadsafelinkedlist"
 	"hyperchain/common"
 	"github.com/op/go-logging"
+	"time"
+	"os"
 )
 
 
@@ -241,9 +243,6 @@ func (pmgr *peerManagerImpl)GetVPPeers() []*Peer {
 	return pmgr.peerPool.GetPeers()
 }
 
-/////////////////////////////
-// TODO UnImplements
-////////////////////////////
 func (pmgr *peerManagerImpl)Stop(){
 	//TODO
 }
@@ -289,6 +288,16 @@ func (pmgr *peerManagerImpl)GetRouterHashifDelete(hash string) (afterDelRouterHa
 
 func (pmgr *peerManagerImpl)DeleteNode(hash string) error { // if self {...} else{...}
 	pmgr.logger.Critical("DELENODE",hash)
+	if pmgr.node.info.Hash == hash{
+		pmgr.isonline.UnLock()
+		pmgr.logger.Critical(" WARNING!! THIS NODE HAS BEEN DELETED!")
+		pmgr.logger.Critical(" THIS NODE WILL STOP IN 3 SECONDS")
+		<- time.After(3*time.Second)
+		pmgr.logger.Critical("EXIT..")
+		pmgr.logger.Critical("Here should exit..")
+		//os.Exit(0)
+
+	}
 	return pmgr.peerPool.DeleteVPPeerByHash(hash)
 }
 
