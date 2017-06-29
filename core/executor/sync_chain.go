@@ -585,6 +585,7 @@ func (executor *Executor) syncInitialize(ev event.ChainSyncReqEvent) {
 	executor.status.syncCtx = ctx
 
 	executor.updateSyncFlag(ev.TargetHeight, ev.TargetBlockHash, ev.TargetHeight)
+	executor.status.syncFlag.ResendExit = make(chan bool)
 	executor.setLatestSyncDownstream(ev.TargetHeight)
 	executor.recordSyncPeers(executor.fetchRepliceIds(ev), ev.Id)
 	executor.status.syncFlag.Oracle = NewOracle(ctx, executor.conf, executor.logger)
