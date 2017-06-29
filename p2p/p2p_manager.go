@@ -101,7 +101,7 @@ func (mgr *p2pManagerImpl)Start() (err error) {
 //can supply all the high level methods.
 //the interface method are same as hyperchain version 1.2, so all the high level
 //interface needn't modify.
-func GetPeerManager(namespace string, peerConfPath string,eventMux *event.TypeMux) (PeerManager,error){
+func GetPeerManager(namespace string, peerConfPath string,eventMux *event.TypeMux, delChan chan bool) (PeerManager,error){
 	if globalP2PManager == nil{
 		return nil,errP2PMGRNotInit
 	}
@@ -116,16 +116,16 @@ func GetPeerManager(namespace string, peerConfPath string,eventMux *event.TypeMu
 	if err != nil{
 		return nil,errors.New(fmt.Sprintf("connot readin the config file %s ,err: %s", peerConfPath,err.Error()))
 	}
-	return globalP2PManager.GetPeerManager(namespace, peerConf,eventMux)
+	return globalP2PManager.GetPeerManager(namespace, peerConf,eventMux,delChan)
 }
 
 
 //GetPeerManager get a peermanager instance, every namespace has an independent instance
-func (p2pmgr *p2pManagerImpl) GetPeerManager(namespace string,peerConf *viper.Viper,eventMux *event.TypeMux)(PeerManager,error){
+func (p2pmgr *p2pManagerImpl) GetPeerManager(namespace string,peerConf *viper.Viper,eventMux *event.TypeMux,delChan chan bool)(PeerManager,error){
 	if p2pmgr == nil{
 		return nil,errP2PMGRNotInit
 	}
-	return NewPeerManagerImpl(namespace,peerConf,eventMux,p2pmgr.hypernet)
+	return NewPeerManagerImpl(namespace,peerConf,eventMux,p2pmgr.hypernet,delChan)
 }
 
 

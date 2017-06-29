@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 	"fmt"
-	"github.com/terasum/lettor/utils"
 )
 
 //Namespace represent the namespace instance
@@ -150,7 +149,7 @@ func (ns *namespaceImpl) init() error {
 
 
 	peerconf := ns.conf.GetString(common.PEER_CONFIG13_PATH)
-	if !utils.Exist(peerconf) {
+	if !common.FileExist(peerconf) {
 		panic("cannot find the peer config")
 	}
 	fmt.Println("peerconf path is",peerconf)

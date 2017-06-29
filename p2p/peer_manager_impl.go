@@ -39,7 +39,7 @@ type peerManagerImpl struct {
 }
 
 //todo rename new function
-func NewPeerManagerImpl(namespace string,peercnf *viper.Viper,ev *event.TypeMux, net *network.HyperNet) (*peerManagerImpl, error) {
+func NewPeerManagerImpl(namespace string,peercnf *viper.Viper,ev *event.TypeMux, net *network.HyperNet,delChan chan bool) (*peerManagerImpl, error) {
 	logger := common.GetLogger(namespace,"peermanager")
 	if net == nil{
 		return nil,errors.New("the P2P manager hasn't initlized.")
