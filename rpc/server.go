@@ -226,12 +226,6 @@ func (s *Server) Stop() {
 	}
 }
 
-func (s *Server) Start() {
-	if atomic.CompareAndSwapInt32(&s.run, 0, 1) {
-		log.Notice("RPC Server start initiatied")
-	}
-}
-
 // readRequest requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
@@ -273,6 +267,8 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 				return
 			}
 			var rm *requestManager
+
+			s.reqMgrMu.Lock()
 			if _, ok := s.requestMgr[name]; !ok {
 				rm = NewRequestManager(name, s)
 				s.requestMgr[name] = rm
@@ -280,6 +276,8 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 			} else {
 				rm = s.requestMgr[name]
 			}
+			s.reqMgrMu.Unlock()
+
 			rm.requests <- request
 			result <- (<-rm.response)
 			return

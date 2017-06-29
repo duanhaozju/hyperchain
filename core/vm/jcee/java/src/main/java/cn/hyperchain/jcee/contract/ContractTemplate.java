@@ -5,6 +5,7 @@
 package cn.hyperchain.jcee.contract;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
+import cn.hyperchain.jcee.common.exception.NetworkUnavalibleException;
 import cn.hyperchain.jcee.executor.ContractHandler;
 import cn.hyperchain.jcee.executor.Handler;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
@@ -65,6 +66,21 @@ public abstract class ContractTemplate {
         }
         return ct.openInvoke(func, args);
     }
+
+    /**
+     * post event out of hyperchain
+     * @param event user defined event
+     * @return the post result
+     * @exception
+     */
+    protected boolean postEvent(Event event) throws NetworkUnavalibleException {
+        //TODO: add event post interface
+
+        return true;
+    }
+
+
+
 
     public ExecuteResult result(boolean exeSuccess, Object result) {
         ExecuteResult rs = new ExecuteResult<>(exeSuccess, result);

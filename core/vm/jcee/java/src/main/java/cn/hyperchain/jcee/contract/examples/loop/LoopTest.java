@@ -10,13 +10,11 @@ import cn.hyperchain.jcee.contract.ContractTemplate;
 import java.util.List;
 
 import cn.hyperchain.jcee.ledger.Result;
-import org.apache.log4j.Logger;
 
 /**
  * Created by huhu on 2017/5/31.
  */
 public class LoopTest extends ContractTemplate {
-    private final Logger logger = Logger.getLogger(LoopTest.class.getCanonicalName());
 
     @Override
     public ExecuteResult invoke(String funcName, List<String> args) {

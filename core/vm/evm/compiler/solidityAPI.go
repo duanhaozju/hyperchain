@@ -41,7 +41,11 @@ func CompileSourcefile(source string) ([]string, []string, []string, error) {
 		abi, _ := json.Marshal(contract.Info.AbiDefinition) // Flatten the compiler parse
 		abis = append(abis, string(abi))
 		bins = append(bins, contract.Code)
-		types = append(types, name)
+		if solc.isSolcjs {
+			types = append(types, strings.Split(name, ":")[1])
+		} else {
+			types = append(types, name)
+		}
 	}
 	return abis, bins, types, nil
 }

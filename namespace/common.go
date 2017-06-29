@@ -73,37 +73,37 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 	return map[string]*api.API{
 		"tx": {
 			Srvname: "tx",
-			Version: "0.4",
+			Version: "1.4",
 			Service: api.NewPublicTransactionAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"node": {
 			Srvname: "node",
-			Version: "0.4",
+			Version: "1.4",
 			Service: api.NewPublicNodeAPI(namespace, ns.eh),
 			Public:  true,
 		},
 		"block": {
 			Srvname: "block",
-			Version: "0.4",
+			Version: "1.4",
 			Service: api.NewPublicBlockAPI(namespace),
 			Public:  true,
 		},
 		"account": {
 			Srvname: "account",
-			Version: "0.4",
+			Version: "1.4",
 			Service: api.NewPublicAccountAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"contract": {
 			Srvname: "contract",
-			Version: "0.4",
+			Version: "1.4",
 			Service: api.NewPublicContractAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"cert": {
 			Srvname: "cert",
-			Version: "0.4",
+			Version: "1.4",
 			Service: api.NewCertAPI(namespace, ns.caMgr),
 			Public:  true,
 		},

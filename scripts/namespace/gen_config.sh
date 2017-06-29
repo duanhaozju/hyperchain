@@ -232,6 +232,9 @@ NS_CONFIG_PATH="${GOPATH}/src/hyperchain/configuration"
 # config ns path
 BUILD_TMP_PATH="${PROJECT_PATH}/build/tmp"
 
+# build hypercli or not?
+BUILD_hypercli=true
+
 # generate local peer config or not
 LOCAL=false
 
@@ -244,6 +247,8 @@ do
     case "$1" in
     -h|--help)
         f_help; exit 0;;
+    -c|--cli)
+        BUILD_hypercli=false; shift;;
     -l|--local)
         LOCAL=true; shift;;
     -*) f_help; exit 1;;
@@ -274,7 +279,9 @@ f_copy_tmp
 f_gen_config
 
 # 5.rebuild hypercli
-f_rebuild_hypercli
+if ${BUILD_hypercli}; then
+    f_rebuild_hypercli
+fi
 
 # 5.distribute config files to corresponding nodes
 f_distribute
