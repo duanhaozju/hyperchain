@@ -7,6 +7,8 @@ window.onload = function () {
     var conn;
     var msg = document.getElementById("msg");
     var log = document.getElementById("log");
+    var tbody = document.getElementById("tbody");
+    var records = {};
 
     function appendLog(item) {
         var doScroll = log.scrollTop > log.scrollHeight - log.clientHeight - 1;
@@ -32,7 +34,7 @@ window.onload = function () {
     };
 
     if (window["WebSocket"]) {
-        conn = new WebSocket("ws://localhost:10001");
+        conn = new WebSocket("ws://localhost:10002");
         console.log("connect ",conn," ...")
         conn.onclose = function (evt) {
             var item = document.createElement("div");
@@ -56,13 +58,39 @@ window.onload = function () {
                      info1.innerText = "==== You have subscribed an event: ====";
                      info1.style.color = "green"
                      appendLog(info1);
+                     records[datajson.result] = 0
+
+                     // 渲染
+                     var tr = document.createElement("tr");
+                     var td1 = document.createElement("td");
+                     var td2 = document.createElement("td");
+
+                     td1.innerText = datajson.result;
+                     td2.innerText = "0";
+
+                     td2.setAttribute("id", datajson.result);
+                     tr.appendChild(td1);
+                     tr.appendChild(td2);
+                     tbody.appendChild(tr)
                  }
+             } else if (datajson.code && datajson.code != 0) {
+                 var info4 = document.createElement("div");
+                 info4.innerText = "==== Subscribed an event error: ====";
+                 info4.style.color = "red"
+                 appendLog(info4);
              } else {
                  // 通知
                  var info2 = document.createElement("div");
                  info2.innerText = "==== The notification message follows: =====";
                  info2.style.color = "cornflowerblue"
                  appendLog(info2);
+                 // 计数
+                 records[datajson.result.subscription]++
+                 // 渲染
+                 var td22 = document.getElementById(datajson.result.subscription);
+                 var current = parseInt(td22.innerText);
+                 current++;
+                 td22.innerText = current;
              }
 
 
@@ -82,11 +110,11 @@ window.onload = function () {
 </script>
 <style type="text/css">
 html {
-    overflow: hidden;
+    /*overflow: hidden;*/
 }
 
 body {
-    overflow: hidden;
+    /*overflow: hidden;*/
     padding: 0;
     margin: 0;
     width: 100%;
@@ -114,21 +142,46 @@ body {
     left: 0px;
     width: 100%;
     overflow: hidden;
+    background: gray;
+}
+
+table {
+    border: 1px solid silver;
+    margin-bottom: 10px;
+}
+
+thead th {
+    background-color: #d5d5d5;
+}
+
+th, td {
+    text-align: center;
+    padding: 5px 10px;
+    min-width: 300px;
 }
 
 </style>
 </head>
 <body>
 <div id="log">
+    <table>
+        <thead>
+        <tr>
+            <th>Subscription</th>
+            <th>Notification</th>
+        </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+    </table>
     <div style="background-color: silver;color: white;padding: 5px">
         <b>Request Example:</b>
-        <div>  Subscribe: {"jsonrpc":"2.0","method": "sub_subscribe","id": 1,"namespace":"global","params":["newBlock", {}]}</div>
+        <div>  Subscribe: {"jsonrpc":"2.0","method": "sub_subscribe","id": 1,"namespace":"global","params":["block", {}]}</div>
         <div>Unsubscribe: {"jsonrpc":"2.0","method": "sub_unsubscribe","id": 1,"namespace":"global","params":["id"]}</div>
     </div>
 </div>
 <form id="form">
     <input type="submit" value="Send" />
-    <input type="text" id="msg" size="64" value='{"jsonrpc":"2.0","method": "sub_subscribe","id": 1,"namespace":"global","params":["newBlock", {}]}'/>
+    <input type="text" id="msg" size="64" style="width: 70%;" value='{"jsonrpc":"2.0","method": "sub_subscribe","id": 1,"namespace":"global","params":["block", {}]}'/>
 </form>
 </body>
 </html>

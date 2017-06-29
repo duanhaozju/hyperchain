@@ -50,9 +50,9 @@ const (
 )
 
 type FilterException struct {
-	Module    string
-	SubType   string
-	ErrorCode int
-	Message   string
-	Date      time.Time
+	Module    string	`json:"module"`
+	SubType   string	`json:"subType"`
+	ErrorCode int		`json:"errorCode"`
+	Message   string	`json:"message"`
+	Date      time.Time	`json:"date"`
 }
