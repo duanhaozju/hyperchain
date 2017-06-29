@@ -268,7 +268,8 @@ func returnLogs(logs []*types.Log) []types.LogTrans {
 		return []types.LogTrans{}
 	}
 	_logs := types.Logs(logs)
-	return _logs.ToLogsTrans()
+	// TODO
+	return _logs.ToLogsTrans(types.Receipt_EVM)
 }
 
 func returnException(data []interface{}) []event.FilterException {

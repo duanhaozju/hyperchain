@@ -274,7 +274,6 @@ func (executor *Executor) updateSyncFlag(num uint64, hash []byte, target uint64)
 	executor.status.syncFlag.SyncDemandBlockNum = num
 	executor.status.syncFlag.SyncDemandBlockHash = hash
 	executor.status.syncFlag.SyncTarget = target
-	executor.status.syncFlag.ResendExit = make(chan bool)
 	return nil
 }
 

@@ -190,7 +190,7 @@
                 <!--</configuration>-->
                 <!--<executions>-->
                     <!--<execution>-->
-                        <!--<cid>assemble-all</cid>-->
+                        <!--<id>assemble-all</id>-->
                         <!--<phase>package</phase>-->
                         <!--<goals>-->
                             <!--<goal>single</goal>-->

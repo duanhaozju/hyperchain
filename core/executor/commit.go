@@ -10,6 +10,7 @@ import (
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"time"
+	"github.com/pkg/errors"
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
@@ -76,7 +77,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 		executor.logger.Errorf("persist transactions of #%d failed.", block.Number)
 		return err
 	}
-	if err, ret := executor.persistReceipts(batch, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
+	if err, ret := executor.persistReceipts(batch, record.ValidTxs, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
 		executor.logger.Errorf("persist receipts of #%d failed.", block.Number)
 		return err
 	} else {
@@ -170,8 +171,16 @@ func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 
 func (executor *Executor) persistTransactions(batch db.Batch, transactions []*types.Transaction, blockNumber uint64) error {
 	for i, transaction := range transactions {
-		if err, _ := edb.PersistTransaction(batch, transaction, false, false); err != nil {
-			return err
+		if transaction.Version != nil {
+			// transaction has add version tag, use original version tag
+			if err, _ := edb.PersistTransaction(batch, transaction, false, false, string(transaction.Version)); err != nil {
+				return err
+			}
+		} else {
+			// use default version tag
+			if err, _ := edb.PersistTransaction(batch, transaction, false, false); err != nil {
+				return err
+			}
 		}
 		// persist transaction meta data
 		meta := &types.TransactionMeta{
@@ -187,9 +196,12 @@ func (executor *Executor) persistTransactions(batch db.Batch, transactions []*ty
 
 // re assign block hash and block number to transaction executor.loggers
 // during the validation, block number and block hash can be incorrect
-func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) (error, []*types.Log) {
+func (executor *Executor) persistReceipts(batch db.Batch, transaction []*types.Transaction, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) (error, []*types.Log) {
 	var filterLogs []*types.Log
-	for _, receipt := range receipts {
+	if len(transaction) != len(receipts) {
+		return errors.New("the number of transactions not equal to receipt"), nil
+	}
+	for idx, receipt := range receipts {
 		logs, err := receipt.RetrieveLogs()
 		if err != nil {
 			return err, nil
@@ -199,8 +211,15 @@ func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Rece
 			log.BlockNumber = blockNumber
 		}
 		receipt.SetLogs(logs)
-		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
-			return err, nil
+
+		if transaction[idx].Version != nil {
+			if err, _ := edb.PersistReceipt(batch, receipt, false, false, string(transaction[idx].Version)); err != nil {
+				return err, nil
+			}
+		} else {
+			if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
+				return err, nil
+			}
 		}
 	}
 	return nil, filterLogs

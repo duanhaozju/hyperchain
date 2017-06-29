@@ -183,7 +183,7 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 			continue
 		}
 		executor.calculateTransactionsFingerprint(tx, false)
-		executor.calculateReceiptFingerprint(receipt, false)
+		executor.calculateReceiptFingerprint(tx, receipt, false)
 		receipts = append(receipts, receipt)
 		validtxs = append(validtxs, tx)
 	}
@@ -234,7 +234,7 @@ func (executor *Executor) submitValidationResult() (error, []byte, []byte, []byt
 	merkleRoot := root.Bytes()
 	res, _ := executor.calculateTransactionsFingerprint(nil, true)
 	txRoot := res.Bytes()
-	res, _ = executor.calculateReceiptFingerprint(nil, true)
+	res, _ = executor.calculateReceiptFingerprint(nil, nil, true)
 	receiptRoot := res.Bytes()
 	executor.recordStateHash(root)
 	return nil, merkleRoot, txRoot, receiptRoot

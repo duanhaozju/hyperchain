@@ -12,7 +12,7 @@ import (
 )
 
 // PersistBlock - persist a block, using param to control whether flush to disk immediately.
-func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool) (error, []byte) {
+func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool, extra ...interface{}) (error, []byte) {
 	if hyperdb.IfLogStatus() {
 		go blockTime(block)
 	}
@@ -20,7 +20,7 @@ func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool) (er
 	if block == nil || batch == nil {
 		return EmptyPointerErr, nil
 	}
-	err, data := encapsulateBlock(block)
+	err, data := encapsulateBlock(block, extra...)
 	if err != nil {
 		//logger.Errorf("wrapper block failed.")
 		return err, nil
@@ -47,18 +47,25 @@ func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool) (er
 }
 
 // encapsulateBlock - encapsulate block with a wrapper for specify block structure version.
-func encapsulateBlock(block *types.Block) (error, []byte) {
+func encapsulateBlock(block *types.Block, extra ...interface{}) (error, []byte) {
+	version := BlockVersion
 	if block == nil {
 		return EmptyPointerErr, nil
 	}
-	block.Version = []byte(BlockVersion)
+	if len(extra) > 0 {
+		// parse version
+		if tmp, ok := extra[0].(string); ok {
+			version = tmp
+		}
+	}
+	block.Version = []byte(version)
 	data, err := proto.Marshal(block)
 	if err != nil {
 		//logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	wrapper := &types.BlockWrapper{
-		BlockVersion: []byte(BlockVersion),
+		BlockVersion: []byte(version),
 		Block:        data,
 	}
 	data, err = proto.Marshal(wrapper)

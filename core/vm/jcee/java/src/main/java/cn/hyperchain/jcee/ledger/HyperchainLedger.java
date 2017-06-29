@@ -4,11 +4,16 @@
  */
 package cn.hyperchain.jcee.ledger;
 
+import cn.hyperchain.jcee.contract.Event;
+import cn.hyperchain.jcee.mock.MockLedger;
+import cn.hyperchain.jcee.util.Base64Coder;
 import cn.hyperchain.jcee.util.Bytes;
+import cn.hyperchain.jcee.util.Coder;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
 import org.apache.log4j.Logger;
 
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -21,9 +26,11 @@ public class HyperchainLedger extends AbstractLedger{
     private static final Logger logger = Logger.getLogger(HyperchainLedger.class.getSimpleName());
     private LedgerClient ledgerClient;
     private Cache cache;
+    private Coder coder;
     public HyperchainLedger(int port){
         ledgerClient = new LedgerClient("localhost", port);
         cache = new HyperCache();
+        coder = new Base64Coder();
     }
 
     public Result get(byte[] key) {
@@ -72,34 +79,29 @@ public class HyperchainLedger extends AbstractLedger{
         return success;
     }
 
-    public ContractProto.Value fetch(byte[] key) {
-        String realK = getContext().getRequestContext().getNamespace()+"_"+
-                getContext().getRequestContext().getCid()+"_" +ByteString.copyFrom(key).toStringUtf8();
-
-        byte[] data = cache.get(realK.getBytes());
-        if(data!=null){
-            ContractProto.Value recvValue = ContractProto.Value.newBuilder()
-                    .setV(ByteString.copyFrom(data))
-                    .build();
-            return recvValue;
-        }
-        ContractProto.Key sendkey = ContractProto.Key.newBuilder()
+    @Override
+    public boolean post(Event event) {
+        ContractProto.Event.Builder eventBuilder = ContractProto.Event.newBuilder()
                 .setContext(getLedgerContext())
-                .setK(ByteString.copyFrom(key))
-                .build();
-        logger.info("Transaction id: " + getContext().getId());
+                .setBody(ByteString.copyFrom(coder.encode(event.toString()), Charset.defaultCharset()));
 
-        ContractProto.Value value = ledgerClient.get(sendkey);
-        cache.put(realK.getBytes(),value.toByteArray());
-        return value;
+        Set<String> topics = event.getTopics();
+        List<ByteString> topics1 = new LinkedList<>();
+        for (String topic: topics) {
+            topics1.add(ByteString.copyFrom(topic, Charset.defaultCharset()));
+        }
+        eventBuilder.addAllTopics(topics1);
+        return ledgerClient.post(eventBuilder.build());
     }
 
     public ContractProto.LedgerContext getLedgerContext(){
+//        logger.debug(getContext().getRequestContext());
         return ContractProto.LedgerContext
                 .newBuilder()
                 .setNamespace(getContext().getRequestContext().getNamespace())
                 .setTxid(getContext().getRequestContext().getTxid())
                 .setCid(getContext().getRequestContext().getCid())
+                .setBlockNumber(getContext().getRequestContext().getBlockNumber())
                 .build();
     }
 
@@ -280,7 +282,7 @@ public class HyperchainLedger extends AbstractLedger{
     }
 
     class BatchImpl implements Batch{
-        private Map<byte[], Result> data;
+        private Map<ByteKey, Result> data;
         private HyperchainLedger ledger;
 
         public BatchImpl(HyperchainLedger ledger) {
@@ -289,7 +291,12 @@ public class HyperchainLedger extends AbstractLedger{
         }
 
         public Result get(byte[] key) {
-            return this.data.get(key);
+            Result result = this.data.get(new ByteKey(key));
+
+            if(result == null){
+                return new Result(ByteString.EMPTY);
+            }
+            return result;
         }
 
         @Override
@@ -297,10 +304,13 @@ public class HyperchainLedger extends AbstractLedger{
             return this.data.get(key.getBytes());
         }
 
-
         @Override
         public void put(byte[] key, byte[] value) {
-            data.put(key, new Result(ByteString.copyFrom(value)));
+            if(value == null || value.length == 0 ){
+                data.put(new ByteKey(key),new Result(ByteString.EMPTY));
+            }else {
+                data.put(new ByteKey(key), new Result(ByteString.copyFrom(value)));
+            }
         }
 
         @Override
@@ -330,9 +340,9 @@ public class HyperchainLedger extends AbstractLedger{
 
         public ContractProto.BatchKV toBatchKV() {
             ContractProto.BatchKV.Builder builder  = ContractProto.BatchKV.newBuilder();
-            for(Map.Entry<byte[], Result> kv: data.entrySet()) {
+            for(Map.Entry<ByteKey, Result> kv: data.entrySet()) {
                 ContractProto.KeyValue keyValue = ContractProto.KeyValue.newBuilder()
-                        .setK(ByteString.copyFrom(kv.getKey()))
+                        .setK(ByteString.copyFrom(kv.getKey().getKey()))
                         .setV(kv.getValue().getValue())
                         .build();
                 builder.addKv(keyValue);
@@ -387,9 +397,10 @@ public class HyperchainLedger extends AbstractLedger{
         }
 
         @Override
-        public byte[] next() {
+        public Result next() {
             if (hasNext()) {
-                return currBatchValue.next().toByteArray();
+                byte[] data = currBatchValue.next().toByteArray();
+                return new Result(ByteString.copyFrom(data));
             }else {
                 throw new NoSuchElementException("No more value to display");
             }

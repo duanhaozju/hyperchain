@@ -7,8 +7,8 @@ import (
 	er "hyperchain/core/errors"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
-	"math/big"
 	"strconv"
+	"math/big"
 )
 
 func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, logger *logging.Logger, namespace string, jvmCli ContractExecutor) (*types.Receipt, []byte, common.Address, error) {

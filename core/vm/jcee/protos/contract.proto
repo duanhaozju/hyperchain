@@ -29,6 +29,7 @@ message RequestContext {
     string txid   = 1;
     string namespace = 2;
     string cid = 3;
+    uint64  blockNumber = 4;
 }
 
 service Ledger {
@@ -39,6 +40,14 @@ service Ledger {
     rpc BatchRead(BatchKey) returns(BathValue) {}
     rpc BatchWrite(BatchKV) returns(Response) {}
     rpc RangeQuery(Range) returns(stream BathValue) {}
+
+    rpc Post(Event) returns (Response) {}
+}
+
+message Event {
+    LedgerContext context = 1;
+    repeated bytes topics = 2;
+    bytes body = 3;
 }
 
 message Key {
@@ -87,4 +96,5 @@ message LedgerContext {
     string txid   = 1;
     string namespace = 2;
     string cid = 3;
+    uint64  blockNumber = 4;
 }
