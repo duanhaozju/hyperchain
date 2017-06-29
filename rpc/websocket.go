@@ -149,7 +149,7 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 		//if options&OptionSubscriptions == OptionSubscriptions {
 		notifier := NewNotifier()
 		ctx = context.WithValue(ctx, NotifierKey{}, notifier)
-		notifier.subchan = common.GetSubChan(ctx)
+		notifier.subChs = common.GetSubChs(ctx)
 		//}
 
 		wssi.wsConnsMux.Lock()

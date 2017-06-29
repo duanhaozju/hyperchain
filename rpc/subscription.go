@@ -44,7 +44,7 @@ type Notifier struct {
 	active   map[common.ID]*common.Subscription
 	inactive map[common.ID]*common.Subscription
 	closed   chan interface{}
-	subchan  *common.Subchan
+	subChs   *common.SubChs
 }
 
 // newNotifier creates a new notifier that can be used to send subscription
@@ -64,19 +64,19 @@ func (notifier *Notifier) waittingReq() {
 
 	for {
 		select {
-			case ctx := <- common.CtxChan:
+			case ctx := <- common.CtxCh:
 				log.Debug("receive context request")
-				log.Debugf("current system SubCtxChan length = %v", len(common.SubCtxChan))
+				log.Debugf("current system CtxSubChsMap length = %v", len(common.SubChsMap))
 				notifier, supported := NotifierFromContext(ctx)
 				if !supported {
-					notifier.subchan.Err <- ErrNotificationsUnsupported
+					notifier.subChs.Err <- ErrNotificationsUnsupported
 					continue
 				}
 
 				rpcSub := notifier.CreateSubscription()
 				log.Debugf("create subscription %v", rpcSub.ID)
 
-				notifier.subchan.SubscriptionChan <- rpcSub
+				notifier.subChs.SubscriptionCh <- rpcSub
 
 				go notifier.waittingSubData(rpcSub)
 			case <-notifier.Closed():
@@ -91,7 +91,7 @@ func (notifier *Notifier) waittingSubData(rpcSub *common.Subscription) {
 
 	for {
 		select {
-			case nd := <- notifier.subchan.NotifyDataChan:
+			case nd := <- notifier.subChs.NotifyDataCh:
 				// sends a notification to the client with the given data as payload.
 				// If an error occurs the RPC connection is closed.
 				log.Debugf("ready to send feedback: %#v", nd.SubID)
@@ -107,7 +107,7 @@ func (notifier *Notifier) waittingSubData(rpcSub *common.Subscription) {
 						//return err
 					}
 				}
-			case <-notifier.subchan.Err:
+			case <-notifier.subChs.Err:
 				// occurs error or connection close
 				log.Debugf("quit data listener of subscription %v",rpcSub.ID)
 				return
@@ -163,7 +163,7 @@ func (n *Notifier) Closed() <- chan interface{} {
 
 func (n *Notifier) Close() {
 	close(n.closed)
-	n.subchan.Close()
+	n.subChs.Close()
 }
 
 
