@@ -29,7 +29,6 @@ type Executor struct {
 	helper     *Helper
 	statedb    vm.Database
 	logger     *logging.Logger
-	exception  ExceptionHandler
 	jvmCli     jvm.ContractExecutor
 	snapshotReg *SnapshotRegistry
 	archiveMgr  *ArchiveManager
@@ -47,7 +46,6 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 		encryption: encryption,
 		helper:     helper,
 		jvmCli:     jvm.NewContractExecutor(conf, namespace),
-		exception:  NewExceptionHandler(helper),
 	}
 
 	if executor.isJvmEnable() {

@@ -272,13 +272,13 @@ func returnLogs(logs []*types.Log) []types.LogTrans {
 	return _logs.ToLogsTrans(types.Receipt_EVM)
 }
 
-func returnException(data []interface{}) []event.FilterException {
+func returnException(data []interface{}) []event.FilterExceptionEvent {
 	if len(data) == 0 {
-		return []event.FilterException{}
+		return []event.FilterExceptionEvent{}
 	}
-	var ret []event.FilterException
+	var ret []event.FilterExceptionEvent
 	for _, d := range data {
-		if val, ok := d.(event.FilterException); ok {
+		if val, ok := d.(event.FilterExceptionEvent); ok {
 			ret = append(ret, val)
 		}
 	}

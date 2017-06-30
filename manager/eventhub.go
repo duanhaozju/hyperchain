@@ -105,6 +105,10 @@ func (hub *EventHub) GetEventObject() *event.TypeMux {
 	return hub.eventMux
 }
 
+func (hub *EventHub) GetExternalEventObject() *event.TypeMux {
+	return hub.filterMux
+}
+
 func (hub *EventHub) GetConsentor() consensus.Consenter {
 	return hub.consenter
 }

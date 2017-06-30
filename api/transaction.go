@@ -45,8 +45,6 @@ type SendTxArgs struct {
 	Payload   string          `json:"payload"`
 	Signature string          `json:"signature"`
 	Timestamp int64           `json:"timestamp"`
-	// --- test -----
-	Request    *Number `json:"request"`
 	Simulate   bool    `json:"simulate"`
 	Opcode     int32   `json:"opcode"`
 	Nonce      int64   `json:"nonce"`
@@ -151,7 +149,6 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 		return common.Hash{}, &common.CallbackError{err.Error()}
 	}
 
-	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	tx.Id = uint64(tran.eh.GetPeerManager().GetNodeId())
 	tx.Signature = common.FromHex(realArgs.Signature)
@@ -164,36 +161,20 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 		return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx"}
 	}
 
-	if args.Request != nil {
-
-		// ** For Hyperboard **
-		for i := 0; i < (*args.Request).ToInt(); i++ {
-			// Unsign Test
-			if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
-				tran.log.Error("invalid signature")
-				// ATTENTION, return invalid transactino directly
-				return common.Hash{}, &common.SignatureInvalidError{Message: "invalid signature"}
-			}
-			go tran.eh.GetEventObject().Post(event.NewTxEvent{
-				Transaction: tx,
-				Simulate:    args.Simulate,
-				SnapshotId:  args.SnapshotId,
-			})
-		}
-	} else {
-		// ** For Hyperchain **
-		if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
-			tran.log.Error("invalid signature")
-			// ATTENTION, return invalid transactino directly
-			return common.Hash{}, &common.SignatureInvalidError{Message: "invalid signature"}
-		}
-
-		go tran.eh.GetEventObject().Post(event.NewTxEvent{
-			Transaction: tx,
-			Simulate:    args.Simulate,
-			SnapshotId:  args.SnapshotId,
-		})
+	// verify tx signature
+	if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
+		tran.log.Error("invalid signature")
+		// ATTENTION, return invalid transactino directly
+		return common.Hash{}, &common.SignatureInvalidError{Message: "invalid signature"}
 	}
+
+	// post new tx event
+	go tran.eh.GetEventObject().Post(event.NewTxEvent{
+		Transaction: tx,
+		Simulate:    args.Simulate,
+		SnapshotId:  args.SnapshotId,
+	})
+
 	return tx.GetHash(), nil
 }
 
@@ -344,7 +325,6 @@ func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*Transac
 
 // GetTransactionByHash returns the transaction for the given transaction hash.
 func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
-
 	tx, err := edb.GetTransaction(tran.namespace, hash[:])
 	if err != nil && err.Error() == leveldb_not_found_error {
 		return tran.getDiscardTransactionByHash(hash)
