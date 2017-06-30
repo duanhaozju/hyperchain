@@ -8,11 +8,12 @@
 ###########################################################
 
 global:
-    grpc_port: 8001
-    jsonrpc_port": 8081
-    restful_port": 9001
+    jsonrpc_port: 8081
+    restful_port: 9001
     jvm_port: 50081
     ledger_port: 50051
+    #namespace config dir root path
+    nsConfigRootPath: "./namespaces"
     #namespace config dir root path
     nsConfigRootPath: "./namespaces"
 
@@ -31,7 +32,7 @@ global:
 
         logsdir: "./logs"
 
-        loglevel: "DEBUG"
+        loglevel: "NOTICE"
         # default loglevel for all modules which can be override by module level log setting
         file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
         console_format: "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
@@ -39,19 +40,23 @@ global:
         module:
             #set log level by module
             p2p: "NOTICE"
-            consensus: "DEBUG"
+            consensus: "NOTICE"
             core: "NOTICE"
             hyperdb: "NOTICE"
-            eventhub: "DEBUG"
-
-
-    hypervm:
-        jvm: false
-
+            eventhub: "NOTICE"
+    p2p:
+        hosts: "./hosts.yaml"
+        port: 50011
+        retrytime: 3s
+        ipc: "hpc_1.ipc"
+        enableTls: true
+	    tlsCA: "./cert/tlscert/tlsca.ca"
+	    tlsServerHostOverride: "hyperchain.cn"
+	    tlsCert: "./cert/tlscert/tls_peer1.cert"
+	    tlsCertPriv: "./cert/tlscert/tls_peer1.priv"
     namespace:
         # start which namespaces when node starts
         start:
             global: true
             ns1: true
-            ns2: true
-            ns3: false
+            ns2: false

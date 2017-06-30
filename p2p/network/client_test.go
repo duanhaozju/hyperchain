@@ -15,7 +15,8 @@ func TestClient_Chat(t *testing.T) {
 		mock_ChatClient := mock_network.NewMockChatClient(controller)
 		chat_chatClient := mock_network.NewMockChat_ChatClient(controller)
 		//this addr will not actually connect
-		client := network.NewClient("localhost:50012")
+		client,err := network.NewClient("localhost:50015")
+		So(err,ShouldBeNil)
 		Convey("test Greeting", func() {
 			mock_ChatClient.EXPECT().Greeting(gomock.Any(),gomock.Any()).Return(&pb.Message{MessageType:pb.MsgType_HELLO_RESPONSE,},nil)
 			err := client.Connect(mock_ChatClient)
@@ -28,7 +29,7 @@ func TestClient_Chat(t *testing.T) {
 			mock_ChatClient.EXPECT().Wisper(gomock.Any(),gomock.Any()).Return(&pb.Message{MessageType:pb.MsgType_KEEPALIVE,},nil)
 			err := client.Connect(mock_ChatClient)
 			So(err,ShouldBeNil)
-			resp,err := client.Wisper(&pb.Message{MessageType:pb.MsgType_KEEPALIVE,})
+			resp,err := client.Whisper(&pb.Message{MessageType:pb.MsgType_KEEPALIVE,})
 			So(err,ShouldBeNil)
 			So(resp.MessageType,ShouldEqual,pb.MsgType_KEEPALIVE)
 		})

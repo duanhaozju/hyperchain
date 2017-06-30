@@ -313,7 +313,7 @@ func (hypernet *HyperNet)Greeting(hostname string,msg *pb.Message)(*pb.Message,e
 func (hypernet *HyperNet)Whisper(hostname string,msg *pb.Message)(*pb.Message,error){
 	hypernet.msgWrapper(msg)
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
-			return client.(*Client).Wisper(msg)
+			return client.(*Client).Whisper(msg)
 		}
 		return nil,errors.New("the host hasn't been initialized.")
 }

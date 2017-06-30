@@ -24,9 +24,43 @@ type Client struct {
 }
 
 
+//connCreator implements the Hyper Transport Layer security
+func connCreator(addr string)(interface{},error){
+	/*
+	General key agree process
+	client                         server
+	       -- client hello     --> query client session don't get the session key
+	      <-- server hello     --
+	       -- client cert      -->
+	      <-- server cert      --
+	       -- client random    --> generate session key and save the session
+	      <-- server done      --
+	       -- client pkg       -->
+	      <-- server pkg       --
+
+	improve key agree process
+	client                        server
+               -- client hello     --> query client session and get the session key
+	      <-- server done      --
+	       -- client pkg       -->
+	      <-- server pkg       --
+
+	the session key expired
+	client                       server
+	      <-- server expired   --
+	       -- client hello     -->
+	      <-- server hello     --
+	      ...
+	       -- client pkg       -->
+	      <-- server pkg       --
+
+
+	*/
+	return grpc.Dial(addr,grpc.WithInsecure())
+}
 
 func NewClient(addr string) (*Client,error){
-	connCreator := func() (interface{}, error) { return grpc.Dial(addr,grpc.WithInsecure())}
+	connCreator := func(endpoint string) (interface{}, error) { }
 	connCloser  := func(v interface{}) error { return v.(*grpc.ClientConn).Close() }
 	poolConfig := &pool.PoolConfig{
 		InitialCap: 2,
@@ -35,6 +69,7 @@ func NewClient(addr string) (*Client,error){
 		Close:      connCloser,
 		//链接最大空闲时间，超过该时间的链接 将会关闭，可避免空闲时链接EOF，自动失效的问题
 		IdleTimeout: 15 * time.Second,
+		Addr:addr,
 	}
 	p, err := pool.NewChannelPool(poolConfig)
 	if err != nil {
@@ -106,8 +141,8 @@ func(c *Client)Greeting(in *pb.Message) (*pb.Message, error){
 	in.From.Extend.IP =[]byte(utils.GetLocalIP())
 	return c.client.Greeting(context.Background(),in)
 }
-// Wisper Transfer the the node health infomation
-func(c *Client)Wisper(in *pb.Message) (*pb.Message, error){
+// Whisper Transfer the the node health information
+func(c *Client)Whisper(in *pb.Message) (*pb.Message, error){
 	if c.client == nil{
 		logger.Warningf("the client is nil %v \n",c.client)
 		return nil,errors.New(fmt.Sprintf("the client is nil %v \n",c.client))

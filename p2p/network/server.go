@@ -36,7 +36,7 @@ func (s *Server) StartServer(port string) error {
 	if err != nil {
 		return err
 	}
-	s.server = grpc.NewServer()
+	s.server = grpc.NewServer(grpc.MaxMsgSize())
 	if s.server == nil{
 		return errors.New("s.server is nil, cannot initialize a grpc.server")
 	}

@@ -59,6 +59,7 @@ func (peer *Peer)Chat(in *pb.Message) (*pb.Message, error){
 func (peer *Peer)Greeting(in *pb.Message) (*pb.Message,error){
 	//here will wrapper the message
 	in.From = &pb.Endpoint{
+		
 		Field : []byte(peer.local.GetNameSpace()),
 		Hostname : []byte(peer.local.Hostname),
 		UUID : []byte(peer.local.GetHash()),
