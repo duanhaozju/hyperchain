@@ -176,6 +176,7 @@ func (adm *Administrator) getLevel(cmd *Command) *CommandResult {
 	argLen := len(cmd.Args)
 	if argLen != 2 {
 		log.Errorf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2 parameters, got %d", argLen)}}
 	}
 	level, err := common.GetLogLevel(cmd.Args[0], cmd.Args[1])
 	if err != nil {
@@ -190,6 +191,7 @@ func (adm *Administrator) setLevel(cmd *Command) *CommandResult {
 	argLen := len(cmd.Args)
 	if argLen != 3 {
 		log.Errorf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 3 parameters, got %d", argLen)}}
 	}
 
 	err := common.SetLogLevel(cmd.Args[0], cmd.Args[1], cmd.Args[2])
