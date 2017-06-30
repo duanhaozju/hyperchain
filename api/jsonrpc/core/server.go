@@ -150,6 +150,9 @@ func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
 			MethodName: req.Method,
 			Args:       args,
 		}
+		if _, ok := s.admin.CmdExecutor[req.Method] ; !ok {
+			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InternalError{Message: "invalid admin method!"}}
+		}
 		rs := s.admin.CmdExecutor[req.Method](cmd)
 		if rs.Ok == false {
 			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: rs.Error}
