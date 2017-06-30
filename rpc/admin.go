@@ -40,8 +40,9 @@ func (cmd *Command) ToJson() string {
 
 //CommandResult command execute result send back to the user.
 type CommandResult struct {
-	Ok     bool        `json:"ok"`
-	Result interface{} `json:"result"`
+	Ok     bool
+	Result interface{}
+	Error  common.RPCError
 }
 
 type Administrator struct {
@@ -53,51 +54,51 @@ type Administrator struct {
 
 //StopServer stop hyperchain server.
 func (adm *Administrator) stopServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	adm.StopServer <- true
 	return &CommandResult{Ok: true, Result: "stop server success!"}
 }
 
 //RestartServer start hyperchain server.
 func (adm *Administrator) restartServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	adm.RestartServer <- true
 	return &CommandResult{Ok: true, Result: "restart server success!"}
 }
 
 //StartMgr start namespace manager.
 func (adm *Administrator) startNsMgr(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	err := adm.NsMgr.Start()
 	if err != nil {
 		log.Errorf("start namespace manager error %v", err)
-		return &CommandResult{Ok: false, Result: err}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "start namespace manager successful"}
 }
 
 //StopNsMgr stop namespace manager.
 func (adm *Administrator) stopNsMgr(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	err := adm.NsMgr.Stop()
 	if err != nil {
 		log.Errorf("stop namespace manager error %v", err)
-		return &CommandResult{Ok: false, Result: err}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "stop namespace manager successful"}
 }
 
 //StartNamespace start namespace by name.
 func (adm *Administrator) startNamespace(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	if len(cmd.Args) != 1 {
-		return &CommandResult{Ok: false, Result: "invalid params"}
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 	//TODO: and synchronized start command
 	go func() {
 		err := adm.NsMgr.StartNamespace(cmd.Args[0])
 		if err != nil {
-			log.Error(&CommandResult{Ok: false, Result: err.Error()})
+			log.Error(err)
 		}
 	}()
 
@@ -106,14 +107,14 @@ func (adm *Administrator) startNamespace(cmd *Command) *CommandResult {
 
 //StartNamespace stop namespace by name.
 func (adm *Administrator) stopNamespace(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	if len(cmd.Args) != 1 {
-		return &CommandResult{Ok: false, Result: "invalid params"}
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 	go func() {
 		err := adm.NsMgr.StopNamespace(cmd.Args[0])
 		if err != nil {
-			log.Error(&CommandResult{Ok: false, Result: err.Error()})
+			log.Error(err)
 		}
 	}()
 
@@ -122,14 +123,14 @@ func (adm *Administrator) stopNamespace(cmd *Command) *CommandResult {
 
 //RestartNamespace restart namespace by name.
 func (adm *Administrator) restartNamespace(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	if len(cmd.Args) != 1 {
-		return &CommandResult{Ok: false, Result: "invalid params"}
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
 	err := adm.NsMgr.RestartNamespace(cmd.Args[0])
 	if err != nil {
-		return &CommandResult{Ok: false, Result: err.Error()}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 
 	return &CommandResult{Ok: true, Result: "restart namespace successful"}
@@ -137,14 +138,14 @@ func (adm *Administrator) restartNamespace(cmd *Command) *CommandResult {
 
 //RegisterNamespace register a new namespace.
 func (adm *Administrator) registerNamespace(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	if len(cmd.Args) != 1 {
-		return &CommandResult{Ok: false, Result: "invalid params"}
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
 	err := adm.NsMgr.Register(cmd.Args[0])
 	if err != nil {
-		return &CommandResult{Ok: false, Result: err.Error()}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 
 	return &CommandResult{Ok: true, Result: "register namespace successful"}
@@ -152,94 +153,78 @@ func (adm *Administrator) registerNamespace(cmd *Command) *CommandResult {
 
 //DeregisterNamespace deregister a namespace
 func (adm *Administrator) deregisterNamespace(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	if len(cmd.Args) != 1 {
-		return &CommandResult{Ok: false, Result: "invalid params"}
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 	err := adm.NsMgr.DeRegister(cmd.Args[0])
 	if err != nil {
-		return &CommandResult{Ok: false, Result: err.Error()}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "deregister namespace successful"}
 }
 
 func (adm *Administrator) listNamespaces(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	names := adm.NsMgr.List()
 	return &CommandResult{Ok: true, Result: names}
 }
 
 //GetLevel get a log level.
 func (adm *Administrator) getLevel(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 2 {
 		log.Errorf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2 parameters, got %d", argLen)}}
 	}
 	level, err := common.GetLogLevel(cmd.Args[0], cmd.Args[1])
 	if err != nil {
-		return &CommandResult{Ok: true, Result: err}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: level}
 }
 
 //SetLevel set a module log level.
 func (adm *Administrator) setLevel(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 3 {
 		log.Errorf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 3 parameters, got %d", argLen)}}
 	}
 
 	err := common.SetLogLevel(cmd.Args[0], cmd.Args[1], cmd.Args[2])
 	if err != nil {
-		return &CommandResult{Ok: true, Result: err}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	rs := strings.Join(cmd.Args, "_")
 	return &CommandResult{Ok: true, Result: rs}
 }
 
-func (adm *Administrator) startHttpServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
-	go hs.Start()
-	return &CommandResult{Ok: true, Result: "start http successful."}
-}
-
-func (adm *Administrator) stopHttpServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
-	hs.Stop()
-	return &CommandResult{Ok: true, Result: "stop http successful."}
-}
-
-func (adm *Administrator) restartHttpServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
-	go hs.Restart()
-	return &CommandResult{Ok: true, Result: "restart http successful."}
-}
-
 func (adm *Administrator) startJvmServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	if err := adm.NsMgr.StartJvm(); err != nil {
 		log.Notice(err)
-		return &CommandResult{Ok: false, Result: err.Error()}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "start jvm successful."}
 }
 
 func (adm *Administrator) stopJvmServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	if err := adm.NsMgr.StopJvm(); err != nil {
 		log.Notice(err)
-		return &CommandResult{Ok: false, Result: err.Error()}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "stop jvm successful."}
 }
 
 func (adm *Administrator) restartJvmServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd)
+	log.Noticef("process cmd %v", cmd.MethodName)
 	if err := adm.NsMgr.RestartJvm(); err != nil {
 		log.Notice(err)
-		return &CommandResult{Ok: false, Result: err.Error()}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "restart jvm successful."}
 }
@@ -260,10 +245,6 @@ func (adm *Administrator) Init() {
 
 	adm.CmdExecutor["getLevel"] = adm.getLevel
 	adm.CmdExecutor["setLevel"] = adm.setLevel
-
-	adm.CmdExecutor["startHttpServer"] = adm.startHttpServer
-	adm.CmdExecutor["stopHttpServer"] = adm.stopHttpServer
-	adm.CmdExecutor["restartHttpServer"] = adm.restartHttpServer
 
 	adm.CmdExecutor["startJvmServer"] = adm.startJvmServer
 	adm.CmdExecutor["stopJvmServer"] = adm.stopJvmServer

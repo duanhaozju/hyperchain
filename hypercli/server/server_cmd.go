@@ -48,7 +48,8 @@ func stop(c *cli.Context) error {
 		MethodName: "admin_stopServer",
 		Args:       c.Args(),
 	}
-	client.InvokeCmd(cmd)
+	result := client.InvokeCmd(cmd)
+	fmt.Print(result)
 	return nil
 }
 
@@ -58,6 +59,7 @@ func restart(c *cli.Context) error {
 		MethodName: "admin_restartServer",
 		Args:       c.Args(),
 	}
-	client.InvokeCmd(cmd)
+	result := client.InvokeCmd(cmd)
+	fmt.Print(result)
 	return nil
 }

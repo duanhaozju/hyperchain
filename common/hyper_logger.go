@@ -138,8 +138,7 @@ func SetLogLevel(namespace string, module string, level string) error {
 		err := errors.New("SetLogLevel Error: " + namespace + "::" + module + " not exist")
 		return err
 	}
-	ml.setLogLevel(level)
-	return nil
+	return ml.setLogLevel(level)
 }
 
 //GetLogLevel get log level info by namespace and module.

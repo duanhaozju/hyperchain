@@ -3,10 +3,10 @@
 package node
 
 import (
-	"fmt"
 	"github.com/urfave/cli"
-	"hyperchain/rpc"
+	"fmt"
 	"hyperchain/hypercli/common"
+	"hyperchain/rpc"
 	"strconv"
 )
 
@@ -14,39 +14,28 @@ import (
 func NewNodeCMD() []cli.Command {
 	return []cli.Command{
 		{
-			Name:    "add",
-			Usage:   "add a new node to specified namespace",
-			Action:  addNode,
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "namespace, n",
-					Value: "",
-					Usage: "setting the namespace to add node to",
-				},
-			},
-		},
-		{
 			Name:    "delete",
 			Usage:   "delete a node from specified namespace",
 			Action:  delNode,
-			Flags: []cli.Flag{
+			Flags:   []cli.Flag{
 				cli.StringFlag{
 					Name:  "namespace, n",
-					Value: "",
+					Value: "global",
 					Usage: "setting the namespace to delete node from",
 				},
 				cli.StringFlag{
-					Name:  "host, h",
-					Value: "",
+					Name:  "ip, i",
+					Value: "127.0.0.1",
 					Usage: "setting the host ip to delete node from",
 				},
 				cli.StringFlag{
 					Name:  "port, p",
-					Value: "",
+					Value: "8085",
 					Usage: "setting the host port to delete node from",
 				},
 			},
 		},
+
 	}
 }
 
@@ -55,23 +44,10 @@ type peerinfos struct {
 	ports []string
 }
 
-func addNode() error {
-	fmt.Println("Not support yet!")
-	return nil
-}
-
 func delNode(c *cli.Context) error {
-	var namespace, ip, port string
-
-	if c.String("namespace") != "" {
-		namespace = c.String("namespace")
-	} else {
-		fmt.Print("namespace: ")
-		fmt.Scanln(&namespace)
-	}
-
-	ip = common.GetNonEmptyValueByName(c, "host")
-	port = common.GetNonEmptyValueByName(c, "port")
+	namespace := common.GetNonEmptyValueByName(c, "namespace")
+	ip := common.GetNonEmptyValueByName(c, "ip")
+	port := common.GetNonEmptyValueByName(c, "port")
 
 	nodehash, err := getDelNodeHash(namespace, ip, port)
 	if err != nil {
@@ -151,7 +127,7 @@ func getPeerInfo(namespace, ip, port string) (peerinfos, error) {
 
 }
 
-func sendDelNode(namespace, hash string, peers peerinfos) error {
+func sendDelNode(namespace, hash string, peers peerinfos) error{
 	params := fmt.Sprintf("[{\"nodehash\":\"%s\"}]", hash)
 	for i, ip := range peers.ips {
 		fmt.Printf("send del node to %v:%v\n", ip, peers.ports[i])

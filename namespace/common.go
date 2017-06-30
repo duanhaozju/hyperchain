@@ -8,6 +8,7 @@ import (
 	"hyperchain/api"
 	"hyperchain/common"
 	"strings"
+	"os"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -23,13 +24,15 @@ var Apis map[string]*API
 var (
 	ErrInvalidNs         = errors.New("namespace/nsmgr: invalid namespace")
 	ErrCannotNewNs       = errors.New("namespace/nsmgr: can not new namespace")
+	ErrRegistered        = errors.New("namespace/nsmgr: namespace has been registered")
 	ErrNsClosed          = errors.New("namespace/nsmgr: namespace closed")
 	ErrNodeNotFound      = errors.New("namespace/node: nod not found")
 	ErrIllegalNodeConfig = errors.New("namespace/node: illegal node config")
+	ErrNonExistConfig    = errors.New("namespace/nsmgr: namespace config file doesn't exist")
 )
 
 //constructConfigFromDir read all info needed by
-func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
+func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, error) {
 	var conf *common.Config
 	nsConfigPath := path + "/global.yaml"
 
@@ -41,6 +44,10 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 		}
 		conf = nr.conf
 	} else {
+		if _, err := os.Stat(nsConfigPath); os.IsNotExist(err) {
+			logger.Error("namespace config file doesn't exist!")
+			return nil, ErrNonExistConfig
+		}
 		conf = common.NewConfig(nsConfigPath)
 	}
 	// init peer configurations
@@ -66,7 +73,7 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) *common.Config {
 		nr.conf.Set(common.C_WEBSOCKET_PORT, peerViper.GetInt("self.websocket_port"))
 	}
 
-	return conf
+	return conf, nil
 }
 
 func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
