@@ -72,7 +72,7 @@ func (adm *Administrator) startNsMgr(cmd *Command) *CommandResult {
 	err := adm.NsMgr.Start()
 	if err != nil {
 		log.Errorf("start namespace manager error %v", err)
-		return &CommandResult{Ok: false, Error: &common.InternalError{Message: err.Error()}}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "start namespace manager successful"}
 }
@@ -83,7 +83,7 @@ func (adm *Administrator) stopNsMgr(cmd *Command) *CommandResult {
 	err := adm.NsMgr.Stop()
 	if err != nil {
 		log.Errorf("stop namespace manager error %v", err)
-		return &CommandResult{Ok: false, Error: &common.InternalError{Message: err.Error()}}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "stop namespace manager successful"}
 }
@@ -130,7 +130,7 @@ func (adm *Administrator) restartNamespace(cmd *Command) *CommandResult {
 
 	err := adm.NsMgr.RestartNamespace(cmd.Args[0])
 	if err != nil {
-		return &CommandResult{Ok: false, Error: &common.InternalError{Message: err.Error()}}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 
 	return &CommandResult{Ok: true, Result: "restart namespace successful"}
@@ -145,7 +145,7 @@ func (adm *Administrator) registerNamespace(cmd *Command) *CommandResult {
 
 	err := adm.NsMgr.Register(cmd.Args[0])
 	if err != nil {
-		return &CommandResult{Ok: false, Error: &common.InternalError{Message: err.Error()}}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 
 	return &CommandResult{Ok: true, Result: "register namespace successful"}
@@ -159,7 +159,7 @@ func (adm *Administrator) deregisterNamespace(cmd *Command) *CommandResult {
 	}
 	err := adm.NsMgr.DeRegister(cmd.Args[0])
 	if err != nil {
-		return &CommandResult{Ok: false, Error: &common.InternalError{Message: err.Error()}}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "deregister namespace successful"}
 }
@@ -179,7 +179,7 @@ func (adm *Administrator) getLevel(cmd *Command) *CommandResult {
 	}
 	level, err := common.GetLogLevel(cmd.Args[0], cmd.Args[1])
 	if err != nil {
-		return &CommandResult{Ok: false, Error: &common.InternalError{Message: err.Error()}}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: level}
 }
@@ -194,7 +194,7 @@ func (adm *Administrator) setLevel(cmd *Command) *CommandResult {
 
 	err := common.SetLogLevel(cmd.Args[0], cmd.Args[1], cmd.Args[2])
 	if err != nil {
-		return &CommandResult{Ok: false, Error: &common.InternalError{Message: err.Error()}}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	rs := strings.Join(cmd.Args, "_")
 	return &CommandResult{Ok: true, Result: rs}
@@ -204,7 +204,7 @@ func (adm *Administrator) startJvmServer(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	if err := adm.NsMgr.StartJvm(); err != nil {
 		log.Notice(err)
-		return &CommandResult{Ok: false, Error: &common.InternalError{Message: err.Error()}}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "start jvm successful."}
 }
@@ -213,7 +213,7 @@ func (adm *Administrator) stopJvmServer(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	if err := adm.NsMgr.StopJvm(); err != nil {
 		log.Notice(err)
-		return &CommandResult{Ok: false, Error: &common.InternalError{Message: err.Error()}}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "stop jvm successful."}
 }
@@ -222,7 +222,7 @@ func (adm *Administrator) restartJvmServer(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	if err := adm.NsMgr.RestartJvm(); err != nil {
 		log.Notice(err)
-		return &CommandResult{Ok: false, Error: &common.InternalError{Message: err.Error()}}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "restart jvm successful."}
 }

@@ -140,18 +140,19 @@ func splitRawMessage(args json.RawMessage) ([]string, error) {
 func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
 	if args, ok := req.Params.(json.RawMessage); !ok {
 		log.Critical("wrong type not json type")
-		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.MethodNotFoundError{}}
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace,
+			Error: &common.InvalidParamsError{Message: "Invalid params supplied", }}
 	} else {
 		args, err := splitRawMessage(args)
 		if err != nil {
-			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidParamsError{}}
+			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidParamsError{Message: err.Error()}}
 		}
 		cmd := &Command{
 			MethodName: req.Method,
 			Args:       args,
 		}
 		if _, ok := s.admin.CmdExecutor[req.Method] ; !ok {
-			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InternalError{Message: "invalid admin method!"}}
+			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
 		}
 		rs := s.admin.CmdExecutor[req.Method](cmd)
 		if rs.Ok == false {
