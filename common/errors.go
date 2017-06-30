@@ -94,6 +94,19 @@ func (e *ShutdownError) Error() string {
 	return "server is shutting down"
 }
 
+// internal error, happened when system encountered an error
+type InternalError struct {
+	Message string
+}
+
+func (e *InternalError) Code() int {
+	return -32814
+}
+
+func (e *InternalError) Error() string {
+	return e.Message
+}
+
 
 
 

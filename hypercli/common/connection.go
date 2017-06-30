@@ -44,33 +44,33 @@ func NewRpcClient(host, port string) *CmdClient {
 }
 
 //InvokeCmd invoke a command using json admin client and wait for the response.
-func (cc *CmdClient) InvokeCmd(cmd *admin.Command) *admin.CommandResult {
+func (cc *CmdClient) InvokeCmd(cmd *admin.Command) string {
 	rs, err := cc.Call(cmd.ToJson())
 	if err != nil {
 		fmt.Println(err.Error())
-		return nil
+		return ""
 	}
 	return rs
 }
 
-func (cc *CmdClient) Call(cmd string) (*admin.CommandResult, error) {
+func (cc *CmdClient) Call(cmd string) (string, error) {
 	reqJson := []byte(cmd)
 	urlStr := fmt.Sprintf("http://%s:%s", cc.host, cc.port)
 	req, err := http.NewRequest("POST", urlStr, bytes.NewBuffer(reqJson))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	rs, err := cc.client.Do(req)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer rs.Body.Close()
 
 	body, err := ioutil.ReadAll(rs.Body)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	result := string(body)
 	//fmt.Println(result)
-	return &admin.CommandResult{Ok: true, Result: result}, nil
+	return result, nil
 }
