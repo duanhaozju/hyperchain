@@ -35,8 +35,8 @@ const (
 	custom_AccountNotExistError
 	custom_NamespaceNotFoundError
 	custom_NoBlockGeneratedError
-	custom_SubNotExistError			// reserved field for version 1.5
-	custom_SnapshotError			// reserved field for version 1.5
+	custom_SubNotExistError
+	custom_SnapshotError
 )
 
 
@@ -65,7 +65,7 @@ type MethodNotFoundError struct {
 
 func (e *MethodNotFoundError) Code() int {return specified_MethodNotFoundError}
 func (e *MethodNotFoundError) Error() string {return fmt.Sprintf("The method %s%s%s does not exist/is not available",
-	e.Service, serviceMethodSeparator, e.Method)}
+										e.Service, serviceMethodSeparator, e.Method)}
 
 // unable to decode supplied params, or an invalid number of parameters
 type InvalidParamsError struct {
@@ -179,6 +179,20 @@ type NoBlockGeneratedError struct {
 
 func (e *NoBlockGeneratedError) Code() int {return custom_NoBlockGeneratedError}
 func (e *NoBlockGeneratedError) Error() string {return fmt.Sprintf(e.Message)}
+
+type SubNotExistError struct {
+	Message string
+}
+
+func (e *SubNotExistError) Code() int {return custom_SubNotExistError}
+func (e *SubNotExistError) Error() string {return e.Message}
+
+type SnapshotErr struct {
+	Message string
+}
+
+func (e *SnapshotErr) Code() int {return custom_SnapshotError}
+func (e *SnapshotErr) Error() string {return e.Message}
 
 type UnauthorizedError struct {}
 

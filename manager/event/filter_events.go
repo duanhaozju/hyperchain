@@ -3,6 +3,7 @@ package event
 import (
 	"hyperchain/core/types"
 	"time"
+	"hyperchain/manager/exception"
 )
 
 type FilterNewBlockEvent struct {
@@ -11,6 +12,19 @@ type FilterNewBlockEvent struct {
 
 type FilterNewLogEvent struct {
 	Logs []*types.Log
+}
+
+type FilterExceptionEvent struct {
+	Module    string
+	Exception exception.ExceptionError
+}
+
+type FilterExceptionData struct {
+	Module    string	`json:"module"`
+	SubType   string	`json:"subType"`
+	ErrorCode int		`json:"errorCode"`
+	Message   string	`json:"message"`
+	Date      time.Time	`json:"date"`
 }
 
 /*
@@ -35,24 +49,3 @@ type FilterArchive struct {
 	Message  string
 }
 
-const (
-	// definition format: <ExceptionModule> + <Module>
-	ExceptionModule_P2P      = "p2p"
-	ExceptionModule_Consenus = "consensus"
-	ExceptionModule_Executor = "executor"
-	// etc ...
-)
-
-const (
-	// definition format: <ExceptionCode> + <Module> + <SubType>
-	ExceptionCode_Executor_Viewchange int =  -1 * iota
-	// etc ...
-)
-
-type FilterException struct {
-	Module    string
-	SubType   string
-	ErrorCode int
-	Message   string
-	Date      time.Time
-}

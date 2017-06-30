@@ -76,7 +76,7 @@ func NewEventSystem(mux *event.TypeMux) *EventSystem {
 func (es *EventSystem) eventLoop() {
 	var (
 		index = make(filterIndex)
-		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{}, event.FilterException{},event.FilterArchive{},
+		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{}, event.FilterExceptionEvent{},event.FilterArchive{},
 			event.FilterSnapshotEvent{}, event.FilterDeleteSnapshotEvent{})
 	)
 
@@ -145,12 +145,19 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 				f.extra <- ev
 			}
 		}
-	case event.FilterException:
+	case event.FilterExceptionEvent:
 		for _, f := range filters[ExceptionSubscription] {
 			if obj.Time.After(f.created) {
 				// filter logs
 				if filterException(ev, &f.crit) {
-					f.extra <- ev
+					exptData := event.FilterExceptionData{
+						Module:		ev.Module,
+						SubType:	ev.Exception.SubType(),
+						ErrorCode:	ev.Exception.ErrorCode(),
+						Message:	ev.Exception.Error(),
+						Date:		time.Now(),
+					}
+					f.extra <- exptData
 				}
 			}
 		}

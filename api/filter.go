@@ -272,33 +272,39 @@ func returnLogs(logs []*types.Log) []types.LogTrans {
 	return _logs.ToLogsTrans(types.Receipt_EVM)
 }
 
-func returnException(data []interface{}) []event.FilterException {
+func returnException(data []interface{}) []event.FilterExceptionEvent {
 	if len(data) == 0 {
-		return []event.FilterException{}
+		return []event.FilterExceptionEvent{}
 	}
-	var ret []event.FilterException
+	var ret []event.FilterExceptionEvent
 	for _, d := range data {
-		if val, ok := d.(event.FilterException); ok {
+		if val, ok := d.(event.FilterExceptionEvent); ok {
 			ret = append(ret, val)
 		}
 	}
 	return ret
 }
 
-// ===================== webscoket event ================
-func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
+/*******************************************************************************
+**									      **
+**			Webscoket Event	Subscription			      **
+**									      **
+********************************************************************************/
+
+// Block creates a subscription that send a notification each time when a new block is appended to the chain.
+func (api *PublicFilterAPI) Block(ctx context.Context) (common.ID, error) {
 
 	api.filtersMu.Lock()
 	defer api.filtersMu.Unlock()
 
 	api.log.Debug("ready to deal with newBlock event request")
-	common.CtxChan <- ctx
-	subchan := common.GetSubChan(ctx)
+	common.CtxCh <- ctx
+	subChs := common.GetSubChs(ctx)
 
 	select {
-	case err := <- subchan.Err:
+	case err := <- subChs.Err:
 		return common.ID(""), err
-	case rpcSub := <- subchan.SubscriptionChan:
+	case rpcSub := <- subChs.SubscriptionCh:
 		api.log.Debugf("receive subscription %v", rpcSub.ID)
 
 		go func() {
@@ -315,11 +321,11 @@ func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
 						Data:  h,
 					}
 
-					subchan.NotifyDataChan <- payload
+					subChs.NotifyDataCh <- payload
 				case <-rpcSub.Err():	 // unsubscribe
 					blockSub.Unsubscribe()
 					return
-				case <-subchan.Closed(): // connection close
+				case <-subChs.Closed(): // connection close
 					api.log.Debug("the websocket connection closed, release resource")
 					blockSub.Unsubscribe()
 					return
@@ -329,5 +335,50 @@ func (api *PublicFilterAPI) NewBlock(ctx context.Context) (common.ID, error) {
 
 		return rpcSub.ID, nil
 	}
+}
 
+// Exception creates a subscription that send a notification each time when exception is threw.
+func (api *PublicFilterAPI) Exception(ctx context.Context, crit flt.FilterCriteria) (common.ID, error) {
+
+	api.filtersMu.Lock()
+	defer api.filtersMu.Unlock()
+
+	api.log.Debug("ready to deal with newException event request")
+	common.CtxCh <- ctx
+	subChs := common.GetSubChs(ctx)
+
+	select {
+	case err := <- subChs.Err:
+		return common.ID(""), err
+	case rpcSub := <- subChs.SubscriptionCh:
+		api.log.Debugf("receive subscription %v", rpcSub.ID)
+
+		go func() {
+
+			ch     := make(chan interface{})
+			sub    := api.events.NewCommonSubscription(ch, false, flt.ExceptionSubscription, crit)
+
+			for {
+				select {
+				case d := <-ch:
+					api.log.Debugf("receive exception")
+					payload := common.NotifyPayload{
+						SubID: rpcSub.ID,
+						Data:  d,
+					}
+
+					subChs.NotifyDataCh <- payload
+				case <-rpcSub.Err():	 // unsubscribe
+					sub.Unsubscribe()
+					return
+				case <-subChs.Closed(): // connection close
+					api.log.Debug("the websocket connection closed, release resource")
+					sub.Unsubscribe()
+					return
+				}
+			}
+		}()
+
+		return rpcSub.ID, nil
+	}
 }

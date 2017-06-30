@@ -28,57 +28,57 @@ type NotifyPayload struct {
 	Data  interface{}
 }
 
-type Subchan struct {
-	Ctx 		  context.Context
-	//Mux               sync.Mutex
-	SubscriptionChan  chan *Subscription
-	NotifyDataChan    chan NotifyPayload
-	Err		  chan error		// context error
-	closed	          chan interface{}	// connection close
+type SubChs struct {
+	Ctx 		context.Context
+	//Mux           sync.Mutex
+	SubscriptionCh	chan *Subscription
+	NotifyDataCh    chan NotifyPayload
+	Err		chan error		// context error
+	closed	        chan interface{}	// connection close
 						 //Unsubscribe       chan ID	// event unsubscribe
 }
 
 var (
-	SubCtxChan map[context.Context]*Subchan
-	CtxChan chan context.Context
-	mux sync.Mutex
+	SubChsMap	map[context.Context]*SubChs
+	CtxCh 		chan context.Context
+	mux 		sync.Mutex
 
 )
 
 func init() {
-	SubCtxChan = make(map[context.Context]*Subchan)
-	CtxChan = make(chan context.Context)
+	SubChsMap = make(map[context.Context]*SubChs)
+	CtxCh     = make(chan context.Context)
 }
 
-func GetSubChan(ctx context.Context) (*Subchan) {
+func GetSubChs(ctx context.Context) (*SubChs) {
 	mux.Lock()
 	defer mux.Unlock()
 
-	if subchan, ok := SubCtxChan[ctx]; ok {
-		return subchan
+	if subChs, ok := SubChsMap[ctx]; ok {
+		return subChs
 	} else {
-		subchan := &Subchan{
-			Ctx:		  ctx,
-			SubscriptionChan: make(chan *Subscription),
-			NotifyDataChan:   make(chan NotifyPayload),
-			Err:              make(chan error),
-			closed:           make(chan interface{}),
+		subChs := &SubChs{
+			Ctx:		ctx,
+			SubscriptionCh:	make(chan *Subscription),
+			NotifyDataCh:   make(chan NotifyPayload),
+			Err:            make(chan error),
+			closed:         make(chan interface{}),
 		}
 
-		SubCtxChan[ctx] = subchan
+		SubChsMap[ctx] = subChs
 
-		return subchan
+		return subChs
 	}
 }
 
-func (subchan *Subchan) Close() {
+func (subChs *SubChs) Close() {
 	// todo 是否需要加锁？
-	close(subchan.closed)
-	close(subchan.Err)
-	delete(SubCtxChan, subchan.Ctx)
+	close(subChs.closed)
+	close(subChs.Err)
+	delete(SubChsMap, subChs.Ctx)
 }
 
 
-func (subchan *Subchan) Closed() <- chan interface{} {
-	return subchan.closed
+func (subChs *SubChs) Closed() <- chan interface{} {
+	return subChs.closed
 }

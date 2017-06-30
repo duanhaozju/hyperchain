@@ -20,14 +20,19 @@ import (
 
 const (
 	stopPendingRequestTimeout             = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
-	OptionMethodInvocation    CodecOption = 1 << iota       // OptionMethodInvocation is an indication that the codec supports RPC method calls
-	// OptionSubscriptions is an indication that the codec suports RPC notifications
-	OptionSubscriptions = 1 << iota // support pub sub
 	adminService                          = "admin"
 )
 
 // CodecOption specifies which type of messages this codec supports
 type CodecOption int
+
+const (
+	// OptionMethodInvocation is an indication that the codec supports RPC method calls
+	OptionMethodInvocation CodecOption = 1 << iota
+
+	// OptionSubscriptions is an indication that the codec suports RPC notifications
+	OptionSubscriptions = 1 << iota // support pub sub
+)
 
 // NewServer will create a new server instance with no registered handlers.
 func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartHp chan bool) *Server {
@@ -44,12 +49,6 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 	}
 	server.admin.Init()
 	return server
-}
-
-// RPCService gives meta information about the server.
-// e.g. gives information about the loaded modules.
-type RPCService struct {
-	server *Server
 }
 
 // serveRequest will reads requests from the codec, calls the RPC callback and
