@@ -3,9 +3,42 @@ package common
 import "fmt"
 
 const (
-	JSONRPCVersion         = "2.0"
 	serviceMethodSeparator = "_"
 )
+
+// JSON-RPC specified error
+const (
+	specified_InvalidMessageError int    = -32700
+	specified_CallbackError       int    = -32000
+	specified_ShutdownError       int    = -32000
+)
+const (
+	specified_InvalidRequestError int    =  -32600 - iota
+	specified_MethodNotFoundError
+	specified_InvalidParamsError
+)
+
+// JSON-RPC custom error code from 32001 to 32099
+const (
+	custom_UnauthorizedError     int   = -32098
+	custom_CertError             int   = -32099
+)
+const (
+	custom_LeveldbNotFoundError  int   = -32001 - iota
+	custom_OutofBalanceError
+	custom_SignatureInvalidError
+	custom_ContractDeployError
+	custom_ContractInvokeError
+	custom_SystemTooBusyError
+	custom_RepeadedTxError
+	custom_ContractPermissionError
+	custom_AccountNotExistError
+	custom_NamespaceNotFoundError
+	custom_NoBlockGeneratedError
+	custom_SubNotExistError			// reserved field for version 1.5
+	custom_SnapshotError			// reserved field for version 1.5
+)
+
 
 // RPCError implements RPC error, is add support for error codec over regular go errors
 type RPCError interface {
@@ -16,102 +49,56 @@ type RPCError interface {
 }
 
 // CORE ERRORS
+// received message isn't a valid request
+type InvalidRequestError struct {
+	Message string
+}
+
+func (e *InvalidRequestError) Code() int {return specified_InvalidRequestError}
+func (e *InvalidRequestError) Error() string {return e.Message}
+
 // request is for an unknown service
 type MethodNotFoundError struct {
 	Service string
 	Method  string
 }
 
-func (e *MethodNotFoundError) Code() int {
-	return -32601
-}
-
-func (e *MethodNotFoundError) Error() string {
-	return fmt.Sprintf("The method %s%s%s does not exist/is not available", e.Service, serviceMethodSeparator, e.Method)
-}
-
-// received message isn't a valid request
-type InvalidRequestError struct {
-	Message string
-}
-
-func (e *InvalidRequestError) Code() int {
-	return -32600
-}
-
-func (e *InvalidRequestError) Error() string {
-	return e.Message
-}
-
-// received message is invalid
-type InvalidMessageError struct {
-	Message string
-}
-
-func (e *InvalidMessageError) Code() int {
-	return -32700
-}
-
-func (e *InvalidMessageError) Error() string {
-	return e.Message
-}
+func (e *MethodNotFoundError) Code() int {return specified_MethodNotFoundError}
+func (e *MethodNotFoundError) Error() string {return fmt.Sprintf("The method %s%s%s does not exist/is not available",
+	e.Service, serviceMethodSeparator, e.Method)}
 
 // unable to decode supplied params, or an invalid number of parameters
 type InvalidParamsError struct {
 	Message string
 }
 
-func (e *InvalidParamsError) Code() int {
-	return -32602
+func (e *InvalidParamsError) Code() int {return specified_InvalidParamsError}
+func (e *InvalidParamsError) Error() string {return e.Message}
+
+// received message is invalid
+type InvalidMessageError struct {
+	Message string
 }
 
-func (e *InvalidParamsError) Error() string {
-	return e.Message
-}
+func (e *InvalidMessageError) Code() int {return specified_InvalidMessageError}
+func (e *InvalidMessageError) Error() string {return e.Message}
 
 // logic error, callback returned an error
 type CallbackError struct {
 	Message string
 }
 
-func (e *CallbackError) Code() int {
-	return -32000
-}
-
-func (e *CallbackError) Error() string {
-	return e.Message
-}
+func (e *CallbackError) Code() int {return specified_CallbackError}
+func (e *CallbackError) Error() string {return e.Message}
 
 // issued when a request is received after the server is issued to stop.
-type ShutdownError struct {
-}
+type ShutdownError struct {}
 
-func (e *ShutdownError) Code() int {
-	return -32000
-}
+func (e *ShutdownError) Code() int {return specified_ShutdownError}
+func (e *ShutdownError) Error() string {return "server is shutting down"}
 
-func (e *ShutdownError) Error() string {
-	return "server is shutting down"
-}
-
-// internal error, happened when system encountered an error
-type InternalError struct {
-	Message string
-}
-
-func (e *InternalError) Code() int {
-	return -32814
-}
-
-func (e *InternalError) Error() string {
-	return e.Message
-}
-
-
-
-
-// JSONRPC ERRORS
-type JSONRPCError interface{
+// JSONRPC custom ERRORS
+type JSONRPCError interface {
 	Code() int
 	Error() string
 }
@@ -120,153 +107,87 @@ type LeveldbNotFoundError struct {
 	Message string
 }
 
-func (e *LeveldbNotFoundError) Code() int {
-	return -32001
-}
-
-func (e *LeveldbNotFoundError) Error() string {
-	return "Not found " + e.Message
-}
+func (e *LeveldbNotFoundError) Code() int {return custom_LeveldbNotFoundError}
+func (e *LeveldbNotFoundError) Error() string {return "Not found " + e.Message}
 
 type OutofBalanceError struct {
 	Message string
 }
 
-func (e *OutofBalanceError) Code() int {
-	return -32002
-}
-
-func (e *OutofBalanceError) Error() string {
-	return e.Message
-}
+func (e *OutofBalanceError) Code() int {return custom_OutofBalanceError}
+func (e *OutofBalanceError) Error() string {return e.Message}
 
 type SignatureInvalidError struct {
 	Message string
 }
 
-func (e *SignatureInvalidError) Code() int {
-	return -32003
-}
-
-func (e *SignatureInvalidError) Error() string {
-	return e.Message
-}
+func (e *SignatureInvalidError) Code() int {return custom_SignatureInvalidError}
+func (e *SignatureInvalidError) Error() string {return e.Message}
 
 type ContractDeployError struct {
 	Message string
 }
 
-func (e *ContractDeployError) Code() int {
-	return -32004
-}
-
-func (e *ContractDeployError) Error() string {
-	return e.Message
-}
+func (e *ContractDeployError) Code() int {return custom_ContractDeployError}
+func (e *ContractDeployError) Error() string {return e.Message}
 
 type ContractInvokeError struct {
 	Message string
 }
 
-func (e *ContractInvokeError) Code() int {
-	return -32005
-}
-
-func (e *ContractInvokeError) Error() string {
-	return e.Message
-}
+func (e *ContractInvokeError) Code() int {return custom_ContractInvokeError}
+func (e *ContractInvokeError) Error() string {return e.Message}
 
 type SystemTooBusyError struct {
 	Message string
 }
 
-func (e *SystemTooBusyError) Code() int {
-	return -32006
-}
-
-func (e *SystemTooBusyError) Error() string {
-	return e.Message
-}
+func (e *SystemTooBusyError) Code() int {return custom_SystemTooBusyError}
+func (e *SystemTooBusyError) Error() string {return e.Message}
 
 type RepeadedTxError struct {
 	Message string
 }
 
-func (e *RepeadedTxError) Code() int {
-	return -32007
-}
-
-func (e *RepeadedTxError) Error() string {
-	return e.Message
-}
+func (e *RepeadedTxError) Code() int {return custom_RepeadedTxError}
+func (e *RepeadedTxError) Error() string {return e.Message}
 
 type ContractPermissionError struct {
-	Message    string
+	Message string
 }
 
-func (e *ContractPermissionError) Code() int {
-	return -32008
-}
-
-func (e *ContractPermissionError) Error() string {
-	return fmt.Sprintf("The contract invocation permission not enough '%s'", e.Message)
-}
+func (e *ContractPermissionError) Code() int {return custom_ContractPermissionError}
+func (e *ContractPermissionError) Error() string {return fmt.Sprintf("The contract invocation permission not enough '%s'", e.Message)}
 
 type AccountNotExistError struct {
-	Message    string
+	Message string
 }
 
-func (e *AccountNotExistError) Code() int {
-	return -32009
-}
-
-func (e *AccountNotExistError) Error() string {
-	return fmt.Sprintf("The account dose not exist '%s'", e.Message)
-}
+func (e *AccountNotExistError) Code() int {return custom_AccountNotExistError}
+func (e *AccountNotExistError) Error() string {return fmt.Sprintf("The account dose not exist '%s'", e.Message)}
 
 type NamespaceNotFound struct {
-	Name    string
+	Name string
 }
 
-func (e *NamespaceNotFound) Code() int {
-	return -32010
-}
-
-func (e *NamespaceNotFound) Error() string {
-	return fmt.Sprintf("The namespace '%s' does not exist", e.Name)
-}
+func (e *NamespaceNotFound) Code() int {return custom_NamespaceNotFoundError}
+func (e *NamespaceNotFound) Error() string {return fmt.Sprintf("The namespace '%s' does not exist", e.Name)}
 
 type NoBlockGeneratedError struct {
-	Message    string
+	Message string
 }
 
-func (e *NoBlockGeneratedError) Code() int {
-	return -32011
-}
+func (e *NoBlockGeneratedError) Code() int {return custom_NoBlockGeneratedError}
+func (e *NoBlockGeneratedError) Error() string {return fmt.Sprintf(e.Message)}
 
-func (e *NoBlockGeneratedError) Error() string {
-	return fmt.Sprintf(e.Message)
-}
+type UnauthorizedError struct {}
 
-type UnauthorizedError struct {
-}
-
-func (e *UnauthorizedError) Code() int {
-	return -32098
-}
-
-func (e *UnauthorizedError) Error() string {
-	return "Unauthorized, Please check your cert"
-}
+func (e *UnauthorizedError) Code() int {return custom_UnauthorizedError}
+func (e *UnauthorizedError) Error() string {return "Unauthorized, Please check your cert"}
 
 type CertError struct {
 	Message string
 }
 
-func (e *CertError) Code() int {
-	return -32099
-}
-
-func (e *CertError) Error() string {
-	return e.Message
-}
+func (e *CertError) Code() int {return custom_CertError}
+func (e *CertError) Error() string {return e.Message}
