@@ -41,7 +41,7 @@ func EncodeReceipt(receipt *types.Receipt) ([]byte, error) {
 
 	localReceipt := &v1_2_types.ReceiptV1_2{
 		Version:           []byte(ReceiptVersion),
-		PostState:         receipt.PostState,
+		PostState:         nil,
 		CumulativeGasUsed: receipt.CumulativeGasUsed,
 		TxHash:            receipt.TxHash,
 		ContractAddress:   receipt.ContractAddress,

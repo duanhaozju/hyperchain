@@ -96,7 +96,7 @@ func checkPermission(env vm.Environment, from, to common.Address, op types.Trans
 
 func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, ret []byte, err error) *types.Receipt {
 	// jvm receipt vmType = 1
-	receipt := types.NewReceipt(nil, big.NewInt(0), 1)
+	receipt := types.NewReceipt(big.NewInt(0), 1)
 	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = txHash.Bytes()
 	receipt.GasUsed = 100000
