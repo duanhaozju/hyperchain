@@ -94,7 +94,7 @@ func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, ga
 	receipt.GasUsed = gas.Int64()
 	receipt.Ret = ret
 	receipt.SetLogs(env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))
-
+	receipt.MakeBloom()
 	if err != nil {
 		if !er.IsValueTransferErr(err) && !er.IsExecContractErr(err) &&! er.IsInvalidInvokePermissionErr(err) {
 			receipt.Status = types.Receipt_FAILED
