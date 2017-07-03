@@ -12,7 +12,8 @@ public class TestTableDesc {
 
     @Test
     public void testToGSON() {
-        TableDesc tableDesc = new TableDesc("table001");
+        TableName tableName = new TableName("namespace001", "cid001", "table001");
+        TableDesc tableDesc = new TableDesc(tableName);
         for (int i = 0; i < 10; i ++) {
             ColumnDesc columnDesc = new ColumnDesc();
             columnDesc.setName("cl" + i);

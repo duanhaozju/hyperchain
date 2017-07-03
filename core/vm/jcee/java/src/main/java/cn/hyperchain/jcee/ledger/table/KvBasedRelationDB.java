@@ -1,3 +1,7 @@
+/**
+ * Hyperchain License
+ * Copyright (C) 2017 The Hyperchain Authors.
+ */
 package cn.hyperchain.jcee.ledger.table;
 
 import cn.hyperchain.jcee.ledger.AbstractLedger;
@@ -10,15 +14,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by wangxiaoyi on 2017/6/29.
- * A relationDB instance is attached to a specific contract
  */
 public class KvBasedRelationDB implements RelationDB {
 
     private static final Logger LOG = Logger.getLogger(KvBasedRelationDB.class);
     private Map<String, Table> tableMap;
     private AbstractLedger ledger;
-    private String namespace;
-    private String cid;
 
     public KvBasedRelationDB(AbstractLedger ledger) {
         this.ledger = ledger;
@@ -27,25 +28,28 @@ public class KvBasedRelationDB implements RelationDB {
 
     @Override
     public boolean CreateTable(TableDesc tableDesc) {
-        String name = tableDesc.getSimpleName();
-        if (tableMap.containsKey(name)) {
-            LOG.error("table " + name + "is existed");
+        String compositeName = tableDesc.getTableName().getCompositeName();
+        if (tableMap.containsKey(compositeName)) {
+            LOG.error("table " + compositeName + "is existed");
             return false;
         }
-        tableMap.put(name, new KvBasedTable(tableDesc));
+        tableMap.put(compositeName, new KvBasedTable(tableDesc));
+        ledger.put(compositeName, tableDesc);
         return true;
     }
 
     @Override
-    public Table getTable(String name) {
+    public Table getTable(TableName name) {
         return tableMap.get(name);
     }
 
     @Override
-    public boolean deleteTable(String name) {
-        //TODO: impl it
-        //1.delete form local cache
-        //2.delete from remote leveldb
+    public boolean deleteTable(TableName name) {
+        String compositeName = name.getCompositeName();
+        if (tableMap.containsKey(compositeName)) {
+            tableMap.remove(compositeName);
+            ledger.delete(compositeName);
+        }
         return false;
     }
 
@@ -58,12 +62,8 @@ public class KvBasedRelationDB implements RelationDB {
         return tables;
     }
 
-    /**
-     * construct a composite table name by namespace contractid and simple table name
-     * @param tableName
-     * @return compositeTableName := namespace_contractid_tableName
-     */
-    public String getCompositeTableName(String tableName) {
-        return namespace + "_" + cid + "_" + tableName;
+    @Override
+    public TableDesc getTableDesc(TableName name) {
+        return tableMap.get(name.getCompositeName()).getDesc();
     }
 }

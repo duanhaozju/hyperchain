@@ -12,6 +12,8 @@ public class TableName {
     private String cid = "";
     private String name = "";
 
+    private static final String TABLE_PREFIX = "kv_table_";
+
     public TableName(String namespace, String cid, String name) {
         this.namespace = namespace;
         this.cid = cid;
@@ -32,11 +34,11 @@ public class TableName {
     }
 
     /**
-     * construct a global unique name with combined namespace cid and name
+     * construct a global unique name with combined namespace cid name and prefix: kv_table_
      * @return composite table name
      */
     public String getCompositeName() {
-        return namespace + "_" + cid + "_" + name;
+        return TABLE_PREFIX + "_" + namespace + "_" + cid + "_" + name;
     }
 
     @Override
@@ -58,5 +60,14 @@ public class TableName {
         result = 31 * result + (getCid() != null ? getCid().hashCode() : 0);
         result = 31 * result + (getName() != null ? getName().hashCode() : 0);
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "TableName{" +
+                "namespace='" + namespace + '\'' +
+                ", cid='" + cid + '\'' +
+                ", name='" + name + '\'' +
+                '}';
     }
 }

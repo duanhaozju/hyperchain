@@ -1,7 +1,12 @@
+/**
+ * Hyperchain License
+ * Copyright (C) 2017 The Hyperchain Authors.
+ */
 package cn.hyperchain.jcee.mock;
 
 import cn.hyperchain.jcee.contract.Event;
 import cn.hyperchain.jcee.ledger.*;
+import cn.hyperchain.jcee.ledger.table.RelationDB;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
@@ -324,5 +329,10 @@ public class MockLedger extends AbstractLedger {
     @Override
     public boolean post(Event event) {
         return false;
+    }
+
+    @Override
+    public RelationDB getDataBase() {
+        return null;
     }
 }

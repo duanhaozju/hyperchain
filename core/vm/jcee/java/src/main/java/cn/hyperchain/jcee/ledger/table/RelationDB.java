@@ -15,9 +15,11 @@ public interface RelationDB {
 
     boolean CreateTable(TableDesc tableDesc);
 
-    Table getTable(String name);
+    Table getTable(TableName name);
 
-    boolean deleteTable(String name);
+    TableDesc getTableDesc(TableName name);
+
+    boolean deleteTable(TableName name);
 
     //list all stored table names
     List<String> listTables();

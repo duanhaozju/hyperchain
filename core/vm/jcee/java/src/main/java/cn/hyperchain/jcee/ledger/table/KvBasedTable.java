@@ -1,3 +1,7 @@
+/**
+ * Hyperchain License
+ * Copyright (C) 2017 The Hyperchain Authors.
+ */
 package cn.hyperchain.jcee.ledger.table;
 
 import java.util.Iterator;
@@ -15,7 +19,7 @@ public class KvBasedTable implements Table {
 
     @Override
     public String getName() {
-        return desc.getSimpleName();
+        return desc.getTableName().getName();
     }
 
     @Override

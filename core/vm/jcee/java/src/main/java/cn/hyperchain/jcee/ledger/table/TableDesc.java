@@ -37,6 +37,10 @@ public class TableDesc {
         return gson.toJson(this);
     }
 
+    public TableName getTableName() {
+        return tableName;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

@@ -7,7 +7,6 @@ package cn.hyperchain.jcee.ledger;
 import cn.hyperchain.jcee.contract.Event;
 import cn.hyperchain.jcee.ledger.table.KvBasedRelationDB;
 import cn.hyperchain.jcee.ledger.table.RelationDB;
-import cn.hyperchain.jcee.mock.MockLedger;
 import cn.hyperchain.jcee.util.Base64Coder;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.jcee.util.Coder;
@@ -423,6 +422,6 @@ public class HyperchainLedger extends AbstractLedger{
 
     @Override
     public RelationDB getDataBase() {
-        return new KvBasedRelationDB();
+        return new KvBasedRelationDB(this);
     }
 }
