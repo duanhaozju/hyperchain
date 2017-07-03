@@ -110,10 +110,11 @@ public class ContractManager {
             logger.error("init contract for " + info.getName() + " faield");
             return false;
         }
-            contract = (ContractTemplate) ins;
-            contract.setCid(info.getCid());
-            contract.setOwner(info.getOwner());
-            contract.setLedger(ledger);
+        contract = (ContractTemplate) ins;
+        contract.setCid(info.getCid());
+        contract.setOwner(info.getOwner());
+        contract.setLedger(ledger);
+        contract.init();
         if (contract != null) {
             ContractHolder holder = new ContractHolder(info, contract);
             addContract(holder);
@@ -134,7 +135,7 @@ public class ContractManager {
             }
             Constructor constructor = clazz.getDeclaredConstructor(argClasses);
             if(constructor != null) {
-               return constructor.newInstance(args);
+                return constructor.newInstance(args);
             }
         } catch (Exception e) {
             e.printStackTrace();

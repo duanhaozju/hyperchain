@@ -44,9 +44,12 @@ public class SimulateBank extends ContractTemplate {
                 return testRangeQuery(args);
             case "testDelete":
                 return testDelete(args);
-            case "testInvokeContract":
+            case "testInvokeContractPass":
                 logger.info("testInvokeContract");
-                return testInvokeContract(args);
+                return testInvokeContractPass(args);
+            case "testInvokeContractReject":
+                logger.info("testInvokeContract");
+                return testInvokeContractReject(args);
             case "testPostEvent":
                 return testPostEvent(args);
             default:
@@ -203,11 +206,18 @@ public class SimulateBank extends ContractTemplate {
         return result(getV.isEmpty());
     }
 
-    public ExecuteResult testInvokeContract(List<String> args) {
+    public ExecuteResult testInvokeContractPass(List<String> args) {
         logger.info(args.toString());
         List<String> arg = new LinkedList<>();
         arg.add("hello, invoke contract!");
-        return invokeContract("global", "bbe2b6412ccf633222374de8958f2acc76cda9c9", "test", arg);
+        return invokeContract("global", "1e548137be17e1a11f0642c9e22dfda64e61fe6d", "test", arg);
+    }
+
+    public ExecuteResult testInvokeContractReject(List<String> args) {
+        logger.info(args.toString());
+        List<String> arg = new LinkedList<>();
+        arg.add("hello, invoke contract!");
+        return invokeContract("global", "1e548137be17e1a11f0642c9e22dfda64e61fe6d", "test", arg);
     }
 
     public ExecuteResult testPostEvent(List<String> args) {

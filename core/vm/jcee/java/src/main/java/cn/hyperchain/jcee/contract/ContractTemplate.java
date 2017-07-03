@@ -12,7 +12,7 @@ import cn.hyperchain.jcee.ledger.AbstractLedger;
 import lombok.*;
 import org.apache.log4j.Logger;
 
-import java.util.List;
+import java.util.*;
 
 //ContractBase which is used as a skeleton of smart contract
 @Data
@@ -24,6 +24,10 @@ public abstract class ContractTemplate {
     private String cid;
     protected AbstractLedger ledger;
     protected Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+
+    private FilterChain filterChain = new FilterChain();
+
+    public void init(){}
 
     /**
      * invoke smart contract method
@@ -51,8 +55,10 @@ public abstract class ContractTemplate {
      * @param args function arguments
      * @return {@link ExecuteResult}
      */
-    protected ExecuteResult invokeContract(String ns, String contractAddr, String func, List<String> args) {
+    protected final ExecuteResult invokeContract(String ns, String contractAddr, String func, List<String> args) {
         //TODO: how to do the authority control
+
+        ContractInfo info = this.getInfo();
         if (ns == null || ns.isEmpty() || contractAddr == null || contractAddr.isEmpty())
             return result(false, "invalid namespace or contract address");
         ContractHandler ch = ContractHandler.getContractHandler();
@@ -64,7 +70,17 @@ public abstract class ContractTemplate {
         if (ct == null) {
             return result(false, "no contract with address: " + contractAddr + "found");
         }
-        return ct.openInvoke(func, args);
+        return ct.checkRuler(func, args,info);
+    }
+
+    protected ExecuteResult checkRuler(String funcName, List<String> args,ContractInfo info){
+
+        String contractAddr = info.getCid();
+
+        if(!filterChain.doFilter(info)){
+            return result(false, "there is no authority to invoke the method "+funcName+ " for contract "+contractAddr);
+        }
+        return openInvoke(funcName,args);
     }
 
     /**

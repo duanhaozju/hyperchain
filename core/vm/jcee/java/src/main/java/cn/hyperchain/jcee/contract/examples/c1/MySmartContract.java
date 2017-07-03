@@ -6,6 +6,7 @@ package cn.hyperchain.jcee.contract.examples.c1;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
+import cn.hyperchain.jcee.contract.FilterChain;
 
 import java.util.List;
 
@@ -19,13 +20,18 @@ public class MySmartContract extends ContractTemplate {
         switch (funcName) {
             case "test": {
                 this.test("invoke method:" + args.get(0));
-                //String name = new String(ledger.get("name".getBytes()));
-                //System.out.println("get name from ledger: " + name);
                 return result(true);
             }
+            case "authority":
+                return authority(args);
+            case "addNsRuler":
+                return addNsRuler(args);
+            case "addCidRuler":
+                return addCidRuler(args);
             default:
                 logger.error("no such method found");
         }
+
         return result(false);
     }
 
@@ -41,18 +47,52 @@ public class MySmartContract extends ContractTemplate {
         switch (funcName) {
             case "test": {
                 this.test("invoke method:" + args.get(0));
-                //String name = new String(ledger.get("name".getBytes()));
-                //System.out.println("get name from ledger: " + name);
                 return result(true);
             }
             default:
-                logger.error("no such method found");
+                logger.error("no such method found or the method cannot be invoked by other contract");
         }
         return result(false);
     }
 
     public void test(String name) {
-//        logger.info(getLedger().getContext().getId());
         logger.info("invoke in test");
+    }
+    public ExecuteResult authority(List<String> args){
+        logger.info("no authority");
+        return result(true);
+    }
+
+
+    public void init(){
+        FilterChain fc = this.getFilterChain();
+
+        NsFilter nsFilter = new NsFilter();
+        nsFilter.addRuler("global");
+
+        CidFilter cidFilter = new CidFilter();
+        cidFilter.addRuler("bbe2b6412ccf633222374de8958f2acc76cda9c9");
+
+        fc.addFilter("namespace",nsFilter);
+        fc.addFilter("cid",cidFilter);
+
+    }
+
+    public ExecuteResult addNsRuler(List<String> args){
+        FilterChain fc = this.getFilterChain();
+        NsFilter nsFilter = (NsFilter)fc.getFilter("namespace");
+        for(String ns:args){
+            nsFilter.addRuler(ns);
+        }
+        return result(true);
+    }
+
+    public ExecuteResult addCidRuler(List<String> args){
+        FilterChain fc = this.getFilterChain();
+        CidFilter cidFilter = (CidFilter) fc.getFilter("cid");
+        for(String cid:args){
+            cidFilter.addRuler(cid);
+        }
+        return result(true);
     }
 }
