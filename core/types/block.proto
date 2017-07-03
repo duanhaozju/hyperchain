@@ -15,6 +15,7 @@ message Block {
 	int64 writeTime = 10;
 	int64 commitTime = 11;
 	int64 evmTime = 12;
+	bytes bloom = 13;
 }
 
 message Blocks{

@@ -3,6 +3,7 @@ package types
 import (
 	"hyperchain/common"
 	"math/big"
+	"github.com/willf/bloom"
 )
 
 //// ReceiptTrans are used to show in web.
@@ -59,6 +60,36 @@ func (r *Receipt) SetLogs(logs Logs) error {
 	}
 	r.Logs = buf
 	return nil
+}
+
+func CreateBloom(receipts []*Receipt) ([]byte, error) {
+	bloom := bloom.New(256 * 8, 3)
+
+	for _, r := range receipts {
+		logs, err := r.RetrieveLogs()
+		if err != nil {
+			return nil, err
+		}
+		for _, log := range logs {
+			bloom.Add(log.Address.Bytes())
+			for _, topic := range log.Topics {
+				bloom.Add(topic.Bytes())
+			}
+		}
+	}
+	return bloom.GobEncode()
+}
+
+func (r *Receipt) BloomFilter() (error, *bloom.BloomFilter) {
+	bloom := bloom.New(256 * 8, 3)
+	if err := bloom.GobDecode(r.GetBloom()); err != nil {
+		return err, nil
+	}
+	return nil, bloom
+}
+
+func BloomLookup(bloom *bloom.BloomFilter, content []byte) bool {
+	return bloom.Test(content)
 }
 
 // Receipts is a wrapper around a Receipt array to implement types.DerivableList.
