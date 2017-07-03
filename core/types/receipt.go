@@ -3,12 +3,13 @@ package types
 import (
 	"hyperchain/common"
 	"math/big"
+	"github.com/willf/bloom"
 )
 
 //// ReceiptTrans are used to show in web.
 type ReceiptTrans struct {
 	Version           string         `json:"version"`
-	PostState         string         `json:"postState"`
+	Bloom             string         `json:"bloom"`
 	CumulativeGasUsed int64          `json:"cumulativeGasUsed"`
 	TxHash            string         `json:"txHash"`
 	ContractAddress   string         `json:"contractAddress"`
@@ -31,7 +32,7 @@ func (receipt Receipt) ToReceiptTrans() (receiptTrans *ReceiptTrans) {
 	return &ReceiptTrans{
 		Version:           string(receipt.Version),
 		GasUsed:           receipt.GasUsed,
-		PostState:         common.BytesToHash(receipt.PostState).Hex(),
+		Bloom:             common.BytesToHash(receipt.Bloom).Hex(),
 		ContractAddress:   common.BytesToAddress(receipt.ContractAddress).Hex(),
 		CumulativeGasUsed: receipt.CumulativeGasUsed,
 		Ret:               common.ToHex(receipt.Ret),
@@ -44,8 +45,8 @@ func (receipt Receipt) ToReceiptTrans() (receiptTrans *ReceiptTrans) {
 }
 
 // NewReceipt creates a barebone transaction receipt, copying the init fields.
-func NewReceipt(root []byte, cumulativeGasUsed *big.Int, vmType int32) *Receipt {
-	return &Receipt{PostState: common.CopyBytes(root), CumulativeGasUsed: cumulativeGasUsed.Int64(), VmType: Receipt_VmType(vmType)}
+func NewReceipt(cumulativeGasUsed *big.Int, vmType int32) *Receipt {
+	return &Receipt{CumulativeGasUsed: cumulativeGasUsed.Int64(), VmType: Receipt_VmType(vmType)}
 }
 
 func (r *Receipt) RetrieveLogs() (Logs, error) {
@@ -59,6 +60,38 @@ func (r *Receipt) SetLogs(logs Logs) error {
 	}
 	r.Logs = buf
 	return nil
+}
+
+func (r *Receipt) MakeBloom() error {
+	bloom := bloom.New(256 * 8, 3)
+	logs, err := r.RetrieveLogs()
+	if err != nil {
+		return err
+	}
+	for _, log := range logs {
+		bloom.Add(log.Address.Bytes())
+		for _, topic := range log.Topics {
+			bloom.Add(topic.Bytes())
+		}
+	}
+	buf, err := bloom.GobEncode()
+	if err != nil {
+		return err
+	}
+	r.Bloom = buf
+	return nil
+}
+
+func (r *Receipt) BloomFilter() (error, *bloom.BloomFilter) {
+	bloom := bloom.New(256 * 8, 3)
+	if err := bloom.GobDecode(r.GetBloom()); err != nil {
+		return err, nil
+	}
+	return nil, bloom
+}
+
+func BloomLookup(bloom *bloom.BloomFilter, content []byte) bool {
+	return bloom.Test(content)
 }
 
 // Receipts is a wrapper around a Receipt array to implement types.DerivableList.

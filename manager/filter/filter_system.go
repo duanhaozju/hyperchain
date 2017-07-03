@@ -5,7 +5,6 @@ import (
 	"hyperchain/common"
 	"hyperchain/manager/event"
 	"time"
-	"hyperchain/core/types"
 	"github.com/op/go-logging"
 )
 
@@ -87,13 +86,11 @@ func (es *EventSystem) eventLoop() {
 	for {
 		select {
 		case ev, active := <-sub.Chan():
-			log.Debugf("start to notify, active = %v", active)
 			if !active { // system stopped
 				return
 			}
 			es.broadcast(index, ev)
 		case f := <-es.installC:
-			log.Debugf("register event %v", f.typ)
 			index[f.typ][f.id] = f
 			close(f.installed)
 		case f := <-es.uninstallC:
@@ -112,9 +109,8 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 	switch ev := obj.Data.(type) {
 	case event.FilterNewBlockEvent:
 		for _, f := range filters[BlocksSubscription] {
-			log.Debugf("block hash: %v", ev.Block.BlockHash)
 			if obj.Time.After(f.created) {
-				f.hashes <- common.BytesToHash(ev.Block.BlockHash)
+				f.data <- common.BytesToHash(ev.Block.BlockHash)
 			}
 		}
 	case event.FilterNewLogEvent:
@@ -123,26 +119,26 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 				// filter logs
 				ret := filterLogs(ev.Logs, &f.crit)
 				if len(ret) != 0 {
-					f.logs <- ret
+					f.data <- ret
 				}
 			}
 		}
 	case event.FilterSnapshotEvent:
 		for _, f := range filters[SnapshotSubscription] {
 			if obj.Time.After(f.created) {
-				f.extra <- ev
+				f.data <- ev
 			}
 		}
 	case event.FilterDeleteSnapshotEvent:
 		for _, f := range filters[DelSnapshotSubscription] {
 			if obj.Time.After(f.created) {
-				f.extra <- ev
+				f.data <- ev
 			}
 		}
 	case event.FilterArchive:
 		for _, f := range filters[ArchiveSubscription] {
 			if obj.Time.After(f.created) {
-				f.extra <- ev
+				f.data <- ev
 			}
 		}
 	case event.FilterExceptionEvent:
@@ -157,7 +153,7 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 						Message:	ev.Exception.Error(),
 						Date:		time.Now(),
 					}
-					f.extra <- exptData
+					f.data <- exptData
 				}
 			}
 		}
@@ -171,38 +167,6 @@ func (es *EventSystem) subscribe(sub *subscription) *Subscription {
 	return &Subscription{ID: sub.id, f: sub, es: es}
 }
 
-func (es *EventSystem) NewBlockSubscription(blockC chan common.Hash, isVerbose bool) *Subscription {
-	sub := &subscription{
-		id:        NewFilterID(),
-		verbose:   isVerbose,
-		typ:       BlocksSubscription,
-		created:   time.Now(),
-		logs:      make(chan []*types.Log),
-		hashes:    blockC,
-		extra:     make(chan interface{}),
-		installed: make(chan struct{}),
-		err:       make(chan error),
-	}
-	return es.subscribe(sub)
-}
-
-func (es *EventSystem) NewLogSubscription(logsCrit FilterCriteria, logC chan []*types.Log) *Subscription {
-	sub := &subscription{
-		id:        NewFilterID(),
-		verbose:   true,
-		typ:       LogsSubscription,
-		created:   time.Now(),
-		// TODO support block tag filter
-		crit:      logsCrit,
-		logs:      logC,
-		hashes:    make(chan common.Hash),
-		extra:     make(chan interface{}),
-		installed: make(chan struct{}),
-		err:       make(chan error),
-	}
-	return es.subscribe(sub)
-}
-
 func (es *EventSystem) NewCommonSubscription(ch chan interface{}, verbose bool, typ Type, crit FilterCriteria) *Subscription {
 	sub := &subscription{
 		id:        NewFilterID(),
@@ -210,9 +174,7 @@ func (es *EventSystem) NewCommonSubscription(ch chan interface{}, verbose bool, 
 		typ:       typ,
 		created:   time.Now(),
 		crit:      crit,
-		logs:      make(chan []*types.Log),
-		hashes:    make(chan common.Hash),
-		extra:     ch,
+		data:      ch,
 		installed: make(chan struct{}),
 		err:       make(chan error),
 	}

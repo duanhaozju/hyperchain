@@ -182,7 +182,6 @@ type ReceiptResult struct {
 	Version         string        `json:"version"`
 	TxHash          string        `json:"txHash"`
 	VmType          string        `json:"vmType"`
-	PostState       string        `json:"postState"`
 	ContractAddress string        `json:"contractAddress"`
 	Ret             string        `json:"ret"`
 	Log             []interface{} `json:"log"`
@@ -204,7 +203,6 @@ func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult
 			Version:         receipt.Version,
 			TxHash:          receipt.TxHash,
 			VmType:          receipt.VmType,
-			PostState:       receipt.PostState,
 			ContractAddress: receipt.ContractAddress,
 			Ret:             receipt.Ret,
 			Log:             logs,

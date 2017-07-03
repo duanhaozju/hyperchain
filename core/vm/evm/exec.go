@@ -88,13 +88,13 @@ func checkPermission(env vm.Environment, from, to common.Address, op types.Trans
 
 
 func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, gasRemained, gas *big.Int, ret []byte, err error) *types.Receipt {
-	receipt := types.NewReceipt(nil, gasRemained, 0)
+	receipt := types.NewReceipt(gasRemained, 0)
 	receipt.ContractAddress = addr.Bytes()
 	receipt.TxHash = txHash.Bytes()
 	receipt.GasUsed = gas.Int64()
 	receipt.Ret = ret
 	receipt.SetLogs(env.Db().GetLogs(common.BytesToHash(receipt.TxHash)))
-
+	receipt.MakeBloom()
 	if err != nil {
 		if !er.IsValueTransferErr(err) && !er.IsExecContractErr(err) &&! er.IsInvalidInvokePermissionErr(err) {
 			receipt.Status = types.Receipt_FAILED
