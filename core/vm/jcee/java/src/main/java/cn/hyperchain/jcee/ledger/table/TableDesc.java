@@ -15,39 +15,26 @@ import java.util.Set;
  */
 public class TableDesc {
 
-    private String name;
-
+    private TableName tableName;
     private Set<ColumnDesc> columnDescSet;
 
     public TableDesc() {
-        name = "defaultName";
+        tableName = new TableName("", "", "");
         columnDescSet = new HashSet<>();
     }
 
-    public TableDesc(String name) {
+    public TableDesc(TableName name) {
         this();
-        this.name = name;
+        this.tableName = name;
     }
 
     public void AddColumn(ColumnDesc columnDesc) {
         columnDescSet.add(columnDesc);
     }
 
-    @Override
-    public String toString() {
-        return "TableDesc{" +
-                "name='" + name + '\'' +
-                ", columnDescSet=" + columnDescSet +
-                '}';
-    }
-
     public String toJSON() {
         Gson gson = new Gson();
         return gson.toJson(this);
-    }
-
-    public String getName() {
-        return name;
     }
 
     @Override
@@ -57,14 +44,22 @@ public class TableDesc {
 
         TableDesc tableDesc = (TableDesc) o;
 
-        if (name != null ? !name.equals(tableDesc.name) : tableDesc.name != null) return false;
+        if (tableName != null ? !tableName.equals(tableDesc.tableName) : tableDesc.tableName != null) return false;
         return columnDescSet != null ? columnDescSet.equals(tableDesc.columnDescSet) : tableDesc.columnDescSet == null;
     }
 
     @Override
     public int hashCode() {
-        int result = name != null ? name.hashCode() : 0;
+        int result = tableName != null ? tableName.hashCode() : 0;
         result = 31 * result + (columnDescSet != null ? columnDescSet.hashCode() : 0);
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "TableDesc{" +
+                "tableName=" + tableName +
+                ", columnDescSet=" + columnDescSet +
+                '}';
     }
 }

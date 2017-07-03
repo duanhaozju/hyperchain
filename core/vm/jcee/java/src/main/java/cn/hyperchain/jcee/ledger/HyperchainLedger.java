@@ -5,6 +5,8 @@
 package cn.hyperchain.jcee.ledger;
 
 import cn.hyperchain.jcee.contract.Event;
+import cn.hyperchain.jcee.ledger.table.KvBasedRelationDB;
+import cn.hyperchain.jcee.ledger.table.RelationDB;
 import cn.hyperchain.jcee.mock.MockLedger;
 import cn.hyperchain.jcee.util.Base64Coder;
 import cn.hyperchain.jcee.util.Bytes;
@@ -125,7 +127,6 @@ public class HyperchainLedger extends AbstractLedger{
     public boolean delete(String key) {
         return delete(key.getBytes());
     }
-
 
     @Override
     public boolean put(byte[] key, boolean value) {
@@ -420,4 +421,8 @@ public class HyperchainLedger extends AbstractLedger{
         }
     }
 
+    @Override
+    public RelationDB getDataBase() {
+        return new KvBasedRelationDB();
+    }
 }

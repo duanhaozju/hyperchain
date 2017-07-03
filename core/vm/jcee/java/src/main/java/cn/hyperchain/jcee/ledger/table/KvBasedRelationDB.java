@@ -1,5 +1,6 @@
 package cn.hyperchain.jcee.ledger.table;
 
+import cn.hyperchain.jcee.ledger.AbstractLedger;
 import org.apache.log4j.Logger;
 
 import java.util.LinkedList;
@@ -9,19 +10,24 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by wangxiaoyi on 2017/6/29.
+ * A relationDB instance is attached to a specific contract
  */
 public class KvBasedRelationDB implements RelationDB {
 
     private static final Logger LOG = Logger.getLogger(KvBasedRelationDB.class);
     private Map<String, Table> tableMap;
+    private AbstractLedger ledger;
+    private String namespace;
+    private String cid;
 
-    public KvBasedRelationDB() {
+    public KvBasedRelationDB(AbstractLedger ledger) {
+        this.ledger = ledger;
         tableMap = new ConcurrentHashMap<>();
     }
 
     @Override
     public boolean CreateTable(TableDesc tableDesc) {
-        String name = tableDesc.getName();
+        String name = tableDesc.getSimpleName();
         if (tableMap.containsKey(name)) {
             LOG.error("table " + name + "is existed");
             return false;
@@ -50,5 +56,14 @@ public class KvBasedRelationDB implements RelationDB {
             tables.add(name);
         }
         return tables;
+    }
+
+    /**
+     * construct a composite table name by namespace contractid and simple table name
+     * @param tableName
+     * @return compositeTableName := namespace_contractid_tableName
+     */
+    public String getCompositeTableName(String tableName) {
+        return namespace + "_" + cid + "_" + tableName;
     }
 }

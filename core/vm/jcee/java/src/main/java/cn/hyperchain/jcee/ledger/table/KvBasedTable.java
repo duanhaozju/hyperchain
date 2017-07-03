@@ -15,7 +15,7 @@ public class KvBasedTable implements Table {
 
     @Override
     public String getName() {
-        return desc.getName();
+        return desc.getSimpleName();
     }
 
     @Override
