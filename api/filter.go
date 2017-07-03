@@ -259,7 +259,7 @@ func (api *PublicFilterAPI) UnSubscription(id string) error {
 func (api *PublicFilterAPI) GetLogs(crit flt.FilterCriteria) (interface{}, error) {
 	err, genesis := edb.GetGenesisTag(api.namespace)
 	if err != nil {
-		return nil, &common.InternalServerErr{Message: "obtain genesis tag failed"}
+		return nil, &common.CallbackError{Message: "obtain genesis tag failed"}
 	}
 	head := edb.GetHeightOfChain(api.namespace)
 

@@ -195,13 +195,6 @@ type SnapshotErr struct {
 func (e *SnapshotErr) Code() int {return custom_SnapshotError}
 func (e *SnapshotErr) Error() string {return e.Message}
 
-type InternalServerErr struct {
-	Message string
-}
-
-func (e *InternalServerErr) Code() int {return custom_InternalServerError}
-func (e *InternalServerErr) Error() string {return e.Message}
-
 type UnauthorizedError struct {}
 
 func (e *UnauthorizedError) Code() int {return custom_UnauthorizedError}
