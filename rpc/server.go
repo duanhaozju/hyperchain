@@ -328,7 +328,7 @@ func (s *Server) handleChannelReq(req *common.RPCRequest) interface{} {
 				if response.IsUnsub {
 					subid := response.Reply.(common.ID)
 					if err := notifier.Unsubscribe(subid); err != nil {
-						return s.CreateErrorResponse(response.Id, response.Namespace, &common.CallbackError{Message: err.Error()})
+						return s.CreateErrorResponse(response.Id, response.Namespace, &common.SubNotExistError{Message: err.Error()})
 					}
 					return s.CreateResponse(response.Id, response.Namespace, true)
 				} else {

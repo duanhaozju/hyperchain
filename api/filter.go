@@ -339,55 +339,22 @@ func returnException(data []interface{}) []event.FilterExceptionEvent {
 // Block creates a subscription that send a notification each time when a new block is appended to the chain.
 func (api *PublicFilterAPI) Block(ctx context.Context) (common.ID, error) {
 
-	api.filtersMu.Lock()
-	defer api.filtersMu.Unlock()
-
 	api.log.Debug("ready to deal with newBlock event request")
-	common.CtxCh <- ctx
-	subChs := common.GetSubChs(ctx)
-
-	select {
-	case err := <- subChs.Err:
-		return common.ID(""), err
-	case rpcSub := <- subChs.SubscriptionCh:
-		api.log.Debugf("receive subscription %v", rpcSub.ID)
-
-		go func() {
-
-			blockCh   := make(chan interface{})
-			blockSub := api.events.NewCommonSubscription(blockCh, false, flt.BlocksSubscription, flt.FilterCriteria{})
-
-			for {
-				select {
-				case h := <-blockCh:
-					payload := common.NotifyPayload{
-						SubID: rpcSub.ID,
-						Data:  h,
-					}
-
-					subChs.NotifyDataCh <- payload
-				case <-rpcSub.Err():	 // unsubscribe
-					blockSub.Unsubscribe()
-					return
-				case <-subChs.Closed(): // connection close
-					api.log.Debug("the websocket connection closed, release resource")
-					blockSub.Unsubscribe()
-					return
-				}
-			}
-		}()
-
-		return rpcSub.ID, nil
-	}
+	return api.handleWSSubscribe(ctx, flt.BlocksSubscription, flt.FilterCriteria{})
 }
 
 // Exception creates a subscription that send a notification each time when exception is threw.
 func (api *PublicFilterAPI) Exception(ctx context.Context, crit flt.FilterCriteria) (common.ID, error) {
 
+	api.log.Debug("ready to deal with newException event request")
+	return api.handleWSSubscribe(ctx, flt.ExceptionSubscription, crit)
+}
+
+func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, typ flt.Type, crit flt.FilterCriteria) (common.ID, error) {
+
 	api.filtersMu.Lock()
 	defer api.filtersMu.Unlock()
 
-	api.log.Debug("ready to deal with newException event request")
 	common.CtxCh <- ctx
 	subChs := common.GetSubChs(ctx)
 
@@ -400,12 +367,12 @@ func (api *PublicFilterAPI) Exception(ctx context.Context, crit flt.FilterCriter
 		go func() {
 
 			ch     := make(chan interface{})
-			sub    := api.events.NewCommonSubscription(ch, false, flt.ExceptionSubscription, crit)
+			sub    := api.events.NewCommonSubscription(ch, false, typ, crit)
 
 			for {
 				select {
 				case d := <-ch:
-					api.log.Debugf("receive exception")
+					api.log.Debugf("receive data")
 					payload := common.NotifyPayload{
 						SubID: rpcSub.ID,
 						Data:  d,

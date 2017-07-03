@@ -196,6 +196,9 @@ func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, comm
 				log.Debug(fmt.Sprintf("Unable to parse subscription method: %v\n", err))
 				return nil, false, &common.InvalidRequestError{Message: "Unable to parse subscription request"}
 			}
+			if subscribeMethod[0] == "" {
+				return nil, false, &common.InvalidParamsError{Message: "Please give a subscription name as the first param"}
+			}
 
 			reqs[0].Service, reqs[0].Method = strings.TrimSuffix(in.Method, SubscribeMethodSuffix), subscribeMethod[0]
 			reqs[0].Params = in.Payload
