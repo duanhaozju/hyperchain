@@ -62,24 +62,22 @@ func (r *Receipt) SetLogs(logs Logs) error {
 	return nil
 }
 
-func (r *Receipt) MakeBloom() error {
+func CreateBloom(receipts []*Receipt) ([]byte, error) {
 	bloom := bloom.New(256 * 8, 3)
-	logs, err := r.RetrieveLogs()
-	if err != nil {
-		return err
-	}
-	for _, log := range logs {
-		bloom.Add(log.Address.Bytes())
-		for _, topic := range log.Topics {
-			bloom.Add(topic.Bytes())
+
+	for _, r := range receipts {
+		logs, err := r.RetrieveLogs()
+		if err != nil {
+			return nil, err
+		}
+		for _, log := range logs {
+			bloom.Add(log.Address.Bytes())
+			for _, topic := range log.Topics {
+				bloom.Add(topic.Bytes())
+			}
 		}
 	}
-	buf, err := bloom.GobEncode()
-	if err != nil {
-		return err
-	}
-	r.Bloom = buf
-	return nil
+	return bloom.GobEncode()
 }
 
 func (r *Receipt) BloomFilter() (error, *bloom.BloomFilter) {

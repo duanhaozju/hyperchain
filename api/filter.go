@@ -11,6 +11,7 @@ import (
 	"hyperchain/manager/event"
 	"hyperchain/core/types"
 	"context"
+	"fmt"
 )
 
 type PublicFilterAPI struct {
@@ -253,6 +254,35 @@ func (api *PublicFilterAPI) UnSubscription(id string) error {
 		return nil
 	}
 	return &common.SubNotExistError{Message: "required subscription does not existed or has expired"}
+}
+
+func (api *PublicFilterAPI) GetLogs(crit flt.FilterCriteria) (interface{}, error) {
+	err, genesis := edb.GetGenesisTag(api.namespace)
+	if err != nil {
+		return nil, &common.InternalServerErr{Message: "obtain genesis tag failed"}
+	}
+	head := edb.GetHeightOfChain(api.namespace)
+
+	var beginNo, endNo uint64
+	if crit.FromBlock == nil || crit.FromBlock.Uint64() < genesis {
+		beginNo = genesis
+	} else {
+		beginNo = crit.FromBlock.Uint64()
+	}
+
+	if crit.ToBlock == nil || crit.ToBlock.Uint64() > head {
+		endNo = head
+	} else {
+		endNo = crit.ToBlock.Uint64()
+	}
+
+	if beginNo >= endNo {
+		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("invalid params. current genesis %d, current head %d", genesis, head)}
+	}
+
+	searcher := flt.NewLogSearcher(beginNo, endNo, crit.Addresses, crit.Topics, api.namespace)
+	return types.Logs(searcher.Search()).ToLogsTrans(types.Receipt_EVM), nil
+
 }
 
 // returnHashes is a helper that will return an empty hash array case the given hash array is nil,

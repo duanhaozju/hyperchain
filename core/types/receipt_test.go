@@ -25,9 +25,9 @@ func TestReceipt_MakeBloom(t *testing.T) {
 		},
 	}
 
-	receipt := Receipt{}
+	receipt := &Receipt{}
 	receipt.SetLogs(logs)
-	receipt.MakeBloom()
+	receipt.Bloom, _ = CreateBloom([]*Receipt{receipt})
 
 	positive := [][]byte{
 		common.LeftPadBytes([]byte("topic1"), 32),
