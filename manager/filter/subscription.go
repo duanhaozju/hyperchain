@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"sync"
 	"time"
-	"hyperchain/core/types"
 )
 
 type subscription struct {
@@ -14,9 +13,7 @@ type subscription struct {
 	typ       Type
 	created   time.Time
 	crit      FilterCriteria
-	logs      chan []*types.Log
-	hashes    chan common.Hash
-	extra     chan interface{}
+	data      chan interface{}
 	installed chan struct{} // closed when the filter is installed
 	err       chan error    // closed when the filter is uninstalled
 }
@@ -62,8 +59,7 @@ func (sub *Subscription) Unsubscribe() {
 			select {
 			case sub.es.uninstallC <- sub.f:
 				break uninstallLoop
-			case <-sub.f.logs:
-			case <-sub.f.hashes:
+			case <-sub.f.data:
 			}
 		}
 

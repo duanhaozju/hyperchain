@@ -211,6 +211,7 @@ func (executor *Executor) persistReceipts(batch db.Batch, transaction []*types.T
 			log.BlockNumber = blockNumber
 		}
 		receipt.SetLogs(logs)
+		filterLogs = append(filterLogs, logs...)
 
 		if transaction[idx].Version != nil {
 			if err, _ := edb.PersistReceipt(batch, receipt, false, false, string(transaction[idx].Version)); err != nil {

@@ -17,8 +17,6 @@ var (
 type Filter struct {
 	typ      Type
 	deadline *time.Timer // filter is inactiv when deadline triggers
-	hashes   []common.Hash
-	logs     []*types.Log
 	data     []interface{}
 	crit     FilterCriteria
 	s        *Subscription // associated subscription in event system
@@ -38,14 +36,6 @@ func NewFilter(typ Type, sub *Subscription, crit FilterCriteria) *Filter {
 */
 func (flt *Filter) GetDeadLine() *time.Timer {
 	return flt.deadline
-}
-
-func (flt *Filter) GetHashes() []common.Hash {
-	return flt.hashes
-}
-
-func (flt *Filter) GetLogs() []*types.Log {
-	return flt.logs
 }
 
 func (flt *Filter) GetData() []interface{} {
@@ -71,22 +61,6 @@ func (flt *Filter) GetVerbose() bool {
 /*
 	Setter
 */
-
-func (flt *Filter) AddHash(hash common.Hash) {
-	flt.hashes = append(flt.hashes, hash)
-}
-
-func (flt *Filter) ClearHash() {
-	flt.hashes = nil
-}
-
-func (flt *Filter) AddLog(log []*types.Log) {
-	flt.logs = append(flt.logs, log...)
-}
-
-func (flt *Filter) Clearlog() {
-	flt.logs = nil
-}
 
 func (flt *Filter) AddData(d interface{}) {
 	flt.data = append(flt.data, d)
@@ -193,6 +167,5 @@ func includes(addresses []common.Address, a common.Address) bool {
 			return true
 		}
 	}
-
 	return false
 }

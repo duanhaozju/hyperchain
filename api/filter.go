@@ -62,8 +62,8 @@ func (api *PublicFilterAPI) timeoutLoop() {
 // It is part of the filter package since polling goes with getFilterChanges.
 func (api *PublicFilterAPI) NewBlockSubscription(isVerbose bool) string {
 	var (
-		blockC   = make(chan common.Hash)
-		blockSub = api.events.NewBlockSubscription(blockC, isVerbose)
+		blockCh  = make(chan interface{})
+		blockSub = api.events.NewCommonSubscription(blockCh, isVerbose, flt.BlocksSubscription, flt.FilterCriteria{})
 	)
 	api.filtersMu.Lock()
 	api.filters[blockSub.ID] = flt.NewFilter(flt.BlocksSubscription, blockSub, flt.FilterCriteria{})
@@ -72,10 +72,10 @@ func (api *PublicFilterAPI) NewBlockSubscription(isVerbose bool) string {
 	go func() {
 		for {
 			select {
-			case b := <-blockC:
+			case b := <-blockCh:
 				api.filtersMu.Lock()
 				if f, found := api.filters[blockSub.ID]; found {
-					f.AddHash(b)
+					f.AddData(b)
 				}
 				api.filtersMu.Unlock()
 			case <-blockSub.Err():
@@ -92,8 +92,8 @@ func (api *PublicFilterAPI) NewBlockSubscription(isVerbose bool) string {
 
 func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string {
 	var (
-		logC     = make(chan []*types.Log)
-		logSub   = api.events.NewLogSubscription(crit, logC)
+		logCh    = make(chan interface{})
+		logSub   = api.events.NewCommonSubscription(logCh, false, flt.LogsSubscription, crit)
 	)
 	api.filtersMu.Lock()
 	api.filters[logSub.ID] = flt.NewFilter(flt.LogsSubscription, logSub, crit)
@@ -102,10 +102,10 @@ func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string
 	go func() {
 		for {
 			select {
-			case b := <-logC:
+			case b := <-logCh:
 				api.filtersMu.Lock()
 				if f, found := api.filters[logSub.ID]; found {
-					f.AddLog(b)
+					f.AddData(b)
 				}
 				api.filtersMu.Unlock()
 			case <-logSub.Err():
@@ -147,6 +147,7 @@ func (api *PublicFilterAPI) NewSnapshotSubscription() string {
 	}()
 	return sub.ID
 }
+
 func (api *PublicFilterAPI) NewExceptionSubscription(crit flt.FilterCriteria) string {
 	var (
 		ch     = make(chan interface{})
@@ -198,9 +199,11 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 		case flt.BlocksSubscription:
 			if f.GetVerbose() {
 				var ret []*BlockResult
-				hashes := f.GetHashes()
-				defer f.ClearHash()
-				for _, hash := range hashes {
+				hashes := f.GetData()
+				defer f.ClearData()
+				for _, tmp := range hashes {
+					hash, ok := tmp.(common.Hash)
+					if !ok { continue }
 					block, err := edb.GetBlock(api.namespace, hash.Bytes())
 					if err != nil {
 						api.log.Warningf("missing block data (#%s)", hash.Hex())
@@ -214,13 +217,13 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 				}
 				return ret, nil
 			} else {
-				hashes := f.GetHashes()
-				defer f.ClearHash()
+				hashes := f.GetData()
+				defer f.ClearData()
 				return returnHashes(hashes), nil
 			}
 		case flt.LogsSubscription:
-			logs := f.GetLogs()
-			defer f.Clearlog()
+			logs := f.GetData()
+			defer f.ClearData()
 			return returnLogs(logs), nil
 		case flt.SnapshotSubscription:
 			datas := f.GetData()
@@ -254,22 +257,34 @@ func (api *PublicFilterAPI) UnSubscription(id string) error {
 
 // returnHashes is a helper that will return an empty hash array case the given hash array is nil,
 // otherwise the given hashes array is returned.
-func returnHashes(hashes []common.Hash) []common.Hash {
+func returnHashes(hashes []interface{}) []common.Hash {
 	if hashes == nil {
+		// Short circuit if hashes is empty
 		return []common.Hash{}
 	}
-	return hashes
+	var ret []common.Hash
+	for _, tmp := range hashes {
+		if hash, ok := tmp.(common.Hash); ok {
+			ret = append(ret, hash)
+		}
+	}
+	return ret
 }
 
 // returnLogs is a helper that will return an empty log array in case the given logs array is nil,
 // otherwise the given logs array is returned.
-func returnLogs(logs []*types.Log) []types.LogTrans {
+func returnLogs(logs []interface{}) []types.LogTrans {
 	if logs == nil {
+		// Short circuit if logs is empty
 		return []types.LogTrans{}
 	}
-	_logs := types.Logs(logs)
-	// TODO
-	return _logs.ToLogsTrans(types.Receipt_EVM)
+	var ret types.Logs
+	for _, tmp := range logs {
+		if log, ok := tmp.([]*types.Log); ok {
+			ret = append(ret, log...)
+		}
+	}
+	return ret.ToLogsTrans(types.Receipt_EVM)
 }
 
 func returnException(data []interface{}) []event.FilterExceptionEvent {
@@ -309,13 +324,12 @@ func (api *PublicFilterAPI) Block(ctx context.Context) (common.ID, error) {
 
 		go func() {
 
-			blockC   := make(chan common.Hash)
-			blockSub := api.events.NewBlockSubscription(blockC, false)
+			blockCh   := make(chan interface{})
+			blockSub := api.events.NewCommonSubscription(blockCh, false, flt.BlocksSubscription, flt.FilterCriteria{})
 
 			for {
 				select {
-				case h := <-blockC:
-					api.log.Debugf("receive block %v", h.Hex())
+				case h := <-blockCh:
 					payload := common.NotifyPayload{
 						SubID: rpcSub.ID,
 						Data:  h,
