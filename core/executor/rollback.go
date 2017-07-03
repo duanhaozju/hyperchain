@@ -5,8 +5,6 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
-	"fmt"
-	"hyperchain/manager/exception"
 )
 
 // reset blockchain to a stable checkpoint status when `viewchange` occur
@@ -35,10 +33,7 @@ func (executor *Executor) Rollback(ev event.VCResetEvent) {
 	batch.Write()
 	executor.initDemand(ev.SeqNo)
 	executor.informConsensus(NOTIFY_VC_DONE, protos.VcResetDone{SeqNo: ev.SeqNo})
-	executor.helper.PostExternal(event.FilterExceptionEvent{
-		Module:    exception.ExceptionModule_Executor,
-		Exception: exception.ExecutorViewchangeError{Msg: fmt.Sprintf("requried to reset status to %d", ev.SeqNo - 1)},
-	})
+	NotifyViewChange(executor.helper, ev.SeqNo)
 }
 
 // CutdownBlock remove a block and reset blockchain status to the last status.
