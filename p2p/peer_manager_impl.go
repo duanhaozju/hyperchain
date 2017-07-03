@@ -206,7 +206,7 @@ func (pmgr *peerManagerImpl) broadcast(msgType pb.MsgType,payload []byte) {
 			m := pb.NewMsg(msgType,payload)
 			_,err := peer.Chat(m)
 			if err != nil{
-				pmgr.logger.Errorf("hostname [%s](%s) chat err: send self %s \n",peer.hostname,peer.local.Hostname,err.Error())
+				pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s \n",peer.hostname,peer.local.Hostname,err.Error())
 			}
 		}(p)
 

@@ -246,10 +246,10 @@ func (hn *HyperNet)ConnectByAddr(hostname,addr string) error{
 		oldClient.(*Client).Close()
 		hn.hostClientMap.Remove(hostname)
 	}
-	err = client.Connect(nil)
-	if err != nil{
-		return err
-	}
+	//err = client.Connect(nil)
+	//if err != nil{
+	//	return err
+	//}
 	hn.hostClientMap.Set(hostname,client)
 	logger.Infof("success connect to %s \n",hostname)
 	return nil
@@ -270,10 +270,10 @@ func (hn *HyperNet)Connect(hostname string) error{
 		oldClient.(*Client).Close()
 		hn.hostClientMap.Remove(hostname)
 	}
-	err = client.Connect(nil)
-	if err != nil{
-		return err
-	}
+	//err = client.Connect(nil)
+	//if err != nil{
+	//	return err
+	//}
 	hn.hostClientMap.Set(hostname,client)
 	logger.Infof("success connect to %s \n",hostname)
 	return nil
@@ -284,12 +284,8 @@ func (hn *HyperNet)Connect(hostname string) error{
 //TODO and cancel the retry process of this hostname
 func (hn *HyperNet)DisConnect(hostname string)(err  error){
 	if client, ok := hn.hostClientMap.Get(hostname);ok{
-		err = client.(*Client).Close()
+		client.(*Client).Close()
 		hn.hostClientMap.Remove(hostname)
-	}
-	if err != nil {
-		logger.Errorf("disconnect %s with somewrong, err: %s",hostname,err.Error())
-		return
 	}
 	logger.Infof("disconnect %s successfully \n",hostname)
   	return

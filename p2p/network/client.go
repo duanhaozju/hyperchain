@@ -9,20 +9,15 @@ import (
 	"golang.org/x/net/context"
 	"time"
 	"github.com/pkg/errors"
-	"hyperchain/p2p/utils"
 	"github.com/terasum/pool"
 )
 
 type Client struct {
 	addr string
 	sec *Sec
-	conn *grpc.ClientConn
 	connPool pool.Pool
-	client ChatClient
 	MsgChan chan *pb.Message
 	hts hts.HTS
-	connCreator func() (interface{}, error)
-	connCloser  func(v interface{}) error
 }
 
 
@@ -85,48 +80,46 @@ func NewClient(addr string,sec *Sec) (*Client,error){
 	return &Client{
 		MsgChan: make(chan *pb.Message,100000),
 		addr: addr,
-		connCreator:connCreator,
-		connCloser:connCloser,
 		connPool:p,
 		sec: sec,
 	},nil
 }
 
-func(c *Client)Connect(client ChatClient) error{
-	if client != nil{
-		c.client = client
-		return nil
-	}
+//func(c *Client)Connect(client ChatClient) error{
+//	if client != nil{
+//		c.client = client
+//		return nil
+//	}
+//
+//	//get a connection from pool
+//	v, err := c.connPool.Get()
+//	if err != nil {
+//		logger.Errorf("cannot get a connection from connection pool: %s \n",c.addr)
+//		fmt.Printf("err: %v",err)
+//		return err
+//	}
+//	//do something
+//	conn:=v.(*grpc.ClientConn)
+//	c.client = NewChatClient(conn)
+//	return nil
+//}
 
-	//get a connection from pool
-	v, err := c.connPool.Get()
-	if err != nil {
-		logger.Errorf("cannot get a connection from connection pool: %s \n",c.addr)
-		fmt.Printf("err: %v",err)
-		return err
-	}
-	//do something
-	conn:=v.(*grpc.ClientConn)
-	c.conn = conn
-	c.client = NewChatClient(conn)
-	return nil
-}
-
-func(c *Client)Close() error{
-	if c.conn != nil{
-		return c.conn.Close()
-	}else{
-		return nil
-	}
+func(c *Client)Close(){
+	c.connPool.Release()
 }
 
 
 func(c *Client)Chat() (error){
-	if c.client == nil{
-		logger.Warningf("the client is nil %v \n",c.client)
-		return nil
+	connv,err :=c.connPool.Get()
+	if err !=  nil{
+		logger.Warningf(" cannot get the conn from connection pool (%v) \n",c.addr)
+		return errors.New(fmt.Sprintf("cannot get the conn from connection pool (%v) \n",c.addr))
 	}
-	stream,err := c.client.Chat(context.Background())
+	conn := connv.(*grpc.ClientConn)
+	client := NewChatClient(conn)
+	//put back the conn into the pool
+	defer c.connPool.Put(conn)
+	stream,err := client.Chat(context.Background())
 	if err != nil{
 		logger.Warningf("cannot create stream! %v \n" ,err)
 		return err
@@ -140,20 +133,32 @@ func(c *Client)Chat() (error){
 	}
 	return nil
 }
+
 // Greeting doube arrow greeting message transfer
 func(c *Client)Greeting(in *pb.Message) (*pb.Message, error){
-	if c.client == nil{
-		logger.Warningf("the client is nil %v \n",c.client)
-		return nil,errors.New(fmt.Sprintf("the client is nil %v \n",c.client))
+	connv,err :=c.connPool.Get()
+	if err !=  nil{
+		logger.Warningf(" cannot get the conn from connection pool (%v) \n",c.addr)
+		return nil,errors.New(fmt.Sprintf("cannot get the conn from connection pool (%v) \n",c.addr))
 	}
-	in.From.Extend.IP =[]byte(utils.GetLocalIP())
-	return c.client.Greeting(context.Background(),in)
+	conn := connv.(*grpc.ClientConn)
+	client := NewChatClient(conn)
+	//put back the conn into the pool
+	defer c.connPool.Put(conn)
+	return client.Greeting(context.Background(),in)
 }
+
 // Whisper Transfer the the node health information
 func(c *Client)Whisper(in *pb.Message) (*pb.Message, error){
-	if c.client == nil{
-		logger.Warningf("the client is nil %v \n",c.client)
-		return nil,errors.New(fmt.Sprintf("the client is nil %v \n",c.client))
+	// get client from conn pool
+	connv,err :=c.connPool.Get()
+	if err !=  nil{
+		logger.Warningf(" cannot get the conn from connection pool (%v) \n",c.addr)
+		return nil,errors.New(fmt.Sprintf("cannot get the conn from connection pool (%v) \n",c.addr))
 	}
-	return c.client.Whisper(context.Background(),in)
+	conn := connv.(*grpc.ClientConn)
+	client := NewChatClient(conn)
+	//put back the conn into the pool
+	defer c.connPool.Put(conn)
+	return client.Whisper(context.Background(),in)
 }
