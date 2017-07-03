@@ -3,6 +3,9 @@ package network
 import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"github.com/spf13/viper"
+	"hyperchain/common"
+	"github.com/pkg/errors"
 )
 
 type Sec struct {
@@ -15,18 +18,31 @@ type Sec struct {
 
 
 //NewSec return a new sec options
-func NewSec(enableTls bool,tlsCA string, tlsServerHostOverride string, tlsCert string, tlsCertPriv string) (*Sec,error){
-	//check node
+func NewSec(config *viper.Viper) (*Sec,error){
+	enableTLS  := config.GetBool("p2p.enableTLS")
+	tlsCA  := config.GetString("p2p.tlsCA")
+	tlsServerHostOverride := config.GetString("p2p.tlsServerHostOverride")
+	tlsCert := config.GetString("p2p.tlsCert")
+	tlsCertPriv := config.GetString("p2p.tlsCertPriv")
 
-
+	//check the file is exist or not
+	if enableTLS && !common.FileExist(tlsCA) {
+		return nil,errors.New("tlsCA file not exist")
+	}
+	if  enableTLS && !common.FileExist(tlsCert) {
+		return nil,errors.New("tlsCert file not exist")
+	}
+	if  enableTLS && !common.FileExist(tlsCertPriv) {
+		return nil,errors.New("tlsCertPriv file not exist")
+	}
 
 	return &Sec{
-		enableTls: enableTls,
+		enableTls: enableTLS,
 		tlsCA:tlsCA,
 		tlsCert:tlsCert,
 		tlsCertPriv:tlsCertPriv,
 		tlsServerHostOverride:tlsServerHostOverride,
-	}
+	},nil
 }
 
 

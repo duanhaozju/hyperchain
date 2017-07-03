@@ -16,13 +16,15 @@ type Server struct {
 	// different filed has different different solts
 	slots *msg.MsgSlots
 	hostchan chan [2]string
+	sec *Sec
 }
 
-func NewServer(hostname string,cn chan [2]string) *Server{
+func NewServer(hostname string,cn chan [2]string,sec *Sec) *Server{
 	return &Server{
 		hostname:hostname,
 		slots:msg.NewMsgSlots(),
 		hostchan:cn,
+		sec:sec,
 	}
 }
 
@@ -36,7 +38,7 @@ func (s *Server) StartServer(port string) error {
 	if err != nil {
 		return err
 	}
-	s.server = grpc.NewServer(grpc.MaxMsgSize())
+	s.server = grpc.NewServer(s.sec.GetGrpcServerOpts()...)
 	if s.server == nil{
 		return errors.New("s.server is nil, cannot initialize a grpc.server")
 	}

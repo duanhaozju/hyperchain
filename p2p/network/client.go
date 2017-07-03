@@ -1,19 +1,21 @@
 package network
 
+import "hyperchain/p2p/hts"
+
 import (
-	"google.golang.org/grpc"
+	grpc "google.golang.org/grpc"
 	pb "hyperchain/p2p/message"
 	"fmt"
 	"golang.org/x/net/context"
 	"time"
-	"hyperchain/p2p/hts"
 	"github.com/pkg/errors"
-	"github.com/silenceper/pool"
 	"hyperchain/p2p/utils"
+	"github.com/terasum/pool"
 )
 
 type Client struct {
 	addr string
+	sec *Sec
 	conn *grpc.ClientConn
 	connPool pool.Pool
 	client ChatClient
@@ -25,7 +27,7 @@ type Client struct {
 
 
 //connCreator implements the Hyper Transport Layer security
-func connCreator(addr string)(interface{},error){
+func connCreator(addr string,options []grpc.DialOption)(interface{},error){
 	/*
 	General key agree process
 	client                         server
@@ -56,12 +58,16 @@ func connCreator(addr string)(interface{},error){
 
 
 	*/
-	return grpc.Dial(addr,grpc.WithInsecure())
+	return grpc.Dial(addr,options...)
 }
 
-func NewClient(addr string) (*Client,error){
-	connCreator := func(endpoint string) (interface{}, error) { }
-	connCloser  := func(v interface{}) error { return v.(*grpc.ClientConn).Close() }
+func connCloser(v interface{}) error{
+	return v.(*grpc.ClientConn).Close()
+}
+
+func NewClient(addr string,sec *Sec) (*Client,error){
+	//connCreator := func(endpoint string,options []grpc.DialOption) (interface{}, error) { return grpc.Dial(endpoint,options)}
+	//connCloser  := func(v interface{}) error { return v.(*grpc.ClientConn).Close() }
 	poolConfig := &pool.PoolConfig{
 		InitialCap: 2,
 		MaxCap:     10,
@@ -69,7 +75,8 @@ func NewClient(addr string) (*Client,error){
 		Close:      connCloser,
 		//链接最大空闲时间，超过该时间的链接 将会关闭，可避免空闲时链接EOF，自动失效的问题
 		IdleTimeout: 15 * time.Second,
-		Addr:addr,
+		EndPoint:addr,
+		Options:sec.GetGrpcClientOpts(),
 	}
 	p, err := pool.NewChannelPool(poolConfig)
 	if err != nil {
@@ -81,6 +88,7 @@ func NewClient(addr string) (*Client,error){
 		connCreator:connCreator,
 		connCloser:connCloser,
 		connPool:p,
+		sec: sec,
 	},nil
 }
 

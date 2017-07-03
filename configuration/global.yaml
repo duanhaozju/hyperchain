@@ -49,7 +49,7 @@ global:
         port: 50011
         retrytime: 3s
         ipc: "hpc_1.ipc"
-        enableTls: true
+        enableTls: false
 	    tlsCA: "./cert/tlscert/tlsca.ca"
 	    tlsServerHostOverride: "hyperchain.cn"
 	    tlsCert: "./cert/tlscert/tls_peer1.cert"

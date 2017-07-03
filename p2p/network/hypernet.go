@@ -32,6 +32,7 @@ type HyperNet struct {
 	reverseQueue  chan [2]string
 
 	listenPort string
+	sec *Sec
 }
 
 func NewHyperNet(config *viper.Viper) (*HyperNet,error){
@@ -54,15 +55,22 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 	if err != nil {
 		return nil,err
 	}
+
+	sec,err := NewSec(config)
+	if err !=nil{
+		return nil,err
+	}
+
 	rq := make(chan [2]string)
 	net :=  &HyperNet{
 		dns:dns,
-		server:NewServer("hypernet",rq),
+		server:NewServer("hypernet",rq,sec),
 		hostClientMap:cmap.New(),
 		failedQueue:lane.NewQueue(),
 		reverseQueue:rq,
 		conf:config,
 		listenPort:port,
+		sec:sec,
 	}
 	net.stateMachine = fsm.NewFSM(
 		"created",
@@ -230,7 +238,7 @@ func (hn *HyperNet)reverse() error{
 
 //Connect to specific host endpoint
 func (hn *HyperNet)ConnectByAddr(hostname,addr string) error{
-	client,err  := NewClient(addr)
+	client,err  := NewClient(addr,hn.sec)
 	if err != nil{
 		return err
 	}
@@ -254,7 +262,7 @@ func (hn *HyperNet)Connect(hostname string) error{
 		logger.Errorf("get dns failed, err : %s \n",err.Error())
 		return err
 	}
-	client,err  := NewClient(addr)
+	client,err  := NewClient(addr,hn.sec)
 	if err != nil{
 		return err
 	}
