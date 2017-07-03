@@ -3,7 +3,7 @@ package types;
 
 message Receipt {
     bytes version = 1;
-	bytes PostState = 2;
+	bytes Bloom   = 2;
 	int64 CumulativeGasUsed = 3;
 	bytes TxHash = 4;
 	bytes ContractAddress = 5;
