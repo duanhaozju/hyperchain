@@ -37,6 +37,7 @@ const (
 	custom_NoBlockGeneratedError
 	custom_SubNotExistError
 	custom_SnapshotError
+	custom_InternalServerError
 )
 
 
@@ -193,6 +194,13 @@ type SnapshotErr struct {
 
 func (e *SnapshotErr) Code() int {return custom_SnapshotError}
 func (e *SnapshotErr) Error() string {return e.Message}
+
+type InternalServerErr struct {
+	Message string
+}
+
+func (e *InternalServerErr) Code() int {return custom_InternalServerError}
+func (e *InternalServerErr) Error() string {return e.Message}
 
 type UnauthorizedError struct {}
 
