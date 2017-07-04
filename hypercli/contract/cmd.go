@@ -12,7 +12,6 @@ import (
 	"time"
 	"os"
 	"hyperchain/core/types"
-	"hyperchain/rpc"
 	"strings"
 	"github.com/golang/protobuf/proto"
 )
