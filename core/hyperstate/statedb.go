@@ -158,7 +158,7 @@ func (self *StateDB) Reset() error {
 	// IMPORTANT reset obj.onDirty callback function and bucket tree
 	dirtyCopy := make(map[common.Address]*StateObject)
 	for _, obj := range self.stateObjects {
-		if _, dirty := self.stateObjectsDirty[obj.address]; dirty == true && !isPrecompiledAccount(obj.address) {
+		if _, dirty := self.stateObjectsDirty[obj.address]; dirty == true && !cm.IsPrecompiledAccount(obj.address) {
 			obj.onDirty = self.MarkStateObjectDirty
 			dirtyCopy[obj.address] = obj
 		}
@@ -1102,14 +1102,6 @@ func validateRoot(root common.Hash, curRoot common.Hash) bool {
 	}
 }
 
-func isPrecompiledAccount(address common.Address) bool {
-	if address.Hex() == common.BytesToAddress(common.LeftPadBytes([]byte{1}, 20)).Hex() || address.Hex() == common.BytesToAddress(common.LeftPadBytes([]byte{2}, 20)).Hex() ||
-		address.Hex() == common.BytesToAddress(common.LeftPadBytes([]byte{3}, 20)).Hex() || address.Hex() == common.BytesToAddress(common.LeftPadBytes([]byte{4}, 20)).Hex() {
-		return true
-	} else {
-		return false
-	}
-}
 
 func (self *StateDB) ShowArchive(address common.Address, date string) map[string]map[string]string {
 	storages := make(map[string]map[string]string)

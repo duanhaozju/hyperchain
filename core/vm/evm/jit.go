@@ -438,8 +438,6 @@ func jitCalculateGasAndSize(env vm.Environment, contract *Contract, instr instru
 	case CREATE:
 		newMemSize = calcMemSize(stack.data[stack.len()-2], stack.data[stack.len()-3])
 	case CALL, CALLCODE:
-		gas.Add(gas, stack.data[stack.len()-1])
-
 		if op == CALL {
 			if !env.Db().Exist(common.BigToAddress(stack.data[stack.len()-2])) {
 				gas.Add(gas, params.CallNewAccountGas)
