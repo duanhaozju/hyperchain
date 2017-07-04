@@ -25,5 +25,14 @@ func TestInnerAddr_Serialize(t *testing.T) {
 		t.Fatal(e)
 	}
 	t.Log(string(b))
+
+	ia,e := InnerAddrUnSerialize(b)
+	if e != nil{
+		t.Fatal(e)
+	}
+
+	t.Log(ia)
+
+
 }
 

@@ -38,7 +38,6 @@ type HyperNet struct {
 
 	addr *InnerAddr
 
-
 }
 
 func NewHyperNet(config *viper.Viper) (*HyperNet,error){
@@ -48,7 +47,6 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 	}
 
 	hostconf := config.GetString("global.p2p.hosts")
-	addrconf := config.GetString("global.p2p.addr")
 	port_i := config.GetInt("global.p2p.port")
 	if port_i == 0{
 		return nil,errors.New("invalid grpc server port")
@@ -58,9 +56,14 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 		fmt.Errorf("hosts config file not exist: %s",hostconf)
 		return nil,errors.New(fmt.Sprintf("connot find the hosts config file: %s",hostconf))
 	}
+	addrconf := config.GetString("global.p2p.addr")
 	if !common.FileExist(addrconf){
 		fmt.Errorf("addr config file not exist: %s",hostconf)
 		return nil,errors.New(fmt.Sprintf("connot find the addr config file: %s",addrconf))
+	}
+	ia ,domain,err := GetInnerAddr(addrconf)
+	if err != nil {
+		return nil,err
 	}
 
 	dns,err := NewDNSResolver(hostconf)
@@ -83,6 +86,8 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 		conf:config,
 		listenPort:port,
 		sec:sec,
+		addr:ia,
+		domain:domain,
 	}
 	net.stateMachine = fsm.NewFSM(
 		"created",
@@ -260,8 +265,16 @@ func (hn *HyperNet)reverse() error{
 			if _,ok := h.hostClientMap.Get(hostname);ok{
 				continue
 			}
-			logger.Infof("reverse connect to hostname %s,addr %s \n",hostname,addr)
-			err := h.ConnectByAddr(hostname,addr)
+			fmt.Printf("reverse connect to hostname %s,addr %s \n",hostname,addr)
+			ia,err := InnerAddrUnSerialize([]byte(addr))
+			if err != nil{
+				logger.Error("cannot unserialize remote addr.")
+				continue
+			}
+			ipaddr := ia.Get(hn.domain)
+
+			err = h.ConnectByAddr(hostname,ipaddr)
+			fmt.Println("actually connect to ",ipaddr)
 			if err !=nil{
 				logger.Errorf("there are something wrong when connect to host: %s",hostname)
 				// TODO here should check the retry time duration, maybe is a nil
@@ -269,14 +282,14 @@ func (hn *HyperNet)reverse() error{
 			}else{
 				logger.Info("success reverse connect to host",hostname)
 			}
-			err = h.dns.AddItem(hostname,addr)
+			err = h.dns.AddItem(hostname,ipaddr)
 			if err != nil{
-				logger.Error("cannot add a dns item into dns file %s, reason %s",hostname,err.Error())
+				logger.Errorf("cannot add a dns item into dns file %s, reason %s",hostname,err.Error())
 			}
 			// here when new node add should persist the connection
 			err = h.dns.Persisit()
 			if err != nil{
-				logger.Error("cannot persist dns item reason %s",err.Error())
+				logger.Errorf("cannot persist dns item reason %s",err.Error())
 			}
 		}
 	}(hn)
@@ -399,6 +412,11 @@ func (hn *HyperNet)msgWrapper(msg *pb.Message){
 	if msg.From.Extend == nil{
 		msg.From.Extend = new(pb.Extend)
 	}
-	msg.From.Extend.IP = []byte(utils.GetLocalIP() + hn.listenPort)
+	if ipaddr ,err := hn.addr.Serialize();err != nil{
+
+		msg.From.Extend.IP = []byte("{\"default\":" + "\"" + utils.GetLocalIP() + hn.listenPort + "\"}")
+	}else{
+		msg.From.Extend.IP = ipaddr
+	}
 
 }

@@ -27,13 +27,14 @@ type MsgSender interface {
 	// send a message to specific peer  UNICAST
 	SendMsg(payLoad []byte, peerList []uint64)
 
-	SendRandomVP(payload []byte)
+	//random select a VP and send msg to it
+	//SendRandomVP(payload []byte)
 
 	// broadcast information to NVP peers
-	BroadcastNVP(payLoad []byte)
+	//BroadcastNVP(payLoad []byte)
 
 	// send a message to specific NVP peer (by nvp hash) UNICAST
-	SendMsgNVP(payLoad []byte, nvpList []string)
+	//SendMsgNVP(payLoad []byte, nvpList []string)
 }
 
 // AddNode
@@ -63,5 +64,5 @@ type InfoGetter interface {
 	GetRouters() []byte
 
 	//ISVP local node is vp node or not
-	IsVP() bool
+	//IsVP() bool
 }

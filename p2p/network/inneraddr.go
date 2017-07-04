@@ -60,7 +60,7 @@ func (ia *InnerAddr)Serialize()([]byte,error){
 
 func InnerAddrUnSerialize(raw []byte)(*InnerAddr,error){
 	tempMap := make(map[string]string)
-	err := json.Unmarshal(raw,tempMap)
+	err := json.Unmarshal(raw,&tempMap)
 	if err !=nil{
 		return nil,err
 	}
@@ -71,15 +71,15 @@ func InnerAddrUnSerialize(raw []byte)(*InnerAddr,error){
 }
 
 
-func GetInnerAddr(addrFile string) (*InnerAddr,error){
+func GetInnerAddr(addrFile string) (*InnerAddr,string,error){
 	if !common.FileExist(addrFile){
-		return nil,errors.New("the addr file not exist!")
+		return nil,"default",errors.New("the addr file not exist!")
 	}
 	vip := viper.New()
 	vip.SetConfigFile(addrFile)
 	err := vip.ReadInConfig()
 	if err != nil{
-		return nil,err
+		return nil,"default",err
 	}
 
 	addrs := NewInnerAddr()
@@ -88,14 +88,15 @@ func GetInnerAddr(addrFile string) (*InnerAddr,error){
 	for _,item := range items{
 		temp_items := strings.Split(item," ")
 		if len(temp_items) !=2{
-			return nil,errors.New(fmt.Sprintf("illegal domain addr (%s)",item))
+			return nil,"default",errors.New(fmt.Sprintf("illegal domain addr (%s)",item))
 		}
 		temp_domain := temp_items[0]
 		//todo check the ip format
 		temp_ipaddr := temp_items[1]
 		addrs.Add(temp_domain,temp_ipaddr)
 	}
-	return addrs,nil
+	domain := vip.GetString("domain")
+	return addrs,domain,nil
 }
 
 
