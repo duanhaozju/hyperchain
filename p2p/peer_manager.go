@@ -27,11 +27,13 @@ type MsgSender interface {
 	// send a message to specific peer  UNICAST
 	SendMsg(payLoad []byte, peerList []uint64)
 
+	SendRandomVP(payload []byte)
+
 	// broadcast information to NVP peers
 	BroadcastNVP(payLoad []byte)
 
-	// send a message to specific peer  UNICAST
-	SendMsgNVP(payLoad []byte, peerList []uint64)
+	// send a message to specific NVP peer (by nvp hash) UNICAST
+	SendMsgNVP(payLoad []byte, nvpList []string)
 }
 
 // AddNode
@@ -59,4 +61,7 @@ type InfoGetter interface {
 	SetPrimary(id uint64) error
 	// use by new peer when join the chain dynamically only
 	GetRouters() []byte
+
+	//ISVP local node is vp node or not
+	IsVP() bool
 }
