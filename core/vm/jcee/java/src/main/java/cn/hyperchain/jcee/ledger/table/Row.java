@@ -23,6 +23,10 @@ public class Row {
         data = new HashMap<>();
     }
 
+    public String getRowId() {
+        return rowId;
+    }
+
     public void put(String key, byte[] value){
         data.put(key, value);
     }
@@ -30,6 +34,11 @@ public class Row {
     public String toJSON() {
         Gson gson = new Gson();
         return gson.toJson(this);
+    }
+
+    public Row merge(Row anotherRow) {
+        this.data.putAll(anotherRow.data);
+        return this;
     }
 
     @Override

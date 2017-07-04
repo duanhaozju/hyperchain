@@ -4,6 +4,8 @@
  */
 package cn.hyperchain.jcee.ledger.table;
 
+import cn.hyperchain.jcee.ledger.Result;
+
 import java.util.Iterator;
 
 /**
@@ -15,15 +17,13 @@ public interface Table {
 
     TableDesc getDesc();
 
-    Row newRow();
-
     boolean Insert(Row row);
 
     boolean Update(Row row);
 
     Row getRow(String rowId);
 
-    Iterator<Row> getRows(String start, String end);
+    Iterator<Result> getRows(String start, String end);
 
     boolean deleteRow(String rowId);
 }

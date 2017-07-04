@@ -4,6 +4,11 @@
  */
 package cn.hyperchain.jcee.ledger.table;
 
+import cn.hyperchain.jcee.ledger.AbstractLedger;
+import cn.hyperchain.jcee.ledger.BatchValue;
+import cn.hyperchain.jcee.ledger.Result;
+import com.google.gson.Gson;
+
 import java.util.Iterator;
 
 /**
@@ -12,9 +17,11 @@ import java.util.Iterator;
 public class KvBasedTable implements Table {
 
     private TableDesc desc;
+    private AbstractLedger ledger;
 
-    public KvBasedTable(TableDesc desc) {
+    public KvBasedTable(TableDesc desc, AbstractLedger ledger) {
         this.desc = desc;
+        this.ledger = ledger;
     }
 
     @Override
@@ -28,32 +35,41 @@ public class KvBasedTable implements Table {
     }
 
     @Override
-    public Row newRow() {
-        return new Row();
-    }
-
-    @Override
     public boolean Insert(Row row) {
-        return false;
+        return ledger.put(row.getRowId(), row.toJSON());
     }
 
     @Override
     public boolean Update(Row row) {
-        return false;
+        Row oldRow = getRow(row.getRowId());
+        if (oldRow == null) {
+            return ledger.put(row.getRowId(), row.toJSON());
+        }else {
+            return ledger.put(row.getRowId(), row.merge(oldRow).toJSON());
+        }
     }
 
     @Override
     public Row getRow(String rowId) {
-        return null;
+        Result data = ledger.get(rowId);
+        if (!data.isEmpty()) {
+            Gson gson = new Gson();
+            Row row = gson.fromJson(data.getValue().toString(), Row.class);
+            return row;
+        }else {
+            return null;
+        }
     }
 
     @Override
-    public Iterator<Row> getRows(String start, String end) {
-        return null;
+    public Iterator<Result> getRows(String start, String end) {
+        //TODO: maybe bugs existed here
+        BatchValue bv = ledger.rangeQuery(start.getBytes(), end.getBytes());
+        return bv;
     }
 
     @Override
     public boolean deleteRow(String rowId) {
-        return false;
+        return ledger.delete(rowId);
     }
 }
