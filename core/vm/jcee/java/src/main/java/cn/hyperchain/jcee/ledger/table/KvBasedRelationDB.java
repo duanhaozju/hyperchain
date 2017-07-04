@@ -34,13 +34,15 @@ public class KvBasedRelationDB implements RelationDB {
             return false;
         }
         tableMap.put(compositeName, new KvBasedTable(tableDesc, ledger));
+        LOG.info("compositeName: " + compositeName);
+        LOG.info("tableDesc: " + tableDesc.toJSON());
         ledger.put(compositeName, tableDesc);
         return true;
     }
 
     @Override
     public Table getTable(TableName name) {
-        return tableMap.get(name);
+        return tableMap.get(name.getCompositeName());
     }
 
     @Override

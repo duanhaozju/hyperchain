@@ -8,19 +8,20 @@ import com.google.gson.Gson;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * Created by wangxiaoyi on 2017/6/29.
  * TableDesc is the description of table schema
  */
-public class TableDesc {
+public class TableDesc{
 
     private TableName tableName;
     private Set<ColumnDesc> columnDescSet;
 
     public TableDesc() {
         tableName = new TableName("", "", "");
-        columnDescSet = new HashSet<>();
+        columnDescSet = new TreeSet<>();
     }
 
     public TableDesc(TableName name) {

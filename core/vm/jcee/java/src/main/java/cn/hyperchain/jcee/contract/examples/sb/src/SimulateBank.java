@@ -241,6 +241,7 @@ public class SimulateBank extends ContractTemplate {
         logger.info(args);
         RelationDB db = ledger.getDataBase(); //do not new database instance every time
         TableName tn = new TableName(getNamespace(), getCid(), "Account");
+        logger.info(tn.toString());
         TableDesc desc = new TableDesc(tn);
         desc.AddColumn(new ColumnDesc("name", DataType.STRING));
         desc.AddColumn(new ColumnDesc("id", DataType.LONG));
@@ -251,6 +252,7 @@ public class SimulateBank extends ContractTemplate {
     }
 
     public ExecuteResult getTableDesc(List<String> args) {
+        logger.info(args);
         TableName tn = new TableName(getNamespace(), getCid(), args.get(0));
         RelationDB db = ledger.getDataBase();
         TableDesc desc = db.getTableDesc(tn);

@@ -15,8 +15,13 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ColumnDesc {
+public class ColumnDesc implements Comparable<ColumnDesc>{
 
     private String name;
     private DataType type;
+
+    @Override
+    public int compareTo(ColumnDesc o) {
+        return this.name.compareTo(o.name);
+    }
 }
