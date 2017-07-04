@@ -17,6 +17,8 @@ import (
 	"path/filepath"
 	"os"
 	"os/exec"
+	"io/ioutil"
+	"bufio"
 )
 
 const (
@@ -141,4 +143,57 @@ func DelCompressedFile(file string) {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+}
+
+func ReadFile(file string) (string, error) {
+	token, err := ioutil.ReadFile(file)
+	return string(token[:]), err
+}
+
+func SaveToFile(file, token string) error {
+	var f *os.File
+	if _, err := os.Stat(file); os.IsExist(err) {
+		os.Remove(file)
+
+	}
+	f, err := os.Create(file)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+	f.WriteString(token)
+	return nil
+}
+
+func ReadPermissionsFromFile(file string) ([]string, error) {
+	var permissions []string
+	abs, err := filepath.Abs(file)
+	if err != nil {
+		return nil, err
+	}
+
+	// open a file
+	if file, err := os.Open(abs); err == nil {
+		// make sure it gets closed
+		defer file.Close()
+
+		// create a new scanner and read the file line by line
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			permission := scanner.Text()
+			if permission != "" {
+				permissions = append(permissions, permission)
+			}
+		}
+
+		// check for errors
+		if err = scanner.Err(); err != nil {
+			return nil, err
+		}
+		return permissions, nil
+	} else {
+		return nil, err
+	}
+	return nil, nil
 }

@@ -74,3 +74,33 @@ func (cc *CmdClient) Call(cmd string) (string, error) {
 	//fmt.Println(result)
 	return result, nil
 }
+
+func (cc *CmdClient) Login(username, password string) (string, error) {
+	reqJson := []byte("")
+	urlStr := fmt.Sprintf("http://%s:%s%s", cc.host, cc.port, "/login")
+	req, err := http.NewRequest("POST", urlStr, bytes.NewBuffer(reqJson))
+	if err != nil {
+		return "", err
+	}
+	// set basic auth header
+	req.SetBasicAuth(username, password)
+
+	rs, err := cc.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer rs.Body.Close()
+
+	body, err := ioutil.ReadAll(rs.Body)
+	if err != nil {
+		return "", err
+	}
+	result := string(body)
+	fmt.Println(result)
+	token := rs.Header.Get("Authorization")
+	if result == "" {
+		return "", ErrEmptyHeader
+	} else {
+		return token, nil
+	}
+}

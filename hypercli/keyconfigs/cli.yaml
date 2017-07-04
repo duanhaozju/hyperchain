@@ -13,6 +13,11 @@ global:
     # data storage config #
     ##########################
 
+    version: 1.4.0
+
     account:
         keystoredir: "./keyconfigs/keystore"
         keynodesdir: "./keyconfigs/keynodes"
+
+    auth:
+        tokenpath: "./.token"

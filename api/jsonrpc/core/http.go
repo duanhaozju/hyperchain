@@ -75,12 +75,16 @@ func (hi *httpServerImpl) Start() error {
 
 	// start http listener
 	handler := NewServer(hi.nr, hi.stopHp, hi.restartHp)
-	listener, err = net.Listen("tcp", fmt.Sprintf(":%d",hi.port))
+
+	http.HandleFunc("/login", LoginServer)
+	http.Handle("/", newCorsHandler(handler, hi.httpAllowedOrigins))
+
+	listener, err = net.Listen("tcp", fmt.Sprintf(":%d", hi.port))
 	if err != nil {
 		return err
 	}
 
-	go newHTTPServer(hi.httpAllowedOrigins, handler).Serve(listener)
+	go newHTTPServer().Serve(listener)
 
 	hi.httpListener = listener
 	hi.httpHandler = handler
@@ -145,9 +149,9 @@ func (hrw *httpReadWrite) Close() error {
 //}
 
 // newHTTPServer creates a new http RPC server around an API provider.
-func newHTTPServer(cors []string, srv *Server) *http.Server {
+func newHTTPServer() *http.Server {
 	return &http.Server{
-		Handler: newCorsHandler(srv, cors),
+		Handler: nil,
 		ReadTimeout:  time.Second * 3,
 	}
 }
