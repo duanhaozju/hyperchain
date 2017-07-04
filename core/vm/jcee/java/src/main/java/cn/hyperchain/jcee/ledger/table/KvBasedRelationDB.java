@@ -33,7 +33,7 @@ public class KvBasedRelationDB implements RelationDB {
             LOG.error("table " + compositeName + "is existed");
             return false;
         }
-        tableMap.put(compositeName, new KvBasedTable(tableDesc));
+        tableMap.put(compositeName, new KvBasedTable(tableDesc, ledger));
         ledger.put(compositeName, tableDesc);
         return true;
     }

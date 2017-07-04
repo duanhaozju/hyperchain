@@ -6,7 +6,9 @@ package cn.hyperchain.jcee.ledger.table;
 
 import com.google.gson.Gson;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -20,7 +22,7 @@ public class Row {
 
     public Row(String rowId){
         this.rowId = rowId;
-        data = new HashMap<>();
+        data = new DataMap();
     }
 
     public String getRowId() {
@@ -65,5 +67,44 @@ public class Row {
         int result = rowId != null ? rowId.hashCode() : 0;
         result = 31 * result + (data != null ? data.hashCode() : 0);
         return result;
+    }
+
+    //self define equals for map value with type of byte[]
+    class DataMap extends HashMap<String, byte[]> {
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this)
+                return true;
+
+            if (!(o instanceof Map))
+                return false;
+            Map<?,?> m = (Map<?,?>) o;
+            if (m.size() != size())
+                return false;
+
+            try {
+                Iterator<Entry<String,byte[]>> i = entrySet().iterator();
+                while (i.hasNext()) {
+                    Entry<String, byte[]> e = i.next();
+                    String key = e.getKey();
+                    byte[] value = e.getValue();
+                    if (value == null) {
+                        if (!(m.get(key)==null && m.containsKey(key)))
+                            return false;
+                    } else {
+                        if (!Arrays.equals(value, (byte[]) m.get(key))) {
+                            return false;
+                        }
+                    }
+                }
+            } catch (ClassCastException unused) {
+                return false;
+            } catch (NullPointerException unused) {
+                return false;
+            }
+
+            return true;
+        }
     }
 }
