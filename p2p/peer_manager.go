@@ -28,13 +28,13 @@ type MsgSender interface {
 	SendMsg(payLoad []byte, peerList []uint64)
 
 	//random select a VP and send msg to it
-	//SendRandomVP(payload []byte)
+	SendRandomVP(payload []byte)
 
 	// broadcast information to NVP peers
-	//BroadcastNVP(payLoad []byte)
+	BroadcastNVP(payLoad []byte)
 
 	// send a message to specific NVP peer (by nvp hash) UNICAST
-	//SendMsgNVP(payLoad []byte, nvpList []string)
+	SendMsgNVP(payLoad []byte, nvpList []string)
 }
 
 // AddNode
