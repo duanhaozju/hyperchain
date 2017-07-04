@@ -44,6 +44,7 @@ global:
             eventhub: "NOTICE"
     p2p:
         hosts: "./hosts.yaml"
+        addr: "./addr.yaml"
         port: 50012
         retrytime: 3s
         ipc: "hpc_2.ipc"

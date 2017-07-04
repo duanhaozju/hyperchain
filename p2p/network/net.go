@@ -19,3 +19,5 @@ func ParseRoute(dnsItem string) (hostname string,port int,err error){
 	}
 	return
 }
+
+

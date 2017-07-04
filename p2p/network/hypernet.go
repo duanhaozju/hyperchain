@@ -32,6 +32,13 @@ type HyperNet struct {
 
 	listenPort string
 	sec *Sec
+
+	// self belong domain
+	domain string
+
+	addr *InnerAddr
+
+
 }
 
 func NewHyperNet(config *viper.Viper) (*HyperNet,error){
@@ -41,6 +48,7 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 	}
 
 	hostconf := config.GetString("global.p2p.hosts")
+	addrconf := config.GetString("global.p2p.addr")
 	port_i := config.GetInt("global.p2p.port")
 	if port_i == 0{
 		return nil,errors.New("invalid grpc server port")
@@ -49,6 +57,10 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 	if !common.FileExist(hostconf){
 		fmt.Errorf("hosts config file not exist: %s",hostconf)
 		return nil,errors.New(fmt.Sprintf("connot find the hosts config file: %s",hostconf))
+	}
+	if !common.FileExist(addrconf){
+		fmt.Errorf("addr config file not exist: %s",hostconf)
+		return nil,errors.New(fmt.Sprintf("connot find the addr config file: %s",addrconf))
 	}
 
 	dns,err := NewDNSResolver(hostconf)
@@ -64,7 +76,7 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 	rq := make(chan [2]string)
 	net :=  &HyperNet{
 		dns:dns,
-		server:NewServer("hypernet",rq,sec,logger),
+		server:NewServer("hypernet",rq,sec),
 		hostClientMap:cmap.New(),
 		failedQueue:lane.NewQueue(),
 		reverseQueue:rq,
@@ -192,8 +204,6 @@ func (hn *HyperNet)Command(args []string,ret *[]string)error{
 	}
 	return nil
 }
-
-
 
 //InitServer start self hypernet server listening server
 func (hn *HyperNet)InitServer()error{
