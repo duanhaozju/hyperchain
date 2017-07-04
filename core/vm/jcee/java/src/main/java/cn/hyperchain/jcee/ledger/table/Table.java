@@ -17,13 +17,13 @@ public interface Table {
 
     Row newRow();
 
-    boolean Insert(String tableName, Row row);
+    boolean Insert(Row row);
 
-    boolean Update(String tableName, Row row);
+    boolean Update(Row row);
 
-    Row getRow(String tableName, ColumnDesc[] key);
+    Row getRow(String rowId);
 
-    Iterator<Row> getRows(String tableName, ColumnDesc[] key);
+    Iterator<Row> getRows(String start, String end);
 
-    boolean deleteRow(String tableName, ColumnDesc[] key);
+    boolean deleteRow(String rowId);
 }

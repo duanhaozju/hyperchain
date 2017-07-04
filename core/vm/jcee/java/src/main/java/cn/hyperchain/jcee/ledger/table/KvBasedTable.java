@@ -33,27 +33,27 @@ public class KvBasedTable implements Table {
     }
 
     @Override
-    public boolean Insert(String tableName, Row row) {
+    public boolean Insert(Row row) {
         return false;
     }
 
     @Override
-    public boolean Update(String tableName, Row row) {
+    public boolean Update(Row row) {
         return false;
     }
 
     @Override
-    public Row getRow(String tableName, ColumnDesc[] key) {
+    public Row getRow(String rowId) {
         return null;
     }
 
     @Override
-    public Iterator<Row> getRows(String tableName, ColumnDesc[] key) {
+    public Iterator<Row> getRows(String start, String end) {
         return null;
     }
 
     @Override
-    public boolean deleteRow(String tableName, ColumnDesc[] key) {
+    public boolean deleteRow(String rowId) {
         return false;
     }
 }
