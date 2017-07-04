@@ -34,6 +34,7 @@ func newHyperchain(argV *argT) *hyperchain {
 
 	globalConfig := common.NewConfig(hp.args.ConfigPath)
 	common.InitHyperLoggerManager(globalConfig)
+	logger = common.GetLogger(common.DEFAULT_LOG, "main")
 	//P2P module MUST Start before namespace server
 	vip := viper.New()
 	vip.SetConfigFile(hp.args.ConfigPath)
@@ -53,7 +54,6 @@ func newHyperchain(argV *argT) *hyperchain {
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
 	hp.hs = jsonrpc.GetHttpServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)
 
-	logger = common.GetLogger(common.DEFAULT_LOG, "main")
 	return hp
 }
 

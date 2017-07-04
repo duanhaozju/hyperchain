@@ -125,7 +125,7 @@ func(c *Client)Chat() (error){
 		return err
 	}
 	for msg := range c.MsgChan{
-		fmt.Println("actual send", string(msg.Payload), time.Now().UnixNano())
+		logger.Debugf("actual send", string(msg.Payload), time.Now().UnixNano())
 		err := stream.Send(msg)
 		if err != nil{
 			fmt.Errorf(err.Error())

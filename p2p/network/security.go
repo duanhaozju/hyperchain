@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/viper"
 	"hyperchain/common"
 	"github.com/pkg/errors"
+	"crypto"
 )
 
 type Sec struct {
@@ -14,16 +15,27 @@ type Sec struct {
 	tlsServerHostOverride string
 	tlsCert string
 	tlsCertPriv string
+
+	//client
+	clientPriv *crypto.PrivateKey
+
+
+	//server
+	serverPriv *crypto.PrivateKey
+
+
+
+
 }
 
 
 //NewSec return a new sec options
 func NewSec(config *viper.Viper) (*Sec,error){
-	enableTLS  := config.GetBool("p2p.enableTLS")
-	tlsCA  := config.GetString("p2p.tlsCA")
-	tlsServerHostOverride := config.GetString("p2p.tlsServerHostOverride")
-	tlsCert := config.GetString("p2p.tlsCert")
-	tlsCertPriv := config.GetString("p2p.tlsCertPriv")
+	enableTLS  := config.GetBool("global.p2p.enableTLS")
+	tlsCA  := config.GetString("global.p2p.tlsCA")
+	tlsServerHostOverride := config.GetString("global.p2p.tlsServerHostOverride")
+	tlsCert := config.GetString("global.p2p.tlsCert")
+	tlsCertPriv := config.GetString("global.p2p.tlsCertPriv")
 
 	//check the file is exist or not
 	if enableTLS && !common.FileExist(tlsCA) {
@@ -36,13 +48,16 @@ func NewSec(config *viper.Viper) (*Sec,error){
 		return nil,errors.New("tlsCertPriv file not exist")
 	}
 
-	return &Sec{
+	sec := &Sec{
 		enableTls: enableTLS,
 		tlsCA:tlsCA,
 		tlsCert:tlsCert,
 		tlsCertPriv:tlsCertPriv,
 		tlsServerHostOverride:tlsServerHostOverride,
-	},nil
+	}
+
+	logger.Critical(sec)
+	return sec,nil
 }
 
 
@@ -62,6 +77,7 @@ func (s *Sec) GetGrpcClientOpts() []grpc.DialOption {
 	if err != nil {
 		panic("cannot get the TLS Cert")
 	}
+	logger.Notice("enable client TLS")
 	opts = append(opts, grpc.WithTransportCredentials(creds))
 	return opts
 }
@@ -77,6 +93,7 @@ func (s *Sec) GetGrpcServerOpts() []grpc.ServerOption {
 	if err != nil {
 		panic("cannot get the TLS Cert")
 	}
+	logger.Notice("enable server TLS")
 	opts = []grpc.ServerOption{grpc.Creds(creds)}
 	return opts
 }

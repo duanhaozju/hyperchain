@@ -124,7 +124,7 @@ func (pmgr *peerManagerImpl)Start() error{
 	}
 
 
-	pmgr.logger.Criticalf("SELF hash:",pmgr.node.info.Hash)
+	pmgr.logger.Criticalf("SELF hash: %s",pmgr.node.info.Hash)
 	return nil
 }
 

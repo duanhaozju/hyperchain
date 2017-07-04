@@ -8,12 +8,13 @@ import (
 	"hyperchain/common"
 	"hyperchain/p2p/ipc"
 	"fmt"
+	"github.com/op/go-logging"
 )
 
 
 
 var (
-	glogger = common.GetLogger(common.DEFAULT_LOG,"p2p")
+	glogger *logging.Logger
 	errP2PMGRNotInit = errors.New("The P2P manager hasn't been initlized, Fatal error")
 )
 
@@ -38,6 +39,7 @@ var globalP2PManager *p2pManagerImpl
 
 
 func GetP2PManager(vip *viper.Viper)(P2PManager,error){
+	glogger = common.GetLogger(common.DEFAULT_LOG,"p2p")
 	if globalP2PManager == nil{
 		p2pManager,err := newP2PManager(vip)
 		if err != nil{
@@ -69,7 +71,8 @@ func newP2PManager(vip *viper.Viper)(*p2pManagerImpl,error){
 		ipcShell:ipc.NEWIPCServer(vip.GetString("global.p2p.ipc")),
 	}
 	p2pmgr.Start()
-	glogger.Info("interactive ipc shell server listening...")
+
+	glogger.Critical("interactive ipc shell server listening...")
 	rc := ipc.NewRemoteCall()
 	ipc.RegisterFunc(rc,"network",p2pmgr.hypernet.Command)
 	err = p2pmgr.ipcShell.Start(rc)

@@ -8,6 +8,7 @@ import (
 	"hyperchain/p2p/msg"
 	pb "hyperchain/p2p/message"
 	"fmt"
+	"github.com/op/go-logging"
 )
 
 type Server struct {
@@ -17,14 +18,16 @@ type Server struct {
 	slots *msg.MsgSlots
 	hostchan chan [2]string
 	sec *Sec
+	logger *logging.Logger
 }
 
-func NewServer(hostname string,cn chan [2]string,sec *Sec) *Server{
+func NewServer(hostname string,cn chan [2]string,sec *Sec,logger *logging.Logger) *Server{
 	return &Server{
 		hostname:hostname,
 		slots:msg.NewMsgSlots(),
 		hostchan:cn,
 		sec:sec,
+		logger:logger,
 	}
 }
 
@@ -106,17 +109,17 @@ func (s Server) Chat(ccServer Chat_ChatServer) error{
 			}
 			fmt.Printf("chat got a message %+v \n", msg)
 			if msg.From == nil || msg.From.Field == nil{
-				logger.Errorf("this msg (%+v) hasn't it's from filed, reject! \n", msg)
+				s.logger.Errorf("this msg (%+v) hasn't it's from filed, reject! \n", msg)
 				return
 			}
 			slot,err := s.slots.GetSlot(string(msg.From.Field))
 			if err != nil{
-				logger.Info("got a unkown filed message: %v \n", msg.MessageType)
+				s.logger.Info("got a unkown filed message: %v \n", msg.MessageType)
 				return
 			}
 			handler,err  := slot.GetHandler(msg.MessageType)
 			if err != nil{
-				logger.Info("got a unkown filed message: %v \n", msg.MessageType)
+				s.logger.Info("got a unkown filed message: %v \n", msg.MessageType)
 				return
 			}else{
 				handler.Receive() <- msg

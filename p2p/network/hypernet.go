@@ -16,7 +16,6 @@ import (
 	"strconv"
 )
 
-var logger = common.GetLogger(common.DEFAULT_LOG, "p2p")
 
 type HyperNet struct {
 	conf          *viper.Viper
@@ -36,6 +35,7 @@ type HyperNet struct {
 }
 
 func NewHyperNet(config *viper.Viper) (*HyperNet,error){
+	logger = common.GetLogger(common.DEFAULT_LOG,"hypernet")
 	if config == nil{
 		return nil,errors.New("Readin host config failed, the viper instance is nil")
 	}
@@ -64,7 +64,7 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 	rq := make(chan [2]string)
 	net :=  &HyperNet{
 		dns:dns,
-		server:NewServer("hypernet",rq,sec),
+		server:NewServer("hypernet",rq,sec,logger),
 		hostClientMap:cmap.New(),
 		failedQueue:lane.NewQueue(),
 		reverseQueue:rq,
@@ -189,7 +189,7 @@ func (hn *HyperNet)InitClients()error{
 // if a connection failed, here will retry to connect the host name
 func (hn *HyperNet)retry() error{
 	td := hn.conf.GetDuration("global.p2p.retrytime")
-	if td == 0 * time.Nanosecond{
+	if td == 0 * time.Second{
 		return errors.New("invalid time duration")
 	}
 	go func(h *HyperNet) {

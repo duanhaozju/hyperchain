@@ -39,7 +39,7 @@ global:
 
         module:
             #set log level by module
-            p2p: "NOTICE"
+            p2p: "DEBUG"
             consensus: "NOTICE"
             core: "NOTICE"
             hyperdb: "NOTICE"
@@ -49,7 +49,7 @@ global:
         port: 50011
         retrytime: 3s
         ipc: "hpc_1.ipc"
-        enableTls: false
+        enableTLS: true
 	    tlsCA: "./cert/tlscert/tlsca.ca"
 	    tlsServerHostOverride: "hyperchain.cn"
 	    tlsCert: "./cert/tlscert/tls_peer1.cert"
