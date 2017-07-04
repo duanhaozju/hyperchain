@@ -23,8 +23,15 @@ type PeerManager interface {
 type MsgSender interface {
 	// broadcast information to peers
 	Broadcast(payLoad []byte)
+
 	// send a message to specific peer  UNICAST
 	SendMsg(payLoad []byte, peerList []uint64)
+
+	// broadcast information to NVP peers
+	BroadcastNVP(payLoad []byte)
+
+	// send a message to specific peer  UNICAST
+	SendMsgNVP(payLoad []byte, peerList []uint64)
 }
 
 // AddNode

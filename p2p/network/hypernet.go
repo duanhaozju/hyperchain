@@ -1,7 +1,7 @@
 package network
 
 import (
-	"github.com/spf13/viper"
+	"github.com/terasum/viper"
 	"hyperchain/common"
 	"github.com/looplab/fsm"
 	"fmt"
@@ -143,6 +143,15 @@ func (hn *HyperNet)Command(args []string,ret *[]string)error{
 			*ret = append(*ret,fmt.Sprintf("connect to %s failed, reason: %s",hostname,err.Error()))
 			break
 		}
+		// important after add a dns item, it should persist
+		err = hn.dns.Persisit()
+		if err != nil{
+			*ret = append(*ret,fmt.Sprintf("filed to persist hosts file, reason: %s",err.Error()))
+			break
+		}else{
+			*ret = append(*ret,fmt.Sprintf(" success to persist hosts file! for host %s \n",hostname))
+		}
+
 		err = hn.Connect(hostname)
 		if err != nil{
 			*ret = append(*ret,fmt.Sprintf("connect to %s failed, reason: %s",hostname,err.Error()))
@@ -153,8 +162,27 @@ func (hn *HyperNet)Command(args []string,ret *[]string)error{
 
 	}
 	case "close":{
+		if len(args)<2{
+			*ret = append(*ret,"invalid connect parameters, format is `network close [hostname]`",)
+			break
+		}
+		hostname := args[1]
+		*ret = append(*ret,fmt.Sprintf("now closing the %s 's connection\n" ,hostname))
 
-		*ret = append(*ret,"close the host connection")
+		err := hn.DisConnect(hostname)
+
+		if err !=nil{
+			*ret = append(*ret,fmt.Sprintf("closing the %s 's connection failed. reason: %s" ,hostname,err.Error()))
+			break
+		}
+		err = hn.dns.Persisit()
+
+		if err !=nil{
+			*ret = append(*ret,"persist %s 's connection failed, reason: %s" ,hostname,err.Error())
+			break
+		}
+
+		*ret = append(*ret,"close the host connection successed.")
 	}
 	case "reconnect":{
 		*ret = append(*ret,"reconnect to new host")
@@ -164,6 +192,7 @@ func (hn *HyperNet)Command(args []string,ret *[]string)error{
 	}
 	return nil
 }
+
 
 
 //InitServer start self hypernet server listening server
@@ -230,7 +259,15 @@ func (hn *HyperNet)reverse() error{
 			}else{
 				logger.Info("success reverse connect to host",hostname)
 			}
-			h.dns.AddItem(hostname,addr)
+			err = h.dns.AddItem(hostname,addr)
+			if err != nil{
+				logger.Error("cannot add a dns item into dns file %s, reason %s",hostname,err.Error())
+			}
+			// here when new node add should persist the connection
+			err = h.dns.Persisit()
+			if err != nil{
+				logger.Error("cannot persist dns item reason %s",err.Error())
+			}
 		}
 	}(hn)
 	return nil
@@ -254,6 +291,7 @@ func (hn *HyperNet)ConnectByAddr(hostname,addr string) error{
 	logger.Infof("success connect to %s \n",hostname)
 	return nil
 }
+
 //Connect to specific host endpoint
 func (hn *HyperNet)Connect(hostname string) error{
 	addr,err := hn.dns.GetDNS(hostname)
@@ -286,6 +324,12 @@ func (hn *HyperNet)DisConnect(hostname string)(err  error){
 	if client, ok := hn.hostClientMap.Get(hostname);ok{
 		client.(*Client).Close()
 		hn.hostClientMap.Remove(hostname)
+		err := hn.dns.DelItem(hostname)
+		if err != nil{
+			return err
+		}
+	}else{
+		return errors.New("hostname not found.")
 	}
 	logger.Infof("disconnect %s successfully \n",hostname)
   	return
@@ -301,6 +345,8 @@ func (hypernet *HyperNet)Chat(hostname string,msg *pb.Message)error{
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
 		client.(*Client).MsgChan <- msg
 		return nil
+	}else{
+		logger.Info("this host han't been connected. (%s)",hostname)
 	}
 	return errors.New("the host hasn't been initialized.")
 }
@@ -309,6 +355,8 @@ func (hypernet *HyperNet)Greeting(hostname string,msg *pb.Message)(*pb.Message,e
 	hypernet.msgWrapper(msg)
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
 		return client.(*Client).Greeting(msg)
+	}else{
+		logger.Info("this host han't been connected. (%s)",hostname)
 	}
 	return nil,errors.New("the host hasn't been initialized.")
 
@@ -318,8 +366,10 @@ func (hypernet *HyperNet)Whisper(hostname string,msg *pb.Message)(*pb.Message,er
 	hypernet.msgWrapper(msg)
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
 			return client.(*Client).Whisper(msg)
-		}
-		return nil,errors.New("the host hasn't been initialized.")
+	}else{
+		logger.Info("this host han't been connected. %s",hostname)
+	}
+	return nil,errors.New("the host hasn't been initialized.")
 }
 
 func(hypernet *HyperNet)Stop(){

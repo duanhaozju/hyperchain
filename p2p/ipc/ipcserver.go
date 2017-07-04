@@ -7,6 +7,7 @@ import (
 	"time"
 	"net/http"
 	"net/rpc"
+	"hyperchain/common"
 )
 var (
 	tcpKeepAliveInterval = 30 * time.Second
@@ -17,6 +18,7 @@ type IPCServer	struct {
 }
 
 func NEWIPCServer(endpoint string) *IPCServer{
+	logger = common.GetLogger(common.DEFAULT_LOG,"ipc")
 	return &IPCServer{
 		endpoint:endpoint,
 	}

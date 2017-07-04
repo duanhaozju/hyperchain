@@ -2,7 +2,7 @@ package p2p
 
 import (
 	"hyperchain/p2p/network"
-	"github.com/spf13/viper"
+	"github.com/terasum/viper"
 	"hyperchain/manager/event"
 	"github.com/pkg/errors"
 	"hyperchain/common"

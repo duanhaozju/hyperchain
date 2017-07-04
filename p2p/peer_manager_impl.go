@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/p2p/network"
 	pb "hyperchain/p2p/message"
-	"github.com/spf13/viper"
+	"github.com/terasum/viper"
 	"hyperchain/manager/event"
 	"hyperchain/p2p/msg"
 	"hyperchain/p2p/info"

@@ -10,7 +10,7 @@ import (
 	"hyperchain/namespace"
 	"time"
 	"hyperchain/p2p"
-	"github.com/spf13/viper"
+	"github.com/terasum/viper"
 	"hyperchain/p2p/ipc"
 	"fmt"
 )
@@ -100,9 +100,9 @@ func main() {
 
 		argv := ctx.Argv().(*argT)
 		if argv.Shell {
-		logger.Info("Start hypernet interactive shell: ",argv.IPCEndpoint)
-		ipc.IPCShell(argv.IPCEndpoint)
-		return nil
+			fmt.Println("Start hypernet interactive shell: ",argv.IPCEndpoint)
+			ipc.IPCShell(argv.IPCEndpoint)
+			return nil
 		}
 		hp := newHyperchain(argv)
 		hp.start()

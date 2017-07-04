@@ -3,7 +3,7 @@ package network
 import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"github.com/spf13/viper"
+	"github.com/terasum/viper"
 	"hyperchain/common"
 	"github.com/pkg/errors"
 	"crypto"

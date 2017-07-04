@@ -1,0 +1,6 @@
+domain: "domain1"
+addrs:
+  - domain1 127.0.0.1:8001
+  - domain2 127.0.0.1:8001
+  - domain3 127.0.0.1:8001
+  - domain4 127.0.0.1:8001
