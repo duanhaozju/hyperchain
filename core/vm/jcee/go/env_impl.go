@@ -72,6 +72,10 @@ func (self *Env) GetHash(n uint64) common.Hash {
 func (self *Env) AddLog(log *types.Log) {
 	self.state.AddLog(log)
 }
+
+func (self *Env) DumpStructLog() {
+	// TODO
+}
 func (self *Env) Depth() int     { return self.depth }
 func (self *Env) SetDepth(i int) { self.depth = i }
 

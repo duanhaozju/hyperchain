@@ -83,7 +83,7 @@ type LogTrans struct {
 	Index       uint	`json:"index"`
 }
 
-func (ls Logs) ToLogsTrans(typ Receipt_VmType) []LogTrans {
+func (ls Logs) ToLogsTrans() []LogTrans {
 	var ret = make([]LogTrans, len(ls))
 	for idx, log := range ls {
 		var topics = make([]string, len(log.Topics))
@@ -100,7 +100,7 @@ func (ls Logs) ToLogsTrans(typ Receipt_VmType) []LogTrans {
 		fmt.Errorf("%#v", data)
 		ret[idx] = LogTrans{
 			Address:     log.Address.Hex(),
-			Data:        data,
+			Data:        common.Bytes2Hex(log.Data),
 			BlockNumber: log.BlockNumber,
 			BlockHash:   log.BlockHash.Hex(),
 			Topics:      topics,

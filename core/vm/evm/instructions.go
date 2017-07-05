@@ -11,7 +11,9 @@ import (
 	"hyperchain/core/vm/evm/params"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
+	cm "hyperchain/core/common"
 )
+
 
 type programInstruction interface {
 	// executes the program instruction and allows the instruction to modify the state of the program
@@ -52,7 +54,6 @@ func (instr instruction) do(program *Program, pc *uint64, env vm.Environment, co
 	if err != nil {
 		return nil, err
 	}
-
 	// Use the calculated gas. When insufficient gas is present, use all gas and return an
 	// Out Of Gas error
 	if !contract.UseGas(cost) {
@@ -352,8 +353,12 @@ func opCalldataCopy(instr instruction, pc *uint64, env vm.Environment, contract 
 func opExtCodeSize(instr instruction, pc *uint64, env vm.Environment, contract *Contract, memory *Memory, stack *stack) {
 	// TODO use cache to optimize
 	addr := common.BigToAddress(stack.pop())
-	l := big.NewInt(int64(len(env.Db().GetCode(addr))))
-	stack.push(l)
+	if cm.IsPrecompiledAccount(addr) {
+		stack.push(big.NewInt(100))
+	} else {
+		l := big.NewInt(int64(len(env.Db().GetCode(addr))))
+		stack.push(l)
+	}
 }
 
 func opCodeSize(instr instruction, pc *uint64, env vm.Environment, contract *Contract, memory *Memory, stack *stack) {
@@ -527,22 +532,18 @@ func opCall(instr instruction, pc *uint64, env vm.Environment, contract *Contrac
 	retOffset, retSize := stack.pop(), stack.pop()
 
 	address := common.BigToAddress(addr)
-
 	// Get the arguments from the memory
 	args := memory.Get(inOffset.Int64(), inSize.Int64())
-
 	if len(value.Bytes()) > 0 {
 		gas.Add(gas, params.CallStipend)
 	}
 	// normal contract call, update operation could happen only in entry contract
 	ret, err := env.Call(contract, address, args, gas, contract.Price, value, 0)
-
 	if err != nil {
 		stack.push(new(big.Int))
 
 	} else {
 		stack.push(big.NewInt(1))
-
 		memory.Set(retOffset.Uint64(), retSize.Uint64(), ret)
 	}
 }
