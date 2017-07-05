@@ -49,6 +49,7 @@ func (cc *CmdClient) InvokeCmd(cmd *admin.Command) string {
 	rs, err := cc.Call(cmd.ToJson(), cmd.MethodName)
 	if err != nil {
 		fmt.Println(err.Error())
+		os.Exit(1)
 		return ""
 	}
 	return rs
@@ -63,12 +64,13 @@ func (cc *CmdClient) Call(cmd string, method string) (string, error) {
 	}
 
 	// get authorization token
-	token, err := ReadFile(tokenpath)
+	userinfo := new(UserInfo)
+	err = ReadFile(tokenpath, userinfo)
 	if err != nil {
 		fmt.Println("Invalid token, please login first!")
 		os.Exit(1)
 	}
-	req.Header.Set("Authorization", token)
+	req.Header.Set("Authorization", userinfo.Token)
 	req.Header.Set("Method", method)
 
 	rs, err := cc.client.Do(req)

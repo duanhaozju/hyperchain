@@ -17,8 +17,8 @@ import (
 	"path/filepath"
 	"os"
 	"os/exec"
-	"io/ioutil"
 	"bufio"
+	"encoding/gob"
 )
 
 const (
@@ -33,6 +33,11 @@ var (
 	kec256Hash       = crypto.NewKeccak256Hash("keccak256")
 )
 
+type UserInfo struct {
+	Username string
+	Token    string
+}
+
 // GetNonEmptyValueByName first finds the value from cli flags, if not found,
 // lets user input from stdin util user inputs an non-empty value
 func GetNonEmptyValueByName(c *cli.Context, name string) string {
@@ -40,11 +45,16 @@ func GetNonEmptyValueByName(c *cli.Context, name string) string {
 	if c.String(name) != "" {
 		value = c.String(name)
 	} else {
+		userinfo := new(UserInfo)
+		err := ReadFile(tokenpath, userinfo)
+		if err == nil {
+			return userinfo.Username
+		}
 		for {
 			if name == "to" {
 				name = "contract address"
 			}
-			fmt.Printf("Please specify a non-empty %s:\n", name)
+			fmt.Printf("%s:\n", name)
 			fmt.Scanln(&value)
 			if value != "" {
 				break
@@ -147,12 +157,19 @@ func DelCompressedFile(file string) {
 	}
 }
 
-func ReadFile(file string) (string, error) {
-	token, err := ioutil.ReadFile(file)
-	return string(token[:]), err
+func ReadFile(path string, object interface{}) error {
+	//token, err := ioutil.ReadFile(file)
+	//return string(token[:]), err
+	file, err := os.Open(path)
+	defer file.Close()
+	if err == nil {
+		decoder := gob.NewDecoder(file)
+		err = decoder.Decode(object)
+	}
+	return err
 }
 
-func SaveToFile(file, token string) error {
+func SaveToFile(file, username, token string) error {
 	var f *os.File
 	if _, err := os.Stat(file); os.IsExist(err) {
 		os.Remove(file)
@@ -164,8 +181,10 @@ func SaveToFile(file, token string) error {
 	}
 
 	defer f.Close()
-	f.WriteString(token)
-	return nil
+	userinfo := &UserInfo{Username: username, Token: token}
+	encoder := gob.NewEncoder(f)
+	return encoder.Encode(userinfo)
+	//f.WriteString(token)
 }
 
 func ReadPermissionsFromFile(file string) ([]string, error) {

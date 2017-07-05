@@ -19,10 +19,8 @@ func login(c *cli.Context) error {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	//CurrentUser = username
-	//fmt.Println(CurrentUser)
 
-	err = common.SaveToFile(tokenpath, token)
+	err = common.SaveToFile(tokenpath, username, token)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

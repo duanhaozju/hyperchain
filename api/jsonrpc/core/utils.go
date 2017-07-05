@@ -209,7 +209,7 @@ func verifyToken(auth, keypath, algorithm string) ([]byte, error) {
 
 	// Print an error if we can't parse for some reason
 	if err != nil {
-		log.Debugf("Couldn't parse token: %v", err)
+		log.Debugf("Couldn't parse token %s, error: %v", auth, err)
 		return nil, ErrTokenInvalid
 	}
 

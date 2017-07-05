@@ -84,6 +84,9 @@ func grant(c *cli.Context) error {
 			fmt.Println("Need at least 2 params(username and permissions)")
 			return common.ErrInvalidArgsNum
 		}
+		if len(permissions) == 2 {
+			permissions = append(permissions, "all")
+		}
 	}
 
 	cmd := &admin.Command{
@@ -122,6 +125,9 @@ func revoke(c *cli.Context) error {
 			fmt.Println("Need at least 2 params(username and permissions)")
 			return common.ErrInvalidArgsNum
 		}
+		if len(permissions) == 2 {
+			permissions = append(permissions, "all")
+		}
 	}
 
 	cmd := &admin.Command{
@@ -138,6 +144,13 @@ func revoke(c *cli.Context) error {
 func list(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	username := c.Args()
+	if len(username) == 0 {
+		userinfo := new(common.UserInfo)
+		err := common.ReadFile(tokenpath, userinfo)
+		if err == nil {
+			username = []string{userinfo.Username}
+		}
+	}
 	if len(username) != 1 {
 		fmt.Println("Need only 1 params(username)")
 		return common.ErrInvalidArgsNum
@@ -156,12 +169,13 @@ func list(c *cli.Context) error {
 	}
 
 	if permissions, ok := response.Result.([]interface{}); !ok {
-		fmt.Println(response.Result)
+		fmt.Printf("Sorry, %s have no permissions to do anything, " +
+			"please contact to the administrator...\n", username)
 		return nil
 	} else {
 		if len(permissions) == 0 {
 			fmt.Printf("Sorry, %s have no permissions to do anything, " +
-				"please contact to you admin...\n", username)
+				"please contact to the administrator...\n", username)
 			return nil
 		}
 		fmt.Printf("%s has permissions to: \n", username)

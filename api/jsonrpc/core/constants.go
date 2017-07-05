@@ -66,6 +66,22 @@ const (
 var defaultScope = []int{admin_getLevel, admin_listNamespaces, node_getNodes, node_getNodeHash, contract_deployContract,
 	contract_invokeContract, contract_maintainContract, tx_getTransactionReceipt, admin_listPermission}
 
+var namespaceGroup = []int{admin_startNsMgr, admin_stopNsMgr, admin_registerNamespace, admin_deregisterNamespace,
+	admin_startNamespace, admin_stopNamespace, admin_restartNamespace, admin_listNamespaces}
+
+var httpGroup = []int{admin_startHttpServer, admin_stopHttpServer, admin_restartHttpServer}
+
+var logGroup = []int{admin_setLevel, admin_getLevel}
+
+var authGroup = []int{admin_createUser, admin_alterUser, admin_dropUser, admin_grantPermission,
+	admin_revokePermission, admin_listPermission}
+
+var contractGroup = []int{contract_deployContract, contract_invokeContract, contract_maintainContract}
+
+var nodeGroup = []int{node_getNodes, node_getNodeHash, node_delNode}
+
+var txGroup = []int{tx_getTransactionReceipt}
+
 // convertToScope converts method name to corresponding scope
 func convertToScope(method string) int {
 	method = toUpper(method)
@@ -132,68 +148,84 @@ func convertToScope(method string) int {
 	}
 }
 
-// convertToMethod converts scope to method
-func convertToMethod(scope int) string {
+// convertToIntegers converts scope to corresponding integers
+func convertToIntegers(scope string) []int {
 	switch scope {
-	case admin_stopServer:
-		return "admin_stopServer"
-	case admin_restartServer:
-		return "admin_restartServer"
-	case admin_startNsMgr:
-		return "admin_startNsMgr"
-	case admin_stopNsMgr:
-		return "admin_stopNsMgr"
-	case admin_registerNamespace:
-		return "admin_registerNamespace"
-	case admin_deregisterNamespace:
-		return "admin_deregisterNamespace"
-	case admin_startNamespace:
-		return "admin_startNamespace"
-	case admin_stopNamespace:
-		return "admin_stopNamespace"
-	case admin_restartNamespace:
-		return "admin_restartNamespace"
-	case admin_listNamespaces:
-		return "admin_listNamespaces"
-	case admin_startHttpServer:
-		return "admin_startHttpServer"
-	case admin_stopHttpServer:
-		return "admin_stopHttpServer"
-	case admin_restartHttpServer:
-		return "admin_restartHttpServer"
-	case admin_setLevel:
-		return "admin_setLevel"
-	case admin_getLevel:
-		return "admin_getLevel"
-	case admin_createUser:
-		return "admin_createUser"
-	case admin_alterUser:
-		return "admin_alterUser"
-	case admin_dropUser:
-		return "admin_dropUser"
-	case admin_grantPermission:
-		return "admin_grantPermission"
-	case admin_revokePermission:
-		return "admin_revokePermission"
-	case admin_listPermission:
-		return "admin_listPermission"
-	case contract_deployContract:
-		return "contract_deployContract"
-	case contract_invokeContract:
-		return "contract_invokeContract"
-	case contract_maintainContract:
-		return "contract_maintainContract"
-	case node_getNodes:
-		return "node_getNodes"
-	case node_getNodeHash:
-		return "node_getNodeHash"
-	case node_delNode:
-		return "node_delNode"
-	case tx_getTransactionReceipt:
-		return "tx_getTransactionReceipt"
+	case "server::stop":
+		return []int{admin_stopServer}
+	case "server:restart":
+		return []int{admin_restartServer}
+	case "server::all":
+		return []int{admin_stopServer, admin_restartServer}
+	case "namespace::startNsMgr":
+		return []int{admin_startNsMgr}
+	case "namespace::stopNsMgr":
+		return []int{admin_stopNsMgr}
+	case "namespace::register":
+		return []int{admin_registerNamespace}
+	case "namespace::deregister":
+		return []int{admin_deregisterNamespace}
+	case "namespace::start":
+		return []int{admin_startNamespace}
+	case "namespace::stop":
+		return []int{admin_stopNamespace}
+	case "namespace::restart":
+		return []int{admin_restartNamespace}
+	case "namespace::list":
+		return []int{admin_listNamespaces}
+	case "namespace::all":
+		return namespaceGroup
+	case "http::start":
+		return []int{admin_startHttpServer}
+	case "http::stop":
+		return []int{admin_stopHttpServer}
+	case "http::restart":
+		return []int{admin_restartHttpServer}
+	case "http::all":
+		return httpGroup
+	case "log::setLevel":
+		return []int{admin_setLevel}
+	case "log::getLevel":
+		return []int{admin_getLevel}
+	case "log::all":
+		return logGroup
+	case "auth::create":
+		return []int{admin_createUser}
+	case "auth::alter":
+		return []int{admin_alterUser}
+	case "auth::drop":
+		return []int{admin_dropUser}
+	case "auth::grant":
+		return []int{admin_grantPermission}
+	case "auth::revoke":
+		return []int{admin_revokePermission}
+	case "auth::list":
+		return []int{admin_listPermission}
+	case "auth::all":
+		return authGroup
+	case "contract::deploy":
+		return []int{contract_deployContract}
+	case "contract::invoke":
+		return []int{contract_invokeContract}
+	case "contract::maintain":
+		return []int{contract_maintainContract}
+	case "contract::all":
+		return contractGroup
+	case "node::getNodes":
+		return []int{node_getNodes}
+	case "node::getNodeHash":
+		return []int{node_getNodeHash}
+	case "node::delete":
+		return []int{node_delNode}
+	case "node::all":
+		return nodeGroup
+	case "tx::getTransactionReceipt":
+		return []int{tx_getTransactionReceipt}
+	case "tx::all":
+		return txGroup
 
 	default:
-		return ""
+		return nil
 	}
 }
 
@@ -247,7 +279,7 @@ func ReadablePermission(scope float64) string {
 	case contract_invokeContract:
 		return "contract::invoke [params...]"
 	case contract_maintainContract:
-		return "contract::[update/frozen/unfrozen/destroy] [params...]"
+		return "contract:: [update/frozen/unfrozen/destroy] [params...]"
 	case node_getNodes:
 		return "node::getNodes"
 	case node_getNodeHash:

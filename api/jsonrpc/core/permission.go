@@ -1,27 +1,37 @@
 package jsonrpc
 
-func grantpermission(username string, permissions []string) ([]string, error) {
+func grantpermission(username string, module string, permissions []string) ([]string, error) {
 	// record non-existing permissions
 	var invalidPms []string
-	log.Debugf("grant permissions %v to %s", permissions, username)
+	log.Debugf("grant permissions %v to %s module: %s", permissions, username, module)
 	if _, err:= IsUserExist(username, ""); err == ErrUserNotExist {
 		return nil, err
 	}
+	//grant all permissions
+	if toUpper(module) == "ALL" {
+		user_scope[username] = rootScopes()
+		return nil, nil
+	}
 	// grant permissions one by one
 	for _, pms := range permissions {
-		scope := convertToScope(pms)
-		if scope == -1 {
-			invalidPms = append(invalidPms, pms)
-			log.Noticef("Invalid permission name: %v", pms)
+		if toUpper(pms) == "ALL" {
+			pms = "all"
+		}
+		scope := convertToIntegers(module + "::" + pms)
+		if scope == nil {
+			invalidPms = append(invalidPms, module + "::" + pms)
+			log.Noticef("Invalid permission name: %s", module + "::" + pms)
 			continue
 		}
-		user_scope[username][scope] = true
+		for _, permission := range scope{
+			user_scope[username][permission] = true
+		}
 	}
 
 	return invalidPms, nil
 }
 
-func revokepermission(username string, permissions []string) ([]string, error) {
+func revokepermission(username string, module string, permissions []string) ([]string, error) {
 	// record non-existing permissions
 	var invalidPms []string
 	log.Debugf("revoke permissions %v to %s", permissions, username)
@@ -29,19 +39,24 @@ func revokepermission(username string, permissions []string) ([]string, error) {
 		return nil, err
 	}
 	// clear all permissions
-	if toUpper(permissions[0]) == "ALL" {
+	if toUpper(module) == "ALL" {
 		user_scope[username] = make(permissionSet)
 		return nil, nil
 	}
 	// revoke permissions one by one
 	for _, pms := range permissions {
-		scope := convertToScope(pms)
-		if scope == -1 {
-			invalidPms = append(invalidPms, pms)
-			log.Noticef("Invalid permission name: %v", pms)
+		if toUpper(pms) == "ALL" {
+			pms = "all"
+		}
+		scope := convertToIntegers(module + "::" + pms)
+		if scope == nil {
+			invalidPms = append(invalidPms, module + "::" + pms)
+			log.Noticef("Invalid permission name: %s", module + "::" + pms)
 			continue
 		}
-		delete(user_scope[username], scope)
+		for _, permission := range scope{
+			delete(user_scope[username], permission)
+		}
 	}
 
 	return invalidPms, nil

@@ -259,11 +259,11 @@ func (adm *Administrator) restartJvmServer(cmd *Command) *CommandResult {
 func (adm *Administrator) grantPermission(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
-	if argLen < 2 {
+	if argLen < 3 {
 		log.Warningf("Invalid cmd nums %d", argLen)
-		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects >=2 parameters, got %d", argLen)}}
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects >=3 parameters, got %d", argLen)}}
 	}
-	invalidPms, err := grantpermission(cmd.Args[0], cmd.Args[1:])
+	invalidPms, err := grantpermission(cmd.Args[0], cmd.Args[1], cmd.Args[2:])
 	if err != nil {
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
@@ -276,11 +276,11 @@ func (adm *Administrator) grantPermission(cmd *Command) *CommandResult {
 func (adm *Administrator) revokePermission(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
-	if argLen < 2 {
+	if argLen < 3 {
 		log.Warningf("Invalid cmd nums %d", argLen)
-		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects >=2 parameters, got %d", argLen)}}
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects >=3 parameters, got %d", argLen)}}
 	}
-	invalidPms, err := revokepermission(cmd.Args[0], cmd.Args[1:])
+	invalidPms, err := revokepermission(cmd.Args[0], cmd.Args[1], cmd.Args[2:])
 	if err != nil {
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}

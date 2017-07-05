@@ -7,7 +7,7 @@ import (
 // Error constants
 var (
 	ErrNotLogin          = errors.New("Need User Login")
-	ErrUnMatch           = errors.New("Username does't match the password")
+	ErrUnMatch           = errors.New("Username or password invalid")
 	ErrUserNotExist      = errors.New("User doesn't exist")
 	ErrDecodeErr         = errors.New("Decode error")
 	ErrNotSupport        = errors.New("Not support method")
