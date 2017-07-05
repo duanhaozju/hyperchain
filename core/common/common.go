@@ -2,6 +2,13 @@ package common
 
 import cm "hyperchain/common"
 
+var precompiledAccount = map[string]struct{}{
+	cm.BytesToAddress(cm.LeftPadBytes([]byte{1}, 20)).Hex(): struct{}{},  // ECRECOVER
+	cm.BytesToAddress(cm.LeftPadBytes([]byte{2}, 20)).Hex(): struct{}{},  // SHA256
+	cm.BytesToAddress(cm.LeftPadBytes([]byte{3}, 20)).Hex(): struct{}{},  // RIPEMD160
+	cm.BytesToAddress(cm.LeftPadBytes([]byte{4}, 20)).Hex(): struct{}{},  // MEMCPY
+}
+
 func RetrieveSnapshotFileds() []string {
 	return []string{
 		// world state related
@@ -14,11 +21,10 @@ func RetrieveSnapshotFileds() []string {
 	}
 }
 
+
 func IsPrecompiledAccount(address cm.Address) bool {
-	if address.Hex() == cm.BytesToAddress(cm.LeftPadBytes([]byte{1}, 20)).Hex() || address.Hex() == cm.BytesToAddress(cm.LeftPadBytes([]byte{2}, 20)).Hex() ||
-		address.Hex() == cm.BytesToAddress(cm.LeftPadBytes([]byte{3}, 20)).Hex() || address.Hex() == cm.BytesToAddress(cm.LeftPadBytes([]byte{4}, 20)).Hex() {
+	if _, exist := precompiledAccount[address.Hex()]; exist {
 		return true
-	} else {
-		return false
 	}
+	return false
 }
