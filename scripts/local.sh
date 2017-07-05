@@ -270,6 +270,9 @@ REBUILD=true
 # rebuild hypercli or not? default = false
 HYPERCLI=false
 
+# distribute jvm or not? default = true
+HYPERJVM=true
+
 # run process or not? default = true
 RUN=true
 
@@ -293,6 +296,8 @@ do
         REBUILD=false; shift;;
     -c|--hypercli)
         HYPERCLI=true; shift;;
+    -j|--jvm)
+        HYPERJVM=false; shift;;
     -m|--mode)
         MODE=true; shift;;
     -n|--run)
@@ -329,7 +334,9 @@ fi
 f_distribute $MAXPEERNUM
 
 # run hyperchain node
+if ${HYPERJVM}; then
 start_hyperjvm
+fi
 
 if ${RUN}; then
     f_run_process
