@@ -40,7 +40,7 @@ const (
 	// user cmd
 	admin_createUser
 	admin_alterUser
-	admin_delUser
+	admin_dropUser
 
 	// permission cmd
 	admin_grantPermission
@@ -52,18 +52,13 @@ const (
 	contract_invokeContract
 
 	// node cmd
-	node_getNodes
-	node_getNodeHash
 	node_delNode
-
-	// tx cmd
-	tx_getTransactionReceipt
 
 	MAXNUM
 )
 
-var defaultScope = []int{admin_getLevel, admin_listNamespaces, node_getNodes, node_getNodeHash, contract_deployContract,
-	contract_invokeContract, tx_getTransactionReceipt, admin_listPermission}
+var defaultScope = []int{admin_getLevel, admin_listNamespaces, contract_deployContract,
+	contract_invokeContract, admin_listPermission}
 
 // convertToScope converts method name to corresponding scope
 func convertToScope(method string) int {
@@ -104,7 +99,7 @@ func convertToScope(method string) int {
 	case toUpper("admin_alterUser"):
 		return admin_alterUser
 	case toUpper("admin_delUser"):
-		return admin_delUser
+		return admin_dropUser
 	case toUpper("admin_grantPermission"):
 		return admin_grantPermission
 	case toUpper("admin_revokePermission"):
@@ -115,14 +110,8 @@ func convertToScope(method string) int {
 		return contract_deployContract
 	case toUpper("contract_invokeContract"):
 		return contract_invokeContract
-	case toUpper("node_getNodes"):
-		return node_getNodes
-	case toUpper("node_getNodeHash"):
-		return node_getNodeHash
 	case toUpper("node_delNode"):
 		return node_delNode
-	case toUpper("tx_getTransactionReceipt"):
-		return tx_getTransactionReceipt
 
 	default:
 		return -1
@@ -166,8 +155,8 @@ func convertToMethod(scope int) string {
 		return "admin_createUser"
 	case admin_alterUser:
 		return "admin_alterUser"
-	case admin_delUser:
-		return "admin_delUser"
+	case admin_dropUser:
+		return "admin_dropUser"
 	case admin_grantPermission:
 		return "admin_grantPermission"
 	case admin_revokePermission:
@@ -178,17 +167,68 @@ func convertToMethod(scope int) string {
 		return "contract_deployContract"
 	case contract_invokeContract:
 		return "contract_invokeContract"
-	case node_getNodes:
-		return "node_getNodes"
-	case node_getNodeHash:
-		return "node_getNodeHash"
 	case node_delNode:
 		return "node_delNode"
-	case tx_getTransactionReceipt:
-		return "tx_getTransactionReceipt"
 
 	default:
 		return ""
+	}
+}
+
+func ReadablePermission(scope float64) string {
+	permission := int(scope)
+	switch permission {
+	case admin_stopServer:
+		return "server::stop"
+	case admin_restartServer:
+		return "server:restart"
+	case admin_startNsMgr:
+		return "namespace::startNsMgr"
+	case admin_stopNsMgr:
+		return "namespace::stopNsMgr"
+	case admin_registerNamespace:
+		return "namespace::register [ns-name]"
+	case admin_deregisterNamespace:
+		return "namespace::deregister [ns-name]"
+	case admin_startNamespace:
+		return "namespace::start [ns-name]"
+	case admin_stopNamespace:
+		return "namespace::stop [ns-name]"
+	case admin_restartNamespace:
+		return "namespace::restart [ns-name]"
+	case admin_listNamespaces:
+		return "namespace::list"
+	case admin_startHttpServer:
+		return "http::start"
+	case admin_stopHttpServer:
+		return "http::stop"
+	case admin_restartHttpServer:
+		return "http::restart"
+	case admin_setLevel:
+		return "log::setLevel [ns-name] [module] [logLevel]"
+	case admin_getLevel:
+		return "log::getLevel [ns-name] [module]"
+	case admin_createUser:
+		return "auth::create [username] [password]"
+	case admin_alterUser:
+		return "auth::alter [username] [password]"
+	case admin_dropUser:
+		return "auth::drop [username]"
+	case admin_grantPermission:
+		return "auth::grant [username] [permissions...]"
+	case admin_revokePermission:
+		return "auth::revoke [username] [permissions...]"
+	case admin_listPermission:
+		return "auth::list [username]"
+	case contract_deployContract:
+		return "contract::deploy [params...]"
+	case contract_invokeContract:
+		return "contract::invoke [params...]"
+	case node_delNode:
+		return "node::delete [params...]"
+
+	default:
+		return "Undified permission!"
 	}
 }
 

@@ -47,14 +47,14 @@ func revokepermission(username string, permissions []string) ([]string, error) {
 	return invalidPms, nil
 }
 
-func listpermission(username string) ([]string, error) {
-	var permissions []string
+func listpermission(username string) ([]int, error) {
+	var permissions []int
 	log.Debugf("list permissions of %s", username)
 	if _, err:= IsUserExist(username, ""); err == ErrUserNotExist {
 		return nil, err
 	}
 	for scope := range user_scope[username] {
-		permissions = append(permissions, convertToMethod(scope))
+		permissions = append(permissions, scope)
 	}
 	return permissions, nil
 }

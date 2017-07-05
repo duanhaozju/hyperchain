@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"hyperchain/hypercli/common"
 	"os"
+	"sort"
 )
 
 // createUser implements the create user logic in hypercli, this method can only be called by root successfully
@@ -147,33 +148,30 @@ func list(c *cli.Context) error {
 	}
 
 	result:= client.InvokeCmd(cmd)
-	fmt.Print(result)
 
 	response, err := common.GetJSONResponse(result)
 	if err != nil {
 		fmt.Println("Get json response failed: ", err)
 		os.Exit(1)
 	}
-	if result, ok := response.Result.(map[string]interface{}); !ok {
-		return fmt.Errorf("rpc result: %v can't parse", response.Result)
+
+	if permissions, ok := response.Result.([]interface{}); !ok {
+		fmt.Println(response.Result)
+		return nil
 	} else {
-		for key, value := range result {
-			if key == "result" {
-				if permissions, ok := value.([]interface{}); !ok {
-					fmt.Println(value)
-					return nil
-				} else {
-					if len(permissions) == 0 {
-						fmt.Printf("Sorry, %s have no permissions to do anything, " +
-							"please contact to you admin...\n", username)
-						return nil
-					}
-					fmt.Printf("%s has permissions to: \n", username)
-					for _, permission := range permissions {
-						fmt.Println(permission)
-					}
-				}
-			}
+		if len(permissions) == 0 {
+			fmt.Printf("Sorry, %s have no permissions to do anything, " +
+				"please contact to you admin...\n", username)
+			return nil
+		}
+		fmt.Printf("%s has permissions to: \n", username)
+		var readablePermissions []string
+		for _, permission := range permissions {
+			readablePermissions = append(readablePermissions, admin.ReadablePermission(permission.(float64)))
+		}
+		sort.Strings(readablePermissions)
+		for _, readablePermission := range readablePermissions {
+			fmt.Println(readablePermission)
 		}
 	}
 
