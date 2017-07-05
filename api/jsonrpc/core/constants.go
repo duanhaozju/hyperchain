@@ -50,15 +50,21 @@ const (
 	// contract cmd
 	contract_deployContract
 	contract_invokeContract
+	contract_maintainContract
 
 	// node cmd
+	node_getNodes
+	node_getNodeHash
 	node_delNode
+
+	// tx cmd
+	tx_getTransactionReceipt
 
 	MAXNUM
 )
 
-var defaultScope = []int{admin_getLevel, admin_listNamespaces, contract_deployContract,
-	contract_invokeContract, admin_listPermission}
+var defaultScope = []int{admin_getLevel, admin_listNamespaces, node_getNodes, node_getNodeHash, contract_deployContract,
+	contract_invokeContract, contract_maintainContract, tx_getTransactionReceipt, admin_listPermission}
 
 // convertToScope converts method name to corresponding scope
 func convertToScope(method string) int {
@@ -110,8 +116,16 @@ func convertToScope(method string) int {
 		return contract_deployContract
 	case toUpper("contract_invokeContract"):
 		return contract_invokeContract
+	case toUpper("contract_maintainContract"):
+		return contract_maintainContract
+	case toUpper("node_getNodes"):
+		return node_getNodes
+	case toUpper("node_getNodeHash"):
+		return node_getNodeHash
 	case toUpper("node_delNode"):
 		return node_delNode
+	case toUpper("tx_getTransactionReceipt"):
+		return tx_getTransactionReceipt
 
 	default:
 		return -1
@@ -167,8 +181,16 @@ func convertToMethod(scope int) string {
 		return "contract_deployContract"
 	case contract_invokeContract:
 		return "contract_invokeContract"
+	case contract_maintainContract:
+		return "contract_maintainContract"
+	case node_getNodes:
+		return "node_getNodes"
+	case node_getNodeHash:
+		return "node_getNodeHash"
 	case node_delNode:
 		return "node_delNode"
+	case tx_getTransactionReceipt:
+		return "tx_getTransactionReceipt"
 
 	default:
 		return ""
@@ -224,8 +246,16 @@ func ReadablePermission(scope float64) string {
 		return "contract::deploy [params...]"
 	case contract_invokeContract:
 		return "contract::invoke [params...]"
+	case contract_maintainContract:
+		return "contract::[update/frozen/unfrozen/destroy] [params...]"
+	case node_getNodes:
+		return "node::getNodes"
+	case node_getNodeHash:
+		return "node::getNodeHash"
 	case node_delNode:
 		return "node::delete [params...]"
+	case tx_getTransactionReceipt:
+		return "tx::getTransactionReceipt"
 
 	default:
 		return "Undified permission!"

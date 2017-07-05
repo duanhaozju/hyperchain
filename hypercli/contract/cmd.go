@@ -149,7 +149,7 @@ func NewContractCMD() []cli.Command {
 			Action:  destroy,
 			Flags:   append(commonFlags, []cli.Flag{
 				cli.StringFlag{
-					Name:  "destorycmd, c",
+					Name:  "destroycmd, c",
 					Value: "",
 					Usage: "specify the payload of destory contract",
 				},
@@ -257,7 +257,7 @@ func unfrozen(c *cli.Context) error {
 
 // destroy destroys the contract
 func destroy(c *cli.Context) error {
-	if err := maintain(c, 4, "updatecmd") ; err != nil {
+	if err := maintain(c, 4, "destroycmd") ; err != nil {
 		fmt.Println("Error in destroy contract!")
 		fmt.Println(err)
 		os.Exit(1)
