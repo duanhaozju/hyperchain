@@ -259,7 +259,7 @@ func (api *PublicFilterAPI) UnSubscription(id string) error {
 func (api *PublicFilterAPI) GetLogs(crit flt.FilterCriteria) (interface{}, error) {
 	err, genesis := edb.GetGenesisTag(api.namespace)
 	if err != nil {
-		return nil, &common.InternalServerErr{Message: "obtain genesis tag failed"}
+		return nil, &common.CallbackError{Message: "obtain genesis tag failed"}
 	}
 	head := edb.GetHeightOfChain(api.namespace)
 
@@ -337,20 +337,26 @@ func returnException(data []interface{}) []event.FilterExceptionEvent {
 ********************************************************************************/
 
 // Block creates a subscription that send a notification each time when a new block is appended to the chain.
-func (api *PublicFilterAPI) Block(ctx context.Context) (common.ID, error) {
+func (api *PublicFilterAPI) Block(ctx context.Context, isVerbose bool) (common.ID, error) {
 
 	api.log.Debug("ready to deal with newBlock event request")
-	return api.handleWSSubscribe(ctx, flt.BlocksSubscription, flt.FilterCriteria{})
+	return api.handleWSSubscribe(ctx, isVerbose, flt.BlocksSubscription, flt.FilterCriteria{})
 }
 
 // Exception creates a subscription that send a notification each time when exception is threw.
 func (api *PublicFilterAPI) Exception(ctx context.Context, crit flt.FilterCriteria) (common.ID, error) {
 
 	api.log.Debug("ready to deal with newException event request")
-	return api.handleWSSubscribe(ctx, flt.ExceptionSubscription, crit)
+	return api.handleWSSubscribe(ctx, false, flt.ExceptionSubscription, crit)
 }
 
-func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, typ flt.Type, crit flt.FilterCriteria) (common.ID, error) {
+// Logs creates a subscription that send a notification each time when contract event is triggered.
+func (api *PublicFilterAPI) Logs(ctx context.Context, crit flt.FilterCriteria) (common.ID, error) {
+	api.log.Debug("ready to deal with newLogs event request")
+	return api.handleWSSubscribe(ctx, false, flt.LogsSubscription, crit)
+}
+
+func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, isVerbose bool, typ flt.Type, crit flt.FilterCriteria) (common.ID, error) {
 
 	api.filtersMu.Lock()
 	defer api.filtersMu.Unlock()
@@ -367,12 +373,34 @@ func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, typ flt.Type,
 		go func() {
 
 			ch     := make(chan interface{})
-			sub    := api.events.NewCommonSubscription(ch, false, typ, crit)
+			sub    := api.events.NewCommonSubscription(ch, isVerbose, typ, crit)
 
 			for {
 				select {
 				case d := <-ch:
 					api.log.Debugf("receive data")
+					switch typ {
+					case flt.BlocksSubscription:
+						if isVerbose {
+							hash, ok := d.(common.Hash)
+							if !ok { continue }
+							block, err := edb.GetBlock(api.namespace, hash.Bytes())
+							if err != nil {
+								api.log.Errorf("missing block data (#%s)", hash.Hex())
+								continue
+							} else if wrappedBlock, err := outputBlockResult(api.namespace, block, true); err != nil{
+								api.log.Errorf("wrapper block data (#%s) failed", hash.Hex())
+								continue
+							} else {
+								d = wrappedBlock
+							}
+						}
+					case flt.LogsSubscription:
+						logs := make([]interface{}, 1)
+						logs = append(logs, d)
+						d =  returnLogs(logs)
+					}
+
 					payload := common.NotifyPayload{
 						SubID: rpcSub.ID,
 						Data:  d,

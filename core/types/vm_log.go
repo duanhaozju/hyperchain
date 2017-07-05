@@ -73,14 +73,14 @@ func DecodeLogs(buf []byte) (Logs, error) {
 }
 
 type LogTrans struct {
-	Address     string
-	Topics      []string
-	Data        string
-	BlockNumber uint64
-	BlockHash   string
-	TxHash      string
-	TxIndex     uint
-	Index       uint
+	Address     string	`json:"address"`
+	Topics      []string	`json:"topics"`
+	Data        string	`json:"data"`
+	BlockNumber uint64	`json:"blockNumber"`
+	BlockHash   string	`json:"blockHash"`
+	TxHash      string	`json:"txHash"`
+	TxIndex     uint	`json:"txIndex"`
+	Index       uint	`json:"index"`
 }
 
 func (ls Logs) ToLogsTrans() []LogTrans {
@@ -90,6 +90,14 @@ func (ls Logs) ToLogsTrans() []LogTrans {
 		for ti, t := range log.Topics {
 			topics[ti] = t.Hex()
 		}
+		var data string
+		switch typ {
+		case Receipt_EVM:
+			data = common.Bytes2Hex(log.Data)
+		case Receipt_JVM:
+			data = string(log.Data)
+		}
+		fmt.Errorf("%#v", data)
 		ret[idx] = LogTrans{
 			Address:     log.Address.Hex(),
 			Data:        common.Bytes2Hex(log.Data),

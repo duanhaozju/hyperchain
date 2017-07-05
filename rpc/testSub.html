@@ -175,13 +175,13 @@ th, td {
     </table>
     <div style="background-color: silver;color: white;padding: 5px">
         <b>Request Example:</b>
-        <div>  Subscribe: {"jsonrpc":"2.0","method": "sub_subscribe","id": 1,"namespace":"global","params":["block", {}]}</div>
+        <div>  Subscribe: {"jsonrpc":"2.0","method": "sub_subscribe","id": 1,"namespace":"global","params":["block", false]}</div>
         <div>Unsubscribe: {"jsonrpc":"2.0","method": "sub_unsubscribe","id": 1,"namespace":"global","params":["id"]}</div>
     </div>
 </div>
 <form id="form">
     <input type="submit" value="Send" />
-    <input type="text" id="msg" size="64" style="width: 70%;" value='{"jsonrpc":"2.0","method": "sub_subscribe","id": 1,"namespace":"global","params":["block", {}]}'/>
+    <input type="text" id="msg" size="64" style="width: 70%;" value='{"jsonrpc":"2.0","method": "sub_subscribe","id": 1,"namespace":"global","params":["block", false]}'/>
 </form>
 </body>
 </html>

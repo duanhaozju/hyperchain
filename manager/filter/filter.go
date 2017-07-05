@@ -74,7 +74,6 @@ func (flt *Filter) ResetDeadline() {
 	flt.deadline.Reset(deadline)
 }
 
-
 // filterLogs creates a slice of logs matching the given criteria.
 func filterLogs(logs []*types.Log, logCrit *FilterCriteria) []*types.Log {
 	var ret []*types.Log
