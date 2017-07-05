@@ -281,7 +281,7 @@ func (api *PublicFilterAPI) GetLogs(crit flt.FilterCriteria) (interface{}, error
 	}
 
 	searcher := flt.NewLogSearcher(beginNo, endNo, crit.Addresses, crit.Topics, api.namespace)
-	return types.Logs(searcher.Search()).ToLogsTrans(types.Receipt_EVM), nil
+	return types.Logs(searcher.Search()).ToLogsTrans(), nil
 
 }
 
@@ -314,7 +314,7 @@ func returnLogs(logs []interface{}) []types.LogTrans {
 			ret = append(ret, log...)
 		}
 	}
-	return ret.ToLogsTrans(types.Receipt_EVM)
+	return ret.ToLogsTrans()
 }
 
 func returnException(data []interface{}) []event.FilterExceptionEvent {
