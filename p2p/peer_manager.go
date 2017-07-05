@@ -27,7 +27,7 @@ type MsgSender interface {
 	// send a message to specific peer  UNICAST
 	SendMsg(payLoad []byte, peerList []uint64)
 
-	//random select a VP and send msg to it
+	// random select a VP and send msg to it
 	SendRandomVP(payload []byte)
 
 	// broadcast information to NVP peers
@@ -64,5 +64,5 @@ type InfoGetter interface {
 	GetRouters() []byte
 
 	//ISVP local node is vp node or not
-	//IsVP() bool
+	IsVP() bool
 }

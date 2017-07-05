@@ -32,7 +32,10 @@ type peerManagerImpl struct {
 	selfID    int
 
 	isonline *threadsafelinkedlist.SpinLock
+
 	isnew bool
+
+	isVP bool
 
 	delchan chan bool
 
@@ -287,7 +290,8 @@ func (pmgr *peerManagerImpl)GetRouterHashifDelete(hash string) (afterDelRouterHa
 	return
 }
 
-func (pmgr *peerManagerImpl)DeleteNode(hash string) error { // if self {...} else{...}
+//DeleteNode delete the specific hash node, if the node hash is self, this node will stoped.
+func (pmgr *peerManagerImpl)DeleteNode(hash string) error {
 	pmgr.logger.Critical("DELENODE",hash)
 	if pmgr.node.info.Hash == hash{
 		pmgr.Stop()
@@ -330,4 +334,23 @@ func (pmgr *peerManagerImpl)GetRouters() []byte{
 	return b
 }
 
+// random select a VP and send msg to it
+func (pmgr *peerManagerImpl)SendRandomVP(payload []byte) error {
+	return nil
+}
+
+// broadcast information to NVP peers
+func(pmgr *peerManagerImpl)BroadcastNVP(payLoad []byte) error {
+	return nil
+}
+
+// send a message to specific NVP peer (by nvp hash) UNICAST
+func(pmgr *peerManagerImpl)SendMsgNVP(payLoad []byte, nvpList []string) error {
+	return nil
+}
+
+//IsVP return true if this node is vp node
+func (pmgr *peerManagerImpl)IsVP()bool{
+	return pmgr.isVP
+}
 
