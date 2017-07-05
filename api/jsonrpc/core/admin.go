@@ -261,10 +261,11 @@ func (adm *Administrator) grantPermission(cmd *Command) *CommandResult {
 	argLen := len(cmd.Args)
 	if argLen < 2 {
 		log.Warningf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects >=2 parameters, got %d", argLen)}}
 	}
 	invalidPms, err := grantpermission(cmd.Args[0], cmd.Args[1:])
 	if err != nil {
-		return &CommandResult{Ok: false, Result: err.Error()}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	if len(invalidPms) == 0 {
 		return &CommandResult{Ok: true, Result: "grant permission successfully."}
@@ -277,10 +278,11 @@ func (adm *Administrator) revokePermission(cmd *Command) *CommandResult {
 	argLen := len(cmd.Args)
 	if argLen < 2 {
 		log.Warningf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects >=2 parameters, got %d", argLen)}}
 	}
 	invalidPms, err := revokepermission(cmd.Args[0], cmd.Args[1:])
 	if err != nil {
-		return &CommandResult{Ok: false, Result: err.Error()}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	if len(invalidPms) == 0 {
 		return &CommandResult{Ok: true, Result: "revoke permission successfully."}
@@ -293,10 +295,11 @@ func (adm *Administrator) listPermission(cmd *Command) *CommandResult {
 	argLen := len(cmd.Args)
 	if argLen != 1 {
 		log.Warningf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen)}}
 	}
 	result, err := listpermission(cmd.Args[0])
 	if err != nil {
-		return &CommandResult{Ok: false, Result: err.Error()}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: result}
 }
@@ -306,13 +309,14 @@ func (adm *Administrator) createUser(cmd *Command) *CommandResult {
 	argLen := len(cmd.Args)
 	if argLen != 2 {
 		log.Warningf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2 parameters, got %d", argLen)}}
 	}
 	username := cmd.Args[0]
 	password := cmd.Args[1]
 	// judge if the user exist or not, if username exists, return a duplicate name error
 	if _, err := IsUserExist(username, password); err != ErrUserNotExist {
 		log.Debugf("User %s: %s", username, ErrDuplicateUsername.Error())
-		return &CommandResult{Ok: true, Result: ErrDuplicateUsername.Error()}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrDuplicateUsername.Error()}}
 	}
 
 	createUser(username, password)
@@ -324,13 +328,14 @@ func (adm *Administrator) alterUser(cmd *Command) *CommandResult {
 	argLen := len(cmd.Args)
 	if argLen != 2 {
 		log.Warningf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2 parameters, got %d", argLen)}}
 	}
 	username := cmd.Args[0]
 	password := cmd.Args[1]
 	// judge if the user exist or not, if username exists, return a duplicate name error
 	if _, err := IsUserExist(username, password); err == ErrUserNotExist {
 		log.Debugf("User %s: %s", username, ErrUserNotExist.Error())
-		return &CommandResult{Ok: true, Result: ErrUserNotExist.Error()}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrUserNotExist.Error()}}
 	}
 
 	alterUser(username, password)
@@ -342,12 +347,13 @@ func (adm *Administrator) delUser(cmd *Command) *CommandResult {
 	argLen := len(cmd.Args)
 	if argLen != 1 {
 		log.Warningf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen)}}
 	}
 	username := cmd.Args[0]
 	// judge if the user exist or not, if username exists, return a duplicate name error
 	if _, err := IsUserExist(username, ""); err == ErrUserNotExist {
 		log.Debugf("User %s: %s", username, ErrUserNotExist.Error())
-		return &CommandResult{Ok: true, Result: ErrUserNotExist.Error()}
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrUserNotExist.Error()}}
 	}
 
 	delUser(username)

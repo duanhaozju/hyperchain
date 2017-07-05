@@ -167,15 +167,15 @@ func NewContractCMD() []cli.Command {
 func deploy(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	var deployCmd string
+	method := "contract_deployContract"
 	if c.String("deploycmd") != "" {
 		deployCmd = c.String("deploycmd")
 	} else {
 		deployParams := []string{"from", "payload"}
-		method := "contract_deployContract"
 		deployCmd = getCmd(method, deployParams, 0, c)
 	}
 	//fmt.Println(deployCmd)
-	result, err := client.Call(deployCmd)
+	result, err := client.Call(deployCmd, method)
 	if err != nil {
 		fmt.Println("Error in call deploy cmd request")
 		fmt.Println(err)
@@ -198,15 +198,15 @@ func deploy(c *cli.Context) error {
 func invoke(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	var invokeCmd string
+	method := "contract_invokeContract"
 	if c.String("invokecmd") != "" {
 		invokeCmd = c.String("invokecmd")
 	} else {
 		invokeParams := []string{"from", "to", "payload", "method", "args"}
-		method := "contract_invokeContract"
 		invokeCmd = getCmd(method, invokeParams, 0, c)
 	}
 	//fmt.Println(invokeCmd)
-	result, err := client.Call(invokeCmd)
+	result, err := client.Call(invokeCmd, method)
 	if err != nil {
 		fmt.Println("Error in call invoke cmd request")
 		fmt.Println(err)
@@ -269,15 +269,15 @@ func destroy(c *cli.Context) error {
 func maintain(c *cli.Context, opcode int32, maintainMethod string) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	var maintainCmd string
+	method := "contract_maintainContract"
 	if c.String(maintainMethod) != "" {
 		maintainCmd = c.String(maintainMethod)
 	} else {
 		maintainParams := []string{"from", "to", "payload", "opcode"}
-		method := "contract_maintainContract"
 		maintainCmd = getCmd(method, maintainParams, opcode, c)
 	}
 	//fmt.Println(maintainCmd)
-	result, err := client.Call(maintainCmd)
+	result, err := client.Call(maintainCmd, method)
 	if err != nil {
 		fmt.Printf("Error in call %s request\n", maintainCmd)
 		return err

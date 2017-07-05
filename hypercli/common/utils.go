@@ -22,6 +22,7 @@ import (
 )
 
 const (
+	tokenpath       = "./.token"
 	password        = "123"
 	defaultGas      = 10000
 	defaultGasPrice = 10000
@@ -101,9 +102,10 @@ func getTransactionReceiptCmd(txHash string, namespace string) string {
 // getTransactionReceipt try to get the transaction receipt 10 times, with 1s interval
 func GetTransactionReceipt(txHash string, namespace string, client *CmdClient) error {
 	cmd := getTransactionReceiptCmd(txHash, namespace)
+	method := "tx_getTransactionReceipt"
 
 	for i:= 1; i<= frequency; i ++ {
-		response, err := client.Call(cmd)
+		response, err := client.Call(cmd, method)
 		if err != nil {
 			return err
 		} else {

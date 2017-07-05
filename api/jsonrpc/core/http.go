@@ -180,6 +180,29 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.StatusRequestEntityTooLarge)
 		return
 	}
+
+	auth := r.Header.Get("Authorization")
+
+	// verify signed token
+	if claims, err := verifyToken(auth, pub_key, "RS256"); err != nil {
+		w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic releam=%s", err.Error()))
+		w.WriteHeader(http.StatusUnauthorized)
+		io.WriteString(w, fmt.Sprintf("%s", err.Error()))
+		return
+	} else {
+		var method = r.Header.Get("Method")
+		if method == "" {
+			io.WriteString(w, "Invalid request")
+			return
+		}
+		if ok, err := checkPermission(claims, method); !ok {
+			w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic releam=%s", err.Error()))
+			w.WriteHeader(http.StatusUnauthorized)
+			io.WriteString(w, fmt.Sprintf("%s", err.Error()))
+			return
+		}
+	}
+
 	w.Header().Set("content-type", "application/json")
 	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr)
 	defer codec.Close()
