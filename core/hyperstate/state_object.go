@@ -30,7 +30,7 @@ const (
 )
 
 const (
-	OPCODE_ARCHIEVE = 100
+	OPCODE_ARCHIVE = 100
 )
 
 func (self Storage) String() (str string) {
@@ -70,7 +70,7 @@ type StateObject struct {
 	code            Code    // contract bytecode, which gets set when code is loaded
 	cachedStorage   Storage // Storage entry cache to avoid duplicate reads
 	dirtyStorage    Storage // Storage entries that need to be flushed to disk
-	archieveStorage Storage // Storage entries that need to be flushed to disk
+	archiveStorage Storage // Storage entries that need to be flushed to disk
 	evictList       map[common.Hash]uint64 // record storage lasted modify block number
 
 	bucketTree *bucket.BucketTree     // a bucket tree use to calculate fingerprint of storage efficiency
@@ -123,7 +123,7 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 		data:            data,
 		cachedStorage:   make(Storage),
 		dirtyStorage:    make(Storage),
-		archieveStorage: make(Storage),
+		archiveStorage:  make(Storage),
 		onDirty:         onDirty,
 		logger:          logger,
 		evictList:       make(map[common.Hash]uint64),
@@ -248,8 +248,8 @@ func (self *StateObject) SetState(db db.Database, key common.Hash, value []byte,
 	})
 	self.logger.Debugf("set state key %s value %s existed %v", key.Hex(), common.Bytes2Hex(value), exist)
 	self.setState(key, value)
-	if self.isArchieve(opcode) {
-		self.archieve(key, previous, value)
+	if self.isArchive(opcode) {
+		self.archive(key, previous, value)
 	}
 }
 
@@ -295,7 +295,7 @@ func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 				return err
 			}
 			// put into archieve db
-			previous := self.archieveStorage[key]
+			previous := self.archiveStorage[key]
 			if len(previous) != 0 {
 				self.logger.Debugf("flush dirty storage address [%s] add key: [%s] to archieve db, value [%s]", self.address.Hex(), key.Hex(), common.Bytes2Hex(previous))
 				if err := archieveDb.Put(CompositeArchieveStorageKey(self.address.Bytes(), key.Bytes()), previous); err != nil {
@@ -312,7 +312,7 @@ func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 	}
 	// flush all bucket tree modified to batch
 	self.bucketTree.AddChangesForPersistence(db, big.NewInt(int64(self.db.curSeqNo)))
-	self.archieveStorage = make(Storage)
+	self.archiveStorage = make(Storage)
 	<- done
 	return nil
 }
@@ -670,13 +670,13 @@ func (self *StateObject) removeDeployedContract(address common.Address) bool {
 	return false
 }
 
-func (self *StateObject) archieve(key common.Hash, originValue, value []byte) {
+func (self *StateObject) archive(key common.Hash, originValue, value []byte) {
 	if len(value) == 0 {
-		self.archieveStorage[key] = originValue
+		self.archiveStorage[key] = originValue
 	}
 }
-func (self *StateObject) isArchieve(opcode int32) bool {
-	return opcode == OPCODE_ARCHIEVE
+func (self *StateObject) isArchive(opcode int32) bool {
+	return opcode == OPCODE_ARCHIVE
 }
 
 

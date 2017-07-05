@@ -70,11 +70,11 @@ func (executor *Executor) initDb() error {
 		return err
 	}
 	executor.db = db
-	archieveDb, err := hyperdb.GetArchieveDbByNamespace(executor.namespace)
+	archiveDb, err := hyperdb.GetArchiveDbByNamespace(executor.namespace)
 	if err != nil {
 		return err
 	}
-	executor.archiveDb = archieveDb
+	executor.archiveDb = archiveDb
 	return nil
 }
 

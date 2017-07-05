@@ -76,11 +76,11 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 
 // NewStateDb - create a empty stateDb handler.
 func NewStateDb(conf *common.Config, db db.Database, namespace string) (vm.Database, error) {
-	archieveDb, err := hyperdb.GetArchieveDbByNamespace(namespace)
+	archiveDb, err := hyperdb.GetArchiveDbByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}
-	stateDb, err := hyperstate.New(common.Hash{}, db, archieveDb, conf, 0, namespace)
+	stateDb, err := hyperstate.New(common.Hash{}, db, archiveDb, conf, 0, namespace)
 	if err != nil {
 		return nil, err
 	}
