@@ -27,7 +27,7 @@ func (receipt Receipt) ToReceiptTrans() (receiptTrans *ReceiptTrans) {
 	if err != nil {
 		logsValue = nil
 	} else {
-		logsValue = logs.ToLogsTrans(receipt.VmType)
+		logsValue = logs.ToLogsTrans()
 	}
 	return &ReceiptTrans{
 		Version:           string(receipt.Version),
