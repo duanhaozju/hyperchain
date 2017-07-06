@@ -28,7 +28,7 @@ type MsgSender interface {
 	SendMsg(payLoad []byte, peerList []uint64)
 
 	// random select a VP and send msg to it
-	SendRandomVP(payload []byte)
+	SendRandomVP(payload []byte) error
 
 	// broadcast information to NVP peers
 	BroadcastNVP(payLoad []byte)
