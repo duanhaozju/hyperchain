@@ -14,6 +14,7 @@ message SessionMessage {
         ADD_PEER = 7;
         DEL_PEER = 8;
         TRANSIT_BLOCK = 9;
+        NVP_RELAY = 10;
     }
     Type type = 1;
     bytes payload = 2;

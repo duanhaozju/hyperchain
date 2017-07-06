@@ -7,6 +7,8 @@ import (
 	"hyperchain/core/types"
 	"reflect"
 	er "hyperchain/core/errors"
+	"strconv"
+	"github.com/pkg/errors"
 )
 type Helper struct {
 	msgQ *event.TypeMux
@@ -109,7 +111,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return nil
 	case NOTIFY_UNICAST_BLOCK:
 		executor.logger.Debug("inform p2p unicast block")
-		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64}, message...) {
+		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64, reflect.String}, message...) {
 			return er.InvalidParamsErr
 		}
 		block, err := edb.GetBlockByNumber(executor.namespace, message[0].(uint64))
@@ -122,11 +124,11 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Error("marshal block failed")
 			return err
 		}
-		//todo peer hash
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_UNICAST_BLOCK,
 			Peers:   []uint64{message[1].(uint64)},
+			PeersHash: []string{message[2].(string)},
 		})
 		return nil
 	case NOTIFY_UNICAST_INVALID:
@@ -143,10 +145,17 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Error("marshal invalid record error")
 			return err
 		}
+		id, err := SplitVpId(r.Tx.Id)
+		if err != nil {
+			executor.logger.Error("get Tx's Id error", err.Error())
+			return err
+		}
+		hash, _ := SplitNvpHash(r.Tx.Id)
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_UNICAST_INVALID,
-			Peers:   []uint64{r.Tx.Id},
+			Peers:   []uint64{id},
+			PeersHash: []string{hash},
 		})
 		return nil
 	case NOTIFY_BROADCAST_SINGLE:
@@ -224,3 +233,19 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	return nil
 }
 
+func SplitNvpHash(id []byte) (string, error) {
+	if len(string(id)) > 64 {
+		return string(id)[:64], nil
+	} else {
+		return "", errors.New("id length less then 64.")
+	}
+}
+
+func SplitVpId(id []byte) (uint64, error) {
+	if len(string(id)) <= 64 {
+		return strconv.ParseUint(string(id), 0, 64)
+	} else {
+		temp := string(id)[64:]
+		return strconv.ParseUint(temp, 0, 64)
+	}
+}

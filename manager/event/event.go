@@ -15,6 +15,7 @@ type BroadcastConsensusEvent struct{ Payload []byte }
 type NewTxEvent struct {
 	Transaction *types.Transaction
 	Simulate bool
+	Ch chan bool
 }
 
 type TxUniqueCastEvent struct {
@@ -127,8 +128,11 @@ type ExecutorToP2PEvent struct {
 	Payload []byte
 	Type    int
 	Peers   []uint64
+	PeersHash   []string
 }
 
-
-
+// receive tx from a nvp
+type NvpRelayTxEvent struct {
+	Payload []byte
+}
 

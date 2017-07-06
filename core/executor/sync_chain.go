@@ -72,8 +72,7 @@ func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 	var request ChainSyncRequest
 	proto.Unmarshal(payload, &request)
 	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
-		//todo hash
-		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
+		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId, request.PeerHash)
 	}
 }
 
