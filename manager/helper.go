@@ -4,6 +4,8 @@ import (
 	"hyperchain/consensus/pbft"
 	"github.com/golang/protobuf/proto"
 	m "hyperchain/manager/message"
+	"github.com/syndtr/goleveldb/leveldb/errors"
+	"fmt"
 )
 
 func (hub *EventHub) invokePbftLocal(serviceType, eventType int, content interface{}) {
@@ -48,16 +50,17 @@ func (hub *EventHub) send(t m.SessionMessage_Type, message []byte, peers []uint6
 	}
 }
 
-func (hub *EventHub) sendToRandomVP(t m.SessionMessage_Type, message []byte) {
+func (hub *EventHub) sendToRandomVP(t m.SessionMessage_Type, message []byte) error {
 	hub.logger.Debugf("send session message %s", t.String())
 	if ctx, err := proto.Marshal(&m.SessionMessage{
 		Type:    t,
 		Payload: message,
 	}); err != nil {
-		hub.logger.Errorf("marshal message %d failed.", t)
-		return
+		errStr := fmt.Sprintf("marshal message %d failed.", t)
+		hub.logger.Errorf(errStr)
+		return errors.New(errStr)
 	} else {
-		hub.peerManager.SendRandomVP(ctx)
+		return hub.peerManager.SendRandomVP(ctx)
 	}
 }
 

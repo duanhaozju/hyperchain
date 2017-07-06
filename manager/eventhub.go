@@ -495,9 +495,10 @@ func (hub *EventHub) RelayTx(transaction *types.Transaction, ch chan bool) {
 	payload, err := proto.Marshal(transaction)
 	if err != nil {
 		hub.logger.Error("Relay tx, marshal payload failed")
+		ch <- false
 		return err
 	}
-	err := hub.sendToRandomVP(m.SessionMessage_NVP_RELAY, payload)
+	err = hub.sendToRandomVP(m.SessionMessage_NVP_RELAY, payload)
 	if err == nil {
 		ch <- true
 	} else {
