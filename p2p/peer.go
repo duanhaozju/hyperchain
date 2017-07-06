@@ -55,23 +55,6 @@ func (peer *Peer)Chat(in *pb.Message) (*pb.Message, error){
 	return resp,nil
 }
 
-//Greeting send a single message to remote peer
-func (peer *Peer)Greeting(in *pb.Message) (*pb.Message,error){
-	//here will wrapper the message
-	in.From = &pb.Endpoint{
-		
-		Field : []byte(peer.local.GetNameSpace()),
-		Hostname : []byte(peer.local.Hostname),
-		UUID : []byte(peer.local.GetHash()),
-		Version : P2P_MODULE_DEV_VERSION,
-	}
-	response,err := peer.net.Greeting(peer.hostname,in)
-	if err != nil{
-		return nil,err
-	}
-	return response,nil
-}
-
 //Whisper send a whisper message to remote peer
 func (peer *Peer)Whisper(in *pb.Message) (*pb.Message,error){
 	in.From = &pb.Endpoint{
@@ -80,7 +63,7 @@ func (peer *Peer)Whisper(in *pb.Message) (*pb.Message,error){
 		UUID : []byte(peer.local.GetHash()),
 		Version : P2P_MODULE_DEV_VERSION,
 	}
-	response,err := peer.net.Greeting(peer.hostname,in)
+	response,err := peer.net.Whisper(peer.hostname,in)
 	if err != nil{
 		return nil,err
 	}

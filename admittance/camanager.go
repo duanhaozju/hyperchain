@@ -6,13 +6,9 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/core/crypto/primitives"
 	"io/ioutil"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"time"
 	"github.com/spf13/viper"
-	"fmt"
 )
 
 var (
@@ -45,62 +41,23 @@ type CAManager struct {
 	checkTCert            bool
 	checkCertSign         bool
 
-	// TLS part
-	tlsCA                 string
-	tlsCert               string
-	tlsCertPriv           string
-	tlsServerHostOverride string
-	//security options
-	enableTls             bool
 	EnableSymmetrical     bool
 
-	//those options just put here temporary
-	RetryTimeLimit    int
-	RecoveryTimeLimit int
-	KeepAliveTimeLimit int
-	KeepAliveInterval time.Duration
-	RetryTimeout time.Duration
-	RecoveryTimeout time.Duration
 	logger     *logging.Logger
 }
-
-var caManager *CAManager
 
 //NewCAManager get a new ca manager instance
 func NewCAManager(conf *common.Config) (*CAManager, error) {
 	logger := common.GetLogger(conf.GetString(common.NAMESPACE), "ca")
 	caconfPath := conf.GetString("global.configs.caconfig")
 	logger.Debug(caconfPath)
-	enableTLS := conf.GetBool("global.security.enabletls")
 	enableSymmetrical := conf.GetBool("global.security.enablesymmetrical")
-
-	//temp options
-	retryTimeLimit := conf.GetInt("global.connection.retryTimeLimit")
-	recoveryTimeLimit := conf.GetInt("global.connection.recoveryTimeLimit")
-	keepAliveTimeLimit := conf.GetInt("global.connection.keepAliveTimeLimit")
-	keepAliveIntervals := conf.GetString("global.connection.keepAliveInterval")
-	keepAliveInterval,err  := time.ParseDuration(keepAliveIntervals)
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("cannot parse the keep alive time duration,val: %v",keepAliveInterval))
-	}
-	retryTimeouts := conf.GetString("global.connection.retryTimeout")
-	retryTimeout,err  := time.ParseDuration(retryTimeouts)
-	if err != nil {
-		return nil, errors.New("cannot parse the retry timeout time duration")
-	}
-
-	recoveryTimeouts := conf.GetString("global.connection.retryTimeout")
-	recoveryTimeout,err  := time.ParseDuration(recoveryTimeouts)
-	if err != nil {
-		return nil, errors.New("cannot parse the recovery timeout time duration")
-	}
-
 	if caconfPath == "" {
 		return nil, errors.New("cannot get the ca config file path.")
 	}
 	config := viper.New()
 	config.SetConfigFile(caconfPath)
-	err = config.ReadInConfig()
+	err := config.ReadInConfig()
 	if err != nil {
 		return nil, errors.New("cannot read ca conf")
 	}
@@ -135,18 +92,7 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 		checkCertSign:config.GetBool("check.certsign"),
 		checkERCert:config.GetBool("check.ercert"),
 		checkTCert:config.GetBool("check.tcert"),
-		tlsCA:config.GetString("tlscert.ca"),
-		tlsCert:config.GetString("tlscert.cert"),
-		tlsCertPriv:config.GetString("tlscert.priv"),
-		tlsServerHostOverride:config.GetString("tlscert.serverhostoverride"),
-		enableTls:enableTLS,
 		EnableSymmetrical:enableSymmetrical,
-		RetryTimeLimit:retryTimeLimit,
-		RecoveryTimeLimit:recoveryTimeLimit,
-		KeepAliveTimeLimit:keepAliveTimeLimit,
-		KeepAliveInterval:keepAliveInterval,
-		RetryTimeout:retryTimeout,
-		RecoveryTimeout:recoveryTimeout,
 		logger:logger,
 
 	},nil
@@ -254,41 +200,6 @@ func (cm *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
 		return false, errParseCert
 	}
 	return primitives.VerifyCert(rcert, cm.rCaCert.x509cert)
-}
-
-/**
-  tls ca get dial opts and server opts part
- */
-
-//GetGrpcClientOpts get GrpcClient options
-func (cm *CAManager) GetGrpcClientOpts() []grpc.DialOption {
-	var opts []grpc.DialOption
-	if !cm.enableTls{
-		cm.logger.Warning("disable Client TLS")
-		opts = append(opts,grpc.WithInsecure())
-		return opts
-	}
-	creds, err := credentials.NewClientTLSFromFile(cm.tlsCA, cm.tlsServerHostOverride)
-	if err != nil {
-		panic("cannot get the TLS Cert")
-	}
-	opts = append(opts, grpc.WithTransportCredentials(creds))
-	return opts
-}
-
-//GetGrpcServerOpts get server grpc options
-func (cm *CAManager) GetGrpcServerOpts() []grpc.ServerOption {
-	var opts []grpc.ServerOption
-	if !cm.enableTls{
-		cm.logger.Warning("disable Server TLS")
-		return opts
-	}
-	creds, err := credentials.NewServerTLSFromFile(cm.tlsCert, cm.tlsCertPriv)
-	if err != nil {
-		panic("cannot get the TLS Cert")
-	}
-	opts = []grpc.ServerOption{grpc.Creds(creds)}
-	return opts
 }
 
 /**

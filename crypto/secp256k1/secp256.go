@@ -28,7 +28,7 @@ import (
 	"math/big"
 	"unsafe"
 
-	"hyperchain/crypto/randentropy"
+	"hyperchain/crypto/csprng"
 )
 
 //#define USE_FIELD_5X64
@@ -64,7 +64,7 @@ func Sign(msg []byte, seckey []byte) ([]byte, error) {
 	sig := make([]byte, 65)
 	sig_ptr := (*C.secp256k1_ecdsa_recoverable_signature)(unsafe.Pointer(&sig[0]))
 
-	nonce := randentropy.GetEntropyCSPRNG(32)
+	nonce := csprng.CSPRNGRandom(32)
 	ndata_ptr := unsafe.Pointer(&nonce[0])
 
 	noncefp_ptr := &(*C.secp256k1_nonce_function_default)

@@ -13,8 +13,9 @@ import (
 	"github.com/op/go-logging"
 	"time"
 	"fmt"
+	"github.com/oleiade/lane"
+	"hyperchain/p2p/random_stack"
 )
-
 
 type peerManagerImpl struct {
 	namespace string
@@ -31,22 +32,24 @@ type peerManagerImpl struct {
 	nodeNum   int
 	selfID    int
 
-	isonline *threadsafelinkedlist.SpinLock
+	isonline  *threadsafelinkedlist.SpinLock
 
-	isnew bool
+	isnew     bool
 
-	isVP bool
+	isVP      bool
 
-	delchan chan bool
+	delchan   chan bool
 
-	logger *logging.Logger
+	logger    *logging.Logger
+
+	pts       *PeerTriples
 }
 
 //todo rename new function
-func NewPeerManagerImpl(namespace string,peercnf *viper.Viper,ev *event.TypeMux, net *network.HyperNet,delChan chan bool) (*peerManagerImpl, error) {
-	logger := common.GetLogger(namespace,"peermanager")
-	if net == nil{
-		return nil,errors.New("the P2P manager hasn't initlized.")
+func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMux, net *network.HyperNet, delChan chan bool) (*peerManagerImpl, error) {
+	logger := common.GetLogger(namespace, "peermanager")
+	if net == nil {
+		return nil, errors.New("the P2P manager hasn't initlized.")
 	}
 	N := peercnf.GetInt("self.N")
 	if N < 4 {
@@ -54,97 +57,89 @@ func NewPeerManagerImpl(namespace string,peercnf *viper.Viper,ev *event.TypeMux,
 	}
 	// cnf check logic
 	selfID := peercnf.GetInt("self.id")
-	if selfID > N || selfID <= 0{
+	if selfID > N || selfID <= 0 {
 		return nil, errors.New(fmt.Sprintf("invalid self id: %d", selfID))
 	}
 	selfHostname := peercnf.GetString("self.hostname")
-	isnew:= peercnf.GetBool("self.new")
-	if selfHostname == ""{
+	isnew := peercnf.GetBool("self.new")
+	isvp := peercnf.GetBool("self.vp")
+
+	if selfHostname == "" {
 		return nil, errors.New(fmt.Sprintf("invalid self hostname: %s", selfHostname))
 	}
 
-	pmi :=  &peerManagerImpl{
+	pmi := &peerManagerImpl{
 		namespace: namespace,
 		eventHub:ev,
 		hyperNet:net,
 		selfID:selfID,
 		peerPool:NewPeersPool(namespace),
-		node:NewNode(namespace,selfID,selfHostname,net),
+		node:NewNode(namespace, selfID, selfHostname, net),
 		nodeNum:N,
 		blackHole:make(chan interface{}),
 		isonline:new(threadsafelinkedlist.SpinLock),
 		isnew:isnew,
 		delchan:delChan,
 		logger: logger,
+		isVP:isvp,
 	}
-
-	nodemaps  := peercnf.Get("nodes").([]interface{})
-	for _,item := range nodemaps{
-		var err error
-		var id int
-		var hostname string
-		node  := item.(map[interface{}]interface{})
-		for key,value := range node{
-			if key.(string) == "id"{
-				id  = value.(int)
-			}
-			if key.(string) == "hostname"{
-				hostname = value.(string)
-			}
-		}
-		err = pmi.bind(namespace,id,hostname)
-		if err != nil{
-			logger.Errorf("cannot bind client,err: %v",err)
-			//this is for atomic bind operation, if a error occurs,
-			//that should unbind all the already binding clients.
-			pmi.unBindAll()
-			return nil,err
-		}
-	}
-	logger.Info("now vp peers pool is ")
-	for _,p := range pmi.peerPool.GetPeers(){
-		logger.Info(p.info.GetID())
-	}
-	return pmi,nil
+	nodes := peercnf.Get("nodes").([]interface{})
+	pmi.pts = QuickParsePeerTriples(pmi.namespace, nodes)
+	sessionHandler := msg.NewSessionHandler(pmi.blackHole, pmi.eventHub)
+	helloHandler := msg.NewHelloHandler(pmi.blackHole, pmi.eventHub)
+	attendHandler := msg.NewAttendHandler(pmi.blackHole, pmi.eventHub)
+	pmi.node.Bind(pb.MsgType_SESSION, sessionHandler)
+	pmi.node.Bind(pb.MsgType_HELLO, helloHandler)
+	pmi.node.Bind(pb.MsgType_ATTEND, attendHandler)
+	return pmi, nil
 }
 
 // initialize the peerManager which is for init the local node
-func (pmgr *peerManagerImpl)Start() error{
+func (pmgr *peerManagerImpl)Start() error {
 	//todo this for test
 	pmgr.Listening()
-	sessionHandler := msg.NewSessionHandler(pmgr.blackHole,pmgr.eventHub)
-	helloHandler := msg.NewHelloHandler(pmgr.blackHole,pmgr.eventHub)
-	attendHandler := msg.NewAttendHandler(pmgr.blackHole,pmgr.eventHub)
-	pmgr.node.Bind(pb.MsgType_SESSION,sessionHandler)
-	pmgr.node.Bind(pb.MsgType_HELLO,helloHandler)
-	pmgr.node.Bind(pb.MsgType_ATTEND,attendHandler)
-	pmgr.SetOnline()
+	for pmgr.pts.HasNext() {
+		pt := pmgr.pts.Pop()
+		//Here should control the permission
+		//TODO check the remote peer permission
+		err := pmgr.bind(pt.namespace, pt.id, pt.hostname)
+		if err != nil {
+			pmgr.logger.Errorf("cannot bind client,err: %v", err)
+			//this is for atomic bind operation, if a error occurs,
+			//that should unbind all the already binding clients.
+			pmgr.unBindAll()
+			return nil, err
+		}
+	}
 	//new attend Process
-	if pmgr.isnew{
+	if pmgr.isnew && pmgr.isVP {
 		//this should wait until all nodes reverse connect to self.
-		pmgr.broadcast(pb.MsgType_ATTEND,[]byte(pmgr.GetLocalAddressPayload()))
+		pmgr.broadcast(pb.MsgType_ATTEND, []byte(pmgr.GetLocalAddressPayload()))
 		pmgr.eventHub.Post(event.AlreadyInChainEvent{})
+	} else if !pmgr.isVP {
+
 	}
 
-
-	pmgr.logger.Criticalf("SELF hash: %s",pmgr.node.info.Hash)
+	pmgr.logger.Criticalf("SELF hash: %s", pmgr.node.info.Hash)
+	// after all connection
+	pmgr.SetOnline()
 	return nil
 }
 
-func (pmgr *peerManagerImpl)Listening(){
+func (pmgr *peerManagerImpl)Listening() {
 	pmgr.logger.Info("hello im listening msg")
-	go func(){
+	go func() {
 		for ev := range pmgr.blackHole {
-			pmgr.logger.Info("OUTER GOT A Message %v \n",ev)
+			pmgr.logger.Info("OUTER GOT A Message %v \n", ev)
 		}
 	}()
 }
 
 //bind the namespace+id -> hostname
 func (pmgr *peerManagerImpl) bind(namespace string, id int, hostname string) error {
-	newPeer := NewPeer(namespace,hostname,id,pmgr.node.info,pmgr.hyperNet)
-	err := pmgr.peerPool.AddVPPeer(id,newPeer)
-	if err != nil{
+	newPeer := NewPeer(namespace, hostname, id, pmgr.node.info, pmgr.hyperNet)
+	err := pmgr.peerPool.AddVPPeer(id, newPeer)
+	if err != nil {
 		return err
 	}
 	return nil
@@ -153,63 +148,63 @@ func (pmgr *peerManagerImpl) bind(namespace string, id int, hostname string) err
 //unBindAll clients, because of error occur.
 func (pmgr *peerManagerImpl) unBindAll() error {
 	peers := pmgr.peerPool.GetPeers()
-	for _,p:=range peers{
+	for _, p := range peers {
 		pmgr.peerPool.DeleteVPPeer(p.info.GetID())
 	}
 	return nil
 }
 
 func (pmgr *peerManagerImpl) SendMsg(payload []byte, peers []uint64) {
-	pmgr.sendMsg(pb.MsgType_SESSION,payload,peers)
+	pmgr.sendMsg(pb.MsgType_SESSION, payload, peers)
 }
 
 //SendMsg send  message to specific hosts
-func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType,payload []byte, peers []uint64) {
-	if !pmgr.isonline.IsLocked(){
+func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType, payload []byte, peers []uint64) {
+	if !pmgr.isonline.IsLocked() {
 		return
 	}
 	//TODO here can be improved, such as pre-calculate the peers' hash
 	//TODO utils.GetHash will new a hasher every time, this waste of time.
 	peerList := pmgr.peerPool.GetPeers()
 	size := len(peerList)
-	for _,id := range peers {
-		//REVIEW here should ensure >= to avoid index out of range
-		if int(id-1) >= size {
+	for _, id := range peers {
+		//REVIEW here should ensure `>=` to avoid index out of range
+		if int(id - 1) >= size {
 			continue
 		}
-		if id == uint64(pmgr.node.info.GetID()){
+		if id == uint64(pmgr.node.info.GetID()) {
 			continue
 		}
-		peer := peerList[int(id-1)]
-		if peer.info.Hostname == pmgr.node.info.Hostname{
+		peer := peerList[int(id - 1)]
+		if peer.info.Hostname == pmgr.node.info.Hostname {
 			continue
 		}
-		m := pb.NewMsg(msgType,payload)
+		m := pb.NewMsg(msgType, payload)
 		peer.Chat(m)
 	}
 
 }
 
-func (pmgr *peerManagerImpl)Broadcast(payload []byte){
-	pmgr.broadcast(pb.MsgType_SESSION,payload)
+func (pmgr *peerManagerImpl)Broadcast(payload []byte) {
+	pmgr.broadcast(pb.MsgType_SESSION, payload)
 }
 //Broadcast message to all binding hosts
-func (pmgr *peerManagerImpl) broadcast(msgType pb.MsgType,payload []byte) {
-	if !pmgr.isonline.IsLocked(){
+func (pmgr *peerManagerImpl) broadcast(msgType pb.MsgType, payload []byte) {
+	if !pmgr.isonline.IsLocked() {
 		return
 	}
 	// use IterBuffered for better performance
 	peerList := pmgr.peerPool.GetPeers()
-	for _,p := range peerList{
-		go func(peer *Peer){
-			if peer.hostname == peer.local.Hostname{
+	for _, p := range peerList {
+		go func(peer *Peer) {
+			if peer.hostname == peer.local.Hostname {
 				return
 			}
 			// this is un thread safe, because this,is a pointer
-			m := pb.NewMsg(msgType,payload)
-			_,err := peer.Chat(m)
-			if err != nil{
-				pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s \n",peer.hostname,peer.local.Hostname,err.Error())
+			m := pb.NewMsg(msgType, payload)
+			_, err := peer.Chat(m)
+			if err != nil {
+				pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s \n", peer.hostname, peer.local.Hostname, err.Error())
 			}
 		}(p)
 
@@ -217,19 +212,19 @@ func (pmgr *peerManagerImpl) broadcast(msgType pb.MsgType,payload []byte) {
 }
 
 // set peer managers primary peer and node
-func (pmgr *peerManagerImpl)SetPrimary(_id uint64) error{
+func (pmgr *peerManagerImpl)SetPrimary(_id uint64) error {
 	//review here conversation is not safe
 	id := int(_id)
 	flag := false
-	if pmgr.node.info.GetID() == id{
+	if pmgr.node.info.GetID() == id {
 		pmgr.node.info.SetPrimary(true)
 		flag = true
 	}
-	for _,peer := range pmgr.peerPool.GetPeers(){
+	for _, peer := range pmgr.peerPool.GetPeers() {
 		if peer.info.GetID() == id {
 			flag = true
 			peer.info.SetPrimary(true)
-		}else{
+		} else {
 			peer.info.SetPrimary(false)
 		}
 	}
@@ -248,7 +243,7 @@ func (pmgr *peerManagerImpl)GetVPPeers() []*Peer {
 	return pmgr.peerPool.GetPeers()
 }
 
-func (pmgr *peerManagerImpl)Stop(){
+func (pmgr *peerManagerImpl)Stop() {
 	pmgr.logger.Criticalf("Unbind all slots...")
 	pmgr.SetOffline()
 	pmgr.node.UnBindAll()
@@ -256,24 +251,24 @@ func (pmgr *peerManagerImpl)Stop(){
 
 // AddNode
 // update routing table when new peer's join request is accepted
-func (pmgr *peerManagerImpl)UpdateRoutingTable(payLoad []byte){
+func (pmgr *peerManagerImpl)UpdateRoutingTable(payLoad []byte) {
 	//unmarshal info
 	i := info.InfoUnmarshal(payLoad)
-	err := pmgr.bind(i.Namespace,i.Id,i.Hostname)
-	if err !=nil{
-		pmgr.logger.Errorf("cannot bind a new peer: %s",err.Error())
+	err := pmgr.bind(i.Namespace, i.Id, i.Hostname)
+	if err != nil {
+		pmgr.logger.Errorf("cannot bind a new peer: %s", err.Error())
 		return
 	}
-	for _,p := range pmgr.peerPool.GetPeers(){
+	for _, p := range pmgr.peerPool.GetPeers() {
 		pmgr.logger.Info("update table", p.hostname)
 	}
 }
 
-func (pmgr *peerManagerImpl)GetLocalAddressPayload() []byte{
+func (pmgr *peerManagerImpl)GetLocalAddressPayload() []byte {
 	return pmgr.node.info.Serialize()
 }
 
-func (pmgr *peerManagerImpl)SetOnline(){
+func (pmgr *peerManagerImpl)SetOnline() {
 	pmgr.isonline.TryLock()
 }
 
@@ -282,22 +277,22 @@ func (pmgr *peerManagerImpl)SetOffline() {
 }
 
 //GetRouterHashifDelete returns after delete specific peer, the router table hash , self new id and the delete id
-func (pmgr *peerManagerImpl)GetRouterHashifDelete(hash string) (afterDelRouterHash string,selfNewId  uint64,delID uint64){
-	afterDelRouterHash,selfNewId,delID,err:=pmgr.peerPool.TryDelete(pmgr.GetLocalNodeHash(),hash)
-	if err != nil{
-		pmgr.logger.Errorf("cannot try del peer, error: %s",err.Error())
+func (pmgr *peerManagerImpl)GetRouterHashifDelete(hash string) (afterDelRouterHash string, selfNewId  uint64, delID uint64) {
+	afterDelRouterHash, selfNewId, delID, err := pmgr.peerPool.TryDelete(pmgr.GetLocalNodeHash(), hash)
+	if err != nil {
+		pmgr.logger.Errorf("cannot try del peer, error: %s", err.Error())
 	}
 	return
 }
 
 //DeleteNode delete the specific hash node, if the node hash is self, this node will stoped.
 func (pmgr *peerManagerImpl)DeleteNode(hash string) error {
-	pmgr.logger.Critical("DELENODE",hash)
-	if pmgr.node.info.Hash == hash{
+	pmgr.logger.Critical("DELENODE", hash)
+	if pmgr.node.info.Hash == hash {
 		pmgr.Stop()
 		pmgr.logger.Critical(" WARNING!! THIS NODE HAS BEEN DELETED!")
 		pmgr.logger.Critical(" THIS NODE WILL STOP IN 3 SECONDS")
-		<- time.After(3*time.Second)
+		<-time.After(3 * time.Second)
 		pmgr.logger.Critical("EXIT..")
 		pmgr.delchan <- true
 		//os.Exit(0)
@@ -315,20 +310,20 @@ func (pmgr *peerManagerImpl)GetAllPeers() []*Peer {
 // get local node instance
 //GetLocalNode() *Node
 // Get local node id
-func (pmgr *peerManagerImpl)GetNodeId() int{
+func (pmgr *peerManagerImpl)GetNodeId() int {
 	return pmgr.node.info.GetID()
 }
 
 //get the peer information of all nodes.
-func (pmgr *peerManagerImpl)GetPeerInfo() PeerInfos{
+func (pmgr *peerManagerImpl)GetPeerInfo() PeerInfos {
 	return PeerInfos{}
 }
 
 // use by new peer when join the chain dynamically only
-func (pmgr *peerManagerImpl)GetRouters() []byte{
-	b,e := pmgr.peerPool.Serlize()
-	if e != nil{
-		pmgr.logger.Errorf("cannot serialize the peerpool,err:%s \n",e.Error())
+func (pmgr *peerManagerImpl)GetRouters() []byte {
+	b, e := pmgr.peerPool.Serlize()
+	if e != nil {
+		pmgr.logger.Errorf("cannot serialize the peerpool,err:%s \n", e.Error())
 		return nil
 	}
 	return b
@@ -336,21 +331,38 @@ func (pmgr *peerManagerImpl)GetRouters() []byte{
 
 // random select a VP and send msg to it
 func (pmgr *peerManagerImpl)SendRandomVP(payload []byte) error {
-	return nil
+	peers := pmgr.peerPool.GetPeers()
+	randomStack := random_stack.NewStack()
+	for _,peer :=range peers{
+		randomStack.Push(peer)
+	}
+	var err error
+	for err != nil  && !randomStack.Empty(){
+		speer := randomStack.RandomPop().(*Peer)
+		m := pb.NewMsg(pb.MsgType_SESSION, payload)
+		_,err = speer.Chat(m)
+	}
+	return err
 }
 
 // broadcast information to NVP peers
-func(pmgr *peerManagerImpl)BroadcastNVP(payLoad []byte) error {
+func (pmgr *peerManagerImpl)BroadcastNVP(payLoad []byte) error {
+	return pmgr.broadcastNVP(pb.MsgType_SESSION,payLoad)
+}
+func(pmgr *peerManagerImpl)broadcastNVP(msgType pb.MsgType,payload []byte)error{
 	return nil
 }
 
 // send a message to specific NVP peer (by nvp hash) UNICAST
-func(pmgr *peerManagerImpl)SendMsgNVP(payLoad []byte, nvpList []string) error {
-	return nil
+func (pmgr *peerManagerImpl)SendMsgNVP(payLoad []byte, nvpList []string) error {
+	return pmgr.sendMsgNVP(pb.MsgType_SESSION,payLoad,nvpList)
 }
 
+func (pmgr *peerManagerImpl)sendMsgNVP(msgType pb.MsgType,payLoad []byte, nvpList []string) error {
+	return nil
+}
 //IsVP return true if this node is vp node
-func (pmgr *peerManagerImpl)IsVP()bool{
+func (pmgr *peerManagerImpl)IsVP() bool {
 	return pmgr.isVP
 }
 

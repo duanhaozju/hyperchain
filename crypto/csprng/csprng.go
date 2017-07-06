@@ -1,6 +1,5 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
-package randentropy
+// Cryptographically Secure Pseudo-Random Number Generator
+package csprng
 
 import (
 	crand "crypto/rand"
@@ -13,12 +12,12 @@ type randEntropy struct {
 }
 
 func (*randEntropy) Read(bytes []byte) (n int, err error) {
-	readBytes := GetEntropyCSPRNG(len(bytes))
+	readBytes := CSPRNGRandom(len(bytes))
 	copy(bytes, readBytes)
 	return len(bytes), nil
 }
 
-func GetEntropyCSPRNG(n int) []byte {
+func CSPRNGRandom(n int) []byte {
 	mainBuff := make([]byte, n)
 	_, err := io.ReadFull(crand.Reader, mainBuff)
 	if err != nil {

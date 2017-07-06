@@ -1,6 +1,4 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
-package utils
+package common
 
 // Clone clones the passed slice
 func Clone(src []byte) []byte {

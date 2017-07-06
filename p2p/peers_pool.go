@@ -88,7 +88,7 @@ func (pool *PeersPool)GetPeersByHash(hash string)*Peer{
 	}
 	return nil
 }
-
+//TryDelete the specific hash node
 func(pool *PeersPool)TryDelete(selfHash,delHash string)(routerhash string, selfnewid uint64,deleteid uint64,err error){
 	pool.logger.Critical("selfhash",selfHash,"delhash",delHash)
 	templist,err := pool.vpPool.Duplicate()
@@ -99,7 +99,7 @@ func(pool *PeersPool)TryDelete(selfHash,delHash string)(routerhash string, selfn
 	for _,item := range templist.Iter(){
 		tempPeer := item.(*Peer)
 		if tempPeer.info.Hash == delHash{
-			pool.logger.Critical("<===> %+v",tempPeer.info)
+			pool.logger.Critical("delete peer => %+v",tempPeer.info)
 			delid = tempPeer.info.Id
 		}
 	}

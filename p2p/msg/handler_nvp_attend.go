@@ -1,39 +1,43 @@
 package msg
 
-import "fmt"
 import (
 	pb "hyperchain/p2p/message"
 	"hyperchain/manager/event"
+	"fmt"
 )
 
-type AttendMsgHandler struct {
+type NVPAttendMsgHandler struct {
 	mchan chan  interface{}
 	ev *event.TypeMux
 }
 
-func NewAttendHandler(blackHole chan interface{},ev *event.TypeMux)*HelloMsgHandler{
+func NewNVPAttendHandler(blackHole chan interface{},ev *event.TypeMux)*HelloMsgHandler{
 	return &HelloMsgHandler{
 		mchan:blackHole,
 		ev:ev,
 	}
 }
 
-func (h  *AttendMsgHandler) Process() {
+//Process
+func (h  *NVPAttendMsgHandler) Process() {
 	for msg := range h.mchan {
 		 fmt.Println("got a Attend message", string(msg.(*pb.Message).Payload))
 	}
 }
 
-func (h  *AttendMsgHandler) Teardown() {
+//Teardown
+func (h  *NVPAttendMsgHandler) Teardown() {
 	//TODO THIS is UN Allowed, because reciver cannot close the mchan
 	close(h.mchan)
 }
 
-func (h *AttendMsgHandler)Receive() chan<- interface{}{
+//Receive
+func (h *NVPAttendMsgHandler)Receive() chan<- interface{}{
 	return h.mchan
 }
 
-func (h *AttendMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
+//Execute
+func (h *NVPAttendMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
 	fmt.Println("got a new peer event ATTEND Msg")
 	go h.ev.Post(event.NewPeerEvent{
 		Payload:msg.Payload,

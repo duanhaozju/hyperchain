@@ -1,13 +1,74 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package utils
+package common
 
 import (
-	"encoding/base64"
-	"io"
+	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
+	"runtime"
+	"strings"
+	"io"
 )
+
+// MakeName creates a node name that follows the ethereum convention
+// for such names. It adds the operation system name and Go runtime version
+// the name.
+func MakeName(name, version string) string {
+	return fmt.Sprintf("%s/v%s/%s/%s", name, version, runtime.GOOS, runtime.Version())
+}
+
+func ExpandHomePath(p string) (path string) {
+	path = p
+	sep := string(os.PathSeparator)
+
+	// Check in case of paths like "/something/~/something/"
+	if len(p) > 1 && p[:1+len(sep)] == "~"+sep {
+		usr, _ := user.Current()
+		dir := usr.HomeDir
+
+		path = strings.Replace(p, "~", dir, 1)
+	}
+
+	return
+}
+
+func FileExist(filePath string) bool {
+	_, err := os.Stat(filePath)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+
+	return true
+}
+
+func AbsolutePath(Datadir string, filename string) string {
+	if filepath.IsAbs(filename) {
+		return filename
+	}
+	return filepath.Join(Datadir, filename)
+}
+
+func HomeDir() string {
+	if home := os.Getenv("HOME"); home != "" {
+		return home
+	}
+	if usr, err := user.Current(); err == nil {
+		return usr.HomeDir
+	}
+	return ""
+}
+
+
+func GetGoPath() string {
+	env := os.Getenv("GOPATH")
+	l := strings.Split(env, ":")
+	if len(l) > 1 {
+		return l[len(l) - 1]
+	}
+	return l[0]
+}
 
 // DirMissingOrEmpty checks is a directory is missin or empty
 func DirMissingOrEmpty(path string) (bool, error) {
@@ -72,27 +133,4 @@ func FilePathMissing(path string) (bool, error) {
 		return true, err
 	}
 	return false, nil
-}
-
-// DecodeBase64 decodes from Base64
-func DecodeBase64(in string) ([]byte, error) {
-	return base64.StdEncoding.DecodeString(in)
-}
-
-// EncodeBase64 encodes to Base64
-func EncodeBase64(in []byte) string {
-	return base64.StdEncoding.EncodeToString(in)
-}
-
-// IntArrayEquals checks if the arrays of ints are the same
-func IntArrayEquals(a []int, b []int) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i, v := range a {
-		if v != b[i] {
-			return false
-		}
-	}
-	return true
 }
