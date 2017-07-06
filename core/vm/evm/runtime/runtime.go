@@ -67,7 +67,7 @@ func setDefaults(cfg *Config) {
 		}
 	}
 	if cfg.conf == nil {
-		cfg.conf = initConf()
+		cfg.conf = InitConf()
 	}
 }
 
@@ -84,7 +84,7 @@ func Execute(db db.Database, code, input []byte, cfg *Config) ([]byte, *hypersta
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		cfg.State = hyperstate.NewRaw(db, 0, cfg.conf)
+		cfg.State = hyperstate.NewRaw(db, 0, "global", cfg.conf)
 	}
 	var (
 		vmenv    = NewEnv(cfg, cfg.State)
@@ -105,6 +105,32 @@ func Execute(db db.Database, code, input []byte, cfg *Config) ([]byte, *hypersta
 	)
 
 	return ret, cfg.State, err
+}
+
+// Create executes the code using the EVM create method
+func Create(db db.Database, input []byte, cfg *Config) ([]byte, common.Address, error) {
+	if cfg == nil {
+		cfg = new(Config)
+	}
+	setDefaults(cfg)
+
+	if cfg.State == nil {
+		cfg.State = hyperstate.NewRaw(db, 0, "global", cfg.conf)
+	}
+	var (
+		vmenv  = NewEnv(cfg, cfg.State)
+		sender = cfg.State.CreateAccount(cfg.Origin)
+	)
+
+	// Call the code with the given configuration.
+	code, address, err := vmenv.Create(
+		sender,
+		input,
+		cfg.GasLimit,
+		cfg.GasPrice,
+		cfg.Value,
+	)
+	return code, address, err
 }
 
 // Call executes the code given by the contract's address. It will return the
@@ -131,7 +157,7 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, error) {
 	return ret, err
 }
 
-func initConf() *common.Config {
+func InitConf() *common.Config {
 	conf := common.NewRawConfig()
 	conf.Set(hyperstate.StateObjectBucketSize, 1000003)
 	conf.Set(hyperstate.StateObjectBucketLevelGroup, 5)

@@ -372,3 +372,4 @@ func getChain(namespace string) (*types.Chain, error) {
 	}
 	return &chain, nil
 }
+

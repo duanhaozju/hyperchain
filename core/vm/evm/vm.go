@@ -38,7 +38,7 @@ type EVM struct {
 func New(env vm.Environment, cfg Config) *EVM {
 	var logger *Logger
 	if cfg.Debug {
-		logger = newLogger(cfg.Logger, env)
+		logger = NewLogger(cfg.Logger, env)
 	}
 
 	return &EVM{
