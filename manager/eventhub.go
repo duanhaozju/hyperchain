@@ -181,7 +181,7 @@ func (hub *EventHub) listenTransactionEvent() {
 			case event.NvpRelayTxEvent:
 				transaction := &types.Transaction{}
 				err := proto.Unmarshal(ev.Payload, transaction)
-				transaction.Id = []byte(string(transaction.Id) + strconv.Itoa(hub.GetPeerManager().GetNodeId()))
+				transaction.Id = append(transaction.Id, common.Int2Bytes(hub.GetPeerManager().GetNodeId())...)
 				if err != nil {
 					hub.logger.Error("Relay tx, unmarshal payload failed")
 				}

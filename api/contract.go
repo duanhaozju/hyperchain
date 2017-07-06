@@ -74,10 +74,10 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	}
 	if contract.eh.NodeIdentification() == manager.IdentificationVP {
-		tx.Id = []byte(strconv.Itoa(contract.eh.GetPeerManager().GetNodeId()))
+		tx.Id = common.Int2Bytes(contract.eh.GetPeerManager().GetNodeId())
 	} else {
 		hash := contract.eh.GetPeerManager().GetLocalNodeHash()
-		tx.Id = []byte(hash)
+		tx.Id = common.Hex2Bytes(hash)
 	}
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()

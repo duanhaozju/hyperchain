@@ -14,7 +14,6 @@ import (
 	"hyperchain/manager"
 	"time"
 	edb "hyperchain/core/db_utils"
-	"strconv"
 )
 
 const (
@@ -153,10 +152,10 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	if tran.eh.NodeIdentification() == manager.IdentificationVP {
-		tx.Id = []byte(strconv.Itoa(tran.eh.GetPeerManager().GetNodeId()))
+		tx.Id = common.Int2Bytes(tran.eh.GetPeerManager().GetNodeId())
 	} else {
 		hash := tran.eh.GetPeerManager().GetLocalNodeHash()
-		tx.Id = []byte(hash)
+		tx.Id = common.Hex2Bytes(hash)
 	}
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()

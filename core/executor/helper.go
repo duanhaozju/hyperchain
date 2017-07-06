@@ -8,7 +8,7 @@ import (
 	"reflect"
 	er "hyperchain/core/errors"
 	"strconv"
-	"github.com/pkg/errors"
+	"hyperchain/common"
 )
 type Helper struct {
 	msgQ *event.TypeMux
@@ -147,10 +147,14 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		}
 		id, err := SplitVpId(r.Tx.Id)
 		if err != nil {
-			executor.logger.Error("get Tx's Id error", err.Error())
+			executor.logger.Errorf("get Tx's Id#%s error. %s", common.Bytes2Hex(r.Tx.Id), err.Error())
 			return err
 		}
-		hash, _ := SplitNvpHash(r.Tx.Id)
+		hash, err := SplitNvpHash(r.Tx.Id)
+		if err != nil {
+			executor.logger.Errorf("get Tx's hash#%s error. %s", common.Bytes2Hex(r.Tx.Id), err.Error())
+			return err
+		}
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_UNICAST_INVALID,
@@ -233,19 +237,25 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	return nil
 }
 
+// hash: 32 bytes.
 func SplitNvpHash(id []byte) (string, error) {
-	if len(string(id)) > 64 {
-		return string(id)[:64], nil
+	if len(id) == 34 {
+		return common.Bytes2Hex(id[:32]), nil
+	} else if len(id) == 2 {
+		return "", nil
 	} else {
-		return "", errors.New("id length less then 64.")
+		return "", er.TxIdLenErr
 	}
 }
 
+// id: 2 bytes.
 func SplitVpId(id []byte) (uint64, error) {
-	if len(string(id)) <= 64 {
-		return strconv.ParseUint(string(id), 0, 64)
+	if len(id) == 34 {
+		temp := id[32:]
+		return strconv.ParseUint(common.Bytes2Hex(temp), 16, 64)
+	} else if len(id) == 2 {
+		return strconv.ParseUint(common.Bytes2Hex(id), 16, 64)
 	} else {
-		temp := string(id)[64:]
-		return strconv.ParseUint(temp, 0, 64)
+		return 0, er.TxIdLenErr
 	}
 }
