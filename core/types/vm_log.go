@@ -6,23 +6,6 @@ import (
 	"hyperchain/common"
 )
 
-const (
-	LogVmType_EVM = iota
-	LogVmType_JVM
-)
-
-type LogVmType int
-
-func (vmType LogVmType) String() string {
-	switch vmType {
-	case LogVmType_EVM:
-		return "EVM"
-	case LogVmType_JVM:
-		return "JVM"
-	default:
-		return ""
-	}
-}
 
 type Log struct {
 	// consensus fields
@@ -90,14 +73,6 @@ func (ls Logs) ToLogsTrans() []LogTrans {
 		for ti, t := range log.Topics {
 			topics[ti] = t.Hex()
 		}
-		var data string
-		switch typ {
-		case Receipt_EVM:
-			data = common.Bytes2Hex(log.Data)
-		case Receipt_JVM:
-			data = string(log.Data)
-		}
-		fmt.Errorf("%#v", data)
 		ret[idx] = LogTrans{
 			Address:     log.Address.Hex(),
 			Data:        common.Bytes2Hex(log.Data),
