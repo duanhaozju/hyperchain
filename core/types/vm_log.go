@@ -83,23 +83,16 @@ type LogTrans struct {
 	Index       uint
 }
 
-func (ls Logs) ToLogsTrans(typ Receipt_VmType) []LogTrans {
+func (ls Logs) ToLogsTrans() []LogTrans {
 	var ret = make([]LogTrans, len(ls))
 	for idx, log := range ls {
 		var topics = make([]string, len(log.Topics))
 		for ti, t := range log.Topics {
 			topics[ti] = t.Hex()
 		}
-		var data string
-		switch typ {
-		case Receipt_EVM:
-			data = common.Bytes2Hex(log.Data)
-		case Receipt_JVM:
-			data = string(log.Data)
-		}
 		ret[idx] = LogTrans{
 			Address:     log.Address.Hex(),
-			Data:        data,
+			Data:        common.Bytes2Hex(log.Data),
 			BlockNumber: log.BlockNumber,
 			BlockHash:   log.BlockHash.Hex(),
 			Topics:      topics,

@@ -12,7 +12,6 @@ import (
 	"time"
 	"os"
 	"hyperchain/core/types"
-	"hyperchain/api/jsonrpc/core"
 	"strings"
 	"github.com/golang/protobuf/proto"
 )
@@ -185,7 +184,7 @@ func deploy(c *cli.Context) error {
 	//fmt.Println(result.Result)
 
 	txHash := getTransactionHash(result)
-	err = common.GetTransactionReceipt(txHash, c, client)
+	err = common.GetTransactionReceipt(txHash, c.String("namespace"), client)
 	if err != nil {
 		fmt.Println("Error in call get transaction receipt")
 		fmt.Println(err)
@@ -216,7 +215,7 @@ func invoke(c *cli.Context) error {
 	//fmt.Println(result.Result)
 
 	txHash := getTransactionHash(result)
-	err = common.GetTransactionReceipt(txHash, c, client)
+	err = common.GetTransactionReceipt(txHash, c.String("namespace"), client)
 	if err != nil {
 		fmt.Println("Error in call get transaction receipt")
 		fmt.Println(err)
@@ -286,7 +285,7 @@ func maintain(c *cli.Context, opcode int32, maintainMethod string) error {
 	//fmt.Print(result.Result)
 
 	txHash := getTransactionHash(result)
-	err = common.GetTransactionReceipt(txHash, c, client)
+	err = common.GetTransactionReceipt(txHash, c.String("namespace"), client)
 	if err != nil {
 		fmt.Println("Error in call get transaction receipt")
 		return err
@@ -295,7 +294,7 @@ func maintain(c *cli.Context, opcode int32, maintainMethod string) error {
 	return nil
 }
 
-func getCmd(method string, deploy_params []string, opcode int32, c *cli.Context) string {
+func getCmd(method string, need_params []string, opcode int32, c *cli.Context) string {
 	namespace := c.String("namespace")
 	var from, to, invokemethod, arg string
 	var nonce, timestamp, amount int64
@@ -308,7 +307,7 @@ func getCmd(method string, deploy_params []string, opcode int32, c *cli.Context)
 	}
 
 	params := "[{"
-	for i, param := range deploy_params{
+	for i, param := range need_params {
 		if i > 0 && param != "payload" && param != "method" && param != "args" {
 			params = params + ","
 		}
@@ -422,7 +421,7 @@ func getPayloadFromPath(dir string) []byte {
 	return buf
 }
 
-func getTransactionHash(result *jsonrpc.CommandResult) string {
+func getTransactionHash(result string) string {
 	response, err := common.GetJSONResponse(result)
 	if err != nil {
 		fmt.Println("Error in call get transaction hash from http response")
@@ -432,8 +431,8 @@ func getTransactionHash(result *jsonrpc.CommandResult) string {
 	}
 
 	if hash, ok := response.Result.(string); !ok {
-		fmt.Println("Error in call get transaction hash from http response:")
-		fmt.Printf("rpc result: %v can't parse to string\n", response.Result)
+		fmt.Println("Error in call get transaction hash from http response")
+		fmt.Printf("rpc result: %v can't convert to string\n", response.Result)
 		return ""
 	} else {
 		return hash

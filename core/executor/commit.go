@@ -118,6 +118,10 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 		return nil
 	}
 	// 1.generate a new block with the argument in cache
+	bloom, err := types.CreateBloom(record.Receipts)
+	if err != nil {
+		return nil
+	}
 	newBlock := &types.Block{
 		ParentHash:  edb.GetLatestBlockHash(executor.namespace),
 		MerkleRoot:  record.MerkleRoot,
@@ -128,6 +132,7 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 		Number:      ev.SeqNo,
 		WriteTime:   time.Now().UnixNano(),
 		EvmTime:     time.Now().UnixNano(),
+		Bloom:       bloom,
 	}
 	newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
 	copy(newBlock.Transactions, record.ValidTxs)
