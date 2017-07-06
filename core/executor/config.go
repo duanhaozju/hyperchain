@@ -6,101 +6,53 @@ import (
 )
 
 const (
-	STATEDB               = "state"
-	stateBucketSize       = "global.executor.buckettree.state.size"
-	stateBucketLevelGroup = "global.executor.buckettree.state.levelGroup"
-	stateBucketCacheSize  = "global.executor.buckettree.state.cacheSize"
-
-	STATEOBJECT                 = "stateObject"
-	stateObjectBucketSize       = "global.executor.buckettree.storage.size"
-	stateObjectBucketLevelGroup = "global.executor.buckettree.storage.levelGroup"
-	stateObjectBucketCacheSize  = "global.executor.buckettree.storage.cacheSize"
-	syncReplicaInterval         = "global.executor.sync_replica.interval"
-	syncReplicaEnable           = "global.executor.sync_replica.enable"
-	syncChainBatchSize          = "global.executor.sync_chain.sync_batch_size"
-	syncChainResendInterval     = "global.executor.sync_chain.sync_resend_interval"
-	syncWsEable                 = "global.executor.sync_chain.sync_ws_enable"
-	snapshotManifestPath        = "global.executor.archive.manifest"
-	archiveMetaPath             = "global.executor.archive.archiveMeta"
-	archiveForceConsistency     = "global.executor.archive.force_consistency"
-	archiveThreshold            = "global.executor.archive.threshold"
+	SyncReplicaInterval         = "global.executor.sync_replica.interval"
+	SyncReplicaEnable           = "global.executor.sync_replica.enable"
+	SyncChainBatchSize          = "global.executor.sync_chain.sync_batch_size"
+	SyncChainResendInterval     = "global.executor.sync_chain.sync_resend_interval"
+	SyncWsEable                 = "global.executor.sync_chain.sync_ws_enable"
+	SnapshotManifestPath        = "global.executor.archive.manifest"
+	ArchiveMetaPath             = "global.executor.archive.archiveMeta"
+	ArchiveForceConsistency     = "global.executor.archive.force_consistency"
+	ArchiveThreshold            = "global.executor.archive.threshold"
 )
-
-// GetBucketSize - get bucket size.
-func (executor *Executor) GetBucketSize(choice string) int {
-	switch choice {
-	case STATEDB:
-		return executor.conf.GetInt(stateBucketSize)
-	case STATEOBJECT:
-		return executor.conf.GetInt(stateObjectBucketSize)
-	default:
-		executor.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
-		return 0
-	}
-}
-
-// GetBucketLevelGroup - get bucket level group
-func (executor *Executor) GetBucketLevelGroup(choice string) int {
-	switch choice {
-	case STATEDB:
-		return executor.conf.GetInt(stateBucketLevelGroup)
-	case STATEOBJECT:
-		return executor.conf.GetInt(stateObjectBucketLevelGroup)
-	default:
-		executor.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
-		return 0
-	}
-}
-
-// GetBucketCacheSize - get bucket cache size
-func (executor *Executor) GetBucketCacheSize(choice string) int {
-	switch choice {
-	case STATEDB:
-		return executor.conf.GetInt(stateBucketCacheSize)
-	case STATEOBJECT:
-		return executor.conf.GetInt(stateObjectBucketCacheSize)
-	default:
-		executor.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
-		return 0
-	}
-}
 
 // GetSyncReplicaInterval - sync replica information interval.
 func (executor *Executor) GetSyncReplicaInterval() time.Duration {
-	return executor.conf.GetDuration(syncReplicaInterval)
+	return executor.conf.GetDuration(SyncReplicaInterval)
 }
 
 // GetSyncReplicaEnable - sync replica switch value.
 func (exector *Executor) GetSyncReplicaEnable() bool {
-	return exector.conf.GetBool(syncReplicaEnable)
+	return exector.conf.GetBool(SyncReplicaEnable)
 }
 
 func (executor *Executor) GetSyncMaxBatchSize() uint64 {
-	return uint64(executor.conf.GetInt64(syncChainBatchSize))
+	return uint64(executor.conf.GetInt64(SyncChainBatchSize))
 }
 
 func (executor *Executor) GetSyncResendInterval() time.Duration {
-	return executor.conf.GetDuration(syncChainResendInterval)
+	return executor.conf.GetDuration(SyncChainResendInterval)
 }
 
 func (executor *Executor) GetManifestPath() string {
-	return executor.conf.GetString(snapshotManifestPath)
+	return executor.conf.GetString(SnapshotManifestPath)
 }
 
 func (executor *Executor) GetArchiveMetaPath() string {
-	return executor.conf.GetString(archiveMetaPath)
+	return executor.conf.GetString(ArchiveMetaPath)
 }
 
 func (executor *Executor) IsArchiveForceConsistency() bool {
-	return executor.conf.GetBool(archiveForceConsistency)
+	return executor.conf.GetBool(ArchiveForceConsistency)
 }
 
 func (executor *Executor) GetArchiveThreshold() int {
-	return executor.conf.GetInt(archiveThreshold)
+	return executor.conf.GetInt(ArchiveThreshold)
 }
 
 func (executor *Executor) IsSyncWsEable() bool {
-	return executor.conf.GetBool(syncWsEable)
+	return executor.conf.GetBool(SyncWsEable)
 }
 
 func (executor *Executor) isJvmEnable() bool {

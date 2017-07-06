@@ -4,17 +4,17 @@ const (
 	GlobalDataNodeCacheSize  = "global.executor.buckettree.global.globalDataNodeCacheSize"
 	GlobalDataNodeCacheLength  = "global.executor.buckettree.global.globalDataNodeCacheLength"
 
-	STATEDB               = "state"
-	stateBucketSize       = "global.executor.buckettree.state.size"
-	stateBucketLevelGroup = "global.executor.buckettree.state.levelGroup"
-	stateBucketCacheSize  = "global.executor.buckettree.state.bucketCacheSize"
-	stateDataNodeCacheSize  = "global.executor.buckettree.state.dataNodeCacheSize"
+	STATEDB                      = "state"
+	StateBucketSize              = "global.executor.buckettree.state.size"
+	StateBucketLevelGroup        = "global.executor.buckettree.state.levelGroup"
+	StateBucketCacheSize         = "global.executor.buckettree.state.bucketCacheSize"
+	StateDataNodeCacheSize       = "global.executor.buckettree.state.dataNodeCacheSize"
 
-	STATEOBJECT                 = "stateObject"
-	stateObjectBucketSize       = "global.executor.buckettree.storage.size"
-	stateObjectBucketLevelGroup = "global.executor.buckettree.storage.levelGroup"
-	stateObjectBucketCacheSize  = "global.executor.buckettree.storage.bucketCacheSize"
-	stateObjectDataNodeCacheSize  = "global.executor.buckettree.storage.dataNodeCacheSize"
+	STATEOBJECT                  = "stateObject"
+	StateObjectBucketSize        = "global.executor.buckettree.storage.size"
+	StateObjectBucketLevelGroup  = "global.executor.buckettree.storage.levelGroup"
+	StateObjectBucketCacheSize   = "global.executor.buckettree.storage.bucketCacheSize"
+	StateObjectDataNodeCacheSize = "global.executor.buckettree.storage.dataNodeCacheSize"
 )
 
 // GetGlobalDataNodeCacheSize - get size of every global data node cache
@@ -31,9 +31,9 @@ func (stateDB *StateDB) GetGlobalDataNodeCacheLength() int {
 func (stateDB *StateDB) GetBucketSize(choice string) int {
 	switch choice {
 	case STATEDB:
-		return stateDB.bktConf.GetInt(stateBucketSize)
+		return stateDB.bktConf.GetInt(StateBucketSize)
 	case STATEOBJECT:
-		return stateDB.bktConf.GetInt(stateObjectBucketSize)
+		return stateDB.bktConf.GetInt(StateObjectBucketSize)
 	default:
 		stateDB.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0
@@ -44,9 +44,9 @@ func (stateDB *StateDB) GetBucketSize(choice string) int {
 func (stateDB *StateDB) GetBucketLevelGroup(choice string) int {
 	switch choice {
 	case STATEDB:
-		return stateDB.bktConf.GetInt(stateBucketLevelGroup)
+		return stateDB.bktConf.GetInt(StateBucketLevelGroup)
 	case STATEOBJECT:
-		return stateDB.bktConf.GetInt(stateObjectBucketLevelGroup)
+		return stateDB.bktConf.GetInt(StateObjectBucketLevelGroup)
 	default:
 		stateDB.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0
@@ -57,9 +57,9 @@ func (stateDB *StateDB) GetBucketLevelGroup(choice string) int {
 func (stateDB *StateDB) GetBucketCacheSize(choice string) int {
 	switch choice {
 	case STATEDB:
-		return stateDB.bktConf.GetInt(stateBucketCacheSize)
+		return stateDB.bktConf.GetInt(StateBucketCacheSize)
 	case STATEOBJECT:
-		return stateDB.bktConf.GetInt(stateObjectBucketCacheSize)
+		return stateDB.bktConf.GetInt(StateObjectBucketCacheSize)
 	default:
 		stateDB.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0
@@ -70,9 +70,9 @@ func (stateDB *StateDB) GetBucketCacheSize(choice string) int {
 func (stateDB *StateDB) GetDataNodeCacheSize(choice string) int {
 	switch choice {
 	case STATEDB:
-		return stateDB.bktConf.GetInt(stateDataNodeCacheSize)
+		return stateDB.bktConf.GetInt(StateDataNodeCacheSize)
 	case STATEOBJECT:
-		return stateDB.bktConf.GetInt(stateObjectDataNodeCacheSize)
+		return stateDB.bktConf.GetInt(StateObjectDataNodeCacheSize)
 	default:
 		stateDB.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJECT)
 		return 0

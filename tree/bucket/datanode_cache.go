@@ -27,7 +27,7 @@ func newDataNodeCache(log *logging.Logger, ns string, treePrefix string, dataNod
 		log.Infof("Constructing datanode-cache with max datanode cache size = [%d]", dataNodeCacheMaxSize)
 	}
 
-	if globalDataNodeCache.isEnable {
+	if IsEnabledGlobal {
 		c := globalDataNodeCache.Get(ConstructPrefix(ns, treePrefix))
 		if c == nil {
 			c, _ = lru.New(globalDataNodeCache.globalDataNodeCacheMaxSize)
@@ -56,7 +56,7 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(db db.Database, buck
 	}
 
 	// step 2.
-	if globalDataNodeCache.isEnable {
+	if IsEnabledGlobal {
 		cache := globalDataNodeCache.Get(ConstructPrefix(db.Namespace(), dataNodeCache.TreePrefix))
 		if cache == nil {
 			cache, _ = lru.New(globalDataNodeCache.globalDataNodeCacheMaxSize)
@@ -86,7 +86,7 @@ func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(db db.Database, buck
 		if dataNodeCache.isEnabled {
 			dataNodeCache.cache.Add(bucketKey, dataNodes)
 		}
-		if globalDataNodeCache.isEnable {
+		if IsEnabledGlobal {
 			cache := globalDataNodeCache.Get(ConstructPrefix(db.Namespace(), dataNodeCache.TreePrefix))
 			if cache == nil {
 				cache, _ = lru.New(globalDataNodeCache.globalDataNodeCacheMaxSize)

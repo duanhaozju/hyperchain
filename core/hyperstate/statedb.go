@@ -123,6 +123,30 @@ func New(root common.Hash, db db.Database, archiveDb db.Database, bktConf *commo
 	return state, nil
 }
 
+func NewRaw(db db.Database, height uint64, conf *common.Config) *StateDB {
+	bucket.NewGlobalDataNodeCache(conf.GetInt(GlobalDataNodeCacheLength), conf.GetInt(GlobalDataNodeCacheSize))
+	csc, _ := lru.New(codeSizeCacheSize)
+	batchCache, _ := common.NewCache()
+	contentCache, _ := common.NewCache()
+	archieveCache, _ := common.NewCache()
+	return &StateDB{
+		db:                db,
+		codeSizeCache:     csc,
+		stateObjects:      make(map[common.Address]*StateObject),
+		stateObjectsDirty: make(map[common.Address]struct{}),
+		refund:            new(big.Int),
+		logs:              make(map[common.Hash]types.Logs),
+		batchCache:        batchCache,
+		contentCache:      contentCache,
+		archieveCache:     archieveCache,
+		logger:            logging.MustGetLogger("raw"),
+		oldestSeqNo:       height + 1,
+		bktConf:           conf,
+	}
+}
+
+
+
 // New - New creates a new statedb by reusing journalled data to avoid costly
 // disk io.
 // Deprecated

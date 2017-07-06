@@ -15,10 +15,11 @@ import (
 
 // Config are the configuration options for the EVM
 type Config struct {
-	Debug     bool
-	EnableJit bool
-	ForceJit  bool
-	Logger    LogConfig
+	Debug                bool
+	EnableJit            bool
+	ForceJit             bool
+	Logger               LogConfig
+	DisableGasMetering   bool
 }
 
 // EVM is used to run Ethereum based contracts and will utilise the

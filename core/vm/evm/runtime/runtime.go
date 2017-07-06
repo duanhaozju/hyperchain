@@ -5,26 +5,20 @@ package runtime
 import (
 	"math/big"
 	"time"
-
 	"hyperchain/common"
 	"hyperchain/core/crypto"
-	"hyperchain/core/state"
-	"hyperchain/core/evm"
-	//"hyperchain/hyperdb"
-	"hyperchain/hyperdb"
+	"hyperchain/core/hyperstate"
+	"hyperchain/core/vm/evm"
+	"hyperchain/hyperdb/db"
 )
 
-// The default, always homestead, rule set for the vm env
-type ruleSet struct{}
-
-func (ruleSet) IsHomestead(*big.Int) bool { return true }
 
 // Config is a basic type specifying certain configuration flags for running
 // the EVM.
 type Config struct {
-	RuleSet     evm.RuleSet
 	Difficulty  *big.Int
 	Origin      common.Address
+	Receiver    common.Address
 	Coinbase    common.Address
 	BlockNumber *big.Int
 	Time        *big.Int
@@ -34,16 +28,21 @@ type Config struct {
 	DisableJit  bool // "disable" so it's enabled by default
 	Debug       bool
 
-	State       *state.StateDB
+	State       *hyperstate.StateDB
 	GetHashFn   func(n uint64) common.Hash
+
+	logs       []evm.StructLog
+	conf       *common.Config
 }
 
 // sets defaults on the config
 func setDefaults(cfg *Config) {
-	if cfg.RuleSet == nil {
-		cfg.RuleSet = ruleSet{}
+	if (cfg.Origin == common.Address{}) {
+		cfg.Origin = common.StringToAddress("sender")
 	}
-
+	if (cfg.Receiver == common.Address{}) {
+		cfg.Receiver = common.StringToAddress("receiver")
+	}
 	if cfg.Difficulty == nil {
 		cfg.Difficulty = new(big.Int)
 	}
@@ -67,6 +66,9 @@ func setDefaults(cfg *Config) {
 			return common.BytesToHash(crypto.Keccak256([]byte(new(big.Int).SetUint64(n).String())))
 		}
 	}
+	if cfg.conf == nil {
+		cfg.conf = initConf()
+	}
 }
 
 // Execute executes the code using the input as call data during the execution.
@@ -75,24 +77,22 @@ func setDefaults(cfg *Config) {
 // Executes sets up a in memory, temporarily, environment for the execution of
 // the given code. It enabled the JIT by default and make sure that it's restored
 // to it's original state afterwards.
-func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
+func Execute(db db.Database, code, input []byte, cfg *Config) ([]byte, *hyperstate.StateDB, error) {
 	if cfg == nil {
 		cfg = new(Config)
 	}
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		db, _ := hyperdb.NewMemDatabase()
-		cfg.State, _ = state.New(common.Hash{}, db)
+		cfg.State = hyperstate.NewRaw(db, 0, cfg.conf)
 	}
 	var (
 		vmenv    = NewEnv(cfg, cfg.State)
 		sender   = cfg.State.CreateAccount(cfg.Origin)
-		receiver = cfg.State.CreateAccount(common.StringToAddress("contract"))
+		receiver = cfg.State.CreateAccount(cfg.Receiver)
 	)
 	// set the receiver's (the executing contract) code for execution.
-	receiver.SetCode(code)
-
+	receiver.SetCode(common.BytesToHash(crypto.Keccak256(code)), code)
 	// Call the code with the given configuration.
 	ret, err := vmenv.Call(
 		sender,
@@ -101,6 +101,7 @@ func Execute(code, input []byte, cfg *Config) ([]byte, *state.StateDB, error) {
 		cfg.GasLimit,
 		cfg.GasPrice,
 		cfg.Value,
+		0,
 	)
 
 	return ret, cfg.State, err
@@ -125,7 +126,26 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, error) {
 		cfg.GasLimit,
 		cfg.GasPrice,
 		cfg.Value,
+		0,
 	)
-
 	return ret, err
 }
+
+func initConf() *common.Config {
+	conf := common.NewRawConfig()
+	conf.Set(hyperstate.StateObjectBucketSize, 1000003)
+	conf.Set(hyperstate.StateObjectBucketLevelGroup, 5)
+	conf.Set(hyperstate.StateObjectBucketCacheSize, 100000)
+	conf.Set(hyperstate.StateObjectDataNodeCacheSize, 100000)
+
+	conf.Set(hyperstate.StateBucketSize, 1000003)
+	conf.Set(hyperstate.StateBucketLevelGroup, 5)
+	conf.Set(hyperstate.StateBucketCacheSize, 100000)
+	conf.Set(hyperstate.StateDataNodeCacheSize, 100000)
+
+	conf.Set(hyperstate.GlobalDataNodeCacheSize, 100000)
+	conf.Set(hyperstate.GlobalDataNodeCacheLength, 20)
+	return conf
+}
+
+
