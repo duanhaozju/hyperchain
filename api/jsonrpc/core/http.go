@@ -190,12 +190,25 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, fmt.Sprintf("%s", err.Error()))
 		return
 	} else {
-		var method = r.Header.Get("Method")
-		if method == "" {
-			io.WriteString(w, "Invalid request")
+		username := getUserFromClaim(claims)
+		if username == "" {
+			w.WriteHeader(http.StatusUnauthorized)
+			io.WriteString(w, fmt.Sprintf("%s", ErrPermission.Error()))
 			return
 		}
-		if ok, err := checkPermission(claims, method); !ok {
+		// check if operation has expired, if expired, return error, else update last operation time
+		if checkOpTimeExpire(username) {
+			w.WriteHeader(http.StatusUnauthorized)
+			io.WriteString(w, fmt.Sprintf("%s", ErrTimeoutPermission.Error()))
+			return
+		}
+		updateLastOperationTime(username)
+		var method = r.Header.Get("Method")
+		if method == "" {
+			io.WriteString(w, "Invalid request method")
+			return
+		}
+		if ok, err := checkPermission(username, method); !ok {
 			w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic releam=%s", err.Error()))
 			w.WriteHeader(http.StatusUnauthorized)
 			io.WriteString(w, fmt.Sprintf("%s", err.Error()))

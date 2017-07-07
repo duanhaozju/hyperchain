@@ -332,7 +332,7 @@ func (adm *Administrator) alterUser(cmd *Command) *CommandResult {
 	argLen := len(cmd.Args)
 	if argLen != 2 {
 		log.Warningf("Invalid cmd nums %d", argLen)
-		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2 parameters, got %d", argLen)}}
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen - 1)}}
 	}
 	username := cmd.Args[0]
 	password := cmd.Args[1]

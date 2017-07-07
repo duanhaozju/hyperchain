@@ -3,7 +3,7 @@ package jsonrpc
 import "strings"
 
 const (
-	expiration int64 = 300
+	expiration int64 = 60
 	beforetime int64 = 300
 	pri_key string   = "../../api/jsonrpc/core/key/sample_key"
 	pub_key string   = "../../api/jsonrpc/core/key/sample_key.pub"
@@ -63,8 +63,7 @@ const (
 	MAXNUM
 )
 
-var defaultGroup = []int{admin_getLevel, admin_listNamespaces, node_getNodes, node_getNodeHash, contract_deployContract,
-	contract_invokeContract, contract_maintainContract, tx_getTransactionReceipt, admin_listPermission}
+var defaultGroup = []int{admin_getLevel, admin_listNamespaces, admin_listPermission, admin_alterUser}
 
 var namespaceGroup = []int{admin_startNsMgr, admin_stopNsMgr, admin_registerNamespace, admin_deregisterNamespace,
 	admin_startNamespace, admin_stopNamespace, admin_restartNamespace, admin_listNamespaces}
@@ -367,8 +366,12 @@ func toUpper(origin string) string {
 
 func getScope(scope []int) permissionSet{
 	pset := make(permissionSet)
-	for _, scope := range scope {
-		pset[scope] = true
+	for _, pms := range scope {
+		pset[pms] = true
+	}
+	// every one has a default scope
+	for _, pms := range defaultGroup {
+		pset[pms] = true
 	}
 	return pset
 }

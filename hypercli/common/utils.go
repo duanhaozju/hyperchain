@@ -218,3 +218,13 @@ func ReadPermissionsFromFile(file string) ([]string, error) {
 	}
 	return nil, nil
 }
+
+func GetCurrentUser() string {
+	var username string
+	userinfo := new(UserInfo)
+	err := ReadFile(tokenpath, userinfo)
+	if err == nil {
+		username = userinfo.Username
+	}
+	return username
+}

@@ -46,7 +46,6 @@ func NewAuthCMD() []cli.Command {
 			Flags:   []cli.Flag{
 				cli.StringFlag{
 					Name:  "group, g",
-					Value: "",
 					Usage: "specify the user group",
 				},
 			},

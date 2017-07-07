@@ -13,6 +13,7 @@ var (
 	ErrNotSupport        = errors.New("Not support method")
 	ErrNoAuth            = errors.New("Failed to verify your signature")
 	ErrPermission        = errors.New("Permission denied")
+	ErrTimeoutPermission = errors.New("Expired token, please login again")
 	ErrInternal          = errors.New("Internal error")
 	ErrTokenInvalid      = errors.New("Invalid token, please login first")
 	ErrDuplicateUsername = errors.New("Duplicate username during register, please register with a new username")

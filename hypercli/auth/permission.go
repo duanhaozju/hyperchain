@@ -14,8 +14,8 @@ import (
 func createUser(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	args := c.Args()
-	if len(args) != 2 {
-		fmt.Println("Need 2 params(username and password)")
+	if c.NArg() != 2 {
+		fmt.Printf("Need 2 params(username and password), got %d\n", c.NArg())
 		return common.ErrInvalidArgsNum
 	}
 	if c.String("group") != "" {
@@ -36,13 +36,24 @@ func createUser(c *cli.Context) error {
 // alterUser implements the alter user logic in hypercli, this method can only be called by root successfully
 func alterUser(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+	var args []string
+	// get current login user
+	currentUser := common.GetCurrentUser()
+	if currentUser == "" {
+		fmt.Println("Invalid token, please login first!")
+		os.Exit(1)
+	}
+	args = append(args, currentUser)
+
+	// get new password
+	if c.NArg() != 1 {
+		fmt.Println("Need only 1 params(new password)")
+		return common.ErrInvalidArgsNum
+	}
+	args = append(args, c.Args()...)
 	cmd := &admin.Command{
 		MethodName: "admin_alterUser",
-		Args:       c.Args(),
-	}
-	if len(cmd.Args) != 2 {
-		fmt.Println("Need 2 params(username and new password)")
-		return common.ErrInvalidArgsNum
+		Args:       args,
 	}
 	result:= client.InvokeCmd(cmd)
 	fmt.Print(result)
@@ -52,13 +63,13 @@ func alterUser(c *cli.Context) error {
 // dropUser implements the drop user logic in hypercli, this method can only be called by root successfully
 func dropUser(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+	if c.NArg() != 1 {
+		fmt.Println("Need only 1 param(username)")
+		return common.ErrInvalidArgsNum
+	}
 	cmd := &admin.Command{
 		MethodName: "admin_delUser",
 		Args:       c.Args(),
-	}
-	if len(cmd.Args) != 1 {
-		fmt.Println("Need only 1 param(username)")
-		return common.ErrInvalidArgsNum
 	}
 	result:= client.InvokeCmd(cmd)
 	fmt.Print(result)

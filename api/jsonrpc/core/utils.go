@@ -27,13 +27,15 @@ import (
 type permissionSet map[int]bool
 
 var valid_user = map [string]string {
-	"root"    : "hyperchain",
-	"duanhao" : "123",
+	"root": "hyperchain",
 }
 
 var user_scope = map [string]permissionSet {
-	"root"    : rootScopes(),
-	"duanhao" : defaultScopes(),
+	"root": rootScopes(),
+}
+
+var user_opTime = map [string]int64 {
+	"root": 0,
 }
 
 func splitRawMessage(args json.RawMessage) ([]string, error) {
@@ -134,15 +136,9 @@ func signToken(username, keypath, algorithm string) (string, error) {
 	claims["iss"] = "Hyperchain Client"
 	claims["aud"] = "www.hyperchain.cn"
 	claims["usr"] = username
-	claims["iat"] = time.Now().Unix()
-	claims["exp"] = time.Now().Unix() + expiration
-	claims["nbf"] = time.Now().Unix() - beforetime
-	// Do we need to wrap the scope to the claims?
-	//if scope, ok := user_scope[username]; !ok {
-	//	return "", fmt.Errorf("Couldn't find the scope of user: %s", username)
-	//} else {
-	//	claims["scp"] = scope
-	//}
+	//claims["iat"] = time.Now().Unix()
+	//claims["exp"] = time.Now().Unix() + expiration
+	//claims["nbf"] = time.Now().Unix() - beforetime
 
 	// get the key
 	var key interface{}
@@ -265,63 +261,26 @@ func getJSONFromClaims(j interface{}) ([]byte, error) {
 	}
 }
 
-// checkPermissionByToken checks if method is permitted in input claims
-func checkPermissionByToken(input []byte, method string) (bool, error) {
-	scope := convertToScope(method)
-	if scope == -1 {
-		return false, ErrPermission
-	}
-
-	claims := string(input)
-
-	// find scp field in claims
-	pat := `"scp":\[.+\]`
-	reg, err := regexp.Compile(pat)
-	if (err != nil ) {
-		log.Debug(err)
-		return false, ErrInternal
-	}
-	matchStr := reg.FindString(claims)
-	if matchStr == "" {
-		return false, ErrPermission
-	}
-	//scopeStr := matchStr[6:]
-
-	//var scopes []int
-	//json.Unmarshal([]byte(scopeStr), &scopes)
-	//if contains(scopes, scope) {
-	//	return true, nil
-	//}
-	return false, ErrPermission
-}
-
 // checkPermission checks permission by username in input claims
-func checkPermission(input []byte, method string) (bool, error) {
+func checkPermission(username, method string) (bool, error) {
 	scope := convertToScope(method)
 	if scope == -1 {
 		return false, ErrPermission
 	}
 
-	var claims jwt.MapClaims
-	if err := json.Unmarshal(input, &claims); err != nil {
-		return false, ErrInternal
-	}
-	if usr, ok := claims["usr"].(string); !ok {
-		return false, ErrInternal
+	if IsUserPermit(username, scope) {
+		return true, nil
 	} else {
-		if IsUserPermit(usr, scope) {
-			return true, nil
-		} else {
-			return false, ErrPermission
-		}
+		return false, ErrPermission
 	}
+
 }
 
 // createUser creates a new account with given username and password
 func createUser(username, password, group string) error {
 	groupPermission := getGroupPermission(group)
 	if groupPermission == nil {
-		return ErrInvalidGroup
+		return fmt.Errorf("Unrecoginzed group %s", group)
 	}
 	valid_user[username] = password
 	user_scope[username] = groupPermission
@@ -337,4 +296,24 @@ func alterUser(username, password string) {
 func delUser(username string) {
 	delete(valid_user, username)
 	delete(user_scope, username)
+}
+
+func updateLastOperationTime(username string) {
+	user_opTime[username] = time.Now().Unix()
+}
+
+func checkOpTimeExpire(username string) bool {
+	return time.Now().Unix() > user_opTime[username] + expiration
+}
+
+func getUserFromClaim(input []byte) string {
+	var claims jwt.MapClaims
+	if err := json.Unmarshal(input, &claims); err != nil {
+		return ""
+	}
+	if usr, ok := claims["usr"].(string); !ok {
+		return ""
+	} else {
+		return usr
+	}
 }
