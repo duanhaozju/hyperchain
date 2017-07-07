@@ -18,5 +18,3 @@ func (writer *CWriter) WriteF(c color.Attribute, format string, data ...interfac
 	cw := color.New(c)
 	cw.Fprintf(writer.Writer, format, data...)
 }
-
-

@@ -1,0 +1,7 @@
+syntax = "proto3";
+package wrapper;
+
+message ReceiptWrapper {
+    bytes receiptVersion = 1;
+    bytes receipt = 2;
+}

@@ -1,9 +1,9 @@
 package common
 
 import (
-	"path/filepath"
-	"os"
 	"github.com/urfave/cli"
+	"os"
+	"path/filepath"
 )
 
 func NewApp(gitCommit, usage string) *cli.App {
