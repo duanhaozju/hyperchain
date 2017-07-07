@@ -9,10 +9,12 @@ import (
 	"hyperchain/core/vm/evm/runtime"
 	"hyperchain/core/hyperstate"
 	"hyperchain/common"
-	"github.com/op/go-logging"
 	"io/ioutil"
 	"hyperchain/core/vm/evm/compiler"
 	"math/big"
+	cm "hyperchain/cmd/common"
+	"os"
+	"github.com/fatih/color"
 )
 
 var runCommand = cli.Command{
@@ -34,7 +36,7 @@ func runCmd(ctx *cli.Context) error {
 		state    *hyperstate.StateDB
 		code     []byte
 		input    []byte
-		logger   *logging.Logger = common.GetLogger("global", "runtime")
+		log      *cm.CWriter = &cm.CWriter{os.Stdout}
 	)
 	// initialize database
 	if ctx.GlobalBool(DisableExtendDBFlag.Name) {
@@ -108,6 +110,9 @@ func runCmd(ctx *cli.Context) error {
 		}
 		ret, _, runtimeErr = runtime.Execute(db, code, input, runtimeConfig)
 	}
-	logger.Notice("ret: ", common.Bytes2Hex(ret), "runtime err", runtimeErr)
+	log.WriteF(color.FgGreen, `vm execution result: %v
+error:               %v
+
+`, common.Bytes2Hex(ret), runtimeErr)
 	return nil
 }
