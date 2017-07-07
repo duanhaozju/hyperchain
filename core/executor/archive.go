@@ -184,7 +184,7 @@ func (mgr *ArchiveManager) getTimestampRange(begin, end uint64) (error, int64, i
 	if err != nil {
 		return err, 0, 0
 	}
-	ek, err := edb.GetBlockByNumber(mgr.namespace, begin)
+	ek, err := edb.GetBlockByNumber(mgr.namespace, end)
 	if err != nil {
 		return err, 0, 0
 	}
