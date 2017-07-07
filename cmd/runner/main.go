@@ -41,9 +41,17 @@ var (
 		Name:  "nogasmetering",
 		Usage: "disable gas metering",
 	}
+	DebugFlag = cli.BoolFlag{
+		Name: "debug",
+		Usage: "output all debug trace info",
+	}
 	CodeFlag = cli.StringFlag{
 		Name:  "code",
 		Usage: "EVM code",
+	}
+	StatFlag = cli.BoolFlag{
+		Name: "stat",
+		Usage: "output all stat info",
 	}
 	CodeFileFlag = cli.StringFlag{
 		Name:  "codefile",
@@ -78,15 +86,14 @@ func init() {
 		BlockFlag,
 		DisableMemoryFlag,
 		DisableStackFlag,
-		DisableGasMeteringFlag,
 		DisableStorageFlag,
+		DebugFlag,
+		StatFlag,
 		CodeFlag,
 		CodeFileFlag,
 		InputFlag,
 		DbFileFlag,
 		DisableExtendDBFlag,
-		MemProfileFlag,
-		CPUProfileFlag,
 	}
 	app.Commands = []cli.Command{
 		runCommand,

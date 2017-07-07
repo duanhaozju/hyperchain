@@ -31,8 +31,11 @@ type Config struct {
 	State       *hyperstate.StateDB
 	GetHashFn   func(n uint64) common.Hash
 
-	logs       []evm.StructLog
-	conf       *common.Config
+	logs           []evm.StructLog
+	conf           *common.Config
+	DisableStack   bool
+	DisableMemory  bool
+	DisableStorage bool
 }
 
 // sets defaults on the config
@@ -77,7 +80,7 @@ func setDefaults(cfg *Config) {
 // Executes sets up a in memory, temporarily, environment for the execution of
 // the given code. It enabled the JIT by default and make sure that it's restored
 // to it's original state afterwards.
-func Execute(db db.Database, code, input []byte, cfg *Config) ([]byte, *hyperstate.StateDB, error) {
+func Execute(db db.Database, code, input []byte, cfg *Config) ([]byte, *hyperstate.StateDB, []evm.StructLog, error) {
 	if cfg == nil {
 		cfg = new(Config)
 	}
@@ -104,7 +107,7 @@ func Execute(db db.Database, code, input []byte, cfg *Config) ([]byte, *hypersta
 		0,
 	)
 
-	return ret, cfg.State, err
+	return ret, cfg.State, vmenv.(*Env).StructLogs(), err
 }
 
 // Create executes the code using the EVM create method

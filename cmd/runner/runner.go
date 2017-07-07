@@ -15,6 +15,9 @@ import (
 	cm "hyperchain/cmd/common"
 	"os"
 	"github.com/fatih/color"
+	"hyperchain/core/vm/evm"
+	"time"
+	rt "runtime"
 )
 
 var runCommand = cli.Command{
@@ -90,29 +93,55 @@ func runCmd(ctx *cli.Context) error {
 	state = hyperstate.NewRaw(db, block.Uint64(), "global", runtime.InitConf())
 
 	runtimeConfig := &runtime.Config{
-		Origin:      common.HexToAddress(sender),
-		Receiver:    common.HexToAddress(receiver),
-		BlockNumber: block,
-		State:       state,
+		Origin:         common.HexToAddress(sender),
+		Receiver:       common.HexToAddress(receiver),
+		BlockNumber:    block,
+		State:          state,
+		Debug:          ctx.GlobalBool(DebugFlag.Name),
+		DisableMemory:  ctx.GlobalBool(DisableMemoryFlag.Name),
+		DisableStack:   ctx.GlobalBool(DisableStackFlag.Name),
+		DisableStorage: ctx.GlobalBool(DisableStorageFlag.Name),
 	}
 
 
 	var (
 		ret        []byte
 		runtimeErr error
+		structLogs []evm.StructLog
+		start      time.Time
+		elapsed    time.Duration
 	)
 
 	if invoke {
+		start = time.Now()
 		ret, runtimeErr = runtime.Call(common.HexToAddress(receiver), input, runtimeConfig)
+		elapsed = time.Since(start)
 	} else {
 		if rawCode {
 			code, _ ,_ = runtime.Create(db, code, runtimeConfig)
 		}
-		ret, _, runtimeErr = runtime.Execute(db, code, input, runtimeConfig)
+		start = time.Now()
+		ret, _, structLogs, runtimeErr = runtime.Execute(db, code, input, runtimeConfig)
+		elapsed  = time.Since(start)
 	}
-	log.WriteF(color.FgGreen, `vm execution result: %v
-error:               %v
 
-`, common.Bytes2Hex(ret), runtimeErr)
+	logs := state.Logs()
+
+	log.WriteF(color.FgHiGreen, "[Result]:        %v\n", common.Bytes2Hex(ret))
+	log.WriteF(color.FgHiRed, "[Error]:         %v\n", runtimeErr)
+	log.WriteF(color.FgHiBlue, "[Logs]:          %v\n", logs)
+	if ctx.GlobalBool(DebugFlag.Name) {
+		evm.StdErrFormat(structLogs)
+	}
+	if ctx.GlobalBool(StatFlag.Name) {
+		var mem rt.MemStats
+		rt.ReadMemStats(&mem)
+		log.WriteF(color.FgHiMagenta, `[Elapsed]:       %v
+[heap object]:   %v
+[allocation]:    %v
+[GC calls]:      %v
+
+`, elapsed, mem.HeapObjects, mem.TotalAlloc, mem.NumGC)
+	}
 	return nil
 }

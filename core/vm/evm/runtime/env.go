@@ -44,7 +44,10 @@ func NewEnv(cfg *Config, state *hyperstate.StateDB) vm.Environment {
 		EnableJit: !cfg.DisableJit,
 		ForceJit:  !cfg.DisableJit,
 		Logger: evm.LogConfig{
-			Collector: env,
+			Collector:      env,
+			DisableStorage: cfg.DisableStorage,
+			DisableMemory:  cfg.DisableMemory,
+			DisableStack:   cfg.DisableStack,
 		},
 	})
 
