@@ -15,8 +15,8 @@ var (
 )
 
 func init() {
-	EnableJit = true
-	ForceJit = true
+	EnableJit   = true
+	ForceJit    = true
 	EnableDebug = false
 }
 
@@ -27,24 +27,6 @@ type Account struct {
 	Storage map[string]string
 }
 
-type Log struct {
-	AddressF string   `json:"address"`
-	DataF    string   `json:"data"`
-	TopicsF  []string `json:"topics"`
-	BloomF   string   `json:"bloom"`
-}
-
-func (self Log) Address() []byte      { return common.Hex2Bytes(self.AddressF) }
-func (self Log) Data() []byte         { return common.Hex2Bytes(self.DataF) }
-func (self Log) RlpData() interface{} { return nil }
-func (self Log) Topics() [][]byte {
-	t := make([][]byte, len(self.TopicsF))
-	for i, topic := range self.TopicsF {
-		t[i] = common.Hex2Bytes(topic)
-	}
-	return t
-}
-
 type VmEnv struct {
 	CurrentCoinbase   string
 	CurrentDifficulty string
@@ -52,20 +34,6 @@ type VmEnv struct {
 	CurrentNumber     string
 	CurrentTimestamp  interface{}
 	PreviousHash      string
-}
-
-type VmTest struct {
-	Callcreates interface{}
-	//Env         map[string]string
-	Env           VmEnv
-	Exec          map[string]string
-	Transaction   map[string]string
-	Logs          []Log
-	Gas           string
-	Out           string
-	Post          map[string]Account
-	Pre           map[string]Account
-	PostStateRoot string
 }
 
 type RuleSet struct {

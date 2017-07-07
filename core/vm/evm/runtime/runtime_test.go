@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"hyperchain/common"
-	"hyperchain/core/state"
-	"hyperchain/core/evm"
-	"hyperchain/hyperdb"
+	"hyperchain/core/vm/evm"
+	"hyperchain/hyperdb/mdb"
+	"hyperchain/core/hyperstate"
 )
 
 func TestDefaults(t *testing.T) {
@@ -45,7 +45,8 @@ func TestEnvironment(t *testing.T) {
 		}
 	}()
 
-	Execute([]byte{
+	db, _ := mdb.NewMemDatabase()
+	Execute(db, []byte{
 		byte(evm.DIFFICULTY),
 		byte(evm.TIMESTAMP),
 		byte(evm.GASLIMIT),
@@ -57,7 +58,8 @@ func TestEnvironment(t *testing.T) {
 }
 
 func TestExecute(t *testing.T) {
-	ret, _, err := Execute([]byte{
+	db, _ := mdb.NewMemDatabase()
+	ret, _, err := Execute(db, []byte{
 		byte(evm.PUSH1), 10,
 		byte(evm.PUSH1), 0,
 		byte(evm.MSTORE),
@@ -76,9 +78,10 @@ func TestExecute(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	db, _ := hyperdb.NewMemDatabase()
-	state, _ := state.New(common.Hash{}, db)
+	db, _ := mdb.NewMemDatabase()
+	state := hyperstate.NewRaw(db, 0, "global", InitConf())
 	address := common.HexToAddress("0x0a")
+	state.CreateAccount(address)
 	state.SetCode(address, []byte{
 		byte(evm.PUSH1), 10,
 		byte(evm.PUSH1), 0,

@@ -131,7 +131,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		contract.SetCallCode(codeAddr, code)
 	}
 	defer contract.Finalise()
-	defer virtualMachine.Finalize()
 
 	// evm finalise
 	ret, err = virtualMachine.Run(contract, input)

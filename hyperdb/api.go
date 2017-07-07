@@ -94,7 +94,7 @@ func InitDatabase(conf *common.Config, namespace string) error {
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
 	}
 
-	archieveDb, err := NewDatabase(conf, "Archieve", 0001, namespace)
+	archieveDb, err := NewDatabase(conf, "archive", 0001, namespace)
 
 	if err != nil {
 		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
@@ -182,7 +182,7 @@ func GetDBDatabaseByNamespace(namespace string) (db.Database, error) {
 	return dbMgr.dbMap[name].db, nil
 }
 
-func GetArchieveDbByNamespace(namespace string) (db.Database, error) {
+func GetArchiveDbByNamespace(namespace string) (db.Database, error) {
 	log := getLogger(namespace)
 	dbMgr.dbSync.RLock()
 	defer dbMgr.dbSync.RUnlock()

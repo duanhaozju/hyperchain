@@ -12,6 +12,7 @@ import (
 	"hyperchain/tree/bucket"
 	"math/big"
 	"sort"
+	"sync"
 )
 
 var emptyCodeHash = crypto.Keccak256(nil)
@@ -30,7 +31,7 @@ const (
 )
 
 const (
-	OPCODE_ARCHIEVE = 100
+	OPCODE_ARCHIVE = 100
 )
 
 func (self Storage) String() (str string) {
@@ -70,7 +71,7 @@ type StateObject struct {
 	code            Code    // contract bytecode, which gets set when code is loaded
 	cachedStorage   Storage // Storage entry cache to avoid duplicate reads
 	dirtyStorage    Storage // Storage entries that need to be flushed to disk
-	archieveStorage Storage // Storage entries that need to be flushed to disk
+	archiveStorage  Storage // Storage entries that need to be flushed to disk
 	evictList       map[common.Hash]uint64 // record storage lasted modify block number
 
 	bucketTree *bucket.BucketTree     // a bucket tree use to calculate fingerprint of storage efficiency
@@ -123,7 +124,7 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 		data:            data,
 		cachedStorage:   make(Storage),
 		dirtyStorage:    make(Storage),
-		archieveStorage: make(Storage),
+		archiveStorage:  make(Storage),
 		onDirty:         onDirty,
 		logger:          logger,
 		evictList:       make(map[common.Hash]uint64),
@@ -248,8 +249,8 @@ func (self *StateObject) SetState(db db.Database, key common.Hash, value []byte,
 	})
 	self.logger.Debugf("set state key %s value %s existed %v", key.Hex(), common.Bytes2Hex(value), exist)
 	self.setState(key, value)
-	if self.isArchieve(opcode) {
-		self.archieve(key, previous, value)
+	if self.isArchive(opcode) {
+		self.archive(key, previous, value)
 	}
 }
 
@@ -281,8 +282,9 @@ func (self *StateObject) removeState(key common.Hash) {
 func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 	// IMPORTANT root should calculate first
 	// otherwise dirty storage will be removed in persist phase
-	done := make(chan struct{})
-	go self.onEvict(done)
+	var wg sync.WaitGroup
+	go self.onEvict(wg)
+	go self.doArchive(wg)
 
 	self.GenerateFingerPrintOfStorage()
 	self.logger.Debugf("begin to flush dirty storage")
@@ -294,15 +296,6 @@ func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 			if err := db.Delete(CompositeStorageKey(self.address.Bytes(), key.Bytes())); err != nil {
 				return err
 			}
-			// put into archieve db
-			previous := self.archieveStorage[key]
-			if len(previous) != 0 {
-				self.logger.Debugf("flush dirty storage address [%s] add key: [%s] to archieve db, value [%s]", self.address.Hex(), key.Hex(), common.Bytes2Hex(previous))
-				if err := archieveDb.Put(CompositeArchieveStorageKey(self.address.Bytes(), key.Bytes()), previous); err != nil {
-					return err
-				}
-			}
-
 		} else {
 			self.logger.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", self.address.Hex(), key.Hex(), common.Bytes2Hex(value))
 			if err := db.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), value); err != nil {
@@ -312,8 +305,8 @@ func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 	}
 	// flush all bucket tree modified to batch
 	self.bucketTree.AddChangesForPersistence(db, big.NewInt(int64(self.db.curSeqNo)))
-	self.archieveStorage = make(Storage)
-	<- done
+	self.archiveStorage = make(Storage)
+	wg.Wait()
 	return nil
 }
 
@@ -670,24 +663,52 @@ func (self *StateObject) removeDeployedContract(address common.Address) bool {
 	return false
 }
 
-func (self *StateObject) archieve(key common.Hash, originValue, value []byte) {
-	if len(value) == 0 {
-		self.archieveStorage[key] = originValue
+func (self *StateObject) archive(key common.Hash, originValue, value []byte) {
+	// only record the initial value once.
+	// Reason:
+	//     for some small variables (e.g. bool, uint8), they are compacted to be stored in
+	//     a single slot. If those varaibles try to archive themself continuously，it can lead only the latest
+	//     slot value been record.
+	// e.g.
+	//     Initial slot value: [A, B, C]
+	//     Final slot value:   [nil, nil, nil]
+	//     if rewrite previous value each time, the recorded is [nil, nil, C], var A, B is dropped!
+	// Additional:
+	//     We store all initial key-value entries, skip judgement whether they are archived by a delete operation
+	//     (via check len(value) == 0). This method can avoid data missing.
+	if _, exist := self.archiveStorage[key]; !exist {
+		self.archiveStorage[key] = originValue
 	}
 }
-func (self *StateObject) isArchieve(opcode int32) bool {
-	return opcode == OPCODE_ARCHIEVE
+func (self *StateObject) isArchive(opcode int32) bool {
+	return opcode == OPCODE_ARCHIVE
 }
 
 
-func (self *StateObject) onEvict(done chan struct{}) {
+func (self *StateObject) onEvict(wg sync.WaitGroup) {
 	defer func() {
-		done <- struct{}{}
+		wg.Done()
 	}()
+	wg.Add(1)
 	for key, brith := range self.evictList {
 		if brith < self.db.oldestSeqNo {
 			delete(self.evictList, key)
 			delete(self.cachedStorage, key)
 		}
 	}
+}
+
+func (self *StateObject) doArchive(wg sync.WaitGroup) {
+	defer func() {
+		wg.Done()
+	}()
+	wg.Add(1)
+	batch := self.db.archiveDb.NewBatch()
+	for key, value := range self.archiveStorage {
+		if len(value) != 0 {
+			self.logger.Debugf("flush dirty storage address [%s] add key: [%s] to archieve db, value [%s]", self.address.Hex(), key.Hex(), common.BytesToHash(value).Hex())
+			batch.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), value)
+		}
+	}
+	batch.Write()
 }

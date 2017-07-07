@@ -92,11 +92,11 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	archieveDb, err := hyperdb.GetArchieveDbByNamespace(namespace)
+	archiveDb, err := hyperdb.GetArchiveDbByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}
-	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, archieveDb, conf, height, namespace)
+	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, archiveDb, conf, height, namespace)
 }
 
 func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte, height uint64, namespace string) (vm.Database, error) {

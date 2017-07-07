@@ -48,6 +48,13 @@ func NewLDBDataBase(conf *common.Config, filepath string, namespace string) (*LD
 	}, err
 }
 
+func NewRawLDBDatabase(db *leveldb.DB, namespace string) (*LDBDatabase){
+	return &LDBDatabase{
+		db:        db,
+		namespace: namespace,
+	}
+}
+
 func LDBDataBasePath(conf *common.Config) string {
 	return conf.GetString(LEVEL_DB_PATH)
 }

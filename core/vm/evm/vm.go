@@ -15,10 +15,11 @@ import (
 
 // Config are the configuration options for the EVM
 type Config struct {
-	Debug     bool
-	EnableJit bool
-	ForceJit  bool
-	Logger    LogConfig
+	Debug                bool
+	EnableJit            bool
+	ForceJit             bool
+	Logger               LogConfig
+	DisableGasMetering   bool
 }
 
 // EVM is used to run Ethereum based contracts and will utilise the
@@ -37,7 +38,7 @@ type EVM struct {
 func New(env vm.Environment, cfg Config) *EVM {
 	var logger *Logger
 	if cfg.Debug {
-		logger = newLogger(cfg.Logger, env)
+		logger = NewLogger(cfg.Logger, env)
 	}
 
 	return &EVM{
@@ -92,9 +93,6 @@ func (evm *EVM) Run(context vm.VmContext, input []byte) (ret []byte, err error) 
 				// Create and compile program
 				program = NewProgram(contract.Code)
 				perr := CompileProgram(program)
-				if evm.cfg.Debug {
-					PrintProgram(program, os.Stdout)
-				}
 				if perr == nil {
 					return RunProgram(evm, program, evm.env, contract, input)
 				}

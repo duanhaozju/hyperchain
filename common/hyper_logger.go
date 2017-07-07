@@ -68,8 +68,10 @@ func InitHyperLoggerManager(conf *Config) {
 		"hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
 			time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
 	os.MkdirAll(loggerDir, 0777)
-	file, _ := os.Create(fileName)
-	hl.currentFile = file
+	if hl.writeToFile {
+		file, _ := os.Create(fileName)
+		hl.currentFile = file
+	}
 
 	name := conf.GetString(NAMESPACE)
 	rwMutex.Lock()
@@ -108,8 +110,8 @@ func GetLogger(namespace string, module string) *logging.Logger {
 		// dynamically loaded module
 		hl, err := getHyperlogger(namespace)
 		if err != nil {
-			commonLogger.Error(err)
-			commonLogger.Errorf("%s namespace logger not initialized using common logger instead!")
+			commonLogger.Debug(err)
+			commonLogger.Debugf("%s namespace logger not initialized using common logger instead!")
 			return commonLogger
 		}
 
@@ -119,8 +121,8 @@ func GetLogger(namespace string, module string) *logging.Logger {
 		newMl, err := hl.addNewLogger(compositeName, hl.currentFile,
 			hl.fileFormat, hl.consoleFormat, hl.baseLevel, hl.writeToFile)
 		if err != nil {
-			commonLogger.Error(err)
-			commonLogger.Errorf("add new logger failed using common logger instead!")
+			commonLogger.Debug(err)
+			commonLogger.Debugf("add new logger failed using common logger instead!")
 			return commonLogger
 		}
 		tmpLogger = newMl.logger
@@ -217,8 +219,6 @@ func (hl *HyperLogger) init() {
 		"hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
 			time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
 	os.MkdirAll(loggerDir, 0777)
-	file, _ := os.Create(fileName)
-	hl.currentFile = file
 
 	ns := conf.GetString(NAMESPACE)
 	mm := conf.GetStringMap(LOG_MODULE_KEY)
@@ -226,10 +226,14 @@ func (hl *HyperLogger) init() {
 	// construct module loggers according to configs
 	for m, l := range mm {
 		compositeName := getCompositeModuleName(ns, m)
-		_, err := hl.addNewLogger(compositeName, file, fileFormat, consoleFormat,
-			cast.ToString(l), hl.writeToFile)
-		if err != nil {
-			commonLogger.Critical("init error")
+		if hl.writeToFile {
+			file, _ := os.Create(fileName)
+			hl.currentFile = file
+			_, err := hl.addNewLogger(compositeName, file, fileFormat, consoleFormat,
+				cast.ToString(l), hl.writeToFile)
+			if err != nil {
+				commonLogger.Critical("init error")
+			}
 		}
 	}
 
@@ -307,13 +311,13 @@ func (hl *HyperLogger) newLogFileByInterval(loggerDir string, conf *Config) {
 func getModuleLogger(namespace, module string) *moduleLogger {
 	hl, err := getHyperlogger(namespace)
 	if err != nil {
-		commonLogger.Critical("GetLogger error: hyperloger nil")
+		commonLogger.Debug("GetLogger error: hyperloger nil")
 		return nil
 	}
 	compositeName := getCompositeModuleName(namespace, module)
 
 	if hl.moduleLoggers == nil {
-		commonLogger.Critical("getLogger error: moduleLoggers nil")
+		commonLogger.Debug("getLogger error: moduleLoggers nil")
 		return nil
 	}
 

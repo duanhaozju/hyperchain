@@ -65,7 +65,7 @@ type Logger struct {
 }
 
 // newLogger returns a new logger
-func newLogger(cfg LogConfig, env vm.Environment) *Logger {
+func NewLogger(cfg LogConfig, env vm.Environment) *Logger {
 	return &Logger{
 		cfg:           cfg,
 		env:           env,

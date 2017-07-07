@@ -40,21 +40,21 @@ type revision struct {
 // * Contracts
 // * Accounts
 type StateDB struct {
-	db            db.Database
-	archieveDb    db.Database
-	root          common.Hash
-	codeSizeCache *lru.Cache
+	db                db.Database
+	archiveDb         db.Database
+	root              common.Hash
+	codeSizeCache     *lru.Cache
 
 	// This map holds 'live' objects, which will get modified while processing a state transition.
 	stateObjects      map[common.Address]*StateObject
 	stateObjectsDirty map[common.Address]struct{}
 	// The refund counter, also used by state transitioning.
-	refund *big.Int
+	refund            *big.Int
 
-	thash, bhash common.Hash
-	txIndex      int
-	logs         map[common.Hash]types.Logs
-	logSize      uint
+	thash, bhash      common.Hash
+	txIndex           int
+	logs              map[common.Hash]types.Logs
+	logSize           uint
 
 	// Journal of state modifications. This is the backbone of
 	// Snapshot and RevertToSnapshot.
@@ -78,7 +78,7 @@ type StateDB struct {
 }
 
 // New - Create a new state from a given root
-func New(root common.Hash, db db.Database, archieveDb db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
+func New(root common.Hash, db db.Database, archiveDb db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
 	logger := common.GetLogger(namespace, "state")
 	csc, _ := lru.New(codeSizeCacheSize)
 	// initialize global cache of bucket tree
@@ -92,7 +92,7 @@ func New(root common.Hash, db db.Database, archieveDb db.Database, bktConf *comm
 	archieveCache, _ := common.NewCache()
 	state := &StateDB{
 		db:                db,
-		archieveDb:        archieveDb,
+		archiveDb:         archiveDb,
 		root:              root,
 		codeSizeCache:     csc,
 		stateObjects:      make(map[common.Address]*StateObject),
@@ -122,6 +122,31 @@ func New(root common.Hash, db db.Database, archieveDb db.Database, bktConf *comm
 	state.setLatest(height + 1)
 	return state, nil
 }
+
+func NewRaw(db db.Database, height uint64, namespace string, conf *common.Config) *StateDB {
+	logger := common.GetLogger(namespace, "state")
+	bucket.NewGlobalDataNodeCache(conf.GetInt(GlobalDataNodeCacheLength), conf.GetInt(GlobalDataNodeCacheSize))
+	csc, _ := lru.New(codeSizeCacheSize)
+	batchCache, _ := common.NewCache()
+	contentCache, _ := common.NewCache()
+	archieveCache, _ := common.NewCache()
+	return &StateDB{
+		db:                db,
+		codeSizeCache:     csc,
+		stateObjects:      make(map[common.Address]*StateObject),
+		stateObjectsDirty: make(map[common.Address]struct{}),
+		refund:            new(big.Int),
+		logs:              make(map[common.Hash]types.Logs),
+		batchCache:        batchCache,
+		contentCache:      contentCache,
+		archieveCache:     archieveCache,
+		oldestSeqNo:       height + 1,
+		bktConf:           conf,
+		logger:            logger,
+	}
+}
+
+
 
 // New - New creates a new statedb by reusing journalled data to avoid costly
 // disk io.
@@ -262,7 +287,7 @@ func (self *StateDB) FetchArchieveBatch(seqNo uint64) db.Batch {
 	} else {
 		// not exist right now
 		self.logger.Debugf("create one archieve batch for #%d", seqNo)
-		batch := self.archieveDb.NewBatch()
+		batch := self.archiveDb.NewBatch()
 		self.archieveCache.Add(seqNo, batch)
 		return batch
 	}
@@ -1105,7 +1130,7 @@ func validateRoot(root common.Hash, curRoot common.Hash) bool {
 
 func (self *StateDB) ShowArchive(address common.Address, date string) map[string]map[string]string {
 	storages := make(map[string]map[string]string)
-	iter := self.archieveDb.NewIterator(GetArchieveStorageKeyWithDatePrefix(address.Bytes(), []byte(date)))
+	iter := self.archiveDb.NewIterator(GetArchieveStorageKeyWithDatePrefix(address.Bytes(), []byte(date)))
 	defer iter.Release()
 	for iter.Next() {
 		d, ok := GetArchieveDate(address.Bytes(), iter.Key())
