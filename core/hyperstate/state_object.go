@@ -707,7 +707,7 @@ func (self *StateObject) doArchive(wg sync.WaitGroup) {
 	for key, value := range self.archiveStorage {
 		if len(value) != 0 {
 			self.logger.Debugf("flush dirty storage address [%s] add key: [%s] to archieve db, value [%s]", self.address.Hex(), key.Hex(), common.BytesToHash(value).Hex())
-			batch.Put(CompositeArchieveStorageKey(self.address.Bytes(), key.Bytes()), value)
+			batch.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), value)
 		}
 	}
 	batch.Write()

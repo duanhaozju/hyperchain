@@ -26,10 +26,11 @@ var runCommand = cli.Command{
 func runCmd(ctx *cli.Context) error {
 	var (
 		invoke   bool        = false
-		rawCode  bool        = true
+		rawCode  bool        = false
 		db       db.Database
 		sender   string
 		receiver string
+		block    *big.Int
 		state    *hyperstate.StateDB
 		code     []byte
 		input    []byte
@@ -77,15 +78,22 @@ func runCmd(ctx *cli.Context) error {
 	if ctx.GlobalString(ReceiverFlag.Name) != "" {
 		receiver = ctx.GlobalString(ReceiverFlag.Name)
 	}
+	// initialize block
+	if ctx.GlobalUint64(BlockFlag.Name) != 0 {
+		block = big.NewInt(int64(ctx.GlobalUint64(BlockFlag.Name)))
+	} else {
+		block = big.NewInt(1)
+	}
 	// initialize state
-	state = hyperstate.NewRaw(db, 1, "global", runtime.InitConf())
+	state = hyperstate.NewRaw(db, block.Uint64(), "global", runtime.InitConf())
 
 	runtimeConfig := &runtime.Config{
 		Origin:      common.HexToAddress(sender),
 		Receiver:    common.HexToAddress(receiver),
-		BlockNumber: big.NewInt(1),
+		BlockNumber: block,
 		State:       state,
 	}
+
 
 	var (
 		ret        []byte

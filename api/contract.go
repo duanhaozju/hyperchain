@@ -372,6 +372,7 @@ func (contract *Contract) GetCreateTime(addr common.Address) (string, error) {
 	}
 }
 
+// Deprecated
 func (contract *Contract) GetArchive(addr common.Address, date string) (map[string]map[string]string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {

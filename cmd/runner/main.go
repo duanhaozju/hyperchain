@@ -21,6 +21,10 @@ var (
 		Name:  "receiver",
 		Usage: "The transaction origin",
 	}
+	BlockFlag = cli.Uint64Flag{
+		Name: "block",
+		Usage: "based block number",
+	}
 	DisableMemoryFlag = cli.BoolFlag{
 		Name:  "nomemory",
 		Usage: "disable memory output",
@@ -71,6 +75,7 @@ func init() {
 	app.Flags = []cli.Flag{
 		SenderFlag,
 		ReceiverFlag,
+		BlockFlag,
 		DisableMemoryFlag,
 		DisableStackFlag,
 		DisableGasMeteringFlag,
