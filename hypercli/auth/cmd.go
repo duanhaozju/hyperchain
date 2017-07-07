@@ -43,6 +43,13 @@ func NewAuthCMD() []cli.Command {
 			Name:    "create",
 			Usage:   "create user(only permitted by root)",
 			Action:  createUser,
+			Flags:   []cli.Flag{
+				cli.StringFlag{
+					Name:  "group, g",
+					Value: "",
+					Usage: "specify the user group",
+				},
+			},
 		},
 		{
 			Name:    "alter",
@@ -58,25 +65,11 @@ func NewAuthCMD() []cli.Command {
 			Name:    "grant",
 			Usage:   "grant permissions to user(only permitted by root)",
 			Action:  grant,
-			Flags:   []cli.Flag{
-				cli.StringFlag{
-					Name:  "path, p",
-					Value: "",
-					Usage: "specify the file path which used to allocate user permissions",
-				},
-			},
 		},
 		{
 			Name:    "revoke",
 			Usage:   "revoke permissions from user(only permitted by root)",
 			Action:  revoke,
-			Flags:   []cli.Flag{
-				cli.StringFlag{
-					Name:  "path, p",
-					Value: "",
-					Usage: "specify the file path which used to revoke user permissions",
-				},
-			},
 		},
 		{
 			Name:    "list",

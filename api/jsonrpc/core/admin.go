@@ -307,19 +307,23 @@ func (adm *Administrator) listPermission(cmd *Command) *CommandResult {
 func (adm *Administrator) createUser(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
-	if argLen != 2 {
+	if argLen != 3 {
 		log.Warningf("Invalid cmd nums %d", argLen)
-		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2 parameters, got %d", argLen)}}
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2/3 parameters, got %d", argLen)}}
 	}
 	username := cmd.Args[0]
 	password := cmd.Args[1]
+	group := cmd.Args[2]
 	// judge if the user exist or not, if username exists, return a duplicate name error
 	if _, err := IsUserExist(username, password); err != ErrUserNotExist {
 		log.Debugf("User %s: %s", username, ErrDuplicateUsername.Error())
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrDuplicateUsername.Error()}}
 	}
 
-	createUser(username, password)
+	err := createUser(username, password, group)
+	if err != nil {
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	}
 	return &CommandResult{Ok: true, Result: "Create user successfully"}
 }
 

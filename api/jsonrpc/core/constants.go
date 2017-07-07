@@ -63,7 +63,7 @@ const (
 	MAXNUM
 )
 
-var defaultScope = []int{admin_getLevel, admin_listNamespaces, node_getNodes, node_getNodeHash, contract_deployContract,
+var defaultGroup = []int{admin_getLevel, admin_listNamespaces, node_getNodes, node_getNodeHash, contract_deployContract,
 	contract_invokeContract, contract_maintainContract, tx_getTransactionReceipt, admin_listPermission}
 
 var namespaceGroup = []int{admin_startNsMgr, admin_stopNsMgr, admin_registerNamespace, admin_deregisterNamespace,
@@ -294,6 +294,33 @@ func ReadablePermission(scope float64) string {
 	}
 }
 
+func getGroupPermission(group string) permissionSet {
+	group = toUpper(group)
+	switch group {
+	case toUpper("root"):
+		return rootScopes()
+	case toUpper("default"):
+		return defaultScopes()
+	case toUpper("namespace"):
+		return namespaceScopes()
+	case toUpper("http"):
+		return httpScopes()
+	case toUpper("log"):
+		return logScopes()
+	case toUpper("auth"):
+		return authScopes()
+	case toUpper("contract"):
+		return contractScopes()
+	case toUpper("node"):
+		return nodeScopes()
+	case toUpper("tx"):
+		return txScopes()
+
+	default:
+		return nil
+	}
+}
+
 func rootScopes() permissionSet {
 	pset := make(permissionSet)
 	for i := 0; i< MAXNUM; i++ {
@@ -303,13 +330,45 @@ func rootScopes() permissionSet {
 }
 
 func defaultScopes() permissionSet {
-	pset := make(permissionSet)
-	for _, scope := range defaultScope {
-		pset[scope] = true
-	}
-	return pset
+	return getScope(defaultGroup)
+}
+
+func namespaceScopes() permissionSet {
+	return getScope(namespaceGroup)
+}
+
+func httpScopes() permissionSet {
+	return getScope(httpGroup)
+}
+
+func logScopes() permissionSet {
+	return getScope(logGroup)
+}
+
+func authScopes() permissionSet {
+	return getScope(authGroup)
+}
+
+func contractScopes() permissionSet {
+	return getScope(contractGroup)
+}
+
+func nodeScopes() permissionSet {
+	return getScope(nodeGroup)
+}
+
+func txScopes() permissionSet {
+	return getScope(txGroup)
 }
 
 func toUpper(origin string) string {
 	return strings.ToUpper(origin)
+}
+
+func getScope(scope []int) permissionSet{
+	pset := make(permissionSet)
+	for _, scope := range scope {
+		pset[scope] = true
+	}
+	return pset
 }

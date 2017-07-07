@@ -13,13 +13,20 @@ import (
 // createUser implements the create user logic in hypercli, this method can only be called by root successfully
 func createUser(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
-	cmd := &admin.Command{
-		MethodName: "admin_createUser",
-		Args:       c.Args(),
-	}
-	if len(cmd.Args) != 2 {
+	args := c.Args()
+	if len(args) != 2 {
 		fmt.Println("Need 2 params(username and password)")
 		return common.ErrInvalidArgsNum
+	}
+	if c.String("group") != "" {
+		args = append(args, c.String("group"))
+	} else {
+		args = append(args, "default")
+	}
+
+	cmd := &admin.Command{
+		MethodName: "admin_createUser",
+		Args:       args,
 	}
 	result := client.InvokeCmd(cmd)
 	fmt.Print(result)
@@ -62,31 +69,13 @@ func dropUser(c *cli.Context) error {
 func grant(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	var permissions []string
-	if c.String("path") != "" {
-		args := c.Args()
-		if len(args) != 1 {
-			fmt.Println("Need only 1 param(username) because you have specify the permission file path")
-			return common.ErrInvalidArgsNum
-		}
-		// get username
-		permissions = append(permissions, args[0])
-
-		// get permissions
-		pms, err := common.ReadPermissionsFromFile(c.String("path"))
-		permissions = append(permissions, pms...)
-		if err != nil {
-			fmt.Println("Read file failed: ", err)
-			os.Exit(1)
-		}
-	} else {
-		permissions = c.Args()
-		if len(permissions) < 2 {
-			fmt.Println("Need at least 2 params(username and permissions)")
-			return common.ErrInvalidArgsNum
-		}
-		if len(permissions) == 2 {
-			permissions = append(permissions, "all")
-		}
+	permissions = c.Args()
+	if len(permissions) < 2 {
+		fmt.Println("Need at least 2 params(username and permissions)")
+		return common.ErrInvalidArgsNum
+	}
+	if len(permissions) == 2 {
+		permissions = append(permissions, "all")
 	}
 
 	cmd := &admin.Command{
@@ -103,31 +92,13 @@ func grant(c *cli.Context) error {
 func revoke(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	var permissions []string
-	if c.String("path") != "" {
-		args := c.Args()
-		if len(args) != 1 {
-			fmt.Println("Need only 1 param(username) because you have specify the permission file path")
-			return common.ErrInvalidArgsNum
-		}
-		// get username
-		permissions = append(permissions, args[0])
-
-		// get permissions
-		pms, err := common.ReadPermissionsFromFile(c.String("path"))
-		permissions = append(permissions, pms...)
-		if err != nil {
-			fmt.Println("Read file failed: ", err)
-			os.Exit(1)
-		}
-	} else {
-		permissions = c.Args()
-		if len(permissions) < 2 {
-			fmt.Println("Need at least 2 params(username and permissions)")
-			return common.ErrInvalidArgsNum
-		}
-		if len(permissions) == 2 {
-			permissions = append(permissions, "all")
-		}
+	permissions = c.Args()
+	if len(permissions) < 2 {
+		fmt.Println("Need at least 2 params(username and permissions)")
+		return common.ErrInvalidArgsNum
+	}
+	if len(permissions) == 2 {
+		permissions = append(permissions, "all")
 	}
 
 	cmd := &admin.Command{

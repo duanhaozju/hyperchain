@@ -16,4 +16,5 @@ var (
 	ErrInternal          = errors.New("Internal error")
 	ErrTokenInvalid      = errors.New("Invalid token, please login first")
 	ErrDuplicateUsername = errors.New("Duplicate username during register, please register with a new username")
+	ErrInvalidGroup      = errors.New("Unrecognized group, please contact to the administrator")
 )

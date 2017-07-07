@@ -318,9 +318,14 @@ func checkPermission(input []byte, method string) (bool, error) {
 }
 
 // createUser creates a new account with given username and password
-func createUser(username, password string) {
+func createUser(username, password, group string) error {
+	groupPermission := getGroupPermission(group)
+	if groupPermission == nil {
+		return ErrInvalidGroup
+	}
 	valid_user[username] = password
-	user_scope[username] = defaultScopes()
+	user_scope[username] = groupPermission
+	return nil
 }
 
 // alterUser alters an existed account with given username and password
