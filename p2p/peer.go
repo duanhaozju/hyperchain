@@ -148,6 +148,7 @@ func PeerUnSerialize(raw []byte) (hostname string, namespace string, hash string
 	                                            ^ServerDone
                                <------------
 */
+
 //this is peer should do things
 func (peer *Peer) clientHello(isOriginal bool) error {
 	fmt.Println("peer.go 152 send client hello message")
@@ -155,6 +156,7 @@ func (peer *Peer) clientHello(isOriginal bool) error {
 	if peer.info.Hostname == peer.local.Hostname {
 		return nil
 	}
+
 	// peer should
 	payload := []byte("client hello[msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTHELLO, payload)
