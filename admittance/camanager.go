@@ -50,7 +50,7 @@ type CAManager struct {
 func NewCAManager(conf *common.Config) (*CAManager, error) {
 	logger := common.GetLogger(conf.GetString(common.NAMESPACE), "ca")
 	caconfPath := conf.GetString("global.configs.caconfig")
-	logger.Debug(caconfPath)
+	logger.Critical(caconfPath)
 	enableSymmetrical := conf.GetBool("global.security.enablesymmetrical")
 	if caconfPath == "" {
 		return nil, errors.New("cannot get the ca config file path.")

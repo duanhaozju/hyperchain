@@ -13,9 +13,21 @@ import (
 	"github.com/op/go-logging"
 	"time"
 	"fmt"
-	"github.com/oleiade/lane"
 	"hyperchain/p2p/random_stack"
+	"sort"
+	"hyperchain/p2p/hts"
+	"hyperchain/p2p/hts/secimpl"
+	"github.com/orcaman/concurrent-map"
+	"hyperchain/p2p/peerevent"
+	"strconv"
+	"reflect"
 )
+
+const(
+	PEERTYPE_VP = iota
+	PEERTYPE_NVP
+)
+
 
 type peerManagerImpl struct {
 	namespace string
@@ -37,12 +49,21 @@ type peerManagerImpl struct {
 	isnew     bool
 
 	isVP      bool
+	isOrg      bool
 
 	delchan   chan bool
 
 	logger    *logging.Logger
 
 	pts       *PeerTriples
+
+	hts *hts.HTS
+
+	//connection controller typemux
+	peerMgrEv *event.TypeMux
+	peerMgrEvClose chan interface{}
+	peerMgrSub cmap.ConcurrentMap
+
 }
 
 //todo rename new function
@@ -63,6 +84,7 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 	selfHostname := peercnf.GetString("self.hostname")
 	isnew := peercnf.GetBool("self.new")
 	isvp := peercnf.GetBool("self.vp")
+	isorg := peercnf.GetBool("self.org")
 
 	if selfHostname == "" {
 		return nil, errors.New(fmt.Sprintf("invalid self hostname: %s", selfHostname))
@@ -77,38 +99,74 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		node:NewNode(namespace, selfID, selfHostname, net),
 		nodeNum:N,
 		blackHole:make(chan interface{}),
+		peerMgrEv:new(event.TypeMux),
+		peerMgrEvClose:make(chan interface{}),
+		peerMgrSub:cmap.New(),
 		isonline:new(threadsafelinkedlist.SpinLock),
 		isnew:isnew,
+		isOrg:isorg,
 		delchan:delChan,
 		logger: logger,
 		isVP:isvp,
+		hts:hts.NewHTS(secimpl.NewECDHWithAES()),
+
 	}
+	//set vp information
+	if !pmi.isVP {
+		pmi.node.info.SetNVP()
+	}
+	if pmi.isOrg{
+		pmi.node.info.SetOriginal()
+	}
+
 	nodes := peercnf.Get("nodes").([]interface{})
 	pmi.pts = QuickParsePeerTriples(pmi.namespace, nodes)
-	sessionHandler := msg.NewSessionHandler(pmi.blackHole, pmi.eventHub)
-	helloHandler := msg.NewHelloHandler(pmi.blackHole, pmi.eventHub)
-	attendHandler := msg.NewAttendHandler(pmi.blackHole, pmi.eventHub)
-	pmi.node.Bind(pb.MsgType_SESSION, sessionHandler)
-	pmi.node.Bind(pb.MsgType_HELLO, helloHandler)
-	pmi.node.Bind(pb.MsgType_ATTEND, attendHandler)
+	sort.Sort(pmi.pts)
+	pmi.binding()
 	return pmi, nil
 }
 
+func(pmi *peerManagerImpl)binding()error{
+	serverHTS,err := pmi.hts.GetServerHTS()
+	if err != nil{
+		return err
+	}
+	clientHelloHandler := msg.NewClientHelloHandler(serverHTS,pmi.peerMgrEv,pmi.logger)
+	pmi.node.Bind(pb.MsgType_CLIENTHELLO, clientHelloHandler)
+
+	clientAcceptHandler := msg.NewClientAcceptHandler(serverHTS,pmi.logger)
+	pmi.node.Bind(pb.MsgType_CLIENTACCEPT, clientAcceptHandler)
+
+	sessionHandler := msg.NewSessionHandler(pmi.blackHole, pmi.eventHub)
+	pmi.node.Bind(pb.MsgType_SESSION, sessionHandler)
+
+	helloHandler := msg.NewHelloHandler(pmi.blackHole, pmi.eventHub)
+	pmi.node.Bind(pb.MsgType_HELLO, helloHandler)
+
+	attendHandler := msg.NewAttendHandler(pmi.blackHole, pmi.eventHub)
+	pmi.node.Bind(pb.MsgType_ATTEND, attendHandler)
+
+	//peer manager event subscribe
+	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_VPCONNECT),pmi.peerMgrEv.Subscribe(peerevent.EV_VPConnect{}))
+	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_NVPCONNECT),pmi.peerMgrEv.Subscribe(peerevent.EV_NVPConnect{}))
+
+	return nil
+}
+
+
 // initialize the peerManager which is for init the local node
 func (pmgr *peerManagerImpl)Start() error {
-	//todo this for test
-	pmgr.Listening()
+	pmgr.listening()
 	for pmgr.pts.HasNext() {
 		pt := pmgr.pts.Pop()
 		//Here should control the permission
-		//TODO check the remote peer permission
-		err := pmgr.bind(pt.namespace, pt.id, pt.hostname)
+		err := pmgr.bind(PEERTYPE_VP,pt.namespace, pt.id, pt.hostname)
 		if err != nil {
 			pmgr.logger.Errorf("cannot bind client,err: %v", err)
 			//this is for atomic bind operation, if a error occurs,
 			//that should unbind all the already binding clients.
 			pmgr.unBindAll()
-			return nil, err
+			return err
 		}
 	}
 	//new attend Process
@@ -126,19 +184,79 @@ func (pmgr *peerManagerImpl)Start() error {
 	return nil
 }
 
-func (pmgr *peerManagerImpl)Listening() {
-	pmgr.logger.Info("hello im listening msg")
-	go func() {
-		for ev := range pmgr.blackHole {
-			pmgr.logger.Info("OUTER GOT A Message %v \n", ev)
+func (pmgr *peerManagerImpl)listening() {
+	pmgr.logger.Critical("Now listening the manager event")
+	//Listening should listening all connection request, and handle it
+	for subitem := range pmgr.peerMgrSub.IterBuffered(){
+		//fmt.Println(subitem.Key,subitem.Val)
+		go func (closechan chan interface{},t string,s event.Subscription){
+			for{
+				select {
+				case <- closechan:{
+					return
+				}
+				case ev := <- s.Chan():{
+					// distribute all event to handlers
+					pmgr.distribute(t,ev.Data)
+				}
+				}
+			}
+		}(pmgr.peerMgrEvClose,subitem.Key,subitem.Val.(event.Subscription))
+	}
+}
+
+//distribute the event and payload
+func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
+	switch ev.(type) {
+	case peerevent.EV_VPConnect:{
+		conev := ev.(peerevent.EV_VPConnect)
+		pmgr.logger.Notice("vp connected",conev.Hostname)
+		// here how to connect to hypernet layer, generally, hypernet should already connect to
+		// remote node by Inneraddr, here just need to bind the hostname.
+		err := pmgr.bind(PEERTYPE_VP,conev.Namespace,conev.ID,conev.Hostname)
+		if err != nil{
+			pmgr.logger.Errorf("cannot bind the remote hostname: reason: %s", err.Error())	
+			return
 		}
-	}()
+	}
+	case peerevent.EV_NVPConnect:{
+
+	}
+	default:
+		pmgr.logger.Critical("cannot determin the event type",reflect.TypeOf(ev))
+
+	}
 }
 
 //bind the namespace+id -> hostname
-func (pmgr *peerManagerImpl) bind(namespace string, id int, hostname string) error {
-	newPeer := NewPeer(namespace, hostname, id, pmgr.node.info, pmgr.hyperNet)
-	err := pmgr.peerPool.AddVPPeer(id, newPeer)
+func (pmgr *peerManagerImpl) bind(peerType int,namespace string, id int, hostname string) error {
+	chts,err := pmgr.hts.GetAClientHTS()
+	if err != nil{
+		return err
+	}
+
+	//TODO here can use the peer hash to quick search
+	//the exist peer
+	if peerType == PEERTYPE_VP{
+		if pmgr.peerPool.GetPeersByHostname(hostname) != nil{
+			return nil
+		}
+	}else{
+		if pmgr.peerPool.GetNVPByHostname(hostname) != nil{
+			return nil
+		}
+	}
+
+	newPeer,err := NewPeer(namespace, hostname, id, pmgr.node.info, pmgr.hyperNet,chts)
+	if err != nil {
+		pmgr.logger.Errorf("cannot establish connection to %s, reason: %s \n",hostname,err.Error())
+		return err
+	}
+	if peerType == PEERTYPE_VP{
+		err = pmgr.peerPool.AddVPPeer(id, newPeer)
+	}else{
+		err = pmgr.peerPool.AddNVPPeer(id, newPeer)
+	}
 	if err != nil {
 		return err
 	}
@@ -254,7 +372,7 @@ func (pmgr *peerManagerImpl)Stop() {
 func (pmgr *peerManagerImpl)UpdateRoutingTable(payLoad []byte) {
 	//unmarshal info
 	i := info.InfoUnmarshal(payLoad)
-	err := pmgr.bind(i.Namespace, i.Id, i.Hostname)
+	err := pmgr.bind(PEERTYPE_VP,i.Namespace, i.Id, i.Hostname)
 	if err != nil {
 		pmgr.logger.Errorf("cannot bind a new peer: %s", err.Error())
 		return

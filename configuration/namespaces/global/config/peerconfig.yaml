@@ -3,8 +3,7 @@ self:
   id: 1
   hostname: node1
   # type 0 creator type 1 add new
-  type: 1
-  introducer: node1
+  vp: true
 nodes:
   -
     id: 1

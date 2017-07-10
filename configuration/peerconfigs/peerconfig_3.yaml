@@ -2,6 +2,8 @@ self:
   "N": 4
   id: 3
   hostname: node3
+  org: true
+  vp: true
 nodes:
   -
     id: 1

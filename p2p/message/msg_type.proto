@@ -34,4 +34,7 @@ enum MsgType{
     // generally response
     RESPONSE                  = 13;
 
+    //NVP issues
+    NVPATTEND                 = 14;
+
 }

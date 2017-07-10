@@ -20,7 +20,7 @@ global:
     dbConfig: "namespaces/ns2/config/db.yaml"
 
     configs:
-        caconfig: "namespaces/ns2/config/caconfig.toml"
+        caconfig: "namespaces/ns2/config/caconfig.yaml"
         peers: "namespaces/ns2/config/local_peerconfig.json"
         peers13: "namespaces/ns2/config/peerconfig.yaml"
         genesis: "namespaces/ns2/config/genesis.json"

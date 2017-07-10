@@ -118,6 +118,8 @@ do
     cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
     cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/cert/
     cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
+    #tls configuration
+    cp -rf  ${CONF_PATH}/tls ${DUMP_PATH}/node${j}/
 
     # distribute hypercli
     if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
@@ -294,6 +296,10 @@ if  $REBUILD ; then
     f_rebuild
 fi
 
+if [[ $? != 0 ]]; then
+echo "compile failed, script stopped."
+exit 1
+fi
 #if $HYPERCLI ; then
 #    f_rebuild_hypercli
 #fi

@@ -31,10 +31,10 @@ type MsgSender interface {
 	SendRandomVP(payload []byte) error
 
 	// broadcast information to NVP peers
-	BroadcastNVP(payLoad []byte)
+	BroadcastNVP(payLoad []byte) error
 
 	// send a message to specific NVP peer (by nvp hash) UNICAST
-	SendMsgNVP(payLoad []byte, nvpList []string)
+	SendMsgNVP(payLoad []byte, nvpList []string) error
 }
 
 // AddNode

@@ -150,6 +150,9 @@ func (list *ThreadSafeLinkedList)Remove(index int32)(interface{},error){
 	if index > list.tail.index {
 		return nil,errors.New("the index larger than list size")
 	}
+	if index < 0 || list.tail == nil {
+		return nil,errors.New("the index less than list size")
+	}
 
 	if index == list.tail.index{
 		curr := list.tail

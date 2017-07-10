@@ -1,4 +1,4 @@
-package network
+package inneraddr
 
 import (
 	"hyperchain/common"

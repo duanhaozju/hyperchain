@@ -8,7 +8,6 @@ import (
 	"hyperchain/p2p/msg"
 	pb "hyperchain/p2p/message"
 	"fmt"
-	"hyperchain/p2p/hts"
 )
 
 type Server struct {

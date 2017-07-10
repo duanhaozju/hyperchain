@@ -2,8 +2,6 @@ package p2p
 
 import (
 	"sync"
-	"container/list"
-	"github.com/golang/go/test/fixedbugs"
 )
 
 var(
@@ -86,13 +84,13 @@ func NewPeerTriples() *PeerTriples{
 
 func(pts *PeerTriples)Push(pt *PeerTriple){
 	pts.rwlock.Lock()
-	defer pts.rwlock.Lock()
+	defer pts.rwlock.Unlock()
 	pts.triples = append(pts.triples,pt)
 }
 
 func(pts *PeerTriples)Pop()*PeerTriple{
 	pts.rwlock.Lock()
-	defer pts.rwlock.Lock()
+	defer pts.rwlock.Unlock()
 	if len(pts.triples)<1{
 		return nil
 	}
@@ -101,9 +99,26 @@ func(pts *PeerTriples)Pop()*PeerTriple{
 		pts.triples = make([]*PeerTriple,0)
 		return ret
 	}
-	ret := pts.triples[len(pts)-1]
-	pts.triples = append(make([]*PeerTriple,0),pts.triples[0:len(pts)-2]...)
+	ret := pts.triples[len(pts.triples)-1]
+	pts.triples = append(make([]*PeerTriple,0),pts.triples[0:len(pts.triples)-1]...)
 	return ret
+}
+
+func(pts *PeerTriples)Len() int{
+	pts.rwlock.RLock()
+	defer pts.rwlock.RUnlock()
+	return len(pts.triples)
+}
+
+func(pts *PeerTriples)Swap(i,j int) {
+	pts.rwlock.Lock()
+	defer pts.rwlock.Unlock()
+	pts.triples[i], pts.triples[j] = pts.triples[j], pts.triples[i]
+}
+func(pts *PeerTriples)Less(i,j int)bool{
+	pts.rwlock.RLock()
+	defer pts.rwlock.RUnlock()
+	return pts.triples[i].id > pts.triples[j].id
 }
 
 func (pts *PeerTriples)HasNext() bool{

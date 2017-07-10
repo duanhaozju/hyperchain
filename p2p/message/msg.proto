@@ -10,7 +10,6 @@ syntax="proto3";
 
 package message;
 
-import "hyperchain/p2p/hts/certificate.proto";
 import "endpoint.proto";
 import "msg_type.proto";
 
@@ -21,5 +20,6 @@ message Message{
     bytes    Payload     = 4;
     int64    TimeStamp   = 5;
     bytes    Extendend   = 6;
+    bytes    ReferAddr   = 7;
 }
 

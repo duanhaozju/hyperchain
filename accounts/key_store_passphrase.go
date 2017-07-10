@@ -17,7 +17,6 @@ import (
 	"golang.org/x/crypto/scrypt"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"hyperchain/crypto/randentropy"
 	"hyperchain/crypto/csprng"
 )
 

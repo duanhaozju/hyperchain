@@ -92,11 +92,35 @@
 */
 package hts
 
-import (
-	"crypto/rand"
-	"fmt"
-)
+type HTS struct {
+	sec Security
+}
 
-type HTS struct{
-	crypter Crypto
+
+
+//NewHTS return a Hyper Transport Security instance
+func NewHTS(sec Security)*HTS{
+	return &HTS{
+		sec:sec,
+	}
+}
+
+//GetAClientHTS return a client HTS instance,
+//this func will self invoke generate generate private key
+func (hts *HTS) GetAClientHTS() (*ClientHTS,error){
+	chts,err := NewCLientHTS(hts.sec)
+	if err != nil{
+		return nil,err
+	}
+	return chts,nil
+}
+
+//GetServerHTS  generally this function will be invoke only once in a namespace
+//this func will self invoke generate generate private key
+func(hts *HTS)GetServerHTS()(*ServerHTS,error){
+	shts,err := NewServerHTS(hts.sec)
+	if err != nil{
+		return nil,err
+	}
+	return shts,nil
 }

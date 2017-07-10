@@ -14,6 +14,7 @@ import (
 	"hyperchain/p2p/utils"
 	"strings"
 	"strconv"
+	"hyperchain/p2p/network/inneraddr"
 )
 
 
@@ -36,7 +37,7 @@ type HyperNet struct {
 	// self belong domain
 	domain string
 
-	addr *InnerAddr
+	addr *inneraddr.InnerAddr
 
 }
 
@@ -61,7 +62,7 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 		fmt.Errorf("addr config file not exist: %s",hostconf)
 		return nil,errors.New(fmt.Sprintf("connot find the addr config file: %s",addrconf))
 	}
-	ia ,domain,err := GetInnerAddr(addrconf)
+	ia ,domain,err := inneraddr.GetInnerAddr(addrconf)
 	if err != nil {
 		return nil,err
 	}
@@ -266,7 +267,7 @@ func (hn *HyperNet)reverse() error{
 				continue
 			}
 			fmt.Printf("reverse connect to hostname %s,addr %s \n",hostname,addr)
-			ia,err := InnerAddrUnSerialize([]byte(addr))
+			ia,err := inneraddr.InnerAddrUnSerialize([]byte(addr))
 			if err != nil{
 				logger.Error("cannot unserialize remote addr.")
 				continue
