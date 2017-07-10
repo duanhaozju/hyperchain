@@ -9,6 +9,7 @@ import (
 	"hyperchain/cmd/dbcli/version/wrapper"
 	"hyperchain/common"
 	"strconv"
+	"strings"
 )
 
 type Version struct {
@@ -32,18 +33,18 @@ var (
 )
 
 /*-----------------------------------block--------------------------------------*/
-func (self *Version) GetBlockByNumber(num uint64) (string, error) {
+func (self *Version) GetBlockByNumber(num uint64, parameter *constant.Parameter) (string, error) {
 	defer self.db.Close()
 	keyNum := strconv.FormatUint(num, 10)
 	v, err := self.db.Get(append(BlockNumPrefix, keyNum...))
 	if err != nil {
 		return "", err
 	} else {
-		return self.getBlockByHash(v)
+		return self.getBlockByHash(v, parameter)
 	}
 }
 
-func (self *Version) getBlockByHash(hash []byte) (string, error) {
+func (self *Version) getBlockByHash(hash []byte, parameter *constant.Parameter) (string, error) {
 	defer self.db.Close()
 	key := append(BlockPrefix, hash...)
 	data, err := self.db.Get(key)
@@ -55,7 +56,7 @@ func (self *Version) getBlockByHash(hash []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	result, err := NewResultFactory(constant.BLOCK, string(blockWrapper.BlockVersion), blockWrapper.Block)
+	result, err := NewResultFactory(constant.BLOCK, string(blockWrapper.BlockVersion), blockWrapper.Block, parameter)
 	if err != nil {
 		return "", err
 	} else {
@@ -64,8 +65,8 @@ func (self *Version) getBlockByHash(hash []byte) (string, error) {
 
 }
 
-func (self *Version) GetBlockByHash(hash string) (string, error) {
-	return self.getBlockByHash(common.Hex2Bytes(hash))
+func (self *Version) GetBlockByHash(hash string, parameter *constant.Parameter) (string, error) {
+	return self.getBlockByHash(common.Hex2Bytes(hash), parameter)
 }
 
 func (self *Version) GetBlockHashByNum(num uint64) (string, error) {
@@ -92,7 +93,7 @@ func (self *Version) GetTransaction(hash string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	result, err := NewResultFactory(constant.TRANSACTION, string(transactionWrapper.TransactionVersion), transactionWrapper.Transaction)
+	result, err := NewResultFactory(constant.TRANSACTION, string(transactionWrapper.TransactionVersion), transactionWrapper.Transaction, nil)
 	if err != nil {
 		return "", err
 	} else {
@@ -110,7 +111,7 @@ func (self *Version) GetAllTransaction(path string) {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 			break
 		}
-		result, err := NewResultFactory(constant.TRANSACTION, string(transactionWrapper.TransactionVersion), transactionWrapper.Transaction)
+		result, err := NewResultFactory(constant.TRANSACTION, string(transactionWrapper.TransactionVersion), transactionWrapper.Transaction, nil)
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 			break
@@ -135,7 +136,7 @@ func (self *Version) GetTxWithBlock(hash string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	result, err := NewResultFactory(constant.TRANSACTIONMETA, constant.VERSIONFINAL, dataMeta)
+	result, err := NewResultFactory(constant.TRANSACTIONMETA, constant.VERSIONFINAL, dataMeta, nil)
 	if err != nil {
 		return "", err
 	} else {
@@ -148,7 +149,7 @@ func (self *Version) GetDiscardTransaction(hash string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	result, err := NewResultFactory(constant.INVAILDTRANSACTION, constant.VERSIONFINAL, data)
+	result, err := NewResultFactory(constant.INVAILDTRANSACTION, constant.VERSIONFINAL, data, nil)
 	if err != nil {
 		return "", err
 	} else {
@@ -160,7 +161,7 @@ func (self *Version) GetAllDiscardTransaction(path string) {
 	iter := self.db.NewIterator(InvalidTransactionPrefix)
 	for iter.Next() {
 		data := iter.Value()
-		result, err := NewResultFactory(constant.INVAILDTRANSACTION, constant.VERSIONFINAL, data)
+		result, err := NewResultFactory(constant.INVAILDTRANSACTION, constant.VERSIONFINAL, data, nil)
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 			break
@@ -192,7 +193,7 @@ func (self *Version) GetReceipt(hash string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	result, err := NewResultFactory(constant.RECEIPT, string(receiptWrapper.ReceiptVersion), receiptWrapper.Receipt)
+	result, err := NewResultFactory(constant.RECEIPT, string(receiptWrapper.ReceiptVersion), receiptWrapper.Receipt, nil)
 	if err != nil {
 		return "", err
 	} else {
@@ -202,11 +203,18 @@ func (self *Version) GetReceipt(hash string) (string, error) {
 
 /*-------------------------------------chain--------------------------------------*/
 func (self *Version) GetChain() (string, error) {
+	var result string
+	var err error
 	data, err := self.db.Get(ChainKey)
 	if err != nil {
 		return "", err
 	}
-	result, err := NewResultFactory(constant.CHAIN, constant.VERSIONFINAL, data)
+	for _, version := range constant.VERSIONS {
+		result, err = NewResultFactory(constant.CHAIN, version, data, nil)
+		if !(err != nil && strings.Contains(err.Error(), constant.PROTOERR)) {
+			break
+		}
+	}
 	if err != nil {
 		return "", err
 	} else {

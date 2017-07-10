@@ -1,4 +1,4 @@
-package version1_2
+package version1_3
 
 type BlockVerboseView struct {
 	Version      string
@@ -13,6 +13,7 @@ type BlockVerboseView struct {
 	WriteTime    int64
 	CommitTime   int64
 	EvmTime      int64
+	Bloom        string
 }
 
 type BlockView struct {
@@ -28,6 +29,7 @@ type BlockView struct {
 	WriteTime    int64
 	CommitTime   int64
 	EvmTime      int64
+	Bloom        string
 }
 
 type TransactionViewHash struct {
@@ -54,7 +56,7 @@ type InvalidTransactionView struct {
 
 type ReceiptView struct {
 	Version           string
-	PostState         string
+	Bloom             string
 	CumulativeGasUsed int64
 	TxHash            string
 	ContractAddress   string
@@ -63,14 +65,15 @@ type ReceiptView struct {
 	Logs              string
 	Status            string
 	Message           string
+	VmType            string
 }
 
 type ChainView struct {
+	Version          string
 	LatestBlockHash  string
 	ParentBlockHash  string
 	Height           uint64
-	RequiredBlockNum uint64
-	RequireBlockHash string
-	RecoveryNum      uint64
+	Genesis          uint64
 	CurrentTxSum     uint64
+	Extra            string
 }

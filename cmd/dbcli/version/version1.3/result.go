@@ -1,13 +1,13 @@
-package version1_2
+package version1_3
 
 import (
-	"github.com/golang/protobuf/proto"
-	"hyperchain/cmd/dbcli/version/version1.2/types"
 	"hyperchain/cmd/dbcli/constant"
+	"github.com/gogo/protobuf/proto"
+	"hyperchain/cmd/dbcli/version/version1.3/types"
 )
 
 func GetBlockData(data []byte, parameter *constant.Parameter) (string, error) {
-	var block version1_2.Block
+	var block version1_3.Block
 	err := proto.Unmarshal(data, &block)
 	if err != nil {
 		return "", err
@@ -21,7 +21,7 @@ func GetBlockData(data []byte, parameter *constant.Parameter) (string, error) {
 }
 
 func GetTransactionData(data []byte) (string, error) {
-	var transaction version1_2.Transaction
+	var transaction version1_3.Transaction
 	err := proto.Unmarshal(data, &transaction)
 	if err != nil {
 		return "", err
@@ -30,28 +30,8 @@ func GetTransactionData(data []byte) (string, error) {
 	}
 }
 
-func GetInvaildTransactionData(data []byte) (string, error) {
-	var invaildTransaction version1_2.InvalidTransactionRecord
-	err := proto.Unmarshal(data, &invaildTransaction)
-	if err != nil {
-		return "", err
-	} else {
-		return invaildTransaction.Encode(), nil
-	}
-}
-
-func GetTransactionMetaData(data []byte) (string, error) {
-	meta := &version1_2.TransactionMeta{}
-	err := proto.Unmarshal(data, meta)
-	if err != nil {
-		return "", err
-	} else {
-		return meta.Encode(), nil
-	}
-}
-
 func GetReceiptData(data []byte) (string, error) {
-	var receipt version1_2.Receipt
+	var receipt version1_3.Receipt
 	err := proto.Unmarshal(data, &receipt)
 	if err != nil {
 		return "", err
@@ -61,7 +41,7 @@ func GetReceiptData(data []byte) (string, error) {
 }
 
 func GetChainData(data []byte) (string, error) {
-	var chain version1_2.Chain
+	var chain version1_3.Chain
 	err := proto.Unmarshal(data, &chain)
 	if err != nil {
 		return "", err
