@@ -36,6 +36,11 @@ func NewBlockCMD() []cli.Command {
 					Value: "",
 					Usage: "specify the output file",
 				},
+				cli.StringFlag{
+					Name: "verbose",
+					Value: "false",
+					Usage: "specify the transaction content",
+				},
 			},
 		},
 		{
@@ -62,6 +67,11 @@ func NewBlockCMD() []cli.Command {
 					Name:  "output, o",
 					Value: "",
 					Usage: "specify the output file",
+				},
+				cli.StringFlag{
+					Name: "verbose",
+					Value: "false",
+					Usage: "specify the transaction content",
 				},
 			},
 		},
@@ -106,7 +116,10 @@ func getBlockByNumber(c *cli.Context) {
 			return
 		}
 		hyperChain := version.NewVersion(database)
-		result, err := hyperChain.GetBlockByNumber(c.Uint64(constant.NUMBER))
+		parameter := &constant.Parameter{
+			Verbose: c.Bool(constant.VERBOSE),
+		}
+		result, err := hyperChain.GetBlockByNumber(c.Uint64(constant.NUMBER), parameter)
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 		} else {
@@ -132,7 +145,10 @@ func getBlockByHash(c *cli.Context) {
 			return
 		}
 		hyperChain := version.NewVersion(database)
-		result, err := hyperChain.GetBlockByHash(c.String(constant.HASH))
+		parameter := &constant.Parameter{
+			Verbose: c.Bool(constant.VERBOSE),
+		}
+		result, err := hyperChain.GetBlockByHash(c.String(constant.HASH), parameter)
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 		} else {

@@ -1,12 +1,10 @@
-package version1_2
+package version1_3
 
 import (
 	"hyperchain/common"
 	"hyperchain/crypto"
-	//"fmt"
-	//"encoding/json"
-	"encoding/json"
 	"fmt"
+	"encoding/json"
 )
 
 func (self *Block) Hash() common.Hash {
@@ -39,6 +37,7 @@ func (self *Block) EncodeVerbose() string {
 		WriteTime:    self.WriteTime,
 		CommitTime:   self.CommitTime,
 		EvmTime:      self.EvmTime,
+		Bloom:        common.Bytes2Hex(self.Bloom),
 	}
 	res, err := json.MarshalIndent(blockVerboseView, "", "\t")
 	if err != nil {
@@ -66,6 +65,7 @@ func (self *Block) Encode() string {
 		WriteTime:    self.WriteTime,
 		CommitTime:   self.CommitTime,
 		EvmTime:      self.EvmTime,
+		Bloom:        common.Bytes2Hex(self.Bloom),
 	}
 	res, err := json.MarshalIndent(blockView, "", "\t")
 	if err != nil {
