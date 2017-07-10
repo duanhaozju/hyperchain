@@ -331,3 +331,6 @@ func getChain(namespace string) (*types.Chain, error) {
 	return &chain, nil
 }
 
+func GetChain(namespace string) (*types.Chain, error) {
+	return getChain(namespace)
+}

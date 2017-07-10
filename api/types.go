@@ -125,7 +125,7 @@ func (n BlockNumber) BlockNumberToUint64(latest uint64) (uint64, error) {
 			//TODO
 			return 0, &common.InvalidParamsError{Message: "Support later..."}
 		} else {
-			return 0, fmt.Errorf("invalid block number %s", input)
+			return 0, &common.InvalidParamsError{Message: fmt.Sprintf("invalid block number %s", input)}
 		}
 	}
 

@@ -61,8 +61,10 @@ type intArgs struct {
 func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) {
 	if args.From == nil || args.To == nil {
 		return nil, &common.InvalidParamsError{Message: "missing params 'from' or 'to'"}
+	} else if chain, err := edb.GetChain(namespace); err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
 	} else {
-		latest := edb.GetChainCopy(namespace).Height
+		latest := chain.Height
 		from, err := args.From.BlockNumberToUint64(latest)
 		if err != nil {
 			return nil, err
@@ -81,7 +83,11 @@ func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) 
 }
 
 func prepareBlockNumber(n BlockNumber, namespace string) (uint64, error) {
-	latest := edb.GetChainCopy(namespace).Height
+	chain, err := edb.GetChain(namespace)
+	if err != nil {
+		return 0, &common.CallbackError{Message: err.Error()}
+	}
+	latest := chain.Height
 	number, err := n.BlockNumberToUint64(latest)
 	if err != nil {
 		return 0, err
@@ -157,7 +163,10 @@ func (blk *Block) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, err
 		return nil, &common.InvalidParamsError{Message: "invalid params"}
 	}
 
-	sumOfBlocks, startBlock, endBlock := getBlocksByTime(blk.namespace, args.StartTime, args.Endtime)
+	sumOfBlocks, startBlock, endBlock, err := getBlocksByTime(blk.namespace, args.StartTime, args.Endtime)
+	if err != nil {
+		return nil, err
+	}
 
 	return &BlocksIntervalResult{
 		SumOfBlocks: NewUint64ToNumber(sumOfBlocks),
@@ -182,7 +191,11 @@ func (blk *Block) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, er
 }
 
 func latestBlock(namespace string) (*BlockResult, error) {
-	lastestBlkHeight := edb.GetChainCopy(namespace).Height
+	chain, err := edb.GetChain(namespace)
+	if err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	}
+	lastestBlkHeight := chain.Height
 
 	if lastestBlkHeight == 0 {
 		return nil, &common.NoBlockGeneratedError{Message: "There is no block generated!"}
@@ -207,8 +220,11 @@ func getBlockByNumber(namespace string, number uint64, isPlain bool) (*BlockResu
 }
 
 // getBlocksByTime returns the bolck for the given block time duration.
-func getBlocksByTime(namespace string, startTime, endTime int64) (sumOfBlocks uint64, startBlock, endBlock *BlockNumber) {
-	currentChain := edb.GetChainCopy(namespace)
+func getBlocksByTime(namespace string, startTime, endTime int64) (sumOfBlocks uint64, startBlock, endBlock *BlockNumber, err error) {
+	currentChain, err := edb.GetChain(namespace)
+	if err != nil {
+		return 0, nil, nil, &common.CallbackError{Message: err.Error()}
+	}
 	height := currentChain.Height
 
 	var i uint64
@@ -221,7 +237,7 @@ func getBlocksByTime(namespace string, startTime, endTime int64) (sumOfBlocks ui
 			if i != height {
 				startBlock = Uint64ToBlockNumber(i + 1)
 			}
-			return sumOfBlocks, startBlock, endBlock
+			return sumOfBlocks, startBlock, endBlock, nil
 		}
 		if block.WriteTime >= startTime && block.WriteTime <= endTime {
 			sumOfBlocks += 1
@@ -233,7 +249,7 @@ func getBlocksByTime(namespace string, startTime, endTime int64) (sumOfBlocks ui
 	if i != height {
 		startBlock = Uint64ToBlockNumber(i + 1)
 	}
-	return sumOfBlocks, startBlock, endBlock
+	return sumOfBlocks, startBlock, endBlock, nil
 }
 
 func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*BlockResult, error) {
