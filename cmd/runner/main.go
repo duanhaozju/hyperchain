@@ -109,7 +109,7 @@ func main() {
 }
 
 func initLog() {
-	conf := cm.NewConfig("../../configuration/namespaces/global/config/global.yaml")
+	conf := cm.NewRawConfig()
 	conf.Set(cm.LOG_DUMP_FILE, false)
 	conf.Set(cm.LOG_BASE_LOG_LEVEL, "NOTICE")
 	conf.Set(cm.LOG_FILE_FORMAT, "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}")
