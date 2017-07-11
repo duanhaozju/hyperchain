@@ -416,7 +416,12 @@ func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, ind
 
 // GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and index.
 func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, index Number) (*TransactionResult, error) {
-	latest := edb.GetChainCopy(tran.namespace).Height
+	chain, err := edb.GetChain(tran.namespace)
+	if err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	}
+
+	latest := chain.Height
 	blknumber, err := n.BlockNumberToUint64(latest)
 	if err != nil {
 		return nil, err
@@ -453,9 +458,12 @@ func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*Transactio
 		return nil, &common.InvalidParamsError{Message:"Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
 	}
 
-	currentChain := edb.GetChainCopy(tran.namespace)
-	height := currentChain.Height
+	currentChain, err := edb.GetChain(tran.namespace)
+	if err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	}
 
+	height := currentChain.Height
 	var txs = make([]*TransactionResult, 0)
 
 	for i := height; i >= uint64(1); i-- {
@@ -503,7 +511,12 @@ func (tran *Transaction) GetBlockTransactionCountByHash(hash common.Hash) (*Numb
 
 // GetBlockTransactionCountByNumber returns the number of block transactions for given block number.
 func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*Number, error) {
-	latest := edb.GetChainCopy(tran.namespace).Height
+	chain, err := edb.GetChain(tran.namespace)
+	if err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	}
+
+	latest := chain.Height
 	blknumber, err := n.BlockNumberToUint64(latest)
 	if err != nil {
 		return nil, err
@@ -557,7 +570,10 @@ func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 // GetTransactionsCount returns the number of transaction in hyperchain.
 func (tran *Transaction) GetTransactionsCount() (interface{}, error) {
 
-	chain := edb.GetChainCopy(tran.namespace)
+	chain, err := edb.GetChain(tran.namespace)
+	if err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	}
 
 	return struct {
 		Count     *Number `json:"count,"`
