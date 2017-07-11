@@ -39,9 +39,9 @@ func NewPeersPool(namespace string)*PeersPool {
 func (pool *PeersPool)AddVPPeer(id int,p *Peer)error{
 	_id := id - 1
 	if pool.vpPool == nil{
-		if _id != 0{
-			return errors.New(fmt.Sprintf("the vp peers pool is empty, could not add index: %d peer",id))
-		}
+		//if _id != 0{
+		//	return errors.New(fmt.Sprintf("the vp peers pool is empty, could not add index: %d peer",id))
+		//}
 		pool.vpPool = threadsafelinkedlist.NewTSLinkedList(p)
 		return nil
 	}
