@@ -162,42 +162,6 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 	return nil
 }
 
-func splitRawMessage(args json.RawMessage) ([]string, error) {
-	str := string(args[:])
-	if len(str) < 4 {
-		return nil, errors.New("invalid args")
-	}
-	str = str[2 : len(str)-2]
-	splitstr := strings.Split(str, ",")
-	return splitstr, nil
-}
-
-func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
-	if args, ok := req.Params.(json.RawMessage); !ok {
-		log.Critical("wrong type not json type")
-		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace,
-			Error: &common.InvalidParamsError{Message: "Invalid params supplied", }}
-	} else {
-		args, err := splitRawMessage(args)
-		if err != nil {
-			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidParamsError{Message: err.Error()}}
-		}
-		cmd := &Command{
-			MethodName: req.Method,
-			Args:       args,
-		}
-		if _, ok := s.admin.CmdExecutor[req.Method] ; !ok {
-			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
-		}
-		rs := s.admin.CmdExecutor[req.Method](cmd)
-		if rs.Ok == false {
-			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: rs.Error}
-		}
-		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Reply: rs.Result}
-	}
-
-}
-
 // ServeCodec reads incoming requests from codec, calls the appropriate callback and writes the
 // response back using the given codec. It will block until the codec is closed or the server is
 // stopped. In either case the codec is closed.
@@ -285,13 +249,13 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 			s.reqMgrMu.Unlock()
 
 			rm.requests <- request
-			result <- (<-rm.response)
+			result <- (<- rm.response)
 			return
 		}(s, req, codec, result)
 	}
 
 	for i := 0; i < number; i++ {
-		response[i] = <-result
+		response[i] = <- result
 	}
 
 	if number == 1 {

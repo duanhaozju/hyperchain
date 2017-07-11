@@ -67,13 +67,13 @@ func (acc *Account) UnlockAccount(args UnlockParas) (bool, error) {
 }
 
 // GetAllBalances returns all account's balance in the db,NOT CACHE DB!
-func (acc *Account) GetAccounts() []*AccountResult {
+func (acc *Account) GetAccounts() ([]*AccountResult, error) {
 	log := common.GetLogger(acc.namespace, "api")
 	var acts []*AccountResult
 	stateDB, err := NewStateDb(acc.config, acc.namespace)
 	if err != nil {
 		log.Errorf("Get stateDB error, %v", err)
-		return nil
+		return nil, &common.CallbackError{Message: err.Error()}
 	}
 	ctx := stateDB.GetAccounts()
 
@@ -84,18 +84,19 @@ func (acc *Account) GetAccounts() []*AccountResult {
 		}
 		acts = append(acts, act)
 	}
-	return acts
+	return acts, nil
 }
 
 // GetBalance returns account balance for given account address.
 func (acc *Account) GetBalance(addr common.Address) (string, error) {
 	if stateDB, err := NewStateDb(acc.config, acc.namespace); err != nil {
+		return "", &common.CallbackError{Message: err.Error()}
+	} else {
 		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 		} else {
-			return "", &common.LeveldbNotFoundError{Message: "stateobject, the account may not exist"}
+			return "", &common.LeveldbNotFoundError{Message:"stateobject, the account may not exist"}
 		}
-	} else {
-		return "", &common.LeveldbNotFoundError{Message: "statedb"}
 	}
+
 }
