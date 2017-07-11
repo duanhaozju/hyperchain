@@ -10,6 +10,12 @@ import (
 	"bytes"
 	"time"
 	er "hyperchain/core/errors"
+	"github.com/cheggaaa/pb"
+)
+
+var (
+	receivePb *pb.ProgressBar
+	processPb *pb.ProgressBar
 )
 
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
@@ -41,6 +47,8 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	executor.recordSyncPeers(ev.Replicas, ev.Id)
 	executor.status.syncFlag.Oracle = NewOracle(ev.Replicas, executor.conf, executor.logger)
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
+	receivePb = common.InitPb(int64(ev.TargetHeight - edb.GetHeightOfChain(executor.namespace)), "receive block")
+	receivePb.Start()
 	go executor.syncChainResendBackend()
 }
 
@@ -110,12 +118,17 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 		}
 		if executor.receiveAllRequiredBlocks() {
 			if executor.getLatestSyncDownstream() != edb.GetHeightOfChain(executor.namespace) {
+				common.AddPb(receivePb, int64(executor.GetSyncMaxBatchSize()))
+				common.PrintPb(receivePb, 0, executor.logger)
 				prev := executor.getLatestSyncDownstream()
 				next := executor.calcuDownstream()
 				executor.status.syncFlag.Oracle.FeedBack(true)
 				executor.SendSyncRequest(prev, next)
 			} else {
 				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
+				common.SetPb(receivePb, receivePb.Total)
+				common.PrintPb(receivePb, 0, executor.logger)
+				receivePb.Finish()
 			}
 		}
 		executor.processSyncBlocks()
@@ -219,6 +232,8 @@ func (executor *Executor) processSyncBlocks() {
 			executor.waitUtilSyncAvailable()
 			defer executor.syncDone()
 			// execute all received block at one time
+			processPb = common.InitPb(int64(executor.getSyncTarget() - edb.GetHeightOfChain(executor.namespace)), "process block")
+			processPb.Start()
 			for i := executor.status.syncFlag.SyncDemandBlockNum + 1; i <= executor.status.syncFlag.SyncTarget; i += 1 {
 				executor.markSyncExecBegin()
 				blk, err := edb.GetBlockByNumber(executor.namespace, i)
@@ -242,9 +257,15 @@ func (executor *Executor) processSyncBlocks() {
 							executor.reject()
 							return
 						}
+						common.AddPb(processPb, 1)
+						common.PrintPb(processPb, 10, executor.logger)
 					}
 				}
 			}
+			if !common.IsPrintPb(processPb, 10) {
+				common.PrintPb(processPb, 0, executor.logger)
+			}
+			processPb.Finish()
 			executor.initDemand(executor.status.syncFlag.SyncTarget + 1)
 			executor.clearSyncFlag()
 			executor.sendStateUpdatedEvent()

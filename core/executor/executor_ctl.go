@@ -372,3 +372,8 @@ func (executor *Executor) getExit(identifier int) chan bool {
 	}
 	return nil
 }
+
+// getSyncTarget - get SyncTarget.
+func (executor *Executor) getSyncTarget() chan bool {
+	return executor.status.syncFlag.SyncTarget
+}
