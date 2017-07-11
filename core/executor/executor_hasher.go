@@ -3,24 +3,27 @@ package executor
 import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/core/types"
-	er "hyperchain/core/errors"
 	"hyperchain/core/db_utils/codec/v1.2"
+	er "hyperchain/core/errors"
+	"hyperchain/core/types"
 )
 
-type ExecutorHashUtil struct {
+// A tool use to calculate hash of transactions, receipts.
+type Hasher struct {
 	transactionCalculator interface{} // a batch of transactions calculator
 	receiptCalculator     interface{} // a batch of receipts calculator
 	transactionBuffer     [][]byte    // transaction buffer
 	receiptBuffer         [][]byte    // receipt buffer
 }
 
+// initTransactionHashCalculator - reset transaction buffer.
 func (executor *Executor) initTransactionHashCalculator() {
-	executor.hashUtils.transactionBuffer = nil
+	executor.hasher.transactionBuffer = nil
 }
 
+// initReceiptHashCalculator - reset receipt buffer.
 func (executor *Executor) initReceiptHashCalculator() {
-	executor.hashUtils.receiptBuffer = nil
+	executor.hasher.receiptBuffer = nil
 }
 
 func (executor *Executor) initCalculator() {
@@ -29,13 +32,21 @@ func (executor *Executor) initCalculator() {
 }
 
 // calculate a batch of transaction
+// if flush flag is false, append serialized transaction data to the buffer,
+// otherwise, make the whole buffer content as the input to generate a hash as a fingerprint.
 func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Transaction, flush bool) (common.Hash, error) {
+	// short circuit if transaction pointer is empty
 	if transaction == nil && flush == false {
 		return common.Hash{}, er.EmptyPointerErr
 	}
+
 	if flush == false {
-		var data []byte
-		var err  error
+		var (
+			data []byte
+			err  error
+		)
+		// Determine the serialization policy based on the data structure version tag.
+		// The purpose is to be compatible with older version of the block chain data.
 		switch string(transaction.Version) {
 		case "1.0":
 			fallthrough
@@ -51,26 +62,32 @@ func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Tr
 			return common.Hash{}, err
 		}
 		// put transaction to buffer temporarily
-		executor.hashUtils.transactionBuffer = append(executor.hashUtils.transactionBuffer, data)
+		executor.hasher.transactionBuffer = append(executor.hasher.transactionBuffer, data)
 		return common.Hash{}, nil
 	} else {
 		// calculate hash together
-		hash := executor.commonHash.Hash(executor.hashUtils.transactionBuffer)
-		executor.hashUtils.transactionBuffer = nil
+		hash := executor.commonHash.Hash(executor.hasher.transactionBuffer)
+		executor.hasher.transactionBuffer = nil
 		return hash, nil
 	}
 	return common.Hash{}, nil
 }
 
 // calculate a batch of receipt
+// if flush flag is false, append serialized receipt data to the buffer,
+// otherwise, make the whole buffer content as the input to generate a hash as a fingerprint.
 func (executor *Executor) calculateReceiptFingerprint(tx *types.Transaction, receipt *types.Receipt, flush bool) (common.Hash, error) {
-	// 1. marshal receipt to byte slice
+	// short circuit if receipt pointer is empty
 	if receipt == nil && flush == false {
 		return common.Hash{}, er.EmptyPointerErr
 	}
 	if flush == false {
-		var data []byte
-		var err  error
+		var (
+			data []byte
+			err  error
+		)
+		// Determine the serialization policy based on the data structure version tag.
+		// The purpose is to be compatible with older version of the block chain data.
 		switch string(tx.Version) {
 		case "1.0":
 			fallthrough
@@ -86,18 +103,18 @@ func (executor *Executor) calculateReceiptFingerprint(tx *types.Transaction, rec
 			return common.Hash{}, err
 		}
 		// put transaction to buffer temporarily
-		executor.hashUtils.receiptBuffer = append(executor.hashUtils.receiptBuffer, data)
+		executor.hasher.receiptBuffer = append(executor.hasher.receiptBuffer, data)
 		return common.Hash{}, nil
 	} else {
 		// calculate hash together
-		hash := executor.commonHash.Hash(executor.hashUtils.receiptBuffer)
-		executor.hashUtils.receiptBuffer = nil
+		hash := executor.commonHash.Hash(executor.hasher.receiptBuffer)
+		executor.hasher.receiptBuffer = nil
 		return hash, nil
 	}
 	return common.Hash{}, nil
 }
 
-// calculateValidationResultHash - calculate a hash to represent a validation result for comparison.
+// calculateValidationResultHash - calculate a hash to represent the validation result for consensus comparison.
 func (executor *Executor) calculateValidationResultHash(merkleRoot, txRoot, receiptRoot []byte) common.Hash {
 	return executor.commonHash.Hash([]interface{}{
 		merkleRoot,
