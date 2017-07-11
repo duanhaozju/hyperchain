@@ -5,7 +5,20 @@ package jsonrpc
 import (
 	"math/big"
 	"reflect"
+	"encoding/json"
+	"strings"
+	"errors"
 )
+
+func splitRawMessage(args json.RawMessage) ([]string, error) {
+	str := string(args[:])
+	if len(str) < 4 {
+		return nil, errors.New("invalid args")
+	}
+	str = str[2 : len(str)-2]
+	splitstr := strings.Split(str, ",")
+	return splitstr, nil
+}
 
 var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
 
