@@ -28,6 +28,9 @@ public class HyperchainLedger extends AbstractLedger{
     private LedgerClient ledgerClient;
     private Cache cache;
     private Coder coder;
+    private RelationDB db;
+
+
     public HyperchainLedger(int port){
         ledgerClient = new LedgerClient("localhost", port);
         cache = new HyperCache();
@@ -422,6 +425,9 @@ public class HyperchainLedger extends AbstractLedger{
 
     @Override
     public RelationDB getDataBase() {
-        return new KvBasedRelationDB(this);
+        if (db == null) {
+            db = new KvBasedRelationDB(this);
+        }
+        return db;
     }
 }

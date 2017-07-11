@@ -11,10 +11,7 @@ import cn.hyperchain.jcee.ledger.Batch;
 import cn.hyperchain.jcee.ledger.BatchKey;
 import cn.hyperchain.jcee.ledger.BatchValue;
 import cn.hyperchain.jcee.ledger.Result;
-import cn.hyperchain.jcee.ledger.table.ColumnDesc;
-import cn.hyperchain.jcee.ledger.table.RelationDB;
-import cn.hyperchain.jcee.ledger.table.TableDesc;
-import cn.hyperchain.jcee.ledger.table.TableName;
+import cn.hyperchain.jcee.ledger.table.*;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.jcee.util.DataType;
 
@@ -50,7 +47,6 @@ public class SimulateBank extends ContractTemplate {
             case "testDelete":
                 return testDelete(args);
             case "testInvokeContract":
-                logger.info("testInvokeContract");
                 return testInvokeContract(args);
             case "testPostEvent":
                 return testPostEvent(args);
@@ -58,6 +54,12 @@ public class SimulateBank extends ContractTemplate {
                 return newAccountTable(args);
             case "getTableDesc":
                 return getTableDesc(args);
+            case "issueByTable":
+                return issueByTable(args);
+            case "transferByTable":
+                return transferByTable(args);
+            case "getAccount":
+                return getAccount(args);
             default:
                 String err = "method " + funcName  + " not found!";
                 logger.error(err);
@@ -237,6 +239,13 @@ public class SimulateBank extends ContractTemplate {
         return result(true);
     }
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    //
+    //       Contract table related usage cases
+    //
+    //
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     public ExecuteResult newAccountTable(List<String> args) {
         logger.info(args);
         RelationDB db = ledger.getDataBase(); //do not new database instance every time
@@ -258,4 +267,36 @@ public class SimulateBank extends ContractTemplate {
         TableDesc desc = db.getTableDesc(tn);
         return result(true, desc);
     }
+
+    public ExecuteResult transferByTable(List<String> args) {
+
+
+        return null;
+
+    }
+
+    public ExecuteResult issueByTable(List<String> args) {
+        Table table = getTable("Account");
+        if (table != null) {
+            Row row = new Row(args.get(0));
+            row.put("name", args.get(1).getBytes());
+            row.put("balance", args.get(2).getBytes());
+            return result(table.insert(row));
+        }else {
+            return result(false);
+        }
+    }
+
+    public ExecuteResult getAccount(List<String> args) {
+        Table table = getTable("Account");
+        if (table != null) {
+            Row row = table.getRow(args.get(0));
+            logger.info(row.toJSON());
+            return result(true, row.toJSON());
+        }else {
+            logger.error("Account with id " + args.get(0) + " is not existed!");
+            return result(false);
+        }
+    }
+    ///////////// End of table usage cases///////////////////////////////////////////////////////////////////////
 }

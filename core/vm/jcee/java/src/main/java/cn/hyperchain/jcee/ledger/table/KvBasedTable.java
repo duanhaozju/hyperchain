@@ -35,12 +35,12 @@ public class KvBasedTable implements Table {
     }
 
     @Override
-    public boolean Insert(Row row) {
+    public boolean insert(Row row) {
         return ledger.put(row.getRowId(), row.toJSON());
     }
 
     @Override
-    public boolean Update(Row row) {
+    public boolean update(Row row) {
         Row oldRow = getRow(row.getRowId());
         if (oldRow == null) {
             return ledger.put(row.getRowId(), row.toJSON());

@@ -17,9 +17,9 @@ public interface Table {
 
     TableDesc getDesc();
 
-    boolean Insert(Row row);
+    boolean insert(Row row);
 
-    boolean Update(Row row);
+    boolean update(Row row);
 
     Row getRow(String rowId);
 

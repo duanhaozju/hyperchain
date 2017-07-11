@@ -37,6 +37,7 @@ public class KvBasedRelationDB implements RelationDB {
         LOG.info("compositeName: " + compositeName);
         LOG.info("tableDesc: " + tableDesc.toJSON());
         ledger.put(compositeName, tableDesc);
+        LOG.info(tableMap);
         return true;
     }
 

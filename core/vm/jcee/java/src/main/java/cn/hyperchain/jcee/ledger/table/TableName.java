@@ -38,7 +38,7 @@ public class TableName {
      * @return composite table name
      */
     public String getCompositeName() {
-        return TABLE_PREFIX + "_" + namespace + "_" + cid + "_" + name;
+        return TABLE_PREFIX + namespace + "_" + cid + "_" + name;
     }
 
     @Override
