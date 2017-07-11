@@ -50,10 +50,10 @@ global:
         retrytime: 3s
         ipc: "hpc_1.ipc"
         enableTLS: true
-	    tlsCA: "./cert/tlscert/tlsca.ca"
+	    tlsCA: "./tls/tlsca.ca"
 	    tlsServerHostOverride: "hyperchain.cn"
-	    tlsCert: "./cert/tlscert/tls_peer1.cert"
-	    tlsCertPriv: "./cert/tlscert/tls_peer1.priv"
+	    tlsCert: "./tls/tls_peer1.cert"
+	    tlsCertPriv: "./tls/tls_peer1.priv"
     namespace:
         # start which namespaces when node starts
         start:

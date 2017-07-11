@@ -4,7 +4,7 @@ package ecies
 
 import (
 	"hyperchain/core/crypto/primitives"
-	"hyperchain/core/crypto/utils"
+	"errors"
 )
 
 type encryptionSchemeImpl struct {
@@ -44,7 +44,7 @@ func (es *encryptionSchemeImpl) Init(params primitives.AsymmetricCipherParameter
 
 func (es *encryptionSchemeImpl) Process(msg []byte) ([]byte, error) {
 	if len(msg) == 0 {
-		return nil, utils.ErrNilArgument
+		return nil, errors.New("Nil argument.")
 	}
 
 	if es.isForEncryption {

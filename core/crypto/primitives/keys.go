@@ -10,14 +10,15 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-
-	"hyperchain/core/crypto/utils"
 )
+// ErrInvalidKey Invalid key
+var ErrInvalidKey = errors.New("Invalid key.")
+var ErrNilArgument = errors.New("Nil argument.")
 
 // PrivateKeyToDER marshals a private key to der
 func PrivateKeyToDER(privateKey *ecdsa.PrivateKey) ([]byte, error) {
 	if privateKey == nil {
-		return nil, utils.ErrNilArgument
+		return nil, ErrNilArgument
 	}
 
 	return x509.MarshalECPrivateKey(privateKey)
@@ -44,7 +45,7 @@ func PrivateKeyToPEM(privateKey interface{}, pwd []byte) ([]byte, error) {
 			},
 		), nil
 	default:
-		return nil, utils.ErrInvalidKey
+		return nil, ErrInvalidKey
 	}
 }
 
@@ -72,7 +73,7 @@ func PrivateKeyToEncryptedPEM(privateKey interface{}, pwd []byte) ([]byte, error
 		return pem.EncodeToMemory(block), nil
 
 	default:
-		return nil, utils.ErrInvalidKey
+		return nil, ErrInvalidKey
 	}
 }
 
@@ -104,7 +105,7 @@ func DERToPrivateKey(der []byte) (key interface{}, err error) {
 // PEMtoPrivateKey unmarshals a pem to private key
 func PEMtoPrivateKey(raw []byte, pwd []byte) (interface{}, error) {
 	if len(raw) == 0 {
-		return nil, utils.ErrNilArgument
+		return nil, ErrNilArgument
 	}
 	block, _ := pem.Decode(raw)
 	if block == nil {
@@ -140,7 +141,7 @@ func PEMtoPrivateKey(raw []byte, pwd []byte) (interface{}, error) {
 // PEMtoAES extracts from the PEM an AES key
 func PEMtoAES(raw []byte, pwd []byte) ([]byte, error) {
 	if len(raw) == 0 {
-		return nil, utils.ErrNilArgument
+		return nil,ErrNilArgument
 	}
 	block, _ := pem.Decode(raw)
 	if block == nil {
@@ -220,7 +221,7 @@ func PublicKeyToPEM(publicKey interface{}, pwd []byte) ([]byte, error) {
 		), nil
 
 	default:
-		return nil, utils.ErrInvalidKey
+		return nil, ErrInvalidKey
 	}
 }
 
@@ -248,14 +249,14 @@ func PublicKeyToEncryptedPEM(publicKey interface{}, pwd []byte) ([]byte, error) 
 		return pem.EncodeToMemory(block), nil
 
 	default:
-		return nil, utils.ErrInvalidKey
+		return nil, ErrInvalidKey
 	}
 }
 
 // PEMtoPublicKey unmarshals a pem to public key
 func PEMtoPublicKey(raw []byte, pwd []byte) (interface{}, error) {
 	if len(raw) == 0 {
-		return nil, utils.ErrNilArgument
+		return nil,ErrNilArgument
 	}
 	block, _ := pem.Decode(raw)
 	if block == nil {

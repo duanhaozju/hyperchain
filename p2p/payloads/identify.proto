@@ -1,0 +1,14 @@
+syntax="proto3";
+package payloads;
+
+message Identify {
+   bool IsVP  = 1;
+   bool IsOriginal = 2;
+   string Hostname = 3;
+   string Namespace = 4;
+   int64 Id = 5;
+   bytes Certificate = 6;
+   bytes Signature = 7;
+   bytes Cipher = 8;
+   bytes KeyExchange = 9;
+}

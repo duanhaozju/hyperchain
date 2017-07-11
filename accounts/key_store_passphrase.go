@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/scrypt"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"hyperchain/crypto/randentropy"
+	"hyperchain/crypto/csprng"
 )
 
 const (
@@ -78,7 +78,7 @@ func (ks keyStorePassphrase) JoinPath(filename string) string {
 // blob that can be decrypted later on.
 func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 	authArray := []byte(auth)
-	salt := randentropy.GetEntropyCSPRNG(32)
+	salt := csprng.CSPRNGRandom(32)
 	derivedKey, err := scrypt.Key(authArray, salt, scryptN, scryptR, scryptP, scryptDKLen)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 	encryptKey := derivedKey[:16]
 	keyBytes := crypto.FromECDSA(key.PrivateKey.(*ecdsa.PrivateKey))
 
-	iv := randentropy.GetEntropyCSPRNG(aes.BlockSize) // 16
+	iv := csprng.CSPRNGRandom(aes.BlockSize)
 	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
 	if err != nil {
 		return nil, err

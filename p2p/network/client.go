@@ -3,7 +3,7 @@ package network
 import "hyperchain/p2p/hts"
 
 import (
-	grpc "google.golang.org/grpc"
+	"google.golang.org/grpc"
 	pb "hyperchain/p2p/message"
 	"fmt"
 	"golang.org/x/net/context"
@@ -23,36 +23,6 @@ type Client struct {
 
 //connCreator implements the Hyper Transport Layer security
 func connCreator(addr string,options []grpc.DialOption)(interface{},error){
-	/*
-	General key agree process
-	client                         server
-	       -- client hello     --> query client session don't get the session key
-	      <-- server hello     --
-	       -- client cert      -->
-	      <-- server cert      --
-	       -- client random    --> generate session key and save the session
-	      <-- server done      --
-	       -- client pkg       -->
-	      <-- server pkg       --
-
-	improve key agree process
-	client                        server
-               -- client hello     --> query client session and get the session key
-	      <-- server done      --
-	       -- client pkg       -->
-	      <-- server pkg       --
-
-	the session key expired
-	client                       server
-	      <-- server expired   --
-	       -- client hello     -->
-	      <-- server hello     --
-	      ...
-	       -- client pkg       -->
-	      <-- server pkg       --
-
-
-	*/
 	return grpc.Dial(addr,options...)
 }
 

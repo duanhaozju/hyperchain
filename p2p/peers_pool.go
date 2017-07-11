@@ -39,9 +39,9 @@ func NewPeersPool(namespace string)*PeersPool {
 func (pool *PeersPool)AddVPPeer(id int,p *Peer)error{
 	_id := id - 1
 	if pool.vpPool == nil{
-		if _id != 0{
-			return errors.New(fmt.Sprintf("the vp peers pool is empty, could not add index: %d peer",id))
-		}
+		//if _id != 0{
+		//	return errors.New(fmt.Sprintf("the vp peers pool is empty, could not add index: %d peer",id))
+		//}
 		pool.vpPool = threadsafelinkedlist.NewTSLinkedList(p)
 		return nil
 	}
@@ -89,6 +89,35 @@ func (pool *PeersPool)GetPeersByHash(hash string)*Peer{
 	return nil
 }
 
+func (pool *PeersPool)GetPeersByHostname(hostname string)*Peer{
+	if pool.vpPool == nil{
+		return nil
+	}
+	l := pool.vpPool.Iter()
+	for _,item := range l{
+		p := item.(*Peer)
+		if p.info.Hostname == hostname{
+			return p
+		}
+	}
+	return nil
+}
+
+func (pool *PeersPool)GetNVPByHostname(hostname string)*Peer{
+	if pool.nvpPool == nil{
+		return nil
+	}
+	l := pool.nvpPool.IterBuffered()
+	for item := range l{
+		p := item.Val.(*Peer)
+		if p.info.Hostname == hostname{
+			return p
+		}
+	}
+	return nil
+}
+
+//TryDelete the specific hash node
 func(pool *PeersPool)TryDelete(selfHash,delHash string)(routerhash string, selfnewid uint64,deleteid uint64,err error){
 	pool.logger.Critical("selfhash",selfHash,"delhash",delHash)
 	templist,err := pool.vpPool.Duplicate()
@@ -99,7 +128,7 @@ func(pool *PeersPool)TryDelete(selfHash,delHash string)(routerhash string, selfn
 	for _,item := range templist.Iter(){
 		tempPeer := item.(*Peer)
 		if tempPeer.info.Hash == delHash{
-			pool.logger.Critical("<===> %+v",tempPeer.info)
+			pool.logger.Critical("delete peer => %+v",tempPeer.info)
 			delid = tempPeer.info.Id
 		}
 	}
@@ -141,6 +170,9 @@ func(pool *PeersPool)TryDelete(selfHash,delHash string)(routerhash string, selfn
 
 //DeleteVPPeer delete a peer from peers pool instance
 func(pool *PeersPool)DeleteVPPeer(id int)error{
+	if pool.vpPool == nil{
+		return nil
+	}
 	_,err := pool.vpPool.Remove(int32(id-1))
 	//update all peers id
 	for idx,item := range pool.vpPool.Iter(){

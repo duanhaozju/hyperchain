@@ -39,7 +39,7 @@ func (h *AttendMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
 		Payload:msg.Payload,
 	})
 	rsp  := &pb.Message{
-		MessageType:pb.MsgType_ATTEND_RESPONSE,
+		MessageType:pb.MsgType_RESPONSE,
 	}
 	return rsp,nil
 }

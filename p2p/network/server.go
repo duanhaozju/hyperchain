@@ -134,21 +134,17 @@ func (s Server) Greeting(ctx context.Context, msg *pb.Message) (*pb.Message, err
 			s.hostchan <- m
 		}(string(msg.From.Hostname),string(msg.From.Extend.IP))
 	}
-	if s.slots == nil{
-		return nil,errors.New(fmt.Sprintf("this server (%s) hasn't register any handler.cannot handle this massage",s.hostname))
-	}
 	if msg.From == nil || msg.From.Field == nil{
 		return nil,errors.New(fmt.Sprintf("this msg (%+v) hasn't it's from filed, reject!",msg))
 	}
-	slot,err := s.slots.GetSlot(string(msg.From.Field))
+	solt,err := s.slots.GetSlot(string(msg.From.Field))
 	if err != nil{
 		return nil,err
 	}
-	handler,err := slot.GetHandler(msg.MessageType)
+	handler,err := solt.GetHandler(msg.MessageType)
 	if err !=nil{
 		return nil,err
 	}else{
-		fmt.Println("greeting handler got the message, and execute it ")
 		retMsg,err := handler.Execute(msg)
 		return retMsg,err
 	}

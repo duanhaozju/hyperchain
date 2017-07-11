@@ -18,8 +18,8 @@ import (
 	//"net"
 	"time"
 
-	"hyperchain/core/crypto/utils"
 	"os"
+	"hyperchain/common"
 )
 
 var (
@@ -109,7 +109,7 @@ func DERCertToPEM(der []byte) []byte {
 // of unhandled critical extensions
 func GetCriticalExtension(cert *x509.Certificate, oid asn1.ObjectIdentifier) ([]byte, error) {
 	for i, ext := range cert.UnhandledCriticalExtensions {
-		if utils.IntArrayEquals(ext, oid) {
+		if common.IntArrayEquals(ext, oid) {
 			cert.UnhandledCriticalExtensions = append(cert.UnhandledCriticalExtensions[:i], cert.UnhandledCriticalExtensions[i+1:]...)
 
 			break
@@ -117,7 +117,7 @@ func GetCriticalExtension(cert *x509.Certificate, oid asn1.ObjectIdentifier) ([]
 	}
 
 	for _, ext := range cert.Extensions {
-		if utils.IntArrayEquals(ext.Id, oid) {
+		if common.IntArrayEquals(ext.Id, oid) {
 			return ext.Value, nil
 		}
 	}

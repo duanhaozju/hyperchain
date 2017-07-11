@@ -20,7 +20,7 @@ global:
     dbConfig: "namespaces/global/config/db.yaml"
 
     configs:
-        caconfig: "namespaces/global/config/caconfig.toml"
+        caconfig: "namespaces/global/config/caconfig.yaml"
         peers: "namespaces/global/config/local_peerconfig.json"
         peers13: "namespaces/global/config/peerconfig.yaml"
         genesis: "namespaces/global/config/genesis.json"
@@ -68,8 +68,8 @@ global:
 
         module:
             #set log level by module
-            p2p: "NOTICE"
-            consensus: "DEBUG"
+            p2p: "DEBUG"
+            consensus: "NOTICE"
             core: "NOTICE"
             hyperdb: "NOTICE"
             common/hyper_logger: "NOTICE"

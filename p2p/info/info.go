@@ -16,6 +16,8 @@ type Info struct {
 	Hostname  string `json:"hostname"`
 	Namespace string `json:"namespace"`
 	Hash      string `json:"hash"`
+	IsVP bool `json:"isvp"`
+	isOriginal bool `json"isorg`
 }
 
 func NewInfo(id int,hostname string,namespcace string)*Info {
@@ -27,6 +29,8 @@ func NewInfo(id int,hostname string,namespcace string)*Info {
 		Hostname:hostname,
 		Hash:common.Bytes2Hex(hash),
 		Namespace:namespcace,
+		IsVP:true,
+		isOriginal:false,
 	}
 }
 
@@ -36,6 +40,17 @@ func (i *Info)GetHash()string{
 	return i.Hash
 }
 
+func (i *Info)SetOriginal(){
+	i.rwmutex.Lock()
+	defer i.rwmutex.Unlock()
+	i.isOriginal = true
+}
+
+func (i *Info)GetOriginal() bool{
+	i.rwmutex.RLock()
+	defer i.rwmutex.RUnlock()
+	return i.isOriginal
+}
 
 func(i *Info)SetHostName(hostname string){
 	i.rwmutex.Lock()
@@ -97,4 +112,8 @@ func InfoUnmarshal(raw []byte)*Info{
 
 func (i *Info)GetNameSpace()string{
 	return i.Namespace
+}
+
+func (i *Info)SetNVP(){
+	i.IsVP = false
 }
