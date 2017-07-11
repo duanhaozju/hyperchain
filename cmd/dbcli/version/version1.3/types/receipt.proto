@@ -1,0 +1,25 @@
+syntax = "proto3";
+package version1_3;
+
+message Receipt {
+    bytes version = 1;
+	bytes Bloom   = 2;
+	int64 CumulativeGasUsed = 3;
+	bytes TxHash = 4;
+	bytes ContractAddress = 5;
+    int64 GasUsed = 6;
+    bytes Ret = 7;
+    bytes Logs = 8;
+    STATUS Status = 9;
+    bytes Message = 10;
+    enum STATUS {
+        SUCCESS       = 0;
+        FAILED        = 1;
+    }
+    enum VmType {
+        EVM = 0;
+        JVM = 1;
+    }
+    VmType vmType = 11;
+}
+

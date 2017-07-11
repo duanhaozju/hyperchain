@@ -1,0 +1,11 @@
+syntax = "proto3";
+package version1_2;
+
+import "chain.proto";
+
+message ReplicaInfo {
+    Chain chain     = 1;
+    bytes ip        = 2;
+    int32 port      = 3;
+    bytes namespace = 4;
+}

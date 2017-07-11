@@ -1,23 +1,23 @@
 package main
 
 import (
-	"github.com/urfave/cli"
-	"hyperchain/hyperdb/db"
-	"hyperchain/hyperdb/mdb"
-	"github.com/syndtr/goleveldb/leveldb"
-	"hyperchain/hyperdb/hleveldb"
-	"hyperchain/core/vm/evm/runtime"
-	"hyperchain/core/hyperstate"
-	"hyperchain/common"
-	"io/ioutil"
-	"hyperchain/core/vm/evm/compiler"
-	"math/big"
-	cm "hyperchain/cmd/common"
-	"os"
 	"github.com/fatih/color"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/urfave/cli"
+	cm "hyperchain/cmd/common"
+	"hyperchain/common"
+	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm/evm"
-	"time"
+	"hyperchain/core/vm/evm/compiler"
+	"hyperchain/core/vm/evm/runtime"
+	"hyperchain/hyperdb/db"
+	"hyperchain/hyperdb/hleveldb"
+	"hyperchain/hyperdb/mdb"
+	"io/ioutil"
+	"math/big"
+	"os"
 	rt "runtime"
+	"time"
 )
 
 var runCommand = cli.Command{
@@ -30,8 +30,8 @@ var runCommand = cli.Command{
 
 func runCmd(ctx *cli.Context) error {
 	var (
-		invoke   bool        = false
-		rawCode  bool        = false
+		invoke   bool = false
+		rawCode  bool = false
 		db       db.Database
 		sender   string
 		receiver string
@@ -103,7 +103,6 @@ func runCmd(ctx *cli.Context) error {
 		DisableStorage: ctx.GlobalBool(DisableStorageFlag.Name),
 	}
 
-
 	var (
 		ret        []byte
 		runtimeErr error
@@ -118,11 +117,11 @@ func runCmd(ctx *cli.Context) error {
 		elapsed = time.Since(start)
 	} else {
 		if rawCode {
-			code, _ ,_ = runtime.Create(db, code, runtimeConfig)
+			code, _, _ = runtime.Create(db, code, runtimeConfig)
 		}
 		start = time.Now()
 		ret, _, structLogs, runtimeErr = runtime.Execute(db, code, input, runtimeConfig)
-		elapsed  = time.Since(start)
+		elapsed = time.Since(start)
 	}
 
 	logs := state.Logs()

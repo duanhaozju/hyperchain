@@ -1,11 +1,11 @@
 package main
 
 import (
-	"os"
 	"fmt"
+	"github.com/urfave/cli"
 	"hyperchain/cmd/common"
 	cm "hyperchain/common"
-	"github.com/urfave/cli"
+	"os"
 )
 
 var gitcommit = ""
@@ -22,7 +22,7 @@ var (
 		Usage: "The transaction origin",
 	}
 	BlockFlag = cli.Uint64Flag{
-		Name: "block",
+		Name:  "block",
 		Usage: "based block number",
 	}
 	DisableMemoryFlag = cli.BoolFlag{
@@ -42,7 +42,7 @@ var (
 		Usage: "disable gas metering",
 	}
 	DebugFlag = cli.BoolFlag{
-		Name: "debug",
+		Name:  "debug",
 		Usage: "output all debug trace info",
 	}
 	CodeFlag = cli.StringFlag{
@@ -50,7 +50,7 @@ var (
 		Usage: "EVM code",
 	}
 	StatFlag = cli.BoolFlag{
-		Name: "stat",
+		Name:  "stat",
 		Usage: "output all stat info",
 	}
 	CodeFileFlag = cli.StringFlag{
@@ -109,11 +109,11 @@ func main() {
 }
 
 func initLog() {
-	conf := cm.NewConfig("../../configuration/namespaces/global/config/global.yaml")
+	conf := cm.NewRawConfig()
 	conf.Set(cm.LOG_DUMP_FILE, false)
 	conf.Set(cm.LOG_BASE_LOG_LEVEL, "NOTICE")
 	conf.Set(cm.LOG_FILE_FORMAT, "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}")
-	conf.Set(cm.LOG_CONSOLE_FORMAT,  "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}")
+	conf.Set(cm.LOG_CONSOLE_FORMAT, "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}")
 	conf.Set(cm.LOG_FILE_DIR, "")
 	conf.Set(cm.C_GRPC_PORT, 0)
 	conf.Set(cm.NAMESPACE, "global")
