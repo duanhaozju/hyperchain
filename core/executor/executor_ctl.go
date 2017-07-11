@@ -374,6 +374,6 @@ func (executor *Executor) getExit(identifier int) chan bool {
 }
 
 // getSyncTarget - get SyncTarget.
-func (executor *Executor) getSyncTarget() chan bool {
+func (executor *Executor) getSyncTarget() uint64 {
 	return executor.status.syncFlag.SyncTarget
 }

@@ -17,7 +17,6 @@ import (
 	"hyperchain/manager/protos"
 	"hyperchain/p2p"
 	"time"
-	"strconv"
 )
 
 const (
@@ -389,7 +388,7 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 			hub.executor.StoreInvalidTransaction(ev.Payload)
 		} else {
 			if len(peerHash) != 0 {
-				hub.sendToNVP(m.SessionMessage_UNICAST_INVALID, ev.Payload, ev.Peers)
+				hub.sendToNVP(m.SessionMessage_UNICAST_INVALID, ev.Payload, ev.PeersHash)
 			} else {
 				hub.send(m.SessionMessage_UNICAST_INVALID, ev.Payload, ev.Peers)
 			}
@@ -405,7 +404,7 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 			}
 			return false
 		}
-		if toNVP {
+		if toNVP() {
 			hub.sendToNVP(m.SessionMessage_UNICAST_BLK, ev.Payload, ev.PeersHash)
 		} else {
 			hub.send(m.SessionMessage_UNICAST_BLK, ev.Payload, ev.Peers)
@@ -496,7 +495,6 @@ func (hub *EventHub) RelayTx(transaction *types.Transaction, ch chan bool) {
 	if err != nil {
 		hub.logger.Error("Relay tx, marshal payload failed")
 		ch <- false
-		return err
 	}
 	err = hub.sendToRandomVP(m.SessionMessage_NVP_RELAY, payload)
 	if err == nil {
