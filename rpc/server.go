@@ -10,8 +10,8 @@ import (
 	"gopkg.in/fatih/set.v0"
 	"hyperchain/common"
 	"hyperchain/namespace"
-	"reflect"
 	"fmt"
+	"sync"
 )
 
 const (
@@ -121,7 +121,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			// If a parsing error occurred, send an error
 			if err.Error() != "EOF" {
 				log.Debug(fmt.Sprintf("read error %v\n", err))
-				codec.Write(s.CreateErrorResponse(nil, "", err))
+				codec.Write(codec.CreateErrorResponse(nil, "", err))
 			}
 			// Error or end of stream, wait for requests and tear down
 			pend.Wait()

@@ -34,11 +34,11 @@ type ServerCodec interface {
 	CreateErrorResponse(id interface{}, namespace string, err common.RPCError) interface{}
 	// Assemble error response with extra information about the error through info
 	CreateErrorResponseWithInfo(id interface{}, namespace string, err common.RPCError, info interface{}) interface{}
-
+	// Create notification response
 	CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{}
 	// Write msg to client.
 	Write(interface{}) error
-
+	// Write notify msg to client.
 	WriteNotify(interface{}) error
 	// Close underlying data stream
 	Close()
