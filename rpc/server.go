@@ -6,13 +6,12 @@ import (
 	"runtime"
 	"sync/atomic"
 	"time"
-	"fmt"
+	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"reflect"
-	"sync"
-	"context"
+	"fmt"
 )
 
 const (
@@ -46,6 +45,23 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 	}
 	server.admin.Init()
 	return server
+}
+
+// ServeCodec reads incoming requests from codec, calls the appropriate callback and writes the
+// response back using the given codec. It will block until the codec is closed or the server is
+// stopped. In either case the codec is closed.
+func (s *Server) ServeCodec(codec ServerCodec, options CodecOption, ctx context.Context) {
+	defer codec.Close()
+	s.serveRequest(codec, false, options, ctx)
+}
+
+// ServeSingleRequest reads and processes a single RPC request from the given codec. It will not
+// close the codec unless a non-recoverable error has occurred. Note, this method will return after
+// a single request has been processed!
+func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s.serveRequest(codec, true, options, ctx)
 }
 
 // serveRequest will reads requests from the codec, calls the RPC callback and
@@ -119,25 +135,25 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			if batch {
 				resps := make([]interface{}, len(reqs))
 				for i, r := range reqs {
-					resps[i] = s.CreateErrorResponse(r.Id, r.Namespace, err)
+					resps[i] = codec.CreateErrorResponse(r.Id, r.Namespace, err)
 				}
 				codec.Write(resps)
 			} else {
-				codec.Write(s.CreateErrorResponse(reqs[0].Id, reqs[0].Namespace, err))
+				codec.Write(codec.CreateErrorResponse(reqs[0].Id, reqs[0].Namespace, err))
 			}
 			return nil
 		}
 		if reqs[0].Service == adminService {
 			response := s.handleCMD(reqs[0])
 			if response.Error != nil {
-				codec.Write(s.CreateErrorResponse(response.Id, response.Namespace, response.Error))
+				codec.Write(codec.CreateErrorResponse(response.Id, response.Namespace, response.Error))
 			} else if response.Reply != nil {
-				if err := codec.Write(s.CreateResponse(response.Id, response.Namespace, response.Reply)); err != nil {
+				if err := codec.Write(codec.CreateResponse(response.Id, response.Namespace, response.Reply)); err != nil {
 					log.Errorf("%v\n", err)
 					codec.Close()
 				}
 			} else {
-				codec.Write(s.CreateResponse(response.Id, response.Namespace, nil))
+				codec.Write(codec.CreateResponse(response.Id, response.Namespace, nil))
 			}
 			return nil
 		}
@@ -157,23 +173,6 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 
 	}
 	return nil
-}
-
-// ServeCodec reads incoming requests from codec, calls the appropriate callback and writes the
-// response back using the given codec. It will block until the codec is closed or the server is
-// stopped. In either case the codec is closed.
-func (s *Server) ServeCodec(codec ServerCodec, options CodecOption, ctx context.Context) {
-	defer codec.Close()
-	s.serveRequest(codec, false, options, ctx)
-}
-
-// ServeSingleRequest reads and processes a single RPC request from the given codec. It will not
-// close the codec unless a non-recoverable error has occurred. Note, this method will return after
-// a single request has been processed!
-func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	s.serveRequest(codec, true, options, ctx)
 }
 
 // Stop will stop reading new requests, wait for stopPendingRequestTimeout to allow pending requests to finish,
@@ -230,17 +229,18 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 			name := request.Namespace
 			if err := codec.CheckHttpHeaders(name); err != nil {
 				log.Errorf("CheckHttpHeaders error: %v", err)
-				result <- s.CreateErrorResponse(request.Id, request.Namespace, &common.CertError{Message: err.Error()})
+				result <- codec.CreateErrorResponse(request.Id, request.Namespace, &common.CertError{Message: err.Error()})
 				return
 			}
 			var rm *requestManager
 
 			s.reqMgrMu.Lock()
 			if _, ok := s.requestMgr[name]; !ok {
-				rm = NewRequestManager(name, s)
+				rm = NewRequestManager(name, s, codec)
 				s.requestMgr[name] = rm
 				rm.Start()
 			} else {
+				s.requestMgr[name].codec = codec
 				rm = s.requestMgr[name]
 			}
 			s.reqMgrMu.Unlock()
@@ -269,62 +269,43 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 }
 
 // handleChannelReq will implement an interface to handle request in channel and return jsonrpc response
-func (s *Server) handleChannelReq(req *common.RPCRequest) interface{} {
+func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) interface{} {
 	r := s.namespaceMgr.ProcessRequest(req.Namespace, req)
 	if r == nil {
 		log.Debug("No process result")
-		return s.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message: "no process result"})
+		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"no process result"})
 	}
 
 	if response, ok := r.(*common.RPCResponse); ok {
 		if response.Error != nil {
-			return s.CreateErrorResponse(response.Id, response.Namespace, response.Error)
+			return codec.CreateErrorResponse(response.Id, response.Namespace, response.Error)
 		} else if response.Reply != nil {
 			if response.IsPubSub {
 				notifier, supported := NotifierFromContext(req.Ctx)
 				if !supported { // interface doesn't support subscriptions (e.g. http)
-					return s.CreateErrorResponse(response.Id, response.Namespace, &common.CallbackError{Message: ErrNotificationsUnsupported.Error()})
+					return codec.CreateErrorResponse(response.Id, response.Namespace, &common.CallbackError{Message: ErrNotificationsUnsupported.Error()})
 				}
 
 				if response.IsUnsub {
 					subid := response.Reply.(common.ID)
 					if err := notifier.Unsubscribe(subid); err != nil {
-						return s.CreateErrorResponse(response.Id, response.Namespace, &common.SubNotExistError{Message: err.Error()})
+						return codec.CreateErrorResponse(response.Id, response.Namespace, &common.SubNotExistError{Message: err.Error()})
 					}
-					return s.CreateResponse(response.Id, response.Namespace, true)
+					return codec.CreateResponse(response.Id, response.Namespace, true)
 				} else {
 					// active the subscription after the sub id was successfully sent to the client
 					notifier.Activate(response.Reply.(common.ID), req.Service, req.Method, req.Namespace)
 				}
 			}
-			return s.CreateResponse(response.Id, response.Namespace, response.Reply)
+			return codec.CreateResponse(response.Id, response.Namespace, response.Reply)
 
 		} else {
-			return s.CreateResponse(response.Id, response.Namespace, nil)
+			return codec.CreateResponse(response.Id, response.Namespace, nil)
 		}
 	//} else if response, ok := r.(*common.RPCNotification); ok{
 	//	return s.CreateNotification(response.SubId, response.Service, response.Namespace, nil)
 	} else {
 		log.Errorf("response type invalid, resp: %v\n")
-		return s.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message: "response type invalid!"})
+		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"response type invalid!"})
 	}
-}
-
-// CreateResponse will create a JSON-RPC success response with the given id and reply as result.
-func (s *Server) CreateResponse(id interface{}, name string, reply interface{}) interface{} {
-	if isHexNum(reflect.TypeOf(reply)) {
-		return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
-	}
-	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: 0, Message: "SUCCESS", Result: reply}
-}
-
-// CreateErrorResponse will create a JSON-RPC error response with the given id and error.
-func (s *Server) CreateErrorResponse(id interface{}, name string, err common.RPCError) interface{} {
-	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: err.Code(), Message: err.Error()}
-}
-
-// CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
-// info is optional and contains additional information about the error. When an empty string is passed it is ignored.
-func (s *Server) CreateErrorResponseWithInfo(id interface{}, name string, err common.RPCError, info interface{}) interface{} {
-	return &JSONResponse{Version: JSONRPCVersion, Namespace: name, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
 }

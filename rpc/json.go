@@ -12,16 +12,13 @@ import (
 	"sync"
 	//"crypto/ecdsa"
 	//"hyperchain/core/crypto/primitives"
-	"github.com/pkg/errors"
 	"hyperchain/namespace"
-	"fmt"
-	"reflect"
-	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 )
 
 const (
-	JSONRPCVersion           = "2.0"
-	serviceMethodSeparator 	 = "_"
+	JSONRPCVersion         = "2.0"
+	serviceMethodSeparator = "_"
 )
 
 // JSON-RPC request
@@ -36,7 +33,7 @@ type JSONRequest struct {
 // JSON-RPC response
 type JSONResponse struct {
 	Version   string      `json:"jsonrpc"`
-	Namespace string      `json:"namespace"`
+	Namespace string      `json:"namespace,omitempty"`
 	Id        interface{} `json:"id,omitempty"`
 	Code      int         `json:"code"`
 	Message   string      `json:"message"`
@@ -256,6 +253,38 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool,
 	return requests, true, nil
 }
 
+// CreateResponse will create a JSON-RPC success response with the given id and reply as result.
+func (c *jsonCodec) CreateResponse(id interface{}, namespace string, reply interface{}) interface{} {
+	if isHexNum(reflect.TypeOf(reply)) {
+		return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
+	}
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: 0, Message: "SUCCESS", Result: reply}
+}
+
+// CreateErrorResponse will create a JSON-RPC error response with the given id and error.
+func (c *jsonCodec) CreateErrorResponse(id interface{}, namespace string, err common.RPCError) interface{} {
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: err.Code(), Message: err.Error()}
+}
+
+// CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
+// info is optional and contains additional information about the error. When an empty string is passed it is ignored.
+func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, namespace string, err common.RPCError, info interface{}) interface{} {
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
+}
+
+// CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
+func (s *jsonCodec) CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{} {
+	if isHexNum(reflect.TypeOf(event)) {
+		//return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace, Method: service + NotificationMethodSuffix,
+		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace,
+			Result: jsonSubscription{Subscription: fmt.Sprintf(`%s`, subid), Data: fmt.Sprintf(`%#x`, event)}}
+	}
+
+	//return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace, Method: service + NotificationMethodSuffix,
+	return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace,
+		Result: jsonSubscription{Event: method, Subscription: fmt.Sprintf(`%s`, subid), Data: event}}
+}
+
 // Write message to client
 func (c *jsonCodec) Write(res interface{}) error {
 	c.encMu.Lock()
@@ -290,19 +319,6 @@ func (c *jsonCodec) WriteNotify(res interface{}) error {
 	}
 	log.Debug("** finish writting notification to client **")
 	return nil
-}
-
-// CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
-func (s *jsonCodec) CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{} {
-	if isHexNum(reflect.TypeOf(event)) {
-		//return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace, Method: service + NotificationMethodSuffix,
-		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace,
-			Result: jsonSubscription{Subscription: fmt.Sprintf(`%s`, subid), Data: fmt.Sprintf(`%#x`, event)}}
-	}
-
-	//return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace, Method: service + NotificationMethodSuffix,
-	return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace,
-		Result: jsonSubscription{Event: method, Subscription: fmt.Sprintf(`%s`, subid), Data: event}}
 }
 
 // Close the underlying connection
