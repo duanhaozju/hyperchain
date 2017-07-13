@@ -55,6 +55,7 @@ func(peer *Peer)Value()interface{}{
 
 //Chat send a stream message to remote peer
 func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
+	fmt.Println("Chat msg to ",peer.info.Hostname)
 	//here will wrapper the message
 	in.From = &pb.Endpoint{
 		Field:    []byte(peer.namespace),

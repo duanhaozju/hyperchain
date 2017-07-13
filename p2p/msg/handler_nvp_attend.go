@@ -38,10 +38,7 @@ func (h *NVPAttendMsgHandler)Receive() chan<- interface{}{
 
 //Execute
 func (h *NVPAttendMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
-	fmt.Println("got a new peer event ATTEND Msg")
-	go h.ev.Post(event.NewPeerEvent{
-		Payload:msg.Payload,
-	})
+	fmt.Printf("GOT A NVP ATTEND MSG hostname(%s), type: %s \n",msg.From.Hostname,msg.MessageType)
 	rsp  := &pb.Message{
 		MessageType:pb.MsgType_RESPONSE,
 	}

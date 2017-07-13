@@ -39,26 +39,16 @@ func NewPeersPool(namespace string)*PeersPool {
 func (pool *PeersPool)AddVPPeer(id int,p *Peer)error{
 	if pool.vpPool == nil{
 		pool.vpPool = threadsafe.NewHeap(p)
-		fmt.Println("init",p.Weight())
-		for _,p := range pool.vpPool.Sort(){
-			fmt.Print("add :",p.(*Peer).hostname," ")
-		}
 		return nil
 	}
 	pool.vpPool.Push(p,p.Weight())
-	fmt.Println("ADD",p.Weight())
-	for _,p := range pool.vpPool.Sort(){
-		fmt.Print("add :",p.(*Peer).hostname," ")
-	}
-	fmt.Println()
 	hash := utils.GetPeerHash(pool.namespace,id)
 	pool.existMap.Set(hash,_VP_FLAG)
 	return nil
 }
 
 //AddNVPPeer add a peer into peers pool instance
-func (pool *PeersPool)AddNVPPeer(id int,p *Peer)error{
-	hash := utils.GetPeerHash(pool.namespace,id)
+func (pool *PeersPool)AddNVPPeer(hash string,p *Peer)error{
 	if tipe,ok := pool.existMap.Get(hash);ok{
 		return errors.New(fmt.Sprintf("this peer already in peers pool type: [%s]",tipe.(string)))
 	}

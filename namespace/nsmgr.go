@@ -193,6 +193,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return err
 	}
 	nsConfig.Set(common.NAMESPACE, name)
+	nsConfig.Set(common.C_JVM_START, nr.GlobalConfig().GetBool(common.C_JVM_START))
 	delFlag := make(chan bool)
 	ns, err := GetNamespace(name, nsConfig, delFlag)
 	if err != nil {

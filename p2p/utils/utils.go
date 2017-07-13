@@ -36,6 +36,12 @@ func GetPeerHash(namespace string,id int) string{
 	return common.ToHex(hasher.Sum(nil))
 }
 
+func HashString(in string)string{
+	hasher := sha3.NewKeccak256()
+	hasher.Write([]byte(in))
+	return common.ToHex(hasher.Sum(nil))
+}
+
 func IPcheck(ip string) bool {
 	trial := net.ParseIP(ip)
 	if trial == nil{

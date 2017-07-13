@@ -148,7 +148,7 @@ func (hrw *httpReadWrite) Close() error {
 func newHTTPServer(cors []string, srv *Server) *http.Server {
 	return &http.Server{
 		Handler: newCorsHandler(srv, cors),
-		ReadTimeout:  time.Second,
+		ReadTimeout:  time.Second * 3,
 	}
 }
 

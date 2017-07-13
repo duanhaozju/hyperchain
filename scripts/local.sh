@@ -115,6 +115,7 @@ do
     cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/ns1/config/peerconfig.yaml
     #namespace's global
     cp -rf  ${CONF_PATH}/peerconfigs/global_${j}.yaml ${DUMP_PATH}/node${j}/global.yaml
+    cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.yaml ${DUMP_PATH}/node${j}/addr.yaml
     cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
     cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/cert/
     cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/

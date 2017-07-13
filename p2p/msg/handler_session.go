@@ -34,7 +34,7 @@ func (session  *SessionMsgHandler) Receive() chan<- interface{}{
 }
 
 func (session  *SessionMsgHandler) Execute(msg *pb.Message) (*pb.Message,error){
-	//fmt.Printf("GOT a SESSION msg %+v \n",msg)
+	fmt.Printf("GOT a SESSION Message From: %s, Type: %s \n",msg.From.Hostname,msg.MessageType.String())
 	go session.evmux.Post(event.SessionEvent{
 		Message:msg.Payload,
 	})

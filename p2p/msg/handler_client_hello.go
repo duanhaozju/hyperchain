@@ -55,7 +55,7 @@ func (h *ClientHelloMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
 	if !id.IsOriginal && id.IsVP {
 		//if verify passed, should notify peer manager to reverse connect to client.
 		// if VP/NVP both should reverse to connect.
-		fmt.Println("---==---===---> post ev VPCONNECT")
+		fmt.Println("---==---===--->> post ev VPCONNECT")
 		go h.hub.Post(peerevent.EV_VPConnect{
 			Hostname: id.Hostname,
 			Namespace:id.Namespace,
@@ -64,6 +64,12 @@ func (h *ClientHelloMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
 
 	} else if !id.IsOriginal && !id.IsVP{
 		//if is nvp h.hub.Post(peerevent.EV_NVPConnect{})
+		fmt.Println("################>> post ev NVPCONNECT")
+		go h.hub.Post(peerevent.EV_NVPConnect{
+			Hostname: id.Hostname,
+			Namespace:id.Namespace,
+			Hash:id.Hostname,
+		})
 	}else{
 		//do nothing
 	}
