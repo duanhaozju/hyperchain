@@ -1,7 +1,7 @@
 package hts
 
 import (
-	"hyperchain/p2p/threadsafelinkedlist"
+	"hyperchain/p2p/threadsafe"
 	"time"
 )
 
@@ -10,14 +10,14 @@ type SessionKey struct {
 	expire    int64
 	sharedKey []byte
 	//this is thread safe flag
-	valid *threadsafelinkedlist.SpinLock
+	valid *threadsafe.SpinLock
 }
 
 func NewSessionKey(sharedKey []byte) *SessionKey {
 	sk := &SessionKey{
 		expire:    time.Now().Unix() + 3600,
 		sharedKey: sharedKey,
-		valid:     new(threadsafelinkedlist.SpinLock),
+		valid:     new(threadsafe.SpinLock),
 	}
 	go sk.selfCheck()
 	return sk

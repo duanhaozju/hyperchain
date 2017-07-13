@@ -1,4 +1,4 @@
-package threadsafelinkedlist
+package threadsafe
 
 import (
 	"sync/atomic"
@@ -134,7 +134,23 @@ func (list *ThreadSafeLinkedList)Insert(index int32, item interface{})error{
 		atomic.AddInt32(&list.capacity,1)
 		return nil
 	}else{
-		return errors.New("cannot find the index elements")
+		return errors.New("cannot insert the index elements")
+	}
+}
+
+func(list *ThreadSafeLinkedList)adjust(){
+	// the list element need implements the ListElement interface
+	//
+	cur := list.head
+	for cur != nil && cur.next != nil {
+		curvalue := cur.value.(listElement).Weight()
+		nextvalue := cur.value.(listElement).Weight()
+		if curvalue > nextvalue{
+			temp := cur.value
+			cur.value = cur.next.value
+			cur.next.value = temp
+		}
+		cur = cur.next
 	}
 }
 

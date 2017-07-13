@@ -8,7 +8,7 @@ import (
 	"hyperchain/manager/event"
 	"hyperchain/p2p/msg"
 	"hyperchain/p2p/info"
-	"hyperchain/p2p/threadsafelinkedlist"
+	"hyperchain/p2p/threadsafe"
 	"hyperchain/common"
 	"github.com/op/go-logging"
 	"time"
@@ -44,7 +44,7 @@ type peerManagerImpl struct {
 	nodeNum   int
 	selfID    int
 
-	isonline  *threadsafelinkedlist.SpinLock
+	isonline  *threadsafe.SpinLock
 
 	isnew     bool
 
@@ -102,7 +102,7 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		peerMgrEv:new(event.TypeMux),
 		peerMgrEvClose:make(chan interface{}),
 		peerMgrSub:cmap.New(),
-		isonline:new(threadsafelinkedlist.SpinLock),
+		isonline:new(threadsafe.SpinLock),
 		isnew:isnew,
 		isOrg:isorg,
 		delchan:delChan,
@@ -293,7 +293,19 @@ func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType, payload []byte, peers [
 		if id == uint64(pmgr.node.info.GetID()) {
 			continue
 		}
-		peer := peerList[int(id - 1)]
+		//TODO 由于加入顺序不一致，所以用这种算法取得的节点不一定是正确的节点
+		// avoid out of range
+		if id > uint64(len(peerList)){
+			return
+		}
+		//需要进行排序处理
+		fmt.Println(id,peerList)
+		peer := peerList[int(id)-1]
+		for _,p := range peerList{
+			fmt.Println(p.hostname)
+		}
+
+		fmt.Println("sendmsg",peer.hostname,peer.local.Hostname,id)
 		if peer.info.Hostname == pmgr.node.info.Hostname {
 			continue
 		}
@@ -315,6 +327,7 @@ func (pmgr *peerManagerImpl) broadcast(msgType pb.MsgType, payload []byte) {
 	peerList := pmgr.peerPool.GetPeers()
 	for _, p := range peerList {
 		go func(peer *Peer) {
+			fmt.Println("broadcast",peer.hostname,peer.local.Hostname)
 			if peer.hostname == peer.local.Hostname {
 				return
 			}

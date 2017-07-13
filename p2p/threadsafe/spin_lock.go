@@ -1,4 +1,4 @@
-package threadsafelinkedlist
+package threadsafe
 
 import "sync/atomic"
 

@@ -5,7 +5,7 @@ import (
 	"github.com/orcaman/concurrent-map"
 	"hyperchain/p2p/utils"
 	"fmt"
-	"hyperchain/p2p/threadsafelinkedlist"
+	"hyperchain/p2p/threadsafe"
 	"encoding/json"
 	"github.com/op/go-logging"
 	"hyperchain/common"
@@ -16,7 +16,7 @@ var (	_VP_FLAG = "VP"
 
 type PeersPool struct {
 	namespace string
-	vpPool *threadsafelinkedlist.ThreadSafeLinkedList
+	vpPool *threadsafe.Heap
 	//nvp hasn't id so use map to storage it
 	nvpPool cmap.ConcurrentMap
 	//put the exist peers into this exist
@@ -37,18 +37,20 @@ func NewPeersPool(namespace string)*PeersPool {
 
 //AddVPPeer add a peer into peers pool instance
 func (pool *PeersPool)AddVPPeer(id int,p *Peer)error{
-	_id := id - 1
 	if pool.vpPool == nil{
-		//if _id != 0{
-		//	return errors.New(fmt.Sprintf("the vp peers pool is empty, could not add index: %d peer",id))
-		//}
-		pool.vpPool = threadsafelinkedlist.NewTSLinkedList(p)
+		pool.vpPool = threadsafe.NewHeap(p)
+		fmt.Println("init",p.Weight())
+		for _,p := range pool.vpPool.Sort(){
+			fmt.Print("add :",p.(*Peer).hostname," ")
+		}
 		return nil
 	}
-	err := pool.vpPool.Insert(int32(_id),p)
-	if err != nil{
-		return err
+	pool.vpPool.Push(p,p.Weight())
+	fmt.Println("ADD",p.Weight())
+	for _,p := range pool.vpPool.Sort(){
+		fmt.Print("add :",p.(*Peer).hostname," ")
 	}
+	fmt.Println()
 	hash := utils.GetPeerHash(pool.namespace,id)
 	pool.existMap.Set(hash,_VP_FLAG)
 	return nil
@@ -71,7 +73,7 @@ func (pool *PeersPool)GetPeers()[]*Peer {
 	if pool.vpPool == nil{
 		return list
 	}
-	l := pool.vpPool.Iter()
+	l := pool.vpPool.Sort()
 	for _,item := range l{
 		list = append(list,item.(*Peer))
 	}
@@ -79,7 +81,7 @@ func (pool *PeersPool)GetPeers()[]*Peer {
 }
 
 func (pool *PeersPool)GetPeersByHash(hash string)*Peer{
-	l := pool.vpPool.Iter()
+	l := pool.vpPool.Sort()
 	for _,item := range l{
 		p := item.(*Peer)
 		if p.info.Hash == hash{
@@ -93,7 +95,7 @@ func (pool *PeersPool)GetPeersByHostname(hostname string)*Peer{
 	if pool.vpPool == nil{
 		return nil
 	}
-	l := pool.vpPool.Iter()
+	l := pool.vpPool.Sort()
 	for _,item := range l{
 		p := item.(*Peer)
 		if p.info.Hostname == hostname{
@@ -120,25 +122,21 @@ func (pool *PeersPool)GetNVPByHostname(hostname string)*Peer{
 //TryDelete the specific hash node
 func(pool *PeersPool)TryDelete(selfHash,delHash string)(routerhash string, selfnewid uint64,deleteid uint64,err error){
 	pool.logger.Critical("selfhash",selfHash,"delhash",delHash)
-	templist,err := pool.vpPool.Duplicate()
-	if err !=nil{
-		return
-	}
+	temppool := pool.vpPool.Duplicate()
 	var delid int
-	for _,item := range templist.Iter(){
+	for _,item := range temppool.Sort(){
 		tempPeer := item.(*Peer)
 		if tempPeer.info.Hash == delHash{
 			pool.logger.Critical("delete peer => %+v",tempPeer.info)
 			delid = tempPeer.info.Id
 		}
 	}
-	_,err = templist.Remove(int32(delid-1))
-	if err != nil{
-		return
+	delitem := temppool.Remove(delid-1)
+	if delitem == nil{
+		err = errors.New("delete failed, the item not exist.")
 	}
-
 	// update all peers id
-	for idx,item := range templist.Iter(){
+	for idx,item := range temppool.Sort(){
 		tempPeer := item.(*Peer)
 		tempPeer.info.SetID(idx + 1)
 		if tempPeer.info.Hash == selfHash{
@@ -148,7 +146,7 @@ func(pool *PeersPool)TryDelete(selfHash,delHash string)(routerhash string, selfn
 	}
 
 	data := make([]string,0)
-	for _,item := range templist.Iter(){
+	for _,item := range temppool.Sort(){
 		peer := item.(*Peer)
 		data = append(data,string(peer.Serialize()))
 	}
@@ -173,13 +171,16 @@ func(pool *PeersPool)DeleteVPPeer(id int)error{
 	if pool.vpPool == nil{
 		return nil
 	}
-	_,err := pool.vpPool.Remove(int32(id-1))
+	v := pool.vpPool.Remove(id-1)
+	if v == nil{
+		return errors.New("cannot remove the peer, the peer is not exist.")
+	}
 	//update all peers id
-	for idx,item := range pool.vpPool.Iter(){
+	for idx,item := range pool.vpPool.Sort(){
 		tempPeer := item.(*Peer)
 		tempPeer.info.SetID(idx + 1)
 	}
-	return err
+	return nil
 }
 
 func(pool *PeersPool)DeleteVPPeerByHash(hash string)error{

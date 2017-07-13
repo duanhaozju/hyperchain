@@ -45,6 +45,14 @@ func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, ne
 	return peer, nil
 }
 
+//implements the WeightItem interface
+func(peer *Peer)Weight()int{
+	return peer.info.Id
+}
+func(peer *Peer)Value()interface{}{
+	return peer
+}
+
 //Chat send a stream message to remote peer
 func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
 	//here will wrapper the message
@@ -174,6 +182,8 @@ func (peer *Peer) clientHello(isOriginal bool) error {
 	return peer.clientResponse(serverHello)
 }
 
+// handle the double side handshake process,
+// when got a serverhello, this peer should response by clientResponse.
 func (peer *Peer) clientResponse(serverHello *pb.Message) error {
 	fmt.Println("peer.go 152 send client accept message")
 	payload := []byte("client accept [msg test]")

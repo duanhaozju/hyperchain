@@ -1,7 +1,7 @@
 // Author: chenquan
 // Date: 2017-06-20
 
-package threadsafelinkedlist
+package threadsafe
 
 import "sync"
 
@@ -24,6 +24,9 @@ func newListNode(prev,next *listNode,value interface{},index int32)*listNode{
 	}
 }
 
+type listElement interface {
+	Weight() int
+}
 
 func (node *listNode)setPrev(p *listNode){
 }

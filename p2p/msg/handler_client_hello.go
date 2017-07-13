@@ -6,8 +6,8 @@ import (
 	"hyperchain/p2p/hts"
 	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/payloads"
-	"hyperchain/p2p/peerevent"
 	"github.com/op/go-logging"
+	"hyperchain/p2p/peerevent"
 )
 
 type ClientHelloMsgHandler struct {
