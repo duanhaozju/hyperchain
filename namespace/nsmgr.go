@@ -193,6 +193,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return err
 	}
 	nsConfig.Set(common.NAMESPACE, name)
+	nsConfig.Set(common.C_JVM_START, nr.GlobalConfig().GetBool(common.C_JVM_START))
 	ns, err := GetNamespace(name, nsConfig)
 	if err != nil {
 		logger.Errorf("Construct namespace %s error, %v", name, err)
