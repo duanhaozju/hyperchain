@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"strconv"
 )
 
 func ToHex(b []byte) string {
@@ -251,4 +252,14 @@ func ByteSliceToInterface(slice [][]byte) (ret []interface{}) {
 	}
 
 	return
+}
+
+func Int2Bytes(num int) []byte {
+	str := strconv.FormatInt(int64(num), 16)
+	if len(str) % 2 != 0 {
+		str = "0" + str
+	}
+	temp := Hex2Bytes(str)
+	res := LeftPadBytes(temp, 2)
+	return res
 }

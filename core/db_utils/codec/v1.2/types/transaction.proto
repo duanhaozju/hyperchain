@@ -8,7 +8,7 @@ message TransactionV1_2 {
 	bytes value = 4;
 	int64 timestamp = 5;
 	bytes signature = 6;
-	uint64 id = 7;
+	bytes id = 7;
 	bytes transactionHash = 8;
 	int64  nonce = 9;
 }

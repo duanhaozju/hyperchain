@@ -7,6 +7,8 @@ import (
 	"hyperchain/core/types"
 	"reflect"
 	er "hyperchain/core/errors"
+	"strconv"
+	"hyperchain/common"
 )
 type Helper struct {
 	msgQ *event.TypeMux
@@ -109,7 +111,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return nil
 	case NOTIFY_UNICAST_BLOCK:
 		executor.logger.Debug("inform p2p unicast block")
-		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64}, message...) {
+		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64, reflect.String}, message...) {
 			return er.InvalidParamsErr
 		}
 		block, err := edb.GetBlockByNumber(executor.namespace, message[0].(uint64))
@@ -126,6 +128,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			Payload: payload,
 			Type:    NOTIFY_UNICAST_BLOCK,
 			Peers:   []uint64{message[1].(uint64)},
+			PeersHash: []string{message[2].(string)},
 		})
 		return nil
 	case NOTIFY_UNICAST_INVALID:
@@ -142,10 +145,21 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Error("marshal invalid record error")
 			return err
 		}
+		id, err := SplitVpId(r.Tx.Id)
+		if err != nil {
+			executor.logger.Errorf("get Tx's Id#%s error. %s", common.Bytes2Hex(r.Tx.Id), err.Error())
+			return err
+		}
+		hash, err := SplitNvpHash(r.Tx.Id)
+		if err != nil {
+			executor.logger.Errorf("get Tx's hash#%s error. %s", common.Bytes2Hex(r.Tx.Id), err.Error())
+			return err
+		}
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_UNICAST_INVALID,
-			Peers:   []uint64{r.Tx.Id},
+			Peers:   []uint64{id},
+			PeersHash: []string{hash},
 		})
 		return nil
 	case NOTIFY_BROADCAST_SINGLE:
@@ -186,11 +200,62 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return nil
 	case NOTIFY_TRANSIT_BLOCK:
 		executor.logger.Debug("inform p2p to transit commited block")
+		if len(message) != 1 {
+			return er.InvalidParamsErr
+		}
+		block, ok := message[0].([]byte)
+		if !ok {
+			return er.InvalidParamsErr
+		}
+		executor.helper.Post(event.ExecutorToP2PEvent{
+			Payload: block,
+			Type:    NOTIFY_TRANSIT_BLOCK,
+		})
 		return nil
-
+	case NOTIFY_NVP_SYNC:
+		executor.logger.Debug("inform p2p to sync NVP")
+		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64}, message...) {
+			return er.InvalidParamsErr
+		}
+		required := ChainSyncRequest{
+			RequiredNumber: message[0].(uint64),
+			CurrentNumber:  message[1].(uint64),
+		}
+		payload, err := proto.Marshal(&required)
+		if err != nil {
+			executor.logger.Errorf("sync chain request marshal message failed of NVP")
+			return err
+		}
+		executor.helper.Post(event.ExecutorToP2PEvent{
+			Payload: payload,
+			Type:    NOTIFY_NVP_SYNC,
+		})
+		return nil
 	default:
 		return er.NoDefinedCaseErr
 	}
 	return nil
 }
 
+// hash: 32 bytes.
+func SplitNvpHash(id []byte) (string, error) {
+	if len(id) == 34 {
+		return common.Bytes2Hex(id[:32]), nil
+	} else if len(id) == 2 {
+		return "", nil
+	} else {
+		return "", er.TxIdLenErr
+	}
+}
+
+// id: 2 bytes.
+func SplitVpId(id []byte) (uint64, error) {
+	if len(id) == 34 {
+		temp := id[32:]
+		return strconv.ParseUint(common.Bytes2Hex(temp), 16, 64)
+	} else if len(id) == 2 {
+		return strconv.ParseUint(common.Bytes2Hex(id), 16, 64)
+	} else {
+		return 0, er.TxIdLenErr
+	}
+}

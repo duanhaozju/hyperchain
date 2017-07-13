@@ -17,6 +17,7 @@ import (
 	"hyperchain/manager/protos"
 	"hyperchain/p2p"
 	"time"
+	"strconv"
 )
 
 const (
@@ -35,6 +36,11 @@ const (
 	BROADCAST_VP = iota
 	BROADCAST_NVP
 	BROADCAST_ALL
+)
+
+const (
+	IdentificationVP int = iota
+	IdentificationNVP
 )
 
 type EventHub struct {
@@ -132,7 +138,7 @@ func (hub *EventHub) Subscribe() {
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.DelPeerEvent{}, event.BroadcastDelPeerEvent{})
 	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InformPrimaryEvent{}, event.VCResetEvent{}, event.ChainSyncReqEvent{})
 	hub.subscriptions[SUB_EXEC] = hub.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{})
-	hub.subscriptions[SUB_TRANSACTION] = hub.eventMux.Subscribe(event.NewTxEvent{})
+	hub.subscriptions[SUB_TRANSACTION] = hub.eventMux.Subscribe(event.NewTxEvent{}, event.NvpRelayTxEvent{})
 }
 
 func (hub *EventHub) GetSubscription(t int) event.Subscription {
@@ -166,8 +172,20 @@ func (hub *EventHub) listenTransactionEvent() {
 				if ev.Simulate == true {
 					hub.executor.RunInSandBox(ev.Transaction)
 				} else {
-					hub.consenter.RecvLocal(ev.Transaction)
+					if hub.NodeIdentification() == IdentificationNVP {
+						hub.RelayTx(ev.Transaction, ev.Ch)
+					} else {
+						hub.consenter.RecvLocal(ev.Transaction)
+					}
 				}
+			case event.NvpRelayTxEvent:
+				transaction := &types.Transaction{}
+				err := proto.Unmarshal(ev.Payload, transaction)
+				transaction.Id = append(transaction.Id, common.Int2Bytes(hub.GetPeerManager().GetNodeId())...)
+				if err != nil {
+					hub.logger.Error("Relay tx, unmarshal payload failed")
+				}
+				hub.consenter.RecvLocal(transaction)
 			}
 
 		}
@@ -366,17 +384,32 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 	case executor.NOTIFY_UNICAST_INVALID:
 		hub.logger.Debugf("message middleware: [unicast invalid tx]")
 		peerId := ev.Peers[0]
+		peerHash := ev.PeersHash[0]
 		if peerId == uint64(hub.peerManager.GetNodeId()) {
 			hub.executor.StoreInvalidTransaction(ev.Payload)
 		} else {
-			hub.send(m.SessionMessage_UNICAST_INVALID, ev.Payload, ev.Peers)
+			if len(peerHash) != 0 {
+				hub.sendToNVP(m.SessionMessage_UNICAST_INVALID, ev.Payload, ev.Peers)
+			} else {
+				hub.send(m.SessionMessage_UNICAST_INVALID, ev.Payload, ev.Peers)
+			}
 		}
 	case executor.NOTIFY_BROADCAST_SINGLE:
 		hub.logger.Debugf("message middleware: [broadcast single]")
 		hub.send(m.SessionMessage_BROADCAST_SINGLE_BLK, ev.Payload, ev.Peers)
 	case executor.NOTIFY_UNICAST_BLOCK:
 		hub.logger.Debugf("message middleware: [unicast block]")
-		hub.send(m.SessionMessage_UNICAST_BLK, ev.Payload, ev.Peers)
+		toNVP := func() bool {
+			if len(ev.PeersHash) != 0 && len(ev.PeersHash[0]) != 0 {
+				return true
+			}
+			return false
+		}
+		if toNVP {
+			hub.sendToNVP(m.SessionMessage_UNICAST_BLK, ev.Payload, ev.PeersHash)
+		} else {
+			hub.send(m.SessionMessage_UNICAST_BLK, ev.Payload, ev.Peers)
+		}
 	case executor.NOTIFY_SYNC_REPLICA:
 		hub.logger.Debugf("message middleware: [sync replica]")
 		chain := &types.Chain{}
@@ -391,6 +424,20 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		})
 		hub.broadcast(BROADCAST_VP, m.SessionMessage_SYNC_REPLICA, payload)
 		hub.executor.ReceiveReplicaInfo(payload)
+	case executor.NOTIFY_TRANSIT_BLOCK:
+		hub.logger.Debug("message middleware: [transit block]")
+		hub.broadcast(BROADCAST_NVP, m.SessionMessage_TRANSIT_BLOCK, ev.Payload)
+	case executor.NOTIFY_NVP_SYNC:
+		hub.logger.Debug("message middleware: [NVP sync]")
+		syncMsg := &executor.ChainSyncRequest{}
+		proto.Unmarshal(ev.Payload, syncMsg)
+		syncMsg.PeerHash = hub.peerManager.GetLocalNodeHash()
+		payload, err := proto.Marshal(syncMsg)
+		if err != nil {
+			hub.logger.Error("message middleware: SendNVPSyncRequest marshal message failed")
+			return
+		}
+		hub.sendToRandomVP(m.SessionMessage_SYNC_REQ, payload)
 	}
 }
 
@@ -412,7 +459,11 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 	case m.SessionMessage_DEL_PEER:
 		hub.consenter.RecvMsg(message.Payload)
 	case m.SessionMessage_UNICAST_BLK:
-		hub.executor.ReceiveSyncBlocks(message.Payload)
+		if hub.NodeIdentification() == IdentificationVP {
+			hub.executor.ReceiveSyncBlocks(message.Payload)
+		} else {
+			hub.executor.GetNVP().ReceiveBlock(message.Payload)
+		}
 	case m.SessionMessage_UNICAST_INVALID:
 		hub.executor.StoreInvalidTransaction(message.Payload)
 	case m.SessionMessage_SYNC_REPLICA:
@@ -421,7 +472,36 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 		fallthrough
 	case m.SessionMessage_SYNC_REQ:
 		hub.executor.ReceiveSyncRequest(message.Payload)
+	case m.SessionMessage_TRANSIT_BLOCK:
+		hub.executor.GetNVP().ReceiveBlock(message.Payload)
+	case m.SessionMessage_NVP_RELAY:
+		go hub.GetEventObject().Post(event.NvpRelayTxEvent{
+			Payload: message.Payload,
+		})
 	default:
 		hub.logger.Error("receive a undefined session event")
+	}
+}
+
+func (hub *EventHub) NodeIdentification() int {
+	if hub.peerManager.IsVP() {
+		return IdentificationVP
+	} else {
+		return IdentificationNVP
+	}
+}
+
+func (hub *EventHub) RelayTx(transaction *types.Transaction, ch chan bool) {
+	payload, err := proto.Marshal(transaction)
+	if err != nil {
+		hub.logger.Error("Relay tx, marshal payload failed")
+		ch <- false
+		return err
+	}
+	err = hub.sendToRandomVP(m.SessionMessage_NVP_RELAY, payload)
+	if err == nil {
+		ch <- true
+	} else {
+		ch <- false
 	}
 }
