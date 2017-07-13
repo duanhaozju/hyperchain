@@ -308,9 +308,10 @@ func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType, payload []byte, peers [
 		}
 		//TODO 由于加入顺序不一致，所以用这种算法取得的节点不一定是正确的节点
 		// avoid out of range
-		if id > uint64(len(peerList)) || id < 0{
+		if id > uint64(len(peerList)) || id <= 0{
 			return
 		}
+		fmt.Println("PEERLIST >>>>>",id)
 		peer := peerList[int(id)-1]
 		if peer.info.Hostname == pmgr.node.info.Hostname {
 			continue

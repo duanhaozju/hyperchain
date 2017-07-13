@@ -11,8 +11,8 @@ type NVPAttendMsgHandler struct {
 	ev *event.TypeMux
 }
 
-func NewNVPAttendHandler(blackHole chan interface{},ev *event.TypeMux)*HelloMsgHandler{
-	return &HelloMsgHandler{
+func NewNVPAttendHandler(blackHole chan interface{},ev *event.TypeMux)*NVPAttendMsgHandler{
+	return &NVPAttendMsgHandler{
 		mchan:blackHole,
 		ev:ev,
 	}
