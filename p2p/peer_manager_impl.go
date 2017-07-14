@@ -536,7 +536,7 @@ func (pmgr *peerManagerImpl)sendMsgNVP(msgType pb.MsgType,payLoad []byte, nvpLis
 			if nvphash != t.Key{
 				continue
 			}
-			pmgr.logger.Critical("(NVP) send message to ",t.Key)
+			pmgr.logger.Critical("(VP) send message to ",t.Key)
 			p := t.Val.(*Peer)
 			//TODO IF send failed. should return a err
 			go func(peer *Peer) {
