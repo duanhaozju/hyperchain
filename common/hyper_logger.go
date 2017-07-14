@@ -5,15 +5,8 @@ package common
 import (
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
-	"github.com/spf13/cast"
-
 	"fmt"
-	"os"
-	"path"
-	"strconv"
-	"strings"
 	"sync"
-	"time"
 )
 
 // Usage:
@@ -39,6 +32,9 @@ type HyperLoggerMgr interface {
 
 	//addHyperLogger add A HyperLogger to this hyperLoggerMgr
 	addHyperLogger(hp *HyperLogger)
+
+	//getHyperLogger get HyperLogger of namespace
+	getHyperLogger(namespace string) *HyperLogger
 }
 
 // InitHyperLoggerManager init the hyperlogger system
@@ -61,32 +57,25 @@ func InitHyperLogger(nsConf *Config) (error) {
 //GetLogger getLogger with specific namespace and module.
 func GetLogger(namespace string, module string) *logging.Logger {
 	ml := getModuleLogger(namespace, module)
-	var tmpLogger *logging.Logger
 	if ml == nil {
 		// dynamically loaded module
-		hl, err := getHyperlogger(namespace)
-		if err != nil {
-			commonLogger.Error(err)
-			commonLogger.Errorf("%s namespace logger not initialized using common logger instead!")
+		hl := hyperLoggerMgr.getHyperLogger(namespace)
+		if hl == nil {
+			//TODO: fix it
+			commonLogger.Error(fmt.Errorf("No Namespace Logger found for %s using commonLogger instead", namespace))
 			return commonLogger
 		}
-
 		// add new module logger
 		compositeName := getCompositeModuleName(namespace, module)
+		ml = newModuleLogger(compositeName, hl.currentFile, hl.fileFormat, hl.consoleFormat, hl.baseLevel, hl.dumpLog)
 
-		newMl, err := hl.addNewLogger(compositeName, hl.currentFile,
-			hl.fileFormat, hl.consoleFormat, hl.baseLevel, hl.dumpLog)
+		err := hl.addNewLogger(ml)
 		if err != nil {
-			commonLogger.Error(err)
-			commonLogger.Errorf("add new logger failed using common logger instead!")
+			commonLogger.Error(fmt.Errorf("New logger for %s failed, using commonLogger instead", namespace))
 			return commonLogger
 		}
-		tmpLogger = newMl.logger
-	} else {
-		tmpLogger = ml.logger
 	}
-
-	return tmpLogger
+	return ml.logger
 }
 
 //SetLogLevel set log level by specific namespace module and the level provided by user.
@@ -109,54 +98,35 @@ func GetLogLevel(namespace, module string) (string, error) {
 	return ml.level, nil
 }
 
-func CloseHyperlogger(namespace string) error {
-	hl, err := getHyperlogger(namespace)
-	if err != nil {
-		commonLogger.Errorf("Close Namespace Error: %s", err.Error())
-		return err
-	}
-	hl.closeLogFile <- struct{}{}
-
-	//TODO: Close logger by namespace
-
-	//rwMutex.Lock()
-	//delete(hyperLoggers, namespace)
-	//rwMutex.Unlock()
-
-	return nil
-}
-
-// getHyperlogger use RLock to read hyperloggers map
-func getHyperlogger(namespace string) (*HyperLogger, error) {
-	if hyperLoggers == nil {
-		return nil, errors.New("getHyperlogger error: Hyperloggers nil")
-	}
-
-	var err error
-	rwMutex.RLock()
-	hl, ok := hyperLoggers[namespace]
-	if !ok {
-		err = errors.New("getHyperlogger error: namespace not exist")
-	} else {
-		err = nil
-	}
-	rwMutex.RUnlock()
-	return hl, err
-}
+//TODO: Fix it
+//func CloseHyperlogger(namespace string) error {
+//	hl, err := getHyperlogger(namespace)
+//	if err != nil {
+//		commonLogger.Errorf("Close Namespace Error: %s", err.Error())
+//		return err
+//	}
+//	hl.closeLogFile <- struct{}{}
+//
+//	//TODO: Close logger by namespace
+//
+//	//rwMutex.Lock()
+//	//delete(hyperLoggers, namespace)
+//	//rwMutex.Unlock()
+//
+//	return nil
+//}
 
 // getModuleLogger get the logger for specified module.
 func getModuleLogger(namespace, module string) *moduleLogger {
-	hl, err := getHyperlogger(namespace)
-	if err != nil {
-		commonLogger.Critical("GetLogger error: hyperloger nil")
+
+	hl := hyperLoggerMgr.getHyperLogger(namespace)
+
+	if hl == nil {
+		commonLogger.Criticalf("No hyperlogger found for namespace: %s", namespace)
 		return nil
 	}
 	compositeName := getCompositeModuleName(namespace, module)
 
-	if hl.loggers == nil {
-		commonLogger.Critical("getLogger error: moduleLoggers nil")
-		return nil
-	}
 
 	hl.rwLock.RLock()
 	ml, ok := hl.loggers[compositeName]

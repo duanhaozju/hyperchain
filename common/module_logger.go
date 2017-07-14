@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 	"os"
 )
-
+//TODO: Check why we need this kind of logger
 type moduleLogger struct {
 	compositeName  string
 	logger         *logging.Logger

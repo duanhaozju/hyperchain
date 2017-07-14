@@ -4,7 +4,6 @@
 package common
 
 import (
-	"errors"
 	"fmt"
 	"github.com/op/go-logging"
 	"github.com/spf13/cast"
@@ -13,7 +12,6 @@ import (
 	"strconv"
 	"sync"
 	"time"
-	"git.hyperchain.cn/chenquan/confer/conf"
 )
 
 //hyperLoggerMgrImpl implementation of HyperLoggerMgr interface.
@@ -44,6 +42,14 @@ func (hmi *hyperLoggerMgrImpl) addHyperLogger(hl *HyperLogger)  {
 	hmi.rwMutex.Unlock()
 }
 
+//getHyperLogger get HyperLogger of namespace
+func (hmi *hyperLoggerMgrImpl) getHyperLogger(namespace string) (hl *HyperLogger) {
+	hmi.rwMutex.RLock()
+	hl = hmi.hyperLoggers[namespace]
+	hmi.rwMutex.RUnlock()
+	return hl
+}
+
 //GetLogger get logger with specified namespace and module.
 func (hmi *hyperLoggerMgrImpl) GetLogger(namespace, module string) *logging.Logger {
 
@@ -53,13 +59,13 @@ func (hmi *hyperLoggerMgrImpl) GetLogger(namespace, module string) *logging.Logg
 //SetLoggerLevel set logger level for specified namespace and module.
 func (hmi *hyperLoggerMgrImpl) SetLoggerLevel(namespace, module, level string) {
 
-	return nil
+	return
 }
 
 //GetLoggerLevel get logger level with specified namespace and module.
 func (hmi *hyperLoggerMgrImpl) GetLoggerLevel(namespace, module string) string {
 
-	return nil
+	return ""
 }
 
 //HyperLogger manage the logger by module for a specified namespace.
@@ -117,8 +123,9 @@ func (hl *HyperLogger) init() {
 	// construct module loggers according to configs
 	for m, l := range mm {
 		compositeName := getCompositeModuleName(ns, m)
-		_, err := hl.addNewLogger(compositeName, hl.currentFile, hl.fileFormat, hl.consoleFormat,
+		ml := newModuleLogger(compositeName, hl.currentFile, hl.fileFormat, hl.consoleFormat,
 			cast.ToString(l), hl.dumpLog)
+		err := hl.addNewLogger(ml)
 		if err != nil {
 			commonLogger.Critical("init error")
 		}
@@ -131,35 +138,29 @@ func (hl *HyperLogger) init() {
 }
 
 //newLoggerFile new logger dump file
-func (hl *HyperLogger) newLoggerFile() {
+func (hl *HyperLogger) newLoggerFile() *os.File{
 	fileName := path.Join(hl.logDir, "hyperchain_"+strconv.Itoa(hl.conf.GetInt(C_GRPC_PORT))+ time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
 	os.MkdirAll(hl.logDir, 0777)
 	file, err := os.Create(fileName)
 	if err == nil {
 		hl.currentFile = file
+
 	}else {
 		//TODO: we need a default log to handle this kind of error
 	}
+	return file
 }
 
-func (hl *HyperLogger) addNewLogger(compositeName string, file *os.File,
-	fileFormat string, consoleFormat string, logLevel string, writeFile bool) (
-	ml *moduleLogger, err error) {
-	if hl.loggers == nil {
-		err = errors.New("addNewLogger error: moduleLoggers nil")
-		return nil, err
-	}
-	ml = newModuleLogger(compositeName, file, fileFormat, consoleFormat,
-		cast.ToString(logLevel), writeFile)
+//addNewLogger add new module logger for namespace logger
+func (hl *HyperLogger) addNewLogger(ml *moduleLogger) error{
 	hl.rwLock.Lock()
-	hl.loggers[compositeName] = ml
+	hl.loggers[ml.compositeName] = ml
 	hl.rwLock.Unlock()
-	return ml, nil
+	return nil
 }
 
 //newLogFileByInterval set new log file for hyperchain
 func (hl *HyperLogger) newLogFileByInterval(conf *Config) {
-	loggerDir := hl.logDir
 	tm := time.Now()
 	hour, min, sec := 3, 0, 0
 	duration := (24+hour)*3600 + min*60 + sec - (tm.Hour()*3600 + tm.Minute()*60 + tm.Second())
@@ -168,37 +169,28 @@ func (hl *HyperLogger) newLogFileByInterval(conf *Config) {
 	d, _ := time.ParseDuration(fmt.Sprintf("%ds", duration))
 	time.Sleep(d)
 
-	fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
-		time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
-	file, _ := os.Create(fileName)
-
-	if hl.loggers == nil {
-		commonLogger.Critical("moduleLoggers nil")
-		return
-	}
+	file := hl.newLoggerFile()
 	hl.rwLock.RLock()
 	for _, ml := range hl.loggers {
 		ml.setNewLogFile(file, hl.fileFormat)
 	}
 	hl.rwLock.RUnlock()
-
 	hl.currentFile.Close()
 	hl.currentFile = file
 
 	for {
 		select {
 		case <-time.After(conf.GetDuration(LOG_NEW_FILE_INTERVAL)):
-			fileName := path.Join(loggerDir, "hyperchain_"+strconv.Itoa(conf.GetInt(C_GRPC_PORT))+
-				time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
-			file, _ := os.Create(fileName)
+			file := hl.newLoggerFile()
 			hl.rwLock.RLock()
 			for _, ml := range hl.loggers {
 				ml.setNewLogFile(file, hl.fileFormat)
 			}
 			hl.rwLock.RUnlock()
-			commonLogger.Infof("Change log file, new log file name: %s", fileName)
 			hl.currentFile.Close()
 			hl.currentFile = file
+
+			commonLogger.Infof("Split log file, new log file name: %s", file.Name())
 		case <-hl.closeLogFile:
 			commonLogger.Info("Close logger service")
 			hl.currentFile.Close()
