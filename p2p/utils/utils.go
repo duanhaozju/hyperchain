@@ -39,7 +39,7 @@ func GetPeerHash(namespace string,id int) string{
 func HashString(in string)string{
 	hasher := sha3.NewKeccak256()
 	hasher.Write([]byte(in))
-	return common.ToHex(hasher.Sum(nil))
+	return common.Bytes2Hex(hasher.Sum(nil))
 }
 
 func IPcheck(ip string) bool {
