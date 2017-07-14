@@ -214,6 +214,10 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 	switch ev.(type) {
 	case peerevent.EV_VPConnect:{
 		conev := ev.(peerevent.EV_VPConnect)
+		if conev.ID > pmgr.nodeNum {
+			pmgr.logger.Warning("Invalid peer connect: ",conev.ID,conev.Namespace,conev.Hostname)
+			return
+		}
 		pmgr.logger.Notice("vp connected",conev.Hostname)
 		// here how to connect to hypernet layer, generally, hypernet should already connect to
 		// remote node by Inneraddr, here just need to bind the hostname.
@@ -243,7 +247,6 @@ func (pmgr *peerManagerImpl) bind(peerType int,namespace string, id int, hostnam
 	if err != nil{
 		return err
 	}
-
 	//TODO here can use the peer hash to quick search
 	//the exist peer
 	if peerType == PEERTYPE_VP{
@@ -397,6 +400,7 @@ func (pmgr *peerManagerImpl)UpdateRoutingTable(payLoad []byte) {
 		pmgr.logger.Errorf("cannot bind a new peer: %s", err.Error())
 		return
 	}
+	pmgr.nodeNum ++
 	for _, p := range pmgr.peerPool.GetPeers() {
 		pmgr.logger.Info("update table", p.hostname)
 	}
@@ -437,7 +441,6 @@ func (pmgr *peerManagerImpl)DeleteNode(hash string) error {
 		<-time.After(3 * time.Second)
 		pmgr.logger.Critical("EXIT..")
 		pmgr.delchan <- true
-		//os.Exit(0)
 
 	}
 	return pmgr.peerPool.DeleteVPPeerByHash(hash)
@@ -479,10 +482,13 @@ func (pmgr *peerManagerImpl)SendRandomVP(payload []byte) error {
 		randomStack.Push(peer)
 	}
 	var err error
-	for err != nil  && !randomStack.Empty(){
+	for !randomStack.Empty(){
 		speer := randomStack.RandomPop().(*Peer)
 		m := pb.NewMsg(pb.MsgType_SESSION, payload)
 		_,err = speer.Chat(m)
+		if err == nil{
+			break
+		}
 	}
 	return err
 }

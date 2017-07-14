@@ -11,8 +11,8 @@ type AttendMsgHandler struct {
 	ev *event.TypeMux
 }
 
-func NewAttendHandler(blackHole chan interface{},ev *event.TypeMux)*HelloMsgHandler{
-	return &HelloMsgHandler{
+func NewAttendHandler(blackHole chan interface{},ev *event.TypeMux)*AttendMsgHandler{
+	return &AttendMsgHandler{
 		mchan:blackHole,
 		ev:ev,
 	}

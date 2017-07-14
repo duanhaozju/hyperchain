@@ -64,11 +64,11 @@ func (h *ClientHelloMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
 
 	} else if !id.IsOriginal && !id.IsVP{
 		//if is nvp h.hub.Post(peerevent.EV_NVPConnect{})
-		fmt.Println("################>> post ev NVPCONNECT")
+		fmt.Println("************---->> post ev NVPCONNECT")
 		go h.hub.Post(peerevent.EV_NVPConnect{
 			Hostname: id.Hostname,
 			Namespace:id.Namespace,
-			Hash:id.Hostname,
+			Hash:id.Hash,
 		})
 	}else{
 		//do nothing
