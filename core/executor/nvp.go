@@ -56,8 +56,11 @@ type NVPContextImpl struct {
 	resendExit   chan bool // for NVP use, resend backend process notifier
 }
 
-func NewNVPContextImpl() *NVPContextImpl {
-	return &NVPContextImpl{}
+func NewNVPContextImpl(executor *Executor) *NVPContextImpl {
+	currentChain := db_utils.GetChainCopy(executor.namespace)
+	return &NVPContextImpl{
+		demandNumber: currentChain.Height+1,
+	}
 }
 
 func (ctx *NVPContextImpl) getDemand() uint64 {
@@ -140,7 +143,7 @@ type NVPImpl struct {
 
 func NewNVPImpl(executor *Executor) *NVPImpl {
 	return &NVPImpl{
-		ctx: NewNVPContextImpl(),
+		ctx: NewNVPContextImpl(executor),
 		executor:executor,
 	}
 }
