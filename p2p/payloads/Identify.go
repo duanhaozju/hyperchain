@@ -5,9 +5,6 @@ import (
 	"hyperchain/p2p/utils"
 )
 
-const VPPREFIX = "VPPREFIX"
-const NVPPREFIX = "VPPREFIX"
-
 func NewIdentify(isvp bool,isOriginal bool,namespace string, hostname string, id int) *Identify {
 	iden := &Identify{
 		Id:       int64(id),
@@ -17,9 +14,9 @@ func NewIdentify(isvp bool,isOriginal bool,namespace string, hostname string, id
 		Namespace:namespace,
 	}
 	if isvp{
-		iden.Hash = utils.HashString(VPPREFIX + hostname + namespace)
+		iden.Hash = utils.HashString(hostname + namespace)
 	}else{
-		iden.Hash = utils.HashString(NVPPREFIX + hostname + namespace)
+		iden.Hash = utils.HashString(hostname + namespace)
 	}
 	return iden
 }
