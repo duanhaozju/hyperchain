@@ -3,19 +3,16 @@
 package common
 
 import (
-	//"os"
 	"testing"
-
-	"fmt"
+	"sync"
+	//"time"
 )
 
-func TestGetLogger(t *testing.T) {
+func TestSetLoggerLevel(t *testing.T) {
 	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
-	InitNsHyperLogger(conf)
+	InitHyperLogger("global", conf)
 	log := GetLogger("global", "consensus")
 	SetLogLevel("global", "consensus", "NOTICE")
-	fmt.Println(log)
-	fmt.Println("aaa")
 	log.Notice("+++++++NOTICE")
 	log.Warning("WARNING")
 	log.Debug("DEBUG")
@@ -28,8 +25,63 @@ func TestGetLogger(t *testing.T) {
 	log.Info("INFO")
 }
 
-func TestLoggerInit(t *testing.T)  {
+func TestMultiNamespaceLogger(t *testing.T)  {
+
+	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
+	conf.Set(LOG_DUMP_FILE, false)
+
+	namespaces := []string {"namespace1", "namespace2", "namespace3"}
+	wg := &sync.WaitGroup{}
+	wg.Add(len(namespaces))
+	for _, ns := range namespaces {
+		InitHyperLogger(ns, conf)
+	}
+	for _, ns := range namespaces {
+		go func(ns string) {
+			log1 := GetLogger(ns, "module1")
+			log2 := GetLogger(ns, "module2")
+			log3 := GetLogger(ns, "module3")
+			for i := 0; i < 20; i ++ {
+				log1.Warning("log1 ...")
+				log2.Info("log2...")
+				log3.Critical("log3...")
+
+				//time.Sleep(1 * time.Second)
+			}
+			wg.Done()
+
+		}(ns)
+	}
+	wg.Wait()
+
+}
 
 
+func TestMultiNamespaceLoggerWithDump(t *testing.T)  {
+	//TODO: test more precisely by read the data in the logger dir
+	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
+	conf.Set(LOG_DUMP_FILE, true)
+	namespaces := []string {"namespace1", "namespace2", "namespace3"}
+	wg := &sync.WaitGroup{}
+	wg.Add(len(namespaces))
+	for _, ns := range namespaces {
+		conf.Set(LOG_DUMP_FILE_DIR, "/tmp/hyperlogger/" + ns)
+		InitHyperLogger(ns, conf)
+	}
+	for _, ns := range namespaces {
+		go func(ns string) {
+			log1 := GetLogger(ns, "module1")
+			log2 := GetLogger(ns, "module2")
+			log3 := GetLogger(ns, "module3")
+			for i := 0; i < 20; i ++ {
+				log1.Warning("log1 ...")
+				log2.Info("log2...")
+				log3.Critical("log3...")
+			}
+			wg.Done()
+
+		}(ns)
+	}
+	wg.Wait()
 
 }

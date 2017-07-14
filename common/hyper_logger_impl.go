@@ -21,17 +21,10 @@ type hyperLoggerMgrImpl struct {
 }
 
 //newHyperLoggerMgrImpl new HyperLoggerMgr instance.
-func newHyperLoggerMgrImpl(conf *Config) HyperLoggerMgr {
+func newHyperLoggerMgrImpl() HyperLoggerMgr {
 	hmi := &hyperLoggerMgrImpl{
 		hyperLoggers: make(map[string]*HyperLogger),
 	}
-	conf.Set(NAMESPACE, DEFAULT_NAMESPACE)
-
-	//TODO: remove the following code outside of this piece of code, make the code do what it really should do
-	//init default HyperLogger
-	hl := newHyperLogger(conf)
-	hmi.addHyperLogger(hl)
-	commonLogger = GetLogger(DEFAULT_NAMESPACE, "common")
 	return hmi
 }
 

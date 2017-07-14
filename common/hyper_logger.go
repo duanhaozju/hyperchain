@@ -13,12 +13,17 @@ import (
 // Use GetLogger to get a logger
 // Use SetLogLevel to set the logger's level
 
-var commonLogger = logging.MustGetLogger("commonLogger")
-var once sync.Once
-var defaultLogLevel = "INFO"
+var(
+	commonLogger = logging.MustGetLogger("commonLogger")
+	once sync.Once
+	defaultLogLevel = "INFO"
+	//new code start here
+	hyperLoggerMgr HyperLoggerMgr
+)
 
-//new code start here
-var hyperLoggerMgr HyperLoggerMgr
+func init() {
+	newHyperLoggerMgr()
+}
 
 type HyperLoggerMgr interface {
 	//GetLogger get logger with specified namespace and module.
@@ -39,13 +44,26 @@ type HyperLoggerMgr interface {
 
 // InitHyperLoggerManager init the hyperlogger system
 func InitHyperLoggerManager(conf *Config) {
+		newHyperLoggerMgr()
+		//init the system log
+		conf.Set(NAMESPACE, DEFAULT_NAMESPACE)
+		hl := newHyperLogger(conf)
+		hyperLoggerMgr.addHyperLogger(hl)
+		commonLogger = GetLogger(DEFAULT_NAMESPACE, "common")
+}
+
+func newHyperLoggerMgr()  {
 	once.Do(func() {
-		hyperLoggerMgr = newHyperLoggerMgrImpl(conf)
+		if hyperLoggerMgr == nil {
+			hyperLoggerMgr = newHyperLoggerMgrImpl()
+		}
 	})
 }
 
 //InitHyperLogger init hyperlogger for a namespace by namespace config.
-func InitHyperLogger(nsConf *Config) (error) {
+func InitHyperLogger(namespace string, nsConf *Config) error {
+	nsConf.Set(NAMESPACE, namespace)
+	newHyperLoggerMgrImpl()
 	hyperLogger := newHyperLogger(nsConf)
 	if hyperLogger == nil {
 		return fmt.Errorf("Init Hyperlogger error: nil return")
@@ -118,21 +136,18 @@ func GetLogLevel(namespace, module string) (string, error) {
 
 // getModuleLogger get the logger for specified module.
 func getModuleLogger(namespace, module string) *moduleLogger {
-
+	if hyperLoggerMgr == nil {
+		return nil
+	}
 	hl := hyperLoggerMgr.getHyperLogger(namespace)
-
 	if hl == nil {
 		commonLogger.Criticalf("No hyperlogger found for namespace: %s", namespace)
 		return nil
 	}
 	compositeName := getCompositeModuleName(namespace, module)
 
-
 	hl.rwLock.RLock()
-	ml, ok := hl.loggers[compositeName]
-	if !ok {
-		commonLogger.Debugf("module %s not exist", compositeName)
-	}
+	ml := hl.loggers[compositeName]
 	hl.rwLock.RUnlock()
 	return ml
 }
