@@ -98,11 +98,6 @@ func (e *ShutdownError) Code() int {return specified_ShutdownError}
 func (e *ShutdownError) Error() string {return "server is shutting down"}
 
 // JSONRPC custom ERRORS
-type JSONRPCError interface {
-	Code() int
-	Error() string
-}
-
 type LeveldbNotFoundError struct {
 	Message string
 }
