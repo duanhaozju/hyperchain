@@ -242,7 +242,9 @@ func (ns *namespaceImpl) Start() error {
 	//5 consensue the routers
 	ns.passRouters()
 	//6. negotiateView
-	ns.negotiateView()
+	if ns.peerMgr.IsVP(){
+		ns.negotiateView()
+	}
 
 	ns.rpc.Start()
 	ns.status.setState(running)

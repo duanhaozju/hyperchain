@@ -225,7 +225,7 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 	}
 	case peerevent.EV_NVPConnect:{
 		conev := ev.(peerevent.EV_NVPConnect)
-		err := pmgr.bind(PEERTYPE_VP,conev.Namespace,0,conev.Hostname,conev.Hash)
+		err := pmgr.bind(PEERTYPE_NVP,conev.Namespace,0,conev.Hostname,conev.Hash)
 		if err != nil{
 			pmgr.logger.Errorf("cannot bind the remote NVP hostname: reason: %s", err.Error())
 			return
@@ -291,7 +291,7 @@ func (pmgr *peerManagerImpl) SendMsg(payload []byte, peers []uint64) {
 
 //SendMsg send  message to specific hosts
 func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType, payload []byte, peers []uint64) {
-	if !pmgr.isOnline() {
+	if !pmgr.isOnline() || !pmgr.IsVP(){
 		return
 	}
 	//TODO here can be improved, such as pre-calculate the peers' hash
@@ -306,7 +306,8 @@ func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType, payload []byte, peers [
 		if id == uint64(pmgr.node.info.GetID()) {
 			continue
 		}
-		//TODO 由于加入顺序不一致，所以用这种算法取得的节点不一定是正确的节点
+		//REVIEW  peers pool low layer struct is priority queue,
+		// REVIEW this can ensure the node id order.
 		// avoid out of range
 		if id > uint64(len(peerList)) || id <= 0{
 			return
@@ -327,7 +328,7 @@ func (pmgr *peerManagerImpl)Broadcast(payload []byte) {
 }
 //Broadcast message to all binding hosts
 func (pmgr *peerManagerImpl) broadcast(msgType pb.MsgType, payload []byte) {
-	if !pmgr.isOnline() {
+	if !pmgr.isOnline() || !pmgr.IsVP(){
 		return
 	}
 	// use IterBuffered for better performance
@@ -491,6 +492,26 @@ func (pmgr *peerManagerImpl)BroadcastNVP(payLoad []byte) error {
 	return pmgr.broadcastNVP(pb.MsgType_SESSION,payLoad)
 }
 func(pmgr *peerManagerImpl)broadcastNVP(msgType pb.MsgType,payload []byte)error{
+	if !pmgr.isOnline() || !pmgr.IsVP(){
+		return nil
+	}
+	// use IterBuffered for better performance
+	for t := range pmgr.peerPool.nvpPool.Iter(){
+		pmgr.logger.Critical("(NVP) send message to ",t.Key)
+		p := t.Val.(*Peer)
+		//TODO IF send failed. should return a err
+		go func(peer *Peer) {
+			if peer.hostname == peer.local.Hostname {
+				return
+			}
+			// this is un thread safe, because this,is a pointer
+			m := pb.NewMsg(msgType, payload)
+			_, err := peer.Chat(m)
+			if err != nil {
+				pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s \n", peer.hostname, peer.local.Hostname, err.Error())
+			}
+		}(p)
+	}
 	return nil
 }
 
@@ -500,6 +521,31 @@ func (pmgr *peerManagerImpl)SendMsgNVP(payLoad []byte, nvpList []string) error {
 }
 
 func (pmgr *peerManagerImpl)sendMsgNVP(msgType pb.MsgType,payLoad []byte, nvpList []string) error {
+	if !pmgr.isOnline() || !pmgr.IsVP(){
+		return nil
+	}
+	// use IterBuffered for better performance
+	for t := range pmgr.peerPool.nvpPool.Iter(){
+		for _,nvphash := range nvpList{
+			if nvphash != t.Key{
+				continue
+			}
+			pmgr.logger.Critical("(NVP) send message to ",t.Key)
+			p := t.Val.(*Peer)
+			//TODO IF send failed. should return a err
+			go func(peer *Peer) {
+				if peer.hostname == peer.local.Hostname {
+					return
+				}
+				// this is un thread safe, because this,is a pointer
+				m := pb.NewMsg(msgType, payLoad)
+				_, err := peer.Chat(m)
+				if err != nil {
+					pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s \n", peer.hostname, peer.local.Hostname, err.Error())
+				}
+			}(p)
+		}
+	}
 	return nil
 }
 //IsVP return true if this node is vp node
