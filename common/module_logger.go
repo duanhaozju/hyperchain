@@ -2,31 +2,31 @@ package common
 
 import (
 	"github.com/op/go-logging"
-	"os"
 	"github.com/pkg/errors"
+	"os"
 )
 
 type moduleLogger struct {
-	compositeName	string
-	logger		*logging.Logger
-	level		string
-	writeFile	bool
-	consoleBackend	logging.Backend
-	fileBackend	logging.Backend
-	backend		logging.LeveledBackend
+	compositeName  string
+	logger         *logging.Logger
+	level          string
+	writeFile      bool
+	consoleBackend logging.Backend
+	fileBackend    logging.Backend
+	backend        logging.LeveledBackend
 }
 
 var (
-	BackendNil  	= errors.New("setLogLevel Error: backend nil")
+	BackendNil = errors.New("setLogLevel Error: backend nil")
 )
 
 // newModuleLogger return a moduleLogger pointer with backend binded.
 func newModuleLogger(compositeName string, file *os.File,
-fileFormat string, consoleFormat string, logLevel string, writeFile bool) *moduleLogger {
+	fileFormat string, consoleFormat string, logLevel string, writeFile bool) *moduleLogger {
 	ml := &moduleLogger{
-		compositeName:	compositeName,
-		level:		logLevel,
-		writeFile:	writeFile,
+		compositeName: compositeName,
+		level:         logLevel,
+		writeFile:     writeFile,
 	}
 
 	logger := logging.MustGetLogger(compositeName)
