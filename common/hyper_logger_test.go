@@ -5,11 +5,29 @@ package common
 import (
 	"testing"
 	"sync"
-	//"time"
 )
+
+func TestGetLogLevel(t *testing.T) {
+	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
+	conf.Set(LOG_DUMP_FILE, false)
+	namespace := "namespace1"
+	InitHyperLogger(namespace, conf)
+
+	err := SetLogLevel(namespace, "p2p", "debug")
+	if err != nil {
+		t.Error(err)
+	}
+	level, err := GetLogLevel(namespace, "p2p")
+	if err != nil {
+		 if level != "debug" {
+			 t.Error("get logger level error")
+		 }
+	}
+}
 
 func TestSetLoggerLevel(t *testing.T) {
 	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
+	conf.Set(LOG_DUMP_FILE, false)
 	InitHyperLogger("global", conf)
 	log := GetLogger("global", "consensus")
 	SetLogLevel("global", "consensus", "NOTICE")
@@ -26,6 +44,7 @@ func TestSetLoggerLevel(t *testing.T) {
 }
 
 func TestMultiNamespaceLogger(t *testing.T)  {
+	//TODO: make the test env independent form the global.yaml
 
 	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
 	conf.Set(LOG_DUMP_FILE, false)
@@ -56,7 +75,6 @@ func TestMultiNamespaceLogger(t *testing.T)  {
 
 }
 
-
 func TestMultiNamespaceLoggerWithDump(t *testing.T)  {
 	//TODO: test more precisely by read the data in the logger dir
 	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
@@ -83,5 +101,4 @@ func TestMultiNamespaceLoggerWithDump(t *testing.T)  {
 		}(ns)
 	}
 	wg.Wait()
-
 }

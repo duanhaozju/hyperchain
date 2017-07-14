@@ -60,7 +60,6 @@ func (ml *moduleLogger) setLogLevel(level string) error {
 	if ml.level == level {
 		return nil
 	}
-
 	ml.level = level
 	l, err := logging.LogLevel(level)
 	if err != nil {

@@ -29,7 +29,7 @@ func newHyperLoggerMgrImpl() HyperLoggerMgr {
 }
 
 //addHyperLogger add hyperLogger to HyperLoggerMgr
-func (hmi *hyperLoggerMgrImpl) addHyperLogger(hl *HyperLogger)  {
+func (hmi *hyperLoggerMgrImpl) addHyperLogger(hl *HyperLogger) {
 	hmi.rwMutex.Lock()
 	hmi.hyperLoggers[hl.conf.GetString(NAMESPACE)] = hl
 	hmi.rwMutex.Unlock()
@@ -44,33 +44,52 @@ func (hmi *hyperLoggerMgrImpl) getHyperLogger(namespace string) (hl *HyperLogger
 }
 
 //GetLogger get logger with specified namespace and module.
-func (hmi *hyperLoggerMgrImpl) GetLogger(namespace, module string) *logging.Logger {
-
-	return nil
+func (hmi *hyperLoggerMgrImpl) getLogger(namespace, module string) *logging.Logger {
+	hl := hyperLoggerMgr.getHyperLogger(namespace)
+	if hl == nil {
+		commonLogger.Errorf("No hyperlogger found for namespace: %s "+
+			"please init namespace level logger system before try to use logger in it,", namespace)
+		return nil
+	}
+	return hl.getOrCreateLogger(module)
 }
 
 //SetLoggerLevel set logger level for specified namespace and module.
-func (hmi *hyperLoggerMgrImpl) SetLoggerLevel(namespace, module, level string) {
+func (hmi *hyperLoggerMgrImpl) setLoggerLevel(namespace, module, level string) error {
 
-	return
+	hl := hyperLoggerMgr.getHyperLogger(namespace)
+	if hl == nil {
+		return fmt.Errorf("namespace: %s logger system is not init yet!", namespace)
+	}
+	ml := hl.getModuleLogger(module)
+	if ml == nil {
+		return fmt.Errorf("SetLogLevel Error: %s::%s not exist", namespace, module)
+	}
+	return ml.setLogLevel(level)
 }
 
 //GetLoggerLevel get logger level with specified namespace and module.
-func (hmi *hyperLoggerMgrImpl) GetLoggerLevel(namespace, module string) string {
-
-	return ""
+func (hmi *hyperLoggerMgrImpl) getLoggerLevel(namespace, module string) (string, error) {
+	hl := hyperLoggerMgr.getHyperLogger(namespace)
+	if hl == nil {
+		return "", fmt.Errorf("namespace: %s logger system is not init yet!", namespace)
+	}
+	ml := hl.getModuleLogger(module)
+	if ml == nil {
+		return "", fmt.Errorf("SetLogLevel Error: %s::%s not exist", namespace, module)
+	}
+	return ml.level, nil
 }
 
 //HyperLogger manage the logger by module for a specified namespace.
 type HyperLogger struct {
-	conf          *Config //config of this hyperlogger
-	loggers       map[string]*moduleLogger //module name to moduleLogger map
-	closeLogFile  chan struct{} //close dump log file flag channel
-	rwLock        sync.RWMutex
-	currentFile   *os.File //current log file
+	conf         *Config                  //config of this hyperlogger
+	loggers      map[string]*moduleLogger //module name to moduleLogger map
+	closeLogFile chan struct{}            //close dump log file flag channel
+	rwLock       sync.RWMutex
+	currentFile  *os.File //current log file
 
 	//TODO: Remove the following variables
-
 	dumpLog       bool
 	baseLevel     string
 	fileFormat    string
@@ -81,9 +100,9 @@ type HyperLogger struct {
 //newHyperLogger new a HyperLogger instance.
 func newHyperLogger(conf *Config) *HyperLogger {
 	hl := &HyperLogger{
-		conf:          conf,
-		closeLogFile:  make(chan struct{}),
-		loggers: make(map[string]*moduleLogger),
+		conf:         conf,
+		closeLogFile: make(chan struct{}),
+		loggers:      make(map[string]*moduleLogger),
 	}
 	hl.init()
 	return hl
@@ -131,25 +150,53 @@ func (hl *HyperLogger) init() {
 }
 
 //newLoggerFile new logger dump file
-func (hl *HyperLogger) newLoggerFile() *os.File{
-	fileName := path.Join(hl.logDir, "hyperchain_"+strconv.Itoa(hl.conf.GetInt(C_GRPC_PORT))+ time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
+func (hl *HyperLogger) newLoggerFile() *os.File {
+	fileName := path.Join(hl.logDir, "hyperchain_"+strconv.Itoa(hl.conf.GetInt(C_GRPC_PORT))+time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
 	os.MkdirAll(hl.logDir, 0777)
 	file, err := os.Create(fileName)
 	if err == nil {
 		hl.currentFile = file
 
-	}else {
+	} else {
 		//TODO: we need a default log to handle this kind of error
 	}
 	return file
 }
 
 //addNewLogger add new module logger for namespace logger
-func (hl *HyperLogger) addNewLogger(ml *moduleLogger) error{
+func (hl *HyperLogger) addNewLogger(ml *moduleLogger) error {
 	hl.rwLock.Lock()
 	hl.loggers[ml.compositeName] = ml
 	hl.rwLock.Unlock()
 	return nil
+}
+
+//getOrCreateLogger get logger by module, if module not existed create it.
+func (hl *HyperLogger) getOrCreateLogger(module string) *logging.Logger {
+	namespace := hl.conf.GetString(NAMESPACE)
+	ml := hl.getModuleLogger(module)
+	if ml != nil {
+		return ml.logger
+	} else {
+		//create new module logger
+		compositeName := getCompositeModuleName(namespace, module)
+		ml = newModuleLogger(compositeName, hl.currentFile, hl.fileFormat, hl.consoleFormat, hl.baseLevel, hl.dumpLog)
+		err := hl.addNewLogger(ml)
+		if err != nil {
+			commonLogger.Error(fmt.Errorf("New logger for %s failed, using commonLogger instead", namespace))
+			return commonLogger
+		}
+		return ml.logger
+	}
+}
+
+//getModuleLogger get moduleLogger by module name.
+func (hl *HyperLogger) getModuleLogger(module string) *moduleLogger {
+	var ml *moduleLogger
+	hl.rwLock.RLock()
+	ml = hl.loggers[getCompositeModuleName(hl.conf.GetString(NAMESPACE), module)]
+	hl.rwLock.RUnlock()
+	return ml
 }
 
 //newLogFileByInterval set new log file for hyperchain
@@ -190,4 +237,8 @@ func (hl *HyperLogger) newLogFileByInterval(conf *Config) {
 			return
 		}
 	}
+}
+
+func getCompositeModuleName(namespace, module string) string {
+	return namespace + "::" + module
 }
