@@ -9,6 +9,7 @@ const (
 	VERBOSE  = "verbose"
 
 	VERSIONFINAL = "final"
+	VERSION1_1   = "1.1"
 	VERSION1_2   = "1.2"
 	VERSION1_3   = "1.3"
 
@@ -23,5 +24,5 @@ const (
 )
 
 var (
-	VERSIONS     = []string{VERSION1_2, VERSION1_3}
+	VERSIONS     = []string{VERSION1_2, VERSION1_2, VERSION1_3}
 )

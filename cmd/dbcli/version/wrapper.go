@@ -149,6 +149,7 @@ func (self *Version) GetDiscardTransaction(hash string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	//todo
 	result, err := NewResultFactory(constant.INVAILDTRANSACTION, constant.VERSIONFINAL, data, nil)
 	if err != nil {
 		return "", err
@@ -161,6 +162,7 @@ func (self *Version) GetAllDiscardTransaction(path string) {
 	iter := self.db.NewIterator(InvalidTransactionPrefix)
 	for iter.Next() {
 		data := iter.Value()
+		//todo
 		result, err := NewResultFactory(constant.INVAILDTRANSACTION, constant.VERSIONFINAL, data, nil)
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())

@@ -4,6 +4,7 @@ import (
 	"hyperchain/cmd/dbcli/constant"
 	"hyperchain/cmd/dbcli/version/version1.2"
 	"hyperchain/cmd/dbcli/version/version1.3"
+	"hyperchain/cmd/dbcli/version/version1.1"
 )
 
 //NewResultFactory -- get json result by struct type and struct version.
@@ -11,6 +12,8 @@ func NewResultFactory(typi string, version string, data []byte, parameter *const
 	switch typi {
 	case constant.BLOCK:
 		switch version {
+		case constant.VERSION1_1:
+			return version1_1.GetBlockData(data, parameter)
 		case constant.VERSION1_2:
 			return version1_2.GetBlockData(data, parameter)
 		case constant.VERSION1_3:
@@ -20,6 +23,8 @@ func NewResultFactory(typi string, version string, data []byte, parameter *const
 		}
 	case constant.TRANSACTION:
 		switch version {
+		case constant.VERSION1_1:
+			return version1_1.GetTransactionData(data)
 		case constant.VERSION1_2:
 			return version1_2.GetTransactionData(data)
 		case constant.VERSION1_3:
@@ -29,7 +34,12 @@ func NewResultFactory(typi string, version string, data []byte, parameter *const
 		}
 	case constant.INVAILDTRANSACTION:
 		switch version {
-		case constant.VERSIONFINAL:
+		case constant.VERSION1_1:
+			return version1_1.GetInvaildTransactionData(data)
+		case constant.VERSION1_2:
+			return version1_2.GetInvaildTransactionData(data)
+		case constant.VERSION1_3:
+			// version1.2 and version1.3 are same.
 			return version1_2.GetInvaildTransactionData(data)
 		default:
 			return "", constant.ErrDataVersion
@@ -43,6 +53,8 @@ func NewResultFactory(typi string, version string, data []byte, parameter *const
 		}
 	case constant.RECEIPT:
 		switch version {
+		case constant.VERSION1_1:
+			return version1_1.GetReceiptData(data)
 		case constant.VERSION1_2:
 			return version1_2.GetReceiptData(data)
 		case constant.VERSION1_3:
@@ -52,6 +64,8 @@ func NewResultFactory(typi string, version string, data []byte, parameter *const
 		}
 	case constant.CHAIN:
 		switch version {
+		case constant.VERSION1_1:
+			return version1_1.GetChainData(data)
 		case constant.VERSION1_2:
 			return version1_2.GetChainData(data)
 		case constant.VERSION1_3:
