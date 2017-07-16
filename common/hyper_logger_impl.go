@@ -111,16 +111,14 @@ type HyperLogger struct {
 	loggers      map[string]*logging.Logger //module name to logger map
 	closeLogFile chan struct{}              //close dump log file flag channel
 	rwLock       sync.RWMutex
+	fileLock     sync.Mutex
 	currentFile  *os.File //current log file
+
+	backendLock  sync.RWMutex
 	backend      logging.LeveledBackend
 	namespace    string
 
-	//TODO: Remove the following variables
-	dumpLog       bool
 	baseLevel     string
-	fileFormat    string
-	consoleFormat string
-	logDir        string
 }
 
 //newHyperLogger new a HyperLogger instance.
@@ -139,7 +137,6 @@ func (hl *HyperLogger) init() {
 	ns := conf.GetString(NAMESPACE)
 	hl.namespace = ns
 	// read all configs needed
-	hl.dumpLog = conf.GetBool(LOG_DUMP_FILE)
 	baseLevel := conf.GetString(LOG_BASE_LOG_LEVEL)
 
 	if len(baseLevel) == 0 {
@@ -148,11 +145,7 @@ func (hl *HyperLogger) init() {
 		hl.baseLevel = baseLevel
 	}
 
-	hl.fileFormat = conf.GetString(LOG_FILE_FORMAT)
-	hl.consoleFormat = conf.GetString(LOG_CONSOLE_FORMAT)
-	hl.logDir = conf.GetString(LOG_FILE_DIR)
-
-	if hl.dumpLog {
+	if hl.conf.GetBool(LOG_DUMP_FILE) {
 		hl.newLoggerFile()
 	}
 	hl.newLeveledBackEnd()
@@ -163,46 +156,50 @@ func (hl *HyperLogger) init() {
 		hl.createLogger(m, cast.ToString(l))
 	}
 	// generate new log file every time interval
-	if hl.dumpLog {
+	if hl.conf.GetBool(LOG_DUMP_FILE) {
 		go hl.newLogFileByInterval(conf)
 	}
 }
 
 //newLoggerFile new logger dump file
 func (hl *HyperLogger) newLoggerFile() *os.File {
+	hl.fileLock.Lock()
 	preFile := hl.currentFile
 	defer func() {
 		if preFile != nil {
 			preFile.Close()
 		}
 	}()
-
-	fileName := path.Join(hl.logDir, "hyperchain_"+strconv.Itoa(hl.conf.GetInt(C_GRPC_PORT))+time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
-	os.MkdirAll(hl.logDir, 0777)
+	dir := hl.conf.GetString(LOG_DUMP_FILE_DIR)
+	fileName := path.Join(dir, "hyperchain_"+strconv.Itoa(hl.conf.GetInt(C_GRPC_PORT))+time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
+	os.MkdirAll(dir, 0777)
 	file, err := os.Create(fileName)
 	if err == nil {
 		hl.currentFile = file
 	}else {
 		commonLogger.Error(err)
 	}
+	hl.fileLock.Unlock()
 	return file
 }
 
 //newLeveledBackEnd new backend with new file.
 func (hl *HyperLogger) newLeveledBackEnd() logging.LeveledBackend {
+	hl.fileLock.Lock()
 	consoleBackend := logging.NewLogBackend(os.Stdout, "", 0)
-	consoleFormatter := logging.MustStringFormatter(hl.consoleFormat)
+	consoleFormatter := logging.MustStringFormatter(hl.conf.GetString(LOG_CONSOLE_FORMAT))
 	consoleFormatterBackend := logging.NewBackendFormatter(consoleBackend, consoleFormatter)
-
-	if hl.dumpLog {
-		fmt.Println(hl.currentFile.Name())
+	hl.backendLock.Lock()
+	if hl.conf.GetBool(LOG_DUMP_FILE) {
 		fileBackend := logging.NewLogBackend(hl.currentFile, "", 0)
-		fileFormatter := logging.MustStringFormatter(hl.fileFormat)
+		fileFormatter := logging.MustStringFormatter(hl.conf.GetString(LOG_FILE_FORMAT))
 		fileFormatterBackend := logging.NewBackendFormatter(fileBackend, fileFormatter)
 		hl.backend = logging.MultiLogger(consoleFormatterBackend, fileFormatterBackend)
 	} else {
 		hl.backend = logging.MultiLogger(consoleFormatterBackend)
 	}
+	hl.backendLock.Unlock()
+	hl.fileLock.Unlock()
 	return hl.backend
 }
 
@@ -230,7 +227,9 @@ func (hl *HyperLogger) createLogger(module, lv string) *logging.Logger {
 	logger := logging.MustGetLogger(compositeName)
 	level, _ := logging.LogLevel(lv)
 	hl.backend.SetLevel(level, compositeName)
+	hl.backendLock.RLock()
 	logger.SetBackend(hl.backend)
+	hl.backendLock.RUnlock()
 	hl.addNewLogger(compositeName, logger)
 	return logger
 }
@@ -256,14 +255,15 @@ func (hl *HyperLogger) newLogFileByInterval(conf *Config) {
 		d, _ := time.ParseDuration(fmt.Sprintf("%ds", duration))
 		time.Sleep(d)
 
-		if hl.dumpLog {
+		if hl.conf.GetBool(LOG_DUMP_FILE) {
 			hl.newLoggerFile()
 			hl.newLeveledBackEnd()
-
 			hl.rwLock.RLock()
+			hl.backendLock.RLock()
 			for _, logger := range hl.loggers {
 				logger.SetBackend(hl.backend)
 			}
+			hl.backendLock.RUnlock()
 			hl.rwLock.RUnlock()
 		}
 	}
@@ -271,7 +271,7 @@ func (hl *HyperLogger) newLogFileByInterval(conf *Config) {
 	for {
 		select {
 		case <-time.After(conf.GetDuration(LOG_NEW_FILE_INTERVAL)):
-			if hl.dumpLog {
+			if hl.conf.GetBool(LOG_DUMP_FILE) {
 				file := hl.newLoggerFile()
 				hl.newLeveledBackEnd()
 				hl.rwLock.RLock()
@@ -279,7 +279,6 @@ func (hl *HyperLogger) newLogFileByInterval(conf *Config) {
 					logger.SetBackend(hl.backend)
 				}
 				hl.rwLock.RUnlock()
-
 				//TODO: how to fix commmonLooger problem
 				commonLogger.Infof("Split log file, new log file name: %s", file.Name())
 			}
