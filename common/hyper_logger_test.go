@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 	"os"
-	"fmt"
 )
 
 func TestGetLogLevel(t *testing.T) {
@@ -33,7 +32,6 @@ func TestSetLoggerLevel(t *testing.T) {
 	conf.Set(LOG_DUMP_FILE, false)
 	InitHyperLogger("global", conf)
 	log := GetLogger("global", "consensus")
-	fmt.Println(log)
 
 	SetLogLevel("global", "consensus", "NOTICE")
 	log.Notice("+++++++NOTICE")

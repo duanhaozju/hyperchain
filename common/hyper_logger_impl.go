@@ -19,6 +19,8 @@ var (
 	ErrNoBackend = errors.New("common/hyper_logger_impl: backend is nil")
 )
 
+//TODO: make the log prefix share same length
+
 //HyperLoggerMgr manage all HyperLogger for different namespaces, a namespace will be allocate a HyperLogger.
 type HyperLoggerMgr interface {
 	//GetLogger get logger with specified namespace and module.
@@ -110,7 +112,7 @@ type HyperLogger struct {
 	conf         *Config                    //config of this hyperlogger
 	loggers      map[string]*logging.Logger //module name to logger map
 	closeLogFile chan struct{}              //close dump log file flag channel
-	rwLock       sync.RWMutex
+	rwLock       sync.RWMutex //TODO: try to fix too many locks here
 	fileLock     sync.Mutex
 	currentFile  *os.File //current log file
 
@@ -186,6 +188,7 @@ func (hl *HyperLogger) newLoggerFile() *os.File {
 //newLeveledBackEnd new backend with new file.
 func (hl *HyperLogger) newLeveledBackEnd() logging.LeveledBackend {
 	hl.fileLock.Lock()
+	oldBackend := hl.backend
 	consoleBackend := logging.NewLogBackend(os.Stdout, "", 0)
 	consoleFormatter := logging.MustStringFormatter(hl.conf.GetString(LOG_CONSOLE_FORMAT))
 	consoleFormatterBackend := logging.NewBackendFormatter(consoleBackend, consoleFormatter)
@@ -198,6 +201,13 @@ func (hl *HyperLogger) newLeveledBackEnd() logging.LeveledBackend {
 	} else {
 		hl.backend = logging.MultiLogger(consoleFormatterBackend)
 	}
+	hl.rwLock.RLock()
+	if oldBackend != nil {
+		for module := range hl.loggers {
+			hl.backend.SetLevel(oldBackend.GetLevel(module), module)
+		}
+	}
+	hl.rwLock.RUnlock()
 	hl.backendLock.Unlock()
 	hl.fileLock.Unlock()
 	return hl.backend
@@ -226,9 +236,9 @@ func (hl *HyperLogger) createLogger(module, lv string) *logging.Logger {
 	compositeName := getCompositeModuleName(hl.namespace, module)
 	logger := logging.MustGetLogger(compositeName)
 	level, _ := logging.LogLevel(lv)
-	hl.backend.SetLevel(level, compositeName)
 	hl.backendLock.RLock()
 	logger.SetBackend(hl.backend)
+	hl.backend.SetLevel(level, compositeName)
 	hl.backendLock.RUnlock()
 	hl.addNewLogger(compositeName, logger)
 	return logger
