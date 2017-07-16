@@ -5,6 +5,9 @@ package common
 import (
 	"testing"
 	"sync"
+	"time"
+	"os"
+	"fmt"
 )
 
 func TestGetLogLevel(t *testing.T) {
@@ -30,6 +33,8 @@ func TestSetLoggerLevel(t *testing.T) {
 	conf.Set(LOG_DUMP_FILE, false)
 	InitHyperLogger("global", conf)
 	log := GetLogger("global", "consensus")
+	fmt.Println(log)
+
 	SetLogLevel("global", "consensus", "NOTICE")
 	log.Notice("+++++++NOTICE")
 	log.Warning("WARNING")
@@ -48,6 +53,7 @@ func TestMultiNamespaceLogger(t *testing.T)  {
 
 	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
 	conf.Set(LOG_DUMP_FILE, false)
+	conf.Set(LOG_BASE_LOG_LEVEL, "DEBUG")
 
 	namespaces := []string {"namespace1", "namespace2", "namespace3"}
 	wg := &sync.WaitGroup{}
@@ -55,21 +61,22 @@ func TestMultiNamespaceLogger(t *testing.T)  {
 	for _, ns := range namespaces {
 		InitHyperLogger(ns, conf)
 	}
-	for _, ns := range namespaces {
+	for _, namespace := range namespaces {
 		go func(ns string) {
 			log1 := GetLogger(ns, "module1")
 			log2 := GetLogger(ns, "module2")
 			log3 := GetLogger(ns, "module3")
-			for i := 0; i < 20; i ++ {
+			for i := 0; i < 2; i ++ {
+				if (i == 1) {
+					SetLogLevel(ns, "module1", "ERROR")
+				}
 				log1.Warning("log1 ...")
 				log2.Info("log2...")
 				log3.Critical("log3...")
-
-				//time.Sleep(1 * time.Second)
 			}
 			wg.Done()
 
-		}(ns)
+		}(namespace)
 	}
 	wg.Wait()
 
@@ -79,6 +86,8 @@ func TestMultiNamespaceLoggerWithDump(t *testing.T)  {
 	//TODO: test more precisely by read the data in the logger dir
 	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
 	conf.Set(LOG_DUMP_FILE, true)
+	conf.Set(LOG_BASE_LOG_LEVEL, "DEBUG")
+
 	namespaces := []string {"namespace1", "namespace2", "namespace3"}
 	wg := &sync.WaitGroup{}
 	wg.Add(len(namespaces))
@@ -91,7 +100,10 @@ func TestMultiNamespaceLoggerWithDump(t *testing.T)  {
 			log1 := GetLogger(ns, "module1")
 			log2 := GetLogger(ns, "module2")
 			log3 := GetLogger(ns, "module3")
-			for i := 0; i < 20; i ++ {
+			for i := 0; i < 2; i ++ {
+				if (i == 1) {
+					SetLogLevel(ns, "module1", "ERROR")
+				}
 				log1.Warning("log1 ...")
 				log2.Info("log2...")
 				log3.Critical("log3...")
@@ -101,4 +113,19 @@ func TestMultiNamespaceLoggerWithDump(t *testing.T)  {
 		}(ns)
 	}
 	wg.Wait()
+}
+
+func TestHyperLoggerSplitByInterval(t *testing.T)  {
+	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
+	conf.Set(LOG_DUMP_FILE, true)
+	conf.Set(LOG_BASE_LOG_LEVEL, "DEBUG")
+	conf.Set(LOG_NEW_FILE_INTERVAL, 4*time.Second)
+	conf.Set(LOG_FILE_DIR, "/tmp/hyperlogger/split")
+	os.RemoveAll("/tmp/hyperlogger/split")
+	InitHyperLogger("test", conf)
+	logger := GetLogger("test", "module1")
+	for i := 1; i < 8; i ++ {
+		logger.Criticalf("test write log %d", i)
+		time.Sleep(1 * time.Second)
+	}
 }

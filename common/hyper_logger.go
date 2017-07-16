@@ -19,24 +19,6 @@ func init() {
 	newHyperLoggerMgr()
 }
 
-//HyperLoggerMgr manage all HyperLogger for different namespaces, a namespace will be allocate a HyperLogger.
-type HyperLoggerMgr interface {
-	//GetLogger get logger with specified namespace and module.
-	getLogger(namespace, module string) *logging.Logger
-
-	//SetLoggerLevel set logger level for specified namespace and module.
-	setLoggerLevel(namespace, module, level string) error
-
-	//GetLoggerLevel get logger level with specified namespace and module.
-	getLoggerLevel(namespace, module string) (string, error)
-
-	//addHyperLogger add A HyperLogger to this hyperLoggerMgr
-	addHyperLogger(hp *HyperLogger)
-
-	//getHyperLogger get HyperLogger of namespace
-	getHyperLogger(namespace string) *HyperLogger
-}
-
 // InitHyperLoggerManager init the hyperlogger system
 func InitHyperLoggerManager(conf *Config) {
 		newHyperLoggerMgr()
