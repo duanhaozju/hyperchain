@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"hyperchain/core/crypto/primitives"
+	"hyperchain/crypto/primitives"
 )
 
 type TestParameters struct {

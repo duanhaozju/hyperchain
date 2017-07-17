@@ -8,7 +8,7 @@ import (
 	"crypto/x509"
 	"io"
 
-	"hyperchain/core/crypto/primitives"
+	"hyperchain/crypto/primitives"
 )
 
 type publicKeyImpl struct {

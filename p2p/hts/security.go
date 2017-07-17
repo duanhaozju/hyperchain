@@ -6,11 +6,6 @@
 //
 package hts
 
-import (
-	"crypto"
-	"io"
-)
-
 type Security interface {
 	KeyExchange
 	SymmetricSecurity
@@ -21,7 +16,7 @@ type KeyExchange interface {
 	// VerifySign verify the sign is generate by this cert
 	// this method will not check the cert is valid
 	//verify the cert and it's signature
-	VerifySign(sign []byte,cert []byte)(bool,error)
+	VerifySign(sign []byte,data []byte,cert []byte)(bool,error)
 	//GenerateShareKey generate the shared key
 	//priKey self side private key
 	//rand []byte CSPRN

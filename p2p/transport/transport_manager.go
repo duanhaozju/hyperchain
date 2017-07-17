@@ -11,7 +11,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/admittance"
 	"hyperchain/common"
-	"hyperchain/core/crypto/primitives"
+	"hyperchain/crypto/primitives"
 	pb "hyperchain/p2p/message"
 	"sync"
 	"hyperchain/p2p/hts/algos/ecdh"
@@ -53,7 +53,7 @@ type TransportManager struct {
 func NewTransportManager(cm *admittance.CAManager, namespace string) (*TransportManager, error) {
 	logger := common.GetLogger(namespace, "p2p")
 	contentPri := cm.GetECertPrivateKeyByte()
-	pri, err := primitives.ParseKey(string(contentPri))
+	pri, err := primitives.ParseKey(contentPri)
 	if err != nil {
 		return nil, err
 	}

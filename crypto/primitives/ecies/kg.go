@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"io"
 
-	"hyperchain/core/crypto/primitives"
+	"hyperchain/crypto/primitives"
 )
 
 type keyGeneratorParameterImpl struct {

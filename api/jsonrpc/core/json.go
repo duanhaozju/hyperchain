@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"reflect"
 	"fmt"
-	"hyperchain/core/crypto/primitives"
+	"hyperchain/crypto/primitives"
 	"crypto/ecdsa"
 )
 
@@ -99,7 +99,7 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string) common.RPCError {
 	defer c.decMu.Unlock()
 
 	tcertPem 	:= common.TransportDecode(c.req.Header.Get("tcert"))
-	tcert,err 	:= primitives.ParseCertificate(tcertPem)
+	tcert,err 	:= primitives.ParseCertificate([]byte(tcertPem))
 	if err != nil {
 		log.Error("fail to parse tcert.",err)
 		return &common.UnauthorizedError{}

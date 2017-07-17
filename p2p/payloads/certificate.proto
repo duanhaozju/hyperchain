@@ -9,5 +9,6 @@ message Certificate{
    bytes RCertSig = 5;
    // generally commonly is node identify or hash
    bytes WithData = 6;
+   bytes Rand = 7;
 
 }

@@ -3,7 +3,7 @@
 package ecies
 
 import (
-	"hyperchain/core/crypto/primitives"
+	"hyperchain/crypto/primitives"
 	"errors"
 )
 

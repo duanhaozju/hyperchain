@@ -13,6 +13,8 @@ import (
 	"hyperchain/p2p/network"
 	"hyperchain/p2p/payloads"
 	"hyperchain/p2p/transport"
+	"github.com/pkg/errors"
+	"hyperchain/crypto/csprng"
 )
 
 // init the package-level logger system,
@@ -167,12 +169,11 @@ func (peer *Peer) clientHello(isOriginal bool) error {
 	}
 	/*
 	 ^ClientHello
-	  *ClientCertificate
-	  *ClientSignature
-	  *ClientCipher
-	  *ClientKeyExchange
+	  *ClientCertificate ==> e cert r cert
+	  *ClientSignature ==> e sign r sign
+	  *ClientCipher ==> rand
+	  *ClientKeyExchange ==> ignored
 	  */
-	peer.chts.CG.GetRCert()
 	data := []byte("hyperchain")
 	esign, err := peer.chts.CG.ESign(data)
 	if err !=nil{
@@ -182,31 +183,87 @@ func (peer *Peer) clientHello(isOriginal bool) error {
 	if err !=nil{
 		return err
 	}
-	cert,err := payloads.NewCertificate([]byte(data),peer.chts.CG.GetECert(),esign,peer.chts.CG.GetRCert(),rsign)
+	rand,err := csprng.CSPRNG(32)
+	if err !=nil{
+		return err
+	}
+	certpayload,err := payloads.NewCertificate(data,peer.chts.CG.GetECert(),esign,peer.chts.CG.GetRCert(),rsign,rand)
 	if err !=nil{
 		return err
 	}
 	// peer should
-	msg := pb.NewMsg(pb.MsgType_CLIENTHELLO, cert)
-	identify := payloads.NewIdentify(peer.local.IsVP,isOriginal,peer.namespace, peer.local.Hostname, peer.local.Id)
+	identify := payloads.NewIdentify(peer.local.IsVP,isOriginal,peer.namespace, peer.local.Hostname, peer.local.Id,certpayload)
 	payload, err := identify.Serialize()
 	if err != nil {
 		return err
 	}
-	msg.Payload = payload
+	msg := pb.NewMsg(pb.MsgType_CLIENTHELLO, payload)
+
 	serverHello, err := peer.Greeting(msg)
-	fmt.Printf("peer.go 151 got a server hello message %+v \n", serverHello)
+
+	fmt.Printf("peer.go 205 got a server hello message %+v \n", serverHello)
 	if err != nil {
 		return err
 	}
-	return peer.clientResponse(serverHello)
+	// complele the key agree
+	if err := peer.negotiateShareKey(serverHello,rand);err != nil{
+		return peer.clientReject(serverHello)
+	}else {
+		return peer.clientResponse(serverHello)
+	}
+
 }
+
+
+func (peer *Peer)negotiateShareKey(in *pb.Message,rand []byte) error{
+	/*
+	   ^ServerReject
+                or
+            ^ServerHello
+             *ServerCertificate
+	     *ServerSignature
+             *ServerCipherSpec
+             *ServerKeyExchange
+             */
+	if in == nil || in.Payload == nil{
+		return errors.New("invalid server return message")
+	}
+
+	iden,err := payloads.IdentifyUnSerialize(in.Payload)
+	if err !=nil{
+		return err
+	}
+	//TODO Check the identity is legal or not
+	if  iden.Payload == nil{
+		return errors.New("iden payload is nil")
+	}
+	cert,err := payloads.CertificateUnMarshal(iden.Payload)
+	if err != nil{
+		return err
+	}
+	r := append(cert.Rand,rand...)
+	return peer.chts.GenShareKey(r,cert.ECert)
+}
+
 
 // handle the double side handshake process,
 // when got a serverhello, this peer should response by clientResponse.
 func (peer *Peer) clientResponse(serverHello *pb.Message) error {
 	payload := []byte("client accept [msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTACCEPT, payload)
+	serverdone, err := peer.Greeting(msg)
+	fmt.Printf("peer.go162 got a server done message %+v \n", serverdone)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// handle the double side handshake process,
+// when got a serverhello, this peer should response by clientResponse.
+func (peer *Peer) clientReject(serverHello *pb.Message) error {
+	payload := []byte("client accept [msg test]")
+	msg := pb.NewMsg(pb.MsgType_CLIENTREJECT, payload)
 	serverdone, err := peer.Greeting(msg)
 	fmt.Printf("peer.go162 got a server done message %+v \n", serverdone)
 	if err != nil {

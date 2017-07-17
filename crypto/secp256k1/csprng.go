@@ -1,4 +1,4 @@
-package secimpl
+package secp256k1
 
 import (
 	"io"
@@ -10,7 +10,7 @@ import (
 
 const aesIV = "HYPERCHAINAES IV"
 
-func CSPRNG(entropylen int)([]byte,error){
+func csprng(entropylen int)([]byte,error){
 
 	entropy := make([]byte, entropylen)
 	_, err := io.ReadFull(rand.Reader, entropy)

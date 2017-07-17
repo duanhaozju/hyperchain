@@ -8,4 +8,5 @@ message Identify {
    string Namespace = 4;
    string Hash      = 5;
    int64 Id         = 6;
+   bytes Payload    = 7;
 }

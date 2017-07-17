@@ -3,8 +3,7 @@ package hts
 import (
 	"crypto"
 	"github.com/pkg/errors"
-	"hyperchain/crypto/primitives"
-	"crypto/ecdsa"
+	"fmt"
 )
 
 type ClientHTS struct {
@@ -28,10 +27,18 @@ func NewClientHTS(sec Security,cg *CertGroup) (*ClientHTS,error) {
 }
 
 func(ch *ClientHTS) VerifySign(sign ,data, rawcert []byte) (bool,error){
-	return ch.security.VerifySign(sign,rawcert)
+	return ch.security.VerifySign(sign,data,rawcert)
+}
 
+func(ch *ClientHTS)GenShareKey(rand,rawcert []byte) error{
 
-
+	sk,err := ch.security.GenerateShareKey(ch.priKey,rand,rawcert)
+	if err != nil{
+		return err
+	}
+	fmt.Println("client key exange",sk)
+	ch.sessionKey = NewSessionKey(sk)
+	return nil
 }
 
 func (ch *ClientHTS) Encrypt(msg []byte) ([]byte, error) {

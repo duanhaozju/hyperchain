@@ -4,7 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"github.com/pkg/errors"
-	"hyperchain/core/crypto/primitives"
+	"hyperchain/crypto/primitives"
 	"io/ioutil"
 	"github.com/op/go-logging"
 	"hyperchain/common"
@@ -132,7 +132,7 @@ func (cm *CAManager)VerifyTCert(tcertPEM string) (bool, error) {
 	if !cm.checkTCert {
 		return true, nil
 	}
-	tcert, err := primitives.ParseCertificate(tcertPEM)
+	tcert, err := primitives.ParseCertificate([]byte(tcertPEM))
 	if err != nil {
 		cm.logger.Error(errParseCert.Error())
 		return false, errParseCert
@@ -152,7 +152,7 @@ func (cm *CAManager) VerifyECert(ecertPEM string) (bool, error) {
 	}
 	// if SDK hasn't TCert it can use the ecert to send the transaction
 	// but if the switch is off, this will not check the ecert is valid or not.
-	ecertToVerify, err := primitives.ParseCertificate(ecertPEM)
+	ecertToVerify, err := primitives.ParseCertificate([]byte(ecertPEM))
 	if err != nil {
 		cm.logger.Error(errParseCert.Error())
 		return false, errParseCert
@@ -173,7 +173,7 @@ func (cm *CAManager) VerifyCertSign(certPEM string, msg, sign []byte) (bool, err
 	if !cm.checkCertSign {
 		return true, nil
 	}
-	ecert, err := primitives.ParseCertificate(certPEM)
+	ecert, err := primitives.ParseCertificate([]byte(certPEM))
 	if err != nil {
 		cm.logger.Error(errParseCert.Error())
 		return false, errParseCert
@@ -194,7 +194,7 @@ func (cm *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
 	if cm.checkERCert {
 		return true,nil
 	}
-	rcert, err := primitives.ParseCertificate(rcertPEM)
+	rcert, err := primitives.ParseCertificate([]byte(rcertPEM))
 	if err != nil {
 		cm.logger.Error(errParseCert)
 		return false, errParseCert
@@ -237,7 +237,7 @@ func readCert(path string) (*cert, error) {
 	if err != nil {
 		return nil, err
 	}
-	certs, err := primitives.ParseCertificate(string(certb))
+	certs, err := primitives.ParseCertificate(certb)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func readKey(path string) (*key, error) {
 	if err != nil {
 		return nil, err
 	}
-	priKey, err := primitives.ParseKey(string(keyb))
+	priKey, err := primitives.ParseKey(keyb)
 	if err != nil {
 		return nil, errors.New("cannot parse the caprivatekey")
 	}

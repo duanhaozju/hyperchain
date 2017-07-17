@@ -16,7 +16,7 @@ import (
 	"fmt"
 
 	"golang.org/x/crypto/hkdf"
-	"hyperchain/core/crypto/primitives"
+	"hyperchain/crypto/primitives"
 )
 
 func aesEncrypt(key, plain []byte) ([]byte, error) {

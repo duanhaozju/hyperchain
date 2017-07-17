@@ -8,6 +8,8 @@ import (
 	"hyperchain/p2p/payloads"
 	"github.com/op/go-logging"
 	"hyperchain/p2p/peerevent"
+	"github.com/pkg/errors"
+	"hyperchain/crypto/csprng"
 )
 
 type ClientHelloMsgHandler struct {
@@ -46,11 +48,27 @@ func (h *ClientHelloMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
 	//got a identity payload
 	id, err := payloads.IdentifyUnSerialize(msg.Payload)
 	if err != nil {
-		//TODO change to logger
-		fmt.Println("err", err)
+		h.logger.Warningf("server hello error: %s \n",err.Error())
 		return nil, err
 	}
+	// Key Agree
+	if id.Payload == nil{
+		h.logger.Error("server hello id.Payload is nil")
+		return nil,errors.New("server hello id.Payload is nil")
+	}
+	rand,err := csprng.CSPRNG(32)
+	if err != nil{
 
+		return nil,errors.New("server hello id.Payload is nil")
+	}
+
+	cert,err := payloads.CertificateUnMarshal(id.Payload)
+	r := append(cert.Rand,rand...)
+
+	err = h.shts.KeyExchange(id.Hash,r,cert.ECert)
+	if err !=nil{
+		return nil,errors.New(fmt.Sprintf("cannot complete the key exchange, reason: %s",err.Error()))
+	}
 
 	if !id.IsOriginal && id.IsVP {
 		//if verify passed, should notify peer manager to reverse connect to client.

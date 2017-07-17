@@ -8,7 +8,6 @@ import (
 	"math/big"
 	"encoding/asn1"
 	"github.com/pkg/errors"
-	"hyperchain/crypto/primitives"
 )
 
 type CertGroup struct {

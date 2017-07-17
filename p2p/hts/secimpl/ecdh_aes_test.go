@@ -3,6 +3,7 @@ package secimpl
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
+	"hyperchain/crypto/csprng"
 )
 
 var pri1 = []byte(`
@@ -53,7 +54,7 @@ AwIDSQAwRgIhAIjutUGJCcWUM3BwE+wIn1zcwmasLoO7YAeaxQD6nKA9AiEA/gnX
 
 func TestECDHWithAES_GenerateShareKey(t *testing.T) {
 	ecaes := NewECDHWithAES()
-	r,err := CSPRNG(32)
+	r,err := csprng.CSPRNG(32)
 	assert.Nil(t,err)
 
 	sk1,e := ecaes.GenerateShareKey(pri1,r,rawcert2)

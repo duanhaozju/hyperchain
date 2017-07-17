@@ -9,7 +9,7 @@ import (
 	"encoding/asn1"
 	"fmt"
 	"crypto/elliptic"
-	"github.com/ethereum/go-ethereum/crypto/sha3"
+	"hyperchain/crypto/sha3"
 )
 // this secimpl implements the Security interface
 
@@ -67,7 +67,7 @@ func(ea *ECDHWithAES)GenerateShareKey(priKey []byte,rand []byte,rawcert []byte)(
 	sharekey = append(sharedKey,x.Bytes()...)
 	sharekey = append(sharedKey,y.Bytes()...)
 	sharekey = append(sharedKey,rand...)
-	hasher := sha3.New256()
+	hasher := sha3.NewKeccak256()
 	hasher.Write(sharekey)
 	sharedKey = hasher.Sum(nil)
 	return sharedKey[:], nil
