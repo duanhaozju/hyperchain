@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/op/go-logging"
+	"hyperchain/common"
 )
 
 var logger *logging.Logger // package-level logger
@@ -67,13 +68,16 @@ type managerImpl struct {
 	threaded
 	receiver Receiver
 	events   chan interface{}
+	logger   *logging.Logger
 }
 
 // NewManagerImpl creates an instance of managerImpl
-func NewManagerImpl() Manager {
+func NewManagerImpl(name string) Manager {
+	logger:=common.GetLogger(name,"event")
 	return &managerImpl{
 		events:   make(chan interface{}),
 		threaded: threaded{make(chan struct{})},
+		logger: logger,
 	}
 }
 
@@ -122,7 +126,7 @@ func (em *managerImpl) eventLoop() {
 		case next := <-em.events:
 			em.Inject(next)
 		case <-em.exit:
-			logger.Debug("eventLoop told to exit")
+			em.logger.Debug("eventLoop told to exit")
 			return
 		}
 	}
