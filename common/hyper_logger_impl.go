@@ -19,7 +19,7 @@ var (
 	ErrNoBackend = errors.New("common/hyper_logger_impl: backend is nil")
 )
 
-//TODO: make the log prefix share same length
+//TODO: make the log prefix share same length ?
 
 //HyperLoggerMgr manage all HyperLogger for different namespaces, a namespace will be allocate a HyperLogger.
 type HyperLoggerMgr interface {
@@ -89,7 +89,9 @@ func (hmi *hyperLoggerMgrImpl) setLoggerLevel(namespace, module, level string) e
 	if err != nil {
 		return err
 	}
+	hl.backendLock.Lock()
 	hl.backend.SetLevel(l, getCompositeModuleName(namespace, module))
+	hl.backendLock.Unlock()
 	return nil
 }
 
@@ -103,8 +105,9 @@ func (hmi *hyperLoggerMgrImpl) getLoggerLevel(namespace, module string) (string,
 	if ml == nil {
 		return "", fmt.Errorf("SetLogLevel Error: %s::%s not exist", namespace, module)
 	}
+	hl.backendLock.RLock()
+	defer hl.backendLock.RUnlock()
 	return hl.backend.GetLevel(getCompositeModuleName(namespace, module)).String(), nil
-	//return ml.getLogLevel(), nil
 }
 
 //HyperLogger manage the logger by module for a specified namespace.
@@ -112,15 +115,17 @@ type HyperLogger struct {
 	conf         *Config                    //config of this hyperlogger
 	loggers      map[string]*logging.Logger //module name to logger map
 	closeLogFile chan struct{}              //close dump log file flag channel
-	rwLock       sync.RWMutex //TODO: try to fix too many locks here
+	rwLock       sync.RWMutex //read write lock for loggers
+
 	fileLock     sync.Mutex
 	currentFile  *os.File //current log file
 
-	backendLock  sync.RWMutex
+	backendLock  sync.RWMutex //readwrite lock for backend
 	backend      logging.LeveledBackend
 	namespace    string
 
 	baseLevel     string
+
 }
 
 //newHyperLogger new a HyperLogger instance.
@@ -187,12 +192,14 @@ func (hl *HyperLogger) newLoggerFile() *os.File {
 
 //newLeveledBackEnd new backend with new file.
 func (hl *HyperLogger) newLeveledBackEnd() logging.LeveledBackend {
-	hl.fileLock.Lock()
+	hl.fileLock.Lock()//read file
+
 	oldBackend := hl.backend
 	consoleBackend := logging.NewLogBackend(os.Stdout, "", 0)
 	consoleFormatter := logging.MustStringFormatter(hl.conf.GetString(LOG_CONSOLE_FORMAT))
 	consoleFormatterBackend := logging.NewBackendFormatter(consoleBackend, consoleFormatter)
-	hl.backendLock.Lock()
+
+	hl.backendLock.Lock()// update backend
 	if hl.conf.GetBool(LOG_DUMP_FILE) {
 		fileBackend := logging.NewLogBackend(hl.currentFile, "", 0)
 		fileFormatter := logging.MustStringFormatter(hl.conf.GetString(LOG_FILE_FORMAT))
@@ -201,14 +208,17 @@ func (hl *HyperLogger) newLeveledBackEnd() logging.LeveledBackend {
 	} else {
 		hl.backend = logging.MultiLogger(consoleFormatterBackend)
 	}
-	hl.rwLock.RLock()
+
+	hl.rwLock.RLock() //read loggers
 	if oldBackend != nil {
 		for module := range hl.loggers {
 			hl.backend.SetLevel(oldBackend.GetLevel(module), module)
 		}
 	}
 	hl.rwLock.RUnlock()
+
 	hl.backendLock.Unlock()
+
 	hl.fileLock.Unlock()
 	return hl.backend
 }
@@ -236,10 +246,12 @@ func (hl *HyperLogger) createLogger(module, lv string) *logging.Logger {
 	compositeName := getCompositeModuleName(hl.namespace, module)
 	logger := logging.MustGetLogger(compositeName)
 	level, _ := logging.LogLevel(lv)
-	hl.backendLock.RLock()
+
+	hl.backendLock.Lock()
 	logger.SetBackend(hl.backend)
-	hl.backend.SetLevel(level, compositeName)
-	hl.backendLock.RUnlock()
+	hl.backend.SetLevel(level, compositeName) //control level set
+	hl.backendLock.Unlock()
+
 	hl.addNewLogger(compositeName, logger)
 	return logger
 }
@@ -251,6 +263,20 @@ func (hl *HyperLogger) getModuleLogger(module string) *logging.Logger {
 	ml = hl.loggers[getCompositeModuleName(hl.namespace, module)]
 	hl.rwLock.RUnlock()
 	return ml
+}
+
+//updateLogFileAndBackend when log file split
+func (hl *HyperLogger) updateLogFileAndBackend()  {
+	file := hl.newLoggerFile()
+	hl.newLeveledBackEnd()
+	hl.rwLock.RLock() // read loggers
+	hl.backendLock.RLock() // read backend
+	for _, logger := range hl.loggers {
+		logger.SetBackend(hl.backend)
+	}
+	hl.backendLock.RUnlock()
+	hl.rwLock.RUnlock()
+	commonLogger.Infof("New log file name: %s", file.Name())
 }
 
 //newLogFileByInterval set new log file for hyperchain
@@ -266,31 +292,14 @@ func (hl *HyperLogger) newLogFileByInterval(conf *Config) {
 		time.Sleep(d)
 
 		if hl.conf.GetBool(LOG_DUMP_FILE) {
-			hl.newLoggerFile()
-			hl.newLeveledBackEnd()
-			hl.rwLock.RLock()
-			hl.backendLock.RLock()
-			for _, logger := range hl.loggers {
-				logger.SetBackend(hl.backend)
-			}
-			hl.backendLock.RUnlock()
-			hl.rwLock.RUnlock()
+			hl.updateLogFileAndBackend()
 		}
 	}
-
 	for {
 		select {
 		case <-time.After(conf.GetDuration(LOG_NEW_FILE_INTERVAL)):
 			if hl.conf.GetBool(LOG_DUMP_FILE) {
-				file := hl.newLoggerFile()
-				hl.newLeveledBackEnd()
-				hl.rwLock.RLock()
-				for _, logger := range hl.loggers {
-					logger.SetBackend(hl.backend)
-				}
-				hl.rwLock.RUnlock()
-				//TODO: how to fix commmonLooger problem
-				commonLogger.Infof("Split log file, new log file name: %s", file.Name())
+				hl.updateLogFileAndBackend()
 			}
 		case <-hl.closeLogFile:
 			hl.currentFile.Close()
