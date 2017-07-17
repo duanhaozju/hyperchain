@@ -165,10 +165,29 @@ func (peer *Peer) clientHello(isOriginal bool) error {
 	if peer.info.Hostname == peer.local.Hostname {
 		return nil
 	}
-
+	/*
+	 ^ClientHello
+	  *ClientCertificate
+	  *ClientSignature
+	  *ClientCipher
+	  *ClientKeyExchange
+	  */
+	peer.chts.CG.GetRCert()
+	data := []byte("hyperchain")
+	esign, err := peer.chts.CG.ESign(data)
+	if err !=nil{
+		return err
+	}
+	rsign, err := peer.chts.CG.RSign(data)
+	if err !=nil{
+		return err
+	}
+	cert,err := payloads.NewCertificate([]byte(data),peer.chts.CG.GetECert(),esign,peer.chts.CG.GetRCert(),rsign)
+	if err !=nil{
+		return err
+	}
 	// peer should
-	payload := []byte("client hello[msg test]")
-	msg := pb.NewMsg(pb.MsgType_CLIENTHELLO, payload)
+	msg := pb.NewMsg(pb.MsgType_CLIENTHELLO, cert)
 	identify := payloads.NewIdentify(peer.local.IsVP,isOriginal,peer.namespace, peer.local.Hostname, peer.local.Id)
 	payload, err := identify.Serialize()
 	if err != nil {
@@ -186,14 +205,12 @@ func (peer *Peer) clientHello(isOriginal bool) error {
 // handle the double side handshake process,
 // when got a serverhello, this peer should response by clientResponse.
 func (peer *Peer) clientResponse(serverHello *pb.Message) error {
-	fmt.Println("peer.go 152 send client accept message")
 	payload := []byte("client accept [msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTACCEPT, payload)
 	serverdone, err := peer.Greeting(msg)
-	fmt.Printf("peer.go 162 got a server done message %+v \n", serverdone)
+	fmt.Printf("peer.go162 got a server done message %+v \n", serverdone)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }

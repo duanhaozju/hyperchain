@@ -92,7 +92,11 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 	if selfHostname == "" {
 		return nil, errors.New(fmt.Sprintf("invalid self hostname: %s", selfHostname))
 	}
-
+	caconf := peercnf.GetString("self.caconf")
+	h,err := hts.NewHTS(secimpl.NewECDHWithAES(),caconf)
+	if err != nil{
+		return nil, errors.New(fmt.Sprintf("hts initlized failed: %s", err.Error()))
+	}
 	pmi := &peerManagerImpl{
 		namespace: namespace,
 		eventHub:ev,
@@ -111,8 +115,7 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		delchan:delChan,
 		logger: logger,
 		isVP:isvp,
-		hts:hts.NewHTS(secimpl.NewECDHWithAES()),
-
+		hts:h,
 	}
 	//set vp information
 	if !pmi.isVP {

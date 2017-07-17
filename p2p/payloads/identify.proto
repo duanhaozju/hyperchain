@@ -8,8 +8,4 @@ message Identify {
    string Namespace = 4;
    string Hash      = 5;
    int64 Id         = 6;
-   bytes Certificate = 7;
-   bytes Signature  = 8;
-   bytes Cipher     = 9;
-   bytes KeyExchange = 10;
 }

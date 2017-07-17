@@ -77,10 +77,10 @@
      1> 密钥交换算法
        - ECDH 基于椭圆曲线的DH算法
        - SM2DH 基于国密SM2算法的DH算法
-       - RSADH 基于RSA加密体系的DH算法
+       - DH 基于RSA加密体系的DH算法
      2> 数字签名算法
        - ECDSA 基于椭圆曲线的数字签名算法
-       - RSADSA 基于RSA的数字签名算法
+       - DSA 基于RSA的数字签名算法
        - SM2 国密SM2
      3> 对称加密算法
        - 3DES Triple Digital Encryption Standard
@@ -92,23 +92,150 @@
 */
 package hts
 
+import (
+	"hyperchain/common"
+	"github.com/pkg/errors"
+	"github.com/terasum/viper"
+	"fmt"
+	"hyperchain/crypto/primitives"
+	"crypto/ecdsa"
+	"io/ioutil"
+)
+
 type HTS struct {
 	sec Security
+	cg *CertGroup
 }
 
 
 
+
+
 //NewHTS return a Hyper Transport Security instance
-func NewHTS(sec Security)*HTS{
-	return &HTS{
+func NewHTS(sec Security,caConfigPath string)(*HTS,error){
+	hts := &HTS{
 		sec:sec,
+		cg:new(CertGroup),
 	}
+	fmt.Println(caConfigPath)
+	// check ca config path
+	if !common.FileExist(caConfigPath){
+		return nil,errors.New("CA config not exist, please check it.")
+	}
+	// read in config, and get all certs
+	vip := viper.New()
+	vip.SetConfigFile(caConfigPath)
+	err := vip.ReadInConfig()
+	if err != nil{
+		return nil,errors.New(fmt.Sprintf("cann't read in the caconfig, reason: %s ",err.Error()))
+	}
+	//ecert group
+	//enable ecert ?
+	enEnroll := vip.GetBool("check.enable")
+	//if enable the ene, readin all ecert
+	if enEnroll {
+		ecap := vip.GetString("ecert.eca")
+		if !common.FileExist(ecap){
+			return nil,errors.New(fmt.Sprintf("cannot read in eca,reason: file not exist (%s)",ecap))
+		}
+		eca,err := ioutil.ReadFile(ecap)
+		if err !=nil{
+			return nil,err
+		}
+		hts.cg.eCA = eca
+		ecas,err := primitives.ParseCertificate(eca)
+		if err != nil {
+			return nil,errors.New(fmt.Sprintf("cannot parse the eca certificate, reason: %s",err.Error()))
+		}
+		hts.cg.eCA_S = ecas
+
+		//parse eca
+		ecertp := vip.GetString("ecert.ecert")
+		if !common.FileExist(ecertp){
+			return nil,errors.New(fmt.Sprintf("cannot read in ecert,reason: file not exist (%s)",ecertp))
+		}
+		ecert,err := ioutil.ReadFile(ecertp)
+		if err !=nil{
+			return nil,err
+		}
+		hts.cg.eCERT = ecert
+		ecerts,err := primitives.ParseCertificate(ecert)
+		if err != nil {
+			return nil,errors.New(fmt.Sprintf("cannot parse the e certificate, reason %s",err.Error()))
+		}
+		hts.cg.eCERT_S = ecerts
+
+		eprivp := vip.GetString("ecert.priv")
+		if !common.FileExist(eprivp){
+			return nil,errors.New(fmt.Sprintf("cannot read in ecert priv,reason: file not exist (%s)",eprivp))
+		}
+		epriv,err := ioutil.ReadFile(eprivp)
+		if err !=nil{
+			return nil,err
+		}
+		hts.cg.eCERTPriv = epriv
+		eps,err := primitives.ParseKey(epriv)
+		if err !=nil {
+			return nil, errors.New(fmt.Sprintf("cannot parse the private key, reason %s",err.Error()))
+		}
+		ep_s,ok :=  eps.(*ecdsa.PrivateKey)
+		if !ok{
+			return nil, errors.New(fmt.Sprintf("cannot parse the private key, reason %s","cannot convert private key into *ecdsa.PrivateKey"))
+		}
+		hts.cg.eCERTPriv_S = ep_s
+
+		rcap := vip.GetString("rcert.rca")
+		if !common.FileExist(rcap){
+			return nil,errors.New(fmt.Sprintf("cannot read in rca,reason: file not exist (%s)",rcap))
+		}
+		rca,err := ioutil.ReadFile(rcap)
+		if err != nil{
+			return nil,err
+		}
+		hts.cg.rCA = rca
+		rcertp := vip.GetString("rcert.rcert")
+		if !common.FileExist(rcertp){
+			return nil,errors.New(fmt.Sprintf("cannot read in rcert,reason: file not exist (%s)",rcertp))
+		}
+		rcert,err := ioutil.ReadFile(rcertp)
+		if err !=nil{
+			return nil,err
+		}
+		hts.cg.rCERT = []byte(rcert)
+
+		rcerts,err := primitives.ParseCertificate(rcert)
+		if err != nil {
+			return nil,errors.New(fmt.Sprintf("cannot parse the r certificate, reason %s",err.Error()))
+		}
+		hts.cg.rCERT_S = rcerts
+
+		rprivp := vip.GetString("rcert.priv")
+		if !common.FileExist(rprivp){
+			return nil,errors.New(fmt.Sprintf("cannot read in rcert priv,reason: file not exist (%s)",eprivp))
+		}
+		rpriv,err := ioutil.ReadFile(rprivp)
+		if err !=nil{
+			return nil,err
+		}
+		hts.cg.rCERTPriv = rpriv
+		rps,err := primitives.ParseKey(rpriv)
+		if err !=nil {
+			return nil, errors.New(fmt.Sprintf("cannot parse the r private key, reason %s",err.Error()))
+		}
+		rp_s,ok :=  rps.(*ecdsa.PrivateKey)
+		if !ok{
+			return nil, errors.New(fmt.Sprintf("cannot parse the r private key, reason %s","cannot convert private key into *ecdsa.PrivateKey"))
+		}
+		hts.cg.rCERTPriv_S = rp_s
+
+	}
+	return hts,nil
 }
 
 //GetAClientHTS return a client HTS instance,
 //this func will self invoke generate generate private key
 func (hts *HTS) GetAClientHTS() (*ClientHTS,error){
-	chts,err := NewCLientHTS(hts.sec)
+	chts,err := NewClientHTS(hts.sec,hts.cg)
 	if err != nil{
 		return nil,err
 	}
@@ -118,7 +245,7 @@ func (hts *HTS) GetAClientHTS() (*ClientHTS,error){
 //GetServerHTS  generally this function will be invoke only once in a namespace
 //this func will self invoke generate generate private key
 func(hts *HTS)GetServerHTS()(*ServerHTS,error){
-	shts,err := NewServerHTS(hts.sec)
+	shts,err := NewServerHTS(hts.sec,hts.cg)
 	if err != nil{
 		return nil,err
 	}

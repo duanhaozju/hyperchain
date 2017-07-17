@@ -14,12 +14,14 @@ type ServerHTS struct {
 	priKey         crypto.PrivateKey
 	pubKey         crypto.PublicKey
 	sessionKeyPool cmap.ConcurrentMap
+	CG *CertGroup
 }
 
-func NewServerHTS(sec Security)(*ServerHTS,error) {
+func NewServerHTS(sec Security,cg *CertGroup)(*ServerHTS,error) {
 	sh := &ServerHTS{
 		sessionKeyPool: cmap.New(),
 		security:sec,
+		CG:cg,
 	}
 	err := sh.genPriKey()
 	if err != nil {

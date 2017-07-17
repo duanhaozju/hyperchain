@@ -2,49 +2,36 @@ package hts
 
 import (
 	"crypto"
-	"crypto/rand"
-
 	"github.com/pkg/errors"
+	"hyperchain/crypto/primitives"
+	"crypto/ecdsa"
 )
 
 type ClientHTS struct {
-	priKey     crypto.PrivateKey
-	pubKey     crypto.PublicKey
+	priKey_s     crypto.PrivateKey
+	priKey    []byte
+	pubKey_s     crypto.PublicKey
+	pubKey  []byte
 	sessionKey *SessionKey
 	security   Security
+	CG *CertGroup
 }
 
-func NewCLientHTS(sec Security) (*ClientHTS,error) {
+func NewClientHTS(sec Security,cg *CertGroup) (*ClientHTS,error) {
 	chts := &ClientHTS{
 		security:sec,
+		CG:cg,
 	}
-	if err := chts.genPriKey();err !=nil{
-		return nil,err
-	}
+	chts.priKey = cg.eCERTPriv
+	chts.priKey_s = cg.eCERTPriv_S
 	return chts,nil
 }
 
-func (ch *ClientHTS) genPriKey() error {
-	pri, pub, err := ch.security.GeneratePrivateKey(rand.Reader)
-	if err != nil {
-		return err
-	}
-	ch.priKey = pri
-	ch.pubKey = pub
-	return nil
-}
+func(ch *ClientHTS) VerifySign(sign ,data, rawcert []byte) (bool,error){
+	return ch.security.VerifySign(sign,rawcert)
 
-func (ch *ClientHTS) GenSharedKey(serverPubKey []byte) error {
-	pubKey, err := ch.security.UnMarshal(serverPubKey)
-	if err != nil {
-		return err
-	}
-	sharedKey, err := ch.security.GenerateSharedKey(ch.priKey, pubKey)
-	if err != nil {
-		return err
-	}
-	ch.sessionKey = NewSessionKey(sharedKey)
-	return nil
+
+
 }
 
 func (ch *ClientHTS) Encrypt(msg []byte) ([]byte, error) {

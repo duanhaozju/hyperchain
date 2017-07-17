@@ -14,7 +14,7 @@ import (
 	"hyperchain/core/crypto/primitives"
 	pb "hyperchain/p2p/message"
 	"sync"
-	"hyperchain/p2p/hts/crypto/ecdh"
+	"hyperchain/p2p/hts/algos/ecdh"
 )
 
 // Init the log setting
