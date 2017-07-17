@@ -56,7 +56,7 @@ func (pbft *pbftImpl) dispatchRecoveryMsg(e events.Event) events.Event {
 
 func (pbft *pbftImpl) initNegoView() error {
 	if !pbft.status.getState(&pbft.status.inNegoView) {
-		pbft.logger.Debugf("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", pbft.id)
+		pbft.logger.Errorf("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", pbft.id)
 		return nil
 	}
 
@@ -203,7 +203,12 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 
 		if canFind {
 			pbft.timerMgr.stopTimer(NEGO_VIEW_RSP_TIMER)
-			pbft.view = result.view
+			var IfUpdata bool
+			if pbft.view==result.view{
+				IfUpdata=true
+			}else{
+				pbft.view = result.view
+			}
 			pbft.N = int(result.n)
 			pbft.f = (pbft.N - 1) / 3
 			//routers, _ := stringToByte(result.routers)
@@ -216,7 +221,9 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			if atomic.LoadUint32(&pbft.activeView) == 0 {
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}
-			pbft.parseSpecifyCertStore()
+			if !IfUpdata{
+				pbft.parseCertStore()
+			}
 			return &LocalEvent{
 				Service:RECOVERY_SERVICE,
 				EventType:RECOVERY_NEGO_VIEW_DONE_EVENT,
