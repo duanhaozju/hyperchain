@@ -15,6 +15,8 @@ import (
 	"hyperchain/p2p/transport"
 	"github.com/pkg/errors"
 	"hyperchain/crypto/csprng"
+	"github.com/op/go-logging"
+	"hyperchain/common"
 )
 
 // init the package-level logger system,
@@ -29,6 +31,7 @@ type Peer struct {
 	TM        *transport.TransportManager
 	p2pHub    event.TypeMux
 	chts      *hts.ClientHTS
+	logger *logging.Logger
 }
 
 //NewPeer get a new peer which chat/greeting/whisper functions
@@ -40,6 +43,7 @@ func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, ne
 		net:       net,
 		local:     localInfo,
 		chts:      chts,
+		logger: common.GetLogger(namespace,"p2p"),
 	}
 	if err := peer.clientHello(peer.info.GetOriginal()); err != nil {
 		return nil, err
@@ -57,7 +61,7 @@ func(peer *Peer)Value()interface{}{
 
 //Chat send a stream message to remote peer
 func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
-	fmt.Println("Chat msg to ",peer.info.Hostname)
+	peer.logger.Debug("Chat msg to ",peer.info.Hostname)
 	//here will wrapper the message
 	in.From = &pb.Endpoint{
 		Field:    []byte(peer.namespace),
@@ -174,7 +178,7 @@ func PeerUnSerialize(raw []byte) (hostname string, namespace string, hash string
 
 //this is peer should do things
 func (peer *Peer) clientHello(isOriginal bool) error {
-	fmt.Println("peer.go 152 send client hello message")
+	peer.logger.Debug("send client hello message")
 	// if self return nil do not need verify
 	if peer.info.Hostname == peer.local.Hostname {
 		return nil
@@ -213,7 +217,7 @@ func (peer *Peer) clientHello(isOriginal bool) error {
 
 	serverHello, err := peer.Greeting(msg)
 
-	fmt.Printf("peer.go 205 got a server hello message %+v \n", serverHello)
+	peer.logger.Debugf("got a server hello message %+v \n", serverHello)
 	if err != nil {
 		fmt.Printf("peer.go 205  err: %s \n",err.Error())
 		return err
@@ -266,7 +270,7 @@ func (peer *Peer) clientResponse(serverHello *pb.Message) error {
 	payload := []byte("client accept [msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTACCEPT, payload)
 	serverdone, err := peer.Greeting(msg)
-	fmt.Printf("peer.go162 got a server done message %+v \n", serverdone)
+	peer.logger.Debug("got a server done message %+v \n", serverdone)
 	if err != nil {
 		return err
 	}
@@ -279,7 +283,7 @@ func (peer *Peer) clientReject(serverHello *pb.Message) error {
 	payload := []byte("client accept [msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTREJECT, payload)
 	serverdone, err := peer.Greeting(msg)
-	fmt.Printf("peer.go162 got a server done message %+v \n", serverdone)
+	peer.logger.Debug("got a server done message %+v \n", serverdone)
 	if err != nil {
 		return err
 	}

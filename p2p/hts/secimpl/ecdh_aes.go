@@ -10,7 +10,6 @@ import (
 	"crypto/elliptic"
 	"hyperchain/crypto/sha3"
 	"hyperchain/crypto/primitives"
-	"agile/utils/common"
 	"crypto/cipher"
 	"bytes"
 	"crypto/des"
@@ -46,7 +45,6 @@ func (ea *ECDHWithAES)VerifySign(sign,data,rawcert []byte)(bool,error){
 }
 
 func(ea *ECDHWithAES)GenerateShareKey(priKey []byte,rand []byte,rawcert []byte)(sharedKey []byte,err error){
-	fmt.Printf("GENE SHARED KEY %s\n",common.ToHex(rand))
 	prikey,err := primitives.ParseKey(priKey)
 	if err != nil{
 		return nil,err
@@ -85,11 +83,9 @@ func(ea *ECDHWithAES)GenerateShareKey(priKey []byte,rand []byte,rawcert []byte)(
 }
 
 func(ea *ECDHWithAES)Encrypt(key, originMsg []byte)(encryptedMsg []byte,err error){
-	fmt.Printf("ENCRYPT: key(%s),origin(%s)\n",common.ToHex(key),common.ToHex(originMsg))
 	return pureEnc(key,originMsg)
 }
 func(ea *ECDHWithAES)Decrypt(key, encryptedMsg []byte)(originMsg []byte,err error){
-	fmt.Printf("DECRYPT: key(%s),origin(%s)\n",common.ToHex(key),common.ToHex(encryptedMsg))
 	return pureDec(key,encryptedMsg)
 }
 

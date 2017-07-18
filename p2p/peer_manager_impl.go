@@ -93,7 +93,6 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		return nil, errors.New(fmt.Sprintf("invalid self hostname: %s", selfHostname))
 	}
 	caconf := peercnf.GetString("self.caconf")
-	fmt.Println(caconf)
 	h,err := hts.NewHTS(secimpl.NewECDHWithAES(),caconf)
 	if err != nil{
 		return nil, errors.New(fmt.Sprintf("hts initlized failed: %s", err.Error()))
@@ -144,7 +143,7 @@ func(pmi *peerManagerImpl)binding()error{
 	clientAcceptHandler := msg.NewClientAcceptHandler(serverHTS,pmi.logger)
 	pmi.node.Bind(pb.MsgType_CLIENTACCEPT, clientAcceptHandler)
 
-	sessionHandler := msg.NewSessionHandler(pmi.blackHole, pmi.eventHub,serverHTS)
+	sessionHandler := msg.NewSessionHandler(pmi.blackHole, pmi.eventHub,serverHTS,pmi.logger)
 	pmi.node.Bind(pb.MsgType_SESSION, sessionHandler)
 
 	helloHandler := msg.NewHelloHandler(pmi.blackHole, pmi.eventHub)
@@ -319,7 +318,6 @@ func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType, payload []byte, peers [
 		if id > uint64(len(peerList)) || id <= 0{
 			return
 		}
-		fmt.Println("PEERLIST >>>>>",id)
 		peer := peerList[int(id)-1]
 		if peer.info.Hostname == pmgr.node.info.Hostname {
 			continue

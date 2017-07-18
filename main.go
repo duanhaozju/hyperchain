@@ -52,7 +52,6 @@ func newHyperchain(argV *argT) *hyperchain {
 	//common.InitLog(globalConfig)
 
 	httpPort := vip.GetInt("global.jsonrpc_port")
-	fmt.Println("XSXSXSX ",httpPort)
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
 	hp.hs = jsonrpc.GetHttpServer(hp.nsMgr, hp.stopFlag, hp.restartFlag,httpPort)
 

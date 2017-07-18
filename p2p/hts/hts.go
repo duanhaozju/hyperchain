@@ -117,7 +117,6 @@ func NewHTS(sec Security,caConfigPath string)(*HTS,error){
 		sec:sec,
 		cg:new(CertGroup),
 	}
-	fmt.Println(caConfigPath)
 	// check ca config path
 	if !common.FileExist(caConfigPath){
 		return nil,errors.New("CA config not exist, please check it.")

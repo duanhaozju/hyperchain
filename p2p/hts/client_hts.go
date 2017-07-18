@@ -3,7 +3,6 @@ package hts
 import (
 	"crypto"
 	"github.com/pkg/errors"
-	"fmt"
 )
 
 type ClientHTS struct {
@@ -36,7 +35,6 @@ func(ch *ClientHTS)GenShareKey(rand,rawcert []byte) error{
 	if err != nil{
 		return err
 	}
-	fmt.Println("client key exange",sk)
 	ch.sessionKey = NewSessionKey(sk)
 	return nil
 }
