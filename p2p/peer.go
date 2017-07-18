@@ -65,6 +65,12 @@ func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
 		UUID:     []byte(peer.local.GetHash()),
 		Version:  P2P_MODULE_DEV_VERSION,
 	}
+	//encrypt
+	encPayload,err := peer.chts.Encrypt(in.Payload)
+	if err != nil{
+		return nil,err
+	}
+	in.Payload = encPayload
 
 	//TODO here should change to Chat method
 	//TODO change as bidi stream transfer method
@@ -83,6 +89,12 @@ func (peer *Peer) Whisper(in *pb.Message) (*pb.Message, error) {
 		UUID:     []byte(peer.local.GetHash()),
 		Version:  P2P_MODULE_DEV_VERSION,
 	}
+	//encrypt
+	encPayload,err := peer.chts.Encrypt(in.Payload)
+	if err != nil{
+		return nil,err
+	}
+	in.Payload = encPayload
 	response, err := peer.net.Whisper(peer.hostname, in)
 	if err != nil {
 		return nil, err
@@ -203,10 +215,12 @@ func (peer *Peer) clientHello(isOriginal bool) error {
 
 	fmt.Printf("peer.go 205 got a server hello message %+v \n", serverHello)
 	if err != nil {
+		fmt.Printf("peer.go 205  err: %s \n",err.Error())
 		return err
 	}
 	// complele the key agree
 	if err := peer.negotiateShareKey(serverHello,rand);err != nil{
+		fmt.Printf("peer.go 210 error: %s \n",err.Error())
 		return peer.clientReject(serverHello)
 	}else {
 		return peer.clientResponse(serverHello)

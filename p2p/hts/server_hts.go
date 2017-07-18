@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/orcaman/concurrent-map"
+	"agile/utils/common"
 )
 
 type ServerHTS struct {
@@ -33,7 +34,7 @@ func (sh *ServerHTS) KeyExchange(idenHash string,rand []byte, rawcert []byte) er
 	if err != nil {
 		return err
 	}
-	fmt.Print("server key exchange:",idenHash,sk)
+	fmt.Printf("server key exchange: %s,%s\n",idenHash,common.ToHex(sk))
 	sessionKey := NewSessionKey(sk)
 	sh.sessionKeyPool.Set(idenHash, sessionKey)
 	return nil

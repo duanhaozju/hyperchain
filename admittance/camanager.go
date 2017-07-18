@@ -9,6 +9,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"github.com/spf13/viper"
+	"fmt"
 )
 
 var (
@@ -59,7 +60,7 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	config.SetConfigFile(caconfPath)
 	err := config.ReadInConfig()
 	if err != nil {
-		return nil, errors.New("cannot read ca conf")
+		return nil, errors.New(fmt.Sprintf("cannot read ca conf,reason: %s",err.Error()))
 	}
 	eca, err := readCert(config.GetString("ecert.ca"))
 	if err != nil {

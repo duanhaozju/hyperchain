@@ -120,6 +120,10 @@ do
     cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/cert/
     cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
     #tls configuration
+    cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/certs/
+    cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/certs/
+
+    #certs
     cp -rf  ${CONF_PATH}/tls ${DUMP_PATH}/node${j}/
 
     # distribute hypercli
@@ -238,8 +242,9 @@ PEER_CONFIG_FILE_NAME="configuration/"$PEER_CONFIG_FILE_NAME
 PEER_CONFIG_FILE=${PROJECT_PATH}/${PEER_CONFIG_FILE_NAME}
 
 # node num
-MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | jq ".maxpeernode"`
-echo "Node number is: ${MAXPEERNUM}"
+# MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | jq ".maxpeernode"`
+# echo "Node number is: ${MAXPEERNUM}"
+MAXPEERNUM=4
 
 # delete data? default = true
 DELETEDATA=true

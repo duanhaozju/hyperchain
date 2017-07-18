@@ -38,7 +38,7 @@ func(slot *MsgSlot)Clear(){
 func(slot *MsgSlot)GetHandler(msgType message.MsgType)(MsgHandler,error){
 	h,ok := slot.slot.Get(strconv.FormatInt(int64(msgType),10))
 	if !ok{
-		return nil,errors.New("Cannot find the msg handler")
+		return nil,errors.New(fmt.Sprintf("Cannot find the msg handler,message type: %s",msgType.String()))
 	}
 	return h.(MsgHandler),nil
 }

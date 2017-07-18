@@ -4,6 +4,7 @@ self:
   hostname: node2
   org: true
   vp: true
+  caconf: "namespaces/global/config/caconfig13.yaml"
 nodes:
   -
     id: 1
