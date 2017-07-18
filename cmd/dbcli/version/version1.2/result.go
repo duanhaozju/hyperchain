@@ -4,6 +4,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/cmd/dbcli/version/version1.2/types"
 	"hyperchain/cmd/dbcli/constant"
+	"strconv"
 )
 
 func GetBlockData(data []byte, parameter *constant.Parameter) (string, error) {
@@ -67,5 +68,15 @@ func GetChainData(data []byte) (string, error) {
 		return "", err
 	} else {
 		return chain.Encode(), nil
+	}
+}
+
+func GetChainHeight(data []byte) (string, error) {
+	var chain version1_2.Chain
+	err := proto.Unmarshal(data, &chain)
+	if err != nil {
+		return "", err
+	} else {
+		return strconv.FormatUint(chain.GetHeight(), 10), nil
 	}
 }

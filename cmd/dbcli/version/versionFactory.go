@@ -41,6 +41,8 @@ func NewResultFactory(typi string, version string, data []byte, parameter *const
 		case constant.VERSION1_3:
 			// version1.2 and version1.3 are same.
 			return version1_2.GetInvaildTransactionData(data)
+		case constant.VERSIONFINAL:
+			return version1_2.GetInvaildTransactionData(data)
 		default:
 			return "", constant.ErrDataVersion
 		}
@@ -70,6 +72,17 @@ func NewResultFactory(typi string, version string, data []byte, parameter *const
 			return version1_2.GetChainData(data)
 		case constant.VERSION1_3:
 			return version1_3.GetChainData(data)
+		default:
+			return "", constant.ErrDataVersion
+		}
+	case constant.CHAINHEIGHT:
+		switch version {
+		case constant.VERSION1_1:
+			return version1_1.GetChainHeight(data)
+		case constant.VERSION1_2:
+			return version1_2.GetChainHeight(data)
+		case constant.VERSION1_3:
+			return version1_3.GetChainHeight(data)
 		default:
 			return "", constant.ErrDataVersion
 		}

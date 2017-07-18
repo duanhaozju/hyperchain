@@ -7,6 +7,8 @@ const (
 	HASH     = "hash"
 	OUTPUT   = "output"
 	VERBOSE  = "verbose"
+	MAX      = "max"
+	MIN      = "min"
 
 	VERSIONFINAL = "final"
 	VERSION1_1   = "1.1"
@@ -19,6 +21,7 @@ const (
 	TRANSACTIONMETA    = "transactionMeta"
 	RECEIPT            = "receipt"
 	CHAIN              = "chain"
+	CHAINHEIGHT        = "chainHeight"
 
 	PROTOERR           = "proto: bad wiretype for field"
 )
