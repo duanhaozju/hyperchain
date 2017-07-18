@@ -102,7 +102,6 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		eventHub:ev,
 		hyperNet:net,
 		selfID:selfID,
-		peerPool:NewPeersPool(namespace),
 		node:NewNode(namespace, selfID, selfHostname, net),
 		nodeNum:N,
 		blackHole:make(chan interface{}),
@@ -117,6 +116,8 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		isVP:isvp,
 		hts:h,
 	}
+	//peer pool
+	pmi.peerPool = NewPeersPool(namespace,pmi.peerMgrEv)
 	//set vp information
 	if !pmi.isVP {
 		pmi.node.info.SetNVP()
@@ -237,6 +238,37 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 			pmgr.logger.Errorf("cannot bind the remote NVP hostname: reason: %s", err.Error())
 			return
 		}
+	}
+	case peerevent.EV_DELETE_NVP:{
+		conev := ev.(peerevent.EV_DELETE_NVP)
+		peer := pmgr.peerPool.GetNVPByHash(conev.Hash)
+		m := pb.NewMsg(pb.MsgType_NVPDELETE,[]byte(pmgr.node.info.Hash))
+		rsp,err := peer.Chat(m)
+		if err != nil{
+			pmgr.logger.Errorf("cannot delete NVP peer, reason: %s \n",err.Error())
+		}
+		if rsp != nil && rsp.Payload != nil{
+			pmgr.logger.Infof("delete NVP peer, response: %s \n",string(rsp.Payload))
+			pmgr.peerPool.DeleteNVPPeer(conev.Hash)
+		}
+	}
+	case peerevent.EV_DELETE_VP:{
+		if pmgr.isVP{
+			pmgr.logger.Critical("As A VP Node, this process cannot be invoked")
+			return
+		}
+		conev := ev.(peerevent.EV_DELETE_NVP)
+		pmgr.logger.Critical("NVP delete VP Peer By hash",conev.Hash)
+		pmgr.peerPool.DeleteVPPeerByHash(conev.Hash)
+		if !pmgr.isVP{
+				if pmgr.peerPool.GetVPNum() == 0{
+					pmgr.logger.Critical("ALL Validate Peer are disconnect with this Non-Validate Peer")
+					pmgr.logger.Critical("This Peer Will quit automaticlly after 3 seconds")
+					<- time.After(3 * time.Second)
+					pmgr.delchan <- true
+				}
+		}
+
 	}
 	default:
 		pmgr.logger.Critical("cannot determin the event type",reflect.TypeOf(ev))
@@ -435,7 +467,7 @@ func (pmgr *peerManagerImpl)GetRouterHashifDelete(hash string) (afterDelRouterHa
 
 //DeleteNode delete the specific hash node, if the node hash is self, this node will stoped.
 func (pmgr *peerManagerImpl)DeleteNode(hash string) error {
-	pmgr.logger.Critical("DELENODE", hash)
+	pmgr.logger.Critical("DELETE NODE", hash)
 	if pmgr.node.info.Hash == hash {
 		pmgr.Stop()
 		pmgr.logger.Critical(" WARNING!! THIS NODE HAS BEEN DELETED!")
@@ -446,6 +478,19 @@ func (pmgr *peerManagerImpl)DeleteNode(hash string) error {
 
 	}
 	return pmgr.peerPool.DeleteVPPeerByHash(hash)
+}
+
+func (pmgr *peerManagerImpl)DeleteNVPNode(hash string) error {
+	pmgr.logger.Critical("DELETE NVPNODE", hash)
+	if pmgr.node.info.Hash == hash {
+		pmgr.logger.Critical("Please do not send delete NVP command to nvp")
+		return nil
+	}
+	ev := peerevent.EV_DELETE_NVP{
+		Hash:hash,
+	}
+	go pmgr.peerMgrEv.Post(ev)
+	return nil
 }
 
 // InfoGetter get the peer info to manager
