@@ -3,13 +3,13 @@ package secimpl
 import (
 	"crypto"
 	"crypto/ecdsa"
-	"certgen/primitives"
 	"errors"
 	"math/big"
 	"encoding/asn1"
 	"fmt"
 	"crypto/elliptic"
 	"hyperchain/crypto/sha3"
+	"hyperchain/crypto/primitives"
 )
 // this secimpl implements the Security interface
 
@@ -42,7 +42,7 @@ func (ea *ECDHWithAES)VerifySign(sign,data,rawcert []byte)(bool,error){
 }
 
 func(ea *ECDHWithAES)GenerateShareKey(priKey []byte,rand []byte,rawcert []byte)(sharedKey []byte,err error){
-	prikey,err := primitives.ParsePriKey(priKey)
+	prikey,err := primitives.ParseKey(priKey)
 	if err != nil{
 		return nil,err
 	}
