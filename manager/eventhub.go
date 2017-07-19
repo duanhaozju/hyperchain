@@ -295,6 +295,7 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 				hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_DEL_NODE_EVENT, msg)
 			case event.DelNVPEvent:
 				hub.logger.Debugf("message middleware: [delete nvp peer]")
+				hub.peerManager.DeleteNVPNode(string(ev.Payload))
 			case event.BroadcastDelPeerEvent:
 				hub.logger.Debugf("message middleware: [broadcast delete peer]")
 				hub.broadcast(BROADCAST_VP, m.SessionMessage_DEL_PEER, ev.Payload)
@@ -302,18 +303,15 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 				hub.logger.Debugf("message middleware: [update routing table]")
 				if ev.Type == true {
 					// add a peer
-					//TODO unSupport method temp @chenquan
 					hub.peerManager.UpdateRoutingTable(ev.Payload)
 					hub.PassRouters()
 				} else {
 					// remove a peer
-					//TODO unSupport method temp @chenquan
 					hub.peerManager.DeleteNode(string(ev.Payload))
 					hub.PassRouters()
 				}
 			case event.AlreadyInChainEvent:
 				hub.logger.Debugf("message middleware: [already in chain]")
-					//TODO unsupport method @chenquan
 					payload := hub.peerManager.GetLocalAddressPayload()
 					hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_NEW_NODE_EVENT, &protos.NewNodeMessage{payload})
 					hub.PassRouters()

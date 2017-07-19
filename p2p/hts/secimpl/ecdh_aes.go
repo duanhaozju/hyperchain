@@ -126,16 +126,6 @@ func TripleDesDec(key, src []byte) ([]byte, error) {
 	return origData, nil
 }
 
-// pure enc will not encrypt the message
-func pureEnc(sec, msg []byte) ([]byte, error) {
-	return msg, nil
-}
-
-// pure dec will return origin message
-func pureDec(sec, msg []byte) ([]byte, error) {
-	return msg, nil
-}
-
 //PKCS5Padding padding with pkcs5
 func PKCS5Padding(ciphertext []byte, blockSize int) []byte {
 	padding := blockSize - len(ciphertext)%blockSize

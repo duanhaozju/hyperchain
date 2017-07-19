@@ -99,7 +99,7 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 	if !common.FileExist(caconf){
 		return nil,errors.New(fmt.Sprintf("caconfig file is not exist, please check it %s \n",caconf))
 	}
-	h,err := hts.NewHTS(secimpl.NewECDHWithAES(),caconf)
+	h,err := hts.NewHTS(secimpl.NewSecuritySelector(caconf),caconf)
 	if err != nil{
 		return nil, errors.New(fmt.Sprintf("hts initlized failed: %s", err.Error()))
 	}

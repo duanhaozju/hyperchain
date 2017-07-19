@@ -97,10 +97,8 @@ func (cf *Config) ContainsKey(key string) bool {
 func (cf *Config) MergeConfig(configPath string) (*Config, error) {
 	cf.lock.Lock()
 	defer cf.lock.Unlock()
-	logger := GetLogger(DEFAULT_LOG, "common")
 	f, err := os.Open(configPath)
 	if err != nil {
-		logger.Errorf("open file: %s error, %v", configPath, err.Error())
 		return cf, err
 	}
 	cf.conf.MergeConfig(f)
