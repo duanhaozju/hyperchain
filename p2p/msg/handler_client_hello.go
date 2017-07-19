@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/crypto/csprng"
 	"hyperchain/p2p/info"
-	"agile/utils/common"
+	"hyperchain/common"
 )
 
 type ClientHelloMsgHandler struct {
