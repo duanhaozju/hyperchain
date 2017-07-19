@@ -9,6 +9,7 @@ import (
 	"hyperchain/core/types"
 
 	"hyperchain/common"
+	"fmt"
 )
 
 // batchManager manage basic batch issues
@@ -133,7 +134,7 @@ func newBatchValidator(pbft *pbftImpl) *batchValidator {
 // newBatchManager init a instance of batchManager.
 func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 	bm := &batchManager{}
-	bm.batchEventsManager = events.NewManagerImpl()
+	bm.batchEventsManager = events.NewManagerImpl(conf.GetString(common.NAMESPACE))
 	bm.batchEventsManager.SetReceiver(pbft)
 
 	pbft.reqEventQueue = events.GetQueue(bm.batchEventsManager.Queue())
@@ -146,9 +147,9 @@ func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 		pbft.logger.Criticalf("Cannot parse batch timeout: %s", err)
 	}
 
-	if batchTimeout >= pbft.pbftTimerMgr.requestTimeout {//TODO: change the pbftTimerMgr to batchTimerMgr
-		pbft.pbftTimerMgr.requestTimeout = 3 * batchTimeout / 2
-		pbft.logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", pbft.pbftTimerMgr.requestTimeout)
+	if batchTimeout >= pbft.timerMgr.requestTimeout {//TODO: change the pbftTimerMgr to batchTimerMgr
+		pbft.timerMgr.requestTimeout = 3 * batchTimeout / 2
+		pbft.logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", pbft.timerMgr.requestTimeout)
 	}
 
 	pbft.logger.Infof("PBFT Batch size = %d", bm.batchSize)
@@ -202,7 +203,7 @@ func (pbft *pbftImpl) startBatchTimer()  {
 		EventType: CORE_BATCH_TIMER_EVENT,
 	}
 
-	pbft.pbftTimerMgr.startTimer(BATCH_TIMER, event, pbft.reqEventQueue)
+	pbft.timerMgr.startTimer(BATCH_TIMER, event, pbft.reqEventQueue)
 
 	pbft.batchMgr.batchTimerActive = true
 	pbft.logger.Debugf("Replica %d started the batch timer", pbft.id)
@@ -210,7 +211,7 @@ func (pbft *pbftImpl) startBatchTimer()  {
 
 //stopBatchTimer stop batch Timer.
 func (pbft *pbftImpl) stopBatchTimer() {
-	pbft.pbftTimerMgr.stopTimer(BATCH_TIMER)
+	pbft.timerMgr.stopTimer(BATCH_TIMER)
 	pbft.batchMgr.batchTimerActive = false
 	pbft.logger.Debugf("Replica %d stoped the batch timer", pbft.id)
 }
@@ -284,6 +285,8 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 	pbft.dupLock.Unlock()
 
 	pbft.logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d, batch size: %d", pbft.id, pbft.view, pbft.batchVdr.vid, txStore.Len())
+	pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout + pbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
+		fmt.Sprintf("new reuqest batch for view=%d/vid=%d", pbft.view, pbft.batchVdr.vid))
 	pbft.helper.ValidateBatch(newBatch.Batch, newBatch.Timestamp, n, pbft.view, true)
 
 }

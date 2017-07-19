@@ -24,7 +24,7 @@ type JvmManager struct {
 	logger           *logging.Logger	 // logger
 	conf             *common.Config
 	exit             chan bool
-
+	lsofPath         string
 }
 
 func NewJvmManager(conf *common.Config) *JvmManager {
@@ -141,13 +141,52 @@ func (mgr *JvmManager) notifyToExit() {
 
 
 func (mgr *JvmManager) checkJvmExist() bool {
+	noLsof := true
+	if len(mgr.lsofPath) == 0 {
+		path, err := exec.LookPath("lsof")
+		logger.Debugf(path)
+		if err != nil {
+			paths := []string{"/usr/sbin/lsof", "/usr/bin/lsof"}
+			for _, p := range paths {
+				if err := findExecutable(p); err == nil {
+					path = p
+					noLsof = false
+					break
+				}
+			}
+		}else {
+			noLsof = false
+		}
+		if len(path) == 0 || noLsof {
+			logger.Errorf("No lsof command found")
+			return true
+		}
+		mgr.lsofPath = path
+	}
+
 	subcmd := fmt.Sprintf("-i:%d", mgr.conf.GetInt(common.C_JVM_PORT))
-	ret, err := exec.Command("lsof", subcmd).Output()
+	ret, err := exec.Command(mgr.lsofPath, subcmd).Output()
 	if err != nil || len(ret) == 0 {
-		return false
+		if err == nil {
+			return false
+		}else {
+			mgr.logger.Error(err.Error())
+			return true
+		}
 	} else {
 		return true
 	}
+}
+
+func findExecutable(file string) error {
+	d, err := os.Stat(file)
+	if err != nil {
+		return err
+	}
+	if m := d.Mode(); !m.IsDir() && m&0111 != 0 {
+		return nil
+	}
+	return os.ErrPermission
 }
 
 func getBinDir() (string, error) {

@@ -12,9 +12,13 @@ function initClass() {
     util="target/classes/cn/hyperchain/jcee/util"
     sdkUtil="hyperjvm/sdk/cn/hyperchain/jcee/util"
 
+    mock="target/classes/cn/hyperchain/jcee/mock"
+    sdkMock="hyperjvm/sdk/cn/hyperchain/jcee/mock"
+
     mkdir -p ${sdkContract}
     echo "${contract}/ContractTemplate.class"
     cp "${contract}/ContractTemplate.class" ${sdkContract}
+    cp "${contract}/Event.class" ${sdkContract}
 
     mkdir -p ${sdkLedger}
     cp "${ledger}/ILedger.class" ${sdkLedger}
@@ -29,6 +33,10 @@ function initClass() {
 
     mkdir -p ${sdkUtil}
     cp "${util}/Bytes.class" ${sdkUtil}
+
+    mkdir -p ${sdkMock}
+    cp "${mock}/MockLedger.class" ${sdkMock}
+    cp "${mock}/MockServer.class" ${sdkMock}
 }
 
 if [ -e hyperjvm/sdk ]; then

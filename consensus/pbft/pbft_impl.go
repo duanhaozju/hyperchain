@@ -35,11 +35,11 @@ type pbftImpl struct {
 	nvInitialSeqNo uint64                       // initial seqNo in a new view
 	cachedlimit    int
 
-	status         PbftStatus                       // basic status of pbft
+	status         PbftStatus                   // basic status of pbft
 
 	batchMgr       *batchManager                // manage batch related issues
-	batchVdr       *batchValidator             // manage batch validate issues
-	pbftTimerMgr   *timerManager                // manage pbft event timers
+	batchVdr       *batchValidator              // manage batch validate issues
+	timerMgr       *timerManager                // manage pbft event timers
 	storeMgr       *storeManager                // manage storage
 	nodeMgr        *nodeManager                 // manage node delete or add
 	recoveryMgr    *recoveryManager             // manage recovery issues
@@ -81,7 +81,7 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) (*pbftImpl
 	pbft.L = pbft.logMultiplier * pbft.K // log size
 
 	//pbftManage manage consensus events
-	pbft.pbftManager = events.NewManagerImpl()
+	pbft.pbftManager = events.NewManagerImpl(pbft.namespace)
 	pbft.pbftManager.SetReceiver(pbft)
 
 	pbft.initMsgEventMap()
@@ -89,18 +89,18 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) (*pbftImpl
 	// new executor
 	pbft.exec = newExecutor()
 	//new timer manager
-	pbft.pbftTimerMgr = newTimerMgr(pbft)
+	pbft.timerMgr = newTimerMgr(pbft)
 
 	pbft.initTimers()
 	pbft.initStatus()
 
-	if pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
-		pbft.logger.Infof("PBFT null requests timeout = %v", pbft.pbftTimerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
+	if pbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
+		pbft.logger.Infof("PBFT null requests timeout = %v", pbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
 	} else {
 		pbft.logger.Infof("PBFT null requests disabled")
 	}
 
-	pbft.vcMgr = newVcManager(pbft.pbftTimerMgr, pbft, config)
+	pbft.vcMgr = newVcManager(pbft.timerMgr, pbft, config)
 	// init the data logs
 	pbft.storeMgr = newStoreMgr()
 	pbft.storeMgr.logger = pbft.logger
@@ -121,7 +121,7 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) (*pbftImpl
 	pbft.logger.Infof("PBFT Max number of validating peers (N) = %v", pbft.N)
 	pbft.logger.Infof("PBFT Max number of failing peers (f) = %v", pbft.f)
 	pbft.logger.Infof("PBFT byzantine flag = %v", pbft.status.getState(&pbft.status.byzantine))
-	pbft.logger.Infof("PBFT request timeout = %v", pbft.pbftTimerMgr.requestTimeout)
+	pbft.logger.Infof("PBFT request timeout = %v", pbft.timerMgr.requestTimeout)
 	pbft.logger.Infof("PBFT Checkpoint period (K) = %v", pbft.K)
 	pbft.logger.Infof("PBFT Log multiplier = %v", pbft.logMultiplier)
 	pbft.logger.Infof("PBFT log size (L) = %v", pbft.L)
@@ -254,7 +254,7 @@ func (pbft *pbftImpl) processNullRequest(msg *protos.Message) error {
 	}
 
 	if pbft.primary(pbft.view) != pbft.id {
-		pbft.pbftTimerMgr.stopTimer(FIRST_REQUEST_TIMER)
+		pbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 	}
 
 	pbft.logger.Infof("Replica %d received null request from primary %d", pbft.id, msg.Id)
@@ -341,6 +341,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			pbft.logger.Warningf("Replica %d is primary, receives validated result %s that is empty",
 				pbft.id, digest)
 			pbft.deleteExistedTx(digest)
+			pbft.stopNewViewTimer()
 			continue
 		}
 
@@ -349,6 +350,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 		// check for other PRE-PREPARE for same digest, but different seqNo
 		if pbft.storeMgr.existedDigest(n, pbft.view, digest) {
 			pbft.deleteExistedTx(digest)
+			pbft.stopNewViewTimer()
 			continue
 		}
 
@@ -357,6 +359,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 				"batch seqNo=%d is out of sequence numbers", pbft.id, digest, n)
 			pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
 			pbft.batchVdr.currentVid = nil
+			pbft.stopNewViewTimer()
 			continue
 		}
 
@@ -374,7 +377,7 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 	n := pbft.seqNo + 1
 
 	pbft.logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
-	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
+	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 	pbft.seqNo = n
 
 	preprepare := &PrePrepare{
@@ -397,6 +400,7 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 		pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
 		pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
 		pbft.batchVdr.currentVid = nil
+		pbft.stopNewViewTimer()
 		return
 	}
 
@@ -407,9 +411,6 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 	msg := cMsgToPbMsg(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 	pbft.batchVdr.updateLCVid()
-
-	pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout, fmt.Sprintf("new request batch view=%d/seqNo=%d, hash=%s", pbft.view, n, digest))
-
 }
 
 //recvPrePrepare process logic for PrePrepare msg.
@@ -424,7 +425,7 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 		return nil
 	}
 
-	pbft.pbftTimerMgr.stopTimer(NULL_REQUEST_TIMER)
+	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 
 	cert := pbft.storeMgr.getCert(preprep.View, preprep.SequenceNumber)
 
@@ -446,7 +447,7 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 
 	if !pbft.status.checkStatesOr(&pbft.status.skipInProgress, &pbft.status.inRecovery) &&
 		preprep.SequenceNumber > pbft.exec.lastExec {
-		pbft.softStartNewViewTimer(pbft.pbftTimerMgr.requestTimeout,
+		pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout,
 			fmt.Sprintf("new pre-prepare for request batch view=%d/seqNo=%d, hash=%s", preprep.View, preprep.SequenceNumber, preprep.BatchDigest))
 	}
 
@@ -607,7 +608,7 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 		idx := msgID{v: commit.View, n: commit.SequenceNumber}
 		if !cert.sentExecute && cert.validated {
 
-			pbft.vcMgr.lastNewViewTimeout = pbft.pbftTimerMgr.getTimeoutValue(NEW_VIEW_TIMER)
+			pbft.vcMgr.lastNewViewTimeout = pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 			delete(pbft.storeMgr.outstandingReqBatches, commit.BatchDigest)
 			pbft.storeMgr.committedCert[idx] = cert.digest
 			pbft.commitTransactions()
@@ -864,6 +865,9 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 	pbft.moveWatermarks(pbft.exec.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.status.inActiveState(&pbft.status.skipInProgress)
 	pbft.validateState()
+	if et.SeqNo % pbft.K == 0 {
+		pbft.checkpoint(et.SeqNo, bcInfo)
+	}
 
 	if pbft.status.getState(&pbft.status.inRecovery) {
 		if pbft.recoveryMgr.recoveryToSeqNo == nil {
@@ -886,13 +890,12 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 			EventType: RECOVERY_RESTART_TIMER_EVENT,
 		}
 
-		pbft.pbftTimerMgr.startTimer(RECOVERY_RESTART_TIMER, event, pbft.pbftEventQueue)
+		pbft.timerMgr.startTimer(RECOVERY_RESTART_TIMER, event, pbft.pbftEventQueue)
 
 		if pbft.storeMgr.highStateTarget == nil {
 			pbft.logger.Errorf("Try to fetch QPC, but highStateTarget is nil")
 			return nil
 		}
-		peers := pbft.storeMgr.highStateTarget.replicas
 		for idx := range pbft.storeMgr.certStore {
 			pbft.persistDelQPCSet(idx.v, idx.n)
 		}
@@ -903,7 +906,7 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 		}
 		pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
 
-		pbft.fetchRecoveryPQC(peers)
+		pbft.fetchRecoveryPQC()
 		return nil
 	}else {
 		pbft.executeAfterStateUpdate()
@@ -1022,12 +1025,12 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	pbft.logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
 		pbft.id, cert.chkptCount, chkpt.SequenceNumber, chkpt.Id)
 
-	if cert.chkptCount == pbft.f + 1 {
+	if cert.chkptCount == pbft.oneCorrectQuorum() {
 		// We do have a weak cert
 		pbft.witnessCheckpointWeakCert(chkpt)
 	}
 
-	if cert.chkptCount < pbft.intersectionQuorum() {
+	if cert.chkptCount < pbft.commonCaseQuorum() {
 		// We do not have a quorum yet
 		return nil
 	}
@@ -1113,7 +1116,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 
 		// If f+1 other replicas have reported checkpoints that were (at one time) outside our watermarks
 		// we need to check to see if we have fallen behind.
-		if len(pbft.storeMgr.hChkpts) >= pbft.f + 1 {
+		if len(pbft.storeMgr.hChkpts) >= pbft.oneCorrectQuorum() {
 			chkptSeqNumArray := make([]uint64, len(pbft.storeMgr.hChkpts))
 			index := 0
 			for replicaID, hChkpt := range pbft.storeMgr.hChkpts {
@@ -1128,7 +1131,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 			// If f+1 nodes have issued checkpoints above our high water mark, then
 			// we will never record 2f+1 checkpoints for that sequence number, we are out of date
 			// (This is because all_replicas - missed - me = 3f+1 - f - 1 = 2f)
-			if m := chkptSeqNumArray[len(chkptSeqNumArray) - (pbft.f + 1)]; m > H {
+			if m := chkptSeqNumArray[len(chkptSeqNumArray) - pbft.oneCorrectQuorum()]; m > H {
 				if pbft.exec.lastExec >= chkpt.SequenceNumber {
 					pbft.logger.Warningf("Replica %d is ahead of others, waiting others catch up", pbft.id)
 					return true
@@ -1154,7 +1157,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 func (pbft *pbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 
 	// Only ever invoked for the first weak cert, so guaranteed to be f+1
-	checkpointMembers := make([]uint64, pbft.f + 1)
+	checkpointMembers := make([]uint64, pbft.oneCorrectQuorum())
 	i := 0
 	for testChkpt := range pbft.storeMgr.checkpointStore {
 		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.Id == chkpt.Id {

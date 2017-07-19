@@ -3,24 +3,26 @@ package jsonrpc
 import "hyperchain/common"
 
 type Receiver interface {
-	handleChannelReq (rq *common.RPCRequest) interface{}
+	handleChannelReq (codec ServerCodec, rq *common.RPCRequest) interface{}
 }
 
 type requestManager struct {
 	namespace string
 	receiver  Receiver
+	codec 	  ServerCodec
 	requests  chan *common.RPCRequest
 	response  chan interface{}
 	exit      chan interface{}
 }
 
-func NewRequestManager(namespace string, s* Server) *requestManager {
+func NewRequestManager(namespace string, s* Server, codec ServerCodec) *requestManager {
 	return &requestManager{
 		namespace: namespace,
 		receiver:  s,
 		requests:  make(chan *common.RPCRequest),
 		response:  make(chan interface{}),
 		exit:      make(chan interface{}),
+		codec:	   codec,
 	}
 }
 
@@ -34,7 +36,7 @@ func (rm *requestManager)Stop() {
 }
 
 func (rm *requestManager)ProcessRequest(request *common.RPCRequest) {
-	rm.response <- rm.receiver.handleChannelReq(request)//TODO: add timeout detect
+	rm.response <- rm.receiver.handleChannelReq(rm.codec, request)//TODO: add timeout detect
 }
 
 func (rm *requestManager)Loop(){

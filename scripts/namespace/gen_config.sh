@@ -183,7 +183,6 @@ f_distribute(){
         cp -rf  ${BUILD_TMP_PATH}/${NS_NAME}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}
         if ${LOCAL}; then
             cp -rf  ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/local_peerconfig.json
-            cp ${DUMP_PATH}/hyperchain ${DUMP_PATH}/${NS_NODES[$j]}
         else
             cp -rf  ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/peerconfig.json
 
@@ -230,6 +229,9 @@ NS_CONFIG_PATH="${GOPATH}/src/hyperchain/configuration"
 # config ns path
 BUILD_TMP_PATH="${PROJECT_PATH}/build/tmp"
 
+# build hypercli or not?
+BUILD_hypercli=true
+
 # generate local peer config or not
 LOCAL=false
 
@@ -242,6 +244,8 @@ do
     case "$1" in
     -h|--help)
         f_help; exit 0;;
+    -c|--cli)
+        BUILD_hypercli=false; shift;;
     -l|--local)
         LOCAL=true; shift;;
     -*) f_help; exit 1;;
@@ -272,7 +276,9 @@ f_copy_tmp
 f_gen_config
 
 # 5.rebuild hypercli
-f_rebuild_hypercli
+if ${BUILD_hypercli}; then
+    f_rebuild_hypercli
+fi
 
 # 5.distribute config files to corresponding nodes
 f_distribute

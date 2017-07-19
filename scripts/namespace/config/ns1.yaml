@@ -14,6 +14,8 @@ node2:
     introducer_ip: 172.16.0.12
     introducer_port: 8002
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051
 
 node3:
     ip: 172.16.0.13
@@ -26,6 +28,8 @@ node3:
     introducer_ip: 172.16.0.12
     introducer_port: 8002
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051
 
 node4:
     ip: 172.16.0.14
@@ -38,6 +42,8 @@ node4:
     introducer_ip: 172.16.0.12
     introducer_port: 8002
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051
 
 node1:
     ip: 172.16.0.11
@@ -50,3 +56,5 @@ node1:
     introducer_ip: 172.16.0.12
     introducer_port: 8002
     introducer_id: 1
+    jvm_port: 50081
+    ledger_port: 50051

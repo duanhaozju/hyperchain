@@ -6,8 +6,6 @@ package cn.hyperchain.jcee.contract.examples.c1;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.ContractTemplate;
-import com.google.protobuf.ByteString;
-import org.apache.log4j.Logger;
 
 import java.util.List;
 
@@ -15,7 +13,6 @@ import java.util.List;
  * Created by wangxiaoyi on 2017/4/7.
  */
 public class MySmartContract extends ContractTemplate {
-    private final Logger logger = Logger.getLogger(MySmartContract.class.getSimpleName());
 
     public ExecuteResult invoke(String funcName, List<String> args) {
         //logger.info("invoke function name: " + funcName);
@@ -55,7 +52,7 @@ public class MySmartContract extends ContractTemplate {
     }
 
     public void test(String name) {
-        logger.info(getLedger().getContext().getId());
-        //logger.info("invoke in test");
+//        logger.info(getLedger().getContext().getId());
+        logger.info("invoke in test");
     }
 }

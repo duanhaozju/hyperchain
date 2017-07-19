@@ -6,6 +6,24 @@ import (
 	"hyperchain/common"
 )
 
+const (
+	LogVmType_EVM = iota
+	LogVmType_JVM
+)
+
+type LogVmType int
+
+func (vmType LogVmType) String() string {
+	switch vmType {
+	case LogVmType_EVM:
+		return "EVM"
+	case LogVmType_JVM:
+		return "JVM"
+	default:
+		return ""
+	}
+}
+
 type Log struct {
 	// consensus fields
 	Address common.Address `json:"Address"`
@@ -25,7 +43,7 @@ type Log struct {
 // primary's seqNo may not equal to other's
 // correctly block number and block hash will be assigned in the commit phase
 func NewLog(address common.Address, topics []common.Hash, data []byte, number uint64) *Log {
-	return &Log{Address: address, Topics: topics, Data: data, BlockNumber: number}
+	return &Log{Address: address, Topics: topics, Data: data, BlockNumber: 0}
 }
 
 func (l *Log) String() string {

@@ -10,6 +10,7 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/protos"
 	"time"
+	"github.com/pkg/errors"
 )
 
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
@@ -70,7 +71,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 		executor.logger.Errorf("persist transactions of #%d failed.", block.Number)
 		return err
 	}
-	if err := executor.persistReceipts(batch, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
+	if err := executor.persistReceipts(batch, record.ValidTxs, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
 		executor.logger.Errorf("persist receipts of #%d failed.", block.Number)
 		return err
 	}
@@ -117,6 +118,10 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 		return nil
 	}
 	// 1.generate a new block with the argument in cache
+	bloom, err := types.CreateBloom(record.Receipts)
+	if err != nil {
+		return nil
+	}
 	newBlock := &types.Block{
 		ParentHash:  edb.GetLatestBlockHash(executor.namespace),
 		MerkleRoot:  record.MerkleRoot,
@@ -127,6 +132,7 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 		Number:      ev.SeqNo,
 		WriteTime:   time.Now().UnixNano(),
 		EvmTime:     time.Now().UnixNano(),
+		Bloom:       bloom,
 	}
 	newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
 	copy(newBlock.Transactions, record.ValidTxs)
@@ -161,8 +167,16 @@ func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 
 func (executor *Executor) persistTransactions(batch db.Batch, transactions []*types.Transaction, blockNumber uint64) error {
 	for i, transaction := range transactions {
-		if err, _ := edb.PersistTransaction(batch, transaction, false, false); err != nil {
-			return err
+		if transaction.Version != nil {
+			// transaction has add version tag, use original version tag
+			if err, _ := edb.PersistTransaction(batch, transaction, false, false, string(transaction.Version)); err != nil {
+				return err
+			}
+		} else {
+			// use default version tag
+			if err, _ := edb.PersistTransaction(batch, transaction, false, false); err != nil {
+				return err
+			}
 		}
 		// persist transaction meta data
 		meta := &types.TransactionMeta{
@@ -178,20 +192,29 @@ func (executor *Executor) persistTransactions(batch db.Batch, transactions []*ty
 
 // re assign block hash and block number to transaction executor.loggers
 // during the validation, block number and block hash can be incorrect
-func (executor *Executor) persistReceipts(batch db.Batch, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
-	for _, receipt := range receipts {
-		//logs, err := receipt.RetrieveLogs()
-		//if err != nil {
-		//	return err
-		//}
-		//for _, log := range logs {
-		//	log.BlockHash = blockHash
-		//	log.BlockNumber = blockNumber
-		//}
-		////TODO: why need a iterate to find the final blockHash and blockNumber
-		//receipt.SetLogs(logs)
-		if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
+func (executor *Executor) persistReceipts(batch db.Batch, transaction []*types.Transaction, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) error {
+	if len(transaction) != len(receipts) {
+		return errors.New("the number of transactions not equal to receipt")
+	}
+	for idx, receipt := range receipts {
+		logs, err := receipt.RetrieveLogs()
+		if err != nil {
 			return err
+		}
+		for _, log := range logs {
+			log.BlockHash = blockHash
+			log.BlockNumber = blockNumber
+		}
+		receipt.SetLogs(logs)
+
+		if transaction[idx].Version != nil {
+			if err, _ := edb.PersistReceipt(batch, receipt, false, false, string(transaction[idx].Version)); err != nil {
+				return err
+			}
+		} else {
+			if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

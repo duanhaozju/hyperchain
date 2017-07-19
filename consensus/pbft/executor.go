@@ -304,7 +304,7 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 	case RECOVERY_DONE_EVENT:
 		pbft.status.inActiveState(&pbft.status.inRecovery)
 		pbft.recoveryMgr.recoveryToSeqNo = nil
-		pbft.pbftTimerMgr.stopTimer(RECOVERY_RESTART_TIMER)
+		pbft.timerMgr.stopTimer(RECOVERY_RESTART_TIMER)
 		pbft.logger.Criticalf("======== Replica %d finished recovery, height: %d", pbft.id, pbft.exec.lastExec)
 		if pbft.recoveryMgr.recvNewViewInRecovery {
 			pbft.logger.Noticef("#  Replica %d find itself received NewView during Recovery"+
@@ -322,7 +322,7 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 				EventType: CORE_FIRST_REQUEST_TIMER_EVENT,
 			}
 
-			pbft.pbftTimerMgr.startTimer(FIRST_REQUEST_TIMER, event, pbft.pbftEventQueue)
+			pbft.timerMgr.startTimer(FIRST_REQUEST_TIMER, event, pbft.pbftEventQueue)
 		}
 		if pbft.status.getState(&pbft.status.vcToRecovery) {
 			pbft.status.inActiveState(&pbft.status.vcToRecovery)

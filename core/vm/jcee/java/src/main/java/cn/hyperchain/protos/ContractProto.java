@@ -1536,6 +1536,11 @@ public final class ContractProto {
      */
     com.google.protobuf.ByteString
         getCidBytes();
+
+    /**
+     * <code>uint64 blockNumber = 4;</code>
+     */
+    long getBlockNumber();
   }
   /**
    * Protobuf type {@code RequestContext}
@@ -1552,6 +1557,7 @@ public final class ContractProto {
       txid_ = "";
       namespace_ = "";
       cid_ = "";
+      blockNumber_ = 0L;
     }
 
     @java.lang.Override
@@ -1595,6 +1601,11 @@ public final class ContractProto {
               java.lang.String s = input.readStringRequireUtf8();
 
               cid_ = s;
+              break;
+            }
+            case 32: {
+
+              blockNumber_ = input.readUInt64();
               break;
             }
           }
@@ -1722,6 +1733,15 @@ public final class ContractProto {
       }
     }
 
+    public static final int BLOCKNUMBER_FIELD_NUMBER = 4;
+    private long blockNumber_;
+    /**
+     * <code>uint64 blockNumber = 4;</code>
+     */
+    public long getBlockNumber() {
+      return blockNumber_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -1743,6 +1763,9 @@ public final class ContractProto {
       if (!getCidBytes().isEmpty()) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, cid_);
       }
+      if (blockNumber_ != 0L) {
+        output.writeUInt64(4, blockNumber_);
+      }
     }
 
     public int getSerializedSize() {
@@ -1758,6 +1781,10 @@ public final class ContractProto {
       }
       if (!getCidBytes().isEmpty()) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, cid_);
+      }
+      if (blockNumber_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(4, blockNumber_);
       }
       memoizedSize = size;
       return size;
@@ -1781,6 +1808,8 @@ public final class ContractProto {
           .equals(other.getNamespace());
       result = result && getCid()
           .equals(other.getCid());
+      result = result && (getBlockNumber()
+          == other.getBlockNumber());
       return result;
     }
 
@@ -1797,6 +1826,9 @@ public final class ContractProto {
       hash = (53 * hash) + getNamespace().hashCode();
       hash = (37 * hash) + CID_FIELD_NUMBER;
       hash = (53 * hash) + getCid().hashCode();
+      hash = (37 * hash) + BLOCKNUMBER_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getBlockNumber());
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -1921,6 +1953,8 @@ public final class ContractProto {
 
         cid_ = "";
 
+        blockNumber_ = 0L;
+
         return this;
       }
 
@@ -1946,6 +1980,7 @@ public final class ContractProto {
         result.txid_ = txid_;
         result.namespace_ = namespace_;
         result.cid_ = cid_;
+        result.blockNumber_ = blockNumber_;
         onBuilt();
         return result;
       }
@@ -1998,6 +2033,9 @@ public final class ContractProto {
         if (!other.getCid().isEmpty()) {
           cid_ = other.cid_;
           onChanged();
+        }
+        if (other.getBlockNumber() != 0L) {
+          setBlockNumber(other.getBlockNumber());
         }
         onChanged();
         return this;
@@ -2231,6 +2269,32 @@ public final class ContractProto {
         onChanged();
         return this;
       }
+
+      private long blockNumber_ ;
+      /**
+       * <code>uint64 blockNumber = 4;</code>
+       */
+      public long getBlockNumber() {
+        return blockNumber_;
+      }
+      /**
+       * <code>uint64 blockNumber = 4;</code>
+       */
+      public Builder setBlockNumber(long value) {
+        
+        blockNumber_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>uint64 blockNumber = 4;</code>
+       */
+      public Builder clearBlockNumber() {
+        
+        blockNumber_ = 0L;
+        onChanged();
+        return this;
+      }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return this;
@@ -2275,6 +2339,791 @@ public final class ContractProto {
     }
 
     public cn.hyperchain.protos.ContractProto.RequestContext getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface EventOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:Event)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    boolean hasContext();
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.LedgerContext getContext();
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder();
+
+    /**
+     * <code>repeated bytes topics = 2;</code>
+     */
+    java.util.List<com.google.protobuf.ByteString> getTopicsList();
+    /**
+     * <code>repeated bytes topics = 2;</code>
+     */
+    int getTopicsCount();
+    /**
+     * <code>repeated bytes topics = 2;</code>
+     */
+    com.google.protobuf.ByteString getTopics(int index);
+
+    /**
+     * <code>bytes body = 3;</code>
+     */
+    com.google.protobuf.ByteString getBody();
+  }
+  /**
+   * Protobuf type {@code Event}
+   */
+  public  static final class Event extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:Event)
+      EventOrBuilder {
+    // Use Event.newBuilder() to construct.
+    private Event(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private Event() {
+      topics_ = java.util.Collections.emptyList();
+      body_ = com.google.protobuf.ByteString.EMPTY;
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private Event(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              cn.hyperchain.protos.ContractProto.LedgerContext.Builder subBuilder = null;
+              if (context_ != null) {
+                subBuilder = context_.toBuilder();
+              }
+              context_ = input.readMessage(cn.hyperchain.protos.ContractProto.LedgerContext.parser(), extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(context_);
+                context_ = subBuilder.buildPartial();
+              }
+
+              break;
+            }
+            case 18: {
+              if (!((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+                topics_ = new java.util.ArrayList<com.google.protobuf.ByteString>();
+                mutable_bitField0_ |= 0x00000002;
+              }
+              topics_.add(input.readBytes());
+              break;
+            }
+            case 26: {
+
+              body_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        if (((mutable_bitField0_ & 0x00000002) == 0x00000002)) {
+          topics_ = java.util.Collections.unmodifiableList(topics_);
+        }
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Event_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Event_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.Event.class, cn.hyperchain.protos.ContractProto.Event.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int CONTEXT_FIELD_NUMBER = 1;
+    private cn.hyperchain.protos.ContractProto.LedgerContext context_;
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public boolean hasContext() {
+      return context_ != null;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.LedgerContext getContext() {
+      return context_ == null ? cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+    }
+    /**
+     * <code>.LedgerContext context = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder() {
+      return getContext();
+    }
+
+    public static final int TOPICS_FIELD_NUMBER = 2;
+    private java.util.List<com.google.protobuf.ByteString> topics_;
+    /**
+     * <code>repeated bytes topics = 2;</code>
+     */
+    public java.util.List<com.google.protobuf.ByteString>
+        getTopicsList() {
+      return topics_;
+    }
+    /**
+     * <code>repeated bytes topics = 2;</code>
+     */
+    public int getTopicsCount() {
+      return topics_.size();
+    }
+    /**
+     * <code>repeated bytes topics = 2;</code>
+     */
+    public com.google.protobuf.ByteString getTopics(int index) {
+      return topics_.get(index);
+    }
+
+    public static final int BODY_FIELD_NUMBER = 3;
+    private com.google.protobuf.ByteString body_;
+    /**
+     * <code>bytes body = 3;</code>
+     */
+    public com.google.protobuf.ByteString getBody() {
+      return body_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (context_ != null) {
+        output.writeMessage(1, getContext());
+      }
+      for (int i = 0; i < topics_.size(); i++) {
+        output.writeBytes(2, topics_.get(i));
+      }
+      if (!body_.isEmpty()) {
+        output.writeBytes(3, body_);
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (context_ != null) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, getContext());
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < topics_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeBytesSizeNoTag(topics_.get(i));
+        }
+        size += dataSize;
+        size += 1 * getTopicsList().size();
+      }
+      if (!body_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(3, body_);
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.Event)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.Event other = (cn.hyperchain.protos.ContractProto.Event) obj;
+
+      boolean result = true;
+      result = result && (hasContext() == other.hasContext());
+      if (hasContext()) {
+        result = result && getContext()
+            .equals(other.getContext());
+      }
+      result = result && getTopicsList()
+          .equals(other.getTopicsList());
+      result = result && getBody()
+          .equals(other.getBody());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      if (hasContext()) {
+        hash = (37 * hash) + CONTEXT_FIELD_NUMBER;
+        hash = (53 * hash) + getContext().hashCode();
+      }
+      if (getTopicsCount() > 0) {
+        hash = (37 * hash) + TOPICS_FIELD_NUMBER;
+        hash = (53 * hash) + getTopicsList().hashCode();
+      }
+      hash = (37 * hash) + BODY_FIELD_NUMBER;
+      hash = (53 * hash) + getBody().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Event parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Event parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Event parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Event parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Event parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Event parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Event parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Event parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Event parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Event parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.Event prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code Event}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:Event)
+        cn.hyperchain.protos.ContractProto.EventOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Event_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Event_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.Event.class, cn.hyperchain.protos.ContractProto.Event.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.Event.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        if (contextBuilder_ == null) {
+          context_ = null;
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+        topics_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        body_ = com.google.protobuf.ByteString.EMPTY;
+
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Event_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Event getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.Event.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.Event build() {
+        cn.hyperchain.protos.ContractProto.Event result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Event buildPartial() {
+        cn.hyperchain.protos.ContractProto.Event result = new cn.hyperchain.protos.ContractProto.Event(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (contextBuilder_ == null) {
+          result.context_ = context_;
+        } else {
+          result.context_ = contextBuilder_.build();
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          topics_ = java.util.Collections.unmodifiableList(topics_);
+          bitField0_ = (bitField0_ & ~0x00000002);
+        }
+        result.topics_ = topics_;
+        result.body_ = body_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.Event) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.Event)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.Event other) {
+        if (other == cn.hyperchain.protos.ContractProto.Event.getDefaultInstance()) return this;
+        if (other.hasContext()) {
+          mergeContext(other.getContext());
+        }
+        if (!other.topics_.isEmpty()) {
+          if (topics_.isEmpty()) {
+            topics_ = other.topics_;
+            bitField0_ = (bitField0_ & ~0x00000002);
+          } else {
+            ensureTopicsIsMutable();
+            topics_.addAll(other.topics_);
+          }
+          onChanged();
+        }
+        if (other.getBody() != com.google.protobuf.ByteString.EMPTY) {
+          setBody(other.getBody());
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.Event parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.Event) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private cn.hyperchain.protos.ContractProto.LedgerContext context_ = null;
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder> contextBuilder_;
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public boolean hasContext() {
+        return contextBuilder_ != null || context_ != null;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContext getContext() {
+        if (contextBuilder_ == null) {
+          return context_ == null ? cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+        } else {
+          return contextBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder setContext(cn.hyperchain.protos.ContractProto.LedgerContext value) {
+        if (contextBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          context_ = value;
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder setContext(
+          cn.hyperchain.protos.ContractProto.LedgerContext.Builder builderForValue) {
+        if (contextBuilder_ == null) {
+          context_ = builderForValue.build();
+          onChanged();
+        } else {
+          contextBuilder_.setMessage(builderForValue.build());
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder mergeContext(cn.hyperchain.protos.ContractProto.LedgerContext value) {
+        if (contextBuilder_ == null) {
+          if (context_ != null) {
+            context_ =
+              cn.hyperchain.protos.ContractProto.LedgerContext.newBuilder(context_).mergeFrom(value).buildPartial();
+          } else {
+            context_ = value;
+          }
+          onChanged();
+        } else {
+          contextBuilder_.mergeFrom(value);
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public Builder clearContext() {
+        if (contextBuilder_ == null) {
+          context_ = null;
+          onChanged();
+        } else {
+          context_ = null;
+          contextBuilder_ = null;
+        }
+
+        return this;
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContext.Builder getContextBuilder() {
+        
+        onChanged();
+        return getContextFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder getContextOrBuilder() {
+        if (contextBuilder_ != null) {
+          return contextBuilder_.getMessageOrBuilder();
+        } else {
+          return context_ == null ?
+              cn.hyperchain.protos.ContractProto.LedgerContext.getDefaultInstance() : context_;
+        }
+      }
+      /**
+       * <code>.LedgerContext context = 1;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder> 
+          getContextFieldBuilder() {
+        if (contextBuilder_ == null) {
+          contextBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              cn.hyperchain.protos.ContractProto.LedgerContext, cn.hyperchain.protos.ContractProto.LedgerContext.Builder, cn.hyperchain.protos.ContractProto.LedgerContextOrBuilder>(
+                  getContext(),
+                  getParentForChildren(),
+                  isClean());
+          context_ = null;
+        }
+        return contextBuilder_;
+      }
+
+      private java.util.List<com.google.protobuf.ByteString> topics_ = java.util.Collections.emptyList();
+      private void ensureTopicsIsMutable() {
+        if (!((bitField0_ & 0x00000002) == 0x00000002)) {
+          topics_ = new java.util.ArrayList<com.google.protobuf.ByteString>(topics_);
+          bitField0_ |= 0x00000002;
+         }
+      }
+      /**
+       * <code>repeated bytes topics = 2;</code>
+       */
+      public java.util.List<com.google.protobuf.ByteString>
+          getTopicsList() {
+        return java.util.Collections.unmodifiableList(topics_);
+      }
+      /**
+       * <code>repeated bytes topics = 2;</code>
+       */
+      public int getTopicsCount() {
+        return topics_.size();
+      }
+      /**
+       * <code>repeated bytes topics = 2;</code>
+       */
+      public com.google.protobuf.ByteString getTopics(int index) {
+        return topics_.get(index);
+      }
+      /**
+       * <code>repeated bytes topics = 2;</code>
+       */
+      public Builder setTopics(
+          int index, com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureTopicsIsMutable();
+        topics_.set(index, value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes topics = 2;</code>
+       */
+      public Builder addTopics(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  ensureTopicsIsMutable();
+        topics_.add(value);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes topics = 2;</code>
+       */
+      public Builder addAllTopics(
+          java.lang.Iterable<? extends com.google.protobuf.ByteString> values) {
+        ensureTopicsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, topics_);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>repeated bytes topics = 2;</code>
+       */
+      public Builder clearTopics() {
+        topics_ = java.util.Collections.emptyList();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.ByteString body_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes body = 3;</code>
+       */
+      public com.google.protobuf.ByteString getBody() {
+        return body_;
+      }
+      /**
+       * <code>bytes body = 3;</code>
+       */
+      public Builder setBody(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        body_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes body = 3;</code>
+       */
+      public Builder clearBody() {
+        
+        body_ = getDefaultInstance().getBody();
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:Event)
+    }
+
+    // @@protoc_insertion_point(class_scope:Event)
+    private static final cn.hyperchain.protos.ContractProto.Event DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.Event();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Event getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<Event>
+        PARSER = new com.google.protobuf.AbstractParser<Event>() {
+      public Event parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new Event(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<Event> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Event> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.Event getDefaultInstanceForType() {
       return DEFAULT_INSTANCE;
     }
 
@@ -7293,6 +8142,11 @@ public final class ContractProto {
      */
     com.google.protobuf.ByteString
         getCidBytes();
+
+    /**
+     * <code>uint64 blockNumber = 4;</code>
+     */
+    long getBlockNumber();
   }
   /**
    * Protobuf type {@code LedgerContext}
@@ -7309,6 +8163,7 @@ public final class ContractProto {
       txid_ = "";
       namespace_ = "";
       cid_ = "";
+      blockNumber_ = 0L;
     }
 
     @java.lang.Override
@@ -7352,6 +8207,11 @@ public final class ContractProto {
               java.lang.String s = input.readStringRequireUtf8();
 
               cid_ = s;
+              break;
+            }
+            case 32: {
+
+              blockNumber_ = input.readUInt64();
               break;
             }
           }
@@ -7479,6 +8339,15 @@ public final class ContractProto {
       }
     }
 
+    public static final int BLOCKNUMBER_FIELD_NUMBER = 4;
+    private long blockNumber_;
+    /**
+     * <code>uint64 blockNumber = 4;</code>
+     */
+    public long getBlockNumber() {
+      return blockNumber_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -7500,6 +8369,9 @@ public final class ContractProto {
       if (!getCidBytes().isEmpty()) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, cid_);
       }
+      if (blockNumber_ != 0L) {
+        output.writeUInt64(4, blockNumber_);
+      }
     }
 
     public int getSerializedSize() {
@@ -7515,6 +8387,10 @@ public final class ContractProto {
       }
       if (!getCidBytes().isEmpty()) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, cid_);
+      }
+      if (blockNumber_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeUInt64Size(4, blockNumber_);
       }
       memoizedSize = size;
       return size;
@@ -7538,6 +8414,8 @@ public final class ContractProto {
           .equals(other.getNamespace());
       result = result && getCid()
           .equals(other.getCid());
+      result = result && (getBlockNumber()
+          == other.getBlockNumber());
       return result;
     }
 
@@ -7554,6 +8432,9 @@ public final class ContractProto {
       hash = (53 * hash) + getNamespace().hashCode();
       hash = (37 * hash) + CID_FIELD_NUMBER;
       hash = (53 * hash) + getCid().hashCode();
+      hash = (37 * hash) + BLOCKNUMBER_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getBlockNumber());
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -7678,6 +8559,8 @@ public final class ContractProto {
 
         cid_ = "";
 
+        blockNumber_ = 0L;
+
         return this;
       }
 
@@ -7703,6 +8586,7 @@ public final class ContractProto {
         result.txid_ = txid_;
         result.namespace_ = namespace_;
         result.cid_ = cid_;
+        result.blockNumber_ = blockNumber_;
         onBuilt();
         return result;
       }
@@ -7755,6 +8639,9 @@ public final class ContractProto {
         if (!other.getCid().isEmpty()) {
           cid_ = other.cid_;
           onChanged();
+        }
+        if (other.getBlockNumber() != 0L) {
+          setBlockNumber(other.getBlockNumber());
         }
         onChanged();
         return this;
@@ -7988,6 +8875,32 @@ public final class ContractProto {
         onChanged();
         return this;
       }
+
+      private long blockNumber_ ;
+      /**
+       * <code>uint64 blockNumber = 4;</code>
+       */
+      public long getBlockNumber() {
+        return blockNumber_;
+      }
+      /**
+       * <code>uint64 blockNumber = 4;</code>
+       */
+      public Builder setBlockNumber(long value) {
+        
+        blockNumber_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>uint64 blockNumber = 4;</code>
+       */
+      public Builder clearBlockNumber() {
+        
+        blockNumber_ = 0L;
+        onChanged();
+        return this;
+      }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return this;
@@ -8053,6 +8966,11 @@ public final class ContractProto {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_RequestContext_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_Event_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Event_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_Key_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -8104,29 +9022,32 @@ public final class ContractProto {
       "\n\016contract.proto\"I\n\007Request\022 \n\007context\030\001" +
       " \001(\0132\017.RequestContext\022\016\n\006method\030\002 \001(\t\022\014\n" +
       "\004args\030\003 \003(\014\"8\n\010Response\022\n\n\002ok\030\001 \001(\010\022\016\n\006r" +
-      "esult\030\002 \001(\014\022\020\n\010codeHash\030\003 \001(\t\">\n\016Request" +
+      "esult\030\002 \001(\014\022\020\n\010codeHash\030\003 \001(\t\"S\n\016Request" +
       "Context\022\014\n\004txid\030\001 \001(\t\022\021\n\tnamespace\030\002 \001(\t" +
-      "\022\013\n\003cid\030\003 \001(\t\"1\n\003Key\022\037\n\007context\030\001 \001(\0132\016." +
-      "LedgerContext\022\t\n\001k\030\002 \001(\014\"6\n\010BatchKey\022\037\n\007" +
-      "context\030\001 \001(\0132\016.LedgerContext\022\t\n\001k\030\002 \003(\014" +
-      "\"3\n\tBathValue\022\n\n\002id\030\001 \001(\t\022\017\n\007hasMore\030\002 \001" +
-      "(\010\022\t\n\001v\030\003 \003(\014\"A\n\007BatchKV\022\037\n\007context\030\001 \001(",
-      "\0132\016.LedgerContext\022\025\n\002kv\030\002 \003(\0132\t.KeyValue" +
-      "\"D\n\005Range\022\037\n\007context\030\001 \001(\0132\016.LedgerConte" +
-      "xt\022\r\n\005start\030\002 \001(\014\022\013\n\003end\030\003 \001(\014\"\036\n\005Value\022" +
-      "\n\n\002id\030\001 \001(\t\022\t\n\001v\030\002 \001(\014\"A\n\010KeyValue\022\037\n\007co" +
-      "ntext\030\001 \001(\0132\016.LedgerContext\022\t\n\001k\030\002 \001(\014\022\t" +
-      "\n\001v\030\003 \001(\014\"=\n\rLedgerContext\022\014\n\004txid\030\001 \001(\t" +
-      "\022\021\n\tnamespace\030\002 \001(\t\022\013\n\003cid\030\003 \001(\t2P\n\010Cont" +
-      "ract\022 \n\007Execute\022\010.Request\032\t.Response\"\000\022\"" +
-      "\n\tHeartBeat\022\010.Request\032\t.Response\"\0002\314\001\n\006L" +
-      "edger\022\025\n\003Get\022\004.Key\032\006.Value\"\000\022\035\n\003Put\022\t.Ke",
-      "yValue\032\t.Response\"\000\022\033\n\006Delete\022\004.Key\032\t.Re" +
-      "sponse\"\000\022$\n\tBatchRead\022\t.BatchKey\032\n.BathV" +
-      "alue\"\000\022#\n\nBatchWrite\022\010.BatchKV\032\t.Respons" +
-      "e\"\000\022$\n\nRangeQuery\022\006.Range\032\n.BathValue\"\0000" +
-      "\001B\'\n\024cn.hyperchain.protosB\rContractProto" +
-      "P\000b\006proto3"
+      "\022\013\n\003cid\030\003 \001(\t\022\023\n\013blockNumber\030\004 \001(\004\"F\n\005Ev" +
+      "ent\022\037\n\007context\030\001 \001(\0132\016.LedgerContext\022\016\n\006" +
+      "topics\030\002 \003(\014\022\014\n\004body\030\003 \001(\014\"1\n\003Key\022\037\n\007con" +
+      "text\030\001 \001(\0132\016.LedgerContext\022\t\n\001k\030\002 \001(\014\"6\n" +
+      "\010BatchKey\022\037\n\007context\030\001 \001(\0132\016.LedgerConte",
+      "xt\022\t\n\001k\030\002 \003(\014\"3\n\tBathValue\022\n\n\002id\030\001 \001(\t\022\017" +
+      "\n\007hasMore\030\002 \001(\010\022\t\n\001v\030\003 \003(\014\"A\n\007BatchKV\022\037\n" +
+      "\007context\030\001 \001(\0132\016.LedgerContext\022\025\n\002kv\030\002 \003" +
+      "(\0132\t.KeyValue\"D\n\005Range\022\037\n\007context\030\001 \001(\0132" +
+      "\016.LedgerContext\022\r\n\005start\030\002 \001(\014\022\013\n\003end\030\003 " +
+      "\001(\014\"\036\n\005Value\022\n\n\002id\030\001 \001(\t\022\t\n\001v\030\002 \001(\014\"A\n\010K" +
+      "eyValue\022\037\n\007context\030\001 \001(\0132\016.LedgerContext" +
+      "\022\t\n\001k\030\002 \001(\014\022\t\n\001v\030\003 \001(\014\"R\n\rLedgerContext\022" +
+      "\014\n\004txid\030\001 \001(\t\022\021\n\tnamespace\030\002 \001(\t\022\013\n\003cid\030" +
+      "\003 \001(\t\022\023\n\013blockNumber\030\004 \001(\0042P\n\010Contract\022 ",
+      "\n\007Execute\022\010.Request\032\t.Response\"\000\022\"\n\tHear" +
+      "tBeat\022\010.Request\032\t.Response\"\0002\351\001\n\006Ledger\022" +
+      "\025\n\003Get\022\004.Key\032\006.Value\"\000\022\035\n\003Put\022\t.KeyValue" +
+      "\032\t.Response\"\000\022\033\n\006Delete\022\004.Key\032\t.Response" +
+      "\"\000\022$\n\tBatchRead\022\t.BatchKey\032\n.BathValue\"\000" +
+      "\022#\n\nBatchWrite\022\010.BatchKV\032\t.Response\"\000\022$\n" +
+      "\nRangeQuery\022\006.Range\032\n.BathValue\"\0000\001\022\033\n\004P" +
+      "ost\022\006.Event\032\t.Response\"\000B\'\n\024cn.hyperchai" +
+      "n.protosB\rContractProtoP\000b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -8157,55 +9078,61 @@ public final class ContractProto {
     internal_static_RequestContext_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_RequestContext_descriptor,
-        new java.lang.String[] { "Txid", "Namespace", "Cid", });
-    internal_static_Key_descriptor =
+        new java.lang.String[] { "Txid", "Namespace", "Cid", "BlockNumber", });
+    internal_static_Event_descriptor =
       getDescriptor().getMessageTypes().get(3);
+    internal_static_Event_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_Event_descriptor,
+        new java.lang.String[] { "Context", "Topics", "Body", });
+    internal_static_Key_descriptor =
+      getDescriptor().getMessageTypes().get(4);
     internal_static_Key_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Key_descriptor,
         new java.lang.String[] { "Context", "K", });
     internal_static_BatchKey_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(5);
     internal_static_BatchKey_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_BatchKey_descriptor,
         new java.lang.String[] { "Context", "K", });
     internal_static_BathValue_descriptor =
-      getDescriptor().getMessageTypes().get(5);
+      getDescriptor().getMessageTypes().get(6);
     internal_static_BathValue_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_BathValue_descriptor,
         new java.lang.String[] { "Id", "HasMore", "V", });
     internal_static_BatchKV_descriptor =
-      getDescriptor().getMessageTypes().get(6);
+      getDescriptor().getMessageTypes().get(7);
     internal_static_BatchKV_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_BatchKV_descriptor,
         new java.lang.String[] { "Context", "Kv", });
     internal_static_Range_descriptor =
-      getDescriptor().getMessageTypes().get(7);
+      getDescriptor().getMessageTypes().get(8);
     internal_static_Range_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Range_descriptor,
         new java.lang.String[] { "Context", "Start", "End", });
     internal_static_Value_descriptor =
-      getDescriptor().getMessageTypes().get(8);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_Value_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Value_descriptor,
         new java.lang.String[] { "Id", "V", });
     internal_static_KeyValue_descriptor =
-      getDescriptor().getMessageTypes().get(9);
+      getDescriptor().getMessageTypes().get(10);
     internal_static_KeyValue_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_KeyValue_descriptor,
         new java.lang.String[] { "Context", "K", "V", });
     internal_static_LedgerContext_descriptor =
-      getDescriptor().getMessageTypes().get(10);
+      getDescriptor().getMessageTypes().get(11);
     internal_static_LedgerContext_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_LedgerContext_descriptor,
-        new java.lang.String[] { "Txid", "Namespace", "Cid", });
+        new java.lang.String[] { "Txid", "Namespace", "Cid", "BlockNumber", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

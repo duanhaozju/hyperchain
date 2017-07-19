@@ -57,8 +57,24 @@ public class TestHyperCache {
                 Result result = new Result(ByteString.copyFrom(hc.get(realK)));
                 Assert.assertEquals(result.toString(),value);
             }
-
         }
-
     }
+
+    @Test
+    public void TestBytes(){
+        String str = "hello";
+        System.out.println(str.getBytes().equals(str.getBytes()));
+        byte[] key1 = str.getBytes();
+        byte[] key2 = str.getBytes();
+        ByteString bs1 = ByteString.copyFrom(key1);
+        ByteString bs2 = ByteString.copyFrom(key2);
+        System.out.println(bs1.toStringUtf8());
+        System.out.println(bs2.toStringUtf8());
+        System.out.println(bs2.equals(bs1));
+
+        byte[] b1 = bs1.toByteArray();
+        byte[] b2 = bs2.toByteArray();
+        System.out.println(b1.equals(b2));
+    }
+
 }

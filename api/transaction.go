@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	defaultGas              int64 = 10000
+	defaultGas              int64 = 100000000
 	defaustGasPrice         int64 = 10000
 	leveldb_not_found_error       = "leveldb: not found"
 )
@@ -194,9 +194,9 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 }
 
 type ReceiptResult struct {
+	Version         string        `json:"version"`
 	TxHash          string        `json:"txHash"`
 	VmType          string        `json:"vmType"`
-	PostState       string        `json:"postState"`
 	ContractAddress string        `json:"contractAddress"`
 	Ret             string        `json:"ret"`
 	Log             []interface{} `json:"log"`
@@ -215,9 +215,9 @@ func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult
 			logs[idx] = receipt.Logs[idx]
 		}
 		return &ReceiptResult{
+			Version:         receipt.Version,
 			TxHash:          receipt.TxHash,
 			VmType:          receipt.VmType,
-			PostState:       receipt.PostState,
 			ContractAddress: receipt.ContractAddress,
 			Ret:             receipt.Ret,
 			Log:             logs,
@@ -291,6 +291,37 @@ func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) 
 	return transactions, nil
 }
 
+// GetDiscardTransactionsByTime returns the invalid transactions for the given time duration.
+func (tran *Transaction) GetDiscardTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
+
+	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0{
+		return nil, &common.InvalidParamsError{Message: "Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
+	}
+
+	reds, err := edb.GetAllDiscardTransaction(tran.namespace)
+	if err != nil && err.Error() == leveldb_not_found_error {
+		return nil, &common.LeveldbNotFoundError{Message: "discard transactions"}
+	} else if err != nil {
+		tran.log.Errorf("GetDiscardTransactionsByTime error: %v", err)
+		return nil, &common.CallbackError{Message: err.Error()}
+	}
+
+	var transactions []*TransactionResult
+
+	for _, red := range reds {
+		if red.Tx.Timestamp <= args.Endtime && red.Tx.Timestamp >= args.StartTime {
+			if ts, err := outputTransaction(red, tran.namespace, tran.log); err != nil {
+				return nil, err
+			} else {
+				transactions = append(transactions, ts)
+			}
+		}
+
+	}
+
+	return transactions, nil
+}
+
 // getDiscardTransactionByHash returns the invalid transaction for the given transaction hash.
 func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 
@@ -351,7 +382,12 @@ func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, ind
 
 // GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and index.
 func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, index Number) (*TransactionResult, error) {
-	latest := edb.GetChainCopy(tran.namespace).Height
+	chain, err := edb.GetChain(tran.namespace)
+	if err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	}
+
+	latest := chain.Height
 	blknumber, err := n.BlockNumberToUint64(latest)
 	if err != nil {
 		return nil, err
@@ -388,9 +424,12 @@ func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*Transactio
 		return nil, &common.InvalidParamsError{Message:"Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
 	}
 
-	currentChain := edb.GetChainCopy(tran.namespace)
-	height := currentChain.Height
+	currentChain, err := edb.GetChain(tran.namespace)
+	if err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	}
 
+	height := currentChain.Height
 	var txs = make([]*TransactionResult, 0)
 
 	for i := height; i >= uint64(1); i-- {
@@ -438,7 +477,12 @@ func (tran *Transaction) GetBlockTransactionCountByHash(hash common.Hash) (*Numb
 
 // GetBlockTransactionCountByNumber returns the number of block transactions for given block number.
 func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*Number, error) {
-	latest := edb.GetChainCopy(tran.namespace).Height
+	chain, err := edb.GetChain(tran.namespace)
+	if err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	}
+
+	latest := chain.Height
 	blknumber, err := n.BlockNumberToUint64(latest)
 	if err != nil {
 		return nil, err
@@ -492,7 +536,10 @@ func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 // GetTransactionsCount returns the number of transaction in hyperchain.
 func (tran *Transaction) GetTransactionsCount() (interface{}, error) {
 
-	chain := edb.GetChainCopy(tran.namespace)
+	chain, err := edb.GetChain(tran.namespace)
+	if err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	}
 
 	return struct {
 		Count     *Number `json:"count,"`

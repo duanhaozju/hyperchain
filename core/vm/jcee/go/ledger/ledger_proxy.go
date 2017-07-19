@@ -13,6 +13,7 @@ import (
 	"net"
 	"strings"
 	"hyperchain/hyperdb/db"
+	"hyperchain/core/types"
 )
 
 var (
@@ -185,6 +186,29 @@ func (lp *LedgerProxy) Delete(ctx context.Context, in *pb.Key) (*pb.Response, er
 	}
 	state.SetState(common.HexToAddress(in.Context.Cid), common.BytesToHash(in.K), nil, 0)
 	return &pb.Response{Ok: true}, nil
+}
+
+func (lp *LedgerProxy) Post(ctx context.Context, event *pb.Event) (*pb.Response, error) {
+
+	exist, state := lp.stateMgr.GetStateDb(event.Context.Namespace)
+	if exist == false {
+		return &pb.Response{Ok: false}, NamespaceNotExistErr
+	}
+	if valid := lp.requestCheck(event.Context); !valid {
+		return &pb.Response{Ok: false}, InvalidRequestErr
+	}
+
+	var topics []common.Hash
+	for _, topic := range event.Topics {
+		topics = append(topics, common.BytesToHash(topic))
+	}
+
+	log := types.NewLog(common.HexToAddress(event.Context.Cid), topics, event.Body, event.Context.BlockNumber)
+	state.AddLog(log)
+
+	return &pb.Response{
+		Ok:true,
+	}, nil
 }
 
 func (lp *LedgerProxy) requestCheck(ctx *pb.LedgerContext) bool {
