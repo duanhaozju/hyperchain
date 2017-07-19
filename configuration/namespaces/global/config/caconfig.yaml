@@ -24,3 +24,7 @@ check:
   tcert: false
   # check the ercert and rcert
   ercert: false
+
+gm:
+  # check use sm4 or not
+  sm4:  false
