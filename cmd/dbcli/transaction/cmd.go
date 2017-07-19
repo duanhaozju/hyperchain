@@ -150,6 +150,7 @@ func getTransactionByHash(c *cli.Context) {
 			return
 		}
 		hyperChain := version.NewVersion(database)
+		defer hyperChain.GetDB().Close()
 		result, err := hyperChain.GetTransaction(c.String(constant.HASH))
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
@@ -176,6 +177,7 @@ func getAllTransaction(c *cli.Context) {
 			return
 		}
 		hyperChain := version.NewVersion(database)
+		defer hyperChain.GetDB().Close()
 		hyperChain.GetAllTransaction(c.String(constant.OUTPUT))
 	} else {
 		fmt.Println(constant.ErrInvalidParams.Error())
@@ -193,6 +195,7 @@ func getTransactionMetaByHash(c *cli.Context) {
 			return
 		}
 		hyperChain := version.NewVersion(database)
+		defer hyperChain.GetDB().Close()
 		result, err := hyperChain.GetTxWithBlock(c.String(constant.HASH))
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
@@ -218,6 +221,7 @@ func getDiscardTransactionByHash(c *cli.Context) {
 			return
 		}
 		hyperChain := version.NewVersion(database)
+		defer hyperChain.GetDB().Close()
 		result, err := hyperChain.GetDiscardTransaction(c.String(constant.HASH))
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
@@ -243,6 +247,7 @@ func getAllDiscardTransaction(c *cli.Context) {
 			return
 		}
 		hyperChain := version.NewVersion(database)
+		defer hyperChain.GetDB().Close()
 		hyperChain.GetAllDiscardTransaction(c.String(constant.OUTPUT))
 	} else {
 		fmt.Println(constant.ErrInvalidParams.Error())

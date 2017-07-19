@@ -52,6 +52,7 @@ func getReceipt(c *cli.Context) {
 			return
 		}
 		hyperChain := version.NewVersion(database)
+		defer hyperChain.GetDB().Close()
 		result, err := hyperChain.GetReceipt(c.String(constant.HASH))
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())

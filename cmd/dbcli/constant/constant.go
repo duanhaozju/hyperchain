@@ -7,8 +7,11 @@ const (
 	HASH     = "hash"
 	OUTPUT   = "output"
 	VERBOSE  = "verbose"
+	MAX      = "max"
+	MIN      = "min"
 
 	VERSIONFINAL = "final"
+	VERSION1_1   = "1.1"
 	VERSION1_2   = "1.2"
 	VERSION1_3   = "1.3"
 
@@ -18,10 +21,11 @@ const (
 	TRANSACTIONMETA    = "transactionMeta"
 	RECEIPT            = "receipt"
 	CHAIN              = "chain"
+	CHAINHEIGHT        = "chainHeight"
 
 	PROTOERR           = "proto: bad wiretype for field"
 )
 
 var (
-	VERSIONS     = []string{VERSION1_2, VERSION1_3}
+	VERSIONS     = []string{VERSION1_2, VERSION1_2, VERSION1_3}
 )
