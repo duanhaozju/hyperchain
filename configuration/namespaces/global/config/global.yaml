@@ -38,9 +38,6 @@ global:
             "N": "14315727801779002117"
             Nsquare: "204940062494628260128356353732290481689"
             G: "90976693534933209671098397317966944738726332459523400324197777885595356310417"
-    security:
-        enabletls: false
-        enablesymmetrical: false
     connection:
         retryTimeLimit: 6
         retryTimeout: 10s

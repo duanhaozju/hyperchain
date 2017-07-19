@@ -52,7 +52,6 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	logger := common.GetLogger(conf.GetString(common.NAMESPACE), "ca")
 	caconfPath := conf.GetString("global.configs.caconfig")
 	logger.Critical(caconfPath)
-	enableSymmetrical := conf.GetBool("global.security.enablesymmetrical")
 	if caconfPath == "" {
 		return nil, errors.New("cannot get the ca config file path.")
 	}
@@ -92,7 +91,6 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 		checkCertSign:config.GetBool("check.certsign"),
 		checkERCert:config.GetBool("check.ercert"),
 		checkTCert:config.GetBool("check.tcert"),
-		EnableSymmetrical:enableSymmetrical,
 		Sm4:config.GetBool("gm.sm4"),
 		logger:logger,
 
