@@ -104,9 +104,10 @@ func main() {
 
 		argv := ctx.Argv().(*argT)
 		if argv.Shell {
-			fmt.Println("Start hypernet interactive shell: ",argv.IPCEndpoint)
+			fmt.Println("Start hypernet interactive shell: ", argv.IPCEndpoint)
 			ipc.IPCShell(argv.IPCEndpoint)
 			return nil
+		}
 		if argv.PProfEnable {
 			setupPProf(argv.PPort)
 		}
@@ -124,4 +125,3 @@ func main() {
 		return nil
 	})
 }
-
