@@ -13,6 +13,7 @@ import (
 	"github.com/terasum/viper"
 	"hyperchain/p2p/ipc"
 	"fmt"
+	_ "net/http/pprof"
 )
 
 type hyperchain struct {
@@ -85,6 +86,8 @@ type argT struct {
 	ConfigPath  string `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
 	IPCEndpoint string `cli:"ipc" usage:"ipc interactive shell attach endpoint" dft:"./hpc.ipc"`
 	Shell       bool `cli:"s,shell" usage:"start interactive shell" dft:"false"`
+	PProfEnable   bool   `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`
+	PPort         string `cli:"pport" usage:"use to specify pprof http port"`
 }
 
 var (
@@ -104,6 +107,8 @@ func main() {
 			fmt.Println("Start hypernet interactive shell: ",argv.IPCEndpoint)
 			ipc.IPCShell(argv.IPCEndpoint)
 			return nil
+		if argv.PProfEnable {
+			setupPProf(argv.PPort)
 		}
 		hp := newHyperchain(argv)
 		hp.start()
@@ -119,3 +124,4 @@ func main() {
 		return nil
 	})
 }
+
