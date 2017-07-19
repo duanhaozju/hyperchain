@@ -3,6 +3,7 @@ package executor
 import (
 	"encoding/hex"
 	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
@@ -10,13 +11,16 @@ import (
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"time"
-	"github.com/pkg/errors"
 )
 
+// CommitBlock - the entry function of the commit process.
+// Receive the commit event as a parameter and cached them in the channel
+// if the pressure is too high.
 func (executor *Executor) CommitBlock(ev event.CommitEvent) {
 	executor.addCommitEvent(ev)
 }
 
+// listenCommitEvent - commit backend process, use to listen new commit event and dispatch it to the processor.
 func (executor *Executor) listenCommitEvent() {
 	executor.logger.Notice("commit backend start")
 	for {
@@ -37,11 +41,14 @@ func (executor *Executor) listenCommitEvent() {
 	}
 }
 
-// processCommitEvent - consume commit event from channel.
+// processCommitEvent - handler of the commit process.
+// consume commit event from the channel, exec the commit logic
+// and notify backend via callback function.
 func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) bool {
 	executor.markCommitBusy()
 	defer executor.markCommitIdle()
 	defer done()
+	// Legitimacy validation
 	if !executor.commitValidationCheck(ev) {
 		executor.logger.Errorf("commit event %d not satisfy the demand", ev.SeqNo)
 		return false
@@ -56,6 +63,7 @@ func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) 
 		executor.logger.Errorf("no validation record for #%d found", ev.SeqNo)
 		return false
 	}
+	// write block data to database in a atomic operation
 	if err := executor.writeBlock(block, record); err != nil {
 		executor.logger.Errorf("write block for #%d failed. err %s", ev.SeqNo, err.Error())
 		return false
@@ -69,42 +77,54 @@ func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) 
 	return true
 }
 
-// writeBlock - flush a block into disk.
+// writeBlock - flush a block into database.
 func (executor *Executor) writeBlock(block *types.Block, record *ValidationResultRecord) error {
 	var filterLogs []*types.Log
+	// fetch the relative db batch obj from the batch buffer
+	// attention: state changes has already been push into the batch obj
 	batch := executor.statedb.FetchBatch(record.SeqNo)
+	// persist transaction data
 	if err := executor.persistTransactions(batch, block.Transactions, block.Number); err != nil {
 		executor.logger.Errorf("persist transactions of #%d failed.", block.Number)
 		return err
 	}
+	// persist receipt data
 	if err, ret := executor.persistReceipts(batch, record.ValidTxs, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
 		executor.logger.Errorf("persist receipts of #%d failed.", block.Number)
 		return err
 	} else {
 		filterLogs = ret
 	}
+	// persist block data
 	if err, _ := edb.PersistBlock(batch, block, false, false); err != nil {
 		executor.logger.Errorf("persist block #%d into database failed.", block.Number, err.Error())
 		return err
 	}
+	// persist chain data
 	if err := edb.UpdateChain(executor.namespace, batch, block, false, false, false); err != nil {
 		executor.logger.Errorf("update chain to #%d failed.", block.Number, err.Error())
 		return err
 	}
+	// flush the whole batch obj.
+	// the database atomic operation of the guarantee is by leveldb batch
+	// look the doc https://godoc.org/github.com/syndtr/goleveldb/leveldb#Batch for detail
 	if err := batch.Write(); err != nil {
 		executor.logger.Errorf("commit #%d changes failed.", block.Number, err.Error())
 		return err
 	}
+	// reset state, notify to remove some cached stuff
 	executor.statedb.MarkProcessFinish(record.SeqNo)
 	executor.statedb.MakeArchive(record.SeqNo)
+	// notify consensus module if it is a checkpoint
 	if block.Number%10 == 0 && block.Number != 0 {
 		edb.WriteChainChan(executor.namespace)
 	}
 	executor.logger.Noticef("Block number %d", block.Number)
 	executor.logger.Noticef("Block hash %s", hex.EncodeToString(block.BlockHash))
-	// executor.logger.Notice(string(executor.statedb.Dump()))
-	// remove Cached Transactions which used to check transaction duplication
+	// told consenus to remove Cached Transactions which used to check transaction duplication
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
+	// push feed data to event system.
+	// external subscribers can access these internal messages through a messaging subscription system
 	go executor.filterFeedback(block, filterLogs)
 	return nil
 }
@@ -145,25 +165,23 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 	}
 	newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
 	copy(newBlock.Transactions, record.ValidTxs)
-	// TODO: why copy it?
-	//newBlock.Transactions = record.ValidTxs
 	newBlock.BlockHash = newBlock.Hash().Bytes()
 	return newBlock
 }
 
-// commitValidationCheck - check whether this commit event satisfy demand.
+// commitValidationCheck - check whether this commit event is the demand one.
 func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
-	// 1. check whether this ev is the demand one
+	// 1. verify that the block height is consistent
 	if !executor.isDemandNumber(ev.SeqNo) {
 		executor.logger.Errorf("receive a commit event %d which is not demand, drop it.", ev.SeqNo)
 		return false
 	}
-	// 2. check whether validation result exist
+	// 2. verify whether validation result exist
 	record := executor.getValidateRecord(ev.Hash)
 	if record == nil {
 		return false
 	}
-	// 3. check whether ev's seqNo equal to record seqNo which act as block number
+	// 3. verify whether ev's seqNo equal to record seqNo which acts as block number
 	vid := record.VID
 	tempBlockNumber := record.SeqNo
 	if tempBlockNumber != ev.SeqNo {
@@ -204,6 +222,7 @@ func (executor *Executor) persistTransactions(batch db.Batch, transactions []*ty
 func (executor *Executor) persistReceipts(batch db.Batch, transaction []*types.Transaction, receipts []*types.Receipt, blockNumber uint64, blockHash common.Hash) (error, []*types.Log) {
 	var filterLogs []*types.Log
 	if len(transaction) != len(receipts) {
+		// short circuit if the number of transactions and receipt are not equal
 		return errors.New("the number of transactions not equal to receipt"), nil
 	}
 	for idx, receipt := range receipts {
@@ -255,6 +274,8 @@ func (executor *Executor) pauseCommit() {
 		}
 	}
 }
+
+// filterFeedback - push latest block data, contract event data to subscription system.
 func (executor *Executor) filterFeedback(block *types.Block, filterLogs []*types.Log) {
 	if err := executor.sendFilterEvent(FILTER_NEW_BLOCK, block); err != nil {
 		executor.logger.Warningf("send new block event failed. error detail: %s", err.Error())

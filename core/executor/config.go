@@ -1,20 +1,24 @@
 package executor
 
 import (
-	"time"
 	"hyperchain/common"
+	"time"
 )
 
 const (
-	SyncReplicaInterval         = "global.executor.sync_replica.interval"
-	SyncReplicaEnable           = "global.executor.sync_replica.enable"
-	SyncChainBatchSize          = "global.executor.sync_chain.sync_batch_size"
-	SyncChainResendInterval     = "global.executor.sync_chain.sync_resend_interval"
-	SyncWsEable                 = "global.executor.sync_chain.sync_ws_enable"
-	SnapshotManifestPath        = "global.executor.archive.manifest"
-	ArchiveMetaPath             = "global.executor.archive.archiveMeta"
-	ArchiveForceConsistency     = "global.executor.archive.force_consistency"
-	ArchiveThreshold            = "global.executor.archive.threshold"
+	// Name should contain the official protocol name,
+	// often a three-letter word.
+	SyncReplicaInterval = "global.executor.sync_replica.interval"
+	// Name should contain the official protocol name,
+	// often a three-letter word.
+	SyncReplicaEnable       = "global.executor.sync_replica.enable"
+	SyncChainBatchSize      = "global.executor.sync_chain.sync_batch_size"
+	SyncChainResendInterval = "global.executor.sync_chain.sync_resend_interval"
+	SyncWsEable             = "global.executor.sync_chain.sync_ws_enable"
+	SnapshotManifestPath    = "global.executor.archive.manifest"
+	ArchiveMetaPath         = "global.executor.archive.archiveMeta"
+	ArchiveForceConsistency = "global.executor.archive.force_consistency"
+	ArchiveThreshold        = "global.executor.archive.threshold"
 )
 
 // GetSyncReplicaInterval - sync replica information interval.

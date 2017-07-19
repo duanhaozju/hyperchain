@@ -10,7 +10,7 @@ import (
 	"hyperchain/core/vm/evm/params"
 )
 
-// PrecompiledAccount represents a native ethereum contract
+// PrecompiledAccount represents a native hyperchain contract
 type PrecompiledAccount struct {
 	Gas func(l int) *big.Int
 	fn  func(in []byte) []byte
@@ -21,11 +21,11 @@ func (self PrecompiledAccount) Call(in []byte) []byte {
 	return self.fn(in)
 }
 
-// Precompiled contains the default set of ethereum contracts
+// Precompiled contains the default set of hyperchain contracts
 var Precompiled = PrecompiledContracts()
 
-// PrecompiledContracts returns the default set of precompiled ethereum
-// contracts defined by the ethereum yellow paper.
+// PrecompiledContracts returns the default set of precompiled hyperchain
+// contracts defined by the hyperchain yellow paper.
 func PrecompiledContracts() map[string]*PrecompiledAccount {
 	return map[string]*PrecompiledAccount{
 		// ECRECOVER

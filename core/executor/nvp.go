@@ -1,9 +1,9 @@
 package executor
 
 import (
+	"hyperchain/common"
 	"hyperchain/core/types"
 	"sync"
-	"hyperchain/common"
 )
 
 type NVP interface {
@@ -15,14 +15,14 @@ type NVPContext interface {
 }
 
 type NVPImpl struct {
-	lock       sync.Mutex
-	ctx        NVPContext
-	executor   *Executor
+	lock     sync.Mutex
+	ctx      NVPContext
+	executor *Executor
 }
 
 type NVPContextImpl struct {
-	demand      uint64
-	blockCache  *common.Cache
+	demand     uint64
+	blockCache *common.Cache
 }
 
 func (nvp *NVPImpl) ReceiveBlock(block *types.Block) {
@@ -41,7 +41,6 @@ func (nvp *NVPImpl) ReceiveBlock(block *types.Block) {
 		// ignore
 	}
 }
-
 
 func (nvp *NVPImpl) PreProcess(block *types.Block) error {
 	// 1. check whether received block is needed
@@ -66,7 +65,6 @@ func (nvp *NVPImpl) process(block *types.Block) error {
 	return nil
 }
 
-
 func (nvp *NVPImpl) FetchBlock() {
 
 }
@@ -86,6 +84,3 @@ func (nvp *NVPImpl) isFuture(id uint64) bool {
 func (nvp *NVPImpl) isFallBehind(id uint64) bool {
 	return false
 }
-
-
-

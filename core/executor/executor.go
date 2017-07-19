@@ -7,33 +7,38 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/hyperstate"
+	"hyperchain/core/vm"
+	"hyperchain/core/vm/jcee/go"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
 	"path"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/jcee/go"
 )
 
+// Executor represents a hyperchain exector implementation
 type Executor struct {
-	namespace  string // namespace tag
-	db         db.Database
-	archiveDb  db.Database
-	commonHash crypto.CommonHash
-	encryption crypto.Encryption
-	conf       *common.Config // block configuration
-	status     ExecutorStatus
-	hashUtils  ExecutorHashUtil
-	cache      ExecutorCache
-	helper     *Helper
-	statedb    vm.Database
-	logger     *logging.Logger
-	jvmCli     jvm.ContractExecutor
-	snapshotReg *SnapshotRegistry
-	archiveMgr  *ArchiveManager
+	// Namespace should contain the official namespace name,
+	// often a fixed size random word.
+	namespace   string
+	db          db.Database       // Db refers a blockchain online database handler
+	archiveDb   db.Database       // Archivedb refers a offline historical database handler
+	commonHash  crypto.CommonHash // Keccak256 hasher
+	encryption  crypto.Encryption // ECDSA encrypter
+	conf        *common.Config    // Conf refers a configuration reader
+	context     ExecutorContext
+	hasher      Hasher
+	cache       Cache
+	helper      *Helper     // Helper refers a communication mux
+	statedb     vm.Database // world state handler
+	logger      *logging.Logger
+	jvmCli      jvm.ContractExecutor // jvm client
+	snapshotReg *SnapshotRegistry    // snapshot registry
+	archiveMgr  *ArchiveManager      // archive manager
 }
 
+// NewExecutor creates a new Hyperchain object (including the
+// initialisation of the common hyperchain object)
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) (*Executor, error) {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
@@ -48,6 +53,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 		jvmCli:     jvm.NewContractExecutor(conf, namespace),
 	}
 
+	// initialise jvm client if jvm is been permissible
 	if executor.isJvmEnable() {
 		executor.jvmCli = jvm.NewContractExecutor(conf, namespace)
 	}
@@ -60,10 +66,10 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 	if err := executor.initDb(); err != nil {
 		return nil, err
 	}
-	// executor.MockTest_DirtyBlocks()
 	return executor, nil
 }
 
+// initDb make the initilisation of the database handler.
 func (executor *Executor) initDb() error {
 	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
@@ -106,7 +112,7 @@ func (executor *Executor) initialize() error {
 		executor.logger.Errorf("executor initiailize db failed. %s", err.Error())
 		return err
 	}
-	if err := initializeExecutorStatus(executor); err != nil {
+	if err := initializeExecutorContext(executor); err != nil {
 		executor.logger.Errorf("executor initiailize status failed. %s", err.Error())
 		return err
 	}
@@ -155,6 +161,7 @@ func initializeExecutorStateDb(executor *Executor) error {
 	return nil
 }
 
+// initHistoryStateDb - open a historical database for snapshot content query.
 func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, error, func()) {
 	// never forget to close db
 	if err, manifest := executor.snapshotReg.rwc.Read(snapshotId); err != nil {

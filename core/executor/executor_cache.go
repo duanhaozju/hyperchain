@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 )
 
-type ExecutorCache struct {
+type Cache struct {
 	validationEventC        chan event.ValidationEvent // validation event buffer
 	commitEventC            chan event.CommitEvent     // commit event buffer
 	validationResultCache   *common.Cache              // cache for validation result
@@ -67,7 +67,7 @@ func (executor *Executor) pendingValidationEventQLen() int {
 func (executor *Executor) clearPendingValidationEventQ() {
 	length := executor.pendingValidationEventQLen()
 	executor.cache.pendingValidationEventQ.Purge()
-	atomic.AddInt32(&executor.status.validateQueueLen, -1*int32(length))
+	atomic.AddInt32(&executor.context.validateQueueLen, -1*int32(length))
 }
 
 // addValidationResult - save a validation result to cache.
@@ -87,7 +87,7 @@ func (executor *Executor) fetchValidationResult(hash string) (*ValidationResultR
 // addValidationEvent - push a validation event to channel buffer.
 func (executor *Executor) addValidationEvent(ev event.ValidationEvent) {
 	executor.cache.validationEventC <- ev
-	atomic.AddInt32(&executor.status.validateQueueLen, 1)
+	atomic.AddInt32(&executor.context.validateQueueLen, 1)
 	executor.logger.Debugf("[Namespace = %s] receive a validation event #%d", executor.namespace, ev.SeqNo)
 }
 
@@ -98,13 +98,13 @@ func (executor *Executor) fetchValidationEvent() chan event.ValidationEvent {
 
 // processValidationDone - validation finish callback.
 func (executor *Executor) processValidationDone() {
-	atomic.AddInt32(&executor.status.validateQueueLen, -1)
+	atomic.AddInt32(&executor.context.validateQueueLen, -1)
 }
 
 // addCommitEvent - push a commit event to channel buffer.
 func (executor *Executor) addCommitEvent(ev event.CommitEvent) {
 	executor.cache.commitEventC <- ev
-	atomic.AddInt32(&executor.status.commitQueueLen, 1)
+	atomic.AddInt32(&executor.context.commitQueueLen, 1)
 	executor.logger.Debugf("[Namespace = %s] receive a commit event #%d", executor.namespace, ev.SeqNo)
 }
 
@@ -115,7 +115,7 @@ func (executor *Executor) fetchCommitEvent() chan event.CommitEvent {
 
 // processCommitDone - commit process finish callback.
 func (executor *Executor) processCommitDone() {
-	atomic.AddInt32(&executor.status.commitQueueLen, -1)
+	atomic.AddInt32(&executor.context.commitQueueLen, -1)
 }
 
 // addToSyncCache - add a block to cache which arrives earlier than expect.

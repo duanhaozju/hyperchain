@@ -9,7 +9,6 @@ import (
 	"hyperchain/namespace"
 	"time"
 	"hyperchain/rpc"
-	"fmt"
 )
 
 type hyperchain struct {
@@ -74,11 +73,6 @@ var (
 
 func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("Recovered in f", r)
-			}
-		}()
 		argv := ctx.Argv().(*argT)
 
 		globalConfig := common.NewConfig(argv.ConfigPath)
