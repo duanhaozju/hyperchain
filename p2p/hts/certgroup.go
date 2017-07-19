@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"encoding/asn1"
 	"github.com/pkg/errors"
+	"hyperchain/crypto/primitives"
 )
 
 type CertGroup struct {
@@ -48,15 +49,27 @@ func(cg *CertGroup)ESign(data []byte)([]byte,error){
 	return cg.eCERTPriv_S.Sign(rand.Reader,data,crypto.SHA3_256)
 }
 
-func(cg *CertGroup)EVerify(sign []byte,hash []byte)(bool,error){
+func(cg *CertGroup)EVerify(rawcert, sign []byte,hash []byte)(bool,error){
+	x509cert,err := primitives.ParseCertificate(rawcert)
+	if err != nil{
+		return false, errors.New("parse the certificate failed (E verify)")
+	}
+	pubkey,ok := x509cert.PublicKey.(*ecdsa.PublicKey)
+	if !ok{
+		return false, errors.New("type assert for publick key failed (E verify)")
+	}
 	ecdsasign := struct {
 		R,S *big.Int
 	}{}
-	_,err := asn1.Unmarshal(sign,&ecdsasign)
+	_,err = asn1.Unmarshal(sign,&ecdsasign)
 	if err !=nil{
 		return false,errors.New("unmarshal the signature failed. (E verify)")
 	}
-	return ecdsa.Verify(&cg.eCERTPriv_S.PublicKey,hash,ecdsasign.R,ecdsasign.S), nil
+	b := ecdsa.Verify(pubkey,hash,ecdsasign.R,ecdsasign.S)
+	if b{
+		return true,nil
+	}
+	return false,errors.New("verify failed, signature verify not passed.")
 }
 
 func(cg *CertGroup)RSign(data []byte)([]byte,error){
@@ -64,16 +77,28 @@ func(cg *CertGroup)RSign(data []byte)([]byte,error){
 	return cg.rCERTPriv_S.Sign(rand.Reader,hash,crypto.SHA3_256)
 }
 
-func(cg *CertGroup)RVerify(sign []byte,data []byte)(bool,error){
+func(cg *CertGroup)RVerify(rawcert, sign []byte,data []byte)(bool,error){
+	x509cert,err := primitives.ParseCertificate(rawcert)
+	if err != nil{
+		return false, errors.New("parse the certificate failed (R verify)")
+	}
+	pubkey,ok := x509cert.PublicKey.(*ecdsa.PublicKey)
+	if !ok{
+		return false, errors.New("type assert for publick key failed (R verify)")
+	}
 	ecdsasign := struct {
 		R,S *big.Int
 	}{}
-	_,err := asn1.Unmarshal(sign,&ecdsasign)
+	_,err = asn1.Unmarshal(sign,&ecdsasign)
 	if err !=nil{
 		return false,errors.New("unmarshal the signature failed. (R verify)")
 	}
 	hash := cg.Hash(data)
-	return ecdsa.Verify(&cg.rCERTPriv_S.PublicKey,hash,ecdsasign.R,ecdsasign.S),nil
+	b := ecdsa.Verify(pubkey,hash,ecdsasign.R,ecdsasign.S)
+	if b{
+		return true,nil
+	}
+	return false,errors.New("verify failed, signature verify not passed.")
 }
 
 func(cg *CertGroup)Hash(data []byte)([]byte){

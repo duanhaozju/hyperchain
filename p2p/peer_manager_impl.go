@@ -70,7 +70,7 @@ type peerManagerImpl struct {
 
 //todo rename new function
 func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMux, net *network.HyperNet, delChan chan bool) (*peerManagerImpl, error) {
-	logger := common.GetLogger(namespace, "peermanager")
+	logger := common.GetLogger(namespace, "p2p")
 	if net == nil {
 		return nil, errors.New("the P2P manager hasn't initlized.")
 	}
@@ -206,7 +206,7 @@ func (pmgr *peerManagerImpl)Start() error {
 	} else if !pmgr.isVP {
 		pmgr.broadcast(pb.MsgType_NVPATTEND, []byte(pmgr.GetLocalAddressPayload()))
 	}
-	pmgr.logger.Criticalf("SELF hash: %s", pmgr.node.info.Hash)
+	pmgr.logger.Infof("SELF hash: %s", pmgr.node.info.Hash)
 	// after all connection
 	return nil
 }

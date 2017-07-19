@@ -81,13 +81,30 @@ func (h *ClientHelloMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
 		h.logger.Warningf("server hello error: %s \n",err.Error())
 		return nil, err
 	}
-	h.logger.Critical("got a remote id is rec:",id.IsReconnect)
+	h.logger.Debugf("got a remote id is rec:",id.IsReconnect)
 	// Key Agree
 	if id.Payload == nil{
 		h.logger.Error("server hello id.Payload is nil")
 		return nil,errors.New("server hello id.Payload is nil")
 	}
 	cert,err := payloads.CertificateUnMarshal(id.Payload)
+	//verify
+	b,e := h.shts.CG.EVerify(cert.ECert,cert.ECertSig,cert.WithData)
+	if !b{
+		h.logger.Critical("Verify the Ecert Signature faild",e,string(msg.From.Hostname))
+		return nil,errors.New("ECert Verify failed.")
+	}else{
+		h.logger.Debug("Ecert Verify passed",string(msg.From.Hostname))
+	}
+	if id.IsVP{
+	b,e = h.shts.CG.RVerify(cert.RCert,cert.RCertSig,cert.WithData)
+		if !b{
+			h.logger.Warningf("Verify the Rcert Signature faild",e,string(msg.From.Hostname))
+			return nil,errors.New("RCert Verify failed.")
+		}else{
+			h.logger.Debug("RCERT Verify passed",string(msg.From.Hostname))
+		}
+	}
 	//server rand + client rand
 	r := append(serverRand,cert.Rand...)
 

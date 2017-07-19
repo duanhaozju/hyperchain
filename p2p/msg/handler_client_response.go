@@ -33,7 +33,7 @@ func (h *ClientAcceptMsgHandler) Receive() chan<- interface{} {
 }
 
 func (h *ClientAcceptMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
-	h.logger.Infof("got a client accept message %v", msg)
+	h.logger.Debugf("got a client accept message %v", msg)
 	rsp := &pb.Message{
 		MessageType: pb.MsgType_SERVERDONE,
 		Payload:[]byte("server send a server Done message(this message is from server)"),
