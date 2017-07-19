@@ -43,9 +43,19 @@ public class FilterChainMgr {
     public void removeFilter(String methodName, String filterName) {
         FilterChain fc = chainMap.get(methodName);
         if (fc == null) {
-            LOG.warn("no FilterChain found for method" + methodName);
+            LOG.warn(String.format("no FilterChain found for method %s", methodName));
         }else {
             fc.removeFilter(filterName);
+        }
+    }
+
+    public Filter getFilter(String methodName, String filterName) {
+        FilterChain fc =chainMap.get(methodName);
+        if (fc == null) {
+            LOG.warn(String.format("no FilterChain found for method %s", methodName));
+            return null;
+        }else {
+            return fc.getFilter(filterName);
         }
     }
 }

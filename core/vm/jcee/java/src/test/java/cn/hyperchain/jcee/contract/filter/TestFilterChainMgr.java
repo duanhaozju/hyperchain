@@ -1,7 +1,9 @@
 package cn.hyperchain.jcee.contract.filter;
 
 import cn.hyperchain.jcee.executor.Context;
+import cn.hyperchain.protos.ContractProto;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -26,10 +28,37 @@ public class TestFilterChainMgr {
     }
 
     @Test
-    public void testAddGetFilterChain() {
-        FilterChain fc = new FilterChain();
-        fc.addFilter(new NamespaceFilter());
+    public void testFilter() {
 
+        mgr.AddFilter("method1", new NamespaceFilter());
+        Context context = new Context("001");
+        context.setRequestContext(ContractProto
+                .RequestContext.newBuilder()
+                .setNamespace("ns1")
+                .build());
+        Assert.assertEquals(true, mgr.getFilterChain("method1").doFilter(context));
+
+        Context context1 = new Context("001");
+        context1.setRequestContext(ContractProto
+                .RequestContext.newBuilder()
+                .setNamespace("nsx")
+                .build());
+        Assert.assertEquals(false, mgr.getFilterChain("method1").doFilter(context1));
+
+    }
+
+    @Test
+    public void testDeleteFilter() {
+        mgr.AddFilter("method1", new NamespaceFilter());
+        Context context = new Context("001");
+        context.setRequestContext(ContractProto
+                .RequestContext.newBuilder()
+                .setNamespace("ns1")
+                .build());
+
+        mgr.removeFilter("method1", "NamespaceFilter");
+
+        Assert.assertEquals(null, mgr.getFilter("method1", "NamespaceFilter"));
     }
 
     class NamespaceFilter implements Filter{
@@ -41,9 +70,9 @@ public class TestFilterChainMgr {
         }
 
         public NamespaceFilter() {
-           permittedNamespaces = new HashSet<>();
-           permittedNamespaces.add("ns1");
-           permittedNamespaces.add("ns2");
+           this.permittedNamespaces = new HashSet<>();
+           this.addPermittedNamespace("ns1");
+           this.addPermittedNamespace("ns2");
         }
 
         @Override
@@ -56,7 +85,7 @@ public class TestFilterChainMgr {
 
         @Override
         public String getName() {
-            return "NamespaceFilter";
+            return this.getClass().getSimpleName();
         }
     }
 
@@ -111,7 +140,7 @@ public class TestFilterChainMgr {
 
         @Override
         public String getName() {
-            return "InvokerFilter";
+            return this.getClass().getSimpleName();
         }
     }
 }

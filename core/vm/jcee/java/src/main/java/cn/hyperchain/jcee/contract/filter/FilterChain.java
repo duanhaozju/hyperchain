@@ -23,7 +23,7 @@ public class FilterChain {
         while (it.hasNext()) {
             Filter filter = it.next();
             if (filter.doFilter(context) == false) {
-                LOG.warn(context + " is not passed filter with name " + filter.getName());
+                LOG.warn(String.format("invoke with context[%s] is rejected by filter[ %s ]", context, filter.getName()));
                 return false;
             }
         }
@@ -34,19 +34,38 @@ public class FilterChain {
         this.filters.add(filter);
     }
 
-    //remove fitler by filter name
+    //remove filter by filter name
     public void removeFilter(String filterName) {
         if (filterName == null || filterName.isEmpty()) {
             LOG.error("filter name is null or empty");
             return;
         }
         Iterator<Filter> it = filters.iterator();
+        Filter filter = null;
+        while (it.hasNext()) {
+            Filter tmpFilter = it.next();
+            if (tmpFilter.getName().equals(filterName)) {
+                filter = tmpFilter;
+            }
+        }
+        if (filter != null) {
+            filters.remove(filter);
+        }
+    }
+
+    //get filter by filter name
+    public Filter getFilter(String filterName) {
+        if (filterName == null || filterName.isEmpty()) {
+            LOG.error("filter name is null or empty");
+            return null;
+        }
+        Iterator<Filter> it = filters.iterator();
         while (it.hasNext()) {
             Filter filter = it.next();
             if (filter.getName().equals(filterName)) {
-                it.remove();
-                return;
+                return filter;
             }
         }
+        return null;
     }
 }
