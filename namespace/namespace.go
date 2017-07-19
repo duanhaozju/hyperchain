@@ -10,7 +10,6 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus"
 	"hyperchain/consensus/csmgr"
-	//"hyperchain/core/db_utils"
 	"hyperchain/core/db_utils"
 	"hyperchain/core/executor"
 	"hyperchain/hyperdb"
@@ -103,7 +102,7 @@ type API struct {
 
 func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*namespaceImpl, error) {
 	// Init Hyperlogger
-	if _, err := common.InitHyperLogger(conf); err != nil {
+	if err := common.InitHyperLogger(name, conf); err != nil {
 		return nil, err
 	}
 
