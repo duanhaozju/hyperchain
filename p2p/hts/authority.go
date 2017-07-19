@@ -1,6 +1,6 @@
 package hts
 
-var AUTH_VER = int64(13)
+const AUTH_VER = int64(13)
 
 func NewAuthority(identify, certificate, cipher, signature, keyExchangeParams, extends []byte) *Authority {
 	return &Authority{

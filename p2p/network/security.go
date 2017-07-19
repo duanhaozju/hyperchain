@@ -7,7 +7,6 @@ import (
 	"hyperchain/common"
 	"github.com/pkg/errors"
 	"crypto"
-	"fmt"
 )
 
 type Sec struct {
@@ -38,7 +37,6 @@ func NewSec(config *viper.Viper) (*Sec,error){
 	tlsCert := config.GetString("global.p2p.tlsCert")
 	tlsCertPriv := config.GetString("global.p2p.tlsCertPriv")
 
-	fmt.Println("tlsCA",tlsCA)
 	//check the file is exist or not
 	if enableTLS && !common.FileExist(tlsCA) {
 		return nil,errors.New("tlsCA file not exist")

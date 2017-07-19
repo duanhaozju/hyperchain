@@ -51,6 +51,8 @@ type peerManagerImpl struct {
 	isVP      bool
 	isOrg      bool
 
+	isRec      bool
+
 	delchan   chan bool
 
 	logger    *logging.Logger
@@ -68,7 +70,7 @@ type peerManagerImpl struct {
 
 //todo rename new function
 func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMux, net *network.HyperNet, delChan chan bool) (*peerManagerImpl, error) {
-	logger := common.GetLogger(namespace, "peermanager")
+	logger := common.GetLogger(namespace, "p2p")
 	if net == nil {
 		return nil, errors.New("the P2P manager hasn't initlized.")
 	}
@@ -88,17 +90,24 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 	selfHostname := peercnf.GetString("self.hostname")
 	isnew := peercnf.GetBool("self.new")
 	isorg := peercnf.GetBool("self.org")
+	isrec := peercnf.GetBool("self.rec")
 
 	if selfHostname == "" {
 		return nil, errors.New(fmt.Sprintf("invalid self hostname: %s", selfHostname))
 	}
-
+	caconf := peercnf.GetString("self.caconf")
+	if !common.FileExist(caconf){
+		return nil,errors.New(fmt.Sprintf("caconfig file is not exist, please check it %s \n",caconf))
+	}
+	h,err := hts.NewHTS(secimpl.NewSecuritySelector(caconf),caconf)
+	if err != nil{
+		return nil, errors.New(fmt.Sprintf("hts initlized failed: %s", err.Error()))
+	}
 	pmi := &peerManagerImpl{
 		namespace: namespace,
 		eventHub:ev,
 		hyperNet:net,
 		selfID:selfID,
-		peerPool:NewPeersPool(namespace),
 		node:NewNode(namespace, selfID, selfHostname, net),
 		nodeNum:N,
 		blackHole:make(chan interface{}),
@@ -108,24 +117,37 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		isonline:new(threadsafe.SpinLock),
 		isnew:isnew,
 		isOrg:isorg,
+		isRec:isrec,
 		delchan:delChan,
 		logger: logger,
 		isVP:isvp,
-		hts:hts.NewHTS(secimpl.NewECDHWithAES()),
-
+		hts:h,
 	}
+	//peer pool
+	pmi.peerPool = NewPeersPool(namespace,pmi.peerMgrEv)
 	//set vp information
 	if !pmi.isVP {
 		pmi.node.info.SetNVP()
 	}
+
+	//original
 	if pmi.isOrg{
-		pmi.node.info.SetOriginal()
+		pmi.node.info.SetOrg()
+	}
+	//TODO org and rec cannot both be true
+	//reconnect
+	if pmi.isRec{
+		pmi.node.info.SetRec()
 	}
 	pmi.isonline.TryLock()
 	nodes := peercnf.Get("nodes").([]interface{})
 	pmi.pts = QuickParsePeerTriples(pmi.namespace, nodes)
 	sort.Sort(pmi.pts)
 	pmi.binding()
+	//ReView After success start up, config org should be set false ,and rec should be set to true
+	peercnf.Set("self.org",false)
+	peercnf.Set("self.rec",true)
+	peercnf.WriteConfig()
 	return pmi, nil
 }
 
@@ -134,13 +156,13 @@ func(pmi *peerManagerImpl)binding()error{
 	if err != nil{
 		return err
 	}
-	clientHelloHandler := msg.NewClientHelloHandler(serverHTS,pmi.peerMgrEv,pmi.logger)
+	clientHelloHandler := msg.NewClientHelloHandler(serverHTS,pmi.peerMgrEv,pmi.node.info,pmi.isOrg,pmi.logger)
 	pmi.node.Bind(pb.MsgType_CLIENTHELLO, clientHelloHandler)
 
 	clientAcceptHandler := msg.NewClientAcceptHandler(serverHTS,pmi.logger)
 	pmi.node.Bind(pb.MsgType_CLIENTACCEPT, clientAcceptHandler)
 
-	sessionHandler := msg.NewSessionHandler(pmi.blackHole, pmi.eventHub)
+	sessionHandler := msg.NewSessionHandler(pmi.blackHole, pmi.eventHub,serverHTS,pmi.logger)
 	pmi.node.Bind(pb.MsgType_SESSION, sessionHandler)
 
 	helloHandler := msg.NewHelloHandler(pmi.blackHole, pmi.eventHub)
@@ -184,13 +206,13 @@ func (pmgr *peerManagerImpl)Start() error {
 	} else if !pmgr.isVP {
 		pmgr.broadcast(pb.MsgType_NVPATTEND, []byte(pmgr.GetLocalAddressPayload()))
 	}
-	pmgr.logger.Criticalf("SELF hash: %s", pmgr.node.info.Hash)
+	pmgr.logger.Infof("SELF hash: %s", pmgr.node.info.Hash)
 	// after all connection
 	return nil
 }
 
 func (pmgr *peerManagerImpl)listening() {
-	pmgr.logger.Critical("Now listening the manager event")
+	pmgr.logger.Info("PeerManager is listening the peer manager event...")
 	//Listening should listening all connection request, and handle it
 	for subitem := range pmgr.peerMgrSub.IterBuffered(){
 		go func (closechan chan interface{},t string,s event.Subscription){
@@ -235,6 +257,37 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 			return
 		}
 	}
+	case peerevent.EV_DELETE_NVP:{
+		conev := ev.(peerevent.EV_DELETE_NVP)
+		peer := pmgr.peerPool.GetNVPByHash(conev.Hash)
+		m := pb.NewMsg(pb.MsgType_NVPDELETE,[]byte(pmgr.node.info.Hash))
+		rsp,err := peer.Chat(m)
+		if err != nil{
+			pmgr.logger.Errorf("cannot delete NVP peer, reason: %s \n",err.Error())
+		}
+		if rsp != nil && rsp.Payload != nil{
+			pmgr.logger.Infof("delete NVP peer, response: %s \n",string(rsp.Payload))
+			pmgr.peerPool.DeleteNVPPeer(conev.Hash)
+		}
+	}
+	case peerevent.EV_DELETE_VP:{
+		if pmgr.isVP{
+			pmgr.logger.Critical("As A VP Node, this process cannot be invoked")
+			return
+		}
+		conev := ev.(peerevent.EV_DELETE_NVP)
+		pmgr.logger.Critical("NVP delete VP Peer By hash",conev.Hash)
+		pmgr.peerPool.DeleteVPPeerByHash(conev.Hash)
+		if !pmgr.isVP{
+				if pmgr.peerPool.GetVPNum() == 0{
+					pmgr.logger.Critical("ALL Validate Peer are disconnect with this Non-Validate Peer")
+					pmgr.logger.Critical("This Peer Will quit automaticlly after 3 seconds")
+					<- time.After(3 * time.Second)
+					pmgr.delchan <- true
+				}
+		}
+
+	}
 	default:
 		pmgr.logger.Critical("cannot determin the event type",reflect.TypeOf(ev))
 
@@ -250,7 +303,11 @@ func (pmgr *peerManagerImpl) bind(peerType int,namespace string, id int, hostnam
 	//TODO here can use the peer hash to quick search
 	//the exist peer
 	if peerType == PEERTYPE_VP{
-		if pmgr.peerPool.GetPeersByHostname(hostname) != nil{
+		if p := pmgr.peerPool.GetPeersByHostname(hostname);p != nil{
+			err := p.clientHello(false,false)
+			if err != nil{
+				return err
+			}
 			return nil
 		}
 	}else{
@@ -315,7 +372,6 @@ func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType, payload []byte, peers [
 		if id > uint64(len(peerList)) || id <= 0{
 			return
 		}
-		fmt.Println("PEERLIST >>>>>",id)
 		peer := peerList[int(id)-1]
 		if peer.info.Hostname == pmgr.node.info.Hostname {
 			continue
@@ -433,7 +489,7 @@ func (pmgr *peerManagerImpl)GetRouterHashifDelete(hash string) (afterDelRouterHa
 
 //DeleteNode delete the specific hash node, if the node hash is self, this node will stoped.
 func (pmgr *peerManagerImpl)DeleteNode(hash string) error {
-	pmgr.logger.Critical("DELENODE", hash)
+	pmgr.logger.Critical("DELETE NODE", hash)
 	if pmgr.node.info.Hash == hash {
 		pmgr.Stop()
 		pmgr.logger.Critical(" WARNING!! THIS NODE HAS BEEN DELETED!")
@@ -444,6 +500,19 @@ func (pmgr *peerManagerImpl)DeleteNode(hash string) error {
 
 	}
 	return pmgr.peerPool.DeleteVPPeerByHash(hash)
+}
+
+func (pmgr *peerManagerImpl)DeleteNVPNode(hash string) error {
+	pmgr.logger.Critical("DELETE NVPNODE", hash)
+	if pmgr.node.info.Hash == hash {
+		pmgr.logger.Critical("Please do not send delete NVP command to nvp")
+		return nil
+	}
+	ev := peerevent.EV_DELETE_NVP{
+		Hash:hash,
+	}
+	go pmgr.peerMgrEv.Post(ev)
+	return nil
 }
 
 // InfoGetter get the peer info to manager

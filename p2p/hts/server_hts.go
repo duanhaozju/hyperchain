@@ -2,63 +2,48 @@ package hts
 
 import (
 	"crypto"
-	"crypto/rand"
 	"fmt"
-
 	"github.com/orcaman/concurrent-map"
-	"github.com/pkg/errors"
 )
 
 type ServerHTS struct {
 	security       Security
-	priKey         crypto.PrivateKey
-	pubKey         crypto.PublicKey
+	priKey        []byte
+	priKey_s crypto.PrivateKey
 	sessionKeyPool cmap.ConcurrentMap
+	CG *CertGroup
 }
 
-func NewServerHTS(sec Security)(*ServerHTS,error) {
+func NewServerHTS(sec Security,cg *CertGroup)(*ServerHTS,error) {
 	sh := &ServerHTS{
 		sessionKeyPool: cmap.New(),
 		security:sec,
-	}
-	err := sh.genPriKey()
-	if err != nil {
-		return nil,err
+		priKey:cg.eCERTPriv,
+		priKey_s:cg.eCERTPriv_S,
+		CG:cg,
 	}
 	return sh,nil
 }
 
-// this is the only way to change the serverHTS private key and public key
-func (sh *ServerHTS) genPriKey() error {
-	pri, pub, err := sh.security.GeneratePrivateKey(rand.Reader)
-	if err != nil {
-		return errors.New(fmt.Sprintf("generate private key failed, reason %s", err.Error()))
-	}
-	sh.priKey = pri
-	sh.pubKey = pub
-	return nil
-}
 
-//GetPubKey get the public key (bytes) to key exchange
-func (sh *ServerHTS) GetPubKey() []byte {
-	return sh.security.Marshal(sh.pubKey)
-}
 
-func (sh *ServerHTS) KeyExchange(identify string, remotePubKey []byte) error {
-	remotePub, err := sh.security.UnMarshal(remotePubKey)
+func (sh *ServerHTS) KeyExchange(idenHash string,rand []byte, rawcert []byte) error {
+	sk ,err := sh.security.GenerateShareKey(sh.priKey,rand,rawcert)
 	if err != nil {
 		return err
 	}
-	sharedKey, err := sh.security.GenerateSharedKey(sh.priKey, remotePub)
-	if err != nil {
-		return err
-	}
-	sessionKey := NewSessionKey(sharedKey)
-	sh.sessionKeyPool.Set(identify, sessionKey)
+	sessionKey := NewSessionKey(sk)
+	sh.sessionKeyPool.Set(idenHash, sessionKey)
 	return nil
 }
 
 func (sh *ServerHTS) Encrypt(identify string, msg []byte) []byte {
+	defer func(){
+		rec := recover()
+		if rec  != nil{
+			fmt.Println("Decrypt failed, fatal error:",rec)
+		}
+	}()
 	if sessionKey, ok := sh.sessionKeyPool.Get(identify); ok {
 		sKey := sessionKey.(*SessionKey)
 		sharedKey := sKey.GetKey()
@@ -76,6 +61,12 @@ func (sh *ServerHTS) Encrypt(identify string, msg []byte) []byte {
 }
 
 func (sh *ServerHTS) Decrypt(identify string, msg []byte) []byte {
+	defer func(){
+		rec := recover()
+		if rec  != nil{
+			fmt.Println("Decrypt failed, fatal error:",rec)
+		}
+	}()
 	if sessionKey, ok := sh.sessionKeyPool.Get(identify); ok {
 		sessionKey := sessionKey.(*SessionKey)
 		sharedKey := sessionKey.GetKey()
@@ -85,9 +76,20 @@ func (sh *ServerHTS) Decrypt(identify string, msg []byte) []byte {
 		}
 		decMsg, err := sh.security.Decrypt(sharedKey, msg)
 		if err != nil {
+			fmt.Println("DECRYPT err ",err.Error())
 			return nil
 		}
 		return decMsg
+	}
+	fmt.Println("DECRYPT KEY not found")
+	return nil
+}
+
+func (sh *ServerHTS)GetSK(hash string) []byte {
+	if sessionKey, ok := sh.sessionKeyPool.Get(hash); ok {
+		sessionKey := sessionKey.(*SessionKey)
+		sharedKey := sessionKey.GetKey()
+		return sharedKey
 	}
 	return nil
 }

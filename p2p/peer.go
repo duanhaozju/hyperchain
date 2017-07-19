@@ -12,7 +12,10 @@ import (
 	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/network"
 	"hyperchain/p2p/payloads"
-	"hyperchain/p2p/transport"
+	"github.com/pkg/errors"
+	"hyperchain/crypto/csprng"
+	"github.com/op/go-logging"
+	"hyperchain/common"
 )
 
 // init the package-level logger system,
@@ -24,9 +27,9 @@ type Peer struct {
 	local     *info.Info
 	namespace string
 	net       *network.HyperNet
-	TM        *transport.TransportManager
 	p2pHub    event.TypeMux
 	chts      *hts.ClientHTS
+	logger *logging.Logger
 }
 
 //NewPeer get a new peer which chat/greeting/whisper functions
@@ -38,8 +41,9 @@ func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, ne
 		net:       net,
 		local:     localInfo,
 		chts:      chts,
+		logger: common.GetLogger(namespace,"p2p"),
 	}
-	if err := peer.clientHello(peer.info.GetOriginal()); err != nil {
+	if err := peer.clientHello(peer.local.IsOrg(),peer.local.IsRec()); err != nil {
 		return nil, err
 	}
 	return peer, nil
@@ -55,7 +59,7 @@ func(peer *Peer)Value()interface{}{
 
 //Chat send a stream message to remote peer
 func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
-	fmt.Println("Chat msg to ",peer.info.Hostname)
+	peer.logger.Debug("Chat msg to ",peer.info.Hostname)
 	//here will wrapper the message
 	in.From = &pb.Endpoint{
 		Field:    []byte(peer.namespace),
@@ -63,6 +67,12 @@ func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
 		UUID:     []byte(peer.local.GetHash()),
 		Version:  P2P_MODULE_DEV_VERSION,
 	}
+	//encrypt
+	encPayload,err := peer.chts.Encrypt(in.Payload)
+	if err != nil{
+		return nil,err
+	}
+	in.Payload = encPayload
 
 	//TODO here should change to Chat method
 	//TODO change as bidi stream transfer method
@@ -81,6 +91,12 @@ func (peer *Peer) Whisper(in *pb.Message) (*pb.Message, error) {
 		UUID:     []byte(peer.local.GetHash()),
 		Version:  P2P_MODULE_DEV_VERSION,
 	}
+	//encrypt
+	encPayload,err := peer.chts.Encrypt(in.Payload)
+	if err != nil{
+		return nil,err
+	}
+	in.Payload = encPayload
 	response, err := peer.net.Whisper(peer.hostname, in)
 	if err != nil {
 		return nil, err
@@ -159,41 +175,136 @@ func PeerUnSerialize(raw []byte) (hostname string, namespace string, hash string
 */
 
 //this is peer should do things
-func (peer *Peer) clientHello(isOriginal bool) error {
-	fmt.Println("peer.go 152 send client hello message")
+func (peer *Peer) clientHello(isOrg,isRec bool) error {
+	peer.logger.Debug("send client hello message")
 	// if self return nil do not need verify
 	if peer.info.Hostname == peer.local.Hostname {
 		return nil
 	}
-
+	/*
+	 ^ClientHello
+	  *ClientCertificate ==> e cert r cert
+	  *ClientSignature ==> e sign r sign
+	  *ClientCipher ==> rand
+	  *ClientKeyExchange ==> ignored
+	  */
+	data := []byte("hyperchain")
+	esign, err := peer.chts.CG.ESign(data)
+	if err !=nil{
+		return err
+	}
+	rsign, err := peer.chts.CG.RSign(data)
+	if err !=nil{
+		return err
+	}
+	rand,err := csprng.CSPRNG(32)
+	if err !=nil{
+		return err
+	}
+	certpayload,err := payloads.NewCertificate(data,peer.chts.CG.GetECert(),esign,peer.chts.CG.GetRCert(),rsign,rand)
+	if err !=nil{
+		return err
+	}
 	// peer should
-	payload := []byte("client hello[msg test]")
-	msg := pb.NewMsg(pb.MsgType_CLIENTHELLO, payload)
-	identify := payloads.NewIdentify(peer.local.IsVP,isOriginal,peer.namespace, peer.local.Hostname, peer.local.Id)
+	identify := payloads.NewIdentify(peer.local.IsVP,isOrg,isRec,peer.namespace, peer.local.Hostname, peer.local.Id,certpayload)
 	payload, err := identify.Serialize()
 	if err != nil {
 		return err
 	}
-	msg.Payload = payload
+	msg := pb.NewMsg(pb.MsgType_CLIENTHELLO, payload)
+
 	serverHello, err := peer.Greeting(msg)
-	fmt.Printf("peer.go 151 got a server hello message %+v \n", serverHello)
+
+	peer.logger.Debugf("got a server hello message %+v \n", serverHello)
 	if err != nil {
+		fmt.Printf("peer.go 205  err: %s \n",err.Error())
 		return err
 	}
-	return peer.clientResponse(serverHello)
+	// complele the key agree
+	if err := peer.negotiateShareKey(serverHello,rand);err != nil{
+		fmt.Printf("peer.go 210 error: %s \n",err.Error())
+		return peer.clientReject(serverHello)
+	}else {
+		return peer.clientResponse(serverHello)
+	}
+
 }
+
+
+func (peer *Peer)negotiateShareKey(in *pb.Message,rand []byte) error{
+	/*
+	   ^ServerReject
+                or
+            ^ServerHello
+             *ServerCertificate
+	     *ServerSignature
+             *ServerCipherSpec
+             *ServerKeyExchange
+             */
+	if in == nil || in.Payload == nil{
+		return errors.New("invalid server return message")
+	}
+
+	iden,err := payloads.IdentifyUnSerialize(in.Payload)
+	if err !=nil{
+		return err
+	}
+	//TODO Check the identity is legal or not
+	if  iden.Payload == nil{
+		return errors.New("iden payload is nil")
+	}
+	cert,err := payloads.CertificateUnMarshal(iden.Payload)
+	if err != nil{
+		return err
+	}
+	r := append(cert.Rand,rand...)
+	err =  peer.chts.GenShareKey(r,cert.ECert)
+	peer.logger.Debugf(`
+Client nego key
+Local Hostname: %s
+Local Hash %s
+Peer hostname %s
+Peer hash %s
+server Rand %s
+client Rand %s
+Total rand %s
+Sharekey %s
+`,
+peer.local.Hostname,
+peer.local.Hash,
+peer.info.Hostname,
+peer.info.Hash,
+common.ToHex(cert.Rand),
+common.ToHex(rand),
+common.ToHex(r),
+common.ToHex(peer.chts.GetSK()))
+return err
+
+}
+
 
 // handle the double side handshake process,
 // when got a serverhello, this peer should response by clientResponse.
 func (peer *Peer) clientResponse(serverHello *pb.Message) error {
-	fmt.Println("peer.go 152 send client accept message")
 	payload := []byte("client accept [msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTACCEPT, payload)
 	serverdone, err := peer.Greeting(msg)
-	fmt.Printf("peer.go 162 got a server done message %+v \n", serverdone)
+	peer.logger.Debug("got a server done message %+v \n", serverdone)
 	if err != nil {
 		return err
 	}
+	return nil
+}
 
+// handle the double side handshake process,
+// when got a serverhello, this peer should response by clientResponse.
+func (peer *Peer) clientReject(serverHello *pb.Message) error {
+	payload := []byte("client accept [msg test]")
+	msg := pb.NewMsg(pb.MsgType_CLIENTREJECT, payload)
+	serverdone, err := peer.Greeting(msg)
+	peer.logger.Debug("got a server done message %+v \n", serverdone)
+	if err != nil {
+		return err
+	}
 	return nil
 }

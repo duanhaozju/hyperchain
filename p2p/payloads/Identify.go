@@ -5,13 +5,15 @@ import (
 	"hyperchain/p2p/utils"
 )
 
-func NewIdentify(isvp bool,isOriginal bool,namespace string, hostname string, id int) *Identify {
+func NewIdentify(isvp,isOriginal,isReconnect bool,namespace , hostname string, id int,payload []byte) *Identify {
 	iden := &Identify{
 		Id:       int64(id),
 		IsVP:     isvp,
 		IsOriginal:isOriginal,
 		Hostname: hostname,
 		Namespace:namespace,
+		Payload:payload,
+		IsReconnect:isReconnect,
 	}
 	if isvp{
 		iden.Hash = utils.HashString(hostname + namespace)

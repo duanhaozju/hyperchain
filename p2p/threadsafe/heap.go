@@ -91,7 +91,6 @@ func(h *Heap)Sort()[] interface{}{
 	}
 	ret := make([]interface{},0)
 	for _,it := range tempHeap.heap{
-		fmt.Print("p",it.priority," ")
 		ret = append(ret,it.value)
 	}
 	fmt.Println()

@@ -27,8 +27,6 @@ import (
 	"errors"
 	"math/big"
 	"unsafe"
-
-	"hyperchain/crypto/csprng"
 )
 
 //#define USE_FIELD_5X64
@@ -64,7 +62,10 @@ func Sign(msg []byte, seckey []byte) ([]byte, error) {
 	sig := make([]byte, 65)
 	sig_ptr := (*C.secp256k1_ecdsa_recoverable_signature)(unsafe.Pointer(&sig[0]))
 
-	nonce := csprng.CSPRNGRandom(32)
+	nonce,err := csprng(32)
+	if err !=nil{
+		return nil,err
+	}
 	ndata_ptr := unsafe.Pointer(&nonce[0])
 
 	noncefp_ptr := &(*C.secp256k1_nonce_function_default)

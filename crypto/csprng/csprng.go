@@ -1,27 +1,16 @@
-// Cryptographically Secure Pseudo-Random Number Generator
 package csprng
 
 import (
-	crand "crypto/rand"
-	"io"
+	"crypto/rand"
 )
 
-var Reader io.Reader = &randEntropy{}
 
-type randEntropy struct {
-}
-
-func (*randEntropy) Read(bytes []byte) (n int, err error) {
-	readBytes := CSPRNGRandom(len(bytes))
-	copy(bytes, readBytes)
-	return len(bytes), nil
-}
-
-func CSPRNGRandom(n int) []byte {
-	mainBuff := make([]byte, n)
-	_, err := io.ReadFull(crand.Reader, mainBuff)
+func CSPRNG(n int)([]byte,error){
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	// Note that err == nil only if we read len(b) bytes.
 	if err != nil {
-		panic("reading from crypto/rand failed: " + err.Error())
+		return nil, err
 	}
-	return mainBuff
+	return b, nil
 }

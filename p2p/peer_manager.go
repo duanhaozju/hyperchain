@@ -50,6 +50,8 @@ type DeleteNode interface {
 	GetLocalNodeHash() string
 	GetRouterHashifDelete(hash string) (string, uint64, uint64)
 	DeleteNode(hash string) error // if self {...} else{...}
+	//Delete NVP node which is connect to self
+	DeleteNVPNode(hash string) error
 }
 
 // InfoGetter get the peer info to manager

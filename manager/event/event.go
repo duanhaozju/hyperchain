@@ -89,8 +89,13 @@ type UpdateRoutingTableEvent struct {
 type AlreadyInChainEvent struct {
 }
 
-// a peer's exit event
-type DelPeerEvent struct {
+// delete VP peer event
+type DelVPEvent struct {
+	Payload []byte
+}
+
+// delete NVP peer event
+type DelNVPEvent struct {
 	Payload []byte
 }
 

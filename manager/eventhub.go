@@ -134,7 +134,7 @@ func (hub *EventHub) Subscribe() {
 	hub.subscriptions[SUB_VALIDATION] = hub.eventMux.Subscribe(event.ValidationEvent{})
 	hub.subscriptions[SUB_COMMIT] = hub.eventMux.Subscribe(event.CommitEvent{})
 	hub.subscriptions[SUB_PEERMAINTAIN] = hub.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
-		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.DelPeerEvent{}, event.BroadcastDelPeerEvent{})
+		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.DelVPEvent{}, event.DelNVPEvent{}, event.BroadcastDelPeerEvent{})
 	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InformPrimaryEvent{}, event.VCResetEvent{}, event.ChainSyncReqEvent{})
 	hub.subscriptions[SUB_EXEC] = hub.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{})
 	hub.subscriptions[SUB_TRANSACTION] = hub.eventMux.Subscribe(event.NewTxEvent{}, event.NvpRelayTxEvent{})
@@ -281,8 +281,8 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 			case event.BroadcastNewPeerEvent:
 				hub.logger.Debugf("message middleware: [broadcast new peer]")
 				hub.broadcast(BROADCAST_VP, m.SessionMessage_ADD_PEER, ev.Payload)
-			case event.DelPeerEvent:
-				hub.logger.Debugf("message middleware: [delete peer]")
+			case event.DelVPEvent:
+				hub.logger.Debugf("message middleware: [delete vp peer]")
 				payload := ev.Payload
 				//TODO unSupport method temp @chenquan
 				routerHash, id, del := hub.peerManager.GetRouterHashifDelete(string(payload))
@@ -293,6 +293,9 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 					Del:        del,
 				}
 				hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_DEL_NODE_EVENT, msg)
+			case event.DelNVPEvent:
+				hub.logger.Debugf("message middleware: [delete nvp peer]")
+				hub.peerManager.DeleteNVPNode(string(ev.Payload))
 			case event.BroadcastDelPeerEvent:
 				hub.logger.Debugf("message middleware: [broadcast delete peer]")
 				hub.broadcast(BROADCAST_VP, m.SessionMessage_DEL_PEER, ev.Payload)
@@ -300,18 +303,15 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 				hub.logger.Debugf("message middleware: [update routing table]")
 				if ev.Type == true {
 					// add a peer
-					//TODO unSupport method temp @chenquan
 					hub.peerManager.UpdateRoutingTable(ev.Payload)
 					hub.PassRouters()
 				} else {
 					// remove a peer
-					//TODO unSupport method temp @chenquan
 					hub.peerManager.DeleteNode(string(ev.Payload))
 					hub.PassRouters()
 				}
 			case event.AlreadyInChainEvent:
 				hub.logger.Debugf("message middleware: [already in chain]")
-					//TODO unsupport method @chenquan
 					payload := hub.peerManager.GetLocalAddressPayload()
 					hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_NEW_NODE_EVENT, &protos.NewNodeMessage{payload})
 					hub.PassRouters()

@@ -36,5 +36,6 @@ enum MsgType{
 
     //NVP issues
     NVPATTEND                 = 14;
+    NVPDELETE                 = 15;
 
 }

@@ -4,11 +4,12 @@ import (
 	"crypto/ecdsa"
 	"crypto/x509"
 	"github.com/pkg/errors"
-	"hyperchain/core/crypto/primitives"
+	"hyperchain/crypto/primitives"
 	"io/ioutil"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"github.com/spf13/viper"
+	"fmt"
 )
 
 var (
@@ -42,7 +43,6 @@ type CAManager struct {
 	checkCertSign         bool
 
 	EnableSymmetrical     bool
-
 	logger     *logging.Logger
 }
 
@@ -51,7 +51,6 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	logger := common.GetLogger(conf.GetString(common.NAMESPACE), "ca")
 	caconfPath := conf.GetString("global.configs.caconfig")
 	logger.Critical(caconfPath)
-	enableSymmetrical := conf.GetBool("global.security.enablesymmetrical")
 	if caconfPath == "" {
 		return nil, errors.New("cannot get the ca config file path.")
 	}
@@ -59,7 +58,7 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	config.SetConfigFile(caconfPath)
 	err := config.ReadInConfig()
 	if err != nil {
-		return nil, errors.New("cannot read ca conf")
+		return nil, errors.New(fmt.Sprintf("cannot read ca conf,reason: %s",err.Error()))
 	}
 	eca, err := readCert(config.GetString("ecert.ca"))
 	if err != nil {
@@ -81,7 +80,6 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return &CAManager{
 		eCaCert:eca,
 		eCert:ecert,
@@ -92,7 +90,6 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 		checkCertSign:config.GetBool("check.certsign"),
 		checkERCert:config.GetBool("check.ercert"),
 		checkTCert:config.GetBool("check.tcert"),
-		EnableSymmetrical:enableSymmetrical,
 		logger:logger,
 
 	},nil
@@ -132,7 +129,7 @@ func (cm *CAManager)VerifyTCert(tcertPEM string) (bool, error) {
 	if !cm.checkTCert {
 		return true, nil
 	}
-	tcert, err := primitives.ParseCertificate(tcertPEM)
+	tcert, err := primitives.ParseCertificate([]byte(tcertPEM))
 	if err != nil {
 		cm.logger.Error(errParseCert.Error())
 		return false, errParseCert
@@ -152,7 +149,7 @@ func (cm *CAManager) VerifyECert(ecertPEM string) (bool, error) {
 	}
 	// if SDK hasn't TCert it can use the ecert to send the transaction
 	// but if the switch is off, this will not check the ecert is valid or not.
-	ecertToVerify, err := primitives.ParseCertificate(ecertPEM)
+	ecertToVerify, err := primitives.ParseCertificate([]byte(ecertPEM))
 	if err != nil {
 		cm.logger.Error(errParseCert.Error())
 		return false, errParseCert
@@ -173,7 +170,7 @@ func (cm *CAManager) VerifyCertSign(certPEM string, msg, sign []byte) (bool, err
 	if !cm.checkCertSign {
 		return true, nil
 	}
-	ecert, err := primitives.ParseCertificate(certPEM)
+	ecert, err := primitives.ParseCertificate([]byte(certPEM))
 	if err != nil {
 		cm.logger.Error(errParseCert.Error())
 		return false, errParseCert
@@ -194,7 +191,7 @@ func (cm *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
 	if cm.checkERCert {
 		return true,nil
 	}
-	rcert, err := primitives.ParseCertificate(rcertPEM)
+	rcert, err := primitives.ParseCertificate([]byte(rcertPEM))
 	if err != nil {
 		cm.logger.Error(errParseCert)
 		return false, errParseCert
@@ -237,7 +234,7 @@ func readCert(path string) (*cert, error) {
 	if err != nil {
 		return nil, err
 	}
-	certs, err := primitives.ParseCertificate(string(certb))
+	certs, err := primitives.ParseCertificate(certb)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +250,7 @@ func readKey(path string) (*key, error) {
 	if err != nil {
 		return nil, err
 	}
-	priKey, err := primitives.ParseKey(string(keyb))
+	priKey, err := primitives.ParseKey(keyb)
 	if err != nil {
 		return nil, errors.New("cannot parse the caprivatekey")
 	}

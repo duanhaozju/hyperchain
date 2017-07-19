@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	"hyperchain/manager/event"
 )
 
 var (	_VP_FLAG = "VP"
@@ -21,16 +22,18 @@ type PeersPool struct {
 	nvpPool cmap.ConcurrentMap
 	//put the exist peers into this exist
 	existMap cmap.ConcurrentMap
+	evMux *event.TypeMux
 	logger *logging.Logger
 }
 
 //NewPeersPool new a peers pool
-func NewPeersPool(namespace string)*PeersPool {
+func NewPeersPool(namespace string,ev *event.TypeMux)*PeersPool {
 	return &PeersPool{
 		namespace:namespace,
 		vpPool:nil,
 		nvpPool:cmap.New(),
 		existMap:cmap.New(),
+		evMux:ev,
 		logger:common.GetLogger(namespace,"p2p"),
 	}
 }
@@ -109,6 +112,19 @@ func (pool *PeersPool)GetNVPByHostname(hostname string)*Peer{
 	return nil
 }
 
+func (pool *PeersPool)GetNVPByHash(hash string)*Peer{
+	if pool.nvpPool == nil{
+		return nil
+	}
+	l := pool.nvpPool.IterBuffered()
+	for item := range l{
+		p := item.Val.(*Peer)
+		if p.info.Hash == hash{
+			return p
+		}
+	}
+	return nil
+}
 //TryDelete the specific hash node
 func(pool *PeersPool)TryDelete(selfHash,delHash string)(routerhash string, selfnewid uint64,deleteid uint64,err error){
 	pool.logger.Critical("selfhash",selfHash,"delhash",delHash)
@@ -175,16 +191,21 @@ func(pool *PeersPool)DeleteVPPeer(id int)error{
 
 func(pool *PeersPool)DeleteVPPeerByHash(hash string)error{
 	p := pool.GetPeersByHash(hash)
-	pool.logger.Critical("delete node",p.info.Id)
+	pool.logger.Critical("delete validate peer",p.info.Id)
 	return pool.DeleteVPPeer(p.info.Id)
 }
 
 
 //DeleteNVPPeer delete the nvp peer
-func(pool *PeersPool)DeleteNVPPeer(hash string){
+func(pool *PeersPool)DeleteNVPPeer(hash string)error{
 	if _,ok := pool.nvpPool.Get(hash);ok{
 		pool.nvpPool.Remove(hash)
 	}
+	return nil
+}
+
+func(pool *PeersPool)GetVPNum() int{
+	return len(pool.vpPool.Sort())
 }
 
 func (pool *PeersPool)Serlize()([]byte,error){

@@ -161,7 +161,7 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 	executor.statedb.MarkProcessStart(tempBlockNumber)
 	// execute transactions one by one
 	for i, tx := range txs {
-		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, tempBlockNumber)
+		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, executor.getTempBlockNumber())
 		if err != nil {
 			errType := executor.classifyInvalid(err)
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
@@ -182,8 +182,8 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 		return err, nil
 	}
 	executor.resetStateDb()
-	executor.logger.Criticalf("[Namespace = %s] validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
-		executor.namespace, tempBlockNumber, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
+	executor.logger.Debugf("[Namespace = %s] validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+		executor.namespace, executor.getTempBlockNumber(), seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &ValidationResultRecord{
 		TxRoot:      txRoot,
 		ReceiptRoot: receiptRoot,
@@ -269,5 +269,4 @@ func (executor *Executor) dealEmptyBlock(res *ValidationResultRecord, ev event.V
 		executor.throwInvalidTransactionBack(res.InvalidTxs)
 	}
 }
-
 
