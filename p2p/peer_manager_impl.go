@@ -51,6 +51,8 @@ type peerManagerImpl struct {
 	isVP      bool
 	isOrg      bool
 
+	isRec      bool
+
 	delchan   chan bool
 
 	logger    *logging.Logger
@@ -88,6 +90,7 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 	selfHostname := peercnf.GetString("self.hostname")
 	isnew := peercnf.GetBool("self.new")
 	isorg := peercnf.GetBool("self.org")
+	isrec := peercnf.GetBool("self.rec")
 
 	if selfHostname == "" {
 		return nil, errors.New(fmt.Sprintf("invalid self hostname: %s", selfHostname))
@@ -114,6 +117,7 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		isonline:new(threadsafe.SpinLock),
 		isnew:isnew,
 		isOrg:isorg,
+		isRec:isrec,
 		delchan:delChan,
 		logger: logger,
 		isVP:isvp,
@@ -125,14 +129,25 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 	if !pmi.isVP {
 		pmi.node.info.SetNVP()
 	}
+
+	//original
 	if pmi.isOrg{
-		pmi.node.info.SetOriginal()
+		pmi.node.info.SetOrg()
+	}
+	//TODO org and rec cannot both be true
+	//reconnect
+	if pmi.isRec{
+		pmi.node.info.SetRec()
 	}
 	pmi.isonline.TryLock()
 	nodes := peercnf.Get("nodes").([]interface{})
 	pmi.pts = QuickParsePeerTriples(pmi.namespace, nodes)
 	sort.Sort(pmi.pts)
 	pmi.binding()
+	//ReView After success start up, config org should be set false ,and rec should be set to true
+	peercnf.Set("self.org",false)
+	peercnf.Set("self.rec",true)
+	peercnf.WriteConfig()
 	return pmi, nil
 }
 
@@ -288,7 +303,11 @@ func (pmgr *peerManagerImpl) bind(peerType int,namespace string, id int, hostnam
 	//TODO here can use the peer hash to quick search
 	//the exist peer
 	if peerType == PEERTYPE_VP{
-		if pmgr.peerPool.GetPeersByHostname(hostname) != nil{
+		if p := pmgr.peerPool.GetPeersByHostname(hostname);p != nil{
+			err := p.clientHello(false,false)
+			if err != nil{
+				return err
+			}
 			return nil
 		}
 	}else{

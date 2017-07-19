@@ -6,6 +6,7 @@ import (
 	"hyperchain/manager/event"
 	"hyperchain/p2p/hts"
 	"github.com/op/go-logging"
+	"github.com/pkg/errors"
 )
 
 
@@ -40,11 +41,12 @@ func (session  *SessionMsgHandler) Receive() chan<- interface{}{
 }
 
 func (session  *SessionMsgHandler) Execute(msg *pb.Message) (*pb.Message,error){
-	session.logger.Debug("GOT a SESSION Message From: %s, Type: %s \n",msg.From.Hostname,msg.MessageType.String())
-	session.logger.Debug("DECRYPTED FOR %s\n",string(msg.From.UUID))
+	session.logger.Debugf("GOT a SESSION Message From: %s, Type: %s \n",msg.From.Hostname,msg.MessageType.String())
+	session.logger.Debugf("DECRYPTED FOR %s\n",string(msg.From.UUID))
 	decPayload:= session.shts.Decrypt(string(msg.From.UUID),msg.Payload)
 	if decPayload == nil{
-		fmt.Println("SESSION PAYLOAD DECRYPT FAILED.")
+		session.logger.Errorf("SESSION PAYLOAD DECRYPT FAILED. msg from %s, namespace %s",msg.From.Hostname)
+		return nil,errors.New("cannot decrypt the Msssge response")
 	}
 	go session.evmux.Post(event.SessionEvent{
 		Message:decPayload,

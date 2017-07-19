@@ -30,7 +30,6 @@ func(ch *ClientHTS) VerifySign(sign ,data, rawcert []byte) (bool,error){
 }
 
 func(ch *ClientHTS)GenShareKey(rand,rawcert []byte) error{
-
 	sk,err := ch.security.GenerateShareKey(ch.priKey,rand,rawcert)
 	if err != nil{
 		return err
@@ -53,4 +52,8 @@ func (ch *ClientHTS) Decrypt(msg []byte) ([]byte, error) {
 		return nil, errors.New("cannot get session Key,enc failed.")
 	}
 	return ch.security.Encrypt(sKey, msg)
+}
+
+func(ch *ClientHTS)GetSK()[]byte{
+	return ch.sessionKey.GetKey()
 }

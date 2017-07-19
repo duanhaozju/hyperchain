@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/crypto/csprng"
 	"hyperchain/p2p/info"
+	"agile/utils/common"
 )
 
 type ClientHelloMsgHandler struct {
@@ -65,7 +66,7 @@ func (h *ClientHelloMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
 		return nil,err
 	}
 	// peer should
-	identify := payloads.NewIdentify(h.local.IsVP,h.isOrigin,h.local.GetNameSpace(), h.local.Hostname, h.local.Id,certpayload)
+	identify := payloads.NewIdentify(h.local.IsVP,h.isOrigin,false,h.local.GetNameSpace(), h.local.Hostname, h.local.Id,certpayload)
 	payload, err := identify.Serialize()
 	if err != nil {
 		return nil,err
@@ -80,27 +81,33 @@ func (h *ClientHelloMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
 		h.logger.Warningf("server hello error: %s \n",err.Error())
 		return nil, err
 	}
+	h.logger.Critical("got a remote id is rec:",id.IsReconnect)
 	// Key Agree
 	if id.Payload == nil{
 		h.logger.Error("server hello id.Payload is nil")
 		return nil,errors.New("server hello id.Payload is nil")
 	}
-	clientRand,err := csprng.CSPRNG(32)
-	if err != nil{
-
-		return nil,errors.New("server hello id.Payload is nil")
-	}
-
 	cert,err := payloads.CertificateUnMarshal(id.Payload)
-	r := append(cert.Rand,clientRand...)
+	//server rand + client rand
+	r := append(serverRand,cert.Rand...)
 
 	err = h.shts.KeyExchange(id.Hash,r,cert.ECert)
 	if err !=nil{
 		h.logger.Errorf("handler_client_hello.go 70 %s \n",err.Error())
 		return nil,errors.New(fmt.Sprintf("cannot complete the key exchange, reason: %s",err.Error()))
 	}
-
-	if !id.IsOriginal && id.IsVP {
+	h.logger.Debugf(`
+Server nego Key:
+Local hostname: %s
+Local hash %s
+Peer hostname %s
+Peer hash %s
+server Rand %s
+client Rand %s
+Total rand %s
+Shared key %s
+`,h.local.Hostname,h.local.Hash,msg.From.Hostname,id.Hash,common.ToHex(serverRand),common.ToHex(cert.Rand),common.ToHex(r),common.ToHex(h.shts.GetSK(id.Hash)))
+	if id.IsReconnect && id.IsVP {
 		//if verify passed, should notify peer manager to reverse connect to client.
 		// if VP/NVP both should reverse to connect.
 		h.logger.Info("post ev VPCONNECT \n")
@@ -110,7 +117,7 @@ func (h *ClientHelloMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
 			ID:int(id.Id),
 		})
 
-	} else if !id.IsOriginal && !id.IsVP{
+	} else if id.IsReconnect && !id.IsVP{
 		//if is nvp h.hub.Post(peerevent.EV_NVPConnect{})
 		h.logger.Info("post ev NVPCONNECT")
 		go h.hub.Post(peerevent.EV_NVPConnect{

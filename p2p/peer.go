@@ -45,7 +45,7 @@ func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, ne
 		chts:      chts,
 		logger: common.GetLogger(namespace,"p2p"),
 	}
-	if err := peer.clientHello(peer.info.GetOriginal()); err != nil {
+	if err := peer.clientHello(peer.local.IsOrg(),peer.local.IsRec()); err != nil {
 		return nil, err
 	}
 	return peer, nil
@@ -177,7 +177,7 @@ func PeerUnSerialize(raw []byte) (hostname string, namespace string, hash string
 */
 
 //this is peer should do things
-func (peer *Peer) clientHello(isOriginal bool) error {
+func (peer *Peer) clientHello(isOrg,isRec bool) error {
 	peer.logger.Debug("send client hello message")
 	// if self return nil do not need verify
 	if peer.info.Hostname == peer.local.Hostname {
@@ -208,7 +208,7 @@ func (peer *Peer) clientHello(isOriginal bool) error {
 		return err
 	}
 	// peer should
-	identify := payloads.NewIdentify(peer.local.IsVP,isOriginal,peer.namespace, peer.local.Hostname, peer.local.Id,certpayload)
+	identify := payloads.NewIdentify(peer.local.IsVP,isOrg,isRec,peer.namespace, peer.local.Hostname, peer.local.Id,certpayload)
 	payload, err := identify.Serialize()
 	if err != nil {
 		return err
@@ -260,7 +260,28 @@ func (peer *Peer)negotiateShareKey(in *pb.Message,rand []byte) error{
 		return err
 	}
 	r := append(cert.Rand,rand...)
-	return peer.chts.GenShareKey(r,cert.ECert)
+	err =  peer.chts.GenShareKey(r,cert.ECert)
+	peer.logger.Debugf(`
+Client nego key
+Local Hostname: %s
+Local Hash %s
+Peer hostname %s
+Peer hash %s
+server Rand %s
+client Rand %s
+Total rand %s
+Sharekey %s
+`,
+peer.local.Hostname,
+peer.local.Hash,
+peer.info.Hostname,
+peer.info.Hash,
+common.ToHex(cert.Rand),
+common.ToHex(rand),
+common.ToHex(r),
+common.ToHex(peer.chts.GetSK()))
+return err
+
 }
 
 

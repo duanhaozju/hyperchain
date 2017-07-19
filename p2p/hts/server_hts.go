@@ -38,6 +38,12 @@ func (sh *ServerHTS) KeyExchange(idenHash string,rand []byte, rawcert []byte) er
 }
 
 func (sh *ServerHTS) Encrypt(identify string, msg []byte) []byte {
+	defer func(){
+		rec := recover()
+		if rec  != nil{
+			fmt.Println("Decrypt failed, fatal error:",rec)
+		}
+	}()
 	if sessionKey, ok := sh.sessionKeyPool.Get(identify); ok {
 		sKey := sessionKey.(*SessionKey)
 		sharedKey := sKey.GetKey()
@@ -55,6 +61,12 @@ func (sh *ServerHTS) Encrypt(identify string, msg []byte) []byte {
 }
 
 func (sh *ServerHTS) Decrypt(identify string, msg []byte) []byte {
+	defer func(){
+		rec := recover()
+		if rec  != nil{
+			fmt.Println("Decrypt failed, fatal error:",rec)
+		}
+	}()
 	if sessionKey, ok := sh.sessionKeyPool.Get(identify); ok {
 		sessionKey := sessionKey.(*SessionKey)
 		sharedKey := sessionKey.GetKey()
@@ -64,9 +76,20 @@ func (sh *ServerHTS) Decrypt(identify string, msg []byte) []byte {
 		}
 		decMsg, err := sh.security.Decrypt(sharedKey, msg)
 		if err != nil {
+			fmt.Println("DECRYPT err ",err.Error())
 			return nil
 		}
 		return decMsg
+	}
+	fmt.Println("DECRYPT KEY not found")
+	return nil
+}
+
+func (sh *ServerHTS)GetSK(hash string) []byte {
+	if sessionKey, ok := sh.sessionKeyPool.Get(hash); ok {
+		sessionKey := sessionKey.(*SessionKey)
+		sharedKey := sessionKey.GetKey()
+		return sharedKey
 	}
 	return nil
 }

@@ -18,6 +18,7 @@ type Info struct {
 	Hash      string `json:"hash"`
 	IsVP bool `json:"isvp"`
 	isOriginal bool `json"isorg`
+	isReconnect bool `json"isorg`
 }
 
 func NewInfo(id int,hostname string,namespcace string)*Info {
@@ -40,18 +41,29 @@ func (i *Info)GetHash()string{
 	return i.Hash
 }
 
-func (i *Info)SetOriginal(){
+func (i *Info)SetOrg(){
 	i.rwmutex.Lock()
 	defer i.rwmutex.Unlock()
 	i.isOriginal = true
 }
 
-func (i *Info)GetOriginal() bool{
+func (i *Info)IsOrg() bool{
 	i.rwmutex.RLock()
 	defer i.rwmutex.RUnlock()
 	return i.isOriginal
 }
 
+func (i *Info)SetRec(){
+	i.rwmutex.Lock()
+	defer i.rwmutex.Unlock()
+	i.isReconnect = true
+}
+
+func (i *Info)IsRec() bool{
+	i.rwmutex.RLock()
+	defer i.rwmutex.RUnlock()
+	return i.isReconnect
+}
 func(i *Info)SetHostName(hostname string){
 	i.rwmutex.Lock()
 	defer i.rwmutex.Unlock()

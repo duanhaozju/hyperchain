@@ -69,8 +69,11 @@ func(ea *ECDHWithAES)GenerateShareKey(priKey []byte,rand []byte,rawcert []byte)(
 	//fmt.Printf("pubx : %s\n",common.ToHex(pubkey.X.Bytes()))
 	//fmt.Printf("puby : %s\n",common.ToHex(pubkey.Y.Bytes()))
 	//fmt.Printf("priD : %s\n",common.ToHex(pri.D.Bytes()))
+	//fmt.Printf("self pubx : %s\n",common.ToHex(pri.X.Bytes()))
+	//fmt.Printf("self puby : %s\n",common.ToHex(pri.Y.Bytes()))
 	//fmt.Printf("x : %s\n",common.ToHex(x.Bytes()))
 	//fmt.Printf("y : %s\n",common.ToHex(y.Bytes()))
+	//fmt.Printf("rand : %s\n",common.ToHex(rand))
 
 	sharekey = append(sharekey,x.Bytes()...)
 	sharekey = append(sharekey,y.Bytes()...)
@@ -83,10 +86,10 @@ func(ea *ECDHWithAES)GenerateShareKey(priKey []byte,rand []byte,rawcert []byte)(
 }
 
 func(ea *ECDHWithAES)Encrypt(key, originMsg []byte)(encryptedMsg []byte,err error){
-	return pureEnc(key,originMsg)
+	return TripleDesEnc(key,originMsg)
 }
 func(ea *ECDHWithAES)Decrypt(key, encryptedMsg []byte)(originMsg []byte,err error){
-	return pureDec(key,encryptedMsg)
+	return TripleDesDec(key,encryptedMsg)
 }
 
 // 3DES encryption algorithm implements
@@ -101,9 +104,7 @@ func TripleDesEnc(key, src []byte) ([]byte, error) {
 	msg := PKCS5Padding(src, block.BlockSize())
 	blockMode := cipher.NewCBCEncrypter(block, key[:block.BlockSize()])
 	crypted := make([]byte, len(msg))
-	//log.Criticalf("block size:%d , src len %d, %d",blockMode.BlockSize(),len(msg),len(msg)%block.BlockSize())
 	blockMode.CryptBlocks(crypted, msg)
-	//log.Criticalf("after encrypt msg is : %s",common.ToHex(crypted))
 	return crypted, nil
 }
 

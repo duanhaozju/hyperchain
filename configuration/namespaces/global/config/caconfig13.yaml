@@ -9,7 +9,7 @@
 ecert:
   eca: "namespaces/global/config/certs/eca.cert"
   ecert: "namespaces/global/config/certs/ecert.cert"
-  priv: "namespaces/global/config/certs/eca.priv"
+  priv: "namespaces/global/config/certs/ecert.priv"
 
 rcert:
   # if you do not have rcert, leave this item blank
