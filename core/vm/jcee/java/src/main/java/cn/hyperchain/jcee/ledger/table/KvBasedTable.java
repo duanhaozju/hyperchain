@@ -54,7 +54,7 @@ public class KvBasedTable implements Table {
         Result data = ledger.get(rowId);
         if (!data.isEmpty()) {
             Gson gson = new Gson();
-            Row row = gson.fromJson(data.getValue().toString(), Row.class);
+            Row row = gson.fromJson(data.toString(), Row.class);
             return row;
         }else {
             return null;

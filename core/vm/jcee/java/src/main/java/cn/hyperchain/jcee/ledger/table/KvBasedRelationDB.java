@@ -5,6 +5,7 @@
 package cn.hyperchain.jcee.ledger.table;
 
 import cn.hyperchain.jcee.ledger.AbstractLedger;
+import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 
 import java.util.LinkedList;
@@ -36,14 +37,22 @@ public class KvBasedRelationDB implements RelationDB {
         tableMap.put(compositeName, new KvBasedTable(tableDesc, ledger));
         LOG.info("compositeName: " + compositeName);
         LOG.info("tableDesc: " + tableDesc.toJSON());
-        ledger.put(compositeName, tableDesc);
+        ledger.put(compositeName, tableDesc.toJSON());
         LOG.info(tableMap);
         return true;
     }
 
     @Override
     public Table getTable(TableName name) {
-        return tableMap.get(name.getCompositeName());
+        String compositeName = name.getCompositeName();
+        if (tableMap.containsKey(compositeName)) {
+            LOG.error("table " + compositeName + " was found in tableMap");
+            return tableMap.get(compositeName);
+        } else {
+            Gson gson = new Gson();
+            Table tableDesc= (Table)gson.fromJson(ledger.get(compositeName).toString(), TableDesc.class);
+            return tableDesc;
+        }
     }
 
     @Override
