@@ -21,6 +21,7 @@ const (
 
 	syncChainBatchSize          = "global.executor.sync_chain.sync_batch_size"
 	syncChainResendInterval     = "global.executor.sync_chain.sync_resend_interval"
+	exitFlag                    = "global.executor.nvp.exitflag"
 
 )
 
@@ -83,4 +84,8 @@ func (executor *Executor) GetSyncResendInterval() time.Duration {
 
 func (executor *Executor) isJvmEnable() bool {
 	return executor.conf.GetBool(common.C_JVM_START)
+}
+
+func (executor *Executor) GetExitFlag() bool {
+	return executor.conf.GetBool(exitFlag)
 }

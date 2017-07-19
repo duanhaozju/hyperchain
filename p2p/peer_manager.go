@@ -17,22 +17,30 @@ type PeerManager interface {
 	// initialize the peerManager which is for init the local node
 	Start() error
 	Stop()
-	GetInitType() <-chan int
 }
 
 // MsgSender Send msg to others peer
 type MsgSender interface {
 	// broadcast information to peers
-	BroadcastPeers(payLoad []byte)
+	Broadcast(payLoad []byte)
+
 	// send a message to specific peer  UNICAST
-	SendMsgToPeers(payLoad []byte, peerList []uint64)
+	SendMsg(payLoad []byte, peerList []uint64)
+
+	// random select a VP and send msg to it
+	SendRandomVP(payload []byte) error
+
+	// broadcast information to NVP peers
+	BroadcastNVP(payLoad []byte) error
+
+	// send a message to specific NVP peer (by nvp hash) UNICAST
+	SendMsgNVP(payLoad []byte, nvpList []string) error
 }
 
 // AddNode
 type AddNode interface {
 	// update routing table when new peer's join request is accepted
 	UpdateRoutingTable(payLoad []byte)
-	UpdateAllRoutingTable(routerPayload []byte)
 	GetLocalAddressPayload() []byte
 	SetOnline()
 }
@@ -42,16 +50,12 @@ type DeleteNode interface {
 	GetLocalNodeHash() string
 	GetRouterHashifDelete(hash string) (string, uint64, uint64)
 	DeleteNode(hash string) error // if self {...} else{...}
+	//Delete NVP node which is connect to self
+	DeleteNVPNode(hash string) error
 }
 
 // InfoGetter get the peer info to manager
 type InfoGetter interface {
-	// get the all peer list to broadcast
-	GetAllPeers() []*Peer
-	GetAllPeersWithTemp() []*Peer
-	GetVPPeers() []*Peer
-	// get local node instance
-	GetLocalNode() *Node
 	// Get local node id
 	GetNodeId() int
 	//get the peer information of all nodes.
@@ -60,4 +64,7 @@ type InfoGetter interface {
 	SetPrimary(id uint64) error
 	// use by new peer when join the chain dynamically only
 	GetRouters() []byte
+
+	//ISVP local node is vp node or not
+	IsVP() bool
 }

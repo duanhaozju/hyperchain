@@ -54,10 +54,20 @@ func (node *Node) DelNode(args NodeArgs) (string, error) {
 	if node.eh == nil {
 		return "", &common.CallbackError{Message:"protocolManager is nil"}
 	}
-	go node.eh.GetEventObject().Post(event.DelPeerEvent{
+	go node.eh.GetEventObject().Post(event.DelVPEvent{
 		Payload: []byte(args.NodeHash),
 	})
-	return "successful request", nil
+	return "successful delete vp node", nil
+}
+
+func (node *Node) DelNVP(args NodeArgs) (string, error) {
+	if node.eh == nil {
+		return "", &common.CallbackError{Message:"protocolManager is nil"}
+	}
+	go node.eh.GetEventObject().Post(event.DelNVPEvent{
+		Payload: []byte(args.NodeHash),
+	})
+	return "successful delete nvp node", nil
 }
 
 func (node *Node) GetNamespace() (string, error) {

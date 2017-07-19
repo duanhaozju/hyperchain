@@ -10,6 +10,12 @@ import (
 	"bytes"
 	"time"
 	er "hyperchain/core/errors"
+	"github.com/cheggaaa/pb"
+)
+
+var (
+	receivePb *pb.ProgressBar
+	processPb *pb.ProgressBar
 )
 
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
@@ -41,6 +47,8 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	executor.recordSyncPeers(ev.Replicas, ev.Id)
 	executor.status.syncFlag.Oracle = NewOracle(ev.Replicas, executor.conf, executor.logger)
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
+	receivePb = common.InitPb(int64(ev.TargetHeight - edb.GetHeightOfChain(executor.namespace)), "receive block")
+	receivePb.Start()
 	go executor.syncChainResendBackend()
 }
 
@@ -72,7 +80,7 @@ func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 	var request ChainSyncRequest
 	proto.Unmarshal(payload, &request)
 	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
-		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
+		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId, request.PeerHash)
 	}
 }
 
@@ -110,12 +118,17 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 		}
 		if executor.receiveAllRequiredBlocks() {
 			if executor.getLatestSyncDownstream() != edb.GetHeightOfChain(executor.namespace) {
+				common.AddPb(receivePb, int64(executor.GetSyncMaxBatchSize()))
+				common.PrintPb(receivePb, 0, executor.logger)
 				prev := executor.getLatestSyncDownstream()
 				next := executor.calcuDownstream()
 				executor.status.syncFlag.Oracle.FeedBack(true)
 				executor.SendSyncRequest(prev, next)
 			} else {
 				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
+				common.SetPb(receivePb, receivePb.Total)
+				common.PrintPb(receivePb, 0, executor.logger)
+				receivePb.Finish()
 			}
 		}
 		executor.processSyncBlocks()
@@ -139,15 +152,15 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 }
 
 // ApplyBlock - apply all transactions in block into state during the `state update` process.
-func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
+func (executor *Executor) ApplyBlock(block *types.Block, seqNo, tempBlockNumber uint64) (error, *ValidationResultRecord) {
 	if block.Transactions == nil {
 		return er.EmptyPointerErr, nil
 	}
-	return executor.applyBlock(block, seqNo)
+	return executor.applyBlock(block, seqNo, tempBlockNumber)
 }
 
-func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
-	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
+func (executor *Executor) applyBlock(block *types.Block, seqNo, tempBlockNumber uint64) (error, *ValidationResultRecord) {
+	err, result := executor.applyTransactions(block.Transactions, nil, seqNo, tempBlockNumber)
 	if err != nil {
 		return err, nil
 	}
@@ -219,6 +232,8 @@ func (executor *Executor) processSyncBlocks() {
 			executor.waitUtilSyncAvailable()
 			defer executor.syncDone()
 			// execute all received block at one time
+			processPb = common.InitPb(int64(executor.getSyncTarget() - edb.GetHeightOfChain(executor.namespace)), "process block")
+			processPb.Start()
 			for i := executor.status.syncFlag.SyncDemandBlockNum + 1; i <= executor.status.syncFlag.SyncTarget; i += 1 {
 				executor.markSyncExecBegin()
 				blk, err := edb.GetBlockByNumber(executor.namespace, i)
@@ -230,7 +245,7 @@ func (executor *Executor) processSyncBlocks() {
 				} else {
 					// set temporary block number as block number since block number is already here
 					executor.initDemand(blk.Number)
-					err, result := executor.ApplyBlock(blk, blk.Number)
+					err, result := executor.ApplyBlock(blk, blk.Number, executor.getTempBlockNumber())
 					if err != nil || executor.assertApplyResult(blk, result) == false {
 						executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
 							executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1, executor.status.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))
@@ -242,9 +257,15 @@ func (executor *Executor) processSyncBlocks() {
 							executor.reject()
 							return
 						}
+						common.AddPb(processPb, 1)
+						common.PrintPb(processPb, 10, executor.logger)
 					}
 				}
 			}
+			if !common.IsPrintPb(processPb, 10) {
+				common.PrintPb(processPb, 0, executor.logger)
+			}
+			processPb.Finish()
 			executor.initDemand(executor.status.syncFlag.SyncTarget + 1)
 			executor.clearSyncFlag()
 			executor.sendStateUpdatedEvent()

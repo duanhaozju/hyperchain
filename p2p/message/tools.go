@@ -3,13 +3,15 @@
 package message
 
 import (
-	"encoding/hex"
-	"hyperchain/crypto"
+	"hyperchain/crypto/sha3"
+	"hyperchain/common"
 )
 
 
 
 func GetHash(needHashString string) string {
-	hasher := crypto.NewKeccak256Hash("keccak256Haner")
-	return hex.EncodeToString(hasher.ByteHash([]byte(needHashString)).Bytes())
+	hasher := sha3.NewKeccak256()
+	hasher.Write([]byte(needHashString))
+	hash := hasher.Sum(nil)
+	return common.ToHex(hash)
 }

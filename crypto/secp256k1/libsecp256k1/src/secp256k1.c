@@ -4,6 +4,8 @@
  * file COPYING or http://www.opensource.org/licenses/mit-license.php.*
  **********************************************************************/
 
+#ifndef __SECP256K1C__
+#define __SECP256K1C__
 #define SECP256K1_BUILD (1)
 
 #include "include/secp256k1.h"
@@ -510,4 +512,5 @@ int secp256k1_ec_pubkey_combine(const secp256k1_context* ctx, secp256k1_pubkey *
 
 #ifdef ENABLE_MODULE_RECOVERY
 # include "modules/recovery/main_impl.h"
+#endif
 #endif

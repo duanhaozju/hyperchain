@@ -124,7 +124,7 @@ func (pbft *pbftImpl) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 		return nil
 	}
 
-	if len(msg.DelPayload) == 0 || len(msg.RouterHash) == 0 || msg.Id == 0 {
+	if len(msg.DelPayload) == 0 || len(msg.RouterHash) == 0 {
 		pbft.logger.Warningf("Replica %d received invalid local delNode message", pbft.id)
 		return nil
 	}

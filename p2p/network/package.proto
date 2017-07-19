@@ -1,0 +1,21 @@
+
+syntax="proto3";
+
+package network;
+
+import "hyperchain/p2p/hts/certificate.proto";
+
+message Package {
+    int64 Version   = 1;
+    bytes Payload   = 2;
+    int64 EncAlgo   = 3;
+    int64 Length    = 4;
+
+
+    // those is key agree and access control part
+    hts.Certificate Cert = 5;
+
+
+
+
+}

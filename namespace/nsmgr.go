@@ -194,7 +194,8 @@ func (nr *nsManagerImpl) Register(name string) error {
 	}
 	nsConfig.Set(common.NAMESPACE, name)
 	nsConfig.Set(common.C_JVM_START, nr.GlobalConfig().GetBool(common.C_JVM_START))
-	ns, err := GetNamespace(name, nsConfig)
+	delFlag := make(chan bool)
+	ns, err := GetNamespace(name, nsConfig, delFlag)
 	if err != nil {
 		logger.Errorf("Construct namespace %s error, %v", name, err)
 		return ErrCannotNewNs
@@ -202,6 +203,8 @@ func (nr *nsManagerImpl) Register(name string) error {
 	nr.rwLock.Lock()
 	nr.namespaces[name] = ns
 	nr.rwLock.Unlock()
+
+	go nr.ListenDelNode(name, delFlag)
 	return nil
 }
 
@@ -319,4 +322,15 @@ func (nr *nsManagerImpl) RestartJvm() error {
 		return err
 	}
 	return nil
+}
+
+//ListenDelNode listen delete node event
+func (nr *nsManagerImpl) ListenDelNode(name string, delFlag chan bool ) {
+	for {
+		select {
+		case <- delFlag:
+			nr.StopNamespace(name)
+			nr.DeRegister(name)
+		}
+	}
 }

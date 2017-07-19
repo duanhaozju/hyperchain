@@ -8,6 +8,12 @@
 ###########################################################
 
 global:
+    jsonrpc_port: 8081
+    restful_port: 9001
+    jvm_port: 50081
+    ledger_port: 50051
+    #namespace config dir root path
+    nsConfigRootPath: "./namespaces"
     #namespace config dir root path
     nsConfigRootPath: "./namespaces"
 
@@ -38,14 +44,19 @@ global:
             core: "NOTICE"
             hyperdb: "NOTICE"
             eventhub: "NOTICE"
-
-    hypervm:
-        jvm: true
-
+    p2p:
+        hosts: "./hosts.yaml"
+        port: 50011
+        retrytime: 3s
+        ipc: "hpc_1.ipc"
+        enableTLS: true
+	    tlsCA: "./tls/tlsca.ca"
+	    tlsServerHostOverride: "hyperchain.cn"
+	    tlsCert: "./tls/tls_peer1.cert"
+	    tlsCertPriv: "./tls/tls_peer1.priv"
     namespace:
         # start which namespaces when node starts
         start:
             global: true
-            ns1: false
+            ns1: true
             ns2: false
-            ns3: false

@@ -47,9 +47,10 @@ type httpServerImpl struct {
 	httpListener 		net.Listener
 	httpHandler  		*Server
 	httpAllowedOrigins 	[]string
+	port int
 }
 
-func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) HttpServer {
+func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool,port int) HttpServer {
 	if hs == nil {
 		log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
 		hs = &httpServerImpl{
@@ -57,6 +58,7 @@ func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp ch
 			stopHp: 		stopHp,
 			restartHp: 		restartHp,
 			httpAllowedOrigins: 	[]string{"*"},
+			port:port,
 		}
 	}
 	return hs
@@ -64,9 +66,7 @@ func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp ch
 
 // Start starts the http RPC endpoint.
 func (hi *httpServerImpl) Start() error {
-	log.Notice("start http service ...")
-	config := hi.nr.GlobalConfig()
-	httpPort := config.GetInt(common.C_HTTP_PORT)
+	log.Notice("start http service ... at",hi.port)
 
 	var (
 		listener net.Listener
@@ -75,7 +75,7 @@ func (hi *httpServerImpl) Start() error {
 
 	// start http listener
 	handler := NewServer(hi.nr, hi.stopHp, hi.restartHp)
-	listener, err = net.Listen("tcp", fmt.Sprintf(":%d", httpPort))
+	listener, err = net.Listen("tcp", fmt.Sprintf(":%d",hi.port))
 	if err != nil {
 		return err
 	}

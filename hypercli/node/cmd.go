@@ -71,6 +71,7 @@ func delNode(c *cli.Context) error {
 	}
 
 	return nil
+
 }
 
 func getHttpResponse(namespace, ip, port, method, params string) (jsonrpc.JSONResponse, error) {

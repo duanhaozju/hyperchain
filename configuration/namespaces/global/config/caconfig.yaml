@@ -1,0 +1,30 @@
+# CA & CERT configs
+#
+# this config prepare  for ca & cert module
+# *.toml config file is batter than *.yaml
+# this config will never change by hyperchain
+# please ensure the file not end with the `/` (slash)
+#
+
+ecert:
+  ca: "namespaces/global/config/cert/eca.ca"
+  cert: "namespaces/global/config/cert/ecert.cert"
+  priv: "namespaces/global/config/cert/ecert.priv"
+
+rcert:
+  # if you do not have rcert, leave this item blank
+  ca: "namespaces/global/config/cert/rca.ca"
+  cert: "namespaces/global/config/cert/rcert.cert"
+  priv: "namespaces/global/config/cert/rcert.priv"
+
+check:
+  # check the ecert and rcert signature during the connect progress
+  certsign: false
+  # check the tcert during the request process
+  tcert: false
+  # check the ercert and rcert
+  ercert: false
+
+security:
+  # Selective symmetric encryption algorithm (pure,3des or sm4)
+  algo: pure
