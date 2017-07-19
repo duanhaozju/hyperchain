@@ -6,9 +6,9 @@ import (
 	"regexp"
 	"strings"
 	"hyperchain/common"
-	"hyperchain/p2p/transport"
 	"strconv"
 	"fmt"
+	"hyperchain/p2p/hts/secimpl"
 )
 
 const (
@@ -53,7 +53,7 @@ func isLicenseExpired() (expired bool) {
 	}
 	pattern, _ := regexp.Compile("Identification: (.*)")
 	identification := pattern.FindString(string(license))[16:]
-	ctx, err := transport.TripleDesDec([]byte(privateKey),common.Hex2Bytes(identification))
+	ctx, err := secimpl.TripleDesDec([]byte(privateKey),common.Hex2Bytes(identification))
 	if err != nil {
 		fmt.Println("invalid license.")
 		expired = true

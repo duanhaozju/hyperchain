@@ -12,7 +12,6 @@ import (
 	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/network"
 	"hyperchain/p2p/payloads"
-	"hyperchain/p2p/transport"
 	"github.com/pkg/errors"
 	"hyperchain/crypto/csprng"
 	"github.com/op/go-logging"
@@ -28,7 +27,6 @@ type Peer struct {
 	local     *info.Info
 	namespace string
 	net       *network.HyperNet
-	TM        *transport.TransportManager
 	p2pHub    event.TypeMux
 	chts      *hts.ClientHTS
 	logger *logging.Logger

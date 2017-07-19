@@ -11,7 +11,6 @@ package guomi
 import "C"
 
 import (
-	"fmt"
 	"unsafe"
 )
 
@@ -26,12 +25,7 @@ func Sm4Enc(key, src []byte) ([]byte, error) {
 
 	C.sm4_setkey_enc(&ctxSm4, (*C.uchar)(unsafe.Pointer(&key[0])))
 	var length int
-	if len(src)%16 == 0 {
-		length = len(src)
-	} else {
-		length = (len(src)/16 + 1) * 16
-	}
-
+	length = len(src)
 	output := make([]byte, length)
 	//fmt.Println("发出的原文长度：",len(src))
 	//fmt.Println("发出的原文：",src)
@@ -42,7 +36,7 @@ func Sm4Enc(key, src []byte) ([]byte, error) {
 	return output[:length], nil
 }
 
-func Sm4Dec(key, src []byte, msgLenth int32) ([]byte, error) {
+func Sm4Dec(key, src []byte) ([]byte, error) {
 	//decLock.Lock()
 	var ctxSm4 C.sm4_context
 	//fmt.Println("收到的密文长度：",len(src))
@@ -52,22 +46,14 @@ func Sm4Dec(key, src []byte, msgLenth int32) ([]byte, error) {
 	output := make([]byte, len(src))
 
 	C.sm4_crypt_ecb(&ctxSm4, 0, C.int(len(src)), (*C.uchar)(unsafe.Pointer(&src[0])), (*C.uchar)(unsafe.Pointer(&output[0])))
-	if C.int(msgLenth) > C.int(len(src)) {
-		fmt.Println("收到原文长度:", msgLenth)
-		panic("计算失败")
-	}
+
 	//fmt.Println("收到原文长度:",msgLenth)
 	//fmt.Println("收到的原文：",output[:msgLenth])
-	var srcByte []byte
-	if msgLenth%16 != 0 {
-		srcByte = output[:msgLenth]
-	} else {
-		srcByte = output[:msgLenth]
-	}
+
 
 	//还原原文
 	//hex := string(srcByte)
 	//dst := common.Hex2Bytes(hex)
 	//decLock.Unlock()
-	return srcByte, nil
+	return output, nil
 }
