@@ -14,10 +14,10 @@ global:
     ##########################
 
     account:
-        keystoredir: "namespaces/template/config/keystore"
-        keynodesdir: "namespaces/template/config/keynodes"
+        keystoredir: "namespaces/global/config/keystore"
+        keynodesdir: "namespaces/global/config/keynodes"
 
-    dbConfig: "namespaces/template/config/db.yaml"
+    dbConfig: "namespaces/global/config/db.yaml"
 
     configs:
         caconfig: "namespaces/template/config/caconfig.toml"
@@ -59,7 +59,7 @@ global:
         newLogFileInterval: 10s  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
                                 # such as "300ms", "2h45m".
 
-        logsdir: "./namespaces/template/data/logs"
+        logsdir: "./namespaces/global/data/logs"
         # default loglevel for all modules which can be override by module level log setting
         loglevel: "NOTICE"
         file_format: "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
@@ -107,5 +107,5 @@ global:
     ######################################################
     consensus:
            algo: "PBFT"
-           algo_config_path: "namespaces/template/config/pbft.yaml"
+           algo_config_path: "namespaces/global/config/pbft.yaml"
 
