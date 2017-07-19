@@ -25,6 +25,6 @@ check:
   # check the ercert and rcert
   ercert: false
 
-gm:
-  # check use sm4 or not
-  sm4:  false
+security:
+  # Selective symmetric encryption algorithm (pure,3des or sm4)
+  algo: pure

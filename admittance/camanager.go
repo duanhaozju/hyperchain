@@ -43,7 +43,6 @@ type CAManager struct {
 	checkCertSign         bool
 
 	EnableSymmetrical     bool
-	Sm4 		      bool
 	logger     *logging.Logger
 }
 
@@ -93,7 +92,6 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 		checkERCert:config.GetBool("check.ercert"),
 		checkTCert:config.GetBool("check.tcert"),
 		EnableSymmetrical:enableSymmetrical,
-		Sm4:config.GetBool("gm.sm4"),
 		logger:logger,
 
 	},nil
@@ -230,10 +228,6 @@ func (caManager *CAManager) IsCheckSign() bool {
 }
 func (caManager *CAManager) IsCheckTCert() bool {
 	return caManager.checkTCert
-}
-
-func (caManager *CAManager) GetSm4() bool{
-	return caManager.Sm4
 }
 
 // tool method for read cert file

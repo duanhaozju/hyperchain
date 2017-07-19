@@ -23,3 +23,6 @@ check:
   # TODO if TCERT check
   # enableT: false
 
+security:
+  # Selective symmetric encryption algorithm (pure,3des or sm4)
+  algo: 3des
