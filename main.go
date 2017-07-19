@@ -9,6 +9,7 @@ import (
 	"hyperchain/namespace"
 	"time"
 	"hyperchain/rpc"
+	_ "net/http/pprof"
 )
 
 type hyperchain struct {
@@ -65,6 +66,8 @@ type argT struct {
 	RestoreEnable bool   `cli:"r,restore" usage:"enable restore system status from dumpfile"`
 	SId           string `cli:"s,sid" usage:"use to specify snapshot" dft:""`
 	Namespace     string `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
+	PProfEnable   bool   `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`
+	PPort         string `cli:"pport" usage:"use to specify pprof http port"`
 }
 
 var (
@@ -82,13 +85,16 @@ func main() {
 		case argv.RestoreEnable:
 			restore(globalConfig, argv.SId, argv.Namespace)
 		default:
-			run(hp)
+			run(hp, argv)
 		}
 		return nil
 	})
 }
 
-func run(inst *hyperchain) {
+func run(inst *hyperchain, argv *argT) {
+	if argv.PProfEnable {
+		setupPProf(argv.PPort)
+	}
 	inst.start()
 	for {
 		select {
