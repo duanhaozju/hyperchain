@@ -212,7 +212,7 @@ func (pmgr *peerManagerImpl)Start() error {
 }
 
 func (pmgr *peerManagerImpl)listening() {
-	pmgr.logger.Critical("Now listening the manager event")
+	pmgr.logger.Info("PeerManager is listening the peer manager event...")
 	//Listening should listening all connection request, and handle it
 	for subitem := range pmgr.peerMgrSub.IterBuffered(){
 		go func (closechan chan interface{},t string,s event.Subscription){
