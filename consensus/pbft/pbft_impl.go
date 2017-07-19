@@ -82,7 +82,7 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) (*pbftImpl
 	pbft.L = pbft.logMultiplier * pbft.K // log size
 
 	//pbftManage manage consensus events
-	pbft.pbftManager = events.NewManagerImpl()
+	pbft.pbftManager = events.NewManagerImpl(pbft.namespace)
 	pbft.pbftManager.SetReceiver(pbft)
 
 	pbft.initMsgEventMap()

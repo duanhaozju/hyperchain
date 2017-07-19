@@ -23,7 +23,7 @@ func (mr *mockReceiver) ProcessEvent(event Event) Event {
 }
 
 func newMockManager(processEvent func(event Event) Event) Manager {
-	manager := NewManagerImpl()
+	manager := NewManagerImpl("global")
 	manager.SetReceiver(&mockReceiver{
 		processEventImpl: processEvent,
 	})

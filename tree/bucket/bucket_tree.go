@@ -459,6 +459,7 @@ func (bucketTree *BucketTree) ClearAllCache(){
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
 	globalDataNodeCache.ClearAllCache()
+	bucketTree.recomputeCryptoHash = true
 }
 
 

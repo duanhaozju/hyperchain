@@ -10,13 +10,13 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	//"crypto/ecdsa"
-	//"hyperchain/core/crypto/primitives"
 	"hyperchain/namespace"
 	"github.com/pkg/errors"
 	"fmt"
 	"reflect"
 	"github.com/gorilla/websocket"
+	"hyperchain/core/crypto/primitives"
+	"crypto/ecdsa"
 )
 
 const (
@@ -89,54 +89,53 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 	}
 }
 
-// isBatch returns true when the first non-whitespace characters is '['
-func isBatch(msg json.RawMessage) bool {
-	for _, c := range msg {
-		// skip insignificant whitespace (http://www.ietf.org/rfc/rfc4627.txt)
-		if c == 0x20 || c == 0x09 || c == 0x0a || c == 0x0d {
-			continue
-		}
-		return c == '['
-	}
-	return false
-}
-
 // CheckHttpHeaders will check http header.
 func (c *jsonCodec) CheckHttpHeaders(namespace string) common.RPCError {
 	ns := c.nr.GetNamespaceByName(namespace)
 	if ns == nil {
 		return &common.NamespaceNotFound{Name: namespace}
 	}
+
 	cm := ns.GetCAManager()
 	if !cm.IsCheckTCert() {
 		return nil
 	}
+
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
-	//TODO fix cert problem
-	//signature := c.req.Header.Get("signature")
-	//msg := common.TransportDecode(c.req.Header.Get("msg"))
-	//tcertPem := common.TransportDecode(c.req.Header.Get("tcert"))
-	//tcert, err := primitives.ParseCertificate(tcertPem)
-	//if err != nil {
-	//	log.Error("fail to parse tcert.", err)
-	//	return &common.UnauthorizedError{}
-	//}
-	//tcertPublicKey := tcert.PublicKey
-	//pubKey := tcertPublicKey.(*(ecdsa.PublicKey))
 
-	//signB := common.Hex2Bytes(signature)
-	//verifySignature, err := primitives.ECDSAVerifyTransport(pubKey, []byte(msg), signB)
-	//if err != nil || !verifySignature {
-	//	log.Error("Fail to verify TransportSignture!", err)
-	//	return &common.UnauthorizedError{}
-	//}
-	//verifyTcert, err := cm.VerifyTCert(tcertPem)
-	//
-	//if verifyTcert == false || err != nil {
-	//	log.Error("Fail to verify tcert!", err)
-	//	return &common.UnauthorizedError{}
-	//}
+	tcertPem 	:= common.TransportDecode(c.req.Header.Get("tcert"))
+	tcert,err 	:= primitives.ParseCertificate(tcertPem)
+	if err != nil {
+		log.Error("fail to parse tcert.",err)
+		return &common.UnauthorizedError{}
+	}
+
+	/**
+	Review 如果客户端没有tcert 则会用ecert充当tcert，此时需要验证是否合法
+	由于tcert 应当是用ecert签出的，那么应该同时可以被根证书验证通过，但是
+	问题是ecert之间无法相互验证，所有的tcert 和ecert都应该用 eca.ca验证
+	这样可以确保所有的签名都可以验证通过
+	在sdk端需要生成相应的signature 需要用私钥对数据进行签名
+	签名算法为 ECDSAWithSHA256
+	这部分需要SDK端实现，hyperchain端已经实现了验证方法
+	*/
+	pubKey 			:= tcert.PublicKey.(*(ecdsa.PublicKey))
+	signature 		:= c.req.Header.Get("signature")
+	msg			:= common.TransportDecode(c.req.Header.Get("msg"))
+	signB 			:= common.Hex2Bytes(signature)
+
+	verifySignature, err	:= primitives.ECDSAVerifyTransport(pubKey,[]byte(msg),signB)
+	if err != nil || !verifySignature {
+		log.Error("Fail to verify Transport Signture!",err)
+		return &common.UnauthorizedError{}
+	}
+
+	verifyTcert, err 	:= cm.VerifyTCert(tcertPem)
+	if verifyTcert == false || err != nil {
+		log.Error("Fail to verify tcert!",err)
+		return &common.UnauthorizedError{}
+	}
 	return nil
 }
 
@@ -156,6 +155,18 @@ func (c *jsonCodec) ReadRequestHeaders() ([]*common.RPCRequest, bool, common.RPC
 	}
 
 	return parseRequest(incomingMsg)
+}
+
+// isBatch returns true when the first non-whitespace characters is '['
+func isBatch(msg json.RawMessage) bool {
+	for _, c := range msg {
+		// skip insignificant whitespace (http://www.ietf.org/rfc/rfc4627.txt)
+		if c == 0x20 || c == 0x09 || c == 0x0a || c == 0x0d {
+			continue
+		}
+		return c == '['
+	}
+	return false
 }
 
 // checkReqId returns an error when the given reqId isn't valid for RPC method calls.
