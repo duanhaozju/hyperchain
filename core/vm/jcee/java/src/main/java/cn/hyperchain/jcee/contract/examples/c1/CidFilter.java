@@ -1,7 +1,8 @@
 package cn.hyperchain.jcee.contract.examples.c1;
 
 import cn.hyperchain.jcee.contract.ContractInfo;
-import cn.hyperchain.jcee.contract.Filter;
+import cn.hyperchain.jcee.contract.filter.Filter;
+import cn.hyperchain.jcee.executor.Context;
 import org.apache.log4j.Logger;
 
 import java.util.HashSet;
@@ -13,16 +14,27 @@ public class CidFilter implements Filter {
 
     protected final Logger logger = Logger.getLogger(CidFilter.class);
     private HashSet<String> cidRuler = new HashSet<>();
-    @Override
-    public boolean doFilter(ContractInfo info) {
-        String cid = info.getCid();
+//    @Override
+//    public boolean doFilter(ContractInfo info) {
+//        String cid = info.getCid();
+//
+//        for(String rule : cidRuler){
+//            if(cid.equals(rule)){
+//                return true;
+//            }
+//        }
+//        return false;
+//    }
 
-        for(String rule : cidRuler){
-            if(cid.equals(rule)){
-                return true;
-            }
-        }
+
+    @Override
+    public boolean doFilter(Context context) {
         return false;
+    }
+
+    @Override
+    public String getName() {
+        return null;
     }
 
     public void addRuler(String ns){

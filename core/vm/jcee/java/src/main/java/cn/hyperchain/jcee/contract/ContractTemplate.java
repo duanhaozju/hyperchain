@@ -5,7 +5,7 @@
 package cn.hyperchain.jcee.contract;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
-import cn.hyperchain.jcee.common.exception.NetworkUnavalibleException;
+import cn.hyperchain.jcee.contract.filter.FilterChain;
 import cn.hyperchain.jcee.executor.ContractHandler;
 import cn.hyperchain.jcee.executor.Handler;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
@@ -27,6 +27,7 @@ public abstract class ContractTemplate {
 
     private FilterChain filterChain = new FilterChain();
 
+
     public void init(){}
 
     /**
@@ -43,8 +44,9 @@ public abstract class ContractTemplate {
      * @param args arguments
      * @return {@link ExecuteResult}
      */
-    protected ExecuteResult openInvoke(String funcName, List<String> args) {
-        return result(true);
+    protected  ExecuteResult openInvoke(String funcName, List<String> args){
+        //this is a empty method by default
+        return result(false, "no method to invoke");
     }
 
     /**
@@ -57,12 +59,15 @@ public abstract class ContractTemplate {
      */
     protected final ExecuteResult invokeContract(String ns, String contractAddr, String func, List<String> args) {
         //TODO: how to do the authority control
-
         ContractInfo info = this.getInfo();
+
+        // 1.check invoke identifier namespace and the contract Address
         if (ns == null || ns.isEmpty() || contractAddr == null || contractAddr.isEmpty())
             return result(false, "invalid namespace or contract address");
+
         ContractHandler ch = ContractHandler.getContractHandler();
         Handler handler = ch.get(ns);
+
         if(! ch.hasHandlerForNamespace(ns)) {
             return result(false, "no namespace named: " + ns + "found");
         }
@@ -70,39 +75,38 @@ public abstract class ContractTemplate {
         if (ct == null) {
             return result(false, "no contract with address: " + contractAddr + "found");
         }
-        return ct.checkRuler(func, args,info);
+
+        return ct.securityCheck(func, args, info);
     }
 
-    protected ExecuteResult checkRuler(String funcName, List<String> args,ContractInfo info){
 
-        String contractAddr = info.getCid();
 
-        if(!filterChain.doFilter(info)){
-            return result(false, "there is no authority to invoke the method "+funcName+ " for contract "+contractAddr);
-        }
-        return openInvoke(funcName,args);
+    protected ExecuteResult securityCheck(String funcName, List<String> args, ContractInfo info){
+
+
+        //TODO: implement this
+
+        return result(false);
+//        String contractAddr = info.getCid();
+//
+//        if(!filterChain.doFilter(info)){
+//            return result(false, "there is no authority to invoke the method "+funcName+ " for contract "+contractAddr);
+//        }
+//        return openInvoke(funcName,args);
     }
 
     /**
-     * post event out of hyperchain
-     * @param event user defined event
-     * @return the post result
-     * @exception
+     * execution result encapsulation method.
+     * @param exeSuccess indicate the execute status, true for success, false for failed
+     * @param result contract execution result if success or failed message
+     * @return
      */
-    protected boolean postEvent(Event event) throws NetworkUnavalibleException {
-        //TODO: add event post interface
-
-        return true;
-    }
-
-
-
-
     public ExecuteResult result(boolean exeSuccess, Object result) {
         ExecuteResult rs = new ExecuteResult<>(exeSuccess, result);
         return rs;
     }
 
+    //just indicate the execution status, no result specified
     public ExecuteResult result(boolean exeSuccess) {
         ExecuteResult rs = new ExecuteResult<>(exeSuccess, "");
         return rs;
