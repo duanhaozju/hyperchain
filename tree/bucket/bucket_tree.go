@@ -58,16 +58,9 @@ func NewBucketTree(db hdb.Database, tree_prefix string) *BucketTree {
 // Initialize - method implementation for interface 'statemgmt.HashableState'
 func (bucketTree *BucketTree) Initialize(configs map[string]interface{}) error {
 	initConfig(bucketTree.log, configs)
-	rootBucketNode, err := fetchBucketNodeFromDB(bucketTree.db, bucketTree.treePrefix, constructRootBucketKey())
-	if err != nil {
+	if err := bucketTree.initLastComputed(); err != nil {
 		return err
 	}
-	if rootBucketNode != nil {
-		bucketTree.persistedStateHash = rootBucketNode.computeCryptoHash(bucketTree.log)
-		bucketTree.lastComputedCryptoHash = bucketTree.persistedStateHash
-	}
-
-
 	bucketTree.bucketCache = newBucketCache(bucketTree.treePrefix, configs[ConfigBucketCacheMaxSize].(int))
 	bucketTree.bucketCache.loadAllBucketNodesFromDB()
 	bucketTree.dataNodeCache = newDataNodeCache(bucketTree.log, bucketTree.db.Namespace(), bucketTree.treePrefix, configs[ConfigDataNodeCacheMaxSize].(int))
@@ -459,7 +452,20 @@ func (bucketTree *BucketTree) ClearAllCache(){
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
 	globalDataNodeCache.ClearAllCache()
-	bucketTree.recomputeCryptoHash = true
+	bucketTree.recomputeCryptoHash = false
+	bucketTree.initLastComputed()
+}
+
+func (bucketTree *BucketTree) initLastComputed() error {
+	rootBucketNode, err := fetchBucketNodeFromDB(bucketTree.db, bucketTree.treePrefix, constructRootBucketKey())
+	if err != nil {
+		return err
+	}
+	if rootBucketNode != nil {
+		bucketTree.persistedStateHash = rootBucketNode.computeCryptoHash(bucketTree.log)
+		bucketTree.lastComputedCryptoHash = bucketTree.persistedStateHash
+	}
+	return nil
 }
 
 
