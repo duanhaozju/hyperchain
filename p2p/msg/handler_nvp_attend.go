@@ -38,7 +38,7 @@ func (h *NVPAttendMsgHandler)Receive() chan<- interface{}{
 
 //Execute
 func (h *NVPAttendMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
-	fmt.Printf("GOT A NVP ATTEND MSG hostname(%s), type: %s \n",msg.From.Hostname,msg.MessageType)
+	fmt.Printf("GOT A NVP ATTEND MSG hostname(%s), type: %s ",msg.From.Hostname,msg.MessageType)
 	rsp  := &pb.Message{
 		MessageType:pb.MsgType_RESPONSE,
 	}

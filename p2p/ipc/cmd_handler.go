@@ -22,7 +22,7 @@ func NewIPCHandler(endpoint string)*CMDHandler{
 func(handler *CMDHandler)handle(c *ishell.Context){
 	client,err := newIPCConnection(handler.ipcEndpoint)
 	if err != nil {
-		logger.Errorf("can't create IPC pipe, error: %s\n", err)
+		logger.Errorf("can't create IPC pipe, error: %s", err)
 		return
 	}
 	args := Args{
