@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"fmt"
 	"hyperchain/p2p/hts/secimpl"
+	"runtime"
 )
 
 const (
@@ -16,6 +17,9 @@ const (
 )
 
 func CheckLicense(exit chan bool) {
+	// this ensures that license checker always hit in `os thread` to avoid jmuping to other threads
+	// since in this approach, working directory will not be affected by other operators.
+	runtime.LockOSThread()
 	ticker := time.NewTicker(10 * time.Second)
 	for {
 		select {
