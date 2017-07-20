@@ -109,4 +109,6 @@ global:
     consensus:
            algo: "PBFT"
            algo_config_path: "namespaces/global/config/pbft.yaml"
+    hypervm:
+          jvm: true
 

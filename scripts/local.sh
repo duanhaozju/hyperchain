@@ -193,16 +193,16 @@ start_hyperjvm() {
     do
         cp -rf ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${DUMP_PATH}/node$j/
     done
-#    cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
-#
-#    case "$_SYSTYPE" in
-#          MAC*)
-#                osascript -e 'tell app "Terminal" to do script "cd '${DUMP_PATH}/node1/hyperjvm/bin/' && ./local_start_hyperjvm.sh"'
-#          ;;
-#          LINUX*)
-#                cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./local_start_hyperjvm.sh
-#          ;;
-#    esac
+    cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
+
+    case "$_SYSTYPE" in
+          MAC*)
+                osascript -e 'tell app "Terminal" to do script "cd '${DUMP_PATH}/node1/hyperjvm/bin/' && ./local_start_hyperjvm.sh"'
+          ;;
+          LINUX*)
+                cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./local_start_hyperjvm.sh
+          ;;
+    esac
 }
 
 f_sleep(){
@@ -314,7 +314,7 @@ fi
 f_distribute $MAXPEERNUM
 
 # run hyperchain node
-#start_hyperjvm
+start_hyperjvm
 
 if ${RUN}; then
     f_run_process
