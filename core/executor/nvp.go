@@ -195,6 +195,7 @@ func (nvp *NVPImpl) ReceiveBlock(payload []byte) {
 			nvp.getCtx().initSync(block.Number - 1, db_utils.GetHeightOfChain(nvp.getExecutor().namespace))
 			nvp.getExecutor().logger.Debugf("sync init result: maxNum: %v, minNumInBatch: %v, isInSync: %v", nvp.getCtx().getMax(), nvp.getCtx().getDown(), nvp.isInSync())
 			nvp.sendSyncRequest(nvp.calUpper(), nvp.getCtx().getDown())
+			nvp.getCtx().initResendExit()
 			go nvp.resendBackend()
 		}
 		if block.Number > nvp.getCtx().getMax() {
@@ -294,7 +295,6 @@ func (nvp *NVPImpl) process(block *types.Block) error {
 }
 
 func (nvp *NVPImpl) resendBackend() {
-	nvp.getCtx().initResendExit()
 	ticker := time.NewTicker(nvp.getExecutor().GetSyncResendInterval())
 	nvp.getExecutor().logger.Debugf("sync request resend interval: ", nvp.getExecutor().GetSyncResendInterval().String())
 	up := nvp.getCtx().getUpper()
