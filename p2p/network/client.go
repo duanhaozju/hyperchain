@@ -82,8 +82,8 @@ func(c *Client)Close(){
 func(c *Client)Chat() (error){
 	connv,err :=c.connPool.Get()
 	if err !=  nil{
-		logger.Warningf(" cannot get the conn from connection pool (%v) \n",c.addr)
-		return errors.New(fmt.Sprintf("cannot get the conn from connection pool (%v) \n",c.addr))
+		logger.Warningf(" cannot get the conn from connection pool (%v) ",c.addr)
+		return errors.New(fmt.Sprintf("cannot get the conn from connection pool (%v) ",c.addr))
 	}
 	conn := connv.(*grpc.ClientConn)
 	client := NewChatClient(conn)
@@ -91,7 +91,7 @@ func(c *Client)Chat() (error){
 	defer c.connPool.Put(conn)
 	stream,err := client.Chat(context.Background())
 	if err != nil{
-		logger.Warningf("cannot create stream! %v \n" ,err)
+		logger.Warningf("cannot create stream! %v " ,err)
 		return err
 	}
 	for msg := range c.MsgChan{
@@ -108,8 +108,8 @@ func(c *Client)Chat() (error){
 func(c *Client)Greeting(in *pb.Message) (*pb.Message, error){
 	connv,err :=c.connPool.Get()
 	if err !=  nil{
-		logger.Warningf(" cannot get the conn from connection pool (%v) \n",c.addr)
-		return nil,errors.New(fmt.Sprintf("cannot get the conn from connection pool (%v) \n",c.addr))
+		logger.Warningf(" cannot get the conn from connection pool (%v) ",c.addr)
+		return nil,errors.New(fmt.Sprintf("cannot get the conn from connection pool (%v) ",c.addr))
 	}
 	conn := connv.(*grpc.ClientConn)
 	client := NewChatClient(conn)
@@ -123,8 +123,8 @@ func(c *Client)Whisper(in *pb.Message) (*pb.Message, error){
 	// get client from conn pool
 	connv,err :=c.connPool.Get()
 	if err !=  nil{
-		logger.Warningf(" cannot get the conn from connection pool (%v) \n",c.addr)
-		return nil,errors.New(fmt.Sprintf("cannot get the conn from connection pool (%v) \n",c.addr))
+		logger.Warningf(" cannot get the conn from connection pool (%v) ",c.addr)
+		return nil,errors.New(fmt.Sprintf("cannot get the conn from connection pool (%v) ",c.addr))
 	}
 	conn := connv.(*grpc.ClientConn)
 	client := NewChatClient(conn)

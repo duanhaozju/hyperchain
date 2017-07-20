@@ -5,7 +5,6 @@ package p2p
 
 import (
 	"encoding/json"
-	"fmt"
 	"hyperchain/manager/event"
 	"hyperchain/p2p/hts"
 	"hyperchain/p2p/info"
@@ -215,14 +214,12 @@ func (peer *Peer) clientHello(isOrg,isRec bool) error {
 
 	serverHello, err := peer.Greeting(msg)
 
-	peer.logger.Debugf("got a server hello message %+v \n", serverHello)
+	peer.logger.Debugf("got a server hello message %+v ", serverHello)
 	if err != nil {
-		fmt.Printf("peer.go 205  err: %s \n",err.Error())
 		return err
 	}
 	// complele the key agree
 	if err := peer.negotiateShareKey(serverHello,rand);err != nil{
-		fmt.Printf("peer.go 210 error: %s \n",err.Error())
 		return peer.clientReject(serverHello)
 	}else {
 		return peer.clientResponse(serverHello)
@@ -289,7 +286,7 @@ func (peer *Peer) clientResponse(serverHello *pb.Message) error {
 	payload := []byte("client accept [msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTACCEPT, payload)
 	serverdone, err := peer.Greeting(msg)
-	peer.logger.Debug("got a server done message %+v \n", serverdone)
+	peer.logger.Debugf("got a server done message %+v ", serverdone)
 	if err != nil {
 		return err
 	}
@@ -302,7 +299,7 @@ func (peer *Peer) clientReject(serverHello *pb.Message) error {
 	payload := []byte("client accept [msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTREJECT, payload)
 	serverdone, err := peer.Greeting(msg)
-	peer.logger.Debug("got a server done message %+v \n", serverdone)
+	peer.logger.Debug("got a server done message %+v ", serverdone)
 	if err != nil {
 		return err
 	}
