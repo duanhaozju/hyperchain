@@ -124,8 +124,8 @@ client Rand %s
 Total rand %s
 Shared key %s
 `,h.local.Hostname,h.local.Hash,msg.From.Hostname,id.Hash,common.ToHex(serverRand),common.ToHex(cert.Rand),common.ToHex(r),common.ToHex(h.shts.GetSK(id.Hash)))
-	h.logger.Critical("isreconnect",id.IsReconnect)
-	h.logger.Critical("isvp",id.IsVP)
+	h.logger.Debug("isreconnect",id.IsReconnect)
+	h.logger.Debug("isvp",id.IsVP)
 	if id.IsReconnect && id.IsVP {
 		//if verify passed, should notify peer manager to reverse connect to client.
 		// if VP/NVP both should reverse to connect.
@@ -145,7 +145,7 @@ Shared key %s
 			Hash:id.Hash,
 		})
 	}else{
-		h.logger.Critical("Do nothing")
+		h.logger.Debug("Do nothing")
 		//do nothing
 	}
 
