@@ -286,7 +286,7 @@ func (peer *Peer) clientResponse(serverHello *pb.Message) error {
 	payload := []byte("client accept [msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTACCEPT, payload)
 	serverdone, err := peer.Greeting(msg)
-	peer.logger.Debug("got a server done message %+v ", serverdone)
+	peer.logger.Debugf("got a server done message %+v ", serverdone)
 	if err != nil {
 		return err
 	}

@@ -323,7 +323,12 @@ func (pmgr *peerManagerImpl) bind(peerType int,namespace string, id int, hostnam
 			return nil
 		}
 	}else{
-		if pmgr.peerPool.GetNVPByHostname(hostname) != nil{
+		if p:= pmgr.peerPool.GetNVPByHostname(hostname);p != nil{
+			pmgr.logger.Critical("Say hello to hostname:",hostname)
+			err := p.clientHello(false,false)
+			if err != nil{
+				return err
+			}
 			return nil
 		}
 	}
