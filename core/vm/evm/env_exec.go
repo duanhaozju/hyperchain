@@ -1,13 +1,13 @@
 package evm
 import (
 	"hyperchain/common"
-	"hyperchain/core/crypto"
 	"hyperchain/core/vm/evm/params"
 	"math/big"
 	"hyperchain/core/types"
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
 	er "hyperchain/core/errors"
+	"hyperchain/crypto"
 )
 
 // Call executes within the given contract
