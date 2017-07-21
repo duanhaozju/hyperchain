@@ -11,6 +11,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/core/vm/evm/params"
 	"hyperchain/core/vm"
+	"hyperchain/crypto"
 )
 
 // progStatus is the type for the JIT program status.

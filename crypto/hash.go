@@ -9,17 +9,17 @@ import (
 )
 
 //Keccak256Hash is a kind of hash method which implements CommomHash interface
-type Keccak256Hash struct {
+type KeccakHash struct {
 	name string
 }
 
-func NewKeccak256Hash(name string) *Keccak256Hash {
-	s256 := &Keccak256Hash{name: name}
+func NewKeccak256Hash(name string) *KeccakHash {
+	s256 := &KeccakHash{name: name}
 	return s256
 }
 
 //Hash transfers object x into common.Hash with length 32
-func (k256 *Keccak256Hash) Hash(x interface{}) (h common.Hash) {
+func (k256 *KeccakHash) Hash(x interface{}) (h common.Hash) {
 	serialize_data, err := json.Marshal(x)
 
 	if err != nil {
@@ -33,7 +33,7 @@ func (k256 *Keccak256Hash) Hash(x interface{}) (h common.Hash) {
 }
 
 //ByteHash deals with params which has already been []byte
-func (k256 *Keccak256Hash) ByteHash(data ...[]byte) (h common.Hash) {
+func (k256 *KeccakHash) ByteHash(data ...[]byte) (h common.Hash) {
 
 	hw := sha3.NewKeccak256()
 	for _, d := range data {
