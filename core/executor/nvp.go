@@ -260,17 +260,19 @@ func (nvp *NVPImpl) applyRemainBlock(number uint64) error {
 
 func (nvp *NVPImpl) process(block *types.Block) error {
 	err, result := nvp.getExecutor().ApplyBlock(block, block.Number, block.Number)
-	if err != nil || nvp.getExecutor().assertApplyResult(block, result) == false {
+	if err != nil {
+		return err
+	}
+	if nvp.getExecutor().assertApplyResult(block, result) == false {
 		if nvp.getExecutor().GetExitFlag() {
 			batch := nvp.getExecutor().db.NewBatch()
 			for i := block.Number; ;i += 1 {
 				// delete persisted blocks number larger than chain height
 				err := db_utils.DeleteBlockByNum(nvp.getExecutor().namespace, batch, i, false, false)
 				if err != nil {
-					errStr := fmt.Sprint("delete block number #%v failed! %v", i, err.Error())
-					return errors.New(errStr)
+					nvp.getExecutor().logger.Errorf("delete block number #%v in batch failed! ErrMsg: %v.", i, err.Error())
 				} else {
-					nvp.getExecutor().logger.Noticef("delete block number #%v.", i)
+					nvp.getExecutor().logger.Noticef("delete block number #%v in batch success!", i)
 				}
 				if !nvp.isInSync() || i == nvp.getCtx().getMax()+1 {
 					break;
@@ -278,7 +280,7 @@ func (nvp *NVPImpl) process(block *types.Block) error {
 			}
 			err := batch.Write()
 			if err != nil {
-				return errors.New("delete blocks failed!" + err.Error())
+				nvp.getExecutor().logger.Error("delete blocks in db failed! ErrMsg: %v." , err.Error())
 			}
 			nvp.getExecutor().clearStatedb()
 			nvp.getExecutor().logger.Error("assert failed! exit hyperchain.")

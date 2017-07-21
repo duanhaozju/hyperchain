@@ -11,6 +11,7 @@ import (
 	"time"
 	er "hyperchain/core/errors"
 	"github.com/cheggaaa/pb"
+	"hyperchain/tree/bucket"
 )
 
 var (
@@ -177,6 +178,9 @@ func (executor *Executor) applyBlock(block *types.Block, seqNo, tempBlockNumber 
 // ClearStateUnCommitted - remove all cached stuff
 func (executor *Executor) clearStatedb() {
 	executor.statedb.Purge()
+	tree := executor.statedb.GetTree()
+	bucketTree := tree.(*bucket.BucketTree)
+	bucketTree.ClearAllCache()
 }
 
 // assertApplyResult - check apply result whether equal with other's.

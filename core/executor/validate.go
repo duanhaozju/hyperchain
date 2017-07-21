@@ -125,7 +125,7 @@ func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidT
 		go func(i int) {
 			tx := txs[i]
 			if !tx.ValidateSign(executor.encryption, executor.commonHash) {
-				executor.logger.Warningf("[Namespace = %s] found invalid signature, send from : %s", executor.namespace, common.Bytes2Hex(tx.Id))
+				executor.logger.Warningf("[Namespace = %s] found invalid signature, send from : %v", executor.namespace, tx.Id)
 				mu.Lock()
 				invalidtxs = append(invalidtxs, &types.InvalidTransactionRecord{
 					Tx:      tx,

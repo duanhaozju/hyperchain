@@ -7,8 +7,6 @@ import (
 	"hyperchain/core/types"
 	"reflect"
 	er "hyperchain/core/errors"
-	"strconv"
-	"hyperchain/common"
 )
 type Helper struct {
 	msgQ *event.TypeMux
@@ -145,20 +143,14 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Error("marshal invalid record error")
 			return err
 		}
-		id, err := SplitVpId(r.Tx.Id)
+		hash, err := r.Tx.GetNVPHash()
 		if err != nil {
-			executor.logger.Errorf("get Tx's Id#%s error. %s", common.Bytes2Hex(r.Tx.Id), err.Error())
-			return err
-		}
-		hash, err := SplitNvpHash(r.Tx.Id)
-		if err != nil {
-			executor.logger.Errorf("get Tx's hash#%s error. %s", common.Bytes2Hex(r.Tx.Id), err.Error())
-			return err
+			executor.logger.Errorf("get nvp hash failde. Err Mag:%v.", err.Error())
 		}
 		executor.helper.Post(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_UNICAST_INVALID,
-			Peers:   []uint64{id},
+			Peers:   []uint64{r.Tx.Id},
 			PeersHash: []string{hash},
 		})
 		return nil
@@ -235,27 +227,4 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return er.NoDefinedCaseErr
 	}
 	return nil
-}
-
-// hash: 32 bytes.
-func SplitNvpHash(id []byte) (string, error) {
-	if len(id) == 34 {
-		return common.Bytes2Hex(id[:32]), nil
-	} else if len(id) == 2 {
-		return "", nil
-	} else {
-		return "", er.TxIdLenErr
-	}
-}
-
-// id: 2 bytes.
-func SplitVpId(id []byte) (uint64, error) {
-	if len(id) == 34 {
-		temp := id[32:]
-		return strconv.ParseUint(common.Bytes2Hex(temp), 16, 64)
-	} else if len(id) == 2 {
-		return strconv.ParseUint(common.Bytes2Hex(id), 16, 64)
-	} else {
-		return 0, er.TxIdLenErr
-	}
 }
