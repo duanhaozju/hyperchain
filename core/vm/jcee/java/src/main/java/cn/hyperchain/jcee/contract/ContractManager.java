@@ -100,9 +100,9 @@ public class ContractManager {
         if (! isSourceSafe(info.getContractPath())) {
             return false;
         }
-        logger.debug("contract info, " + info.toString());
+        logger.info("contract info, " + info.toString());
         ContractClassLoader classLoader = new ContractClassLoader(info.getContractPath(), info.getClassPrefix());
-        ContractTemplate contract = null;
+        ContractTemplate contract;
 
         Class contractClass = classLoader.load(info.getContractMainName());
         Object ins = newInstance(contractClass, info.getArgClasses(), info.getArgs());
@@ -114,7 +114,6 @@ public class ContractManager {
         contract.setCid(info.getCid());
         contract.setOwner(info.getOwner());
         contract.setLedger(ledger);
-        contract.init();
         if (contract != null) {
             ContractHolder holder = new ContractHolder(info, contract);
             addContract(holder);

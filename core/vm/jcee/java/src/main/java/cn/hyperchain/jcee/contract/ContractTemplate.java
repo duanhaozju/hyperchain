@@ -5,6 +5,7 @@
 package cn.hyperchain.jcee.contract;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
+import cn.hyperchain.jcee.contract.filter.Filter;
 import cn.hyperchain.jcee.contract.filter.FilterChain;
 import cn.hyperchain.jcee.contract.filter.FilterManager;
 import cn.hyperchain.jcee.executor.Context;
@@ -33,13 +34,7 @@ public abstract class ContractTemplate {
     @Getter
     protected AbstractLedger ledger;
     protected Logger logger = Logger.getLogger(this.getClass().getSimpleName());
-    private FilterManager filterManager = new FilterManager();
-
-    /**
-     * init method init the contract basic info
-     * example: 1. add self-defined filters
-     */
-    public void init(){}
+    protected final FilterManager filterManager = new FilterManager();
 
     /**
      * invoke smart contract method
@@ -119,5 +114,9 @@ public abstract class ContractTemplate {
     protected final ExecuteResult result(boolean exeSuccess) {
         ExecuteResult rs = new ExecuteResult<>(exeSuccess, "");
         return rs;
+    }
+
+    protected final void addFilter(String funcName, Filter filter) {
+        filterManager.AddFilter(funcName, filter);
     }
 }
