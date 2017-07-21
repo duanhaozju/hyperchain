@@ -15,11 +15,11 @@ import java.util.Set;
  */
 public class TestFilterChainMgr {
 
-    static FilterChainMgr mgr;
+    static FilterManager mgr;
 
     @BeforeClass
     public static void setup() {
-        mgr = new FilterChainMgr();
+        mgr = new FilterManager();
     }
 
     @AfterClass

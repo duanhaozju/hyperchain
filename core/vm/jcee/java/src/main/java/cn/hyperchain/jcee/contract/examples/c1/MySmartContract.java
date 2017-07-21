@@ -66,34 +66,36 @@ public class MySmartContract extends ContractTemplate {
     }
 
     public void init(){
-        FilterChain fc = this.getFilterChain();
-
-        NsFilter nsFilter = new NsFilter();
-        nsFilter.addRuler("global");
-
-        CidFilter cidFilter = new CidFilter();
-        cidFilter.addRuler("bbe2b6412ccf633222374de8958f2acc76cda9c9");
-
-        //fc.addFilter("namespace",nsFilter);
-        //fc.addFilter("cid",cidFilter);
+//        FilterChain fc = this.getFilterChain();
+//
+//        NsFilter nsFilter = new NsFilter();
+//        nsFilter.addRuler("global");
+//
+//        CidFilter cidFilter = new CidFilter();
+//        cidFilter.addRuler("bbe2b6412ccf633222374de8958f2acc76cda9c9");
+//
+//        //fc.addFilter("namespace",nsFilter);
+//        //fc.addFilter("cid",cidFilter);
 
     }
 
     public ExecuteResult addNsRuler(List<String> args){
-        FilterChain fc = this.getFilterChain();
-       // NsFilter nsFilter = (NsFilter)fc.getFilter("namespace");
-        for(String ns:args){
-         //   nsFilter.addRuler(ns);
-        }
+//        FilterChain fc = this.getFilterChain();
+//       // NsFilter nsFilter = (NsFilter)fc.getFilter("namespace");
+//        for(String ns:args){
+//         //   nsFilter.addRuler(ns);
+//        }
+//        return result(true);
         return result(true);
     }
 
     public ExecuteResult addCidRuler(List<String> args){
-        FilterChain fc = this.getFilterChain();
-      //  CidFilter cidFilter = (CidFilter) fc.getFilter("cid");
-        for(String cid:args){
-        //    cidFilter.addRuler(cid);
-        }
+//        FilterChain fc = this.getFilterChain();
+//      //  CidFilter cidFilter = (CidFilter) fc.getFilter("cid");
+//        for(String cid:args){
+//        //    cidFilter.addRuler(cid);
+//        }
+//        return result(true);
         return result(true);
     }
 }

@@ -8,13 +8,13 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Created by wangxiaoyi on 2017/7/17.
  */
-public class FilterChainMgr {
+public class FilterManager {
 
-    private static final Logger LOG = Logger.getLogger(FilterChainMgr.class.getSimpleName());
+    private static final Logger LOG = Logger.getLogger(FilterManager.class.getSimpleName());
 
     private Map<String, FilterChain> chainMap; // method to FilterChain map
 
-    public FilterChainMgr() {
+    public FilterManager() {
         chainMap = new ConcurrentHashMap<>();
     }
 

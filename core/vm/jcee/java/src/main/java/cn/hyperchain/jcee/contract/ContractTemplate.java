@@ -6,6 +6,8 @@ package cn.hyperchain.jcee.contract;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.contract.filter.FilterChain;
+import cn.hyperchain.jcee.contract.filter.FilterManager;
+import cn.hyperchain.jcee.executor.Context;
 import cn.hyperchain.jcee.executor.ContractHandler;
 import cn.hyperchain.jcee.executor.Handler;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
@@ -15,19 +17,28 @@ import org.apache.log4j.Logger;
 import java.util.*;
 
 //ContractBase which is used as a skeleton of smart contract
-@Data
 @AllArgsConstructor
 @NoArgsConstructor
 public abstract class ContractTemplate {
+    @Setter
+    @Getter
     private ContractInfo info;
+    @Setter
+    @Getter
     private String owner;
+    @Setter
+    @Getter
     private String cid;
+    @Setter
+    @Getter
     protected AbstractLedger ledger;
     protected Logger logger = Logger.getLogger(this.getClass().getSimpleName());
+    private FilterManager filterManager = new FilterManager();
 
-    private FilterChain filterChain = new FilterChain();
-
-
+    /**
+     * init method init the contract basic info
+     * example: 1. add self-defined filters
+     */
     public void init(){}
 
     /**
@@ -59,7 +70,6 @@ public abstract class ContractTemplate {
      */
     protected final ExecuteResult invokeContract(String ns, String contractAddr, String func, List<String> args) {
         //TODO: how to do the authority control
-        ContractInfo info = this.getInfo();
 
         // 1.check invoke identifier namespace and the contract Address
         if (ns == null || ns.isEmpty() || contractAddr == null || contractAddr.isEmpty())
@@ -76,23 +86,22 @@ public abstract class ContractTemplate {
             return result(false, "no contract with address: " + contractAddr + "found");
         }
 
-        return ct.securityCheck(func, args, info);
+        Context context = new Context(ledger.getContext().getId());
+        context.setRequestContext(ledger.getContext().getRequestContext());
+        return ct.securityCheck(func, args, context);
     }
 
+    private final ExecuteResult securityCheck(String funcName, List<String> args, Context context){
 
-
-    protected ExecuteResult securityCheck(String funcName, List<String> args, ContractInfo info){
-
-
-        //TODO: implement this
-
-        return result(false);
-//        String contractAddr = info.getCid();
-//
-//        if(!filterChain.doFilter(info)){
-//            return result(false, "there is no authority to invoke the method "+funcName+ " for contract "+contractAddr);
-//        }
-//        return openInvoke(funcName,args);
+        FilterChain fc = filterManager.getFilterChain(funcName);
+        if (fc == null) {
+            if (!fc.doFilter(context)) {
+                return result(false,
+                        String.format("Invoker %s at contract %s try to invoke function %s failed", context.getRequestContext().getInvoker()
+                        , context.getRequestContext().getCid(), funcName));
+            }
+        }
+        return openInvoke(funcName, args);
     }
 
     /**
@@ -101,13 +110,13 @@ public abstract class ContractTemplate {
      * @param result contract execution result if success or failed message
      * @return
      */
-    public ExecuteResult result(boolean exeSuccess, Object result) {
+    protected final ExecuteResult result(boolean exeSuccess, Object result) {
         ExecuteResult rs = new ExecuteResult<>(exeSuccess, result);
         return rs;
     }
 
     //just indicate the execution status, no result specified
-    public ExecuteResult result(boolean exeSuccess) {
+    protected final ExecuteResult result(boolean exeSuccess) {
         ExecuteResult rs = new ExecuteResult<>(exeSuccess, "");
         return rs;
     }
