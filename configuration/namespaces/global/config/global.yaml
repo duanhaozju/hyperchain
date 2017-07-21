@@ -21,7 +21,6 @@ global:
 
     configs:
         caconfig: "namespaces/global/config/caconfig.yaml"
-        caconfig13: "namespaces/global/config/caconfig13.yaml"
         peers: "namespaces/global/config/local_peerconfig.json"
         peers13: "namespaces/global/config/peerconfig.yaml"
         genesis: "namespaces/global/config/genesis.json"

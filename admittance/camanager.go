@@ -37,12 +37,12 @@ type CAManager struct {
 	rCert                 *cert
 	tCacert               *cert
 	eCertPri              *key
+	rCertPri	      *key
 	//check flags
 	checkERCert           bool
 	checkTCert            bool
 	checkCertSign         bool
 
-	EnableSymmetrical     bool
 	logger     *logging.Logger
 }
 
@@ -60,19 +60,19 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("cannot read ca conf,reason: %s",err.Error()))
 	}
-	eca, err := readCert(config.GetString("ecert.ca"))
+	eca, err := readCert(config.GetString("ecert.eca"))
 	if err != nil {
 		return nil, err
 	}
-	ecert, err := readCert(config.GetString("ecert.cert"))
+	ecert, err := readCert(config.GetString("ecert.ecert"))
 	if err != nil {
 		return nil, err
 	}
-	rca, err := readCert(config.GetString("rcert.ca"))
+	rca, err := readCert(config.GetString("rcert.rca"))
 	if err != nil {
 		return nil, err
 	}
-	rcert, err := readCert(config.GetString("rcert.cert"))
+	rcert, err := readCert(config.GetString("rcert.rcert"))
 	if err != nil {
 		rcert = &cert{}
 	}
@@ -80,16 +80,21 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	if err != nil {
 		return nil, err
 	}
+	rcertpriv, err := readKey(config.GetString("rcert.priv"))
+	if err != nil {
+		return nil, err
+	}
 	return &CAManager{
 		eCaCert:eca,
 		eCert:ecert,
 		eCertPri:ecertpriv,
+		rCertPri:rcertpriv,
 		rCaCert:rca,
 		rCert:rcert,
 		tCacert:ecert,
-		checkCertSign:config.GetBool("check.certsign"),
-		checkERCert:config.GetBool("check.ercert"),
-		checkTCert:config.GetBool("check.tcert"),
+		checkCertSign:config.GetBool("check.sign"),
+		checkERCert:config.GetBool("check.enable"),
+		checkTCert:config.GetBool("check.enableT"),
 		logger:logger,
 
 	},nil
@@ -134,10 +139,16 @@ func (cm *CAManager)VerifyTCert(tcertPEM string) (bool, error) {
 		cm.logger.Error(errParseCert.Error())
 		return false, errParseCert
 	}
-	if tcert.IsCA == true {
-		return primitives.VerifyCert(tcert, cm.eCaCert.x509cert)
-	} else {
-		return primitives.VerifyCert(tcert, cm.tCacert.x509cert)
+	if tcert.IsCA == true{
+		return false,errFailedVerifySign
+	}
+
+	ef,_ := primitives.VerifyCert(tcert, cm.eCaCert.x509cert)
+	tf,_ := primitives.VerifyCert(tcert, cm.tCacert.x509cert)
+	if ef || tf {
+		return true,nil
+	}else {
+		return false, errFailedVerifySign
 
 	}
 }
