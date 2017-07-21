@@ -168,15 +168,20 @@ func(pmi *peerManagerImpl)binding()error{
 	helloHandler := msg.NewHelloHandler(pmi.blackHole, pmi.eventHub)
 	pmi.node.Bind(pb.MsgType_HELLO, helloHandler)
 
-	attendHandler := msg.NewAttendHandler(pmi.blackHole, pmi.eventHub)
+	attendHandler := msg.NewAttendHandler(pmi.blackHole, pmi.eventHub,serverHTS)
 	pmi.node.Bind(pb.MsgType_ATTEND, attendHandler)
 
 	nvpAttendHandler := msg.NewNVPAttendHandler(pmi.blackHole, pmi.eventHub)
 	pmi.node.Bind(pb.MsgType_NVPATTEND, nvpAttendHandler)
 
+	nvpDeleteHandler := msg.NewNVPDeleteHandler(pmi.blackHole, pmi.eventHub,pmi.peerMgrEv,serverHTS)
+	pmi.node.Bind(pb.MsgType_NVPDELETE,nvpDeleteHandler)
+
 	//peer manager event subscribe
 	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_VPCONNECT),pmi.peerMgrEv.Subscribe(peerevent.EV_VPConnect{}))
 	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_NVPCONNECT),pmi.peerMgrEv.Subscribe(peerevent.EV_NVPConnect{}))
+	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_VPDELETE),pmi.peerMgrEv.Subscribe(peerevent.EV_DELETE_VP{}))
+	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_NVPDELETE),pmi.peerMgrEv.Subscribe(peerevent.EV_DELETE_NVP{}))
 
 	return nil
 }
@@ -258,24 +263,31 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 		}
 	}
 	case peerevent.EV_DELETE_NVP:{
+		pmgr.logger.Critical("GOT a EV_DELETE_NVP")
 		conev := ev.(peerevent.EV_DELETE_NVP)
 		peer := pmgr.peerPool.GetNVPByHash(conev.Hash)
-		m := pb.NewMsg(pb.MsgType_NVPDELETE,[]byte(pmgr.node.info.Hash))
+		if peer == nil{
+			pmgr.logger.Warningf("This NVP(%s) not connect to this VP ignored.",conev.Hash)
+			return
+		}
+		pmgr.logger.Critical("SEND TO NVP=>>",pmgr.node.info.Hash)
+		m := pb.NewMsg(pb.MsgType_NVPDELETE,common.Hex2Bytes(pmgr.node.info.Hash))
 		rsp,err := peer.Chat(m)
 		if err != nil{
-			pmgr.logger.Errorf("cannot delete NVP peer, reason: %s \n",err.Error())
+			pmgr.logger.Errorf("cannot delete NVP peer, reason: %s ",err.Error())
 		}
 		if rsp != nil && rsp.Payload != nil{
-			pmgr.logger.Infof("delete NVP peer, response: %s \n",string(rsp.Payload))
+			pmgr.logger.Infof("delete NVP peer, response: %s ",string(rsp.Payload))
 			pmgr.peerPool.DeleteNVPPeer(conev.Hash)
 		}
 	}
 	case peerevent.EV_DELETE_VP:{
+		pmgr.logger.Critical("GOT a EV_DELETE_VP")
 		if pmgr.isVP{
 			pmgr.logger.Critical("As A VP Node, this process cannot be invoked")
 			return
 		}
-		conev := ev.(peerevent.EV_DELETE_NVP)
+		conev := ev.(peerevent.EV_DELETE_VP)
 		pmgr.logger.Critical("NVP delete VP Peer By hash",conev.Hash)
 		pmgr.peerPool.DeleteVPPeerByHash(conev.Hash)
 		if !pmgr.isVP{
@@ -311,7 +323,12 @@ func (pmgr *peerManagerImpl) bind(peerType int,namespace string, id int, hostnam
 			return nil
 		}
 	}else{
-		if pmgr.peerPool.GetNVPByHostname(hostname) != nil{
+		if p:= pmgr.peerPool.GetNVPByHostname(hostname);p != nil{
+			pmgr.logger.Critical("Say hello to hostname:",hostname)
+			err := p.clientHello(false,false)
+			if err != nil{
+				return err
+			}
 			return nil
 		}
 	}
@@ -322,7 +339,7 @@ func (pmgr *peerManagerImpl) bind(peerType int,namespace string, id int, hostnam
 	<- time.After(time.Second)
 	newPeer,err := NewPeer(namespace, hostname, id, pmgr.node.info, pmgr.hyperNet,chts)
 	if err != nil {
-		pmgr.logger.Errorf("cannot establish connection to %s, reason: %s \n",hostname,err.Error())
+		pmgr.logger.Errorf("cannot establish connection to %s, reason: %s ",hostname,err.Error())
 		return err
 	}
 	if peerType == PEERTYPE_VP{
@@ -401,7 +418,7 @@ func (pmgr *peerManagerImpl) broadcast(msgType pb.MsgType, payload []byte) {
 			m := pb.NewMsg(msgType, payload)
 			_, err := peer.Chat(m)
 			if err != nil {
-				pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s \n", peer.hostname, peer.local.Hostname, err.Error())
+				pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s ", peer.hostname, peer.local.Hostname, err.Error())
 			}
 		}(p)
 
@@ -503,7 +520,7 @@ func (pmgr *peerManagerImpl)DeleteNode(hash string) error {
 }
 
 func (pmgr *peerManagerImpl)DeleteNVPNode(hash string) error {
-	pmgr.logger.Critical("DELETE NVPNODE", hash)
+	pmgr.logger.Critical("Delete None Validate peer hash:", hash)
 	if pmgr.node.info.Hash == hash {
 		pmgr.logger.Critical("Please do not send delete NVP command to nvp")
 		return nil
@@ -537,7 +554,7 @@ func (pmgr *peerManagerImpl)GetPeerInfo() PeerInfos {
 func (pmgr *peerManagerImpl)GetRouters() []byte {
 	b, e := pmgr.peerPool.Serlize()
 	if e != nil {
-		pmgr.logger.Errorf("cannot serialize the peerpool,err:%s \n", e.Error())
+		pmgr.logger.Errorf("cannot serialize the peerpool,err:%s ", e.Error())
 		return nil
 	}
 	return b
@@ -583,7 +600,7 @@ func(pmgr *peerManagerImpl)broadcastNVP(msgType pb.MsgType,payload []byte)error{
 			m := pb.NewMsg(msgType, payload)
 			_, err := peer.Chat(m)
 			if err != nil {
-				pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s \n", peer.hostname, peer.local.Hostname, err.Error())
+				pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s ", peer.hostname, peer.local.Hostname, err.Error())
 			}
 		}(p)
 	}
@@ -616,7 +633,7 @@ func (pmgr *peerManagerImpl)sendMsgNVP(msgType pb.MsgType,payLoad []byte, nvpLis
 				m := pb.NewMsg(msgType, payLoad)
 				_, err := peer.Chat(m)
 				if err != nil {
-					pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s \n", peer.hostname, peer.local.Hostname, err.Error())
+					pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s ", peer.hostname, peer.local.Hostname, err.Error())
 				}
 			}(p)
 		}

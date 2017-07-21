@@ -191,7 +191,12 @@ func(pool *PeersPool)DeleteVPPeer(id int)error{
 
 func(pool *PeersPool)DeleteVPPeerByHash(hash string)error{
 	p := pool.GetPeersByHash(hash)
-	pool.logger.Critical("delete validate peer",p.info.Id)
+	if p != nil{
+		pool.logger.Critical("delete validate peer",p.info.Id)
+	}else{
+		pool.logger.Notice("delete validate peer failed.")
+		return errors.New(fmt.Sprintf("this validate peer (%s) not exist",hash))
+	}
 	return pool.DeleteVPPeer(p.info.Id)
 }
 

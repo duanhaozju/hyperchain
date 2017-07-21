@@ -6,19 +6,23 @@ import (
 	"fmt"
 	"hyperchain/p2p/peerevent"
 	"github.com/pkg/errors"
+	"hyperchain/common"
+	"hyperchain/p2p/hts"
 )
 
 type NVPDeleteMsgHandler struct {
 	mchan chan  interface{}
 	ev *event.TypeMux
 	mgrev *event.TypeMux
+	shts *hts.ServerHTS
 }
 
-func NewNVPDeleteHandler(blackHole chan interface{},ev *event.TypeMux,mgrev *event.TypeMux)*NVPDeleteMsgHandler{
+func NewNVPDeleteHandler(blackHole chan interface{},ev *event.TypeMux,mgrev *event.TypeMux,shts *hts.ServerHTS)*NVPDeleteMsgHandler{
 	return &NVPDeleteMsgHandler{
 		mchan:blackHole,
 		ev:ev,
 		mgrev:mgrev,
+		shts:shts,
 	}
 }
 
@@ -42,19 +46,22 @@ func (h *NVPDeleteMsgHandler)Receive() chan<- interface{}{
 
 //Execute
 func (h *NVPDeleteMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
-	fmt.Printf("GOT A NVP DELETE MSG hostname(%s), type: %s \n",msg.From.Hostname,msg.MessageType)
 	rsp  := &pb.Message{
 		MessageType:pb.MsgType_RESPONSE,
 	}
-	if msg != nil && msg.Payload != nil{
-		VPHash := string(msg.Payload)
-		ev := peerevent.EV_DELETE_VP{
-			Hash:VPHash,
-		}
-		go h.mgrev.Post(ev)
-		return rsp,nil
-	}else{
-		return nil,errors.New("in message is nil,")
+	if msg == nil || msg.Payload == nil{
+		return nil,errors.New("message is nil, invalid message")
 	}
+	payload := h.shts.Decrypt(string(msg.From.UUID),msg.Payload)
+	if payload == nil{
+		return nil,errors.New("cannot decrypt the message payload.")
+	}
+	VPHash := common.Bytes2Hex(payload)
+	fmt.Println("GOT A VP DELETE MSG",VPHash)
+	ev := peerevent.EV_DELETE_VP{
+		Hash:VPHash,
+	}
+	go h.mgrev.Post(ev)
+	return rsp,nil
 
 }
