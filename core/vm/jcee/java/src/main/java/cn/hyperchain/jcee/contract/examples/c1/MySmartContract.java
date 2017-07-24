@@ -11,21 +11,30 @@ import java.util.List;
 
 /**
  * Created by wangxiaoyi on 2017/4/7.
+ * Test open invoke authority.
  */
 public class MySmartContract extends ContractTemplate {
 
+    public MySmartContract() {
+        ContractFilter cf = new ContractFilter();
+        InvokerFilter invf = new InvokerFilter();
+        cf.addPermittedContractAddr("bbe2b6412ccf633222374de8958f2acc76cda9c9");
+        invf.addPermittedInvokerAddr("000f1a7a08ccc48e5d30f80850cf1cf283aa3abd");
+        addFilter("openTest", cf);
+        addFilter("openTest", invf);
+    }
+
+    /**
+     * invoke smart contract method
+     *
+     * @param funcName function name user defined in contract
+     * @param args     arguments of funcName
+     * @return {@link ExecuteResult}
+     */
+    @Override
     public ExecuteResult invoke(String funcName, List<String> args) {
-        //logger.info("invoke function name: " + funcName);
-        switch (funcName) {
-            case "test": {
-                this.test("invoke method:" + args.get(0));
-                //String name = new String(ledger.get("name".getBytes()));
-                //System.out.println("get name from ledger: " + name);
-                return result(true);
-            }
-            default:
-                logger.error("no such method found");
-        }
+        //empty impl
+
         return result(false);
     }
 
@@ -39,20 +48,17 @@ public class MySmartContract extends ContractTemplate {
     @Override
     protected ExecuteResult openInvoke(String funcName, List<String> args) {
         switch (funcName) {
-            case "test": {
-                this.test("invoke method:" + args.get(0));
-                //String name = new String(ledger.get("name".getBytes()));
-                //System.out.println("get name from ledger: " + name);
-                return result(true);
+            case "openTest": {
+                return openTest(args);
             }
             default:
-                logger.error("no such method found");
+                logger.error("no such method found or the method cannot be invoked by other contract");
         }
         return result(false);
     }
 
-    public void test(String name) {
-//        logger.info(getLedger().getContext().getId());
-        logger.info("invoke in test");
+    public ExecuteResult openTest(List<String> args) {
+        logger.info(args.get(0));
+        return result(true, args.get(0));
     }
 }
