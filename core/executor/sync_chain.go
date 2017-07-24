@@ -19,6 +19,12 @@ import (
 	"path/filepath"
 	"time"
 	"hyperchain/tree/bucket"
+	"github.com/cheggaaa/pb"
+)
+
+var (
+	receivePb *pb.ProgressBar
+	processPb *pb.ProgressBar
 )
 
 /*
@@ -62,6 +68,8 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	}
 
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
+	receivePb = common.InitPb(int64(ev.TargetHeight - edb.GetHeightOfChain(executor.namespace)), "receive block")
+	receivePb.Start()
 	go executor.syncChainResendBackend()
 }
 
@@ -134,10 +142,14 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 		return true
 	}
 
-	reqNext := func() {
+	reqNext := func(isbatch bool) {
 		executor.logger.Notice("still have some blocks to fetch")
 		executor.context.syncFlag.qosStat.FeedBack(true)
 		executor.context.syncCtx.SetCurrentPeer(executor.context.syncFlag.qosStat.SelectPeer())
+		if isbatch {
+			common.AddPb(receivePb, int64(executor.GetSyncMaxBatchSize()))
+			common.PrintPb(receivePb, 0, executor.logger)
+		}
 		prev := executor.getLatestSyncDownstream()
 		next := executor.calcuDownstream()
 		executor.SendSyncRequest(prev, next)
@@ -177,9 +189,12 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			executor.logger.Notice("receive a batch of blocks")
 			needNextFetch := checkNeedMore()
 			if needNextFetch {
-				reqNext()
+				reqNext(true)
 			} else {
 				executor.logger.Noticef("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.context.syncFlag.SyncTarget)
+				common.SetPb(receivePb, receivePb.Total)
+				common.PrintPb(receivePb, 0, executor.logger)
+				receivePb.Finish()
 				if executor.context.syncCtx.UpdateGenesis {
 					// receive world state
 					executor.logger.Notice("send request to fetch world state for status transition")
@@ -197,7 +212,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 							return
 						}
 						executor.logger.Noticef("cutdown block #%d", executor.context.syncFlag.SyncDemandBlockNum)
-						reqNext()
+						reqNext(false)
 					}
 				}
 			}
@@ -412,6 +427,8 @@ func (executor *Executor) processSyncBlocks() {
 		executor.waitUtilSyncAvailable()
 		defer executor.syncDone()
 		// execute all received block at one time
+		processPb = common.InitPb(int64(executor.getSyncTarget() - edb.GetHeightOfChain(executor.namespace)), "process block")
+		processPb.Start()
 		var low uint64
 		if executor.context.syncCtx.UpdateGenesis {
 			_, low = executor.context.syncCtx.GetCurrentGenesis()
@@ -443,9 +460,15 @@ func (executor *Executor) processSyncBlocks() {
 						executor.reject()
 						return
 					}
+					common.AddPb(processPb, 1)
+					common.PrintPb(processPb, 10, executor.logger)
 				}
 			}
 		}
+		if !common.IsPrintPb(processPb, 10) {
+			common.PrintPb(processPb, 0, executor.logger)
+		}
+		processPb.Finish()
 		executor.initDemand(executor.context.syncFlag.SyncTarget + 1)
 		executor.clearSyncFlag()
 		executor.sendStateUpdatedEvent()
