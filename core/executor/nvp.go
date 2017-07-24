@@ -156,7 +156,7 @@ func (nvp *NVPImpl) ReceiveBlock(payload []byte) {
 	nvp.lock.Lock()
 	defer nvp.lock.Unlock()
 
-	block, err := nvp.preProcess(payload);
+	block, err := nvp.preProcess(payload)
 	if err != nil {
 		nvp.executor.logger.Error(err)
 		return
@@ -222,7 +222,12 @@ func (nvp *NVPImpl) preProcess(payload []byte) (*types.Block,error) {
 				errStr := fmt.Sprintf("verify block integrity fail! receive a broken block %d, drop it.", block.Number)
 				return nil, errors.New(errStr)
 			}
-			err, _ = db_utils.PersistBlock(nvp.getExecutor().db.NewBatch(), block, true, true)
+			if block.Version != nil {
+				// Receive block with version tag
+				err, _ = db_utils.PersistBlock(nvp.getExecutor().db.NewBatch(), block, true, true, string(block.Version))
+			} else {
+				err, _ = db_utils.PersistBlock(nvp.getExecutor().db.NewBatch(), block, true, true)
+			}
 			if err != nil {
 				return nil, errors.New("put block into DB failed." + err.Error())
 			}
