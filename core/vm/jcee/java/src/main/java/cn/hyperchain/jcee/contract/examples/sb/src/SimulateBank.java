@@ -44,11 +44,10 @@ public class SimulateBank extends ContractTemplate {
                 return testRangeQuery(args);
             case "testDelete":
                 return testDelete(args);
-            case "testInvokeContract":
-                logger.info("testInvokeContract");
-                return testInvokeContract(args);
             case "testPostEvent":
                 return testPostEvent(args);
+            case "testInvokeContract":
+                return testInvokeContract(args);
             default:
                 String err = "method " + funcName  + " not found!";
                 logger.error(err);
@@ -128,8 +127,8 @@ public class SimulateBank extends ContractTemplate {
         }
     }
 
-    //1.test read batch
-    //2.test write batch
+    //1.openTest read batch
+    //2.openTest write batch
     private ExecuteResult transferByBatch(List<String> args) {
         if(args.size() != 3) {
             logger.error("args num is invalid");
@@ -203,24 +202,24 @@ public class SimulateBank extends ContractTemplate {
         return result(getV.isEmpty());
     }
 
-    public ExecuteResult testInvokeContract(List<String> args) {
-        logger.info(args.toString());
-        List<String> arg = new LinkedList<>();
-        arg.add("hello, invoke contract!");
-        return invokeContract("global", "bbe2b6412ccf633222374de8958f2acc76cda9c9", "test", arg);
-    }
-
     public ExecuteResult testPostEvent(List<String> args) {
         logger.info(args);
         for (int i = 0; i < 10; i ++) {
             Event event = new Event("event" + i);
             event.addTopic("simulate_bank");
-            event.addTopic("test");
+            event.addTopic("openTest");
             event.put("attr1", "value1");
             event.put("attr2", "value2");
             event.put("attr3", "value3");
             ledger.post(event);
         }
         return result(true);
+    }
+
+    public ExecuteResult testInvokeContract(List<String> args) {
+        List<String> subArgs = new LinkedList<>();
+        subArgs.add(args.get(0));
+        String contractAddr = args.get(0);
+        return invokeContract("global", contractAddr, "openTest", subArgs);
     }
 }

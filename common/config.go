@@ -17,6 +17,15 @@ type Config struct {
 	lock *sync.RWMutex
 }
 
+//NewEmptyConfig new config without underlying config file
+func NewEmptyConfig() *Config {
+	vp := viper.New()
+	return &Config{
+		conf: vp,
+		lock: &sync.RWMutex{},
+	}
+}
+
 //NewConfig return a new instance of Config by configPath
 func NewConfig(configPath string) *Config {
 	vp := viper.New()

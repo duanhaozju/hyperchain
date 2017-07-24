@@ -28,4 +28,12 @@ public class Context {
     public void setRequestContext(ContractProto.RequestContext requestContext) {
         this.requestContext = requestContext;
     }
+
+    @Override
+    public String toString() {
+        return "Context{" +
+                "id='" + id + '\'' +
+                ", requestContext=" + requestContext +
+                '}';
+    }
 }
