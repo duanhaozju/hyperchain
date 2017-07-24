@@ -82,7 +82,7 @@ func GetResult(db *leveldb.DB, contractAddress string, contractVariables []*type
 			delete(variableNameSet, name)
 		}
 	}
-	return  result
+	return result
 }
 
 func dealV(remainType string, variableValues []*types.ContractVariable, format string, contractContent *ContractContent, start int, keyToOriMap map[string]map[string]string) string {
