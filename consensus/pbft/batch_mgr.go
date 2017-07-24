@@ -133,7 +133,7 @@ func newBatchValidator(pbft *pbftImpl) *batchValidator {
 // newBatchManager init a instance of batchManager.
 func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 	bm := &batchManager{}
-	bm.batchEventsManager = events.NewManagerImpl()
+	bm.batchEventsManager = events.NewManagerImpl(conf.GetString(common.NAMESPACE))
 	bm.batchEventsManager.SetReceiver(pbft)
 
 	pbft.reqEventQueue = events.GetQueue(bm.batchEventsManager.Queue())

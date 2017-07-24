@@ -2,11 +2,11 @@ package executor
 
 import (
 	"hyperchain/common"
+	er "hyperchain/core/errors"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/evm"
 	"hyperchain/core/vm/jcee/go"
-	er "hyperchain/core/errors"
 )
 
 func (executor *Executor) ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64) (*types.Receipt, []byte, common.Address, error) {
@@ -23,5 +23,3 @@ func (executor *Executor) ExecTransaction(db vm.Database, tx *types.Transaction,
 		return nil, nil, common.Address{}, er.ExecContractErr(1, "undefined vm type")
 	}
 }
-
-

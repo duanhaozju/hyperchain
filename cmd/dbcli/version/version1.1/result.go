@@ -1,14 +1,14 @@
-package version1_3
+package version1_1
 
 import (
-	"hyperchain/cmd/dbcli/constant"
-	"hyperchain/cmd/dbcli/version/version1.3/types"
 	"github.com/golang/protobuf/proto"
+	"hyperchain/cmd/dbcli/version/version1.1/types"
+	"hyperchain/cmd/dbcli/constant"
 	"strconv"
 )
 
 func GetBlockData(data []byte, parameter *constant.Parameter) (string, error) {
-	var block version1_3.Block
+	var block version1_1.Block
 	err := proto.Unmarshal(data, &block)
 	if err != nil {
 		return "", err
@@ -22,7 +22,7 @@ func GetBlockData(data []byte, parameter *constant.Parameter) (string, error) {
 }
 
 func GetTransactionData(data []byte) (string, error) {
-	var transaction version1_3.Transaction
+	var transaction version1_1.Transaction
 	err := proto.Unmarshal(data, &transaction)
 	if err != nil {
 		return "", err
@@ -31,8 +31,28 @@ func GetTransactionData(data []byte) (string, error) {
 	}
 }
 
+func GetInvaildTransactionData(data []byte) (string, error) {
+	var invaildTransaction version1_1.InvalidTransactionRecord
+	err := proto.Unmarshal(data, &invaildTransaction)
+	if err != nil {
+		return "", err
+	} else {
+		return invaildTransaction.Encode(), nil
+	}
+}
+
+func GetTransactionMetaData(data []byte) (string, error) {
+	meta := &version1_1.TransactionMeta{}
+	err := proto.Unmarshal(data, meta)
+	if err != nil {
+		return "", err
+	} else {
+		return meta.Encode(), nil
+	}
+}
+
 func GetReceiptData(data []byte) (string, error) {
-	var receipt version1_3.Receipt
+	var receipt version1_1.Receipt
 	err := proto.Unmarshal(data, &receipt)
 	if err != nil {
 		return "", err
@@ -42,7 +62,7 @@ func GetReceiptData(data []byte) (string, error) {
 }
 
 func GetChainData(data []byte) (string, error) {
-	var chain version1_3.Chain
+	var chain version1_1.Chain
 	err := proto.Unmarshal(data, &chain)
 	if err != nil {
 		return "", err
@@ -52,7 +72,7 @@ func GetChainData(data []byte) (string, error) {
 }
 
 func GetChainHeight(data []byte) (string, error) {
-	var chain version1_3.Chain
+	var chain version1_1.Chain
 	err := proto.Unmarshal(data, &chain)
 	if err != nil {
 		return "", err

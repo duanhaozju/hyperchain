@@ -1,7 +1,7 @@
 RADAR
 ---
 
-radar is a tool to get data can be view clearly from level db.
+radar is a tool to get data can be view clearly from level db. Only support one contract in one file.
 
 Version
 ---

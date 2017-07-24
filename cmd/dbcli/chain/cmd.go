@@ -47,6 +47,7 @@ func getChain(c *cli.Context) {
 			return
 		}
 		hyperChain := version.NewVersion(database)
+		defer hyperChain.GetDB().Close()
 		result, err := hyperChain.GetChain()
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())

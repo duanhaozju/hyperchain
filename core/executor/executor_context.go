@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-type ExecutorStatus struct {
+type ExecutorContext struct {
 	validateBehaveFlag int32 // validation type, normal or just ignore.
 	validateInProgress int32 // validation operation flag, validating or idle
 	commitInProgress   int32 // commit operation flag, committing or idle
@@ -43,37 +43,37 @@ type SyncFlag struct {
 	InExecution         uint32    // flag mark in execution
 	ResendMode          uint32    // sync request resend context
 	ResendExit          chan bool // resend backend process notifier
-	Oracle              *Oracle   // peer selector before send sync request, adhere `BEST PEER` algorithm
+	qosStat             *QosStat  // peer selector before send sync request, adhere `BEST PEER` algorithm
 }
 
-func initializeExecutorStatus(executor *Executor) error {
-	executor.status.validationExit = make(chan bool)
-	executor.status.commitExit = make(chan bool)
-	executor.status.replicaSyncExit = make(chan bool)
+func initializeExecutorContext(executor *Executor) error {
+	executor.context.validationExit = make(chan bool)
+	executor.context.commitExit = make(chan bool)
+	executor.context.replicaSyncExit = make(chan bool)
 
-	executor.status.validationSuspend = make(chan bool)
-	executor.status.commitSuspend = make(chan bool)
-	executor.status.syncReplicaSuspend = make(chan bool)
+	executor.context.validationSuspend = make(chan bool)
+	executor.context.commitSuspend = make(chan bool)
+	executor.context.syncReplicaSuspend = make(chan bool)
 
 	currentChain := edb.GetChainCopy(executor.namespace)
 	executor.initDemand(currentChain.Height + 1)
 	blk, err := edb.GetBlockByNumber(executor.namespace, currentChain.Height)
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] get block #%d failed.", executor.namespace, currentChain.Height)
-		executor.status.lastValidationState.Store(common.Hash{})
+		executor.context.lastValidationState.Store(common.Hash{})
 		return err
 	} else {
-		executor.status.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
+		executor.context.lastValidationState.Store(common.BytesToHash(blk.MerkleRoot))
 		executor.logger.Noticef("[Namespace = %s] initialize executor status success. demand block number %d, demand seqNo %d, latest state hash %s",
-			executor.namespace, executor.status.demandNumber, executor.status.demandSeqNo, common.Bytes2Hex(blk.MerkleRoot))
+			executor.namespace, executor.context.demandNumber, executor.context.demandSeqNo, common.Bytes2Hex(blk.MerkleRoot))
 		return nil
 	}
 }
 
 func (executor *Executor) initDemand(num uint64) {
-	executor.status.demandNumber = num
-	executor.status.demandSeqNo = num
-	executor.status.tempBlockNumber = num
+	executor.context.demandNumber = num
+	executor.context.demandSeqNo = num
+	executor.context.tempBlockNumber = num
 }
 
 func (executor *Executor) stateTransition(id uint64, root common.Hash) {
@@ -82,83 +82,83 @@ func (executor *Executor) stateTransition(id uint64, root common.Hash) {
 
 // Demand block number
 func (executor *Executor) incDemandNumber() {
-	executor.status.demandNumber += 1
-	executor.logger.Debugf("[Namespace = %s] increase demand number to %d", executor.namespace, executor.status.demandNumber)
+	executor.context.demandNumber += 1
+	executor.logger.Debugf("[Namespace = %s] increase demand number to %d", executor.namespace, executor.context.demandNumber)
 }
 
 func (executor *Executor) setDemandNumber(num uint64) {
-	executor.status.demandNumber = num
-	executor.logger.Debugf("[Namespace = %s] set demand number to %d", executor.namespace, executor.status.demandNumber)
+	executor.context.demandNumber = num
+	executor.logger.Debugf("[Namespace = %s] set demand number to %d", executor.namespace, executor.context.demandNumber)
 }
 
 func (executor *Executor) getDemandNumber() uint64 {
-	return executor.status.demandNumber
+	return executor.context.demandNumber
 }
 
 func (executor *Executor) isDemandNumber(num uint64) bool {
-	return executor.status.demandNumber == num
+	return executor.context.demandNumber == num
 }
 
 // Demand seqNo
 func (executor *Executor) incDemandSeqNo() {
-	executor.status.demandSeqNo += 1
-	executor.logger.Debugf("[Namespace = %s] increase demand seqNo to %d", executor.namespace, executor.status.demandSeqNo)
+	executor.context.demandSeqNo += 1
+	executor.logger.Debugf("[Namespace = %s] increase demand seqNo to %d", executor.namespace, executor.context.demandSeqNo)
 }
 
 func (executor *Executor) setDemandSeqNo(num uint64) {
-	executor.status.demandSeqNo = num
-	executor.logger.Debugf("[Namespace = %s] set demand seqNo to %d", executor.namespace, executor.status.demandSeqNo)
+	executor.context.demandSeqNo = num
+	executor.logger.Debugf("[Namespace = %s] set demand seqNo to %d", executor.namespace, executor.context.demandSeqNo)
 }
 
 func (executor *Executor) getDemandSeqNo() uint64 {
-	return executor.status.demandSeqNo
+	return executor.context.demandSeqNo
 }
 
 func (executor *Executor) isDemandSeqNo(num uint64) bool {
-	return executor.status.demandSeqNo == num
+	return executor.context.demandSeqNo == num
 }
 
 // Temp block number
 func (executor *Executor) incTempBlockNumber() {
-	executor.status.tempBlockNumber += 1
-	executor.logger.Debugf("[Namespace = %s] increase temp block number to %d", executor.namespace, executor.status.tempBlockNumber)
+	executor.context.tempBlockNumber += 1
+	executor.logger.Debugf("[Namespace = %s] increase temp block number to %d", executor.namespace, executor.context.tempBlockNumber)
 }
 
 func (executor *Executor) setTempBlockNumber(num uint64) {
-	executor.status.tempBlockNumber = num
-	executor.logger.Debugf("[Namespace = %s] set temp block number to %d", executor.namespace, executor.status.tempBlockNumber)
+	executor.context.tempBlockNumber = num
+	executor.logger.Debugf("[Namespace = %s] set temp block number to %d", executor.namespace, executor.context.tempBlockNumber)
 }
 
 func (executor *Executor) getTempBlockNumber() uint64 {
-	return executor.status.tempBlockNumber
+	return executor.context.tempBlockNumber
 }
 
 // recordStateHash - set latest statedb's hash.
 func (executor *Executor) recordStateHash(hash common.Hash) {
-	executor.status.lastValidationState.Store(hash)
+	executor.context.lastValidationState.Store(hash)
 }
 
 // retrieveStateHash - get latest statedb's hash.
 func (executor *Executor) retrieveStateHash() common.Hash {
-	v := executor.status.lastValidationState.Load()
+	v := executor.context.lastValidationState.Load()
 	return v.(common.Hash)
 }
 
 // turnOffValidationSwitch - turn on validation switch, executor will process received event.
 func (executor *Executor) turnOnValidationSwitch() {
 	executor.logger.Debugf("[Namespace = %s] turn on validation switch", executor.namespace)
-	atomic.StoreInt32(&executor.status.validateBehaveFlag, VALIDATION_NORMAL)
+	atomic.StoreInt32(&executor.context.validateBehaveFlag, VALIDATION_NORMAL)
 }
 
 // turnOffValidationSwitch - turn off validation switch, executor will drop all received event when the switch turn off.
 func (executor *Executor) turnOffValidationSwitch() {
 	executor.logger.Debugf("[Namespace = %s] turn off validation switch", executor.namespace)
-	atomic.StoreInt32(&executor.status.validateBehaveFlag, VALIDATION_IGNORE)
+	atomic.StoreInt32(&executor.context.validateBehaveFlag, VALIDATION_IGNORE)
 }
 
 // isReadyToValidation - check whether executor is ready to process validation event.
 func (executor *Executor) isReadyToValidation() bool {
-	if atomic.LoadInt32(&executor.status.validateBehaveFlag) == VALIDATION_NORMAL {
+	if atomic.LoadInt32(&executor.context.validateBehaveFlag) == VALIDATION_NORMAL {
 		return true
 	}
 	return false
@@ -167,25 +167,25 @@ func (executor *Executor) isReadyToValidation() bool {
 // markValidationBusy - mark executor is in validation.
 func (executor *Executor) markValidationBusy() {
 	executor.logger.Debugf("[Namespace = %s] mark validation busy", executor.namespace)
-	atomic.StoreInt32(&executor.status.validateInProgress, BUSY)
+	atomic.StoreInt32(&executor.context.validateInProgress, BUSY)
 }
 
 // markValidationBusy - mark executor is idle.
 func (executor *Executor) markValidationIdle() {
 	executor.logger.Debugf("[Namespace = %s] mark validation idle", executor.namespace)
-	atomic.StoreInt32(&executor.status.validateInProgress, IDLE)
+	atomic.StoreInt32(&executor.context.validateInProgress, IDLE)
 }
 
 // markCommitBusy - mark executor is in commit.
 func (executor *Executor) markCommitBusy() {
 	executor.logger.Debugf("[Namespace = %s] mark commit busy", executor.namespace)
-	atomic.StoreInt32(&executor.status.commitInProgress, BUSY)
+	atomic.StoreInt32(&executor.context.commitInProgress, BUSY)
 }
 
 // markCommitIdle - mark executor is idle.
 func (executor *Executor) markCommitIdle() {
 	executor.logger.Debugf("[Namespace = %s] mark commit idle", executor.namespace)
-	atomic.StoreInt32(&executor.status.commitInProgress, IDLE)
+	atomic.StoreInt32(&executor.context.commitInProgress, IDLE)
 }
 
 // waitUtilValidationIdle - suspend thread util all validations event has been process done.
@@ -196,7 +196,7 @@ func (executor *Executor) waitUtilValidationIdle() {
 	for {
 		select {
 		case <-ticker.C:
-			if atomic.LoadInt32(&executor.status.validateQueueLen) == 0 && atomic.LoadInt32(&executor.status.validateInProgress) == IDLE {
+			if atomic.LoadInt32(&executor.context.validateQueueLen) == 0 && atomic.LoadInt32(&executor.context.validateInProgress) == IDLE {
 				return
 			} else {
 				continue
@@ -213,7 +213,7 @@ func (executor *Executor) wailUtilCommitIdle() {
 	for {
 		select {
 		case <-ticker.C:
-			if atomic.LoadInt32(&executor.status.commitQueueLen) == 0 && atomic.LoadInt32(&executor.status.commitInProgress) == IDLE {
+			if atomic.LoadInt32(&executor.context.commitQueueLen) == 0 && atomic.LoadInt32(&executor.context.commitInProgress) == IDLE {
 				return
 			} else {
 				continue
@@ -271,102 +271,102 @@ func (executor *Executor) syncDone() {
 
 // updateSyncFlag - update demand block number, related hash and target during the sync.
 func (executor *Executor) updateSyncFlag(num uint64, hash []byte, target uint64) error {
-	executor.status.syncFlag.SyncDemandBlockNum = num
-	executor.status.syncFlag.SyncDemandBlockHash = hash
-	executor.status.syncFlag.SyncTarget = target
+	executor.context.syncFlag.SyncDemandBlockNum = num
+	executor.context.syncFlag.SyncDemandBlockHash = hash
+	executor.context.syncFlag.SyncTarget = target
 	return nil
 }
 
 // clearSyncFlag - clear all sync flag fields.
 func (executor *Executor) clearSyncFlag() {
 	executor.setSyncChainExit()
-	executor.status.syncFlag.SyncDemandBlockNum = 0
-	executor.status.syncFlag.SyncDemandBlockHash = nil
-	executor.status.syncFlag.SyncTarget = 0
-	executor.status.syncFlag.LocalId = 0
-	executor.status.syncFlag.SyncPeers = nil
-	executor.status.syncFlag.TempDownstream = 0
-	executor.status.syncFlag.LatestUpstream = 0
-	executor.status.syncFlag.LatestDownstream = 0
-	executor.status.syncCtx = nil
-	executor.status.syncFlag.Oracle = nil
+	executor.context.syncFlag.SyncDemandBlockNum = 0
+	executor.context.syncFlag.SyncDemandBlockHash = nil
+	executor.context.syncFlag.SyncTarget = 0
+	executor.context.syncFlag.LocalId = 0
+	executor.context.syncFlag.SyncPeers = nil
+	executor.context.syncFlag.TempDownstream = 0
+	executor.context.syncFlag.LatestUpstream = 0
+	executor.context.syncFlag.LatestDownstream = 0
+	executor.context.syncCtx = nil
+	executor.context.syncFlag.qosStat = nil
 }
 
 // recordSyncPeers - record peers id and self during the sync.
 func (executor *Executor) recordSyncPeers(peers []uint64, localId uint64) {
-	executor.status.syncFlag.SyncPeers = peers
-	executor.status.syncFlag.LocalId = localId
+	executor.context.syncFlag.SyncPeers = peers
+	executor.context.syncFlag.LocalId = localId
 }
 
 // recordSyncReqArgs - record current sync request's high height and low height.
 func (executor *Executor) recordSyncReqArgs(upstream, downstream uint64) {
-	atomic.StoreUint64(&executor.status.syncFlag.LatestUpstream, upstream)
-	atomic.StoreUint64(&executor.status.syncFlag.LatestDownstream, downstream)
+	atomic.StoreUint64(&executor.context.syncFlag.LatestUpstream, upstream)
+	atomic.StoreUint64(&executor.context.syncFlag.LatestDownstream, downstream)
 }
 
 // getSyncReqArgs - get latest sync request's high height and low height.
 func (executor *Executor) getSyncReqArgs() (uint64, uint64) {
-	return atomic.LoadUint64(&executor.status.syncFlag.LatestUpstream), atomic.LoadUint64(&executor.status.syncFlag.LatestDownstream)
+	return atomic.LoadUint64(&executor.context.syncFlag.LatestUpstream), atomic.LoadUint64(&executor.context.syncFlag.LatestDownstream)
 }
 
 func (executor *Executor) setSyncChainExit() {
-	executor.status.syncFlag.ResendExit <- true
+	executor.context.syncFlag.ResendExit <- true
 }
 
 // setLatestSyncDownstream - save latest sync request down stream.
 // return 0 if hasn't been set.
 func (executor *Executor) setLatestSyncDownstream(num uint64) {
-	executor.status.syncFlag.TempDownstream = num
+	executor.context.syncFlag.TempDownstream = num
 }
 
 // getLatestSyncDownstream - get latest sync request down stream
 func (executor *Executor) getLatestSyncDownstream() uint64 {
-	return executor.status.syncFlag.TempDownstream
+	return executor.context.syncFlag.TempDownstream
 }
 
 // markSyncExecBegin - set execution(sync) flag true
 func (executor *Executor) markSyncExecBegin() {
-	atomic.StoreUint32(&executor.status.syncFlag.InExecution, 1)
+	atomic.StoreUint32(&executor.context.syncFlag.InExecution, 1)
 }
 
 // markSyncExecFinish - set execution(sync) flag false
 func (executor *Executor) markSyncExecFinish() {
-	atomic.StoreUint32(&executor.status.syncFlag.InExecution, 0)
+	atomic.StoreUint32(&executor.context.syncFlag.InExecution, 0)
 }
 
 // isSyncInExecution - query execution(sync) flag
 func (executor *Executor) isSyncInExecution() bool {
-	return atomic.LoadUint32(&executor.status.syncFlag.InExecution) == 1
+	return atomic.LoadUint32(&executor.context.syncFlag.InExecution) == 1
 }
 
 // setValidationExit - notify validation backend process to exit.
 func (executor *Executor) setValidationExit() {
-	executor.status.validationExit <- true
+	executor.context.validationExit <- true
 }
 
 // getValidationExit - get exit flag.
 func (executor *Executor) getValidationExit() chan bool {
-	return executor.status.validationExit
+	return executor.context.validationExit
 }
 
 // setCommitExit - notify commit backend process to exit.
 func (executor *Executor) setCommitExit() {
-	executor.status.commitExit <- true
+	executor.context.commitExit <- true
 }
 
 // getCommitExit - get exit flag.
 func (executor *Executor) getCommitExit() chan bool {
-	return executor.status.commitExit
+	return executor.context.commitExit
 }
 
 // setReplicaSyncExit - notify replica sync backend process to exit.
 func (executor *Executor) setReplicaSyncExit() {
-	executor.status.replicaSyncExit <- true
+	executor.context.replicaSyncExit <- true
 }
 
 // getReplicaSyncExit - get exit flag.
 func (executor *Executor) getReplicaSyncExit() chan bool {
-	return executor.status.replicaSyncExit
+	return executor.context.replicaSyncExit
 }
 
 // getExit - get exit status.
@@ -385,11 +385,11 @@ func (executor *Executor) getExit(identifier int) chan bool {
 func (executor *Executor) getSuspend(identifier int) chan bool {
 	switch identifier {
 	case IDENTIFIER_VALIDATION:
-		return executor.status.validationSuspend
+		return executor.context.validationSuspend
 	case IDENTIFIER_COMMIT:
-		return executor.status.commitSuspend
+		return executor.context.commitSuspend
 	case IDENTIFIER_REPLICA_SYNC:
-		return executor.status.syncReplicaSuspend
+		return executor.context.syncReplicaSuspend
 	}
 	return nil
 }
@@ -397,21 +397,21 @@ func (executor *Executor) getSuspend(identifier int) chan bool {
 func (executor *Executor) setSuspend(identifier int) {
 	switch identifier {
 	case IDENTIFIER_VALIDATION:
-		executor.status.validationSuspend <- true
+		executor.context.validationSuspend <- true
 	case IDENTIFIER_COMMIT:
-		executor.status.commitSuspend <- true
+		executor.context.commitSuspend <- true
 	case IDENTIFIER_REPLICA_SYNC:
-		executor.status.syncReplicaSuspend <- true
+		executor.context.syncReplicaSuspend <- true
 	}
 }
 
 func (executor *Executor) unsetSuspend(identifier int) {
 	switch identifier {
 	case IDENTIFIER_VALIDATION:
-		executor.status.validationSuspend <- false
+		executor.context.validationSuspend <- false
 	case IDENTIFIER_COMMIT:
-		executor.status.commitSuspend <- false
+		executor.context.commitSuspend <- false
 	case IDENTIFIER_REPLICA_SYNC:
-		executor.status.syncReplicaSuspend <- false
+		executor.context.syncReplicaSuspend <- false
 	}
 }

@@ -7,12 +7,14 @@ import (
 	"hyperchain/core/vm"
 )
 
-// run transaction in a sandbox
+// run transaction in a simulator
 // execution result will not been add to database
 func (executor *Executor) RunInSandBox(tx *types.Transaction, snapshotId string) error {
-	var statedb vm.Database
-	var err error
-	var callback func()
+	var (
+		statedb  vm.Database
+		err      error
+		callback func()
+	)
 	if snapshotId == "" {
 		statedb, err = executor.newStateDb()
 	} else {

@@ -50,7 +50,7 @@ func getStorage(c *cli.Context) {
 		db, err := leveldb.OpenFile(database, nil)
 		defer db.Close()
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("radar/cmd:", err.Error())
 		}
 
 		var originKeyOfMaps map[string]map[string][][]string
@@ -58,20 +58,20 @@ func getStorage(c *cli.Context) {
 		if c.String("key") != "" {
 			content, err := ioutil.ReadFile(c.String("key"))
 			if err != nil {
-				fmt.Println(err.Error())
+				fmt.Println("radar/cmd:", err.Error())
 				return
 			}
 			var temp Keys
 			err = json.Unmarshal(content, &temp)
 			if err != nil {
-				fmt.Println(err.Error())
+				fmt.Println("radar/cmd:", err.Error())
 				return
 			}
 			originKeyOfMaps[temp.ContractName] = temp.Key
 		}
 		res , err := api.GetResult(contractFile, db, contractAddress, originKeyOfMaps)
 		if err != nil {
-			fmt.Println(err.Error())
+			fmt.Println("radar/cmd:", err.Error())
 		} else {
 			for k, v := range res {
 				fmt.Println("contract:", k)

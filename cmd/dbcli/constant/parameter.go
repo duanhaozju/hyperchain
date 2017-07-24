@@ -2,7 +2,6 @@ package constant
 
 type Parameter struct {
 	Verbose bool
-	dd int
 }
 
 func (parameter *Parameter) GetVerbose() bool  {
