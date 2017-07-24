@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+#set -e
 # set environment
 f_set_env(){
     case "$OSTYPE" in
@@ -58,12 +58,13 @@ f_check_local_env(){
 
 # kill hyperchain process
 f_kill_process(){
-    echo "kill the bind port process"
-    PID=`ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}'`
-    if [ "$PID" != "" ]
-    then
-        ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}' | xargs kill -9
-    fi
+    #echo "kill the bind port process"
+    #PID=`ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}'`
+    #if [ "$PID" != "" ]
+    #then
+    #    ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}' | xargs kill -9
+    #fi
+	pkill hyperchain
 }
 
 # clear data
@@ -107,9 +108,23 @@ do
     fi
 
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
-    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
-    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
+    cp -rf  ${CONF_PATH}/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
+    cp -rf  ${CONF_PATH}/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/ns1/config/local_peerconfig.json
+    #peerconfig.yaml
+    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.yaml
+    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/ns1/config/peerconfig.yaml
+    #namespace's global
+    cp -rf  ${CONF_PATH}/peerconfigs/global_${j}.yaml ${DUMP_PATH}/node${j}/global.yaml
+    cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.yaml ${DUMP_PATH}/node${j}/addr.yaml
+    cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
+    cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/cert/
     cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
+    #tls configuration
+    cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/certs/
+    cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/certs/
+
+    #certs
+    cp -rf  ${CONF_PATH}/tls ${DUMP_PATH}/node${j}/
 
     # distribute hypercli
     if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
@@ -178,8 +193,8 @@ start_hyperjvm() {
     do
         cp -rf ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${DUMP_PATH}/node$j/
     done
-#    cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
-#
+    cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
+
 #    case "$_SYSTYPE" in
 #          MAC*)
 #                osascript -e 'tell app "Terminal" to do script "cd '${DUMP_PATH}/node1/hyperjvm/bin/' && ./local_start_hyperjvm.sh"'
@@ -227,8 +242,9 @@ PEER_CONFIG_FILE_NAME="configuration/"$PEER_CONFIG_FILE_NAME
 PEER_CONFIG_FILE=${PROJECT_PATH}/${PEER_CONFIG_FILE_NAME}
 
 # node num
-MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | jq ".maxpeernode"`
-echo "Node number is: ${MAXPEERNUM}"
+# MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | jq ".maxpeernode"`
+# echo "Node number is: ${MAXPEERNUM}"
+MAXPEERNUM=4
 
 # delete data? default = true
 DELETEDATA=true
@@ -286,9 +302,13 @@ if  $REBUILD ; then
     f_rebuild
 fi
 
-if $HYPERCLI ; then
-    f_rebuild_hypercli
+if [[ $? != 0 ]]; then
+echo "compile failed, script stopped."
+exit 1
 fi
+#if $HYPERCLI ; then
+#    f_rebuild_hypercli
+#fi
 
 # distribute files
 f_distribute $MAXPEERNUM

@@ -29,7 +29,8 @@ message RequestContext {
     string txid   = 1;
     string namespace = 2;
     string cid = 3;
-    uint64  blockNumber = 4;
+    string invoker = 4;
+    uint64 blockNumber = 5;
 }
 
 service Ledger {

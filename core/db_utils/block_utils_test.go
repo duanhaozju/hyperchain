@@ -1,21 +1,22 @@
 package db_utils
 
 import (
-	"hyperchain/core/test_util"
-	"hyperchain/hyperdb"
 	"testing"
+	"hyperchain/hyperdb"
+	"hyperchain/core/test_util"
+	"hyperchain/common"
 )
 
 // TestPutBlock tests for PutBlock
 func TestPersistBlock(t *testing.T) {
-	logger.Info("test =============> > > TestPersistBlock")
+	t.Log("test =============> > > TestPersistBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	err,_ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
-	block, err := GetBlock(hyperdb.defaut_namespace, test_util.BlockCases.BlockHash)
+	block, err := GetBlock(common.DEFAULT_NAMESPACE, test_util.BlockCases.BlockHash)
 	if block.Number != 1 {
 		t.Error("TestPersistBlock fail")
 	}
@@ -24,16 +25,16 @@ func TestPersistBlock(t *testing.T) {
 
 // TestGetBlock tests for GetBlock
 func TestGetBlockHash(t *testing.T) {
-	logger.Info("test =============> > > TestGetBlockHash")
+	t.Log("test =============> > > TestGetBlockHash")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
-	blockHash, err := GetBlockHash(hyperdb.defaut_namespace, 1)
+	blockHash, err := GetBlockHash(common.DEFAULT_NAMESPACE, 1)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	if string(blockHash) != string(test_util.BlockCases.BlockHash) {
 		t.Errorf("both blockhash is not equal, %s not equal %s, TestGetBlock fail", string(blockHash), string(test_util.BlockCases.BlockHash))
@@ -43,19 +44,19 @@ func TestGetBlockHash(t *testing.T) {
 
 // TestDeleteBlock tests for DeleteBlock
 func TestDeleteBlock(t *testing.T) {
-	logger.Info("test =============> > > TestDeleteBlock")
+	t.Log("test =============> > > TestDeleteBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
-	block, err := GetBlock(hyperdb.defaut_namespace, test_util.BlockCases.BlockHash)
+	block, err := GetBlock(common.DEFAULT_NAMESPACE, test_util.BlockCases.BlockHash)
 	if block.Number != 1 {
 		t.Error("GetBlock fail")
 	}
-	err = DeleteBlock(hyperdb.defaut_namespace, db.NewBatch(), test_util.BlockCases.BlockHash, true, true)
-	block, err = GetBlock(hyperdb.defaut_namespace, test_util.BlockCases.BlockHash)
+	err = DeleteBlock(common.DEFAULT_NAMESPACE, db.NewBatch(), test_util.BlockCases.BlockHash, true, true)
+	block, err = GetBlock(common.DEFAULT_NAMESPACE, test_util.BlockCases.BlockHash)
 	if err.Error() != "leveldb: not found" {
 		t.Errorf("block delete fail, TestDeleteBlock fail")
 	}
@@ -63,14 +64,14 @@ func TestDeleteBlock(t *testing.T) {
 }
 
 func TestGetMarshalBlock(t *testing.T) {
-	logger.Info("test =============> > > TestGetMarshalBlock")
+	t.Log("test =============> > > TestGetMarshalBlock")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
 	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
-	block, err := GetBlock(hyperdb.defaut_namespace, test_util.BlockCases.BlockHash)
+	block, err := GetBlock(common.DEFAULT_NAMESPACE, test_util.BlockCases.BlockHash)
 	if block.Number != 1 {
 		t.Error("GetBlock fail")
 	}

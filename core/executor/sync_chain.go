@@ -18,6 +18,7 @@ import (
 	"path"
 	"path/filepath"
 	"time"
+	"hyperchain/tree/bucket"
 )
 
 /*
@@ -346,7 +347,7 @@ func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *
 
 func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
 	var filterLogs []*types.Log
-	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
+	err, result := executor.applyTransactions(block.Transactions, nil, seqNo, seqNo)
 	if err != nil {
 		return err, nil
 	}
@@ -366,6 +367,9 @@ func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *
 // ClearStateUnCommitted - remove all cached stuff
 func (executor *Executor) clearStatedb() {
 	executor.statedb.Purge()
+	tree := executor.statedb.GetTree()
+	bucketTree := tree.(*bucket.BucketTree)
+	bucketTree.ClearAllCache()
 }
 
 // assertApplyResult - check apply result whether equal with other's.
@@ -435,7 +439,7 @@ func (executor *Executor) processSyncBlocks() {
 					return
 				} else {
 					// commit modified changes in this block and update chain.
-					if err := executor.accpet(blk.Number, result); err != nil {
+					if err := executor.accpet(blk.Number, blk, result); err != nil {
 						executor.reject()
 						return
 					}
@@ -503,7 +507,7 @@ func (executor *Executor) sendStateUpdatedEvent() {
 }
 
 // accpet - accept block synchronization result.
-func (executor *Executor) accpet(seqNo uint64, result *ValidationResultRecord) error {
+func (executor *Executor) accpet(seqNo uint64, block *types.Block, result *ValidationResultRecord) error {
 	batch := executor.statedb.FetchBatch(seqNo)
 	if err := edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false); err != nil {
 		executor.logger.Errorf("update chain to (#%d) failed, err: %s", err.Error())
@@ -514,6 +518,8 @@ func (executor *Executor) accpet(seqNo uint64, result *ValidationResultRecord) e
 		return err
 	}
 	executor.statedb.MarkProcessFinish(seqNo)
+	executor.TransitVerifiedBlock(block)
+	edb.WriteTxBloomFilter(executor.namespace, block.Transactions)
 	executor.filterFeedback(result.Block, result.Logs)
 	return nil
 }

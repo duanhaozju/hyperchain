@@ -1,17 +1,19 @@
 package db_utils
 
 import (
-	"gopkg.in/check.v1"
-	"hyperchain/core/test_util"
-	"hyperchain/core/types"
 	"hyperchain/hyperdb"
-	"math/rand"
-	"reflect"
-	"strconv"
 	"testing"
+	"hyperchain/core/test_util"
+	"gopkg.in/check.v1"
+	"hyperchain/core/types"
+	"reflect"
+	"math/rand"
 	"testing/quick"
 	"time"
+	"strconv"
+	"hyperchain/common"
 )
+
 
 func Test(t *testing.T) {
 	check.TestingT(t)
@@ -80,137 +82,91 @@ func (s *blockSuite) TestBlockSuite12(c *check.C) {
 }
 
 func GetVersionOfBlock() string {
-	logger.Info("test =============> > > TestGetVersionOfBlock")
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	block, _ := GetBlockByNumber(common.DEFAULT_NAMESPACE, 1)
 	return string(block.Version)
 }
 
 func GetParentHashOfBlock() string {
-	logger.Info("test =============> > > TestGetParentHashOfBlock")
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	block, _ := GetBlockByNumber(common.DEFAULT_NAMESPACE, 1)
 	return string(block.ParentHash)
 }
 
 func GetBlockHashOfBlock() string {
-	logger.Info("test =============> > > TestGetBlockHashOfBlock")
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	block, _ := GetBlockByNumber(common.DEFAULT_NAMESPACE, 1)
+	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	return string(block.BlockHash)
 }
 
 func GetTransactionsOfBlock() []*types.Transaction {
-	logger.Info("test =============> > > TestGetTransactionsOfBlock")
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	block, _ := GetBlockByNumber(common.DEFAULT_NAMESPACE, 1)
 	return block.Transactions
 }
 
 func GetTimestampOfBlock() int64 {
-	logger.Info("test =============> > > TestGetTimestampOfBlock")
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	block, _ := GetBlockByNumber(common.DEFAULT_NAMESPACE, 1)
 	return block.Timestamp
 
 }
 
 func GetMerkleRootOfBlock() string {
-	logger.Info("test =============> > > TestGetMerkleRootOfBlock")
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	block, _ := GetBlockByNumber(common.DEFAULT_NAMESPACE, 1)
 	return string(block.MerkleRoot)
 }
 
 func GetTxRootOfBlock() string {
-	logger.Info("test =============> > > TestGetTxRootOfBlock")
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	block, _ := GetBlockByNumber(common.DEFAULT_NAMESPACE, 1)
 	return string(block.TxRoot)
 }
 
 func GetReceiptRootOfBlock() string {
-	logger.Info("test =============> > > TestGetReceiptRootOfBlock")
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	block, _ := GetBlockByNumber(common.DEFAULT_NAMESPACE, 1)
 	return string(block.ReceiptRoot)
 }
 
 func GetNumberOfBlock() uint64 {
-	logger.Info("test =============> > > TestGetNumberOfBlock")
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	block, _ := GetBlockByNumber(common.DEFAULT_NAMESPACE, 1)
 	return block.Number
 }
 
 func GetWriteTimeOfBlock() int64 {
-	logger.Info("test =============> > > TestGetWriteTimeOfBlock")
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	block, _ := GetBlockByNumber(common.DEFAULT_NAMESPACE, 1)
 	return block.WriteTime
 }
 
 func GetCommitTimeOfBlock() int64 {
-	logger.Info("test =============> > > TestGetCommitTimeOfBlock")
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	block, _ := GetBlockByNumber(common.DEFAULT_NAMESPACE, 1)
 	return block.CommitTime
 }
 
 func GetEvmTimeOfBlock() int64 {
-	logger.Info("test =============> > > TestGetEvmTimeOfBlock")
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	block, err := GetBlockByNumber(hyperdb.defaut_namespace, 1)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	block, _ := GetBlockByNumber(common.DEFAULT_NAMESPACE, 1)
 	return block.EvmTime
 }
+
+
 
 // using quick for unit test
 func (blockSuite) Generate(r *rand.Rand, size int) reflect.Value {
@@ -229,18 +185,18 @@ func (blockSuite) Generate(r *rand.Rand, size int) reflect.Value {
 		CommitTime:   time.Now().Local().UnixNano(),
 		EvmTime:      time.Now().Local().UnixNano(),
 	}
-	block := blockSuite{block: blockCases}
+	block := blockSuite{block:blockCases}
 	return reflect.ValueOf(block)
 }
 
 func runBlockTest(block blockSuite) bool {
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
-	err, _ := PersistBlock(db.NewBatch(), &block.block, true, true)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
+	err,_ := PersistBlock(db.NewBatch(), &block.block, true, true)
 	if err != nil {
 		return false
 	}
-	actual, err := GetBlock(hyperdb.defaut_namespace, block.block.BlockHash)
+	actual, err := GetBlock(common.DEFAULT_NAMESPACE, block.block.BlockHash)
 	if !reflect.DeepEqual(actual, &block.block) {
 		return false
 	}

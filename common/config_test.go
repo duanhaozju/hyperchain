@@ -10,6 +10,15 @@ import (
 	"time"
 )
 
+func TestNewEmptyConfig(t *testing.T) {
+	conf := NewRawConfig()
+	conf.Set("k1", "v1")
+	v := conf.GetString("k1")
+	if v != "v1" {
+		t.Error("config set or put error")
+	}
+}
+
 func TestGetString(t *testing.T) {
 	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
 

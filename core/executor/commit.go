@@ -123,6 +123,12 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	executor.logger.Noticef("Block hash %s", hex.EncodeToString(block.BlockHash))
 	// told consenus to remove Cached Transactions which used to check transaction duplication
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
+	executor.TransitVerifiedBlock(block)
+
+	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
+		executor.logger.Warning("write tx to bloom filter failed", err.Error())
+	}
+
 	// push feed data to event system.
 	// external subscribers can access these internal messages through a messaging subscription system
 	go executor.filterFeedback(block, filterLogs)

@@ -3,7 +3,7 @@
 package common
 
 import (
-	"hyperchain/p2p/message"
+	//"hyperchain/p2p/message"
 )
 
 type Config interface {
@@ -22,8 +22,8 @@ type Config interface {
 	GetRPCPort(nodeID int) int
 	GetIP(nodeID int) string
 	MaxNum() int
-	AddNodesAndPersist(addrs map[string]message.PeerAddr)
-	DelNodesAndPersist(addrs map[string]message.PeerAddr)
+	//AddNodesAndPersist(addrs map[string]message.PeerAddr)
+	//DelNodesAndPersist(addrs map[string]message.PeerAddr)
 	Peers() []PeerConfigNodes
 }
 

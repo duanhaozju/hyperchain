@@ -9,6 +9,19 @@ import (
 	"os"
 )
 
+func TestRawLogger(t *testing.T)  {
+	conf := NewRawConfig()
+	InitHyperLogger("test", conf)
+	logger := GetLogger("test", "a")
+	logger.Info("aaa")
+	logger.Debug("sss")
+
+	InitRawHyperLogger("test2")
+	logger = GetLogger("test2", "abb")
+	logger.Info("aaa")
+	logger.Info("sss")
+}
+
 func TestGetLogLevel(t *testing.T) {
 	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
 	conf.Set(LOG_DUMP_FILE, false)

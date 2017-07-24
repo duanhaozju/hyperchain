@@ -19,6 +19,7 @@ const (
 	ArchiveMetaPath         = "global.executor.archive.archiveMeta"
 	ArchiveForceConsistency = "global.executor.archive.force_consistency"
 	ArchiveThreshold        = "global.executor.archive.threshold"
+	exitFlag                = "global.executor.nvp.exitflag"
 )
 
 // GetSyncReplicaInterval - sync replica information interval.
@@ -61,4 +62,9 @@ func (executor *Executor) IsSyncWsEable() bool {
 
 func (executor *Executor) isJvmEnable() bool {
 	return executor.conf.GetBool(common.C_JVM_START)
+}
+
+
+func (executor *Executor) GetExitFlag() bool {
+	return executor.conf.GetBool(exitFlag)
 }

@@ -361,6 +361,14 @@ func getChain(namespace string) (*types.Chain, error) {
 	if err != nil {
 		return nil, err
 	}
+	return getChainFn(db)
+}
+
+func getChainFn(db db.Database) (*types.Chain, error) {
+	if db == nil {
+		// short circuit if db is empty
+		return nil, errors.New("empty db")
+	}
 	var chain types.Chain
 	data, err := db.Get(ChainKey)
 	if err != nil {

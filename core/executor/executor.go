@@ -35,6 +35,7 @@ type Executor struct {
 	jvmCli      jvm.ContractExecutor // jvm client
 	snapshotReg *SnapshotRegistry    // snapshot registry
 	archiveMgr  *ArchiveManager      // archive manager
+	nvp         NVP
 }
 
 // NewExecutor creates a new Hyperchain object (including the
@@ -61,6 +62,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 	executor.logger = common.GetLogger(namespace, "executor")
 	executor.snapshotReg = NewSnapshotRegistry(namespace, executor.logger, executor)
 	executor.archiveMgr = NewArchiveManager(namespace, executor, executor.snapshotReg, executor.logger)
+	executor.nvp = NewNVPImpl(executor)
 	// TODO doesn't know why to add this statement here.
 	// TODO ask @Rongjialei to fix this.
 	if err := executor.initDb(); err != nil {
@@ -205,3 +207,9 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 func (executor *Executor) FetchStateDb() vm.Database {
 	return executor.statedb
 }
+
+// GetNVP get nvp handler.
+func (executor *Executor) GetNVP() NVP {
+	return executor.nvp
+}
+

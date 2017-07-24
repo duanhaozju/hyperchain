@@ -116,7 +116,7 @@ func (executor *Executor) process(validationEvent event.ValidationEvent, done fu
 	)
 
 	invalidtxs, validtxs = executor.checkSign(validationEvent.Transactions)
-	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo)
+	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo, executor.getTempBlockNumber())
 	if err != nil {
 		// short circuit if error occur during the transaction execution
 		executor.logger.Errorf("[Namespace = %s] process transaction batch #%d failed.", executor.namespace, validationEvent.SeqNo)
@@ -149,7 +149,7 @@ func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidT
 		go func(i int) {
 			tx := txs[i]
 			if !tx.ValidateSign(executor.encryption, executor.commonHash) {
-				executor.logger.Warningf("[Namespace = %s] found invalid signature, send from : %d", executor.namespace, tx.Id)
+				executor.logger.Warningf("[Namespace = %s] found invalid signature, send from : %v", executor.namespace, tx.Id)
 				mu.Lock()
 				invalidtxs = append(invalidtxs, &types.InvalidTransactionRecord{
 					Tx:      tx,
@@ -177,17 +177,17 @@ func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidT
 }
 
 // applyTransactions - execute transaction one by one.
-func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *ValidationResultRecord) {
+func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo, temp uint64) (error, *ValidationResultRecord) {
 	var (
 		validtxs []*types.Transaction
 		receipts []*types.Receipt
 	)
 
 	executor.initCalculator()
-	executor.statedb.MarkProcessStart(executor.getTempBlockNumber())
+	executor.statedb.MarkProcessStart(temp)
 	// execute transaction one by one
 	for i, tx := range txs {
-		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, executor.getTempBlockNumber())
+		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, temp)
 		if err != nil {
 			errType := executor.classifyInvalid(err)
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
@@ -209,7 +209,7 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 	}
 	executor.resetStateDb()
 	executor.logger.Debugf("[Namespace = %s] validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
-		executor.namespace, executor.getTempBlockNumber(), seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
+		executor.namespace, temp, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &ValidationResultRecord{
 		TxRoot:      txRoot,
 		ReceiptRoot: receiptRoot,

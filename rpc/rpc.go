@@ -36,7 +36,7 @@ func GetRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp cha
 }
 
 func newRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) *RPCServerImpl{
-	rsi := &RPCServerImpl {}
+	rsi := &RPCServerImpl{}
 	rsi.httpServer = GetHttpServer(nr, stopHp, restartHp)
 	rsi.wsServer = GetWSServer(nr, stopHp, restartHp)
 	return rsi

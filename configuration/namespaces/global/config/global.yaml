@@ -20,8 +20,9 @@ global:
     dbConfig: "namespaces/global/config/db.yaml"
 
     configs:
-        caconfig: "namespaces/global/config/caconfig.toml"
+        caconfig: "namespaces/global/config/caconfig.yaml"
         peers: "namespaces/global/config/local_peerconfig.json"
+        peers13: "namespaces/global/config/peerconfig.yaml"
         genesis: "namespaces/global/config/genesis.json"
         static_peers: "namespaces/global/config/static_peers.json"
         ratelimit:
@@ -35,9 +36,6 @@ global:
             "N": "14315727801779002117"
             Nsquare: "204940062494628260128356353732290481689"
             G: "90976693534933209671098397317966944738726332459523400324197777885595356310417"
-    security:
-        enabletls: false
-        enablesymmetrical: false
     connection:
         retryTimeLimit: 6
         retryTimeout: 10s
@@ -71,8 +69,7 @@ global:
             core: "NOTICE"
             hyperdb: "NOTICE"
             common/hyper_logger: "NOTICE"
-            hyperstate: "DEBUG"
-            api: "DEBUG"
+            hyperstate: "NOTICE"
 
     ######################################################
     # configs related to the executor                    #
@@ -82,6 +79,8 @@ global:
             sync_batch_size: 10
             sync_resend_interval: 10s
             sync_ws_enable: false
+        nvp:
+            exitflag: false
         sync_replica:
             interval : 500s
             enable   : false
@@ -114,4 +113,13 @@ global:
     consensus:
            algo: "PBFT"
            algo_config_path: "namespaces/global/config/pbft.yaml"
+    hypervm:
+          jvm: false
+
+    miscellaneous:
+        # bloom filter used in tx duplication checking
+        bloomfilter:
+            interval: 24
+            rebuild_time: 3
+            bloombit: 100000000
 

@@ -128,7 +128,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_UNICAST_BLOCK:
 		// Unicast block data to the fetcher.
 		executor.logger.Debug("inform p2p unicast block")
-		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64}, message...) {
+		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64, reflect.String}, message...) {
 			return er.InvalidParamsErr
 		}
 		block, err := edb.GetBlockByNumber(executor.namespace, message[0].(uint64))
@@ -145,6 +145,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			Payload: payload,
 			Type:    NOTIFY_UNICAST_BLOCK,
 			Peers:   []uint64{message[1].(uint64)},
+			PeersHash: []string{message[2].(string)},
 		})
 		return nil
 	case NOTIFY_UNICAST_INVALID:
@@ -162,10 +163,15 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Error("marshal invalid record error")
 			return err
 		}
+		hash, err := r.Tx.GetNVPHash()
+		if err != nil {
+			executor.logger.Errorf("get nvp hash failde. Err Mag:%v.", err.Error())
+		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_UNICAST_INVALID,
 			Peers:   []uint64{r.Tx.Id},
+			PeersHash: []string{hash},
 		})
 		return nil
 	case NOTIFY_BROADCAST_SINGLE:
@@ -315,6 +321,36 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_TRANSIT_BLOCK:
 		// for nvp extension
 		executor.logger.Debug("inform p2p to transit commited block")
+		if len(message) != 1 {
+			return er.InvalidParamsErr
+		}
+		block, ok := message[0].([]byte)
+		if !ok {
+			return er.InvalidParamsErr
+		}
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
+			Payload: block,
+			Type:    NOTIFY_TRANSIT_BLOCK,
+		})
+		return nil
+	case NOTIFY_NVP_SYNC:
+		executor.logger.Debug("inform p2p to sync NVP")
+		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64}, message...) {
+			return er.InvalidParamsErr
+		}
+		required := ChainSyncRequest{
+			RequiredNumber: message[0].(uint64),
+			CurrentNumber:  message[1].(uint64),
+		}
+		payload, err := proto.Marshal(&required)
+		if err != nil {
+			executor.logger.Errorf("sync chain request marshal message failed of NVP")
+			return err
+		}
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
+			Payload: payload,
+			Type:    NOTIFY_NVP_SYNC,
+		})
 		return nil
 	default:
 		return er.NoDefinedCaseErr

@@ -4,526 +4,304 @@
 package p2p
 
 import (
-	"errors"
-	"hyperchain/admittance"
+	"encoding/json"
+	"hyperchain/manager/event"
+	"hyperchain/p2p/hts"
+	"hyperchain/p2p/info"
 	pb "hyperchain/p2p/message"
-	"hyperchain/p2p/transport"
-	"strconv"
-	"sync"
-	"time"
-
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
-	//"fmt"
-	"fmt"
-	"github.com/golang/protobuf/proto"
+	"hyperchain/p2p/network"
+	"hyperchain/p2p/payloads"
+	"github.com/pkg/errors"
+	"hyperchain/crypto/csprng"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/manager/event"
-)
-
-var (
-	errPeerClosed = errors.New("this peer was cloesd.")
 )
 
 // init the package-level logger system,
 // after this declare and init function,
 // you can use the `log` whole the package scope
-
-type KAV struct {
-	StopKAV      chan bool
-	KAVFailCount int
-	InKAV        bool
-}
-
-type Retry struct {
-	StopRetry  chan bool
-	RetryCount int
-	RetryLimit int
-}
-
 type Peer struct {
-	PeerAddr   *pb.PeerAddr
-	Connection *grpc.ClientConn
-	LocalAddr  *pb.PeerAddr
-	Client     pb.ChatClient
-	TM         *transport.TransportManager
-	Alive      bool
-	chatMux    sync.Mutex
-	IsPrimary  bool
-	//PeerPool   PeersPool
-	Certificate string
-	CM          *admittance.CAManager
-	eventMux    *event.TypeMux
-	eventSub    event.Subscription
-
-	//stop chan
-	StopKAV   chan bool
-	StopRetry chan bool
-	//count
-	RetryCount int
-	KAVCount   int
-
-	//retry
-	retryTimeLimit     int
-	recoveryTimeLimit  int
-	keepAliveTimeLimit int
-
-	//flags
-	InKAV   bool
-	InRetry bool
-	logger  *logging.Logger
+	hostname  string
+	info      *info.Info
+	local     *info.Info
+	namespace string
+	net       *network.HyperNet
+	p2pHub    event.TypeMux
+	chts      *hts.ClientHTS
+	logger *logging.Logger
 }
 
-// NewPeer to create a Peer which with a connection
-// the peer will auto store into the peer pool.
-// when creating a peer, the client instance will create a message whose type is HELLO
-// if get a response, save the peer into singleton peer pool instance
-// NewPeer 用于返回一个新的NewPeer 用于与远端的peer建立连接，这个peer将会存储在peerPool中
-// 如果取得相应的连接返回值，将会将peer存储在单例的PeersPool中进行存储
-func NewPeer(peerAddr *pb.PeerAddr, localAddr *pb.PeerAddr, TM *transport.TransportManager, cm *admittance.CAManager, namespace string) *Peer {
-	logger := common.GetLogger(namespace, "peer")
-	return &Peer{
-		TM:                TM,
-		CM:                cm,
-		LocalAddr:         localAddr,
-		eventMux:          new(event.TypeMux),
-		PeerAddr:          peerAddr,
-		StopKAV:           make(chan bool, 1),
-		StopRetry:         make(chan bool, 1),
-		RetryCount:        0,
-		IsPrimary:         false,
-		retryTimeLimit:    cm.RetryTimeLimit,
-		recoveryTimeLimit: cm.RecoveryTimeLimit,
-		logger:            logger,
+//NewPeer get a new peer which chat/greeting/whisper functions
+func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, net *network.HyperNet, chts *hts.ClientHTS) (*Peer, error) {
+	peer := &Peer{
+		info:      info.NewInfo(id, hostname, namespace),
+		namespace: namespace,
+		hostname:  hostname,
+		net:       net,
+		local:     localInfo,
+		chts:      chts,
+		logger: common.GetLogger(namespace,"p2p"),
 	}
-}
-
-//connect connect method must call after newPeer
-func (peer *Peer) Connect(payload []byte, msgType pb.Message_MsgType, isSign bool, callback func(*pb.Message) (interface{}, error)) (interface{}, error) {
-	peer.eventSub = peer.eventMux.Subscribe(KeepAliveEvent{}, RetryEvent{}, SelfNarrateEvent{}, RecoveryEvent{}, CloseEvent{}, PendingEvent{})
-	go peer.listening()
-	opts := peer.CM.GetGrpcClientOpts()
-	opts = append(opts, grpc.FailOnNonTempDialError(true))
-	conn, err := grpc.Dial(peer.PeerAddr.IP+":"+strconv.Itoa(peer.PeerAddr.Port), opts...)
-	if err != nil {
-		conn.Close()
-		peer.logger.Error("err:", errors.New("Cannot establish a connection!"))
+	if err := peer.clientHello(peer.local.IsOrg(),peer.local.IsRec()); err != nil {
 		return nil, err
 	}
-	peer.Connection = conn
-	peer.Client = pb.NewChatClient(conn)
+	return peer, nil
+}
 
-	msg := peer.newMsg(payload, msgType)
-	retMessage, err := peer.Client.Chat(context.Background(), msg)
+//implements the WeightItem interface
+func(peer *Peer)Weight()int{
+	return peer.info.Id
+}
+func(peer *Peer)Value()interface{}{
+	return peer
+}
+
+//Chat send a stream message to remote peer
+func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
+	peer.logger.Debug("Chat msg to ",peer.info.Hostname)
+	//here will wrapper the message
+	in.From = &pb.Endpoint{
+		Field:    []byte(peer.namespace),
+		Hostname: []byte(peer.local.Hostname),
+		UUID:     []byte(peer.local.GetHash()),
+		Version:  P2P_MODULE_DEV_VERSION,
+	}
+	//encrypt
+	encPayload,err := peer.chts.Encrypt(in.Payload)
+	if err != nil{
+		return nil,err
+	}
+	in.Payload = encPayload
+
+	//TODO here should change to Chat method
+	//TODO change as bidi stream transfer method
+	resp, err := peer.net.Whisper(peer.hostname, in)
 	if err != nil {
-		peer.logger.Error(peer.LocalAddr.ID, ">>", peer.PeerAddr.ID, ": cannot establish a connection", err)
 		return nil, err
 	}
-	data, err := callback(retMessage)
+	return resp, nil
+}
+
+//Whisper send a whisper message to remote peer
+func (peer *Peer) Whisper(in *pb.Message) (*pb.Message, error) {
+	in.From = &pb.Endpoint{
+		Field:    []byte(peer.local.GetNameSpace()),
+		Hostname: []byte(peer.local.Hostname),
+		UUID:     []byte(peer.local.GetHash()),
+		Version:  P2P_MODULE_DEV_VERSION,
+	}
+	//encrypt
+	encPayload,err := peer.chts.Encrypt(in.Payload)
+	if err != nil{
+		return nil,err
+	}
+	in.Payload = encPayload
+	response, err := peer.net.Whisper(peer.hostname, in)
 	if err != nil {
-		peer.logger.Error(peer.LocalAddr.ID, ">>", peer.PeerAddr.ID, ": cannot establish a connection", err)
 		return nil, err
 	}
-	peer.Alive = true
-	//TODO self narrate configurable
-	go peer.eventMux.Post(SelfNarrateEvent{
-		content: fmt.Sprintf("I'am node %d , peer to -> %d (create time %s)", peer.LocalAddr.ID, peer.PeerAddr.ID, time.Now().Format("20060102 15:04:05")),
-	})
-	go peer.eventMux.Post(KeepAliveEvent{
-		Interval: peer.CM.KeepAliveInterval,
-	})
-	return data, nil
+	return response, nil
 }
 
-//listening the event change
-func (peer *Peer) listening() {
-	for ev := range peer.eventSub.Chan() {
-		switch ev.Data.(type) {
-		case KeepAliveEvent:
-			kavev := ev.Data.(KeepAliveEvent)
-			//TODO change the timeout times as configurable
-			go peer.keepAlive(kavev.Interval, peer.CM.KeepAliveTimeLimit)
-		case RetryEvent:
-			retryev := ev.Data.(RetryEvent)
-			go peer.retry(retryev.RetryTimeout, retryev.RetryTimes)
-		case CloseEvent:
-			go peer.Close()
-		case SelfNarrateEvent:
-			{
-				con := ev.Data.(SelfNarrateEvent)
-				go peer.selfNarrate(con.content)
-			}
-		case RecoveryEvent:
-			{
-				recov := ev.Data.(RecoveryEvent)
-				go peer.recovery(recov.addr, recov.recoveryTimeout, recov.recoveryTimes)
-			}
-		}
-
+//Greeting send a greeting message to remote peer
+func (peer *Peer) Greeting(in *pb.Message) (*pb.Message, error) {
+	in.From = &pb.Endpoint{
+		Field:    []byte(peer.local.GetNameSpace()),
+		Hostname: []byte(peer.local.Hostname),
+		UUID:     []byte(peer.local.GetHash()),
+		Version:  P2P_MODULE_DEV_VERSION,
 	}
-}
-
-// keep alive call back function
-func (peer *Peer) keepAlive(interval time.Duration, timeoutTimes int) {
-	peer.InKAV = true
-	peer.InRetry = false
-	for {
-		select {
-		case <-time.Tick(interval):
-			{
-				peer.logger.Debugf("[KAV] %d >> %d (failed time: %d)", peer.LocalAddr.ID, peer.PeerAddr.ID, peer.KAVCount)
-				kavMsg := peer.newMsg([]byte(fmt.Sprintf("[KAV] %d >> %d", peer.LocalAddr.ID, peer.PeerAddr.ID)), pb.Message_KEEPALIVE)
-				_, err := peer.Client.Chat(context.Background(), kavMsg, grpc.FailFast(true))
-				if err == nil {
-					peer.Alive = true
-					continue
-				}
-				// Thread safe
-				peer.KAVCount++
-				if peer.KAVCount > timeoutTimes {
-					peer.logger.Warning("Reach keep alive faild time limit and need to retry connect")
-					peer.Alive = false
-					peer.KAVCount = 0
-					go peer.eventMux.Post(RetryEvent{
-						RetryTimeout: peer.CM.RetryTimeout,
-						RetryTimes:   peer.KAVCount,
-					})
-					return
-				}
-			}
-		case <-peer.StopKAV:
-			{
-				peer.Alive = false
-				peer.InKAV = false
-				return
-			}
-		}
-	}
-}
-
-// retry connection call back function
-func (peer *Peer) retry(timeout time.Duration, retryTimes int) error {
-	peer.InRetry = true
-	peer.InKAV = false
-	if peer.Alive {
-		peer.StopKAV <- true
-		go peer.eventMux.Post(KeepAliveEvent{
-			Interval: peer.CM.KeepAliveInterval,
-		})
-		return nil
-	}
-	//ignore this error, because this error means the connection already closed.
-	_ = peer.Connection.Close()
-	peer.logger.Infof("now retry connect to peer Id: %d, IP: %s, port: %d (retry times: %d)", peer.PeerAddr.ID, peer.PeerAddr.IP, peer.PeerAddr.Port, peer.RetryCount)
-	//todo check this connection options
-	if conn, bol := peer.slightTest(peer.LocalAddr.IP, peer.LocalAddr.Port, peer.newMsg([]byte("SLIGHTTEST"), pb.Message_KEEPALIVE)); bol {
-		//failed, this is failed condition branch
-		peer.logger.Errorf("retry connect to peer failed,  will retry again after %s ( retry times:%d )", timeout.String(), retryTimes)
-		if retryTimes <= peer.retryTimeLimit {
-			peer.logger.Warning("retry not reach the limit, and go to select...")
-			// this channel select will select two channel
-			select {
-			case <-time.After(timeout):
-				{
-					peer.logger.Warning("go to post retry event")
-					go peer.eventMux.Post(RetryEvent{
-						RetryTimeout: timeout,
-						RetryTimes:   retryTimes + 1,
-					})
-					return nil
-				}
-			// this channel will write by node, not peer part
-			// when a new peer reconnect event happen
-			case <-peer.StopRetry:
-				{
-					return nil
-				}
-			}
-
-		} else {
-			peer.logger.Errorf("retry connect to peer failed after %d times,close this peer", retryTimes)
-			// change to close state
-			go peer.eventMux.Post(CloseEvent{})
-			return errors.New(fmt.Sprintf("retry connect to peer failed after %d times,close this peer", retryTimes))
-
-		}
-	} else {
-		peer.logger.Infof("retry connect to peer %d success", peer.PeerAddr.ID)
-		//success
-		peer.Connection = conn
-		peer.Client = pb.NewChatClient(conn)
-		peer.Alive = true
-		go peer.eventMux.Post(KeepAliveEvent{
-			Interval: peer.CM.KeepAliveInterval,
-		})
-		return nil
-	}
-
-}
-
-//reverse connection call back function
-func (peer *Peer) recovery(addr *pb.PeerAddr, timeout time.Duration, recoveryTimes int) error {
-	peer.logger.Criticalf("gointo recovery process (id: %d,ip:%s,port:%d times:%d)", addr.ID, addr.IP, addr.Port, recoveryTimes)
-	if conn, bol := peer.slightTest(addr.IP, addr.Port, peer.newMsg([]byte("SLIGHTTEST#RECOVERY"), pb.Message_KEEPALIVE)); bol {
-		peer.logger.Infof("recovery the peer (id: %d,ip:%s,port:%d) success!", addr.ID, addr.IP, addr.Port)
-		// could connect to given address
-		client := pb.NewChatClient(conn)
-		//ignore the error
-		_ = peer.Connection.Close()
-		//if in retry process
-		if peer.InRetry {
-			peer.StopRetry <- true
-		}
-
-		// if in keep alive process
-		if peer.InKAV {
-			peer.StopKAV <- true
-		}
-		peer.Connection = conn
-		peer.Client = client
-		peer.Alive = true
-		peer.StopKAV = make(chan bool, 1)
-		peer.StopRetry = make(chan bool, 1)
-		peer.KAVCount = 0
-		peer.RetryCount = 0
-		go peer.eventMux.Post(KeepAliveEvent{
-			Interval: peer.CM.KeepAliveInterval,
-		})
-		return nil
-
-	} else {
-		peer.logger.Warningf("cannot recovery the connection to peer: %d (ip: %s port:%d ),and will retry after %s", addr.ID, addr.IP, addr.Port, timeout.String())
-		//do some thing
-		if recoveryTimes <= peer.recoveryTimeLimit {
-			select {
-			case <-time.After(timeout):
-				{
-					peer.logger.Warningf("recovery again to peer: %d (ip: %s port:%d ) retry times:%d", addr.ID, addr.IP, addr.Port, recoveryTimes)
-					go peer.eventMux.Post(RecoveryEvent{
-						addr:            addr,
-						recoveryTimeout: timeout,
-						recoveryTimes:   recoveryTimes + 1,
-					})
-					return nil
-				}
-			// this channel will write by node, not peer part
-			// when a new peer reconnect event happen
-			case <-peer.StopRetry:
-				{
-					return nil
-				}
-			}
-		} else {
-			peer.logger.Warningf("cannot recovery the connection to peer: %d (ip: %s port:%d )<reach the limit(%d)>,and cancel the recovery process", addr.ID, addr.IP, addr.Port, peer.recoveryTimeLimit)
-			return errors.New(fmt.Sprintf("cannot recovery the connection to peer: %d (ip: %s port:%d )<reach the limit(%d)>,and cancel the recovery process", addr.ID, addr.IP, addr.Port, peer.recoveryTimeLimit))
-
-		}
-	}
-
-}
-
-// Close the peer connection
-// this function should ensure no thread use this thread
-// this is not thread safety
-func (peer *Peer) Close() error {
-	peer.logger.Warning("now close the peer ID: %d, IP: %s Port: %d", peer.PeerAddr.ID, peer.PeerAddr.IP, peer.PeerAddr.Port)
-	peer.Alive = false
-	peer.InKAV = false
-	peer.InRetry = false
-	peer.KAVCount = 0
-	peer.RetryCount = 0
-	peer.StopKAV <- false
-	peer.StopRetry <- false
-
-	close(peer.StopKAV)
-	close(peer.StopRetry)
-	return peer.Connection.Close()
-}
-
-// self Narrate call back function
-func (peer *Peer) selfNarrate(content string) {
-	for range time.Tick(5 * time.Second) {
-		peer.logger.Debug("[SN]", content)
-	}
-}
-
-//newMsg create a new peer msg
-func (peer *Peer) newMsg(payload []byte, msgType pb.Message_MsgType) *pb.Message {
-	newMsg := &pb.Message{
-		MessageType:  msgType,
-		Payload:      payload,
-		MsgTimeStamp: time.Now().UnixNano(),
-		From:         peer.LocalAddr.ToPeerAddress(),
-	}
-	signmsg, err := peer.TM.SignMsg(newMsg)
+	response, err := peer.net.Greeting(peer.hostname, in)
 	if err != nil {
-		peer.logger.Warningf("sign msg failed err %v", err)
+		return nil, err
 	}
-	return &signmsg
+	return response, nil
 }
 
-//setPubkey set share public key
-func (peer *Peer) setKey(msg *pb.Message) error {
-	//verify the rcert and set the status
-	if err := peer.TM.NegoShareSecret(msg.Payload, pb.RecoverPeerAddr(msg.From)); err != nil {
-		peer.logger.Errorf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID, err)
-		return errors.New(fmt.Sprintf("generate the share secret key, from node id: %d, error info %s ", msg.From.ID, err))
+//Serialize the peer
+func (peer *Peer) Serialize() []byte {
+	ps := struct {
+		Hostname  string `json:"hostname"`
+		Namespace string `json:"namespace"`
+		Hash      string `json:"hash"`
+	}{}
+	ps.Hash = peer.info.GetHash()
+	ps.Hostname = peer.hostname
+	ps.Namespace = peer.namespace
+	b, err := json.Marshal(ps)
+	if err != nil {
+		return nil
+	}
+	return b
+}
+
+//Unserialize the peer
+func PeerUnSerialize(raw []byte) (hostname string, namespace string, hash string, err error) {
+	ps := &struct {
+		Hostname  string `json:"hostname"`
+		Namespace string `json:"namespace"`
+		Hash      string `json:"hash"`
+	}{}
+	err = json.Unmarshal(raw, ps)
+	if err != nil {
+		return "", "", "", err
+	}
+	return ps.Hostname, ps.Namespace, ps.Hash, nil
+}
+
+/*
+	Client                                         Server
+	^ClientHello
+	  *ClientCertificate
+	  *ClientSignature      ------------>        Listening
+	  *ClientCipher
+	  *ClientKeyExchange
+
+	                                            ^ServerReject
+	                                                or
+	                                            ^ServerHello
+	                                             *ServerCertificate
+	                       <------------         *ServerSignature
+	                                             *ServerCipherSpec
+	                                             *ServerKeyExchange
+
+	  ^ClientAccept
+	      or               ------------->
+	  ^ClientReject
+
+	                                            ^ServerDone
+                               <------------
+*/
+
+//this is peer should do things
+func (peer *Peer) clientHello(isOrg,isRec bool) error {
+	peer.logger.Debug("send client hello message")
+	// if self return nil do not need verify
+	if peer.info.Hostname == peer.local.Hostname {
+		return nil
+	}
+	/*
+	 ^ClientHello
+	  *ClientCertificate ==> e cert r cert
+	  *ClientSignature ==> e sign r sign
+	  *ClientCipher ==> rand
+	  *ClientKeyExchange ==> ignored
+	  */
+	data := []byte("hyperchain")
+	esign, err := peer.chts.CG.ESign(data)
+	if err !=nil{
+		return err
+	}
+	rsign, err := peer.chts.CG.RSign(data)
+	if err !=nil{
+		return err
+	}
+	rand,err := csprng.CSPRNG(32)
+	if err !=nil{
+		return err
+	}
+	certpayload,err := payloads.NewCertificate(data,peer.chts.CG.GetECert(),esign,peer.chts.CG.GetRCert(),rsign,rand)
+	if err !=nil{
+		return err
+	}
+	// peer should
+	identify := payloads.NewIdentify(peer.local.IsVP,isOrg,isRec,peer.namespace, peer.local.Hostname, peer.local.Id,certpayload)
+	payload, err := identify.Serialize()
+	if err != nil {
+		return err
+	}
+	msg := pb.NewMsg(pb.MsgType_CLIENTHELLO, payload)
+
+	serverHello, err := peer.Greeting(msg)
+
+	peer.logger.Debugf("got a server hello message %+v ", serverHello)
+	if err != nil {
+		return err
+	}
+	// complele the key agree
+	if err := peer.negotiateShareKey(serverHello,rand);err != nil{
+		return peer.clientReject(serverHello)
+	}else {
+		return peer.clientResponse(serverHello)
+	}
+
+}
+
+
+func (peer *Peer)negotiateShareKey(in *pb.Message,rand []byte) error{
+	/*
+	   ^ServerReject
+                or
+            ^ServerHello
+             *ServerCertificate
+	     *ServerSignature
+             *ServerCipherSpec
+             *ServerKeyExchange
+             */
+	if in == nil || in.Payload == nil{
+		return errors.New("invalid server return message")
+	}
+
+	iden,err := payloads.IdentifyUnSerialize(in.Payload)
+	if err !=nil{
+		return err
+	}
+	//TODO Check the identity is legal or not
+	if  iden.Payload == nil{
+		return errors.New("iden payload is nil")
+	}
+	cert,err := payloads.CertificateUnMarshal(iden.Payload)
+	if err != nil{
+		return err
+	}
+	r := append(cert.Rand,rand...)
+	err =  peer.chts.GenShareKey(r,cert.ECert)
+	peer.logger.Debugf(`
+Client nego key
+Local Hostname: %s
+Local Hash %s
+Peer hostname %s
+Peer hash %s
+server Rand %s
+client Rand %s
+Total rand %s
+Sharekey %s
+`,
+peer.local.Hostname,
+peer.local.Hash,
+peer.info.Hostname,
+peer.info.Hash,
+common.ToHex(cert.Rand),
+common.ToHex(rand),
+common.ToHex(r),
+common.ToHex(peer.chts.GetSK()))
+return err
+
+}
+
+
+// handle the double side handshake process,
+// when got a serverhello, this peer should response by clientResponse.
+func (peer *Peer) clientResponse(serverHello *pb.Message) error {
+	payload := []byte("client accept [msg test]")
+	msg := pb.NewMsg(pb.MsgType_CLIENTACCEPT, payload)
+	serverdone, err := peer.Greeting(msg)
+	peer.logger.Debugf("got a server done message %+v ", serverdone)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
-// slightly connect test
-func (peer *Peer) slightTest(ip string, port int, msg *pb.Message) (*grpc.ClientConn, bool) {
-	opts := peer.CM.GetGrpcClientOpts()
-	opts = append(opts, grpc.WithTimeout(2*time.Second))
-	conn, err1 := grpc.Dial(ip+":"+strconv.Itoa(port), opts...)
-	tempClient := pb.NewChatClient(conn)
-	_, err2 := tempClient.Chat(context.Background(), msg, grpc.FailFast(true))
-	if err1 != nil || err2 != nil || conn == nil {
-		if conn == nil {
-			conn.Close()
-		}
-		return conn, false
-	} else {
-		return conn, true
-	}
-}
-
-//verify the signature
-func (peer *Peer) verSign(msg *pb.Message) error {
-	_, err := peer.TM.VerifyMsg(msg)
-	return err
-}
-
-//HelloHandler hello response handler
-func (peer *Peer) HelloHandler(retMsg *pb.Message) (interface{}, error) {
-	if err := peer.verSign(retMsg); err != nil {
-		return nil, err
-	}
-	if retMsg.MessageType == pb.Message_HELLO_RESPONSE {
-		if err := peer.setKey(retMsg); err != nil {
-			return nil, err
-		}
-		return nil, nil
-	}
-	return nil, errors.New("ret message isn't Message_HELLO_RESPONSE!")
-}
-
-//ReconnectHandler reconnect response handler
-func (peer *Peer) ReconnectHandler(retMsg *pb.Message) (interface{}, error) {
-	if err := peer.verSign(retMsg); err != nil {
-		return nil, err
-	}
-	if retMsg.MessageType == pb.Message_RECONNECT_RESPONSE {
-		if err := peer.setKey(retMsg); err != nil {
-			return nil, err
-		}
-		return nil, nil
-	}
-	return nil, errors.New("ret message isn't Message_RECONNECT_RESPONSE")
-}
-
-//ReverseHandler handle reverse return message
-func (peer *Peer) ReverseHandler(retMsg *pb.Message) (interface{}, error) {
-	if err := peer.verSign(retMsg); err != nil {
-		return nil, err
-	}
-	if retMsg.MessageType == pb.Message_HELLOREVERSE_RESPONSE {
-		if err := peer.setKey(retMsg); err != nil {
-			return nil, err
-		}
-		return nil, nil
-	}
-	return nil, errors.New("ret message isn't Message_HELLOREVERSE_RESPONSE")
-}
-
-//NothingHandler do noting just offer a call back function
-func (peer *Peer) NothingHandler(retMsg *pb.Message) (interface{}, error) {
-	if err := peer.verSign(retMsg); err != nil {
-		return nil, err
-	}
-	return nil, nil
-}
-
-func (peer *Peer) IntroHandler(retMsg *pb.Message) (interface{}, error) {
-	if err := peer.verSign(retMsg); err != nil {
-		return nil, err
-	}
-	if retMsg.MessageType == pb.Message_INTRODUCE_RESPONSE {
-		routers := new(pb.Routers)
-		err := proto.Unmarshal(retMsg.Payload, routers)
-		if err != nil {
-			return nil, err
-		}
-		return routers, nil
-
-	}
-
-	return nil, errors.New("ret message isn't Message_INTRODUCE_RESPONSE")
-
-}
-
-func (peer *Peer) AttendHandler(retMsg *pb.Message) (interface{}, error) {
-	if err := peer.verSign(retMsg); err != nil {
-		return nil, err
-	}
-	if retMsg.MessageType == pb.Message_ATTEND_RESPONSE {
-		err := peer.setKey(retMsg)
-		if err != nil {
-			peer.logger.Errorf("generate the share secret key, from node id: %d, error info %s ", retMsg.From.ID, err)
-			return nil, err
-		}
-		return nil, nil
-	}
-	return nil, errors.New("ret message isn't Message_ATTEND_RESPONSE")
-
-}
-
-func (peer *Peer) AttendNotifyHandler(retMsg *pb.Message) (interface{}, error) {
-	if retMsg.MessageType == pb.Message_ATTEND_NOTIFY_RESPONSE {
-		err := peer.setKey(retMsg)
-		if err != nil {
-			peer.logger.Errorf("generate the share secret key, from node id: %d, error info %s ", retMsg.From.ID, err)
-			return nil, err
-		}
-		return nil, nil
-	}
-	return nil, errors.New("ret message isn't Message_ATTEND_NOTIFY_RESPONSE")
-
-}
-
-// Chat is a function to send a message to peer,
-// this function invokes the remote function peer-to-peer,
-// which implements the service that prototype file declares
-//
-func (peer *Peer) Chat(msg pb.Message) (response *pb.Message, err error) {
-	peer.logger.Debug("CHAT:", msg.From.ID, ">>>", peer.PeerAddr.ID)
-	if !peer.Alive {
-		peer.logger.Warningf("chat failed, %d -> %d ,this.peer was closed.", msg.From.ID, peer.PeerAddr.ID)
-		return nil, errPeerClosed
-	}
-	msg.Payload, err = peer.TM.Encrypt(msg.Payload, peer.PeerAddr)
+// handle the double side handshake process,
+// when got a serverhello, this peer should response by clientResponse.
+func (peer *Peer) clientReject(serverHello *pb.Message) error {
+	payload := []byte("client accept [msg test]")
+	msg := pb.NewMsg(pb.MsgType_CLIENTREJECT, payload)
+	serverdone, err := peer.Greeting(msg)
+	peer.logger.Debug("got a server done message %+v ", serverdone)
 	if err != nil {
-		peer.logger.Errorf("encrypt msg failed(%d -> %d),%v", msg.From.ID, peer.PeerAddr.ID, err)
-		return nil, err
+		return err
 	}
-	signmsg, err := peer.TM.SignMsg(&msg)
-	if err != nil {
-		peer.logger.Errorf("sign with secret failed ( %d -> %d ),%v", msg.From.ID, peer.PeerAddr.ID, err)
-	}
-	response, err = peer.Client.Chat(context.Background(), &signmsg)
-	if err != nil {
-		peer.Alive = false
-		peer.logger.Error(peer.LocalAddr.ID, ">>", peer.PeerAddr.ID, ": response err:", err)
-		return nil, err
-	}
-	// decode the return message
-	response.Payload, err = peer.TM.Decrypt(response.Payload, pb.RecoverPeerAddr(response.From))
-	if err != nil {
-		peer.logger.Errorf("Decrypt the msg faild (%d -> $d) err %v:", msg.From.ID, peer.PeerAddr.ID, err)
-		return nil, err
-	}
-	peer.logger.Debugf("response from: %d, type %v, origin msg is :(%d  >> %d)", response.From.ID, response.MessageType, msg.From.ID, peer.PeerAddr.ID)
-	return response, err
+	return nil
 }

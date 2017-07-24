@@ -16,6 +16,7 @@ type NewTxEvent struct {
 	Transaction *types.Transaction
 	Simulate    bool
 	SnapshotId  string
+	Ch          chan bool
 }
 
 type TxUniqueCastEvent struct {
@@ -95,8 +96,13 @@ type UpdateRoutingTableEvent struct {
 type AlreadyInChainEvent struct {
 }
 
-// a peer's exit event
-type DelPeerEvent struct {
+// delete VP peer event
+type DelVPEvent struct {
+	Payload []byte
+}
+
+// delete NVP peer event
+type DelNVPEvent struct {
 	Payload []byte
 }
 
@@ -116,9 +122,6 @@ type ReceiveVerifiedBlock struct {
 	Payload []byte
 }
 
-type NegoRoutersEvent struct {
-	Payload []byte
-}
 
 type CommitedBlockEvent struct {
 	Payload []byte
@@ -133,9 +136,10 @@ type ExecutorToConsensusEvent struct {
 }
 
 type ExecutorToP2PEvent struct {
-	Payload []byte
-	Type    int
-	Peers   []uint64
+	Payload     []byte
+	Type        int
+	Peers       []uint64
+	PeersHash   []string
 }
 
 /*
@@ -153,4 +157,8 @@ type DeleteSnapshotEvent struct {
 
 type ArchiveEvent struct {
 	FilterId string
+}
+// receive tx from a nvp
+type NvpRelayTxEvent struct {
+	Payload []byte
 }

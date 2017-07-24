@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/golang-lru"
 	"hyperchain/common"
-	"hyperchain/core/crypto"
+	"hyperchain/crypto"
 	"io"
 	"hyperchain/core/vm/evm/params"
 	"hyperchain/core/vm"

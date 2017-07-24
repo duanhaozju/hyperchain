@@ -11,7 +11,7 @@ import java.io.*;
  */
 public class TestSecurity {
 
-    private String dir = "/src/test/resources/contracts/security";
+    private String dir = "/src/openTest/resources/contracts/security";
     private String normalContract = "/NormalContract.class";
     private String ioContract = "/IOContract.class";
     private String threadContract = "/ThreadContract.class";

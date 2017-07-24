@@ -1,23 +1,27 @@
 package db_utils
 
 import (
-	"hyperchain/core/test_util"
 	"hyperchain/hyperdb"
 	"testing"
+	"hyperchain/core/test_util"
+	"hyperchain/common"
+	"bytes"
 )
 
+
+
 func TestGetVersionOfTransaction(t *testing.T) {
-	logger.Info("test =============> > > TestGetVersionOfTransaction")
+	t.Log("test =============> > > TestGetVersionOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
+	tr, err := GetTransaction(common.DEFAULT_NAMESPACE, key)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	if string(tr.Signature) != string(test_util.TransactionCases[0].Signature) {
 		t.Errorf("%s not equal %s, TestGetTransaction fail", string(tr.Signature), string(test_util.TransactionCases[0].Signature))
@@ -26,17 +30,17 @@ func TestGetVersionOfTransaction(t *testing.T) {
 }
 
 func TestGetFromOfTransaction(t *testing.T) {
-	logger.Info("test =============> > > TestGetFromOfTransaction")
+	t.Log("test =============> > > TestGetFromOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
+	tr, err := GetTransaction(common.DEFAULT_NAMESPACE, key)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	if string(tr.From) != string(test_util.TransactionCases[0].From) {
 		t.Error("TestGetFromOfTransaction fail")
@@ -45,17 +49,17 @@ func TestGetFromOfTransaction(t *testing.T) {
 }
 
 func TestGetToOfTransaction(t *testing.T) {
-	logger.Info("test =============> > > TestGetToOfTransaction")
+	t.Log("test =============> > > TestGetToOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
+	tr, err := GetTransaction(common.DEFAULT_NAMESPACE, key)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	if string(tr.To) != string(test_util.TransactionCases[0].To) {
 		t.Error("TestGetToOfTransaction fail")
@@ -64,17 +68,17 @@ func TestGetToOfTransaction(t *testing.T) {
 }
 
 func TestGetValueOfTransaction(t *testing.T) {
-	logger.Info("test =============> > > TestGetValueOfTransaction")
+	t.Log("test =============> > > TestGetValueOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
+	tr, err := GetTransaction(common.DEFAULT_NAMESPACE, key)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	if string(tr.Value) != string(test_util.TransactionCases[0].Value) {
 		t.Error("TestGetValueOfTransaction fail")
@@ -83,17 +87,17 @@ func TestGetValueOfTransaction(t *testing.T) {
 }
 
 func TestGetTimestampOfTransaction(t *testing.T) {
-	logger.Info("test =============> > > TestGetTimestampOfTransaction")
+	t.Log("test =============> > > TestGetTimestampOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
+	tr, err := GetTransaction(common.DEFAULT_NAMESPACE, key)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	if tr.Timestamp != test_util.TransactionCases[0].Timestamp {
 		t.Error("TestGetTimestampOfTransaction fail")
@@ -102,17 +106,17 @@ func TestGetTimestampOfTransaction(t *testing.T) {
 }
 
 func TestGetSignatureOfTransaction(t *testing.T) {
-	logger.Info("test =============> > > TestGetSignatureOfTransaction")
+	t.Log("test =============> > > TestGetSignatureOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
+	tr, err := GetTransaction(common.DEFAULT_NAMESPACE, key)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	if string(tr.Signature) != string(test_util.TransactionCases[0].Signature) {
 		t.Error("TestGetSignatureOfTransaction fail")
@@ -121,36 +125,36 @@ func TestGetSignatureOfTransaction(t *testing.T) {
 }
 
 func TestGetIdOfTransaction(t *testing.T) {
-	logger.Info("test =============> > > TestGetIdOfTransaction")
+	t.Log("test =============> > > TestGetIdOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
+	tr, err := GetTransaction(common.DEFAULT_NAMESPACE, key)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
-	if tr.Id != test_util.TransactionCases[0].Id {
+	if bytes.Compare(tr.Id, test_util.TransactionCases[0].Id) != 0 {
 		t.Error("TestGetIdOfTransaction fail")
 	}
 	deleteTestData()
 }
 
 func TestGetTransactionHashOfTransaction(t *testing.T) {
-	logger.Info("test =============> > > TestGetTransactionHashOfTransaction")
+	t.Log("test =============> > > TestGetTransactionHashOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
+	tr, err := GetTransaction(common.DEFAULT_NAMESPACE, key)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	if string(tr.TransactionHash) != string(test_util.TransactionCases[0].TransactionHash) {
 		t.Error("TestGetTransactionHashOfTransaction fail")
@@ -159,17 +163,17 @@ func TestGetTransactionHashOfTransaction(t *testing.T) {
 }
 
 func TestGetNonceOfTransaction(t *testing.T) {
-	logger.Info("test =============> > > TestGetNonceOfTransaction")
+	t.Log("test =============> > > TestGetNonceOfTransaction")
 	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(hyperdb.defaut_namespace)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
 	err, _ := PersistTransaction(db.NewBatch(), test_util.TransactionCases[0], true, true)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	key := test_util.TransactionCases[0].GetHash().Bytes()
-	tr, err := GetTransaction(hyperdb.defaut_namespace, key)
+	tr, err := GetTransaction(common.DEFAULT_NAMESPACE, key)
 	if err != nil {
-		logger.Fatal(err)
+		t.Error(err.Error())
 	}
 	if tr.Nonce != test_util.TransactionCases[0].Nonce {
 		t.Error("TestGetNonceOfTransaction fail")
