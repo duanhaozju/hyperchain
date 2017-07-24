@@ -19,6 +19,11 @@ var (
 	ErrNoBackend = errors.New("common/hyper_logger_impl: backend is nil")
 )
 
+const (
+	default_logger_level = "DEBUG"
+	default_logger_format = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
+)
+
 //TODO: make the log prefix share same length ?
 
 //HyperLoggerMgr manage all HyperLogger for different namespaces, a namespace will be allocate a HyperLogger.
@@ -147,7 +152,7 @@ func (hl *HyperLogger) init() {
 	baseLevel := conf.GetString(LOG_BASE_LOG_LEVEL)
 
 	if len(baseLevel) == 0 {
-		hl.baseLevel = defaultLogLevel
+		hl.baseLevel = default_logger_level
 	} else {
 		hl.baseLevel = baseLevel
 	}
@@ -196,7 +201,15 @@ func (hl *HyperLogger) newLeveledBackEnd() logging.LeveledBackend {
 
 	oldBackend := hl.backend
 	consoleBackend := logging.NewLogBackend(os.Stdout, "", 0)
-	consoleFormatter := logging.MustStringFormatter(hl.conf.GetString(LOG_CONSOLE_FORMAT))
+
+	var consoleFormat string
+	if len(hl.conf.GetString(LOG_CONSOLE_FORMAT)) == 0 {
+		consoleFormat = default_logger_format
+	}else {
+		consoleFormat = hl.conf.GetString(LOG_CONSOLE_FORMAT)
+	}
+	consoleFormatter := logging.MustStringFormatter(consoleFormat)
+
 	consoleFormatterBackend := logging.NewBackendFormatter(consoleBackend, consoleFormatter)
 
 	hl.backendLock.Lock()// update backend
