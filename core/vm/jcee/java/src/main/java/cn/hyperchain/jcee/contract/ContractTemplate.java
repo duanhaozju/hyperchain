@@ -74,11 +74,11 @@ public abstract class ContractTemplate {
         Handler handler = ch.get(ns);
 
         if(! ch.hasHandlerForNamespace(ns)) {
-            return result(false, "no namespace named: " + ns + "found");
+            return result(false, String.format("no namespace named: %s found", ns));
         }
         ContractTemplate ct = handler.getContractMgr().getContract(contractAddr);
         if (ct == null) {
-            return result(false, "no contract with address: " + contractAddr + "found");
+            return result(false, String.format("no contract with address: %s found", contractAddr));
         }
 
         Context context = new Context(ledger.getContext().getId());

@@ -19,7 +19,7 @@ public class MySmartContract extends ContractTemplate {
         ContractFilter cf = new ContractFilter();
         InvokerFilter invf = new InvokerFilter();
         cf.addPermittedContractAddr("bbe2b6412ccf633222374de8958f2acc76cda9c9");
-        invf.addPermittedInvokerAddr("0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd");
+        invf.addPermittedInvokerAddr("000f1a7a08ccc48e5d30f80850cf1cf283aa3abd");
         addFilter("openTest", cf);
         addFilter("openTest", invf);
     }
@@ -34,6 +34,7 @@ public class MySmartContract extends ContractTemplate {
     @Override
     public ExecuteResult invoke(String funcName, List<String> args) {
         //empty impl
+
         return result(false);
     }
 

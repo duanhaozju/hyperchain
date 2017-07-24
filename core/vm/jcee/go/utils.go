@@ -68,7 +68,7 @@ func Parse(ctx *Context, in []byte) *pb.Request {
 				Namespace:   ctx.GetEnv().Namespace(),
 				Txid:        ctx.GetEnv().TransactionHash().Hex(),
 				BlockNumber: ctx.GetEnv().BlockNumber().Uint64(),
-				Invoker:     ctx.GetCaller().Address().Hex(),
+				Invoker:     common.HexToString(ctx.GetCaller().Address().Hex()),
 			},
 			Method:   "deploy",
 			Args:     iArgs,
