@@ -352,6 +352,8 @@ func (executor *Executor) accpet(seqNo uint64, block *types.Block) error {
 	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
 		executor.logger.Warning("write tx to bloom filter failed", err.Error())
 	}
+	// send it to connected nvp
+	executor.TransitVerifiedBlock(block)
 	executor.statedb.MarkProcessFinish(seqNo)
 	return nil
 }
