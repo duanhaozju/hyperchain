@@ -284,7 +284,7 @@ func (nvp *NVPImpl) process(block *types.Block) error {
 			syscall.Exit(0)
 		}
 	}
-	nvp.getExecutor().accpet(block.Number)
+	nvp.getExecutor().accpet(block.Number, block)
 	if nvp.isInSync() {
 		nvp.getCtx().setDown(db_utils.GetHeightOfChain(nvp.getExecutor().namespace))
 	}

@@ -253,7 +253,7 @@ func (executor *Executor) processSyncBlocks() {
 						return
 					} else {
 						// commit modified changes in this block and update chain.
-						if err := executor.accpet(blk.Number); err != nil {
+						if err := executor.accpet(blk.Number, blk); err != nil {
 							executor.reject()
 							return
 						}
@@ -335,7 +335,7 @@ func (executor *Executor) sendStateUpdatedEvent() {
 }
 
 // accpet - accept block synchronization result.
-func (executor *Executor) accpet(seqNo uint64) error {
+func (executor *Executor) accpet(seqNo uint64, block *types.Block) error {
 	batch := executor.statedb.FetchBatch(seqNo)
 	if err := edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false); err != nil {
 		executor.logger.Errorf("update chain to (#%d) failed, err: %s", err.Error())
@@ -344,6 +344,9 @@ func (executor *Executor) accpet(seqNo uint64) error {
 	if err := batch.Write(); err != nil {
 		executor.logger.Errorf("commit (#%d) changes failed, err: %s", err.Error())
 		return err
+	}
+	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
+		executor.logger.Warning("write tx to bloom filter failed", err.Error())
 	}
 	executor.statedb.MarkProcessFinish(seqNo)
 	return nil

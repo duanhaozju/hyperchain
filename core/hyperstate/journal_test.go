@@ -18,7 +18,6 @@ import (
 	"testing/quick"
 	"github.com/op/go-logging"
 	"math/big"
-	"hyperchain/core/evm"
 	"hyperchain/core/types"
 )
 

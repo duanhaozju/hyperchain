@@ -98,6 +98,10 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	// remove Cached Transactions which used to check transaction duplication
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
 	executor.TransitVerifiedBlock(block)
+
+	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
+		executor.logger.Warning("write tx to bloom filter failed", err.Error())
+	}
 	return nil
 }
 

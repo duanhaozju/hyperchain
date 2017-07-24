@@ -110,5 +110,12 @@ global:
            algo: "PBFT"
            algo_config_path: "namespaces/global/config/pbft.yaml"
     hypervm:
-          jvm: true
+          jvm: false
+
+    miscellaneous:
+        # bloom filter used in tx duplication checking
+        bloomfilter:
+            interval: 24
+            rebuild_time: 3
+            bloombit: 100000000
 
