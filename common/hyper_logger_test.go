@@ -10,7 +10,7 @@ import (
 )
 
 func TestRawLogger(t *testing.T)  {
-	conf := NewEmptyConfig()
+	conf := NewRawConfig()
 	InitHyperLogger("test", conf)
 	logger := GetLogger("test", "a")
 	logger.Info("aaa")

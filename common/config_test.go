@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewEmptyConfig(t *testing.T) {
-	conf := NewEmptyConfig()
+	conf := NewRawConfig()
 	conf.Set("k1", "v1")
 	v := conf.GetString("k1")
 	if v != "v1" {

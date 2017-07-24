@@ -38,7 +38,7 @@ func newHyperLoggerMgr()  {
 
 //InitRawHyperLogger init hyperlogger for a namespace by default setting.
 func InitRawHyperLogger(namespace string) error {
-	nsConf := NewEmptyConfig()
+	nsConf := NewRawConfig()
 	nsConf.Set(NAMESPACE, namespace)
 	newHyperLoggerMgrImpl()
 	hyperLogger := newHyperLogger(nsConf)
