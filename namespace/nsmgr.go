@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"sync"
 	"os"
+	"hyperchain/core/db_utils"
 )
 
 var logger *logging.Logger
@@ -57,18 +58,21 @@ type NamespaceManager interface {
 
 //nsManagerImpl implementation of NsRegistry.
 type nsManagerImpl struct {
-	rwLock     *sync.RWMutex
-	namespaces map[string]Namespace
-	jvmManager *JvmManager
-	conf       *common.Config
+	rwLock      *sync.RWMutex
+	namespaces  map[string]Namespace
+	jvmManager  *JvmManager
+	bloomfilter *db_utils.BloomFilterCache   // transaciton bloom filter
+	// help to do transaction duplication checking
+	conf        *common.Config
 }
 
 //NewNsManager new a namespace manager
 func newNsManager(conf *common.Config) *nsManagerImpl {
 	nr := &nsManagerImpl{
-		namespaces: make(map[string]Namespace),
-		conf:       conf,
-		jvmManager: NewJvmManager(conf),
+		namespaces:  make(map[string]Namespace),
+		conf:        conf,
+		jvmManager:  NewJvmManager(conf),
+		bloomfilter: db_utils.NewBloomCache(conf),
 	}
 	nr.rwLock = new(sync.RWMutex)
 	err := nr.init()
@@ -157,6 +161,7 @@ func (nr *nsManagerImpl) Stop() error {
 	if err := nr.jvmManager.Stop(); err != nil {
 		logger.Errorf("Stop hyperjvm error %v", err)
 	}
+	nr.bloomfilter.Close()
 	logger.Noticef("NamespaceManager stopped!")
 	return nil
 }
@@ -203,7 +208,10 @@ func (nr *nsManagerImpl) Register(name string) error {
 	nr.rwLock.Lock()
 	nr.namespaces[name] = ns
 	nr.rwLock.Unlock()
-
+	if err := nr.bloomfilter.Register(name); err != nil {
+		logger.Error("register bloom filter failed", err.Error())
+		return err
+	}
 	go nr.ListenDelNode(name, delFlag)
 	return nil
 }
@@ -223,6 +231,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 		logger.Warningf("namespace %s not exist, please register first.", name)
 		return ErrInvalidNs
 	}
+	nr.bloomfilter.UnRegister(name)
 	logger.Criticalf("namespace: %s stopped", name)
 	//TODO: need to delete the data?
 	return nil

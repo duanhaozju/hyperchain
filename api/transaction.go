@@ -122,8 +122,11 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	}
 	if txType == 1 && (args.Payload == "" || args.Payload == "0x"){
 		return SendTxArgs{}, &common.InvalidParamsError{Message:"contract code is empty"}
-
 	}
+	if args.Timestamp + time.Duration(24 * time.Hour).Nanoseconds() < time.Now().UnixNano() {
+		return SendTxArgs{}, &common.InvalidParamsError{Message:"transaction out of date"}
+	}
+
 	return args, nil
 }
 
@@ -161,7 +164,11 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	tx.TransactionHash = tx.Hash().Bytes()
 
 	//delete repeated tx
-	var exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash)
+	var exist bool
+	if err, exist = edb.LookupTransaction(tran.namespace, tx.GetHash()); err != nil || exist == true {
+		// recheck by query db
+		exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash)
+	}
 
 	if exist {
 		return common.Hash{}, &common.RepeadedTxError{Message:"repeated tx"}

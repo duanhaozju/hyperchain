@@ -82,7 +82,10 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()
 	//delete repeated tx
-	var exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash)
+	var exist bool
+	if err, exist = edb.LookupTransaction(contract.namespace, tx.GetHash()); err != nil || exist == true {
+		exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash)
+	}
 
 	if exist {
 		return common.Hash{}, &common.RepeadedTxError{Message:"repeated tx"}

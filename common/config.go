@@ -40,7 +40,12 @@ func NewConfig(configPath string) *Config {
 		lock: &sync.RWMutex{},
 	}
 }
-
+func NewRawConfig() *Config {
+	return &Config{
+		conf: viper.New(),
+		lock: &sync.RWMutex{},
+	}
+}
 func (cf *Config) Get(key string) interface{} {
 	cf.lock.RLock()
 	defer cf.lock.RUnlock()

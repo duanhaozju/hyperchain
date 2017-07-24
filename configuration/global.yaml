@@ -60,3 +60,10 @@ global:
             global: true
             ns1: true
             ns2: false
+
+    miscellaneous:
+        # bloom filter used in tx duplication checking
+        bloomfilter:
+            interval: 24
+            rebuild_time: 3
+            bloombit: 100000000
