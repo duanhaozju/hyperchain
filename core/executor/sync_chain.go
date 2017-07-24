@@ -650,7 +650,7 @@ func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 		return
 	}
 	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
-		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
+		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId, request.PeerHash)
 	}
 }
 

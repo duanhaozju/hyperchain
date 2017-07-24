@@ -401,7 +401,7 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		hub.logger.Debugf("message middleware: [unicast invalid tx]")
 		peerId := ev.Peers[0]
 		peerHash := ev.PeersHash[0]
-		if  peerId == uint64(hub.peerManager.GetNodeId()) {
+		if peerId == uint64(hub.peerManager.GetNodeId()) {
 			if len(peerHash) == 0 {
 				hub.executor.StoreInvalidTransaction(ev.Payload)
 			} else {
