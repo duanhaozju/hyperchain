@@ -74,10 +74,14 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	}
 	if contract.eh.NodeIdentification() == manager.IdentificationVP {
-		tx.Id = common.Int2Bytes(contract.eh.GetPeerManager().GetNodeId())
+		tx.Id = uint64(contract.eh.GetPeerManager().GetNodeId())
 	} else {
 		hash := contract.eh.GetPeerManager().GetLocalNodeHash()
-		tx.Id = common.Hex2Bytes(hash)
+		err := tx.SetNVPHash(hash)
+		if err != nil {
+			log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
+			return common.Hash{}, &common.MarshalError{Message:"marshal nvp hash error"}
+		}
 	}
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()

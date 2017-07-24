@@ -180,11 +180,12 @@ func (hub *EventHub) listenTransactionEvent() {
 			case event.NvpRelayTxEvent:
 				transaction := &types.Transaction{}
 				err := proto.Unmarshal(ev.Payload, transaction)
-				transaction.Id = append(transaction.Id, common.Int2Bytes(hub.GetPeerManager().GetNodeId())...)
 				if err != nil {
 					hub.logger.Error("Relay tx, unmarshal payload failed")
+				} else {
+					transaction.Id = uint64(hub.GetPeerManager().GetNodeId())
+					hub.consenter.RecvLocal(transaction)
 				}
-				hub.consenter.RecvLocal(transaction)
 			}
 
 		}
@@ -384,14 +385,14 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		hub.logger.Debugf("message middleware: [unicast invalid tx]")
 		peerId := ev.Peers[0]
 		peerHash := ev.PeersHash[0]
-		if peerId == uint64(hub.peerManager.GetNodeId()) {
-			hub.executor.StoreInvalidTransaction(ev.Payload)
-		} else {
-			if len(peerHash) != 0 {
-				hub.sendToNVP(m.SessionMessage_UNICAST_INVALID, ev.Payload, ev.PeersHash)
+		if  peerId == uint64(hub.peerManager.GetNodeId()) {
+			if len(peerHash) == 0 {
+				hub.executor.StoreInvalidTransaction(ev.Payload)
 			} else {
-				hub.send(m.SessionMessage_UNICAST_INVALID, ev.Payload, ev.Peers)
+				hub.sendToNVP(m.SessionMessage_UNICAST_INVALID, ev.Payload, ev.PeersHash)
 			}
+		} else {
+			hub.send(m.SessionMessage_UNICAST_INVALID, ev.Payload, ev.Peers)
 		}
 	case executor.NOTIFY_BROADCAST_SINGLE:
 		hub.logger.Debugf("message middleware: [broadcast single]")
@@ -464,7 +465,12 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 			hub.executor.GetNVP().ReceiveBlock(message.Payload)
 		}
 	case m.SessionMessage_UNICAST_INVALID:
-		hub.executor.StoreInvalidTransaction(message.Payload)
+		sendToNVP, hash := hub.isSendToNVP(message.Payload)
+		if sendToNVP {
+			hub.sendToNVP(m.SessionMessage_UNICAST_INVALID, message.Payload, hash)
+		} else {
+			hub.executor.StoreInvalidTransaction(message.Payload)
+		}
 	case m.SessionMessage_SYNC_REPLICA:
 		hub.executor.ReceiveReplicaInfo(message.Payload)
 	case m.SessionMessage_BROADCAST_SINGLE_BLK:
@@ -502,4 +508,20 @@ func (hub *EventHub) RelayTx(transaction *types.Transaction, ch chan bool) {
 	} else {
 		ch <- false
 	}
+}
+
+func (hub *EventHub) isSendToNVP(payload []byte) (bool, []string) {
+	invalidTx := &types.InvalidTransactionRecord{}
+	err := proto.Unmarshal(payload, invalidTx)
+	if err != nil {
+		hub.logger.Error("unmarshal invalid transaction record payload failed")
+	}
+	hash, err := invalidTx.Tx.GetNVPHash()
+	if err != nil {
+		hub.logger.Error("get NVP hash failed. Err Msg: %v.", err.Error())
+	}
+	if len(hash) > 0 && hub.peerManager.IsVP() {
+		return true, []string{hash}
+	}
+	return false, nil
 }
