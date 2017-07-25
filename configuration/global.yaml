@@ -63,7 +63,7 @@ global:
             ns2: false
 
     hypervm:
-        jvm: true
+        jvm: false
 
     configs:
         ratelimit:
