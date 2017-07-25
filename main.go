@@ -57,11 +57,11 @@ func newHyperchain(argV *argT) *hyperchain {
 }
 
 func (h *hyperchain) start() {
-	logger.Critical("Hyperchain server start...")
+	logger.Critical("Hyperchain server starting...")
 	go h.nsMgr.Start()
 	go h.hs.Start()
 	go CheckLicense(h.stopFlag)
-	logger.Critical("Hyperchain server started")
+	logger.Critical("Hyperchain server started successful")
 }
 
 func (h *hyperchain) stop() {

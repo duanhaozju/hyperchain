@@ -63,5 +63,4 @@ func TestHeap_Walk(t *testing.T) {
 	for _,i := range h5{
 		fmt.Print(i)
 	}
-	fmt.Println()
 }
