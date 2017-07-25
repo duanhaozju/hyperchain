@@ -50,7 +50,7 @@ func (list *ThreadSafeLinkedList)Walk(){
 		curr = curr.next
 	}
 
-	fmt.Println()
+	//fmt.Println()
 }
 
 func (list *ThreadSafeLinkedList)IterSlow()[]interface{}{
