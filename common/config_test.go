@@ -78,3 +78,8 @@ func TestGetBool(t *testing.T) {
 		t.Errorf("GetBool(%q) = %t, actual: %t", key, rs, expect)
 	}
 }
+
+func TestReadConfigFile(t *testing.T)  {
+	conf := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/global.yaml")
+	conf.Get("xxx")
+}

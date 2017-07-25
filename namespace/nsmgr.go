@@ -122,7 +122,6 @@ func (nr *nsManagerImpl) init() error {
 func (nr *nsManagerImpl) Start() error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
-
 	for name := range nr.namespaces {
 		go func(name string) {
 			err := nr.StartNamespace(name)

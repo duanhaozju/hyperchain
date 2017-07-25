@@ -26,13 +26,6 @@ global:
         genesis: "namespaces/global/config/genesis.json"
         static_peers: "namespaces/global/config/static_peers.json"
 
-        ratelimit:
-                enable   : true
-                txRatePeak : 100
-                txFillRate: 0.5ms
-                contractRatePeak : 100
-                contractFillRate: 0.5ms
-
         hmpublickey:
             "N": "14315727801779002117"
             Nsquare: "204940062494628260128356353732290481689"
@@ -108,13 +101,4 @@ global:
     consensus:
            algo: "PBFT"
            algo_config_path: "namespaces/global/config/pbft.yaml"
-    hypervm:
-          jvm: false
-
-    miscellaneous:
-        # bloom filter used in tx duplication checking
-        bloomfilter:
-            interval: 24
-            rebuild_time: 3
-            bloombit: 100000000
 

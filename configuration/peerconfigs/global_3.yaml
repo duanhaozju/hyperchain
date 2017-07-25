@@ -59,3 +59,19 @@ global:
             global: true
             ns1: false
             ns2: false
+    hypervm:
+        jvm: true
+
+    configs:
+        ratelimit:
+                enable: true
+                txRatePeak: 100
+                txFillRate: 0.5ms
+                contractRatePeak: 100
+                contractFillRate: 0.5ms
+    miscellaneous:
+        # bloom filter used in tx duplication checking
+        bloomfilter:
+            interval: 24
+            rebuild_time: 3
+            bloombit: 100000000
