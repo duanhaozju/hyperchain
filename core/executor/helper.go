@@ -142,9 +142,9 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			return err
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
-			Payload: payload,
-			Type:    NOTIFY_UNICAST_BLOCK,
-			Peers:   []uint64{message[1].(uint64)},
+			Payload:   payload,
+			Type:      NOTIFY_UNICAST_BLOCK,
+			Peers:     []uint64{message[1].(uint64)},
 			PeersHash: []string{message[2].(string)},
 		})
 		return nil
@@ -168,9 +168,9 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Errorf("get nvp hash failde. Err Mag:%v.", err.Error())
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
-			Payload: payload,
-			Type:    NOTIFY_UNICAST_INVALID,
-			Peers:   []uint64{r.Tx.Id},
+			Payload:   payload,
+			Type:      NOTIFY_UNICAST_INVALID,
+			Peers:     []uint64{r.Tx.Id},
 			PeersHash: []string{hash},
 		})
 		return nil

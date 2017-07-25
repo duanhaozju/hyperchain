@@ -104,14 +104,19 @@ func main() {
 		}()
 
 		argv := ctx.Argv().(*argT)
-
 		globalConfig := common.NewConfig(argv.ConfigPath)
 
-		hp := newHyperchain(argv, globalConfig)
 		switch {
 		case argv.RestoreEnable:
+			// Restore blockchain
 			restore(globalConfig, argv.SId, argv.Namespace)
+		case argv.Shell:
+			// Start interactive shell
+			fmt.Println("Start hypernet interactive shell: ", argv.IPCEndpoint)
+			ipc.IPCShell(argv.IPCEndpoint)
 		default:
+			// Start hyperchain service
+			hp := newHyperchain(argv, globalConfig)
 			run(hp, argv)
 		}
 		return nil
@@ -119,11 +124,6 @@ func main() {
 }
 
 func run(inst *hyperchain, argv *argT) {
-	if argv.Shell {
-		fmt.Println("Start hypernet interactive shell: ", argv.IPCEndpoint)
-		ipc.IPCShell(argv.IPCEndpoint)
-		return
-	}
 	if argv.PProfEnable {
 		setupPProf(argv.PPort)
 	}

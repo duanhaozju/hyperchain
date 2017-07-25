@@ -152,7 +152,7 @@ func NewNVPImpl(executor *Executor) *NVPImpl {
 // process in serial but may out of order.
 func (nvp *NVPImpl) ReceiveBlock(payload []byte) {
 
-	nvp.getExecutor().logger.Debugf("receive block")
+	nvp.getExecutor().logger.Debug("receive block")
 	nvp.lock.Lock()
 	defer nvp.lock.Unlock()
 
