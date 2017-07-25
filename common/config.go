@@ -32,6 +32,13 @@ func NewConfig(configPath string) *Config {
 	}
 }
 
+//NewRawConfig new config without underlying config file
+func NewRawConfig() *Config {
+	return &Config{
+		conf: viper.New(),
+		lock: &sync.RWMutex{},
+	}
+}
 func (cf *Config) Get(key string) interface{} {
 	cf.lock.RLock()
 	defer cf.lock.RUnlock()

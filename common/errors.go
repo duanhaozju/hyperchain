@@ -37,6 +37,7 @@ const (
 	custom_NoBlockGeneratedError
 	custom_SubNotExistError			// reserved field for version 1.5
 	custom_SnapshotError			// reserved field for version 1.5
+	custom_MarshalError
 )
 
 
@@ -186,3 +187,11 @@ type CertError struct {
 
 func (e *CertError) Code() int {return custom_CertError}
 func (e *CertError) Error() string {return e.Message}
+
+type MarshalError struct {
+	Message string
+}
+
+func (e *MarshalError) Code() int {return custom_MarshalError
+}
+func (e *MarshalError) Error() string {return e.Message}

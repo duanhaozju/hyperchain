@@ -8,9 +8,10 @@ message Transaction {
 	bytes value = 4;
 	int64 timestamp = 5;
 	bytes signature = 6;
-	bytes id = 7;
+	uint64 id = 7;
 	bytes transactionHash = 8;
 	int64  nonce = 9;
+	bytes extra = 10;
 }
 
 message InvalidTransactionRecord {

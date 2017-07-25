@@ -1,11 +1,10 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package crypto
+package primitives
 
 import (
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
-	"hyperchain/crypto/primitives"
 )
 
 var (
@@ -33,7 +32,7 @@ func Init() (err error) {
 	}
 
 	log.Debugf("Working at security level [%d]", securityLevel)
-	if err = primitives.InitSecurityLevel(hashAlgorithm, securityLevel); err != nil {
+	if err = InitSecurityLevel(hashAlgorithm, securityLevel); err != nil {
 		log.Errorf("Failed setting security level: [%s]", err)
 
 		return

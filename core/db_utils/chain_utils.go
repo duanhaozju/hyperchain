@@ -6,6 +6,7 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"sync"
+	"errors"
 )
 
 // memChain manage safe chain
@@ -318,6 +319,14 @@ func getChain(namespace string) (*types.Chain, error) {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return nil, err
+	}
+	return getChainFn(db)
+}
+
+func getChainFn(db db.Database) (*types.Chain, error) {
+	if db == nil {
+		// short circuit if db is empty
+		return nil, errors.New("empty db")
 	}
 	var chain types.Chain
 	data, err := db.Get(ChainKey)

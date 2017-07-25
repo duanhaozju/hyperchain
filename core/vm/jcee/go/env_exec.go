@@ -1,7 +1,6 @@
 package jvm
 import (
 	"hyperchain/common"
-	"hyperchain/core/crypto"
 	"hyperchain/core/vm/evm/params"
 	"math/big"
 	"hyperchain/core/types"
@@ -11,6 +10,7 @@ import (
 	"os"
 	"github.com/golang/protobuf/proto"
 	"errors"
+	"hyperchain/crypto"
 )
 
 // Call executes within the given contract

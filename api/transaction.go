@@ -122,8 +122,11 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	}
 	if txType == 1 && (args.Payload == "" || args.Payload == "0x"){
 		return SendTxArgs{}, &common.InvalidParamsError{Message:"contract code is empty"}
-
 	}
+	if args.Timestamp + time.Duration(24 * time.Hour).Nanoseconds() < time.Now().UnixNano() {
+		return SendTxArgs{}, &common.InvalidParamsError{Message:"transaction out of date"}
+	}
+
 	return args, nil
 }
 
@@ -152,16 +155,24 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	if tran.eh.NodeIdentification() == manager.IdentificationVP {
-		tx.Id = common.Int2Bytes(tran.eh.GetPeerManager().GetNodeId())
+		tx.Id = uint64(tran.eh.GetPeerManager().GetNodeId())
 	} else {
 		hash := tran.eh.GetPeerManager().GetLocalNodeHash()
-		tx.Id = common.Hex2Bytes(hash)
+		err := tx.SetNVPHash(hash)
+		if err != nil {
+			tran.log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
+			return common.Hash{}, &common.MarshalError{Message:"marshal nvp hash error"}
+		}
 	}
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()
 
 	//delete repeated tx
-	var exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash)
+	var exist bool
+	if err, exist = edb.LookupTransaction(tran.namespace, tx.GetHash()); err != nil || exist == true {
+		// recheck by query db
+		exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash)
+	}
 
 	if exist {
 		return common.Hash{}, &common.RepeadedTxError{Message:"repeated tx"}

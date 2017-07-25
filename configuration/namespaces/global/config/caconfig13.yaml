@@ -19,6 +19,8 @@ rcert:
 
 check:
   enable: true
+  sign: false
+  enableT: false
 
 security:
   # Selective symmetric encryption algorithm (pure,3des or sm4)

@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/viper"
 	"hyperchain/api"
 	"hyperchain/common"
-	"strings"
 	"os"
 )
 
@@ -25,21 +24,11 @@ var (
 func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, error) {
 	var conf *common.Config
 	nsConfigPath := path + "/global.yaml"
-
-	if strings.HasSuffix(path, "/"+DEFAULT_NAMESPACE+"/config") {
-		_, err := nr.conf.MergeConfig(nsConfigPath)
-		if err != nil {
-			logger.Errorf("Merge config: %s error %v", nsConfigPath, err)
-			panic(err)
-		}
-		conf = nr.conf
-	} else {
-		if _, err := os.Stat(nsConfigPath); os.IsNotExist(err) {
-			logger.Error("namespace config file doesn't exist!")
-			return nil, ErrNonExistConfig
-		}
-		conf = common.NewConfig(nsConfigPath)
+	if _, err := os.Stat(nsConfigPath); os.IsNotExist(err) {
+		logger.Error("namespace config file doesn't exist!")
+		return nil, ErrNonExistConfig
 	}
+	conf = common.NewConfig(nsConfigPath)
 	// init peer configurations
 	peerConfigPath := conf.GetString("global.configs.peers13")
 	peerViper := viper.New()
@@ -49,21 +38,12 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, er
 		logger.Errorf("err %v", err)
 	}
 	// global part
-	nr.conf.Set(common.C_HTTP_PORT, nr.conf.GetInt("global.jsonrpc_port"))
-	nr.conf.Set(common.C_REST_PORT, nr.conf.GetInt("global.restful_port"))
-	nr.conf.Set(common.C_GRPC_PORT,  nr.conf.GetInt("global.p2p.port"))
+	conf.Set(common.C_GRPC_PORT,  nr.conf.GetInt("global.p2p.port"))
 	conf.Set(common.C_JVM_PORT,   nr.conf.GetInt("global.jvm_port"))
-	conf.Set(common.C_LEDGER_PORT,nr.conf.GetInt("global.ledger_port"))
 	// ns part
 	conf.Set(common.C_NODE_ID, peerViper.GetInt("self.id"))
 	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
 	conf.Set(common.C_GLOBAL_CONFIG_PATH, nsConfigPath)
-
-
-	if strings.HasSuffix(path, "/"+DEFAULT_NAMESPACE+"/config") {
-		nr.conf.Set(common.C_HTTP_PORT, peerViper.GetInt("self.jsonrpc_port"))
-		nr.conf.Set(common.C_REST_PORT, peerViper.GetInt("self.restful_port"))
-	}
 
 	return conf, nil
 }

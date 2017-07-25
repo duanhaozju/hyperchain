@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"hyperchain/common"
-	"hyperchain/core/crypto"
 	"path"
+	"hyperchain/crypto"
 )
 
 var (

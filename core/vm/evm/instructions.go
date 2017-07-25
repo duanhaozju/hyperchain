@@ -7,10 +7,10 @@ import (
 	"math/big"
 
 	"hyperchain/common"
-	"hyperchain/core/crypto"
 	"hyperchain/core/vm/evm/params"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
+	"hyperchain/crypto"
 )
 
 type programInstruction interface {

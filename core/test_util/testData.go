@@ -5,36 +5,36 @@ import (
 )
 
 var TransactionCases = []*types.Transaction{
-	&types.Transaction{
+	{
 		Version:   []byte(TransactionVersion),
 		From:      []byte("6201cb0448964ac597faf6fdf1f472edf2a22b89"),
 		To:        []byte("0000000000000000000000000000000000000003"),
 		Value:     []byte("100"),
 		Timestamp: time.Now().UnixNano() - int64(time.Second),
 		Signature: []byte("signature1"),
-		Id:        1,
+		Id:        []byte{1},
 		TransactionHash: []byte("transactionHash1"),
 		Nonce: 1,
 	},
-	&types.Transaction{
+	{
 		Version:   []byte(TransactionVersion),
 		From:      []byte("0000000000000000000000000000000000000001"),
 		To:        []byte("0000000000000000000000000000000000000002"),
 		Value:     []byte("100"),
 		Timestamp: time.Now().UnixNano(),
 		Signature: []byte("signature2"),
-		Id:        2,
+		Id:        []byte{1},
 		TransactionHash: []byte("transactionHash2"),
 		Nonce: 2,
 	},
-	&types.Transaction{
+	{
 		Version:   []byte(TransactionVersion),
 		From:      []byte("0000000000000000000000000000000000000002"),
 		To:        []byte("0000000000000000000000000000000000000003"),
 		Value:     []byte("700"),
 		Timestamp: time.Now().UnixNano(),
 		Signature: []byte("signature3"),
-		Id:        3,
+		Id:        []byte{1},
 		TransactionHash: []byte("transactionHash3"),
 		Nonce: 3,
 	},
@@ -62,7 +62,6 @@ var TransactionMeta = types.TransactionMeta{
 
 var Receipt = types.Receipt{
 	Version:           []byte(ReceiptVersion),
-	PostState:         []byte("postState"),
 	CumulativeGasUsed: 1,
 	TxHash:           []byte("12345678901234567890123456789012"),
 	ContractAddress:   []byte("contractAddress"),

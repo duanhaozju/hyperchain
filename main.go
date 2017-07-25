@@ -49,9 +49,6 @@ func newHyperchain(argV *argT) *hyperchain {
 	}
 	hp.p2pmgr = p2pManager
 
-	//
-	//common.InitLog(globalConfig)
-
 	httpPort := vip.GetInt("global.jsonrpc_port")
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
 	hp.hs = jsonrpc.GetHttpServer(hp.nsMgr, hp.stopFlag, hp.restartFlag,httpPort)

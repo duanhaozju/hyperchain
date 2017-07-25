@@ -156,7 +156,7 @@ func (nvp *NVPImpl) ReceiveBlock(payload []byte) {
 	nvp.lock.Lock()
 	defer nvp.lock.Unlock()
 
-	block, err := nvp.preProcess(payload);
+	block, err := nvp.preProcess(payload)
 	if err != nil {
 		nvp.executor.logger.Error(err)
 		return
@@ -195,6 +195,7 @@ func (nvp *NVPImpl) ReceiveBlock(payload []byte) {
 			nvp.getCtx().initSync(block.Number - 1, db_utils.GetHeightOfChain(nvp.getExecutor().namespace))
 			nvp.getExecutor().logger.Debugf("sync init result: maxNum: %v, minNumInBatch: %v, isInSync: %v", nvp.getCtx().getMax(), nvp.getCtx().getDown(), nvp.isInSync())
 			nvp.sendSyncRequest(nvp.calUpper(), nvp.getCtx().getDown())
+			nvp.getCtx().initResendExit()
 			go nvp.resendBackend()
 		}
 		if block.Number > nvp.getCtx().getMax() {
@@ -221,7 +222,12 @@ func (nvp *NVPImpl) preProcess(payload []byte) (*types.Block,error) {
 				errStr := fmt.Sprintf("verify block integrity fail! receive a broken block %d, drop it.", block.Number)
 				return nil, errors.New(errStr)
 			}
-			err, _ = db_utils.PersistBlock(nvp.getExecutor().db.NewBatch(), block, true, true)
+			if block.Version != nil {
+				// Receive block with version tag
+				err, _ = db_utils.PersistBlock(nvp.getExecutor().db.NewBatch(), block, true, true, string(block.Version))
+			} else {
+				err, _ = db_utils.PersistBlock(nvp.getExecutor().db.NewBatch(), block, true, true)
+			}
 			if err != nil {
 				return nil, errors.New("put block into DB failed." + err.Error())
 			}
@@ -259,17 +265,19 @@ func (nvp *NVPImpl) applyRemainBlock(number uint64) error {
 
 func (nvp *NVPImpl) process(block *types.Block) error {
 	err, result := nvp.getExecutor().ApplyBlock(block, block.Number, block.Number)
-	if err != nil || nvp.getExecutor().assertApplyResult(block, result) == false {
+	if err != nil {
+		return err
+	}
+	if nvp.getExecutor().assertApplyResult(block, result) == false {
 		if nvp.getExecutor().GetExitFlag() {
 			batch := nvp.getExecutor().db.NewBatch()
 			for i := block.Number; ;i += 1 {
 				// delete persisted blocks number larger than chain height
 				err := db_utils.DeleteBlockByNum(nvp.getExecutor().namespace, batch, i, false, false)
 				if err != nil {
-					errStr := fmt.Sprint("delete block number #%v failed! %v", i, err.Error())
-					return errors.New(errStr)
+					nvp.getExecutor().logger.Errorf("delete block number #%v in batch failed! ErrMsg: %v.", i, err.Error())
 				} else {
-					nvp.getExecutor().logger.Noticef("delete block number #%v.", i)
+					nvp.getExecutor().logger.Noticef("delete block number #%v in batch success!", i)
 				}
 				if !nvp.isInSync() || i == nvp.getCtx().getMax()+1 {
 					break;
@@ -277,14 +285,14 @@ func (nvp *NVPImpl) process(block *types.Block) error {
 			}
 			err := batch.Write()
 			if err != nil {
-				return errors.New("delete blocks failed!" + err.Error())
+				nvp.getExecutor().logger.Error("delete blocks in db failed! ErrMsg: %v." , err.Error())
 			}
 			nvp.getExecutor().clearStatedb()
 			nvp.getExecutor().logger.Error("assert failed! exit hyperchain.")
 			syscall.Exit(0)
 		}
 	}
-	nvp.getExecutor().accpet(block.Number)
+	nvp.getExecutor().accpet(block.Number, block)
 	if nvp.isInSync() {
 		nvp.getCtx().setDown(db_utils.GetHeightOfChain(nvp.getExecutor().namespace))
 	}
@@ -294,7 +302,6 @@ func (nvp *NVPImpl) process(block *types.Block) error {
 }
 
 func (nvp *NVPImpl) resendBackend() {
-	nvp.getCtx().initResendExit()
 	ticker := time.NewTicker(nvp.getExecutor().GetSyncResendInterval())
 	nvp.getExecutor().logger.Debugf("sync request resend interval: ", nvp.getExecutor().GetSyncResendInterval().String())
 	up := nvp.getCtx().getUpper()

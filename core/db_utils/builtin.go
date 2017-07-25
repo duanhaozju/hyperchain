@@ -27,6 +27,7 @@ var (
 	ChainKey                 = []byte("chain-key-")
 	BlockNumPrefix           = []byte("blockNum-")
 	TxMetaSuffix             = []byte{0x01}
+	BloomPrefix              = []byte("bloom-")
 )
 
 func InitDBForNamespace(conf *common.Config, namespace string) error{

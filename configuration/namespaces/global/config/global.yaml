@@ -21,18 +21,10 @@ global:
 
     configs:
         caconfig: "namespaces/global/config/caconfig.yaml"
-        caconfig13: "namespaces/global/config/caconfig13.yaml"
         peers: "namespaces/global/config/local_peerconfig.json"
         peers13: "namespaces/global/config/peerconfig.yaml"
         genesis: "namespaces/global/config/genesis.json"
         static_peers: "namespaces/global/config/static_peers.json"
-
-        ratelimit:
-                enable   : true
-                txRatePeak : 100
-                txFillRate: 0.5ms
-                contractRatePeak : 100
-                contractFillRate: 0.5ms
 
         hmpublickey:
             "N": "14315727801779002117"

@@ -100,9 +100,9 @@ public class ContractManager {
         if (! isSourceSafe(info.getContractPath())) {
             return false;
         }
-        logger.debug("contract info, " + info.toString());
+        logger.info("contract info, " + info.toString());
         ContractClassLoader classLoader = new ContractClassLoader(info.getContractPath(), info.getClassPrefix());
-        ContractTemplate contract = null;
+        ContractTemplate contract;
 
         Class contractClass = classLoader.load(info.getContractMainName());
         Object ins = newInstance(contractClass, info.getArgClasses(), info.getArgs());
@@ -110,10 +110,10 @@ public class ContractManager {
             logger.error("init contract for " + info.getName() + " faield");
             return false;
         }
-            contract = (ContractTemplate) ins;
-            contract.setCid(info.getCid());
-            contract.setOwner(info.getOwner());
-            contract.setLedger(ledger);
+        contract = (ContractTemplate) ins;
+        contract.setCid(info.getCid());
+        contract.setOwner(info.getOwner());
+        contract.setLedger(ledger);
         if (contract != null) {
             ContractHolder holder = new ContractHolder(info, contract);
             addContract(holder);
@@ -134,7 +134,7 @@ public class ContractManager {
             }
             Constructor constructor = clazz.getDeclaredConstructor(argClasses);
             if(constructor != null) {
-               return constructor.newInstance(args);
+                return constructor.newInstance(args);
             }
         } catch (Exception e) {
             e.printStackTrace();
