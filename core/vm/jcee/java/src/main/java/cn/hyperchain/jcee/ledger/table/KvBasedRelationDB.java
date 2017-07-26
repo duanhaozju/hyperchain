@@ -5,6 +5,7 @@
 package cn.hyperchain.jcee.ledger.table;
 
 import cn.hyperchain.jcee.ledger.AbstractLedger;
+import cn.hyperchain.jcee.ledger.Result;
 import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 
@@ -46,12 +47,17 @@ public class KvBasedRelationDB implements RelationDB {
     public Table getTable(TableName name) {
         String compositeName = name.getCompositeName();
         if (tableMap.containsKey(compositeName)) {
-            LOG.error("table " + compositeName + " was found in tableMap");
+//            LOG.error("table " + compositeName + " was found in tableMap");
             return tableMap.get(compositeName);
         } else {
-            Gson gson = new Gson();
-            Table tableDesc= (Table)gson.fromJson(ledger.get(compositeName).toString(), TableDesc.class);
-            return tableDesc;
+            Result table = ledger.get(compositeName);
+            if (table == null) {
+                return null;
+            } else {
+                Gson gson = new Gson();
+                Table tableDesc= (Table)gson.fromJson(table.toString(), TableDesc.class);
+                return tableDesc;
+            }
         }
     }
 

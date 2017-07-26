@@ -15,6 +15,7 @@ import cn.hyperchain.jcee.ledger.table.*;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.jcee.util.DataType;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -60,6 +61,8 @@ public class SimulateBank extends ContractTemplate {
                 return transferByTable(args);
             case "getAccount":
                 return getAccount(args);
+            case "getAccountByRange":
+                return getAccountByRange(args);
             default:
                 String err = "method " + funcName  + " not found!";
                 logger.error(err);
@@ -269,10 +272,26 @@ public class SimulateBank extends ContractTemplate {
     }
 
     public ExecuteResult transferByTable(List<String> args) {
+        Table table = getTable("Account");
+        if (table != null) {
+            Row accountA = table.getRow(args.get(0));
+            Row accountB = table.getRow(args.get(1));
+            double num = Double.parseDouble(args.get(2));
 
-
-        return null;
-
+            double balanceA = Double.parseDouble(accountA.get("balance"));
+            double balanceB = Double.parseDouble(accountB.get("balance"));
+            if (balanceA > num) {
+                accountA.put("balance", String.valueOf(balanceA - num).getBytes());
+                accountB.put("balance", String.valueOf(balanceB + num).getBytes());
+            }
+            ArrayList<Row> rows = new ArrayList<>();
+            rows.add(accountA);
+            rows.add(accountB);
+            return result(table.insertRows(rows));
+        }else {
+            logger.error("Account with id " + args.get(0) + " is not existed!");
+            return result(false);
+        }
     }
 
     public ExecuteResult issueByTable(List<String> args) {
@@ -297,6 +316,16 @@ public class SimulateBank extends ContractTemplate {
             logger.error("Account with id " + args.get(0) + " is not existed!");
             return result(false);
         }
+    }
+
+    public ExecuteResult getAccountByRange(List<String> args) {
+        Table table = getTable("Account");
+        ArrayList<Row> rows = table.getRows(args.get(0), args.get(1));
+        logger.error("getAccountByRange count is " + rows.size());
+        for (Row row : rows) {
+//            logger.error("getAccountByRange result is " + row);
+        }
+        return result(true);
     }
     ///////////// End of table usage cases///////////////////////////////////////////////////////////////////////
 }

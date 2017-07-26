@@ -143,6 +143,7 @@ func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer
 	}
 	start := common.BytesToHash(r.Start)
 	limit := common.BytesToHash(r.End)
+
 	iterRange := vm.IterRange{
 		Start:   &start,
 		Limit:   &limit,
@@ -156,7 +157,9 @@ func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer
 		Id:  r.Context.Txid,
 	}
 	for iter.Next() {
-		batchValue.V = append(batchValue.V, iter.Value())
+		s := make([]byte, len(iter.Value()))
+		copy(s, iter.Value())
+		batchValue.V = append(batchValue.V, s)
 		cnt += 1
 		if cnt == BatchSize {
 			batchValue.HasMore = true

@@ -33,6 +33,10 @@ public class Row {
         data.put(key, value);
     }
 
+    public String get(String key) {
+        return new String(data.get(key));
+    }
+
     public String toJSON() {
         Gson gson = new Gson();
         return gson.toJson(this);
