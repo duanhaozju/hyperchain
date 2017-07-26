@@ -86,7 +86,7 @@ func (executor *Executor) cutdownChainByRange(batch db.Batch, from, to uint64) e
 				executor.logger.Errorf("[Namespace = %s] delete useless receipt in block %d failed, error msg %s", executor.namespace, i, err.Error())
 			}
 		}
-		edb.SetTxDeltaOfMemChain(executor.namespace, uint64(len(block.Transactions)))
+		edb.AddTxDeltaOfMemChain(executor.namespace, uint64(len(block.Transactions)))
 		// delete block
 		if err := edb.DeleteBlockByNum(executor.namespace, batch, i, false, false); err != nil {
 			executor.logger.Errorf("[Namespace = %s] delete useless block %d failed, error msg %s", executor.namespace, i, err.Error())
