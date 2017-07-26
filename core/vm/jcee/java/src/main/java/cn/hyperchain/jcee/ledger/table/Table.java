@@ -4,7 +4,9 @@
  */
 package cn.hyperchain.jcee.ledger.table;
 
-import java.util.ArrayList;
+import cn.hyperchain.jcee.ledger.Result;
+
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -24,7 +26,7 @@ public interface Table {
 
     Row getRow(String rowId);
 
-    ArrayList<Row> getRows(String start, String end);
+    Iterator<Result> getRows(String start, String end);
 
     boolean deleteRow(String rowId);
 }

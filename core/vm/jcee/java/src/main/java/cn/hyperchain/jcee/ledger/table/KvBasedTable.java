@@ -12,6 +12,7 @@ import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -83,18 +84,10 @@ public class KvBasedTable implements Table {
     }
 
     @Override
-    public ArrayList<Row> getRows(String start, String end) {
+    public Iterator<Result> getRows(String start, String end) {
         //TODO: maybe bugs existed here
         BatchValue bv = ledger.rangeQuery(getCompositeName(start).getBytes(), getCompositeName(end).getBytes());
-        ArrayList<Row> rows = new ArrayList<>();
-        while (bv.hasNext()) {
-            Result rs = bv.next();
-            if (!rs.isEmpty()) {
-                Gson gson = new Gson();
-                rows.add(gson.fromJson(rs.toString(), Row.class));
-            }
-        }
-        return rows;
+        return bv;
     }
 
     @Override

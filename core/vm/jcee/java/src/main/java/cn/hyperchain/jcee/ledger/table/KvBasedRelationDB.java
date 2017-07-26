@@ -50,13 +50,16 @@ public class KvBasedRelationDB implements RelationDB {
 //            LOG.error("table " + compositeName + " was found in tableMap");
             return tableMap.get(compositeName);
         } else {
-            Result table = ledger.get(compositeName);
-            if (table == null) {
+            LOG.error("table " + compositeName + " was found in ledger");
+            Result rs = ledger.get(compositeName);
+            if (rs == null) {
                 return null;
             } else {
                 Gson gson = new Gson();
-                Table tableDesc= (Table)gson.fromJson(table.toString(), TableDesc.class);
-                return tableDesc;
+                TableDesc tableDesc= gson.fromJson(rs.toString(), TableDesc.class);
+                Table table = new KvBasedTable(tableDesc, ledger);
+                tableMap.put(compositeName, table);
+                return table;
             }
         }
     }

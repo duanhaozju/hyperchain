@@ -14,8 +14,10 @@ import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.ledger.table.*;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.jcee.util.DataType;
+import com.google.gson.Gson;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -320,11 +322,17 @@ public class SimulateBank extends ContractTemplate {
 
     public ExecuteResult getAccountByRange(List<String> args) {
         Table table = getTable("Account");
-        ArrayList<Row> rows = table.getRows(args.get(0), args.get(1));
-        logger.error("getAccountByRange count is " + rows.size());
-        for (Row row : rows) {
-//            logger.error("getAccountByRange result is " + row);
+        Iterator<Result> rows = table.getRows(args.get(0), args.get(1));
+        int count = 0;
+        while (rows.hasNext()) {
+            Result rs = rows.next();
+            if (!rs.isEmpty()) {
+                String row = rs.toString();
+                logger.error("getAccountByRange=>row is " + row);
+                count++;
+            }
         }
+        logger.error("getAccountByRange count is " + count);
         return result(true);
     }
     ///////////// End of table usage cases///////////////////////////////////////////////////////////////////////
