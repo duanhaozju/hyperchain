@@ -46,23 +46,37 @@ func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool, ext
 
 // encapsulateBlock - encapsulate block with a wrapper for specify block structure version.
 func encapsulateBlock(block *types.Block, extra ...interface{}) (error, []byte) {
-	version := BlockVersion
+	var (
+		blkVersion string = BlockVersion
+		txVersion  string = TransactionVersion
+	)
 	if block == nil {
 		return EmptyPointerErr, nil
 	}
-	if len(extra) > 0 {
+	if len(extra) >= 1 {
 		// parse version
 		if tmp, ok := extra[0].(string); ok {
-			version = tmp
+			blkVersion = tmp
 		}
 	}
-	block.Version = []byte(version)
+	if len(extra) >= 2 {
+		// parse version
+		if tmp, ok := extra[1].(string); ok {
+			txVersion = tmp
+		}
+	}
+	block.Version = []byte(blkVersion)
+
+	for _, tx := range block.Transactions {
+		tx.Version = []byte(txVersion)
+	}
+
 	data, err := proto.Marshal(block)
 	if err != nil {
 		return err, nil
 	}
 	wrapper := &types.BlockWrapper{
-		BlockVersion: []byte(version),
+		BlockVersion: []byte(blkVersion),
 		Block:        data,
 	}
 	data, err = proto.Marshal(wrapper)
@@ -140,8 +154,16 @@ func GetBlockByNumberFunc(db db.Database, blockNumber uint64) (*types.Block, err
 
 // DeleteBlock - delete a block via hash.
 func DeleteBlock(namespace string, batch db.Batch, key []byte, flush, sync bool) error {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	if err != nil {
+		return err
+	}
+	return DeleteBlockFunc(db, batch, key, flush, sync)
+}
+
+func DeleteBlockFunc(db db.Database, batch db.Batch, key []byte, flush, sync bool) error {
 	// remove number <-> hash associate
-	blk, err := GetBlock(namespace, key)
+	blk, err := GetBlockFunc(db, key)
 	if err != nil {
 		return err
 	}
@@ -174,6 +196,14 @@ func DeleteBlockByNum(namepspace string, batch db.Batch, blockNum uint64, flush,
 		return err
 	}
 	return DeleteBlock(namepspace, batch, hash, flush, sync)
+}
+
+func DeleteBlockByNumFunc(db db.Database, batch db.Batch, blockNum uint64, flush, sync bool) error {
+	hash, err := GetBlockHashFunc(db, blockNum)
+	if err != nil {
+		return err
+	}
+	return DeleteBlockFunc(db, batch, hash, flush, sync)
 }
 
 // IsGenesisFinish - check whether genesis block has been mined into blockchain

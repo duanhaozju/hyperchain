@@ -128,10 +128,7 @@ func (cache *BloomFilterCache) expire() {
 	var (
 		rebuildTime int64 = cache.config.GetInt64(RebuildTime)
 		interval    int64 = cache.config.GetInt64(RebuildInterval)
-		size        int64 = cache.config.GetInt64(BloomBit)
 		timer       *time.Timer
-		pending     map[string]struct{}
-		finish      map[string]*bloom.BloomFilter
 	)
 
 	var duration time.Duration = time.Duration(int64(24 + int(rebuildTime) - time.Now().Hour()))
@@ -142,33 +139,43 @@ func (cache *BloomFilterCache) expire() {
 			cache.wg.Done()
 			break
 		case <-timer.C:
-			cache.lock.RLock()
-			for ns := range cache.c {
-				pending[ns] = struct{}{}
-			}
-			cache.lock.RUnlock()
-			// rebuild serially to decrease the system IO pressure
-			for ns := range pending {
-				filter := cache.InitBloomFilter(int(size), ns)
-				if filter != nil {
-					finish[ns] = filter
-				}
-			}
-			cache.lock.Lock()
-			for ns, filter := range finish {
-				cache.c[ns] = filter
-			}
-			cache.lock.Unlock()
+			cache.rebuild(nil)
 			timer.Reset(time.Duration(interval) * time.Hour)
 		}
 	}
+}
+
+// rebuild bloom filter rebuild handler.
+func (cache *BloomFilterCache) rebuild(hook func()) {
+	var (
+		pending map[string]struct{}           = make(map[string]struct{})
+		finish  map[string]*bloom.BloomFilter = make(map[string]*bloom.BloomFilter)
+		size    int64                         = cache.config.GetInt64(BloomBit)
+	)
+	cache.lock.RLock()
+	for ns := range cache.c {
+		pending[ns] = struct{}{}
+	}
+	cache.lock.RUnlock()
+	// rebuild serially to decrease the system IO pressure
+	for ns := range pending {
+		filter := cache.InitBloomFilter(int(size), ns, hook)
+		if filter != nil {
+			finish[ns] = filter
+		}
+	}
+	cache.lock.Lock()
+	for ns, filter := range finish {
+		cache.c[ns] = filter
+	}
+	cache.lock.Unlock()
 }
 
 // Register register a bloom filter with namespace as a parameter.
 // Duplication error will been returned if the filter is already existed.
 func (cache *BloomFilterCache) Register(namespace string) error {
 	size := cache.config.GetInt64(BloomBit)
-	filter := cache.InitBloomFilter(int(size), namespace)
+	filter := cache.InitBloomFilter(int(size), namespace, nil)
 	if filter == nil {
 		return InitBloomFilterFailedErr
 	}
@@ -177,7 +184,7 @@ func (cache *BloomFilterCache) Register(namespace string) error {
 	if ret := <-wait; !ret {
 		return DuplicateBloomFilterRegisterErr
 	} else {
-		cache.log.Criticalf("register %s success", namespace)
+		cache.log.Noticef("register %s success", namespace)
 		return nil
 	}
 }
@@ -244,7 +251,7 @@ func (cache *BloomFilterCache) Close() {
 	cache.wg.Wait()
 }
 
-func (cache *BloomFilterCache) InitBloomFilter(bloomBit int, namespace string) *bloom.BloomFilter {
+func (cache *BloomFilterCache) InitBloomFilter(bloomBit int, namespace string, sleepHook func()) *bloom.BloomFilter {
 	var (
 		start   time.Time = time.Now()
 		now     int64     = time.Now().UnixNano()
@@ -285,6 +292,9 @@ func (cache *BloomFilterCache) InitBloomFilter(bloomBit int, namespace string) *
 		cur -= 1
 	}
 
+	if sleepHook != nil {
+		sleepHook()
+	}
 	// Add new blocks while generated during the last stage.
 	var repeat int = 0
 	for cur = head + 1; cur <= GetHeightOfChain(namespace); cur += 1 {
@@ -310,7 +320,7 @@ func (cache *BloomFilterCache) InitBloomFilter(bloomBit int, namespace string) *
 		}
 		counter += 1
 	}
-	cache.log.Debugf("build bloom filter for namespace %s success. elapsed %v", namespace, time.Since(start))
+	cache.log.Debugf("build bloom filter for namespace %s success. totally %d block been pushed into filter, elapsed %v", namespace, counter, time.Since(start))
 	return filter
 }
 

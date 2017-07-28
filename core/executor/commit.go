@@ -173,18 +173,8 @@ func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 }
 
 func (executor *Executor) persistTransactions(batch db.Batch, transactions []*types.Transaction, blockNumber uint64) error {
+	// Only tx meta is saved to database, no more redundant transactions are persisted.
 	for i, transaction := range transactions {
-		if transaction.Version != nil {
-			// transaction has add version tag, use original version tag
-			if err, _ := edb.PersistTransaction(batch, transaction, false, false, string(transaction.Version)); err != nil {
-				return err
-			}
-		} else {
-			// use default version tag
-			if err, _ := edb.PersistTransaction(batch, transaction, false, false); err != nil {
-				return err
-			}
-		}
 		// persist transaction meta data
 		meta := &types.TransactionMeta{
 			BlockIndex: blockNumber,
