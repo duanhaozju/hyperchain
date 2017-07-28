@@ -5,8 +5,6 @@ package jsonrpc
 import (
 	"math/big"
 	"reflect"
-	"unicode"
-	"unicode/utf8"
 	"strings"
 	"encoding/base64"
 	"encoding/json"
@@ -18,8 +16,6 @@ import (
 	"net/http"
 	"time"
 	"github.com/dgrijalva/jwt-go"
-	"encoding/json"
-	"strings"
 	"errors"
 )
 
