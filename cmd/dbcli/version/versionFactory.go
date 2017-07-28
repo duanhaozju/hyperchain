@@ -24,11 +24,11 @@ func NewResultFactory(typi string, version string, data []byte, parameter *const
 	case constant.TRANSACTION:
 		switch version {
 		case constant.VERSION1_1:
-			return version1_1.GetTransactionData(data)
+			return version1_1.GetTransactionData(data, parameter)
 		case constant.VERSION1_2:
-			return version1_2.GetTransactionData(data)
+			return version1_2.GetTransactionData(data, parameter)
 		case constant.VERSION1_3:
-			return version1_3.GetTransactionData(data)
+			return version1_3.GetTransactionData(data, parameter)
 		default:
 			return "", constant.ErrDataVersion
 		}

@@ -58,6 +58,38 @@ func NewTransactionCMD() []cli.Command {
 					Value: "",
 					Usage: "specify the output file",
 				},
+				cli.StringFlag{
+					Name: "verbose",
+					Value: "false",
+					Usage: "specify the transaction content",
+				},
+			},
+		},
+		{
+			Name:   "getAllTransactionSequential",
+			Usage:  "get all transactions sequential",
+			Action: getAllTransactionSequential,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "path, p",
+					Value: "",
+					Usage: "specify the path of db",
+				},
+				cli.StringFlag{
+					Name:  "database, db",
+					Value: "leveldb",
+					Usage: "specify the database using",
+				},
+				cli.StringFlag{
+					Name:  "output, o",
+					Value: "",
+					Usage: "specify the output file",
+				},
+				cli.StringFlag{
+					Name: "verbose",
+					Value: "false",
+					Usage: "specify the transaction content",
+				},
 			},
 		},
 		{
@@ -156,7 +188,8 @@ func getTransactionByHash(c *cli.Context) {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 		} else {
 			if c.String(constant.OUTPUT) != "" {
-				utils.CreateOrAppend(c.String(constant.OUTPUT), result)
+				file := utils.CreateOrAppend(c.String(constant.OUTPUT), result)
+				defer utils.Close(file)
 			} else {
 				fmt.Println(utils.Decorate(result))
 			}
@@ -178,7 +211,31 @@ func getAllTransaction(c *cli.Context) {
 		}
 		hyperChain := version.NewVersion(database)
 		defer hyperChain.GetDB().Close()
-		hyperChain.GetAllTransaction(c.String(constant.OUTPUT))
+		parameter := &constant.Parameter{
+			Verbose: c.Bool(constant.VERBOSE),
+		}
+		hyperChain.GetAllTransaction(c.String(constant.OUTPUT), parameter)
+	} else {
+		fmt.Println(constant.ErrInvalidParams.Error())
+	}
+}
+
+// getAllTransactionSequential -- get all transactions sequential
+func getAllTransactionSequential(c *cli.Context) {
+	if c.String(constant.PATH) != "" && c.String(constant.DATABASE) != "" {
+		path := c.String(constant.PATH)
+		db := c.String(constant.DATABASE)
+		database, err := database.DBFactory(db, path)
+		if err != nil {
+			fmt.Println(constant.ErrDBInit.Error(), err.Error())
+			return
+		}
+		hyperChain := version.NewVersion(database)
+		defer hyperChain.GetDB().Close()
+		parameter := &constant.Parameter{
+			Verbose: c.Bool(constant.VERBOSE),
+		}
+		hyperChain.GetAllTransactionSequential(c.String(constant.OUTPUT), parameter)
 	} else {
 		fmt.Println(constant.ErrInvalidParams.Error())
 	}
@@ -201,7 +258,8 @@ func getTransactionMetaByHash(c *cli.Context) {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 		} else {
 			if c.String(constant.OUTPUT) != "" {
-				utils.CreateOrAppend(c.String(constant.OUTPUT), result)
+				file := utils.CreateOrAppend(c.String(constant.OUTPUT), result)
+				defer utils.Close(file)
 			} else {
 				fmt.Println(utils.Decorate(result))
 			}
@@ -227,7 +285,8 @@ func getDiscardTransactionByHash(c *cli.Context) {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 		} else {
 			if c.String(constant.OUTPUT) != "" {
-				utils.CreateOrAppend(c.String(constant.OUTPUT), result)
+				file := utils.CreateOrAppend(c.String(constant.OUTPUT), result)
+				defer utils.Close(file)
 			} else {
 				fmt.Println(utils.Decorate(result))
 			}
