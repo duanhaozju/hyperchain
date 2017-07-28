@@ -53,7 +53,8 @@ func getChain(c *cli.Context) {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 		} else {
 			if c.String(constant.OUTPUT) != "" {
-				utils.CreateOrAppend(c.String(constant.OUTPUT), result)
+				file := utils.CreateOrAppend(c.String(constant.OUTPUT), result)
+				defer utils.Close(file)
 			} else {
 				fmt.Println(utils.Decorate(result))
 			}

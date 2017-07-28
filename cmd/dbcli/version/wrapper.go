@@ -10,6 +10,8 @@ import (
 	"hyperchain/common"
 	"strconv"
 	"strings"
+	"os"
+	"regexp"
 )
 
 type Version struct {
@@ -92,8 +94,10 @@ func (self *Version) GetBlockRange(path string, min, max uint64, parameter *cons
 	if height < max {
 		max = height
 	}
+	var file *os.File
+	defer utils.Close(file)
 	if path != "" {
-		utils.CreateOrAppend(path, "[")
+		file = utils.CreateOrAppend(path, "[")
 	} else {
 		fmt.Println(utils.Decorate("["))
 	}
@@ -108,14 +112,14 @@ func (self *Version) GetBlockRange(path string, min, max uint64, parameter *cons
 				result = strings.Replace("\t" + result + ",", "\n", "\n\t", -1)
 			}
 			if path != "" {
-				utils.CreateOrAppend(path, result)
+				utils.Append(file, result)
 			} else {
 				fmt.Println(utils.Decorate(result))
 			}
 		}
 	}
 	if path != "" {
-		utils.CreateOrAppend(path, "]")
+		utils.Append(file, "]")
 	} else {
 		fmt.Println(utils.Decorate("]"))
 	}
@@ -155,10 +159,12 @@ func (self *Version) GetTransaction(hash string) (string, error) {
 	}
 }
 
-func (self *Version) GetAllTransaction(path string) {
+func (self *Version) GetAllTransaction(path string, parameter *constant.Parameter) {
 	iter := self.db.NewIterator(TransactionPrefix)
+	var file *os.File
+	defer utils.Close(file)
 	if path != "" {
-		utils.CreateOrAppend(path, "[")
+		file = utils.CreateOrAppend(path, "[")
 	} else {
 		fmt.Println(utils.Decorate("["))
 	}
@@ -171,14 +177,14 @@ func (self *Version) GetAllTransaction(path string) {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 			break
 		}
-		result, err := NewResultFactory(constant.TRANSACTION, string(transactionWrapper.TransactionVersion), transactionWrapper.Transaction, nil)
+		result, err := NewResultFactory(constant.TRANSACTION, string(transactionWrapper.TransactionVersion), transactionWrapper.Transaction, parameter)
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 			break
 		} else if result1 != "" {
 			result1 = strings.Replace("\t" + result1 + ",", "\n", "\n\t", -1)
 			if path != "" {
-				utils.CreateOrAppend(path, result1)
+				utils.Append(file, result1)
 			} else {
 				fmt.Println(utils.Decorate(result1))
 			}
@@ -188,13 +194,13 @@ func (self *Version) GetAllTransaction(path string) {
 	if result1 != "" {
 		result1 = strings.Replace("\t" + result1, "\n", "\n\t", -1)
 		if path != "" {
-			utils.CreateOrAppend(path, result1)
+			utils.Append(file, result1)
 		} else {
 			fmt.Println(utils.Decorate(result1))
 		}
 	}
 	if path != "" {
-		utils.CreateOrAppend(path, "]")
+		utils.Append(file, "]")
 	} else {
 		fmt.Println(utils.Decorate("]"))
 	}
@@ -203,6 +209,71 @@ func (self *Version) GetAllTransaction(path string) {
 	if err != nil {
 		fmt.Println(constant.ErrQuery.Error(), err.Error())
 		return
+	}
+}
+
+func (self *Version) GetAllTransactionSequential(path string, parameter *constant.Parameter) {
+	height, err := self.GetChainHeight()
+	if err != nil {
+		fmt.Println(constant.ErrQuery.Error(), err.Error())
+		return
+	}
+	max, err := strconv.ParseUint(height, 10, 64)
+	if err != nil {
+		fmt.Println(constant.ErrQuery.Error(), err.Error())
+		return
+	}
+	var file *os.File
+	defer utils.Close(file)
+	if path != "" {
+		file = utils.CreateOrAppend(path, "[")
+	} else {
+		fmt.Println(utils.Decorate("["))
+	}
+	var result1 string
+	for i := uint64(0); i <= max; i++ {
+		block, err := self.GetBlockByNumber(i, parameter)
+		if err != nil {
+			fmt.Println(constant.ErrQuery.Error(), err.Error())
+		} else {
+			reg, err := regexp.Compile("(\"Transactions\": \\[){1}.*(\\]){1}")
+			if err != nil {
+				fmt.Println(constant.ErrQuery.Error(), err.Error())
+			}
+			result := reg.FindString(strings.Replace(block, "\n", "||", -1))
+			if result != "" {
+				result = strings.Replace(result, "||", "\n", -1)
+				reg2, err := regexp.Compile(`{[^}]*}`)
+				if err != nil {
+					fmt.Println(constant.ErrQuery.Error(), err.Error())
+				}
+				txs := reg2.FindAllString(result, -1)
+				for j := 0; j < len(txs); j++ {
+					if result1 != "" {
+						result1 = strings.Replace("\t" + strings.TrimSpace(result1) + ",", "\t\t", "\t", -1)
+						if path != "" {
+							utils.Append(file, result1)
+						} else {
+							fmt.Println(utils.Decorate(result1))
+						}
+					}
+					result1 = txs[j]
+				}
+			}
+		}
+	}
+	if result1 != "" {
+		result1 = strings.Replace("\t" + strings.TrimSpace(result1), "\t\t", "\t", -1)
+		if path != "" {
+			utils.Append(file, result1)
+		} else {
+			fmt.Println(utils.Decorate(result1))
+		}
+	}
+	if path != "" {
+		utils.Append(file, "]")
+	} else {
+		fmt.Println(utils.Decorate("]"))
 	}
 }
 
@@ -235,8 +306,10 @@ func (self *Version) GetDiscardTransaction(hash string) (string, error) {
 
 func (self *Version) GetAllDiscardTransaction(path string) {
 	iter := self.db.NewIterator(InvalidTransactionPrefix)
+	var file *os.File
+	defer utils.Close(file)
 	if path != "" {
-		utils.CreateOrAppend(path, "[")
+		file = utils.CreateOrAppend(path, "[")
 	} else {
 		fmt.Println(utils.Decorate("["))
 	}
@@ -251,7 +324,7 @@ func (self *Version) GetAllDiscardTransaction(path string) {
 		} else if result1 != "" {
 			result1 = strings.Replace("\t" + result1 + ",", "\n", "\n\t", -1)
 			if path != "" {
-				utils.CreateOrAppend(path, result)
+				utils.Append(file, result)
 			} else {
 				fmt.Println(utils.Decorate(result))
 			}
@@ -261,13 +334,13 @@ func (self *Version) GetAllDiscardTransaction(path string) {
 	if result1 != "" {
 		result1 = strings.Replace("\t" + result1, "\n", "\n\t", -1)
 		if path != "" {
-			utils.CreateOrAppend(path, result1)
+			utils.Append(file, result1)
 		} else {
 			fmt.Println(utils.Decorate(result1))
 		}
 	}
 	if path != "" {
-		utils.CreateOrAppend(path, "]")
+		utils.Append(file, "]")
 	} else {
 		fmt.Println(utils.Decorate("]"))
 	}
