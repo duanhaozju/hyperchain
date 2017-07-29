@@ -122,3 +122,19 @@ func (cf *Config) OnConfigChange(run func(in fsnotify.Event))  {
 	cf.conf.OnConfigChange(run)
 }
 
+func (cf *Config) Print()  {
+	keys := cf.conf.AllKeys()
+	for _, key := range keys {
+		fmt.Printf("key: %s, value: %v\n", key, cf.Get(key))
+	}
+}
+
+func (cf *Config) equals(anotherConfig *Config) bool {
+	for _, key := range anotherConfig.conf.AllKeys() {
+		if !cf.ContainsKey(key) {
+			fmt.Printf("No value for key %s found \n", key)
+			return true
+		}
+	}
+	return true
+}
