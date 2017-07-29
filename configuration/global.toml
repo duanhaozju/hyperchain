@@ -17,47 +17,44 @@ title = "Hyperchain global configurations"
 #
 ##########################################################
 
-[global.log]
-dumpfile = true # dump the log file or not
-newLogFileInterval = "24h"  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-                         # such as "300ms", "2h45m".
-logsdir = "./logs"
-loglevel = "NOTICE" # default loglevel for all modules which can be override by module level log setting
+[log]
+dump_file       = true # dump the log file or not
+dump_interval   = "24h"  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h". such as "300ms", "2h45m".
+log_dir         = "./logs"
+log_level       = "NOTICE" # default loglevel for all modules which can be override by module level log setting
+file_format     = "[global.%{module}][global.%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
+console_format  = "%{color}[global.%{module}][global.%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
 
-file_format = "[global.%{module}][global.%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
-console_format = "%{color}[global.%{module}][global.%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
-
-    [global.log.module]
-    #set log level by module
-    p2p = "DEBUG"
-    consensus = "NOTICE"
-    core = "NOTICE"
-    hyperdb = "NOTICE"
-    eventhub = "NOTICE"
+    [log.module] #set log level by module
+    p2p         = "DEBUG"
+    consensus   = "NOTICE"
+    core        = "NOTICE"
+    hyperdb     = "NOTICE"
+    eventhub    = "NOTICE"
 
 ##########################################################
 #
 # P2P section
 #
 ##########################################################
-[global.p2p]
-hosts = "./hosts.yaml"
-addr = "./addr.yaml"
-port = 50011
-retrytime = "3s"
-ipc = "hpc_1.ipc"
-enableTLS = true
-tlsCA = "./tls/tlsca.ca"
-tlsServerHostOverride = "hyperchain.cn"
-tlsCert = "./tls/tls_peer1.cert"
-tlsCertPriv = "./tls/tls_peer1.priv"
+[p2p]
+retrytime               = "3s"
+ipc                     = "hpc_1.ipc"
+enableTLS               = true
+tlsCA                   = "./tls/tlsca.ca"
+tlsServerHostOverride   = "hyperchain.cn"
+tlsCert                 = "./tls/tls_peer1.cert"  #TODO: rename peer1 to peer ?
+tlsCertPriv             = "./tls/tls_peer1.priv"
+
+hosts                   = "./hosts.yaml"
+addr                    = "./addr.yaml"
 
 ##########################################################
 #
-# vm section
+# hypervm section
 #
 ##########################################################
-[global.hyperjvm]
+[hypervm]
 jvm = true
 
 ##########################################################
@@ -65,34 +62,41 @@ jvm = true
 # key ports section
 #
 ##########################################################
-[global]
-jsonrpc_port = 8081
-restful_port = 9001
-jvm_port = 50081
-ledger_port = 50051
-nsConfigRootPath = "./namespaces"
+[port]
+jsonrpc     = 8081
+restful     = 9001
+jvm         = 50081
+ledger      = 50051
+grpc        = 50011 # p2p
 
 ##########################################################
 #
 # namespace section
 #
 ##########################################################
-[global.namespace]
-    [global.namespace.start] # start which namespaces when node starts
-    global = true
-    ns1 = false
-    ns2 = false
+[namespace]
+config_root_dir = "./namespaces"
 
-[global.configs]
-  [global.configs.ratelimit]
-  enable = true
-  txRatePeak = 100
-  txFillRate = "0.5ms"
-  contractRatePeak = 100
-  contractFillRate = "0.5ms"
+    [namespace.start] # define start which namespaces when node starts
+    global  = false
+    ns1     = false
+    ns2     = false
 
-[global.miscellaneous]
-  [global.miscellaneous.bloomfilter] # bloom filter used in tx duplication checking
-  interval = 24
-  rebuild_time = 3
-  bloombit = 100000000
+##########################################################
+#
+# other configurations section
+#
+##########################################################
+[flow.control]
+    [ratelimit]
+    enable            = true
+    txRatePeak        = 100
+    txFillRate        = "0.5ms"
+    contractRatePeak  = 100
+    contractFillRate  = "0.5ms"
+
+[dupliate.remove]
+    [bloomfilter] # bloom filter used in tx duplication checking
+    interval          = 24
+    rebuild_time      = 3
+    bloombit          = 100000000

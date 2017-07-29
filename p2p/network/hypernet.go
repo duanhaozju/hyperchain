@@ -49,8 +49,8 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 		return nil,errors.New("Readin host config failed, the viper instance is nil")
 	}
 
-	hostconf := config.GetString("global.p2p.hosts")
-	port_i := config.GetInt("global.p2p.port")
+	hostconf := config.GetString(common.P2P_HOSTS)
+	port_i := config.GetInt(common.P2P_PORT)
 	if port_i == 0{
 		return nil,errors.New("invalid grpc server port")
 	}
@@ -59,7 +59,7 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 		fmt.Errorf("hosts config file not exist: %s",hostconf)
 		return nil,errors.New(fmt.Sprintf("connot find the hosts config file: %s",hostconf))
 	}
-	addrconf := config.GetString("global.p2p.addr")
+	addrconf := config.GetString(common.P2P_ADDR)
 	if !common.FileExist(addrconf){
 		fmt.Errorf("addr config file not exist: %s",hostconf)
 		return nil,errors.New(fmt.Sprintf("connot find the addr config file: %s",addrconf))
@@ -226,7 +226,7 @@ func (hn *HyperNet)InitClients()error{
 		if err != nil{
 			logger.Error("there are something wrong when connect to host",hostname)
 			// TODO here should check the retry time duration, maybe is a nil
-			logger.Info("It will retry connect to host",hostname,"after ",hn.conf.GetDuration("global.p2p.retrytime"))
+			logger.Info("It will retry connect to host",hostname,"after ",hn.conf.GetDuration(common.P2P_RETRY_TIME))
 			hn.failedQueue.Enqueue(hostname)
 		}
 	}
@@ -235,7 +235,7 @@ func (hn *HyperNet)InitClients()error{
 
 // if a connection failed, here will retry to connect the host name
 func (hn *HyperNet)retry() error{
-	td := hn.conf.GetDuration("global.p2p.retrytime")
+	td := hn.conf.GetDuration(common.P2P_RETRY_TIME)
 	if td == 0 * time.Second{
 		return errors.New("invalid time duration")
 	}
@@ -247,7 +247,7 @@ func (hn *HyperNet)retry() error{
 				if err !=nil{
 					logger.Error("there are something wrong when connect to host",hostname)
 					// TODO here should check the retry time duration, maybe is a nil
-					logger.Info("It will retry connect to host",hostname,"after ",hn.conf.GetDuration("global.p2p.retrytime"))
+					logger.Info("It will retry connect to host",hostname,"after ",hn.conf.GetDuration(common.P2P_RETRY_TIME))
 					h.failedQueue.Enqueue(hostname)
 				}else{
 					logger.Info("success connect to host",hostname)
@@ -281,7 +281,7 @@ func (hn *HyperNet)reverse() error{
 			if err !=nil{
 				logger.Errorf("there are something wrong when connect to host: %s",hostname)
 				// TODO here should check the retry time duration, maybe is a nil
-				logger.Info("It will retry connect to host",hostname,"after ",hn.conf.GetDuration("global.p2p.retrytime"))
+				logger.Info("It will retry connect to host",hostname,"after ",hn.conf.GetDuration(common.P2P_RETRY_TIME))
 			}else{
 				logger.Info("success reverse connect to host",hostname)
 			}

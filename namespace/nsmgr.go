@@ -18,7 +18,7 @@ var logger *logging.Logger
 
 const (
 	DEFAULT_NAMESPACE  = "global"
-	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
+	NS_CONFIG_DIR_ROOT = "namespace.config_root_dir"
 )
 
 var once sync.Once
