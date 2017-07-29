@@ -3,19 +3,16 @@
 
 //Package pbft implement the pbft algorithm
 //The PBFT key features:
-//	1. atomic sequence transactions guarantee
+//	    1. atomic sequence transactions guarantee
 //      2. leader selection by viewchange
 //      3. dynamic delete or add new node
 //      4. support state recovery.
 package pbft
 
 import (
-	"fmt"
-
 	"github.com/golang/protobuf/proto"
 
 	"hyperchain/common"
-	"hyperchain/consensus"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
@@ -30,18 +27,18 @@ which can be invoked by outer services.
 
 // New return a instance of pbftProtocal  TODO: rename helper.Stack ??
 func New(namespace string, conf *common.Config, h helper.Stack) (*pbftImpl, error) {
-	var err error
-	pcPath := conf.GetString(consensus.CONSENSUS_ALGO_CONFIG_PATH)
-	if pcPath == "" {
-		err = fmt.Errorf("Invalid consensus algorithm configuration path, %s: %s",
-			consensus.CONSENSUS_ALGO_CONFIG_PATH, pcPath)
-		return nil, err
-	}
-	conf, err = conf.MergeConfig(pcPath)
-	if err != nil {
-		err = fmt.Errorf("Load pbft config error: %v", err)
-		return nil, err
-	}
+	//var err error
+	//pcPath := conf.GetString(consensus.CONSENSUS_ALGO_CONFIG_PATH)
+	//if pcPath == "" {
+	//	err = fmt.Errorf("Invalid consensus algorithm configuration path, %s: %s",
+	//		consensus.CONSENSUS_ALGO_CONFIG_PATH, pcPath)
+	//	return nil, err
+	//}
+	//conf, err = conf.MergeConfig(pcPath)
+	//if err != nil {
+	//	err = fmt.Errorf("Load pbft config error: %v", err)
+	//	return nil, err
+	//}
 	return newPBFT(namespace, conf, h)
 }
 

@@ -246,7 +246,7 @@ DUMP_PATH="${PROJECT_PATH}/build"
 CONF_PATH="${PROJECT_PATH}/configuration"
 
 # global config path
-GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/global.yaml"
+GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/namespace.toml"
 
 # hypercli root path
 CLI_PATH="${PROJECT_PATH}/hypercli"

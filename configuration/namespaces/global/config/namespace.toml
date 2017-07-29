@@ -1,0 +1,197 @@
+###########################################################
+#  _   _                        ____ _           _        #
+# | | | |_   _ _ __   ___ _ __ / ___| |__   __ _(_)_ __   #
+# | |_| | | | | '_ \ / _ \ '__| |   | '_ \ / _\` | | '_ \ #
+# |  _  | |_| | |_) |  __/ |  | |___| | | | (_| | | | | | #
+# |_| |_|\__, | .__/ \___|_|   \____|_| |_|\__,_|_|_| |_| #
+#        |___/|_|                                         #
+###########################################################
+
+[global]
+
+    ##########################
+    # data storage config #
+    ##########################
+
+    [global.account]
+        keystoredir = "namespaces/global/config/keystore"
+        keynodesdir = "namespaces/global/config/keynodes"
+
+
+
+    [global.configs]
+        caconfig = "namespaces/global/config/caconfig.toml"
+        peers = "namespaces/global/config/local_peerconfig.json"
+        peers13 = "namespaces/global/config/peerconfig.yaml"
+        genesis = "namespaces/global/config/genesis.json"
+        static_peers = "namespaces/global/config/static_peers.json"
+
+        [global.hmpublickey]
+            "N" = "14315727801779002117"
+            Nsquare = "204940062494628260128356353732290481689"
+            G = "90976693534933209671098397317966944738726332459523400324197777885595356310417"
+    [global.connection]
+        retryTimeLimit = 6
+        retryTimeout = "10s"
+        recoveryTimeLimit = 5
+        recoveryTimeout = "5s"
+        keepAliveTimeLimit = 3
+        keepAliveInterval = "3s"
+
+    ######################################################
+    # config log's level by module                       #
+    #                                                    #
+    # CRITICAL ERROR WARNING NOTICE INFO DEBUG           #
+    # high <------------- log level -------> low         #
+    #                                                    #
+    ######################################################
+    [log]
+    dump_file       = true # dump the log file or not
+    dump_interval   = "24h"  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h". such as "300ms", "2h45m".
+    log_dir         = "./namespaces/global/data/logs"
+    log_level       = "NOTICE" # default loglevel for all modules which can be override by module level log setting
+    file_format     = "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
+    console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
+
+        [log.module] #set log level by module
+        #p2p         = "INFO"
+        consensus   = "INFO"
+        core        = "NOTICE"
+        hyperdb     = "NOTICE"
+        eventhub    = "NOTICE"
+
+
+    ######################################################
+    # configs related to the executor                    #
+    ######################################################
+    [global.executor]
+        [global.executor.sync_chain]
+            sync_batch_size = 500
+            sync_resend_interval = "1m"
+        [global.executor.nvp]
+            exitflag = false
+        [global.executor.sync_replica]
+            interval = "500s"
+            enable   = false
+        [global.executor.buckettree]
+            [global.executor.buckettree.global]
+                globalDataNodeCacheSize = 10000
+                globalDataNodeCacheLength = 20
+            [global.executor.buckettree.state]
+                size= 1000003
+                levelGroup= 5
+                bucketCacheSize= 100000
+                dataNodeCacheSize= 100000
+            [global.executor.buckettree.storage]
+                size= 1000003
+                levelGroup= 5
+                bucketCacheSize= 100000
+                dataNodeCacheSize= 100000
+    ######################################################
+    # configs related to the consensus                   #
+    #                                                    #
+    # 1. choose which consensus algorithm to use         #
+    # 2. define the algorithm related configurations     #
+    #                                                    #
+    ######################################################
+    [global.consensus]
+           algo = "PBFT"
+           algo_config_path = "namespaces/global/config/pbft.toml"
+
+#[database]
+#[executor]
+#[consensus]
+#[encryption]
+
+[pbft]
+
+    # Number of replicas
+    nodes= 4
+
+    # How many transactions should the primary pack before sending pre-prepare
+    batchsize= 500
+
+    # How many times of same vc from self before a replica start recovery
+    vcresendlimit= 10
+
+# Timeouts
+[timeout]
+
+    # How long to wait for N-f responses after send negotiate view
+    negoview= "6s"
+
+    # How long to wait before recovery finished(This is for release1.2)
+    recovery= "15s"
+
+    # How long to wait before first request should come
+    firstrequest= "30s"
+
+    # Primary send a pre-prepare if there are pending requests, although batchsize isn't reached yet,
+    batch= "1s"
+
+    # How long may a request(transaction batch) take between reception and execution, must be greater than the batch timeout
+    request= "6s"
+
+    # How long may a validate (transaction batch) process will take by local Validation
+    validate= "1s"
+
+    # Primary send it to inform aliveness, must be greater than request timeout
+    nullrequest= "6s"
+
+    # How long may a view change take
+    viewchange= "8s"
+
+    # How long to wait for a view change quorum before resending (the same) view change
+    resendviewchange= "10s"
+
+    # How long to clean out-of-data view change message
+    cleanviewchange= "30s"
+
+    # How long may a update-n take
+    update= "4s"
+
+[dbConfig]
+
+    ################################################################################
+    # database name     #    database code
+    #                   #
+    # LEVEL_DB          #      0001
+    # SUPER_LEVEL_DB    #      0010
+    #                   #
+    ################################################################################
+    dbType = 0001
+
+    #db path of hyperchain. it's the parent dir of namespace dir
+    leveldbPath = "./namespaces/global/data/leveldb"
+
+    logStatus = true
+
+    logPath = "./namespaces/global/data/db.log"
+
+# CA & CERT configs
+#
+# this config prepare  for ca & cert module
+# *.toml config file is batter than *.yaml
+# this config will never change by hyperchain
+# please ensure the file not end with the `/` (slash)
+#
+
+[ecert]
+  eca= "namespaces/global/config/certs/eca.cert"
+  ecert= "namespaces/global/config/certs/ecert.cert"
+  priv= "namespaces/global/config/certs/ecert.priv"
+
+[rcert]
+  # if you do not have rcert, leave this item blank
+  rca= "namespaces/global/config/certs/rca.cert"
+  rcert= "namespaces/global/config/certs/rcert.cert"
+  priv= "namespaces/global/config/certs/rcert.priv"
+
+[check]
+  enable= true
+  sign= false
+  enableT= false
+
+[security]
+  # Selective symmetric encryption algorithm (pure,3des or sm4)
+  algo= "3des"

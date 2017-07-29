@@ -99,14 +99,14 @@ func (cf *Config) Set(key string, value interface{}) {
 	cf.conf.Set(key, value)
 }
 
-// ContainsKey judge whether the key is set in the config
+// ContainsKey judge whether the key is set in the config.
 func (cf *Config) ContainsKey(key string) bool {
 	cf.lock.RLock()
 	defer cf.lock.RUnlock()
 	return cf.conf.IsSet(key)
 }
 
-// MergeConfig merge config by the config file path
+// MergeConfig merge config by the config file path, the file try to merge should have same format.
 func (cf *Config) MergeConfig(configPath string) (*Config, error) {
 	cf.lock.Lock()
 	defer cf.lock.Unlock()
@@ -114,10 +114,10 @@ func (cf *Config) MergeConfig(configPath string) (*Config, error) {
 	if err != nil {
 		return cf, err
 	}
-	cf.conf.MergeConfig(f)
-	return cf, nil
+	err = cf.conf.MergeConfig(f)
+	return cf, err
 }
-//OnConfigChange register function to invoke when config file change
+//OnConfigChange register function to invoke when config file change.
 func (cf *Config) OnConfigChange(run func(in fsnotify.Event))  {
 	cf.conf.OnConfigChange(run)
 }

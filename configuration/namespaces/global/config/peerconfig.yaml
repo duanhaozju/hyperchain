@@ -2,8 +2,10 @@ self:
   "N": 4
   id: 1
   hostname: node1
-  # type 0 creator type 1 add new
+  org: true
   vp: true
+  rec: false
+  caconf: "namespaces/global/config/caconfig.toml"
 nodes:
   -
     id: 1

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"hyperchain/common"
 	"hyperchain/hyperdb"
-	"strconv"
 	"github.com/op/go-logging"
 )
 
@@ -31,9 +30,6 @@ var (
 )
 
 func InitDBForNamespace(conf *common.Config, namespace string) error{
-	dbConfigPath := conf.GetString(common.DB_CONFIG_PATH)
-	conf.MergeConfig(dbConfigPath)
-	hyperdb.SetDBConfig(dbConfigPath, strconv.Itoa(conf.GetInt(common.C_NODE_ID)))
 	err := hyperdb.InitDatabase(conf, namespace)
 	if err != nil {
 		return err

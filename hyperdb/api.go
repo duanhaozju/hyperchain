@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/op/go-logging"
-	"github.com/spf13/viper"
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
 	"hyperchain/hyperdb/hleveldb"
@@ -60,22 +59,11 @@ func init() {
 	}
 }
 
-func SetDBConfig(dbConfig string, port string) {
-	config := viper.New()
-	viper.SetEnvPrefix("DBCONFIG_ENV")
-	config.SetConfigFile(dbConfig)
-	err := config.ReadInConfig()
-	if err != nil {
-		panic(fmt.Errorf("Error envPre %s reading %s", "dbConfig", err))
-	}
-	dbType = config.GetInt(db_type)
-
-	logStatus = config.GetBool("dbConfig.logStatus")
-	logPath = config.GetString("dbConfig.logPath")
-
-}
-
 func InitDatabase(conf *common.Config, namespace string) error {
+	dbType = conf.GetInt(db_type)
+
+	logStatus = conf.GetBool("dbConfig.logStatus")
+	logPath = conf.GetString("dbConfig.logPath")
 	log := getLogger(namespace)
 	log.Criticalf("init db for namespace %s", namespace)
 	dbMgr.dbSync.Lock()

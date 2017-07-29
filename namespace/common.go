@@ -8,6 +8,7 @@ import (
 	"hyperchain/api"
 	"hyperchain/common"
 	"os"
+	"fmt"
 )
 
 var (
@@ -23,7 +24,7 @@ var (
 //constructConfigFromDir read all info needed by
 func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, error) {
 	var conf *common.Config
-	nsConfigPath := path + "/global.yaml"
+	nsConfigPath := path + "/namespace.toml"
 	if _, err := os.Stat(nsConfigPath); os.IsNotExist(err) {
 		logger.Error("namespace config file doesn't exist!")
 		return nil, ErrNonExistConfig
