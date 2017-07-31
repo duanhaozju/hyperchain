@@ -907,7 +907,7 @@ func (pbft *pbftImpl) sendFinishUpdate() events.Event {
 
 	broadcast := cMsgToPbMsg(msg, pbft.id)
 	pbft.helper.InnerBroadcast(broadcast)
-	pbft.logger.Debugf("Replica %d broadcast FinishUpdate", pbft.id)
+	pbft.logger.Debugf("Replica %d broadcast FinishUpdate for view=%d, h=%d", pbft.id, pbft.view, pbft.h)
 
 	return pbft.recvFinishUpdate(finish)
 }
@@ -917,13 +917,13 @@ func (pbft *pbftImpl) recvFinishUpdate(finish *FinishUpdate) events.Event {
 		pbft.logger.Debugf("Replica %d is not in updatingN, but received FinishUpdate from replica %d", pbft.id, finish.ReplicaId)
 		return nil
 	}
+	pbft.logger.Debugf("Replica %d received FinishUpdate from replica %d, view=%d/h=%d", pbft.id, finish.ReplicaId, finish.View, finish.LowH)
 
 	if finish.View != pbft.view {
 		pbft.logger.Warningf("Replica %d received FinishUpdate from replica %d, expect view=%d, but get view=%d", pbft.id, finish.ReplicaId, pbft.view, finish.View)
 		// We don't ignore it as there may be delay during receiveUpdate from primary between new node and other non-primary old replicas
 	}
 
-	pbft.logger.Debugf("Replica %d received FinishUpdate from replica %d, view=%d/h=%d", pbft.id, finish.ReplicaId, finish.View, finish.LowH)
 
 	ok := pbft.nodeMgr.finishUpdateStore[*finish]
 	if ok {
@@ -941,9 +941,9 @@ func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 	for finish := range pbft.nodeMgr.finishUpdateStore {
 		if finish.View == pbft.view {
 			quorum++
-		}
-		if finish.ReplicaId == pbft.primary(pbft.view) {
-			hasPrimary = true
+			if finish.ReplicaId == pbft.primary(pbft.view) {
+				hasPrimary = true
+			}
 		}
 	}
 
