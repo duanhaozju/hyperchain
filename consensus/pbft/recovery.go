@@ -590,29 +590,29 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 	for idx, cert := range pbft.storeMgr.certStore {
 		// send all PQC that n > h, since it maybe wait others to execute
 		if idx.n > h {
-			if pbft.primary(pbft.view) == pbft.id {
+			//if pbft.primary(pbft.view) == pbft.id {
 				if cert.prePrepare == nil {
-					pbft.logger.Warningf("Primary %d in returnRcPQC finds nil pre-prepare for view=%d/seqNo=%d",
+					pbft.logger.Warningf("Replica %d in returnRcPQC finds nil pre-prepare for view=%d/seqNo=%d",
 						pbft.id, idx.v, idx.n)
 				} else {
 					prepres = append(prepres, cert.prePrepare)
 				}
-			} else if cert.sentPrepare {
+			//} else if cert.sentPrepare {
 				for pre := range cert.prepare {
 					if pre.ReplicaId == pbft.id {
 						pres = append(pres, &pre)
 						break
 					}
 				}
-			}
-			if cert.sentCommit {
+			//}
+			//if cert.sentCommit {
 				for cmt := range cert.commit {
 					if cmt.ReplicaId == pbft.id {
 						cmts = append(cmts, &cmt)
 						break
 					}
 				}
-			}
+			//}
 		}
 	}
 	rcReturn := &RecoveryReturnPQC{ ReplicaId: pbft.id }
