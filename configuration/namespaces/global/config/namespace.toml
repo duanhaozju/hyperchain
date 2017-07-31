@@ -17,8 +17,6 @@
         keystoredir = "namespaces/global/config/keystore"
         keynodesdir = "namespaces/global/config/keynodes"
 
-
-
     [global.configs]
         caconfig = "namespaces/global/config/namespace.toml"
         peers = "namespaces/global/config/local_peerconfig.json"

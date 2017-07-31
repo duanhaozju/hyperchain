@@ -8,6 +8,7 @@ import (
 	"hyperchain/core/types"
 	"sync"
 	"time"
+	"fmt"
 )
 
 var (
@@ -19,9 +20,9 @@ var (
 )
 
 const (
-	RebuildTime     = "dupliate.remove.bloomfilter.rebuild_time"
-	RebuildInterval = "dupliate.remove.bloomfilter.interval"
-	BloomBit        = "dupliate.remove.bloomfilter.bloombit"
+	RebuildTime     = "duplicate.remove.bloomfilter.rebuild_time"
+	RebuildInterval = "duplicate.remove.bloomfilter.interval"
+	BloomBit        = "duplicate.remove.bloomfilter.bloombit"
 )
 
 // Bloomfilter implement the muilti-namespace transaciton bloom filter.
@@ -130,6 +131,7 @@ func (cache *BloomFilterCache) expire() {
 		interval    int64 = cache.config.GetInt64(RebuildInterval)
 		timer       *time.Timer
 	)
+	fmt.Printf("rebuildTime: %d /n", rebuildTime)
 
 	var duration time.Duration = time.Duration(int64(24 + int(rebuildTime) - time.Now().Hour()))
 	timer = time.NewTimer(duration * time.Hour)

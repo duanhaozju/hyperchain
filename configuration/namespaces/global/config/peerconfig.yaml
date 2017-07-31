@@ -5,7 +5,7 @@ self:
   org: true
   vp: true
   rec: false
-  caconf: "namespaces/global/config/caconfig.toml"
+  caconf: "namespaces/global/config/namespace.toml" #TODO: duplicate config with namespace.toml
 nodes:
   -
     id: 1

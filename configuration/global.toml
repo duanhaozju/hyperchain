@@ -87,16 +87,15 @@ config_root_dir = "./namespaces"
 # other configurations section
 #
 ##########################################################
-[flow.control]
-    [ratelimit]
-    enable            = true
-    txRatePeak        = 100
-    txFillRate        = "0.5ms"
-    contractRatePeak  = 100
-    contractFillRate  = "0.5ms"
 
-[dupliate.remove]
-    [bloomfilter] # bloom filter used in tx duplication checking
-    interval          = 24
-    rebuild_time      = 3
-    bloombit          = 100000000
+[flow.control.ratelimit]
+ enable            = true
+ txRatePeak        = 100
+ txFillRate        = "0.5ms"
+ contractRatePeak  = 100
+ contractFillRate  = "0.5ms"
+
+[duplicate.remove.bloomfilter] # bloom filter used in tx duplication checking
+ interval          = 24
+ rebuild_time      = 3
+ bloombit          = 100000000
