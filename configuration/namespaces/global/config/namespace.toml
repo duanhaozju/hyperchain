@@ -10,12 +10,12 @@ title = "namespace configurations"
 
 [genesis]
     [genesis.alloc]
-     "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd" = 1000000000
-     "e93b92f1da08f925bdee44e91e7768380ae83307" = 1000000000
-     "6201cb0448964ac597faf6fdf1f472edf2a22b89" = 1000000000
-     "b18c8575e3284e79b92100025a31378feb8100d6" = 1000000000
-     "856E2B9A5FA82FD1B031D1FF6863864DBAC7995D" = 1000000000
-     "fbca6a7e9e29728773b270d3f00153c75d04e1ad" = 1000000000
+     "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd" = "1000000000"
+     "e93b92f1da08f925bdee44e91e7768380ae83307" = "1000000000"
+     "6201cb0448964ac597faf6fdf1f472edf2a22b89" = "1000000000"
+     "b18c8575e3284e79b92100025a31378feb8100d6" = "1000000000"
+     "856E2B9A5FA82FD1B031D1FF6863864DBAC7995D" = "1000000000"
+     "fbca6a7e9e29728773b270d3f00153c75d04e1ad" = "1000000000"
 
 ############################################################################################################
 # consensus algorithm configuration section
@@ -156,7 +156,5 @@ keynodesdir = "namespaces/global/config/keynodes"
 
 [config.path]
 caconfig        = "namespaces/global/config/namespace.toml"
-peers           = "namespaces/global/config/local_peerconfig.json"
-peers13         = "namespaces/global/config/peerconfig.yaml"
-genesis         = "namespaces/global/config/genesis.json"
+peers           = "namespaces/global/config/peerconfig.yaml"
 static_peers    = "namespaces/global/config/static_peers.json"

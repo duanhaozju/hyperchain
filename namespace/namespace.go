@@ -113,7 +113,7 @@ func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*nam
 	}
 
 	nsInfo, err := NewNamespaceInfo(conf.GetString(common.PEER_CONFIG_PATH), name, common.GetLogger(name, "namespace"))
-	nsInfo.PrintInfo()
+	//nsInfo.PrintInfo()
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (ns *namespaceImpl) init() error {
 	ns.caMgr = cm
 
 
-	peerconf := ns.conf.GetString(common.PEER_CONFIG13_PATH)
+	peerconf := ns.conf.GetString(common.PEER_CONFIG_PATH)
 	if !common.FileExist(peerconf) {
 		panic("cannot find the peer config")
 	}

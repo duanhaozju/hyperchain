@@ -93,7 +93,6 @@ func GetNamespaceManager(conf *common.Config) NamespaceManager {
 
 //init the namespace registry by configuration.
 func (nr *nsManagerImpl) init() error {
-	//init all namespace instance by configuration
 	configRootDir := nr.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
 		return errors.New("Namespace config root dir is not valid")

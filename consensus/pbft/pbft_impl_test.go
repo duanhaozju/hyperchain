@@ -19,7 +19,7 @@ func NewConfig(path ,name string)(*common.Config){
 	conf.Set(common.NAMESPACE, name)
 	common.InitHyperLogger(conf)
 	// init peer configurations
-	peerConfigPath := conf.GetString("config.path.peers")
+	peerConfigPath := conf.GetString(common.PEER_CONFIG_PATH)
 	peerViper := viper.New()
 	peerViper.SetConfigFile(filepath.Join("../../build/node1/",peerConfigPath))
 	err := peerViper.ReadInConfig()

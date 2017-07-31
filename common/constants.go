@@ -17,7 +17,7 @@ const (
 )
 
 //constants for input args
-const (
+const ( //TODO: refactor this
 	C_NODE_ID            = "global.id"
 	C_HTTP_PORT          = "global.http_port"
 	C_REST_PORT          = "global.rest_port"
@@ -30,14 +30,12 @@ const (
 	DEFAULT_NAMESPACE 	= "system"
 	KEY_STORE_DIR 		= "account.keystoredir"
 	KEY_NODE_DIR  		= "account.keynodesdir"
-	PEER_CONFIG_PATH	= "config.path.peers"
-	PEER_CONFIG13_PATH 	= "config.path.peers13"
-	DB_CONFIG_PATH      = "global.dbConfig"
+	PEER_CONFIG_PATH 	= "config.path.peers"
 )
 
 const (
-	START_NAMESPACE = "namespace.start."
-	C_JVM_START          = "hypervm.jvm"
+	START_NAMESPACE 	= "namespace.start."
+	C_JVM_START         = "hypervm.jvm"
 )
 
 //constants for logger keys
