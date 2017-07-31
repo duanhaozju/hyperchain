@@ -124,7 +124,7 @@ func (pbft *pbftImpl) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 		return nil
 	}
 
-	if len(msg.DelPayload) == 0 || len(msg.RouterHash) == 0 {
+	if len(msg.DelPayload) == 0 || msg.Id == 0 {
 		pbft.logger.Warningf("Replica %d received invalid local delNode message", pbft.id)
 		return nil
 	}
@@ -182,12 +182,10 @@ func (pbft *pbftImpl) sendAgreeDelNode(key string, routerHash string, newId uint
 	cert := pbft.getDelNodeCert(key)
 	cert.newId = newId
 	cert.delId = delId
-	cert.routerHash = routerHash
 
 	del := &DelNode{
 		ReplicaId:  pbft.id,
 		Key:        key,
-		RouterHash: routerHash,
 	}
 
 	payload, err := proto.Marshal(del)
@@ -314,7 +312,7 @@ func (pbft *pbftImpl) maybeUpdateTableForDel(key string) error {
 	pbft.status.inActiveState(&pbft.status.inDeletingNode)
 
 	atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 1)
-	pbft.sendAgreeUpdateNforDel(key, cert.routerHash)
+	pbft.sendAgreeUpdateNforDel(key)
 
 	return nil
 }
@@ -436,7 +434,7 @@ func (pbft *pbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) events.Event {
 }
 
 // Primary send update_n after finish del node
-func (pbft *pbftImpl) sendAgreeUpdateNforDel(key string, routerHash string) error {
+func (pbft *pbftImpl) sendAgreeUpdateNforDel(key string) error {
 
 	pbft.logger.Debugf("Replica %d try to send update_n after finish del node", pbft.id)
 
@@ -462,7 +460,6 @@ func (pbft *pbftImpl) sendAgreeUpdateNforDel(key string, routerHash string) erro
 		Flag:		false,
 		ReplicaId:	pbft.id,
 		Key:		key,
-		RouterHash:	routerHash,
 		N:		n,
 		View:		view,
 		H:		pbft.h,
@@ -549,7 +546,7 @@ func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 			pbft.id)
 		pbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 		agree.ReplicaId = pbft.id
-		return pbft.sendAgreeUpdateNforDel(agree.Key, agree.RouterHash)
+		return pbft.sendAgreeUpdateNforDel(agree.Key)
 	}
 
 	quorum := 0

@@ -11,7 +11,6 @@ import (
 type requestContainer struct {
 	key string
 	req *types.Transaction
-	tmux	sync.Mutex
 }
 
 type orderedRequests struct {
@@ -79,6 +78,7 @@ func (a *orderedRequests) empty() {
 type requestStore struct {
 	outstandingRequests *orderedRequests
 	pendingRequests     *orderedRequests
+	tmux	sync.Mutex
 }
 
 // newRequestStore creates a new requestStore.
