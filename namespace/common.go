@@ -8,7 +8,6 @@ import (
 	"hyperchain/api"
 	"hyperchain/common"
 	"os"
-	"fmt"
 )
 
 var (
