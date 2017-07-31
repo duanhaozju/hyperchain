@@ -409,9 +409,9 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.batchVdr.lastVid = selfLastExec
 
 		if pbft.primary(pbft.view) == pbft.id {
-			for idx := range pbft.certStore {
+			for idx := range pbft.storeMgr.certStore {
 				if idx.n > selfLastExec {
-					delete(pbft.certStore, idx)
+					delete(pbft.storeMgr.certStore, idx)
 					pbft.persistDelQPCSet(idx.v, idx.n)
 				}
 			}
