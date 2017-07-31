@@ -156,5 +156,13 @@ keynodesdir = "namespaces/global/config/keynodes"
 
 [config.path]
 caconfig        = "namespaces/global/config/namespace.toml"
-peers           = "namespaces/global/config/peerconfig.yaml"
+peerconfig      = "namespaces/global/config/peerconfig.yaml"
 static_peers    = "namespaces/global/config/static_peers.json"
+
+#TODO: flow.control.ratelimit configs should move to global.toml finally
+[flow.control.ratelimit]
+ enable            = true
+ txRatePeak        = 100
+ txFillRate        = "0.5ms"
+ contractRatePeak  = 100
+ contractFillRate  = "0.5ms"

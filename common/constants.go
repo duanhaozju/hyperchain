@@ -30,7 +30,7 @@ const (
 	DEFAULT_NAMESPACE 	= "system"
 	KEY_STORE_DIR 		= "account.keystoredir"
 	KEY_NODE_DIR  		= "account.keynodesdir"
-	PEER_CONFIG_PATH 	= "config.path.peers"
+	PEER_CONFIG_PATH 	= "config.path.peerconfig"
 )
 
 const (
