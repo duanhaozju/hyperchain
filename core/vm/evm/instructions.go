@@ -7,7 +7,7 @@ import (
 	"math/big"
 
 	"hyperchain/common"
-	"hyperchain/core/crypto"
+	"hyperchain/crypto"
 	"hyperchain/core/vm/evm/params"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"

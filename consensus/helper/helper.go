@@ -27,7 +27,6 @@ type Stack interface {
 	BroadcastAddNode(msg *pb.Message) error
 	BroadcastDelNode(msg *pb.Message) error
 	UpdateTable(payload []byte, flag bool) error
-	NegoRouters(routers []byte) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -197,16 +196,6 @@ func (h *helper) UpdateTable(payload []byte, flag bool) error {
 	return nil
 }
 
-// Inform to update routing table
-func (h *helper) NegoRouters(routers []byte) error {
-
-	msg := event.NegoRoutersEvent{
-		Payload: routers,
-	}
-	h.msgQ.Post(msg)
-
-	return nil
-}
 
 // NewHelper initializes a helper object
 func NewHelper(m *event.TypeMux) *helper {

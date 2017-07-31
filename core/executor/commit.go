@@ -105,6 +105,11 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 		executor.logger.Errorf("update chain to #%d failed.", block.Number, err.Error())
 		return err
 	}
+	// write bloom filter first
+	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
+		executor.logger.Warning("write tx to bloom filter failed", err.Error())
+	}
+
 	// flush the whole batch obj.
 	// the database atomic operation of the guarantee is by leveldb batch
 	// look the doc https://godoc.org/github.com/syndtr/goleveldb/leveldb#Batch for detail
@@ -123,6 +128,9 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	executor.logger.Noticef("Block hash %s", hex.EncodeToString(block.BlockHash))
 	// told consenus to remove Cached Transactions which used to check transaction duplication
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
+	executor.TransitVerifiedBlock(block)
+
+
 	// push feed data to event system.
 	// external subscribers can access these internal messages through a messaging subscription system
 	go executor.filterFeedback(block, filterLogs)
@@ -194,17 +202,6 @@ func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 
 func (executor *Executor) persistTransactions(batch db.Batch, transactions []*types.Transaction, blockNumber uint64) error {
 	for i, transaction := range transactions {
-		if transaction.Version != nil {
-			// transaction has add version tag, use original version tag
-			if err, _ := edb.PersistTransaction(batch, transaction, false, false, string(transaction.Version)); err != nil {
-				return err
-			}
-		} else {
-			// use default version tag
-			if err, _ := edb.PersistTransaction(batch, transaction, false, false); err != nil {
-				return err
-			}
-		}
 		// persist transaction meta data
 		meta := &types.TransactionMeta{
 			BlockIndex: blockNumber,

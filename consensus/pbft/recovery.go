@@ -29,6 +29,7 @@ type blkIdx struct {
 func newRecoveryMgr() *recoveryManager {
 	rm := &recoveryManager{}
 	rm.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
+	rm.rcRspStore = make(map[uint64]*RecoveryResponse)
 	rm.recoveryToSeqNo = nil
 	rm.recvNewViewInRecovery = false
 

@@ -10,6 +10,15 @@ import (
 	"time"
 )
 
+func TestNewEmptyConfig(t *testing.T) {
+	conf := NewRawConfig()
+	conf.Set("k1", "v1")
+	v := conf.GetString("k1")
+	if v != "v1" {
+		t.Error("config set or put error")
+	}
+}
+
 func TestGetString(t *testing.T) {
 	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
 
@@ -68,4 +77,9 @@ func TestGetBool(t *testing.T) {
 	if rs != expect {
 		t.Errorf("GetBool(%q) = %t, actual: %t", key, rs, expect)
 	}
+}
+
+func TestReadConfigFile(t *testing.T)  {
+	conf := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/global.yaml")
+	conf.Get("xxx")
 }

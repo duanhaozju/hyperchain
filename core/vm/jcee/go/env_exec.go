@@ -1,7 +1,6 @@
 package jvm
 import (
 	"hyperchain/common"
-	"hyperchain/core/crypto"
 	"hyperchain/core/vm/evm/params"
 	"math/big"
 	"hyperchain/core/types"
@@ -11,6 +10,8 @@ import (
 	"os"
 	"github.com/golang/protobuf/proto"
 	"errors"
+	"hyperchain/crypto"
+	"fmt"
 )
 
 // Call executes within the given contract
@@ -58,6 +59,9 @@ func Create(env vm.Environment, caller vm.ContractRef, buf []byte, gas, gasPrice
 
 func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input []byte, codePath string, codeDigest []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
 	virtualMachine := env.Vm()
+	if virtualMachine == nil {
+		return nil, addr, fmt.Errorf("virtual machine is not init")
+	}
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
 	snapshotPreTransfer := env.MakeSnapshot()

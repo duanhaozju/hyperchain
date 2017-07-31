@@ -415,3 +415,8 @@ func (executor *Executor) unsetSuspend(identifier int) {
 		executor.context.syncReplicaSuspend <- false
 	}
 }
+// getSyncTarget - get SyncTarget.
+func (executor *Executor) getSyncTarget() uint64 {
+	return executor.context.syncFlag.SyncTarget
+}
+

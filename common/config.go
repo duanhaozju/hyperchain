@@ -6,10 +6,10 @@ import (
 	"github.com/spf13/viper"
 
 	"fmt"
-	"github.com/fsnotify/fsnotify"
-	"os"
-	"sync"
 	"time"
+	"os"
+	"github.com/fsnotify/fsnotify"
+	"sync"
 )
 
 type Config struct {
@@ -31,6 +31,8 @@ func NewConfig(configPath string) *Config {
 		lock: &sync.RWMutex{},
 	}
 }
+
+//NewRawConfig new config without underlying config file
 func NewRawConfig() *Config {
 	return &Config{
 		conf: viper.New(),
@@ -109,8 +111,8 @@ func (cf *Config) MergeConfig(configPath string) (*Config, error) {
 	cf.conf.MergeConfig(f)
 	return cf, nil
 }
-
 //OnConfigChange register function to invoke when config file change
-func (cf *Config) OnConfigChange(run func(in fsnotify.Event)) {
+func (cf *Config) OnConfigChange(run func(in fsnotify.Event))  {
 	cf.conf.OnConfigChange(run)
 }
+

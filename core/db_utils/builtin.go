@@ -29,8 +29,9 @@ var (
 	BlockNumPrefix           = []byte("blockNum-")
 	TxMetaSuffix             = []byte{0x01}
 
-	JournalPrefix  = []byte("-journal")
-	SnapshotPrefix = []byte("-snapshot")
+	JournalPrefix            = []byte("-journal")
+	SnapshotPrefix           = []byte("-snapshot")
+	BloomPrefix              = []byte("bloom-")
 )
 
 func InitDBForNamespace(conf *common.Config, namespace string) error {

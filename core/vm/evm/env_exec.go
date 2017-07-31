@@ -1,7 +1,7 @@
 package evm
 import (
 	"hyperchain/common"
-	"hyperchain/core/crypto"
+	"hyperchain/crypto"
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/types"
 	"hyperchain/core/vm/evm/params"

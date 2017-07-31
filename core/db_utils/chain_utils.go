@@ -213,14 +213,14 @@ func GetTxDeltaOfMemChain(namespace string) uint64 {
 }
 
 // SetTxDeltaOfMemChain set the memChain's txDelta
-func SetTxDeltaOfMemChain(namespace string, txDelta uint64) error {
+func AddTxDeltaOfMemChain(namespace string, txDelta uint64) error {
 	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return EmptyPointerErr
 	} else {
 		chain.lock.Lock()
 		defer chain.lock.Unlock()
-		chain.txDelta = txDelta
+		chain.txDelta += txDelta
 		return nil
 	}
 }
@@ -360,6 +360,14 @@ func getChain(namespace string) (*types.Chain, error) {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return nil, err
+	}
+	return getChainFn(db)
+}
+
+func getChainFn(db db.Database) (*types.Chain, error) {
+	if db == nil {
+		// short circuit if db is empty
+		return nil, errors.New("empty db")
 	}
 	var chain types.Chain
 	data, err := db.Get(ChainKey)

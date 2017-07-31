@@ -24,6 +24,9 @@ public class ContractClassLoader extends ClassLoader{
     public ContractClassLoader(String contractDir, String classPrefix) {
         this.classPrefix = classPrefix;
         this.contractDir = contractDir;
+
+        logger.info(classPrefix);
+        logger.info(contractDir);
         this.contractNames = new ConcurrentSet<>();
     }
 
@@ -43,6 +46,7 @@ public class ContractClassLoader extends ClassLoader{
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
         String fileName = contractDir + "/" + name.replaceAll("\\.", "/") + ".class";
+        logger.info(fileName);
         try {
             byte[] bytes;
             bytes = loadClassContent(fileName);

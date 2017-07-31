@@ -38,6 +38,7 @@ const (
 	custom_SubNotExistError
 	custom_SnapshotError
 	custom_InternalServerError
+	custom_MarshalError
 )
 
 
@@ -201,3 +202,11 @@ type CertError struct {
 
 func (e *CertError) Code() int {return custom_CertError}
 func (e *CertError) Error() string {return e.Message}
+
+type MarshalError struct {
+	Message string
+}
+
+func (e *MarshalError) Code() int {return custom_MarshalError
+}
+func (e *MarshalError) Error() string {return e.Message}

@@ -20,7 +20,7 @@ func GenTransferTransactionRandomly() *types.Transaction {
 	timestamp, _ := strconv.ParseInt(strings.Split(args[4], " ")[1], 10, 64)
 	nonce, _ := strconv.ParseInt(strings.Split(args[5], " ")[1], 10, 64)
 	amount, _ := strconv.ParseInt(strings.Split(args[6], " ")[1], 10, 64)
-	value, _ := proto.Marshal(types.NewTransactionValue(10000, 10000, amount, nil, 0))
+	value, _ := proto.Marshal(types.NewTransactionValue(10000, 10000, amount, nil, 0, 0))
 	return &types.Transaction{
 		From:      common.Hex2Bytes(strings.Split(args[2], " ")[1]),
 		To:        common.Hex2Bytes(strings.Split(args[3], " ")[1]),
@@ -40,7 +40,7 @@ func GenInvalidTransferTransactionRandomly() *types.Transaction {
 	timestamp, _ := strconv.ParseInt(strings.Split(args[4], " ")[1], 10, 64)
 	nonce, _ := strconv.ParseInt(strings.Split(args[5], " ")[1], 10, 64)
 	amount, _ := strconv.ParseInt(strings.Split(args[6], " ")[1], 10, 64)
-	value, _ := proto.Marshal(types.NewTransactionValue(10000, 10000, amount, nil, 0))
+	value, _ := proto.Marshal(types.NewTransactionValue(10000, 10000, amount, nil, 0, 0))
 	return &types.Transaction{
 		From:      common.Hex2Bytes(strings.Split(args[2], " ")[1]),
 		To:        common.Hex2Bytes(strings.Split(args[3], " ")[1]),
@@ -60,7 +60,7 @@ func GenSignatureInvalidTransferTransactionRandomly() *types.Transaction {
 	timestamp, _ := strconv.ParseInt(strings.Split(args[4], " ")[1], 10, 64)
 	nonce, _ := strconv.ParseInt(strings.Split(args[5], " ")[1], 10, 64)
 	amount, _ := strconv.ParseInt(strings.Split(args[6], " ")[1], 10, 64)
-	value, _ := proto.Marshal(types.NewTransactionValue(10000, 10000, amount, nil, 0))
+	value, _ := proto.Marshal(types.NewTransactionValue(10000, 10000, amount, nil, 0, 0))
 	return &types.Transaction{
 		From:      common.Hex2Bytes(strings.Split(args[2], " ")[1]),
 		To:        common.Hex2Bytes(strings.Split(args[3], " ")[1]),
@@ -80,7 +80,7 @@ func DeployContract(from, contractBin string) *types.Transaction {
 	timestamp, _ := strconv.ParseInt(strings.Split(args[4], " ")[1], 10, 64)
 	nonce, _ := strconv.ParseInt(strings.Split(args[5], " ")[1], 10, 64)
 	payload := strings.Split(args[6], " ")[1]
-	value, _ := proto.Marshal(types.NewTransactionValue(10000, 10000, 0, common.Hex2Bytes(payload), 0))
+	value, _ := proto.Marshal(types.NewTransactionValue(10000, 10000, 0, common.Hex2Bytes(payload), 0, 0))
 	return &types.Transaction{
 		From:      common.Hex2Bytes(strings.Split(args[2], " ")[1]),
 		To:        nil,
@@ -100,7 +100,7 @@ func GenContractTransactionRandomly(from, to, methodBin string) *types.Transacti
 	timestamp, _ := strconv.ParseInt(strings.Split(args[4], " ")[1], 10, 64)
 	nonce, _ := strconv.ParseInt(strings.Split(args[5], " ")[1], 10, 64)
 	payload := strings.Split(args[6], " ")[1]
-	value, _ := proto.Marshal(types.NewTransactionValue(10000, 10000, 0, common.Hex2Bytes(payload), 0))
+	value, _ := proto.Marshal(types.NewTransactionValue(10000, 10000, 0, common.Hex2Bytes(payload), 0, 0))
 	return &types.Transaction{
 		From:      common.Hex2Bytes(strings.Split(args[2], " ")[1]),
 		To:        common.Hex2Bytes(strings.Split(args[3], " ")[1]),

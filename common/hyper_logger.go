@@ -11,7 +11,6 @@ import (
 var(
 	commonLogger = logging.MustGetLogger("commonLogger")
 	once sync.Once
-	defaultLogLevel = "INFO"
 	hyperLoggerMgr HyperLoggerMgr
 )
 
@@ -35,6 +34,19 @@ func newHyperLoggerMgr()  {
 			hyperLoggerMgr = newHyperLoggerMgrImpl()
 		}
 	})
+}
+
+//InitRawHyperLogger init hyperlogger for a namespace by default setting.
+func InitRawHyperLogger(namespace string) error {
+	nsConf := NewRawConfig()
+	nsConf.Set(NAMESPACE, namespace)
+	newHyperLoggerMgrImpl()
+	hyperLogger := newHyperLogger(nsConf)
+	if hyperLogger == nil {
+		return fmt.Errorf("Init Hyperlogger error: nil return")
+	}
+	hyperLoggerMgr.addHyperLogger(hyperLogger)
+	return nil
 }
 
 //InitHyperLogger init hyperlogger for a namespace by namespace config.

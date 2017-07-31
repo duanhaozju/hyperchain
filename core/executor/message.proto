@@ -6,6 +6,7 @@ message ChainSyncRequest{
     uint64  currentNumber  = 1;
     uint64  requiredNumber = 2;
     uint64  peerId         = 3;
+    string  peerHash       = 4;
 }
 
 message WsContext {

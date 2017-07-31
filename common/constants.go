@@ -57,6 +57,7 @@ const (
 	DATABASE_DIR = "global.database.dir"
 
 	PEER_CONFIG_PATH = "global.configs.peers"
+	PEER_CONFIG13_PATH = "global.configs.peers13"
 
 	GENESIS_CONFIG_PATH = "global.configs.genesis"
 

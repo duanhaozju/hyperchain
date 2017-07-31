@@ -18,6 +18,13 @@ import (
 	"path"
 	"path/filepath"
 	"time"
+	"hyperchain/tree/bucket"
+	"github.com/cheggaaa/pb"
+)
+
+var (
+	receivePb *pb.ProgressBar
+	processPb *pb.ProgressBar
 )
 
 /*
@@ -61,6 +68,8 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	}
 
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
+	receivePb = common.InitPb(int64(ev.TargetHeight - edb.GetHeightOfChain(executor.namespace)), "receive block")
+	receivePb.Start()
 	go executor.syncChainResendBackend()
 }
 
@@ -133,10 +142,14 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 		return true
 	}
 
-	reqNext := func() {
+	reqNext := func(isbatch bool) {
 		executor.logger.Notice("still have some blocks to fetch")
 		executor.context.syncFlag.qosStat.FeedBack(true)
 		executor.context.syncCtx.SetCurrentPeer(executor.context.syncFlag.qosStat.SelectPeer())
+		if isbatch {
+			common.AddPb(receivePb, int64(executor.GetSyncMaxBatchSize()))
+			common.PrintPb(receivePb, 0, executor.logger)
+		}
 		prev := executor.getLatestSyncDownstream()
 		next := executor.calcuDownstream()
 		executor.SendSyncRequest(prev, next)
@@ -159,7 +172,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			if executor.isDemandSyncBlock(block) {
 				// received block's struct definition may different from current
 				// for backward compatibility, store with original version tag.
-				edb.PersistBlock(executor.db.NewBatch(), block, true, true, string(block.Version))
+				edb.PersistBlock(executor.db.NewBatch(), block, true, true, string(block.Version), getTxVersion(block))
 				if err := executor.updateSyncDemand(block); err != nil {
 					executor.logger.Errorf("[Namespace = %s] update sync demand failed.", executor.namespace)
 					executor.reject()
@@ -176,9 +189,12 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			executor.logger.Notice("receive a batch of blocks")
 			needNextFetch := checkNeedMore()
 			if needNextFetch {
-				reqNext()
+				reqNext(true)
 			} else {
 				executor.logger.Noticef("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.context.syncFlag.SyncTarget)
+				common.SetPb(receivePb, receivePb.Total)
+				common.PrintPb(receivePb, 0, executor.logger)
+				receivePb.Finish()
 				if executor.context.syncCtx.UpdateGenesis {
 					// receive world state
 					executor.logger.Notice("send request to fetch world state for status transition")
@@ -196,7 +212,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 							return
 						}
 						executor.logger.Noticef("cutdown block #%d", executor.context.syncFlag.SyncDemandBlockNum)
-						reqNext()
+						reqNext(false)
 					}
 				}
 			}
@@ -346,7 +362,7 @@ func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *
 
 func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
 	var filterLogs []*types.Log
-	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
+	err, result := executor.applyTransactions(block.Transactions, nil, seqNo, seqNo)
 	if err != nil {
 		return err, nil
 	}
@@ -366,6 +382,9 @@ func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *
 // ClearStateUnCommitted - remove all cached stuff
 func (executor *Executor) clearStatedb() {
 	executor.statedb.Purge()
+	tree := executor.statedb.GetTree()
+	bucketTree := tree.(*bucket.BucketTree)
+	bucketTree.ClearAllCache()
 }
 
 // assertApplyResult - check apply result whether equal with other's.
@@ -408,6 +427,8 @@ func (executor *Executor) processSyncBlocks() {
 		executor.waitUtilSyncAvailable()
 		defer executor.syncDone()
 		// execute all received block at one time
+		processPb = common.InitPb(int64(executor.getSyncTarget() - edb.GetHeightOfChain(executor.namespace)), "process block")
+		processPb.Start()
 		var low uint64
 		if executor.context.syncCtx.UpdateGenesis {
 			_, low = executor.context.syncCtx.GetCurrentGenesis()
@@ -435,13 +456,19 @@ func (executor *Executor) processSyncBlocks() {
 					return
 				} else {
 					// commit modified changes in this block and update chain.
-					if err := executor.accpet(blk.Number, result); err != nil {
+					if err := executor.accpet(blk.Number, blk, result); err != nil {
 						executor.reject()
 						return
 					}
+					common.AddPb(processPb, 1)
+					common.PrintPb(processPb, 10, executor.logger)
 				}
 			}
 		}
+		if !common.IsPrintPb(processPb, 10) {
+			common.PrintPb(processPb, 0, executor.logger)
+		}
+		processPb.Finish()
 		executor.initDemand(executor.context.syncFlag.SyncTarget + 1)
 		executor.clearSyncFlag()
 		executor.sendStateUpdatedEvent()
@@ -503,17 +530,21 @@ func (executor *Executor) sendStateUpdatedEvent() {
 }
 
 // accpet - accept block synchronization result.
-func (executor *Executor) accpet(seqNo uint64, result *ValidationResultRecord) error {
+func (executor *Executor) accpet(seqNo uint64, block *types.Block, result *ValidationResultRecord) error {
 	batch := executor.statedb.FetchBatch(seqNo)
 	if err := edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false); err != nil {
 		executor.logger.Errorf("update chain to (#%d) failed, err: %s", err.Error())
 		return err
 	}
+	// write bloom filter first
+	edb.WriteTxBloomFilter(executor.namespace, block.Transactions)
+
 	if err := batch.Write(); err != nil {
 		executor.logger.Errorf("commit (#%d) changes failed, err: %s", err.Error())
 		return err
 	}
 	executor.statedb.MarkProcessFinish(seqNo)
+	executor.TransitVerifiedBlock(block)
 	executor.filterFeedback(result.Block, result.Logs)
 	return nil
 }
@@ -644,7 +675,7 @@ func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 		return
 	}
 	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
-		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
+		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId, request.PeerHash)
 	}
 }
 
@@ -777,3 +808,12 @@ func (executor *Executor) constrcutWs(ack *WsAck, packetId uint64, packetSize ui
 		Payload:    payload,
 	}
 }
+
+func getTxVersion(block *types.Block) string {
+	if block == nil || len(block.Transactions) == 0 {
+		// short circuit if block is empty or no transaction embeded.
+		return edb.TransactionVersion
+	}
+	return string(block.Transactions[0].Version)
+}
+

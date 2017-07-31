@@ -5,11 +5,11 @@ package common
 
 import (
 	"encoding/json"
-	"github.com/op/go-logging"
-	"hyperchain/common"
-	pb "hyperchain/p2p/message"
+	//pb "hyperchain/p2p/message"
 	"io/ioutil"
 	"sync"
+	"github.com/op/go-logging"
+	"hyperchain/common"
 )
 
 type ConfigReader struct {
@@ -19,7 +19,7 @@ type ConfigReader struct {
 	maxNode   int
 	path      string
 	writeLock sync.Mutex
-	logger    *logging.Logger
+	logger *logging.Logger
 }
 
 // TODO return a error next to the configReader or throw a panic
@@ -139,74 +139,74 @@ func (conf *ConfigReader) persist() error {
 	}
 	return nil
 }
-
-func (conf *ConfigReader) addNode(addr pb.PeerAddr) {
-	newAddress := NewAddress(addr.ID, addr.Port, addr.RPCPort, addr.IP)
-	conf.nodes[addr.ID] = newAddress
-	peerConfigNode := NewPeerConfigNodes(addr.IP, addr.RPCPort, addr.Port, addr.ID)
-	conf.Config.PeerNodes = append(conf.Config.PeerNodes, *peerConfigNode)
-
-}
-func (conf *ConfigReader) updateNode(addr pb.PeerAddr) {
-	if addr.ID < len(conf.Config.PeerNodes) {
-		conf.Config.PeerNodes[addr.ID].ID = addr.ID
-		conf.Config.PeerNodes[addr.ID].Address = addr.IP
-		conf.Config.PeerNodes[addr.ID].Port = addr.Port
-		conf.Config.PeerNodes[addr.ID].RPCPort = addr.RPCPort
-	}
-}
-
-func (conf *ConfigReader) delNode(addr pb.PeerAddr) {
-	conf.maxNode -= 1
-	delete(conf.nodes, addr.ID)
-	conf.Config.Maxpeernode -= 1
-	conf.Config.PeerNodes = deleteElement(conf.Config.PeerNodes, addr)
-}
-
-func (conf *ConfigReader) AddNodesAndPersist(addrs map[string]pb.PeerAddr) {
-	idx := 0
-	for _, value := range addrs {
-		if _, ok := conf.nodes[value.ID]; !ok {
-			conf.logger.Debug("add a node", value.ID)
-			conf.addNode(value)
-		} //}else {
-		//	conf.updateNode(value)
-		//}
-		idx++
-		if idx == 1 {
-			conf.Config.SelfConfig.IntroducerID = value.ID
-			conf.Config.SelfConfig.IntroducerIP = value.IP
-			conf.Config.SelfConfig.IntroducerPort = value.Port
-			conf.Config.SelfConfig.IntroducerJSONRPCPort = value.RPCPort
-		}
-	}
-	conf.maxNode = len(addrs) + 1
-	conf.Config.Maxpeernode = len(addrs) + 1
-	conf.persist()
-}
-func (conf *ConfigReader) DelNodesAndPersist(addrs map[string]pb.PeerAddr) {
-	for _, value := range addrs {
-		if _, ok := conf.nodes[value.ID]; ok {
-			if value.ID < conf.Config.SelfConfig.NodeID {
-				conf.Config.SelfConfig.NodeID--
-			}
-			conf.delNode(value)
-		}
-	}
-	conf.persist()
-}
-
-func deleteElement(nodes []PeerConfigNodes, addr pb.PeerAddr) []PeerConfigNodes {
-	result := make([]PeerConfigNodes, 0)
-	index := 0
-	for k, v := range nodes {
-		if v.ID == addr.ID {
-			result = append(result, nodes[index:k]...)
-			index = k + 1
-		} else if v.ID > addr.ID {
-			nodes[k].ID = nodes[k].ID - 1
-			result = append(result, nodes[k])
-		}
-	}
-	return result
-}
+//
+//func (conf *ConfigReader) addNode(addr pb.PeerAddr) {
+//	newAddress := NewAddress(addr.ID, addr.Port, addr.RPCPort, addr.IP)
+//	conf.nodes[addr.ID] = newAddress
+//	peerConfigNode := NewPeerConfigNodes(addr.IP, addr.RPCPort, addr.Port, addr.ID)
+//	conf.Config.PeerNodes = append(conf.Config.PeerNodes, *peerConfigNode)
+//
+//}
+//func (conf *ConfigReader) updateNode(addr pb.PeerAddr) {
+//	if addr.ID < len(conf.Config.PeerNodes) {
+//		conf.Config.PeerNodes[addr.ID].ID = addr.ID
+//		conf.Config.PeerNodes[addr.ID].Address = addr.IP
+//		conf.Config.PeerNodes[addr.ID].Port = addr.Port
+//		conf.Config.PeerNodes[addr.ID].RPCPort = addr.RPCPort
+//	}
+//}
+//
+//func (conf *ConfigReader) delNode(addr pb.PeerAddr) {
+//	conf.maxNode -= 1
+//	delete(conf.nodes, addr.ID)
+//	conf.Config.Maxpeernode -= 1
+//	conf.Config.PeerNodes = deleteElement(conf.Config.PeerNodes, addr)
+//}
+//
+//func (conf *ConfigReader) AddNodesAndPersist(addrs map[string]pb.PeerAddr) {
+//	idx := 0
+//	for _, value := range addrs {
+//		if _, ok := conf.nodes[value.ID]; !ok {
+//			conf.logger.Debug("add a node", value.ID)
+//			conf.addNode(value)
+//		} //}else {
+//		//	conf.updateNode(value)
+//		//}
+//		idx++
+//		if idx == 1 {
+//			conf.Config.SelfConfig.IntroducerID = value.ID
+//			conf.Config.SelfConfig.IntroducerIP = value.IP
+//			conf.Config.SelfConfig.IntroducerPort = value.Port
+//			conf.Config.SelfConfig.IntroducerJSONRPCPort = value.RPCPort
+//		}
+//	}
+//	conf.maxNode = len(addrs) + 1
+//	conf.Config.Maxpeernode = len(addrs) + 1
+//	conf.persist()
+//}
+//func (conf *ConfigReader) DelNodesAndPersist(addrs map[string]pb.PeerAddr) {
+//	for _, value := range addrs {
+//		if _, ok := conf.nodes[value.ID]; ok {
+//			if value.ID < conf.Config.SelfConfig.NodeID {
+//				conf.Config.SelfConfig.NodeID--
+//			}
+//			conf.delNode(value)
+//		}
+//	}
+//	conf.persist()
+//}
+//
+//func deleteElement(nodes []PeerConfigNodes, addr pb.PeerAddr) []PeerConfigNodes {
+//	result := make([]PeerConfigNodes, 0)
+//	index := 0
+//	for k, v := range nodes {
+//		if v.ID == addr.ID {
+//			result = append(result, nodes[index:k]...)
+//			index = k + 1
+//		} else if v.ID > addr.ID {
+//			nodes[k].ID = nodes[k].ID - 1
+//			result = append(result, nodes[k])
+//		}
+//	}
+//	return result
+//}

@@ -18,6 +18,8 @@ message SessionMessage {
         SEND_WORLD_STATE = 11;
         ADD_PEER = 12;
         DEL_PEER = 13;
+        TRANSIT_BLOCK = 14;
+        NVP_RELAY = 15;
     }
     Type type = 1;
     bytes payload = 2;

@@ -20,24 +20,16 @@ global:
     dbConfig: "namespaces/global/config/db.yaml"
 
     configs:
-        caconfig: "namespaces/global/config/caconfig.toml"
+        caconfig: "namespaces/global/config/caconfig.yaml"
         peers: "namespaces/global/config/local_peerconfig.json"
+        peers13: "namespaces/global/config/peerconfig.yaml"
         genesis: "namespaces/global/config/genesis.json"
         static_peers: "namespaces/global/config/static_peers.json"
-        ratelimit:
-                enable   : true
-                txRatePeak : 100
-                txFillRate: 0.5ms
-                contractRatePeak : 100
-                contractFillRate: 0.5ms
 
         hmpublickey:
             "N": "14315727801779002117"
             Nsquare: "204940062494628260128356353732290481689"
             G: "90976693534933209671098397317966944738726332459523400324197777885595356310417"
-    security:
-        enabletls: false
-        enablesymmetrical: false
     connection:
         retryTimeLimit: 6
         retryTimeout: 10s
@@ -71,25 +63,20 @@ global:
             core: "NOTICE"
             hyperdb: "NOTICE"
             common/hyper_logger: "NOTICE"
-            hyperstate: "DEBUG"
-            api: "DEBUG"
+            hyperstate: "NOTICE"
 
     ######################################################
     # configs related to the executor                    #
     ######################################################
     executor:
         sync_chain:
-            sync_batch_size: 10
-            sync_resend_interval: 10s
-            sync_ws_enable: false
+            sync_batch_size: 500
+            sync_resend_interval: 1m
+        nvp:
+            exitflag: false
         sync_replica:
             interval : 500s
             enable   : false
-        archive:
-            manifest: "./namespaces/global/data/snapshot_manifest.json"
-            archiveMeta: "./namespaces/global/data/archive_meta.json"
-            force_consistency: false
-            threshold: 0
         buckettree:
             global:
                 globalDataNodeCacheSize: 10000

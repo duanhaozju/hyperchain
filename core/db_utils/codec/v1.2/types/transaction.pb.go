@@ -2,6 +2,15 @@
 // source: transaction.proto
 // DO NOT EDIT!
 
+/*
+Package types is a generated protocol buffer package.
+
+It is generated from these files:
+	transaction.proto
+
+It has these top-level messages:
+	TransactionV1_2
+*/
 package types
 
 import proto "github.com/golang/protobuf/proto"
@@ -12,6 +21,12 @@ import math "math"
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
+
+// This is a compile-time assertion to ensure that this generated file
+// is compatible with the proto package it is being compiled against.
+// A compilation error at this line likely means your copy of the
+// proto package needs to be updated.
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type TransactionV1_2 struct {
 	Version         []byte `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`

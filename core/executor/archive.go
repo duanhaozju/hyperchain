@@ -95,20 +95,14 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 			return err
 		}
 		for idx, tx := range block.Transactions {
-			receipt := edb.GetRawReceipt(mgr.namespace, tx.GetHash())
-			if err := edb.DeleteTransaction(olBatch, tx.GetHash().Bytes(), false, false); err != nil {
-				mgr.logger.Errorf("[Namespace = %s] archive useless tx in block %d failed, error msg %s", mgr.namespace, i, err.Error())
+			if edb.DeleteTransactionMeta(olBatch, tx.GetHash().Bytes(), false, false); err != nil {
+				mgr.logger.Errorf("[Namespace = %s] archive useless transaction meta in block %d failed, error msg %s", mgr.namespace, i, err.Error())
 				return err
 			}
+			receipt := edb.GetRawReceipt(mgr.namespace, tx.GetHash())
 			if err := edb.DeleteReceipt(olBatch, tx.GetHash().Bytes(), false, false); err != nil {
 				mgr.logger.Errorf("[Namespace = %s] archive useless receipt in block %d failed, error msg %s", mgr.namespace, i, err.Error())
 				return err
-			}
-			if err, _ := edb.PersistTransaction(avBatch, tx, false, false); err != nil {
-				mgr.logger.Errorf("[Namespace = %s] archive tx in block %d to historic database failed, error msg %s", mgr.namespace, i, err.Error())
-				return err
-			} else {
-				txc += 1
 			}
 			// persist transaction meta data
 			meta := &types.TransactionMeta{
@@ -118,6 +112,8 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 			if err := edb.PersistTransactionMeta(avBatch, meta, tx.GetHash(), false, false); err != nil {
 				mgr.logger.Errorf("[Namespace = %s] archive txmeta in block %d to historic database failed, error msg %s", mgr.namespace, i, err.Error())
 				return err
+			} else {
+				txc += 1
 			}
 			if err, _ := edb.PersistReceipt(avBatch, receipt, false, false); err != nil {
 				mgr.logger.Errorf("[Namespace = %s] archive receipt in block %d to historic database failed, error msg %s", mgr.namespace, i, err.Error())
