@@ -1355,20 +1355,19 @@ func (pbft *pbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, rep
 // receive local message methods
 // =============================================================================
 func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
+	if atomic.LoadUint32(&pbft.activeView) == 0 {
+		pbft.logger.Debugf("Replica %d ignoring ValidatedResult as we sre in view change", pbft.id)
+		return nil
+	}
+
+	if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 {
+		pbft.logger.Debugf("Replica %d ignoring ValidatedResult as we are in updating N", pbft.id)
+		return nil
+	}
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
 		pbft.logger.Debugf("Primary %d received validated batch for view=%d/vid=%d, batch size: %d, hash: %s", pbft.id, result.View, result.SeqNo, len(result.Transactions), result.Hash)
-
-		if atomic.LoadUint32(&pbft.activeView) == 0 {
-			pbft.logger.Debugf("Replica %d ignoring ValidatedResult as we sre in view change", pbft.id)
-			return nil
-		}
-
-		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 {
-			pbft.logger.Debugf("Replica %d ignoring ValidatedResult as we are in updating N", pbft.id)
-			return nil
-		}
 
 		if !pbft.inV(result.View) {
 			pbft.logger.Debugf("Replica %d receives validated result whose view is in old view, now view=%v", pbft.id, pbft.view)
