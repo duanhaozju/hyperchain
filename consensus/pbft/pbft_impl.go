@@ -1390,7 +1390,7 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 		pbft.batchVdr.saveToCVB(digest, cache)
 		pbft.trySendPrePrepares()
 	} else {
-		pbft.logger.Debugf("Replica %d recived validated batch for view=%d/sqeNo=%d, batch size: %d, hash: %s", pbft.id, result.View, result.SeqNo, len(result.Transactions), result.Hash)
+		pbft.logger.Debugf("Replica %d received validated batch for view=%d/sqeNo=%d, batch size: %d, hash: %s", pbft.id, result.View, result.SeqNo, len(result.Transactions), result.Hash)
 
 		if !pbft.inWV(result.View, result.SeqNo) {
 			pbft.logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
