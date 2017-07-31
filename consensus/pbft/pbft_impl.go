@@ -833,10 +833,10 @@ func (pbft *pbftImpl) processRequestsDuringRecovery() {
 
 func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error {
 
-	if pbft.status.getState(&pbft.status.inNegoView) {
-		pbft.logger.Debugf("Replica %d try to recvStateUpdatedEvent, but it's in nego-view", pbft.id)
-		return nil
-	}
+	//if pbft.status.getState(&pbft.status.inNegoView) {
+	//	pbft.logger.Debugf("Replica %d try to recvStateUpdatedEvent, but it's in nego-view", pbft.id)
+	//	return nil
+	//}
 
 	pbft.status.inActiveState(&pbft.status.stateTransferring)
 	// If state transfer did not complete successfully, or if it did not reach our low watermark, do it again
