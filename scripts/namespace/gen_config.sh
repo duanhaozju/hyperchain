@@ -190,12 +190,26 @@ f_distribute(){
 
         cp -rf  ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/node${j}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/cert/
 
-        # distribute hypercli
         if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
-            mkdir ${DUMP_PATH}/node${j}/hypercli
+            mkdir -p ${DUMP_PATH}/node${j}/hypercli
         fi
         cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
         cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
+
+        # distribute bin
+        BIN_PATH=${DUMP_PATH}/node${j}/bin
+        if [ -d ${BIN_PATH} ];then
+            rm -rf ${BIN_PATH}
+        fi
+        mkdir -p ${BIN_PATH}
+        cp ${PROJECT_PATH}/scripts/sub_scripts/start.sh ${BIN_PATH}
+        cp ${PROJECT_PATH}/scripts/sub_scripts/stop.sh ${BIN_PATH}
+        cp ${PROJECT_PATH}/scripts/sub_scripts/stop.sh ${BIN_PATH}/stop_local.sh
+        if [ ${_SYSTYPE} = "MAC" ]; then
+            sed -i "" "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
+        else
+            sed -i "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
+        fi
     done
         rm -rf ${BUILD_TMP_PATH}
 }
