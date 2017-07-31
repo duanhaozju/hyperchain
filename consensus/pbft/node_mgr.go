@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"reflect"
 	ndb "hyperchain/core/db_utils"
+	"sort"
 )
 
 /**
@@ -1329,17 +1330,24 @@ func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uin
 	}
 
 	// prune top null requests
-	i := h + 1
-	list := make(map[uint64]string)
 	for n, msg := range msgList {
 		if n > maxN || msg == "" {
-			continue
-		} else {
-			list[i] = msg
-			i++
+			delete(msgList, n)
 		}
 	}
-
+	keys := make([]uint64, len(msgList))
+	i := 0;
+	for n := range msgList {
+		keys[i] = n
+		i++
+	}
+	sort.Sort(sortableUint64Slice(keys))
+	x := h + 1
+	list := make(map[uint64]string)
+	for _, n := range keys {
+		list[x] = msgList[n]
+		x++
+	}
 	return list
 }
 

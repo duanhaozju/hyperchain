@@ -13,6 +13,7 @@ import (
 	"hyperchain/common"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"sync/atomic"
+	"sort"
 )
 
 //view change manager
@@ -1061,16 +1062,26 @@ nLoop:
 	}
 
 	// prune top null requests
-	i := h + 1
-	list := make(map[uint64]string)
 	for n, msg := range msgList {
 		if n > maxN || msg == "" {
-			continue
-		} else {
-			list[i] = msg
-			i++
+			delete(msgList, n)
 		}
 	}
+
+	keys := make([]uint64, len(msgList))
+	i := 0;
+	for n := range msgList {
+		keys[i] = n
+		i++
+	}
+	sort.Sort(sortableUint64Slice(keys))
+	x := h + 1
+	list := make(map[uint64]string)
+	for _, n := range keys {
+		list[x] = msgList[n]
+		x++
+	}
+
 	return list
 }
 
