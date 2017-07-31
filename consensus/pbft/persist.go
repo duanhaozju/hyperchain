@@ -188,6 +188,12 @@ func (pbft *pbftImpl) restoreCert() {
 			}
 		}
 	}
+	for idx, cert := range pbft.storeMgr.certStore {
+		if idx.n <= pbft.exec.lastExec {
+			cert.sentExecute = true
+		}
+	}
+
 }
 
 func (pbft *pbftImpl) parseSpecifyCertStore() {

@@ -679,7 +679,7 @@ func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
 		}
 
 		if idx.n != pbft.exec.lastExec + 1 {
-			pbft.logger.Debugf("Replica %d hasn't done with last execute %d, seq=%d", pbft.id, pbft.exec.lastExec, idx.n)
+			pbft.logger.Debugf("Replica %d expects to execute seq=%d, but get seq=%d", pbft.id, pbft.exec.lastExec+1, idx.n)
 			//break
 			continue
 		}
@@ -859,7 +859,6 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 	pbft.exec.setLastExec(et.SeqNo)
 	pbft.batchVdr.setVid(et.SeqNo)
 	pbft.batchVdr.setLastVid(et.SeqNo)
-	pbft.moveWatermarks(pbft.exec.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.status.inActiveState(&pbft.status.skipInProgress)
 	pbft.validateState()
 	if et.SeqNo % pbft.K == 0 {
@@ -869,8 +868,8 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 
 	if pbft.status.getState(&pbft.status.inRecovery) {
 		if pbft.recoveryMgr.recoveryToSeqNo == nil {
-			pbft.logger.Errorf("Replica %d in recovery recvStateUpdatedEvent but " +
-				"its recoveryToSeqNo is nil")
+			pbft.logger.Warningf("Replica %d in recovery recvStateUpdatedEvent but " +
+				"its recoveryToSeqNo is nil", pbft.id)
 			return nil
 		}
 		if pbft.exec.lastExec == *pbft.recoveryMgr.recoveryToSeqNo {

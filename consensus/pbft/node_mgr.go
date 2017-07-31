@@ -1097,9 +1097,7 @@ func (pbft *pbftImpl) rebuildCertStoreForUpdate() {
 			msg := cMsgToPbMsg(consensusMsg, pbft.id)
 			pbft.helper.InnerBroadcast(msg)
 		}
-		if vc.sentExecute {
-			cert.sentExecute = true
-		}
+		cert.sentExecute = true
 	}
 
 }
