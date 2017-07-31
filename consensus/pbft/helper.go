@@ -77,6 +77,10 @@ func (pbft *pbftImpl) getAddNodeCert(addHash string) (cert *addNodeCert) {
 	return
 }
 
+func (pbft *pbftImpl) allCorrectQuorum() int {
+	return pbft.N
+}
+
 // Given a ip/digest get the addnode Cert
 func (pbft *pbftImpl) getDelNodeCert(delHash string) (cert *delNodeCert) {
 

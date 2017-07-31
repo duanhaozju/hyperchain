@@ -253,7 +253,7 @@ func (pbft *pbftImpl) maybeUpdateTableForAdd(key string) error {
 	}
 
 	cert := pbft.getAddNodeCert(key)
-	if cert.addCount < pbft.commonCaseQuorum() {
+	if cert.addCount < pbft.allCorrectQuorum() {
 		return nil
 	}
 
@@ -267,7 +267,7 @@ func (pbft *pbftImpl) maybeUpdateTableForAdd(key string) error {
 				return nil
 			}
 		} else {
-			pbft.logger.Debugf("Replica %d has not locally ready but still accept adding", pbft.id)
+			pbft.logger.Warningf("Replica %d has not locally ready for adding, have not received connect from new replica", pbft.id)
 			return nil
 		}
 	}
@@ -286,7 +286,7 @@ func (pbft *pbftImpl) maybeUpdateTableForDel(key string) error {
 
 	cert := pbft.getDelNodeCert(key)
 
-	if cert.delCount < pbft.N {
+	if cert.delCount <  pbft.allCorrectQuorum() {
 		return nil
 	}
 
@@ -835,8 +835,6 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 				sentExecute: cert.sentExecute,
 			}
 			tmpStore[tmpId] = tmpCert
-			delete(pbft.storeMgr.certStore, idx)
-			pbft.persistDelQPCSet(idx.v, idx.n)
 		}
 	}
 

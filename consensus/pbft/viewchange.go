@@ -664,8 +664,6 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 				sentExecute: cert.sentExecute,
 			}
 			tmpStore[tmpId] = tmpCert
-			delete(pbft.storeMgr.certStore, idx)
-			pbft.persistDelQPCSet(idx.v, idx.n)
 		}
 	}
 	for idx, cert := range pbft.vcMgr.vcCertStore {
