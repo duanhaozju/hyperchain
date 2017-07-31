@@ -27,7 +27,7 @@ type ServerCodec interface {
 	// Check http header
 	CheckHttpHeaders(namespace string) common.RPCError
 	// Read next request
-	ReadRequestHeaders() ([]*common.RPCRequest, bool, common.RPCError)
+	ReadRequestHeaders(options CodecOption) ([]*common.RPCRequest, bool, common.RPCError)
 	// Assemble success response, expects response id and payload
 	CreateResponse(id interface{}, namespace string, reply interface{}) interface{}
 	// Assemble error response, expects response id and error

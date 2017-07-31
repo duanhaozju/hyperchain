@@ -27,7 +27,7 @@ const (
 	OptionMethodInvocation CodecOption = 1 << iota
 
 	// OptionSubscriptions is an indication that the codec suports RPC notifications
-	OptionSubscriptions = 1 << iota // support pub sub
+	OptionSubscriptions
 )
 
 // NewServer will create a new server instance with no registered handlers.
@@ -115,7 +115,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 
 	// test if the server is ordered to stop
 	for atomic.LoadInt32(&s.run) == 1 {
-		reqs, batch, err := s.readRequest(codec)
+		reqs, batch, err := s.readRequest(codec, options)
 		// If a parsing error occurred, send an error
 		if err != nil {
 			// If a parsing error occurred, send an error
@@ -195,8 +195,8 @@ func (s *Server) Stop() {
 // readRequest requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
-func (s *Server) readRequest(codec ServerCodec) ([]*common.RPCRequest, bool, common.RPCError) {
-	reqs, batch, err := codec.ReadRequestHeaders()
+func (s *Server) readRequest(codec ServerCodec,  options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
+	reqs, batch, err := codec.ReadRequestHeaders(options)
 	if err != nil {
 		return nil, batch, err
 	}

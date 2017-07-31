@@ -142,7 +142,7 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string) common.RPCError {
 // ReadRequestHeaders will read new requests without parsing the arguments. It will
 // return a collection of requests, an indication if these requests are in batch
 // form or an error when the incoming message could not be read/parsed.
-func (c *jsonCodec) ReadRequestHeaders() ([]*common.RPCRequest, bool, common.RPCError) {
+func (c *jsonCodec) ReadRequestHeaders(options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
@@ -154,7 +154,7 @@ func (c *jsonCodec) ReadRequestHeaders() ([]*common.RPCRequest, bool, common.RPC
 		return parseBatchRequest(incomingMsg)
 	}
 
-	return parseRequest(incomingMsg)
+	return parseRequest(incomingMsg, options)
 }
 
 // isBatch returns true when the first non-whitespace characters is '['
@@ -188,7 +188,7 @@ func checkReqId(reqId json.RawMessage) error {
 // parseRequest will parse a single request from the given RawMessage. It will return
 // the parsed request, an indication if the request was a batch or an error when
 // the request could not be parsed.
-func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, common.RPCError) {
+func parseRequest(incomingMsg json.RawMessage, options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
 	var in JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
 		return nil, false, &common.InvalidMessageError{Message: err.Error()}
@@ -199,6 +199,9 @@ func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, comm
 
 	// subscribe are special, they will always use `subscribeMethod` as first param in the payload
 	if strings.HasSuffix(in.Method, SubscribeMethodSuffix) {
+		if options == OptionMethodInvocation {
+			return nil, false, &common.CallbackError{Message: ErrNotificationsUnsupported.Error()}
+		}
 		reqs := []*common.RPCRequest{{Id: &in.Id, IsPubSub: true}}
 		if len(in.Payload) > 0 {
 			// first param must be subscription name
