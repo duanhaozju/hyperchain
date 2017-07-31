@@ -354,7 +354,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			continue
 		}
 
-		if !pbft.inWV(pbft.view, n) {
+		if !pbft.sendInWV(pbft.view, n) {
 			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because " +
 				"batch seqNo=%d is out of sequence numbers", pbft.id, digest, n)
 			pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
