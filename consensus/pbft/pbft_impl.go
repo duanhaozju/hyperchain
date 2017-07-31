@@ -859,13 +859,11 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 	pbft.exec.setLastExec(et.SeqNo)
 	pbft.batchVdr.setVid(et.SeqNo)
 	pbft.batchVdr.setLastVid(et.SeqNo)
-	bcInfo := pbft.getCurrentBlockInfo()
-	id, _ := proto.Marshal(bcInfo)
-	pbft.persistCheckpoint(et.SeqNo, id)
 	pbft.moveWatermarks(pbft.exec.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.status.inActiveState(&pbft.status.skipInProgress)
 	pbft.validateState()
 	if et.SeqNo % pbft.K == 0 {
+		bcInfo := pbft.getCurrentBlockInfo()
 		pbft.checkpoint(et.SeqNo, bcInfo)
 	}
 
