@@ -797,8 +797,12 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 }
 
 func (pbft *pbftImpl) rebuildCertStore() {
-
-	pbft.storeMgr.certStore = make(map[msgID]*msgCert)
+	for idx := range pbft.storeMgr.certStore {
+		if idx.v < pbft.view {
+			delete(pbft.storeMgr.certStore, idx)
+			pbft.persistDelQPCSet(idx.v, idx.n)
+		}
+	}
 	for idx, vc := range pbft.vcMgr.vcCertStore {
 		if idx.n > pbft.exec.lastExec {
 			continue

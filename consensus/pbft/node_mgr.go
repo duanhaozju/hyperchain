@@ -1007,8 +1007,13 @@ func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 }
 
 func (pbft *pbftImpl) rebuildCertStoreForUpdate() {
+	for idx := range pbft.storeMgr.certStore {
+		if idx.v < pbft.view {
+			delete(pbft.storeMgr.certStore, idx)
+			pbft.persistDelQPCSet(idx.v, idx.n)
+		}
+	}
 
-	pbft.storeMgr.certStore = make(map[msgID]*msgCert)
 	for idx, vc := range pbft.nodeMgr.updateCertStore {
 		if idx.n > pbft.exec.lastExec {
 			continue
