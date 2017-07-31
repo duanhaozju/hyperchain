@@ -114,7 +114,22 @@ do
     cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.yaml
     cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/ns1/config/peerconfig.yaml
     #namespace's global
-    cp -rf  ${CONF_PATH}/peerconfigs/global_${j}.yaml ${DUMP_PATH}/node${j}/global.yaml
+
+    cp -rf  ${CONF_PATH}/global.yaml ${DUMP_PATH}/node${j}/global.yaml
+    if [ ${_SYSTYPE} = "MAC" ]; then
+        sed -i "" "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+        sed -i "" "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+        sed -i "" "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+        sed -i "" "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+        sed -i "" "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+    else
+        sed -i "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+        sed -i "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+        sed -i "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+        sed -i "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+        sed -i "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+    fi
+
     cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.yaml ${DUMP_PATH}/node${j}/addr.yaml
     cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
     cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/cert/

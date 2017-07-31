@@ -345,12 +345,14 @@ func (executor *Executor) accpet(seqNo uint64, block *types.Block) error {
 		executor.logger.Errorf("update chain to (#%d) failed, err: %s", err.Error())
 		return err
 	}
+	// write to bloom filter first
+	// IMPORTANT never reorder the sequence of (1) write bloom filter (2) flush db
+	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
+		executor.logger.Warning("write tx to bloom filter failed", err.Error())
+	}
 	if err := batch.Write(); err != nil {
 		executor.logger.Errorf("commit (#%d) changes failed, err: %s", err.Error())
 		return err
-	}
-	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
-		executor.logger.Warning("write tx to bloom filter failed", err.Error())
 	}
 	// send it to connected nvp
 	executor.TransitVerifiedBlock(block)

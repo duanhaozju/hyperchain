@@ -12,6 +12,9 @@ import cn.hyperchain.jcee.executor.Context;
 import cn.hyperchain.jcee.executor.ContractHandler;
 import cn.hyperchain.jcee.executor.Handler;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
+import cn.hyperchain.jcee.ledger.table.RelationDB;
+import cn.hyperchain.jcee.ledger.table.Table;
+import cn.hyperchain.jcee.ledger.table.TableName;
 import lombok.*;
 import org.apache.log4j.Logger;
 
@@ -118,5 +121,18 @@ public abstract class ContractTemplate {
 
     protected final void addFilter(String funcName, Filter filter) {
         filterManager.AddFilter(funcName, filter);
+    }
+
+    public String getNamespace() {
+        return this.info.getNamespace();
+    }
+    /**
+     * get table instance used by this contract with specified name
+     * @param name name
+     * @return Table instance
+     */
+    public Table getTable(String name) {
+        RelationDB db = ledger.getDataBase();
+        return db.getTable(new TableName(getNamespace(), getCid(), name));
     }
 }

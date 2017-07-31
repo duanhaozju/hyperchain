@@ -4,13 +4,15 @@
  */
 package cn.hyperchain.jcee.ledger;
 
-
 import cn.hyperchain.jcee.contract.Event;
+import cn.hyperchain.jcee.ledger.table.RelationDB;
 
 public interface ILedger {
 
     //post event to hyperchain
     boolean post(Event event);
+
+    RelationDB getDataBase();
 
     //newBatch create a new batch
     Batch newBatch();

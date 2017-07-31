@@ -77,8 +77,8 @@ func (hmi *hyperLoggerMgrImpl) getHyperLogger(namespace string) (hl *HyperLogger
 func (hmi *hyperLoggerMgrImpl) getLogger(namespace, module string) *logging.Logger {
 	hl := hyperLoggerMgr.getHyperLogger(namespace)
 	if hl == nil {
-		commonLogger.Errorf("No hyperlogger found for namespace: %s "+
-			"please init namespace level logger system before try to use logger in it,", namespace)
+		commonLogger.Errorf("No hyperlogger found for namespace: %s:%s "+
+			"please init namespace level logger system before try to use logger in it,", namespace, module)
 		return nil
 	}
 	return hl.getOrCreateLogger(module)

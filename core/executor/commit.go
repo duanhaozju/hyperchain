@@ -83,6 +83,11 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 		executor.logger.Errorf("update chain to #%d failed.", block.Number, err.Error())
 		return err
 	}
+	// write to bloom filter first
+	// IMPORTANT never reorder the sequence of (1) write bloom filter (2) flush db
+	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
+		executor.logger.Warning("write tx to bloom filter failed", err.Error())
+	}
 	if err := batch.Write(); err != nil {
 		executor.logger.Errorf("commit #%d changes failed.", block.Number, err.Error())
 		return err
@@ -99,9 +104,6 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
 	executor.TransitVerifiedBlock(block)
 
-	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
-		executor.logger.Warning("write tx to bloom filter failed", err.Error())
-	}
 	return nil
 }
 

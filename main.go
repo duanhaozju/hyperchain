@@ -49,9 +49,6 @@ func newHyperchain(argV *argT) *hyperchain {
 	}
 	hp.p2pmgr = p2pManager
 
-	//
-	//common.InitLog(globalConfig)
-
 	httpPort := vip.GetInt("global.jsonrpc_port")
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
 	hp.hs = jsonrpc.GetHttpServer(hp.nsMgr, hp.stopFlag, hp.restartFlag,httpPort)
@@ -60,11 +57,11 @@ func newHyperchain(argV *argT) *hyperchain {
 }
 
 func (h *hyperchain) start() {
-	logger.Critical("Hyperchain server start...")
+	logger.Critical("Hyperchain server starting...")
 	go h.nsMgr.Start()
 	go h.hs.Start()
 	go CheckLicense(h.stopFlag)
-	logger.Critical("Hyperchain server started")
+	logger.Critical("Hyperchain server started successful")
 }
 
 func (h *hyperchain) stop() {

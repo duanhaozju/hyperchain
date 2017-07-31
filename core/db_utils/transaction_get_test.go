@@ -5,7 +5,6 @@ import (
 	"testing"
 	"hyperchain/core/test_util"
 	"hyperchain/common"
-	"bytes"
 )
 
 
@@ -137,7 +136,7 @@ func TestGetIdOfTransaction(t *testing.T) {
 	if err != nil {
 		t.Error(err.Error())
 	}
-	if bytes.Compare(tr.Id, test_util.TransactionCases[0].Id) != 0 {
+	if tr.Id != test_util.TransactionCases[0].Id {
 		t.Error("TestGetIdOfTransaction fail")
 	}
 	deleteTestData()

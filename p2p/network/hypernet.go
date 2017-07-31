@@ -15,8 +15,10 @@ import (
 	"strings"
 	"strconv"
 	"hyperchain/p2p/network/inneraddr"
+	"github.com/op/go-logging"
 )
 
+var logger *logging.Logger
 
 type HyperNet struct {
 	conf          *viper.Viper

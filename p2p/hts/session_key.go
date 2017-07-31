@@ -19,7 +19,8 @@ func NewSessionKey(sharedKey []byte) *SessionKey {
 		sharedKey: sharedKey,
 		valid:     new(threadsafe.SpinLock),
 	}
-	go sk.selfCheck()
+	//TODO next version feature.
+	//go sk.selfCheck()
 	return sk
 }
 

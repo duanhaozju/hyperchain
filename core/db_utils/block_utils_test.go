@@ -63,21 +63,3 @@ func TestDeleteBlock(t *testing.T) {
 	deleteTestData()
 }
 
-func TestGetMarshalBlock(t *testing.T) {
-	t.Log("test =============> > > TestGetMarshalBlock")
-	InitDataBase()
-	db, _ := hyperdb.GetDBDatabaseByNamespace(common.DEFAULT_NAMESPACE)
-	err, _ := PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	if err != nil {
-		t.Error(err.Error())
-	}
-	block, err := GetBlock(common.DEFAULT_NAMESPACE, test_util.BlockCases.BlockHash)
-	if block.Number != 1 {
-		t.Error("GetBlock fail")
-	}
-	err, _ = GetMarshalBlock(block)
-	if err != nil {
-		t.Errorf("TestGetMarshalBlock fail")
-	}
-	deleteTestData()
-}
