@@ -141,10 +141,9 @@ func (pbft *pbftImpl) rebuildDuplicator() {
 
 // replica clear the duplicator after view change
 func (pbft *pbftImpl) clearDuplicator() {
-	h := pbft.h
 	pbft.dupLock.Lock()
 	for i := range pbft.duplicator {
-		if i > h {
+		if i > pbft.exec.lastExec  {
 			delete(pbft.duplicator, i)
 		}
 	}
