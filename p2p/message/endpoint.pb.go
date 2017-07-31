@@ -8,11 +8,13 @@ It is generated from these files:
 	endpoint.proto
 	msg.proto
 	msg_type.proto
+	package.proto
 
 It has these top-level messages:
 	Endpoint
 	Extend
 	Message
+	Package
 */
 package message
 

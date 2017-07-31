@@ -329,7 +329,7 @@ fi
 f_distribute $MAXPEERNUM
 
 # run hyperchain node
-start_hyperjvm
+# start_hyperjvm
 
 if ${RUN}; then
     f_run_process

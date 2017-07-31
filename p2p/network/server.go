@@ -180,3 +180,12 @@ func(s Server) Whisper(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	}
 	return nil,errors.New(fmt.Sprintf("This message type is not support, %v",msg.MessageType))
 }
+
+// Wisper Transfer the the node health infomation
+func(s Server) Discuss(ctx context.Context, pkg *pb.Package) (*pb.Package, error){
+	if pkg.Type == pb.ControlType_Close {
+		fmt.Println("[Discuss] close this peer (current will not close the remote peer)")
+	}
+	resp := pb.NewPkg(nil,pb.ControlType_Response)
+	return resp,nil
+}

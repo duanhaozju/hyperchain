@@ -10,6 +10,7 @@ import (
 	"time"
 	"github.com/pkg/errors"
 	"github.com/terasum/pool"
+	"github.com/looplab/fsm"
 )
 
 type Client struct {
@@ -18,6 +19,21 @@ type Client struct {
 	connPool pool.Pool
 	MsgChan chan *pb.Message
 	hts hts.HTS
+	stateMachine  *fsm.FSM
+
+
+	// configurations
+	keepAliveDuration time.Duration
+	keepAliveFailTimes int
+
+	pendingDuration time.Duration
+	pendingFailTimes int
+
+	//connection pool init capacity
+	connInitCap int
+	// connection pool upper limit
+	connUpperlimit int
+
 }
 
 
@@ -47,38 +63,28 @@ func NewClient(addr string,sec *Sec) (*Client,error){
 	if err != nil {
 		return nil,err
 	}
-	return &Client{
+	c := &Client{
 		MsgChan: make(chan *pb.Message,100000),
 		addr: addr,
 		connPool:p,
 		sec: sec,
-	},nil
+		//todo those configuration sould be read from configuration
+		connInitCap:2,
+		connUpperlimit:10,
+		keepAliveDuration:time.Second*3,
+		pendingDuration:time.Second*5,
+		pendingFailTimes:3,
+		keepAliveFailTimes:3,
+	}
+	// start fsm
+	c.initState()
+	return c,nil
 }
-
-//func(c *Client)Connect(client ChatClient) error{
-//	if client != nil{
-//		c.client = client
-//		return nil
-//	}
-//
-//	//get a connection from pool
-//	v, err := c.connPool.Get()
-//	if err != nil {
-//		logger.Errorf("cannot get a connection from connection pool: %s \n",c.addr)
-//		fmt.Printf("err: %v",err)
-//		return err
-//	}
-//	//do something
-//	conn:=v.(*grpc.ClientConn)
-//	c.client = NewChatClient(conn)
-//	return nil
-//}
 
 func(c *Client)Close(){
 	c.connPool.Release()
 }
-
-
+// Chat chat remote peer as bidi stream
 func(c *Client)Chat() (error){
 	connv,err :=c.connPool.Get()
 	if err !=  nil{
@@ -118,7 +124,7 @@ func(c *Client)Greeting(in *pb.Message) (*pb.Message, error){
 	return client.Greeting(context.Background(),in)
 }
 
-// Whisper Transfer the the node health information
+// Whisper Transfer the the high level information
 func(c *Client)Whisper(in *pb.Message) (*pb.Message, error){
 	// get client from conn pool
 	connv,err :=c.connPool.Get()
@@ -132,3 +138,20 @@ func(c *Client)Whisper(in *pb.Message) (*pb.Message, error){
 	defer c.connPool.Put(conn)
 	return client.Whisper(context.Background(),in)
 }
+
+// Discuss Transfer the the node health information
+func(c *Client)Discuss(in *pb.Package) (*pb.Package, error){
+	// get client from conn pool
+	connv,err :=c.connPool.Get()
+	if err !=  nil{
+		logger.Warningf(" cannot get the conn from connection pool (%v) ",c.addr)
+		return nil,errors.New(fmt.Sprintf("cannot get the conn from connection pool (%v) ",c.addr))
+	}
+	conn := connv.(*grpc.ClientConn)
+	client := NewChatClient(conn)
+	//put back the conn into the pool
+	defer c.connPool.Put(conn)
+	return client.Discuss(context.Background(),in)
+}
+
+

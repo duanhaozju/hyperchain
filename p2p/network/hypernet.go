@@ -12,7 +12,6 @@ import (
 	"hyperchain/p2p/msg"
 	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/utils"
-	"strings"
 	"strconv"
 	"hyperchain/p2p/network/inneraddr"
 )
@@ -24,7 +23,6 @@ type HyperNet struct {
 	server        *Server
 	clients       cmap.ConcurrentMap
 	hostClientMap cmap.ConcurrentMap
-	stateMachine  *fsm.FSM
 
 	// failed queue
 	failedQueue   *lane.Queue
@@ -90,17 +88,7 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 		addr:ia,
 		domain:domain,
 	}
-	net.stateMachine = fsm.NewFSM(
-		"created",
-		fsm.Events{
-			{Name: "Initlize", Src: []string{"created"}, Dst: "initliezed"},
-			{Name: "Create", Src: []string{"established"}, Dst: "pending"},
-		},
-		fsm.Callbacks{
-			//"enter_state":         func(e *fsm.Event) { p.enterState(e) },
-			//"before_event":        func(e *fsm.Event) { p.beforeEvent(e) },
-		},
-	)
+
 	err = net.retry()
 	if err != nil {
 		return nil,err
@@ -118,98 +106,7 @@ func (hn *HyperNet)DeRegisterHandlers(filed string){
 	hn.server.DeregisterSlots(filed)
 }
 
-func (hn *HyperNet)Command(args []string,ret *[]string)error{
-	if len(args) < 1{
-		*ret = append(*ret,"please specific the network subcommand.")
-		return nil
-	}
 
-	switch args[0] {
-	case "list":{
-		*ret = append(*ret,"list all connections\n")
-		*ret = append(*ret,hn.dns.ListHosts()...)
-	}
-	case "connect":{
-		if len(args)<3{
-			*ret = append(*ret,"invalid connect parameters, format is `network connect [hostname] [ip:port]`",)
-			break
-		}
-		hostname := args[1]
-		ipaddr := args[2]
-		if !strings.Contains(ipaddr,":"){
-			*ret = append(*ret,fmt.Sprintf("%s is not a valid ipaddress, format is ipaddr:port",ipaddr))
-			break
-		}
-		ip := strings.Split(ipaddr,":")[0]
-
-		if !utils.IPcheck(ip){
-			*ret = append(*ret,fmt.Sprintf("%s is not a valid ipv4 address",ip))
-			break
-		}
-
-		port_s := strings.Split(ipaddr,":")[1]
-		port,err := strconv.Atoi(port_s)
-		if err != nil{
-			*ret = append(*ret,fmt.Sprintf("%s valid port",port_s))
-			break
-		}
-		*ret = append(*ret,fmt.Sprintf("connect to a new host: %s =>> %s:%d\n",hostname,ip,port))
-		// real connection part
-		//add dns item
-		err = hn.dns.AddItem(hostname,ipaddr)
-		if err != nil{
-			*ret = append(*ret,fmt.Sprintf("connect to %s failed, reason: %s",hostname,err.Error()))
-			break
-		}
-		// important after add a dns item, it should persist
-		err = hn.dns.Persisit()
-		if err != nil{
-			*ret = append(*ret,fmt.Sprintf("filed to persist hosts file, reason: %s",err.Error()))
-			break
-		}else{
-			*ret = append(*ret,fmt.Sprintf(" success to persist hosts file! for host %s \n",hostname))
-		}
-
-		err = hn.Connect(hostname)
-		if err != nil{
-			*ret = append(*ret,fmt.Sprintf("connect to %s failed, reason: %s",hostname,err.Error()))
-			break
-		}
-
-		*ret = append(*ret,fmt.Sprintf("connect to %s successful.",hostname))
-
-	}
-	case "close":{
-		if len(args)<2{
-			*ret = append(*ret,"invalid connect parameters, format is `network close [hostname]`",)
-			break
-		}
-		hostname := args[1]
-		*ret = append(*ret,fmt.Sprintf("now closing the %s 's connection\n" ,hostname))
-
-		err := hn.DisConnect(hostname)
-
-		if err !=nil{
-			*ret = append(*ret,fmt.Sprintf("closing the %s 's connection failed. reason: %s" ,hostname,err.Error()))
-			break
-		}
-		err = hn.dns.Persisit()
-
-		if err !=nil{
-			*ret = append(*ret,"persist %s 's connection failed, reason: %s" ,hostname,err.Error())
-			break
-		}
-
-		*ret = append(*ret,"close the host connection successed.")
-	}
-	case "reconnect":{
-		*ret = append(*ret,"reconnect to new host")
-	}
-	default:
-		*ret = append(*ret,fmt.Sprintf("unsupport subcommand `network %s`", args[0]))
-	}
-	return nil
-}
 
 //InitServer start self hypernet server listening server
 func (hn *HyperNet)InitServer()error{
@@ -307,10 +204,7 @@ func (hn *HyperNet)ConnectByAddr(hostname,addr string) error{
 		oldClient.(*Client).Close()
 		hn.hostClientMap.Remove(hostname)
 	}
-	//err = client.Connect(nil)
-	//if err != nil{
-	//	return err
-	//}
+	hn.dns.AddItem(hostname,addr)
 	hn.hostClientMap.Set(hostname,client)
 	logger.Infof("success connect to %s \n",hostname)
 	return nil
@@ -346,9 +240,16 @@ func (hn *HyperNet)Connect(hostname string) error{
 //TODO and cancel the retry process of this hostname
 func (hn *HyperNet)DisConnect(hostname string)(err  error){
 	if client, ok := hn.hostClientMap.Get(hostname);ok{
+		//todo need to notify remote peer to disconnect or not?
+		//current implements is notify remote peer disconnect self
+		pkg := pb.NewPkg(nil,pb.ControlType_Close)
+		_,err := client.(*Client).Discuss(pkg)
+		if err != nil{
+			return err
+		}
 		client.(*Client).Close()
 		hn.hostClientMap.Remove(hostname)
-		err := hn.dns.DelItem(hostname)
+		err = hn.dns.DelItem(hostname)
 		if err != nil{
 			return err
 		}
@@ -360,7 +261,7 @@ func (hn *HyperNet)DisConnect(hostname string)(err  error){
 }
 
 //HealthCheck check the connection is available or not at regular intervals
-func (hyperNet *HyperNet)HealthCheck(){
+func (hyperNet *HyperNet)HealthCheck(hostname string){
 	// TODO NetWork Health check
 }
 
@@ -396,6 +297,19 @@ func (hypernet *HyperNet)Whisper(hostname string,msg *pb.Message)(*pb.Message,er
 	return nil,errors.New("the host hasn't been initialized.")
 }
 
+
+
+func (hypernet *HyperNet)Discuss(hostname string,pkg *pb.Package)(*pb.Package,error){
+	hypernet.pkgWrapper(pkg,hostname)
+	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
+			return client.(*Client).Discuss(pkg)
+	}else{
+		logger.Info("this host han't been connected. %s",hostname)
+	}
+	return nil,errors.New("the host hasn't been initialized.")
+}
+
+
 func(hypernet *HyperNet)Stop(){
 	for item := range hypernet.clients.IterBuffered() {
 		client := item.Val.(*Client)
@@ -414,10 +328,21 @@ func (hn *HyperNet)msgWrapper(msg *pb.Message){
 		msg.From.Extend = new(pb.Extend)
 	}
 	if ipaddr ,err := hn.addr.Serialize();err != nil{
-
 		msg.From.Extend.IP = []byte("{\"default\":" + "\"" + utils.GetLocalIP() + hn.listenPort + "\"}")
 	}else{
 		msg.From.Extend.IP = ipaddr
 	}
+}
 
+func (hn *HyperNet)pkgWrapper(pkg *pb.Package,hostname string){
+	if ipaddr ,err := hn.addr.Serialize();err != nil{
+		pkg.Src = []byte("{\"default\":" + "\"" + utils.GetLocalIP() + hn.listenPort + "\"}")
+	}else{
+		pkg.Src = ipaddr
+	}
+	pkg.SrcHost = hn.domain
+	if ip,err := hn.dns.GetDNS(hostname); err != nil{
+		pkg.Dst = []byte(ip)
+	}
+	pkg.DstHost = hostname
 }
