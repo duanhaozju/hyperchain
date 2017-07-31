@@ -104,7 +104,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			if executor.isDemandSyncBlock(block) {
 				// received block's struct definition may different from current
 				// for backward compatibility, store with original version tag.
-				edb.PersistBlock(executor.db.NewBatch(), block, true, true, string(block.Version))
+				edb.PersistBlock(executor.db.NewBatch(), block, true, true, string(block.Version), getTxVersion(block))
 				if err := executor.updateSyncDemand(block); err != nil {
 					executor.logger.Errorf("[Namespace = %s] update sync demand failed.", executor.namespace)
 					executor.reject()
@@ -400,4 +400,12 @@ func (executor *Executor) calcuDownstream() uint64 {
 
 func (executor *Executor) receiveAllRequiredBlocks() bool {
 	return executor.status.syncFlag.SyncDemandBlockNum == executor.getLatestSyncDownstream()
+}
+
+func getTxVersion(block *types.Block) string {
+	if block == nil || len(block.Transactions) == 0 {
+		// short circuit if block is empty or no transaction embeded.
+		return edb.TransactionVersion
+	}
+	return string(block.Transactions[0].Version)
 }
