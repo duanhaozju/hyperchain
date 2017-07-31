@@ -198,26 +198,33 @@ func (pbft *pbftImpl) restoreCert() {
 
 func (pbft *pbftImpl) parseSpecifyCertStore() {
 	tmpStore := make(map[msgID]*msgCert)
-	for idx := range pbft.storeMgr.certStore {
-		cert := pbft.storeMgr.getCert(idx.v, idx.n)
+	for midx, mcert := range pbft.storeMgr.certStore {
+		idx := midx
+		cert := mcert
+		for nidx, ncert := range pbft.storeMgr.certStore {
+			if midx.n == nidx.n {
+				if midx.v <= nidx.v {
+					idx = nidx
+					cert = ncert
+				}
+				delete(pbft.storeMgr.certStore, nidx)
+			}
+		}
 		if cert.prePrepare != nil {
 			cert.prePrepare.View = pbft.view
 		}
 		preps := make(map[Prepare]bool)
 		for prep := range cert.prepare {
-			delete(cert.prepare, prep)
 			prep.View = pbft.view
 			preps[prep] = true
 		}
 		cert.prepare = preps
 		cmts := make(map[Commit]bool)
 		for cmt := range cert.commit {
-			delete(cert.commit, cmt)
 			cmt.View = pbft.view
 			cmts[cmt] = true
 		}
 		cert.commit = cmts
-		delete(pbft.storeMgr.certStore, idx)
 		idx.v = pbft.view
 		tmpStore[idx] = cert
 	}
