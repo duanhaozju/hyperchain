@@ -1251,8 +1251,8 @@ func (pbft *pbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (ch
 	return
 }
 
-func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uint64) (msgList map[uint64]string) {
-	msgList = make(map[uint64]string)
+func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uint64) (map[uint64]string) {
+	msgList := make(map[uint64]string)
 
 	maxN := h + 1
 
@@ -1331,13 +1331,18 @@ func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uin
 	}
 
 	// prune top null requests
+	i := h + 1
+	list := make(map[uint64]string)
 	for n, msg := range msgList {
 		if n > maxN || msg == "" {
-			delete(msgList, n)
+			continue
+		} else {
+			list[i] = msg
+			i++
 		}
 	}
 
-	return
+	return list
 }
 
 func (pbft *pbftImpl) processRequestsDuringUpdatingN() {
