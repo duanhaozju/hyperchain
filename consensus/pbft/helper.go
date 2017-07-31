@@ -77,6 +77,12 @@ func (pbft *pbftImpl) getAddNodeCert(addHash string) (cert *addNodeCert) {
 	return
 }
 
+// Is the view right? And is the sequence number between low watermark and high watermark?
+func (pbft *pbftImpl) sendInWV(v uint64, n uint64) bool {
+	return pbft.view == v && n > pbft.h && n <= pbft.h + pbft.L
+}
+
+
 func (pbft *pbftImpl) allCorrectQuorum() int {
 	return pbft.N
 }

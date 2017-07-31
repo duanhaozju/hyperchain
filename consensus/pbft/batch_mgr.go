@@ -271,6 +271,12 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 		return
 	}
 
+	// ignore too many validated batch as we limited the high watermark in send pre-prepare
+	if len(pbft.batchVdr.cacheValidatedBatch) > int(pbft.L) {
+		pbft.logger.Warningf("Primary %d cached too many validated batch!", pbft.id)
+		return
+	}
+
 	// for keep the previous vid before viewchange
 	var n uint64
 	if vid != 0 {
