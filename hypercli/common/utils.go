@@ -76,8 +76,10 @@ func GetJSONResponse(result string) (jsonrpc.JSONResponse, error) {
 
 // GenSignature generates the transaction signature by many params ...
 func GenSignature(from string, to string, timestamp int64, amount int64, payload string, nonce int64, opcode int32, vmtype types.TransactionValue_VmType) ([]byte, error){
-	conf := common.NewConfig("./keyconfigs/cli.yaml")
+	conf := common.NewRawConfig()
 	conf.Set(common.C_NODE_ID, 1)
+	conf.Set(common.KEY_NODE_DIR, "./keyconfigs/keynodes")
+	conf.Set(common.KEY_STORE_DIR, "./keyconfigs/keystore")
 
 	am := accounts.NewAccountManager(conf)
 

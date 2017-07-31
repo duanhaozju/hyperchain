@@ -190,6 +190,12 @@ f_distribute(){
 
         cp -rf  ${BUILD_TMP_PATH}/${NS_NAME}/config/peerconfigs/node${j}/* ${DUMP_PATH}/${NS_NODES[$j]}/namespaces/${NS_NAME}/config/cert/
 
+        if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
+            mkdir -p ${DUMP_PATH}/node${j}/hypercli
+        fi
+        cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
+        cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
+
         # distribute bin
         BIN_PATH=${DUMP_PATH}/node${j}/bin
         if [ -d ${BIN_PATH} ];then
@@ -204,9 +210,6 @@ f_distribute(){
         else
             sed -i "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
         fi
-
-        # distribute hypercli
-        cp -rf  ${CLI_PATH}/hypercli ${BIN_PATH}
     done
         rm -rf ${BUILD_TMP_PATH}
 }

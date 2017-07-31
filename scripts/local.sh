@@ -141,8 +141,18 @@ do
     #certs
     cp -rf  ${CONF_PATH}/tls ${DUMP_PATH}/node${j}/
 
-    # distribute bin
+    # distribute hypercli
+    if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
+        mkdir ${DUMP_PATH}/node${j}/hypercli
+    fi
+    if [ ! -e "${CLI_PATH}/hypercli" ]; then
+        f_rebuild_hypercli
+    fi
+    cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
+    cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
+
     BIN_PATH=${DUMP_PATH}/node${j}/bin
+    # distribute bin
     if [ -d ${BIN_PATH} ];then
         rm -rf ${BIN_PATH}
     fi
@@ -155,13 +165,6 @@ do
     else
         sed -i "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
     fi
-
-    # distribute hypercli
-    if [ ! -e "${CLI_PATH}/hypercli" ]; then
-        f_rebuild_hypercli
-    fi
-    cp -rf  ${CLI_PATH}/hypercli ${BIN_PATH}
-
 done
 }
 
@@ -323,9 +326,9 @@ if [[ $? != 0 ]]; then
 echo "compile failed, script stopped."
 exit 1
 fi
-#if $HYPERCLI ; then
-#    f_rebuild_hypercli
-#fi
+if $HYPERCLI ; then
+    f_rebuild_hypercli
+fi
 
 # distribute files
 f_distribute $MAXPEERNUM
