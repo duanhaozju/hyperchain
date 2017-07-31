@@ -915,7 +915,6 @@ func (pbft *pbftImpl) sendFinishUpdate() events.Event {
 func (pbft *pbftImpl) recvFinishUpdate(finish *FinishUpdate) events.Event {
 	if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
 		pbft.logger.Debugf("Replica %d is not in updatingN, but received FinishUpdate from replica %d", pbft.id, finish.ReplicaId)
-		return nil
 	}
 	pbft.logger.Debugf("Replica %d received FinishUpdate from replica %d, view=%d/h=%d", pbft.id, finish.ReplicaId, finish.View, finish.LowH)
 
