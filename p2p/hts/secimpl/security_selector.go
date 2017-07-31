@@ -20,7 +20,7 @@ func NewSecuritySelector(caconf string)(hts.Security){
 		log.Error(fmt.Sprintf("cann't read in the caconfig, reason: %s ",err.Error()))
 		return nil
 	}
-	algo := vip.GetString("security.algo")
+	algo := vip.GetString(common.ENCRYPTION_SECURITY_ALGO)
 	switch algo{
 	case "pure":
 		log.Critical("Use ECDH WITH PURE ALGO!")

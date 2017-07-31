@@ -52,8 +52,8 @@
     console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
 
         [log.module] #set log level by module
-        #p2p         = "INFO"
-        consensus   = "INFO"
+        p2p         = "NOTICE"
+        consensus   = "NOTICE"
         core        = "NOTICE"
         hyperdb     = "NOTICE"
         eventhub    = "NOTICE"
@@ -90,53 +90,6 @@
 #[executor]
 #[consensus]
 #[encryption]
-
-[dbConfig]
-
-    ################################################################################
-    # database name     #    database code
-    #                   #
-    # LEVEL_DB          #      0001
-    # SUPER_LEVEL_DB    #      0010
-    #                   #
-    ################################################################################
-    dbType = 0001
-
-    #db path of hyperchain. it's the parent dir of namespace dir
-    leveldbPath = "./namespaces/global/data/leveldb"
-
-    logStatus = true
-
-    logPath = "./namespaces/global/data/db.log"
-
-# CA & CERT configs
-#
-# this config prepare  for ca & cert module
-# *.toml config file is batter than *.yaml
-# this config will never change by hyperchain
-# please ensure the file not end with the `/` (slash)
-#
-
-[ecert]
-  eca= "namespaces/global/config/certs/eca.cert"
-  ecert= "namespaces/global/config/certs/ecert.cert"
-  priv= "namespaces/global/config/certs/ecert.priv"
-
-[rcert]
-  # if you do not have rcert, leave this item blank
-  rca= "namespaces/global/config/certs/rca.cert"
-  rcert= "namespaces/global/config/certs/rcert.cert"
-  priv= "namespaces/global/config/certs/rcert.priv"
-
-[check]
-  enable= true
-  sign= false
-  enableT= false
-
-[security]
-  # Selective symmetric encryption algorithm (pure,3des or sm4)
-  algo= "3des"
-
 
 
 ############################################################################################################
@@ -187,3 +140,56 @@ algo = "PBFT"
 
             # How long may a update-n take
             update= "4s"
+
+############################################################################################################
+# encryption algorithm configuration section
+#   CA & CERT configs
+#   this config will never change by hyperchain
+#   please ensure the file not end with the `/` (slash)
+#
+############################################################################################################
+[encryption]
+[encryption.ecert]
+ eca= "namespaces/global/config/certs/eca.cert"
+ ecert= "namespaces/global/config/certs/ecert.cert"
+ priv= "namespaces/global/config/certs/ecert.priv"
+
+[encryption.rcert]
+  # if you do not have rcert, leave this item blank
+ rca= "namespaces/global/config/certs/rca.cert"
+ rcert= "namespaces/global/config/certs/rcert.cert"
+ priv= "namespaces/global/config/certs/rcert.priv"
+
+[encryption.check]
+ enable= true
+ sign= false
+ enableT= false
+
+[encryption.security]
+ algo= "3des"   # Selective symmetric encryption algorithm (pure,3des or sm4)
+
+
+############################################################################################################
+# database configuration section
+#
+#
+#
+#
+############################################################################################################
+[dbConfig]
+
+    ################################################################################
+    # database name     #    database code
+    #                   #
+    # LEVEL_DB          #      0001
+    # SUPER_LEVEL_DB    #      0010
+    #                   #
+    ################################################################################
+    dbType = 0001
+
+    #db path of hyperchain. it's the parent dir of namespace dir
+    leveldbPath = "./namespaces/global/data/leveldb"
+
+    logStatus = true
+
+    logPath = "./namespaces/global/data/db.log"

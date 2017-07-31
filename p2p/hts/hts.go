@@ -130,10 +130,10 @@ func NewHTS(sec Security,caConfigPath string)(*HTS,error){
 	}
 	//ecert group
 	//enable ecert ?
-	enEnroll := vip.GetBool("check.enable")
+	enEnroll := vip.GetBool(common.ENCRYPTION_CHECK_ENABLE)
 	//if enable the ene, readin all ecert
 	if enEnroll {
-		ecap := vip.GetString("ecert.eca")
+		ecap := vip.GetString(common.ENCRYPTION_ECERT_ECA)
 		if !common.FileExist(ecap){
 			return nil,errors.New(fmt.Sprintf("cannot read in eca,reason: file not exist (%s)",ecap))
 		}
@@ -149,7 +149,7 @@ func NewHTS(sec Security,caConfigPath string)(*HTS,error){
 		hts.cg.eCA_S = ecas
 
 		//parse eca
-		ecertp := vip.GetString("ecert.ecert")
+		ecertp := vip.GetString(common.ENCRYPTION_ECERT_ECERT)
 		if !common.FileExist(ecertp){
 			return nil,errors.New(fmt.Sprintf("cannot read in ecert,reason: file not exist (%s)",ecertp))
 		}
@@ -164,7 +164,7 @@ func NewHTS(sec Security,caConfigPath string)(*HTS,error){
 		}
 		hts.cg.eCERT_S = ecerts
 
-		eprivp := vip.GetString("ecert.priv")
+		eprivp := vip.GetString(common.ENCRYPTION_ECERT_PRIV)
 		if !common.FileExist(eprivp){
 			return nil,errors.New(fmt.Sprintf("cannot read in ecert priv,reason: file not exist (%s)",eprivp))
 		}
@@ -183,7 +183,7 @@ func NewHTS(sec Security,caConfigPath string)(*HTS,error){
 		}
 		hts.cg.eCERTPriv_S = ep_s
 
-		rcap := vip.GetString("rcert.rca")
+		rcap := vip.GetString(common.ENCRYPTION_RCERT_RCERT)
 		if !common.FileExist(rcap){
 			return nil,errors.New(fmt.Sprintf("cannot read in rca,reason: file not exist (%s)",rcap))
 		}
@@ -192,7 +192,7 @@ func NewHTS(sec Security,caConfigPath string)(*HTS,error){
 			return nil,err
 		}
 		hts.cg.rCA = rca
-		rcertp := vip.GetString("rcert.rcert")
+		rcertp := vip.GetString(common.ENCRYPTION_RCERT_RCERT)
 		if !common.FileExist(rcertp){
 			return nil,errors.New(fmt.Sprintf("cannot read in rcert,reason: file not exist (%s)",rcertp))
 		}
@@ -208,7 +208,7 @@ func NewHTS(sec Security,caConfigPath string)(*HTS,error){
 		}
 		hts.cg.rCERT_S = rcerts
 
-		rprivp := vip.GetString("rcert.priv")
+		rprivp := vip.GetString(common.ENCRYPTION_RCERT_PRIV)
 		if !common.FileExist(rprivp){
 			return nil,errors.New(fmt.Sprintf("cannot read in rcert priv,reason: file not exist (%s)",eprivp))
 		}

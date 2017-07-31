@@ -72,3 +72,20 @@ const (
 	P2P_HOSTS 						= "p2p.hosts"
 	P2P_ADDR 						= "P2P.addr"
 )
+
+//constants for encryption configuration keys
+const (
+	ENCRYPTION_ECERT_ECA 	= "encryption.ecert.eca"
+	ENCRYPTION_ECERT_ECERT	= "encryption.ecert.ecert"
+	ENCRYPTION_ECERT_PRIV	= "encryption.ecert.priv"
+
+	ENCRYPTION_RCERT_RCA    = "encryption.rcert.rca"
+	ENCRYPTION_RCERT_RCERT  = "encryption.rcert.rcert"
+	ENCRYPTION_RCERT_PRIV   = "encryption.rcert.priv"
+
+	ENCRYPTION_CHECK_ENABLE  	= "encryption.check.enable"
+	ENCRYPTION_CHECK_SIGN    	= "encryption.check.sign"
+	ENCRYPTION_CHECK_ENABLE_T 	= "encryption.check.enableT"
+
+	ENCRYPTION_SECURITY_ALGO    = "encryption.security.algo"
+)
