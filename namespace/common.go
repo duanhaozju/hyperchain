@@ -30,7 +30,7 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, er
 	}
 	conf = common.NewConfig(nsConfigPath)
 	// init peer configurations
-	peerConfigPath := conf.GetString("global.configs.peers13")
+	peerConfigPath := conf.GetString("config.path.peers13")
 	peerViper := viper.New()
 	peerViper.SetConfigFile(peerConfigPath)
 	err := peerViper.ReadInConfig()

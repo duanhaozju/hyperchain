@@ -9,7 +9,7 @@ import (
 	"github.com/op/go-logging"
 )
 const (
-	staticPeerFile = "global.configs.static_peers"
+	staticPeerFile = "config.path.static_peers"
 )
 type Oracle struct {
 	peers           []uint64

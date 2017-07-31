@@ -28,10 +28,10 @@ const (
 const (
 	NAMESPACE 			= "namespace.name"
 	DEFAULT_NAMESPACE 	= "system"
-	KEY_STORE_DIR 		= "global.account.keystoredir"
-	KEY_NODE_DIR  		= "global.account.keynodesdir"
-	PEER_CONFIG_PATH	= "global.configs.peers"
-	PEER_CONFIG13_PATH 	= "global.configs.peers13"
+	KEY_STORE_DIR 		= "account.keystoredir"
+	KEY_NODE_DIR  		= "account.keynodesdir"
+	PEER_CONFIG_PATH	= "config.path.peers"
+	PEER_CONFIG13_PATH 	= "config.path.peers13"
 	DB_CONFIG_PATH      = "global.dbConfig"
 )
 

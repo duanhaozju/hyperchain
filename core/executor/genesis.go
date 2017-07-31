@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	genesisPath  = "global.configs.genesis"
+	genesisPath  = "config.path.genesis"
 )
 
 // CreateInitBlock - create genesis for a specific namespace.

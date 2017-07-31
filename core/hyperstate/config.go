@@ -1,20 +1,20 @@
 package hyperstate
 
 const (
-	GlobalDataNodeCacheSize  = "global.executor.buckettree.global.globalDataNodeCacheSize"
-	GlobalDataNodeCacheLength  = "global.executor.buckettree.global.globalDataNodeCacheLength"
+	GlobalDataNodeCacheSize  = "executor.buckettree.global.globalDataNodeCacheSize"
+	GlobalDataNodeCacheLength  = "executor.buckettree.global.globalDataNodeCacheLength"
 
 	STATEDB               = "state"
-	stateBucketSize       = "global.executor.buckettree.state.size"
-	stateBucketLevelGroup = "global.executor.buckettree.state.levelGroup"
-	stateBucketCacheSize  = "global.executor.buckettree.state.bucketCacheSize"
-	stateDataNodeCacheSize  = "global.executor.buckettree.state.dataNodeCacheSize"
+	stateBucketSize       = "executor.buckettree.state.size"
+	stateBucketLevelGroup = "executor.buckettree.state.levelGroup"
+	stateBucketCacheSize  = "executor.buckettree.state.bucketCacheSize"
+	stateDataNodeCacheSize  = "executor.buckettree.state.dataNodeCacheSize"
 
 	STATEOBJECT                 = "stateObject"
-	stateObjectBucketSize       = "global.executor.buckettree.storage.size"
-	stateObjectBucketLevelGroup = "global.executor.buckettree.storage.levelGroup"
-	stateObjectBucketCacheSize  = "global.executor.buckettree.storage.bucketCacheSize"
-	stateObjectDataNodeCacheSize  = "global.executor.buckettree.storage.dataNodeCacheSize"
+	stateObjectBucketSize       = "executor.buckettree.storage.size"
+	stateObjectBucketLevelGroup = "executor.buckettree.storage.levelGroup"
+	stateObjectBucketCacheSize  = "executor.buckettree.storage.bucketCacheSize"
+	stateObjectDataNodeCacheSize  = "executor.buckettree.storage.dataNodeCacheSize"
 )
 
 // GetGlobalDataNodeCacheSize - get size of every global data node cache

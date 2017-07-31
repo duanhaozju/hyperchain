@@ -28,7 +28,7 @@ type DBInstance struct {
 }
 
 const (
-	db_type = "dbConfig.dbType"
+	db_type = "database.type"
 
 	// database type
 	ldb_db         = 0001
@@ -62,8 +62,8 @@ func init() {
 func InitDatabase(conf *common.Config, namespace string) error {
 	dbType = conf.GetInt(db_type)
 
-	logStatus = conf.GetBool("dbConfig.logStatus")
-	logPath = conf.GetString("dbConfig.logPath")
+	logStatus = conf.GetBool("database.leveldb.log_status")
+	logPath = conf.GetString("database.leveldb.log_path")
 	log := getLogger(namespace)
 	log.Criticalf("init db for namespace %s", namespace)
 	dbMgr.dbSync.Lock()

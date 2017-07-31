@@ -8,7 +8,6 @@ import (
 	"hyperchain/core/types"
 	"sync"
 	"time"
-	"fmt"
 )
 
 var (
@@ -131,7 +130,6 @@ func (cache *BloomFilterCache) expire() {
 		interval    int64 = cache.config.GetInt64(RebuildInterval)
 		timer       *time.Timer
 	)
-	fmt.Printf("rebuildTime: %d /n", rebuildTime)
 
 	var duration time.Duration = time.Duration(int64(24 + int(rebuildTime) - time.Now().Hour()))
 	timer = time.NewTimer(duration * time.Hour)
