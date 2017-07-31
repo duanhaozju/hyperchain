@@ -1413,7 +1413,6 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 }
 
 func (pbft *pbftImpl) recvRemoveCache(vid uint64) bool {
-
 	if vid <= 10 {
 		pbft.logger.Debugf("Replica %d received remove cached batch %d <= 10, retain it until 11", pbft.id, vid)
 		return true

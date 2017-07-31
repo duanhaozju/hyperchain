@@ -132,17 +132,19 @@ func (pbft *pbftImpl) rebuildDuplicator() {
 	for i, txStore := range pbft.duplicator {
 		temp[i-dv] = txStore
 	}
+	pbft.dupLock.Unlock()
 	pbft.duplicator = temp
 	pbft.clearDuplicator()
-	pbft.dupLock.Unlock()
 }
 
 // replica clear the duplicator after view change
 func (pbft *pbftImpl) clearDuplicator() {
 	h := pbft.h
+	pbft.dupLock.Lock()
 	for i := range pbft.duplicator {
 		if i > h {
 			delete(pbft.duplicator, i)
 		}
 	}
+	pbft.dupLock.Unlock()
 }
