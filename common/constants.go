@@ -3,19 +3,6 @@
 
 package common
 
-//constants for logger key
-const (
-	LOG_FILE_DIR          = "global.logs.logsdir"
-	LOG_DUMP_FILE 	      = "global.logs.dumpfile"
-	LOG_BASE_LOG_LEVEL    = "global.logs.loglevel"
-	LOG_NEW_FILE_INTERVAL = "global.logs.newLogFileInterval"
-	LOG_FILE_FORMAT       = "global.logs.file_format"
-	LOG_CONSOLE_FORMAT    = "global.logs.console_format"
-	LOG_MODULE_KEY        = "global.logs.module"
-	LOG_MAX_SIZE          = "global.logs.max_log_size"
-	DEFAULT_LOG        = "system"
-)
-
 //constants for input args
 const ( //TODO: refactor this
 	C_NODE_ID            = "global.id"
@@ -48,6 +35,7 @@ const (
 	LOG_CONSOLE_FORMAT    = "log.console_format"
 	LOG_MODULE_KEY        = "log.module"
 	DEFAULT_LOG       	  = "system"
+	LOG_MAX_SIZE          = "log.max_log_size"
 )
 
 //constants for port keys
