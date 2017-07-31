@@ -1245,7 +1245,7 @@ func (pbft *pbftImpl) beforeSendVC() error{
 
 	pbft.vcMgr.plist = pbft.calcPSet()
 	pbft.vcMgr.qlist = pbft.calcQSet()
-
+	pbft.batchVdr.cacheValidatedBatch = make(map[string]*cacheBatch)
 	// clear old messages
 	for idx := range pbft.vcMgr.viewChangeStore {
 		if idx.v < pbft.view {
