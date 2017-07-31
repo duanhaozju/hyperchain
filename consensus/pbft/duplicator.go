@@ -128,12 +128,14 @@ func (pbft *pbftImpl) removeDuplicate(txBatch *TransactionBatch) (newBatch *Tran
 func (pbft *pbftImpl) rebuildDuplicator() {
 	temp := make(map[uint64]*transactionStore)
 	dv := pbft.batchVdr.vid - pbft.h
-	pbft.dupLock.Lock()
+	pbft.dupLock.RLock()
 	for i, txStore := range pbft.duplicator {
 		temp[i-dv] = txStore
 	}
-	pbft.dupLock.Unlock()
+	pbft.dupLock.RUnlock()
+	pbft.dupLock.Lock()
 	pbft.duplicator = temp
+	pbft.dupLock.Unlock()
 	pbft.clearDuplicator()
 }
 
