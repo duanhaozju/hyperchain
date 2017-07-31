@@ -170,6 +170,7 @@ func (hl *HyperLogger) init() {
 	// generate new log file every time interval
 	if hl.conf.GetBool(LOG_DUMP_FILE) {
 		go hl.newLogFileByInterval(conf)
+		go hl.newLogFileBySize(conf)
 	}
 }
 
@@ -292,7 +293,7 @@ func (hl *HyperLogger) updateLogFileAndBackend()  {
 	commonLogger.Infof("New log file name: %s", file.Name())
 }
 
-//newLogFileByInterval set new log file for hyperchain
+//newLogFileByInterval set new log file by time for hyperchain
 func (hl *HyperLogger) newLogFileByInterval(conf *Config) {
 	du := conf.GetDuration(LOG_NEW_FILE_INTERVAL)
 	if du.Hours() == 24 {
@@ -321,6 +322,42 @@ func (hl *HyperLogger) newLogFileByInterval(conf *Config) {
 	}
 }
 
+//newLogFileBySize set new log file by file size for hyperchain
+func (hl *HyperLogger) newLogFileBySize(conf *Config) {
+	for {
+		select {
+		case <-time.After(2 * time.Minute):
+			commonLogger.Debug("check log file size")
+			if hl.shouldSplitLog(conf) {
+				hl.updateLogFileAndBackend()
+			}
+		case <-hl.closeLogFile:
+			hl.currentFile.Close()
+			return
+		}
+	}
+}
+
 func getCompositeModuleName(namespace, module string) string {
 	return namespace + "::" + module
+}
+
+func (hl *HyperLogger) shouldSplitLog(conf *Config) bool {
+	const max_log_size = 199 * 1024 * 1024
+	maxLogFileSize := conf.GetBytes(LOG_MAX_SIZE)
+	if maxLogFileSize > max_log_size || maxLogFileSize <= 0 {
+		maxLogFileSize = max_log_size
+	}
+	hl.fileLock.Lock()
+	defer hl.fileLock.Unlock()
+	fileInfo, err := os.Stat(hl.currentFile.Name())
+	if err != nil {
+		commonLogger.Error(err)
+		return false
+	}
+	commonLogger.Debugf("log file size is %d ", fileInfo.Size())
+	if fileInfo.Size() >= int64(maxLogFileSize) {
+		return true
+	}
+	return false
 }

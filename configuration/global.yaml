@@ -29,6 +29,7 @@ global:
         dumpfile: true
         newLogFileInterval: 24h  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
                                  # such as "300ms", "2h45m".
+        max_log_size: 200mb # "mb", "kb"
 
         logsdir: "./logs"
 
