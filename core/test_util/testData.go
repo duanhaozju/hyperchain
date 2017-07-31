@@ -2,39 +2,40 @@ package test_util
 import (
 	"time"
 	"hyperchain/core/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var TransactionCases = []*types.Transaction{
 	{
 		Version:   []byte(TransactionVersion),
 		From:      []byte("6201cb0448964ac597faf6fdf1f472edf2a22b89"),
-		To:        []byte("0000000000000000000000000000000000000003"),
+		To:        []byte("0000000000000000000000000000000000000a03"),
 		Value:     []byte("100"),
 		Timestamp: time.Now().UnixNano() - int64(time.Second),
 		Signature: []byte("signature1"),
-		Id:        []byte{1},
+		Id:        1,
 		TransactionHash: []byte("transactionHash1"),
 		Nonce: 1,
 	},
 	{
 		Version:   []byte(TransactionVersion),
-		From:      []byte("0000000000000000000000000000000000000001"),
-		To:        []byte("0000000000000000000000000000000000000002"),
+		From:      []byte("0000000000000000000000000000000000000a01"),
+		To:        []byte("0000000000000000000000000000000000000a02"),
 		Value:     []byte("100"),
 		Timestamp: time.Now().UnixNano(),
-		Signature: []byte("signature2"),
-		Id:        []byte{1},
+		Signature: common.Hex2Bytes("signature2"),
+		Id:        1,
 		TransactionHash: []byte("transactionHash2"),
 		Nonce: 2,
 	},
 	{
 		Version:   []byte(TransactionVersion),
-		From:      []byte("0000000000000000000000000000000000000002"),
-		To:        []byte("0000000000000000000000000000000000000003"),
+		From:      []byte("0000000000000000000000000000000000000a02"),
+		To:        []byte("0000000000000000000000000000000000000a03"),
 		Value:     []byte("700"),
 		Timestamp: time.Now().UnixNano(),
 		Signature: []byte("signature3"),
-		Id:        []byte{1},
+		Id:        1,
 		TransactionHash: []byte("transactionHash3"),
 		Nonce: 3,
 	},
@@ -49,7 +50,7 @@ var BlockCases = types.Block{
 	MerkleRoot:   []byte("merkleRoot"),
 	TxRoot:       []byte("txRoot"),
 	ReceiptRoot:  []byte("receiptRoot"),
-	Number:       1,
+	Number:       100,
 	WriteTime:    1489387223,
 	CommitTime:   1489387224,
 	EvmTime:      1489387225,
@@ -62,12 +63,14 @@ var TransactionMeta = types.TransactionMeta{
 
 var Receipt = types.Receipt{
 	Version:           []byte(ReceiptVersion),
+	Bloom:             []byte("bloom"),
 	CumulativeGasUsed: 1,
-	TxHash:           []byte("12345678901234567890123456789012"),
+	TxHash:            []byte("12345678901234567890123456789012"),
 	ContractAddress:   []byte("contractAddress"),
 	GasUsed:           1,
 	Ret:               []byte("ret"),
 	Logs:              []byte("logs"),
 	Status:            types.Receipt_SUCCESS,
 	Message:           []byte("message"),
+	VmType:            types.Receipt_EVM,
 }

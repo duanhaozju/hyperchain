@@ -4,10 +4,12 @@
  */
 package cn.hyperchain.jcee.ledger;
 
+import java.util.Iterator;
+
 /**
  * Created by wangxiaoyi on 2017/5/8.
  */
-public interface BatchValue {
+public interface BatchValue extends Iterator<Result>{
     Result next();
     boolean hasNext();
 }

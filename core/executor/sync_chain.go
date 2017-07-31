@@ -172,7 +172,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			if executor.isDemandSyncBlock(block) {
 				// received block's struct definition may different from current
 				// for backward compatibility, store with original version tag.
-				edb.PersistBlock(executor.db.NewBatch(), block, true, true, string(block.Version))
+				edb.PersistBlock(executor.db.NewBatch(), block, true, true, string(block.Version), getTxVersion(block))
 				if err := executor.updateSyncDemand(block); err != nil {
 					executor.logger.Errorf("[Namespace = %s] update sync demand failed.", executor.namespace)
 					executor.reject()
@@ -536,13 +536,15 @@ func (executor *Executor) accpet(seqNo uint64, block *types.Block, result *Valid
 		executor.logger.Errorf("update chain to (#%d) failed, err: %s", err.Error())
 		return err
 	}
+	// write bloom filter first
+	edb.WriteTxBloomFilter(executor.namespace, block.Transactions)
+
 	if err := batch.Write(); err != nil {
 		executor.logger.Errorf("commit (#%d) changes failed, err: %s", err.Error())
 		return err
 	}
 	executor.statedb.MarkProcessFinish(seqNo)
 	executor.TransitVerifiedBlock(block)
-	edb.WriteTxBloomFilter(executor.namespace, block.Transactions)
 	executor.filterFeedback(result.Block, result.Logs)
 	return nil
 }
@@ -806,3 +808,12 @@ func (executor *Executor) constrcutWs(ack *WsAck, packetId uint64, packetSize ui
 		Payload:    payload,
 	}
 }
+
+func getTxVersion(block *types.Block) string {
+	if block == nil || len(block.Transactions) == 0 {
+		// short circuit if block is empty or no transaction embeded.
+		return edb.TransactionVersion
+	}
+	return string(block.Transactions[0].Version)
+}
+

@@ -396,7 +396,7 @@ func getCmd(method string, need_params []string, opcode int32, c *cli.Context) s
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	signature := hex.EncodeToString(sig)
+	signature := "00" + hex.EncodeToString(sig)
 	params = params + "," + fmt.Sprintf("\"signature\":\"%s\"", signature)
 
 	// end of params

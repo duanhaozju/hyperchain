@@ -69,7 +69,6 @@ func(h *Heap)Walk(){
 	for i :=0; i < len(h.heap);i++{
 		fmt.Print(h.heap[i].priority,",")
 	}
-	fmt.Println()
 }
 
 func(h *Heap)Sort()[] interface{}{
@@ -93,7 +92,6 @@ func(h *Heap)Sort()[] interface{}{
 	for _,it := range tempHeap.heap{
 		ret = append(ret,it.value)
 	}
-	fmt.Println()
 	return ret
 }
 

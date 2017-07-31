@@ -1,6 +1,10 @@
+/**
+ * Hyperchain License
+ * Copyright (C) 2017 The Hyperchain Authors.
+ */
 package cn.hyperchain.jcee.ledger.table;
 
-import java.util.Iterator;
+import java.util.List;
 
 /**
  * Created by wangxiaoyi on 2017/6/23.
@@ -9,19 +13,14 @@ import java.util.Iterator;
  */
 public interface RelationDB {
 
-    boolean CreateTable(String name, Column[] columns);
+    boolean CreateTable(TableDesc tableDesc);
 
-    Table getTable(String name);
+    Table getTable(TableName name);
 
-    boolean deleteTable(String name);
+    TableDesc getTableDesc(TableName name);
 
-    boolean Insert(String tableName, Row row);
+    boolean deleteTable(TableName name);
 
-    boolean Update(String tableName, Row row);
-
-    Row getRow(String tableName, Column[] key);
-
-    Iterator<Row> getRows(String tableName, Column[] key);
-
-    boolean deleteRow(String tableName, Column[] key);
+    //list all stored table names
+    List<String> listTables();
 }
