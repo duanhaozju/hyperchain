@@ -184,7 +184,7 @@ func (hl *HyperLogger) newLoggerFile() *os.File {
 		}
 	}()
 	dir := hl.conf.GetString(LOG_DUMP_FILE_DIR)
-	fileName := path.Join(dir, "hyperchain_"+strconv.Itoa(hl.conf.GetInt(C_GRPC_PORT))+time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
+	fileName := path.Join(dir, "hyperchain_"+strconv.Itoa(hl.conf.GetInt(P2P_PORT))+time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
 	os.MkdirAll(dir, 0777)
 	file, err := os.Create(fileName)
 	if err == nil {

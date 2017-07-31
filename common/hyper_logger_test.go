@@ -131,7 +131,7 @@ func TestHyperLoggerSplitByInterval(t *testing.T)  {
 	conf.Set(LOG_DUMP_FILE, true)
 	conf.Set(LOG_BASE_LOG_LEVEL, "DEBUG")
 	conf.Set(LOG_NEW_FILE_INTERVAL, 4*time.Second)
-	conf.Set(LOG_FILE_DIR, "/tmp/hyperlogger/split")
+	conf.Set(LOG_DUMP_FILE_DIR, "/tmp/hyperlogger/split")
 	os.RemoveAll("/tmp/hyperlogger/split")
 	InitHyperLogger("test", conf)
 	logger := GetLogger("test", "module1")

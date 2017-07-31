@@ -12,6 +12,5 @@ const (
 
 // key for consensus
 const (
-	CONSENSUS_ALGO = "global.consensus.algo"
-	CONSENSUS_ALGO_CONFIG_PATH = "global.consensus.algo_config_path"
+	CONSENSUS_ALGO = "consensus.algo"
 )

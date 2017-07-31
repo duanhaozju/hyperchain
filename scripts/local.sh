@@ -115,19 +115,19 @@ do
     cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/ns1/config/peerconfig.yaml
     #namespace's global
 
-    cp -rf  ${CONF_PATH}/global.yaml ${DUMP_PATH}/node${j}/global.yaml
+    cp -rf  ${CONF_PATH}/global.toml ${DUMP_PATH}/node${j}/global.toml
     if [ ${_SYSTYPE} = "MAC" ]; then
-        sed -i "" "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "" "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "" "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "" "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "" "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+        sed -i "" "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
     else
-        sed -i "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+        sed -i "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
     fi
 
     cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.yaml ${DUMP_PATH}/node${j}/addr.yaml
@@ -246,7 +246,7 @@ DUMP_PATH="${PROJECT_PATH}/build"
 CONF_PATH="${PROJECT_PATH}/configuration"
 
 # global config path
-GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/global.yaml"
+GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/namespace.toml"
 
 # hypercli root path
 CLI_PATH="${PROJECT_PATH}/hypercli"

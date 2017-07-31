@@ -31,11 +31,11 @@ type Sec struct {
 
 //NewSec return a new sec options
 func NewSec(config *viper.Viper) (*Sec,error){
-	enableTLS  := config.GetBool("global.p2p.enableTLS")
-	tlsCA  := config.GetString("global.p2p.tlsCA")
-	tlsServerHostOverride := config.GetString("global.p2p.tlsServerHostOverride")
-	tlsCert := config.GetString("global.p2p.tlsCert")
-	tlsCertPriv := config.GetString("global.p2p.tlsCertPriv")
+	enableTLS  := config.GetBool(common.P2P_ENABLE_TLS)
+	tlsCA  := config.GetString(common.P2P_TLS_CA)
+	tlsServerHostOverride := config.GetString(common.P2P_TLS_SERVER_HOST_OVERRIDE)
+	tlsCert := config.GetString(common.P2P_TLS_CERT)
+	tlsCertPriv := config.GetString(common.P2P_TLS_CERT_PRIV)
 
 	//check the file is exist or not
 	if enableTLS && !common.FileExist(tlsCA) {
