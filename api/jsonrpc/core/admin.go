@@ -256,6 +256,114 @@ func (adm *Administrator) restartJvmServer(cmd *Command) *CommandResult {
 	return &CommandResult{Ok: true, Result: "restart jvm successful."}
 }
 
+func (adm *Administrator) grantPermission(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd.MethodName)
+	argLen := len(cmd.Args)
+	if argLen < 3 {
+		log.Warningf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects >=3 parameters, got %d", argLen)}}
+	}
+	invalidPms, err := grantpermission(cmd.Args[0], cmd.Args[1], cmd.Args[2:])
+	if err != nil {
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	}
+	if len(invalidPms) == 0 {
+		return &CommandResult{Ok: true, Result: "grant permission successfully."}
+	}
+	return &CommandResult{Ok: true, Result: fmt.Sprintf("grant permission successfully, but there are some invalid permissions: %v", invalidPms)}
+}
+
+func (adm *Administrator) revokePermission(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd.MethodName)
+	argLen := len(cmd.Args)
+	if argLen < 3 {
+		log.Warningf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects >=3 parameters, got %d", argLen)}}
+	}
+	invalidPms, err := revokepermission(cmd.Args[0], cmd.Args[1], cmd.Args[2:])
+	if err != nil {
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	}
+	if len(invalidPms) == 0 {
+		return &CommandResult{Ok: true, Result: "revoke permission successfully."}
+	}
+	return &CommandResult{Ok: true, Result: fmt.Sprintf("revoke permission successfully, but there are some invalid permissions: %v", invalidPms)}
+}
+
+func (adm *Administrator) listPermission(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd.MethodName)
+	argLen := len(cmd.Args)
+	if argLen != 1 {
+		log.Warningf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen)}}
+	}
+	result, err := listpermission(cmd.Args[0])
+	if err != nil {
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	}
+	return &CommandResult{Ok: true, Result: result}
+}
+
+func (adm *Administrator) createUser(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd.MethodName)
+	argLen := len(cmd.Args)
+	if argLen != 3 {
+		log.Warningf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2/3 parameters, got %d", argLen)}}
+	}
+	username := cmd.Args[0]
+	password := cmd.Args[1]
+	group := cmd.Args[2]
+	// judge if the user exist or not, if username exists, return a duplicate name error
+	if _, err := IsUserExist(username, password); err != ErrUserNotExist {
+		log.Debugf("User %s: %s", username, ErrDuplicateUsername.Error())
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrDuplicateUsername.Error()}}
+	}
+
+	err := createUser(username, password, group)
+	if err != nil {
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	}
+	return &CommandResult{Ok: true, Result: "Create user successfully"}
+}
+
+func (adm *Administrator) alterUser(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd.MethodName)
+	argLen := len(cmd.Args)
+	if argLen != 2 {
+		log.Warningf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen - 1)}}
+	}
+	username := cmd.Args[0]
+	password := cmd.Args[1]
+	// judge if the user exist or not, if username exists, return a duplicate name error
+	if _, err := IsUserExist(username, password); err == ErrUserNotExist {
+		log.Debugf("User %s: %s", username, ErrUserNotExist.Error())
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrUserNotExist.Error()}}
+	}
+
+	alterUser(username, password)
+	return &CommandResult{Ok: true, Result: "Alter user password successfully"}
+}
+
+func (adm *Administrator) delUser(cmd *Command) *CommandResult {
+	log.Noticef("process cmd %v", cmd.MethodName)
+	argLen := len(cmd.Args)
+	if argLen != 1 {
+		log.Warningf("Invalid cmd nums %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen)}}
+	}
+	username := cmd.Args[0]
+	// judge if the user exist or not, if username exists, return a duplicate name error
+	if _, err := IsUserExist(username, ""); err == ErrUserNotExist {
+		log.Debugf("User %s: %s", username, ErrUserNotExist.Error())
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrUserNotExist.Error()}}
+	}
+
+	delUser(username)
+	return &CommandResult{Ok: true, Result: "Delete user successfully"}
+}
+
 func (adm *Administrator) Init() {
 	adm.CmdExecutor = make(map[string]func(command *Command) *CommandResult)
 	adm.CmdExecutor["stopServer"] = adm.stopServer
@@ -276,4 +384,12 @@ func (adm *Administrator) Init() {
 	adm.CmdExecutor["startJvmServer"] = adm.startJvmServer
 	adm.CmdExecutor["stopJvmServer"] = adm.stopJvmServer
 	adm.CmdExecutor["restartJvmServer"] = adm.restartJvmServer
+
+	adm.CmdExecutor["grantPermission"] = adm.grantPermission
+	adm.CmdExecutor["revokePermission"] = adm.revokePermission
+	adm.CmdExecutor["listPermission"] = adm.listPermission
+
+	adm.CmdExecutor["createUser"] = adm.createUser
+	adm.CmdExecutor["alterUser"] = adm.alterUser
+	adm.CmdExecutor["delUser"] = adm.delUser
 }

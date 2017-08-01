@@ -68,7 +68,7 @@ func newP2PManager(vip *viper.Viper)(*p2pManagerImpl,error){
 	p2pmgr :=  &p2pManagerImpl{
 		hypernet:net,
 		conf:vip,
-		ipcShell:ipc.NEWIPCServer(vip.GetString("global.p2p.ipc")),
+		ipcShell:ipc.NEWIPCServer(vip.GetString(common.P2P_IPC)),
 	}
 	p2pmgr.Start()
 

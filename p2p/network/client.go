@@ -15,6 +15,7 @@ import (
 
 type Client struct {
 	addr string
+	hostname string
 	sec *Sec
 	connPool pool.Pool
 	MsgChan chan *pb.Message
@@ -46,7 +47,7 @@ func connCloser(v interface{}) error{
 	return v.(*grpc.ClientConn).Close()
 }
 
-func NewClient(addr string,sec *Sec) (*Client,error){
+func NewClient(hostname, addr string,sec *Sec) (*Client,error){
 	//connCreator := func(endpoint string,options []grpc.DialOption) (interface{}, error) { return grpc.Dial(endpoint,options)}
 	//connCloser  := func(v interface{}) error { return v.(*grpc.ClientConn).Close() }
 	poolConfig := &pool.PoolConfig{
@@ -66,6 +67,7 @@ func NewClient(addr string,sec *Sec) (*Client,error){
 	c := &Client{
 		MsgChan: make(chan *pb.Message,100000),
 		addr: addr,
+		hostname: hostname,
 		connPool:p,
 		sec: sec,
 		//todo those configuration sould be read from configuration
@@ -78,6 +80,7 @@ func NewClient(addr string,sec *Sec) (*Client,error){
 	}
 	// start fsm
 	c.initState()
+	c.stateMachine.Event(c_EventConnect)
 	return c,nil
 }
 

@@ -5,9 +5,10 @@ import (
 	"hyperchain/common"
 	"encoding/json"
 	"hyperchain/p2p/utils"
+	"github.com/op/go-logging"
 )
 
-var logger = common.GetLogger(common.DEFAULT_LOG,"p2p")
+var logger *logging.Logger
 
 type Info struct {
 	rwmutex   *sync.RWMutex
@@ -22,6 +23,7 @@ type Info struct {
 }
 
 func NewInfo(id int,hostname string,namespcace string)*Info {
+	logger = common.GetLogger(common.DEFAULT_LOG,"p2p")
 	hash := utils.Sha3([]byte(hostname+namespcace))
 	return &Info{
 		rwmutex:new(sync.RWMutex),

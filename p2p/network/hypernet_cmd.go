@@ -19,7 +19,13 @@ func (hn *HyperNet)Command(args []string,ret *[]string)error{
 		// hostname => ip:addr
 		case "list":{
 			*ret = append(*ret,"list all connections\n")
-			*ret = append(*ret,hn.dns.ListHosts()...)
+			for t := range hn.clients.IterBuffered(){
+				c := t.Val.(*Client)
+				stat := c.stateMachine.Current()
+				addr := c.addr
+				hostname := c.hostname
+				*ret = append(*ret,fmt.Sprintf("%s => %s (%s)",hostname,addr, stat))
+			}
 		}
 		// connect
 		// connect to new remote

@@ -17,9 +17,12 @@ import (
 	"path/filepath"
 	"os"
 	"os/exec"
+	"bufio"
+	"encoding/gob"
 )
 
 const (
+	tokenpath       = "./.token"
 	password        = "123"
 	defaultGas      = 10000
 	defaultGasPrice = 10000
@@ -30,6 +33,11 @@ var (
 	kec256Hash       = crypto.NewKeccak256Hash("keccak256")
 )
 
+type UserInfo struct {
+	Username string
+	Token    string
+}
+
 // GetNonEmptyValueByName first finds the value from cli flags, if not found,
 // lets user input from stdin util user inputs an non-empty value
 func GetNonEmptyValueByName(c *cli.Context, name string) string {
@@ -37,11 +45,16 @@ func GetNonEmptyValueByName(c *cli.Context, name string) string {
 	if c.String(name) != "" {
 		value = c.String(name)
 	} else {
+		userinfo := new(UserInfo)
+		err := ReadFile(tokenpath, userinfo)
+		if err == nil {
+			return userinfo.Username
+		}
 		for {
 			if name == "to" {
 				name = "contract address"
 			}
-			fmt.Printf("Please specify a non-empty %s:\n", name)
+			fmt.Printf("%s:\n", name)
 			fmt.Scanln(&value)
 			if value != "" {
 				break
@@ -63,8 +76,10 @@ func GetJSONResponse(result string) (jsonrpc.JSONResponse, error) {
 
 // GenSignature generates the transaction signature by many params ...
 func GenSignature(from string, to string, timestamp int64, amount int64, payload string, nonce int64, opcode int32, vmtype types.TransactionValue_VmType) ([]byte, error){
-	conf := common.NewConfig("./keyconfigs/cli.yaml")
+	conf := common.NewRawConfig()
 	conf.Set(common.C_NODE_ID, 1)
+	conf.Set(common.KEY_NODE_DIR, "./keyconfigs/keynodes")
+	conf.Set(common.KEY_STORE_DIR, "./keyconfigs/keystore")
 
 	am := accounts.NewAccountManager(conf)
 
@@ -99,9 +114,10 @@ func getTransactionReceiptCmd(txHash string, namespace string) string {
 // getTransactionReceipt try to get the transaction receipt 10 times, with 1s interval
 func GetTransactionReceipt(txHash string, namespace string, client *CmdClient) error {
 	cmd := getTransactionReceiptCmd(txHash, namespace)
+	method := "tx_getTransactionReceipt"
 
 	for i:= 1; i<= frequency; i ++ {
-		response, err := client.Call(cmd)
+		response, err := client.Call(cmd, method)
 		if err != nil {
 			return err
 		} else {
@@ -141,4 +157,76 @@ func DelCompressedFile(file string) {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+}
+
+func ReadFile(path string, object interface{}) error {
+	//token, err := ioutil.ReadFile(file)
+	//return string(token[:]), err
+	file, err := os.Open(path)
+	defer file.Close()
+	if err == nil {
+		decoder := gob.NewDecoder(file)
+		err = decoder.Decode(object)
+	}
+	return err
+}
+
+func SaveToFile(file, username, token string) error {
+	var f *os.File
+	if _, err := os.Stat(file); os.IsExist(err) {
+		os.Remove(file)
+
+	}
+	f, err := os.Create(file)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+	userinfo := &UserInfo{Username: username, Token: token}
+	encoder := gob.NewEncoder(f)
+	return encoder.Encode(userinfo)
+	//f.WriteString(token)
+}
+
+func ReadPermissionsFromFile(file string) ([]string, error) {
+	var permissions []string
+	abs, err := filepath.Abs(file)
+	if err != nil {
+		return nil, err
+	}
+
+	// open a file
+	if file, err := os.Open(abs); err == nil {
+		// make sure it gets closed
+		defer file.Close()
+
+		// create a new scanner and read the file line by line
+		scanner := bufio.NewScanner(file)
+		for scanner.Scan() {
+			permission := scanner.Text()
+			if permission != "" {
+				permissions = append(permissions, permission)
+			}
+		}
+
+		// check for errors
+		if err = scanner.Err(); err != nil {
+			return nil, err
+		}
+		return permissions, nil
+	} else {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func GetCurrentUser() string {
+	var username string
+	userinfo := new(UserInfo)
+	err := ReadFile(tokenpath, userinfo)
+	if err == nil {
+		username = userinfo.Username
+	}
+	return username
 }

@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 	"time"
+	"fmt"
 )
 
 func TestNewEmptyConfig(t *testing.T) {
@@ -80,6 +81,24 @@ func TestGetBool(t *testing.T) {
 }
 
 func TestReadConfigFile(t *testing.T)  {
-	conf := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/global.yaml")
-	conf.Get("xxx")
+	conf := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/namespaces/global/config/namespace.toml")
+	conf.Print()
+	fmt.Println(conf.GetStringMap("log.module"))
+}
+
+func TestConfigMerge(t *testing.T)  {
+	conf := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/namespaces/global/config/pbft.yaml")
+	conf.Print()
+
+	conf.MergeConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/namespaces/global/config/namespace.toml")
+	conf.Print()
+}
+
+func TestReadTomlConfigFile(t *testing.T)  {
+	conf := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/global.toml")
+	conf2 := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/global.yaml")
+
+	fmt.Println(conf.equals(conf2))
+
+	conf.Print()
 }

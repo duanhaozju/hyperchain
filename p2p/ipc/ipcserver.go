@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"net/rpc"
 	"hyperchain/common"
+	"github.com/op/go-logging"
 )
 var (
+	logger *logging.Logger
 	tcpKeepAliveInterval = 30 * time.Second
 )
 

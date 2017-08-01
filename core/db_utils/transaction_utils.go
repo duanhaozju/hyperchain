@@ -7,6 +7,7 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"encoding/json"
+	"github.com/pkg/errors"
 )
 
 // GetInvaildTxErrType - gets ErrType of invalid tx
@@ -43,120 +44,23 @@ func GetTransactionFunc(db db.Database, key []byte) (*types.Transaction, error) 
 	if key == nil {
 		return nil, EmptyPointerErr
 	}
-	var wrapper types.TransactionWrapper
-	var transaction types.Transaction
-	keyFact := append(TransactionPrefix, key...)
-	data, err := db.Get(keyFact)
-	if len(data) == 0 {
-		return &transaction, err
+
+	bi, ti := GetTxWithBlockFunc(db, key)
+	if bi == 0 && ti == 0 {
+		return nil, errors.New("not found tx meta")
 	}
-	err = proto.Unmarshal(data, &wrapper)
+
+	block, err := GetBlockByNumberFunc(db, bi)
 	if err != nil {
-		return &transaction, err
+		return nil, errors.New("not found block")
 	}
-	err = proto.Unmarshal(wrapper.Transaction, &transaction)
-	return &transaction, err
+
+	if len(block.Transactions) < int(ti + 1) {
+		return nil, errors.New("out of slice range")
+	}
+	return block.Transactions[int(ti)], nil
 }
 
-// Persist transaction content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
-func PersistTransaction(batch db.Batch, transaction *types.Transaction, flush bool, sync bool, extra ...interface{}) (error, []byte) {
-	// check pointer value
-	if transaction == nil || batch == nil {
-		return EmptyPointerErr, nil
-	}
-	err, data := encapsulateTransaction(transaction, extra...)
-	if err != nil {
-		return err, nil
-	}
-	if err := batch.Put(append(TransactionPrefix, transaction.GetHash().Bytes()...), data); err != nil {
-		return err, nil
-	}
-	// flush to disk immediately
-	if flush {
-		if sync {
-			batch.Write()
-		} else {
-			go batch.Write()
-		}
-	}
-	return nil, data
-}
-
-// wrap transaction
-func encapsulateTransaction(transaction *types.Transaction, extra ...interface{}) (error, []byte) {
-	version := TransactionVersion
-	if transaction == nil {
-		return EmptyPointerErr, nil
-	}
-	if len(extra) > 0 {
-		// parse version
-		if tmp, ok := extra[0].(string); ok {
-			version = tmp
-		}
-	}
-	transaction.Version = []byte(version)
-	data, err := proto.Marshal(transaction)
-	if err != nil {
-		return err, nil
-	}
-	wrapper := &types.TransactionWrapper{
-		TransactionVersion: []byte(version),
-		Transaction:        data,
-	}
-	data, err = proto.Marshal(wrapper)
-	if err != nil {
-		return err, nil
-	}
-	return nil, data
-}
-
-// Persist transactions content to a batch, KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false
-func PersistTransactions(batch db.Batch, transactions []*types.Transaction, version string, flush bool, sync bool, extra ...interface{}) error {
-	// check pointer value
-	if transactions == nil || batch == nil {
-		return EmptyPointerErr
-	}
-	// process
-	for _, transaction := range transactions {
-		err, data := encapsulateTransaction(transaction, extra...)
-		if err != nil {
-			return err
-		}
-		if err := batch.Put(append(TransactionPrefix, transaction.GetHash().Bytes()...), data); err != nil {
-			return err
-		}
-	}
-	// flush to disk immediately
-	if flush {
-		if sync {
-			batch.Write()
-		} else {
-			go batch.Write()
-		}
-	}
-	return nil
-}
-
-func DeleteTransaction(batch db.Batch, key []byte, flush, sync bool) error {
-	keyFact := append(TransactionPrefix, key...)
-	err := batch.Delete(keyFact)
-	if err != nil {
-		return err
-	}
-	err = DeleteTransactionMeta(batch, key, false, false)
-	if err != nil {
-		return err
-	}
-	// flush to disk immediately
-	if flush {
-		if sync {
-			batch.Write()
-		} else {
-			go batch.Write()
-		}
-	}
-	return nil
-}
 
 func GetAllTransaction(namespace string) ([]*types.Transaction, error) {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
@@ -167,36 +71,40 @@ func GetAllTransaction(namespace string) ([]*types.Transaction, error) {
 }
 
 func GetAllTransactionFunc(db db.Database) ([]*types.Transaction, error) {
-	var ts []*types.Transaction = make([]*types.Transaction, 0)
-	iter := db.NewIterator(TransactionPrefix)
-	for iter.Next() {
-		var wrapper types.TransactionWrapper
-		var transaction types.Transaction
-		value := iter.Value()
-		proto.Unmarshal(value, &wrapper)
-		proto.Unmarshal(wrapper.Transaction, &transaction)
-		ts = append(ts, &transaction)
+	var (
+		ts []*types.Transaction = make([]*types.Transaction, 0)
+		index            uint64
+	)
+	chain, err := getChainFn(db)
+	if err != nil {
+		return nil, err
 	}
-	iter.Release()
-	err := iter.Error()
-	return ts, err
 
+	for index = 1; index <= chain.Height; index += 1 {
+		block, err := GetBlockByNumberFunc(db, index)
+		if err != nil {
+			return nil, err
+		}
+		ts = append(ts, block.Transactions...)
+	}
+	return ts, nil
 }
 
 // Judge whether a transaction has been saved in database
 func JudgeTransactionExist(namespace string, key []byte) (bool, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
-	if err != nil {
-		return false, err
+	tx, err := GetTransaction(namespace, key)
+	if tx == nil || err != nil {
+		return false, nil
 	}
-	var wrapper types.TransactionWrapper
-	keyFact := append(TransactionPrefix, key...)
-	data, err := db.Get(keyFact)
-	if len(data) == 0 {
-		return false, err
+	return true, nil
+}
+
+func JudgeTransactionExistFunc(db db.Database, key []byte) (bool, error) {
+	tx, err := GetTransactionFunc(db, key)
+	if tx == nil || err != nil {
+		return false, nil
 	}
-	err = proto.Unmarshal(data, &wrapper)
-	return true, err
+	return true, nil
 }
 
 /*

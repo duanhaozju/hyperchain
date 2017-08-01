@@ -55,7 +55,7 @@ func (lp *LedgerProxy) UnRegister(namespace string) error {
 }
 
 func (lp *LedgerProxy) Server() error {
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", lp.conf.Get(common.C_LEDGER_PORT)))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", lp.conf.Get(common.LEDGER_PORT)))
 	if err != nil {
 		return err
 	}
@@ -143,6 +143,7 @@ func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer
 	}
 	start := common.BytesToHash(r.Start)
 	limit := common.BytesToHash(r.End)
+
 	iterRange := vm.IterRange{
 		Start:   &start,
 		Limit:   &limit,
@@ -156,7 +157,9 @@ func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer
 		Id:  r.Context.Txid,
 	}
 	for iter.Next() {
-		batchValue.V = append(batchValue.V, iter.Value())
+		s := make([]byte, len(iter.Value()))
+		copy(s, iter.Value())
+		batchValue.V = append(batchValue.V, s)
 		cnt += 1
 		if cnt == BatchSize {
 			batchValue.HasMore = true
