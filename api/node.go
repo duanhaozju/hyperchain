@@ -69,3 +69,9 @@ func (node *Node) DeleteNVP(args NodeArgs) (string, error) {
 	})
 	return "successful request to delete nvp node", nil
 }
+
+// DelNode is in order to be compatible with sdk for release1.2
+func (node *Node) DelNode(args NodeArgs) (string, error) {
+	return node.DeleteVP(args)
+}
+
