@@ -39,6 +39,11 @@ public abstract class ContractTemplate {
     protected Logger logger = Logger.getLogger(this.getClass().getSimpleName());
     protected final FilterManager filterManager = new FilterManager();
 
+    protected final ExecuteResult sysQuery() {
+        //todo
+        return null;
+    }
+
     /**
      * invoke smart contract method
      * @param funcName function name user defined in contract
