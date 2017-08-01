@@ -4,12 +4,8 @@
 package common
 
 //constants for input args
-const ( //TODO: refactor this
+const (
 	C_NODE_ID            = "global.id"
-	C_HTTP_PORT          = "global.http_port"
-	C_REST_PORT          = "global.rest_port"
-	C_PEER_CONFIG_PATH   = "global.peerconfigs.path"
-	C_GLOBAL_CONFIG_PATH = "global.globalconfig.path"
 )
 
 const (

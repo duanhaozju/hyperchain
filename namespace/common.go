@@ -42,9 +42,6 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, er
 	conf.Set(common.JVM_PORT,   nr.conf.GetInt(common.JVM_PORT))
 	// ns part
 	conf.Set(common.C_NODE_ID, peerViper.GetInt("self.id"))
-	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
-	conf.Set(common.C_GLOBAL_CONFIG_PATH, nsConfigPath)
-
 	return conf, nil
 }
 
