@@ -4,8 +4,8 @@ package pbft
 
 import (
 	"container/list"
-
 	"hyperchain/core/types"
+	"sync"
 )
 
 type requestContainer struct {
@@ -78,6 +78,7 @@ func (a *orderedRequests) empty() {
 type requestStore struct {
 	outstandingRequests *orderedRequests
 	pendingRequests     *orderedRequests
+	tmux	sync.Mutex
 }
 
 // newRequestStore creates a new requestStore.
@@ -95,6 +96,8 @@ func newRequestStore() *requestStore {
 
 // storeOutstanding adds a request to the outstanding request list
 func (rs *requestStore) storeOutstanding(request *types.Transaction) {
+	rs.tmux.Lock()
+	defer rs.tmux.Unlock()
 	rs.outstandingRequests.add(request)
 }
 
@@ -110,6 +113,8 @@ func (rs *requestStore) storePendings(requests []*types.Transaction) {
 
 // remove deletes the request from both the outstanding and pending lists, it returns whether it was found in each list respectively
 func (rs *requestStore) remove(request *types.Transaction) (outstanding, pending bool) {
+	rs.tmux.Lock()
+	defer rs.tmux.Unlock()
 	outstanding = rs.outstandingRequests.remove(request)
 	pending = rs.pendingRequests.remove(request)
 	return

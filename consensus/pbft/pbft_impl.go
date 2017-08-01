@@ -354,11 +354,10 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			continue
 		}
 
-		if !pbft.inWV(pbft.view, n) {
+		if !pbft.sendInWV(pbft.view, n) {
 			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because " +
 				"batch seqNo=%d is out of sequence numbers", pbft.id, digest, n)
-			pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
-			pbft.batchVdr.currentVid = nil
+			//ogger.Debugf("Replica %d broadcast FinishUpdate", pbft.id)
 			pbft.stopNewViewTimer()
 			continue
 		}
@@ -679,7 +678,7 @@ func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
 		}
 
 		if idx.n != pbft.exec.lastExec + 1 {
-			pbft.logger.Debugf("Replica %d hasn't done with last execute %d, seq=%d", pbft.id, pbft.exec.lastExec, idx.n)
+			pbft.logger.Debugf("Replica %d expects to execute seq=%d, but get seq=%d", pbft.id, pbft.exec.lastExec+1, idx.n)
 			//break
 			continue
 		}
@@ -833,10 +832,10 @@ func (pbft *pbftImpl) processRequestsDuringRecovery() {
 
 func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error {
 
-	if pbft.status.getState(&pbft.status.inNegoView) {
-		pbft.logger.Debugf("Replica %d try to recvStateUpdatedEvent, but it's in nego-view", pbft.id)
-		return nil
-	}
+	//if pbft.status.getState(&pbft.status.inNegoView) {
+	//	pbft.logger.Debugf("Replica %d try to recvStateUpdatedEvent, but it's in nego-view", pbft.id)
+	//	return nil
+	//}
 
 	pbft.status.inActiveState(&pbft.status.stateTransferring)
 	// If state transfer did not complete successfully, or if it did not reach our low watermark, do it again
@@ -859,20 +858,17 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 	pbft.exec.setLastExec(et.SeqNo)
 	pbft.batchVdr.setVid(et.SeqNo)
 	pbft.batchVdr.setLastVid(et.SeqNo)
-	bcInfo := pbft.getCurrentBlockInfo()
-	id, _ := proto.Marshal(bcInfo)
-	pbft.persistCheckpoint(et.SeqNo, id)
-	pbft.moveWatermarks(pbft.exec.lastExec) // The watermark movement handles moving this to a checkpoint boundary
 	pbft.status.inActiveState(&pbft.status.skipInProgress)
 	pbft.validateState()
 	if et.SeqNo % pbft.K == 0 {
+		bcInfo := pbft.getCurrentBlockInfo()
 		pbft.checkpoint(et.SeqNo, bcInfo)
 	}
 
 	if pbft.status.getState(&pbft.status.inRecovery) {
 		if pbft.recoveryMgr.recoveryToSeqNo == nil {
-			pbft.logger.Errorf("Replica %d in recovery recvStateUpdatedEvent but " +
-				"its recoveryToSeqNo is nil")
+			pbft.logger.Warningf("Replica %d in recovery recvStateUpdatedEvent but " +
+				"its recoveryToSeqNo is nil", pbft.id)
 			return nil
 		}
 		if pbft.exec.lastExec == *pbft.recoveryMgr.recoveryToSeqNo {
@@ -1358,20 +1354,19 @@ func (pbft *pbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, rep
 // receive local message methods
 // =============================================================================
 func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
+	if atomic.LoadUint32(&pbft.activeView) == 0 {
+		pbft.logger.Debugf("Replica %d ignoring ValidatedResult as we sre in view change", pbft.id)
+		return nil
+	}
+
+	if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 {
+		pbft.logger.Debugf("Replica %d ignoring ValidatedResult as we are in updating N", pbft.id)
+		return nil
+	}
 
 	primary := pbft.primary(pbft.view)
 	if primary == pbft.id {
 		pbft.logger.Debugf("Primary %d received validated batch for view=%d/vid=%d, batch size: %d, hash: %s", pbft.id, result.View, result.SeqNo, len(result.Transactions), result.Hash)
-
-		if atomic.LoadUint32(&pbft.activeView) == 0 {
-			pbft.logger.Debugf("Replica %d ignoring ValidatedResult as we sre in view change", pbft.id)
-			return nil
-		}
-
-		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 {
-			pbft.logger.Debugf("Replica %d ignoring ValidatedResult as we are in updating N", pbft.id)
-			return nil
-		}
 
 		if !pbft.inV(result.View) {
 			pbft.logger.Debugf("Replica %d receives validated result whose view is in old view, now view=%v", pbft.id, pbft.view)
@@ -1393,7 +1388,7 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 		pbft.batchVdr.saveToCVB(digest, cache)
 		pbft.trySendPrePrepares()
 	} else {
-		pbft.logger.Debugf("Replica %d recived validated batch for view=%d/sqeNo=%d, batch size: %d, hash: %s", pbft.id, result.View, result.SeqNo, len(result.Transactions), result.Hash)
+		pbft.logger.Debugf("Replica %d received validated batch for view=%d/sqeNo=%d, batch size: %d, hash: %s", pbft.id, result.View, result.SeqNo, len(result.Transactions), result.Hash)
 
 		if !pbft.inWV(result.View, result.SeqNo) {
 			pbft.logger.Debugf("Replica %d receives validated result %s that is out of sequence numbers", pbft.id, result.Hash)
@@ -1415,7 +1410,6 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 }
 
 func (pbft *pbftImpl) recvRemoveCache(vid uint64) bool {
-
 	if vid <= 10 {
 		pbft.logger.Debugf("Replica %d received remove cached batch %d <= 10, retain it until 11", pbft.id, vid)
 		return true

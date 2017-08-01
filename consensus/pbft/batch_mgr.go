@@ -271,6 +271,12 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 		return
 	}
 
+	// ignore too many validated batch as we limited the high watermark in send pre-prepare
+	if len(pbft.batchVdr.cacheValidatedBatch) > int(pbft.L) {
+		pbft.logger.Warningf("Primary %d has cached %d validated batch, exceed %d!", pbft.id, len(pbft.batchVdr.cacheValidatedBatch), pbft.L)
+		return
+	}
+
 	// for keep the previous vid before viewchange
 	var n uint64
 	if vid != 0 {
@@ -283,6 +289,15 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 	pbft.dupLock.Lock()
 	pbft.duplicator[n] = txStore
 	pbft.dupLock.Unlock()
+
+	// the RWLock above may block for some time, and if happened viewchange during that time,
+	// this pre-primary may not be a primary in new view, so judge if it is primary before we
+	// really send ValidateBatch
+	if pbft.primary(pbft.view) != pbft.id {
+		pbft.logger.Warningf("Replica %d may have view changed, and now primary is: %d", pbft.id, pbft.primary(pbft.view))
+		return
+	}
+
 
 	pbft.logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d, batch size: %d", pbft.id, pbft.view, pbft.batchVdr.vid, txStore.Len())
 	pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout + pbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),

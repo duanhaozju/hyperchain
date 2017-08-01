@@ -13,6 +13,7 @@ import (
 	"hyperchain/common"
 	"github.com/syndtr/goleveldb/leveldb/errors"
 	"sync/atomic"
+	"sort"
 )
 
 //view change manager
@@ -663,8 +664,6 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 				sentExecute: cert.sentExecute,
 			}
 			tmpStore[tmpId] = tmpCert
-			delete(pbft.storeMgr.certStore, idx)
-			pbft.persistDelQPCSet(idx.v, idx.n)
 		}
 	}
 	for idx, cert := range pbft.vcMgr.vcCertStore {
@@ -797,8 +796,12 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 }
 
 func (pbft *pbftImpl) rebuildCertStore() {
-
-	pbft.storeMgr.certStore = make(map[msgID]*msgCert)
+	for idx := range pbft.storeMgr.certStore {
+		if idx.v < pbft.view {
+			delete(pbft.storeMgr.certStore, idx)
+			pbft.persistDelQPCSet(idx.v, idx.n)
+		}
+	}
 	for idx, vc := range pbft.vcMgr.vcCertStore {
 		if idx.n > pbft.exec.lastExec {
 			continue
@@ -977,8 +980,8 @@ func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 	return
 }
 
-func (pbft *pbftImpl) assignSequenceNumbers(vset []*ViewChange, h uint64) (msgList map[uint64]string) {
-	msgList = make(map[uint64]string)
+func (pbft *pbftImpl) assignSequenceNumbers(vset []*ViewChange, h uint64) (map[uint64]string) {
+	msgList := make(map[uint64]string)
 
 	maxN := h + 1
 
@@ -1062,7 +1065,22 @@ nLoop:
 			delete(msgList, n)
 		}
 	}
-	return
+
+	keys := make([]uint64, len(msgList))
+	i := 0;
+	for n := range msgList {
+		keys[i] = n
+		i++
+	}
+	sort.Sort(sortableUint64Slice(keys))
+	x := h + 1
+	list := make(map[uint64]string)
+	for _, n := range keys {
+		list[x] = msgList[n]
+		x++
+	}
+
+	return list
 }
 
 func (pbft *pbftImpl) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
@@ -1227,7 +1245,7 @@ func (pbft *pbftImpl) beforeSendVC() error{
 
 	pbft.vcMgr.plist = pbft.calcPSet()
 	pbft.vcMgr.qlist = pbft.calcQSet()
-
+	pbft.batchVdr.cacheValidatedBatch = make(map[string]*cacheBatch)
 	// clear old messages
 	for idx := range pbft.vcMgr.viewChangeStore {
 		if idx.v < pbft.view {
