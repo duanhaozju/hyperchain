@@ -79,8 +79,8 @@ func (executor *Executor) cutdownChainByRange(batch db.Batch, from, to uint64) e
 		}
 
 		for _, tx := range block.Transactions {
-			if err := edb.DeleteTransaction(batch, tx.GetHash().Bytes(), false, false); err != nil {
-				executor.logger.Errorf("[Namespace = %s] delete useless tx in block %d failed, error msg %s", executor.namespace, i, err.Error())
+			if err := edb.DeleteTransactionMeta(batch, tx.GetHash().Bytes(), false, false); err != nil {
+				executor.logger.Errorf("[Namespace = %s] delete useless tx meta in block %d failed, error msg %s", executor.namespace, i, err.Error())
 			}
 			if err := edb.DeleteReceipt(batch, tx.GetHash().Bytes(), false, false); err != nil {
 				executor.logger.Errorf("[Namespace = %s] delete useless receipt in block %d failed, error msg %s", executor.namespace, i, err.Error())

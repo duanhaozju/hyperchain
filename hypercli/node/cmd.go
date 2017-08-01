@@ -81,7 +81,7 @@ func getHttpResponse(namespace, ip, port, method, params string) (jsonrpc.JSONRe
 		"{\"jsonrpc\":\"2.0\",\"namespace\":\"%s\",\"method\":\"%s\",\"params\":%s,\"id\":1}",
 		namespace, method, params)
 
-	result, err := client.Call(cmd)
+	result, err := client.Call(cmd, method)
 	if err != nil {
 		return response, err
 	}

@@ -13,15 +13,15 @@ import (
 )
 
 const (
-	rateLimitEnable = "global.configs.ratelimit.enable"
+	rateLimitEnable = "flow.control.ratelimit.enable"
 
 	TRANSACTION         = "transaction"
-	transactionPeak     = "global.configs.ratelimit.txRatePeak"
-	transactionFillRate = "global.configs.ratelimit.txFillRate"
+	transactionPeak     = "flow.control.ratelimit.txRatePeak"
+	transactionFillRate = "flow.control.ratelimit.txFillRate"
 
 	CONTRACT         = "contract"
-	contractPeak     = "global.configs.ratelimit.contractRatePeak"
-	contractFillRate = "global.configs.ratelimit.contractFillRate"
+	contractPeak     = "flow.control.ratelimit.contractRatePeak"
+	contractFillRate = "flow.control.ratelimit.contractFillRate"
 
 	paillpublickeyN       = "global.configs.hmpublickey.N"
 	paillpublickeynsquare = "global.configs.hmpublickey.Nsquare"

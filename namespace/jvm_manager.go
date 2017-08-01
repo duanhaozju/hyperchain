@@ -75,7 +75,7 @@ func (mgr *JvmManager) startJvmServer() error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(path.Join(binHome, StartShell), strconv.Itoa(mgr.conf.GetInt(common.C_JVM_PORT)), strconv.Itoa(mgr.conf.GetInt(common.C_LEDGER_PORT)))
+	cmd := exec.Command(path.Join(binHome, StartShell), strconv.Itoa(mgr.conf.GetInt(common.JVM_PORT)), strconv.Itoa(mgr.conf.GetInt(common.LEDGER_PORT)))
 	err = cmd.Run()
 	if err != nil {
 		mgr.logger.Error(err)
@@ -96,7 +96,7 @@ func (mgr *JvmManager) stopJvmServer() error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command(path.Join(binHome, StopShell), strconv.Itoa(mgr.conf.GetInt(common.C_JVM_PORT)), strconv.Itoa(mgr.conf.GetInt(common.C_LEDGER_PORT)))
+	cmd := exec.Command(path.Join(binHome, StopShell), strconv.Itoa(mgr.conf.GetInt(common.JVM_PORT)), strconv.Itoa(mgr.conf.GetInt(common.LEDGER_PORT)))
 	err = cmd.Run()
 	if err != nil {
 		mgr.logger.Error(err)
@@ -164,7 +164,7 @@ func (mgr *JvmManager) checkJvmExist() bool {
 		mgr.lsofPath = path
 	}
 
-	subcmd := fmt.Sprintf("-i:%d", mgr.conf.GetInt(common.C_JVM_PORT))
+	subcmd := fmt.Sprintf("-i:%d", mgr.conf.GetInt(common.JVM_PORT))
 	ret, err := exec.Command(mgr.lsofPath, subcmd).Output()
 	if err != nil || len(ret) == 0 {
 		if err == nil {

@@ -9,6 +9,7 @@ import (
 	"hyperchain/p2p/network"
 	"hyperchain/p2p/utils"
 	"fmt"
+	"hyperchain/common"
 )
 
 var _ = Describe("P2pManager", func() {
@@ -16,8 +17,8 @@ var _ = Describe("P2pManager", func() {
 		var vip *viper.Viper
 
 		JustBeforeEach(func() {
-			vip.Set("global.p2p.retrytime", "3s")
-			vip.Set("global.p2p.port",50019)
+			vip.Set(common.P2P_RETRY_TIME, "3s")
+			vip.Set(common.P2P_PORT,50019)
 
 		})
 		AfterEach(func() {
@@ -28,7 +29,7 @@ var _ = Describe("P2pManager", func() {
 		Context("with a valid config file", func() {
 			BeforeEach(func() {
 				vip = viper.New()
-				vip.Set("global.p2p.hosts", utils.GetProjectPath()+"/p2p/test/hosts.yaml")
+				vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/p2p/test/hosts.yaml")
 
 			})
 			It("it should start up a global p2pManager", func() {
@@ -48,9 +49,9 @@ var _ = Describe("P2pManager", func() {
 
 		BeforeEach(func() {
 			vip = viper.New()
-			vip.Set("global.p2p.retrytime", "3s")
-			vip.Set("global.p2p.port",50019)
-			vip.Set("global.p2p.hosts", utils.GetProjectPath()+"/p2p/test/notFound.yaml")
+			vip.Set(common.P2P_RETRY_TIME, "3s")
+			vip.Set(common.P2P_PORT,50019)
+			vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/p2p/test/notFound.yaml")
 
 		})
 
@@ -58,7 +59,7 @@ var _ = Describe("P2pManager", func() {
 			It("it should return a error with a invalid p2p config", func() {
 
 				Skip("hahah")
-				By(fmt.Sprintf("invalid config string gloabl.p2p.hosts %s",vip.GetString("global.p2p.hosts")))
+				By(fmt.Sprintf("invalid config string gloabl.p2p.hosts %s",vip.GetString(common.P2P_HOSTS)))
 				_,err := GetP2PManager(vip)
 				Expect(err).NotTo(BeNil())
 			})
@@ -70,9 +71,9 @@ var _ = Describe("P2pManager", func() {
 
 		BeforeEach(func() {
 			vip = viper.New()
-			vip.Set("global.p2p.hosts", utils.GetProjectPath()+"/p2p/test/hosts.yaml")
-			vip.Set("global.p2p.retrytime", "3s")
-			vip.Set("global.p2p.port",50019)
+			vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/p2p/test/hosts.yaml")
+			vip.Set(common.P2P_RETRY_TIME, "3s")
+			vip.Set(common.P2P_PORT,50019)
 		})
 
 		Context("With a correctly config", func() {

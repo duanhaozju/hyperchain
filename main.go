@@ -49,7 +49,7 @@ func newHyperchain(argV *argT) *hyperchain {
 	}
 	hp.p2pmgr = p2pManager
 
-	httpPort := vip.GetInt("global.jsonrpc_port")
+	httpPort := vip.GetInt(common.JSON_RPC_PORT)
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
 	hp.hs = jsonrpc.GetHttpServer(hp.nsMgr, hp.stopFlag, hp.restartFlag,httpPort)
 
@@ -80,7 +80,7 @@ func (h *hyperchain) restart() {
 
 type argT struct {
 	cli.Helper
-	ConfigPath  string `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
+	ConfigPath  string `cli:"c,conf" usage:"config file path" dft:"./global.toml"`
 	IPCEndpoint string `cli:"ipc" usage:"ipc interactive shell attach endpoint" dft:"./hpc.ipc"`
 	Shell       bool `cli:"s,shell" usage:"start interactive shell" dft:"false"`
 	PProfEnable   bool   `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`

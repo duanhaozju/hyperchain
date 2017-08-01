@@ -27,7 +27,7 @@ func init(){
 	fakeviper := viper.New()
 	fakeviper.SetConfigFile(projectPath+"/admittance/test/global.yaml");
 	fakeviper.ReadInConfig()
-	fakeviper.Set("global.configs.caconfig",projectPath+"/admittance/test/caconfig.toml")
+	fakeviper.Set("config.path.caconfig",projectPath+"/admittance/test/caconfig.toml")
 
 	var cmerr error
 	testCaManager,cmerr = NewCAManager(fakeviper)

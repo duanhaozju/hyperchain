@@ -91,6 +91,7 @@ public class HyperchainLedger extends AbstractLedger{
 
         Set<String> topics = event.getTopics();
         List<ByteString> topics1 = new LinkedList<>();
+        topics1.add(ByteString.copyFrom("jvm", Charset.defaultCharset()));
         for (String topic: topics) {
             topics1.add(ByteString.copyFrom(topic, Charset.defaultCharset()));
         }
