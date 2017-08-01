@@ -273,7 +273,7 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 
 	// ignore too many validated batch as we limited the high watermark in send pre-prepare
 	if len(pbft.batchVdr.cacheValidatedBatch) > int(pbft.L) {
-		pbft.logger.Warningf("Primary %d has cached %d validated batch, exceed %d!", pbft.id, len(pbft.cacheValidatedBatch), pbft.L)
+		pbft.logger.Warningf("Primary %d has cached %d validated batch, exceed %d!", pbft.id, len(pbft.batchVdr.cacheValidatedBatch), pbft.L)
 		return
 	}
 
@@ -294,7 +294,7 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 	// this pre-primary may not be a primary in new view, so judge if it is primary before we
 	// really send ValidateBatch
 	if pbft.primary(pbft.view) != pbft.id {
-		logger.Warningf("Replica %d may have view changed, and now primary is: %d", pbft.id, pbft.primary(pbft.view))
+		pbft.logger.Warningf("Replica %d may have view changed, and now primary is: %d", pbft.id, pbft.primary(pbft.view))
 		return
 	}
 
