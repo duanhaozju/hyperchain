@@ -30,6 +30,7 @@ public class SimulateBankTest {
         server.invoke("issue",Arrays.asList(issueArgs));
 
         ExecuteResult result = server.invoke("getAccountBalance",Arrays.asList(getArgs));
+        System.out.println("balance: " + result.getResult());
         logger.info(result.getResult());
 
     }
@@ -38,15 +39,53 @@ public class SimulateBankTest {
         server.invoke("testDelete",Arrays.asList(new String[]{}));
     }
 
+
     public static void testRangeQuery(){
+
         server.invoke("testRangeQuery",Arrays.asList(new String[]{}));
     }
+
+    public static void testNewAccountTable() {
+
+        ExecuteResult result = server.invoke("newAccountTable", Arrays.asList(new String[]{}));
+        System.out.println(result.getResult());
+    }
+
+    public static void testGetTableDesc() {
+        String[] args = new String[]{"Account"};
+        ExecuteResult result = server.invoke("getTableDesc", Arrays.asList(args));
+        System.out.println(result.getResult());
+    }
+
+    public static void testIssueByTable() {
+        String[] args = new String[]{"bk-1", "bk-1", "100"};
+        String[] args2 = new String[]{"bk-2", "bk-2", "100"};
+        server.invoke("issueByTable", Arrays.asList(args));
+        server.invoke("issueByTable", Arrays.asList(args2));
+    }
+
+    public static void testTransferByTable() {
+        String[] args = new String[]{"bk-1", "bk-2", "10"};
+        server.invoke("transferByTable", Arrays.asList(args));
+    }
+
+    public static void testGetAccountByRange() {
+        String[] args = new String[]{"bk-1", "bk-2"};
+        server.invoke("getAccountByRange", Arrays.asList(args));
+    }
+
     public static void main(String[] args) {
         SimulateBank sb = new SimulateBank();
         deploy(sb);
-        testIssueAndGetBalance();
-        testRangeQuery();
-        testDelete();
+//        testIssueAndGetBalance();
+//        testRangeQuery();
+//        testDelete();
+
+        testNewAccountTable();
+        testGetTableDesc();
+        testIssueByTable();
+        testTransferByTable();
+        testGetAccountByRange();
     }
 
 }
