@@ -151,7 +151,7 @@ func (s Server) Greeting(ctx context.Context, msg *pb.Message) (*pb.Message, err
 	return nil,errors.New(fmt.Sprintf("This message type is not support, %v",msg.MessageType))
 }
 
-// Wisper Transfer the the node health infomation
+// Whisper Transfer the the node health information
 func(s Server) Whisper(ctx context.Context, msg *pb.Message) (*pb.Message, error){
 	if msg.From!= nil && msg.From.Hostname != nil && msg.From.Extend!= nil && msg.From.Extend.IP !=nil{
 		go func(from,ip string){
@@ -181,10 +181,13 @@ func(s Server) Whisper(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	return nil,errors.New(fmt.Sprintf("This message type is not support, %v",msg.MessageType))
 }
 
-// Wisper Transfer the the node health infomation
+// Discuss Transfer the the node health information
 func(s Server) Discuss(ctx context.Context, pkg *pb.Package) (*pb.Package, error){
 	if pkg.Type == pb.ControlType_Close {
-		fmt.Println("[Discuss] close this peer (current will not close the remote peer)")
+		logger.Warning("[Discuss] close this peer (current will not close the remote peer)")
+	}
+	if pkg.Payload != nil{
+		logger.Debugf("[Discuss] receive a discuss msg %s \n",string(pkg.Payload))
 	}
 	resp := pb.NewPkg(nil,pb.ControlType_Response)
 	return resp,nil

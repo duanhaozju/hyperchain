@@ -38,6 +38,8 @@ type HyperNet struct {
 
 	addr *inneraddr.InnerAddr
 
+	cconf *clientConf
+
 }
 
 func NewHyperNet(config *viper.Viper) (*HyperNet,error){
@@ -75,7 +77,9 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 	if err !=nil{
 		return nil,err
 	}
+	// connection configuration
 
+	cconf := NewClientConf(config)
 	rq := make(chan [2]string)
 	net :=  &HyperNet{
 		dns:dns,
@@ -88,6 +92,7 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 		sec:sec,
 		addr:ia,
 		domain:domain,
+		cconf:cconf,
 	}
 
 	err = net.retry()
@@ -197,7 +202,7 @@ func (hn *HyperNet)reverse() error{
 
 //Connect to specific host endpoint
 func (hn *HyperNet)ConnectByAddr(hostname,addr string) error{
-	client,err  := NewClient(hostname,addr,hn.sec)
+	client,err  := NewClient(hostname,addr,hn.sec,hn.cconf)
 	if err != nil{
 		return err
 	}
@@ -219,7 +224,7 @@ func (hn *HyperNet)Connect(hostname string) error{
 		logger.Errorf("get dns failed, err : %s \n",err.Error())
 		return err
 	}
-	client,err  := NewClient(hostname,addr,hn.sec)
+	client,err  := NewClient(hostname,addr,hn.sec,hn.cconf)
 	if err != nil{
 		return err
 	}

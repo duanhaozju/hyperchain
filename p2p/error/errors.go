@@ -55,3 +55,13 @@ type ErrUnknown struct{}
 func (e ErrUnknown)Error()string{
 	return "unKnown error."
 }
+
+type ErrDecryptFailed struct {}
+func (e ErrDecryptFailed)Error()string{
+	return "Decrypt Failed"
+}
+
+type ErrEncryptFailed struct {}
+func (e ErrEncryptFailed)Error()string{
+	return "Encrypt Failed."
+}

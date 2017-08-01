@@ -270,8 +270,8 @@ REBUILD=true
 # rebuild hypercli or not? default = false
 HYPERCLI=false
 
-# distribute jvm or not? default = true
-HYPERJVM=true
+# distribute jvm or not? default = false
+HYPERJVM=false
 
 # run process or not? default = true
 RUN=true
@@ -297,7 +297,7 @@ do
     -c|--hypercli)
         HYPERCLI=true; shift;;
     -j|--jvm)
-        HYPERJVM=false; shift;;
+        HYPERJVM=true; shift;;
     -m|--mode)
         MODE=true; shift;;
     -n|--run)

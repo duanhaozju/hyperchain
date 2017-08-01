@@ -21,19 +21,8 @@ type Client struct {
 	MsgChan chan *pb.Message
 	hts hts.HTS
 	stateMachine  *fsm.FSM
-
-
-	// configurations
-	keepAliveDuration time.Duration
-	keepAliveFailTimes int
-
-	pendingDuration time.Duration
-	pendingFailTimes int
-
-	//connection pool init capacity
-	connInitCap int
-	// connection pool upper limit
-	connUpperlimit int
+	//configurations
+	cconf *clientConf
 
 }
 
@@ -47,16 +36,16 @@ func connCloser(v interface{}) error{
 	return v.(*grpc.ClientConn).Close()
 }
 
-func NewClient(hostname, addr string,sec *Sec) (*Client,error){
+func NewClient(hostname, addr string,sec *Sec,cconf *clientConf) (*Client,error){
 	//connCreator := func(endpoint string,options []grpc.DialOption) (interface{}, error) { return grpc.Dial(endpoint,options)}
 	//connCloser  := func(v interface{}) error { return v.(*grpc.ClientConn).Close() }
 	poolConfig := &pool.PoolConfig{
-		InitialCap: 2,
-		MaxCap:     10,
+		InitialCap: cconf.connInitCap,
+		MaxCap:     cconf.connUpperlimit,
 		Factory:    connCreator,
 		Close:      connCloser,
 		//链接最大空闲时间，超过该时间的链接 将会关闭，可避免空闲时链接EOF，自动失效的问题
-		IdleTimeout: 15 * time.Second,
+		IdleTimeout: cconf.connIdleTime,
 		EndPoint:addr,
 		Options:sec.GetGrpcClientOpts(),
 	}
@@ -71,12 +60,7 @@ func NewClient(hostname, addr string,sec *Sec) (*Client,error){
 		connPool:p,
 		sec: sec,
 		//todo those configuration sould be read from configuration
-		connInitCap:2,
-		connUpperlimit:10,
-		keepAliveDuration:time.Second*3,
-		pendingDuration:time.Second*5,
-		pendingFailTimes:3,
-		keepAliveFailTimes:3,
+		cconf:cconf,
 	}
 	// start fsm
 	c.initState()
@@ -115,6 +99,10 @@ func(c *Client)Chat() (error){
 
 // Greeting doube arrow greeting message transfer
 func(c *Client)Greeting(in *pb.Message) (*pb.Message, error){
+	if c.stateMachine.Current() != c_StatWorking{
+		logger.Warningf("This client's stat. is not working, ignore messge send.(stat %s, addr %s,hostname: %s)",c.stateMachine.Current(),c.addr,c.hostname)
+		return nil,errors.New(fmt.Sprintf("This client's stat. is not working, ignore messge send.(stat %s, addr %s,hostname: %s)",c.stateMachine.Current(),c.addr,c.hostname))
+	}
 	connv,err :=c.connPool.Get()
 	if err !=  nil{
 		logger.Warningf(" cannot get the conn from connection pool (%v) ",c.addr)
@@ -129,6 +117,10 @@ func(c *Client)Greeting(in *pb.Message) (*pb.Message, error){
 
 // Whisper Transfer the the high level information
 func(c *Client)Whisper(in *pb.Message) (*pb.Message, error){
+	if c.stateMachine.Current() != c_StatWorking{
+		logger.Warningf("This client's stat. is not working, ignore messge send.(stat %s, addr %s,hostname: %s)",c.stateMachine.Current(),c.addr,c.hostname)
+		return nil,errors.New(fmt.Sprintf("This client's stat. is not working, ignore messge send.(stat %s, addr %s,hostname: %s)",c.stateMachine.Current(),c.addr,c.hostname))
+	}
 	// get client from conn pool
 	connv,err :=c.connPool.Get()
 	if err !=  nil{

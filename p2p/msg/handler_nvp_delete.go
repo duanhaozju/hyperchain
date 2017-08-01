@@ -58,7 +58,7 @@ func (h *NVPDeleteMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
 	}
 	VPHash := common.Bytes2Hex(payload)
 	fmt.Println("GOT A VP DELETE MSG",VPHash)
-	ev := peerevent.EV_DELETE_VP{
+	ev := peerevent.DELETE_VP{
 		Hash:VPHash,
 	}
 	go h.mgrev.Post(ev)

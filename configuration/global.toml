@@ -49,13 +49,27 @@ tlsCertPriv             = "./tls/tls_peer1.priv"
 hosts                   = "./hosts.yaml"
 addr                    = "./addr.yaml"
 
+# connection control configurations
+# keepalive configuration
+keepAliveDuration = "3s"
+keepAliveFailTimes = 3
+# pending configuration
+pendingDuration = "10s"
+pendingFailTimes = 3
+# connection pool init capacity
+connInitCap = 1
+# connection pool upper limit
+connUpperlimit = 1
+# to avoid the EOF set the time
+connIdleTime = "15s"
+
 ##########################################################
 #
 # hypervm section
 #
 ##########################################################
 [hypervm]
-jvm = true
+jvm = false
 
 ##########################################################
 #

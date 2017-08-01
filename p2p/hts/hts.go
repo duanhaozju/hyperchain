@@ -100,6 +100,7 @@ import (
 	"hyperchain/crypto/primitives"
 	"crypto/ecdsa"
 	"io/ioutil"
+	"hyperchain/manager/event"
 )
 
 type HTS struct {
@@ -243,8 +244,8 @@ func (hts *HTS) GetAClientHTS() (*ClientHTS,error){
 
 //GetServerHTS  generally this function will be invoke only once in a namespace
 //this func will self invoke generate generate private key
-func(hts *HTS)GetServerHTS()(*ServerHTS,error){
-	shts,err := NewServerHTS(hts.sec,hts.cg)
+func(hts *HTS)GetServerHTS(peermgrEv *event.TypeMux)(*ServerHTS,error){
+	shts,err := NewServerHTS(hts.sec,hts.cg,peermgrEv)
 	if err != nil{
 		return nil,err
 	}

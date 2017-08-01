@@ -1,4 +1,4 @@
 package peerevent
-type EV_DELETE_NVP struct {
+type DELETE_NVP struct {
 	Hash string
 }

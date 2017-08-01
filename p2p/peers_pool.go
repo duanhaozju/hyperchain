@@ -73,7 +73,7 @@ func (pool *PeersPool)GetPeers()[]*Peer {
 	return list
 }
 
-func (pool *PeersPool)GetPeersByHash(hash string)*Peer{
+func (pool *PeersPool)GetPeerByHash(hash string)*Peer{
 	l := pool.vpPool.Sort()
 	for _,item := range l{
 		p := item.(*Peer)
@@ -190,7 +190,7 @@ func(pool *PeersPool)DeleteVPPeer(id int)error{
 }
 
 func(pool *PeersPool)DeleteVPPeerByHash(hash string)error{
-	p := pool.GetPeersByHash(hash)
+	p := pool.GetPeerByHash(hash)
 	if p != nil{
 		pool.logger.Critical("delete validate peer",p.info.Id)
 	}else{
