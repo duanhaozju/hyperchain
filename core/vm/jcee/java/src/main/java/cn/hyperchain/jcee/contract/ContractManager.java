@@ -107,7 +107,7 @@ public class ContractManager {
         Class contractClass = classLoader.load(info.getContractMainName());
         Object ins = newInstance(contractClass, info.getArgClasses(), info.getArgs());
         if (ins == null) {
-            logger.error("init contract for " + info.getName() + " faield");
+            logger.error("init contract for " + info.getName() + " failed");
             return false;
         }
         contract = (ContractTemplate) ins;

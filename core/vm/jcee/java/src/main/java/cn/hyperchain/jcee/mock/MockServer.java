@@ -5,6 +5,7 @@
 package cn.hyperchain.jcee.mock;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
+import cn.hyperchain.jcee.contract.ContractInfo;
 import cn.hyperchain.jcee.contract.ContractTemplate;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
 import cn.hyperchain.jcee.util.HashFunction;
@@ -30,6 +31,10 @@ public class MockServer {
         AbstractLedger ledger = new MockLedger();
         String cid = HashFunction.computeCodeHash(ct.toString().getBytes());
         ct.setLedger(ledger);
+
+        ContractInfo cif = new ContractInfo();
+        cif.setNamespace("global");
+        ct.setInfo(cif);
 
         contractHolder.put(cid,ct);
         return cid;
