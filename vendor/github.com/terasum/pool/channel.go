@@ -18,7 +18,7 @@ type PoolConfig struct {
 	Factory func(endpoint string, options []grpc.DialOption) (interface{}, error)
 	//关闭链接的方法
 	Close func(interface{}) error
-	//链接最大空闲时间，超过该time则将失效
+	//链接最大空闲时间，超过该事件则将失效
 	IdleTimeout time.Duration
 
 	//endpoint target link

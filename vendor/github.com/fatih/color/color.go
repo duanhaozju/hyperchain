@@ -18,7 +18,7 @@ var (
 	// or not. This is a global option and affects all colors. For more control
 	// over each color block use the methods DisableColor() individually.
 	NoColor = os.Getenv("TERM") == "dumb" ||
-		(!isatty.IsTerminal(os.Stdout.Fd()))
+		(!isatty.IsTerminal(os.Stdout.Fd()) && !isatty.IsCygwinTerminal(os.Stdout.Fd()))
 
 	// Output defines the standard output of the print functions. By default
 	// os.Stdout is used.
