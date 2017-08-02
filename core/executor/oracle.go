@@ -7,11 +7,8 @@ import (
 	"os"
 	"encoding/json"
 	"github.com/op/go-logging"
-	//"fmt"
+	"sync"
 )
-//const (
-//	staticPeerFile = "config.path.static_peers"
-//)
 type Oracle struct {
 	peers           []uint64
 	staticPeers     []uint64
@@ -19,6 +16,7 @@ type Oracle struct {
 	conf            *common.Config
 	latestSelected  uint64
 	logger          *logging.Logger
+	once            sync.Once
 }
 
 type StaticPeer struct {
@@ -44,8 +42,7 @@ func NewOracle(peers []uint64, conf *common.Config, logger *logging.Logger) *Ora
 		score:       score,
 		logger:      logger,
 	}
-	//staticPeers := oracle.ReadStaticPeer(oracle.conf.GetString(staticPeerFile))
-	staticPeers := oracle.ReadPeerIds(conf.GetString(common.PEER_CONFIG_PATH))
+	staticPeers := oracle.ReadPeerIds()
 	logger.Debug("read static peers from configuration", staticPeers)
 	for _, peer := range staticPeers {
 		if contains(peers, peer) {
@@ -104,16 +101,19 @@ func (oracle *Oracle) ReadStaticPeer(path string) []uint64 {
 	oracle.logger.Debug("invalid static peers configuration file")
 	return nil
 }
-//TODO: this method need change if peerconfig.yaml become peerconfig.toml
-func (oracle *Oracle) ReadPeerIds(peerConfigPath string) []uint64 {
-	var ret   []uint64
-	conf := common.NewConfig(peerConfigPath)
-	nodes := conf.Get("nodes").([]interface{})
-	for _,item := range nodes{
+
+func (oracle *Oracle) ReadPeerIds() []uint64 {
+	var ret []uint64
+	oracle.once.Do(func() {
+		oracle.conf.MergeConfig(oracle.conf.GetString(common.PEER_CONFIG_PATH))
+	})
+
+	nodes := oracle.conf.Get("nodes").([]interface{})
+	for _, item := range nodes{
 		var id uint64
-		node  := item.(map[interface{}]interface{})
-		for key,value := range node{
-			if key.(string) == "id"{
+		node := item.(map[string]interface{})
+		for key, value := range node{
+			if key == "id" {
 				id  = uint64(value.(int64))
 				ret = append(ret, id)
 			}
