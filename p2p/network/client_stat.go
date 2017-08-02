@@ -2,12 +2,12 @@ package network
 
 import (
 	"github.com/looplab/fsm"
-	"fmt"
 	"time"
 	"hyperchain/p2p/message"
 	"context"
 	"google.golang.org/grpc"
 	"github.com/terasum/pool"
+	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
 )
 
 const (
@@ -103,7 +103,7 @@ func (c *Client)pending(){
 				logger.Warning("unsuitable stat (pending), ignore.")
 				return
 			}
-			if !c.sTest(c.addr) {
+			if !c.ping(c.addr) {
 				logger.Warningf("recovery failed (to %s, times: %d)",c.addr,counter)
 				counter++
 				if counter > c.cconf.pendingFailTimes{
@@ -135,7 +135,7 @@ func (c *Client)reborn(){
 	}
 	p, err := pool.NewChannelPool(poolConfig)
 	if err != nil {
-		fmt.Errorf("Fatal: cannot reborn this connection %s",err.Error())
+		logger.Errorf("Fatal: cannot reborn this connection %s",err.Error())
 		return
 	}
 	c.connPool = p
@@ -143,8 +143,8 @@ func (c *Client)reborn(){
 }
 
 
-func (c *Client) sTest(addr string) bool{
-	logger.Noticef("sTest to %s",addr)
+func (c *Client) ping(addr string) bool{
+	logger.Noticef("ping %s",addr)
 	conn,err :=  grpc.Dial(addr,c.sec.GetGrpcClientOpts()...)
 	if err != nil{
 		if conn != nil{
@@ -153,9 +153,9 @@ func (c *Client) sTest(addr string) bool{
 		return false
 	}
 	client := NewChatClient(conn)
-	in := message.NewPkg([]byte("try package"),message.ControlType_KeepAlive)
-	//TODO here should evaluate to use the WithRetryTimeLimit (self modified library)
-	_,err = client.Discuss(context.Background(),in,grpc.FailFast(true))
+	in := message.NewPkg([]byte("ping"),message.ControlType_KeepAlive)
+	// to ensure the retry times use the grpc_retry library
+	_,err = client.Discuss(context.Background(),in,grpc.FailFast(true),grpc_retry.WithMax(1))
 	if conn != nil{
 		conn.Close()
 	}

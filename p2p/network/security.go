@@ -56,7 +56,6 @@ func NewSec(config *viper.Viper) (*Sec,error){
 		tlsServerHostOverride:tlsServerHostOverride,
 	}
 
-	logger.Critical(sec)
 	return sec,nil
 }
 

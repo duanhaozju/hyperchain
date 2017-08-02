@@ -140,7 +140,7 @@ console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shor
 max_log_size    = "200mb"  # "mb", "kb"
 
     [log.module] #set log level by module
-    p2p         = "DEBUG"
+    p2p         = "NOTICE"
     consensus   = "NOTICE"
     core        = "NOTICE"
     hyperdb     = "NOTICE"

@@ -2,7 +2,6 @@ package network
 
 import (
 	"time"
-	"fmt"
 	"github.com/terasum/viper"
 )
 
@@ -32,6 +31,5 @@ func NewClientConf(vip *viper.Viper) *clientConf{
 		connUpperlimit:vip.GetInt("p2p.connUpperlimit"),
 		connIdleTime:vip.GetDuration("p2p.connIdleTime"),
 	}
-	fmt.Printf("%+v",cconf)
 	return cconf
 }

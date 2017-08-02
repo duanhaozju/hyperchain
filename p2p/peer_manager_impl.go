@@ -255,7 +255,7 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 		// remote node by Inneraddr, here just need to bind the hostname.
 		err := pmgr.bind(PEERTYPE_VP,conev.Namespace,conev.ID,conev.Hostname,"")
 		if err != nil{
-			pmgr.logger.Errorf("cannot bind the remote VP hostname: reason: %s", err.Error())
+			pmgr.logger.Warningf("cannot bind the remote VP hostname: reason: %s", err.Error())
 			return
 		}
 	}
@@ -306,9 +306,13 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 
 	}
 	case peerevent.UPDATE_SESSION_KEY:{
-		pmgr.logger.Critical("GOT a EV_UPDATE_SESSION_KEY")
+		pmgr.logger.Debug("GOT a EV_UPDATE_SESSION_KEY")
 		conev := ev.(peerevent.UPDATE_SESSION_KEY)
-		pmgr.logger.Critical("Update the session key for",conev.NodeHash)
+		pmgr.logger.Notice("Update the session key for",conev.NodeHash)
+		if !pmgr.peerPool.Ready(){
+			pmgr.logger.Error("failed to update the session key, the peers pool has not prepared yet.")
+			return
+		}
 		peer := pmgr.peerPool.GetPeerByHash(conev.NodeHash)
 		if peer == nil{
 			pmgr.logger.Error("Cannot find a peer By hash",conev.NodeHash)
@@ -438,7 +442,7 @@ func (pmgr *peerManagerImpl) broadcast(msgType pb.MsgType, payload []byte) {
 			m := pb.NewMsg(msgType, payload)
 			_, err := peer.Chat(m)
 			if err != nil {
-				pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s ", peer.hostname, peer.local.Hostname, err.Error())
+				pmgr.logger.Warningf("hostname [target: %s](local: %s) chat err: send self %s ", peer.hostname, peer.local.Hostname, err.Error())
 			}
 		}(p)
 

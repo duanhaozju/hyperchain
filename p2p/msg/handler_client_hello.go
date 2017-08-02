@@ -46,7 +46,7 @@ func (h *ClientHelloMsgHandler) Receive() chan<- interface{} {
 }
 
 func (h *ClientHelloMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
-	h.logger.Debugf("got a client hello message %v", msg)
+	h.logger.Debugf("got a client hello message msgtype %s", msg.MessageType)
 	// SERVER HELLO response
 	data := []byte("hyperchain")
 	esign, err := h.shts.CG.ESign(data)

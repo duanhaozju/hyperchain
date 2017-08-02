@@ -44,6 +44,11 @@ func NewPeersPool(namespace string,ev *event.TypeMux,pts *PeerTriples,peercnf *p
 	}
 }
 
+func(pool *PeersPool)Ready()bool{
+	return pool.nvpPool != nil
+}
+
+
 //AddVPPeer add a peer into peers pool instance
 func (pool *PeersPool)AddVPPeer(id int,p *Peer)error{
 	if pool.vpPool == nil{
@@ -92,6 +97,9 @@ func (pool *PeersPool)GetPeers()[]*Peer {
 }
 
 func (pool *PeersPool)GetPeerByHash(hash string)*Peer{
+	if pool.vpPool == nil{
+		return nil
+	}
 	l := pool.vpPool.Sort()
 	for _,item := range l{
 		p := item.(*Peer)
