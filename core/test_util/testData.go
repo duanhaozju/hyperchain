@@ -2,7 +2,7 @@ package test_util
 import (
 	"time"
 	"hyperchain/core/types"
-	"github.com/ethereum/go-ethereum/common"
+	"hyperchain/common"
 )
 
 var TransactionCases = []*types.Transaction{
