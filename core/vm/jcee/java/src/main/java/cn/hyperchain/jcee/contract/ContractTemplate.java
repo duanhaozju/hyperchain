@@ -40,8 +40,7 @@ public abstract class ContractTemplate {
     protected final FilterManager filterManager = new FilterManager();
 
     protected final ExecuteResult sysQuery() {
-        //todo
-        return null;
+        return result(true, info);
     }
 
     /**

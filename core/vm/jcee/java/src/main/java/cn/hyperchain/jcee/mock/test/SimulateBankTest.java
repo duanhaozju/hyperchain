@@ -74,6 +74,10 @@ public class SimulateBankTest {
         server.invoke("getAccountByRange", Arrays.asList(args));
     }
 
+    public static void testSysQuery() {
+        ExecuteResult result =  server.invoke("testSysQuery", Arrays.asList(new String[]{}));
+        System.out.println("SysQuery result is :" + result);
+    }
     public static void main(String[] args) {
         SimulateBank sb = new SimulateBank();
         deploy(sb);
@@ -81,11 +85,13 @@ public class SimulateBankTest {
 //        testRangeQuery();
 //        testDelete();
 
-        testNewAccountTable();
-        testGetTableDesc();
-        testIssueByTable();
-        testTransferByTable();
-        testGetAccountByRange();
+//        testNewAccountTable();
+//        testGetTableDesc();
+//        testIssueByTable();
+//        testTransferByTable();
+//        testGetAccountByRange();
+
+        testSysQuery();
     }
 
 }

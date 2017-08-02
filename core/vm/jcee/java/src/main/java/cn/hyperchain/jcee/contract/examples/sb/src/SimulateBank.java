@@ -53,6 +53,8 @@ public class SimulateBank extends ContractTemplate {
                 return testInvokeContract(args);
             case "testPostEvent":
                 return testPostEvent(args);
+            case "testSysQuery":
+                return testSysQuery(args);
             case "newAccountTable":
                 return newAccountTable(args);
             case "getTableDesc":
@@ -242,6 +244,10 @@ public class SimulateBank extends ContractTemplate {
             ledger.post(event);
         }
         return result(true);
+    }
+
+    public ExecuteResult testSysQuery(List<String> args) {
+        return sysQuery();
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
