@@ -169,7 +169,7 @@ func (hn *HyperNet)reverse() error{
 			if _,ok := h.hostClientMap.Get(hostname);ok{
 				continue
 			}
-			fmt.Printf("reverse connect to hostname %s,addr %s \n",hostname,addr)
+			logger.Infof("reverse connect to hostname %s,addr %s \n",hostname,addr)
 			ia,err := inneraddr.InnerAddrUnSerialize([]byte(addr))
 			if err != nil{
 				logger.Error("cannot unserialize remote addr.")
@@ -178,7 +178,7 @@ func (hn *HyperNet)reverse() error{
 			ipaddr := ia.Get(hn.domain)
 
 			err = h.ConnectByAddr(hostname,ipaddr)
-			fmt.Println("actually connect to ",ipaddr)
+			logger.Infof("actually connect to %s",ipaddr)
 			if err !=nil{
 				logger.Errorf("there are something wrong when connect to host: %s",hostname)
 				// TODO here should check the retry time duration, maybe is a nil

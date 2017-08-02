@@ -211,13 +211,11 @@ func (peer *Peer) clientHello(isOrg,isRec bool) error {
 		return err
 	}
 	msg := pb.NewMsg(pb.MsgType_CLIENTHELLO, payload)
-
 	serverHello, err := peer.Greeting(msg)
-
-	peer.logger.Debugf("got a server hello message %+v ", serverHello)
 	if err != nil {
 		return err
 	}
+	peer.logger.Debugf("got a server hello message msgtype %s  ", serverHello.MessageType)
 	// complele the key agree
 	if err := peer.negotiateShareKey(serverHello,rand);err != nil{
 		return peer.clientReject(serverHello)

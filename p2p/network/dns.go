@@ -76,10 +76,10 @@ func(dnsr *DNSResolver)AddItem(hostname string,addr string)error{
 	defer dnsr.lock.Unlock()
 	if _,ok := dnsr.DNSItems[hostname]; !ok{
 		dnsr.DNSItems[hostname] = addr
-		logger.Noticef("add a new dns item: %s => %s \n",hostname,addr)
+		logger.Noticef("add a new dns item: %s => %s ",hostname,addr)
 		return nil
 	}else{
-		logger.Noticef("the new dns item already exist, ignore %s => %s \n",hostname,addr)
+		logger.Noticef("the new dns item already exist, ignore %s => %s ",hostname,addr)
 		return nil
 	}
 }

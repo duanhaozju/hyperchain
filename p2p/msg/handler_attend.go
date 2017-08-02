@@ -38,7 +38,6 @@ func (h *AttendMsgHandler)Receive() chan<- interface{}{
 }
 
 func (h *AttendMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
-	fmt.Println("got a new peer event ATTEND Msg")
 	if msg == nil || msg.Payload == nil{
 		return nil,errors.New("msg or msg body is nil")
 	}

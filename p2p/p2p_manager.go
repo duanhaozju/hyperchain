@@ -72,7 +72,7 @@ func newP2PManager(vip *viper.Viper)(*p2pManagerImpl,error){
 	}
 	p2pmgr.Start()
 
-	glogger.Critical("interactive ipc shell server listening...")
+	glogger.Notice("interactive ipc shell server listening...")
 	rc := ipc.NewRemoteCall()
 	ipc.RegisterFunc(rc,"network",p2pmgr.hypernet.Command)
 	err = p2pmgr.ipcShell.Start(rc)

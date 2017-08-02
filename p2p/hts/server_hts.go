@@ -64,7 +64,6 @@ func (sh *ServerHTS) Encrypt(identify string, msg []byte) []byte {
 		}
 		return encMsg
 	}
-	fmt.Println("ENCRYPT KEY not found")
 	sh.ev.Post(peerevent.UPDATE_SESSION_KEY{identify})
 	return nil
 }
@@ -73,7 +72,6 @@ func (sh *ServerHTS) Decrypt(identify string, msg []byte) []byte {
 	defer func(){
 		rec := recover()
 		if rec  != nil{
-			fmt.Println("Decrypt failed, fatal error:",rec)
 			sh.ev.Post(peerevent.UPDATE_SESSION_KEY{identify})
 		}
 	}()
@@ -81,18 +79,17 @@ func (sh *ServerHTS) Decrypt(identify string, msg []byte) []byte {
 		sessionKey := sessionKey.(*SessionKey)
 		sharedKey := sessionKey.GetKey()
 		if sharedKey == nil {
+			//TODO expired.
 			fmt.Printf("this session key is expired, id: %s ", identify)
 			return nil
 		}
 		decMsg, err := sh.security.Decrypt(sharedKey, msg)
 		if err != nil {
-			fmt.Println("DECRYPT err ",err.Error())
 			sh.ev.Post(peerevent.UPDATE_SESSION_KEY{identify})
 			return nil
 		}
 		return decMsg
 	}
-	fmt.Println("DECRYPT KEY not found")
 	sh.ev.Post(peerevent.UPDATE_SESSION_KEY{identify})
 	return nil
 }

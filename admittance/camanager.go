@@ -50,7 +50,6 @@ type CAManager struct {
 func NewCAManager(conf *common.Config) (*CAManager, error) {
 	logger := common.GetLogger(conf.GetString(common.NAMESPACE), "ca")
 	caconfPath := conf.GetString("config.path.caconfig")
-	logger.Critical(caconfPath)
 	if caconfPath == "" {
 		return nil, errors.New("cannot get the ca config file path.")
 	}
