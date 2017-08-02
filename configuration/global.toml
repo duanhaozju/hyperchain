@@ -46,8 +46,8 @@ tlsServerHostOverride   = "hyperchain.cn"
 tlsCert                 = "./tls/tls_peer1.cert"  #TODO: rename peer1 to peer ?
 tlsCertPriv             = "./tls/tls_peer1.priv"
 
-hosts                   = "./hosts.yaml"
-addr                    = "./addr.yaml"
+hosts                   = "./hosts.toml"
+addr                    = "./addr.toml"
 
 # connection control configurations
 # keepalive configuration

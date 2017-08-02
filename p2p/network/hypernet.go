@@ -188,7 +188,7 @@ func (hn *HyperNet)reverse() error{
 			}
 			err = h.dns.AddItem(hostname,ipaddr)
 			if err != nil{
-				logger.Errorf("cannot add a dns item into dns file %s, reason %s",hostname,err.Error())
+				logger.Errorf("cannot add a dns item into dns file (for host %s), reason %s",hostname,err.Error())
 			}
 			// here when new node add should persist the connection
 			err = h.dns.Persisit()

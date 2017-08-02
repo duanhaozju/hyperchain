@@ -35,7 +35,6 @@ type peerManagerImpl struct {
 	// use this map will lose some tps, and idHostMap functional are same as the old version peersPool
 	// idHostMap -> map[string]string => map[id]hostname
 	hyperNet  *network.HyperNet
-
 	node      *Node
 	peerPool  *PeersPool
 
@@ -58,6 +57,8 @@ type peerManagerImpl struct {
 	logger    *logging.Logger
 
 	pts       *PeerTriples
+	// this is for persist the config
+	peercnf *peerCnf
 
 	hts *hts.HTS
 
@@ -122,9 +123,12 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		logger: logger,
 		isVP:isvp,
 		hts:h,
+		peercnf:newPeerCnf(peercnf),
 	}
+	nodes := peercnf.Get("nodes").([]interface{})
+	pmi.pts = QuickParsePeerTriples(pmi.namespace, nodes)
 	//peer pool
-	pmi.peerPool = NewPeersPool(namespace,pmi.peerMgrEv)
+	pmi.peerPool = NewPeersPool(namespace,pmi.peerMgrEv,pmi.pts,pmi.peercnf)
 	//set vp information
 	if !pmi.isVP {
 		pmi.node.info.SetNVP()
@@ -140,14 +144,14 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		pmi.node.info.SetRec()
 	}
 	pmi.isonline.TryLock()
-	nodes := peercnf.Get("nodes").([]interface{})
-	pmi.pts = QuickParsePeerTriples(pmi.namespace, nodes)
 	sort.Sort(pmi.pts)
 	pmi.binding()
 	//ReView After success start up, config org should be set false ,and rec should be set to true
-	peercnf.Set("self.org",false)
-	peercnf.Set("self.rec",true)
-	peercnf.WriteConfig()
+	pmi.peercnf.Lock()
+	pmi.peercnf.vip.Set("self.org",false)
+	pmi.peercnf.vip.Set("self.rec",true)
+	pmi.peercnf.vip.WriteConfig()
+	pmi.peercnf.Unlock()
 	return pmi, nil
 }
 
@@ -493,6 +497,11 @@ func (pmgr *peerManagerImpl)UpdateRoutingTable(payLoad []byte) {
 	for _, p := range pmgr.peerPool.GetPeers() {
 		pmgr.logger.Info("update table", p.hostname)
 	}
+	err = pmgr.peerPool.PersistList()
+	if err !=nil{
+		pmgr.logger.Errorf("cannot persisit peer config reason: %s", err.Error())
+		return
+	}
 }
 
 func (pmgr *peerManagerImpl)GetLocalAddressPayload() []byte {
@@ -532,7 +541,11 @@ func (pmgr *peerManagerImpl)DeleteNode(hash string) error {
 		pmgr.delchan <- true
 
 	}
-	return pmgr.peerPool.DeleteVPPeerByHash(hash)
+	err :=   pmgr.peerPool.DeleteVPPeerByHash(hash)
+	if err != nil{
+		return err
+	}
+	return pmgr.peerPool.PersistList()
 }
 
 func (pmgr *peerManagerImpl)DeleteNVPNode(hash string) error {
