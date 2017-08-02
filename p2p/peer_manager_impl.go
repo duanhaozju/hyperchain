@@ -35,7 +35,6 @@ type peerManagerImpl struct {
 	// use this map will lose some tps, and idHostMap functional are same as the old version peersPool
 	// idHostMap -> map[string]string => map[id]hostname
 	hyperNet  *network.HyperNet
-
 	node      *Node
 	peerPool  *PeersPool
 
@@ -58,6 +57,8 @@ type peerManagerImpl struct {
 	logger    *logging.Logger
 
 	pts       *PeerTriples
+	// this is for persist the config
+	peercnf *peerCnf
 
 	hts *hts.HTS
 
@@ -122,9 +123,12 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		logger: logger,
 		isVP:isvp,
 		hts:h,
+		peercnf:newPeerCnf(peercnf),
 	}
+	nodes := peercnf.Get("nodes").([]interface{})
+	pmi.pts = QuickParsePeerTriples(pmi.namespace, nodes)
 	//peer pool
-	pmi.peerPool = NewPeersPool(namespace,pmi.peerMgrEv)
+	pmi.peerPool = NewPeersPool(namespace,pmi.peerMgrEv,pmi.pts,pmi.peercnf)
 	//set vp information
 	if !pmi.isVP {
 		pmi.node.info.SetNVP()
@@ -140,19 +144,19 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		pmi.node.info.SetRec()
 	}
 	pmi.isonline.TryLock()
-	nodes := peercnf.Get("nodes").([]interface{})
-	pmi.pts = QuickParsePeerTriples(pmi.namespace, nodes)
 	sort.Sort(pmi.pts)
 	pmi.binding()
 	//ReView After success start up, config org should be set false ,and rec should be set to true
-	peercnf.Set("self.org",false)
-	peercnf.Set("self.rec",true)
-	peercnf.WriteConfig()
+	pmi.peercnf.Lock()
+	pmi.peercnf.vip.Set("self.org",false)
+	pmi.peercnf.vip.Set("self.rec",true)
+	pmi.peercnf.vip.WriteConfig()
+	pmi.peercnf.Unlock()
 	return pmi, nil
 }
 
 func(pmi *peerManagerImpl)binding()error{
-	serverHTS,err := pmi.hts.GetServerHTS()
+	serverHTS,err := pmi.hts.GetServerHTS(pmi.peerMgrEv)
 	if err != nil{
 		return err
 	}
@@ -178,10 +182,11 @@ func(pmi *peerManagerImpl)binding()error{
 	pmi.node.Bind(pb.MsgType_NVPDELETE,nvpDeleteHandler)
 
 	//peer manager event subscribe
-	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_VPCONNECT),pmi.peerMgrEv.Subscribe(peerevent.EV_VPConnect{}))
-	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_NVPCONNECT),pmi.peerMgrEv.Subscribe(peerevent.EV_NVPConnect{}))
-	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_VPDELETE),pmi.peerMgrEv.Subscribe(peerevent.EV_DELETE_VP{}))
-	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_NVPDELETE),pmi.peerMgrEv.Subscribe(peerevent.EV_DELETE_NVP{}))
+	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_VPCONNECT),pmi.peerMgrEv.Subscribe(peerevent.VPConnect{}))
+	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_NVPCONNECT),pmi.peerMgrEv.Subscribe(peerevent.NVPConnect{}))
+	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_VPDELETE),pmi.peerMgrEv.Subscribe(peerevent.DELETE_VP{}))
+	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_NVPDELETE),pmi.peerMgrEv.Subscribe(peerevent.DELETE_NVP{}))
+	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_UPDATESESSIONKey),pmi.peerMgrEv.Subscribe(peerevent.UPDATE_SESSION_KEY{}))
 
 	return nil
 }
@@ -239,8 +244,8 @@ func (pmgr *peerManagerImpl)listening() {
 //distribute the event and payload
 func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 	switch ev.(type) {
-	case peerevent.EV_VPConnect:{
-		conev := ev.(peerevent.EV_VPConnect)
+	case peerevent.VPConnect:{
+		conev := ev.(peerevent.VPConnect)
 		if conev.ID > pmgr.nodeNum {
 			pmgr.logger.Warning("Invalid peer connect: ",conev.ID,conev.Namespace,conev.Hostname)
 			return
@@ -254,17 +259,17 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 			return
 		}
 	}
-	case peerevent.EV_NVPConnect:{
-		conev := ev.(peerevent.EV_NVPConnect)
+	case peerevent.NVPConnect:{
+		conev := ev.(peerevent.NVPConnect)
 		err := pmgr.bind(PEERTYPE_NVP,conev.Namespace,0,conev.Hostname,conev.Hash)
 		if err != nil{
 			pmgr.logger.Errorf("cannot bind the remote NVP hostname: reason: %s", err.Error())
 			return
 		}
 	}
-	case peerevent.EV_DELETE_NVP:{
+	case peerevent.DELETE_NVP:{
 		pmgr.logger.Critical("GOT a EV_DELETE_NVP")
-		conev := ev.(peerevent.EV_DELETE_NVP)
+		conev := ev.(peerevent.DELETE_NVP)
 		peer := pmgr.peerPool.GetNVPByHash(conev.Hash)
 		if peer == nil{
 			pmgr.logger.Warningf("This NVP(%s) not connect to this VP ignored.",conev.Hash)
@@ -281,13 +286,13 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 			pmgr.peerPool.DeleteNVPPeer(conev.Hash)
 		}
 	}
-	case peerevent.EV_DELETE_VP:{
+	case peerevent.DELETE_VP:{
 		pmgr.logger.Critical("GOT a EV_DELETE_VP")
 		if pmgr.isVP{
 			pmgr.logger.Critical("As A VP Node, this process cannot be invoked")
 			return
 		}
-		conev := ev.(peerevent.EV_DELETE_VP)
+		conev := ev.(peerevent.DELETE_VP)
 		pmgr.logger.Critical("NVP delete VP Peer By hash",conev.Hash)
 		pmgr.peerPool.DeleteVPPeerByHash(conev.Hash)
 		if !pmgr.isVP{
@@ -297,6 +302,21 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 					<- time.After(3 * time.Second)
 					pmgr.delchan <- true
 				}
+		}
+
+	}
+	case peerevent.UPDATE_SESSION_KEY:{
+		pmgr.logger.Critical("GOT a EV_UPDATE_SESSION_KEY")
+		conev := ev.(peerevent.UPDATE_SESSION_KEY)
+		pmgr.logger.Critical("Update the session key for",conev.NodeHash)
+		peer := pmgr.peerPool.GetPeerByHash(conev.NodeHash)
+		if peer == nil{
+			pmgr.logger.Error("Cannot find a peer By hash",conev.NodeHash)
+			return
+		}
+		err := peer.clientHello(false,true)
+		if err != nil{
+			pmgr.logger.Error("failed to update the session key",conev.NodeHash)
 		}
 
 	}
@@ -477,6 +497,11 @@ func (pmgr *peerManagerImpl)UpdateRoutingTable(payLoad []byte) {
 	for _, p := range pmgr.peerPool.GetPeers() {
 		pmgr.logger.Info("update table", p.hostname)
 	}
+	err = pmgr.peerPool.PersistList()
+	if err !=nil{
+		pmgr.logger.Errorf("cannot persisit peer config reason: %s", err.Error())
+		return
+	}
 }
 
 func (pmgr *peerManagerImpl)GetLocalAddressPayload() []byte {
@@ -516,7 +541,11 @@ func (pmgr *peerManagerImpl)DeleteNode(hash string) error {
 		pmgr.delchan <- true
 
 	}
-	return pmgr.peerPool.DeleteVPPeerByHash(hash)
+	err :=   pmgr.peerPool.DeleteVPPeerByHash(hash)
+	if err != nil{
+		return err
+	}
+	return pmgr.peerPool.PersistList()
 }
 
 func (pmgr *peerManagerImpl)DeleteNVPNode(hash string) error {
@@ -525,7 +554,7 @@ func (pmgr *peerManagerImpl)DeleteNVPNode(hash string) error {
 		pmgr.logger.Critical("Please do not send delete NVP command to nvp")
 		return nil
 	}
-	ev := peerevent.EV_DELETE_NVP{
+	ev := peerevent.DELETE_NVP{
 		Hash:hash,
 	}
 	go pmgr.peerMgrEv.Post(ev)

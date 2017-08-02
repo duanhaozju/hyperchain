@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"sync"
+	"github.com/terasum/viper"
 )
 
 var(
@@ -60,12 +61,12 @@ func QuickParsePeerTriples(namespcace string,nodes []interface{}) *PeerTriples{
 	for _,item := range nodes{
 		var id int
 		var hostname string
-		node  := item.(map[interface{}]interface{})
+		node  := item.(map[string]interface{})
 		for key,value := range node{
-			if key.(string) == "id"{
-				id  = value.(int)
+			if key == "id"{
+				id  =int(value.(int64))
 			}
-			if key.(string) == "hostname"{
+			if key == "hostname"{
 				hostname = value.(string)
 			}
 		}
@@ -75,6 +76,24 @@ func QuickParsePeerTriples(namespcace string,nodes []interface{}) *PeerTriples{
 	return pts
 }
 
+func SwitchPeerTriples(pts *PeerTriples,tpts *PeerTriples){
+	pts = tpts
+}
+
+func PersistPeerTriples(vip *viper.Viper,pts *PeerTriples) error{
+	pts.rwlock.RLock()
+	defer pts.rwlock.RUnlock()
+	s := make([]interface{},0)
+	for _,t := range pts.triples{
+		tmpm := make(map[string]interface{})
+		tmpm["id"] = t.id
+		tmpm["hostname"] = t.hostname
+		s = append(s,tmpm)
+	}
+	vip.Set("nodes",s)
+	return vip.WriteConfig()
+}
+
 func NewPeerTriples() *PeerTriples{
 	return &PeerTriples{
 		rwlock:new(sync.RWMutex),
@@ -82,10 +101,41 @@ func NewPeerTriples() *PeerTriples{
 	}
 }
 
+func (pts *PeerTriples)Has(id int,namespace, hostname string) bool{
+	pts.rwlock.RLock()
+	defer pts.rwlock.RUnlock()
+	for _,pt := range pts.triples{
+		if pt.id == id && pt.hostname == hostname && pt.namespace == namespace{
+			return true
+		}
+	}
+	return false
+}
+
 func(pts *PeerTriples)Push(pt *PeerTriple){
 	pts.rwlock.Lock()
 	defer pts.rwlock.Unlock()
 	pts.triples = append(pts.triples,pt)
+}
+
+func(pts *PeerTriples)Remove(id int)*PeerTriple{
+	pts.rwlock.Lock()
+	defer pts.rwlock.Unlock()
+	if len(pts.triples)<1{
+		return nil
+	}
+
+	tmp_t := make([]*PeerTriple,0)
+	var ret *PeerTriple
+	for _,pt := range pts.triples{
+		if pt.id == id {
+			ret = pt
+			continue
+		}
+		tmp_t = append(tmp_t,pt)
+	}
+	pts.triples = tmp_t
+	return ret
 }
 
 func(pts *PeerTriples)Pop()*PeerTriple{

@@ -140,7 +140,7 @@ console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shor
 max_log_size    = "200mb"  # "mb", "kb"
 
     [log.module] #set log level by module
-    p2p         = "NOTICE"
+    p2p         = "DEBUG"
     consensus   = "NOTICE"
     core        = "NOTICE"
     hyperdb     = "NOTICE"
@@ -157,7 +157,7 @@ keynodesdir = "namespaces/global/config/keynodes"
 
 [config.path]
 caconfig        = "namespaces/global/config/namespace.toml"
-peerconfig      = "namespaces/global/config/peerconfig.yaml"
+peerconfig      = "namespaces/global/config/peerconfig.toml"
 static_peers    = "namespaces/global/config/static_peers.json"
 
 #TODO: flow.control.ratelimit configs should move to global.toml finally

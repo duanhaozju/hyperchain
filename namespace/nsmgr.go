@@ -129,9 +129,9 @@ func (nr *nsManagerImpl) Start() error {
 			}
 		}(name)
 	}
-
 	if nr.conf.GetBool(common.C_JVM_START) == true {
 		if err := nr.jvmManager.Start(); err != nil {
+			logger.Error(err)
 			return err
 		}
 	}

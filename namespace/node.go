@@ -5,7 +5,6 @@ package namespace
 
 import (
 	"github.com/op/go-logging"
-	"hyperchain/p2p/common"
 	//"github.com/pkg/errors"
 	"sync"
 )
@@ -36,7 +35,7 @@ type NamespaceInfo struct {
 	logger     *logging.Logger
 
 	nodes map[int]*Node
-	config *common.ConfigReader
+	//config *common.ConfigReader
 	lock        *sync.RWMutex
 }
 

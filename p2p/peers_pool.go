@@ -23,17 +23,23 @@ type PeersPool struct {
 	//put the exist peers into this exist
 	existMap cmap.ConcurrentMap
 	evMux *event.TypeMux
+	//for configuration persist
+	pts *PeerTriples
+	peercnf *peerCnf
+
 	logger *logging.Logger
 }
 
 //NewPeersPool new a peers pool
-func NewPeersPool(namespace string,ev *event.TypeMux)*PeersPool {
+func NewPeersPool(namespace string,ev *event.TypeMux,pts *PeerTriples,peercnf *peerCnf)*PeersPool {
 	return &PeersPool{
 		namespace:namespace,
 		vpPool:nil,
 		nvpPool:cmap.New(),
 		existMap:cmap.New(),
 		evMux:ev,
+		pts: pts,
+		peercnf:peercnf,
 		logger:common.GetLogger(namespace,"p2p"),
 	}
 }
@@ -48,6 +54,18 @@ func (pool *PeersPool)AddVPPeer(id int,p *Peer)error{
 	hash := utils.GetPeerHash(pool.namespace,id)
 	pool.existMap.Set(hash,_VP_FLAG)
 	return nil
+}
+
+func(pool *PeersPool)PersistList() error {
+	pool.peercnf.Lock()
+	defer pool.peercnf.Unlock()
+	tmppts := NewPeerTriples()
+	for _,p := range pool.vpPool.Sort(){
+		peer :=  p.(*Peer)
+		pt := NewPeerTriple(peer.info.Namespace,peer.info.Id,peer.info.Hostname)
+		tmppts.Push(pt)
+	}
+	return PersistPeerTriples(pool.peercnf.vip,tmppts)
 }
 
 //AddNVPPeer add a peer into peers pool instance
@@ -73,7 +91,7 @@ func (pool *PeersPool)GetPeers()[]*Peer {
 	return list
 }
 
-func (pool *PeersPool)GetPeersByHash(hash string)*Peer{
+func (pool *PeersPool)GetPeerByHash(hash string)*Peer{
 	l := pool.vpPool.Sort()
 	for _,item := range l{
 		p := item.(*Peer)
@@ -186,11 +204,12 @@ func(pool *PeersPool)DeleteVPPeer(id int)error{
 		tempPeer := item.(*Peer)
 		tempPeer.info.SetID(idx + 1)
 	}
+	pool.pts.Remove(id)
 	return nil
 }
 
 func(pool *PeersPool)DeleteVPPeerByHash(hash string)error{
-	p := pool.GetPeersByHash(hash)
+	p := pool.GetPeerByHash(hash)
 	if p != nil{
 		pool.logger.Critical("delete validate peer",p.info.Id)
 	}else{

@@ -6,6 +6,7 @@ syntax="proto3";
 package network;
 
 import "hyperchain/p2p/message/msg.proto";
+import "hyperchain/p2p/message/package.proto";
 
 service Chat {
     // dibi data tranfer
@@ -29,10 +30,14 @@ service Chat {
                                    <--------             Finished
       Application Data             <------->     Application Data
     */
+
     // Greeting doube arrow greeting message transfer
     rpc Greeting(message.Message)returns(message.Message){}
 
-    // Wisper Transfer the the node health infomation
+    // Wisper Transfer the the high level protocol message infomation
     rpc Whisper(message.Message)returns(message.Message){}
+
+    // Discuss design for control the network stat.
+    rpc Discuss(message.Package) returns(message.Package){}
 
 }

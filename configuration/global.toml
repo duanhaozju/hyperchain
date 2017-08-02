@@ -46,8 +46,22 @@ tlsServerHostOverride   = "hyperchain.cn"
 tlsCert                 = "./tls/tls_peer1.cert"  #TODO: rename peer1 to peer ?
 tlsCertPriv             = "./tls/tls_peer1.priv"
 
-hosts                   = "./hosts.yaml"
-addr                    = "./addr.yaml"
+hosts                   = "./hosts.toml"
+addr                    = "./addr.toml"
+
+# connection control configurations
+# keepalive configuration
+keepAliveDuration = "3s"
+keepAliveFailTimes = 3
+# pending configuration
+pendingDuration = "10s"
+pendingFailTimes = 3
+# connection pool init capacity
+connInitCap = 1
+# connection pool upper limit
+connUpperlimit = 1
+# to avoid the EOF set the time
+connIdleTime = "15s"
 
 ##########################################################
 #
@@ -55,7 +69,7 @@ addr                    = "./addr.yaml"
 #
 ##########################################################
 [hypervm]
-jvm = true
+jvm = false
 
 ##########################################################
 #

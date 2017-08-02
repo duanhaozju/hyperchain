@@ -51,7 +51,7 @@ f_check_local_env(){
     fi
     # confer
     if ! type confer > /dev/null; then
-        echo -e "Please install `confer` to read global.yaml config"
+        echo -e "Please install `confer` to read global.toml config"
         exit 1
     fi
 }
@@ -108,11 +108,9 @@ do
     fi
 
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
-    cp -rf  ${CONF_PATH}/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
-    cp -rf  ${CONF_PATH}/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/ns1/config/local_peerconfig.json
-    #peerconfig.yaml
-    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.yaml
-    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/ns1/config/peerconfig.yaml
+    #peerconfig.toml
+    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.toml
+    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/ns1/config/peerconfig.toml
     #namespace's global
 
     cp -rf  ${CONF_PATH}/global.toml ${DUMP_PATH}/node${j}/global.toml
@@ -130,9 +128,7 @@ do
         sed -i "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
     fi
 
-    cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.yaml ${DUMP_PATH}/node${j}/addr.yaml
-    cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
-    cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/cert/
+    cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.toml ${DUMP_PATH}/node${j}/addr.toml
     cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
     #tls configuration
     cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/certs/
@@ -270,8 +266,8 @@ REBUILD=true
 # rebuild hypercli or not? default = false
 HYPERCLI=false
 
-# distribute jvm or not? default = true
-HYPERJVM=true
+# distribute jvm or not? default = false
+HYPERJVM=false
 
 # run process or not? default = true
 RUN=true
@@ -297,7 +293,7 @@ do
     -c|--hypercli)
         HYPERCLI=true; shift;;
     -j|--jvm)
-        HYPERJVM=false; shift;;
+        HYPERJVM=true; shift;;
     -m|--mode)
         MODE=true; shift;;
     -n|--run)
