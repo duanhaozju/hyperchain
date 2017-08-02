@@ -73,14 +73,14 @@ func DecodeLogs(buf []byte) (Logs, error) {
 }
 
 type LogTrans struct {
-	Address     string
-	Topics      []string
-	Data        string
-	BlockNumber uint64
-	BlockHash   string
-	TxHash      string
-	TxIndex     uint
-	Index       uint
+	Address     string	`json:"address"`
+	Topics      []string	`json:"topics"`
+	Data        string	`json:"data"`
+	BlockNumber uint64	`json:"blockNumber"`
+	BlockHash   string	`json:"blockHash"`
+	TxHash      string	`json:"txHash"`
+	TxIndex     uint	`json:"txIndex"`
+	Index       uint	`json:"index"`
 }
 
 func (ls Logs) ToLogsTrans() []LogTrans {
