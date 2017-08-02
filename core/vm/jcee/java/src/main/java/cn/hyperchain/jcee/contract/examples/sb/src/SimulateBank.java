@@ -281,7 +281,11 @@ public class SimulateBank extends ContractTemplate {
             double num = Double.parseDouble(args.get(2));
 
             double balanceA = Double.parseDouble(accountA.get("balance"));
+            System.out.println(balanceA);
+            System.out.println(balanceA - num);
             double balanceB = Double.parseDouble(accountB.get("balance"));
+            System.out.println(balanceB);
+            System.out.println(balanceB + num);
             if (balanceA > num) {
                 accountA.put("balance", String.valueOf(balanceA - num).getBytes());
                 accountB.put("balance", String.valueOf(balanceB + num).getBytes());

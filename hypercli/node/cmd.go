@@ -132,7 +132,7 @@ func sendDelNode(namespace, hash string, peers peerinfos) error{
 	params := fmt.Sprintf("[{\"nodehash\":\"%s\"}]", hash)
 	for i, ip := range peers.ips {
 		fmt.Printf("send del node to %v:%v\n", ip, peers.ports[i])
-		_, err := getHttpResponse(namespace, ip, peers.ports[i], "node_delNode", params)
+		_, err := getHttpResponse(namespace, ip, peers.ports[i], "node_deleteVP", params)
 		if err != nil {
 			return err
 		}

@@ -365,11 +365,17 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		return nil
 	}
 
+	if pbft.recoveryMgr.recoveryToSeqNo!=nil{
+		pbft.logger.Debugf("Replica %d in recovery receive rcRsp from replica %d "+
+			"but chkpt quorum and seqNo quorum already found. "+
+			"Ignore it", pbft.id, rsp.ReplicaId)
+		return nil
+	}
 	// find quorum chkpt
-	n, lastid, find, chkptBehind := pbft.findHighestChkptQuorum()
+	n, lastid, find, chkptBehind, replicas := pbft.findHighestChkptQuorum()
 	pbft.logger.Debug("n: ", n, "lastid: ", lastid, "find: ", find, "chkptBehind: ", chkptBehind)
 
-	lastExec, curHash, execFind, replicas := pbft.findLastExecQuorum()
+	lastExec, curHash, execFind := pbft.findLastExecQuorum()
 	pbft.logger.Debug("lastExec:", lastExec, "curHash:", curHash, "execFind:", execFind, "replicas:", replicas)
 
 	if !find {
@@ -381,19 +387,9 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.logger.Debugf("Replica %d did not find lastexec quorum", pbft.id)
 		return nil
 	}
-
-	if pbft.recoveryMgr.recoveryToSeqNo != nil {
-		pbft.logger.Debugf("Replica %d in recovery receive rcRsp from replica %d"+
-			"but chkpt quorum and seqNo quorum already found. "+
-			"Ignore it", pbft.id, rsp.ReplicaId)
-		return nil
-	}
 	pbft.timerMgr.stopTimer(RECOVERY_RESTART_TIMER)
 	pbft.recoveryMgr.recoveryToSeqNo = &lastExec
 
-	//blockInfo := getBlockchainInfo()
-	//id, _ := proto.Marshal(blockInfo)
-	//idAsString := byteToString(id)
 	selfLastExec, selfCurHash := persist.GetBlockHeightAndHash(pbft.namespace)
 
 	pbft.logger.Debugf("Replica %d in recovery find quorum chkpt: %d, self: %d, "+
@@ -412,10 +408,12 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.batchVdr.vid = selfLastExec
 		pbft.batchVdr.lastVid = selfLastExec
 
-		for idx := range pbft.storeMgr.certStore {
-			if idx.n > selfLastExec {
-				delete(pbft.storeMgr.certStore, idx)
-				pbft.persistDelQPCSet(idx.v, idx.n)
+		if pbft.primary(pbft.view) == pbft.id {
+			for idx := range pbft.storeMgr.certStore {
+				if idx.n > selfLastExec {
+					delete(pbft.storeMgr.certStore, idx)
+					pbft.persistDelQPCSet(idx.v, idx.n)
+				}
 			}
 		}
 		if !pbft.status.getState(&pbft.status.inVcReset) {
@@ -463,7 +461,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 }
 
 // findHighestChkptQuorum finds highest one of chkpts which achieve quorum
-func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, find bool, chkptBehind bool) {
+func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, find bool, chkptBehind bool, replicas []uint64) {
 
 	pbft.logger.Debugf("Replica %d now enter findHighestChkptQuorum", pbft.id)
 
@@ -502,11 +500,12 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, find bool, c
 				chkptBehind = true
 			}
 			if ci.n >= n {
-				if ci.n > n {
-					chkptBehind = true
-				}
 				n = ci.n
 				d = ci.d
+				replicas = make([]uint64, 0, len(peers))
+				for replica := range peers {
+					replicas = append(replicas, replica)
+				}
 			}
 		}
 	}
@@ -514,7 +513,7 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, find bool, c
 	return
 }
 
-func (pbft *pbftImpl) findLastExecQuorum() (lastExec uint64, hash string, find bool, peers []uint64) {
+func (pbft *pbftImpl) findLastExecQuorum() (lastExec uint64, hash string, find bool) {
 
 	lastExecs := make(map[blkIdx]map[uint64]bool)
 	find = false
@@ -536,11 +535,6 @@ func (pbft *pbftImpl) findLastExecQuorum() (lastExec uint64, hash string, find b
 			lastExec = idx.height
 			hash = idx.hash
 			find = true
-			replicas := lastExecs[idx]
-			peers = make([]uint64, 0, len(replicas))
-			for peer := range replicas {
-				peers = append(peers, peer)
-			}
 			break
 		}
 	}
@@ -562,7 +556,7 @@ func (pbft *pbftImpl) fetchRecoveryPQC() events.Event {
 
 	payload, err := proto.Marshal(fetch)
 	if err != nil {
-		pbft.logger.Errorf("recovery response marshal error")
+		pbft.logger.Errorf("ConsensusMessage_RECOVERY_FETCH_QPC marshal error")
 		return nil
 	}
 	conMsg := &ConsensusMessage{
@@ -589,33 +583,51 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 	}
 
 	var prepres []*PrePrepare
-	var pres []bool
-	var cmts []bool
+	var pres []*Prepare
+	var cmts []*Commit
 
-	for msgId, msgCert := range pbft.storeMgr.certStore {
-		if msgId.n > h && msgId.n <= pbft.exec.lastExec {
-			if msgCert.prePrepare == nil {
-				// During consequent addnode, if new node fetch recovery PQC from this node before this
-				// node has received enough prepre from primary, there will exist a nil prepre in certStore
-				pbft.logger.Warningf("Replica %d has a nil preprepare in certStore with view=%d/seqNo=%d", pbft.id, msgId.v, msgId.n)
-				prepres = append(prepres, &PrePrepare{})
+	// replica just send all PQC that itself had sent
+	for idx, cert := range pbft.storeMgr.certStore {
+		// send all PQC that n > h, since it maybe wait others to execute
+		if idx.n > h && idx.v == pbft.view {
+			if cert.prePrepare == nil {
+				pbft.logger.Warningf("Replica %d in returnRcPQC finds nil pre-prepare for view=%d/seqNo=%d",
+					pbft.id, idx.v, idx.n)
 			} else {
-				prepres = append(prepres, msgCert.prePrepare)
+				prepres = append(prepres, cert.prePrepare)
 			}
-			pres = append(pres, msgCert.sentPrepare)
-			cmts = append(cmts, msgCert.sentCommit)
+			for pre := range cert.prepare {
+				if pre.ReplicaId != dest {
+					prepare := pre
+					pres = append(pres, &prepare)
+					//break
+				}
+			}
+			for cmt := range cert.commit {
+				if cmt.ReplicaId != dest {
+					commit := cmt
+					cmts = append(cmts, &commit)
+					//break
+				}
+			}
 		}
 	}
-	rcReturn := &RecoveryReturnPQC{
-		ReplicaId: pbft.id,
-		PrepreSet: prepres,
-		PreSent:   pres,
-		CmtSent:   cmts,
+	rcReturn := &RecoveryReturnPQC{ ReplicaId: pbft.id }
+
+	// in case replica doesn't have PQC, we cannot assign a nil one
+	if prepres != nil {
+		rcReturn.PrepreSet = prepres
+	}
+	if pres != nil {
+		rcReturn.PreSet = pres
+	}
+	if cmts != nil {
+		rcReturn.CmtSet = cmts
 	}
 
 	payload, err := proto.Marshal(rcReturn)
 	if err != nil {
-		pbft.logger.Errorf("recovery response marshal error: &v", err)
+		pbft.logger.Errorf("ConsensusMessage_RECOVERY_RETURN_QPC marshal error: %v", err)
 		return nil
 	}
 	msg := &ConsensusMessage{
@@ -625,13 +637,15 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 	conMsg := cMsgToPbMsg(msg, pbft.id)
 	pbft.helper.InnerUnicast(conMsg, dest)
 
+	pbft.logger.Debugf("Replica %d send recovery_return_pqc %v", pbft.id, rcReturn)
+
 	return nil
 }
 
 // recvRecoveryReturnPQC process PQC info target peers return
 func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.Event {
 
-	pbft.logger.Debugf("Replica %d now recvRecoveryReturnPQC from replica %d, preset: %+v, cmtset: %+v", pbft.id, PQCInfo.ReplicaId, PQCInfo.PreSent, PQCInfo.CmtSent)
+	pbft.logger.Debugf("Replica %d now recvRecoveryReturnPQC from replica %d, return_pqc %v", pbft.id, PQCInfo.ReplicaId, PQCInfo)
 
 	if !pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Warningf("Replica %d receive recoveryReturnQPC, but it's not in recovery", pbft.id)
@@ -645,67 +659,16 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 	}
 	pbft.recoveryMgr.rcPQCSenderStore[sender] = true
 
-	prepreSet := PQCInfo.GetPrepreSet()
-	preSent := PQCInfo.PreSent
-	cmtSent := PQCInfo.CmtSent
+	// post all the PQC
+	for _, preprep := range PQCInfo.GetPrepreSet() {
+		go pbft.pbftEventQueue.Push(preprep)
+	}
+	for _, prep := range PQCInfo.GetPreSet() {
+		go pbft.pbftEventQueue.Push(prep)
+	}
+	for _, cmt := range PQCInfo.GetCmtSet() {
+		go pbft.pbftEventQueue.Push(cmt)
 
-	for i := 0; i < len(PQCInfo.PrepreSet); i++ {
-		preprep := prepreSet[i]
-		// recv preprepare
-		if len(preprep.BatchDigest) != 0 {
-			cert := pbft.storeMgr.getCert(preprep.View, preprep.SequenceNumber)
-			if cert.digest != preprep.BatchDigest {
-				payload, err := proto.Marshal(preprep)
-				if err != nil {
-					pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-					return false
-				}
-
-				redo_preprep := &ConsensusMessage{
-					Type:    ConsensusMessage_PRE_PREPARE,
-					Payload: payload,
-				}
-				go pbft.pbftEventQueue.Push(redo_preprep)
-			}
-		}
-		// recv prepare
-		if preSent[i] {
-			prep := &Prepare{
-				View:           preprep.View,
-				SequenceNumber: preprep.SequenceNumber,
-				BatchDigest:    preprep.BatchDigest,
-				ReplicaId:      sender,
-			}
-			payload, err := proto.Marshal(prep)
-			if err != nil {
-				pbft.logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
-				return nil
-			}
-			redo_prep := &ConsensusMessage{
-				Type:    ConsensusMessage_PREPARE,
-				Payload: payload,
-			}
-			go pbft.pbftEventQueue.Push(redo_prep)
-		}
-		// recv commit
-		if cmtSent[i] {
-			cmt := &Commit{
-				View:           preprep.View,
-				SequenceNumber: preprep.SequenceNumber,
-				BatchDigest:    preprep.BatchDigest,
-				ReplicaId:      sender,
-			}
-			payload, err := proto.Marshal(cmt)
-			if err != nil {
-				pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
-				return nil
-			}
-			redo_cmt := &ConsensusMessage{
-				Type:    ConsensusMessage_COMMIT,
-				Payload: payload,
-			}
-			go pbft.pbftEventQueue.Push(redo_cmt)
-		}
 	}
 
 	return nil

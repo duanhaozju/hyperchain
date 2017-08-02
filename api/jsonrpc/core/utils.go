@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"time"
 	"github.com/dgrijalva/jwt-go"
-	"errors"
 )
 
 // permissionSet used to maintain user permissions
@@ -36,12 +35,24 @@ var user_opTime = map [string]int64 {
 
 func splitRawMessage(args json.RawMessage) ([]string, error) {
 	str := string(args[:])
-	if len(str) < 4 {
-		return nil, errors.New("invalid args")
+	length := len(str)
+	if length < 2 {
+		return nil, ErrInvalidParamFormat
+	} else {
+		if str[0] != '[' || str[length - 1] != ']' {
+			return nil, ErrInvalidParamFormat
+		}
 	}
-	str = str[2 : len(str)-2]
-	splitstr := strings.Split(str, ",")
-	return splitstr, nil
+
+	if length == 2 {
+		return nil, nil
+	} else if length < 4 {
+		return nil, ErrInvalidParams
+	} else {
+		str = str[2 : len(str)-2]
+		splitstr := strings.Split(str, ",")
+		return splitstr, nil
+	}
 }
 
 var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
