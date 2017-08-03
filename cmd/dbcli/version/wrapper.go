@@ -12,6 +12,9 @@ import (
 	"strings"
 	"os"
 	"regexp"
+	"encoding/json"
+	"hyperchain/core/hyperstate"
+	"hyperchain/cmd/dbcli/version/versionAccount"
 )
 
 type Version struct {
@@ -32,6 +35,8 @@ var (
 	TxMetaSuffix             = []byte{0x01}
 	ReceiptsPrefix           = []byte("receipts-")
 	ChainKey                 = []byte("chain-key-")
+
+	accountIdentifier        = "-account"
 )
 
 /*-----------------------------------block--------------------------------------*/
@@ -410,6 +415,163 @@ func (self *Version) GetChainHeight() (string, error) {
 		return "", err
 	} else {
 		return result, nil
+	}
+}
+
+/*-------------------------------------account--------------------------------------*/
+func (self *Version) GetAccountByAddress(address, path string, parameter *constant.Parameter) {
+	data, err := self.db.Get(hyperstate.CompositeAccountKey(common.Hex2Bytes(address)))
+	if err != nil {
+		fmt.Println(constant.ErrQuery.Error(), err.Error())
+		return
+	}
+	var file *os.File
+	defer utils.Close(file)
+	if path != "" {
+		file = utils.Open(path)
+	}
+	var account versionAccount.Account
+	err = json.Unmarshal(data, &account)
+	if err != nil {
+		fmt.Println(constant.ErrQuery.Error(), err.Error())
+		return
+	}
+	if parameter.GetVerbose() {
+		code, _ := self.db.Get(hyperstate.CompositeCodeHash(common.Hex2Bytes(address), account.CodeHash))
+		prefixRes := account.EncodeVerbose(address, common.Bytes2Hex(code))
+		if path != "" {
+			utils.Append(file, prefixRes)
+		} else {
+			fmt.Println(utils.Decorate(prefixRes))
+		}
+		storageIt := self.db.NewIterator(hyperstate.GetStorageKeyPrefix(common.Hex2Bytes(address)))
+		var storageRes string
+		for storageIt.Next() {
+			storageKey, _ := hyperstate.SplitCompositeStorageKey(common.Hex2Bytes(address), storageIt.Key())
+			if storageRes != "" {
+				storageRes += ","
+				if path != "" {
+					utils.Append(file, storageRes)
+				} else {
+					fmt.Println(utils.Decorate(storageRes))
+				}
+			}
+			storageRes = "\t\t\t" + "\"" + common.Bytes2Hex(storageKey) + "\"" + ":" + " " + "\"" + common.Bytes2Hex(storageIt.Value()) + "\""
+		}
+		if storageRes != "" {
+			if path != "" {
+				utils.Append(file, storageRes)
+				utils.Append(file, "\t\t}")
+				utils.Append(file, "\t}")
+				utils.Append(file, "}")
+			} else {
+				fmt.Println(utils.Decorate(storageRes))
+				fmt.Println(utils.Decorate("\t\t}"))
+				fmt.Println(utils.Decorate("\t}"))
+				fmt.Println(utils.Decorate("}"))
+			}
+		}
+	} else {
+		res := account.Encode(address)
+		if path != "" {
+			utils.Append(file, res)
+		} else {
+			fmt.Println(utils.Decorate(res))
+		}
+	}
+}
+
+func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
+	var file *os.File
+	defer utils.Close(file)
+	if path != "" {
+		file = utils.CreateOrAppend(path, "{")
+	} else {
+		fmt.Println(utils.Decorate("{"))
+	}
+	var result1 string
+	it := self.db.NewIterator([]byte(accountIdentifier))
+	for it.Next() {
+		address, ok := hyperstate.SplitCompositeAccountKey(it.Key())
+		if ok == false {
+			fmt.Println(constant.ErrQuery.Error(), "split account address error.")
+			continue
+		}
+		var account versionAccount.Account
+		err := json.Unmarshal(it.Value(), &account)
+		if err != nil {
+			fmt.Println(constant.ErrQuery.Error(), err.Error())
+			break
+		}
+		if parameter.GetVerbose() {
+			if result1 != "" {
+				result1 = "\t" + result1 + ","
+				if path != "" {
+					utils.Append(file, result1)
+				} else {
+					fmt.Println(utils.Decorate(result1))
+				}
+			}
+			code, _ := self.db.Get(hyperstate.CompositeCodeHash(address, account.CodeHash))
+			prefixRes := account.EncodeVerbose(common.Bytes2Hex(address), common.Bytes2Hex(code))
+			prefixRes = strings.Replace("\t" + prefixRes, "\n", "\n\t", -1)
+			if path != "" {
+				utils.Append(file, prefixRes)
+			} else {
+				fmt.Println(utils.Decorate(prefixRes))
+			}
+			storageIt := self.db.NewIterator(hyperstate.GetStorageKeyPrefix(address))
+			var storageRes string
+			for storageIt.Next() {
+				storageKey, _ := hyperstate.SplitCompositeStorageKey(address, storageIt.Key())
+				if storageRes != "" {
+					storageRes += ","
+					if path != "" {
+						utils.Append(file, storageRes)
+					} else {
+						fmt.Println(utils.Decorate(storageRes))
+					}
+				}
+				storageRes = "\t\t\t\t" + "\"" + common.Bytes2Hex(storageKey) + "\"" + ":" + " " + "\"" + common.Bytes2Hex(storageIt.Value()) + "\""
+			}
+			if path != "" {
+				if storageRes != "" {
+					utils.Append(file, storageRes)
+				}
+				utils.Append(file, "\t\t\t}")
+				utils.Append(file, "\t\t}")
+			} else {
+				if storageRes != "" {
+					fmt.Println(utils.Decorate(storageRes))
+				}
+				fmt.Println(utils.Decorate("\t\t\t}"))
+				fmt.Println(utils.Decorate("\t\t}"))
+			}
+			result1 = "}"
+		} else {
+			if result1 != "" {
+				result1 = strings.Replace("\t" + result1 + ",", "\n", "\n\t", -1)
+				if path != "" {
+					utils.Append(file, result1)
+				} else {
+					fmt.Println(utils.Decorate(result1))
+				}
+			}
+			result1 = account.Encode(common.Bytes2Hex(address))
+		}
+	}
+	if result1 != "" {
+		result1 = strings.Replace("\t" + result1, "\n", "\n\t", -1)
+		if path != "" {
+			utils.Append(file, result1)
+		} else {
+			fmt.Println(utils.Decorate(result1))
+		}
+	}
+	if path != "" {
+		utils.Append(file, "}")
+	} else {
+		fmt.Println(utils.Decorate("}"))
 	}
 }
 

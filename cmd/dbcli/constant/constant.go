@@ -9,6 +9,7 @@ const (
 	VERBOSE  = "verbose"
 	MAX      = "max"
 	MIN      = "min"
+	ADDRESS  = "address"
 
 	VERSIONFINAL = "final"
 	VERSION1_1   = "1.1"
@@ -22,6 +23,7 @@ const (
 	RECEIPT            = "receipt"
 	CHAIN              = "chain"
 	CHAINHEIGHT        = "chainHeight"
+	ACCOUNT            = "account"
 
 	PROTOERR           = "proto: bad wiretype for field"
 )

@@ -8,6 +8,7 @@ import (
 	"hyperchain/cmd/dbcli/transaction"
 	"os"
 	"time"
+	"hyperchain/cmd/dbcli/account"
 )
 
 var app *cli.App
@@ -39,6 +40,11 @@ func initApp() {
 			Name:        "receipt",
 			Usage:       "receipt specific commands",
 			Subcommands: receipt.NewReceiptCMD(),
+		},
+		{
+			Name:        "account",
+			Usage:       "account specific commands",
+			Subcommands: account.NewAccountCMD(),
 		},
 	}
 
