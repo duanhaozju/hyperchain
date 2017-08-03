@@ -744,6 +744,12 @@
 			"revisionTime": "2017-01-20T12:32:11Z"
 		},
 		{
+			"checksumSHA1": "9LeR7BH4PSu8LRDZ8bY7QY1HXJE=",
+			"path": "github.com/urfave/cli",
+			"revision": "4b90d79a682b4bf685762c7452db20f2a676ecb2",
+			"revisionTime": "2017-07-06T19:46:25Z"
+		},
+		{
 			"checksumSHA1": "6KZEap6v/5gD+tjiNbpD81kD61o=",
 			"path": "github.com/willf/bitset",
 			"revision": "988f4f24992fc745de53c42df0da6581e42a6686",
