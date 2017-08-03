@@ -22,7 +22,6 @@ type HyperNet struct {
 	conf          *viper.Viper
 	dns           *DNSResolver
 	server        *Server
-	clients       cmap.ConcurrentMap
 	hostClientMap cmap.ConcurrentMap
 
 	// failed queue
@@ -232,10 +231,6 @@ func (hn *HyperNet)Connect(hostname string) error{
 		oldClient.(*Client).Close()
 		hn.hostClientMap.Remove(hostname)
 	}
-	//err = client.Connect(nil)
-	//if err != nil{
-	//	return err
-	//}
 	hn.hostClientMap.Set(hostname,client)
 	logger.Infof("success connect to %s \n",hostname)
 	return nil
@@ -254,6 +249,7 @@ func (hn *HyperNet)DisConnect(hostname string)(err  error){
 			return err
 		}
 		client.(*Client).Close()
+		client.(*Client).stateMachine.Event(c_EventClose)
 		hn.hostClientMap.Remove(hostname)
 		err = hn.dns.DelItem(hostname)
 		if err != nil{
@@ -317,7 +313,7 @@ func (hypernet *HyperNet)Discuss(hostname string,pkg *pb.Package)(*pb.Package,er
 
 
 func(hypernet *HyperNet)Stop(){
-	for item := range hypernet.clients.IterBuffered() {
+	for item := range hypernet.hostClientMap.IterBuffered() {
 		client := item.Val.(*Client)
 		client.Close()
 		logger.Info("close client: ",item.Key)

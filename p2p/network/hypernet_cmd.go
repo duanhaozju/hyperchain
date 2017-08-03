@@ -19,12 +19,18 @@ func (hn *HyperNet)Command(args []string,ret *[]string)error{
 		// hostname => ip:addr
 		case "list":{
 			*ret = append(*ret,"list all connections\n")
-			for t := range hn.clients.IterBuffered(){
+			logger.Notice("[IPC] network list")
+			// review if the map is empty this will be blocked
+			if hn.hostClientMap.IsEmpty(){
+				*ret = append(*ret,"connection is empty\n")
+				return nil
+			}
+			for t := range hn.hostClientMap.IterBuffered(){
 				c := t.Val.(*Client)
 				stat := c.stateMachine.Current()
 				addr := c.addr
 				hostname := c.hostname
-				*ret = append(*ret,fmt.Sprintf("%s => %s (%s)",hostname,addr, stat))
+				*ret = append(*ret,fmt.Sprintf("hostname: %s addr:%s stat: %s\n",hostname,addr, stat))
 			}
 		}
 		// connect
