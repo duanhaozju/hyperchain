@@ -71,6 +71,7 @@ func delNode(c *cli.Context) error {
 	}
 
 	return nil
+
 }
 
 func getHttpResponse(namespace, ip, port, method, params string) (jsonrpc.JSONResponse, error) {
@@ -80,7 +81,7 @@ func getHttpResponse(namespace, ip, port, method, params string) (jsonrpc.JSONRe
 		"{\"jsonrpc\":\"2.0\",\"namespace\":\"%s\",\"method\":\"%s\",\"params\":%s,\"id\":1}",
 		namespace, method, params)
 
-	result, err := client.Call(cmd)
+	result, err := client.Call(cmd, method)
 	if err != nil {
 		return response, err
 	}
@@ -131,7 +132,7 @@ func sendDelNode(namespace, hash string, peers peerinfos) error{
 	params := fmt.Sprintf("[{\"nodehash\":\"%s\"}]", hash)
 	for i, ip := range peers.ips {
 		fmt.Printf("send del node to %v:%v\n", ip, peers.ports[i])
-		_, err := getHttpResponse(namespace, ip, peers.ports[i], "node_delNode", params)
+		_, err := getHttpResponse(namespace, ip, peers.ports[i], "node_deleteVP", params)
 		if err != nil {
 			return err
 		}

@@ -5,8 +5,7 @@ package namespace
 
 import (
 	"github.com/op/go-logging"
-	"hyperchain/p2p/common"
-	"github.com/pkg/errors"
+	//"github.com/pkg/errors"
 	"sync"
 )
 
@@ -36,7 +35,7 @@ type NamespaceInfo struct {
 	logger     *logging.Logger
 
 	nodes map[int]*Node
-	config *common.ConfigReader
+	//config *common.ConfigReader
 	lock        *sync.RWMutex
 }
 
@@ -52,18 +51,20 @@ func NewNamespaceInfo(peerConfigPath, namespace string, logger *logging.Logger) 
 
 //if add node or delete node, this method must be invoked.
 func (ni *NamespaceInfo) init(peerConfigPath, namespace string) error {
-	ni.lock.Lock()
-	defer ni.lock.Unlock()
-	config := common.NewConfigReader(peerConfigPath, namespace)
-	if (config == nil) {
-		return errors.New("can not read config file " + peerConfigPath)
-	}
-	ni.config = config
-	ni.nodes = make(map[int]*Node, config.MaxNum())
-	peerConfigNodes := config.Peers()
-	for _, pn := range peerConfigNodes {
-		ni.nodes[pn.ID] = NewNode(pn.ID, pn.Port, pn.RPCPort, pn.Address, pn.ExternalAddress)
-	}
+	//TODO: complement namespace info gathering
+	//ni.logger.Critical(peerConfigPath)
+	//ni.lock.Lock()
+	//defer ni.lock.Unlock()
+	//config := common.NewConfigReader(peerConfigPath, namespace)
+	//if (config == nil) {
+	//	return errors.New("can not read config file " + peerConfigPath)
+	//}
+	//ni.config = config
+	//ni.nodes = make(map[int]*Node, config.MaxNum())
+	//peerConfigNodes := config.Peers()
+	//for _, pn := range peerConfigNodes {
+	//	ni.nodes[pn.ID] = NewNode(pn.ID, pn.Port, pn.RPCPort, pn.Address, pn.ExternalAddress)
+	//}
 	return nil
 }
 
@@ -116,7 +117,7 @@ func (ni *NamespaceInfo) PrintInfo()  {
 	ni.lock.RLock()
 	defer ni.lock.RUnlock()
 	for _, node := range ni.nodes {
-		ni.logger.Criticalf("node info %v ", node)
+		ni.logger.Debugf("node info %v ", node)
 	}
 }
 

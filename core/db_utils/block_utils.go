@@ -2,13 +2,13 @@ package db_utils
 
 import (
 	"github.com/golang/protobuf/proto"
+	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"os"
 	"strconv"
 	"time"
-	"hyperchain/common"
 )
 
 // PersistBlock - persist a block, using param to control whether flush to disk immediately.
@@ -22,11 +22,9 @@ func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool, ext
 	}
 	err, data := encapsulateBlock(block, extra...)
 	if err != nil {
-		//logger.Errorf("wrapper block failed.")
 		return err, nil
 	}
 	if err := batch.Put(append(BlockPrefix, block.BlockHash...), data); err != nil {
-		//logger.Error("Put block data into database failed! error msg, ", err.Error())
 		return err, nil
 	}
 
@@ -48,29 +46,41 @@ func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool, ext
 
 // encapsulateBlock - encapsulate block with a wrapper for specify block structure version.
 func encapsulateBlock(block *types.Block, extra ...interface{}) (error, []byte) {
-	version := BlockVersion
+	var (
+		blkVersion string = BlockVersion
+		txVersion  string = TransactionVersion
+	)
 	if block == nil {
 		return EmptyPointerErr, nil
 	}
-	if len(extra) > 0 {
+	if len(extra) >= 1 {
 		// parse version
 		if tmp, ok := extra[0].(string); ok {
-			version = tmp
+			blkVersion = tmp
 		}
 	}
-	block.Version = []byte(version)
+	if len(extra) >= 2 {
+		// parse version
+		if tmp, ok := extra[1].(string); ok {
+			txVersion = tmp
+		}
+	}
+	block.Version = []byte(blkVersion)
+
+	for _, tx := range block.Transactions {
+		tx.Version = []byte(txVersion)
+	}
+
 	data, err := proto.Marshal(block)
 	if err != nil {
-		//logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	wrapper := &types.BlockWrapper{
-		BlockVersion: []byte(version),
+		BlockVersion: []byte(blkVersion),
 		Block:        data,
 	}
 	data, err = proto.Marshal(wrapper)
 	if err != nil {
-		//logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
 		return err, nil
 	}
 	return nil, data
@@ -78,11 +88,16 @@ func encapsulateBlock(block *types.Block, extra ...interface{}) (error, []byte) 
 
 // GetBlockHash - retrieve block hash with related block number.
 func GetBlockHash(namespace string, blockNumber uint64) ([]byte, error) {
-	keyNum := strconv.FormatInt(int64(blockNumber), 10)
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}
+	return GetBlockHashFunc(db, blockNumber)
+}
+
+// GetBlockHashFunc - retrieve block with specific db.
+func GetBlockHashFunc(db db.Database, blockNumber uint64) ([]byte, error) {
+	keyNum := strconv.FormatInt(int64(blockNumber), 10)
 	return db.Get(append(BlockNumPrefix, keyNum...))
 }
 
@@ -92,6 +107,11 @@ func GetBlock(namespace string, key []byte) (*types.Block, error) {
 	if err != nil {
 		return nil, err
 	}
+	return GetBlockFunc(db, key)
+}
+
+// GetBlockFunc - retrieve block with specific db.
+func GetBlockFunc(db db.Database, key []byte) (*types.Block, error) {
 	var wrapper types.BlockWrapper
 	var block types.Block
 	key = append(BlockPrefix, key...)
@@ -117,10 +137,33 @@ func GetBlockByNumber(namespace string, blockNumber uint64) (*types.Block, error
 	return GetBlock(namespace, hash)
 }
 
+// GetLatestBlock get current head block.
+func GetLatestBlock(namespace string) (*types.Block, error) {
+	height := GetHeightOfChain(namespace)
+	return GetBlockByNumber(namespace, height)
+}
+
+// GetBlockByNumberFunc - retrieve block via block number with specific db.
+func GetBlockByNumberFunc(db db.Database, blockNumber uint64) (*types.Block, error) {
+	hash, err := GetBlockHashFunc(db, blockNumber)
+	if err != nil {
+		return nil, err
+	}
+	return GetBlockFunc(db, hash)
+}
+
 // DeleteBlock - delete a block via hash.
 func DeleteBlock(namespace string, batch db.Batch, key []byte, flush, sync bool) error {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	if err != nil {
+		return err
+	}
+	return DeleteBlockFunc(db, batch, key, flush, sync)
+}
+
+func DeleteBlockFunc(db db.Database, batch db.Batch, key []byte, flush, sync bool) error {
 	// remove number <-> hash associate
-	blk, err := GetBlock(namespace, key)
+	blk, err := GetBlockFunc(db, key)
 	if err != nil {
 		return err
 	}
@@ -155,6 +198,14 @@ func DeleteBlockByNum(namepspace string, batch db.Batch, blockNum uint64, flush,
 	return DeleteBlock(namepspace, batch, hash, flush, sync)
 }
 
+func DeleteBlockByNumFunc(db db.Database, batch db.Batch, blockNum uint64, flush, sync bool) error {
+	hash, err := GetBlockHashFunc(db, blockNum)
+	if err != nil {
+		return err
+	}
+	return DeleteBlockFunc(db, batch, hash, flush, sync)
+}
+
 // IsGenesisFinish - check whether genesis block has been mined into blockchain
 func IsGenesisFinish(namespace string) bool {
 	_, err := GetBlockByNumber(namespace, 0)
@@ -166,6 +217,8 @@ func IsGenesisFinish(namespace string) bool {
 		return true
 	}
 }
+
+// BlockTime - for metric
 func blockTime(block *types.Block) {
 	times := block.WriteTime - block.Timestamp
 	f, err := os.OpenFile(hyperdb.GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)
@@ -179,18 +232,4 @@ func blockTime(block *types.Block) {
 		_, err = f.WriteAt([]byte(str), n)
 		f.Close()
 	}
-}
-
-// GetMarshalBlock - return marshal block with a specify block structure version.
-func GetMarshalBlock(block *types.Block) (error, []byte) {
-	if block == nil {
-		return EmptyPointerErr, nil
-	}
-	block.Version = []byte(BlockVersion)
-	data, err := proto.Marshal(block)
-	if err != nil {
-		//logger.Error("Invalid block struct to marshal! error msg, ", err.Error())
-		return err, nil
-	}
-	return nil, data
 }

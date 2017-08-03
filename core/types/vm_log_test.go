@@ -94,7 +94,7 @@ func (s *LogSuite) TestToLogsTrans(c *checker.C) {
 	logs = append(logs, &log)
 	logs = append(logs, &log)
 
-	logTrans := logs.ToLogsTrans()
+	logTrans := logs.ToLogsTrans(Receipt_EVM)
 	lt1 := NewTestLogTrans()
 	for _, lt := range logTrans {
 		CheckTranEqual(lt1, lt, c)

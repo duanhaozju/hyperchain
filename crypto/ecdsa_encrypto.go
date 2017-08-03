@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"github.com/syndtr/goleveldb/leveldb/errors"
 	"hyperchain/common"
 	"hyperchain/crypto/secp256k1"
 	"hyperchain/crypto/sha3"
@@ -16,6 +15,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"errors"
 )
 
 type EcdsaEncrypto struct {

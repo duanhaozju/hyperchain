@@ -19,6 +19,11 @@ var (
 	ErrNoBackend = errors.New("common/hyper_logger_impl: backend is nil")
 )
 
+const (
+	default_logger_level = "DEBUG"
+	default_logger_format = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
+)
+
 //TODO: make the log prefix share same length ?
 
 //HyperLoggerMgr manage all HyperLogger for different namespaces, a namespace will be allocate a HyperLogger.
@@ -72,8 +77,8 @@ func (hmi *hyperLoggerMgrImpl) getHyperLogger(namespace string) (hl *HyperLogger
 func (hmi *hyperLoggerMgrImpl) getLogger(namespace, module string) *logging.Logger {
 	hl := hyperLoggerMgr.getHyperLogger(namespace)
 	if hl == nil {
-		commonLogger.Errorf("No hyperlogger found for namespace: %s "+
-			"please init namespace level logger system before try to use logger in it,", namespace)
+		commonLogger.Errorf("No hyperlogger found for namespace: %s:%s "+
+			"please init namespace level logger system before try to use logger in it,", namespace, module)
 		return nil
 	}
 	return hl.getOrCreateLogger(module)
@@ -147,7 +152,7 @@ func (hl *HyperLogger) init() {
 	baseLevel := conf.GetString(LOG_BASE_LOG_LEVEL)
 
 	if len(baseLevel) == 0 {
-		hl.baseLevel = defaultLogLevel
+		hl.baseLevel = default_logger_level
 	} else {
 		hl.baseLevel = baseLevel
 	}
@@ -165,6 +170,7 @@ func (hl *HyperLogger) init() {
 	// generate new log file every time interval
 	if hl.conf.GetBool(LOG_DUMP_FILE) {
 		go hl.newLogFileByInterval(conf)
+		go hl.newLogFileBySize(conf)
 	}
 }
 
@@ -178,7 +184,7 @@ func (hl *HyperLogger) newLoggerFile() *os.File {
 		}
 	}()
 	dir := hl.conf.GetString(LOG_DUMP_FILE_DIR)
-	fileName := path.Join(dir, "hyperchain_"+strconv.Itoa(hl.conf.GetInt(C_GRPC_PORT))+time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
+	fileName := path.Join(dir, "hyperchain_"+strconv.Itoa(hl.conf.GetInt(P2P_PORT))+time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
 	os.MkdirAll(dir, 0777)
 	file, err := os.Create(fileName)
 	if err == nil {
@@ -196,7 +202,15 @@ func (hl *HyperLogger) newLeveledBackEnd() logging.LeveledBackend {
 
 	oldBackend := hl.backend
 	consoleBackend := logging.NewLogBackend(os.Stdout, "", 0)
-	consoleFormatter := logging.MustStringFormatter(hl.conf.GetString(LOG_CONSOLE_FORMAT))
+
+	var consoleFormat string
+	if len(hl.conf.GetString(LOG_CONSOLE_FORMAT)) == 0 {
+		consoleFormat = default_logger_format
+	}else {
+		consoleFormat = hl.conf.GetString(LOG_CONSOLE_FORMAT)
+	}
+	consoleFormatter := logging.MustStringFormatter(consoleFormat)
+
 	consoleFormatterBackend := logging.NewBackendFormatter(consoleBackend, consoleFormatter)
 
 	hl.backendLock.Lock()// update backend
@@ -279,7 +293,7 @@ func (hl *HyperLogger) updateLogFileAndBackend()  {
 	commonLogger.Infof("New log file name: %s", file.Name())
 }
 
-//newLogFileByInterval set new log file for hyperchain
+//newLogFileByInterval set new log file by time for hyperchain
 func (hl *HyperLogger) newLogFileByInterval(conf *Config) {
 	du := conf.GetDuration(LOG_NEW_FILE_INTERVAL)
 	if du.Hours() == 24 {
@@ -308,6 +322,42 @@ func (hl *HyperLogger) newLogFileByInterval(conf *Config) {
 	}
 }
 
+//newLogFileBySize set new log file by file size for hyperchain
+func (hl *HyperLogger) newLogFileBySize(conf *Config) {
+	for {
+		select {
+		case <-time.After(2 * time.Minute):
+			commonLogger.Debug("check log file size")
+			if hl.shouldSplitLog(conf) {
+				hl.updateLogFileAndBackend()
+			}
+		case <-hl.closeLogFile:
+			hl.currentFile.Close()
+			return
+		}
+	}
+}
+
 func getCompositeModuleName(namespace, module string) string {
 	return namespace + "::" + module
+}
+
+func (hl *HyperLogger) shouldSplitLog(conf *Config) bool {
+	const max_log_size = 199 * 1024 * 1024
+	maxLogFileSize := conf.GetBytes(LOG_MAX_SIZE)
+	if maxLogFileSize > max_log_size || maxLogFileSize <= 0 {
+		maxLogFileSize = max_log_size
+	}
+	hl.fileLock.Lock()
+	defer hl.fileLock.Unlock()
+	fileInfo, err := os.Stat(hl.currentFile.Name())
+	if err != nil {
+		commonLogger.Error(err)
+		return false
+	}
+	commonLogger.Debugf("log file size is %d ", fileInfo.Size())
+	if fileInfo.Size() >= int64(maxLogFileSize) {
+		return true
+	}
+	return false
 }

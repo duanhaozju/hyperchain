@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+#set -e
 # set environment
 f_set_env(){
     case "$OSTYPE" in
@@ -51,19 +51,20 @@ f_check_local_env(){
     fi
     # confer
     if ! type confer > /dev/null; then
-        echo -e "Please install `confer` to read global.yaml config"
+        echo -e "Please install `confer` to read global.toml config"
         exit 1
     fi
 }
 
 # kill hyperchain process
 f_kill_process(){
-    echo "kill the bind port process"
-    PID=`ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}'`
-    if [ "$PID" != "" ]
-    then
-        ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}' | xargs kill -9
-    fi
+    #echo "kill the bind port process"
+    #PID=`ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}'`
+    #if [ "$PID" != "" ]
+    #then
+    #    ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}' | xargs kill -9
+    #fi
+	pkill hyperchain
 }
 
 # clear data
@@ -107,9 +108,34 @@ do
     fi
 
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
-    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
-    cp -rf  ${CONF_PATH}/namespaces/global/config/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
+    #peerconfig.toml
+    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.toml
+    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/ns1/config/peerconfig.toml
+    #namespace's global
+
+    cp -rf  ${CONF_PATH}/global.toml ${DUMP_PATH}/node${j}/global.toml
+    if [ ${_SYSTYPE} = "MAC" ]; then
+        sed -i "" "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+    else
+        sed -i "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+    fi
+
+    cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.toml ${DUMP_PATH}/node${j}/addr.toml
     cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
+    #tls configuration
+    cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/certs/
+    cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/certs/
+
+    #certs
+    cp -rf  ${CONF_PATH}/tls ${DUMP_PATH}/node${j}/
 
     # distribute hypercli
     if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
@@ -178,8 +204,8 @@ start_hyperjvm() {
     do
         cp -rf ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${DUMP_PATH}/node$j/
     done
-#    cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
-#
+    cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
+
 #    case "$_SYSTYPE" in
 #          MAC*)
 #                osascript -e 'tell app "Terminal" to do script "cd '${DUMP_PATH}/node1/hyperjvm/bin/' && ./local_start_hyperjvm.sh"'
@@ -216,7 +242,7 @@ DUMP_PATH="${PROJECT_PATH}/build"
 CONF_PATH="${PROJECT_PATH}/configuration"
 
 # global config path
-GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/global.yaml"
+GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/namespace.toml"
 
 # hypercli root path
 CLI_PATH="${PROJECT_PATH}/hypercli"
@@ -227,8 +253,9 @@ PEER_CONFIG_FILE_NAME="configuration/"$PEER_CONFIG_FILE_NAME
 PEER_CONFIG_FILE=${PROJECT_PATH}/${PEER_CONFIG_FILE_NAME}
 
 # node num
-MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | jq ".maxpeernode"`
-echo "Node number is: ${MAXPEERNUM}"
+# MAXPEERNUM=`cat ${PEER_CONFIG_FILE} | jq ".maxpeernode"`
+# echo "Node number is: ${MAXPEERNUM}"
+MAXPEERNUM=4
 
 # delete data? default = true
 DELETEDATA=true
@@ -238,6 +265,9 @@ REBUILD=true
 
 # rebuild hypercli or not? default = false
 HYPERCLI=false
+
+# distribute jvm or not? default = false
+HYPERJVM=false
 
 # run process or not? default = true
 RUN=true
@@ -262,6 +292,8 @@ do
         REBUILD=false; shift;;
     -c|--hypercli)
         HYPERCLI=true; shift;;
+    -j|--jvm)
+        HYPERJVM=true; shift;;
     -m|--mode)
         MODE=true; shift;;
     -n|--run)
@@ -286,6 +318,10 @@ if  $REBUILD ; then
     f_rebuild
 fi
 
+if [[ $? != 0 ]]; then
+echo "compile failed, script stopped."
+exit 1
+fi
 if $HYPERCLI ; then
     f_rebuild_hypercli
 fi
@@ -294,7 +330,9 @@ fi
 f_distribute $MAXPEERNUM
 
 # run hyperchain node
+if ${HYPERJVM}; then
 start_hyperjvm
+fi
 
 if ${RUN}; then
     f_run_process

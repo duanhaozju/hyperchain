@@ -73,12 +73,23 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	} else {
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	}
-
-	tx.Id = uint64(contract.eh.GetPeerManager().GetNodeId())
+	if contract.eh.NodeIdentification() == manager.IdentificationVP {
+		tx.Id = uint64(contract.eh.GetPeerManager().GetNodeId())
+	} else {
+		hash := contract.eh.GetPeerManager().GetLocalNodeHash()
+		err := tx.SetNVPHash(hash)
+		if err != nil {
+			log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
+			return common.Hash{}, &common.MarshalError{Message:"marshal nvp hash error"}
+		}
+	}
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()
 	//delete repeated tx
-	var exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash)
+	var exist bool
+	if err, exist = edb.LookupTransaction(contract.namespace, tx.GetHash()); err != nil || exist == true {
+		exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash)
+	}
 
 	if exist {
 		return common.Hash{}, &common.RepeadedTxError{Message:"repeated tx"}
@@ -91,10 +102,25 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 		return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
 	}
 
-	go contract.eh.GetEventObject().Post(event.NewTxEvent{
-		Transaction: tx,
-		Simulate:    args.Simulate,
-	})
+	if contract.eh.NodeIdentification() == manager.IdentificationNVP {
+		ch := make(chan bool)
+		go contract.eh.GetEventObject().Post(event.NewTxEvent{
+			Transaction: tx,
+			Simulate: args.Simulate,
+			Ch: ch,
+		})
+		res := <- ch
+		close(ch)
+		if res == false {
+			return common.Hash{}, &common.CallbackError{Message:"send tx to nvp failed."}
+		}
+
+	} else {
+		go contract.eh.GetEventObject().Post(event.NewTxEvent{
+			Transaction: tx,
+			Simulate:    args.Simulate,
+		})
+	}
 	return tx.GetHash(), nil
 
 }

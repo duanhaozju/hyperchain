@@ -10,6 +10,13 @@ import (
 	"bytes"
 	"time"
 	er "hyperchain/core/errors"
+	"github.com/cheggaaa/pb"
+	"hyperchain/tree/bucket"
+)
+
+var (
+	receivePb *pb.ProgressBar
+	processPb *pb.ProgressBar
 )
 
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
@@ -41,6 +48,8 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	executor.recordSyncPeers(ev.Replicas, ev.Id)
 	executor.status.syncFlag.Oracle = NewOracle(ev.Replicas, executor.conf, executor.logger)
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
+	receivePb = common.InitPb(int64(ev.TargetHeight - edb.GetHeightOfChain(executor.namespace)), "receive block")
+	receivePb.Start()
 	go executor.syncChainResendBackend()
 }
 
@@ -72,7 +81,7 @@ func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 	var request ChainSyncRequest
 	proto.Unmarshal(payload, &request)
 	for i := request.RequiredNumber; i > request.CurrentNumber; i -= 1 {
-		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId)
+		executor.informP2P(NOTIFY_UNICAST_BLOCK, i, request.PeerId, request.PeerHash)
 	}
 }
 
@@ -95,7 +104,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			if executor.isDemandSyncBlock(block) {
 				// received block's struct definition may different from current
 				// for backward compatibility, store with original version tag.
-				edb.PersistBlock(executor.db.NewBatch(), block, true, true, string(block.Version))
+				edb.PersistBlock(executor.db.NewBatch(), block, true, true, string(block.Version), getTxVersion(block))
 				if err := executor.updateSyncDemand(block); err != nil {
 					executor.logger.Errorf("[Namespace = %s] update sync demand failed.", executor.namespace)
 					executor.reject()
@@ -110,12 +119,17 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 		}
 		if executor.receiveAllRequiredBlocks() {
 			if executor.getLatestSyncDownstream() != edb.GetHeightOfChain(executor.namespace) {
+				common.AddPb(receivePb, int64(executor.GetSyncMaxBatchSize()))
+				common.PrintPb(receivePb, 0, executor.logger)
 				prev := executor.getLatestSyncDownstream()
 				next := executor.calcuDownstream()
 				executor.status.syncFlag.Oracle.FeedBack(true)
 				executor.SendSyncRequest(prev, next)
 			} else {
 				executor.logger.Debugf("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.status.syncFlag.SyncTarget)
+				common.SetPb(receivePb, receivePb.Total)
+				common.PrintPb(receivePb, 0, executor.logger)
+				receivePb.Finish()
 			}
 		}
 		executor.processSyncBlocks()
@@ -139,15 +153,15 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 }
 
 // ApplyBlock - apply all transactions in block into state during the `state update` process.
-func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
+func (executor *Executor) ApplyBlock(block *types.Block, seqNo, tempBlockNumber uint64) (error, *ValidationResultRecord) {
 	if block.Transactions == nil {
 		return er.EmptyPointerErr, nil
 	}
-	return executor.applyBlock(block, seqNo)
+	return executor.applyBlock(block, seqNo, tempBlockNumber)
 }
 
-func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
-	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
+func (executor *Executor) applyBlock(block *types.Block, seqNo, tempBlockNumber uint64) (error, *ValidationResultRecord) {
+	err, result := executor.applyTransactions(block.Transactions, nil, seqNo, tempBlockNumber)
 	if err != nil {
 		return err, nil
 	}
@@ -164,6 +178,9 @@ func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *
 // ClearStateUnCommitted - remove all cached stuff
 func (executor *Executor) clearStatedb() {
 	executor.statedb.Purge()
+	tree := executor.statedb.GetTree()
+	bucketTree := tree.(*bucket.BucketTree)
+	bucketTree.ClearAllCache()
 }
 
 // assertApplyResult - check apply result whether equal with other's.
@@ -219,6 +236,8 @@ func (executor *Executor) processSyncBlocks() {
 			executor.waitUtilSyncAvailable()
 			defer executor.syncDone()
 			// execute all received block at one time
+			processPb = common.InitPb(int64(executor.getSyncTarget() - edb.GetHeightOfChain(executor.namespace)), "process block")
+			processPb.Start()
 			for i := executor.status.syncFlag.SyncDemandBlockNum + 1; i <= executor.status.syncFlag.SyncTarget; i += 1 {
 				executor.markSyncExecBegin()
 				blk, err := edb.GetBlockByNumber(executor.namespace, i)
@@ -230,7 +249,7 @@ func (executor *Executor) processSyncBlocks() {
 				} else {
 					// set temporary block number as block number since block number is already here
 					executor.initDemand(blk.Number)
-					err, result := executor.ApplyBlock(blk, blk.Number)
+					err, result := executor.ApplyBlock(blk, blk.Number, executor.getTempBlockNumber())
 					if err != nil || executor.assertApplyResult(blk, result) == false {
 						executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
 							executor.namespace, executor.status.syncFlag.SyncDemandBlockNum +1, executor.status.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))
@@ -238,13 +257,19 @@ func (executor *Executor) processSyncBlocks() {
 						return
 					} else {
 						// commit modified changes in this block and update chain.
-						if err := executor.accpet(blk.Number); err != nil {
+						if err := executor.accpet(blk.Number, blk); err != nil {
 							executor.reject()
 							return
 						}
+						common.AddPb(processPb, 1)
+						common.PrintPb(processPb, 10, executor.logger)
 					}
 				}
 			}
+			if !common.IsPrintPb(processPb, 10) {
+				common.PrintPb(processPb, 0, executor.logger)
+			}
+			processPb.Finish()
 			executor.initDemand(executor.status.syncFlag.SyncTarget + 1)
 			executor.clearSyncFlag()
 			executor.sendStateUpdatedEvent()
@@ -314,16 +339,23 @@ func (executor *Executor) sendStateUpdatedEvent() {
 }
 
 // accpet - accept block synchronization result.
-func (executor *Executor) accpet(seqNo uint64) error {
+func (executor *Executor) accpet(seqNo uint64, block *types.Block) error {
 	batch := executor.statedb.FetchBatch(seqNo)
 	if err := edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false); err != nil {
 		executor.logger.Errorf("update chain to (#%d) failed, err: %s", err.Error())
 		return err
 	}
+	// write to bloom filter first
+	// IMPORTANT never reorder the sequence of (1) write bloom filter (2) flush db
+	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
+		executor.logger.Warning("write tx to bloom filter failed", err.Error())
+	}
 	if err := batch.Write(); err != nil {
 		executor.logger.Errorf("commit (#%d) changes failed, err: %s", err.Error())
 		return err
 	}
+	// send it to connected nvp
+	executor.TransitVerifiedBlock(block)
 	executor.statedb.MarkProcessFinish(seqNo)
 	return nil
 }
@@ -368,4 +400,12 @@ func (executor *Executor) calcuDownstream() uint64 {
 
 func (executor *Executor) receiveAllRequiredBlocks() bool {
 	return executor.status.syncFlag.SyncDemandBlockNum == executor.getLatestSyncDownstream()
+}
+
+func getTxVersion(block *types.Block) string {
+	if block == nil || len(block.Transactions) == 0 {
+		// short circuit if block is empty or no transaction embeded.
+		return edb.TransactionVersion
+	}
+	return string(block.Transactions[0].Version)
 }

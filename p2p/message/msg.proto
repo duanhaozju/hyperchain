@@ -1,0 +1,25 @@
+// author: chenquan
+// date: 16-8-25
+// last modified: 16-12-29 13:50
+// last Modified Author: zhangkejie
+// change log:fix the cert and signature
+//
+// message defination for network transaction
+//
+syntax="proto3";
+
+package message;
+
+import "endpoint.proto";
+import "msg_type.proto";
+
+message Message{
+    int64    Version     = 1;
+    MsgType  MessageType = 2;
+    Endpoint From        = 3;
+    bytes    Payload     = 4;
+    int64    TimeStamp   = 5;
+    bytes    Extendend   = 6;
+    bytes    ReferAddr   = 7;
+}
+

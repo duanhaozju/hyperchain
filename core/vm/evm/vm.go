@@ -7,9 +7,9 @@ import (
 	"math/big"
 
 	"hyperchain/common"
-	"hyperchain/core/crypto"
 	"hyperchain/core/vm/evm/params"
 	"hyperchain/core/vm"
+	"hyperchain/crypto"
 )
 
 // Config are the configuration options for the EVM

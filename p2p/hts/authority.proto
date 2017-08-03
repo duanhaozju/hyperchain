@@ -1,0 +1,27 @@
+// author: chenquan
+// date: 17-6-9
+// last modified:
+// last Modified Author: zhangkejie
+// change log:fix the cert and signature
+//
+// message defination for network transaction
+//
+syntax="proto3";
+
+package hts;
+
+message Authority{
+    int64 Version           = 1;
+    // generally is hostname
+    bytes Identify          = 2;
+    // generally ecert
+    bytes Certificate       = 3;
+    // generally is signature certificate's public key matched private key signature
+    bytes Signature         = 4;
+    // key exchange params
+    bytes KeyExchangeParams = 5;
+    // cipher spec for key agree
+    bytes CipherSpec        = 6;
+    // extends field
+    bytes Extends           = 7;
+}

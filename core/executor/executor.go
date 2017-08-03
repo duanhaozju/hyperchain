@@ -29,13 +29,13 @@ type Executor struct {
 	statedb    vm.Database
 	logger     *logging.Logger
 	jvmCli     jvm.ContractExecutor
+	nvp        NVP
 }
 
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux) *Executor {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	helper := NewHelper(eventMux)
-
 	executor := &Executor{
 		namespace:  namespace,
 		conf:       conf,
@@ -49,6 +49,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux)
 	}
 
 	executor.logger = common.GetLogger(namespace, "executor")
+	executor.nvp = NewNVPImpl(executor)
 	executor.initDb()
 	return executor
 }
@@ -140,4 +141,8 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 // FetchStateDb - fetch state db
 func (executor *Executor) FetchStateDb() vm.Database {
 	return executor.statedb
+}
+
+func (executor *Executor) GetNVP() NVP {
+	return executor.nvp
 }

@@ -1,0 +1,14 @@
+syntax="proto3";
+package payloads;
+
+message Certificate{
+   int64 Version  = 1;
+   bytes ECert    = 2;
+   bytes ECertSig = 3;
+   bytes RCert    = 4;
+   bytes RCertSig = 5;
+   // generally commonly is node identify or hash
+   bytes WithData = 6;
+   bytes Rand = 7;
+
+}

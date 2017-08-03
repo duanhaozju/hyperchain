@@ -6,8 +6,8 @@ import (
 	"math/big"
 
 	"hyperchain/common"
-	"hyperchain/core/crypto"
 	"hyperchain/core/vm/evm/params"
+	"hyperchain/crypto"
 )
 
 // PrecompiledAccount represents a native ethereum contract

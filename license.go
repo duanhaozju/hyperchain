@@ -6,9 +6,10 @@ import (
 	"regexp"
 	"strings"
 	"hyperchain/common"
-	"hyperchain/p2p/transport"
 	"strconv"
 	"fmt"
+	"hyperchain/p2p/hts/secimpl"
+	"runtime"
 )
 
 const (
@@ -16,7 +17,10 @@ const (
 )
 
 func CheckLicense(exit chan bool) {
-	ticker := time.NewTicker(10 * time.Second)
+	// this ensures that license checker always hit in `os thread` to avoid jmuping to other threads
+	// since in this approach, working directory will not be affected by other operators.
+	runtime.LockOSThread()
+	ticker := time.NewTicker(1 * time.Hour)
 	for {
 		select {
 		case <-ticker.C:
@@ -53,7 +57,7 @@ func isLicenseExpired() (expired bool) {
 	}
 	pattern, _ := regexp.Compile("Identification: (.*)")
 	identification := pattern.FindString(string(license))[16:]
-	ctx, err := transport.TripleDesDec([]byte(privateKey),common.Hex2Bytes(identification))
+	ctx, err := secimpl.TripleDesDec([]byte(privateKey),common.Hex2Bytes(identification))
 	if err != nil {
 		fmt.Println("invalid license.")
 		expired = true

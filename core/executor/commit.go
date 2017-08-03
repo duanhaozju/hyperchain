@@ -83,6 +83,11 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 		executor.logger.Errorf("update chain to #%d failed.", block.Number, err.Error())
 		return err
 	}
+	// write to bloom filter first
+	// IMPORTANT never reorder the sequence of (1) write bloom filter (2) flush db
+	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
+		executor.logger.Warning("write tx to bloom filter failed", err.Error())
+	}
 	if err := batch.Write(); err != nil {
 		executor.logger.Errorf("commit #%d changes failed.", block.Number, err.Error())
 		return err
@@ -97,6 +102,8 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	// executor.logger.Notice(string(executor.statedb.Dump()))
 	// remove Cached Transactions which used to check transaction duplication
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
+	executor.TransitVerifiedBlock(block)
+
 	return nil
 }
 
@@ -166,18 +173,8 @@ func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 }
 
 func (executor *Executor) persistTransactions(batch db.Batch, transactions []*types.Transaction, blockNumber uint64) error {
+	// Only tx meta is saved to database, no more redundant transactions are persisted.
 	for i, transaction := range transactions {
-		if transaction.Version != nil {
-			// transaction has add version tag, use original version tag
-			if err, _ := edb.PersistTransaction(batch, transaction, false, false, string(transaction.Version)); err != nil {
-				return err
-			}
-		} else {
-			// use default version tag
-			if err, _ := edb.PersistTransaction(batch, transaction, false, false); err != nil {
-				return err
-			}
-		}
 		// persist transaction meta data
 		meta := &types.TransactionMeta{
 			BlockIndex: blockNumber,

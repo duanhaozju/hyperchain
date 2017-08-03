@@ -1,0 +1,41 @@
+syntax="proto3";
+
+package message;
+
+enum MsgType{
+    ////////////////////////////
+    // HTS issues
+    CLIENTHELLO               = 0;
+    SERVERHELLO               = 1;
+    SERVERREJECT              = 2;
+    CLIENTACCEPT              = 3;
+    CLIENTREJECT              = 4;
+    SERVERDONE                = 5;
+
+    ///////////////////////////
+    //HTS update session key
+    CLIENTUPDATE              = 6;
+
+    // hypernet issues
+    KEEPALIVE                 = 7;
+    PENDING                   = 8;
+
+    //////////////////////////
+    //CONSENSUS issues
+    // general hello
+    HELLO                     = 9;
+    // new node attend
+    ATTEND                    = 10;
+    // reconnect
+    RECONNECT                 = 11;
+
+    //consensus importtant session
+    SESSION                   = 12;
+    // generally response
+    RESPONSE                  = 13;
+
+    //NVP issues
+    NVPATTEND                 = 14;
+    NVPDELETE                 = 15;
+
+}

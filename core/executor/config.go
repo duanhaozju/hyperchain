@@ -7,20 +7,21 @@ import (
 
 const (
 	STATEDB               = "state"
-	stateBucketSize       = "global.executor.buckettree.state.size"
-	stateBucketLevelGroup = "global.executor.buckettree.state.levelGroup"
-	stateBucketCacheSize  = "global.executor.buckettree.state.cacheSize"
+	stateBucketSize       = "executor.buckettree.state.size"
+	stateBucketLevelGroup = "executor.buckettree.state.levelGroup"
+	stateBucketCacheSize  = "executor.buckettree.state.cacheSize"
 
 	STATEOBJECT                 = "stateObject"
 	stateObjectBucketSize       = "global.executor.buckettree.storage.size"
 	stateObjectBucketLevelGroup = "global.executor.buckettree.storage.levelGroup"
 	stateObjectBucketCacheSize  = "global.executor.buckettree.storage.cacheSize"
 
-	syncReplicaInterval         = "global.executor.sync_replica.interval"
-	syncReplicaEnable           = "global.executor.sync_replica.enable"
+	syncReplicaInterval         = "executor.sync_replica.interval"
+	syncReplicaEnable           = "executor.sync_replica.enable"
 
-	syncChainBatchSize          = "global.executor.sync_chain.sync_batch_size"
-	syncChainResendInterval     = "global.executor.sync_chain.sync_resend_interval"
+	syncChainBatchSize          = "executor.sync_chain.sync_batch_size"
+	syncChainResendInterval     = "executor.sync_chain.sync_resend_interval"
+	exitFlag                    = "executor.nvp.exitflag"
 
 )
 
@@ -83,4 +84,8 @@ func (executor *Executor) GetSyncResendInterval() time.Duration {
 
 func (executor *Executor) isJvmEnable() bool {
 	return executor.conf.GetBool(common.C_JVM_START)
+}
+
+func (executor *Executor) GetExitFlag() bool {
+	return executor.conf.GetBool(exitFlag)
 }

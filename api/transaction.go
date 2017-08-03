@@ -122,8 +122,11 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	}
 	if txType == 1 && (args.Payload == "" || args.Payload == "0x"){
 		return SendTxArgs{}, &common.InvalidParamsError{Message:"contract code is empty"}
-
 	}
+	if args.Timestamp + time.Duration(24 * time.Hour).Nanoseconds() < time.Now().UnixNano() {
+		return SendTxArgs{}, &common.InvalidParamsError{Message:"transaction out of date"}
+	}
+
 	return args, nil
 }
 
@@ -151,12 +154,25 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 
 	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
-	tx.Id = uint64(tran.eh.GetPeerManager().GetNodeId())
+	if tran.eh.NodeIdentification() == manager.IdentificationVP {
+		tx.Id = uint64(tran.eh.GetPeerManager().GetNodeId())
+	} else {
+		hash := tran.eh.GetPeerManager().GetLocalNodeHash()
+		err := tx.SetNVPHash(hash)
+		if err != nil {
+			tran.log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
+			return common.Hash{}, &common.MarshalError{Message:"marshal nvp hash error"}
+		}
+	}
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()
 
 	//delete repeated tx
-	var exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash)
+	var exist bool
+	if err, exist = edb.LookupTransaction(tran.namespace, tx.GetHash()); err != nil || exist == true {
+		// recheck by query db
+		exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash)
+	}
 
 	if exist {
 		return common.Hash{}, &common.RepeadedTxError{Message:"repeated tx"}
@@ -172,10 +188,25 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 				// ATTENTION, return invalid transactino directly
 				return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
 			}
-			go tran.eh.GetEventObject().Post(event.NewTxEvent{
-				Transaction: tx,
-				Simulate:    args.Simulate,
-			})
+			if tran.eh.NodeIdentification() == manager.IdentificationNVP {
+				ch := make(chan bool)
+				go tran.eh.GetEventObject().Post(event.NewTxEvent{
+					Transaction: tx,
+					Simulate:    args.Simulate,
+					Ch: ch,
+				})
+				res := <- ch
+				close(ch)
+				if res == false {
+					return common.Hash{}, &common.CallbackError{Message:"send tx to nvp failed."}
+				}
+
+			} else {
+				go tran.eh.GetEventObject().Post(event.NewTxEvent{
+					Transaction: tx,
+					Simulate:    args.Simulate,
+				})
+			}
 		}
 	} else {
 		// ** For Hyperchain **
@@ -184,11 +215,25 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 			// ATTENTION, return invalid transactino directly
 			return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
 		}
+		if tran.eh.NodeIdentification() == manager.IdentificationNVP {
+			ch := make(chan bool)
+			go tran.eh.GetEventObject().Post(event.NewTxEvent{
+				Transaction: tx,
+				Simulate:    args.Simulate,
+				Ch: ch,
+			})
+			res := <- ch
+			close(ch)
+			if res == false {
+				return common.Hash{}, &common.CallbackError{Message:"send tx to nvp failed."}
+			}
 
-		go tran.eh.GetEventObject().Post(event.NewTxEvent{
-			Transaction: tx,
-			Simulate:    args.Simulate,
-		})
+		} else {
+			go tran.eh.GetEventObject().Post(event.NewTxEvent{
+				Transaction: tx,
+				Simulate:    args.Simulate,
+			})
+		}
 	}
 	return tx.GetHash(), nil
 }

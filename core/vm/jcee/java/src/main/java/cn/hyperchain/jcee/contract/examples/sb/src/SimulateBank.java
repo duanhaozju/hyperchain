@@ -11,8 +11,13 @@ import cn.hyperchain.jcee.ledger.Batch;
 import cn.hyperchain.jcee.ledger.BatchKey;
 import cn.hyperchain.jcee.ledger.BatchValue;
 import cn.hyperchain.jcee.ledger.Result;
+import cn.hyperchain.jcee.ledger.table.*;
 import cn.hyperchain.jcee.util.Bytes;
+import cn.hyperchain.jcee.util.DataType;
+import com.google.gson.Gson;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -45,10 +50,21 @@ public class SimulateBank extends ContractTemplate {
             case "testDelete":
                 return testDelete(args);
             case "testInvokeContract":
-                logger.info("testInvokeContract");
                 return testInvokeContract(args);
             case "testPostEvent":
                 return testPostEvent(args);
+            case "newAccountTable":
+                return newAccountTable(args);
+            case "getTableDesc":
+                return getTableDesc(args);
+            case "issueByTable":
+                return issueByTable(args);
+            case "transferByTable":
+                return transferByTable(args);
+            case "getAccount":
+                return getAccount(args);
+            case "getAccountByRange":
+                return getAccountByRange(args);
             default:
                 String err = "method " + funcName  + " not found!";
                 logger.error(err);
@@ -202,14 +218,18 @@ public class SimulateBank extends ContractTemplate {
         }
         return result(getV.isEmpty());
     }
+     public ExecuteResult testInvokeContract(List<String> args) {
+            List<String> subArgs = new LinkedList<>();
+            subArgs.add(args.get(0));
+            String contractAddr = args.get(0);
+            return invokeContract("global", contractAddr, "openTest", subArgs);
+        }
 
-    public ExecuteResult testInvokeContract(List<String> args) {
-        logger.info(args.toString());
-        List<String> arg = new LinkedList<>();
-        arg.add("hello, invoke contract!");
-        return invokeContract("global", "bbe2b6412ccf633222374de8958f2acc76cda9c9", "test", arg);
-    }
-
+    /**
+     * test the post event mechanism
+     * @param args
+     * @return
+     */
     public ExecuteResult testPostEvent(List<String> args) {
         logger.info(args);
         for (int i = 0; i < 10; i ++) {
@@ -223,4 +243,101 @@ public class SimulateBank extends ContractTemplate {
         }
         return result(true);
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    //
+    //       Contract table related usage cases
+    //
+    //
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    public ExecuteResult newAccountTable(List<String> args) {
+        logger.info(args);
+        RelationDB db = ledger.getDataBase(); //do not new database instance every time
+        TableName tn = new TableName(getNamespace(), getCid(), "Account");
+        logger.info(tn.toString());
+        TableDesc desc = new TableDesc(tn);
+        desc.AddColumn(new ColumnDesc("name", DataType.STRING));
+        desc.AddColumn(new ColumnDesc("id", DataType.LONG));
+        desc.AddColumn(new ColumnDesc("age", DataType.INT));
+        desc.AddColumn(new ColumnDesc("balance", DataType.DOUBLE));
+        db.CreateTable(desc);
+        return result(true);
+    }
+
+    public ExecuteResult getTableDesc(List<String> args) {
+        logger.info(args);
+        TableName tn = new TableName(getNamespace(), getCid(), args.get(0));
+        RelationDB db = ledger.getDataBase();
+        TableDesc desc = db.getTableDesc(tn);
+        return result(true, desc);
+    }
+
+    public ExecuteResult transferByTable(List<String> args) {
+        Table table = getTable("Account");
+        if (table != null) {
+            Row accountA = table.getRow(args.get(0));
+            Row accountB = table.getRow(args.get(1));
+            double num = Double.parseDouble(args.get(2));
+
+            double balanceA = Double.parseDouble(accountA.get("balance"));
+            System.out.println(balanceA);
+            System.out.println(balanceA - num);
+            double balanceB = Double.parseDouble(accountB.get("balance"));
+            System.out.println(balanceB);
+            System.out.println(balanceB + num);
+            if (balanceA > num) {
+                accountA.put("balance", String.valueOf(balanceA - num).getBytes());
+                accountB.put("balance", String.valueOf(balanceB + num).getBytes());
+            }
+            ArrayList<Row> rows = new ArrayList<>();
+            rows.add(accountA);
+            rows.add(accountB);
+            return result(table.insertRows(rows));
+        }else {
+            logger.error("Account with id " + args.get(0) + " is not existed!");
+            return result(false);
+        }
+    }
+
+    public ExecuteResult issueByTable(List<String> args) {
+        Table table = getTable("Account");
+        if (table != null) {
+            Row row = new Row(args.get(0));
+            row.put("name", args.get(1).getBytes());
+            row.put("balance", args.get(2).getBytes());
+            return result(table.insert(row));
+        }else {
+            return result(false);
+        }
+    }
+
+    public ExecuteResult getAccount(List<String> args) {
+        Table table = getTable("Account");
+        if (table != null) {
+            Row row = table.getRow(args.get(0));
+            logger.info(row.toJSON());
+            return result(true, row.toJSON());
+        }else {
+            logger.error("Account with id " + args.get(0) + " is not existed!");
+            return result(false);
+        }
+    }
+
+    public ExecuteResult getAccountByRange(List<String> args) {
+        Table table = getTable("Account");
+        Iterator<Result> rows = table.getRows(args.get(0), args.get(1));
+        int count = 0;
+        while (rows.hasNext()) {
+            Result rs = rows.next();
+            if (!rs.isEmpty()) {
+                String row = rs.toString();
+                logger.error("getAccountByRange=>row is " + row);
+                count++;
+            }
+        }
+        logger.error("getAccountByRange count is " + count);
+        return result(true);
+    }
+    ///////////// End of table usage cases///////////////////////////////////////////////////////////////////////
 }

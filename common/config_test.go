@@ -8,7 +8,17 @@ import (
 	"reflect"
 	"testing"
 	"time"
+	"fmt"
 )
+
+func TestNewEmptyConfig(t *testing.T) {
+	conf := NewRawConfig()
+	conf.Set("k1", "v1")
+	v := conf.GetString("k1")
+	if v != "v1" {
+		t.Error("config set or put error")
+	}
+}
 
 func TestGetString(t *testing.T) {
 	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
@@ -68,4 +78,27 @@ func TestGetBool(t *testing.T) {
 	if rs != expect {
 		t.Errorf("GetBool(%q) = %t, actual: %t", key, rs, expect)
 	}
+}
+
+func TestReadConfigFile(t *testing.T)  {
+	conf := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/namespaces/global/config/namespace.toml")
+	conf.Print()
+	fmt.Println(conf.GetStringMap("log.module"))
+}
+
+func TestConfigMerge(t *testing.T)  {
+	conf := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/namespaces/global/config/pbft.yaml")
+	conf.Print()
+
+	conf.MergeConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/namespaces/global/config/namespace.toml")
+	conf.Print()
+}
+
+func TestReadTomlConfigFile(t *testing.T)  {
+	conf := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/global.toml")
+	conf2 := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/global.yaml")
+
+	fmt.Println(conf.equals(conf2))
+
+	conf.Print()
 }

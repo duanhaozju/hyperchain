@@ -2,13 +2,10 @@ package crypto
 
 import (
 	"testing"
-	//"hyperchain/common"
-	//"github.com/magiconair/properties/assert"
 	"fmt"
 	"hyperchain/common"
 	"crypto/ecdsa"
 	"hyperchain/crypto/secp256k1"
-	//"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
 
 func TestTOECDSAPub(t *testing.T) {

@@ -50,16 +50,28 @@ func (node *Node) GetNodeHash() (string, error) {
 	return node.eh.GetPeerManager().GetLocalNodeHash(), nil
 }
 
-func (node *Node) DelNode(args NodeArgs) (string, error) {
+func (node *Node) DeleteVP(args NodeArgs) (string, error) {
 	if node.eh == nil {
 		return "", &common.CallbackError{Message:"protocolManager is nil"}
 	}
-	go node.eh.GetEventObject().Post(event.DelPeerEvent{
+	go node.eh.GetEventObject().Post(event.DelVPEvent{
 		Payload: []byte(args.NodeHash),
 	})
-	return "successful request", nil
+	return "successful request to delete vp node", nil
 }
 
-func (node *Node) GetNamespace() (string, error) {
-	return node.namespace, nil
+func (node *Node) DeleteNVP(args NodeArgs) (string, error) {
+	if node.eh == nil {
+		return "", &common.CallbackError{Message:"protocolManager is nil"}
+	}
+	go node.eh.GetEventObject().Post(event.DelNVPEvent{
+		Payload: []byte(args.NodeHash),
+	})
+	return "successful request to delete nvp node", nil
 }
+
+// DelNode is in order to be compatible with sdk for release1.2
+func (node *Node) DelNode(args NodeArgs) (string, error) {
+	return node.DeleteVP(args)
+}
+
