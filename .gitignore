@@ -28,5 +28,6 @@ core/vm/jcee/java/hyperjvm
 core/.DSTORE
 
 logs
+.token
 
 hyperchain

@@ -1,4 +1,4 @@
 package peerevent
-type EV_DELETE_VP struct {
+type DELETE_VP struct {
 	Hash string
 }

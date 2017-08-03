@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	LEVEL_DB_PATH = "dbConfig.leveldbPath"
+	LEVEL_DB_PATH = "database.leveldb.path"
 )
 
 // the Database for LevelDB

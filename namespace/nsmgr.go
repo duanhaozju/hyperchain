@@ -18,7 +18,7 @@ var logger *logging.Logger
 
 const (
 	DEFAULT_NAMESPACE  = "global"
-	NS_CONFIG_DIR_ROOT = "global.nsConfigRootPath"
+	NS_CONFIG_DIR_ROOT = "namespace.config_root_dir"
 )
 
 var once sync.Once
@@ -93,7 +93,6 @@ func GetNamespaceManager(conf *common.Config) NamespaceManager {
 
 //init the namespace registry by configuration.
 func (nr *nsManagerImpl) init() error {
-	//init all namespace instance by configuration
 	configRootDir := nr.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
 		return errors.New("Namespace config root dir is not valid")
@@ -130,9 +129,9 @@ func (nr *nsManagerImpl) Start() error {
 			}
 		}(name)
 	}
-
 	if nr.conf.GetBool(common.C_JVM_START) == true {
 		if err := nr.jvmManager.Start(); err != nil {
+			logger.Error(err)
 			return err
 		}
 	}

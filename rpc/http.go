@@ -3,18 +3,13 @@
 package jsonrpc
 
 import (
-	//"github.com/astaxie/beego"
-	//"github.com/astaxie/beego/logs"
 	"github.com/rs/cors"
-
-	//"hyperchain/api/rest/routers"
 	"hyperchain/namespace"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"time"
-	"hyperchain/common"
 )
 
 const (
@@ -29,7 +24,7 @@ type httpServerImpl struct {
 	stopHp			chan bool
 	restartHp		chan bool
 	nr			namespace.NamespaceManager
-
+	port                    int
 	httpListener 		net.Listener
 	httpHandler  		*Server
 	httpAllowedOrigins 	[]string
@@ -42,6 +37,7 @@ func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp ch
 			stopHp: 		stopHp,
 			restartHp: 		restartHp,
 			httpAllowedOrigins: 	[]string{"*"},
+			port:                   nr.GlobalConfig().GetInt("port.jsonrpc"),
 		}
 	}
 	return hs
@@ -49,10 +45,7 @@ func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp ch
 
 // Start starts the http RPC endpoint.
 func (hi *httpServerImpl) Start() error {
-	config := hi.nr.GlobalConfig()
-	httpPort := config.GetInt(common.C_HTTP_PORT)
-
-	log.Notice("start http service ... at", httpPort)
+	log.Notice("start http service ... at", hi.port)
 
 	var (
 		listener net.Listener
@@ -61,12 +54,16 @@ func (hi *httpServerImpl) Start() error {
 
 	// start http listener
 	handler := NewServer(hi.nr, hi.stopHp, hi.restartHp)
-	listener, err = net.Listen("tcp", fmt.Sprintf(":%d", httpPort))
+
+	// http.HandleFunc("/login", LoginServer)
+	http.Handle("/", newCorsHandler(handler, hi.httpAllowedOrigins))
+
+	listener, err = net.Listen("tcp", fmt.Sprintf(":%d", hi.port))
 	if err != nil {
 		return err
 	}
 
-	go newHTTPServer(hi.httpAllowedOrigins, handler).Serve(listener)
+	go newHTTPServer().Serve(listener)
 
 	hi.httpListener = listener
 	hi.httpHandler = handler
@@ -131,9 +128,9 @@ func (hrw *httpReadWrite) Close() error {
 //}
 
 // newHTTPServer creates a new http RPC server around an API provider.
-func newHTTPServer(cors []string, srv *Server) *http.Server {
+func newHTTPServer() *http.Server {
 	return &http.Server{
-		Handler: newCorsHandler(srv, cors),
+		Handler: nil,
 		ReadTimeout:  time.Second * 3,
 	}
 }

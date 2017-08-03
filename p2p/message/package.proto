@@ -1,0 +1,25 @@
+
+syntax="proto3";
+
+package message;
+
+
+enum ControlType{
+    Update      = 0;
+    Create      = 1;
+    Close       = 2;
+    Notify      = 3;
+    KeepAlive   = 4;
+    Response    = 5;
+}
+
+message Package {
+   int64        Version     = 1;
+   ControlType  Type        = 2;
+   bytes        Payload     = 3;
+   //src should be ip:port
+   bytes        src          = 4;
+   string       srcHost     = 5;
+   bytes        dst         = 6;
+   string       dstHost      = 7;
+}

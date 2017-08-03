@@ -1,53 +1,53 @@
 package admittance
 
 import (
-	"crypto/ecdsa"
-	"fmt"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"testing"
+	"crypto/ecdsa"
 	"hyperchain/common"
 	"hyperchain/core/crypto/primitives"
-	"io/ioutil"
 	"os"
 	"strings"
-	"testing"
+	"github.com/spf13/viper"
+	"fmt"
 )
 
 var (
 	testCaManager *CAManager
-	projectPath   string
+	projectPath string
 )
-
-func init() {
+func init(){
 	env := os.Getenv("GOPATH")
-	if strings.Contains(env, ":") {
-		env = strings.Split(env, ":")[0]
+	if strings.Contains(env,":"){
+		env = strings.Split(env,":")[0]
 	}
-	projectPath = env + "/src/hyperchain"
+	projectPath = env+"/src/hyperchain"
 
 	fakeviper := viper.New()
-	fakeviper.SetConfigFile(projectPath + "/admittance/test/global.yaml")
+	fakeviper.SetConfigFile(projectPath+"/admittance/test/global.yaml");
 	fakeviper.ReadInConfig()
-	fakeviper.Set("global.configs.caconfig", projectPath+"/admittance/test/caconfig.toml")
+	fakeviper.Set("config.path.caconfig",projectPath+"/admittance/test/caconfig.toml")
 
 	var cmerr error
-	testCaManager, cmerr = NewCAManager(fakeviper)
+	testCaManager,cmerr = NewCAManager(fakeviper)
 	if cmerr != nil {
 		fmt.Println(cmerr)
 		panic("cannot initliazied the camanager")
 	}
 }
 
+
 func TestCAManager_GetECACertByte(t *testing.T) {
-	assert.Equal(t, testCaManager.GetECACertByte(), getFileBytes(projectPath+"/admittance/test/cert/eca.ca"))
+	assert.Equal(t, testCaManager.GetECACertByte(), getFileBytes(projectPath + "/admittance/test/cert/eca.ca"))
 }
 
 func TestCAManager_GetECertByte(t *testing.T) {
-	assert.Equal(t, testCaManager.GetECertByte(), getFileBytes(projectPath+"/admittance/test/cert/ecert.cert"))
+	assert.Equal(t, testCaManager.GetECertByte(), getFileBytes(projectPath + "/admittance/test/cert/ecert.cert"))
 }
 
 func TestCAManager_GetECertPrivateKeyByte(t *testing.T) {
-	assert.Equal(t, testCaManager.GetECertPrivateKeyByte(), getFileBytes(projectPath+"/admittance/test/cert/ecert.priv"))
+	assert.Equal(t, testCaManager.GetECertPrivateKeyByte(), getFileBytes(projectPath + "/admittance/test/cert/ecert.priv"))
 }
 
 func TestCAManager_GetECertPrivKey(t *testing.T) {
@@ -55,11 +55,11 @@ func TestCAManager_GetECertPrivKey(t *testing.T) {
 }
 
 func TestCAManager_IsCheckSign(t *testing.T) {
-	assert.True(t, testCaManager.IsCheckSign())
+	assert.True(t,testCaManager.IsCheckSign())
 }
 
 func TestCAManager_GetRCAcertByte(t *testing.T) {
-	assert.Equal(t, testCaManager.GetRCAcertByte(), getFileBytes(projectPath+"/admittance/test/cert/rca.ca"))
+	assert.Equal(t, testCaManager.GetRCAcertByte(), getFileBytes(projectPath + "/admittance/test/cert/rca.ca"))
 }
 
 func TestCAManager_GetIsCheckTCert(t *testing.T) {
@@ -67,7 +67,7 @@ func TestCAManager_GetIsCheckTCert(t *testing.T) {
 }
 
 func TestCAManager_GetRCertByte(t *testing.T) {
-	assert.Equal(t, testCaManager.GetRCertByte(), getFileBytes(projectPath+"/admittance/test/cert/rcert.cert"))
+	assert.Equal(t, testCaManager.GetRCertByte(), getFileBytes(projectPath + "/admittance/test/cert/rcert.cert"))
 }
 
 //SignTCert will generate a new tcert form the camanager
@@ -129,7 +129,7 @@ func getFileBytes(path string) []byte {
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 
-		panic(fmt.Sprintf("read file failed, err: %v", err))
+		panic(fmt.Sprintf("read file failed, err: %v",err));
 	}
 	return bytes
 }

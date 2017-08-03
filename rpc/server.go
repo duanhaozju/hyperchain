@@ -38,12 +38,12 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 		namespaceMgr: nr,
 		requestMgr:   make(map[string]*requestManager),
 	}
-	server.admin = &Administrator{
-		NsMgr:         server.namespaceMgr,
-		StopServer:    stopHyperchain,
-		RestartServer: restartHp,
-	}
-	server.admin.Init()
+	//server.admin = &Administrator{
+	//	NsMgr:         server.namespaceMgr,
+	//	StopServer:    stopHyperchain,
+	//	RestartServer: restartHp,
+	//}
+	//server.admin.Init()
 	return server
 }
 
@@ -143,20 +143,20 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			}
 			return nil
 		}
-		if reqs[0].Service == adminService {
-			response := s.handleCMD(reqs[0])
-			if response.Error != nil {
-				codec.Write(codec.CreateErrorResponse(response.Id, response.Namespace, response.Error))
-			} else if response.Reply != nil {
-				if err := codec.Write(codec.CreateResponse(response.Id, response.Namespace, response.Reply)); err != nil {
-					log.Errorf("%v\n", err)
-					codec.Close()
-				}
-			} else {
-				codec.Write(codec.CreateResponse(response.Id, response.Namespace, nil))
-			}
-			return nil
-		}
+		//if reqs[0].Service == adminService {
+		//	response := s.handleCMD(reqs[0])
+		//	if response.Error != nil {
+		//		codec.Write(codec.CreateErrorResponse(response.Id, response.Namespace, response.Error))
+		//	} else if response.Reply != nil {
+		//		if err := codec.Write(codec.CreateResponse(response.Id, response.Namespace, response.Reply)); err != nil {
+		//			log.Errorf("%v\n", err)
+		//			codec.Close()
+		//		}
+		//	} else {
+		//		codec.Write(codec.CreateResponse(response.Id, response.Namespace, nil))
+		//	}
+		//	return nil
+		//}
 
 		if singleShot {
 			s.handleReqs(ctx, codec, reqs)

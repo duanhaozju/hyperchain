@@ -49,8 +49,7 @@ type CAManager struct {
 //NewCAManager get a new ca manager instance
 func NewCAManager(conf *common.Config) (*CAManager, error) {
 	logger := common.GetLogger(conf.GetString(common.NAMESPACE), "ca")
-	caconfPath := conf.GetString("global.configs.caconfig")
-	logger.Critical(caconfPath)
+	caconfPath := conf.GetString("config.path.caconfig")
 	if caconfPath == "" {
 		return nil, errors.New("cannot get the ca config file path.")
 	}
@@ -60,27 +59,27 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("cannot read ca conf,reason: %s",err.Error()))
 	}
-	eca, err := readCert(config.GetString("ecert.eca"))
+	eca, err := readCert(config.GetString(common.ENCRYPTION_ECERT_ECA))
 	if err != nil {
 		return nil, err
 	}
-	ecert, err := readCert(config.GetString("ecert.ecert"))
+	ecert, err := readCert(config.GetString(common.ENCRYPTION_ECERT_ECERT))
 	if err != nil {
 		return nil, err
 	}
-	rca, err := readCert(config.GetString("rcert.rca"))
+	rca, err := readCert(config.GetString(common.ENCRYPTION_RCERT_RCA))
 	if err != nil {
 		return nil, err
 	}
-	rcert, err := readCert(config.GetString("rcert.rcert"))
+	rcert, err := readCert(config.GetString(common.ENCRYPTION_RCERT_RCERT))
 	if err != nil {
 		rcert = &cert{}
 	}
-	ecertpriv, err := readKey(config.GetString("ecert.priv"))
+	ecertpriv, err := readKey(config.GetString(common.ENCRYPTION_ECERT_PRIV))
 	if err != nil {
 		return nil, err
 	}
-	rcertpriv, err := readKey(config.GetString("rcert.priv"))
+	rcertpriv, err := readKey(config.GetString(common.ENCRYPTION_RCERT_PRIV))
 	if err != nil {
 		return nil, err
 	}
@@ -92,9 +91,9 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 		rCaCert:rca,
 		rCert:rcert,
 		tCacert:ecert,
-		checkCertSign:config.GetBool("check.sign"),
-		checkERCert:config.GetBool("check.enable"),
-		checkTCert:config.GetBool("check.enableT"),
+		checkCertSign:config.GetBool(common.ENCRYPTION_CHECK_SIGN),
+		checkERCert:config.GetBool(common.ENCRYPTION_CHECK_ENABLE),
+		checkTCert:config.GetBool(common.ENCRYPTION_CHECK_ENABLE_T),
 		logger:logger,
 
 	},nil

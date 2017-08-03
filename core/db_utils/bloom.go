@@ -19,9 +19,9 @@ var (
 )
 
 const (
-	RebuildTime     = "global.miscellaneous.bloomfilter.rebuild_time"
-	RebuildInterval = "global.miscellaneous.bloomfilter.interval"
-	BloomBit        = "global.miscellaneous.bloomfilter.bloombit"
+	RebuildTime     = "duplicate.remove.bloomfilter.rebuild_time"
+	RebuildInterval = "duplicate.remove.bloomfilter.interval"
+	BloomBit        = "duplicate.remove.bloomfilter.bloombit"
 )
 
 // Bloomfilter implement the muilti-namespace transaciton bloom filter.

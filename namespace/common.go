@@ -23,14 +23,14 @@ var (
 //constructConfigFromDir read all info needed by
 func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, error) {
 	var conf *common.Config
-	nsConfigPath := path + "/global.yaml"
+	nsConfigPath := path + "/namespace.toml"
 	if _, err := os.Stat(nsConfigPath); os.IsNotExist(err) {
 		logger.Error("namespace config file doesn't exist!")
 		return nil, ErrNonExistConfig
 	}
 	conf = common.NewConfig(nsConfigPath)
 	// init peer configurations
-	peerConfigPath := conf.GetString("global.configs.peers13")
+	peerConfigPath := conf.GetString(common.PEER_CONFIG_PATH)
 	peerViper := viper.New()
 	peerViper.SetConfigFile(peerConfigPath)
 	err := peerViper.ReadInConfig()
@@ -38,13 +38,10 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, er
 		logger.Errorf("err %v", err)
 	}
 	// global part
-	conf.Set(common.C_GRPC_PORT,  nr.conf.GetInt("global.p2p.port"))
-	conf.Set(common.C_JVM_PORT,   nr.conf.GetInt("global.jvm_port"))
+	conf.Set(common.P2P_PORT,  nr.conf.GetInt(common.P2P_PORT))
+	conf.Set(common.JVM_PORT,   nr.conf.GetInt(common.JVM_PORT))
 	// ns part
 	conf.Set(common.C_NODE_ID, peerViper.GetInt("self.id"))
-	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
-	conf.Set(common.C_GLOBAL_CONFIG_PATH, nsConfigPath)
-
 	return conf, nil
 }
 

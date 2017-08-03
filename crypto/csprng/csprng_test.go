@@ -3,7 +3,7 @@ package csprng
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
-	"agile/utils/common"
+	"hyperchain/common"
 )
 
 func TestCSPRNG(t *testing.T) {

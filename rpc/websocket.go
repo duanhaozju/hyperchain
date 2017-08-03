@@ -29,7 +29,7 @@ type wsServerImpl struct {
 	stopHp			chan bool
 	restartHp		chan bool
 	nr			namespace.NamespaceManager
-
+	port                    int
 	wsConns			map[*websocket.Conn]*Notifier
 	wsConnsMux	       	sync.Mutex
 	wsHandler        	*Server
@@ -51,6 +51,7 @@ func GetWSServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan
 			nr: 			nr,
 			wsAllowedOrigins: 	[]string{"*"},
 			wsConns:		make(map[*websocket.Conn]*Notifier),
+			port:                   nr.GlobalConfig().GetInt("port.websocket"),
 		}
 	}
 	return wsS
@@ -59,8 +60,6 @@ func GetWSServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan
 // Start starts the websocket RPC endpoint.
 func (wssi *wsServerImpl) Start() error{
 	log.Notice("start websocket service ...")
-	config := wssi.nr.GlobalConfig()
-	wsPort := config.GetInt(common.C_WEBSOCKET_PORT)
 
 	var (
 		listener net.Listener
@@ -69,12 +68,12 @@ func (wssi *wsServerImpl) Start() error{
 
 	// start websocket listener
 	handler := NewServer(wssi.nr, wssi.stopHp, wssi.restartHp)
-	if listener, err = net.Listen("tcp", fmt.Sprintf(":%d", wsPort)); err != nil {
+	if listener, err = net.Listen("tcp", fmt.Sprintf(":%d", wssi.port)); err != nil {
 		log.Errorf("%v",err)
 		return err
 	}
 	go wssi.newWSServer(handler).Serve(listener)
-	log.Notice(fmt.Sprintf("WebSocket endpoint opened: ws://%s", fmt.Sprintf("%d", wsPort)))
+	log.Notice(fmt.Sprintf("WebSocket endpoint opened: ws://%s", fmt.Sprintf("%d", wssi.port)))
 
 
 	wssi.wsListener = listener
