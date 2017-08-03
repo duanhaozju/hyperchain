@@ -149,6 +149,7 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 	//ReView After success start up, config org should be set false ,and rec should be set to true
 	pmi.peercnf.Lock()
 	pmi.peercnf.vip.Set("self.org",false)
+	pmi.peercnf.vip.Set("self.new",false)
 	pmi.peercnf.vip.Set("self.rec",true)
 	pmi.peercnf.vip.WriteConfig()
 	pmi.peercnf.Unlock()

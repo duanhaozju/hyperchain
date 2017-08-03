@@ -91,6 +91,7 @@ func PersistPeerTriples(vip *viper.Viper,pts *PeerTriples) error{
 		s = append(s,tmpm)
 	}
 	vip.Set("nodes",s)
+	vip.Set("self.n",int64(len(s)))
 	return vip.WriteConfig()
 }
 
