@@ -12,9 +12,12 @@ import cn.hyperchain.jcee.executor.Context;
 import cn.hyperchain.jcee.executor.ContractHandler;
 import cn.hyperchain.jcee.executor.Handler;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
+import cn.hyperchain.jcee.ledger.BatchValue;
+import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.ledger.table.RelationDB;
 import cn.hyperchain.jcee.ledger.table.Table;
 import cn.hyperchain.jcee.ledger.table.TableName;
+import cn.hyperchain.jcee.util.Bytes;
 import lombok.*;
 import org.apache.log4j.Logger;
 
@@ -39,8 +42,28 @@ public abstract class ContractTemplate {
     protected Logger logger = Logger.getLogger(this.getClass().getSimpleName());
     protected final FilterManager filterManager = new FilterManager();
 
-    protected final ExecuteResult sysQuery() {
-        return result(true, info);
+    protected final ExecuteResult sysQuery(String type) {
+        switch (type) {
+            case "contractinfo":
+                return result(true, info.toString());
+            case "database_schema":
+                Iterator<Result> schemas = getDBSchema();
+                if (schemas == null) {
+                    return result(false, null);
+                } else {
+                    List<String> ret = new ArrayList<>();
+                    while (schemas.hasNext()) {
+                        Result rs = schemas.next();
+                        if (!rs.isEmpty()) {
+                            String schema = rs.toString();
+                            ret.add(schema);
+                        }
+                    }
+                    return result(true, ret);
+                }
+            default:
+                return result(false, "query type " + type + "not found");
+        }
     }
 
     /**
@@ -138,5 +161,12 @@ public abstract class ContractTemplate {
     public Table getTable(String name) {
         RelationDB db = ledger.getDataBase();
         return db.getTable(new TableName(getNamespace(), getCid(), name));
+    }
+
+    public Iterator<Result> getDBSchema() {
+        String start = "kv_table_" + getNamespace() + "_" + getCid() + "_";
+        String end = "kv_table_" + getNamespace() + "_" + getCid() + "`";
+        Iterator<Result> schemas = ledger.rangeQuery(Bytes.toByteArray(start), Bytes.toByteArray(end));
+        return schemas;
     }
 }

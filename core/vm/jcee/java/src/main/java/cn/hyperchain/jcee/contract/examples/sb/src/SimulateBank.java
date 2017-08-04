@@ -14,7 +14,6 @@ import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.ledger.table.*;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.jcee.util.DataType;
-import com.google.gson.Gson;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -36,6 +35,7 @@ public class SimulateBank extends ContractTemplate {
      */
     @Override
     public ExecuteResult invoke(String funcName, List<String> args) {
+
         switch (funcName) {
             case "issue":
                 return issue(args);
@@ -57,6 +57,8 @@ public class SimulateBank extends ContractTemplate {
                 return testSysQuery(args);
             case "newAccountTable":
                 return newAccountTable(args);
+            case "newPersonTable":
+                return newPersonTable(args);
             case "getTableDesc":
                 return getTableDesc(args);
             case "issueByTable":
@@ -247,7 +249,8 @@ public class SimulateBank extends ContractTemplate {
     }
 
     public ExecuteResult testSysQuery(List<String> args) {
-        return sysQuery();
+        ExecuteResult schemas = sysQuery("database_schema");
+        return schemas;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -267,6 +270,20 @@ public class SimulateBank extends ContractTemplate {
         desc.AddColumn(new ColumnDesc("id", DataType.LONG));
         desc.AddColumn(new ColumnDesc("age", DataType.INT));
         desc.AddColumn(new ColumnDesc("balance", DataType.DOUBLE));
+        db.CreateTable(desc);
+        return result(true);
+    }
+
+    public ExecuteResult newPersonTable(List<String> args) {
+        logger.info(args);
+        RelationDB db = ledger.getDataBase(); //do not new database instance every time
+        TableName tn = new TableName(getNamespace(), getCid(), "Person");
+        logger.info(tn.toString());
+        TableDesc desc = new TableDesc(tn);
+        desc.AddColumn(new ColumnDesc("name", DataType.STRING));
+        desc.AddColumn(new ColumnDesc("id", DataType.LONG));
+        desc.AddColumn(new ColumnDesc("age", DataType.INT));
+        desc.AddColumn(new ColumnDesc("tall", DataType.DOUBLE));
         db.CreateTable(desc);
         return result(true);
     }
