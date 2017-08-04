@@ -78,7 +78,7 @@ public class SimulateBank extends ContractTemplate {
 //    }
 
     //String account, double num
-    private ExecuteResult issue(List<String> args) {
+    public ExecuteResult issue(List<String> args) {
         if(args.size() != 2) {
             logger.error("args num is invalid");
             return result(false, "args num is invalid");

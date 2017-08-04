@@ -89,6 +89,8 @@ public class ContractTemplate {
             logger.error(e.getMessage());
         } catch (InvocationTargetException e) {
             logger.error(e.getMessage());
+        } catch (Exception e) {
+            logger.error(e.getMessage());
         }
         return result(false, "Contract invoke error");
     }
