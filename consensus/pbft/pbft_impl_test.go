@@ -19,7 +19,7 @@ func NewConfig(path ,name string)(*common.Config){
 	conf.Set(common.NAMESPACE, name)
 	common.InitHyperLogger(conf)
 	// init peer configurations
-	peerConfigPath := conf.GetString("global.configs.peers")
+	peerConfigPath := conf.GetString(common.PEER_CONFIG_PATH)
 	peerViper := viper.New()
 	peerViper.SetConfigFile(filepath.Join("../../build/node1/",peerConfigPath))
 	err := peerViper.ReadInConfig()
@@ -27,13 +27,13 @@ func NewConfig(path ,name string)(*common.Config){
 		panic(err)
 	}
 	conf.Set(common.C_NODE_ID, peerViper.GetInt("self.node_id"))
-	conf.Set(common.C_HTTP_PORT, peerViper.GetInt("self.jsonrpc_port"))
-	conf.Set(common.C_REST_PORT, peerViper.GetInt("self.restful_port"))
-	conf.Set(common.C_GRPC_PORT, peerViper.GetInt("self.grpc_port"))
-	conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
-	conf.Set(common.C_GLOBAL_CONFIG_PATH, path)
-	conf.Set(common.C_JVM_PORT, peerViper.GetInt("self.jvm_port"))
-	conf.Set(common.C_LEDGER_PORT, peerViper.GetInt("self.ledger_port"))
+	//conf.Set(common.C_HTTP_PORT, peerViper.GetInt("self.jsonrpc_port"))
+	//conf.Set(common.C_REST_PORT, peerViper.GetInt("self.restful_port"))
+	conf.Set(common.P2P_PORT, peerViper.GetInt("self.grpc_port"))
+	//conf.Set(common.C_PEER_CONFIG_PATH, peerConfigPath)
+	//conf.Set(common.C_GLOBAL_CONFIG_PATH, path)
+	conf.Set(common.JVM_PORT, peerViper.GetInt("self.jvm_port"))
+	conf.Set(common.LEDGER_PORT, peerViper.GetInt("self.ledger_port"))
 
 	conf.Set(common.NAMESPACE, name)
 

@@ -6,6 +6,7 @@ package cn.hyperchain.jcee.mock;
 
 import cn.hyperchain.jcee.contract.Event;
 import cn.hyperchain.jcee.ledger.*;
+import cn.hyperchain.jcee.ledger.table.KvBasedRelationDB;
 import cn.hyperchain.jcee.ledger.table.RelationDB;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.protos.ContractProto;
@@ -19,6 +20,7 @@ import java.util.*;
 public class MockLedger extends AbstractLedger {
     private Cache cache;
     private TreeMap<ByteKey, Result> data;
+    private RelationDB db;
 
     public MockLedger(){
         cache = new HyperCache();
@@ -333,6 +335,9 @@ public class MockLedger extends AbstractLedger {
 
     @Override
     public RelationDB getDataBase() {
-        return null;
+        if (db == null) {
+            db = new KvBasedRelationDB(this);
+        }
+        return db;
     }
 }

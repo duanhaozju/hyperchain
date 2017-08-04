@@ -58,11 +58,10 @@ func newHyperchain(argV *argT, conf *common.Config) *hyperchain {
 }
 
 func (h *hyperchain) start() {
-	logger.Critical("Hyperchain server start...")
+	logger.Notice("Hyperchain server starting...")
 	go h.nsMgr.Start()
 	go h.hs.Start()
 	go CheckLicense(h.stopFlag)
-	logger.Critical("Hyperchain server started")
 }
 
 func (h *hyperchain) stop() {
@@ -86,7 +85,7 @@ type argT struct {
 	Namespace     string   `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
 	PProfEnable   bool     `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`
 	PPort         string   `cli:"pport" usage:"use to specify pprof http port"`
-	ConfigPath    string   `cli:"c,conf" usage:"config file path" dft:"./global.yaml"`
+	ConfigPath    string   `cli:"c,conf" usage:"config file path" dft:"./global.toml"`
 	IPCEndpoint   string   `cli:"ipc" usage:"ipc interactive shell attach endpoint" dft:"./hpc.ipc"`
 	Shell         bool     `cli:"s,shell" usage:"start interactive shell" dft:"false"`
 }

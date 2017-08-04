@@ -51,7 +51,7 @@ f_check_local_env(){
     fi
     # confer
     if ! type confer > /dev/null; then
-        echo -e "Please install `confer` to read global.yaml config"
+        echo -e "Please install `confer` to read global.toml config"
         exit 1
     fi
 }
@@ -108,33 +108,29 @@ do
     fi
 
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
-    cp -rf  ${CONF_PATH}/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/global/config/local_peerconfig.json
-    cp -rf  ${CONF_PATH}/peerconfigs/local_peerconfig_${j}.json ${DUMP_PATH}/node${j}/namespaces/ns1/config/local_peerconfig.json
-    #peerconfig.yaml
-    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.yaml
-    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.yaml ${DUMP_PATH}/node${j}/namespaces/ns1/config/peerconfig.yaml
+    #peerconfig.toml
+    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.toml
+    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/ns1/config/peerconfig.toml
     #namespace's global
 
-    cp -rf  ${CONF_PATH}/global.yaml ${DUMP_PATH}/node${j}/global.yaml
+    cp -rf  ${CONF_PATH}/global.toml ${DUMP_PATH}/node${j}/global.toml
     if [ ${_SYSTYPE} = "MAC" ]; then
-        sed -i "" "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "" "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "" "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "" "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "" "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "" "s/10001/1000${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+        sed -i "" "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/10001/1000${j}/g" ${DUMP_PATH}/node${j}/global.toml
     else
-        sed -i "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.yaml
-        sed -i "s/10001/1000${j}/g" ${DUMP_PATH}/node${j}/global.yaml
+        sed -i "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/10001/1000${j}/g" ${DUMP_PATH}/node${j}/global.toml
     fi
 
-    cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.yaml ${DUMP_PATH}/node${j}/addr.yaml
-    cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/cert/
-    cp -rf  ${CONF_PATH}/peerconfigs/node${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/cert/
+    cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.toml ${DUMP_PATH}/node${j}/addr.toml
     cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
     #tls configuration
     cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/certs/
@@ -248,7 +244,7 @@ DUMP_PATH="${PROJECT_PATH}/build"
 CONF_PATH="${PROJECT_PATH}/configuration"
 
 # global config path
-GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/global.yaml"
+GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/namespace.toml"
 
 # hypercli root path
 CLI_PATH="${PROJECT_PATH}/hypercli"
@@ -271,6 +267,9 @@ REBUILD=true
 
 # rebuild hypercli or not? default = false
 HYPERCLI=false
+
+# distribute jvm or not? default = false
+HYPERJVM=false
 
 # run process or not? default = true
 RUN=true
@@ -295,6 +294,8 @@ do
         REBUILD=false; shift;;
     -c|--hypercli)
         HYPERCLI=true; shift;;
+    -j|--jvm)
+        HYPERJVM=true; shift;;
     -m|--mode)
         MODE=true; shift;;
     -n|--run)
@@ -323,15 +324,17 @@ if [[ $? != 0 ]]; then
 echo "compile failed, script stopped."
 exit 1
 fi
-#if $HYPERCLI ; then
-#    f_rebuild_hypercli
-#fi
+if $HYPERCLI ; then
+    f_rebuild_hypercli
+fi
 
 # distribute files
 f_distribute $MAXPEERNUM
 
 # run hyperchain node
+if ${HYPERJVM}; then
 start_hyperjvm
+fi
 
 if ${RUN}; then
     f_run_process

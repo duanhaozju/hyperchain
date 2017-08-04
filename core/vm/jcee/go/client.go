@@ -51,7 +51,7 @@ type executeRs struct {
 }
 
 func NewContractExecutor(conf *common.Config, namespace string) ContractExecutor {
-	address := fmt.Sprintf("localhost:%d", conf.Get(common.C_JVM_PORT))
+	address := fmt.Sprintf("localhost:%d", conf.Get(common.JVM_PORT))
 	Jvm := &contractExecutorImpl{
 		address:    address,
 		logger:     common.GetLogger(namespace, "jvm"),

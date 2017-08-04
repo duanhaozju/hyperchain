@@ -1,22 +1,16 @@
 package executor
 
 import (
-	"github.com/buger/jsonparser"
-	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	"math/big"
+	"time"
 	"hyperchain/core/hyperstate"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
-	"io/ioutil"
-	"math/big"
 	"strconv"
-	"time"
-)
-
-const (
-	genesisPath = "global.configs.genesis"
 )
 
 // CreateInitBlock - create genesis for a specific namespace.
@@ -33,23 +27,26 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 		Number     uint64
 		Alloc      map[string]int64
 	}
-
-	bytes, err := ioutil.ReadFile(getGenesisPath(config))
-	if err != nil {
-		return err
-	}
 	// create state instance with empty root hash
 	stateDb, err := NewStateDb(config, executor.db, executor.namespace)
 	if err != nil {
 		return err
 	}
 	stateDb.MarkProcessStart(0)
-	jsonparser.ObjectEach(bytes, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
+	genMap := config.GetStringMap("genesis.alloc")
+	if genMap == nil {
+		panic("can not read genesis config")
+	}
+	for key, value := range genMap {
 		object := stateDb.CreateAccount(common.HexToAddress(string(key)))
-		account, _ := strconv.ParseInt(string(value), 10, 64)
+		s, ok := value.(string)
+		if !ok {
+			panic("invalid genesis configuration")
+		}
+		account, _ := strconv.ParseInt(s, 10, 64)
 		object.AddBalance(big.NewInt(account))
-		return nil
-	}, "genesis", "alloc")
+	}
+
 	root, err := stateDb.Commit()
 	if err != nil {
 		return err
@@ -85,9 +82,4 @@ func NewStateDb(conf *common.Config, db db.Database, namespace string) (vm.Datab
 		return nil, err
 	}
 	return stateDb, nil
-}
-
-// getGenesisPath - load genesis file path from config.
-func getGenesisPath(conf *common.Config) string {
-	return conf.GetString(genesisPath)
 }

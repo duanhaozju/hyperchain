@@ -128,21 +128,24 @@ func (pbft *pbftImpl) removeDuplicate(txBatch *TransactionBatch) (newBatch *Tran
 func (pbft *pbftImpl) rebuildDuplicator() {
 	temp := make(map[uint64]*transactionStore)
 	dv := pbft.batchVdr.vid - pbft.h
-	pbft.dupLock.Lock()
+	pbft.dupLock.RLock()
 	for i, txStore := range pbft.duplicator {
 		temp[i-dv] = txStore
 	}
+	pbft.dupLock.RUnlock()
+	pbft.dupLock.Lock()
 	pbft.duplicator = temp
-	pbft.clearDuplicator()
 	pbft.dupLock.Unlock()
+	pbft.clearDuplicator()
 }
 
 // replica clear the duplicator after view change
 func (pbft *pbftImpl) clearDuplicator() {
-	h := pbft.h
+	pbft.dupLock.Lock()
 	for i := range pbft.duplicator {
-		if i > h {
+		if i > pbft.exec.lastExec  {
 			delete(pbft.duplicator, i)
 		}
 	}
+	pbft.dupLock.Unlock()
 }

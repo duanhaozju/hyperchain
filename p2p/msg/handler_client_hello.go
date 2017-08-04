@@ -46,7 +46,7 @@ func (h *ClientHelloMsgHandler) Receive() chan<- interface{} {
 }
 
 func (h *ClientHelloMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
-	h.logger.Debugf("got a client hello message %v", msg)
+	h.logger.Debugf("got a client hello message msgtype %s", msg.MessageType)
 	// SERVER HELLO response
 	data := []byte("hyperchain")
 	esign, err := h.shts.CG.ESign(data)
@@ -130,7 +130,7 @@ Shared key %s
 		//if verify passed, should notify peer manager to reverse connect to client.
 		// if VP/NVP both should reverse to connect.
 		h.logger.Info("post ev VPCONNECT \n")
-		go h.hub.Post(peerevent.EV_VPConnect{
+		go h.hub.Post(peerevent.VPConnect{
 			Hostname: id.Hostname,
 			Namespace:id.Namespace,
 			ID:int(id.Id),
@@ -139,7 +139,7 @@ Shared key %s
 	} else if id.IsReconnect && !id.IsVP{
 		//if is nvp h.hub.Post(peerevent.EV_NVPConnect{})
 		h.logger.Info("post ev NVPCONNECT")
-		go h.hub.Post(peerevent.EV_NVPConnect{
+		go h.hub.Post(peerevent.NVPConnect{
 			Hostname: id.Hostname,
 			Namespace:id.Namespace,
 			Hash:id.Hash,

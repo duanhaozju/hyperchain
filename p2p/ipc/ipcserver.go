@@ -61,7 +61,7 @@ func (server *IPCServer)listener()(net.Listener, error){
 	}
 
 	os.Remove(server.endpoint)
-	logger.Noticef("start unix ipc server, ",server.endpoint)
+	logger.Noticef("start unix ipc server, pipe: %s",server.endpoint)
 	l,err := net.Listen("unix",server.endpoint)
 	if err != nil{
 		return nil,err

@@ -35,18 +35,20 @@ import (
 
 type threadUnsafeSet map[interface{}]struct{}
 
-type orderedPair struct {
-	first  interface{}
-	second interface{}
+// An OrderedPair represents a 2-tuple of values.
+type OrderedPair struct {
+	First  interface{}
+	Second interface{}
 }
 
 func newThreadUnsafeSet() threadUnsafeSet {
 	return make(threadUnsafeSet)
 }
 
-func (pair *orderedPair) Equal(other orderedPair) bool {
-	if pair.first == other.first &&
-		pair.second == other.second {
+// Equal says whether two 2-tuples contain the same values in the same order.
+func (pair *OrderedPair) Equal(other OrderedPair) bool {
+	if pair.First == other.First &&
+		pair.Second == other.Second {
 		return true
 	}
 
@@ -78,8 +80,16 @@ func (set *threadUnsafeSet) IsSubset(other Set) bool {
 	return true
 }
 
+func (set *threadUnsafeSet) IsProperSubset(other Set) bool {
+	return set.IsSubset(other) && !set.Equal(other)
+}
+
 func (set *threadUnsafeSet) IsSuperset(other Set) bool {
 	return other.IsSubset(set)
+}
+
+func (set *threadUnsafeSet) IsProperSuperset(other Set) bool {
+	return set.IsSuperset(other) && !set.Equal(other)
 }
 
 func (set *threadUnsafeSet) Union(other Set) Set {
@@ -210,8 +220,9 @@ func (set *threadUnsafeSet) String() string {
 	return fmt.Sprintf("Set{%s}", strings.Join(items, ", "))
 }
 
-func (pair orderedPair) String() string {
-	return fmt.Sprintf("(%v, %v)", pair.first, pair.second)
+// String outputs a 2-tuple in the form "(A, B)".
+func (pair OrderedPair) String() string {
+	return fmt.Sprintf("(%v, %v)", pair.First, pair.Second)
 }
 
 func (set *threadUnsafeSet) PowerSet() Set {
@@ -248,7 +259,7 @@ func (set *threadUnsafeSet) CartesianProduct(other Set) Set {
 
 	for i := range *set {
 		for j := range *o {
-			elem := orderedPair{first: i, second: j}
+			elem := OrderedPair{First: i, Second: j}
 			cartProduct.Add(elem)
 		}
 	}

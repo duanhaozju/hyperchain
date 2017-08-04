@@ -10,14 +10,20 @@ import (
 	"time"
 	"github.com/pkg/errors"
 	"github.com/terasum/pool"
+	"github.com/looplab/fsm"
 )
 
 type Client struct {
 	addr string
+	hostname string
 	sec *Sec
 	connPool pool.Pool
 	MsgChan chan *pb.Message
 	hts hts.HTS
+	stateMachine  *fsm.FSM
+	//configurations
+	cconf *clientConf
+
 }
 
 
@@ -30,16 +36,16 @@ func connCloser(v interface{}) error{
 	return v.(*grpc.ClientConn).Close()
 }
 
-func NewClient(addr string,sec *Sec) (*Client,error){
+func NewClient(hostname, addr string,sec *Sec,cconf *clientConf) (*Client,error){
 	//connCreator := func(endpoint string,options []grpc.DialOption) (interface{}, error) { return grpc.Dial(endpoint,options)}
 	//connCloser  := func(v interface{}) error { return v.(*grpc.ClientConn).Close() }
 	poolConfig := &pool.PoolConfig{
-		InitialCap: 2,
-		MaxCap:     10,
+		InitialCap: cconf.connInitCap,
+		MaxCap:     cconf.connUpperlimit,
 		Factory:    connCreator,
 		Close:      connCloser,
 		//链接最大空闲时间，超过该时间的链接 将会关闭，可避免空闲时链接EOF，自动失效的问题
-		IdleTimeout: 15 * time.Second,
+		IdleTimeout: cconf.connIdleTime,
 		EndPoint:addr,
 		Options:sec.GetGrpcClientOpts(),
 	}
@@ -47,38 +53,25 @@ func NewClient(addr string,sec *Sec) (*Client,error){
 	if err != nil {
 		return nil,err
 	}
-	return &Client{
+	c := &Client{
 		MsgChan: make(chan *pb.Message,100000),
 		addr: addr,
+		hostname: hostname,
 		connPool:p,
 		sec: sec,
-	},nil
+		//todo those configuration sould be read from configuration
+		cconf:cconf,
+	}
+	// start fsm
+	c.initState()
+	c.stateMachine.Event(c_EventConnect)
+	return c,nil
 }
-
-//func(c *Client)Connect(client ChatClient) error{
-//	if client != nil{
-//		c.client = client
-//		return nil
-//	}
-//
-//	//get a connection from pool
-//	v, err := c.connPool.Get()
-//	if err != nil {
-//		logger.Errorf("cannot get a connection from connection pool: %s \n",c.addr)
-//		fmt.Printf("err: %v",err)
-//		return err
-//	}
-//	//do something
-//	conn:=v.(*grpc.ClientConn)
-//	c.client = NewChatClient(conn)
-//	return nil
-//}
 
 func(c *Client)Close(){
 	c.connPool.Release()
 }
-
-
+// Chat chat remote peer as bidi stream
 func(c *Client)Chat() (error){
 	connv,err :=c.connPool.Get()
 	if err !=  nil{
@@ -106,6 +99,10 @@ func(c *Client)Chat() (error){
 
 // Greeting doube arrow greeting message transfer
 func(c *Client)Greeting(in *pb.Message) (*pb.Message, error){
+	if c.stateMachine.Current() != c_StatWorking{
+		logger.Warningf("This client's stat. is not working, ignore messge send.(stat %s, addr %s,hostname: %s)",c.stateMachine.Current(),c.addr,c.hostname)
+		return nil,errors.New(fmt.Sprintf("This client's stat. is not working, ignore messge send.(stat %s, addr %s,hostname: %s)",c.stateMachine.Current(),c.addr,c.hostname))
+	}
 	connv,err :=c.connPool.Get()
 	if err !=  nil{
 		logger.Warningf(" cannot get the conn from connection pool (%v) ",c.addr)
@@ -118,8 +115,12 @@ func(c *Client)Greeting(in *pb.Message) (*pb.Message, error){
 	return client.Greeting(context.Background(),in)
 }
 
-// Whisper Transfer the the node health information
+// Whisper Transfer the the high level information
 func(c *Client)Whisper(in *pb.Message) (*pb.Message, error){
+	if c.stateMachine.Current() != c_StatWorking{
+		logger.Warningf("This client's stat. is not working, ignore messge send.(stat %s, addr %s,hostname: %s)",c.stateMachine.Current(),c.addr,c.hostname)
+		return nil,errors.New(fmt.Sprintf("This client's stat. is not working, ignore messge send.(stat %s, addr %s,hostname: %s)",c.stateMachine.Current(),c.addr,c.hostname))
+	}
 	// get client from conn pool
 	connv,err :=c.connPool.Get()
 	if err !=  nil{
@@ -132,3 +133,20 @@ func(c *Client)Whisper(in *pb.Message) (*pb.Message, error){
 	defer c.connPool.Put(conn)
 	return client.Whisper(context.Background(),in)
 }
+
+// Discuss Transfer the the node health information
+func(c *Client)Discuss(in *pb.Package) (*pb.Package, error){
+	// get client from conn pool
+	connv,err :=c.connPool.Get()
+	if err !=  nil{
+		logger.Warningf(" cannot get the conn from connection pool (%v) ",c.addr)
+		return nil,errors.New(fmt.Sprintf("cannot get the conn from connection pool (%v) ",c.addr))
+	}
+	conn := connv.(*grpc.ClientConn)
+	client := NewChatClient(conn)
+	//put back the conn into the pool
+	defer c.connPool.Put(conn)
+	return client.Discuss(context.Background(),in)
+}
+
+

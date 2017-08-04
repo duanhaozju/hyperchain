@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 	"hyperchain/p2p/utils"
 	"hyperchain/manager/event"
+	"hyperchain/common"
 )
 
 var _ = Describe("PeerManagerImpl", func() {
@@ -17,9 +18,9 @@ var _ = Describe("PeerManagerImpl", func() {
 		var err error
 		BeforeEach(func() {
 			vip := viper.New()
-			vip.Set("global.p2p.hosts", utils.GetProjectPath()+"/p2p/test/hosts.yaml")
-			vip.Set("global.p2p.retrytime", "3s")
-			vip.Set("global.p2p.port",50019)
+			vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/p2p/test/hosts.yaml")
+			vip.Set(common.P2P_RETRY_TIME, "3s")
+			vip.Set(common.P2P_PORT,50019)
 			hypernet,err = network.NewHyperNet(vip)
 			//Expect(err).To(BeNil())
 			//hypernet.InitServer()

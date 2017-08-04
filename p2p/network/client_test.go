@@ -15,7 +15,7 @@ func TestClient_Chat(t *testing.T) {
 		mock_ChatClient := mock_network.NewMockChatClient(controller)
 		chat_chatClient := mock_network.NewMockChat_ChatClient(controller)
 		//this addr will not actually connect
-		client,err := network.NewClient("localhost:50015",nil)
+		client,err := network.NewClient("node1","localhost:50015",nil)
 		So(err,ShouldBeNil)
 
 		Convey("Test chat", func() {

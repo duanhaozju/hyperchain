@@ -45,7 +45,7 @@ func (session  *SessionMsgHandler) Execute(msg *pb.Message) (*pb.Message,error){
 	session.logger.Debugf("DECRYPTED FOR %s",string(msg.From.UUID))
 	decPayload:= session.shts.Decrypt(string(msg.From.UUID),msg.Payload)
 	if decPayload == nil{
-		session.logger.Errorf("SESSION PAYLOAD DECRYPT FAILED. msg from %s, namespace %s",msg.From.Hostname)
+		session.logger.Warningf("SESSION PAYLOAD DECRYPT FAILED. msg from %s, namespace %s",msg.From.Hostname,msg.From.Field)
 		return nil,errors.New("cannot decrypt the Msssge response")
 	}
 	go session.evmux.Post(event.SessionEvent{

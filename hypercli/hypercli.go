@@ -12,6 +12,7 @@ import (
 
 	"os"
 	"time"
+	"hyperchain/hypercli/auth"
 )
 
 var app *cli.App
@@ -38,10 +39,12 @@ func initApp() {
 	}
 
 	app.Commands = []cli.Command{
+		auth.NewLoginCMD(),
+		auth.NewLogoutCMD(),
 		{
-			Name:        "server",
-			Usage:       "server specific commands",
-			Subcommands: server.NewServerCMD(),
+			Name:        "auth",
+			Usage:       "auth specific commands",
+			Subcommands: auth.NewAuthCMD(),
 		},
 		{
 			Name:        "namespace",

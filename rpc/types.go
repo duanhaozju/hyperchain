@@ -15,7 +15,6 @@ type Server struct {
 	codecsMu     sync.Mutex
 	codecs       *set.Set
 	namespaceMgr namespace.NamespaceManager
-	admin        *Administrator
 	reqMgrMu     sync.Mutex
 	requestMgr   map[string]*requestManager
 }
