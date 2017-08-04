@@ -249,7 +249,7 @@ public class SimulateBank extends ContractTemplate {
     }
 
     public ExecuteResult testSysQuery(List<String> args) {
-        ExecuteResult schemas = sysQuery("database_schema");
+        ExecuteResult schemas = sysQuery(QueryType.DATABASE_SCHEMAS);
         return schemas;
     }
 

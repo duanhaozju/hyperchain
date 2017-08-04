@@ -44,11 +44,11 @@ public class ContractTemplate {
     protected Logger logger = Logger.getLogger(this.getClass().getSimpleName());
     protected final FilterManager filterManager = new FilterManager();
 
-    protected final ExecuteResult sysQuery(String type) {
+    protected final ExecuteResult sysQuery(QueryType type) {
         switch (type) {
-            case "contractinfo":
+            case CONTRACT_INFO:
                 return result(true, info.toString());
-            case "database_schema":
+            case DATABASE_SCHEMAS:
                 Iterator<Result> schemas = getDBSchema();
                 if (schemas == null) {
                     return result(false, null);
@@ -77,12 +77,7 @@ public class ContractTemplate {
      */
     public ExecuteResult invoke(String funcName, List<String> args) {
         Class clazz = this.getClass();
-        logger.error(funcName);
         try {
-            Method[] methods = clazz.getDeclaredMethods();
-            for (Method m : methods) {
-                logger.error(m.getName());
-            }
             Method method = clazz.getDeclaredMethod(funcName, List.class);
             if(!method.isAccessible()) {
                 method.setAccessible(true);
@@ -192,5 +187,10 @@ public class ContractTemplate {
         String end = "kv_table_" + getNamespace() + "_" + getCid() + "`";
         Iterator<Result> schemas = ledger.rangeQuery(Bytes.toByteArray(start), Bytes.toByteArray(end));
         return schemas;
+    }
+
+    public enum QueryType {
+        CONTRACT_INFO,
+        DATABASE_SCHEMAS
     }
 }
