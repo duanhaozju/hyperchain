@@ -21,12 +21,14 @@ import cn.hyperchain.jcee.util.Bytes;
 import lombok.*;
 import org.apache.log4j.Logger;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.*;
 
 //ContractBase which is used as a skeleton of smart contract
 @AllArgsConstructor
 @NoArgsConstructor
-public abstract class ContractTemplate {
+public class ContractTemplate {
     @Setter
     @Getter
     private ContractInfo info;
@@ -68,11 +70,33 @@ public abstract class ContractTemplate {
 
     /**
      * invoke smart contract method
+     *
      * @param funcName function name user defined in contract
-     * @param args arguments of funcName
+     * @param args     arguments of funcName
      * @return {@link ExecuteResult}
      */
-    public abstract ExecuteResult invoke(String funcName, List<String> args);
+    public ExecuteResult invoke(String funcName, List<String> args) {
+        Class clazz = this.getClass();
+        logger.error(funcName);
+        try {
+            Method[] methods = clazz.getDeclaredMethods();
+            for (Method m : methods) {
+                logger.error(m.getName());
+            }
+            Method method = clazz.getDeclaredMethod(funcName, List.class);
+            if(!method.isAccessible()) {
+                method.setAccessible(true);
+            }
+            return (ExecuteResult) method.invoke(this, args);
+        } catch (NoSuchMethodException e) {
+            logger.error("no such method");
+        } catch (IllegalAccessException e) {
+            logger.error(e.getMessage());
+        } catch (InvocationTargetException e) {
+            logger.error(e.getMessage());
+        }
+        return result(false, "Contract invoke error");
+    }
 
     /**
      * openInvoke provide a interface to be invoked by other contracts
@@ -80,7 +104,7 @@ public abstract class ContractTemplate {
      * @param args arguments
      * @return {@link ExecuteResult}
      */
-    protected  ExecuteResult openInvoke(String funcName, List<String> args){
+    protected ExecuteResult openInvoke(String funcName, List<String> args){
         //this is a empty method by default
         return result(false, "no method to invoke");
     }

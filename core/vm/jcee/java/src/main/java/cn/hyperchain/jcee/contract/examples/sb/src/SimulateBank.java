@@ -33,49 +33,49 @@ public class SimulateBank extends ContractTemplate {
      * @param funcName function name user defined in contract
      * @param args     arguments of funcName
      */
-    @Override
-    public ExecuteResult invoke(String funcName, List<String> args) {
-
-        switch (funcName) {
-            case "issue":
-                return issue(args);
-            case "transfer":
-                return transfer(args);
-            case "transferByBatch":
-                return transferByBatch(args);
-            case "getAccountBalance":
-                return getAccountBalance(args);
-            case "testRangeQuery":
-                return testRangeQuery(args);
-            case "testDelete":
-                return testDelete(args);
-            case "testInvokeContract":
-                return testInvokeContract(args);
-            case "testPostEvent":
-                return testPostEvent(args);
-            case "testSysQuery":
-                return testSysQuery(args);
-            case "newAccountTable":
-                return newAccountTable(args);
-            case "newPersonTable":
-                return newPersonTable(args);
-            case "getTableDesc":
-                return getTableDesc(args);
-            case "issueByTable":
-                return issueByTable(args);
-            case "transferByTable":
-                return transferByTable(args);
-            case "getAccount":
-                return getAccount(args);
-            case "getAccountByRange":
-                return getAccountByRange(args);
-            default:
-                String err = "method " + funcName  + " not found!";
-                logger.error(err);
-                return new ExecuteResult(false, err);
-
-        }
-    }
+//    @Override
+//    public ExecuteResult invoke(String funcName, List<String> args) {
+//
+//        switch (funcName) {
+//            case "issue":
+//                return issue(args);
+//            case "transfer":
+//                return transfer(args);
+//            case "transferByBatch":
+//                return transferByBatch(args);
+//            case "getAccountBalance":
+//                return getAccountBalance(args);
+//            case "testRangeQuery":
+//                return testRangeQuery(args);
+//            case "testDelete":
+//                return testDelete(args);
+//            case "testInvokeContract":
+//                return testInvokeContract(args);
+//            case "testPostEvent":
+//                return testPostEvent(args);
+//            case "testSysQuery":
+//                return testSysQuery(args);
+//            case "newAccountTable":
+//                return newAccountTable(args);
+//            case "newPersonTable":
+//                return newPersonTable(args);
+//            case "getTableDesc":
+//                return getTableDesc(args);
+//            case "issueByTable":
+//                return issueByTable(args);
+//            case "transferByTable":
+//                return transferByTable(args);
+//            case "getAccount":
+//                return getAccount(args);
+//            case "getAccountByRange":
+//                return getAccountByRange(args);
+//            default:
+//                String err = "method " + funcName  + " not found!";
+//                logger.error(err);
+//                return new ExecuteResult(false, err);
+//
+//        }
+//    }
 
     //String account, double num
     private ExecuteResult issue(List<String> args) {
@@ -304,11 +304,7 @@ public class SimulateBank extends ContractTemplate {
             double num = Double.parseDouble(args.get(2));
 
             double balanceA = Double.parseDouble(accountA.get("balance"));
-            System.out.println(balanceA);
-            System.out.println(balanceA - num);
             double balanceB = Double.parseDouble(accountB.get("balance"));
-            System.out.println(balanceB);
-            System.out.println(balanceB + num);
             if (balanceA > num) {
                 accountA.put("balance", String.valueOf(balanceA - num).getBytes());
                 accountB.put("balance", String.valueOf(balanceB + num).getBytes());
