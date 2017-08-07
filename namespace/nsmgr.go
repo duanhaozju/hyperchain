@@ -12,6 +12,7 @@ import (
 	"sync"
 	"os"
 	"hyperchain/core/db_utils"
+	"strings"
 )
 
 var logger *logging.Logger
@@ -172,6 +173,16 @@ func (nr *nsManagerImpl) List() (names []string) {
 		names = append(names, name)
 	}
 	return names
+}
+
+func (nr *nsManagerImpl) checkNamespaceName(name string) bool {
+	if name == "global" {
+		return true
+	}
+	if len(name) == 13 && strings.HasPrefix(name, "ns_") {
+		return true
+	}
+	return false
 }
 
 //Register register a new namespace, by the new namespace config dir.
