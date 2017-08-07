@@ -49,20 +49,7 @@ public class ContractTemplate {
             case CONTRACT_INFO:
                 return result(true, info.toString());
             case DATABASE_SCHEMAS:
-                Iterator<Result> schemas = getDBSchema();
-                if (schemas == null) {
-                    return result(false, null);
-                } else {
-                    List<String> ret = new ArrayList<>();
-                    while (schemas.hasNext()) {
-                        Result rs = schemas.next();
-                        if (!rs.isEmpty()) {
-                            String schema = rs.toString();
-                            ret.add(schema);
-                        }
-                    }
-                    return result(true, ret);
-                }
+                return getDBSchema();
             default:
                 return result(false, "query type " + type + "not found");
         }
@@ -184,11 +171,23 @@ public class ContractTemplate {
         return db.getTable(new TableName(getNamespace(), getCid(), name));
     }
 
-    public Iterator<Result> getDBSchema() {
+    public ExecuteResult getDBSchema() {
         String start = "kv_table_" + getNamespace() + "_" + getCid() + "_";
         String end = "kv_table_" + getNamespace() + "_" + getCid() + "`";
         Iterator<Result> schemas = ledger.rangeQuery(Bytes.toByteArray(start), Bytes.toByteArray(end));
-        return schemas;
+        if (schemas == null) {
+            return result(false, null);
+        } else {
+            List<String> ret = new ArrayList<>();
+            while (schemas.hasNext()) {
+                Result rs = schemas.next();
+                if (!rs.isEmpty()) {
+                    String schema = rs.toString();
+                    ret.add(schema);
+                }
+            }
+            return result(true, ret);
+        }
     }
 
     public enum QueryType {
