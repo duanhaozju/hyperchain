@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli"
-	admin "hyperchain/api/jsonrpc/core"
+	admin "hyperchain/api/jsonrpc/core/admin"
 	"io/ioutil"
 	"net/http"
 	"os"

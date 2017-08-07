@@ -7,6 +7,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"sync"
+	admin "hyperchain/api/jsonrpc/core/admin"
 )
 
 // Server represents a RPC server
@@ -15,7 +16,7 @@ type Server struct {
 	codecsMu     sync.Mutex
 	codecs       *set.Set
 	namespaceMgr namespace.NamespaceManager
-	admin        *Administrator
+	admin        *admin.Administrator
 	reqMgrMu     sync.Mutex
 	requestMgr   map[string]*requestManager
 }

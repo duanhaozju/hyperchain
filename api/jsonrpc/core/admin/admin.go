@@ -7,39 +7,12 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"strings"
-	"encoding/json"
+	"github.com/op/go-logging"
 )
 
-func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RPCResponse {
-	err := s.preHandle(codec)
-	if err != nil {
-		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidTokenError{Message: err.Error()}}
-	}
+var log *logging.Logger
 
-	cmd := &Command{MethodName: req.Method}
-	if args, ok := req.Params.(json.RawMessage); !ok {
-		log.Notice("nil parms in json")
-		cmd.Args = nil
-	} else {
-		args, err := splitRawMessage(args)
-		if err != nil {
-			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidParamsError{Message: err.Error()}}
-		}
-		cmd.Args = args
-	}
-	if _, ok := s.admin.CmdExecutor[req.Method] ; !ok {
-		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
-	}
-	rs := s.admin.CmdExecutor[req.Method](cmd)
-	if rs.Ok == false {
-		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: rs.Error}
-	}
-	return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Reply: rs.Result}
-
-}
-
-func (s *Server) preHandle(codec ServerCodec) error {
-	token, method := codec.GetAuthInfo()
+func PreHandle(token, method string) error {
 	if method == "" {
 		return ErrNotSupport
 	}
@@ -397,6 +370,8 @@ func (adm *Administrator) delUser(cmd *Command) *CommandResult {
 }
 
 func (adm *Administrator) Init() {
+	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc/admin")
+
 	adm.CmdExecutor = make(map[string]func(command *Command) *CommandResult)
 	adm.CmdExecutor["stopServer"] = adm.stopServer
 	adm.CmdExecutor["restartServer"] = adm.restartServer

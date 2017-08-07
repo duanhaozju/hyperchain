@@ -182,7 +182,7 @@ type InvalidTokenError struct {
 }
 
 func (e *InvalidTokenError) Code() int {return custom_InvalidTokenError}
-func (e *InvalidTokenError) Error() string {return "Invalid token"}
+func (e *InvalidTokenError) Error() string {return fmt.Sprintf(e.Message)}
 
 type UnauthorizedError struct {}
 

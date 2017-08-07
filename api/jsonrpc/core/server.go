@@ -10,6 +10,8 @@ import (
 	"gopkg.in/fatih/set.v0"
 	"hyperchain/common"
 	"hyperchain/namespace"
+	"encoding/json"
+	admin "hyperchain/api/jsonrpc/core/admin"
 )
 
 const (
@@ -36,7 +38,7 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 		namespaceMgr: nr,
 		requestMgr:   make(map[string]*requestManager),
 	}
-	server.admin = &Administrator{
+	server.admin = &admin.Administrator{
 		NsMgr:         server.namespaceMgr,
 		StopServer:    stopHyperchain,
 		RestartServer: restartHp,
@@ -250,4 +252,33 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 		log.Errorf("response type invalid, resp: %v\n")
 		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"response type invalid!"})
 	}
+}
+
+func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RPCResponse {
+	token, method := codec.GetAuthInfo()
+	err := admin.PreHandle(token, method)
+	if err != nil {
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidTokenError{Message: err.Error()}}
+	}
+
+	cmd := &admin.Command{MethodName: req.Method}
+	if args, ok := req.Params.(json.RawMessage); !ok {
+		log.Notice("nil parms in json")
+		cmd.Args = nil
+	} else {
+		args, err := splitRawMessage(args)
+		if err != nil {
+			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidParamsError{Message: err.Error()}}
+		}
+		cmd.Args = args
+	}
+	if _, ok := s.admin.CmdExecutor[req.Method] ; !ok {
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
+	}
+	rs := s.admin.CmdExecutor[req.Method](cmd)
+	if rs.Ok == false {
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: rs.Error}
+	}
+	return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Reply: rs.Result}
+
 }

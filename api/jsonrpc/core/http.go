@@ -17,6 +17,7 @@ import (
 	"time"
 	"sync"
 	"github.com/op/go-logging"
+	admin "hyperchain/api/jsonrpc/core/admin"
 )
 
 const (
@@ -76,7 +77,7 @@ func (hi *httpServerImpl) Start() error {
 	// start http listener
 	handler := NewServer(hi.nr, hi.stopHp, hi.restartHp)
 
-	http.HandleFunc("/login", LoginServer)
+	http.HandleFunc("/login", admin.LoginServer)
 	http.Handle("/", newCorsHandler(handler, hi.httpAllowedOrigins))
 
 	listener, err = net.Listen("tcp", fmt.Sprintf(":%d", hi.port))

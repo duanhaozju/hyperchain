@@ -4,7 +4,6 @@ import "strings"
 
 const (
 	expiration int64 = 600
-	beforetime int64 = 300
 	pri_key string   = "./hypercli/keyconfigs/key/key"
 	pub_key string   = "./hypercli/keyconfigs/key/key.pub"
 )

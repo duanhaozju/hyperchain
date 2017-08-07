@@ -7,7 +7,7 @@ import (
 	"github.com/urfave/cli"
 	"hyperchain/hypercli/common"
 	cm "hyperchain/common"
-	admin "hyperchain/api/jsonrpc/core"
+	admin "hyperchain/api/admin"
 	"path"
 	"hyperchain/crypto"
 	"time"
