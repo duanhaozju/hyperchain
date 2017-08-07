@@ -23,6 +23,7 @@ type permissionSet map[int]bool
 
 var valid_user = map [string]string {
 	"root": "hyperchain",
+	"hpc": "hpc",
 }
 
 var user_scope = map [string]permissionSet {

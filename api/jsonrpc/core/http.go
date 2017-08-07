@@ -151,7 +151,6 @@ func (hrw *httpReadWrite) Close() error {
 // newHTTPServer creates a new http RPC server around an API provider.
 func newHTTPServer() *http.Server {
 	return &http.Server{
-		Handler: nil,
 		ReadTimeout:  time.Second * 3,
 	}
 }
