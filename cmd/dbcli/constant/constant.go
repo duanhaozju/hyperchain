@@ -10,6 +10,8 @@ const (
 	MAX      = "max"
 	MIN      = "min"
 	ADDRESS  = "address"
+	NS       = "ns"
+	GLOBALCONF = "globalconf"
 
 	VERSIONFINAL = "final"
 	VERSION1_1   = "1.1"

@@ -15,6 +15,8 @@ import (
 	"encoding/json"
 	"hyperchain/core/hyperstate"
 	"hyperchain/cmd/dbcli/version/versionAccount"
+	"hyperchain/hyperdb"
+	"sort"
 )
 
 type Version struct {
@@ -489,16 +491,28 @@ func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
 	} else {
 		fmt.Println(utils.Decorate("{"))
 	}
-	var result1 string
-	it := self.db.NewIterator([]byte(accountIdentifier))
-	for it.Next() {
-		address, ok := hyperstate.SplitCompositeAccountKey(it.Key())
+
+	var accountAddress []string
+	iter := self.db.NewIterator([]byte(accountIdentifier))
+	for iter.Next() {
+		address, ok := hyperstate.SplitCompositeAccountKey(iter.Key())
 		if ok == false {
 			fmt.Println(constant.ErrQuery.Error(), "split account address error.")
 			continue
 		}
+		accountAddress = append(accountAddress, common.Bytes2Hex(address))
+	}
+	sort.Strings(accountAddress)
+
+	var result1 string
+	for index := 0; index < len(accountAddress); index++ {
+		data, err := self.db.Get(hyperstate.CompositeAccountKey(common.Hex2Bytes(accountAddress[index])))
+		if err != nil {
+			fmt.Println(constant.ErrQuery.Error(), err.Error())
+			break
+		}
 		var account versionAccount.Account
-		err := json.Unmarshal(it.Value(), &account)
+		err = json.Unmarshal(data, &account)
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 			break
@@ -512,18 +526,18 @@ func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
 					fmt.Println(utils.Decorate(result1))
 				}
 			}
-			code, _ := self.db.Get(hyperstate.CompositeCodeHash(address, account.CodeHash))
-			prefixRes := account.EncodeVerbose(common.Bytes2Hex(address), common.Bytes2Hex(code))
+			code, _ := self.db.Get(hyperstate.CompositeCodeHash(common.Hex2Bytes(accountAddress[index]), account.CodeHash))
+			prefixRes := account.EncodeVerbose(accountAddress[index], common.Bytes2Hex(code))
 			prefixRes = strings.Replace("\t" + prefixRes, "\n", "\n\t", -1)
 			if path != "" {
 				utils.Append(file, prefixRes)
 			} else {
 				fmt.Println(utils.Decorate(prefixRes))
 			}
-			storageIt := self.db.NewIterator(hyperstate.GetStorageKeyPrefix(address))
+			storageIt := self.db.NewIterator(hyperstate.GetStorageKeyPrefix(common.Hex2Bytes(accountAddress[index])))
 			var storageRes string
 			for storageIt.Next() {
-				storageKey, _ := hyperstate.SplitCompositeStorageKey(address, storageIt.Key())
+				storageKey, _ := hyperstate.SplitCompositeStorageKey(common.Hex2Bytes(accountAddress[index]), storageIt.Key())
 				if storageRes != "" {
 					storageRes += ","
 					if path != "" {
@@ -557,9 +571,10 @@ func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
 					fmt.Println(utils.Decorate(result1))
 				}
 			}
-			result1 = account.Encode(common.Bytes2Hex(address))
+			result1 = account.Encode(accountAddress[index])
 		}
 	}
+
 	if result1 != "" {
 		result1 = strings.Replace("\t" + result1, "\n", "\n\t", -1)
 		if path != "" {
@@ -578,4 +593,74 @@ func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
 /*-------------------------------------self--------------------------------------*/
 func (self *Version) GetDB() database.Database {
 	return self.db
+}
+
+func (self *Version) RevertDB(ns, globalConf, path string, number uint64, parameter *constant.Parameter) {
+	str, err := self.GetChainHeight()
+	if err != nil {
+		fmt.Println(constant.ErrQuery.Error(), err.Error())
+		return
+	}
+	height, err := strconv.Atoi(str)
+	if err != nil {
+		fmt.Println(constant.ErrQuery.Error(), err.Error())
+		return
+	}
+	maxBlockStr, err := self.GetBlockByNumber(uint64(height), parameter)
+	if err != nil {
+		fmt.Println(constant.ErrQuery.Error(), err.Error())
+		return
+	}
+	reg, err := regexp.Compile("\"MerkleRoot\": \"[a-zA-Z0-9]+\",")
+	if err != nil {
+		fmt.Println(constant.ErrQuery.Error(), err.Error())
+		return
+	}
+	rootStr := reg.FindString(maxBlockStr)
+	root := common.HexToHash(rootStr[len("\"MerkleRoot\": \""):len(rootStr)-2])
+
+	var targetRoot [][]byte
+	for i := int64(height-1); i >= int64(number); i-- {
+		minBlockStr, err := self.GetBlockByNumber(uint64(i), parameter)
+		if err != nil {
+			fmt.Println(constant.ErrQuery.Error(), err.Error())
+			return
+		}
+		needRootStr := reg.FindString(minBlockStr)
+		needBlockRoot := common.Hex2Bytes(needRootStr[len("\"MerkleRoot\": \""):len(rootStr)-2])
+		targetRoot = append(targetRoot, needBlockRoot)
+	}
+
+	config := common.NewConfig(globalConf)
+	err = common.InitHyperLogger(ns, config)
+	if err != nil {
+		fmt.Println(constant.ErrQuery.Error(), err.Error())
+	}
+
+	self.GetDB().Close()
+
+	db, err := hyperdb.NewDatabase(nil, path, 0001, ns)
+	if err != nil {
+		fmt.Println(constant.ErrQuery.Error(), err.Error())
+		return
+	}
+	stateDb, err := hyperstate.New(root, db, nil, config, uint64(height), ns)
+	if err != nil {
+		fmt.Println(constant.ErrQuery.Error(), err.Error())
+		return
+	}
+	for i := int64(height-1); i >= int64(number); i-- {
+		batch := db.NewBatch()
+		err = stateDb.RevertToJournal(uint64(i), uint64(height), targetRoot[0], batch)
+		if err != nil {
+			fmt.Println(constant.ErrQuery.Error(), err.Error())
+			return
+		}
+		batch.Write()
+		height--
+		if len(targetRoot) > 1 {
+			targetRoot = targetRoot[1:]
+		}
+	}
+	db.Close()
 }
