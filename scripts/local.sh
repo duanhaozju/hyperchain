@@ -69,6 +69,7 @@ f_kill_process(){
 
 # clear data
 f_delete_data(){
+echo "Delete old node data"
 for (( j=1; j<=$MAXPEERNUM; j++ ))
 do
     # Clear the old data
@@ -331,7 +332,7 @@ f_distribute $MAXPEERNUM
 
 # run hyperchain node
 if ${HYPERJVM}; then
-start_hyperjvm
+    start_hyperjvm
 fi
 
 if ${RUN}; then

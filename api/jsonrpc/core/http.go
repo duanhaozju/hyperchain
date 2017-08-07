@@ -181,41 +181,6 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//auth := r.Header.Get("Authorization")
-	//
-	//// verify signed token
-	//if claims, err := verifyToken(auth, pub_key, "RS256"); err != nil {
-	//	w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic releam=%s", err.Error()))
-	//	w.WriteHeader(http.StatusUnauthorized)
-	//	io.WriteString(w, fmt.Sprintf("%s", err.Error()))
-	//	return
-	//} else {
-	//	username := getUserFromClaim(claims)
-	//	if username == "" {
-	//		w.WriteHeader(http.StatusUnauthorized)
-	//		io.WriteString(w, fmt.Sprintf("%s", ErrPermission.Error()))
-	//		return
-	//	}
-	//	// check if operation has expired, if expired, return error, else update last operation time
-	//	if checkOpTimeExpire(username) {
-	//		w.WriteHeader(http.StatusUnauthorized)
-	//		io.WriteString(w, fmt.Sprintf("%s", ErrTimeoutPermission.Error()))
-	//		return
-	//	}
-	//	updateLastOperationTime(username)
-	//	var method = r.Header.Get("Method")
-	//	if method == "" {
-	//		io.WriteString(w, "Invalid request method")
-	//		return
-	//	}
-	//	if ok, err := checkPermission(username, method); !ok {
-	//		w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic releam=%s", err.Error()))
-	//		w.WriteHeader(http.StatusUnauthorized)
-	//		io.WriteString(w, fmt.Sprintf("%s", err.Error()))
-	//		return
-	//	}
-	//}
-
 	w.Header().Set("content-type", "application/json")
 	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr)
 	defer codec.Close()

@@ -118,7 +118,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			return nil
 		}
 		if reqs[0].Service == adminService {
-			response := s.handleCMD(reqs[0])
+			response := s.handleCMD(reqs[0], codec)
 			if response.Error != nil {
 				codec.Write(codec.CreateErrorResponse(response.Id, response.Namespace, response.Error))
 			} else if response.Reply != nil {

@@ -143,9 +143,6 @@ func signToken(username, keypath, algorithm string) (string, error) {
 	claims["iss"] = "Hyperchain Client"
 	claims["aud"] = "www.hyperchain.cn"
 	claims["usr"] = username
-	//claims["iat"] = time.Now().Unix()
-	//claims["exp"] = time.Now().Unix() + expiration
-	//claims["nbf"] = time.Now().Unix() - beforetime
 
 	// get the key
 	var key interface{}

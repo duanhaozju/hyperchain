@@ -34,6 +34,8 @@ type ServerCodec interface {
 	CreateErrorResponse(id interface{}, namespace string, err common.RPCError) interface{}
 	// Assemble error response with extra information about the error through info
 	CreateErrorResponseWithInfo(id interface{}, namespace string, err common.RPCError, info interface{}) interface{}
+	// GatAuthInfo read authentication info (token and method) from http header
+	GetAuthInfo() (string, string)
 	// Write msg to client.
 	Write(interface{}) error
 	// Close underlying data stream

@@ -10,7 +10,12 @@ import (
 	"encoding/json"
 )
 
-func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
+func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RPCResponse {
+	err := s.preHandle(codec)
+	if err != nil {
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidTokenError{Message: err.Error()}}
+	}
+
 	cmd := &Command{MethodName: req.Method}
 	if args, ok := req.Params.(json.RawMessage); !ok {
 		log.Notice("nil parms in json")
@@ -32,6 +37,36 @@ func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
 	return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Reply: rs.Result}
 
 }
+
+func (s *Server) preHandle(codec ServerCodec) error {
+	token, method := codec.GetAuthInfo()
+	if method == "" {
+		return ErrNotSupport
+	}
+	if token == "" {
+		return ErrTokenInvalid
+	}
+
+	// verify signed token
+	if claims, err := verifyToken(token, pub_key, "RS256"); err != nil {
+		return err
+	} else {
+		username := getUserFromClaim(claims)
+		if username == "" {
+			return ErrPermission
+		}
+		// check if operation has expired, if expired, return error, else update last operation time
+		if checkOpTimeExpire(username) {
+			return ErrTimeoutPermission
+		}
+		updateLastOperationTime(username)
+		if ok, err := checkPermission(username, method); !ok {
+			return err
+		}
+	}
+	return nil
+}
+
 
 //Command command send from client.
 type Command struct {
