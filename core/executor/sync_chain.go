@@ -231,8 +231,8 @@ func (executor *Executor) ReceiveWsHandshake(payload []byte) {
 		executor.logger.Warning("unmarshal world state packet failed.")
 		return
 	}
-	executor.logger.Noticef("receive ws handshake, content: [ total size (#%d), packet num (#%d), max packet size (#%d) ]",
-		hs.Size, hs.PacketNum, hs.PacketSize)
+	executor.logger.Noticef("receive ws handshake, content: [ total size (#%d), packet num (#%d), max packet size (#%d)KB ]",
+		hs.Size, hs.PacketNum, hs.PacketSize/1024)
 
 	executor.context.syncCtx.RecordWsHandshake(&hs)
 
@@ -257,7 +257,7 @@ func (executor *Executor) ReceiveWsHandshake(payload []byte) {
 // store the slice packet and send back ack to fetch the next one.
 // If all packets has been received, assemble them and trigger to apply.
 func (executor *Executor) ReceiveWorldState(payload []byte) {
-	executor.logger.Noticef("receive ws packet")
+	executor.logger.Debugf("receive ws packet")
 	var ws Ws
 	if err := proto.Unmarshal(payload, &ws); err != nil {
 		executor.logger.Warning("unmarshal world state packet failed.")
@@ -281,6 +281,7 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 		if err != nil {
 			return err
 		}
+		defer fd.Close()
 		for ; i <= hs.PacketNum; i += 1 {
 			fname := fmt.Sprintf("ws_%d.tar.gz", i)
 			buf, err := ioutil.ReadFile(path.Join(executor.context.syncCtx.GetWsHome(), fname))
@@ -292,7 +293,6 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 				return errors.New("assmble ws file failed")
 			}
 		}
-		fd.Close()
 		return nil
 	}
 
@@ -323,6 +323,14 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 			return
 		}
 		executor.context.syncCtx.SetTransitioned()
+		go executor.InsertSnapshot(common.Manifest{
+			Height:      nGenesis,
+			BlockHash:   common.Bytes2Hex(newGenesis.BlockHash),
+			FilterId:    ws.Ctx.FilterId,
+			MerkleRoot:  common.Bytes2Hex(newGenesis.MerkleRoot),
+			Date:        time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05"),
+			Namespace:   executor.namespace,
+		})
 		executor.processSyncBlocks()
 	} else if ws.PacketId == executor.context.syncCtx.GetWsId()+1 {
 		// fetch the next slice packet.
@@ -427,15 +435,17 @@ func (executor *Executor) processSyncBlocks() {
 		executor.waitUtilSyncAvailable()
 		defer executor.syncDone()
 		// execute all received block at one time
-		processPb = common.InitPb(int64(executor.getSyncTarget() - edb.GetHeightOfChain(executor.namespace)), "process block")
-		processPb.Start()
+		var processPb *pb.ProgressBar
 		var low uint64
 		if executor.context.syncCtx.UpdateGenesis {
 			_, low = executor.context.syncCtx.GetCurrentGenesis()
 			low += 1
+			processPb = common.InitPb(int64(executor.getSyncTarget() - low + 1), "process block")
 		} else {
 			low = executor.context.syncFlag.SyncDemandBlockNum + 1
+			processPb = common.InitPb(int64(executor.getSyncTarget() - edb.GetHeightOfChain(executor.namespace)), "process block")
 		}
+		processPb.Start()
 
 		for i := low; i <= executor.context.syncFlag.SyncTarget; i += 1 {
 			blk, err := edb.GetBlockByNumber(executor.namespace, i)
@@ -700,8 +710,11 @@ func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
 		fsize = size
 	}
 
-	n := fsize / int64(WsShardLen)
-	if fsize%int64(WsShardLen) > 0 {
+	wsShardSize := executor.GetStateFetchPacketSize()
+
+
+	n := fsize / int64(wsShardSize)
+	if fsize%int64(wsShardSize) > 0 {
 		n += 1
 	}
 	hs := executor.constructWsHandshake(request, manifest.FilterId, uint64(fsize), uint64(n))
@@ -726,9 +739,11 @@ func (executor *Executor) ReceiveWsAck(payload []byte) {
 		os.Remove(fpath)
 	}
 
+	wsShardSize := int64(executor.GetStateFetchPacketSize())
+
 	sendWs := func(shardId uint64, filterId string, ws *WsAck) {
 		fpath := executor.snapshotReg.CompressedSnapshotPath(filterId)
-		err, reader := common.NewSectionReader(fpath, WsShardLen)
+		err, reader := common.NewSectionReader(fpath, wsShardSize)
 		defer reader.Close()
 		if err != nil {
 			return
@@ -767,6 +782,7 @@ func (executor *Executor) ReceiveWsAck(payload []byte) {
 
 // constructWsHandshake - make ws handshake packet.
 func (executor *Executor) constructWsHandshake(req WsRequest, filterId string, size uint64, pn uint64) *WsHandshake {
+	wsShardSize := int64(executor.GetStateFetchPacketSize())
 	return &WsHandshake{
 		Ctx: &WsContext{
 			FilterId:    filterId,
@@ -775,7 +791,7 @@ func (executor *Executor) constructWsHandshake(req WsRequest, filterId string, s
 		},
 		Height:     req.Target,
 		Size:       size,
-		PacketSize: uint64(WsShardLen),
+		PacketSize: uint64(wsShardSize),
 		PacketNum:  pn,
 	}
 }

@@ -98,7 +98,7 @@ algo = "PBFT"
     max_block_fetch         = 50
     block_fetch_timeout     = "1m"
     state_fetch_enable      = true
-    state_fetch_packet_size = "1mb"
+    state_fetch_packet_size = 1024  # 1024KB
 
     [executor.archive] 
     snapshot_manifest = "./namespaces/global/data/snapshot.meta"

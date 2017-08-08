@@ -25,6 +25,11 @@ func (executor *Executor) DeleteSnapshot(ev event.DeleteSnapshotEvent) {
 	executor.snapshotReg.DeleteSnapshot(ev)
 }
 
+// Insert a snapshot to local registry.(may receive from the network)
+func (executor *Executor) InsertSnapshot(meta common.Manifest) {
+	executor.snapshotReg.Insert(meta)
+}
+
 // snapshot manager
 type SnapshotRegistry struct {
 	namespace string
@@ -101,6 +106,31 @@ func (registry *SnapshotRegistry) CompressSnapshot(filterId string) (error, int6
 
 func (registry *SnapshotRegistry) CompressedSnapshotPath(filterId string) string {
 	return path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "snapshots", registry.snapshotId(filterId)+".tar.gz")
+}
+
+func (registry *SnapshotRegistry) Insert(meta common.Manifest) {
+	sdir := path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "snapshots")
+	if _, err := os.Stat(sdir); os.IsNotExist(err) {
+		c := cmd.Command("mkdir", "-p", sdir)
+		if e := c.Run(); e != nil {
+			return
+		}
+	}
+	spath := path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "ws", "ws_" + meta.FilterId, "SNAPSHOT_" + meta.FilterId)
+	dump := cmd.Command("mv", "-f", spath, sdir)
+	if e := dump.Run(); e != nil {
+		return
+	}
+
+	clear := cmd.Command("rm", "-rf", path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "ws"))
+	if e := clear.Run(); e != nil {
+		return
+	}
+
+	if err := registry.rwc.Write(meta); err != nil {
+		registry.logger.Warningf("insert snapshost %s failed. reason %s", meta.FilterId, err.Error())
+	}
+	registry.logger.Noticef("insert snapshost %s success", meta.FilterId)
 }
 
 /*

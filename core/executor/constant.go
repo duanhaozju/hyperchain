@@ -51,7 +51,6 @@ const (
 
 const (
 	LatestBlockNumber     uint64 = 0
-	WsShardLen            = 1024 * 1024 // 1MB
 	MaxPendingSnapshotReq = 1024
 )
 

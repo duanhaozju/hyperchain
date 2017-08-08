@@ -11,6 +11,7 @@ const (
 	SyncChainBatchSize      = "executor.syncer.max_block_fetch"
 	SyncChainResendInterval = "executor.syncer.block_fetch_timeout"
 	SyncWsEable             = "executor.syncer.state_fetch_enable"
+	SyncWsPacketSize        = "executor.syncer.state_fetch_packet_size"
 	SnapshotManifestPath    = "executor.archive.snapshot_manifest"
 	ArchiveMetaPath         = "executor.archive.archive_manifest"
 	ArchiveForceConsistency = "executor.archive.force_consistency"
@@ -60,6 +61,9 @@ func (executor *Executor) isJvmEnable() bool {
 	return executor.conf.GetBool(common.C_JVM_START)
 }
 
+func (executor *Executor) GetStateFetchPacketSize() int {
+	return executor.conf.GetInt(SyncWsPacketSize) * 1024
+}
 
 func (executor *Executor) GetExitFlag() bool {
 	return executor.conf.GetBool(exitFlag)
