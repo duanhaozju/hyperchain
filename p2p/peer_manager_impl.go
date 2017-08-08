@@ -50,6 +50,8 @@ type peerManagerImpl struct {
 	isVP      bool
 	isOrg      bool
 
+	n     int
+
 	isRec      bool
 
 	delchan   chan bool
@@ -122,6 +124,7 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		delchan:delChan,
 		logger: logger,
 		isVP:isvp,
+		n:N,
 		hts:h,
 		peercnf:newPeerCnf(peercnf),
 	}
@@ -579,6 +582,9 @@ func (pmgr *peerManagerImpl)GetNodeId() int {
 	return pmgr.node.info.GetID()
 }
 
+func (pmgr *peerManagerImpl)GetN() int {
+	return pmgr.n
+}
 //get the peer information of all nodes.
 func (pmgr *peerManagerImpl)GetPeerInfo() PeerInfos {
 	return PeerInfos{}

@@ -58,6 +58,8 @@ type DeleteNode interface {
 type InfoGetter interface {
 	// Get local node id
 	GetNodeId() int
+	// Get current N
+	GetN() int
 	//get the peer information of all nodes.
 	GetPeerInfo() PeerInfos
 	// set

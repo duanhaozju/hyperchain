@@ -28,7 +28,6 @@ title = "namespace configurations"
 algo = "PBFT"
 
     [consensus.pbft]        #PBFT configurations
-    nodes           = 4     # Number of replicas
     batchsize       = 500   # How many transactions should the primary pack before sending pre-prepare
     vcresendlimit   = 10    # How many times of same vc from self before a replica start recovery
 

@@ -165,7 +165,7 @@ func (ns *namespaceImpl) init() error {
 	ns.peerMgr = peerMgr
 
 	//4.init pbft consensus
-	consenter, err := csmgr.Consenter(ns.Name(), ns.conf, ns.eventMux)
+	consenter, err := csmgr.Consenter(ns.Name(), ns.conf, ns.eventMux,peerMgr.GetN())
 	if err != nil {
 		logger.Errorf("init Consenter for namespace %s error, %v", ns.Name(), err)
 		return err

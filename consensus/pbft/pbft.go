@@ -26,7 +26,7 @@ which can be invoked by outer services.
 */
 
 // New return a instance of pbftProtocal  TODO: rename helper.Stack ??
-func New(namespace string, conf *common.Config, h helper.Stack) (*pbftImpl, error) {
+func New(namespace string, conf *common.Config, h helper.Stack, n int) (*pbftImpl, error) {
 	//var err error
 	//pcPath := conf.GetString(consensus.CONSENSUS_ALGO_CONFIG_PATH)
 	//if pcPath == "" {
@@ -39,7 +39,7 @@ func New(namespace string, conf *common.Config, h helper.Stack) (*pbftImpl, erro
 	//	err = fmt.Errorf("Load pbft config error: %v", err)
 	//	return nil, err
 	//}
-	return newPBFT(namespace, conf, h)
+	return newPBFT(namespace, conf, h, n)
 }
 
 // RecvMsg receive messages from outer services.
