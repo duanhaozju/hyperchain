@@ -13,6 +13,7 @@ import (
 	"time"
 	"strconv"
 	"math/rand"
+	"os"
 )
 
 //NewNamespaceCMD new namespace related
@@ -95,35 +96,37 @@ func stop(c *cli.Context) error {
 	return nil
 }
 
-func new(c *cli.Context) error  {
-	fns := c.FlagNames()
-	for _, fn := range fns {
-
-		if fn == "configDir" {
-			dir := c.String(fn)
-			if len(dir) == 0 {
-				fmt.Printf("%s is invalid namespace config dir!", dir)
-			}
-			conf := cm.NewConfig(path.Join(dir, "peerconfig.toml"))
-			nodes := conf.Get("nodes")
-			var hostNames string
-			if nodemap, ok := nodes.([]interface{}); ok {
-				for _, n := range nodemap {
-					if node, ok := n.(map[string]interface{}); ok {
-						fmt.Printf("node name %s, node value %s \n", "hostname", node["hostname"])
-						hostName, _ := node["hostname"].(string)
-						hostNames += hostName
-					}else {
-						fmt.Println("invalid peerconfig")
-					}
-				}
-				name := generateNamespaceId(hostNames)
-				fmt.Printf("new namespace id is: %s\n", name)
-			}else {
+func new(c *cli.Context) error {
+	dir := c.String("configDir")
+	if len(dir) == 0 {
+		fmt.Printf("%s is invalid namespace config dir!", dir)
+		return nil
+	}
+	configPath := path.Join(dir, "peerconfig.toml")
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		fmt.Printf("Can not find peerconfig.toml in config path: %s\n", dir)
+		return nil
+	}
+	config := cm.NewConfig(configPath)
+	nodes := config.Get("nodes")
+	var hostNames string
+	if nodemap, ok := nodes.([]interface{}); ok {
+		for _, n := range nodemap {
+			if node, ok := n.(map[string]interface{}); ok {
+				fmt.Printf("node name %s, node value %s \n", "hostname", node["hostname"])
+				hostName, _ := node["hostname"].(string)
+				hostNames += hostName
+			} else {
 				fmt.Println("invalid peerconfig")
+				return nil
 			}
 		}
+		name := generateNamespaceId(hostNames)
+		fmt.Printf("new namespace id is: %s\n", name)
+	} else {
+		fmt.Println("invalid peerconfig")
 	}
+
 	return nil
 }
 

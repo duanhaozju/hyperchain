@@ -12,7 +12,7 @@ import (
 
 var log *logging.Logger
 
-func PreHandle(token, method string) error {
+func (adm *Administrator) PreHandle(token, method string) error {
 	if method == "" {
 		return ErrNotSupport
 	}
@@ -78,6 +78,7 @@ type CommandResult struct {
 }
 
 type Administrator struct {
+	Check         bool
 	NsMgr         namespace.NamespaceManager
 	CmdExecutor   map[string]func(command *Command) *CommandResult
 	StopServer    chan bool
@@ -371,6 +372,7 @@ func (adm *Administrator) delUser(cmd *Command) *CommandResult {
 
 func (adm *Administrator) Init() {
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc/admin")
+	expiration = adm.NsMgr.GlobalConfig().GetDuration(common.ADMIN_EXPIRATION)
 
 	adm.CmdExecutor = make(map[string]func(command *Command) *CommandResult)
 	adm.CmdExecutor["stopServer"] = adm.stopServer

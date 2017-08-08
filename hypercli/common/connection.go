@@ -65,11 +65,7 @@ func (cc *CmdClient) Call(cmd string, method string) (string, error) {
 
 	// get authorization token
 	userinfo := new(UserInfo)
-	err = ReadFile(tokenpath, userinfo)
-	if err != nil {
-		fmt.Println("Invalid token, please login first!")
-		os.Exit(1)
-	}
+	ReadFile(tokenpath, userinfo)
 	req.Header.Set("Authorization", userinfo.Token)
 	req.Header.Set("Method", method)
 

@@ -108,7 +108,7 @@ func (hmi *hyperLoggerMgrImpl) getLoggerLevel(namespace, module string) (string,
 	}
 	ml := hl.getModuleLogger(module)
 	if ml == nil {
-		return "", fmt.Errorf("SetLogLevel Error: %s::%s not exist", namespace, module)
+		return "", fmt.Errorf("GetLogLevel Error: %s::%s not exist", namespace, module)
 	}
 	hl.backendLock.RLock()
 	defer hl.backendLock.RUnlock()
