@@ -94,6 +94,10 @@ public class SimulateBank extends ContractTemplate {
         return result(true);
     }
 
+    public ExecuteResult getValue(List<String> args) {
+        return result(true, ledger.get(args.get(0).getBytes()));
+    }
+
     //String accountA, String accountB, double num
     private ExecuteResult transfer(List<String> args) {
         try {
@@ -114,7 +118,6 @@ public class SimulateBank extends ContractTemplate {
                         ledger.put(accountB, balanceB + num);
                     }
                 }
-
             }else {
                 String msg = "get account " + accountA  + " balance error";
                 logger.error(msg);
@@ -181,6 +184,15 @@ public class SimulateBank extends ContractTemplate {
         wb.put(A, Bytes.toByteArray(abalance - amount));
         wb.put(B, Bytes.toByteArray(bbalance + abalance));
         return result(wb.commit());
+    }
+
+    private ExecuteResult rangeQuery(List<String> args) {
+        BatchValue bv = ledger.rangeQuery(args.get(0).getBytes(), args.get(1).getBytes());
+        while (bv.hasNext()) {
+            Result rs = bv.next();
+            logger.error(rs.toString());
+        }
+        return result(true, "success");
     }
 
     //testRangeQuery
@@ -250,6 +262,7 @@ public class SimulateBank extends ContractTemplate {
 
     public ExecuteResult testSysQuery(List<String> args) {
         ExecuteResult schemas = sysQuery(QueryType.DATABASE_SCHEMAS);
+        logger.error(schemas.getResult());
         return schemas;
     }
 
@@ -261,7 +274,6 @@ public class SimulateBank extends ContractTemplate {
     //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     public ExecuteResult newAccountTable(List<String> args) {
-        logger.info(args);
         RelationDB db = ledger.getDataBase(); //do not new database instance every time
         TableName tn = new TableName(getNamespace(), getCid(), "Account");
         logger.info(tn.toString());

@@ -12,18 +12,24 @@ import cn.hyperchain.jcee.executor.Context;
 import cn.hyperchain.jcee.executor.ContractHandler;
 import cn.hyperchain.jcee.executor.Handler;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
-import cn.hyperchain.jcee.ledger.BatchValue;
 import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.ledger.table.RelationDB;
 import cn.hyperchain.jcee.ledger.table.Table;
 import cn.hyperchain.jcee.ledger.table.TableName;
 import cn.hyperchain.jcee.util.Bytes;
-import lombok.*;
+import com.google.gson.Gson;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.apache.log4j.Logger;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 
 //ContractBase which is used as a skeleton of smart contract
 @AllArgsConstructor
@@ -172,21 +178,11 @@ public class ContractTemplate {
     }
 
     public ExecuteResult getDBSchema() {
-        String start = "kv_table_" + getNamespace() + "_" + getCid() + "_";
-        String end = "kv_table_" + getNamespace() + "_" + getCid() + "`";
-        Iterator<Result> schemas = ledger.rangeQuery(Bytes.toByteArray(start), Bytes.toByteArray(end));
-        if (schemas == null) {
-            return result(false, null);
+        Result rs = ledger.get("database_schemas");
+        if (rs.isEmpty()) {
+            return result(false, "Database schemas are empty");
         } else {
-            List<String> ret = new ArrayList<>();
-            while (schemas.hasNext()) {
-                Result rs = schemas.next();
-                if (!rs.isEmpty()) {
-                    String schema = rs.toString();
-                    ret.add(schema);
-                }
-            }
-            return result(true, ret);
+            return result(true, rs.toString());
         }
     }
 

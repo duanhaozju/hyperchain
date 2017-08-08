@@ -138,14 +138,14 @@ public class ContractInfo {
                 ", contractMainName='" + contractMainName + '\'' +
                 ", cid='" + cid + '\'' +
                 ", owner='" + owner + '\'' +
-                ", contractPath='" + contractPath + '\'' +
+//                ", contractPath='" + contractPath + '\'' +
                 ", classPrefix='" + classPrefix + '\'' +
                 ", namespace='" + namespace + '\'' +
                 ", argTypes=" + Arrays.toString(argTypes) +
                 ", args=" + Arrays.toString(args) +
                 ", codeHash='" + codeHash + '\'' +
-                ", createTime=" + createTime +
-                ", modifyTime=" + modifyTime +
+//                ", createTime=" + createTime +
+//                ", modifyTime=" + modifyTime +
                 '}';
     }
 }

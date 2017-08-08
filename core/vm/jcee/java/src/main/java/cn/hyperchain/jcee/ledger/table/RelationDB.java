@@ -20,7 +20,4 @@ public interface RelationDB {
     TableDesc getTableDesc(TableName name);
 
     boolean deleteTable(TableName name);
-
-    //list all stored table names
-    List<String> listTables();
 }
