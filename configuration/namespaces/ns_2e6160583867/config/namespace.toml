@@ -54,15 +54,15 @@ algo = "PBFT"
 ############################################################################################################
 [encryption]
 [encryption.ecert]
- eca    = "namespaces/ns_2e6160583867/config/certs/eca.cert"
- ecert  = "namespaces/ns_2e6160583867/config/certs/ecert.cert"
- priv   = "namespaces/ns_2e6160583867/config/certs/ecert.priv"
+ eca    = "config/certs/eca.cert"
+ ecert  = "config/certs/ecert.cert"
+ priv   = "config/certs/ecert.priv"
 
 [encryption.rcert]
   # if you do not have rcert, leave this item blank
- rca    = "namespaces/ns_2e6160583867/config/certs/rca.cert"
- rcert  = "namespaces/ns_2e6160583867/config/certs/rcert.cert"
- priv   = "namespaces/ns_2e6160583867/config/certs/rcert.priv"
+ rca    = "config/certs/rca.cert"
+ rcert  = "config/certs/rcert.cert"
+ priv   = "config/certs/rcert.priv"
 
 [encryption.check]
  enable     = true
@@ -84,9 +84,9 @@ algo = "PBFT"
 [database]
     type = 0001
     [database.leveldb]
-    path        = "./namespaces/ns_2e6160583867/data/leveldb" #leveldb table root dir
+    path        = "data/leveldb" #leveldb table root dir
     log_status  = false
-    log_path    = "./namespaces/ns_2e6160583867/data/db.log"
+    log_path    = "data/db.log"
 
 
 ############################################################################################################
@@ -133,7 +133,7 @@ algo = "PBFT"
 [log]
 dump_file       = true # dump the log file or not
 dump_interval   = "24h"  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h". such as "300ms", "2h45m".
-log_dir         = "./namespaces/ns_2e6160583867/data/logs"
+log_dir         = "data/logs"
 log_level       = "NOTICE" # default loglevel for all modules which can be override by module level log setting
 file_format     = "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
 console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
@@ -152,12 +152,12 @@ max_log_size    = "200mb"  # "mb", "kb"
 #
 ############################################################################################################
 [account]
-keystoredir = "namespaces/ns_2e6160583867/config/keystore"
-keynodesdir = "namespaces/ns_2e6160583867/config/keynodes"
+keystoredir = "config/keystore"
+keynodesdir = "config/keynodes"
 
 [config.path]
-caconfig        = "namespaces/ns_2e6160583867/config/namespace.toml"
-peerconfig      = "namespaces/ns_2e6160583867/config/peerconfig.toml"
+caconfig        = "config/namespace.toml"
+peerconfig      = "config/peerconfig.toml"
 
 #TODO: flow.control.ratelimit configs should move to global.toml finally
 [flow.control.ratelimit]

@@ -96,11 +96,11 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 	if selfHostname == "" {
 		return nil, errors.New(fmt.Sprintf("invalid self hostname: %s", selfHostname))
 	}
-	caconf := peercnf.GetString("self.caconf")
+	caconf := common.GetPath(namespace, peercnf.GetString("self.caconf"))
 	if !common.FileExist(caconf){
 		return nil,errors.New(fmt.Sprintf("caconfig file is not exist, please check it %s \n",caconf))
 	}
-	h,err := hts.NewHTS(secimpl.NewSecuritySelector(caconf),caconf)
+	h,err := hts.NewHTS(namespace, secimpl.NewSecuritySelector(caconf),caconf)
 	if err != nil{
 		return nil, errors.New(fmt.Sprintf("hts initlized failed: %s", err.Error()))
 	}

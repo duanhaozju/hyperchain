@@ -202,7 +202,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return ErrNonExistConfig
 	}
 	nsConfigDir := nsRootPath + "/config"
-	nsConfig, err := nr.constructConfigFromDir(nsConfigDir)
+	nsConfig, err := nr.constructConfigFromDir(name, nsConfigDir)
 	if err != nil {
 		return err
 	}
