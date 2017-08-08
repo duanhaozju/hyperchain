@@ -157,6 +157,13 @@ func (c *jsonCodec) ReadRequestHeaders(options CodecOption) ([]*common.RPCReques
 	return parseRequest(incomingMsg, options)
 }
 
+// GatAuthInfo read authentication info (token and method) from http header
+func (c *jsonCodec) GetAuthInfo() (string, string) {
+	token := c.req.Header.Get("Authorization")
+	method := c.req.Header.Get("Method")
+	return token, method
+}
+
 // isBatch returns true when the first non-whitespace characters is '['
 func isBatch(msg json.RawMessage) bool {
 	for _, c := range msg {

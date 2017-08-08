@@ -7,6 +7,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"sync"
+	admin "hyperchain/api/admin"
 )
 
 // Server represents a RPC server
@@ -15,6 +16,7 @@ type Server struct {
 	codecsMu     sync.Mutex
 	codecs       *set.Set
 	namespaceMgr namespace.NamespaceManager
+	admin        *admin.Administrator
 	reqMgrMu     sync.Mutex
 	requestMgr   map[string]*requestManager
 }
@@ -35,6 +37,8 @@ type ServerCodec interface {
 	CreateErrorResponseWithInfo(id interface{}, namespace string, err common.RPCError, info interface{}) interface{}
 	// Create notification response
 	CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{}
+	// GatAuthInfo read authentication info (token and method) from http header
+	GetAuthInfo() (string, string)
 	// Write msg to client.
 	Write(interface{}) error
 	// Write notify msg to client.

@@ -21,7 +21,7 @@ var (
 )
 
 //constructConfigFromDir read all info needed by
-func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, error) {
+func (nr *nsManagerImpl) constructConfigFromDir(namespace, path string) (*common.Config, error) {
 	var conf *common.Config
 	nsConfigPath := path + "/namespace.toml"
 	if _, err := os.Stat(nsConfigPath); os.IsNotExist(err) {
@@ -30,7 +30,7 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, er
 	}
 	conf = common.NewConfig(nsConfigPath)
 	// init peer configurations
-	peerConfigPath := conf.GetString(common.PEER_CONFIG_PATH)
+	peerConfigPath := common.GetPath(namespace, conf.GetString(common.PEER_CONFIG_PATH))
 	peerViper := viper.New()
 	peerViper.SetConfigFile(peerConfigPath)
 	err := peerViper.ReadInConfig()

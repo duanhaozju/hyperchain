@@ -21,6 +21,7 @@ core/vm/jcee/java/target
 core/vm/jcee/java/*.iml
 core/vm/jcee/java/.idea
 hypercli/hypercli
+hypercli/keyconfigs/keynodes
 
 core/vm/jcee/java/hyperjvm
 

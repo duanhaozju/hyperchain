@@ -25,7 +25,7 @@ type hyperchain struct {
 	args        *argT
 }
 
-func newHyperchain(argV *argT, conf *common.Config) *hyperchain {
+func newHyperchain(argV *argT) *hyperchain {
 	hp := &hyperchain{
 		stopFlag:    make(chan bool),
 		restartFlag: make(chan bool),
@@ -49,8 +49,6 @@ func newHyperchain(argV *argT, conf *common.Config) *hyperchain {
 	}
 	hp.p2pmgr = p2pManager
 
-	//
-	//common.InitLog(globalConfig)
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
 	hp.hs = jsonrpc.GetRPCServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)
 
@@ -83,11 +81,11 @@ type argT struct {
 	RestoreEnable bool     `cli:"r,restore" usage:"enable restore system status from dumpfile"`
 	SId           string   `cli:"sid" usage:"use to specify snapshot" dft:""`
 	Namespace     string   `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
-	PProfEnable   bool     `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`
-	PPort         string   `cli:"pport" usage:"use to specify pprof http port"`
-	ConfigPath    string   `cli:"c,conf" usage:"config file path" dft:"./global.toml"`
-	IPCEndpoint   string   `cli:"ipc" usage:"ipc interactive shell attach endpoint" dft:"./hpc.ipc"`
-	Shell         bool     `cli:"s,shell" usage:"start interactive shell" dft:"false"`
+	ConfigPath  string `cli:"c,conf" usage:"config file path" dft:"./global.toml"`
+	IPCEndpoint string `cli:"ipc" usage:"ipc interactive shell attach endpoint" dft:"./hpc.ipc"`
+	Shell       bool `cli:"s,shell" usage:"start interactive shell" dft:"false"`
+	PProfEnable   bool   `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`
+	PPort         string `cli:"pport" usage:"use to specify pprof http port"`
 }
 
 var (

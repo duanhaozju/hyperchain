@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli"
-	admin "hyperchain/rpc"
+	admin "hyperchain/api/admin"
 	"hyperchain/hypercli/common"
 )
 
