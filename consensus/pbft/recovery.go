@@ -676,14 +676,44 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 
 	// post all the PQC
 	for _, preprep := range PQCInfo.GetPrepreSet() {
-		go pbft.pbftEventQueue.Push(preprep)
+		payload, err := proto.Marshal(preprep)
+		if err != nil {
+			pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
+			pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
+			pbft.batchVdr.currentVid = nil
+			return nil
+		}
+		consensusMsg := &ConsensusMessage{
+			Type:    ConsensusMessage_PRE_PREPARE,
+			Payload: payload,
+		}
+		go pbft.pbftEventQueue.Push(consensusMsg)
 	}
 	for _, prep := range PQCInfo.GetPreSet() {
-		go pbft.pbftEventQueue.Push(prep)
+		payload, err := proto.Marshal(prep)
+		if err != nil {
+			pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
+			pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
+			pbft.batchVdr.currentVid = nil
+			return nil
+		}
+		consensusMsg := &ConsensusMessage{
+			Type:    ConsensusMessage_PREPARE,
+			Payload: payload,
+		}
+		go pbft.pbftEventQueue.Push(consensusMsg)
 	}
 	for _, cmt := range PQCInfo.GetCmtSet() {
-		go pbft.pbftEventQueue.Push(cmt)
-
+		payload, err := proto.Marshal(cmt)
+		if err != nil {
+			pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
+			return nil
+		}
+		consensusMsg := &ConsensusMessage{
+			Type:    ConsensusMessage_COMMIT,
+			Payload: payload,
+		}
+		go pbft.pbftEventQueue.Push(consensusMsg)
 	}
 
 	return nil
