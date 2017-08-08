@@ -2,7 +2,7 @@ package auth
 
 import (
 	"github.com/urfave/cli"
-	admin "hyperchain/api/jsonrpc/core/admin"
+	admin "hyperchain/api/admin"
 
 	"fmt"
 	"hyperchain/hypercli/common"

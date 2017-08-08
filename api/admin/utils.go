@@ -3,8 +3,6 @@
 package jsonrpc
 
 import (
-	"math/big"
-	"reflect"
 	"strings"
 	"encoding/base64"
 	"encoding/json"
@@ -32,42 +30,6 @@ var user_scope = map [string]permissionSet {
 
 var user_opTime = map [string]int64 {
 	"root": 0,
-}
-
-func splitRawMessage(args json.RawMessage) ([]string, error) {
-	str := string(args[:])
-	length := len(str)
-	if length < 2 {
-		return nil, ErrInvalidParamFormat
-	} else {
-		if str[0] != '[' || str[length - 1] != ']' {
-			return nil, ErrInvalidParamFormat
-		}
-	}
-
-	if length == 2 {
-		return nil, nil
-	} else if length < 4 {
-		return nil, ErrInvalidParams
-	} else {
-		str = str[2 : len(str)-2]
-		splitstr := strings.Split(str, ",")
-		return splitstr, nil
-	}
-}
-
-var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
-
-// Indication if this type should be serialized in hex
-func isHexNum(t reflect.Type) bool {
-	if t == nil {
-		return false
-	}
-	for t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	return t == bigIntType
 }
 
 

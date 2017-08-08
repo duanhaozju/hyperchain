@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"encoding/json"
 	"strings"
-	admin "hyperchain/api/jsonrpc/core/admin"
+	admin "hyperchain/api/admin"
 )
 
 var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()

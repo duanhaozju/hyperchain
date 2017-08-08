@@ -11,7 +11,6 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/crypto"
 	"encoding/json"
-	"hyperchain/api/jsonrpc/core"
 	"strings"
 	"time"
 	"path/filepath"
@@ -20,6 +19,7 @@ import (
 	"bufio"
 	"encoding/gob"
 	"github.com/pkg/errors"
+	"hyperchain/rpc"
 )
 
 const (

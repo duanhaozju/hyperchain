@@ -5,7 +5,7 @@ package log
 import (
 	"fmt"
 	"github.com/urfave/cli"
-	admin "hyperchain/api/jsonrpc/core/admin"
+	admin "hyperchain/api/admin"
 	"hyperchain/hypercli/common"
 )
 

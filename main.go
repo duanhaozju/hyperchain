@@ -5,7 +5,6 @@ package main
 import (
 	"github.com/mkideal/cli"
 	"github.com/op/go-logging"
-	"hyperchain/api/jsonrpc/core"
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"time"
@@ -14,11 +13,12 @@ import (
 	"hyperchain/p2p/ipc"
 	"fmt"
 	_ "net/http/pprof"
+	"hyperchain/rpc"
 )
 
 type hyperchain struct {
 	nsMgr       namespace.NamespaceManager
-	hs          jsonrpc.HttpServer
+	hs          jsonrpc.RPCServer
 	p2pmgr 	    p2p.P2PManager
 	stopFlag    chan bool
 	restartFlag chan bool
@@ -49,9 +49,8 @@ func newHyperchain(argV *argT) *hyperchain {
 	}
 	hp.p2pmgr = p2pManager
 
-	httpPort := vip.GetInt(common.JSON_RPC_PORT)
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
-	hp.hs = jsonrpc.GetHttpServer(hp.nsMgr, hp.stopFlag, hp.restartFlag,httpPort)
+	hp.hs = jsonrpc.GetRPCServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)
 
 	return hp
 }

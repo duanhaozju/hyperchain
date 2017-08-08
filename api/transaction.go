@@ -46,12 +46,10 @@ type SendTxArgs struct {
 	Payload   string          `json:"payload"`
 	Signature string          `json:"signature"`
 	Timestamp int64           `json:"timestamp"`
-	// --- test -----
-	Request   *Number     `json:"request"`
-	Simulate  bool        `json:"simulate"`
-	Opcode    int32       `json:"opcode"`
-	Nonce     int64       `json:"nonce"`
-	VmType    string      `json:"type"`
+	Simulate  bool		`json:"simulate"`
+	Opcode    int32		`json:"opcode"`
+	Nonce     int64		`json:"nonce"`
+	VmType    string	`json:"type"`
 }
 
 type TransactionResult struct {
@@ -152,7 +150,6 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 		return common.Hash{}, &common.CallbackError{err.Error()}
 	}
 
-	//tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, common.FromHex(args.Signature))
 	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	if tran.eh.NodeIdentification() == manager.IdentificationVP {
 		tx.Id = uint64(tran.eh.GetPeerManager().GetNodeId())
@@ -178,63 +175,32 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 		return common.Hash{}, &common.RepeadedTxError{Message:"repeated tx"}
 	}
 
-	if args.Request != nil {
-
-		// ** For Hyperboard **
-		for i := 0; i < (*args.Request).ToInt(); i++ {
-			// Unsign Test
-			if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
-				tran.log.Error("invalid signature")
-				// ATTENTION, return invalid transactino directly
-				return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
-			}
-			if tran.eh.NodeIdentification() == manager.IdentificationNVP {
-				ch := make(chan bool)
-				go tran.eh.GetEventObject().Post(event.NewTxEvent{
-					Transaction: tx,
-					Simulate:    args.Simulate,
-					Ch: ch,
-				})
-				res := <- ch
-				close(ch)
-				if res == false {
-					return common.Hash{}, &common.CallbackError{Message:"send tx to nvp failed."}
-				}
-
-			} else {
-				go tran.eh.GetEventObject().Post(event.NewTxEvent{
-					Transaction: tx,
-					Simulate:    args.Simulate,
-				})
-			}
+	// verify tx signature
+	if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
+		tran.log.Error("invalid signature")
+		// ATTENTION, return invalid transactino directly
+		return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
+	}
+	if tran.eh.NodeIdentification() == manager.IdentificationNVP {
+		ch := make(chan bool)
+		go tran.eh.GetEventObject().Post(event.NewTxEvent{
+			Transaction: tx,
+			Simulate:    args.Simulate,
+			Ch:          ch,
+		})
+		res := <- ch
+		close(ch)
+		if res == false {
+			return common.Hash{}, &common.CallbackError{Message:"send tx to nvp failed."}
 		}
 	} else {
-		// ** For Hyperchain **
-		if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
-			tran.log.Error("invalid signature")
-			// ATTENTION, return invalid transactino directly
-			return common.Hash{}, &common.SignatureInvalidError{Message:"invalid signature"}
-		}
-		if tran.eh.NodeIdentification() == manager.IdentificationNVP {
-			ch := make(chan bool)
-			go tran.eh.GetEventObject().Post(event.NewTxEvent{
-				Transaction: tx,
-				Simulate:    args.Simulate,
-				Ch: ch,
-			})
-			res := <- ch
-			close(ch)
-			if res == false {
-				return common.Hash{}, &common.CallbackError{Message:"send tx to nvp failed."}
-			}
-
-		} else {
-			go tran.eh.GetEventObject().Post(event.NewTxEvent{
-				Transaction: tx,
-				Simulate:    args.Simulate,
-			})
-		}
+		// post new tx event
+		go tran.eh.GetEventObject().Post(event.NewTxEvent{
+			Transaction: tx,
+			Simulate:    args.Simulate,
+		})
 	}
+
 	return tx.GetHash(), nil
 }
 
@@ -535,10 +501,10 @@ func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*Numbe
 
 	block, err := edb.GetBlockByNumber(tran.namespace, blknumber)
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by number %#x", n)}
+		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("block by number %#x", n)}
 	} else if err != nil {
 		tran.log.Errorf("%v", err)
-		return nil, &common.CallbackError{Message:err.Error()}
+		return nil, &common.CallbackError{Message: err.Error()}
 	}
 
 	txCount := len(block.Transactions)
@@ -562,7 +528,7 @@ func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
-		return common.Hash{}, &common.CallbackError{Message:err.Error()}
+		return common.Hash{}, &common.CallbackError{Message: err.Error()}
 	}
 
 	if args.To == nil {
@@ -661,8 +627,7 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 				return nil, &common.CallbackError{Message: err.Error()}
 			}
 
-
-			if to == contractAddr && to != "0x0000000000000000000000000000000000000000"{
+			if to == contractAddr && to != "0x0000000000000000000000000000000000000000" {
 				if args.MethodID != "" {
 					if substr(txResult.Payload, 2, 10) == args.MethodID {
 						txCounts++
@@ -692,12 +657,12 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 	}
 
 	return struct {
-		Count     	*Number `json:"count,"`
-		LastIndex 	*Number   `json:"lastIndex"`
-		LastBlockNum 	*BlockNumber `json:"lastBlockNum"`
+		Count        *Number      `json:"count,"`
+		LastIndex    *Number      `json:"lastIndex"`
+		LastBlockNum *BlockNumber `json:"lastBlockNum"`
 	}{
-		Count:     NewIntToNumber(txCounts),
-		LastIndex: NewIntToNumber(lastIndex),
+		Count:        NewIntToNumber(txCounts),
+		LastIndex:    NewIntToNumber(lastIndex),
 		LastBlockNum: Uint64ToBlockNumber(lastBlockNum),
 	}, nil
 
@@ -723,7 +688,7 @@ type pagingArgs struct {
 	methodId 	string
 }
 
-func preparePagingArgs(args PagingArgs) (PagingArgs, error){
+func preparePagingArgs(args PagingArgs) (PagingArgs, error) {
 	if args.PageSize == 0 {
 		return PagingArgs{}, &common.InvalidParamsError{"'pageSize' can't be zero or empty"}
 	} else if args.Separated % args.PageSize != 0 {
@@ -739,7 +704,7 @@ func preparePagingArgs(args PagingArgs) (PagingArgs, error){
 	return args, nil
 }
 
-func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}, error){
+func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}, error) {
 
 	realArgs, err := preparePagingArgs(args)
 	if err != nil {
@@ -791,7 +756,6 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 			index = 0
 		}
 
-
 		if !isFirstTx && index == 0 {
 			txCounts_temp = txCounts + blockTxCount
 		} else {
@@ -807,7 +771,7 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 			index = blockTxCount - 1
 			txCounts = txCounts_temp
 		} else {
-			index = separated - txCounts + index -1
+			index = separated - txCounts + index - 1
 			txCounts += index + 1
 		}
 
@@ -844,15 +808,15 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 	}
 
 	return tran.getNextPagingTransactions(txs, blkNumber, index, pagingArgs{
-		pageSize: realArgs.PageSize.ToInt(),
+		pageSize:     realArgs.PageSize.ToInt(),
 		minBlkNumber: min,
 		maxBlkNumber: max,
 		contractAddr: realArgs.ContractAddr,
-		methodId: realArgs.MethodID,
+		methodId:     realArgs.MethodID,
 	})
 }
 
-func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}, error){
+func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}, error) {
 
 	realArgs, err := preparePagingArgs(args)
 	if err != nil {
@@ -890,7 +854,7 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 		}
 
 		// filter
-		if filteredTxsByAddr, err := tran.filterTransactionsByAddress(block.Transactions[: index], contractAddr); err != nil {
+		if filteredTxsByAddr, err := tran.filterTransactionsByAddress(block.Transactions[:index], contractAddr); err != nil {
 			return nil, err
 		} else if realArgs.MethodID != "" {
 
@@ -906,7 +870,6 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 		if filtedTxsCount != blockTxCount {
 			index = filtedTxsCount
 		}
-
 
 		txCounts += index
 		if txCounts < separated {
@@ -953,15 +916,15 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 	}
 
 	return tran.getPrevPagingTransactions(txs, blkNumber, index, pagingArgs{
-		pageSize: realArgs.PageSize.ToInt(),
+		pageSize:     realArgs.PageSize.ToInt(),
 		minBlkNumber: min,
 		maxBlkNumber: max,
 		contractAddr: realArgs.ContractAddr,
-		methodId: realArgs.MethodID,
+		methodId:     realArgs.MethodID,
 	})
 }
 
-func (tran *Transaction) getNextPagingTransactions(txs []interface{}, currentNumber uint64, currentIndex int, constant pagingArgs) ([]interface{}, error){
+func (tran *Transaction) getNextPagingTransactions(txs []interface{}, currentNumber uint64, currentIndex int, constant pagingArgs) ([]interface{}, error) {
 	//log.Notice("===== enter getNextPagingTransactions =======\n")
 	//log.Noticef("当前交易量 %v: \n", len(txs))
 	//log.Noticef("当前区块号 %v: \n", currentNumber)
@@ -989,10 +952,9 @@ func (tran *Transaction) getNextPagingTransactions(txs []interface{}, currentNum
 		flag = blockTxCount - (currentIndex + 1) <= constant.pageSize - len(txs)
 	}
 
+	if flag {
 
-	if (flag) {
-
-		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[currentIndex : ], constant.contractAddr); err != nil {
+		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[currentIndex:], constant.contractAddr); err != nil {
 			return nil, err
 		} else {
 			if constant.methodId != "" {
@@ -1008,12 +970,11 @@ func (tran *Transaction) getNextPagingTransactions(txs []interface{}, currentNum
 			}
 		}
 
-
 		return tran.getNextPagingTransactions(txs, currentNumber, 0, constant)
 	} else {
 		index := currentIndex + constant.pageSize - len(txs)
 
-		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[currentIndex : index], constant.contractAddr); err != nil {
+		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[currentIndex:index], constant.contractAddr); err != nil {
 			return nil, err
 		} else {
 			if constant.methodId != "" {
@@ -1031,14 +992,14 @@ func (tran *Transaction) getNextPagingTransactions(txs []interface{}, currentNum
 	}
 }
 
-func (tran *Transaction) getPrevPagingTransactions(txs []interface{}, currentNumber uint64, currentIndex int, constant pagingArgs) ([]interface{}, error){
+func (tran *Transaction) getPrevPagingTransactions(txs []interface{}, currentNumber uint64, currentIndex int, constant pagingArgs) ([]interface{}, error) {
 
 	//log.Notice("===== enter getPrevPagingTransactions =======\n")
 	//log.Noticef("当前交易量 %v: \n", len(txs))
 	//log.Noticef("当前区块号 %v: \n", currentNumber)
 	//log.Noticef("当前交易索引 %v: \n", currentIndex)
 
-	if len(txs) == constant.pageSize || currentNumber < constant.minBlkNumber || currentNumber == 0{
+	if len(txs) == constant.pageSize || currentNumber < constant.minBlkNumber || currentNumber == 0 {
 		return txs, nil
 	}
 
@@ -1051,10 +1012,7 @@ func (tran *Transaction) getPrevPagingTransactions(txs []interface{}, currentNum
 		currentIndex = blk.TxCounts.ToInt() - 1
 	}
 
-
-
-	if currentIndex + 1 <= constant.pageSize - len(txs) {
-
+	if currentIndex+1 <= constant.pageSize-len(txs) {
 
 		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[:currentIndex+1], constant.contractAddr); err != nil {
 			return nil, err
@@ -1078,8 +1036,7 @@ func (tran *Transaction) getPrevPagingTransactions(txs []interface{}, currentNum
 
 		index := currentIndex - (constant.pageSize - len(txs)) + 1
 
-
-		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[index: currentIndex+1], constant.contractAddr); err != nil {
+		if filteredTxByAddr, err := tran.filterTransactionsByAddress(blk.Transactions[index:currentIndex+1], constant.contractAddr); err != nil {
 			return nil, err
 		} else {
 			if constant.methodId != "" {
@@ -1138,7 +1095,7 @@ func outputTransaction(trans interface{}, namespace string, log *logging.Logger)
 	case *types.Transaction:
 		if err := proto.Unmarshal(t.Value, &txValue); err != nil {
 			log.Errorf("%v", err)
-			return nil, &common.CallbackError{Message:err.Error()}
+			return nil, &common.CallbackError{Message: err.Error()}
 		}
 
 		txHash := t.GetHash()
@@ -1163,30 +1120,30 @@ func outputTransaction(trans interface{}, namespace string, log *logging.Logger)
 				Payload:     common.ToHex(txValue.Payload),
 			}
 		} else if err != nil && err.Error() == leveldb_not_found_error {
-			return nil, &common.LeveldbNotFoundError{Message:fmt.Sprintf("block by %d", bn)}
+			return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("block by %d", bn)}
 		} else if err != nil {
-			return nil, &common.CallbackError{Message:err.Error()}
+			return nil, &common.CallbackError{Message: err.Error()}
 		}
 
 	case *types.InvalidTransactionRecord:
 		if err := proto.Unmarshal(t.Tx.Value, &txValue); err != nil {
 			log.Errorf("%v", err)
-			return nil, &common.CallbackError{Message:err.Error()}
+			return nil, &common.CallbackError{Message: err.Error()}
 		}
 		txHash := t.Tx.GetHash()
 		txRes = &TransactionResult{
-			Version:     string(t.Tx.Version),
-			Hash:        txHash,
-			From:        common.BytesToAddress(t.Tx.From),
-			To:          common.BytesToAddress(t.Tx.To),
-			Amount:      NewInt64ToNumber(txValue.Amount),
-			Nonce:       t.Tx.Nonce,
+			Version: string(t.Tx.Version),
+			Hash:    txHash,
+			From:    common.BytesToAddress(t.Tx.From),
+			To:      common.BytesToAddress(t.Tx.To),
+			Amount:  NewInt64ToNumber(txValue.Amount),
+			Nonce:   t.Tx.Nonce,
 			//Gas: 		NewInt64ToNumber(txValue.GasLimit),
 			//GasPrice: 	NewInt64ToNumber(txValue.Price),
-			Timestamp:   t.Tx.Timestamp,
-			Payload:     common.ToHex(txValue.Payload),
-			Invalid:     true,
-			InvalidMsg:  t.ErrType.String(),
+			Timestamp:  t.Tx.Timestamp,
+			Payload:    common.ToHex(txValue.Payload),
+			Invalid:    true,
+			InvalidMsg: t.ErrType.String(),
 		}
 	}
 

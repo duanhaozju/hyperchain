@@ -6,8 +6,8 @@ import (
 	"github.com/urfave/cli"
 	"fmt"
 	"hyperchain/hypercli/common"
-	"hyperchain/api/jsonrpc/core"
 	"strconv"
+	"hyperchain/rpc"
 )
 
 //NewNodeCMD new node related commands.

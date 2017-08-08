@@ -26,12 +26,12 @@ func NewRequestManager(namespace string, s* Server, codec ServerCodec) *requestM
 	}
 }
 
-func (rm *requestManager)Start() {
+func (rm *requestManager) Start() {
 	log.Debug("start a new jsonrpc request manager")
 	go rm.Loop()
 }
 
-func (rm *requestManager)Stop() {
+func (rm *requestManager) Stop() {
 	close(rm.exit)
 }
 
@@ -39,7 +39,7 @@ func (rm *requestManager)ProcessRequest(request *common.RPCRequest) {
 	rm.response <- rm.receiver.handleChannelReq(rm.codec, request)//TODO: add timeout detect
 }
 
-func (rm *requestManager)Loop(){
+func (rm *requestManager) Loop() {
 	for {
 		select {
 		case request := <- rm.requests:

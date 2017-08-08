@@ -257,7 +257,7 @@ type ValueArgs struct {
 }
 
 type HmCheckResult struct {
-	CheckResult []bool  `json:"checkResult"`
+	CheckResult        []bool `json:"checkResult"`
 	SumIllegalHmAmount string `json:"illegalHmAmount"`
 }
 
