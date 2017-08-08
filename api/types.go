@@ -178,4 +178,3 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 }
-

@@ -44,15 +44,18 @@ type JSONResponse struct {
 
 // JSON-RPC notification payload
 type jsonSubscription struct {
-	Subscription string      `json:"subscription"`
-	Result       interface{} `json:"result,omitempty"`
+	Event        	string		`json:"event"`
+	Subscription 	string      	`json:"subscription"`
+	Data       	interface{} 	`json:"data,omitempty"`
 }
 
 // JSON-RPC notification
 type jsonNotification struct {
-	Version string           `json:"jsonrpc"`
-	Method  string           `json:"method"`
-	Params  jsonSubscription `json:"params"`
+	Version 	string           	`json:"jsonrpc"`
+	//Method  	string           	`json:"method"`
+	//Params  	jsonSubscription 	`json:"params"`
+	Namespace 	string          	`json:"namespace"`
+	Result    	jsonSubscription	`json:"result"`
 }
 
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It
@@ -75,11 +78,11 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 	d.UseNumber()
 	return &jsonCodec{
 		closed: make(chan interface{}),
-		d: d,
-		e: json.NewEncoder(rwc),
-		rw: rwc,
-		req: req,
-		nr: nr,
+		d: 	d,
+		e: 	json.NewEncoder(rwc),
+		rw: 	rwc,
+		req: 	req,
+		nr: 	nr,
 	}
 }
 
@@ -136,20 +139,26 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string) common.RPCError {
 // ReadRequestHeaders will read new requests without parsing the arguments. It will
 // return a collection of requests, an indication if these requests are in batch
 // form or an error when the incoming message could not be read/parsed.
-func (c *jsonCodec) ReadRequestHeaders() ([]*common.RPCRequest, bool, common.RPCError) {
+func (c *jsonCodec) ReadRequestHeaders(options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
 	var incomingMsg json.RawMessage
 	if err := c.d.Decode(&incomingMsg); err != nil {
-		log.Error(err)
 		return nil, false, &common.InvalidRequestError{Message: err.Error()}
 	}
 	if isBatch(incomingMsg) {
 		return parseBatchRequest(incomingMsg)
 	}
 
-	return parseRequest(incomingMsg)
+	return parseRequest(incomingMsg, options)
+}
+
+// GatAuthInfo read authentication info (token and method) from http header
+func (c *jsonCodec) GetAuthInfo() (string, string) {
+	token := c.req.Header.Get("Authorization")
+	method := c.req.Header.Get("Method")
+	return token, method
 }
 
 // isBatch returns true when the first non-whitespace characters is '['
@@ -183,19 +192,19 @@ func checkReqId(reqId json.RawMessage) error {
 // parseRequest will parse a single request from the given RawMessage. It will return
 // the parsed request, an indication if the request was a batch or an error when
 // the request could not be parsed.
-func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, common.RPCError) {
+func parseRequest(incomingMsg json.RawMessage, options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
 	var in JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
-		return nil, false, &common.InvalidMessageError{Message:err.Error()}
+		return nil, false, &common.InvalidMessageError{Message: err.Error()}
 	}
 	if err := checkReqId(in.Id); err != nil {
-		return nil, false, &common.InvalidMessageError{Message:err.Error()}
+		return nil, false, &common.InvalidMessageError{Message: err.Error()}
 	}
 
 	// regular RPC call
 	elems := strings.Split(in.Method, serviceMethodSeparator)
 	if len(elems) != 2 {
-		return nil, false, &common.MethodNotFoundError{Service:in.Method, Method:""}
+		return nil, false, &common.MethodNotFoundError{Service: in.Method, Method: ""}
 	}
 
 	if len(in.Payload) == 0 {
@@ -210,13 +219,13 @@ func parseRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, comm
 func parseBatchRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool, common.RPCError) {
 	var in []JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
-		return nil, false, &common.InvalidMessageError{Message:err.Error()}
+		return nil, false, &common.InvalidMessageError{Message: err.Error()}
 	}
 
 	requests := make([]*common.RPCRequest, len(in))
 	for i, r := range in {
 		if err := checkReqId(r.Id); err != nil {
-			return nil, false, &common.InvalidMessageError{Message:err.Error()}
+			return nil, false, &common.InvalidMessageError{Message: err.Error()}
 		}
 
 		id := &in[i].Id

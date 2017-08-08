@@ -7,31 +7,39 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"strings"
-	"encoding/json"
+	"github.com/op/go-logging"
 )
 
-func (s *Server) handleCMD(req *common.RPCRequest) *common.RPCResponse {
-	cmd := &Command{MethodName: req.Method}
-	if args, ok := req.Params.(json.RawMessage); !ok {
-		log.Notice("nil parms in json")
-		cmd.Args = nil
-	} else {
-		args, err := splitRawMessage(args)
-		if err != nil {
-			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidParamsError{Message: err.Error()}}
-		}
-		cmd.Args = args
-	}
-	if _, ok := s.admin.CmdExecutor[req.Method] ; !ok {
-		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
-	}
-	rs := s.admin.CmdExecutor[req.Method](cmd)
-	if rs.Ok == false {
-		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: rs.Error}
-	}
-	return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Reply: rs.Result}
+var log *logging.Logger
 
+func PreHandle(token, method string) error {
+	if method == "" {
+		return ErrNotSupport
+	}
+	if token == "" {
+		return ErrTokenInvalid
+	}
+
+	// verify signed token
+	if claims, err := verifyToken(token, pub_key, "RS256"); err != nil {
+		return err
+	} else {
+		username := getUserFromClaim(claims)
+		if username == "" {
+			return ErrPermission
+		}
+		// check if operation has expired, if expired, return error, else update last operation time
+		if checkOpTimeExpire(username) {
+			return ErrTimeoutPermission
+		}
+		updateLastOperationTime(username)
+		if ok, err := checkPermission(username, method); !ok {
+			return err
+		}
+	}
+	return nil
 }
+
 
 //Command command send from client.
 type Command struct {
@@ -362,6 +370,8 @@ func (adm *Administrator) delUser(cmd *Command) *CommandResult {
 }
 
 func (adm *Administrator) Init() {
+	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc/admin")
+
 	adm.CmdExecutor = make(map[string]func(command *Command) *CommandResult)
 	adm.CmdExecutor["stopServer"] = adm.stopServer
 	adm.CmdExecutor["restartServer"] = adm.restartServer

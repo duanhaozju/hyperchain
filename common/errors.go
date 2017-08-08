@@ -20,6 +20,7 @@ const (
 
 // JSON-RPC custom error code from 32001 to 32099
 const (
+	custom_InvalidTokenError     int   = -32097
 	custom_UnauthorizedError     int   = -32098
 	custom_CertError             int   = -32099
 )
@@ -175,6 +176,13 @@ type NoBlockGeneratedError struct {
 
 func (e *NoBlockGeneratedError) Code() int {return custom_NoBlockGeneratedError}
 func (e *NoBlockGeneratedError) Error() string {return fmt.Sprintf(e.Message)}
+
+type InvalidTokenError struct {
+	Message string
+}
+
+func (e *InvalidTokenError) Code() int {return custom_InvalidTokenError}
+func (e *InvalidTokenError) Error() string {return fmt.Sprintf(e.Message)}
 
 type UnauthorizedError struct {}
 

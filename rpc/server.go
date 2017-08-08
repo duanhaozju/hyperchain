@@ -10,6 +10,10 @@ import (
 	"gopkg.in/fatih/set.v0"
 	"hyperchain/common"
 	"hyperchain/namespace"
+	"encoding/json"
+	admin "hyperchain/api/admin"
+	"sync"
+	"fmt"
 )
 
 const (
@@ -25,7 +29,7 @@ const (
 	OptionMethodInvocation CodecOption = 1 << iota
 
 	// OptionSubscriptions is an indication that the codec suports RPC notifications
-	OptionSubscriptions = 1 << iota // support pub sub
+	OptionSubscriptions
 )
 
 // NewServer will create a new server instance with no registered handlers.
@@ -36,7 +40,7 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 		namespaceMgr: nr,
 		requestMgr:   make(map[string]*requestManager),
 	}
-	server.admin = &Administrator{
+	server.admin = &admin.Administrator{
 		NsMgr:         server.namespaceMgr,
 		StopServer:    stopHyperchain,
 		RestartServer: restartHp,
@@ -48,16 +52,18 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 // ServeCodec reads incoming requests from codec, calls the appropriate callback and writes the
 // response back using the given codec. It will block until the codec is closed or the server is
 // stopped. In either case the codec is closed.
-func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
+func (s *Server) ServeCodec(codec ServerCodec, options CodecOption, ctx context.Context) {
 	defer codec.Close()
-	s.serveRequest(codec, false, options)
+	s.serveRequest(codec, false, options, ctx)
 }
 
 // ServeSingleRequest reads and processes a single RPC request from the given codec. It will not
 // close the codec unless a non-recoverable error has occurred. Note, this method will return after
 // a single request has been processed!
 func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
-	s.serveRequest(codec, true, options)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	s.serveRequest(codec, true, options, ctx)
 }
 
 // serveRequest will reads requests from the codec, calls the RPC callback and
@@ -66,7 +72,10 @@ func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
 // If singleShot is true it will process a single request, otherwise it will handle
 // requests until the codec returns an error when reading a request (in most cases
 // an EOF). It executes requests in parallel when singleShot is false.
-func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecOption) error {
+func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecOption, ctx context.Context) error {
+
+	var pend sync.WaitGroup
+
 	defer func() {
 		if err := recover(); err != nil {
 			const size = 64 << 10
@@ -82,8 +91,21 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 		return
 	}()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	//ctx, cancel := context.WithCancel(context.Background())
+	//
+	////defer func() {
+	////	fmt.Println("context cancel()")
+	////	cancel()
+	////}()
+	//defer cancel()
+	//
+	//// if the codec supports notification include a notifier that callbacks can use
+	//// to send notification to clients. It is thight to the codec/connection. If the
+	//// connection is closed the notifier will stop and cancels all active subscriptions.
+	//if options&OptionSubscriptions == OptionSubscriptions {
+	//	//ctx = context.WithValue(ctx, common.NotifierKey{}, common.NewNotifier(codec))
+	//	ctx = context.WithValue(ctx, NotifierKey{}, NewNotifier(codec))
+	//}
 
 	s.codecsMu.Lock()
 	if atomic.LoadInt32(&s.run) != 1 { // server stopped
@@ -95,10 +117,16 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 
 	// test if the server is ordered to stop
 	for atomic.LoadInt32(&s.run) == 1 {
-		reqs, batch, err := s.readRequest(codec)
+		reqs, batch, err := s.readRequest(codec, options)
+		// If a parsing error occurred, send an error
 		if err != nil {
-			log.Debugf("%v\n", err)
-			codec.Write(codec.CreateErrorResponse(nil, "", err))
+			// If a parsing error occurred, send an error
+			if err.Error() != "EOF" {
+				log.Debug(fmt.Sprintf("read error %v\n", err))
+				codec.Write(codec.CreateErrorResponse(nil, "", err))
+			}
+			// Error or end of stream, wait for requests and tear down
+			pend.Wait()
 			return nil
 		}
 
@@ -118,7 +146,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			return nil
 		}
 		if reqs[0].Service == adminService {
-			response := s.handleCMD(reqs[0])
+			response := s.handleCMD(reqs[0], codec)
 			if response.Error != nil {
 				codec.Write(codec.CreateErrorResponse(response.Id, response.Namespace, response.Error))
 			} else if response.Reply != nil {
@@ -131,8 +159,20 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			}
 			return nil
 		}
-		s.handleReqs(ctx, codec, reqs)
-		return nil
+
+		if singleShot {
+			s.handleReqs(ctx, codec, reqs)
+			return nil
+		}
+
+		// For multi-shot connections, start a goroutine to serve and loop back
+		pend.Add(1)
+
+		go func() {
+			defer pend.Done()
+			s.handleReqs(ctx, codec, reqs)
+		}()
+
 	}
 	return nil
 }
@@ -157,8 +197,8 @@ func (s *Server) Stop() {
 // readRequest requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
-func (s *Server) readRequest(codec ServerCodec) ([]*common.RPCRequest, bool, common.RPCError) {
-	reqs, batch, err := codec.ReadRequestHeaders()
+func (s *Server) readRequest(codec ServerCodec,  options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
+	reqs, batch, err := codec.ReadRequestHeaders(options)
 	if err != nil {
 		return nil, batch, err
 	}
@@ -187,7 +227,7 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 	for _, req := range reqs {
 		req.Ctx = ctx
 
-		go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}){
+		go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}) {
 			name := request.Namespace
 			if err := codec.CheckHttpHeaders(name); err != nil {
 				log.Errorf("CheckHttpHeaders error: %v", err)
@@ -250,4 +290,33 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 		log.Errorf("response type invalid, resp: %v\n")
 		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"response type invalid!"})
 	}
+}
+
+func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RPCResponse {
+	token, method := codec.GetAuthInfo()
+	err := admin.PreHandle(token, method)
+	if err != nil {
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidTokenError{Message: err.Error()}}
+	}
+
+	cmd := &admin.Command{MethodName: req.Method}
+	if args, ok := req.Params.(json.RawMessage); !ok {
+		log.Notice("nil parms in json")
+		cmd.Args = nil
+	} else {
+		args, err := splitRawMessage(args)
+		if err != nil {
+			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidParamsError{Message: err.Error()}}
+		}
+		cmd.Args = args
+	}
+	if _, ok := s.admin.CmdExecutor[req.Method] ; !ok {
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
+	}
+	rs := s.admin.CmdExecutor[req.Method](cmd)
+	if rs.Ok == false {
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: rs.Error}
+	}
+	return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Reply: rs.Result}
+
 }

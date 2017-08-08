@@ -3,10 +3,9 @@ package jsonrpc
 import "strings"
 
 const (
-	expiration int64 = 60
-	beforetime int64 = 300
-	pri_key string   = "../../api/jsonrpc/core/key/sample_key"
-	pub_key string   = "../../api/jsonrpc/core/key/sample_key.pub"
+	expiration int64 = 600
+	pri_key string   = "./hypercli/keyconfigs/key/key"
+	pub_key string   = "./hypercli/keyconfigs/key/key.pub"
 )
 
 const (

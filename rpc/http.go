@@ -8,57 +8,43 @@ import (
 	"github.com/rs/cors"
 
 	//"hyperchain/api/rest/routers"
-	"hyperchain/common"
 	"hyperchain/namespace"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"time"
-	"sync"
-	"github.com/op/go-logging"
+	admin "hyperchain/api/admin"
 )
 
 const (
 	maxHTTPRequestContentLength = 1024 * 256
+	ReadTimeout	            = 3 * time.Second
 )
 
 var (
-	hs           HttpServer
-	once         sync.Once
-	log *logging.Logger // package-level logger
+	hs           RPCServer
 )
-
-type HttpServer interface {
-	//Start start the http service.
-	Start() error
-	//Stop the http service.
-	Stop() error
-	//Restart the http service.
-	Restart() error
-}
-
 
 type httpServerImpl struct {
 	stopHp			chan bool
 	restartHp		chan bool
 	nr			namespace.NamespaceManager
+	port                    int
 
 	httpListener 		net.Listener
 	httpHandler  		*Server
 	httpAllowedOrigins 	[]string
-	port int
 }
 
-func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool,port int) HttpServer {
+func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) RPCServer {
 	if hs == nil {
-		log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
 		hs = &httpServerImpl{
 			nr: 			nr,
 			stopHp: 		stopHp,
 			restartHp: 		restartHp,
 			httpAllowedOrigins: 	[]string{"*"},
-			port:port,
+			port:                   nr.GlobalConfig().GetInt("port.jsonrpc"),
 		}
 	}
 	return hs
@@ -66,7 +52,7 @@ func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp ch
 
 // Start starts the http RPC endpoint.
 func (hi *httpServerImpl) Start() error {
-	log.Notice("start http service ... at",hi.port)
+	log.Notice("start http service ... at", hi.port)
 
 	var (
 		listener net.Listener
@@ -76,7 +62,7 @@ func (hi *httpServerImpl) Start() error {
 	// start http listener
 	handler := NewServer(hi.nr, hi.stopHp, hi.restartHp)
 
-	http.HandleFunc("/login", LoginServer)
+	http.HandleFunc("/login", admin.LoginServer)
 	http.Handle("/", newCorsHandler(handler, hi.httpAllowedOrigins))
 
 	listener, err = net.Listen("tcp", fmt.Sprintf(":%d", hi.port))
@@ -152,7 +138,7 @@ func (hrw *httpReadWrite) Close() error {
 func newHTTPServer() *http.Server {
 	return &http.Server{
 		Handler: nil,
-		ReadTimeout:  time.Second * 3,
+		ReadTimeout:  ReadTimeout,
 	}
 }
 
@@ -180,41 +166,6 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.StatusRequestEntityTooLarge)
 		return
 	}
-
-	//auth := r.Header.Get("Authorization")
-	//
-	//// verify signed token
-	//if claims, err := verifyToken(auth, pub_key, "RS256"); err != nil {
-	//	w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic releam=%s", err.Error()))
-	//	w.WriteHeader(http.StatusUnauthorized)
-	//	io.WriteString(w, fmt.Sprintf("%s", err.Error()))
-	//	return
-	//} else {
-	//	username := getUserFromClaim(claims)
-	//	if username == "" {
-	//		w.WriteHeader(http.StatusUnauthorized)
-	//		io.WriteString(w, fmt.Sprintf("%s", ErrPermission.Error()))
-	//		return
-	//	}
-	//	// check if operation has expired, if expired, return error, else update last operation time
-	//	if checkOpTimeExpire(username) {
-	//		w.WriteHeader(http.StatusUnauthorized)
-	//		io.WriteString(w, fmt.Sprintf("%s", ErrTimeoutPermission.Error()))
-	//		return
-	//	}
-	//	updateLastOperationTime(username)
-	//	var method = r.Header.Get("Method")
-	//	if method == "" {
-	//		io.WriteString(w, "Invalid request method")
-	//		return
-	//	}
-	//	if ok, err := checkPermission(username, method); !ok {
-	//		w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic releam=%s", err.Error()))
-	//		w.WriteHeader(http.StatusUnauthorized)
-	//		io.WriteString(w, fmt.Sprintf("%s", err.Error()))
-	//		return
-	//	}
-	//}
 
 	w.Header().Set("content-type", "application/json")
 	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr)

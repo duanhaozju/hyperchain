@@ -7,6 +7,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"sync"
+	admin "hyperchain/api/admin"
 )
 
 // Server represents a RPC server
@@ -15,7 +16,7 @@ type Server struct {
 	codecsMu     sync.Mutex
 	codecs       *set.Set
 	namespaceMgr namespace.NamespaceManager
-	admin        *Administrator
+	admin        *admin.Administrator
 	reqMgrMu     sync.Mutex
 	requestMgr   map[string]*requestManager
 }
@@ -27,13 +28,15 @@ type ServerCodec interface {
 	// Check http header
 	CheckHttpHeaders(namespace string) common.RPCError
 	// Read next request
-	ReadRequestHeaders() ([]*common.RPCRequest, bool, common.RPCError)
+	ReadRequestHeaders(options CodecOption) ([]*common.RPCRequest, bool, common.RPCError)
 	// Assemble success response, expects response id and payload
 	CreateResponse(id interface{}, namespace string, reply interface{}) interface{}
 	// Assemble error response, expects response id and error
 	CreateErrorResponse(id interface{}, namespace string, err common.RPCError) interface{}
 	// Assemble error response with extra information about the error through info
 	CreateErrorResponseWithInfo(id interface{}, namespace string, err common.RPCError, info interface{}) interface{}
+	// GatAuthInfo read authentication info (token and method) from http header
+	GetAuthInfo() (string, string)
 	// Write msg to client.
 	Write(interface{}) error
 	// Close underlying data stream
