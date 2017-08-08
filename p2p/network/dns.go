@@ -71,10 +71,10 @@ func (dnsr *DNSResolver)GetDNS(hostname string) (string,error){
 	return "",errHostnameNotFoud
 }
 
-func(dnsr *DNSResolver)AddItem(hostname string,addr string)error{
+func(dnsr *DNSResolver)AddItem(hostname string,addr string,overwrite bool)error{
 	dnsr.lock.Lock()
 	defer dnsr.lock.Unlock()
-	if _,ok := dnsr.DNSItems[hostname]; !ok{
+	if _,ok := dnsr.DNSItems[hostname]; !ok || overwrite{
 		dnsr.DNSItems[hostname] = addr
 		logger.Noticef("add a new dns item: %s => %s ",hostname,addr)
 		return nil

@@ -165,8 +165,11 @@ func (hn *HyperNet)reverse() error{
 		for m := range h.reverseQueue{
 			hostname := m[0]
 			addr := m[1]
-			if _,ok := h.hostClientMap.Get(hostname);ok{
-				continue
+			if c,ok := h.hostClientMap.Get(hostname);ok{
+				if !c.(*Client).stateMachine.Is(c_StatClosed){
+					c.(*Client).stateMachine.Event(c_EventConnect)
+					continue
+				}
 			}
 			logger.Infof("reverse connect to hostname %s,addr %s \n",hostname,addr)
 			ia,err := inneraddr.InnerAddrUnSerialize([]byte(addr))
@@ -177,17 +180,13 @@ func (hn *HyperNet)reverse() error{
 			ipaddr := ia.Get(hn.domain)
 
 			err = h.ConnectByAddr(hostname,ipaddr)
-			logger.Infof("actually connect to %s",ipaddr)
+			logger.Infof("now actually connect to %s",ipaddr)
 			if err !=nil{
 				logger.Errorf("there are something wrong when connect to host: %s",hostname)
 				// TODO here should check the retry time duration, maybe is a nil
 				logger.Info("It will retry connect to host",hostname,"after ",hn.conf.GetDuration(common.P2P_RETRY_TIME))
 			}else{
 				logger.Info("success reverse connect to host",hostname)
-			}
-			err = h.dns.AddItem(hostname,ipaddr)
-			if err != nil{
-				logger.Errorf("cannot add a dns item into dns file (for host %s), reason %s",hostname,err.Error())
 			}
 			// here when new node add should persist the connection
 			err = h.dns.Persisit()
@@ -209,7 +208,7 @@ func (hn *HyperNet)ConnectByAddr(hostname,addr string) error{
 		oldClient.(*Client).Close()
 		hn.hostClientMap.Remove(hostname)
 	}
-	hn.dns.AddItem(hostname,addr)
+	hn.dns.AddItem(hostname,addr,true)
 	hn.hostClientMap.Set(hostname,client)
 	logger.Infof("success connect to %s \n",hostname)
 	return nil

@@ -62,7 +62,7 @@ func (hn *HyperNet)Command(args []string,ret *[]string)error{
 		       *ret = append(*ret,fmt.Sprintf("connect to a new host: %s =>> %s:%d\n",hostname,ip,port))
 		       // real connection part
 		       //add dns item
-		       err = hn.dns.AddItem(hostname,ipaddr)
+		       err = hn.dns.AddItem(hostname,ipaddr,false)
 		       if err != nil{
 		       		*ret = append(*ret,fmt.Sprintf("connect to %s failed, reason: %s",hostname,err.Error()))
 		       		break
