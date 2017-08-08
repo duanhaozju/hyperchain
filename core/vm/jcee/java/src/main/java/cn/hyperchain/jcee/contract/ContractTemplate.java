@@ -16,8 +16,6 @@ import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.ledger.table.RelationDB;
 import cn.hyperchain.jcee.ledger.table.Table;
 import cn.hyperchain.jcee.ledger.table.TableName;
-import cn.hyperchain.jcee.util.Bytes;
-import com.google.gson.Gson;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,9 +24,6 @@ import org.apache.log4j.Logger;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 
 //ContractBase which is used as a skeleton of smart contract

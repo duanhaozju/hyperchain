@@ -27,56 +27,6 @@ public class SimulateBank extends ContractTemplate {
 
     public SimulateBank() {}
 
-    /**
-     * invoke smart contract method
-     *
-     * @param funcName function name user defined in contract
-     * @param args     arguments of funcName
-     */
-//    @Override
-//    public ExecuteResult invoke(String funcName, List<String> args) {
-//
-//        switch (funcName) {
-//            case "issue":
-//                return issue(args);
-//            case "transfer":
-//                return transfer(args);
-//            case "transferByBatch":
-//                return transferByBatch(args);
-//            case "getAccountBalance":
-//                return getAccountBalance(args);
-//            case "testRangeQuery":
-//                return testRangeQuery(args);
-//            case "testDelete":
-//                return testDelete(args);
-//            case "testInvokeContract":
-//                return testInvokeContract(args);
-//            case "testPostEvent":
-//                return testPostEvent(args);
-//            case "testSysQuery":
-//                return testSysQuery(args);
-//            case "newAccountTable":
-//                return newAccountTable(args);
-//            case "newPersonTable":
-//                return newPersonTable(args);
-//            case "getTableDesc":
-//                return getTableDesc(args);
-//            case "issueByTable":
-//                return issueByTable(args);
-//            case "transferByTable":
-//                return transferByTable(args);
-//            case "getAccount":
-//                return getAccount(args);
-//            case "getAccountByRange":
-//                return getAccountByRange(args);
-//            default:
-//                String err = "method " + funcName  + " not found!";
-//                logger.error(err);
-//                return new ExecuteResult(false, err);
-//
-//        }
-//    }
-
     //String account, double num
     public ExecuteResult issue(List<String> args) {
         if(args.size() != 2) {
@@ -92,10 +42,6 @@ public class SimulateBank extends ContractTemplate {
             return result(false, "put data error");
         }
         return result(true);
-    }
-
-    public ExecuteResult getValue(List<String> args) {
-        return result(true, ledger.get(args.get(0).getBytes()));
     }
 
     //String accountA, String accountB, double num
