@@ -31,21 +31,17 @@ type FilterExceptionData struct {
 	Archive
 */
 
-type FilterSnapshotEvent struct {
-	FilterId string
-	Success  bool
-	Message  string
-}
-
-type FilterDeleteSnapshotEvent struct {
-	FilterId string
-	Success  bool
-	Message  string
-}
+const (
+	FilterMakeSnapshot = "make_snapshot"
+	FilterDeleteSnapshot = "delete_snapshot"
+	FilterDoArchive = "do_archive"
+)
 
 type FilterArchive struct {
-	FilterId string
-	Success  bool
-	Message  string
+	Type     string      `json:"type"`
+	FilterId string      `json:"filterId"`
+	Success  bool        `json:"success"`
+	Message  string      `json:"message"`
 }
+
 

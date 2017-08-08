@@ -122,13 +122,14 @@ func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string
 
 }
 
-func (api *PublicFilterAPI) NewSnapshotSubscription() string {
+func (api *PublicFilterAPI) NewArchiveSubscription() string {
 	var (
 		ch = make(chan interface{})
-		sub = api.events.NewCommonSubscription(ch, false, flt.SnapshotSubscription, flt.FilterCriteria{})
+		sub = api.events.NewCommonSubscription(ch, false, flt.ArchiveSubscription, flt.FilterCriteria{})
 	)
 	api.filtersMu.Lock()
-	api.filters[sub.ID] = flt.NewFilter(flt.SnapshotSubscription, sub, flt.FilterCriteria{})
+	api.filters[sub.ID] = flt.NewFilter(flt.ArchiveSubscription, sub, flt.FilterCriteria{})
+	api.filtersMu.Unlock()
 	go func() {
 		for {
 			select {
@@ -226,15 +227,10 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 			logs := f.GetData()
 			defer f.ClearData()
 			return returnLogs(logs), nil
-		case flt.SnapshotSubscription:
+		case flt.ArchiveSubscription:
 			datas := f.GetData()
-			var ret []event.FilterSnapshotEvent
-			for _, d := range datas {
-				if val, ok := d.(event.FilterSnapshotEvent); ok {
-					ret = append(ret, val)
-				}
-			}
-			return ret, nil
+			defer f.ClearData()
+			return datas, nil
 		case flt.ExceptionSubscription:
 			data := f.GetData()
 			defer f.ClearData()

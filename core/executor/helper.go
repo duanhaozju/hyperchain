@@ -388,7 +388,8 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
 			return er.InvalidParamsErr
 		}
-		executor.helper.PostExternal(event.FilterSnapshotEvent{
+		executor.helper.PostExternal(event.FilterArchive{
+			Type:     event.FilterMakeSnapshot,
 			Success:  message[0].(bool),
 			FilterId: message[1].(string),
 			Message:  message[2].(string),
@@ -399,7 +400,8 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
 			return er.InvalidParamsErr
 		}
-		executor.helper.PostExternal(event.FilterDeleteSnapshotEvent{
+		executor.helper.PostExternal(event.FilterArchive{
+			Type:     event.FilterDeleteSnapshot,
 			Success:  message[0].(bool),
 			FilterId: message[1].(string),
 			Message:  message[2].(string),
@@ -411,6 +413,7 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 			return er.InvalidParamsErr
 		}
 		executor.helper.PostExternal(event.FilterArchive{
+			Type:     event.FilterDoArchive,
 			Success:  message[0].(bool),
 			FilterId: message[1].(string),
 			Message:  message[2].(string),

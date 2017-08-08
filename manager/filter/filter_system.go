@@ -21,11 +21,7 @@ const (
 	TransactionsSubscription
 	// BlocksSubscription queries hashes for blocks that are imported
 	BlocksSubscription
-	// SnapshotSubscription queries snapshot behavious result
-	SnapshotSubscription
-	// DelSnapshotSubscription queries del snapshot behavious result
-	DelSnapshotSubscription
-	// ArchiveSubscription queries chain's archive behavious result
+	// ArchiveSubscription queries snapshot/archive behavious result
 	ArchiveSubscription
 	// ExceptionSubscription capture all system exception events.
 	ExceptionSubscription
@@ -75,8 +71,7 @@ func NewEventSystem(mux *event.TypeMux) *EventSystem {
 func (es *EventSystem) eventLoop() {
 	var (
 		index = make(filterIndex)
-		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{}, event.FilterExceptionEvent{},event.FilterArchive{},
-			event.FilterSnapshotEvent{}, event.FilterDeleteSnapshotEvent{})
+		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{}, event.FilterExceptionEvent{},event.FilterArchive{})
 	)
 
 	for i := UnknownSubscription; i < LastIndexSubscription; i++ {
@@ -121,18 +116,6 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 				if len(ret) != 0 {
 					f.data <- ret
 				}
-			}
-		}
-	case event.FilterSnapshotEvent:
-		for _, f := range filters[SnapshotSubscription] {
-			if obj.Time.After(f.created) {
-				f.data <- ev
-			}
-		}
-	case event.FilterDeleteSnapshotEvent:
-		for _, f := range filters[DelSnapshotSubscription] {
-			if obj.Time.After(f.created) {
-				f.data <- ev
 			}
 		}
 	case event.FilterArchive:
