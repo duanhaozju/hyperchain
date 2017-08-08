@@ -13,6 +13,7 @@ const (
 	IDLE = 0
 )
 
+// Hyperchain protocol message definitions
 const (
 	// consensus
 	NOTIFY_REMOVE_CACHE = iota
@@ -33,12 +34,12 @@ const (
 	NOTIFY_NVP_SYNC
 )
 
+// Subscription type definitions
 const (
 	FILTER_NEW_BLOCK = iota
 	FILTER_NEW_LOG
 	FILTER_SNAPSHOT_RESULT
 	FILTER_DELETE_SNAPSHOT
-
 	FILTER_ARCHIVE
 )
 
@@ -49,10 +50,13 @@ const (
 )
 
 const (
-	LatestBlockNumber uint64 = 0
-	// WsShardLen              = 2 * 1024 * 1024 // 2MB
-	WsShardLen = 1024 // 1KB
+	LatestBlockNumber     uint64 = 0
+	WsShardLen            = 1024 * 1024 // 1MB
+	MaxPendingSnapshotReq = 1024
+)
 
+// Error message definitions
+const (
 	InvalidSnapshotReqErr = "invalid snapshot request"
 	InvalidDeletionReqErr = "invalid snapshot deletion request"
 	MakeSnapshotFailedErr = "make snapshot failed"
@@ -62,6 +66,7 @@ const (
 	EmptyMessage          = ""
 )
 
+// Error definitions
 var (
 	SnapshotContentInvalidErr     = errors.New("snapshot content invalid")
 	ArchiveRequestNotSatisfiedErr = errors.New("archive request not satisfied with requirement")

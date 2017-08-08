@@ -227,7 +227,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// (1) Relative block height of the world state
 		// (2) Request peer identification
 		// (3) Target peer identification
-		executor.logger.Notice("inform p2p sync world state")
+		executor.logger.Debug("inform p2p sync world state")
 		if !checkParams([]reflect.Kind{reflect.Uint64}, message...) {
 			return er.InvalidParamsErr
 		}
@@ -253,7 +253,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// (2) each packet size
 		// (3) totally packet number
 		// (4) relative block number
-		executor.logger.Notice("inform p2p send world state handshake packet")
+		executor.logger.Debug("inform p2p send world state handshake packet")
 		if len(message) != 1 {
 			return er.InvalidParamsErr
 		}
@@ -278,7 +278,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// (2) received packet id
 		// (3) received status
 		// (4) extra message
-		executor.logger.Notice("inform p2p send ws ack")
+		executor.logger.Debug("inform p2p send ws ack")
 		if len(message) != 1 {
 			return er.InvalidParamsErr
 		}
@@ -301,7 +301,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// Those params are included:
 		// (1) worldstate transmission session context
 		// (2) worldstate slice content
-		executor.logger.Notice("inform p2p sync world state")
+		executor.logger.Debug("inform p2p sync world state")
 		if len(message) != 1 {
 			return er.InvalidParamsErr
 		}
@@ -389,8 +389,8 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 			return er.InvalidParamsErr
 		}
 		executor.helper.PostExternal(event.FilterSnapshotEvent{
-			FilterId: message[1].(string),
 			Success:  message[0].(bool),
+			FilterId: message[1].(string),
 			Message:  message[2].(string),
 		})
 		return nil
@@ -400,8 +400,8 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 			return er.InvalidParamsErr
 		}
 		executor.helper.PostExternal(event.FilterDeleteSnapshotEvent{
-			FilterId: message[1].(string),
 			Success:  message[0].(bool),
+			FilterId: message[1].(string),
 			Message:  message[2].(string),
 		})
 		return nil
@@ -411,8 +411,8 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 			return er.InvalidParamsErr
 		}
 		executor.helper.PostExternal(event.FilterArchive{
-			FilterId: message[1].(string),
 			Success:  message[0].(bool),
+			FilterId: message[1].(string),
 			Message:  message[2].(string),
 		})
 		return nil

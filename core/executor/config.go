@@ -6,20 +6,16 @@ import (
 )
 
 const (
-	// Name should contain the official protocol name,
-	// often a three-letter word.
-	SyncReplicaInterval = "global.executor.sync_replica.interval"
-	// Name should contain the official protocol name,
-	// often a three-letter word.
-	SyncReplicaEnable       = "global.executor.sync_replica.enable"
-	SyncChainBatchSize      = "global.executor.sync_chain.sync_batch_size"
-	SyncChainResendInterval = "global.executor.sync_chain.sync_resend_interval"
-	SyncWsEable             = "global.executor.sync_chain.sync_ws_enable"
-	SnapshotManifestPath    = "global.executor.archive.manifest"
-	ArchiveMetaPath         = "global.executor.archive.archiveMeta"
-	ArchiveForceConsistency = "global.executor.archive.force_consistency"
-	ArchiveThreshold        = "global.executor.archive.threshold"
-	exitFlag                = "global.executor.nvp.exitflag"
+	SyncReplicaInterval     = "executor.sync_replica.interval"
+	SyncReplicaEnable       = "executor.sync_replica.enable"
+	SyncChainBatchSize      = "executor.syncer.max_block_fetch"
+	SyncChainResendInterval = "executor.syncer.block_fetch_timeout"
+	SyncWsEable             = "executor.syncer.state_fetch_enable"
+	SnapshotManifestPath    = "executor.archive.snapshot_manifest"
+	ArchiveMetaPath         = "executor.archive.archive_manifest"
+	ArchiveForceConsistency = "executor.archive.force_consistency"
+	ArchiveThreshold        = "executor.archive.threshold"
+	exitFlag                = "executor.nvp.exitflag"
 )
 
 // GetSyncReplicaInterval - sync replica information interval.

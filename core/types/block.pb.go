@@ -30,6 +30,7 @@ It has these top-level messages:
 	TransactionMeta
 	TransactionValue
 	InvokeArgs
+	TxExtra
 	TransactionWrapper
 */
 package types

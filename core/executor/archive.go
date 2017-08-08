@@ -44,7 +44,8 @@ func (mgr *ArchiveManager) Archive(filterId string) {
 			mgr.logger.Noticef("archive for (filter %s) failed, detail %s", filterId, err.Error())
 			mgr.feedback(false, filterId, ArchiveFailedErr)
 		} else {
-			mgr.logger.Noticef("archive for (filter %s) success", filterId)
+			mgr.logger.Noticef("archive for (filter %s) success, genesis block changes to %d and the relative genesis world state %s",
+				filterId, manifest.Height, manifest.FilterId)
 			mgr.feedback(true, filterId, EmptyMessage)
 		}
 	}
@@ -76,7 +77,7 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 		return ArchiveRequestNotSatisfiedErr
 	}
 
-	if meta.Height >= curGenesis {
+	if meta.Height >= curGenesis && meta.Height != 0 {
 		mgr.logger.Warningf("archive database, chain height (#%d) larger than current genesis (#%d)", meta.Height, curGenesis)
 	} else if meta.Height < curGenesis-1 {
 		mgr.logger.Warningf("archive database, chain height (#%d) not continuous with current genesis (#%d)", meta.Height, curGenesis)
@@ -167,7 +168,6 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 		mgr.logger.Errorf("[Namespace = %s] update meta failed. error msg %s", mgr.namespace, err.Error())
 		return err
 	}
-
 	return nil
 }
 

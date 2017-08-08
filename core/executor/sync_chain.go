@@ -250,7 +250,7 @@ func (executor *Executor) ReceiveWsHandshake(payload []byte) {
 		executor.logger.Warning("send ws ack failed")
 		return
 	}
-	executor.logger.Noticef("send ws ack (#%d) success", ack.PacketId)
+	executor.logger.Debugf("send ws ack (#%d) success", ack.PacketId)
 }
 
 // ReceiveWsHandshake receive tag peer's ws packet,
@@ -266,7 +266,7 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 
 	store := func(payload []byte, packetId uint64, filterId string) error {
 		// GRPC will prevent packet to be modified
-		executor.logger.Noticef("receive ws (#%s) fragment (#%d), size (#%d)", filterId, packetId, len(payload))
+		executor.logger.Debugf("receive ws (#%s) fragment (#%d), size (#%d)", filterId, packetId, len(payload))
 		fname := fmt.Sprintf("ws_%d.tar.gz", packetId)
 		if err := ioutil.WriteFile(path.Join(executor.context.syncCtx.GetWsHome(), fname), payload, 0644); err != nil {
 			return err
@@ -332,7 +332,7 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 			executor.logger.Warning("send ws ack failed")
 			return
 		}
-		executor.logger.Noticef("send ws (#%s) ack (#%d) success", ack.Ctx.FilterId, ack.PacketId)
+		executor.logger.Debugf("send ws (#%s) ack (#%d) success", ack.Ctx.FilterId, ack.PacketId)
 		executor.context.syncCtx.SetWsId(ws.PacketId)
 	}
 }
@@ -482,7 +482,7 @@ func (executor *Executor) SendSyncRequestForSingle(number uint64) {
 
 // SendSyncRequestForWorldState - send world state fetch request.
 func (executor *Executor) SendSyncRequestForWorldState(number uint64) {
-	executor.logger.Noticef("send req to fetch world state at height (#%d)", number)
+	executor.logger.Debugf("send req to fetch world state at height (#%d)", number)
 	executor.informP2P(NOTIFY_REQUEST_WORLD_STATE, number)
 }
 
@@ -709,7 +709,7 @@ func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
 		executor.logger.Warningf("send world state (#%s) back to (%d) failed, err msg %s", manifest.FilterId, request.InitiatorId, err.Error())
 		return
 	}
-	executor.logger.Noticef("send world state (#%s) handshake back to (%d) success, total size %d, total packet num %d, max packet size %d",
+	executor.logger.Debugf("send world state (#%s) handshake back to (%d) success, total size %d, total packet num %d, max packet size %d",
 		manifest.FilterId, request.InitiatorId, hs.Size, hs.PacketNum, hs.PacketSize)
 }
 
@@ -739,7 +739,7 @@ func (executor *Executor) ReceiveWsAck(payload []byte) {
 			if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE, ws); err != nil {
 				return
 			}
-			executor.logger.Noticef("send ws(#%s) packet (#%d), packet size (#%d) to peer (#%d) success", ws.Ctx.FilterId, ws.PacketId, ws.PacketSize, ws.Ctx.ReceiverId)
+			executor.logger.Debugf("send ws(#%s) packet (#%d), packet size (#%d) to peer (#%d) success", ws.Ctx.FilterId, ws.PacketId, ws.PacketSize, ws.Ctx.ReceiverId)
 		} else if n == 0 && err != nil {
 			// TODO handler invalid ws req
 			return
@@ -796,7 +796,7 @@ func (executor *Executor) constructWsAck(ctx *WsContext, packetId uint64, status
 
 // constructWsHandshake - make ws packet.
 func (executor *Executor) constrcutWs(ack *WsAck, packetId uint64, packetSize uint64, payload []byte) *Ws {
-	executor.logger.Noticef("construct ws packet with %d size", len(payload))
+	executor.logger.Debugf("construct ws packet with %d size", len(payload))
 	return &Ws{
 		Ctx: &WsContext{
 			FilterId:    ack.Ctx.FilterId,
