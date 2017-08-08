@@ -41,6 +41,7 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 		requestMgr:   make(map[string]*requestManager),
 	}
 	server.admin = &admin.Administrator{
+		Check:         nr.GlobalConfig().GetBool(common.ADMIN_CHECK),
 		NsMgr:         server.namespaceMgr,
 		StopServer:    stopHyperchain,
 		RestartServer: restartHp,
@@ -293,10 +294,12 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 }
 
 func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RPCResponse {
-	token, method := codec.GetAuthInfo()
-	err := admin.PreHandle(token, method)
-	if err != nil {
-		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidTokenError{Message: err.Error()}}
+	if s.admin.Check {
+		token, method := codec.GetAuthInfo()
+		err := s.admin.PreHandle(token, method)
+		if err != nil {
+			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidTokenError{Message: err.Error()}}
+		}
 	}
 
 	cmd := &admin.Command{MethodName: req.Method}

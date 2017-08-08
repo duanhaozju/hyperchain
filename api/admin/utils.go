@@ -270,7 +270,7 @@ func updateLastOperationTime(username string) {
 }
 
 func checkOpTimeExpire(username string) bool {
-	return time.Now().Unix() > user_opTime[username] + expiration
+	return float64(time.Now().Unix() - user_opTime[username]) > expiration.Seconds()
 }
 
 func getUserFromClaim(input []byte) string {

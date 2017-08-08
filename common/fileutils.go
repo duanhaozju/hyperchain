@@ -136,7 +136,10 @@ func FilePathMissing(path string) (bool, error) {
 	return false, nil
 }
 
-//GetPath get complete path for namespace level config file.
+// GetPath get complete path for namespace level config file.
 func GetPath(namespace, shortPath string) string {
+	if len(namespace) == 0 {
+		return shortPath
+	}
 	return path.Join("namespaces", namespace, shortPath)
 }
