@@ -76,11 +76,6 @@ func NewContractCMD() []cli.Command {
 					Usage: "specify the contract address",
 				},
 				cli.StringFlag{
-					Name:  "method, m",
-					Value: "",
-					Usage: "specify the method of invoke contract",
-				},
-				cli.StringFlag{
 					Name:  "args, a",
 					Value: "",
 					Usage: "specify the args of invoke contract",
@@ -202,7 +197,7 @@ func invoke(c *cli.Context) error {
 	if c.String("invokecmd") != "" {
 		invokeCmd = c.String("invokecmd")
 	} else {
-		invokeParams := []string{"from", "to", "payload", "method", "args"}
+		invokeParams := []string{"from", "to", "payload", "args"}
 		invokeCmd = getCmd(method, invokeParams, 0, c)
 	}
 	//fmt.Println(invokeCmd)
@@ -339,11 +334,6 @@ func getCmd(method string, need_params []string, opcode int32, c *cli.Context) s
 
 		case "opcode":
 			params = params + fmt.Sprintf("\"%s\":%d", param, opcode)
-
-		case "method":
-			if c.Bool("jvm") {
-				invokemethod = common.GetNonEmptyValueByName(c, "method")
-			}
 
 		case "args":
 			if c.Bool("jvm") {

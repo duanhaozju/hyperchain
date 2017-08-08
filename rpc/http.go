@@ -3,17 +3,23 @@
 package jsonrpc
 
 import (
+	//"github.com/astaxie/beego"
+	//"github.com/astaxie/beego/logs"
 	"github.com/rs/cors"
+
+	//"hyperchain/api/rest/routers"
 	"hyperchain/namespace"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"time"
+	admin "hyperchain/api/admin"
 )
 
 const (
 	maxHTTPRequestContentLength = 1024 * 256
+	ReadTimeout	            = 3 * time.Second
 )
 
 var (
@@ -25,6 +31,7 @@ type httpServerImpl struct {
 	restartHp		chan bool
 	nr			namespace.NamespaceManager
 	port                    int
+
 	httpListener 		net.Listener
 	httpHandler  		*Server
 	httpAllowedOrigins 	[]string
@@ -55,7 +62,7 @@ func (hi *httpServerImpl) Start() error {
 	// start http listener
 	handler := NewServer(hi.nr, hi.stopHp, hi.restartHp)
 
-	// http.HandleFunc("/login", LoginServer)
+	http.HandleFunc("/login", admin.LoginServer)
 	http.Handle("/", newCorsHandler(handler, hi.httpAllowedOrigins))
 
 	listener, err = net.Listen("tcp", fmt.Sprintf(":%d", hi.port))
@@ -131,7 +138,7 @@ func (hrw *httpReadWrite) Close() error {
 func newHTTPServer() *http.Server {
 	return &http.Server{
 		Handler: nil,
-		ReadTimeout:  time.Second * 3,
+		ReadTimeout:  ReadTimeout,
 	}
 }
 
@@ -159,6 +166,7 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.StatusRequestEntityTooLarge)
 		return
 	}
+
 	w.Header().Set("content-type", "application/json")
 	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr, nil)
 	defer codec.Close()

@@ -63,7 +63,7 @@ type pbftImpl struct {
 }
 
 //newPBFT init the PBFT instance
-func newPBFT(namespace string, config *common.Config, h helper.Stack) (*pbftImpl, error) {
+func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*pbftImpl, error) {
 	var err error
 	pbft := &pbftImpl{}
 	pbft.logger = common.GetLogger(namespace, "consensus")
@@ -75,7 +75,7 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack) (*pbftImpl
 		return nil, err
 	}
 	pbft.id = uint64(config.GetInt64(common.C_NODE_ID))
-	pbft.N = config.GetInt(PBFT_NODE_NUM)
+	pbft.N = n
 	pbft.f = (pbft.N - 1) / 3
 	pbft.K = uint64(10)
 	pbft.logMultiplier = uint64(4)

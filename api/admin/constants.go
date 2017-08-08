@@ -1,12 +1,15 @@
 package jsonrpc
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
+
+var expiration = 300 * time.Second
 
 const (
-	expiration int64 = 60
-	beforetime int64 = 300
-	pri_key string   = "../../api/jsonrpc/core/key/sample_key"
-	pub_key string   = "../../api/jsonrpc/core/key/sample_key.pub"
+	pri_key string   = "./hypercli/keyconfigs/key/key"
+	pub_key string   = "./hypercli/keyconfigs/key/key.pub"
 )
 
 const (

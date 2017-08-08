@@ -4,7 +4,7 @@ package server
 
 import (
 	"github.com/urfave/cli"
-	admin "hyperchain/rpc"
+	admin "hyperchain/api/admin"
 	"hyperchain/hypercli/common"
 	"fmt"
 )

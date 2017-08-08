@@ -11,7 +11,6 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/crypto"
 	"encoding/json"
-	"hyperchain/rpc"
 	"strings"
 	"time"
 	"path/filepath"
@@ -19,6 +18,8 @@ import (
 	"os/exec"
 	"bufio"
 	"encoding/gob"
+	"github.com/pkg/errors"
+	"hyperchain/rpc"
 )
 
 const (
@@ -74,10 +75,18 @@ func GetJSONResponse(result string) (jsonrpc.JSONResponse, error) {
 	return response, nil
 }
 
+func checkToken(result string) error {
+	tokenErr := &common.InvalidTokenError{}
+	response, err := GetJSONResponse(result)
+	if err == nil && response.Code == tokenErr.Code() {
+		return errors.New(response.Message)
+	}
+	return nil
+}
+
 // GenSignature generates the transaction signature by many params ...
 func GenSignature(from string, to string, timestamp int64, amount int64, payload string, nonce int64, opcode int32, vmtype types.TransactionValue_VmType) ([]byte, error){
 	conf := common.NewRawConfig()
-	conf.Set(common.C_NODE_ID, 1)
 	conf.Set(common.KEY_NODE_DIR, "./keyconfigs/keynodes")
 	conf.Set(common.KEY_STORE_DIR, "./keyconfigs/keystore")
 

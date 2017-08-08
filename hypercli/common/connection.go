@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli"
-	admin "hyperchain/rpc"
+	admin "hyperchain/api/admin"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -65,11 +65,7 @@ func (cc *CmdClient) Call(cmd string, method string) (string, error) {
 
 	// get authorization token
 	userinfo := new(UserInfo)
-	err = ReadFile(tokenpath, userinfo)
-	if err != nil {
-		fmt.Println("Invalid token, please login first!")
-		os.Exit(1)
-	}
+	ReadFile(tokenpath, userinfo)
 	req.Header.Set("Authorization", userinfo.Token)
 	req.Header.Set("Method", method)
 
@@ -84,10 +80,9 @@ func (cc *CmdClient) Call(cmd string, method string) (string, error) {
 		return "", err
 	}
 	result := string(body)
-	if rs.StatusCode == http.StatusUnauthorized {
-		return "", fmt.Errorf(result)
+	if err = checkToken(result); err != nil {
+		return "", err
 	}
-	//fmt.Println(result)
 	return result, nil
 }
 

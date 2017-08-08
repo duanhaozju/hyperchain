@@ -4,14 +4,14 @@
 package csmgr
 
 import (
-	"fmt"
 	"hyperchain/common"
+	"fmt"
 
-	cs "hyperchain/consensus"
-	"hyperchain/consensus/helper"
 	"hyperchain/consensus/pbft"
 	"hyperchain/manager/event"
 	"sync"
+	cs "hyperchain/consensus"
+	"hyperchain/consensus/helper"
 )
 
 var cr cs.Consenter
@@ -19,14 +19,12 @@ var once sync.Once
 var err error
 
 //new init the consentor instance.
-func newConsenter(namespace string, conf *common.Config, msgQ *event.TypeMux) (cs.Consenter, error) {
+func newConsenter(namespace string, conf *common.Config, msgQ *event.TypeMux, n int) (cs.Consenter, error) {
 	h := helper.NewHelper(msgQ)
 	algo := conf.GetString(cs.CONSENSUS_ALGO)
 	switch algo {
-	case cs.PBFT:
-		return pbft.New(namespace, conf, h)
-	case cs.NBFT:
-		panic(fmt.Errorf("Not implemented yet %s", algo))
+	case cs.PBFT: return pbft.New(namespace, conf, h, n)
+	case cs.NBFT: panic(fmt.Errorf("Not implemented yet %s", algo))
 	default:
 		panic(fmt.Errorf("Invalid consensus alorithm defined: %s", algo))
 	}
@@ -34,9 +32,9 @@ func newConsenter(namespace string, conf *common.Config, msgQ *event.TypeMux) (c
 
 // Consenter return a Consenter instance
 // msgQ is the connection with outer services.
-func Consenter(namespace string, conf *common.Config, msgQ *event.TypeMux) (cs.Consenter, error) {
+func Consenter(namespace string, conf *common.Config, msgQ *event.TypeMux, n int) (cs.Consenter, error) {
 	//once.Do(func() {
-	cr, err = newConsenter(namespace, conf, msgQ)
+		cr, err = newConsenter(namespace, conf, msgQ, n)
 	//})
 	return cr, err
 }

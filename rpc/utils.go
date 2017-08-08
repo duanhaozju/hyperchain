@@ -5,9 +5,13 @@ package jsonrpc
 import (
 	"math/big"
 	"reflect"
+	"encoding/json"
+	"strings"
+	admin "hyperchain/api/admin"
 )
 
 var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
+
 // Indication if this type should be serialized in hex
 func isHexNum(t reflect.Type) bool {
 	if t == nil {
@@ -20,4 +24,24 @@ func isHexNum(t reflect.Type) bool {
 	return t == bigIntType
 }
 
+func splitRawMessage(args json.RawMessage) ([]string, error) {
+	str := string(args[:])
+	length := len(str)
+	if length < 2 {
+		return nil, admin.ErrInvalidParamFormat
+	} else {
+		if str[0] != '[' || str[length - 1] != ']' {
+			return nil, admin.ErrInvalidParamFormat
+		}
+	}
 
+	if length == 2 {
+		return nil, nil
+	} else if length < 4 {
+		return nil, admin.ErrInvalidParams
+	} else {
+		str = str[2 : len(str)-2]
+		splitstr := strings.Split(str, ",")
+		return splitstr, nil
+	}
+}

@@ -85,3 +85,9 @@ const (
 
 	ENCRYPTION_SECURITY_ALGO    = "encryption.security.algo"
 )
+
+//constants for administrator oprations
+const (
+	ADMIN_CHECK      = "admin.check"
+	ADMIN_EXPIRATION = "admin.expiration"
+)

@@ -108,7 +108,7 @@ func (hmi *hyperLoggerMgrImpl) getLoggerLevel(namespace, module string) (string,
 	}
 	ml := hl.getModuleLogger(module)
 	if ml == nil {
-		return "", fmt.Errorf("SetLogLevel Error: %s::%s not exist", namespace, module)
+		return "", fmt.Errorf("GetLogLevel Error: %s::%s not exist", namespace, module)
 	}
 	hl.backendLock.RLock()
 	defer hl.backendLock.RUnlock()
@@ -183,7 +183,13 @@ func (hl *HyperLogger) newLoggerFile() *os.File {
 			preFile.Close()
 		}
 	}()
-	dir := hl.conf.GetString(LOG_DUMP_FILE_DIR)
+	var dir string
+	if hl.namespace != DEFAULT_NAMESPACE {
+		dir = GetPath(hl.namespace, hl.conf.GetString(LOG_DUMP_FILE_DIR))
+	}else {
+		dir = hl.conf.GetString(LOG_DUMP_FILE_DIR)
+	}
+
 	fileName := path.Join(dir, "hyperchain_"+strconv.Itoa(hl.conf.GetInt(P2P_PORT))+time.Now().Format("-2006-01-02-15:04:05 PM")+".log")
 	os.MkdirAll(dir, 0777)
 	file, err := os.Create(fileName)

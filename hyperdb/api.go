@@ -63,7 +63,7 @@ func InitDatabase(conf *common.Config, namespace string) error {
 	dbType = conf.GetInt(db_type)
 
 	logStatus = conf.GetBool("database.leveldb.log_status")
-	logPath = conf.GetString("database.leveldb.log_path")
+	logPath = common.GetPath(namespace, conf.GetString("database.leveldb.log_path"))
 	log := getLogger(namespace)
 	log.Criticalf("init db for namespace %s", namespace)
 	dbMgr.dbSync.Lock()

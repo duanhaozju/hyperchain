@@ -10,8 +10,10 @@ import (
 	"gopkg.in/fatih/set.v0"
 	"hyperchain/common"
 	"hyperchain/namespace"
-	"fmt"
+	"encoding/json"
+	admin "hyperchain/api/admin"
 	"sync"
+	"fmt"
 )
 
 const (
@@ -38,12 +40,13 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 		namespaceMgr: nr,
 		requestMgr:   make(map[string]*requestManager),
 	}
-	//server.admin = &Administrator{
-	//	NsMgr:         server.namespaceMgr,
-	//	StopServer:    stopHyperchain,
-	//	RestartServer: restartHp,
-	//}
-	//server.admin.Init()
+	server.admin = &admin.Administrator{
+		Check:         nr.GlobalConfig().GetBool(common.ADMIN_CHECK),
+		NsMgr:         server.namespaceMgr,
+		StopServer:    stopHyperchain,
+		RestartServer: restartHp,
+	}
+	server.admin.Init()
 	return server
 }
 
@@ -143,20 +146,20 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			}
 			return nil
 		}
-		//if reqs[0].Service == adminService {
-		//	response := s.handleCMD(reqs[0])
-		//	if response.Error != nil {
-		//		codec.Write(codec.CreateErrorResponse(response.Id, response.Namespace, response.Error))
-		//	} else if response.Reply != nil {
-		//		if err := codec.Write(codec.CreateResponse(response.Id, response.Namespace, response.Reply)); err != nil {
-		//			log.Errorf("%v\n", err)
-		//			codec.Close()
-		//		}
-		//	} else {
-		//		codec.Write(codec.CreateResponse(response.Id, response.Namespace, nil))
-		//	}
-		//	return nil
-		//}
+		if reqs[0].Service == adminService {
+			response := s.handleCMD(reqs[0], codec)
+			if response.Error != nil {
+				codec.Write(codec.CreateErrorResponse(response.Id, response.Namespace, response.Error))
+			} else if response.Reply != nil {
+				if err := codec.Write(codec.CreateResponse(response.Id, response.Namespace, response.Reply)); err != nil {
+					log.Errorf("%v\n", err)
+					codec.Close()
+				}
+			} else {
+				codec.Write(codec.CreateResponse(response.Id, response.Namespace, nil))
+			}
+			return nil
+		}
 
 		if singleShot {
 			s.handleReqs(ctx, codec, reqs)
@@ -308,4 +311,35 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 		log.Errorf("response type invalid, resp: %v\n")
 		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"response type invalid!"})
 	}
+}
+
+func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RPCResponse {
+	if s.admin.Check {
+		token, method := codec.GetAuthInfo()
+		err := s.admin.PreHandle(token, method)
+		if err != nil {
+			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidTokenError{Message: err.Error()}}
+		}
+	}
+
+	cmd := &admin.Command{MethodName: req.Method}
+	if args, ok := req.Params.(json.RawMessage); !ok {
+		log.Notice("nil parms in json")
+		cmd.Args = nil
+	} else {
+		args, err := splitRawMessage(args)
+		if err != nil {
+			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidParamsError{Message: err.Error()}}
+		}
+		cmd.Args = args
+	}
+	if _, ok := s.admin.CmdExecutor[req.Method] ; !ok {
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
+	}
+	rs := s.admin.CmdExecutor[req.Method](cmd)
+	if rs.Ok == false {
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: rs.Error}
+	}
+	return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Reply: rs.Result}
+
 }
