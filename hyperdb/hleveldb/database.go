@@ -35,7 +35,7 @@ type LDBDatabase struct {
 // the LDBDataBase instance must be close after use, by calling Close method
 func NewLDBDataBase(conf *common.Config,filepath string, namespace string) (*LDBDatabase, error) {
 	if conf!=nil {
-		filepath= pa.Join(conf.GetString(LEVEL_DB_PATH), filepath)
+		filepath= pa.Join(common.GetPath(namespace, conf.GetString(LEVEL_DB_PATH)), filepath)
 	}
 	db, err := leveldb.OpenFile(filepath, nil)
 	return &LDBDatabase{

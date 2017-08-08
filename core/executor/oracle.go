@@ -105,7 +105,8 @@ func (oracle *Oracle) ReadStaticPeer(path string) []uint64 {
 func (oracle *Oracle) ReadPeerIds() []uint64 {
 	var ret []uint64
 	oracle.once.Do(func() {
-		oracle.conf.MergeConfig(oracle.conf.GetString(common.PEER_CONFIG_PATH))
+		path := common.GetPath(oracle.conf.GetString(common.NAMESPACE), oracle.conf.GetString(common.PEER_CONFIG_PATH))
+		oracle.conf.MergeConfig(path)
 	})
 
 	nodes := oracle.conf.Get("nodes").([]interface{})

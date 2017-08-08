@@ -12,6 +12,7 @@ import (
 	"sync"
 	"os"
 	"hyperchain/core/db_utils"
+	"strings"
 )
 
 var logger *logging.Logger
@@ -174,6 +175,16 @@ func (nr *nsManagerImpl) List() (names []string) {
 	return names
 }
 
+func (nr *nsManagerImpl) checkNamespaceName(name string) bool {
+	if name == "global" {
+		return true
+	}
+	if len(name) == 13 && strings.HasPrefix(name, "ns_") {
+		return true
+	}
+	return false
+}
+
 //Register register a new namespace, by the new namespace config dir.
 func (nr *nsManagerImpl) Register(name string) error {
 	logger.Noticef("Register namespace: %s", name)
@@ -191,7 +202,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return ErrNonExistConfig
 	}
 	nsConfigDir := nsRootPath + "/config"
-	nsConfig, err := nr.constructConfigFromDir(nsConfigDir)
+	nsConfig, err := nr.constructConfigFromDir(name, nsConfigDir)
 	if err != nil {
 		return err
 	}

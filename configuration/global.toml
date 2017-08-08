@@ -92,9 +92,8 @@ grpc        = 50011 # p2p
 config_root_dir = "./namespaces"
 
     [namespace.start] # define start which namespaces when node starts
-    global  = true
-    ns1     = false
-    ns2     = false
+    global          = true
+    ns_2e6160583867 = true
 
 ##########################################################
 #

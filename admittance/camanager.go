@@ -48,8 +48,11 @@ type CAManager struct {
 
 //NewCAManager get a new ca manager instance
 func NewCAManager(conf *common.Config) (*CAManager, error) {
-	logger := common.GetLogger(conf.GetString(common.NAMESPACE), "ca")
-	caconfPath := conf.GetString("config.path.caconfig")
+	namespace := conf.GetString(common.NAMESPACE)
+	logger := common.GetLogger(namespace, "ca")
+
+
+	caconfPath := common.GetPath(namespace, conf.GetString("config.path.caconfig"))
 	if caconfPath == "" {
 		return nil, errors.New("cannot get the ca config file path.")
 	}
@@ -59,27 +62,27 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("cannot read ca conf,reason: %s",err.Error()))
 	}
-	eca, err := readCert(config.GetString(common.ENCRYPTION_ECERT_ECA))
+	eca, err := readCert(common.GetPath(namespace, config.GetString(common.ENCRYPTION_ECERT_ECA)))
 	if err != nil {
 		return nil, err
 	}
-	ecert, err := readCert(config.GetString(common.ENCRYPTION_ECERT_ECERT))
+	ecert, err := readCert(common.GetPath(namespace, config.GetString(common.ENCRYPTION_ECERT_ECERT)))
 	if err != nil {
 		return nil, err
 	}
-	rca, err := readCert(config.GetString(common.ENCRYPTION_RCERT_RCA))
+	rca, err := readCert(common.GetPath(namespace, config.GetString(common.ENCRYPTION_RCERT_RCA)))
 	if err != nil {
 		return nil, err
 	}
-	rcert, err := readCert(config.GetString(common.ENCRYPTION_RCERT_RCERT))
+	rcert, err := readCert(common.GetPath(namespace, config.GetString(common.ENCRYPTION_RCERT_RCERT)))
 	if err != nil {
 		rcert = &cert{}
 	}
-	ecertpriv, err := readKey(config.GetString(common.ENCRYPTION_ECERT_PRIV))
+	ecertpriv, err := readKey(common.GetPath(namespace, config.GetString(common.ENCRYPTION_ECERT_PRIV)))
 	if err != nil {
 		return nil, err
 	}
-	rcertpriv, err := readKey(config.GetString(common.ENCRYPTION_RCERT_PRIV))
+	rcertpriv, err := readKey(common.GetPath(namespace, config.GetString(common.ENCRYPTION_RCERT_PRIV)))
 	if err != nil {
 		return nil, err
 	}

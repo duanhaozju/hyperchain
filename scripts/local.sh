@@ -110,7 +110,7 @@ do
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
     #peerconfig.toml
     cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.toml
-    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/ns1/config/peerconfig.toml
+    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/ns_2e6160583867/config/peerconfig.toml
     #namespace's global
 
     cp -rf  ${CONF_PATH}/global.toml ${DUMP_PATH}/node${j}/global.toml
@@ -132,7 +132,7 @@ do
     cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
     #tls configuration
     cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/certs/
-    cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/certs/
+    cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/ns_2e6160583867/config/certs/
 
     #certs
     cp -rf  ${CONF_PATH}/tls ${DUMP_PATH}/node${j}/

@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"io"
+	"path"
 )
 
 // MakeName creates a node name that follows the ethereum convention
@@ -133,4 +134,9 @@ func FilePathMissing(path string) (bool, error) {
 		return true, err
 	}
 	return false, nil
+}
+
+//GetPath get complete path for namespace level config file.
+func GetPath(namespace, shortPath string) string {
+	return path.Join("namespaces", namespace, shortPath)
 }

@@ -102,6 +102,7 @@ type API struct {
 
 func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*namespaceImpl, error) {
 	// Init Hyperlogger
+	conf.Set(common.NAMESPACE, name)
 	if err := common.InitHyperLogger(name, conf); err != nil {
 		return nil, err
 	}
@@ -111,8 +112,8 @@ func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*nam
 		desc:  "startting",
 		lock:  new(sync.RWMutex),
 	}
-
-	nsInfo, err := NewNamespaceInfo(conf.GetString(common.PEER_CONFIG_PATH), name, common.GetLogger(name, "namespace"))
+	ppath := common.GetPath(name, conf.GetString(common.PEER_CONFIG_PATH))
+	nsInfo, err := NewNamespaceInfo(ppath, name, common.GetLogger(name, "namespace"))
 	//nsInfo.PrintInfo()
 	if err != nil {
 		return nil, err
@@ -148,7 +149,7 @@ func (ns *namespaceImpl) init() error {
 	ns.caMgr = cm
 
 
-	peerconf := ns.conf.GetString(common.PEER_CONFIG_PATH)
+	peerconf := common.GetPath(ns.Name(), ns.conf.GetString(common.PEER_CONFIG_PATH))
 	if !common.FileExist(peerconf) {
 		panic("cannot find the peer config")
 	}
@@ -173,7 +174,7 @@ func (ns *namespaceImpl) init() error {
 
 	//5.init account manager
 	am := accounts.NewAccountManager(ns.conf)
-	am.UnlockAllAccount(ns.conf.GetString(common.KEY_STORE_DIR))
+	am.UnlockAllAccount(common.GetPath(ns.Name(), ns.conf.GetString(common.KEY_STORE_DIR)))
 	ns.am = am
 
 	//6.init block pool to save block

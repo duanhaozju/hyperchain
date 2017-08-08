@@ -51,10 +51,10 @@ type unlocked struct {
 func NewAccountManager(conf *common.Config) *AccountManager {
 	//init encryption object
 	encryp := crypto.NewEcdsaEncrypto("ecdsa")
-	encryp.GenerateNodeKey(strconv.Itoa(conf.GetInt(common.C_NODE_ID)), conf.GetString(common.KEY_NODE_DIR))
+	encryp.GenerateNodeKey(strconv.Itoa(conf.GetInt(common.C_NODE_ID)),
+		common.GetPath(conf.GetString(common.NAMESPACE), conf.GetString(common.KEY_NODE_DIR)))
 
-
-	keydir := conf.GetString(common.KEY_STORE_DIR)
+	keydir := common.GetPath(conf.GetString(common.NAMESPACE), conf.GetString(common.KEY_STORE_DIR))
 
 	keydir, _ = filepath.Abs(keydir)
 	am := &AccountManager{
