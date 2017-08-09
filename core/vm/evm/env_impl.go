@@ -1,21 +1,23 @@
 package evm
 import (
+	"github.com/op/go-logging"
 	"hyperchain/common"
+	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"math/big"
-	"hyperchain/core/types"
-	"github.com/op/go-logging"
 	"hyperchain/core/vm"
 )
 
 var (
-	ForceJit  bool
-	EnableJit bool
+	ForceJit    bool
+	EnableJit   bool
+	EnableDebug bool
 )
 
 func init() {
-	EnableJit = true
-	ForceJit = true
+	EnableJit   = true
+	ForceJit    = true
+	EnableDebug = false
 }
 
 type Account struct {
@@ -25,24 +27,6 @@ type Account struct {
 	Storage map[string]string
 }
 
-type Log struct {
-	AddressF string   `json:"address"`
-	DataF    string   `json:"data"`
-	TopicsF  []string `json:"topics"`
-	BloomF   string   `json:"bloom"`
-}
-
-func (self Log) Address() []byte      { return common.Hex2Bytes(self.AddressF) }
-func (self Log) Data() []byte         { return common.Hex2Bytes(self.DataF) }
-func (self Log) RlpData() interface{} { return nil }
-func (self Log) Topics() [][]byte {
-	t := make([][]byte, len(self.TopicsF))
-	for i, topic := range self.TopicsF {
-		t[i] = common.Hex2Bytes(topic)
-	}
-	return t
-}
-
 type VmEnv struct {
 	CurrentCoinbase   string
 	CurrentDifficulty string
@@ -50,20 +34,6 @@ type VmEnv struct {
 	CurrentNumber     string
 	CurrentTimestamp  interface{}
 	PreviousHash      string
-}
-
-type VmTest struct {
-	Callcreates interface{}
-	//Env         map[string]string
-	Env           VmEnv
-	Exec          map[string]string
-	Transaction   map[string]string
-	Logs          []Log
-	Gas           string
-	Out           string
-	Post          map[string]Account
-	Pre           map[string]Account
-	PostStateRoot string
 }
 
 type RuleSet struct {
@@ -109,10 +79,23 @@ func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger
 		txHash:    txHash,
 		Gas:       new(big.Int),
 	}
-	env.evm = New(env, Config{
-		EnableJit: EnableJit,
-		ForceJit:  ForceJit,
-	})
+	var cfg Config
+	if EnableDebug {
+		cfg = Config{
+			EnableJit: EnableJit,
+			ForceJit:  ForceJit,
+			Debug:     EnableDebug,
+			Logger:    LogConfig{
+				Collector: env,
+			},
+		}
+	} else {
+		cfg = Config{
+			EnableJit: EnableJit,
+			ForceJit:  ForceJit,
+		}
+	}
+	env.evm = New(env, cfg)
 	return env
 }
 
@@ -142,6 +125,13 @@ func (self *Env) SetDepth(i int) { self.depth = i }
 func (self *Env) CanTransfer(from common.Address, balance *big.Int) bool {
 	return self.state.GetBalance(from).Cmp(balance) >= 0
 }
+func (self *Env) AddStructLog(log StructLog) {
+	self.logs = append(self.logs, log)
+}
+func (self *Env) DumpStructLog() {
+	StdErrFormat(self.logs)
+}
+
 func (self *Env) MakeSnapshot() interface{} {
 	return self.state.Snapshot()
 }

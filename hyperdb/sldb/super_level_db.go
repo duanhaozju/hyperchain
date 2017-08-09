@@ -26,15 +26,15 @@ type SuperLevelDB struct {
 	index     Index
 	closed    chan bool
 	logger    *logging.Logger
+	conf      *common.Config
 	namespace string
 }
 
-func NewSLDB(conf *common.Config, namespace string) (*SuperLevelDB, error) {
-	var filepath = ""
+func NewSLDB(conf *common.Config, path string, namespace string) (*SuperLevelDB, error) {
+	var filepath = path
 	if conf != nil {
 		if conf != nil {
-			filepath = pa.Join(conf.GetString(sldb_path), filepath)
-			filepath = conf.GetString(sldb_path)
+			filepath = pa.Join(conf.GetString(sldb_path), path)
 		}
 	}
 
@@ -46,20 +46,25 @@ func NewSLDB(conf *common.Config, namespace string) (*SuperLevelDB, error) {
 		return nil, err
 
 	}
-	index := NewKeyIndex(conf, "defaultNS", db, pa.Join(filepath, "index", "index.bloom.dat"))
+	index := NewKeyIndex(conf, "defaultNS", db, pa.Join(filepath, "index"))
 	index.logger = log
 	index.Init()
 	index.conf = conf
 	sldb := &SuperLevelDB{
-		path:        filepath,
-		db:          db,
-		index:       index,
-		closed:      make(chan bool),
-		logger:      log,
-		namespace:   namespace,
+		path:      filepath,
+		db:        db,
+		index:     index,
+		closed:    make(chan bool),
+		logger:    log,
+		conf:      conf,
+		namespace: namespace,
 	}
 	go sldb.dumpIndexByInterval(conf.GetDuration(sldb_index_dump_interval))
 	return sldb, err
+}
+
+func SLDBPath(conf *common.Config) string {
+	return conf.GetString(sldb_path)
 }
 
 //Put put key value data into the database.
@@ -172,6 +177,32 @@ func (sldb *SuperLevelDB) dumpIndexByInterval(du time.Duration) {
 			return
 		}
 	}
+}
+
+func (sb *SuperLevelDB) MakeSnapshot(backupPath string, fields []string) error {
+	backupDb, err := NewSLDB(sb.conf, backupPath, sb.namespace)
+	if err != nil {
+		return err
+	}
+	defer backupDb.Close()
+
+	snapshot, err := sb.db.GetSnapshot()
+	if err != nil {
+		return err
+	}
+	defer snapshot.Release()
+
+	for _, field := range fields {
+		iter := snapshot.NewIterator(util.BytesPrefix([]byte(field)), nil)
+		for iter.Next() {
+			if err := backupDb.Put(iter.Key(), iter.Value()); err != nil {
+				iter.Release()
+				return err
+			}
+		}
+		iter.Release()
+	}
+	return nil
 }
 
 //batch related functions

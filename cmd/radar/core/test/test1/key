@@ -1,0 +1,13 @@
+{
+	"ContractName": "Demo",
+	"Key": {
+		"bankMap": [
+			[
+				"001"
+			],
+			[
+				"002"
+			]
+		]
+	}
+}

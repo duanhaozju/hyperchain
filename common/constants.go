@@ -9,6 +9,19 @@ const (
 )
 
 const (
+	OP_UPDATE   = 1
+	OP_FREEZE   = 2
+	OP_UNFREEZE = 3
+	OP_ARCHIVE  = 100
+)
+
+const (
+	DB_LEVELDB int = iota
+	DB_SLDB
+)
+
+
+const (
 	NAMESPACE 			= "namespace.name"
 	DEFAULT_NAMESPACE 	= "system"
 	KEY_STORE_DIR 		= "account.keystoredir"
@@ -36,10 +49,11 @@ const (
 
 //constants for port keys
 const (
-	JSON_RPC_PORT 	= "port.jsonrpc"
-	JVM_PORT 		= "port.jvm"
-	LEDGER_PORT 	= "port.ledger"
-	P2P_PORT        = "port.grpc"
+	JSON_RPC_PORT 	     = "port.jsonrpc"
+	JVM_PORT 	     = "port.jvm"
+	LEDGER_PORT 	     = "port.ledger"
+	P2P_PORT             = "port.grpc"
+	C_WEBSOCKET_PORT     = "global.websocket_port"
 )
 
 //constants for p2p configuration keys

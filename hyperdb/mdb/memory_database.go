@@ -89,6 +89,10 @@ func (db *MemDatabase) Namespace() string {
 
 func (db *MemDatabase) Close() {}
 
+func (db *MemDatabase) MakeSnapshot(string, []string) error {
+	return nil
+}
+
 type Iter struct {
 	index int
 	ptr   *MemDatabase

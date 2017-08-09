@@ -17,6 +17,7 @@ import (
 	"sync/atomic"
 	"github.com/op/go-logging"
 	"sync"
+	"hyperchain/manager/event"
 )
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
@@ -305,11 +306,11 @@ func (pbft *pbftImpl) trySendPrePrepares() {
 
 	pbft.logger.Debugf("Replica %d attempting to call sendPrePrepare", pbft.id)
 
-	for stopTry := false; !stopTry;  {
+	for stopTry := false; !stopTry; {
 		if find, txBatch, digest := pbft.findNextPrePrepareBatch(); find {
 			pbft.sendPrePrepare(txBatch, digest)
 			pbft.maybeSendCommit(digest, pbft.view, pbft.seqNo)
-		}else {
+		} else {
 			stopTry = true
 		}
 	}
@@ -636,7 +637,7 @@ func (pbft *pbftImpl) commitTransactions() {
 	pbft.logger.Debugf("Replica %d attempting to commitTransactions", pbft.id)
 
 	for hasTxToExec := true; hasTxToExec; {
-		if find, idx, cert := pbft.findNextCommitTx(); find{
+		if find, idx, cert := pbft.findNextCommitTx(); find {
 			digest := cert.digest
 			if digest == "" {
 				pbft.logger.Infof("Replica %d executing null request for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
@@ -648,7 +649,7 @@ func (pbft *pbftImpl) commitTransactions() {
 			}
 			cert.sentExecute = true
 			pbft.afterCommitTx(idx)
-		}else {
+		} else {
 			hasTxToExec = false
 		}
 	}
@@ -723,12 +724,12 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 			}
 			if pbft.exec.lastExec == *pbft.recoveryMgr.recoveryToSeqNo {
 				go pbft.pbftEventQueue.Push(&LocalEvent{
-					Service:RECOVERY_SERVICE,
-					EventType:RECOVERY_DONE_EVENT,
+					Service:   RECOVERY_SERVICE,
+					EventType: RECOVERY_DONE_EVENT,
 				})
 			}
 		}
-		if pbft.exec.lastExec % pbft.K == 0 {
+		if pbft.exec.lastExec%pbft.K == 0 {
 			bcInfo := pbft.getBlockchainInfo()
 			height := bcInfo.Height
 			if height == pbft.exec.lastExec {
@@ -763,7 +764,7 @@ func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) events.Event {
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 ||
 		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
-		pbft.status.checkStatesOr(&pbft.status.inNegoView, &pbft.status.inRecovery){
+		pbft.status.checkStatesOr(&pbft.status.inNegoView, &pbft.status.inRecovery) {
 		pbft.reqStore.storeOutstanding(tx)
 		return nil
 	}
@@ -875,8 +876,8 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 			// This is a somewhat subtle situation, we are behind by checkpoint, but others are just on chkpt.
 			// Hence, no need to fetch preprepare, prepare, commit
 			go pbft.pbftEventQueue.Push(&LocalEvent{
-				Service:RECOVERY_SERVICE,
-				EventType:RECOVERY_DONE_EVENT,
+				Service:   RECOVERY_SERVICE,
+				EventType: RECOVERY_DONE_EVENT,
 			})
 			return nil
 		}
@@ -904,7 +905,7 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 
 		pbft.fetchRecoveryPQC()
 		return nil
-	}else {
+	} else {
 		pbft.executeAfterStateUpdate()
 	}
 
@@ -948,7 +949,7 @@ func (pbft *pbftImpl) executeAfterStateUpdate() {
 
 func (pbft *pbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 
-	if n % pbft.K != 0 {
+	if n%pbft.K != 0 {
 		pbft.logger.Errorf("Attempted to checkpoint a sequence number (%d) which is not a multiple of the checkpoint interval (%d)", n, pbft.K)
 		return
 	}
@@ -956,14 +957,16 @@ func (pbft *pbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 	id, _ := proto.Marshal(info)
 	idAsString := byteToString(id)
 	seqNo := n
+	genesis := pbft.getGenesisInfo()
 
-	pbft.logger.Infof("Replica %d preparing checkpoint for view=%d/seqNo=%d and b64 id of %s",
-		pbft.id, pbft.view, seqNo, idAsString)
+	pbft.logger.Infof("Replica %d preparing checkpoint for view=%d/seqNo=%d and b64Id=%s/genesis=%d",
+		pbft.id, pbft.view, seqNo, idAsString, genesis)
 
 	chkpt := &Checkpoint{
 		SequenceNumber: seqNo,
 		ReplicaId:      pbft.id,
 		Id:             idAsString,
+		Genesis:        genesis,
 	}
 	pbft.storeMgr.saveCheckpoint(seqNo, idAsString)
 
@@ -1048,7 +1051,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 			if pbft.status.getState(&pbft.status.inRecovery) {
 				pbft.moveWatermarks(chkpt.SequenceNumber)
 			} else {
-				logSafetyBound := pbft.h + pbft.L / 2
+				logSafetyBound := pbft.h + pbft.L/2
 				// As an optimization, if we are more than half way out of our log and in state transfer, move our watermarks so we don't lose track of the network
 				// if needed, state transfer will restart on completion to a more recent point in time
 				if chkpt.SequenceNumber >= logSafetyBound {
@@ -1075,7 +1078,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 }
 
 // used in view-change to fetch missing assigned, non-checkpointed requests
-func (pbft *pbftImpl) fetchRequestBatches() (error) {
+func (pbft *pbftImpl) fetchRequestBatches() error {
 
 	for digest := range pbft.storeMgr.missingReqBatches {
 		frb := &FetchRequestBatch{
@@ -1153,11 +1156,15 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 func (pbft *pbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 
 	// Only ever invoked for the first weak cert, so guaranteed to be f+1
-	checkpointMembers := make([]uint64, pbft.oneCorrectQuorum())
+	checkpointMembers := make([]replicaInfo, pbft.oneCorrectQuorum())
 	i := 0
 	for testChkpt := range pbft.storeMgr.checkpointStore {
 		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.Id == chkpt.Id {
-			checkpointMembers[i] = testChkpt.ReplicaId
+			checkpointMembers[i] = replicaInfo{
+				id:      testChkpt.ReplicaId,
+				height:  testChkpt.SequenceNumber,
+				genesis: testChkpt.Genesis,
+			}
 			pbft.logger.Debugf("Replica %d adding replica %d (handle %v) to weak cert", pbft.id, testChkpt.ReplicaId, checkpointMembers[i])
 			i++
 		}
@@ -1308,7 +1315,7 @@ func (pbft *pbftImpl) resubmitRequestBatches() {
 
 	var submissionOrder []*TransactionBatch
 
-	outer:
+outer:
 	for d, reqBatch := range pbft.storeMgr.outstandingReqBatches {
 		for _, cert := range pbft.storeMgr.certStore {
 			if cert.digest == d {
@@ -1331,7 +1338,7 @@ func (pbft *pbftImpl) resubmitRequestBatches() {
 	}
 }
 
-func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []uint64) {
+func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []replicaInfo) {
 	info := &protos.BlockchainInfo{}
 	err := proto.Unmarshal(id, info)
 	if err != nil {
@@ -1344,9 +1351,17 @@ func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []uint64) {
 }
 
 // updateState attempts to synchronize state to a particular target, implicitly calls rollback if needed
-func (pbft *pbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, replicaId []uint64) {
-
-	pbft.helper.UpdateState(pbft.id, info.Height, info.CurrentBlockHash, replicaId) // TODO: stateUpdateEvent
+func (pbft *pbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, replicas []replicaInfo) {
+	var targets []event.SyncReplica
+	for _, replica := range replicas {
+		target := event.SyncReplica{
+			Id:      replica.id,
+			Height:  replica.height,
+			Genesis: replica.genesis,
+		}
+		targets = append(targets, target)
+	}
+	pbft.helper.UpdateState(pbft.id, info.Height, info.CurrentBlockHash, targets) // TODO: stateUpdateEvent
 
 }
 
@@ -1420,12 +1435,12 @@ func (pbft *pbftImpl) recvRemoveCache(vid uint64) bool {
 	pbft.dupLock.RUnlock()
 	if ok {
 		pbft.logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
-			pbft.dupLock.Lock()
-			delete(pbft.duplicator, id)
-			pbft.dupLock.Unlock()
+		pbft.dupLock.Lock()
+		delete(pbft.duplicator, id)
+		pbft.dupLock.Unlock()
 	}
 
-	if vid % pbft.K == 0 {
+	if vid%pbft.K == 0 {
 		pbft.dupLock.Lock()
 		for tmp := range pbft.duplicator {
 			if tmp < id {

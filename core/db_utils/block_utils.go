@@ -208,9 +208,14 @@ func DeleteBlockByNumFunc(db db.Database, batch db.Batch, blockNum uint64, flush
 
 // IsGenesisFinish - check whether genesis block has been mined into blockchain
 func IsGenesisFinish(namespace string) bool {
-	_, err := GetBlockByNumber(namespace, 0)
+	logger := common.GetLogger(namespace, "db_utils")
+	err, tag := GetGenesisTag(namespace)
 	if err != nil {
-		logger := common.GetLogger(namespace, "db_utils")
+		return false
+	}
+	logger.Notice("tag", tag)
+	_, err = GetBlockByNumber(namespace, tag)
+	if err != nil {
 		logger.Warning("missing genesis block")
 		return false
 	} else {

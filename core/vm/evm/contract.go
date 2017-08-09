@@ -10,7 +10,7 @@ import (
 )
 
 
-// Contract represents an ethereum contract in the state database. It contains
+// Contract represents an hyperchain contract in the state database. It contains
 // the the contract code, calling arguments. Contract implements ContractRef
 type Contract struct {
 	// CallerAddress is the result of the caller which initialised this
@@ -100,6 +100,11 @@ func (c *Contract) Finalise() {
 
 // UseGas attempts the use gas and subtracts it and returns true on success
 func (c *Contract) UseGas(gas *big.Int) (ok bool) {
+	// for archive transaction, no gas cost for each operation
+	if c.Opcode == common.OP_ARCHIVE {
+		ok = true
+		return
+	}
 	ok = useGas(c.Gas, gas)
 	if ok {
 		c.UsedGas.Add(c.UsedGas, gas)

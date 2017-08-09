@@ -3,7 +3,6 @@
 
 package consensus
 
-
 // consensus algorithm name
 const (
 	PBFT = "PBFT"

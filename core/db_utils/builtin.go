@@ -2,9 +2,9 @@ package db_utils
 
 import (
 	"errors"
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/hyperdb"
-	"github.com/op/go-logging"
 )
 
 var (
@@ -16,6 +16,7 @@ const (
 	BlockVersion       = "1.3"
 	ReceiptVersion     = "1.3"
 	TransactionVersion = "1.3"
+	ChainVersion       = "1.3"
 )
 
 var (
@@ -26,6 +27,9 @@ var (
 	ChainKey                 = []byte("chain-key-")
 	BlockNumPrefix           = []byte("blockNum-")
 	TxMetaSuffix             = []byte{0x01}
+
+	JournalPrefix            = []byte("-journal")
+	SnapshotPrefix           = []byte("-snapshot")
 	BloomPrefix              = []byte("bloom-")
 )
 
@@ -38,6 +42,6 @@ func InitDBForNamespace(conf *common.Config, namespace string) error{
 	return err
 }
 
-func logger(namespace string) *logging.Logger  {
+func logger(namespace string) *logging.Logger {
 	return common.GetLogger(namespace, "core/db_utils")
 }

@@ -30,4 +30,3 @@ func (c *CertController) GetTCert() {
 
 	c.ServeJSON()
 }
-

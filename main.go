@@ -78,11 +78,14 @@ func (h *hyperchain) restart() {
 
 type argT struct {
 	cli.Helper
-	ConfigPath  string `cli:"c,conf" usage:"config file path" dft:"./global.toml"`
-	IPCEndpoint string `cli:"ipc" usage:"ipc interactive shell attach endpoint" dft:"./hpc.ipc"`
-	Shell       bool `cli:"s,shell" usage:"start interactive shell" dft:"false"`
-	PProfEnable   bool   `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`
-	PPort         string `cli:"pport" usage:"use to specify pprof http port"`
+	RestoreEnable bool     `cli:"r,restore" usage:"enable restore system status from dumpfile"`
+	SId           string   `cli:"sid" usage:"use to specify snapshot" dft:""`
+	Namespace     string   `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
+	ConfigPath    string   `cli:"c,conf" usage:"config file path" dft:"./global.toml"`
+	IPCEndpoint   string   `cli:"ipc" usage:"ipc interactive shell attach endpoint" dft:"./hpc.ipc"`
+	Shell         bool     `cli:"s,shell" usage:"start interactive shell" dft:"false"`
+	PProfEnable   bool     `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`
+	PPort         string   `cli:"pport" usage:"use to specify pprof http port"`
 }
 
 var (
@@ -93,30 +96,41 @@ func main() {
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		defer func() {
 			if r := recover(); r != nil {
-				fmt.Println("Pannic: ", r)
+				fmt.Println("Panic: ", r)
 			}
 		}()
 
 		argv := ctx.Argv().(*argT)
-		if argv.Shell {
+		globalConfig := common.NewConfig(argv.ConfigPath)
+
+		switch {
+		case argv.RestoreEnable:
+			// Restore blockchain
+			restore(globalConfig, argv.SId, argv.Namespace)
+		case argv.Shell:
+			// Start interactive shell
 			fmt.Println("Start hypernet interactive shell: ", argv.IPCEndpoint)
 			ipc.IPCShell(argv.IPCEndpoint)
-			return nil
-		}
-		if argv.PProfEnable {
-			setupPProf(argv.PPort)
-		}
-		hp := newHyperchain(argv)
-		hp.start()
-		for {
-			select {
-			case <-hp.stopFlag:
-				hp.stop()
-				return nil
-			case <-hp.restartFlag:
-				hp.restart()
-			}
+		default:
+			// Start hyperchain service
+			hp := newHyperchain(argv)
+			run(hp, argv)
 		}
 		return nil
 	})
+}
+
+func run(inst *hyperchain, argv *argT) {
+	if argv.PProfEnable {
+		setupPProf(argv.PPort)
+	}
+	inst.start()
+	for {
+		select {
+		case <-inst.stopFlag:
+			inst.stop()
+		case <-inst.restartFlag:
+			inst.restart()
+		}
+	}
 }

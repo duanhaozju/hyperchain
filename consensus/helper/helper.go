@@ -20,7 +20,7 @@ type Stack interface {
 	InnerBroadcast(msg *pb.Message) error
 	InnerUnicast(msg *pb.Message, to uint64) error
 	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
-	UpdateState(myId uint64, height uint64, blockHash []byte, replicaId []uint64) error
+	UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error
 	ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
 	VcReset(seqNo uint64) error
 	InformPrimary(primary uint64) error
@@ -88,13 +88,12 @@ func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, t
 }
 
 // UpdateState transfers the UpdateStateEvent to outer
-func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, replicaId []uint64) error {
-
+func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error {
 	updateStateEvent := event.ChainSyncReqEvent{
 		Id:              myId,
 		TargetHeight:    height,
 		TargetBlockHash: blockHash,
-		Replicas:        replicaId,
+		Replicas:        replicas,
 	}
 
 	// Post the event to outer
@@ -109,8 +108,8 @@ func (h *helper) ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo 
 	validateEvent := event.ValidationEvent{
 		Transactions: txs,
 		Timestamp:    timeStamp,
-		SeqNo:	      seqNo,
-		View:	      view,
+		SeqNo:        seqNo,
+		View:         view,
 		IsPrimary:    isPrimary,
 	}
 
@@ -189,7 +188,7 @@ func (h *helper) UpdateTable(payload []byte, flag bool) error {
 
 	updateTable := event.UpdateRoutingTableEvent{
 		Payload: payload,
-		Type:	 flag,
+		Type:    flag,
 	}
 
 	h.msgQ.Post(updateTable)

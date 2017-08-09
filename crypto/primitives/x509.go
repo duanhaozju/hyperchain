@@ -328,8 +328,7 @@ func generTcert(ca *x509.Certificate, private interface{}, publicKey interface{}
 		},
 	}
 
-
-	cert, err := x509.CreateCertificate(rand.Reader, &template,ca, publicKey, caPri)
+	cert, err := x509.CreateCertificate(rand.Reader, &template, ca, publicKey, caPri)
 	if err != nil {
 		return nil, err
 	}

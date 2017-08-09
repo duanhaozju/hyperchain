@@ -256,6 +256,7 @@ func (cache *BloomFilterCache) InitBloomFilter(bloomBit int, namespace string, s
 		start   time.Time = time.Now()
 		now     int64     = time.Now().UnixNano()
 		head    uint64
+		genesis uint64
 		cur     uint64
 		filter  *bloom.BloomFilter = bloom.New(uint(bloomBit), 3)
 		counter int
@@ -268,12 +269,13 @@ func (cache *BloomFilterCache) InitBloomFilter(bloomBit int, namespace string, s
 		return nil
 	}
 	head = chain.Height
+	genesis = chain.Genesis
 	cur = head
 
 	// Build bloom filter from the current head block.
 	// Break the loop if current block is old enough.
 	for {
-		if cur == 0 {
+		if cur == 0 || cur < genesis {
 			break
 		}
 		blk, err := GetBlockByNumber(namespace, cur)

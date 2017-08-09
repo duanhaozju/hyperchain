@@ -5,9 +5,9 @@ package pbft
 import (
 	"container/list"
 
-	"hyperchain/core/types"
 	"encoding/hex"
 	"github.com/pkg/errors"
+	"hyperchain/core/types"
 )
 
 type transactionContainer struct {

@@ -1,13 +1,13 @@
 package evm
 import (
 	"hyperchain/common"
+	"hyperchain/crypto"
+	"hyperchain/core/hyperstate"
+	"hyperchain/core/types"
 	"hyperchain/core/vm/evm/params"
 	"math/big"
-	"hyperchain/core/types"
-	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
 	er "hyperchain/core/errors"
-	"hyperchain/crypto"
 )
 
 // Call executes within the given contract
@@ -112,7 +112,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 	/*
 		RUN VM
-	 */
+	*/
 	if env.Db().GetStatus(to.Address()) != hyperstate.STATEOBJECT_STATUS_NORMAL {
 		env.Logger().Debugf("account %s has been frozen", to.Address().Hex())
 		env.SetSnapshot(snapshotPreTransfer)
@@ -132,6 +132,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 	defer contract.Finalise()
 
+	// evm finalise
 	ret, err = virtualMachine.Run(contract, input)
 
 	if err == nil && (createAccount || isUpdate(op)) {

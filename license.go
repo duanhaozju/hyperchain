@@ -32,7 +32,6 @@ func CheckLicense(exit chan bool) {
 	}
 }
 
-
 // isLicenseExpired - check whether license is expired.
 func isLicenseExpired() (expired bool) {
 	var err error

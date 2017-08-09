@@ -12,8 +12,8 @@ import (
 	"io/ioutil"
 	//"fmt"
 	//"sync"
-	"github.com/pkg/errors"
 	"crypto/ecdsa"
+	"github.com/pkg/errors"
 )
 
 //读取config文件
@@ -81,10 +81,10 @@ func ParseKey(derPri []byte) (interface{}, error) {
 
 func ParsePubKey(pubPem string) (*ecdsa.PublicKey, error) {
 	if pubPem == "" {
-		return nil,errors.New("the pub pem is nil")
+		return nil, errors.New("the pub pem is nil")
 	}
-	block,_ := pem.Decode([]byte(pubPem))
-	pub,err := DERToPublicKey(block.Bytes)
+	block, _ := pem.Decode([]byte(pubPem))
+	pub, err := DERToPublicKey(block.Bytes)
 
 	if err != nil {
 		log.Error(err)

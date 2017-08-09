@@ -24,6 +24,7 @@ type RPCServer interface {
 
 type RPCServerImpl struct {
 	httpServer  RPCServer
+	wsServer    RPCServer
 }
 
 func GetRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) RPCServer {
@@ -37,6 +38,7 @@ func GetRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp cha
 func newRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) *RPCServerImpl{
 	rsi := &RPCServerImpl{}
 	rsi.httpServer = GetHttpServer(nr, stopHp, restartHp)
+	rsi.wsServer = GetWSServer(nr, stopHp, restartHp)
 	return rsi
 }
 
@@ -49,6 +51,12 @@ func (rsi *RPCServerImpl) Start() error{
 		return err
 	}
 
+	// start websocket server
+	if err := rsi.wsServer.Start(); err != nil {
+		log.Error(err)
+		rsi.httpServer.Stop()
+		return err
+	}
 	return nil
 }
 
@@ -60,6 +68,10 @@ func (rsi *RPCServerImpl) Stop() error {
 		return err
 	}
 
+	// stop websocket server
+	if err := rsi.wsServer.Stop(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -71,5 +83,9 @@ func (rsi *RPCServerImpl) Restart() error {
 		return err
 	}
 
+	// restart websocket server
+	if err := rsi.wsServer.Restart(); err != nil {
+		return err
+	}
 	return nil
 }

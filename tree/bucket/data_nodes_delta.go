@@ -2,13 +2,13 @@ package bucket
 
 import (
 	"bytes"
+	"fmt"
+	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"sort"
-	"github.com/golang/protobuf/proto"
-	"fmt"
 )
 
-const MAXDATANODESSIZE  = 8
+const MAXDATANODESSIZE = 8
 
 // Code for managing changes in data nodes
 type DataNodes []*DataNode

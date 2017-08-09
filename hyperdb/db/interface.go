@@ -9,6 +9,7 @@ type Database interface {
 	Close()
 	NewBatch() Batch
 	NewIterator(prefix []byte) Iterator
+	MakeSnapshot(string, []string) error
 	Namespace() string
 	Scan(begin, end []byte) Iterator
 }

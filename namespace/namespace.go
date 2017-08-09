@@ -3,7 +3,6 @@
 package namespace
 
 import (
-	"errors"
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/admittance"
@@ -81,6 +80,7 @@ type namespaceImpl struct {
 
 	conf      *common.Config
 	eventMux  *event.TypeMux
+	filterMux *event.TypeMux
 	consenter consensus.Consenter
 	caMgr     *admittance.CAManager
 	am        *accounts.AccountManager
@@ -91,13 +91,6 @@ type namespaceImpl struct {
 	rpc       rpc.RequestProcessor
 	restart   bool
 	delFlag   chan bool
-}
-
-type API struct {
-	Srvname string      // srvname under which the rpc methods of Service are exposed
-	Version string      // api version for DApp's
-	Service interface{} // receiver instance which holds the methods
-	Public  bool        // indication if the methods must be considered safe for public use
 }
 
 func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*namespaceImpl, error) {
@@ -123,6 +116,7 @@ func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*nam
 		status:   status,
 		conf:     conf,
 		eventMux: new(event.TypeMux),
+		filterMux: new(event.TypeMux),
 		restart:  false,
 		delFlag:  delFlag,
 	}
@@ -178,16 +172,17 @@ func (ns *namespaceImpl) init() error {
 	ns.am = am
 
 	//6.init block pool to save block
-	executor := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux)
-	if executor == nil {
-		return errors.New("Initialize Executor failed")
+	executor, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux)
+	if err != nil {
+		logger.Errorf("init Executor for namespace %s error, %v", ns.Name(), err)
+		return err
 	}
 
 	executor.CreateInitBlock(ns.conf)
 	ns.executor = executor
 
 	//7. init eventhub
-	eh := manager.New(ns.Name(), ns.eventMux, executor, ns.peerMgr, consenter, am, cm)
+	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, executor, ns.peerMgr, consenter, am, cm)
 	ns.eh = eh
 	ns.status.setState(initialized)
 
