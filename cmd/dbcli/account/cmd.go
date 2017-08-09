@@ -56,7 +56,7 @@ func NewAccountCMD() []cli.Command {
 				},
 				cli.StringFlag{
 					Name: "globalconf",
-					Value: "../../configuration/namespaces/global/config/namespace.toml",
+					Value: "",
 					Usage: "specify the namespace global config",
 				},
 			},
@@ -98,7 +98,7 @@ func NewAccountCMD() []cli.Command {
 				},
 				cli.StringFlag{
 					Name: "globalconf",
-					Value: "../../configuration/namespaces/global/config/namespace.toml",
+					Value: "",
 					Usage: "specify the namespace global config",
 				},
 			},

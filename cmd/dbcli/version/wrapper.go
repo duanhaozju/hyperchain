@@ -546,7 +546,15 @@ func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
 						fmt.Println(utils.Decorate(storageRes))
 					}
 				}
-				storageRes = "\t\t\t\t" + "\"" + common.Bytes2Hex(storageKey) + "\"" + ":" + " " + "\"" + common.Bytes2Hex(storageIt.Value()) + "\""
+				var value []byte = make([]byte, len(storageIt.Value()))
+				if len(storageIt.Value()) <= common.HashLength {
+					copy(value, storageIt.Value())
+					value = common.BytesToHash(value).Bytes()
+				} else {
+					copy(value, storageIt.Value())
+				}
+
+				storageRes = "\t\t\t\t" + "\"" + common.Bytes2Hex(storageKey) + "\"" + ":" + " " + "\"" + common.Bytes2Hex(value) + "\""
 			}
 			if path != "" {
 				if storageRes != "" {
@@ -630,8 +638,12 @@ func (self *Version) RevertDB(ns, globalConf, path string, number uint64, parame
 		needBlockRoot := common.Hex2Bytes(needRootStr[len("\"MerkleRoot\": \""):len(rootStr)-2])
 		targetRoot = append(targetRoot, needBlockRoot)
 	}
-
-	config := common.NewConfig(globalConf)
+	var config *common.Config
+	if globalConf == "" {
+		config = DefaultConfig()
+	} else {
+		config = common.NewConfig(globalConf)
+	}
 	err = common.InitHyperLogger(ns, config)
 	if err != nil {
 		fmt.Println(constant.ErrQuery.Error(), err.Error())
@@ -663,4 +675,18 @@ func (self *Version) RevertDB(ns, globalConf, path string, number uint64, parame
 		}
 	}
 	db.Close()
+}
+
+func DefaultConfig() *common.Config {
+	config := common.NewRawConfig()
+	config.Set(hyperstate.StateBucketSize, 1000003)
+	config.Set(hyperstate.StateBucketLevelGroup, 5)
+	config.Set(hyperstate.StateBucketCacheSize, 100000)
+	config.Set(hyperstate.StateDataNodeCacheSize, 100000)
+
+	config.Set(hyperstate.StateObjectBucketSize, 1000003)
+	config.Set(hyperstate.StateObjectBucketLevelGroup, 5)
+	config.Set(hyperstate.StateObjectBucketCacheSize, 100000)
+	config.Set(hyperstate.StateObjectDataNodeCacheSize, 100000)
+	return config
 }
