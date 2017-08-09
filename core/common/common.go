@@ -1,6 +1,10 @@
 package common
 
-import cm "hyperchain/common"
+import (
+	cm "hyperchain/common"
+	"path"
+	"hyperchain/hyperdb"
+)
 
 var precompiledAccount = map[string]struct{}{
 	cm.BytesToAddress(cm.LeftPadBytes([]byte{1}, 20)).Hex(): struct{}{},  // ECRECOVER
@@ -29,4 +33,7 @@ func IsPrecompiledAccount(address cm.Address) bool {
 	return false
 }
 
+func GetDatabaseHome(namespace string, conf *cm.Config) string {
+	return path.Join("namespaces", namespace, hyperdb.GetDatabaseHome(conf))
+}
 

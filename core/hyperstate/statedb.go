@@ -1176,6 +1176,10 @@ func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
 			}
 			valueCopy := make([]byte, len(iter.Value()))
 			copy(valueCopy, iter.Value())
+
+			if len(valueCopy) <= common.HashLength {
+				valueCopy = common.BytesToHash(valueCopy).Bytes()
+			}
 			dirtyStorage[common.BytesToHash(key).Hex()] = valueCopy
 		}
 		stateObject.bucketTree.PrepareWorkingSet(dirtyStorage, big.NewInt(0))

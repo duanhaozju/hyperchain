@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
+	cm "hyperchain/core/common"
 	edb "hyperchain/core/db_utils"
 	er "hyperchain/core/errors"
 	"hyperchain/core/types"
@@ -237,7 +238,7 @@ func (executor *Executor) ReceiveWsHandshake(payload []byte) {
 	executor.context.syncCtx.RecordWsHandshake(&hs)
 
 	// make `receive home`
-	p := path.Join(hyperdb.GetDatabaseHome(executor.conf), "ws", "ws_"+hs.Ctx.FilterId)
+	p := path.Join(cm.GetDatabaseHome(executor.namespace, executor.conf), "ws", "ws_"+hs.Ctx.FilterId)
 	err := os.MkdirAll(p, 0777)
 	if err != nil {
 		executor.logger.Warningf("make ws home for %s failed", hs.Ctx.FilterId)

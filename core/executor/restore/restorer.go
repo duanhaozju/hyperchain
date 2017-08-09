@@ -35,7 +35,7 @@ func NewRestorer(conf *common.Config, db db.Database, ns string) *Handler {
 
 func (handler *Handler) Restore(sid string) error {
 	sid = convertId(sid)
-	if exist, _ := checkExist(sid, handler.conf); exist == false {
+	if exist, _ := checkExist(handler.ns, sid, handler.conf); exist == false {
 		return FileNotExsitErr
 	}
 	p := path.Join("snapshots", "SNAPSHOT_"+sid)
@@ -101,8 +101,8 @@ func (handler *Handler) Restore(sid string) error {
 	return nil
 }
 
-func checkExist(id string, conf *common.Config) (bool, error) {
-	p := path.Join(hyperdb.GetDatabaseHome(conf), "snapshots", "SNAPSHOT_"+id)
+func checkExist(ns, id string, conf *common.Config) (bool, error) {
+	p := path.Join(cm.GetDatabaseHome(ns, conf), "snapshots", "SNAPSHOT_"+id)
 	_, err := os.Stat(p)
 	if err == nil {
 		return true, nil

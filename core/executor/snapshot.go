@@ -105,24 +105,24 @@ func (registry *SnapshotRegistry) CompressSnapshot(filterId string) (error, int6
 }
 
 func (registry *SnapshotRegistry) CompressedSnapshotPath(filterId string) string {
-	return path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "snapshots", registry.snapshotId(filterId)+".tar.gz")
+	return path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf), "snapshots", registry.snapshotId(filterId)+".tar.gz")
 }
 
 func (registry *SnapshotRegistry) Insert(meta common.Manifest) {
-	sdir := path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "snapshots")
+	sdir := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf), "snapshots")
 	if _, err := os.Stat(sdir); os.IsNotExist(err) {
 		c := cmd.Command("mkdir", "-p", sdir)
 		if e := c.Run(); e != nil {
 			return
 		}
 	}
-	spath := path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "ws", "ws_" + meta.FilterId, "SNAPSHOT_" + meta.FilterId)
+	spath := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf), "ws", "ws_" + meta.FilterId, "SNAPSHOT_" + meta.FilterId)
 	dump := cmd.Command("mv", "-f", spath, sdir)
 	if e := dump.Run(); e != nil {
 		return
 	}
 
-	clear := cmd.Command("rm", "-rf", path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "ws"))
+	clear := cmd.Command("rm", "-rf", path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf), "ws"))
 	if e := clear.Run(); e != nil {
 		return
 	}
@@ -191,16 +191,34 @@ func (registry *SnapshotRegistry) handle(number uint64) {
 // 1. Make a world state copy with the help of leveldb snapshot mechanism.
 // 2. Push the pivot block to snapshot data.
 // 3. Write meta to snapshot manifest file.
-func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) error {
+func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) (err error) {
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
-	if err := registry.duplicate(filterId); err != nil {
+	// Remove snapshot file if error occur
+	var (
+		begin time.Time = time.Now()
+	)
+
+
+	defer func() {
+		if err == nil {
+			registry.logger.Noticef("make snapshot for %s elasped %v", filterId, time.Since(begin))
+		}
+	}()
+
+	defer func() {
+		if err != nil {
+			registry.deleteSnapshot(filterId)
+		}
+	}()
+
+	if err = registry.duplicate(filterId); err != nil {
 		return err
 	}
-	if err := registry.pushBlock(filterId, number); err != nil {
+	if err = registry.pushBlock(filterId, number); err != nil {
 		return err
 	}
-	if err := registry.writeMeta(filterId, number); err != nil {
+	if err = registry.writeMeta(filterId, number); err != nil {
 		return err
 	}
 	return nil
@@ -281,7 +299,7 @@ func (registry *SnapshotRegistry) CalculateStateHash(filterId string, compareTag
 		return common.Hash{}, err
 	}
 	curhash, err := localState.RecomputeCryptoHash()
-	registry.logger.Noticef("full quantity calculation, snapshot world state hash (%s)", curhash.Hex())
+	registry.logger.Noticef("full quantity calculation, snapshot world state hash (%s), expect (%s)", curhash.Hex(), compareTag.Hex())
 	if err != nil {
 		return common.Hash{}, err
 	} else {
@@ -293,7 +311,7 @@ func (registry *SnapshotRegistry) CalculateStateHash(filterId string, compareTag
 func (registry *SnapshotRegistry) deleteSnapshot(filterId string) error {
 	conf := registry.executor.conf
 	fId := registry.snapshotId(filterId)
-	sPath := registry.snapshotPath(hyperdb.GetDatabaseHome(conf), fId)
+	sPath := registry.snapshotPath(cm.GetDatabaseHome(registry.namespace, conf), fId)
 	localCmd := cmd.Command("rm", "-rf", sPath)
 	if err := localCmd.Run(); err != nil {
 		return err
@@ -306,7 +324,7 @@ func (registry *SnapshotRegistry) compress(filterId string) (error, int64) {
 	if !registry.rwc.Contain(filterId) {
 		return SnapshotDoesntExistErr, 0
 	}
-	spath := path.Join(hyperdb.GetDatabaseHome(registry.executor.conf), "snapshots", registry.snapshotId(filterId))
+	spath := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf), "snapshots", registry.snapshotId(filterId))
 	localCmd := cmd.Command("tar", "-C", filepath.Dir(spath), "-czvf", spath+".tar.gz", registry.snapshotId(filterId))
 	if err := localCmd.Run(); err != nil {
 		return err, 0
