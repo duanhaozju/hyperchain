@@ -125,6 +125,12 @@ func (blk *Block) GetBlockByHash(hash common.Hash) (*BlockResult, error) {
 	return getBlockByHash(blk.namespace, hash, false)
 }
 
+// GenesisBlock return current genesis block number.
+func (blk *Block) GenesisBlock() (uint64, error) {
+	err, genesis := edb.GetGenesisTag(blk.namespace)
+	return genesis, err
+}
+
 // GetPlainBlockByHash returns the block for the given block hash.
 func (blk *Block) GetPlainBlockByHash(hash common.Hash) (*BlockResult, error) {
 	return getBlockByHash(blk.namespace, hash, true)

@@ -343,11 +343,14 @@ func (registry *SnapshotRegistry) compress(filterId string) (error, int64) {
 // checkSnapshotRequest if the pivot point of request is less than current chain height,
 // this type of request is recognized as invalid one.
 func (registry *SnapshotRegistry) checkSnapshotRequest(event event.SnapshotEvent) bool {
-	if event.BlockNumber == LatestBlockNumber {
-		return true
-	}
 	chainHeight := edb.GetHeightOfChain(registry.namespace)
-	if event.BlockNumber < chainHeight {
+	if event.BlockNumber < chainHeight && event.BlockNumber != LatestBlockNumber {
+		return false
+	}
+	if _, meta := registry.rwc.Search(chainHeight); (meta != common.Manifest{}) && event.BlockNumber == LatestBlockNumber {
+		return false
+	}
+	if _, meta := registry.rwc.Search(event.BlockNumber); (meta != common.Manifest{}) && event.BlockNumber != LatestBlockNumber {
 		return false
 	}
 	return true

@@ -79,7 +79,7 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 
 	if meta.Height >= curGenesis && meta.Height != 0 {
 		mgr.logger.Warningf("archive database, chain height (#%d) larger than current genesis (#%d)", meta.Height, curGenesis)
-	} else if meta.Height < curGenesis-1 {
+	} else if meta.Height != curGenesis-1 {
 		mgr.logger.Warningf("archive database, chain height (#%d) not continuous with current genesis (#%d)", meta.Height, curGenesis)
 	}
 
@@ -203,6 +203,9 @@ func (mgr *ArchiveManager) checkRequest(manifest common.Manifest, meta common.Ar
 		if genesis != meta.Height+1 {
 			return false
 		}
+	}
+	if genesis == manifest.Height {
+		return false
 	}
 	return true
 }
