@@ -113,7 +113,7 @@ func main() {
 			ipc.IPCShell(argv.IPCEndpoint)
 		default:
 			// Start hyperchain service
-			hp := newHyperchain(argv, globalConfig)
+			hp := newHyperchain(argv)
 			run(hp, argv)
 		}
 		return nil
