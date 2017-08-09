@@ -38,11 +38,11 @@ func (executor *Executor) GetSyncResendInterval() time.Duration {
 }
 
 func (executor *Executor) GetManifestPath() string {
-	return executor.conf.GetString(SnapshotManifestPath)
+	return common.GetPath(executor.namespace, executor.conf.GetString(SnapshotManifestPath))
 }
 
 func (executor *Executor) GetArchiveMetaPath() string {
-	return executor.conf.GetString(ArchiveMetaPath)
+	return common.GetPath(executor.namespace, executor.conf.GetString(ArchiveMetaPath))
 }
 
 func (executor *Executor) IsArchiveForceConsistency() bool {

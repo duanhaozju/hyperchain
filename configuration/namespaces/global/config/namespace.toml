@@ -101,8 +101,8 @@ algo = "PBFT"
     state_fetch_packet_size = 1024  # 1024KB
 
     [executor.archive] 
-    snapshot_manifest = "./namespaces/global/data/snapshot.meta"
-    archive_manifest  = "./namespaces/global/data/archive.meta"
+    snapshot_manifest = "data/snapshot.meta"
+    archive_manifest  = "data/archive.meta"
     threshold = 0
     force_consistency = false
 
