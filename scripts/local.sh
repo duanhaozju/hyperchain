@@ -270,7 +270,7 @@ REBUILD=true
 HYPERCLI=false
 
 # distribute jvm or not? default = false
-HYPERJVM=false
+HYPERJVM=true
 
 # run process or not? default = true
 RUN=true
