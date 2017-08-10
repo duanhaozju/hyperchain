@@ -45,7 +45,7 @@ func NewStorageIterator(obj *StateObject, start, limit *common.Hash) *StorageIte
 	}
 
 	for k, v := range obj.dirtyStorage {
-		if isLarger(start, k.Bytes()) && isLess(limit, k.Bytes()) {
+		if isLarger(start, k.Bytes()) && isLess(limit, k.Bytes()) && v != nil {
 			cache[k] = v
 			cacheKeys = append(cacheKeys, k)
 		}

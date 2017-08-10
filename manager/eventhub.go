@@ -99,10 +99,8 @@ func (hub *EventHub) Start() {
 }
 
 func (hub *EventHub) Stop() {
-	for i := 0; i < len(hub.subscriptions); i += 1 {
-		hub.close <- true
-	}
-	hub.logger.Noticef("event hub stopped!")
+	close(hub.close)
+	hub.logger.Notice("event hub stopped!")
 }
 
 // Properties
