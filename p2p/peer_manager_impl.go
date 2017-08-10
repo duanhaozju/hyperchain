@@ -115,7 +115,6 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		nodeNum:N,
 		blackHole:make(chan interface{}),
 		peerMgrEv:new(event.TypeMux),
-		peerMgrEvClose:make(chan interface{}),
 		peerMgrSub:cmap.New(),
 		isonline:new(threadsafe.SpinLock),
 		isnew:isnew,
@@ -198,6 +197,9 @@ func(pmi *peerManagerImpl)binding()error{
 
 // initialize the peerManager which is for init the local node
 func (pmgr *peerManagerImpl)Start() error {
+	if e := pmgr.binding();e!= nil{
+		return e
+	}
 	pmgr.listening()
 	for pmgr.pts.HasNext() {
 		pt := pmgr.pts.Pop()
@@ -226,6 +228,9 @@ func (pmgr *peerManagerImpl)Start() error {
 }
 
 func (pmgr *peerManagerImpl)listening() {
+	// every times when listening, should give a new channel
+	// MUST ensure the channel is already closed or the peerMgrEvClose is nil
+	pmgr.peerMgrEvClose = make(chan interface{})
 	pmgr.logger.Info("PeerManager is listening the peer manager event...")
 	//Listening should listening all connection request, and handle it
 	for subitem := range pmgr.peerMgrSub.IterBuffered(){
@@ -233,6 +238,7 @@ func (pmgr *peerManagerImpl)listening() {
 			for{
 				select {
 				case <- closechan:{
+					pmgr.logger.Debug("Listening sub goroutine stopped.")
 					return
 				}
 				case ev := <- s.Chan():{
@@ -363,7 +369,7 @@ func (pmgr *peerManagerImpl) bind(peerType int,namespace string, id int, hostnam
 	//TODO here has a problem: generally, this method will be invoked before than
 	//TODO the network persist the new hostname, it will return a error: the host hasn't been initialized.
 	//TODO so the node may cannot connect to new peer, bind will be failed.
-	//TODO to quick fix this: before create a new peer, sleep 1 seconds.
+	//TODO to quick fix this: before create a new peer, sleep 1 second.
 	<- time.After(time.Second)
 	newPeer,err := NewPeer(namespace, hostname, id, pmgr.node.info, pmgr.hyperNet,chts)
 	if err != nil {
@@ -486,6 +492,7 @@ func (pmgr *peerManagerImpl)GetVPPeers() []*Peer {
 }
 
 func (pmgr *peerManagerImpl)Stop() {
+	close(pmgr.peerMgrEvClose)
 	pmgr.logger.Criticalf("Unbind all slots...")
 	pmgr.SetOffline()
 	pmgr.node.UnBindAll()
