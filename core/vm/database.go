@@ -56,6 +56,8 @@ type Database interface {
 	Purge()
 
 	Commit() (common.Hash, error)
+	RecomputeCryptoHash() (common.Hash, error)
+	ResetToTarget(uint64, common.Hash)
 	Reset() error
 	// Query
 	GetAccounts() map[string]Account
@@ -73,6 +75,7 @@ type Database interface {
 	DeleteBatch(seqNo uint64)
 	MakeArchive(uint64)
 	ShowArchive(common.Address, string) map[string]map[string]string
+	Apply(db.Database, db.Batch, common.Hash) error
 }
 
 type Iterator interface {
@@ -98,8 +101,8 @@ func BytesPrefix(prefix []byte) *IterRange {
 			break
 		}
 	}
-	startH := common.BytesToHash(prefix)
-	limitH := common.BytesToHash(limit)
+	startH := common.BytesToRightPaddingHash(prefix)
+	limitH := common.BytesToRightPaddingHash(limit)
 	return &IterRange{
 		Start: &startH,
 		Limit: &limitH,

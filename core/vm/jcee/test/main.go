@@ -41,7 +41,7 @@ func initConfig() *common.Config {
 }
 
 func initDb() vm.Database {
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	stateDb, _ := hyperstate.New(common.Hash{}, db, db, initConfig(), 0, "global")
 	stateDb.CreateAccount(common.HexToAddress("e81e714395549ba939403c7634172de21367f8b5"))
 	stateDb.Commit()

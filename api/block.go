@@ -4,10 +4,10 @@ package api
 
 import (
 	"fmt"
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
-	"github.com/op/go-logging"
 )
 
 type Block struct {
@@ -41,10 +41,10 @@ func NewPublicBlockAPI(namespace string) *Block {
 }
 
 type IntervalArgs struct {
-	From 		*BlockNumber `json:"from"`
-	To   		*BlockNumber `json:"to"`
-	ContractAddr 	*common.Address `json:"address"`
-	MethodID	string `json:"methodID"`
+	From         *BlockNumber    `json:"from"`
+	To           *BlockNumber    `json:"to"`
+	ContractAddr *common.Address `json:"address"`
+	MethodID     string          `json:"methodID"`
 }
 
 type IntervalTime struct {
@@ -123,6 +123,12 @@ func (blk *Block) LatestBlock() (*BlockResult, error) {
 // GetBlockByHash returns the block for the given block hash.
 func (blk *Block) GetBlockByHash(hash common.Hash) (*BlockResult, error) {
 	return getBlockByHash(blk.namespace, hash, false)
+}
+
+// GenesisBlock return current genesis block number.
+func (blk *Block) GenesisBlock() (uint64, error) {
+	err, genesis := edb.GetGenesisTag(blk.namespace)
+	return genesis, err
 }
 
 // GetPlainBlockByHash returns the block for the given block hash.

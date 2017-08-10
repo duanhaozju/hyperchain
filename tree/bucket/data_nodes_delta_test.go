@@ -2,8 +2,8 @@ package bucket
 
 import (
 	"bytes"
-	"testing"
 	"encoding/binary"
+	"testing"
 )
 
 // TODO test
@@ -11,13 +11,12 @@ import (
 
 // TODO add
 
-
-func TestBigInt(t *testing.T){
+func TestBigInt(t *testing.T) {
 	bytes := make([]byte, 8)
 	binary.LittleEndian.PutUint64(bytes, 8)
-	log.Critical("size is",bytes)
+	log.Critical("size is", bytes)
 	value := binary.LittleEndian.Uint64(bytes)
-	log.Critical("size is",value)
+	log.Critical("size is", value)
 
 }
 
@@ -56,7 +55,7 @@ func TestDataNodesSort(t *testing.T) {
 			bytes.Compare(newDataNodes[i].getCompositeKey(), dataNodes[i].getCompositeKey()) != 0 {
 		}
 	}
-	log.Critical("newDataNodes is",len(newDataNodes))
+	log.Critical("newDataNodes is", len(newDataNodes))
 	log.Critical("newDataNodes equals dataNodes")
 }
 

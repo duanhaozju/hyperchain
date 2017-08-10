@@ -6,23 +6,6 @@ import (
 	"hyperchain/common"
 )
 
-const (
-	LogVmType_EVM = iota
-	LogVmType_JVM
-)
-
-type LogVmType int
-
-func (vmType LogVmType) String() string {
-	switch vmType {
-	case LogVmType_EVM:
-		return "EVM"
-	case LogVmType_JVM:
-		return "JVM"
-	default:
-		return ""
-	}
-}
 
 type Log struct {
 	// consensus fields

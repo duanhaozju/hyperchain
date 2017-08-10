@@ -5,7 +5,7 @@ import (
 	"hyperchain/common"
 )
 
-// Account represents a contract or basic ethereum account.
+// Account represents a contract or basic hyperchain account.
 type Account interface {
 	SubBalance(amount *big.Int)
 	AddBalance(amount *big.Int)

@@ -7,6 +7,7 @@ import (
 	"hyperchain/hyperdb/db"
 	"sync"
 	"hyperchain/common"
+	"bytes"
 )
 
 //CopyBytes Copy and return []byte.
@@ -24,11 +25,11 @@ type MemDatabase struct {
 	ns    string
 }
 
-func NewMemDatabase() (*MemDatabase, error) {
+func NewMemDatabase(namespace string) (*MemDatabase, error) {
 	return &MemDatabase{
 		key:   nil,
 		value: nil,
-		ns:    "",
+		ns:    namespace,
 	}, nil
 }
 
@@ -37,7 +38,7 @@ func (db *MemDatabase) Put(key []byte, value []byte) error {
 	defer db.lock.Unlock()
 
 	db.key = append(db.key, common.Bytes2Hex(key))
-	db.value = append(db.value, value)
+	db.value = append(db.value, CopyBytes(value))
 	return nil
 }
 
@@ -51,9 +52,9 @@ func (db *MemDatabase) Get(key []byte) ([]byte, error) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
 
-	for k, v := range db.key {
+	for idx, v := range db.key {
 		if v == common.Bytes2Hex(key) {
-			return db.value[k], nil
+			return CopyBytes(db.value[idx]), nil
 		}
 	}
 	return nil, errors.New("leveldb: not found")
@@ -76,8 +77,8 @@ func (db *MemDatabase) Delete(key []byte) error {
 
 	for k, v := range db.key {
 		if v == common.Bytes2Hex(key) {
-			db.key = append(db.key[0:k], db.key[k+1:len(db.key)]...)
-			db.value = append(db.value[0:k], db.value[k+1:len(db.value)]...)
+			db.key = append(db.key[0:k], db.key[k+1:]...)
+			db.value = append(db.value[0:k], db.value[k+1:]...)
 		}
 	}
 	return nil
@@ -87,24 +88,53 @@ func (db *MemDatabase) Namespace() string {
 	return db.ns
 }
 
-func (db *MemDatabase) Close() {}
+func (db *MemDatabase) Close() {
+	db.lock.Lock()
+	defer db.lock.Unlock()
+	db.key = nil
+	db.value = nil
+}
+
+func (db *MemDatabase) MakeSnapshot(string, []string) error {
+	panic("not support")
+}
 
 type Iter struct {
 	index int
 	ptr   *MemDatabase
-	str   string
+	start []byte
+	limit []byte
 }
 
-func (db *MemDatabase) NewIterator(str []byte) db.Iterator {
-	var iter Iter
-	iter.index = -1
-	iter.ptr = db
-	iter.str = common.Bytes2Hex(str)
-	return &iter
+func (db *MemDatabase) NewIterator(prefix []byte) db.Iterator {
+	var limit []byte
+	for i := len(prefix) - 1; i >= 0; i-- {
+		c := prefix[i]
+		if c < 0xff {
+			limit = make([]byte, i+1)
+			copy(limit, prefix)
+			limit[i] = c + 1
+			break
+		}
+	}
+	iter := &Iter{
+		index: -1,
+		ptr:   db,
+		start: prefix,
+		limit: limit,
+	}
+
+	return iter
 }
 
-func (db *MemDatabase) Scan(begin, end []byte) db.Iterator {
-	return &Iter{}
+func (db *MemDatabase) Scan(start, limit []byte) db.Iterator {
+	iterator := &Iter{
+		index: -1,
+		ptr:   db,
+		start: start,
+		limit: limit,
+	}
+	return iterator
 }
 
 func (iter *Iter) Next() bool {
@@ -114,10 +144,8 @@ func (iter *Iter) Next() bool {
 			iter.index -= 1
 			return false
 		}
-		if len(iter.str) > len(iter.ptr.key[iter.index]) {
-			continue
-		}
-		if iter.str == iter.ptr.key[iter.index][:len(iter.str)] {
+
+		if InRange(iter.start, iter.limit, common.Hex2Bytes(iter.ptr.key[iter.index])) {
 			break
 		}
 	}
@@ -125,7 +153,7 @@ func (iter *Iter) Next() bool {
 }
 
 func (iter *Iter) Key() []byte {
-	return []byte(iter.ptr.key[iter.index])
+	return common.Hex2Bytes(iter.ptr.key[iter.index])
 }
 
 func (iter *Iter) Value() []byte {
@@ -142,7 +170,7 @@ func (iter *Iter) Error() error {
 }
 
 func (iter *Iter) Seek(key []byte) bool {
-	return true
+	panic("not support")
 }
 
 //-- mem db的batch操作
@@ -211,4 +239,11 @@ func (b *memBatch) Write() error {
 }
 func (b *memBatch) Len() int {
 	return len(b.writes)
+}
+
+func InRange(start []byte, limit []byte, elem []byte) bool {
+	if (start == nil || bytes.Compare(start, elem) <= 0) && (limit == nil || bytes.Compare(limit, elem) > 0) {
+		return true
+	}
+	return false
 }

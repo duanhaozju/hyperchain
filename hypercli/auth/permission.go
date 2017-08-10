@@ -67,6 +67,10 @@ func dropUser(c *cli.Context) error {
 		fmt.Println("Need only 1 param(username)")
 		return common.ErrInvalidArgsNum
 	}
+	if c.Args().Get(0) == "root" {
+		fmt.Println("Can not delete root!")
+		return nil
+	}
 	cmd := &admin.Command{
 		MethodName: "admin_delUser",
 		Args:       c.Args(),

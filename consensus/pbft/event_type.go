@@ -15,9 +15,15 @@ type checkpointMessage struct {
 	id    []byte
 }
 
+type replicaInfo struct {
+	id      uint64
+	height  uint64
+	genesis uint64
+}
+
 type stateUpdateTarget struct {
 	checkpointMessage
-	replicas []uint64
+	replicas []replicaInfo
 }
 
 //mesage type

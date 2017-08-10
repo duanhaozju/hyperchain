@@ -13,14 +13,13 @@ import (
 	"hyperchain/hyperdb"
 )
 
-
 // StoreState stores a key,value pair
 func StoreState(namespace string, key string, value []byte) error {
 	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
 	if err != nil {
 		return err
 	}
-	return db.Put([]byte("consensus." + key), value)
+	return db.Put([]byte("consensus."+key), value)
 }
 
 //DelAllState: remove all state
@@ -93,6 +92,10 @@ func GetBlockHeightAndHash(namespace string) (uint64, string) {
 	return bcInfo.Height, hash
 }
 
-func GetHeightofChain(namespace string) uint64 {
+func GetHeightOfChain(namespace string) uint64 {
 	return ndb.GetHeightOfChain(namespace)
+}
+
+func GetGenesisOfChain(namespace string) (error, uint64) {
+	return ndb.GetGenesisTag(namespace)
 }

@@ -48,6 +48,13 @@ func BytesToHash(b []byte) Hash {
 	h.SetBytes(b)
 	return h
 }
+
+func BytesToRightPaddingHash(b []byte) Hash {
+	var h Hash
+	h.SetBytesLeft(b)
+	return h
+}
+
 func StringToHash(s string) Hash { return BytesToHash([]byte(s)) }
 func BigToHash(b *big.Int) Hash  { return BytesToHash(b.Bytes()) }
 func HexToHash(s string) Hash    { return BytesToHash(FromHex(s)) }
@@ -91,6 +98,13 @@ func (h *Hash) SetBytes(b []byte) {
 	}
 
 	copy(h[HashLength-len(b):], b)
+}
+
+func (h *Hash) SetBytesLeft(b []byte) {
+	if len(b) > len(h) {
+		b = b[:HashLength]
+	}
+	copy(h[:], b)
 }
 
 // Set string `s` to h. If s is larger than len(h) it will panic
@@ -204,6 +218,16 @@ func PP(value []byte) string {
 	return fmt.Sprintf("%x...%x", value[:4], value[len(value)-4])
 }
 
+// API describes the set of methods offered over the RPC interface
+//type API struct {
+//	Srvname string      // srvname under which the rpc methods of Service are exposed
+//	Version string      // api version
+//	Service interface{} // receiver instance which holds the methods
+//	Public  bool        // indication if the methods must be considered safe for public use
+//}
+//
+//var Apis map[string]*API
+
 // rpcRequest represents a raw incoming RPC request
 type RPCRequest struct {
 	Service   string
@@ -222,4 +246,13 @@ type RPCResponse struct {
 	//Reply []reflect.Value
 	Reply interface{}
 	Error RPCError
+	IsPubSub  bool
+	IsUnsub   bool
+}
+
+type RPCNotification struct {
+	Namespace string
+	SubId     ID
+	Service   string
+	Result    interface{}
 }

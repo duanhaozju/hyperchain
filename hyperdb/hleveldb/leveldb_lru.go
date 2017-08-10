@@ -3,12 +3,13 @@ package hleveldb
 import (
 	"errors"
 	Lru "github.com/hashicorp/golang-lru"
-	"github.com/syndtr/goleveldb/leveldb"
-	"sync"
 	"github.com/op/go-logging"
-	"hyperchain/hyperdb/db"
+	"github.com/syndtr/goleveldb/leveldb"
 	"hyperchain/common"
+	"hyperchain/hyperdb/db"
+	"sync"
 )
+
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("hyperdb/leveldb_lru")
@@ -24,13 +25,12 @@ type levelLruDatabase struct {
 }
 
 var (
-	leveldbPath          = "./build/leveldb"
+	leveldbPath = "./build/leveldb"
 )
 
-func NewLevelLruDB(conf *common.Config,filepath string, ns string) (*levelLruDatabase, error) {
+func NewLevelLruDB(conf *common.Config, filepath string, ns string) (*levelLruDatabase, error) {
 
-
-	leveldb, err :=NewLDBDataBase(conf,filepath, ns)
+	leveldb, err := NewLDBDataBase(conf, filepath, ns)
 	if err != nil {
 		log.Noticef("NewLDBDataBase(%v) fail. err is %v. \n", leveldbPath, err.Error())
 		return nil, err
@@ -45,9 +45,9 @@ func NewLevelLruDB(conf *common.Config,filepath string, ns string) (*levelLruDat
 	return &levelLruDatabase{leveldb: leveldb, cache: cache, dbStatus: true}, nil
 }
 
-func NewLevelLruDBWithP(conf *common.Config,filepath string, ns string) (*levelLruDatabase, error) {
+func NewLevelLruDBWithP(conf *common.Config, filepath string, ns string) (*levelLruDatabase, error) {
 
-	leveldb, err :=NewLDBDataBase(conf,filepath, ns)
+	leveldb, err := NewLDBDataBase(conf, filepath, ns)
 	if err != nil {
 		log.Noticef("NewLDBDataBase(%v) fail. err is %v. \n", leveldbPath, err.Error())
 		return nil, err
@@ -61,7 +61,6 @@ func NewLevelLruDBWithP(conf *common.Config,filepath string, ns string) (*levelL
 
 	return &levelLruDatabase{leveldb: leveldb, cache: cache, dbStatus: true}, nil
 }
-
 
 func (lldb *levelLruDatabase) Put(key []byte, value []byte) error {
 

@@ -17,6 +17,8 @@ import (
 	"hyperchain/manager/protos"
 	"hyperchain/p2p"
 	"time"
+
+	flt "hyperchain/manager/filter"
 )
 
 const (
@@ -50,29 +52,35 @@ type EventHub struct {
 	consenter      consensus.Consenter
 	accountManager *accounts.AccountManager
 	eventMux       *event.TypeMux
+	filterMux      *event.TypeMux
 	// subscription
 	subscriptions map[int]event.Subscription
-	initType      int
-	logger        *logging.Logger
-	close         chan bool
+
+	filterSystem *flt.EventSystem
+
+	initType int
+	logger   *logging.Logger
+	close    chan bool
 }
 
-func New(namespace string, eventMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
-	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, consenter, am)
+func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
+	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, filterMux, consenter, am)
 	return eventHub
 }
 
-func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, consenter consensus.Consenter,
+func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, filterMux *event.TypeMux, consenter consensus.Consenter,
 	am *accounts.AccountManager) *EventHub {
 	hub := &EventHub{
 		namespace:      namespace,
 		executor:       executor,
 		eventMux:       eventMux,
+		filterMux:      filterMux,
 		consenter:      consenter,
 		peerManager:    peerManager,
 		accountManager: am,
 		subscriptions:  make(map[int]event.Subscription),
 		close:          make(chan bool),
+		filterSystem:   flt.NewEventSystem(filterMux),
 	}
 	hub.logger = common.GetLogger(namespace, "eventhub")
 	hub.Subscribe()
@@ -80,34 +88,28 @@ func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.
 }
 
 func (hub *EventHub) Start() {
-	//REVIEW none of p2p module business
 	go hub.listenValidateEvent()
-	//REVIEW none of p2p module business
 	go hub.listenCommitEvent()
-	//TODO  here has some peerManager's method
 	go hub.listenConsensusEvent()
-	//TODO here has some dispatch message to p2p module
 	go hub.listenExecutorEvent()
-	//TODO here has a setPrimary method of p2p module [ok]
 	go hub.listenMiscellaneousEvent()
-	//TODO here has a mount of broadcast method of p2p module [todo]
 	go hub.listenPeerMaintainEvent()
-	//REVIEW here has some p2p response message dispatch methods.
 	go hub.listenSessionEvent()
-	//REVIEW none of p2p module duty
 	go hub.listenTransactionEvent()
 }
 
 func (hub *EventHub) Stop() {
-	for i := 0; i < len(hub.subscriptions); i += 1 {
-		hub.close <- true
-	}
-	hub.logger.Noticef("event hub stopped!")
+	close(hub.close)
+	hub.logger.Notice("event hub stopped!")
 }
 
 // Properties
 func (hub *EventHub) GetEventObject() *event.TypeMux {
 	return hub.eventMux
+}
+
+func (hub *EventHub) GetExternalEventObject() *event.TypeMux {
+	return hub.filterMux
 }
 
 func (hub *EventHub) GetConsentor() consensus.Consenter {
@@ -126,6 +128,10 @@ func (hub *EventHub) GetAccountManager() *accounts.AccountManager {
 	return hub.accountManager
 }
 
+func (hub *EventHub) GetFilterSystem() *flt.EventSystem {
+	return hub.filterSystem
+}
+
 func (hub *EventHub) Subscribe() {
 	// Session stuff
 	hub.subscriptions[SUB_SESSION] = hub.eventMux.Subscribe(event.SessionEvent{})
@@ -135,7 +141,8 @@ func (hub *EventHub) Subscribe() {
 	hub.subscriptions[SUB_COMMIT] = hub.eventMux.Subscribe(event.CommitEvent{})
 	hub.subscriptions[SUB_PEERMAINTAIN] = hub.eventMux.Subscribe(event.NewPeerEvent{}, event.BroadcastNewPeerEvent{},
 		event.UpdateRoutingTableEvent{}, event.AlreadyInChainEvent{}, event.DelVPEvent{}, event.DelNVPEvent{}, event.BroadcastDelPeerEvent{})
-	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InformPrimaryEvent{}, event.VCResetEvent{}, event.ChainSyncReqEvent{})
+	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InformPrimaryEvent{}, event.VCResetEvent{}, event.ChainSyncReqEvent{},
+		event.SnapshotEvent{}, event.DeleteSnapshotEvent{}, event.ArchiveEvent{})
 	hub.subscriptions[SUB_EXEC] = hub.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{})
 	hub.subscriptions[SUB_TRANSACTION] = hub.eventMux.Subscribe(event.NewTxEvent{}, event.NvpRelayTxEvent{})
 }
@@ -169,7 +176,7 @@ func (hub *EventHub) listenTransactionEvent() {
 			case event.NewTxEvent:
 				hub.logger.Debugf("message middleware: [new tx]")
 				if ev.Simulate == true {
-					hub.executor.RunInSandBox(ev.Transaction)
+					hub.executor.RunInSandBox(ev.Transaction, ev.SnapshotId)
 				} else {
 					if hub.NodeIdentification() == IdentificationNVP {
 						hub.RelayTx(ev.Transaction, ev.Ch)
@@ -244,6 +251,15 @@ func (hub *EventHub) listenMiscellaneousEvent() {
 			case event.ChainSyncReqEvent:
 				hub.logger.Debugf("message middleware: [chain sync request]")
 				hub.executor.SyncChain(ev)
+			case event.SnapshotEvent:
+				hub.logger.Debugf("message middleware: [snapshot request]")
+				hub.executor.Snapshot(ev)
+			case event.DeleteSnapshotEvent:
+				hub.logger.Debugf("message middleware: [delete snapshot request]")
+				hub.executor.DeleteSnapshot(ev)
+			case event.ArchiveEvent:
+				hub.logger.Debugf("message middleware: [archive request]")
+				hub.executor.Archive(ev)
 			}
 		}
 	}
@@ -277,15 +293,14 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 		case obj := <-hub.GetSubscription(SUB_PEERMAINTAIN).Chan():
 			switch ev := obj.Data.(type) {
 			case event.NewPeerEvent:
-				hub.logger.Critical("message middleware: [new peer]")
+				hub.logger.Debugf("message middleware: [new peer]")
 				hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_ADD_NODE_EVENT, &protos.AddNodeMessage{ev.Payload})
 			case event.BroadcastNewPeerEvent:
 				hub.logger.Debugf("message middleware: [broadcast new peer]")
 				hub.broadcast(BROADCAST_VP, m.SessionMessage_ADD_PEER, ev.Payload)
 			case event.DelVPEvent:
-				hub.logger.Debugf("message middleware: [delete vp peer]")
+				hub.logger.Debugf("message middleware: [delete peer]")
 				payload := ev.Payload
-				//TODO unSupport method temp @chenquan
 				routerHash, id, del := hub.peerManager.GetRouterHashifDelete(string(payload))
 				msg := &protos.DelNodeMessage{
 					DelPayload: payload,
@@ -333,7 +348,6 @@ func (hub *EventHub) listenExecutorEvent() {
 			case event.ExecutorToConsensusEvent:
 				hub.dispatchExecutorToConsensus(ev)
 			case event.ExecutorToP2PEvent:
-				//TODO there are somethis to fix @chenquan
 				hub.dispatchExecutorToP2P(ev)
 			}
 
@@ -385,7 +399,7 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		hub.logger.Debugf("message middleware: [unicast invalid tx]")
 		peerId := ev.Peers[0]
 		peerHash := ev.PeersHash[0]
-		if  peerId == uint64(hub.peerManager.GetNodeId()) {
+		if peerId == uint64(hub.peerManager.GetNodeId()) {
 			if len(peerHash) == 0 {
 				hub.executor.StoreInvalidTransaction(ev.Payload)
 			} else {
@@ -438,6 +452,18 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 			return
 		}
 		hub.sendToRandomVP(m.SessionMessage_SYNC_REQ, payload)
+	case executor.NOTIFY_REQUEST_WORLD_STATE:
+		hub.logger.Debugf("message middleware: [request world state]")
+		hub.send(m.SessionMessage_SYNC_WORLD_STATE, ev.Payload, ev.Peers)
+	case executor.NOTIFY_SEND_WORLD_STATE_HANDSHAKE:
+		hub.logger.Debugf("message middleware: [send world state handshake packet]")
+		hub.send(m.SessionMessage_SEND_WS_HS, ev.Payload, ev.Peers)
+	case executor.NOTIFY_SEND_WORLD_STATE:
+		hub.logger.Debugf("message middleware: [request world state]")
+		hub.send(m.SessionMessage_SEND_WORLD_STATE, ev.Payload, ev.Peers)
+	case executor.NOTIFY_SEND_WS_ACK:
+		hub.logger.Debugf("message middleware: [send ws ack]")
+		hub.send(m.SessionMessage_SEND_WS_ACK, ev.Payload, ev.Peers)
 	}
 }
 
@@ -477,6 +503,14 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 		fallthrough
 	case m.SessionMessage_SYNC_REQ:
 		hub.executor.ReceiveSyncRequest(message.Payload)
+	case m.SessionMessage_SYNC_WORLD_STATE:
+		hub.executor.ReceiveWorldStateSyncRequest(message.Payload)
+	case m.SessionMessage_SEND_WORLD_STATE:
+		hub.executor.ReceiveWorldState(message.Payload)
+	case m.SessionMessage_SEND_WS_HS:
+		hub.executor.ReceiveWsHandshake(message.Payload)
+	case m.SessionMessage_SEND_WS_ACK:
+		hub.executor.ReceiveWsAck(message.Payload)
 	case m.SessionMessage_TRANSIT_BLOCK:
 		hub.executor.GetNVP().ReceiveBlock(message.Payload)
 	case m.SessionMessage_NVP_RELAY:

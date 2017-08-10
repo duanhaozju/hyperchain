@@ -25,11 +25,11 @@ func TestSyncFSM(t *testing.T) {
 
 func prepareCallbacks() fsm.Callbacks {
 	fns := make(fsm.Callbacks)
-	fns["enter_" + SyncFSM_Prepare] = prepareCallback
-	fns["enter_" + SyncFSM_Select] = selectCallback
-	fns["enter_" + SyncFSM_Wait] = waitCallback
-	fns["enter_" + SyncFSM_Exec] = execCallback
-	fns["enter_" + SyncFSM_Done] = doneCallback
+	fns["enter_"+SyncFSM_Prepare] = prepareCallback
+	fns["enter_"+SyncFSM_Select] = selectCallback
+	fns["enter_"+SyncFSM_Wait] = waitCallback
+	fns["enter_"+SyncFSM_Exec] = execCallback
+	fns["enter_"+SyncFSM_Done] = doneCallback
 	return fns
 }
 

@@ -1,0 +1,22 @@
+syntax = "proto3";
+package version1_2;
+import "transaction.proto";
+
+message Block {
+    bytes version = 1;
+	bytes parentHash = 2;
+	bytes blockHash = 3;
+	repeated Transaction transactions = 4;
+	int64 timestamp = 5;
+	bytes merkleRoot = 6;
+	bytes txRoot = 7;
+	bytes receiptRoot = 8;
+	uint64 number = 9;
+	int64 writeTime = 10;
+	int64 commitTime = 11;
+	int64 evmTime = 12;
+}
+
+message Blocks{
+    repeated Block batch = 1;
+}

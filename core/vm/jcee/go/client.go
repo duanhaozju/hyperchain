@@ -22,6 +22,8 @@ type ContractExecutor interface {
 	Stop() error
 	// Run invoke contract, use `Execute` internally
 	Run(vm.VmContext, []byte) ([]byte, error)
+	// Clear context and make some stats
+	Finalize()
 	// Ping send ping package for healthy assurance
 	Ping() (*pb.Response, error)
 }
@@ -94,6 +96,10 @@ func (cei *contractExecutorImpl) Run(ctx vm.VmContext, in []byte) ([]byte, error
 	} else {
 		return response.Result, nil
 	}
+}
+
+func (cei *contractExecutorImpl) Finalize() {
+
 }
 
 func (cei *contractExecutorImpl) Ping() (*pb.Response, error){

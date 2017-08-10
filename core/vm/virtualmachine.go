@@ -5,6 +5,7 @@ type Vm interface {
 	// and return the contract execution return bytes or an error if it
 	// failed.
 	Run(c VmContext, in []byte) ([]byte, error)
+	Finalize()
 }
 // Just a symbolic interface
 // virtual machine use type assert to convert to real type.

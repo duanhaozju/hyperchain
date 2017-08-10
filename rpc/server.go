@@ -283,10 +283,30 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 		if response.Error != nil {
 			return codec.CreateErrorResponse(response.Id, response.Namespace, response.Error)
 		} else if response.Reply != nil {
+			if response.IsPubSub {
+				notifier, supported := NotifierFromContext(req.Ctx)
+				if !supported { // interface doesn't support subscriptions (e.g. http)
+					return codec.CreateErrorResponse(response.Id, response.Namespace, &common.CallbackError{Message: ErrNotificationsUnsupported.Error()})
+				}
+
+				if response.IsUnsub {
+					subid := response.Reply.(common.ID)
+					if err := notifier.Unsubscribe(subid); err != nil {
+						return codec.CreateErrorResponse(response.Id, response.Namespace, &common.SubNotExistError{Message: err.Error()})
+					}
+					return codec.CreateResponse(response.Id, response.Namespace, true)
+				} else {
+					// active the subscription after the sub id was successfully sent to the client
+					notifier.Activate(response.Reply.(common.ID), req.Service, req.Method, req.Namespace)
+				}
+			}
 			return codec.CreateResponse(response.Id, response.Namespace, response.Reply)
+
 		} else {
 			return codec.CreateResponse(response.Id, response.Namespace, nil)
 		}
+	//} else if response, ok := r.(*common.RPCNotification); ok{
+	//	return s.CreateNotification(response.SubId, response.Service, response.Namespace, nil)
 	} else {
 		log.Errorf("response type invalid, resp: %v\n")
 		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"response type invalid!"})

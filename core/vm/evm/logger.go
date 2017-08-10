@@ -65,7 +65,7 @@ type Logger struct {
 }
 
 // newLogger returns a new logger
-func newLogger(cfg LogConfig, env vm.Environment) *Logger {
+func NewLogger(cfg LogConfig, env vm.Environment) *Logger {
 	return &Logger{
 		cfg:           cfg,
 		env:           env,
@@ -144,24 +144,24 @@ func (l *Logger) captureState(pc uint64, op OpCode, gas, cost *big.Int, memory *
 
 // StdErrFormat formats a slice of StructLogs to human readable format
 func StdErrFormat(logs []StructLog) {
-	fmt.Fprintf(os.Stderr, "VM STAT %d OPs\n", len(logs))
+	fmt.Fprintf(os.Stdout, "VM STAT %d OPs\n", len(logs))
 	for _, log := range logs {
-		fmt.Fprintf(os.Stderr, "PC %08d: %s GAS: %v COST: %v", log.Pc, log.Op, log.Gas, log.GasCost)
+		fmt.Fprintf(os.Stdout, "PC %08d: [%s] GAS: %v COST: %v", log.Pc, log.Op.String(), log.Gas, log.GasCost)
 		if log.Err != nil {
-			fmt.Fprintf(os.Stderr, " ERROR: %v", log.Err)
+			fmt.Fprintf(os.Stdout, " ERROR: %v", log.Err)
 		}
-		fmt.Fprintf(os.Stderr, "\n")
+		fmt.Fprintf(os.Stdout, "\n")
 
-		fmt.Fprintln(os.Stderr, "STACK =", len(log.Stack))
+		fmt.Fprintln(os.Stdout, "STACK =", len(log.Stack))
 
 		for i := len(log.Stack) - 1; i >= 0; i-- {
-			fmt.Fprintf(os.Stderr, "%04d: %x\n", len(log.Stack)-i-1, common.LeftPadBytes(log.Stack[i].Bytes(), 32))
+			fmt.Fprintf(os.Stdout, "%04d: %x\n", len(log.Stack)-i-1, common.LeftPadBytes(log.Stack[i].Bytes(), 32))
 		}
 
-		const maxMem = 10
+		// const maxMem = 10
 		addr := 0
-		fmt.Fprintln(os.Stderr, "MEM =", len(log.Memory))
-		for i := 0; i+16 <= len(log.Memory) && addr < maxMem; i += 16 {
+		fmt.Fprintln(os.Stdout, "MEM =", len(log.Memory))
+		for i := 0; i+16 <= len(log.Memory); /*&& addr < maxMem*/ i += 16 {
 			data := log.Memory[i : i+16]
 			str := fmt.Sprintf("%04d: % x  ", addr*16, data)
 			for _, r := range data {
@@ -174,13 +174,13 @@ func StdErrFormat(logs []StructLog) {
 				}
 			}
 			addr++
-			fmt.Fprintln(os.Stderr, str)
+			fmt.Fprintln(os.Stdout, str)
 		}
 
-		fmt.Fprintln(os.Stderr, "STORAGE =", len(log.Storage))
+		fmt.Fprintln(os.Stdout, "STORAGE =", len(log.Storage))
 		for h, item := range log.Storage {
-			fmt.Fprintf(os.Stderr, "%x: %x\n", h, item)
+			fmt.Fprintf(os.Stdout, "%x: %x\n", h, item)
 		}
-		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stdout)
 	}
 }

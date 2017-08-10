@@ -138,3 +138,20 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method": "node_delNVP","params":[{
 
 ################################# 批量调用例子 ###################################
 curl localhost:8081 --data '[{"jsonrpc":"2.0","method":"block_lastestBlock","params":[],"id":1}, {"jsonrpc":"2.0","method": "node_getNodes","id": 2}]'
+
+
+################################# 数据归档 ######################################
+# 制作快照
+curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"archive_snapshot","params":[0],"id":1}'
+# 读取快照内容
+curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"archive_readSnapshot,"params":["<filterId>", isVerbose],"id":1}'
+# 读取快照列表
+curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"archive_listSnapshot","params":[],"id":1}'
+# 删除快照
+curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"archive_deleteSnapshot","params":["<filterId>"],"id":1}'
+# 检查快照
+curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"archive_checkSnapshot","params":["<filterId>"],"id":1}'
+# 数据归档
+curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"archive_archive","params":["<filterId>"],"id":1}'
+
+

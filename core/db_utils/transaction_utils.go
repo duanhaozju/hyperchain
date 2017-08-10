@@ -222,6 +222,54 @@ func GetAllDiscardTransactionFunc(db db.Database) ([]*types.InvalidTransactionRe
 	return ts, err
 }
 
+func DeleteAllDiscardTransaction(db db.Database, batch db.Batch, flush, sync bool) error {
+	iter := db.NewIterator(InvalidTransactionPrefix)
+	defer iter.Release()
+	for iter.Next() {
+		batch.Delete(iter.Key())
+	}
+	err := iter.Error()
+	// flush to disk immediately
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return err
+}
+
+func DumpDiscardTransactionInRange(db db.Database, batch db.Batch, dumpBatch db.Batch, start, end int64, flush, sync bool) (error, uint64) {
+	// flush to disk immediately
+	iter := db.NewIterator(InvalidTransactionPrefix)
+	defer iter.Release()
+	var cnt uint64
+	for iter.Next() {
+		var t types.InvalidTransactionRecord
+		value := iter.Value()
+		if err := proto.Unmarshal(value, &t); err != nil {
+			continue
+		}
+		if t.Tx != nil && t.Tx.Timestamp < end && t.Tx.Timestamp >= start {
+			cnt += 1
+			batch.Delete(iter.Key())
+			dumpBatch.Put(iter.Key(), iter.Value())
+		}
+	}
+	err := iter.Error()
+	if flush {
+		if sync {
+			batch.Write()
+			dumpBatch.Write()
+		} else {
+			go batch.Write()
+			go dumpBatch.Write()
+		}
+	}
+	return err, cnt
+}
+
 func GetDiscardTransaction(namespace string, key []byte) (*types.InvalidTransactionRecord, error) {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {

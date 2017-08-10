@@ -26,7 +26,7 @@ type blkIdx struct {
 	hash   string
 }
 
-func newRecoveryMgr() *recoveryManager  {
+func newRecoveryMgr() *recoveryManager {
 	rm := &recoveryManager{}
 	rm.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 	rm.rcRspStore = make(map[uint64]*RecoveryResponse)
@@ -255,7 +255,7 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 
 	pbft.recoveryMgr.recoveryToSeqNo = nil
 	// update watermarks
-	height := persist.GetHeightofChain(pbft.namespace)
+	height := persist.GetHeightOfChain(pbft.namespace)
 
 	pbft.recoveryMgr.rcRspStore = make(map[uint64]*RecoveryResponse)
 
@@ -282,11 +282,14 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 	pbft.timerMgr.startTimer(RECOVERY_RESTART_TIMER, event, pbft.pbftEventQueue)
 
 	height, curHash := persist.GetBlockHeightAndHash(pbft.namespace)
+	genesis := pbft.getGenesisInfo()
+
 	rc := &RecoveryResponse{
-		ReplicaId: pbft.id,
-		Chkpts:    pbft.storeMgr.chkpts,
+		ReplicaId:     pbft.id,
+		Chkpts:        pbft.storeMgr.chkpts,
 		BlockHeight:   height,
 		LastBlockHash: curHash,
+		Genesis:       genesis,
 	}
 	pbft.recvRecoveryRsp(rc)
 	return nil
@@ -316,12 +319,14 @@ func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 	}
 
 	height, curHash := persist.GetBlockHeightAndHash(pbft.namespace)
+	genesis := pbft.getGenesisInfo()
 
 	rc := &RecoveryResponse{
 		ReplicaId:     pbft.id,
 		Chkpts:        pbft.storeMgr.chkpts,
 		BlockHeight:   height,
 		LastBlockHash: curHash,
+		Genesis:       genesis,
 	}
 
 	pbft.logger.Debugf("Replica %d recovery response to replica %d is : %v", pbft.id, recoveryInit.ReplicaId, rc)
@@ -372,7 +377,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		return nil
 	}
 	// find quorum chkpt
-	n, lastid, find, chkptBehind, replicas := pbft.findHighestChkptQuorum()
+	n, lastid, replicas, find, chkptBehind := pbft.findHighestChkptQuorum()
 	pbft.logger.Debug("n: ", n, "lastid: ", lastid, "find: ", find, "chkptBehind: ", chkptBehind)
 
 	lastExec, curHash, execFind := pbft.findLastExecQuorum()
@@ -452,7 +457,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.moveWatermarks(n)
 		pbft.stateTransfer(target)
 	} else if !pbft.status.getState(&pbft.status.skipInProgress) && !pbft.status.getState(&pbft.status.inVcReset) {
-		pbft.helper.VcReset(selfLastExec+1)
+		pbft.helper.VcReset(selfLastExec + 1)
 		pbft.status.activeState(&pbft.status.inVcReset)
 	} else {
 		pbft.logger.Debugf("Replica %d try to recovery but find itself in state update", pbft.id)
@@ -461,11 +466,11 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 }
 
 // findHighestChkptQuorum finds highest one of chkpts which achieve quorum
-func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, find bool, chkptBehind bool, replicas []uint64) {
+func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []replicaInfo, find bool, chkptBehind bool) {
 
 	pbft.logger.Debugf("Replica %d now enter findHighestChkptQuorum", pbft.id)
 
-	chkpts := make(map[cidx]map[uint64]bool)
+	chkpts := make(map[cidx]map[replicaInfo]bool)
 
 	for from, rsp := range pbft.recoveryMgr.rcRspStore {
 		for chkptN, chkptD := range rsp.GetChkpts() {
@@ -475,10 +480,20 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, find bool, c
 			}
 			peers, ok := chkpts[chkptIdx]
 			if ok {
-				peers[from] = true
+				replica := replicaInfo{
+					id:      from,
+					height:  rsp.BlockHeight,
+					genesis: rsp.Genesis,
+				}
+				peers[replica] = true
 			} else {
-				peers = make(map[uint64]bool)
-				peers[from] = true
+				peers = make(map[replicaInfo]bool)
+				replica := replicaInfo{
+					id:      from,
+					height:  rsp.BlockHeight,
+					genesis: rsp.Genesis,
+				}
+				peers[replica] = true
 				chkpts[chkptIdx] = peers
 			}
 		}
@@ -502,9 +517,9 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, find bool, c
 			if ci.n >= n {
 				n = ci.n
 				d = ci.d
-				replicas = make([]uint64, 0, len(peers))
-				for replica := range peers {
-					replicas = append(replicas, replica)
+				replicas = make([]replicaInfo, 0, len(peers))
+				for peer := range peers {
+					replicas = append(replicas, peer)
 				}
 			}
 		}
@@ -661,14 +676,40 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 
 	// post all the PQC
 	for _, preprep := range PQCInfo.GetPrepreSet() {
-		go pbft.pbftEventQueue.Push(preprep)
+		payload, err := proto.Marshal(preprep)
+		if err != nil {
+			pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
+			return nil
+		}
+		consensusMsg := &ConsensusMessage{
+			Type:    ConsensusMessage_PRE_PREPARE,
+			Payload: payload,
+		}
+		go pbft.pbftEventQueue.Push(consensusMsg)
 	}
 	for _, prep := range PQCInfo.GetPreSet() {
-		go pbft.pbftEventQueue.Push(prep)
+		payload, err := proto.Marshal(prep)
+		if err != nil {
+			pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
+			return nil
+		}
+		consensusMsg := &ConsensusMessage{
+			Type:    ConsensusMessage_PREPARE,
+			Payload: payload,
+		}
+		go pbft.pbftEventQueue.Push(consensusMsg)
 	}
 	for _, cmt := range PQCInfo.GetCmtSet() {
-		go pbft.pbftEventQueue.Push(cmt)
-
+		payload, err := proto.Marshal(cmt)
+		if err != nil {
+			pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
+			return nil
+		}
+		consensusMsg := &ConsensusMessage{
+			Type:    ConsensusMessage_COMMIT,
+			Payload: payload,
+		}
+		go pbft.pbftEventQueue.Push(consensusMsg)
 	}
 
 	return nil

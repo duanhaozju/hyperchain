@@ -10,7 +10,7 @@ import (
 )
 
 func TestGetTransaction(t *testing.T) {
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 
 	for idx, tx := range test_util.TransactionCases {
@@ -33,7 +33,7 @@ func TestGetTransaction(t *testing.T) {
 }
 
 func TestJudgeTransactionExist(t *testing.T) {
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	for idx, tx := range test_util.TransactionCases {
 		meta := &types.TransactionMeta{
@@ -53,7 +53,7 @@ func TestJudgeTransactionExist(t *testing.T) {
 
 // TestGetInvaildTx tests for GetDiscardTransaction
 func TestGetInvaildTx(t *testing.T) {
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	tx := test_util.TransactionCases[0]
 	record := &types.InvalidTransactionRecord{
 		Tx:      tx,

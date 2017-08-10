@@ -152,7 +152,7 @@ func NewNVPImpl(executor *Executor) *NVPImpl {
 // process in serial but may out of order.
 func (nvp *NVPImpl) ReceiveBlock(payload []byte) {
 
-	nvp.getExecutor().logger.Debugf("receive block")
+	nvp.getExecutor().logger.Debug("receive block")
 	nvp.lock.Lock()
 	defer nvp.lock.Unlock()
 
@@ -264,7 +264,7 @@ func (nvp *NVPImpl) applyRemainBlock(number uint64) error {
 }
 
 func (nvp *NVPImpl) process(block *types.Block) error {
-	err, result := nvp.getExecutor().ApplyBlock(block, block.Number, block.Number)
+	err, result := nvp.getExecutor().ApplyBlock(block, block.Number)
 	if err != nil {
 		return err
 	}
@@ -292,7 +292,7 @@ func (nvp *NVPImpl) process(block *types.Block) error {
 			syscall.Exit(0)
 		}
 	}
-	nvp.getExecutor().accpet(block.Number, block)
+	nvp.getExecutor().accpet(block.Number, block, result)
 	if nvp.isInSync() {
 		nvp.getCtx().setDown(db_utils.GetHeightOfChain(nvp.getExecutor().namespace))
 	}

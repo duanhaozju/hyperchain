@@ -20,9 +20,10 @@ func IsValueTransferErr(e error) bool {
 	_, ok := e.(*ValueTransferError)
 	return ok
 }
+
 /*
 	SignatureError
- */
+*/
 type SignatureError struct {
 	message string
 }
@@ -40,7 +41,7 @@ func IsSignatureErr(e error) bool {
 
 /*
 	ExecContractError
- */
+*/
 type ExecContractError struct {
 	message string
 	errType int
@@ -67,7 +68,7 @@ func IsExecContractErr(e error) bool {
 
 /*
 	InvalidInvokePermissionError
- */
+*/
 type InvalidInvokePermissionError struct {
 	message string
 }
@@ -93,6 +94,7 @@ var (
 	NoDefinedCaseErr = errors.New("no defined case")
 	EmptyPointerErr  = errors.New("nil pointer")
 	TxIdLenErr = errors.New("tx's id length does not match.")
+	MarshalFailedErr = errors.New("marshal failed")
 )
 
 

@@ -50,6 +50,11 @@ const (
 	admin_revokePermission
 	admin_listPermission
 
+	// jvm cmd
+	admin_startJvmServer
+	admin_stopJvmServer
+	admin_restartJvmServer
+
 	// contract cmd
 	contract_deployContract
 	contract_invokeContract
@@ -77,6 +82,8 @@ var logGroup = []int{admin_setLevel, admin_getLevel}
 
 var authGroup = []int{admin_createUser, admin_alterUser, admin_dropUser, admin_grantPermission,
 	admin_revokePermission, admin_listPermission}
+
+var jvmGroup = []int{admin_startJvmServer, admin_stopJvmServer, admin_restartJvmServer}
 
 var contractGroup = []int{contract_deployContract, contract_invokeContract, contract_maintainContract}
 
@@ -114,6 +121,12 @@ func convertToScope(method string) int {
 		return admin_stopHttpServer
 	case toUpper("admin_restartHttpServer"):
 		return admin_restartHttpServer
+	case toUpper("admin_startJvmServer"):
+		return admin_startJvmServer
+	case toUpper("admin_stopJvmServer"):
+		return admin_stopJvmServer
+	case toUpper("admin_restartJvmServer"):
+		return admin_restartJvmServer
 	case toUpper("admin_setLevel"):
 		return admin_setLevel
 	case toUpper("admin_getLevel"):
@@ -185,6 +198,14 @@ func convertToIntegers(scope string) []int {
 		return []int{admin_restartHttpServer}
 	case "http::all":
 		return httpGroup
+	case "jvm::start":
+		return []int{admin_startJvmServer}
+	case "jvm::stop":
+		return []int{admin_stopJvmServer}
+	case "jvm::restart":
+		return []int{admin_restartJvmServer}
+	case "jvm::all":
+		return jvmGroup
 	case "log::setLevel":
 		return []int{admin_setLevel}
 	case "log::getLevel":
@@ -260,6 +281,12 @@ func ReadablePermission(scope float64) string {
 		return "http::stop"
 	case admin_restartHttpServer:
 		return "http::restart"
+	case admin_startJvmServer:
+		return "jvm::start"
+	case admin_stopJvmServer:
+		return "jvm::stop"
+	case admin_restartJvmServer:
+		return "jvm::restart"
 	case admin_setLevel:
 		return "log::setLevel [ns-name] [module] [logLevel]"
 	case admin_getLevel:

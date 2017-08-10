@@ -4,9 +4,11 @@ package types;
 message Chain {
 	bytes latestBlockHash = 1;
 	bytes parentBlockHash = 2;
-	uint64 height = 3;
+	uint64 height         = 3;
 	uint64 requiredBlockNum = 4;
-	bytes requireBlockHash = 5;
-	uint64 recoveryNum = 6;
-	uint64 currentTxSum = 7;
+    bytes requireBlockHash = 5;
+    uint64 recoveryNum     = 6;
+    uint64 currentTxSum    = 7;
+	uint64 genesis         = 8;
+	bytes  extra           = 9;
 }

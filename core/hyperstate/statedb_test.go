@@ -34,8 +34,8 @@ func (suite *StateDbSuite) TearDownSuite(c *checker.C) {
 }
 
 func (suite *StateDbSuite) TestGetState(c *checker.C) {
-	db, _ := mdb.NewMemDatabase()
-	state, _ := New(common.Hash{}, db, db, globalConfig, 0, "global")
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
+	state, _ := New(common.Hash{}, db, db, nil, 0, "global")
 	addr := common.BytesToAddress([]byte("address"))
 	key  := common.BytesToHash([]byte("key"))
 	value := []byte("value")

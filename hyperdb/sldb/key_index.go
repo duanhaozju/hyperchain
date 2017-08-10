@@ -3,6 +3,7 @@
 package sldb
 
 import (
+	"github.com/op/go-logging"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/willf/bloom"
@@ -12,7 +13,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/op/go-logging"
 )
 
 const (
@@ -45,6 +45,7 @@ type KeyIndex struct {
 	lastStartKeyPrefix []byte
 	currStartKeyPrefix []byte
 	bloomPath          string
+	bloomDir           string
 	conf               *common.Config
 	logger             *logging.Logger
 }
@@ -59,7 +60,8 @@ func NewKeyIndex(conf *common.Config, ns string, db *leveldb.DB, path string) *K
 		bf:            filter,
 		db:            db,
 		keyPrefix:     []byte(ns + "_bloom_key."),
-		bloomPath:     path,
+		bloomPath:     path + "/bloom.dat",
+		bloomDir:      path,
 		keyPrefixLock: new(sync.RWMutex),
 	}
 	return index
@@ -204,7 +206,8 @@ func (ki *KeyIndex) dropPreviousKey() error {
 }
 
 func (ki *KeyIndex) persistBloom() error {
-	bloomDir := ki.conf.GetString(sldb_index_dir)
+	bloomDir := ki.bloomDir
+	ki.logger.Criticalf("sldb dir: %s ", bloomDir)
 	_, error := os.Stat(bloomDir)
 	if !(error == nil || os.IsExist(error)) {
 		err := os.MkdirAll(bloomDir, 0777)
@@ -234,10 +237,13 @@ func (ki *KeyIndex) persistBloom() error {
 	ki.keyPrefixLock.Lock()
 	defer ki.keyPrefixLock.Unlock()
 	err = ki.db.Put(ki.lastStartKey(), ki.currStartKeyPrefix, nil)
+	if err != nil {
+		return err
+	}
 	ki.lastStartKeyPrefix = ki.currStartKeyPrefix
 	ki.currStartKeyPrefix = ki.checkPointKey()
 	ki.keyPrefix = ki.currStartKeyPrefix
-	return err
+	return nil
 }
 
 //BloomFilter just for test now

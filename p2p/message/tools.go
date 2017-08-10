@@ -7,8 +7,6 @@ import (
 	"hyperchain/common"
 )
 
-
-
 func GetHash(needHashString string) string {
 	hasher := sha3.NewKeccak256()
 	hasher.Write([]byte(needHashString))

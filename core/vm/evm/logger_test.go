@@ -20,7 +20,7 @@ func TestLogger(t *testing.T) {
 		DisableStorage: true,
 		FullStorage:    true,
 	}
-	logger := newLogger(cfg, env)
+	logger := NewLogger(cfg, env)
 
 	fmt.Println(logger)
 

@@ -121,12 +121,14 @@ do
         sed -i "" "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "" "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "" "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/10001/1000${j}/g" ${DUMP_PATH}/node${j}/global.toml
     else
         sed -i "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/10001/1000${j}/g" ${DUMP_PATH}/node${j}/global.toml
     fi
 
     cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.toml ${DUMP_PATH}/node${j}/addr.toml
@@ -268,7 +270,7 @@ REBUILD=true
 HYPERCLI=false
 
 # distribute jvm or not? default = false
-HYPERJVM=false
+HYPERJVM=true
 
 # run process or not? default = true
 RUN=true

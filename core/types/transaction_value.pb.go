@@ -2,17 +2,6 @@
 // source: transaction_value.proto
 // DO NOT EDIT!
 
-/*
-Package types is a generated protocol buffer package.
-
-It is generated from these files:
-	transaction_value.proto
-
-It has these top-level messages:
-	TransactionValue
-	InvokeArgs
-	TxExtra
-*/
 package types
 
 import proto "github.com/golang/protobuf/proto"
@@ -23,12 +12,6 @@ import math "math"
 var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
-
-// This is a compile-time assertion to ensure that this generated file
-// is compatible with the proto package it is being compiled against.
-// A compilation error at this line likely means your copy of the
-// proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type TransactionValue_Opcode int32
 

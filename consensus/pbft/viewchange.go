@@ -74,7 +74,7 @@ func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vc
 	nvTimeout := pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 	if vcm.cleanVcTimeout < 6 * nvTimeout {
 		vcm.cleanVcTimeout = 6 * nvTimeout
-		pbft.logger.Criticalf("Replica %d set timeout of cleaning out-of-time view change message to %v since it's to short", pbft.id, 6 * nvTimeout)
+		pbft.logger.Criticalf("Replica %d set timeout of cleaning out-of-time view change message to %v since it's to short", pbft.id, 6*nvTimeout)
 	}
 
 	vcm.viewChangePeriod = uint64(0)
@@ -327,8 +327,8 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 			pbft.vcMgr.lastNewViewTimeout = 5 * pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 		}
 		return &LocalEvent{
-			Service:VIEW_CHANGE_SERVICE,
-			EventType:VIEW_CHANGE_QUORUM_EVENT,
+			Service:   VIEW_CHANGE_SERVICE,
+			EventType: VIEW_CHANGE_QUORUM_EVENT,
 		}
 	}
 
@@ -508,7 +508,7 @@ func (pbft *pbftImpl) processNewView() events.Event {
 }
 
 //primaryProcessNewView
-func (pbft *pbftImpl) primaryProcessNewView(initialCp ViewChange_C, replicas []uint64, nv *NewView) events.Event {
+func (pbft *pbftImpl) primaryProcessNewView(initialCp ViewChange_C, replicas []replicaInfo, nv *NewView) events.Event {
 	var newReqBatchMissing bool
 
 	speculativeLastExec := pbft.exec.lastExec
@@ -566,7 +566,7 @@ func (vcm *vcManager) updateViewChangeSeqNo(seqNo, K, id uint64) {
 		return
 	}
 	// Ensure the view change always occurs at a checkpoint boundary
-	vcm.viewChangeSeqNo = seqNo + vcm.viewChangePeriod * K - seqNo % K
+	vcm.viewChangeSeqNo = seqNo + vcm.viewChangePeriod*K - seqNo%K
 	//logger.Debugf("Replica %d updating view change sequence number to %d", id, vcm.viewChangeSeqNo)
 }
 
@@ -658,9 +658,9 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 		if idx.n > pbft.h {
 			tmpId := msgID{idx.n, pbft.view}
 			tmpCert := &certSet{
-				digest: cert.digest,
+				digest:      cert.digest,
 				sentPrepare: cert.sentPrepare,
-				sentCommit: cert.sentCommit,
+				sentCommit:  cert.sentCommit,
 				sentExecute: cert.sentExecute,
 			}
 			tmpStore[tmpId] = tmpCert
@@ -790,8 +790,8 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 	}
 
 	return &LocalEvent{
-		Service:VIEW_CHANGE_SERVICE,
-		EventType:VIEW_CHANGED_EVENT,
+		Service:   VIEW_CHANGE_SERVICE,
+		EventType: VIEW_CHANGED_EVENT,
 	}
 }
 
@@ -810,11 +810,11 @@ func (pbft *pbftImpl) rebuildCertStore() {
 		batch, ok := pbft.batchVdr.validatedBatchStore[vc.digest]
 		if pbft.primary(pbft.view) == pbft.id && ok {
 			preprep := &PrePrepare{
-				View: idx.v,
-				SequenceNumber: idx.n,
-				BatchDigest: vc.digest,
+				View:             idx.v,
+				SequenceNumber:   idx.n,
+				BatchDigest:      vc.digest,
 				TransactionBatch: batch,
-				ReplicaId: pbft.id,
+				ReplicaId:        pbft.id,
 			}
 			cert.digest = vc.digest
 			cert.prePrepare = preprep
@@ -838,10 +838,10 @@ func (pbft *pbftImpl) rebuildCertStore() {
 		}
 		if pbft.primary(pbft.view) != pbft.id && vc.sentPrepare {
 			prep := &Prepare{
-				View: idx.v,
+				View:           idx.v,
 				SequenceNumber: idx.n,
-				BatchDigest: vc.digest,
-				ReplicaId: pbft.id,
+				BatchDigest:    vc.digest,
+				ReplicaId:      pbft.id,
 			}
 			cert.prepare[*prep] = true
 			cert.sentPrepare = true
@@ -863,10 +863,10 @@ func (pbft *pbftImpl) rebuildCertStore() {
 		}
 		if vc.sentCommit {
 			cmt := &Commit{
-				View: idx.v,
+				View:           idx.v,
 				SequenceNumber: idx.n,
-				BatchDigest: vc.digest,
-				ReplicaId: pbft.id,
+				BatchDigest:    vc.digest,
+				ReplicaId:      pbft.id,
 			}
 			cert.commit[*cmt] = true
 			cert.sentValidate = true
@@ -893,7 +893,6 @@ func (pbft *pbftImpl) rebuildCertStore() {
 		}
 	}
 }
-
 
 func (pbft *pbftImpl) finishViewChange() events.Event {
 
@@ -926,7 +925,7 @@ func (pbft *pbftImpl) getViewChanges() (vset []*ViewChange) {
 	return
 }
 
-func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint ViewChange_C, ok bool, replicas []uint64) {
+func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint ViewChange_C, ok bool, replicas []replicaInfo) {
 	checkpoints := make(map[ViewChange_C][]*ViewChange)
 	for _, vc := range vset {
 		for _, c := range vc.Cset {
@@ -967,9 +966,13 @@ func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 		}
 
 		if checkpoint.SequenceNumber <= idx.SequenceNumber {
-			replicas = make([]uint64, len(vcList))
+			replicas = make([]replicaInfo, len(vcList))
 			for i, vc := range vcList {
-				replicas[i] = vc.ReplicaId
+				replicas[i] = replicaInfo{
+					id:      vc.ReplicaId,
+					height:  vc.H,
+					genesis: vc.Genesis,
+				}
 			}
 
 			checkpoint = idx
@@ -987,7 +990,7 @@ func (pbft *pbftImpl) assignSequenceNumbers(vset []*ViewChange, h uint64) (map[u
 
 	// "for all n such that h < n <= h + L"
 nLoop:
-	for n := h + 1; n <= h + pbft.L; n++ {
+	for n := h + 1; n <= h+pbft.L; n++ {
 		// "∃m ∈ S..."
 		for _, m := range vset {
 			// "...with <n,d,v> ∈ m.P"
@@ -1224,7 +1227,7 @@ func (pbft *pbftImpl) correctViewChange(vc *ViewChange) bool {
 }
 
 //beforeSendVC operations before send view change
-func (pbft *pbftImpl) beforeSendVC() error{
+func (pbft *pbftImpl) beforeSendVC() error {
 	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to send view change, but it's in nego-view", pbft.id)
 		return errors.New("node is in nego view now!")
@@ -1239,7 +1242,7 @@ func (pbft *pbftImpl) beforeSendVC() error{
 	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 
 	delete(pbft.vcMgr.newViewStore, pbft.view)
-	pbft.view ++
+	pbft.view++
 	atomic.StoreUint32(&pbft.activeView, 0)
 	pbft.status.inActiveState(&pbft.status.vcHandled)
 

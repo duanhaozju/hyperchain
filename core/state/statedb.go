@@ -50,7 +50,7 @@ func init() {
 // created.
 var StartingNonce uint64
 
-// StateDBs within the ethereum protocol are used to store anything
+// StateDBs within the hyperchain protocol are used to store anything
 // within the merkle trie. StateDBs take care of caching and storing
 // nested states. It's the general query interface to retrieve:
 // * Contracts
@@ -524,4 +524,3 @@ func (self *StateDB) Snapshot() *StateDB {
 func (self *StateDB) RevertToSnapshot(statedb *StateDB) {
 	self.Set(statedb)
 }
-

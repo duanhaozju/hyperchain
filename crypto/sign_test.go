@@ -4,8 +4,8 @@ package crypto
 
 import (
 	"hyperchain/common"
-	"sync/atomic"
 	"math/big"
+	"sync/atomic"
 )
 
 type TransactionAgain struct {
