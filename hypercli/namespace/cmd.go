@@ -113,7 +113,7 @@ func new(c *cli.Context) error {
 	if nodemap, ok := nodes.([]interface{}); ok {
 		for _, n := range nodemap {
 			if node, ok := n.(map[string]interface{}); ok {
-				fmt.Printf("node name %s, node value %s \n", "hostname", node["hostname"])
+				//fmt.Printf("node name %s, node value %s \n", "hostname", node["hostname"])
 				hostName, _ := node["hostname"].(string)
 				hostNames += hostName
 			} else {
@@ -134,9 +134,9 @@ func new(c *cli.Context) error {
 func generateNamespaceId(hostNames string) string  {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	hashString := hostNames + time.Now().String() + strconv.Itoa(rand.Intn(1000000))
-	fmt.Println(hashString)
+	//fmt.Println(hashString)
 	hash := kec256Hash.Hash(hashString).Hex()
-	fmt.Println(hash)
+	//fmt.Println(hash)
 	return "ns_" + hash[2:14]
 }
 
