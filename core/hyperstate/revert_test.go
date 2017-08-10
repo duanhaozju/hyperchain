@@ -101,9 +101,9 @@ func (test *revertTest) String() string {
 func (test *revertTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
-		db, _         = mdb.NewMemDatabase()
+		db, _         = mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 		state, _      = New(common.Hash{}, db, db, tutil.InitConfig(configPath), 10, common.DEFAULT_NAMESPACE)
-		checkDb, _    = mdb.NewMemDatabase()
+		checkDb, _    = mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 		checkState, _ = New(common.Hash{}, checkDb, checkDb, tutil.InitConfig(configPath), 10, common.DEFAULT_NAMESPACE)
 		immediateRoot []byte
 	)

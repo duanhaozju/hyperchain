@@ -45,7 +45,7 @@ func TestEnvironment(t *testing.T) {
 		}
 	}()
 
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	Execute(db, []byte{
 		byte(evm.DIFFICULTY),
 		byte(evm.TIMESTAMP),
@@ -58,7 +58,7 @@ func TestEnvironment(t *testing.T) {
 }
 
 func TestExecute(t *testing.T) {
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	ret, _, err := Execute(db, []byte{
 		byte(evm.PUSH1), 10,
 		byte(evm.PUSH1), 0,
@@ -78,7 +78,7 @@ func TestExecute(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	state := hyperstate.NewRaw(db, 0, "global", InitConf())
 	address := common.HexToAddress("0x0a")
 	state.CreateAccount(address)

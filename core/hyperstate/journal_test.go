@@ -248,7 +248,7 @@ func (test *snapshotTest) String() string {
 func (test *snapshotTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
-		db, _        = mdb.NewMemDatabase()
+		db, _        = mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 		state, _     = New(common.Hash{}, db, db, tutil.InitConfig(configPath), 10, common.DEFAULT_NAMESPACE)
 		snapshotRevs = make([]int, len(test.snapshots))
 		sindex       = 0

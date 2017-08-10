@@ -14,7 +14,7 @@ func TestStorageIterator(t *testing.T) {
 	configPath := "../../configuration/namespaces/global/config/namespace.toml"
 	common.InitHyperLoggerManager(tutil.InitConfig(configPath))
 	common.InitRawHyperLogger(common.DEFAULT_NAMESPACE)
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	conf := common.NewRawConfig()
 
 	conf.Set(common.LOG_BASE_LOG_LEVEL, "NOTICE")
@@ -63,7 +63,7 @@ func TestStorageIteratorWithPrefix(t *testing.T) {
 	configPath := "../../configuration/namespaces/global/config/namespace.toml"
 	common.InitHyperLoggerManager(tutil.InitConfig(configPath))
 	common.InitRawHyperLogger(common.DEFAULT_NAMESPACE)
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	conf := common.NewRawConfig()
 
 	conf.Set(common.LOG_BASE_LOG_LEVEL, "NOTICE")

@@ -43,7 +43,7 @@ func runCmd(ctx *cli.Context) error {
 	)
 	// initialize database
 	if ctx.GlobalBool(DisableExtendDBFlag.Name) {
-		db, _ = mdb.NewMemDatabase()
+		db, _ = mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	} else {
 		lvldb, err := leveldb.OpenFile(ctx.GlobalString(DbFileFlag.Name), nil)
 		if err != nil {
