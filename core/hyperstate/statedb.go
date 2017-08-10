@@ -123,6 +123,9 @@ func New(root common.Hash, db db.Database, archiveDb db.Database, bktConf *commo
 	return state, nil
 }
 
+/*
+	Just for test
+ */
 func NewRaw(db db.Database, height uint64, namespace string, conf *common.Config) *StateDB {
 	logger := common.GetLogger(namespace, "state")
 	bucket.NewGlobalDataNodeCache(conf.GetInt(GlobalDataNodeCacheLength), conf.GetInt(GlobalDataNodeCacheSize))
@@ -132,6 +135,7 @@ func NewRaw(db db.Database, height uint64, namespace string, conf *common.Config
 	archieveCache, _ := common.NewCache()
 	return &StateDB{
 		db:                db,
+		archiveDb:         db,
 		codeSizeCache:     csc,
 		stateObjects:      make(map[common.Address]*StateObject),
 		stateObjectsDirty: make(map[common.Address]struct{}),

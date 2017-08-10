@@ -114,9 +114,8 @@ func initLog() {
 	conf.Set(cm.LOG_BASE_LOG_LEVEL, "NOTICE")
 	conf.Set(cm.LOG_FILE_FORMAT, "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}")
 	conf.Set(cm.LOG_CONSOLE_FORMAT, "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}")
-	conf.Set(cm.LOG_FILE_DIR, "")
-	conf.Set(cm.C_GRPC_PORT, 0)
+	conf.Set(cm.LOG_DUMP_FILE_DIR, "")
 	conf.Set(cm.NAMESPACE, "global")
 	cm.InitHyperLoggerManager(conf)
-	cm.InitHyperLogger(conf)
+	cm.InitHyperLogger(conf, "global")
 }

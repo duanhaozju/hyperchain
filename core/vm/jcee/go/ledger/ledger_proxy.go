@@ -78,7 +78,7 @@ func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) 
 	if valid := lp.requestCheck(key.Context); !valid {
 		return nil, InvalidRequestErr
 	}
-	_, value := state.GetState(common.HexToAddress(key.Context.Cid), common.BytesToHash(key.K))
+	_, value := state.GetState(common.HexToAddress(key.Context.Cid), common.BytesToRightPaddingHash(key.K))
 	v := &pb.Value{
 		Id: key.Context.Txid,
 		V: value,
@@ -94,7 +94,7 @@ func (lp *LedgerProxy) Put(ctx context.Context, kv *pb.KeyValue) (*pb.Response, 
 	if valid := lp.requestCheck(kv.Context); !valid {
 		return &pb.Response{Ok: false}, InvalidRequestErr
 	}
-	state.SetState(common.HexToAddress(kv.Context.Cid), common.BytesToHash(kv.K), kv.V, 0)
+	state.SetState(common.HexToAddress(kv.Context.Cid), common.BytesToRightPaddingHash(kv.K), kv.V, 0)
 	return &pb.Response{Ok: true}, nil
 }
 
@@ -108,7 +108,7 @@ func (lp *LedgerProxy) BatchRead(ctx context.Context, batch *pb.BatchKey) (*pb.B
 	}
 	response := &pb.BathValue{}
 	for _, key := range batch.K {
-		exist, value := state.GetState(common.HexToAddress(batch.Context.Cid), common.BytesToHash(key))
+		exist, value := state.GetState(common.HexToAddress(batch.Context.Cid), common.BytesToRightPaddingHash(key))
 		if exist == true {
 			response.V = append(response.V, value)
 		} else {
@@ -128,7 +128,7 @@ func (lp *LedgerProxy) BatchWrite(ctx context.Context, batch *pb.BatchKV) (*pb.R
 		return &pb.Response{Ok: false}, InvalidRequestErr
 	}
 	for _, kv := range batch.Kv {
-		state.SetState(common.HexToAddress(batch.Context.Cid), common.BytesToHash(kv.K), kv.V, 0)
+		state.SetState(common.HexToAddress(batch.Context.Cid), common.BytesToRightPaddingHash(kv.K), kv.V, 0)
 	}
 	return &pb.Response{Ok: true}, nil
 }
@@ -141,8 +141,8 @@ func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer
 	if valid := lp.requestCheck(r.Context); !valid {
 		return InvalidRequestErr
 	}
-	start := common.BytesToHash(r.Start)
-	limit := common.BytesToHash(r.End)
+	start := common.BytesToRightPaddingHash(r.Start)
+	limit := common.BytesToRightPaddingHash(r.End)
 
 	iterRange := vm.IterRange{
 		Start:   &start,
@@ -187,7 +187,7 @@ func (lp *LedgerProxy) Delete(ctx context.Context, in *pb.Key) (*pb.Response, er
 	if valid := lp.requestCheck(in.Context); !valid {
 		return &pb.Response{Ok: false}, InvalidRequestErr
 	}
-	state.SetState(common.HexToAddress(in.Context.Cid), common.BytesToHash(in.K), nil, 0)
+	state.SetState(common.HexToAddress(in.Context.Cid), common.BytesToRightPaddingHash(in.K), nil, 0)
 	return &pb.Response{Ok: true}, nil
 }
 

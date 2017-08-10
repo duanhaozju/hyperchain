@@ -39,7 +39,7 @@ func (suite *RevertSuite) TearDownSuite(c *checker.C) {
 }
 
 func (suite *RevertSuite) TestRevertRandom(c *checker.C) {
-	config := &quick.Config{MaxCount: 30}
+	config := &quick.Config{MaxCount: 3}
 	err := quick.Check((*revertTest).run, config)
 	if cerr, ok := err.(*quick.CheckError); ok {
 		test := cerr.In[0].(*revertTest)
@@ -102,9 +102,9 @@ func (test *revertTest) run() bool {
 	// Run all actions and create snapshots.
 	var (
 		db, _         = mdb.NewMemDatabase()
-		state, _      = New(common.Hash{}, db, db, tutil.InitConfig(configPath), 10, "test")
+		state, _      = New(common.Hash{}, db, db, tutil.InitConfig(configPath), 10, common.DEFAULT_NAMESPACE)
 		checkDb, _    = mdb.NewMemDatabase()
-		checkState, _ = New(common.Hash{}, checkDb, checkDb, tutil.InitConfig(configPath), 10, "test")
+		checkState, _ = New(common.Hash{}, checkDb, checkDb, tutil.InitConfig(configPath), 10, common.DEFAULT_NAMESPACE)
 		immediateRoot []byte
 	)
 

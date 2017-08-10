@@ -28,7 +28,7 @@ func NewMemDatabase() (*MemDatabase, error) {
 	return &MemDatabase{
 		key:   nil,
 		value: nil,
-		ns:    "",
+		ns:    common.DEFAULT_NAMESPACE,
 	}, nil
 }
 
@@ -97,6 +97,8 @@ type Iter struct {
 	index int
 	ptr   *MemDatabase
 	str   string
+	start string
+	limit string
 }
 
 func (db *MemDatabase) NewIterator(str []byte) db.Iterator {
@@ -108,7 +110,13 @@ func (db *MemDatabase) NewIterator(str []byte) db.Iterator {
 }
 
 func (db *MemDatabase) Scan(begin, end []byte) db.Iterator {
-	return &Iter{}
+	iterator := &Iter{
+		index: -1,
+		ptr:   db,
+		start: common.BytesToRightPaddingHash(begin).Hex(),
+		limit: common.BytesToRightPaddingHash(end).Hex(),
+	}
+	return iterator
 }
 
 func (iter *Iter) Next() bool {

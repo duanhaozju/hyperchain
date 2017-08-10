@@ -48,6 +48,13 @@ func BytesToHash(b []byte) Hash {
 	h.SetBytes(b)
 	return h
 }
+
+func BytesToRightPaddingHash(b []byte) Hash {
+	var h Hash
+	h.SetBytesLeft(b)
+	return h
+}
+
 func StringToHash(s string) Hash { return BytesToHash([]byte(s)) }
 func BigToHash(b *big.Int) Hash  { return BytesToHash(b.Bytes()) }
 func HexToHash(s string) Hash    { return BytesToHash(FromHex(s)) }
@@ -91,6 +98,13 @@ func (h *Hash) SetBytes(b []byte) {
 	}
 
 	copy(h[HashLength-len(b):], b)
+}
+
+func (h *Hash) SetBytesLeft(b []byte) {
+	if len(b) > len(h) {
+		b = b[:HashLength]
+	}
+	copy(h[:], b)
 }
 
 // Set string `s` to h. If s is larger than len(h) it will panic

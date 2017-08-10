@@ -101,8 +101,8 @@ func BytesPrefix(prefix []byte) *IterRange {
 			break
 		}
 	}
-	startH := common.BytesToHash(prefix)
-	limitH := common.BytesToHash(limit)
+	startH := common.BytesToRightPaddingHash(prefix)
+	limitH := common.BytesToRightPaddingHash(limit)
 	return &IterRange{
 		Start: &startH,
 		Limit: &limitH,
