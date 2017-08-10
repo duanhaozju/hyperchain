@@ -75,7 +75,7 @@ func (cache *BloomFilterCache) loop() {
 		select {
 		case <-cache.closed:
 			cache.wg.Done()
-			break
+			return
 		case req := <-cache.updateCh:
 			cache.lock.Lock()
 			cache.c[req.namespace] = req.filter
@@ -137,7 +137,7 @@ func (cache *BloomFilterCache) expire() {
 		select {
 		case <-cache.closed:
 			cache.wg.Done()
-			break
+			return
 		case <-timer.C:
 			cache.rebuild(nil)
 			timer.Reset(time.Duration(interval) * time.Hour)
