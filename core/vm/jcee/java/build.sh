@@ -21,7 +21,7 @@ mvn clean package -Dmaven.test.skip=true
 cp target/lib/*  hyperjvm/libs/
 
 echo "3. build the hyperjvm sdk"
-./build_sdk.sh
+#./build_sdk.sh
 
 echo "4. clean target package"
 rm -rf target
