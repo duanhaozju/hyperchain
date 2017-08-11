@@ -26,6 +26,7 @@ type Iterator interface {
 	Value() []byte
 	Seek(key []byte) bool
 	Next() bool
+	Prev() bool
 	Release()
 	Error() error
 }

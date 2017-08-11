@@ -40,6 +40,8 @@ func NewLDBDataBase(conf *common.Config,filepath string, namespace string) (*LDB
 		filepath= pa.Join(common.GetPath(namespace, conf.GetString(LEVEL_DB_PATH)), filepath)
 	}
 	db, err := leveldb.OpenFile(filepath, nil)
+	t := db.NewIterator(nil, nil)
+	t.Last()
 	return &LDBDatabase{
 		path:      filepath,
 		db:        db,

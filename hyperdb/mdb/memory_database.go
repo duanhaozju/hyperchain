@@ -152,6 +152,19 @@ func (iter *Iter) Next() bool {
 	return true
 }
 
+func (iter *Iter) Prev() bool {
+	for {
+		iter.index -= 1
+		if iter.index <= -1 {
+			return false
+		}
+		if InRange(iter.start, iter.limit, common.Hex2Bytes(iter.ptr.key[iter.index])) {
+			break
+		}
+	}
+	return true
+}
+
 func (iter *Iter) Key() []byte {
 	return common.Hex2Bytes(iter.ptr.key[iter.index])
 }
