@@ -49,7 +49,7 @@ func runCmd(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		db = hleveldb.NewRawLDBDatabase(lvldb, "global")
+		db = hleveldb.NewRawLDBDatabase(lvldb, common.DEFAULT_NAMESPACE)
 	}
 	// initialize code
 	if ctx.GlobalString(CodeFlag.Name) != "" {
@@ -90,7 +90,7 @@ func runCmd(ctx *cli.Context) error {
 		block = big.NewInt(1)
 	}
 	// initialize state
-	state = hyperstate.NewRaw(db, block.Uint64(), "global", runtime.InitConf())
+	state = hyperstate.NewRaw(db, block.Uint64(), common.DEFAULT_NAMESPACE, runtime.InitConf())
 
 	runtimeConfig := &runtime.Config{
 		Origin:         common.HexToAddress(sender),

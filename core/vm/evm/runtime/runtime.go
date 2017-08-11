@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"time"
 	"hyperchain/common"
-	"hyperchain/core/crypto"
+	"hyperchain/crypto"
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm/evm"
 	"hyperchain/hyperdb/db"

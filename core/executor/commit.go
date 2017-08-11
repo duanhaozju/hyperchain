@@ -130,7 +130,6 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
 	executor.TransitVerifiedBlock(block)
 
-
 	// push feed data to event system.
 	// external subscribers can access these internal messages through a messaging subscription system
 	go executor.filterFeedback(block, filterLogs)
