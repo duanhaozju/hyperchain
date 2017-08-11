@@ -80,7 +80,7 @@ func (sldb *SuperLevelDB) Get(key []byte) ([]byte, error) {
 	if sldb.index.MayContains(key) {
 		data, err = sldb.db.Get(key, nil)
 	} else {
-		err = leveldb.ErrNotFound
+		err = db.DB_NOT_FOUND
 	}
 	return data, err
 }

@@ -69,6 +69,9 @@ func (self *LDBDatabase) Put(key []byte, value []byte) error {
 // the Database does not contains the key
 func (self *LDBDatabase) Get(key []byte) ([]byte, error) {
 	dat, err := self.db.Get(key, nil)
+	if err==leveldb.ErrNotFound{
+		err=db.DB_NOT_FOUND
+	}
 	return dat, err
 }
 
