@@ -39,33 +39,6 @@ func NewTransactionCMD() []cli.Command {
 			},
 		},
 		{
-			Name:   "getAllTransaction",
-			Usage:  "get all transactions",
-			Action: getAllTransaction,
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "path, p",
-					Value: "",
-					Usage: "specify the path of db",
-				},
-				cli.StringFlag{
-					Name:  "database, db",
-					Value: "leveldb",
-					Usage: "specify the database using",
-				},
-				cli.StringFlag{
-					Name:  "output, o",
-					Value: "",
-					Usage: "specify the output file",
-				},
-				cli.StringFlag{
-					Name: "verbose",
-					Value: "false",
-					Usage: "specify the transaction content",
-				},
-			},
-		},
-		{
 			Name:   "getAllTransactionSequential",
 			Usage:  "get all transactions sequential",
 			Action: getAllTransactionSequential,
@@ -183,7 +156,7 @@ func getTransactionByHash(c *cli.Context) {
 		}
 		hyperChain := version.NewVersion(database)
 		defer hyperChain.GetDB().Close()
-		result, err := hyperChain.GetTransaction(c.String(constant.HASH))
+		result, err := hyperChain.GetTransactionByHash(c.String(constant.HASH))
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 		} else {
@@ -194,27 +167,6 @@ func getTransactionByHash(c *cli.Context) {
 				fmt.Println(utils.Decorate(result))
 			}
 		}
-	} else {
-		fmt.Println(constant.ErrInvalidParams.Error())
-	}
-}
-
-// getAllTransaction -- get all transactions
-func getAllTransaction(c *cli.Context) {
-	if c.String(constant.PATH) != "" && c.String(constant.DATABASE) != "" {
-		path := c.String(constant.PATH)
-		db := c.String(constant.DATABASE)
-		database, err := database.DBFactory(db, path)
-		if err != nil {
-			fmt.Println(constant.ErrDBInit.Error(), err.Error())
-			return
-		}
-		hyperChain := version.NewVersion(database)
-		defer hyperChain.GetDB().Close()
-		parameter := &constant.Parameter{
-			Verbose: c.Bool(constant.VERBOSE),
-		}
-		hyperChain.GetAllTransaction(c.String(constant.OUTPUT), parameter)
 	} else {
 		fmt.Println(constant.ErrInvalidParams.Error())
 	}

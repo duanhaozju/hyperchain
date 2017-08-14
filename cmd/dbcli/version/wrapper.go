@@ -32,7 +32,6 @@ func NewVersion(db database.Database) *Version {
 var (
 	BlockNumPrefix           = []byte("blockNum-")
 	BlockPrefix              = []byte("block-")
-	TransactionPrefix        = []byte("transaction-")
 	InvalidTransactionPrefix = []byte("invalidtransaction-")
 	TxMetaSuffix             = []byte{0x01}
 	ReceiptsPrefix           = []byte("receipts-")
@@ -147,75 +146,73 @@ func (self *Version) GetAllBlockSequential(path string, parameter *constant.Para
 }
 
 /*-------------------------------------transaction--------------------------------------*/
-func (self *Version) GetTransaction(hash string) (string, error) {
-	var transactionWrapper wrapper.TransactionWrapper
-	keyFact := append(TransactionPrefix, common.Hex2Bytes(hash)...)
-	data, err := self.db.Get(keyFact)
+func (self *Version) GetTransactionByHash(hash string) (string, error) {
+	txBlockStr, err := self.GetTxWithBlock(hash)
 	if err != nil {
 		return "", err
 	}
-	err = proto.Unmarshal(data, &transactionWrapper)
+	blockIndex := 0
+	txIndex := 0
+	blockIndexReg, err := regexp.Compile("\"BlockIndex\": [0-9]+")
 	if err != nil {
 		return "", err
 	}
-	result, err := NewResultFactory(constant.TRANSACTION, string(transactionWrapper.TransactionVersion), transactionWrapper.Transaction, nil)
+	if blockIndexReg.MatchString(txBlockStr) {
+		temp := blockIndexReg.FindString(txBlockStr)[len("\"BlockIndex\": "):]
+		index := strings.Index(",", temp)
+		if index == -1 {
+			blockIndex, err = strconv.Atoi(temp)
+			if err != nil {
+				return "", err
+			}
+		} else {
+			blockIndex, err = strconv.Atoi(temp[:index])
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+	txIndexReg, err := regexp.Compile("\"Index\": [0-9]+")
+	if err != nil {
+		return "", err
+	}
+	if txIndexReg.MatchString(txBlockStr) {
+		temp := txIndexReg.FindString(txBlockStr)[len("\"Index\": "):]
+		index := strings.Index(",", temp)
+		if index == -1 {
+			txIndex, err = strconv.Atoi(temp)
+			if err != nil {
+				return "", err
+			}
+		} else {
+			txIndex, err = strconv.Atoi(temp[:index])
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+	keyNum := strconv.FormatInt(int64(blockIndex), 10)
+	blockHash, err := self.db.Get(append(BlockNumPrefix, keyNum...))
+	if err != nil {
+		return "", err
+	}
+	data, err := self.db.Get(append(BlockPrefix, blockHash...))
+	if err != nil {
+		return "", err
+	}
+	var blockWrapper wrapper.BlockWrapper
+	err = proto.Unmarshal(data, &blockWrapper)
+	if err != nil {
+		return "", err
+	}
+	parameter := &constant.Parameter {
+		TxIndex: txIndex,
+	}
+	result, err := NewResultFactory(constant.TRANSACTION, string(blockWrapper.BlockVersion), blockWrapper.Block, parameter)
 	if err != nil {
 		return "", err
 	} else {
 		return result, nil
-	}
-}
-
-func (self *Version) GetAllTransaction(path string, parameter *constant.Parameter) {
-	iter := self.db.NewIterator(TransactionPrefix)
-	var file *os.File
-	defer utils.Close(file)
-	if path != "" {
-		file = utils.CreateOrAppend(path, "[")
-	} else {
-		fmt.Println(utils.Decorate("["))
-	}
-	var result1 string
-	for iter.Next() {
-		var transactionWrapper wrapper.TransactionWrapper
-		value := iter.Value()
-		err := proto.Unmarshal(value, &transactionWrapper)
-		if err != nil {
-			fmt.Println(constant.ErrQuery.Error(), err.Error())
-			break
-		}
-		result, err := NewResultFactory(constant.TRANSACTION, string(transactionWrapper.TransactionVersion), transactionWrapper.Transaction, parameter)
-		if err != nil {
-			fmt.Println(constant.ErrQuery.Error(), err.Error())
-			break
-		} else if result1 != "" {
-			result1 = strings.Replace("\t" + result1 + ",", "\n", "\n\t", -1)
-			if path != "" {
-				utils.Append(file, result1)
-			} else {
-				fmt.Println(utils.Decorate(result1))
-			}
-		}
-		result1 = result
-	}
-	if result1 != "" {
-		result1 = strings.Replace("\t" + result1, "\n", "\n\t", -1)
-		if path != "" {
-			utils.Append(file, result1)
-		} else {
-			fmt.Println(utils.Decorate(result1))
-		}
-	}
-	if path != "" {
-		utils.Append(file, "]")
-	} else {
-		fmt.Println(utils.Decorate("]"))
-	}
-	iter.Release()
-	err := iter.Error()
-	if err != nil {
-		fmt.Println(constant.ErrQuery.Error(), err.Error())
-		return
 	}
 }
 

@@ -82,3 +82,13 @@ func (self *Block) Encode() string {
 	}
 	return string(res)
 }
+
+func (self *Block) EncodeTransaction(txIndex int) string {
+	transactionView := self.Transactions[txIndex].ToTransactionView()
+	res, err := json.MarshalIndent(transactionView, "", "\t")
+	if err != nil {
+		fmt.Println(err.Error())
+		return ""
+	}
+	return string(res)
+}
