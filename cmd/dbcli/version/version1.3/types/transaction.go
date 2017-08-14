@@ -129,26 +129,6 @@ func (self *Transaction) ToTransactionViewHash() *TransactionViewHash {
 	return transactionViewHash
 }
 
-func (self *Transaction) Encode() string {
-	transactionViewHash := self.ToTransactionViewHash()
-	res, err := json.MarshalIndent(transactionViewHash, "", "\t")
-	if err != nil {
-		fmt.Println(err.Error())
-		return ""
-	}
-	return string(res)
-}
-
-func (self *Transaction) EncodeVerbose() string {
-	transactionView := self.ToTransactionView()
-	res, err := json.MarshalIndent(transactionView, "", "\t")
-	if err != nil {
-		fmt.Println(err.Error())
-		return ""
-	}
-	return string(res)
-}
-
 func (self *InvalidTransactionRecord) Encode() string {
 	transactionView := self.Tx.ToTransactionView()
 	invalidTransactionView := &InvalidTransactionView{

@@ -22,16 +22,12 @@ func GetBlockData(data []byte, parameter *constant.Parameter) (string, error) {
 }
 
 func GetTransactionData(data []byte, parameter *constant.Parameter) (string, error) {
-	var transaction version1_1.Transaction
-	err := proto.Unmarshal(data, &transaction)
+	var block version1_1.Block
+	err := proto.Unmarshal(data, &block)
 	if err != nil {
 		return "", err
 	} else {
-		if parameter.GetVerbose() {
-			return transaction.EncodeVerbose(), nil
-		} else {
-			return transaction.Encode(), nil
-		}
+		return block.EncodeTransaction(parameter.GetTxIndex()), nil
 	}
 }
 
