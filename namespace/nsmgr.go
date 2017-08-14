@@ -272,6 +272,7 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
 		if err := ns.Start(); err != nil {
+			ns.Stop() //start failed, try to stop some started components
 			return err
 		} else {
 			nr.jvmManager.ledgerProxy.Register(name, ns.GetExecutor().FetchStateDb())
