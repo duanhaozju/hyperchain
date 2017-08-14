@@ -19,7 +19,7 @@ import (
 func TestNewHelper(t *testing.T) {
 	m := &event.TypeMux{}
 	h := &helper{
-		msgQ: m,
+		innerMux: m,
 	}
 
 	help := NewHelper(m)

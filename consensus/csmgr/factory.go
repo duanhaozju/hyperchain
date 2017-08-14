@@ -19,8 +19,8 @@ var once sync.Once
 var err error
 
 //new init the consentor instance.
-func newConsenter(namespace string, conf *common.Config, msgQ *event.TypeMux, n int) (cs.Consenter, error) {
-	h := helper.NewHelper(msgQ)
+func newConsenter(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux, n int) (cs.Consenter, error) {
+	h := helper.NewHelper(eventMux, filterMux)
 	algo := conf.GetString(cs.CONSENSUS_ALGO)
 	switch algo {
 	case cs.PBFT: return pbft.New(namespace, conf, h, n)
@@ -32,9 +32,9 @@ func newConsenter(namespace string, conf *common.Config, msgQ *event.TypeMux, n 
 
 // Consenter return a Consenter instance
 // msgQ is the connection with outer services.
-func Consenter(namespace string, conf *common.Config, msgQ *event.TypeMux, n int) (cs.Consenter, error) {
+func Consenter(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux, n int) (cs.Consenter, error) {
 	//once.Do(func() {
-		cr, err = newConsenter(namespace, conf, msgQ, n)
+		cr, err = newConsenter(namespace, conf, eventMux, filterMux, n)
 	//})
 	return cr, err
 }
