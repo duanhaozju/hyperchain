@@ -8,6 +8,8 @@ import (
 	"hyperchain/consensus/events"
 	"hyperchain/manager/protos"
 	"sync/atomic"
+	"hyperchain/consensus"
+	"fmt"
 )
 
 type executor struct {
@@ -180,6 +182,8 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.status.inActiveState(&pbft.status.vcHandled)
 		pbft.logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/height=%d", pbft.id, primary, pbft.view, pbft.exec.lastExec)
+		viewChangeResult := fmt.Sprintf("Replica %d finished viewChange, primary=%d, view=%d/height=%d", pbft.id, primary, pbft.view, pbft.exec.lastExec)
+		pbft.helper.SendFilterEvent(consensus.FILTER_View_Change_Finish, viewChangeResult)
 		if pbft.status.getState(&pbft.status.isNewNode) {
 			pbft.sendReadyForN()
 			return nil

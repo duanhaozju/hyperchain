@@ -10,10 +10,13 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"hyperchain/core/types"
+	//"reflect"
+	"hyperchain/consensus"
 )
 
 type helper struct {
-	msgQ *event.TypeMux
+	innerMux *event.TypeMux
+	externalMux *event.TypeMux
 }
 
 type Stack interface {
@@ -27,6 +30,7 @@ type Stack interface {
 	BroadcastAddNode(msg *pb.Message) error
 	BroadcastDelNode(msg *pb.Message) error
 	UpdateTable(payload []byte, flag bool) error
+	SendFilterEvent(informType int, message ...interface{}) error
 }
 
 // InnerBroadcast broadcast the consensus message between vp nodes
@@ -43,7 +47,7 @@ func (h *helper) InnerBroadcast(msg *pb.Message) error {
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(broadcastEvent)
+	go h.innerMux.Post(broadcastEvent)
 
 	return nil
 }
@@ -63,7 +67,7 @@ func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(unicastEvent)
+	go h.innerMux.Post(unicastEvent)
 
 	return nil
 }
@@ -82,7 +86,7 @@ func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, t
 
 	// Post the event to outer
 	// !!! CANNOT use go, it will result in concurrent problems when writing blocks
-	h.msgQ.Post(writeEvent)
+	h.innerMux.Post(writeEvent)
 
 	return nil
 }
@@ -97,7 +101,7 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(updateStateEvent)
+	go h.innerMux.Post(updateStateEvent)
 
 	return nil
 }
@@ -114,7 +118,7 @@ func (h *helper) ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo 
 	}
 
 	// Post the event to outer
-	h.msgQ.Post(validateEvent)
+	h.innerMux.Post(validateEvent)
 
 	return nil
 }
@@ -127,7 +131,7 @@ func (h *helper) VcReset(seqNo uint64) error {
 	}
 
 	// No need to "go h.msgQ.Post...", we'll wait for it to return
-	h.msgQ.Post(vcResetEvent)
+	h.innerMux.Post(vcResetEvent)
 	//time.Sleep(time.Millisecond * 50)
 
 	return nil
@@ -140,7 +144,7 @@ func (h *helper) InformPrimary(primary uint64) error {
 		Primary: primary,
 	}
 
-	go h.msgQ.Post(informPrimaryEvent)
+	go h.innerMux.Post(informPrimaryEvent)
 
 	return nil
 }
@@ -159,7 +163,7 @@ func (h *helper) BroadcastAddNode(msg *pb.Message) error {
 	}
 
 	// Post the event to outer
-	h.msgQ.Post(broadcastEvent)
+	h.innerMux.Post(broadcastEvent)
 
 	return nil
 }
@@ -178,7 +182,7 @@ func (h *helper) BroadcastDelNode(msg *pb.Message) error {
 	}
 
 	// Post the event to outer
-	h.msgQ.Post(broadcastEvent)
+	h.innerMux.Post(broadcastEvent)
 
 	return nil
 }
@@ -191,18 +195,90 @@ func (h *helper) UpdateTable(payload []byte, flag bool) error {
 		Type:    flag,
 	}
 
-	h.msgQ.Post(updateTable)
+	h.innerMux.Post(updateTable)
 
 	return nil
 }
 
 
 // NewHelper initializes a helper object
-func NewHelper(m *event.TypeMux) *helper {
+func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *helper {
 
 	h := &helper{
-		msgQ: m,
+		innerMux: innerMux,
+		externalMux: externalMux,
 	}
 
 	return h
+}
+
+// PostExternal post event to outer event mux
+func (h *helper) PostExternal(ev interface{}) {
+	h.externalMux.Post(ev)
+}
+
+// sendFilterEvent - send event to subscription system.
+func (h *helper) SendFilterEvent(informType int, message ...interface{}) error {
+	switch informType {
+	case consensus.FILTER_View_Change_Finish:
+		// NewBlock event
+		if len(message) != 1 {
+			return nil
+		}
+		re, ok := message[0].(string)
+		if ok == false {
+			return nil
+		}
+		h.PostExternal(event.FilterConsensusEvent{re})
+		return nil
+	//case FILTER_NEW_LOG:
+	//	// New virtual machine log event
+	//	if len(message) != 1 {
+	//		return er.InvalidParamsErr
+	//	}
+	//	logs, ok := message[0].([]*types.Log)
+	//	if ok == false {
+	//		return er.InvalidParamsErr
+	//	}
+	//	executor.helper.PostExternal(event.FilterNewLogEvent{logs})
+	//	return nil
+	//case FILTER_SNAPSHOT_RESULT:
+	//	// Snapshot operation result event
+	//	if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
+	//		return er.InvalidParamsErr
+	//	}
+	//	executor.helper.PostExternal(event.FilterArchive{
+	//		Type:     event.FilterMakeSnapshot,
+	//		Success:  message[0].(bool),
+	//		FilterId: message[1].(string),
+	//		Message:  message[2].(string),
+	//	})
+	//	return nil
+	//case FILTER_DELETE_SNAPSHOT:
+	//	// Snapshot deletion result event
+	//	if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
+	//		return er.InvalidParamsErr
+	//	}
+	//	executor.helper.PostExternal(event.FilterArchive{
+	//		Type:     event.FilterDeleteSnapshot,
+	//		Success:  message[0].(bool),
+	//		FilterId: message[1].(string),
+	//		Message:  message[2].(string),
+	//	})
+	//	return nil
+	//case FILTER_ARCHIVE:
+	//	// archive operation result event
+	//	if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
+	//		return er.InvalidParamsErr
+	//	}
+	//	executor.helper.PostExternal(event.FilterArchive{
+	//		Type:     event.FilterDoArchive,
+	//		Success:  message[0].(bool),
+	//		FilterId: message[1].(string),
+	//		Message:  message[2].(string),
+	//	})
+	//	return nil
+	default:
+		return nil
+	}
 }

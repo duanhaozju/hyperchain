@@ -19,6 +19,10 @@ type FilterExceptionEvent struct {
 	Exception exception.ExceptionError
 }
 
+type  FilterConsensusEvent struct {
+	Result string
+}
+
 type FilterExceptionData struct {
 	Module    string	`json:"module"`
 	SubType   string	`json:"subType"`

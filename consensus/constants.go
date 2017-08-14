@@ -13,3 +13,9 @@ const (
 const (
 	CONSENSUS_ALGO = "consensus.algo"
 )
+
+// Subscription type definitions
+const (
+	FILTER_View_Change_Finish = iota
+	FILTER_Nextthing
+)
