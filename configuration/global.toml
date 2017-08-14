@@ -38,6 +38,7 @@ console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shor
 #
 ##########################################################
 [p2p]
+servername              = "hyperchainServer1"
 retrytime               = "3s"
 ipc                     = "hpc_1.ipc"
 enableTLS               = true

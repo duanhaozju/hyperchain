@@ -17,8 +17,9 @@ func getCmds(endpoint string)[]*ishell.Cmd{
 			Help: `network commands:
 		network list	- show all connections and status
 		network connect [hostname@ip:port]	- create a new connection by hostname and addr
-		network close  [hostname]	- close the connection to hostname
-		network reconnect  [hostname]	- reconnect to hostname
+		network close  [hostname]	- close the connection to host
+		network reconnect  [hostname]	- reconnect to host
+		network ping  [hostname]	- ping to host and get the latency
 			`,
 			Func: handler.handle,
 		},

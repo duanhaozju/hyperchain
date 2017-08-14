@@ -5,6 +5,8 @@ import (
 	"strings"
 	"strconv"
 	"hyperchain/p2p/utils"
+	"hyperchain/p2p/message"
+	"time"
 )
 
 func (hn *HyperNet)Command(args []string,ret *[]string)error{
@@ -138,6 +140,32 @@ func (hn *HyperNet)Command(args []string,ret *[]string)error{
 				break
 			}
 			*ret = append(*ret,fmt.Sprintf("reconnecting to %s => %s successful\n" ,hostname,ipaddr))
+
+		}
+		case "ping":{
+			*ret = append(*ret,"ping to host...")
+			if len(args)<2{
+				*ret = append(*ret,"invalid ping parameters, format is `network ping [hostname]`",)
+				break
+			}
+			hostname := strings.TrimSpace(args[1])
+			*ret = append(*ret,fmt.Sprintf("now ping to %s\n" ,hostname))
+
+			c, ok:= hn.hostClientMap.Get(hostname)
+			if !ok{
+				*ret = append(*ret,fmt.Sprintf("invalid hostname (%s), the host not connected.\n" ,hostname))
+				break
+			}
+			in := message.NewPkg([]byte("ping"),message.ControlType_Notify)
+			in.SrcHost = hn.server.selfIdentifier
+			start := time.Now().UnixNano()
+			_,err := c.(*Client).Discuss(in)
+			if err != nil{
+				*ret = append(*ret,fmt.Sprintf("ping to %s failed, error info %s\n" ,hostname,err.Error()))
+				break
+			}
+			end := time.Now().UnixNano()
+			*ret = append(*ret,fmt.Sprintf("ping to %s successful, latency is %d ns" ,hostname,(end-start)))
 
 		}
 		default:

@@ -60,6 +60,7 @@ const (
 const (
 	P2P_RETRY_TIME 					= "p2p.retrytime"
 	P2P_IPC 						= "p2p.ipc"
+	P2P_SERVERNAME 						= "p2p.servername"
 	P2P_ENABLE_TLS 					= "p2p.enableTLS"
 	P2P_TLS_CA 						= "p2p.tlsCA"
 	P2P_TLS_SERVER_HOST_OVERRIDE 	= "p2p.tlsServerHostOverride"

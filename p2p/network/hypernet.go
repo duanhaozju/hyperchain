@@ -41,7 +41,7 @@ type HyperNet struct {
 
 }
 
-func NewHyperNet(config *viper.Viper) (*HyperNet,error){
+func NewHyperNet(config *viper.Viper,identifier string) (*HyperNet,error){
 	logger = common.GetLogger(common.DEFAULT_LOG,"hypernet")
 	if config == nil{
 		return nil,errors.New("Readin host config failed, the viper instance is nil")
@@ -82,7 +82,7 @@ func NewHyperNet(config *viper.Viper) (*HyperNet,error){
 	rq := make(chan [2]string)
 	net :=  &HyperNet{
 		dns:dns,
-		server:NewServer("hypernet",rq,sec),
+		server:NewServer(identifier,rq,sec),
 		hostClientMap:cmap.New(),
 		failedQueue:lane.NewQueue(),
 		reverseQueue:rq,

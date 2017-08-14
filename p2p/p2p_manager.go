@@ -61,7 +61,8 @@ func ClearP2PManager()error{
 }
 
 func newP2PManager(vip *viper.Viper)(*p2pManagerImpl,error){
-	net,err :=network.NewHyperNet(vip)
+	sname  := vip.GetString(common.P2P_SERVERNAME)
+	net,err :=network.NewHyperNet(vip,sname)
 	if err !=nil{
 		return nil,err
 	}
