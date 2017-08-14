@@ -10,7 +10,7 @@ import (
 )
 
 func (executor *Executor) Archive(event event.ArchiveEvent) {
-	executor.archiveMgr.Archive(event.FilterId)
+	executor.archiveMgr.Archive(event)
 }
 
 type ArchiveManager struct {
@@ -34,19 +34,22 @@ func NewArchiveManager(namespace string, executor *Executor, registry *SnapshotR
 /*
 	External Functions
 */
-func (mgr *ArchiveManager) Archive(filterId string) {
+func (mgr *ArchiveManager) Archive(event event.ArchiveEvent) {
 	var manifest common.Manifest
-	if !mgr.registry.rwc.Contain(filterId) {
-		mgr.feedback(false, filterId, SnapshotNotExistErr)
+	if !mgr.registry.rwc.Contain(event.FilterId) {
+		mgr.feedback(false, event.FilterId, SnapshotNotExistMsg)
+		event.Cont <- SnapshotDoesntExistErr
 	} else {
-		_, manifest = mgr.registry.rwc.Read(filterId)
+		_, manifest = mgr.registry.rwc.Read(event.FilterId)
 		if err := mgr.migrate(manifest); err != nil {
-			mgr.logger.Noticef("archive for (filter %s) failed, detail %s", filterId, err.Error())
-			mgr.feedback(false, filterId, ArchiveFailedErr)
+			mgr.logger.Noticef("archive for (filter %s) failed, detail %s", event.FilterId, err.Error())
+			mgr.feedback(false, event.FilterId, ArchiveFailedMsg)
+			event.Cont <- ArchiveFailedErr
 		} else {
 			mgr.logger.Noticef("archive for (filter %s) success, genesis block changes to %d and the relative genesis world state %s",
-				filterId, manifest.Height, manifest.FilterId)
-			mgr.feedback(true, filterId, EmptyMessage)
+				event.FilterId, manifest.Height, manifest.FilterId)
+			mgr.feedback(true, event.FilterId, EmptyMessage)
+			close(event.Cont)
 		}
 	}
 }

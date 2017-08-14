@@ -56,19 +56,25 @@ const (
 
 // Error message definitions
 const (
-	InvalidSnapshotReqErr = "invalid snapshot request"
-	InvalidDeletionReqErr = "invalid snapshot deletion request"
-	MakeSnapshotFailedErr = "make snapshot failed"
-	SnapshotNotExistErr   = "snapshot doesn't exist"
-	DeleteSnapshotErr     = "delete snapshot failed"
-	ArchiveFailedErr      = "archive failed"
+	InvalidSnapshotReqMsg = "invalid snapshot request"
+	InvalidDeletionReqMsg = "invalid snapshot deletion request"
+	InvalidArchiveReqMsg  = "archive request not satisfied with requirement"
+	InvalidContentMsg     = "snapshot content invalid"
+	MakeSnapshotFailedMsg = "make snapshot failed"
+	SnapshotNotExistMsg   = "snapshot doesn't exist"
+	DeleteSnapshotMsg     = "delete snapshot failed"
+	ArchiveFailedMsg      = "archive failed"
+	ApplyWsErrMsg         = "apply world state failed"
 	EmptyMessage          = ""
 )
 
 // Error definitions
 var (
-	SnapshotContentInvalidErr     = errors.New("snapshot content invalid")
-	ArchiveRequestNotSatisfiedErr = errors.New("archive request not satisfied with requirement")
-	SnapshotDoesntExistErr        = errors.New("snapshot does not exist")
-	ApplyWsErr                    = errors.New("apply world state failed")
+	SnapshotContentInvalidErr     = errors.New(InvalidContentMsg)
+	ArchiveRequestNotSatisfiedErr = errors.New(InvalidArchiveReqMsg)
+	SnapshotDoesntExistErr        = errors.New(SnapshotNotExistMsg)
+	InvalidSnapshotDeletionErr    = errors.New(InvalidDeletionReqMsg)
+	DeleteSnapshotFailedErr       = errors.New(DeleteSnapshotMsg)
+	ArchiveFailedErr              = errors.New(ArchiveFailedMsg)
+	ApplyWsErr                    = errors.New(ApplyWsErrMsg)
 )
