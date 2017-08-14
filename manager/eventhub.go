@@ -99,7 +99,9 @@ func (hub *EventHub) Start() {
 }
 
 func (hub *EventHub) Stop() {
-	close(hub.close)
+	if hub.close != nil {
+		close(hub.close)
+	}
 	hub.logger.Notice("event hub stopped!")
 }
 

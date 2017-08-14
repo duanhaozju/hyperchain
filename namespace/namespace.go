@@ -229,19 +229,31 @@ func (ns *namespaceImpl) Start() error {
 	//1.start consenter
 	ns.consenter.Start()
 	//2.start executor
-	ns.executor.Start()
+	err := ns.executor.Start()
+	if err != nil {
+		return err
+	}
+
 	//3.start event hub
 	ns.eh.Start()
+
 	//4.start grpc manager
-	ns.peerMgr.Start()
+	err = ns.peerMgr.Start()
+	if err != nil {
+		return err
+	}
+
 	//5 consensue the routers
 	ns.passRouters()
+
 	//6. negotiateView
 	if ns.peerMgr.IsVP(){
 		ns.negotiateView()
 	}
 
-	ns.rpc.Start()
+	if err = ns.rpc.Start(); err != nil {
+		return err
+	}
 	ns.status.setState(running)
 	ns.logger.Noticef("namespace: %s start successful", ns.Name())
 	ns.restart = true
@@ -273,13 +285,19 @@ func (ns *namespaceImpl) Stop() error {
 		ns.logger.Criticalf("namespace: %s not running now, need not to stop", ns.Name())
 	}
 	//1.stop request processor
-	ns.rpc.Stop()
+	err := ns.rpc.Stop()
+	if err != nil {
+		 ns.logger.Error(err)
+	}
 
 	//2.stop eventhub
 	ns.eh.Stop()
 
 	//3.stop executor
-	ns.executor.Stop()
+	err = ns.executor.Stop()
+	if err != nil {
+		ns.logger.Error(err)
+	}
 
 	//4.stop consensus service
 	ns.consenter.Close()
@@ -290,7 +308,10 @@ func (ns *namespaceImpl) Stop() error {
 	ns.status.setState(closed)
 	//ns.logger.Notice()
 	//close related database
-	hyperdb.StopDatabase(ns.Name())
+	err = hyperdb.StopDatabase(ns.Name())
+	if err != nil {
+		ns.logger.Error(err)
+	}
 
 	ns.logger.Noticef("namespace: %s stopped!", ns.Name())
 	return nil
