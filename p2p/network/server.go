@@ -11,7 +11,7 @@ import (
 )
 
 type Server struct {
-	hostname string
+	selfIdentifier string
 	server *grpc.Server
 	// different filed has different different solts
 	slots *msg.MsgSlots
@@ -19,9 +19,9 @@ type Server struct {
 	sec *Sec
 }
 
-func NewServer(hostname string,cn chan [2]string,sec *Sec) *Server{
+func NewServer(identifier string,cn chan [2]string,sec *Sec) *Server{
 	return &Server{
-		hostname:hostname,
+		selfIdentifier:identifier,
 		slots:msg.NewMsgSlots(),
 		hostchan:cn,
 		sec:sec,
@@ -29,7 +29,7 @@ func NewServer(hostname string,cn chan [2]string,sec *Sec) *Server{
 }
 
 func(s *Server) Claim() string{
-	return s.hostname
+	return s.selfIdentifier
 }
 
 // StartServer start the gRPC server
@@ -90,7 +90,7 @@ func (s *Server)DeregisterSlots(filed string){
 // dibi data tranfer
 func (s Server) Chat(ccServer Chat_ChatServer) error{
 	if s.slots == nil{
-		return errors.New(fmt.Sprintf("this server (%s) hasn't register any handler.cannot handle this massage",s.hostname))
+		return errors.New(fmt.Sprintf("this server (%s) hasn't register any handler.cannot handle this massage",s.selfIdentifier))
 	}
 	for{
 		in,err := ccServer.Recv()
@@ -162,7 +162,7 @@ func(s Server) Whisper(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	}
 
 	if s.slots == nil{
-		return nil,errors.New(fmt.Sprintf("this server (%s) hasn't register any handler.cannot handle this massage",s.hostname))
+		return nil,errors.New(fmt.Sprintf("this server (%s) hasn't register any handler.cannot handle this massage",s.selfIdentifier))
 	}
 	if msg.From == nil || msg.From.Field == nil{
 		return nil,errors.New(fmt.Sprintf("this msg (%+v) hasn't it's from filed, reject!",msg))
@@ -188,6 +188,9 @@ func(s Server) Discuss(ctx context.Context, pkg *pb.Package) (*pb.Package, error
 	}
 	if pkg.Payload != nil{
 		logger.Debugf("[Discuss] receive a discuss msg %s \n",string(pkg.Payload))
+	}
+	if pkg.Type == pb.ControlType_Notify{
+		logger.Noticef("got a message from %s, content is %s",pkg.SrcHost,string(pkg.Payload))
 	}
 	resp := pb.NewPkg(nil,pb.ControlType_Response)
 	return resp,nil
