@@ -12,18 +12,24 @@ import cn.hyperchain.jcee.executor.Context;
 import cn.hyperchain.jcee.executor.ContractHandler;
 import cn.hyperchain.jcee.executor.Handler;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
+import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.ledger.table.RelationDB;
 import cn.hyperchain.jcee.ledger.table.Table;
 import cn.hyperchain.jcee.ledger.table.TableName;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.apache.log4j.Logger;
 
-import java.util.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.List;
 
 //ContractBase which is used as a skeleton of smart contract
 @AllArgsConstructor
 @NoArgsConstructor
-public abstract class ContractTemplate {
+public class ContractTemplate {
     @Setter
     @Getter
     private ContractInfo info;
@@ -39,13 +45,43 @@ public abstract class ContractTemplate {
     protected Logger logger = Logger.getLogger(this.getClass().getSimpleName());
     protected final FilterManager filterManager = new FilterManager();
 
+    protected final ExecuteResult sysQuery(QueryType type) {
+        switch (type) {
+            case CONTRACT_INFO:
+                return result(true, info.toString());
+            case DATABASE_SCHEMAS:
+                return getDBSchema();
+            default:
+                return result(false, "query type " + type + "not found");
+        }
+    }
+
     /**
      * invoke smart contract method
+     *
      * @param funcName function name user defined in contract
-     * @param args arguments of funcName
+     * @param args     arguments of funcName
      * @return {@link ExecuteResult}
      */
-    public abstract ExecuteResult invoke(String funcName, List<String> args);
+    public ExecuteResult invoke(String funcName, List<String> args) {
+        Class clazz = this.getClass();
+        try {
+            Method method = clazz.getDeclaredMethod(funcName, List.class);
+            if(!method.isAccessible()) {
+                method.setAccessible(true);
+            }
+            return (ExecuteResult) method.invoke(this, args);
+        } catch (NoSuchMethodException e) {
+            logger.error("no such method");
+        } catch (IllegalAccessException e) {
+            logger.error(e.getMessage());
+        } catch (InvocationTargetException e) {
+            logger.error(e.getMessage());
+        } catch (Exception e) {
+            logger.error(e.getMessage());
+        }
+        return result(false, "Contract invoke error");
+    }
 
     /**
      * openInvoke provide a interface to be invoked by other contracts
@@ -53,7 +89,7 @@ public abstract class ContractTemplate {
      * @param args arguments
      * @return {@link ExecuteResult}
      */
-    protected  ExecuteResult openInvoke(String funcName, List<String> args){
+    protected ExecuteResult openInvoke(String funcName, List<String> args){
         //this is a empty method by default
         return result(false, "no method to invoke");
     }
@@ -92,12 +128,10 @@ public abstract class ContractTemplate {
     private final ExecuteResult securityCheck(String funcName, List<String> args, Context context){
 
         FilterChain fc = filterManager.getFilterChain(funcName);
-        if (fc == null) {
-            if (!fc.doFilter(context)) {
-                return result(false,
-                        String.format("Invoker %s at contract %s try to invoke function %s failed", context.getRequestContext().getInvoker()
-                        , context.getRequestContext().getCid(), funcName));
-            }
+        if (fc != null && !fc.doFilter(context)) {
+            return result(false,
+                    String.format("Invoker %s at contract %s try to invoke function %s failed", context.getRequestContext().getInvoker()
+                    , context.getRequestContext().getCid(), funcName));
         }
         return openInvoke(funcName, args);
     }
@@ -134,5 +168,19 @@ public abstract class ContractTemplate {
     public Table getTable(String name) {
         RelationDB db = ledger.getDataBase();
         return db.getTable(new TableName(getNamespace(), getCid(), name));
+    }
+
+    public ExecuteResult getDBSchema() {
+        Result rs = ledger.get("database_schemas");
+        if (rs.isEmpty()) {
+            return result(false, "Database schemas are empty");
+        } else {
+            return result(true, rs.toString());
+        }
+    }
+
+    public enum QueryType {
+        CONTRACT_INFO,
+        DATABASE_SCHEMAS
     }
 }

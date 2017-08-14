@@ -20,6 +20,7 @@ public class HyperCache implements Cache{
 
     private CacheAccess<ByteString, byte[]> cache = null;
     private static final Logger logger = Logger.getLogger(HyperchainLedger.class.getSimpleName());
+    private static final boolean cacheSwitcher = false;
 
 
     public HyperCache(){ //TODO: fix cache key may mix problem !!!
@@ -47,13 +48,16 @@ public class HyperCache implements Cache{
         }
     }
 
-    public byte[] get(byte[] key)
-    {
-//        logger.info("try to get from cache for key "+new String(key));
-        return cache.get(ByteString.copyFrom(key));
+    public byte[] get(byte[] key) {
+        if (cacheSwitcher) {
+            // logger.info("try to get from cache for key "+new String(key));
+            return cache.get(ByteString.copyFrom(key));
+        } else {
+            return null;
+        }
     }
 
-    public void delete(byte[] key){
+    public void delete(byte[] key) {
         cache.remove(ByteString.copyFrom(key));
     }
 

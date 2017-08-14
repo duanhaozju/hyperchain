@@ -36,7 +36,7 @@ public class MockServer {
         cif.setNamespace("global");
         ct.setInfo(cif);
 
-        contractHolder.put(cid,ct);
+        contractHolder.put(cid, ct);
         return cid;
     }
     public ExecuteResult invoke(String funcName, List<String> args){

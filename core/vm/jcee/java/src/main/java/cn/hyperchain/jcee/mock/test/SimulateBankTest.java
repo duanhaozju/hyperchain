@@ -42,15 +42,18 @@ public class SimulateBankTest {
 
     public static void testRangeQuery(){
 
-        server.invoke("testRangeQuery",Arrays.asList(new String[]{}));
+        server.invoke("testRangeQuery", Arrays.asList(new String[]{}));
     }
 
     public static void testNewAccountTable() {
-
         ExecuteResult result = server.invoke("newAccountTable", Arrays.asList(new String[]{}));
         System.out.println(result.getResult());
     }
 
+    public static void testNewPersonTable() {
+        ExecuteResult result = server.invoke("newPersonTable", Arrays.asList(new String[]{}));
+        System.out.println(result.getResult());
+    }
     public static void testGetTableDesc() {
         String[] args = new String[]{"Account"};
         ExecuteResult result = server.invoke("getTableDesc", Arrays.asList(args));
@@ -74,6 +77,10 @@ public class SimulateBankTest {
         server.invoke("getAccountByRange", Arrays.asList(args));
     }
 
+    public static void testSysQuery() {
+        ExecuteResult result =  server.invoke("testSysQuery", Arrays.asList(new String[]{}));
+        System.out.println("SysQuery result is :" + result);
+    }
     public static void main(String[] args) {
         SimulateBank sb = new SimulateBank();
         deploy(sb);
@@ -82,10 +89,13 @@ public class SimulateBankTest {
 //        testDelete();
 
         testNewAccountTable();
-        testGetTableDesc();
-        testIssueByTable();
-        testTransferByTable();
-        testGetAccountByRange();
+        testNewPersonTable();
+//        testGetTableDesc();
+//        testIssueByTable();
+//        testTransferByTable();
+//        testGetAccountByRange();
+
+        testSysQuery();
     }
 
 }

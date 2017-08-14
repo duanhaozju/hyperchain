@@ -18,13 +18,28 @@ import java.util.*;
  * Created by huhu on 2017/6/21.
  */
 public class MockLedger extends AbstractLedger {
-    private Cache cache;
     private TreeMap<ByteKey, Result> data;
     private RelationDB db;
 
     public MockLedger(){
-        cache = new HyperCache();
+        Comparator<ByteKey> comparator = new Comparator<ByteKey>() {
+            @Override
+            public int compare(ByteKey o1, ByteKey o2) {
+                byte[] left = o1.getKey();
+                byte[] right = o2.getKey();
+                for (int i = 0, j = 0; i < left.length && j < right.length; i++, j++) {
+                    int a = (left[i] & 0xff);
+                    int b = (right[j] & 0xff);
+                    if (a != b) {
+                        return a - b;
+                    }
+                }
+                return left.length - right.length;
+            }
+        };
+        data = new TreeMap<>(comparator);
     }
+
     @Override
     public Batch newBatch() {
         return new BatchImpl(this);
@@ -34,22 +49,6 @@ public class MockLedger extends AbstractLedger {
         private MockLedger ledger;
 
         public BatchImpl(MockLedger ledger) {
-            Comparator<ByteKey> comparator = new Comparator<ByteKey>() {
-                @Override
-                public int compare(ByteKey o1, ByteKey o2) {
-                    byte[] left = o1.getKey();
-                    byte[] right = o2.getKey();
-                    for (int i = 0, j = 0; i < left.length && j < right.length; i++, j++) {
-                        int a = (left[i] & 0xff);
-                        int b = (right[j] & 0xff);
-                        if (a != b) {
-                            return a - b;
-                        }
-                    }
-                    return left.length - right.length;
-                }
-            };
-            data = new TreeMap<ByteKey,Result>(comparator);
             this.ledger = ledger;
         }
 
@@ -117,14 +116,10 @@ public class MockLedger extends AbstractLedger {
     public boolean writeBatch(ContractProto.BatchKV batch) {
 
         int count = batch.getKvCount();
-        for(int i =0;i<count;i++){
-            ContractProto.KeyValue data = batch.getKv(i);
-            byte[] key = data.getK().toByteArray();
-            byte[] value = data.getV().toByteArray();
-
-            cache.put(key, value);
+        for(int i =0; i<count; i++){
+            ContractProto.KeyValue kv = batch.getKv(i);
+            data.put(new ByteKey(kv.getK().toByteArray()), new Result(kv.getV()));
         }
-
         return true;
     }
 
@@ -164,19 +159,17 @@ public class MockLedger extends AbstractLedger {
         List<byte[]> keys = key.getKeys();
 
         for(byte[] k: keys){
-
-            byte[] value = cache.get(k);
-            batch.put(k,value);
+            Result value = data.get(new ByteKey(k));
+            batch.put(k, value.toBytes());
         }
         return batch;
     }
 
     @Override
     public BatchValue rangeQuery(byte[] start, byte[] end) {
-
         SortedMap<ByteKey, Result> treemapincl = new TreeMap<ByteKey, Result>();
         try{
-            treemapincl = data.subMap(new ByteKey(start),new ByteKey(end));
+            treemapincl = data.subMap(new ByteKey(start), new ByteKey(end));
         }catch (IllegalArgumentException e){
             return new BathValueImpl(treemapincl);
         }
@@ -211,7 +204,7 @@ public class MockLedger extends AbstractLedger {
 
     @Override
     public boolean delete(byte[] key) {
-        cache.delete(key);
+        data.remove(key);
         return true;
     }
 
@@ -223,9 +216,9 @@ public class MockLedger extends AbstractLedger {
     @Override
     public Result get(byte[] key) {
 
-        byte[] data = cache.get(key);
-        if(data != null){
-            return new Result(ByteString.copyFrom(data));
+        Result value = data.get(key);
+        if(value != null){
+            return new Result(ByteString.copyFrom(value.toBytes()));
         }
 
         return new Result(ByteString.EMPTY);
@@ -238,8 +231,11 @@ public class MockLedger extends AbstractLedger {
 
     @Override
     public boolean put(byte[] key, byte[] value) {
-
-        cache.put(key,value);
+        if(value == null || value.length == 0 ){
+            data.put(new ByteKey(key), new Result(ByteString.EMPTY));
+        }else {
+            data.put(new ByteKey(key), new Result(ByteString.copyFrom(value)));
+        }
         return true;
     }
 

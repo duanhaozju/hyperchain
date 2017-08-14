@@ -14,7 +14,6 @@ import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.ledger.table.*;
 import cn.hyperchain.jcee.util.Bytes;
 import cn.hyperchain.jcee.util.DataType;
-import com.google.gson.Gson;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -28,53 +27,8 @@ public class SimulateBank extends ContractTemplate {
 
     public SimulateBank() {}
 
-    /**
-     * invoke smart contract method
-     *
-     * @param funcName function name user defined in contract
-     * @param args     arguments of funcName
-     */
-    @Override
-    public ExecuteResult invoke(String funcName, List<String> args) {
-        switch (funcName) {
-            case "issue":
-                return issue(args);
-            case "transfer":
-                return transfer(args);
-            case "transferByBatch":
-                return transferByBatch(args);
-            case "getAccountBalance":
-                return getAccountBalance(args);
-            case "testRangeQuery":
-                return testRangeQuery(args);
-            case "testDelete":
-                return testDelete(args);
-            case "testInvokeContract":
-                return testInvokeContract(args);
-            case "testPostEvent":
-                return testPostEvent(args);
-            case "newAccountTable":
-                return newAccountTable(args);
-            case "getTableDesc":
-                return getTableDesc(args);
-            case "issueByTable":
-                return issueByTable(args);
-            case "transferByTable":
-                return transferByTable(args);
-            case "getAccount":
-                return getAccount(args);
-            case "getAccountByRange":
-                return getAccountByRange(args);
-            default:
-                String err = "method " + funcName  + " not found!";
-                logger.error(err);
-                return new ExecuteResult(false, err);
-
-        }
-    }
-
     //String account, double num
-    private ExecuteResult issue(List<String> args) {
+    public ExecuteResult issue(List<String> args) {
         if(args.size() != 2) {
             logger.error("args num is invalid");
             return result(false, "args num is invalid");
@@ -110,7 +64,6 @@ public class SimulateBank extends ContractTemplate {
                         ledger.put(accountB, balanceB + num);
                     }
                 }
-
             }else {
                 String msg = "get account " + accountA  + " balance error";
                 logger.error(msg);
@@ -179,6 +132,15 @@ public class SimulateBank extends ContractTemplate {
         return result(wb.commit());
     }
 
+    private ExecuteResult rangeQuery(List<String> args) {
+        BatchValue bv = ledger.rangeQuery(args.get(0).getBytes(), args.get(1).getBytes());
+        while (bv.hasNext()) {
+            Result rs = bv.next();
+            logger.error(rs.toString());
+        }
+        return result(true, "success");
+    }
+
     //testRangeQuery
     private ExecuteResult testRangeQuery(List<String> args) {
         Batch batch = ledger.newBatch();
@@ -244,6 +206,12 @@ public class SimulateBank extends ContractTemplate {
         return result(true);
     }
 
+    public ExecuteResult testSysQuery(List<String> args) {
+        ExecuteResult schemas = sysQuery(QueryType.DATABASE_SCHEMAS);
+        logger.error(schemas.getResult());
+        return schemas;
+    }
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //
     //
@@ -252,7 +220,6 @@ public class SimulateBank extends ContractTemplate {
     //
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////
     public ExecuteResult newAccountTable(List<String> args) {
-        logger.info(args);
         RelationDB db = ledger.getDataBase(); //do not new database instance every time
         TableName tn = new TableName(getNamespace(), getCid(), "Account");
         logger.info(tn.toString());
@@ -261,6 +228,20 @@ public class SimulateBank extends ContractTemplate {
         desc.AddColumn(new ColumnDesc("id", DataType.LONG));
         desc.AddColumn(new ColumnDesc("age", DataType.INT));
         desc.AddColumn(new ColumnDesc("balance", DataType.DOUBLE));
+        db.CreateTable(desc);
+        return result(true);
+    }
+
+    public ExecuteResult newPersonTable(List<String> args) {
+        logger.info(args);
+        RelationDB db = ledger.getDataBase(); //do not new database instance every time
+        TableName tn = new TableName(getNamespace(), getCid(), "Person");
+        logger.info(tn.toString());
+        TableDesc desc = new TableDesc(tn);
+        desc.AddColumn(new ColumnDesc("name", DataType.STRING));
+        desc.AddColumn(new ColumnDesc("id", DataType.LONG));
+        desc.AddColumn(new ColumnDesc("age", DataType.INT));
+        desc.AddColumn(new ColumnDesc("tall", DataType.DOUBLE));
         db.CreateTable(desc);
         return result(true);
     }
@@ -281,11 +262,7 @@ public class SimulateBank extends ContractTemplate {
             double num = Double.parseDouble(args.get(2));
 
             double balanceA = Double.parseDouble(accountA.get("balance"));
-            System.out.println(balanceA);
-            System.out.println(balanceA - num);
             double balanceB = Double.parseDouble(accountB.get("balance"));
-            System.out.println(balanceB);
-            System.out.println(balanceB + num);
             if (balanceA > num) {
                 accountA.put("balance", String.valueOf(balanceA - num).getBytes());
                 accountB.put("balance", String.valueOf(balanceB + num).getBytes());
