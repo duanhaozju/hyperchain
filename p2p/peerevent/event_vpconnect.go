@@ -1,6 +1,7 @@
 package peerevent
-type VPConnect struct {
+type S_VPConnect struct {
 	Namespace string
 	Hostname string
 	ID int
+	IsReconnect bool
 }

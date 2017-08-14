@@ -46,7 +46,7 @@ func (sh *ServerHTS) Encrypt(identify string, msg []byte) []byte {
 		rec := recover()
 		if rec  != nil{
 			fmt.Println("Encrypt failed, fatal error:",rec)
-			sh.ev.Post(peerevent.UPDATE_SESSION_KEY{identify})
+			sh.ev.Post(peerevent.S_UPDATE_SESSION_KEY{identify})
 		}
 	}()
 	if sessionKey, ok := sh.sessionKeyPool.Get(identify); ok {
@@ -59,12 +59,12 @@ func (sh *ServerHTS) Encrypt(identify string, msg []byte) []byte {
 		encMsg, err := sh.security.Encrypt(sharedKey, msg)
 		if err != nil {
 			fmt.Println("ENCRYPT err ",err.Error())
-			sh.ev.Post(peerevent.UPDATE_SESSION_KEY{identify})
+			sh.ev.Post(peerevent.S_UPDATE_SESSION_KEY{identify})
 			return nil
 		}
 		return encMsg
 	}
-	sh.ev.Post(peerevent.UPDATE_SESSION_KEY{identify})
+	sh.ev.Post(peerevent.S_UPDATE_SESSION_KEY{identify})
 	return nil
 }
 
@@ -72,7 +72,7 @@ func (sh *ServerHTS) Decrypt(identify string, msg []byte) []byte {
 	defer func(){
 		rec := recover()
 		if rec  != nil{
-			sh.ev.Post(peerevent.UPDATE_SESSION_KEY{identify})
+			sh.ev.Post(peerevent.S_UPDATE_SESSION_KEY{identify})
 		}
 	}()
 	if sessionKey, ok := sh.sessionKeyPool.Get(identify); ok {
@@ -85,12 +85,12 @@ func (sh *ServerHTS) Decrypt(identify string, msg []byte) []byte {
 		}
 		decMsg, err := sh.security.Decrypt(sharedKey, msg)
 		if err != nil {
-			sh.ev.Post(peerevent.UPDATE_SESSION_KEY{identify})
+			sh.ev.Post(peerevent.S_UPDATE_SESSION_KEY{identify})
 			return nil
 		}
 		return decMsg
 	}
-	sh.ev.Post(peerevent.UPDATE_SESSION_KEY{identify})
+	sh.ev.Post(peerevent.S_UPDATE_SESSION_KEY{identify})
 	return nil
 }
 

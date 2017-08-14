@@ -22,6 +22,9 @@ type PeersPool struct {
 	nvpPool cmap.ConcurrentMap
 	//put the exist peers into this exist
 	existMap cmap.ConcurrentMap
+	// pending map
+	pendingMap cmap.ConcurrentMap
+
 	evMux *event.TypeMux
 	//for configuration persist
 	pts *PeerTriples
@@ -36,6 +39,7 @@ func NewPeersPool(namespace string,ev *event.TypeMux,pts *PeerTriples,peercnf *p
 		namespace:namespace,
 		vpPool:nil,
 		nvpPool:cmap.New(),
+		pendingMap:cmap.New(),
 		existMap:cmap.New(),
 		evMux:ev,
 		pts: pts,
@@ -110,18 +114,18 @@ func (pool *PeersPool)GetPeerByHash(hash string)*Peer{
 	return nil
 }
 
-func (pool *PeersPool)GetPeersByHostname(hostname string)*Peer{
+func (pool *PeersPool)GetPeersByHostname(hostname string)(*Peer,bool){
 	if pool.vpPool == nil{
-		return nil
+		return nil,false
 	}
 	l := pool.vpPool.Sort()
 	for _,item := range l{
 		p := item.(*Peer)
 		if p.info.Hostname == hostname{
-			return p
+			return p,true
 		}
 	}
-	return nil
+	return nil,false
 }
 
 func (pool *PeersPool)GetNVPByHostname(hostname string)*Peer{

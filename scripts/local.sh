@@ -183,6 +183,7 @@ f_x_in_mac_cmd(){
 f_run_process(){
     for((j=1;j<=$MAXPEERNUM;j++))
     do
+        sleep 5 
         case "$_SYSTYPE" in
           MAC*)
              f_x_in_mac_cmd $j
