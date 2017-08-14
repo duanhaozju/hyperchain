@@ -679,6 +679,9 @@ func (self *Version) RevertDB(ns, globalConf, path string, number uint64, parame
 
 func DefaultConfig() *common.Config {
 	config := common.NewRawConfig()
+	config.Set(hyperstate.GlobalDataNodeCacheSize, 10000)
+	config.Set(hyperstate.GlobalDataNodeCacheLength, 20)
+
 	config.Set(hyperstate.StateBucketSize, 1000003)
 	config.Set(hyperstate.StateBucketLevelGroup, 5)
 	config.Set(hyperstate.StateBucketCacheSize, 100000)
@@ -688,5 +691,7 @@ func DefaultConfig() *common.Config {
 	config.Set(hyperstate.StateObjectBucketLevelGroup, 5)
 	config.Set(hyperstate.StateObjectBucketCacheSize, 100000)
 	config.Set(hyperstate.StateObjectDataNodeCacheSize, 100000)
+
+	config.Set(common.LOG_BASE_LOG_LEVEL, "NOTICE")
 	return config
 }
