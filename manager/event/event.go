@@ -153,10 +153,12 @@ type SnapshotEvent struct {
 
 type DeleteSnapshotEvent struct {
 	FilterId string
+	Cont     chan error
 }
 
 type ArchiveEvent struct {
 	FilterId string
+	Cont     chan error
 }
 // receive tx from a nvp
 type NvpRelayTxEvent struct {
