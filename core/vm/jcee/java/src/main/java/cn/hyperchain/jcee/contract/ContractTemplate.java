@@ -128,12 +128,10 @@ public class ContractTemplate {
     private final ExecuteResult securityCheck(String funcName, List<String> args, Context context){
 
         FilterChain fc = filterManager.getFilterChain(funcName);
-        if (fc == null) {
-            if (!fc.doFilter(context)) {
-                return result(false,
-                        String.format("Invoker %s at contract %s try to invoke function %s failed", context.getRequestContext().getInvoker()
-                        , context.getRequestContext().getCid(), funcName));
-            }
+        if (fc != null && !fc.doFilter(context)) {
+            return result(false,
+                    String.format("Invoker %s at contract %s try to invoke function %s failed", context.getRequestContext().getInvoker()
+                    , context.getRequestContext().getCid(), funcName));
         }
         return openInvoke(funcName, args);
     }
