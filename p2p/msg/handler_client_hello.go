@@ -81,7 +81,7 @@ func (h *ClientHelloMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
 		h.logger.Warningf("server hello error: %s \n",err.Error())
 		return nil, err
 	}
-	h.logger.Debugf("got a remote id is rec:",id.IsReconnect)
+	h.logger.Debugf("got a remote id is rec: %v",id.IsReconnect)
 	// Key Agree
 	if id.Payload == nil{
 		h.logger.Error("server hello id.Payload is nil")
@@ -126,27 +126,26 @@ Shared key %s
 `,h.local.Hostname,h.local.Hash,msg.From.Hostname,id.Hash,common.ToHex(serverRand),common.ToHex(cert.Rand),common.ToHex(r),common.ToHex(h.shts.GetSK(id.Hash)))
 	h.logger.Debug("isreconnect",id.IsReconnect)
 	h.logger.Debug("isvp",id.IsVP)
-	if id.IsReconnect && id.IsVP {
+	if id.IsVP {
 		//if verify passed, should notify peer manager to reverse connect to client.
 		// if VP/NVP both should reverse to connect.
-		h.logger.Info("post ev VPCONNECT \n")
-		go h.hub.Post(peerevent.VPConnect{
+		h.logger.Debugf("post ev VPCONNECT %s",id.Hostname)
+		go h.hub.Post(peerevent.S_VPConnect{
 			Hostname: id.Hostname,
 			Namespace:id.Namespace,
 			ID:int(id.Id),
+			IsReconnect:id.IsReconnect,
 		})
 
-	} else if id.IsReconnect && !id.IsVP{
+	} else {
 		//if is nvp h.hub.Post(peerevent.EV_NVPConnect{})
-		h.logger.Info("post ev NVPCONNECT")
-		go h.hub.Post(peerevent.NVPConnect{
+		h.logger.Info("post ev NVPCONNECT",id.Hostname)
+		go h.hub.Post(peerevent.S_NVPConnect{
 			Hostname: id.Hostname,
 			Namespace:id.Namespace,
 			Hash:id.Hash,
+			IsReconnect:id.IsReconnect,
 		})
-	}else{
-		h.logger.Debug("Do nothing")
-		//do nothing
 	}
 
 	return rsp, nil

@@ -144,7 +144,7 @@ func (c *Client)reborn(){
 
 
 func (c *Client) ping(addr string) bool{
-	logger.Noticef("ping %s",addr)
+	logger.Infof("ping %s",addr)
 	conn,err :=  grpc.Dial(addr,c.sec.GetGrpcClientOpts()...)
 	if err != nil{
 		if conn != nil{

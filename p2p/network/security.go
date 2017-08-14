@@ -76,7 +76,7 @@ func (s *Sec) GetGrpcClientOpts() []grpc.DialOption {
 	if err != nil {
 		panic("cannot get the TLS Cert")
 	}
-	logger.Notice("enable client TLS")
+	logger.Info("enable client TLS")
 	opts = append(opts, grpc.WithTransportCredentials(creds))
 	return opts
 }
