@@ -1,16 +1,10 @@
 package executor
 
 import (
-	"encoding/json"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"io/ioutil"
 	"math"
-	"os"
-)
-
-const (
-	staticPeerFile = "global.configs.static_peers"
+	"sync"
 )
 
 // Peer qos statistic implementation
@@ -21,19 +15,7 @@ type QosStat struct {
 	logger            *logging.Logger
 	ctx               *ChainSyncContext
 	needUpdateGenesis bool
-}
-
-// Static peer are used as pre-configured connections which are always
-// has the higest priority to regard as a state update target peer.
-type StaticPeer struct {
-	ID            uint64 `json:"id,omitempty"`
-	LocalAddress  string `json:"local_address,omitempty"`
-	RemoteAddress string `json:"remote_address,omitempty"`
-	Port          uint   `json:"port,omitempty"`
-}
-
-type StaticPeers struct {
-	peers []StaticPeer `json:"static_peers,omitempty"`
+	once              sync.Once
 }
 
 func NewQos(ctx *ChainSyncContext, conf *common.Config, logger *logging.Logger) *QosStat {
@@ -58,8 +40,7 @@ func NewQos(ctx *ChainSyncContext, conf *common.Config, logger *logging.Logger) 
 		needUpdateGenesis: needUpdateGenesis,
 		ctx:               ctx,
 	}
-	staticPeers := qosStat.ReadStaticPeer(qosStat.conf.GetString(staticPeerFile))
-	logger.Debug("read static peers from configuration", staticPeers)
+	staticPeers := qosStat.ReadStaticPeer()
 	for _, peer := range staticPeers {
 		if _, exist := score[peer]; exist == true {
 			qosStat.score[peer] += 10
@@ -107,24 +88,24 @@ func (qosStat *QosStat) FeedBack(success bool) {
 }
 
 // ReadStaticPeer load preconfig peer info
-func (qosStat *QosStat) ReadStaticPeer(path string) []uint64 {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil
-	}
-	if buf, err := ioutil.ReadFile(path); err == nil {
-		var peers []StaticPeer
-		var ret []uint64
-		err := json.Unmarshal(buf, &peers)
-		if err != nil {
-			qosStat.logger.Error(err.Error())
+func (qosStat *QosStat) ReadStaticPeer() []uint64 {
+	var ret []uint64
+	qosStat.once.Do(func() {
+		qosStat.conf.MergeConfig(qosStat.conf.GetString(common.PEER_CONFIG_PATH))
+	})
+	nodes := qosStat.conf.Get("nodes").([]interface{})
+	for _, item := range nodes{
+		var id uint64
+		node := item.(map[string]interface{})
+		for key, value := range node {
+			if key == "id" {
+				id  = uint64(value.(int64))
+				ret = append(ret, id)
+			}
 		}
-		for _, p := range peers {
-			ret = append(ret, p.ID)
-		}
-		return ret
 	}
-	qosStat.logger.Debug("invalid static peers configuration file")
-	return nil
+	qosStat.logger.Debugf("local node static peer setting: %v", ret)
+	return ret
 }
 
 func (qosStat *QosStat) incScore() {

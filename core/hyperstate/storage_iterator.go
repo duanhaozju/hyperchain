@@ -1,18 +1,88 @@
 package hyperstate
 
 import (
+	"bytes"
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
-	"bytes"
+	"sort"
 )
 
+type sortable []common.Hash
+
+func (array sortable) Len() int      { return len(array) }
+func (array sortable) Swap(i, j int) { array[i], array[j] = array[j], array[i] }
+func (array sortable) Less(i, j int) bool {
+	return bytes.Compare(array[i].Bytes(), array[j].Bytes()) < 0
+}
+
+type MemIterator struct {
+	cache     Storage
+	cacheKeys sortable
+	index     int
+}
+
+func NewMemIterator(kvs Storage) *MemIterator {
+	cache := make(Storage)
+	var key sortable
+	for k, v := range kvs {
+		cache[k] = v
+		key = append(key, k)
+	}
+	sort.Sort(key)
+	return &MemIterator{
+		cache:      cache,
+		cacheKeys:  key,
+		index:      -1,
+	}
+}
+
+// Next moves the iterator to the next key/value pair.
+// It returns whether the iterator is exhausted.
+func (iter *MemIterator) Next() bool {
+	iter.index += 1
+	if iter.index >= len(iter.cacheKeys) {
+		return false
+	}
+	return true
+}
+
+// Next moves the iterator to the prev key/value pair.
+// It returns whether the iterator is exhausted.
+func (iter *MemIterator) Prev() bool {
+	iter.index -= 1
+	if iter.index <= -1 {
+		return false
+	}
+	return true
+}
+
+func (iter *MemIterator) Key() []byte {
+	return iter.cacheKeys[iter.index].Bytes()
+}
+
+func (iter *MemIterator) Value() []byte {
+	return iter.cache[iter.cacheKeys[iter.index]]
+}
+
+func (iter *MemIterator) Exist(key common.Hash) bool {
+	_, exist := iter.cache[key]
+	return exist
+}
+
+func (iter *MemIterator) Release() {
+	iter.cache = nil
+	iter.cacheKeys = nil
+	iter.index = -1
+	return
+}
+
 type StorageIterator struct {
-	cache      Storage
-	cacheKeys  []common.Hash
-	dbIter     db.Iterator
-	idx        int
-	addr       common.Address
-	plexer     bool
+	memIter   *MemIterator
+	dbIter    db.Iterator
+	addr      common.Address
+	plexer    bool
+	first     bool
+	exhausted [2]bool
 }
 
 // NewIterator returns an iterator for the latest snapshot of the
@@ -31,11 +101,12 @@ type StorageIterator struct {
 // The iterator must be released after use, by calling Release method.
 //
 func NewStorageIterator(obj *StateObject, start, limit *common.Hash) *StorageIterator {
-	cache := make(Storage)
-	var cacheKeys []common.Hash
+	var (
+		cache      Storage  = make(Storage)
+		startBytes []byte
+		limitBytes []byte
+	)
 
-	var startBytes []byte
-	var limitBytes []byte
 	if start != nil {
 		startBytes = start.Bytes()
 	}
@@ -47,50 +118,59 @@ func NewStorageIterator(obj *StateObject, start, limit *common.Hash) *StorageIte
 	for k, v := range obj.dirtyStorage {
 		if isLarger(start, k.Bytes()) && isLess(limit, k.Bytes()) && v != nil {
 			cache[k] = v
-			cacheKeys = append(cacheKeys, k)
 		}
 	}
+	memIter := NewMemIterator(cache)
 	var dbIter db.Iterator
 	if start == nil && limit == nil {
 		dbIter = obj.db.db.NewIterator(GetStorageKeyPrefix(obj.address.Bytes()))
 	} else {
 		dbIter = obj.db.db.Scan(CompositeStorageKey(obj.address.Bytes(), startBytes), CompositeStorageKey(obj.address.Bytes(), limitBytes))
 	}
-	// sort.Sort(cacheKeys)
 	return &StorageIterator{
-		cache:     cache,
-		cacheKeys: cacheKeys,
+		memIter:   memIter,
 		addr:      obj.address,
 		dbIter:    dbIter,
-		idx:       -1,
+		first:     true,
 	}
 }
 
 func (iter *StorageIterator) Next() bool {
-	if iter.idx < len(iter.cacheKeys) - 1 && len(iter.cacheKeys) > 0 {
-		iter.idx += 1
-		return true
+	if !iter.exhausted[0] && !iter.memIter.Next() {
+		iter.exhausted[0] = true
 	}
-	for {
-		iter.plexer = true
+	for !iter.exhausted[1] {
 		if !iter.dbIter.Next() {
-			return false
+			iter.exhausted[1] = true
+			break
 		}
-		tmp, b := SplitCompositeStorageKey(iter.addr.Bytes(), iter.dbIter.Key())
-		if b == false {
-			return false
-		}
-
-		if _, exist := iter.cache[common.BytesToHash(tmp)]; exist == true {
+		if iter.memIter.Exist(common.BytesToRightPaddingHash(iter.dbIter.Key())) {
 			continue
 		}
-		return true
+		break
 	}
+	switch {
+	case iter.exhausted[0] && iter.exhausted[1]:
+		return false
+	case !iter.exhausted[0] && iter.exhausted[1]:
+		iter.plexer = false
+	case iter.exhausted[0] && !iter.exhausted[1]:
+		iter.plexer = true
+	case !iter.exhausted[0] && !iter.exhausted[1]:
+		if bytes.Compare(iter.memIter.Key(), iter.dbIter.Key()) <= 0 {
+			iter.plexer = false
+			iter.dbIter.Prev()
+		} else {
+			iter.plexer = true
+			iter.memIter.Prev()
+		}
+	}
+	return true
 }
 
 func (iter *StorageIterator) Key() []byte {
 	if !iter.plexer {
-		return iter.cacheKeys[iter.idx].Bytes()
+		return iter.memIter.Key()
 	} else {
 		tmp, _ := SplitCompositeStorageKey(iter.addr.Bytes(), iter.dbIter.Key())
 		return tmp
@@ -99,7 +179,7 @@ func (iter *StorageIterator) Key() []byte {
 
 func (iter *StorageIterator) Value() []byte {
 	if !iter.plexer {
-		return iter.cache[iter.cacheKeys[iter.idx]]
+		return iter.memIter.Value()
 	} else {
 		return iter.dbIter.Value()
 	}
@@ -107,7 +187,8 @@ func (iter *StorageIterator) Value() []byte {
 
 func (iter *StorageIterator) Release() {
 	iter.dbIter.Release()
-	iter.idx = -1
+	iter.memIter.Release()
+	iter.first = true
 }
 
 func isLarger(start *common.Hash, key []byte) bool {
@@ -123,4 +204,3 @@ func isLess(limit *common.Hash, key []byte) bool {
 	}
 	return bytes.Compare(key, limit.Bytes()) < 0
 }
-
