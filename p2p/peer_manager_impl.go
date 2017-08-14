@@ -84,7 +84,7 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 	}
 	// cnf check logic
 	selfID := peercnf.GetInt("self.id")
-	if isvp && (selfID > N || selfID <= 0) {
+	if isvp && (selfID - 1 > N || selfID <= 0) {
 		return nil, errors.New(fmt.Sprintf("invalid self id: %d", selfID))
 	}
 	if !isvp && selfID != 0{
