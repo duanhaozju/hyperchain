@@ -12,6 +12,7 @@ import (
 	"hyperchain/core/types"
 	//"reflect"
 	"hyperchain/consensus"
+	"hyperchain/manager/appstat"
 )
 
 type helper struct {
@@ -225,59 +226,17 @@ func (h *helper) SendFilterEvent(informType int, message ...interface{}) error {
 		if len(message) != 1 {
 			return nil
 		}
-		re, ok := message[0].(string)
+		msg, ok := message[0].(string)
 		if ok == false {
 			return nil
 		}
-		h.PostExternal(event.FilterConsensusEvent{re})
+		h.PostExternal(event.FilterSystemStatusEvent{
+			Module:    appstat.ExceptionModule_Consenus,
+			Status:    appstat.Normal,
+			Subtype:   appstat.ExceptionSubType_ViewChange,
+			Message:   msg,
+		})
 		return nil
-	//case FILTER_NEW_LOG:
-	//	// New virtual machine log event
-	//	if len(message) != 1 {
-	//		return er.InvalidParamsErr
-	//	}
-	//	logs, ok := message[0].([]*types.Log)
-	//	if ok == false {
-	//		return er.InvalidParamsErr
-	//	}
-	//	executor.helper.PostExternal(event.FilterNewLogEvent{logs})
-	//	return nil
-	//case FILTER_SNAPSHOT_RESULT:
-	//	// Snapshot operation result event
-	//	if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
-	//		return er.InvalidParamsErr
-	//	}
-	//	executor.helper.PostExternal(event.FilterArchive{
-	//		Type:     event.FilterMakeSnapshot,
-	//		Success:  message[0].(bool),
-	//		FilterId: message[1].(string),
-	//		Message:  message[2].(string),
-	//	})
-	//	return nil
-	//case FILTER_DELETE_SNAPSHOT:
-	//	// Snapshot deletion result event
-	//	if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
-	//		return er.InvalidParamsErr
-	//	}
-	//	executor.helper.PostExternal(event.FilterArchive{
-	//		Type:     event.FilterDeleteSnapshot,
-	//		Success:  message[0].(bool),
-	//		FilterId: message[1].(string),
-	//		Message:  message[2].(string),
-	//	})
-	//	return nil
-	//case FILTER_ARCHIVE:
-	//	// archive operation result event
-	//	if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
-	//		return er.InvalidParamsErr
-	//	}
-	//	executor.helper.PostExternal(event.FilterArchive{
-	//		Type:     event.FilterDoArchive,
-	//		Success:  message[0].(bool),
-	//		FilterId: message[1].(string),
-	//		Message:  message[2].(string),
-	//	})
-	//	return nil
 	default:
 		return nil
 	}

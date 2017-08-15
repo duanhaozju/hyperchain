@@ -352,12 +352,6 @@ func (api *PublicFilterAPI) Logs(ctx context.Context, crit flt.FilterCriteria) (
 	return api.handleWSSubscribe(ctx, false, flt.LogsSubscription, crit)
 }
 
-// Logs creates a subscription that send a notification each time when consensus status changed.
-func (api *PublicFilterAPI) Consensus(ctx context.Context, crit flt.FilterCriteria) (common.ID, error) {
-	api.log.Debug("ready to deal with newConsensus event request")
-	return api.handleWSSubscribe(ctx, false, flt.ConsensusSubscription, crit)
-}
-
 func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, isVerbose bool, typ flt.Type, crit flt.FilterCriteria) (common.ID, error) {
 
 	api.filtersMu.Lock()

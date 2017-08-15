@@ -22,10 +22,6 @@ type FilterSystemStatusEvent struct {
 	Date      time.Time   `json:"date"`
 }
 
-type FilterConsensusEvent struct {
-	Result string
-}
-
 /*
 	Archive
 */
