@@ -150,13 +150,13 @@ func (api *PublicFilterAPI) NewArchiveSubscription() string {
 	return sub.ID
 }
 
-func (api *PublicFilterAPI) NewExceptionSubscription(crit flt.FilterCriteria) string {
+func (api *PublicFilterAPI) NewSystemStatusSubscription(crit flt.FilterCriteria) string {
 	var (
 		ch     = make(chan interface{})
-		sub   = api.events.NewCommonSubscription(ch, false, flt.ExceptionSubscription, crit)
+		sub   = api.events.NewCommonSubscription(ch, false, flt.SystemStatusSubscription, crit)
 	)
 	api.filtersMu.Lock()
-	api.filters[sub.ID] = flt.NewFilter(flt.ExceptionSubscription, sub, crit)
+	api.filters[sub.ID] = flt.NewFilter(flt.SystemStatusSubscription, sub, crit)
 	api.filtersMu.Unlock()
 
 	go func() {
@@ -231,10 +231,10 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 			datas := f.GetData()
 			defer f.ClearData()
 			return datas, nil
-		case flt.ExceptionSubscription:
+		case flt.SystemStatusSubscription:
 			data := f.GetData()
 			defer f.ClearData()
-			return returnException(data), nil
+			return returnSystemStatus(data), nil
 		}
 	}
 
@@ -313,13 +313,13 @@ func returnLogs(logs []interface{}) []types.LogTrans {
 	return ret.ToLogsTrans()
 }
 
-func returnException(data []interface{}) []event.FilterExceptionEvent {
+func returnSystemStatus(data []interface{}) []event.FilterSystemStatusEvent {
 	if len(data) == 0 {
-		return []event.FilterExceptionEvent{}
+		return []event.FilterSystemStatusEvent{}
 	}
-	var ret []event.FilterExceptionEvent
+	var ret []event.FilterSystemStatusEvent
 	for _, d := range data {
-		if val, ok := d.(event.FilterExceptionEvent); ok {
+		if val, ok := d.(event.FilterSystemStatusEvent); ok {
 			ret = append(ret, val)
 		}
 	}
@@ -340,22 +340,16 @@ func (api *PublicFilterAPI) Block(ctx context.Context, isVerbose bool) (common.I
 }
 
 // Exception creates a subscription that send a notification each time when exception is threw.
-func (api *PublicFilterAPI) Exception(ctx context.Context, crit flt.FilterCriteria) (common.ID, error) {
+func (api *PublicFilterAPI) SystemStatus(ctx context.Context, crit flt.FilterCriteria) (common.ID, error) {
 
 	api.log.Debug("ready to deal with newException event request")
-	return api.handleWSSubscribe(ctx, false, flt.ExceptionSubscription, crit)
+	return api.handleWSSubscribe(ctx, false, flt.SystemStatusSubscription, crit)
 }
 
 // Logs creates a subscription that send a notification each time when contract event is triggered.
 func (api *PublicFilterAPI) Logs(ctx context.Context, crit flt.FilterCriteria) (common.ID, error) {
 	api.log.Debug("ready to deal with newLogs event request")
 	return api.handleWSSubscribe(ctx, false, flt.LogsSubscription, crit)
-}
-
-// Logs creates a subscription that send a notification each time when consensus status changed.
-func (api *PublicFilterAPI) Consensus(ctx context.Context, crit flt.FilterCriteria) (common.ID, error) {
-	api.log.Debug("ready to deal with newConsensus event request")
-	return api.handleWSSubscribe(ctx, false, flt.ConsensusSubscription, crit)
 }
 
 func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, isVerbose bool, typ flt.Type, crit flt.FilterCriteria) (common.ID, error) {

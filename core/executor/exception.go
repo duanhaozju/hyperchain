@@ -3,12 +3,16 @@ package executor
 import (
 	"fmt"
 	"hyperchain/manager/event"
-	"hyperchain/manager/exception"
+	"hyperchain/manager/appstat"
 )
 
 func NotifyViewChange(helper *Helper, seqNo uint64) {
-	helper.PostExternal(event.FilterExceptionEvent{
-		Module:    exception.ExceptionModule_Executor,
-		Exception: exception.ExecutorViewchangeError{Msg: fmt.Sprintf("requried to reset status to %d", seqNo-1)},
+	message := fmt.Sprintf("required viewchange to %d", seqNo)
+	helper.PostExternal(event.FilterSystemStatusEvent{
+		Module:    appstat.ExceptionModule_Executor,
+		Status:    appstat.Exception,
+		Subtype:   appstat.ExceptionSubType_ViewChange,
+		ErrorCode: appstat.ExceptionCode_Executor_Viewchange,
+		Message:   message,
 	})
 }

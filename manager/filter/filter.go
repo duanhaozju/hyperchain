@@ -115,7 +115,7 @@ Logs:
 	return ret
 }
 
-func filterException(ev event.FilterExceptionEvent, crit *FilterCriteria) bool {
+func filterException(ev event.FilterSystemStatusEvent, crit *FilterCriteria) bool {
 	include := func(include []interface{}, exclude []interface{}, val interface{}) bool {
 		if len(include) == 0 {
 			if len(exclude) == 0 {
@@ -154,8 +154,8 @@ func filterException(ev event.FilterExceptionEvent, crit *FilterCriteria) bool {
 		return ret
 	}
 	if include(convertStringArray(crit.Modules), convertStringArray(crit.ModulesExclude), ev.Module) &&
-		include(convertStringArray(crit.SubType), convertStringArray(crit.SubTypeExclude), ev.Exception.SubType()) &&
-		include(convertIntArray(crit.Code), convertIntArray(crit.CodeExclude), ev.Exception.ErrorCode()) {
+		include(convertStringArray(crit.SubType), convertStringArray(crit.SubTypeExclude), ev.Subtype) &&
+		include(convertIntArray(crit.Code), convertIntArray(crit.CodeExclude), ev.ErrorCode) {
 		return true
 	}
 	return false
