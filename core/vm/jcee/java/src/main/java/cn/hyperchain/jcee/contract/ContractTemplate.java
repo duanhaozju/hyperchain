@@ -10,7 +10,7 @@ import cn.hyperchain.jcee.contract.filter.FilterChain;
 import cn.hyperchain.jcee.contract.filter.FilterManager;
 import cn.hyperchain.jcee.executor.Context;
 import cn.hyperchain.jcee.executor.ContractHandler;
-import cn.hyperchain.jcee.executor.Handler;
+import cn.hyperchain.jcee.executor.IHandler;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
 import cn.hyperchain.jcee.ledger.Result;
 import cn.hyperchain.jcee.ledger.table.RelationDB;
@@ -110,7 +110,7 @@ public class ContractTemplate {
             return result(false, "invalid namespace or contract address");
 
         ContractHandler ch = ContractHandler.getContractHandler();
-        Handler handler = ch.get(ns);
+        IHandler handler = ch.get(ns);
 
         if(! ch.hasHandlerForNamespace(ns)) {
             return result(false, String.format("no namespace named: %s found", ns));

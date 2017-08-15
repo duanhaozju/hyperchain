@@ -26,7 +26,7 @@ import java.util.Properties;
  * Handler used to handle the real request
  * a namespace has a handler to handle request within this namespace
  */
-public class Handler {
+public class Handler implements IHandler {
 
     private Logger logger = Logger.getLogger(Handler.class.getSimpleName());
     private ContractManager cm;
@@ -37,6 +37,7 @@ public class Handler {
         cm = new ContractManager(ledgerPort);
     }
 
+    @Override
     public void freeze(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
         ContractProto.Response response;
         String cid = request.getContext().getCid();
@@ -60,6 +61,7 @@ public class Handler {
         responseObserver.onCompleted();
     }
 
+    @Override
     public void unfreeze(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
         ContractProto.Response response;
         String cid = request.getContext().getCid();
@@ -81,7 +83,7 @@ public class Handler {
         responseObserver.onCompleted();
     }
 
-
+    @Override
     public void destroy(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
         /**
          * 1.remove the contract object from ContractManager
@@ -100,6 +102,7 @@ public class Handler {
      * @param request
      * @param responseObserver
      */
+    @Override
     public void update(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
 
         if (checkContractExistence(request, responseObserver)) {
@@ -117,6 +120,7 @@ public class Handler {
      * @param request invoke method
      * @param responseObserver
      */
+    @Override
     public void invoke(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver){
         ContractProto.Response response = null;
         logger.debug("cid is " + request.getContext().getCid());
@@ -142,6 +146,7 @@ public class Handler {
      * @param request deploy request
      * @param responseObserver
      */
+    @Override
     public void deploy(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver){
 
         List<ByteString>  args = request.getArgsList();
@@ -225,6 +230,7 @@ public class Handler {
         return task;
     }
 
+    @Override
     public ContractManager getContractMgr() {
         return cm;
     }
