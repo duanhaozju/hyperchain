@@ -3,7 +3,6 @@ package event
 import (
 	"hyperchain/core/types"
 	"time"
-	"hyperchain/manager/exception"
 )
 
 type FilterNewBlockEvent struct {
@@ -14,21 +13,17 @@ type FilterNewLogEvent struct {
 	Logs []*types.Log
 }
 
-type FilterExceptionEvent struct {
-	Module    string
-	Exception exception.ExceptionError
+type FilterSystemStatusEvent struct {
+	Module    string      `json:"module"`
+	Status    bool        `json:"status"`
+	Subtype   string      `json:"subType"`
+	ErrorCode int         `json:"errorCode"`
+	Message   string      `json:"message"`
+	Date      time.Time   `json:"date"`
 }
 
-type  FilterConsensusEvent struct {
+type FilterConsensusEvent struct {
 	Result string
-}
-
-type FilterExceptionData struct {
-	Module    string	`json:"module"`
-	SubType   string	`json:"subType"`
-	ErrorCode int		`json:"errorCode"`
-	Message   string	`json:"message"`
-	Date      time.Time	`json:"date"`
 }
 
 /*

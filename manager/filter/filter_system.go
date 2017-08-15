@@ -26,7 +26,7 @@ const (
 	//ConsensusSubscription queries consensus status
 	ConsensusSubscription
 	// ExceptionSubscription capture all system exception events.
-	ExceptionSubscription
+	SystemStatusSubscription
 	// LastSubscription keeps track of the last index
 	LastIndexSubscription
 )
@@ -73,7 +73,7 @@ func NewEventSystem(mux *event.TypeMux) *EventSystem {
 func (es *EventSystem) eventLoop() {
 	var (
 		index = make(filterIndex)
-		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{}, event.FilterExceptionEvent{}, event.FilterArchive{}, event.FilterConsensusEvent{})
+		sub   = es.mux.Subscribe(event.FilterNewBlockEvent{}, event.FilterNewLogEvent{}, event.FilterSystemStatusEvent{}, event.FilterArchive{}, event.FilterConsensusEvent{})
 	)
 
 	for i := UnknownSubscription; i < LastIndexSubscription; i++ {
@@ -132,19 +132,13 @@ func (es *EventSystem) broadcast(filters filterIndex, obj *event.Event) {
 				f.data <- ev
 			}
 		}
-	case event.FilterExceptionEvent:
-		for _, f := range filters[ExceptionSubscription] {
+	case event.FilterSystemStatusEvent:
+		for _, f := range filters[SystemStatusSubscription] {
 			if obj.Time.After(f.created) {
 				// filter logs
 				if filterException(ev, &f.crit) {
-					exptData := event.FilterExceptionData{
-						Module:		ev.Module,
-						SubType:	ev.Exception.SubType(),
-						ErrorCode:	ev.Exception.ErrorCode(),
-						Message:	ev.Exception.Error(),
-						Date:		time.Now(),
-					}
-					f.data <- exptData
+					ev.Date = time.Now()
+					f.data <- ev
 				}
 			}
 		}
