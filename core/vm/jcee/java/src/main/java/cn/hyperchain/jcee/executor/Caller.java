@@ -17,7 +17,7 @@ public class Caller {
 
     private static final Logger logger = Logger.getLogger(Caller.class.getSimpleName());
 
-    private Handler handler;
+    private IHandler handler;
     @Getter
     private ContractProto.Request request;
     @Getter
@@ -28,7 +28,7 @@ public class Caller {
         this.responseObserver = responseObserver;
     }
 
-    public void setHandler(Handler handler) {
+    public void setHandler(IHandler handler) {
         this.handler = handler;
     }
 

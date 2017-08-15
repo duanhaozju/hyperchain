@@ -9,13 +9,11 @@ import org.apache.log4j.Logger;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ContractHandler {
+public class ContractHandler extends IContractHandler {
     private static final Logger logger = Logger.getLogger(ContractHandler.class.getSimpleName());
 
     private Map<String, Handler> handlers; // <namespace, handler>
     private int ledgerPort;
-
-    private static volatile ContractHandler ch;
 
     private ContractHandler(int ledgerPort){
         handlers = new ConcurrentHashMap<>();
@@ -27,13 +25,6 @@ public class ContractHandler {
         if (ch == null) {
             ch = new ContractHandler(ledgerPort);
         }
-    }
-
-    public static ContractHandler getContractHandler() {
-        if (ch == null) {
-            throw new NullPointerException("ContractHandler is not initialized after bootstrap");
-        }
-        return ch;
     }
 
     public void addHandler(String namespace) {

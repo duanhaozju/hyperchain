@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * ContractManager manage the contract load and fetch
  * A namespace has a independent contract manager,
  */
-public class ContractManager {
+public class ContractManager implements IContractManager {
     private static Logger logger = Logger.getLogger(ContractManager.class.getSimpleName());
     private Map<String, ContractHolder> contracts;
     private List<Checker> checkers;

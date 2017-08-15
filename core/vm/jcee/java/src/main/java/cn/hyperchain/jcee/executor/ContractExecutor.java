@@ -23,13 +23,13 @@ public class ContractExecutor {
     private volatile boolean close;
     private ExecutorService threadPool;
     private Map<String, Executor> executors;
-    private ContractHandler contractHandler;
+    private IContractHandler contractHandler;
 
     public ContractExecutor() {
         close = false;
         executors = new ConcurrentHashMap<>();
         threadPool = Executors.newCachedThreadPool();
-        contractHandler = ContractHandler.getContractHandler();
+        contractHandler = IContractHandler.getContractHandler();
     }
 
     public void dispatch(Caller caller) throws InterruptedException {
@@ -109,7 +109,7 @@ public class ContractExecutor {
         }
     }
 
-    public ContractHandler getContractHandler() {
+    public IContractHandler getContractHandler() {
         return contractHandler;
     }
 

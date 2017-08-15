@@ -9,7 +9,7 @@ import cn.hyperchain.jcee.contract.filter.Filter;
 import cn.hyperchain.jcee.contract.filter.FilterChain;
 import cn.hyperchain.jcee.contract.filter.FilterManager;
 import cn.hyperchain.jcee.executor.Context;
-import cn.hyperchain.jcee.executor.ContractHandler;
+import cn.hyperchain.jcee.executor.IContractHandler;
 import cn.hyperchain.jcee.executor.IHandler;
 import cn.hyperchain.jcee.ledger.AbstractLedger;
 import cn.hyperchain.jcee.ledger.Result;
@@ -109,7 +109,7 @@ public class ContractTemplate {
         if (ns == null || ns.isEmpty() || contractAddr == null || contractAddr.isEmpty())
             return result(false, "invalid namespace or contract address");
 
-        ContractHandler ch = ContractHandler.getContractHandler();
+        IContractHandler ch = IContractHandler.getContractHandler();
         IHandler handler = ch.get(ns);
 
         if(! ch.hasHandlerForNamespace(ns)) {

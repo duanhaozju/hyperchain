@@ -5,10 +5,7 @@
 package cn.hyperchain.jcee.executor;
 
 import cn.hyperchain.jcee.common.Constants;
-import cn.hyperchain.jcee.contract.ContractState;
-import cn.hyperchain.jcee.contract.ContractTemplate;
-import cn.hyperchain.jcee.contract.ContractInfo;
-import cn.hyperchain.jcee.contract.ContractManager;
+import cn.hyperchain.jcee.contract.*;
 import cn.hyperchain.jcee.util.Errors;
 import cn.hyperchain.jcee.util.HashFunction;
 import cn.hyperchain.jcee.util.IOHelper;
@@ -29,7 +26,7 @@ import java.util.Properties;
 public class Handler implements IHandler {
 
     private Logger logger = Logger.getLogger(Handler.class.getSimpleName());
-    private ContractManager cm;
+    private IContractManager cm;
 
     enum TaskType {QUERY, INVOKE}
 
@@ -231,7 +228,7 @@ public class Handler implements IHandler {
     }
 
     @Override
-    public ContractManager getContractMgr() {
+    public IContractManager getContractMgr() {
         return cm;
     }
 
