@@ -10,6 +10,9 @@ import (
 var (
 	EmptyPointerErr = errors.New("nil pointer")
 	MarshalErr      = errors.New("marshal failed")
+	NotFindTxMetaErr = errors.New("not find tx meta")
+	NotFindBlockErr = errors.New("not find block")
+ 	OutOfSliceRangeErr = errors.New("out of slice(transactions in block) range")
 )
 
 const (

@@ -7,7 +7,6 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"encoding/json"
-	"github.com/pkg/errors"
 )
 
 // GetInvaildTxErrType - gets ErrType of invalid tx
@@ -47,16 +46,16 @@ func GetTransactionFunc(db db.Database, key []byte) (*types.Transaction, error) 
 
 	bi, ti := GetTxWithBlockFunc(db, key)
 	if bi == 0 && ti == 0 {
-		return nil, errors.New("not found tx meta")
+		return nil, NotFindTxMetaErr
 	}
 
 	block, err := GetBlockByNumberFunc(db, bi)
 	if err != nil {
-		return nil, errors.New("not found block")
+		return nil, NotFindBlockErr
 	}
 
 	if len(block.Transactions) < int(ti + 1) {
-		return nil, errors.New("out of slice range")
+		return nil, OutOfSliceRangeErr
 	}
 	return block.Transactions[int(ti)], nil
 }
