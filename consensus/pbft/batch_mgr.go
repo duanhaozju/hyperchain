@@ -270,12 +270,7 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 		return
 	}
 
-	// ignore too many validated batch as we limited the high watermark in send pre-prepare
-	if pbft.sendInWV(pbft.view, pbft.seqNo+1) {
-		pbft.logger.Warningf("Primary %d has send pre-prepare for seqNo=%d, but h=%d!",
-			pbft.id, pbft.seqNo, pbft.h)
-		return
-	}
+
 
 	// for keep the previous vid before viewchange
 	var n uint64
@@ -283,6 +278,13 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 		n = vid
 	} else {
 		n = pbft.batchVdr.vid + 1
+	}
+
+	// ignore too many validated batch as we limited the high watermark in send pre-prepare
+	if pbft.sendInWV(pbft.view, pbft.seqNo+1) {
+		pbft.logger.Warningf("Primary %d has send pre-prepare for seqNo=%d, but h=%d!",
+			pbft.id, pbft.seqNo, pbft.h)
+		return
 	}
 
 	pbft.batchVdr.vid = n
