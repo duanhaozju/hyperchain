@@ -617,6 +617,7 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 			}
 		} else {
 			pbft.logger.Debugf("Replica %d committed for seqNo: %d, but sentExecute: %v, validated: %v", pbft.id, commit.SequenceNumber, cert.sentExecute, cert.validated)
+			pbft.startTimerIfOutstandingRequests()
 		}
 	}
 
