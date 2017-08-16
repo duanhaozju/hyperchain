@@ -127,9 +127,10 @@ Shared key %s`, h.local.Hostname, h.local.Hash, msg.From.Hostname, id.Hash, comm
 	h.logger.Debug("isvp", id.IsVP)
 	if id.IsVP {
 		//if verify passed, should notify peer manager to reverse connect to client.
-		// if VP/NVP both should reverse to connect.
-		h.logger.Debugf("post ev VPCONNECT %s", id.Hostname)
+		h.logger.Debugf("post ev VPCONNECT %s rec %v", id.Hostname,id.IsReconnect)
 		if id.IsReconnect {
+			// if VP/NVP both should reverse to connect.
+			h.logger.Infof("post ev VPCONNECT %s", id.Hostname)
 			go h.hub.Post(peerevent.S_VPConnect{
 				Hostname: id.Hostname,
 				Namespace:id.Namespace,

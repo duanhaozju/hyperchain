@@ -79,6 +79,7 @@ func (sh *ServerHTS) Decrypt(identify string, msg []byte) []byte {
 			fmt.Printf("this session key is expired, id: %s ", identify)
 			return nil
 		}
+
 		decMsg, err := sh.security.Decrypt(sharedKey, msg)
 		if err != nil {
 			fmt.Printf("Dec err: %s ", err.Error())

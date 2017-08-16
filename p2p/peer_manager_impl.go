@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"fmt"
 	"math"
+	"regexp"
 )
 
 const(
@@ -164,6 +165,8 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 }
 
 func(pmi *peerManagerImpl)prepare()error{
+	pmi.logger.Notice("prepare for ns",pmi.namespace)
+	// MUST ensure the channel is already closed or the peerMgrEvClose is nil
 	serverHTS,err := pmi.hts.GetServerHTS(pmi.peerMgrEv)
 	if err != nil{
 		return err
@@ -200,12 +203,25 @@ func(pmi *peerManagerImpl)prepare()error{
 	return nil
 }
 
+func(pmgr *peerManagerImpl)unSubscribe(){
+	pmgr.logger.Critical("Unsubscribe event...")
+	for t := range pmgr.peerMgrSub.IterBuffered(){
+		t.Val.(event.Subscription).Unsubscribe()
+		pmgr.logger.Critical("Unsubscribe event... for",t.Key)
+		pmgr.peerMgrSub.Remove(t.Key)
+	}
+}
+
 
 // initialize the peerManager which is for init the local node
 func (pmgr *peerManagerImpl)Start() error {
+	if pmgr.isRec {
+		pmgr.node.info.SetRec()
+	}
 	if e := pmgr.prepare();e!= nil{
 		return e
 	}
+	pmgr.peerMgrEvClose = make(chan interface{})
 	pmgr.listening()
 	go pmgr.linking()
 	go pmgr.updating()
@@ -232,10 +248,7 @@ func (pmgr *peerManagerImpl)Start() error {
 }
 
 func (pmgr *peerManagerImpl)listening() {
-	// every times when listening, should give a new channel
-	// MUST ensure the channel is already closed or the peerMgrEvClose is nil
-	pmgr.peerMgrEvClose = make(chan interface{})
-	pmgr.logger.Info("PeerManager is listening the peer manager event...")
+	pmgr.logger.Notice("start listening...")
 	//Listening should listening all connection request, and handle it
 	for subitem := range pmgr.peerMgrSub.IterBuffered(){
 		go func (closechan chan interface{},t string,s event.Subscription){
@@ -264,7 +277,7 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 			pmgr.logger.Warning("Invalid peer connect: ",conev.ID,conev.Namespace,conev.Hostname)
 			return
 		}
-		pmgr.logger.Noticef("vp connected %s",conev.Hostname)
+		pmgr.logger.Infof("Got VP connected %s EVENT",conev.Hostname)
 		// here how to connect to hypernet layer, generally, hypernet should already connect to
 		// remote node by Inneraddr, here just need to bind the hostname.
 		pmgr.bind(PEERTYPE_VP,conev.Namespace,conev.ID,conev.Hostname,"")
@@ -272,12 +285,12 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 	}
 	case peerevent.S_NVPConnect:{
 		conev := ev.(peerevent.S_NVPConnect)
-		pmgr.logger.Notice("NVP CONNECT",conev.Hostname)
+		pmgr.logger.Info("GOT NVP CONNECT EVENT",conev.Hostname)
 		pmgr.bind(PEERTYPE_NVP,conev.Namespace,0,conev.Hostname,conev.Hash)
 	}
 	case peerevent.S_DELETE_NVP:{
 		conev := ev.(peerevent.S_DELETE_NVP)
-		pmgr.logger.Debug("Got a EV_DELETE_NVP for %s",conev.Hash)
+		pmgr.logger.Info("Got a EV_DELETE_NVP for %s",conev.Hash)
 		peer := pmgr.peerPool.GetNVPByHash(conev.Hash)
 		if peer == nil{
 			pmgr.logger.Warningf("This NVP(%s) not connect to this VP ignored.",conev.Hash)
@@ -314,7 +327,7 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 	}
 	case peerevent.S_UPDATE_SESSION_KEY:{
 		conev := ev.(peerevent.S_UPDATE_SESSION_KEY)
-		pmgr.logger.Debugf("Got update SESSION key for %s",conev.NodeHash)
+		pmgr.logger.Infof("Got update SESSION key EVNET for %s",conev.NodeHash)
 		if num,ok := pmgr.pendingSkMap.Get(conev.NodeHash);!ok{
 			pmgr.pendingSkMap.Set(conev.NodeHash,0)
 		}else{
@@ -328,7 +341,7 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 }
 
 func (pmgr *peerManagerImpl)updating(){
-	pmgr.logger.Info("start updating process..")
+	pmgr.logger.Notice("start updating process..")
 	for{
 		select {
 		case <- pmgr.peerMgrEvClose:
@@ -343,7 +356,7 @@ func (pmgr *peerManagerImpl)updating(){
 			waitList = append(waitList,t.Key)
 		}
 		for _,hash := range waitList {
-			pmgr.logger.Notice("Update the session key for",hash)
+			pmgr.logger.Info("Update the session key for",hash)
 			peer := pmgr.peerPool.GetPeerByHash(hash)
 			if peer == nil{
 				pmgr.logger.Warningf("Cannot find a VP peer By hash %s",hash)
@@ -554,6 +567,10 @@ func (pmgr *peerManagerImpl) broadcast(msgType pb.MsgType, payload []byte) {
 			_, err := peer.Chat(m)
 			if err != nil {
 				pmgr.logger.Warningf("hostname [target: %s](local: %s) chat err: send self %s ", peer.hostname, peer.local.Hostname, err.Error())
+				if ok,_ := regexp.MatchString(".+decrypt.+?",err.Error());ok{
+					pmgr.logger.Warningf("update the session key because of cannot decrypt msg [%s](%s)",peer.namespace,peer.hostname)
+					pmgr.peerMgrEv.Post(peerevent.S_UPDATE_SESSION_KEY{peer.info.Hash})
+				}
 			}
 		}(p)
 
@@ -596,6 +613,14 @@ func (pmgr *peerManagerImpl)Stop() {
 	close(pmgr.peerMgrEvClose)
 	pmgr.logger.Criticalf("Unbind all slots...")
 	pmgr.SetOffline()
+	pmgr.unSubscribe()
+	pmgr.peercnf.vip.Set("self.rec",true)
+	err := pmgr.peercnf.vip.WriteConfig()
+	pmgr.isRec = true
+	pmgr.isnew = false
+	if err != nil{
+		pmgr.logger.Errorf("cannot stop peermanager, reason %s",err.Error())
+	}
 	pmgr.node.UnBindAll()
 }
 
