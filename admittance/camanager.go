@@ -11,6 +11,8 @@ import (
 	"github.com/spf13/viper"
 	"fmt"
 	"strings"
+	"hyperchain/hyperdb"
+	"encoding/asn1"
 )
 
 var (
@@ -21,6 +23,8 @@ var (
 	errDERToPEM = errors.New("cannot convert the der format cert into pem format.")
 	errFailedVerifySign = errors.New("Verify the Cert Signature failed, please use the correctly certificate")
 )
+
+const CertKey string = "tcerts"
 
 type cert struct {
 	x509cert *x509.Certificate
@@ -147,8 +151,9 @@ func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
 		log.Error("tcert is CA !ERROE!")
 		return false,errFailedVerifySign
 	}
+
+	//生成TCERT METHOD
 	if strings.EqualFold("getTCert",method) {
-		log.Critical(method)
 		ef,_ := primitives.VerifyCert(tcert, cm.eCaCert.x509cert)
 		if ef {
 			return true,nil
@@ -157,13 +162,40 @@ func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
 
 		}
 	}
-	tf,_:= primitives.VerifyCert(tcert, cm.tCacert.x509cert)
-	if tf {
-		return true,nil
-	}else {
-		return false, errFailedVerifySign
 
+	//其他METHOD
+	db,err := hyperdb.GetDBDatabase()
+	if err!=nil {
+		log.Error(err)
+		return false,&common.CertError{Message: "Get Database failed"};
 	}
+	certs,err := db.Get([]byte(CertKey))
+	if err!=nil {
+		log.Error("This node has not gen tcert:",err)
+		return  false,&common.CertError{Message: "This node has not gen tcert!"};
+	}
+	regs := struct {
+		Tcerts []string
+	}{}
+	_,err = asn1.Unmarshal(certs,&regs)
+	if err!=nil {
+		log.Error(err)
+		return  false,&common.CertError{Message: "UnMarshal cert lists failed"};
+	}
+	for _,v := range regs.Tcerts  {
+		log.Critical(v)
+		if strings.EqualFold(v,tcertPEM) {
+			tf,_:= primitives.VerifyCert(tcert, cm.tCacert.x509cert)
+			if tf {
+				return true,nil
+			}else {
+				return false, errFailedVerifySign
+
+			}
+		}
+	}
+	log.Error("Node has not gen this Tcert!Please check it")
+	return false, errFailedVerifySign
 }
 
 // verify the ecert is valid or not
