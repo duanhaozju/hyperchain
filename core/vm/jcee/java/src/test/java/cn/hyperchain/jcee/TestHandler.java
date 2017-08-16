@@ -1,6 +1,6 @@
 package cn.hyperchain.jcee;
 
-import cn.hyperchain.jcee.executor.Handler;
+import cn.hyperchain.jcee.server.executor.Handler;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
 import org.junit.Assert;

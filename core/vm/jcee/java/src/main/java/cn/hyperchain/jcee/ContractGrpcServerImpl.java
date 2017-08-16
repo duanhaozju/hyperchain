@@ -4,12 +4,12 @@
  */
 package cn.hyperchain.jcee;
 
-import cn.hyperchain.jcee.contract.ContractInfo;
-import cn.hyperchain.jcee.db.ContractsMeta;
-import cn.hyperchain.jcee.db.MetaDB;
-import cn.hyperchain.jcee.executor.Caller;
-import cn.hyperchain.jcee.executor.ContractExecutor;
-import cn.hyperchain.jcee.util.Errors;
+import cn.hyperchain.jcee.server.contract.ContractInfo;
+import cn.hyperchain.jcee.server.db.ContractsMeta;
+import cn.hyperchain.jcee.server.db.MetaDB;
+import cn.hyperchain.jcee.server.executor.Caller;
+import cn.hyperchain.jcee.server.executor.ContractExecutor;
+import cn.hyperchain.jcee.server.common.Errors;
 import cn.hyperchain.protos.ContractGrpc;
 
 import cn.hyperchain.protos.ContractProto;

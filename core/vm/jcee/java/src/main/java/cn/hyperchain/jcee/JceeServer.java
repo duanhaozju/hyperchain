@@ -4,7 +4,7 @@
  */
 package cn.hyperchain.jcee;
 
-import cn.hyperchain.jcee.executor.ContractHandler;
+import cn.hyperchain.jcee.server.executor.ContractHandler;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.apache.log4j.Logger;
