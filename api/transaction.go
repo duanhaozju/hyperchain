@@ -14,16 +14,18 @@ import (
 	"hyperchain/manager"
 	"hyperchain/manager/event"
 	"time"
+	"hyperchain/hyperdb/db"
 )
 
 const (
 	defaultGas              int64 = 100000000
 	defaustGasPrice         int64 = 10000
-	leveldb_not_found_error       = "leveldb: not found"
 )
 
 var (
 	kec256Hash = crypto.NewKeccak256Hash("keccak256")
+	leveldb_not_found_error = db.DB_NOT_FOUND.Error()
+	not_found_tx_meta = "not found tx meta"
 )
 
 type Transaction struct {
@@ -354,7 +356,7 @@ func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*Transac
 // GetTransactionByHash returns the transaction for the given transaction hash.
 func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 	tx, err := edb.GetTransaction(tran.namespace, hash[:])
-	if err != nil && err.Error() == leveldb_not_found_error {
+	if err != nil && err.Error() == not_found_tx_meta {
 		return tran.getDiscardTransactionByHash(hash)
 	} else if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}

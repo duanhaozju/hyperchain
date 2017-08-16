@@ -1,8 +1,8 @@
 package cn.hyperchain.jcee.security;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
-import cn.hyperchain.jcee.contract.ContractTemplate;
-import cn.hyperchain.jcee.ledger.AbstractLedger;
+import cn.hyperchain.jcee.client.contract.ContractTemplate;
+import cn.hyperchain.jcee.client.ledger.AbstractLedger;
 
 import java.util.List;
 
@@ -49,8 +49,4 @@ public class ReflectContract2 extends ContractTemplate {
         super.setCid(cid);
     }
 
-    @Override
-    public ExecuteResult invoke(String funcName, List<String> args) {
-        return null;
-    }
 }
