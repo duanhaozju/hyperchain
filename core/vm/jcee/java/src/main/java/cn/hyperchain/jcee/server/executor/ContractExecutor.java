@@ -4,7 +4,7 @@
  */
 package cn.hyperchain.jcee.server.executor;
 
-import cn.hyperchain.jcee.client.executor.IContractHandler;
+import cn.hyperchain.jcee.client.executor.AbstractContractHandler;
 import cn.hyperchain.jcee.server.common.Errors;
 import org.apache.log4j.Logger;
 
@@ -22,13 +22,13 @@ public class ContractExecutor {
     private volatile boolean close;
     private ExecutorService threadPool;
     private Map<String, Executor> executors;
-    private IContractHandler contractHandler;
+    private AbstractContractHandler contractHandler;
 
     public ContractExecutor() {
         close = false;
         executors = new ConcurrentHashMap<>();
         threadPool = Executors.newCachedThreadPool();
-        contractHandler = IContractHandler.getContractHandler();
+        contractHandler = AbstractContractHandler.getContractHandler();
     }
 
     public void dispatch(Caller caller) throws InterruptedException {
@@ -108,7 +108,7 @@ public class ContractExecutor {
         }
     }
 
-    public IContractHandler getContractHandler() {
+    public AbstractContractHandler getContractHandler() {
         return contractHandler;
     }
 

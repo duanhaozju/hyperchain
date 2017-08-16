@@ -50,8 +50,4 @@ public class ReflectContract extends ContractTemplate {
         super.setCid(cid);
     }
 
-    @Override
-    public ExecuteResult invoke(String funcName, List<String> args) {
-        return null;
-    }
 }

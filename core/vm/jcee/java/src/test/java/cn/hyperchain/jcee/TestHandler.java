@@ -1,5 +1,6 @@
 package cn.hyperchain.jcee;
 
+import cn.hyperchain.jcee.server.executor.ContractHandler;
 import cn.hyperchain.jcee.server.executor.Handler;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;
@@ -18,6 +19,7 @@ public class TestHandler {
 
         String contractDir = TestHandler.class.getResource("/contracts").getPath();
 //        System.out.println(contractDir);
+        ContractHandler.init(80081);
         ContractGrpcServerImpl cgsi = new ContractGrpcServerImpl();
         Handler handler = new Handler(123);
         ContractProto.Request request = ContractProto.Request.newBuilder()

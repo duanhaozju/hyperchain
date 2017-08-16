@@ -12,11 +12,6 @@ import java.util.List;
  */
 public class NormalContract extends ContractTemplate {
 
-    @Override
-    public ExecuteResult invoke(String funcName, List<String> args) {
-        return null;
-    }
-
     //String account, double num
         private boolean issue(List<String> args) {
             if(args.size() != 2) {

@@ -1,11 +1,9 @@
 package cn.hyperchain.jcee.security;
 
-import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.client.contract.ContractTemplate;
 import cn.hyperchain.jcee.client.ledger.AbstractLedger;
 
 import java.text.SimpleDateFormat;
-import java.util.List;
 
 /**
  * Created by Think on 4/27/17.
@@ -50,8 +48,4 @@ public class TimeContract2 extends ContractTemplate {
         super.setCid(cid);
     }
 
-    @Override
-    public ExecuteResult invoke(String funcName, List<String> args) {
-        return null;
-    }
 }
