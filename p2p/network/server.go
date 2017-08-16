@@ -167,17 +167,21 @@ func(s Server) Whisper(ctx context.Context, msg *pb.Message) (*pb.Message, error
 	if msg.From == nil || msg.From.Field == nil{
 		return nil,errors.New(fmt.Sprintf("this msg (%+v) hasn't it's from filed, reject!",msg))
 	}
+
 	solt,err := s.slots.GetSlot(string(msg.From.Field))
 	if err != nil{
 		return nil,err
 	}
+	logger.Debugf("Got messsage type :%s from: %s",msg.MessageType,string(msg.From.Hostname))
 	handler,err := solt.GetHandler(msg.MessageType)
 	if err !=nil{
 		return nil,err
 	}else{
+
 		retMsg,err := handler.Execute(msg)
 		return retMsg,err
 	}
+
 	return nil,errors.New(fmt.Sprintf("This message type is not support, %v",msg.MessageType))
 }
 

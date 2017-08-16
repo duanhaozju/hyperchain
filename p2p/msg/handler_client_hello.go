@@ -122,21 +122,21 @@ Peer hash %s
 server Rand %s
 client Rand %s
 Total rand %s
-Shared key %s
-`,h.local.Hostname,h.local.Hash,msg.From.Hostname,id.Hash,common.ToHex(serverRand),common.ToHex(cert.Rand),common.ToHex(r),common.ToHex(h.shts.GetSK(id.Hash)))
+Shared key %s`,h.local.Hostname,h.local.Hash,msg.From.Hostname,id.Hash,common.ToHex(serverRand),common.ToHex(cert.Rand),common.ToHex(r),common.ToHex(h.shts.GetSK(id.Hash)))
 	h.logger.Debug("isreconnect",id.IsReconnect)
 	h.logger.Debug("isvp",id.IsVP)
 	if id.IsVP {
 		//if verify passed, should notify peer manager to reverse connect to client.
 		// if VP/NVP both should reverse to connect.
 		h.logger.Debugf("post ev VPCONNECT %s",id.Hostname)
-		go h.hub.Post(peerevent.S_VPConnect{
-			Hostname: id.Hostname,
-			Namespace:id.Namespace,
-			ID:int(id.Id),
-			IsReconnect:id.IsReconnect,
-		})
-
+		if id.IsReconnect{
+			go h.hub.Post(peerevent.S_VPConnect{
+				Hostname: id.Hostname,
+				Namespace:id.Namespace,
+				ID:int(id.Id),
+				IsReconnect:id.IsReconnect,
+			})
+		}
 	} else {
 		//if is nvp h.hub.Post(peerevent.EV_NVPConnect{})
 		h.logger.Info("post ev NVPCONNECT",id.Hostname)

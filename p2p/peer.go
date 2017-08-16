@@ -15,6 +15,9 @@ import (
 	"hyperchain/crypto/csprng"
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	//"regexp"
+	//"hyperchain/p2p/peerevent"
+	//"fmt"
 )
 
 // init the package-level logger system,
@@ -26,13 +29,13 @@ type Peer struct {
 	local     *info.Info
 	namespace string
 	net       *network.HyperNet
-	p2pHub    event.TypeMux
+	p2pHub    *event.TypeMux
 	chts      *hts.ClientHTS
 	logger *logging.Logger
 }
 
 //NewPeer get a new peer which chat/greeting/whisper functions
-func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, net *network.HyperNet, chts *hts.ClientHTS) (*Peer, error) {
+func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, net *network.HyperNet, chts *hts.ClientHTS,evhub *event.TypeMux) (*Peer, error) {
 	peer := &Peer{
 		info:      info.NewInfo(id, hostname, namespace),
 		namespace: namespace,
@@ -40,6 +43,7 @@ func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, ne
 		net:       net,
 		local:     localInfo,
 		chts:      chts,
+		p2pHub:	 evhub,
 		logger: common.GetLogger(namespace,"p2p"),
 	}
 	if err := peer.clientHello(peer.local.IsOrg(),peer.local.IsRec()); err != nil {
@@ -77,6 +81,10 @@ func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
 	//TODO change as bidi stream transfer method
 	resp, err := peer.net.Whisper(peer.hostname, in)
 	if err != nil {
+		//if ok,_ := regexp.MatchString(".+decrypt.+?",err.Error());ok{
+			//fmt.Println("update peer sk",peer.info.Hash,peer.p2pHub)
+			//go peer.p2pHub.Post(peerevent.S_UPDATE_SESSION_KEY{NodeHash:peer.info.Hash})
+		//}
 		return nil, err
 	}
 	return resp, nil
