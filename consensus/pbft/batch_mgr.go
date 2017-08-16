@@ -271,8 +271,9 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 	}
 
 	// ignore too many validated batch as we limited the high watermark in send pre-prepare
-	if len(pbft.batchVdr.cacheValidatedBatch) > int(pbft.L) {
-		pbft.logger.Warningf("Primary %d has cached %d validated batch, exceed %d!", pbft.id, len(pbft.batchVdr.cacheValidatedBatch), pbft.L)
+	if pbft.sendInWV(pbft.view, pbft.seqNo+1) {
+		pbft.logger.Warningf("Primary %d has send pre-prepare for seqNo=%d, but h=%d!",
+			pbft.id, pbft.seqNo, pbft.h)
 		return
 	}
 

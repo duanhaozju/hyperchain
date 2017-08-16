@@ -330,8 +330,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 		}
 
 		if cache.vid != pbft.batchVdr.lastVid + 1 {
-			pbft.logger.Debugf("Primary %d hasn't done with last send pre-prepare, vid=%d",
-				pbft.batchVdr.pbftId, pbft.batchVdr.lastVid)
+			pbft.logger.Debugf("Primary %d expect to send pre-prepare for vid=%d, not vid=%d", pbft.id, pbft.batchVdr.lastVid+1, cache.vid)
 			continue
 		}
 
