@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 function initClass() {
     contract="target/classes/cn/hyperchain/jcee/contract"
-    sdkContract="hyperjvm/sdk/cn/hyperchain/jcee/contract"
+    sdkContract="hyperjvm/client/cn/hyperchain/jcee/contract"
 
     ledger="target/classes/cn/hyperchain/jcee/ledger"
-    sdkLedger="hyperjvm/sdk/cn/hyperchain/jcee/ledger"
+    sdkLedger="hyperjvm/client/cn/hyperchain/jcee/ledger"
 
     common="target/classes/cn/hyperchain/jcee/common"
-    sdkCommon="hyperjvm/sdk/cn/hyperchain/jcee/common"
+    sdkCommon="hyperjvm/client/cn/hyperchain/jcee/common"
 
     util="target/classes/cn/hyperchain/jcee/util"
-    sdkUtil="hyperjvm/sdk/cn/hyperchain/jcee/util"
+    sdkUtil="hyperjvm/client/cn/hyperchain/jcee/util"
 
     mock="target/classes/cn/hyperchain/jcee/mock"
-    sdkMock="hyperjvm/sdk/cn/hyperchain/jcee/mock"
+    sdkMock="hyperjvm/client/cn/hyperchain/jcee/mock"
 
     mkdir -p ${sdkContract}
     echo "${contract}/ContractTemplate.class"
@@ -43,7 +43,7 @@ function initClass() {
 }
 
 if [ -e hyperjvm/sdk ]; then
-    echo "delete sdk."
+    echo "delete client."
     rm -rf hyperjvm/sdk
 fi
 

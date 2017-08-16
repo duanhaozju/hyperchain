@@ -4,7 +4,7 @@
  */
 package cn.hyperchain.jcee.common;
 
-import cn.hyperchain.jcee.util.Bytes;
+import cn.hyperchain.jcee.common.Bytes;
 import com.google.protobuf.ByteString;
 import lombok.AllArgsConstructor;
 import lombok.Data;
