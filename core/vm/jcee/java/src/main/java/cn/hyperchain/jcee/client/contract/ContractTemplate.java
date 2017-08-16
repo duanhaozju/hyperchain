@@ -7,7 +7,7 @@ package cn.hyperchain.jcee.client.contract;
 import cn.hyperchain.jcee.client.contract.filter.Filter;
 import cn.hyperchain.jcee.client.contract.filter.FilterChain;
 import cn.hyperchain.jcee.client.contract.filter.FilterManager;
-import cn.hyperchain.jcee.client.executor.IContractHandler;
+import cn.hyperchain.jcee.client.executor.AbstractContractHandler;
 import cn.hyperchain.jcee.client.executor.IHandler;
 import cn.hyperchain.jcee.client.ledger.table.RelationDB;
 import cn.hyperchain.jcee.client.ledger.table.Table;
@@ -109,7 +109,7 @@ public class ContractTemplate {
         if (ns == null || ns.isEmpty() || contractAddr == null || contractAddr.isEmpty())
             return result(false, "invalid namespace or contract address");
 
-        IContractHandler ch = IContractHandler.getContractHandler();
+        AbstractContractHandler ch = AbstractContractHandler.getContractHandler();
         IHandler handler = ch.get(ns);
 
         if(! ch.hasHandlerForNamespace(ns)) {

@@ -1,10 +1,10 @@
 package cn.hyperchain.jcee.client.executor;
 
-public abstract class IContractHandler {
+public abstract class AbstractContractHandler {
 
-    protected static volatile IContractHandler ch;
+    protected static volatile AbstractContractHandler ch;
 
-    public static IContractHandler getContractHandler() {
+    public static final AbstractContractHandler getContractHandler() {
         if (ch == null) {
             throw new NullPointerException("ContractHandler is not initialized after bootstrap");
         }

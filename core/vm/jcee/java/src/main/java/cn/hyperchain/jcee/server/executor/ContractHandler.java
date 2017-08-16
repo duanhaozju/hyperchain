@@ -4,16 +4,17 @@
  */
 package cn.hyperchain.jcee.server.executor;
 
-import cn.hyperchain.jcee.client.executor.IContractHandler;
+import cn.hyperchain.jcee.client.executor.AbstractContractHandler;
+import cn.hyperchain.jcee.client.executor.IHandler;
 import org.apache.log4j.Logger;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ContractHandler extends IContractHandler {
+public class ContractHandler extends AbstractContractHandler {
     private static final Logger logger = Logger.getLogger(ContractHandler.class.getSimpleName());
 
-    private Map<String, Handler> handlers; // <namespace, handler>
+    private Map<String, IHandler> handlers; // <namespace, handler>
     private int ledgerPort;
 
     private ContractHandler(int ledgerPort){
@@ -38,7 +39,7 @@ public class ContractHandler extends IContractHandler {
         return handlers.containsKey(namespace);
     }
 
-    public Handler get(String namespace) {
+    public IHandler get(String namespace) {
         return handlers.get(namespace);
     }
 
