@@ -212,6 +212,8 @@ func (pbft *pbftImpl) parseSpecifyCertStore() {
 		}
 		if cert.prePrepare != nil {
 			cert.prePrepare.View = pbft.view
+			primary := pbft.primary(pbft.view)
+			cert.prePrepare.ReplicaId = primary
 		}
 		preps := make(map[Prepare]bool)
 		for prep := range cert.prepare {
