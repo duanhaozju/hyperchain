@@ -8,14 +8,14 @@ import (
 )
 
 type Node struct {
-	info *info.Info
+	info      *info.Info
 	namespace string
-	net *network.HyperNet
+	net       *network.HyperNet
 }
 
-func NewNode(namespace string,id int,hostname string,net *network.HyperNet) *Node{
+func NewNode(namespace string, id int, hostname string, net *network.HyperNet) *Node {
 	node := &Node{
-		info:info.NewInfo(id,hostname,namespace),
+		info:info.NewInfo(id, hostname, namespace),
 		namespace:namespace,
 		net:net,
 	}
@@ -23,12 +23,12 @@ func NewNode(namespace string,id int,hostname string,net *network.HyperNet) *Nod
 }
 
 //Bind msgType and handler for this namespace
-func (node *Node)Bind(msgType message.MsgType,handler msg.MsgHandler){
-		node.net.RegisterHandler(node.namespace,msgType,handler)
+func (node *Node)Bind(msgType message.MsgType, handler msg.MsgHandler) {
+	node.net.RegisterHandler(node.namespace, msgType, handler)
 }
 
 // UnBindAll all handlers.
-func (node *Node)UnBindAll(){
-		node.net.DeRegisterHandlers(node.namespace)
+func (node *Node)UnBindAll() {
+	node.net.DeRegisterHandlers(node.namespace)
 }
 

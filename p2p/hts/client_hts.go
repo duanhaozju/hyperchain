@@ -7,17 +7,17 @@ import (
 )
 
 type ClientHTS struct {
-	priKey_s     crypto.PrivateKey
-	priKey    []byte
-	pubKey_s     crypto.PublicKey
-	pubKey  []byte
+	priKey_s   crypto.PrivateKey
+	priKey     []byte
+	pubKey_s   crypto.PublicKey
+	pubKey     []byte
 	sessionKey *SessionKey
 	security   Security
-	CG *CertGroup
-	rwlock *sync.RWMutex
+	CG         *CertGroup
+	rwlock     *sync.RWMutex
 }
 
-func NewClientHTS(sec Security,cg *CertGroup) (*ClientHTS,error) {
+func NewClientHTS(sec Security, cg *CertGroup) (*ClientHTS, error) {
 	chts := &ClientHTS{
 		security:sec,
 		CG:cg,
@@ -25,16 +25,16 @@ func NewClientHTS(sec Security,cg *CertGroup) (*ClientHTS,error) {
 	}
 	chts.priKey = cg.eCERTPriv
 	chts.priKey_s = cg.eCERTPriv_S
-	return chts,nil
+	return chts, nil
 }
 
-func(ch *ClientHTS) VerifySign(sign ,data, rawcert []byte) (bool,error){
-	return ch.security.VerifySign(sign,data,rawcert)
+func (ch *ClientHTS) VerifySign(sign, data, rawcert []byte) (bool, error) {
+	return ch.security.VerifySign(sign, data, rawcert)
 }
 
-func(ch *ClientHTS)GenShareKey(rand,rawcert []byte) error{
-	sk,err := ch.security.GenerateShareKey(ch.priKey,rand,rawcert)
-	if err != nil{
+func (ch *ClientHTS)GenShareKey(rand, rawcert []byte) error {
+	sk, err := ch.security.GenerateShareKey(ch.priKey, rand, rawcert)
+	if err != nil {
 		return err
 	}
 	ch.rwlock.Lock()
@@ -50,11 +50,11 @@ func (ch *ClientHTS) Encrypt(msg []byte) ([]byte, error) {
 	if sKey == nil {
 		return nil, errors.New("cannot get session Key,enc failed.")
 	}
-	b,e := ch.security.Encrypt(sKey, msg)
-	if e != nil{
+	b, e := ch.security.Encrypt(sKey, msg)
+	if e != nil {
 		ch.sessionKey.SetOff()
 	}
-	return b,e
+	return b, e
 }
 
 func (ch *ClientHTS) Decrypt(msg []byte) ([]byte, error) {
@@ -64,14 +64,14 @@ func (ch *ClientHTS) Decrypt(msg []byte) ([]byte, error) {
 	if sKey == nil {
 		return nil, errors.New("cannot get session Key,enc failed.")
 	}
-	b,e :=  ch.security.Decrypt(sKey, msg)
-	if e != nil{
+	b, e := ch.security.Decrypt(sKey, msg)
+	if e != nil {
 		ch.sessionKey.SetOff()
 	}
-	return b,e
+	return b, e
 }
 
-func(ch *ClientHTS)GetSK()[]byte{
+func (ch *ClientHTS)GetSK() []byte {
 	ch.rwlock.RLock()
 	defer ch.rwlock.RUnlock()
 	return ch.sessionKey.GetKey()

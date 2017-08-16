@@ -28,11 +28,11 @@ type Peer struct {
 	net       *network.HyperNet
 	p2pHub    *event.TypeMux
 	chts      *hts.ClientHTS
-	logger *logging.Logger
+	logger    *logging.Logger
 }
 
 //NewPeer get a new peer which chat/greeting/whisper functions
-func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, net *network.HyperNet, chts *hts.ClientHTS,evhub *event.TypeMux) (*Peer, error) {
+func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, net *network.HyperNet, chts *hts.ClientHTS, evhub *event.TypeMux) (*Peer, error) {
 	peer := &Peer{
 		info:      info.NewInfo(id, hostname, namespace),
 		namespace: namespace,
@@ -40,26 +40,26 @@ func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, ne
 		net:       net,
 		local:     localInfo,
 		chts:      chts,
-		p2pHub:	 evhub,
-		logger: common.GetLogger(namespace,"p2p"),
+		p2pHub:         evhub,
+		logger: common.GetLogger(namespace, "p2p"),
 	}
-	if err := peer.clientHello(peer.local.IsOrg(),peer.local.IsRec()); err != nil {
+	if err := peer.clientHello(peer.local.IsOrg(), peer.local.IsRec()); err != nil {
 		return nil, err
 	}
 	return peer, nil
 }
 
 //implements the WeightItem interface
-func(peer *Peer)Weight()int{
+func (peer *Peer)Weight() int {
 	return peer.info.Id
 }
-func(peer *Peer)Value()interface{}{
+func (peer *Peer)Value() interface{} {
 	return peer
 }
 
 //Chat send a stream message to remote peer
 func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
-	peer.logger.Debug("Chat msg to ",peer.info.Hostname)
+	peer.logger.Debug("Chat msg to ", peer.info.Hostname)
 	//here will wrapper the message
 	in.From = &pb.Endpoint{
 		Field:    []byte(peer.namespace),
@@ -68,9 +68,9 @@ func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
 		Version:  P2P_MODULE_DEV_VERSION,
 	}
 	//encrypt
-	encPayload,err := peer.chts.Encrypt(in.Payload)
-	if err != nil{
-		return nil,err
+	encPayload, err := peer.chts.Encrypt(in.Payload)
+	if err != nil {
+		return nil, err
 	}
 	in.Payload = encPayload
 
@@ -92,9 +92,9 @@ func (peer *Peer) Whisper(in *pb.Message) (*pb.Message, error) {
 		Version:  P2P_MODULE_DEV_VERSION,
 	}
 	//encrypt
-	encPayload,err := peer.chts.Encrypt(in.Payload)
-	if err != nil{
-		return nil,err
+	encPayload, err := peer.chts.Encrypt(in.Payload)
+	if err != nil {
+		return nil, err
 	}
 	in.Payload = encPayload
 	response, err := peer.net.Whisper(peer.hostname, in)
@@ -175,7 +175,7 @@ func PeerUnSerialize(raw []byte) (hostname string, namespace string, hash string
 */
 
 //this is peer should do things
-func (peer *Peer) clientHello(isOrg,isRec bool) error {
+func (peer *Peer) clientHello(isOrg, isRec bool) error {
 	peer.logger.Debug("send client hello message")
 	// if self return nil do not need verify
 	if peer.info.Hostname == peer.local.Hostname {
@@ -190,23 +190,23 @@ func (peer *Peer) clientHello(isOrg,isRec bool) error {
 	  */
 	data := []byte("hyperchain")
 	esign, err := peer.chts.CG.ESign(data)
-	if err !=nil{
+	if err != nil {
 		return err
 	}
 	rsign, err := peer.chts.CG.RSign(data)
-	if err !=nil{
+	if err != nil {
 		return err
 	}
-	rand,err := csprng.CSPRNG(32)
-	if err !=nil{
+	rand, err := csprng.CSPRNG(32)
+	if err != nil {
 		return err
 	}
-	certpayload,err := payloads.NewCertificate(data,peer.chts.CG.GetECert(),esign,peer.chts.CG.GetRCert(),rsign,rand)
-	if err !=nil{
+	certpayload, err := payloads.NewCertificate(data, peer.chts.CG.GetECert(), esign, peer.chts.CG.GetRCert(), rsign, rand)
+	if err != nil {
 		return err
 	}
 	// peer should
-	identify := payloads.NewIdentify(peer.local.IsVP,isOrg,isRec,peer.namespace, peer.local.Hostname, peer.local.Id,certpayload)
+	identify := payloads.NewIdentify(peer.local.IsVP, isOrg, isRec, peer.namespace, peer.local.Hostname, peer.local.Id, certpayload)
 	payload, err := identify.Serialize()
 	if err != nil {
 		return err
@@ -218,16 +218,15 @@ func (peer *Peer) clientHello(isOrg,isRec bool) error {
 	}
 	peer.logger.Debugf("got a server hello message msgtype %s  ", serverHello.MessageType)
 	// complele the key agree
-	if err := peer.negotiateShareKey(serverHello,rand);err != nil{
+	if err := peer.negotiateShareKey(serverHello, rand); err != nil {
 		return peer.clientReject(serverHello)
-	}else {
+	} else {
 		return peer.clientResponse(serverHello)
 	}
 
 }
 
-
-func (peer *Peer)negotiateShareKey(in *pb.Message,rand []byte) error{
+func (peer *Peer)negotiateShareKey(in *pb.Message, rand []byte) error {
 	/*
 	   ^ServerReject
                 or
@@ -237,24 +236,24 @@ func (peer *Peer)negotiateShareKey(in *pb.Message,rand []byte) error{
              *ServerCipherSpec
              *ServerKeyExchange
              */
-	if in == nil || in.Payload == nil{
+	if in == nil || in.Payload == nil {
 		return errors.New("invalid server return message")
 	}
 
-	iden,err := payloads.IdentifyUnSerialize(in.Payload)
-	if err !=nil{
+	iden, err := payloads.IdentifyUnSerialize(in.Payload)
+	if err != nil {
 		return err
 	}
 	//TODO Check the identity is legal or not
-	if  iden.Payload == nil{
+	if iden.Payload == nil {
 		return errors.New("iden payload is nil")
 	}
-	cert,err := payloads.CertificateUnMarshal(iden.Payload)
-	if err != nil{
+	cert, err := payloads.CertificateUnMarshal(iden.Payload)
+	if err != nil {
 		return err
 	}
-	r := append(cert.Rand,rand...)
-	err =  peer.chts.GenShareKey(r,cert.ECert)
+	r := append(cert.Rand, rand...)
+	err = peer.chts.GenShareKey(r, cert.ECert)
 	peer.logger.Debugf(`
 Client nego key
 Local Hostname: %s
@@ -266,15 +265,15 @@ client Rand %s
 Total rand %s
 Sharekey %s
 `,
-peer.local.Hostname,
-peer.local.Hash,
-peer.info.Hostname,
-peer.info.Hash,
-common.ToHex(cert.Rand),
-common.ToHex(rand),
-common.ToHex(r),
-common.ToHex(peer.chts.GetSK()))
-return err
+		peer.local.Hostname,
+		peer.local.Hash,
+		peer.info.Hostname,
+		peer.info.Hash,
+		common.ToHex(cert.Rand),
+		common.ToHex(rand),
+		common.ToHex(r),
+		common.ToHex(peer.chts.GetSK()))
+	return err
 
 }
 

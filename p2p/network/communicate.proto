@@ -1,7 +1,7 @@
 //
 // command protoc -I=../../../:. --go_out=plugins=grpc:. *.proto
 
-syntax="proto3";
+syntax = "proto3";
 
 package network;
 
@@ -10,7 +10,8 @@ import "hyperchain/p2p/message/package.proto";
 
 service Chat {
     // dibi data tranfer
-    rpc Chat(stream message.Message) returns(stream message.Message){}
+    rpc Chat (stream message.Message) returns (stream message.Message) {
+    }
 
     /*
       Client                                               Server
@@ -32,12 +33,15 @@ service Chat {
     */
 
     // Greeting doube arrow greeting message transfer
-    rpc Greeting(message.Message)returns(message.Message){}
+    rpc Greeting (message.Message) returns (message.Message) {
+    }
 
     // Wisper Transfer the the high level protocol message infomation
-    rpc Whisper(message.Message)returns(message.Message){}
+    rpc Whisper (message.Message) returns (message.Message) {
+    }
 
     // Discuss design for control the network stat.
-    rpc Discuss(message.Package) returns(message.Package){}
+    rpc Discuss (message.Package) returns (message.Package) {
+    }
 
 }

@@ -27,7 +27,7 @@ func (h *ClientAcceptMsgHandler) Teardown() {
 	h.logger.Info("client accept message not support the stream message, so needn't to be close")
 }
 
-func (h *ClientAcceptMsgHandler) Receive() chan<- interface{} {
+func (h *ClientAcceptMsgHandler) Receive() chan <- interface{} {
 	h.logger.Info("client accpet message not support stream message")
 	return nil
 }
