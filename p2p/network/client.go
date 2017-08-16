@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/terasum/pool"
 	"github.com/looplab/fsm"
+	"regexp"
 )
 
 type Client struct {
@@ -114,7 +115,9 @@ func (c *Client)Greeting(in *pb.Message) (*pb.Message, error) {
 	resp,err :=  client.Greeting(context.Background(), in)
 	if err != nil{
 		logger.Warningf("Greeting failed, client stat change to pending, close this client error info: %s",err.Error())
-		c.stateMachine.Event(c_EventError)
+		if ok,_:=regexp.MatchString(".+closing",err.Error());ok{
+			c.stateMachine.Event(c_EventError)
+		}
 	}
 	return resp,err
 }
@@ -138,7 +141,9 @@ func (c *Client)Whisper(in *pb.Message) (*pb.Message, error) {
 	resp,err:= client.Whisper(context.Background(), in)
 	if err != nil{
 		logger.Warningf("Whisper failed, client stat change to pending, close this client error info: %s",err.Error())
-		c.stateMachine.Event(c_EventError)
+		if ok,_:=regexp.MatchString(".+closing",err.Error());ok{
+			c.stateMachine.Event(c_EventError)
+		}
 	}
 	return resp,err
 }
@@ -158,7 +163,9 @@ func (c *Client)Discuss(in *pb.Package) (*pb.Package, error) {
 	resp,err := client.Discuss(context.Background(), in)
 	if err != nil{
 		logger.Warningf("Discuss failed, client stat change to pending, close this client error info: %s",err.Error())
-		c.stateMachine.Event(c_EventError)
+		if ok,_:=regexp.MatchString(".+closing",err.Error());ok{
+			c.stateMachine.Event(c_EventError)
+		}
 	}
 	return resp,err
 }
