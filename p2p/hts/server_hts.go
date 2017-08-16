@@ -10,14 +10,14 @@ import (
 
 type ServerHTS struct {
 	security       Security
-	priKey        []byte
-	priKey_s crypto.PrivateKey
+	priKey         []byte
+	priKey_s       crypto.PrivateKey
 	sessionKeyPool cmap.ConcurrentMap
-	ev *event.TypeMux
-	CG *CertGroup
+	ev             *event.TypeMux
+	CG             *CertGroup
 }
 
-func NewServerHTS(sec Security,cg *CertGroup,ev *event.TypeMux)(*ServerHTS,error) {
+func NewServerHTS(sec Security, cg *CertGroup, ev *event.TypeMux) (*ServerHTS, error) {
 	sh := &ServerHTS{
 		sessionKeyPool: cmap.New(),
 		security:sec,
@@ -26,13 +26,11 @@ func NewServerHTS(sec Security,cg *CertGroup,ev *event.TypeMux)(*ServerHTS,error
 		CG:cg,
 		ev:ev,
 	}
-	return sh,nil
+	return sh, nil
 }
 
-
-
-func (sh *ServerHTS) KeyExchange(idenHash string,rand []byte, rawcert []byte) error {
-	sk ,err := sh.security.GenerateShareKey(sh.priKey,rand,rawcert)
+func (sh *ServerHTS) KeyExchange(idenHash string, rand []byte, rawcert []byte) error {
+	sk, err := sh.security.GenerateShareKey(sh.priKey, rand, rawcert)
 	if err != nil {
 		return err
 	}
@@ -42,10 +40,10 @@ func (sh *ServerHTS) KeyExchange(idenHash string,rand []byte, rawcert []byte) er
 }
 
 func (sh *ServerHTS) Encrypt(identify string, msg []byte) []byte {
-	defer func(){
+	defer func() {
 		rec := recover()
-		if rec  != nil{
-			fmt.Println("Encrypt failed, fatal error:",rec)
+		if rec != nil {
+			fmt.Println("Encrypt failed, fatal error:", rec)
 		}
 	}()
 	if sessionKey, ok := sh.sessionKeyPool.Get(identify); ok {
@@ -57,7 +55,7 @@ func (sh *ServerHTS) Encrypt(identify string, msg []byte) []byte {
 		}
 		encMsg, err := sh.security.Encrypt(sharedKey, msg)
 		if err != nil {
-			fmt.Println("ENCRYPT err ",err.Error())
+			fmt.Println("ENCRYPT err ", err.Error())
 			return nil
 		}
 		return encMsg
@@ -67,9 +65,9 @@ func (sh *ServerHTS) Encrypt(identify string, msg []byte) []byte {
 
 func (sh *ServerHTS) Decrypt(identify string, msg []byte) []byte {
 
-	defer func(){
+	defer func() {
 		rec := recover()
-		if rec  != nil{
+		if rec != nil {
 			go sh.ev.Post(peerevent.S_UPDATE_SESSION_KEY{identify})
 		}
 	}()
@@ -89,7 +87,6 @@ func (sh *ServerHTS) Decrypt(identify string, msg []byte) []byte {
 		}
 		return decMsg
 	}
-	fmt.Println("key is nil,search kkey for",identify)
 	go sh.ev.Post(peerevent.S_UPDATE_SESSION_KEY{identify})
 	return nil
 }

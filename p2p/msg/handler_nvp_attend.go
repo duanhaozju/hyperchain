@@ -7,11 +7,11 @@ import (
 )
 
 type NVPAttendMsgHandler struct {
-	mchan chan  interface{}
-	ev *event.TypeMux
+	mchan chan interface{}
+	ev    *event.TypeMux
 }
 
-func NewNVPAttendHandler(blackHole chan interface{},ev *event.TypeMux)*NVPAttendMsgHandler{
+func NewNVPAttendHandler(blackHole chan interface{}, ev *event.TypeMux) *NVPAttendMsgHandler {
 	return &NVPAttendMsgHandler{
 		mchan:blackHole,
 		ev:ev,
@@ -21,7 +21,7 @@ func NewNVPAttendHandler(blackHole chan interface{},ev *event.TypeMux)*NVPAttend
 //Process
 func (h  *NVPAttendMsgHandler) Process() {
 	for msg := range h.mchan {
-		 fmt.Println("got a Attend message", string(msg.(*pb.Message).Payload))
+		fmt.Println("got a Attend message", string(msg.(*pb.Message).Payload))
 	}
 }
 
@@ -32,15 +32,15 @@ func (h  *NVPAttendMsgHandler) Teardown() {
 }
 
 //Receive
-func (h *NVPAttendMsgHandler)Receive() chan<- interface{}{
+func (h *NVPAttendMsgHandler)Receive() chan <- interface{} {
 	return h.mchan
 }
 
 //Execute
-func (h *NVPAttendMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
-	fmt.Printf("GOT A NVP ATTEND MSG hostname(%s), type: %s ",msg.From.Hostname,msg.MessageType)
-	rsp  := &pb.Message{
+func (h *NVPAttendMsgHandler)Execute(msg *pb.Message) (*pb.Message, error) {
+	fmt.Printf("GOT A NVP ATTEND MSG hostname(%s), type: %s ", msg.From.Hostname, msg.MessageType)
+	rsp := &pb.Message{
 		MessageType:pb.MsgType_RESPONSE,
 	}
-	return rsp,nil
+	return rsp, nil
 }

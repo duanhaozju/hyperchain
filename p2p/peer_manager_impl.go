@@ -314,7 +314,7 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 	}
 	case peerevent.S_UPDATE_SESSION_KEY:{
 		conev := ev.(peerevent.S_UPDATE_SESSION_KEY)
-		pmgr.logger.Notice("Got Update SESSION Key for %s",conev.NodeHash)
+		pmgr.logger.Debugf("Got update SESSION key for %s",conev.NodeHash)
 		if num,ok := pmgr.pendingSkMap.Get(conev.NodeHash);!ok{
 			pmgr.pendingSkMap.Set(conev.NodeHash,0)
 		}else{
@@ -329,9 +329,13 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 
 func (pmgr *peerManagerImpl)updating(){
 	pmgr.logger.Info("start updating process..")
-	for range time.Tick(3 * time.Second){
+	for{
+		select {
+		case <- pmgr.peerMgrEvClose:
+			return
+		case <- time.Tick(3 * time.Second):{
 		if !pmgr.peerPool.Ready(){
-			pmgr.logger.Error("failed to update the session key, the peers pool has not prepared yet.")
+			pmgr.logger.Warning("failed to update the session key, the peers pool has not prepared yet.")
 			continue
 		}
 		waitList := make([]string,0)
@@ -342,81 +346,107 @@ func (pmgr *peerManagerImpl)updating(){
 			pmgr.logger.Notice("Update the session key for",hash)
 			peer := pmgr.peerPool.GetPeerByHash(hash)
 			if peer == nil{
-				pmgr.logger.Error("Cannot find a peer By hash",hash)
-				continue
+				pmgr.logger.Warningf("Cannot find a VP peer By hash %s",hash)
+				peer = pmgr.peerPool.GetNVPByHash(hash)
+				if peer == nil{
+					pmgr.logger.Errorf("Cannot find a NVP/VP peer By hash %s",hash)
+					continue
+				}
 			}
 			err := peer.clientHello(false,false)
 			if err != nil{
-				pmgr.logger.Error("failed to update the session key",hash)
+				pmgr.logger.Warningf("failed to update the session key, hash: %s, reason: %s",hash,err.Error())
 				continue
 			}
 			pmgr.pendingSkMap.Remove(hash)
 		}
-
+		}
+		}
 	}
 }
 
 func (pmgr *peerManagerImpl) linking() {
 	pmgr.logger.Notice("start linking process..")
 	var flag = false;
-	for range time.Tick(3 * time.Second){
-		if  pmgr.peerPool.Ready() && !flag &&(pmgr.peerPool.GetVPNum() > int(math.Floor(float64(pmgr.n)/3.00))){
-			pmgr.pendingChan <- struct {}{}
-			flag = true
-		}
-		waitList := make([]peerevent.S_ReBind,0)
-		for t := range pmgr.peerPool.pendingMap.IterBuffered(){
-			conev :=t.Val.(peerevent.S_ReBind)
-			waitList = append(waitList,conev)
-		}
+	for {
+		select {
+		case <- pmgr.peerMgrEvClose:
+			return
+		case <- time.Tick(3 * time.Second):{
+			if  pmgr.peerPool.Ready() && !flag &&(pmgr.peerPool.GetVPNum() > int(math.Floor(float64(pmgr.n)/3.00))){
+				pmgr.pendingChan <- struct {}{}
+				flag = true
+			}
+			waitList := make([]peerevent.S_ReBind,0)
+			for t := range pmgr.peerPool.pendingMap.IterBuffered(){
+				conev :=t.Val.(peerevent.S_ReBind)
+				waitList = append(waitList,conev)
+			}
 
-		for _,wait := range waitList {
-			pmgr.logger.Debugf("linking to peer [%s](%s) waiting queue size %d",wait.Namespace,wait.Hostname,pmgr.peerPool.pendingMap.Count())
-			chts,err := pmgr.hts.GetAClientHTS()
-			if err != nil{
-				pmgr.logger.Warning("get chts failed %s",err.Error())
-				continue
-			}
-			//the exist peer
-			if wait.PeerType == PEERTYPE_VP{
-				if p,ok:= pmgr.peerPool.GetPeersByHostname(wait.Hostname);ok{
-					err := p.clientHello(false,false)
-					if err != nil{
-						pmgr.logger.Warning("connect to vp %s failed, retry after 3 second", wait.Hostname)
-						continue
+			for _,wait := range waitList {
+				pmgr.logger.Debugf("linking to peer [%s](%s) waiting queue size %d",wait.Namespace,wait.Hostname,pmgr.peerPool.pendingMap.Count())
+				chts,err := pmgr.hts.GetAClientHTS()
+				if err != nil{
+					pmgr.logger.Warning("get chts failed %s",err.Error())
+					if len(waitList) <= 1{
+						break
+					}
+					continue
+				}
+				//the exist peer
+				if wait.PeerType == PEERTYPE_VP{
+					if p,ok:= pmgr.peerPool.GetPeersByHostname(wait.Hostname);ok{
+						err := p.clientHello(false,false)
+						if err != nil{
+							pmgr.logger.Warning("connect to vp %s failed, retry after 3 second", wait.Hostname)
+							if len(waitList) <= 1{
+								break
+							}
+							continue
+						}
+					}
+				}else{
+					if p, ok:= pmgr.peerPool.GetNVPByHostname(wait.Hostname);ok{
+						pmgr.logger.Critical("Say hello to hostname:",wait.Hostname)
+						err := p.clientHello(false,false)
+						if err != nil{
+							pmgr.logger.Warning("connect to nvp %s failed, retry after 3 second", wait.Hostname)
+							if len(waitList) <= 1{
+								break
+							}
+							continue
+						}
 					}
 				}
-			}else{
-				if p, ok:= pmgr.peerPool.GetNVPByHostname(wait.Hostname);ok{
-					pmgr.logger.Critical("Say hello to hostname:",wait.Hostname)
-					err := p.clientHello(false,false)
-					if err != nil{
-						pmgr.logger.Warning("connect to nvp %s failed, retry after 3 second", wait.Hostname)
-						continue
+				//TODO here has a problem: generally, this method will be invoked before than
+				//TODO the network persist the new hostname, it will return a error: the host hasn't been initialized.
+				//TODO so the node may cannot connect to new peer, bind will be failed.
+				//TODO to quick fix this: before create a new peer, sleep 1 second.
+				<- time.After(time.Second)
+				newPeer,err := NewPeer(wait.Namespace, wait.Hostname, wait.Id, pmgr.node.info, pmgr.hyperNet,chts,pmgr.eventHub)
+				if err != nil {
+					pmgr.logger.Warningf("cannot establish connection to %s, reason: %s ",wait.Hostname,err.Error())
+					if len(waitList) <= 1{
+						break
 					}
+					continue
 				}
+				if wait.PeerType == PEERTYPE_VP{
+					err = pmgr.peerPool.AddVPPeer(wait.Id, newPeer)
+				}else{
+					err = pmgr.peerPool.AddNVPPeer(wait.Hash, newPeer)
+				}
+				if err != nil {
+					pmgr.logger.Warning("add peer %s failed, retry after 3 second", wait.Hostname)
+					if len(waitList) <= 1{
+						break
+					}
+					continue
+				}
+				pmgr.logger.Noticef("successful connect to [%s] (%s)", wait.Namespace,wait.Hostname)
+				pmgr.peerPool.pendingMap.Remove(wait.Namespace + ":" + wait.Hostname)
 			}
-			//TODO here has a problem: generally, this method will be invoked before than
-			//TODO the network persist the new hostname, it will return a error: the host hasn't been initialized.
-			//TODO so the node may cannot connect to new peer, bind will be failed.
-			//TODO to quick fix this: before create a new peer, sleep 1 second.
-			<- time.After(time.Second)
-			newPeer,err := NewPeer(wait.Namespace, wait.Hostname, wait.Id, pmgr.node.info, pmgr.hyperNet,chts,pmgr.eventHub)
-			if err != nil {
-				pmgr.logger.Errorf("cannot establish connection to %s, reason: %s ",wait.Hostname,err.Error())
-				continue
 			}
-			if wait.PeerType == PEERTYPE_VP{
-				err = pmgr.peerPool.AddVPPeer(wait.Id, newPeer)
-			}else{
-				err = pmgr.peerPool.AddNVPPeer(wait.Hash, newPeer)
-			}
-			if err != nil {
-				pmgr.logger.Warning("add peer %s failed, retry after 3 second", wait.Hostname)
-				continue
-			}
-			pmgr.logger.Noticef("successful connect to [%s] (%s)", wait.Namespace,wait.Hostname)
-			pmgr.peerPool.pendingMap.Remove(wait.Namespace + ":" + wait.Hostname)
 		}
 	}
 }
@@ -496,7 +526,7 @@ func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType, payload []byte, peers [
 		go func(p *Peer){
 			_,err := peer.Chat(m)
 			if err !=nil{
-				pmgr.logger.Errorf("SendMsg failed (%s) %s",peer.hostname,err.Error() )
+				pmgr.logger.Warningf("Send Messahge failed, to (%s), reasoon: %s",peer.hostname,err.Error() )
 			}
 		}(peer)
 	}
@@ -737,7 +767,7 @@ func (pmgr *peerManagerImpl)sendMsgNVP(msgType pb.MsgType,payLoad []byte, nvpLis
 			if nvphash != t.Key{
 				continue
 			}
-			pmgr.logger.Critical("(VP) send message to ",t.Key)
+			pmgr.logger.Debugf("(VP) send message to %s",t.Key)
 			p := t.Val.(*Peer)
 			//TODO IF send failed. should return a err
 			go func(peer *Peer) {

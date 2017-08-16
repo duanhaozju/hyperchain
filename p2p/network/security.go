@@ -10,38 +10,37 @@ import (
 )
 
 type Sec struct {
-	enableTls bool
-	tlsCA string
+	enableTls             bool
+	tlsCA                 string
 	tlsServerHostOverride string
-	tlsCert string
-	tlsCertPriv string
+	tlsCert               string
+	tlsCertPriv           string
 
 	//client
-	clientPriv *crypto.PrivateKey
+	clientPriv            *crypto.PrivateKey
 
 	//server
-	serverPriv *crypto.PrivateKey
-
+	serverPriv            *crypto.PrivateKey
 }
 
 
 //NewSec return a new sec options
-func NewSec(config *viper.Viper) (*Sec,error){
-	enableTLS  := config.GetBool(common.P2P_ENABLE_TLS)
-	tlsCA  := config.GetString(common.P2P_TLS_CA)
+func NewSec(config *viper.Viper) (*Sec, error) {
+	enableTLS := config.GetBool(common.P2P_ENABLE_TLS)
+	tlsCA := config.GetString(common.P2P_TLS_CA)
 	tlsServerHostOverride := config.GetString(common.P2P_TLS_SERVER_HOST_OVERRIDE)
 	tlsCert := config.GetString(common.P2P_TLS_CERT)
 	tlsCertPriv := config.GetString(common.P2P_TLS_CERT_PRIV)
 
 	//check the file is exist or not
 	if enableTLS && !common.FileExist(tlsCA) {
-		return nil,errors.New("tlsCA file not exist")
+		return nil, errors.New("tlsCA file not exist")
 	}
-	if  enableTLS && !common.FileExist(tlsCert) {
-		return nil,errors.New("tlsCert file not exist")
+	if enableTLS && !common.FileExist(tlsCert) {
+		return nil, errors.New("tlsCert file not exist")
 	}
-	if  enableTLS && !common.FileExist(tlsCertPriv) {
-		return nil,errors.New("tlsCertPriv file not exist")
+	if enableTLS && !common.FileExist(tlsCertPriv) {
+		return nil, errors.New("tlsCertPriv file not exist")
 	}
 
 	sec := &Sec{
@@ -52,7 +51,7 @@ func NewSec(config *viper.Viper) (*Sec,error){
 		tlsServerHostOverride:tlsServerHostOverride,
 	}
 
-	return sec,nil
+	return sec, nil
 }
 
 
@@ -63,9 +62,9 @@ func NewSec(config *viper.Viper) (*Sec,error){
 //GetGrpcClientOpts get GrpcClient options
 func (s *Sec) GetGrpcClientOpts() []grpc.DialOption {
 	var opts []grpc.DialOption
-	if !s.enableTls{
+	if !s.enableTls {
 		logger.Warning("disable Client TLS")
-		opts = append(opts,grpc.WithInsecure())
+		opts = append(opts, grpc.WithInsecure())
 		return opts
 	}
 	creds, err := credentials.NewClientTLSFromFile(s.tlsCA, s.tlsServerHostOverride)
@@ -80,7 +79,7 @@ func (s *Sec) GetGrpcClientOpts() []grpc.DialOption {
 //GetGrpcServerOpts get server grpc options
 func (s *Sec) GetGrpcServerOpts() []grpc.ServerOption {
 	var opts []grpc.ServerOption
-	if !s.enableTls{
+	if !s.enableTls {
 		logger.Warning("disable Server TLS")
 		return opts
 	}

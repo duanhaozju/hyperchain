@@ -60,7 +60,7 @@ pendingFailTimes = 3
 # connection pool init capacity
 connInitCap = 1
 # connection pool upper limit
-connUpperlimit = 10
+connUpperlimit = 1
 # to avoid the EOF set the time
 connIdleTime = "15s"
 

@@ -7,31 +7,31 @@ import (
 
 type peerCnf struct {
 	rwLock *sync.RWMutex
-	vip *viper.Viper
+	vip    *viper.Viper
 }
 
-func newPeerCnf(vip *viper.Viper)*peerCnf{
+func newPeerCnf(vip *viper.Viper) *peerCnf {
 	return &peerCnf{
 		rwLock:new(sync.RWMutex),
 		vip:vip,
 	}
 }
 
-func(cnf *peerCnf)viper()*viper.Viper{
+func (cnf *peerCnf)viper() *viper.Viper {
 	return cnf.vip
 }
 
-func(cnf *peerCnf)RLock(){
+func (cnf *peerCnf)RLock() {
 	cnf.rwLock.RLock()
 }
 
-func(cnf *peerCnf)RUnlock(){
+func (cnf *peerCnf)RUnlock() {
 	cnf.rwLock.RUnlock()
 }
 
-func(cnf *peerCnf)Lock(){
+func (cnf *peerCnf)Lock() {
 	cnf.rwLock.Lock()
 }
-func(cnf *peerCnf)Unlock(){
+func (cnf *peerCnf)Unlock() {
 	cnf.rwLock.Unlock()
 }

@@ -7,11 +7,11 @@ import (
 )
 
 type HelloMsgHandler struct {
-	mchan chan  interface{}
-	ev *event.TypeMux
+	mchan chan interface{}
+	ev    *event.TypeMux
 }
 
-func NewHelloHandler(blackHole chan interface{},ev *event.TypeMux)*HelloMsgHandler{
+func NewHelloHandler(blackHole chan interface{}, ev *event.TypeMux) *HelloMsgHandler {
 	return &HelloMsgHandler{
 		mchan:blackHole,
 		ev:ev,
@@ -20,8 +20,8 @@ func NewHelloHandler(blackHole chan interface{},ev *event.TypeMux)*HelloMsgHandl
 
 func (hellloMsgh  *HelloMsgHandler) Process() {
 	for msg := range hellloMsgh.mchan {
-		 fmt.Println("got a hello message", string(msg.(*pb.Message).Payload))
-		}
+		fmt.Println("got a hello message", string(msg.(*pb.Message).Payload))
+	}
 }
 
 func (hellloMsgh  *HelloMsgHandler) Teardown() {
@@ -29,14 +29,14 @@ func (hellloMsgh  *HelloMsgHandler) Teardown() {
 	close(hellloMsgh.mchan)
 }
 
-func (helloMsgh *HelloMsgHandler)Receive() chan<- interface{}{
+func (helloMsgh *HelloMsgHandler)Receive() chan <- interface{} {
 	return helloMsgh.mchan
 }
 
-func (helloMsgh *HelloMsgHandler)Execute(msg *pb.Message) (*pb.Message,error){
+func (helloMsgh *HelloMsgHandler)Execute(msg *pb.Message) (*pb.Message, error) {
 	fmt.Printf("Got a hello message %+v \n", msg)
-	rsp  := &pb.Message{
+	rsp := &pb.Message{
 		MessageType:pb.MsgType_RESPONSE,
 	}
-	return rsp,nil
+	return rsp, nil
 }

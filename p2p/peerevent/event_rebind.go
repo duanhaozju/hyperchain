@@ -1,9 +1,9 @@
 package peerevent
 
 type S_ReBind struct {
-	PeerType int
+	PeerType  int
 	Namespace string
-	Id int
-	Hostname string
-	Hash string
+	Id        int
+	Hostname  string
+	Hash      string
 }

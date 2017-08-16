@@ -7,21 +7,21 @@ import (
 
 type clientConf struct {
 	// configurations
-	keepAliveDuration time.Duration
+	keepAliveDuration  time.Duration
 	keepAliveFailTimes int
 
-	pendingDuration time.Duration
-	pendingFailTimes int
+	pendingDuration    time.Duration
+	pendingFailTimes   int
 
 	//connection pool init capacity
-	connInitCap int
+	connInitCap        int
 	// connection pool upper limit
-	connUpperlimit int
+	connUpperlimit     int
 	// to avoid the EOF set the time
-	connIdleTime time.Duration
+	connIdleTime       time.Duration
 }
 
-func NewClientConf(vip *viper.Viper) *clientConf{
+func NewClientConf(vip *viper.Viper) *clientConf {
 	cconf := &clientConf{
 		keepAliveDuration:vip.GetDuration("p2p.keepAliveDuration"),
 		keepAliveFailTimes:vip.GetInt("p2p.keepAliveFailTimes"),
