@@ -345,7 +345,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			pbft.stopNewViewTimer()
 			continue
 		}
-
+		pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 		n := pbft.seqNo + 1
 
 		// check for other PRE-PREPARE for same digest, but different seqNo
@@ -377,7 +377,6 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 	n := pbft.seqNo + 1
 
 	pbft.logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
-	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 	pbft.seqNo = n
 
 	preprepare := &PrePrepare{
@@ -1257,7 +1256,7 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 	pbft.logger.Infof("Replica %d updated low watermark to %d",
 		pbft.id, pbft.h)
 
-	pbft.resubmitRequestBatches()
+	pbft.trySendPrePrepares()
 }
 
 func (pbft *pbftImpl) updateHighStateTarget(target *stateUpdateTarget) {
