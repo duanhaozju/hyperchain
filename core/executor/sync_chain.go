@@ -506,7 +506,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 		if executor.cache.syncCache.Contains(tmp) {
 			blks, _ := executor.fetchFromSyncCache(tmp)
 			for hash, blk := range blks {
-				if hash == common.BytesToHash(tmpHash).Hex() {
+				if hash == common.Bytes2Hex(tmpHash) {
 					edb.PersistBlock(executor.db.NewBatch(), &blk, true, true)
 					executor.cache.syncCache.Remove(tmp)
 					tmp = tmp - 1
@@ -515,7 +515,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 					executor.logger.Debugf("[Namespace = %s] process sync block(block number = %d) stored in cache", executor.namespace, blk.Number)
 					break
 				} else {
-					executor.logger.Debugf("[Namespace = %s] found invalid sync block, discard block number %d, block hash %s", executor.namespace, blk.Number, common.BytesToHash(blk.BlockHash).Hex())
+					executor.logger.Debugf("[Namespace = %s] found invalid sync block, discard block number %d, block hash %s, required %s", executor.namespace, blk.Number, common.Bytes2Hex(blk.BlockHash), common.Bytes2Hex(tmpHash))
 				}
 			}
 			if flag {
@@ -638,7 +638,7 @@ func (executor *Executor) syncInitialize(ev event.ChainSyncReqEvent) {
 	executor.context.syncFlag.ResendExit = make(chan bool)
 	executor.setLatestSyncDownstream(ev.TargetHeight)
 	executor.recordSyncPeers(executor.fetchRepliceIds(ev), ev.Id)
-	executor.context.syncFlag.qosStat = NewQos(ctx, executor.conf, executor.logger)
+	executor.context.syncFlag.qosStat = NewQos(ctx, executor.conf, executor.namespace, executor.logger)
 	firstPeer := executor.context.syncFlag.qosStat.SelectPeer()
 	ctx.SetCurrentPeer(firstPeer)
 }

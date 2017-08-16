@@ -16,9 +16,10 @@ type QosStat struct {
 	ctx               *ChainSyncContext
 	needUpdateGenesis bool
 	once              sync.Once
+	namespace         string
 }
 
-func NewQos(ctx *ChainSyncContext, conf *common.Config, logger *logging.Logger) *QosStat {
+func NewQos(ctx *ChainSyncContext, conf *common.Config, namespace string, logger *logging.Logger) *QosStat {
 	// assign init score
 	score := make(map[uint64]int64)
 	var needUpdateGenesis bool
@@ -39,6 +40,7 @@ func NewQos(ctx *ChainSyncContext, conf *common.Config, logger *logging.Logger) 
 		logger:            logger,
 		needUpdateGenesis: needUpdateGenesis,
 		ctx:               ctx,
+		namespace:         namespace,
 	}
 	staticPeers := qosStat.ReadStaticPeer()
 	for _, peer := range staticPeers {
@@ -91,7 +93,7 @@ func (qosStat *QosStat) FeedBack(success bool) {
 func (qosStat *QosStat) ReadStaticPeer() []uint64 {
 	var ret []uint64
 	qosStat.once.Do(func() {
-		qosStat.conf.MergeConfig(qosStat.conf.GetString(common.PEER_CONFIG_PATH))
+		qosStat.conf.MergeConfig(common.GetPath(qosStat.namespace, qosStat.conf.GetString(common.PEER_CONFIG_PATH)))
 	})
 	nodes := qosStat.conf.Get("nodes").([]interface{})
 	for _, item := range nodes{
