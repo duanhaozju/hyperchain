@@ -132,6 +132,7 @@ func (cm *CAManager) GenTCert(publicKey string) (string, error) {
 //ECert 进行充当TCERT 所以需要用ECA.CERT 即ECA.CA 作为根证书进行验证
 //VerifyTCert verify the TCert is valid or not
 func (cm *CAManager)VerifyTCert(tcertPEM string) (bool, error) {
+	log := common.GetLogger(common.DEFAULT_NAMESPACE, "api")
 	// if check TCert flag is false, default return true
 	if !cm.checkTCert {
 		return true, nil
@@ -142,14 +143,16 @@ func (cm *CAManager)VerifyTCert(tcertPEM string) (bool, error) {
 		return false, errParseCert
 	}
 	if tcert.IsCA == true{
+		log.Error("tcert is CA !ERROE!")
 		return false,errFailedVerifySign
 	}
 
 	ef,_ := primitives.VerifyCert(tcert, cm.eCaCert.x509cert)
-	tf,_ := primitives.VerifyCert(tcert, cm.tCacert.x509cert)
+	tf,terr:= primitives.VerifyCert(tcert, cm.tCacert.x509cert)
 	if ef || tf {
 		return true,nil
 	}else {
+		log.Error(terr)
 		return false, errFailedVerifySign
 
 	}
