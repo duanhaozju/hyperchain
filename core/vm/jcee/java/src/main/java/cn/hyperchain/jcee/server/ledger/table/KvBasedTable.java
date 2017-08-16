@@ -6,9 +6,11 @@ package cn.hyperchain.jcee.server.ledger.table;
 
 import cn.hyperchain.jcee.client.ledger.Batch;
 import cn.hyperchain.jcee.client.ledger.BatchValue;
+import cn.hyperchain.jcee.client.ledger.table.Row;
 import cn.hyperchain.jcee.client.ledger.table.Table;
 import cn.hyperchain.jcee.client.ledger.AbstractLedger;
-import cn.hyperchain.jcee.server.ledger.Result;
+import cn.hyperchain.jcee.client.ledger.table.TableDesc;
+import cn.hyperchain.jcee.client.ledger.Result;
 import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 

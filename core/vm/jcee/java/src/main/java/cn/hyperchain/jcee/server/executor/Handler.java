@@ -4,6 +4,8 @@
  */
 package cn.hyperchain.jcee.server.executor;
 
+import cn.hyperchain.jcee.client.contract.ContractInfo;
+import cn.hyperchain.jcee.client.contract.ContractState;
 import cn.hyperchain.jcee.client.contract.ContractTemplate;
 import cn.hyperchain.jcee.client.contract.IContractManager;
 import cn.hyperchain.jcee.client.executor.IHandler;
@@ -11,7 +13,7 @@ import cn.hyperchain.jcee.common.Context;
 import cn.hyperchain.jcee.server.common.Constants;
 import cn.hyperchain.jcee.server.contract.*;
 import cn.hyperchain.jcee.server.common.Errors;
-import cn.hyperchain.jcee.server.common.HashFunction;
+import cn.hyperchain.jcee.common.HashFunction;
 import cn.hyperchain.jcee.server.common.IOHelper;
 import cn.hyperchain.protos.ContractProto;
 import com.google.protobuf.ByteString;

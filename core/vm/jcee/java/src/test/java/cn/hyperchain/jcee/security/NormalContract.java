@@ -2,7 +2,7 @@ package cn.hyperchain.jcee.security;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.client.contract.ContractTemplate;
-import cn.hyperchain.jcee.server.ledger.Result;
+import cn.hyperchain.jcee.client.ledger.Result;
 import com.google.protobuf.ByteString;
 
 import java.util.List;

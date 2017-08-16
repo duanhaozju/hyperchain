@@ -4,9 +4,7 @@
  */
 package cn.hyperchain.jcee.client.ledger.table;
 
-import cn.hyperchain.jcee.server.ledger.Result;
-import cn.hyperchain.jcee.server.ledger.table.Row;
-import cn.hyperchain.jcee.server.ledger.table.TableDesc;
+import cn.hyperchain.jcee.client.ledger.Result;
 
 import java.util.Iterator;
 import java.util.List;

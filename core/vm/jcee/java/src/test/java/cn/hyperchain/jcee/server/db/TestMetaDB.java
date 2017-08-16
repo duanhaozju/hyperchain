@@ -1,7 +1,7 @@
 package cn.hyperchain.jcee.server.db;
 
-import cn.hyperchain.jcee.server.contract.ContractInfo;
-import cn.hyperchain.jcee.server.contract.ContractState;
+import cn.hyperchain.jcee.client.contract.ContractInfo;
+import cn.hyperchain.jcee.client.contract.ContractState;
 import org.junit.Assert;
 import org.junit.Test;
 

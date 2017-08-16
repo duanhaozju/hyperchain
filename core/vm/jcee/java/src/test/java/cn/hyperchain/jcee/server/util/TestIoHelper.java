@@ -1,6 +1,6 @@
 package cn.hyperchain.jcee.server.util;
 
-import cn.hyperchain.jcee.server.common.HashFunction;
+import cn.hyperchain.jcee.common.HashFunction;
 import cn.hyperchain.jcee.server.common.IOHelper;
 import org.apache.commons.codec.binary.Hex;
 import org.junit.Test;

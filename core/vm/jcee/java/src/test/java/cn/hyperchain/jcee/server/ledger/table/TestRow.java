@@ -4,6 +4,7 @@
  */
 package cn.hyperchain.jcee.server.ledger.table;
 
+import cn.hyperchain.jcee.client.ledger.table.Row;
 import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 import org.junit.Assert;

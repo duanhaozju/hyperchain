@@ -2,9 +2,9 @@
  * Hyperchain License
  * Copyright (C) 2016 The Hyperchain Authors.
  */
-package cn.hyperchain.jcee.server.ledger;
+package cn.hyperchain.jcee.client.ledger;
 
-import cn.hyperchain.jcee.server.common.exception.ResultNotExistException;
+import cn.hyperchain.jcee.common.exception.ResultNotExistException;
 import cn.hyperchain.jcee.common.Bytes;
 import com.google.protobuf.ByteString;
 

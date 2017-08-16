@@ -1,5 +1,6 @@
 package cn.hyperchain.jcee.server.ledger;
 
+import cn.hyperchain.jcee.client.ledger.Result;
 import com.google.protobuf.ByteString;
 import org.junit.Assert;
 import org.junit.Test;

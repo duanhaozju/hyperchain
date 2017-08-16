@@ -1,5 +1,8 @@
 package cn.hyperchain.jcee.server.ledger.table;
 
+import cn.hyperchain.jcee.client.ledger.table.ColumnDesc;
+import cn.hyperchain.jcee.client.ledger.table.TableDesc;
+import cn.hyperchain.jcee.client.ledger.table.TableName;
 import cn.hyperchain.jcee.common.DataType;
 import com.google.gson.Gson;
 import org.junit.Assert;

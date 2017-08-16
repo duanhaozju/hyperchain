@@ -1,4 +1,4 @@
-package cn.hyperchain.jcee.server.common.exception;
+package cn.hyperchain.jcee.common.exception;
 
 /**
  * Created by Think on 5/31/17.

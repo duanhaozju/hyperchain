@@ -2,7 +2,7 @@
  * Hyperchain License
  * Copyright (C) 2016 The Hyperchain Authors.
  */
-package cn.hyperchain.jcee.server.common;
+package cn.hyperchain.jcee.common;
 
 import org.apache.commons.codec.binary.Hex;
 import scorex.crypto.hash.Keccak256;

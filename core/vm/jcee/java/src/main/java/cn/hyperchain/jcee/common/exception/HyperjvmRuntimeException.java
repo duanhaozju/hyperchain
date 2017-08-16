@@ -2,7 +2,7 @@
  * Hyperchain License
  * Copyright (C) 2016 The Hyperchain Authors.
  */
-package cn.hyperchain.jcee.server.common.exception;
+package cn.hyperchain.jcee.common.exception;
 
 /**
  * Created by wangxiaoyi on 2017/6/7.

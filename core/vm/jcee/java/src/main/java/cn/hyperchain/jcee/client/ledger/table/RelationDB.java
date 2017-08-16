@@ -4,9 +4,6 @@
  */
 package cn.hyperchain.jcee.client.ledger.table;
 
-import cn.hyperchain.jcee.server.ledger.table.TableDesc;
-import cn.hyperchain.jcee.server.ledger.table.TableName;
-
 /**
  * Created by wangxiaoyi on 2017/6/23.
  * used by {@link cn.hyperchain.jcee.client.ledger.ILedger}

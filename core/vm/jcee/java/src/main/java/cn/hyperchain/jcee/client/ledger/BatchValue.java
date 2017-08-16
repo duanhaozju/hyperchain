@@ -4,8 +4,6 @@
  */
 package cn.hyperchain.jcee.client.ledger;
 
-import cn.hyperchain.jcee.server.ledger.Result;
-
 import java.util.Iterator;
 
 /**

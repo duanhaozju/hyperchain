@@ -5,10 +5,10 @@
 package cn.hyperchain.jcee.client.mock;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
-import cn.hyperchain.jcee.server.contract.ContractInfo;
+import cn.hyperchain.jcee.client.contract.ContractInfo;
 import cn.hyperchain.jcee.client.contract.ContractTemplate;
 import cn.hyperchain.jcee.client.ledger.AbstractLedger;
-import cn.hyperchain.jcee.server.common.HashFunction;
+import cn.hyperchain.jcee.common.HashFunction;
 import lombok.Getter;
 import lombok.Setter;
 

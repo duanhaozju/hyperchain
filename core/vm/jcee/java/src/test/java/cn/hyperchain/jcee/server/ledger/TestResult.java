@@ -1,6 +1,7 @@
 package cn.hyperchain.jcee.server.ledger;
 
-import cn.hyperchain.jcee.server.common.exception.HyperjvmRuntimeException;
+import cn.hyperchain.jcee.client.ledger.Result;
+import cn.hyperchain.jcee.common.exception.HyperjvmRuntimeException;
 import com.google.protobuf.ByteString;
 import org.junit.Assert;
 import org.junit.Test;

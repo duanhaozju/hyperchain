@@ -2,7 +2,7 @@
  * Hyperchain License
  * Copyright (C) 2017 The Hyperchain Authors.
  */
-package cn.hyperchain.jcee.server.ledger.table;
+package cn.hyperchain.jcee.client.ledger.table;
 
 import cn.hyperchain.jcee.common.DataType;
 import lombok.AllArgsConstructor;

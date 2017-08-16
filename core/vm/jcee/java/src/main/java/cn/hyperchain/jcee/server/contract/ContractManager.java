@@ -4,12 +4,14 @@
  */
 package cn.hyperchain.jcee.server.contract;
 
+import cn.hyperchain.jcee.client.contract.ContractInfo;
 import cn.hyperchain.jcee.client.contract.ContractTemplate;
+import cn.hyperchain.jcee.client.contract.IContractHolder;
 import cn.hyperchain.jcee.client.contract.IContractManager;
+import cn.hyperchain.jcee.client.ledger.AbstractLedger;
 import cn.hyperchain.jcee.server.contract.security.ByteCodeChecker;
 import cn.hyperchain.jcee.server.contract.security.Checker;
 import cn.hyperchain.jcee.server.db.MetaDB;
-import cn.hyperchain.jcee.client.ledger.AbstractLedger;
 import cn.hyperchain.jcee.server.ledger.HyperchainLedger;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,7 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ContractManager implements IContractManager {
     private static Logger logger = Logger.getLogger(ContractManager.class.getSimpleName());
-    private Map<String, ContractHolder> contracts;
+    private Map<String, IContractHolder> contracts;
     private List<Checker> checkers;
 
     //ledger is shared by contract with same namespace
@@ -44,7 +46,7 @@ public class ContractManager implements IContractManager {
     public ContractTemplate getContract(String cid) {
         logger.debug(contracts.toString());
         logger.debug("cid is " + cid);
-        ContractHolder holder = contracts.get(cid);
+        ContractHolder holder = (ContractHolder) contracts.get(cid);
         if(holder == null) return null;
         return holder.getContract();
     }
@@ -73,7 +75,7 @@ public class ContractManager implements IContractManager {
         return contracts.containsKey(cid);
     }
 
-    public void addContract(ContractHolder holder) {
+    public void addContract(IContractHolder holder) {
         String key = holder.getInfo().getCid();
         if(contracts.containsKey(key)) {
             logger.error(key + " existed!");

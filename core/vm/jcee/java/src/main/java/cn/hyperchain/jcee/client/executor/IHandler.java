@@ -1,7 +1,7 @@
 package cn.hyperchain.jcee.client.executor;
 
 import cn.hyperchain.jcee.client.contract.IContractManager;
-import cn.hyperchain.jcee.server.contract.ContractInfo;
+import cn.hyperchain.jcee.client.contract.ContractInfo;
 import cn.hyperchain.protos.ContractProto;
 import io.grpc.stub.StreamObserver;
 

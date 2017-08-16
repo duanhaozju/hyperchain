@@ -4,7 +4,7 @@
  */
 package cn.hyperchain.jcee;
 
-import cn.hyperchain.jcee.server.contract.ContractInfo;
+import cn.hyperchain.jcee.client.contract.ContractInfo;
 import cn.hyperchain.jcee.server.db.ContractsMeta;
 import cn.hyperchain.jcee.server.db.MetaDB;
 import cn.hyperchain.jcee.server.executor.Caller;

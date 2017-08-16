@@ -1,5 +1,6 @@
 package cn.hyperchain.jcee.server.ledger.table;
 
+import cn.hyperchain.jcee.client.ledger.table.TableName;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;

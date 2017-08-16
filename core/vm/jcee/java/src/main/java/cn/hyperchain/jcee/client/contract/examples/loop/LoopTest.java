@@ -6,7 +6,7 @@ package cn.hyperchain.jcee.client.contract.examples.loop;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.client.contract.ContractTemplate;
-import cn.hyperchain.jcee.server.ledger.Result;
+import cn.hyperchain.jcee.client.ledger.Result;
 
 import java.util.List;
 

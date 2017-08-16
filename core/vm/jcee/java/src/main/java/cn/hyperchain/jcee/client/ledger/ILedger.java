@@ -6,7 +6,6 @@ package cn.hyperchain.jcee.client.ledger;
 
 import cn.hyperchain.jcee.client.ledger.table.RelationDB;
 import cn.hyperchain.jcee.common.Event;
-import cn.hyperchain.jcee.server.ledger.Result;
 
 public interface ILedger {
 

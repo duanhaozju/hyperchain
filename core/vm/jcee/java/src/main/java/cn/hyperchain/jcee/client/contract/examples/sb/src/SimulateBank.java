@@ -7,13 +7,11 @@ package cn.hyperchain.jcee.client.contract.examples.sb.src;
 import cn.hyperchain.jcee.client.ledger.Batch;
 import cn.hyperchain.jcee.client.ledger.BatchKey;
 import cn.hyperchain.jcee.client.ledger.BatchValue;
-import cn.hyperchain.jcee.client.ledger.table.RelationDB;
-import cn.hyperchain.jcee.client.ledger.table.Table;
+import cn.hyperchain.jcee.client.ledger.table.*;
 import cn.hyperchain.jcee.common.ExecuteResult;
 import cn.hyperchain.jcee.client.contract.ContractTemplate;
 import cn.hyperchain.jcee.common.Event;
-import cn.hyperchain.jcee.server.ledger.Result;
-import cn.hyperchain.jcee.server.ledger.table.*;
+import cn.hyperchain.jcee.client.ledger.Result;
 import cn.hyperchain.jcee.common.Bytes;
 import cn.hyperchain.jcee.common.DataType;
 

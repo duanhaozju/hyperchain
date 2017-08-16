@@ -4,7 +4,7 @@
  */
 package cn.hyperchain.jcee.server.db;
 
-import cn.hyperchain.jcee.server.contract.ContractInfo;
+import cn.hyperchain.jcee.client.contract.ContractInfo;
 import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;

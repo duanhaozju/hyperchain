@@ -5,8 +5,6 @@
 package cn.hyperchain.jcee.client.ledger;
 
 
-import cn.hyperchain.jcee.server.ledger.Result;
-
 /**
  * Created by wangxiaoyi on 2017/5/5.
  */

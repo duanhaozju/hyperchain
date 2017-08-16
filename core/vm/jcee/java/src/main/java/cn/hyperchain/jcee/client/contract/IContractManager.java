@@ -1,8 +1,5 @@
 package cn.hyperchain.jcee.client.contract;
 
-import cn.hyperchain.jcee.server.contract.ContractHolder;
-import cn.hyperchain.jcee.server.contract.ContractInfo;
-
 public interface IContractManager {
 
     ContractTemplate getContract(String cid);
@@ -13,7 +10,7 @@ public interface IContractManager {
 
     void destroyContract(String cid);
 
-    void addContract(ContractHolder holder);
+    void addContract(IContractHolder holder);
 
     boolean deployContract(ContractInfo info) throws ClassNotFoundException;
 }
