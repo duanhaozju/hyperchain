@@ -15,9 +15,6 @@ import (
 	"hyperchain/crypto/csprng"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	//"regexp"
-	//"hyperchain/p2p/peerevent"
-	//"fmt"
 )
 
 // init the package-level logger system,
@@ -81,10 +78,6 @@ func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
 	//TODO change as bidi stream transfer method
 	resp, err := peer.net.Whisper(peer.hostname, in)
 	if err != nil {
-		//if ok,_ := regexp.MatchString(".+decrypt.+?",err.Error());ok{
-			//fmt.Println("update peer sk",peer.info.Hash,peer.p2pHub)
-			//go peer.p2pHub.Post(peerevent.S_UPDATE_SESSION_KEY{NodeHash:peer.info.Hash})
-		//}
 		return nil, err
 	}
 	return resp, nil

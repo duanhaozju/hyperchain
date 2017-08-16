@@ -70,7 +70,7 @@ func (c *Client)s_Closed(e *fsm.Event){
 func (c *Client)working(){
 	go func(c *Client){
 		ticker := time.NewTicker(c.cconf.keepAliveDuration)
-		//counter := 0
+		counter := 0
 		kap := message.NewPkg([]byte("keepalive"),message.ControlType_KeepAlive)
 		for range ticker.C{
 			if c.stateMachine.Current() != c_StatWorking{
@@ -79,15 +79,12 @@ func (c *Client)working(){
 			}
 			_,err := c.Discuss(kap)
 			if err != nil{
-
-				c.stateMachine.Event(c_EventError)
-				return
-				//logger.Warningf("keepalive failed (to %s, times: %d) rsp %s",c.addr,counter,err.Error())
-				//counter++
-				//if counter > c.cconf.keepAliveFailTimes{
-				//	logger.Warningf("keepalive failed and connection change to pending (%s)",c.addr)
-				//	return
-				//}
+				logger.Warningf("keepalive failed (to %s, times: %d) rsp %s",c.addr,counter,err.Error())
+				counter++
+				if counter > c.cconf.keepAliveFailTimes{
+					logger.Warningf("keepalive failed and connection change to pending (%s)",c.addr)
+					return
+				}
 			}else{
 				logger.Debugf("keep alive successed. (%s)",c.hostname)
 			}
