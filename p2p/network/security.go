@@ -19,12 +19,8 @@ type Sec struct {
 	//client
 	clientPriv *crypto.PrivateKey
 
-
 	//server
 	serverPriv *crypto.PrivateKey
-
-
-
 
 }
 

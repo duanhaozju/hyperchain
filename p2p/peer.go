@@ -26,13 +26,13 @@ type Peer struct {
 	local     *info.Info
 	namespace string
 	net       *network.HyperNet
-	p2pHub    event.TypeMux
+	p2pHub    *event.TypeMux
 	chts      *hts.ClientHTS
 	logger *logging.Logger
 }
 
 //NewPeer get a new peer which chat/greeting/whisper functions
-func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, net *network.HyperNet, chts *hts.ClientHTS) (*Peer, error) {
+func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, net *network.HyperNet, chts *hts.ClientHTS,evhub *event.TypeMux) (*Peer, error) {
 	peer := &Peer{
 		info:      info.NewInfo(id, hostname, namespace),
 		namespace: namespace,
@@ -40,6 +40,7 @@ func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, ne
 		net:       net,
 		local:     localInfo,
 		chts:      chts,
+		p2pHub:	 evhub,
 		logger: common.GetLogger(namespace,"p2p"),
 	}
 	if err := peer.clientHello(peer.local.IsOrg(),peer.local.IsRec()); err != nil {

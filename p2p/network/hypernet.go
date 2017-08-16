@@ -77,7 +77,6 @@ func NewHyperNet(config *viper.Viper,identifier string) (*HyperNet,error){
 		return nil,err
 	}
 	// connection configuration
-
 	cconf := NewClientConf(config)
 	rq := make(chan [2]string)
 	net :=  &HyperNet{
@@ -166,12 +165,16 @@ func (hn *HyperNet)reverse() error{
 			hostname := m[0]
 			addr := m[1]
 			if c,ok := h.hostClientMap.Get(hostname);ok{
-				if !c.(*Client).stateMachine.Is(c_StatClosed){
-					c.(*Client).stateMachine.Event(c_EventConnect)
+				if !c.(*Client).stateMachine.Is(c_StatClosed) && !c.(*Client).stateMachine.Is(c_StatWorking)  {
+					logger.Debugf("Adjust the stat for client %s, (pending -> working)", hostname)
+					c.(*Client).stateMachine.Event(c_EventRecovery)
+					continue
+				}else if c.(*Client).stateMachine.Is(c_StatWorking){
+					logger.Debugf("Adjust the stat for client %s, (working -> working)",hostname)
 					continue
 				}
 			}
-			logger.Infof("reverse connect to hostname %s,addr %s \n",hostname,addr)
+			logger.Noticef("reverse connect to hostname %s,addr %s \n",hostname,addr)
 			ia,err := inneraddr.InnerAddrUnSerialize([]byte(addr))
 			if err != nil{
 				logger.Error("cannot unserialize remote addr.")
@@ -291,11 +294,14 @@ func (hypernet *HyperNet)Greeting(hostname string,msg *pb.Message)(*pb.Message,e
 func (hypernet *HyperNet)Whisper(hostname string,msg *pb.Message)(*pb.Message,error){
 	hypernet.msgWrapper(msg)
 	if client,ok := hypernet.hostClientMap.Get(hostname);ok{
+		if !client.(*Client).stateMachine.Is(c_StatWorking){
+			return nil,errors.New(fmt.Sprintf("invalid client stat(%s) hostname(%s)",client.(*Client).stateMachine.Current(),client.(*Client).hostname))
+		}
 			return client.(*Client).Whisper(msg)
 	}else{
 		logger.Info("this host han't been connected. %s",hostname)
+		return nil,errors.New("the host hasn't been initialized.")
 	}
-	return nil,errors.New("the host hasn't been initialized.")
 }
 
 

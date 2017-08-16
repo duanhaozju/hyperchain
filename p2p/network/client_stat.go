@@ -29,7 +29,7 @@ func(c *Client)initState(){
 	c.stateMachine = fsm.NewFSM(
 		c_StatCreated,
 		fsm.Events{
-			{Name: c_EventConnect, Src: []string{c_StatCreated}, Dst: c_StatWorking},
+			{Name: c_EventConnect, Src: []string{c_StatCreated,c_StatPending}, Dst: c_StatWorking},
 			{Name: c_EventError, Src: []string{c_StatWorking}, Dst: c_StatPending},
 			{Name: c_EventRecovery, Src: []string{c_StatPending,c_StatClosed}, Dst: c_StatWorking },
 			{Name: c_EventClose, Src: []string{c_StatPending}, Dst: c_StatClosed},
@@ -79,11 +79,10 @@ func (c *Client)working(){
 			}
 			_,err := c.Discuss(kap)
 			if err != nil{
-				logger.Warningf("keepalive failed (to %s, times: %d)",c.addr,counter)
+				logger.Warningf("keepalive failed (to %s, times: %d) rsp %s",c.addr,counter,err.Error())
 				counter++
 				if counter > c.cconf.keepAliveFailTimes{
 					logger.Warningf("keepalive failed and connection change to pending (%s)",c.addr)
-					c.stateMachine.Event(c_EventError)
 					return
 				}
 			}else{
