@@ -230,7 +230,7 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 
 		go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}) {
 			name := request.Namespace
-			if err := codec.CheckHttpHeaders(name); err != nil {
+			if err := codec.CheckHttpHeaders(name,request.Method); err != nil {
 				log.Errorf("CheckHttpHeaders error: %v", err)
 				result <- codec.CreateErrorResponse(request.Id, request.Namespace, &common.CertError{Message: err.Error()})
 				return

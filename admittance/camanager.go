@@ -10,6 +10,7 @@ import (
 	"hyperchain/common"
 	"github.com/spf13/viper"
 	"fmt"
+	"strings"
 )
 
 var (
@@ -131,7 +132,7 @@ func (cm *CAManager) GenTCert(publicKey string) (string, error) {
 //TCert 需要用为其签发的ECert来验证，但是在没有TCERT的时候只能够用
 //ECert 进行充当TCERT 所以需要用ECA.CERT 即ECA.CA 作为根证书进行验证
 //VerifyTCert verify the TCert is valid or not
-func (cm *CAManager)VerifyTCert(tcertPEM string) (bool, error) {
+func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
 	log := common.GetLogger(common.DEFAULT_NAMESPACE, "api")
 	// if check TCert flag is false, default return true
 	if !cm.checkTCert {
@@ -146,13 +147,20 @@ func (cm *CAManager)VerifyTCert(tcertPEM string) (bool, error) {
 		log.Error("tcert is CA !ERROE!")
 		return false,errFailedVerifySign
 	}
+	if strings.EqualFold("getTCert",method) {
+		log.Critical(method)
+		ef,_ := primitives.VerifyCert(tcert, cm.eCaCert.x509cert)
+		if ef {
+			return true,nil
+		}else {
+			return false, errFailedVerifySign
 
-	ef,_ := primitives.VerifyCert(tcert, cm.eCaCert.x509cert)
-	tf,terr:= primitives.VerifyCert(tcert, cm.tCacert.x509cert)
-	if ef || tf {
+		}
+	}
+	tf,_:= primitives.VerifyCert(tcert, cm.tCacert.x509cert)
+	if tf {
 		return true,nil
 	}else {
-		log.Error(terr)
 		return false, errFailedVerifySign
 
 	}
