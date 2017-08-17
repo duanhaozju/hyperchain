@@ -80,7 +80,6 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*p
 	pbft.K = uint64(10)
 	pbft.logMultiplier = uint64(4)
 	pbft.L = pbft.logMultiplier * pbft.K // log size
-
 	//pbftManage manage consensus events
 	pbft.pbftManager = events.NewManagerImpl(pbft.namespace)
 	pbft.pbftManager.SetReceiver(pbft)
@@ -1211,13 +1210,6 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 			delete(pbft.storeMgr.outstandingReqBatches, cert.digest)
 			delete(pbft.storeMgr.certStore, idx)
 			pbft.persistDelQPCSet(idx.v, idx.n)
-			delete(pbft.nodeMgr.updateCertStore, idx)
-		}
-	}
-
-	for idx := range pbft.vcMgr.vcCertStore {
-		if idx.n <= h {
-			delete(pbft.vcMgr.vcCertStore, idx)
 		}
 	}
 
@@ -1386,7 +1378,7 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 			pbft.logger.Debugf("Replica %d receives validated result whose view is in old view, now view=%v", pbft.id, pbft.view)
 			return nil
 		}
-
+		atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,
 			Timestamp: result.Timestamp,

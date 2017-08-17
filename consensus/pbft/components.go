@@ -39,12 +39,6 @@ type msgCert struct {
 	cStored      bool
 }
 
-type updateCert struct {
-	digest      string
-	sentPrepare bool
-	sentCommit  bool
-	sentExecute bool
-}
 
 //Checkpoint id
 type chkptID struct {
@@ -95,13 +89,6 @@ type uidx struct {
 	n    int64
 	flag bool
 	key  string
-}
-
-type certSet struct {
-	digest      string
-	sentPrepare bool
-	sentCommit  bool
-	sentExecute bool
 }
 
 type Xset map[uint64]string

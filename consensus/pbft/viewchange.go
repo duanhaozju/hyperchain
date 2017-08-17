@@ -31,7 +31,6 @@ type vcManager struct {
 	newViewStore       map[uint64]*NewView       	// track last new-view we received or sent
 	viewChangeStore    map[vcidx]*ViewChange     	// track view-change messages
 	vcResetStore       map[FinishVcReset]bool 	// track vcReset message from others
-	vcCertStore	   map[msgID]*certSet
 	cleanVcTimeout	   time.Duration
 }
 
@@ -63,7 +62,6 @@ func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vc
 	vcm.plist = make(map[uint64]*ViewChange_PQ)
 	vcm.newViewStore = make(map[uint64]*NewView)
 	vcm.viewChangeStore = make(map[vcidx]*ViewChange)
-	vcm.vcCertStore = make(map[msgID]*certSet)
 
 	// clean out-of-data view change message
 	var err error
@@ -653,27 +651,6 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 	}
 	pbft.status.activeState(&pbft.status.vcHandled)
 
-	tmpStore := make(map[msgID]*certSet)
-	for idx, cert := range pbft.storeMgr.certStore {
-		if idx.n > pbft.h {
-			tmpId := msgID{idx.n, pbft.view}
-			tmpCert := &certSet{
-				digest:      cert.digest,
-				sentPrepare: cert.sentPrepare,
-				sentCommit:  cert.sentCommit,
-				sentExecute: cert.sentExecute,
-			}
-			tmpStore[tmpId] = tmpCert
-		}
-	}
-	for idx, cert := range pbft.vcMgr.vcCertStore {
-		if idx.n > pbft.h {
-			tmpId := msgID{idx.n, idx.v}
-			tmpStore[tmpId] = cert
-		}
-	}
-	pbft.vcMgr.vcCertStore = tmpStore
-
 	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
 	pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.batchVdr.preparedCert = make(map[msgID]string)
@@ -795,28 +772,37 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 	}
 }
 
-func (pbft *pbftImpl) rebuildCertStore() {
-	for idx := range pbft.storeMgr.certStore {
-		if idx.v < pbft.view {
-			delete(pbft.storeMgr.certStore, idx)
-			pbft.persistDelQPCSet(idx.v, idx.n)
-		}
+func (pbft *pbftImpl) rebuildCertStoreForVC() {
+	nv, ok := pbft.vcMgr.newViewStore[pbft.view]
+	if !ok {
+		pbft.logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
+		return
 	}
-	for idx, vc := range pbft.vcMgr.vcCertStore {
-		if idx.n > pbft.exec.lastExec {
+	pbft.rebuildCertStore(nv.Xset)
+}
+
+func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
+	for n, d := range xset {
+		if n <= pbft.h || n > pbft.exec.lastExec {
 			continue
 		}
-		cert := pbft.storeMgr.getCert(idx.v, idx.n)
-		batch, ok := pbft.batchVdr.validatedBatchStore[vc.digest]
+		batch, ok := pbft.batchVdr.validatedBatchStore[d]
+		if !ok && d != "" {
+			pbft.logger.Criticalf("Replica %d is missing tx batch for seqNo=%d with digest '%s' for assigned prepare", pbft.id)
+		}
+
+		cert := pbft.storeMgr.getCert(pbft.view, n)
+
 		if pbft.primary(pbft.view) == pbft.id && ok {
+
 			preprep := &PrePrepare{
-				View:             idx.v,
-				SequenceNumber:   idx.n,
-				BatchDigest:      vc.digest,
-				TransactionBatch: batch,
-				ReplicaId:        pbft.id,
+				View:				pbft.view,
+				SequenceNumber: 		n,
+				BatchDigest:			d,
+				TransactionBatch:		batch,
+				ReplicaId:			pbft.id,
 			}
-			cert.digest = vc.digest
+			cert.digest = d
 			cert.prePrepare = preprep
 			cert.validated = true
 
@@ -835,13 +821,12 @@ func (pbft *pbftImpl) rebuildCertStore() {
 			}
 			msg := cMsgToPbMsg(consensusMsg, pbft.id)
 			pbft.helper.InnerBroadcast(msg)
-		}
-		if pbft.primary(pbft.view) != pbft.id && vc.sentPrepare {
+		}else{
 			prep := &Prepare{
-				View:           idx.v,
-				SequenceNumber: idx.n,
-				BatchDigest:    vc.digest,
-				ReplicaId:      pbft.id,
+				View: 			pbft.view,
+				SequenceNumber: 	n,
+				BatchDigest:		d,
+				ReplicaId:		pbft.id,
 			}
 			cert.prepare[*prep] = true
 			cert.sentPrepare = true
@@ -861,36 +846,33 @@ func (pbft *pbftImpl) rebuildCertStore() {
 			msg := cMsgToPbMsg(consensusMsg, pbft.id)
 			pbft.helper.InnerBroadcast(msg)
 		}
-		if vc.sentCommit {
-			cmt := &Commit{
-				View:           idx.v,
-				SequenceNumber: idx.n,
-				BatchDigest:    vc.digest,
-				ReplicaId:      pbft.id,
-			}
-			cert.commit[*cmt] = true
-			cert.sentValidate = true
-			cert.validated = true
-			cert.sentCommit = true
-
-			payload, err := proto.Marshal(cmt)
-			if err != nil {
-				pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
-				pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
-				pbft.batchVdr.currentVid = nil
-				return
-			}
-
-			consensusMsg := &ConsensusMessage{
-				Type:    ConsensusMessage_COMMIT,
-				Payload: payload,
-			}
-			msg := cMsgToPbMsg(consensusMsg, pbft.id)
-			pbft.helper.InnerBroadcast(msg)
+		cmt := &Commit{
+			View:			pbft.view,
+			SequenceNumber: 	n,
+			BatchDigest:		d,
+			ReplicaId:		pbft.id,
 		}
-		if vc.sentExecute {
-			cert.sentExecute = true
+		cert.commit[*cmt] = true
+		cert.sentValidate = true
+		cert.validated = true
+		cert.sentCommit = true
+		cert.sentExecute = true
+
+		payload, err := proto.Marshal(cmt)
+		if err != nil {
+			pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
+			pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
+			pbft.batchVdr.currentVid= nil
+			return
 		}
+		consensusMsg := &ConsensusMessage{
+			Type:    ConsensusMessage_COMMIT,
+			Payload: payload,
+
+		}
+		msg := cMsgToPbMsg(consensusMsg, pbft.id)
+		pbft.helper.InnerBroadcast(msg)
+
 	}
 }
 

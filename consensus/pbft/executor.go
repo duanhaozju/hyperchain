@@ -189,7 +189,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			return nil
 		}
 		pbft.processRequestsDuringViewChange()
-		pbft.rebuildCertStore()
+		pbft.rebuildCertStoreForVC()
 	case VIEW_CHANGE_RESEND_TIMER_EVENT:
 		if atomic.LoadUint32(&pbft.activeView) == 1 {
 			pbft.logger.Warningf("Replica %d had its view change resend timer expire but it's in an active view, this is benign but may indicate a bug", pbft.id)

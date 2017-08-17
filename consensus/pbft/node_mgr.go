@@ -31,7 +31,6 @@ type nodeManager struct {
 	agreeUpdateStore  map[aidx]*AgreeUpdateN		// track agree-update-n message
 	updateStore	  map[uidx]*UpdateN		// track last update-n we received or sent
 	updateTarget	  uidx				// track the new view after update
-	updateCertStore	  map[msgID]*updateCert		// track the local certStore that needed during update
 	finishUpdateStore map[FinishUpdate]bool
 }
 
@@ -39,7 +38,6 @@ func newNodeMgr() *nodeManager {
 	nm := &nodeManager{}
 	nm.addNodeCertStore = make(map[string]*addNodeCert)
 	nm.delNodeCertStore = make(map[string]*delNodeCert)
-	nm.updateCertStore = make(map[msgID]*updateCert)
 	nm.agreeUpdateStore = make(map[aidx]*AgreeUpdateN)
 	nm.updateStore = make(map[uidx]*UpdateN)
 	nm.finishUpdateStore = make(map[FinishUpdate]bool)
@@ -823,27 +821,6 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 	pbft.stopNewViewTimer()
 	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 
-	tmpStore := make(map[msgID]*updateCert)
-	for idx, cert := range pbft.storeMgr.certStore {
-		if idx.n > pbft.h {
-			tmpId := msgID{n: idx.n, v: update.View}
-			tmpCert := &updateCert{
-				digest:      cert.digest,
-				sentPrepare: cert.sentPrepare,
-				sentCommit:  cert.sentCommit,
-				sentExecute: cert.sentExecute,
-			}
-			tmpStore[tmpId] = tmpCert
-		}
-	}
-
-	for idx, cert := range pbft.nodeMgr.updateCertStore {
-		if idx.n > pbft.h {
-			tmpId := msgID{v:update.View, n:idx.n}
-			tmpStore[tmpId] = cert
-		}
-	}
-	pbft.nodeMgr.updateCertStore = tmpStore
 
 	pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.batchVdr.preparedCert = make(map[msgID]string)
@@ -1001,101 +978,13 @@ func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 }
 
 func (pbft *pbftImpl) rebuildCertStoreForUpdate() {
-	for idx := range pbft.storeMgr.certStore {
-		if idx.v < pbft.view {
-			delete(pbft.storeMgr.certStore, idx)
-			pbft.persistDelQPCSet(idx.v, idx.n)
-		}
+
+	update, ok  := pbft.nodeMgr.updateStore[pbft.nodeMgr.updateTarget]
+	if !ok {
+		pbft.logger.Debugf("Primary %d ignoring handleTailAfterUpdate as it could not find target %v in its updateStore", pbft.id, pbft.nodeMgr.updateTarget)
+		return
 	}
-
-	for idx, vc := range pbft.nodeMgr.updateCertStore {
-		if idx.n > pbft.exec.lastExec {
-			continue
-		}
-		cert := pbft.storeMgr.getCert(idx.v, idx.n)
-		batch, ok := pbft.batchVdr.validatedBatchStore[vc.digest]
-		if pbft.primary(pbft.view) == pbft.id && ok {
-			preprep := &PrePrepare{
-				View:             idx.v,
-				SequenceNumber:   idx.n,
-				BatchDigest:      vc.digest,
-				TransactionBatch: batch,
-				ReplicaId:        pbft.id,
-			}
-			cert.digest = vc.digest
-			cert.prePrepare = preprep
-			cert.validated = true
-
-			pbft.persistQSet(preprep)
-
-			payload, err := proto.Marshal(preprep)
-			if err != nil {
-				pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-				pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
-				pbft.batchVdr.currentVid = nil
-				return
-			}
-			consensusMsg := &ConsensusMessage{
-				Type:    ConsensusMessage_PRE_PREPARE,
-				Payload: payload,
-			}
-			msg := cMsgToPbMsg(consensusMsg, pbft.id)
-			pbft.helper.InnerBroadcast(msg)
-		}
-		if pbft.primary(pbft.view) != pbft.id && vc.sentPrepare {
-			prep := &Prepare{
-				View:           idx.v,
-				SequenceNumber: idx.n,
-				BatchDigest:    vc.digest,
-				ReplicaId:      pbft.id,
-			}
-			cert.prepare[*prep] = true
-			cert.sentPrepare = true
-
-			payload, err := proto.Marshal(prep)
-			if err != nil {
-				pbft.logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
-				pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
-				pbft.batchVdr.currentVid = nil
-				return
-			}
-
-			consensusMsg := &ConsensusMessage{
-				Type:    ConsensusMessage_PREPARE,
-				Payload: payload,
-			}
-			msg := cMsgToPbMsg(consensusMsg, pbft.id)
-			pbft.helper.InnerBroadcast(msg)
-		}
-		if vc.sentCommit {
-			cmt := &Commit{
-				View:           idx.v,
-				SequenceNumber: idx.n,
-				BatchDigest:    vc.digest,
-				ReplicaId:      pbft.id,
-			}
-			cert.commit[*cmt] = true
-			cert.sentValidate = true
-			cert.validated = true
-			cert.sentCommit = true
-
-			payload, err := proto.Marshal(cmt)
-			if err != nil {
-				pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
-				pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
-				pbft.batchVdr.currentVid = nil
-				return
-			}
-
-			consensusMsg := &ConsensusMessage{
-				Type:    ConsensusMessage_COMMIT,
-				Payload: payload,
-			}
-			msg := cMsgToPbMsg(consensusMsg, pbft.id)
-			pbft.helper.InnerBroadcast(msg)
-		}
-		cert.sentExecute = true
-	}
+	pbft.rebuildCertStore(update.Xset)
 
 }
 
