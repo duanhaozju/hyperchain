@@ -873,6 +873,7 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 		if pbft.exec.lastExec == *pbft.recoveryMgr.recoveryToSeqNo {
 			// This is a somewhat subtle situation, we are behind by checkpoint, but others are just on chkpt.
 			// Hence, no need to fetch preprepare, prepare, commit
+			pbft.fetchRecoveryPQC()
 			go pbft.pbftEventQueue.Push(&LocalEvent{
 				Service:   RECOVERY_SERVICE,
 				EventType: RECOVERY_DONE_EVENT,

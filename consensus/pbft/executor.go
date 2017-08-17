@@ -228,6 +228,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 		seqNo = event.SeqNo
 		if pbft.status.getState(&pbft.status.inRecovery) {
 			if seqNo - 1 == *pbft.recoveryMgr.recoveryToSeqNo {
+				pbft.fetchRecoveryPQC()
 				return &LocalEvent{
 					Service:   RECOVERY_SERVICE,
 					EventType: RECOVERY_DONE_EVENT,
