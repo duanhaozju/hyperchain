@@ -10,6 +10,9 @@ import (
 	"hyperchain/common"
 	"github.com/spf13/viper"
 	"fmt"
+	"strings"
+	"hyperchain/hyperdb"
+	"encoding/asn1"
 )
 
 var (
@@ -20,6 +23,8 @@ var (
 	errDERToPEM = errors.New("cannot convert the der format cert into pem format.")
 	errFailedVerifySign = errors.New("Verify the Cert Signature failed, please use the correctly certificate")
 )
+
+const CertKey string = "tcerts"
 
 type cert struct {
 	x509cert *x509.Certificate
@@ -131,7 +136,8 @@ func (cm *CAManager) GenTCert(publicKey string) (string, error) {
 //TCert 需要用为其签发的ECert来验证，但是在没有TCERT的时候只能够用
 //ECert 进行充当TCERT 所以需要用ECA.CERT 即ECA.CA 作为根证书进行验证
 //VerifyTCert verify the TCert is valid or not
-func (cm *CAManager)VerifyTCert(tcertPEM string) (bool, error) {
+func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
+	log := common.GetLogger(common.DEFAULT_NAMESPACE, "api")
 	// if check TCert flag is false, default return true
 	if !cm.checkTCert {
 		return true, nil
@@ -142,17 +148,53 @@ func (cm *CAManager)VerifyTCert(tcertPEM string) (bool, error) {
 		return false, errParseCert
 	}
 	if tcert.IsCA == true{
+		log.Error("tcert is CA !ERROE!")
 		return false,errFailedVerifySign
 	}
 
-	ef,_ := primitives.VerifyCert(tcert, cm.eCaCert.x509cert)
-	tf,_ := primitives.VerifyCert(tcert, cm.tCacert.x509cert)
-	if ef || tf {
-		return true,nil
-	}else {
-		return false, errFailedVerifySign
+	//生成TCERT METHOD
+	if strings.EqualFold("getTCert",method) {
+		ef,_ := primitives.VerifyCert(tcert, cm.eCaCert.x509cert)
+		if ef {
+			return true,nil
+		}else {
+			return false, errFailedVerifySign
 
+		}
 	}
+
+	//其他METHOD
+	db,err := hyperdb.GetDBDatabase()
+	if err!=nil {
+		log.Error(err)
+		return false,&common.CertError{Message: "Get Database failed"};
+	}
+	certs,err := db.Get([]byte(CertKey))
+	if err!=nil {
+		log.Error("This node has not gen tcert:",err)
+		return  false,&common.CertError{Message: "This node has not gen tcert!"};
+	}
+	regs := struct {
+		Tcerts []string
+	}{}
+	_,err = asn1.Unmarshal(certs,&regs)
+	if err!=nil {
+		log.Error(err)
+		return  false,&common.CertError{Message: "UnMarshal cert lists failed"};
+	}
+	for _,v := range regs.Tcerts  {
+		if strings.EqualFold(v,tcertPEM) {
+			tf,_:= primitives.VerifyCert(tcert, cm.tCacert.x509cert)
+			if tf {
+				return true,nil
+			}else {
+				return false, errFailedVerifySign
+
+			}
+		}
+	}
+	log.Error("Node has not gen this Tcert!Please check it")
+	return false, errFailedVerifySign
 }
 
 // verify the ecert is valid or not

@@ -90,7 +90,7 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 }
 
 // CheckHttpHeaders will check http header.
-func (c *jsonCodec) CheckHttpHeaders(namespace string) common.RPCError {
+func (c *jsonCodec) CheckHttpHeaders(namespace string,method string) common.RPCError {
 	ns := c.nr.GetNamespaceByName(namespace)
 	if ns == nil {
 		return &common.NamespaceNotFound{Name: namespace}
@@ -131,7 +131,7 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string) common.RPCError {
 		return &common.UnauthorizedError{}
 	}
 
-	verifyTcert, err 	:= cm.VerifyTCert(tcertPem)
+	verifyTcert, err 	:= cm.VerifyTCert(tcertPem,method)
 	if verifyTcert == false || err != nil {
 		log.Error("Fail to verify tcert!",err)
 		return &common.UnauthorizedError{}

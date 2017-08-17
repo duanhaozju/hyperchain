@@ -26,7 +26,7 @@ type Server struct {
 // multiple go-routines concurrently.
 type ServerCodec interface {
 	// Check http header
-	CheckHttpHeaders(namespace string) common.RPCError
+	CheckHttpHeaders(namespace string,method string) common.RPCError
 	// Read next request
 	ReadRequestHeaders(options CodecOption) ([]*common.RPCRequest, bool, common.RPCError)
 	// Assemble success response, expects response id and payload
