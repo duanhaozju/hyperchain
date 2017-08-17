@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"hyperchain/core/vm/jcee/go"
 	"os"
+	"bytes"
 )
 const (
 	BinHome  = "hyperjvm/bin"
@@ -75,10 +76,18 @@ func (mgr *JvmManager) startJvmServer() error {
 	if err != nil {
 		return err
 	}
+
+	if !common.FileExist(binHome) {
+		return fmt.Errorf("Hyperjvm bin is not found, path: %s is not existed!", binHome)
+	}
+
 	cmd := exec.Command(path.Join(binHome, StartShell), strconv.Itoa(mgr.conf.GetInt(common.JVM_PORT)), strconv.Itoa(mgr.conf.GetInt(common.LEDGER_PORT)))
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
 	err = cmd.Run()
 	if err != nil {
-		mgr.logger.Error(err)
+		mgr.logger.Error(out.String())
 		return err
 	}
 	mgr.logger.Info("execute start hyperjvm command successful")
