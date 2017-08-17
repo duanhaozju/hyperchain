@@ -74,7 +74,7 @@ func newTransactionStore() *transactionStore {
 // =============================================================================
 // check if a tx is duplicate in a block
 func (pbft *pbftImpl) checkDuplicateInBlock(tx *types.Transaction, txStore *transactionStore) bool {
-	key := hex.EncodeToString(tx.TransactionHash)
+	key := byteToString(tx.TransactionHash)
 	return txStore.has(key)
 }
 
