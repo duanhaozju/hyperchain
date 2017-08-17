@@ -601,7 +601,7 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 	}
 
 	if pbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
-		pbft.stopNewViewTimer()
+
 		idx := msgID{v: commit.View, n: commit.SequenceNumber}
 		if !cert.sentExecute && cert.validated {
 
@@ -615,7 +615,6 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 			}
 		} else {
 			pbft.logger.Debugf("Replica %d committed for seqNo: %d, but sentExecute: %v, validated: %v", pbft.id, commit.SequenceNumber, cert.sentExecute, cert.validated)
-			pbft.startTimerIfOutstandingRequests()
 		}
 	}
 
@@ -644,6 +643,7 @@ func (pbft *pbftImpl) commitTransactions() {
 				pbft.persistCSet(idx.v, idx.n)
 				isPrimary, _ := pbft.isPrimary()
 				atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
+				pbft.stopNewViewTimer()
 				pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 			}
 			cert.sentExecute = true
