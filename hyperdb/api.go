@@ -90,7 +90,7 @@ func InitDatabase(conf *common.Config, namespace string) error {
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
 	}
 
-	db1, err1 := NewDatabase(conf, "Consensus", 0001, namespace)
+	db1, err1 := NewDatabase(conf, "consensus", 0001, namespace)
 
 	if err1 != nil {
 		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
