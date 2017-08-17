@@ -277,7 +277,6 @@ func (pbft *pbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 		}
 		return pbft.processUpdateN()
 	case NODE_MGR_UPDATEDN_EVENT:
-		delete(pbft.nodeMgr.updateStore, pbft.nodeMgr.updateTarget)
 		pbft.startTimerIfOutstandingRequests()
 		pbft.vcMgr.vcResendCount = 0
 		pbft.nodeMgr.finishUpdateStore = make(map[FinishUpdate]bool)

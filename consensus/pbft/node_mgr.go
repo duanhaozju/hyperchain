@@ -404,7 +404,7 @@ func (pbft *pbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) events.Event {
 	if int(agree.N) == pbft.N && agree.View == pbft.view {
 		pbft.logger.Debugf("Replica %d alreay finish update for N=%d/view=%d", pbft.id, pbft.N, pbft.view)
 	}
-
+	delete(pbft.nodeMgr.updateStore, pbft.nodeMgr.updateTarget)
 	pbft.stopNewViewTimer()
 	atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 1)
 
@@ -447,7 +447,7 @@ func (pbft *pbftImpl) sendAgreeUpdateNforDel(key string) error {
 		pbft.logger.Errorf("Primary %d has not done with delnode for key=%s", pbft.id, key)
 		return nil
 	}
-
+	delete(pbft.nodeMgr.updateStore, pbft.nodeMgr.updateTarget)
 	pbft.stopNewViewTimer()
 	atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 1)
 
@@ -981,7 +981,7 @@ func (pbft *pbftImpl) rebuildCertStoreForUpdate() {
 
 	update, ok  := pbft.nodeMgr.updateStore[pbft.nodeMgr.updateTarget]
 	if !ok {
-		pbft.logger.Debugf("Primary %d ignoring handleTailAfterUpdate as it could not find target %v in its updateStore", pbft.id, pbft.nodeMgr.updateTarget)
+		pbft.logger.Debugf("Primary %d ignoring rebuildCertStore as it could not find target %v in its updateStore", pbft.id, pbft.nodeMgr.updateTarget)
 		return
 	}
 	pbft.rebuildCertStore(update.Xset)

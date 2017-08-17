@@ -735,7 +735,7 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 
 	nv, ok := pbft.vcMgr.newViewStore[pbft.view]
 	if !ok {
-		pbft.logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
+		pbft.logger.Debugf("Replica %d ignoring rebuildCertStore as it could not find view %d in its newViewStore", pbft.id, pbft.view)
 		return nil
 	}
 
