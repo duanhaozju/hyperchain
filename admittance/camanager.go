@@ -183,7 +183,6 @@ func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
 		return  false,&common.CertError{Message: "UnMarshal cert lists failed"};
 	}
 	for _,v := range regs.Tcerts  {
-		log.Critical(v)
 		if strings.EqualFold(v,tcertPEM) {
 			tf,_:= primitives.VerifyCert(tcert, cm.tCacert.x509cert)
 			if tf {
