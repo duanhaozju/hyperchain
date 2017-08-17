@@ -7,6 +7,7 @@ import (
 	"hyperchain/manager"
 	"hyperchain/manager/event"
 	"hyperchain/p2p"
+	"fmt"
 )
 
 type NodeArgs struct {
@@ -57,7 +58,7 @@ func (node *Node) DeleteVP(args NodeArgs) (string, error) {
 	go node.eh.GetEventObject().Post(event.DelVPEvent{
 		Payload: []byte(args.NodeHash),
 	})
-	return "successful request to delete vp node", nil
+	return fmt.Sprintf("successful request to delete vp node, hash %s", args.NodeHash), nil
 }
 
 func (node *Node) DeleteNVP(args NodeArgs) (string, error) {
