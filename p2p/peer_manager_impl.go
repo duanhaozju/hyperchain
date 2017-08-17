@@ -298,13 +298,12 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 		}
 		pmgr.logger.Critical("SEND TO NVP=>>",pmgr.node.info.Hash)
 		m := pb.NewMsg(pb.MsgType_NVPDELETE,common.Hex2Bytes(pmgr.node.info.Hash))
-		rsp,err := peer.Chat(m)
+		_,err := peer.Chat(m)
 		if err != nil{
 			pmgr.logger.Errorf("cannot delete NVP peer, reason: %s ",err.Error())
-		}
-		if rsp != nil && rsp.Payload != nil{
-			pmgr.logger.Infof("delete NVP peer, response: %s ",string(rsp.Payload))
+		}else{
 			pmgr.peerPool.DeleteNVPPeer(conev.Hash)
+			pmgr.logger.Noticef("delete NVP peer, hash %s, vp pool size(%d) nvp pool size(%d)",conev.Hash,pmgr.peerPool.GetVPNum(),pmgr.peerPool.GetNVPNum())
 		}
 	}
 	case peerevent.S_DELETE_VP:{
@@ -314,8 +313,11 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 		}
 		conev := ev.(peerevent.S_DELETE_VP)
 		pmgr.logger.Noticef("GOT a EV_DELETE_VP %s",conev.Hash)
-		pmgr.peerPool.DeleteVPPeerByHash(conev.Hash)
-		if !pmgr.isVP{
+		err := pmgr.peerPool.DeleteVPPeerByHash(conev.Hash)
+		if err != nil{
+			pmgr.logger.Errorf("cannot delete vp peer, reason: %s",err.Error())
+		}
+		if err == nil && !pmgr.isVP{
 				if pmgr.peerPool.GetVPNum() == 0{
 					pmgr.logger.Warning("ALL Validate Peer are disconnect with this Non-Validate Peer")
 					pmgr.logger.Warning("This Peer Will quit automaticlly after 3 seconds")
