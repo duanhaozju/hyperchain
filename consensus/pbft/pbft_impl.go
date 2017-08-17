@@ -353,6 +353,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 		// check for other PRE-PREPARE for same digest, but different seqNo
 		if pbft.storeMgr.existedDigest(n, pbft.view, digest) {
 			pbft.deleteExistedTx(digest)
+			atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
 			continue
 		}
 
