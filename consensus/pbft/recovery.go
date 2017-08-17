@@ -662,10 +662,6 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 
 	pbft.logger.Debugf("Replica %d now recvRecoveryReturnPQC from replica %d, return_pqc %v", pbft.id, PQCInfo.ReplicaId, PQCInfo)
 
-	if !pbft.status.getState(&pbft.status.inRecovery) {
-		pbft.logger.Warningf("Replica %d receive recoveryReturnQPC, but it's not in recovery", pbft.id)
-		return nil
-	}
 
 	sender := PQCInfo.ReplicaId
 	if _, exist := pbft.recoveryMgr.rcPQCSenderStore[sender]; exist {

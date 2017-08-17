@@ -677,13 +677,7 @@ func (pbft *pbftImpl) primaryProcessUpdateN(initialCp ViewChange_C, replicas []r
 	if pbft.exec.currentExec != nil {
 		speculativeLastExec = *pbft.exec.currentExec
 	}
-	// If we have not reached the sequence number, check to see if we can reach it without state transfer
-	// In general, executions are better than state transfer
-	if speculativeLastExec < initialCp.SequenceNumber {
-		if pbft.canExecuteToTarget(speculativeLastExec, initialCp) {
-			return nil
-		}
-	}
+
 
 	if pbft.h < initialCp.SequenceNumber {
 		pbft.moveWatermarks(initialCp.SequenceNumber)
@@ -755,15 +749,6 @@ func (pbft *pbftImpl) processUpdateN() events.Event {
 		speculativeLastExec = *pbft.exec.currentExec
 	}
 
-	// If we have not reached the sequence number, check to see if we can reach it without state transfer
-	// In general, executions are better than state transfer
-	if speculativeLastExec < cp.SequenceNumber {
-		if speculativeLastExec < cp.SequenceNumber {
-			if pbft.canExecuteToTarget(speculativeLastExec, cp) {
-				return nil
-			}
-		}
-	}
 	// --
 	msgList := pbft.assignSequenceNumbersForUpdate(update.Aset, cp.SequenceNumber)
 

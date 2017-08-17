@@ -454,13 +454,6 @@ func (pbft *pbftImpl) processNewView() events.Event {
 		speculativeLastExec = *pbft.exec.currentExec
 	}
 
-	// If we have not reached the sequence number, check to see if we can reach it without state transfer
-	// In general, executions are better than state transfer
-	if speculativeLastExec < cp.SequenceNumber {
-		if pbft.canExecuteToTarget(speculativeLastExec, cp) {
-			return nil
-		}
-	}
 	// --
 	msgList := pbft.assignSequenceNumbers(nv.Vset, cp.SequenceNumber)
 
@@ -513,13 +506,6 @@ func (pbft *pbftImpl) primaryProcessNewView(initialCp ViewChange_C, replicas []r
 	if pbft.exec.currentExec != nil {
 		speculativeLastExec = *pbft.exec.currentExec
 	}
-	// If we have not reached the sequence number, check to see if we can reach it without state transfer
-	// In general, executions are better than state transfer
-	if speculativeLastExec < initialCp.SequenceNumber {
-		if pbft.canExecuteToTarget(speculativeLastExec, initialCp) {
-			return nil
-		}
-	}
 
 	if pbft.h < initialCp.SequenceNumber {
 		pbft.moveWatermarks(initialCp.SequenceNumber)
@@ -568,51 +554,6 @@ func (vcm *vcManager) updateViewChangeSeqNo(seqNo, K, id uint64) {
 	//logger.Debugf("Replica %d updating view change sequence number to %d", id, vcm.viewChangeSeqNo)
 }
 
-func (pbft *pbftImpl) canExecuteToTarget(specLastExec uint64, initialCp ViewChange_C) bool {
-
-	canExecuteToTarget := true
-outer:
-	for seqNo := specLastExec + 1; seqNo <= initialCp.SequenceNumber; seqNo++ {
-		found := false
-		for idx, cert := range pbft.storeMgr.certStore {
-			if idx.n != seqNo {
-				continue
-			}
-
-			quorum := 0
-			for p := range cert.commit {
-				// Was this committed in the previous view
-				if p.View == idx.v && p.SequenceNumber == seqNo {
-					quorum++
-				}
-			}
-
-			if quorum < pbft.commonCaseQuorum() {
-				pbft.logger.Debugf("Replica %d missing quorum of commit certificate for seqNo=%d, only has %d of %d", pbft.id, seqNo, quorum, pbft.commonCaseQuorum())
-				continue
-			}
-
-			found = true
-			break
-		}
-
-		if !found {
-			canExecuteToTarget = false
-			pbft.logger.Debugf("Replica %d missing commit certificate for seqNo=%d", pbft.id, seqNo)
-			break outer
-		}
-
-	}
-
-	if canExecuteToTarget {
-		pbft.nvInitialSeqNo = initialCp.SequenceNumber
-		pbft.logger.Debugf("Replica %d needs to process a new view, but can execute to the checkpoint seqNo %d, delaying processing of new view", pbft.id, initialCp.SequenceNumber)
-	} else {
-		pbft.nvInitialSeqNo = 0
-		pbft.logger.Infof("Replica %d cannot execute to the view change checkpoint with seqNo %d", pbft.id, initialCp.SequenceNumber)
-	}
-	return canExecuteToTarget
-}
 
 func (pbft *pbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing bool) {
 	newReqBatchMissing = false

@@ -34,7 +34,7 @@ type pbftImpl struct {
 	seqNo          uint64                       // PBFT "n", strictly monotonic increasing sequence number
 	view           uint64                       // current view
 	nvInitialSeqNo uint64                       // initial seqNo in a new view
-	cachedlimit    int
+	cachetx	       int
 
 	status         PbftStatus                   // basic status of pbft
 
@@ -80,6 +80,9 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*p
 	pbft.K = uint64(10)
 	pbft.logMultiplier = uint64(4)
 	pbft.L = pbft.logMultiplier * pbft.K // log size
+	pbft.cachetx = config.GetInt("consensus.pbft.cachetx")
+	pbft.logger.Noticef("Replica %d set cachetx %d", pbft.id, pbft.cachetx)
+
 	//pbftManage manage consensus events
 	pbft.pbftManager = events.NewManagerImpl(pbft.namespace)
 	pbft.pbftManager.SetReceiver(pbft)
@@ -349,7 +352,6 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 		// check for other PRE-PREPARE for same digest, but different seqNo
 		if pbft.storeMgr.existedDigest(n, pbft.view, digest) {
 			pbft.deleteExistedTx(digest)
-			pbft.stopNewViewTimer()
 			continue
 		}
 
@@ -357,7 +359,6 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because " +
 				"batch seqNo=%d is out of sequence numbers", pbft.id, digest, n)
 			//ogger.Debugf("Replica %d broadcast FinishUpdate", pbft.id)
-			pbft.stopNewViewTimer()
 			continue
 		}
 
@@ -397,7 +398,6 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 		pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
 		pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
 		pbft.batchVdr.currentVid = nil
-		pbft.stopNewViewTimer()
 		return
 	}
 
@@ -643,6 +643,7 @@ func (pbft *pbftImpl) commitTransactions() {
 				pbft.logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 				pbft.persistCSet(idx.v, idx.n)
 				isPrimary, _ := pbft.isPrimary()
+				atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
 				pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 			}
 			cert.sentExecute = true
@@ -762,7 +763,11 @@ func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) events.Event {
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 ||
 		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
-		pbft.status.checkStatesOr(&pbft.status.inNegoView, &pbft.status.inRecovery) {
+		pbft.status.checkStatesOr(&pbft.status.inNegoView) {
+		if pbft.reqStore.outstandingRequests.Len() >= pbft.cachetx {
+			return nil
+		}
+
 		pbft.reqStore.storeOutstanding(tx)
 		return nil
 	}
@@ -1379,7 +1384,6 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 			pbft.logger.Debugf("Replica %d receives validated result whose view is in old view, now view=%v", pbft.id, pbft.view)
 			return nil
 		}
-		atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,
 			Timestamp: result.Timestamp,

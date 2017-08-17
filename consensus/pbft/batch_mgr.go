@@ -307,7 +307,7 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 
 	pbft.logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d, batch size: %d", pbft.id, pbft.view, pbft.batchVdr.vid, txStore.Len())
 	pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout + pbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
-		fmt.Sprintf("new reuqest batch for view=%d/vid=%d", pbft.view, pbft.batchVdr.vid))
+		fmt.Sprintf("new request batch for view=%d/vid=%d", pbft.view, pbft.batchVdr.vid))
 	pbft.helper.ValidateBatch(newBatch.Batch, newBatch.Timestamp, n, pbft.view, true)
 
 }
