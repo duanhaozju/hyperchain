@@ -174,7 +174,6 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 	case VIEW_CHANGED_EVENT:
 		pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)
 		pbft.startTimerIfOutstandingRequests()
-		pbft.vcMgr.vcResendCount = 0
 		pbft.vcMgr.vcResetStore = make(map[FinishVcReset]bool)
 		primary := pbft.primary(pbft.view)
 		pbft.helper.InformPrimary(primary)

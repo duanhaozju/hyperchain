@@ -663,6 +663,7 @@ func (pbft *pbftImpl) commitTransactions() {
 				isPrimary, _ := pbft.isPrimary()
 				atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
 				pbft.stopNewViewTimer()
+				pbft.vcMgr.vcResendCount = 0
 				pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 			}
 			cert.sentExecute = true
