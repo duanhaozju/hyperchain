@@ -422,7 +422,9 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 		return nil
 	}
 
-	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
+	if preprep.SequenceNumber > pbft.exec.lastExec {
+		pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
+	}
 
 	cert := pbft.storeMgr.getCert(preprep.View, preprep.SequenceNumber)
 
@@ -496,9 +498,17 @@ func (pbft *pbftImpl) recvPrepare(prep *Prepare) error {
 	ok := cert.prepare[*prep]
 
 	if ok {
-		pbft.logger.Warningf("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
-			prep.ReplicaId, prep.View, prep.SequenceNumber)
-		return nil
+		if pbft.status.checkStatesOr(&pbft.status.inRecovery)|| prep.SequenceNumber <= pbft.exec.lastExec {
+			// this is normal when in recovery
+			pbft.logger.Debugf("Replica %d in recovery, received duplicate prepare from replica %d, view=%d/seqNo=%d",
+				pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
+			return nil
+		} else {
+			// this is abnormal in common case
+			pbft.logger.Warningf("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
+				prep.ReplicaId, prep.View, prep.SequenceNumber)
+			return nil
+		}
 	}
 
 	cert.prepare[*prep] = true
@@ -589,9 +599,18 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 	ok := cert.commit[*commit]
 
 	if ok {
-		pbft.logger.Warningf("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
-			commit.ReplicaId, commit.View, commit.SequenceNumber)
-		return nil
+		if pbft.status.checkStatesOr(&pbft.status.inRecovery) || commit.SequenceNumber <= pbft.exec.lastExec {
+			// this is normal when in recovery
+			pbft.logger.Warningf("Replica %d in recovery, received commit from replica %d, view=%d/seqNo=%d",
+				pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
+			return nil
+		} else {
+			// this is abnormal in common case
+			pbft.logger.Warningf("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
+				commit.ReplicaId, commit.View, commit.SequenceNumber)
+			return nil
+		}
+
 	}
 
 	cert.commit[*commit] = true
