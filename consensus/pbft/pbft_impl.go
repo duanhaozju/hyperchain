@@ -343,6 +343,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			pbft.logger.Warningf("Replica %d is primary, receives validated result %s that is empty",
 				pbft.id, digest)
 			pbft.deleteExistedTx(digest)
+			atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
 			pbft.stopNewViewTimer()
 			continue
 		}
