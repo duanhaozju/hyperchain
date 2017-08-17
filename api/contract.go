@@ -122,7 +122,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 			SnapshotId:  args.SnapshotId,
 		})
 	}
-	log.Noticef("Receive contract tx, txHash = %x", tx.GetTransactionHash())
+	log.Noticef("Receive contract tx, txHash = %v", tx.GetTransactionHash())
 	return tx.GetHash(), nil
 
 }

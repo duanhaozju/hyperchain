@@ -717,6 +717,7 @@ func (pbft *pbftImpl) rebuildCertStoreForVC() {
 }
 
 func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
+	// rebuild certStore according to Xset
 	for n, d := range xset {
 		if n <= pbft.h || n > pbft.exec.lastExec {
 			continue
@@ -807,6 +808,18 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 		}
 		msg := cMsgToPbMsg(consensusMsg, pbft.id)
 		pbft.helper.InnerBroadcast(msg)
+		// rebuild pqlist according to xset
+		pbft.vcMgr.qlist = make(map[qidx]*ViewChange_PQ)
+		pbft.vcMgr.plist = make(map[uint64]*ViewChange_PQ)
+
+		id := qidx{d, n}
+		pqItem := &ViewChange_PQ{
+			SequenceNumber:	n,
+			BatchDigest:	d,
+			View:			pbft.view,
+		}
+		pbft.vcMgr.qlist[id] = pqItem
+		pbft.vcMgr.plist[n] = pqItem
 
 	}
 }
