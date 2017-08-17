@@ -598,13 +598,7 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 	pbft.storeMgr.committedCert = make(map[msgID]string)
 	prevPrimary := pbft.primary(pbft.view - 1)
 	if prevPrimary == pbft.id {
-		pbft.rebuildDuplicator()
-		if len(pbft.batchMgr.batchStore) > 0 {
-			for _, tx := range pbft.batchMgr.batchStore {
-				go pbft.reqEventQueue.Push(tx)
-			}
-			pbft.batchMgr.batchStore = nil
-		}
+		pbft.rebuildDuplicator(nv.Xset)
 	} else {
 		pbft.clearDuplicator()
 	}
