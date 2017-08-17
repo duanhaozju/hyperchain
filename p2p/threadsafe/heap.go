@@ -118,17 +118,17 @@ func ( h *Heap)Remove(priority int) interface{} {
 func (h *Heap)Duplicate() *Heap {
 	h.rwlock.Lock()
 	defer h.rwlock.Unlock()
-	h = new(Heap)
-	h.rwlock = new(sync.RWMutex)
-	h.heap = make([]*heapItem, 0)
+	temph := new(Heap)
+	temph.rwlock = new(sync.RWMutex)
+	temph.heap = make([]*heapItem, 0)
 	for _, item := range h.heap {
 		tmpItem := &heapItem{
 			value:item.value,
 			priority:item.priority,
 		}
-		h.heap = append(h.heap, tmpItem)
+		temph.heap = append(temph.heap, tmpItem)
 	}
-	return h
+	return temph
 }
 
 //time complex is O(logn)

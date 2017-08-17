@@ -164,7 +164,6 @@ func (pool *PeersPool)TryDelete(selfHash, delHash string) (routerhash string, se
 	for _, item := range temppool.Sort() {
 		tempPeer := item.(*Peer)
 		if tempPeer.info.Hash == delHash {
-			pool.logger.Critical("delete peer => %+v", tempPeer.info)
 			delid = tempPeer.info.Id
 		}
 	}
@@ -197,7 +196,7 @@ func (pool *PeersPool)TryDelete(selfHash, delHash string) (routerhash string, se
 	}
 	routerhash = common.ToHex(utils.Sha3(b))
 	deleteid = uint64(delid)
-	pool.logger.Criticalf("r %s,selfid: %d,deleteid: %d,e: %s", routerhash, selfnewid, deleteid, err)
+	pool.logger.Criticalf("router hash %s,self id: %d,delete id: %d,e: %v", routerhash, selfnewid, deleteid, err)
 	return
 
 }
