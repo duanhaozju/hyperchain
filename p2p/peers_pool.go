@@ -167,7 +167,7 @@ func (pool *PeersPool)TryDelete(selfHash, delHash string) (routerhash string, se
 			delid = tempPeer.info.Id
 		}
 	}
-	delitem := temppool.Remove(delid - 1)
+	delitem := temppool.Remove(delid)
 	if delitem == nil {
 		err = errors.New("delete failed, the item not exist.")
 	}
@@ -207,7 +207,7 @@ func (pool *PeersPool)DeleteVPPeer(id int) error {
 	if pool.vpPool == nil {
 		return nil
 	}
-	v := pool.vpPool.Remove(id - 1)
+	v := pool.vpPool.Remove(id)
 	if v == nil {
 		return errors.New("cannot remove the peer, the peer is not exist.")
 	}
@@ -242,6 +242,10 @@ func (pool *PeersPool)DeleteNVPPeer(hash string) error {
 
 func (pool *PeersPool)GetVPNum() int {
 	return len(pool.vpPool.Sort())
+}
+
+func (pool *PeersPool)GetNVPNum() int {
+	return pool.nvpPool.Count()
 }
 
 func (pool *PeersPool)Serlize() ([]byte, error) {
