@@ -10,6 +10,7 @@ import (
 
 	"hyperchain/common"
 	"fmt"
+	"sync/atomic"
 )
 
 // batchManager manage basic batch issues
@@ -28,7 +29,7 @@ type batchValidator struct {
 	vid                 	uint64                       // track the validate sequence number
 	lastVid             	uint64                       // track the last validate batch seqNo
 	currentVid          	*uint64                      // track the current validate batch seqNo
-
+	validateCount		int32
 	validatedBatchStore 	map[string]*TransactionBatch // track the validated transaction batch
 	cacheValidatedBatch 	map[string]*cacheBatch       // track the cached validated batch
 
@@ -125,7 +126,7 @@ func newBatchValidator(pbft *pbftImpl) *batchValidator {
 	bv.validatedBatchStore = make(map[string]*TransactionBatch)
 	bv.cacheValidatedBatch = make(map[string]*cacheBatch)
 	bv.preparedCert = make(map[msgID]string)
-
+	atomic.StoreInt32(&bv.validateCount, 0)
 	bv.pbftId = pbft.id
 	return bv
 }
@@ -135,7 +136,6 @@ func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 	bm := &batchManager{}
 	bm.batchEventsManager = events.NewManagerImpl(conf.GetString(common.NAMESPACE))
 	bm.batchEventsManager.SetReceiver(pbft)
-
 	pbft.reqEventQueue = events.GetQueue(bm.batchEventsManager.Queue())
 
 	bm.batchSize = conf.GetInt(PBFT_BATCH_SIZE)
@@ -270,11 +270,7 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 		return
 	}
 
-	// ignore too many validated batch as we limited the high watermark in send pre-prepare
-	if len(pbft.batchVdr.cacheValidatedBatch) > int(pbft.L) {
-		pbft.logger.Warningf("Primary %d has cached %d validated batch, exceed %d!", pbft.id, len(pbft.batchVdr.cacheValidatedBatch), pbft.L)
-		return
-	}
+
 
 	// for keep the previous vid before viewchange
 	var n uint64
@@ -284,7 +280,18 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 		n = pbft.batchVdr.vid + 1
 	}
 
+	// ignore too many validated batch as we limited the high watermark in send pre-prepare
+
+	count := atomic.LoadInt32(&pbft.batchVdr.validateCount)
+	if uint64(count) >= pbft.L {
+		pbft.logger.Warningf("Primary %d try to validate batch for vid=%d, but we had already send %d ValidateEvent", pbft.id, n, count)
+		return
+	}
+
 	pbft.batchVdr.vid = n
+
+	atomic.AddInt32(&pbft.batchVdr.validateCount, 1)
+
 	pbft.dupLock.Lock()
 	pbft.duplicator[n] = txStore
 	pbft.dupLock.Unlock()
@@ -300,7 +307,7 @@ func (pbft *pbftImpl) primaryValidateBatch(txBatch *TransactionBatch, vid uint64
 
 	pbft.logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d, batch size: %d", pbft.id, pbft.view, pbft.batchVdr.vid, txStore.Len())
 	pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout + pbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
-		fmt.Sprintf("new reuqest batch for view=%d/vid=%d", pbft.view, pbft.batchVdr.vid))
+		fmt.Sprintf("new request batch for view=%d/vid=%d", pbft.view, pbft.batchVdr.vid))
 	pbft.helper.ValidateBatch(newBatch.Batch, newBatch.Timestamp, n, pbft.view, true)
 
 }

@@ -31,7 +31,6 @@ type vcManager struct {
 	newViewStore       map[uint64]*NewView       	// track last new-view we received or sent
 	viewChangeStore    map[vcidx]*ViewChange     	// track view-change messages
 	vcResetStore       map[FinishVcReset]bool 	// track vcReset message from others
-	vcCertStore	   map[msgID]*certSet
 	cleanVcTimeout	   time.Duration
 }
 
@@ -63,7 +62,6 @@ func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vc
 	vcm.plist = make(map[uint64]*ViewChange_PQ)
 	vcm.newViewStore = make(map[uint64]*NewView)
 	vcm.viewChangeStore = make(map[vcidx]*ViewChange)
-	vcm.vcCertStore = make(map[msgID]*certSet)
 
 	// clean out-of-data view change message
 	var err error
@@ -267,7 +265,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 		pbft.timerMgr.stopTimer(NEW_VIEW_TIMER)
 		pbft.timerMgr.stopTimer(VC_RESEND_TIMER)
 		pbft.vcMgr.vcResendCount = 0
-		pbft.view--
+		pbft.restoreView("")
 		pbft.status.activeState(&pbft.status.inNegoView, &pbft.status.inRecovery)
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.initNegoView()
@@ -456,13 +454,6 @@ func (pbft *pbftImpl) processNewView() events.Event {
 		speculativeLastExec = *pbft.exec.currentExec
 	}
 
-	// If we have not reached the sequence number, check to see if we can reach it without state transfer
-	// In general, executions are better than state transfer
-	if speculativeLastExec < cp.SequenceNumber {
-		if pbft.canExecuteToTarget(speculativeLastExec, cp) {
-			return nil
-		}
-	}
 	// --
 	msgList := pbft.assignSequenceNumbers(nv.Vset, cp.SequenceNumber)
 
@@ -515,13 +506,6 @@ func (pbft *pbftImpl) primaryProcessNewView(initialCp ViewChange_C, replicas []r
 	if pbft.exec.currentExec != nil {
 		speculativeLastExec = *pbft.exec.currentExec
 	}
-	// If we have not reached the sequence number, check to see if we can reach it without state transfer
-	// In general, executions are better than state transfer
-	if speculativeLastExec < initialCp.SequenceNumber {
-		if pbft.canExecuteToTarget(speculativeLastExec, initialCp) {
-			return nil
-		}
-	}
 
 	if pbft.h < initialCp.SequenceNumber {
 		pbft.moveWatermarks(initialCp.SequenceNumber)
@@ -570,51 +554,6 @@ func (vcm *vcManager) updateViewChangeSeqNo(seqNo, K, id uint64) {
 	//logger.Debugf("Replica %d updating view change sequence number to %d", id, vcm.viewChangeSeqNo)
 }
 
-func (pbft *pbftImpl) canExecuteToTarget(specLastExec uint64, initialCp ViewChange_C) bool {
-
-	canExecuteToTarget := true
-outer:
-	for seqNo := specLastExec + 1; seqNo <= initialCp.SequenceNumber; seqNo++ {
-		found := false
-		for idx, cert := range pbft.storeMgr.certStore {
-			if idx.n != seqNo {
-				continue
-			}
-
-			quorum := 0
-			for p := range cert.commit {
-				// Was this committed in the previous view
-				if p.View == idx.v && p.SequenceNumber == seqNo {
-					quorum++
-				}
-			}
-
-			if quorum < pbft.commonCaseQuorum() {
-				pbft.logger.Debugf("Replica %d missing quorum of commit certificate for seqNo=%d, only has %d of %d", pbft.id, seqNo, quorum, pbft.commonCaseQuorum())
-				continue
-			}
-
-			found = true
-			break
-		}
-
-		if !found {
-			canExecuteToTarget = false
-			pbft.logger.Debugf("Replica %d missing commit certificate for seqNo=%d", pbft.id, seqNo)
-			break outer
-		}
-
-	}
-
-	if canExecuteToTarget {
-		pbft.nvInitialSeqNo = initialCp.SequenceNumber
-		pbft.logger.Debugf("Replica %d needs to process a new view, but can execute to the checkpoint seqNo %d, delaying processing of new view", pbft.id, initialCp.SequenceNumber)
-	} else {
-		pbft.nvInitialSeqNo = 0
-		pbft.logger.Infof("Replica %d cannot execute to the view change checkpoint with seqNo %d", pbft.id, initialCp.SequenceNumber)
-	}
-	return canExecuteToTarget
-}
 
 func (pbft *pbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing bool) {
 	newReqBatchMissing = false
@@ -653,40 +592,13 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 	}
 	pbft.status.activeState(&pbft.status.vcHandled)
 
-	tmpStore := make(map[msgID]*certSet)
-	for idx, cert := range pbft.storeMgr.certStore {
-		if idx.n > pbft.h {
-			tmpId := msgID{idx.n, pbft.view}
-			tmpCert := &certSet{
-				digest:      cert.digest,
-				sentPrepare: cert.sentPrepare,
-				sentCommit:  cert.sentCommit,
-				sentExecute: cert.sentExecute,
-			}
-			tmpStore[tmpId] = tmpCert
-		}
-	}
-	for idx, cert := range pbft.vcMgr.vcCertStore {
-		if idx.n > pbft.h {
-			tmpId := msgID{idx.n, idx.v}
-			tmpStore[tmpId] = cert
-		}
-	}
-	pbft.vcMgr.vcCertStore = tmpStore
-
 	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
 	pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.batchVdr.preparedCert = make(map[msgID]string)
 	pbft.storeMgr.committedCert = make(map[msgID]string)
 	prevPrimary := pbft.primary(pbft.view - 1)
 	if prevPrimary == pbft.id {
-		pbft.rebuildDuplicator()
-		if len(pbft.batchMgr.batchStore) > 0 {
-			for _, tx := range pbft.batchMgr.batchStore {
-				go pbft.reqEventQueue.Push(tx)
-			}
-			pbft.batchMgr.batchStore = nil
-		}
+		pbft.rebuildDuplicator(nv.Xset)
 	} else {
 		pbft.clearDuplicator()
 	}
@@ -758,7 +670,7 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 
 	nv, ok := pbft.vcMgr.newViewStore[pbft.view]
 	if !ok {
-		pbft.logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
+		pbft.logger.Debugf("Replica %d ignoring rebuildCertStore as it could not find view %d in its newViewStore", pbft.id, pbft.view)
 		return nil
 	}
 
@@ -795,28 +707,38 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 	}
 }
 
-func (pbft *pbftImpl) rebuildCertStore() {
-	for idx := range pbft.storeMgr.certStore {
-		if idx.v < pbft.view {
-			delete(pbft.storeMgr.certStore, idx)
-			pbft.persistDelQPCSet(idx.v, idx.n)
-		}
+func (pbft *pbftImpl) rebuildCertStoreForVC() {
+	nv, ok := pbft.vcMgr.newViewStore[pbft.view]
+	if !ok {
+		pbft.logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", pbft.id, pbft.view)
+		return
 	}
-	for idx, vc := range pbft.vcMgr.vcCertStore {
-		if idx.n > pbft.exec.lastExec {
+	pbft.rebuildCertStore(nv.Xset)
+}
+
+func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
+	// rebuild certStore according to Xset
+	for n, d := range xset {
+		if n <= pbft.h || n > pbft.exec.lastExec {
 			continue
 		}
-		cert := pbft.storeMgr.getCert(idx.v, idx.n)
-		batch, ok := pbft.batchVdr.validatedBatchStore[vc.digest]
+		batch, ok := pbft.batchVdr.validatedBatchStore[d]
+		if !ok && d != "" {
+			pbft.logger.Criticalf("Replica %d is missing tx batch for seqNo=%d with digest '%s' for assigned prepare", pbft.id)
+		}
+
+		cert := pbft.storeMgr.getCert(pbft.view, n)
+
 		if pbft.primary(pbft.view) == pbft.id && ok {
+
 			preprep := &PrePrepare{
-				View:             idx.v,
-				SequenceNumber:   idx.n,
-				BatchDigest:      vc.digest,
-				TransactionBatch: batch,
-				ReplicaId:        pbft.id,
+				View:				pbft.view,
+				SequenceNumber: 		n,
+				BatchDigest:			d,
+				TransactionBatch:		batch,
+				ReplicaId:			pbft.id,
 			}
-			cert.digest = vc.digest
+			cert.digest = d
 			cert.prePrepare = preprep
 			cert.validated = true
 
@@ -835,13 +757,12 @@ func (pbft *pbftImpl) rebuildCertStore() {
 			}
 			msg := cMsgToPbMsg(consensusMsg, pbft.id)
 			pbft.helper.InnerBroadcast(msg)
-		}
-		if pbft.primary(pbft.view) != pbft.id && vc.sentPrepare {
+		}else{
 			prep := &Prepare{
-				View:           idx.v,
-				SequenceNumber: idx.n,
-				BatchDigest:    vc.digest,
-				ReplicaId:      pbft.id,
+				View: 			pbft.view,
+				SequenceNumber: 	n,
+				BatchDigest:		d,
+				ReplicaId:		pbft.id,
 			}
 			cert.prepare[*prep] = true
 			cert.sentPrepare = true
@@ -861,36 +782,45 @@ func (pbft *pbftImpl) rebuildCertStore() {
 			msg := cMsgToPbMsg(consensusMsg, pbft.id)
 			pbft.helper.InnerBroadcast(msg)
 		}
-		if vc.sentCommit {
-			cmt := &Commit{
-				View:           idx.v,
-				SequenceNumber: idx.n,
-				BatchDigest:    vc.digest,
-				ReplicaId:      pbft.id,
-			}
-			cert.commit[*cmt] = true
-			cert.sentValidate = true
-			cert.validated = true
-			cert.sentCommit = true
-
-			payload, err := proto.Marshal(cmt)
-			if err != nil {
-				pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
-				pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
-				pbft.batchVdr.currentVid = nil
-				return
-			}
-
-			consensusMsg := &ConsensusMessage{
-				Type:    ConsensusMessage_COMMIT,
-				Payload: payload,
-			}
-			msg := cMsgToPbMsg(consensusMsg, pbft.id)
-			pbft.helper.InnerBroadcast(msg)
+		cmt := &Commit{
+			View:			pbft.view,
+			SequenceNumber: 	n,
+			BatchDigest:		d,
+			ReplicaId:		pbft.id,
 		}
-		if vc.sentExecute {
-			cert.sentExecute = true
+		cert.commit[*cmt] = true
+		cert.sentValidate = true
+		cert.validated = true
+		cert.sentCommit = true
+		cert.sentExecute = true
+
+		payload, err := proto.Marshal(cmt)
+		if err != nil {
+			pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
+			pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
+			pbft.batchVdr.currentVid= nil
+			return
 		}
+		consensusMsg := &ConsensusMessage{
+			Type:    ConsensusMessage_COMMIT,
+			Payload: payload,
+
+		}
+		msg := cMsgToPbMsg(consensusMsg, pbft.id)
+		pbft.helper.InnerBroadcast(msg)
+		// rebuild pqlist according to xset
+		pbft.vcMgr.qlist = make(map[qidx]*ViewChange_PQ)
+		pbft.vcMgr.plist = make(map[uint64]*ViewChange_PQ)
+
+		id := qidx{d, n}
+		pqItem := &ViewChange_PQ{
+			SequenceNumber:	n,
+			BatchDigest:	d,
+			View:			pbft.view,
+		}
+		pbft.vcMgr.qlist[id] = pqItem
+		pbft.vcMgr.plist[n] = pqItem
+
 	}
 }
 

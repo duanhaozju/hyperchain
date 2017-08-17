@@ -174,7 +174,6 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 	case VIEW_CHANGED_EVENT:
 		pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)
 		pbft.startTimerIfOutstandingRequests()
-		pbft.vcMgr.vcResendCount = 0
 		pbft.vcMgr.vcResetStore = make(map[FinishVcReset]bool)
 		primary := pbft.primary(pbft.view)
 		pbft.helper.InformPrimary(primary)
@@ -189,7 +188,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			return nil
 		}
 		pbft.processRequestsDuringViewChange()
-		pbft.rebuildCertStore()
+		pbft.rebuildCertStoreForVC()
 	case VIEW_CHANGE_RESEND_TIMER_EVENT:
 		if atomic.LoadUint32(&pbft.activeView) == 1 {
 			pbft.logger.Warningf("Replica %d had its view change resend timer expire but it's in an active view, this is benign but may indicate a bug", pbft.id)
@@ -228,6 +227,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 		seqNo = event.SeqNo
 		if pbft.status.getState(&pbft.status.inRecovery) {
 			if seqNo - 1 == *pbft.recoveryMgr.recoveryToSeqNo {
+				pbft.fetchRecoveryPQC()
 				return &LocalEvent{
 					Service:   RECOVERY_SERVICE,
 					EventType: RECOVERY_DONE_EVENT,
@@ -277,7 +277,6 @@ func (pbft *pbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 		}
 		return pbft.processUpdateN()
 	case NODE_MGR_UPDATEDN_EVENT:
-		delete(pbft.nodeMgr.updateStore, pbft.nodeMgr.updateTarget)
 		pbft.startTimerIfOutstandingRequests()
 		pbft.vcMgr.vcResendCount = 0
 		pbft.nodeMgr.finishUpdateStore = make(map[FinishUpdate]bool)

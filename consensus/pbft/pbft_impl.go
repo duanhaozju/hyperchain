@@ -34,7 +34,7 @@ type pbftImpl struct {
 	seqNo          uint64                       // PBFT "n", strictly monotonic increasing sequence number
 	view           uint64                       // current view
 	nvInitialSeqNo uint64                       // initial seqNo in a new view
-	cachedlimit    int
+	cachetx	       int
 
 	status         PbftStatus                   // basic status of pbft
 
@@ -80,6 +80,8 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*p
 	pbft.K = uint64(10)
 	pbft.logMultiplier = uint64(4)
 	pbft.L = pbft.logMultiplier * pbft.K // log size
+	pbft.cachetx = config.GetInt("consensus.pbft.cachetx")
+	pbft.logger.Noticef("Replica %d set cachetx %d", pbft.id, pbft.cachetx)
 
 	//pbftManage manage consensus events
 	pbft.pbftManager = events.NewManagerImpl(pbft.namespace)
@@ -330,8 +332,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 		}
 
 		if cache.vid != pbft.batchVdr.lastVid + 1 {
-			pbft.logger.Debugf("Primary %d hasn't done with last send pre-prepare, vid=%d",
-				pbft.batchVdr.pbftId, pbft.batchVdr.lastVid)
+			pbft.logger.Debugf("Primary %d expect to send pre-prepare for vid=%d, not vid=%d", pbft.id, pbft.batchVdr.lastVid+1, cache.vid)
 			continue
 		}
 
@@ -342,16 +343,17 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			pbft.logger.Warningf("Replica %d is primary, receives validated result %s that is empty",
 				pbft.id, digest)
 			pbft.deleteExistedTx(digest)
+			atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
 			pbft.stopNewViewTimer()
 			continue
 		}
-
+		pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 		n := pbft.seqNo + 1
 
 		// check for other PRE-PREPARE for same digest, but different seqNo
 		if pbft.storeMgr.existedDigest(n, pbft.view, digest) {
 			pbft.deleteExistedTx(digest)
-			pbft.stopNewViewTimer()
+			atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
 			continue
 		}
 
@@ -359,7 +361,6 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because " +
 				"batch seqNo=%d is out of sequence numbers", pbft.id, digest, n)
 			//ogger.Debugf("Replica %d broadcast FinishUpdate", pbft.id)
-			pbft.stopNewViewTimer()
 			continue
 		}
 
@@ -377,7 +378,6 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 	n := pbft.seqNo + 1
 
 	pbft.logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
-	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 	pbft.seqNo = n
 
 	preprepare := &PrePrepare{
@@ -400,7 +400,6 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 		pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
 		pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
 		pbft.batchVdr.currentVid = nil
-		pbft.stopNewViewTimer()
 		return
 	}
 
@@ -425,7 +424,9 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 		return nil
 	}
 
-	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
+	if preprep.SequenceNumber > pbft.exec.lastExec {
+		pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
+	}
 
 	cert := pbft.storeMgr.getCert(preprep.View, preprep.SequenceNumber)
 
@@ -499,9 +500,17 @@ func (pbft *pbftImpl) recvPrepare(prep *Prepare) error {
 	ok := cert.prepare[*prep]
 
 	if ok {
-		pbft.logger.Warningf("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
-			prep.ReplicaId, prep.View, prep.SequenceNumber)
-		return nil
+		if pbft.status.checkStatesOr(&pbft.status.inRecovery)|| prep.SequenceNumber <= pbft.exec.lastExec {
+			// this is normal when in recovery
+			pbft.logger.Debugf("Replica %d in recovery, received duplicate prepare from replica %d, view=%d/seqNo=%d",
+				pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
+			return nil
+		} else {
+			// this is abnormal in common case
+			pbft.logger.Warningf("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
+				prep.ReplicaId, prep.View, prep.SequenceNumber)
+			return nil
+		}
 	}
 
 	cert.prepare[*prep] = true
@@ -592,9 +601,18 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 	ok := cert.commit[*commit]
 
 	if ok {
-		pbft.logger.Warningf("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
-			commit.ReplicaId, commit.View, commit.SequenceNumber)
-		return nil
+		if pbft.status.checkStatesOr(&pbft.status.inRecovery) || commit.SequenceNumber <= pbft.exec.lastExec {
+			// this is normal when in recovery
+			pbft.logger.Warningf("Replica %d in recovery, received commit from replica %d, view=%d/seqNo=%d",
+				pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
+			return nil
+		} else {
+			// this is abnormal in common case
+			pbft.logger.Warningf("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
+				commit.ReplicaId, commit.View, commit.SequenceNumber)
+			return nil
+		}
+
 	}
 
 	cert.commit[*commit] = true
@@ -604,7 +622,7 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 	}
 
 	if pbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
-		pbft.stopNewViewTimer()
+
 		idx := msgID{v: commit.View, n: commit.SequenceNumber}
 		if !cert.sentExecute && cert.validated {
 
@@ -645,6 +663,9 @@ func (pbft *pbftImpl) commitTransactions() {
 				pbft.logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 				pbft.persistCSet(idx.v, idx.n)
 				isPrimary, _ := pbft.isPrimary()
+				atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
+				pbft.stopNewViewTimer()
+				pbft.vcMgr.vcResendCount = 0
 				pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
 			}
 			cert.sentExecute = true
@@ -764,7 +785,11 @@ func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) events.Event {
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 ||
 		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
-		pbft.status.checkStatesOr(&pbft.status.inNegoView, &pbft.status.inRecovery) {
+		pbft.status.checkStatesOr(&pbft.status.inNegoView) {
+		if pbft.reqStore.outstandingRequests.Len() >= pbft.cachetx {
+			return nil
+		}
+
 		pbft.reqStore.storeOutstanding(tx)
 		return nil
 	}
@@ -875,6 +900,7 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 		if pbft.exec.lastExec == *pbft.recoveryMgr.recoveryToSeqNo {
 			// This is a somewhat subtle situation, we are behind by checkpoint, but others are just on chkpt.
 			// Hence, no need to fetch preprepare, prepare, commit
+			pbft.fetchRecoveryPQC()
 			go pbft.pbftEventQueue.Push(&LocalEvent{
 				Service:   RECOVERY_SERVICE,
 				EventType: RECOVERY_DONE_EVENT,
@@ -1212,13 +1238,6 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 			delete(pbft.storeMgr.outstandingReqBatches, cert.digest)
 			delete(pbft.storeMgr.certStore, idx)
 			pbft.persistDelQPCSet(idx.v, idx.n)
-			delete(pbft.nodeMgr.updateCertStore, idx)
-		}
-	}
-
-	for idx := range pbft.vcMgr.vcCertStore {
-		if idx.n <= h {
-			delete(pbft.vcMgr.vcCertStore, idx)
 		}
 	}
 
@@ -1257,7 +1276,7 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 	pbft.logger.Infof("Replica %d updated low watermark to %d",
 		pbft.id, pbft.h)
 
-	pbft.resubmitRequestBatches()
+	pbft.trySendPrePrepares()
 }
 
 func (pbft *pbftImpl) updateHighStateTarget(target *stateUpdateTarget) {
@@ -1387,7 +1406,6 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 			pbft.logger.Debugf("Replica %d receives validated result whose view is in old view, now view=%v", pbft.id, pbft.view)
 			return nil
 		}
-
 		batch := &TransactionBatch{
 			Batch:     result.Transactions,
 			Timestamp: result.Timestamp,

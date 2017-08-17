@@ -74,7 +74,7 @@ func newTransactionStore() *transactionStore {
 // =============================================================================
 // check if a tx is duplicate in a block
 func (pbft *pbftImpl) checkDuplicateInBlock(tx *types.Transaction, txStore *transactionStore) bool {
-	key := hex.EncodeToString(tx.TransactionHash)
+	key := byteToString(tx.TransactionHash)
 	return txStore.has(key)
 }
 
@@ -125,18 +125,23 @@ func (pbft *pbftImpl) removeDuplicate(txBatch *TransactionBatch) (newBatch *Tran
 }
 
 // previous primary rebuild the duplicator after view change
-func (pbft *pbftImpl) rebuildDuplicator() {
+func (pbft *pbftImpl) rebuildDuplicator(xset map[uint64]string) {
 	temp := make(map[uint64]*transactionStore)
-	dv := pbft.batchVdr.vid - pbft.h
-	pbft.dupLock.RLock()
-	for i, txStore := range pbft.duplicator {
-		temp[i-dv] = txStore
+	for n, d := range xset {
+		if n <= pbft.exec.lastExec {
+			batch, ok := pbft.batchVdr.validatedBatchStore[d]
+			if ok {
+				store := newTransactionStore()
+				for _, tx := range batch.Batch {
+					store.add(tx)
+				}
+				temp[n] = store
+			}
+		}
 	}
-	pbft.dupLock.RUnlock()
 	pbft.dupLock.Lock()
 	pbft.duplicator = temp
 	pbft.dupLock.Unlock()
-	pbft.clearDuplicator()
 }
 
 // replica clear the duplicator after view change
