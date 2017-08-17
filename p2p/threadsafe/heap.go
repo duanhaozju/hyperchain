@@ -100,7 +100,6 @@ func ( h *Heap)Remove(priority int) interface{} {
 	var ret interface{}
 	var i int
 	for i = 0; i < len(h.heap); i++ {
-		fmt.Println("priority1",h.heap[i].priority,"proority2",priority)
 		if h.heap[i].priority == priority {
 			ret = h.heap[i].value
 			break

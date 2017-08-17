@@ -108,7 +108,6 @@ func (pool *PeersPool)GetPeerByHash(hash string) *Peer {
 	l := pool.vpPool.Sort()
 	for _, item := range l {
 		p := item.(*Peer)
-		fmt.Printf("hash1 %s, hash2 %s\n",p.info.Hash,hash)
 		if p.info.Hash == hash {
 			return p
 		}
