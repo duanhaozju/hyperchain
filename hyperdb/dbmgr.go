@@ -10,6 +10,9 @@ import (
 	"sync"
 	"github.com/pkg/errors"
 	"hyperchain/hyperdb/hleveldb"
+	"path"
+
+	hcomm "hyperchain/hyperdb/common"
 )
 
 var (
@@ -25,9 +28,28 @@ var once  sync.Once
 //DatabaseManager mange all database by namespace
 type DatabaseManager struct {
 	config *common.Config
-	nlock   sync.RWMutex
+	nlock  *sync.RWMutex
 	ndbs   map[string]*NDB // <namespace, ndb>
 	logger *logging.Logger
+}
+
+func (md *DatabaseManager) addNDB(namespace string, ndb *NDB)  {
+	md.nlock.Lock()
+	md.ndbs[namespace] = ndb
+	md.nlock.Unlock()
+}
+
+//for test
+func (md *DatabaseManager) clearMemNDBSs()  {
+	md.nlock.Lock()
+	md.ndbs = make(map[string]*NDB)
+	md.nlock.Unlock()
+}
+
+func (md *DatabaseManager) removeNDB(namespace string)  {
+	md.nlock.Lock()
+	delete(md.ndbs, namespace)
+	md.nlock.Unlock()
 }
 
 type DbName struct {
@@ -60,6 +82,7 @@ func InitDBMgr(conf *common.Config) error {
 			config: conf,
 			ndbs: make(map[string]*NDB),
 			logger: common.GetLogger(common.DEFAULT_LOG, "dbmgr"),
+			nlock: &sync.RWMutex{},
 		}
 	})
 	return nil
@@ -67,6 +90,10 @@ func InitDBMgr(conf *common.Config) error {
 
 //CreateDB create database instance
 func CreateDB(dbname *DbName, conf *common.Config) (error, db.Database) {
+
+	if dbmgr == nil {
+		InitDBMgr(conf)
+	}
 
 	if dbname == nil || len(dbname.Name) == 0 || len(dbname.Namespace) == 0 {
 		return ErrInvalidDbName, nil
@@ -78,25 +105,26 @@ func CreateDB(dbname *DbName, conf *common.Config) (error, db.Database) {
 	}
 
 	if dbmgr.contains(dbname) {
-		return ErrDbExisted
+		return ErrDbExisted, nil
 	}
 	//create new database
-	db, err := hleveldb.NewLDBDataBase(conf, dbname.Name, dbname.Namespace)
+	ldb, err := hleveldb.NewLDBDataBase(conf, path.Join(conf.GetString(hcomm.LEVEL_DB_ROOT_DIR), dbname.Name), dbname.Namespace)
 	if err != nil {
 		return err, nil
 	}
 
 	if ndb, ok := dbmgr.ndbs[dbname.Namespace]; ok {
-		ndb.addDB(dbname.Name, db)
+		ndb.addDB(dbname.Name, ldb)
 	}else {
 		ndb = &NDB{
 			namespace:dbname.Namespace,
-			dbs:make(map[string] db.Database),
+			dbs:make(map[string]db.Database),
 		}
-		ndb.addDB(dbname.Name, db)
+		ndb.addDB(dbname.Name, ldb)
+		dbmgr.addNDB(dbname.Namespace, ndb)
 	}
 
-	return nil, db
+	return nil, ldb
 }
 
 //GetDB get database by namespace and dbname
@@ -108,7 +136,11 @@ func GetDB(dbname *DbName) (error, db.Database) {
 type NDB struct {
 	namespace string	  //namespace id
 	lock sync.RWMutex
-	dbs map[string] db.Database // <dbname, db>
+	dbs map[string]db.Database // <dbname, db>
+}
+
+func (ndb *NDB) close()  {
+
 }
 
 func (ndb *NDB) addDB(name string, db db.Database)  {
@@ -119,7 +151,7 @@ func (ndb *NDB) addDB(name string, db db.Database)  {
 
 //getDatabase get database instance by namespace and dbname
 func (dm *DatabaseManager) getDatabase(namespace, dbname string) (error, db.Database) {
-	if dbname == nil || len(dbname) == 0 || len(namespace) == 0 {
+	if len(dbname) == 0 || len(namespace) == 0 {
 		return ErrInvalidDbName, nil
 	}
 
@@ -138,12 +170,6 @@ func (dm *DatabaseManager) getDatabase(namespace, dbname string) (error, db.Data
 
 //close close all dbs
 func (dm *DatabaseManager) close() error {
-
-	return nil
-}
-
-//close add new database instace to the database manager
-func (dm *DatabaseManager) addDatabase(namespace, dbname string, db db.Database) error {
-
+	//todo: close all databases
 	return nil
 }
