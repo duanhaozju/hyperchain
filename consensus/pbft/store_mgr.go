@@ -82,9 +82,9 @@ func (sm *storeManager) getCheckpoint(l uint64) string {
 
 // getCert given a digest/view/seq, is there an entry in the certLog?
 // If so, return it. If not, create it.
-func (sm *storeManager) getCert(v uint64, n uint64) (cert *msgCert) {
+func (sm *storeManager) getCert(v uint64, n uint64, d string) (cert *msgCert) {
 
-	idx := msgID{v, n}
+	idx := msgID{v, n, d}
 	cert, ok := sm.certStore[idx]
 
 	if ok {

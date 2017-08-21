@@ -106,7 +106,7 @@ func (pbft *pbftImpl) calcQSet() map[qidx]*ViewChange_PQ {
 			continue
 		}
 
-		digest := cert.digest
+		digest := cert.resultHash
 		if !pbft.prePrepared(digest, idx.v, idx.n) {
 			continue
 		}
@@ -139,7 +139,7 @@ func (pbft *pbftImpl) calcPSet() map[uint64]*ViewChange_PQ {
 			continue
 		}
 
-		digest := cert.digest
+		digest := cert.resultHash
 		if !pbft.prepared(digest, idx.v, idx.n) {
 			continue
 		}
@@ -738,7 +738,7 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 				TransactionBatch:		batch,
 				ReplicaId:			pbft.id,
 			}
-			cert.digest = d
+			cert.resultHash = d
 			cert.prePrepare = preprep
 			cert.validated = true
 

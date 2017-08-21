@@ -161,8 +161,8 @@ func (pbft *pbftImpl) restoreCert() {
 	for idx, q := range qset {
 		cert := pbft.storeMgr.getCert(idx.v, idx.n)
 		cert.prePrepare = q
-		cert.digest = q.BatchDigest
-		pbft.batchVdr.validatedBatchStore[cert.digest] = q.GetTransactionBatch()
+		cert.resultHash = q.BatchDigest
+		pbft.batchVdr.validatedBatchStore[cert.resultHash] = q.GetTransactionBatch()
 	}
 
 	pset, _ := pbft.restorePSet()

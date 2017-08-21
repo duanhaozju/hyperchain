@@ -160,8 +160,11 @@ func (m *ConsensusMessage) GetPayload() []byte {
 }
 
 type TransactionBatch struct {
-	Batch     []*types.Transaction `protobuf:"bytes,1,rep,name=batch" json:"batch,omitempty"`
-	Timestamp int64                `protobuf:"varint,2,opt,name=timestamp" json:"timestamp,omitempty"`
+	TxList     []*types.Transaction `protobuf:"bytes,1,rep,name=tx_list,json=txList" json:"tx_list,omitempty"`
+	HashList   []string             `protobuf:"bytes,2,rep,name=hash_list,json=hashList" json:"hash_list,omitempty"`
+	Timestamp  int64                `protobuf:"varint,3,opt,name=timestamp" json:"timestamp,omitempty"`
+	SeqNo      uint64               `protobuf:"varint,4,opt,name=seq_no,json=seqNo" json:"seq_no,omitempty"`
+	ResultHash string               `protobuf:"bytes,5,opt,name=resultHash" json:"resultHash,omitempty"`
 }
 
 func (m *TransactionBatch) Reset()                    { *m = TransactionBatch{} }
@@ -169,14 +172,59 @@ func (m *TransactionBatch) String() string            { return proto.CompactText
 func (*TransactionBatch) ProtoMessage()               {}
 func (*TransactionBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
-func (m *TransactionBatch) GetBatch() []*types.Transaction {
+func (m *TransactionBatch) GetTxList() []*types.Transaction {
 	if m != nil {
-		return m.Batch
+		return m.TxList
+	}
+	return nil
+}
+
+func (m *TransactionBatch) GetHashList() []string {
+	if m != nil {
+		return m.HashList
 	}
 	return nil
 }
 
 func (m *TransactionBatch) GetTimestamp() int64 {
+	if m != nil {
+		return m.Timestamp
+	}
+	return 0
+}
+
+func (m *TransactionBatch) GetSeqNo() uint64 {
+	if m != nil {
+		return m.SeqNo
+	}
+	return 0
+}
+
+func (m *TransactionBatch) GetResultHash() string {
+	if m != nil {
+		return m.ResultHash
+	}
+	return ""
+}
+
+type HashBatch struct {
+	List      []string `protobuf:"bytes,1,rep,name=list" json:"list,omitempty"`
+	Timestamp int64    `protobuf:"varint,2,opt,name=timestamp" json:"timestamp,omitempty"`
+}
+
+func (m *HashBatch) Reset()                    { *m = HashBatch{} }
+func (m *HashBatch) String() string            { return proto.CompactTextString(m) }
+func (*HashBatch) ProtoMessage()               {}
+func (*HashBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *HashBatch) GetList() []string {
+	if m != nil {
+		return m.List
+	}
+	return nil
+}
+
+func (m *HashBatch) GetTimestamp() int64 {
 	if m != nil {
 		return m.Timestamp
 	}
@@ -208,21 +256,30 @@ func (m *ReturnRequestBatch) GetDigest() string {
 }
 
 type PrePrepare struct {
-	View             uint64            `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
-	SequenceNumber   uint64            `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
-	BatchDigest      string            `protobuf:"bytes,3,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
-	TransactionBatch *TransactionBatch `protobuf:"bytes,4,opt,name=transaction_batch,json=transactionBatch" json:"transaction_batch,omitempty"`
-	ReplicaId        uint64            `protobuf:"varint,5,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	View           uint64     `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
+	Vid            uint64     `protobuf:"varint,2,opt,name=vid" json:"vid,omitempty"`
+	SequenceNumber uint64     `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
+	BatchDigest    string     `protobuf:"bytes,4,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
+	ResultHash     string     `protobuf:"bytes,5,opt,name=result_hash,json=resultHash" json:"result_hash,omitempty"`
+	HashBatch      *HashBatch `protobuf:"bytes,6,opt,name=hash_batch,json=hashBatch" json:"hash_batch,omitempty"`
+	ReplicaId      uint64     `protobuf:"varint,7,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
 }
 
 func (m *PrePrepare) Reset()                    { *m = PrePrepare{} }
 func (m *PrePrepare) String() string            { return proto.CompactTextString(m) }
 func (*PrePrepare) ProtoMessage()               {}
-func (*PrePrepare) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+func (*PrePrepare) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
 func (m *PrePrepare) GetView() uint64 {
 	if m != nil {
 		return m.View
+	}
+	return 0
+}
+
+func (m *PrePrepare) GetVid() uint64 {
+	if m != nil {
+		return m.Vid
 	}
 	return 0
 }
@@ -241,9 +298,16 @@ func (m *PrePrepare) GetBatchDigest() string {
 	return ""
 }
 
-func (m *PrePrepare) GetTransactionBatch() *TransactionBatch {
+func (m *PrePrepare) GetResultHash() string {
 	if m != nil {
-		return m.TransactionBatch
+		return m.ResultHash
+	}
+	return ""
+}
+
+func (m *PrePrepare) GetHashBatch() *HashBatch {
+	if m != nil {
+		return m.HashBatch
 	}
 	return nil
 }
@@ -257,19 +321,28 @@ func (m *PrePrepare) GetReplicaId() uint64 {
 
 type Prepare struct {
 	View           uint64 `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
-	SequenceNumber uint64 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
-	BatchDigest    string `protobuf:"bytes,3,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
-	ReplicaId      uint64 `protobuf:"varint,4,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Vid            uint64 `protobuf:"varint,2,opt,name=vid" json:"vid,omitempty"`
+	SequenceNumber uint64 `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
+	BatchDigest    string `protobuf:"bytes,4,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
+	ResultHash     string `protobuf:"bytes,5,opt,name=result_hash,json=resultHash" json:"result_hash,omitempty"`
+	ReplicaId      uint64 `protobuf:"varint,6,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
 }
 
 func (m *Prepare) Reset()                    { *m = Prepare{} }
 func (m *Prepare) String() string            { return proto.CompactTextString(m) }
 func (*Prepare) ProtoMessage()               {}
-func (*Prepare) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (*Prepare) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
 func (m *Prepare) GetView() uint64 {
 	if m != nil {
 		return m.View
+	}
+	return 0
+}
+
+func (m *Prepare) GetVid() uint64 {
+	if m != nil {
+		return m.Vid
 	}
 	return 0
 }
@@ -288,6 +361,13 @@ func (m *Prepare) GetBatchDigest() string {
 	return ""
 }
 
+func (m *Prepare) GetResultHash() string {
+	if m != nil {
+		return m.ResultHash
+	}
+	return ""
+}
+
 func (m *Prepare) GetReplicaId() uint64 {
 	if m != nil {
 		return m.ReplicaId
@@ -297,19 +377,28 @@ func (m *Prepare) GetReplicaId() uint64 {
 
 type Commit struct {
 	View           uint64 `protobuf:"varint,1,opt,name=view" json:"view,omitempty"`
-	SequenceNumber uint64 `protobuf:"varint,2,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
-	BatchDigest    string `protobuf:"bytes,3,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
-	ReplicaId      uint64 `protobuf:"varint,4,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+	Vid            uint64 `protobuf:"varint,2,opt,name=vid" json:"vid,omitempty"`
+	SequenceNumber uint64 `protobuf:"varint,3,opt,name=sequence_number,json=sequenceNumber" json:"sequence_number,omitempty"`
+	BatchDigest    string `protobuf:"bytes,4,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
+	ResultHash     string `protobuf:"bytes,5,opt,name=result_hash,json=resultHash" json:"result_hash,omitempty"`
+	ReplicaId      uint64 `protobuf:"varint,6,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
 }
 
 func (m *Commit) Reset()                    { *m = Commit{} }
 func (m *Commit) String() string            { return proto.CompactTextString(m) }
 func (*Commit) ProtoMessage()               {}
-func (*Commit) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+func (*Commit) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
 
 func (m *Commit) GetView() uint64 {
 	if m != nil {
 		return m.View
+	}
+	return 0
+}
+
+func (m *Commit) GetVid() uint64 {
+	if m != nil {
+		return m.Vid
 	}
 	return 0
 }
@@ -324,6 +413,13 @@ func (m *Commit) GetSequenceNumber() uint64 {
 func (m *Commit) GetBatchDigest() string {
 	if m != nil {
 		return m.BatchDigest
+	}
+	return ""
+}
+
+func (m *Commit) GetResultHash() string {
+	if m != nil {
+		return m.ResultHash
 	}
 	return ""
 }
