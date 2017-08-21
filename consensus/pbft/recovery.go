@@ -30,6 +30,7 @@ func newRecoveryMgr() *recoveryManager {
 	rm := &recoveryManager{}
 	rm.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 	rm.rcRspStore = make(map[uint64]*RecoveryResponse)
+	rm.rcPQCSenderStore=make(map[uint64]bool)
 	rm.recoveryToSeqNo = nil
 	rm.recvNewViewInRecovery = false
 
