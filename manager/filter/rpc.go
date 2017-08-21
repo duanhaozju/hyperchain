@@ -3,7 +3,6 @@ package filter
 import (
 	"encoding/hex"
 	"math/rand"
-	"strings"
 	"sync"
 	"time"
 )
@@ -36,7 +35,7 @@ func NewFilterID() string {
 
 	rpcId := hex.EncodeToString(id)
 	// rpc ID's are RPC quantities, no leading zero's and 0 is 0x0
-	rpcId = strings.TrimLeft(rpcId, "0")
+	// rpcId = strings.TrimLeft(rpcId, "0")
 	if rpcId == "" {
 		rpcId = "0"
 	}
