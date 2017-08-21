@@ -29,6 +29,7 @@ algo = "PBFT"
 
     [consensus.pbft]        #PBFT configurations
     batchsize       = 500   # How many transactions should the primary pack before sending pre-prepare
+    poolsize        = 5000  # How many transactions could the txPool stores in total
     vcresendlimit   = 10    # How many times of same vc from self before a replica start recovery
     cachetx         = 30000 # How many transactions will be stored if system in abnormal (like viewchange and nego-view)
 

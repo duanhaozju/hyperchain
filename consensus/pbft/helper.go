@@ -204,7 +204,7 @@ func (pbft *pbftImpl) prePrepared(digest string, v uint64, n uint64) bool {
 
 	if cert != nil {
 		p := cert.prePrepare
-		if p != nil && p.View == v && p.SequenceNumber == n && p.BatchDigest == digest && cert.digest == digest {
+		if p != nil && p.View == v && p.SequenceNumber == n && p.BatchDigest == digest && cert.resultHash == digest {
 			return true
 		}
 	}
@@ -222,7 +222,7 @@ func (pbft *pbftImpl) prepared(digest string, v uint64, n uint64) bool {
 		return false
 	}
 
-	cert := pbft.storeMgr.certStore[msgID{v, n}]
+	cert := pbft.storeMgr.certStore[msgID{v, n, digest}]
 
 	if cert == nil {
 		return false
@@ -238,7 +238,7 @@ func (pbft *pbftImpl) prepared(digest string, v uint64, n uint64) bool {
 
 func (pbft *pbftImpl) onlyPrepared(digest string, v uint64, n uint64) bool {
 
-	cert := pbft.storeMgr.certStore[msgID{v, n}]
+	cert := pbft.storeMgr.certStore[msgID{v, n, digest}]
 
 	if cert == nil {
 		return false
@@ -502,7 +502,7 @@ func (pbft *pbftImpl) isCommitLegal(commit *Commit) bool {
 func (pbft *pbftImpl) parseCertStore() {
 	tmpStore := make(map[msgID]*msgCert)
 	for idx := range pbft.storeMgr.certStore {
-		cert := pbft.storeMgr.getCert(idx.v, idx.n)
+		cert := pbft.storeMgr.getCert(idx.v, idx.n, idx.d)
 		if cert.prePrepare != nil {
 			cert.prePrepare.View = pbft.view
 		}

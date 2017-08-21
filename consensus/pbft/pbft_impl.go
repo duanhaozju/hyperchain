@@ -18,6 +18,8 @@ import (
 	"github.com/op/go-logging"
 	"sync"
 	"hyperchain/manager/event"
+	"hyperchain/consensus/txpool"
+	"time"
 )
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
@@ -60,6 +62,8 @@ type pbftImpl struct {
 	logger         *logging.Logger
 
 	dupLock        *sync.RWMutex
+
+	poolFull			uint32
 }
 
 //newPBFT init the PBFT instance
@@ -144,7 +148,7 @@ func (pbft *pbftImpl) ProcessEvent(ee events.Event) events.Event {
 		tx := e
 		return pbft.processTxEvent(tx)
 
-	case *TransactionBatch:
+	case txpool.TxHashBatch:
 		err := pbft.recvRequestBatch(e)
 		if err != nil {
 			pbft.logger.Warning(err.Error())
@@ -196,22 +200,7 @@ func (pbft *pbftImpl) dispatchCorePbftMsg(e events.Event) events.Event {
 	return nil
 }
 
-// enqueueTx parse transaction msg and send it into request event queue.
-func (pbft *pbftImpl) enqueueTx(msg *protos.Message) error {
 
-	// Parse the transaction payload to transaction
-	tx := &types.Transaction{}
-	err := proto.Unmarshal(msg.Payload, tx)
-	if err != nil {
-		pbft.logger.Errorf("error: %v ,can not unmarshal protos.Message", err)
-		return err
-	}
-
-	// Post a requestEvent
-	go pbft.reqEventQueue.Push(tx)
-
-	return nil
-}
 
 // enqueueConsensusMsg parse consensus msg and send it to the corresponding event queue.
 func (pbft *pbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
@@ -229,7 +218,17 @@ func (pbft *pbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 			pbft.logger.Errorf("processConsensus, unmarshal error: can not unmarshal ConsensusMessage", err)
 			return err
 		}
-		go pbft.reqEventQueue.Push(tx)
+		if atomic.LoadUint32(&pbft.activeView) == 0 ||
+			atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
+			pbft.status.checkStatesOr(&pbft.status.inNegoView) {
+			err = pbft.batchMgr.txPool.AddNewTx(tx, false, false)
+		}
+		if ok, _ := pbft.isPrimary(); ok {
+			err = pbft.batchMgr.txPool.AddNewTx(tx, true, false)
+		} else {
+			err = pbft.batchMgr.txPool.AddNewTx(tx, false, false)
+		}
+		return nil
 	} else {
 		go pbft.pbftEventQueue.Push(consensus)
 	}
@@ -309,9 +308,11 @@ func (pbft *pbftImpl) trySendPrePrepares() {
 	pbft.logger.Debugf("Replica %d attempting to call sendPrePrepare", pbft.id)
 
 	for stopTry := false; !stopTry; {
-		if find, txBatch, digest := pbft.findNextPrePrepareBatch(); find {
-			pbft.sendPrePrepare(txBatch, digest)
-			pbft.maybeSendCommit(digest, pbft.view, pbft.seqNo)
+		if find, txBatch, digest, resultHash := pbft.findNextPrePrepareBatch(); find {
+			if len(txBatch.TxList) == 0 {
+				pbft.sendPrePrepareSp(digest, resultHash, txBatch)
+			}
+			pbft.sendPrePrepare(digest, resultHash, txBatch)
 		} else {
 			stopTry = true
 		}
@@ -319,10 +320,11 @@ func (pbft *pbftImpl) trySendPrePrepares() {
 }
 
 //findNextPrePrepareBatch find next validated batch to send preprepare msg.
-func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string) {
+func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string, string) {
 	var find bool
 	var nextPreprepareBatch *TransactionBatch
 	var digest string
+	var resultHash string
 	for digest = range pbft.batchVdr.cacheValidatedBatch {
 		cache := pbft.batchVdr.getCacheBatchFromCVB(digest)
 		if cache == nil {
@@ -339,14 +341,14 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 		currentVid := cache.vid
 		pbft.batchVdr.setCurrentVid(&currentVid)
 
-		if len(cache.batch.Batch) == 0 {
-			pbft.logger.Warningf("Replica %d is primary, receives validated result %s that is empty",
-				pbft.id, digest)
-			pbft.deleteExistedTx(digest)
-			atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
-			pbft.stopNewViewTimer()
-			continue
-		}
+		//if len(cache.batch.TxList) == 0 {
+		//	pbft.logger.Warningf("Replica %d is primary, receives validated result %s that is empty",
+		//		pbft.id, digest)
+		//	pbft.deleteExistedTx(digest)
+		//	atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
+		//	pbft.stopNewViewTimer()
+		//	continue
+		//}
 		pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 		n := pbft.seqNo + 1
 
@@ -366,12 +368,62 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 
 		find = true
 		nextPreprepareBatch = cache.batch
+		resultHash = cache.resultHash
 	}
-	return find, nextPreprepareBatch, digest
+	return find, nextPreprepareBatch, digest, resultHash
+}
+
+func (pbft *pbftImpl) sendPrePrepareSp(digest string, hash string, batch *TransactionBatch) {
+
+	pbft.logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d/vid=%d/digest=%s",
+		pbft.id, pbft.view, uint64(0), *pbft.batchVdr.currentVid, digest)
+
+	hashbatch := &HashBatch{
+		List:		batch.HashList,
+		Timestamp:	batch.Timestamp,
+	}
+	preprep := &PrePrepare{
+		View:             pbft.view,
+		SequenceNumber:   uint64(0),
+		Vid:		  *pbft.batchVdr.currentVid,
+		BatchDigest:      digest,
+		ResultHash:	  hash,
+		HashBatch:	  hashbatch,
+		ReplicaId:        pbft.id,
+	}
+
+	payload, err := proto.Marshal(preprep)
+	if err != nil {
+		pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
+		pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
+		pbft.batchVdr.currentVid = nil
+		return
+	}
+
+	consensusMsg := &ConsensusMessage{
+		Type:    ConsensusMessage_PRE_PREPARE,
+		Payload: payload,
+	}
+	msg := cMsgToPbMsg(consensusMsg, pbft.id)
+	pbft.helper.InnerBroadcast(msg)
+
+	pbft.batchVdr.updateLCVid()
+
+	pbft.batchVdr.deleteCacheFromCVB(digest)
+
+	// clean the invalid txs
+	delete(pbft.storeMgr.outstandingReqBatches, digest)
+
+	pbft.stopNewViewTimer()
+	pbft.startTimerIfOutstandingRequests()
+
+	pbft.trySendPrePrepares()
+
+	return true
 }
 
 //sendPrePrepare send prepare message.
-func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) {
+func (pbft *pbftImpl) sendPrePrepare(digest string, hash string, reqBatch *TransactionBatch) {
 
 	pbft.logger.Debugf("Replica %d is primary, issuing pre-prepare for request batch %s", pbft.id, digest)
 
@@ -380,20 +432,31 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 	pbft.logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d", pbft.id, pbft.view, n)
 	pbft.seqNo = n
 
-	preprepare := &PrePrepare{
-		View:             pbft.view,
-		SequenceNumber:   n,
-		BatchDigest:      digest,
-		TransactionBatch: reqBatch,
-		ReplicaId:        pbft.id,
+	hashBatch := &HashBatch{
+		List:		reqBatch.HashList,
+		Timestamp:	reqBatch.Timestamp,
 	}
-	cert := pbft.storeMgr.getCert(pbft.view, n)
+
+	preprepare := &PrePrepare{
+		View:             	pbft.view,
+		SequenceNumber:   	n,
+		Vid:		  	*pbft.batchVdr.currentVid,
+		BatchDigest:      	digest,
+		ResultHash:		hash,
+		HashBatch: 		hashBatch,
+		ReplicaId:        	pbft.id,
+	}
+
+	cert := pbft.storeMgr.getCert(pbft.view, n, digest)
 	cert.prePrepare = preprepare
-	cert.digest = digest
+	cert.resultHash = digest
 	cert.sentValidate = true
 	cert.validated = true
 	pbft.batchVdr.deleteCacheFromCVB(digest)
 	pbft.persistQSet(preprepare)
+
+	pbft.storeMgr.outstandingReqBatches[digest].SeqNo = n
+	pbft.storeMgr.outstandingReqBatches[digest].ResultHash = hash
 
 	payload, err := proto.Marshal(preprepare)
 	if err != nil {
@@ -410,6 +473,8 @@ func (pbft *pbftImpl) sendPrePrepare(reqBatch *TransactionBatch, digest string) 
 	msg := cMsgToPbMsg(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 	pbft.batchVdr.updateLCVid()
+	pbft.maybeSendCommit(digest, pbft.view, n, pbft.batchVdr.lastVid)
+	pbft.trySendPrePrepares()
 }
 
 //recvPrePrepare process logic for PrePrepare msg.
@@ -428,16 +493,16 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 		pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 	}
 
-	cert := pbft.storeMgr.getCert(preprep.View, preprep.SequenceNumber)
+	cert := pbft.storeMgr.getCert(preprep.View, preprep.SequenceNumber, preprep.HashBatch)
 
-	if cert.digest != "" && cert.digest != preprep.BatchDigest {
+	if cert.resultHash != "" && cert.resultHash != preprep.BatchDigest {
 		pbft.logger.Warningf("Pre-prepare found for same view/seqNo but different digest: received %s, stored %s",
-			preprep.BatchDigest, cert.digest)
+			preprep.BatchDigest, cert.resultHash)
 		return nil
 	}
 
 	cert.prePrepare = preprep
-	cert.digest = preprep.BatchDigest
+	cert.resultHash = preprep.BatchDigest
 
 	// Store the request batch if, for whatever reason, we haven't received it from an earlier broadcast
 	if preprep.BatchDigest != "" && !pbft.batchVdr.containsInVBS(preprep.BatchDigest) {
@@ -495,7 +560,7 @@ func (pbft *pbftImpl) recvPrepare(prep *Prepare) error {
 		return nil
 	}
 
-	cert := pbft.storeMgr.getCert(prep.View, prep.SequenceNumber)
+	cert := pbft.storeMgr.getCert(prep.View, prep.SequenceNumber, prep.BatchDigest)
 
 	ok := cert.prepare[*prep]
 
@@ -515,12 +580,12 @@ func (pbft *pbftImpl) recvPrepare(prep *Prepare) error {
 
 	cert.prepare[*prep] = true
 
-	return pbft.maybeSendCommit(prep.BatchDigest, prep.View, prep.SequenceNumber)
+	return pbft.maybeSendCommit(prep.BatchDigest, prep.View, prep.SequenceNumber, prep.Vid)
 }
 
 //maybeSendCommit may send commit msg.
-func (pbft *pbftImpl) maybeSendCommit(digest string, v uint64, n uint64) error {
-	cert := pbft.storeMgr.getCert(v, n)
+func (pbft *pbftImpl) maybeSendCommit(digest string, v uint64, n uint64, vid uint64) error {
+	cert := pbft.storeMgr.getCert(v, n, digest)
 
 	if cert == nil {
 		pbft.logger.Errorf("Replica %d can't get the cert for the view=%d/seqNo=%d", pbft.id, v, n)
@@ -544,10 +609,10 @@ func (pbft *pbftImpl) maybeSendCommit(digest string, v uint64, n uint64) error {
 	if ok, _ := pbft.isPrimary(); ok {
 		return pbft.sendCommit(digest, v, n)
 	} else {
-		idx := msgID{v: v, n: n}
+		idx := vidx{view: v, seqNo: n, vid: vid}
 
 		if !cert.sentValidate {
-			pbft.batchVdr.preparedCert[idx] = cert.digest
+			pbft.batchVdr.preparedCert[idx] = digest
 			pbft.validatePending()
 		}
 		return nil
@@ -557,7 +622,7 @@ func (pbft *pbftImpl) maybeSendCommit(digest string, v uint64, n uint64) error {
 //sendCommit send commit message.
 func (pbft *pbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 
-	cert := pbft.storeMgr.getCert(v, n)
+	cert := pbft.storeMgr.getCert(v, n, digest)
 
 	if !cert.sentCommit {
 		pbft.logger.Debugf("Replica %d broadcasting commit for view=%d/seqNo=%d", pbft.id, v, n)
@@ -596,7 +661,7 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 		return nil
 	}
 
-	cert := pbft.storeMgr.getCert(commit.View, commit.SequenceNumber)
+	cert := pbft.storeMgr.getCert(commit.View, commit.SequenceNumber, commit.BatchDigest)
 
 	ok := cert.commit[*commit]
 
@@ -628,7 +693,7 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 
 			pbft.vcMgr.lastNewViewTimeout = pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 			delete(pbft.storeMgr.outstandingReqBatches, commit.BatchDigest)
-			pbft.storeMgr.committedCert[idx] = cert.digest
+			pbft.storeMgr.committedCert[idx] = cert.resultHash
 			pbft.commitTransactions()
 			if commit.SequenceNumber == pbft.vcMgr.viewChangeSeqNo {
 				pbft.logger.Warningf("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
@@ -656,7 +721,7 @@ func (pbft *pbftImpl) commitTransactions() {
 
 	for hasTxToExec := true; hasTxToExec; {
 		if find, idx, cert := pbft.findNextCommitTx(); find {
-			digest := cert.digest
+			digest := cert.resultHash
 			if digest == "" {
 				pbft.logger.Infof("Replica %d executing null request for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 			} else {
@@ -666,7 +731,7 @@ func (pbft *pbftImpl) commitTransactions() {
 				atomic.AddInt32(&pbft.batchVdr.validateCount, -1)
 				pbft.stopNewViewTimer()
 				pbft.vcMgr.vcResendCount = 0
-				pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.TransactionBatch.Timestamp)
+				pbft.helper.Execute(idx.n, digest, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)
 			}
 			cert.sentExecute = true
 			pbft.afterCommitTx(idx)
@@ -712,7 +777,7 @@ func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
 			continue
 		}
 
-		digest := cert.digest
+		digest := cert.resultHash
 
 		// check if committed
 		if !pbft.committed(digest, idx.v, idx.n) {
@@ -771,40 +836,36 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 //processTxEvent process received transaction event
 func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) events.Event {
 
+
+	payload, err := proto.Marshal(tx)
+	if err != nil {
+		pbft.logger.Errorf("ConsensusMessage_TRANSACTION Marshal Error", err)
+		return nil
+	}
+	consensusMsg := &ConsensusMessage{
+		Type:    ConsensusMessage_TRANSACTION,
+		Payload: payload,
+	}
+	pbMsg := cMsgToPbMsg(consensusMsg, pbft.id)
+	pbft.helper.InnerBroadcast(pbMsg)
+
+
 	if atomic.LoadUint32(&pbft.activeView) == 0 ||
 		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
 		pbft.status.checkStatesOr(&pbft.status.inNegoView) {
-		if pbft.reqStore.outstandingRequests.Len() >= pbft.cachetx {
-			return nil
-		}
-
-		pbft.reqStore.storeOutstanding(tx)
-		return nil
+		err = pbft.batchMgr.txPool.AddNewTx(tx, false, true)
 	}
-	//curr node is not primary
-	if ok, currP := pbft.isPrimary(); !ok {
-		//Broadcast request to primary
-		payload, err := proto.Marshal(tx)
-		if err != nil {
-			pbft.logger.Errorf("C  ConsensusMessage_TRANSACTION Marshal Error", err)
-			return nil
-		}
-		consensusMsg := &ConsensusMessage{
-			Type:    ConsensusMessage_TRANSACTION,
-			Payload: payload,
-		}
-		pbMsg := cMsgToPbMsg(consensusMsg, pbft.id)
-		pbft.helper.InnerUnicast(pbMsg, currP)
-		return nil
+	if ok, _ := pbft.isPrimary(); ok {
+		err = pbft.batchMgr.txPool.AddNewTx(tx, true, true)
+	} else {
+		err = pbft.batchMgr.txPool.AddNewTx(tx, false, true)
 	}
-	//curr node is primary
-	return pbft.primaryProcessTx(tx)
+	if err != nil && err == txpool.ErrPoolFull {
+		atomic.StoreUint32(&pbft.poolFull, 1)
+	}
+	return nil
 }
 
-//primaryProcessTx primary node use this method to handle transaction
-func (pbft *pbftImpl) primaryProcessTx(tx *types.Transaction) events.Event {
-	return pbft.recvTransaction(tx)
-}
 
 //processRequestsDuringViewChange process requests received during view change.
 func (pbft *pbftImpl) processRequestsDuringViewChange() error {
@@ -914,21 +975,27 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 }
 
 //recvRequestBatch handle logic after receive request batch
-func (pbft *pbftImpl) recvRequestBatch(reqBatch *TransactionBatch) error {
+func (pbft *pbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvRequestBatch, but it's in nego-view", pbft.id)
 		return nil
 	}
 
-	digest := hash(reqBatch)
-	pbft.logger.Debugf("Replica %d received request batch %s", pbft.id, digest)
+	pbft.logger.Debugf("Replica %d received request batch %s", pbft.id, reqBatch.BatchHash)
+
+
+	txBatch := &TransactionBatch{
+		TxList: 	reqBatch.TxList,
+		HashList: 	reqBatch.TxHashList,
+		Timestamp:	time.Now().UnixNano(),
+	}
 
 	if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.primary(pbft.view) == pbft.id &&
 		!pbft.status.checkStatesOr(&pbft.status.inNegoView, &pbft.status.inRecovery) {
-		pbft.primaryValidateBatch(reqBatch, 0)
+		pbft.primaryValidateBatch(reqBatch.BatchHash, txBatch, 0)
 	} else {
-		pbft.logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", pbft.id, digest)
+		pbft.logger.Debugf("Replica %d is backup, not sending pre-prepare for request batch %s", pbft.id, reqBatch.BatchHash)
 	}
 
 	return nil
@@ -939,9 +1006,9 @@ func (pbft *pbftImpl) executeAfterStateUpdate() {
 	pbft.logger.Debugf("Replica %d try to execute after state update", pbft.id)
 
 	for idx, cert := range pbft.storeMgr.certStore {
-		if idx.n > pbft.seqNo && pbft.prepared(cert.digest, idx.v, idx.n) && !cert.validated {
-			pbft.logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, cert.digest)
-			pbft.batchVdr.preparedCert[idx] = cert.digest
+		if idx.n > pbft.seqNo && pbft.prepared(cert.resultHash, idx.v, idx.n) && !cert.validated {
+			pbft.logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, cert.resultHash)
+			pbft.batchVdr.preparedCert[idx] = cert.resultHash
 			pbft.validatePending()
 		}
 	}
@@ -1209,8 +1276,8 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 		if idx.n <= h {
 			pbft.logger.Debugf("Replica %d cleaning quorum certificate for view=%d/seqNo=%d",
 				pbft.id, idx.v, idx.n)
-			pbft.batchVdr.deleteTxFromVBS(cert.digest)
-			delete(pbft.storeMgr.outstandingReqBatches, cert.digest)
+			pbft.batchVdr.deleteTxFromVBS(cert.resultHash)
+			delete(pbft.storeMgr.outstandingReqBatches, cert.resultHash)
 			delete(pbft.storeMgr.certStore, idx)
 			pbft.persistDelQPCSet(idx.v, idx.n)
 		}
@@ -1317,7 +1384,7 @@ func (pbft *pbftImpl) resubmitRequestBatches() {
 outer:
 	for d, reqBatch := range pbft.storeMgr.outstandingReqBatches {
 		for _, cert := range pbft.storeMgr.certStore {
-			if cert.digest == d {
+			if cert.resultHash == d {
 				pbft.logger.Debugf("Replica %d already has certificate for request batch %s - not going to resubmit", pbft.id, d)
 				continue outer
 			}
@@ -1387,7 +1454,7 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 			return nil
 		}
 		batch := &TransactionBatch{
-			Batch:     result.Transactions,
+			TxList:     result.Transactions,
 			Timestamp: result.Timestamp,
 		}
 		digest := result.Hash
@@ -1395,8 +1462,9 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 
 		pbft.storeMgr.outstandingReqBatches[digest] = batch
 		cache := &cacheBatch{
-			batch: batch,
-			vid:   result.SeqNo,
+			batch: 		batch,
+			vid:   		result.Vid,
+			resultHash:	result.Hash,
 		}
 		pbft.batchVdr.saveToCVB(digest, cache)
 		pbft.trySendPrePrepares()
@@ -1416,12 +1484,11 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 		}
 
 		digest := result.Hash
-		if digest == cert.digest {
+		if digest == cert.resultHash {
 			cert.validated = true
 			pbft.sendCommit(digest, result.View, result.SeqNo)
 		} else {
-			pbft.logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary, self: %s, primary: %s",
-				pbft.id, result.View, result.SeqNo, result.Hash, cert.digest)
+			pbft.logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary, self: %s, primary: %s", pbft.id, result.View, result.SeqNo, result.Hash, cert.resultHash)
 			pbft.sendViewChange()
 		}
 	}

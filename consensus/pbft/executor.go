@@ -134,12 +134,6 @@ func (pbft *pbftImpl) dispatchLocalEvent(e *LocalEvent) events.Event {
 //handleCorePbftEvent handler core PBFT service events.
 func (pbft *pbftImpl) handleCorePbftEvent(e *LocalEvent) events.Event {
 	switch e.EventType {
-	case CORE_BATCH_TIMER_EVENT:
-		pbft.logger.Debugf("Replica %d batch timer expired", pbft.id)
-		if atomic.LoadUint32(&pbft.activeView) == 1 && !pbft.batchMgr.isBatchStoreEmpty() {
-			return pbft.sendBatch()
-		}
-		return nil
 
 	case CORE_NULL_REQUEST_TIMER_EVENT:
 		pbft.handleNullRequestTimerEvent()

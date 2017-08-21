@@ -96,7 +96,7 @@ func (pbft *pbftImpl) checkDuplicateInCache(tx *types.Transaction) (exist bool) 
 func (pbft *pbftImpl) checkDuplicate(txBatch *TransactionBatch) (txStore *transactionStore, err error) {
 	txStore = newTransactionStore()
 	err = nil
-	for _, tx := range txBatch.Batch {
+	for _, tx := range txBatch.TxList {
 		key := hex.EncodeToString(tx.TransactionHash)
 		if txStore.has(key) || pbft.checkDuplicateInCache(tx) {
 			err = errors.New("Find duplicate transaction in the batch sent by primary")
@@ -112,13 +112,13 @@ func (pbft *pbftImpl) checkDuplicate(txBatch *TransactionBatch) (txStore *transa
 func (pbft *pbftImpl) removeDuplicate(txBatch *TransactionBatch) (newBatch *TransactionBatch, txStore *transactionStore) {
 	newBatch = &TransactionBatch{Timestamp: txBatch.Timestamp}
 	txStore = newTransactionStore()
-	for _, tx := range txBatch.Batch {
+	for _, tx := range txBatch.TxList {
 		key := byteToString(tx.TransactionHash)
 		if txStore.has(key) || pbft.checkDuplicateInCache(tx) {
 			pbft.logger.Warningf("Primary %d received duplicate transaction hash %v", pbft.id, key)
 		} else {
 			txStore.add(tx)
-			newBatch.Batch = append(newBatch.Batch, tx)
+			newBatch.TxList = append(newBatch.TxList, tx)
 		}
 	}
 	return
@@ -132,7 +132,7 @@ func (pbft *pbftImpl) rebuildDuplicator(xset map[uint64]string) {
 			batch, ok := pbft.batchVdr.validatedBatchStore[d]
 			if ok {
 				store := newTransactionStore()
-				for _, tx := range batch.Batch {
+				for _, tx := range batch.TxList {
 					store.add(tx)
 				}
 				temp[n] = store
