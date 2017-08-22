@@ -12,6 +12,7 @@ import (
 	"context"
 	"sync"
 	"time"
+	"errors"
 )
 
 const (
@@ -20,7 +21,7 @@ const (
 )
 
 var (
-	wsS          RPCServer
+	wsS          internalRPCServer
 
 )
 
@@ -43,7 +44,7 @@ type httpReadWriteCloser struct {
 	io.WriteCloser
 }
 
-func GetWSServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) RPCServer {
+func GetWSServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) internalRPCServer {
 	if wsS == nil {
 		wsS = &wsServerImpl{
 			stopHp: 		stopHp,
@@ -57,9 +58,9 @@ func GetWSServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan
 	return wsS
 }
 
-// Start starts the websocket RPC endpoint.
-func (wssi *wsServerImpl) Start() error{
-	log.Notice("start websocket service ...")
+// start starts the websocket RPC endpoint.
+func (wssi *wsServerImpl) start() error{
+	log.Noticef("starting websocket service at port %v ...", wssi.port)
 
 	var (
 		listener net.Listener
@@ -73,7 +74,6 @@ func (wssi *wsServerImpl) Start() error{
 		return err
 	}
 	go wssi.newWSServer(handler).Serve(listener)
-	log.Notice(fmt.Sprintf("WebSocket endpoint opened: ws://%s", fmt.Sprintf("%d", wssi.port)))
 
 
 	wssi.wsListener = listener
@@ -82,9 +82,9 @@ func (wssi *wsServerImpl) Start() error{
 	return nil
 }
 
-// Stop terminates the websocket RPC endpoint.
-func (wssi *wsServerImpl) Stop() error {
-	log.Notice("stop websocket service ...")
+// stop terminates the websocket RPC endpoint.
+func (wssi *wsServerImpl) stop() error {
+	log.Noticef("stopping websocket service at port %v ...", wssi.port)
 	if wssi.wsListener != nil {
 		wssi.wsListener.Close()
 		wssi.wsListener = nil
@@ -103,20 +103,32 @@ func (wssi *wsServerImpl) Stop() error {
 		wssi.closeConnection(n, c)
 	}
 
-	log.Notice("stopped websocket service")
+	log.Notice("websocket service stopped")
 
 	return nil
 }
 
-// Restart restarts the websocket RPC endpoint.
-func (wssi *wsServerImpl) Restart() error {
-	log.Notice("restart websocket service ...")
-	if err := wssi.Stop(); err != nil {
+// restart restarts the websocket RPC endpoint.
+func (wssi *wsServerImpl) restart() error {
+	log.Noticef("restarting websocket service at port %v ...", wssi.port)
+	if err := wssi.stop(); err != nil {
 		return err
 	}
-	if err := wssi.Start(); err != nil {
+	if err := wssi.start(); err != nil {
 		return err
 	}
+	return nil
+}
+
+func(wssi *wsServerImpl) getPort() int {
+	return wssi.port
+}
+
+func (wssi *wsServerImpl) setPort(port int) error {
+	if port == 0 {
+		return errors.New("please offer websocket port")
+	}
+	wssi.port = port
 	return nil
 }
 

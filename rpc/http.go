@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"time"
 	admin "hyperchain/api/admin"
+	"errors"
 )
 
 const (
@@ -23,7 +24,7 @@ const (
 )
 
 var (
-	hs           RPCServer
+	hs           internalRPCServer
 )
 
 type httpServerImpl struct {
@@ -37,7 +38,7 @@ type httpServerImpl struct {
 	httpAllowedOrigins 	[]string
 }
 
-func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) RPCServer {
+func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) internalRPCServer {
 	if hs == nil {
 		hs = &httpServerImpl{
 			nr: 			nr,
@@ -50,9 +51,9 @@ func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp ch
 	return hs
 }
 
-// Start starts the http RPC endpoint.
-func (hi *httpServerImpl) Start() error {
-	log.Notice("start http service ... at", hi.port)
+// start starts the http RPC endpoint.
+func (hi *httpServerImpl) start() error {
+	log.Noticef("starting http service at port %v ...", hi.port)
 
 	var (
 		listener net.Listener
@@ -78,9 +79,9 @@ func (hi *httpServerImpl) Start() error {
 	return nil
 }
 
-// Stop stops the http RPC endpoint.
-func (hi *httpServerImpl) Stop() error {
-	log.Notice("stop http service ...")
+// stop stops the http RPC endpoint.
+func (hi *httpServerImpl) stop() error {
+	log.Noticef("stopping http service at port %v ...", hi.port)
 	if hi.httpListener != nil {
 		hi.httpListener.Close()
 		hi.httpListener = nil
@@ -92,20 +93,31 @@ func (hi *httpServerImpl) Stop() error {
 		time.Sleep(4 * time.Second)
 	}
 
-	log.Notice("stopped http service")
+	log.Notice("http service stopped")
 	return nil
 }
 
-// Restart restarts the http RPC endpoint.
-func (hi *httpServerImpl) Restart() error {
+// restart restarts the http RPC endpoint.
+func (hi *httpServerImpl) restart() error {
+	log.Noticef("restarting http service at port %v ...", hi.port)
+	if err := hi.stop(); err != nil {
+		return err
+	}
+	if err := hi.start(); err != nil {
+		return err
+	}
+	return nil
+}
 
-	log.Notice("restart http service ...")
-	if err := hi.Stop(); err != nil {
-		return err
+func(hi *httpServerImpl) getPort() int {
+	return hi.port
+}
+
+func (hi *httpServerImpl) setPort(port int) error {
+	if port == 0 {
+		return errors.New("please offer http port")
 	}
-	if err := hi.Start(); err != nil {
-		return err
-	}
+	hi.port = port
 	return nil
 }
 
