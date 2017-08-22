@@ -40,7 +40,7 @@ func TestInitDBMgr(t *testing.T) {
 
 func TestCreateDB(t *testing.T) {
 	setupDB()
-	err, db := ConnectToDB(&DbName{
+	db, err := ConnectToDB(&DbName{
 		name:"db1",
 		namespace:common.DEFAULT_NAMESPACE,
 	}, conf)
@@ -50,7 +50,7 @@ func TestCreateDB(t *testing.T) {
 	}
 
 	db.Put([]byte("a"), []byte("b"))
-	err, db2 := ConnectToDB(&DbName{
+	db2, err := ConnectToDB(&DbName{
 		name:"db2",
 		namespace:common.DEFAULT_NAMESPACE,
 	}, conf)
@@ -70,13 +70,13 @@ func TestGetDB(t *testing.T) {
 			name:fmt.Sprintf("db%d", i),
 			namespace:common.DEFAULT_NAMESPACE,
 		}
-		err, db := ConnectToDB(dbName, conf)
+		db, err := ConnectToDB(dbName, conf)
 		if err != nil {
 			t.Errorf("create db error: %v", err)
 		}
 		k, v := []byte("a"), []byte("b")
 		db.Put(k, v)
-		err, db2 := GetDB(dbName)
+		db2, err:= GetDB(dbName)
 		if err != nil {
 			t.Errorf("create db error: %v", err)
 		}
@@ -94,12 +94,12 @@ func TestMultiThreadDbOps(t *testing.T)  {
 		wg.Add(1)
 		go func() {
 			id := atomic.AddInt32(&x, 1)
-			fmt.Printf("create db%d......\n", id)
+			logger.Infof("create db%d......", id)
 			dbName := &DbName{
 				name:fmt.Sprintf("db%d", id),
 				namespace:common.DEFAULT_NAMESPACE,
 			}
-			err, db := ConnectToDB(dbName, conf)
+			db, err := ConnectToDB(dbName, conf)
 			if err != nil {
 				t.Errorf("create db error: %v", err)
 			}
@@ -119,7 +119,7 @@ func TestMultiThreadDbOps(t *testing.T)  {
 				namespace:common.DEFAULT_NAMESPACE,
 			}
 			//fmt.Printf("db name: %s \n", dbName.Name)
-			err, db := GetDB(dbName)
+			db, err:= GetDB(dbName)
 			if err != nil {
 				t.Errorf("get db error: %v", err)
 			}
@@ -139,7 +139,7 @@ func TestMultiThreadDbOps(t *testing.T)  {
 
 func TestGetDB2(t *testing.T) {
 	setupDB()
-	err, _ := GetDB(&DbName{
+	_, err := GetDB(&DbName{
 		name:"sss",
 		namespace:common.DEFAULT_NAMESPACE,
 	})
@@ -153,7 +153,7 @@ func TestGetDB2(t *testing.T) {
 
 func TestClose(t *testing.T) {//TODO: add more checks  add db root dir not database dir
 	setupDB()
-	err, _ := ConnectToDB(&DbName{
+	_, err:= ConnectToDB(&DbName{
 		name:"db1",
 		namespace:common.DEFAULT_NAMESPACE,
 	}, conf)
@@ -163,14 +163,14 @@ func TestClose(t *testing.T) {//TODO: add more checks  add db root dir not datab
 	}
 	Close()
 
-	err, _ = GetDB(&DbName{
+	_, err = GetDB(&DbName{
 		name:"db1",
 		namespace:common.DEFAULT_NAMESPACE,
 	})
 	time.Sleep(1 * time.Second)
 	assert.Equal(t, ErrDbNotExisted, err)
 
-	err, _ = ConnectToDB(&DbName{
+	_, err = ConnectToDB(&DbName{
 		name:"db1",
 		namespace:common.DEFAULT_NAMESPACE,
 	}, conf)
@@ -184,7 +184,7 @@ func TestClose(t *testing.T) {//TODO: add more checks  add db root dir not datab
 		namespace:common.DEFAULT_NAMESPACE,
 	})
 
-	err, _ = GetDB(&DbName{
+	_, err = GetDB(&DbName{
 		name:"db1",
 		namespace:common.DEFAULT_NAMESPACE,
 	})

@@ -81,15 +81,15 @@ func (dm *DatabaseManager) contains(dbName *DbName) bool {
 
 
 //getDatabase get database instance by namespace and dbname.
-func (dm *DatabaseManager) getDatabase(namespace, dbname string) (error, db.Database) {
+func (dm *DatabaseManager) getDatabase(namespace, dbname string) (db.Database, error) {
 	if len(dbname) == 0 || len(namespace) == 0 {
-		return ErrInvalidDbName, nil
+		return nil, ErrInvalidDbName
 	}
 	ndb := dm.getNDB(namespace)
 	if ndb != nil {
 		return ndb.getDB(dbname)
 	}else {
-		return ErrDbNotExisted, nil
+		return nil, ErrDbNotExisted
 	}
 }
 
@@ -131,14 +131,14 @@ func InitDBMgr(conf *common.Config) error {
 }
 
 //ConnectToDB connect to a specified database
-func ConnectToDB(dbname *DbName, conf *common.Config) (error, db.Database) {
+func ConnectToDB(dbname *DbName, conf *common.Config) (db.Database, error) {
 
 	if dbmgr == nil {
 		InitDBMgr(conf)
 	}
 
 	if dbname == nil || len(dbname.name) == 0 || len(dbname.namespace) == 0 {
-		return ErrInvalidDbName, nil
+		return nil, ErrInvalidDbName
 	}
 
 	ns := conf.GetString(common.NAMESPACE)
@@ -147,12 +147,12 @@ func ConnectToDB(dbname *DbName, conf *common.Config) (error, db.Database) {
 	}
 
 	if dbmgr.contains(dbname) {
-		return ErrDbExisted, nil
+		return nil, ErrDbExisted
 	}
 	//create new database
 	ldb, err := hleveldb.NewLDBDataBase(conf, path.Join(conf.GetString(hcomm.LEVEL_DB_ROOT_DIR), dbname.name), dbname.namespace)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	if ndb, ok := dbmgr.ndbs[dbname.namespace]; ok {
@@ -166,11 +166,11 @@ func ConnectToDB(dbname *DbName, conf *common.Config) (error, db.Database) {
 		dbmgr.addNDB(dbname.namespace, ndb)
 	}
 
-	return nil, ldb
+	return ldb, nil
 }
 
 //GetDB get database by namespace and dbname.
-func GetDB(dbname *DbName) (error, db.Database) {
+func GetDB(dbname *DbName) (db.Database, error) {
 	if dbmgr == nil {
 		//TODO: handle situations where dbmgr is not initialized
 	}
@@ -179,14 +179,13 @@ func GetDB(dbname *DbName) (error, db.Database) {
 
 //CloseByName close connection to the database.
 func CloseByName(dbname *DbName) error {
-	err, db := GetDB(dbname)
+	db, err := GetDB(dbname)
 	if err != nil {
 		return ErrDbNotExisted
 	}
 	db.Close()
 	ndb := dbmgr.getNDB(dbname.namespace)
 	ndb.removeDB(dbname.name)
-	//TODO: remove the db instance
 	return nil
 }
 
@@ -223,13 +222,13 @@ func (ndb *NDB) addDB(name string, db db.Database)  {
 	ndb.lock.Unlock()
 }
 
-func (ndb *NDB) getDB(name string) (error, db.Database)  {
+func (ndb *NDB) getDB(name string) (db.Database, error)  {
 	ndb.lock.RLock()
 	defer ndb.lock.RUnlock()
 	if db, ok := ndb.dbs[name]; ok {
-		return nil, db
+		return db, nil
 	}else {
-		return ErrDbNotExisted, nil
+		return nil, ErrDbNotExisted
 	}
 }
 
