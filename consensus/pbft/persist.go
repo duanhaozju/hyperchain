@@ -159,6 +159,9 @@ func (pbft *pbftImpl) restoreCert() {
 
 	qset, _ := pbft.restoreQSet()
 	for idx, q := range qset {
+		if idx.n > pbft.exec.lastExec {
+			continue
+		}
 		cert := pbft.storeMgr.getCert(idx.v, idx.n)
 		cert.prePrepare = q
 		cert.digest = q.BatchDigest
@@ -167,6 +170,9 @@ func (pbft *pbftImpl) restoreCert() {
 
 	pset, _ := pbft.restorePSet()
 	for idx, prepares := range pset {
+		if idx.n > pbft.exec.lastExec {
+			continue
+		}
 		cert := pbft.storeMgr.getCert(idx.v, idx.n)
 		for _, p := range prepares.Set {
 			cert.prepare[*p] = true
@@ -178,6 +184,9 @@ func (pbft *pbftImpl) restoreCert() {
 
 	cset, _ := pbft.restoreCSet()
 	for idx, commits := range cset {
+		if idx.n > pbft.exec.lastExec {
+			continue
+		}
 		cert := pbft.storeMgr.getCert(idx.v, idx.n)
 		for _, c := range commits.Set {
 			cert.commit[*c] = true
@@ -328,12 +337,7 @@ func (pbft *pbftImpl) restoreView(view string) {
 	}
 }
 
-func (pbft *pbftImpl) restoreState() {
-
-	pbft.restoreCert()
-
-	pbft.restoreView("")
-
+func (pbft *pbftImpl) restoreState(view string) {
 	chkpts, err := persist.ReadStateSet(pbft.namespace, "chkpt.")
 	if err == nil {
 		highSeq := uint64(0)
@@ -382,6 +386,8 @@ func (pbft *pbftImpl) restoreState() {
 	}
 	pbft.batchVdr.setVid(pbft.seqNo)
 	pbft.batchVdr.setLastVid(pbft.seqNo)
+	pbft.restoreCert()
+	pbft.restoreView(view)
 
 	pbft.logger.Infof("Replica %d restored state: view: %d, seqNo: %d, reqBatches: %d, chkpts: %d",
 		pbft.id, pbft.view, pbft.seqNo, len(pbft.batchVdr.validatedBatchStore), len(pbft.storeMgr.chkpts))

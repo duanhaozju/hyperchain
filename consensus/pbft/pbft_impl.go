@@ -1429,13 +1429,19 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 		}
 
 		cert := pbft.storeMgr.getCert(result.View, result.SeqNo)
+		if cert.digest == "" {
+			pbft.logger.Warningf("Relica %d cannot find pre-prepare for validateResult view=%d/vid=%d",
+				pbft.id, result.View, result.SeqNo)
+			return nil
+		}
 
 		digest := result.Hash
 		if digest == cert.digest {
 			cert.validated = true
 			pbft.sendCommit(digest, result.View, result.SeqNo)
 		} else {
-			pbft.logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary, self: %s, primary: %s", pbft.id, result.View, result.SeqNo, result.Hash, cert.digest)
+			pbft.logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d sent from primary, self: %s, primary: %s",
+				pbft.id, result.View, result.SeqNo, result.Hash, cert.digest)
 			pbft.sendViewChange()
 		}
 	}
