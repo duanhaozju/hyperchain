@@ -381,56 +381,28 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	n, lastid, replicas, find, chkptBehind := pbft.findHighestChkptQuorum()
 	pbft.logger.Debug("n: ", n, "lastid: ", lastid, "find: ", find, "chkptBehind: ", chkptBehind)
 
-	lastExec, curHash, execFind := pbft.findLastExecQuorum()
-	pbft.logger.Debug("lastExec:", lastExec, "curHash:", curHash, "execFind:", execFind, "replicas:", replicas)
-
 	if !find {
 		pbft.logger.Debugf("Replica %d did not find chkpt quorum", pbft.id)
 		return nil
 	}
 
-	if !execFind {
-		pbft.logger.Debugf("Replica %d did not find lastexec quorum", pbft.id)
-		return nil
-	}
 	pbft.timerMgr.stopTimer(RECOVERY_RESTART_TIMER)
-	pbft.recoveryMgr.recoveryToSeqNo = &lastExec
+	pbft.recoveryMgr.recoveryToSeqNo = &n
 
-	selfLastExec, selfCurHash := persist.GetBlockHeightAndHash(pbft.namespace)
+	pbft.logger.Debugf("Replica %d in recovery find quorum chkpt: %d",pbft.id, n, pbft.h)
 
-	pbft.logger.Debugf("Replica %d in recovery find quorum chkpt: %d, self: %d, "+
-		"others lastExec: %d, self: %d", pbft.id, n, pbft.h, lastExec, pbft.exec.lastExec)
-	pbft.logger.Debugf("Replica %d in recovery, "+
-		"others lastBlockInfo: %s, self: %s", pbft.id, rsp.LastBlockHash, selfCurHash)
+	if pbft.primary(pbft.view) == pbft.id {
+		for idx := range pbft.storeMgr.certStore {
+			if idx.n > pbft.exec.lastExec {
+				delete(pbft.storeMgr.certStore, idx)
+				pbft.persistDelQPCSet(idx.v, idx.n)
 
-	// Fast catch up
-	if lastExec == selfLastExec && curHash == selfCurHash {
-		pbft.logger.Debugf("Replica %d in recovery same lastExec: %d, "+
-			"same block hash: %s, fast catch up", pbft.id, selfLastExec, curHash)
-		//pbft.status.inActiveState(&pbft.status.inRecovery)
-		//pbft.recoveryMgr.recoveryToSeqNo = nil
-		pbft.seqNo = selfLastExec
-		pbft.exec.lastExec = selfLastExec
-		pbft.batchVdr.vid = selfLastExec
-		pbft.batchVdr.lastVid = selfLastExec
-
-		if pbft.primary(pbft.view) == pbft.id {
-			for idx := range pbft.storeMgr.certStore {
-				if idx.n > selfLastExec {
-					delete(pbft.storeMgr.certStore, idx)
-					pbft.persistDelQPCSet(idx.v, idx.n)
-				}
 			}
 		}
-		if !pbft.status.getState(&pbft.status.inVcReset) {
-			pbft.helper.VcReset(selfLastExec + 1)
-			pbft.status.activeState(&pbft.status.inVcReset)
-		}
-		return nil
 	}
 
-	pbft.logger.Debugf("Replica %d in recovery self lastExec: %d, others: %d"+
-		"miss match self block hash: %s, other block hash %s", pbft.id, selfLastExec, lastExec, selfCurHash, curHash)
+	pbft.logger.Debugf("Replica %d in recovery self lastExec: %d, self h: %d, others h: %d",
+		pbft.id, pbft.exec.lastExec, pbft.h, n)
 
 	var id []byte
 	var err error
@@ -458,7 +430,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.moveWatermarks(n)
 		pbft.stateTransfer(target)
 	} else if !pbft.status.getState(&pbft.status.skipInProgress) && !pbft.status.getState(&pbft.status.inVcReset) {
-		pbft.helper.VcReset(selfLastExec + 1)
+		pbft.helper.VcReset(pbft.exec.lastExec + 1)
 		pbft.status.activeState(&pbft.status.inVcReset)
 	} else {
 		pbft.logger.Debugf("Replica %d try to recovery but find itself in state update", pbft.id)
