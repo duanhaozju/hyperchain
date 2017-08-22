@@ -228,7 +228,6 @@ func (pmgr *peerManagerImpl)Start() error {
 	for pmgr.pts.HasNext() {
 		pt := pmgr.pts.Pop()
 		//Here should control the permission
-		pmgr.logger.Critical("start up info ",pt.id,pt.hostname)
 		pmgr.bind(PEERTYPE_VP,pt.namespace, pt.id, pt.hostname,"")
 	}
 	pmgr.SetOnline()
@@ -400,10 +399,10 @@ func (pmgr *peerManagerImpl) linking() {
 			}
 
 			for _,wait := range waitList {
-				pmgr.logger.Noticef("linking to peer [%s](%s) waiting queue size %d",wait.Namespace,wait.Hostname,pmgr.peerPool.pendingMap.Count())
+				pmgr.logger.Debugf("linking to peer [%s](%s) waiting queue size %d",wait.Namespace,wait.Hostname,pmgr.peerPool.pendingMap.Count())
 				chts,err := pmgr.hts.GetAClientHTS()
 				if err != nil{
-					pmgr.logger.Critical("get chts failed %s",err.Error())
+					pmgr.logger.Errorf("get chts failed %s",err.Error())
 					if len(waitList) <= 1{
 						break
 					}
