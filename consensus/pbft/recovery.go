@@ -389,7 +389,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	pbft.timerMgr.stopTimer(RECOVERY_RESTART_TIMER)
 	pbft.recoveryMgr.recoveryToSeqNo = &n
 
-	pbft.logger.Debugf("Replica %d in recovery find quorum chkpt: %d",pbft.id, n, pbft.h)
+	pbft.logger.Debugf("Replica %d in recovery find quorum chkpt: %d",pbft.id, n)
 
 	if pbft.primary(pbft.view) == pbft.id {
 		for idx := range pbft.storeMgr.certStore {
