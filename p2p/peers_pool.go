@@ -101,6 +101,17 @@ func (pool *PeersPool)GetPeers() []*Peer {
 	return list
 }
 
+func (pool *PeersPool)MaxID() int{
+	max := 1;
+	l := pool.vpPool.Sort()
+	for _, item := range l {
+		if max < item.(*Peer).info.Id{
+			max = item.(*Peer).info.Id
+		}
+	}
+	return max
+}
+
 func (pool *PeersPool)GetPeerByHash(hash string) *Peer {
 	if pool.vpPool == nil {
 		return nil

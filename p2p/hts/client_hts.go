@@ -46,6 +46,9 @@ func (ch *ClientHTS)GenShareKey(rand, rawcert []byte) error {
 func (ch *ClientHTS) Encrypt(msg []byte) ([]byte, error) {
 	ch.rwlock.RLock()
 	defer ch.rwlock.RUnlock()
+	if ch.sessionKey == nil{
+		return nil, errors.New("cannot get session Key,enc failed (nil).")
+	}
 	sKey := ch.sessionKey.GetKey()
 	if sKey == nil {
 		return nil, errors.New("cannot get session Key,enc failed.")
