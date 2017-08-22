@@ -31,6 +31,7 @@ type wsServerImpl struct {
 	restartHp		chan bool
 	nr			namespace.NamespaceManager
 	port                    int
+
 	wsConns			map[*websocket.Conn]*Notifier
 	wsConnsMux	       	sync.Mutex
 	wsHandler        	*Server
@@ -52,7 +53,7 @@ func GetWSServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan
 			nr: 			nr,
 			wsAllowedOrigins: 	[]string{"*"},
 			wsConns:		make(map[*websocket.Conn]*Notifier),
-			port:                   nr.GlobalConfig().GetInt("port.websocket"),
+			port:                   nr.GlobalConfig().GetInt(common.WEBSOCKET_PORT),
 		}
 	}
 	return wsS

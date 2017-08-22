@@ -53,7 +53,7 @@ const (
 	JVM_PORT 	     = "port.jvm"
 	LEDGER_PORT 	     = "port.ledger"
 	P2P_PORT             = "port.grpc"
-	C_WEBSOCKET_PORT     = "global.websocket_port"
+	WEBSOCKET_PORT       = "port.websocket"
 )
 
 //constants for p2p configuration keys

@@ -27,15 +27,16 @@ func NEWIPCServer(endpoint string) *IPCServer{
 }
 
 
-func (server *IPCServer)Start(rcrecv interface{})error{
+func (server *IPCServer)Start()error{
 	var (
 		listener net.Listener
 		err error
 	)
 
-	rpc.Register(rcrecv)
+	rpc.Register(GetRemoteCall())
 	rpc.HandleHTTP()
 
+	logger.Notice("interactive ipc shell server listening...")
 	if listener,err = server.listener();err != nil {
 		logger.Errorf("some error occured: %s",err.Error())
 		return err

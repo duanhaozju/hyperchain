@@ -5,6 +5,7 @@ import (
 	"sync"
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	"hyperchain/ipc"
 )
 
 var (
@@ -64,7 +65,9 @@ func GetRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp cha
 func newRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) *RPCServerImpl{
 	rsi := &RPCServerImpl{}
 	rsi.httpServer = GetHttpServer(nr, stopHp, restartHp)
-	rsi.wsServer = GetWSServer(nr, stopHp, restartHp)
+	rsi.wsServer   = GetWSServer(nr, stopHp, restartHp)
+
+	ipc.RegisterFunc("service", rsi.Command)
 	return rsi
 }
 

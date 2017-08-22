@@ -16,6 +16,7 @@ import (
 	"time"
 	admin "hyperchain/api/admin"
 	"errors"
+	"hyperchain/common"
 )
 
 const (
@@ -45,7 +46,7 @@ func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp ch
 			stopHp: 		stopHp,
 			restartHp: 		restartHp,
 			httpAllowedOrigins: 	[]string{"*"},
-			port:                   nr.GlobalConfig().GetInt("port.jsonrpc"),
+			port:                   nr.GlobalConfig().GetInt(common.JSON_RPC_PORT),
 		}
 	}
 	return hs
@@ -63,15 +64,16 @@ func (hi *httpServerImpl) start() error {
 	// start http listener
 	handler := NewServer(hi.nr, hi.stopHp, hi.restartHp)
 
-	http.HandleFunc("/login", admin.LoginServer)
-	http.Handle("/", newCorsHandler(handler, hi.httpAllowedOrigins))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/login", admin.LoginServer)
+	mux.Handle("/", newCorsHandler(handler, hi.httpAllowedOrigins))
 
 	listener, err = net.Listen("tcp", fmt.Sprintf(":%d", hi.port))
 	if err != nil {
 		return err
 	}
 
-	go newHTTPServer().Serve(listener)
+	go newHTTPServer(mux).Serve(listener)
 
 	hi.httpListener = listener
 	hi.httpHandler = handler
@@ -147,9 +149,9 @@ func (hrw *httpReadWrite) Close() error {
 //}
 
 // newHTTPServer creates a new http RPC server around an API provider.
-func newHTTPServer() *http.Server {
+func newHTTPServer(mux *http.ServeMux) *http.Server {
 	return &http.Server{
-		Handler: nil,
+		Handler: mux,
 		ReadTimeout:  ReadTimeout,
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"hyperchain/manager/event"
 	"github.com/pkg/errors"
 	"hyperchain/common"
-	"hyperchain/p2p/ipc"
+	"hyperchain/ipc"
 	"fmt"
 	"github.com/op/go-logging"
 )
@@ -65,17 +65,10 @@ func newP2PManager(vip *viper.Viper) (*p2pManagerImpl, error) {
 	p2pmgr := &p2pManagerImpl{
 		hypernet:net,
 		conf:vip,
-		ipcShell:ipc.NEWIPCServer(vip.GetString(common.P2P_IPC)),
 	}
 	p2pmgr.Start()
 
-	glogger.Notice("interactive ipc shell server listening...")
-	rc := ipc.NewRemoteCall()
-	ipc.RegisterFunc(rc, "network", p2pmgr.hypernet.Command)
-	err = p2pmgr.ipcShell.Start(rc)
-	if err != nil {
-		glogger.Fatalf("cannot start ipc server, err: %s", err.Error())
-	}
+	ipc.RegisterFunc("network", p2pmgr.hypernet.Command)
 	return p2pmgr, nil
 }
 
