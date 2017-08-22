@@ -10,7 +10,7 @@ import (
 	"time"
 	"hyperchain/p2p"
 	"github.com/terasum/viper"
-	"hyperchain/p2p/ipc"
+	"hyperchain/ipc"
 	"fmt"
 	_ "net/http/pprof"
 	"hyperchain/rpc"
@@ -19,6 +19,7 @@ import (
 type hyperchain struct {
 	nsMgr       namespace.NamespaceManager
 	hs          jsonrpc.RPCServer
+	ipcShell    *ipc.IPCServer
 	p2pmgr 	    p2p.P2PManager
 	stopFlag    chan bool
 	restartFlag chan bool
@@ -43,14 +44,15 @@ func newHyperchain(argV *argT) *hyperchain {
 	if err != nil{
 		panic(err)
 	}
-	p2pManager,err  := p2p.GetP2PManager(vip)
+
+	hp.ipcShell	 = ipc.NEWIPCServer(globalConfig.GetString(common.P2P_IPC))
+	p2pManager,err	:= p2p.GetP2PManager(vip)
 	if err != nil{
 		panic(err)
 	}
-	hp.p2pmgr = p2pManager
-
-	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
-	hp.hs = jsonrpc.GetRPCServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)
+	hp.p2pmgr 	= p2pManager
+	hp.nsMgr 	= namespace.GetNamespaceManager(globalConfig)
+	hp.hs 		= jsonrpc.GetRPCServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)
 
 	return hp
 }
@@ -60,6 +62,7 @@ func (h *hyperchain) start() {
 	go h.nsMgr.Start()
 	go h.hs.Start()
 	go CheckLicense(h.stopFlag)
+	go h.ipcShell.Start()
 }
 
 func (h *hyperchain) stop() {

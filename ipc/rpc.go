@@ -6,6 +6,10 @@ import (
 	"fmt"
 )
 
+var (
+	remoteCall *RemoteCall
+)
+
 type Args struct {
 	Cmd string
 	Argv []string
@@ -20,14 +24,18 @@ type RemoteCall struct{
 	Func map[string]func(args []string,ret *[]string)error
 }
 
-func NewRemoteCall()*RemoteCall{
-	return &RemoteCall{
-		RegLock:new(sync.RWMutex),
-		Func:make(map[string]func(args []string,ret *[]string)error),
+func GetRemoteCall() *RemoteCall{
+	if remoteCall == nil {
+		remoteCall = &RemoteCall{
+			RegLock:new(sync.RWMutex),
+			Func:make(map[string]func(args []string,ret *[]string)error),
+		}
 	}
+	return remoteCall
 }
 
-func RegisterFunc(rc *RemoteCall,cmd string,f func(args []string,ret *[]string)error ){
+func RegisterFunc(cmd string,f func(args []string,ret *[]string)error ){
+	rc := GetRemoteCall()
 	rc.RegLock.Lock()
 	defer rc.RegLock.Unlock()
 	rc.Func[cmd] = f
