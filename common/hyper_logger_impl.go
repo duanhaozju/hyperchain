@@ -37,10 +37,10 @@ type HyperLoggerMgr interface {
 	//GetLoggerLevel get logger level with specified namespace and module.
 	getLoggerLevel(namespace, module string) (string, error)
 
-	//addHyperLogger add A HyperLogger to this hyperLoggerMgr
+	//addHyperLogger add A HyperLogger to this hyperLoggerMgr.
 	addHyperLogger(hp *HyperLogger)
 
-	//getHyperLogger get HyperLogger of namespace
+	//getHyperLogger get HyperLogger of namespace.
 	getHyperLogger(namespace string) *HyperLogger
 }
 
@@ -58,14 +58,14 @@ func newHyperLoggerMgrImpl() HyperLoggerMgr {
 	return hmi
 }
 
-//addHyperLogger add hyperLogger to HyperLoggerMgr
+//addHyperLogger add hyperLogger to HyperLoggerMgr.
 func (hmi *hyperLoggerMgrImpl) addHyperLogger(hl *HyperLogger) {
 	hmi.rwMutex.Lock()
 	hmi.hyperLoggers[hl.namespace] = hl
 	hmi.rwMutex.Unlock()
 }
 
-//getHyperLogger get HyperLogger of namespace
+//getHyperLogger get HyperLogger of namespace.
 func (hmi *hyperLoggerMgrImpl) getHyperLogger(namespace string) (hl *HyperLogger) {
 	hmi.rwMutex.RLock()
 	hl = hmi.hyperLoggers[namespace]
@@ -174,7 +174,7 @@ func (hl *HyperLogger) init() {
 	}
 }
 
-//newLoggerFile new logger dump file
+//newLoggerFile new logger dump file.
 func (hl *HyperLogger) newLoggerFile() *os.File {
 	hl.fileLock.Lock()
 	preFile := hl.currentFile
@@ -243,7 +243,7 @@ func (hl *HyperLogger) newLeveledBackEnd() logging.LeveledBackend {
 	return hl.backend
 }
 
-//addNewLogger add new module logger for namespace logger
+//addNewLogger add new module logger for namespace logger.
 func (hl *HyperLogger) addNewLogger(module string, logger *logging.Logger) error {
 	hl.rwLock.Lock()
 	hl.loggers[module] = logger
@@ -285,7 +285,7 @@ func (hl *HyperLogger) getModuleLogger(module string) *logging.Logger {
 	return ml
 }
 
-//updateLogFileAndBackend when log file split
+//updateLogFileAndBackend when log file split.
 func (hl *HyperLogger) updateLogFileAndBackend()  {
 	file := hl.newLoggerFile()
 	hl.newLeveledBackEnd()

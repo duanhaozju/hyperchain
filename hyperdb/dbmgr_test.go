@@ -8,11 +8,12 @@ import (
 	"hyperchain/common"
 	hcomm "hyperchain/hyperdb/common"
 	"fmt"
-	"reflect"
 	"os"
 	"sync/atomic"
 	"sync"
 	"math/rand"
+	"time"
+	"github.com/stretchr/testify/assert"
 )
 
 var conf *common.Config
@@ -21,7 +22,8 @@ func setupDB()  {
 	conf = common.NewRawConfig()
 	conf.Set(common.NAMESPACE, common.DEFAULT_NAMESPACE)
 	conf.Set(hcomm.LEVEL_DB_ROOT_DIR, "/tmp/hyperdb")
-	common.InitHyperLoggerManager(conf)
+	common.InitHyperLogger(common.DEFAULT_NAMESPACE, conf)
+	common.SetLogLevel(common.DEFAULT_NAMESPACE, "dbmgr", "debug")
 	InitDBMgr(conf)
 }
 
@@ -38,9 +40,9 @@ func TestInitDBMgr(t *testing.T) {
 
 func TestCreateDB(t *testing.T) {
 	setupDB()
-	err, db := CreateDB(&DbName{
-		Name:"db1",
-		Namespace:common.DEFAULT_NAMESPACE,
+	err, db := ConnectToDB(&DbName{
+		name:"db1",
+		namespace:common.DEFAULT_NAMESPACE,
 	}, conf)
 
 	if err != nil {
@@ -48,9 +50,9 @@ func TestCreateDB(t *testing.T) {
 	}
 
 	db.Put([]byte("a"), []byte("b"))
-	err, db2 := CreateDB(&DbName{
-		Name:"db2",
-		Namespace:common.DEFAULT_NAMESPACE,
+	err, db2 := ConnectToDB(&DbName{
+		name:"db2",
+		namespace:common.DEFAULT_NAMESPACE,
 	}, conf)
 
 	if err != nil {
@@ -65,10 +67,10 @@ func TestGetDB(t *testing.T) {
 	setupDB()
 	for i := 0; i < 10; i ++ {
 		dbName := &DbName{
-			Name:fmt.Sprintf("db%d", i),
-			Namespace:common.DEFAULT_NAMESPACE,
+			name:fmt.Sprintf("db%d", i),
+			namespace:common.DEFAULT_NAMESPACE,
 		}
-		err, db := CreateDB(dbName, conf)
+		err, db := ConnectToDB(dbName, conf)
 		if err != nil {
 			t.Errorf("create db error: %v", err)
 		}
@@ -79,9 +81,7 @@ func TestGetDB(t *testing.T) {
 			t.Errorf("create db error: %v", err)
 		}
 		v2, err := db2.Get(k)
-		if reflect.DeepEqual(v, v2) != true {
-			t.Errorf("put and get data not equal")
-		}
+		assert.Equal(t, v, v2)
 	}
 	clearDB()
 }
@@ -96,10 +96,10 @@ func TestMultiThreadDbOps(t *testing.T)  {
 			id := atomic.AddInt32(&x, 1)
 			fmt.Printf("create db%d......\n", id)
 			dbName := &DbName{
-				Name:fmt.Sprintf("db%d", id),
-				Namespace:common.DEFAULT_NAMESPACE,
+				name:fmt.Sprintf("db%d", id),
+				namespace:common.DEFAULT_NAMESPACE,
 			}
-			err, db := CreateDB(dbName, conf)
+			err, db := ConnectToDB(dbName, conf)
 			if err != nil {
 				t.Errorf("create db error: %v", err)
 			}
@@ -115,8 +115,8 @@ func TestMultiThreadDbOps(t *testing.T)  {
 		go func() {
 			id := rand.Intn(10)
 			dbName := &DbName{
-				Name:fmt.Sprintf("db%d", id),
-				Namespace:common.DEFAULT_NAMESPACE,
+				name:fmt.Sprintf("db%d", id),
+				namespace:common.DEFAULT_NAMESPACE,
 			}
 			//fmt.Printf("db name: %s \n", dbName.Name)
 			err, db := GetDB(dbName)
@@ -129,9 +129,7 @@ func TestMultiThreadDbOps(t *testing.T)  {
 			if err != nil {
 				t.Errorf("get db error: %v", err)
 			}
-			if reflect.DeepEqual(v, v2) != true {
-				t.Errorf("put and get data not equal")
-			}
+			assert.Equal(t, v, v2)
 			wg.Done()
 		}()
 	}
@@ -142,8 +140,8 @@ func TestMultiThreadDbOps(t *testing.T)  {
 func TestGetDB2(t *testing.T) {
 	setupDB()
 	err, _ := GetDB(&DbName{
-		Name:"sss",
-		Namespace:common.DEFAULT_NAMESPACE,
+		name:"sss",
+		namespace:common.DEFAULT_NAMESPACE,
 	})
 
 	if err == nil {
@@ -153,11 +151,11 @@ func TestGetDB2(t *testing.T) {
 	clearDB()
 }
 
-func TestClose(t *testing.T) {//TODO: add more checks
+func TestClose(t *testing.T) {//TODO: add more checks  add db root dir not database dir
 	setupDB()
-	err, _ := CreateDB(&DbName{
-		Name:"db1",
-		Namespace:common.DEFAULT_NAMESPACE,
+	err, _ := ConnectToDB(&DbName{
+		name:"db1",
+		namespace:common.DEFAULT_NAMESPACE,
 	}, conf)
 
 	if err != nil {
@@ -165,12 +163,32 @@ func TestClose(t *testing.T) {//TODO: add more checks
 	}
 	Close()
 
-	err, db := GetDB(&DbName{
-		Name:"db1",
-		Namespace:common.DEFAULT_NAMESPACE,
+	err, _ = GetDB(&DbName{
+		name:"db1",
+		namespace:common.DEFAULT_NAMESPACE,
+	})
+	time.Sleep(1 * time.Second)
+	assert.Equal(t, ErrDbNotExisted, err)
+
+	err, _ = ConnectToDB(&DbName{
+		name:"db1",
+		namespace:common.DEFAULT_NAMESPACE,
+	}, conf)
+
+	if err != nil {
+		t.Errorf("create db error: %v", err)
+	}
+
+	CloseByName(&DbName{
+		name:"db1",
+		namespace:common.DEFAULT_NAMESPACE,
 	})
 
-	db.Put([]byte("11"), []byte("11"))
-	t.Error(err)
+	err, _ = GetDB(&DbName{
+		name:"db1",
+		namespace:common.DEFAULT_NAMESPACE,
+	})
+	time.Sleep(1 * time.Second)
+	assert.Equal(t, ErrDbNotExisted, err)
 	clearDB()
 }

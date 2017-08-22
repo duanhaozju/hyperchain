@@ -15,6 +15,10 @@ import (
 	hcomm "hyperchain/hyperdb/common"
 )
 
+func init()  {
+	logger = common.GetLogger(common.DEFAULT_NAMESPACE, "dbmgr")
+}
+
 var (
 	ErrInvalidConfig = errors.New("hyperdb/dbmgr: Invalid config")
 	ErrInvalidDbName = errors.New("hyperdb/dbmgr: Invalid dbname or namespace")
@@ -22,8 +26,11 @@ var (
 	ErrDbNotExisted  = errors.New("hyperdb/dbmgr: Database is not existed")
 )
 
-var dbmgr *DatabaseManager
-var once  sync.Once
+var (
+	dbmgr *DatabaseManager
+	once  sync.Once
+	logger *logging.Logger
+)
 
 //DatabaseManager mange all database by namespace.
 type DatabaseManager struct {
@@ -61,8 +68,8 @@ func (md *DatabaseManager) removeNDB(namespace string)  {
 func (dm *DatabaseManager) contains(dbName *DbName) bool {
 	dm.nlock.RLock()
 	defer dm.nlock.RUnlock()
-	if ndb, ok := dm.ndbs[dbName.Namespace]; ok {
-		if _, ok = ndb.dbs[dbName.Name]; ok {
+	if ndb, ok := dm.ndbs[dbName.namespace]; ok {
+		if _, ok = ndb.dbs[dbName.name]; ok {
 			return true
 		}else {
 			return false
@@ -87,8 +94,22 @@ func (dm *DatabaseManager) getDatabase(namespace, dbname string) (error, db.Data
 }
 
 type DbName struct {
-	Namespace string
-	Name      string
+	namespace string
+	name      string
+}
+
+func NewDbName(name, namesapce string) *DbName  {
+	if len(name) == 0 {
+		logger.Error(ErrInvalidDbName)
+		return nil
+	}
+	dn := &DbName{}
+
+	if len(namesapce) == 0 {
+		dn.namespace = common.DEFAULT_NAMESPACE
+	}
+	dn.name = name
+	return dn
 }
 
 //InitDBMgr init blockchain database manager
@@ -97,6 +118,7 @@ func InitDBMgr(conf *common.Config) error {
 		//TODO: add default
 		return ErrInvalidConfig
 	}
+	logger = common.GetLogger(common.DEFAULT_NAMESPACE, "dbmgr")
 	once.Do(func() {
 		dbmgr = &DatabaseManager{
 			config: conf,
@@ -108,19 +130,19 @@ func InitDBMgr(conf *common.Config) error {
 	return nil
 }
 
-//CreateDB create database instance
-func CreateDB(dbname *DbName, conf *common.Config) (error, db.Database) {
+//ConnectToDB connect to a specified database
+func ConnectToDB(dbname *DbName, conf *common.Config) (error, db.Database) {
 
 	if dbmgr == nil {
 		InitDBMgr(conf)
 	}
 
-	if dbname == nil || len(dbname.Name) == 0 || len(dbname.Namespace) == 0 {
+	if dbname == nil || len(dbname.name) == 0 || len(dbname.namespace) == 0 {
 		return ErrInvalidDbName, nil
 	}
 
 	ns := conf.GetString(common.NAMESPACE)
-	if len(ns) != 0 && dbname.Namespace != ns {
+	if len(ns) != 0 && dbname.namespace != ns {
 		dbmgr.logger.Noticef("input namespace name is not equal to namespace specified in config")
 	}
 
@@ -128,20 +150,20 @@ func CreateDB(dbname *DbName, conf *common.Config) (error, db.Database) {
 		return ErrDbExisted, nil
 	}
 	//create new database
-	ldb, err := hleveldb.NewLDBDataBase(conf, path.Join(conf.GetString(hcomm.LEVEL_DB_ROOT_DIR), dbname.Name), dbname.Namespace)
+	ldb, err := hleveldb.NewLDBDataBase(conf, path.Join(conf.GetString(hcomm.LEVEL_DB_ROOT_DIR), dbname.name), dbname.namespace)
 	if err != nil {
 		return err, nil
 	}
 
-	if ndb, ok := dbmgr.ndbs[dbname.Namespace]; ok {
-		ndb.addDB(dbname.Name, ldb)
+	if ndb, ok := dbmgr.ndbs[dbname.namespace]; ok {
+		ndb.addDB(dbname.name, ldb)
 	}else {
 		ndb = &NDB{
-			namespace:dbname.Namespace,
+			namespace:dbname.namespace,
 			dbs:make(map[string]db.Database),
 		}
-		ndb.addDB(dbname.Name, ldb)
-		dbmgr.addNDB(dbname.Namespace, ndb)
+		ndb.addDB(dbname.name, ldb)
+		dbmgr.addNDB(dbname.namespace, ndb)
 	}
 
 	return nil, ldb
@@ -152,25 +174,30 @@ func GetDB(dbname *DbName) (error, db.Database) {
 	if dbmgr == nil {
 		//TODO: handle situations where dbmgr is not initialized
 	}
-	return dbmgr.getDatabase(dbname.Namespace, dbname.Name)
+	return dbmgr.getDatabase(dbname.namespace, dbname.name)
 }
 
+//CloseByName close connection to the database.
 func CloseByName(dbname *DbName) error {
 	err, db := GetDB(dbname)
 	if err != nil {
 		return ErrDbNotExisted
 	}
 	db.Close()
+	ndb := dbmgr.getNDB(dbname.namespace)
+	ndb.removeDB(dbname.name)
+	//TODO: remove the db instance
 	return nil
 }
 
-//Close close all databases
+//Close close all databases, and remove all connected db instances.
 func Close()  {
 	dbmgr.nlock.RLock()
 	defer dbmgr.nlock.RUnlock()
 	for _, ndb := range dbmgr.ndbs {
 		ndb.close()
 	}
+	dbmgr.ndbs = make(map[string]*NDB)
 }
 
 //NDB manage databases for namespace
@@ -184,7 +211,8 @@ type NDB struct {
 func (ndb *NDB) close()  {
 	ndb.lock.RLock()
 	defer ndb.lock.RUnlock()
-	for _, db := range ndb.dbs {
+	for name, db := range ndb.dbs {
+		logger.Infof("try to close db %s", name)
 		go db.Close()
 	}
 }
@@ -203,4 +231,10 @@ func (ndb *NDB) getDB(name string) (error, db.Database)  {
 	}else {
 		return ErrDbNotExisted, nil
 	}
+}
+
+func (ndb *NDB) removeDB(name string)  {
+	ndb.lock.Lock()
+	defer ndb.lock.Unlock()
+	delete(ndb.dbs, name)
 }
