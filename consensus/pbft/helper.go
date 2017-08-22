@@ -154,7 +154,7 @@ func (pbft *pbftImpl) handleCachedTxs(cache map[uint64]*transactionStore) {
 func (pbft *pbftImpl) cleanAllCache() {
 
 	for idx := range pbft.storeMgr.certStore {
-		if idx.n > pbft.exec.lastExec && idx.v != pbft.view {
+		if idx.n > pbft.exec.lastExec{
 			delete(pbft.storeMgr.certStore, idx)
 			pbft.persistDelQPCSet(idx.v, idx.n)
 		}
