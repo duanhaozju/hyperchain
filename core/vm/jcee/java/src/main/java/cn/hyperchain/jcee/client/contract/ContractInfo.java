@@ -21,7 +21,6 @@ public class ContractInfo {
     private String cid;// contract cid
     private String owner;
     private String contractPath;
-    private String classPrefix;
     private String namespace;
 
     private String []argTypes;
@@ -102,8 +101,6 @@ public class ContractInfo {
         if (getOwner() != null ? !getOwner().equals(info.getOwner()) : info.getOwner() != null) return false;
         if (getContractPath() != null ? !getContractPath().equals(info.getContractPath()) : info.getContractPath() != null)
             return false;
-        if (getClassPrefix() != null ? !getClassPrefix().equals(info.getClassPrefix()) : info.getClassPrefix() != null)
-            return false;
         if (getNamespace() != null ? !getNamespace().equals(info.getNamespace()) : info.getNamespace() != null)
             return false;
         // Probably incorrect - comparing Object[] arrays with Arrays.equals
@@ -120,7 +117,6 @@ public class ContractInfo {
         result = 31 * result + (getCid() != null ? getCid().hashCode() : 0);
         result = 31 * result + (getOwner() != null ? getOwner().hashCode() : 0);
         result = 31 * result + (getContractPath() != null ? getContractPath().hashCode() : 0);
-        result = 31 * result + (getClassPrefix() != null ? getClassPrefix().hashCode() : 0);
         result = 31 * result + (getNamespace() != null ? getNamespace().hashCode() : 0);
         result = 31 * result + Arrays.hashCode(getArgTypes());
         result = 31 * result + Arrays.hashCode(getArgs());
@@ -137,14 +133,10 @@ public class ContractInfo {
                 ", contractMainName='" + contractMainName + '\'' +
                 ", cid='" + cid + '\'' +
                 ", owner='" + owner + '\'' +
-//                ", contractPath='" + contractPath + '\'' +
-                ", classPrefix='" + classPrefix + '\'' +
                 ", namespace='" + namespace + '\'' +
                 ", argTypes=" + Arrays.toString(argTypes) +
                 ", args=" + Arrays.toString(args) +
                 ", codeHash='" + codeHash + '\'' +
-//                ", createTime=" + createTime +
-//                ", modifyTime=" + modifyTime +
                 '}';
     }
 }

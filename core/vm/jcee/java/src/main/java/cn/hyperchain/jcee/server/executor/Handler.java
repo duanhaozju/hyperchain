@@ -169,7 +169,6 @@ public class Handler implements IHandler {
             info = new ContractInfo(props.getProperty(Constants.CONTRACT_NAME), request.getContext().getCid(),
                     request.getContext().getInvoker());
             info.setContractPath(contractPath);
-            info.setClassPrefix(props.getProperty(Constants.CONTRACT_CLASS_SUPER_DIR));
             info.setContractMainName(props.getProperty(Constants.CONTRACT_MAIN_CLASS));
             info.setCid(request.getContext().getCid());
             info.setNamespace(request.getContext().getNamespace());

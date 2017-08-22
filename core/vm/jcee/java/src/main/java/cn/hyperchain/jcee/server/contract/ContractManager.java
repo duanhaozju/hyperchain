@@ -105,7 +105,7 @@ public class ContractManager implements IContractManager {
             return false;
         }
         logger.info("contract info, " + info.toString());
-        ContractClassLoader classLoader = new ContractClassLoader(info.getContractPath(), info.getClassPrefix());
+        ContractClassLoader classLoader = new ContractClassLoader(info.getContractPath());
         ContractTemplate contract;
 
         Class contractClass = classLoader.load(info.getContractMainName());

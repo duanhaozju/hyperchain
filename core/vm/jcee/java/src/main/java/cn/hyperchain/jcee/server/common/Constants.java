@@ -12,5 +12,4 @@ public class Constants {
     //Contract meta data
     public static final String CONTRACT_NAME = "contract.name";
     public static final String CONTRACT_MAIN_CLASS = "main.class";
-    public static final String CONTRACT_CLASS_SUPER_DIR = "package.prefix";
 }

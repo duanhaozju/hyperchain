@@ -5,6 +5,7 @@
 package cn.hyperchain.jcee.server.contract;
 
 import io.netty.util.internal.ConcurrentSet;
+import org.apache.log4j.Category;
 import org.apache.log4j.Logger;
 
 import java.io.File;
@@ -18,29 +19,13 @@ import java.util.Set;
 public class ContractClassLoader extends ClassLoader{
     private static final Logger logger = Logger.getLogger(ContractClassLoader.class.getSimpleName());
     private String contractDir;
-    private Set<String> contractNames;
-    private String classPrefix; // used to identify which classes load by this ContractClassLoader
 
-    public ContractClassLoader(String contractDir, String classPrefix) {
-        this.classPrefix = classPrefix;
+    public ContractClassLoader(String contractDir) {
         this.contractDir = contractDir;
-
-        logger.info(classPrefix);
-        logger.info(contractDir);
-        this.contractNames = new ConcurrentSet<>();
     }
 
     public Class<?> load(String name) throws  ClassNotFoundException {
-        return loadClass(name);
-    }
-
-    @Override
-    public Class<?> loadClass(String name) throws ClassNotFoundException {
-        if (name.startsWith(classPrefix)){
-            logger.info("add contract class name " + name);
-            contractNames.add(name);
-        }
-        return loadClass(name, true);
+        return super.loadClass(name, true);
     }
 
     @Override
@@ -55,20 +40,6 @@ public class ContractClassLoader extends ClassLoader{
             e.printStackTrace();
             throw new ClassNotFoundException();
         }
-    }
-
-    @Override
-    protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-        Class<?> clazz = findLoadedClass(name);
-        if (clazz != null) {
-            return clazz;
-        }
-        if (contractNames.contains(name)) {
-            clazz = findClass(name);
-            resolveClass(clazz);
-            return clazz;
-        }
-        return super.loadClass(name, true);
     }
 
     private void loadClassFromFile(File file) throws Exception{
@@ -94,7 +65,7 @@ public class ContractClassLoader extends ClassLoader{
 
     //read class data from disk
     private byte[] loadClassContent(String spath) throws Exception {
-        byte[] classData = null;
+        byte[] classData;
         if(spath != null && spath.length() > 0){
             Path path = Paths.get(spath);
             classData = Files.readAllBytes(path);
@@ -102,13 +73,5 @@ public class ContractClassLoader extends ClassLoader{
                throw new IOException("Invalid path");
         }
         return classData;
-    }
-
-    public String getClassPrefix() {
-        return classPrefix;
-    }
-
-    public void setClassPrefix(String classPrefix) {
-        this.classPrefix = classPrefix;
     }
 }
