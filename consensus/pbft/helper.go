@@ -195,16 +195,11 @@ func (pbft *pbftImpl) oneCorrectQuorum() int {
 
 func (pbft *pbftImpl) prePrepared(digest string, v uint64, n uint64) bool {
 
-	if digest != "" && !pbft.batchVdr.containsInVBS(digest) {
-		pbft.logger.Debugf("Replica %d havan't store the reqBatch", pbft.id)
-		return false
-	}
-
-	cert := pbft.storeMgr.certStore[msgID{v, n}]
+	cert := pbft.storeMgr.certStore[msgID{v, n, digest}]
 
 	if cert != nil {
 		p := cert.prePrepare
-		if p != nil && p.View == v && p.SequenceNumber == n && p.BatchDigest == digest && cert.resultHash == digest {
+		if p != nil && p.View == v && p.SequenceNumber == n && p.BatchDigest == digest {
 			return true
 		}
 	}
@@ -255,7 +250,7 @@ func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
 		return false
 	}
 
-	cert := pbft.storeMgr.certStore[msgID{v, n}]
+	cert := pbft.storeMgr.certStore[msgID{v, n, digest}]
 
 	if cert == nil {
 		return false
@@ -271,7 +266,7 @@ func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
 
 func (pbft *pbftImpl) onlyCommitted(digest string, v uint64, n uint64) bool {
 
-	cert := pbft.storeMgr.certStore[msgID{v, n}]
+	cert := pbft.storeMgr.certStore[msgID{v, n, digest}]
 
 	if cert == nil {
 		return false
@@ -415,7 +410,6 @@ func (pbft *pbftImpl) validateState() {
 func (pbft *pbftImpl) deleteExistedTx(digest string) {
 	pbft.batchVdr.updateLCVid()
 	pbft.batchVdr.deleteCacheFromCVB(digest)
-	pbft.batchVdr.deleteTxFromVBS(digest)
 	delete(pbft.storeMgr.outstandingReqBatches, digest)
 }
 

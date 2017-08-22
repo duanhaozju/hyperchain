@@ -9,7 +9,6 @@ import (
 
 	"hyperchain/common"
 	"fmt"
-	"sync/atomic"
 	"hyperchain/consensus/txpool"
 )
 
@@ -27,15 +26,12 @@ type batchValidator struct {
 	vid                 	uint64                       // track the validate sequence number
 	lastVid             	uint64                       // track the last validate batch seqNo
 	currentVid          	*uint64                      // track the current validate batch seqNo
-	validateCount		int32
-	validatedBatchStore 	map[string]*TransactionBatch // track the validated transaction batch
 	cacheValidatedBatch 	map[string]*cacheBatch       // track the cached validated batch
 
 	validateTimer		events.Timer
 	validateTimeout		time.Duration
 	preparedCert            map[vidx]string             // track the prepared cert to help validate
-
-	pbftId                  uint64
+	spNullRequest		map[msgID]*PrePrepare
 }
 
 func (bv *batchValidator) setVid(vid uint64) {
@@ -56,10 +52,6 @@ func (bv *batchValidator) saveToCVB(digest string, cb *cacheBatch) {
 	bv.cacheValidatedBatch[digest] = cb
 }
 
-//saveToVBS save the transaction into validatedBatchStore.
-func (bv *batchValidator) saveToVBS(digest string, tx *TransactionBatch) {
-	bv.validatedBatchStore[digest] = tx
-}
 
 //containsInCVB judge whether the cache in cacheValidatedBatch.
 func (bv *batchValidator) containsInCVB(digest string) bool {
@@ -67,11 +59,6 @@ func (bv *batchValidator) containsInCVB(digest string) bool {
 	return ok
 }
 
-//containsInVBS judge whether the cache in validatedBatchStore.
-func (bv *batchValidator) containsInVBS(digest string) bool {
-	_, ok := bv.validatedBatchStore[digest]
-	return ok
-}
 
 //update lastVid  and currentVid
 func (bv *batchValidator) updateLCVid() {
@@ -93,39 +80,17 @@ func (bv *batchValidator) getCacheBatchFromCVB(digest string) *cacheBatch {
 	return bv.cacheValidatedBatch[digest]
 }
 
-//getTxFromVBS get transaction from validatedBatchStore.
-func (bv *batchValidator) getTxBatchFromVBS(digest string) *TransactionBatch {
-	return bv.validatedBatchStore[digest]
-}
-
 //deleteCacheFromCVB delete cacheBatch from cachedValidatedBatch.
 func (bv *batchValidator) deleteCacheFromCVB(digest string) {
 	delete(bv.cacheValidatedBatch, digest)
 }
 
-//deleteTxFromVBS delete transaction from validatedBatchStore.
-func (bv *batchValidator) deleteTxFromVBS(digest string) {
-	delete(bv.validatedBatchStore, digest)
-}
-
-//emptyVBS empty the validatedBatchStore.
-func (bv *batchValidator) emptyVBS() {
-	bv.validatedBatchStore = make(map[string]*TransactionBatch)
-}
-
-//vbsSize return the size of validatedBatchStore.
-func (bv *batchValidator) vbsSize() int {
-	return len(bv.validatedBatchStore)
-}
-
 func newBatchValidator(pbft *pbftImpl) *batchValidator {
 
 	bv := &batchValidator{}
-	bv.validatedBatchStore = make(map[string]*TransactionBatch)
 	bv.cacheValidatedBatch = make(map[string]*cacheBatch)
 	bv.preparedCert = make(map[vidx]string)
-	atomic.StoreInt32(&bv.validateCount, 0)
-	bv.pbftId = pbft.id
+	bv.spNullRequest = make(map[msgID]*PrePrepare)
 	return bv
 }
 
@@ -187,17 +152,10 @@ func (pbft *pbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 		n = pbft.batchVdr.vid + 1
 	}
 
-	// ignore too many validated batch as we limited the high watermark in send pre-prepare
-
-	count := atomic.LoadInt32(&pbft.batchVdr.validateCount)
-	if uint64(count) >= pbft.L {
-		pbft.logger.Warningf("Primary %d try to validate batch for vid=%d, but we had already send %d ValidateEvent", pbft.id, n, count)
-		return
-	}
-
 	pbft.batchVdr.vid = n
 
-	atomic.AddInt32(&pbft.batchVdr.validateCount, 1)
+	pbft.storeMgr.outstandingReqBatches[digest] = batch
+	pbft.storeMgr.txBatchStore[digest] = batch
 
 	pbft.logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d, batch size: %d", pbft.id, pbft.view, pbft.batchVdr.vid, len(batch.HashList))
 	pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout + pbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
@@ -213,56 +171,79 @@ func (pbft *pbftImpl) validatePending() {
 		return
 	}
 
-	for idx := range pbft.batchVdr.preparedCert {
-		if pbft.preValidate(idx) {
+	for idx, digest := range pbft.batchVdr.preparedCert {
+		if pbft.preValidate(idx, digest) {
 			break
 		}
 	}
 }
 
-func (pbft *pbftImpl) preValidate(idx msgID) bool {
-
-	cert := pbft.storeMgr.certStore[idx]
-
-	if cert == nil || cert.prePrepare == nil {
-		pbft.logger.Debugf("Backup %d already call validate for batch view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
+func (pbft *pbftImpl) preValidate(idx vidx, digest string) bool {
+	if idx.vid != pbft.batchVdr.lastVid+1 {
+		pbft.logger.Debugf("Backup %d gets validateBatch vid=%d, but expect vid=%d", pbft.id, idx.vid, pbft.batchVdr.lastVid+1)
 		return false
 	}
 
-	if idx.n != pbft.batchVdr.lastVid+1 {
-		pbft.logger.Debugf("Backup %d gets validateBatch seqNo=%d, but expect seqNo=%d", pbft.id, idx.n, pbft.batchVdr.lastVid+1)
+	var preprep *PrePrepare
+	var ok bool
+
+	if idx.seqNo == uint64(0) {
+		id := msgID{idx.view, idx.vid, digest}
+		preprep, ok = pbft.batchVdr.spNullRequest[id]
+		if !ok {
+			pbft.logger.Warningf("Replica %d get pre-prepare failed for special null-request view=%d/vid=%d/digest=%s",
+				pbft.id, idx.view, idx.vid, digest)
+			return false
+		}
+	} else {
+		cert := pbft.storeMgr.getCert(idx.view, idx.seqNo, digest)
+		if cert.prePrepare == nil {
+			pbft.logger.Warningf("Replica %d get pre-prepare failed for view=%d/seqNo=%d/digest=%s",
+				pbft.id, idx.view, idx.seqNo, digest)
+			return false
+		}
+		preprep = cert.prePrepare
+	}
+
+	batch, missing, err := pbft.batchMgr.txPool.GetTxsByHashList(preprep.BatchDigest, preprep.HashBatch.List)
+	if err != nil {
+		pbft.logger.Warningf("Replica %d get error when get txlist, err: %v", pbft.id, err)
+		pbft.sendViewChange()
+		return false
+	}
+	if missing != nil {
+		pbft.fetchMissingTransaction(preprep, missing)
 		return false
 	}
 
-	currentVid := idx.n
+	txBatch := &TransactionBatch{
+		TxList:		batch,
+		HashList:	preprep.HashBatch.List,
+		Timestamp:	preprep.HashBatch.Timestamp,
+	}
+	pbft.storeMgr.txBatchStore[preprep.BatchDigest] = txBatch
+	pbft.storeMgr.outstandingReqBatches[preprep.BatchDigest] = txBatch
+
+	currentVid := idx.vid
 	pbft.batchVdr.currentVid = &currentVid
 
-	txStore, err := pbft.checkDuplicate(cert.prePrepare.TransactionBatch)
-	if err != nil {
-		pbft.logger.Warningf("Backup %d find duplicate transaction in the batch for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
-		pbft.sendViewChange()
-		return true
+	if idx.seqNo != uint64(0) {
+		cert := pbft.storeMgr.getCert(idx.view, idx.seqNo, digest)
+		cert.sentValidate = true
 	}
-	pbft.logger.Debugf("Backup %d cache duplicator for view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 
-	pbft.dupLock.Lock()
-	pbft.duplicator[idx.n] = txStore
-	pbft.dupLock.Unlock()
-
-	pbft.execValidate(cert.prePrepare.TransactionBatch, idx)
-	cert.sentValidate = true
+	pbft.execValidate(digest, txBatch, idx)
 
 	return true
 }
 
-func (pbft *pbftImpl) execValidate(txBatch *TransactionBatch, idx msgID) {
+func (pbft *pbftImpl) execValidate(digest string, txBatch *TransactionBatch, idx vidx) {
 
-	pbft.logger.Debugf("Backup %d try to validate batch for view=%d/seqNo=%d, batch size: %d", pbft.id, idx.v, idx.n, len(txBatch.TxList))
+	pbft.logger.Debugf("Backup %d try to validate batch for view=%d/seqNo=%d/vid=%d, batch size: %d", pbft.id, idx.view, idx.seqNo, idx.vid, len(txBatch.TxList))
 
-	pbft.helper.ValidateBatch(txBatch.TxList, txBatch.Timestamp, idx.n, idx.v, false)
+	pbft.helper.ValidateBatch(digest, txBatch.TxList, txBatch.Timestamp, idx.seqNo, idx.vid, idx.view, false)
 	delete(pbft.batchVdr.preparedCert, idx)
-	pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
-	pbft.batchVdr.currentVid = nil
+	pbft.batchVdr.updateLCVid()
 
 	pbft.validatePending()
 }

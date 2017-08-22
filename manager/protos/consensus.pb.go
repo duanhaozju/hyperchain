@@ -254,6 +254,8 @@ type ValidatedTxs struct {
 	SeqNo        uint64               `protobuf:"varint,3,opt,name=seqNo" json:"seqNo,omitempty"`
 	View         uint64               `protobuf:"varint,4,opt,name=view" json:"view,omitempty"`
 	Timestamp    int64                `protobuf:"varint,5,opt,name=timestamp" json:"timestamp,omitempty"`
+	Vid          uint64               `protobuf:"varint,6,opt,name=vid" json:"vid,omitempty"`
+	Digest       string               `protobuf:"bytes,7,opt,name=digest" json:"digest,omitempty"`
 }
 
 func (m *ValidatedTxs) Reset()                    { *m = ValidatedTxs{} }
@@ -294,6 +296,20 @@ func (m *ValidatedTxs) GetTimestamp() int64 {
 		return m.Timestamp
 	}
 	return 0
+}
+
+func (m *ValidatedTxs) GetVid() uint64 {
+	if m != nil {
+		return m.Vid
+	}
+	return 0
+}
+
+func (m *ValidatedTxs) GetDigest() string {
+	if m != nil {
+		return m.Digest
+	}
+	return ""
 }
 
 type NewNodeMessage struct {
