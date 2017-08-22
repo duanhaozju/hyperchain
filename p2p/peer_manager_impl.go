@@ -228,6 +228,7 @@ func (pmgr *peerManagerImpl)Start() error {
 	for pmgr.pts.HasNext() {
 		pt := pmgr.pts.Pop()
 		//Here should control the permission
+		pmgr.logger.Critical("start up info ",pt.id,pt.hostname)
 		pmgr.bind(PEERTYPE_VP,pt.namespace, pt.id, pt.hostname,"")
 	}
 	pmgr.SetOnline()
@@ -399,10 +400,10 @@ func (pmgr *peerManagerImpl) linking() {
 			}
 
 			for _,wait := range waitList {
-				pmgr.logger.Debugf("linking to peer [%s](%s) waiting queue size %d",wait.Namespace,wait.Hostname,pmgr.peerPool.pendingMap.Count())
+				pmgr.logger.Noticef("linking to peer [%s](%s) waiting queue size %d",wait.Namespace,wait.Hostname,pmgr.peerPool.pendingMap.Count())
 				chts,err := pmgr.hts.GetAClientHTS()
 				if err != nil{
-					pmgr.logger.Warning("get chts failed %s",err.Error())
+					pmgr.logger.Critical("get chts failed %s",err.Error())
 					if len(waitList) <= 1{
 						break
 					}
@@ -524,26 +525,40 @@ func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType, payload []byte, peers [
 		if int(id - 1) >= size {
 			continue
 		}
-		if id == uint64(pmgr.node.info.GetID()) {
-			continue
-		}
-		//REVIEW  peers pool low layer struct is priority queue,
-		// REVIEW this can ensure the node id order.
-		// avoid out of range
-		if id > uint64(len(peerList)) || id <= 0{
+		// this judge is for judge the max id is out of range or not
+		if int(id) > pmgr.peerPool.MaxID() || id <= 0{
 			return
 		}
-		peer := peerList[int(id)-1]
-		if peer.info.Hostname == pmgr.node.info.Hostname {
+		// REVIEW here should compare with local node id, shouldn't sub one
+		if id == uint64(pmgr.node.info.GetID()) {
+			pmgr.logger.Debugf("skip message send to self",pmgr.node.info.GetID())
 			continue
 		}
-		m := pb.NewMsg(msgType, payload)
-		go func(p *Peer){
-			_,err := peer.Chat(m)
-			if err !=nil{
-				pmgr.logger.Warningf("Send Messahge failed, to (%s), reasoon: %s",peer.hostname,err.Error() )
+		// REVIEW  peers pool low layer struct is priority queue,
+		// REVIEW this can ensure the node id order.
+		// REVIEW avoid out of range
+		// REVIEW here may cause a bug:
+		// if a node hasn't connect such as node 3 connect before than node2
+		// the peer list will  be [1,,3,4]
+		// if send message to 2, the message will be send to node 3 actually
+		//peer := peerList[int(id)-1]
+		for _,peer := range peerList{
+			// here do not need to judge peer is self, because self node has been skipped.
+			if (peer.info.Id != int(id)){
+				continue
 			}
-		}(peer)
+			m := pb.NewMsg(msgType, payload)
+			go func(p *Peer){
+				pmgr.logger.Debug("send message to",p.info.Id,p.info.Hostname)
+				_,err := p.Chat(m)
+				if err !=nil{
+					if ok,_ := regexp.MatchString("cannot get session Key",err.Error());ok{
+						go pmgr.peerMgrEv.Post(peerevent.S_UPDATE_SESSION_KEY{NodeHash:peer.info.Hash})
+					}
+					pmgr.logger.Warningf("Send Messahge failed, to (%s), reason: %s",p.hostname,err.Error() )
+				}
+			}(peer)
+		}
 	}
 }
 
