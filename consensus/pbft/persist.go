@@ -24,9 +24,9 @@ func (pbft *pbftImpl) persistQSet(preprep *PrePrepare) {
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
-func (pbft *pbftImpl) persistPSet(v uint64, n uint64) {
+func (pbft *pbftImpl) persistPSet(v uint64, n uint64, d string) {
 
-	cert := pbft.storeMgr.getCert(v, n)
+	cert := pbft.storeMgr.getCert(v, n, d)
 	set := []*Prepare{}
 	pset := &Pset{Set: set}
 	for p := range cert.prepare {
@@ -39,13 +39,13 @@ func (pbft *pbftImpl) persistPSet(v uint64, n uint64) {
 		pbft.logger.Warningf("Replica %d could not persist pset: %s", pbft.id, err)
 		return
 	}
-	key := fmt.Sprintf("pset.%d.%d", v, n)
+	key := fmt.Sprintf("pset.%d.%d.%s", v, n, d)
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
-func (pbft *pbftImpl) persistCSet(v uint64, n uint64) {
+func (pbft *pbftImpl) persistCSet(v uint64, n uint64, d string) {
 
-	cert := pbft.storeMgr.getCert(v, n)
+	cert := pbft.storeMgr.getCert(v, n, d)
 	set := []*Commit{}
 	cset := &Cset{Set: set}
 	for c := range cert.commit {
@@ -58,16 +58,16 @@ func (pbft *pbftImpl) persistCSet(v uint64, n uint64) {
 		pbft.logger.Warningf("Replica %d could not persist cset: %s", pbft.id, err)
 		return
 	}
-	key := fmt.Sprintf("cset.%d.%d", v, n)
+	key := fmt.Sprintf("cset.%d.%d.%s", v, n, d)
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
-func (pbft *pbftImpl) persistDelQPCSet(v uint64, n uint64) {
-	qset := fmt.Sprintf("qset.%d.%d", v, n)
+func (pbft *pbftImpl) persistDelQPCSet(v uint64, n uint64, vid uint64, d string) {
+	qset := fmt.Sprintf("qset.%d.%d.%d.%s", v, n, vid, d)
 	persist.DelState(pbft.namespace, qset)
-	pset := fmt.Sprintf("pset.%d.%d", v, n)
+	pset := fmt.Sprintf("pset.%d.%d.%s", v, n, d)
 	persist.DelState(pbft.namespace, pset)
-	cset := fmt.Sprintf("cset.%d.%d", v, n)
+	cset := fmt.Sprintf("cset.%d.%d.%s", v, n, d)
 	persist.DelState(pbft.namespace, cset)
 }
 
@@ -162,7 +162,6 @@ func (pbft *pbftImpl) restoreCert() {
 		cert := pbft.storeMgr.getCert(idx.v, idx.n)
 		cert.prePrepare = q
 		cert.resultHash = q.BatchDigest
-		pbft.batchVdr.validatedBatchStore[cert.resultHash] = q.GetTransactionBatch()
 	}
 
 	pset, _ := pbft.restorePSet()
@@ -234,7 +233,7 @@ func (pbft *pbftImpl) parseSpecifyCertStore() {
 }
 
 func (pbft *pbftImpl) persistRequestBatch(digest string) {
-	reqBatch := pbft.batchVdr.getTxBatchFromVBS(digest)
+	reqBatch := pbft.storeMgr.txBatchStore[digest]
 	reqBatchPacked, err := proto.Marshal(reqBatch)
 	if err != nil {
 		pbft.logger.Warningf("Replica %d could not persist request batch %s: %s", pbft.id, digest, err)

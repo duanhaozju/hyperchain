@@ -79,6 +79,8 @@ const (
 	ConsensusMessage_AGREE_UPDATE_N          ConsensusMessage_Type = 19
 	ConsensusMessage_UPDATE_N                ConsensusMessage_Type = 20
 	ConsensusMessage_FINISH_UPDATE           ConsensusMessage_Type = 21
+	ConsensusMessage_FETCH_MISSING_TRANSACTION  ConsensusMessage_Type = 22
+	ConsensusMessage_RETURN_MISSING_TRANSACTION ConsensusMessage_Type = 23
 )
 
 var ConsensusMessage_Type_name = map[int32]string{
@@ -104,6 +106,8 @@ var ConsensusMessage_Type_name = map[int32]string{
 	19: "AGREE_UPDATE_N",
 	20: "UPDATE_N",
 	21: "FINISH_UPDATE",
+	22: "FETCH_MISSING_TRANSACTION",
+	23: "RETURN_MISSING_TRANSACTION",
 }
 var ConsensusMessage_Type_value = map[string]int32{
 	"TRANSACTION":             0,
@@ -128,6 +132,8 @@ var ConsensusMessage_Type_value = map[string]int32{
 	"AGREE_UPDATE_N":          19,
 	"UPDATE_N":                20,
 	"FINISH_UPDATE":           21,
+	"FETCH_MISSING_TRANSACTION":  22,
+	"RETURN_MISSING_TRANSACTION": 23,
 }
 
 func (x ConsensusMessage_Type) String() string {
@@ -253,6 +259,78 @@ func (m *ReturnRequestBatch) GetDigest() string {
 		return m.Digest
 	}
 	return ""
+}
+
+type FetchMissingTransaction struct {
+	Preprep   *PrePrepare `protobuf:"bytes,1,opt,name=preprep" json:"preprep,omitempty"`
+	HashList  []string    `protobuf:"bytes,2,rep,name=hash_list,json=hashList" json:"hash_list,omitempty"`
+	ReplicaId uint64      `protobuf:"varint,3,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+}
+
+func (m *FetchMissingTransaction) Reset()                    { *m = FetchMissingTransaction{} }
+func (m *FetchMissingTransaction) String() string            { return proto.CompactTextString(m) }
+func (*FetchMissingTransaction) ProtoMessage()               {}
+func (*FetchMissingTransaction) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+
+func (m *FetchMissingTransaction) GetPreprep() *PrePrepare {
+	if m != nil {
+		return m.Preprep
+	}
+	return nil
+}
+
+func (m *FetchMissingTransaction) GetHashList() []string {
+	if m != nil {
+		return m.HashList
+	}
+	return nil
+}
+
+func (m *FetchMissingTransaction) GetReplicaId() uint64 {
+	if m != nil {
+		return m.ReplicaId
+	}
+	return 0
+}
+
+type ReturnMissingTransaction struct {
+	Preprep   *PrePrepare          `protobuf:"bytes,1,opt,name=preprep" json:"preprep,omitempty"`
+	HashList  []string             `protobuf:"bytes,2,rep,name=hash_list,json=hashList" json:"hash_list,omitempty"`
+	TxList    []*types.Transaction `protobuf:"bytes,3,rep,name=tx_list,json=txList" json:"tx_list,omitempty"`
+	ReplicaId uint64               `protobuf:"varint,4,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
+}
+
+func (m *ReturnMissingTransaction) Reset()                    { *m = ReturnMissingTransaction{} }
+func (m *ReturnMissingTransaction) String() string            { return proto.CompactTextString(m) }
+func (*ReturnMissingTransaction) ProtoMessage()               {}
+func (*ReturnMissingTransaction) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+
+func (m *ReturnMissingTransaction) GetPreprep() *PrePrepare {
+	if m != nil {
+		return m.Preprep
+	}
+	return nil
+}
+
+func (m *ReturnMissingTransaction) GetHashList() []string {
+	if m != nil {
+		return m.HashList
+	}
+	return nil
+}
+
+func (m *ReturnMissingTransaction) GetTxList() []*types.Transaction {
+	if m != nil {
+		return m.TxList
+	}
+	return nil
+}
+
+func (m *ReturnMissingTransaction) GetReplicaId() uint64 {
+	if m != nil {
+		return m.ReplicaId
+	}
+	return 0
 }
 
 type PrePrepare struct {

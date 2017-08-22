@@ -61,6 +61,10 @@ func (pbft *pbftImpl) dispatchMsgToService(e events.Event) int {
 		return CORE_PBFT_SERVICE
 	case *Checkpoint:
 		return CORE_PBFT_SERVICE
+	case *FetchMissingTransaction:
+		return CORE_PBFT_SERVICE
+	case *ReturnMissingTransaction:
+		return CORE_PBFT_SERVICE
 
 	//view change service
 	case *ViewChange:

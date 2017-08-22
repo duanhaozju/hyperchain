@@ -60,8 +60,8 @@ type vcidx struct {
 }
 
 type cacheBatch struct {
-	batch *TransactionBatch
-	vid   uint64
+	batch 		*TransactionBatch
+	vid   		uint64
 	resultHash	string
 }
 

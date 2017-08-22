@@ -111,13 +111,13 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, vid uint64, view uint64, isPrimary bool) error {
 
 	validateEvent := event.ValidationEvent{
-		Digest:		  digest,
-		Vid:		  vid,
-		Transactions: txs,
-		Timestamp:    timeStamp,
-		SeqNo:        seqNo,
-		View:         view,
-		IsPrimary:    isPrimary,
+		Digest:		digest,
+		Vid:		vid,
+		Transactions: 	txs,
+		Timestamp:    	timeStamp,
+		SeqNo:        	seqNo,
+		View:         	view,
+		IsPrimary:    	isPrimary,
 	}
 
 	// Post the event to outer
