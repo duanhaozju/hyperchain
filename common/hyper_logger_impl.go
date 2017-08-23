@@ -20,7 +20,7 @@ var (
 )
 
 const (
-	default_logger_level = "DEBUG"
+	default_logger_level  = "DEBUG"
 	default_logger_format = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
 )
 
@@ -77,9 +77,9 @@ func (hmi *hyperLoggerMgrImpl) getHyperLogger(namespace string) (hl *HyperLogger
 func (hmi *hyperLoggerMgrImpl) getLogger(namespace, module string) *logging.Logger {
 	hl := hyperLoggerMgr.getHyperLogger(namespace)
 	if hl == nil {
-		commonLogger.Errorf("No hyperlogger found for namespace: %s:%s "+
-			"please init namespace level logger system before try to use logger in it,", namespace, module)
-		return nil
+		commonLogger.Warningf("No hyperlogger found for namespace: %s:%s "+
+			"please init namespace level logger system before try to use it,", namespace, module)
+		return logging.MustGetLogger(getCompositeModuleName(namespace, module))
 	}
 	return hl.getOrCreateLogger(module)
 }
@@ -120,17 +120,16 @@ type HyperLogger struct {
 	conf         *Config                    //config of this hyperlogger
 	loggers      map[string]*logging.Logger //module name to logger map
 	closeLogFile chan struct{}              //close dump log file flag channel
-	rwLock       sync.RWMutex //read write lock for loggers
+	rwLock       sync.RWMutex               //read write lock for loggers
 
-	fileLock     sync.Mutex
-	currentFile  *os.File //current log file
+	fileLock    sync.Mutex
+	currentFile *os.File //current log file
 
-	backendLock  sync.RWMutex //readwrite lock for backend
-	backend      logging.LeveledBackend
-	namespace    string
+	backendLock sync.RWMutex //readwrite lock for backend
+	backend     logging.LeveledBackend
+	namespace   string
 
-	baseLevel     string
-
+	baseLevel string
 }
 
 //newHyperLogger new a HyperLogger instance.
@@ -186,7 +185,7 @@ func (hl *HyperLogger) newLoggerFile() *os.File {
 	var dir string
 	if hl.namespace != DEFAULT_NAMESPACE {
 		dir = GetPath(hl.namespace, hl.conf.GetString(LOG_DUMP_FILE_DIR))
-	}else {
+	} else {
 		dir = hl.conf.GetString(LOG_DUMP_FILE_DIR)
 	}
 
@@ -195,7 +194,7 @@ func (hl *HyperLogger) newLoggerFile() *os.File {
 	file, err := os.Create(fileName)
 	if err == nil {
 		hl.currentFile = file
-	}else {
+	} else {
 		commonLogger.Error(err)
 	}
 	hl.fileLock.Unlock()
@@ -204,7 +203,7 @@ func (hl *HyperLogger) newLoggerFile() *os.File {
 
 //newLeveledBackEnd new backend with new file.
 func (hl *HyperLogger) newLeveledBackEnd() logging.LeveledBackend {
-	hl.fileLock.Lock()//read file
+	hl.fileLock.Lock() //read file
 
 	oldBackend := hl.backend
 	consoleBackend := logging.NewLogBackend(os.Stdout, "", 0)
@@ -212,14 +211,14 @@ func (hl *HyperLogger) newLeveledBackEnd() logging.LeveledBackend {
 	var consoleFormat string
 	if len(hl.conf.GetString(LOG_CONSOLE_FORMAT)) == 0 {
 		consoleFormat = default_logger_format
-	}else {
+	} else {
 		consoleFormat = hl.conf.GetString(LOG_CONSOLE_FORMAT)
 	}
 	consoleFormatter := logging.MustStringFormatter(consoleFormat)
 
 	consoleFormatterBackend := logging.NewBackendFormatter(consoleBackend, consoleFormatter)
 
-	hl.backendLock.Lock()// update backend
+	hl.backendLock.Lock() // update backend
 	if hl.conf.GetBool(LOG_DUMP_FILE) {
 		fileBackend := logging.NewLogBackend(hl.currentFile, "", 0)
 		fileFormatter := logging.MustStringFormatter(hl.conf.GetString(LOG_FILE_FORMAT))
@@ -286,10 +285,10 @@ func (hl *HyperLogger) getModuleLogger(module string) *logging.Logger {
 }
 
 //updateLogFileAndBackend when log file split.
-func (hl *HyperLogger) updateLogFileAndBackend()  {
+func (hl *HyperLogger) updateLogFileAndBackend() {
 	file := hl.newLoggerFile()
 	hl.newLeveledBackEnd()
-	hl.rwLock.RLock() // read loggers
+	hl.rwLock.RLock()      // read loggers
 	hl.backendLock.RLock() // read backend
 	for _, logger := range hl.loggers {
 		logger.SetBackend(hl.backend)

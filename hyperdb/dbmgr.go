@@ -5,17 +5,18 @@ package hyperdb
 
 import (
 	"github.com/op/go-logging"
+	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
-	"sync"
-	"github.com/pkg/errors"
 	"hyperchain/hyperdb/hleveldb"
 	"path"
+	"sync"
 
+	"fmt"
 	hcomm "hyperchain/hyperdb/common"
 )
 
-func init()  {
+func init() {
 	logger = common.GetLogger(common.DEFAULT_NAMESPACE, "dbmgr")
 }
 
@@ -27,8 +28,8 @@ var (
 )
 
 var (
-	dbmgr *DatabaseManager
-	once  sync.Once
+	dbmgr  *DatabaseManager
+	once   sync.Once
 	logger *logging.Logger
 )
 
@@ -40,26 +41,26 @@ type DatabaseManager struct {
 	logger *logging.Logger
 }
 
-func (md *DatabaseManager) addNDB(namespace string, ndb *NDB)  {
+func (md *DatabaseManager) addNDB(namespace string, ndb *NDB) {
 	md.nlock.Lock()
 	md.ndbs[namespace] = ndb
 	md.nlock.Unlock()
 }
 
-func (md *DatabaseManager) getNDB(namespace string) *NDB  {
+func (md *DatabaseManager) getNDB(namespace string) *NDB {
 	md.nlock.RLock()
 	defer md.nlock.RUnlock()
 	return md.ndbs[namespace]
 }
 
 //for test
-func (md *DatabaseManager) clearMemNDBSs()  {
+func (md *DatabaseManager) clearMemNDBSs() {
 	md.nlock.Lock()
 	md.ndbs = make(map[string]*NDB)
 	md.nlock.Unlock()
 }
 
-func (md *DatabaseManager) removeNDB(namespace string)  {
+func (md *DatabaseManager) removeNDB(namespace string) {
 	md.nlock.Lock()
 	delete(md.ndbs, namespace)
 	md.nlock.Unlock()
@@ -71,14 +72,13 @@ func (dm *DatabaseManager) contains(dbName *DbName) bool {
 	if ndb, ok := dm.ndbs[dbName.namespace]; ok {
 		if _, ok = ndb.dbs[dbName.name]; ok {
 			return true
-		}else {
+		} else {
 			return false
 		}
-	}else {
+	} else {
 		return false
 	}
 }
-
 
 //getDatabase get database instance by namespace and dbname.
 func (dm *DatabaseManager) getDatabase(namespace, dbname string) (db.Database, error) {
@@ -88,7 +88,7 @@ func (dm *DatabaseManager) getDatabase(namespace, dbname string) (db.Database, e
 	ndb := dm.getNDB(namespace)
 	if ndb != nil {
 		return ndb.getDB(dbname)
-	}else {
+	} else {
 		return nil, ErrDbNotExisted
 	}
 }
@@ -98,7 +98,7 @@ type DbName struct {
 	name      string
 }
 
-func NewDbName(name, namesapce string) *DbName  {
+func NewDbName(name, namesapce string) *DbName {
 	if len(name) == 0 {
 		logger.Error(ErrInvalidDbName)
 		return nil
@@ -112,19 +112,26 @@ func NewDbName(name, namesapce string) *DbName  {
 	return dn
 }
 
+func defaultConfig() *common.Config {
+	conf := common.NewRawConfig()
+	conf.Set(hcomm.LEVEL_DB_ROOT_DIR, "./tmp")
+	conf.Set(hcomm.DB_TYPE, hcomm.LDB_DB)
+	return conf
+}
+
 //InitDBMgr init blockchain database manager
 func InitDBMgr(conf *common.Config) error {
 	if conf == nil {
-		//TODO: add default
-		return ErrInvalidConfig
+		conf = defaultConfig()
+		logger.Noticef("%v, use default db config, %v", ErrInvalidConfig, conf)
 	}
 	logger = common.GetLogger(common.DEFAULT_NAMESPACE, "dbmgr")
 	once.Do(func() {
 		dbmgr = &DatabaseManager{
 			config: conf,
-			ndbs: make(map[string]*NDB),
+			ndbs:   make(map[string]*NDB),
 			logger: common.GetLogger(common.DEFAULT_LOG, "dbmgr"),
-			nlock: &sync.RWMutex{},
+			nlock:  &sync.RWMutex{},
 		}
 	})
 	return nil
@@ -132,6 +139,10 @@ func InitDBMgr(conf *common.Config) error {
 
 //ConnectToDB connect to a specified database
 func ConnectToDB(dbname *DbName, conf *common.Config) (db.Database, error) {
+
+	if conf == nil || len(conf.GetString(hcomm.LEVEL_DB_ROOT_DIR)) == 0 {
+		return nil, fmt.Errorf("hyperdb/dbmgr: invalid conf, no db configs found")
+	}
 
 	if dbmgr == nil {
 		InitDBMgr(conf)
@@ -157,10 +168,10 @@ func ConnectToDB(dbname *DbName, conf *common.Config) (db.Database, error) {
 
 	if ndb, ok := dbmgr.ndbs[dbname.namespace]; ok {
 		ndb.addDB(dbname.name, ldb)
-	}else {
+	} else {
 		ndb = &NDB{
-			namespace:dbname.namespace,
-			dbs:make(map[string]db.Database),
+			namespace: dbname.namespace,
+			dbs:       make(map[string]db.Database),
 		}
 		ndb.addDB(dbname.name, ldb)
 		dbmgr.addNDB(dbname.namespace, ndb)
@@ -190,7 +201,7 @@ func CloseByName(dbname *DbName) error {
 }
 
 //Close close all databases, and remove all connected db instances.
-func Close()  {
+func Close() {
 	dbmgr.nlock.RLock()
 	defer dbmgr.nlock.RUnlock()
 	for _, ndb := range dbmgr.ndbs {
@@ -201,13 +212,13 @@ func Close()  {
 
 //NDB manage databases for namespace
 type NDB struct {
-	namespace string	  //namespace id
-	lock sync.RWMutex
-	dbs map[string]db.Database // <dbname, db>
+	namespace string //namespace id
+	lock      sync.RWMutex
+	dbs       map[string]db.Database // <dbname, db>
 }
 
 //close close all database during this namespace.
-func (ndb *NDB) close()  {
+func (ndb *NDB) close() {
 	ndb.lock.RLock()
 	defer ndb.lock.RUnlock()
 	for name, db := range ndb.dbs {
@@ -216,23 +227,23 @@ func (ndb *NDB) close()  {
 	}
 }
 
-func (ndb *NDB) addDB(name string, db db.Database)  {
+func (ndb *NDB) addDB(name string, db db.Database) {
 	ndb.lock.Lock()
 	ndb.dbs[name] = db
 	ndb.lock.Unlock()
 }
 
-func (ndb *NDB) getDB(name string) (db.Database, error)  {
+func (ndb *NDB) getDB(name string) (db.Database, error) {
 	ndb.lock.RLock()
 	defer ndb.lock.RUnlock()
 	if db, ok := ndb.dbs[name]; ok {
 		return db, nil
-	}else {
+	} else {
 		return nil, ErrDbNotExisted
 	}
 }
 
-func (ndb *NDB) removeDB(name string)  {
+func (ndb *NDB) removeDB(name string) {
 	ndb.lock.Lock()
 	defer ndb.lock.Unlock()
 	delete(ndb.dbs, name)

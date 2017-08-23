@@ -23,7 +23,7 @@ func TestRawLogger(t *testing.T)  {
 }
 
 func TestGetLogLevel(t *testing.T) {
-	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
+	conf := NewConfig("../configuration/namespaces/global/config/namespace.toml")
 	conf.Set(LOG_DUMP_FILE, false)
 	namespace := "namespace1"
 	InitHyperLogger(namespace, conf)
@@ -41,7 +41,7 @@ func TestGetLogLevel(t *testing.T) {
 }
 
 func TestSetLoggerLevel(t *testing.T) {
-	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
+	conf := NewConfig("../configuration/namespaces/global/config/namespace.toml")
 	conf.Set(LOG_DUMP_FILE, false)
 	InitHyperLogger("global", conf)
 	log := GetLogger("global", "consensus")
@@ -62,7 +62,7 @@ func TestSetLoggerLevel(t *testing.T) {
 func TestMultiNamespaceLogger(t *testing.T)  {
 	//TODO: make the test env independent form the global.yaml
 
-	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
+	conf := NewConfig("../configuration/namespaces/global/config/namespace.toml")
 	conf.Set(LOG_DUMP_FILE, false)
 	conf.Set(LOG_BASE_LOG_LEVEL, "DEBUG")
 
@@ -95,7 +95,7 @@ func TestMultiNamespaceLogger(t *testing.T)  {
 
 func TestMultiNamespaceLoggerWithDump(t *testing.T)  {
 	//TODO: test more precisely by read the data in the logger dir
-	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
+	conf := NewConfig("../configuration/namespaces/global/config/namespace.toml")
 	conf.Set(LOG_DUMP_FILE, true)
 	conf.Set(LOG_BASE_LOG_LEVEL, "DEBUG")
 
@@ -127,7 +127,7 @@ func TestMultiNamespaceLoggerWithDump(t *testing.T)  {
 }
 
 func TestHyperLoggerSplitByInterval(t *testing.T)  {
-	conf := NewConfig("../configuration/namespaces/global/config/global.yaml")
+	conf := NewConfig("../configuration/namespaces/global/config/namespace.toml")
 	conf.Set(LOG_DUMP_FILE, true)
 	conf.Set(LOG_BASE_LOG_LEVEL, "DEBUG")
 	conf.Set(LOG_NEW_FILE_INTERVAL, 4*time.Second)
