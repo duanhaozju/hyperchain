@@ -125,11 +125,11 @@ func (pbft *pbftImpl) Close() {
 	pbft.storeMgr = newStoreMgr()
 	pbft.nodeMgr = newNodeMgr()
 
-	pbft.duplicator = make(map[uint64]*transactionStore)
+	//pbft.duplicator = make(map[uint64]*transactionStore)
 	pbft.batchMgr = newBatchManager(pbft.config, pbft) // init after pbftEventQueue
 	// new batch manager
-	pbft.batchVdr = newBatchValidator(pbft)
-	pbft.reqStore = newRequestStore()
+	pbft.batchVdr = newBatchValidator()
+	//pbft.reqStore = newRequestStore()
 	pbft.recoveryMgr = newRecoveryMgr()
 
 	pbft.logger.Noticef("PBFT stopped!")

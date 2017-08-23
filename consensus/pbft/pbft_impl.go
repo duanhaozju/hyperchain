@@ -50,7 +50,7 @@ type pbftImpl struct {
 	exec           *executor                    // manage transaction exec
 
 	helper         helper.Stack
-	reqStore       *requestStore                // received messages
+	//reqStore       *requestStore                // received messages
 
 	pbftManager    events.Manager               // manage pbft event
 
@@ -116,8 +116,8 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*p
 
 	pbft.batchMgr = newBatchManager(config, pbft) // init after pbftEventQueue
 	// new batch manager
-	pbft.batchVdr = newBatchValidator(pbft)
-	pbft.reqStore = newRequestStore()
+	pbft.batchVdr = newBatchValidator()
+	//pbft.reqStore = newRequestStore()
 	pbft.recoveryMgr = newRecoveryMgr()
 
 	atomic.StoreUint32(&pbft.activeView, 1)
@@ -1051,36 +1051,6 @@ func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) events.Event {
 }
 
 
-//processRequestsDuringViewChange process requests received during view change.
-func (pbft *pbftImpl) processRequestsDuringViewChange() error {
-	if atomic.LoadUint32(&pbft.activeView) == 1 &&
-		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
-		!pbft.status.getState(&pbft.status.inRecovery) {
-		pbft.processCachedTransactions()
-	} else {
-		pbft.logger.Warningf("Replica %d try to processReqDuringViewChange but view change is not finished or it's in recovery / updaingN", pbft.id)
-	}
-	return nil
-}
-
-//processCachedTransactions process cached tx.
-func (pbft *pbftImpl) processCachedTransactions() {
-	for pbft.reqStore.outstandingRequests.Len() != 0 {
-		temp := pbft.reqStore.outstandingRequests.order.Front().Value
-		reqc, ok := interface{}(temp).(requestContainer)
-		if !ok {
-			pbft.logger.Error("type assert error:", temp)
-			return
-		}
-		req := reqc.req
-		if req != nil {
-			go pbft.reqEventQueue.Push(req)
-		}
-		pbft.reqStore.remove(req)
-	}
-}
-
-
 func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error {
 
 	//if pbft.status.getState(&pbft.status.inNegoView) {
@@ -1116,6 +1086,11 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 		pbft.checkpoint(et.SeqNo, bcInfo)
 	}
 
+	if atomic.LoadUint32(&pbft.activeView) == 1 || atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
+		!pbft.status.getState(&pbft.status.inNegoView)  {
+		atomic.StoreUint32(&pbft.normal, 1)
+	}
+
 	if pbft.status.getState(&pbft.status.inRecovery) {
 		if pbft.recoveryMgr.recoveryToSeqNo == nil {
 			pbft.logger.Warningf("Replica %d in recovery recvStateUpdatedEvent but " +
@@ -1144,8 +1119,8 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 			pbft.logger.Errorf("Try to fetch QPC, but highStateTarget is nil")
 			return nil
 		}
-		for idx := range pbft.storeMgr.certStore {
-			pbft.persistDelQPCSet(idx.v, idx.n)
+		for idx, cert := range pbft.storeMgr.certStore {
+			pbft.persistDelQPCSet(idx.v, idx.n, cert.vid, idx.d)
 		}
 		for idx := range pbft.storeMgr.certStore {
 			if idx.n > pbft.exec.lastExec {
@@ -1569,6 +1544,8 @@ func (pbft *pbftImpl) stateTransfer(optional *stateUpdateTarget) {
 }
 
 func (pbft *pbftImpl) retryStateTransfer(optional *stateUpdateTarget) {
+
+	atomic.StoreUint32(&pbft.normal, 0)
 
 	if pbft.status.getState(&pbft.status.stateTransferring) {
 		pbft.logger.Debugf("Replica %d is currently mid state transfer, it must wait for this state transfer to complete before initiating a new one", pbft.id)

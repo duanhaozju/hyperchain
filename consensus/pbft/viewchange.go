@@ -263,7 +263,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 		pbft.timerMgr.stopTimer(NEW_VIEW_TIMER)
 		pbft.timerMgr.stopTimer(VC_RESEND_TIMER)
 		pbft.vcMgr.vcResendCount = 0
-		pbft.restoreView()
+		pbft.restoreView("")
 		pbft.status.activeState(&pbft.status.inNegoView, &pbft.status.inRecovery)
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.initNegoView()
@@ -594,12 +594,6 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 	pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
 	pbft.batchVdr.preparedCert = make(map[vidx]string)
 	pbft.storeMgr.committedCert = make(map[msgID]string)
-	prevPrimary := pbft.primary(pbft.view - 1)
-	if prevPrimary == pbft.id {
-		pbft.rebuildDuplicator(nv.Xset)
-	} else {
-		pbft.clearDuplicator()
-	}
 
 	backendVid := pbft.exec.lastExec + 1
 	pbft.seqNo = pbft.exec.lastExec
@@ -652,10 +646,11 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 	for finish := range pbft.vcMgr.vcResetStore {
 		if finish.View == pbft.view {
 			quorum++
+			if finish.ReplicaId == pbft.primary(pbft.view) {
+				hasPrimary = true
+			}
 		}
-		if finish.ReplicaId == pbft.primary(pbft.view) {
-			hasPrimary = true
-		}
+
 	}
 	if quorum < pbft.allCorrectReplicasQuorum() || !hasPrimary {
 		return nil
@@ -720,23 +715,29 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 		if n <= pbft.h || n > pbft.exec.lastExec {
 			continue
 		}
-		batch, ok := pbft.batchVdr.validatedBatchStore[d]
+		batch, ok := pbft.storeMgr.txBatchStore[d]
 		if !ok && d != "" {
 			pbft.logger.Criticalf("Replica %d is missing tx batch for seqNo=%d with digest '%s' for assigned prepare", pbft.id)
 		}
 
-		cert := pbft.storeMgr.getCert(pbft.view, n)
+		hashBatch := &HashBatch{
+			List:		batch.HashList,
+			Timestamp:	batch.Timestamp,
+		}
+		cert := pbft.storeMgr.getCert(pbft.view, n, d)
 
 		if pbft.primary(pbft.view) == pbft.id && ok {
 
 			preprep := &PrePrepare{
 				View:				pbft.view,
+				Vid:				n,
 				SequenceNumber: 		n,
 				BatchDigest:			d,
-				TransactionBatch:		batch,
+				ResultHash:			batch.ResultHash,
+				HashBatch:			hashBatch,
 				ReplicaId:			pbft.id,
 			}
-			cert.resultHash = d
+			cert.resultHash = batch.ResultHash
 			cert.prePrepare = preprep
 			cert.validated = true
 
@@ -745,8 +746,7 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 			payload, err := proto.Marshal(preprep)
 			if err != nil {
 				pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-				pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
-				pbft.batchVdr.currentVid = nil
+				pbft.batchVdr.updateLCVid()
 				return
 			}
 			consensusMsg := &ConsensusMessage{
@@ -758,8 +758,10 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 		}else{
 			prep := &Prepare{
 				View: 			pbft.view,
+				Vid:			n,
 				SequenceNumber: 	n,
 				BatchDigest:		d,
+				ResultHash:		batch.ResultHash,
 				ReplicaId:		pbft.id,
 			}
 			cert.prepare[*prep] = true
@@ -768,8 +770,7 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 			payload, err := proto.Marshal(prep)
 			if err != nil {
 				pbft.logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
-				pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
-				pbft.batchVdr.currentVid = nil
+				pbft.batchVdr.updateLCVid()
 				return
 			}
 
@@ -782,8 +783,10 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 		}
 		cmt := &Commit{
 			View:			pbft.view,
+			Vid:			n,
 			SequenceNumber: 	n,
 			BatchDigest:		d,
+			ResultHash:		batch.ResultHash,
 			ReplicaId:		pbft.id,
 		}
 		cert.commit[*cmt] = true
@@ -1027,14 +1030,15 @@ func (pbft *pbftImpl) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
 	}
 
 	digest := fr.BatchDigest
-	if !pbft.batchVdr.containsInVBS(digest) {
+	if _, ok := pbft.storeMgr.txBatchStore[digest]; !ok {
 		return nil // we don't have it either
 	}
 
-	reqBatch := pbft.batchVdr.getTxBatchFromVBS(digest)
+	reqBatch := pbft.storeMgr.txBatchStore[digest]
 	batch := &ReturnRequestBatch{
-		Batch:  reqBatch,
-		Digest: digest,
+		Batch:  	reqBatch,
+		BatchDigest: 	digest,
+		ReplicaId:	pbft.id,
 	}
 	payload, err := proto.Marshal(batch)
 	if err != nil {
@@ -1064,11 +1068,11 @@ func (pbft *pbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) events.E
 		return nil
 	}
 
-	digest := batch.Digest
+	digest := batch.BatchDigest
 	if _, ok := pbft.storeMgr.missingReqBatches[digest]; !ok {
 		return nil // either the wrong digest, or we got it already from someone else
 	}
-	pbft.batchVdr.saveToVBS(digest, batch.Batch)
+	pbft.storeMgr.txBatchStore[digest] = batch.Batch
 	delete(pbft.storeMgr.missingReqBatches, digest)
 	pbft.logger.Warning("Primary received missing request: ", digest)
 
@@ -1168,6 +1172,7 @@ func (pbft *pbftImpl) beforeSendVC() error {
 
 	pbft.stopNewViewTimer()
 	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
+	pbft.batchMgr.txPool.StopBatch()
 
 	delete(pbft.vcMgr.newViewStore, pbft.view)
 	pbft.view++

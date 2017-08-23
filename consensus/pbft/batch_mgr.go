@@ -85,7 +85,7 @@ func (bv *batchValidator) deleteCacheFromCVB(digest string) {
 	delete(bv.cacheValidatedBatch, digest)
 }
 
-func newBatchValidator(pbft *pbftImpl) *batchValidator {
+func newBatchValidator() *batchValidator {
 
 	bv := &batchValidator{}
 	bv.cacheValidatedBatch = make(map[string]*cacheBatch)
