@@ -62,13 +62,24 @@ func (pbft *pbftImpl) persistCSet(v uint64, n uint64) {
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
-func (pbft *pbftImpl) persistDelQPCSet(v uint64, n uint64) {
+func (pbft *pbftImpl) persistDelQSet(v uint64, n uint64) {
 	qset := fmt.Sprintf("qset.%d.%d", v, n)
 	persist.DelState(pbft.namespace, qset)
+}
+
+func (pbft *pbftImpl) persistDelPSet(v uint64, n uint64) {
 	pset := fmt.Sprintf("pset.%d.%d", v, n)
 	persist.DelState(pbft.namespace, pset)
+}
+
+func (pbft *pbftImpl) persistDelCSet(v uint64, n uint64) {
 	cset := fmt.Sprintf("cset.%d.%d", v, n)
 	persist.DelState(pbft.namespace, cset)
+}
+func (pbft *pbftImpl) persistDelQPCSet(v uint64, n uint64) {
+	pbft.persistDelQSet(v, n)
+	pbft.persistDelPSet(v, n)
+	pbft.persistDelCSet(v, n)
 }
 
 func (pbft *pbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
@@ -160,6 +171,7 @@ func (pbft *pbftImpl) restoreCert() {
 	qset, _ := pbft.restoreQSet()
 	for idx, q := range qset {
 		if idx.n > pbft.exec.lastExec {
+			pbft.persistDelQSet(idx.v, idx.n)
 			continue
 		}
 		cert := pbft.storeMgr.getCert(idx.v, idx.n)
@@ -171,6 +183,7 @@ func (pbft *pbftImpl) restoreCert() {
 	pset, _ := pbft.restorePSet()
 	for idx, prepares := range pset {
 		if idx.n > pbft.exec.lastExec {
+			pbft.persistDelPSet(idx.v, idx.n)
 			continue
 		}
 		cert := pbft.storeMgr.getCert(idx.v, idx.n)
@@ -185,6 +198,7 @@ func (pbft *pbftImpl) restoreCert() {
 	cset, _ := pbft.restoreCSet()
 	for idx, commits := range cset {
 		if idx.n > pbft.exec.lastExec {
+			pbft.persistDelCSet(idx.v, idx.n)
 			continue
 		}
 		cert := pbft.storeMgr.getCert(idx.v, idx.n)
@@ -206,7 +220,6 @@ func (pbft *pbftImpl) restoreCert() {
 }
 
 func (pbft *pbftImpl) parseSpecifyCertStore() {
-	tmpStore := make(map[msgID]*msgCert)
 	for midx, mcert := range pbft.storeMgr.certStore {
 		idx := midx
 		cert := mcert
@@ -217,12 +230,14 @@ func (pbft *pbftImpl) parseSpecifyCertStore() {
 					cert = ncert
 				}
 				delete(pbft.storeMgr.certStore, nidx)
+				pbft.persistDelQPCSet(nidx.v, nidx.n)
 			}
 		}
 		if cert.prePrepare != nil {
 			cert.prePrepare.View = pbft.view
 			primary := pbft.primary(pbft.view)
 			cert.prePrepare.ReplicaId = primary
+			pbft.persistQSet(cert.prePrepare)
 		}
 		preps := make(map[Prepare]bool)
 		for prep := range cert.prepare {
@@ -237,9 +252,11 @@ func (pbft *pbftImpl) parseSpecifyCertStore() {
 		}
 		cert.commit = cmts
 		idx.v = pbft.view
-		tmpStore[idx] = cert
+		pbft.storeMgr.certStore[idx] = cert
+		pbft.persistPSet(idx.v, idx.n)
+		pbft.persistCSet(idx.v, idx.n)
+
 	}
-	pbft.storeMgr.certStore = tmpStore
 }
 
 func (pbft *pbftImpl) persistRequestBatch(digest string) {
@@ -338,6 +355,14 @@ func (pbft *pbftImpl) restoreView(view string) {
 }
 
 func (pbft *pbftImpl) restoreState(view string) {
+	pbft.restoreLastSeqNo() // assign value to lastExec
+	if pbft.seqNo < pbft.exec.lastExec {
+		pbft.seqNo = pbft.exec.lastExec
+	}
+	pbft.batchVdr.setVid(pbft.seqNo)
+	pbft.batchVdr.setLastVid(pbft.seqNo)
+	pbft.restoreCert()
+	pbft.restoreView(view)
 	chkpts, err := persist.ReadStateSet(pbft.namespace, "chkpt.")
 	if err == nil {
 		highSeq := uint64(0)
@@ -380,14 +405,6 @@ func (pbft *pbftImpl) restoreState(view string) {
 		pbft.nodeMgr.localKey = string(localKey)
 	}
 
-	pbft.restoreLastSeqNo() // assign value to lastExec
-	if pbft.seqNo < pbft.exec.lastExec {
-		pbft.seqNo = pbft.exec.lastExec
-	}
-	pbft.batchVdr.setVid(pbft.seqNo)
-	pbft.batchVdr.setLastVid(pbft.seqNo)
-	pbft.restoreCert()
-	pbft.restoreView(view)
 
 	pbft.logger.Infof("Replica %d restored state: view: %d, seqNo: %d, reqBatches: %d, chkpts: %d",
 		pbft.id, pbft.view, pbft.seqNo, len(pbft.batchVdr.validatedBatchStore), len(pbft.storeMgr.chkpts))
