@@ -19,4 +19,6 @@ type Consenter interface {
 
 	//Close close the consenter service
 	Close()
+
+	GetStatus() (normal bool, full bool)
 }
