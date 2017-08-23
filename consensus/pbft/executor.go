@@ -172,12 +172,17 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 	case VIEW_CHANGED_EVENT:
 		pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)
 		pbft.startTimerIfOutstandingRequests()
+		pbft.vcMgr.vcResendCount = 0
 		pbft.vcMgr.vcResetStore = make(map[FinishVcReset]bool)
 		primary := pbft.primary(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.persistView(pbft.view)
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.status.inActiveState(&pbft.status.vcHandled)
+		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
+			!pbft.status.getState(&pbft.status.inNegoView) && !pbft.status.getState(&pbft.status.skipInProgress)  {
+			atomic.StoreUint32(&pbft.normal, 1)
+		}
 		pbft.logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/height=%d", pbft.id, primary, pbft.view, pbft.exec.lastExec)
 		viewChangeResult := fmt.Sprintf("Replica %d finished viewChange, primary=%d, view=%d/height=%d", pbft.id, primary, pbft.view, pbft.exec.lastExec)
 		pbft.helper.SendFilterEvent(consensus.FILTER_View_Change_Finish, viewChangeResult)
@@ -274,6 +279,7 @@ func (pbft *pbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 		}
 		return pbft.processUpdateN()
 	case NODE_MGR_UPDATEDN_EVENT:
+		delete(pbft.nodeMgr.updateStore, pbft.nodeMgr.updateTarget)
 		pbft.startTimerIfOutstandingRequests()
 		pbft.vcMgr.vcResendCount = 0
 		pbft.nodeMgr.finishUpdateStore = make(map[FinishUpdate]bool)
@@ -287,6 +293,10 @@ func (pbft *pbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 		}
 		atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 0)
 		pbft.rebuildCertStoreForUpdate()
+		if atomic.LoadUint32(&pbft.activeView) == 1 &&
+			!pbft.status.getState(&pbft.status.inNegoView) && !pbft.status.getState(&pbft.status.skipInProgress)  {
+			atomic.StoreUint32(&pbft.normal, 1)
+		}
 		pbft.logger.Criticalf("======== Replica %d finished UpdatingN, primary=%d, n=%d/f=%d/view=%d/h=%d", pbft.id, pbft.primary(pbft.view), pbft.N, pbft.f, pbft.view, pbft.h)
 	}
 
