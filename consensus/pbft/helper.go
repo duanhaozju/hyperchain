@@ -153,10 +153,10 @@ func (pbft *pbftImpl) handleCachedTxs(cache map[uint64]*transactionStore) {
 
 func (pbft *pbftImpl) cleanAllCache() {
 
-	for idx := range pbft.storeMgr.certStore {
-		if idx.n > pbft.exec.lastExec && idx.v != pbft.view {
+	for idx, cert := range pbft.storeMgr.certStore {
+		if idx.n > pbft.exec.lastExec{
 			delete(pbft.storeMgr.certStore, idx)
-			pbft.persistDelQPCSet(idx.v, idx.n)
+			pbft.persistDelQPCSet(idx.v, idx.n, cert.vid, idx.d)
 		}
 	}
 
@@ -484,23 +484,4 @@ func (pbft *pbftImpl) isCommitLegal(commit *Commit) bool {
 		return false
 	}
 	return true
-}
-
-func (pbft *pbftImpl) parseCertStore() {
-	tmpStore := make(map[msgID]*msgCert)
-	for idx := range pbft.storeMgr.certStore {
-		cert := pbft.storeMgr.getCert(idx.v, idx.n, idx.d)
-		if cert.prePrepare != nil {
-			cert.prePrepare.View = pbft.view
-		}
-		for prep := range cert.prepare {
-			prep.View = pbft.view
-		}
-		for cmt := range cert.commit {
-			cmt.View = pbft.view
-		}
-		idx.v = pbft.view
-		tmpStore[msgID{pbft.view, idx.n}] = cert
-	}
-	pbft.storeMgr.certStore = tmpStore
 }

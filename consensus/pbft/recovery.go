@@ -61,6 +61,8 @@ func (pbft *pbftImpl) initNegoView() error {
 		return nil
 	}
 
+	atomic.StoreUint32(&pbft.normal, 0)
+
 	pbft.logger.Debugf("Replica %d now negotiate view...", pbft.id)
 
 	event := &LocalEvent{
@@ -175,10 +177,8 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 		}
 		viewCount := make(map[resp]uint64)
 		var result resp
-		spFind := false
 		canFind := false
-		view := uint64(0)
-		n := 0
+
 		for _, rs := range pbft.recoveryMgr.negoViewRspStore {
 			//r := byteToString(rs.Routers)
 			ret := resp{rs.N, rs.View}
@@ -194,13 +194,6 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 				break
 			}
 		}
-		for rs, count := range viewCount {
-			if count >= uint64(pbft.commonCaseQuorum()-1) && rs.view != pbft.view {
-				spFind = true
-				view = rs.view
-				n = int(rs.n)
-			}
-		}
 
 		if canFind {
 			pbft.timerMgr.stopTimer(NEGO_VIEW_RSP_TIMER)
@@ -212,32 +205,12 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			}
 			pbft.N = int(result.n)
 			pbft.f = (pbft.N - 1) / 3
-			//routers, _ := stringToByte(result.routers)
-			//if !bytes.Equal(routers, pbft.nodeMgr.routers) && !pbft.status.getState(&pbft.status.isNewNode) {
-			//	pbft.nodeMgr.routers = routers
-			//	pbft.logger.Debugf("Replica %d update routing table according to nego result", pbft.id)
-			//	pbft.helper.NegoRouters(routers)
-			//}
 			pbft.status.inActiveState(&pbft.status.inNegoView)
 			if atomic.LoadUint32(&pbft.activeView) == 0 {
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}
 			if !IfUpdata{
-				pbft.parseCertStore()
-			}
-			return &LocalEvent{
-				Service:RECOVERY_SERVICE,
-				EventType:RECOVERY_NEGO_VIEW_DONE_EVENT,
-			}
-		} else if spFind {
-			pbft.timerMgr.stopTimer(NEGO_VIEW_RSP_TIMER)
-			pbft.view = view
-			pbft.N = n
-			pbft.f = (pbft.N - 1) / 3
-			pbft.parseCertStore()
-			pbft.status.inActiveState(&pbft.status.inNegoView)
-			if atomic.LoadUint32(&pbft.activeView) == 0 {
-				atomic.StoreUint32(&pbft.activeView, 1)
+				pbft.parseSpecifyCertStore()
 			}
 			return &LocalEvent{
 				Service:RECOVERY_SERVICE,
@@ -414,10 +387,10 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.batchVdr.lastVid = selfLastExec
 
 		if pbft.primary(pbft.view) == pbft.id {
-			for idx := range pbft.storeMgr.certStore {
+			for idx, cert := range pbft.storeMgr.certStore {
 				if idx.n > selfLastExec {
 					delete(pbft.storeMgr.certStore, idx)
-					pbft.persistDelQPCSet(idx.v, idx.n)
+					pbft.persistDelQPCSet(idx.v, idx.n, cert.vid, idx.d)
 				}
 			}
 		}
@@ -597,14 +570,18 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 		return nil
 	}
 
-	var prepres []*PrePrepare
-	var pres []*Prepare
-	var cmts []*Commit
+	var prepres 	[]*PrePrepare
+	var pres 	[]*Prepare
+	var cmts 	[]*Commit
+	var vid		uint64
 
 	// replica just send all PQC that itself had sent
 	for idx, cert := range pbft.storeMgr.certStore {
 		// send all PQC that n > h, since it maybe wait others to execute
 		if idx.n > h && idx.v == pbft.view {
+			if idx.n == h+1 {
+				vid = cert.vid
+			}
 			if cert.prePrepare == nil {
 				pbft.logger.Warningf("Replica %d in returnRcPQC finds nil pre-prepare for view=%d/seqNo=%d",
 					pbft.id, idx.v, idx.n)
@@ -625,6 +602,11 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 					//break
 				}
 			}
+		}
+	}
+	for idx, prep := range pbft.batchVdr.spNullRequest {
+		if idx.v == pbft.view && idx.n >= vid {
+			prepres = append(prepres, prep)
 		}
 	}
 	rcReturn := &RecoveryReturnPQC{ ReplicaId: pbft.id }

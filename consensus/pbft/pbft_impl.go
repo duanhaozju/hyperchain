@@ -16,7 +16,6 @@ import (
 	"hyperchain/manager/protos"
 	"sync/atomic"
 	"github.com/op/go-logging"
-	"sync"
 	"hyperchain/manager/event"
 	"hyperchain/consensus/txpool"
 	"time"
@@ -52,7 +51,6 @@ type pbftImpl struct {
 
 	helper         helper.Stack
 	reqStore       *requestStore                // received messages
-	duplicator     map[uint64]*transactionStore // currently executing request
 
 	pbftManager    events.Manager               // manage pbft event
 
@@ -62,9 +60,9 @@ type pbftImpl struct {
 	config *common.Config
 	logger         *logging.Logger
 
-	dupLock        *sync.RWMutex
+	normal		uint32
+	poolFull	uint32
 
-	poolFull			uint32
 }
 
 //newPBFT init the PBFT instance
@@ -115,8 +113,6 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*p
 
 	// initialize state transfer
 	pbft.nodeMgr = newNodeMgr()
-	pbft.duplicator = make(map[uint64]*transactionStore)
-	pbft.dupLock = &sync.RWMutex{}
 
 	pbft.batchMgr = newBatchManager(config, pbft) // init after pbftEventQueue
 	// new batch manager
@@ -133,6 +129,9 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*p
 	pbft.logger.Infof("PBFT Checkpoint period (K) = %v", pbft.K)
 	pbft.logger.Infof("PBFT Log multiplier = %v", pbft.logMultiplier)
 	pbft.logger.Infof("PBFT log size (L) = %v", pbft.L)
+
+	atomic.StoreUint32(&pbft.normal, 1)
+	atomic.StoreUint32(&pbft.poolFull, 0)
 
 	return pbft, nil
 }
@@ -155,13 +154,13 @@ func (pbft *pbftImpl) ProcessEvent(ee events.Event) events.Event {
 			pbft.logger.Warning(err.Error())
 		}
 
-	case protos.RemoveCache:
-		vid := e.Vid
-		ok := pbft.recvRemoveCache(vid)
-		if !ok {
-			pbft.logger.Debugf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
-		}
-		return nil
+	//case protos.RemoveCache:
+	//	vid := e.Vid
+	//	ok := pbft.recvRemoveCache(vid)
+	//	if !ok {
+	//		pbft.logger.Debugf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
+	//	}
+	//	return nil
 
 	case protos.RoutersMessage:
 		if len(e.Routers) == 0 {
@@ -466,7 +465,7 @@ func (pbft *pbftImpl) sendPrePrepare(digest string, hash string, reqBatch *Trans
 	reqBatch.ResultHash = hash
 	pbft.storeMgr.outstandingReqBatches[digest] = reqBatch
 	pbft.storeMgr.txBatchStore[digest] = reqBatch
-	pbft.persistRequestBatch(digest)
+	pbft.persistTxBatch(digest)
 
 	payload, err := proto.Marshal(preprepare)
 	if err != nil {
@@ -1081,14 +1080,6 @@ func (pbft *pbftImpl) processCachedTransactions() {
 	}
 }
 
-//processRequestsDuringRecovery process requests
-func (pbft *pbftImpl) processRequestsDuringRecovery() {
-	if !pbft.status.getState(&pbft.status.inRecovery) && atomic.LoadUint32(&pbft.activeView) == 1 && atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
-		pbft.processCachedTransactions()
-	} else {
-		pbft.logger.Warningf("Replica %d try to processRequestsDuringRecovery but recovery is not finished or it's in viewChange / updatingN", pbft.id)
-	}
-}
 
 func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error {
 
@@ -1206,9 +1197,10 @@ func (pbft *pbftImpl) executeAfterStateUpdate() {
 	pbft.logger.Debugf("Replica %d try to execute after state update", pbft.id)
 
 	for idx, cert := range pbft.storeMgr.certStore {
-		if idx.n > pbft.seqNo && pbft.prepared(cert.resultHash, idx.v, idx.n) && !cert.validated {
-			pbft.logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, cert.resultHash)
-			pbft.batchVdr.preparedCert[idx] = cert.resultHash
+		if idx.n > pbft.seqNo && pbft.prepared(idx.d, idx.v, idx.n) && !cert.validated {
+			pbft.logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, idx.d)
+			id := vidx{idx.v, idx.n, cert.vid}
+			pbft.batchVdr.preparedCert[id] = idx.d
 			pbft.validatePending()
 		}
 	}
@@ -1507,7 +1499,7 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 	for digest, batch := range pbft.storeMgr.txBatchStore {
 		if batch.SeqNo <= target && batch.SeqNo != 0 {
 			delete(pbft.storeMgr.txBatchStore, digest)
-			pbft.persistDelRequestBatch(digest)
+			pbft.persistDelTxBatch(digest)
 			digestList = append(digestList, digest)
 		}
 	}
@@ -1729,7 +1721,7 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 			batch.ResultHash = result.Hash
 			pbft.storeMgr.outstandingReqBatches[result.Digest] = batch
 			pbft.storeMgr.txBatchStore[result.Digest] = batch
-			pbft.persistRequestBatch(result.Digest)
+			pbft.persistTxBatch(result.Digest)
 			pbft.sendCommit(result.Digest, result.View, result.SeqNo)
 		} else {
 			pbft.logger.Warningf("Relica %d cannot agree with the validate result for view=%d/seqNo=%d/vid=%d sent from primary, self: %s, primary: %s",
@@ -1740,31 +1732,31 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 	return nil
 }
 
-func (pbft *pbftImpl) recvRemoveCache(vid uint64) bool {
-	if vid <= 10 {
-		pbft.logger.Debugf("Replica %d received remove cached batch %d <= 10, retain it until 11", pbft.id, vid)
-		return true
-	}
-	id := vid - 10
-	pbft.dupLock.RLock()
-	_, ok := pbft.duplicator[id]
-	pbft.dupLock.RUnlock()
-	if ok {
-		pbft.logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
-		pbft.dupLock.Lock()
-		delete(pbft.duplicator, id)
-		pbft.dupLock.Unlock()
-	}
-
-	if vid%pbft.K == 0 {
-		pbft.dupLock.Lock()
-		for tmp := range pbft.duplicator {
-			if tmp < id {
-				delete(pbft.duplicator, tmp)
-			}
-		}
-		pbft.dupLock.Unlock()
-	}
-
-	return ok
-}
+//func (pbft *pbftImpl) recvRemoveCache(vid uint64) bool {
+//	if vid <= 10 {
+//		pbft.logger.Debugf("Replica %d received remove cached batch %d <= 10, retain it until 11", pbft.id, vid)
+//		return true
+//	}
+//	id := vid - 10
+//	pbft.dupLock.RLock()
+//	_, ok := pbft.duplicator[id]
+//	pbft.dupLock.RUnlock()
+//	if ok {
+//		pbft.logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
+//		pbft.dupLock.Lock()
+//		delete(pbft.duplicator, id)
+//		pbft.dupLock.Unlock()
+//	}
+//
+//	if vid%pbft.K == 0 {
+//		pbft.dupLock.Lock()
+//		for tmp := range pbft.duplicator {
+//			if tmp < id {
+//				delete(pbft.duplicator, tmp)
+//			}
+//		}
+//		pbft.dupLock.Unlock()
+//	}
+//
+//	return ok
+//}

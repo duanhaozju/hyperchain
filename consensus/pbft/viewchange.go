@@ -106,19 +106,18 @@ func (pbft *pbftImpl) calcQSet() map[qidx]*ViewChange_PQ {
 			continue
 		}
 
-		digest := cert.resultHash
-		if !pbft.prePrepared(digest, idx.v, idx.n) {
+		if !pbft.prePrepared(idx.d, idx.v, idx.n) {
 			continue
 		}
 
-		qi := qidx{digest, idx.n}
+		qi := qidx{idx.d, idx.n}
 		if q, ok := qset[qi]; ok && q.View > idx.v {
 			continue
 		}
 
 		qset[qi] = &ViewChange_PQ{
 			SequenceNumber: idx.n,
-			BatchDigest:    digest,
+			BatchDigest:    idx.d,
 			View:           idx.v,
 		}
 	}
@@ -139,8 +138,7 @@ func (pbft *pbftImpl) calcPSet() map[uint64]*ViewChange_PQ {
 			continue
 		}
 
-		digest := cert.resultHash
-		if !pbft.prepared(digest, idx.v, idx.n) {
+		if !pbft.prepared(idx.d, idx.v, idx.n) {
 			continue
 		}
 
@@ -150,7 +148,7 @@ func (pbft *pbftImpl) calcPSet() map[uint64]*ViewChange_PQ {
 
 		pset[idx.n] = &ViewChange_PQ{
 			SequenceNumber: idx.n,
-			BatchDigest:    digest,
+			BatchDigest:    idx.d,
 			View:           idx.v,
 		}
 	}
@@ -265,7 +263,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 		pbft.timerMgr.stopTimer(NEW_VIEW_TIMER)
 		pbft.timerMgr.stopTimer(VC_RESEND_TIMER)
 		pbft.vcMgr.vcResendCount = 0
-		pbft.restoreView("")
+		pbft.restoreView()
 		pbft.status.activeState(&pbft.status.inNegoView, &pbft.status.inRecovery)
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.initNegoView()
@@ -568,7 +566,7 @@ func (pbft *pbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing
 				continue
 			}
 
-			if !pbft.batchVdr.containsInVBS(d) {
+			if _, ok := pbft.storeMgr.txBatchStore[d]; !ok {
 				pbft.logger.Warningf("Replica %d missing assigned, non-checkpointed request batch %s",
 					pbft.id, d)
 				if _, ok := pbft.storeMgr.missingReqBatches[d]; !ok {
@@ -594,7 +592,7 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 
 	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
 	pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
-	pbft.batchVdr.preparedCert = make(map[msgID]string)
+	pbft.batchVdr.preparedCert = make(map[vidx]string)
 	pbft.storeMgr.committedCert = make(map[msgID]string)
 	prevPrimary := pbft.primary(pbft.view - 1)
 	if prevPrimary == pbft.id {
@@ -691,11 +689,11 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 				// This should not happen
 				pbft.logger.Critical("view change Xset has null batch, kick it out")
 			} else {
-				batch, ok := pbft.batchVdr.validatedBatchStore[d]
+				batch, ok := pbft.storeMgr.txBatchStore[d]
 				if !ok {
 					pbft.logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 				} else if i > pbft.seqNo {
-					pbft.primaryValidateBatch(batch, i)
+					pbft.primaryValidateBatch(d, batch, i)
 				}
 			}
 		}
@@ -1175,6 +1173,7 @@ func (pbft *pbftImpl) beforeSendVC() error {
 	pbft.view++
 	atomic.StoreUint32(&pbft.activeView, 0)
 	pbft.status.inActiveState(&pbft.status.vcHandled)
+	atomic.StoreUint32(&pbft.normal, 0)
 
 	pbft.vcMgr.plist = pbft.calcPSet()
 	pbft.vcMgr.qlist = pbft.calcQSet()

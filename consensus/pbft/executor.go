@@ -331,12 +331,15 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 			pbft.sendReadyForN()
 			return nil
 		}
-		pbft.processRequestsDuringRecovery()
 		pbft.executeAfterStateUpdate()
 		return nil
 
 	case RECOVERY_NEGO_VIEW_DONE_EVENT:
-		pbft.logger.Criticalf("======== Replica %d finished negotiating view: %d", pbft.id, pbft.view)
+		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
+			atomic.LoadUint32(&pbft.activeView) == 1 && !pbft.status.getState(&pbft.status.skipInProgress)  {
+			atomic.StoreUint32(&pbft.normal, 1)
+		}
+		pbft.logger.Criticalf("======== Replica %d finished negotiating view: %d / N=%d", pbft.id, pbft.view, pbft.N)
 		primary := pbft.primary(pbft.view)
 		if pbft.status.getState(&pbft.status.vcToRecovery) {
 			pbft.parseSpecifyCertStore()
