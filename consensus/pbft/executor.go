@@ -185,7 +185,6 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			pbft.sendReadyForN()
 			return nil
 		}
-		pbft.processRequestsDuringViewChange()
 		pbft.rebuildCertStoreForVC()
 	case VIEW_CHANGE_RESEND_TIMER_EVENT:
 		if atomic.LoadUint32(&pbft.activeView) == 1 {
@@ -286,7 +285,6 @@ func (pbft *pbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 			pbft.status.inActiveState(&pbft.status.isNewNode)
 		}
 		atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 0)
-		pbft.processRequestsDuringUpdatingN()
 		pbft.rebuildCertStoreForUpdate()
 		pbft.logger.Criticalf("======== Replica %d finished UpdatingN, primary=%d, n=%d/f=%d/view=%d/h=%d", pbft.id, pbft.primary(pbft.view), pbft.N, pbft.f, pbft.view, pbft.h)
 	}

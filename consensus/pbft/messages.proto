@@ -67,7 +67,8 @@ message hash_batch {
 
 message return_request_batch {
     transaction_batch batch = 1;
-    string digest = 2;
+    string batch_digest = 2;
+    uint64 replica_id = 3;
 }
 
 message fetch_missing_transaction {

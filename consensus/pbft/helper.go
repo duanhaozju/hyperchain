@@ -130,26 +130,26 @@ func (pbft *pbftImpl) getDelNV(del uint64) (n int64, v uint64) {
 	return
 }
 
-func (pbft *pbftImpl) handleCachedTxs(cache map[uint64]*transactionStore) {
-	for vid, batch := range cache {
-		if vid < pbft.h {
-			continue
-		}
-		for batch.Len() != 0 {
-			temp := batch.order.Front().Value
-			txc, ok := interface{}(temp).(transactionContainer)
-			if !ok {
-				pbft.logger.Error("type assert error:", temp)
-				return
-			}
-			tx := txc.tx
-			if tx != nil {
-				pbft.reqStore.storeOutstanding(tx)
-			}
-			batch.remove(tx)
-		}
-	}
-}
+//func (pbft *pbftImpl) handleCachedTxs(cache map[uint64]*transactionStore) {
+//	for vid, batch := range cache {
+//		if vid < pbft.h {
+//			continue
+//		}
+//		for batch.Len() != 0 {
+//			temp := batch.order.Front().Value
+//			txc, ok := interface{}(temp).(transactionContainer)
+//			if !ok {
+//				pbft.logger.Error("type assert error:", temp)
+//				return
+//			}
+//			tx := txc.tx
+//			if tx != nil {
+//				pbft.reqStore.storeOutstanding(tx)
+//			}
+//			batch.remove(tx)
+//		}
+//	}
+//}
 
 func (pbft *pbftImpl) cleanAllCache() {
 

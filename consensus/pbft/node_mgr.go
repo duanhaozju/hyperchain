@@ -401,8 +401,14 @@ func (pbft *pbftImpl) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 
 func (pbft *pbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) events.Event {
 
+	if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1  {
+		pbft.logger.Debugf("Replica %d already in updatingN, ignore send agree-update-n again")
+		return nil
+	}
+
 	if int(agree.N) == pbft.N && agree.View == pbft.view {
-		pbft.logger.Debugf("Replica %d alreay finish update for N=%d/view=%d", pbft.id, pbft.N, pbft.view)
+		pbft.logger.Warningf("Replica %d alreay finish update for N=%d/view=%d", pbft.id, pbft.N, pbft.view)
+		return nil
 	}
 	delete(pbft.nodeMgr.updateStore, pbft.nodeMgr.updateTarget)
 	pbft.stopNewViewTimer()
@@ -523,7 +529,7 @@ func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 
 	replicas := make(map[uint64]bool)
 	for idx := range pbft.nodeMgr.agreeUpdateStore {
-		if !(idx.v == agree.View && idx.n == agree.N) {
+		if !(idx.v == agree.View && idx.n == agree.N && idx.flag == agree.Flag) {
 			continue
 		}
 		replicas[idx.id] = true
@@ -549,7 +555,7 @@ func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 
 	quorum := 0
 	for idx := range pbft.nodeMgr.agreeUpdateStore {
-		if idx.v == agree.View {
+		if idx.v == agree.View && idx.n == agree.N && idx.flag == agree.Flag {
 			quorum++
 		}
 	}
@@ -806,11 +812,6 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 	pbft.stopNewViewTimer()
 	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 
-
-	pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
-	pbft.batchVdr.preparedCert = make(map[msgID]string)
-	pbft.storeMgr.committedCert = make(map[msgID]string)
-
 	backenVid := pbft.exec.lastExec + 1
 	pbft.seqNo = pbft.exec.lastExec
 	pbft.batchVdr.vid = pbft.exec.lastExec
@@ -946,11 +947,11 @@ func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 				// This should not happen
 				pbft.logger.Critical("update_n Xset has null batch, kick it out")
 			} else {
-				batch, ok := pbft.batchVdr.validatedBatchStore[d]
+				batch, ok := pbft.storeMgr.txBatchStore[d]
 				if !ok {
 					pbft.logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
 				} else if i > pbft.seqNo {
-					pbft.primaryValidateBatch(batch, i)
+					pbft.primaryValidateBatch(d, batch, i)
 				}
 			}
 		}
@@ -1225,12 +1226,3 @@ nLoop:
 	return list
 }
 
-func (pbft *pbftImpl) processRequestsDuringUpdatingN() {
-	if atomic.LoadUint32(&pbft.activeView) == 1 &&
-		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
-		!pbft.status.getState(&pbft.status.inRecovery) {
-		pbft.processCachedTransactions()
-	} else {
-		pbft.logger.Warningf("Replica %d try to processRequestsDuringUpdatingN but updatingN is not finished or it's in recovery / viewChange", pbft.id)
-	}
-}

@@ -238,14 +238,15 @@ func (m *HashBatch) GetTimestamp() int64 {
 }
 
 type ReturnRequestBatch struct {
-	Batch  *TransactionBatch `protobuf:"bytes,1,opt,name=batch" json:"batch,omitempty"`
-	Digest string            `protobuf:"bytes,2,opt,name=digest" json:"digest,omitempty"`
+	Batch       *TransactionBatch `protobuf:"bytes,1,opt,name=batch" json:"batch,omitempty"`
+	BatchDigest string            `protobuf:"bytes,2,opt,name=batch_digest,json=batchDigest" json:"batch_digest,omitempty"`
+	ReplicaId   uint64            `protobuf:"varint,3,opt,name=replica_id,json=replicaId" json:"replica_id,omitempty"`
 }
 
 func (m *ReturnRequestBatch) Reset()                    { *m = ReturnRequestBatch{} }
 func (m *ReturnRequestBatch) String() string            { return proto.CompactTextString(m) }
 func (*ReturnRequestBatch) ProtoMessage()               {}
-func (*ReturnRequestBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (*ReturnRequestBatch) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
 func (m *ReturnRequestBatch) GetBatch() *TransactionBatch {
 	if m != nil {
@@ -254,11 +255,18 @@ func (m *ReturnRequestBatch) GetBatch() *TransactionBatch {
 	return nil
 }
 
-func (m *ReturnRequestBatch) GetDigest() string {
+func (m *ReturnRequestBatch) GetBatchDigest() string {
 	if m != nil {
-		return m.Digest
+		return m.BatchDigest
 	}
 	return ""
+}
+
+func (m *ReturnRequestBatch) GetReplicaId() uint64 {
+	if m != nil {
+		return m.ReplicaId
+	}
+	return 0
 }
 
 type FetchMissingTransaction struct {

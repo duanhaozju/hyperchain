@@ -50,7 +50,7 @@ type pbftImpl struct {
 	exec           *executor                    // manage transaction exec
 
 	helper         helper.Stack
-	reqStore       *requestStore                // received messages
+	//reqStore       *requestStore                // received messages
 
 	pbftManager    events.Manager               // manage pbft event
 
@@ -116,8 +116,8 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*p
 
 	pbft.batchMgr = newBatchManager(config, pbft) // init after pbftEventQueue
 	// new batch manager
-	pbft.batchVdr = newBatchValidator(pbft)
-	pbft.reqStore = newRequestStore()
+	pbft.batchVdr = newBatchValidator()
+	//pbft.reqStore = newRequestStore()
 	pbft.recoveryMgr = newRecoveryMgr()
 
 	atomic.StoreUint32(&pbft.activeView, 1)
@@ -1104,6 +1104,11 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 		pbft.checkpoint(et.SeqNo, bcInfo)
 	}
 
+	if atomic.LoadUint32(&pbft.activeView) == 1 || atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
+		!pbft.status.getState(&pbft.status.inNegoView)  {
+		atomic.StoreUint32(&pbft.normal, 1)
+	}
+
 	if pbft.status.getState(&pbft.status.inRecovery) {
 		if pbft.recoveryMgr.recoveryToSeqNo == nil {
 			pbft.logger.Warningf("Replica %d in recovery recvStateUpdatedEvent but " +
@@ -1114,10 +1119,10 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 			// This is a somewhat subtle situation, we are behind by checkpoint, but others are just on chkpt.
 			// Hence, no need to fetch preprepare, prepare, commit
 
-			for idx := range pbft.storeMgr.certStore {
+			for idx, cert := range pbft.storeMgr.certStore {
 				if idx.n > pbft.exec.lastExec {
 					delete(pbft.storeMgr.certStore, idx)
-					pbft.persistDelQPCSet(idx.v, idx.n)
+					pbft.persistDelQPCSet(idx.v, idx.n, cert.vid, idx.d)
 				}
 			}
 			pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
@@ -1549,6 +1554,8 @@ func (pbft *pbftImpl) stateTransfer(optional *stateUpdateTarget) {
 }
 
 func (pbft *pbftImpl) retryStateTransfer(optional *stateUpdateTarget) {
+
+	atomic.StoreUint32(&pbft.normal, 0)
 
 	if pbft.status.getState(&pbft.status.stateTransferring) {
 		pbft.logger.Debugf("Replica %d is currently mid state transfer, it must wait for this state transfer to complete before initiating a new one", pbft.id)
