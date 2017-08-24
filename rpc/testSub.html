@@ -34,7 +34,7 @@ window.onload = function () {
     };
 
     if (window["WebSocket"]) {
-        conn = new WebSocket("ws://localhost:10002");
+        conn = new WebSocket("ws://localhost:10001");
         console.log("connect ",conn," ...")
         conn.onclose = function (evt) {
             var item = document.createElement("div");
@@ -58,20 +58,23 @@ window.onload = function () {
                      info1.innerText = "==== You have subscribed an event: ====";
                      info1.style.color = "green"
                      appendLog(info1);
-                     records[datajson.result] = 0
+                     console.log(typeof datajson.result)
+                     if (typeof datajson.result == "string") {
+                         records[datajson.result] = 0
 
-                     // 渲染
-                     var tr = document.createElement("tr");
-                     var td1 = document.createElement("td");
-                     var td2 = document.createElement("td");
+                         // 渲染
+                         var tr = document.createElement("tr");
+                         var td1 = document.createElement("td");
+                         var td2 = document.createElement("td");
 
-                     td1.innerText = datajson.result;
-                     td2.innerText = "0";
+                         td1.innerText = datajson.result;
+                         td2.innerText = "0";
 
-                     td2.setAttribute("id", datajson.result);
-                     tr.appendChild(td1);
-                     tr.appendChild(td2);
-                     tbody.appendChild(tr)
+                         td2.setAttribute("id", datajson.result);
+                         tr.appendChild(td1);
+                         tr.appendChild(td2);
+                         tbody.appendChild(tr)
+                     }
                  }
              } else if (datajson.code && datajson.code != 0) {
                  var info4 = document.createElement("div");
