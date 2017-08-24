@@ -202,12 +202,17 @@ func (mgr *ArchiveManager) checkRequest(manifest common.Manifest, meta common.Ar
 	if curHeigit < uint64(mgr.executor.GetArchiveThreshold())+manifest.Height {
 		return false
 	}
+	// Optional. If user set the `force consistency` config item as true,
+	// which means if archived chain is not continuous with the online chain,
+	// the request can be regarded as a invalid one.
 	if mgr.executor.IsArchiveForceConsistency() {
 		if genesis != meta.Height+1 {
 			return false
 		}
 	}
-	if genesis == manifest.Height {
+	// if genesis block is larger or equal with the snapshot height,
+	// the request is regarded as a invalid one.
+	if genesis >= manifest.Height {
 		return false
 	}
 	return true
