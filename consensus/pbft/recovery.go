@@ -389,20 +389,17 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	pbft.timerMgr.stopTimer(RECOVERY_RESTART_TIMER)
 	pbft.recoveryMgr.recoveryToSeqNo = &n
 
-	pbft.logger.Debugf("Replica %d in recovery find quorum chkpt: %d",pbft.id, n)
+	pbft.logger.Debugf("Replica %d in recovery self lastExec: %d, self h: %d, others h: %d",
+		pbft.id, pbft.exec.lastExec, pbft.h, n)
 
 	if pbft.primary(pbft.view) == pbft.id {
 		for idx := range pbft.storeMgr.certStore {
 			if idx.n > pbft.exec.lastExec {
 				delete(pbft.storeMgr.certStore, idx)
 				pbft.persistDelQPCSet(idx.v, idx.n)
-
 			}
 		}
 	}
-
-	pbft.logger.Debugf("Replica %d in recovery self lastExec: %d, self h: %d, others h: %d",
-		pbft.id, pbft.exec.lastExec, pbft.h, n)
 
 	var id []byte
 	var err error
@@ -495,35 +492,6 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []r
 					replicas = append(replicas, peer)
 				}
 			}
-		}
-	}
-
-	return
-}
-
-func (pbft *pbftImpl) findLastExecQuorum() (lastExec uint64, hash string, find bool) {
-
-	lastExecs := make(map[blkIdx]map[uint64]bool)
-	find = false
-	for _, rsp := range pbft.recoveryMgr.rcRspStore {
-		idx := blkIdx{
-			height: rsp.BlockHeight,
-			hash:   rsp.LastBlockHash,
-		}
-		replicas, ok := lastExecs[idx]
-		if ok {
-			replicas[rsp.ReplicaId] = true
-		} else {
-			replicas := make(map[uint64]bool)
-			replicas[rsp.ReplicaId] = true
-			lastExecs[idx] = replicas
-		}
-
-		if len(lastExecs[idx]) >= pbft.oneCorrectQuorum() {
-			lastExec = idx.height
-			hash = idx.hash
-			find = true
-			break
 		}
 	}
 

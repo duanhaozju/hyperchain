@@ -603,7 +603,7 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 	if ok {
 		if pbft.status.checkStatesOr(&pbft.status.inRecovery) || commit.SequenceNumber <= pbft.exec.lastExec {
 			// this is normal when in recovery
-			pbft.logger.Warningf("Replica %d in recovery, received commit from replica %d, view=%d/seqNo=%d",
+			pbft.logger.Debugf("Replica %d in recovery, received commit from replica %d, view=%d/seqNo=%d",
 				pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
 			return nil
 		} else {
@@ -738,18 +738,6 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 		pbft.logger.Debugf("Replica %d finish execution %d, trying next", pbft.id, *pbft.exec.currentExec)
 		pbft.exec.lastExec = *pbft.exec.currentExec
 		delete(pbft.storeMgr.committedCert, idx)
-		if pbft.status.getState(&pbft.status.inRecovery) {
-			if pbft.recoveryMgr.recoveryToSeqNo == nil {
-				pbft.logger.Errorf("Replica %d in recovery execDoneSync but its recoveryToSeqNo is nil", pbft.id)
-				return
-			}
-			if pbft.exec.lastExec == *pbft.recoveryMgr.recoveryToSeqNo {
-				go pbft.pbftEventQueue.Push(&LocalEvent{
-					Service:   RECOVERY_SERVICE,
-					EventType: RECOVERY_DONE_EVENT,
-				})
-			}
-		}
 		if pbft.exec.lastExec%pbft.K == 0 {
 			bcInfo := pbft.getBlockchainInfo()
 			height := bcInfo.Height
@@ -897,10 +885,18 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 				"its recoveryToSeqNo is nil", pbft.id)
 			return nil
 		}
-		if pbft.exec.lastExec == *pbft.recoveryMgr.recoveryToSeqNo {
+		if pbft.exec.lastExec >= *pbft.recoveryMgr.recoveryToSeqNo {
 			// This is a somewhat subtle situation, we are behind by checkpoint, but others are just on chkpt.
 			// Hence, no need to fetch preprepare, prepare, commit
-			pbft.fetchRecoveryPQC()
+
+			for idx := range pbft.storeMgr.certStore {
+				if idx.n > pbft.exec.lastExec {
+					delete(pbft.storeMgr.certStore, idx)
+					pbft.persistDelQPCSet(idx.v, idx.n)
+				}
+			}
+			pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
+
 			go pbft.pbftEventQueue.Push(&LocalEvent{
 				Service:   RECOVERY_SERVICE,
 				EventType: RECOVERY_DONE_EVENT,
@@ -908,28 +904,7 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 			return nil
 		}
 
-		event := &LocalEvent{
-			Service:   RECOVERY_SERVICE,
-			EventType: RECOVERY_RESTART_TIMER_EVENT,
-		}
-
-		pbft.timerMgr.startTimer(RECOVERY_RESTART_TIMER, event, pbft.pbftEventQueue)
-
-		if pbft.storeMgr.highStateTarget == nil {
-			pbft.logger.Errorf("Try to fetch QPC, but highStateTarget is nil")
-			return nil
-		}
-		for idx := range pbft.storeMgr.certStore {
-			pbft.persistDelQPCSet(idx.v, idx.n)
-		}
-		for idx := range pbft.storeMgr.certStore {
-			if idx.n > pbft.exec.lastExec {
-				delete(pbft.storeMgr.certStore, idx)
-			}
-		}
-		pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
-
-		pbft.fetchRecoveryPQC()
+		pbft.restartRecovery()
 		return nil
 	} else {
 		pbft.executeAfterStateUpdate()
@@ -1272,6 +1247,11 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 	pbft.storeMgr.moveWatermarks(pbft, h)
 
 	pbft.h = h
+
+	// we should update the recovery target if system goes on
+	if pbft.status.getState(&pbft.status.inRecovery) {
+		pbft.recoveryMgr.recoveryToSeqNo = &h
+	}
 
 	pbft.logger.Infof("Replica %d updated low watermark to %d",
 		pbft.id, pbft.h)

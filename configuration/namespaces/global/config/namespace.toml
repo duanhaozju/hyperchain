@@ -42,7 +42,7 @@ algo = "PBFT"
             nullrequest     = "6s"  # Primary send it to inform aliveness, must be greater than request timeout
             viewchange      = "8s"  # How long may a view change take
             resendviewchange= "10s" # How long to wait for a view change quorum before resending (the same) view change
-            cleanviewchange = "30s" # How long to clean out-of-data view change message
+            cleanviewchange = "60s" # How long to clean out-of-data view change message
             update          = "4s"  # How long may a update-n take
 
 ############################################################################################################
