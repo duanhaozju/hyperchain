@@ -97,9 +97,9 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	whiteList := config.GetBool(common.ENCRYPTION_TCERT_WHITELIST)
 	if whiteList {
+		logger.Critical("Init Tcert White list!")
 		whiteListDir := common.GetPath(namespace, config.GetString(common.ENCRYPTION_TCERT_WHITELIST_DIR))
 		tcertFiles,err := ListDir(whiteListDir,"cert")
 		if err != nil{
@@ -167,7 +167,6 @@ func (cm *CAManager) GenTCert(publicKey string) (string, error) {
 //ECert 进行充当TCERT 所以需要用ECA.CERT 即ECA.CA 作为根证书进行验证
 //VerifyTCert verify the TCert is valid or not
 func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
-	log := common.GetLogger(common.NAMESPACE, "ca")
 	// if check TCert flag is false, default return true
 	if !cm.checkTCert {
 		return true, nil
@@ -178,7 +177,7 @@ func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
 		return false, errParseCert
 	}
 	if tcert.IsCA == true{
-		log.Error("tcert is CA !ERROE!")
+		cm.logger.Error("tcert is CA !ERROE!")
 		return false,errFailedVerifySign
 	}
 
@@ -196,12 +195,12 @@ func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
 	//其他METHOD
 	db,err := hyperdb.GetDBDatabase()
 	if err!=nil {
-		log.Error(err)
+		cm.logger.Error(err)
 		return false,&common.CertError{Message: "Get Database failed"};
 	}
 	certs,err := db.Get([]byte(CertKey))
 	if err!=nil {
-		log.Error("This node has not gen tcert:",err)
+		cm.logger.Error("This node has not gen tcert:",err)
 		return  false,&common.CertError{Message: "This node has not gen tcert!"};
 	}
 	regs := struct {
@@ -209,7 +208,7 @@ func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
 	}{}
 	_,err = asn1.Unmarshal(certs,&regs)
 	if err!=nil {
-		log.Error(err)
+		cm.logger.Error(err)
 		return  false,&common.CertError{Message: "UnMarshal cert lists failed"};
 	}
 	for _,v := range regs.Tcerts  {
@@ -223,7 +222,7 @@ func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
 			}
 		}
 	}
-	log.Error("Node has not gen this Tcert!Please check it")
+	cm.logger.Error("Node has not gen this Tcert!Please check it")
 	return false, errFailedVerifySign
 }
 
