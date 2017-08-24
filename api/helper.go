@@ -104,12 +104,16 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, archiveDb, conf, height, namespace)
 }
 
-func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte, height uint64, namespace string) (vm.Database, error) {
+func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte, height uint64, namespace string) (vm.Database, func(), error) {
 	db, err := hyperdb.NewDatabase(conf, path.Join("snapshots", "SNAPSHOT_"+filterId), hyperdb.GetDatabaseType(conf), namespace)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return hyperstate.New(common.BytesToHash(merkleRoot), db, nil, conf, height, namespace)
+	closer := func() {
+		db.Close()
+	}
+	state, err := hyperstate.New(common.BytesToHash(merkleRoot), db, nil, conf, height, namespace)
+	return state, closer, err
 }
 
 func substr(str string, start int, end int) string {

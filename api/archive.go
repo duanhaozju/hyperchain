@@ -87,10 +87,11 @@ func (admin *ArchivePublicAPI) CheckSnapshot(filterId string) (bool, error) {
 		return false, &common.SnapshotErr{Message: err.Error()}
 	}
 	// return whole world state
-	stateDb, err := NewSnapshotStateDb(admin.config, manifest.FilterId, common.Hex2Bytes(manifest.MerkleRoot), manifest.Height, manifest.Namespace)
+	stateDb, closer, err := NewSnapshotStateDb(admin.config, manifest.FilterId, common.Hex2Bytes(manifest.MerkleRoot), manifest.Height, manifest.Namespace)
 	if err != nil {
 		return false, &common.SnapshotErr{Message: err.Error()}
 	}
+	defer closer()
 	curHash, err := stateDb.RecomputeCryptoHash()
 	if err != nil {
 		return false, &common.SnapshotErr{Message: err.Error()}
