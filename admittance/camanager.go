@@ -13,6 +13,7 @@ import (
 	"strings"
 	"hyperchain/hyperdb"
 	"encoding/asn1"
+	"os"
 )
 
 var (
@@ -25,6 +26,11 @@ var (
 )
 
 const CertKey string = "tcerts"
+
+
+type RegisterTcerts struct {
+	Tcerts []string
+}
 
 type cert struct {
 	x509cert *x509.Certificate
@@ -91,6 +97,30 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	if err != nil {
 		return nil, err
 	}
+	whiteList := config.GetBool(common.ENCRYPTION_TCERT_WHITELIST)
+	if whiteList {
+		logger.Critical("Init Tcert White list!")
+		whiteListDir := common.GetPath(namespace, config.GetString(common.ENCRYPTION_TCERT_WHITELIST_DIR))
+		tcertFiles,err := ListDir(whiteListDir,"cert")
+		if err != nil{
+			logger.Error("Init tcert white list failed :",err)
+			return  nil,&common.CertError{Message: "Init tcert white list failed"};
+		}
+		for _,tcertPath := range tcertFiles{
+			cert, err := ioutil.ReadFile(tcertPath)
+			if err != nil {
+				return nil, err
+			}
+			err = RegisterCert(cert)
+			if err != nil{
+				if err != nil {
+					logger.Error(err)
+					return nil, &common.CertError{Message: "Init tcert white list failed"}
+				}
+			}
+		}
+	}
+
 	return &CAManager{
 		eCaCert:eca,
 		eCert:ecert,
@@ -137,7 +167,6 @@ func (cm *CAManager) GenTCert(publicKey string) (string, error) {
 //ECert 进行充当TCERT 所以需要用ECA.CERT 即ECA.CA 作为根证书进行验证
 //VerifyTCert verify the TCert is valid or not
 func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
-	log := common.GetLogger(common.DEFAULT_NAMESPACE, "api")
 	// if check TCert flag is false, default return true
 	if !cm.checkTCert {
 		return true, nil
@@ -148,7 +177,7 @@ func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
 		return false, errParseCert
 	}
 	if tcert.IsCA == true{
-		log.Error("tcert is CA !ERROE!")
+		cm.logger.Error("tcert is CA !ERROE!")
 		return false,errFailedVerifySign
 	}
 
@@ -166,12 +195,12 @@ func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
 	//其他METHOD
 	db,err := hyperdb.GetDBDatabase()
 	if err!=nil {
-		log.Error(err)
+		cm.logger.Error(err)
 		return false,&common.CertError{Message: "Get Database failed"};
 	}
 	certs,err := db.Get([]byte(CertKey))
 	if err!=nil {
-		log.Error("This node has not gen tcert:",err)
+		cm.logger.Error("This node has not gen tcert:",err)
 		return  false,&common.CertError{Message: "This node has not gen tcert!"};
 	}
 	regs := struct {
@@ -179,7 +208,7 @@ func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
 	}{}
 	_,err = asn1.Unmarshal(certs,&regs)
 	if err!=nil {
-		log.Error(err)
+		cm.logger.Error(err)
 		return  false,&common.CertError{Message: "UnMarshal cert lists failed"};
 	}
 	for _,v := range regs.Tcerts  {
@@ -193,7 +222,7 @@ func (cm *CAManager)VerifyTCert(tcertPEM string,method string) (bool, error) {
 			}
 		}
 	}
-	log.Error("Node has not gen this Tcert!Please check it")
+	cm.logger.Error("Node has not gen this Tcert!Please check it")
 	return false, errFailedVerifySign
 }
 
@@ -313,4 +342,71 @@ func readKey(path string) (*key, error) {
 		priKey:priKey,
 		prikeybyte:keyb,
 	}, nil
+}
+
+func ListDir(dirPth string, suffix string) (files []string, err error) {
+	files = make([]string, 0, 10)
+	dir, err := ioutil.ReadDir(dirPth)
+	if err != nil {
+		return nil, err
+	}
+	PthSep := string(os.PathSeparator)
+	suffix = strings.ToUpper(suffix) //忽略后缀匹配的大小写
+	for _, fi := range dir {
+		if fi.IsDir() { // 忽略目录
+			continue
+		}
+		if strings.HasSuffix(strings.ToUpper(fi.Name()), suffix) { //匹配文件
+			files = append(files, dirPth+PthSep+fi.Name())
+		}
+	}
+	return files, nil
+}
+
+func RegisterCert(tcert []byte) error {
+	log := common.GetLogger(common.DEFAULT_NAMESPACE, "api")
+	db,err := hyperdb.GetDBDatabase()
+	if err!=nil {
+		log.Error(err)
+		return &common.CertError{Message: "Get Database failed"};
+	}
+	certs,err := db.Get([]byte(CertKey))
+	tcertStr := string(tcert)
+	//First to Save CertList
+	if err != nil{
+		//log.Critical("Register TCERT:",tcertStr)
+		regLists := RegisterTcerts{[]string{tcertStr}}
+		lists,err := asn1.Marshal(regLists)
+		if err!= nil{
+			log.Error(err)
+			return &common.CertError{Message: "Marshal cert lists failed"};
+		}
+		err = db.Put([]byte(CertKey),lists)
+		if err!= nil{
+			log.Error(err)
+			return &common.CertError{Message: "Save cert lists failed"};
+		}
+		return nil
+	}
+	//log.Critical("GET CERT LIST FROM DB:",certs)
+	Regs := struct {
+		Tcerts []string
+	}{}
+	_,err = asn1.Unmarshal(certs,&Regs)
+	if err!=nil {
+		log.Error(err)
+		return  &common.CertError{Message: "UnMarshal cert lists failed"};
+	}
+	Regs.Tcerts = append(Regs.Tcerts,tcertStr)
+	lists,err := asn1.Marshal(Regs)
+	if err!= nil{
+		log.Error(err)
+		return &common.CertError{Message: "Marshal cert lists failed"};
+	}
+	err = db.Put([]byte(CertKey),lists)
+	if err!= nil{
+		log.Error(err)
+		return &common.CertError{Message: "Save cert lists failed"};
+	}
+	return nil
 }
