@@ -101,7 +101,7 @@ func (pbft *pbftImpl) Start() {
 	pbft.reqEventQueue = events.GetQueue(pbft.batchMgr.batchEventsManager.Queue())
 
 	//1.restore state.
-	pbft.restoreState("")
+	pbft.restoreState()
 
 	pbft.vcMgr.viewChangeSeqNo = ^uint64(0) // infinity
 	pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)

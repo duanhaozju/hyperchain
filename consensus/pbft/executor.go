@@ -226,8 +226,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 		}
 		seqNo = event.SeqNo
 		if pbft.status.getState(&pbft.status.inRecovery)&& pbft.recoveryMgr.recoveryToSeqNo != nil  {
-			if seqNo - 1 == *pbft.recoveryMgr.recoveryToSeqNo {
-				pbft.fetchRecoveryPQC()
+			if seqNo - 1 >= *pbft.recoveryMgr.recoveryToSeqNo {
 				return &LocalEvent{
 					Service:   RECOVERY_SERVICE,
 					EventType: RECOVERY_DONE_EVENT,
@@ -333,6 +332,7 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 			pbft.sendReadyForN()
 			return nil
 		}
+		pbft.fetchRecoveryPQC()
 		pbft.processRequestsDuringRecovery()
 		pbft.executeAfterStateUpdate()
 		return nil

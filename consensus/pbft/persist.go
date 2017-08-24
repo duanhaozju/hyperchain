@@ -10,7 +10,6 @@ import (
 	"encoding/binary"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
-	"strconv"
 )
 
 func (pbft *pbftImpl) persistQSet(preprep *PrePrepare) {
@@ -331,38 +330,32 @@ func (pbft *pbftImpl) persistDellLocalKey() {
 	persist.DelState(pbft.namespace, key)
 }
 
-func (pbft *pbftImpl) restoreView(view string) {
-	v := uint64(0)
-	if view != "" {
-		intValue, err := strconv.Atoi(view)
-		if err == nil {
-			v = uint64(intValue)
-		}
-	}
-	b, err := persist.ReadState(pbft.namespace, "view")
+func (pbft *pbftImpl) restoreView() {
+
+	v, err := persist.ReadState(pbft.namespace, "view")
 	if err == nil {
-		bb := binary.LittleEndian.Uint64(b)
-		if view == "" || v == bb {
-			pbft.view = bb
-		} else {
-			pbft.view = v
-			pbft.parseSpecifyCertStore()
-		}
+		view := binary.LittleEndian.Uint64(v)
+		pbft.view = view
+		pbft.parseSpecifyCertStore()
 		pbft.logger.Noticef("========= restore view %d =======", pbft.view)
 	} else {
 		pbft.logger.Noticef("Replica %d could not restore view: %s", pbft.id, err)
 	}
+
 }
 
-func (pbft *pbftImpl) restoreState(view string) {
+func (pbft *pbftImpl) restoreState() {
+
 	pbft.restoreLastSeqNo() // assign value to lastExec
 	if pbft.seqNo < pbft.exec.lastExec {
 		pbft.seqNo = pbft.exec.lastExec
 	}
 	pbft.batchVdr.setVid(pbft.seqNo)
 	pbft.batchVdr.setLastVid(pbft.seqNo)
+
 	pbft.restoreCert()
-	pbft.restoreView(view)
+	pbft.restoreView()
+
 	chkpts, err := persist.ReadStateSet(pbft.namespace, "chkpt.")
 	if err == nil {
 		highSeq := uint64(0)

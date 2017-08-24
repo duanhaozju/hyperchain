@@ -72,7 +72,7 @@ func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vc
 	nvTimeout := pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 	if vcm.cleanVcTimeout < 6 * nvTimeout {
 		vcm.cleanVcTimeout = 6 * nvTimeout
-		pbft.logger.Criticalf("Replica %d set timeout of cleaning out-of-time view change message to %v since it's to short", pbft.id, 6*nvTimeout)
+		pbft.logger.Criticalf("Replica %d set timeout of cleaning out-of-time view change message to %v since it's too short", pbft.id, 6*nvTimeout)
 	}
 
 	vcm.viewChangePeriod = uint64(0)
@@ -265,7 +265,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 		pbft.timerMgr.stopTimer(NEW_VIEW_TIMER)
 		pbft.timerMgr.stopTimer(VC_RESEND_TIMER)
 		pbft.vcMgr.vcResendCount = 0
-		pbft.restoreView("")
+		pbft.restoreView()
 		pbft.status.activeState(&pbft.status.inNegoView, &pbft.status.inRecovery)
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.initNegoView()
