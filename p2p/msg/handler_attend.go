@@ -42,9 +42,9 @@ func (h *AttendMsgHandler)Execute(msg *pb.Message) (*pb.Message, error) {
 		return nil, errors.New("msg or msg body is nil")
 	}
 	//decrypt
-	payload := h.shts.Decrypt(string(msg.From.UUID), msg.Payload)
-	if payload == nil {
-		return nil, errors.New("cannot decrypt the msg")
+	payload,err := h.shts.Decrypt(string(msg.From.UUID), msg.Payload)
+	if err != nil {
+		return nil, err
 	}
 	go h.ev.Post(event.NewPeerEvent{
 		Payload:payload,

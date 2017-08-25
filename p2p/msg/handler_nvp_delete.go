@@ -52,12 +52,11 @@ func (h *NVPDeleteMsgHandler)Execute(msg *pb.Message) (*pb.Message, error) {
 	if msg == nil || msg.Payload == nil {
 		return nil, errors.New("message is nil, invalid message")
 	}
-	payload := h.shts.Decrypt(string(msg.From.UUID), msg.Payload)
-	if payload == nil {
-		return nil, errors.New("cannot decrypt the message payload.")
+	payload,err := h.shts.Decrypt(string(msg.From.UUID), msg.Payload)
+	if err != nil {
+		return nil, err
 	}
 	VPHash := common.Bytes2Hex(payload)
-	fmt.Println("GOT A VP DELETE MSG", VPHash)
 	ev := peerevent.S_DELETE_VP{
 		Hash:VPHash,
 	}
