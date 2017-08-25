@@ -16,9 +16,9 @@ import (
 	hcomm "hyperchain/hyperdb/common"
 )
 
-func init() {
-	logger = common.GetLogger(common.DEFAULT_NAMESPACE, "dbmgr")
-}
+//func init() {
+//	logger = common.GetLogger(common.DEFAULT_NAMESPACE, "dbmgr")
+//}
 
 var (
 	ErrInvalidConfig = errors.New("hyperdb/dbmgr: Invalid config")
@@ -121,6 +121,7 @@ func defaultConfig() *common.Config {
 
 //InitDBMgr init blockchain database manager
 func InitDBMgr(conf *common.Config) error {
+	logger = common.GetLogger(common.DEFAULT_NAMESPACE, "dbmgr")
 	if conf == nil {
 		conf = defaultConfig()
 		logger.Noticef("%v, use default db config, %v", ErrInvalidConfig, conf)
@@ -139,7 +140,7 @@ func InitDBMgr(conf *common.Config) error {
 
 //ConnectToDB connect to a specified database
 func ConnectToDB(dbname *DbName, conf *common.Config) (db.Database, error) {
-
+	logger = common.GetLogger(common.DEFAULT_NAMESPACE, "dbmgr")
 	if conf == nil || len(conf.GetString(hcomm.LEVEL_DB_ROOT_DIR)) == 0 {
 		return nil, fmt.Errorf("hyperdb/dbmgr: invalid conf, no db configs found")
 	}

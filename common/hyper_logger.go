@@ -5,8 +5,8 @@ package common
 import (
 	"fmt"
 	"github.com/op/go-logging"
-	"sync"
 	"os"
+	"sync"
 )
 
 var (
@@ -48,7 +48,7 @@ func newHyperLoggerMgr() {
 func InitRawHyperLogger(namespace string) error {
 	nsConf := NewRawConfig()
 	nsConf.Set(NAMESPACE, namespace)
-	newHyperLoggerMgrImpl()
+	newHyperLoggerMgr()
 	hyperLogger := newHyperLogger(nsConf)
 	if hyperLogger == nil {
 		return fmt.Errorf("Init Hyperlogger error: nil return")
@@ -60,7 +60,7 @@ func InitRawHyperLogger(namespace string) error {
 //InitHyperLogger init hyperlogger for a namespace by namespace config.
 func InitHyperLogger(namespace string, nsConf *Config) error {
 	nsConf.Set(NAMESPACE, namespace)
-	newHyperLoggerMgrImpl()
+	newHyperLoggerMgr()
 	hyperLogger := newHyperLogger(nsConf)
 	if hyperLogger == nil {
 		return fmt.Errorf("Init Hyperlogger error: nil return")
