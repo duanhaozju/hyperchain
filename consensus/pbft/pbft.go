@@ -129,3 +129,18 @@ func (pbft *pbftImpl) Close() {
 	pbft.logger.Noticef("PBFT stopped!")
 
 }
+
+func (pbft *pbftImpl) GetStatus() (normal bool, full bool) {
+
+	normal = false
+	full = false
+
+	if atomic.LoadUint32(&pbft.normal) == 1 {
+		normal = true
+	}
+	if atomic.LoadUint32(&pbft.poolFull) == 1 {
+		full = true
+	}
+
+	return
+}
