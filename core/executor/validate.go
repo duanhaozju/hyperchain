@@ -51,7 +51,7 @@ func (executor *Executor) listenValidationEvent() {
 		case ev := <-executor.fetchValidationEvent():
 			if executor.isReadyToValidation() {
 				if success := executor.processValidationEvent(ev, executor.processValidationDone); success == false {
-					executor.logger.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
+					executor.logger.Errorf("validate #%d failed, system crush down.", ev.Vid)
 				}
 			} else {
 				executor.dropValdiateEvent(ev, executor.processValidationDone)
@@ -64,7 +64,7 @@ func (executor *Executor) listenValidationEvent() {
 func (executor *Executor) processValidationEvent(validationEvent event.ValidationEvent, done func()) bool {
 	executor.markValidationBusy()
 	defer executor.markValidationIdle()
-	if !executor.isDemandSeqNo(validationEvent.SeqNo) {
+	if !executor.isDemandSeqNo(validationEvent.Vid) {
 		executor.addPendingValidationEvent(validationEvent)
 		return true
 	}
@@ -86,7 +86,7 @@ func (executor *Executor) processPendingValidationEvent(done func()) bool {
 					return false
 				} else {
 					executor.incDemandSeqNo()
-					executor.cache.pendingValidationEventQ.RemoveWithCond(ev.SeqNo, RemoveLessThan)
+					executor.cache.pendingValidationEventQ.RemoveWithCond(ev.Vid, RemoveLessThan)
 				}
 			} else {
 				break
@@ -101,7 +101,7 @@ func (executor *Executor) dropValdiateEvent(validationEvent event.ValidationEven
 	executor.markValidationBusy()
 	defer executor.markValidationIdle()
 	defer done()
-	executor.logger.Noticef("[Namespace = %s] drop validation event %d", executor.namespace, validationEvent.SeqNo)
+	executor.logger.Noticef("[Namespace = %s] drop validation event %d", executor.namespace, validationEvent.Vid)
 }
 
 // process - Specific implementation logic, including the signature checking,
@@ -116,10 +116,10 @@ func (executor *Executor) process(validationEvent event.ValidationEvent, done fu
 	)
 
 	invalidtxs, validtxs = executor.checkSign(validationEvent.Transactions)
-	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo, executor.getTempBlockNumber())
+	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.Vid, executor.getTempBlockNumber())
 	if err != nil {
 		// short circuit if error occur during the transaction execution
-		executor.logger.Errorf("[Namespace = %s] process transaction batch #%d failed.", executor.namespace, validationEvent.SeqNo)
+		executor.logger.Errorf("[Namespace = %s] process transaction batch #%d failed.", executor.namespace, validationEvent.Vid)
 		return err, false
 	}
 	// calculate validation result hash for comparison
@@ -269,7 +269,7 @@ func (executor *Executor) throwInvalidTransactionBack(invalidtxs []*types.Invali
 // saveValidationResult - save validation result to cache.
 func (executor *Executor) saveValidationResult(res *ValidationResultRecord, ev event.ValidationEvent, hash common.Hash) {
 	if len(res.ValidTxs) != 0 {
-		res.VID = ev.SeqNo
+		res.VID = ev.Vid
 		res.SeqNo = executor.getTempBlockNumber()
 		// regard the batch as a valid block
 		executor.incTempBlockNumber()
@@ -285,6 +285,8 @@ func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev e
 		View:         ev.View,
 		Hash:         hash.Hex(),
 		Timestamp:    ev.Timestamp,
+		Vid:          ev.Vid,
+		Digest:       ev.Digest,
 	})
 }
 
@@ -292,7 +294,6 @@ func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev e
 // to original node if i am a primary.
 func (executor *Executor) dealEmptyBlock(res *ValidationResultRecord, ev event.ValidationEvent) {
 	if ev.IsPrimary {
-		executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: ev.SeqNo})
 		executor.throwInvalidTransactionBack(res.InvalidTxs)
 	}
 }

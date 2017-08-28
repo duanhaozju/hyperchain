@@ -423,8 +423,6 @@ func (pbft *pbftImpl) sendPrePrepareSp(digest string, hash string, batch *Transa
 
 	pbft.stopNewViewTimer()
 	pbft.startTimerIfOutstandingRequests()
-
-	return true
 }
 
 //sendPrePrepare send prepare message.
@@ -1572,36 +1570,6 @@ func (pbft *pbftImpl) retryStateTransfer(optional *stateUpdateTarget) {
 
 }
 
-func (pbft *pbftImpl) resubmitRequestBatches() {
-	if pbft.primary(pbft.view) != pbft.id {
-		return
-	}
-
-	var submissionOrder []*TransactionBatch
-
-outer:
-	for d, reqBatch := range pbft.storeMgr.outstandingReqBatches {
-		for _, cert := range pbft.storeMgr.certStore {
-			if cert.resultHash == d {
-				pbft.logger.Debugf("Replica %d already has certificate for request batch %s - not going to resubmit", pbft.id, d)
-				continue outer
-			}
-		}
-		pbft.logger.Infof("Replica %d has detected request batch %s must be resubmitted", pbft.id, d)
-		submissionOrder = append(submissionOrder, reqBatch)
-	}
-
-	if len(submissionOrder) == 0 {
-		return
-	}
-
-	for _, reqBatch := range submissionOrder {
-		// This is a request batch that has not been pre-prepared yet
-		// Trigger request batch processing again
-		pbft.recvRequestBatch(reqBatch)
-	}
-}
-
 func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []replicaInfo) {
 	info := &protos.BlockchainInfo{}
 	err := proto.Unmarshal(id, info)
@@ -1708,32 +1676,3 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 	}
 	return nil
 }
-
-//func (pbft *pbftImpl) recvRemoveCache(vid uint64) bool {
-//	if vid <= 10 {
-//		pbft.logger.Debugf("Replica %d received remove cached batch %d <= 10, retain it until 11", pbft.id, vid)
-//		return true
-//	}
-//	id := vid - 10
-//	pbft.dupLock.RLock()
-//	_, ok := pbft.duplicator[id]
-//	pbft.dupLock.RUnlock()
-//	if ok {
-//		pbft.logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
-//		pbft.dupLock.Lock()
-//		delete(pbft.duplicator, id)
-//		pbft.dupLock.Unlock()
-//	}
-//
-//	if vid%pbft.K == 0 {
-//		pbft.dupLock.Lock()
-//		for tmp := range pbft.duplicator {
-//			if tmp < id {
-//				delete(pbft.duplicator, tmp)
-//			}
-//		}
-//		pbft.dupLock.Unlock()
-//	}
-//
-//	return ok
-//}

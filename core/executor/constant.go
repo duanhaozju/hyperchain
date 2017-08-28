@@ -16,8 +16,7 @@ const (
 // Hyperchain protocol message definitions
 const (
 	// consensus
-	NOTIFY_REMOVE_CACHE = iota
-	NOTIFY_VALIDATION_RES
+	NOTIFY_VALIDATION_RES = iota
 	NOTIFY_VC_DONE
 	NOTIFY_SYNC_DONE
 	// p2p

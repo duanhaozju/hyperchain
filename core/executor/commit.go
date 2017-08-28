@@ -9,7 +9,6 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
-	"hyperchain/manager/protos"
 	"time"
 )
 
@@ -127,7 +126,6 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	executor.logger.Noticef("Block number %d", block.Number)
 	executor.logger.Noticef("Block hash %s", hex.EncodeToString(block.BlockHash))
 	// told consenus to remove Cached Transactions which used to check transaction duplication
-	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
 	executor.TransitVerifiedBlock(block)
 
 	// push feed data to event system.

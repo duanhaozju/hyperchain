@@ -3,15 +3,15 @@
 package pbft
 
 import (
-	"time"
 	"fmt"
+	"time"
 
-	"hyperchain/manager/protos"
 	"hyperchain/consensus/helper/persist"
+	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
-	"sync/atomic"
 	"math"
+	"sync/atomic"
 )
 
 // =============================================================================
@@ -79,9 +79,8 @@ func (pbft *pbftImpl) getAddNodeCert(addHash string) (cert *addNodeCert) {
 
 // Is the view right? And is the sequence number between low watermark and high watermark?
 func (pbft *pbftImpl) sendInWV(v uint64, n uint64) bool {
-	return pbft.view == v && n > pbft.h && n <= pbft.h + pbft.L
+	return pbft.view == v && n > pbft.h && n <= pbft.h+pbft.L
 }
-
 
 func (pbft *pbftImpl) allCorrectQuorum() int {
 	return pbft.N
@@ -154,7 +153,7 @@ func (pbft *pbftImpl) getDelNV(del uint64) (n int64, v uint64) {
 func (pbft *pbftImpl) cleanAllCache() {
 
 	for idx, cert := range pbft.storeMgr.certStore {
-		if idx.n > pbft.exec.lastExec{
+		if idx.n > pbft.exec.lastExec {
 			delete(pbft.storeMgr.certStore, idx)
 			pbft.persistDelQPCSet(idx.v, idx.n, cert.vid, idx.d)
 		}
@@ -171,7 +170,7 @@ func (pbft *pbftImpl) cleanAllCache() {
 // More generally, we need every two common case quorum of size X to intersect in at least F+1
 // hence 2X>=N+F+1
 func (pbft *pbftImpl) commonCaseQuorum() int {
-	return int(math.Ceil(float64(pbft.N+pbft.f+1)/float64(2)))
+	return int(math.Ceil(float64(pbft.N+pbft.f+1) / float64(2)))
 }
 
 func (pbft *pbftImpl) allCorrectReplicasQuorum() int {
