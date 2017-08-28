@@ -140,10 +140,7 @@ func (bm *batchManager) pushEvent(event interface{}) {
 	bm.batchEventsManager.Queue() <- event
 }
 
-
 func (pbft *pbftImpl) primaryValidateBatch(digest string, batch *TransactionBatch, vid uint64) {
-
-
 	// for keep the previous vid before viewchange
 	var n uint64
 	if vid != 0 {

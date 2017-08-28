@@ -193,7 +193,7 @@ func (pbft *pbftImpl) restoreCert() {
 			pbft.persistDelPSet(idx.v, idx.n, idx.d)
 			continue
 		}
-		cert := pbft.storeMgr.getCert(idx.v, idx.n)
+		cert := pbft.storeMgr.getCert(idx.v, idx.n, idx.d)
 		for _, p := range prepares.Set {
 			cert.prepare[*p] = true
 			if p.ReplicaId == pbft.id {
@@ -208,7 +208,7 @@ func (pbft *pbftImpl) restoreCert() {
 			pbft.persistDelCSet(idx.v, idx.n, idx.d)
 			continue
 		}
-		cert := pbft.storeMgr.getCert(idx.v, idx.n)
+		cert := pbft.storeMgr.getCert(idx.v, idx.n, idx.d)
 		for _, c := range commits.Set {
 			cert.commit[*c] = true
 			if c.ReplicaId == pbft.id {

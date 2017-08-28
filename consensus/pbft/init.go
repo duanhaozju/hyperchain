@@ -14,9 +14,6 @@ func (pbft *pbftImpl) initTimers() {
 	pbft.timerMgr.newTimer(BATCH_TIMER, pbft.config.GetDuration(PBFT_BATCH_TIMEOUT))
 	pbft.timerMgr.newTimer(CLEAN_VIEW_CHANGE_TIMER, pbft.config.GetDuration(PBFT_BATCH_TIMEOUT))
 	pbft.timerMgr.newTimer(VALIDATE_TIMER, pbft.config.GetDuration(PBFT_VALIDATE_TIMEOUT))
-	//pbft.pbftTimerMgr.newTimer(ADD_NODE_TIMER, pbft.config.GetDuration(PBFT_ADD_NODE_TIMEOUT))
-	//pbft.pbftTimerMgr.newTimer(DEL_NODE_TIMER, pbft.config.GetDuration(PBFT_DEL_NODE_TIMEOUT))
-	//pbft.pbftTimerMgr.newTimer(UPDATE_TIMER, pbft.config.GetDuration(PBFT_UPDATE_TIMEOUT))
 }
 
 //initMsgEventMap construct consensus_message to real type map

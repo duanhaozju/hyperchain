@@ -263,7 +263,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 		pbft.timerMgr.stopTimer(NEW_VIEW_TIMER)
 		pbft.timerMgr.stopTimer(VC_RESEND_TIMER)
 		pbft.vcMgr.vcResendCount = 0
-		pbft.restoreView("")
+		pbft.restoreView()
 		pbft.status.activeState(&pbft.status.inNegoView, &pbft.status.inRecovery)
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.initNegoView()

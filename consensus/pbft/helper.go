@@ -130,27 +130,6 @@ func (pbft *pbftImpl) getDelNV(del uint64) (n int64, v uint64) {
 	return
 }
 
-//func (pbft *pbftImpl) handleCachedTxs(cache map[uint64]*transactionStore) {
-//	for vid, batch := range cache {
-//		if vid < pbft.h {
-//			continue
-//		}
-//		for batch.Len() != 0 {
-//			temp := batch.order.Front().Value
-//			txc, ok := interface{}(temp).(transactionContainer)
-//			if !ok {
-//				pbft.logger.Error("type assert error:", temp)
-//				return
-//			}
-//			tx := txc.tx
-//			if tx != nil {
-//				pbft.reqStore.storeOutstanding(tx)
-//			}
-//			batch.remove(tx)
-//		}
-//	}
-//}
-
 func (pbft *pbftImpl) cleanAllCache() {
 
 	for idx, cert := range pbft.storeMgr.certStore {
@@ -372,8 +351,6 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 		EventType: CORE_NULL_REQUEST_TIMER_EVENT,
 	}
 
-	//pbft.logger.Errorf("replica: %d, primary: %d, reset null request timeout to %v", pbft.id, pbft.primary(pbft.view), timeout)
-
 	pbft.timerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, event, pbft.pbftEventQueue)
 }
 
@@ -485,22 +462,3 @@ func (pbft *pbftImpl) isCommitLegal(commit *Commit) bool {
 	}
 	return true
 }
-
-//func (pbft *pbftImpl) parseCertStore() {
-//	tmpStore := make(map[msgID]*msgCert)
-//	for idx := range pbft.storeMgr.certStore {
-//		cert := pbft.storeMgr.getCert(idx.v, idx.n, idx.d)
-//		if cert.prePrepare != nil {
-//			cert.prePrepare.View = pbft.view
-//		}
-//		for prep := range cert.prepare {
-//			prep.View = pbft.view
-//		}
-//		for cmt := range cert.commit {
-//			cmt.View = pbft.view
-//		}
-//		idx.v = pbft.view
-//		tmpStore[msgID{pbft.view, idx.n}] = cert
-//	}
-//	pbft.storeMgr.certStore = tmpStore
-//}

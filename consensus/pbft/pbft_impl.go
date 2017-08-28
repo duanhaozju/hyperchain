@@ -423,8 +423,6 @@ func (pbft *pbftImpl) sendPrePrepareSp(digest string, hash string, batch *Transa
 
 	pbft.stopNewViewTimer()
 	pbft.startTimerIfOutstandingRequests()
-
-	return true
 }
 
 //sendPrePrepare send prepare message.
@@ -1038,44 +1036,7 @@ func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) events.Event {
 	return nil
 }
 
-
-//processRequestsDuringViewChange process requests received during view change.
-func (pbft *pbftImpl) processRequestsDuringViewChange() error {
-	if atomic.LoadUint32(&pbft.activeView) == 1 &&
-		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
-		!pbft.status.getState(&pbft.status.inRecovery) {
-		pbft.processCachedTransactions()
-	} else {
-		pbft.logger.Warningf("Replica %d try to processReqDuringViewChange but view change is not finished or it's in recovery / updaingN", pbft.id)
-	}
-	return nil
-}
-
-//processCachedTransactions process cached tx.
-func (pbft *pbftImpl) processCachedTransactions() {
-	for pbft.reqStore.outstandingRequests.Len() != 0 {
-		temp := pbft.reqStore.outstandingRequests.order.Front().Value
-		reqc, ok := interface{}(temp).(requestContainer)
-		if !ok {
-			pbft.logger.Error("type assert error:", temp)
-			return
-		}
-		req := reqc.req
-		if req != nil {
-			go pbft.reqEventQueue.Push(req)
-		}
-		pbft.reqStore.remove(req)
-	}
-}
-
-
 func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error {
-
-	//if pbft.status.getState(&pbft.status.inNegoView) {
-	//	pbft.logger.Debugf("Replica %d try to recvStateUpdatedEvent, but it's in nego-view", pbft.id)
-	//	return nil
-	//}
-
 	pbft.status.inActiveState(&pbft.status.stateTransferring)
 	// If state transfer did not complete successfully, or if it did not reach our low watermark, do it again
 	if et.SeqNo < pbft.h {
@@ -1580,36 +1541,6 @@ func (pbft *pbftImpl) retryStateTransfer(optional *stateUpdateTarget) {
 
 	pbft.skipTo(target.seqNo, target.id, target.replicas)
 
-}
-
-func (pbft *pbftImpl) resubmitRequestBatches() {
-	if pbft.primary(pbft.view) != pbft.id {
-		return
-	}
-
-	var submissionOrder []*TransactionBatch
-
-outer:
-	for d, reqBatch := range pbft.storeMgr.outstandingReqBatches {
-		for _, cert := range pbft.storeMgr.certStore {
-			if cert.resultHash == d {
-				pbft.logger.Debugf("Replica %d already has certificate for request batch %s - not going to resubmit", pbft.id, d)
-				continue outer
-			}
-		}
-		pbft.logger.Infof("Replica %d has detected request batch %s must be resubmitted", pbft.id, d)
-		submissionOrder = append(submissionOrder, reqBatch)
-	}
-
-	if len(submissionOrder) == 0 {
-		return
-	}
-
-	for _, reqBatch := range submissionOrder {
-		// This is a request batch that has not been pre-prepared yet
-		// Trigger request batch processing again
-		pbft.recvRequestBatch(reqBatch)
-	}
 }
 
 func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []replicaInfo) {

@@ -14,8 +14,6 @@ const (
 	NEGO_VIEW_RSP_TIMER 			= "negoViewRspTimer" //timer track timeout for N-f nego-view responses
 	RECOVERY_RESTART_TIMER 			= "recoveryRestartTimer" // recoveryRestartTimer track how long a recovery is finished and fires if needed
 	CLEAN_VIEW_CHANGE_TIMER 		= "cleanViewChangeTimer"
-
-
 )
 //pbft config keys
 const (

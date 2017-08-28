@@ -126,11 +126,6 @@ func (pbft *pbftImpl) recvNegoView(nv *NegotiateView) events.Event {
 	sender := nv.ReplicaId
 	pbft.logger.Debugf("Replica %d receive nego_view from %d", pbft.id, sender)
 
-	//if pbft.nodeMgr.routers == nil {
-	//	pbft.logger.Debugf("Replica %d ignore nego_view from %d since has not received local msg", pbft.id, sender)
-	//	return nil
-	//}
-
 	negoViewRsp := &NegotiateViewResponse{
 		ReplicaId: pbft.id,
 		View:      pbft.view,
@@ -158,7 +153,6 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 		return nil
 	}
 
-	//rspId, rspView := nvr.ReplicaId, nvr.View
 	if _, ok := pbft.recoveryMgr.negoViewRspStore[nvr.ReplicaId]; ok {
 		pbft.logger.Warningf("Already recv view number from replica %d, replace it with view %d", nvr.ReplicaId, nvr.View)
 	}
@@ -174,14 +168,12 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 		type resp struct {
 			n uint64
 			view uint64
-			//routers string
 		}
 		viewCount := make(map[resp]uint64)
 		var result resp
 		canFind := false
 
 		for _, rs := range pbft.recoveryMgr.negoViewRspStore {
-			//r := byteToString(rs.Routers)
 			ret := resp{rs.N, rs.View}
 			if _, ok := viewCount[ret]; ok {
 				viewCount[ret]++
@@ -189,7 +181,6 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 				viewCount[ret] = uint64(1)
 			}
 			if viewCount[ret] >= uint64(pbft.commonCaseQuorum()) {
-				// yes we find the view
 				result = ret
 				canFind = true
 				break

@@ -27,18 +27,6 @@ which can be invoked by outer services.
 
 // New return a instance of pbftProtocal  TODO: rename helper.Stack ??
 func New(namespace string, conf *common.Config, h helper.Stack, n int) (*pbftImpl, error) {
-	//var err error
-	//pcPath := conf.GetString(consensus.CONSENSUS_ALGO_CONFIG_PATH)
-	//if pcPath == "" {
-	//	err = fmt.Errorf("Invalid consensus algorithm configuration path, %s: %s",
-	//		consensus.CONSENSUS_ALGO_CONFIG_PATH, pcPath)
-	//	return nil, err
-	//}
-	//conf, err = conf.MergeConfig(pcPath)
-	//if err != nil {
-	//	err = fmt.Errorf("Load pbft config error: %v", err)
-	//	return nil, err
-	//}
 	return newPBFT(namespace, conf, h, n)
 }
 
