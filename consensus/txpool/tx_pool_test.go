@@ -3,10 +3,10 @@
 package txpool
 
 import (
-	"testing"
-	"time"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
+	"testing"
+	"time"
 )
 
 func batchLoop(batchSub event.Subscription) {
@@ -24,7 +24,7 @@ func TestNewTxPoolImpl(t *testing.T) {
 	eventMux := new(event.TypeMux)
 	//batchSub := eventMux.Subscribe(TxHashBatch{})
 	//recvFromChan(batchSub.Chan())
-	if txPool, err := newTxPoolImpl(400, eventMux, 10 * time.Second, 40); err != nil {
+	if txPool, err := newTxPoolImpl(400, eventMux, 10*time.Second, 40); err != nil {
 		t.Error("new txPool fail")
 	} else {
 		if txPool.batchSize != 40 || txPool.batchTimerActive != false {
@@ -37,7 +37,7 @@ func TestNewTxPoolImpl(t *testing.T) {
 func TestPrimaryAddNewTx(t *testing.T) {
 	eventMux := new(event.TypeMux)
 	batchSub := eventMux.Subscribe(TxHashBatch{})
-	txPool, err := newTxPoolImpl(400, eventMux, 10 * time.Second, 40)
+	txPool, err := newTxPoolImpl(400, eventMux, 10*time.Second, 40)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
@@ -79,10 +79,10 @@ func TestPrimaryAddNewTx(t *testing.T) {
 	if err != nil {
 		t.Error("primary add transaction fail")
 	}
-	if len(txPool.txPoolHash) != 0 || len(txPool.txPool) != 0 || len(txPool.batchStore) != 1{
+	if len(txPool.txPoolHash) != 0 || len(txPool.txPool) != 0 || len(txPool.batchStore) != 1 {
 		t.Error("should generate a batch, but fail")
 	}
-	if (txPool.batchTimerActive == true || txPool.batchTimer != nil){
+	if txPool.batchTimerActive == true || txPool.batchTimer != nil {
 		t.Error("timer should be stopped")
 	}
 	time.Sleep(time.Second)
@@ -90,7 +90,7 @@ func TestPrimaryAddNewTx(t *testing.T) {
 
 func TestReplicaAddNewTx(t *testing.T) {
 	eventMux := new(event.TypeMux)
-	txPool, err := newTxPoolImpl(1, eventMux, 10 * time.Second, 40)
+	txPool, err := newTxPoolImpl(1, eventMux, 10*time.Second, 40)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
@@ -139,7 +139,7 @@ func TestReplicaAddNewTx(t *testing.T) {
 
 func TestAddNewTx(t *testing.T) {
 	eventMux := new(event.TypeMux)
-	txPool, err := newTxPoolImpl(10, eventMux, 10 * time.Second, 40)
+	txPool, err := newTxPoolImpl(10, eventMux, 10*time.Second, 40)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
@@ -184,7 +184,7 @@ func TestAddNewTx(t *testing.T) {
 }
 
 func TestAddTxs(t *testing.T) {
-	txPool, err := newTxPoolImpl(10, new(event.TypeMux), 10 * time.Second, 40)
+	txPool, err := newTxPoolImpl(10, new(event.TypeMux), 10*time.Second, 40)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
@@ -202,7 +202,7 @@ func TestAddTxs(t *testing.T) {
 	if err != nil {
 		t.Error("add transaction false")
 	}
-	if len(txPool.txPoolHash) != 1 || len(txPool.txPool) != 1{
+	if len(txPool.txPoolHash) != 1 || len(txPool.txPool) != 1 {
 		t.Error("add dupilcate transactions, expect 1")
 	}
 	tx2 := &types.Transaction{
@@ -219,14 +219,14 @@ func TestAddTxs(t *testing.T) {
 	if err != nil {
 		t.Error("add transaction false")
 	}
-	if len(txPool.txPoolHash) != 2 || len(txPool.txPool) != 2{
+	if len(txPool.txPoolHash) != 2 || len(txPool.txPool) != 2 {
 		t.Error("add dupilcate transactions, expect 1")
 	}
 
 }
 
 func TestBatchTimer(t *testing.T) {
-	txPool, err := newTxPoolImpl(10, new(event.TypeMux), 2 * time.Second, 3)
+	txPool, err := newTxPoolImpl(10, new(event.TypeMux), 2*time.Second, 3)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
@@ -252,18 +252,18 @@ func TestBatchTimer(t *testing.T) {
 }
 
 func TestReturnFetchTxs(t *testing.T) {
-	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10 * time.Second, 10)
+	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10*time.Second, 10)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1", TxHashList: []string {"1","2"}})
-	_, err = txPool.ReturnFetchTxs("1", []string {"1"})
+	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1", TxHashList: []string{"1", "2"}})
+	_, err = txPool.ReturnFetchTxs("1", []string{"1"})
 	if err == nil {
 		t.Error("should not find this batch")
 	}
 	txBatch := &TxHashBatch{
-		TxHashList: []string {"1", "2", "3", "4"},
-		TxList: []*types.Transaction {
+		TxHashList: []string{"1", "2", "3", "4"},
+		TxList: []*types.Transaction{
 			&types.Transaction{
 				From:            []byte{1},
 				To:              []byte{2},
@@ -304,11 +304,11 @@ func TestReturnFetchTxs(t *testing.T) {
 	}
 	txBatch.BatchHash = hash(txBatch)
 	txPool.batchStore = append(txPool.batchStore, txBatch)
-	txBatches, err := txPool.ReturnFetchTxs(txBatch.BatchHash, []string {"5"})
+	txBatches, err := txPool.ReturnFetchTxs(txBatch.BatchHash, []string{"5"})
 	if err == nil {
 		t.Error("should not find this transanction")
 	}
-	txBatches, err = txPool.ReturnFetchTxs(txBatch.BatchHash, []string {"2", "4"})
+	txBatches, err = txPool.ReturnFetchTxs(txBatch.BatchHash, []string{"2", "4"})
 	if err != nil {
 		t.Error("should find these transanctions")
 	}
@@ -321,12 +321,12 @@ func TestReturnFetchTxs(t *testing.T) {
 }
 
 func TestGotMissingTxs(t *testing.T) {
-	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10 * time.Second, 10)
+	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10*time.Second, 10)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
 
-	txs := []*types.Transaction {
+	txs := []*types.Transaction{
 		{
 			From:            []byte{1},
 			To:              []byte{2},
@@ -346,7 +346,7 @@ func TestGotMissingTxs(t *testing.T) {
 			TransactionHash: []byte("hash4"),
 		},
 	}
-	txPool.missingTxs["2"] = []string {byteToString(txs[0].TransactionHash), byteToString(txs[1].TransactionHash)}
+	txPool.missingTxs["2"] = []string{txs[0].GetHash().Hex(), txs[1].GetHash().Hex()}
 	if _, err = txPool.GotMissingTxs("2", txs); err != ErrNoCachedBatch {
 		t.Error("should not find this id in cachedHashList")
 	}
@@ -355,19 +355,19 @@ func TestGotMissingTxs(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if hashList[0] != byteToString(txs[0].TransactionHash) {
+	if hashList[0] != txs[0].GetHash().Hex() {
 		t.Error("should get the same hash")
 	}
 }
 
 func TestGetTxsByHashList(t *testing.T) {
-	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10 * time.Second, 10)
+	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10*time.Second, 10)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1", TxHashList: []string {"1","2"}})
+	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1", TxHashList: []string{"1", "2"}})
 	id := hash(txPool.batchStore[0])
-	txs, missingHash, err := txPool.GetTxsByHashList(id, []string {})
+	txs, missingHash, err := txPool.GetTxsByHashList(id, []string{})
 	if err != ErrDuplicateBatch {
 		t.Error("This batch already exists")
 	}
@@ -375,12 +375,12 @@ func TestGetTxsByHashList(t *testing.T) {
 	txPool.txPool["2"] = &types.Transaction{}
 	txPool.txPool["3"] = &types.Transaction{}
 	txPool.txPool["4"] = &types.Transaction{}
-	txPool.txPoolHash = []string {"1", "2", "3", "4"}
-	txs, missingHash, err = txPool.GetTxsByHashList("2", []string {"2", "5", "6"})
+	txPool.txPoolHash = []string{"1", "2", "3", "4"}
+	txs, missingHash, err = txPool.GetTxsByHashList("2", []string{"2", "5", "6"})
 	if err != ErrMissing || txs != nil || len(missingHash) != 2 {
 		t.Error("should return missing error and miss two transactions in total")
 	}
-	txs, missingHash, err = txPool.GetTxsByHashList("2", []string {"2", "3", "4"})
+	txs, missingHash, err = txPool.GetTxsByHashList("2", []string{"2", "3", "4"})
 	if err != nil {
 		t.Error("should generate a new batch")
 	}
@@ -393,14 +393,14 @@ func TestGetTxsByHashList(t *testing.T) {
 }
 
 func TestRemoveBatchedTxs(t *testing.T) {
-	txPool, err := newTxPoolImpl(1, new(event.TypeMux), 10 * time.Second, 40)
+	txPool, err := newTxPoolImpl(1, new(event.TypeMux), 10*time.Second, 40)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1", })
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "2", })
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "3", })
-	hashList := []string {"1", "2"}
+	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1"})
+	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "2"})
+	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "3"})
+	hashList := []string{"1", "2"}
 	err = txPool.RemoveBatchedTxs(hashList)
 	if err != nil {
 		t.Error("remove batched transactions failed")
@@ -408,7 +408,7 @@ func TestRemoveBatchedTxs(t *testing.T) {
 	if len(txPool.batchStore) != 1 {
 		t.Error("remove two batch, expect 1")
 	}
-	hashList = []string {"2", "3"}
+	hashList = []string{"2", "3"}
 	err = txPool.RemoveBatchedTxs(hashList)
 	if err != nil {
 		t.Error("remove batched transactions failed")
@@ -419,13 +419,13 @@ func TestRemoveBatchedTxs(t *testing.T) {
 }
 
 func TestRemoveOneBatchedTxs(t *testing.T) {
-	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10 * time.Second, 40)
+	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10*time.Second, 40)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1", })
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "2", })
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "3", })
+	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1"})
+	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "2"})
+	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "3"})
 	if err = txPool.RemoveOneBatchedTxs("4"); err != ErrNoTxHash {
 		t.Error("should not find the batch whose hash is '4'")
 	}
@@ -437,7 +437,7 @@ func TestRemoveOneBatchedTxs(t *testing.T) {
 }
 
 func TestGetTxsBack(t *testing.T) {
-	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10 * time.Second, 10)
+	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10*time.Second, 10)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
@@ -460,29 +460,29 @@ func TestGetTxsBack(t *testing.T) {
 		TransactionHash: []byte("hash2"),
 	}
 	batch1 := &TxHashBatch{
-		TxList: []*types.Transaction{tx1},
-		TxHashList: []string{byteToString(tx1.TransactionHash)},
+		TxList:     []*types.Transaction{tx1},
+		TxHashList: []string{tx1.GetHash().Hex()},
 	}
 	batch2 := &TxHashBatch{
-		TxList: []*types.Transaction{tx2},
-		TxHashList: []string{byteToString(tx2.TransactionHash)},
+		TxList:     []*types.Transaction{tx2},
+		TxHashList: []string{tx2.GetHash().Hex()},
 	}
 	batch1.BatchHash = hash(batch1)
 	batch2.BatchHash = hash(batch2)
 
 	txPool.batchStore = append(txPool.batchStore, batch1)
-	txPool.batchedTxs[byteToString(tx1.TransactionHash)] = true
+	txPool.batchedTxs[tx1.GetHash().Hex()] = true
 	txPool.batchStore = append(txPool.batchStore, batch2)
-	txPool.batchedTxs[byteToString(tx2.TransactionHash)] = true
-	err = txPool.GetTxsBack([]string {batch1.BatchHash, "1"})
+	txPool.batchedTxs[tx2.GetHash().Hex()] = true
+	err = txPool.GetTxsBack([]string{batch1.BatchHash, "1"})
 	if err == nil || len(txPool.batchStore) != 2 {
 		t.Error("should not move because there is no batch whose hash is '1'")
 	}
-	err = txPool.GetTxsBack([]string {batch1.BatchHash, batch2.BatchHash})
-	if err != nil || txPool.batchStore != nil{
+	err = txPool.GetTxsBack([]string{batch1.BatchHash, batch2.BatchHash})
+	if err != nil || txPool.batchStore != nil {
 		t.Error("should move all batched batches")
 	}
-	if txPool.txPoolHash[0] != byteToString(tx1.TransactionHash) {
+	if txPool.txPoolHash[0] != tx1.GetHash().Hex() {
 		t.Error("The first transaction in batch should be the first transaction in txpool")
 	}
 }
@@ -490,7 +490,7 @@ func TestGetTxsBack(t *testing.T) {
 func TestGetAllTxsLength(t *testing.T) {
 	eventMux := new(event.TypeMux)
 	batchSub := eventMux.Subscribe(TxHashBatch{})
-	txPool, err := newTxPoolImpl(3, eventMux, 10 * time.Second, 2)
+	txPool, err := newTxPoolImpl(3, eventMux, 10*time.Second, 2)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
@@ -505,9 +505,9 @@ func TestGetAllTxsLength(t *testing.T) {
 	}
 	txPool.AddNewTx(tx, true, false)
 	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{
-		BatchHash: "1",
-		TxList: []*types.Transaction {tx},
-		TxHashList: []string {byteToString(tx.TransactionHash)},
+		BatchHash:  "1",
+		TxList:     []*types.Transaction{tx},
+		TxHashList: []string{tx.GetHash().Hex()},
 	})
 	if txPool.IsPoolFull() != 2 {
 		t.Error("store two transactions in total, expect 2")
@@ -529,7 +529,7 @@ func TestGetAllTxsLength(t *testing.T) {
 }
 
 func TestGenerateTxBatch(t *testing.T) {
-	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10 * time.Second, 10)
+	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10*time.Second, 10)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
@@ -542,7 +542,7 @@ func TestGenerateTxBatch(t *testing.T) {
 func TestNewTxBatch(t *testing.T) {
 	eventMux := new(event.TypeMux)
 	batchSub := eventMux.Subscribe(TxHashBatch{})
-	txPool, err := newTxPoolImpl(3, eventMux, 10 * time.Second, 1)
+	txPool, err := newTxPoolImpl(3, eventMux, 10*time.Second, 1)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
@@ -578,7 +578,7 @@ func TestNewTxBatch(t *testing.T) {
 	if len(txPool.txPool) != 0 || len(txPool.txPoolHash) != 0 || len(txPool.batchStore) != 1 {
 		t.Error("should generate one batch")
 	}
-	txPool.addTxs([]*types.Transaction {tx2, tx3})
+	txPool.addTxs([]*types.Transaction{tx2, tx3})
 	txPool.newTxBatch()
 	if len(txPool.txPool) != 1 || len(txPool.txPoolHash) != 1 || len(txPool.batchStore) != 2 {
 		t.Error("should generate one batch again")
@@ -586,7 +586,7 @@ func TestNewTxBatch(t *testing.T) {
 }
 
 func TestRemoveTxPoolTxs(t *testing.T) {
-	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10 * time.Second, 10)
+	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10*time.Second, 10)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
@@ -594,8 +594,8 @@ func TestRemoveTxPoolTxs(t *testing.T) {
 	txPool.txPool["2"] = &types.Transaction{}
 	txPool.txPool["3"] = &types.Transaction{}
 	txPool.txPool["4"] = &types.Transaction{}
-	txPool.txPoolHash = []string {"1", "2", "3", "4"}
-	txPool.removeTxPoolTxs([]string {"2", "4"})
+	txPool.txPoolHash = []string{"1", "2", "3", "4"}
+	txPool.removeTxPoolTxs([]string{"2", "4"})
 	if len(txPool.txPool) != 2 || len(txPool.txPoolHash) != 2 {
 		t.Error("should remove two transactions")
 	}
@@ -605,11 +605,11 @@ func TestRemoveTxPoolTxs(t *testing.T) {
 }
 
 func TestGetBatchById(t *testing.T) {
-	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10 * time.Second, 10)
+	txPool, err := newTxPoolImpl(100, new(event.TypeMux), 10*time.Second, 10)
 	if err != nil {
 		t.Error("new txPool fail")
 	}
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1", TxHashList: []string {"1","2"}})
+	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1", TxHashList: []string{"1", "2"}})
 	h := hash(txPool.batchStore[0])
 	batch, err := txPool.getBatchById(h)
 	if err != nil {

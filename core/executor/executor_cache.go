@@ -44,8 +44,8 @@ func (executor *Executor) PurgeCache() {
 
 // addPendingValidationEvent - push a validation event to pending queue.
 func (executor *Executor) addPendingValidationEvent(validationEvent event.ValidationEvent) {
-	executor.logger.Warningf("[Namespace = %s] receive validation event %d while %d is required, save into cache temporarily.", executor.namespace, validationEvent.SeqNo, executor.getDemandSeqNo())
-	executor.cache.pendingValidationEventQ.Add(validationEvent.SeqNo, validationEvent)
+	executor.logger.Warningf("[Namespace = %s] receive validation event %d while %d is required, save into cache temporarily.", executor.namespace, validationEvent.Vid, executor.getDemandSeqNo())
+	executor.cache.pendingValidationEventQ.Add(validationEvent.Vid, validationEvent)
 }
 
 // fetchPendingValidationEvent - fetch a validation event in pending queue via seqNo, return false if not exist.
@@ -88,7 +88,7 @@ func (executor *Executor) fetchValidationResult(hash string) (*ValidationResultR
 func (executor *Executor) addValidationEvent(ev event.ValidationEvent) {
 	executor.cache.validationEventC <- ev
 	atomic.AddInt32(&executor.context.validateQueueLen, 1)
-	executor.logger.Debugf("[Namespace = %s] receive a validation event #%d", executor.namespace, ev.SeqNo)
+	executor.logger.Debugf("[Namespace = %s] receive a validation event #%d", executor.namespace, ev.Vid)
 }
 
 // fetchValidationEvent - got a validation event from channel buffer.

@@ -377,9 +377,6 @@ func (hub *EventHub) NegotiateView() {
 
 func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
 	switch ev.Type {
-	case executor.NOTIFY_REMOVE_CACHE:
-		hub.logger.Debugf("message middleware: [remove cache]")
-		hub.consenter.RecvLocal(ev.Payload)
 	case executor.NOTIFY_VC_DONE:
 		hub.logger.Debugf("message middleware: [vc done]")
 		hub.invokePbftLocal(pbft.VIEW_CHANGE_SERVICE, pbft.VIEW_CHANGE_VC_RESET_DONE_EVENT, ev.Payload)

@@ -12,11 +12,11 @@ type TxHashBatch struct {
 }
 
 type MissingTxHashList struct {
-	TxHashList	[]string
-	BatchHash	string
+	TxHashList []string
+	BatchHash  string
 }
 
 type ReturnFetchTxs struct {
-	BatchHash		string
-	ReturnedFetchTxs	[]*types.Transaction
+	BatchHash        string
+	ReturnedFetchTxs []*types.Transaction
 }

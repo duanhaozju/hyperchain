@@ -338,8 +338,6 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 			pbft.sendReadyForN()
 			return nil
 		}
-		pbft.fetchRecoveryPQC()
-		//pbft.processRequestsDuringRecovery()
 		pbft.executeAfterStateUpdate()
 		return nil
 

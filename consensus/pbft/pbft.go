@@ -60,12 +60,6 @@ func (pbft *pbftImpl) RecvLocal(msg interface{}) error {
 		return nil
 	} else {
 		switch msg.(type) {
-		case protos.RemoveCache:
-			if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.primary(pbft.view) == pbft.id {
-				go pbft.reqEventQueue.Push(msg)
-			} else {
-				go pbft.pbftEventQueue.Push(msg)
-			}
 		case *types.Transaction: //local transaction
 			go pbft.reqEventQueue.Push(msg)
 

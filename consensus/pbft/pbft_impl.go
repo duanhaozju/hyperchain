@@ -1649,32 +1649,3 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 	}
 	return nil
 }
-
-//func (pbft *pbftImpl) recvRemoveCache(vid uint64) bool {
-//	if vid <= 10 {
-//		pbft.logger.Debugf("Replica %d received remove cached batch %d <= 10, retain it until 11", pbft.id, vid)
-//		return true
-//	}
-//	id := vid - 10
-//	pbft.dupLock.RLock()
-//	_, ok := pbft.duplicator[id]
-//	pbft.dupLock.RUnlock()
-//	if ok {
-//		pbft.logger.Debugf("Replica %d received remove cached batch %d, and remove batch %d", pbft.id, vid, id)
-//		pbft.dupLock.Lock()
-//		delete(pbft.duplicator, id)
-//		pbft.dupLock.Unlock()
-//	}
-//
-//	if vid%pbft.K == 0 {
-//		pbft.dupLock.Lock()
-//		for tmp := range pbft.duplicator {
-//			if tmp < id {
-//				delete(pbft.duplicator, tmp)
-//			}
-//		}
-//		pbft.dupLock.Unlock()
-//	}
-//
-//	return ok
-//}

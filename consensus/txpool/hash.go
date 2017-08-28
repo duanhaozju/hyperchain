@@ -3,18 +3,9 @@
 package txpool
 
 import (
-	"encoding/base64"
 	"crypto/md5"
 	"encoding/hex"
 )
-
-
-func byteToString(data []byte) (re string) {
-
-	re = base64.StdEncoding.EncodeToString(data)
-	return
-}
-
 
 func hash(batch *TxHashBatch) string {
 	h := md5.New()
