@@ -26,4 +26,6 @@ var (
 	ErrPoolFull = errors.New("txPool is full")
 
 	ErrEmptyFull = errors.New("txPool is empty")
+
+	ErrAlreadyStop = errors.New("BatchTimer has been stopped")
 )

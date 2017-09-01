@@ -356,6 +356,9 @@ func (pool *txPoolImpl) IsPoolFull() bool {
 
 // generateTxBatch generates a transaction batch by batch limit (timeout or size).
 func (pool *txPoolImpl) generateTxBatch() error {
+	if pool.batchTimerActive == false {
+		return ErrAlreadyStop
+	}
 	pool.stopBatchTimer()
 	poolLen := len(pool.txPool)
 	if poolLen == 0 {
@@ -366,6 +369,7 @@ func (pool *txPoolImpl) generateTxBatch() error {
 		if batch != nil {
 			pool.postTxBatch(*batch)
 		}
+		pool.startBatchTimer()
 	}
 	return nil
 }
