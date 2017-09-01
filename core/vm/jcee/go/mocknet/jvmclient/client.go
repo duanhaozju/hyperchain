@@ -1,8 +1,8 @@
 package main
 
 import (
-	//"context"
 	"context"
+	"flag"
 	"fmt"
 	"github.com/opentracing/opentracing-go/log"
 	"google.golang.org/grpc"
@@ -11,25 +11,40 @@ import (
 	"time"
 )
 
-const totalCount = 10 * 10000
+const (
+	totalCount = 10 * 10000
+	sync       = "sync"
+	async      = "async"
+)
+
+var port *string
+var host *string
 
 func main() {
-	//streamTest()
-	synCallTest()
+
+	m := flag.String("m", "sync", "decide run sync or async call")
+	port = flag.String("p", "50051", "server port")
+	host = flag.String("h", "localhost", "server host")
+
+	flag.Parse()
+	switch *m {
+	case async:
+		asyncCallTest()
+	case sync:
+		synCallTest()
+	}
 }
 
-func streamTest() {
+//test async invoke by stream
+func asyncCallTest() {
 	fmt.Println("client start !")
-
-	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", *host, *port), grpc.WithInsecure())
 	if err != nil {
 		log.Error(err)
 	}
-
 	client := pb.NewContractClient(conn)
-
 	client.Execute(context.Background(), &pb.Request{
-		Method: "test",
+		Method: "asyncCall",
 	})
 
 	stream, err := client.StreamExecute(context.Background())
@@ -50,11 +65,9 @@ func streamTest() {
 				close(waitc)
 				return
 			}
-
 			if err != nil {
-				fmt.Print("Failed to receive a note : %v", err)
+				fmt.Printf("Failed to receive a note : %v\n", err)
 			}
-
 			fmt.Printf("receive response %d: %v\n", c, in)
 		}
 		waitc <- struct{}{}
@@ -62,19 +75,19 @@ func streamTest() {
 
 	for i := 0; i < totalCount; i++ {
 		stream.Send(&pb.Request{
-			Method: "Test Request",
+			Method: "asyncCall",
 		})
 	}
 
 	defer conn.Close()
 	<-waitc
-
 	end := time.Now()
 	fmt.Printf("stream time used: %v", end.Sub(start))
 }
 
+//test sync call
 func synCallTest() {
-	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", *host, *port), grpc.WithInsecure())
 	if err != nil {
 		log.Error(err)
 	}
@@ -83,10 +96,9 @@ func synCallTest() {
 	var totalCount int = 10 * 10000
 	start := time.Now()
 	for i := 0; i < totalCount; i++ {
-		rsp, _ := client.Execute(context.Background(), &pb.Request{Method: "synCall"})
+		rsp, _ := client.Execute(context.Background(), &pb.Request{Method: "syncCall"})
 
 		fmt.Printf("receive response %d: %v\n", i, rsp)
 	}
 	fmt.Printf("syn call time used: %v", time.Now().Sub(start))
-
 }

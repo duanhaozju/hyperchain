@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	context "golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -10,13 +11,18 @@ import (
 	"net"
 )
 
+var port *string
+var host *string
+
 type jvmServer struct {
 	req    chan *pb.Request
 	stream pb.Contract_StreamExecuteServer
 }
+
 var count = 0
+
 func (js *jvmServer) Execute(c context.Context, req *pb.Request) (*pb.Response, error) {
-	count ++
+	count++
 	fmt.Printf("Process request %d: %v\n", count, req)
 	return &pb.Response{Ok: true}, nil
 }
@@ -44,7 +50,7 @@ func (js *jvmServer) StreamExecute(stream pb.Contract_StreamExecuteServer) error
 func (js *jvmServer) startProcessThread() {
 	var i int = 0
 	for {
-		i ++
+		i++
 		select {
 		case req := <-js.req:
 			fmt.Printf("Process request %d: %v\n", i, req)
@@ -63,7 +69,11 @@ func NewJvmServer() *jvmServer {
 }
 
 func main() {
-	addr := "localhost:50051"
+
+	port = flag.String("p", "50051", "server port")
+	host = flag.String("h", "localhost", "server host")
+	addr := fmt.Sprintf("%s:%s", *host, *port)
+	fmt.Println(addr)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
