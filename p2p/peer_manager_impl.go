@@ -626,7 +626,13 @@ func (pmgr *peerManagerImpl)GetVPPeers() []*Peer {
 }
 
 func (pmgr *peerManagerImpl)Stop() {
-	close(pmgr.peerMgrEvClose)
+	select{
+		case <-pmgr.peerMgrEvClose:
+			pmgr.logger.Infof("the peer manager channel already closed.")
+		default:
+			close(pmgr.peerMgrEvClose)
+
+	}
 	pmgr.logger.Criticalf("Unbind all slots...")
 	pmgr.SetOffline()
 	pmgr.unSubscribe()
