@@ -3,11 +3,12 @@
 package pbft
 
 import (
-	"fmt"
-	"hyperchain/consensus/helper/persist"
-
 	"encoding/base64"
 	"encoding/binary"
+	"fmt"
+
+	"hyperchain/consensus/helper/persist"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 )
@@ -429,7 +430,6 @@ func (pbft *pbftImpl) restoreState() {
 	if err == nil {
 		pbft.nodeMgr.localKey = string(localKey)
 	}
-
 
 	pbft.logger.Infof("Replica %d restored state: view: %d, seqNo: %d, reqBatches: %d, chkpts: %d",
 		pbft.id, pbft.view, pbft.seqNo, len(pbft.storeMgr.txBatchStore), len(pbft.storeMgr.chkpts))

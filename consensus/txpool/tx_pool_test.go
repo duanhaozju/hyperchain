@@ -3,10 +3,11 @@
 package txpool
 
 import (
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
 	"testing"
 	"time"
+
+	"hyperchain/core/types"
+	"hyperchain/manager/event"
 )
 
 func batchLoop(batchSub event.Subscription) {

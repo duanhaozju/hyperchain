@@ -4,12 +4,14 @@
 package pbft
 
 import (
-	"github.com/golang/protobuf/proto"
+	"fmt"
+	"sync/atomic"
+
+	"hyperchain/consensus"
 	"hyperchain/consensus/events"
 	"hyperchain/manager/protos"
-	"sync/atomic"
-	"hyperchain/consensus"
-	"fmt"
+
+	"github.com/golang/protobuf/proto"
 )
 
 type executor struct {
@@ -180,7 +182,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.status.inActiveState(&pbft.status.vcHandled)
 		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
-			!pbft.status.getState(&pbft.status.inNegoView) && !pbft.status.getState(&pbft.status.skipInProgress)  {
+			!pbft.status.getState(&pbft.status.inNegoView) && !pbft.status.getState(&pbft.status.skipInProgress) {
 			atomic.StoreUint32(&pbft.normal, 1)
 		}
 		pbft.logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/height=%d", pbft.id, primary, pbft.view, pbft.exec.lastExec)
@@ -222,13 +224,13 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 		var seqNo uint64
 		var event protos.VcResetDone
 		var ok bool
-		if event, ok = e.Event.(protos.VcResetDone) ; !ok {
+		if event, ok = e.Event.(protos.VcResetDone); !ok {
 			pbft.logger.Error("type assert error!")
 			return nil
 		}
 		seqNo = event.SeqNo
-		if pbft.status.getState(&pbft.status.inRecovery)&& pbft.recoveryMgr.recoveryToSeqNo != nil  {
-			if seqNo - 1 >= *pbft.recoveryMgr.recoveryToSeqNo {
+		if pbft.status.getState(&pbft.status.inRecovery) && pbft.recoveryMgr.recoveryToSeqNo != nil {
+			if seqNo-1 >= *pbft.recoveryMgr.recoveryToSeqNo {
 				return &LocalEvent{
 					Service:   RECOVERY_SERVICE,
 					EventType: RECOVERY_DONE_EVENT,
@@ -293,7 +295,7 @@ func (pbft *pbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 		atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 0)
 		pbft.rebuildCertStoreForUpdate()
 		if atomic.LoadUint32(&pbft.activeView) == 1 &&
-			!pbft.status.getState(&pbft.status.inNegoView) && !pbft.status.getState(&pbft.status.skipInProgress)  {
+			!pbft.status.getState(&pbft.status.inNegoView) && !pbft.status.getState(&pbft.status.skipInProgress) {
 			atomic.StoreUint32(&pbft.normal, 1)
 		}
 		pbft.logger.Criticalf("======== Replica %d finished UpdatingN, primary=%d, n=%d/f=%d/view=%d/h=%d", pbft.id, pbft.primary(pbft.view), pbft.N, pbft.f, pbft.view, pbft.h)
@@ -344,7 +346,7 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 
 	case RECOVERY_NEGO_VIEW_DONE_EVENT:
 		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
-			atomic.LoadUint32(&pbft.activeView) == 1 && !pbft.status.getState(&pbft.status.skipInProgress)  {
+			atomic.LoadUint32(&pbft.activeView) == 1 && !pbft.status.getState(&pbft.status.skipInProgress) {
 			atomic.StoreUint32(&pbft.normal, 1)
 		}
 		pbft.logger.Criticalf("======== Replica %d finished negotiating view: %d / N=%d", pbft.id, pbft.view, pbft.N)

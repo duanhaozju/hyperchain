@@ -5,62 +5,61 @@ package pbft
 import (
 	"encoding/base64"
 	"fmt"
+	"reflect"
 	"sort"
-
-	"github.com/golang/protobuf/proto"
+	"sync/atomic"
+	"time"
 
 	"hyperchain/common"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
-	"hyperchain/core/types"
-	"hyperchain/manager/protos"
-	"sync/atomic"
-	"github.com/op/go-logging"
-	"hyperchain/manager/event"
 	"hyperchain/consensus/txpool"
-	"time"
-	"reflect"
+	"hyperchain/core/types"
+	"hyperchain/manager/event"
+	"hyperchain/manager/protos"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
 )
 
 // batch is used to construct reqbatch, the middle layer between outer to pbft
 type pbftImpl struct {
-	namespace	string
-	activeView     uint32                       // view change happening
-	f              int                          // max. number of faults we can tolerate
-	N              int                          // max.number of validators in the network
-	h              uint64                       // low watermark
-	id             uint64                       // replica ID; PBFT `i`
-	K              uint64                       // checkpoint period
-	logMultiplier  uint64                       // use this value to calculate log size : k*logMultiplier
-	L              uint64                       // log size
-	seqNo          uint64                       // PBFT "n", strictly monotonic increasing sequence number
-	view           uint64                       // current view
-	nvInitialSeqNo uint64                       // initial seqNo in a new view
-	cachetx	       int
+	namespace      string
+	activeView     uint32 // view change happening
+	f              int    // max. number of faults we can tolerate
+	N              int    // max.number of validators in the network
+	h              uint64 // low watermark
+	id             uint64 // replica ID; PBFT `i`
+	K              uint64 // checkpoint period
+	logMultiplier  uint64 // use this value to calculate log size : k*logMultiplier
+	L              uint64 // log size
+	seqNo          uint64 // PBFT "n", strictly monotonic increasing sequence number
+	view           uint64 // current view
+	nvInitialSeqNo uint64 // initial seqNo in a new view
+	cachetx        int
 
-	status         PbftStatus                   // basic status of pbft
+	status PbftStatus // basic status of pbft
 
-	batchMgr       *batchManager                // manage batch related issues
-	batchVdr       *batchValidator              // manage batch validate issues
-	timerMgr       *timerManager                // manage pbft event timers
-	storeMgr       *storeManager                // manage storage
-	nodeMgr        *nodeManager                 // manage node delete or add
-	recoveryMgr    *recoveryManager             // manage recovery issues
-	vcMgr          *vcManager                   // manage viewchange issues
-	exec           *executor                    // manage transaction exec
+	batchMgr    *batchManager    // manage batch related issues
+	batchVdr    *batchValidator  // manage batch validate issues
+	timerMgr    *timerManager    // manage pbft event timers
+	storeMgr    *storeManager    // manage storage
+	nodeMgr     *nodeManager     // manage node delete or add
+	recoveryMgr *recoveryManager // manage recovery issues
+	vcMgr       *vcManager       // manage viewchange issues
+	exec        *executor        // manage transaction exec
 
-	helper         helper.Stack
+	helper helper.Stack
 	//reqStore       *requestStore                // received messages
 
-	pbftManager    events.Manager               // manage pbft event
-	pbftEventQueue events.Queue                 // transfer PBFT related event
+	pbftManager    events.Manager // manage pbft event
+	pbftEventQueue events.Queue   // transfer PBFT related event
 
 	config *common.Config
-	logger         *logging.Logger
+	logger *logging.Logger
 
-	normal		uint32
-	poolFull	uint32
-
+	normal   uint32
+	poolFull uint32
 }
 
 //newPBFT init the PBFT instance
@@ -319,7 +318,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			continue
 		}
 
-		if cache.vid != pbft.batchVdr.lastVid + 1 {
+		if cache.vid != pbft.batchVdr.lastVid+1 {
 			pbft.logger.Debugf("Primary %d expect to send pre-prepare for vid=%d, not vid=%d", pbft.id, pbft.batchVdr.lastVid+1, cache.vid)
 			continue
 		}
@@ -342,7 +341,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 		}
 
 		if !pbft.sendInWV(pbft.view, n) {
-			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because " +
+			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because "+
 				"batch seqNo=%d is out of sequence numbers", pbft.id, digest, n)
 			pbft.batchVdr.currentVid = nil
 			//ogger.Debugf("Replica %d broadcast FinishUpdate", pbft.id)
@@ -363,17 +362,17 @@ func (pbft *pbftImpl) sendPrePrepareSp(digest string, hash string, batch *Transa
 		pbft.id, pbft.view, uint64(0), *pbft.batchVdr.currentVid, digest)
 
 	hashbatch := &HashBatch{
-		List:		batch.HashList,
-		Timestamp:	batch.Timestamp,
+		List:      batch.HashList,
+		Timestamp: batch.Timestamp,
 	}
 	preprep := &PrePrepare{
-		View:             pbft.view,
-		SequenceNumber:   uint64(0),
-		Vid:		  *pbft.batchVdr.currentVid,
-		BatchDigest:      digest,
-		ResultHash:	  hash,
-		HashBatch:	  hashbatch,
-		ReplicaId:        pbft.id,
+		View:           pbft.view,
+		SequenceNumber: uint64(0),
+		Vid:            *pbft.batchVdr.currentVid,
+		BatchDigest:    digest,
+		ResultHash:     hash,
+		HashBatch:      hashbatch,
+		ReplicaId:      pbft.id,
 	}
 
 	payload, err := proto.Marshal(preprep)
@@ -414,18 +413,18 @@ func (pbft *pbftImpl) sendPrePrepare(digest string, hash string, reqBatch *Trans
 	pbft.seqNo = n
 
 	hashBatch := &HashBatch{
-		List:		reqBatch.HashList,
-		Timestamp:	reqBatch.Timestamp,
+		List:      reqBatch.HashList,
+		Timestamp: reqBatch.Timestamp,
 	}
 
 	preprepare := &PrePrepare{
-		View:             	pbft.view,
-		SequenceNumber:   	n,
-		Vid:		  	*pbft.batchVdr.currentVid,
-		BatchDigest:      	digest,
-		ResultHash:		hash,
-		HashBatch: 		hashBatch,
-		ReplicaId:        	pbft.id,
+		View:           pbft.view,
+		SequenceNumber: n,
+		Vid:            *pbft.batchVdr.currentVid,
+		BatchDigest:    digest,
+		ResultHash:     hash,
+		HashBatch:      hashBatch,
+		ReplicaId:      pbft.id,
 	}
 
 	cert := pbft.storeMgr.getCert(pbft.view, n, digest)
@@ -531,7 +530,6 @@ func (pbft *pbftImpl) recvPrePrepareSp(preprep *PrePrepare) error {
 		return nil
 	}
 
-
 	if !pbft.status.checkStatesOr(&pbft.status.skipInProgress, &pbft.status.inRecovery) &&
 		preprep.SequenceNumber > pbft.exec.lastExec {
 		pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout,
@@ -554,10 +552,10 @@ func (pbft *pbftImpl) sendPrepare(preprep *PrePrepare) error {
 	pbft.logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
 	prep := &Prepare{
 		View:           preprep.View,
-		Vid:		preprep.Vid,
+		Vid:            preprep.Vid,
 		SequenceNumber: preprep.SequenceNumber,
 		BatchDigest:    preprep.BatchDigest,
-		ResultHash:	preprep.ResultHash,
+		ResultHash:     preprep.ResultHash,
 		ReplicaId:      pbft.id,
 	}
 	pbft.recvPrepare(prep) // send to itself
@@ -588,7 +586,7 @@ func (pbft *pbftImpl) recvPrepare(prep *Prepare) error {
 	ok := cert.prepare[*prep]
 
 	if ok {
-		if pbft.status.checkStatesOr(&pbft.status.inRecovery)|| prep.SequenceNumber <= pbft.exec.lastExec {
+		if pbft.status.checkStatesOr(&pbft.status.inRecovery) || prep.SequenceNumber <= pbft.exec.lastExec {
 			// this is normal when in recovery
 			pbft.logger.Debugf("Replica %d in recovery, received duplicate prepare from replica %d, view=%d/seqNo=%d",
 				pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
@@ -651,9 +649,9 @@ func (pbft *pbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 		pbft.logger.Debugf("Replica %d broadcasting commit for view=%d/seqNo=%d", pbft.id, v, n)
 		commit := &Commit{
 			View:           v,
-			Vid:		cert.vid,
+			Vid:            cert.vid,
 			SequenceNumber: n,
-			ResultHash:	cert.resultHash,
+			ResultHash:     cert.resultHash,
 			BatchDigest:    digest,
 			ReplicaId:      pbft.id,
 		}
@@ -739,9 +737,9 @@ func (pbft *pbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing []str
 	pbft.logger.Debugf("Replica %d try to fetch missing txs from primary %d", pbft.id, preprep.ReplicaId)
 
 	fetch := &FetchMissingTransaction{
-		Preprep:	preprep,
-		HashList:	missing,
-		ReplicaId:	pbft.id,
+		Preprep:   preprep,
+		HashList:  missing,
+		ReplicaId: pbft.id,
 	}
 
 	payload, err := proto.Marshal(fetch)
@@ -771,10 +769,10 @@ func (pbft *pbftImpl) recvFetchMissingTransaction(fetch *FetchMissingTransaction
 	}
 
 	re := &ReturnMissingTransaction{
-		Preprep:	fetch.Preprep,
-		HashList:	fetch.HashList,
-		TxList:		txList,
-		ReplicaId:	pbft.id,
+		Preprep:   fetch.Preprep,
+		HashList:  fetch.HashList,
+		TxList:    txList,
+		ReplicaId: pbft.id,
 	}
 
 	payload, err := proto.Marshal(re)
@@ -823,8 +821,8 @@ func (pbft *pbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 		}
 
 		batch := &TransactionBatch{
-			TxList:	txList,
-			HashList: re.Preprep.HashBatch.List,
+			TxList:    txList,
+			HashList:  re.Preprep.HashBatch.List,
 			Timestamp: re.Preprep.HashBatch.Timestamp,
 		}
 
@@ -851,8 +849,8 @@ func (pbft *pbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 		}
 
 		batch := &TransactionBatch{
-			TxList:	txList,
-			HashList: preprep.HashBatch.List,
+			TxList:    txList,
+			HashList:  preprep.HashBatch.List,
 			Timestamp: preprep.HashBatch.Timestamp,
 		}
 
@@ -913,7 +911,7 @@ func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
 			continue
 		}
 
-		if idx.n != pbft.exec.lastExec + 1 {
+		if idx.n != pbft.exec.lastExec+1 {
 			pbft.logger.Debugf("Replica %d expects to execute seq=%d, but get seq=%d", pbft.id, pbft.exec.lastExec+1, idx.n)
 			//break
 			continue
@@ -1031,19 +1029,19 @@ func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 	pbft.batchVdr.setLastVid(et.SeqNo)
 	pbft.status.inActiveState(&pbft.status.skipInProgress)
 	pbft.validateState()
-	if et.SeqNo % pbft.K == 0 {
+	if et.SeqNo%pbft.K == 0 {
 		bcInfo := pbft.getCurrentBlockInfo()
 		pbft.checkpoint(et.SeqNo, bcInfo)
 	}
 
 	if atomic.LoadUint32(&pbft.activeView) == 1 || atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
-		!pbft.status.getState(&pbft.status.inNegoView)  {
+		!pbft.status.getState(&pbft.status.inNegoView) {
 		atomic.StoreUint32(&pbft.normal, 1)
 	}
 
 	if pbft.status.getState(&pbft.status.inRecovery) {
 		if pbft.recoveryMgr.recoveryToSeqNo == nil {
-			pbft.logger.Warningf("Replica %d in recovery recvStateUpdatedEvent but " +
+			pbft.logger.Warningf("Replica %d in recovery recvStateUpdatedEvent but "+
 				"its recoveryToSeqNo is nil", pbft.id)
 			return nil
 		}
@@ -1085,11 +1083,10 @@ func (pbft *pbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 
 	pbft.logger.Debugf("Replica %d received request batch %s", pbft.id, reqBatch.BatchHash)
 
-
 	txBatch := &TransactionBatch{
-		TxList: 	reqBatch.TxList,
-		HashList: 	reqBatch.TxHashList,
-		Timestamp:	time.Now().UnixNano(),
+		TxList:    reqBatch.TxList,
+		HashList:  reqBatch.TxHashList,
+		Timestamp: time.Now().UnixNano(),
 	}
 
 	if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.primary(pbft.view) == pbft.id &&
@@ -1302,7 +1299,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 			// If f+1 nodes have issued checkpoints above our high water mark, then
 			// we will never record 2f+1 checkpoints for that sequence number, we are out of date
 			// (This is because all_replicas - missed - me = 3f+1 - f - 1 = 2f)
-			if m := chkptSeqNumArray[len(chkptSeqNumArray) - pbft.oneCorrectQuorum()]; m > H {
+			if m := chkptSeqNumArray[len(chkptSeqNumArray)-pbft.oneCorrectQuorum()]; m > H {
 				if pbft.exec.lastExec >= chkpt.SequenceNumber {
 					pbft.logger.Warningf("Replica %d is ahead of others, waiting others catch up", pbft.id)
 					return true
@@ -1391,7 +1388,7 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 
 	// clean the invalid cache
 	var spList []string
-	for idx := range pbft.batchVdr.spNullRequest  {
+	for idx := range pbft.batchVdr.spNullRequest {
 		if idx.n <= vid {
 			delete(pbft.batchVdr.spNullRequest, idx)
 			delete(pbft.storeMgr.txBatchStore, idx.d)
@@ -1401,9 +1398,9 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 	pbft.batchMgr.txPool.RemoveBatchedTxs(spList)
 
 	var target uint64
-	if h<10{
-		target=0
-	}else{
+	if h < 10 {
+		target = 0
+	} else {
 		target = h - uint64(10)
 	}
 
@@ -1564,13 +1561,13 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 			return nil
 		}
 		batch := &TransactionBatch{
-			TxList:     	result.Transactions,
-			Timestamp: 	result.Timestamp,
+			TxList:    result.Transactions,
+			Timestamp: result.Timestamp,
 		}
 		cache := &cacheBatch{
-			batch: 		batch,
-			vid:   		result.Vid,
-			resultHash:	result.Hash,
+			batch:      batch,
+			vid:        result.Vid,
+			resultHash: result.Hash,
 		}
 		pbft.batchVdr.saveToCVB(result.Digest, cache)
 		pbft.trySendPrePrepares()

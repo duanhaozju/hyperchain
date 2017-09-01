@@ -3,12 +3,12 @@
 package pbft
 
 import (
+	"encoding/base64"
+	"strings"
 	"testing"
 	"time"
 
-	"encoding/base64"
 	"hyperchain/core/types"
-	"strings"
 )
 
 func TestHash(t *testing.T) {

@@ -10,14 +10,14 @@ import (
 // PbftStatus is used to store all the status in pbft
 type PbftStatus struct {
 	byzantine         int32 // whether this node is intentionally acting as byzantine
-	activeView		  int32 // track if replica is in active view
+	activeView        int32 // track if replica is in active view
 	skipInProgress    int32 // set when we have detested a fall behind scenario until we pick a new starting point
 	stateTransferring int32 // set when state transfer is executing
 	valid             int32 //
 	timerActive       int32
 	inRecovery        int32
 	inNegoView        int32
-	inUpdatingN		  int32
+	inUpdatingN       int32
 	isNewNode         int32
 	inAddingNode      int32
 	inDeletingNode    int32

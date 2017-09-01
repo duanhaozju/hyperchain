@@ -4,38 +4,37 @@
 package pbft
 
 import (
-	"hyperchain/consensus/events"
+	"fmt"
 	"time"
 
 	"hyperchain/common"
-	"fmt"
+	"hyperchain/consensus/events"
 	"hyperchain/consensus/txpool"
 	"hyperchain/manager/event"
 )
 
 // batchManager manage basic batch issues
 // exp:
-// 	1.pushEvent
-//      2.batch events timer management
+//      1.batch events timer management
 type batchManager struct {
-	txPool		txpool.TxPool
-	eventMux	*event.TypeMux
-	batchSub	event.Subscription
-	close       chan bool
-	pbftQueue	events.Queue
+	txPool    txpool.TxPool
+	eventMux  *event.TypeMux
+	batchSub  event.Subscription
+	close     chan bool
+	pbftQueue events.Queue
 }
 
 //batchValidator used to manager batch validate issues.
 type batchValidator struct {
-	vid                 	uint64                       // track the validate sequence number
-	lastVid             	uint64                       // track the last validate batch seqNo
-	currentVid          	*uint64                      // track the current validate batch seqNo
-	cacheValidatedBatch 	map[string]*cacheBatch       // track the cached validated batch
+	vid                 uint64                 // track the validate sequence number
+	lastVid             uint64                 // track the last validate batch seqNo
+	currentVid          *uint64                // track the current validate batch seqNo
+	cacheValidatedBatch map[string]*cacheBatch // track the cached validated batch
 
-	validateTimer		events.Timer
-	validateTimeout		time.Duration
-	preparedCert        map[vidx]string             // track the prepared cert to help validate
-	spNullRequest		map[msgID]*PrePrepare
+	validateTimer   events.Timer
+	validateTimeout time.Duration
+	preparedCert    map[vidx]string // track the prepared cert to help validate
+	spNullRequest   map[msgID]*PrePrepare
 }
 
 func (bv *batchValidator) setVid(vid uint64) {
@@ -56,13 +55,11 @@ func (bv *batchValidator) saveToCVB(digest string, cb *cacheBatch) {
 	bv.cacheValidatedBatch[digest] = cb
 }
 
-
 //containsInCVB judge whether the cache in cacheValidatedBatch.
 func (bv *batchValidator) containsInCVB(digest string) bool {
 	_, ok := bv.cacheValidatedBatch[digest]
 	return ok
 }
-
 
 //update lastVid  and currentVid
 func (bv *batchValidator) updateLCVid() {
@@ -117,7 +114,7 @@ func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 		panic(fmt.Errorf("Cannot create txpool: %s", err))
 	}
 
-	if batchTimeout >= pbft.timerMgr.requestTimeout {//TODO: change the pbftTimerMgr to batchTimerMgr
+	if batchTimeout >= pbft.timerMgr.requestTimeout { //TODO: change the pbftTimerMgr to batchTimerMgr
 		pbft.timerMgr.requestTimeout = 3 * batchTimeout / 2
 		pbft.logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", pbft.timerMgr.requestTimeout)
 	}
@@ -168,7 +165,7 @@ func (pbft *pbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 	pbft.storeMgr.txBatchStore[digest] = batch
 
 	pbft.logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d, batch size: %d", pbft.id, pbft.view, pbft.batchVdr.vid, len(batch.HashList))
-	pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout + pbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
+	pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout+pbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
 		fmt.Sprintf("new request batch for view=%d/vid=%d", pbft.view, pbft.batchVdr.vid))
 	pbft.helper.ValidateBatch(digest, batch.TxList, batch.Timestamp, uint64(0), n, pbft.view, true)
 
@@ -227,9 +224,9 @@ func (pbft *pbftImpl) preValidate(idx vidx, digest string) bool {
 	}
 
 	txBatch := &TransactionBatch{
-		TxList:		batch,
-		HashList:	preprep.HashBatch.List,
-		Timestamp:	preprep.HashBatch.Timestamp,
+		TxList:    batch,
+		HashList:  preprep.HashBatch.List,
+		Timestamp: preprep.HashBatch.Timestamp,
 	}
 	pbft.storeMgr.txBatchStore[preprep.BatchDigest] = txBatch
 	pbft.storeMgr.outstandingReqBatches[preprep.BatchDigest] = txBatch

@@ -5,8 +5,9 @@ package events
 import (
 	"time"
 
-	"github.com/op/go-logging"
 	"hyperchain/common"
+
+	"github.com/op/go-logging"
 )
 
 var logger *logging.Logger // package-level logger
@@ -73,11 +74,11 @@ type managerImpl struct {
 
 // NewManagerImpl creates an instance of managerImpl
 func NewManagerImpl(name string) Manager {
-	logger:=common.GetLogger(name,"event")
+	logger := common.GetLogger(name, "event")
 	return &managerImpl{
 		events:   make(chan interface{}),
 		threaded: threaded{make(chan struct{})},
-		logger: logger,
+		logger:   logger,
 	}
 }
 

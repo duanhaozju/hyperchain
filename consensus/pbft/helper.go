@@ -4,14 +4,14 @@ package pbft
 
 import (
 	"fmt"
+	"math"
+	"sync/atomic"
 	"time"
 
 	"hyperchain/consensus/helper/persist"
 	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
-	"math"
-	"sync/atomic"
 )
 
 // =============================================================================

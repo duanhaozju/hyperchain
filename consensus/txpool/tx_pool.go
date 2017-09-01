@@ -3,10 +3,12 @@
 package txpool
 
 import (
-	"github.com/op/go-logging"
-	"hyperchain/core/types"
 	"time"
+
+	"hyperchain/core/types"
 	"hyperchain/manager/event"
+
+	"github.com/op/go-logging"
 )
 
 var logger *logging.Logger // package-level logger
@@ -356,7 +358,7 @@ func (pool *txPoolImpl) IsPoolFull() bool {
 
 // generateTxBatch generates a transaction batch by batch limit (timeout or size).
 func (pool *txPoolImpl) generateTxBatch() error {
-	if pool.batchTimerActive == false {
+	if !pool.batchTimerActive {
 		return ErrAlreadyStop
 	}
 	pool.stopBatchTimer()

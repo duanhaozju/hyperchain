@@ -11,21 +11,20 @@ This file provide a mechanism to manage the storage in PBFT
 
 //storeManager manage common store data structures for PBFT.
 type storeManager struct {
-	chkpts          	map[uint64]string      // state checkpoints; map lastExec to global hash
-	hChkpts         	map[uint64]uint64      // map repilicaId to replica highest checkpoint num
-	checkpointStore 	map[Checkpoint]bool    // track checkpoints as set
-	chkptCertStore  	map[chkptID]*chkptCert // track quorum certificates for checkpoints
+	chkpts          map[uint64]string      // state checkpoints; map lastExec to global hash
+	hChkpts         map[uint64]uint64      // map repilicaId to replica highest checkpoint num
+	checkpointStore map[Checkpoint]bool    // track checkpoints as set
+	chkptCertStore  map[chkptID]*chkptCert // track quorum certificates for checkpoints
 
-	certStore     		map[msgID]*msgCert // track quorum certificates for requests
-	committedCert 		map[msgID]string   // track the committed cert to help execute msgId - digest
+	certStore     map[msgID]*msgCert // track quorum certificates for requests
+	committedCert map[msgID]string   // track the committed cert to help execute msgId - digest
 
-	outstandingReqBatches 	map[string]*TransactionBatch // track whether we are waiting for request batches to execute
-	txBatchStore		map[string]*TransactionBatch
+	outstandingReqBatches map[string]*TransactionBatch // track whether we are waiting for request batches to execute
+	txBatchStore          map[string]*TransactionBatch
 
-
-	missingReqBatches 	map[string]bool    // for all the assigned, non-checkpointed request batches we might be missing during view-change
-	highStateTarget   	*stateUpdateTarget // Set to the highest weak checkpoint cert we have observed
-	logger            	*logging.Logger
+	missingReqBatches map[string]bool    // for all the assigned, non-checkpointed request batches we might be missing during view-change
+	highStateTarget   *stateUpdateTarget // Set to the highest weak checkpoint cert we have observed
+	logger            *logging.Logger
 }
 
 func newStoreMgr() *storeManager {

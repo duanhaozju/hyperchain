@@ -3,22 +3,25 @@
 package pbft
 
 import (
-	"github.com/golang/protobuf/proto"
-	"hyperchain/consensus/events"
 	"encoding/base64"
-	"hyperchain/consensus/helper/persist"
 	"sync/atomic"
+
+	"hyperchain/consensus/events"
+	"hyperchain/consensus/helper/persist"
+
+	"github.com/golang/protobuf/proto"
 )
+
 /**
-	This file contains recovery related issues
- */
+This file contains recovery related issues
+*/
 
 type recoveryManager struct {
-	recoveryToSeqNo	       *uint64				 // recoveryToSeqNo is the target seqNo expected to recover to
-	rcRspStore             map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
-	rcPQCSenderStore       map[uint64]bool			 // rcPQCSenderStore store those who sent PQC info to self
-	recvNewViewInRecovery  bool				 // recvNewViewInRecovery record whether receive new view during recovery
-	negoViewRspStore       map[uint64]*NegotiateViewResponse // track replicaId, viewNo.
+	recoveryToSeqNo       *uint64                           // recoveryToSeqNo is the target seqNo expected to recover to
+	rcRspStore            map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
+	rcPQCSenderStore      map[uint64]bool                   // rcPQCSenderStore store those who sent PQC info to self
+	recvNewViewInRecovery bool                              // recvNewViewInRecovery record whether receive new view during recovery
+	negoViewRspStore      map[uint64]*NegotiateViewResponse // track replicaId, viewNo.
 }
 
 type blkIdx struct {
@@ -30,7 +33,7 @@ func newRecoveryMgr() *recoveryManager {
 	rm := &recoveryManager{}
 	rm.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 	rm.rcRspStore = make(map[uint64]*RecoveryResponse)
-	rm.rcPQCSenderStore=make(map[uint64]bool)
+	rm.rcPQCSenderStore = make(map[uint64]bool)
 	rm.recoveryToSeqNo = nil
 	rm.recvNewViewInRecovery = false
 
@@ -166,7 +169,7 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 		// Reason for not using '≥ pbft.N-pbft.f': if self is wrong, then we are impossible to find 2f+1 same view
 		// can we find same view from 2f+1 peers?
 		type resp struct {
-			n uint64
+			n    uint64
 			view uint64
 		}
 		viewCount := make(map[resp]uint64)
@@ -190,9 +193,9 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 		if canFind {
 			pbft.timerMgr.stopTimer(NEGO_VIEW_RSP_TIMER)
 			var IfUpdata bool
-			if pbft.view==result.view{
-				IfUpdata=true
-			}else{
+			if pbft.view == result.view {
+				IfUpdata = true
+			} else {
 				pbft.view = result.view
 			}
 			pbft.N = int(result.n)
@@ -201,12 +204,12 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			if atomic.LoadUint32(&pbft.activeView) == 0 {
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}
-			if !IfUpdata{
+			if !IfUpdata {
 				pbft.parseSpecifyCertStore()
 			}
 			return &LocalEvent{
-				Service:RECOVERY_SERVICE,
-				EventType:RECOVERY_NEGO_VIEW_DONE_EVENT,
+				Service:   RECOVERY_SERVICE,
+				EventType: RECOVERY_NEGO_VIEW_DONE_EVENT,
 			}
 		}
 	}
@@ -335,7 +338,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		return nil
 	}
 
-	if pbft.recoveryMgr.recoveryToSeqNo!=nil{
+	if pbft.recoveryMgr.recoveryToSeqNo != nil {
 		pbft.logger.Debugf("Replica %d in recovery receive rcRsp from replica %d "+
 			"but chkpt quorum and seqNo quorum already found. "+
 			"Ignore it", pbft.id, rsp.ReplicaId)
@@ -502,10 +505,10 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 		return nil
 	}
 
-	var prepres 	[]*PrePrepare
-	var pres 	[]*Prepare
-	var cmts 	[]*Commit
-	var vid		uint64
+	var prepres []*PrePrepare
+	var pres []*Prepare
+	var cmts []*Commit
+	var vid uint64
 
 	// replica just send all PQC that itself had sent
 	for idx, cert := range pbft.storeMgr.certStore {
@@ -541,7 +544,7 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 			prepres = append(prepres, prep)
 		}
 	}
-	rcReturn := &RecoveryReturnPQC{ ReplicaId: pbft.id }
+	rcReturn := &RecoveryReturnPQC{ReplicaId: pbft.id}
 
 	// in case replica doesn't have PQC, we cannot assign a nil one
 	if prepres != nil {
@@ -575,7 +578,6 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.Event {
 
 	pbft.logger.Debugf("Replica %d now recvRecoveryReturnPQC from replica %d, return_pqc %v", pbft.id, PQCInfo.ReplicaId, PQCInfo)
-
 
 	sender := PQCInfo.ReplicaId
 	if _, exist := pbft.recoveryMgr.rcPQCSenderStore[sender]; exist {

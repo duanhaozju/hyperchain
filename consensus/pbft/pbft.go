@@ -10,14 +10,15 @@
 package pbft
 
 import (
-	"github.com/golang/protobuf/proto"
+	"sync/atomic"
 
 	"hyperchain/common"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
-	"hyperchain/manager/protos"
-	"sync/atomic"
 	"hyperchain/core/types"
+	"hyperchain/manager/protos"
+
+	"github.com/golang/protobuf/proto"
 )
 
 /**

@@ -28,7 +28,7 @@ type msgID struct { // our index through certStore
 //Batch state cache
 type msgCert struct {
 	resultHash   string
-	vid	     uint64
+	vid          uint64
 	prePrepare   *PrePrepare
 	sentPrepare  bool
 	prepare      map[Prepare]bool
@@ -40,7 +40,6 @@ type msgCert struct {
 	pStored      bool
 	cStored      bool
 }
-
 
 //Checkpoint id
 type chkptID struct {
@@ -60,9 +59,9 @@ type vcidx struct {
 }
 
 type cacheBatch struct {
-	batch 		*TransactionBatch
-	vid   		uint64
-	resultHash	string
+	batch      *TransactionBatch
+	vid        uint64
+	resultHash string
 }
 
 type addNodeCert struct {
@@ -97,7 +96,7 @@ type uidx struct {
 type Xset map[uint64]string
 
 type vidx struct {
-	view uint64
+	view  uint64
 	seqNo uint64
-	vid uint64
+	vid   uint64
 }
