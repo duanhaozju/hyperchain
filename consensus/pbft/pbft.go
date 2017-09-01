@@ -15,9 +15,9 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
-	"hyperchain/core/types"
 	"hyperchain/manager/protos"
 	"sync/atomic"
+	"hyperchain/core/types"
 )
 
 /**
@@ -57,17 +57,23 @@ func (pbft *pbftImpl) RecvLocal(msg interface{}) error {
 		if negoView.Type == protos.Message_NEGOTIATE_VIEW {
 			return pbft.initNegoView()
 		}
-		return nil
-	} else {
-		switch msg.(type) {
-		case *types.Transaction: //local transaction
-			go pbft.reqEventQueue.Push(msg)
-
-		default:
-			go pbft.pbftEventQueue.Push(msg)
+	} else if tx, ok := msg.(*types.Transaction); ok {
+		payload, err := proto.Marshal(tx)
+		if err != nil {
+			pbft.logger.Errorf("ConsensusMessage_TRANSACTION Marshal Error", err)
+			return nil
 		}
-		return nil
+		consensusMsg := &ConsensusMessage{
+			Type:    ConsensusMessage_TRANSACTION,
+			Payload: payload,
+		}
+		pbMsg := cMsgToPbMsg(consensusMsg, pbft.id)
+		pbft.helper.InnerBroadcast(pbMsg)
 	}
+
+	go pbft.pbftEventQueue.Push(msg)
+
+	return nil
 }
 
 //Start start the consensus service
@@ -80,14 +86,15 @@ func (pbft *pbftImpl) Start() {
 	atomic.StoreUint32(&pbft.activeView, 1)
 	pbft.pbftManager.Start()
 	pbft.pbftEventQueue = events.GetQueue(pbft.pbftManager.Queue()) // init pbftEventQueue
-	pbft.reqEventQueue = events.GetQueue(pbft.batchMgr.batchEventsManager.Queue())
+
+	pbft.logger.Critical(pbft.pbftEventQueue, &pbft.pbftEventQueue)
 
 	//1.restore state.
 	pbft.restoreState()
 
 	pbft.vcMgr.viewChangeSeqNo = ^uint64(0) // infinity
 	pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)
-	pbft.batchMgr.start()
+	pbft.batchMgr.start(pbft.pbftEventQueue)
 
 	pbft.timerMgr.makeRequestTimeoutLegal()
 

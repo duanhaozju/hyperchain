@@ -4,9 +4,9 @@ package txpool
 
 import (
 	"github.com/op/go-logging"
-	"hyperchain/consensus/events"
 	"hyperchain/core/types"
 	"time"
+	"hyperchain/manager/event"
 )
 
 var logger *logging.Logger // package-level logger
@@ -44,7 +44,7 @@ type txPoolImpl struct {
 	cachedHashList   map[string][]string           // cached hash list using batch hash as key
 	missingTxs       map[string][]string           // store missing tx hash using batch hash as key
 	poolSize         int                           // upper limit of txPool
-	queue            events.Queue
+	queue            *event.TypeMux
 	batchTimer       *Timer
 	batchTimerActive bool
 	batchTimeout     time.Duration
@@ -57,7 +57,7 @@ type Timer struct {
 }
 
 // NewTxPool creates a new transaction pool
-func NewTxPool(poolsize int, queue events.Queue, timeout time.Duration, batchsize int) (TxPool, error) {
+func NewTxPool(poolsize int, queue *event.TypeMux, timeout time.Duration, batchsize int) (TxPool, error) {
 	return newTxPoolImpl(poolsize, queue, timeout, batchsize)
 }
 
@@ -285,7 +285,7 @@ func (pool *txPoolImpl) GetOneTxsBack(hash string) error {
 
 // newTxPoolImpl creates a new transaction pool to gather, sort and filter inbound
 // transactions from the network.
-func newTxPoolImpl(poolsize int, queue events.Queue, timeout time.Duration, batchsize int) (*txPoolImpl, error) {
+func newTxPoolImpl(poolsize int, queue *event.TypeMux, timeout time.Duration, batchsize int) (*txPoolImpl, error) {
 	txpool := &txPoolImpl{
 		poolSize:     poolsize,
 		queue:        queue,
@@ -372,7 +372,7 @@ func (pool *txPoolImpl) generateTxBatch() error {
 
 // postTxBash post a batch to chan which should be listened by consensus module
 func (pool *txPoolImpl) postTxBatch(msg TxHashBatch) error {
-	pool.queue.Push(msg)
+	pool.queue.Post(msg)
 	return nil
 }
 

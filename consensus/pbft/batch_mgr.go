@@ -10,6 +10,7 @@ import (
 	"hyperchain/common"
 	"fmt"
 	"hyperchain/consensus/txpool"
+	"hyperchain/manager/event"
 )
 
 // batchManager manage basic batch issues
@@ -17,8 +18,11 @@ import (
 // 	1.pushEvent
 //      2.batch events timer management
 type batchManager struct {
-	txPool 		   txpool.TxPool
-	batchEventsManager events.Manager       //pbft.batchManager => batchManager
+	txPool		txpool.TxPool
+	eventMux	*event.TypeMux
+	batchSub	event.Subscription
+	close       chan bool
+	pbftQueue	events.Queue
 }
 
 //batchValidator used to manager batch validate issues.
@@ -30,7 +34,7 @@ type batchValidator struct {
 
 	validateTimer		events.Timer
 	validateTimeout		time.Duration
-	preparedCert            map[vidx]string             // track the prepared cert to help validate
+	preparedCert        map[vidx]string             // track the prepared cert to help validate
 	spNullRequest		map[msgID]*PrePrepare
 }
 
@@ -97,10 +101,10 @@ func newBatchValidator() *batchValidator {
 // newBatchManager init a instance of batchManager.
 func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 	bm := &batchManager{}
-	bm.batchEventsManager = events.NewManagerImpl(conf.GetString(common.NAMESPACE))
-	bm.batchEventsManager.SetReceiver(pbft)
-	pbft.reqEventQueue = events.GetQueue(bm.batchEventsManager.Queue())
 
+	bm.eventMux = new(event.TypeMux)
+	bm.batchSub = bm.eventMux.Subscribe(txpool.TxHashBatch{})
+	bm.close = make(chan bool)
 
 	batchSize := conf.GetInt(PBFT_BATCH_SIZE)
 	poolSize := conf.GetInt(PBFT_POOL_SIZE)
@@ -108,11 +112,10 @@ func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 	if err != nil {
 		pbft.logger.Criticalf("Cannot parse batch timeout: %s", err)
 	}
-	bm.txPool, err = txpool.NewTxPool(poolSize, pbft.reqEventQueue, batchTimeout, batchSize)
+	bm.txPool, err = txpool.NewTxPool(poolSize, bm.eventMux, batchTimeout, batchSize)
 	if err != nil {
 		panic(fmt.Errorf("Cannot create txpool: %s", err))
 	}
-
 
 	if batchTimeout >= pbft.timerMgr.requestTimeout {//TODO: change the pbftTimerMgr to batchTimerMgr
 		pbft.timerMgr.requestTimeout = 3 * batchTimeout / 2
@@ -125,19 +128,29 @@ func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 	return bm
 }
 
-func (bm *batchManager) start() {
-	bm.batchEventsManager.Start()
+func (bm *batchManager) start(queue events.Queue) {
+	bm.pbftQueue = queue
+	go bm.listenTxPoolEvent()
 }
 
 func (bm *batchManager) stop() {
-	bm.batchEventsManager.Stop()
+	if bm.close != nil {
+		close(bm.close)
+	}
 }
 
-
-//pushEvent push the event into the batch events queue.
-func (bm *batchManager) pushEvent(event interface{}) {
-	//pbft.logger.Debugf("send event into batch event queue, %v", event)
-	bm.batchEventsManager.Queue() <- event
+func (bm *batchManager) listenTxPoolEvent() {
+	for {
+		select {
+		case <-bm.close:
+			return
+		case obj := <-bm.batchSub.Chan():
+			switch ev := obj.Data.(type) {
+			case txpool.TxHashBatch:
+				go bm.pbftQueue.Push(ev)
+			}
+		}
+	}
 }
 
 func (pbft *pbftImpl) primaryValidateBatch(digest string, batch *TransactionBatch, vid uint64) {

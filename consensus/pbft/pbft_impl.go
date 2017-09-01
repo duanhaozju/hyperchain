@@ -53,8 +53,6 @@ type pbftImpl struct {
 	//reqStore       *requestStore                // received messages
 
 	pbftManager    events.Manager               // manage pbft event
-
-	reqEventQueue  events.Queue                 // transfer request transactions
 	pbftEventQueue events.Queue                 // transfer PBFT related event
 
 	config *common.Config
@@ -145,22 +143,13 @@ func (pbft *pbftImpl) ProcessEvent(ee events.Event) events.Event {
 
 	switch e := ee.(type) {
 	case *types.Transaction: //local transaction
-		tx := e
-		return pbft.processTxEvent(tx)
+		return pbft.processTxEvent(e)
 
 	case txpool.TxHashBatch:
 		err := pbft.recvRequestBatch(e)
 		if err != nil {
 			pbft.logger.Warning(err.Error())
 		}
-
-	//case protos.RemoveCache:
-	//	vid := e.Vid
-	//	ok := pbft.recvRemoveCache(vid)
-	//	if !ok {
-	//		pbft.logger.Debugf("Replica %d received local remove cached batch %d, but can not find mapping batch", pbft.id, vid)
-	//	}
-	//	return nil
 
 	case protos.RoutersMessage:
 		if len(e.Routers) == 0 {
@@ -179,7 +168,6 @@ func (pbft *pbftImpl) ProcessEvent(ee events.Event) events.Event {
 
 	default:
 		pbft.logger.Errorf("Can't recognize event type of %v.", e)
-		return pbft.dispatchConsensusMsg(ee) //TODO: fix this ...
 		return nil
 	}
 	return nil
@@ -208,8 +196,6 @@ func (pbft *pbftImpl) dispatchCorePbftMsg(e events.Event) events.Event {
 	return nil
 }
 
-
-
 // enqueueConsensusMsg parse consensus msg and send it to the corresponding event queue.
 func (pbft *pbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 	consensus := &ConsensusMessage{}
@@ -226,20 +212,11 @@ func (pbft *pbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 			pbft.logger.Errorf("processConsensus, unmarshal error: can not unmarshal ConsensusMessage", err)
 			return err
 		}
-		if atomic.LoadUint32(&pbft.activeView) == 0 ||
-			atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
-			pbft.status.checkStatesOr(&pbft.status.inNegoView) {
-			err = pbft.batchMgr.txPool.AddNewTx(tx, false, false)
-		}
-		if ok, _ := pbft.isPrimary(); ok {
-			err = pbft.batchMgr.txPool.AddNewTx(tx, true, false)
-		} else {
-			err = pbft.batchMgr.txPool.AddNewTx(tx, false, false)
-		}
-		return nil
+		go pbft.pbftEventQueue.Push(tx)
 	} else {
 		go pbft.pbftEventQueue.Push(consensus)
 	}
+
 	return nil
 }
 
@@ -1006,19 +983,7 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 //processTxEvent process received transaction event
 func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) events.Event {
 
-
-	payload, err := proto.Marshal(tx)
-	if err != nil {
-		pbft.logger.Errorf("ConsensusMessage_TRANSACTION Marshal Error", err)
-		return nil
-	}
-	consensusMsg := &ConsensusMessage{
-		Type:    ConsensusMessage_TRANSACTION,
-		Payload: payload,
-	}
-	pbMsg := cMsgToPbMsg(consensusMsg, pbft.id)
-	pbft.helper.InnerBroadcast(pbMsg)
-
+	var err error
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 ||
 		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
@@ -1030,9 +995,15 @@ func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) events.Event {
 	} else {
 		err = pbft.batchMgr.txPool.AddNewTx(tx, false, true)
 	}
-	if err != nil && err == txpool.ErrPoolFull {
+
+	if pbft.batchMgr.txPool.IsPoolFull() {
 		atomic.StoreUint32(&pbft.poolFull, 1)
 	}
+
+	if err != nil {
+		pbft.logger.Warningf(err.Error())
+	}
+
 	return nil
 }
 
