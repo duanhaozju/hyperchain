@@ -9176,16 +9176,17 @@ public final class ContractProto {
       "\0132\016.LedgerContext\022\t\n\001k\030\002 \001(\014\022\t\n\001v\030\003 \001(\014\"" +
       "R\n\rLedgerContext\022\014\n\004txid\030\001 \001(\t\022\021\n\tnamesp" +
       "ace\030\002 \001(\t\022\013\n\003cid\030\003 \001(\t\022\023\n\013blockNumber\030\004 ",
-      "\001(\0042P\n\010Contract\022 \n\007Execute\022\010.Request\032\t.R" +
+      "\001(\0042|\n\010Contract\022 \n\007Execute\022\010.Request\032\t.R" +
       "esponse\"\000\022\"\n\tHeartBeat\022\010.Request\032\t.Respo" +
-      "nse\"\0002\351\001\n\006Ledger\022\025\n\003Get\022\004.Key\032\006.Value\"\000\022" +
-      "\035\n\003Put\022\t.KeyValue\032\t.Response\"\000\022\033\n\006Delete" +
-      "\022\004.Key\032\t.Response\"\000\022$\n\tBatchRead\022\t.Batch" +
-      "Key\032\n.BathValue\"\000\022#\n\nBatchWrite\022\010.BatchK" +
-      "V\032\t.Response\"\000\022$\n\nRangeQuery\022\006.Range\032\n.B" +
-      "athValue\"\0000\001\022\033\n\004Post\022\006.Event\032\t.Response\"" +
-      "\000B\'\n\024cn.hyperchain.protosB\rContractProto" +
-      "P\000b\006proto3"
+      "nse\"\000\022*\n\rStreamExecute\022\010.Request\032\t.Respo" +
+      "nse\"\000(\0010\0012\351\001\n\006Ledger\022\025\n\003Get\022\004.Key\032\006.Valu" +
+      "e\"\000\022\035\n\003Put\022\t.KeyValue\032\t.Response\"\000\022\033\n\006De" +
+      "lete\022\004.Key\032\t.Response\"\000\022$\n\tBatchRead\022\t.B" +
+      "atchKey\032\n.BathValue\"\000\022#\n\nBatchWrite\022\010.Ba" +
+      "tchKV\032\t.Response\"\000\022$\n\nRangeQuery\022\006.Range" +
+      "\032\n.BathValue\"\0000\001\022\033\n\004Post\022\006.Event\032\t.Respo" +
+      "nse\"\000B\'\n\024cn.hyperchain.protosB\rContractP",
+      "rotoP\000b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
