@@ -103,7 +103,7 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*p
 		pbft.logger.Infof("PBFT null requests disabled")
 	}
 
-	pbft.vcMgr = newVcManager(pbft.timerMgr, pbft, config)
+	pbft.vcMgr = newVcManager(pbft)
 	// init the data logs
 	pbft.storeMgr = newStoreMgr()
 	pbft.storeMgr.logger = pbft.logger
@@ -111,7 +111,7 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*p
 	// initialize state transfer
 	pbft.nodeMgr = newNodeMgr()
 
-	pbft.batchMgr = newBatchManager(config, pbft) // init after pbftEventQueue
+	pbft.batchMgr = newBatchManager(pbft) // init after pbftEventQueue
 	// new batch manager
 	pbft.batchVdr = newBatchValidator()
 	//pbft.reqStore = newRequestStore()
@@ -296,8 +296,9 @@ func (pbft *pbftImpl) trySendPrePrepares() {
 			waitingBatch := pbft.storeMgr.outstandingReqBatches[digest]
 			if len(txBatch.TxList) == 0 {
 				pbft.sendPrePrepareSp(digest, resultHash, waitingBatch)
+			} else {
+				pbft.sendPrePrepare(digest, resultHash, waitingBatch)
 			}
-			pbft.sendPrePrepare(digest, resultHash, waitingBatch)
 		} else {
 			stopTry = true
 		}
@@ -358,7 +359,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 
 func (pbft *pbftImpl) sendPrePrepareSp(digest string, hash string, batch *TransactionBatch) {
 
-	pbft.logger.Debugf("Primary %d broadcasting pre-prepare for view=%d/seqNo=%d/vid=%d/digest=%s",
+	pbft.logger.Debugf("Primary %d broadcasting pre-prepare-sp for view=%d/seqNo=%d/vid=%d/digest=%s",
 		pbft.id, pbft.view, uint64(0), *pbft.batchVdr.currentVid, digest)
 
 	hashbatch := &HashBatch{
@@ -499,7 +500,7 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 
 func (pbft *pbftImpl) recvPrePrepareSp(preprep *PrePrepare) error {
 
-	pbft.logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d/vid=%d, digest=%s ",
+	pbft.logger.Debugf("Replica %d received pre-prepare-sp from replica %d for view=%d/seqNo=%d/vid=%d, digest=%s ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.Vid, preprep.BatchDigest)
 
 	if pbft.status.getState(&pbft.status.inNegoView) {

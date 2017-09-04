@@ -6,8 +6,6 @@ package pbft
 import (
 	"fmt"
 	"time"
-
-	"hyperchain/common"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/txpool"
 	"hyperchain/manager/event"
@@ -96,20 +94,20 @@ func newBatchValidator() *batchValidator {
 }
 
 // newBatchManager init a instance of batchManager.
-func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
+func newBatchManager(pbft *pbftImpl) *batchManager {
 	bm := &batchManager{}
 
 	bm.eventMux = new(event.TypeMux)
 	bm.batchSub = bm.eventMux.Subscribe(txpool.TxHashBatch{})
 	bm.close = make(chan bool)
 
-	batchSize := conf.GetInt(PBFT_BATCH_SIZE)
-	poolSize := conf.GetInt(PBFT_POOL_SIZE)
-	batchTimeout, err := time.ParseDuration(conf.GetString(PBFT_BATCH_TIMEOUT))
+	batchSize := pbft.config.GetInt(PBFT_BATCH_SIZE)
+	poolSize := pbft.config.GetInt(PBFT_POOL_SIZE)
+	batchTimeout, err := time.ParseDuration(pbft.config.GetString(PBFT_BATCH_TIMEOUT))
 	if err != nil {
 		pbft.logger.Criticalf("Cannot parse batch timeout: %s", err)
 	}
-	bm.txPool, err = txpool.NewTxPool(poolSize, bm.eventMux, batchTimeout, batchSize)
+	bm.txPool, err = txpool.NewTxPool(pbft.namespace, poolSize, bm.eventMux, batchTimeout, batchSize)
 	if err != nil {
 		panic(fmt.Errorf("Cannot create txpool: %s", err))
 	}

@@ -9,13 +9,10 @@ import (
 	"hyperchain/manager/event"
 
 	"github.com/op/go-logging"
+	"hyperchain/common"
 )
 
 var logger *logging.Logger // package-level logger
-
-func init() {
-	logger = logging.MustGetLogger("consensus/txpool")
-}
 
 // TxPool contains all currently known transactions. Transactions
 // enter the pool when they are received from the network or submitted
@@ -59,7 +56,8 @@ type Timer struct {
 }
 
 // NewTxPool creates a new transaction pool
-func NewTxPool(poolsize int, queue *event.TypeMux, timeout time.Duration, batchsize int) (TxPool, error) {
+func NewTxPool(namespace string, poolsize int, queue *event.TypeMux, timeout time.Duration, batchsize int) (TxPool, error) {
+	logger = common.GetLogger(namespace, "consensus")
 	return newTxPoolImpl(poolsize, queue, timeout, batchsize)
 }
 
@@ -364,15 +362,14 @@ func (pool *txPoolImpl) generateTxBatch() error {
 	pool.stopBatchTimer()
 	poolLen := len(pool.txPool)
 	if poolLen == 0 {
-		logger.Error("Told to send an empty batch store for ordering, ignoring")
-		return ErrEmptyFull
+		logger.Debug("Told to send an empty batch store for ordering, ignoring")
 	} else {
 		batch := pool.newTxBatch()
 		if batch != nil {
 			pool.postTxBatch(*batch)
 		}
-		pool.startBatchTimer()
 	}
+	pool.startBatchTimer()
 	return nil
 }
 

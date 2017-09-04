@@ -111,12 +111,12 @@ func (pbft *pbftImpl) Close() {
 
 	pbft.logger.Notice("PBFT clear some resources")
 
-	pbft.vcMgr = newVcManager(pbft.timerMgr, pbft, pbft.config)
+	pbft.vcMgr = newVcManager(pbft)
 	pbft.storeMgr = newStoreMgr()
 	pbft.nodeMgr = newNodeMgr()
 
 	//pbft.duplicator = make(map[uint64]*transactionStore)
-	pbft.batchMgr = newBatchManager(pbft.config, pbft) // init after pbftEventQueue
+	pbft.batchMgr = newBatchManager(pbft) // init after pbftEventQueue
 	// new batch manager
 	pbft.batchVdr = newBatchValidator()
 	//pbft.reqStore = newRequestStore()
