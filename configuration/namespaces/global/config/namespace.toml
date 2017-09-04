@@ -72,7 +72,7 @@ algo = "PBFT"
 [encryption.check]
  enable     = true
  sign       = false
- enableT    = true
+ enableT    = false
 
 [encryption.security]
  algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des or sm4)
