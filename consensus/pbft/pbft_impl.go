@@ -142,7 +142,7 @@ func (pbft *pbftImpl) ProcessEvent(ee events.Event) events.Event {
 
 	switch e := ee.(type) {
 	case *types.Transaction: //local transaction
-		return pbft.processTxEvent(e)
+		return pbft.processTransaction(e)
 
 	case txpool.TxHashBatch:
 		err := pbft.recvRequestBatch(e)
@@ -455,7 +455,6 @@ func (pbft *pbftImpl) sendPrePrepare(digest string, hash string, reqBatch *Trans
 	msg := cMsgToPbMsg(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 	pbft.batchVdr.updateLCVid()
-	pbft.maybeSendCommit(digest, pbft.view, n, pbft.batchVdr.lastVid)
 }
 
 //recvPrePrepare process logic for PrePrepare msg.
@@ -464,14 +463,13 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 	pbft.logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d/vid=%d, digest=%s ",
 		pbft.id, preprep.ReplicaId, preprep.View, preprep.SequenceNumber, preprep.Vid, preprep.BatchDigest)
 
-	pbft.stopFirstRequestTimer()
-
 	if !pbft.isPrePrepareLegal(preprep) {
 		return nil
 	}
 
 	if preprep.SequenceNumber > pbft.exec.lastExec {
 		pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
+		pbft.stopFirstRequestTimer()
 	}
 
 	cert := pbft.storeMgr.getCert(preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
@@ -810,8 +808,8 @@ func (pbft *pbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 
 		_, err := pbft.batchMgr.txPool.GotMissingTxs(re.Preprep.BatchDigest, re.TxList)
 		if err != nil {
-			pbft.logger.Warningf("Replica %d find something wrong with the return of missing txs", pbft.id)
-			return err
+			pbft.logger.Warningf("Replica %d find something wrong with the return of missing txs, error: %v", pbft.id, err)
+			return nil
 		}
 
 		txList, missing, err := pbft.batchMgr.txPool.GetTxsByHashList(re.Preprep.BatchDigest, re.Preprep.HashBatch.List)
@@ -838,8 +836,8 @@ func (pbft *pbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 
 		_, err := pbft.batchMgr.txPool.GotMissingTxs(re.Preprep.BatchDigest, re.TxList)
 		if err != nil {
-			pbft.logger.Warningf("Replica %d find something wrong with the return of missing txs", pbft.id)
-			return err
+			pbft.logger.Warningf("Replica %d find something wrong with the return of missing txs, error: %v", pbft.id, err)
+			return nil
 		}
 
 		txList, missing, err := pbft.batchMgr.txPool.GetTxsByHashList(re.Preprep.BatchDigest, re.Preprep.HashBatch.List)
@@ -979,19 +977,26 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 //=============================================================================
 
 //processTxEvent process received transaction event
-func (pbft *pbftImpl) processTxEvent(tx *types.Transaction) events.Event {
+func (pbft *pbftImpl) processTransaction(tx *types.Transaction) events.Event {
 
 	var err error
+	var isGenerated bool
 
 	if atomic.LoadUint32(&pbft.activeView) == 0 ||
 		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
 		pbft.status.checkStatesOr(&pbft.status.inNegoView) {
-		err = pbft.batchMgr.txPool.AddNewTx(tx, false, true)
+		_, err = pbft.batchMgr.txPool.AddNewTx(tx, false, true)
 	}
 	if ok, _ := pbft.isPrimary(); ok {
-		err = pbft.batchMgr.txPool.AddNewTx(tx, true, true)
+		if !pbft.batchMgr.isBatchTimerActive() {
+			pbft.startBatchTimer()
+		}
+		isGenerated, err = pbft.batchMgr.txPool.AddNewTx(tx, true, true)
+		if isGenerated {
+			pbft.stopBatchTimer()
+		}
 	} else {
-		err = pbft.batchMgr.txPool.AddNewTx(tx, false, true)
+		_, err = pbft.batchMgr.txPool.AddNewTx(tx, false, true)
 	}
 
 	if pbft.batchMgr.txPool.IsPoolFull() {

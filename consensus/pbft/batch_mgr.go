@@ -22,6 +22,7 @@ type batchManager struct {
 	batchSub  event.Subscription
 	close     chan bool
 	pbftQueue events.Queue
+	batchTimerActive bool
 }
 
 //batchValidator used to manager batch validate issues.
@@ -105,18 +106,19 @@ func newBatchManager(conf *common.Config, pbft *pbftImpl) *batchManager {
 
 	batchSize := conf.GetInt(PBFT_BATCH_SIZE)
 	poolSize := conf.GetInt(PBFT_POOL_SIZE)
+
 	batchTimeout, err := time.ParseDuration(conf.GetString(PBFT_BATCH_TIMEOUT))
 	if err != nil {
 		pbft.logger.Criticalf("Cannot parse batch timeout: %s", err)
 	}
-	bm.txPool, err = txpool.NewTxPool(poolSize, bm.eventMux, batchTimeout, batchSize)
-	if err != nil {
-		panic(fmt.Errorf("Cannot create txpool: %s", err))
-	}
-
 	if batchTimeout >= pbft.timerMgr.requestTimeout { //TODO: change the pbftTimerMgr to batchTimerMgr
 		pbft.timerMgr.requestTimeout = 3 * batchTimeout / 2
 		pbft.logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", pbft.timerMgr.requestTimeout)
+	}
+
+	bm.txPool, err = txpool.NewTxPool(pbft.namespace, poolSize, bm.eventMux, batchSize)
+	if err != nil {
+		panic(fmt.Errorf("Cannot create txpool: %s", err))
 	}
 
 	pbft.logger.Infof("PBFT Batch size = %d", batchSize)
@@ -136,6 +138,7 @@ func (bm *batchManager) stop() {
 	}
 }
 
+// listenTxPoolEvent start the thread of listening the TxHashBatch sent by txpool
 func (bm *batchManager) listenTxPoolEvent() {
 	for {
 		select {
@@ -148,6 +151,43 @@ func (bm *batchManager) listenTxPoolEvent() {
 			}
 		}
 	}
+}
+
+func (bm *batchManager) isBatchTimerActive() bool {
+	return bm.batchTimerActive
+}
+
+// startBatchTimer start the batch timer
+func (pbft *pbftImpl) startBatchTimer() {
+	event := &LocalEvent{
+		Service:   CORE_PBFT_SERVICE,
+		EventType: CORE_BATCH_TIMER_EVENT,
+	}
+
+	pbft.timerMgr.startTimer(BATCH_TIMER, event, pbft.pbftEventQueue)
+	pbft.batchMgr.batchTimerActive = true
+	pbft.logger.Debugf("Primary %d started the batch timer", pbft.id)
+}
+
+// stopBatchTimer stop the batch timer
+func (pbft *pbftImpl) stopBatchTimer() {
+	pbft.timerMgr.stopTimer(BATCH_TIMER)
+	pbft.batchMgr.batchTimerActive = false
+	pbft.logger.Debugf("Primary %d stopped the batch timer", pbft.id)
+}
+
+// restartBatchTimer restart the batch timer
+func (pbft *pbftImpl) restartBatchTimer() {
+	pbft.timerMgr.stopTimer(BATCH_TIMER)
+
+	event := &LocalEvent{
+		Service:   CORE_PBFT_SERVICE,
+		EventType: CORE_BATCH_TIMER_EVENT,
+	}
+
+	pbft.timerMgr.startTimer(BATCH_TIMER, event, pbft.pbftEventQueue)
+	pbft.batchMgr.batchTimerActive = true
+	pbft.logger.Debugf("Primary %d restarted the batch timer", pbft.id)
 }
 
 func (pbft *pbftImpl) primaryValidateBatch(digest string, batch *TransactionBatch, vid uint64) {

@@ -129,6 +129,7 @@ func (pbft *pbftImpl) getDelNV(del uint64) (n int64, v uint64) {
 	return
 }
 
+// cleanAllCache clean some old cache of previous view
 func (pbft *pbftImpl) cleanAllCache() {
 
 	for idx, cert := range pbft.storeMgr.certStore {
@@ -142,6 +143,11 @@ func (pbft *pbftImpl) cleanAllCache() {
 	pbft.vcMgr.newViewStore = make(map[uint64]*NewView)
 	pbft.vcMgr.vcResetStore = make(map[FinishVcReset]bool)
 	pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
+
+	// we should clear the qlist & plist, since we may send viewchange after recovery
+	// those previous viewchange msg will make viewchange-check incorrect
+	pbft.vcMgr.qlist = make(map[qidx]*ViewChange_PQ)
+	pbft.vcMgr.plist = make(map[uint64]*ViewChange_PQ)
 
 }
 

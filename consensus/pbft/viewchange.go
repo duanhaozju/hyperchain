@@ -1171,7 +1171,6 @@ func (pbft *pbftImpl) beforeSendVC() error {
 
 	pbft.stopNewViewTimer()
 	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
-	pbft.batchMgr.txPool.StopBatch()
 
 	delete(pbft.vcMgr.newViewStore, pbft.view)
 	pbft.view++

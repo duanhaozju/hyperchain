@@ -587,41 +587,16 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 	pbft.recoveryMgr.rcPQCSenderStore[sender] = true
 
 	// post all the PQC
-	for _, preprep := range PQCInfo.GetPrepreSet() {
-		payload, err := proto.Marshal(preprep)
-		if err != nil {
-			pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-			return nil
+	if pbft.primary(pbft.view) != pbft.id {
+		for _, preprep := range PQCInfo.GetPrepreSet() {
+			pbft.recvPrePrepare(preprep)
 		}
-		consensusMsg := &ConsensusMessage{
-			Type:    ConsensusMessage_PRE_PREPARE,
-			Payload: payload,
-		}
-		go pbft.pbftEventQueue.Push(consensusMsg)
 	}
 	for _, prep := range PQCInfo.GetPreSet() {
-		payload, err := proto.Marshal(prep)
-		if err != nil {
-			pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-			return nil
-		}
-		consensusMsg := &ConsensusMessage{
-			Type:    ConsensusMessage_PREPARE,
-			Payload: payload,
-		}
-		go pbft.pbftEventQueue.Push(consensusMsg)
+		pbft.recvPrepare(prep)
 	}
 	for _, cmt := range PQCInfo.GetCmtSet() {
-		payload, err := proto.Marshal(cmt)
-		if err != nil {
-			pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
-			return nil
-		}
-		consensusMsg := &ConsensusMessage{
-			Type:    ConsensusMessage_COMMIT,
-			Payload: payload,
-		}
-		go pbft.pbftEventQueue.Push(consensusMsg)
+		pbft.recvCommit(cmt)
 	}
 
 	return nil
