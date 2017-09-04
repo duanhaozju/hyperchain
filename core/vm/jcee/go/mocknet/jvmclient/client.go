@@ -12,19 +12,22 @@ import (
 )
 
 const (
-	totalCount = 10 * 10000
 	sync       = "sync"
 	async      = "async"
 )
 
-var port *string
-var host *string
+var (
+	port *string
+	host *string
+	totalCount *int
+)
 
 func main() {
 
 	m := flag.String("m", "sync", "decide run sync or async call")
 	port = flag.String("p", "50051", "server port")
 	host = flag.String("h", "localhost", "server host")
+	totalCount = flag.Int("tc", 100000, "total num of request")
 
 	flag.Parse()
 	switch *m {
@@ -58,7 +61,7 @@ func asyncCallTest() {
 	//var totalCount int = 10 * 10000
 	var c int = 0
 	go func() {
-		for c < totalCount {
+		for c < *totalCount {
 			in, err := stream.Recv()
 			c++
 			if err == io.EOF {
@@ -73,7 +76,7 @@ func asyncCallTest() {
 		waitc <- struct{}{}
 	}()
 
-	for i := 0; i < totalCount; i++ {
+	for i := 0; i < *totalCount; i++ {
 		stream.Send(&pb.Request{
 			Method: "asyncCall",
 		})
@@ -87,15 +90,15 @@ func asyncCallTest() {
 
 //test sync call
 func synCallTest() {
+	fmt.Println(fmt.Sprintf("%s:%s", *host, *port))
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", *host, *port), grpc.WithInsecure())
 	if err != nil {
 		log.Error(err)
 	}
 
 	client := pb.NewContractClient(conn)
-	var totalCount int = 10 * 10000
 	start := time.Now()
-	for i := 0; i < totalCount; i++ {
+	for i := 0; i < *totalCount; i++ {
 		rsp, _ := client.Execute(context.Background(), &pb.Request{Method: "syncCall"})
 
 		fmt.Printf("receive response %d: %v\n", i, rsp)

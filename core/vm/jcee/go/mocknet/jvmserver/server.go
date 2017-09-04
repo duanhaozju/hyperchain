@@ -71,9 +71,10 @@ func NewJvmServer() *jvmServer {
 func main() {
 
 	port = flag.String("p", "50051", "server port")
-	host = flag.String("h", "localhost", "server host")
+	host = flag.String("h", "0.0.0.0", "server host")
+
+	flag.Parse()
 	addr := fmt.Sprintf("%s:%s", *host, *port)
-	fmt.Println(addr)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
