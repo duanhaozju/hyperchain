@@ -10,11 +10,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"hyperchain/common"
 	"hyperchain/consensus/events"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/syndtr/goleveldb/leveldb/errors"
+	"errors"
 )
 
 //view change manager
@@ -53,7 +52,7 @@ func (pbft *pbftImpl) dispatchViewChangeMsg(e events.Event) events.Event {
 }
 
 //newVcManager init a instance of view change manager.
-func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vcManager {
+func newVcManager(pbft *pbftImpl) *vcManager {
 	vcm := &vcManager{}
 	//vcm.pset = make(map[uint64]*ViewChange_PQ)
 	//vcm.qset = make(map[qidx]*ViewChange_PQ)
@@ -66,7 +65,7 @@ func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vc
 
 	// clean out-of-data view change message
 	var err error
-	vcm.cleanVcTimeout, err = time.ParseDuration(conf.GetString(PBFT_CLEAN_VIEWCHANGE_TIMEOUT))
+	vcm.cleanVcTimeout, err = time.ParseDuration(pbft.config.GetString(PBFT_CLEAN_VIEWCHANGE_TIMEOUT))
 	if err != nil {
 		pbft.logger.Criticalf("Cannot parse clean out-of-data view change message timeout: %s", err)
 	}
@@ -84,10 +83,10 @@ func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vc
 		pbft.logger.Infof("PBFT automatic view change disabled")
 	}
 
-	vcm.lastNewViewTimeout = pbftTm.getTimeoutValue(NEW_VIEW_TIMER)
+	vcm.lastNewViewTimeout = pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 
 	// vcResendLimit
-	vcm.vcResendLimit = conf.GetInt(PBFT_VC_RESEND_LIMIT)
+	vcm.vcResendLimit = pbft.config.GetInt(PBFT_VC_RESEND_LIMIT)
 	pbft.logger.Debugf("Replica %d set vcResendLimit %d", pbft.id, vcm.vcResendLimit)
 	vcm.vcResendCount = 0
 
