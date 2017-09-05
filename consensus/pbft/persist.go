@@ -11,6 +11,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
+	"strconv"
 )
 
 func (pbft *pbftImpl) persistQSet(preprep *PrePrepare) {
@@ -391,7 +392,6 @@ func (pbft *pbftImpl) restoreState() {
 
 	chkpts, err := persist.ReadStateSet(pbft.namespace, "chkpt.")
 	if err == nil {
-		highSeq := uint64(0)
 		for key, id := range chkpts {
 			var seqNo uint64
 			if _, err = fmt.Sscanf(key, "chkpt.%d", &seqNo); err != nil {
@@ -400,16 +400,21 @@ func (pbft *pbftImpl) restoreState() {
 				idAsString := base64.StdEncoding.EncodeToString(id)
 				pbft.logger.Debugf("Replica %d found checkpoint %s for seqNo %d", pbft.id, idAsString, seqNo)
 				pbft.storeMgr.saveCheckpoint(seqNo, idAsString)
-				if seqNo > highSeq {
-					highSeq = seqNo
-				}
 			}
 		}
-		pbft.moveWatermarks(highSeq)
 	} else {
 		pbft.logger.Warningf("Replica %d could not restore checkpoints: %s", pbft.id, err)
 	}
-
+	hstr,err:=persist.ReadState(pbft.namespace,"pbft.h")
+	if err!=nil{
+		pbft.logger.Warningf("Replica %d could not restore h: %s", pbft.id, err)
+	}else{
+		h,err:=strconv.ParseUint(string(hstr),10,64)
+		if err!=nil{
+			panic("transfer pbft.h from string to uint64 failed with err: "+err.Error())
+		}
+		pbft.moveWatermarks(h)
+	}
 	n, err := persist.ReadState(pbft.namespace, "nodes")
 	if err == nil {
 		nodes := binary.LittleEndian.Uint64(n)
