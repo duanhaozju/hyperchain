@@ -54,6 +54,15 @@ public class ContractGrpc {
               "Contract", "StreamExecute"),
           io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Request.getDefaultInstance()),
           io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Response.getDefaultInstance()));
+  @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/1901")
+  public static final io.grpc.MethodDescriptor<cn.hyperchain.protos.ContractProto.Message,
+      cn.hyperchain.protos.ContractProto.Message> METHOD_REGISTER =
+      io.grpc.MethodDescriptor.create(
+          io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING,
+          generateFullMethodName(
+              "Contract", "Register"),
+          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Message.getDefaultInstance()),
+          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Message.getDefaultInstance()));
 
   /**
    * Creates a new async stub that supports all call types for the service
@@ -103,10 +112,24 @@ public class ContractGrpc {
     }
 
     /**
+     * <pre>
+     *used to transfer data between hyperchain and contract, just for test now, will be discard later
+     * </pre>
      */
     public io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Request> streamExecute(
         io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response> responseObserver) {
       return asyncUnimplementedStreamingCall(METHOD_STREAM_EXECUTE, responseObserver);
+    }
+
+    /**
+     * <pre>
+     *Interface that provides support to jvm execution which will estabilish a stream between Server
+     *and Client. Message type provide the context necessary for server to respond appropriately.
+     * </pre>
+     */
+    public io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message> register(
+        io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message> responseObserver) {
+      return asyncUnimplementedStreamingCall(METHOD_REGISTER, responseObserver);
     }
 
     @java.lang.Override public io.grpc.ServerServiceDefinition bindService() {
@@ -132,6 +155,13 @@ public class ContractGrpc {
                 cn.hyperchain.protos.ContractProto.Request,
                 cn.hyperchain.protos.ContractProto.Response>(
                   this, METHODID_STREAM_EXECUTE)))
+          .addMethod(
+            METHOD_REGISTER,
+            asyncBidiStreamingCall(
+              new MethodHandlers<
+                cn.hyperchain.protos.ContractProto.Message,
+                cn.hyperchain.protos.ContractProto.Message>(
+                  this, METHODID_REGISTER)))
           .build();
     }
   }
@@ -177,11 +207,26 @@ public class ContractGrpc {
     }
 
     /**
+     * <pre>
+     *used to transfer data between hyperchain and contract, just for test now, will be discard later
+     * </pre>
      */
     public io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Request> streamExecute(
         io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response> responseObserver) {
       return asyncBidiStreamingCall(
           getChannel().newCall(METHOD_STREAM_EXECUTE, getCallOptions()), responseObserver);
+    }
+
+    /**
+     * <pre>
+     *Interface that provides support to jvm execution which will estabilish a stream between Server
+     *and Client. Message type provide the context necessary for server to respond appropriately.
+     * </pre>
+     */
+    public io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message> register(
+        io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message> responseObserver) {
+      return asyncBidiStreamingCall(
+          getChannel().newCall(METHOD_REGISTER, getCallOptions()), responseObserver);
     }
   }
 
@@ -268,6 +313,7 @@ public class ContractGrpc {
   private static final int METHODID_EXECUTE = 0;
   private static final int METHODID_HEART_BEAT = 1;
   private static final int METHODID_STREAM_EXECUTE = 2;
+  private static final int METHODID_REGISTER = 3;
 
   private static class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -307,6 +353,9 @@ public class ContractGrpc {
         case METHODID_STREAM_EXECUTE:
           return (io.grpc.stub.StreamObserver<Req>) serviceImpl.streamExecute(
               (io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response>) responseObserver);
+        case METHODID_REGISTER:
+          return (io.grpc.stub.StreamObserver<Req>) serviceImpl.register(
+              (io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message>) responseObserver);
         default:
           throw new AssertionError();
       }
@@ -317,7 +366,8 @@ public class ContractGrpc {
     return new io.grpc.ServiceDescriptor(SERVICE_NAME,
         METHOD_EXECUTE,
         METHOD_HEART_BEAT,
-        METHOD_STREAM_EXECUTE);
+        METHOD_STREAM_EXECUTE,
+        METHOD_REGISTER);
   }
 
 }
