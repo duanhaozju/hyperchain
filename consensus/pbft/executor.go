@@ -143,6 +143,7 @@ func (pbft *pbftImpl) handleCorePbftEvent(e *LocalEvent) events.Event {
 
 	case CORE_BATCH_TIMER_EVENT:
 		pbft.logger.Debugf("Primary %d batch timer expires, try to create a batch", pbft.id)
+		pbft.stopBatchTimer()
 		pbft.batchMgr.txPool.GenerateTxBatch()
 		return nil
 
