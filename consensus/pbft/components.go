@@ -37,8 +37,6 @@ type msgCert struct {
 	sentCommit   bool
 	commit       map[Commit]bool
 	sentExecute  bool
-	pStored      bool
-	cStored      bool
 }
 
 //Checkpoint id

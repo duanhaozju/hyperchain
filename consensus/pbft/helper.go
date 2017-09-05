@@ -208,40 +208,11 @@ func (pbft *pbftImpl) prepared(digest string, v uint64, n uint64) bool {
 	return prepCount >= pbft.commonCaseQuorum()-1
 }
 
-func (pbft *pbftImpl) onlyPrepared(digest string, v uint64, n uint64) bool {
-
-	cert := pbft.storeMgr.certStore[msgID{v, n, digest}]
-
-	if cert == nil {
-		return false
-	}
-
-	prepCount := len(cert.prepare)
-
-	return prepCount >= pbft.commonCaseQuorum()-1
-}
-
 func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
 
 	if !pbft.prepared(digest, v, n) {
 		return false
 	}
-
-	cert := pbft.storeMgr.certStore[msgID{v, n, digest}]
-
-	if cert == nil {
-		return false
-	}
-
-	cmtCount := len(cert.commit)
-
-	pbft.logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
-		pbft.id, v, n, cmtCount)
-
-	return cmtCount >= pbft.commonCaseQuorum()
-}
-
-func (pbft *pbftImpl) onlyCommitted(digest string, v uint64, n uint64) bool {
 
 	cert := pbft.storeMgr.certStore[msgID{v, n, digest}]
 
@@ -338,7 +309,7 @@ func (pbft *pbftImpl) startTimerIfOutstandingRequests() {
 			}
 			return digests
 		}()
-		pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
+		pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v, batches: %v", len(getOutstandingDigests), getOutstandingDigests))
 	} else if pbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
 		pbft.nullReqTimerReset()
 	}

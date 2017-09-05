@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"hyperchain/common"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/txpool"
 	"hyperchain/manager/event"
@@ -17,11 +16,11 @@ import (
 // exp:
 //      1.batch events timer management
 type batchManager struct {
-	txPool    txpool.TxPool
-	eventMux  *event.TypeMux
-	batchSub  event.Subscription
-	close     chan bool
-	pbftQueue events.Queue
+	txPool           txpool.TxPool
+	eventMux         *event.TypeMux
+	batchSub         event.Subscription
+	close            chan bool
+	pbftQueue        events.Queue
 	batchTimerActive bool
 }
 

@@ -5,7 +5,6 @@ package pbft
 import (
 	"encoding/base64"
 	"fmt"
-	"reflect"
 	"sort"
 	"sync/atomic"
 	"time"
@@ -612,11 +611,6 @@ func (pbft *pbftImpl) maybeSendCommit(digest string, v uint64, n uint64, vid uin
 		return nil
 	}
 
-	if pbft.onlyPrepared(digest, v, n) && !cert.pStored {
-		pbft.persistPSet(v, n, digest)
-		cert.pStored = true
-	}
-
 	if !pbft.prepared(digest, v, n) {
 		return nil
 	}
@@ -704,11 +698,6 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 
 	cert.commit[*commit] = true
 
-	if pbft.onlyCommitted(commit.BatchDigest, commit.View, commit.SequenceNumber) && !cert.cStored {
-		pbft.persistCSet(commit.View, commit.SequenceNumber, commit.BatchDigest)
-		cert.cStored = true
-	}
-
 	if pbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
 		pbft.stopNewViewTimer()
 		idx := msgID{v: commit.View, n: commit.SequenceNumber, d: commit.BatchDigest}
@@ -736,9 +725,12 @@ func (pbft *pbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing []str
 	pbft.logger.Debugf("Replica %d try to fetch missing txs from primary %d", pbft.id, preprep.ReplicaId)
 
 	fetch := &FetchMissingTransaction{
-		Preprep:   preprep,
-		HashList:  missing,
-		ReplicaId: pbft.id,
+		View:           preprep.View,
+		Vid:            preprep.Vid,
+		SequenceNumber: preprep.SequenceNumber,
+		BatchDigest:    preprep.BatchDigest,
+		HashList:       missing,
+		ReplicaId:      pbft.id,
 	}
 
 	payload, err := proto.Marshal(fetch)
@@ -761,17 +753,21 @@ func (pbft *pbftImpl) recvFetchMissingTransaction(fetch *FetchMissingTransaction
 
 	pbft.logger.Debugf("Primary %d received FetchMissingTransaction request from replica %d", pbft.id, fetch.ReplicaId)
 
-	txList, err := pbft.batchMgr.txPool.ReturnFetchTxs(fetch.Preprep.BatchDigest, fetch.HashList)
+	txList, err := pbft.batchMgr.txPool.ReturnFetchTxs(fetch.BatchDigest, fetch.HashList)
 	if err != nil {
-		pbft.logger.Warningf("Primary %d cannot find the digest %d, missing txs: %v", pbft.id, fetch.Preprep.BatchDigest, fetch.HashList)
+		pbft.logger.Warningf("Primary %d cannot find the digest %d, missing txs: %v",
+			pbft.id, fetch.BatchDigest, fetch.HashList)
 		return nil
 	}
 
 	re := &ReturnMissingTransaction{
-		Preprep:   fetch.Preprep,
-		HashList:  fetch.HashList,
-		TxList:    txList,
-		ReplicaId: pbft.id,
+		View:           fetch.View,
+		Vid:            fetch.Vid,
+		SequenceNumber: fetch.SequenceNumber,
+		BatchDigest:    fetch.BatchDigest,
+		HashList:       fetch.HashList,
+		TxList:         txList,
+		ReplicaId:      pbft.id,
 	}
 
 	payload, err := proto.Marshal(re)
@@ -795,55 +791,68 @@ func (pbft *pbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 	pbft.logger.Debugf("Replica %d received ReturnMissingTransaction from replica %d", pbft.id, re.ReplicaId)
 
 	if len(re.TxList) != len(re.HashList) {
-		pbft.logger.Warningf("Replica %d received mismatch length return %v", pbft.id, re.Preprep)
+		pbft.logger.Warningf("Replica %d received mismatch length return %v", pbft.id, re)
 		return nil
 	}
 
-	if re.Preprep.SequenceNumber != uint64(0) {
+	if re.Vid <= pbft.batchVdr.lastVid {
+		pbft.logger.Warningf("Replica %d received validated missing transactions, vid=%d, ignore it",
+			pbft.id, re.Vid)
+		return nil
+	}
 
-		cert := pbft.storeMgr.getCert(re.Preprep.View, re.Preprep.SequenceNumber, re.Preprep.BatchDigest)
-		if cert.prePrepare == nil && !reflect.DeepEqual(cert.prePrepare, re.Preprep) {
-			pbft.logger.Warningf("Replica %d had not received a pre-prepare before like %v", pbft.id, re.Preprep)
+	if re.SequenceNumber != uint64(0) {
+
+		cert := pbft.storeMgr.getCert(re.View, re.SequenceNumber, re.BatchDigest)
+		if cert.prePrepare == nil {
+			pbft.logger.Warningf("Replica %d had not received a pre-prepare before for view=%d/vid=%d/seqNo=%d",
+				pbft.id, re.View, re.Vid, re.SequenceNumber)
 			return nil
 		}
 
-		_, err := pbft.batchMgr.txPool.GotMissingTxs(re.Preprep.BatchDigest, re.TxList)
+		_, err := pbft.batchMgr.txPool.GotMissingTxs(re.BatchDigest, re.TxList)
 		if err != nil {
-			pbft.logger.Warningf("Replica %d find something wrong with the return of missing txs, error: %v", pbft.id, err)
+			pbft.logger.Warningf("Replica %d find something wrong with the return of missing txs, error: %v",
+				pbft.id, err)
 			return nil
 		}
 
-		txList, missing, err := pbft.batchMgr.txPool.GetTxsByHashList(re.Preprep.BatchDigest, re.Preprep.HashBatch.List)
+		txList, missing, err := pbft.batchMgr.txPool.GetTxsByHashList(re.BatchDigest, cert.prePrepare.HashBatch.List)
 		if err != nil || missing != nil {
-			pbft.logger.Warningf("Replica %d still cannot get all txs with digest: %s", pbft.id, re.Preprep.BatchDigest)
+			pbft.logger.Warningf("Replica %d still cannot get all txs with digest: %s", pbft.id, re.BatchDigest)
 			return nil
 		}
 
+		preprep := pbft.storeMgr.getCert(re.View, re.SequenceNumber, re.BatchDigest)
+		if preprep == nil {
+
+		}
 		batch := &TransactionBatch{
 			TxList:    txList,
-			HashList:  re.Preprep.HashBatch.List,
-			Timestamp: re.Preprep.HashBatch.Timestamp,
+			HashList:  cert.prePrepare.HashBatch.List,
+			Timestamp: cert.prePrepare.HashBatch.Timestamp,
 		}
 
-		pbft.storeMgr.txBatchStore[re.Preprep.BatchDigest] = batch
-		pbft.storeMgr.outstandingReqBatches[re.Preprep.BatchDigest] = batch
+		pbft.storeMgr.txBatchStore[re.BatchDigest] = batch
+		pbft.storeMgr.outstandingReqBatches[re.BatchDigest] = batch
 	} else {
-		idx := msgID{re.Preprep.View, re.Preprep.Vid, re.Preprep.BatchDigest}
+		idx := msgID{re.View, re.Vid, re.BatchDigest}
 		preprep, ok := pbft.batchVdr.spNullRequest[idx]
-		if !ok || !reflect.DeepEqual(preprep, re.Preprep) {
-			pbft.logger.Warningf("Replica %d had not received a pre-prepare before like %v", pbft.id, re.Preprep)
+		if !ok {
+			pbft.logger.Warningf("Replica %d had not received a pre-prepare before for view=%d/vid=%d/seqNo=%d",
+				pbft.id, re.View, re.Vid, re.SequenceNumber)
 			return nil
 		}
 
-		_, err := pbft.batchMgr.txPool.GotMissingTxs(re.Preprep.BatchDigest, re.TxList)
+		_, err := pbft.batchMgr.txPool.GotMissingTxs(re.BatchDigest, re.TxList)
 		if err != nil {
 			pbft.logger.Warningf("Replica %d find something wrong with the return of missing txs, error: %v", pbft.id, err)
 			return nil
 		}
 
-		txList, missing, err := pbft.batchMgr.txPool.GetTxsByHashList(re.Preprep.BatchDigest, re.Preprep.HashBatch.List)
+		txList, missing, err := pbft.batchMgr.txPool.GetTxsByHashList(re.BatchDigest, preprep.HashBatch.List)
 		if err != nil || missing != nil {
-			pbft.logger.Warningf("Replica %d still cannot get all txs with digest: %s", pbft.id, re.Preprep.BatchDigest)
+			pbft.logger.Warningf("Replica %d still cannot get all txs with digest: %s", pbft.id, re.BatchDigest)
 			return nil
 		}
 

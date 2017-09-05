@@ -12,8 +12,8 @@ import (
 
 	"hyperchain/consensus/events"
 
-	"github.com/golang/protobuf/proto"
 	"errors"
+	"github.com/golang/protobuf/proto"
 )
 
 //view change manager
