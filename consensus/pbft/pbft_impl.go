@@ -6,12 +6,14 @@ import (
 	"encoding/base64"
 	"fmt"
 	"sort"
+	"strconv"
 	"sync/atomic"
 	"time"
 
 	"hyperchain/common"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
+	"hyperchain/consensus/helper/persist"
 	"hyperchain/consensus/txpool"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
@@ -1464,10 +1466,11 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 	pbft.storeMgr.moveWatermarks(pbft, h)
 
 	pbft.h = h
-	err:=persist.StoreState(pbft.namespace,"pbft.h", []byte(strconv.FormatUint(h,10)))
-	if err!=nil{
-		panic("persist pbft.h failed "+err.Error())
+	err := persist.StoreState(pbft.namespace, "pbft.h", []byte(strconv.FormatUint(h, 10)))
+	if err != nil {
+		panic("persist pbft.h failed " + err.Error())
 	}
+
 	// we should update the recovery target if system goes on
 	if pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.recoveryMgr.recoveryToSeqNo = &h

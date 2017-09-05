@@ -405,13 +405,13 @@ func (pbft *pbftImpl) restoreState() {
 	} else {
 		pbft.logger.Warningf("Replica %d could not restore checkpoints: %s", pbft.id, err)
 	}
-	hstr,err:=persist.ReadState(pbft.namespace,"pbft.h")
-	if err!=nil{
+	hstr, err := persist.ReadState(pbft.namespace, "pbft.h")
+	if err != nil {
 		pbft.logger.Warningf("Replica %d could not restore h: %s", pbft.id, err)
-	}else{
-		h,err:=strconv.ParseUint(string(hstr),10,64)
-		if err!=nil{
-			panic("transfer pbft.h from string to uint64 failed with err: "+err.Error())
+	} else {
+		h, err := strconv.ParseUint(string(hstr), 10, 64)
+		if err != nil {
+			panic("transfer pbft.h from string to uint64 failed with err: " + err.Error())
 		}
 		pbft.moveWatermarks(h)
 	}
