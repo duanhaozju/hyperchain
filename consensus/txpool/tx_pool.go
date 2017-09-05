@@ -152,6 +152,11 @@ func (pool *txPoolImpl) GetTxsByHashList(id string, hashList []string) (txs []*t
 		missingTxsHash = nil
 		return
 	}
+	if miss, ok := pool.missingTxs[id]; ok {
+		txs = nil
+		missingTxsHash = miss
+		return
+	}
 	for _, hash := range hashList {
 		_, ok := pool.batchedTxs[hash]
 		if ok {
