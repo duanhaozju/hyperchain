@@ -65,7 +65,7 @@ algo = "PBFT"
  priv   = "config/certs/rcert.priv"
 
 [encryption.tcert]
-  # if you do not have rcert, leave this item blank
+  # Tcert whitelist configuration.
  whiteList = true
  listDir  = "config/certs/tcerts"
 
