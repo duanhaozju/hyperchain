@@ -3,6 +3,7 @@ package p2p
 import (
 	"sync"
 	"github.com/terasum/viper"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -55,12 +56,15 @@ type PeerTriples struct {
 	triples []*PeerTriple
 }
 
-func QuickParsePeerTriples(namespcace string, nodes []interface{}) *PeerTriples {
+func QuickParsePeerTriples(namespcace string, nodes []interface{}) (*PeerTriples,error) {
 	pts := NewPeerTriples()
 	for _, item := range nodes {
 		var id int
 		var hostname string
-		node := item.(map[string]interface{})
+		node,ok := item.(map[string]interface{})
+		if !ok {
+			return errors.New("cannot parse the peer config nodes list, please check the peerconfig.yaml file")
+		}
 		for key, value := range node {
 			if key == "id" {
 				id = int(value.(int64))
@@ -72,7 +76,7 @@ func QuickParsePeerTriples(namespcace string, nodes []interface{}) *PeerTriples 
 		pt := NewPeerTriple(namespcace, id, hostname)
 		pts.Push(pt)
 	}
-	return pts
+	return pts,nil
 }
 
 func SwitchPeerTriples(pts *PeerTriples, tpts *PeerTriples) {
