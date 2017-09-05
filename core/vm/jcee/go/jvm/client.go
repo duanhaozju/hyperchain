@@ -2,39 +2,58 @@ package jvm
 
 import (
 	"context"
+	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
+	"hyperchain/common"
 	pb "hyperchain/core/vm/jcee/protos"
-	"fmt"
+	"time"
+	"github.com/op/go-logging"
 )
 
 type Client struct {
-	port   int
-	host   string
+	config *common.Config
 	conn   *grpc.ClientConn
 	stream pb.Contract_RegisterClient
 	CC     pb.ContractClient
+	addr   string
+	logger *logging.Logger
 }
 
-func NewClient(conn *grpc.ClientConn) *Client {
+func NewClient(conf *common.Config) *Client {
 	return &Client{
-		conn: conn,
+		config: conf,
+		logger: common.GetLogger(conf.GetString(common.NAMESPACE), "jvmclient"),
 	}
 }
 
 func (c *Client) Connect() error {
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%d", c.host, c.port), grpc.WithInsecure())
-	if err != nil {
-		return err
+	retryTime := 10
+	for ; c.stream == nil && retryTime > 0; retryTime -- {
+		c.addr = fmt.Sprintf("localhost:%s", c.config.GetString(common.JVM_PORT))
+		c.logger.Debugf("%d times try to connect to %s", retryTime, c.addr)
+		conn, err := grpc.Dial(c.addr, grpc.WithInsecure())
+		if err != nil {
+			continue
+		}
+		c.conn = conn
+		c.CC = pb.NewContractClient(c.conn)
+		stream, err := c.CC.Register(context.Background())
+		if err != nil {
+			continue
+		}
+		c.stream = stream
+		c.logger.Criticalf("jvm client connect to %s successful", c.addr)
+		if c.stream == nil {
+			time.Sleep(1 * time.Second)
+		}
+		return nil
 	}
-	c.conn = conn
-	c.CC = pb.NewContractClient(c.conn)
-	stream, err := c.CC.Register(context.Background())
-	if err != nil {
-		return err
+	if c.stream == nil {
+		return nil
+	}else {
+		return fmt.Errorf("jvm client connect to server failed")
 	}
-	c.stream = stream
-	return nil
 }
 
 func (c *Client) sendMsg(msg *pb.Message) error {
@@ -42,10 +61,39 @@ func (c *Client) sendMsg(msg *pb.Message) error {
 }
 
 //Execute execute transaction in syn way.
-func (c *Client) Execute(msg *pb.Message) (*pb.Message, error) {
+func (c *Client) SyncExecute(req *pb.Request) (*pb.Response, error) {
+	if c.stream == nil {
+		err := c.Connect()
+		if err != nil {
+			return &pb.Response{
+				Ok:false,
+				Result:[]byte(err.Error()),
+			}, err
+		}
+	}
+
+	msg := &pb.Message{
+		Type: pb.Message_TRANSACTION,
+	}
+	payload, err := proto.Marshal(req)
+	msg.Payload = payload
 	c.stream.Send(msg)
 	resp, err := c.stream.Recv()
-	return resp, err
+	if err != nil {
+		return &pb.Response{
+			Ok:     false,
+			Result: []byte(err.Error()),
+		}, err
+	}
+	rsp := &pb.Response{}
+	err = proto.Unmarshal(resp.Payload, rsp)
+	if err != nil {
+		return &pb.Response{
+			Ok:     false,
+			Result: []byte(err.Error()),
+		}, err
+	}
+	return rsp, err
 }
 
 //AsyncExecute execute Request in asynchronous way.
@@ -59,6 +107,10 @@ func (c *Client) AsyncExecute(tx *pb.Request) error {
 	}
 	msg.Payload = payload
 	return c.stream.Send(msg)
+}
+
+func (c *Client) HeartBeat() (*pb.Response, error) {
+	return c.CC.HeartBeat(context.Background(), &pb.Request{}, grpc.FailFast(true))
 }
 
 //BatchExecute execute requests by batch
@@ -82,4 +134,12 @@ func (c *Client) BatchExecute(requests []*pb.Request) ([]*pb.Response, error) {
 		count++
 	}
 	return responses, nil
+}
+
+func (c *Client) Addr() string {
+	return c.addr
+}
+
+func (c *Client) Close() error {
+	return c.conn.Close()
 }

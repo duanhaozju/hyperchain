@@ -137,7 +137,6 @@ func (nr *nsManagerImpl) Start() error {
 			return err
 		}
 	}
-
 	return nil
 }
 
