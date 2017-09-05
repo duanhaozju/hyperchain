@@ -30,7 +30,7 @@ func NewSecuritySelector(caconf string)(hts.Security){
 		return NewECDHWithSM4()
 	case "3des":
 		log.Notice("Use ECDH WITH 3DES ALGO!")
-		return NewECDHWithAES()
+		return NewECDHWith3DES()
 	default:
 		log.Error("Unknow symmetric encryption algorithm,please modify cacondig.yaml and restart node!")
 		return NewECDHWithPURE()

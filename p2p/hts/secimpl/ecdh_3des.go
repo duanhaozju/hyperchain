@@ -16,13 +16,13 @@ import (
 )
 // this secimpl implements the Security interface
 
-type ECDHWithAES struct{
+type ECDHWith3DES struct{
 }
-func NewECDHWithAES()*ECDHWithAES{
-	return &ECDHWithAES{}
+func NewECDHWith3DES()*ECDHWith3DES{
+	return &ECDHWith3DES{}
 }
 
-func (ea *ECDHWithAES)VerifySign(sign,data,rawcert []byte)(bool,error){
+func (ea *ECDHWith3DES)VerifySign(sign,data,rawcert []byte)(bool,error){
 	cert,err := primitives.ParseCertificate(rawcert)
 	if err != nil{
 		return false,err
@@ -44,7 +44,7 @@ func (ea *ECDHWithAES)VerifySign(sign,data,rawcert []byte)(bool,error){
 	return ecdsa.Verify(pubkey,hash,ecdsasign.R,ecdsasign.S),nil
 }
 
-func(ea *ECDHWithAES)GenerateShareKey(priKey []byte,rand []byte,rawcert []byte)(sharedKey []byte,err error){
+func(ea *ECDHWith3DES)GenerateShareKey(priKey []byte,rand []byte,rawcert []byte)(sharedKey []byte,err error){
 	prikey,err := primitives.ParseKey(priKey)
 	if err != nil{
 		return nil,err
@@ -85,10 +85,10 @@ func(ea *ECDHWithAES)GenerateShareKey(priKey []byte,rand []byte,rawcert []byte)(
 
 }
 
-func(ea *ECDHWithAES)Encrypt(key, originMsg []byte)(encryptedMsg []byte,err error){
+func(ea *ECDHWith3DES)Encrypt(key, originMsg []byte)(encryptedMsg []byte,err error){
 	return TripleDesEnc(key,originMsg)
 }
-func(ea *ECDHWithAES)Decrypt(key, encryptedMsg []byte)(originMsg []byte,err error){
+func(ea *ECDHWith3DES)Decrypt(key, encryptedMsg []byte)(originMsg []byte,err error){
 	return TripleDesDec(key,encryptedMsg)
 }
 
