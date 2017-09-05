@@ -72,25 +72,6 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
         }
         return true;
     }
-    /**
-     * @param request
-     * @param responseObserver
-     */
-    @Override
-    public void execute(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
-//        if (state == State.running) {
-//            if (!pass(request, responseObserver)) return;
-//            Caller caller = new Caller(request, responseObserver);
-//            try {
-//                contractExecutor.dispatch(caller);
-//            } catch (InterruptedException ie) {
-//                logger.error(ie.getMessage());
-//                Errors.ReturnErrMsg(ie.getMessage(), responseObserver);
-//            }
-//        }else {
-//            Errors.ReturnErrMsg("HyperVM can not execute request now, current state is " + state, responseObserver);
-//        }
-    }
 
     //pass validate the request header.
     public boolean pass(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver) {
@@ -183,11 +164,6 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
 
             }
         };
-    }
-
-    @Override
-    public StreamObserver<ContractProto.Request> streamExecute(StreamObserver<ContractProto.Response> responseObserver) {
-        return super.streamExecute(responseObserver);
     }
 
     //ContractGrpcServerImpl state
