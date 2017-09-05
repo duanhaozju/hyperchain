@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	context "golang.org/x/net/context"
 	"google.golang.org/grpc"
 	pb "hyperchain/core/vm/jcee/protos"
@@ -15,24 +16,19 @@ var port *string
 var host *string
 
 type jvmServer struct {
-	req    chan *pb.Request
-	stream pb.Contract_StreamExecuteServer
+	req    chan *pb.Message
+	stream pb.Contract_RegisterServer
 }
 
 var count = 0
 
-func (js *jvmServer) Execute(c context.Context, req *pb.Request) (*pb.Response, error) {
+func (js *jvmServer) HeartBeat(c context.Context, req *pb.Request) (*pb.Response, error) {
 	count++
 	fmt.Printf("Process request %d: %v\n", count, req)
 	return &pb.Response{Ok: true}, nil
 }
 
-func (js *jvmServer) HeartBeat(c context.Context, req *pb.Request) (*pb.Response, error) {
-
-	return nil, nil
-}
-
-func (js *jvmServer) StreamExecute(stream pb.Contract_StreamExecuteServer) error {
+func (js *jvmServer) Register(stream pb.Contract_RegisterServer) error {
 	js.stream = stream
 	for { // close judge
 		req, err := stream.Recv()
@@ -55,8 +51,12 @@ func (js *jvmServer) startProcessThread() {
 		case req := <-js.req:
 			fmt.Printf("Process request %d: %v\n", i, req)
 			//Handle in another thread
-			js.stream.Send(&pb.Response{
-				Ok: true,
+			rsp := &pb.Response{Ok: true}
+			payload, _ := proto.Marshal(rsp)
+
+			js.stream.Send(&pb.Message{
+				Type:    pb.Message_RESPONSE,
+				Payload: payload,
 			})
 		}
 	}
@@ -64,7 +64,7 @@ func (js *jvmServer) startProcessThread() {
 
 func NewJvmServer() *jvmServer {
 	return &jvmServer{
-		req: make(chan (*pb.Request), 1000),
+		req: make(chan (*pb.Message), 1000),
 	}
 }
 

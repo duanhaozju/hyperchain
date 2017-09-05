@@ -5,12 +5,8 @@ option java_package = "cn.hyperchain.protos";
 option java_outer_classname = "ContractProto";
 
 service Contract {
-    //used tp execute contract method remotely
-    rpc Execute (Request) returns (Response) {}
-    //used to detect the health state of contract
+    //HeartBeat used to detect the health of server
     rpc HeartBeat(Request) returns (Response) {}
-    //used to transfer data between hyperchain and contract, just for test now, will be discard later
-    rpc StreamExecute (stream Request) returns(stream Response) {}
 
     //Interface that provides support to jvm execution which will estabilish a stream between Server
     //and Client. Message type provide the context necessary for server to respond appropriately.
@@ -109,7 +105,6 @@ message Range {
     bytes start = 2;
     bytes end = 3;
 }
-
 
 message Value{
     string id = 1;

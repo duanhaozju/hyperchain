@@ -46,11 +46,8 @@ func asyncCallTest() {
 		log.Error(err)
 	}
 	client := pb.NewContractClient(conn)
-	client.Execute(context.Background(), &pb.Request{
-		Method: "asyncCall",
-	})
 
-	stream, err := client.StreamExecute(context.Background())
+	stream, err := client.Register(context.Background())
 	if err != nil {
 		fmt.Print(err)
 		return
@@ -77,8 +74,9 @@ func asyncCallTest() {
 	}()
 
 	for i := 0; i < *totalCount; i++ {
-		stream.Send(&pb.Request{
-			Method: "asyncCall",
+		stream.Send(&pb.Message{
+			Type:pb.Message_TRANSACTION,
+			Payload:[]byte("asyncCall"),
 		})
 	}
 
@@ -99,8 +97,7 @@ func synCallTest() {
 	client := pb.NewContractClient(conn)
 	start := time.Now()
 	for i := 0; i < *totalCount; i++ {
-		rsp, _ := client.Execute(context.Background(), &pb.Request{Method: "syncCall"})
-
+		rsp, _ := client.HeartBeat(context.Background(), &pb.Request{Method: "syncCall"})
 		fmt.Printf("receive response %d: %v\n", i, rsp)
 	}
 	fmt.Printf("syn call time used: %v", time.Now().Sub(start))
