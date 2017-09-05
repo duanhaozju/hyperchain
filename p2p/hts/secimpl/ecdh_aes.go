@@ -1,21 +1,17 @@
 package secimpl
 
 import (
-"crypto"
-"crypto/ecdsa"
-"errors"
-"math/big"
-"encoding/asn1"
-"fmt"
-"crypto/elliptic"
-"hyperchain/crypto/sha3"
-"hyperchain/crypto/primitives"
-"crypto/cipher"
-"bytes"
-"crypto/des"
-	"hyperchain/cmd/dbcli/block"
+	"crypto"
+	"crypto/ecdsa"
+	"errors"
+	"math/big"
+	"encoding/asn1"
+	"fmt"
+	"crypto/elliptic"
+	"hyperchain/crypto/sha3"
+	"hyperchain/crypto/primitives"
+	"crypto/cipher"
 	"crypto/aes"
-	"debug/macho"
 )
 // this secimpl implements the Security interface
 

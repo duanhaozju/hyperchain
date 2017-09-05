@@ -75,7 +75,7 @@ algo = "PBFT"
  enableT    = true
 
 [encryption.security]
- algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des or sm4)
+ algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des,aes or sm4)
 
 
 ############################################################################################################
