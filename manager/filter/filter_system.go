@@ -2,10 +2,10 @@ package filter
 
 import (
 	"errors"
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/manager/event"
 	"time"
-	"github.com/op/go-logging"
 )
 
 // Type determines the kind of filter and is used to put the filter in to
@@ -36,7 +36,7 @@ const (
 
 var (
 	ErrInvalidSubscriptionID = errors.New("invalid id")
-	log 	     *logging.Logger // package-level logger
+	log                      *logging.Logger // package-level logger
 
 )
 
