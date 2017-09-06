@@ -135,7 +135,10 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 
 	}
 	nodes := peercnf.Get("nodes").([]interface{})
-	pmi.pts = QuickParsePeerTriples(pmi.namespace, nodes)
+	pmi.pts,err = QuickParsePeerTriples(pmi.namespace, nodes)
+	if err != nil{
+		return nil,err
+	}
 	//peer pool
 	pmi.peerPool = NewPeersPool(namespace,pmi.peerMgrEv,pmi.pts,pmi.peercnf)
 	//set vp information
