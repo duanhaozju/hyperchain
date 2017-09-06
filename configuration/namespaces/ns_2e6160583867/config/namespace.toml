@@ -66,13 +66,13 @@ algo = "PBFT"
 
 [encryption.tcert]
   # Tcert whitelist configuration.
- whiteList = true
+ whiteList = false
  listDir  = "config/certs/tcerts"
 
 [encryption.check]
  enable     = true
  sign       = false
- enableT    = true
+ enableT    = false
 
 [encryption.security]
  algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des,aes or sm4)
