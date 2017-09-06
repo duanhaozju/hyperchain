@@ -66,7 +66,15 @@ func (cg *CertGroup)EVerify(rawcert, sign []byte, hash []byte) (bool, error) {
 	if err != nil {
 		return false, errors.New("unmarshal the signature failed. (E verify)")
 	}
+
 	b := ecdsa.Verify(pubkey, hash, ecdsasign.R, ecdsasign.S)
+
+	//验证父证书
+	err = x509cert.CheckSignatureFrom(cg.eCA_S)
+	if err != nil {
+		return false, errors.New("verified the parent cert failed!")
+	}
+
 	if b {
 		return true, nil
 	}
@@ -102,6 +110,13 @@ func (cg *CertGroup)RVerify(rawcert, sign []byte, data []byte) (bool, error) {
 	}
 	hash := cg.Hash(data)
 	b := ecdsa.Verify(pubkey, hash, ecdsasign.R, ecdsasign.S)
+
+	//验证父证书
+	err = x509cert.CheckSignatureFrom(cg.rCA_S)
+	if err != nil {
+		return false, errors.New("verified the parent cert failed!")
+	}
+
 	if b {
 		return true, nil
 	}
