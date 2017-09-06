@@ -194,6 +194,12 @@ func NewHTS(namespace string, sec Security, caConfigPath string) (*HTS, error) {
 			return nil, err
 		}
 		hts.cg.rCA = rca
+		rcas, err := primitives.ParseCertificate(rca)
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("cannot parse the rca certificate, reason: %s", err.Error()))
+		}
+		hts.cg.rCA_S = rcas
+
 		rcertp := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_RCERT_RCERT))
 		if !common.FileExist(rcertp) {
 			return nil, errors.New(fmt.Sprintf("cannot read in rcert,reason: file not exist (%s)", rcertp))

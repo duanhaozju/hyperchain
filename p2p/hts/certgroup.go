@@ -70,7 +70,8 @@ func (cg *CertGroup)EVerify(rawcert, sign []byte, hash []byte) (bool, error) {
 	b := ecdsa.Verify(pubkey, hash, ecdsasign.R, ecdsasign.S)
 
 	//验证父证书
-	err = x509cert.CheckSignatureFrom(cg.eCA_S)
+	eca,_ := primitives.ParseCertificate(cg.eCA)
+	err = x509cert.CheckSignatureFrom(eca)
 	if err != nil {
 		return false, errors.New("verified the parent cert failed!")
 	}

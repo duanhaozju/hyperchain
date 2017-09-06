@@ -71,7 +71,7 @@ algo = "PBFT"
 
 [encryption.check]
  enable     = true  #enable RCert
- sign       = false  #enable Signature
+ sign       = true  #enable Signature
  enableT    = false  #enable TCert
 
 [encryption.security]
