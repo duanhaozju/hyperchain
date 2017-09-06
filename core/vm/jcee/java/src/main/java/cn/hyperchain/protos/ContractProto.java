@@ -9909,14 +9909,15 @@ public final class ContractProto {
       "ce\030\002 \001(\t\022\013\n\003cid\030\003 \001(\t\022\023\n\013blockNumber\030\004 \001" +
       "(\0042T\n\010Contract\022\"\n\tHeartBeat\022\010.Request\032\t." +
       "Response\"\000\022$\n\010Register\022\010.Message\032\010.Messa" +
-      "ge\"\000(\0010\0012\351\001\n\006Ledger\022\025\n\003Get\022\004.Key\032\006.Value" +
+      "ge\"\000(\0010\0012\217\002\n\006Ledger\022\025\n\003Get\022\004.Key\032\006.Value" +
       "\"\000\022\035\n\003Put\022\t.KeyValue\032\t.Response\"\000\022\033\n\006Del",
       "ete\022\004.Key\032\t.Response\"\000\022$\n\tBatchRead\022\t.Ba" +
       "tchKey\032\n.BathValue\"\000\022#\n\nBatchWrite\022\010.Bat" +
       "chKV\032\t.Response\"\000\022$\n\nRangeQuery\022\006.Range\032" +
       "\n.BathValue\"\0000\001\022\033\n\004Post\022\006.Event\032\t.Respon" +
-      "se\"\000B\'\n\024cn.hyperchain.protosB\rContractPr" +
-      "otoP\000b\006proto3"
+      "se\"\000\022$\n\010Register\022\010.Message\032\010.Message\"\000(\001" +
+      "0\001B\'\n\024cn.hyperchain.protosB\rContractProt" +
+      "oP\000b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {

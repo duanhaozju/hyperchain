@@ -90,6 +90,15 @@ public class LedgerGrpc {
               "Ledger", "Post"),
           io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Event.getDefaultInstance()),
           io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Response.getDefaultInstance()));
+  @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/1901")
+  public static final io.grpc.MethodDescriptor<cn.hyperchain.protos.ContractProto.Message,
+      cn.hyperchain.protos.ContractProto.Message> METHOD_REGISTER =
+      io.grpc.MethodDescriptor.create(
+          io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING,
+          generateFullMethodName(
+              "Ledger", "Register"),
+          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Message.getDefaultInstance()),
+          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Message.getDefaultInstance()));
 
   /**
    * Creates a new async stub that supports all call types for the service
@@ -167,6 +176,13 @@ public class LedgerGrpc {
       asyncUnimplementedUnaryCall(METHOD_POST, responseObserver);
     }
 
+    /**
+     */
+    public io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message> register(
+        io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message> responseObserver) {
+      return asyncUnimplementedStreamingCall(METHOD_REGISTER, responseObserver);
+    }
+
     @java.lang.Override public io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
           .addMethod(
@@ -218,6 +234,13 @@ public class LedgerGrpc {
                 cn.hyperchain.protos.ContractProto.Event,
                 cn.hyperchain.protos.ContractProto.Response>(
                   this, METHODID_POST)))
+          .addMethod(
+            METHOD_REGISTER,
+            asyncBidiStreamingCall(
+              new MethodHandlers<
+                cn.hyperchain.protos.ContractProto.Message,
+                cn.hyperchain.protos.ContractProto.Message>(
+                  this, METHODID_REGISTER)))
           .build();
     }
   }
@@ -294,6 +317,14 @@ public class LedgerGrpc {
         io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response> responseObserver) {
       asyncUnaryCall(
           getChannel().newCall(METHOD_POST, getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     */
+    public io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message> register(
+        io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message> responseObserver) {
+      return asyncBidiStreamingCall(
+          getChannel().newCall(METHOD_REGISTER, getCallOptions()), responseObserver);
     }
   }
 
@@ -440,6 +471,7 @@ public class LedgerGrpc {
   private static final int METHODID_BATCH_WRITE = 4;
   private static final int METHODID_RANGE_QUERY = 5;
   private static final int METHODID_POST = 6;
+  private static final int METHODID_REGISTER = 7;
 
   private static class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -496,6 +528,9 @@ public class LedgerGrpc {
     public io.grpc.stub.StreamObserver<Req> invoke(
         io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
+        case METHODID_REGISTER:
+          return (io.grpc.stub.StreamObserver<Req>) serviceImpl.register(
+              (io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message>) responseObserver);
         default:
           throw new AssertionError();
       }
@@ -510,7 +545,8 @@ public class LedgerGrpc {
         METHOD_BATCH_READ,
         METHOD_BATCH_WRITE,
         METHOD_RANGE_QUERY,
-        METHOD_POST);
+        METHOD_POST,
+        METHOD_REGISTER);
   }
 
 }

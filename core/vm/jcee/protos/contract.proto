@@ -66,8 +66,8 @@ service Ledger {
     rpc RangeQuery(Range) returns(stream BathValue) {}
 
     rpc Post(Event) returns (Response) {}
+    rpc Register(stream Message) returns(stream Message) {}
 
-    //rpc Invoke(stream Message) returns(stream Message) {}
 }
 
 message Event {
