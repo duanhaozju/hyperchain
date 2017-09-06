@@ -19,7 +19,7 @@ var (
 	}
 	ReceiverFlag = cli.StringFlag{
 		Name:  "receiver",
-		Usage: "The transaction origin",
+		Usage: "The transaction recipient",
 	}
 	BlockFlag = cli.Uint64Flag{
 		Name:  "block",
