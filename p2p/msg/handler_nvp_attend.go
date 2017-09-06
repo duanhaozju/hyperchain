@@ -4,17 +4,25 @@ import (
 	pb "hyperchain/p2p/message"
 	"hyperchain/manager/event"
 	"fmt"
+	"hyperchain/p2p/peerevent"
+	"hyperchain/common"
+	"github.com/op/go-logging"
 )
 
 type NVPAttendMsgHandler struct {
 	mchan chan interface{}
 	ev    *event.TypeMux
+	peermgr *event.TypeMux
+	log *logging.Logger
 }
 
-func NewNVPAttendHandler(blackHole chan interface{}, ev *event.TypeMux) *NVPAttendMsgHandler {
+func NewNVPAttendHandler(blackHole chan interface{}, ev *event.TypeMux, peermgr *event.TypeMux,log *logging.Logger) *NVPAttendMsgHandler {
 	return &NVPAttendMsgHandler{
 		mchan:blackHole,
 		ev:ev,
+		peermgr:peermgr,
+		log:log,
+
 	}
 }
 
@@ -38,7 +46,19 @@ func (h *NVPAttendMsgHandler)Receive() chan <- interface{} {
 
 //Execute
 func (h *NVPAttendMsgHandler)Execute(msg *pb.Message) (*pb.Message, error) {
-	fmt.Printf("GOT A NVP ATTEND MSG hostname(%s), type: %s ", msg.From.Hostname, msg.MessageType)
+	h.log.Infof("GOT A NVP ATTEND MSG hostname(%s), type: %s \n", msg.From.Hostname, msg.MessageType)
+	var isRec bool
+	if string(msg.Payload) == "True" {
+		isRec = true
+	}
+
+	ev := peerevent.S_NVPConnect{
+				Namespace:string(msg.From.Field),
+				Hostname:string(msg.From.Hostname),
+				Hash:common.ToHex(msg.From.UUID),
+				IsReconnect:isRec,
+			}
+	h.peermgr.Post(ev)
 	rsp := &pb.Message{
 		MessageType:pb.MsgType_RESPONSE,
 	}

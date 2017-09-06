@@ -134,18 +134,26 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		pendingSkMap : cmap.New(),
 
 	}
-	nodes := peercnf.Get("nodes").([]interface{})
-	pmi.pts,err = QuickParsePeerTriples(pmi.namespace, nodes)
-	if err != nil{
-		return nil,err
+	return pmi, nil
+}
+
+func(pmi *peerManagerImpl)configure()error{
+	er := pmi.peercnf.viper().ReadInConfig()
+	if er != nil{
+		return er
 	}
+	nodes := pmi.peercnf.viper().Get("nodes").([]interface{})
+	pts,err := QuickParsePeerTriples(pmi.namespace, nodes)
+	if err != nil{
+		return err
+	}
+	pmi.pts = pts
 	//peer pool
-	pmi.peerPool = NewPeersPool(namespace,pmi.peerMgrEv,pmi.pts,pmi.peercnf)
+	pmi.peerPool = NewPeersPool(pmi.namespace,pmi.peerMgrEv,pmi.pts,pmi.peercnf)
 	//set vp information
 	if !pmi.isVP {
 		pmi.node.info.SetNVP()
 	}
-
 	//original
 	if pmi.isOrg{
 		pmi.node.info.SetOrg()
@@ -164,7 +172,7 @@ func NewPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 	pmi.peercnf.vip.Set("self.rec",true)
 	pmi.peercnf.vip.WriteConfig()
 	pmi.peercnf.Unlock()
-	return pmi, nil
+	return nil
 }
 
 func(pmi *peerManagerImpl)prepare()error{
@@ -189,17 +197,20 @@ func(pmi *peerManagerImpl)prepare()error{
 	attendHandler := msg.NewAttendHandler(pmi.blackHole, pmi.eventHub,serverHTS)
 	pmi.node.Bind(pb.MsgType_ATTEND, attendHandler)
 
-	nvpAttendHandler := msg.NewNVPAttendHandler(pmi.blackHole, pmi.eventHub)
+	nvpAttendHandler := msg.NewNVPAttendHandler(pmi.blackHole, pmi.eventHub,pmi.peerMgrEv,pmi.logger)
 	pmi.node.Bind(pb.MsgType_NVPATTEND, nvpAttendHandler)
 
 	nvpDeleteHandler := msg.NewNVPDeleteHandler(pmi.blackHole, pmi.eventHub,pmi.peerMgrEv,serverHTS)
 	pmi.node.Bind(pb.MsgType_NVPDELETE,nvpDeleteHandler)
 
+	nvpExitHandler := msg.NewNVPExitHandler(pmi.blackHole, pmi.peerMgrEv,serverHTS)
+	pmi.node.Bind(pb.MsgType_NVPEXIT,nvpExitHandler)
 	//peer manager event subscribe
 	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_VPCONNECT),pmi.peerMgrEv.Subscribe(peerevent.S_VPConnect{}))
 	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_NVPCONNECT),pmi.peerMgrEv.Subscribe(peerevent.S_NVPConnect{}))
 	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_VPDELETE),pmi.peerMgrEv.Subscribe(peerevent.S_DELETE_VP{}))
 	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_NVPDELETE),pmi.peerMgrEv.Subscribe(peerevent.S_DELETE_NVP{}))
+	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_NVPEXIT),pmi.peerMgrEv.Subscribe(peerevent.S_NVP_EXIT{}))
 	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_UPDATE_SESSION_KEY),pmi.peerMgrEv.Subscribe(peerevent.S_UPDATE_SESSION_KEY{}))
 	pmi.peerMgrSub.Set(strconv.Itoa(peerevent.EV_REBIND),pmi.peerMgrEv.Subscribe(peerevent.S_ReBind{}))
 
@@ -218,11 +229,14 @@ func(pmgr *peerManagerImpl)unSubscribe(){
 
 // initialize the peerManager which is for init the local node
 func (pmgr *peerManagerImpl)Start() error {
-	if pmgr.isRec {
-		pmgr.node.info.SetRec()
+	if e := pmgr.configure(); e != nil{
+		return e
 	}
 	if e := pmgr.prepare();e!= nil{
 		return e
+	}
+	if pmgr.isRec {
+		pmgr.node.info.SetRec()
 	}
 	pmgr.peerMgrEvClose = make(chan interface{})
 	pmgr.listening()
@@ -243,7 +257,11 @@ func (pmgr *peerManagerImpl)Start() error {
 		pmgr.broadcast(pb.MsgType_ATTEND, []byte(pmgr.GetLocalAddressPayload()))
 		pmgr.eventHub.Post(event.AlreadyInChainEvent{})
 	} else if !pmgr.isVP {
-		pmgr.broadcast(pb.MsgType_NVPATTEND, []byte(pmgr.GetLocalAddressPayload()))
+		if pmgr.isRec {
+			pmgr.broadcast(pb.MsgType_NVPATTEND, []byte("True"))
+		}else{
+			pmgr.broadcast(pb.MsgType_NVPATTEND, []byte("False"))
+		}
 	}
 	pmgr.logger.Infof("SELF hash: %s", pmgr.node.info.Hash)
 	// after all connection
@@ -339,6 +357,14 @@ func (pmgr *peerManagerImpl)distribute(t string,ev interface{}){
 			pmgr.pendingSkMap.Set(conev.NodeHash,num.(int)+1)
 		}
 	}
+	case peerevent.S_NVP_EXIT:{
+		conev := ev.(peerevent.S_NVP_EXIT)
+		pmgr.logger.Infof("Got NVP EXIT EVENT for %s",conev.NVPHash)
+		er := pmgr.peerPool.DeleteNVPPeer(conev.NVPHash)
+		if er != nil{
+			pmgr.logger.Errorf("delete NVP failed, reason: %s",er.Error())
+		}
+	}
 	default:
 		pmgr.logger.Warningf("cannot determin the event type %v",reflect.TypeOf(ev))
 
@@ -370,6 +396,7 @@ func (pmgr *peerManagerImpl)updating(){
 					pmgr.logger.Errorf("Cannot find a NVP/VP peer By hash %s",hash)
 					continue
 				}
+				pmgr.logger.Noticef("find a NVP peer by hash %s",hash)
 			}
 			err := peer.clientHello(false,false)
 			if err != nil{
@@ -455,7 +482,7 @@ func (pmgr *peerManagerImpl) linking() {
 					err = pmgr.peerPool.AddNVPPeer(wait.Hash, newPeer)
 				}
 				if err != nil {
-					pmgr.logger.Warning("add peer %s failed, retry after 3 second", wait.Hostname)
+					pmgr.logger.Warningf("add peer %s failed, retry after 3 second, err: %s", wait.Hostname,err.Error())
 					if len(waitList) <= 1{
 						break
 					}
@@ -569,8 +596,8 @@ func (pmgr *peerManagerImpl)Broadcast(payload []byte) {
 }
 //Broadcast message to all binding hosts
 func (pmgr *peerManagerImpl) broadcast(msgType pb.MsgType, payload []byte) {
-	if !pmgr.isOnline() || !pmgr.IsVP(){
-		pmgr.logger.Warningf("Broadcast failed, local node not prepared (isonline: %v, isvp: %v)", pmgr.isonline,pmgr.isVP)
+	if !pmgr.isOnline(){
+		pmgr.logger.Warningf("Broadcast failed, local node has not prepared (isonline: %v, isvp: %v)", pmgr.isonline,pmgr.isVP)
 		return
 	}
 	// use IterBuffered for better performance
@@ -636,6 +663,7 @@ func (pmgr *peerManagerImpl)Stop() {
 			close(pmgr.peerMgrEvClose)
 
 	}
+	pmgr.broadcast(pb.MsgType_NVPEXIT,[]byte(pmgr.GetLocalNodeHash()))
 	pmgr.logger.Criticalf("Unbind all slots...")
 	pmgr.SetOffline()
 	pmgr.unSubscribe()
@@ -795,7 +823,11 @@ func(pmgr *peerManagerImpl)broadcastNVP(msgType pb.MsgType,payload []byte)error{
 			m := pb.NewMsg(msgType, payload)
 			_, err := peer.Chat(m)
 			if err != nil {
-				pmgr.logger.Errorf("hostname [target: %s](local: %s) chat err: send self %s ", peer.hostname, peer.local.Hostname, err.Error())
+				pmgr.logger.Warningf("hostname [target: %s](local: %s) chat err: send self %s ", peer.hostname, peer.local.Hostname, err.Error())
+				if ok,_ := regexp.MatchString("cannot find the filed msg slot",err.Error());ok{
+						pmgr.peerPool.DeleteNVPPeer(t.Key)
+					pmgr.logger.Noticef("delete NVP [%s](%s)", peer.namespace,peer.hostname)
+				}
 			}
 		}(p)
 	}
