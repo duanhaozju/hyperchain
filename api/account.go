@@ -33,7 +33,7 @@ func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.
 }
 
 //New Account according to args from html
-func (acc *Account) NewAccountAPI(password string) (common.Address, error) {
+func (acc *Account) NewAccount(password string) (common.Address, error) {
 	log := common.GetLogger(acc.namespace, "api")
 	am := acc.eh.GetAccountManager()
 	ac, err := am.NewAccount(password)
