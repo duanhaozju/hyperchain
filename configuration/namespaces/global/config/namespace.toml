@@ -70,9 +70,9 @@ algo = "PBFT"
  listDir  = "config/certs/tcerts"
 
 [encryption.check]
- enable     = true
- sign       = false
- enableT    = true
+ enable     = true  #enable RCert
+ sign       = false  #enable Signature
+ enableT    = false  #enable TCert
 
 [encryption.security]
  algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des,aes or sm4)
