@@ -66,6 +66,40 @@ connIdleTime = "15s"
 
 ##########################################################
 #
+# hypervm section
+#
+##########################################################
+[hypervm]
+jvm = false
+
+##########################################################
+#
+# key ports section
+#
+##########################################################
+[port]
+jsonrpc     = 8081
+restful     = 9001
+websocket   = 10001
+jvm         = 50081
+ledger      = 50051
+grpc        = 50011 # p2p
+
+##########################################################
+#
+# namespace section
+#
+##########################################################
+[namespace]
+config_root_dir = "./namespaces"
+
+    [namespace.start] # define start which namespaces when node starts
+    ns1 = true
+    global          = true
+    ns_2e6160583867 = false
+
+##########################################################
+#
 # administrator section
 #
 ##########################################################
@@ -90,36 +124,3 @@ expiration = "300s"
  interval          = 24
  rebuild_time      = 3
  bloombit          = 100000000
-
-##########################################################
-#
-# key ports section
-#
-##########################################################
-[port]
-jsonrpc     = 8081
-restful     = 9001
-websocket   = 10001
-jvm         = 50081
-ledger      = 50051
-grpc        = 50011 # p2p
-
-##########################################################
-#
-# hypervm section
-#
-##########################################################
-[hypervm]
-jvm = true
-
-##########################################################
-#
-# namespace section
-# warning: this section must be placed at the end of the file
-##########################################################
-[namespace]
-config_root_dir = "./namespaces"
-
-    [namespace.start] # define start which namespaces when node starts
-    global          = true
-    ns_2e6160583867 = false

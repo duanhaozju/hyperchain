@@ -1,16 +1,16 @@
 package common
 
 import (
-	"fmt"
-	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"os"
-	"strings"
 	"testing"
+	"os"
+	"io/ioutil"
+	"github.com/stretchr/testify/assert"
+	"fmt"
+	"strings"
 )
 
 func TestSeekAndAppend(t *testing.T) {
-	filePath := "./test/resources/global.toml"
+	filePath := "./testhelper/resources/global.toml"
 	err := SeekAndAppend("[namespace.start]", filePath, fmt.Sprintf("    %s", "ns1 = true"))
 	if err != nil {
 		t.Error(err)

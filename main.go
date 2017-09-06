@@ -35,6 +35,7 @@ func newHyperchain(argV *argT) *hyperchain {
 
 
 	globalConfig := common.NewConfig(hp.args.ConfigPath)
+	globalConfig.Set(common.GLOBAL_CONFIG_PATH, hp.args.ConfigPath)
 	common.InitHyperLoggerManager(globalConfig)
 	logger = common.GetLogger(common.DEFAULT_LOG, "main")
 	//P2P module MUST Start before namespace server
