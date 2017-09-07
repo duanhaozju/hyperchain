@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	ErrNoSuchNamespace   = errors.New("namespace/nsmgr: no such namespace found")
 	ErrInvalidNs         = errors.New("namespace/nsmgr: invalid namespace")
 	ErrCannotNewNs       = errors.New("namespace/nsmgr: can not new namespace")
 	ErrRegistered        = errors.New("namespace/nsmgr: namespace has been registered")
