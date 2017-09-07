@@ -245,6 +245,9 @@ func (pool *PeersPool)DeleteVPPeerByHash(hash string) error {
 
 //DeleteNVPPeer delete the nvp peer
 func (pool *PeersPool)DeleteNVPPeer(hash string) error {
+	if _,ok := pool.existMap.Get(hash);ok {
+		pool.existMap.Remove(hash)
+	}
 	if _, ok := pool.nvpPool.Get(hash); ok {
 		pool.nvpPool.Remove(hash)
 	}
