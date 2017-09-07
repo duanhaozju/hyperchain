@@ -191,11 +191,9 @@ func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 		return false
 	}
 	// 3. verify whether ev's seqNo equal to record seqNo which acts as block number
-	vid := record.VID
-	tempBlockNumber := record.SeqNo
-	if tempBlockNumber != ev.SeqNo {
-		executor.logger.Errorf("miss match temp block number<#%d>and actually block number<#%d> for vid #%d validation. commit for block #%d failed",
-			tempBlockNumber, ev.SeqNo, vid, ev.SeqNo)
+	if record.SeqNo != ev.SeqNo {
+		executor.logger.Errorf("miss match validation seqNo<#%d>and commit seqNo<#%d>  commit for block failed",
+			record.SeqNo, ev.SeqNo)
 		return false
 	}
 	return true
