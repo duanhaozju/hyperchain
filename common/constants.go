@@ -70,6 +70,11 @@ const (
 	P2P_ADDR 						= "P2P.addr"
 )
 
+// constants for http configuration keys
+const (
+	HTTP_SECURITY		= "http.security"
+)
+
 //constants for encryption configuration keys
 const (
 	ENCRYPTION_ECERT_ECA 	= "encryption.ecert.eca"
