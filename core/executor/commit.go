@@ -69,6 +69,7 @@ func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) 
 	}
 	// throw all invalid transactions back.
 	if ev.IsPrimary {
+		// TODO save invalid transaction by itself
 		executor.throwInvalidTransactionBack(record.InvalidTxs)
 	}
 	executor.incDemandNumber()
@@ -157,19 +158,22 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 		return nil
 	}
 	newBlock := &types.Block{
-		ParentHash:  edb.GetLatestBlockHash(executor.namespace),
-		MerkleRoot:  record.MerkleRoot,
-		TxRoot:      record.TxRoot,
-		ReceiptRoot: record.ReceiptRoot,
-		Timestamp:   ev.Timestamp,
-		CommitTime:  ev.Timestamp,
-		Number:      ev.SeqNo,
-		WriteTime:   time.Now().UnixNano(),
-		EvmTime:     time.Now().UnixNano(),
-		Bloom:       bloom,
+		Transactions: nil,
+		ParentHash:   edb.GetLatestBlockHash(executor.namespace),
+		MerkleRoot:   record.MerkleRoot,
+		TxRoot:       record.TxRoot,
+		ReceiptRoot:  record.ReceiptRoot,
+		Timestamp:    ev.Timestamp,
+		CommitTime:   ev.Timestamp,
+		Number:       ev.SeqNo,
+		WriteTime:    time.Now().UnixNano(),
+		EvmTime:      time.Now().UnixNano(),
+		Bloom:        bloom,
 	}
-	newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
-	copy(newBlock.Transactions, record.ValidTxs)
+	if len(record.ValidTxs) != 0 {
+		newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
+		copy(newBlock.Transactions, record.ValidTxs)
+	}
 	newBlock.BlockHash = newBlock.Hash().Bytes()
 	return newBlock
 }

@@ -128,9 +128,6 @@ func (executor *Executor) process(validationEvent event.ValidationEvent, done fu
 	executor.logger.Debugf("[Namespace = %s] valid transaction number %d", executor.namespace, len(validateResult.ValidTxs))
 	executor.saveValidationResult(validateResult, validationEvent, hash)
 	executor.sendValidationResult(validateResult, validationEvent, hash)
-	if len(validateResult.ValidTxs) == 0 {
-		executor.dealEmptyBlock(validateResult, validationEvent)
-	}
 	return nil, true
 }
 
@@ -268,13 +265,13 @@ func (executor *Executor) throwInvalidTransactionBack(invalidtxs []*types.Invali
 
 // saveValidationResult - save validation result to cache.
 func (executor *Executor) saveValidationResult(res *ValidationResultRecord, ev event.ValidationEvent, hash common.Hash) {
-	if len(res.ValidTxs) != 0 {
-		res.VID = ev.Vid
-		res.SeqNo = executor.getTempBlockNumber()
-		// regard the batch as a valid block
-		executor.incTempBlockNumber()
-		executor.addValidationResult(hash.Hex(), res)
-	}
+	// TODO remove the temp block number
+	// Since it is equal to vid right now
+	res.VID = ev.Vid
+	res.SeqNo = executor.getTempBlockNumber()
+	// regard the batch as a valid block
+	executor.incTempBlockNumber()
+	executor.addValidationResult(hash.Hex(), res)
 }
 
 // sendValidationResult - send validation result to consensus module.
