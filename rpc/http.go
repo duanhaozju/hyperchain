@@ -17,6 +17,10 @@ import (
 	admin "hyperchain/api/admin"
 	"errors"
 	"hyperchain/common"
+	"crypto/x509"
+	"io/ioutil"
+	"crypto/tls"
+	"golang.org/x/net/http2"
 )
 
 const (
@@ -54,12 +58,13 @@ func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp ch
 
 // start starts the http RPC endpoint.
 func (hi *httpServerImpl) start() error {
-	log.Noticef("starting http service at port %v ...", hi.port)
 
 	var (
 		listener net.Listener
 		err      error
 	)
+
+	config := hi.nr.GlobalConfig()
 
 	// start http listener
 	handler := NewServer(hi.nr, hi.stopHp, hi.restartHp)
@@ -68,12 +73,49 @@ func (hi *httpServerImpl) start() error {
 	mux.HandleFunc("/login", admin.LoginServer)
 	mux.Handle("/", newCorsHandler(handler, hi.httpAllowedOrigins))
 
-	listener, err = net.Listen("tcp", fmt.Sprintf(":%d", hi.port))
-	if err != nil {
-		return err
-	}
+	if config.GetBool(common.HTTP_SECURITY) {
+		// enable https
+		log.Noticef("starting http service at port %v ... , security connection is enabled.", hi.port)
 
-	go newHTTPServer(mux).Serve(listener)
+		pool := x509.NewCertPool()
+		caCrt, err := ioutil.ReadFile(config.GetString(common.P2P_TLS_CA))
+		if err != nil {
+			fmt.Println("ReadFile err:", err)
+			return err
+		}
+		pool.AppendCertsFromPEM(caCrt)
+
+		serverCert, err := tls.LoadX509KeyPair(config.GetString(common.P2P_TLS_CERT), config.GetString(common.P2P_TLS_CERT_PRIV))
+		if err != nil {
+			log.Errorf("Loadx509keypair err: ", err)
+			return err
+		}
+
+		if listener, err = tls.Listen("tcp", ":"+config.GetString(common.JSON_RPC_PORT), &tls.Config{
+			ClientCAs:  pool,
+			ClientAuth: tls.RequireAndVerifyClientCert,
+			Certificates: []tls.Certificate{serverCert},
+			NextProtos: []string{"h2"},
+		}); err != nil {
+			log.Error(err)
+			return err
+		}
+
+		srv := newHTTPServer(mux, &tls.Config{
+			ClientCAs:  pool,
+			ClientAuth: tls.RequireAndVerifyClientCert,
+		})
+		http2.ConfigureServer(srv, &http2.Server{})
+		go srv.Serve(listener)
+	} else {
+		// disable https
+		log.Noticef("starting http service at port %v ... , security connection is disenabled.", hi.port)
+		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", hi.port))
+		if err != nil {
+			return err
+		}
+		go newHTTPServer(mux, nil).Serve(listener)
+	}
 
 	hi.httpListener = listener
 	hi.httpHandler = handler
@@ -149,10 +191,11 @@ func (hrw *httpReadWrite) Close() error {
 //}
 
 // newHTTPServer creates a new http RPC server around an API provider.
-func newHTTPServer(mux *http.ServeMux) *http.Server {
+func newHTTPServer(mux *http.ServeMux, tlsConfig *tls.Config) *http.Server {
 	return &http.Server{
 		Handler: mux,
 		ReadTimeout:  ReadTimeout,
+		TLSConfig: tlsConfig,
 	}
 }
 
@@ -173,7 +216,6 @@ func newCorsHandler(srv *Server, allowedOrigins []string) http.Handler {
 
 // ServeHTTP serves JSON-RPC requests over HTTP.
 func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
 	if r.ContentLength > maxHTTPRequestContentLength {
 		http.Error(w,
 			fmt.Sprintf("content length too large (%d>%d)", r.ContentLength, maxHTTPRequestContentLength),
