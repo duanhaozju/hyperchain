@@ -11,17 +11,18 @@ import (
 	"hyperchain/crypto/sha3"
 	"hyperchain/crypto/primitives"
 	"crypto/cipher"
-	"crypto/aes"
+	"bytes"
+	"crypto/des"
 )
 // this secimpl implements the Security interface
 
-type ECDHWithAES struct{
+type ECDHWith3DES struct{
 }
-func NewECDHWithAES()*ECDHWithAES{
-	return &ECDHWithAES{}
+func NewECDHWith3DES()*ECDHWith3DES{
+	return &ECDHWith3DES{}
 }
 
-func (ea *ECDHWithAES)VerifySign(sign,data,rawcert []byte)(bool,error){
+func (ea *ECDHWith3DES)VerifySign(sign,data,rawcert []byte)(bool,error){
 	cert,err := primitives.ParseCertificate(rawcert)
 	if err != nil{
 		return false,err
@@ -43,7 +44,7 @@ func (ea *ECDHWithAES)VerifySign(sign,data,rawcert []byte)(bool,error){
 	return ecdsa.Verify(pubkey,hash,ecdsasign.R,ecdsasign.S),nil
 }
 
-func(ea *ECDHWithAES)GenerateShareKey(priKey []byte,rand []byte,rawcert []byte)(sharedKey []byte,err error){
+func(ea *ECDHWith3DES)GenerateShareKey(priKey []byte,rand []byte,rawcert []byte)(sharedKey []byte,err error){
 	prikey,err := primitives.ParseKey(priKey)
 	if err != nil{
 		return nil,err
@@ -84,34 +85,36 @@ func(ea *ECDHWithAES)GenerateShareKey(priKey []byte,rand []byte,rawcert []byte)(
 
 }
 
-func(ea *ECDHWithAES)Encrypt(key, originMsg []byte)(encryptedMsg []byte,err error){
-	return AesEnc(key,originMsg)
+func(ea *ECDHWith3DES)Encrypt(key, originMsg []byte)(encryptedMsg []byte,err error){
+	return TripleDesEnc(key,originMsg)
 }
-func(ea *ECDHWithAES)Decrypt(key, encryptedMsg []byte)(originMsg []byte,err error){
-	return AesDec(key,encryptedMsg)
-}
-
-func AesEnc(key,src []byte)([]byte,error){
-	if len(key) != 32 {
-		return nil, errors.New("the secret len must be 32")
-	}
-
-	block,err := aes.NewCipher(key)
-	if err!= nil{
-		return nil,err
-	}
-	msg := PKCS5Padding(src,block.BlockSize())
-	blockMode := cipher.NewCBCEncrypter(block,key[:block.BlockSize()])
-	crypted := make([]byte,len(msg))
-	blockMode.CryptBlocks(crypted,msg)
-	return crypted,nil
+func(ea *ECDHWith3DES)Decrypt(key, encryptedMsg []byte)(originMsg []byte,err error){
+	return TripleDesDec(key,encryptedMsg)
 }
 
-func AesDec(key,src []byte)([]byte,error){
-	if len(key) != 32 {
-		return nil, errors.New("the secret len must be 32")
+// 3DES encryption algorithm implements
+func TripleDesEnc(key, src []byte) ([]byte, error) {
+	if len(key) < 24 {
+		return nil, errors.New("the secret len is less than 24")
 	}
-	block,err := aes.NewCipher(key)
+	block, err := des.NewTripleDESCipher(key[:24])
+	if err != nil {
+		return nil, err
+	}
+	msg := PKCS5Padding(src, block.BlockSize())
+	blockMode := cipher.NewCBCEncrypter(block, key[:block.BlockSize()])
+	crypted := make([]byte, len(msg))
+	blockMode.CryptBlocks(crypted, msg)
+	return crypted, nil
+}
+
+// 3DES decryption algorithm implements
+func TripleDesDec(key, src []byte) ([]byte, error) {
+	//log.Criticalf("to descrypt msg is : %s",common.ToHex(src))
+	if len(key) < 24 {
+		return nil, errors.New("the secret len is less than 24")
+	}
+	block, err := des.NewTripleDESCipher(key[:24])
 	if err != nil {
 		return nil, err
 	}
@@ -122,3 +125,19 @@ func AesDec(key,src []byte)([]byte,error){
 	origData = PKCS5UnPadding(origData)
 	return origData, nil
 }
+
+//PKCS5Padding padding with pkcs5
+func PKCS5Padding(ciphertext []byte, blockSize int) []byte {
+	padding := blockSize - len(ciphertext)%blockSize
+	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(ciphertext, padtext...)
+}
+
+//PKCS5UnPadding unpadding with pkcs5
+func PKCS5UnPadding(origData []byte) []byte {
+	length := len(origData)
+	// 去掉最后一个字节 unpadding 次
+	unpadding := int(origData[length-1])
+	return origData[:(length - unpadding)]
+}
+

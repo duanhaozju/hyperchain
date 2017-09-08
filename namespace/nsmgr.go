@@ -13,6 +13,7 @@ import (
 	"os"
 	"hyperchain/core/db_utils"
 	"strings"
+	"fmt"
 )
 
 var logger *logging.Logger
@@ -221,7 +222,18 @@ func (nr *nsManagerImpl) Register(name string) error {
 		logger.Error("register bloom filter failed", err.Error())
 		return err
 	}
+	if err = updateNamespaceStartConfig(name, nr.conf); err != nil {
+		logger.Criticalf("Update namespace start for [%s] config failed", name)
+	}
 	go nr.ListenDelNode(name, delFlag)
+	return nil
+}
+
+func updateNamespaceStartConfig(name string, conf *common.Config) error  {
+	if !conf.ContainsKey(fmt.Sprintf("namespace.start.%s", name)) {
+		return common.SeekAndAppend("[namespace.start]", conf.GetString(common.GLOBAL_CONFIG_PATH),
+			fmt.Sprintf("    %s = true", name))
+	}
 	return nil
 }
 

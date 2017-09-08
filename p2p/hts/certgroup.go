@@ -13,6 +13,7 @@ import (
 
 type CertGroup struct {
 	enableEnroll bool
+	sign 	     bool
 
 	//ECert group
 	eCA          []byte
@@ -29,9 +30,6 @@ type CertGroup struct {
 	rCERT_S      *x509.Certificate
 	rCERTPriv    []byte
 	rCERTPriv_S  *ecdsa.PrivateKey
-
-	//TCert group
-	enableT      bool
 }
 
 func (cg *CertGroup)GetECert() []byte {
@@ -43,10 +41,16 @@ func (cg *CertGroup)GetRCert() []byte {
 }
 
 func (cg *CertGroup)ESign(data []byte) ([]byte, error) {
+	if !cg.sign {
+		return nil,nil
+	}
 	return cg.eCERTPriv_S.Sign(rand.Reader, data, crypto.SHA3_256)
 }
 
 func (cg *CertGroup)EVerify(rawcert, sign []byte, hash []byte) (bool, error) {
+	if !cg.sign {
+		return true,nil
+	}
 	x509cert, err := primitives.ParseCertificate(rawcert)
 	if err != nil {
 		return false, errors.New("parse the certificate failed (E verify)")
@@ -62,7 +66,16 @@ func (cg *CertGroup)EVerify(rawcert, sign []byte, hash []byte) (bool, error) {
 	if err != nil {
 		return false, errors.New("unmarshal the signature failed. (E verify)")
 	}
+
 	b := ecdsa.Verify(pubkey, hash, ecdsasign.R, ecdsasign.S)
+
+	//验证父证书
+	eca,_ := primitives.ParseCertificate(cg.eCA)
+	err = x509cert.CheckSignatureFrom(eca)
+	if err != nil {
+		return false, errors.New("verified the parent cert failed!")
+	}
+
 	if b {
 		return true, nil
 	}
@@ -70,11 +83,17 @@ func (cg *CertGroup)EVerify(rawcert, sign []byte, hash []byte) (bool, error) {
 }
 
 func (cg *CertGroup)RSign(data []byte) ([]byte, error) {
+	if !cg.sign  || !cg.enableEnroll {
+		return nil,nil
+	}
 	hash := cg.Hash(data)
 	return cg.rCERTPriv_S.Sign(rand.Reader, hash, crypto.SHA3_256)
 }
 
 func (cg *CertGroup)RVerify(rawcert, sign []byte, data []byte) (bool, error) {
+	if !cg.sign  || !cg.enableEnroll {
+		return true,nil
+	}
 	x509cert, err := primitives.ParseCertificate(rawcert)
 	if err != nil {
 		return false, errors.New("parse the certificate failed (R verify)")
@@ -92,6 +111,13 @@ func (cg *CertGroup)RVerify(rawcert, sign []byte, data []byte) (bool, error) {
 	}
 	hash := cg.Hash(data)
 	b := ecdsa.Verify(pubkey, hash, ecdsasign.R, ecdsasign.S)
+
+	//验证父证书
+	err = x509cert.CheckSignatureFrom(cg.rCA_S)
+	if err != nil {
+		return false, errors.New("verified the parent cert failed!")
+	}
+
 	if b {
 		return true, nil
 	}

@@ -20,7 +20,7 @@ type Config struct {
 //NewConfig return a new instance of Config by configPath
 func NewConfig(configPath string) *Config {
 	vp := viper.New()
-	vp.WatchConfig()
+	//vp.WatchConfig()
 	vp.SetConfigFile(configPath)
 	err := vp.ReadInConfig()
 	if err != nil {
