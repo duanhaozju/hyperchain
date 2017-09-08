@@ -596,7 +596,6 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 
 	backendVid := pbft.exec.lastExec + 1
 	pbft.seqNo = pbft.exec.lastExec
-	pbft.batchVdr.setVid(pbft.exec.lastExec)
 	pbft.batchVdr.setLastVid(pbft.exec.lastExec)
 
 	if !pbft.status.getState(&pbft.status.skipInProgress) &&
@@ -669,8 +668,7 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 	pbft.stopNewViewTimer()
 
 	pbft.seqNo = pbft.exec.lastExec
-	pbft.batchVdr.vid = pbft.exec.lastExec
-	pbft.batchVdr.lastVid = pbft.exec.lastExec
+	pbft.batchVdr.setLastVid(pbft.exec.lastExec)
 
 	if pbft.primary(pbft.view) == pbft.id {
 		xSetLen := len(nv.Xset)
@@ -686,7 +684,7 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 				batch, ok := pbft.storeMgr.txBatchStore[d]
 				if !ok {
 					pbft.logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
-				} else if i > pbft.seqNo {
+				} else if i > pbft.exec.lastExec {
 					pbft.primaryValidateBatch(d, batch, i)
 				}
 			}
@@ -729,7 +727,6 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 
 			preprep := &PrePrepare{
 				View:           pbft.view,
-				Vid:            n,
 				SequenceNumber: n,
 				BatchDigest:    d,
 				ResultHash:     batch.ResultHash,
@@ -757,7 +754,6 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 		} else {
 			prep := &Prepare{
 				View:           pbft.view,
-				Vid:            n,
 				SequenceNumber: n,
 				BatchDigest:    d,
 				ResultHash:     batch.ResultHash,
@@ -782,7 +778,6 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 		}
 		cmt := &Commit{
 			View:           pbft.view,
-			Vid:            n,
 			SequenceNumber: n,
 			BatchDigest:    d,
 			ResultHash:     batch.ResultHash,

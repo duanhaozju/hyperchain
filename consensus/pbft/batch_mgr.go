@@ -26,7 +26,6 @@ type batchManager struct {
 
 //batchValidator used to manager batch validate issues.
 type batchValidator struct {
-	vid                 uint64                 // track the validate sequence number
 	lastVid             uint64                 // track the last validate batch seqNo
 	currentVid          *uint64                // track the current validate batch seqNo
 	cacheValidatedBatch map[string]*cacheBatch // track the cached validated batch
@@ -34,16 +33,6 @@ type batchValidator struct {
 	validateTimer   events.Timer
 	validateTimeout time.Duration
 	preparedCert    map[vidx]string // track the prepared cert to help validate
-	spNullRequest   map[msgID]*PrePrepare
-}
-
-func (bv *batchValidator) setVid(vid uint64) {
-	bv.vid = vid
-}
-
-//incVid increase vid.
-func (bv *batchValidator) incVid() {
-	bv.vid = bv.vid + 1
 }
 
 func (bv *batchValidator) setLastVid(lvid uint64) {
@@ -91,7 +80,6 @@ func newBatchValidator() *batchValidator {
 	bv := &batchValidator{}
 	bv.cacheValidatedBatch = make(map[string]*cacheBatch)
 	bv.preparedCert = make(map[vidx]string)
-	bv.spNullRequest = make(map[msgID]*PrePrepare)
 	return bv
 }
 
@@ -189,24 +177,24 @@ func (pbft *pbftImpl) restartBatchTimer() {
 	pbft.logger.Debugf("Primary %d restarted the batch timer", pbft.id)
 }
 
-func (pbft *pbftImpl) primaryValidateBatch(digest string, batch *TransactionBatch, vid uint64) {
+func (pbft *pbftImpl) primaryValidateBatch(digest string, batch *TransactionBatch, seqNo uint64) {
 	// for keep the previous vid before viewchange
 	var n uint64
-	if vid != 0 {
-		n = vid
+	if seqNo != 0 {
+		n = seqNo
 	} else {
-		n = pbft.batchVdr.vid + 1
+		n = pbft.seqNo + 1
 	}
 
-	pbft.batchVdr.vid = n
+	pbft.seqNo = n
 
 	pbft.storeMgr.outstandingReqBatches[digest] = batch
 	pbft.storeMgr.txBatchStore[digest] = batch
 
-	pbft.logger.Debugf("Primary %d try to validate batch for view=%d/vid=%d, batch size: %d", pbft.id, pbft.view, pbft.batchVdr.vid, len(batch.HashList))
+	pbft.logger.Debugf("Primary %d try to validate batch for view=%d/seqNo=%d, batch size: %d", pbft.id, pbft.view, n, len(batch.HashList))
 	pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout+pbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
-		fmt.Sprintf("new request batch for view=%d/vid=%d", pbft.view, pbft.batchVdr.vid))
-	pbft.helper.ValidateBatch(digest, batch.TxList, batch.Timestamp, uint64(0), n, pbft.view, true)
+		fmt.Sprintf("new request batch for view=%d/seqNo=%d", pbft.view, n))
+	pbft.helper.ValidateBatch(digest, batch.TxList, batch.Timestamp, n, pbft.view, true)
 
 }
 
@@ -225,31 +213,18 @@ func (pbft *pbftImpl) validatePending() {
 }
 
 func (pbft *pbftImpl) preValidate(idx vidx, digest string) bool {
-	if idx.vid != pbft.batchVdr.lastVid+1 {
-		pbft.logger.Debugf("Backup %d gets validateBatch vid=%d, but expect vid=%d", pbft.id, idx.vid, pbft.batchVdr.lastVid+1)
+	if idx.seqNo != pbft.batchVdr.lastVid+1 {
+		pbft.logger.Debugf("Backup %d gets validateBatch seqNo=%d, but expect seqNo=%d", pbft.id, idx.seqNo, pbft.batchVdr.lastVid+1)
 		return false
 	}
 
-	var preprep *PrePrepare
-	var ok bool
-
-	if idx.seqNo == uint64(0) {
-		id := msgID{idx.view, idx.vid, digest}
-		preprep, ok = pbft.batchVdr.spNullRequest[id]
-		if !ok {
-			pbft.logger.Warningf("Replica %d get pre-prepare failed for special null-request view=%d/vid=%d/digest=%s",
-				pbft.id, idx.view, idx.vid, digest)
-			return false
-		}
-	} else {
-		cert := pbft.storeMgr.getCert(idx.view, idx.seqNo, digest)
-		if cert.prePrepare == nil {
-			pbft.logger.Warningf("Replica %d get pre-prepare failed for view=%d/seqNo=%d/digest=%s",
-				pbft.id, idx.view, idx.seqNo, digest)
-			return false
-		}
-		preprep = cert.prePrepare
+	cert := pbft.storeMgr.getCert(idx.view, idx.seqNo, digest)
+	if cert.prePrepare == nil {
+		pbft.logger.Warningf("Replica %d get pre-prepare failed for view=%d/seqNo=%d/digest=%s",
+			pbft.id, idx.view, idx.seqNo, digest)
+		return false
 	}
+	preprep := cert.prePrepare
 
 	batch, missing, err := pbft.batchMgr.txPool.GetTxsByHashList(preprep.BatchDigest, preprep.HashBatch.List)
 	if err != nil {
@@ -270,13 +245,9 @@ func (pbft *pbftImpl) preValidate(idx vidx, digest string) bool {
 	pbft.storeMgr.txBatchStore[preprep.BatchDigest] = txBatch
 	pbft.storeMgr.outstandingReqBatches[preprep.BatchDigest] = txBatch
 
-	currentVid := idx.vid
+	currentVid := idx.seqNo
 	pbft.batchVdr.currentVid = &currentVid
-
-	if idx.seqNo != uint64(0) {
-		cert := pbft.storeMgr.getCert(idx.view, idx.seqNo, digest)
-		cert.sentValidate = true
-	}
+	cert.sentValidate = true
 
 	pbft.execValidate(digest, txBatch, idx)
 
@@ -285,9 +256,9 @@ func (pbft *pbftImpl) preValidate(idx vidx, digest string) bool {
 
 func (pbft *pbftImpl) execValidate(digest string, txBatch *TransactionBatch, idx vidx) {
 
-	pbft.logger.Debugf("Backup %d try to validate batch for view=%d/seqNo=%d/vid=%d, batch size: %d", pbft.id, idx.view, idx.seqNo, idx.vid, len(txBatch.TxList))
+	pbft.logger.Debugf("Backup %d try to validate batch for view=%d/seqNo=%d, batch size: %d", pbft.id, idx.view, idx.seqNo, len(txBatch.TxList))
 
-	pbft.helper.ValidateBatch(digest, txBatch.TxList, txBatch.Timestamp, idx.seqNo, idx.vid, idx.view, false)
+	pbft.helper.ValidateBatch(digest, txBatch.TxList, txBatch.Timestamp, idx.seqNo, idx.view, false)
 	delete(pbft.batchVdr.preparedCert, idx)
 	pbft.batchVdr.updateLCVid()
 

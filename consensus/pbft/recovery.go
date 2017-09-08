@@ -360,10 +360,10 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.id, pbft.exec.lastExec, pbft.h, n)
 
 	if pbft.primary(pbft.view) == pbft.id {
-		for idx, cert := range pbft.storeMgr.certStore {
+		for idx := range pbft.storeMgr.certStore {
 			if idx.n > pbft.exec.lastExec {
 				delete(pbft.storeMgr.certStore, idx)
-				pbft.persistDelQPCSet(idx.v, idx.n, cert.vid, idx.d)
+				pbft.persistDelQPCSet(idx.v, idx.n, idx.d)
 			}
 		}
 	}
@@ -508,15 +508,11 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 	var prepres []*PrePrepare
 	var pres []*Prepare
 	var cmts []*Commit
-	var vid uint64
 
 	// replica just send all PQC that itself had sent
 	for idx, cert := range pbft.storeMgr.certStore {
 		// send all PQC that n > h, since it maybe wait others to execute
 		if idx.n > h && idx.v == pbft.view {
-			if idx.n == h+1 {
-				vid = cert.vid
-			}
 			if cert.prePrepare == nil {
 				pbft.logger.Warningf("Replica %d in returnRcPQC finds nil pre-prepare for view=%d/seqNo=%d",
 					pbft.id, idx.v, idx.n)
@@ -539,11 +535,7 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 			}
 		}
 	}
-	for idx, prep := range pbft.batchVdr.spNullRequest {
-		if idx.v == pbft.view && idx.n >= vid {
-			prepres = append(prepres, prep)
-		}
-	}
+
 	rcReturn := &RecoveryReturnPQC{ReplicaId: pbft.id}
 
 	// in case replica doesn't have PQC, we cannot assign a nil one

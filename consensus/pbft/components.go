@@ -28,7 +28,6 @@ type msgID struct { // our index through certStore
 //Batch state cache
 type msgCert struct {
 	resultHash   string
-	vid          uint64
 	prePrepare   *PrePrepare
 	sentPrepare  bool
 	prepare      map[Prepare]bool
@@ -58,7 +57,7 @@ type vcidx struct {
 
 type cacheBatch struct {
 	batch      *TransactionBatch
-	vid        uint64
+	seqNo      uint64
 	resultHash string
 }
 
@@ -96,5 +95,4 @@ type Xset map[uint64]string
 type vidx struct {
 	view  uint64
 	seqNo uint64
-	vid   uint64
 }

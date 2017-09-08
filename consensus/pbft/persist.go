@@ -21,7 +21,7 @@ func (pbft *pbftImpl) persistQSet(preprep *PrePrepare) {
 		pbft.logger.Warningf("Replica %d could not persist qset: %s", pbft.id, err)
 		return
 	}
-	key := fmt.Sprintf("qset.%d.%d.%d.%s", preprep.View, preprep.SequenceNumber, preprep.Vid, preprep.BatchDigest)
+	key := fmt.Sprintf("qset.%d.%d.%s", preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
@@ -63,8 +63,8 @@ func (pbft *pbftImpl) persistCSet(v uint64, n uint64, d string) {
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
-func (pbft *pbftImpl) persistDelQSet(v uint64, n uint64, vid uint64, d string) {
-	qset := fmt.Sprintf("qset.%d.%d.%d.%s", v, n, vid, d)
+func (pbft *pbftImpl) persistDelQSet(v uint64, n uint64,d string) {
+	qset := fmt.Sprintf("qset.%d.%d.%s", v, n, d)
 	persist.DelState(pbft.namespace, qset)
 }
 
@@ -77,8 +77,8 @@ func (pbft *pbftImpl) persistDelCSet(v uint64, n uint64, d string) {
 	cset := fmt.Sprintf("cset.%d.%d.%s", v, n, d)
 	persist.DelState(pbft.namespace, cset)
 }
-func (pbft *pbftImpl) persistDelQPCSet(v uint64, n uint64, vid uint64, d string) {
-	pbft.persistDelQSet(v, n, vid, d)
+func (pbft *pbftImpl) persistDelQPCSet(v uint64, n uint64, d string) {
+	pbft.persistDelQSet(v, n, d)
 	pbft.persistDelPSet(v, n, d)
 	pbft.persistDelCSet(v, n, d)
 }
@@ -98,13 +98,8 @@ func (pbft *pbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
 				preprep := &PrePrepare{}
 				err := proto.Unmarshal(set, preprep)
 				if err == nil {
-					if n != uint64(0) {
-						idx := msgID{v, n, d}
-						qset[idx] = preprep
-					} else {
-						idx := msgID{v, vid, d}
-						pbft.batchVdr.spNullRequest[idx] = preprep
-					}
+					idx := msgID{v, n, d}
+					qset[idx] = preprep
 				} else {
 					pbft.logger.Warningf("Replica %d could not restore pre-prepare key %v, err: %v", pbft.id, set, err)
 				}
@@ -181,11 +176,10 @@ func (pbft *pbftImpl) restoreCert() {
 	for idx, q := range qset {
 		cert := pbft.storeMgr.getCert(idx.v, idx.n, idx.d)
 		if idx.n > pbft.exec.lastExec {
-			pbft.persistDelQSet(idx.v, idx.n, cert.vid, idx.d)
+			pbft.persistDelQSet(idx.v, idx.n, idx.d)
 			continue
 		}
 		cert.prePrepare = q
-		cert.vid = q.Vid
 		cert.resultHash = q.ResultHash
 	}
 
@@ -239,7 +233,7 @@ func (pbft *pbftImpl) parseSpecifyCertStore() {
 					cert = ncert
 				}
 				delete(pbft.storeMgr.certStore, nidx)
-				pbft.persistDelQPCSet(nidx.v, nidx.n, ncert.vid, nidx.d)
+				pbft.persistDelQPCSet(nidx.v, nidx.n, nidx.d)
 			}
 		}
 		if cert.prePrepare != nil {
@@ -382,7 +376,6 @@ func (pbft *pbftImpl) restoreState() {
 	if pbft.seqNo < pbft.exec.lastExec {
 		pbft.seqNo = pbft.exec.lastExec
 	}
-	pbft.batchVdr.setVid(pbft.seqNo)
 	pbft.batchVdr.setLastVid(pbft.seqNo)
 
 	pbft.restoreCert()

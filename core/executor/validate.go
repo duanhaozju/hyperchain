@@ -50,7 +50,7 @@ func (executor *Executor) listenValidationEvent() {
 		case ev := <-executor.fetchValidationEvent():
 			if executor.isReadyToValidation() {
 				if success := executor.processValidationEvent(ev, executor.processValidationDone); success == false {
-					executor.logger.Errorf("validate #%d failed, system crush down.", ev.Vid)
+					executor.logger.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
 				}
 			} else {
 				executor.dropValdiateEvent(ev, executor.processValidationDone)
@@ -276,7 +276,6 @@ func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev e
 		View:         ev.View,
 		Hash:         hash.Hex(),
 		Timestamp:    ev.Timestamp,
-		Vid:          ev.Vid,
 		Digest:       ev.Digest,
 	})
 }

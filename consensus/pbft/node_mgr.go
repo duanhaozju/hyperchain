@@ -814,7 +814,6 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 
 	backenVid := pbft.exec.lastExec + 1
 	pbft.seqNo = pbft.exec.lastExec
-	pbft.batchVdr.vid = pbft.exec.lastExec
 	pbft.batchVdr.lastVid = pbft.exec.lastExec
 
 	pbft.view = update.View
@@ -932,7 +931,6 @@ func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 	pbft.stopNewViewTimer()
 
 	pbft.seqNo = pbft.exec.lastExec
-	pbft.batchVdr.vid = pbft.exec.lastExec
 	pbft.batchVdr.lastVid = pbft.exec.lastExec
 
 	if pbft.primary(pbft.view) == pbft.id {

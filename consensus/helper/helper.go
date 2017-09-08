@@ -24,7 +24,7 @@ type Stack interface {
 	InnerUnicast(msg *pb.Message, to uint64) error
 	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
 	UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error
-	ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, vid uint64, view uint64, isPrimary bool) error
+	ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
 	VcReset(seqNo uint64) error
 	InformPrimary(primary uint64) error
 	BroadcastAddNode(msg *pb.Message) error
@@ -107,11 +107,10 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 }
 
 // UpdateState transfers the UpdateStateEvent to outer
-func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, vid uint64, view uint64, isPrimary bool) error {
+func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error {
 
 	validateEvent := event.ValidationEvent{
 		Digest:       digest,
-		Vid:          vid,
 		Transactions: txs,
 		Timestamp:    timeStamp,
 		SeqNo:        seqNo,

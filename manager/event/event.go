@@ -45,7 +45,6 @@ type SessionEvent struct {
 //receive new block event from node consensus event for consensus module
 type ValidationEvent struct {
 	Digest		 string
-	Vid			 uint64
 	Transactions []*types.Transaction
 	SeqNo        uint64
 	View         uint64

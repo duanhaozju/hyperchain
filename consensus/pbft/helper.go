@@ -132,10 +132,10 @@ func (pbft *pbftImpl) getDelNV(del uint64) (n int64, v uint64) {
 // cleanAllCache clean some old cache of previous view
 func (pbft *pbftImpl) cleanAllCache() {
 
-	for idx, cert := range pbft.storeMgr.certStore {
+	for idx := range pbft.storeMgr.certStore {
 		if idx.n > pbft.exec.lastExec {
 			delete(pbft.storeMgr.certStore, idx)
-			pbft.persistDelQPCSet(idx.v, idx.n, cert.vid, idx.d)
+			pbft.persistDelQPCSet(idx.v, idx.n, idx.d)
 		}
 	}
 
