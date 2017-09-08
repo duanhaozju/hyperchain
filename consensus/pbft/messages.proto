@@ -45,41 +45,72 @@ message consensus_message {
         AGREE_UPDATE_N = 19;
         UPDATE_N = 20;
         FINISH_UPDATE = 21;
+        FETCH_MISSING_TRANSACTION = 22;
+        RETURN_MISSING_TRANSACTION = 23;
     }
     Type type = 1;
     bytes payload = 2;
 }
 
 message transaction_batch {
-    repeated types.Transaction batch = 1;
+    repeated types.Transaction tx_list = 1;
+    repeated string hash_list = 2;
+    int64 timestamp = 3;
+    uint64 seq_no = 4;
+    string resultHash = 5;
+}
+
+message hash_batch {
+    repeated string list = 1;
     int64 timestamp = 2;
 }
 
 message return_request_batch {
     transaction_batch batch = 1;
-    string digest = 2;
+    string batch_digest = 2;
+    uint64 replica_id = 3;
+}
+
+message fetch_missing_transaction {
+    uint64 view = 1;
+    uint64 sequence_number = 2;
+    string batch_digest = 3;
+    repeated string hash_list = 4;
+    uint64 replica_id = 5;
+}
+
+message return_missing_transaction {
+    uint64 view = 1;
+    uint64 sequence_number = 2;
+    string batch_digest = 3;
+    repeated string hash_list = 4;
+    repeated types.Transaction tx_list = 5;
+    uint64 replica_id = 6;
 }
 
 message pre_prepare {
     uint64 view = 1;
     uint64 sequence_number = 2;
     string batch_digest = 3;
-    transaction_batch transaction_batch = 4;
-    uint64 replica_id = 5;
+    string result_hash = 4;
+    hash_batch hash_batch = 5;
+    uint64 replica_id = 6;
 }
 
 message prepare {
     uint64 view = 1;
     uint64 sequence_number = 2;
     string batch_digest = 3;
-    uint64 replica_id = 4;
+    string result_hash = 4;
+    uint64 replica_id = 5;
 }
 
 message commit {
     uint64 view = 1;
     uint64 sequence_number = 2;
     string batch_digest = 3;
-    uint64 replica_id = 4;
+    string result_hash = 4;
+    uint64 replica_id = 5;
 }
 
 message block_info {
@@ -151,23 +182,23 @@ message recovery_init {
 }
 
 message recovery_response {
-    uint64               replica_id    = 1;
-    map<uint64, string>  chkpts        = 2;
-    uint64               blockHeight   = 3;
-    string               lastBlockHash = 4;
-    uint64               genesis       = 5;
+    uint64 replica_id = 1;
+    map<uint64, string> chkpts = 2;
+    uint64 blockHeight = 3;
+    string lastBlockHash = 4;
+    uint64 genesis = 5;
 }
 
 message recovery_fetchPQC {
     uint64 replica_id = 1;
-    uint64 h          = 2;
+    uint64 h = 2;
 }
 
 message recovery_returnPQC {
-    uint64                  replica_id = 1;
-    repeated pre_prepare    prepre_set = 2;
-    repeated prepare           pre_set   = 3;
-    repeated commit           cmt_set   = 4;
+    uint64 replica_id = 1;
+    repeated pre_prepare prepre_set = 2;
+    repeated prepare pre_set = 3;
+    repeated commit cmt_set = 4;
 }
 
 message Pset {

@@ -18,8 +18,7 @@ type ValidationResultRecord struct {
 	InvalidTxs  []*types.InvalidTransactionRecord // invalid transaction list
 	ValidTxs    []*types.Transaction              // valid transaction list
 	Receipts    []*types.Receipt                  // receipt list
-	SeqNo       uint64                            // temp block number for this batch
-	VID         uint64                            // validation label
+	SeqNo       uint64                            // sequence number
 	SubscriptionData
 }
 
@@ -116,7 +115,7 @@ func (executor *Executor) process(validationEvent event.ValidationEvent, done fu
 	)
 
 	invalidtxs, validtxs = executor.checkSign(validationEvent.Transactions)
-	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo, executor.getTempBlockNumber())
+	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo)
 	if err != nil {
 		// short circuit if error occur during the transaction execution
 		executor.logger.Errorf("[Namespace = %s] process transaction batch #%d failed.", executor.namespace, validationEvent.SeqNo)
@@ -126,11 +125,8 @@ func (executor *Executor) process(validationEvent event.ValidationEvent, done fu
 	hash := executor.calculateValidationResultHash(validateResult.MerkleRoot, validateResult.TxRoot, validateResult.ReceiptRoot)
 	executor.logger.Debugf("[Namespace = %s] invalid transaction number %d", executor.namespace, len(validateResult.InvalidTxs))
 	executor.logger.Debugf("[Namespace = %s] valid transaction number %d", executor.namespace, len(validateResult.ValidTxs))
-	executor.saveValidationResult(validateResult, validationEvent, hash)
+	executor.saveValidationResult(validateResult, hash)
 	executor.sendValidationResult(validateResult, validationEvent, hash)
-	if len(validateResult.ValidTxs) == 0 {
-		executor.dealEmptyBlock(validateResult, validationEvent)
-	}
 	return nil, true
 }
 
@@ -177,17 +173,17 @@ func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidT
 }
 
 // applyTransactions - execute transaction one by one.
-func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo, temp uint64) (error, *ValidationResultRecord) {
+func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *ValidationResultRecord) {
 	var (
 		validtxs []*types.Transaction
 		receipts []*types.Receipt
 	)
 
 	executor.initCalculator()
-	executor.statedb.MarkProcessStart(temp)
+	executor.statedb.MarkProcessStart(seqNo)
 	// execute transaction one by one
 	for i, tx := range txs {
-		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, temp)
+		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, seqNo)
 		if err != nil {
 			errType := executor.classifyInvalid(err)
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
@@ -208,8 +204,8 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 		return err, nil
 	}
 	executor.resetStateDb()
-	executor.logger.Debugf("[Namespace = %s] validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
-		executor.namespace, temp, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
+	executor.logger.Debugf("[Namespace = %s] validate result seqNo #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+		executor.namespace, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &ValidationResultRecord{
 		TxRoot:      txRoot,
 		ReceiptRoot: receiptRoot,
@@ -217,6 +213,7 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 		Receipts:    receipts,
 		ValidTxs:    validtxs,
 		InvalidTxs:  invalidTxs,
+		SeqNo:       seqNo,
 	}
 }
 
@@ -267,14 +264,8 @@ func (executor *Executor) throwInvalidTransactionBack(invalidtxs []*types.Invali
 }
 
 // saveValidationResult - save validation result to cache.
-func (executor *Executor) saveValidationResult(res *ValidationResultRecord, ev event.ValidationEvent, hash common.Hash) {
-	if len(res.ValidTxs) != 0 {
-		res.VID = ev.SeqNo
-		res.SeqNo = executor.getTempBlockNumber()
-		// regard the batch as a valid block
-		executor.incTempBlockNumber()
-		executor.addValidationResult(hash.Hex(), res)
-	}
+func (executor *Executor) saveValidationResult(res *ValidationResultRecord, hash common.Hash) {
+	executor.addValidationResult(hash.Hex(), res)
 }
 
 // sendValidationResult - send validation result to consensus module.
@@ -285,16 +276,8 @@ func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev e
 		View:         ev.View,
 		Hash:         hash.Hex(),
 		Timestamp:    ev.Timestamp,
+		Digest:       ev.Digest,
 	})
-}
-
-// dealEmptyBlock - deal with empty block, throw all invalid transaction back
-// to original node if i am a primary.
-func (executor *Executor) dealEmptyBlock(res *ValidationResultRecord, ev event.ValidationEvent) {
-	if ev.IsPrimary {
-		executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: ev.SeqNo})
-		executor.throwInvalidTransactionBack(res.InvalidTxs)
-	}
 }
 
 // pauseValidation - stop validation process for a while.

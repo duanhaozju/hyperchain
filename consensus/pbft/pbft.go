@@ -10,14 +10,15 @@
 package pbft
 
 import (
-	"github.com/golang/protobuf/proto"
+	"sync/atomic"
 
 	"hyperchain/common"
 	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
 	"hyperchain/manager/protos"
-	"sync/atomic"
+
+	"github.com/golang/protobuf/proto"
 )
 
 /**
@@ -27,18 +28,6 @@ which can be invoked by outer services.
 
 // New return a instance of pbftProtocal  TODO: rename helper.Stack ??
 func New(namespace string, conf *common.Config, h helper.Stack, n int) (*pbftImpl, error) {
-	//var err error
-	//pcPath := conf.GetString(consensus.CONSENSUS_ALGO_CONFIG_PATH)
-	//if pcPath == "" {
-	//	err = fmt.Errorf("Invalid consensus algorithm configuration path, %s: %s",
-	//		consensus.CONSENSUS_ALGO_CONFIG_PATH, pcPath)
-	//	return nil, err
-	//}
-	//conf, err = conf.MergeConfig(pcPath)
-	//if err != nil {
-	//	err = fmt.Errorf("Load pbft config error: %v", err)
-	//	return nil, err
-	//}
 	return newPBFT(namespace, conf, h, n)
 }
 
@@ -69,23 +58,23 @@ func (pbft *pbftImpl) RecvLocal(msg interface{}) error {
 		if negoView.Type == protos.Message_NEGOTIATE_VIEW {
 			return pbft.initNegoView()
 		}
-		return nil
-	} else {
-		switch msg.(type) {
-		case protos.RemoveCache:
-			if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.primary(pbft.view) == pbft.id {
-				go pbft.reqEventQueue.Push(msg)
-			} else {
-				go pbft.pbftEventQueue.Push(msg)
-			}
-		case *types.Transaction: //local transaction
-			go pbft.reqEventQueue.Push(msg)
-
-		default:
-			go pbft.pbftEventQueue.Push(msg)
+	} else if tx, ok := msg.(*types.Transaction); ok {
+		payload, err := proto.Marshal(tx)
+		if err != nil {
+			pbft.logger.Errorf("ConsensusMessage_TRANSACTION Marshal Error", err)
+			return nil
 		}
-		return nil
+		consensusMsg := &ConsensusMessage{
+			Type:    ConsensusMessage_TRANSACTION,
+			Payload: payload,
+		}
+		pbMsg := cMsgToPbMsg(consensusMsg, pbft.id)
+		pbft.helper.InnerBroadcast(pbMsg)
 	}
+
+	go pbft.pbftEventQueue.Push(msg)
+
+	return nil
 }
 
 //Start start the consensus service
@@ -98,14 +87,15 @@ func (pbft *pbftImpl) Start() {
 	atomic.StoreUint32(&pbft.activeView, 1)
 	pbft.pbftManager.Start()
 	pbft.pbftEventQueue = events.GetQueue(pbft.pbftManager.Queue()) // init pbftEventQueue
-	pbft.reqEventQueue = events.GetQueue(pbft.batchMgr.batchEventsManager.Queue())
+
+	pbft.logger.Critical(pbft.pbftEventQueue, &pbft.pbftEventQueue)
 
 	//1.restore state.
 	pbft.restoreState()
 
 	pbft.vcMgr.viewChangeSeqNo = ^uint64(0) // infinity
 	pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)
-	pbft.batchMgr.start()
+	pbft.batchMgr.start(pbft.pbftEventQueue)
 
 	pbft.timerMgr.makeRequestTimeoutLegal()
 
@@ -121,17 +111,32 @@ func (pbft *pbftImpl) Close() {
 
 	pbft.logger.Notice("PBFT clear some resources")
 
-	pbft.vcMgr = newVcManager(pbft.timerMgr, pbft, pbft.config)
+	pbft.vcMgr = newVcManager(pbft)
 	pbft.storeMgr = newStoreMgr()
 	pbft.nodeMgr = newNodeMgr()
 
-	pbft.duplicator = make(map[uint64]*transactionStore)
-	pbft.batchMgr = newBatchManager(pbft.config, pbft) // init after pbftEventQueue
+	//pbft.duplicator = make(map[uint64]*transactionStore)
+	pbft.batchMgr = newBatchManager(pbft) // init after pbftEventQueue
 	// new batch manager
-	pbft.batchVdr = newBatchValidator(pbft)
-	pbft.reqStore = newRequestStore()
+	pbft.batchVdr = newBatchValidator()
+	//pbft.reqStore = newRequestStore()
 	pbft.recoveryMgr = newRecoveryMgr()
 
 	pbft.logger.Noticef("PBFT stopped!")
 
+}
+
+func (pbft *pbftImpl) GetStatus() (normal bool, full bool) {
+
+	normal = false
+	full = false
+
+	if atomic.LoadUint32(&pbft.normal) == 1 {
+		normal = true
+	}
+	if atomic.LoadUint32(&pbft.poolFull) == 1 {
+		full = true
+	}
+
+	return
 }

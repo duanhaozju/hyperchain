@@ -4,12 +4,14 @@
 package pbft
 
 import (
-	"github.com/golang/protobuf/proto"
+	"fmt"
+	"sync/atomic"
+
+	"hyperchain/consensus"
 	"hyperchain/consensus/events"
 	"hyperchain/manager/protos"
-	"sync/atomic"
-	"hyperchain/consensus"
-	"fmt"
+
+	"github.com/golang/protobuf/proto"
 )
 
 type executor struct {
@@ -60,6 +62,10 @@ func (pbft *pbftImpl) dispatchMsgToService(e events.Event) int {
 	case *Commit:
 		return CORE_PBFT_SERVICE
 	case *Checkpoint:
+		return CORE_PBFT_SERVICE
+	case *FetchMissingTransaction:
+		return CORE_PBFT_SERVICE
+	case *ReturnMissingTransaction:
 		return CORE_PBFT_SERVICE
 
 	//view change service
@@ -134,11 +140,11 @@ func (pbft *pbftImpl) dispatchLocalEvent(e *LocalEvent) events.Event {
 //handleCorePbftEvent handler core PBFT service events.
 func (pbft *pbftImpl) handleCorePbftEvent(e *LocalEvent) events.Event {
 	switch e.EventType {
+
 	case CORE_BATCH_TIMER_EVENT:
-		pbft.logger.Debugf("Replica %d batch timer expired", pbft.id)
-		if atomic.LoadUint32(&pbft.activeView) == 1 && !pbft.batchMgr.isBatchStoreEmpty() {
-			return pbft.sendBatch()
-		}
+		pbft.logger.Debugf("Primary %d batch timer expires, try to create a batch", pbft.id)
+		pbft.stopBatchTimer()
+		pbft.batchMgr.txPool.GenerateTxBatch()
 		return nil
 
 	case CORE_NULL_REQUEST_TIMER_EVENT:
@@ -174,12 +180,17 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 	case VIEW_CHANGED_EVENT:
 		pbft.vcMgr.updateViewChangeSeqNo(pbft.seqNo, pbft.K, pbft.id)
 		pbft.startTimerIfOutstandingRequests()
+		pbft.vcMgr.vcResendCount = 0
 		pbft.vcMgr.vcResetStore = make(map[FinishVcReset]bool)
 		primary := pbft.primary(pbft.view)
 		pbft.helper.InformPrimary(primary)
 		pbft.persistView(pbft.view)
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.status.inActiveState(&pbft.status.vcHandled)
+		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
+			!pbft.status.getState(&pbft.status.inNegoView) && !pbft.status.getState(&pbft.status.skipInProgress) {
+			atomic.StoreUint32(&pbft.normal, 1)
+		}
 		pbft.logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/height=%d", pbft.id, primary, pbft.view, pbft.exec.lastExec)
 		viewChangeResult := fmt.Sprintf("Replica %d finished viewChange, primary=%d, view=%d/height=%d", pbft.id, primary, pbft.view, pbft.exec.lastExec)
 		pbft.helper.SendFilterEvent(consensus.FILTER_View_Change_Finish, viewChangeResult)
@@ -187,7 +198,6 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			pbft.sendReadyForN()
 			return nil
 		}
-		pbft.processRequestsDuringViewChange()
 		pbft.rebuildCertStoreForVC()
 	case VIEW_CHANGE_RESEND_TIMER_EVENT:
 		if atomic.LoadUint32(&pbft.activeView) == 1 {
@@ -220,13 +230,13 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 		var seqNo uint64
 		var event protos.VcResetDone
 		var ok bool
-		if event, ok = e.Event.(protos.VcResetDone) ; !ok {
+		if event, ok = e.Event.(protos.VcResetDone); !ok {
 			pbft.logger.Error("type assert error!")
 			return nil
 		}
 		seqNo = event.SeqNo
-		if pbft.status.getState(&pbft.status.inRecovery)&& pbft.recoveryMgr.recoveryToSeqNo != nil  {
-			if seqNo - 1 >= *pbft.recoveryMgr.recoveryToSeqNo {
+		if pbft.status.getState(&pbft.status.inRecovery) && pbft.recoveryMgr.recoveryToSeqNo != nil {
+			if seqNo-1 >= *pbft.recoveryMgr.recoveryToSeqNo {
 				return &LocalEvent{
 					Service:   RECOVERY_SERVICE,
 					EventType: RECOVERY_DONE_EVENT,
@@ -276,6 +286,7 @@ func (pbft *pbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 		}
 		return pbft.processUpdateN()
 	case NODE_MGR_UPDATEDN_EVENT:
+		delete(pbft.nodeMgr.updateStore, pbft.nodeMgr.updateTarget)
 		pbft.startTimerIfOutstandingRequests()
 		pbft.vcMgr.vcResendCount = 0
 		pbft.nodeMgr.finishUpdateStore = make(map[FinishUpdate]bool)
@@ -288,8 +299,11 @@ func (pbft *pbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 			pbft.status.inActiveState(&pbft.status.isNewNode)
 		}
 		atomic.StoreUint32(&pbft.nodeMgr.inUpdatingN, 0)
-		pbft.processRequestsDuringUpdatingN()
 		pbft.rebuildCertStoreForUpdate()
+		if atomic.LoadUint32(&pbft.activeView) == 1 &&
+			!pbft.status.getState(&pbft.status.inNegoView) && !pbft.status.getState(&pbft.status.skipInProgress) {
+			atomic.StoreUint32(&pbft.normal, 1)
+		}
 		pbft.logger.Criticalf("======== Replica %d finished UpdatingN, primary=%d, n=%d/f=%d/view=%d/h=%d", pbft.id, pbft.primary(pbft.view), pbft.N, pbft.f, pbft.view, pbft.h)
 	}
 
@@ -333,12 +347,15 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 			return nil
 		}
 		pbft.fetchRecoveryPQC()
-		pbft.processRequestsDuringRecovery()
 		pbft.executeAfterStateUpdate()
 		return nil
 
 	case RECOVERY_NEGO_VIEW_DONE_EVENT:
-		pbft.logger.Criticalf("======== Replica %d finished negotiating view: %d", pbft.id, pbft.view)
+		if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 &&
+			atomic.LoadUint32(&pbft.activeView) == 1 && !pbft.status.getState(&pbft.status.skipInProgress) {
+			atomic.StoreUint32(&pbft.normal, 1)
+		}
+		pbft.logger.Criticalf("======== Replica %d finished negotiating view: %d / N=%d", pbft.id, pbft.view, pbft.N)
 		primary := pbft.primary(pbft.view)
 		if pbft.status.getState(&pbft.status.vcToRecovery) {
 			pbft.parseSpecifyCertStore()

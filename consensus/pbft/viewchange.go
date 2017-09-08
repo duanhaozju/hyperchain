@@ -6,32 +6,32 @@ import (
 	"encoding/base64"
 	"fmt"
 	"reflect"
-	"hyperchain/consensus/events"
-	"github.com/golang/protobuf/proto"
+	"sort"
+	"sync/atomic"
 	"time"
 
-	"hyperchain/common"
-	"github.com/syndtr/goleveldb/leveldb/errors"
-	"sync/atomic"
-	"sort"
+	"hyperchain/consensus/events"
+
+	"errors"
+	"github.com/golang/protobuf/proto"
 )
 
 //view change manager
 type vcManager struct {
-	vcResendLimit      int                       // vcResendLimit indicates a replica's view change resending upbound.
-	vcResendCount      int                       // vcResendCount represent times of same view change info resend
-	viewChangePeriod   uint64                    // period between automatic view changes
-	viewChangeSeqNo    uint64                    // next seqNo to perform view change TODO: NO usage
-	lastNewViewTimeout time.Duration             // last timeout we used during this view change
-	newViewTimerReason string                    // what triggered the timer
+	vcResendLimit      int           // vcResendLimit indicates a replica's view change resending upbound.
+	vcResendCount      int           // vcResendCount represent times of same view change info resend
+	viewChangePeriod   uint64        // period between automatic view changes
+	viewChangeSeqNo    uint64        // next seqNo to perform view change TODO: NO usage
+	lastNewViewTimeout time.Duration // last timeout we used during this view change
+	newViewTimerReason string        // what triggered the timer
 
-	qlist		   map[qidx]*ViewChange_PQ
-	plist		   map[uint64]*ViewChange_PQ
+	qlist map[qidx]*ViewChange_PQ
+	plist map[uint64]*ViewChange_PQ
 
-	newViewStore       map[uint64]*NewView       	// track last new-view we received or sent
-	viewChangeStore    map[vcidx]*ViewChange     	// track view-change messages
-	vcResetStore       map[FinishVcReset]bool 	// track vcReset message from others
-	cleanVcTimeout	   time.Duration
+	newViewStore    map[uint64]*NewView    // track last new-view we received or sent
+	viewChangeStore map[vcidx]*ViewChange  // track view-change messages
+	vcResetStore    map[FinishVcReset]bool // track vcReset message from others
+	cleanVcTimeout  time.Duration
 }
 
 //dispatchViewChangeMsg dispatch view change consensus messages from other peers.
@@ -52,7 +52,7 @@ func (pbft *pbftImpl) dispatchViewChangeMsg(e events.Event) events.Event {
 }
 
 //newVcManager init a instance of view change manager.
-func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vcManager {
+func newVcManager(pbft *pbftImpl) *vcManager {
 	vcm := &vcManager{}
 	//vcm.pset = make(map[uint64]*ViewChange_PQ)
 	//vcm.qset = make(map[qidx]*ViewChange_PQ)
@@ -65,12 +65,12 @@ func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vc
 
 	// clean out-of-data view change message
 	var err error
-	vcm.cleanVcTimeout, err = time.ParseDuration(conf.GetString(PBFT_CLEAN_VIEWCHANGE_TIMEOUT))
+	vcm.cleanVcTimeout, err = time.ParseDuration(pbft.config.GetString(PBFT_CLEAN_VIEWCHANGE_TIMEOUT))
 	if err != nil {
 		pbft.logger.Criticalf("Cannot parse clean out-of-data view change message timeout: %s", err)
 	}
 	nvTimeout := pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
-	if vcm.cleanVcTimeout < 6 * nvTimeout {
+	if vcm.cleanVcTimeout < 6*nvTimeout {
 		vcm.cleanVcTimeout = 6 * nvTimeout
 		pbft.logger.Criticalf("Replica %d set timeout of cleaning out-of-time view change message to %v since it's too short", pbft.id, 6*nvTimeout)
 	}
@@ -83,10 +83,10 @@ func newVcManager(pbftTm *timerManager, pbft *pbftImpl, conf *common.Config) *vc
 		pbft.logger.Infof("PBFT automatic view change disabled")
 	}
 
-	vcm.lastNewViewTimeout = pbftTm.getTimeoutValue(NEW_VIEW_TIMER)
+	vcm.lastNewViewTimeout = pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 
 	// vcResendLimit
-	vcm.vcResendLimit = conf.GetInt(PBFT_VC_RESEND_LIMIT)
+	vcm.vcResendLimit = pbft.config.GetInt(PBFT_VC_RESEND_LIMIT)
 	pbft.logger.Debugf("Replica %d set vcResendLimit %d", pbft.id, vcm.vcResendLimit)
 	vcm.vcResendCount = 0
 
@@ -106,19 +106,18 @@ func (pbft *pbftImpl) calcQSet() map[qidx]*ViewChange_PQ {
 			continue
 		}
 
-		digest := cert.digest
-		if !pbft.prePrepared(digest, idx.v, idx.n) {
+		if !pbft.prePrepared(idx.d, idx.v, idx.n) {
 			continue
 		}
 
-		qi := qidx{digest, idx.n}
+		qi := qidx{idx.d, idx.n}
 		if q, ok := qset[qi]; ok && q.View > idx.v {
 			continue
 		}
 
 		qset[qi] = &ViewChange_PQ{
 			SequenceNumber: idx.n,
-			BatchDigest:    digest,
+			BatchDigest:    idx.d,
 			View:           idx.v,
 		}
 	}
@@ -139,8 +138,7 @@ func (pbft *pbftImpl) calcPSet() map[uint64]*ViewChange_PQ {
 			continue
 		}
 
-		digest := cert.digest
-		if !pbft.prepared(digest, idx.v, idx.n) {
+		if !pbft.prepared(idx.d, idx.v, idx.n) {
 			continue
 		}
 
@@ -150,7 +148,7 @@ func (pbft *pbftImpl) calcPSet() map[uint64]*ViewChange_PQ {
 
 		pset[idx.n] = &ViewChange_PQ{
 			SequenceNumber: idx.n,
-			BatchDigest:    digest,
+			BatchDigest:    idx.d,
 			View:           idx.v,
 		}
 	}
@@ -283,7 +281,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 	replicas := make(map[uint64]bool)
 	minView := uint64(0)
 	for idx := range pbft.vcMgr.viewChangeStore {
-		if vc.Timestamp + int64(pbft.timerMgr.getTimeoutValue(CLEAN_VIEW_CHANGE_TIMER)) < time.Now().UnixNano() {
+		if vc.Timestamp+int64(pbft.timerMgr.getTimeoutValue(CLEAN_VIEW_CHANGE_TIMER)) < time.Now().UnixNano() {
 			pbft.logger.Warningf("Replica %d dropped an out-of-time view change message from replica %d", pbft.id, vc.ReplicaId)
 			delete(pbft.vcMgr.viewChangeStore, idx)
 			continue
@@ -321,7 +319,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 		pbft.timerMgr.stopTimer(VC_RESEND_TIMER)
 		pbft.startNewViewTimer(pbft.vcMgr.lastNewViewTimeout, "new view change")
 		pbft.vcMgr.lastNewViewTimeout = 2 * pbft.vcMgr.lastNewViewTimeout
-		if pbft.vcMgr.lastNewViewTimeout > 5 * pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER) {
+		if pbft.vcMgr.lastNewViewTimeout > 5*pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER) {
 			pbft.vcMgr.lastNewViewTimeout = 5 * pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 		}
 		return &LocalEvent{
@@ -554,7 +552,6 @@ func (vcm *vcManager) updateViewChangeSeqNo(seqNo, K, id uint64) {
 	//logger.Debugf("Replica %d updating view change sequence number to %d", id, vcm.viewChangeSeqNo)
 }
 
-
 func (pbft *pbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing bool) {
 	newReqBatchMissing = false
 	for n, d := range xset {
@@ -568,7 +565,7 @@ func (pbft *pbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing
 				continue
 			}
 
-			if !pbft.batchVdr.containsInVBS(d) {
+			if _, ok := pbft.storeMgr.txBatchStore[d]; !ok {
 				pbft.logger.Warningf("Replica %d missing assigned, non-checkpointed request batch %s",
 					pbft.id, d)
 				if _, ok := pbft.storeMgr.missingReqBatches[d]; !ok {
@@ -594,18 +591,11 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 
 	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
 	pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
-	pbft.batchVdr.preparedCert = make(map[msgID]string)
+	pbft.batchVdr.preparedCert = make(map[vidx]string)
 	pbft.storeMgr.committedCert = make(map[msgID]string)
-	prevPrimary := pbft.primary(pbft.view - 1)
-	if prevPrimary == pbft.id {
-		pbft.rebuildDuplicator(nv.Xset)
-	} else {
-		pbft.clearDuplicator()
-	}
 
 	backendVid := pbft.exec.lastExec + 1
 	pbft.seqNo = pbft.exec.lastExec
-	pbft.batchVdr.setVid(pbft.exec.lastExec)
 	pbft.batchVdr.setLastVid(pbft.exec.lastExec)
 
 	if !pbft.status.getState(&pbft.status.skipInProgress) &&
@@ -654,10 +644,11 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 	for finish := range pbft.vcMgr.vcResetStore {
 		if finish.View == pbft.view {
 			quorum++
+			if finish.ReplicaId == pbft.primary(pbft.view) {
+				hasPrimary = true
+			}
 		}
-		if finish.ReplicaId == pbft.primary(pbft.view) {
-			hasPrimary = true
-		}
+
 	}
 	if quorum < pbft.allCorrectReplicasQuorum() || !hasPrimary {
 		return nil
@@ -677,8 +668,7 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 	pbft.stopNewViewTimer()
 
 	pbft.seqNo = pbft.exec.lastExec
-	pbft.batchVdr.vid = pbft.exec.lastExec
-	pbft.batchVdr.lastVid = pbft.exec.lastExec
+	pbft.batchVdr.setLastVid(pbft.exec.lastExec)
 
 	if pbft.primary(pbft.view) == pbft.id {
 		xSetLen := len(nv.Xset)
@@ -691,11 +681,11 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 				// This should not happen
 				pbft.logger.Critical("view change Xset has null batch, kick it out")
 			} else {
-				batch, ok := pbft.batchVdr.validatedBatchStore[d]
+				batch, ok := pbft.storeMgr.txBatchStore[d]
 				if !ok {
 					pbft.logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, pbft.id)
-				} else if i > pbft.seqNo {
-					pbft.primaryValidateBatch(batch, i)
+				} else if i > pbft.exec.lastExec {
+					pbft.primaryValidateBatch(d, batch, i)
 				}
 			}
 		}
@@ -722,23 +712,28 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 		if n <= pbft.h || n > pbft.exec.lastExec {
 			continue
 		}
-		batch, ok := pbft.batchVdr.validatedBatchStore[d]
+		batch, ok := pbft.storeMgr.txBatchStore[d]
 		if !ok && d != "" {
 			pbft.logger.Criticalf("Replica %d is missing tx batch for seqNo=%d with digest '%s' for assigned prepare", pbft.id)
 		}
 
-		cert := pbft.storeMgr.getCert(pbft.view, n)
+		hashBatch := &HashBatch{
+			List:      batch.HashList,
+			Timestamp: batch.Timestamp,
+		}
+		cert := pbft.storeMgr.getCert(pbft.view, n, d)
 
 		if pbft.primary(pbft.view) == pbft.id && ok {
 
 			preprep := &PrePrepare{
-				View:				pbft.view,
-				SequenceNumber: 		n,
-				BatchDigest:			d,
-				TransactionBatch:		batch,
-				ReplicaId:			pbft.id,
+				View:           pbft.view,
+				SequenceNumber: n,
+				BatchDigest:    d,
+				ResultHash:     batch.ResultHash,
+				HashBatch:      hashBatch,
+				ReplicaId:      pbft.id,
 			}
-			cert.digest = d
+			cert.resultHash = batch.ResultHash
 			cert.prePrepare = preprep
 			cert.validated = true
 
@@ -747,8 +742,7 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 			payload, err := proto.Marshal(preprep)
 			if err != nil {
 				pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-				pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
-				pbft.batchVdr.currentVid = nil
+				pbft.batchVdr.updateLCVid()
 				return
 			}
 			consensusMsg := &ConsensusMessage{
@@ -757,12 +751,13 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 			}
 			msg := cMsgToPbMsg(consensusMsg, pbft.id)
 			pbft.helper.InnerBroadcast(msg)
-		}else{
+		} else {
 			prep := &Prepare{
-				View: 			pbft.view,
-				SequenceNumber: 	n,
-				BatchDigest:		d,
-				ReplicaId:		pbft.id,
+				View:           pbft.view,
+				SequenceNumber: n,
+				BatchDigest:    d,
+				ResultHash:     batch.ResultHash,
+				ReplicaId:      pbft.id,
 			}
 			cert.prepare[*prep] = true
 			cert.sentPrepare = true
@@ -770,8 +765,7 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 			payload, err := proto.Marshal(prep)
 			if err != nil {
 				pbft.logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
-				pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
-				pbft.batchVdr.currentVid = nil
+				pbft.batchVdr.updateLCVid()
 				return
 			}
 
@@ -783,10 +777,11 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 			pbft.helper.InnerBroadcast(msg)
 		}
 		cmt := &Commit{
-			View:			pbft.view,
-			SequenceNumber: 	n,
-			BatchDigest:		d,
-			ReplicaId:		pbft.id,
+			View:           pbft.view,
+			SequenceNumber: n,
+			BatchDigest:    d,
+			ResultHash:     batch.ResultHash,
+			ReplicaId:      pbft.id,
 		}
 		cert.commit[*cmt] = true
 		cert.sentValidate = true
@@ -798,13 +793,12 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 		if err != nil {
 			pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
 			pbft.batchVdr.lastVid = *pbft.batchVdr.currentVid
-			pbft.batchVdr.currentVid= nil
+			pbft.batchVdr.currentVid = nil
 			return
 		}
 		consensusMsg := &ConsensusMessage{
 			Type:    ConsensusMessage_COMMIT,
 			Payload: payload,
-
 		}
 		msg := cMsgToPbMsg(consensusMsg, pbft.id)
 		pbft.helper.InnerBroadcast(msg)
@@ -814,9 +808,9 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 
 		id := qidx{d, n}
 		pqItem := &ViewChange_PQ{
-			SequenceNumber:	n,
-			BatchDigest:	d,
-			View:			pbft.view,
+			SequenceNumber: n,
+			BatchDigest:    d,
+			View:           pbft.view,
 		}
 		pbft.vcMgr.qlist[id] = pqItem
 		pbft.vcMgr.plist[n] = pqItem
@@ -913,7 +907,7 @@ func (pbft *pbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 	return
 }
 
-func (pbft *pbftImpl) assignSequenceNumbers(vset []*ViewChange, h uint64) (map[uint64]string) {
+func (pbft *pbftImpl) assignSequenceNumbers(vset []*ViewChange, h uint64) map[uint64]string {
 	msgList := make(map[uint64]string)
 
 	maxN := h + 1
@@ -1000,7 +994,7 @@ nLoop:
 	}
 
 	keys := make([]uint64, len(msgList))
-	i := 0;
+	i := 0
 	for n := range msgList {
 		keys[i] = n
 		i++
@@ -1029,14 +1023,15 @@ func (pbft *pbftImpl) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
 	}
 
 	digest := fr.BatchDigest
-	if !pbft.batchVdr.containsInVBS(digest) {
+	if _, ok := pbft.storeMgr.txBatchStore[digest]; !ok {
 		return nil // we don't have it either
 	}
 
-	reqBatch := pbft.batchVdr.getTxBatchFromVBS(digest)
+	reqBatch := pbft.storeMgr.txBatchStore[digest]
 	batch := &ReturnRequestBatch{
-		Batch:  reqBatch,
-		Digest: digest,
+		Batch:       reqBatch,
+		BatchDigest: digest,
+		ReplicaId:   pbft.id,
 	}
 	payload, err := proto.Marshal(batch)
 	if err != nil {
@@ -1066,11 +1061,11 @@ func (pbft *pbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) events.E
 		return nil
 	}
 
-	digest := batch.Digest
+	digest := batch.BatchDigest
 	if _, ok := pbft.storeMgr.missingReqBatches[digest]; !ok {
 		return nil // either the wrong digest, or we got it already from someone else
 	}
-	pbft.batchVdr.saveToVBS(digest, batch.Batch)
+	pbft.storeMgr.txBatchStore[digest] = batch.Batch
 	delete(pbft.storeMgr.missingReqBatches, digest)
 	pbft.logger.Warning("Primary received missing request: ", digest)
 
@@ -1175,6 +1170,7 @@ func (pbft *pbftImpl) beforeSendVC() error {
 	pbft.view++
 	atomic.StoreUint32(&pbft.activeView, 0)
 	pbft.status.inActiveState(&pbft.status.vcHandled)
+	atomic.StoreUint32(&pbft.normal, 0)
 
 	pbft.vcMgr.plist = pbft.calcPSet()
 	pbft.vcMgr.qlist = pbft.calcQSet()

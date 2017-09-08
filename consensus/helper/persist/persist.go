@@ -22,15 +22,6 @@ func StoreState(namespace string, key string, value []byte) error {
 	return db.Put([]byte("consensus."+key), value)
 }
 
-//DelAllState: remove all state
-//func DelAllState() error {
-//	db, err := hyperdb.GetLDBDatabase()
-//	if err == nil {
-//		db.Destroy()
-//	}
-//	return err
-//}
-
 // DelState removes a key,value pair
 func DelState(namesapce string, key string) error {
 	db, err := hyperdb.GetDBConsensusByNamespace(namesapce)

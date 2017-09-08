@@ -3,15 +3,15 @@
 package pbft
 
 import (
-	"time"
 	"fmt"
+	"math"
+	"sync/atomic"
+	"time"
 
-	"hyperchain/manager/protos"
 	"hyperchain/consensus/helper/persist"
+	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
-	"sync/atomic"
-	"math"
 )
 
 // =============================================================================
@@ -79,9 +79,8 @@ func (pbft *pbftImpl) getAddNodeCert(addHash string) (cert *addNodeCert) {
 
 // Is the view right? And is the sequence number between low watermark and high watermark?
 func (pbft *pbftImpl) sendInWV(v uint64, n uint64) bool {
-	return pbft.view == v && n > pbft.h && n <= pbft.h + pbft.L
+	return pbft.view == v && n > pbft.h && n <= pbft.h+pbft.L
 }
-
 
 func (pbft *pbftImpl) allCorrectQuorum() int {
 	return pbft.N
@@ -130,47 +129,25 @@ func (pbft *pbftImpl) getDelNV(del uint64) (n int64, v uint64) {
 	return
 }
 
-func (pbft *pbftImpl) handleCachedTxs(cache map[uint64]*transactionStore) {
-	for vid, batch := range cache {
-		if vid < pbft.h {
-			continue
-		}
-		for batch.Len() != 0 {
-			temp := batch.order.Front().Value
-			txc, ok := interface{}(temp).(transactionContainer)
-			if !ok {
-				pbft.logger.Error("type assert error:", temp)
-				return
-			}
-			tx := txc.tx
-			if tx != nil {
-				pbft.reqStore.storeOutstanding(tx)
-			}
-			batch.remove(tx)
-		}
-	}
-}
-
+// cleanAllCache clean some old cache of previous view
 func (pbft *pbftImpl) cleanAllCache() {
 
 	for idx := range pbft.storeMgr.certStore {
-		if idx.n > pbft.exec.lastExec{
+		if idx.n > pbft.exec.lastExec {
 			delete(pbft.storeMgr.certStore, idx)
-			pbft.persistDelQPCSet(idx.v, idx.n)
+			pbft.persistDelQPCSet(idx.v, idx.n, idx.d)
 		}
 	}
-	pbft.dupLock.Lock()
-	for n := range pbft.duplicator {
-		if n > pbft.exec.lastExec {
-			delete(pbft.duplicator, n)
-		}
-	}
-	pbft.dupLock.Unlock()
 
 	pbft.vcMgr.viewChangeStore = make(map[vcidx]*ViewChange)
 	pbft.vcMgr.newViewStore = make(map[uint64]*NewView)
 	pbft.vcMgr.vcResetStore = make(map[FinishVcReset]bool)
 	pbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
+
+	// we should clear the qlist & plist, since we may send viewchange after recovery
+	// those previous viewchange msg will make viewchange-check incorrect
+	pbft.vcMgr.qlist = make(map[qidx]*ViewChange_PQ)
+	pbft.vcMgr.plist = make(map[uint64]*ViewChange_PQ)
 
 }
 
@@ -178,7 +155,7 @@ func (pbft *pbftImpl) cleanAllCache() {
 // More generally, we need every two common case quorum of size X to intersect in at least F+1
 // hence 2X>=N+F+1
 func (pbft *pbftImpl) commonCaseQuorum() int {
-	return int(math.Ceil(float64(pbft.N+pbft.f+1)/float64(2)))
+	return int(math.Ceil(float64(pbft.N+pbft.f+1) / float64(2)))
 }
 
 func (pbft *pbftImpl) allCorrectReplicasQuorum() int {
@@ -195,16 +172,11 @@ func (pbft *pbftImpl) oneCorrectQuorum() int {
 
 func (pbft *pbftImpl) prePrepared(digest string, v uint64, n uint64) bool {
 
-	if digest != "" && !pbft.batchVdr.containsInVBS(digest) {
-		pbft.logger.Debugf("Replica %d havan't store the reqBatch", pbft.id)
-		return false
-	}
-
-	cert := pbft.storeMgr.certStore[msgID{v, n}]
+	cert := pbft.storeMgr.certStore[msgID{v, n, digest}]
 
 	if cert != nil {
 		p := cert.prePrepare
-		if p != nil && p.View == v && p.SequenceNumber == n && p.BatchDigest == digest && cert.digest == digest {
+		if p != nil && p.View == v && p.SequenceNumber == n && p.BatchDigest == digest {
 			return true
 		}
 	}
@@ -222,7 +194,7 @@ func (pbft *pbftImpl) prepared(digest string, v uint64, n uint64) bool {
 		return false
 	}
 
-	cert := pbft.storeMgr.certStore[msgID{v, n}]
+	cert := pbft.storeMgr.certStore[msgID{v, n, digest}]
 
 	if cert == nil {
 		return false
@@ -236,42 +208,13 @@ func (pbft *pbftImpl) prepared(digest string, v uint64, n uint64) bool {
 	return prepCount >= pbft.commonCaseQuorum()-1
 }
 
-func (pbft *pbftImpl) onlyPrepared(digest string, v uint64, n uint64) bool {
-
-	cert := pbft.storeMgr.certStore[msgID{v, n}]
-
-	if cert == nil {
-		return false
-	}
-
-	prepCount := len(cert.prepare)
-
-	return prepCount >= pbft.commonCaseQuorum()-1
-}
-
 func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
 
 	if !pbft.prepared(digest, v, n) {
 		return false
 	}
 
-	cert := pbft.storeMgr.certStore[msgID{v, n}]
-
-	if cert == nil {
-		return false
-	}
-
-	cmtCount := len(cert.commit)
-
-	pbft.logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
-		pbft.id, v, n, cmtCount)
-
-	return cmtCount >= pbft.commonCaseQuorum()
-}
-
-func (pbft *pbftImpl) onlyCommitted(digest string, v uint64, n uint64) bool {
-
-	cert := pbft.storeMgr.certStore[msgID{v, n}]
+	cert := pbft.storeMgr.certStore[msgID{v, n, digest}]
 
 	if cert == nil {
 		return false
@@ -366,7 +309,7 @@ func (pbft *pbftImpl) startTimerIfOutstandingRequests() {
 			}
 			return digests
 		}()
-		pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v", len(getOutstandingDigests)))
+		pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v, batches: %v", len(getOutstandingDigests), getOutstandingDigests))
 	} else if pbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
 		pbft.nullReqTimerReset()
 	}
@@ -383,8 +326,6 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 		Service:   CORE_PBFT_SERVICE,
 		EventType: CORE_NULL_REQUEST_TIMER_EVENT,
 	}
-
-	//pbft.logger.Errorf("replica: %d, primary: %d, reset null request timeout to %v", pbft.id, pbft.primary(pbft.view), timeout)
 
 	pbft.timerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, event, pbft.pbftEventQueue)
 }
@@ -415,7 +356,6 @@ func (pbft *pbftImpl) validateState() {
 func (pbft *pbftImpl) deleteExistedTx(digest string) {
 	pbft.batchVdr.updateLCVid()
 	pbft.batchVdr.deleteCacheFromCVB(digest)
-	pbft.batchVdr.deleteTxFromVBS(digest)
 	delete(pbft.storeMgr.outstandingReqBatches, digest)
 }
 
@@ -497,23 +437,4 @@ func (pbft *pbftImpl) isCommitLegal(commit *Commit) bool {
 		return false
 	}
 	return true
-}
-
-func (pbft *pbftImpl) parseCertStore() {
-	tmpStore := make(map[msgID]*msgCert)
-	for idx := range pbft.storeMgr.certStore {
-		cert := pbft.storeMgr.getCert(idx.v, idx.n)
-		if cert.prePrepare != nil {
-			cert.prePrepare.View = pbft.view
-		}
-		for prep := range cert.prepare {
-			prep.View = pbft.view
-		}
-		for cmt := range cert.commit {
-			cmt.View = pbft.view
-		}
-		idx.v = pbft.view
-		tmpStore[msgID{pbft.view, idx.n}] = cert
-	}
-	pbft.storeMgr.certStore = tmpStore
 }

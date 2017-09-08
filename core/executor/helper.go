@@ -50,16 +50,6 @@ func checkParams(expect []reflect.Kind, params ...interface{}) bool {
 // informConsensus - communicate with consensus module.
 func (executor *Executor) informConsensus(informType int, message interface{}) error {
 	switch informType {
-	case NOTIFY_REMOVE_CACHE:
-		executor.logger.Debug("inform consenus remove cache")
-		msg, ok := message.(protos.RemoveCache)
-		if !ok {
-			return er.InvalidParamsErr
-		}
-		executor.helper.PostInner(event.ExecutorToConsensusEvent{
-			Payload: msg,
-			Type:    NOTIFY_REMOVE_CACHE,
-		})
 	case NOTIFY_VALIDATION_RES:
 		executor.logger.Debugf("[Namespace = %s] inform consenus validation result", executor.namespace)
 		msg, ok := message.(protos.ValidatedTxs)

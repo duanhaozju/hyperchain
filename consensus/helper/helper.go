@@ -5,18 +5,17 @@ package helper
 import (
 	"time"
 
+	"hyperchain/consensus"
+	"hyperchain/core/types"
+	"hyperchain/manager/appstat"
 	"hyperchain/manager/event"
 	pb "hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
-	"hyperchain/core/types"
-	//"reflect"
-	"hyperchain/consensus"
-	"hyperchain/manager/appstat"
 )
 
 type helper struct {
-	innerMux *event.TypeMux
+	innerMux    *event.TypeMux
 	externalMux *event.TypeMux
 }
 
@@ -25,7 +24,7 @@ type Stack interface {
 	InnerUnicast(msg *pb.Message, to uint64) error
 	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
 	UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error
-	ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
+	ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
 	VcReset(seqNo uint64) error
 	InformPrimary(primary uint64) error
 	BroadcastAddNode(msg *pb.Message) error
@@ -108,9 +107,10 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 }
 
 // UpdateState transfers the UpdateStateEvent to outer
-func (h *helper) ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error {
+func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error {
 
 	validateEvent := event.ValidationEvent{
+		Digest:       digest,
 		Transactions: txs,
 		Timestamp:    timeStamp,
 		SeqNo:        seqNo,
@@ -201,12 +201,11 @@ func (h *helper) UpdateTable(payload []byte, flag bool) error {
 	return nil
 }
 
-
 // NewHelper initializes a helper object
 func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *helper {
 
 	h := &helper{
-		innerMux: innerMux,
+		innerMux:    innerMux,
 		externalMux: externalMux,
 	}
 
@@ -231,10 +230,10 @@ func (h *helper) SendFilterEvent(informType int, message ...interface{}) error {
 			return nil
 		}
 		h.PostExternal(event.FilterSystemStatusEvent{
-			Module:    appstat.ExceptionModule_Consenus,
-			Status:    appstat.Normal,
-			Subtype:   appstat.ExceptionSubType_ViewChange,
-			Message:   msg,
+			Module:  appstat.ExceptionModule_Consenus,
+			Status:  appstat.Normal,
+			Subtype: appstat.ExceptionSubType_ViewChange,
+			Message: msg,
 		})
 		return nil
 	default:

@@ -9,7 +9,6 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
-	"hyperchain/manager/protos"
 	"time"
 )
 
@@ -70,6 +69,7 @@ func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) 
 	}
 	// throw all invalid transactions back.
 	if ev.IsPrimary {
+		// TODO save invalid transaction by itself
 		executor.throwInvalidTransactionBack(record.InvalidTxs)
 	}
 	executor.incDemandNumber()
@@ -127,7 +127,6 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	executor.logger.Noticef("Block number %d", block.Number)
 	executor.logger.Noticef("Block hash %s", hex.EncodeToString(block.BlockHash))
 	// told consenus to remove Cached Transactions which used to check transaction duplication
-	executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: record.VID})
 	executor.TransitVerifiedBlock(block)
 
 	// push feed data to event system.
@@ -159,19 +158,22 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 		return nil
 	}
 	newBlock := &types.Block{
-		ParentHash:  edb.GetLatestBlockHash(executor.namespace),
-		MerkleRoot:  record.MerkleRoot,
-		TxRoot:      record.TxRoot,
-		ReceiptRoot: record.ReceiptRoot,
-		Timestamp:   ev.Timestamp,
-		CommitTime:  ev.Timestamp,
-		Number:      ev.SeqNo,
-		WriteTime:   time.Now().UnixNano(),
-		EvmTime:     time.Now().UnixNano(),
-		Bloom:       bloom,
+		Transactions: nil,
+		ParentHash:   edb.GetLatestBlockHash(executor.namespace),
+		MerkleRoot:   record.MerkleRoot,
+		TxRoot:       record.TxRoot,
+		ReceiptRoot:  record.ReceiptRoot,
+		Timestamp:    ev.Timestamp,
+		CommitTime:   ev.Timestamp,
+		Number:       ev.SeqNo,
+		WriteTime:    time.Now().UnixNano(),
+		EvmTime:      time.Now().UnixNano(),
+		Bloom:        bloom,
 	}
-	newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
-	copy(newBlock.Transactions, record.ValidTxs)
+	if len(record.ValidTxs) != 0 {
+		newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
+		copy(newBlock.Transactions, record.ValidTxs)
+	}
 	newBlock.BlockHash = newBlock.Hash().Bytes()
 	return newBlock
 }
@@ -189,11 +191,9 @@ func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 		return false
 	}
 	// 3. verify whether ev's seqNo equal to record seqNo which acts as block number
-	vid := record.VID
-	tempBlockNumber := record.SeqNo
-	if tempBlockNumber != ev.SeqNo {
-		executor.logger.Errorf("miss match temp block number<#%d>and actually block number<#%d> for vid #%d validation. commit for block #%d failed",
-			tempBlockNumber, ev.SeqNo, vid, ev.SeqNo)
+	if record.SeqNo != ev.SeqNo {
+		executor.logger.Errorf("miss match validation seqNo<#%d>and commit seqNo<#%d>  commit for block failed",
+			record.SeqNo, ev.SeqNo)
 		return false
 	}
 	return true

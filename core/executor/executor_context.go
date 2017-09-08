@@ -17,7 +17,6 @@ type ExecutorContext struct {
 
 	demandNumber        uint64       // current demand number for commit
 	demandSeqNo         uint64       // current demand seqNo for validation
-	tempBlockNumber     uint64       // temporarily block number
 	lastValidationState atomic.Value // latest state root hash
 	validationExit      chan bool    // validation exit notifier
 	commitExit          chan bool    // commit exit notifier
@@ -73,7 +72,6 @@ func initializeExecutorContext(executor *Executor) error {
 func (executor *Executor) initDemand(num uint64) {
 	executor.context.demandNumber = num
 	executor.context.demandSeqNo = num
-	executor.context.tempBlockNumber = num
 }
 
 func (executor *Executor) stateTransition(id uint64, root common.Hash) {
@@ -116,21 +114,6 @@ func (executor *Executor) getDemandSeqNo() uint64 {
 
 func (executor *Executor) isDemandSeqNo(num uint64) bool {
 	return executor.context.demandSeqNo == num
-}
-
-// Temp block number
-func (executor *Executor) incTempBlockNumber() {
-	executor.context.tempBlockNumber += 1
-	executor.logger.Debugf("[Namespace = %s] increase temp block number to %d", executor.namespace, executor.context.tempBlockNumber)
-}
-
-func (executor *Executor) setTempBlockNumber(num uint64) {
-	executor.context.tempBlockNumber = num
-	executor.logger.Debugf("[Namespace = %s] set temp block number to %d", executor.namespace, executor.context.tempBlockNumber)
-}
-
-func (executor *Executor) getTempBlockNumber() uint64 {
-	return executor.context.tempBlockNumber
 }
 
 // recordStateHash - set latest statedb's hash.
@@ -415,8 +398,8 @@ func (executor *Executor) unsetSuspend(identifier int) {
 		executor.context.syncReplicaSuspend <- false
 	}
 }
+
 // getSyncTarget - get SyncTarget.
 func (executor *Executor) getSyncTarget() uint64 {
 	return executor.context.syncFlag.SyncTarget
 }
-

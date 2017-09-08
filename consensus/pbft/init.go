@@ -14,9 +14,6 @@ func (pbft *pbftImpl) initTimers() {
 	pbft.timerMgr.newTimer(BATCH_TIMER, pbft.config.GetDuration(PBFT_BATCH_TIMEOUT))
 	pbft.timerMgr.newTimer(CLEAN_VIEW_CHANGE_TIMER, pbft.config.GetDuration(PBFT_BATCH_TIMEOUT))
 	pbft.timerMgr.newTimer(VALIDATE_TIMER, pbft.config.GetDuration(PBFT_VALIDATE_TIMEOUT))
-	//pbft.pbftTimerMgr.newTimer(ADD_NODE_TIMER, pbft.config.GetDuration(PBFT_ADD_NODE_TIMEOUT))
-	//pbft.pbftTimerMgr.newTimer(DEL_NODE_TIMER, pbft.config.GetDuration(PBFT_DEL_NODE_TIMEOUT))
-	//pbft.pbftTimerMgr.newTimer(UPDATE_TIMER, pbft.config.GetDuration(PBFT_UPDATE_TIMEOUT))
 }
 
 //initMsgEventMap construct consensus_message to real type map
@@ -53,6 +50,10 @@ func (pbft *pbftImpl) initMsgEventMap() {
 	eventCreators[ConsensusMessage_AGREE_UPDATE_N] = func() interface{} { return &AgreeUpdateN{} }
 	eventCreators[ConsensusMessage_FINISH_VCRESET] = func() interface{} { return &FinishVcReset{} }
 	eventCreators[ConsensusMessage_FINISH_UPDATE] = func() interface{} { return &FinishUpdate{} }
+
+	eventCreators[ConsensusMessage_FETCH_MISSING_TRANSACTION] = func() interface{} { return &FetchMissingTransaction{} }
+	eventCreators[ConsensusMessage_RETURN_MISSING_TRANSACTION] = func() interface{} { return &ReturnMissingTransaction{} }
+
 }
 
 //initStatus configs basic status when starts up

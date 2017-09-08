@@ -1,19 +1,19 @@
 package pbft
 
 import (
-	"testing"
-	"hyperchain/common"
-	"github.com/spf13/viper"
-	"path/filepath"
-	"hyperchain/consensus/helper"
-	"hyperchain/manager/event"
 	"fmt"
-	"hyperchain/consensus"
 	"github.com/facebookgo/ensure"
+	"github.com/spf13/viper"
+	"hyperchain/common"
+	"hyperchain/consensus"
+	"hyperchain/consensus/helper"
 	"hyperchain/core/db_utils"
+	"hyperchain/manager/event"
+	"path/filepath"
+	"testing"
 )
 
-func NewConfig(path ,name string)(*common.Config){
+func NewConfig(path, name string) *common.Config {
 	conf := common.NewConfig(path)
 	common.InitHyperLoggerManager(conf)
 	conf.Set(common.NAMESPACE, name)
@@ -21,7 +21,7 @@ func NewConfig(path ,name string)(*common.Config){
 	// init peer configurations
 	peerConfigPath := conf.GetString(common.PEER_CONFIG_PATH)
 	peerViper := viper.New()
-	peerViper.SetConfigFile(filepath.Join("../../build/node1/",peerConfigPath))
+	peerViper.SetConfigFile(filepath.Join("../../build/node1/", peerConfigPath))
 	err := peerViper.ReadInConfig()
 	if err != nil {
 		panic(err)
@@ -43,13 +43,13 @@ func NewConfig(path ,name string)(*common.Config){
 			consensus.CONSENSUS_ALGO_CONFIG_PATH, pcPath)
 		panic(err)
 	}
-	conf, err = conf.MergeConfig(filepath.Join("../../build/node1/",pcPath))
+	conf, err = conf.MergeConfig(filepath.Join("../../build/node1/", pcPath))
 	if err != nil {
 		err = fmt.Errorf("Load pbft config error: %v", err)
 		panic(err)
 	}
 
-	conf, err = conf.MergeConfig(filepath.Join("../../build/node1/","namespaces/global/config/pbft.yaml"))
+	conf, err = conf.MergeConfig(filepath.Join("../../build/node1/", "namespaces/global/config/pbft.yaml"))
 	if err != nil {
 		err = fmt.Errorf("Load pbft config error: %v", err)
 		panic(err)
@@ -58,35 +58,34 @@ func NewConfig(path ,name string)(*common.Config){
 	return conf
 }
 
-
 func TestPbftImpl_func1(t *testing.T) {
 
 	//new PBFT
-	conf:=NewConfig("../../build/node1/namespaces/global/config/global.yaml","global")
-	_=conf
-	conf.Set(common.DB_CONFIG_PATH,filepath.Join("../../build/node1/",conf.GetString(common.DB_CONFIG_PATH)))
+	conf := NewConfig("../../build/node1/namespaces/global/config/global.yaml", "global")
+	_ = conf
+	conf.Set(common.DB_CONFIG_PATH, filepath.Join("../../build/node1/", conf.GetString(common.DB_CONFIG_PATH)))
 	err := db_utils.InitDBForNamespace(conf, "global")
 	if err != nil {
 		t.Errorf("init db for namespace: %s error, %v", "global", err)
 	}
 
-	h:=helper.NewHelper(new(event.TypeMux))
-	pbft,err:=newPBFT("global",conf,h)
+	h := helper.NewHelper(new(event.TypeMux))
+	pbft, err := newPBFT("global", conf, h)
 
-	ensure.Nil(t,err)
+	ensure.Nil(t, err)
 
-	ensure.DeepEqual(t,pbft.namespace,"global")
-	ensure.DeepEqual(t,pbft.activeView,uint32(1))
-	ensure.DeepEqual(t,pbft.f,(pbft.N - 1) / 3)
-	ensure.DeepEqual(t,pbft.N,conf.GetInt(PBFT_NODE_NUM))
-	ensure.DeepEqual(t,pbft.h,uint64(0))
-	ensure.DeepEqual(t,pbft.id,uint64(conf.GetInt64(common.C_NODE_ID)))
-	ensure.DeepEqual(t,pbft.K,uint64(10))
-	ensure.DeepEqual(t,pbft.logMultiplier,uint64(4))
-	ensure.DeepEqual(t,pbft.L,pbft.logMultiplier * pbft.K)
-	ensure.DeepEqual(t,pbft.seqNo,uint64(0))
-	ensure.DeepEqual(t,pbft.view,uint64(0))
-	ensure.DeepEqual(t,pbft.nvInitialSeqNo,uint64(0))
+	ensure.DeepEqual(t, pbft.namespace, "global")
+	ensure.DeepEqual(t, pbft.activeView, uint32(1))
+	ensure.DeepEqual(t, pbft.f, (pbft.N-1)/3)
+	ensure.DeepEqual(t, pbft.N, conf.GetInt(PBFT_NODE_NUM))
+	ensure.DeepEqual(t, pbft.h, uint64(0))
+	ensure.DeepEqual(t, pbft.id, uint64(conf.GetInt64(common.C_NODE_ID)))
+	ensure.DeepEqual(t, pbft.K, uint64(10))
+	ensure.DeepEqual(t, pbft.logMultiplier, uint64(4))
+	ensure.DeepEqual(t, pbft.L, pbft.logMultiplier*pbft.K)
+	ensure.DeepEqual(t, pbft.seqNo, uint64(0))
+	ensure.DeepEqual(t, pbft.view, uint64(0))
+	ensure.DeepEqual(t, pbft.nvInitialSeqNo, uint64(0))
 
 	//Test Consenter interface
 

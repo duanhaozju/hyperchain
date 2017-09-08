@@ -58,13 +58,11 @@ func (tm *timerManager) Stop() {
 //startTimer init and start a timer by name
 func (tm *timerManager) startTimer(tname string, event *LocalEvent, queue events.Queue) int {
 	tm.stopTimer(tname)
-	//logger.Errorf("Starting a new timer---%s", tname)
 
 	tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
 	tm.ttimers[tname].alivecounts++
 
 	counts := len(tm.ttimers[tname].isActive)
-	//tm.logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
 
 	send := func() {
 		if tm.ttimers[tname].isActive[counts-1] {
@@ -79,17 +77,14 @@ func (tm *timerManager) startTimer(tname string, event *LocalEvent, queue events
 // startTimerWithNewTT init and start a timer by name with new timeout
 func (tm *timerManager) startTimerWithNewTT(tname string, d time.Duration, event *LocalEvent, queue events.Queue) int {
 	tm.stopTimer(tname)
-	//logger.Errorf("Starting a new timer---%s with new duration %d", tname, d)
 
 	tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
 	tm.ttimers[tname].alivecounts++
 
 	counts := len(tm.ttimers[tname].isActive)
-	//tm.logger.Errorf("Now exsits %d---%d timer---%s", counts, tm.ttimers[tname].alivecounts, tname)
 
 	send := func() {
 		if tm.ttimers[tname].isActive[counts-1] {
-			//tm.logger.Errorf("push the %dnd timer: %v with timeout: %v", counts, tname, d)
 			queue.Push(event)
 		}
 	}
@@ -103,10 +98,6 @@ func (tm *timerManager) stopTimer(tname string) {
 		tm.logger.Errorf("Stop timer failed!, timer %s not created yet!", tname)
 		return
 	}
-	//tm.logger.Errorf("Stoping timer---%s", tname)
-	//
-	//counts := len(tm.ttimers[tname].isActive)
-	//tm.logger.Errorf("Now exsits %d timer named---%s", counts, tname)
 
 	for i := range tm.ttimers[tname].isActive {
 		tm.ttimers[tname].isActive[i] = false
@@ -128,13 +119,8 @@ func (tm *timerManager) stopOneTimer(tname string, num int) {
 		return
 	}
 
-	//tm.logger.Errorf("Stoping timer---%s", tname)
-	//tm.logger.Errorf("Now exsits %d timer---%s, to stop %d", counts, tname, num)
-
 	tm.ttimers[tname].isActive[num] = false
-
 	tm.ttimers[tname].alivecounts--
-
 }
 
 // containsTimer returns true if there exists a timer named timerName

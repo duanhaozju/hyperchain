@@ -3,11 +3,12 @@
 package pbft
 
 import (
-	"fmt"
-	"hyperchain/consensus/helper/persist"
-
 	"encoding/base64"
 	"encoding/binary"
+	"fmt"
+
+	"hyperchain/consensus/helper/persist"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"strconv"
@@ -20,13 +21,13 @@ func (pbft *pbftImpl) persistQSet(preprep *PrePrepare) {
 		pbft.logger.Warningf("Replica %d could not persist qset: %s", pbft.id, err)
 		return
 	}
-	key := fmt.Sprintf("qset.%d.%d", preprep.View, preprep.SequenceNumber)
+	key := fmt.Sprintf("qset.%d.%d.%s", preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
-func (pbft *pbftImpl) persistPSet(v uint64, n uint64) {
+func (pbft *pbftImpl) persistPSet(v uint64, n uint64, d string) {
 
-	cert := pbft.storeMgr.getCert(v, n)
+	cert := pbft.storeMgr.getCert(v, n, d)
 	set := []*Prepare{}
 	pset := &Pset{Set: set}
 	for p := range cert.prepare {
@@ -39,13 +40,13 @@ func (pbft *pbftImpl) persistPSet(v uint64, n uint64) {
 		pbft.logger.Warningf("Replica %d could not persist pset: %s", pbft.id, err)
 		return
 	}
-	key := fmt.Sprintf("pset.%d.%d", v, n)
+	key := fmt.Sprintf("pset.%d.%d.%s", v, n, d)
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
-func (pbft *pbftImpl) persistCSet(v uint64, n uint64) {
+func (pbft *pbftImpl) persistCSet(v uint64, n uint64, d string) {
 
-	cert := pbft.storeMgr.getCert(v, n)
+	cert := pbft.storeMgr.getCert(v, n, d)
 	set := []*Commit{}
 	cset := &Cset{Set: set}
 	for c := range cert.commit {
@@ -58,28 +59,28 @@ func (pbft *pbftImpl) persistCSet(v uint64, n uint64) {
 		pbft.logger.Warningf("Replica %d could not persist cset: %s", pbft.id, err)
 		return
 	}
-	key := fmt.Sprintf("cset.%d.%d", v, n)
+	key := fmt.Sprintf("cset.%d.%d.%s", v, n, d)
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
-func (pbft *pbftImpl) persistDelQSet(v uint64, n uint64) {
-	qset := fmt.Sprintf("qset.%d.%d", v, n)
+func (pbft *pbftImpl) persistDelQSet(v uint64, n uint64,d string) {
+	qset := fmt.Sprintf("qset.%d.%d.%s", v, n, d)
 	persist.DelState(pbft.namespace, qset)
 }
 
-func (pbft *pbftImpl) persistDelPSet(v uint64, n uint64) {
-	pset := fmt.Sprintf("pset.%d.%d", v, n)
+func (pbft *pbftImpl) persistDelPSet(v uint64, n uint64, d string) {
+	pset := fmt.Sprintf("pset.%d.%d.%s", v, n, d)
 	persist.DelState(pbft.namespace, pset)
 }
 
-func (pbft *pbftImpl) persistDelCSet(v uint64, n uint64) {
-	cset := fmt.Sprintf("cset.%d.%d", v, n)
+func (pbft *pbftImpl) persistDelCSet(v uint64, n uint64, d string) {
+	cset := fmt.Sprintf("cset.%d.%d.%s", v, n, d)
 	persist.DelState(pbft.namespace, cset)
 }
-func (pbft *pbftImpl) persistDelQPCSet(v uint64, n uint64) {
-	pbft.persistDelQSet(v, n)
-	pbft.persistDelPSet(v, n)
-	pbft.persistDelCSet(v, n)
+func (pbft *pbftImpl) persistDelQPCSet(v uint64, n uint64, d string) {
+	pbft.persistDelQSet(v, n, d)
+	pbft.persistDelPSet(v, n, d)
+	pbft.persistDelCSet(v, n, d)
 }
 
 func (pbft *pbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
@@ -89,14 +90,15 @@ func (pbft *pbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
 	payload, err := persist.ReadStateSet(pbft.namespace, "qset.")
 	if err == nil {
 		for key, set := range payload {
-			var v, n uint64
-			if _, err = fmt.Sscanf(key, "qset.%d.%d", &v, &n); err != nil {
+			var v, n, vid uint64
+			var d string
+			if _, err = fmt.Sscanf(key, "qset.%d.%d.%d.%s", &v, &n, &vid, &d); err != nil {
 				pbft.logger.Warningf("Replica %d could not restore qset key %s", pbft.id, key)
 			} else {
 				preprep := &PrePrepare{}
 				err := proto.Unmarshal(set, preprep)
 				if err == nil {
-					idx := msgID{v, n}
+					idx := msgID{v, n, d}
 					qset[idx] = preprep
 				} else {
 					pbft.logger.Warningf("Replica %d could not restore pre-prepare key %v, err: %v", pbft.id, set, err)
@@ -118,13 +120,14 @@ func (pbft *pbftImpl) restorePSet() (map[msgID]*Pset, error) {
 	if err == nil {
 		for key, set := range payload {
 			var v, n uint64
-			if _, err = fmt.Sscanf(key, "pset.%d.%d", &v, &n); err != nil {
+			var d string
+			if _, err = fmt.Sscanf(key, "pset.%d.%d.%s", &v, &n, &d); err != nil {
 				pbft.logger.Warningf("Replica %d could not restore pset key %s", pbft.id, key)
 			} else {
 				prepares := &Pset{}
 				err := proto.Unmarshal(set, prepares)
 				if err == nil {
-					idx := msgID{v, n}
+					idx := msgID{v, n, d}
 					pset[idx] = prepares
 				} else {
 					pbft.logger.Warningf("Replica %d could not restore prepares key %v", pbft.id, set)
@@ -146,13 +149,14 @@ func (pbft *pbftImpl) restoreCSet() (map[msgID]*Cset, error) {
 	if err == nil {
 		for key, set := range payload {
 			var v, n uint64
-			if _, err = fmt.Sscanf(key, "cset.%d.%d", &v, &n); err != nil {
+			var d string
+			if _, err = fmt.Sscanf(key, "cset.%d.%d.%s", &v, &n, &d); err != nil {
 				pbft.logger.Warningf("Replica %d could not restore pset key %s", pbft.id, key)
 			} else {
 				commits := &Cset{}
 				err := proto.Unmarshal(set, commits)
 				if err == nil {
-					idx := msgID{v, n}
+					idx := msgID{v, n, d}
 					cset[idx] = commits
 				} else {
 					pbft.logger.Warningf("Replica %d could not restore commits key %v", pbft.id, set)
@@ -170,23 +174,22 @@ func (pbft *pbftImpl) restoreCert() {
 
 	qset, _ := pbft.restoreQSet()
 	for idx, q := range qset {
+		cert := pbft.storeMgr.getCert(idx.v, idx.n, idx.d)
 		if idx.n > pbft.exec.lastExec {
-			pbft.persistDelQSet(idx.v, idx.n)
+			pbft.persistDelQSet(idx.v, idx.n, idx.d)
 			continue
 		}
-		cert := pbft.storeMgr.getCert(idx.v, idx.n)
 		cert.prePrepare = q
-		cert.digest = q.BatchDigest
-		pbft.batchVdr.validatedBatchStore[cert.digest] = q.GetTransactionBatch()
+		cert.resultHash = q.ResultHash
 	}
 
 	pset, _ := pbft.restorePSet()
 	for idx, prepares := range pset {
 		if idx.n > pbft.exec.lastExec {
-			pbft.persistDelPSet(idx.v, idx.n)
+			pbft.persistDelPSet(idx.v, idx.n, idx.d)
 			continue
 		}
-		cert := pbft.storeMgr.getCert(idx.v, idx.n)
+		cert := pbft.storeMgr.getCert(idx.v, idx.n, idx.d)
 		for _, p := range prepares.Set {
 			cert.prepare[*p] = true
 			if p.ReplicaId == pbft.id {
@@ -198,10 +201,10 @@ func (pbft *pbftImpl) restoreCert() {
 	cset, _ := pbft.restoreCSet()
 	for idx, commits := range cset {
 		if idx.n > pbft.exec.lastExec {
-			pbft.persistDelCSet(idx.v, idx.n)
+			pbft.persistDelCSet(idx.v, idx.n, idx.d)
 			continue
 		}
-		cert := pbft.storeMgr.getCert(idx.v, idx.n)
+		cert := pbft.storeMgr.getCert(idx.v, idx.n, idx.d)
 		for _, c := range commits.Set {
 			cert.commit[*c] = true
 			if c.ReplicaId == pbft.id {
@@ -230,7 +233,7 @@ func (pbft *pbftImpl) parseSpecifyCertStore() {
 					cert = ncert
 				}
 				delete(pbft.storeMgr.certStore, nidx)
-				pbft.persistDelQPCSet(nidx.v, nidx.n)
+				pbft.persistDelQPCSet(nidx.v, nidx.n, nidx.d)
 			}
 		}
 		if cert.prePrepare != nil {
@@ -253,28 +256,28 @@ func (pbft *pbftImpl) parseSpecifyCertStore() {
 		cert.commit = cmts
 		idx.v = pbft.view
 		pbft.storeMgr.certStore[idx] = cert
-		pbft.persistPSet(idx.v, idx.n)
-		pbft.persistCSet(idx.v, idx.n)
+		pbft.persistPSet(idx.v, idx.n, idx.d)
+		pbft.persistCSet(idx.v, idx.n, idx.d)
 
 	}
 }
 
-func (pbft *pbftImpl) persistRequestBatch(digest string) {
-	reqBatch := pbft.batchVdr.getTxBatchFromVBS(digest)
-	reqBatchPacked, err := proto.Marshal(reqBatch)
+func (pbft *pbftImpl) persistTxBatch(digest string) {
+	txBatch := pbft.storeMgr.txBatchStore[digest]
+	txBatchPacked, err := proto.Marshal(txBatch)
 	if err != nil {
 		pbft.logger.Warningf("Replica %d could not persist request batch %s: %s", pbft.id, digest, err)
 		return
 	}
-	persist.StoreState(pbft.namespace, "reqBatch."+digest, reqBatchPacked)
+	persist.StoreState(pbft.namespace, "txBatch."+digest, txBatchPacked)
 }
 
-func (pbft *pbftImpl) persistDelRequestBatch(digest string) {
-	persist.DelState(pbft.namespace, "reqBatch."+digest)
+func (pbft *pbftImpl) persistDelTxBatch(digest string) {
+	persist.DelState(pbft.namespace, "txBatch."+digest)
 }
 
-func (pbft *pbftImpl) persistDelAllRequestBatches() {
-	reqBatches, err := persist.ReadStateSet(pbft.namespace, "reqBatch.")
+func (pbft *pbftImpl) persistDelAllTxBatches() {
+	reqBatches, err := persist.ReadStateSet(pbft.namespace, "txBatch.")
 	if err != nil {
 		pbft.logger.Errorf("Read State Set Error %s", err)
 		return
@@ -342,7 +345,29 @@ func (pbft *pbftImpl) restoreView() {
 	} else {
 		pbft.logger.Noticef("Replica %d could not restore view: %s", pbft.id, err)
 	}
+}
 
+func (pbft *pbftImpl) restoreTxBatchStore() {
+
+	payload, err := persist.ReadStateSet(pbft.namespace, "txBatch.")
+	if err == nil {
+		for key, set := range payload {
+			var digest string
+			if _, err = fmt.Sscanf(key, "txBatch.%s", &digest); err != nil {
+				pbft.logger.Warningf("Replica %d could not restore pset key %s", pbft.id, key)
+			} else {
+				batch := &TransactionBatch{}
+				err := proto.Unmarshal(set, batch)
+				if err == nil {
+					pbft.storeMgr.txBatchStore[digest] = batch
+				} else {
+					pbft.logger.Warningf("Replica %d could not unmarshal batch key %s for error: %v", pbft.id, key, err)
+				}
+			}
+		}
+	} else {
+		pbft.logger.Warningf("Replica %d could not restore txBatch for error: %v", pbft.id, err)
+	}
 }
 
 func (pbft *pbftImpl) restoreState() {
@@ -351,11 +376,12 @@ func (pbft *pbftImpl) restoreState() {
 	if pbft.seqNo < pbft.exec.lastExec {
 		pbft.seqNo = pbft.exec.lastExec
 	}
-	pbft.batchVdr.setVid(pbft.seqNo)
 	pbft.batchVdr.setLastVid(pbft.seqNo)
 
 	pbft.restoreCert()
 	pbft.restoreView()
+
+	pbft.restoreTxBatchStore()
 
 	chkpts, err := persist.ReadStateSet(pbft.namespace, "chkpt.")
 	if err == nil {
@@ -372,13 +398,13 @@ func (pbft *pbftImpl) restoreState() {
 	} else {
 		pbft.logger.Warningf("Replica %d could not restore checkpoints: %s", pbft.id, err)
 	}
-	hstr,err:=persist.ReadState(pbft.namespace,"pbft.h")
-	if err!=nil{
+	hstr, err := persist.ReadState(pbft.namespace, "pbft.h")
+	if err != nil {
 		pbft.logger.Warningf("Replica %d could not restore h: %s", pbft.id, err)
-	}else{
-		h,err:=strconv.ParseUint(string(hstr),10,64)
-		if err!=nil{
-			panic("transfer pbft.h from string to uint64 failed with err: "+err.Error())
+	} else {
+		h, err := strconv.ParseUint(string(hstr), 10, 64)
+		if err != nil {
+			panic("transfer pbft.h from string to uint64 failed with err: " + err.Error())
 		}
 		pbft.moveWatermarks(h)
 	}
@@ -403,9 +429,8 @@ func (pbft *pbftImpl) restoreState() {
 		pbft.nodeMgr.localKey = string(localKey)
 	}
 
-
 	pbft.logger.Infof("Replica %d restored state: view: %d, seqNo: %d, reqBatches: %d, chkpts: %d",
-		pbft.id, pbft.view, pbft.seqNo, len(pbft.batchVdr.validatedBatchStore), len(pbft.storeMgr.chkpts))
+		pbft.id, pbft.view, pbft.seqNo, len(pbft.storeMgr.txBatchStore), len(pbft.storeMgr.chkpts))
 }
 
 func (pbft *pbftImpl) restoreLastSeqNo() {

@@ -20,6 +20,7 @@ type storeManager struct {
 	committedCert map[msgID]string   // track the committed cert to help execute msgId - digest
 
 	outstandingReqBatches map[string]*TransactionBatch // track whether we are waiting for request batches to execute
+	txBatchStore          map[string]*TransactionBatch
 
 	missingReqBatches map[string]bool    // for all the assigned, non-checkpointed request batches we might be missing during view-change
 	highStateTarget   *stateUpdateTarget // Set to the highest weak checkpoint cert we have observed
@@ -39,6 +40,7 @@ func newStoreMgr() *storeManager {
 	sm.committedCert = make(map[msgID]string)
 
 	sm.outstandingReqBatches = make(map[string]*TransactionBatch)
+	sm.txBatchStore = make(map[string]*TransactionBatch)
 
 	sm.missingReqBatches = make(map[string]bool)
 	return sm
@@ -82,9 +84,9 @@ func (sm *storeManager) getCheckpoint(l uint64) string {
 
 // getCert given a digest/view/seq, is there an entry in the certLog?
 // If so, return it. If not, create it.
-func (sm *storeManager) getCert(v uint64, n uint64) (cert *msgCert) {
+func (sm *storeManager) getCert(v uint64, n uint64, d string) (cert *msgCert) {
 
-	idx := msgID{v, n}
+	idx := msgID{v, n, d}
 	cert, ok := sm.certStore[idx]
 
 	if ok {

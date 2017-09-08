@@ -3,12 +3,12 @@
 package pbft
 
 import (
+	"encoding/base64"
+	"strings"
 	"testing"
 	"time"
 
-	"encoding/base64"
 	"hyperchain/core/types"
-	"strings"
 )
 
 func TestHash(t *testing.T) {
@@ -31,7 +31,7 @@ func TestHash(t *testing.T) {
 		Signature: b,
 	}
 
-	reqBatch := &TransactionBatch{Batch: []*types.Transaction{req1, req2}}
+	reqBatch := &TransactionBatch{TxList: []*types.Transaction{req1, req2}}
 
 	hashReq := hash(req1)
 	hashReqBatch := hash(reqBatch)

@@ -3,22 +3,25 @@
 package pbft
 
 import (
-	"github.com/golang/protobuf/proto"
-	"hyperchain/consensus/events"
 	"encoding/base64"
-	"hyperchain/consensus/helper/persist"
 	"sync/atomic"
+
+	"hyperchain/consensus/events"
+	"hyperchain/consensus/helper/persist"
+
+	"github.com/golang/protobuf/proto"
 )
+
 /**
-	This file contains recovery related issues
- */
+This file contains recovery related issues
+*/
 
 type recoveryManager struct {
-	recoveryToSeqNo	       *uint64				 // recoveryToSeqNo is the target seqNo expected to recover to
-	rcRspStore             map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
-	rcPQCSenderStore       map[uint64]bool			 // rcPQCSenderStore store those who sent PQC info to self
-	recvNewViewInRecovery  bool				 // recvNewViewInRecovery record whether receive new view during recovery
-	negoViewRspStore       map[uint64]*NegotiateViewResponse // track replicaId, viewNo.
+	recoveryToSeqNo       *uint64                           // recoveryToSeqNo is the target seqNo expected to recover to
+	rcRspStore            map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
+	rcPQCSenderStore      map[uint64]bool                   // rcPQCSenderStore store those who sent PQC info to self
+	recvNewViewInRecovery bool                              // recvNewViewInRecovery record whether receive new view during recovery
+	negoViewRspStore      map[uint64]*NegotiateViewResponse // track replicaId, viewNo.
 }
 
 type blkIdx struct {
@@ -30,7 +33,7 @@ func newRecoveryMgr() *recoveryManager {
 	rm := &recoveryManager{}
 	rm.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 	rm.rcRspStore = make(map[uint64]*RecoveryResponse)
-	rm.rcPQCSenderStore=make(map[uint64]bool)
+	rm.rcPQCSenderStore = make(map[uint64]bool)
 	rm.recoveryToSeqNo = nil
 	rm.recvNewViewInRecovery = false
 
@@ -61,6 +64,8 @@ func (pbft *pbftImpl) initNegoView() error {
 		pbft.logger.Errorf("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", pbft.id)
 		return nil
 	}
+
+	atomic.StoreUint32(&pbft.normal, 0)
 
 	pbft.logger.Debugf("Replica %d now negotiate view...", pbft.id)
 
@@ -124,11 +129,6 @@ func (pbft *pbftImpl) recvNegoView(nv *NegotiateView) events.Event {
 	sender := nv.ReplicaId
 	pbft.logger.Debugf("Replica %d receive nego_view from %d", pbft.id, sender)
 
-	//if pbft.nodeMgr.routers == nil {
-	//	pbft.logger.Debugf("Replica %d ignore nego_view from %d since has not received local msg", pbft.id, sender)
-	//	return nil
-	//}
-
 	negoViewRsp := &NegotiateViewResponse{
 		ReplicaId: pbft.id,
 		View:      pbft.view,
@@ -156,7 +156,6 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 		return nil
 	}
 
-	//rspId, rspView := nvr.ReplicaId, nvr.View
 	if _, ok := pbft.recoveryMgr.negoViewRspStore[nvr.ReplicaId]; ok {
 		pbft.logger.Warningf("Already recv view number from replica %d, replace it with view %d", nvr.ReplicaId, nvr.View)
 	}
@@ -170,18 +169,14 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 		// Reason for not using '≥ pbft.N-pbft.f': if self is wrong, then we are impossible to find 2f+1 same view
 		// can we find same view from 2f+1 peers?
 		type resp struct {
-			n uint64
+			n    uint64
 			view uint64
-			//routers string
 		}
 		viewCount := make(map[resp]uint64)
 		var result resp
-		spFind := false
 		canFind := false
-		view := uint64(0)
-		n := 0
+
 		for _, rs := range pbft.recoveryMgr.negoViewRspStore {
-			//r := byteToString(rs.Routers)
 			ret := resp{rs.N, rs.View}
 			if _, ok := viewCount[ret]; ok {
 				viewCount[ret]++
@@ -189,60 +184,32 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 				viewCount[ret] = uint64(1)
 			}
 			if viewCount[ret] >= uint64(pbft.commonCaseQuorum()) {
-				// yes we find the view
 				result = ret
 				canFind = true
 				break
-			}
-		}
-		for rs, count := range viewCount {
-			if count >= uint64(pbft.commonCaseQuorum()-1) && rs.view != pbft.view {
-				spFind = true
-				view = rs.view
-				n = int(rs.n)
 			}
 		}
 
 		if canFind {
 			pbft.timerMgr.stopTimer(NEGO_VIEW_RSP_TIMER)
 			var IfUpdata bool
-			if pbft.view==result.view{
-				IfUpdata=true
-			}else{
+			if pbft.view == result.view {
+				IfUpdata = true
+			} else {
 				pbft.view = result.view
 			}
 			pbft.N = int(result.n)
 			pbft.f = (pbft.N - 1) / 3
-			//routers, _ := stringToByte(result.routers)
-			//if !bytes.Equal(routers, pbft.nodeMgr.routers) && !pbft.status.getState(&pbft.status.isNewNode) {
-			//	pbft.nodeMgr.routers = routers
-			//	pbft.logger.Debugf("Replica %d update routing table according to nego result", pbft.id)
-			//	pbft.helper.NegoRouters(routers)
-			//}
 			pbft.status.inActiveState(&pbft.status.inNegoView)
 			if atomic.LoadUint32(&pbft.activeView) == 0 {
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}
-			if !IfUpdata{
-				pbft.parseCertStore()
+			if !IfUpdata {
+				pbft.parseSpecifyCertStore()
 			}
 			return &LocalEvent{
-				Service:RECOVERY_SERVICE,
-				EventType:RECOVERY_NEGO_VIEW_DONE_EVENT,
-			}
-		} else if spFind {
-			pbft.timerMgr.stopTimer(NEGO_VIEW_RSP_TIMER)
-			pbft.view = view
-			pbft.N = n
-			pbft.f = (pbft.N - 1) / 3
-			pbft.parseCertStore()
-			pbft.status.inActiveState(&pbft.status.inNegoView)
-			if atomic.LoadUint32(&pbft.activeView) == 0 {
-				atomic.StoreUint32(&pbft.activeView, 1)
-			}
-			return &LocalEvent{
-				Service:RECOVERY_SERVICE,
-				EventType:RECOVERY_NEGO_VIEW_DONE_EVENT,
+				Service:   RECOVERY_SERVICE,
+				EventType: RECOVERY_NEGO_VIEW_DONE_EVENT,
 			}
 		}
 	}
@@ -371,7 +338,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		return nil
 	}
 
-	if pbft.recoveryMgr.recoveryToSeqNo!=nil{
+	if pbft.recoveryMgr.recoveryToSeqNo != nil {
 		pbft.logger.Debugf("Replica %d in recovery receive rcRsp from replica %d "+
 			"but chkpt quorum and seqNo quorum already found. "+
 			"Ignore it", pbft.id, rsp.ReplicaId)
@@ -396,7 +363,7 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		for idx := range pbft.storeMgr.certStore {
 			if idx.n > pbft.exec.lastExec {
 				delete(pbft.storeMgr.certStore, idx)
-				pbft.persistDelQPCSet(idx.v, idx.n)
+				pbft.persistDelQPCSet(idx.v, idx.n, idx.d)
 			}
 		}
 	}
@@ -568,7 +535,8 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 			}
 		}
 	}
-	rcReturn := &RecoveryReturnPQC{ ReplicaId: pbft.id }
+
+	rcReturn := &RecoveryReturnPQC{ReplicaId: pbft.id}
 
 	// in case replica doesn't have PQC, we cannot assign a nil one
 	if prepres != nil {
@@ -603,7 +571,6 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 
 	pbft.logger.Debugf("Replica %d now recvRecoveryReturnPQC from replica %d, return_pqc %v", pbft.id, PQCInfo.ReplicaId, PQCInfo)
 
-
 	sender := PQCInfo.ReplicaId
 	if _, exist := pbft.recoveryMgr.rcPQCSenderStore[sender]; exist {
 		pbft.logger.Warningf("Replica %d receive duplicate RecoveryReturnPQC, ignore it", pbft.id)
@@ -612,41 +579,16 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 	pbft.recoveryMgr.rcPQCSenderStore[sender] = true
 
 	// post all the PQC
-	for _, preprep := range PQCInfo.GetPrepreSet() {
-		payload, err := proto.Marshal(preprep)
-		if err != nil {
-			pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-			return nil
+	if pbft.primary(pbft.view) != pbft.id {
+		for _, preprep := range PQCInfo.GetPrepreSet() {
+			pbft.recvPrePrepare(preprep)
 		}
-		consensusMsg := &ConsensusMessage{
-			Type:    ConsensusMessage_PRE_PREPARE,
-			Payload: payload,
-		}
-		go pbft.pbftEventQueue.Push(consensusMsg)
 	}
 	for _, prep := range PQCInfo.GetPreSet() {
-		payload, err := proto.Marshal(prep)
-		if err != nil {
-			pbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-			return nil
-		}
-		consensusMsg := &ConsensusMessage{
-			Type:    ConsensusMessage_PREPARE,
-			Payload: payload,
-		}
-		go pbft.pbftEventQueue.Push(consensusMsg)
+		pbft.recvPrepare(prep)
 	}
 	for _, cmt := range PQCInfo.GetCmtSet() {
-		payload, err := proto.Marshal(cmt)
-		if err != nil {
-			pbft.logger.Errorf("ConsensusMessage_COMMIT Marshal Error", err)
-			return nil
-		}
-		consensusMsg := &ConsensusMessage{
-			Type:    ConsensusMessage_COMMIT,
-			Payload: payload,
-		}
-		go pbft.pbftEventQueue.Push(consensusMsg)
+		pbft.recvCommit(cmt)
 	}
 
 	return nil

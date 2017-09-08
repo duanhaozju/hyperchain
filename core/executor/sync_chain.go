@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/cheggaaa/pb"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	cm "hyperchain/core/common"
@@ -13,14 +14,13 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
+	"hyperchain/tree/bucket"
 	"io/ioutil"
 	"os"
 	cmd "os/exec"
 	"path"
 	"path/filepath"
 	"time"
-	"hyperchain/tree/bucket"
-	"github.com/cheggaaa/pb"
 )
 
 var (
@@ -69,7 +69,7 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	}
 
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
-	receivePb = common.InitPb(int64(ev.TargetHeight - edb.GetHeightOfChain(executor.namespace)), "receive block")
+	receivePb = common.InitPb(int64(ev.TargetHeight-edb.GetHeightOfChain(executor.namespace)), "receive block")
 	receivePb.Start()
 	go executor.syncChainResendBackend()
 }
@@ -325,12 +325,12 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 		}
 		executor.context.syncCtx.SetTransitioned()
 		go executor.InsertSnapshot(common.Manifest{
-			Height:      nGenesis,
-			BlockHash:   common.Bytes2Hex(newGenesis.BlockHash),
-			FilterId:    ws.Ctx.FilterId,
-			MerkleRoot:  common.Bytes2Hex(newGenesis.MerkleRoot),
-			Date:        time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05"),
-			Namespace:   executor.namespace,
+			Height:     nGenesis,
+			BlockHash:  common.Bytes2Hex(newGenesis.BlockHash),
+			FilterId:   ws.Ctx.FilterId,
+			MerkleRoot: common.Bytes2Hex(newGenesis.MerkleRoot),
+			Date:       time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05"),
+			Namespace:  executor.namespace,
 		})
 		executor.processSyncBlocks()
 	} else if ws.PacketId == executor.context.syncCtx.GetWsId()+1 {
@@ -371,7 +371,7 @@ func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *
 
 func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
 	var filterLogs []*types.Log
-	err, result := executor.applyTransactions(block.Transactions, nil, seqNo, seqNo)
+	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
 	if err != nil {
 		return err, nil
 	}
@@ -441,10 +441,10 @@ func (executor *Executor) processSyncBlocks() {
 		if executor.context.syncCtx.UpdateGenesis {
 			_, low = executor.context.syncCtx.GetCurrentGenesis()
 			low += 1
-			processPb = common.InitPb(int64(executor.getSyncTarget() - low + 1), "process block")
+			processPb = common.InitPb(int64(executor.getSyncTarget()-low+1), "process block")
 		} else {
 			low = executor.context.syncFlag.SyncDemandBlockNum + 1
-			processPb = common.InitPb(int64(executor.getSyncTarget() - edb.GetHeightOfChain(executor.namespace)), "process block")
+			processPb = common.InitPb(int64(executor.getSyncTarget()-edb.GetHeightOfChain(executor.namespace)), "process block")
 		}
 		processPb.Start()
 
@@ -713,7 +713,6 @@ func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
 
 	wsShardSize := executor.GetStateFetchPacketSize()
 
-
 	n := fsize / int64(wsShardSize)
 	if fsize%int64(wsShardSize) > 0 {
 		n += 1
@@ -833,4 +832,3 @@ func getTxVersion(block *types.Block) string {
 	}
 	return string(block.Transactions[0].Version)
 }
-

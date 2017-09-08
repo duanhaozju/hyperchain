@@ -55,6 +55,7 @@ message ValidatedTxs {
     uint64 seqNo = 3;
     uint64 view = 4;
     int64 timestamp = 5;
+    string  digest = 7;
 }
 
 message NewNodeMessage {
