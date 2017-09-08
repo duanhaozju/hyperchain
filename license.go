@@ -56,7 +56,7 @@ func isLicenseExpired() (expired bool) {
 	}
 	pattern, _ := regexp.Compile("Identification: (.*)")
 	identification := pattern.FindString(string(license))[16:]
-	ctx, err := secimpl.TripleDesDec([]byte(privateKey),common.Hex2Bytes(identification))
+	ctx, err := secimpl.TripleDesDecrypt8(common.Hex2Bytes(identification), []byte(privateKey))
 	if err != nil {
 		fmt.Println("invalid license.")
 		expired = true

@@ -92,6 +92,33 @@ func(ea *ECDHWith3DES)Decrypt(key, encryptedMsg []byte)(originMsg []byte,err err
 	return TripleDesDec(key,encryptedMsg)
 }
 
+func TripleDesEncrypt8(origData, key []byte) ([]byte, error) {
+	block, err := des.NewTripleDESCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	origData = PKCS5Padding(origData, block.BlockSize())
+	// origData = ZeroPadding(origData, block.BlockSize())
+	blockMode := cipher.NewCBCEncrypter(block, key[:8])
+	crypted := make([]byte, len(origData))
+	blockMode.CryptBlocks(crypted, origData)
+	return crypted, nil
+}
+
+func TripleDesDecrypt8(crypted, key []byte) ([]byte, error) {
+	block, err := des.NewTripleDESCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	blockMode := cipher.NewCBCDecrypter(block, key[:8])
+	origData := make([]byte, len(crypted))
+	// origData := crypted
+	blockMode.CryptBlocks(origData, crypted)
+	origData = PKCS5UnPadding(origData)
+	// origData = ZeroUnPadding(origData)
+	return origData, nil
+}
+
 // 3DES encryption algorithm implements
 func TripleDesEnc(key, src []byte) ([]byte, error) {
 	if len(key) < 24 {
