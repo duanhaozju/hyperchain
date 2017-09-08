@@ -11,6 +11,7 @@ import (
 	"strings"
 	"io"
 	"path"
+	"bufio"
 )
 
 // MakeName creates a node name that follows the ethereum convention
@@ -142,4 +143,58 @@ func GetPath(namespace, shortPath string) string {
 		return shortPath
 	}
 	return path.Join("namespaces", namespace, shortPath)
+}
+
+//SeekAndAppend seek item by pattern in filepath and than append content after that item
+func SeekAndAppend(item, filepath, appendContent string) error {
+
+	//1. check validity of arguments.
+	if len(filepath) == 0 {
+		return fmt.Errorf("Invalid filepath, file path is empty!")
+	}
+
+	if len(item) == 0 {
+		return fmt.Errorf("Invalid iterm, item is empty")
+	}
+
+	if len(appendContent) == 0 {
+		return fmt.Errorf("Invalid iterm, appenContent is empty")
+	}
+
+	//2. create a temp file to store new file content.
+
+	newFilePath := filepath + ".tmp"
+
+	newFile, err := os.Create(newFilePath)
+	if err != nil {
+		return err
+	}
+	defer newFile.Close()
+
+	//3. copy and appen appendContent
+
+	file, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if _, err = newFile.WriteString(line + "\n"); err != nil {
+			return err
+		}
+		if strings.Contains(line, item) {
+			if _, err = newFile.WriteString(appendContent + "\n"); err != nil {
+				return err
+			}
+		}
+	}
+
+	//4. rename .tmp file to original file name
+	if err = os.Rename(newFilePath, filepath); err != nil{
+		return err
+	}
+	return nil
 }

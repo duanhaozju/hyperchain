@@ -27,6 +27,7 @@ const (
 	KEY_STORE_DIR 		= "account.keystoredir"
 	KEY_NODE_DIR  		= "account.keynodesdir"
 	PEER_CONFIG_PATH 	= "config.path.peerconfig"
+	GLOBAL_CONFIG_PATH  = "global.config.path"
 )
 
 const (
@@ -68,6 +69,11 @@ const (
 	P2P_TLS_CERT_PRIV 				= "p2p.tlsCertPriv"
 	P2P_HOSTS 						= "p2p.hosts"
 	P2P_ADDR 						= "P2P.addr"
+)
+
+// constants for http configuration keys
+const (
+	HTTP_SECURITY		= "http.security"
 )
 
 //constants for encryption configuration keys

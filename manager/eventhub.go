@@ -19,6 +19,7 @@ import (
 	"time"
 
 	flt "hyperchain/manager/filter"
+	"sync"
 )
 
 const (
@@ -30,7 +31,6 @@ const (
 	SUB_EXEC
 	SUB_SESSION
 	SUB_TRANSACTION
-	SUB_NVP
 )
 
 const (
@@ -61,6 +61,7 @@ type EventHub struct {
 	initType int
 	logger   *logging.Logger
 	close    chan bool
+	wg       sync.WaitGroup
 }
 
 func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
@@ -78,16 +79,15 @@ func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.
 		consenter:      consenter,
 		peerManager:    peerManager,
 		accountManager: am,
-		subscriptions:  make(map[int]event.Subscription),
-		close:          make(chan bool),
 		filterSystem:   flt.NewEventSystem(filterMux),
 	}
 	hub.logger = common.GetLogger(namespace, "eventhub")
-	hub.Subscribe()
 	return hub
 }
 
 func (hub *EventHub) Start() {
+	hub.close = make(chan bool)
+	hub.Subscribe()
 	go hub.listenValidateEvent()
 	go hub.listenCommitEvent()
 	go hub.listenConsensusEvent()
@@ -96,13 +96,17 @@ func (hub *EventHub) Start() {
 	go hub.listenPeerMaintainEvent()
 	go hub.listenSessionEvent()
 	go hub.listenTransactionEvent()
+	hub.logger.Notice("start eventhub successfully...")
 }
 
 func (hub *EventHub) Stop() {
 	if hub.close != nil {
 		close(hub.close)
 	}
-	hub.logger.Notice("event hub stopped!")
+	hub.wg.Wait()
+	hub.Unsubscribe()
+	hub.close = nil
+	hub.logger.Notice("stop eventhub successfully...")
 }
 
 // Properties
@@ -135,6 +139,7 @@ func (hub *EventHub) GetFilterSystem() *flt.EventSystem {
 }
 
 func (hub *EventHub) Subscribe() {
+	hub.subscriptions = make(map[int]event.Subscription)
 	// Session stuff
 	hub.subscriptions[SUB_SESSION] = hub.eventMux.Subscribe(event.SessionEvent{})
 	// Internal stuff
@@ -149,14 +154,26 @@ func (hub *EventHub) Subscribe() {
 	hub.subscriptions[SUB_TRANSACTION] = hub.eventMux.Subscribe(event.NewTxEvent{}, event.NvpRelayTxEvent{})
 }
 
+func (hub *EventHub) Unsubscribe() {
+	for typ := SUB_VALIDATION; typ <= SUB_TRANSACTION; typ += 1 {
+		if hub.subscriptions[typ] != nil {
+			hub.subscriptions[typ].Unsubscribe()
+		}
+	}
+	hub.subscriptions = nil
+}
+
 func (hub *EventHub) GetSubscription(t int) event.Subscription {
 	return hub.subscriptions[t]
 }
 
 func (hub *EventHub) listenSessionEvent() {
+	hub.wg.Add(1)
 	for {
 		select {
 		case <-hub.close:
+			hub.wg.Done()
+			hub.logger.Debug("listen session event exit")
 			return
 		case obj := <-hub.GetSubscription(SUB_SESSION).Chan():
 			switch ev := obj.Data.(type) {
@@ -169,9 +186,12 @@ func (hub *EventHub) listenSessionEvent() {
 }
 
 func (hub *EventHub) listenTransactionEvent() {
+	hub.wg.Add(1)
 	for {
 		select {
 		case <-hub.close:
+			hub.wg.Done()
+			hub.logger.Debug("listen transaction event exit")
 			return
 		case obj := <-hub.GetSubscription(SUB_TRANSACTION).Chan():
 			switch ev := obj.Data.(type) {
@@ -203,9 +223,12 @@ func (hub *EventHub) listenTransactionEvent() {
 
 // listen validate msg
 func (hub *EventHub) listenValidateEvent() {
+	hub.wg.Add(1)
 	for {
 		select {
 		case <-hub.close:
+			hub.wg.Done()
+			hub.logger.Debug("listen validation event exit")
 			return
 		case obj := <-hub.GetSubscription(SUB_VALIDATION).Chan():
 			switch ev := obj.Data.(type) {
@@ -221,9 +244,12 @@ func (hub *EventHub) listenValidateEvent() {
 
 // listen commit msg
 func (hub *EventHub) listenCommitEvent() {
+	hub.wg.Add(1)
 	for {
 		select {
 		case <-hub.close:
+			hub.wg.Done()
+			hub.logger.Debug("listen commit event exit")
 			return
 		case obj := <-hub.GetSubscription(SUB_COMMIT).Chan():
 			switch ev := obj.Data.(type) {
@@ -238,9 +264,12 @@ func (hub *EventHub) listenCommitEvent() {
 }
 
 func (hub *EventHub) listenMiscellaneousEvent() {
+	hub.wg.Add(1)
 	for {
 		select {
 		case <-hub.close:
+			hub.wg.Done()
+			hub.logger.Debug("listen miscellaneous event exit")
 			return
 		case obj := <-hub.GetSubscription(SUB_MISCELLANEOUS).Chan():
 			switch ev := obj.Data.(type) {
@@ -268,9 +297,12 @@ func (hub *EventHub) listenMiscellaneousEvent() {
 }
 
 func (hub *EventHub) listenConsensusEvent() {
+	hub.wg.Add(1)
 	for {
 		select {
 		case <-hub.close:
+			hub.wg.Done()
+			hub.logger.Debug("listen consensus event exit")
 			return
 		case obj := <-hub.GetSubscription(SUB_CONSENSUS).Chan():
 			switch ev := obj.Data.(type) {
@@ -287,10 +319,12 @@ func (hub *EventHub) listenConsensusEvent() {
 }
 
 func (hub *EventHub) listenPeerMaintainEvent() {
-
+	hub.wg.Add(1)
 	for {
 		select {
 		case <-hub.close:
+			hub.wg.Done()
+			hub.logger.Debug("listen peer maintain event exit")
 			return
 		case obj := <-hub.GetSubscription(SUB_PEERMAINTAIN).Chan():
 			switch ev := obj.Data.(type) {
@@ -330,20 +364,22 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 				}
 			case event.AlreadyInChainEvent:
 				hub.logger.Debugf("message middleware: [already in chain]")
-					payload := hub.peerManager.GetLocalAddressPayload()
-					hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_NEW_NODE_EVENT, &protos.NewNodeMessage{payload})
-					hub.PassRouters()
-					hub.NegotiateView()
+				payload := hub.peerManager.GetLocalAddressPayload()
+				hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_NEW_NODE_EVENT, &protos.NewNodeMessage{payload})
+				hub.PassRouters()
+				hub.NegotiateView()
 			}
-
 		}
 	}
 }
 
 func (hub *EventHub) listenExecutorEvent() {
+	hub.wg.Add(1)
 	for {
 		select {
 		case <-hub.close:
+			hub.wg.Done()
+			hub.logger.Debug("listen executor event exit")
 			return
 		case obj := <-hub.GetSubscription(SUB_EXEC).Chan():
 			switch ev := obj.Data.(type) {
@@ -430,7 +466,7 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		// TODO FIX this! @chenquan
 		//addr := hub.peerManager.GetLocalNode().GetNodeAddr()
 		payload, _ := proto.Marshal(&types.ReplicaInfo{
-			Chain:     chain,
+			Chain: chain,
 			//Ip:        []byte(addr.IP),
 			//Port:      int32(addr.Port),
 			Namespace: []byte(hub.namespace),

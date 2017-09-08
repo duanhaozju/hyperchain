@@ -56,7 +56,7 @@ func (rsi *RPCServerImpl) Command(args []string,ret *[]string)error{
 			if err := rsi.StopHttpServer(); err != nil {
 				*ret = append(*ret, fmt.Sprintf("failed to stop http service. Err: %v", err),)
 			} else {
-				*ret = append(*ret, "success to stop http service.")
+				*ret = append(*ret, fmt.Sprintf("success to stop http service at port %v", rsi.httpServer.getPort()))
 			}
 			break
 		}
@@ -110,7 +110,7 @@ func (rsi *RPCServerImpl) Command(args []string,ret *[]string)error{
 			if err := rsi.StopWSServer(); err != nil {
 				*ret = append(*ret, fmt.Sprintf("failed to stop websocket service. Err: %v", err),)
 			} else {
-				*ret = append(*ret, "success to stop websocket service.")
+				*ret = append(*ret, fmt.Sprintf("success to stop websocket service at port %v", rsi.wsServer.getPort()))
 			}
 			break
 		}

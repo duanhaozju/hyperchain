@@ -81,22 +81,31 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 	if err != nil {
 		return nil, err
 	}
-	rca, err := readCert(common.GetPath(namespace, config.GetString(common.ENCRYPTION_RCERT_RCA)))
-	if err != nil {
-		return nil, err
-	}
-	rcert, err := readCert(common.GetPath(namespace, config.GetString(common.ENCRYPTION_RCERT_RCERT)))
-	if err != nil {
-		rcert = &cert{}
-	}
 	ecertpriv, err := readKey(common.GetPath(namespace, config.GetString(common.ENCRYPTION_ECERT_PRIV)))
 	if err != nil {
 		return nil, err
 	}
-	rcertpriv, err := readKey(common.GetPath(namespace, config.GetString(common.ENCRYPTION_RCERT_PRIV)))
-	if err != nil {
-		return nil, err
+
+	enable := config.GetBool(common.ENCRYPTION_CHECK_ENABLE)
+
+	var rca *cert
+	var rcert *cert
+	var rcertpriv *key
+	if enable {
+		rca, err = readCert(common.GetPath(namespace, config.GetString(common.ENCRYPTION_RCERT_RCA)))
+		if err != nil {
+			return nil, err
+		}
+		rcert, err = readCert(common.GetPath(namespace, config.GetString(common.ENCRYPTION_RCERT_RCERT)))
+		if err != nil {
+			rcert = &cert{}
+		}
+		rcertpriv, err = readKey(common.GetPath(namespace, config.GetString(common.ENCRYPTION_RCERT_PRIV)))
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	whiteList := config.GetBool(common.ENCRYPTION_TCERT_WHITELIST)
 	if whiteList {
 		logger.Critical("Init Tcert White list!")

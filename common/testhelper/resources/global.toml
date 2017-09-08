@@ -34,14 +34,6 @@ console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shor
 
 ##########################################################
 #
-# http section
-#
-##########################################################
-[http]
-security    = false # if true, it will enable secure http connection(https).
-
-##########################################################
-#
 # P2P section
 #
 ##########################################################
@@ -102,6 +94,7 @@ grpc        = 50011 # p2p
 config_root_dir = "./namespaces"
 
     [namespace.start] # define start which namespaces when node starts
+    ns1 = true
     global          = true
     ns_2e6160583867 = false
 

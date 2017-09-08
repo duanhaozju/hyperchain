@@ -66,17 +66,17 @@ algo = "PBFT"
  priv   = "config/certs/rcert.priv"
 
 [encryption.tcert]
-  # if you do not have rcert, leave this item blank
- whiteList = true
+  # Tcert whitelist configuration.
+ whiteList = false
  listDir  = "config/certs/tcerts"
 
 [encryption.check]
- enable     = true
- sign       = false
- enableT    = true
+ enable     = true  #enable RCert
+ sign       = false  #enable Signature
+ enableT    = false  #enable TCert
 
 [encryption.security]
- algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des or sm4)
+ algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des,aes or sm4)
 
 
 ############################################################################################################
