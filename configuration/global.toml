@@ -38,7 +38,7 @@ console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shor
 #
 ##########################################################
 [http]
-security    = false # 为true表示使用https + http2，否则使用http
+security    = false # if true, it will enable secure http connection(https).
 
 ##########################################################
 #
