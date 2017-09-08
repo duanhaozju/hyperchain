@@ -32,10 +32,10 @@ func getCmds(endpoint string)[]*ishell.Cmd{
 			Name: "service",
 			Help: `service commands:
 		service http start [port] 	- start http service
-		service http stop	  	- stop http service
-		service http restart	  	- restart http service
+		service http stop	- stop http service
+		service http restart	- restart http service
 		service websocket start [port] 	- start http service
-		service websocket stop	  	- stop http service
+		service websocket stop	- stop http service
 		service websocket restart	- restart http service
 			`,
 			Func: handler.handle,

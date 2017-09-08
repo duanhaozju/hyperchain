@@ -78,7 +78,6 @@ func (hi *httpServerImpl) start() error {
 		log.Noticef("starting http service at port %v ... , security connection is enabled.", hi.port)
 
 		pool := x509.NewCertPool()
-
 		caCrt, err := ioutil.ReadFile(config.GetString(common.P2P_TLS_CA))
 		if err != nil {
 			fmt.Println("ReadFile err:", err)
@@ -86,35 +85,28 @@ func (hi *httpServerImpl) start() error {
 		}
 		pool.AppendCertsFromPEM(caCrt)
 
+		serverCert, err := tls.LoadX509KeyPair(config.GetString(common.P2P_TLS_CERT), config.GetString(common.P2P_TLS_CERT_PRIV))
+		if err != nil {
+			log.Errorf("Loadx509keypair err: ", err)
+			return err
+		}
+
+		if listener, err = tls.Listen("tcp", ":"+config.GetString(common.JSON_RPC_PORT), &tls.Config{
+			ClientCAs:  pool,
+			ClientAuth: tls.RequireAndVerifyClientCert,
+			Certificates: []tls.Certificate{serverCert},
+			NextProtos: []string{"h2"},
+		}); err != nil {
+			log.Error(err)
+			return err
+		}
+
 		srv := newHTTPServer(mux, &tls.Config{
 			ClientCAs:  pool,
 			ClientAuth: tls.RequireAndVerifyClientCert,
 		})
-		srv.Addr = ":"+config.GetString(common.JSON_RPC_PORT)
 		http2.ConfigureServer(srv, &http2.Server{})
-		go func() {
-			err = srv.ListenAndServeTLS(config.GetString(common.P2P_TLS_CERT), config.GetString(common.P2P_TLS_CERT_PRIV))
-			if err != nil {
-				log.Errorf("ListenAndServeTLS error: %v", err)
-			}
-		}()
-		//TODO 需要支持手动关闭安全http服务
-
-		//serverCert, err := tls.LoadX509KeyPair(config.GetString(common.P2P_TLS_CERT), config.GetString(common.P2P_TLS_CERT_PRIV))
-		//if err != nil {
-		//	fmt.Println("Loadx509keypair err:", err)
-		//	return err
-		//}
-		//listener, err = tls.Listen("tcp", ":"+config.GetString(common.JSON_RPC_PORT), &tls.Config{
-		//	ClientCAs:  pool,
-		//	ClientAuth: tls.RequireAndVerifyClientCert,
-		//	Certificates: []tls.Certificate{serverCert},
-		//})
-		//if err != nil {
-		//	fmt.Println(err)
-		//	return err
-		//}
-		//go srv.Serve(listener)
+		go srv.Serve(listener)
 	} else {
 		// disable https
 		log.Noticef("starting http service at port %v ... , security connection is disenabled.", hi.port)
