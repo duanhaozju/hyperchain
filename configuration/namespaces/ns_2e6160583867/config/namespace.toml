@@ -31,7 +31,6 @@ algo = "PBFT"
     nodes           = 4     # Number of replicas
     batchsize       = 500   # How many transactions should the primary pack before sending pre-prepare
     vcresendlimit   = 10    # How many times of same vc from self before a replica start recovery
-    cachetx         = 30000 # How many transactions will be stored if system in abnormal (like viewchange and nego-view)
         [consensus.pbft.timeout]
             negoview        = "6s"  # How long to wait for N-f responses after send negotiate view
             recovery        = "15s" # How long to wait before recovery finished(This is for release1.2)

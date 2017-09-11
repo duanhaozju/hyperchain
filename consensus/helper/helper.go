@@ -19,17 +19,32 @@ type helper struct {
 	externalMux *event.TypeMux
 }
 
+// Stack helps pbftImpl send message to other components of system. PbftImpl
+// would generate some messages and post these messages to other components,
+// in order to send messages to other vp nodes, let other components validate or
+// execute transactions, or send messages to clients.
 type Stack interface {
+	// InnerBroadcast broadcast the consensus message to all other vp nodes
 	InnerBroadcast(msg *pb.Message) error
+	// InnerUnicast unicast the transaction message to a specific vp node
 	InnerUnicast(msg *pb.Message, to uint64) error
+	// Execute transfers the transactions decided by consensus to outer to execute these transactions
 	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
+	// UpdateState transfers the UpdateStateEvent to outer
 	UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error
+	// ValidateBatch transfers the ValidationEvent to outer
 	ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, vid uint64, view uint64, isPrimary bool) error
+	// VcReset reset vid when view change is done, clear the validate cache larger than seqNo
 	VcReset(seqNo uint64) error
+	// InformPrimary send the primary id to update info after negotiate view or view change
 	InformPrimary(primary uint64) error
+	// BroadcastAddNode broadcast addnode message to others
 	BroadcastAddNode(msg *pb.Message) error
+	// BroadcastDelNode broadcast delnode message to others
 	BroadcastDelNode(msg *pb.Message) error
+	// UpdateTable inform to update routing table
 	UpdateTable(payload []byte, flag bool) error
+	// SendFilterEvent sends event to subscription system, then the system would return message to clients which subscribe this message.
 	SendFilterEvent(informType int, message ...interface{}) error
 }
 
@@ -106,7 +121,7 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 	return nil
 }
 
-// UpdateState transfers the UpdateStateEvent to outer
+// ValidateBatch transfers the ValidationEvent to outer
 func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, vid uint64, view uint64, isPrimary bool) error {
 
 	validateEvent := event.ValidationEvent{
@@ -218,7 +233,7 @@ func (h *helper) PostExternal(ev interface{}) {
 	h.externalMux.Post(ev)
 }
 
-// sendFilterEvent - send event to subscription system.
+// sendFilterEvent sends event to subscription system.
 func (h *helper) SendFilterEvent(informType int, message ...interface{}) error {
 	switch informType {
 	case consensus.FILTER_View_Change_Finish:

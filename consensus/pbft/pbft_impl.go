@@ -23,47 +23,44 @@ import (
 	"github.com/op/go-logging"
 )
 
-// batch is used to construct reqbatch, the middle layer between outer to pbft
+// pbftImpl is the core struct of pbft module, which handles all functions about consensus
 type pbftImpl struct {
-	namespace      string
-	activeView     uint32 // view change happening
-	f              int    // max. number of faults we can tolerate
-	N              int    // max.number of validators in the network
-	h              uint64 // low watermark
-	id             uint64 // replica ID; PBFT `i`
-	K              uint64 // checkpoint period
-	logMultiplier  uint64 // use this value to calculate log size : k*logMultiplier
-	L              uint64 // log size
-	seqNo          uint64 // PBFT "n", strictly monotonic increasing sequence number
-	view           uint64 // current view
-	nvInitialSeqNo uint64 // initial seqNo in a new view
-	cachetx        int
+	namespace      	string // this node belongs to which namespace
+	activeView     	uint32 // view change happening, this view is active now or not
+	f              	int    // max. number of byzantine validators we can tolerate
+	N              	int    // max. number of validators in the network
+	h              	uint64 // low watermark
+	id             	uint64 // replica ID; PBFT `i`
+	K              	uint64 // how long this checkpoint period is
+	logMultiplier  	uint64 // use this value to calculate log size : k*logMultiplier
+	L              	uint64 // log size: k*logMultiplier
+	seqNo          	uint64 // PBFT "n", strictly monotonic increasing sequence number
+	view           	uint64 // current view
 
-	status PbftStatus // basic status of pbft
+	status 		PbftStatus // keep all basic status of pbft in this object
 
-	batchMgr    *batchManager    // manage batch related issues
-	batchVdr    *batchValidator  // manage batch validate issues
-	timerMgr    *timerManager    // manage pbft event timers
-	storeMgr    *storeManager    // manage storage
-	nodeMgr     *nodeManager     // manage node delete or add
-	recoveryMgr *recoveryManager // manage recovery issues
-	vcMgr       *vcManager       // manage viewchange issues
-	exec        *executor        // manage transaction exec
+	batchMgr    	*batchManager    // manage batch related issues
+	batchVdr    	*batchValidator  // manage batch validate issues
+	timerMgr    	*timerManager    // manage pbft event timers
+	storeMgr    	*storeManager    // manage storage
+	nodeMgr     	*nodeManager     // manage node delete or add
+	recoveryMgr 	*recoveryManager // manage recovery issues
+	vcMgr       	*vcManager       // manage viewchange issues
+	exec        	*executor        // manage transaction exec
 
-	helper helper.Stack
-	//reqStore       *requestStore                // received messages
+	helper 		helper.Stack	 // send message to other components of system
 
-	pbftManager    events.Manager // manage pbft event
-	pbftEventQueue events.Queue   // transfer PBFT related event
+	pbftManager    events.Manager 	 // manage pbft event
+	pbftEventQueue events.Queue   	 // transfer PBFT related event
 
-	config *common.Config
-	logger *logging.Logger
+	config *common.Config		 // get configuration info
+	logger *logging.Logger		 // write logger to record some info
 
-	normal   uint32
-	poolFull uint32
+	normal   uint32			 // system is normal or not
+	poolFull uint32			 // txPool is full or not
 }
 
-//newPBFT init the PBFT instance
+// newPBFT init the PBFT instance
 func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*pbftImpl, error) {
 	var err error
 	pbft := &pbftImpl{}
@@ -81,8 +78,6 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*p
 	pbft.K = uint64(10)
 	pbft.logMultiplier = uint64(4)
 	pbft.L = pbft.logMultiplier * pbft.K // log size
-	pbft.cachetx = config.GetInt("consensus.pbft.cachetx")
-	pbft.logger.Noticef("Replica %d set cachetx %d", pbft.id, pbft.cachetx)
 
 	//pbftManage manage consensus events
 	pbft.pbftManager = events.NewManagerImpl(pbft.namespace)
@@ -138,7 +133,7 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*p
 // general event process method
 // =============================================================================
 
-// ProcessEvent implements event.Receiver
+// ProcessEvent implements event.Receiver, dispatch messages according to their types
 func (pbft *pbftImpl) ProcessEvent(ee events.Event) events.Event {
 
 	switch e := ee.(type) {
@@ -173,11 +168,11 @@ func (pbft *pbftImpl) ProcessEvent(ee events.Event) events.Event {
 	return nil
 }
 
-//dispatchCorePbftMsg dispatch core PBFT consensus messages from other peers.
+// dispatchCorePbftMsg dispatch core PBFT consensus messages.
 func (pbft *pbftImpl) dispatchCorePbftMsg(e events.Event) events.Event {
 	switch et := e.(type) {
 	case *PrePrepare:
-		if et.SequenceNumber != uint64(0) {
+		if et.SequenceNumber != uint64(0) {// The seqNo of prePrepare-sp message is 0
 			return pbft.recvPrePrepare(et)
 		} else {
 			return pbft.recvPrePrepareSp(et)
@@ -224,7 +219,7 @@ func (pbft *pbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 // null request methods
 //=============================================================================
 
-// processNullRequest process when a null request come
+// processNullRequest process null request when it come
 func (pbft *pbftImpl) processNullRequest(msg *protos.Message) error {
 	if pbft.status.getState(&pbft.status.inNegoView) {
 		return nil
@@ -235,11 +230,11 @@ func (pbft *pbftImpl) processNullRequest(msg *protos.Message) error {
 		return nil
 	}
 
-	if pbft.primary(pbft.view) != msg.Id {
+	if pbft.primary(pbft.view) != msg.Id { // only primary could send a null request
 		pbft.logger.Warningf("Replica %d received null request from replica %d who is not primary", pbft.id, msg.Id)
 		return nil
 	}
-
+	// if receiver is not primary, stop FIRST_REQUEST_TIMER started after this replica finished recovery
 	if pbft.primary(pbft.view) != pbft.id {
 		pbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 	}
@@ -249,7 +244,8 @@ func (pbft *pbftImpl) processNullRequest(msg *protos.Message) error {
 	return nil
 }
 
-//handleNullRequestEvent triggered by null request timer
+// handleNullRequestEvent triggered by null request timer, primary needs to send a null request
+// and replica needs to send view change
 func (pbft *pbftImpl) handleNullRequestTimerEvent() {
 
 	if pbft.status.getState(&pbft.status.inNegoView) {
@@ -262,7 +258,7 @@ func (pbft *pbftImpl) handleNullRequestTimerEvent() {
 	}
 
 	if pbft.primary(pbft.view) != pbft.id {
-		// backup expected a null request, but primary never sent one
+		// replica expects a null request, but primary never sent one
 		pbft.logger.Warningf("Replica %d null request timer expired, sending view change", pbft.id)
 		pbft.sendViewChange()
 	} else {
@@ -282,9 +278,12 @@ func (pbft *pbftImpl) sendNullRequest() {
 // Preprepare prepare commit methods
 //=============================================================================
 
-// trySendPrePrepares send all available PrePrepare messages.
+// trySendPrePrepares check whether there is a pre-prepare message in process, If not,
+// send all available PrePrepare messages by order.
 func (pbft *pbftImpl) trySendPrePrepares() {
 
+	// if we find a batch in findNextPrePrepareBatch, currentVid would be set.
+	// And currentVid would be set to nil after send a pre-prepare message.
 	if pbft.batchVdr.currentVid != nil {
 		pbft.logger.Debugf("Replica %d not attempting to send pre-prepare bacause it is currently send %d, retry.", pbft.id, *pbft.batchVdr.currentVid)
 		return
@@ -293,7 +292,7 @@ func (pbft *pbftImpl) trySendPrePrepares() {
 	pbft.logger.Debugf("Replica %d attempting to call sendPrePrepare", pbft.id)
 
 	for stopTry := false; !stopTry; {
-		if find, txBatch, digest, resultHash := pbft.findNextPrePrepareBatch(); find {
+		if find, txBatch, digest, resultHash := pbft.findNextPrePrepareBatch(); find { // if find, just send
 			waitingBatch := pbft.storeMgr.outstandingReqBatches[digest]
 			if len(txBatch.TxList) == 0 {
 				pbft.sendPrePrepareSp(digest, resultHash, waitingBatch)
@@ -306,7 +305,7 @@ func (pbft *pbftImpl) trySendPrePrepares() {
 	}
 }
 
-//findNextPrePrepareBatch find next validated batch to send preprepare msg.
+// findNextPrePrepareBatch find next validated batch to send preprepare msg.
 func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string, string) {
 	var find bool
 	var nextPreprepareBatch *TransactionBatch
@@ -320,7 +319,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			continue
 		}
 
-		if cache.vid != pbft.batchVdr.lastVid+1 {
+		if cache.vid != pbft.batchVdr.lastVid+1 { // find the batch whose vid is exactly lastVid+1
 			pbft.logger.Debugf("Primary %d expect to send pre-prepare for vid=%d, not vid=%d", pbft.id, pbft.batchVdr.lastVid+1, cache.vid)
 			continue
 		}
@@ -328,6 +327,8 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 		currentVid := cache.vid
 		pbft.batchVdr.setCurrentVid(&currentVid)
 
+		// if the batch is full of transactions which cannot pass validate,
+		// send a special prePrepare whose seqNo is 0
 		if len(cache.batch.TxList) == 0 {
 			find = true
 			nextPreprepareBatch = cache.batch
@@ -342,10 +343,12 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			continue
 		}
 
+		// restrict the speed of sending prePrepare，and in view change, when send new view,
+		// we need to assign seqNo and there is an upper limit. So we cannot break the high watermark.
 		if !pbft.sendInWV(pbft.view, n) {
 			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because "+
 				"batch seqNo=%d is out of sequence numbers", pbft.id, digest, n)
-			pbft.batchVdr.currentVid = nil
+			pbft.batchVdr.currentVid = nil // don't send this message this time, send it after move watermark
 			//ogger.Debugf("Replica %d broadcast FinishUpdate", pbft.id)
 			break
 		}
@@ -358,6 +361,8 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 	return find, nextPreprepareBatch, digest, resultHash
 }
 
+// sendPrePrepareSp send special prepare message. If all transactions in a batch cannot pass validation,
+// it's a special batch.
 func (pbft *pbftImpl) sendPrePrepareSp(digest string, hash string, batch *TransactionBatch) {
 
 	pbft.logger.Debugf("Primary %d broadcasting pre-prepare-sp for view=%d/seqNo=%d/vid=%d/digest=%s",
@@ -369,7 +374,7 @@ func (pbft *pbftImpl) sendPrePrepareSp(digest string, hash string, batch *Transa
 	}
 	preprep := &PrePrepare{
 		View:           pbft.view,
-		SequenceNumber: uint64(0),
+		SequenceNumber: uint64(0), // special prePrepare's seqNo is set to 0
 		Vid:            *pbft.batchVdr.currentVid,
 		BatchDigest:    digest,
 		ResultHash:     hash,
@@ -403,7 +408,7 @@ func (pbft *pbftImpl) sendPrePrepareSp(digest string, hash string, batch *Transa
 	pbft.startTimerIfOutstandingRequests()
 }
 
-//sendPrePrepare send prepare message.
+// sendPrePrepare send prePrepare message.
 func (pbft *pbftImpl) sendPrePrepare(digest string, hash string, reqBatch *TransactionBatch) {
 
 	pbft.logger.Debugf("Replica %d is primary, issuing pre-prepare for request batch %s", pbft.id, digest)
@@ -459,7 +464,7 @@ func (pbft *pbftImpl) sendPrePrepare(digest string, hash string, reqBatch *Trans
 	pbft.batchVdr.updateLCVid()
 }
 
-//recvPrePrepare process logic for PrePrepare msg.
+// recvPrePrepare process logic for PrePrepare msg.
 func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 
 	pbft.logger.Debugf("Replica %d received pre-prepare from replica %d for view=%d/seqNo=%d/vid=%d, digest=%s ",
@@ -469,6 +474,8 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 		return nil
 	}
 
+	// In recovery, we would fetch recovery PQC, and receive these PQC again,
+	// and we cannot stop timer in this situation, so we check seqNo here.
 	if preprep.SequenceNumber > pbft.exec.lastExec {
 		pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 		pbft.stopFirstRequestTimer()
@@ -547,7 +554,7 @@ func (pbft *pbftImpl) recvPrePrepareSp(preprep *PrePrepare) error {
 	return nil
 }
 
-//sendPrepare send prepare message.
+// sendPrepare send prepare message.
 func (pbft *pbftImpl) sendPrepare(preprep *PrePrepare) error {
 	pbft.logger.Debugf("Backup %d broadcasting prepare for view=%d/seqNo=%d", pbft.id, preprep.View, preprep.SequenceNumber)
 	prep := &Prepare{
@@ -572,7 +579,7 @@ func (pbft *pbftImpl) sendPrepare(preprep *PrePrepare) error {
 	return pbft.helper.InnerBroadcast(msg)
 }
 
-//recvPrepare process logic after receive prepare message
+// recvPrepare process logic after receive prepare message
 func (pbft *pbftImpl) recvPrepare(prep *Prepare) error {
 	pbft.logger.Debugf("Replica %d received prepare from replica %d for view=%d/seqNo=%d",
 		pbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
@@ -604,7 +611,8 @@ func (pbft *pbftImpl) recvPrepare(prep *Prepare) error {
 	return pbft.maybeSendCommit(prep.BatchDigest, prep.View, prep.SequenceNumber, prep.Vid)
 }
 
-//maybeSendCommit may send commit msg.
+// maybeSendCommit check if we could send commit. if no problem,
+// primary would send commit and replica would validate the batch.
 func (pbft *pbftImpl) maybeSendCommit(digest string, v uint64, n uint64, vid uint64) error {
 	cert := pbft.storeMgr.getCert(v, n, digest)
 
@@ -626,8 +634,7 @@ func (pbft *pbftImpl) maybeSendCommit(digest string, v uint64, n uint64, vid uin
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		idx := vidx{view: v, seqNo: n, vid: vid}
-
-		if !cert.sentValidate {
+		if !cert.sentValidate {// if haven't send to validate the batch
 			pbft.batchVdr.preparedCert[idx] = digest
 			pbft.validatePending()
 		}
@@ -635,7 +642,7 @@ func (pbft *pbftImpl) maybeSendCommit(digest string, v uint64, n uint64, vid uin
 	}
 }
 
-//sendCommit send commit message.
+// sendCommit send commit message.
 func (pbft *pbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 
 	cert := pbft.storeMgr.getCert(v, n, digest)
@@ -670,7 +677,7 @@ func (pbft *pbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 	return nil
 }
 
-//recvCommit process logic after receive commit message.
+// recvCommit process logic after receive commit message.
 func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 	pbft.logger.Debugf("Replica %d received commit from replica %d for view=%d/seqNo=%d",
 		pbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
@@ -701,7 +708,7 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 	cert.commit[*commit] = true
 
 	if pbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
-		pbft.stopNewViewTimer()
+		pbft.stopNewViewTimer()// stop new view timer which was started when recv prePrepare
 		idx := msgID{v: commit.View, n: commit.SequenceNumber, d: commit.BatchDigest}
 		if !cert.sentExecute && cert.validated {
 
@@ -722,6 +729,7 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 	return nil
 }
 
+// fetchMissingTransaction fetch missing transactions from primary which this node didn't receive but primary received
 func (pbft *pbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing []string) error {
 
 	pbft.logger.Debugf("Replica %d try to fetch missing txs from primary %d", pbft.id, preprep.ReplicaId)
@@ -751,6 +759,7 @@ func (pbft *pbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing []str
 	return nil
 }
 
+// recvFetchMissingTransaction returns transactions to a node which didn't receive some transactions and ask primary for them.
 func (pbft *pbftImpl) recvFetchMissingTransaction(fetch *FetchMissingTransaction) error {
 
 	pbft.logger.Debugf("Primary %d received FetchMissingTransaction request from replica %d", pbft.id, fetch.ReplicaId)
@@ -788,6 +797,8 @@ func (pbft *pbftImpl) recvFetchMissingTransaction(fetch *FetchMissingTransaction
 	return nil
 }
 
+// recvReturnMissingTransaction processes ReturnMissingTransaction from primary.
+// Add these transactions to txPool and see if it has correct transactions.
 func (pbft *pbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction) events.Event {
 
 	pbft.logger.Debugf("Replica %d received ReturnMissingTransaction from replica %d", pbft.id, re.ReplicaId)
@@ -875,7 +886,7 @@ func (pbft *pbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 // execute transactions
 //=============================================================================
 
-//commitTransactions commit all available transactions
+// commitTransactions commit all available transactions by order
 func (pbft *pbftImpl) commitTransactions() {
 	if pbft.exec.currentExec != nil {
 		pbft.logger.Debugf("Replica %d not attempting to commitTransactions bacause it is currently executing %d",
@@ -899,7 +910,7 @@ func (pbft *pbftImpl) commitTransactions() {
 	pbft.startTimerIfOutstandingRequests()
 }
 
-//findNextCommitTx find next msgID which is able to commit.
+// findNextCommitTx find next msgID which is able to commit.
 func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
 	var find bool = false
 	var nextExecuteMsgId msgID
@@ -951,7 +962,8 @@ func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
 	return find, nextExecuteMsgId, cert
 }
 
-//afterCommitTx after commit transaction.
+// afterCommitTx processes logic after commit transaction, update lastExec,
+// and generate checkpoint when lastExec % K == 0
 func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 
 	if pbft.exec.currentExec != nil {
@@ -977,11 +989,6 @@ func (pbft *pbftImpl) afterCommitTx(idx msgID) {
 	}
 
 	pbft.exec.currentExec = nil
-	// optimization: if we are in view changing waiting for executing to target seqNo,
-	// one-time processNewView() is enough. No need to processNewView() every time in execDoneSync()
-	if atomic.LoadUint32(&pbft.activeView) == 0 && pbft.exec.lastExec == pbft.nvInitialSeqNo {
-		pbft.processNewView()
-	}
 }
 
 //=============================================================================
@@ -994,17 +1001,22 @@ func (pbft *pbftImpl) processTransaction(tx *types.Transaction) events.Event {
 	var err error
 	var isGenerated bool
 
+	// this function processes transaction from client, so should check poolSize
+
+
+	// this node is not normal, just add a transaction without generating batch.
 	if atomic.LoadUint32(&pbft.activeView) == 0 ||
 		atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 1 ||
 		pbft.status.checkStatesOr(&pbft.status.inNegoView) {
 		_, err = pbft.batchMgr.txPool.AddNewTx(tx, false, true)
 	}
+	// primary nodes would check if this transaction triggered generating a batch or not
 	if ok, _ := pbft.isPrimary(); ok {
-		if !pbft.batchMgr.isBatchTimerActive() {
+		if !pbft.batchMgr.isBatchTimerActive() { // start batch timer when this node receives the first transaction of a batch
 			pbft.startBatchTimer()
 		}
 		isGenerated, err = pbft.batchMgr.txPool.AddNewTx(tx, true, true)
-		if isGenerated {
+		if isGenerated { // If this transaction triggers generating a batch, stop batch timer
 			pbft.stopBatchTimer()
 		}
 	} else {
@@ -1022,9 +1034,11 @@ func (pbft *pbftImpl) processTransaction(tx *types.Transaction) events.Event {
 	return nil
 }
 
+// recvStateUpdatedEvent processes StateUpdatedMessage.
 func (pbft *pbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error {
 	pbft.status.inActiveState(&pbft.status.stateTransferring)
 	// If state transfer did not complete successfully, or if it did not reach our low watermark, do it again
+	// When this node moves watermark before this node receives StateUpdatedMessage, this would happen.
 	if et.SeqNo < pbft.h {
 		pbft.logger.Warningf("Replica %d recovered to seqNo %d but our low watermark has moved to %d", pbft.id, et.SeqNo, pbft.h)
 		if pbft.storeMgr.highStateTarget == nil {
@@ -1118,11 +1132,13 @@ func (pbft *pbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 	return nil
 }
 
+// executeAfterStateUpdate processes logic after state update
 func (pbft *pbftImpl) executeAfterStateUpdate() {
 
 	pbft.logger.Debugf("Replica %d try to execute after state update", pbft.id)
 
 	for idx, cert := range pbft.storeMgr.certStore {
+		// If this node is primary, it would validate first, then send prePrepare
 		if idx.n > pbft.seqNo && pbft.prepared(idx.d, idx.v, idx.n) && !cert.validated {
 			pbft.logger.Debugf("Replica %d try to vaidate batch %s", pbft.id, idx.d)
 			id := vidx{idx.v, idx.n, cert.vid}
@@ -1133,6 +1149,7 @@ func (pbft *pbftImpl) executeAfterStateUpdate() {
 
 }
 
+// checkpoint generate a checkpoint and broadcast it to outer.
 func (pbft *pbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 
 	if n%pbft.K != 0 {
@@ -1157,7 +1174,7 @@ func (pbft *pbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 	pbft.storeMgr.saveCheckpoint(seqNo, idAsString)
 
 	pbft.persistCheckpoint(seqNo, id)
-	pbft.recvCheckpoint(chkpt)
+	pbft.recvCheckpoint(chkpt)	// send to itself
 	payload, err := proto.Marshal(chkpt)
 	if err != nil {
 		pbft.logger.Errorf("ConsensusMessage_CHECKPOINT Marshal Error", err)
@@ -1171,6 +1188,7 @@ func (pbft *pbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 	pbft.helper.InnerBroadcast(msg)
 }
 
+// recvCheckpoint processes logic after receive checkpoint.
 func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 
 	pbft.logger.Debugf("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
@@ -1181,6 +1199,10 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 		return nil
 	}
 
+	// weakCheckpointSetOutOfRange checks if this node is fell behind or not. If we receive f+1 checkpoints whose seqNo > H (for example 150),
+	// move watermark to the smallest seqNo (150) among these checkpoints, because this node is fell behind at least 50 blocks.
+	// Then when this node receives f+1 checkpoints whose seqNo (160) is larger than 150,
+	// enter witnessCheckpointWeakCert and set highStateTarget to 160, then this node would find itself fell behind and trigger state update
 	if pbft.weakCheckpointSetOutOfRange(chkpt) {
 		return nil
 	}
@@ -1211,7 +1233,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 		pbft.id, cert.chkptCount, chkpt.SequenceNumber, chkpt.Id)
 
 	if cert.chkptCount == pbft.oneCorrectQuorum() {
-		// We do have a weak cert
+		// update state update target and state transfer to it if this node already fell behind
 		pbft.witnessCheckpointWeakCert(chkpt)
 	}
 
@@ -1234,12 +1256,18 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 		pbft.logger.Debugf("Replica %d found checkpoint quorum for seqNo %d, digest %s, but it has not reached this checkpoint itself yet",
 			pbft.id, chkpt.SequenceNumber, chkpt.Id)
 		if pbft.status.getState(&pbft.status.skipInProgress) {
+			// When this node started state update, it would set h to the target, and finally it would receive a StateUpdatedEvent whose seqNo is this h.
 			if pbft.status.getState(&pbft.status.inRecovery) {
+				// If this node is in recovery, it wants to state update to a latest checkpoint so it would not fall behind more than 10 block.
+				// So if move watermarks here, this node would receive StateUpdatedEvent whose seqNo is smaller than h,
+				// and it would retryStateTransfer.
+				// If not move watermarks here, this node would fall behind more then ten block,
+				// and this is different from what we want to do using recovery.
 				pbft.moveWatermarks(chkpt.SequenceNumber)
 			} else {
+				// If this node is not in recovery, if this node just fell behind in 20 blocks, this node could just commit and execute.
+				// If larger than 20 blocks, just state update.
 				logSafetyBound := pbft.h + pbft.L/2
-				// As an optimization, if we are more than half way out of our log and in state transfer, move our watermarks so we don't lose track of the network
-				// if needed, state transfer will restart on completion to a more recent point in time
 				if chkpt.SequenceNumber >= logSafetyBound {
 					pbft.logger.Debugf("Replica %d is in state transfer, but, the network seems to be moving on past %d, moving our watermarks to stay with it", pbft.id, logSafetyBound)
 					pbft.moveWatermarks(chkpt.SequenceNumber)
@@ -1287,6 +1315,8 @@ func (pbft *pbftImpl) fetchRequestBatches() error {
 	return nil
 }
 
+// weakCheckpointSetOutOfRange checks if this node is fell behind or not. If we receive f+1 checkpoints whose seqNo > H (for example 150),
+// move watermark to the smallest seqNo (150) among these checkpoints, because this node is fell behind 5 blocks at least.
 func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 	H := pbft.h + pbft.L
 
@@ -1330,7 +1360,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 				pbft.invalidateState()
 				pbft.stopNewViewTimer()
 
-				// TODO, reprocess the already gathered checkpoints, this will make recovery faster, though it is presently correct
+				// TODO, state update here, this will make recovery faster, though it is presently correct
 				return true
 			}
 		}
@@ -1339,6 +1369,7 @@ func (pbft *pbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 	return false
 }
 
+// witnessCheckpointWeakCert updates state update target and state transfer to it if this node already fell behind
 func (pbft *pbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 
 	// Only ever invoked for the first weak cert, so guaranteed to be f+1
@@ -1380,6 +1411,8 @@ func (pbft *pbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 	}
 }
 
+// moveWatermarks move low watermark h to n, and clear all message whose seqNo is smaller than h.
+// Then if this node is primary, try to send prePrepare.
 func (pbft *pbftImpl) moveWatermarks(n uint64) {
 
 	// round down n to previous low watermark
@@ -1479,9 +1512,13 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 	pbft.logger.Infof("Replica %d updated low watermark to %d",
 		pbft.id, pbft.h)
 
-	pbft.trySendPrePrepares()
+	primary := pbft.primary(pbft.view)
+	if primary == pbft.id {
+		pbft.trySendPrePrepares()
+	}
 }
 
+// updateHighStateTarget updates high state target
 func (pbft *pbftImpl) updateHighStateTarget(target *stateUpdateTarget) {
 	if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.storeMgr.highStateTarget != nil && pbft.storeMgr.highStateTarget.seqNo >= target.seqNo {
 		pbft.logger.Infof("Replica %d not updating state target to seqNo %d, has target for seqNo %d",
@@ -1492,6 +1529,7 @@ func (pbft *pbftImpl) updateHighStateTarget(target *stateUpdateTarget) {
 	pbft.storeMgr.highStateTarget = target
 }
 
+// stateTransfer state transfers to the target
 func (pbft *pbftImpl) stateTransfer(optional *stateUpdateTarget) {
 
 	if !pbft.status.getState(&pbft.status.skipInProgress) {
@@ -1503,6 +1541,7 @@ func (pbft *pbftImpl) stateTransfer(optional *stateUpdateTarget) {
 	pbft.retryStateTransfer(optional)
 }
 
+// retryStateTransfer sets system abnormal and stateTransferring, then skips to target
 func (pbft *pbftImpl) retryStateTransfer(optional *stateUpdateTarget) {
 
 	atomic.StoreUint32(&pbft.normal, 0)
@@ -1532,6 +1571,7 @@ func (pbft *pbftImpl) retryStateTransfer(optional *stateUpdateTarget) {
 
 }
 
+// skipTo skips to seqNo with id
 func (pbft *pbftImpl) skipTo(seqNo uint64, id []byte, replicas []replicaInfo) {
 	info := &protos.BlockchainInfo{}
 	err := proto.Unmarshal(id, info)
@@ -1562,6 +1602,8 @@ func (pbft *pbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, rep
 // =============================================================================
 // receive local message methods
 // =============================================================================
+
+// recvValidatedResult processes ValidatedResult
 func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 	if atomic.LoadUint32(&pbft.activeView) == 0 {
 		pbft.logger.Debugf("Replica %d ignoring ValidatedResult as we sre in view change", pbft.id)
@@ -1601,7 +1643,7 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 			return nil
 		}
 		if result.SeqNo == uint64(0) {
-			if len(result.Transactions) == 0 {
+			if len(result.Transactions) == 0 { // if this is a special batch with no valid transaction
 				pbft.logger.Debugf("Replica %d received all invalid batch view=%d/seqNo=%d/vid=%d that is true",
 					pbft.id, result.View, result.SeqNo, result.Vid)
 				pbft.stopNewViewTimer()
