@@ -67,7 +67,6 @@ service Ledger {
 
     rpc Post(Event) returns (Response) {}
     rpc Register(stream Message) returns(stream Message) {}
-
 }
 
 message Event {

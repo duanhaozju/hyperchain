@@ -2,13 +2,11 @@ package cn.hyperchain.jcee.server.mocknet;
 
 import cn.hyperchain.protos.ContractGrpc;
 import cn.hyperchain.protos.ContractProto;
-import com.google.common.util.concurrent.ListenableFuture;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class RawNetClient {
@@ -83,28 +81,6 @@ public class RawNetClient {
             ContractProto.Message msg = messages.take();
             System.out.println(String.format("receive response %d %s", i, msg.toString()));
         }
-//
-//        CountDownLatch latch = new CountDownLatch(1);
-//
-//        new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                int i = 0;
-//                while (i < totalCount) {
-//                    i ++;
-//                    try {
-//                        ContractProto.Message message = messages.take();
-//                        System.out.println(String.format("receive response %d %s", i, message.toString()));
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-//                }
-//                latch.countDown();
-//            }
-//        }).start();
-//
-//
-//        latch.await();
 
     }
 
