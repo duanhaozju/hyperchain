@@ -20,13 +20,16 @@ func CheckLicense(exit chan bool) {
 	// this ensures that license checker always hit in `os thread` to avoid jmuping to other threads
 	// since in this approach, working directory will not be affected by other operators.
 	runtime.LockOSThread()
-	ticker := time.NewTicker(1 * time.Hour)
+	// check license immediately once hyperchain start.
+	timer := time.NewTimer(0)
 	for {
 		select {
-		case <-ticker.C:
+		case <-timer.C:
 			if expired := isLicenseExpired(); expired {
 				notifySystemExit(exit)
 				return
+			} else {
+				timer.Reset(1 * time.Hour)
 			}
 		}
 	}
