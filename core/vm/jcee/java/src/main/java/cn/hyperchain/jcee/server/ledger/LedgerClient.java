@@ -8,6 +8,7 @@ import cn.hyperchain.protos.ContractProto;
 import cn.hyperchain.protos.LedgerGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.grpc.stub.StreamObserver;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -25,6 +26,9 @@ public class LedgerClient {
 
     private final ManagedChannel channel;
     private final LedgerGrpc.LedgerBlockingStub blockingStub;
+    private final LedgerGrpc.LedgerStub asyncStub;
+
+    private StreamObserver<ContractProto.Message> streamObserver;
 
     public LedgerClient(String host, int port) {
         this.host = host;
@@ -33,6 +37,9 @@ public class LedgerClient {
                 .usePlaintext(true)
                 .build();
         this.blockingStub = LedgerGrpc.newBlockingStub(channel);
+        this.asyncStub = LedgerGrpc.newStub(channel);
+        this.streamObserver = register();
+//        LedgerGrpc.r
     }
 
     public void shutdown(){
@@ -66,5 +73,28 @@ public class LedgerClient {
 
     public boolean post(ContractProto.Event event) {
         return blockingStub.post(event).getOk();
+    }
+
+    public StreamObserver<ContractProto.Message> register() {
+
+        return asyncStub.register(new StreamObserver<ContractProto.Message>() {
+            @Override
+            public void onNext(ContractProto.Message message) {
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+
+            }
+
+            @Override
+            public void onCompleted() {
+
+            }
+        });
+    }
+
+    public void sendMsg(ContractProto.Message msg) {
+
     }
 }

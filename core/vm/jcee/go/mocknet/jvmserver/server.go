@@ -16,8 +16,6 @@ var port *string
 var host *string
 
 type jvmServer struct {
-	req    chan *pb.Message
-	stream pb.Contract_RegisterServer
 }
 
 var count = 0
@@ -29,32 +27,38 @@ func (js *jvmServer) HeartBeat(c context.Context, req *pb.Request) (*pb.Response
 }
 
 func (js *jvmServer) Register(stream pb.Contract_RegisterServer) error {
-	js.stream = stream
+	reqs := make(chan *pb.Message, 1000)
+	go func() {
+		js.startProcessThread(stream, reqs)
+	}()
+
 	for { // close judge
 		req, err := stream.Recv()
 		if err == io.EOF {
-			return nil
+			fmt.Println(err)
+			break
 		}
 		if err != nil {
-			return err
+			fmt.Println(err)
+			break
 		}
-		js.req <- req
+		reqs <- req
 	}
 	return nil
 }
 
-func (js *jvmServer) startProcessThread() {
+func (js *jvmServer) startProcessThread(stream pb.Contract_RegisterServer, reqs chan *pb.Message) {
 	var i int = 0
 	for {
 		i++
 		select {
-		case req := <-js.req:
+		case req := <-reqs:
 			fmt.Printf("Process request %d: %v\n", i, req)
 			//Handle in another thread
 			rsp := &pb.Response{Ok: true}
 			payload, _ := proto.Marshal(rsp)
 
-			js.stream.Send(&pb.Message{
+			stream.Send(&pb.Message{
 				Type:    pb.Message_RESPONSE,
 				Payload: payload,
 			})
@@ -63,9 +67,7 @@ func (js *jvmServer) startProcessThread() {
 }
 
 func NewJvmServer() *jvmServer {
-	return &jvmServer{
-		req: make(chan (*pb.Message), 1000),
-	}
+	return &jvmServer{}
 }
 
 func main() {
@@ -82,7 +84,6 @@ func main() {
 
 	grpcServer := grpc.NewServer()
 	jvmServer := NewJvmServer()
-	go jvmServer.startProcessThread()
 
 	pb.RegisterContractServer(grpcServer, jvmServer)
 

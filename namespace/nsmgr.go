@@ -286,7 +286,7 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 			ns.Stop() //start failed, try to stop some started components
 			return err
 		} else {
-			nr.jvmManager.ledgerProxy.Register(name, ns.GetExecutor().FetchStateDb())
+			nr.jvmManager.ledgerProxy.RegisterDB(name, ns.GetExecutor().FetchStateDb())
 			return nil
 		}
 
