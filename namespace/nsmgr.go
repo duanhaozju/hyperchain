@@ -250,7 +250,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 		}
 	} else {
 		logger.Warningf("namespace %s not exist, please register first.", name)
-		return ErrInvalidNs
+		return ErrNoSuchNamespace
 	}
 	nr.bloomfilter.UnRegister(name)
 	logger.Criticalf("namespace: %s stopped", name)
