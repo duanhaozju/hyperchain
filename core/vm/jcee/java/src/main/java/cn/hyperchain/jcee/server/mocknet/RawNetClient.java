@@ -77,7 +77,7 @@ public class RawNetClient {
 
             ContractProto.Message message = ContractProto.Message.newBuilder().setType(ContractProto.Message.Type.TRANSACTION).build();
             observer.onNext(message);
-            
+
             ContractProto.Message msg = messages.take();
             System.out.println(String.format("receive response %d %s", i, msg.toString()));
         }

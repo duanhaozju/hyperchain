@@ -143,12 +143,13 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
                                     Errors.ReturnErrMsg("HyperVM can not execute request now, current state is " + state, responseObserver);
                                 }
 
-
                             }catch (InvalidProtocolBufferException ipbe){
-
+                                logger.error(ipbe);
                             }
+                            break;
                     }
                     case UNRECOGNIZED:{
+                        logger.error(message.getType());
                         logger.error("Receive undefined transaction type");
                     }
                 }
@@ -156,12 +157,12 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
 
             @Override
             public void onError(Throwable throwable) {
-
+                logger.error(throwable);
             }
 
             @Override
             public void onCompleted() {
-
+                logger.error("responseObserver is closed ！！！");
             }
         };
     }

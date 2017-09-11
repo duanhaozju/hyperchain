@@ -51,8 +51,8 @@ public class JceeServer implements IServer {
             server.awaitTermination();
         }catch (Exception e) {
             logger.error(e);
-            e.printStackTrace();
-            System.exit(-1);
+        }finally {
+            server.shutdownNow();
         }
     }
 

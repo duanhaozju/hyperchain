@@ -6,13 +6,17 @@ package cn.hyperchain.jcee.server.ledger;
 
 import cn.hyperchain.protos.ContractProto;
 import cn.hyperchain.protos.LedgerGrpc;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.log4j.Logger;
 
 import java.util.Iterator;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class LedgerClient {
 
@@ -24,10 +28,11 @@ public class LedgerClient {
     @Setter
     private int port;
 
+    private static final Logger logger = Logger.getLogger(LedgerClient.class);
     private final ManagedChannel channel;
     private final LedgerGrpc.LedgerBlockingStub blockingStub;
     private final LedgerGrpc.LedgerStub asyncStub;
-
+    private final BlockingQueue<ContractProto.Message> messages;
     private StreamObserver<ContractProto.Message> streamObserver;
 
     public LedgerClient(String host, int port) {
@@ -39,7 +44,8 @@ public class LedgerClient {
         this.blockingStub = LedgerGrpc.newBlockingStub(channel);
         this.asyncStub = LedgerGrpc.newStub(channel);
         this.streamObserver = register();
-//        LedgerGrpc.r
+        this.messages = new LinkedBlockingQueue<>();
+        this.streamObserver = register();
     }
 
     public void shutdown(){
@@ -47,12 +53,56 @@ public class LedgerClient {
     }
 
     public boolean put(ContractProto.KeyValue kv) {
-        ContractProto.Response response = blockingStub.put(kv);
-        return response.getOk();
+        if (streamObserver == null) {
+            reconnect();
+        }
+
+        ContractProto.Message msg = ContractProto.Message.newBuilder()
+                .setType(ContractProto.Message.Type.PUT)
+                .setPayload(kv.toByteString())
+                .build();
+        streamObserver.onNext(msg);
+
+        try {
+            ContractProto.Message rsp = messages.take();
+            ContractProto.Response response = ContractProto.Response.parseFrom(rsp.getPayload());
+            return response.getOk();
+        } catch (InterruptedException e) {
+            logger.error(e);
+            return false;
+        }catch (InvalidProtocolBufferException ipbe) {
+            logger.error(ipbe);
+            return false;
+        }
     }
 
     public ContractProto.Value get(ContractProto.Key key) {
-        return blockingStub.get(key);
+
+        if (streamObserver == null) {
+            reconnect();
+        }
+
+        ContractProto.Message msg = ContractProto.Message.newBuilder()
+                .setType(ContractProto.Message.Type.GET)
+                .setPayload(key.toByteString())
+                .build();
+        streamObserver.onNext(msg);
+
+        try {
+            ContractProto.Message rsp = messages.take();
+
+            if (rsp.getPayload().isEmpty()) {
+                return ContractProto.Value.newBuilder().build();
+            }else {
+                return ContractProto.Value.parseFrom(rsp.getPayload());
+            }
+        } catch (InterruptedException e) {
+            logger.error(e);
+            return ContractProto.Value.newBuilder().build();
+        }catch (InvalidProtocolBufferException ipbe) {
+            logger.error(ipbe);
+            return ContractProto.Value.newBuilder().build();
+        }
     }
 
     public boolean delete(ContractProto.Key key) {
@@ -60,11 +110,55 @@ public class LedgerClient {
     }
 
     public boolean batchWrite(ContractProto.BatchKV bkv) {
-        return blockingStub.batchWrite(bkv).getOk();
+        if (streamObserver == null) {
+            reconnect();
+        }
+
+        ContractProto.Message msg = ContractProto.Message.newBuilder()
+                .setType(ContractProto.Message.Type.BATCH_WRITE)
+                .setPayload(bkv.toByteString())
+                .build();
+        streamObserver.onNext(msg);
+
+        try {
+            ContractProto.Message rsp = messages.take();
+            ContractProto.Response response = ContractProto.Response.parseFrom(rsp.getPayload());
+            return response.getOk();
+        } catch (InterruptedException e) {
+            logger.error(e);
+            return false;
+        }catch (InvalidProtocolBufferException ipbe) {
+            logger.error(ipbe);
+            return false;
+        }
     }
 
     public ContractProto.BathValue bathRead(ContractProto.BatchKey bk) {
-        return blockingStub.batchRead(bk);
+        if (streamObserver == null) {
+            reconnect();
+        }
+
+        ContractProto.Message msg = ContractProto.Message.newBuilder()
+                .setType(ContractProto.Message.Type.BATCH_READ)
+                .setPayload(bk.toByteString())
+                .build();
+        streamObserver.onNext(msg);
+
+        try {
+            ContractProto.Message rsp = messages.take();
+
+            if (rsp.getPayload().isEmpty()) {
+                return ContractProto.BathValue.newBuilder().build();
+            }else {
+                return ContractProto.BathValue.parseFrom(rsp.getPayload());
+            }
+        } catch (InterruptedException e) {
+            logger.error(e);
+            return ContractProto.BathValue.newBuilder().build();
+        }catch (InvalidProtocolBufferException ipbe) {
+            logger.error(ipbe);
+            return ContractProto.BathValue.newBuilder().build();
+        }
     }
 
     public Iterator<ContractProto.BathValue> rangeQuery(ContractProto.Range range) {
@@ -80,6 +174,11 @@ public class LedgerClient {
         return asyncStub.register(new StreamObserver<ContractProto.Message>() {
             @Override
             public void onNext(ContractProto.Message message) {
+                try {
+                    messages.put(message);
+                } catch (InterruptedException e) {
+                    logger.error(e);
+                }
             }
 
             @Override
@@ -94,7 +193,7 @@ public class LedgerClient {
         });
     }
 
-    public void sendMsg(ContractProto.Message msg) {
-
+    public void reconnect() {
+        this.streamObserver = register();
     }
 }
