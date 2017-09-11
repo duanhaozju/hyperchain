@@ -349,7 +349,6 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, *TransactionBatch, string
 			pbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because "+
 				"batch seqNo=%d is out of sequence numbers", pbft.id, digest, n)
 			pbft.batchVdr.currentVid = nil // don't send this message this time, send it after move watermark
-			//ogger.Debugf("Replica %d broadcast FinishUpdate", pbft.id)
 			break
 		}
 
@@ -630,7 +629,7 @@ func (pbft *pbftImpl) maybeSendCommit(digest string, v uint64, n uint64, vid uin
 		return nil
 	}
 
-	if ok, _ := pbft.isPrimary(); ok {
+	if ok := pbft.isPrimary(); ok {
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		idx := vidx{view: v, seqNo: n, vid: vid}
@@ -898,7 +897,7 @@ func (pbft *pbftImpl) commitTransactions() {
 		if find, idx, cert := pbft.findNextCommitTx(); find {
 			pbft.logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 			pbft.persistCSet(idx.v, idx.n, idx.d)
-			isPrimary, _ := pbft.isPrimary()
+			isPrimary := pbft.isPrimary()
 			//pbft.vcMgr.vcResendCount = 0
 			pbft.helper.Execute(idx.n, cert.resultHash, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)
 			cert.sentExecute = true
@@ -965,7 +964,6 @@ func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
 // afterCommitTx processes logic after commit transaction, update lastExec,
 // and generate checkpoint when lastExec % K == 0
 func (pbft *pbftImpl) afterCommitTx(idx msgID) {
-
 	if pbft.exec.currentExec != nil {
 		pbft.logger.Debugf("Replica %d finish execution %d, trying next", pbft.id, *pbft.exec.currentExec)
 		pbft.exec.lastExec = *pbft.exec.currentExec
@@ -1011,7 +1009,7 @@ func (pbft *pbftImpl) processTransaction(tx *types.Transaction) events.Event {
 		_, err = pbft.batchMgr.txPool.AddNewTx(tx, false, true)
 	}
 	// primary nodes would check if this transaction triggered generating a batch or not
-	if ok, _ := pbft.isPrimary(); ok {
+	if ok := pbft.isPrimary(); ok {
 		if !pbft.batchMgr.isBatchTimerActive() { // start batch timer when this node receives the first transaction of a batch
 			pbft.startBatchTimer()
 		}

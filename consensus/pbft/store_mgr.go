@@ -9,24 +9,35 @@ import "github.com/op/go-logging"
 This file provide a mechanism to manage the storage in PBFT
 */
 
-//storeManager manage common store data structures for PBFT.
+// storeManager manages common store data structures for PBFT.
 type storeManager struct {
-	chkpts          map[uint64]string      // state checkpoints; map lastExec to global hash
-	hChkpts         map[uint64]uint64      // map repilicaId to replica highest checkpoint num
-	checkpointStore map[Checkpoint]bool    // track checkpoints as set
-	chkptCertStore  map[chkptID]*chkptCert // track quorum certificates for checkpoints
-
-	certStore     map[msgID]*msgCert // track quorum certificates for requests
-	committedCert map[msgID]string   // track the committed cert to help execute msgId - digest
-
-	outstandingReqBatches map[string]*TransactionBatch // track whether we are waiting for request batches to execute
-	txBatchStore          map[string]*TransactionBatch
-
-	missingReqBatches map[string]bool    // for all the assigned, non-checkpointed request batches we might be missing during view-change
-	highStateTarget   *stateUpdateTarget // Set to the highest weak checkpoint cert we have observed
 	logger            *logging.Logger
+
+	certStore     map[msgID]*msgCert // track quorum certificates for messages
+	committedCert map[msgID]string   // track the committed cert to help execute
+
+	outstandingReqBatches map[string]*TransactionBatch // track whether we are waiting for transaction batches to execute
+	txBatchStore          map[string]*TransactionBatch // track L cached transaction batches produced from txPool
+
+	missingReqBatches map[string]bool    // for all the assigned, non-checkpointed request batches we might miss
+	                                     // some transactions in some batches, record batch id
+	highStateTarget   *stateUpdateTarget // Set to the highest weak checkpoint cert we have observed
+
+	// ---------------checkpoint related--------------------
+	chkpts          map[uint64]string      // checkpoints that we reached by ourselves after commit a block with a
+					       // block number == integer multiple of K; map lastExec to a base64
+					       // encoded BlockchainInfo
+
+	hChkpts         map[uint64]uint64      // checkpoint numbers received from others which are bigger than our
+					       // H(=h+L); map replicaID to the last checkpoint number received from
+					       // that replica bigger than H
+
+	checkpointStore map[Checkpoint]bool    // track all non-repeating checkpoints received from others
+	chkptCertStore  map[chkptID]*chkptCert // track quorum certificates for checkpoints with the same chkptID; map
+					       // chkptID(seqNo and id) to chkptCert(all checkpoints with that chkptID)
 }
 
+// newStoreMgr news an instance of storeManager
 func newStoreMgr() *storeManager {
 	sm := &storeManager{}
 
@@ -46,9 +57,8 @@ func newStoreMgr() *storeManager {
 	return sm
 }
 
-//removeLowPQSet remove set in chpts, pset, qset, cset, plist, qlist which index <= h
+// moveWatermarks removes useless set in chkpts, plist, qlist whose index <= h
 func (sm *storeManager) moveWatermarks(pbft *pbftImpl, h uint64) {
-
 	for n := range sm.chkpts {
 		if n < h {
 			delete(sm.chkpts, n)
@@ -69,23 +79,15 @@ func (sm *storeManager) moveWatermarks(pbft *pbftImpl, h uint64) {
 	}
 }
 
-func (sm *storeManager) chkptsLen() int {
-	return len(sm.chkpts)
-}
-
-//saveCheckpoint lastExec - global hash
+// saveCheckpoint saves checkpoint information to chkpts, whose key is lastExec, value is the global hash of current
+// BlockchainInfo
 func (sm *storeManager) saveCheckpoint(l uint64, gh string) {
 	sm.chkpts[l] = gh
 }
 
-func (sm *storeManager) getCheckpoint(l uint64) string {
-	return sm.chkpts[l]
-}
-
-// getCert given a digest/view/seq, is there an entry in the certLog?
-// If so, return it. If not, create it.
+// Given a digest/view/seq, is there an entry in the certStore?
+// If so, return it else, create a new entry
 func (sm *storeManager) getCert(v uint64, n uint64, d string) (cert *msgCert) {
-
 	idx := msgID{v, n, d}
 	cert, ok := sm.certStore[idx]
 
@@ -103,9 +105,9 @@ func (sm *storeManager) getCert(v uint64, n uint64, d string) (cert *msgCert) {
 	return
 }
 
-// getChkptCert given a seqNo/id get the checkpoint Cert.
+// Given a seqNo/id, is there an entry in the chkptCertStore?
+// If so, return it, else, create a new entry
 func (sm *storeManager) getChkptCert(n uint64, id string) (cert *chkptCert) {
-
 	idx := chkptID{n, id}
 	cert, ok := sm.chkptCertStore[idx]
 
@@ -122,7 +124,9 @@ func (sm *storeManager) getChkptCert(n uint64, id string) (cert *chkptCert) {
 	return
 }
 
-// check for other PRE-PREPARE with same digest, but different seqNo
+// existedDigest checks if there exists another PRE-PREPARE message in certStore which has the same digest, same view,
+// but different seqNo with the given one
+// TODO change this func to pbftImpl
 func (sm *storeManager) existedDigest(n uint64, view uint64, digest string) bool {
 	for _, cert := range sm.certStore {
 		if p := cert.prePrepare; p != nil {

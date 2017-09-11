@@ -48,7 +48,7 @@ type Stack interface {
 	SendFilterEvent(informType int, message ...interface{}) error
 }
 
-// InnerBroadcast broadcast the consensus message between vp nodes
+// InnerBroadcast broadcasts the consensus message between VP nodes
 func (h *helper) InnerBroadcast(msg *pb.Message) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -67,7 +67,7 @@ func (h *helper) InnerBroadcast(msg *pb.Message) error {
 	return nil
 }
 
-// InnerUnicast unicast the transaction message between to primary
+// InnerUnicast unicasts message to the specified VP node
 func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -121,7 +121,7 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 	return nil
 }
 
-// ValidateBatch transfers the ValidationEvent to outer
+// ValidateBatch transfers the ValidateEvent to outer
 func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, vid uint64, view uint64, isPrimary bool) error {
 
 	validateEvent := event.ValidationEvent{
@@ -140,7 +140,7 @@ func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStam
 	return nil
 }
 
-// VcReset reset vid when view change is done
+// VcReset resets vid after in recovery, viewchange or add/delete nodes
 func (h *helper) VcReset(seqNo uint64) error {
 
 	vcResetEvent := event.VCResetEvent{
@@ -149,12 +149,11 @@ func (h *helper) VcReset(seqNo uint64) error {
 
 	// No need to "go h.msgQ.Post...", we'll wait for it to return
 	h.innerMux.Post(vcResetEvent)
-	//time.Sleep(time.Millisecond * 50)
 
 	return nil
 }
 
-// Inform the primary id after negotiate or
+// InformPrimary informs the primary id after negotiate or viewchanged
 func (h *helper) InformPrimary(primary uint64) error {
 
 	informPrimaryEvent := event.InformPrimaryEvent{
@@ -166,7 +165,7 @@ func (h *helper) InformPrimary(primary uint64) error {
 	return nil
 }
 
-// Broadcast addnode message to others
+// BroadcastAddNode broadcasts addnode message to others
 func (h *helper) BroadcastAddNode(msg *pb.Message) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -185,7 +184,7 @@ func (h *helper) BroadcastAddNode(msg *pb.Message) error {
 	return nil
 }
 
-// Broadcast delnode message to others
+// BroadcastDelNode broadcasts delnode message to others
 func (h *helper) BroadcastDelNode(msg *pb.Message) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -204,7 +203,7 @@ func (h *helper) BroadcastDelNode(msg *pb.Message) error {
 	return nil
 }
 
-// Inform to update routing table
+// UpdateTable informs to update routing table
 func (h *helper) UpdateTable(payload []byte, flag bool) error {
 
 	updateTable := event.UpdateRoutingTableEvent{
@@ -228,7 +227,7 @@ func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *helper {
 	return h
 }
 
-// PostExternal post event to outer event mux
+// PostExternal posts event to outer event mux
 func (h *helper) PostExternal(ev interface{}) {
 	h.externalMux.Post(ev)
 }

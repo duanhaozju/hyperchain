@@ -7,61 +7,78 @@ package pbft
 This file defines the structs uesd in PBFT
 */
 
-//Preprepare index
+// -----------certStore related structs-----------------
+// Preprepare index
 type qidx struct {
-	d string
-	n uint64
+	d string // digest
+	n uint64 // seqNo
 }
 
-//Checkpoint index
-type cidx struct {
-	n uint64
-	d string
+// certStore index
+type msgID struct {
+	v uint64 // view
+	n uint64 // seqNo
+	d string // digest
 }
 
-type msgID struct { // our index through certStore
-	v uint64
-	n uint64
-	d string
-}
-
-//Batch state cache
+// cached consensus msgs related to batch
 type msgCert struct {
-	resultHash   string
-	vid          uint64
-	prePrepare   *PrePrepare
-	sentPrepare  bool
-	prepare      map[Prepare]bool
-	sentValidate bool
-	validated    bool
-	sentCommit   bool
-	commit       map[Commit]bool
-	sentExecute  bool
+	resultHash   string           // validated result hash of primary
+	vid          uint64           // validate ID
+	prePrepare   *PrePrepare      // pre-prepare msg
+	sentPrepare  bool             // track whether broadcast prepare for this batch before or not
+	prepare      map[Prepare]bool // prepare msgs received from other nodes
+	sentValidate bool             // track whether sent validate event to executor module before or not
+	validated    bool             // track whether received the validated result of this batch or not
+	sentCommit   bool             // track whether broadcast commit for this batch before or not
+	commit       map[Commit]bool  // commit msgs received from other nodes
+	sentExecute  bool             // track whether sent execute event to executor module before or not
 }
 
-//Checkpoint id
+// -----------checkpoint related structs-----------------
+// Checkpoint index
+type cidx struct {
+	n uint64 // checkpoint number
+	d string // checkpoint digest
+}
+
+// chkptCertStore index
 type chkptID struct {
-	n  uint64 //seq num
-	id string //digest of checkpoint
+	n  uint64 // seq num
+	id string // digest of checkpoint
 }
 
+// checkpoints received from other nodes with same chkptID
 type chkptCert struct {
 	chkpts     map[Checkpoint]bool
 	chkptCount int
 }
 
-//viewchange index
-type vcidx struct {
-	v  uint64 //view
-	id uint64 //replica id
-}
-
+// -----------validate related structs-----------------
+// cached batch related params stored in cacheValidatedBatch
 type cacheBatch struct {
 	batch      *TransactionBatch
 	vid        uint64
 	resultHash string
 }
 
+// preparedCert index
+type vidx struct {
+	view  uint64
+	seqNo uint64
+	vid   uint64
+}
+
+// -----------viewchange related structs-----------------
+// viewchange index
+type vcidx struct {
+	v  uint64 // view
+	id uint64 // replica id
+}
+
+type Xset map[uint64]string
+
+// -----------node addition/deletion related structs-----------------
 type addNodeCert struct {
 	addNodes  map[AddNode]bool
 	addCount  int
@@ -91,10 +108,19 @@ type uidx struct {
 	key  string
 }
 
-type Xset map[uint64]string
-
-type vidx struct {
-	view  uint64
+// -----------state update related structs-----------------
+type checkpointMessage struct {
 	seqNo uint64
-	vid   uint64
+	id    []byte
+}
+
+type replicaInfo struct {
+	id      uint64
+	height  uint64
+	genesis uint64
+}
+
+type stateUpdateTarget struct {
+	checkpointMessage
+	replicas []replicaInfo
 }
