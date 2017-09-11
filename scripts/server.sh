@@ -12,17 +12,17 @@ HYPERCHAIN_DIR="$GOPATH/src/hyperchain"
 # judge system type varible may `MAC` or `LINUX`
 _SYSTYPE="MAC"
 case "$OSTYPE" in
-  darwin*)  
+  darwin*)
     echo "RUN SCRIPTS ON OSX"
     _SYSTYPE="MAC"
-  ;; 
-  linux*) 
+  ;;
+  linux*)
     echo "RUN SCRIPTS ON LINUX"
     _SYSTYPE="LINUX"
   ;;
-  *) 
+  *)
     echo "unknown: $OSTYPE"
-    exit -1 
+    exit -1
   ;;
 esac
 
@@ -123,6 +123,10 @@ MAXNODE=`cat serverlist.txt | wc -l`
 while IFS='' read -r line || [[ -n "$line" ]]; do
 	SERVER_ADDR+=" ${line}"
 done < serverlist.txt
+
+while IFS='' read -r line || [[ -n "$line" ]]; do
+	INNER_SERVER_ADDR+=" ${line}"
+done < innerserverlist.txt
 
 
 #################################
@@ -259,13 +263,13 @@ EOF
 }
 
 # modifiy the global config value
-fs_modifi_global(){
-    if [ ${_SYSTYPE} = "MAC" ]; then
-        sed -i "" "s/local_peerconfig.json/peerconfig.json/g" ${HYPERCHAIN_DIR}/scripts/namespace/config/template/config/global.yaml
-    else
-        sed -i "s/local_peerconfig.json/peerconfig.json/g" ${HYPERCHAIN_DIR}/scripts/namespace/config/template/config/global.yaml
-    fi
-}
+#fs_modifi_global(){
+#    if [ ${_SYSTYPE} = "MAC" ]; then
+#        sed -i "" "s/local_peerconfig.json/peerconfig.json/g" ${HYPERCHAIN_DIR}/scripts/namespace/config/template/config/global.yaml
+#    else
+#        sed -i "s/local_peerconfig.json/peerconfig.json/g" ${HYPERCHAIN_DIR}/scripts/namespace/config/template/config/global.yaml
+#    fi
+#}
 
 # generate the peer configs and distribute it
 fs_gen_and_distribute_peerconfig(){
@@ -275,10 +279,62 @@ fs_gen_and_distribute_peerconfig(){
 
 # generate peer configs
 fs__generate_node_peer_configs(){
-    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh global
-    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh -c ns1
-    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh -c ns2
-    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh -c ns3
+#    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh global
+#    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh -c ns1
+#    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh -c ns2
+#    ${GOPATH}/src/hyperchain/scripts/namespace/gen_config.sh -c ns3
+    ni=1
+    mkdir ${GOPATH}/src/hyperchain/build
+    for server_address in ${INNER_SERVER_ADDR[@]}; do
+    echo "gen config"
+    cd ${GOPATH}/src/hyperchain/build
+    mkdir node${ni}
+    cd node${ni}
+    cp -rf ${GOPATH}/src/hyperchain/configuration/* ./
+    cp -rf ${GOPATH}/src/hyperchain/configuration/peerconfigs/peerconfig_${ni}.toml ./namespaces/global/config/peerconfig.toml
+    cp -rf ${GOPATH}/src/hyperchain/configuration/global.toml ./global.toml
+    cp -rf ${GOPATH}/src/hyperchain/configuration/peerconfigs/addr_1.toml ./addr.toml
+    if [ ${_SYSTYPE} = "MAC" ]; then
+        sed -i "" "s/domain=\"domain1\"/domain=\"domain${ni}\"/g" ./addr.toml
+    else
+        sed -i "s/domain=\"domain1\"/domain=\"domain${ni}\"/g" ./addr.toml
+    fi
+    cp -rf  ${GOPATH}/src/hyperchain/configuration/peerconfigs/cert${ni}/* ./namespaces/global/config/certs/
+    cp -rf  ${GOPATH}/src/hyperchain/configuration/tls ./
+    mkdir ./bin
+    cp ${GOPATH}/src/hyperchain/scripts/sub_scripts/start.sh ./bin
+    ((ni+=1))
+done
+    ni=1
+    for server_address in ${INNER_SERVER_ADDR[@]}; do
+    if [ ${_SYSTYPE} = "MAC" ]; then
+        sed -i "" "s/domain${ni} 127.0.0.1:50011/domain${ni} ${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node1/addr.toml
+        sed -i "" "s/domain${ni} 127.0.0.1:50011/domain${ni} ${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node2/addr.toml
+        sed -i "" "s/domain${ni} 127.0.0.1:50011/domain${ni} ${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node3/addr.toml
+        sed -i "" "s/domain${ni} 127.0.0.1:50011/domain${ni} ${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node4/addr.toml
+    else
+        sed -i "s/domain${ni} 127.0.0.1:50011/domain${ni} ${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node1/addr.toml
+        sed -i "s/domain${ni} 127.0.0.1:50011/domain${ni} ${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node2/addr.toml
+        sed -i "s/domain${ni} 127.0.0.1:50011/domain${ni} ${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node3/addr.toml
+        sed -i "s/domain${ni} 127.0.0.1:50011/domain${ni} ${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node4/addr.toml
+    fi
+    ((ni+=1))
+done
+    ni=1
+    for server_address in ${INNER_SERVER_ADDR[@]}; do
+    if [ ${_SYSTYPE} = "MAC" ]; then
+        sed -i "" "s/127.0.0.1:5001${ni}/${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node1/hosts.toml
+        sed -i "" "s/127.0.0.1:5001${ni}/${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node2/hosts.toml
+        sed -i "" "s/127.0.0.1:5001${ni}/${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node3/hosts.toml
+        sed -i "" "s/127.0.0.1:5001${ni}/${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node4/hosts.toml
+    else
+        sed -i "s/127.0.0.1:5001${ni}/${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node1/hosts.toml
+        sed -i "s/127.0.0.1:5001${ni}/${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node2/hosts.toml
+        sed -i "s/127.0.0.1:5001${ni}/${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node3/hosts.toml
+        sed -i "s/127.0.0.1:5001${ni}/${server_address}:50011/g" ${GOPATH}/src/hyperchain/build/node4/hosts.toml
+    fi
+    ((ni+=1))
+done
 }
 
 # distribute config files
@@ -336,7 +392,7 @@ fs_run_N_terminals_linux(){
 fs_run_N_terminals_mac(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        osascript -e 'tell app "Terminal" to do script "ssh '${USERNAME}'@'${server_address}' \" cd /home/'${USERNAME}'/node'${ni}' && ./hyperchain 2>error.log \""'
+        osascript -e 'tell app "Terminal" to do script "ssh '${USERNAME}'@'${server_address}' \" cd /home/'${USERNAME}'/node'${ni}' && export LD_LIBRARY_PATH=/usr/local/ssl/lib && ./hyperchain --pprof --pport 10091 2>error.log \""'
         ni=`expr ${ni} + 1`
     done
 }
@@ -418,7 +474,7 @@ if ${REBUILD}; then
     fs_distribute_the_binary
 fi
 
-fs_modifi_global
+#fs_modifi_global
 
 fs_gen_and_distribute_peerconfig
 
