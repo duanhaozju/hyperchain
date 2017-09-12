@@ -199,6 +199,8 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			return nil
 		}
 		pbft.rebuildCertStoreForVC()
+		pbft.handleTransactionsAfterAbnormal()
+
 	case VIEW_CHANGE_RESEND_TIMER_EVENT:
 		if atomic.LoadUint32(&pbft.activeView) == 1 {
 			pbft.logger.Warningf("Replica %d had its view change resend timer expire but it's in an active view, this is benign but may indicate a bug", pbft.id)
@@ -305,11 +307,17 @@ func (pbft *pbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 			atomic.StoreUint32(&pbft.normal, 1)
 		}
 		pbft.logger.Criticalf("======== Replica %d finished UpdatingN, primary=%d, n=%d/f=%d/view=%d/h=%d", pbft.id, pbft.primary(pbft.view), pbft.N, pbft.f, pbft.view, pbft.h)
+		pbft.handleTransactionsAfterAbnormal()
+
+	default:
+		pbft.logger.Errorf("Invalid view change event event : %v", e)
+		return nil
 	}
 
 	if err != nil {
 		pbft.logger.Warning(err.Error())
 	}
+
 	return nil
 }
 
@@ -347,6 +355,7 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 			return nil
 		}
 		pbft.fetchRecoveryPQC()
+		pbft.handleTransactionsAfterAbnormal()
 		pbft.executeAfterStateUpdate()
 		return nil
 

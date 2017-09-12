@@ -205,53 +205,61 @@ func (pbft *pbftImpl) validatePending() {
 		return
 	}
 
-	for idx, digest := range pbft.batchVdr.preparedCert {
-		if pbft.preValidate(idx, digest) {
-			break
+	for stop := false; !stop; {
+		if find, digest, txBatch, idx := pbft.findNextValidateBatch(); find {
+			pbft.execValidate(digest, txBatch, idx)
+			cert := pbft.storeMgr.getCert(idx.view, idx.seqNo, digest)
+			cert.sentValidate = true
+		} else {
+			stop = true
 		}
 	}
+
 }
 
-func (pbft *pbftImpl) preValidate(idx vidx, digest string) bool {
-	if idx.seqNo != pbft.batchVdr.lastVid+1 {
-		pbft.logger.Debugf("Backup %d gets validateBatch seqNo=%d, but expect seqNo=%d", pbft.id, idx.seqNo, pbft.batchVdr.lastVid+1)
-		return false
+func (pbft *pbftImpl) findNextValidateBatch() (find bool, digest string, txBatch *TransactionBatch, idx vidx) {
+
+	for idx, digest = range pbft.batchVdr.preparedCert {
+		cert := pbft.storeMgr.getCert(idx.view, idx.seqNo, digest)
+
+		if idx.seqNo != pbft.batchVdr.lastVid+1 {
+			pbft.logger.Debugf("Backup %d gets validateBatch seqNo=%d, but expect seqNo=%d", pbft.id, idx.seqNo, pbft.batchVdr.lastVid+1)
+			continue
+		}
+
+		if cert.prePrepare == nil {
+			pbft.logger.Warningf("Replica %d get pre-prepare failed for view=%d/seqNo=%d/digest=%s",
+				pbft.id, idx.view, idx.seqNo, digest)
+			continue
+		}
+		preprep := cert.prePrepare
+
+		batch, missing, err := pbft.batchMgr.txPool.GetTxsByHashList(digest, preprep.HashBatch.List)
+		if err != nil {
+			pbft.logger.Warningf("Replica %d get error when get txlist, err: %v", pbft.id, err)
+			pbft.sendViewChange()
+			return
+		}
+		if missing != nil {
+			pbft.fetchMissingTransaction(preprep, missing)
+			return
+		}
+
+		currentVid := idx.seqNo
+		pbft.batchVdr.setCurrentVid(&currentVid)
+
+		txBatch = &TransactionBatch{
+			TxList:    batch,
+			HashList:  preprep.HashBatch.List,
+			Timestamp: preprep.HashBatch.Timestamp,
+		}
+		pbft.storeMgr.txBatchStore[preprep.BatchDigest] = txBatch
+		pbft.storeMgr.outstandingReqBatches[preprep.BatchDigest] = txBatch
+
+		find = true
+		break
 	}
-
-	cert := pbft.storeMgr.getCert(idx.view, idx.seqNo, digest)
-	if cert.prePrepare == nil {
-		pbft.logger.Warningf("Replica %d get pre-prepare failed for view=%d/seqNo=%d/digest=%s",
-			pbft.id, idx.view, idx.seqNo, digest)
-		return false
-	}
-	preprep := cert.prePrepare
-
-	batch, missing, err := pbft.batchMgr.txPool.GetTxsByHashList(preprep.BatchDigest, preprep.HashBatch.List)
-	if err != nil {
-		pbft.logger.Warningf("Replica %d get error when get txlist, err: %v", pbft.id, err)
-		pbft.sendViewChange()
-		return false
-	}
-	if missing != nil {
-		pbft.fetchMissingTransaction(preprep, missing)
-		return false
-	}
-
-	txBatch := &TransactionBatch{
-		TxList:    batch,
-		HashList:  preprep.HashBatch.List,
-		Timestamp: preprep.HashBatch.Timestamp,
-	}
-	pbft.storeMgr.txBatchStore[preprep.BatchDigest] = txBatch
-	pbft.storeMgr.outstandingReqBatches[preprep.BatchDigest] = txBatch
-
-	currentVid := idx.seqNo
-	pbft.batchVdr.currentVid = &currentVid
-	cert.sentValidate = true
-
-	pbft.execValidate(digest, txBatch, idx)
-
-	return true
+	return
 }
 
 func (pbft *pbftImpl) execValidate(digest string, txBatch *TransactionBatch, idx vidx) {
@@ -262,5 +270,20 @@ func (pbft *pbftImpl) execValidate(digest string, txBatch *TransactionBatch, idx
 	delete(pbft.batchVdr.preparedCert, idx)
 	pbft.batchVdr.updateLCVid()
 
-	pbft.validatePending()
+}
+
+// handleTransactionsAfterAbnormal handles the transactions put in txPool during
+// viewChange, updateN and recovery
+func (pbft *pbftImpl) handleTransactionsAfterAbnormal() {
+
+	// backup does not need to process it
+	if pbft.primary(pbft.view) != pbft.id {
+		return
+	}
+
+	// if primary has transactions in txPool, generate batches of the transactions
+	if pbft.batchMgr.txPool.HasTxInPool() {
+		pbft.batchMgr.txPool.GenerateTxBatch()
+	}
+
 }

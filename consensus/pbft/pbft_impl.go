@@ -279,7 +279,7 @@ func (pbft *pbftImpl) sendNullRequest() {
 //=============================================================================
 
 // trySendPrePrepares send all available PrePrepare messages.
-func (pbft *pbftImpl) trySendPrePrepares() {
+func (pbft *pbftImpl) sendPendingPrePrepares() {
 
 	if pbft.batchVdr.currentVid != nil {
 		pbft.logger.Debugf("Replica %d not attempting to send pre-prepare bacause it is currently send %d, retry.", pbft.id, *pbft.batchVdr.currentVid)
@@ -288,21 +288,19 @@ func (pbft *pbftImpl) trySendPrePrepares() {
 
 	pbft.logger.Debugf("Replica %d attempting to call sendPrePrepare", pbft.id)
 
-	for stopTry := false; !stopTry; {
+	for stop := false; !stop; {
 		if find, digest, resultHash := pbft.findNextPrePrepareBatch(); find {
 			waitingBatch := pbft.storeMgr.outstandingReqBatches[digest]
 			pbft.sendPrePrepare(*pbft.batchVdr.currentVid, digest, resultHash, waitingBatch)
 		} else {
-			stopTry = true
+			stop = true
 		}
 	}
 }
 
 //findNextPrePrepareBatch find next validated batch to send preprepare msg.
-func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, string, string) {
-	var find bool
-	var digest string
-	var resultHash string
+func (pbft *pbftImpl) findNextPrePrepareBatch() (find bool, digest string, resultHash string) {
+
 	for digest = range pbft.batchVdr.cacheValidatedBatch {
 		cache := pbft.batchVdr.getCacheBatchFromCVB(digest)
 		if cache == nil {
@@ -319,13 +317,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, string, string) {
 		currentVid := cache.seqNo
 		pbft.batchVdr.setCurrentVid(&currentVid)
 
-		if len(cache.batch.TxList) == 0 {
-			find = true
-			resultHash = cache.resultHash
-			break
-		}
 		n := currentVid + 1
-
 		// check for other PRE-PREPARE for same digest, but different seqNo
 		if pbft.storeMgr.existedDigest(n, pbft.view, digest) {
 			pbft.deleteExistedTx(digest)
@@ -344,7 +336,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (bool, string, string) {
 		resultHash = cache.resultHash
 		break
 	}
-	return find, digest, resultHash
+	return
 }
 
 //sendPrePrepare send prepare message.
@@ -595,7 +587,7 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 			pbft.vcMgr.lastNewViewTimeout = pbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 			delete(pbft.storeMgr.outstandingReqBatches, commit.BatchDigest)
 			pbft.storeMgr.committedCert[idx] = commit.BatchDigest
-			pbft.commitTransactions()
+			pbft.commitPendingBlocks()
 			if commit.SequenceNumber == pbft.vcMgr.viewChangeSeqNo {
 				pbft.logger.Warningf("Replica %d cycling view for seqNo=%d", pbft.id, commit.SequenceNumber)
 				pbft.sendViewChange()
@@ -611,7 +603,8 @@ func (pbft *pbftImpl) recvCommit(commit *Commit) error {
 
 func (pbft *pbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing []string) error {
 
-	pbft.logger.Debugf("Replica %d try to fetch missing txs from primary %d", pbft.id, preprep.ReplicaId)
+	pbft.logger.Debugf("Replica %d try to fetch missing txs for view=%d/seqNo=%d from primary %d",
+		pbft.id, preprep.View, preprep.SequenceNumber, preprep.ReplicaId)
 
 	fetch := &FetchMissingTransaction{
 		View:           preprep.View,
@@ -639,7 +632,8 @@ func (pbft *pbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing []str
 
 func (pbft *pbftImpl) recvFetchMissingTransaction(fetch *FetchMissingTransaction) error {
 
-	pbft.logger.Debugf("Primary %d received FetchMissingTransaction request from replica %d", pbft.id, fetch.ReplicaId)
+	pbft.logger.Debugf("Primary %d received FetchMissingTransaction request for view=%d/seqNo=%d from replica %d",
+		pbft.id, fetch.View, fetch.SequenceNumber, fetch.ReplicaId)
 
 	txList, err := pbft.batchMgr.txPool.ReturnFetchTxs(fetch.BatchDigest, fetch.HashList)
 	if err != nil {
@@ -683,7 +677,7 @@ func (pbft *pbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 	}
 
 	if re.SequenceNumber <= pbft.batchVdr.lastVid {
-		pbft.logger.Warningf("Replica %d received validated missing transactions, seqNo=%d < lastVid=%d, ignore it",
+		pbft.logger.Warningf("Replica %d received validated missing transactions, seqNo=%d <= lastVid=%d, ignore it",
 			pbft.id, re.SequenceNumber, pbft.batchVdr.lastVid)
 		return nil
 	}
@@ -702,25 +696,6 @@ func (pbft *pbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 		return nil
 	}
 
-	txList, missing, err := pbft.batchMgr.txPool.GetTxsByHashList(re.BatchDigest, cert.prePrepare.HashBatch.List)
-	if err != nil || missing != nil {
-		pbft.logger.Warningf("Replica %d still cannot get all txs with digest: %s", pbft.id, re.BatchDigest)
-		return nil
-	}
-
-	preprep := pbft.storeMgr.getCert(re.View, re.SequenceNumber, re.BatchDigest)
-	if preprep == nil {
-
-	}
-	batch := &TransactionBatch{
-		TxList:    txList,
-		HashList:  cert.prePrepare.HashBatch.List,
-		Timestamp: cert.prePrepare.HashBatch.Timestamp,
-	}
-
-	pbft.storeMgr.txBatchStore[re.BatchDigest] = batch
-	pbft.storeMgr.outstandingReqBatches[re.BatchDigest] = batch
-
 	pbft.validatePending()
 	return nil
 }
@@ -730,7 +705,8 @@ func (pbft *pbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 //=============================================================================
 
 //commitTransactions commit all available transactions
-func (pbft *pbftImpl) commitTransactions() {
+func (pbft *pbftImpl) commitPendingBlocks() {
+
 	if pbft.exec.currentExec != nil {
 		pbft.logger.Debugf("Replica %d not attempting to commitTransactions bacause it is currently executing %d",
 			pbft.id, pbft.exec.currentExec)
@@ -745,7 +721,7 @@ func (pbft *pbftImpl) commitTransactions() {
 			//pbft.vcMgr.vcResendCount = 0
 			pbft.helper.Execute(idx.n, cert.resultHash, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)
 			cert.sentExecute = true
-			pbft.afterCommitTx(idx)
+			pbft.afterCommitBlock(idx)
 		} else {
 			hasTxToExec = false
 		}
@@ -754,12 +730,9 @@ func (pbft *pbftImpl) commitTransactions() {
 }
 
 //findNextCommitTx find next msgID which is able to commit.
-func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
-	var find bool = false
-	var nextExecuteMsgId msgID
-	var cert *msgCert
+func (pbft *pbftImpl) findNextCommitTx() (find bool, idx msgID, cert *msgCert) {
 
-	for idx := range pbft.storeMgr.committedCert {
+	for idx = range pbft.storeMgr.committedCert {
 		cert = pbft.storeMgr.certStore[idx]
 
 		if cert == nil || cert.prePrepare == nil {
@@ -798,15 +771,14 @@ func (pbft *pbftImpl) findNextCommitTx() (bool, msgID, *msgCert) {
 		pbft.exec.currentExec = &currentExec
 
 		find = true
-		nextExecuteMsgId = idx
 		break
 	}
 
-	return find, nextExecuteMsgId, cert
+	return
 }
 
 //afterCommitTx after commit transaction.
-func (pbft *pbftImpl) afterCommitTx(idx msgID) {
+func (pbft *pbftImpl) afterCommitBlock(idx msgID) {
 
 	if pbft.exec.currentExec != nil {
 		pbft.logger.Debugf("Replica %d finish execution %d, trying next", pbft.id, *pbft.exec.currentExec)
@@ -1317,7 +1289,7 @@ func (pbft *pbftImpl) moveWatermarks(n uint64) {
 	pbft.logger.Infof("Replica %d updated low watermark to %d",
 		pbft.id, pbft.h)
 
-	pbft.trySendPrePrepares()
+	pbft.sendPendingPrePrepares()
 }
 
 func (pbft *pbftImpl) updateHighStateTarget(target *stateUpdateTarget) {
@@ -1429,7 +1401,7 @@ func (pbft *pbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 			resultHash: result.Hash,
 		}
 		pbft.batchVdr.saveToCVB(result.Digest, cache)
-		pbft.trySendPrePrepares()
+		pbft.sendPendingPrePrepares()
 	} else {
 		pbft.logger.Debugf("Replica %d received validated batch for view=%d/seqNo=%d, batch size: %d, hash: %s",
 			pbft.id, result.View, result.SeqNo, len(result.Transactions), result.Hash)

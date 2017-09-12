@@ -23,6 +23,7 @@ type TxPool interface {
 	RemoveBatchedTxs(hashList []string) error
 	RemoveOneBatchedTxs(hash string) error
 	IsPoolFull() bool
+	HasTxInPool() bool
 	GetTxsBack(hashList []string) error
 	GetOneTxsBack(hash string) error
 	GetTxsByHashList(id string, hashList []string) (txs []*types.Transaction, missingTxsHash []string, err error)
@@ -351,6 +352,11 @@ func (pool *txPoolImpl) replicaAddNewTx(tx *types.Transaction, checkPool bool) (
 func (pool *txPoolImpl) IsPoolFull() bool {
 	length := len(pool.txPool) + len(pool.batchedTxs)
 	return length >= pool.poolSize
+}
+
+func (pool *txPoolImpl) HasTxInPool() bool {
+	length := len(pool.txPool)
+	return length > 0
 }
 
 // generateTxBatch generates a transaction batch by batch limit (timeout or size).

@@ -19,7 +19,7 @@ import (
 Node control issues
 */
 
-// nodeManager add node or delete node.
+// nodeManager is the state manager of in configuration
 type nodeManager struct {
 	localKey         string                  // track new node's local key (payload from local)
 	addNodeCertStore map[string]*addNodeCert // track the received add node agree message
@@ -32,9 +32,10 @@ type nodeManager struct {
 	agreeUpdateStore  map[aidx]*AgreeUpdateN // track agree-update-n message
 	updateStore       map[uidx]*UpdateN      // track last update-n we received or sent
 	updateTarget      uidx                   // track the new view after update
-	finishUpdateStore map[FinishUpdate]bool
+	finishUpdateStore map[FinishUpdate]bool  // track finishUpdate message from others
 }
 
+// newNodeMgr creates a new nodeManager
 func newNodeMgr() *nodeManager {
 	nm := &nodeManager{}
 	nm.addNodeCertStore = make(map[string]*addNodeCert)
