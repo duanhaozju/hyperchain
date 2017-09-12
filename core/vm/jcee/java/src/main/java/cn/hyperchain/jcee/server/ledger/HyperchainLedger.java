@@ -264,13 +264,15 @@ public class HyperchainLedger extends AbstractLedger {
                 bk.put(k);
             }
         }
-        ContractProto.BathValue bv = ledgerClient.bathRead(toProtoBatchKey(bk));
-        List<ByteString> values = bv.getVList();
-        int i = 0;
-        for (byte[] k: bk.getKeys()) {
-            batch.put(k, values.get(i).toByteArray());
-            cache.put(k,values.get(i).toByteArray());
-            i ++;
+        if (bk.getKeys().size() >0) {
+            ContractProto.BathValue bv = ledgerClient.bathRead(toProtoBatchKey(bk));
+            List<ByteString> values = bv.getVList();
+            int i = 0;
+            for (byte[] k : bk.getKeys()) {
+                batch.put(k, values.get(i).toByteArray());
+                cache.put(k, values.get(i).toByteArray());
+                i++;
+            }
         }
         return batch;
     }
