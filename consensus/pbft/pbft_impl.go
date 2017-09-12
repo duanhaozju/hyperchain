@@ -1135,6 +1135,7 @@ func (pbft *pbftImpl) executeAfterStateUpdate() {
 
 	if pbft.primary(pbft.view) == pbft.id {
 		pbft.logger.Debugf("Replica %d is primary, not execute after state update", pbft.id)
+		return
 	}
 	pbft.logger.Debugf("Replica %d try to execute after state update", pbft.id)
 
