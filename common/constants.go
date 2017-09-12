@@ -74,6 +74,7 @@ const (
 // constants for http configuration keys
 const (
 	HTTP_SECURITY		= "http.security"
+	HTTP_VERSION2		= "http.version_2"
 )
 
 //constants for encryption configuration keys
