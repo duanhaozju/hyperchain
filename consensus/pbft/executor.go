@@ -189,15 +189,21 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			return nil
 		}
 		seqNo = event.SeqNo
+		// if we start VcReset in recovery, we may encounter 2 cases such as:
+		// 1. in recovery, we have executed to 25, but others only executed to 28, so our recoveryToSeqNo == 20,
+		// and lastExec == 25, need to VcReset to 25, after VcResetDone quickly, we can return recovery done directly
+		// 2. in recovery, we have executed to 25, but others only executed to 28, so our recoveryToSeqNo == 20,
+		// and lastExec == 25, need to VcReset to 25, but during VcReset which may be a little slow, others may
+		// execute to 30+ or 40+..., which triggered moveWatermarks in recvCheckpoint(), recoveryToSeqNo may have
+		// been changed to 30 or 40 or bigger, in this case, after VcResetDone, we will come into
+		// recvStateUpdatedEvent in which we will retryStateTransfer to the new checkpoint
 		if pbft.status.getState(&pbft.status.inRecovery) && pbft.recoveryMgr.recoveryToSeqNo != nil {
-			// TODO use >= or == ?
 			if seqNo-1 >= *pbft.recoveryMgr.recoveryToSeqNo {
 				return &LocalEvent{
 					Service:   RECOVERY_SERVICE,
 					EventType: RECOVERY_DONE_EVENT,
 				}
 			} else {
-				// TODO how this happened?
 				state := protos.StateUpdatedMessage{SeqNo: seqNo - 1}
 				return pbft.recvStateUpdatedEvent(state)
 			}

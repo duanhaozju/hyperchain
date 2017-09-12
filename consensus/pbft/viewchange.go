@@ -288,6 +288,8 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 		pbft.timerMgr.stopTimer(VC_RESEND_TIMER)
 		pbft.vcMgr.vcResendCount = 0
 		pbft.restoreView()
+		// after 10 viewchange without response from others, we will restart recovery, and set vcToRecovery to
+		// true, which, after negotiate view done, we need to parse certStore
 		pbft.status.activeState(&pbft.status.inNegoView, &pbft.status.inRecovery, &pbft.status.vcToRecovery)
 		atomic.StoreUint32(&pbft.activeView, 1)
 		pbft.initNegoView()

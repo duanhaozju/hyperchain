@@ -21,6 +21,8 @@ var eventCreators map[ConsensusMessage_Type]func() interface{}
 // initMsgEventMap maps consensus_message to real consensus msg type which used to Unmarshal consensus_message's payload
 // to actual consensus msg
 func (pbft *pbftImpl) initMsgEventMap() {
+	eventCreators = make(map[ConsensusMessage_Type]func() interface{})
+
 	eventCreators[ConsensusMessage_TRANSACTION] = func() interface{} { return &TransactionBatch{} }
 	eventCreators[ConsensusMessage_PRE_PREPARE] = func() interface{} { return &PrePrepare{} }
 	eventCreators[ConsensusMessage_PREPARE] = func() interface{} { return &Prepare{} }

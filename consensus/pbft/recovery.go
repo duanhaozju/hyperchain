@@ -368,16 +368,6 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	pbft.logger.Debugf("Replica %d in recovery self lastExec: %d, self h: %d, others h: %d",
 		pbft.id, pbft.exec.lastExec, pbft.h, chkptSeqNo)
 
-	// TODO why primary delete these
-	if pbft.primary(pbft.view) == pbft.id {
-		for idx, cert := range pbft.storeMgr.certStore {
-			if idx.n > pbft.exec.lastExec {
-				delete(pbft.storeMgr.certStore, idx)
-				pbft.persistDelQPCSet(idx.v, idx.n, cert.vid, idx.d)
-			}
-		}
-	}
-
 	var chkptId []byte
 	var err error
 	if chkptSeqNo != 0 {
@@ -404,7 +394,8 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 		pbft.moveWatermarks(chkptSeqNo)
 		pbft.stateTransfer(target)
 	} else if !pbft.status.getState(&pbft.status.skipInProgress) && !pbft.status.getState(&pbft.status.inVcReset) {
-		// if we are not behind by checkpoint, just VcReset to delete the useless tmp validate result
+		// if we are not behind by checkpoint, just VcReset to delete the useless tmp validate result, after
+		// VcResetDone, we will finish recovery or come into stateUpdate
 		pbft.helper.VcReset(pbft.exec.lastExec + 1)
 		pbft.status.activeState(&pbft.status.inVcReset)
 	} else {
@@ -524,7 +515,6 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 				vid = cert.vid
 			}
 			if cert.prePrepare == nil {
-				// TODO if find nil, just break ?
 				pbft.logger.Warningf("Replica %d in returnRcPQC finds nil pre-prepare for view=%d/seqNo=%d",
 					pbft.id, idx.v, idx.n)
 			} else {

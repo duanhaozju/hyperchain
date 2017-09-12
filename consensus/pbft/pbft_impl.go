@@ -1133,6 +1133,9 @@ func (pbft *pbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 // executeAfterStateUpdate processes logic after state update
 func (pbft *pbftImpl) executeAfterStateUpdate() {
 
+	if pbft.primary(pbft.view) == pbft.id {
+		pbft.logger.Debugf("Replica %d is primary, not execute after state update", pbft.id)
+	}
 	pbft.logger.Debugf("Replica %d try to execute after state update", pbft.id)
 
 	for idx, cert := range pbft.storeMgr.certStore {
@@ -1205,6 +1208,8 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 		return nil
 	}
 
+	// if chkpt.seqNo<=h, ignore it as we have reached a higher h, else, continue to find f+1 checkpoint messages
+	// with the same seqNo and ID
 	if !pbft.inW(chkpt.SequenceNumber) {
 		if chkpt.SequenceNumber != pbft.h && !pbft.status.getState(&pbft.status.skipInProgress) {
 			// It is perfectly normal that we receive checkpoints for the watermark we just raised, as we raise it after 2f+1, leaving f replies left
@@ -1232,7 +1237,7 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 
 	if cert.chkptCount == pbft.oneCorrectQuorum() {
 		// update state update target and state transfer to it if this node already fell behind
-		pbft.witnessCheckpointWeakCert(chkpt)
+			pbft.witnessCheckpointWeakCert(chkpt)
 	}
 
 	if cert.chkptCount < pbft.commonCaseQuorum() {
@@ -1278,6 +1283,8 @@ func (pbft *pbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
 	pbft.logger.Infof("Replica %d found checkpoint quorum for seqNo %d, digest %s",
 		pbft.id, chkpt.SequenceNumber, chkpt.Id)
 
+	// if we found self checkpoint ID is not the same as the quorum checkpoint ID, we will fetch from others until
+	// self block hash is the same as other quorum replicas
 	if chkptID != chkpt.Id {
 		pbft.logger.Criticalf("Replica %d generated a checkpoint of %s, but a quorum of the network agrees on %s. This is almost definitely non-deterministic chaincode.",
 			pbft.id, chkptID, chkpt.Id)
@@ -1387,8 +1394,7 @@ func (pbft *pbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 
 	snapshotID, err := base64.StdEncoding.DecodeString(chkpt.Id)
 	if err != nil {
-		err = fmt.Errorf("Replica %d received a weak checkpoint cert which could not be decoded (%s)", pbft.id, chkpt.Id)
-		pbft.logger.Error(err.Error())
+		pbft.logger.Errorf("Replica %d received a weak checkpoint cert whose ID(%s) could not be decoded", pbft.id, chkpt.Id)
 		return
 	}
 
@@ -1562,9 +1568,6 @@ func (pbft *pbftImpl) retryStateTransfer(optional *stateUpdateTarget) {
 
 	pbft.logger.Infof("Replica %d is initiating state transfer to seqNo %d", pbft.id, target.seqNo)
 
-	//pbft.batch.pbftManager.Queue() <- stateUpdateEvent // Todo for stateupdate
-	//pbft.consumer.skipTo(target.seqNo, target.id, target.replicas)
-
 	pbft.skipTo(target.seqNo, target.id, target.replicas)
 
 }
@@ -1593,7 +1596,7 @@ func (pbft *pbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, rep
 		}
 		targets = append(targets, target)
 	}
-	pbft.helper.UpdateState(pbft.id, info.Height, info.CurrentBlockHash, targets) // TODO: stateUpdateEvent
+	pbft.helper.UpdateState(pbft.id, info.Height, info.CurrentBlockHash, targets)
 
 }
 

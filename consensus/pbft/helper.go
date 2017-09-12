@@ -419,6 +419,9 @@ func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool {
 		return false
 	}
 
+	// if we are not in recovery, but receive prepare from primary, which means primary behavior as a byzantine,
+	// we don't send viewchange here, because in this case, replicas will eventually find primary abnormal in other
+	// cases, such as inconsistent validate result or others
 	if pbft.primary(prep.View) == prep.ReplicaId && !pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Warningf("Replica %d received prepare from primary, ignoring", pbft.id)
 		return false
