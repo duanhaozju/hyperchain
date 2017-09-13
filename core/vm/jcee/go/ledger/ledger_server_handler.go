@@ -6,6 +6,8 @@ import (
 	"hyperchain/common"
 	pb "hyperchain/core/vm/jcee/protos"
 	"strings"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
 )
 
 type Handler struct {
@@ -64,18 +66,19 @@ func (h *Handler) get(msg *pb.Message) {
 	if err != nil {
 		h.logger.Error(err)
 		h.ReturnError()
+		return
 	}
 
 	exist, state := h.stateMgr.GetStateDb(key.Context.Namespace)
 	if exist == false {
-		//return nil, NamespaceNotExistErr
 		h.logger.Error(NamespaceNotExistErr)
 		h.ReturnError()
+		return
 	}
 	if valid := h.requestCheck(key.Context); !valid {
-		//return nil, InvalidRequestErr
 		h.logger.Error(InvalidRequestErr)
 		h.ReturnError()
+		return
 	}
 	_, value := state.GetState(common.HexToAddress(key.Context.Cid), common.BytesToRightPaddingHash(key.K))
 	v := &pb.Value{
@@ -104,18 +107,19 @@ func (h *Handler) put(msg *pb.Message) {
 	if err != nil {
 		h.logger.Error(err)
 		h.ReturnError()
+		return
 	}
 
 	exist, state := h.stateMgr.GetStateDb(kv.Context.Namespace)
 	if exist == false {
-		//return &pb.Response{Ok: false}, NamespaceNotExistErr
 		h.logger.Error(NamespaceNotExistErr)
 		h.ReturnError()
+		return
 	}
 	if valid := h.requestCheck(kv.Context); !valid {
-		//return &pb.Response{Ok: false}, InvalidRequestErr
 		h.logger.Error(InvalidRequestErr)
 		h.ReturnError()
+		return
 	}
 	state.SetState(common.HexToAddress(kv.Context.Cid), common.BytesToRightPaddingHash(kv.K), kv.V, 0)
 
@@ -131,11 +135,32 @@ func (h *Handler) put(msg *pb.Message) {
 
 	if err != nil {
 		h.logger.Error(err)
+		return
 	}
 }
 
 func (h *Handler) delete(msg *pb.Message) {
-	//key *pb.Key
+
+	k := &pb.Key{}
+	err := proto.Unmarshal(msg.Payload, k)
+	if err != nil {
+		h.logger.Error(err)
+		h.returnFalseResponse()
+		return
+	}
+
+	exist, state := h.stateMgr.GetStateDb(k.Context.Namespace)
+	if exist == false {
+		h.logger.Error(NamespaceNotExistErr)
+		h.returnFalseResponse()
+		return
+	}
+	if valid := h.requestCheck(k.Context); !valid {
+		h.logger.Error(InvalidRequestErr)
+		h.returnFalseResponse()
+	}
+	state.SetState(common.HexToAddress(k.Context.Cid), common.BytesToRightPaddingHash(k.K), nil, 0)
+	h.returnTrueResponse()
 }
 
 func (h *Handler) batchRead(msg *pb.Message) {
@@ -145,16 +170,19 @@ func (h *Handler) batchRead(msg *pb.Message) {
 	if err != nil {
 		h.logger.Error(err)
 		h.ReturnError()
+		return
 	}
 
 	exist, state := h.stateMgr.GetStateDb(bk.Context.Namespace)
 	if exist == false {
-		//return nil, NamespaceNotExistErr
+		h.logger.Error(NamespaceNotExistErr)
 		h.ReturnError()
+		return
 	}
 	if valid := h.requestCheck(bk.Context); !valid {
-		//return nil, InvalidRequestErr
+		h.logger.Error(InvalidRequestErr)
 		h.ReturnError()
+		return
 	}
 	response := &pb.BathValue{}
 	for _, key := range bk.K {
@@ -172,6 +200,7 @@ func (h *Handler) batchRead(msg *pb.Message) {
 	if err != nil {
 		h.logger.Error(err)
 		h.ReturnError()
+		return
 	}
 
 	err = h.stream.Send(&pb.Message{
@@ -191,15 +220,19 @@ func (h *Handler) batchWrite(msg *pb.Message) {
 	if err != nil {
 		h.logger.Error(err)
 		h.ReturnError()
+		return
 	}
 
 	exist, state := h.stateMgr.GetStateDb(batch.Context.Namespace)
 	if exist == false {
-		//return &pb.Response{Ok: false}, NamespaceNotExistErr
+		h.logger.Error(NamespaceNotExistErr)
 		h.ReturnError()
+		return
 	}
 	if valid := h.requestCheck(batch.Context); !valid {
-		//return &pb.Response{Ok: false}, InvalidRequestErr
+		h.logger.Error(InvalidRequestErr)
+		h.returnFalseResponse()
+		return
 	}
 	for _, kv := range batch.Kv {
 		state.SetState(common.HexToAddress(batch.Context.Cid), common.BytesToRightPaddingHash(kv.K), kv.V, 0)
@@ -208,6 +241,7 @@ func (h *Handler) batchWrite(msg *pb.Message) {
 	if err != nil {
 		h.logger.Error(err)
 		h.ReturnError()
+		return
 	}
 
 	err = h.stream.Send(&pb.Message{
@@ -222,16 +256,145 @@ func (h *Handler) batchWrite(msg *pb.Message) {
 
 func (h *Handler) rangeQuery(msg *pb.Message) {
 
+	r := &pb.Range{}
+	err := proto.Unmarshal(msg.Payload, r)
+	if err != nil {
+		h.logger.Error(err)
+		h.ReturnError()
+		return
+	}
+
+	exist, state := h.stateMgr.GetStateDb(r.Context.Namespace)
+	if exist == false {
+		h.logger.Error(NamespaceNotExistErr)
+		h.returnFalseResponse()
+		return
+	}
+	if valid := h.requestCheck(r.Context); !valid {
+		h.logger.Error(InvalidRequestErr)
+		h.returnFalseResponse()
+		return
+	}
+	start := common.BytesToRightPaddingHash(r.Start)
+	limit := common.BytesToRightPaddingHash(r.End)
+
+	iterRange := vm.IterRange{
+		Start:   &start,
+		Limit:   &limit,
+	}
+	iter, err := state.NewIterator(common.BytesToAddress(common.FromHex(r.Context.Cid)), &iterRange)
+	if err != nil {
+		h.logger.Error(err)
+		h.returnFalseResponse()
+		return
+	}
+	cnt := 0
+	batchValue := &pb.BathValue{
+		Id:  r.Context.Txid,
+	}
+	for iter.Next() {
+		s := make([]byte, len(iter.Value()))
+		copy(s, iter.Value())
+		batchValue.V = append(batchValue.V, s)
+		cnt += 1
+		if cnt == BatchSize {
+			batchValue.HasMore = true
+
+			paylod, err := proto.Marshal(batchValue)
+			if err != nil {
+				h.logger.Error(err)
+				h.ReturnError()
+				return
+			}
+
+			err = h.stream.Send(&pb.Message{
+				Type:    pb.Message_RESPONSE,
+				Payload: paylod,
+			})
+
+			if err != nil {
+				h.logger.Error(err)
+				return
+			}
+
+			cnt = 0
+			batchValue = &pb.BathValue{
+				Id:  r.Context.Txid,
+			}
+		}
+	}
+	batchValue.HasMore = false
+	paylod, err := proto.Marshal(batchValue)
+	if err != nil {
+		h.logger.Error(err)
+		h.ReturnError()
+		return
+	}
+
+	err = h.stream.Send(&pb.Message{
+		Type:    pb.Message_RESPONSE,
+		Payload: paylod,
+	})
+
+	if err != nil {
+		h.logger.Error(err)
+		return
+	}
 }
 
 func (h *Handler) post(msg *pb.Message) {
 
+	event := &pb.Event{}
+	err := proto.Unmarshal(msg.Payload, event)
+	if err != nil {
+		h.logger.Error(err)
+		h.returnFalseResponse()
+		return
+	}
+
+	exist, state := h.stateMgr.GetStateDb(event.Context.Namespace)
+	if exist == false {
+		h.logger.Error(NamespaceNotExistErr)
+		h.returnFalseResponse()
+		return
+	}
+	if valid := h.requestCheck(event.Context); !valid {
+		h.logger.Error(InvalidRequestErr)
+		h.returnFalseResponse()
+		return
+	}
+
+	var topics []common.Hash
+	for _, topic := range event.Topics {
+		topics = append(topics, common.BytesToHash(topic))
+	}
+
+	log := types.NewLog(common.HexToAddress(event.Context.Cid), topics, event.Body, event.Context.BlockNumber)
+	state.AddLog(log)
+
+	h.returnTrueResponse()
 }
 
 func (h *Handler) ReturnError() {
 	h.stream.Send(&pb.Message{
 		Type:    pb.Message_RESPONSE,
 		Payload: []byte(""),
+	})
+}
+
+func (h *Handler) returnFalseResponse() {
+	paylod, _ := proto.Marshal(&pb.Response{Ok: false})
+	h.stream.Send(&pb.Message{
+		Type:    pb.Message_RESPONSE,
+		Payload: paylod,
+	})
+}
+
+func (h *Handler) returnTrueResponse() {
+	paylod, _ := proto.Marshal(&pb.Response{Ok: true})
+	h.stream.Send(&pb.Message{
+		Type:    pb.Message_RESPONSE,
+		Payload: paylod,
 	})
 }
 
