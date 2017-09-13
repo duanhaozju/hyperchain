@@ -106,7 +106,28 @@ public class LedgerClient {
     }
 
     public boolean delete(ContractProto.Key key) {
-        return blockingStub.delete(key).getOk();
+
+        if(streamObserver == null) {
+            reconnect();
+        }
+
+        ContractProto.Message msg = ContractProto.Message.newBuilder()
+                .setType(ContractProto.Message.Type.DELETE)
+                .setPayload(key.toByteString())
+                .build();
+        streamObserver.onNext(msg);
+
+        try {
+            ContractProto.Message rsp = messages.take();
+            ContractProto.Response response = ContractProto.Response.parseFrom(rsp.getPayload());
+            return response.getOk();
+        } catch (InterruptedException e) {
+            logger.error(e);
+            return false;
+        }catch (InvalidProtocolBufferException ipbe) {
+            logger.error(ipbe);
+            return false;
+        }
     }
 
     public boolean batchWrite(ContractProto.BatchKV bkv) {
@@ -166,9 +187,32 @@ public class LedgerClient {
     }
 
     public boolean post(ContractProto.Event event) {
-        return blockingStub.post(event).getOk();
+
+        if(streamObserver == null) {
+            reconnect();
+        }
+
+        ContractProto.Message msg = ContractProto.Message.newBuilder()
+                .setType(ContractProto.Message.Type.POST_EVENT)
+                .setPayload(event.toByteString())
+                .build();
+        streamObserver.onNext(msg);
+
+        try {
+            ContractProto.Message rsp = messages.take();
+            ContractProto.Response response = ContractProto.Response.parseFrom(rsp.getPayload());
+            return response.getOk();
+        } catch (InterruptedException e) {
+            logger.error(e);
+            return false;
+        }catch (InvalidProtocolBufferException ipbe) {
+            logger.error(ipbe);
+            return false;
+        }
     }
 
+
+    //register create a new stream with ledger server.
     public StreamObserver<ContractProto.Message> register() {
 
         return asyncStub.register(new StreamObserver<ContractProto.Message>() {
