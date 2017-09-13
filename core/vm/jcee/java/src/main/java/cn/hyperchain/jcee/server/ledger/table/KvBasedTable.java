@@ -48,7 +48,7 @@ public class KvBasedTable implements Table {
 
     @Override
     public boolean insert(Row row) {
-        logger.fatal("insert row is " + row.toJSON());
+        logger.debug("insert row is " + row.toJSON());
         return ledger.put(getCompositeName(row.getRowId()), row.toJSON());
     }
 
@@ -74,7 +74,6 @@ public class KvBasedTable implements Table {
 
     @Override
     public Row getRow(String rowId) {
-        logger.error("get rowId is " + rowId);
         Result data = ledger.get(getCompositeName(rowId));
         if (!data.isEmpty()) {
             Gson gson = new Gson();
