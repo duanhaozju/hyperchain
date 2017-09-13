@@ -82,10 +82,6 @@ func (pbft *pbftImpl) sendInWV(v uint64, n uint64) bool {
 	return pbft.view == v && n > pbft.h && n <= pbft.h+pbft.L
 }
 
-func (pbft *pbftImpl) allCorrectQuorum() int {
-	return pbft.N
-}
-
 // Given a ip/digest get the addnode Cert
 func (pbft *pbftImpl) getDelNodeCert(delHash string) (cert *delNodeCert) {
 
@@ -166,6 +162,9 @@ func (pbft *pbftImpl) oneCorrectQuorum() int {
 	return pbft.f + 1
 }
 
+func (pbft *pbftImpl) allCorrectQuorum() int {
+	return pbft.N
+}
 // =============================================================================
 // pre-prepare/prepare/commit check helper
 // =============================================================================

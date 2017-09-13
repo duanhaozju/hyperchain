@@ -63,7 +63,6 @@ type cacheBatch struct {
 
 type addNodeCert struct {
 	addNodes  map[AddNode]bool
-	addCount  int
 	finishAdd bool
 }
 
@@ -72,7 +71,6 @@ type delNodeCert struct {
 	delId      uint64
 	routerHash string
 	delNodes   map[DelNode]bool
-	delCount   int
 	finishDel  bool
 }
 
