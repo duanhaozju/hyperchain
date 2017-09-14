@@ -18,7 +18,6 @@ const (
 
 //pbft config keys
 const (
-	PBFT_NODE_NUM        = "consensus.pbft.nodes"
 	PBFT_BATCH_SIZE      = "consensus.pbft.batchsize"
 	PBFT_POOL_SIZE       = "consensus.pbft.poolsize"
 	PBFT_VC_RESEND_LIMIT = "consensus.pbft.vcresendlimit"
