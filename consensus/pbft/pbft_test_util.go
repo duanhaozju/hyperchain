@@ -134,7 +134,7 @@ func (TH *TestHelp)InnerUnicast(msg *pb.Message, to uint64) error{
 	return nil
 }
 
-func (TH *TestHelp)ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error{
+func (TH *TestHelp)ValidateBatch(digest string,txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error{
 	go func(){
 		time.Sleep(0)
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
@@ -148,6 +148,7 @@ func (TH *TestHelp)ValidateBatch(txs []*types.Transaction, timeStamp int64, seqN
 			View:view,
 			Hash:hash.Hex(),
 			Transactions:txs,
+			Digest:digest,
 		}
 		if TH.batchMap[hash]!=nil{
 			TH.batchMapLock.Lock()
