@@ -515,6 +515,7 @@ func (pbft *pbftImpl) sendAgreeUpdateNforDel(key string) error {
 }
 
 // recvAgreeUpdateN handles the AgreeUpdateN message sent by others,
+// checks the correctness and judges if it can move on to QuorumEvent.
 func (pbft *pbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 
 	pbft.logger.Debugf("Replica %d received agree-update-n from replica %d, v:%d, n:%d, flag:%v, h:%d, |C|:%d, |P|:%d, |Q|:%d",
@@ -709,44 +710,18 @@ func (pbft *pbftImpl) recvUpdateN(update *UpdateN) events.Event {
 }
 
 // primaryProcessUpdateN processes the UpdateN message after it has already reached
-// updateN-quorum
+// updateN-quorum.
 func (pbft *pbftImpl) primaryProcessUpdateN(initialCp ViewChange_C, replicas []replicaInfo, update *UpdateN) events.Event {
-	var newReqBatchMissing bool
 
-	speculativeLastExec := pbft.exec.lastExec
-	if pbft.exec.currentExec != nil {
-		speculativeLastExec = *pbft.exec.currentExec
+	// Check if primary need state update
+	err := pbft.checkIfNeedStateUpdate(initialCp, replicas)
+	if err != nil {
+		pbft.logger.Error(err.Error())
+		return nil
 	}
 
-	if pbft.h < initialCp.SequenceNumber {
-		pbft.moveWatermarks(initialCp.SequenceNumber)
-	}
-
-	// true means we can not execToTarget need state transfer
-	if speculativeLastExec < initialCp.SequenceNumber {
-		pbft.logger.Warningf("Replica %d missing base checkpoint %d (%s), our most recent execution %d", pbft.id, initialCp.SequenceNumber, initialCp.Id, speculativeLastExec)
-
-		snapshotID, err := base64.StdEncoding.DecodeString(initialCp.Id)
-		if nil != err {
-			err = fmt.Errorf("Replica %d received a agree-update-n whose hash could not be decoded (%s)", pbft.id, initialCp.Id)
-			pbft.logger.Error(err.Error())
-			return nil
-		}
-
-		target := &stateUpdateTarget{
-			checkpointMessage: checkpointMessage{
-				seqNo: initialCp.SequenceNumber,
-				id:    snapshotID,
-			},
-			replicas: replicas,
-		}
-
-		pbft.updateHighStateTarget(target)
-		pbft.stateTransfer(target)
-	}
-
-	newReqBatchMissing = pbft.feedMissingReqBatchIfNeeded(update.Xset)
-
+	// Check if primary need fetch missing requests
+	newReqBatchMissing := pbft.feedMissingReqBatchIfNeeded(update.Xset)
 	if len(pbft.storeMgr.missingReqBatches) == 0 {
 		return pbft.processReqInUpdate(update)
 	} else if newReqBatchMissing {
@@ -756,8 +731,11 @@ func (pbft *pbftImpl) primaryProcessUpdateN(initialCp ViewChange_C, replicas []r
 	return nil
 }
 
+// processUpdateN handles the UpdateN message sent from primary, it can only be called
+// once replica has reached update-quorum.
 func (pbft *pbftImpl) processUpdateN() events.Event {
 
+	// Get the UpdateN from the local cache
 	update, ok := pbft.nodeMgr.updateStore[pbft.nodeMgr.updateTarget]
 	if !ok {
 		pbft.logger.Debugf("Replica %d ignoring processUpdateN as it could not find n=%d/view=%d in its updateStore", pbft.id, pbft.nodeMgr.updateTarget.n, pbft.nodeMgr.updateTarget.v)
@@ -776,63 +754,40 @@ func (pbft *pbftImpl) processUpdateN() events.Event {
 		return nil
 	}
 
+	// Find the initial checkpoint
+	// TODO: use the aset sent from primary is not suitable, use aset itself has received.
 	cp, ok, replicas := pbft.selectInitialCheckpointForUpdate(update.Aset)
 	if !ok {
 		pbft.logger.Warningf("Replica %d could not determine initial checkpoint: %+v",
 			pbft.id, pbft.vcMgr.viewChangeStore)
 		return pbft.sendViewChange()
 	}
-	// 以上 primary 不必做
-	speculativeLastExec := pbft.exec.lastExec
-	if pbft.exec.currentExec != nil {
-		speculativeLastExec = *pbft.exec.currentExec
-	}
 
-	// --
+	// Check if the xset sent by new primary is built correctly by the aset
 	msgList := pbft.assignSequenceNumbersForUpdate(update.Aset, cp.SequenceNumber)
-
 	if msgList == nil {
 		pbft.logger.Warningf("Replica %d could not assign sequence numbers: %+v",
 			pbft.id, pbft.vcMgr.viewChangeStore)
 		return pbft.sendViewChange()
 	}
-
 	if !(len(msgList) == 0 && len(update.Xset) == 0) && !reflect.DeepEqual(msgList, update.Xset) {
 		pbft.logger.Warningf("Replica %d failed to verify new-view Xset: computed %+v, received %+v",
 			pbft.id, msgList, update.Xset)
 		return pbft.sendViewChange()
 	}
-	// -- primary 不必做
-	if pbft.h < cp.SequenceNumber {
-		pbft.moveWatermarks(cp.SequenceNumber)
-	}
 
-	if speculativeLastExec < cp.SequenceNumber {
-		pbft.logger.Warningf("Replica %d missing base checkpoint %d (%s), our most recent execution %d", pbft.id, cp.SequenceNumber, cp.Id, speculativeLastExec)
-
-		snapshotID, err := base64.StdEncoding.DecodeString(cp.Id)
-		if nil != err {
-			err = fmt.Errorf("Replica %d received a view change whose hash could not be decoded (%s)", pbft.id, cp.Id)
-			pbft.logger.Error(err.Error())
-			return nil
-		}
-
-		target := &stateUpdateTarget{
-			checkpointMessage: checkpointMessage{
-				seqNo: cp.SequenceNumber,
-				id:    snapshotID,
-			},
-			replicas: replicas,
-		}
-
-		pbft.updateHighStateTarget(target)
-		pbft.stateTransfer(target)
+	// Check if primary need state update
+	err := pbft.checkIfNeedStateUpdate(cp, replicas)
+	if err != nil {
+		pbft.logger.Error(err.Error())
+		return nil
 	}
 
 	return pbft.processReqInUpdate(update)
 
 }
 
+// processReqInUpdate resets all the variables that need to be updated after updating n
 func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 	pbft.logger.Debugf("Replica %d accepting update-n to target %v", pbft.id, pbft.nodeMgr.updateTarget)
 
@@ -845,10 +800,7 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 	pbft.stopNewViewTimer()
 	pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 
-	backenVid := pbft.exec.lastExec + 1
-	pbft.seqNo = pbft.exec.lastExec
-	pbft.batchVdr.lastVid = pbft.exec.lastExec
-
+	// Update the view, N and f
 	pbft.view = update.View
 	pbft.N = int(update.N)
 	pbft.f = (pbft.N - 1) / 3
@@ -858,22 +810,29 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 		pbft.id = cert.newId
 	}
 
+	// Clean the AgreeUpdateN messages in this turn
 	for idx := range pbft.nodeMgr.agreeUpdateStore {
 		if idx.v == update.View && idx.n == update.N && idx.flag == update.Flag {
 			delete(pbft.nodeMgr.agreeUpdateStore, idx)
 		}
 	}
 
+	// Clean the AddNode/DelNode messages in this turn
 	pbft.nodeMgr.addNodeCertStore = make(map[string]*addNodeCert)
 	pbft.nodeMgr.delNodeCertStore = make(map[string]*delNodeCert)
 
+	resetTarget := pbft.exec.lastExec + 1
 	if !pbft.status.getState(&pbft.status.skipInProgress) &&
 		!pbft.status.getState(&pbft.status.inVcReset) {
-		pbft.helper.VcReset(backenVid)
+		// In most common case, do VcReset
+		pbft.helper.VcReset(resetTarget)
 		pbft.status.activeState(&pbft.status.inVcReset)
 	} else if pbft.primary(pbft.view) == pbft.id {
+		// Primary cannot do VcReset then we just let others choose next primary
+		// after update timer expired
 		pbft.logger.Warningf("New primary %d need to catch up other, waiting", pbft.id)
 	} else {
+		// Replica can just respone the update no matter what happened
 		pbft.logger.Warningf("Replica %d cannot process local vcReset, but also send finishVcReset", pbft.id)
 		pbft.sendFinishUpdate()
 	}
@@ -881,6 +840,8 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 	return nil
 }
 
+// sendFinishUpdate broadcasts the FinisheUpdate message to others to inform that
+// it has finished VcReset of updating
 func (pbft *pbftImpl) sendFinishUpdate() events.Event {
 
 	finish := &FinishUpdate{
@@ -906,7 +867,9 @@ func (pbft *pbftImpl) sendFinishUpdate() events.Event {
 	return pbft.recvFinishUpdate(finish)
 }
 
+// recvFinishUpdate handles the FinishUpdate messages sent from others
 func (pbft *pbftImpl) recvFinishUpdate(finish *FinishUpdate) events.Event {
+
 	if atomic.LoadUint32(&pbft.nodeMgr.inUpdatingN) == 0 {
 		pbft.logger.Debugf("Replica %d is not in updatingN, but received FinishUpdate from replica %d", pbft.id, finish.ReplicaId)
 	}
@@ -927,7 +890,10 @@ func (pbft *pbftImpl) recvFinishUpdate(finish *FinishUpdate) events.Event {
 	return pbft.handleTailAfterUpdate()
 }
 
+// handleTailAfterUpdate handles the tail after stable checkpoint
 func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
+
+	// Get the quorum of FinishUpdate messages, and if has new primary's
 	quorum := 0
 	hasPrimary := false
 	for finish := range pbft.nodeMgr.finishUpdateStore {
@@ -939,6 +905,7 @@ func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 		}
 	}
 
+	// We can only go on if we have arrived quorum, and we have primary's message
 	if quorum < pbft.allCorrectReplicasQuorum() {
 		pbft.logger.Debugf("Replica %d doesn't has arrive quorum FinishUpdate, expect=%d, got=%d",
 			pbft.id, pbft.allCorrectReplicasQuorum(), quorum)
@@ -963,9 +930,11 @@ func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 
 	pbft.stopNewViewTimer()
 
+	// Reset the seqNo and vid
 	pbft.seqNo = pbft.exec.lastExec
 	pbft.batchVdr.lastVid = pbft.exec.lastExec
 
+	// New Primary validate the batch built by xset
 	if pbft.primary(pbft.view) == pbft.id {
 		xSetLen := len(update.Xset)
 		upper := uint64(xSetLen) + pbft.h + uint64(1)
@@ -993,6 +962,8 @@ func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 	}
 }
 
+// rebuildCertStoreForUpdate rebuilds the certStore after finished updating,
+// according to the Xset
 func (pbft *pbftImpl) rebuildCertStoreForUpdate() {
 
 	update, ok := pbft.nodeMgr.updateStore[pbft.nodeMgr.updateTarget]
@@ -1019,6 +990,7 @@ func (pbft *pbftImpl) agreeUpdateHelper(agree *AgreeUpdateN) {
 		}
 	}
 
+	// Gather all the checkpoints
 	for n, id := range pbft.storeMgr.chkpts {
 		agree.Cset = append(agree.Cset, &ViewChange_C{
 			SequenceNumber: n,
@@ -1026,6 +998,7 @@ func (pbft *pbftImpl) agreeUpdateHelper(agree *AgreeUpdateN) {
 		})
 	}
 
+	// Gather all the p entries
 	for _, p := range pset {
 		if p.SequenceNumber < pbft.h {
 			pbft.logger.Errorf("BUG! Replica %d should not have anything in our pset less than h, found %+v", pbft.id, p)
@@ -1033,6 +1006,7 @@ func (pbft *pbftImpl) agreeUpdateHelper(agree *AgreeUpdateN) {
 		agree.Pset = append(agree.Pset, p)
 	}
 
+	// Gather all the q entries
 	for _, q := range qset {
 		if q.SequenceNumber < pbft.h {
 			pbft.logger.Errorf("BUG! Replica %d should not have anything in our qset less than h, found %+v", pbft.id, q)
@@ -1045,17 +1019,21 @@ func (pbft *pbftImpl) agreeUpdateHelper(agree *AgreeUpdateN) {
 func (pbft *pbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 
 	if agree.Flag {
+		// Get the add-node cert
 		cert := pbft.getAddNodeCert(agree.Key)
 		if !pbft.status.getState(&pbft.status.isNewNode) && !cert.finishAdd {
 			pbft.logger.Debugf("Replica %d has not complete add node", pbft.id)
 			return false
 		}
+
+		// Check the N and view after updating
 		n, view := pbft.getAddNV()
 		if n != agree.N || view != agree.View {
 			pbft.logger.Debugf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", pbft.id, n, view, agree.N, agree.View)
 			return false
 		}
 
+		// Check if there's any invalid p or q entry
 		for _, p := range append(agree.Pset, agree.Qset...) {
 			if !(p.View <= agree.View && p.SequenceNumber > agree.H && p.SequenceNumber <= agree.H+pbft.L) {
 				pbft.logger.Debugf("Replica %d invalid p entry in agree-update: agree(v:%d h:%d) p(v:%d n:%d)", pbft.id, agree.View, agree.H, p.View, p.SequenceNumber)
@@ -1064,17 +1042,21 @@ func (pbft *pbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 		}
 
 	} else {
+		// Get the del-node cert
 		cert := pbft.getDelNodeCert(agree.Key)
 		if !cert.finishDel {
 			pbft.logger.Debugf("Replica %d has not complete del node", pbft.id)
 			return false
 		}
+
+		// Check the N and view after updating
 		n, view := pbft.getDelNV(cert.delId)
 		if n != agree.N || view != agree.View {
 			pbft.logger.Debugf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", pbft.id, n, view, agree.N, agree.View)
 			return false
 		}
 
+		// Check if there's any invalid p or q entry
 		for _, p := range append(agree.Pset, agree.Qset...) {
 			if !(p.View <= agree.View+1 && p.SequenceNumber > agree.H && p.SequenceNumber <= agree.H+pbft.L) {
 				pbft.logger.Debugf("Replica %d invalid p entry in agree-update: agree(v:%d h:%d) p(v:%d n:%d)", pbft.id, agree.View, agree.H, p.View, p.SequenceNumber)
@@ -1084,6 +1066,7 @@ func (pbft *pbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 
 	}
 
+	// Check if there's invalid checkpoint
 	for _, c := range agree.Cset {
 		if !(c.SequenceNumber >= agree.H && c.SequenceNumber <= agree.H+pbft.L) {
 			pbft.logger.Warningf("Replica %d invalid c entry in agree-update: agree(v:%d h:%d) c(n:%d)", pbft.id, agree.View, agree.H, c.SequenceNumber)
@@ -1094,6 +1077,44 @@ func (pbft *pbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 	return true
 }
 
+// checkIfNeedStateUpdate checks if a replica need to do state update
+func (pbft *pbftImpl) checkIfNeedStateUpdate(initialCp ViewChange_C, replicas []replicaInfo) error {
+
+	speculativeLastExec := pbft.exec.lastExec
+	if pbft.exec.currentExec != nil {
+		speculativeLastExec = *pbft.exec.currentExec
+	}
+
+	if pbft.h < initialCp.SequenceNumber {
+		pbft.moveWatermarks(initialCp.SequenceNumber)
+	}
+
+	// If replica's lastExec < initial checkpoint, replica is out of data
+	if speculativeLastExec < initialCp.SequenceNumber {
+		pbft.logger.Warningf("Replica %d missing base checkpoint %d (%s), our most recent execution %d", pbft.id, initialCp.SequenceNumber, initialCp.Id, speculativeLastExec)
+
+		snapshotID, err := base64.StdEncoding.DecodeString(initialCp.Id)
+		if nil != err {
+			err = fmt.Errorf("Replica %d received a agree-update-n whose hash could not be decoded (%s)", pbft.id, initialCp.Id)
+			return err
+		}
+
+		// Build the new target of state update
+		target := &stateUpdateTarget{
+			checkpointMessage: checkpointMessage{
+				seqNo: initialCp.SequenceNumber,
+				id:    snapshotID,
+			},
+			replicas: replicas,
+		}
+
+		pbft.updateHighStateTarget(target)
+		pbft.stateTransfer(target)
+	}
+
+	return nil
+}
+
 // getAgreeUpdates gets all the AgreeUpdateN messages the replica received.
 func (pbft *pbftImpl) getAgreeUpdates() (agrees []*AgreeUpdateN) {
 	for _, agree := range pbft.nodeMgr.agreeUpdateStore {
@@ -1102,15 +1123,26 @@ func (pbft *pbftImpl) getAgreeUpdates() (agrees []*AgreeUpdateN) {
 	return
 }
 
+// selectInitialCheckpointForUpdate selects the highest checkpoint
+// that reached f+1 quorum.
 func (pbft *pbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (checkpoint ViewChange_C, ok bool, replicas []replicaInfo) {
+
+	// For the checkpoint as key, find the corresponding AgreeUpdateN messages
 	checkpoints := make(map[ViewChange_C][]*AgreeUpdateN)
 	for _, agree := range aset {
-		for _, c := range agree.Cset { // TODO, verify that we strip duplicate checkpoints from this set
+		// Verify that we strip duplicate checkpoints from this Cset
+		set := make(map[ViewChange_C]bool)
+		for _, c := range agree.Cset {
+			if ok := set[*c]; ok {
+				continue
+			}
 			checkpoints[*c] = append(checkpoints[*c], agree)
+			set[*c] = true
 			pbft.logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s", pbft.id, agree.ReplicaId, agree.H, c.SequenceNumber, c.Id)
 		}
 	}
 
+	// Indicate that replica cannot find any checkpoint
 	if len(checkpoints) == 0 {
 		pbft.logger.Debugf("Replica %d has no checkpoints to select from: %d %s",
 			pbft.id, len(pbft.vcMgr.viewChangeStore), checkpoints)
@@ -1118,7 +1150,7 @@ func (pbft *pbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (ch
 	}
 
 	for idx, vcList := range checkpoints {
-		// need weak certificate for the checkpoint
+		// Need weak certificate for the checkpoint
 		if len(vcList) < pbft.oneCorrectQuorum() { // type casting necessary to match types
 			pbft.logger.Debugf("Replica %d has no weak certificate for n:%d, vcList was %d long",
 				pbft.id, idx.SequenceNumber, len(vcList))
@@ -1140,6 +1172,7 @@ func (pbft *pbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (ch
 			continue
 		}
 
+		// Find the highest checkpoint
 		if checkpoint.SequenceNumber <= idx.SequenceNumber {
 			replicas = make([]replicaInfo, len(vcList))
 			for i, vc := range vcList {
@@ -1158,6 +1191,10 @@ func (pbft *pbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (ch
 	return
 }
 
+// assignSequenceNumbersForUpdate assigns the new seqNo of each valid batch in new view:
+// 1. finds all the batch that both prepared and pre-prepared;
+// 2. assigns the seqNo to batches ignoring the invalid ones.
+// Example: we have 1, 3, 4, 5, 6 prepared and pre-prepared, we get {1, 2, 3, 4, 5}
 func (pbft *pbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uint64) map[uint64]string {
 	msgList := make(map[uint64]string)
 
@@ -1244,6 +1281,7 @@ nLoop:
 		}
 	}
 
+	// Sort the msgList, as it's random ranged
 	keys := make([]uint64, len(msgList))
 	i := 0
 	for n := range msgList {
@@ -1251,6 +1289,8 @@ nLoop:
 		i++
 	}
 	sort.Sort(sortableUint64Slice(keys))
+
+	// Sequentially assign the seqNo
 	x := h + 1
 	list := make(map[uint64]string)
 	for _, n := range keys {
