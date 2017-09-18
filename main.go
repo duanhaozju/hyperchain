@@ -14,6 +14,7 @@ import (
 	"fmt"
 	_ "net/http/pprof"
 	"hyperchain/rpc"
+	"hyperchain/hyperdb"
 )
 
 type hyperchain struct {
@@ -38,6 +39,7 @@ func newHyperchain(argV *argT) *hyperchain {
 	globalConfig.Set(common.GLOBAL_CONFIG_PATH, hp.args.ConfigPath)
 	common.InitHyperLoggerManager(globalConfig)
 	logger = common.GetLogger(common.DEFAULT_LOG, "main")
+	hyperdb.InitDBMgr(globalConfig)
 	//P2P module MUST Start before namespace server
 	vip := viper.New()
 	vip.SetConfigFile(hp.args.ConfigPath)
@@ -60,6 +62,7 @@ func newHyperchain(argV *argT) *hyperchain {
 
 func (h *hyperchain) start() {
 	logger.Notice("Hyperchain server starting...")
+	hyperdb.InitDBMgr(h.nsMgr.GlobalConfig())
 	go h.nsMgr.Start()
 	go h.hs.Start()
 	go CheckLicense(h.stopFlag)
@@ -71,6 +74,7 @@ func (h *hyperchain) stop() {
 	h.nsMgr.Stop()
 	time.Sleep(3 * time.Second)
 	h.hs.Stop()
+	hyperdb.Close()
 	logger.Critical("Hyperchain server stopped")
 }
 

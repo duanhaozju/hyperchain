@@ -3,32 +3,40 @@
 package common
 
 import (
-	"github.com/op/go-logging"
 	"fmt"
+	"github.com/op/go-logging"
+	"os"
 	"sync"
 )
 
-var(
-	commonLogger = logging.MustGetLogger("commonLogger")
-	once sync.Once
+var (
+	commonLogger   *logging.Logger
+	once           sync.Once
 	hyperLoggerMgr HyperLoggerMgr
 )
 
 func init() {
+	conf := defaultLoggerConfig()
+	consoleBackend := logging.NewLogBackend(os.Stdout, "", 0)
+	consoleFormat := conf.GetString(LOG_CONSOLE_FORMAT)
+	consoleFormatter := logging.MustStringFormatter(consoleFormat)
+	consoleFormatterBackend := logging.NewBackendFormatter(consoleBackend, consoleFormatter)
+	logging.SetBackend(consoleFormatterBackend)
+	commonLogger = logging.MustGetLogger("commonLogger")
 	newHyperLoggerMgr()
 }
 
 // InitHyperLoggerManager init the hyperlogger system
 func InitHyperLoggerManager(conf *Config) {
-		newHyperLoggerMgr()
-		//init the system log
-		conf.Set(NAMESPACE, DEFAULT_NAMESPACE)
-		hl := newHyperLogger(conf)
-		hyperLoggerMgr.addHyperLogger(hl)
-		commonLogger = GetLogger(DEFAULT_NAMESPACE, "common")
+	newHyperLoggerMgr()
+	//init the system log
+	conf.Set(NAMESPACE, DEFAULT_NAMESPACE)
+	hl := newHyperLogger(conf)
+	hyperLoggerMgr.addHyperLogger(hl)
+	commonLogger = GetLogger(DEFAULT_NAMESPACE, "common")
 }
 
-func newHyperLoggerMgr()  {
+func newHyperLoggerMgr() {
 	once.Do(func() {
 		if hyperLoggerMgr == nil {
 			hyperLoggerMgr = newHyperLoggerMgrImpl()
@@ -40,7 +48,7 @@ func newHyperLoggerMgr()  {
 func InitRawHyperLogger(namespace string) error {
 	nsConf := NewRawConfig()
 	nsConf.Set(NAMESPACE, namespace)
-	newHyperLoggerMgrImpl()
+	newHyperLoggerMgr()
 	hyperLogger := newHyperLogger(nsConf)
 	if hyperLogger == nil {
 		return fmt.Errorf("Init Hyperlogger error: nil return")
@@ -52,7 +60,7 @@ func InitRawHyperLogger(namespace string) error {
 //InitHyperLogger init hyperlogger for a namespace by namespace config.
 func InitHyperLogger(namespace string, nsConf *Config) error {
 	nsConf.Set(NAMESPACE, namespace)
-	newHyperLoggerMgrImpl()
+	newHyperLoggerMgr()
 	hyperLogger := newHyperLogger(nsConf)
 	if hyperLogger == nil {
 		return fmt.Errorf("Init Hyperlogger error: nil return")
@@ -64,7 +72,8 @@ func InitHyperLogger(namespace string, nsConf *Config) error {
 //GetLogger getLogger with specific namespace and module.
 func GetLogger(namespace string, module string) *logging.Logger {
 	if hyperLoggerMgr == nil {
-		panic(fmt.Sprintf("Hyper logger sytem is not init, please init it first"))
+		commonLogger.Warningf("Hyper logger sytem is not init, init it by default configs")
+		InitHyperLoggerManager(defaultLoggerConfig())
 	}
 	return hyperLoggerMgr.getLogger(namespace, module)
 }
@@ -77,4 +86,12 @@ func SetLogLevel(namespace string, module string, level string) error {
 //GetLogLevel get log level info by namespace and module.
 func GetLogLevel(namespace, module string) (string, error) {
 	return hyperLoggerMgr.getLoggerLevel(namespace, module)
+}
+
+func defaultLoggerConfig() *Config {
+	conf := NewRawConfig()
+	conf.Set(LOG_BASE_LOG_LEVEL, "DEBUG")
+	conf.Set(LOG_DUMP_FILE, false)
+	conf.Set(LOG_CONSOLE_FORMAT, "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}")
+	return conf
 }

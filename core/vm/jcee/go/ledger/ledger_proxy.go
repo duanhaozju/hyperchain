@@ -14,6 +14,7 @@ import (
 	"strings"
 	"hyperchain/hyperdb/db"
 	"hyperchain/core/types"
+	"io"
 )
 
 var (
@@ -46,7 +47,7 @@ func NewLedgerProxy(conf *common.Config) *LedgerProxy {
 	}
 }
 
-func (lp *LedgerProxy) Register(namespace string, db vm.Database) error {
+func (lp *LedgerProxy) RegisterDB(namespace string, db vm.Database) error {
 	return lp.stateMgr.Register(namespace, db)
 }
 
@@ -68,6 +69,29 @@ func (lp *LedgerProxy) Server() error {
 
 func (lp *LedgerProxy) StopServer() {
 	lp.server.Stop()
+}
+
+func (lp *LedgerProxy) Register(stream pb.Ledger_RegisterServer) error{
+	messages := make(chan *pb.Message, 1000)
+
+	handler := NewHandler(messages, stream)
+	handler.stateMgr = lp.stateMgr
+	handler.logger = common.GetLogger(lp.conf.GetString(common.NAMESPACE), "ledger/handler")
+	go handler.handle()
+
+	for { // close judge
+		msg, err := stream.Recv()
+		if err == io.EOF {
+			fmt.Println(err)
+			return err
+		}
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		messages <- msg
+	}
+	return nil
 }
 
 func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) {

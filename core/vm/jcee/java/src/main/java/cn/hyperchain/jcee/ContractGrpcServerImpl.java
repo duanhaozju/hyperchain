@@ -13,6 +13,7 @@ import cn.hyperchain.jcee.server.common.Errors;
 import cn.hyperchain.protos.ContractGrpc;
 
 import cn.hyperchain.protos.ContractProto;
+import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.stub.StreamObserver;
 import org.apache.log4j.Logger;
 
@@ -71,28 +72,9 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
         }
         return true;
     }
-    /**
-     * @param request
-     * @param responseObserver
-     */
-    @Override
-    public void execute(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
-        if (state == State.running) {
-            if (!pass(request, responseObserver)) return;
-            Caller caller = new Caller(request, responseObserver);
-            try {
-                contractExecutor.dispatch(caller);
-            } catch (InterruptedException ie) {
-                logger.error(ie.getMessage());
-                Errors.ReturnErrMsg(ie.getMessage(), responseObserver);
-            }
-        }else {
-            Errors.ReturnErrMsg("HyperVM can not execute request now, current state is " + state, responseObserver);
-        }
-    }
 
     //pass validate the request header.
-    public boolean pass(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+    public boolean pass(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver) {
         ContractProto.RequestContext rc = request.getContext();
         String err;
         if (rc == null) {
@@ -137,6 +119,52 @@ public class ContractGrpcServerImpl extends ContractGrpc.ContractImplBase {
         ContractProto.Response r = ContractProto.Response.newBuilder().setOk(true).build();
         responseObserver.onNext(r);
         responseObserver.onCompleted();
+    }
+
+    public StreamObserver<ContractProto.Message> register(StreamObserver<ContractProto.Message> responseObserver) {
+        return new StreamObserver<ContractProto.Message>() {
+            @Override
+            public void onNext(ContractProto.Message message) {
+
+                switch (message.getType()){
+                    case TRANSACTION:{
+                            try {
+                                ContractProto.Request request = ContractProto.Request.parseFrom(message.getPayload().toByteArray());
+                                if (state == State.running) {
+                                    if (!pass(request, responseObserver)) return;
+                                    Caller caller = new Caller(request, responseObserver);
+                                    try {
+                                        contractExecutor.dispatch(caller);
+                                    } catch (InterruptedException ie) {
+                                        logger.error(ie.getMessage());
+                                        Errors.ReturnErrMsg(ie.getMessage(), responseObserver);
+                                    }
+                                }else {
+                                    Errors.ReturnErrMsg("HyperVM can not execute request now, current state is " + state, responseObserver);
+                                }
+
+                            }catch (InvalidProtocolBufferException ipbe){
+                                logger.error(ipbe);
+                            }
+                            break;
+                    }
+                    case UNRECOGNIZED:{
+                        logger.error(message.getType());
+                        logger.error("Receive undefined transaction type");
+                    }
+                }
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                logger.error(throwable);
+            }
+
+            @Override
+            public void onCompleted() {
+                logger.error("responseObserver is closed ！！！");
+            }
+        };
     }
 
     //ContractGrpcServerImpl state

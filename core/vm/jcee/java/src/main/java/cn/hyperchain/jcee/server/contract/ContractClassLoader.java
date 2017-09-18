@@ -4,8 +4,6 @@
  */
 package cn.hyperchain.jcee.server.contract;
 
-import io.netty.util.internal.ConcurrentSet;
-import org.apache.log4j.Category;
 import org.apache.log4j.Logger;
 
 import java.io.File;
@@ -13,7 +11,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Set;
 
 //ContractClassLoader used to load the contract class at runtime.
 public class ContractClassLoader extends ClassLoader{

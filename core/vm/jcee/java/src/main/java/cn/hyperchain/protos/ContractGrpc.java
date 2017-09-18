@@ -29,15 +29,6 @@ public class ContractGrpc {
   // Static method descriptors that strictly reflect the proto.
   @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/1901")
   public static final io.grpc.MethodDescriptor<cn.hyperchain.protos.ContractProto.Request,
-      cn.hyperchain.protos.ContractProto.Response> METHOD_EXECUTE =
-      io.grpc.MethodDescriptor.create(
-          io.grpc.MethodDescriptor.MethodType.UNARY,
-          generateFullMethodName(
-              "Contract", "Execute"),
-          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Request.getDefaultInstance()),
-          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Response.getDefaultInstance()));
-  @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/1901")
-  public static final io.grpc.MethodDescriptor<cn.hyperchain.protos.ContractProto.Request,
       cn.hyperchain.protos.ContractProto.Response> METHOD_HEART_BEAT =
       io.grpc.MethodDescriptor.create(
           io.grpc.MethodDescriptor.MethodType.UNARY,
@@ -45,6 +36,15 @@ public class ContractGrpc {
               "Contract", "HeartBeat"),
           io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Request.getDefaultInstance()),
           io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Response.getDefaultInstance()));
+  @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/1901")
+  public static final io.grpc.MethodDescriptor<cn.hyperchain.protos.ContractProto.Message,
+      cn.hyperchain.protos.ContractProto.Message> METHOD_REGISTER =
+      io.grpc.MethodDescriptor.create(
+          io.grpc.MethodDescriptor.MethodType.BIDI_STREAMING,
+          generateFullMethodName(
+              "Contract", "Register"),
+          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Message.getDefaultInstance()),
+          io.grpc.protobuf.ProtoUtils.marshaller(cn.hyperchain.protos.ContractProto.Message.getDefaultInstance()));
 
   /**
    * Creates a new async stub that supports all call types for the service
@@ -75,17 +75,7 @@ public class ContractGrpc {
 
     /**
      * <pre>
-     *used tp execute contract method remotely
-     * </pre>
-     */
-    public void execute(cn.hyperchain.protos.ContractProto.Request request,
-        io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response> responseObserver) {
-      asyncUnimplementedUnaryCall(METHOD_EXECUTE, responseObserver);
-    }
-
-    /**
-     * <pre>
-     *used to detect the health state of contract
+     *HeartBeat used to detect the health of server
      * </pre>
      */
     public void heartBeat(cn.hyperchain.protos.ContractProto.Request request,
@@ -93,15 +83,19 @@ public class ContractGrpc {
       asyncUnimplementedUnaryCall(METHOD_HEART_BEAT, responseObserver);
     }
 
+    /**
+     * <pre>
+     *Interface that provides support to jvm execution which will estabilish a stream between Server
+     *and Client. Message type provide the context necessary for server to respond appropriately.
+     * </pre>
+     */
+    public io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message> register(
+        io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message> responseObserver) {
+      return asyncUnimplementedStreamingCall(METHOD_REGISTER, responseObserver);
+    }
+
     @java.lang.Override public io.grpc.ServerServiceDefinition bindService() {
       return io.grpc.ServerServiceDefinition.builder(getServiceDescriptor())
-          .addMethod(
-            METHOD_EXECUTE,
-            asyncUnaryCall(
-              new MethodHandlers<
-                cn.hyperchain.protos.ContractProto.Request,
-                cn.hyperchain.protos.ContractProto.Response>(
-                  this, METHODID_EXECUTE)))
           .addMethod(
             METHOD_HEART_BEAT,
             asyncUnaryCall(
@@ -109,6 +103,13 @@ public class ContractGrpc {
                 cn.hyperchain.protos.ContractProto.Request,
                 cn.hyperchain.protos.ContractProto.Response>(
                   this, METHODID_HEART_BEAT)))
+          .addMethod(
+            METHOD_REGISTER,
+            asyncBidiStreamingCall(
+              new MethodHandlers<
+                cn.hyperchain.protos.ContractProto.Message,
+                cn.hyperchain.protos.ContractProto.Message>(
+                  this, METHODID_REGISTER)))
           .build();
     }
   }
@@ -133,24 +134,25 @@ public class ContractGrpc {
 
     /**
      * <pre>
-     *used tp execute contract method remotely
-     * </pre>
-     */
-    public void execute(cn.hyperchain.protos.ContractProto.Request request,
-        io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response> responseObserver) {
-      asyncUnaryCall(
-          getChannel().newCall(METHOD_EXECUTE, getCallOptions()), request, responseObserver);
-    }
-
-    /**
-     * <pre>
-     *used to detect the health state of contract
+     *HeartBeat used to detect the health of server
      * </pre>
      */
     public void heartBeat(cn.hyperchain.protos.ContractProto.Request request,
         io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response> responseObserver) {
       asyncUnaryCall(
           getChannel().newCall(METHOD_HEART_BEAT, getCallOptions()), request, responseObserver);
+    }
+
+    /**
+     * <pre>
+     *Interface that provides support to jvm execution which will estabilish a stream between Server
+     *and Client. Message type provide the context necessary for server to respond appropriately.
+     * </pre>
+     */
+    public io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message> register(
+        io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message> responseObserver) {
+      return asyncBidiStreamingCall(
+          getChannel().newCall(METHOD_REGISTER, getCallOptions()), responseObserver);
     }
   }
 
@@ -174,17 +176,7 @@ public class ContractGrpc {
 
     /**
      * <pre>
-     *used tp execute contract method remotely
-     * </pre>
-     */
-    public cn.hyperchain.protos.ContractProto.Response execute(cn.hyperchain.protos.ContractProto.Request request) {
-      return blockingUnaryCall(
-          getChannel(), METHOD_EXECUTE, getCallOptions(), request);
-    }
-
-    /**
-     * <pre>
-     *used to detect the health state of contract
+     *HeartBeat used to detect the health of server
      * </pre>
      */
     public cn.hyperchain.protos.ContractProto.Response heartBeat(cn.hyperchain.protos.ContractProto.Request request) {
@@ -213,18 +205,7 @@ public class ContractGrpc {
 
     /**
      * <pre>
-     *used tp execute contract method remotely
-     * </pre>
-     */
-    public com.google.common.util.concurrent.ListenableFuture<cn.hyperchain.protos.ContractProto.Response> execute(
-        cn.hyperchain.protos.ContractProto.Request request) {
-      return futureUnaryCall(
-          getChannel().newCall(METHOD_EXECUTE, getCallOptions()), request);
-    }
-
-    /**
-     * <pre>
-     *used to detect the health state of contract
+     *HeartBeat used to detect the health of server
      * </pre>
      */
     public com.google.common.util.concurrent.ListenableFuture<cn.hyperchain.protos.ContractProto.Response> heartBeat(
@@ -234,8 +215,8 @@ public class ContractGrpc {
     }
   }
 
-  private static final int METHODID_EXECUTE = 0;
-  private static final int METHODID_HEART_BEAT = 1;
+  private static final int METHODID_HEART_BEAT = 0;
+  private static final int METHODID_REGISTER = 1;
 
   private static class MethodHandlers<Req, Resp> implements
       io.grpc.stub.ServerCalls.UnaryMethod<Req, Resp>,
@@ -254,10 +235,6 @@ public class ContractGrpc {
     @java.lang.SuppressWarnings("unchecked")
     public void invoke(Req request, io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
-        case METHODID_EXECUTE:
-          serviceImpl.execute((cn.hyperchain.protos.ContractProto.Request) request,
-              (io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response>) responseObserver);
-          break;
         case METHODID_HEART_BEAT:
           serviceImpl.heartBeat((cn.hyperchain.protos.ContractProto.Request) request,
               (io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Response>) responseObserver);
@@ -272,6 +249,9 @@ public class ContractGrpc {
     public io.grpc.stub.StreamObserver<Req> invoke(
         io.grpc.stub.StreamObserver<Resp> responseObserver) {
       switch (methodId) {
+        case METHODID_REGISTER:
+          return (io.grpc.stub.StreamObserver<Req>) serviceImpl.register(
+              (io.grpc.stub.StreamObserver<cn.hyperchain.protos.ContractProto.Message>) responseObserver);
         default:
           throw new AssertionError();
       }
@@ -280,8 +260,8 @@ public class ContractGrpc {
 
   public static io.grpc.ServiceDescriptor getServiceDescriptor() {
     return new io.grpc.ServiceDescriptor(SERVICE_NAME,
-        METHOD_EXECUTE,
-        METHOD_HEART_BEAT);
+        METHOD_HEART_BEAT,
+        METHOD_REGISTER);
   }
 
 }

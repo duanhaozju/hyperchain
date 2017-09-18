@@ -2,8 +2,6 @@ package jvm
 
 import (
 	"github.com/looplab/fsm"
-	"google.golang.org/grpc"
-	"hyperchain/core/vm/jcee/protos"
 	"time"
 	"github.com/op/go-logging"
 )
@@ -31,7 +29,6 @@ type ConnMaintainer struct {
 	rc       int32
 	pc       int32
 	exit     chan bool
-
 	logger   *logging.Logger
 }
 
@@ -108,14 +105,7 @@ func (maintainer *ConnMaintainer) ping() error {
 
 
 func (maintainer *ConnMaintainer) conn() error {
-	conn, err := grpc.Dial(maintainer.cli.address, grpc.WithInsecure(), grpc.FailOnNonTempDialError(true), grpc.WithTimeout(500 * time.Millisecond), grpc.WithBlock())
-	if err != nil {
-		maintainer.logger.Warningf("did not connect: %v", err)
-		return err
-	}
-	maintainer.cli.client = contract.NewContractClient(conn)
-	maintainer.cli.conn = conn
-	return nil
+	return maintainer.cli.client.Connect()
 }
 
 /*
@@ -137,14 +127,14 @@ func (maintainer *ConnMaintainer) pingF(e *fsm.Event) {
 
 func (maintainer *ConnMaintainer) reconn(e *fsm.Event) {
 	if maintainer.pc < retryThreshold || !maintainer.fsm.Is(conn_sick) {
-		maintainer.logger.Debugf("try to reconnect to %s, doesn't satisify.", maintainer.cli.address)
+		maintainer.logger.Debugf("try to reconnect to %s, doesn't satisify.", maintainer.cli.Address())
 		return
 	}
 	if err := maintainer.conn(); err != nil {
-		maintainer.logger.Warningf("connect to %s failed", maintainer.cli.address)
+		maintainer.logger.Warningf("connect to %s failed", maintainer.cli.Address())
 		return
 	} else {
-		maintainer.logger.Debugf("connect to %s success", maintainer.cli.address)
+		maintainer.logger.Debugf("connect to %s success", maintainer.cli.Address())
 		maintainer.pc = 0
 		return
 	}

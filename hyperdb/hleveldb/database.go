@@ -10,12 +10,10 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"hyperchain/common"
 	"hyperchain/hyperdb/db"
-	pa "path/filepath"
+	hcom "hyperchain/hyperdb/common"
 )
 
-const (
-	LEVEL_DB_PATH = "database.leveldb.path"
-)
+
 
 // the Database for LevelDB
 // LDBDatabase implements the DataBase interface
@@ -36,9 +34,6 @@ type LDBDatabase struct {
 // the return *LDBDatabase is goruntine-safe
 // the LDBDataBase instance must be close after use, by calling Close method
 func NewLDBDataBase(conf *common.Config,filepath string, namespace string) (*LDBDatabase, error) {
-	if conf!=nil {
-		filepath= pa.Join(common.GetPath(namespace, conf.GetString(LEVEL_DB_PATH)), filepath)
-	}
 	db, err := leveldb.OpenFile(filepath, nil)
 	t := db.NewIterator(nil, nil)
 	t.Last()
@@ -58,7 +53,7 @@ func NewRawLDBDatabase(db *leveldb.DB, namespace string) (*LDBDatabase){
 }
 
 func LDBDataBasePath(conf *common.Config) string {
-	return conf.GetString(LEVEL_DB_PATH)
+	return conf.GetString(hcom.LEVEL_DB_ROOT_DIR)
 }
 
 // Put sets value for the given key, if the key exists, it will overwrite

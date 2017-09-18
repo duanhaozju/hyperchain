@@ -19,12 +19,15 @@ public class Errors {
      * construct error msg and return to the invokeside
      * @param msg
      */
-    public static void ReturnErrMsg(String msg, StreamObserver<ContractProto.Response> responseObserver) {
+    public static void ReturnErrMsg(String msg, StreamObserver<ContractProto.Message> responseObserver) {
         ContractProto.Response response = ContractProto.Response.newBuilder()
                 .setOk(false)
                 .setResult(ByteString.copyFrom(msg, Charset.defaultCharset()))
                 .build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+        ContractProto.Message rspMsg = ContractProto.Message.newBuilder()
+                .setType(ContractProto.Message.Type.RESPONSE)
+                .setPayload(response.toByteString())
+                .build();
+        responseObserver.onNext(rspMsg);
     }
 }

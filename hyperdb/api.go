@@ -12,6 +12,8 @@ import (
 	"hyperchain/hyperdb/sldb"
 	"strconv"
 	"sync"
+	"path"
+	hcom "hyperchain/hyperdb/common"
 )
 
 var (
@@ -20,30 +22,25 @@ var (
 	dbType    = 0001
 )
 
+const (
+	// namespace
+	blockchain        = "blockchain"
+	consensus         = "consensus"
+	archive           = "archive"
+
+	default_namespace = "global"
+
+	// state
+	closed stateDb = iota
+	opened
+)
+
 type stateDb int32
 
 type DBInstance struct {
 	db    db.Database
 	state stateDb
 }
-
-const (
-	db_type = "database.type"
-
-	// database type
-	ldb_db         = 0001
-	super_level_db = 0010
-
-	// namespace
-	default_namespace = "global"
-	blockchain        = "blockchain"
-	consensus         = "consensus"
-	archive           = "archive"
-
-	// state
-	closed stateDb = iota
-	opened
-)
 
 type DbManager struct {
 	dbMap  map[string]*DBInstance
@@ -60,7 +57,7 @@ func init() {
 }
 
 func InitDatabase(conf *common.Config, namespace string) error {
-	dbType = conf.GetInt(db_type)
+	dbType = conf.GetInt(hcom.DB_TYPE)
 
 	logStatus = conf.GetBool("database.leveldb.log_status")
 	logPath = common.GetPath(namespace, conf.GetString("database.leveldb.log_path"))
@@ -90,7 +87,7 @@ func InitDatabase(conf *common.Config, namespace string) error {
 		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
 	}
 
-	db1, err1 := NewDatabase(conf, "Consensus", 0001, namespace)
+	db1, err1 := NewDatabase(conf, "consensus", 0001, namespace)
 
 	if err1 != nil {
 		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
@@ -205,11 +202,11 @@ func GetDBConsensusByNamespace(namespace string) (db.Database, error) {
 }
 
 func GetDatabaseHome(conf *common.Config) string {
-	dbType := conf.GetInt(db_type)
+	dbType := conf.GetInt(hcom.DB_TYPE)
 	switch dbType {
-	case ldb_db:
+	case hcom.LDB_DB:
 		return hleveldb.LDBDataBasePath(conf)
-	case super_level_db:
+	case hcom.SUPER_LEVEL_DB:
 		return sldb.SLDBPath(conf)
 	default:
 		return ""
@@ -217,15 +214,16 @@ func GetDatabaseHome(conf *common.Config) string {
 }
 
 func GetDatabaseType(conf *common.Config) int {
-	return conf.GetInt(db_type)
+	return conf.GetInt(hcom.DB_TYPE)
 }
 
-func NewDatabase(conf *common.Config, path string, dbType int, namespace string) (db.Database, error) {
+func NewDatabase(conf *common.Config, dbname string, dbType int, namespace string) (db.Database, error) {
 	switch dbType {
-	case ldb_db:
-		return hleveldb.NewLDBDataBase(conf, path, namespace)
-	case super_level_db:
-		return sldb.NewSLDB(conf, path, namespace)
+	case hcom.LDB_DB:
+		dbpath := path.Join(common.GetPath(namespace, conf.GetString(hcom.LEVEL_DB_ROOT_DIR)), dbname)
+		return hleveldb.NewLDBDataBase(conf, dbpath, namespace)
+	case hcom.SUPER_LEVEL_DB:
+		return sldb.NewSLDB(conf, dbname, namespace)
 	default:
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
 	}

@@ -22,9 +22,9 @@ public class Caller {
     @Getter
     private ContractProto.Request request;
     @Getter
-    private StreamObserver<ContractProto.Response> responseObserver;
+    private StreamObserver<ContractProto.Message> responseObserver;
 
-    public Caller(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+    public Caller(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver) {
         this.request = request;
         this.responseObserver = responseObserver;
     }

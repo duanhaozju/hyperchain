@@ -14,8 +14,8 @@ public class TestMetaDB {
     public void testStoreAndLoadMeta() {
         ContractInfo info = new ContractInfo("contractA", "cid0000001", "hyperchain");
         info.setContractPath("path/to/contract");
-        info.setClassPrefix("cn.hyperchain.jcee.server.contract.examples.sb");
-        info.setNamespace("namespace_global");
+//        info.setClassPrefix("cn.hyperchain.jcee.server.contract.examples.sb");
+//        info.setNamespace("namespace_global");
         info.setState(ContractState.NORMAL);
 
 //        Class[] cls = new Class[] {String.class, Integer.class};

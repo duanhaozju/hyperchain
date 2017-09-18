@@ -7,17 +7,17 @@ import io.grpc.stub.StreamObserver;
 
 public interface IHandler {
 
-    void freeze(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver);
+    void freeze(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver);
 
-    void unfreeze(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver);
+    void unfreeze(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver);
 
-    void destroy(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver);
+    void destroy(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver);
 
-    void update(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver);
+    void update(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver);
 
-    void invoke(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver);
+    void invoke(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver);
 
-    void deploy(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver);
+    void deploy(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver);
 
     boolean deploy(ContractInfo info) throws ClassNotFoundException;
 
