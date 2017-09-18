@@ -1,53 +1,54 @@
 package pbft
 
 import (
-	"testing"
-	"hyperchain/common"
-	"github.com/spf13/viper"
-	"hyperchain/consensus/helper"
-	"hyperchain/manager/event"
 	"github.com/facebookgo/ensure"
-	"hyperchain/core/db_utils"
-	"path/filepath"
-	pb "hyperchain/manager/protos"
 	"github.com/golang/protobuf/proto"
-	"strconv"
+	"github.com/spf13/viper"
+	"hyperchain/common"
+	"hyperchain/consensus/helper"
+	"hyperchain/core/db_utils"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/crypto"
 	"hyperchain/core/types"
-	"sync"
-	"hyperchain/manager/protos"
-	"time"
+	"hyperchain/crypto"
 	"hyperchain/hyperdb"
+	"hyperchain/manager/event"
+	"hyperchain/manager/protos"
+	pb "hyperchain/manager/protos"
+	"os"
+	"path/filepath"
+	"strconv"
+	"sync"
+	"testing"
+	"time"
 )
 
 //path struct should match
 // /namespaces/(namespace)/config/namespace.toml
-func TNewConfig(fatherpath ,name string,nodeId int)(*common.Config){
+func TNewConfig(fatherpath, name string, nodeId int) *common.Config {
 
-	path:=filepath.Join(fatherpath,name,"/config/namespace.toml")
+	path := filepath.Join(fatherpath, name, "/config/namespace.toml")
 	conf := common.NewConfig(path)
 	common.InitHyperLoggerManager(conf)
-	peerConfigPath :=conf.GetString(common.PEER_CONFIG_PATH)
+	peerConfigPath := conf.GetString(common.PEER_CONFIG_PATH)
 
-	peerConfigPath =filepath.Join(fatherpath,name,peerConfigPath)
+	peerConfigPath = filepath.Join(fatherpath, name, peerConfigPath)
 	peerViper := viper.New()
 	peerViper.SetConfigFile(peerConfigPath)
 	err := peerViper.ReadInConfig()
 	if err != nil {
-		panic("err "+err.Error())
+		panic("err " + err.Error())
 	}
 	//set node self.id
-	if nodeId!=0{
-		conf.Set(common.C_NODE_ID,strconv.Itoa(nodeId))
-	}else{
+	if nodeId != 0 {
+		conf.Set(common.C_NODE_ID, strconv.Itoa(nodeId))
+	} else {
 		conf.Set(common.C_NODE_ID, peerViper.GetInt("self.id"))
 	}
 
-	conf.Set(PBFT_NODE_NUM, peerViper.GetInt("self.N"))
-	namespace:=name+"-"+strconv.Itoa(conf.GetInt(common.C_NODE_ID))
+	conf.Set("self.N", peerViper.GetInt("self.N"))
+	namespace := name + "-" + strconv.Itoa(conf.GetInt(common.C_NODE_ID))
 	conf.Set(common.NAMESPACE, namespace)
-	common.InitHyperLogger(namespace,conf)
+	common.InitHyperLogger(namespace, conf)
 	return conf
 }
 
@@ -56,19 +57,19 @@ func TNewConfig(fatherpath ,name string,nodeId int)(*common.Config){
 // ../../configuration/namespaces/
 // If the namespace is global
 // The directory of namesapces.toml should be   ../../configuration/namespaces/global/config/namespace.toml
-func TNewPbft(dbpath ,path ,namespace string,nodeId int,t *testing.T)(*pbftImpl,*common.Config,error){
-	conf:=TNewConfig(path,namespace,nodeId)
-	namespace=conf.GetString(common.NAMESPACE)
-	if dbpath!=""{
-		conf.Set("database.leveldb.path",dbpath)
+func TNewPbft(dbpath, path, namespace string, nodeId int, t *testing.T) (*pbftImpl, *common.Config, error) {
+	conf := TNewConfig(path, namespace, nodeId)
+	namespace = conf.GetString(common.NAMESPACE)
+	if dbpath != "" {
+		conf.Set("database.leveldb.path", dbpath)
 	}
 	err := db_utils.InitDBForNamespace(conf, namespace)
 	if err != nil {
 		t.Errorf("init db for namespace: %s error, %v", namespace, err)
 	}
-	h:=helper.NewHelper(new(event.TypeMux),new(event.TypeMux))
-	pbft,err:=newPBFT(namespace,conf,h,4)
-	return pbft,conf,err
+	h := helper.NewHelper(new(event.TypeMux), new(event.TypeMux))
+	pbft, err := newPBFT(namespace, conf, h, conf.GetInt("self.N"))
+	return pbft, conf, err
 }
 
 /////////////////////////////////////////////////////
@@ -91,10 +92,10 @@ type MessageChanel struct {
 	MsgChan chan *pb.Message
 }
 
-func (MS *MessageChanel)Start(pbft *pbftImpl){
-	for msg:=range MS.MsgChan{
-		message,err:=proto.Marshal(msg)
-		if err!=nil{
+func (MS *MessageChanel) Start(pbft *pbftImpl) {
+	for msg := range MS.MsgChan {
+		message, err := proto.Marshal(msg)
+		if err != nil {
 			pbft.logger.Error("Marshal failed")
 		}
 		pbft.RecvMsg(message)
@@ -102,92 +103,92 @@ func (MS *MessageChanel)Start(pbft *pbftImpl){
 }
 
 type TestHelp struct {
-	PbftList	[]*MessageChanel //save pbftHandle for communicate. Because the id of node is from 1,so the Pbftlist[0] always nil
-	PbftID 		int
-	PbftLen		int
-	namespace 	string
-	batchMap	map[common.Hash]*protos.ValidatedTxs
-	batchMapLock 	sync.Mutex //no currency read, so don;t use RWMutex
-	pbft		*pbftImpl
+	PbftList     []*MessageChanel //save pbftHandle for communicate. Because the id of node is from 1,so the Pbftlist[0] always nil
+	PbftID       int
+	PbftLen      int
+	namespace    string
+	batchMap     map[common.Hash]*protos.ValidatedTxs
+	batchMapLock sync.Mutex //no currency read, so don;t use RWMutex
+	pbft         *pbftImpl
 }
 
-func (TH *TestHelp)InnerBroadcast(msg *pb.Message)error{
-	for i:=1;i<=TH.PbftLen;i++{
-		if i!=TH.PbftID{
-			if TH.PbftList[i]==nil{
+func (TH *TestHelp) InnerBroadcast(msg *pb.Message) error {
+	for i := 1; i <= TH.PbftLen; i++ {
+		if i != TH.PbftID {
+			if TH.PbftList[i] == nil {
 				continue
 			}
-			TH.pbft.logger.Debugf("broadcast to %v",i)
-			TH.PbftList[i].MsgChan<-msg
+			TH.pbft.logger.Debugf("broadcast to %v", i)
+			TH.PbftList[i].MsgChan <- msg
 		}
 	}
 	return nil
 }
 
-func (TH *TestHelp)InnerUnicast(msg *pb.Message, to uint64) error{
-	to1:=int(to)
-	if to1<=TH.PbftLen{
-		if TH.PbftList[to1]!=nil{
-			TH.PbftList[to1].MsgChan<-msg
+func (TH *TestHelp) InnerUnicast(msg *pb.Message, to uint64) error {
+	to1 := int(to)
+	if to1 <= TH.PbftLen {
+		if TH.PbftList[to1] != nil {
+			TH.PbftList[to1].MsgChan <- msg
 		}
 	}
 	return nil
 }
 
-func (TH *TestHelp)ValidateBatch(digest string,txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error{
-	go func(){
+func (TH *TestHelp) ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error {
+	go func() {
 		time.Sleep(0)
 		kec256Hash := crypto.NewKeccak256Hash("keccak256")
-		validTxSet:=make([][]byte,len(txs))
-		for i:=0;i<len(txs);i++{
-			validTxSet[i]=txs[i].TransactionHash
+		validTxSet := make([][]byte, len(txs))
+		for i := 0; i < len(txs); i++ {
+			validTxSet[i] = txs[i].TransactionHash
 		}
 		hash := kec256Hash.Hash(validTxSet)
-		vtx:=protos.ValidatedTxs{
-			SeqNo:seqNo,
-			View:view,
-			Hash:hash.Hex(),
-			Transactions:txs,
-			Digest:digest,
+		vtx := protos.ValidatedTxs{
+			SeqNo:        seqNo,
+			View:         view,
+			Hash:         hash.Hex(),
+			Transactions: txs,
+			Digest:       digest,
 		}
-		if TH.batchMap[hash]!=nil{
+		if TH.batchMap[hash] != nil {
 			TH.batchMapLock.Lock()
-			TH.batchMap[hash]=&vtx
+			TH.batchMap[hash] = &vtx
 			TH.batchMapLock.Unlock()
 		}
 
-		event:=&LocalEvent{
-			Service  : CORE_PBFT_SERVICE,
-			EventType :CORE_VALIDATED_TXS_EVENT,
-			Event	:vtx,
+		event := &LocalEvent{
+			Service:   CORE_PBFT_SERVICE,
+			EventType: CORE_VALIDATED_TXS_EVENT,
+			Event:     vtx,
 		}
 		TH.pbft.RecvLocal(event)
 	}()
 	return nil
 }
 
-func (TH *TestHelp)Execute(seqNo uint64, hashS string, flag bool, isPrimary bool, time int64) error{
-	hash:=common.StringToHash(hashS)
+func (TH *TestHelp) Execute(seqNo uint64, hashS string, flag bool, isPrimary bool, time int64) error {
+	hash := common.StringToHash(hashS)
 	TH.batchMapLock.Lock()
-	if TH.batchMap[hash]==nil{
+	if TH.batchMap[hash] == nil {
 		TH.pbft.logger.Error("miss commit block")
 		TH.batchMapLock.Unlock()
 		return nil
 	}
-	vtx:=TH.batchMap[hash]
+	vtx := TH.batchMap[hash]
 	TH.batchMapLock.Unlock()
 
-	db,err:=hyperdb.GetDBDatabaseByNamespace(TH.namespace)
-	if err!=nil{
+	db, err := hyperdb.GetDBDatabaseByNamespace(TH.namespace)
+	if err != nil {
 		TH.pbft.logger.Error(err.Error())
 	}
 
-	batch:=db.NewBatch()
+	batch := db.NewBatch()
 
-	block:=&types.Block{
-		ParentHash:  edb.GetLatestBlockHash(TH.namespace),
+	block := &types.Block{
+		ParentHash:   edb.GetLatestBlockHash(TH.namespace),
 		Transactions: vtx.Transactions,
-		Number:  vtx.SeqNo,
+		Number:       vtx.SeqNo,
 	}
 	if err, _ := edb.PersistBlock(batch, block, false, false); err != nil {
 		TH.pbft.logger.Errorf("persist block #%d into database failed.", block.Number, err.Error())
@@ -198,98 +199,95 @@ func (TH *TestHelp)Execute(seqNo uint64, hashS string, flag bool, isPrimary bool
 		TH.pbft.logger.Errorf("update chain to #%d failed.", block.Number, err.Error())
 		return nil
 	}
-	err=batch.Write()
-	if err!=nil{
+	err = batch.Write()
+	if err != nil {
 		TH.pbft.logger.Error(err.Error())
 	}
 	return nil
 }
 
-func (TH *TestHelp)UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error{
+func (TH *TestHelp) UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error {
 	return nil
 }
 
-func (TH *TestHelp)VcReset(seqNo uint64) error{
+func (TH *TestHelp) VcReset(seqNo uint64) error {
 	//TODO vcReset
-	event:=&LocalEvent{
-		Service:VIEW_CHANGE_SERVICE,
-		EventType:VIEW_CHANGE_VC_RESET_DONE_EVENT,
-		Event:protos.VcResetDone{SeqNo: seqNo},
+	event := &LocalEvent{
+		Service:   VIEW_CHANGE_SERVICE,
+		EventType: VIEW_CHANGE_VC_RESET_DONE_EVENT,
+		Event:     protos.VcResetDone{SeqNo: seqNo},
 	}
 	TH.pbft.RecvLocal(event)
 	return nil
 }
-func (TH *TestHelp)InformPrimary(primary uint64) error{return nil}
-func (TH *TestHelp)BroadcastAddNode(msg *pb.Message) error{return nil}
-func (TH *TestHelp)BroadcastDelNode(msg *pb.Message) error{return nil}
-func (TH *TestHelp)UpdateTable(payload []byte, flag bool) error{return nil}
-func (TH *TestHelp)SendFilterEvent(informType int, message ...interface{}) error{return nil}
+func (TH *TestHelp) InformPrimary(primary uint64) error                           { return nil }
+func (TH *TestHelp) BroadcastAddNode(msg *pb.Message) error                       { return nil }
+func (TH *TestHelp) BroadcastDelNode(msg *pb.Message) error                       { return nil }
+func (TH *TestHelp) UpdateTable(payload []byte, flag bool) error                  { return nil }
+func (TH *TestHelp) SendFilterEvent(informType int, message ...interface{}) error { return nil }
 
 type PBFTNode struct {
-	nodeId int
-	dbPath string
-	confPath string
+	nodeId    int
+	dbPath    string
+	confPath  string
 	namesapce string
 }
 
-func CreatPBFT(t *testing.T,N int,dbPath string,confPath string,namespace string,nodes []*PBFTNode)(pbftList []*pbftImpl){
+func CreatPBFT(t *testing.T, N int, dbPath string, confPath string, namespace string, nodes []*PBFTNode) (pbftList []*pbftImpl) {
 
-
-	if N<4{
+	if N < 4 {
 		t.Error("N is too small to create PBFT network")
 	}
-	pbftList=make([]*pbftImpl,N+1)//pbft id start from 1 not zero ,so Create N+1 slice
-	mcList:=make([]*MessageChanel,N+1)
-	thList:=make([]*TestHelp,N+1)
+	pbftList = make([]*pbftImpl, N+1) //pbft id start from 1 not zero ,so Create N+1 slice
+	mcList := make([]*MessageChanel, N+1)
+	thList := make([]*TestHelp, N+1)
 	var err error
-	for i:=0;i<len(nodes);i++{
+	for i := 0; i < len(nodes); i++ {
 
-		if nodes[i].nodeId>N{
+		if nodes[i].nodeId > N {
 			t.Log("node id is greater then N")
 			continue
 		}
-		pbftList[nodes[i].nodeId],_,err=TNewPbft(nodes[i].dbPath,nodes[i].confPath,nodes[i].namesapce,0,t)
-		ensure.Nil(t,err)
+		pbftList[nodes[i].nodeId], _, err = TNewPbft(nodes[i].dbPath, nodes[i].confPath, nodes[i].namesapce, 0, t)
+		ensure.Nil(t, err)
 	}
 
 	//init node not in nodes
-	for i:=1;i<N+1;i++{
-		if pbftList[i]==nil{
-			pbftList[i],_,err=TNewPbft(dbPath,confPath,namespace,i,t)
-			ensure.Nil(t,err)
+	for i := 1; i < N+1; i++ {
+		if pbftList[i] == nil {
+			pbftList[i], _, err = TNewPbft(dbPath, confPath, namespace, i, t)
+			ensure.Nil(t, err)
 		}
 	}
-	logger:=common.GetLogger("system", "test")
-	for i:=1;i<N+1;i++{
-		mcList[i]=&MessageChanel{
-			MsgChan:make(chan *pb.Message),
+	logger := common.GetLogger("system", "test")
+	for i := 1; i < N+1; i++ {
+		mcList[i] = &MessageChanel{
+			MsgChan: make(chan *pb.Message),
 		}
 		go mcList[i].Start(pbftList[i])
 	}
 
-
 	//init helper and replace the helper in pbft
-	for i:=1;i<N+1;i++{
-		thList[i]=&TestHelp{
-			pbft:pbftList[i],
-			PbftID:i,
-			PbftList:mcList,
-			namespace:pbftList[i].namespace,
-			batchMap:make(map[common.Hash]*protos.ValidatedTxs),
-			PbftLen:N,
+	for i := 1; i < N+1; i++ {
+		thList[i] = &TestHelp{
+			pbft:      pbftList[i],
+			PbftID:    i,
+			PbftList:  mcList,
+			namespace: pbftList[i].namespace,
+			batchMap:  make(map[common.Hash]*protos.ValidatedTxs),
+			PbftLen:   N,
 		}
-		pbftList[i].helper=thList[i]
+		pbftList[i].helper = thList[i]
 	}
 
-
 	logger.Notice("Full system initialization completed. Now try to start pbft")
-	for i:=1;i<N+1;i++{
+	for i := 1; i < N+1; i++ {
 		pbftList[i].Start()
 	}
 
 	logger.Debug("start negotiate view")
-	for i:=1;i<N+1;i++{
-		negoView:= &protos.Message{
+	for i := 1; i < N+1; i++ {
+		negoView := &protos.Message{
 			Type:      protos.Message_NEGOTIATE_VIEW,
 			Timestamp: time.Now().UnixNano(),
 			Payload:   nil,
@@ -406,7 +404,18 @@ func CreatPBFT(t *testing.T,N int,dbPath string,confPath string,namespace string
 	// pbft3.RecvLocal(negoView3)
 	// pbft4.RecvLocal(negoView4)
 }
+
 //
 //func MsgForRecvMsg(msgType int32,)[]byte{
 //
 //}
+
+//remove the data and namespace directory in ./
+func CleanData() error {
+	err := os.RemoveAll("./data")
+	if err != nil {
+		return err
+	}
+	err = os.RemoveAll("./namespaces")
+	return err
+}
