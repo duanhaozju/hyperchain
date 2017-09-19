@@ -9,7 +9,7 @@ import (
 	"hyperchain/admittance"
 	"hyperchain/common"
 	"hyperchain/consensus"
-	"hyperchain/consensus/pbft"
+	"hyperchain/consensus/rbft"
 	"hyperchain/core/executor"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
@@ -330,7 +330,7 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 			switch ev := obj.Data.(type) {
 			case event.NewPeerEvent:
 				hub.logger.Debugf("message middleware: [new peer]")
-				hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_ADD_NODE_EVENT, &protos.AddNodeMessage{ev.Payload})
+				hub.invokePbftLocal(rbft.NODE_MGR_SERVICE, rbft.NODE_MGR_ADD_NODE_EVENT, &protos.AddNodeMessage{ev.Payload})
 			case event.BroadcastNewPeerEvent:
 				hub.logger.Debugf("message middleware: [broadcast new peer]")
 				hub.broadcast(BROADCAST_VP, m.SessionMessage_ADD_PEER, ev.Payload)
@@ -344,7 +344,7 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 					Id:         id,
 					Del:        del,
 				}
-				hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_DEL_NODE_EVENT, msg)
+				hub.invokePbftLocal(rbft.NODE_MGR_SERVICE, rbft.NODE_MGR_DEL_NODE_EVENT, msg)
 			case event.DelNVPEvent:
 				hub.logger.Debugf("message middleware: [delete nvp peer]")
 				hub.peerManager.DeleteNVPNode(string(ev.Payload))
@@ -365,7 +365,7 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 			case event.AlreadyInChainEvent:
 				hub.logger.Debugf("message middleware: [already in chain]")
 				payload := hub.peerManager.GetLocalAddressPayload()
-				hub.invokePbftLocal(pbft.NODE_MGR_SERVICE, pbft.NODE_MGR_NEW_NODE_EVENT, &protos.NewNodeMessage{payload})
+				hub.invokePbftLocal(rbft.NODE_MGR_SERVICE, rbft.NODE_MGR_NEW_NODE_EVENT, &protos.NewNodeMessage{payload})
 				hub.PassRouters()
 				hub.NegotiateView()
 			}
@@ -415,13 +415,13 @@ func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEve
 	switch ev.Type {
 	case executor.NOTIFY_VC_DONE:
 		hub.logger.Debugf("message middleware: [vc done]")
-		hub.invokePbftLocal(pbft.VIEW_CHANGE_SERVICE, pbft.VIEW_CHANGE_VC_RESET_DONE_EVENT, ev.Payload)
+		hub.invokePbftLocal(rbft.VIEW_CHANGE_SERVICE, rbft.VIEW_CHANGE_VC_RESET_DONE_EVENT, ev.Payload)
 	case executor.NOTIFY_VALIDATION_RES:
 		hub.logger.Debugf("message middleware: [validation result]")
-		hub.invokePbftLocal(pbft.CORE_PBFT_SERVICE, pbft.CORE_VALIDATED_TXS_EVENT, ev.Payload)
+		hub.invokePbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_VALIDATED_TXS_EVENT, ev.Payload)
 	case executor.NOTIFY_SYNC_DONE:
 		hub.logger.Debugf("message middleware: [sync done]")
-		hub.invokePbftLocal(pbft.CORE_PBFT_SERVICE, pbft.CORE_STATE_UPDATE_EVENT, ev.Payload)
+		hub.invokePbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_STATE_UPDATE_EVENT, ev.Payload)
 	}
 }
 

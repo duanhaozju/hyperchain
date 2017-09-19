@@ -5,7 +5,7 @@
 //// last Modified Author: Xiaoyi Wang
 //// change log: new test for helper
 //
-package pbft
+package rbft
 
 //
 //import (

@@ -9,17 +9,17 @@ import (
 	"hyperchain/common"
 	cs "hyperchain/consensus"
 	"hyperchain/consensus/helper"
-	"hyperchain/consensus/pbft"
+	"hyperchain/consensus/rbft"
 	"hyperchain/manager/event"
 )
 
-//new init the consentor instance.
+// new initializes the consentor instance.
 func newConsenter(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux, n int) (cs.Consenter, error) {
 	h := helper.NewHelper(eventMux, filterMux)
 	algo := conf.GetString(cs.CONSENSUS_ALGO)
 	switch algo {
-	case cs.PBFT:
-		return pbft.New(namespace, conf, h, n)
+	case cs.RBFT:
+		return rbft.New(namespace, conf, h, n)
 	case cs.NBFT:
 		panic(fmt.Errorf("Not implemented yet %s", algo))
 	default:
@@ -27,10 +27,7 @@ func newConsenter(namespace string, conf *common.Config, eventMux *event.TypeMux
 	}
 }
 
-// Consenter return a Consenter instance
-// msgQ is the connection with outer services.
+// Consenter returns a Consenter instance in which eventMux and filterMux are the connections with outer services.
 func Consenter(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux, n int) (cs.Consenter, error) {
-
 	return newConsenter(namespace, conf, eventMux, filterMux, n)
-
 }

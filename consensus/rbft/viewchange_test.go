@@ -1,4 +1,4 @@
-package pbft
+package rbft
 
 //
 //import(
@@ -947,7 +947,6 @@ package pbft
 //		t.Error("sequence number 66 should be assigned but not assigned actually")
 //	}
 //
-//	//TODO: sequence number 77 should not be assigned!!!
 //
 //}
 //

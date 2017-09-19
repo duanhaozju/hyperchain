@@ -38,7 +38,7 @@ It has these top-level messages:
 	UpdateN
 	FinishUpdate
 */
-package pbft
+package rbft
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"

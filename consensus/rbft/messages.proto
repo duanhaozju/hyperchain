@@ -236,7 +236,7 @@ message agree_update_n {
     repeated view_change.C cset = 8;
     repeated view_change.PQ pset = 9;
     repeated view_change.PQ qset = 10;
-    uint64 genesis =11;
+    uint64 genesis = 11;
 }
 
 message update_n {

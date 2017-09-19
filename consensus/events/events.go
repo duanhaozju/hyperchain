@@ -57,9 +57,9 @@ func (t *threaded) Halt() {
 // a Receiver on the other side of the queue
 type Manager interface {
 	Inject(Event)            // A temporary interface to allow the event manager thread to skip the queue
-	Queue() chan interface{} //event Queue
+	Queue() chan interface{} // event Queue
 	SetReceiver(Receiver)    // Set the target to route events to
-	Start()                  // Starts the Manager thread TODO, these thread management things should probably go away
+	Start()                  // Starts the Manager thread
 	Halt()                   // Stops the Manager thread
 	Stop()
 }
