@@ -41,18 +41,18 @@ type RPCServerImpl struct {
 
 // GetRPCServer creates a new RPCServerImpl instance
 // implements RPCServer interface.
-func GetRPCServer(nr namespace.NamespaceManager) RPCServer {
+func GetRPCServer(nr namespace.NamespaceManager, config *common.Config) RPCServer {
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
 	once.Do(func() {
-		rpcs = newRPCServer(nr)
+		rpcs = newRPCServer(nr, config)
 	})
 	return rpcs
 }
 
-func newRPCServer(nr namespace.NamespaceManager) *RPCServerImpl {
+func newRPCServer(nr namespace.NamespaceManager, config *common.Config) *RPCServerImpl {
 	rsi := &RPCServerImpl{}
-	rsi.httpServer = GetHttpServer(nr)
-	rsi.wsServer = GetWSServer(nr)
+	rsi.httpServer = GetHttpServer(nr, config)
+	rsi.wsServer = GetWSServer(nr, config)
 
 	ipc.RegisterFunc("service", rsi.Command)
 	return rsi

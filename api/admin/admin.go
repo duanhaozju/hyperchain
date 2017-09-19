@@ -79,6 +79,7 @@ type CommandResult struct {
 type Administrator struct {
 	Check         bool
 	NsMgr         namespace.NamespaceManager
+	Config        *common.Config
 	CmdExecutor   map[string]func(command *Command) *CommandResult
 }
 
@@ -369,7 +370,8 @@ func (adm *Administrator) delUser(cmd *Command) *CommandResult {
 
 func (adm *Administrator) Init() {
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc/admin")
-	expiration = adm.NsMgr.GlobalConfig().GetDuration(common.ADMIN_EXPIRATION)
+	//expiration = adm.NsMgr.GlobalConfig().GetDuration(common.ADMIN_EXPIRATION)
+	expiration = adm.Config.GetDuration(common.ADMIN_EXPIRATION)
 
 	adm.CmdExecutor = make(map[string]func(command *Command) *CommandResult)
 	adm.CmdExecutor["stopServer"] = adm.stopServer

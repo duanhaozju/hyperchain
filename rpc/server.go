@@ -33,7 +33,7 @@ const (
 )
 
 // NewServer will create a new server instance with no registered handlers.
-func NewServer(nr namespace.NamespaceManager) *Server {
+func NewServer(nr namespace.NamespaceManager, config *common.Config) *Server {
 	server := &Server{
 		codecs:       set.New(),
 		run:          1,
@@ -41,8 +41,9 @@ func NewServer(nr namespace.NamespaceManager) *Server {
 		requestMgr:   make(map[string]*requestManager),
 	}
 	server.admin = &admin.Administrator{
-		Check:         nr.GlobalConfig().GetBool(common.ADMIN_CHECK),
+		Check:         config.GetBool(common.ADMIN_CHECK),
 		NsMgr:         server.namespaceMgr,
+		Config:        config,
 	}
 	server.admin.Init()
 	return server

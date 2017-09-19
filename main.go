@@ -54,7 +54,7 @@ func newHyperchain(argV *argT) *hyperchain {
 	}
 	hp.p2pmgr = p2pManager
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig, hp.stopFlag, hp.restartFlag)
-	hp.hs = jsonrpc.GetRPCServer(hp.nsMgr)
+	hp.hs = jsonrpc.GetRPCServer(hp.nsMgr, hp.nsMgr.GlobalConfig())
 
 	return hp
 }

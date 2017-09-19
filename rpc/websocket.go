@@ -27,6 +27,7 @@ var (
 type wsServerImpl struct {
 	nr        namespace.NamespaceManager
 	port      int
+	config    *common.Config
 
 	wsConns          map[*websocket.Conn]*Notifier
 	wsConnsMux       sync.Mutex
@@ -41,13 +42,14 @@ type httpReadWriteCloser struct {
 	io.WriteCloser
 }
 
-func GetWSServer(nr namespace.NamespaceManager) internalRPCServer {
+func GetWSServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
 	if wsS == nil {
 		wsS = &wsServerImpl{
 			nr:               nr,
 			wsAllowedOrigins: []string{"*"},
 			wsConns:          make(map[*websocket.Conn]*Notifier),
-			port:             nr.GlobalConfig().GetInt(common.WEBSOCKET_PORT),
+			port:             config.GetInt(common.WEBSOCKET_PORT),
+			config:			  config,
 		}
 	}
 	return wsS
@@ -63,7 +65,7 @@ func (wssi *wsServerImpl) start() error {
 	)
 
 	// start websocket listener
-	handler := NewServer(wssi.nr)
+	handler := NewServer(wssi.nr, wssi.config)
 	if listener, err = net.Listen("tcp", fmt.Sprintf(":%d", wssi.port)); err != nil {
 		log.Errorf("%v", err)
 		return err

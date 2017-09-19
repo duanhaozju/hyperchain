@@ -73,7 +73,7 @@ const (
 // constants for http configuration keys
 const (
 	HTTP_SECURITY 		= "http.security"
-	HTTP_VERSION2 		= "http.version_2"
+	HTTP_VERSION2 		= "http.http_2"
 	HTTP_ALLOWEDORIGINS = "http.allowedOrigins"
 )
 

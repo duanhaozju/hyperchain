@@ -53,8 +53,6 @@ type jsonSubscription struct {
 // JSON-RPC notification
 type jsonNotification struct {
 	Version string `json:"jsonrpc"`
-	//Method  	string           	`json:"method"`
-	//Params  	jsonSubscription 	`json:"params"`
 	Namespace string           `json:"namespace"`
 	Result    jsonSubscription `json:"result"`
 }

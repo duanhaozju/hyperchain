@@ -31,20 +31,19 @@ var (
 type httpServerImpl struct {
 	nr        namespace.NamespaceManager
 	port      int
+	config    *common.Config
 
 	httpListener       net.Listener
 	httpHandler        *Server
-	httpAllowedOrigins []string
 }
 
 // GetHttpServer creates a new httpServerImpl instance implements internalRPCServer interface.
-func GetHttpServer(nr namespace.NamespaceManager) internalRPCServer {
-	fmt.Println(nr.GlobalConfig().GetStringSlice(common.HTTP_ALLOWEDORIGINS))
+func GetHttpServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
 	if hs == nil {
 		hs = &httpServerImpl{
 			nr:                 nr,
-			httpAllowedOrigins: nr.GlobalConfig().GetStringSlice(common.HTTP_ALLOWEDORIGINS),
-			port:               nr.GlobalConfig().GetInt(common.JSON_RPC_PORT),
+			port:               config.GetInt(common.JSON_RPC_PORT),
+			config:				config,
 		}
 	}
 	return hs
@@ -58,13 +57,13 @@ func (hi *httpServerImpl) start() error {
 		err      error
 	)
 
-	config := hi.nr.GlobalConfig()
+	config := hi.config
 
-	handler := NewServer(hi.nr)
+	handler := NewServer(hi.nr, config)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", admin.LoginServer)
-	mux.Handle("/", newCorsHandler(handler, hi.httpAllowedOrigins))
+	mux.Handle("/", newCorsHandler(handler, config.GetStringSlice(common.HTTP_ALLOWEDORIGINS)))
 
 	isVersion2 := config.GetBool(common.HTTP_VERSION2)
 	isHTTPS := config.GetBool(common.HTTP_SECURITY)
@@ -173,17 +172,15 @@ func (hi *httpServerImpl) setPort(port int) error {
 
 func (hi *httpServerImpl) secureConfig() (*tls.Config, error) {
 
-	config := hi.nr.GlobalConfig()
-
 	pool := x509.NewCertPool()
-	caCrt, err := ioutil.ReadFile(config.GetString(common.P2P_TLS_CA))
+	caCrt, err := ioutil.ReadFile(hi.config.GetString(common.P2P_TLS_CA))
 	if err != nil {
 		fmt.Println("ReadFile err:", err)
 		return nil, err
 	}
 	pool.AppendCertsFromPEM(caCrt)
 
-	serverCert, err := tls.LoadX509KeyPair(config.GetString(common.P2P_TLS_CERT), config.GetString(common.P2P_TLS_CERT_PRIV))
+	serverCert, err := tls.LoadX509KeyPair(hi.config.GetString(common.P2P_TLS_CERT), hi.config.GetString(common.P2P_TLS_CERT_PRIV))
 	if err != nil {
 		log.Errorf("Loadx509keypair err: ", err)
 		return nil, err
