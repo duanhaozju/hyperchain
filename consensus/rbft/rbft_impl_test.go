@@ -1,4 +1,4 @@
-package pbft
+package rbft
 
 import (
 	"github.com/facebookgo/ensure"
@@ -28,7 +28,6 @@ func TestPbftImpl_NewPbft(t *testing.T) {
 	ensure.DeepEqual(t, pbft.L, pbft.logMultiplier*pbft.K)
 	ensure.DeepEqual(t, pbft.seqNo, uint64(0))
 	ensure.DeepEqual(t, pbft.view, uint64(0))
-	ensure.DeepEqual(t, pbft.nvInitialSeqNo, uint64(0))
 
 	//Test Consenter interface
 

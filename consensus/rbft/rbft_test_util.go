@@ -1,4 +1,4 @@
-package pbft
+package rbft
 
 import (
 	"github.com/facebookgo/ensure"
@@ -57,7 +57,7 @@ func TNewConfig(fatherpath, name string, nodeId int) *common.Config {
 // ../../configuration/namespaces/
 // If the namespace is global
 // The directory of namesapces.toml should be   ../../configuration/namespaces/global/config/namespace.toml
-func TNewPbft(dbpath, path, namespace string, nodeId int, t *testing.T) (*pbftImpl, *common.Config, error) {
+func TNewPbft(dbpath, path, namespace string, nodeId int, t *testing.T) (*rbftImpl, *common.Config, error) {
 	conf := TNewConfig(path, namespace, nodeId)
 	namespace = conf.GetString(common.NAMESPACE)
 	if dbpath != "" {
@@ -92,7 +92,7 @@ type MessageChanel struct {
 	MsgChan chan *pb.Message
 }
 
-func (MS *MessageChanel) Start(pbft *pbftImpl) {
+func (MS *MessageChanel) Start(pbft *rbftImpl) {
 	for msg := range MS.MsgChan {
 		message, err := proto.Marshal(msg)
 		if err != nil {
@@ -109,7 +109,7 @@ type TestHelp struct {
 	namespace    string
 	batchMap     map[common.Hash]*protos.ValidatedTxs
 	batchMapLock sync.Mutex //no currency read, so don;t use RWMutex
-	pbft         *pbftImpl
+	rbft         *rbftImpl
 }
 
 func (TH *TestHelp) InnerBroadcast(msg *pb.Message) error {
@@ -118,7 +118,7 @@ func (TH *TestHelp) InnerBroadcast(msg *pb.Message) error {
 			if TH.PbftList[i] == nil {
 				continue
 			}
-			TH.pbft.logger.Debugf("broadcast to %v", i)
+			TH.rbft.logger.Debugf("broadcast to %v", i)
 			TH.PbftList[i].MsgChan <- msg
 		}
 	}
@@ -158,11 +158,11 @@ func (TH *TestHelp) ValidateBatch(digest string, txs []*types.Transaction, timeS
 		}
 
 		event := &LocalEvent{
-			Service:   CORE_PBFT_SERVICE,
+			Service:   CORE_RBFT_SERVICE,
 			EventType: CORE_VALIDATED_TXS_EVENT,
 			Event:     vtx,
 		}
-		TH.pbft.RecvLocal(event)
+		TH.rbft.RecvLocal(event)
 	}()
 	return nil
 }
@@ -171,7 +171,7 @@ func (TH *TestHelp) Execute(seqNo uint64, hashS string, flag bool, isPrimary boo
 	hash := common.StringToHash(hashS)
 	TH.batchMapLock.Lock()
 	if TH.batchMap[hash] == nil {
-		TH.pbft.logger.Error("miss commit block")
+		TH.rbft.logger.Error("miss commit block")
 		TH.batchMapLock.Unlock()
 		return nil
 	}
@@ -180,7 +180,7 @@ func (TH *TestHelp) Execute(seqNo uint64, hashS string, flag bool, isPrimary boo
 
 	db, err := hyperdb.GetDBDatabaseByNamespace(TH.namespace)
 	if err != nil {
-		TH.pbft.logger.Error(err.Error())
+		TH.rbft.logger.Error(err.Error())
 	}
 
 	batch := db.NewBatch()
@@ -191,17 +191,17 @@ func (TH *TestHelp) Execute(seqNo uint64, hashS string, flag bool, isPrimary boo
 		Number:       vtx.SeqNo,
 	}
 	if err, _ := edb.PersistBlock(batch, block, false, false); err != nil {
-		TH.pbft.logger.Errorf("persist block #%d into database failed.", block.Number, err.Error())
+		TH.rbft.logger.Errorf("persist block #%d into database failed.", block.Number, err.Error())
 		return nil
 	}
 
 	if err := edb.UpdateChain(TH.namespace, batch, block, false, false, false); err != nil {
-		TH.pbft.logger.Errorf("update chain to #%d failed.", block.Number, err.Error())
+		TH.rbft.logger.Errorf("update chain to #%d failed.", block.Number, err.Error())
 		return nil
 	}
 	err = batch.Write()
 	if err != nil {
-		TH.pbft.logger.Error(err.Error())
+		TH.rbft.logger.Error(err.Error())
 	}
 	return nil
 }
@@ -217,7 +217,7 @@ func (TH *TestHelp) VcReset(seqNo uint64) error {
 		EventType: VIEW_CHANGE_VC_RESET_DONE_EVENT,
 		Event:     protos.VcResetDone{SeqNo: seqNo},
 	}
-	TH.pbft.RecvLocal(event)
+	TH.rbft.RecvLocal(event)
 	return nil
 }
 func (TH *TestHelp) InformPrimary(primary uint64) error                           { return nil }
@@ -233,12 +233,12 @@ type PBFTNode struct {
 	namesapce string
 }
 
-func CreatPBFT(t *testing.T, N int, dbPath string, confPath string, namespace string, nodes []*PBFTNode) (pbftList []*pbftImpl) {
+func CreatPBFT(t *testing.T, N int, dbPath string, confPath string, namespace string, nodes []*PBFTNode) (pbftList []*rbftImpl) {
 
 	if N < 4 {
 		t.Error("N is too small to create PBFT network")
 	}
-	pbftList = make([]*pbftImpl, N+1) //pbft id start from 1 not zero ,so Create N+1 slice
+	pbftList = make([]*rbftImpl, N+1) //pbft id start from 1 not zero ,so Create N+1 slice
 	mcList := make([]*MessageChanel, N+1)
 	thList := make([]*TestHelp, N+1)
 	var err error
@@ -270,7 +270,7 @@ func CreatPBFT(t *testing.T, N int, dbPath string, confPath string, namespace st
 	//init helper and replace the helper in pbft
 	for i := 1; i < N+1; i++ {
 		thList[i] = &TestHelp{
-			pbft:      pbftList[i],
+			rbft:      pbftList[i],
 			PbftID:    i,
 			PbftList:  mcList,
 			namespace: pbftList[i].namespace,
