@@ -14,37 +14,23 @@ var (
 	rpcs RPCServer
 )
 
+// RPCServer wraps all external server operations.
 type RPCServer interface {
-	//Start start the rpc service. It will use default port of config.
+	//Start start the rpc service. It will startup all supported external service.
 	Start() error
-	//Stop the rpc service.
+
+	//Stop the rpc service. It will stop all supported external service.
 	Stop() error
-	//Restart the rpc service.
+
+	//Restart the rpc service. It will restart all supported external service.
 	Restart() error
-	//Start http server. It will use specified port.
-	StartHttpServer(port int) error
-	//Stop http server
-	StopHttpServer() error
-	//Restart http server
-	RestartHttpServer() error
-	//Start websocket server. It will use specified port.
-	StartWSServer(port int) error
-	//Stop websocket server
-	StopWSServer() error
-	//Restart websocket server
-	RestartWSServer() error
 }
 
 type internalRPCServer interface {
-	// Start start the rpc service.
 	start() error
-	// Stop the rpc service.
 	stop() error
-	// Restart the rpc service.
 	restart() error
-	// Get service listening port.
 	getPort() int
-	// Set service port.
 	setPort(port int) error
 }
 
@@ -70,7 +56,8 @@ func newRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp cha
 	return rsi
 }
 
-// Start startup all rpc server.
+// Start startups all rpc server. It will startup all supported external service
+// including http/https, websocket.
 func (rsi *RPCServerImpl) Start() error {
 
 	// start http server
@@ -88,7 +75,8 @@ func (rsi *RPCServerImpl) Start() error {
 	return nil
 }
 
-// Stop terminates all rpc server.
+// Stop terminates all rpc server. It will stop all supported external service
+// including http/https, websocket.
 func (rsi *RPCServerImpl) Stop() error {
 
 	// stop http server
@@ -103,7 +91,8 @@ func (rsi *RPCServerImpl) Stop() error {
 	return nil
 }
 
-// Restart all rpc server
+// Restart restarts all rpc server. It will restart all supported external service
+// including http/https, websocket.
 func (rsi *RPCServerImpl) Restart() error {
 
 	// restart http server
@@ -116,36 +105,4 @@ func (rsi *RPCServerImpl) Restart() error {
 		return err
 	}
 	return nil
-}
-
-// StartHttpServer starts http service.
-func (rsi *RPCServerImpl) StartHttpServer(port int) error {
-	rsi.httpServer.setPort(port)
-	return rsi.httpServer.start()
-}
-
-// StopHttpServer stops http service.
-func (rsi *RPCServerImpl) StopHttpServer() error {
-	return rsi.httpServer.stop()
-}
-
-// RestartHttpServer restarts http service.
-func (rsi *RPCServerImpl) RestartHttpServer() error {
-	return rsi.httpServer.restart()
-}
-
-// StartWSServer starts websocket service.
-func (rsi *RPCServerImpl) StartWSServer(port int) error {
-	rsi.wsServer.setPort(port)
-	return rsi.wsServer.start()
-}
-
-// StopWSServer stops websocket service.
-func (rsi *RPCServerImpl) StopWSServer() error {
-	return rsi.wsServer.stop()
-}
-
-// RestartWSServer restarts websocket service.
-func (rsi *RPCServerImpl) RestartWSServer() error {
-	return rsi.wsServer.restart()
 }

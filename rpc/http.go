@@ -24,7 +24,7 @@ import (
 
 const (
 	maxHTTPRequestContentLength = 1024 * 256
-	ReadTimeout                 = 3 * time.Second
+	ReadTimeout                 = 5 * time.Second
 )
 
 var (
@@ -100,7 +100,7 @@ func (hi *httpServerImpl) start() error {
 		log.Noticef("starting http/2 service at port %v ... , secure connection is enabled.", hi.port)
 
 		tlsConfig.NextProtos = []string{"h2"}
-		if listener, err = tls.Listen("tcp", ":"+config.GetString(common.JSON_RPC_PORT), tlsConfig); err != nil {
+		if listener, err = tls.Listen("tcp", fmt.Sprintf(":%d", hi.port), tlsConfig); err != nil {
 			log.Error(err)
 			return err
 		}
@@ -118,7 +118,7 @@ func (hi *httpServerImpl) start() error {
 		// http1.1, https
 		log.Noticef("starting http/1.1 service at port %v ... , secure connection is enabled.", hi.port)
 
-		if listener, err = tls.Listen("tcp", ":"+config.GetString(common.JSON_RPC_PORT), tlsConfig); err != nil {
+		if listener, err = tls.Listen("tcp", fmt.Sprintf(":%d", hi.port), tlsConfig); err != nil {
 			log.Error(err)
 			return err
 		}
@@ -159,7 +159,7 @@ func (hi *httpServerImpl) stop() error {
 	if hi.httpHandler != nil {
 		hi.httpHandler.Stop()
 		hi.httpHandler = nil
-		time.Sleep(4 * time.Second)
+		time.Sleep(ReadTimeout)
 	}
 
 	log.Notice("http service stopped")
