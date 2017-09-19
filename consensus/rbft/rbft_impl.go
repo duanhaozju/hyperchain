@@ -694,7 +694,7 @@ func (rbft *rbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 		return nil
 	}
 
-	_, err := rbft.batchMgr.txPool.GotMissingTxs(re.BatchDigest, re.TxList)
+	err := rbft.batchMgr.txPool.GotMissingTxs(re.BatchDigest, re.TxList)
 	if err != nil {
 		rbft.logger.Warningf("Replica %d find something wrong with the return of missing txs, error: %v",
 			rbft.id, err)

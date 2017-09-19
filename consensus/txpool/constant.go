@@ -11,7 +11,7 @@ var (
 	// ErrDuplicateTx is returned if the transaction is a duplicate one.
 	ErrDuplicateBatch = errors.New("duplicate batch")
 
-	ErrNoBatch = errors.New("can't find batch")
+	ErrNoBatch = errors.New("can't find batch with id")
 
 	ErrNoTxHash = errors.New("can't find tx hash in batched txs")
 
@@ -26,6 +26,4 @@ var (
 	ErrPoolFull = errors.New("txPool is full")
 
 	ErrEmptyFull = errors.New("txPool is empty")
-
-	ErrAlreadyStop = errors.New("BatchTimer has been stopped")
 )
