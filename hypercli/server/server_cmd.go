@@ -17,7 +17,7 @@ func init() {
 }
 
 //NewServerCMD new server related commands.
-func dNewServerCMD() []cli.Command {
+func NewServerCMD() []cli.Command {
 	return []cli.Command{
 		{
 			Name:   "start",

@@ -73,6 +73,11 @@ func initApp() {
 			Usage:       "jvm specific commands",
 			Subcommands: server.NewJvmCMD(),
 		},
+		{
+			Name:        "server",
+			Usage:       "server specific commands",
+			Subcommands: server.NewServerCMD(),
+		},
 	}
 
 }

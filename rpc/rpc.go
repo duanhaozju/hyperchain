@@ -39,6 +39,8 @@ type RPCServerImpl struct {
 	wsServer   internalRPCServer
 }
 
+// GetRPCServer creates a new RPCServerImpl instance
+// implements RPCServer interface.
 func GetRPCServer(nr namespace.NamespaceManager) RPCServer {
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
 	once.Do(func() {
@@ -69,7 +71,6 @@ func (rsi *RPCServerImpl) Start() error {
 	// start websocket server
 	if err := rsi.wsServer.start(); err != nil {
 		log.Error(err)
-		rsi.httpServer.stop()
 		return err
 	}
 	return nil
