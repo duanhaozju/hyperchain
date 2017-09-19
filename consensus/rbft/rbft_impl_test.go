@@ -1,4 +1,4 @@
-package pbft
+package rbft
 
 import (
 	"fmt"
@@ -45,13 +45,13 @@ func NewConfig(path, name string) *common.Config {
 	}
 	conf, err = conf.MergeConfig(filepath.Join("../../build/node1/", pcPath))
 	if err != nil {
-		err = fmt.Errorf("Load pbft config error: %v", err)
+		err = fmt.Errorf("Load rbft config error: %v", err)
 		panic(err)
 	}
 
-	conf, err = conf.MergeConfig(filepath.Join("../../build/node1/", "namespaces/global/config/pbft.yaml"))
+	conf, err = conf.MergeConfig(filepath.Join("../../build/node1/", "namespaces/global/config/rbft.yaml"))
 	if err != nil {
-		err = fmt.Errorf("Load pbft config error: %v", err)
+		err = fmt.Errorf("Load rbft config error: %v", err)
 		panic(err)
 	}
 
@@ -70,30 +70,30 @@ func TestPbftImpl_func1(t *testing.T) {
 	}
 
 	h := helper.NewHelper(new(event.TypeMux))
-	pbft, err := newPBFT("global", conf, h)
+	rbft, err := newPBFT("global", conf, h)
 
 	ensure.Nil(t, err)
 
-	ensure.DeepEqual(t, pbft.namespace, "global")
-	ensure.DeepEqual(t, pbft.activeView, uint32(1))
-	ensure.DeepEqual(t, pbft.f, (pbft.N-1)/3)
-	ensure.DeepEqual(t, pbft.N, conf.GetInt(PBFT_NODE_NUM))
-	ensure.DeepEqual(t, pbft.h, uint64(0))
-	ensure.DeepEqual(t, pbft.id, uint64(conf.GetInt64(common.C_NODE_ID)))
-	ensure.DeepEqual(t, pbft.K, uint64(10))
-	ensure.DeepEqual(t, pbft.logMultiplier, uint64(4))
-	ensure.DeepEqual(t, pbft.L, pbft.logMultiplier*pbft.K)
-	ensure.DeepEqual(t, pbft.seqNo, uint64(0))
-	ensure.DeepEqual(t, pbft.view, uint64(0))
-	ensure.DeepEqual(t, pbft.nvInitialSeqNo, uint64(0))
+	ensure.DeepEqual(t, rbft.namespace, "global")
+	ensure.DeepEqual(t, rbft.activeView, uint32(1))
+	ensure.DeepEqual(t, rbft.f, (rbft.N-1)/3)
+	ensure.DeepEqual(t, rbft.N, conf.GetInt(PBFT_NODE_NUM))
+	ensure.DeepEqual(t, rbft.h, uint64(0))
+	ensure.DeepEqual(t, rbft.id, uint64(conf.GetInt64(common.C_NODE_ID)))
+	ensure.DeepEqual(t, rbft.K, uint64(10))
+	ensure.DeepEqual(t, rbft.logMultiplier, uint64(4))
+	ensure.DeepEqual(t, rbft.L, rbft.logMultiplier*rbft.K)
+	ensure.DeepEqual(t, rbft.seqNo, uint64(0))
+	ensure.DeepEqual(t, rbft.view, uint64(0))
+	ensure.DeepEqual(t, rbft.nvInitialSeqNo, uint64(0))
 
 	//Test Consenter interface
 
-	pbft.Start()
+	rbft.Start()
 
-	pbft.RecvLocal()
+	rbft.RecvLocal()
 
-	//pbft.RecvMsg()
-	pbft.Close()
+	//rbft.RecvMsg()
+	rbft.Close()
 
 }
