@@ -679,7 +679,7 @@ func (pbft *pbftImpl) recvUpdateN(update *UpdateN) events.Event {
 	}
 
 	// UpdateN can only be sent by primary
-	if !(update.View >= 0 && pbft.primary(pbft.view) == update.ReplicaId) {
+	if !(update.View >= 0 && pbft.isPrimary(update.ReplicaId)) {
 		pbft.logger.Infof("Replica %d rejecting invalid UpdateN from %d, v:%d",
 			pbft.id, update.ReplicaId, update.View)
 		return nil
@@ -827,7 +827,7 @@ func (pbft *pbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 		// In most common case, do VcReset
 		pbft.helper.VcReset(resetTarget)
 		pbft.status.activeState(&pbft.status.inVcReset)
-	} else if pbft.primary(pbft.view) == pbft.id {
+	} else if pbft.isPrimary(pbft.id) {
 		// Primary cannot do VcReset then we just let others choose next primary
 		// after update timer expired
 		pbft.logger.Warningf("New primary %d need to catch up other, waiting", pbft.id)
@@ -899,7 +899,7 @@ func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 	for finish := range pbft.nodeMgr.finishUpdateStore {
 		if finish.View == pbft.view {
 			quorum++
-			if finish.ReplicaId == pbft.primary(pbft.view) {
+			if pbft.isPrimary(finish.ReplicaId) {
 				hasPrimary = true
 			}
 		}
@@ -935,7 +935,7 @@ func (pbft *pbftImpl) handleTailAfterUpdate() events.Event {
 	pbft.batchVdr.lastVid = pbft.exec.lastExec
 
 	// New Primary validate the batch built by xset
-	if pbft.primary(pbft.view) == pbft.id {
+	if pbft.isPrimary(pbft.id) {
 		xSetLen := len(update.Xset)
 		upper := uint64(xSetLen) + pbft.h + uint64(1)
 		for i := pbft.h + uint64(1); i < upper; i++ {

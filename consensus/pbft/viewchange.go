@@ -363,7 +363,7 @@ func (pbft *pbftImpl) recvViewChange(vc *ViewChange) events.Event {
 		}
 	}
 	//if message from primary, peers send view change to other peers directly
-	if atomic.LoadUint32(&pbft.activeView) == 1 && vc.ReplicaId == pbft.primary(pbft.view) {
+	if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.isPrimary(vc.ReplicaId) {
 		pbft.sendViewChange()
 	}
 
@@ -660,7 +660,7 @@ func (pbft *pbftImpl) processReqInNewView(nv *NewView) events.Event {
 		!pbft.status.getState(&pbft.status.inVcReset) {
 		pbft.helper.VcReset(backendVid)
 		pbft.status.activeState(&pbft.status.inVcReset)
-	} else if pbft.primary(pbft.view) == pbft.id {
+	} else if pbft.isPrimary(pbft.id) {
 		pbft.logger.Warningf("New primary %d need to catch up other, wating", pbft.id)
 	} else {
 		pbft.logger.Warningf("Replica %d cannot process local vcReset, but also send finishVcReset", pbft.id)
@@ -709,7 +709,7 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 	for finish := range pbft.vcMgr.vcResetStore {
 		if finish.View == pbft.view {
 			quorum++
-			if finish.ReplicaId == pbft.primary(pbft.view) {
+			if pbft.isPrimary(finish.ReplicaId) {
 				hasPrimary = true
 			}
 		}
@@ -740,7 +740,7 @@ func (pbft *pbftImpl) handleTailInNewView() events.Event {
 
 	//Primary validate batches which has seq > low watermark
 	//Batch will transfer to pre-prepare
-	if pbft.primary(pbft.view) == pbft.id {
+	if pbft.isPrimary(pbft.id) {
 		xSetLen := len(nv.Xset)
 		upper := uint64(xSetLen) + pbft.h + uint64(1)
 		for i := pbft.h + uint64(1); i < upper; i++ {
@@ -799,8 +799,7 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 		}
 		cert := pbft.storeMgr.getCert(pbft.view, n, d)
 		//if peer is primary ,it rebuild PrePrepare , persist it and broadcast PrePrepare
-		if pbft.primary(pbft.view) == pbft.id && ok {
-
+		if pbft.isPrimary(pbft.id) && ok {
 			preprep := &PrePrepare{
 				View:           pbft.view,
 				SequenceNumber: n,
@@ -827,7 +826,7 @@ func (pbft *pbftImpl) rebuildCertStore(xset map[uint64]string) {
 			}
 			msg := cMsgToPbMsg(consensusMsg, pbft.id)
 			pbft.helper.InnerBroadcast(msg)
-		}else{
+		} else {
 			//else rebuild Prepare and broadcast Prepare
 			prep := &Prepare{
 				View:           pbft.view,

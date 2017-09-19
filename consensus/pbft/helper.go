@@ -39,9 +39,9 @@ func (pbft *pbftImpl) primary(v uint64) uint64 {
 }
 
 // isPrimary returns if current node is primary or not
-func (pbft *pbftImpl) isPrimary() bool {
+func (pbft *pbftImpl) isPrimary(id uint64) bool {
 	primary := pbft.primary(pbft.view)
-	return primary == pbft.id
+	return primary == id
 }
 
 // InW returns if the given seqNo is higher than h or not
@@ -330,7 +330,7 @@ func (pbft *pbftImpl) startTimerIfOutstandingRequests() {
 // 2. for non-primary, null request timeout =3*(timeout written in the config)+request timeout
 func (pbft *pbftImpl) nullReqTimerReset() {
 	timeout := pbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
-	if pbft.primary(pbft.view) != pbft.id {
+	if !pbft.isPrimary(pbft.id) {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
 		timeout = 3 * timeout + pbft.timerMgr.requestTimeout
 	}
@@ -345,7 +345,7 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 
 // stopFirstRequestTimer stops the first request timer event if current node is not primary
 func (pbft *pbftImpl) stopFirstRequestTimer() {
-	if !pbft.isPrimary() {
+	if !pbft.isPrimary(pbft.id) {
 		pbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 	}
 }
@@ -388,7 +388,7 @@ func (pbft *pbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 		return false
 	}
 
-	if pbft.primary(pbft.view) != preprep.ReplicaId {
+	if !pbft.isPrimary(preprep.ReplicaId) {
 		pbft.logger.Warningf("Pre-prepare from other than primary: got %d, should be %d",
 			preprep.ReplicaId, pbft.primary(pbft.view))
 		return false
@@ -421,7 +421,7 @@ func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool {
 	// if we are not in recovery, but receive prepare from primary, which means primary behavior as a byzantine,
 	// we don't send viewchange here, because in this case, replicas will eventually find primary abnormal in other
 	// cases, such as inconsistent validate result or others
-	if pbft.primary(prep.View) == prep.ReplicaId && !pbft.status.getState(&pbft.status.inRecovery) {
+	if pbft.isPrimary(prep.ReplicaId) && !pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Warningf("Replica %d received prepare from primary, ignoring", pbft.id)
 		return false
 	}

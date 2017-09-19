@@ -65,7 +65,6 @@ type cacheBatch struct {
 type vidx struct {
 	view  uint64
 	seqNo uint64
-	vid   uint64
 }
 
 // -----------viewchange related structs-----------------

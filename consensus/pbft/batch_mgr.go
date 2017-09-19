@@ -294,7 +294,7 @@ func (pbft *pbftImpl) execValidate(digest string, txBatch *TransactionBatch, idx
 func (pbft *pbftImpl) handleTransactionsAfterAbnormal() {
 
 	// backup does not need to process it
-	if pbft.primary(pbft.view) != pbft.id {
+	if !pbft.isPrimary(pbft.id) {
 		return
 	}
 

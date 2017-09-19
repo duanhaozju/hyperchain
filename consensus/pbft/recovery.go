@@ -575,7 +575,7 @@ func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.E
 	pbft.recoveryMgr.rcPQCSenderStore[sender] = true
 
 	// post all the PQC
-	if pbft.primary(pbft.view) != pbft.id {
+	if !pbft.isPrimary(pbft.id) {
 		for _, preprep := range PQCInfo.GetPrepreSet() {
 			pbft.recvPrePrepare(preprep)
 		}

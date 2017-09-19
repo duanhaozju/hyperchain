@@ -163,7 +163,7 @@ func (pbft *pbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			pbft.logger.Debugf("Replica %d try to process viewChangeQuorumEvent, but it's in nego-view", pbft.id)
 			return nil
 		}
-		if ok := pbft.isPrimary(); ok {
+		if pbft.isPrimary(pbft.id) {
 			// if we are catching up, don't send new view as a primary and after a while, other nodes will
 			// send a new viewchange whose seqNo=previous viewchange's seqNo + 1 because of new view timeout
 			// and eventually others will finish viewchange with a new view in which primary is not in
@@ -244,7 +244,7 @@ func (pbft *pbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 			pbft.logger.Debugf("Replica %d try to process agreeUpdateNQuorumEvent, but it's in nego-view", pbft.id)
 			return nil
 		}
-		if pbft.primary(pbft.view) == pbft.id {
+		if pbft.isPrimary(pbft.id) {
 			return pbft.sendUpdateN()
 		}
 		return pbft.processUpdateN()
@@ -304,7 +304,7 @@ func (pbft *pbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 		// after recovery, new primary need to send null request as a heartbeat, and non-primary will start a
 		// first request timer which must be longer than null request timer in which non-primary must receive a
 		// request from primary(null request or pre-prepare...), or this node will send viewchange
-		if pbft.primary(pbft.view) == pbft.id {
+		if pbft.isPrimary(pbft.id) {
 			pbft.sendNullRequest()
 		} else {
 			event := &LocalEvent{

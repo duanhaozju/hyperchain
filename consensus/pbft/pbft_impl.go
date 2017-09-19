@@ -226,12 +226,12 @@ func (pbft *pbftImpl) processNullRequest(msg *protos.Message) error {
 		return nil
 	}
 
-	if pbft.primary(pbft.view) != msg.Id { // only primary could send a null request
+	if !pbft.isPrimary(msg.Id) { // only primary could send a null request
 		pbft.logger.Warningf("Replica %d received null request from replica %d who is not primary", pbft.id, msg.Id)
 		return nil
 	}
 	// if receiver is not primary, stop FIRST_REQUEST_TIMER started after this replica finished recovery
-	if pbft.primary(pbft.view) != pbft.id {
+	if !pbft.isPrimary(pbft.id) {
 		pbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 	}
 
@@ -253,7 +253,7 @@ func (pbft *pbftImpl) handleNullRequestTimerEvent() {
 		return
 	}
 
-	if pbft.primary(pbft.view) != pbft.id {
+	if !pbft.isPrimary(pbft.id) {
 		// replica expects a null request, but primary never sent one
 		pbft.logger.Warningf("Replica %d null request timer expired, sending view change", pbft.id)
 		pbft.sendViewChange()
@@ -309,7 +309,7 @@ func (pbft *pbftImpl) findNextPrePrepareBatch() (find bool, digest string, resul
 		}
 
 		if cache.seqNo != pbft.batchVdr.lastVid+1 { // find the batch whose vid is exactly lastVid+1
-			pbft.logger.Debugf("Primary %d expect to send pre-prepare for vid=%d, not vid=%d", pbft.id, pbft.batchVdr.lastVid+1, cache.vid)
+			pbft.logger.Debugf("Primary %d expect to send pre-prepare for seqNo=%d, not seqNo=%d", pbft.id, pbft.batchVdr.lastVid+1, cache.seqNo)
 			continue
 		}
 
@@ -420,8 +420,8 @@ func (pbft *pbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 
 	pbft.persistQSet(preprep)
 
-	if pbft.primary(pbft.view) != pbft.id && pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) &&
-		!cert.sentPrepare {
+	if !pbft.isPrimary(pbft.id) && !cert.sentPrepare &&
+		pbft.prePrepared(preprep.BatchDigest, preprep.View, preprep.SequenceNumber) {
 		cert.sentPrepare = true
 		return pbft.sendPrepare(preprep)
 	}
@@ -504,7 +504,7 @@ func (pbft *pbftImpl) maybeSendCommit(digest string, v uint64, n uint64) error {
 		return nil
 	}
 
-	if pbft.isPrimary() {
+	if pbft.isPrimary(pbft.id) {
 		return pbft.sendCommit(digest, v, n)
 	} else {
 		idx := vidx{view: v, seqNo: n}
@@ -722,7 +722,7 @@ func (pbft *pbftImpl) commitPendingBlocks() {
 		if find, idx, cert := pbft.findNextCommitTx(); find {
 			pbft.logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", pbft.id, idx.v, idx.n)
 			pbft.persistCSet(idx.v, idx.n, idx.d)
-			isPrimary := pbft.isPrimary()
+			isPrimary := pbft.isPrimary(pbft.id)
 			//pbft.vcMgr.vcResendCount = 0
 			pbft.helper.Execute(idx.n, cert.resultHash, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)
 			cert.sentExecute = true
@@ -829,7 +829,7 @@ func (pbft *pbftImpl) processTransaction(tx *types.Transaction) events.Event {
 		_, err = pbft.batchMgr.txPool.AddNewTx(tx, false, true)
 	}
 	// primary nodes would check if this transaction triggered generating a batch or not
-	if pbft.isPrimary() {
+	if pbft.isPrimary(pbft.id) {
 		if !pbft.batchMgr.isBatchTimerActive() { // start batch timer when this node receives the first transaction of a batch
 			pbft.startBatchTimer()
 		}
@@ -937,7 +937,7 @@ func (pbft *pbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 		Timestamp: time.Now().UnixNano(),
 	}
 
-	if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.primary(pbft.view) == pbft.id &&
+	if atomic.LoadUint32(&pbft.activeView) == 1 && pbft.isPrimary(pbft.id) &&
 		!pbft.status.checkStatesOr(&pbft.status.inNegoView, &pbft.status.inRecovery) {
 		pbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 		pbft.primaryValidateBatch(reqBatch.BatchHash, txBatch, 0)
@@ -952,7 +952,7 @@ func (pbft *pbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 // executeAfterStateUpdate processes logic after state update
 func (pbft *pbftImpl) executeAfterStateUpdate() {
 
-	if pbft.primary(pbft.view) == pbft.id {
+	if pbft.isPrimary(pbft.id) {
 		pbft.logger.Debugf("Replica %d is primary, not execute after state update", pbft.id)
 		return
 	}
