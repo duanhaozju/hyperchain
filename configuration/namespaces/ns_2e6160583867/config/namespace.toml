@@ -25,14 +25,14 @@ title = "namespace configurations"
 #
 ############################################################################################################
 [consensus]
-algo = "PBFT"
+algo = "RBFT"
 
-    [consensus.pbft]        #PBFT configurations
+    [consensus.rbft]        #PBFT configurations
     batchsize       = 100   # How many transactions should the primary pack before sending pre-prepare
     poolsize        = 50000  # How many transactions could the txPool stores in total
     vcresendlimit   = 10    # How many times of same vc from self before a replica start recovery
 
-        [consensus.pbft.timeout]
+        [consensus.rbft.timeout]
             negoview        = "6s"  # How long to wait for N-f responses after send negotiate view
             recovery        = "15s" # How long to wait before recovery finished(This is for release1.2)
             firstrequest    = "30s" # How long to wait before first request should come

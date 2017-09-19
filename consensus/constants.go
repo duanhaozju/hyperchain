@@ -5,7 +5,7 @@ package consensus
 
 // consensus algorithm name
 const (
-	PBFT = "PBFT"
+	RBFT = "RBFT"
 	NBFT = "NBFT"
 )
 

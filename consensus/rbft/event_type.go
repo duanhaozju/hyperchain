@@ -1,11 +1,11 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package pbft
+package rbft
 
 // mesage type
 const (
-	// 1.pbft core
-	CORE_BATCH_TIMER_EVENT = iota
+	// 1.rbft core
+	CORE_BATCH_TIMER_EVENT         = iota
 	CORE_NULL_REQUEST_TIMER_EVENT
 	CORE_FIRST_REQUEST_TIMER_EVENT
 	CORE_STATE_UPDATE_EVENT
@@ -34,7 +34,7 @@ const (
 
 // service type
 const (
-	CORE_PBFT_SERVICE = iota
+	CORE_RBFT_SERVICE   = iota
 	VIEW_CHANGE_SERVICE
 	RECOVERY_SERVICE
 	NODE_MGR_SERVICE
@@ -43,7 +43,7 @@ const (
 
 // LocalEvent represents event sent by local modules
 type LocalEvent struct {
-	Service   int          // service type range from {CORE_PBFT_SERVICE, VIEW_CHANGE_SERVICE, RECOVERY_SERVICE, NODE_MGR_SERVICE}
+	Service   int // service type range from {CORE_RBFT_SERVICE, VIEW_CHANGE_SERVICE, RECOVERY_SERVICE, NODE_MGR_SERVICE}
 	EventType int
 	Event     interface{}
 }

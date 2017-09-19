@@ -1,7 +1,7 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
 
-package pbft
+package rbft
 
 // constant timer names
 const (
@@ -16,27 +16,27 @@ const (
 	CLEAN_VIEW_CHANGE_TIMER = "cleanViewChangeTimer" // timer track how long a viewchange msg will store in memory
 )
 
-//pbft config keys
+//rbft config keys
 const (
-	PBFT_BATCH_SIZE      = "consensus.pbft.batchsize"
-	PBFT_POOL_SIZE       = "consensus.pbft.poolsize"
-	PBFT_VC_RESEND_LIMIT = "consensus.pbft.vcresendlimit"
+	RBFT_BATCH_SIZE      = "consensus.rbft.batchsize"
+	RBFT_POOL_SIZE       = "consensus.rbft.poolsize"
+	RBFT_VC_RESEND_LIMIT = "consensus.rbft.vcresendlimit"
 
 	//timeout keys
-	PBFT_NEGOVIEW_TIMEOUT          = "consensus.pbft.timeout.negoview"
-	PBFT_RECOVERY_TIMEOUT          = "consensus.pbft.timeout.recovery"
-	PBFT_VIEWCHANGE_TIMEOUT        = "consensus.pbft.timeout.viewchange"
-	PBFT_RESEND_VIEWCHANGE_TIMEOUT = "consensus.pbft.timeout.resendviewchange"
-	PBFT_CLEAN_VIEWCHANGE_TIMEOUT  = "consensus.pbft.timeout.cleanviewchange"
-	PBFT_BATCH_TIMEOUT             = "consensus.pbft.timeout.batch"
-	PBFT_REQUEST_TIMEOUT           = "consensus.pbft.timeout.request"
-	PBFT_VALIDATE_TIMEOUT          = "consensus.pbft.timeout.validate"
-	PBFT_NULLREQUEST_TIMEOUT       = "consensus.pbft.timeout.nullrequest"
-	PBFT_FIRST_REQUEST_TIMEOUT     = "consensus.pbft.timeout.firstrequest"
-	PBFT_UPDATE_TIMEOUT            = "consensus.pbft.timeout.update"
+	RBFT_NEGOVIEW_TIMEOUT          = "consensus.rbft.timeout.negoview"
+	RBFT_RECOVERY_TIMEOUT          = "consensus.rbft.timeout.recovery"
+	RBFT_VIEWCHANGE_TIMEOUT        = "consensus.rbft.timeout.viewchange"
+	RBFT_RESEND_VIEWCHANGE_TIMEOUT = "consensus.rbft.timeout.resendviewchange"
+	RBFT_CLEAN_VIEWCHANGE_TIMEOUT  = "consensus.rbft.timeout.cleanviewchange"
+	RBFT_BATCH_TIMEOUT             = "consensus.rbft.timeout.batch"
+	RBFT_REQUEST_TIMEOUT           = "consensus.rbft.timeout.request"
+	RBFT_VALIDATE_TIMEOUT          = "consensus.rbft.timeout.validate"
+	RBFT_NULLREQUEST_TIMEOUT       = "consensus.rbft.timeout.nullrequest"
+	RBFT_FIRST_REQUEST_TIMEOUT     = "consensus.rbft.timeout.firstrequest"
+	RBFT_UPDATE_TIMEOUT            = "consensus.rbft.timeout.update"
 )
 
-// type for pbft status
+// type for rbft status
 const (
 	ON  = 1
 	OFF = 0

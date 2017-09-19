@@ -9,7 +9,7 @@ import (
 	"hyperchain/common"
 	cs "hyperchain/consensus"
 	"hyperchain/consensus/helper"
-	"hyperchain/consensus/pbft"
+	"hyperchain/consensus/rbft"
 	"hyperchain/manager/event"
 )
 
@@ -18,8 +18,8 @@ func newConsenter(namespace string, conf *common.Config, eventMux *event.TypeMux
 	h := helper.NewHelper(eventMux, filterMux)
 	algo := conf.GetString(cs.CONSENSUS_ALGO)
 	switch algo {
-	case cs.PBFT:
-		return pbft.New(namespace, conf, h, n)
+	case cs.RBFT:
+		return rbft.New(namespace, conf, h, n)
 	case cs.NBFT:
 		panic(fmt.Errorf("Not implemented yet %s", algo))
 	default:

@@ -1,13 +1,13 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
 
-package pbft
+package rbft
 
 import (
 	"sync/atomic"
 )
 
-// PbftStatus is used to store all the status in pbft
+// PbftStatus is used to store all the status in rbft
 type PbftStatus struct {
 	byzantine         int32 // whether this node is intentionally acting as byzantine
 	activeView        int32 // track if replica is in active view

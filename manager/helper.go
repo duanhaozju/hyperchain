@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/syndtr/goleveldb/leveldb/errors"
-	"hyperchain/consensus/pbft"
+	"hyperchain/consensus/rbft"
 	m "hyperchain/manager/message"
 )
 
 func (hub *EventHub) invokePbftLocal(serviceType, eventType int, content interface{}) {
-	e := &pbft.LocalEvent{
+	e := &rbft.LocalEvent{
 		Service:   serviceType,
 		EventType: eventType,
 		Event:     content,

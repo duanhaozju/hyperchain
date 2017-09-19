@@ -1,7 +1,7 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
 
-package pbft
+package rbft
 
 import "github.com/op/go-logging"
 
@@ -11,7 +11,7 @@ This file provide a mechanism to manage the storage in PBFT
 
 // storeManager manages common store data structures for PBFT.
 type storeManager struct {
-	logger            *logging.Logger
+	logger *logging.Logger
 
 	certStore     map[msgID]*msgCert // track quorum certificates for messages
 	committedCert map[msgID]string   // track the committed cert to help execute
@@ -19,22 +19,22 @@ type storeManager struct {
 	outstandingReqBatches map[string]*TransactionBatch // track whether we are waiting for transaction batches to execute
 	txBatchStore          map[string]*TransactionBatch // track L cached transaction batches produced from txPool
 
-	missingReqBatches map[string]bool    // for all the assigned, non-checkpointed request batches we might miss
-	                                     // some transactions in some batches, record batch id
-	highStateTarget   *stateUpdateTarget // Set to the highest weak checkpoint cert we have observed
+	missingReqBatches map[string]bool // for all the assigned, non-checkpointed request batches we might miss
+	// some transactions in some batches, record batch id
+	highStateTarget *stateUpdateTarget // Set to the highest weak checkpoint cert we have observed
 
 	// ---------------checkpoint related--------------------
-	chkpts          map[uint64]string      // checkpoints that we reached by ourselves after commit a block with a
-					       // block number == integer multiple of K; map lastExec to a base64
-					       // encoded BlockchainInfo
+	chkpts map[uint64]string // checkpoints that we reached by ourselves after commit a block with a
+	// block number == integer multiple of K; map lastExec to a base64
+	// encoded BlockchainInfo
 
-	hChkpts         map[uint64]uint64      // checkpoint numbers received from others which are bigger than our
-					       // H(=h+L); map replicaID to the last checkpoint number received from
-					       // that replica bigger than H
+	hChkpts map[uint64]uint64 // checkpoint numbers received from others which are bigger than our
+	// H(=h+L); map replicaID to the last checkpoint number received from
+	// that replica bigger than H
 
 	checkpointStore map[Checkpoint]bool    // track all non-repeating checkpoints received from others
 	chkptCertStore  map[chkptID]*chkptCert // track quorum certificates for checkpoints with the same chkptID; map
-					       // chkptID(seqNo and id) to chkptCert(all checkpoints with that chkptID)
+	// chkptID(seqNo and id) to chkptCert(all checkpoints with that chkptID)
 }
 
 // newStoreMgr news an instance of storeManager
@@ -58,23 +58,23 @@ func newStoreMgr() *storeManager {
 }
 
 // moveWatermarks removes useless set in chkpts, plist, qlist whose index <= h
-func (sm *storeManager) moveWatermarks(pbft *pbftImpl, h uint64) {
+func (sm *storeManager) moveWatermarks(rbft *rbftImpl, h uint64) {
 	for n := range sm.chkpts {
 		if n < h {
 			delete(sm.chkpts, n)
-			pbft.persistDelCheckpoint(n)
+			rbft.persistDelCheckpoint(n)
 		}
 	}
 
-	for idx := range pbft.vcMgr.qlist {
+	for idx := range rbft.vcMgr.qlist {
 		if idx.n <= h {
-			delete(pbft.vcMgr.qlist, idx)
+			delete(rbft.vcMgr.qlist, idx)
 		}
 	}
 
-	for n := range pbft.vcMgr.plist {
+	for n := range rbft.vcMgr.plist {
 		if n <= h {
-			delete(pbft.vcMgr.plist, n)
+			delete(rbft.vcMgr.plist, n)
 		}
 	}
 }
@@ -126,7 +126,7 @@ func (sm *storeManager) getChkptCert(n uint64, id string) (cert *chkptCert) {
 
 // existedDigest checks if there exists another PRE-PREPARE message in certStore which has the same digest, same view,
 // but different seqNo with the given one
-// TODO change this func to pbftImpl
+// TODO change this func to rbftImpl
 func (sm *storeManager) existedDigest(n uint64, view uint64, digest string) bool {
 	for _, cert := range sm.certStore {
 		if p := cert.prePrepare; p != nil {

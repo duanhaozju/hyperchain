@@ -1,26 +1,26 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
 
-package pbft
+package rbft
 
 // initTimers creates timers when start up
-func (pbft *pbftImpl) initTimers() {
-	pbft.timerMgr.newTimer(VC_RESEND_TIMER, pbft.config.GetDuration(PBFT_RESEND_VIEWCHANGE_TIMEOUT))
-	pbft.timerMgr.newTimer(NULL_REQUEST_TIMER, pbft.config.GetDuration(PBFT_NULLREQUEST_TIMEOUT))
-	pbft.timerMgr.newTimer(NEW_VIEW_TIMER, pbft.config.GetDuration(PBFT_VIEWCHANGE_TIMEOUT))
-	pbft.timerMgr.newTimer(FIRST_REQUEST_TIMER, pbft.config.GetDuration(PBFT_FIRST_REQUEST_TIMEOUT))
-	pbft.timerMgr.newTimer(NEGO_VIEW_RSP_TIMER, pbft.config.GetDuration(PBFT_NEGOVIEW_TIMEOUT))
-	pbft.timerMgr.newTimer(RECOVERY_RESTART_TIMER, pbft.config.GetDuration(PBFT_RECOVERY_TIMEOUT))
-	pbft.timerMgr.newTimer(BATCH_TIMER, pbft.config.GetDuration(PBFT_BATCH_TIMEOUT))
-	pbft.timerMgr.newTimer(CLEAN_VIEW_CHANGE_TIMER, pbft.config.GetDuration(PBFT_BATCH_TIMEOUT))
-	pbft.timerMgr.newTimer(VALIDATE_TIMER, pbft.config.GetDuration(PBFT_VALIDATE_TIMEOUT))
+func (rbft *rbftImpl) initTimers() {
+	rbft.timerMgr.newTimer(VC_RESEND_TIMER, rbft.config.GetDuration(RBFT_RESEND_VIEWCHANGE_TIMEOUT))
+	rbft.timerMgr.newTimer(NULL_REQUEST_TIMER, rbft.config.GetDuration(RBFT_NULLREQUEST_TIMEOUT))
+	rbft.timerMgr.newTimer(NEW_VIEW_TIMER, rbft.config.GetDuration(RBFT_VIEWCHANGE_TIMEOUT))
+	rbft.timerMgr.newTimer(FIRST_REQUEST_TIMER, rbft.config.GetDuration(RBFT_FIRST_REQUEST_TIMEOUT))
+	rbft.timerMgr.newTimer(NEGO_VIEW_RSP_TIMER, rbft.config.GetDuration(RBFT_NEGOVIEW_TIMEOUT))
+	rbft.timerMgr.newTimer(RECOVERY_RESTART_TIMER, rbft.config.GetDuration(RBFT_RECOVERY_TIMEOUT))
+	rbft.timerMgr.newTimer(BATCH_TIMER, rbft.config.GetDuration(RBFT_BATCH_TIMEOUT))
+	rbft.timerMgr.newTimer(CLEAN_VIEW_CHANGE_TIMER, rbft.config.GetDuration(RBFT_BATCH_TIMEOUT))
+	rbft.timerMgr.newTimer(VALIDATE_TIMER, rbft.config.GetDuration(RBFT_VALIDATE_TIMEOUT))
 }
 
 var eventCreators map[ConsensusMessage_Type]func() interface{}
 
 // initMsgEventMap maps consensus_message to real consensus msg type which used to Unmarshal consensus_message's payload
 // to actual consensus msg
-func (pbft *pbftImpl) initMsgEventMap() {
+func (rbft *rbftImpl) initMsgEventMap() {
 	eventCreators = make(map[ConsensusMessage_Type]func() interface{})
 
 	eventCreators[ConsensusMessage_TRANSACTION] = func() interface{} { return &TransactionBatch{} }
@@ -51,7 +51,7 @@ func (pbft *pbftImpl) initMsgEventMap() {
 }
 
 // initStatus init basic status when starts up
-func (pbft *pbftImpl) initStatus() {
-	pbft.status.activeState(&pbft.status.inNegoView)
-	pbft.status.activeState(&pbft.status.inRecovery)
+func (rbft *rbftImpl) initStatus() {
+	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.status.activeState(&rbft.status.inRecovery)
 }

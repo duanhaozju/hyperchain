@@ -33,18 +33,17 @@ type TxPool interface {
 
 // txPoolImpl implement the txpool
 type txPoolImpl struct {
-	txPool           map[string]*types.Transaction // store all non-batched txs
-	txPoolHash       []string                      // store all non-batched txs' hash by order
-	batchStore       []*TxHashBatch                // store all batch using batch hash as key
-	batchedTxs       map[string]bool               // store batched txs' hash
-	cachedHashList   map[string][]string           // cached hash list of missing batch using batch hash as key
-	missingTxs       map[string][]string           // store missing tx hash using batch hash as key
-	poolSize         int                           // upper limit of txPool
-	queue            *event.TypeMux		       // when we generate a batch, we would post it to this channel
-	batchSize        int			       // a batch contains how many transactions
-	logger		 *logging.Logger
+	txPool         map[string]*types.Transaction // store all non-batched txs
+	txPoolHash     []string                      // store all non-batched txs' hash by order
+	batchStore     []*TxHashBatch                // store all batch using batch hash as key
+	batchedTxs     map[string]bool               // store batched txs' hash
+	cachedHashList map[string][]string           // cached hash list of missing batch using batch hash as key
+	missingTxs     map[string][]string           // store missing tx hash using batch hash as key
+	poolSize       int                           // upper limit of txPool
+	queue          *event.TypeMux                // when we generate a batch, we would post it to this channel
+	batchSize      int                           // a batch contains how many transactions
+	logger         *logging.Logger
 }
-
 
 // NewTxPool creates a new transaction pool
 func NewTxPool(namespace string, poolsize int, queue *event.TypeMux, batchsize int) (TxPool, error) {
@@ -85,7 +84,6 @@ func (pool *txPoolImpl) addTxs(txs []*types.Transaction) error {
 func (pool *txPoolImpl) GenerateTxBatch() error {
 	return pool.generateTxBatch()
 }
-
 
 // GetTxsByHashList returns the transaction list found by given hash list.
 // When replicas receive hashList from primary, they need to generate batches the same as primary.
@@ -176,8 +174,6 @@ func (pool *txPoolImpl) ReturnFetchTxs(id string, missingHashList []string) (txs
 		return
 	}
 }
-
-
 
 // GotMissingTxs receives txs fetched from primary and add txs to txpool
 func (pool *txPoolImpl) GotMissingTxs(id string, txs []*types.Transaction) ([]string, error) {
