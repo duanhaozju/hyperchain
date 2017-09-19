@@ -1,17 +1,17 @@
 package jsonrpc
 
 import (
-	"errors"
-	"sync"
-	"context"
-	"encoding/binary"
 	"bufio"
-	"time"
-	"encoding/hex"
-	"strings"
+	"context"
 	crand "crypto/rand"
-	"math/rand"
+	"encoding/binary"
+	"encoding/hex"
+	"errors"
 	"hyperchain/common"
+	"math/rand"
+	"strings"
+	"sync"
+	"time"
 )
 
 const (
@@ -39,7 +39,7 @@ type NotifierKey struct{}
 // Server callbacks use the notifier to send notifications.
 type Notifier struct {
 	codec    ServerCodec
-	subMu    sync.RWMutex 		// guards active and inactive maps
+	subMu    sync.RWMutex // guards active and inactive maps
 	stopped  bool
 	active   map[common.ID]*common.Subscription
 	inactive map[common.ID]*common.Subscription
@@ -51,10 +51,10 @@ type Notifier struct {
 // notifications to the client.
 func NewNotifier() *Notifier {
 	notifier := &Notifier{
-			active:   make(map[common.ID]*common.Subscription),
-			inactive: make(map[common.ID]*common.Subscription),
-			closed:   make(chan interface{}),
-		    }
+		active:   make(map[common.ID]*common.Subscription),
+		inactive: make(map[common.ID]*common.Subscription),
+		closed:   make(chan interface{}),
+	}
 
 	go notifier.waittingReq()
 	return notifier
@@ -64,24 +64,24 @@ func (notifier *Notifier) waittingReq() {
 
 	for {
 		select {
-			case ctx := <- common.CtxCh:
-				log.Debug("receive context request")
-				log.Debugf("current system CtxSubChsMap length = %v", len(common.SubChsMap))
-				notifier, supported := NotifierFromContext(ctx)
-				if !supported {
-					notifier.subChs.Err <- ErrNotificationsUnsupported
-					continue
-				}
+		case ctx := <-common.CtxCh:
+			log.Debug("receive context request")
+			log.Debugf("current system CtxSubChsMap length = %v", len(common.SubChsMap))
+			notifier, supported := NotifierFromContext(ctx)
+			if !supported {
+				notifier.subChs.Err <- ErrNotificationsUnsupported
+				continue
+			}
 
-				rpcSub := notifier.CreateSubscription()
-				log.Debugf("create subscription %v", rpcSub.ID)
+			rpcSub := notifier.CreateSubscription()
+			log.Debugf("create subscription %v", rpcSub.ID)
 
-				notifier.subChs.SubscriptionCh <- rpcSub
+			notifier.subChs.SubscriptionCh <- rpcSub
 
-				go notifier.waittingSubData(rpcSub)
-			case <-notifier.Closed():
-				log.Debug("quit request listener of this connection")
-				return
+			go notifier.waittingSubData(rpcSub)
+		case <-notifier.Closed():
+			log.Debug("quit request listener of this connection")
+			return
 
 		}
 	}
@@ -91,30 +91,30 @@ func (notifier *Notifier) waittingSubData(rpcSub *common.Subscription) {
 
 	for {
 		select {
-			case nd := <- notifier.subChs.NotifyDataCh:
-				// sends a notification to the client with the given data as payload.
-				// If an error occurs the RPC connection is closed.
-				log.Debugf("ready to send feedback: %#v", nd.SubID)
-				id := nd.SubID
-				data := nd.Data
-				sub, active := notifier.active[id]
+		case nd := <-notifier.subChs.NotifyDataCh:
+			// sends a notification to the client with the given data as payload.
+			// If an error occurs the RPC connection is closed.
+			log.Debugf("ready to send feedback: %#v", nd.SubID)
+			id := nd.SubID
+			data := nd.Data
+			sub, active := notifier.active[id]
 
-				if active {
-					notification := notifier.codec.CreateNotification(id, sub.Service, sub.Method, sub.Namespace, data)
-					if err := notifier.codec.WriteNotify(notification); err != nil {
-						log.Errorf("%v",err)
-						notifier.codec.Close()
-						//return err
-					}
+			if active {
+				notification := notifier.codec.CreateNotification(id, sub.Service, sub.Method, sub.Namespace, data)
+				if err := notifier.codec.WriteNotify(notification); err != nil {
+					log.Errorf("%v", err)
+					notifier.codec.Close()
+					//return err
 				}
-			case <-notifier.subChs.Err:
-				// occurs error or connection close
-				log.Debugf("quit data listener of subscription %v",rpcSub.ID)
-				return
-			case <-rpcSub.Err():
-				// If the subscription is unsubscribed, quit its data listener.
-				log.Debugf("quit data listener of subscription %v",rpcSub.ID)
-				return
+			}
+		case <-notifier.subChs.Err:
+			// occurs error or connection close
+			log.Debugf("quit data listener of subscription %v", rpcSub.ID)
+			return
+		case <-rpcSub.Err():
+			// If the subscription is unsubscribed, quit its data listener.
+			log.Debugf("quit data listener of subscription %v", rpcSub.ID)
+			return
 		}
 
 	}
@@ -157,7 +157,7 @@ func (n *Notifier) Unsubscribe(id common.ID) error {
 	return ErrSubscriptionNotFound
 }
 
-func (n *Notifier) Closed() <- chan interface{} {
+func (n *Notifier) Closed() <-chan interface{} {
 	return n.closed
 }
 
@@ -165,7 +165,6 @@ func (n *Notifier) Close() {
 	close(n.closed)
 	n.subChs.Close()
 }
-
 
 // activate enables a subscription. Until a subscription is enabled all
 // notifications are dropped. This method is called by the RPC server after

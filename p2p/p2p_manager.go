@@ -1,18 +1,18 @@
 package p2p
 
 import (
-	"hyperchain/p2p/network"
-	"github.com/terasum/viper"
-	"hyperchain/manager/event"
-	"github.com/pkg/errors"
-	"hyperchain/common"
-	"hyperchain/ipc"
 	"fmt"
 	"github.com/op/go-logging"
+	"github.com/pkg/errors"
+	"github.com/terasum/viper"
+	"hyperchain/common"
+	"hyperchain/ipc"
+	"hyperchain/manager/event"
+	"hyperchain/p2p/network"
 )
 
 var (
-	glogger *logging.Logger
+	glogger          *logging.Logger
 	errP2PMGRNotInit = errors.New("The P2P manager hasn't been initlized, Fatal error")
 )
 
@@ -63,8 +63,8 @@ func newP2PManager(vip *viper.Viper) (*p2pManagerImpl, error) {
 		return nil, err
 	}
 	p2pmgr := &p2pManagerImpl{
-		hypernet:net,
-		conf:vip,
+		hypernet: net,
+		conf:     vip,
 	}
 	p2pmgr.Start()
 
@@ -72,7 +72,7 @@ func newP2PManager(vip *viper.Viper) (*p2pManagerImpl, error) {
 	return p2pmgr, nil
 }
 
-func (mgr *p2pManagerImpl)Start() (err error) {
+func (mgr *p2pManagerImpl) Start() (err error) {
 	// if there are something wrong cause a panic,
 	// here will recover
 	defer func() {
@@ -111,7 +111,6 @@ func GetPeerManager(namespace string, peerConfPath string, eventMux *event.TypeM
 	return globalP2PManager.GetPeerManager(namespace, peerConf, eventMux, delChan)
 }
 
-
 //GetPeerManager get a peermanager instance, every namespace has an independent instance
 func (p2pmgr *p2pManagerImpl) GetPeerManager(namespace string, peerConf *viper.Viper, eventMux *event.TypeMux, delChan chan bool) (PeerManager, error) {
 	if p2pmgr == nil {
@@ -120,15 +119,13 @@ func (p2pmgr *p2pManagerImpl) GetPeerManager(namespace string, peerConf *viper.V
 	return NewPeerManagerImpl(namespace, peerConf, eventMux, p2pmgr.hypernet, delChan)
 }
 
-
 //Stop stop services under this namespace.
-func (p2pmgr *p2pManagerImpl)Stop() error {
+func (p2pmgr *p2pManagerImpl) Stop() error {
 	p2pmgr.hypernet.Stop()
 	return nil
 }
 
 //Restart restart services under this namespace.
-func (p2pmgr *p2pManagerImpl)Restart() error {
+func (p2pmgr *p2pManagerImpl) Restart() error {
 	return nil
 }
-

@@ -9,4 +9,3 @@ const (
 	EV_UPDATE_SESSION_KEY
 	EV_REBIND
 )
-

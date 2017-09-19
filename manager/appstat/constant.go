@@ -1,8 +1,8 @@
 package appstat
 
 const (
-	Normal     = true
-	Exception  = false
+	Normal    = true
+	Exception = false
 )
 
 // Exception module name
@@ -24,7 +24,7 @@ const (
 // Error code
 const (
 	// definition format: <ExceptionCode> + <Module> + <SubType>
-	ExceptionCode_Executor_Viewchange int =  -1 * (iota + 1)
+	ExceptionCode_Executor_Viewchange int = -1 * (iota + 1)
 	ExceptionCode_Jsonrpc_Transactions
 	// etc ...
 )

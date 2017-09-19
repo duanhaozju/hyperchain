@@ -5,7 +5,7 @@ type Parameter struct {
 	TxIndex int
 }
 
-func (parameter *Parameter) GetVerbose() bool  {
+func (parameter *Parameter) GetVerbose() bool {
 	return parameter.Verbose
 }
 
@@ -13,7 +13,7 @@ func (parameter *Parameter) SetVerbose(verbose bool) {
 	parameter.Verbose = verbose
 }
 
-func (parameter *Parameter) GetTxIndex() int  {
+func (parameter *Parameter) GetTxIndex() int {
 	return parameter.TxIndex
 }
 

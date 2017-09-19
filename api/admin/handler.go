@@ -3,11 +3,11 @@
 package jsonrpc
 
 import (
-	//"fmt"
-	//"io"
-	//"net/http"
-	//"io"
-	//"fmt"
+//"fmt"
+//"io"
+//"net/http"
+//"io"
+//"fmt"
 )
 import (
 	"fmt"
@@ -51,4 +51,3 @@ func LoginServer(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	io.WriteString(w, fmt.Sprintf("%s", LoggedIn))
 }
-

@@ -1,55 +1,55 @@
 package hts
 
 import (
-	"crypto/x509"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"crypto"
-	"math/big"
+	"crypto/x509"
 	"encoding/asn1"
 	"github.com/pkg/errors"
 	"hyperchain/crypto/primitives"
+	"math/big"
 )
 
 type CertGroup struct {
 	enableEnroll bool
-	sign 	     bool
+	sign         bool
 
 	//ECert group
-	eCA          []byte
-	eCA_S        *x509.Certificate
-	eCERT        []byte
-	eCERT_S      *x509.Certificate
-	eCERTPriv    []byte
-	eCERTPriv_S  *ecdsa.PrivateKey
+	eCA         []byte
+	eCA_S       *x509.Certificate
+	eCERT       []byte
+	eCERT_S     *x509.Certificate
+	eCERTPriv   []byte
+	eCERTPriv_S *ecdsa.PrivateKey
 
 	//RCert group
-	rCA          []byte
-	rCA_S        *x509.Certificate
-	rCERT        []byte
-	rCERT_S      *x509.Certificate
-	rCERTPriv    []byte
-	rCERTPriv_S  *ecdsa.PrivateKey
+	rCA         []byte
+	rCA_S       *x509.Certificate
+	rCERT       []byte
+	rCERT_S     *x509.Certificate
+	rCERTPriv   []byte
+	rCERTPriv_S *ecdsa.PrivateKey
 }
 
-func (cg *CertGroup)GetECert() []byte {
+func (cg *CertGroup) GetECert() []byte {
 	return cg.eCERT
 }
 
-func (cg *CertGroup)GetRCert() []byte {
+func (cg *CertGroup) GetRCert() []byte {
 	return cg.rCERT
 }
 
-func (cg *CertGroup)ESign(data []byte) ([]byte, error) {
+func (cg *CertGroup) ESign(data []byte) ([]byte, error) {
 	if !cg.sign {
-		return nil,nil
+		return nil, nil
 	}
 	return cg.eCERTPriv_S.Sign(rand.Reader, data, crypto.SHA3_256)
 }
 
-func (cg *CertGroup)EVerify(rawcert, sign []byte, hash []byte) (bool, error) {
+func (cg *CertGroup) EVerify(rawcert, sign []byte, hash []byte) (bool, error) {
 	if !cg.sign {
-		return true,nil
+		return true, nil
 	}
 	x509cert, err := primitives.ParseCertificate(rawcert)
 	if err != nil {
@@ -70,7 +70,7 @@ func (cg *CertGroup)EVerify(rawcert, sign []byte, hash []byte) (bool, error) {
 	b := ecdsa.Verify(pubkey, hash, ecdsasign.R, ecdsasign.S)
 
 	//验证父证书
-	eca,_ := primitives.ParseCertificate(cg.eCA)
+	eca, _ := primitives.ParseCertificate(cg.eCA)
 	err = x509cert.CheckSignatureFrom(eca)
 	if err != nil {
 		return false, errors.New("verified the parent cert failed!")
@@ -82,17 +82,17 @@ func (cg *CertGroup)EVerify(rawcert, sign []byte, hash []byte) (bool, error) {
 	return false, errors.New("verify failed, signature verify not passed.")
 }
 
-func (cg *CertGroup)RSign(data []byte) ([]byte, error) {
-	if !cg.sign  || !cg.enableEnroll {
-		return nil,nil
+func (cg *CertGroup) RSign(data []byte) ([]byte, error) {
+	if !cg.sign || !cg.enableEnroll {
+		return nil, nil
 	}
 	hash := cg.Hash(data)
 	return cg.rCERTPriv_S.Sign(rand.Reader, hash, crypto.SHA3_256)
 }
 
-func (cg *CertGroup)RVerify(rawcert, sign []byte, data []byte) (bool, error) {
-	if !cg.sign  || !cg.enableEnroll {
-		return true,nil
+func (cg *CertGroup) RVerify(rawcert, sign []byte, data []byte) (bool, error) {
+	if !cg.sign || !cg.enableEnroll {
+		return true, nil
 	}
 	x509cert, err := primitives.ParseCertificate(rawcert)
 	if err != nil {
@@ -124,7 +124,7 @@ func (cg *CertGroup)RVerify(rawcert, sign []byte, data []byte) (bool, error) {
 	return false, errors.New("verify failed, signature verify not passed.")
 }
 
-func (cg *CertGroup)Hash(data []byte) ([]byte) {
+func (cg *CertGroup) Hash(data []byte) []byte {
 	her := crypto.SHA3_256.New()
 	her.Write(data)
 	return her.Sum(nil)

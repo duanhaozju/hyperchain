@@ -32,13 +32,13 @@ public class ABC extends ContractTemplate {
         ledger.put("A1",account1);
         ledger.put("A2",account2);
 
-        logger.info(ledger.get("A1").toObeject(Account.class).getAccountNumber());
+        logger.info(ledger.get("A1").toObject(Account.class).getAccountNumber());
 
         BatchKey bk = ledger.newBatchKey();
         bk.put(key1);
         bk.put(key2);
         Batch batch = ledger.batchRead(bk);
-        logger.info(batch.get(key1).toObeject(Account.class).getAccountNumber());
+        logger.info(batch.get(key1).toObject(Account.class).getAccountNumber());
 
         //abnormal
         Result result = batch.get("A11");
@@ -90,7 +90,7 @@ public class ABC extends ContractTemplate {
             logger.error(msg);
             return result(false,msg);
         }
-        Account account = result.toObeject(Account.class);
+        Account account = result.toObject(Account.class);
 
         return result(true,account);
 
@@ -113,19 +113,19 @@ public class ABC extends ContractTemplate {
         Result result = ledger.get(accountPrefix+buyerAccountNum);
         Account buy = null;
         if(!result.isEmpty()){
-            buy = result.toObeject(Account.class);
+            buy = result.toObject(Account.class);
         }
 
         result = ledger.get(accountPrefix+sellerAccountNum);
         Account sell= null;
         if(!result.isEmpty()){
-            sell = result.toObeject(Account.class);
+            sell = result.toObject(Account.class);
         }
 
         result = ledger.get(orderPrefix+orderNum);
         Order data= null;
         if(!result.isEmpty()){
-            data = result.toObeject(Order.class);
+            data = result.toObject(Order.class);
         }
         if(data != null){
             msg = "the order has been published";
@@ -193,7 +193,7 @@ public class ABC extends ContractTemplate {
         }
         Order order = null;
         if(!result.isEmpty()){
-            order = result.toObeject(Order.class);
+            order = result.toObject(Order.class);
         }
 
         if(order.getAmount() < amount + order.getDraftAmount()){
@@ -220,7 +220,7 @@ public class ABC extends ContractTemplate {
 
         Account acceptor = null;
         if(!result.isEmpty()){
-            acceptor = result.toObeject(Account.class);
+            acceptor = result.toObject(Account.class);
         }
 
         result = batch.get(payeeKey);
@@ -231,7 +231,7 @@ public class ABC extends ContractTemplate {
         }
         Account payee = null;
         if(!result.isEmpty()){
-            payee = result.toObeject(Account.class);
+            payee = result.toObject(Account.class);
         }
 
         if(judgeAcceptor(acceptor, draftType)){
@@ -277,7 +277,7 @@ public class ABC extends ContractTemplate {
             return result(false,msg);
         }
 
-        Draft draft = result.toObeject(Draft.class);
+        Draft draft = result.toObject(Draft.class);
 
         logger.info(draft.getDraftNum());
         logger.info(draft.getFirstOwner());
@@ -295,7 +295,7 @@ public class ABC extends ContractTemplate {
 
         result = ledger.get("A1");
         if(!result.isEmpty()){
-            Account account = result.toObeject(Account.class);
+            Account account = result.toObject(Account.class);
             logger.info(account.getAccountNumber());
         }
 
@@ -326,7 +326,7 @@ public class ABC extends ContractTemplate {
         }
         Account replyer = null;
         if(!result.isEmpty()){
-            replyer = result.toObeject(Account.class);
+            replyer = result.toObject(Account.class);
         }
 
         if(!judgeAccountCorrect(replyer,replyerName,replyerBankNum)){
@@ -343,7 +343,7 @@ public class ABC extends ContractTemplate {
             return result(false,msg);
         }
 
-        Draft draft = result.toObeject(Draft.class);
+        Draft draft = result.toObject(Draft.class);
         if(!draft.getDraftStatus().equals("020001")){
             msg = "draft status is not satisfied";
             logger.error(msg);
@@ -363,7 +363,7 @@ public class ABC extends ContractTemplate {
         result = batch.get(orderPrefix+draft.getOrderNum());
         Order order = null;
         if(!result.isEmpty()){
-            order = result.toObeject(Order.class);
+            order = result.toObject(Order.class);
         }
         if(responseType.equals("SU01")){
             draft.setDraftStatus("000002");
@@ -392,7 +392,7 @@ public class ABC extends ContractTemplate {
                 result = batch.get(accountPrefix +draft.getDrawerId());
                 Account account = null;
                 if(!result.isEmpty()){
-                    account = result.toObeject(Account.class);
+                    account = result.toObject(Account.class);
                 }
                 ExecuteResult result1 = receiveDraftApply(draft,account,
                         account.getName(),account.getBusinessBankNum());

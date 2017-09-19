@@ -89,7 +89,7 @@ algo = "PBFT"
 [database]
     type = 0001
     [database.leveldb]
-    path        = "data/leveldb" #leveldb table root dir
+    root_dir    = "data/leveldb" #leveldb table root dir
     log_status  = false
     log_path    = "data/db.log"
 

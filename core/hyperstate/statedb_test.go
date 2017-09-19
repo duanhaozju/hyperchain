@@ -3,11 +3,12 @@ package hyperstate
 import (
 	"testing"
 	//"testing/quick"
+	"bytes"
 	checker "gopkg.in/check.v1"
 	"hyperchain/common"
 	"hyperchain/hyperdb/mdb"
-	"bytes"
 )
+
 type StateDbSuite struct {
 }
 
@@ -37,7 +38,7 @@ func (suite *StateDbSuite) TestGetState(c *checker.C) {
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	state, _ := New(common.Hash{}, db, db, nil, 0, "global")
 	addr := common.BytesToAddress([]byte("address"))
-	key  := common.BytesToHash([]byte("key"))
+	key := common.BytesToHash([]byte("key"))
 	value := []byte("value")
 	state.MarkProcessStart(1)
 	state.CreateAccount(addr)
@@ -48,7 +49,7 @@ func (suite *StateDbSuite) TestGetState(c *checker.C) {
 	state.MarkProcessFinish(1)
 
 	exist, newValue := state.GetState(addr, key)
-	if bytes.Compare(value, newValue) != 0  || exist == false {
+	if bytes.Compare(value, newValue) != 0 || exist == false {
 		c.Error("get state failed")
 	}
 }

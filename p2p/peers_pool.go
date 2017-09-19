@@ -1,61 +1,60 @@
 package p2p
 
 import (
-	"github.com/pkg/errors"
-	"github.com/orcaman/concurrent-map"
-	"hyperchain/p2p/utils"
-	"fmt"
-	"hyperchain/p2p/threadsafe"
 	"encoding/json"
+	"fmt"
 	"github.com/op/go-logging"
+	"github.com/orcaman/concurrent-map"
+	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/manager/event"
+	"hyperchain/p2p/threadsafe"
+	"hyperchain/p2p/utils"
 )
 
 var (
-	_VP_FLAG = "VP"
+	_VP_FLAG  = "VP"
 	_NVP_FLAG = "NVP"
 )
 
 type PeersPool struct {
-	namespace  string
-	vpPool     *threadsafe.Heap
+	namespace string
+	vpPool    *threadsafe.Heap
 	//nvp hasn't id so use map to storage it
-	nvpPool    cmap.ConcurrentMap
+	nvpPool cmap.ConcurrentMap
 	//put the exist peers into this exist
-	existMap   cmap.ConcurrentMap
+	existMap cmap.ConcurrentMap
 	// pending map
 	pendingMap cmap.ConcurrentMap
 	evMux      *event.TypeMux
 	//for configuration persist
-	pts        *PeerTriples
-	peercnf    *peerCnf
+	pts     *PeerTriples
+	peercnf *peerCnf
 
-	logger     *logging.Logger
+	logger *logging.Logger
 }
 
 //NewPeersPool new a peers pool
 func NewPeersPool(namespace string, ev *event.TypeMux, pts *PeerTriples, peercnf *peerCnf) *PeersPool {
 	return &PeersPool{
-		namespace:namespace,
-		vpPool:nil,
-		nvpPool:cmap.New(),
-		pendingMap:cmap.New(),
-		existMap:cmap.New(),
-		evMux:ev,
-		pts: pts,
-		peercnf:peercnf,
-		logger:common.GetLogger(namespace, "p2p"),
+		namespace:  namespace,
+		vpPool:     nil,
+		nvpPool:    cmap.New(),
+		pendingMap: cmap.New(),
+		existMap:   cmap.New(),
+		evMux:      ev,
+		pts:        pts,
+		peercnf:    peercnf,
+		logger:     common.GetLogger(namespace, "p2p"),
 	}
 }
 
-func (pool *PeersPool)Ready() bool {
+func (pool *PeersPool) Ready() bool {
 	return pool.vpPool != nil
 }
 
-
 //AddVPPeer add a peer into peers pool instance
-func (pool *PeersPool)AddVPPeer(id int, p *Peer) error {
+func (pool *PeersPool) AddVPPeer(id int, p *Peer) error {
 	if pool.vpPool == nil {
 		pool.vpPool = threadsafe.NewHeap(p)
 		return nil
@@ -66,7 +65,7 @@ func (pool *PeersPool)AddVPPeer(id int, p *Peer) error {
 	return nil
 }
 
-func (pool *PeersPool)PersistList() error {
+func (pool *PeersPool) PersistList() error {
 	pool.peercnf.Lock()
 	defer pool.peercnf.Unlock()
 	tmppts := NewPeerTriples()
@@ -79,7 +78,7 @@ func (pool *PeersPool)PersistList() error {
 }
 
 //AddNVPPeer add a peer into peers pool instance
-func (pool *PeersPool)AddNVPPeer(hash string, p *Peer) error {
+func (pool *PeersPool) AddNVPPeer(hash string, p *Peer) error {
 	if tipe, ok := pool.existMap.Get(hash); ok {
 		return errors.New(fmt.Sprintf("this peer already in peers pool type: [%s]", tipe.(string)))
 	}
@@ -89,7 +88,7 @@ func (pool *PeersPool)AddNVPPeer(hash string, p *Peer) error {
 }
 
 //GetPeers get all peer list
-func (pool *PeersPool)GetPeers() []*Peer {
+func (pool *PeersPool) GetPeers() []*Peer {
 	list := make([]*Peer, 0)
 	if pool.vpPool == nil {
 		return list
@@ -101,18 +100,18 @@ func (pool *PeersPool)GetPeers() []*Peer {
 	return list
 }
 
-func (pool *PeersPool)MaxID() int{
-	max := 1;
+func (pool *PeersPool) MaxID() int {
+	max := 1
 	l := pool.vpPool.Sort()
 	for _, item := range l {
-		if max < item.(*Peer).info.Id{
+		if max < item.(*Peer).info.Id {
 			max = item.(*Peer).info.Id
 		}
 	}
 	return max
 }
 
-func (pool *PeersPool)GetPeerByHash(hash string) *Peer {
+func (pool *PeersPool) GetPeerByHash(hash string) *Peer {
 	if pool.vpPool == nil {
 		return nil
 	}
@@ -126,7 +125,7 @@ func (pool *PeersPool)GetPeerByHash(hash string) *Peer {
 	return nil
 }
 
-func (pool *PeersPool)GetPeersByHostname(hostname string) (*Peer, bool) {
+func (pool *PeersPool) GetPeersByHostname(hostname string) (*Peer, bool) {
 	if pool.vpPool == nil {
 		return nil, false
 	}
@@ -140,7 +139,7 @@ func (pool *PeersPool)GetPeersByHostname(hostname string) (*Peer, bool) {
 	return nil, false
 }
 
-func (pool *PeersPool)GetNVPByHostname(hostname string) (*Peer, bool) {
+func (pool *PeersPool) GetNVPByHostname(hostname string) (*Peer, bool) {
 	if pool.nvpPool == nil {
 		return nil, false
 	}
@@ -154,7 +153,7 @@ func (pool *PeersPool)GetNVPByHostname(hostname string) (*Peer, bool) {
 	return nil, false
 }
 
-func (pool *PeersPool)GetNVPByHash(hash string) *Peer {
+func (pool *PeersPool) GetNVPByHash(hash string) *Peer {
 	if pool.nvpPool == nil {
 		return nil
 	}
@@ -167,8 +166,9 @@ func (pool *PeersPool)GetNVPByHash(hash string) *Peer {
 	}
 	return nil
 }
+
 //TryDelete the specific hash node
-func (pool *PeersPool)TryDelete(selfHash, delHash string) (routerhash string, selfnewid uint64, deleteid uint64, err error) {
+func (pool *PeersPool) TryDelete(selfHash, delHash string) (routerhash string, selfnewid uint64, deleteid uint64, err error) {
 	pool.logger.Critical("selfhash", selfHash, "delhash", delHash)
 	temppool := pool.vpPool.Duplicate()
 	var delid int
@@ -212,9 +212,8 @@ func (pool *PeersPool)TryDelete(selfHash, delHash string) (routerhash string, se
 
 }
 
-
 //DeleteVPPeer delete a peer from peers pool instance
-func (pool *PeersPool)DeleteVPPeer(id int) error {
+func (pool *PeersPool) DeleteVPPeer(id int) error {
 	if pool.vpPool == nil {
 		return nil
 	}
@@ -231,7 +230,7 @@ func (pool *PeersPool)DeleteVPPeer(id int) error {
 	return nil
 }
 
-func (pool *PeersPool)DeleteVPPeerByHash(hash string) error {
+func (pool *PeersPool) DeleteVPPeerByHash(hash string) error {
 	p := pool.GetPeerByHash(hash)
 	if p != nil {
 		pool.logger.Critical("delete validate peer", p.info.Id)
@@ -242,10 +241,9 @@ func (pool *PeersPool)DeleteVPPeerByHash(hash string) error {
 	return pool.DeleteVPPeer(p.info.Id)
 }
 
-
 //DeleteNVPPeer delete the nvp peer
-func (pool *PeersPool)DeleteNVPPeer(hash string) error {
-	if _,ok := pool.existMap.Get(hash);ok {
+func (pool *PeersPool) DeleteNVPPeer(hash string) error {
+	if _, ok := pool.existMap.Get(hash); ok {
 		pool.existMap.Remove(hash)
 	}
 	if _, ok := pool.nvpPool.Get(hash); ok {
@@ -254,15 +252,15 @@ func (pool *PeersPool)DeleteNVPPeer(hash string) error {
 	return nil
 }
 
-func (pool *PeersPool)GetVPNum() int {
+func (pool *PeersPool) GetVPNum() int {
 	return len(pool.vpPool.Sort())
 }
 
-func (pool *PeersPool)GetNVPNum() int {
+func (pool *PeersPool) GetNVPNum() int {
 	return pool.nvpPool.Count()
 }
 
-func (pool *PeersPool)Serlize() ([]byte, error) {
+func (pool *PeersPool) Serlize() ([]byte, error) {
 	peers := pool.GetPeers()
 	data := make([]string, 0)
 	for _, peer := range peers {

@@ -3,8 +3,8 @@
 package ecies
 
 import (
-	"hyperchain/crypto/primitives"
 	"errors"
+	"hyperchain/crypto/primitives"
 )
 
 type encryptionSchemeImpl struct {

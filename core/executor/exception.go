@@ -2,8 +2,8 @@ package executor
 
 import (
 	"fmt"
-	"hyperchain/manager/event"
 	"hyperchain/manager/appstat"
+	"hyperchain/manager/event"
 )
 
 func NotifyViewChange(helper *Helper, seqNo uint64) {

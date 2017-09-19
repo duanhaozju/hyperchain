@@ -2,8 +2,8 @@ package version1_1
 
 import (
 	"github.com/golang/protobuf/proto"
-	"hyperchain/cmd/dbcli/version/version1.1/types"
 	"hyperchain/cmd/dbcli/constant"
+	"hyperchain/cmd/dbcli/version/version1.1/types"
 	"strconv"
 )
 

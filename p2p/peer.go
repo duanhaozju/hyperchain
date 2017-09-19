@@ -5,16 +5,16 @@ package p2p
 
 import (
 	"encoding/json"
+	"github.com/op/go-logging"
+	"github.com/pkg/errors"
+	"hyperchain/common"
+	"hyperchain/crypto/csprng"
 	"hyperchain/manager/event"
 	"hyperchain/p2p/hts"
 	"hyperchain/p2p/info"
 	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/network"
 	"hyperchain/p2p/payloads"
-	"github.com/pkg/errors"
-	"hyperchain/crypto/csprng"
-	"github.com/op/go-logging"
-	"hyperchain/common"
 )
 
 // init the package-level logger system,
@@ -40,8 +40,8 @@ func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, ne
 		net:       net,
 		local:     localInfo,
 		chts:      chts,
-		p2pHub:         evhub,
-		logger: common.GetLogger(namespace, "p2p"),
+		p2pHub:    evhub,
+		logger:    common.GetLogger(namespace, "p2p"),
 	}
 	if err := peer.clientHello(peer.local.IsOrg(), peer.local.IsRec()); err != nil {
 		return nil, err
@@ -50,10 +50,10 @@ func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, ne
 }
 
 //implements the WeightItem interface
-func (peer *Peer)Weight() int {
+func (peer *Peer) Weight() int {
 	return peer.info.Id
 }
-func (peer *Peer)Value() interface{} {
+func (peer *Peer) Value() interface{} {
 	return peer
 }
 
@@ -187,7 +187,7 @@ func (peer *Peer) clientHello(isOrg, isRec bool) error {
 	  *ClientSignature ==> e sign r sign
 	  *ClientCipher ==> rand
 	  *ClientKeyExchange ==> ignored
-	  */
+	*/
 	data := []byte("hyperchain")
 	esign, err := peer.chts.CG.ESign(data)
 	if err != nil {
@@ -226,16 +226,16 @@ func (peer *Peer) clientHello(isOrg, isRec bool) error {
 
 }
 
-func (peer *Peer)negotiateShareKey(in *pb.Message, rand []byte) error {
+func (peer *Peer) negotiateShareKey(in *pb.Message, rand []byte) error {
 	/*
-	   ^ServerReject
-                or
-            ^ServerHello
-             *ServerCertificate
-	     *ServerSignature
-             *ServerCipherSpec
-             *ServerKeyExchange
-             */
+		   ^ServerReject
+	                or
+	            ^ServerHello
+	             *ServerCertificate
+		     *ServerSignature
+	             *ServerCipherSpec
+	             *ServerKeyExchange
+	*/
 	if in == nil || in.Payload == nil {
 		return errors.New("invalid server return message")
 	}
@@ -276,7 +276,6 @@ Sharekey %s
 	return err
 
 }
-
 
 // handle the double side handshake process,
 // when got a serverhello, this peer should response by clientResponse.

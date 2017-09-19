@@ -1,8 +1,8 @@
 package errors
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 )
 
 type ValueTransferError struct {
@@ -85,16 +85,13 @@ func IsInvalidInvokePermissionErr(e error) bool {
 	return ok
 }
 
-
 /*
 	Constant errors
- */
+*/
 var (
 	InvalidParamsErr = errors.New("invalid params")
 	NoDefinedCaseErr = errors.New("no defined case")
 	EmptyPointerErr  = errors.New("nil pointer")
-	TxIdLenErr = errors.New("tx's id length does not match.")
+	TxIdLenErr       = errors.New("tx's id length does not match.")
 	MarshalFailedErr = errors.New("marshal failed")
 )
-
-

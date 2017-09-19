@@ -31,7 +31,7 @@ public class KvBasedRelationDB implements RelationDB {
     public boolean CreateTable(TableDesc tableDesc) {
         String compositeName = tableDesc.getTableName().getCompositeName();
         LOG.info("tableDesc: " + tableDesc.toJSON());
-        LOG.error("compositeName" + compositeName);
+        LOG.info("compositeName: " + compositeName);
         HashMap schemasMap = getSchemasMap();
         schemasMap.put(compositeName, tableDesc.toJSON());
         Gson gson = new Gson();

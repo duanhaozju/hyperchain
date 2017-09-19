@@ -73,10 +73,10 @@ func (s *Status) getState() NsState {
 
 //namespaceImpl implementation of Namespace
 type namespaceImpl struct {
-	logger    *logging.Logger
+	logger *logging.Logger
 
-	nsInfo    *NamespaceInfo
-	status    *Status
+	nsInfo *NamespaceInfo
+	status *Status
 
 	conf      *common.Config
 	eventMux  *event.TypeMux
@@ -88,9 +88,9 @@ type namespaceImpl struct {
 	peerMgr   p2p.PeerManager
 	executor  *executor.Executor
 
-	rpc       rpc.RequestProcessor
-	restart   bool
-	delFlag   chan bool
+	rpc     rpc.RequestProcessor
+	restart bool
+	delFlag chan bool
 }
 
 func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*namespaceImpl, error) {
@@ -112,13 +112,13 @@ func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*nam
 		return nil, err
 	}
 	ns := &namespaceImpl{
-		nsInfo:   nsInfo,
-		status:   status,
-		conf:     conf,
-		eventMux: new(event.TypeMux),
+		nsInfo:    nsInfo,
+		status:    status,
+		conf:      conf,
+		eventMux:  new(event.TypeMux),
 		filterMux: new(event.TypeMux),
-		restart:  false,
-		delFlag:  delFlag,
+		restart:   false,
+		delFlag:   delFlag,
 	}
 	ns.logger = common.GetLogger(name, "namespace")
 	return ns, nil
@@ -142,15 +142,14 @@ func (ns *namespaceImpl) init() error {
 	}
 	ns.caMgr = cm
 
-
 	peerconf := common.GetPath(ns.Name(), ns.conf.GetString(common.PEER_CONFIG_PATH))
 	if !common.FileExist(peerconf) {
 		panic("cannot find the peer config")
 	}
 
 	//3. init peer manager to start grpc server and client
-	logger.Warning("getPeerManager for",ns.Name())
-	peerMgr, err := p2p.GetPeerManager(ns.Name(),peerconf,ns.eventMux, ns.delFlag)
+	logger.Warning("getPeerManager for", ns.Name())
+	peerMgr, err := p2p.GetPeerManager(ns.Name(), peerconf, ns.eventMux, ns.delFlag)
 	if err != nil {
 		ns.logger.Error(err)
 		return err
@@ -247,7 +246,7 @@ func (ns *namespaceImpl) Start() error {
 	ns.passRouters()
 
 	//6. negotiateView
-	if ns.peerMgr.IsVP(){
+	if ns.peerMgr.IsVP() {
 		ns.negotiateView()
 	}
 
@@ -287,7 +286,7 @@ func (ns *namespaceImpl) Stop() error {
 	//1.stop request processor
 	err := ns.rpc.Stop()
 	if err != nil {
-		 ns.logger.Error(err)
+		ns.logger.Error(err)
 	}
 
 	//2.stop eventhub

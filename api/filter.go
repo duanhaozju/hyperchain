@@ -1,16 +1,16 @@
 package api
 
 import (
+	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"sync"
-	flt "hyperchain/manager/filter"
-	"time"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/core/types"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
-	"hyperchain/core/types"
-	"fmt"
+	flt "hyperchain/manager/filter"
+	"sync"
+	"time"
 )
 
 type PublicFilterAPI struct {
@@ -92,8 +92,8 @@ func (api *PublicFilterAPI) NewBlockSubscription(isVerbose bool) string {
 
 func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string {
 	var (
-		logCh    = make(chan interface{})
-		logSub   = api.events.NewCommonSubscription(logCh, false, flt.LogsSubscription, crit)
+		logCh  = make(chan interface{})
+		logSub = api.events.NewCommonSubscription(logCh, false, flt.LogsSubscription, crit)
 	)
 	api.filtersMu.Lock()
 	api.filters[logSub.ID] = flt.NewFilter(flt.LogsSubscription, logSub, crit)
@@ -123,7 +123,7 @@ func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string
 
 func (api *PublicFilterAPI) NewArchiveSubscription() string {
 	var (
-		ch = make(chan interface{})
+		ch  = make(chan interface{})
 		sub = api.events.NewCommonSubscription(ch, false, flt.ArchiveSubscription, flt.FilterCriteria{})
 	)
 	api.filtersMu.Lock()
@@ -151,8 +151,8 @@ func (api *PublicFilterAPI) NewArchiveSubscription() string {
 
 func (api *PublicFilterAPI) NewSystemStatusSubscription(crit flt.FilterCriteria) string {
 	var (
-		ch     = make(chan interface{})
-		sub   = api.events.NewCommonSubscription(ch, false, flt.SystemStatusSubscription, crit)
+		ch  = make(chan interface{})
+		sub = api.events.NewCommonSubscription(ch, false, flt.SystemStatusSubscription, crit)
 	)
 	api.filtersMu.Lock()
 	api.filters[sub.ID] = flt.NewFilter(flt.SystemStatusSubscription, sub, crit)
@@ -204,7 +204,9 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 				defer f.ClearData()
 				for _, tmp := range hashes {
 					hash, ok := tmp.(common.Hash)
-					if !ok { continue }
+					if !ok {
+						continue
+					}
 					block, err := edb.GetBlock(api.namespace, hash.Bytes())
 					if err != nil {
 						api.log.Warningf("missing block data (#%s)", hash.Hex())

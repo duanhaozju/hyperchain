@@ -297,9 +297,9 @@ func (pool *txPoolImpl) GetOneTxsBack(hash string) error {
 // transactions from the network.
 func newTxPoolImpl(namespace string, poolsize int, queue *event.TypeMux, batchsize int) (*txPoolImpl, error) {
 	txpool := &txPoolImpl{
-		poolSize:     poolsize,
-		queue:        queue,
-		batchSize:    batchsize,
+		poolSize:  poolsize,
+		queue:     queue,
+		batchSize: batchsize,
 	}
 	txpool.txPool = make(map[string]*types.Transaction)
 	txpool.txPoolHash = nil

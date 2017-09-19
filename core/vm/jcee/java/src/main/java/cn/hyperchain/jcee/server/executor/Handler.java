@@ -41,7 +41,7 @@ public class Handler implements IHandler {
     }
 
     @Override
-    public void freeze(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+    public void freeze(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver) {
         ContractProto.Response response;
         String cid = request.getContext().getCid();
         logger.info("System try to freeze contract with id " + cid);
@@ -60,12 +60,16 @@ public class Handler implements IHandler {
                 .setOk(true)
                 .setCodeHash(info.getCodeHash())
                 .build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+
+        ContractProto.Message rspMsg = ContractProto.Message.newBuilder()
+                .setType(ContractProto.Message.Type.RESPONSE)
+                .setPayload(response.toByteString())
+                .build();
+        responseObserver.onNext(rspMsg);
     }
 
     @Override
-    public void unfreeze(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+    public void unfreeze(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver) {
         ContractProto.Response response;
         String cid = request.getContext().getCid();
         logger.info("System try to unfreeze contract with id " + cid);
@@ -82,12 +86,15 @@ public class Handler implements IHandler {
                 .setOk(true)
                 .setCodeHash(info.getCodeHash())
                 .build();
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+        ContractProto.Message rspMsg = ContractProto.Message.newBuilder()
+                .setType(ContractProto.Message.Type.RESPONSE)
+                .setPayload(response.toByteString())
+                .build();
+        responseObserver.onNext(rspMsg);
     }
 
     @Override
-    public void destroy(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+    public void destroy(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver) {
         /**
          * 1.remove the contract object from ContractManager
          */
@@ -106,7 +113,7 @@ public class Handler implements IHandler {
      * @param responseObserver
      */
     @Override
-    public void update(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+    public void update(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver) {
 
         if (checkContractExistence(request, responseObserver)) {
             //1.destroy old contract
@@ -124,7 +131,7 @@ public class Handler implements IHandler {
      * @param responseObserver
      */
     @Override
-    public void invoke(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver){
+    public void invoke(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver){
         ContractProto.Response response = null;
         logger.debug("cid is " + request.getContext().getCid());
         logger.debug("contract is " + cm.getContract(request.getContext().getCid()));
@@ -135,8 +142,11 @@ public class Handler implements IHandler {
         }
         try{
             response = task.call();
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
+            ContractProto.Message rspMsg = ContractProto.Message.newBuilder()
+                    .setType(ContractProto.Message.Type.RESPONSE)
+                    .setPayload(response.toByteString())
+                    .build();
+            responseObserver.onNext(rspMsg);
         }catch (Exception e) {
             logger.error(e);
             Errors.ReturnErrMsg(e.getMessage(), responseObserver);
@@ -150,7 +160,7 @@ public class Handler implements IHandler {
      * @param responseObserver
      */
     @Override
-    public void deploy(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver){
+    public void deploy(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver){
 
         List<ByteString>  args = request.getArgsList();
         if (args == null || args.size() == 0) {
@@ -200,8 +210,11 @@ public class Handler implements IHandler {
             r = ContractProto.Response.newBuilder().setOk(false).setCodeHash(info.getCodeHash()).build();
         }
         if (responseObserver != null) {
-            responseObserver.onNext(r);
-            responseObserver.onCompleted();
+            ContractProto.Message rspMsg = ContractProto.Message.newBuilder()
+                    .setType(ContractProto.Message.Type.RESPONSE)
+                    .setPayload(r.toByteString())
+                    .build();
+            responseObserver.onNext(rspMsg);
         }
     }
 
@@ -306,7 +319,7 @@ public class Handler implements IHandler {
         return HashFunction.computeCodeHash(code);
     }
 
-    public boolean checkContractExistence(ContractProto.Request request, StreamObserver<ContractProto.Response> responseObserver) {
+    public boolean checkContractExistence(ContractProto.Request request, StreamObserver<ContractProto.Message> responseObserver) {
         String cid = request.getContext().getCid();
         logger.info(cid);
         String err;

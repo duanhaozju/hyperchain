@@ -7,19 +7,19 @@ import (
 	"math/big"
 
 	"hyperchain/common"
+	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm/params"
 	"hyperchain/crypto"
 	"os"
-	"hyperchain/core/vm/evm/params"
-	"hyperchain/core/vm"
 )
 
 // Config are the configuration options for the EVM
 type Config struct {
-	Debug                bool
-	EnableJit            bool
-	ForceJit             bool
-	Logger               LogConfig
-	DisableGasMetering   bool
+	Debug              bool
+	EnableJit          bool
+	ForceJit           bool
+	Logger             LogConfig
+	DisableGasMetering bool
 }
 
 // EVM is used to run Ethereum based contracts and will utilise the

@@ -14,6 +14,726 @@ public final class ContractProto {
     registerAllExtensions(
         (com.google.protobuf.ExtensionRegistryLite) registry);
   }
+  public interface MessageOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:Message)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>.Message.Type type = 1;</code>
+     */
+    int getTypeValue();
+    /**
+     * <code>.Message.Type type = 1;</code>
+     */
+    cn.hyperchain.protos.ContractProto.Message.Type getType();
+
+    /**
+     * <code>bytes payload = 2;</code>
+     */
+    com.google.protobuf.ByteString getPayload();
+  }
+  /**
+   * <pre>
+   *Message is the wrapper of specific message
+   * </pre>
+   *
+   * Protobuf type {@code Message}
+   */
+  public  static final class Message extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:Message)
+      MessageOrBuilder {
+    // Use Message.newBuilder() to construct.
+    private Message(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private Message() {
+      type_ = 0;
+      payload_ = com.google.protobuf.ByteString.EMPTY;
+    }
+
+    @java.lang.Override
+    public final com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return com.google.protobuf.UnknownFieldSet.getDefaultInstance();
+    }
+    private Message(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!input.skipField(tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 8: {
+              int rawValue = input.readEnum();
+
+              type_ = rawValue;
+              break;
+            }
+            case 18: {
+
+              payload_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        makeExtensionsImmutable();
+      }
+    }
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Message_descriptor;
+    }
+
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return cn.hyperchain.protos.ContractProto.internal_static_Message_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              cn.hyperchain.protos.ContractProto.Message.class, cn.hyperchain.protos.ContractProto.Message.Builder.class);
+    }
+
+    /**
+     * Protobuf enum {@code Message.Type}
+     */
+    public enum Type
+        implements com.google.protobuf.ProtocolMessageEnum {
+      /**
+       * <code>UNDEFINED = 0;</code>
+       */
+      UNDEFINED(0),
+      /**
+       * <code>REGISTER = 1;</code>
+       */
+      REGISTER(1),
+      /**
+       * <code>TRANSACTION = 2;</code>
+       */
+      TRANSACTION(2),
+      /**
+       * <code>GET = 3;</code>
+       */
+      GET(3),
+      /**
+       * <code>PUT = 4;</code>
+       */
+      PUT(4),
+      /**
+       * <code>DELETE = 5;</code>
+       */
+      DELETE(5),
+      /**
+       * <code>BATCH_READ = 6;</code>
+       */
+      BATCH_READ(6),
+      /**
+       * <code>BATCH_WRITE = 7;</code>
+       */
+      BATCH_WRITE(7),
+      /**
+       * <code>RANGE_QUERY = 8;</code>
+       */
+      RANGE_QUERY(8),
+      /**
+       * <code>POST_EVENT = 9;</code>
+       */
+      POST_EVENT(9),
+      /**
+       * <code>RESPONSE = 10;</code>
+       */
+      RESPONSE(10),
+      /**
+       * <code>HEART_BEAT = 11;</code>
+       */
+      HEART_BEAT(11),
+      UNRECOGNIZED(-1),
+      ;
+
+      /**
+       * <code>UNDEFINED = 0;</code>
+       */
+      public static final int UNDEFINED_VALUE = 0;
+      /**
+       * <code>REGISTER = 1;</code>
+       */
+      public static final int REGISTER_VALUE = 1;
+      /**
+       * <code>TRANSACTION = 2;</code>
+       */
+      public static final int TRANSACTION_VALUE = 2;
+      /**
+       * <code>GET = 3;</code>
+       */
+      public static final int GET_VALUE = 3;
+      /**
+       * <code>PUT = 4;</code>
+       */
+      public static final int PUT_VALUE = 4;
+      /**
+       * <code>DELETE = 5;</code>
+       */
+      public static final int DELETE_VALUE = 5;
+      /**
+       * <code>BATCH_READ = 6;</code>
+       */
+      public static final int BATCH_READ_VALUE = 6;
+      /**
+       * <code>BATCH_WRITE = 7;</code>
+       */
+      public static final int BATCH_WRITE_VALUE = 7;
+      /**
+       * <code>RANGE_QUERY = 8;</code>
+       */
+      public static final int RANGE_QUERY_VALUE = 8;
+      /**
+       * <code>POST_EVENT = 9;</code>
+       */
+      public static final int POST_EVENT_VALUE = 9;
+      /**
+       * <code>RESPONSE = 10;</code>
+       */
+      public static final int RESPONSE_VALUE = 10;
+      /**
+       * <code>HEART_BEAT = 11;</code>
+       */
+      public static final int HEART_BEAT_VALUE = 11;
+
+
+      public final int getNumber() {
+        if (this == UNRECOGNIZED) {
+          throw new java.lang.IllegalArgumentException(
+              "Can't get the number of an unknown enum value.");
+        }
+        return value;
+      }
+
+      /**
+       * @deprecated Use {@link #forNumber(int)} instead.
+       */
+      @java.lang.Deprecated
+      public static Type valueOf(int value) {
+        return forNumber(value);
+      }
+
+      public static Type forNumber(int value) {
+        switch (value) {
+          case 0: return UNDEFINED;
+          case 1: return REGISTER;
+          case 2: return TRANSACTION;
+          case 3: return GET;
+          case 4: return PUT;
+          case 5: return DELETE;
+          case 6: return BATCH_READ;
+          case 7: return BATCH_WRITE;
+          case 8: return RANGE_QUERY;
+          case 9: return POST_EVENT;
+          case 10: return RESPONSE;
+          case 11: return HEART_BEAT;
+          default: return null;
+        }
+      }
+
+      public static com.google.protobuf.Internal.EnumLiteMap<Type>
+          internalGetValueMap() {
+        return internalValueMap;
+      }
+      private static final com.google.protobuf.Internal.EnumLiteMap<
+          Type> internalValueMap =
+            new com.google.protobuf.Internal.EnumLiteMap<Type>() {
+              public Type findValueByNumber(int number) {
+                return Type.forNumber(number);
+              }
+            };
+
+      public final com.google.protobuf.Descriptors.EnumValueDescriptor
+          getValueDescriptor() {
+        return getDescriptor().getValues().get(ordinal());
+      }
+      public final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptorForType() {
+        return getDescriptor();
+      }
+      public static final com.google.protobuf.Descriptors.EnumDescriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.Message.getDescriptor().getEnumTypes().get(0);
+      }
+
+      private static final Type[] VALUES = values();
+
+      public static Type valueOf(
+          com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+        if (desc.getType() != getDescriptor()) {
+          throw new java.lang.IllegalArgumentException(
+            "EnumValueDescriptor is not for this type.");
+        }
+        if (desc.getIndex() == -1) {
+          return UNRECOGNIZED;
+        }
+        return VALUES[desc.getIndex()];
+      }
+
+      private final int value;
+
+      private Type(int value) {
+        this.value = value;
+      }
+
+      // @@protoc_insertion_point(enum_scope:Message.Type)
+    }
+
+    public static final int TYPE_FIELD_NUMBER = 1;
+    private int type_;
+    /**
+     * <code>.Message.Type type = 1;</code>
+     */
+    public int getTypeValue() {
+      return type_;
+    }
+    /**
+     * <code>.Message.Type type = 1;</code>
+     */
+    public cn.hyperchain.protos.ContractProto.Message.Type getType() {
+      cn.hyperchain.protos.ContractProto.Message.Type result = cn.hyperchain.protos.ContractProto.Message.Type.valueOf(type_);
+      return result == null ? cn.hyperchain.protos.ContractProto.Message.Type.UNRECOGNIZED : result;
+    }
+
+    public static final int PAYLOAD_FIELD_NUMBER = 2;
+    private com.google.protobuf.ByteString payload_;
+    /**
+     * <code>bytes payload = 2;</code>
+     */
+    public com.google.protobuf.ByteString getPayload() {
+      return payload_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (type_ != cn.hyperchain.protos.ContractProto.Message.Type.UNDEFINED.getNumber()) {
+        output.writeEnum(1, type_);
+      }
+      if (!payload_.isEmpty()) {
+        output.writeBytes(2, payload_);
+      }
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (type_ != cn.hyperchain.protos.ContractProto.Message.Type.UNDEFINED.getNumber()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeEnumSize(1, type_);
+      }
+      if (!payload_.isEmpty()) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, payload_);
+      }
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof cn.hyperchain.protos.ContractProto.Message)) {
+        return super.equals(obj);
+      }
+      cn.hyperchain.protos.ContractProto.Message other = (cn.hyperchain.protos.ContractProto.Message) obj;
+
+      boolean result = true;
+      result = result && type_ == other.type_;
+      result = result && getPayload()
+          .equals(other.getPayload());
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + TYPE_FIELD_NUMBER;
+      hash = (53 * hash) + type_;
+      hash = (37 * hash) + PAYLOAD_FIELD_NUMBER;
+      hash = (53 * hash) + getPayload().hashCode();
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Message parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Message parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Message parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static cn.hyperchain.protos.ContractProto.Message parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Message parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Message parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Message parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Message parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static cn.hyperchain.protos.ContractProto.Message parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static cn.hyperchain.protos.ContractProto.Message parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(cn.hyperchain.protos.ContractProto.Message prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     *Message is the wrapper of specific message
+     * </pre>
+     *
+     * Protobuf type {@code Message}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:Message)
+        cn.hyperchain.protos.ContractProto.MessageOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Message_descriptor;
+      }
+
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Message_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                cn.hyperchain.protos.ContractProto.Message.class, cn.hyperchain.protos.ContractProto.Message.Builder.class);
+      }
+
+      // Construct using cn.hyperchain.protos.ContractProto.Message.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        type_ = 0;
+
+        payload_ = com.google.protobuf.ByteString.EMPTY;
+
+        return this;
+      }
+
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return cn.hyperchain.protos.ContractProto.internal_static_Message_descriptor;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Message getDefaultInstanceForType() {
+        return cn.hyperchain.protos.ContractProto.Message.getDefaultInstance();
+      }
+
+      public cn.hyperchain.protos.ContractProto.Message build() {
+        cn.hyperchain.protos.ContractProto.Message result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public cn.hyperchain.protos.ContractProto.Message buildPartial() {
+        cn.hyperchain.protos.ContractProto.Message result = new cn.hyperchain.protos.ContractProto.Message(this);
+        result.type_ = type_;
+        result.payload_ = payload_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof cn.hyperchain.protos.ContractProto.Message) {
+          return mergeFrom((cn.hyperchain.protos.ContractProto.Message)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(cn.hyperchain.protos.ContractProto.Message other) {
+        if (other == cn.hyperchain.protos.ContractProto.Message.getDefaultInstance()) return this;
+        if (other.type_ != 0) {
+          setTypeValue(other.getTypeValue());
+        }
+        if (other.getPayload() != com.google.protobuf.ByteString.EMPTY) {
+          setPayload(other.getPayload());
+        }
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        cn.hyperchain.protos.ContractProto.Message parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (cn.hyperchain.protos.ContractProto.Message) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+
+      private int type_ = 0;
+      /**
+       * <code>.Message.Type type = 1;</code>
+       */
+      public int getTypeValue() {
+        return type_;
+      }
+      /**
+       * <code>.Message.Type type = 1;</code>
+       */
+      public Builder setTypeValue(int value) {
+        type_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>.Message.Type type = 1;</code>
+       */
+      public cn.hyperchain.protos.ContractProto.Message.Type getType() {
+        cn.hyperchain.protos.ContractProto.Message.Type result = cn.hyperchain.protos.ContractProto.Message.Type.valueOf(type_);
+        return result == null ? cn.hyperchain.protos.ContractProto.Message.Type.UNRECOGNIZED : result;
+      }
+      /**
+       * <code>.Message.Type type = 1;</code>
+       */
+      public Builder setType(cn.hyperchain.protos.ContractProto.Message.Type value) {
+        if (value == null) {
+          throw new NullPointerException();
+        }
+        
+        type_ = value.getNumber();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>.Message.Type type = 1;</code>
+       */
+      public Builder clearType() {
+        
+        type_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.ByteString payload_ = com.google.protobuf.ByteString.EMPTY;
+      /**
+       * <code>bytes payload = 2;</code>
+       */
+      public com.google.protobuf.ByteString getPayload() {
+        return payload_;
+      }
+      /**
+       * <code>bytes payload = 2;</code>
+       */
+      public Builder setPayload(com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  
+        payload_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>bytes payload = 2;</code>
+       */
+      public Builder clearPayload() {
+        
+        payload_ = getDefaultInstance().getPayload();
+        onChanged();
+        return this;
+      }
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return this;
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:Message)
+    }
+
+    // @@protoc_insertion_point(class_scope:Message)
+    private static final cn.hyperchain.protos.ContractProto.Message DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new cn.hyperchain.protos.ContractProto.Message();
+    }
+
+    public static cn.hyperchain.protos.ContractProto.Message getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<Message>
+        PARSER = new com.google.protobuf.AbstractParser<Message>() {
+      public Message parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+          return new Message(input, extensionRegistry);
+      }
+    };
+
+    public static com.google.protobuf.Parser<Message> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<Message> getParserForType() {
+      return PARSER;
+    }
+
+    public cn.hyperchain.protos.ContractProto.Message getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   public interface RequestOrBuilder extends
       // @@protoc_insertion_point(interface_extends:Request)
       com.google.protobuf.MessageOrBuilder {
@@ -9088,6 +9808,11 @@ public final class ContractProto {
   }
 
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_Message_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_Message_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_Request_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -9156,36 +9881,43 @@ public final class ContractProto {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\016contract.proto\"I\n\007Request\022 \n\007context\030\001" +
-      " \001(\0132\017.RequestContext\022\016\n\006method\030\002 \001(\t\022\014\n" +
-      "\004args\030\003 \003(\014\"8\n\010Response\022\n\n\002ok\030\001 \001(\010\022\016\n\006r" +
-      "esult\030\002 \001(\014\022\020\n\010codeHash\030\003 \001(\t\"d\n\016Request" +
-      "Context\022\014\n\004txid\030\001 \001(\t\022\021\n\tnamespace\030\002 \001(\t" +
-      "\022\013\n\003cid\030\003 \001(\t\022\017\n\007invoker\030\004 \001(\t\022\023\n\013blockN" +
-      "umber\030\005 \001(\004\"F\n\005Event\022\037\n\007context\030\001 \001(\0132\016." +
-      "LedgerContext\022\016\n\006topics\030\002 \003(\014\022\014\n\004body\030\003 " +
-      "\001(\014\"1\n\003Key\022\037\n\007context\030\001 \001(\0132\016.LedgerCont" +
-      "ext\022\t\n\001k\030\002 \001(\014\"6\n\010BatchKey\022\037\n\007context\030\001 ",
-      "\001(\0132\016.LedgerContext\022\t\n\001k\030\002 \003(\014\"3\n\tBathVa" +
-      "lue\022\n\n\002id\030\001 \001(\t\022\017\n\007hasMore\030\002 \001(\010\022\t\n\001v\030\003 " +
-      "\003(\014\"A\n\007BatchKV\022\037\n\007context\030\001 \001(\0132\016.Ledger" +
-      "Context\022\025\n\002kv\030\002 \003(\0132\t.KeyValue\"D\n\005Range\022" +
-      "\037\n\007context\030\001 \001(\0132\016.LedgerContext\022\r\n\005star" +
-      "t\030\002 \001(\014\022\013\n\003end\030\003 \001(\014\"\036\n\005Value\022\n\n\002id\030\001 \001(" +
-      "\t\022\t\n\001v\030\002 \001(\014\"A\n\010KeyValue\022\037\n\007context\030\001 \001(" +
-      "\0132\016.LedgerContext\022\t\n\001k\030\002 \001(\014\022\t\n\001v\030\003 \001(\014\"" +
-      "R\n\rLedgerContext\022\014\n\004txid\030\001 \001(\t\022\021\n\tnamesp" +
-      "ace\030\002 \001(\t\022\013\n\003cid\030\003 \001(\t\022\023\n\013blockNumber\030\004 ",
-      "\001(\0042P\n\010Contract\022 \n\007Execute\022\010.Request\032\t.R" +
-      "esponse\"\000\022\"\n\tHeartBeat\022\010.Request\032\t.Respo" +
-      "nse\"\0002\351\001\n\006Ledger\022\025\n\003Get\022\004.Key\032\006.Value\"\000\022" +
-      "\035\n\003Put\022\t.KeyValue\032\t.Response\"\000\022\033\n\006Delete" +
-      "\022\004.Key\032\t.Response\"\000\022$\n\tBatchRead\022\t.Batch" +
-      "Key\032\n.BathValue\"\000\022#\n\nBatchWrite\022\010.BatchK" +
-      "V\032\t.Response\"\000\022$\n\nRangeQuery\022\006.Range\032\n.B" +
-      "athValue\"\0000\001\022\033\n\004Post\022\006.Event\032\t.Response\"" +
-      "\000B\'\n\024cn.hyperchain.protosB\rContractProto" +
-      "P\000b\006proto3"
+      "\n\016contract.proto\"\354\001\n\007Message\022\033\n\004type\030\001 \001" +
+      "(\0162\r.Message.Type\022\017\n\007payload\030\002 \001(\014\"\262\001\n\004T" +
+      "ype\022\r\n\tUNDEFINED\020\000\022\014\n\010REGISTER\020\001\022\017\n\013TRAN" +
+      "SACTION\020\002\022\007\n\003GET\020\003\022\007\n\003PUT\020\004\022\n\n\006DELETE\020\005\022" +
+      "\016\n\nBATCH_READ\020\006\022\017\n\013BATCH_WRITE\020\007\022\017\n\013RANG" +
+      "E_QUERY\020\010\022\016\n\nPOST_EVENT\020\t\022\014\n\010RESPONSE\020\n\022" +
+      "\016\n\nHEART_BEAT\020\013\"I\n\007Request\022 \n\007context\030\001 " +
+      "\001(\0132\017.RequestContext\022\016\n\006method\030\002 \001(\t\022\014\n\004" +
+      "args\030\003 \003(\014\"8\n\010Response\022\n\n\002ok\030\001 \001(\010\022\016\n\006re" +
+      "sult\030\002 \001(\014\022\020\n\010codeHash\030\003 \001(\t\"d\n\016RequestC",
+      "ontext\022\014\n\004txid\030\001 \001(\t\022\021\n\tnamespace\030\002 \001(\t\022" +
+      "\013\n\003cid\030\003 \001(\t\022\017\n\007invoker\030\004 \001(\t\022\023\n\013blockNu" +
+      "mber\030\005 \001(\004\"F\n\005Event\022\037\n\007context\030\001 \001(\0132\016.L" +
+      "edgerContext\022\016\n\006topics\030\002 \003(\014\022\014\n\004body\030\003 \001" +
+      "(\014\"1\n\003Key\022\037\n\007context\030\001 \001(\0132\016.LedgerConte" +
+      "xt\022\t\n\001k\030\002 \001(\014\"6\n\010BatchKey\022\037\n\007context\030\001 \001" +
+      "(\0132\016.LedgerContext\022\t\n\001k\030\002 \003(\014\"3\n\tBathVal" +
+      "ue\022\n\n\002id\030\001 \001(\t\022\017\n\007hasMore\030\002 \001(\010\022\t\n\001v\030\003 \003" +
+      "(\014\"A\n\007BatchKV\022\037\n\007context\030\001 \001(\0132\016.LedgerC" +
+      "ontext\022\025\n\002kv\030\002 \003(\0132\t.KeyValue\"D\n\005Range\022\037",
+      "\n\007context\030\001 \001(\0132\016.LedgerContext\022\r\n\005start" +
+      "\030\002 \001(\014\022\013\n\003end\030\003 \001(\014\"\036\n\005Value\022\n\n\002id\030\001 \001(\t" +
+      "\022\t\n\001v\030\002 \001(\014\"A\n\010KeyValue\022\037\n\007context\030\001 \001(\013" +
+      "2\016.LedgerContext\022\t\n\001k\030\002 \001(\014\022\t\n\001v\030\003 \001(\014\"R" +
+      "\n\rLedgerContext\022\014\n\004txid\030\001 \001(\t\022\021\n\tnamespa" +
+      "ce\030\002 \001(\t\022\013\n\003cid\030\003 \001(\t\022\023\n\013blockNumber\030\004 \001" +
+      "(\0042T\n\010Contract\022\"\n\tHeartBeat\022\010.Request\032\t." +
+      "Response\"\000\022$\n\010Register\022\010.Message\032\010.Messa" +
+      "ge\"\000(\0010\0012\217\002\n\006Ledger\022\025\n\003Get\022\004.Key\032\006.Value" +
+      "\"\000\022\035\n\003Put\022\t.KeyValue\032\t.Response\"\000\022\033\n\006Del",
+      "ete\022\004.Key\032\t.Response\"\000\022$\n\tBatchRead\022\t.Ba" +
+      "tchKey\032\n.BathValue\"\000\022#\n\nBatchWrite\022\010.Bat" +
+      "chKV\032\t.Response\"\000\022$\n\nRangeQuery\022\006.Range\032" +
+      "\n.BathValue\"\0000\001\022\033\n\004Post\022\006.Event\032\t.Respon" +
+      "se\"\000\022$\n\010Register\022\010.Message\032\010.Message\"\000(\001" +
+      "0\001B\'\n\024cn.hyperchain.protosB\rContractProt" +
+      "oP\000b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -9199,74 +9931,80 @@ public final class ContractProto {
       .internalBuildGeneratedFileFrom(descriptorData,
         new com.google.protobuf.Descriptors.FileDescriptor[] {
         }, assigner);
-    internal_static_Request_descriptor =
+    internal_static_Message_descriptor =
       getDescriptor().getMessageTypes().get(0);
+    internal_static_Message_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_Message_descriptor,
+        new java.lang.String[] { "Type", "Payload", });
+    internal_static_Request_descriptor =
+      getDescriptor().getMessageTypes().get(1);
     internal_static_Request_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Request_descriptor,
         new java.lang.String[] { "Context", "Method", "Args", });
     internal_static_Response_descriptor =
-      getDescriptor().getMessageTypes().get(1);
+      getDescriptor().getMessageTypes().get(2);
     internal_static_Response_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Response_descriptor,
         new java.lang.String[] { "Ok", "Result", "CodeHash", });
     internal_static_RequestContext_descriptor =
-      getDescriptor().getMessageTypes().get(2);
+      getDescriptor().getMessageTypes().get(3);
     internal_static_RequestContext_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_RequestContext_descriptor,
         new java.lang.String[] { "Txid", "Namespace", "Cid", "Invoker", "BlockNumber", });
     internal_static_Event_descriptor =
-      getDescriptor().getMessageTypes().get(3);
+      getDescriptor().getMessageTypes().get(4);
     internal_static_Event_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Event_descriptor,
         new java.lang.String[] { "Context", "Topics", "Body", });
     internal_static_Key_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(5);
     internal_static_Key_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Key_descriptor,
         new java.lang.String[] { "Context", "K", });
     internal_static_BatchKey_descriptor =
-      getDescriptor().getMessageTypes().get(5);
+      getDescriptor().getMessageTypes().get(6);
     internal_static_BatchKey_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_BatchKey_descriptor,
         new java.lang.String[] { "Context", "K", });
     internal_static_BathValue_descriptor =
-      getDescriptor().getMessageTypes().get(6);
+      getDescriptor().getMessageTypes().get(7);
     internal_static_BathValue_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_BathValue_descriptor,
         new java.lang.String[] { "Id", "HasMore", "V", });
     internal_static_BatchKV_descriptor =
-      getDescriptor().getMessageTypes().get(7);
+      getDescriptor().getMessageTypes().get(8);
     internal_static_BatchKV_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_BatchKV_descriptor,
         new java.lang.String[] { "Context", "Kv", });
     internal_static_Range_descriptor =
-      getDescriptor().getMessageTypes().get(8);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_Range_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Range_descriptor,
         new java.lang.String[] { "Context", "Start", "End", });
     internal_static_Value_descriptor =
-      getDescriptor().getMessageTypes().get(9);
+      getDescriptor().getMessageTypes().get(10);
     internal_static_Value_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_Value_descriptor,
         new java.lang.String[] { "Id", "V", });
     internal_static_KeyValue_descriptor =
-      getDescriptor().getMessageTypes().get(10);
+      getDescriptor().getMessageTypes().get(11);
     internal_static_KeyValue_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_KeyValue_descriptor,
         new java.lang.String[] { "Context", "K", "V", });
     internal_static_LedgerContext_descriptor =
-      getDescriptor().getMessageTypes().get(11);
+      getDescriptor().getMessageTypes().get(12);
     internal_static_LedgerContext_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_LedgerContext_descriptor,

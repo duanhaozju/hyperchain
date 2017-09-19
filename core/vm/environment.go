@@ -1,10 +1,10 @@
 package vm
 
 import (
-	"math/big"
-	"hyperchain/common"
 	"github.com/op/go-logging"
+	"hyperchain/common"
 	"hyperchain/core/types"
+	"math/big"
 )
 
 type Type byte
@@ -76,4 +76,3 @@ type Environment interface {
 	// Create a new contract
 	Create(me ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error)
 }
-

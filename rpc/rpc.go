@@ -1,17 +1,17 @@
 package jsonrpc
 
 import (
-	"hyperchain/namespace"
-	"sync"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/ipc"
+	"hyperchain/namespace"
+	"sync"
 )
 
 var (
-	once         sync.Once
-        log 	     *logging.Logger // package-level logger
-	rpcs 	     RPCServer
+	once sync.Once
+	log  *logging.Logger // package-level logger
+	rpcs RPCServer
 )
 
 type RPCServer interface {
@@ -33,7 +33,6 @@ type RPCServer interface {
 	StopWSServer() error
 	//Restart websocket server
 	RestartWSServer() error
-
 }
 
 type internalRPCServer interface {
@@ -50,8 +49,8 @@ type internalRPCServer interface {
 }
 
 type RPCServerImpl struct {
-	httpServer  internalRPCServer
-	wsServer    internalRPCServer
+	httpServer internalRPCServer
+	wsServer   internalRPCServer
 }
 
 func GetRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) RPCServer {
@@ -62,17 +61,17 @@ func GetRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp cha
 	return rpcs
 }
 
-func newRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) *RPCServerImpl{
+func newRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) *RPCServerImpl {
 	rsi := &RPCServerImpl{}
 	rsi.httpServer = GetHttpServer(nr, stopHp, restartHp)
-	rsi.wsServer   = GetWSServer(nr, stopHp, restartHp)
+	rsi.wsServer = GetWSServer(nr, stopHp, restartHp)
 
 	ipc.RegisterFunc("service", rsi.Command)
 	return rsi
 }
 
 // Start startup all rpc server.
-func (rsi *RPCServerImpl) Start() error{
+func (rsi *RPCServerImpl) Start() error {
 
 	// start http server
 	if err := rsi.httpServer.start(); err != nil {

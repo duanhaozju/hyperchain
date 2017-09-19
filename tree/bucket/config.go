@@ -21,7 +21,6 @@ const ConfigBucketCacheMaxSize = "bucketCacheMaxSize"
 // ConfigDataNodeCacheMaxSize - config name 'dataNodeCacheMaxSize' as it appears in yaml file
 const ConfigDataNodeCacheMaxSize = "dataNodeCacheMaxSize"
 
-
 // DefaultNumBuckets - total buckets
 const DefaultNumBuckets = 19
 
@@ -34,7 +33,6 @@ const DefaultBucketCacheMaxSize = 20
 
 // DefaultDataNodeCacheMaxSize - the cache of dataNodes
 const DefaultDataNodesCacheMaxSize = 40
-
 
 var conf *config
 
@@ -75,13 +73,13 @@ func initConfig(log *logging.Logger, configs map[string]interface{}) {
 		dataNodeCacheMaxSize = DefaultDataNodesCacheMaxSize
 	}
 
-	conf = newConfig(numBuckets, maxGroupingAtEachLevel, hashFunction,bucketCacheMaxSize,dataNodeCacheMaxSize)
+	conf = newConfig(numBuckets, maxGroupingAtEachLevel, hashFunction, bucketCacheMaxSize, dataNodeCacheMaxSize)
 	log.Infof("Initializing bucket tree state implemetation with configurations %+v", conf)
 }
 
-func newConfig(numBuckets int, maxGroupingAtEachLevel int, hashFunc hashFunc,bucketCacheMaxSize,dataNodeCacheMaxSize int) *config {
-	conf := &config{ maxGroupingAtEachLevel, -1, make(map[int]int), hashFunc,
-		bucketCacheMaxSize, dataNodeCacheMaxSize }
+func newConfig(numBuckets int, maxGroupingAtEachLevel int, hashFunc hashFunc, bucketCacheMaxSize, dataNodeCacheMaxSize int) *config {
+	conf := &config{maxGroupingAtEachLevel, -1, make(map[int]int), hashFunc,
+		bucketCacheMaxSize, dataNodeCacheMaxSize}
 	currentLevel := 0
 	numBucketAtCurrentLevel := numBuckets
 	levelInfoMap := make(map[int]int)

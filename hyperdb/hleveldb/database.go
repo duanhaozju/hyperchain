@@ -9,12 +9,8 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"hyperchain/common"
+	hcom "hyperchain/hyperdb/common"
 	"hyperchain/hyperdb/db"
-	pa "path/filepath"
-)
-
-const (
-	LEVEL_DB_PATH = "database.leveldb.path"
 )
 
 // the Database for LevelDB
@@ -35,10 +31,7 @@ type LDBDatabase struct {
 // DB can be recovered with Recover function.
 // the return *LDBDatabase is goruntine-safe
 // the LDBDataBase instance must be close after use, by calling Close method
-func NewLDBDataBase(conf *common.Config,filepath string, namespace string) (*LDBDatabase, error) {
-	if conf!=nil {
-		filepath= pa.Join(common.GetPath(namespace, conf.GetString(LEVEL_DB_PATH)), filepath)
-	}
+func NewLDBDataBase(conf *common.Config, filepath string, namespace string) (*LDBDatabase, error) {
 	db, err := leveldb.OpenFile(filepath, nil)
 	t := db.NewIterator(nil, nil)
 	t.Last()
@@ -50,7 +43,7 @@ func NewLDBDataBase(conf *common.Config,filepath string, namespace string) (*LDB
 	}, err
 }
 
-func NewRawLDBDatabase(db *leveldb.DB, namespace string) (*LDBDatabase){
+func NewRawLDBDatabase(db *leveldb.DB, namespace string) *LDBDatabase {
 	return &LDBDatabase{
 		db:        db,
 		namespace: namespace,
@@ -58,7 +51,7 @@ func NewRawLDBDatabase(db *leveldb.DB, namespace string) (*LDBDatabase){
 }
 
 func LDBDataBasePath(conf *common.Config) string {
-	return conf.GetString(LEVEL_DB_PATH)
+	return conf.GetString(hcom.LEVEL_DB_ROOT_DIR)
 }
 
 // Put sets value for the given key, if the key exists, it will overwrite
@@ -71,8 +64,8 @@ func (self *LDBDatabase) Put(key []byte, value []byte) error {
 // the Database does not contains the key
 func (self *LDBDatabase) Get(key []byte) ([]byte, error) {
 	dat, err := self.db.Get(key, nil)
-	if err==leveldb.ErrNotFound{
-		err=db.DB_NOT_FOUND
+	if err == leveldb.ErrNotFound {
+		err = db.DB_NOT_FOUND
 	}
 	return dat, err
 }

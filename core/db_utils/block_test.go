@@ -1,13 +1,13 @@
 package db_utils
 
 import (
-	"testing"
-	"reflect"
-	"hyperchain/hyperdb/mdb"
-	"hyperchain/core/test_util"
 	"bytes"
-	"hyperchain/core/types"
 	"hyperchain/common"
+	"hyperchain/core/test_util"
+	"hyperchain/core/types"
+	"hyperchain/hyperdb/mdb"
+	"reflect"
+	"testing"
 )
 
 func TestGetBlock(t *testing.T) {
@@ -93,4 +93,3 @@ func TestDeleteBlock(t *testing.T) {
 		t.Error("expect deletion success")
 	}
 }
-

@@ -76,7 +76,8 @@ public class ContractTemplate {
         } catch (IllegalAccessException e) {
             logger.error(e.getMessage());
         } catch (InvocationTargetException e) {
-            logger.error(e.getMessage());
+            logger.error("Invoke function name is " + funcName);
+            logger.error(e);
         } catch (Exception e) {
             logger.error(e.getMessage());
         }

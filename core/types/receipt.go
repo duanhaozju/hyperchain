@@ -1,9 +1,9 @@
 package types
 
 import (
+	"github.com/willf/bloom"
 	"hyperchain/common"
 	"math/big"
-	"github.com/willf/bloom"
 )
 
 //// ReceiptTrans are used to show in web.
@@ -63,7 +63,7 @@ func (r *Receipt) SetLogs(logs Logs) error {
 }
 
 func CreateBloom(receipts []*Receipt) ([]byte, error) {
-	bloom := bloom.New(256 * 8, 3)
+	bloom := bloom.New(256*8, 3)
 
 	for _, r := range receipts {
 		logs, err := r.RetrieveLogs()
@@ -81,7 +81,7 @@ func CreateBloom(receipts []*Receipt) ([]byte, error) {
 }
 
 func (r *Receipt) BloomFilter() (error, *bloom.BloomFilter) {
-	bloom := bloom.New(256 * 8, 3)
+	bloom := bloom.New(256*8, 3)
 	if err := bloom.GobDecode(r.GetBloom()); err != nil {
 		return err, nil
 	}

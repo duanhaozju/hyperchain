@@ -25,7 +25,7 @@ var (
 	config     *common.Config
 	ns         string   = common.DEFAULT_NAMESPACE
 	globalconf string   = "../../configuration/namespaces/global/config/namespace.toml"
-	dbList     []string = []string{"Archive", "blockchain", "Consensus", "namespaces"}
+	dbList     []string = []string{"Archive", "blockchain", "consensus", "namespaces"}
 )
 
 // Run once when the suite starts running.

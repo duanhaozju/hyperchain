@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"hyperchain/common"
-	"hyperchain/p2p/transport"
+	"hyperchain/p2p/hts/secimpl"
 	"io/ioutil"
 	"strconv"
 	"time"
@@ -22,7 +22,7 @@ func GenerateLicense() {
 	idSuffix := string("Hyperchain")
 	date := time.Date(*year, time.Month(*month), *day, 0, 0, 0, 0, time.UTC)
 	timestamp := date.Unix()
-	id, err := transport.TripleDesEncrypt([]byte(strconv.FormatInt(timestamp, 10)+idSuffix), []byte(privateKey))
+	id, err := secimpl.TripleDesEncrypt8([]byte(strconv.FormatInt(timestamp, 10)+idSuffix), []byte(privateKey))
 	if err != nil {
 		fmt.Println("####################  Generate License Failed ###################")
 		fmt.Println(err)
@@ -35,7 +35,6 @@ func GenerateLicense() {
 		return
 	}
 	ctx := "\n\t12. Identification: " + string(common.Bytes2Hex(id))
-	fmt.Println("getsss", ctx)
 	ioutil.WriteFile(*path+"LICENSE", []byte(string(licenseTemplate)+ctx), 0644)
 	fmt.Println("####################  Generate License Success ###################")
 	fmt.Println("   Arguments:")

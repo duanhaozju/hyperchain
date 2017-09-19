@@ -7,13 +7,12 @@ import (
 	"math/big"
 
 	"hyperchain/common"
-	"hyperchain/crypto"
-	"hyperchain/core/vm/evm/params"
+	cm "hyperchain/core/common"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
-	cm "hyperchain/core/common"
+	"hyperchain/core/vm/evm/params"
+	"hyperchain/crypto"
 )
-
 
 type programInstruction interface {
 	// executes the program instruction and allows the instruction to modify the state of the program

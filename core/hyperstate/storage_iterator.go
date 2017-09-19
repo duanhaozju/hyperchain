@@ -30,9 +30,9 @@ func NewMemIterator(kvs Storage) *MemIterator {
 	}
 	sort.Sort(key)
 	return &MemIterator{
-		cache:      cache,
-		cacheKeys:  key,
-		index:      -1,
+		cache:     cache,
+		cacheKeys: key,
+		index:     -1,
 	}
 }
 
@@ -102,7 +102,7 @@ type StorageIterator struct {
 //
 func NewStorageIterator(obj *StateObject, start, limit *common.Hash) *StorageIterator {
 	var (
-		cache      Storage  = make(Storage)
+		cache      Storage = make(Storage)
 		startBytes []byte
 		limitBytes []byte
 	)
@@ -128,10 +128,10 @@ func NewStorageIterator(obj *StateObject, start, limit *common.Hash) *StorageIte
 		dbIter = obj.db.db.Scan(CompositeStorageKey(obj.address.Bytes(), startBytes), CompositeStorageKey(obj.address.Bytes(), limitBytes))
 	}
 	return &StorageIterator{
-		memIter:   memIter,
-		addr:      obj.address,
-		dbIter:    dbIter,
-		first:     true,
+		memIter: memIter,
+		addr:    obj.address,
+		dbIter:  dbIter,
+		first:   true,
 	}
 }
 

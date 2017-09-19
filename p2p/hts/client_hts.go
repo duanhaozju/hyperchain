@@ -19,9 +19,9 @@ type ClientHTS struct {
 
 func NewClientHTS(sec Security, cg *CertGroup) (*ClientHTS, error) {
 	chts := &ClientHTS{
-		security:sec,
-		CG:cg,
-		rwlock:new(sync.RWMutex),
+		security: sec,
+		CG:       cg,
+		rwlock:   new(sync.RWMutex),
 	}
 	chts.priKey = cg.eCERTPriv
 	chts.priKey_s = cg.eCERTPriv_S
@@ -32,7 +32,7 @@ func (ch *ClientHTS) VerifySign(sign, data, rawcert []byte) (bool, error) {
 	return ch.security.VerifySign(sign, data, rawcert)
 }
 
-func (ch *ClientHTS)GenShareKey(rand, rawcert []byte) error {
+func (ch *ClientHTS) GenShareKey(rand, rawcert []byte) error {
 	sk, err := ch.security.GenerateShareKey(ch.priKey, rand, rawcert)
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (ch *ClientHTS)GenShareKey(rand, rawcert []byte) error {
 func (ch *ClientHTS) Encrypt(msg []byte) ([]byte, error) {
 	ch.rwlock.RLock()
 	defer ch.rwlock.RUnlock()
-	if ch.sessionKey == nil{
+	if ch.sessionKey == nil {
 		return nil, errors.New("cannot get session Key,enc failed (nil).")
 	}
 	sKey := ch.sessionKey.GetKey()
@@ -74,7 +74,7 @@ func (ch *ClientHTS) Decrypt(msg []byte) ([]byte, error) {
 	return b, e
 }
 
-func (ch *ClientHTS)GetSK() []byte {
+func (ch *ClientHTS) GetSK() []byte {
 	ch.rwlock.RLock()
 	defer ch.rwlock.RUnlock()
 	return ch.sessionKey.GetKey()

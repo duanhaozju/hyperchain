@@ -3,11 +3,11 @@
 package mdb
 
 import (
+	"bytes"
 	"errors"
+	"hyperchain/common"
 	"hyperchain/hyperdb/db"
 	"sync"
-	"hyperchain/common"
-	"bytes"
 )
 
 //CopyBytes Copy and return []byte.

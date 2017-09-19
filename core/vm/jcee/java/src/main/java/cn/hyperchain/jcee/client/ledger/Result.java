@@ -67,7 +67,7 @@ public class Result {
         return value.toStringUtf8();
     }
 
-    public <T> T toObeject(Class<T> clazz) {
+    public <T> T toObject(Class<T> clazz) {
         if (this.isEmpty()) {
             throw new ResultNotExistException();
         }

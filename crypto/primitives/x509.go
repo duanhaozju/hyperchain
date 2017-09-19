@@ -18,8 +18,8 @@ import (
 	//"net"
 	"time"
 
-	"os"
 	"hyperchain/common"
+	"os"
 )
 
 var (

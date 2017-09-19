@@ -1,11 +1,11 @@
 package threadsafe
 
 import (
-	"sync/atomic"
-	"reflect"
 	"fmt"
 	"github.com/pkg/errors"
+	"reflect"
 	"sync"
+	"sync/atomic"
 )
 
 type ThreadSafeLinkedList struct {
@@ -24,22 +24,22 @@ type ThreadSafeLinkedList struct {
 func NewTSLinkedList(head interface{}) *ThreadSafeLinkedList {
 	headnode := newListNode(nil, nil, head, int32(0))
 	return &ThreadSafeLinkedList{
-		head:headnode,
-		tail:headnode,
-		rwlock:new(sync.RWMutex),
-		capacity:int32(1),
-		mark:false,
-		markLock:new(sync.RWMutex),
+		head:     headnode,
+		tail:     headnode,
+		rwlock:   new(sync.RWMutex),
+		capacity: int32(1),
+		mark:     false,
+		markLock: new(sync.RWMutex),
 	}
 }
 
-func (list *ThreadSafeLinkedList)GetCapcity() int32 {
+func (list *ThreadSafeLinkedList) GetCapcity() int32 {
 	list.rwlock.RLock()
 	defer list.rwlock.RUnlock()
 	return list.capacity
 }
 
-func (list *ThreadSafeLinkedList)Walk() {
+func (list *ThreadSafeLinkedList) Walk() {
 	list.rwlock.RLock()
 	defer list.rwlock.RUnlock()
 	curr := list.head
@@ -50,7 +50,7 @@ func (list *ThreadSafeLinkedList)Walk() {
 
 }
 
-func (list *ThreadSafeLinkedList)IterSlow() []interface{} {
+func (list *ThreadSafeLinkedList) IterSlow() []interface{} {
 	// list.mark is false
 	list.rwlock.RLock()
 	defer list.rwlock.RUnlock()
@@ -63,11 +63,10 @@ func (list *ThreadSafeLinkedList)IterSlow() []interface{} {
 	return l
 }
 
-
 // Iter get a iterator for this linked list,
 // this use a snap_shoot for thread safe,
 // improve iter performance
-func (list *ThreadSafeLinkedList)Iter() []interface{} {
+func (list *ThreadSafeLinkedList) Iter() []interface{} {
 	list.markLock.RLock()
 	if list.mark {
 		s := list.snapshot
@@ -92,7 +91,7 @@ func (list *ThreadSafeLinkedList)Iter() []interface{} {
 }
 
 //Insert a element after the index, all elements' index after the index will add 1
-func (list *ThreadSafeLinkedList)Insert(index int32, item interface{}) error {
+func (list *ThreadSafeLinkedList) Insert(index int32, item interface{}) error {
 	list.rwlock.Lock()
 	defer list.rwlock.Unlock()
 	list.markLock.Lock()
@@ -101,7 +100,7 @@ func (list *ThreadSafeLinkedList)Insert(index int32, item interface{}) error {
 	// 前驱，当前
 	var curr *listNode
 	if index >= list.tail.index {
-		newNode := newListNode(list.tail, nil, item, list.tail.index + 1)
+		newNode := newListNode(list.tail, nil, item, list.tail.index+1)
 		list.tail.next = newNode
 		list.tail = newNode
 		atomic.AddInt32(&list.capacity, 1)
@@ -118,14 +117,14 @@ func (list *ThreadSafeLinkedList)Insert(index int32, item interface{}) error {
 	// p   c   c.n
 	//
 	// p   c  (N)  c.n
-	if (curr.index == index) {
-		newNode := newListNode(curr, curr.next, item, index + 1)
+	if curr.index == index {
+		newNode := newListNode(curr, curr.next, item, index+1)
 		curr.next.prev = newNode
 		curr.next = newNode
 		curr.prev = newNode
 		curr = newNode.next
 		// 将在该节点之后的节点index全部加1
-		for (curr != nil) {
+		for curr != nil {
 			atomic.AddInt32(&curr.index, 1)
 			curr = curr.next
 		}
@@ -136,7 +135,7 @@ func (list *ThreadSafeLinkedList)Insert(index int32, item interface{}) error {
 	}
 }
 
-func (list *ThreadSafeLinkedList)adjust() {
+func (list *ThreadSafeLinkedList) adjust() {
 	// the list element need implements the ListElement interface
 	//
 	cur := list.head
@@ -153,7 +152,7 @@ func (list *ThreadSafeLinkedList)adjust() {
 }
 
 //Remove the index element and return the removed element
-func (list *ThreadSafeLinkedList)Remove(index int32) (interface{}, error) {
+func (list *ThreadSafeLinkedList) Remove(index int32) (interface{}, error) {
 	list.rwlock.Lock()
 	defer list.rwlock.Unlock()
 
@@ -189,7 +188,7 @@ func (list *ThreadSafeLinkedList)Remove(index int32) (interface{}, error) {
 		value := curr.value
 		c := curr.next
 		curr = nil
-		for (c != nil) {
+		for c != nil {
 			atomic.AddInt32(&c.index, -1)
 			c = c.next
 		}
@@ -199,7 +198,7 @@ func (list *ThreadSafeLinkedList)Remove(index int32) (interface{}, error) {
 }
 
 //Find the index element and return element
-func (list *ThreadSafeLinkedList)Find(index int32) (interface{}, error) {
+func (list *ThreadSafeLinkedList) Find(index int32) (interface{}, error) {
 	list.rwlock.RLock()
 	defer list.rwlock.RUnlock()
 	curr := list.head
@@ -218,7 +217,7 @@ func (list *ThreadSafeLinkedList)Find(index int32) (interface{}, error) {
 }
 
 //Contains the element
-func (list *ThreadSafeLinkedList)Contains(item interface{}) (int32, error) {
+func (list *ThreadSafeLinkedList) Contains(item interface{}) (int32, error) {
 	list.rwlock.RLock()
 	defer list.rwlock.RUnlock()
 	curr := list.head
@@ -231,7 +230,7 @@ func (list *ThreadSafeLinkedList)Contains(item interface{}) (int32, error) {
 	return -1, errors.New("Not found")
 }
 
-func (list *ThreadSafeLinkedList)Duplicate() (*ThreadSafeLinkedList, error) {
+func (list *ThreadSafeLinkedList) Duplicate() (*ThreadSafeLinkedList, error) {
 	if list == nil || list.capacity == 0 {
 		return nil, errors.New("this list is nil or empty")
 	}

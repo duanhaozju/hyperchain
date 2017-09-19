@@ -1,11 +1,12 @@
 package jvm
+
 import (
+	"github.com/op/go-logging"
 	"hyperchain/common"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
 	"hyperchain/crypto"
 	"math/big"
-	"github.com/op/go-logging"
-	"hyperchain/core/vm"
-	"hyperchain/core/types"
 )
 
 type Account struct {
@@ -46,20 +47,23 @@ func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger
 	return env
 }
 
-func (self *Env) Vm() vm.Vm                { return self.jvm }
-func (self *Env) Origin() common.Address   { return self.origin }
-func (self *Env) BlockNumber() *big.Int    { return self.number }
+func (self *Env) Vm() vm.Vm              { return self.jvm }
+func (self *Env) Origin() common.Address { return self.origin }
+func (self *Env) BlockNumber() *big.Int  { return self.number }
+
 // Deprecate
-func (self *Env) Coinbase() common.Address { return common.Address{}}
+func (self *Env) Coinbase() common.Address { return common.Address{} }
 func (self *Env) Time() *big.Int           { return self.time }
+
 // Deprecate
-func (self *Env) Difficulty() *big.Int     { return nil}
-func (self *Env) Db() vm.Database          { return self.state }
+func (self *Env) Difficulty() *big.Int { return nil }
+func (self *Env) Db() vm.Database      { return self.state }
+
 // Deprecate
-func (self *Env) GasLimit() *big.Int       { return nil}
-func (self *Env) VmType() vm.Type          { return vm.JavaVmTy }
-func (self *Env) Logger() *logging.Logger  { return self.logger}
-func (self *Env) Namespace() string        { return self.namespace}
+func (self *Env) GasLimit() *big.Int      { return nil }
+func (self *Env) VmType() vm.Type         { return vm.JavaVmTy }
+func (self *Env) Logger() *logging.Logger { return self.logger }
+func (self *Env) Namespace() string       { return self.namespace }
 
 func (self *Env) TransactionHash() common.Hash {
 	return self.txHash

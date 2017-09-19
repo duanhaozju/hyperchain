@@ -4,10 +4,10 @@ package jsonrpc
 
 import (
 	"fmt"
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"strings"
-	"github.com/op/go-logging"
 )
 
 var log *logging.Logger
@@ -39,7 +39,6 @@ func (adm *Administrator) PreHandle(token, method string) error {
 	}
 	return nil
 }
-
 
 //Command command send from client.
 type Command struct {
@@ -338,7 +337,7 @@ func (adm *Administrator) alterUser(cmd *Command) *CommandResult {
 	argLen := len(cmd.Args)
 	if argLen != 2 {
 		log.Warningf("Invalid cmd nums %d", argLen)
-		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen - 1)}}
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen-1)}}
 	}
 	username := cmd.Args[0]
 	password := cmd.Args[1]

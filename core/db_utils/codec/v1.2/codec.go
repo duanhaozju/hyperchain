@@ -1,27 +1,26 @@
 package v1_2
 
 import (
-	"hyperchain/core/types"
-	v1_2_types "hyperchain/core/db_utils/codec/v1.2/types"
-	"github.com/golang/protobuf/proto"
 	"errors"
+	"github.com/golang/protobuf/proto"
+	v1_2_types "hyperchain/core/db_utils/codec/v1.2/types"
+	"hyperchain/core/types"
 )
-
 
 func EncodeTransaction(tx *types.Transaction) ([]byte, error) {
 	if tx == nil {
 		return nil, errors.New("empty pointer")
 	}
 	localTransaction := &v1_2_types.TransactionV1_2{
-		Version:           []byte(TransactionVersion),
-		From:              tx.From,
-		To:                tx.To,
-		Value:             tx.Value,
-		Timestamp:         tx.Timestamp,
-		Signature:         tx.Signature,
-		Id:                tx.Id,
-		TransactionHash:   tx.TransactionHash,
-		Nonce:             tx.Nonce,
+		Version:         []byte(TransactionVersion),
+		From:            tx.From,
+		To:              tx.To,
+		Value:           tx.Value,
+		Timestamp:       tx.Timestamp,
+		Signature:       tx.Signature,
+		Id:              tx.Id,
+		TransactionHash: tx.TransactionHash,
+		Nonce:           tx.Nonce,
 	}
 	data, err := proto.Marshal(localTransaction)
 	if err != nil {

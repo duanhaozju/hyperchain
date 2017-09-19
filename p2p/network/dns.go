@@ -1,10 +1,10 @@
 package network
 
 import (
-	"github.com/terasum/viper"
-	"github.com/pkg/errors"
-	"strings"
 	"fmt"
+	"github.com/pkg/errors"
+	"github.com/terasum/viper"
+	"strings"
 	"sync"
 )
 
@@ -26,14 +26,14 @@ func NewDNSResolver(hostsPath string) (*DNSResolver, error) {
 		return nil, err
 	}
 	dnsr := &DNSResolver{
-		hostConfig:vip,
-		lock:new(sync.RWMutex),
+		hostConfig: vip,
+		lock:       new(sync.RWMutex),
 	}
 	dnsr.resolveHosts()
 	return dnsr, nil
 }
 
-func (dnsr *DNSResolver)resolveHosts() {
+func (dnsr *DNSResolver) resolveHosts() {
 	dnsr.lock.Lock()
 	defer dnsr.lock.Unlock()
 	dnsr.DNSItems = make(map[string]string)
@@ -44,7 +44,7 @@ func (dnsr *DNSResolver)resolveHosts() {
 	}
 }
 
-func (dnsr *DNSResolver)ListHosts() []string {
+func (dnsr *DNSResolver) ListHosts() []string {
 	dnsr.lock.RLock()
 	defer dnsr.lock.RUnlock()
 	list := make([]string, 0)
@@ -54,7 +54,7 @@ func (dnsr *DNSResolver)ListHosts() []string {
 	return list
 }
 
-func (dnsr *DNSResolver)listHostnames() []string {
+func (dnsr *DNSResolver) listHostnames() []string {
 	dnsr.lock.RLock()
 	defer dnsr.lock.RUnlock()
 	list := make([]string, 0)
@@ -63,7 +63,7 @@ func (dnsr *DNSResolver)listHostnames() []string {
 	}
 	return list
 }
-func (dnsr *DNSResolver)GetDNS(hostname string) (string, error) {
+func (dnsr *DNSResolver) GetDNS(hostname string) (string, error) {
 	dnsr.lock.RLock()
 	defer dnsr.lock.RUnlock()
 	if dnsitem, ok := dnsr.DNSItems[hostname]; ok {
@@ -72,7 +72,7 @@ func (dnsr *DNSResolver)GetDNS(hostname string) (string, error) {
 	return "", errHostnameNotFoud
 }
 
-func (dnsr *DNSResolver)AddItem(hostname string, addr string, overwrite bool) error {
+func (dnsr *DNSResolver) AddItem(hostname string, addr string, overwrite bool) error {
 	dnsr.lock.Lock()
 	defer dnsr.lock.Unlock()
 	if _, ok := dnsr.DNSItems[hostname]; !ok || overwrite {
@@ -85,7 +85,7 @@ func (dnsr *DNSResolver)AddItem(hostname string, addr string, overwrite bool) er
 	}
 }
 
-func (dnsr *DNSResolver)DelItem(hostname string) error {
+func (dnsr *DNSResolver) DelItem(hostname string) error {
 	dnsr.lock.Lock()
 	defer dnsr.lock.Unlock()
 	if addr, ok := dnsr.DNSItems[hostname]; ok {
@@ -96,7 +96,7 @@ func (dnsr *DNSResolver)DelItem(hostname string) error {
 	return errHostnameNotFoud
 }
 
-func (dnsr *DNSResolver)Persisit() error {
+func (dnsr *DNSResolver) Persisit() error {
 	dnsr.lock.Lock()
 	defer dnsr.lock.Unlock()
 	var dns []string
@@ -113,4 +113,3 @@ func (dnsr *DNSResolver)Persisit() error {
 	logger.Info("persist hosts file successed")
 	return nil
 }
-

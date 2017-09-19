@@ -62,9 +62,9 @@ func Sign(msg []byte, seckey []byte) ([]byte, error) {
 	sig := make([]byte, 65)
 	sig_ptr := (*C.secp256k1_ecdsa_recoverable_signature)(unsafe.Pointer(&sig[0]))
 
-	nonce,err := csprng(32)
-	if err !=nil{
-		return nil,err
+	nonce, err := csprng(32)
+	if err != nil {
+		return nil, err
 	}
 	ndata_ptr := unsafe.Pointer(&nonce[0])
 

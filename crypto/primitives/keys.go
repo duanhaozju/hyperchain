@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 )
+
 // ErrInvalidKey Invalid key
 var ErrInvalidKey = errors.New("Invalid key.")
 var ErrNilArgument = errors.New("Nil argument.")
@@ -141,7 +142,7 @@ func PEMtoPrivateKey(raw []byte, pwd []byte) (interface{}, error) {
 // PEMtoAES extracts from the PEM an AES key
 func PEMtoAES(raw []byte, pwd []byte) ([]byte, error) {
 	if len(raw) == 0 {
-		return nil,ErrNilArgument
+		return nil, ErrNilArgument
 	}
 	block, _ := pem.Decode(raw)
 	if block == nil {
@@ -256,7 +257,7 @@ func PublicKeyToEncryptedPEM(publicKey interface{}, pwd []byte) ([]byte, error) 
 // PEMtoPublicKey unmarshals a pem to public key
 func PEMtoPublicKey(raw []byte, pwd []byte) (interface{}, error) {
 	if len(raw) == 0 {
-		return nil,ErrNilArgument
+		return nil, ErrNilArgument
 	}
 	block, _ := pem.Decode(raw)
 	if block == nil {

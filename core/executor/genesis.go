@@ -1,16 +1,16 @@
 package executor
 
 import (
-	"math/big"
-	"time"
-	"hyperchain/core/hyperstate"
-	edb "hyperchain/core/db_utils"
 	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/core/hyperstate"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
+	"math/big"
 	"strconv"
+	"time"
 )
 
 // CreateInitBlock - create genesis for a specific namespace.

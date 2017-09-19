@@ -50,7 +50,6 @@ func Sm4Dec(key, src []byte) ([]byte, error) {
 	//fmt.Println("收到原文长度:",msgLenth)
 	//fmt.Println("收到的原文：",output[:msgLenth])
 
-
 	//还原原文
 	//hex := string(srcByte)
 	//dst := common.Hex2Bytes(hex)

@@ -112,4 +112,3 @@ func CheckTranEqual(lt1, lt2 LogTrans, c *checker.C) {
 	c.Assert(lt1.BlockHash, checker.DeepEquals, lt2.BlockHash)
 	c.Assert(lt1.Index, checker.DeepEquals, lt2.Index)
 }
-

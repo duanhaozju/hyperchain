@@ -68,11 +68,11 @@ type StateObject struct {
 	// by StateDB.Commit.
 	dbErr error
 
-	code            Code    // contract bytecode, which gets set when code is loaded
-	cachedStorage   Storage // Storage entry cache to avoid duplicate reads
-	dirtyStorage    Storage // Storage entries that need to be flushed to disk
-	archiveStorage  Storage // Storage entries that need to be flushed to disk
-	evictList       map[common.Hash]uint64 // record storage lasted modify block number
+	code           Code                   // contract bytecode, which gets set when code is loaded
+	cachedStorage  Storage                // Storage entry cache to avoid duplicate reads
+	dirtyStorage   Storage                // Storage entries that need to be flushed to disk
+	archiveStorage Storage                // Storage entries that need to be flushed to disk
+	evictList      map[common.Hash]uint64 // record storage lasted modify block number
 
 	bucketTree *bucket.BucketTree     // a bucket tree use to calculate fingerprint of storage efficiency
 	bucketConf map[string]interface{} // bucket tree config
@@ -119,15 +119,15 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 		data.CodeHash = emptyCodeHash
 	}
 	obj := &StateObject{
-		db:              db,
-		address:         address,
-		data:            data,
-		cachedStorage:   make(Storage),
-		dirtyStorage:    make(Storage),
-		archiveStorage:  make(Storage),
-		onDirty:         onDirty,
-		logger:          logger,
-		evictList:       make(map[common.Hash]uint64),
+		db:             db,
+		address:        address,
+		data:           data,
+		cachedStorage:  make(Storage),
+		dirtyStorage:   make(Storage),
+		archiveStorage: make(Storage),
+		onDirty:        onDirty,
+		logger:         logger,
+		evictList:      make(map[common.Hash]uint64),
 	}
 	// initialize bucket tree
 	if setup {
@@ -241,11 +241,11 @@ func GetStateFromDB(db db.Database, address common.Address, key common.Hash) (bo
 func (self *StateObject) SetState(db db.Database, key common.Hash, value []byte, opcode int32) {
 	exist, previous := self.db.GetState(self.address, key)
 	self.db.journal.JournalList = append(self.db.journal.JournalList, &StorageChange{
-		Account:       &self.address,
-		Key:           key,
-		Prevalue:      previous,
-		Exist:         exist,
-		LastModify:    self.evictList[key],
+		Account:    &self.address,
+		Key:        key,
+		Prevalue:   previous,
+		Exist:      exist,
+		LastModify: self.evictList[key],
 	})
 	self.logger.Debugf("set state key %s value %s existed %v", key.Hex(), common.Bytes2Hex(value), exist)
 	self.setState(key, value)
@@ -371,7 +371,7 @@ func (c *StateObject) ReturnGas(gas, price *big.Int) {}
 
 // Deprecated
 func (self *StateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)) *StateObject {
-	copyEvictList := func(evistList map[common.Hash]uint64) map[common.Hash] uint64 {
+	copyEvictList := func(evistList map[common.Hash]uint64) map[common.Hash]uint64 {
 		ret := make(map[common.Hash]uint64)
 		for k, v := range evistList {
 			ret[k] = v
@@ -683,7 +683,6 @@ func (self *StateObject) archive(key common.Hash, originValue, value []byte) {
 func (self *StateObject) isArchive(opcode int32) bool {
 	return opcode == OPCODE_ARCHIVE
 }
-
 
 func (self *StateObject) onEvict(wg sync.WaitGroup) {
 	defer func() {

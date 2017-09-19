@@ -1,42 +1,42 @@
 package utils
 
 import (
-	"os"
-	"strings"
-	"path/filepath"
-	"hyperchain/crypto/sha3"
-	"strconv"
-	"hyperchain/common"
-	"net"
-	"encoding/gob"
 	"bytes"
+	"encoding/gob"
+	"hyperchain/common"
+	"hyperchain/crypto/sha3"
+	"net"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 )
 
-func GetProjectPath() string{
+func GetProjectPath() string {
 	gopath := os.Getenv("GOPATH")
-	if strings.Contains(gopath,":"){
-		gopath = strings.Split(gopath,":")[0]
+	if strings.Contains(gopath, ":") {
+		gopath = strings.Split(gopath, ":")[0]
 	}
 	return gopath + "/src/hyperchain"
 }
 
-func GetCurrentDirectory() (string,error){
+func GetCurrentDirectory() (string, error) {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	if err != nil {
-		return "",err
+		return "", err
 	}
-	return strings.Replace(dir, "\\", "/", -1),nil
+	return strings.Replace(dir, "\\", "/", -1), nil
 
 }
 
-func GetPeerHash(namespace string,id int) string{
+func GetPeerHash(namespace string, id int) string {
 	hasher := sha3.NewKeccak256()
 	ids := strconv.Itoa(id)
-	hasher.Write([]byte(namespace+ids))
+	hasher.Write([]byte(namespace + ids))
 	return common.ToHex(hasher.Sum(nil))
 }
 
-func HashString(in string)string{
+func HashString(in string) string {
 	hasher := sha3.NewKeccak256()
 	hasher.Write([]byte(in))
 	return common.Bytes2Hex(hasher.Sum(nil))
@@ -44,12 +44,12 @@ func HashString(in string)string{
 
 func IPcheck(ip string) bool {
 	trial := net.ParseIP(ip)
-	if trial == nil{
+	if trial == nil {
 		return false
 	}
 	if trial.To4() == nil {
 		return false
-	}else{
+	} else {
 		return true
 	}
 }
@@ -79,8 +79,7 @@ func DeepCopy(dst, src interface{}) error {
 	return gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dst)
 }
 
-
-func Sha3(data []byte)(hash []byte){
+func Sha3(data []byte) (hash []byte) {
 	hasher := sha3.NewKeccak256()
 	hasher.Write(data)
 	hash = hasher.Sum(nil)

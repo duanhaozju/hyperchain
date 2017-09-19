@@ -19,13 +19,13 @@ public class TestContractClassLoader {
     public void testReLoadClass() {
 
         String contractDir = TestContractClassLoader.class.getResource("/classes").getPath();
-        ContractClassLoader loader = new ContractClassLoader(contractDir, "cn.hyperchain.jcee.server.contract.examples");
+        ContractClassLoader loader = new ContractClassLoader(contractDir);
         try{
             ContractTemplate c1 = (ContractTemplate) loader.loadClass("cn.hyperchain.jcee.server.contract.examples.c2.ReloadableContract").newInstance();
             logger.info(c1.getClass().getCanonicalName());
             logger.info(c1.toString());
 
-            ContractClassLoader loader2 = new ContractClassLoader(contractDir, "cn.hyperchain.jcee.server.contract.examples");
+            ContractClassLoader loader2 = new ContractClassLoader(contractDir);
             ContractTemplate c2 = (ContractTemplate) loader2.loadClass("cn.hyperchain.jcee.server.contract.examples.c2.ReloadableContract").newInstance();
             logger.info(c2.getClass().getCanonicalName());
             assert c1.getClass() != c2.getClass();

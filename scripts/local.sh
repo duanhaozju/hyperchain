@@ -58,12 +58,6 @@ f_check_local_env(){
 
 # kill hyperchain process
 f_kill_process(){
-    #echo "kill the bind port process"
-    #PID=`ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}'`
-    #if [ "$PID" != "" ]
-    #then
-    #    ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}' | xargs kill -9
-    #fi
 	pkill hyperchain
 }
 
@@ -208,15 +202,6 @@ start_hyperjvm() {
         cp -rf ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${DUMP_PATH}/node$j/
     done
     cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
-
-#    case "$_SYSTYPE" in
-#          MAC*)
-#                osascript -e 'tell app "Terminal" to do script "cd '${DUMP_PATH}/node1/hyperjvm/bin/' && ./local_start_hyperjvm.sh"'
-#          ;;
-#          LINUX*)
-#                cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./local_start_hyperjvm.sh
-#          ;;
-#    esac
 }
 
 f_sleep(){

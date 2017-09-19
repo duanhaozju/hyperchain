@@ -1,4 +1,5 @@
 package vm
+
 // Vm is the basic interface for an implementation of the EVM.
 type Vm interface {
 	// Run should execute the given contract with the input given in in
@@ -7,6 +8,7 @@ type Vm interface {
 	Run(c VmContext, in []byte) ([]byte, error)
 	Finalize()
 }
+
 // Just a symbolic interface
 // virtual machine use type assert to convert to real type.
-type VmContext interface {}
+type VmContext interface{}

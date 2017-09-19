@@ -11,13 +11,13 @@ import (
 	"hyperchain/hyperdb/mdb"
 	"math"
 	//"math/big"
+	"hyperchain/core/types"
 	"math/big"
 	"math/rand"
 	"reflect"
 	"strings"
 	"testing"
 	"testing/quick"
-	"hyperchain/core/types"
 )
 
 var (

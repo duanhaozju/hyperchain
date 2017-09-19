@@ -37,7 +37,7 @@ func NewBlockCMD() []cli.Command {
 					Usage: "specify the output file",
 				},
 				cli.StringFlag{
-					Name: "verbose",
+					Name:  "verbose",
 					Value: "false",
 					Usage: "specify the transaction content",
 				},
@@ -69,7 +69,7 @@ func NewBlockCMD() []cli.Command {
 					Usage: "specify the output file",
 				},
 				cli.StringFlag{
-					Name: "verbose",
+					Name:  "verbose",
 					Value: "false",
 					Usage: "specify the transaction content",
 				},
@@ -123,7 +123,7 @@ func NewBlockCMD() []cli.Command {
 					Usage: "specify the output file",
 				},
 				cli.StringFlag{
-					Name: "verbose",
+					Name:  "verbose",
 					Value: "false",
 					Usage: "specify the transaction content",
 				},
@@ -150,7 +150,7 @@ func NewBlockCMD() []cli.Command {
 					Usage: "specify the output file",
 				},
 				cli.StringFlag{
-					Name: "verbose",
+					Name:  "verbose",
 					Value: "false",
 					Usage: "specify the transaction content",
 				},
@@ -160,7 +160,7 @@ func NewBlockCMD() []cli.Command {
 					Usage: "specify the min block number",
 				},
 				cli.StringFlag{
-					Name: "max",
+					Name:  "max",
 					Value: "0",
 					Usage: "specify the max block number",
 				},
@@ -261,7 +261,7 @@ func getBlockHashByNumber(c *cli.Context) {
 
 // getBlockRange -- get block within the range
 func getBlockRange(c *cli.Context) {
-	if c.String(constant.PATH) != "" && c.String(constant.DATABASE) != "" && c.Uint64(constant.MIN) >= 0 && c.Uint64(constant.MAX) >= 0{
+	if c.String(constant.PATH) != "" && c.String(constant.DATABASE) != "" && c.Uint64(constant.MIN) >= 0 && c.Uint64(constant.MAX) >= 0 {
 		path := c.String(constant.PATH)
 		db := c.String(constant.DATABASE)
 		min := c.Uint64(constant.MIN)

@@ -1,10 +1,10 @@
 package main
 
 import (
-	"os"
-	"time"
 	"github.com/urfave/cli"
 	"hyperchain/cmd/radar/contract"
+	"os"
+	"time"
 )
 
 var app *cli.App

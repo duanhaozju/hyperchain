@@ -1,17 +1,17 @@
 package test
 
 import (
-	"testing"
-	"hyperchain/cmd/radar/core/api"
-	"fmt"
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
 	"hyperchain/cmd/radar/contract"
+	"hyperchain/cmd/radar/core/api"
 	"hyperchain/cmd/radar/core/test"
+	"io/ioutil"
+	"testing"
 )
 
-func TestSource4 (t *testing.T) {
+func TestSource4(t *testing.T) {
 	db, err := leveldb.OpenFile("blockchain", nil)
 	defer db.Close()
 	if err != nil {
@@ -40,7 +40,7 @@ func TestSource4 (t *testing.T) {
 		"user={id:1,age:[3,4],desc:[\"b\",\"aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggg\"]}",
 		"temp=[\"b\",\"aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggg\"]",
 		"users=[{id:5,age:[7,8],desc:[\"b\",\"aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggg\"]},{id:19,age:[20,21],desc:[\"b\",\"aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggg\"]}]",
-		}
+	}
 	rightResult["Demo"] = temp
 
 	if err != nil {

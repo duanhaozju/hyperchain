@@ -1,10 +1,10 @@
 package vm
 
 import (
-	"math/big"
-	"hyperchain/hyperdb/db"
 	"hyperchain/common"
 	"hyperchain/core/types"
+	"hyperchain/hyperdb/db"
+	"math/big"
 )
 
 type Database interface {
@@ -66,7 +66,6 @@ type Database interface {
 	GetCurrentTxHash() common.Hash
 	NewIterator(common.Address, *IterRange) (Iterator, error)
 
-
 	// Atomic Related
 	MarkProcessStart(uint64)
 	MarkProcessFinish(uint64)
@@ -79,15 +78,15 @@ type Database interface {
 }
 
 type Iterator interface {
-	Next()    bool
-	Key()     []byte
-	Value()   []byte
+	Next() bool
+	Key() []byte
+	Value() []byte
 	Release()
 }
 
 type IterRange struct {
-	Start     *common.Hash
-	Limit     *common.Hash
+	Start *common.Hash
+	Limit *common.Hash
 }
 
 func BytesPrefix(prefix []byte) *IterRange {

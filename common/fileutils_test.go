@@ -1,12 +1,12 @@
 package common
 
 import (
-	"testing"
-	"os"
-	"io/ioutil"
-	"github.com/stretchr/testify/assert"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"os"
 	"strings"
+	"testing"
 )
 
 func TestSeekAndAppend(t *testing.T) {

@@ -3,22 +3,22 @@
 package jsonrpc
 
 import (
-	"runtime"
-	"sync/atomic"
-	"time"
+	"encoding/json"
+	"fmt"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
+	admin "hyperchain/api/admin"
 	"hyperchain/common"
 	"hyperchain/namespace"
-	"encoding/json"
-	admin "hyperchain/api/admin"
+	"runtime"
 	"sync"
-	"fmt"
+	"sync/atomic"
+	"time"
 )
 
 const (
-	stopPendingRequestTimeout             = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
-	adminService                          = "admin"
+	stopPendingRequestTimeout = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
+	adminService              = "admin"
 )
 
 // CodecOption specifies which type of messages this codec supports
@@ -198,7 +198,7 @@ func (s *Server) Stop() {
 // readRequest requests the next (batch) request from the codec. It will return the collection
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
-func (s *Server) readRequest(codec ServerCodec,  options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
+func (s *Server) readRequest(codec ServerCodec, options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
 	reqs, batch, err := codec.ReadRequestHeaders(options)
 	if err != nil {
 		return nil, batch, err
@@ -230,7 +230,7 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 
 		go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}) {
 			name := request.Namespace
-			if err := codec.CheckHttpHeaders(name,request.Method); err != nil {
+			if err := codec.CheckHttpHeaders(name, request.Method); err != nil {
 				log.Errorf("CheckHttpHeaders error: %v", err)
 				result <- codec.CreateErrorResponse(request.Id, request.Namespace, &common.CertError{Message: err.Error()})
 				return
@@ -249,13 +249,13 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 			s.reqMgrMu.Unlock()
 
 			rm.requests <- request
-			result <- (<- rm.response)
+			result <- (<-rm.response)
 			return
 		}(s, req, codec, result)
 	}
 
 	for i := 0; i < number; i++ {
-		response[i] = <- result
+		response[i] = <-result
 	}
 
 	if number == 1 {
@@ -276,7 +276,7 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 	r := s.namespaceMgr.ProcessRequest(req.Namespace, req)
 	if r == nil {
 		log.Debug("No process result")
-		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"no process result"})
+		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message: "no process result"})
 	}
 
 	if response, ok := r.(*common.RPCResponse); ok {
@@ -305,11 +305,11 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 		} else {
 			return codec.CreateResponse(response.Id, response.Namespace, nil)
 		}
-	//} else if response, ok := r.(*common.RPCNotification); ok{
-	//	return s.CreateNotification(response.SubId, response.Service, response.Namespace, nil)
+		//} else if response, ok := r.(*common.RPCNotification); ok{
+		//	return s.CreateNotification(response.SubId, response.Service, response.Namespace, nil)
 	} else {
 		log.Errorf("response type invalid, resp: %v\n")
-		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message:"response type invalid!"})
+		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message: "response type invalid!"})
 	}
 }
 
@@ -333,7 +333,7 @@ func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RP
 		}
 		cmd.Args = args
 	}
-	if _, ok := s.admin.CmdExecutor[req.Method] ; !ok {
+	if _, ok := s.admin.CmdExecutor[req.Method]; !ok {
 		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
 	}
 	rs := s.admin.CmdExecutor[req.Method](cmd)

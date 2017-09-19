@@ -1,26 +1,26 @@
 package secp256k1
 
 import (
-	"io"
-	"crypto/sha512"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"crypto/sha512"
+	"io"
 )
 
 const aesIV = "HYPERCHAINAES IV"
 
-func csprng(entropylen int)([]byte,error){
+func csprng(entropylen int) ([]byte, error) {
 
 	entropy := make([]byte, entropylen)
 	_, err := io.ReadFull(rand.Reader, entropy)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 	// Initialize an SHA-512 hash context; digest ...
 	md := sha512.New()
-	md.Write(entropy)        // the entropy,
-	key := md.Sum(nil)[:32]  // and compute ChopMD-256(SHA-512),
+	md.Write(entropy)       // the entropy,
+	key := md.Sum(nil)[:32] // and compute ChopMD-256(SHA-512),
 
 	// Create an AES-CTR instance to use as a CSPRNG.
 	block, err := aes.NewCipher(key)
@@ -36,11 +36,11 @@ func csprng(entropylen int)([]byte,error){
 	}
 
 	randbuf := make([]byte, entropylen)
-	_,err = io.ReadFull(csprng.R,randbuf)
-	if err != nil{
-		return nil,err
+	_, err = io.ReadFull(csprng.R, randbuf)
+	if err != nil {
+		return nil, err
 	}
-	return randbuf[:],nil
+	return randbuf[:], nil
 
 }
 

@@ -197,11 +197,11 @@ func (blk *Block) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, er
 }
 
 // GetChainHeight returns latest block height.
-func (blk *Block) GetChainHeight() (*BlockNumber, error){
+func (blk *Block) GetChainHeight() (*BlockNumber, error) {
 	chain, err := edb.GetChain(blk.namespace)
 	if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
-	} else if (chain.Height == 0) {
+	} else if chain.Height == 0 {
 		return nil, &common.NoBlockGeneratedError{Message: "There is no block generated!"}
 	}
 	return Uint64ToBlockNumber(chain.Height), nil

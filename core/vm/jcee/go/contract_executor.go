@@ -3,15 +3,13 @@
 package jvm
 
 import (
-	"context"
-	"fmt"
+	"errors"
 	"github.com/op/go-logging"
-	"google.golang.org/grpc"
 	"hyperchain/common"
 	"hyperchain/core/vm"
+	"hyperchain/core/vm/jcee/go/jvm"
 	pb "hyperchain/core/vm/jcee/protos"
 	"sync/atomic"
-	"errors"
 	"time"
 )
 
@@ -29,41 +27,36 @@ type ContractExecutor interface {
 }
 
 var (
-	JVMServerErr = errors.New("jvm server execute error")
+	JVMServerErr    = errors.New("jvm server execute error")
 	CodeNotMatchErr = errors.New("execution code not match with ledger error")
-	ContextTypeErr = errors.New("mismatch when do context type convert")
+	ContextTypeErr  = errors.New("mismatch when do context type convert")
 )
 
 type contractExecutorImpl struct {
-	address    string
 	logger     *logging.Logger
-
-	client     pb.ContractClient
-	conn       *grpc.ClientConn
-
+	client     *jvm.Client
 	close      int32
 	maintainer *ConnMaintainer
 }
 
 type executeRs struct {
 	Response *pb.Response
-	Err error
+	Err      error
 }
 
 func NewContractExecutor(conf *common.Config, namespace string) ContractExecutor {
-	address := fmt.Sprintf("localhost:%d", conf.Get(common.JVM_PORT))
 	Jvm := &contractExecutorImpl{
-		address:    address,
-		logger:     common.GetLogger(namespace, "jvm"),
+		logger: common.GetLogger(namespace, "jvm"),
+		client: jvm.NewClient(conf),
 	}
 	return Jvm
 }
-
 
 func (cei *contractExecutorImpl) Start() error {
 	atomic.StoreInt32(&cei.close, 0)
 	cei.maintainer = NewConnMaintainer(cei, cei.logger)
 	if err := cei.maintainer.conn(); err != nil {
+		cei.logger.Error(err)
 	}
 	go cei.maintainer.Serve()
 	return nil
@@ -72,7 +65,7 @@ func (cei *contractExecutorImpl) Start() error {
 func (cei *contractExecutorImpl) Stop() error {
 	atomic.StoreInt32(&cei.close, 1)
 	cei.maintainer.Exit()
-	return cei.conn.Close()
+	return cei.client.Close()
 }
 
 func (cei *contractExecutorImpl) isActive() bool {
@@ -102,12 +95,12 @@ func (cei *contractExecutorImpl) Finalize() {
 
 }
 
-func (cei *contractExecutorImpl) Ping() (*pb.Response, error){
+func (cei *contractExecutorImpl) Ping() (*pb.Response, error) {
 	return cei.heartbeat()
 }
 
 func (cei *contractExecutorImpl) Address() string {
-	return cei.address
+	return cei.client.Addr()
 }
 
 // execute send invocation message to jvm server.
@@ -117,13 +110,13 @@ func (cei *contractExecutorImpl) execute(tx *pb.Request) (*pb.Response, error) {
 	}
 	er := make(chan *executeRs)
 	go func() {
-		r, err := cei.client.Execute(context.Background(), tx)
+		r, err := cei.client.SyncExecute(tx)
 		er <- &executeRs{r, err}
 	}()
 	select {
-	case <- time.Tick(5 * time.Second):
-		return &pb.Response{Ok:false, Result:[]byte("hyperjvm execute timeout")}, errors.New("execute timeout")
-	case rs := <- er:
+	case <-time.Tick(5 * time.Second):
+		return &pb.Response{Ok: false, Result: []byte("hyperjvm execute timeout")}, errors.New("execute timeout")
+	case rs := <-er:
 		return rs.Response, rs.Err
 	}
 }
@@ -133,6 +126,5 @@ func (cei *contractExecutorImpl) heartbeat() (*pb.Response, error) {
 	if cei.client == nil {
 		return nil, errors.New("no client establish")
 	}
-	return cei.client.HeartBeat(context.Background(), &pb.Request{}, grpc.FailFast(true))
+	return cei.client.HeartBeat()
 }
-

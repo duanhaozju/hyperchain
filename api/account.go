@@ -95,7 +95,7 @@ func (acc *Account) GetBalance(addr common.Address) (string, error) {
 		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 		} else {
-			return "", &common.LeveldbNotFoundError{Message:"stateobject, the account may not exist"}
+			return "", &common.LeveldbNotFoundError{Message: "stateobject, the account may not exist"}
 		}
 	}
 
