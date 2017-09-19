@@ -22,8 +22,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"strings"
 )
+
+var letterBytes = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func ToHex(b []byte) string {
 	hex := Bytes2Hex(b)
@@ -265,4 +268,12 @@ func ByteSliceToInterface(slice [][]byte) (ret []interface{}) {
 	}
 
 	return
+}
+
+func RandBytes(size int) []byte {
+	b := make([]byte, size)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return b
 }

@@ -5,7 +5,7 @@ import (
 	"hyperchain/common"
 	cm "hyperchain/core/common"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/core/state"
+	"hyperchain/core/ledger/state"
 	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
 	"os"

@@ -9,11 +9,11 @@ import (
 	"hyperchain/common"
 	cm "hyperchain/core/common"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/core/ledger/tree/bucket"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
-	"hyperchain/tree/bucket"
 	"io/ioutil"
 	"os"
 	cmd "os/exec"
@@ -384,7 +384,7 @@ func (executor *Executor) clearStatedb() {
 	executor.statedb.Purge()
 	tree := executor.statedb.GetTree()
 	bucketTree := tree.(*bucket.BucketTree)
-	bucketTree.ClearAllCache()
+	bucketTree.Clear()
 }
 
 // assertApplyResult - check apply result whether equal with other's.

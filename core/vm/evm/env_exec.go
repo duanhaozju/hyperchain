@@ -3,7 +3,7 @@ package evm
 import (
 	"hyperchain/common"
 	er "hyperchain/core/errors"
-	"hyperchain/core/state"
+	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/evm/params"

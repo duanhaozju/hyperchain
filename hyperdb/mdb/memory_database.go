@@ -4,9 +4,8 @@ package mdb
 
 import (
 	"bytes"
-	"errors"
 	"hyperchain/common"
-	"hyperchain/hyperdb/db"
+	hdb "hyperchain/hyperdb/db"
 	"sync"
 )
 
@@ -57,7 +56,7 @@ func (db *MemDatabase) Get(key []byte) ([]byte, error) {
 			return CopyBytes(db.value[idx]), nil
 		}
 	}
-	return nil, errors.New("leveldb: not found")
+	return nil, hdb.DB_NOT_FOUND
 }
 
 func (db *MemDatabase) Keys() [][]byte {
@@ -106,7 +105,7 @@ type Iter struct {
 	limit []byte
 }
 
-func (db *MemDatabase) NewIterator(prefix []byte) db.Iterator {
+func (db *MemDatabase) NewIterator(prefix []byte) hdb.Iterator {
 	var limit []byte
 	for i := len(prefix) - 1; i >= 0; i-- {
 		c := prefix[i]
@@ -127,7 +126,7 @@ func (db *MemDatabase) NewIterator(prefix []byte) db.Iterator {
 	return iter
 }
 
-func (db *MemDatabase) Scan(start, limit []byte) db.Iterator {
+func (db *MemDatabase) Scan(start, limit []byte) hdb.Iterator {
 	iterator := &Iter{
 		index: -1,
 		ptr:   db,
@@ -195,7 +194,7 @@ type memBatch struct {
 	lock   sync.RWMutex
 }
 
-func (db *MemDatabase) NewBatch() db.Batch {
+func (db *MemDatabase) NewBatch() hdb.Batch {
 	return &memBatch{
 		db: db,
 	}

@@ -3,7 +3,7 @@ package executor
 import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/core/state"
+	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"

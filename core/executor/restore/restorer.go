@@ -11,7 +11,7 @@ import (
 	"os"
 	"path"
 	"strings"
-	"hyperchain/core/state"
+	"hyperchain/core/ledger/state"
 )
 
 var (

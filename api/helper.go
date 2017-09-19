@@ -4,7 +4,7 @@ import (
 	"errors"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/core/state"
+	"hyperchain/core/ledger/state"
 	"hyperchain/core/vm"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/hyperdb"
