@@ -6,7 +6,7 @@ import (
 	"github.com/urfave/cli"
 	cm "hyperchain/cmd/common"
 	"hyperchain/common"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/state"
 	"hyperchain/core/vm/evm"
 	"hyperchain/core/vm/evm/compiler"
 	"hyperchain/core/vm/evm/runtime"
@@ -36,7 +36,7 @@ func runCmd(ctx *cli.Context) error {
 		sender   string
 		receiver string
 		block    *big.Int
-		state    *hyperstate.StateDB
+		state    *state.StateDB
 		code     []byte
 		input    []byte
 		log      *cm.CWriter = &cm.CWriter{os.Stdout}
@@ -90,7 +90,7 @@ func runCmd(ctx *cli.Context) error {
 		block = big.NewInt(1)
 	}
 	// initialize state
-	state = hyperstate.NewRaw(db, block.Uint64(), common.DEFAULT_NAMESPACE, runtime.InitConf())
+	state = state.NewRaw(db, block.Uint64(), common.DEFAULT_NAMESPACE, runtime.InitConf())
 
 	runtimeConfig := &runtime.Config{
 		Origin:         common.HexToAddress(sender),

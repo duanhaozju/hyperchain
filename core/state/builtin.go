@@ -1,4 +1,4 @@
-package hyperstate
+package state
 
 import (
 	"hyperchain/crypto"

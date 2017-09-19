@@ -1,4 +1,4 @@
-package hyperstate
+package state
 
 const (
 	GlobalDataNodeCacheSize   = "executor.buckettree.global.globalDataNodeCacheSize"

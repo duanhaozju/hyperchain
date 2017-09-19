@@ -3,7 +3,7 @@ package executor
 import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
@@ -77,7 +77,7 @@ func NewStateDb(conf *common.Config, db db.Database, namespace string) (vm.Datab
 	if err != nil {
 		return nil, err
 	}
-	stateDb, err := hyperstate.New(common.Hash{}, db, archiveDb, conf, 0, namespace)
+	stateDb, err := state.New(common.Hash{}, db, archiveDb, conf, 0, namespace)
 	if err != nil {
 		return nil, err
 	}

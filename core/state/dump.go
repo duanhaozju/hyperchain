@@ -1,6 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package hyperstate
+package state
 
 import (
 	"encoding/json"

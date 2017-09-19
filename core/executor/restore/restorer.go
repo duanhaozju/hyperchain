@@ -6,12 +6,12 @@ import (
 	"hyperchain/common"
 	cm "hyperchain/core/common"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/core/hyperstate"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"os"
 	"path"
 	"strings"
+	"hyperchain/core/state"
 )
 
 var (
@@ -114,7 +114,7 @@ func checkExist(ns, id string, conf *common.Config) (bool, error) {
 }
 
 func checkIntegrity(merkleRoot []byte, height uint64, namespace string, db db.Database, conf *common.Config) bool {
-	stateDb, err := hyperstate.New(common.BytesToHash(merkleRoot), db, db, conf, height, namespace)
+	stateDb, err := state.New(common.BytesToHash(merkleRoot), db, db, conf, height, namespace)
 	if err != nil {
 		return false
 	}

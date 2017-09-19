@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"hyperchain/common"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/state"
 	"math/big"
 	"strings"
 )
@@ -55,9 +55,9 @@ func (account *Account) Encode(address string) string {
 		Creator:           account.Creator.Hex(),
 		CreateTime:        account.CreateTime,
 	}
-	if account.Status == hyperstate.STATEOBJECT_STATUS_NORMAL {
+	if account.Status == state.STATEOBJECT_STATUS_NORMAL {
 		accountView.Status = "normal"
-	} else if account.Status == hyperstate.STATEOBJECT_STATUS_FROZON {
+	} else if account.Status == state.STATEOBJECT_STATUS_FROZON {
 		accountView.Status = "frozen"
 	}
 	accounts[address] = accountView
@@ -81,9 +81,9 @@ func (account *Account) EncodeVerbose(address string, code string) string {
 		CreateTime:        account.CreateTime,
 		Code:              code,
 	}
-	if account.Status == hyperstate.STATEOBJECT_STATUS_NORMAL {
+	if account.Status == state.STATEOBJECT_STATUS_NORMAL {
 		accountVerboseView.Status = "normal"
-	} else if account.Status == hyperstate.STATEOBJECT_STATUS_FROZON {
+	} else if account.Status == state.STATEOBJECT_STATUS_FROZON {
 		accountVerboseView.Status = "frozen"
 	}
 	accountVerboseView.Storage = make(map[string]string)

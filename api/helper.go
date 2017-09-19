@@ -4,7 +4,7 @@ import (
 	"errors"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/state"
 	"hyperchain/core/vm"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/hyperdb"
@@ -112,7 +112,7 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, archiveDb, conf, height, namespace)
+	return state.New(common.BytesToHash(latestBlk.MerkleRoot), db, archiveDb, conf, height, namespace)
 }
 
 // NewSnapshotStateDb creates a new state db from given root.
@@ -124,7 +124,7 @@ func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte,
 	closer := func() {
 		db.Close()
 	}
-	state, err := hyperstate.New(common.BytesToHash(merkleRoot), db, nil, conf, height, namespace)
+	state, err := state.New(common.BytesToHash(merkleRoot), db, nil, conf, height, namespace)
 	return state, closer, err
 }
 

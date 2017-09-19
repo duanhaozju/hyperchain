@@ -5,7 +5,7 @@ import (
 	"hyperchain/common"
 	cm "hyperchain/core/common"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/state"
 	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
 	"os"
@@ -303,7 +303,7 @@ func (registry *SnapshotRegistry) CalculateStateHash(filterId string, compareTag
 	if err != nil {
 		return common.Hash{}, err
 	}
-	localState, err := hyperstate.New(compareTag, localDb, nil, registry.executor.conf, height, registry.executor.namespace)
+	localState, err := state.New(compareTag, localDb, nil, registry.executor.conf, height, registry.executor.namespace)
 	if err != nil {
 		return common.Hash{}, err
 	}

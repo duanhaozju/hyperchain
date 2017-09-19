@@ -13,7 +13,7 @@ import (
 	//"strconv"
 	//"time"
 	"hyperchain/common"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/state"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb/mdb"
 	"os"
@@ -41,7 +41,7 @@ func initConfig() *common.Config {
 
 func initDb() vm.Database {
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
-	stateDb, _ := hyperstate.New(common.Hash{}, db, db, initConfig(), 0, "global")
+	stateDb, _ := state.New(common.Hash{}, db, db, initConfig(), 0, "global")
 	stateDb.CreateAccount(common.HexToAddress("e81e714395549ba939403c7634172de21367f8b5"))
 	stateDb.Commit()
 	return stateDb
