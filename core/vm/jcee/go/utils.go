@@ -1,13 +1,13 @@
 package jvm
 
 import (
+	"github.com/gogo/protobuf/proto"
+	"hyperchain/common"
+	"hyperchain/core/types"
+	pb "hyperchain/core/vm/jcee/protos"
 	"os"
 	"path"
 	"strings"
-	"hyperchain/core/types"
-	"github.com/gogo/protobuf/proto"
-	pb "hyperchain/core/vm/jcee/protos"
-	"hyperchain/common"
 )
 
 const (
@@ -16,7 +16,6 @@ const (
 	ContractPrefix = "contract"
 	CompressFileN  = "contract.tar.gz"
 )
-
 
 func getContractDir() (string, error) {
 	cur, err := os.Getwd()
@@ -34,7 +33,7 @@ func getBinDir() (string, error) {
 	return path.Join(cur, BinHome), nil
 }
 
-func cd(target string, relative bool) (string, error)  {
+func cd(target string, relative bool) (string, error) {
 	cur, err := os.Getwd()
 	if err != nil {
 		return "", err
@@ -52,6 +51,7 @@ func cd(target string, relative bool) (string, error)  {
 	}
 	return cur, nil
 }
+
 // parse parse input data and encapsulate as a invocation request.
 func Parse(ctx *Context, in []byte) *pb.Request {
 	if ctx.IsCreation() {
@@ -63,15 +63,15 @@ func Parse(ctx *Context, in []byte) *pb.Request {
 		iArgs = append(iArgs, []byte(ctx.GetCodePath()))
 		iArgs = append(iArgs, args.Args...)
 		return &pb.Request{
-			Context:  &pb.RequestContext{
+			Context: &pb.RequestContext{
 				Cid:         common.HexToString(ctx.Address().Hex()),
 				Namespace:   ctx.GetEnv().Namespace(),
 				Txid:        ctx.GetEnv().TransactionHash().Hex(),
 				BlockNumber: ctx.GetEnv().BlockNumber().Uint64(),
 				Invoker:     common.HexToString(ctx.GetCaller().Address().Hex()),
 			},
-			Method:   "deploy",
-			Args:     iArgs,
+			Method: "deploy",
+			Args:   iArgs,
 		}
 	} else if ctx.IsUpdate() {
 		var args types.InvokeArgs
@@ -82,14 +82,14 @@ func Parse(ctx *Context, in []byte) *pb.Request {
 		iArgs = append(iArgs, []byte(ctx.GetCodePath()))
 		iArgs = append(iArgs, args.Args...)
 		return &pb.Request{
-			Context:  &pb.RequestContext{
+			Context: &pb.RequestContext{
 				Cid:         common.HexToString(ctx.Address().Hex()),
 				Namespace:   ctx.GetEnv().Namespace(),
 				Txid:        ctx.GetEnv().TransactionHash().Hex(),
 				BlockNumber: ctx.GetEnv().BlockNumber().Uint64(),
 			},
-			Method:   "update",
-			Args:     iArgs,
+			Method: "update",
+			Args:   iArgs,
 		}
 	} else {
 		var args types.InvokeArgs
@@ -97,14 +97,14 @@ func Parse(ctx *Context, in []byte) *pb.Request {
 			return nil
 		}
 		return &pb.Request{
-			Context:  &pb.RequestContext{
+			Context: &pb.RequestContext{
 				Cid:         common.HexToString(ctx.Address().Hex()),
 				Namespace:   ctx.GetEnv().Namespace(),
 				Txid:        ctx.GetEnv().TransactionHash().Hex(),
 				BlockNumber: ctx.GetEnv().BlockNumber().Uint64(),
 			},
-			Method:   args.MethodName,
-			Args:     args.Args,
+			Method: args.MethodName,
+			Args:   args.Args,
 		}
 
 	}
@@ -119,4 +119,3 @@ func hexMatch(str1, str2 string) bool {
 	}
 	return str1 == str2
 }
-

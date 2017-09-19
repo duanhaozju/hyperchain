@@ -1,11 +1,12 @@
 package evm
+
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/types"
+	"hyperchain/core/vm"
 	"hyperchain/crypto"
 	"math/big"
-	"hyperchain/core/vm"
 )
 
 var (
@@ -15,8 +16,8 @@ var (
 )
 
 func init() {
-	EnableJit   = true
-	ForceJit    = true
+	EnableJit = true
+	ForceJit = true
 	EnableDebug = false
 }
 
@@ -59,14 +60,13 @@ type Env struct {
 	difficulty *big.Int
 	gasLimit   *big.Int
 
-	logs       []StructLog
-	logger     *logging.Logger
-	namespace  string
-	txHash     common.Hash
-	vmTest     bool
-	evm        *EVM
+	logs      []StructLog
+	logger    *logging.Logger
+	namespace string
+	txHash    common.Hash
+	vmTest    bool
+	evm       *EVM
 }
-
 
 func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger, namespace string, txHash common.Hash) *Env {
 	env := &Env{
@@ -85,7 +85,7 @@ func NewEnv(state vm.Database, setting map[string]string, logger *logging.Logger
 			EnableJit: EnableJit,
 			ForceJit:  ForceJit,
 			Debug:     EnableDebug,
-			Logger:    LogConfig{
+			Logger: LogConfig{
 				Collector: env,
 			},
 		}
@@ -109,8 +109,8 @@ func (self *Env) Difficulty() *big.Int     { return self.difficulty }
 func (self *Env) Db() vm.Database          { return self.state }
 func (self *Env) GasLimit() *big.Int       { return self.gasLimit }
 func (self *Env) VmType() vm.Type          { return vm.StdVmTy }
-func (self *Env) Logger() *logging.Logger  { return self.logger}
-func (self *Env) Namespace() string        { return self.namespace}
+func (self *Env) Logger() *logging.Logger  { return self.logger }
+func (self *Env) Namespace() string        { return self.namespace }
 func (self *Env) TransactionHash() common.Hash {
 	return self.txHash
 }

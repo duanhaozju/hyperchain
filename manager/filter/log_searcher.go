@@ -1,9 +1,9 @@
 package filter
 
 import (
+	"github.com/willf/bloom"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
-	"github.com/willf/bloom"
 	"hyperchain/core/types"
 )
 
@@ -16,15 +16,15 @@ type Searcher struct {
 
 func NewLogSearcher(begin, end uint64, address []common.Address, topics [][]common.Hash, ns string) *Searcher {
 	return &Searcher{
-		addresses:   address,
-		topics:      topics,
-		begin:       begin,
-		end:         end,
-		namespace:   ns,
+		addresses: address,
+		topics:    topics,
+		begin:     begin,
+		end:       end,
+		namespace: ns,
 	}
 }
 
-func (searcher *Searcher) Search()(ret []*types.Log) {
+func (searcher *Searcher) Search() (ret []*types.Log) {
 	var i uint64
 	for i = searcher.begin; i <= searcher.end; i += 1 {
 		block, err := edb.GetBlockByNumber(searcher.namespace, i)
@@ -37,7 +37,7 @@ func (searcher *Searcher) Search()(ret []*types.Log) {
 			for _, tx := range block.Transactions {
 				receipt := edb.GetRawReceipt(searcher.namespace, tx.Hash())
 				logs, err := receipt.RetrieveLogs()
-				if err != nil || len(logs) == 0{
+				if err != nil || len(logs) == 0 {
 					continue
 				}
 				unfiltered = append(unfiltered, logs...)
@@ -48,15 +48,15 @@ func (searcher *Searcher) Search()(ret []*types.Log) {
 	return
 }
 
-func (searcher *Searcher) criteria() (*FilterCriteria) {
+func (searcher *Searcher) criteria() *FilterCriteria {
 	return &FilterCriteria{
-		Addresses:    searcher.addresses,
-		Topics:       searcher.topics,
+		Addresses: searcher.addresses,
+		Topics:    searcher.topics,
 	}
 }
 
 func (searcher *Searcher) BloomFilterLookup(buf []byte) bool {
-	bloom := bloom.New(256 * 8, 3)
+	bloom := bloom.New(256*8, 3)
 	bloom.GobDecode(buf)
 
 	if len(searcher.addresses) > 0 {

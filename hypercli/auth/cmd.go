@@ -9,10 +9,10 @@ import (
 //NewLoginCMD new login commands.
 func NewLoginCMD() cli.Command {
 	return cli.Command{
-		Name:    "login",
-		Usage:   "login to the server with username and password",
-		Action:  login,
-		Flags:   []cli.Flag{
+		Name:   "login",
+		Usage:  "login to the server with username and password",
+		Action: login,
+		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "username, u",
 				Value: "",
@@ -30,9 +30,9 @@ func NewLoginCMD() cli.Command {
 //NewLogoutCMD new logout commands.
 func NewLogoutCMD() cli.Command {
 	return cli.Command{
-		Name:    "logout",
-		Usage:   "logout from the server",
-		Action:  logout,
+		Name:   "logout",
+		Usage:  "logout from the server",
+		Action: logout,
 	}
 }
 
@@ -40,10 +40,10 @@ func NewLogoutCMD() cli.Command {
 func NewAuthCMD() []cli.Command {
 	return []cli.Command{
 		{
-			Name:    "create",
-			Usage:   "create user(only permitted by root)",
-			Action:  createUser,
-			Flags:   []cli.Flag{
+			Name:   "create",
+			Usage:  "create user(only permitted by root)",
+			Action: createUser,
+			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "group, g",
 					Usage: "specify the user group",
@@ -51,29 +51,29 @@ func NewAuthCMD() []cli.Command {
 			},
 		},
 		{
-			Name:    "alter",
-			Usage:   "alter user(only permitted by root)",
-			Action:  alterUser,
+			Name:   "alter",
+			Usage:  "alter user(only permitted by root)",
+			Action: alterUser,
 		},
 		{
-			Name:    "drop",
-			Usage:   "delete user(only permitted by root)",
-			Action:  dropUser,
+			Name:   "drop",
+			Usage:  "delete user(only permitted by root)",
+			Action: dropUser,
 		},
 		{
-			Name:    "grant",
-			Usage:   "grant permissions to user(only permitted by root)",
-			Action:  grant,
+			Name:   "grant",
+			Usage:  "grant permissions to user(only permitted by root)",
+			Action: grant,
 		},
 		{
-			Name:    "revoke",
-			Usage:   "revoke permissions from user(only permitted by root)",
-			Action:  revoke,
+			Name:   "revoke",
+			Usage:  "revoke permissions from user(only permitted by root)",
+			Action: revoke,
 		},
 		{
-			Name:    "list",
-			Usage:   "list permissions of given user",
-			Action:  list,
+			Name:   "list",
+			Usage:  "list permissions of given user",
+			Action: list,
 		},
 	}
 }

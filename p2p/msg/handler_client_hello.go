@@ -2,16 +2,16 @@ package msg
 
 import (
 	"fmt"
+	"github.com/op/go-logging"
+	"github.com/pkg/errors"
+	"hyperchain/common"
+	"hyperchain/crypto/csprng"
 	"hyperchain/manager/event"
 	"hyperchain/p2p/hts"
+	"hyperchain/p2p/info"
 	pb "hyperchain/p2p/message"
 	"hyperchain/p2p/payloads"
-	"github.com/op/go-logging"
 	"hyperchain/p2p/peerevent"
-	"github.com/pkg/errors"
-	"hyperchain/crypto/csprng"
-	"hyperchain/p2p/info"
-	"hyperchain/common"
 )
 
 type ClientHelloMsgHandler struct {
@@ -24,11 +24,11 @@ type ClientHelloMsgHandler struct {
 
 func NewClientHelloHandler(shts *hts.ServerHTS, mgrhub *event.TypeMux, localInfo *info.Info, isorigin bool, logger *logging.Logger) *ClientHelloMsgHandler {
 	return &ClientHelloMsgHandler{
-		shts:   shts,
-		logger: logger,
-		hub:    mgrhub,
-		local: localInfo,
-		isOrigin:isorigin,
+		shts:     shts,
+		logger:   logger,
+		hub:      mgrhub,
+		local:    localInfo,
+		isOrigin: isorigin,
 	}
 }
 
@@ -40,14 +40,14 @@ func (h *ClientHelloMsgHandler) Teardown() {
 	h.logger.Info("client hello msg not support the stream message, so needn't to be close")
 }
 
-func (h *ClientHelloMsgHandler) Receive() chan <- interface{} {
+func (h *ClientHelloMsgHandler) Receive() chan<- interface{} {
 	h.logger.Info("client hello message not support stream message")
 	return nil
 }
 
 func (h *ClientHelloMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
 	h.logger.Debugf("got a client hello message msgtype %s", msg.MessageType)
-	h.logger.Noticef("client [%s](%s) say hello", string(msg.From.Field),string(msg.From.Hostname))
+	h.logger.Noticef("client [%s](%s) say hello", string(msg.From.Field), string(msg.From.Hostname))
 	// SERVER HELLO response
 	data := []byte("hyperchain")
 	esign, err := h.shts.CG.ESign(data)
@@ -128,25 +128,25 @@ Shared key %s`, h.local.Hostname, h.local.Hash, msg.From.Hostname, id.Hash, comm
 	h.logger.Debug("isvp", id.IsVP)
 	if id.IsVP {
 		//if verify passed, should notify peer manager to reverse connect to client.
-		h.logger.Debugf("post ev VPCONNECT %s rec %v", id.Hostname,id.IsReconnect)
+		h.logger.Debugf("post ev VPCONNECT %s rec %v", id.Hostname, id.IsReconnect)
 		if id.IsReconnect {
 			// if VP/NVP both should reverse to connect.
 			h.logger.Infof("post ev VPCONNECT %s", id.Hostname)
 			go h.hub.Post(peerevent.S_VPConnect{
-				Hostname: id.Hostname,
-				Namespace:id.Namespace,
-				ID:int(id.Id),
-				IsReconnect:id.IsReconnect,
+				Hostname:    id.Hostname,
+				Namespace:   id.Namespace,
+				ID:          int(id.Id),
+				IsReconnect: id.IsReconnect,
 			})
 		}
 	} else {
 		//if is nvp h.hub.Post(peerevent.EV_NVPConnect{})
 		h.logger.Info("post ev NVPCONNECT", id.Hostname)
 		go h.hub.Post(peerevent.S_NVPConnect{
-			Hostname: id.Hostname,
-			Namespace:id.Namespace,
-			Hash:id.Hash,
-			IsReconnect:id.IsReconnect,
+			Hostname:    id.Hostname,
+			Namespace:   id.Namespace,
+			Hash:        id.Hash,
+			IsReconnect: id.IsReconnect,
 		})
 	}
 

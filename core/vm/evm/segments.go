@@ -3,8 +3,8 @@
 package evm
 
 import (
-	"math/big"
 	"hyperchain/core/vm"
+	"math/big"
 )
 
 type jumpSeg struct {

@@ -5,7 +5,7 @@ import (
 	"hyperchain/common"
 )
 
-type SolidityVariable interface{
+type SolidityVariable interface {
 	Decode() string
 	String() string
 	GetBitNum() int
@@ -20,21 +20,21 @@ type SolidityVariable interface{
 }
 
 type ContractVariable struct {
-	Id uint
-	Name string
-	Key string
-	NowKey string
-	RemainType string
-	Variable SolidityVariable
+	Id                 uint
+	Name               string
+	Key                string
+	NowKey             string
+	RemainType         string
+	Variable           SolidityVariable
 	StartAddressOfSlot []byte
-	OriginalKeyOfMap string
-	KeyOfMap string
-	Use bool
-	BelongTo uint
-	BelongToFlag bool
+	OriginalKeyOfMap   string
+	KeyOfMap           string
+	Use                bool
+	BelongTo           uint
+	BelongToFlag       bool
 }
 
-func (contractVariable *ContractVariable) SetStartAddressOfSlot(v [] byte) {
+func (contractVariable *ContractVariable) SetStartAddressOfSlot(v []byte) {
 	contractVariable.StartAddressOfSlot = v
 }
 

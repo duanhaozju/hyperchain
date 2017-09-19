@@ -1,12 +1,12 @@
 package network
 
 import (
+	"crypto"
+	"github.com/pkg/errors"
+	"github.com/terasum/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"github.com/terasum/viper"
 	"hyperchain/common"
-	"github.com/pkg/errors"
-	"crypto"
 )
 
 type Sec struct {
@@ -17,12 +17,11 @@ type Sec struct {
 	tlsCertPriv           string
 
 	//client
-	clientPriv            *crypto.PrivateKey
+	clientPriv *crypto.PrivateKey
 
 	//server
-	serverPriv            *crypto.PrivateKey
+	serverPriv *crypto.PrivateKey
 }
-
 
 //NewSec return a new sec options
 func NewSec(config *viper.Viper) (*Sec, error) {
@@ -44,20 +43,19 @@ func NewSec(config *viper.Viper) (*Sec, error) {
 	}
 
 	sec := &Sec{
-		enableTls: enableTLS,
-		tlsCA:tlsCA,
-		tlsCert:tlsCert,
-		tlsCertPriv:tlsCertPriv,
-		tlsServerHostOverride:tlsServerHostOverride,
+		enableTls:             enableTLS,
+		tlsCA:                 tlsCA,
+		tlsCert:               tlsCert,
+		tlsCertPriv:           tlsCertPriv,
+		tlsServerHostOverride: tlsServerHostOverride,
 	}
 
 	return sec, nil
 }
 
-
 /**
   tls ca get dial opts and server opts part
- */
+*/
 
 //GetGrpcClientOpts get GrpcClient options
 func (s *Sec) GetGrpcClientOpts() []grpc.DialOption {
@@ -91,4 +89,3 @@ func (s *Sec) GetGrpcServerOpts() []grpc.ServerOption {
 	opts = []grpc.ServerOption{grpc.Creds(creds)}
 	return opts
 }
-

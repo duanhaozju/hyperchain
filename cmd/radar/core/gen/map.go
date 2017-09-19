@@ -1,9 +1,9 @@
 package gen
 
 import (
-	"strings"
-	"math/big"
 	"hyperchain/common"
+	"math/big"
+	"strings"
 )
 
 func ConvertKeyOfMap(originKeyOfMaps map[string]map[string][][]string, contractMap map[string]*ContractContent) (map[string]map[string][][]string, map[string]map[string]map[string]string) {
@@ -13,7 +13,7 @@ func ConvertKeyOfMap(originKeyOfMaps map[string]map[string][][]string, contractM
 	keysOfMapContract = make(map[string]map[string][][]string)
 	keyToOriMapContract = make(map[string]map[string]map[string]string)
 
-	for name ,v := range contractMap {
+	for name, v := range contractMap {
 		if originKeyOfMap, ok := originKeyOfMaps[name]; ok {
 			a, b := convertKeyOfMap(originKeyOfMap, v.MapContent)
 			keysOfMapContract[name] = a
@@ -36,11 +36,11 @@ func convertKeyOfMap(originKeyOfMap map[string][][]string, mapContent map[string
 		var typesOfKey []string
 		for {
 			firIndex := strings.Index(value, "(")
-			secIndex := strings.Index(value, "=");
+			secIndex := strings.Index(value, "=")
 			if firIndex == -1 || secIndex == -1 {
 				break
 			}
-			typesOfKey = append(typesOfKey, value[firIndex+1: secIndex])
+			typesOfKey = append(typesOfKey, value[firIndex+1:secIndex])
 			value = value[secIndex+1:]
 		}
 		keyTypesOfMap[key] = typesOfKey
@@ -209,7 +209,7 @@ func getConvertKey(str string, typeOfKey string) string {
 		if len(str) >= 2 && str[:2] == "0x" {
 			str16 = str[2:]
 		}
-		if len(str16) % 2 != 0 {
+		if len(str16)%2 != 0 {
 			str16 = "0" + str16
 		}
 		temp := common.Hex2Bytes(str16)
@@ -292,6 +292,5 @@ func getConvertKey(str string, typeOfKey string) string {
 		res = common.Bytes2Hex(aa1.Bytes()[len(aa1.Bytes())-32:])
 	}
 
-
-	return res;
+	return res
 }

@@ -2,7 +2,7 @@ package ipc
 
 import "github.com/abiosoft/ishell"
 
-func IPCShell(endpoint string){
+func IPCShell(endpoint string) {
 	// create new shell.
 	// by default, new shell includes 'exit', 'help' and 'clear' commands.
 	shell := ishell.New()
@@ -11,7 +11,7 @@ func IPCShell(endpoint string){
 	shell.Println("Welcome to Hypernet interactive shell!")
 
 	// register a function for "greet" command.
-	for _,cmd := range getCmds(endpoint){
+	for _, cmd := range getCmds(endpoint) {
 		shell.AddCmd(cmd)
 	}
 

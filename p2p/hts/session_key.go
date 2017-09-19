@@ -10,7 +10,7 @@ type SessionKey struct {
 	expire    int64
 	sharedKey []byte
 	//this is thread safe flag
-	valid     *threadsafe.SpinLock
+	valid *threadsafe.SpinLock
 }
 
 func NewSessionKey(sharedKey []byte) *SessionKey {

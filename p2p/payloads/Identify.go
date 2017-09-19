@@ -7,13 +7,13 @@ import (
 
 func NewIdentify(isvp, isOriginal, isReconnect bool, namespace, hostname string, id int, payload []byte) *Identify {
 	iden := &Identify{
-		Id:       int64(id),
-		IsVP:     isvp,
-		IsOriginal:isOriginal,
-		Hostname: hostname,
-		Namespace:namespace,
-		Payload:payload,
-		IsReconnect:isReconnect,
+		Id:          int64(id),
+		IsVP:        isvp,
+		IsOriginal:  isOriginal,
+		Hostname:    hostname,
+		Namespace:   namespace,
+		Payload:     payload,
+		IsReconnect: isReconnect,
 	}
 	if isvp {
 		iden.Hash = utils.HashString(hostname + namespace)

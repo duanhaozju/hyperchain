@@ -1,21 +1,20 @@
 package jvm
 
 import (
-	"io/ioutil"
-	"strings"
-	"path"
 	"bytes"
-	command "os/exec"
-	"path/filepath"
+	"io/ioutil"
 	"os"
+	command "os/exec"
+	"path"
+	"path/filepath"
 	"sort"
+	"strings"
 )
 
 var DecompressErr = "decompress source contract failed"
 var InvalidSourceCodeErr = "invalid source contract code"
 var CompileSourceCodeErr = "compile source contract failed"
 var SigSourceCodeErr = "generate signature for contract failed"
-
 
 type ContractProperties struct {
 	MainClass    string

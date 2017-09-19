@@ -1,8 +1,8 @@
 package common
 
 import (
-	"sync"
 	"context"
+	"sync"
 )
 
 // ID defines a pseudo random number that is used to identify RPC subscriptions.
@@ -12,10 +12,10 @@ type ID string
 // this subscription to wait for an unsubscribe request for the client, see Err().
 type Subscription struct {
 	ID        ID
-	Service string
-	Method  string
+	Service   string
+	Method    string
 	Namespace string
-	Error       chan error // closed on unsubscribe
+	Error     chan error // closed on unsubscribe
 }
 
 // Err returns a channel that is closed when the client send an unsubscribe request.
@@ -29,28 +29,27 @@ type NotifyPayload struct {
 }
 
 type SubChs struct {
-	Ctx 		context.Context
+	Ctx context.Context
 	//Mux           sync.Mutex
-	SubscriptionCh	chan *Subscription
-	NotifyDataCh    chan NotifyPayload
-	Err		chan error		// context error
-	closed	        chan interface{}	// connection close
-						 //Unsubscribe       chan ID	// event unsubscribe
+	SubscriptionCh chan *Subscription
+	NotifyDataCh   chan NotifyPayload
+	Err            chan error       // context error
+	closed         chan interface{} // connection close
+	//Unsubscribe       chan ID	// event unsubscribe
 }
 
 var (
-	SubChsMap	map[context.Context]*SubChs
-	CtxCh 		chan context.Context
-	mux 		sync.Mutex
-
+	SubChsMap map[context.Context]*SubChs
+	CtxCh     chan context.Context
+	mux       sync.Mutex
 )
 
 func init() {
 	SubChsMap = make(map[context.Context]*SubChs)
-	CtxCh     = make(chan context.Context)
+	CtxCh = make(chan context.Context)
 }
 
-func GetSubChs(ctx context.Context) (*SubChs) {
+func GetSubChs(ctx context.Context) *SubChs {
 	mux.Lock()
 	defer mux.Unlock()
 
@@ -58,8 +57,8 @@ func GetSubChs(ctx context.Context) (*SubChs) {
 		return subChs
 	} else {
 		subChs := &SubChs{
-			Ctx:		ctx,
-			SubscriptionCh:	make(chan *Subscription),
+			Ctx:            ctx,
+			SubscriptionCh: make(chan *Subscription),
 			NotifyDataCh:   make(chan NotifyPayload),
 			Err:            make(chan error),
 			closed:         make(chan interface{}),
@@ -78,7 +77,6 @@ func (subChs *SubChs) Close() {
 	delete(SubChsMap, subChs.Ctx)
 }
 
-
-func (subChs *SubChs) Closed() <- chan interface{} {
+func (subChs *SubChs) Closed() <-chan interface{} {
 	return subChs.closed
 }

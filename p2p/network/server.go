@@ -1,30 +1,30 @@
 package network
 
 import (
-	"net"
-	"google.golang.org/grpc"
-	"golang.org/x/net/context"
-	"github.com/pkg/errors"
-	"hyperchain/p2p/msg"
-	pb "hyperchain/p2p/message"
 	"fmt"
+	"github.com/pkg/errors"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	pb "hyperchain/p2p/message"
+	"hyperchain/p2p/msg"
+	"net"
 )
 
 type Server struct {
 	selfIdentifier string
 	server         *grpc.Server
 	// different filed has different different solts
-	slots          *msg.MsgSlots
-	hostchan       chan [2]string
-	sec            *Sec
+	slots    *msg.MsgSlots
+	hostchan chan [2]string
+	sec      *Sec
 }
 
 func NewServer(identifier string, cn chan [2]string, sec *Sec) *Server {
 	return &Server{
-		selfIdentifier:identifier,
-		slots:msg.NewMsgSlots(),
-		hostchan:cn,
-		sec:sec,
+		selfIdentifier: identifier,
+		slots:          msg.NewMsgSlots(),
+		hostchan:       cn,
+		sec:            sec,
 	}
 }
 
@@ -47,13 +47,13 @@ func (s *Server) StartServer(port string) error {
 	return nil
 }
 
-func (s *Server)StopServer() {
+func (s *Server) StopServer() {
 	if s.server != nil {
 		s.server.Stop()
 	}
 }
 
-func (s *Server)RegisterSlot(filed string, msgType pb.MsgType, msgHandler msg.MsgHandler) error {
+func (s *Server) RegisterSlot(filed string, msgType pb.MsgType, msgHandler msg.MsgHandler) error {
 	if s.slots == nil {
 		s.slots = msg.NewMsgSlots()
 	}
@@ -70,7 +70,7 @@ func (s *Server)RegisterSlot(filed string, msgType pb.MsgType, msgHandler msg.Ms
 	return nil
 }
 
-func (s *Server)DeregisterSlot(filed string, msgType pb.MsgType) error {
+func (s *Server) DeregisterSlot(filed string, msgType pb.MsgType) error {
 	slot, e := s.slots.GetSlot(filed)
 	if e != nil {
 		return e
@@ -79,13 +79,12 @@ func (s *Server)DeregisterSlot(filed string, msgType pb.MsgType) error {
 	return nil
 }
 
-func (s *Server)DeregisterSlots(filed string) {
+func (s *Server) DeregisterSlots(filed string) {
 	if slot, err := s.slots.GetSlot(filed); err == nil {
 		slot.Clear()
 	}
 	s.slots.DeRegister(filed)
 }
-
 
 // dibi data tranfer
 func (s Server) Chat(ccServer Chat_ChatServer) error {

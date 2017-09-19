@@ -1,43 +1,44 @@
 package test_util
+
 import (
-	"time"
-	"hyperchain/core/types"
 	"hyperchain/common"
+	"hyperchain/core/types"
+	"time"
 )
 
 var TransactionCases = []*types.Transaction{
 	{
-		Version:   []byte(TransactionVersion),
-		From:      []byte("6201cb0448964ac597faf6fdf1f472edf2a22b89"),
-		To:        []byte("0000000000000000000000000000000000000a03"),
-		Value:     []byte("100"),
-		Timestamp: time.Now().UnixNano() - int64(time.Second),
-		Signature: []byte("signature1"),
-		Id:        1,
+		Version:         []byte(TransactionVersion),
+		From:            []byte("6201cb0448964ac597faf6fdf1f472edf2a22b89"),
+		To:              []byte("0000000000000000000000000000000000000a03"),
+		Value:           []byte("100"),
+		Timestamp:       time.Now().UnixNano() - int64(time.Second),
+		Signature:       []byte("signature1"),
+		Id:              1,
 		TransactionHash: []byte("transactionHash1"),
-		Nonce: 1,
+		Nonce:           1,
 	},
 	{
-		Version:   []byte(TransactionVersion),
-		From:      []byte("0000000000000000000000000000000000000a01"),
-		To:        []byte("0000000000000000000000000000000000000a02"),
-		Value:     []byte("100"),
-		Timestamp: time.Now().UnixNano(),
-		Signature: common.Hex2Bytes("signature2"),
-		Id:        1,
+		Version:         []byte(TransactionVersion),
+		From:            []byte("0000000000000000000000000000000000000a01"),
+		To:              []byte("0000000000000000000000000000000000000a02"),
+		Value:           []byte("100"),
+		Timestamp:       time.Now().UnixNano(),
+		Signature:       common.Hex2Bytes("signature2"),
+		Id:              1,
 		TransactionHash: []byte("transactionHash2"),
-		Nonce: 2,
+		Nonce:           2,
 	},
 	{
-		Version:   []byte(TransactionVersion),
-		From:      []byte("0000000000000000000000000000000000000a02"),
-		To:        []byte("0000000000000000000000000000000000000a03"),
-		Value:     []byte("700"),
-		Timestamp: time.Now().UnixNano(),
-		Signature: []byte("signature3"),
-		Id:        1,
+		Version:         []byte(TransactionVersion),
+		From:            []byte("0000000000000000000000000000000000000a02"),
+		To:              []byte("0000000000000000000000000000000000000a03"),
+		Value:           []byte("700"),
+		Timestamp:       time.Now().UnixNano(),
+		Signature:       []byte("signature3"),
+		Id:              1,
 		TransactionHash: []byte("transactionHash3"),
-		Nonce: 3,
+		Nonce:           3,
 	},
 }
 

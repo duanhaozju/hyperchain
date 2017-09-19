@@ -20,4 +20,3 @@ func VerifyBlockIntegrity(block *types.Block) bool {
 	}
 	return false
 }
-

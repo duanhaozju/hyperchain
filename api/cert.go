@@ -53,5 +53,3 @@ func (node *Cert) GetTCert(args CertArgs) (*TCertReturn, error) {
 	return &TCertReturn{TCert: tcert}, nil
 
 }
-
-

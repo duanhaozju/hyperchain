@@ -7,14 +7,15 @@ import (
 	"hyperchain/crypto"
 	"io/ioutil"
 	"os"
-	"time"
 	"strconv"
+	"time"
 	//"hyperchain/crypto/guomi"
 	//"hyperchain/admittance"
+	"encoding/json"
 	"github.com/op/go-logging"
 	"hyperchain/crypto/sha3"
-	"encoding/json"
 )
+
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("p2p")
@@ -44,23 +45,23 @@ func (self *Transaction) Hash(ch crypto.CommonHash) common.Hash {
 
 func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
 	/*
-	from=0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
-	&to=0x80958818f0a025273111fba92ed14c3dd483caeb
-	&value=0x08904e10904e1835
-	&timestamp=0x14a31c7e4883b166
-	&nonce=0x179a44e05e42f7
+		from=0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
+		&to=0x80958818f0a025273111fba92ed14c3dd483caeb
+		&value=0x08904e10904e1835
+		&timestamp=0x14a31c7e4883b166
+		&nonce=0x179a44e05e42f7
 	*/
 	value := new(TransactionValue)
-	hashErr := proto.Unmarshal(self.Value,value)
-	if hashErr != nil{
+	hashErr := proto.Unmarshal(self.Value, value)
+	if hashErr != nil {
 		fmt.Println("cannot unmarshal the transaction value!")
 		return ch.ByteHash([]byte("invalid hash"))
 	}
 	var needHash string
-	if value.Payload == nil{
-		needHash = "from="+common.ToHex(self.From)+"&to="+common.ToHex(self.To)+"&value=0x"+strconv.FormatInt(value.Amount,16)+"&timestamp=0x"+strconv.FormatInt(self.Timestamp,16)+"&nonce=0x"+strconv.FormatInt(self.Nonce,16)
-	}else{
-		needHash = "from="+common.ToHex(self.From)+"&to="+common.ToHex(self.To)+"&value="+common.ToHex(value.Payload)+"&timestamp=0x"+strconv.FormatInt(self.Timestamp,16)+"&nonce=0x"+strconv.FormatInt(self.Nonce,16)
+	if value.Payload == nil {
+		needHash = "from=" + common.ToHex(self.From) + "&to=" + common.ToHex(self.To) + "&value=0x" + strconv.FormatInt(value.Amount, 16) + "&timestamp=0x" + strconv.FormatInt(self.Timestamp, 16) + "&nonce=0x" + strconv.FormatInt(self.Nonce, 16)
+	} else {
+		needHash = "from=" + common.ToHex(self.From) + "&to=" + common.ToHex(self.To) + "&value=" + common.ToHex(value.Payload) + "&timestamp=0x" + strconv.FormatInt(self.Timestamp, 16) + "&nonce=0x" + strconv.FormatInt(self.Nonce, 16)
 	}
 	//sha3 Hash
 	hashResult := ch.ByteHash([]byte(needHash))
@@ -317,7 +318,6 @@ func (tx *Transaction) GetTransactionValue() *TransactionValue {
 	proto.Unmarshal(tx.Value, transactionValue)
 	return transactionValue
 }
-
 
 func Keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()

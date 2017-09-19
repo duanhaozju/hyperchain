@@ -9,10 +9,10 @@ import (
 
 	"github.com/hashicorp/golang-lru"
 	"hyperchain/common"
+	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm/params"
 	"hyperchain/crypto"
 	"io"
-	"hyperchain/core/vm/evm/params"
-	"hyperchain/core/vm"
 )
 
 // progStatus is the type for the JIT program status.

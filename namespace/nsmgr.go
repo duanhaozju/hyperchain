@@ -6,14 +6,14 @@ package namespace
 
 import (
 	"errors"
+	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"io/ioutil"
-	"sync"
-	"os"
 	"hyperchain/core/db_utils"
+	"io/ioutil"
+	"os"
 	"strings"
-	"fmt"
+	"sync"
 )
 
 var logger *logging.Logger
@@ -63,9 +63,9 @@ type nsManagerImpl struct {
 	rwLock      *sync.RWMutex
 	namespaces  map[string]Namespace
 	jvmManager  *JvmManager
-	bloomfilter *db_utils.BloomFilterCache   // transaciton bloom filter
+	bloomfilter *db_utils.BloomFilterCache // transaciton bloom filter
 	// help to do transaction duplication checking
-	conf        *common.Config
+	conf *common.Config
 }
 
 //NewNsManager new a namespace manager
@@ -228,7 +228,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 	return nil
 }
 
-func updateNamespaceStartConfig(name string, conf *common.Config) error  {
+func updateNamespaceStartConfig(name string, conf *common.Config) error {
 	if !conf.ContainsKey(fmt.Sprintf("namespace.start.%s", name)) {
 		return common.SeekAndAppend("[namespace.start]", conf.GetString(common.GLOBAL_CONFIG_PATH),
 			fmt.Sprintf("    %s = true", name))
@@ -355,10 +355,10 @@ func (nr *nsManagerImpl) RestartJvm() error {
 }
 
 //ListenDelNode listen delete node event
-func (nr *nsManagerImpl) ListenDelNode(name string, delFlag chan bool ) {
+func (nr *nsManagerImpl) ListenDelNode(name string, delFlag chan bool) {
 	for {
 		select {
-		case <- delFlag:
+		case <-delFlag:
 			nr.StopNamespace(name)
 			nr.DeRegister(name)
 		}

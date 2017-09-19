@@ -1,8 +1,8 @@
 package threadsafe
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
 type tesItem struct {
@@ -10,18 +10,18 @@ type tesItem struct {
 	priority int
 }
 
-func (i *tesItem)Weight() int {
+func (i *tesItem) Weight() int {
 	return i.priority
 }
 
-func (i *tesItem)Value() interface{} {
+func (i *tesItem) Value() interface{} {
 	return i.value
 }
 
 func TestHeap_Walk(t *testing.T) {
 	item1 := &tesItem{
-		priority:1,
-		value:1,
+		priority: 1,
+		value:    1,
 	}
 	heap := NewHeap(item1)
 	h1 := heap.Sort()

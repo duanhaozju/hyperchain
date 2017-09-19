@@ -1,15 +1,15 @@
 package gen
 
 import (
-	"strings"
-	"regexp"
-	"io"
 	"bufio"
-	"os"
 	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"strings"
 )
 
-type ContractContent struct{
+type ContractContent struct {
 	ContractVariablesContent []string
 	StructContent            map[string]string
 	EnumContent              map[string]string
@@ -58,13 +58,13 @@ func standardizeAllContracts(path string) string {
 						break
 					}
 					if str == '\n' {
-						break;
+						break
 					}
 				}
 			}
 			continue
 		}
-		if str == '{' || str == '}' || str == ';' || str == '=' || str == ',' || str == '(' || str == ')'{
+		if str == '{' || str == '}' || str == ';' || str == '=' || str == ',' || str == '(' || str == ')' {
 			res = res + " " + string(str) + " "
 		} else {
 			res += string(str)
@@ -87,17 +87,17 @@ func getContentOfContract(res string) (string, *ContractContent) {
 	contractContent.EnumContent = make(map[string]string)
 	contractContent.MapContent = make(map[string]string)
 
-	content := strings.Split(strings.TrimSpace(res)," ")
+	content := strings.Split(strings.TrimSpace(res), " ")
 	var i int
 	var name string
 	for i = 0; i < len(content); i++ {
 		if content[i] == "{" {
-			break;
+			break
 		}
 		name += content[i]
 	}
 	i++
-	for ; i < len(content); {
+	for i < len(content) {
 		if content[i] == "function" {
 			count := 0
 			for {
@@ -123,15 +123,15 @@ func getContentOfContract(res string) (string, *ContractContent) {
 			var mapVariable string
 			for {
 				if content[i] == ";" {
-					break;
+					break
 				} else if content[i] != " " {
 					mapVariable += content[i]
 					i++
 				}
 			}
-			i++;
+			i++
 			lasIndex := strings.LastIndex(mapVariable, ")")
-			contractContent.ContractVariablesContent = append(contractContent.ContractVariablesContent, mapVariable[:lasIndex+1] + " " + mapVariable[lasIndex+1:])
+			contractContent.ContractVariablesContent = append(contractContent.ContractVariablesContent, mapVariable[:lasIndex+1]+" "+mapVariable[lasIndex+1:])
 			contractContent.MapContent[mapVariable[lasIndex+1:]] = mapVariable[:lasIndex+1]
 		} else if content[i] == "struct" {
 			i++
@@ -175,12 +175,12 @@ func getContentOfContract(res string) (string, *ContractContent) {
 				}
 				i++
 				if content[i] == ";" {
-					break;
+					break
 				}
 			}
 			i++
 			if !constantFlag {
-				contractContent.ContractVariablesContent = append(contractContent.ContractVariablesContent, tmp[:len(tmp) - 1])
+				contractContent.ContractVariablesContent = append(contractContent.ContractVariablesContent, tmp[:len(tmp)-1])
 			}
 		} else {
 			i++
@@ -202,4 +202,3 @@ func GetContentOfAllContracts(path string) map[string]*ContractContent {
 	}
 	return contentOfAllContracts
 }
-

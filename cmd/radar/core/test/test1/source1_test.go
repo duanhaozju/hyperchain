@@ -1,16 +1,17 @@
 package test
 
 import (
-	"testing"
-	"hyperchain/cmd/radar/core/api"
-	"hyperchain/cmd/radar/core/test"
+	"encoding/json"
 	"fmt"
 	"github.com/syndtr/goleveldb/leveldb"
-	"encoding/json"
-	"io/ioutil"
 	"hyperchain/cmd/radar/contract"
+	"hyperchain/cmd/radar/core/api"
+	"hyperchain/cmd/radar/core/test"
+	"io/ioutil"
+	"testing"
 )
-func TestSource1 (t *testing.T) {
+
+func TestSource1(t *testing.T) {
 
 	db, err := leveldb.OpenFile("blockchain", nil)
 	defer db.Close()

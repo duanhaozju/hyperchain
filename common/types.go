@@ -244,10 +244,10 @@ type RPCResponse struct {
 	Namespace string
 	Id        interface{}
 	//Reply []reflect.Value
-	Reply interface{}
-	Error RPCError
-	IsPubSub  bool
-	IsUnsub   bool
+	Reply    interface{}
+	Error    RPCError
+	IsPubSub bool
+	IsUnsub  bool
 }
 
 type RPCNotification struct {

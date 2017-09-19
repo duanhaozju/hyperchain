@@ -5,12 +5,12 @@ import (
 	"errors"
 	"github.com/hashicorp/golang-lru"
 	"github.com/op/go-logging"
-	"math/big"
-	"sync"
-	hdb "hyperchain/hyperdb/db"
 	"hyperchain/common"
 	tp "hyperchain/common/threadpool"
+	hdb "hyperchain/hyperdb/db"
+	"math/big"
 	"runtime"
+	"sync"
 )
 
 var (
@@ -157,9 +157,8 @@ func (bucketTree *BucketTree) processDataNodeDelta() error {
 		return nil
 	}
 
-	pool, _ := tp.CreatePool(runtime.NumCPU() + 1, handler).Open()
+	pool, _ := tp.CreatePool(runtime.NumCPU()+1, handler).Open()
 	defer pool.Close()
-
 
 	for _, bucketKey := range afftectedBuckets {
 		pool.SendWorkAsync(bucketKey, nil)
@@ -205,7 +204,7 @@ func (bucketTree *BucketTree) processBucketTreeDelta() error {
 			return nil
 		}
 
-		pool, _ := tp.CreatePool(runtime.NumCPU() + 1, handler).Open()
+		pool, _ := tp.CreatePool(runtime.NumCPU()+1, handler).Open()
 
 		for _, bucketNode := range bucketNodes {
 			pool.SendWorkAsync(bucketNode, nil)
@@ -270,11 +269,11 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 		remainingNodes = existingNodes[j:]
 		newDataNodes = append(newDataNodes, remainingNodes...)
 	}
-	hashingDataArray := make([][]byte,len(newDataNodes))
+	hashingDataArray := make([][]byte, len(newDataNodes))
 	for i, dataNode := range newDataNodes {
 		hashingDataArray[i] = dataNode.getValue()
 	}
-	bucketHashCalculator.setHashingData(JoinBytes(hashingDataArray,""))
+	bucketHashCalculator.setHashingData(JoinBytes(hashingDataArray, ""))
 	return bucketHashCalculator.computeCryptoHash(), newDataNodes
 }
 
@@ -326,8 +325,6 @@ func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch hdb.
 		}
 	}
 }
-
-
 
 // TODO test
 func (bucketTree *BucketTree) updateCacheWithoutPersist(currentBlockNum *big.Int) {
@@ -443,8 +440,6 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hdb.Batch, currentB
 			continue
 		}
 
-
-
 		bucketTree.PrepareWorkingSet(keyValueMap, big.NewInt(i))
 		bucketTree.AddChangesForPersistence(writeBatch, big.NewInt(i))
 
@@ -468,7 +463,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hdb.Batch, currentB
 	return nil
 }
 
-func (bucketTree *BucketTree) ClearAllCache(){
+func (bucketTree *BucketTree) ClearAllCache() {
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
 	globalDataNodeCache.ClearAllCache()
@@ -487,5 +482,3 @@ func (bucketTree *BucketTree) initLastComputed() error {
 	}
 	return nil
 }
-
-

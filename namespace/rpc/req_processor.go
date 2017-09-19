@@ -1,19 +1,19 @@
 package rpc
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/op/go-logging"
+	"hyperchain/api"
 	"hyperchain/common"
 	"reflect"
 	"strings"
-	"context"
-	"hyperchain/api"
 )
 
 const (
-	UnsubscribeMethodSuffix  = "_unsubscribe"
+	UnsubscribeMethodSuffix = "_unsubscribe"
 )
 
 type RequestProcessor interface {
@@ -156,7 +156,7 @@ func (jrpi *JsonRpcProcessorImpl) checkRequestParams(req *common.RPCRequest) *se
 				}
 			}
 		} else {
-			 sr = &serverRequest{id: req.Id, err: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
+			sr = &serverRequest{id: req.Id, err: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
 		}
 		return sr
 	}
@@ -338,10 +338,9 @@ func (jrpi *JsonRpcProcessorImpl) CreateNotification(subid common.ID, service, n
 	//	Params: jsonSubscription{Subscription: subid, Result: event}}
 	return &common.RPCNotification{
 		Namespace: namespace,
-		Service: service,
-		SubId: subid,
-		Result: event,
-
+		Service:   service,
+		SubId:     subid,
+		Result:    event,
 	}
 }
 

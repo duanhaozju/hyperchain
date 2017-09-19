@@ -3,20 +3,20 @@
 package jsonrpc
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
+	"fmt"
+	"github.com/gorilla/websocket"
+	"github.com/pkg/errors"
 	"hyperchain/common"
+	"hyperchain/crypto/primitives"
+	"hyperchain/namespace"
 	"io"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
-	"hyperchain/namespace"
-	"github.com/pkg/errors"
-	"fmt"
-	"reflect"
-	"github.com/gorilla/websocket"
-	"hyperchain/crypto/primitives"
-	"crypto/ecdsa"
 )
 
 const (
@@ -45,18 +45,18 @@ type JSONResponse struct {
 
 // JSON-RPC notification payload
 type jsonSubscription struct {
-	Event        	string		`json:"event"`
-	Subscription 	string      	`json:"subscription"`
-	Data       	interface{} 	`json:"data,omitempty"`
+	Event        string      `json:"event"`
+	Subscription string      `json:"subscription"`
+	Data         interface{} `json:"data,omitempty"`
 }
 
 // JSON-RPC notification
 type jsonNotification struct {
-	Version 	string           	`json:"jsonrpc"`
+	Version string `json:"jsonrpc"`
 	//Method  	string           	`json:"method"`
 	//Params  	jsonSubscription 	`json:"params"`
-	Namespace 	string          	`json:"namespace"`
-	Result    	jsonSubscription	`json:"result"`
+	Namespace string           `json:"namespace"`
+	Result    jsonSubscription `json:"result"`
 }
 
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It
@@ -90,7 +90,7 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 }
 
 // CheckHttpHeaders will check http header.
-func (c *jsonCodec) CheckHttpHeaders(namespace string,method string) common.RPCError {
+func (c *jsonCodec) CheckHttpHeaders(namespace string, method string) common.RPCError {
 	ns := c.nr.GetNamespaceByName(namespace)
 	if ns == nil {
 		return &common.NamespaceNotFound{Name: namespace}
@@ -104,10 +104,10 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string,method string) common.RPCE
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
-	tcertPem 	:= common.TransportDecode(c.req.Header.Get("tcert"))
-	tcert,err 	:= primitives.ParseCertificate([]byte(tcertPem))
+	tcertPem := common.TransportDecode(c.req.Header.Get("tcert"))
+	tcert, err := primitives.ParseCertificate([]byte(tcertPem))
 	if err != nil {
-		log.Error("fail to parse tcert.",err)
+		log.Error("fail to parse tcert.", err)
 		return &common.UnauthorizedError{}
 	}
 
@@ -120,20 +120,20 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string,method string) common.RPCE
 	签名算法为 ECDSAWithSHA256
 	这部分需要SDK端实现，hyperchain端已经实现了验证方法
 	*/
-	pubKey 			:= tcert.PublicKey.(*(ecdsa.PublicKey))
-	signature 		:= c.req.Header.Get("signature")
-	msg			:= common.TransportDecode(c.req.Header.Get("msg"))
-	signB 			:= common.Hex2Bytes(signature)
+	pubKey := tcert.PublicKey.(*(ecdsa.PublicKey))
+	signature := c.req.Header.Get("signature")
+	msg := common.TransportDecode(c.req.Header.Get("msg"))
+	signB := common.Hex2Bytes(signature)
 
-	verifySignature, err	:= primitives.ECDSAVerifyTransport(pubKey,[]byte(msg),signB)
+	verifySignature, err := primitives.ECDSAVerifyTransport(pubKey, []byte(msg), signB)
 	if err != nil || !verifySignature {
-		log.Error("Fail to verify Transport Signture!",err)
+		log.Error("Fail to verify Transport Signture!", err)
 		return &common.UnauthorizedError{}
 	}
 
-	verifyTcert, err 	:= cm.VerifyTCert(tcertPem,method)
+	verifyTcert, err := cm.VerifyTCert(tcertPem, method)
 	if verifyTcert == false || err != nil {
-		log.Error("Fail to verify tcert!",err)
+		log.Error("Fail to verify tcert!", err)
 		return &common.UnauthorizedError{}
 	}
 	return nil
@@ -305,7 +305,7 @@ func (s *jsonCodec) CreateNotification(subid common.ID, service, method, namespa
 	}
 
 	//return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace, Method: service + NotificationMethodSuffix,
-	return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace,
+	return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace,
 		Result: jsonSubscription{Event: method, Subscription: fmt.Sprintf(`%s`, subid), Data: event}}
 }
 

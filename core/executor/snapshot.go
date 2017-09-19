@@ -126,7 +126,7 @@ func (registry *SnapshotRegistry) Insert(meta common.Manifest) {
 			return
 		}
 	}
-	spath := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf), "ws", "ws_" + meta.FilterId, "SNAPSHOT_" + meta.FilterId)
+	spath := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf), "ws", "ws_"+meta.FilterId, "SNAPSHOT_"+meta.FilterId)
 	dump := cmd.Command("mv", "-f", spath, sdir)
 	if e := dump.Run(); e != nil {
 		return
@@ -208,7 +208,6 @@ func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) (
 	var (
 		begin time.Time = time.Now()
 	)
-
 
 	defer func() {
 		if err == nil {

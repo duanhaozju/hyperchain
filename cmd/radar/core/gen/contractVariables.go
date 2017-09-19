@@ -1,33 +1,33 @@
 package gen
 
 import (
-	"strings"
-	"regexp"
-	"strconv"
-	"math/big"
-	"math"
 	"errors"
 	"fmt"
-	"hyperchain/common"
-	"hyperchain/crypto"
-	"hyperchain/cmd/radar/core/types"
 	"github.com/syndtr/goleveldb/leveldb"
-	"hyperchain/core/hyperstate"
 	rcm "hyperchain/cmd/radar/core/common"
+	"hyperchain/cmd/radar/core/types"
+	"hyperchain/common"
+	"hyperchain/core/hyperstate"
+	"hyperchain/crypto"
+	"math"
+	"math/big"
+	"regexp"
+	"strconv"
+	"strings"
 )
 
 type Status struct {
-	variableKey string
-	variableName string
-	contractKey string
+	variableKey    string
+	variableName   string
+	contractKey    string
 	contractNowKey string
-	remainType string
-	isNewSlot bool
-	isAddress bool
-	isNewDoneSlot bool
-	keyOfMap string
-	BelongTo uint
-	BelongToFlag bool
+	remainType     string
+	isNewSlot      bool
+	isAddress      bool
+	isNewDoneSlot  bool
+	keyOfMap       string
+	BelongTo       uint
+	BelongToFlag   bool
 }
 
 func GetContractVariables(contractContent *ContractContent, db *leveldb.DB, contractAddress string) []*types.ContractVariable {
@@ -35,15 +35,15 @@ func GetContractVariables(contractContent *ContractContent, db *leveldb.DB, cont
 	for i := 0; i < len(contractContent.ContractVariablesContent); i++ {
 		str := strings.Split(contractContent.ContractVariablesContent[i], " ")
 		status := Status{
-			variableKey: str[0],
-			variableName: contractContent.ContractVariablesContent[i][len(str[0])+1:],
-			contractKey: str[0],
+			variableKey:    str[0],
+			variableName:   contractContent.ContractVariablesContent[i][len(str[0])+1:],
+			contractKey:    str[0],
 			contractNowKey: "",
-			remainType: str[0],
-			isNewSlot: false,
-			isAddress: false,
-			isNewDoneSlot: false,
-			keyOfMap: "",
+			remainType:     str[0],
+			isNewSlot:      false,
+			isAddress:      false,
+			isNewDoneSlot:  false,
+			keyOfMap:       "",
 		}
 		contractVariables = deal(contractVariables, contractContent, status, db, contractAddress)
 	}
@@ -67,7 +67,7 @@ func deal(contractVariables []*types.ContractVariable, contractContent *Contract
 		status.isNewDoneSlot = true
 		var id uint = 0
 		if len(contractVariables) != 0 {
-			id = contractVariables[len(contractVariables) - 1].Id + 1
+			id = contractVariables[len(contractVariables)-1].Id + 1
 		}
 		if !status.isAddress {
 			status.remainType = ""
@@ -78,14 +78,14 @@ func deal(contractVariables []*types.ContractVariable, contractContent *Contract
 		contractVariables = append(contractVariables, variable)
 	} else if contentValue, ok := contractContent.StructContent[status.variableKey]; ok == true {
 		str := strings.Split(contentValue, " ")
-		for i := 0; i < len(str) / 2; i++ {
+		for i := 0; i < len(str)/2; i++ {
 			var temp = status
 			if i == 0 {
 				temp.isNewSlot = true
 			} else {
 				temp.isNewSlot = false
 			}
-			if i == len(str) / 2 - 1 {
+			if i == len(str)/2-1 {
 				temp.isNewDoneSlot = true
 			} else {
 				temp.isNewDoneSlot = false
@@ -103,7 +103,7 @@ func deal(contractVariables []*types.ContractVariable, contractContent *Contract
 			len /= 2
 			count++
 		}
-		for count % 8 != 0 {
+		for count%8 != 0 {
 			count++
 		}
 		status.variableKey = "uint" + strconv.Itoa(count)
@@ -132,14 +132,14 @@ func deal(contractVariables []*types.ContractVariable, contractContent *Contract
 				} else {
 					temp.isNewSlot = false
 				}
-				if i == length - 1 {
+				if i == length-1 {
 					temp.isNewDoneSlot = true
 				} else {
 					temp.isNewDoneSlot = false
 				}
 				temp.variableKey = pre
-				temp.contractNowKey = status.contractNowKey + " " + pre+use + strconv.Itoa(int(i))
-				temp.remainType = pre+remain
+				temp.contractNowKey = status.contractNowKey + " " + pre + use + strconv.Itoa(int(i))
+				temp.remainType = pre + remain
 				contractVariables = deal(contractVariables, contractContent, temp, db, contractAddress)
 			}
 		} else if dynamicArrayReg.MatchString(status.variableKey) {
@@ -164,7 +164,7 @@ func deal(contractVariables []*types.ContractVariable, contractContent *Contract
 			} else {
 				var id uint = 0
 				if len(contractVariables) != 0 {
-					id = contractVariables[len(contractVariables) - 1].Id + 1
+					id = contractVariables[len(contractVariables)-1].Id + 1
 				}
 				if !status.isAddress {
 					status.remainType = ""
@@ -178,7 +178,7 @@ func deal(contractVariables []*types.ContractVariable, contractContent *Contract
 		} else {
 			var id uint = 0
 			if len(contractVariables) != 0 {
-				id = contractVariables[len(contractVariables) - 1].Id + 1
+				id = contractVariables[len(contractVariables)-1].Id + 1
 			}
 			if !status.isAddress {
 				status.remainType = ""
@@ -208,7 +208,7 @@ func DealDynamic(contractVariable *types.ContractVariable, contractVariables []*
 	}
 	dbKey := hyperstate.CompositeStorageKey(common.Hex2Bytes(contractAddress), contractVariable.StartAddressOfSlot)
 	temp, err := db.Get(dbKey, nil)
-	if err != nil && !strings.Contains(err.Error(), "leveldb: not found"){
+	if err != nil && !strings.Contains(err.Error(), "leveldb: not found") {
 		return contractVariables, err
 	}
 	temp = rcm.LeftPaddingZeroByte(temp)
@@ -220,31 +220,31 @@ func DealDynamic(contractVariable *types.ContractVariable, contractVariables []*
 	if contractVariable.Variable.GetKey() == string_Type {
 		value := str
 		tmp, _ := strconv.ParseUint(value[len(value)-1:], 16, 64)
-		if tmp % 2 != 0 {
+		if tmp%2 != 0 {
 			length, _ := strconv.ParseInt(value, 16, 64)
-			tempLength := (float64(length)-1) / 64
+			tempLength := (float64(length) - 1) / 64
 			length = int64(math.Ceil(float64(tempLength)))
 			kec256Hash := crypto.NewKeccak256Hash("keccak256")
 			hexAddress := kec256Hash.ByteHash(contractVariable.StartAddressOfSlot).Hex()
 			startAddress := big.NewInt(0)
 			startAddress.SetString(hexAddress, 0)
-			isNewSlot = true;
-			isNewDoneSlot = true;
-			isAddress = false;
+			isNewSlot = true
+			isNewDoneSlot = true
+			isAddress = false
 			preLength := len(contractVariables)
 			for i := 0; i < int(length); i++ {
 				status := Status{
-					variableKey: string_Type,
-					variableName: variableName,
-					contractKey: contractType,
+					variableKey:    string_Type,
+					variableName:   variableName,
+					contractKey:    contractType,
 					contractNowKey: contractNowType,
-					remainType: "",
-					isNewSlot: isNewSlot,
-					isAddress: isAddress,
-					isNewDoneSlot: isNewDoneSlot,
-					keyOfMap: "",
-					BelongTo: belongTo,
-					BelongToFlag: true,
+					remainType:     "",
+					isNewSlot:      isNewSlot,
+					isAddress:      isAddress,
+					isNewDoneSlot:  isNewDoneSlot,
+					keyOfMap:       "",
+					BelongTo:       belongTo,
+					BelongToFlag:   true,
 				}
 				contractVariables = deal(contractVariables, contractContent, status, db, contractAddress)
 			}
@@ -259,7 +259,7 @@ func DealDynamic(contractVariable *types.ContractVariable, contractVariables []*
 	} else if strings.Contains(contractVariable.RemainType, "mapping") {
 		if len(keysOfMap[contractVariable.Name]) > 0 {
 			var length int
-			if firMap  {
+			if firMap {
 				length = len(keysOfMap[contractVariable.Name])
 			} else {
 				length = 1
@@ -277,28 +277,28 @@ func DealDynamic(contractVariable *types.ContractVariable, contractVariables []*
 				startAddress.SetString(hexAddress, 0)
 				index1 := strings.Index(contractVariable.RemainType, ">")
 				index2 := strings.LastIndex(contractVariable.RemainType, ")")
-				remainTypeOfMap := contractVariable.RemainType[index1+1:index2]
+				remainTypeOfMap := contractVariable.RemainType[index1+1 : index2]
 				bit := 0
 				preLength := len(contractVariables)
 				status := Status{
-					variableKey: remainTypeOfMap,
-					variableName: variableName,
-					contractKey: contractVariable.Key,
+					variableKey:    remainTypeOfMap,
+					variableName:   variableName,
+					contractKey:    contractVariable.Key,
 					contractNowKey: "",
-					remainType: remainTypeOfMap,
-					isNewSlot: false,
-					isAddress: false,
-					isNewDoneSlot: false,
-					keyOfMap: contractVariable.KeyOfMap + " " +key,
-					BelongTo: belongTo,
-					BelongToFlag: true,
+					remainType:     remainTypeOfMap,
+					isNewSlot:      false,
+					isAddress:      false,
+					isNewDoneSlot:  false,
+					keyOfMap:       contractVariable.KeyOfMap + " " + key,
+					BelongTo:       belongTo,
+					BelongToFlag:   true,
 				}
 				contractVariables = deal(contractVariables, contractContent, status, db, contractAddress)
 				nowLength := len(contractVariables)
 				for j := preLength; j < nowLength; j++ {
 					variable := contractVariables[j]
-					preContractVariable := contractVariables[j - 1]
-					if bit == 0 || (!variable.Variable.GetIsNewSlot() && !preContractVariable.Variable.GetIsNewDoneSlot() && variable.Variable.GetBitNum() + bit <= 256) {
+					preContractVariable := contractVariables[j-1]
+					if bit == 0 || (!variable.Variable.GetIsNewSlot() && !preContractVariable.Variable.GetIsNewDoneSlot() && variable.Variable.GetBitNum()+bit <= 256) {
 						variable.SetStartAddressOfSlot((rcm.LeftPaddingZero(startAddress)))
 						variable.Variable.SetBitIndex(bit)
 						bit += variable.Variable.GetBitNum()
@@ -306,7 +306,7 @@ func DealDynamic(contractVariable *types.ContractVariable, contractVariables []*
 						startAddress = startAddress.Add(startAddress, big.NewInt(1))
 						variable.SetStartAddressOfSlot((rcm.LeftPaddingZero(startAddress)))
 						variable.Variable.SetBitIndex(0)
-						bit = variable.Variable.GetBitNum();
+						bit = variable.Variable.GetBitNum()
 					}
 				}
 			}
@@ -322,25 +322,25 @@ func DealDynamic(contractVariable *types.ContractVariable, contractVariables []*
 		preLength := len(contractVariables)
 		for ; i < length; i++ {
 			status := Status{
-				variableKey: contractRemainType,
-				variableName: variableName,
-				contractKey: contractType,
+				variableKey:    contractRemainType,
+				variableName:   variableName,
+				contractKey:    contractType,
 				contractNowKey: contractNowType + " " + pre + use + strconv.Itoa(int(i)),
-				remainType: contractRemainType,
-				isNewSlot: isNewSlot,
-				isAddress: isAddress,
-				isNewDoneSlot: isNewDoneSlot,
-				keyOfMap: "",
-				BelongTo: belongTo,
-				BelongToFlag: true,
+				remainType:     contractRemainType,
+				isNewSlot:      isNewSlot,
+				isAddress:      isAddress,
+				isNewDoneSlot:  isNewDoneSlot,
+				keyOfMap:       "",
+				BelongTo:       belongTo,
+				BelongToFlag:   true,
 			}
 			contractVariables = deal(contractVariables, contractContent, status, db, contractAddress)
 		}
 		nowLength := len(contractVariables)
 		for j := preLength; j < nowLength; j++ {
 			variable := contractVariables[j]
-			preContractVariable := contractVariables[j - 1]
-			if bit == 0 || (!variable.Variable.GetIsNewSlot() && !preContractVariable.Variable.GetIsNewDoneSlot() && variable.Variable.GetBitNum() + bit <= 256) {
+			preContractVariable := contractVariables[j-1]
+			if bit == 0 || (!variable.Variable.GetIsNewSlot() && !preContractVariable.Variable.GetIsNewDoneSlot() && variable.Variable.GetBitNum()+bit <= 256) {
 				variable.SetStartAddressOfSlot((rcm.LeftPaddingZero(startAddress)))
 				variable.Variable.SetBitIndex(bit)
 				bit += variable.Variable.GetBitNum()
@@ -348,7 +348,7 @@ func DealDynamic(contractVariable *types.ContractVariable, contractVariables []*
 				startAddress = startAddress.Add(startAddress, big.NewInt(1))
 				variable.SetStartAddressOfSlot((rcm.LeftPaddingZero(startAddress)))
 				variable.Variable.SetBitIndex(0)
-				bit = variable.Variable.GetBitNum();
+				bit = variable.Variable.GetBitNum()
 			}
 		}
 	} else { //[][]
@@ -362,7 +362,7 @@ func DealDynamic(contractVariable *types.ContractVariable, contractVariables []*
 		for ; i < length; i++ {
 			var id uint = 0
 			if len(contractVariables) != 0 {
-				id = contractVariables[len(contractVariables) - 1].Id + 1
+				id = contractVariables[len(contractVariables)-1].Id + 1
 			}
 			isAddress = true
 			remainType := pre + remain
@@ -373,18 +373,18 @@ func DealDynamic(contractVariable *types.ContractVariable, contractVariables []*
 			if isAddress {
 				isNewSlot = true
 				isNewDoneSlot = true
-				status := Status {
-					variableKey: uint256_Type,
-					variableName: variableName,
-					contractKey: contractType,
+				status := Status{
+					variableKey:    uint256_Type,
+					variableName:   variableName,
+					contractKey:    contractType,
 					contractNowKey: contractNowType + " " + pre + use + strconv.Itoa(int(i)),
-					remainType: remainType,
-					isNewSlot: isNewSlot,
-					isAddress: isAddress,
-					isNewDoneSlot: isNewDoneSlot,
-					keyOfMap: contractVariable.KeyOfMap,
-					BelongTo: belongTo,
-					BelongToFlag: true,
+					remainType:     remainType,
+					isNewSlot:      isNewSlot,
+					isAddress:      isAddress,
+					isNewDoneSlot:  isNewDoneSlot,
+					keyOfMap:       contractVariable.KeyOfMap,
+					BelongTo:       belongTo,
+					BelongToFlag:   true,
 				}
 				variable := GenerateContractVariableFactory(status, id)
 				variable.SetStartAddressOfSlot((rcm.LeftPaddingZero(startAddress)))
@@ -397,31 +397,31 @@ func DealDynamic(contractVariable *types.ContractVariable, contractVariables []*
 				} else {
 					isNewSlot = false
 				}
-				if i == length - 1 {
+				if i == length-1 {
 					isNewDoneSlot = true
 				} else {
 					isNewDoneSlot = false
 				}
 				preLength := len(contractVariables)
 				status := Status{
-					variableKey: pre,
-					variableName: variableName,
-					contractKey: contractType,
+					variableKey:    pre,
+					variableName:   variableName,
+					contractKey:    contractType,
 					contractNowKey: contractNowType + " " + pre + use + strconv.Itoa(int(i)),
-					remainType: remainType,
-					isNewSlot: isNewSlot,
-					isAddress: isAddress,
-					isNewDoneSlot: isNewDoneSlot,
-					keyOfMap: contractVariable.KeyOfMap,
-					BelongTo: belongTo,
-					BelongToFlag: true,
+					remainType:     remainType,
+					isNewSlot:      isNewSlot,
+					isAddress:      isAddress,
+					isNewDoneSlot:  isNewDoneSlot,
+					keyOfMap:       contractVariable.KeyOfMap,
+					BelongTo:       belongTo,
+					BelongToFlag:   true,
 				}
 				contractVariables = deal(contractVariables, contractContent, status, db, contractAddress)
 				nowLength := len(contractVariables)
 				for j := preLength; j < nowLength; j++ {
 					variable := contractVariables[j]
-					preContractVariable := contractVariables[j - 1]
-					if bit == 0 || (!variable.Variable.GetIsNewSlot() && !preContractVariable.Variable.GetIsNewDoneSlot() && variable.Variable.GetBitNum() + bit <= 256) {
+					preContractVariable := contractVariables[j-1]
+					if bit == 0 || (!variable.Variable.GetIsNewSlot() && !preContractVariable.Variable.GetIsNewDoneSlot() && variable.Variable.GetBitNum()+bit <= 256) {
 						variable.SetStartAddressOfSlot((rcm.LeftPaddingZero(startAddress)))
 						variable.Variable.SetBitIndex(bit)
 						bit += variable.Variable.GetBitNum()
@@ -429,7 +429,7 @@ func DealDynamic(contractVariable *types.ContractVariable, contractVariables []*
 						startAddress = startAddress.Add(startAddress, big.NewInt(1))
 						variable.SetStartAddressOfSlot((rcm.LeftPaddingZero(startAddress)))
 						variable.Variable.SetBitIndex(0)
-						bit = variable.Variable.GetBitNum();
+						bit = variable.Variable.GetBitNum()
 					}
 				}
 			}

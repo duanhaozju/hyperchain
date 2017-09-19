@@ -4,10 +4,10 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	pb "hyperchain/core/vm/jcee/protos"
-	"strings"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
+	pb "hyperchain/core/vm/jcee/protos"
+	"strings"
 )
 
 type Handler struct {
@@ -279,8 +279,8 @@ func (h *Handler) rangeQuery(msg *pb.Message) {
 	limit := common.BytesToRightPaddingHash(r.End)
 
 	iterRange := vm.IterRange{
-		Start:   &start,
-		Limit:   &limit,
+		Start: &start,
+		Limit: &limit,
 	}
 	iter, err := state.NewIterator(common.BytesToAddress(common.FromHex(r.Context.Cid)), &iterRange)
 	if err != nil {
@@ -290,7 +290,7 @@ func (h *Handler) rangeQuery(msg *pb.Message) {
 	}
 	cnt := 0
 	batchValue := &pb.BathValue{
-		Id:  r.Context.Txid,
+		Id: r.Context.Txid,
 	}
 	for iter.Next() {
 		s := make([]byte, len(iter.Value()))
@@ -319,7 +319,7 @@ func (h *Handler) rangeQuery(msg *pb.Message) {
 
 			cnt = 0
 			batchValue = &pb.BathValue{
-				Id:  r.Context.Txid,
+				Id: r.Context.Txid,
 			}
 		}
 	}

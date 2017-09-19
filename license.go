@@ -1,15 +1,15 @@
 package main
 
 import (
-	"time"
+	"fmt"
+	"hyperchain/common"
+	"hyperchain/p2p/hts/secimpl"
 	"io/ioutil"
 	"regexp"
-	"strings"
-	"hyperchain/common"
-	"strconv"
-	"fmt"
-	"hyperchain/p2p/hts/secimpl"
 	"runtime"
+	"strconv"
+	"strings"
+	"time"
 )
 
 const (

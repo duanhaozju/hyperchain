@@ -1,11 +1,11 @@
 package test
 
 import (
-	"testing"
 	"hyperchain/cmd/radar/core/api"
+	"testing"
 )
 
-func TestSource5 (t *testing.T) {
+func TestSource5(t *testing.T) {
 	const path = "./contract/source5.solc"
 
 	var storages map[string]map[string]string
@@ -1140,7 +1140,6 @@ func TestSource5 (t *testing.T) {
 	var rightResult map[string][]string
 	rightResult = make(map[string][]string)
 
-
 	var temp = []string{
 		"accounts[\"A1\"]={accountNumber:\"A1\",name:\"Acc1\",ID:\"01\",IDType:CT00,accountType:RC01,businessBankNum:\"abc01\",businessBankName:\"abcBank\",addr:\"beijing\",phoneNum:\"15527372819\",modifyTime:\"20170330\"}",
 		"accounts[\"A2\"]={accountNumber:\"A2\",name:\"Acc2\",ID:\"01\",IDType:CT00,accountType:RC01,businessBankNum:\"abc01\",businessBankName:\"abcBank\",addr:\"beijing\",phoneNum:\"13879746072\",modifyTime:\"20170330\"}",
@@ -1223,7 +1222,7 @@ func TestSource5 (t *testing.T) {
 		"orderDraftNums[\"order6\"]=[\"draft23\",\"draft24\",\"draft25\"]",
 		"orderDraftNums[\"order1\"]=[\"draft1\",\"draft2\",\"draft3\",\"draft4\",\"draft5\"]",
 		"state=\"state1\"",
-		}
+	}
 	rightResult["ABC"] = temp
 
 	if err != nil {

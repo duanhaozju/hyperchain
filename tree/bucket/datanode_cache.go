@@ -2,9 +2,9 @@ package bucket
 
 import (
 	"github.com/hashicorp/golang-lru"
-	"hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	"hyperchain/hyperdb/db"
 )
 
 var (
@@ -21,7 +21,7 @@ func newDataNodeCache(log *logging.Logger, ns string, treePrefix string, dataNod
 	isEnabled := true
 	if dataNodeCacheMaxSize <= 0 {
 		isEnabled = false
-		log.Error("dataNodeCacheMaxSize is ",dataNodeCacheMaxSize)
+		log.Error("dataNodeCacheMaxSize is ", dataNodeCacheMaxSize)
 		return &DataNodeCache{TreePrefix: treePrefix, isEnabled: isEnabled}
 	} else {
 		log.Infof("Constructing datanode-cache with max datanode cache size = [%d]", dataNodeCacheMaxSize)
@@ -41,7 +41,7 @@ func newDataNodeCache(log *logging.Logger, ns string, treePrefix string, dataNod
 func (dataNodeCache *DataNodeCache) FetchDataNodesFromCache(db db.Database, bucketKey BucketKey) (dataNodes DataNodes, err error) {
 	// step 0.
 	log := common.GetLogger(db.Namespace(), "bucket")
-	if !dataNodeCache.isEnabled{
+	if !dataNodeCache.isEnabled {
 		return fetchDataNodesFromDBByBucketKey(db, dataNodeCache.TreePrefix, &bucketKey)
 	}
 

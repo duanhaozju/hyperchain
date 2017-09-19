@@ -2,10 +2,10 @@ package filter
 
 import (
 	"hyperchain/common"
-	"time"
+	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"reflect"
-	"hyperchain/core/types"
+	"time"
 )
 
 var (

@@ -4,7 +4,7 @@ import "math/big"
 
 func LeftPaddingZeroByte(temp []byte) []byte {
 	var res []byte
-	for i := 0; i < 32 - len(temp); i++ {
+	for i := 0; i < 32-len(temp); i++ {
 		res = append(res, 0)
 	}
 	for i := 0; i < len(temp); i++ {
@@ -16,7 +16,7 @@ func LeftPaddingZeroByte(temp []byte) []byte {
 func LeftPaddingZero(startAddress *big.Int) []byte {
 	temp := startAddress.Bytes()
 	var res []byte
-	for i := 0; i < 32 - len(temp); i++ {
+	for i := 0; i < 32-len(temp); i++ {
 		res = append(res, 0)
 	}
 	for i := 0; i < len(temp); i++ {

@@ -2,11 +2,9 @@ package jvm
 
 import "sync"
 
-
-
 /*
 	Deprecated
- */
+*/
 
 import (
 	"hyperchain/common"
@@ -26,7 +24,7 @@ type ClientManager struct {
 }
 
 func NewClientManager(conf *common.Config) *ClientManager {
-	clientMgrOnce.Do(func(){
+	clientMgrOnce.Do(func() {
 		ClientMgr = &ClientManager{
 			clients: make(map[string]ContractExecutor),
 			conf:    conf,

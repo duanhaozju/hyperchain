@@ -1,19 +1,19 @@
 package network
 
 import (
-	"github.com/terasum/viper"
-	"hyperchain/common"
 	"fmt"
+	"github.com/oleiade/lane"
+	"github.com/op/go-logging"
 	"github.com/orcaman/concurrent-map"
 	"github.com/pkg/errors"
-	"github.com/oleiade/lane"
-	"time"
-	"hyperchain/p2p/msg"
+	"github.com/terasum/viper"
+	"hyperchain/common"
 	pb "hyperchain/p2p/message"
+	"hyperchain/p2p/msg"
+	"hyperchain/p2p/network/inneraddr"
 	"hyperchain/p2p/utils"
 	"strconv"
-	"hyperchain/p2p/network/inneraddr"
-	"github.com/op/go-logging"
+	"time"
 )
 
 var logger *logging.Logger
@@ -25,19 +25,19 @@ type HyperNet struct {
 	hostClientMap cmap.ConcurrentMap
 
 	// failed queue
-	failedQueue   *lane.Queue
+	failedQueue *lane.Queue
 	//reverse queue
-	reverseQueue  chan [2]string
+	reverseQueue chan [2]string
 
-	listenPort    string
-	sec           *Sec
+	listenPort string
+	sec        *Sec
 
 	// self belong domain
-	domain        string
+	domain string
 
-	addr          *inneraddr.InnerAddr
+	addr *inneraddr.InnerAddr
 
-	cconf         *clientConf
+	cconf *clientConf
 }
 
 func NewHyperNet(config *viper.Viper, identifier string) (*HyperNet, error) {
@@ -79,17 +79,17 @@ func NewHyperNet(config *viper.Viper, identifier string) (*HyperNet, error) {
 	cconf := NewClientConf(config)
 	rq := make(chan [2]string)
 	net := &HyperNet{
-		dns:dns,
-		server:NewServer(identifier, rq, sec),
-		hostClientMap:cmap.New(),
-		failedQueue:lane.NewQueue(),
-		reverseQueue:rq,
-		conf:config,
-		listenPort:port,
-		sec:sec,
-		addr:ia,
-		domain:domain,
-		cconf:cconf,
+		dns:           dns,
+		server:        NewServer(identifier, rq, sec),
+		hostClientMap: cmap.New(),
+		failedQueue:   lane.NewQueue(),
+		reverseQueue:  rq,
+		conf:          config,
+		listenPort:    port,
+		sec:           sec,
+		addr:          ia,
+		domain:        domain,
+		cconf:         cconf,
 	}
 
 	err = net.retry()
@@ -101,23 +101,21 @@ func NewHyperNet(config *viper.Viper, identifier string) (*HyperNet, error) {
 
 //Register server msg handler
 //ensure this before than init server
-func (hn *HyperNet)RegisterHandler(filed string, msgType pb.MsgType, handler msg.MsgHandler) error {
+func (hn *HyperNet) RegisterHandler(filed string, msgType pb.MsgType, handler msg.MsgHandler) error {
 	return hn.server.RegisterSlot(filed, msgType, handler)
 }
 
-func (hn *HyperNet)DeRegisterHandlers(filed string) {
+func (hn *HyperNet) DeRegisterHandlers(filed string) {
 	hn.server.DeregisterSlots(filed)
 }
 
-
-
 //InitServer start self hypernet server listening server
-func (hn *HyperNet)InitServer() error {
+func (hn *HyperNet) InitServer() error {
 	hn.reverse()
 	return hn.server.StartServer(hn.listenPort)
 }
 
-func (hn *HyperNet)InitClients() error {
+func (hn *HyperNet) InitClients() error {
 	for _, hostname := range hn.dns.listHostnames() {
 		logger.Info("Now connect to host:", hostname)
 		err := hn.Connect(hostname)
@@ -132,9 +130,9 @@ func (hn *HyperNet)InitClients() error {
 }
 
 // if a connection failed, here will retry to connect the host name
-func (hn *HyperNet)retry() error {
+func (hn *HyperNet) retry() error {
 	td := hn.conf.GetDuration(common.P2P_RETRY_TIME)
-	if td == 0 * time.Second {
+	if td == 0*time.Second {
 		return errors.New("invalid time duration")
 	}
 	go func(h *HyperNet) {
@@ -157,7 +155,7 @@ func (hn *HyperNet)retry() error {
 }
 
 // if a connection failed, here will retry to connect the host name
-func (hn *HyperNet)reverse() error {
+func (hn *HyperNet) reverse() error {
 	logger.Info("start reverse process")
 	go func(h *HyperNet) {
 		for m := range h.reverseQueue {
@@ -201,7 +199,7 @@ func (hn *HyperNet)reverse() error {
 }
 
 //Connect to specific host endpoint
-func (hn *HyperNet)ConnectByAddr(hostname, addr string) error {
+func (hn *HyperNet) ConnectByAddr(hostname, addr string) error {
 	client, err := NewClient(hostname, addr, hn.sec, hn.cconf)
 	if err != nil {
 		return err
@@ -217,7 +215,7 @@ func (hn *HyperNet)ConnectByAddr(hostname, addr string) error {
 }
 
 //Connect to specific host endpoint
-func (hn *HyperNet)Connect(hostname string) error {
+func (hn *HyperNet) Connect(hostname string) error {
 	addr, err := hn.dns.GetDNS(hostname)
 	logger.Info("connect to ", addr)
 	if err != nil {
@@ -240,7 +238,7 @@ func (hn *HyperNet)Connect(hostname string) error {
 //Disconnect to specific endpoint and delete the client from map
 //TODO here should also handle the filed queue, find the specific host,
 //TODO and cancel the retry process of this hostname
-func (hn *HyperNet)DisConnect(hostname string) (err  error) {
+func (hn *HyperNet) DisConnect(hostname string) (err error) {
 	if client, ok := hn.hostClientMap.Get(hostname); ok {
 		//todo need to notify remote peer to disconnect or not?
 		//current implements is notify remote peer disconnect self
@@ -264,11 +262,11 @@ func (hn *HyperNet)DisConnect(hostname string) (err  error) {
 }
 
 //HealthCheck check the connection is available or not at regular intervals
-func (hyperNet *HyperNet)HealthCheck(hostname string) {
+func (hyperNet *HyperNet) HealthCheck(hostname string) {
 	// TODO NetWork Health check
 }
 
-func (hypernet *HyperNet)Chat(hostname string, msg *pb.Message) error {
+func (hypernet *HyperNet) Chat(hostname string, msg *pb.Message) error {
 	hypernet.msgWrapper(msg)
 	if client, ok := hypernet.hostClientMap.Get(hostname); ok {
 		client.(*Client).MsgChan <- msg
@@ -279,7 +277,7 @@ func (hypernet *HyperNet)Chat(hostname string, msg *pb.Message) error {
 	return errors.New("the host hasn't been initialized.")
 }
 
-func (hypernet *HyperNet)Greeting(hostname string, msg *pb.Message) (*pb.Message, error) {
+func (hypernet *HyperNet) Greeting(hostname string, msg *pb.Message) (*pb.Message, error) {
 	hypernet.msgWrapper(msg)
 	if client, ok := hypernet.hostClientMap.Get(hostname); ok {
 		return client.(*Client).Greeting(msg)
@@ -290,7 +288,7 @@ func (hypernet *HyperNet)Greeting(hostname string, msg *pb.Message) (*pb.Message
 
 }
 
-func (hypernet *HyperNet)Whisper(hostname string, msg *pb.Message) (*pb.Message, error) {
+func (hypernet *HyperNet) Whisper(hostname string, msg *pb.Message) (*pb.Message, error) {
 	hypernet.msgWrapper(msg)
 	if client, ok := hypernet.hostClientMap.Get(hostname); ok {
 		if !client.(*Client).stateMachine.Is(c_StatWorking) {
@@ -303,7 +301,7 @@ func (hypernet *HyperNet)Whisper(hostname string, msg *pb.Message) (*pb.Message,
 	}
 }
 
-func (hypernet *HyperNet)Discuss(hostname string, pkg *pb.Package) (*pb.Package, error) {
+func (hypernet *HyperNet) Discuss(hostname string, pkg *pb.Package) (*pb.Package, error) {
 	hypernet.pkgWrapper(pkg, hostname)
 	if client, ok := hypernet.hostClientMap.Get(hostname); ok {
 		return client.(*Client).Discuss(pkg)
@@ -313,7 +311,7 @@ func (hypernet *HyperNet)Discuss(hostname string, pkg *pb.Package) (*pb.Package,
 	return nil, errors.New("the host hasn't been initialized.")
 }
 
-func (hypernet *HyperNet)Stop() {
+func (hypernet *HyperNet) Stop() {
 	for item := range hypernet.hostClientMap.IterBuffered() {
 		client := item.Val.(*Client)
 		client.Close()
@@ -322,7 +320,7 @@ func (hypernet *HyperNet)Stop() {
 	hypernet.server.server.GracefulStop()
 }
 
-func (hn *HyperNet)msgWrapper(msg *pb.Message) {
+func (hn *HyperNet) msgWrapper(msg *pb.Message) {
 	if msg.From == nil {
 		msg.From = new(pb.Endpoint)
 	}
@@ -336,7 +334,7 @@ func (hn *HyperNet)msgWrapper(msg *pb.Message) {
 	}
 }
 
-func (hn *HyperNet)pkgWrapper(pkg *pb.Package, hostname string) {
+func (hn *HyperNet) pkgWrapper(pkg *pb.Package, hostname string) {
 	if ipaddr, err := hn.addr.Serialize(); err != nil {
 		pkg.Src = []byte("{\"default\":" + "\"" + utils.GetLocalIP() + hn.listenPort + "\"}")
 	} else {

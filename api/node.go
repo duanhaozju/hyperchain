@@ -3,11 +3,11 @@
 package api
 
 import (
+	"fmt"
 	"hyperchain/common"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
 	"hyperchain/p2p"
-	"fmt"
 )
 
 type NodeArgs struct {
@@ -63,7 +63,7 @@ func (node *Node) DeleteVP(args NodeArgs) (string, error) {
 
 func (node *Node) DeleteNVP(args NodeArgs) (string, error) {
 	if node.eh == nil {
-		return "", &common.CallbackError{Message:"protocolManager is nil"}
+		return "", &common.CallbackError{Message: "protocolManager is nil"}
 	}
 	go node.eh.GetEventObject().Post(event.DelNVPEvent{
 		Payload: []byte(args.NodeHash),
@@ -75,4 +75,3 @@ func (node *Node) DeleteNVP(args NodeArgs) (string, error) {
 func (node *Node) DelNode(args NodeArgs) (string, error) {
 	return node.DeleteVP(args)
 }
-

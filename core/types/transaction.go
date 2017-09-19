@@ -3,18 +3,18 @@ package types
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/crypto"
-	"strconv"
 	"hyperchain/crypto/guomi"
-	"github.com/op/go-logging"
 	"hyperchain/crypto/sha3"
+	"strconv"
 )
+
 var log *logging.Logger // package-level logger
 func init() {
 	log = logging.MustGetLogger("transaction")
 }
-
 
 func (self *Transaction) Hash() common.Hash {
 	ch := crypto.NewKeccak256Hash("keccak256")
@@ -59,13 +59,13 @@ func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
 	return hashResult
 }
 
-func (self *Transaction) SighHashSM3(pubX,pubY []byte) []byte {
+func (self *Transaction) SighHashSM3(pubX, pubY []byte) []byte {
 	/*
-	from=0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
-	&to=0x80958818f0a025273111fba92ed14c3dd483caeb
-	&value=0x08904e10904e1835
-	&timestamp=0x14a31c7e4883b166
-	&nonce=0x179a44e05e42f7
+		from=0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
+		&to=0x80958818f0a025273111fba92ed14c3dd483caeb
+		&value=0x08904e10904e1835
+		&timestamp=0x14a31c7e4883b166
+		&nonce=0x179a44e05e42f7
 	*/
 	h := guomi.New()
 	ENTL1 := "00"
@@ -74,9 +74,9 @@ func (self *Transaction) SighHashSM3(pubX,pubY []byte) []byte {
 	h.Write(common.Hex2Bytes(ENTL2))
 	userId := "31323334353637383132333435363738"
 	h.Write(common.Hex2Bytes(userId))
-	a:= "FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFC"
+	a := "FFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00000000FFFFFFFFFFFFFFFC"
 	h.Write(common.Hex2Bytes(a))
-	b:= "28E9FA9E9D9F5E344D5A9E4BCF6509A7F39789F515AB8F92DDBCBD414D940E93"
+	b := "28E9FA9E9D9F5E344D5A9E4BCF6509A7F39789F515AB8F92DDBCBD414D940E93"
 	h.Write(common.Hex2Bytes(b))
 	xG := "32C4AE2C1F1981195F9904466A39C9948FE30BBFF2660BE1715A4589334C74C7"
 	h.Write(common.Hex2Bytes(xG))
@@ -89,19 +89,19 @@ func (self *Transaction) SighHashSM3(pubX,pubY []byte) []byte {
 	h2 := guomi.New()
 
 	value := new(TransactionValue)
-	hashErr := proto.Unmarshal(self.Value,value)
-	if hashErr != nil{
+	hashErr := proto.Unmarshal(self.Value, value)
+	if hashErr != nil {
 		log.Error("cannot unmarshal the transaction value!")
 		h2.Write([]byte("invalid hash"))
 		return h2.Sum(nil)
 	}
 
 	var needHash string
-	if value.Payload == nil{
-		needHash = "from="+common.ToHex(self.From)+"&to="+common.ToHex(self.To)+"&value=0x"+strconv.FormatInt(value.Amount,16)+"&timestamp=0x"+strconv.FormatInt(self.Timestamp,16)+"&nonce=0x"+strconv.FormatInt(self.Nonce,16)
-	}else{
-		log.Debug("x: ",common.ToHex(value.Payload))
-		needHash = "from="+common.ToHex(self.From)+"&to="+common.ToHex(self.To)+"&value="+common.ToHex(value.Payload)+"&timestamp=0x"+strconv.FormatInt(self.Timestamp,16)+"&nonce=0x"+strconv.FormatInt(self.Nonce,16)
+	if value.Payload == nil {
+		needHash = "from=" + common.ToHex(self.From) + "&to=" + common.ToHex(self.To) + "&value=0x" + strconv.FormatInt(value.Amount, 16) + "&timestamp=0x" + strconv.FormatInt(self.Timestamp, 16) + "&nonce=0x" + strconv.FormatInt(self.Nonce, 16)
+	} else {
+		log.Debug("x: ", common.ToHex(value.Payload))
+		needHash = "from=" + common.ToHex(self.From) + "&to=" + common.ToHex(self.To) + "&value=" + common.ToHex(value.Payload) + "&timestamp=0x" + strconv.FormatInt(self.Timestamp, 16) + "&nonce=0x" + strconv.FormatInt(self.Nonce, 16)
 	}
 	log.Debug(needHash)
 	//修改为sm3hash方法
@@ -128,18 +128,18 @@ func (self *Transaction) FString() string {
 //validates the signature
 //if addr recovered from signature != tx.from return false
 func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.CommonHash) bool {
-	if len(self.Signature)<66 {
+	if len(self.Signature) < 66 {
 		log.Error("Illegal Signature length,please check it!")
 		return false
 	}
 	flag := self.Signature[0]
-	if flag==1{
+	if flag == 1 {
 		//sm2p256v1 := guomi.Curve(1)
 		//puk, err := guomi.ParsePublicKeyByDerEncode(sm2p256v1,self.Puk)
-		pub := make([]byte,65)
-		copy(pub[:],self.Signature[1:66])
-		sign  := make([]byte,len(self.Signature)-66)
-		copy(sign[:],self.Signature[66:])
+		pub := make([]byte, 65)
+		copy(pub[:], self.Signature[1:66])
+		sign := make([]byte, len(self.Signature)-66)
+		copy(sign[:], self.Signature[66:])
 		//if len(pub) > 65 {
 		//	log.Error("The Public Key is wrong!Publick Length is ",len(pub),"!")
 		//	return false
@@ -149,10 +149,10 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 		var addr common.Address
 		copy(addr[:], Keccak256(pub[0:])[12:])
 		from := common.BytesToAddress(self.From)
-		if from != addr{
-			log.Error("From :",from.Hex())
-			log.Error("Address :",addr.Hex())
-			log.Error("Puk:",common.ToHex(pub))
+		if from != addr {
+			log.Error("From :", from.Hex())
+			log.Error("Address :", addr.Hex())
+			log.Error("Puk:", common.ToHex(pub))
 			log.Error("From address is wrong , please check it!")
 			return false
 		}
@@ -163,8 +163,8 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 			log.Error(err)
 			return false
 		}
-		hash := self.SighHashSM3(puk.X,puk.Y)
-		bol,err:= puk.VerifySignature(sign,hash)
+		hash := self.SighHashSM3(puk.X, puk.Y)
+		bol, err := puk.VerifySignature(sign, hash)
 		if err != nil {
 			log.Error(err)
 			return false
@@ -173,14 +173,15 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 	}
 	hash := self.SighHash(ch)
 	addr, err := encryption.UnSign(hash[:], self.Signature[1:])
-	if err!=nil{
+	if err != nil {
 		log.Error(err)
 		return false
 	}
 	from := common.BytesToAddress(self.From)
-	return addr==from
+	return addr == from
 
 }
+
 // NewTransaction returns a new transaction
 //func NewTransaction(from []byte,to []byte,value []byte, signature []byte) *Transaction{
 func NewTransaction(from []byte, to []byte, value []byte, timestamp int64, nonce int64) *Transaction {
@@ -211,7 +212,6 @@ func (tx *Transaction) GetTransactionValue() *TransactionValue {
 	proto.Unmarshal(tx.Value, transactionValue)
 	return transactionValue
 }
-
 
 func Keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()

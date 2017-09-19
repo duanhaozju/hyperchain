@@ -7,17 +7,17 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/ratelimit"
 	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
+	"hyperchain/core/vm"
 	"hyperchain/core/vm/evm/compiler"
 	"hyperchain/crypto/hmEncryption"
-	"hyperchain/manager/event"
 	"hyperchain/manager"
+	"hyperchain/manager/event"
 	"math/big"
-	"time"
 	"strconv"
-	edb "hyperchain/core/db_utils"
 	"strings"
-	"hyperchain/core/vm"
+	"time"
 )
 
 type Contract struct {
@@ -79,7 +79,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 		err := tx.SetNVPHash(hash)
 		if err != nil {
 			log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
-			return common.Hash{}, &common.MarshalError{Message:"marshal nvp hash error"}
+			return common.Hash{}, &common.MarshalError{Message: "marshal nvp hash error"}
 		}
 	}
 	tx.Signature = common.FromHex(realArgs.Signature)
@@ -107,12 +107,12 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 			Transaction: tx,
 			Simulate:    args.Simulate,
 			SnapshotId:  args.SnapshotId,
-			Ch: ch,
+			Ch:          ch,
 		})
-		res := <- ch
+		res := <-ch
 		close(ch)
 		if res == false {
-			return common.Hash{}, &common.CallbackError{Message:"send tx to nvp failed."}
+			return common.Hash{}, &common.CallbackError{Message: "send tx to nvp failed."}
 		}
 
 	} else {

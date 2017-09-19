@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	hcom "hyperchain/hyperdb/common"
 	"hyperchain/hyperdb/db"
 	"hyperchain/hyperdb/hleveldb"
 	"hyperchain/hyperdb/sldb"
+	"path"
 	"strconv"
 	"sync"
-	"path"
-	hcom "hyperchain/hyperdb/common"
 )
 
 var (
@@ -24,9 +24,9 @@ var (
 
 const (
 	// namespace
-	blockchain        = "blockchain"
-	consensus         = "consensus"
-	archive           = "archive"
+	blockchain = "blockchain"
+	consensus  = "consensus"
+	archive    = "archive"
 
 	default_namespace = "global"
 

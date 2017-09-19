@@ -5,11 +5,11 @@ import (
 )
 
 type IPCCmd struct {
-	CMD string `json:"cmd"`
+	CMD  string   `json:"cmd"`
 	Args []string `json:"args"`
 }
 
-func getCmds(endpoint string)[]*ishell.Cmd{
+func getCmds(endpoint string) []*ishell.Cmd {
 	handler := NewIPCHandler(endpoint)
 	return []*ishell.Cmd{
 		{
@@ -40,10 +40,5 @@ func getCmds(endpoint string)[]*ishell.Cmd{
 			`,
 			Func: handler.handle,
 		},
-
 	}
 }
-
-
-
-

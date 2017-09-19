@@ -1,12 +1,12 @@
 package db_utils
 
 import (
+	"encoding/json"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
-	"encoding/json"
 )
 
 // GetInvaildTxErrType - gets ErrType of invalid tx
@@ -54,12 +54,11 @@ func GetTransactionFunc(db db.Database, key []byte) (*types.Transaction, error) 
 		return nil, NotFindBlockErr
 	}
 
-	if len(block.Transactions) < int(ti + 1) {
+	if len(block.Transactions) < int(ti+1) {
 		return nil, OutOfSliceRangeErr
 	}
 	return block.Transactions[int(ti)], nil
 }
-
 
 func GetAllTransaction(namespace string) ([]*types.Transaction, error) {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
@@ -71,8 +70,8 @@ func GetAllTransaction(namespace string) ([]*types.Transaction, error) {
 
 func GetAllTransactionFunc(db db.Database) ([]*types.Transaction, error) {
 	var (
-		ts []*types.Transaction = make([]*types.Transaction, 0)
-		index            uint64
+		ts    []*types.Transaction = make([]*types.Transaction, 0)
+		index uint64
 	)
 	chain, err := getChainFn(db)
 	if err != nil {
@@ -293,18 +292,18 @@ func EncodeTransaction(transaction *types.Transaction) ([]byte, error) {
 	// There use transaction's signature directly
 	// Since the same signature means the consensus field of both are equal.
 	type ConsensusTransaction struct {
-		From            []byte      `json:"from,omitempty"`
-		To              []byte      `json:"to,omitempty"`
-		Value           []byte      `json:"value,omitempty"`
-		Timestamp       int64       `json:"timestamp,omitempty"`
-		Nonce           int64       `json:"nonce,omitempty"`
+		From      []byte `json:"from,omitempty"`
+		To        []byte `json:"to,omitempty"`
+		Value     []byte `json:"value,omitempty"`
+		Timestamp int64  `json:"timestamp,omitempty"`
+		Nonce     int64  `json:"nonce,omitempty"`
 	}
 
 	return json.Marshal(&ConsensusTransaction{
-		From:       transaction.From,
-		To:         transaction.To,
-		Value:      transaction.Value,
-		Timestamp:  transaction.Timestamp,
-		Nonce:      transaction.Nonce,
+		From:      transaction.From,
+		To:        transaction.To,
+		Value:     transaction.Value,
+		Timestamp: transaction.Timestamp,
+		Nonce:     transaction.Nonce,
 	})
 }

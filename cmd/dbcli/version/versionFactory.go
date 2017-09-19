@@ -2,9 +2,9 @@ package version
 
 import (
 	"hyperchain/cmd/dbcli/constant"
+	"hyperchain/cmd/dbcli/version/version1.1"
 	"hyperchain/cmd/dbcli/version/version1.2"
 	"hyperchain/cmd/dbcli/version/version1.3"
-	"hyperchain/cmd/dbcli/version/version1.1"
 )
 
 //NewResultFactory -- get json result by struct type and struct version.

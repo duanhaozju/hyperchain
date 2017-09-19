@@ -10,8 +10,8 @@ import (
 )
 
 type KV struct {
-	Key    common.Hash
-	Value  []byte
+	Key   common.Hash
+	Value []byte
 }
 
 func TestMemIterator_Iter(t *testing.T) {
@@ -24,24 +24,24 @@ func TestMemIterator_Iter(t *testing.T) {
 	}
 	expect := []KV{
 		{
-			Key:    common.BytesToRightPaddingHash([]byte("key")),
-			Value:  []byte("value"),
+			Key:   common.BytesToRightPaddingHash([]byte("key")),
+			Value: []byte("value"),
 		},
 		{
-			Key:    common.BytesToRightPaddingHash([]byte("key01")),
-			Value:  []byte("value01"),
+			Key:   common.BytesToRightPaddingHash([]byte("key01")),
+			Value: []byte("value01"),
 		},
 		{
-			Key:    common.BytesToRightPaddingHash([]byte("key1")),
-			Value:  []byte("value1"),
+			Key:   common.BytesToRightPaddingHash([]byte("key1")),
+			Value: []byte("value1"),
 		},
 		{
-			Key:    common.BytesToRightPaddingHash([]byte("key11")),
-			Value:  []byte("value11"),
+			Key:   common.BytesToRightPaddingHash([]byte("key11")),
+			Value: []byte("value11"),
 		},
 		{
-			Key:    common.BytesToRightPaddingHash([]byte("key2")),
-			Value:  []byte("value2"),
+			Key:   common.BytesToRightPaddingHash([]byte("key2")),
+			Value: []byte("value2"),
 		},
 	}
 	cnt := 0
@@ -110,7 +110,6 @@ func InitTestState() *StateDB {
 	batch.Write()
 	stateDb.MarkProcessFinish(1)
 
-
 	stateDb.MarkProcessStart(2)
 
 	for k, v := range InitData2() {
@@ -176,20 +175,20 @@ func InitData2() map[common.Hash][]byte {
 func ExpectResult() []KV {
 	expect := []KV{
 		{
-			Key: 	common.BytesToRightPaddingHash([]byte("-")),
-			Value:  []byte("value-"),
+			Key:   common.BytesToRightPaddingHash([]byte("-")),
+			Value: []byte("value-"),
 		}, {
-			Key: 	common.BytesToRightPaddingHash([]byte("key01")),
-			Value:  []byte("value01"),
+			Key:   common.BytesToRightPaddingHash([]byte("key01")),
+			Value: []byte("value01"),
 		}, {
-			Key: 	common.BytesToRightPaddingHash([]byte("key1")),
-			Value:  []byte("newvalue1"),
+			Key:   common.BytesToRightPaddingHash([]byte("key1")),
+			Value: []byte("newvalue1"),
 		}, {
-			Key: 	common.BytesToRightPaddingHash([]byte("key10")),
-			Value:  []byte("value10"),
+			Key:   common.BytesToRightPaddingHash([]byte("key10")),
+			Value: []byte("value10"),
 		}, {
-			Key: 	common.BytesToRightPaddingHash([]byte("key2")),
-			Value:  []byte("newvalue2"),
+			Key:   common.BytesToRightPaddingHash([]byte("key2")),
+			Value: []byte("newvalue2"),
 		},
 	}
 	return expect

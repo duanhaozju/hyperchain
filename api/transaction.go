@@ -11,19 +11,19 @@ import (
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
+	"hyperchain/hyperdb/db"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
 	"time"
-	"hyperchain/hyperdb/db"
 )
 
 const (
-	defaultGas              int64 = 100000000
-	defaustGasPrice         int64 = 10000
+	defaultGas      int64 = 100000000
+	defaustGasPrice int64 = 10000
 )
 
 var (
-	kec256Hash = crypto.NewKeccak256Hash("keccak256")
+	kec256Hash              = crypto.NewKeccak256Hash("keccak256")
 	leveldb_not_found_error = db.DB_NOT_FOUND.Error()
 )
 
@@ -38,19 +38,19 @@ type Transaction struct {
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 // If type is Ptr or String, it is optional parameter
 type SendTxArgs struct {
-	From      common.Address  `json:"from"`
-	To        *common.Address `json:"to"`
-	Gas       *Number         `json:"gas"`
-	GasPrice  *Number         `json:"gasPrice"`
-	Value     *Number         `json:"value"`
-	Payload   string          `json:"payload"`
-	Signature string          `json:"signature"`
-	Timestamp int64           `json:"timestamp"`
-	Simulate   bool    `json:"simulate"`
-	Opcode     int32   `json:"opcode"`
-	Nonce      int64   `json:"nonce"`
-	SnapshotId string  `json:"snapshotId"`
-	VmType     string  `json:"type"`
+	From       common.Address  `json:"from"`
+	To         *common.Address `json:"to"`
+	Gas        *Number         `json:"gas"`
+	GasPrice   *Number         `json:"gasPrice"`
+	Value      *Number         `json:"value"`
+	Payload    string          `json:"payload"`
+	Signature  string          `json:"signature"`
+	Timestamp  int64           `json:"timestamp"`
+	Simulate   bool            `json:"simulate"`
+	Opcode     int32           `json:"opcode"`
+	Nonce      int64           `json:"nonce"`
+	SnapshotId string          `json:"snapshotId"`
+	VmType     string          `json:"type"`
 }
 
 type TransactionResult struct {
@@ -125,8 +125,8 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	if args.SnapshotId != "" && args.Simulate != true {
 		return SendTxArgs{}, &common.InvalidParamsError{Message: "can not query history ledger without `simulate` mode"}
 	}
-	if args.Timestamp + time.Duration(24 * time.Hour).Nanoseconds() < time.Now().UnixNano() {
-		return SendTxArgs{}, &common.InvalidParamsError{Message:"transaction out of date"}
+	if args.Timestamp+time.Duration(24*time.Hour).Nanoseconds() < time.Now().UnixNano() {
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "transaction out of date"}
 	}
 
 	return args, nil
@@ -162,7 +162,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 		err := tx.SetNVPHash(hash)
 		if err != nil {
 			tran.log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
-			return common.Hash{}, &common.MarshalError{Message:"marshal nvp hash error"}
+			return common.Hash{}, &common.MarshalError{Message: "marshal nvp hash error"}
 		}
 	}
 	tx.Signature = common.FromHex(realArgs.Signature)
@@ -176,7 +176,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	}
 
 	if exist {
-		return common.Hash{}, &common.RepeadedTxError{Message:"repeated tx"}
+		return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx"}
 	}
 
 	// verify tx signature
@@ -192,10 +192,10 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 			Simulate:    args.Simulate,
 			Ch:          ch,
 		})
-		res := <- ch
+		res := <-ch
 		close(ch)
 		if res == false {
-			return common.Hash{}, &common.CallbackError{Message:"send tx to nvp failed."}
+			return common.Hash{}, &common.CallbackError{Message: "send tx to nvp failed."}
 		}
 	} else {
 		// post new tx event
@@ -310,7 +310,7 @@ func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) 
 // GetDiscardTransactionsByTime returns the invalid transactions for the given time duration.
 func (tran *Transaction) GetDiscardTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
-	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0{
+	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0 {
 		return nil, &common.InvalidParamsError{Message: "Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
 	}
 

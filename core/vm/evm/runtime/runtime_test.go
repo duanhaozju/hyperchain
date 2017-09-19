@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"hyperchain/common"
+	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm/evm"
 	"hyperchain/hyperdb/mdb"
-	"hyperchain/core/hyperstate"
 )
 
 func TestDefaults(t *testing.T) {

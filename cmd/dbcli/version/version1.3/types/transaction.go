@@ -1,12 +1,12 @@
 package version1_3
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"hyperchain/crypto"
 	"strconv"
-	"encoding/json"
 )
 
 func (self *Transaction) Hash() common.Hash {

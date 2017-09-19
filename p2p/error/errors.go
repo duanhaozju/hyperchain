@@ -33,42 +33,42 @@ func Campare(origin interface{}, shouldBe int) bool {
 
 type ErrCertPemParseFailed struct{}
 
-func (e ErrCertPemParseFailed)Error() string {
+func (e ErrCertPemParseFailed) Error() string {
 	return "Cert PEM parse failed."
 }
 
 type ErrECertVerifyFailed struct{}
 
-func (e ErrECertVerifyFailed)Error() string {
+func (e ErrECertVerifyFailed) Error() string {
 	return "ECert Verify Failed."
 }
 
 type ErrRCertVerifyFailed struct{}
 
-func (e ErrRCertVerifyFailed)Error() string {
+func (e ErrRCertVerifyFailed) Error() string {
 	return "RCert Verify failed."
 }
 
 type ErrCertSignVerifyFailed struct{}
 
-func (e ErrCertSignVerifyFailed)Error() string {
+func (e ErrCertSignVerifyFailed) Error() string {
 	return "Cert Signature Verified failed."
 }
 
 type ErrUnknown struct{}
 
-func (e ErrUnknown)Error() string {
+func (e ErrUnknown) Error() string {
 	return "unKnown error."
 }
 
 type ErrDecryptFailed struct{}
 
-func (e ErrDecryptFailed)Error() string {
+func (e ErrDecryptFailed) Error() string {
 	return "Decrypt Failed"
 }
 
 type ErrEncryptFailed struct{}
 
-func (e ErrEncryptFailed)Error() string {
+func (e ErrEncryptFailed) Error() string {
 	return "Encrypt Failed."
 }

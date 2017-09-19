@@ -3,11 +3,9 @@
 
 package common
 
-
 const (
-
 	LEVEL_DB_ROOT_DIR = "database.leveldb.root_dir"
-	DB_TYPE = "database.type"
+	DB_TYPE           = "database.type"
 
 	// database type
 	LDB_DB         = 0001

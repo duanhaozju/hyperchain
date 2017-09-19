@@ -1,9 +1,9 @@
 package types
 
 import (
+	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"math/big"
-	"github.com/golang/protobuf/proto"
 )
 
 func (tv *TransactionValue) RetrievePayload() []byte {

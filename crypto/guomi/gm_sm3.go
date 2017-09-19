@@ -1,4 +1,5 @@
 package guomi
+
 /*
 #cgo LDFLAGS: -L/usr/local/lib -L/usr/lib -L/usr/lib -lssl -lcrypto
 #include <stdlib.h>
@@ -7,7 +8,7 @@ package guomi
 #include "./crypto/err/err.h"
 #include "./crypto/err/err.c"
 
- */
+*/
 import "C"
 
 import (
@@ -18,11 +19,10 @@ import (
 /**
 sm3_hash
 this context implements the hash.Hash interface
- */
+*/
 type sm3ctx struct {
 	ctx C.sm3_ctx_t
 }
-
 
 func New() hash.Hash {
 	h := new(sm3ctx)

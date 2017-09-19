@@ -44,7 +44,7 @@ type SessionEvent struct {
 
 //receive new block event from node consensus event for consensus module
 type ValidationEvent struct {
-	Digest		 string
+	Digest       string
 	Transactions []*types.Transaction
 	SeqNo        uint64
 	View         uint64
@@ -123,7 +123,6 @@ type ReceiveVerifiedBlock struct {
 	Payload []byte
 }
 
-
 type CommitedBlockEvent struct {
 	Payload []byte
 }
@@ -137,10 +136,10 @@ type ExecutorToConsensusEvent struct {
 }
 
 type ExecutorToP2PEvent struct {
-	Payload     []byte
-	Type        int
-	Peers       []uint64
-	PeersHash   []string
+	Payload   []byte
+	Type      int
+	Peers     []uint64
+	PeersHash []string
 }
 
 /*
@@ -161,6 +160,7 @@ type ArchiveEvent struct {
 	FilterId string
 	Cont     chan error
 }
+
 // receive tx from a nvp
 type NvpRelayTxEvent struct {
 	Payload []byte

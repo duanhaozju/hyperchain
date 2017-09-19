@@ -69,11 +69,11 @@ type ReceiptView struct {
 }
 
 type ChainView struct {
-	Version          string
-	LatestBlockHash  string
-	ParentBlockHash  string
-	Height           uint64
-	Genesis          uint64
-	CurrentTxSum     uint64
-	Extra            string
+	Version         string
+	LatestBlockHash string
+	ParentBlockHash string
+	Height          uint64
+	Genesis         uint64
+	CurrentTxSum    uint64
+	Extra           string
 }

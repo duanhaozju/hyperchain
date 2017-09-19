@@ -14,12 +14,12 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	cm "hyperchain/core/common"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
 	"hyperchain/tree/bucket"
 	"sync/atomic"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
 )
 
 const (
@@ -40,21 +40,21 @@ type revision struct {
 // * Contracts
 // * Accounts
 type StateDB struct {
-	db                db.Database
-	archiveDb         db.Database
-	root              common.Hash
-	codeSizeCache     *lru.Cache
+	db            db.Database
+	archiveDb     db.Database
+	root          common.Hash
+	codeSizeCache *lru.Cache
 
 	// This map holds 'live' objects, which will get modified while processing a state transition.
 	stateObjects      map[common.Address]*StateObject
 	stateObjectsDirty map[common.Address]struct{}
 	// The refund counter, also used by state transitioning.
-	refund            *big.Int
+	refund *big.Int
 
-	thash, bhash      common.Hash
-	txIndex           int
-	logs              map[common.Hash]types.Logs
-	logSize           uint
+	thash, bhash common.Hash
+	txIndex      int
+	logs         map[common.Hash]types.Logs
+	logSize      uint
 
 	// Journal of state modifications. This is the backbone of
 	// Snapshot and RevertToSnapshot.
@@ -82,7 +82,7 @@ func New(root common.Hash, db db.Database, archiveDb db.Database, bktConf *commo
 	logger := common.GetLogger(namespace, "state")
 	csc, _ := lru.New(codeSizeCacheSize)
 	// initialize global cache of bucket tree
-	bucket.NewGlobalDataNodeCache(bktConf.GetInt(GlobalDataNodeCacheLength),bktConf.GetInt(GlobalDataNodeCacheSize))
+	bucket.NewGlobalDataNodeCache(bktConf.GetInt(GlobalDataNodeCacheLength), bktConf.GetInt(GlobalDataNodeCacheSize))
 	// initialize bucket tree
 	bucketPrefix, _ := CompositeStateBucketPrefix()
 	bucketTree := bucket.NewBucketTree(db, string(bucketPrefix))
@@ -125,7 +125,7 @@ func New(root common.Hash, db db.Database, archiveDb db.Database, bktConf *commo
 
 /*
 	Just for test
- */
+*/
 func NewRaw(db db.Database, height uint64, namespace string, conf *common.Config) *StateDB {
 	logger := common.GetLogger(namespace, "state")
 	bucket.NewGlobalDataNodeCache(conf.GetInt(GlobalDataNodeCacheLength), conf.GetInt(GlobalDataNodeCacheSize))
@@ -149,8 +149,6 @@ func NewRaw(db db.Database, height uint64, namespace string, conf *common.Config
 		logger:            logger,
 	}
 }
-
-
 
 // New - New creates a new statedb by reusing journalled data to avoid costly
 // disk io.
@@ -1130,7 +1128,6 @@ func validateRoot(root common.Hash, curRoot common.Hash) bool {
 		return true
 	}
 }
-
 
 func (self *StateDB) ShowArchive(address common.Address, date string) map[string]map[string]string {
 	storages := make(map[string]map[string]string)

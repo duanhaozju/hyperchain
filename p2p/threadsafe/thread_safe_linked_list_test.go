@@ -1,8 +1,8 @@
 package threadsafe
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestNewTSLinkedList(t *testing.T) {
@@ -178,7 +178,7 @@ func TestThreadSafeLinkedList_Contains2(t *testing.T) {
 func BenchmarkThreadSafeLinkedList_Find(b *testing.B) {
 	list := NewTSLinkedList("head")
 	for i := 0; i < 100000; i++ {
-		list.Insert(list.GetCapcity() - 1, "test")
+		list.Insert(list.GetCapcity()-1, "test")
 	}
 	for i := 0; i < b.N; i++ {
 		list.Find(99999)
@@ -261,7 +261,7 @@ func BenchmarkThreadSafeLinkedList_Iter(b *testing.B) {
 	//setup code
 	list := NewTSLinkedList("head")
 	for i := 0; i < 100000; i++ {
-		list.Insert(list.GetCapcity() - 1, "test")
+		list.Insert(list.GetCapcity()-1, "test")
 	}
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
@@ -274,7 +274,7 @@ func BenchmarkThreadSafeLinkedList_IterSlow(b *testing.B) {
 	//setup code
 	list := NewTSLinkedList("head")
 	for i := 0; i < 100000; i++ {
-		list.Insert(list.GetCapcity() - 1, "test")
+		list.Insert(list.GetCapcity()-1, "test")
 	}
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {

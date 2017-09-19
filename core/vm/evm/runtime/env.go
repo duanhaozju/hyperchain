@@ -3,13 +3,13 @@
 package runtime
 
 import (
-	"math/big"
-	"hyperchain/common"
-	"hyperchain/core/vm/evm"
-	"hyperchain/core/hyperstate"
-	"hyperchain/core/vm"
-	"hyperchain/core/types"
 	"github.com/op/go-logging"
+	"hyperchain/common"
+	"hyperchain/core/hyperstate"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm"
+	"math/big"
 )
 
 // Env is a basic runtime environment required for running the EVM.

@@ -3,15 +3,14 @@
 package runtime
 
 import (
-	"math/big"
-	"time"
 	"hyperchain/common"
-	"hyperchain/crypto"
 	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm/evm"
+	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
+	"math/big"
+	"time"
 )
-
 
 // Config is a basic type specifying certain configuration flags for running
 // the EVM.
@@ -28,8 +27,8 @@ type Config struct {
 	DisableJit  bool // "disable" so it's enabled by default
 	Debug       bool
 
-	State       *hyperstate.StateDB
-	GetHashFn   func(n uint64) common.Hash
+	State     *hyperstate.StateDB
+	GetHashFn func(n uint64) common.Hash
 
 	logs           []evm.StructLog
 	conf           *common.Config
@@ -176,5 +175,3 @@ func InitConf() *common.Config {
 	conf.Set(hyperstate.GlobalDataNodeCacheLength, 20)
 	return conf
 }
-
-

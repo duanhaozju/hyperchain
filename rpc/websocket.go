@@ -1,43 +1,41 @@
 package jsonrpc
 
 import (
-	"hyperchain/namespace"
-	"hyperchain/common"
-	"fmt"
-	"net/http"
-	"github.com/gorilla/websocket"
-	"net"
-	"io"
-	"net/url"
 	"context"
+	"errors"
+	"fmt"
+	"github.com/gorilla/websocket"
+	"hyperchain/common"
+	"hyperchain/namespace"
+	"io"
+	"net"
+	"net/http"
+	"net/url"
 	"sync"
 	"time"
-	"errors"
 )
 
 const (
-	ReadBufferSize = 1024 * 256
+	ReadBufferSize  = 1024 * 256
 	WriteBufferSize = 1024 * 256
 )
 
 var (
-	wsS          internalRPCServer
-
+	wsS internalRPCServer
 )
 
 type wsServerImpl struct {
+	stopHp    chan bool
+	restartHp chan bool
+	nr        namespace.NamespaceManager
+	port      int
 
-	stopHp			chan bool
-	restartHp		chan bool
-	nr			namespace.NamespaceManager
-	port                    int
-
-	wsConns			map[*websocket.Conn]*Notifier
-	wsConnsMux	       	sync.Mutex
-	wsHandler        	*Server
-	wsListener       	net.Listener
-	wsAllowedOrigins 	[]string		// allowedOrigins should be a comma-separated list of allowed origin URLs.
-					       // To allow connections with any origin, pass "*".
+	wsConns          map[*websocket.Conn]*Notifier
+	wsConnsMux       sync.Mutex
+	wsHandler        *Server
+	wsListener       net.Listener
+	wsAllowedOrigins []string // allowedOrigins should be a comma-separated list of allowed origin URLs.
+	// To allow connections with any origin, pass "*".
 }
 
 type httpReadWriteCloser struct {
@@ -48,19 +46,19 @@ type httpReadWriteCloser struct {
 func GetWSServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) internalRPCServer {
 	if wsS == nil {
 		wsS = &wsServerImpl{
-			stopHp: 		stopHp,
-			restartHp: 		restartHp,
-			nr: 			nr,
-			wsAllowedOrigins: 	[]string{"*"},
-			wsConns:		make(map[*websocket.Conn]*Notifier),
-			port:                   nr.GlobalConfig().GetInt(common.WEBSOCKET_PORT),
+			stopHp:           stopHp,
+			restartHp:        restartHp,
+			nr:               nr,
+			wsAllowedOrigins: []string{"*"},
+			wsConns:          make(map[*websocket.Conn]*Notifier),
+			port:             nr.GlobalConfig().GetInt(common.WEBSOCKET_PORT),
 		}
 	}
 	return wsS
 }
 
 // start starts the websocket RPC endpoint.
-func (wssi *wsServerImpl) start() error{
+func (wssi *wsServerImpl) start() error {
 	log.Noticef("starting websocket service at port %v ...", wssi.port)
 
 	var (
@@ -71,14 +69,13 @@ func (wssi *wsServerImpl) start() error{
 	// start websocket listener
 	handler := NewServer(wssi.nr, wssi.stopHp, wssi.restartHp)
 	if listener, err = net.Listen("tcp", fmt.Sprintf(":%d", wssi.port)); err != nil {
-		log.Errorf("%v",err)
+		log.Errorf("%v", err)
 		return err
 	}
 	go wssi.newWSServer(handler).Serve(listener)
 
-
 	wssi.wsListener = listener
-	wssi.wsHandler  = handler
+	wssi.wsHandler = handler
 
 	return nil
 }
@@ -121,7 +118,7 @@ func (wssi *wsServerImpl) restart() error {
 	return nil
 }
 
-func(wssi *wsServerImpl) getPort() int {
+func (wssi *wsServerImpl) getPort() int {
 	return wssi.port
 }
 
@@ -213,11 +210,11 @@ func (wssi *wsServerImpl) isOriginAllowed(origin string) bool {
 		}
 	}
 
-	return  false
+	return false
 }
 
 func (wssi *wsServerImpl) closeConnection(notifier *Notifier, conn *websocket.Conn) {
-	log.Debugf("cancel the context and close websocket connection %p, release resource",conn)
+	log.Debugf("cancel the context and close websocket connection %p, release resource", conn)
 
 	notifier.Close()
 	conn.Close()

@@ -3,14 +3,14 @@
 package jvm
 
 import (
+	"errors"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/core/vm"
+	"hyperchain/core/vm/jcee/go/jvm"
 	pb "hyperchain/core/vm/jcee/protos"
 	"sync/atomic"
-	"errors"
 	"time"
-	"hyperchain/core/vm/jcee/go/jvm"
 )
 
 type ContractExecutor interface {
@@ -27,9 +27,9 @@ type ContractExecutor interface {
 }
 
 var (
-	JVMServerErr = errors.New("jvm server execute error")
+	JVMServerErr    = errors.New("jvm server execute error")
 	CodeNotMatchErr = errors.New("execution code not match with ledger error")
-	ContextTypeErr = errors.New("mismatch when do context type convert")
+	ContextTypeErr  = errors.New("mismatch when do context type convert")
 )
 
 type contractExecutorImpl struct {
@@ -41,17 +41,16 @@ type contractExecutorImpl struct {
 
 type executeRs struct {
 	Response *pb.Response
-	Err error
+	Err      error
 }
 
 func NewContractExecutor(conf *common.Config, namespace string) ContractExecutor {
 	Jvm := &contractExecutorImpl{
-		logger:     common.GetLogger(namespace, "jvm"),
-		client:     jvm.NewClient(conf),
+		logger: common.GetLogger(namespace, "jvm"),
+		client: jvm.NewClient(conf),
 	}
 	return Jvm
 }
-
 
 func (cei *contractExecutorImpl) Start() error {
 	atomic.StoreInt32(&cei.close, 0)
@@ -96,7 +95,7 @@ func (cei *contractExecutorImpl) Finalize() {
 
 }
 
-func (cei *contractExecutorImpl) Ping() (*pb.Response, error){
+func (cei *contractExecutorImpl) Ping() (*pb.Response, error) {
 	return cei.heartbeat()
 }
 
@@ -115,9 +114,9 @@ func (cei *contractExecutorImpl) execute(tx *pb.Request) (*pb.Response, error) {
 		er <- &executeRs{r, err}
 	}()
 	select {
-	case <- time.Tick(5 * time.Second):
-		return &pb.Response{Ok:false, Result:[]byte("hyperjvm execute timeout")}, errors.New("execute timeout")
-	case rs := <- er:
+	case <-time.Tick(5 * time.Second):
+		return &pb.Response{Ok: false, Result: []byte("hyperjvm execute timeout")}, errors.New("execute timeout")
+	case rs := <-er:
 		return rs.Response, rs.Err
 	}
 }
@@ -129,4 +128,3 @@ func (cei *contractExecutorImpl) heartbeat() (*pb.Response, error) {
 	}
 	return cei.client.HeartBeat()
 }
-

@@ -1,16 +1,16 @@
 package constant
 
 const (
-	PATH     = "path"
-	DATABASE = "database"
-	NUMBER   = "number"
-	HASH     = "hash"
-	OUTPUT   = "output"
-	VERBOSE  = "verbose"
-	MAX      = "max"
-	MIN      = "min"
-	ADDRESS  = "address"
-	NS       = "ns"
+	PATH       = "path"
+	DATABASE   = "database"
+	NUMBER     = "number"
+	HASH       = "hash"
+	OUTPUT     = "output"
+	VERBOSE    = "verbose"
+	MAX        = "max"
+	MIN        = "min"
+	ADDRESS    = "address"
+	NS         = "ns"
 	GLOBALCONF = "globalconf"
 
 	VERSIONFINAL = "final"
@@ -27,9 +27,9 @@ const (
 	CHAINHEIGHT        = "chainHeight"
 	ACCOUNT            = "account"
 
-	PROTOERR           = "proto: bad wiretype for field"
+	PROTOERR = "proto: bad wiretype for field"
 )
 
 var (
-	VERSIONS     = []string{VERSION1_2, VERSION1_2, VERSION1_3}
+	VERSIONS = []string{VERSION1_2, VERSION1_2, VERSION1_3}
 )

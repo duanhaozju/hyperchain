@@ -1,12 +1,12 @@
 package versionAccount
 
 import (
-	"math/big"
-	"hyperchain/common"
 	"encoding/json"
-	"strings"
-	"hyperchain/core/hyperstate"
 	"fmt"
+	"hyperchain/common"
+	"hyperchain/core/hyperstate"
+	"math/big"
+	"strings"
 )
 
 type Account struct {
@@ -47,13 +47,13 @@ type AccountVerboseView struct {
 func (account *Account) Encode(address string) string {
 	var accounts = make(map[string]AccountView)
 	var accountView = AccountView{
-		Nonce: account.Nonce,
-		Balance: account.Balance,
-		Root: account.Root.Hex(),
-		CodeHash: common.Bytes2Hex(account.CodeHash),
+		Nonce:             account.Nonce,
+		Balance:           account.Balance,
+		Root:              account.Root.Hex(),
+		CodeHash:          common.Bytes2Hex(account.CodeHash),
 		DeployedContracts: account.DeployedContracts,
-		Creator: account.Creator.Hex(),
-		CreateTime: account.CreateTime,
+		Creator:           account.Creator.Hex(),
+		CreateTime:        account.CreateTime,
 	}
 	if account.Status == hyperstate.STATEOBJECT_STATUS_NORMAL {
 		accountView.Status = "normal"
@@ -72,14 +72,14 @@ func (account *Account) Encode(address string) string {
 func (account *Account) EncodeVerbose(address string, code string) string {
 	var accounts = make(map[string]AccountVerboseView)
 	var accountVerboseView = AccountVerboseView{
-		Nonce: account.Nonce,
-		Balance: account.Balance,
-		Root: account.Root.Hex(),
-		CodeHash: common.Bytes2Hex(account.CodeHash),
+		Nonce:             account.Nonce,
+		Balance:           account.Balance,
+		Root:              account.Root.Hex(),
+		CodeHash:          common.Bytes2Hex(account.CodeHash),
 		DeployedContracts: account.DeployedContracts,
-		Creator: account.Creator.Hex(),
-		CreateTime: account.CreateTime,
-		Code: code,
+		Creator:           account.Creator.Hex(),
+		CreateTime:        account.CreateTime,
+		Code:              code,
 	}
 	if account.Status == hyperstate.STATEOBJECT_STATUS_NORMAL {
 		accountVerboseView.Status = "normal"
@@ -93,6 +93,6 @@ func (account *Account) EncodeVerbose(address string, code string) string {
 		fmt.Println(err.Error())
 		return ""
 	}
-	str :=  string(res)
+	str := string(res)
 	return str[:strings.Index(str, "\"Storage\"")+len("\"Storage\": {")]
 }

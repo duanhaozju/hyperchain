@@ -3,38 +3,37 @@
 package jsonrpc
 
 import (
-	"strings"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"regexp"
+	"github.com/dgrijalva/jwt-go"
 	"io"
-	"os"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"regexp"
+	"strings"
 	"time"
-	"github.com/dgrijalva/jwt-go"
 )
 
 // permissionSet used to maintain user permissions
 type permissionSet map[int]bool
 
-var valid_user = map [string]string {
+var valid_user = map[string]string{
 	"root": "hyperchain",
-	"hpc": "hpc",
+	"hpc":  "hpc",
 }
 
-var user_scope = map [string]permissionSet {
+var user_scope = map[string]permissionSet{
 	"root": rootScopes(),
 }
 
-var user_opTime = map [string]int64 {
+var user_opTime = map[string]int64{
 	"root": 0,
 }
 
-
 func IsUserExist(username, password string) (bool, error) {
-	for k,v := range valid_user {
+	for k, v := range valid_user {
 		if k == username {
 			if v == password {
 				return true, nil
@@ -48,7 +47,7 @@ func IsUserExist(username, password string) (bool, error) {
 
 func IsUserPermit(username string, scope int) bool {
 	for name, scopes := range user_scope {
-		if name == username{
+		if name == username {
 			return contains(scopes, scope)
 		}
 	}
@@ -59,7 +58,7 @@ func contains(pset permissionSet, scope int) bool {
 	return pset[scope]
 }
 
-func basicAuth(req *http.Request) (string, string, error){
+func basicAuth(req *http.Request) (string, string, error) {
 	var username, password string
 	auth := req.Header.Get("Authorization")
 	if auth == "" {
@@ -270,7 +269,7 @@ func updateLastOperationTime(username string) {
 }
 
 func checkOpTimeExpire(username string) bool {
-	return float64(time.Now().Unix() - user_opTime[username]) > expiration.Seconds()
+	return float64(time.Now().Unix()-user_opTime[username]) > expiration.Seconds()
 }
 
 func getUserFromClaim(input []byte) string {
