@@ -249,7 +249,6 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 		}
 		return rbft.processUpdateN()
 	case NODE_MGR_UPDATEDN_EVENT:
-		delete(rbft.nodeMgr.updateStore, rbft.nodeMgr.updateTarget)
 		rbft.startTimerIfOutstandingRequests()
 		rbft.vcMgr.vcResendCount = 0
 		rbft.nodeMgr.finishUpdateStore = make(map[FinishUpdate]bool)
@@ -269,6 +268,7 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 		}
 		rbft.logger.Criticalf("======== Replica %d finished UpdatingN, primary=%d, n=%d/f=%d/view=%d/h=%d", rbft.id, rbft.primary(rbft.view), rbft.N, rbft.f, rbft.view, rbft.h)
 		rbft.handleTransactionsAfterAbnormal()
+		delete(rbft.nodeMgr.updateStore, rbft.nodeMgr.updateTarget)
 
 	default:
 		rbft.logger.Errorf("Invalid view change event event : %v", e)
