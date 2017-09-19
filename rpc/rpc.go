@@ -39,18 +39,18 @@ type RPCServerImpl struct {
 	wsServer   internalRPCServer
 }
 
-func GetRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) RPCServer {
+func GetRPCServer(nr namespace.NamespaceManager) RPCServer {
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
 	once.Do(func() {
-		rpcs = newRPCServer(nr, stopHp, restartHp)
+		rpcs = newRPCServer(nr)
 	})
 	return rpcs
 }
 
-func newRPCServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) *RPCServerImpl {
+func newRPCServer(nr namespace.NamespaceManager) *RPCServerImpl {
 	rsi := &RPCServerImpl{}
-	rsi.httpServer = GetHttpServer(nr, stopHp, restartHp)
-	rsi.wsServer = GetWSServer(nr, stopHp, restartHp)
+	rsi.httpServer = GetHttpServer(nr)
+	rsi.wsServer = GetWSServer(nr)
 
 	ipc.RegisterFunc("service", rsi.Command)
 	return rsi

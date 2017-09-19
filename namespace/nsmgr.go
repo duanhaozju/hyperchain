@@ -56,6 +56,10 @@ type NamespaceManager interface {
 	RestartNamespace(name string) error
 	//GlobalConfig global configuration of the system.
 	GlobalConfig() *common.Config
+	//GetStopFlag returns the flag of stop hyperchain server
+	GetStopFlag() chan bool
+	//GetRestartFlag returns the flag of restart hyperchain server
+	GetRestartFlag() chan bool
 }
 
 //nsManagerImpl implementation of NsRegistry.
@@ -66,15 +70,19 @@ type nsManagerImpl struct {
 	bloomfilter *db_utils.BloomFilterCache // transaciton bloom filter
 	// help to do transaction duplication checking
 	conf *common.Config
+	stopHp      chan bool
+	restartHp   chan bool
 }
 
 //NewNsManager new a namespace manager
-func newNsManager(conf *common.Config) *nsManagerImpl {
+func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *nsManagerImpl {
 	nr := &nsManagerImpl{
 		namespaces:  make(map[string]Namespace),
 		conf:        conf,
 		jvmManager:  NewJvmManager(conf),
 		bloomfilter: db_utils.NewBloomCache(conf),
+		stopHp:      stopHp,
+		restartHp:   restartHp,
 	}
 	nr.rwLock = new(sync.RWMutex)
 	err := nr.init()
@@ -85,10 +93,10 @@ func newNsManager(conf *common.Config) *nsManagerImpl {
 }
 
 //GetNamespaceManager get namespace registry instance.
-func GetNamespaceManager(conf *common.Config) NamespaceManager {
+func GetNamespaceManager(conf *common.Config, stopHp chan bool, restartHp chan bool) NamespaceManager {
 	logger = common.GetLogger(common.DEFAULT_LOG, "nsmgr")
 	once.Do(func() {
-		nr = newNsManager(conf)
+		nr = newNsManager(conf, stopHp, restartHp)
 	})
 	return nr
 }
@@ -363,4 +371,14 @@ func (nr *nsManagerImpl) ListenDelNode(name string, delFlag chan bool) {
 			nr.DeRegister(name)
 		}
 	}
+}
+
+//GetStopFlag returns the flag of stop hyperchain server
+func (nr *nsManagerImpl) GetStopFlag() chan bool {
+	return nr.stopHp
+}
+
+//GetRestartFlag returns the flag of restart hyperchain server
+func (nr *nsManagerImpl) GetRestartFlag() chan bool {
+	return nr.restartHp
 }

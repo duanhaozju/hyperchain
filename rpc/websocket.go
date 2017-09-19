@@ -43,11 +43,11 @@ type httpReadWriteCloser struct {
 	io.WriteCloser
 }
 
-func GetWSServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) internalRPCServer {
+func GetWSServer(nr namespace.NamespaceManager) internalRPCServer {
 	if wsS == nil {
 		wsS = &wsServerImpl{
-			stopHp:           stopHp,
-			restartHp:        restartHp,
+			stopHp:           nr.GetStopFlag(),
+			restartHp:        nr.GetRestartFlag(),
 			nr:               nr,
 			wsAllowedOrigins: []string{"*"},
 			wsConns:          make(map[*websocket.Conn]*Notifier),

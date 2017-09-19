@@ -42,12 +42,12 @@ type httpServerImpl struct {
 	httpAllowedOrigins []string
 }
 
-func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) internalRPCServer {
+func GetHttpServer(nr namespace.NamespaceManager) internalRPCServer {
 	if hs == nil {
 		hs = &httpServerImpl{
 			nr:                 nr,
-			stopHp:             stopHp,
-			restartHp:          restartHp,
+			stopHp:             nr.GetStopFlag(),
+			restartHp:          nr.GetRestartFlag(),
 			httpAllowedOrigins: []string{"*"},
 			port:               nr.GlobalConfig().GetInt(common.JSON_RPC_PORT),
 		}
