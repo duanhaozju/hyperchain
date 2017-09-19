@@ -3,25 +3,25 @@
 package main
 
 import (
+	"fmt"
 	"github.com/mkideal/cli"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/namespace"
-	"time"
-	"hyperchain/p2p"
 	"github.com/terasum/viper"
-	"hyperchain/ipc"
-	"fmt"
-	_ "net/http/pprof"
-	"hyperchain/rpc"
+	"hyperchain/common"
 	"hyperchain/hyperdb"
+	"hyperchain/ipc"
+	"hyperchain/namespace"
+	"hyperchain/p2p"
+	"hyperchain/rpc"
+	_ "net/http/pprof"
+	"time"
 )
 
 type hyperchain struct {
 	nsMgr       namespace.NamespaceManager
 	hs          jsonrpc.RPCServer
 	ipcShell    *ipc.IPCServer
-	p2pmgr 	    p2p.P2PManager
+	p2pmgr      p2p.P2PManager
 	stopFlag    chan bool
 	restartFlag chan bool
 	args        *argT
@@ -34,7 +34,6 @@ func newHyperchain(argV *argT) *hyperchain {
 		args:        argV,
 	}
 
-
 	globalConfig := common.NewConfig(hp.args.ConfigPath)
 	globalConfig.Set(common.GLOBAL_CONFIG_PATH, hp.args.ConfigPath)
 	common.InitHyperLoggerManager(globalConfig)
@@ -44,18 +43,18 @@ func newHyperchain(argV *argT) *hyperchain {
 	vip := viper.New()
 	vip.SetConfigFile(hp.args.ConfigPath)
 	err := vip.ReadInConfig()
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 
-	hp.ipcShell	 = ipc.NEWIPCServer(globalConfig.GetString(common.P2P_IPC))
-	p2pManager,err	:= p2p.GetP2PManager(vip)
-	if err != nil{
+	hp.ipcShell = ipc.NEWIPCServer(globalConfig.GetString(common.P2P_IPC))
+	p2pManager, err := p2p.GetP2PManager(vip)
+	if err != nil {
 		panic(err)
 	}
-	hp.p2pmgr 	= p2pManager
-	hp.nsMgr 	= namespace.GetNamespaceManager(globalConfig)
-	hp.hs 		= jsonrpc.GetRPCServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)
+	hp.p2pmgr = p2pManager
+	hp.nsMgr = namespace.GetNamespaceManager(globalConfig)
+	hp.hs = jsonrpc.GetRPCServer(hp.nsMgr, hp.stopFlag, hp.restartFlag)
 
 	return hp
 }
@@ -86,14 +85,14 @@ func (h *hyperchain) restart() {
 
 type argT struct {
 	cli.Helper
-	RestoreEnable bool     `cli:"r,restore" usage:"enable restore system status from dumpfile"`
-	SId           string   `cli:"sid" usage:"use to specify snapshot" dft:""`
-	Namespace     string   `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
-	ConfigPath    string   `cli:"c,conf" usage:"config file path" dft:"./global.toml"`
-	IPCEndpoint   string   `cli:"ipc" usage:"ipc interactive shell attach endpoint" dft:"./hpc.ipc"`
-	Shell         bool     `cli:"s,shell" usage:"start interactive shell" dft:"false"`
-	PProfEnable   bool     `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`
-	PPort         string   `cli:"pport" usage:"use to specify pprof http port"`
+	RestoreEnable bool   `cli:"r,restore" usage:"enable restore system status from dumpfile"`
+	SId           string `cli:"sid" usage:"use to specify snapshot" dft:""`
+	Namespace     string `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
+	ConfigPath    string `cli:"c,conf" usage:"config file path" dft:"./global.toml"`
+	IPCEndpoint   string `cli:"ipc" usage:"ipc interactive shell attach endpoint" dft:"./hpc.ipc"`
+	Shell         bool   `cli:"s,shell" usage:"start interactive shell" dft:"false"`
+	PProfEnable   bool   `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`
+	PPort         string `cli:"pport" usage:"use to specify pprof http port"`
 }
 
 var (

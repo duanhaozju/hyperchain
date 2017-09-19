@@ -1,8 +1,8 @@
 package vm
 
 import (
-	"math/big"
 	"hyperchain/common"
+	"math/big"
 )
 
 // Account represents a contract or basic hyperchain account.

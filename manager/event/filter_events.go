@@ -14,12 +14,12 @@ type FilterNewLogEvent struct {
 }
 
 type FilterSystemStatusEvent struct {
-	Module    string      `json:"module"`
-	Status    bool        `json:"status"`
-	Subtype   string      `json:"subType"`
-	ErrorCode int         `json:"errorCode"`
-	Message   string      `json:"message"`
-	Date      time.Time   `json:"date"`
+	Module    string    `json:"module"`
+	Status    bool      `json:"status"`
+	Subtype   string    `json:"subType"`
+	ErrorCode int       `json:"errorCode"`
+	Message   string    `json:"message"`
+	Date      time.Time `json:"date"`
 }
 
 /*
@@ -27,16 +27,14 @@ type FilterSystemStatusEvent struct {
 */
 
 const (
-	FilterMakeSnapshot = "make_snapshot"
+	FilterMakeSnapshot   = "make_snapshot"
 	FilterDeleteSnapshot = "delete_snapshot"
-	FilterDoArchive = "do_archive"
+	FilterDoArchive      = "do_archive"
 )
 
 type FilterArchive struct {
-	Type     string      `json:"type"`
-	FilterId string      `json:"filterId"`
-	Success  bool        `json:"success"`
-	Message  string      `json:"message"`
+	Type     string `json:"type"`
+	FilterId string `json:"filterId"`
+	Success  bool   `json:"success"`
+	Message  string `json:"message"`
 }
-
-

@@ -1,9 +1,9 @@
 package network
 
 import (
-	"strings"
 	"github.com/pkg/errors"
 	"strconv"
+	"strings"
 )
 
 var errInvalidRoute = errors.New("route item is invalid, please check it.")
@@ -20,5 +20,3 @@ func ParseRoute(dnsItem string) (hostname string, port int, err error) {
 	}
 	return
 }
-
-

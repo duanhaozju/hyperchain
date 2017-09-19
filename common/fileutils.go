@@ -3,15 +3,15 @@
 package common
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
-	"io"
-	"path"
-	"bufio"
 )
 
 // MakeName creates a node name that follows the ethereum convention
@@ -62,12 +62,11 @@ func HomeDir() string {
 	return ""
 }
 
-
 func GetGoPath() string {
 	env := os.Getenv("GOPATH")
 	l := strings.Split(env, ":")
 	if len(l) > 1 {
-		return l[len(l) - 1]
+		return l[len(l)-1]
 	}
 	return l[0]
 }
@@ -193,7 +192,7 @@ func SeekAndAppend(item, filepath, appendContent string) error {
 	}
 
 	//4. rename .tmp file to original file name
-	if err = os.Rename(newFilePath, filepath); err != nil{
+	if err = os.Rename(newFilePath, filepath); err != nil {
 		return err
 	}
 	return nil

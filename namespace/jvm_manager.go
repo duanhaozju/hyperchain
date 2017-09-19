@@ -1,40 +1,41 @@
 package namespace
 
 import (
-	ledger "hyperchain/core/vm/jcee/go/ledger"
-	"hyperchain/common"
-	"os/exec"
-	"github.com/op/go-logging"
-	"strconv"
-	"path"
-	"time"
-	"fmt"
-	"hyperchain/core/vm/jcee/go"
-	"os"
 	"bytes"
+	"fmt"
+	"github.com/op/go-logging"
+	"hyperchain/common"
+	"hyperchain/core/vm/jcee/go"
+	ledger "hyperchain/core/vm/jcee/go/ledger"
+	"os"
+	"os/exec"
+	"path"
+	"strconv"
+	"time"
 )
+
 const (
-	BinHome  = "hyperjvm/bin"
+	BinHome    = "hyperjvm/bin"
 	StartShell = "start_hyperjvm.sh"
-	StopShell =  "stop_hyperjvm.sh"
+	StopShell  = "stop_hyperjvm.sh"
 )
 
 type JvmManager struct {
-	ledgerProxy      *ledger.LedgerProxy     // ledger server handler, use to support ledger service
-	jvmCli           jvm.ContractExecutor   // system jvm client, for health maintain
-	logger           *logging.Logger	 // logger
-	conf             *common.Config
-	exit             chan bool
-	lsofPath         string
+	ledgerProxy *ledger.LedgerProxy  // ledger server handler, use to support ledger service
+	jvmCli      jvm.ContractExecutor // system jvm client, for health maintain
+	logger      *logging.Logger      // logger
+	conf        *common.Config
+	exit        chan bool
+	lsofPath    string
 }
 
 func NewJvmManager(conf *common.Config) *JvmManager {
 	return &JvmManager{
-		ledgerProxy:     ledger.NewLedgerProxy(conf),
-		jvmCli:          jvm.NewContractExecutor(conf, common.DEFAULT_NAMESPACE),
-		logger:          common.GetLogger(common.DEFAULT_LOG, "nsmgr"),
-		conf:            conf,
-		exit:            make(chan bool),
+		ledgerProxy: ledger.NewLedgerProxy(conf),
+		jvmCli:      jvm.NewContractExecutor(conf, common.DEFAULT_NAMESPACE),
+		logger:      common.GetLogger(common.DEFAULT_LOG, "nsmgr"),
+		conf:        conf,
+		exit:        make(chan bool),
 	}
 }
 
@@ -121,9 +122,9 @@ func (mgr *JvmManager) startJvmServerDaemon() {
 
 	for {
 		select {
-		case <- mgr.exit:
+		case <-mgr.exit:
 			return
-		case <- ticker.C:
+		case <-ticker.C:
 			if !mgr.checkJvmExist() {
 				mgr.restartJvmServer()
 				time.Sleep(10 * time.Second)
@@ -148,7 +149,6 @@ func (mgr *JvmManager) notifyToExit() {
 	mgr.exit <- true
 }
 
-
 func (mgr *JvmManager) checkJvmExist() bool {
 	noLsof := true
 	if len(mgr.lsofPath) == 0 {
@@ -163,7 +163,7 @@ func (mgr *JvmManager) checkJvmExist() bool {
 					break
 				}
 			}
-		}else {
+		} else {
 			noLsof = false
 		}
 		if len(path) == 0 || noLsof {
@@ -178,7 +178,7 @@ func (mgr *JvmManager) checkJvmExist() bool {
 	if err != nil || len(ret) == 0 {
 		if err == nil {
 			return false
-		}else {
+		} else {
 			mgr.logger.Error(err.Error())
 			return true
 		}

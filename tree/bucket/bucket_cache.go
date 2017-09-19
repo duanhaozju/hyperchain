@@ -5,7 +5,6 @@ import (
 	"hyperchain/hyperdb/db"
 )
 
-
 // We can create a cache and keep all the bucket nodes pre-loaded.
 // Since, the bucket nodes do not contain actual data and max possible
 // buckets are pre-determined, the memory demand may not be very high or can easily
@@ -24,12 +23,12 @@ func newBucketCache(treePrefix string, maxBucketCacheSize int) *BucketCache {
 		isEnabled = false
 		return &BucketCache{TreePrefix: treePrefix, isEnabled: isEnabled}
 	} else {
-		cache,_ := lru.New(maxBucketCacheSize)
+		cache, _ := lru.New(maxBucketCacheSize)
 		return &BucketCache{TreePrefix: treePrefix, cache: cache, isEnabled: isEnabled}
 	}
 }
 
-func (bucketCache *BucketCache) clearAllCache(){
+func (bucketCache *BucketCache) clearAllCache() {
 	bucketCache.cache.Purge()
 }
 
@@ -46,7 +45,7 @@ func (bucketCache *BucketCache) put(key BucketKey, node *BucketNode) {
 	}
 	node.markedForDeletion = false
 	node.childrenUpdated = nil
-	bucketCache.cache.Add(key,node)
+	bucketCache.cache.Add(key, node)
 }
 
 // TODO performance status should be done
@@ -54,16 +53,16 @@ func (bucketCache *BucketCache) fetchBucketNodeFromCache(db db.Database, key Buc
 	if !bucketCache.isEnabled {
 		return fetchBucketNodeFromDB(db, bucketCache.TreePrefix, &key)
 	}
-	bucketNodeValue,ok := bucketCache.cache.Get(key)
+	bucketNodeValue, ok := bucketCache.cache.Get(key)
 	if ok {
-		return bucketNodeValue.(*BucketNode),nil
+		return bucketNodeValue.(*BucketNode), nil
 	}
-	bucketNode,err := fetchBucketNodeFromDB(db, bucketCache.TreePrefix, &key)
-	if err != nil{
-		return nil,err
-	}else {
+	bucketNode, err := fetchBucketNodeFromDB(db, bucketCache.TreePrefix, &key)
+	if err != nil {
+		return nil, err
+	} else {
 		//cache.c.Add(key,bucketNode)
-		return bucketNode,nil
+		return bucketNode, nil
 	}
 
 }
@@ -74,4 +73,3 @@ func (bucketCache *BucketCache) remove(key BucketKey) {
 	}
 	bucketCache.cache.Remove(key)
 }
-

@@ -5,24 +5,24 @@ package namespace
 import (
 	"fmt"
 	"github.com/urfave/cli"
-	"hyperchain/hypercli/common"
-	cm "hyperchain/common"
 	admin "hyperchain/api/admin"
-	"path"
+	cm "hyperchain/common"
 	"hyperchain/crypto"
-	"time"
-	"strconv"
+	"hyperchain/hypercli/common"
 	"math/rand"
 	"os"
+	"path"
+	"strconv"
+	"time"
 )
 
 //NewNamespaceCMD new namespace related
 func NewNamespaceCMD() []cli.Command {
 	return []cli.Command{
 		{
-			Name:    "startNsMgr",
-			Usage:   "start the namespace manager",
-			Action:  start,
+			Name:   "startNsMgr",
+			Usage:  "start the namespace manager",
+			Action: start,
 		},
 		{
 			Name:   "stopNsMgr",
@@ -33,7 +33,7 @@ func NewNamespaceCMD() []cli.Command {
 			Name:   "new",
 			Usage:  "generate a unique namespace id",
 			Action: new,
-			Flags:  []cli.Flag{
+			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "configDir, d",
 					Value: "",
@@ -131,7 +131,7 @@ func new(c *cli.Context) error {
 }
 
 //namespace generate functions
-func generateNamespaceId(hostNames string) string  {
+func generateNamespaceId(hostNames string) string {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	hashString := hostNames + time.Now().String() + strconv.Itoa(rand.Intn(1000000))
 	//fmt.Println(hashString)

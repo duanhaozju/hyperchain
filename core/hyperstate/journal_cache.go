@@ -22,11 +22,11 @@ type JournalCache struct {
 
 func NewJournalCache(db db.Database, logger *logging.Logger) *JournalCache {
 	return &JournalCache{
-		db:                       db,
-		logger:                   logger,
-		stateObjects:             make(map[common.Address]*StateObject),
-		stateWorkingSet:          bucket.NewKVMap(),
-		stateObjectsWorkingSet:   make(map[common.Address]bucket.K_VMap),
+		db:                     db,
+		logger:                 logger,
+		stateObjects:           make(map[common.Address]*StateObject),
+		stateWorkingSet:        bucket.NewKVMap(),
+		stateObjectsWorkingSet: make(map[common.Address]bucket.K_VMap),
 	}
 }
 

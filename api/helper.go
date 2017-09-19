@@ -5,12 +5,12 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/hyperstate"
+	"hyperchain/core/vm"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/hyperdb"
 	"math/big"
 	"path"
 	"time"
-	"hyperchain/core/vm"
 )
 
 const (

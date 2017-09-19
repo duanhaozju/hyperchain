@@ -1,8 +1,8 @@
 package admittance
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
 //var (
@@ -127,9 +127,8 @@ import (
 //}
 
 func TestCAManager_InitTcert(t *testing.T) {
-	files,_ := ListDir("/Users/DeepSea/Documents/workspace/workspace_go/src/hyperchain/configuration/peerconfigs/cert1","cert")
-	for k,f := range files{
-		fmt.Println(k,f)
+	files, _ := ListDir("/Users/DeepSea/Documents/workspace/workspace_go/src/hyperchain/configuration/peerconfigs/cert1", "cert")
+	for k, f := range files {
+		fmt.Println(k, f)
 	}
 }
-

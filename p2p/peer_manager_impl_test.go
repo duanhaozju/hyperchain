@@ -1,11 +1,11 @@
 package p2p_test
 
 import (
-	"hyperchain/p2p/network"
 	"github.com/spf13/viper"
-	"hyperchain/p2p/utils"
-	"hyperchain/manager/event"
 	"hyperchain/common"
+	"hyperchain/manager/event"
+	"hyperchain/p2p/network"
+	"hyperchain/p2p/utils"
 )
 
 var _ = Describe("PeerManagerImpl", func() {
@@ -14,7 +14,7 @@ var _ = Describe("PeerManagerImpl", func() {
 		var err error
 		BeforeEach(func() {
 			vip := viper.New()
-			vip.Set(common.P2P_HOSTS, utils.GetProjectPath() + "/p2p/test/hosts.yaml")
+			vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/p2p/test/hosts.yaml")
 			vip.Set(common.P2P_RETRY_TIME, "3s")
 			vip.Set(common.P2P_PORT, 50019)
 			hypernet, err = network.NewHyperNet(vip)

@@ -1,11 +1,11 @@
 package manager
 
 import (
-	"hyperchain/consensus/pbft"
-	"github.com/golang/protobuf/proto"
-	m "hyperchain/manager/message"
-	"github.com/syndtr/goleveldb/leveldb/errors"
 	"fmt"
+	"github.com/golang/protobuf/proto"
+	"github.com/syndtr/goleveldb/leveldb/errors"
+	"hyperchain/consensus/pbft"
+	m "hyperchain/manager/message"
 )
 
 func (hub *EventHub) invokePbftLocal(serviceType, eventType int, content interface{}) {

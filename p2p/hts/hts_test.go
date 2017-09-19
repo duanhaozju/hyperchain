@@ -1,10 +1,10 @@
 package hts
 
 import (
-	"testing"
-	"hyperchain/p2p/utils"
 	"github.com/stretchr/testify/assert"
 	"hyperchain/p2p/hts/secimpl"
+	"hyperchain/p2p/utils"
+	"testing"
 )
 
 func TestNewHTS(t *testing.T) {

@@ -3,11 +3,11 @@
 package jsonrpc
 
 import (
+	"encoding/json"
+	admin "hyperchain/api/admin"
 	"math/big"
 	"reflect"
-	"encoding/json"
 	"strings"
-	admin "hyperchain/api/admin"
 )
 
 var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
@@ -30,7 +30,7 @@ func splitRawMessage(args json.RawMessage) ([]string, error) {
 	if length < 2 {
 		return nil, admin.ErrInvalidParamFormat
 	} else {
-		if str[0] != '[' || str[length - 1] != ']' {
+		if str[0] != '[' || str[length-1] != ']' {
 			return nil, admin.ErrInvalidParamFormat
 		}
 	}

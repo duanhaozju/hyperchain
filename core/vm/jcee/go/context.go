@@ -1,9 +1,9 @@
 package jvm
 
 import (
+	"hyperchain/common"
 	"hyperchain/core/vm"
 	"math/big"
-	"hyperchain/common"
 )
 
 type Context struct {
@@ -16,7 +16,6 @@ type Context struct {
 	codePath   string
 	codeHash   common.Hash
 }
-
 
 func NewContext(caller vm.ContractRef, callee vm.ContractRef, env vm.Environment, isCreation bool, isUpdate bool, codePath string, codeHash common.Hash) *Context {
 	return &Context{
@@ -70,7 +69,6 @@ func (ctx *Context) GetCaller() vm.ContractRef {
 	return ctx.caller
 }
 
-
 func (ctx *Context) UseGas(*big.Int) bool {
 	return true
 }
@@ -116,7 +114,6 @@ func (ctx *Context) GetJumpdests() interface{} {
 func (ctx *Context) GetEnv() vm.Environment {
 	return ctx.env
 }
-
 
 func (ctx *Context) IsCreation() bool {
 	return ctx.isCreation

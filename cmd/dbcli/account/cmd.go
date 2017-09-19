@@ -1,15 +1,15 @@
 package account
 
 import (
-	"github.com/urfave/cli"
-	"hyperchain/cmd/dbcli/database"
 	"fmt"
+	"github.com/urfave/cli"
 	"hyperchain/cmd/dbcli/constant"
+	"hyperchain/cmd/dbcli/database"
 	"hyperchain/cmd/dbcli/version"
-	"io/ioutil"
-	"path"
-	"os"
 	"io"
+	"io/ioutil"
+	"os"
+	"path"
 )
 
 func NewAccountCMD() []cli.Command {
@@ -40,22 +40,22 @@ func NewAccountCMD() []cli.Command {
 					Usage: "specify the output file",
 				},
 				cli.StringFlag{
-					Name: "verbose",
+					Name:  "verbose",
 					Value: "false",
 					Usage: "specify the account content",
 				},
 				cli.StringFlag{
-					Name: "number",
+					Name:  "number",
 					Value: "-1",
 					Usage: "specify the block number",
 				},
 				cli.StringFlag{
-					Name: "ns",
+					Name:  "ns",
 					Value: "global",
 					Usage: "specify the namespace",
 				},
 				cli.StringFlag{
-					Name: "globalconf",
+					Name:  "globalconf",
 					Value: "",
 					Usage: "specify the namespace global config",
 				},
@@ -82,22 +82,22 @@ func NewAccountCMD() []cli.Command {
 					Usage: "specify the output file",
 				},
 				cli.StringFlag{
-					Name: "verbose",
+					Name:  "verbose",
 					Value: "false",
 					Usage: "specify the account content",
 				},
 				cli.StringFlag{
-					Name: "number",
+					Name:  "number",
 					Value: "-1",
 					Usage: "specify the block number",
 				},
 				cli.StringFlag{
-					Name: "ns",
+					Name:  "ns",
 					Value: "global",
 					Usage: "specify the namespace",
 				},
 				cli.StringFlag{
-					Name: "globalconf",
+					Name:  "globalconf",
 					Value: "",
 					Usage: "specify the namespace global config",
 				},
@@ -194,7 +194,7 @@ func createDBCopy(dbPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	for i:=0 ; i < len(fileInfos); i++ {
+	for i := 0; i < len(fileInfos); i++ {
 		if fileInfos[i].IsDir() {
 			continue
 		}

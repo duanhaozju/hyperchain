@@ -1,22 +1,22 @@
 package version
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/cmd/dbcli/constant"
 	"hyperchain/cmd/dbcli/database"
 	"hyperchain/cmd/dbcli/utils"
+	"hyperchain/cmd/dbcli/version/versionAccount"
 	"hyperchain/cmd/dbcli/version/wrapper"
 	"hyperchain/common"
-	"strconv"
-	"strings"
+	"hyperchain/core/hyperstate"
+	"hyperchain/hyperdb"
 	"os"
 	"regexp"
-	"encoding/json"
-	"hyperchain/core/hyperstate"
-	"hyperchain/cmd/dbcli/version/versionAccount"
-	"hyperchain/hyperdb"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 type Version struct {
@@ -37,7 +37,7 @@ var (
 	ReceiptsPrefix           = []byte("receipts-")
 	ChainKey                 = []byte("chain-key-")
 
-	accountIdentifier        = "-account"
+	accountIdentifier = "-account"
 )
 
 /*-----------------------------------block--------------------------------------*/
@@ -113,9 +113,9 @@ func (self *Version) GetBlockRange(path string, min, max uint64, parameter *cons
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 		} else {
 			if i == max {
-				result = strings.Replace("\t" + result, "\n", "\n\t", -1)
+				result = strings.Replace("\t"+result, "\n", "\n\t", -1)
 			} else {
-				result = strings.Replace("\t" + result + ",", "\n", "\n\t", -1)
+				result = strings.Replace("\t"+result+",", "\n", "\n\t", -1)
 			}
 			if path != "" {
 				utils.Append(file, result)
@@ -205,7 +205,7 @@ func (self *Version) GetTransactionByHash(hash string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	parameter := &constant.Parameter {
+	parameter := &constant.Parameter{
 		TxIndex: txIndex,
 	}
 	result, err := NewResultFactory(constant.TRANSACTION, string(blockWrapper.BlockVersion), blockWrapper.Block, parameter)
@@ -254,7 +254,7 @@ func (self *Version) GetAllTransactionSequential(path string, parameter *constan
 				txs := reg2.FindAllString(result, -1)
 				for j := 0; j < len(txs); j++ {
 					if result1 != "" {
-						result1 = strings.Replace("\t" + strings.TrimSpace(result1) + ",", "\t\t", "\t", -1)
+						result1 = strings.Replace("\t"+strings.TrimSpace(result1)+",", "\t\t", "\t", -1)
 						if path != "" {
 							utils.Append(file, result1)
 						} else {
@@ -267,7 +267,7 @@ func (self *Version) GetAllTransactionSequential(path string, parameter *constan
 		}
 	}
 	if result1 != "" {
-		result1 = strings.Replace("\t" + strings.TrimSpace(result1), "\t\t", "\t", -1)
+		result1 = strings.Replace("\t"+strings.TrimSpace(result1), "\t\t", "\t", -1)
 		if path != "" {
 			utils.Append(file, result1)
 		} else {
@@ -326,7 +326,7 @@ func (self *Version) GetAllDiscardTransaction(path string) {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 			break
 		} else if result1 != "" {
-			result1 = strings.Replace("\t" + result1 + ",", "\n", "\n\t", -1)
+			result1 = strings.Replace("\t"+result1+",", "\n", "\n\t", -1)
 			if path != "" {
 				utils.Append(file, result)
 			} else {
@@ -336,7 +336,7 @@ func (self *Version) GetAllDiscardTransaction(path string) {
 		result1 = result
 	}
 	if result1 != "" {
-		result1 = strings.Replace("\t" + result1, "\n", "\n\t", -1)
+		result1 = strings.Replace("\t"+result1, "\n", "\n\t", -1)
 		if path != "" {
 			utils.Append(file, result1)
 		} else {
@@ -525,7 +525,7 @@ func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
 			}
 			code, _ := self.db.Get(hyperstate.CompositeCodeHash(common.Hex2Bytes(accountAddress[index]), account.CodeHash))
 			prefixRes := account.EncodeVerbose(accountAddress[index], common.Bytes2Hex(code))
-			prefixRes = strings.Replace("\t" + prefixRes, "\n", "\n\t", -1)
+			prefixRes = strings.Replace("\t"+prefixRes, "\n", "\n\t", -1)
 			if path != "" {
 				utils.Append(file, prefixRes)
 			} else {
@@ -569,7 +569,7 @@ func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
 			result1 = "}"
 		} else {
 			if result1 != "" {
-				result1 = strings.Replace("\t" + result1 + ",", "\n", "\n\t", -1)
+				result1 = strings.Replace("\t"+result1+",", "\n", "\n\t", -1)
 				if path != "" {
 					utils.Append(file, result1)
 				} else {
@@ -581,7 +581,7 @@ func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
 	}
 
 	if result1 != "" {
-		result1 = strings.Replace("\t" + result1, "\n", "\n\t", -1)
+		result1 = strings.Replace("\t"+result1, "\n", "\n\t", -1)
 		if path != "" {
 			utils.Append(file, result1)
 		} else {
@@ -622,17 +622,17 @@ func (self *Version) RevertDB(ns, globalConf, path string, number uint64, parame
 		return
 	}
 	rootStr := reg.FindString(maxBlockStr)
-	root := common.HexToHash(rootStr[len("\"MerkleRoot\": \""):len(rootStr)-2])
+	root := common.HexToHash(rootStr[len("\"MerkleRoot\": \"") : len(rootStr)-2])
 
 	var targetRoot [][]byte
-	for i := int64(height-1); i >= int64(number); i-- {
+	for i := int64(height - 1); i >= int64(number); i-- {
 		minBlockStr, err := self.GetBlockByNumber(uint64(i), parameter)
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 			return
 		}
 		needRootStr := reg.FindString(minBlockStr)
-		needBlockRoot := common.Hex2Bytes(needRootStr[len("\"MerkleRoot\": \""):len(rootStr)-2])
+		needBlockRoot := common.Hex2Bytes(needRootStr[len("\"MerkleRoot\": \"") : len(rootStr)-2])
 		targetRoot = append(targetRoot, needBlockRoot)
 	}
 	var config *common.Config
@@ -658,7 +658,7 @@ func (self *Version) RevertDB(ns, globalConf, path string, number uint64, parame
 		fmt.Println(constant.ErrQuery.Error(), err.Error())
 		return
 	}
-	for i := int64(height-1); i >= int64(number); i-- {
+	for i := int64(height - 1); i >= int64(number); i-- {
 		batch := db.NewBatch()
 		err = stateDb.RevertToJournal(uint64(i), uint64(height), targetRoot[0], batch)
 		if err != nil {

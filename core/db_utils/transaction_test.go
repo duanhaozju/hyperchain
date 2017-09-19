@@ -1,12 +1,12 @@
 package db_utils
 
 import (
-	"testing"
-	"hyperchain/hyperdb/mdb"
-	"hyperchain/core/types"
-	"hyperchain/core/test_util"
-	"reflect"
 	"hyperchain/common"
+	"hyperchain/core/test_util"
+	"hyperchain/core/types"
+	"hyperchain/hyperdb/mdb"
+	"reflect"
+	"testing"
 )
 
 func TestGetTransaction(t *testing.T) {
@@ -49,7 +49,6 @@ func TestJudgeTransactionExist(t *testing.T) {
 		}
 	}
 }
-
 
 // TestGetInvaildTx tests for GetDiscardTransaction
 func TestGetInvaildTx(t *testing.T) {

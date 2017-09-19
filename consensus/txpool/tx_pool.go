@@ -32,16 +32,16 @@ type TxPool interface {
 
 // txPoolImpl implement the txpool
 type txPoolImpl struct {
-	txPool           map[string]*types.Transaction // store all non-batched txs
-	txPoolHash       []string                      // store all non-batched txs' hash by order
-	batchStore       []*TxHashBatch                // store batched txs using batch hash as key
-	batchedTxs       map[string]bool               // store batched txs' hash
-	cachedHashList   map[string][]string           // cached hash list using batch hash as key
-	missingTxs       map[string][]string           // store missing tx hash using batch hash as key
-	poolSize         int                           // upper limit of txPool
-	queue            *event.TypeMux
-	batchSize        int
-	logger			 *logging.Logger
+	txPool         map[string]*types.Transaction // store all non-batched txs
+	txPoolHash     []string                      // store all non-batched txs' hash by order
+	batchStore     []*TxHashBatch                // store batched txs using batch hash as key
+	batchedTxs     map[string]bool               // store batched txs' hash
+	cachedHashList map[string][]string           // cached hash list using batch hash as key
+	missingTxs     map[string][]string           // store missing tx hash using batch hash as key
+	poolSize       int                           // upper limit of txPool
+	queue          *event.TypeMux
+	batchSize      int
+	logger         *logging.Logger
 }
 
 // Timer
@@ -285,9 +285,9 @@ func (pool *txPoolImpl) GetOneTxsBack(hash string) error {
 // transactions from the network.
 func newTxPoolImpl(namespace string, poolsize int, queue *event.TypeMux, batchsize int) (*txPoolImpl, error) {
 	txpool := &txPoolImpl{
-		poolSize:     poolsize,
-		queue:        queue,
-		batchSize:    batchsize,
+		poolSize:  poolsize,
+		queue:     queue,
+		batchSize: batchsize,
 	}
 	txpool.txPool = make(map[string]*types.Transaction)
 	txpool.txPoolHash = nil

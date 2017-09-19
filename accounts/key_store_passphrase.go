@@ -16,8 +16,8 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
 	"hyperchain/common"
-	"hyperchain/crypto/csprng"
 	"hyperchain/crypto"
+	"hyperchain/crypto/csprng"
 )
 
 const (
@@ -78,9 +78,9 @@ func (ks keyStorePassphrase) JoinPath(filename string) string {
 // blob that can be decrypted later on.
 func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 	authArray := []byte(auth)
-	salt,err := csprng.CSPRNG(32)
-	if err !=nil{
-		return nil,err
+	salt, err := csprng.CSPRNG(32)
+	if err != nil {
+		return nil, err
 	}
 	derivedKey, err := scrypt.Key(authArray, salt, scryptN, scryptR, scryptP, scryptDKLen)
 	if err != nil {
@@ -89,9 +89,9 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 	encryptKey := derivedKey[:16]
 	keyBytes := crypto.FromECDSA(key.PrivateKey.(*ecdsa.PrivateKey))
 
-	iv,err := csprng.CSPRNG(aes.BlockSize)
-	if err !=nil{
-		return nil,err
+	iv, err := csprng.CSPRNG(aes.BlockSize)
+	if err != nil {
+		return nil, err
 	}
 	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
 	if err != nil {

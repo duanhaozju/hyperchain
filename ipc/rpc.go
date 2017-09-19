@@ -1,9 +1,9 @@
 package ipc
 
 import (
-	"sync"
 	"errors"
 	"fmt"
+	"sync"
 )
 
 var (
@@ -11,7 +11,7 @@ var (
 )
 
 type Args struct {
-	Cmd string
+	Cmd  string
 	Argv []string
 }
 
@@ -19,35 +19,34 @@ type Ret struct {
 	Rets []string
 }
 
-type RemoteCall struct{
+type RemoteCall struct {
 	RegLock *sync.RWMutex
-	Func map[string]func(args []string,ret *[]string)error
+	Func    map[string]func(args []string, ret *[]string) error
 }
 
-func GetRemoteCall() *RemoteCall{
+func GetRemoteCall() *RemoteCall {
 	if remoteCall == nil {
 		remoteCall = &RemoteCall{
-			RegLock:new(sync.RWMutex),
-			Func:make(map[string]func(args []string,ret *[]string)error),
+			RegLock: new(sync.RWMutex),
+			Func:    make(map[string]func(args []string, ret *[]string) error),
 		}
 	}
 	return remoteCall
 }
 
-func RegisterFunc(cmd string,f func(args []string,ret *[]string)error ){
+func RegisterFunc(cmd string, f func(args []string, ret *[]string) error) {
 	rc := GetRemoteCall()
 	rc.RegLock.Lock()
 	defer rc.RegLock.Unlock()
 	rc.Func[cmd] = f
 }
 
-func(rc *RemoteCall)Call(args Args,ret *Ret)error{
+func (rc *RemoteCall) Call(args Args, ret *Ret) error {
 	rc.RegLock.RLock()
 	defer rc.RegLock.RUnlock()
-	if f,ok := rc.Func[args.Cmd];ok{
-		return f(args.Argv,&ret.Rets)
-	}else{
-		return errors.New(fmt.Sprintf("the cmd: %s hasn't register.",args.Cmd))
+	if f, ok := rc.Func[args.Cmd]; ok {
+		return f(args.Argv, &ret.Rets)
+	} else {
+		return errors.New(fmt.Sprintf("the cmd: %s hasn't register.", args.Cmd))
 	}
 }
-

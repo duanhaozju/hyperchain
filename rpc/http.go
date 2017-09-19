@@ -7,49 +7,49 @@ import (
 	//"github.com/astaxie/beego/logs"
 	"github.com/rs/cors"
 	//"hyperchain/api/rest/routers"
-	"hyperchain/namespace"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
 	"fmt"
+	"golang.org/x/net/http2"
+	admin "hyperchain/api/admin"
+	"hyperchain/common"
+	"hyperchain/namespace"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"time"
-	admin "hyperchain/api/admin"
-	"errors"
-	"hyperchain/common"
-	"crypto/x509"
-	"io/ioutil"
-	"crypto/tls"
-	"golang.org/x/net/http2"
 )
 
 const (
 	maxHTTPRequestContentLength = 1024 * 256
-	ReadTimeout	            = 3 * time.Second
+	ReadTimeout                 = 3 * time.Second
 )
 
 var (
-	hs           internalRPCServer
+	hs internalRPCServer
 )
 
 type httpServerImpl struct {
-	stopHp			chan bool
-	restartHp		chan bool
-	nr			namespace.NamespaceManager
-	port                    int
+	stopHp    chan bool
+	restartHp chan bool
+	nr        namespace.NamespaceManager
+	port      int
 
-	httpListener 		net.Listener
-	httpHandler  		*Server
-	httpAllowedOrigins 	[]string
+	httpListener       net.Listener
+	httpHandler        *Server
+	httpAllowedOrigins []string
 }
 
 func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) internalRPCServer {
 	if hs == nil {
 		hs = &httpServerImpl{
-			nr: 			nr,
-			stopHp: 		stopHp,
-			restartHp: 		restartHp,
-			httpAllowedOrigins: 	[]string{"*"},
-			port:                   nr.GlobalConfig().GetInt(common.JSON_RPC_PORT),
+			nr:                 nr,
+			stopHp:             stopHp,
+			restartHp:          restartHp,
+			httpAllowedOrigins: []string{"*"},
+			port:               nr.GlobalConfig().GetInt(common.JSON_RPC_PORT),
 		}
 	}
 	return hs
@@ -89,9 +89,9 @@ func (hi *httpServerImpl) start() error {
 		return err
 	}
 	tlsConfig := &tls.Config{
-			ClientCAs:  pool,
-			ClientAuth: tls.RequireAndVerifyClientCert,
-			Certificates: []tls.Certificate{serverCert},
+		ClientCAs:    pool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		Certificates: []tls.Certificate{serverCert},
 	}
 
 	if isVersion2 && isHTTPS {
@@ -178,7 +178,7 @@ func (hi *httpServerImpl) restart() error {
 	return nil
 }
 
-func(hi *httpServerImpl) getPort() int {
+func (hi *httpServerImpl) getPort() int {
 	return hi.port
 }
 
@@ -218,9 +218,9 @@ func (hrw *httpReadWrite) Close() error {
 // newHTTPServer creates a new http RPC server around an API provider.
 func newHTTPServer(mux *http.ServeMux, tlsConfig *tls.Config) *http.Server {
 	return &http.Server{
-		Handler: mux,
-		ReadTimeout:  ReadTimeout,
-		TLSConfig: tlsConfig,
+		Handler:     mux,
+		ReadTimeout: ReadTimeout,
+		TLSConfig:   tlsConfig,
 	}
 }
 

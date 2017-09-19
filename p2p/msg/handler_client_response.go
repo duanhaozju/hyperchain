@@ -27,7 +27,7 @@ func (h *ClientAcceptMsgHandler) Teardown() {
 	h.logger.Info("client accept message not support the stream message, so needn't to be close")
 }
 
-func (h *ClientAcceptMsgHandler) Receive() chan <- interface{} {
+func (h *ClientAcceptMsgHandler) Receive() chan<- interface{} {
 	h.logger.Info("client accpet message not support stream message")
 	return nil
 }
@@ -36,7 +36,7 @@ func (h *ClientAcceptMsgHandler) Execute(msg *pb.Message) (*pb.Message, error) {
 	h.logger.Debugf("got a client accept message ,msg type %s", msg.MessageType)
 	rsp := &pb.Message{
 		MessageType: pb.MsgType_SERVERDONE,
-		Payload:[]byte("server send a server Done message(this message is from server)"),
+		Payload:     []byte("server send a server Done message(this message is from server)"),
 	}
 	return rsp, nil
 }

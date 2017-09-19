@@ -59,7 +59,7 @@ func NewTransactionCMD() []cli.Command {
 					Usage: "specify the output file",
 				},
 				cli.StringFlag{
-					Name: "verbose",
+					Name:  "verbose",
 					Value: "false",
 					Usage: "specify the transaction content",
 				},

@@ -63,7 +63,7 @@ func (pbft *pbftImpl) persistCSet(v uint64, n uint64, d string) {
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
-func (pbft *pbftImpl) persistDelQSet(v uint64, n uint64,d string) {
+func (pbft *pbftImpl) persistDelQSet(v uint64, n uint64, d string) {
 	qset := fmt.Sprintf("qset.%d.%d.%s", v, n, d)
 	persist.DelState(pbft.namespace, qset)
 }

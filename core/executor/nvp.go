@@ -1,16 +1,16 @@
 package executor
 
 import (
-	"hyperchain/core/types"
-	"sync"
-	"github.com/golang/protobuf/proto"
-	"hyperchain/core/db_utils"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
-	"encoding/hex"
-	"syscall"
+	"hyperchain/core/db_utils"
+	"hyperchain/core/types"
+	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
 
@@ -47,19 +47,19 @@ type NVPContext interface {
 }
 
 type NVPContextImpl struct {
-	demandNumber uint64    // current demand number for commit
+	demandNumber uint64 // current demand number for commit
 
-	isInSync     bool      // for NVP use, to indicate whether send demand block repeatedly.
-	max          uint64    // for NVP use, get max demand block number during sync
-	upper        uint64    // for NVP use, get max demand block number in batch during sync
-	down         uint64    // for NVP use, get min demand block number in batch during sync
-	resendExit   chan bool // for NVP use, resend backend process notifier
+	isInSync   bool      // for NVP use, to indicate whether send demand block repeatedly.
+	max        uint64    // for NVP use, get max demand block number during sync
+	upper      uint64    // for NVP use, get max demand block number in batch during sync
+	down       uint64    // for NVP use, get min demand block number in batch during sync
+	resendExit chan bool // for NVP use, resend backend process notifier
 }
 
 func NewNVPContextImpl(executor *Executor) *NVPContextImpl {
 	currentChain := db_utils.GetChainCopy(executor.namespace)
 	return &NVPContextImpl{
-		demandNumber: currentChain.Height+1,
+		demandNumber: currentChain.Height + 1,
 	}
 }
 
@@ -87,7 +87,7 @@ func (ctx *NVPContextImpl) getIsInSync() bool {
 	return ctx.isInSync
 }
 
-func (ctx *NVPContextImpl) setIsInSync(flag bool)  {
+func (ctx *NVPContextImpl) setIsInSync(flag bool) {
 	ctx.isInSync = flag
 }
 
@@ -107,7 +107,7 @@ func (ctx *NVPContextImpl) setDown(num uint64) {
 	atomic.StoreUint64(&ctx.down, num)
 }
 
-func (ctx *NVPContextImpl) getResendExit() chan bool  {
+func (ctx *NVPContextImpl) getResendExit() chan bool {
 	return ctx.resendExit
 }
 
@@ -136,15 +136,15 @@ type NVP interface {
 }
 
 type NVPImpl struct {
-	lock       sync.Mutex
-	ctx        NVPContext
-	executor   *Executor
+	lock     sync.Mutex
+	ctx      NVPContext
+	executor *Executor
 }
 
 func NewNVPImpl(executor *Executor) *NVPImpl {
 	return &NVPImpl{
-		ctx: NewNVPContextImpl(executor),
-		executor:executor,
+		ctx:      NewNVPContextImpl(executor),
+		executor: executor,
 	}
 }
 
@@ -192,7 +192,7 @@ func (nvp *NVPImpl) ReceiveBlock(payload []byte) {
 		}
 	} else {
 		if !nvp.isInSync() {
-			nvp.getCtx().initSync(block.Number - 1, db_utils.GetHeightOfChain(nvp.getExecutor().namespace))
+			nvp.getCtx().initSync(block.Number-1, db_utils.GetHeightOfChain(nvp.getExecutor().namespace))
 			nvp.getExecutor().logger.Debugf("sync init result: maxNum: %v, minNumInBatch: %v, isInSync: %v", nvp.getCtx().getMax(), nvp.getCtx().getDown(), nvp.isInSync())
 			nvp.sendSyncRequest(nvp.calUpper(), nvp.getCtx().getDown())
 			nvp.getCtx().initResendExit()
@@ -207,7 +207,7 @@ func (nvp *NVPImpl) ReceiveBlock(payload []byte) {
 	}
 }
 
-func (nvp *NVPImpl) preProcess(payload []byte) (*types.Block,error) {
+func (nvp *NVPImpl) preProcess(payload []byte) (*types.Block, error) {
 	nvp.getExecutor().logger.Debugf("pre-process block of NVP start!")
 	block := &types.Block{}
 	err := proto.Unmarshal(payload, block)
@@ -256,7 +256,7 @@ func (nvp *NVPImpl) applyRemainBlock(number uint64) error {
 	if err != nil {
 		return nil
 	}
-	if err := nvp.process(block); err != nil{
+	if err := nvp.process(block); err != nil {
 		return err
 	}
 	nvp.getCtx().updateDemand()
@@ -271,7 +271,7 @@ func (nvp *NVPImpl) process(block *types.Block) error {
 	if nvp.getExecutor().assertApplyResult(block, result) == false {
 		if nvp.getExecutor().GetExitFlag() {
 			batch := nvp.getExecutor().db.NewBatch()
-			for i := block.Number; ;i += 1 {
+			for i := block.Number; ; i += 1 {
 				// delete persisted blocks number larger than chain height
 				err := db_utils.DeleteBlockByNum(nvp.getExecutor().namespace, batch, i, false, false)
 				if err != nil {
@@ -280,12 +280,12 @@ func (nvp *NVPImpl) process(block *types.Block) error {
 					nvp.getExecutor().logger.Noticef("delete block number #%v in batch success!", i)
 				}
 				if !nvp.isInSync() || i == nvp.getCtx().getMax()+1 {
-					break;
+					break
 				}
 			}
 			err := batch.Write()
 			if err != nil {
-				nvp.getExecutor().logger.Error("delete blocks in db failed! ErrMsg: %v." , err.Error())
+				nvp.getExecutor().logger.Error("delete blocks in db failed! ErrMsg: %v.", err.Error())
 			}
 			nvp.getExecutor().clearStatedb()
 			nvp.getExecutor().logger.Error("assert failed! exit hyperchain.")
@@ -308,7 +308,7 @@ func (nvp *NVPImpl) resendBackend() {
 	down := nvp.getCtx().getDown()
 	for {
 		select {
-		case <- nvp.getCtx().getResendExit():
+		case <-nvp.getCtx().getResendExit():
 			nvp.getExecutor().logger.Notice("resend mechanism in sync finish!")
 			return
 		case <-ticker.C:
@@ -367,7 +367,7 @@ func (nvp *NVPImpl) decUpper(block *types.Block) {
 			break
 		}
 		nvp.getExecutor().logger.Debugf("db already has block number #%v. block hash %v.", blk.Number, common.Bytes2Hex(blk.BlockHash))
-		nvp.getCtx().setUpper(nvp.getCtx().getUpper()-1)
+		nvp.getCtx().setUpper(nvp.getCtx().getUpper() - 1)
 		blk, err = db_utils.GetBlockByNumber(nvp.getExecutor().namespace, nvp.getCtx().getUpper())
 	}
 }

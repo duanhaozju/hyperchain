@@ -6,7 +6,7 @@ type SpinLock struct {
 	state int32
 }
 
-func (s *SpinLock)TryLock() bool {
+func (s *SpinLock) TryLock() bool {
 	return atomic.CompareAndSwapInt32(&s.state, 0, 1)
 }
 

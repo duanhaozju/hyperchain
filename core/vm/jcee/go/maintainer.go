@@ -2,10 +2,9 @@ package jvm
 
 import (
 	"github.com/looplab/fsm"
-	"time"
 	"github.com/op/go-logging"
+	"time"
 )
-
 
 const (
 	conn_init   = "init"
@@ -14,27 +13,27 @@ const (
 )
 
 const (
-	initialize       = "initialize"
-	ping_success     = "ping_success"
-	ping_failed      = "ping_failed"
-	rebirth          = "rebirth"
+	initialize   = "initialize"
+	ping_success = "ping_success"
+	ping_failed  = "ping_failed"
+	rebirth      = "rebirth"
 )
 
 const retryThreshold = 5
 
 type ConnMaintainer struct {
-	fsm      *fsm.FSM
-	cli      *contractExecutorImpl
+	fsm *fsm.FSM
+	cli *contractExecutorImpl
 
-	rc       int32
-	pc       int32
-	exit     chan bool
-	logger   *logging.Logger
+	rc     int32
+	pc     int32
+	exit   chan bool
+	logger *logging.Logger
 }
 
 func NewConnMaintainer(cli *contractExecutorImpl, logger *logging.Logger) *ConnMaintainer {
 	exit := make(chan bool)
-	mr :=  &ConnMaintainer{
+	mr := &ConnMaintainer{
 		cli:    cli,
 		exit:   exit,
 		logger: logger,
@@ -48,9 +47,9 @@ func NewConnMaintainer(cli *contractExecutorImpl, logger *logging.Logger) *ConnM
 			{Name: rebirth, Src: []string{conn_sick}, Dst: conn_health},
 		},
 		fsm.Callbacks{
-			"before_" + ping_success: func(e *fsm.Event) {mr.pingS(e)},
-			"before_" + ping_failed: func(e *fsm.Event) {mr.pingF(e)},
-			"after_" + ping_failed: func(e *fsm.Event) {mr.reconn(e)},
+			"before_" + ping_success: func(e *fsm.Event) { mr.pingS(e) },
+			"before_" + ping_failed:  func(e *fsm.Event) { mr.pingF(e) },
+			"after_" + ping_failed:   func(e *fsm.Event) { mr.reconn(e) },
 		},
 	)
 	mr.fsm.Event(initialize)
@@ -103,14 +102,13 @@ func (maintainer *ConnMaintainer) ping() error {
 	}
 }
 
-
 func (maintainer *ConnMaintainer) conn() error {
 	return maintainer.cli.client.Connect()
 }
 
 /*
 	Callbacks
- */
+*/
 
 func (maintainer *ConnMaintainer) pingS(e *fsm.Event) {
 	maintainer.logger.Debug("ping success")
@@ -123,7 +121,6 @@ func (maintainer *ConnMaintainer) pingF(e *fsm.Event) {
 	maintainer.logger.Debug("ping failed")
 	maintainer.pc += 1
 }
-
 
 func (maintainer *ConnMaintainer) reconn(e *fsm.Event) {
 	if maintainer.pc < retryThreshold || !maintainer.fsm.Is(conn_sick) {
@@ -143,4 +140,3 @@ func (maintainer *ConnMaintainer) reconn(e *fsm.Event) {
 func (maintainer *ConnMaintainer) trace(e *fsm.Event) {
 	maintainer.logger.Debugf("[FSM TRACE] event %s", e.Event)
 }
-

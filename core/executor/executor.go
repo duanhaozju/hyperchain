@@ -212,4 +212,3 @@ func (executor *Executor) FetchStateDb() vm.Database {
 func (executor *Executor) GetNVP() NVP {
 	return executor.nvp
 }
-

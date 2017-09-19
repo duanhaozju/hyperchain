@@ -39,8 +39,8 @@ func (nr *nsManagerImpl) constructConfigFromDir(namespace, path string) (*common
 		logger.Errorf("err %v", err)
 	}
 	// global part
-	conf.Set(common.P2P_PORT,  nr.conf.GetInt(common.P2P_PORT))
-	conf.Set(common.JVM_PORT,   nr.conf.GetInt(common.JVM_PORT))
+	conf.Set(common.P2P_PORT, nr.conf.GetInt(common.P2P_PORT))
+	conf.Set(common.JVM_PORT, nr.conf.GetInt(common.JVM_PORT))
 	// ns part
 	conf.Set(common.C_NODE_ID, peerViper.GetInt("self.id"))
 	return conf, nil

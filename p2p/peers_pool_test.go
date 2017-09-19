@@ -9,5 +9,3 @@ var _ = Describe("PeersPool", func() {
 		})
 	})
 })
-
-

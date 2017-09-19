@@ -50,7 +50,7 @@ const (
 
 const (
 	LatestBlockNumber     uint64 = 0
-	MaxPendingSnapshotReq = 1024
+	MaxPendingSnapshotReq        = 1024
 )
 
 // Error message definitions

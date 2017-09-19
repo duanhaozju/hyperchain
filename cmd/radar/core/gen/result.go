@@ -1,15 +1,15 @@
 package gen
 
 import (
-	"strings"
-	"strconv"
-	"math"
-	"hyperchain/common"
-	"hyperchain/crypto"
-	"hyperchain/cmd/radar/core/types"
 	"github.com/syndtr/goleveldb/leveldb"
-	"hyperchain/core/hyperstate"
 	rcm "hyperchain/cmd/radar/core/common"
+	"hyperchain/cmd/radar/core/types"
+	"hyperchain/common"
+	"hyperchain/core/hyperstate"
+	"hyperchain/crypto"
+	"math"
+	"strconv"
+	"strings"
 )
 
 func GetResult(db *leveldb.DB, contractAddress string, contractVariables []*types.ContractVariable, contractContent *ContractContent, keyToOriMap map[string]map[string]string) []string {
@@ -37,7 +37,7 @@ func GetResult(db *leveldb.DB, contractAddress string, contractVariables []*type
 	for index := 0; index < len(contractVariables); index++ {
 		name := contractVariables[index].Name
 		if value, ok := variableNameSet[name]; ok {
-		//for name, value := range variableNameSet {
+			//for name, value := range variableNameSet {
 			if strings.Contains(value[0].Key, "mapping") {
 				var everyKeyMap map[string][]*types.ContractVariable
 				everyKeyMap = make(map[string][]*types.ContractVariable)
@@ -52,9 +52,9 @@ func GetResult(db *leveldb.DB, contractAddress string, contractVariables []*type
 
 					index1 := strings.Index(typeOfValue, "(")
 					index2 := strings.Index(typeOfValue, "=")
-					typeOfKeys = append(typeOfKeys, strings.TrimSpace(typeOfValue[index1 + 1:index2]))
+					typeOfKeys = append(typeOfKeys, strings.TrimSpace(typeOfValue[index1+1:index2]))
 
-					typeOfValue = typeOfValue[firIndex + 1: lasIndex]
+					typeOfValue = typeOfValue[firIndex+1 : lasIndex]
 				}
 				for k, v := range everyKeyMap {
 					flag := false
@@ -71,13 +71,13 @@ func GetResult(db *leveldb.DB, contractAddress string, contractVariables []*type
 								ksStr += "[" + humanDecodeOfKeyInMap(keyToOriMap[name][ks[i]], typeOfKeys[i]) + "]"
 							}
 							//result += name + ksStr + "=" + dealV(typeOfValue, v, "%s", contractContent, 0, keyToOriMap) + "\n";
-							result = append(result, name + ksStr + "=" + dealV(typeOfValue, v, "%s", contractContent, 0, keyToOriMap));
+							result = append(result, name+ksStr+"="+dealV(typeOfValue, v, "%s", contractContent, 0, keyToOriMap))
 						}
 					}
 				}
 			} else {
 				//result += name + "=" + dealV(value[0].Key, value, "%s", contractContent, 0, keyToOriMap) + "\n";
-				result = append(result, name + "=" + dealV(value[0].Key, value, "%s", contractContent, 0, keyToOriMap));
+				result = append(result, name+"="+dealV(value[0].Key, value, "%s", contractContent, 0, keyToOriMap))
 			}
 			delete(variableNameSet, name)
 		}
@@ -97,7 +97,7 @@ func dealV(remainType string, variableValues []*types.ContractVariable, format s
 			var result string
 			for i := 0; i < len(structKeys); i = i + 2 {
 				typeOfKey := structKeys[i]
-				nameOfKey := structKeys[i + 1]
+				nameOfKey := structKeys[i+1]
 				format1 := "%s"
 				var everyValue []*types.ContractVariable
 				everyValue = append(everyValue, variableValues[start])
@@ -124,7 +124,7 @@ func dealV(remainType string, variableValues []*types.ContractVariable, format s
 				str := dealV(typeOfKey, everyValue, format1, contractContent, 0, keyToOriMap)
 				result = result + nameOfKey + ":" + str + ","
 			}
-			format = strings.Replace(format, "%s", "{" + result[:len(result)-1] + "}", 1)
+			format = strings.Replace(format, "%s", "{"+result[:len(result)-1]+"}", 1)
 		}
 		return format
 	} else if _, ok := contractContent.EnumContent[remainType]; ok {
@@ -144,7 +144,7 @@ func dealV(remainType string, variableValues []*types.ContractVariable, format s
 		mid := remainType[firIndex:lasIndex]
 		las := remainType[lasIndex:]
 		if len(las) > 2 {
-			length, _ := strconv.ParseUint(las[1:len(las) - 1], 10, 64)
+			length, _ := strconv.ParseUint(las[1:len(las)-1], 10, 64)
 			var str string
 			var i uint64
 			for i = 0; i < length; i++ {
@@ -152,11 +152,11 @@ func dealV(remainType string, variableValues []*types.ContractVariable, format s
 			}
 			str = "[" + str[:len(str)-1] + "]"
 			format = strings.Replace(format, "%s", str, -1)
-			return dealV(pre + mid, variableValues, format, contractContent, start, keyToOriMap)
+			return dealV(pre+mid, variableValues, format, contractContent, start, keyToOriMap)
 		} else {
 			countS := strings.Count(format, "%s")
 			index := strings.Index(format, "%s")
-			for i:=0; i < countS; i++ {
+			for i := 0; i < countS; i++ {
 				length, _ := strconv.ParseUint(variableValues[start].Variable.GetValue(), 16, 64)
 				var str string
 				var i uint64
@@ -166,14 +166,14 @@ func dealV(remainType string, variableValues []*types.ContractVariable, format s
 				if length == 0 {
 					str = "[" + str + "]"
 				} else {
-					str = "[" + str[:len(str) - 1] + "]"
+					str = "[" + str[:len(str)-1] + "]"
 				}
 				format = format[:index] + strings.Replace(format[index:], "%s", str, 1)
 				index = index + len(str) + 1
 				variableValues[start].Use = true
 				start++
 			}
-			return dealV(pre + mid, variableValues, format, contractContent, start, keyToOriMap)
+			return dealV(pre+mid, variableValues, format, contractContent, start, keyToOriMap)
 		}
 	} else if remainType == string_Type {
 		for i := start; i < len(variableValues); i++ {
@@ -182,7 +182,7 @@ func dealV(remainType string, variableValues []*types.ContractVariable, format s
 			}
 			value := variableValues[start].Variable.GetValue()
 			temp, _ := strconv.ParseUint(value[len(value)-1:], 16, 64)
-			if temp % 2 == 0 {
+			if temp%2 == 0 {
 				if variableValues[i].Variable.GetValue() == "0000000000000000000000000000000000000000000000000000000000000000" {
 					format = strings.Replace(format, "%s", humanDecode("00", variableValues[i].Variable.GetKey(), contractContent.EnumContent), 1)
 				} else {
@@ -193,7 +193,7 @@ func dealV(remainType string, variableValues []*types.ContractVariable, format s
 				strLength, _ := strconv.ParseInt(variableValues[start].Variable.GetValue(), 16, 64)
 				variableValues[start].Use = true
 				var result string
-				tempLength := (float64(strLength)-1) / 64
+				tempLength := (float64(strLength) - 1) / 64
 				slotSize := int64(math.Ceil(float64(tempLength)))
 				kec256Hash := crypto.NewKeccak256Hash("keccak256")
 				h := kec256Hash.ByteHash(variableValues[start].StartAddressOfSlot)
@@ -209,7 +209,7 @@ func dealV(remainType string, variableValues []*types.ContractVariable, format s
 					variableValues[startOfPart].Use = true
 					startOfPart++
 				}
-				format = strings.Replace(format, "%s", humanDecode(result[:strLength - 1], string_Type, contractContent.EnumContent), 1)
+				format = strings.Replace(format, "%s", humanDecode(result[:strLength-1], string_Type, contractContent.EnumContent), 1)
 			}
 			start++
 		}
@@ -230,7 +230,7 @@ func dealV(remainType string, variableValues []*types.ContractVariable, format s
 
 func humanDecode(decodeResult string, typeOfVariable string, enumContent map[string]string) string {
 	if v, ok := enumContent[typeOfVariable]; ok {
-		index, _ := strconv.ParseInt(decodeResult, 16, 0);
+		index, _ := strconv.ParseInt(decodeResult, 16, 0)
 		enums := strings.Split(v, ",")
 		return enums[index]
 	} else if strings.Contains(typeOfVariable, "byte") || strings.Contains(typeOfVariable, "string") {
@@ -246,7 +246,7 @@ func humanDecode(decodeResult string, typeOfVariable string, enumContent map[str
 				break
 			}
 		}
-		return "\"" +string(common.Hex2Bytes(decodeResultCopy)) + "\""
+		return "\"" + string(common.Hex2Bytes(decodeResultCopy)) + "\""
 	} else if strings.Contains(typeOfVariable, "uint") {
 		value, _ := strconv.ParseUint(decodeResult, 16, 64)
 		res := strconv.FormatUint(value, 10)
@@ -257,7 +257,7 @@ func humanDecode(decodeResult string, typeOfVariable string, enumContent map[str
 		return res
 	} else if strings.Contains(typeOfVariable, "address") {
 		return common.HexToAddress(decodeResult).Hex()
-	}else if strings.Contains(typeOfVariable, "bool") {
+	} else if strings.Contains(typeOfVariable, "bool") {
 		value, _ := strconv.ParseUint(decodeResult, 16, 64)
 		var res string = "false"
 		if value != 0 {

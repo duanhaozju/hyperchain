@@ -222,4 +222,3 @@ func (key *PublicKey) VerifySignature(sig, dgst []byte) (bool, error) {
 
 	return false, errors.New("invaild signature!")
 }
-

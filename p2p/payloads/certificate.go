@@ -1,19 +1,20 @@
 package payloads
 
 import "github.com/golang/protobuf/proto"
+
 //release 1.3 => 13
 const CERT_VERSION = int64(13)
 
 func NewCertificate(data, ecert, ecertsign, rcert, rcertsign, rand []byte) ([]byte, error) {
 	cert := &Certificate{
-		Version:CERT_VERSION,
-		ECert:ecert,
-		ECertSig:ecertsign,
-		RCert:rcert,
-		RCertSig:rcertsign,
-		WithData:data,
+		Version:  CERT_VERSION,
+		ECert:    ecert,
+		ECertSig: ecertsign,
+		RCert:    rcert,
+		RCertSig: rcertsign,
+		WithData: data,
 		//keyagree rand
-		Rand:rand,
+		Rand: rand,
 	}
 	return proto.Marshal(cert)
 }

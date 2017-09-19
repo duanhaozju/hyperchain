@@ -8,13 +8,13 @@ import (
 
 func (self *Chain) Encode() string {
 	chainView := &ChainView{
-		Version:          string(self.Version),
-		LatestBlockHash:  common.Bytes2Hex(self.LatestBlockHash),
-		ParentBlockHash:  common.Bytes2Hex(self.ParentBlockHash),
-		Height:           self.Height,
-		Genesis:          self.Genesis,
-		CurrentTxSum:     self.CurrentTxSum,
-		Extra:            common.Bytes2Hex(self.Extra),
+		Version:         string(self.Version),
+		LatestBlockHash: common.Bytes2Hex(self.LatestBlockHash),
+		ParentBlockHash: common.Bytes2Hex(self.ParentBlockHash),
+		Height:          self.Height,
+		Genesis:         self.Genesis,
+		CurrentTxSum:    self.CurrentTxSum,
+		Extra:           common.Bytes2Hex(self.Extra),
 	}
 	res, err := json.MarshalIndent(chainView, "", "\t")
 	if err != nil {

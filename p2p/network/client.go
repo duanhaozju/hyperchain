@@ -3,15 +3,15 @@ package network
 import "hyperchain/p2p/hts"
 
 import (
-	"google.golang.org/grpc"
-	pb "hyperchain/p2p/message"
 	"fmt"
-	"golang.org/x/net/context"
-	"time"
+	"github.com/looplab/fsm"
 	"github.com/pkg/errors"
 	"github.com/terasum/pool"
-	"github.com/looplab/fsm"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	pb "hyperchain/p2p/message"
 	"regexp"
+	"time"
 )
 
 type Client struct {
@@ -23,9 +23,8 @@ type Client struct {
 	hts          hts.HTS
 	stateMachine *fsm.FSM
 	//configurations
-	cconf        *clientConf
+	cconf *clientConf
 }
-
 
 //connCreator implements the Hyper Transport Layer security
 func connCreator(addr string, options []grpc.DialOption) (interface{}, error) {
@@ -46,21 +45,21 @@ func NewClient(hostname, addr string, sec *Sec, cconf *clientConf) (*Client, err
 		Close:      connCloser,
 		//链接最大空闲时间，超过该时间的链接 将会关闭，可避免空闲时链接EOF，自动失效的问题
 		IdleTimeout: cconf.connIdleTime,
-		EndPoint:addr,
-		Options:sec.GetGrpcClientOpts(),
+		EndPoint:    addr,
+		Options:     sec.GetGrpcClientOpts(),
 	}
 	p, err := pool.NewChannelPool(poolConfig)
 	if err != nil {
 		return nil, err
 	}
 	c := &Client{
-		MsgChan: make(chan *pb.Message, 100000),
-		addr: addr,
+		MsgChan:  make(chan *pb.Message, 100000),
+		addr:     addr,
 		hostname: hostname,
-		connPool:p,
-		sec: sec,
+		connPool: p,
+		sec:      sec,
 		//todo those configuration sould be read from configuration
-		cconf:cconf,
+		cconf: cconf,
 	}
 	// start fsm
 	c.initState()
@@ -68,11 +67,12 @@ func NewClient(hostname, addr string, sec *Sec, cconf *clientConf) (*Client, err
 	return c, nil
 }
 
-func (c *Client)Close() {
+func (c *Client) Close() {
 	c.connPool.Release()
 }
+
 // Chat chat remote peer as bidi stream
-func (c *Client)Chat() (error) {
+func (c *Client) Chat() error {
 	connv, err := c.connPool.Get()
 	if err != nil {
 		logger.Warningf(" cannot get the conn from connection pool (%v) ", c.addr)
@@ -98,7 +98,7 @@ func (c *Client)Chat() (error) {
 }
 
 // Greeting doube arrow greeting message transfer
-func (c *Client)Greeting(in *pb.Message) (*pb.Message, error) {
+func (c *Client) Greeting(in *pb.Message) (*pb.Message, error) {
 	if c.stateMachine.Current() != c_StatWorking {
 		logger.Warningf("This client's stat. is not working, ignore messge send.(stat %s, addr %s,hostname: %s)", c.stateMachine.Current(), c.addr, c.hostname)
 		return nil, errors.New(fmt.Sprintf("This client's stat. is not working, ignore messge send.(stat %s, addr %s,hostname: %s)", c.stateMachine.Current(), c.addr, c.hostname))
@@ -112,18 +112,18 @@ func (c *Client)Greeting(in *pb.Message) (*pb.Message, error) {
 	client := NewChatClient(conn)
 	//put back the conn into the pool
 	defer c.connPool.Put(conn)
-	resp,err :=  client.Greeting(context.Background(), in)
-	if err != nil{
-		logger.Warningf("Greeting failed, client stat change to pending, close this client error info: %s",err.Error())
-		if ok,_:=regexp.MatchString(".+closing",err.Error());ok{
+	resp, err := client.Greeting(context.Background(), in)
+	if err != nil {
+		logger.Warningf("Greeting failed, client stat change to pending, close this client error info: %s", err.Error())
+		if ok, _ := regexp.MatchString(".+closing", err.Error()); ok {
 			c.stateMachine.Event(c_EventError)
 		}
 	}
-	return resp,err
+	return resp, err
 }
 
 // Whisper Transfer the the high level information
-func (c *Client)Whisper(in *pb.Message) (*pb.Message, error) {
+func (c *Client) Whisper(in *pb.Message) (*pb.Message, error) {
 	if c.stateMachine.Current() != c_StatWorking {
 		logger.Warningf("This client's stat. is not working, ignore messge send.(stat %s, addr %s,hostname: %s)", c.stateMachine.Current(), c.addr, c.hostname)
 		return nil, errors.New(fmt.Sprintf("This client's stat. is not working, ignore messge send.(stat %s, addr %s,hostname: %s)", c.stateMachine.Current(), c.addr, c.hostname))
@@ -138,18 +138,18 @@ func (c *Client)Whisper(in *pb.Message) (*pb.Message, error) {
 	client := NewChatClient(conn)
 	//put back the conn into the pool
 	defer c.connPool.Put(conn)
-	resp,err:= client.Whisper(context.Background(), in)
-	if err != nil{
-		logger.Warningf("Whisper failed, client stat change to pending, close this client error info: %s",err.Error())
-		if ok,_:=regexp.MatchString(".+closing",err.Error());ok{
+	resp, err := client.Whisper(context.Background(), in)
+	if err != nil {
+		logger.Warningf("Whisper failed, client stat change to pending, close this client error info: %s", err.Error())
+		if ok, _ := regexp.MatchString(".+closing", err.Error()); ok {
 			c.stateMachine.Event(c_EventError)
 		}
 	}
-	return resp,err
+	return resp, err
 }
 
 // Discuss Transfer the the node health information
-func (c *Client)Discuss(in *pb.Package) (*pb.Package, error) {
+func (c *Client) Discuss(in *pb.Package) (*pb.Package, error) {
 	// get client from conn pool
 	connv, err := c.connPool.Get()
 	if err != nil {
@@ -160,14 +160,12 @@ func (c *Client)Discuss(in *pb.Package) (*pb.Package, error) {
 	client := NewChatClient(conn)
 	//put back the conn into the pool
 	defer c.connPool.Put(conn)
-	resp,err := client.Discuss(context.Background(), in)
-	if err != nil{
-		logger.Warningf("Discuss failed, client stat change to pending, close this client error info: %s",err.Error())
-		if ok,_:=regexp.MatchString(".+closing",err.Error());ok{
+	resp, err := client.Discuss(context.Background(), in)
+	if err != nil {
+		logger.Warningf("Discuss failed, client stat change to pending, close this client error info: %s", err.Error())
+		if ok, _ := regexp.MatchString(".+closing", err.Error()); ok {
 			c.stateMachine.Event(c_EventError)
 		}
 	}
-	return resp,err
+	return resp, err
 }
-
-

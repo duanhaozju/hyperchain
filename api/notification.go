@@ -3,14 +3,14 @@ package api
 import (
 	"context"
 	"hyperchain/common"
-	flt "hyperchain/manager/filter"
 	edb "hyperchain/core/db_utils"
+	flt "hyperchain/manager/filter"
 	"sync"
 )
 
 var (
 	subscribedEvents map[context.Context][]Event
-	eventsMux	 sync.Mutex
+	eventsMux        sync.Mutex
 )
 
 type Event struct {
@@ -64,15 +64,15 @@ func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, isVerbose boo
 	subChs := common.GetSubChs(ctx)
 
 	select {
-	case err := <- subChs.Err:
+	case err := <-subChs.Err:
 		return common.ID(""), err
-	case rpcSub := <- subChs.SubscriptionCh:
+	case rpcSub := <-subChs.SubscriptionCh:
 		api.log.Debugf("receive subscription %v", rpcSub.ID)
 
 		go func() {
 
-			ch     := make(chan interface{})
-			sub    := api.events.NewCommonSubscription(ch, isVerbose, typ, crit)
+			ch := make(chan interface{})
+			sub := api.events.NewCommonSubscription(ch, isVerbose, typ, crit)
 
 			for {
 				select {
@@ -82,12 +82,14 @@ func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, isVerbose boo
 					case flt.BlocksSubscription:
 						if isVerbose {
 							hash, ok := d.(common.Hash)
-							if !ok { continue }
+							if !ok {
+								continue
+							}
 							block, err := edb.GetBlock(api.namespace, hash.Bytes())
 							if err != nil {
 								api.log.Errorf("missing block data (#%s)", hash.Hex())
 								continue
-							} else if wrappedBlock, err := outputBlockResult(api.namespace, block, true); err != nil{
+							} else if wrappedBlock, err := outputBlockResult(api.namespace, block, true); err != nil {
 								api.log.Errorf("wrapper block data (#%s) failed", hash.Hex())
 								continue
 							} else {
@@ -97,7 +99,7 @@ func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, isVerbose boo
 					case flt.LogsSubscription:
 						logs := make([]interface{}, 1)
 						logs = append(logs, d)
-						d =  returnLogs(logs)
+						d = returnLogs(logs)
 					}
 
 					payload := common.NotifyPayload{
@@ -106,7 +108,7 @@ func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, isVerbose boo
 					}
 
 					subChs.NotifyDataCh <- payload
-				case <-rpcSub.Err():	 // unsubscribe
+				case <-rpcSub.Err(): // unsubscribe
 					sub.Unsubscribe()
 					subscribedEvents[ctx] = deleteEvent(subscribedEvents[ctx], rpcSub.ID)
 					return
@@ -120,7 +122,7 @@ func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, isVerbose boo
 		}()
 
 		// recode subscribed event
-		switch typ{
+		switch typ {
 		case flt.BlocksSubscription:
 			subscribedEvents[ctx] = append(subscribedEvents[ctx], Event{
 				SubId: rpcSub.ID,
@@ -142,14 +144,14 @@ func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, isVerbose boo
 	}
 }
 
-func deleteEvent(events []Event, id common.ID) []Event{
+func deleteEvent(events []Event, id common.ID) []Event {
 	eventsMux.Lock()
 	defer eventsMux.Unlock()
 
 	es := events
-	for i, e :=  range es {
-		if  e.SubId == id {
-			es =  append(es[:i],es[i+1:]...)
+	for i, e := range es {
+		if e.SubId == id {
+			es = append(es[:i], es[i+1:]...)
 		}
 	}
 	return es

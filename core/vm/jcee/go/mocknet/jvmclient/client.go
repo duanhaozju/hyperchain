@@ -12,13 +12,13 @@ import (
 )
 
 const (
-	sync       = "sync"
-	async      = "async"
+	sync  = "sync"
+	async = "async"
 )
 
 var (
-	port *string
-	host *string
+	port       *string
+	host       *string
 	totalCount *int
 )
 
@@ -75,8 +75,8 @@ func asyncCallTest() {
 
 	for i := 0; i < *totalCount; i++ {
 		stream.Send(&pb.Message{
-			Type:pb.Message_TRANSACTION,
-			Payload:[]byte("asyncCall"),
+			Type:    pb.Message_TRANSACTION,
+			Payload: []byte("asyncCall"),
 		})
 	}
 

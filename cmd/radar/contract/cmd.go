@@ -1,11 +1,11 @@
 package contract
 
 import (
-	"github.com/urfave/cli"
-	"fmt"
-	"hyperchain/cmd/radar/core/api"
-	"github.com/syndtr/goleveldb/leveldb"
 	"encoding/json"
+	"fmt"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/urfave/cli"
+	"hyperchain/cmd/radar/core/api"
 	"io/ioutil"
 )
 
@@ -69,7 +69,7 @@ func getStorage(c *cli.Context) {
 			}
 			originKeyOfMaps[temp.ContractName] = temp.Key
 		}
-		res , err := api.GetResult(contractFile, db, contractAddress, originKeyOfMaps)
+		res, err := api.GetResult(contractFile, db, contractAddress, originKeyOfMaps)
 		if err != nil {
 			fmt.Println("radar/cmd:", err.Error())
 		} else {
@@ -87,5 +87,5 @@ func getStorage(c *cli.Context) {
 
 type Keys struct {
 	ContractName string
-	Key map[string][][]string
+	Key          map[string][][]string
 }

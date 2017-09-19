@@ -1,9 +1,9 @@
 package mdb
 
 import (
-	"testing"
-	"hyperchain/common"
 	"bytes"
+	"hyperchain/common"
+	"testing"
 )
 
 func TestMemDatabase_PutGet(t *testing.T) {
@@ -71,12 +71,12 @@ func TestMemDatabase_Delete(t *testing.T) {
 
 	cnt := 0
 	for k := range kvs {
-		if cnt % 2 == 0 {
+		if cnt%2 == 0 {
 			db.Delete([]byte(k))
 		}
 	}
 	for k, v := range kvs {
-		if cnt % 2 == 0 {
+		if cnt%2 == 0 {
 			_, err := db.Get([]byte(k))
 			if err == nil {
 				t.Error("expect to been deleted")
@@ -125,10 +125,9 @@ func TestMemBatch_Write(t *testing.T) {
 		}
 	}
 
-
 	cnt := 0
 	for k := range kvs {
-		if cnt % 2 == 0 {
+		if cnt%2 == 0 {
 			batch.Delete([]byte(k))
 		}
 	}
@@ -136,7 +135,7 @@ func TestMemBatch_Write(t *testing.T) {
 	batch.Write()
 
 	for k, v := range kvs {
-		if cnt % 2 == 0 {
+		if cnt%2 == 0 {
 			_, err := db.Get([]byte(k))
 			if err == nil {
 				t.Error("expect to been deleted")
@@ -207,14 +206,14 @@ func TestMemDatabase_NewIterator(t *testing.T) {
 	// With empty start but a limit
 	iter2 := db.Scan(nil, []byte("key3"))
 	expect := map[string][]byte{
-		"key1":    []byte("value1"),
-		"key2":    []byte("value2"),
-		"key":     []byte("value"),
-		"key100":  []byte("value100"),
-		"1":       []byte("value11"),
-		"2":       []byte("value22"),
-		"3":       []byte("value33"),
-		"-":       []byte("value-"),
+		"key1":   []byte("value1"),
+		"key2":   []byte("value2"),
+		"key":    []byte("value"),
+		"key100": []byte("value100"),
+		"1":      []byte("value11"),
+		"2":      []byte("value22"),
+		"3":      []byte("value33"),
+		"-":      []byte("value-"),
 	}
 	for iter2.Next() {
 		if v, ok := expect[string(iter2.Key())]; !ok || bytes.Compare(v, iter2.Value()) != 0 {
@@ -224,9 +223,9 @@ func TestMemDatabase_NewIterator(t *testing.T) {
 	// With a non-empty start and a limit
 	iter3 := db.Scan([]byte("key1"), []byte("key3"))
 	expect = map[string][]byte{
-		"key1":    []byte("value1"),
-		"key2":    []byte("value2"),
-		"key100":  []byte("value100"),
+		"key1":   []byte("value1"),
+		"key2":   []byte("value2"),
+		"key100": []byte("value100"),
 	}
 	for iter3.Next() {
 		if v, ok := expect[string(iter3.Key())]; !ok || bytes.Compare(v, iter3.Value()) != 0 {
@@ -234,4 +233,3 @@ func TestMemDatabase_NewIterator(t *testing.T) {
 		}
 	}
 }
-

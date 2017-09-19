@@ -1,24 +1,24 @@
 package evm
 
 import (
-	"math/big"
 	"bytes"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	er "hyperchain/core/errors"
-	"github.com/op/go-logging"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
+	"math/big"
 	"strconv"
 )
 
 type Message struct {
-	From        common.Address
-	To          common.Address
-	Gas         *big.Int
-	GasPrice    *big.Int
-	Amount      *big.Int
-	Payload     []byte
-	Op          types.TransactionValue_Opcode
+	From     common.Address
+	To       common.Address
+	Gas      *big.Int
+	GasPrice *big.Int
+	Amount   *big.Int
+	Payload  []byte
+	Op       types.TransactionValue_Opcode
 }
 
 func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, logger *logging.Logger, namespace string) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
@@ -44,7 +44,7 @@ func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber
 }
 
 func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
-gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
+	gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
 	var sender vm.Account
 
 	if !(vmenv.Db().Exist(*from)) {
@@ -86,7 +86,6 @@ func checkPermission(env vm.Environment, from, to common.Address, op types.Trans
 	return true
 }
 
-
 func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, gasRemained, gas *big.Int, ret []byte, err error) *types.Receipt {
 	receipt := types.NewReceipt(gasRemained, 0)
 	receipt.ContractAddress = addr.Bytes()
@@ -97,7 +96,7 @@ func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, ga
 	bloom, _ := types.CreateBloom([]*types.Receipt{receipt})
 	receipt.Bloom = bloom
 	if err != nil {
-		if !er.IsValueTransferErr(err) && !er.IsExecContractErr(err) &&! er.IsInvalidInvokePermissionErr(err) {
+		if !er.IsValueTransferErr(err) && !er.IsExecContractErr(err) && !er.IsInvalidInvokePermissionErr(err) {
 			receipt.Status = types.Receipt_FAILED
 			receipt.Message = []byte(err.Error())
 		}
@@ -107,7 +106,6 @@ func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, ga
 	}
 	return receipt
 }
-
 
 func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger, namespace string, txHash common.Hash) vm.Environment {
 	env := make(map[string]string)
@@ -126,24 +124,24 @@ func setDefaults(tx *types.Transaction) Message {
 		fallthrough
 	case "1.2":
 		return Message{
-			From:       common.BytesToAddress(tx.From),
-			To:         common.BytesToAddress(tx.To),
-			Gas:        big.NewInt(100000000),
-			GasPrice:   tv.RetrieveGasPrice(),
-			Amount:     tv.RetrieveAmount(),
-			Payload:    tv.RetrievePayload(),
-			Op:         tv.GetOp(),
+			From:     common.BytesToAddress(tx.From),
+			To:       common.BytesToAddress(tx.To),
+			Gas:      big.NewInt(100000000),
+			GasPrice: tv.RetrieveGasPrice(),
+			Amount:   tv.RetrieveAmount(),
+			Payload:  tv.RetrievePayload(),
+			Op:       tv.GetOp(),
 		}
 	default:
 		// Current version
 		return Message{
-			From:       common.BytesToAddress(tx.From),
-			To:         common.BytesToAddress(tx.To),
-			Gas:        tv.RetrieveGas(),
-			GasPrice:   tv.RetrieveGasPrice(),
-			Amount:     tv.RetrieveAmount(),
-			Payload:    tv.RetrievePayload(),
-			Op:         tv.GetOp(),
+			From:     common.BytesToAddress(tx.From),
+			To:       common.BytesToAddress(tx.To),
+			Gas:      tv.RetrieveGas(),
+			GasPrice: tv.RetrieveGasPrice(),
+			Amount:   tv.RetrieveAmount(),
+			Payload:  tv.RetrievePayload(),
+			Op:       tv.GetOp(),
 		}
 	}
 }

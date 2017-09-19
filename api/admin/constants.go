@@ -8,17 +8,17 @@ import (
 var expiration = 300 * time.Second
 
 const (
-	pri_key string   = "./hypercli/keyconfigs/key/key"
-	pub_key string   = "./hypercli/keyconfigs/key/key.pub"
+	pri_key string = "./hypercli/keyconfigs/key/key"
+	pub_key string = "./hypercli/keyconfigs/key/key.pub"
 )
 
 const (
-	LoggedIn   = "Log in Succeefully"
+	LoggedIn = "Log in Succeefully"
 )
 
 const (
 	// server cmd
-	admin_stopServer          int = iota
+	admin_stopServer int = iota
 	admin_restartServer
 
 	// namespace cmd
@@ -352,7 +352,7 @@ func getGroupPermission(group string) permissionSet {
 
 func rootScopes() permissionSet {
 	pset := make(permissionSet)
-	for i := 0; i< MAXNUM; i++ {
+	for i := 0; i < MAXNUM; i++ {
 		pset[i] = true
 	}
 	return pset
@@ -394,7 +394,7 @@ func toUpper(origin string) string {
 	return strings.ToUpper(origin)
 }
 
-func getScope(scope []int) permissionSet{
+func getScope(scope []int) permissionSet {
 	pset := make(permissionSet)
 	for _, pms := range scope {
 		pset[pms] = true

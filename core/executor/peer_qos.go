@@ -96,12 +96,12 @@ func (qosStat *QosStat) ReadStaticPeer() []uint64 {
 		qosStat.conf.MergeConfig(common.GetPath(qosStat.namespace, qosStat.conf.GetString(common.PEER_CONFIG_PATH)))
 	})
 	nodes := qosStat.conf.Get("nodes").([]interface{})
-	for _, item := range nodes{
+	for _, item := range nodes {
 		var id uint64
 		node := item.(map[string]interface{})
 		for key, value := range node {
 			if key == "id" {
-				id  = uint64(value.(int64))
+				id = uint64(value.(int64))
 				ret = append(ret, id)
 			}
 		}

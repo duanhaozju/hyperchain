@@ -4,8 +4,8 @@ package tests
 
 import (
 	"hyperchain/common"
-	"hyperchain/core/state"
 	"hyperchain/core/evm"
+	"hyperchain/core/state"
 	"hyperchain/hyperdb"
 	"math/big"
 )

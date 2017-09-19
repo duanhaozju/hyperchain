@@ -24,7 +24,7 @@ func TestClient_SyncExecute(t *testing.T) {
 		t.Error(err)
 	}
 
-	for i := 1; i < 100; i ++ {
+	for i := 1; i < 100; i++ {
 		rsp, err := client.SyncExecute(&pb.Request{
 			Method: "test",
 		})

@@ -93,14 +93,14 @@
 package hts
 
 import (
-	"hyperchain/common"
+	"crypto/ecdsa"
+	"fmt"
 	"github.com/pkg/errors"
 	"github.com/terasum/viper"
-	"fmt"
+	"hyperchain/common"
 	"hyperchain/crypto/primitives"
-	"crypto/ecdsa"
-	"io/ioutil"
 	"hyperchain/manager/event"
+	"io/ioutil"
 )
 
 type HTS struct {
@@ -111,8 +111,8 @@ type HTS struct {
 //NewHTS return a Hyper Transport Security instance
 func NewHTS(namespace string, sec Security, caConfigPath string) (*HTS, error) {
 	hts := &HTS{
-		sec:sec,
-		cg:new(CertGroup),
+		sec: sec,
+		cg:  new(CertGroup),
 	}
 	// check ca config path
 	if !common.FileExist(caConfigPath) {
@@ -125,7 +125,6 @@ func NewHTS(namespace string, sec Security, caConfigPath string) (*HTS, error) {
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("cann't read in the caconfig, reason: %s ", err.Error()))
 	}
-
 
 	//ecert group
 	//enable ecert ?
@@ -252,7 +251,7 @@ func (hts *HTS) GetAClientHTS() (*ClientHTS, error) {
 
 //GetServerHTS  generally this function will be invoke only once in a namespace
 //this func will self invoke generate generate private key
-func (hts *HTS)GetServerHTS(peermgrEv *event.TypeMux) (*ServerHTS, error) {
+func (hts *HTS) GetServerHTS(peermgrEv *event.TypeMux) (*ServerHTS, error) {
 	shts, err := NewServerHTS(hts.sec, hts.cg, peermgrEv)
 	if err != nil {
 		return nil, err

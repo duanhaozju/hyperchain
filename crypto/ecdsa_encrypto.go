@@ -7,6 +7,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hyperchain/common"
 	"hyperchain/crypto/secp256k1"
@@ -15,7 +16,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"errors"
 )
 
 type EcdsaEncrypto struct {

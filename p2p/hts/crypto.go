@@ -1,8 +1,8 @@
 package hts
 
 import (
-	"io"
 	"crypto"
+	"io"
 )
 
 type Crypto interface {

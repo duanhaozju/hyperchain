@@ -9,7 +9,6 @@ import (
 	"hyperchain/core/vm"
 )
 
-
 // Contract represents an hyperchain contract in the state database. It contains
 // the the contract code, calling arguments. Contract implements ContractRef
 type Contract struct {

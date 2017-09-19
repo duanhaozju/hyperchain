@@ -15,7 +15,7 @@ func PutData(key string, value []byte, namespace string) error {
 	if err != nil {
 		return err
 	}
-	return db.Put([]byte("p2p." + key), value)
+	return db.Put([]byte("p2p."+key), value)
 }
 
 func PutBool(key string, value bool, namespace string) error {
@@ -31,7 +31,7 @@ func PutBool(key string, value bool, namespace string) error {
 		persistValue = []byte("false")
 	}
 
-	return db.Put([]byte("p2p." + key), persistValue)
+	return db.Put([]byte("p2p."+key), persistValue)
 }
 
 func GetBool(key string, namespace string) (bool, error) {

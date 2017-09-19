@@ -2,9 +2,9 @@ package auth
 
 import (
 	"fmt"
-	"os"
 	"github.com/urfave/cli"
 	"hyperchain/hypercli/common"
+	"os"
 )
 
 const tokenpath = "./.token"

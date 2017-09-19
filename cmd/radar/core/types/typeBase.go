@@ -5,14 +5,14 @@ import (
 )
 
 type Base struct {
-	Key        string
-	BitNum     int
-	BitIndex   int
-	AddressNum int
-	Value      string
-	IsNewSlot  bool
-	IsNewDoneSlot  bool
-	IsAddress  bool
+	Key           string
+	BitNum        int
+	BitIndex      int
+	AddressNum    int
+	Value         string
+	IsNewSlot     bool
+	IsNewDoneSlot bool
+	IsAddress     bool
 }
 
 func (self *Base) GetBitNum() int {
@@ -57,5 +57,5 @@ func (self *Base) GetValue() string {
 
 func (self *Base) String() string {
 	return fmt.Sprintf("{ Key: %v BitNum: %v BitIndex: %v AddressNum: %v Value: %v IsNewSlot: %v IsNewDoneSlot: %v IsAddress: %v}",
-		self.Key, self.BitNum, self.BitIndex, self.AddressNum, self.Value, self.IsNewSlot, self.IsNewDoneSlot,self.IsAddress)
+		self.Key, self.BitNum, self.BitIndex, self.AddressNum, self.Value, self.IsNewSlot, self.IsNewDoneSlot, self.IsAddress)
 }

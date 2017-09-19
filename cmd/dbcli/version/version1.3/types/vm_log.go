@@ -1,8 +1,8 @@
 package version1_3
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"hyperchain/common"
 )
 

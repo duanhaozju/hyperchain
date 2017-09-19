@@ -2,17 +2,16 @@ package common
 
 import (
 	cm "hyperchain/common"
-	"path"
 	"hyperchain/hyperdb"
+	"path"
 )
 
 var precompiledAccount = map[string]struct{}{
-	cm.BytesToAddress(cm.LeftPadBytes([]byte{1}, 20)).Hex(): struct{}{},  // ECRECOVER
-	cm.BytesToAddress(cm.LeftPadBytes([]byte{2}, 20)).Hex(): struct{}{},  // SHA256
-	cm.BytesToAddress(cm.LeftPadBytes([]byte{3}, 20)).Hex(): struct{}{},  // RIPEMD160
-	cm.BytesToAddress(cm.LeftPadBytes([]byte{4}, 20)).Hex(): struct{}{},  // MEMCPY
+	cm.BytesToAddress(cm.LeftPadBytes([]byte{1}, 20)).Hex(): struct{}{}, // ECRECOVER
+	cm.BytesToAddress(cm.LeftPadBytes([]byte{2}, 20)).Hex(): struct{}{}, // SHA256
+	cm.BytesToAddress(cm.LeftPadBytes([]byte{3}, 20)).Hex(): struct{}{}, // RIPEMD160
+	cm.BytesToAddress(cm.LeftPadBytes([]byte{4}, 20)).Hex(): struct{}{}, // MEMCPY
 }
-
 
 func RetrieveSnapshotFileds() []string {
 	return []string{
@@ -36,4 +35,3 @@ func IsPrecompiledAccount(address cm.Address) bool {
 func GetDatabaseHome(namespace string, conf *cm.Config) string {
 	return path.Join("namespaces", namespace, hyperdb.GetDatabaseHome(conf))
 }
-

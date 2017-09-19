@@ -52,7 +52,7 @@ func TestConnMaintainer_Transition(t *testing.T) {
 		if maintainer.fsm.Current() != conn_sick {
 			t.Error("invalid ping failed transit")
 		}
-		if maintainer.pc != 2 + int32(i) {
+		if maintainer.pc != 2+int32(i) {
 			t.Error("invalid ping counter value")
 		}
 	}
