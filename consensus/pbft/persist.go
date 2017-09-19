@@ -14,8 +14,8 @@ import (
 	"strconv"
 )
 
+// persistQSet persists marshaled pre-prepare message to database
 func (pbft *pbftImpl) persistQSet(preprep *PrePrepare) {
-
 	raw, err := proto.Marshal(preprep)
 	if err != nil {
 		pbft.logger.Warningf("Replica %d could not persist qset: %s", pbft.id, err)
@@ -25,8 +25,8 @@ func (pbft *pbftImpl) persistQSet(preprep *PrePrepare) {
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
+// persistPSet persists marshaled prepare messages in the cert with the given msgID(v,n,d) to database
 func (pbft *pbftImpl) persistPSet(v uint64, n uint64, d string) {
-
 	cert := pbft.storeMgr.getCert(v, n, d)
 	set := []*Prepare{}
 	pset := &Pset{Set: set}
@@ -44,8 +44,8 @@ func (pbft *pbftImpl) persistPSet(v uint64, n uint64, d string) {
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
+// persistCSet persists marshaled commit messages in the cert with the given msgID(v,n,d) to database
 func (pbft *pbftImpl) persistCSet(v uint64, n uint64, d string) {
-
 	cert := pbft.storeMgr.getCert(v, n, d)
 	set := []*Commit{}
 	cset := &Cset{Set: set}
@@ -63,28 +63,33 @@ func (pbft *pbftImpl) persistCSet(v uint64, n uint64, d string) {
 	persist.StoreState(pbft.namespace, key, raw)
 }
 
+// persistDelQSet deletes marshaled pre-prepare message with the given key from database
 func (pbft *pbftImpl) persistDelQSet(v uint64, n uint64, d string) {
 	qset := fmt.Sprintf("qset.%d.%d.%s", v, n, d)
 	persist.DelState(pbft.namespace, qset)
 }
 
+// persistDelPSet deletes marshaled prepare messages with the given key from database
 func (pbft *pbftImpl) persistDelPSet(v uint64, n uint64, d string) {
 	pset := fmt.Sprintf("pset.%d.%d.%s", v, n, d)
 	persist.DelState(pbft.namespace, pset)
 }
 
+// persistDelCSet deletes marshaled commit messages with the given key from database
 func (pbft *pbftImpl) persistDelCSet(v uint64, n uint64, d string) {
 	cset := fmt.Sprintf("cset.%d.%d.%s", v, n, d)
 	persist.DelState(pbft.namespace, cset)
 }
+
+// persistDelQPCSet deletes marshaled pre-prepare,prepare,commit messages with the given key from database
 func (pbft *pbftImpl) persistDelQPCSet(v uint64, n uint64, d string) {
 	pbft.persistDelQSet(v, n, d)
 	pbft.persistDelPSet(v, n, d)
 	pbft.persistDelCSet(v, n, d)
 }
 
+// restoreQSet restores pre-prepare messages from database, which, keyed by msgID
 func (pbft *pbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
-
 	qset := make(map[msgID]*PrePrepare)
 
 	payload, err := persist.ReadStateSet(pbft.namespace, "qset.")
@@ -112,8 +117,8 @@ func (pbft *pbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
 	return qset, err
 }
 
+// restorePSet restores prepare messages from database, which, keyed by msgID
 func (pbft *pbftImpl) restorePSet() (map[msgID]*Pset, error) {
-
 	pset := make(map[msgID]*Pset)
 
 	payload, err := persist.ReadStateSet(pbft.namespace, "pset.")
@@ -141,8 +146,8 @@ func (pbft *pbftImpl) restorePSet() (map[msgID]*Pset, error) {
 	return pset, err
 }
 
+// restoreCSet restores commit messages from database, which, keyed by msgID
 func (pbft *pbftImpl) restoreCSet() (map[msgID]*Cset, error) {
-
 	cset := make(map[msgID]*Cset)
 
 	payload, err := persist.ReadStateSet(pbft.namespace, "cset.")
@@ -170,8 +175,8 @@ func (pbft *pbftImpl) restoreCSet() (map[msgID]*Cset, error) {
 	return cset, err
 }
 
+// restoreCert restores pre-prepares,prepares,commits from database and remove the messages with seqNo>lastExec
 func (pbft *pbftImpl) restoreCert() {
-
 	qset, _ := pbft.restoreQSet()
 	for idx, q := range qset {
 		cert := pbft.storeMgr.getCert(idx.v, idx.n, idx.d)
@@ -222,6 +227,10 @@ func (pbft *pbftImpl) restoreCert() {
 
 }
 
+// parseSpecifyCertStore re-constructs certStore:
+// 1. for messages with the same seqNo but different view in certStore, save only the cert with the largest seqNo and
+// remove all the certs from memory and database
+// 2. replace all view in certStore with pbft.view and persist the new constructed certStore
 func (pbft *pbftImpl) parseSpecifyCertStore() {
 	for midx, mcert := range pbft.storeMgr.certStore {
 		idx := midx
@@ -258,10 +267,10 @@ func (pbft *pbftImpl) parseSpecifyCertStore() {
 		pbft.storeMgr.certStore[idx] = cert
 		pbft.persistPSet(idx.v, idx.n, idx.d)
 		pbft.persistCSet(idx.v, idx.n, idx.d)
-
 	}
 }
 
+// persistTxBatch persists one marshaled transaction batch with the given digest to database
 func (pbft *pbftImpl) persistTxBatch(digest string) {
 	txBatch := pbft.storeMgr.txBatchStore[digest]
 	txBatchPacked, err := proto.Marshal(txBatch)
@@ -272,10 +281,12 @@ func (pbft *pbftImpl) persistTxBatch(digest string) {
 	persist.StoreState(pbft.namespace, "txBatch."+digest, txBatchPacked)
 }
 
+// persistDelTxBatch removes one marshaled transaction batch with the given digest from database
 func (pbft *pbftImpl) persistDelTxBatch(digest string) {
 	persist.DelState(pbft.namespace, "txBatch."+digest)
 }
 
+// persistDelAllTxBatches removes all marshaled transaction batches from database
 func (pbft *pbftImpl) persistDelAllTxBatches() {
 	reqBatches, err := persist.ReadStateSet(pbft.namespace, "txBatch.")
 	if err != nil {
@@ -288,16 +299,20 @@ func (pbft *pbftImpl) persistDelAllTxBatches() {
 	}
 }
 
+// persistCheckpoint persists checkpoint to database, which, key contains the seqNo of checkpoint, value is the
+// checkpoint ID
 func (pbft *pbftImpl) persistCheckpoint(seqNo uint64, id []byte) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)
 	persist.StoreState(pbft.namespace, key, id)
 }
 
+// persistDelCheckpoint deletes checkpoint with the given seqNo from database
 func (pbft *pbftImpl) persistDelCheckpoint(seqNo uint64) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)
 	persist.DelState(pbft.namespace, key)
 }
 
+// persistView persists current view to database
 func (pbft *pbftImpl) persistView(view uint64) {
 	key := fmt.Sprint("view")
 	b := make([]byte, 8)
@@ -305,11 +320,13 @@ func (pbft *pbftImpl) persistView(view uint64) {
 	persist.StoreState(pbft.namespace, key, b)
 }
 
+// persistDelView deletes the view entries from database
 func (pbft *pbftImpl) persistDelView() {
 	key := fmt.Sprint("view")
 	persist.DelState(pbft.namespace, key)
 }
 
+// persistN persists current N to database
 func (pbft *pbftImpl) persistN(n int) {
 	key := fmt.Sprint("nodes")
 	res := make([]byte, 8)
@@ -317,6 +334,7 @@ func (pbft *pbftImpl) persistN(n int) {
 	persist.StoreState(pbft.namespace, key, res)
 }
 
+// persistNewNode persists new node message to database
 func (pbft *pbftImpl) persistNewNode(new uint64) {
 	key := fmt.Sprint("new")
 	res := make([]byte, 8)
@@ -324,18 +342,20 @@ func (pbft *pbftImpl) persistNewNode(new uint64) {
 	persist.StoreState(pbft.namespace, key, res)
 }
 
+// persistLocalKey persists hash of local key to database
 func (pbft *pbftImpl) persistLocalKey(hash []byte) {
 	key := fmt.Sprint("localkey")
 	persist.StoreState(pbft.namespace, key, hash)
 }
 
+// persistDelLocal key deletes local key info from database
 func (pbft *pbftImpl) persistDellLocalKey() {
 	key := fmt.Sprint("localkey")
 	persist.DelState(pbft.namespace, key)
 }
 
+// restoreView restores current view from database and then re-construct certStore
 func (pbft *pbftImpl) restoreView() {
-
 	v, err := persist.ReadState(pbft.namespace, "view")
 	if err == nil {
 		view := binary.LittleEndian.Uint64(v)
@@ -347,8 +367,8 @@ func (pbft *pbftImpl) restoreView() {
 	}
 }
 
+// restoreTxBatchStore restores transaction batches from database
 func (pbft *pbftImpl) restoreTxBatchStore() {
-
 	payload, err := persist.ReadStateSet(pbft.namespace, "txBatch.")
 	if err == nil {
 		for key, set := range payload {
@@ -370,9 +390,10 @@ func (pbft *pbftImpl) restoreTxBatchStore() {
 	}
 }
 
+// restoreState restores lastExec, certStore, view, transaction batches, checkpoints, h and other add/del node related
+// params from database
 func (pbft *pbftImpl) restoreState() {
-
-	pbft.restoreLastSeqNo() // assign value to lastExec
+	pbft.restoreLastSeqNo()
 	if pbft.seqNo < pbft.exec.lastExec {
 		pbft.seqNo = pbft.exec.lastExec
 	}
@@ -433,6 +454,7 @@ func (pbft *pbftImpl) restoreState() {
 		pbft.id, pbft.view, pbft.seqNo, len(pbft.storeMgr.txBatchStore), len(pbft.storeMgr.chkpts))
 }
 
+// restoreLastSeqNo restores lastExec from database
 func (pbft *pbftImpl) restoreLastSeqNo() {
 	var err error
 	if pbft.exec.lastExec, err = pbft.getLastSeqNo(); err != nil {
@@ -442,8 +464,8 @@ func (pbft *pbftImpl) restoreLastSeqNo() {
 	pbft.logger.Infof("Replica %d restored lastExec: %d", pbft.id, pbft.exec.lastExec)
 }
 
+// getLastSeqNo retrieves database and returns the last block number
 func (pbft *pbftImpl) getLastSeqNo() (uint64, error) {
-
 	var err error
 	h := persist.GetHeightOfChain(pbft.namespace)
 	if h == 0 {

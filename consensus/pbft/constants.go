@@ -5,15 +5,15 @@ package pbft
 
 // constant timer names
 const (
-	BATCH_TIMER             = "batchTimer"
-	VALIDATE_TIMER          = "validateTimer"
-	VC_RESEND_TIMER         = "vcResendTimer"        //timer triggering resend of a view change
-	NEW_VIEW_TIMER          = "newViewTimer"         //timer triggering view change by out of timeout of some requestBatch
-	NULL_REQUEST_TIMER      = "nullRequestTimer"     //timer triggering send null request, used for heartbeat
-	FIRST_REQUEST_TIMER     = "firstRequestTimer"    //timer set for replicas in case of primary start and shut down immediately
-	NEGO_VIEW_RSP_TIMER     = "negoViewRspTimer"     //timer track timeout for N-f nego-view responses
-	RECOVERY_RESTART_TIMER  = "recoveryRestartTimer" // recoveryRestartTimer track how long a recovery is finished and fires if needed
-	CLEAN_VIEW_CHANGE_TIMER = "cleanViewChangeTimer"
+	BATCH_TIMER             = "batchTimer"           // timer triggering package a batch
+	VALIDATE_TIMER          = "validateTimer"        // timer expected to spend in validate
+	VC_RESEND_TIMER         = "vcResendTimer"        // timer triggering resend of a view change
+	NEW_VIEW_TIMER          = "newViewTimer"         // timer triggering view change by out of timeout of some requestBatch
+	NULL_REQUEST_TIMER      = "nullRequestTimer"     // timer triggering send null request, used for heartbeat
+	FIRST_REQUEST_TIMER     = "firstRequestTimer"    // timer set for replicas in case of primary start and shut down immediately
+	NEGO_VIEW_RSP_TIMER     = "negoViewRspTimer"     // timer track timeout for N-f nego-view responses
+	RECOVERY_RESTART_TIMER  = "recoveryRestartTimer" // timer track how long a recovery is finished and fires if needed
+	CLEAN_VIEW_CHANGE_TIMER = "cleanViewChangeTimer" // timer track how long a viewchange msg will store in memory
 )
 
 //pbft config keys

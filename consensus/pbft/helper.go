@@ -33,35 +33,40 @@ func (a sortableUint64Slice) Less(i, j int) bool {
 // helper functions for PBFT
 // =============================================================================
 
-// Given a certain view v and replicaCount n, what is the expected primary?
+// primary returns the expected primary ID with the given view v
 func (pbft *pbftImpl) primary(v uint64) uint64 {
 	return (v % uint64(pbft.N)) + 1
 }
 
-//isPrimary is current PBFT node the primary?
-func (pbft *pbftImpl) isPrimary() (bool, uint64) {
+// isPrimary returns if current node is primary or not
+func (pbft *pbftImpl) isPrimary() bool {
 	primary := pbft.primary(pbft.view)
-	return primary == pbft.id, primary
+	return primary == pbft.id
 }
 
-// Is the sequence number between watermarks?
+// InW returns if the given seqNo is higher than h or not
 func (pbft *pbftImpl) inW(n uint64) bool {
 	return n > pbft.h
 }
 
-// Is the view right?
+// InV returns if the given view equals the current view or not
 func (pbft *pbftImpl) inV(v uint64) bool {
 	return pbft.view == v
 }
 
-// Is the view right? And is the sequence number between watermarks?
+// InWV firstly checks if the given view is inV then checks if the given seqNo n is inW
 func (pbft *pbftImpl) inWV(v uint64, n uint64) bool {
-	return pbft.view == v && pbft.inW(n)
+	return pbft.inV(v) && pbft.inW(n)
 }
 
-// Given a ip/digest get the addnode Cert
-func (pbft *pbftImpl) getAddNodeCert(addHash string) (cert *addNodeCert) {
+// sendInWV used in findNextPrePrepareBatch firstly check the given view equals the current view or not and then check
+// the given seqNo is between low watermark and high watermark or not
+func (pbft *pbftImpl) sendInWV(v uint64, n uint64) bool {
+	return pbft.view == v && n > pbft.h && n <= pbft.h+pbft.L
+}
 
+// getAddNodeCert returns the addnode Cert with the given addHash
+func (pbft *pbftImpl) getAddNodeCert(addHash string) (cert *addNodeCert) {
 	cert, ok := pbft.nodeMgr.addNodeCertStore[addHash]
 
 	if ok {
@@ -77,14 +82,8 @@ func (pbft *pbftImpl) getAddNodeCert(addHash string) (cert *addNodeCert) {
 	return
 }
 
-// Is the view right? And is the sequence number between low watermark and high watermark?
-func (pbft *pbftImpl) sendInWV(v uint64, n uint64) bool {
-	return pbft.view == v && n > pbft.h && n <= pbft.h+pbft.L
-}
-
-// Given a ip/digest get the addnode Cert
+// getDelNodeCert returns the delnode Cert with the given delHash
 func (pbft *pbftImpl) getDelNodeCert(delHash string) (cert *delNodeCert) {
-
 	cert, ok := pbft.nodeMgr.delNodeCertStore[delHash]
 
 	if ok {
@@ -100,8 +99,8 @@ func (pbft *pbftImpl) getDelNodeCert(delHash string) (cert *delNodeCert) {
 	return
 }
 
+// getAddNV calculates the new N and view after add a new node
 func (pbft *pbftImpl) getAddNV() (n int64, v uint64) {
-
 	n = int64(pbft.N) + 1
 	if pbft.view < uint64(pbft.N) {
 		v = pbft.view + uint64(n)
@@ -112,8 +111,8 @@ func (pbft *pbftImpl) getAddNV() (n int64, v uint64) {
 	return
 }
 
+// getDelNV calculates the new N and view after delete a new node
 func (pbft *pbftImpl) getDelNV(del uint64) (n int64, v uint64) {
-
 	n = int64(pbft.N) - 1
 	if pbft.primary(pbft.view) > del {
 		v = pbft.view%uint64(pbft.N) - 1 + (uint64(pbft.N)-1)*(pbft.view/uint64(pbft.N)+1)
@@ -125,9 +124,8 @@ func (pbft *pbftImpl) getDelNV(del uint64) (n int64, v uint64) {
 	return
 }
 
-// cleanAllCache clean some old cache of previous view
+// cleanAllCache cleans some old certs of previous view in certStore whose seqNo > lastExec
 func (pbft *pbftImpl) cleanAllCache() {
-
 	for idx := range pbft.storeMgr.certStore {
 		if idx.n > pbft.exec.lastExec {
 			delete(pbft.storeMgr.certStore, idx)
@@ -154,14 +152,17 @@ func (pbft *pbftImpl) commonCaseQuorum() int {
 	return int(math.Ceil(float64(pbft.N+pbft.f+1) / float64(2)))
 }
 
+// oneCorrectQuorum returns the number of replicas in which correct numbers must be bigger than incorrect number
 func (pbft *pbftImpl) allCorrectReplicasQuorum() int {
 	return (pbft.N - pbft.f)
 }
 
+// oneCorrectQuorum returns the number of replicas in which there must exist at least one correct replica
 func (pbft *pbftImpl) oneCorrectQuorum() int {
 	return pbft.f + 1
 }
 
+// allCorrectQuorum returns number if all consensus nodes
 func (pbft *pbftImpl) allCorrectQuorum() int {
 	return pbft.N
 }
@@ -169,8 +170,8 @@ func (pbft *pbftImpl) allCorrectQuorum() int {
 // pre-prepare/prepare/commit check helper
 // =============================================================================
 
+// prePrepared returns if there existed a pre-prepare message in certStore with the given digest,view,seqNo
 func (pbft *pbftImpl) prePrepared(digest string, v uint64, n uint64) bool {
-
 	cert := pbft.storeMgr.certStore[msgID{v, n, digest}]
 
 	if cert != nil {
@@ -186,7 +187,8 @@ func (pbft *pbftImpl) prePrepared(digest string, v uint64, n uint64) bool {
 	return false
 }
 
-//prepared judge whether collect enough prepare messages.
+// prepared firstly checks if the cert with the given msgID has been prePrepared,
+// then checks if this node has collected enough prepare messages for the cert with given msgID
 func (pbft *pbftImpl) prepared(digest string, v uint64, n uint64) bool {
 
 	if !pbft.prePrepared(digest, v, n) {
@@ -207,6 +209,8 @@ func (pbft *pbftImpl) prepared(digest string, v uint64, n uint64) bool {
 	return prepCount >= pbft.commonCaseQuorum()-1
 }
 
+// committed firstly checks if the cert with the given msgID has been prepared,
+// then checks if this node has collected enough commit messages for the cert with given msgID
 func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
 
 	if !pbft.prepared(digest, v, n) {
@@ -230,9 +234,8 @@ func (pbft *pbftImpl) committed(digest string, v uint64, n uint64) bool {
 // =============================================================================
 // helper functions for transfer message
 // =============================================================================
-// consensusMsgHelper help convert the ConsensusMessage to pb.Message
+// consensusMsgHelper helps convert the ConsensusMessage to pb.Message
 func cMsgToPbMsg(msg *ConsensusMessage, id uint64) *protos.Message {
-
 	msgPayload, err := proto.Marshal(msg)
 
 	if err != nil {
@@ -249,7 +252,7 @@ func cMsgToPbMsg(msg *ConsensusMessage, id uint64) *protos.Message {
 	return pbMsg
 }
 
-// nullRequestMsgToPbMsg help convert the nullRequestMessage to pb.Message.
+// nullRequestMsgToPbMsg helps convert the nullRequestMessage to pb.Message.
 func nullRequestMsgToPbMsg(id uint64) *protos.Message {
 	pbMsg := &protos.Message{
 		Type:      protos.Message_NULL_REQUEST,
@@ -261,8 +264,9 @@ func nullRequestMsgToPbMsg(id uint64) *protos.Message {
 	return pbMsg
 }
 
+// getBlockchainInfo used after commit gets the current blockchain information from database when our lastExec reached
+// the checkpoint, so here we wait until the executor module executes to a checkpoint to return the current BlockchainInfo
 func (pbft *pbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
-
 	bcInfo := persist.GetBlockchainInfo(pbft.namespace)
 
 	height := bcInfo.Height
@@ -276,6 +280,9 @@ func (pbft *pbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
 	}
 }
 
+// getCurrentBlockInfo used after recvStateUpdatedEvent gets the current BlockchainInfo immediately rather than waiting
+// waiting until the executor module executes to a checkpoint as the current height must be a checkpoint if we reach the
+// checkpoint after state update
 func (pbft *pbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 	height, curHash, prevHash := persist.GetCurrentBlockInfo(pbft.namespace)
 	return &protos.BlockchainInfo{
@@ -285,6 +292,7 @@ func (pbft *pbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 	}
 }
 
+// getGenesisInfo returns the genesis block information of the current namespace
 func (pbft *pbftImpl) getGenesisInfo() uint64 {
 	_, genesis := persist.GetGenesisOfChain(pbft.namespace)
 	return genesis
@@ -294,9 +302,11 @@ func (pbft *pbftImpl) getGenesisInfo() uint64 {
 // helper functions for timer
 // =============================================================================
 
+// startTimerIfOutstandingRequests soft starts a new view timer if there exists some outstanding request batches,
+// else reset the null request timer
 func (pbft *pbftImpl) startTimerIfOutstandingRequests() {
 	if pbft.status.getState(&pbft.status.skipInProgress) || pbft.exec.currentExec != nil {
-		// Do not start the view change timer if we are executing or state transferring, these take arbitrarilly long amounts of time
+		// Do not start the view change timer if we are executing or state transferring, these take arbitrarily long amounts of time
 		return
 	}
 
@@ -314,11 +324,15 @@ func (pbft *pbftImpl) startTimerIfOutstandingRequests() {
 	}
 }
 
+// nullReqTimerReset reset the null request timer with a certain timeout, for different replica, null request timeout is
+// different:
+// 1. for primary, null request timeout is the timeout written in the config
+// 2. for non-primary, null request timeout =3*(timeout written in the config)+request timeout
 func (pbft *pbftImpl) nullReqTimerReset() {
 	timeout := pbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
 	if pbft.primary(pbft.view) != pbft.id {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
-		timeout = 3*timeout + pbft.timerMgr.requestTimeout
+		timeout = 3 * timeout + pbft.timerMgr.requestTimeout
 	}
 
 	event := &LocalEvent{
@@ -329,9 +343,9 @@ func (pbft *pbftImpl) nullReqTimerReset() {
 	pbft.timerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, event, pbft.pbftEventQueue)
 }
 
-//stopFirstRequestTimer
+// stopFirstRequestTimer stops the first request timer event if current node is not primary
 func (pbft *pbftImpl) stopFirstRequestTimer() {
-	if ok, _ := pbft.isPrimary(); !ok {
+	if !pbft.isPrimary() {
 		pbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 	}
 }
@@ -339,26 +353,30 @@ func (pbft *pbftImpl) stopFirstRequestTimer() {
 // =============================================================================
 // helper functions for validateState
 // =============================================================================
-// invalidateState is invoked to tell us that consensus realizes the ledger is out of sync
+// invalidateState is invoked to tell us that consensus module has realized the ledger is out of sync
 func (pbft *pbftImpl) invalidateState() {
 	pbft.logger.Debug("Invalidating the current state")
 	pbft.status.inActiveState(&pbft.status.valid)
 }
 
-// validateState is invoked to tell us that consensus has the ledger back in sync
+// validateState is invoked to tell us that consensus module has realized the ledger is back in sync
 func (pbft *pbftImpl) validateState() {
 	pbft.logger.Debug("Validating the current state")
 	pbft.status.activeState(&pbft.status.valid)
 }
 
-//deleteExistedTx delete existed transaction.
+// deleteExistedTx delete batch with the given digest from cacheValidatedBatch and outstandingReqBatches
 func (pbft *pbftImpl) deleteExistedTx(digest string) {
 	pbft.batchVdr.updateLCVid()
 	pbft.batchVdr.deleteCacheFromCVB(digest)
 	delete(pbft.storeMgr.outstandingReqBatches, digest)
 }
 
-//isPrePrepareLegal both PBFT state PrePrepare message are legal.
+// =============================================================================
+// helper functions for check the validity of consensus messages
+// =============================================================================
+// isPrePrepareLegal firstly checks if current status can receive pre-prepare or not, then checks pre-prepare message
+// itself is legal or not
 func (pbft *pbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try recvPrePrepare, but it's in nego-view", pbft.id)
@@ -383,8 +401,8 @@ func (pbft *pbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 				pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
 		} else {
 			// This is perfectly normal
-			pbft.logger.Debugf("Replica %d pre-prepare view different, or sequence number outside watermarks: "+
-				"preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
+			pbft.logger.Debugf("Replica %d pre-prepare view different, or sequence number outside " +
+				"watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
 				pbft.id, preprep.View, pbft.view, preprep.SequenceNumber, pbft.h)
 		}
 		return false
@@ -392,13 +410,17 @@ func (pbft *pbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 	return true
 }
 
-//isPrepareLegal both PBFT state Prepare message are legal.
+// isPrepareLegal firstly checks if current status can receive prepare or not, then checks prepare message itself is
+// legal or not
 func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool {
 	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvPrepare, but it's in nego-view", pbft.id)
 		return false
 	}
-	//TODO: need !pbft.status[IN_RECOVERY] ?
+
+	// if we are not in recovery, but receive prepare from primary, which means primary behavior as a byzantine,
+	// we don't send viewchange here, because in this case, replicas will eventually find primary abnormal in other
+	// cases, such as inconsistent validate result or others
 	if pbft.primary(prep.View) == prep.ReplicaId && !pbft.status.getState(&pbft.status.inRecovery) {
 		pbft.logger.Warningf("Replica %d received prepare from primary, ignoring", pbft.id)
 		return false
@@ -419,7 +441,8 @@ func (pbft *pbftImpl) isPrepareLegal(prep *Prepare) bool {
 	return true
 }
 
-//isPrepareLegal both PBFT state Commit message are legal.
+// isCommitLegal firstly checks if current status can receive commit or not, then checks commit message itself is legal
+// or not
 func (pbft *pbftImpl) isCommitLegal(commit *Commit) bool {
 	if pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d try to recvCommit, but it's in nego-view", pbft.id)

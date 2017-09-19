@@ -13,22 +13,22 @@ import (
 this file provide a mechanism to manage different timers.
 */
 
-// titletimer manage timer with the same timer name
+// titletimer manages timer with the same timer name, which, we allow different timer with the same timer name, such as:
+// we allow several request timers at the same time, each timer started after received a new request batch
 type titletimer struct {
-	timerName   string
-	timeout     time.Duration
-	alivecounts int
-	isActive    []bool
+	timerName   string         // the unique timer name
+	timeout     time.Duration  // default timeout of this timer
+	isActive    []bool         // track all the timers with this timerName if it is active now
 }
 
-// timerManager manage common used timer.
+// timerManager manages common used timers.
 type timerManager struct {
 	ttimers        map[string]*titletimer
 	requestTimeout time.Duration
 	logger         *logging.Logger
 }
 
-// newTimerMgr init a instance of timerManager.
+// newTimerMgr news an instance of timerManager.
 func newTimerMgr(pbft *pbftImpl) *timerManager {
 	tm := &timerManager{
 		ttimers:        make(map[string]*titletimer),
@@ -39,52 +39,48 @@ func newTimerMgr(pbft *pbftImpl) *timerManager {
 	return tm
 }
 
-// newTimer new a pbft timer by timer name and append into corresponding map
-func (tm *timerManager) newTimer(tname string, d time.Duration) {
-	tm.ttimers[tname] = &titletimer{
-		timerName:   tname,
+// newTimer news a titletimer with the given name and default timeout, then add this timer to timerManager
+func (tm *timerManager) newTimer(name string, d time.Duration) {
+	tm.ttimers[name] = &titletimer{
+		timerName:   name,
 		timeout:     d,
-		alivecounts: 0,
 	}
 }
 
-//Stop stop all timer managers.
+// Stop stops all timers managed by timerManager
 func (tm *timerManager) Stop() {
 	for timerName := range tm.ttimers {
 		tm.stopTimer(timerName)
 	}
 }
 
-//startTimer init and start a timer by name
-func (tm *timerManager) startTimer(tname string, event *LocalEvent, queue events.Queue) int {
-	tm.stopTimer(tname)
+// startTimer starts the timer with the given name and default timeout, then sets the event which will be triggered
+// after this timeout
+func (tm *timerManager) startTimer(name string, event *LocalEvent, queue events.Queue) int {
+	tm.stopTimer(name)
 
-	tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
-	tm.ttimers[tname].alivecounts++
-
-	counts := len(tm.ttimers[tname].isActive)
+	tm.ttimers[name].isActive = append(tm.ttimers[name].isActive, true)
+	counts := len(tm.ttimers[name].isActive)
 
 	send := func() {
-		if tm.ttimers[tname].isActive[counts-1] {
-			//tm.logger.Errorf("push the %dnd timer: %v with timeout: %v", counts, tname, tm.ttimers[tname].timeout)
+		if tm.ttimers[name].isActive[counts-1] {
 			queue.Push(event)
 		}
 	}
-	time.AfterFunc(tm.ttimers[tname].timeout, send)
+	time.AfterFunc(tm.ttimers[name].timeout, send)
 	return counts - 1
 }
 
-// startTimerWithNewTT init and start a timer by name with new timeout
-func (tm *timerManager) startTimerWithNewTT(tname string, d time.Duration, event *LocalEvent, queue events.Queue) int {
-	tm.stopTimer(tname)
+// startTimerWithNewTT starts the timer with the given name and timeout, then sets the event which will be triggered
+// after this timeout
+func (tm *timerManager) startTimerWithNewTT(name string, d time.Duration, event *LocalEvent, queue events.Queue) int {
+	tm.stopTimer(name)
 
-	tm.ttimers[tname].isActive = append(tm.ttimers[tname].isActive, true)
-	tm.ttimers[tname].alivecounts++
-
-	counts := len(tm.ttimers[tname].isActive)
+	tm.ttimers[name].isActive = append(tm.ttimers[name].isActive, true)
+	counts := len(tm.ttimers[name].isActive)
 
 	send := func() {
-		if tm.ttimers[tname].isActive[counts-1] {
+		if tm.ttimers[name].isActive[counts-1] {
 			queue.Push(event)
 		}
 	}
@@ -92,21 +88,19 @@ func (tm *timerManager) startTimerWithNewTT(tname string, d time.Duration, event
 	return counts - 1
 }
 
-// stopTimer stop all timers by the same timerName.
-func (tm *timerManager) stopTimer(tname string) {
-	if !tm.containsTimer(tname) {
-		tm.logger.Errorf("Stop timer failed!, timer %s not created yet!", tname)
+// stopTimer stops all timers with the same timerName.
+func (tm *timerManager) stopTimer(name string) {
+	if !tm.containsTimer(name) {
+		tm.logger.Errorf("Stop timer failed!, timer %s not created yet!", name)
 		return
 	}
 
-	for i := range tm.ttimers[tname].isActive {
-		tm.ttimers[tname].isActive[i] = false
+	for i := range tm.ttimers[name].isActive {
+		tm.ttimers[name].isActive[i] = false
 	}
-
-	tm.ttimers[tname].alivecounts = 0
 }
 
-// stopOneTimer stop one timer by the timerName and index.
+// stopOneTimer stops one timer by the timerName and index.
 func (tm *timerManager) stopOneTimer(tname string, num int) {
 	if !tm.containsTimer(tname) {
 		tm.logger.Errorf("Stop timer failed!, timer %s not created yet!", tname)
@@ -120,7 +114,6 @@ func (tm *timerManager) stopOneTimer(tname string, num int) {
 	}
 
 	tm.ttimers[tname].isActive[num] = false
-	tm.ttimers[tname].alivecounts--
 }
 
 // containsTimer returns true if there exists a timer named timerName
@@ -129,7 +122,7 @@ func (tm *timerManager) containsTimer(timerName string) bool {
 	return ok
 }
 
-// getTimeoutValue get event timer timeout
+// getTimeoutValue gets the default timeout of the given timer
 func (tm *timerManager) getTimeoutValue(timerName string) time.Duration {
 	if !tm.containsTimer(timerName) {
 		tm.logger.Warningf("Get tiemout failed!, timer %s not created yet! no time out", timerName)
@@ -138,6 +131,7 @@ func (tm *timerManager) getTimeoutValue(timerName string) time.Duration {
 	return tm.ttimers[timerName].timeout
 }
 
+// setTimeoutValue sets the default timeout of the given timer with a new timeout
 func (tm *timerManager) setTimeoutValue(timerName string, d time.Duration) {
 	if !tm.containsTimer(timerName) {
 		tm.logger.Warningf("Set tiemout failed!, timer %s not created yet! no time out", timerName)
@@ -146,7 +140,8 @@ func (tm *timerManager) setTimeoutValue(timerName string, d time.Duration) {
 	tm.ttimers[timerName].timeout = d
 }
 
-// makeRequestTimeoutLegal if requestTimeout is not legal, make it legal
+// makeRequestTimeoutLegal checks if requestTimeout is legal or not, if not, make it legal, which, nullRequest timeout
+// must be larger than requestTimeout
 func (tm *timerManager) makeRequestTimeoutLegal() {
 	nullRequestTimeout := tm.getTimeoutValue(NULL_REQUEST_TIMER)
 	requestTimeout := tm.requestTimeout

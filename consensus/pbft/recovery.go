@@ -16,19 +16,16 @@ import (
 This file contains recovery related issues
 */
 
+// recoveryManager manages negotiate view and recovery related events
 type recoveryManager struct {
-	recoveryToSeqNo       *uint64                           // recoveryToSeqNo is the target seqNo expected to recover to
-	rcRspStore            map[uint64]*RecoveryResponse      // rcRspStore store recovery responses from replicas
-	rcPQCSenderStore      map[uint64]bool                   // rcPQCSenderStore store those who sent PQC info to self
-	recvNewViewInRecovery bool                              // recvNewViewInRecovery record whether receive new view during recovery
-	negoViewRspStore      map[uint64]*NegotiateViewResponse // track replicaId, viewNo.
+	recoveryToSeqNo       *uint64                           // target seqNo expected to recover to
+	rcRspStore            map[uint64]*RecoveryResponse      // store recovery responses received from other nodes
+	rcPQCSenderStore      map[uint64]bool                   // store those who sent PQC info to self
+	recvNewViewInRecovery bool                              // record whether receive new view during recovery
+	negoViewRspStore      map[uint64]*NegotiateViewResponse // stores recovery negotiate view response received from other nodes
 }
 
-type blkIdx struct {
-	height uint64
-	hash   string
-}
-
+// newRecoveryMgr news an instance of recoveryManager
 func newRecoveryMgr() *recoveryManager {
 	rm := &recoveryManager{}
 	rm.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
@@ -40,7 +37,7 @@ func newRecoveryMgr() *recoveryManager {
 	return rm
 }
 
-//dispatchRecoveryMsg dispatch recovery service messages from other peers.
+// dispatchRecoveryMsg dispatches recovery service messages using service type
 func (pbft *pbftImpl) dispatchRecoveryMsg(e events.Event) events.Event {
 	switch et := e.(type) {
 	case *NegotiateView:
@@ -59,6 +56,10 @@ func (pbft *pbftImpl) dispatchRecoveryMsg(e events.Event) events.Event {
 	return nil
 }
 
+// initNegoView initializes negotiate view:
+// 1. start negotiate view response timer
+// 2. broadcast negotiate view
+// 3. construct NegotiateViewResponse and send it to self
 func (pbft *pbftImpl) initNegoView() error {
 	if !pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Errorf("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", pbft.id)
@@ -116,11 +117,13 @@ func (pbft *pbftImpl) initNegoView() error {
 	return nil
 }
 
+// restartNegoView restarts negotiate view
 func (pbft *pbftImpl) restartNegoView() {
 	pbft.logger.Debugf("Replica %d restart negotiate view", pbft.id)
 	pbft.initNegoView()
 }
 
+// recvNegoView firstly checks current state, then send response to the sender
 func (pbft *pbftImpl) recvNegoView(nv *NegotiateView) events.Event {
 	if atomic.LoadUint32(&pbft.activeView) == 0 {
 		pbft.logger.Warningf("Replica %d is in viewChange, reject negoView from replica %d", pbft.id, nv.ReplicaId)
@@ -150,6 +153,8 @@ func (pbft *pbftImpl) recvNegoView(nv *NegotiateView) events.Event {
 	return nil
 }
 
+// recvNegoViewRsp stores the negotiate view response, if the counts of negoViewRsp reach the commonCaseQuorum, update
+// current info if needed
 func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 	if !pbft.status.getState(&pbft.status.inNegoView) {
 		pbft.logger.Debugf("Replica %d already finished nego_view, ignore incoming nego_view_rsp", pbft.id)
@@ -165,17 +170,19 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 	pbft.recoveryMgr.negoViewRspStore[nvr.ReplicaId] = nvr
 
 	if len(pbft.recoveryMgr.negoViewRspStore) >= pbft.commonCaseQuorum() {
-		// Reason for not using '> pbft.N-pbft.f': if N==5, we are require more than we need
-		// Reason for not using '≥ pbft.N-pbft.f': if self is wrong, then we are impossible to find 2f+1 same view
 		// can we find same view from 2f+1 peers?
 		type resp struct {
 			n    uint64
 			view uint64
 		}
 		viewCount := make(map[resp]uint64)
-		var result resp
+
+		// check if we can find quorum negoViewRsp whose have the same n and view, if we can find, which means
+		// quorum nodes agree to a N and view, save to quorumResp, set canFind to true and update N, view if needed
+		var quorumResp resp
 		canFind := false
 
+		// find the quorum negoViewRsp
 		for _, rs := range pbft.recoveryMgr.negoViewRspStore {
 			ret := resp{rs.N, rs.View}
 			if _, ok := viewCount[ret]; ok {
@@ -184,27 +191,31 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 				viewCount[ret] = uint64(1)
 			}
 			if viewCount[ret] >= uint64(pbft.commonCaseQuorum()) {
-				result = ret
+				quorumResp = ret
 				canFind = true
 				break
 			}
 		}
 
+		// we can find the quorum negoViewRsp with the same N and view, judge if the response.view equals to the
+		// current view, if so, just update N and view, else update N, view and then re-constructs certStore
 		if canFind {
 			pbft.timerMgr.stopTimer(NEGO_VIEW_RSP_TIMER)
-			var IfUpdata bool
-			if pbft.view == result.view {
-				IfUpdata = true
+			var needUpdate bool
+			if pbft.view == quorumResp.view {
+				needUpdate = false
 			} else {
-				pbft.view = result.view
+				needUpdate = true
+				pbft.view = quorumResp.view
 			}
-			pbft.N = int(result.n)
+			// update N and f
+			pbft.N = int(quorumResp.n)
 			pbft.f = (pbft.N - 1) / 3
 			pbft.status.inActiveState(&pbft.status.inNegoView)
 			if atomic.LoadUint32(&pbft.activeView) == 0 {
 				atomic.StoreUint32(&pbft.activeView, 1)
 			}
-			if !IfUpdata {
+			if needUpdate {
 				pbft.parseSpecifyCertStore()
 			}
 			return &LocalEvent{
@@ -216,17 +227,15 @@ func (pbft *pbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 	return nil
 }
 
-// procativeRecovery broadcast a procative recovery message to ask others for recent blocks info
+// initRecovery broadcasts a procative recovery message to ask others for recent blocks info and send RecoveryResponse
+// to itself
 func (pbft *pbftImpl) initRecovery() events.Event {
-
 	pbft.logger.Debugf("Replica %d now initRecovery", pbft.id)
 
 	pbft.recoveryMgr.recoveryToSeqNo = nil
-	// update watermarks
-	height := persist.GetHeightOfChain(pbft.namespace)
-
 	pbft.recoveryMgr.rcRspStore = make(map[uint64]*RecoveryResponse)
 
+	// broadcast recovery message
 	recoveryMsg := &RecoveryInit{
 		ReplicaId: pbft.id,
 	}
@@ -242,16 +251,16 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 	msg := cMsgToPbMsg(consensusMsg, pbft.id)
 	pbft.helper.InnerBroadcast(msg)
 
+	// start recovery restart timer
 	event := &LocalEvent{
 		Service:   RECOVERY_SERVICE,
 		EventType: RECOVERY_RESTART_TIMER_EVENT,
 	}
-
 	pbft.timerMgr.startTimer(RECOVERY_RESTART_TIMER, event, pbft.pbftEventQueue)
 
+	// send RecoveryResponse to itself
 	height, curHash := persist.GetBlockHeightAndHash(pbft.namespace)
 	genesis := pbft.getGenesisInfo()
-
 	rc := &RecoveryResponse{
 		ReplicaId:     pbft.id,
 		Chkpts:        pbft.storeMgr.chkpts,
@@ -263,22 +272,21 @@ func (pbft *pbftImpl) initRecovery() events.Event {
 	return nil
 }
 
-// restartRecovery restart recovery immediately when recoveryRestartTimer expires
+// restartRecovery restarts recovery immediately
 func (pbft *pbftImpl) restartRecovery() {
-
 	pbft.logger.Noticef("Replica %d now restartRecovery", pbft.id)
+
 	// clean the negoViewRspStore and recoveryRspStore
 	pbft.recoveryMgr.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 	pbft.recoveryMgr.rcRspStore = make(map[uint64]*RecoveryResponse)
-	// recovery redo requires update new if need
+
 	pbft.status.activeState(&pbft.status.inNegoView)
 	pbft.status.activeState(&pbft.status.inRecovery)
 	pbft.initNegoView()
 }
 
-// recvRcry process incoming proactive recovery message
+// recvRecovery processes incoming proactive recovery message and send the response to the sender
 func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
-
 	pbft.logger.Debugf("Replica %d now recvRecovery from replica %d", pbft.id, recoveryInit.ReplicaId)
 
 	if pbft.status.getState(&pbft.status.skipInProgress) {
@@ -316,9 +324,9 @@ func (pbft *pbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 	return nil
 }
 
-// recvRcryRsp process other replicas' feedback as with initRecovery
+// recvRecoveryRsp stores the recovery response, if the counts of rcRspStore reach the commonCaseQuorum, find highest
+// checkpoint quorum and use that checkpoint seqNo as the recovery target to continue recovery
 func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
-
 	pbft.logger.Debugf("Replica %d now recvRecoveryRsp from replica %d for block height=%d", pbft.id, rsp.ReplicaId, rsp.BlockHeight)
 
 	if !pbft.status.getState(&pbft.status.inRecovery) {
@@ -332,9 +340,8 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	pbft.recoveryMgr.rcRspStore[from] = rsp
 
 	if len(pbft.recoveryMgr.rcRspStore) < pbft.commonCaseQuorum() {
-		// Reason for not using '≤ pbft.N-pbft.f': if N==5, we are require more than we need
 		pbft.logger.Debugf("Replica %d recv recoveryRsp from replica %d, rsp count: %d, not "+
-			"beyond %d", pbft.id, rsp.ReplicaId, len(pbft.recoveryMgr.rcRspStore), pbft.commonCaseQuorum())
+			"beyond %d, waiting...", pbft.id, rsp.ReplicaId, len(pbft.recoveryMgr.rcRspStore), pbft.commonCaseQuorum())
 		return nil
 	}
 
@@ -344,9 +351,10 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 			"Ignore it", pbft.id, rsp.ReplicaId)
 		return nil
 	}
-	// find quorum chkpt
-	n, lastid, replicas, find, chkptBehind := pbft.findHighestChkptQuorum()
-	pbft.logger.Debug("n: ", n, "lastid: ", lastid, "find: ", find, "chkptBehind: ", chkptBehind)
+
+	// find quorum high checkpoint
+	chkptSeqNo, chkptid, replicas, find, chkptBehind := pbft.findHighestChkptQuorum()
+	pbft.logger.Debug("chkptSeqNo: ", chkptSeqNo, "chkptid: ", chkptid, "find: ", find, "chkptBehind: ", chkptBehind)
 
 	if !find {
 		pbft.logger.Debugf("Replica %d did not find chkpt quorum", pbft.id)
@@ -354,61 +362,56 @@ func (pbft *pbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
 	}
 
 	pbft.timerMgr.stopTimer(RECOVERY_RESTART_TIMER)
-	pbft.recoveryMgr.recoveryToSeqNo = &n
+	// use the highest checkpoint seqNo as recoveryToSeqNo, and fetchPQC after recovery done
+	pbft.recoveryMgr.recoveryToSeqNo = &chkptSeqNo
 
 	pbft.logger.Debugf("Replica %d in recovery self lastExec: %d, self h: %d, others h: %d",
-		pbft.id, pbft.exec.lastExec, pbft.h, n)
+		pbft.id, pbft.exec.lastExec, pbft.h, chkptSeqNo)
 
-	if pbft.primary(pbft.view) == pbft.id {
-		for idx := range pbft.storeMgr.certStore {
-			if idx.n > pbft.exec.lastExec {
-				delete(pbft.storeMgr.certStore, idx)
-				pbft.persistDelQPCSet(idx.v, idx.n, idx.d)
-			}
-		}
-	}
-
-	var id []byte
+	var chkptId []byte
 	var err error
-	if n != 0 {
-		id, err = base64.StdEncoding.DecodeString(lastid)
-		if nil != err {
-			pbft.logger.Errorf("Replica %d cannot decode blockInfoId %s to %+v", pbft.id, lastid, id)
+	if chkptSeqNo != 0 {
+		chkptId, err = base64.StdEncoding.DecodeString(chkptid)
+		if err != nil {
+			pbft.logger.Errorf("Replica %d cannot decode blockInfoId %s to %+v", pbft.id, chkptid, chkptId)
 			return nil
 		}
 	} else {
-		id = []byte("XXX GENESIS")
+		chkptId = []byte("XXX GENESIS")
 	}
 
 	target := &stateUpdateTarget{
 		checkpointMessage: checkpointMessage{
-			seqNo: n,
-			id:    id,
+			seqNo: chkptSeqNo,
+			id:    chkptId,
 		},
 		replicas: replicas,
 	}
-
 	pbft.updateHighStateTarget(target)
 
 	if chkptBehind {
-		pbft.moveWatermarks(n)
+		// if we are behind by checkpoint, move watermark and state transfer to the target
+		pbft.moveWatermarks(chkptSeqNo)
 		pbft.stateTransfer(target)
 	} else if !pbft.status.getState(&pbft.status.skipInProgress) && !pbft.status.getState(&pbft.status.inVcReset) {
+		// if we are not behind by checkpoint, just VcReset to delete the useless tmp validate result, after
+		// VcResetDone, we will finish recovery or come into stateUpdate
 		pbft.helper.VcReset(pbft.exec.lastExec + 1)
 		pbft.status.activeState(&pbft.status.inVcReset)
 	} else {
+		// if we are state transferring, just continue
 		pbft.logger.Debugf("Replica %d try to recovery but find itself in state update", pbft.id)
 	}
 	return nil
 }
 
-// findHighestChkptQuorum finds highest one of chkpts which achieve quorum
-func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []replicaInfo, find bool, chkptBehind bool) {
-
+// findHighestChkptQuorum finds highest one of chkpts which achieve oneCorrectQuorum
+func (pbft *pbftImpl) findHighestChkptQuorum() (chkptSeqNo uint64, chkptId string, replicas []replicaInfo, find bool, chkptBehind bool) {
 	pbft.logger.Debugf("Replica %d now enter findHighestChkptQuorum", pbft.id)
 
 	chkpts := make(map[cidx]map[replicaInfo]bool)
 
+	// classify the checkpoints using Checkpoint index(seqNo,digest)
 	for from, rsp := range pbft.recoveryMgr.rcRspStore {
 		for chkptN, chkptD := range rsp.GetChkpts() {
 			chkptIdx := cidx{
@@ -438,22 +441,17 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []r
 
 	find = false
 	chkptBehind = false
-	n = pbft.h
+	chkptSeqNo = pbft.h
 
-	// Since replica sends all of its chkpt, we may encounter several, instead of single one,
-	// chkpts, which reach 2f+1
-
-	// In this case, others will move watermarks sooner or later.
-	// Hopefully, we find only one chkpt which reaches 2f+1 and this chkpt is their pbft.h
+	// Since replica sends all of its chkpt, we may encounter several, instead of single one, chkpts, which
+	// reach oneCorrectQuorum. In this case, others will move watermarks sooner or later, so we find the highest
+	// quorum checkpoint as the recovery target.
 	for ci, peers := range chkpts {
 		if len(peers) >= pbft.oneCorrectQuorum() {
 			find = true
-			if ci.n > n {
-				chkptBehind = true
-			}
-			if ci.n >= n {
-				n = ci.n
-				d = ci.d
+			if ci.n >= chkptSeqNo {
+				chkptSeqNo = ci.n
+				chkptId = ci.d
 				replicas = make([]replicaInfo, 0, len(peers))
 				for peer := range peers {
 					replicas = append(replicas, peer)
@@ -461,22 +459,22 @@ func (pbft *pbftImpl) findHighestChkptQuorum() (n uint64, d string, replicas []r
 			}
 		}
 	}
+	if chkptSeqNo > pbft.h {
+		chkptBehind = true
+	}
 
 	return
 }
 
-// fetchRecoveryPQC fetch PQC info after receive stateUpdated event
+// fetchRecoveryPQC always fetches PQC info after recovery done to fetch PQC info after target checkpoint
 func (pbft *pbftImpl) fetchRecoveryPQC() events.Event {
-
 	pbft.logger.Debugf("Replica %d now fetchRecoveryPQC", pbft.id)
-
 	pbft.recoveryMgr.rcPQCSenderStore = make(map[uint64]bool)
 
 	fetch := &RecoveryFetchPQC{
 		ReplicaId: pbft.id,
 		H:         pbft.h,
 	}
-
 	payload, err := proto.Marshal(fetch)
 	if err != nil {
 		pbft.logger.Errorf("ConsensusMessage_RECOVERY_FETCH_QPC marshal error")
@@ -493,12 +491,11 @@ func (pbft *pbftImpl) fetchRecoveryPQC() events.Event {
 	return nil
 }
 
-// returnRecoveryPQC return  recovery PQC to the peer behind
+// returnRecoveryPQC returns all PQC info we have sent before to the sender
 func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
-
 	pbft.logger.Debugf("Replica %d now returnRecoveryPQC", pbft.id)
 
-	dest, h := fetch.ReplicaId, fetch.H
+	destID, h := fetch.ReplicaId, fetch.H
 
 	if h >= pbft.h+pbft.L {
 		pbft.logger.Errorf("Replica %d receives fetch QPC request, but its pbft.h ≥ highwatermark", pbft.id)
@@ -509,9 +506,9 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 	var pres []*Prepare
 	var cmts []*Commit
 
-	// replica just send all PQC that itself had sent
+	// replica just send all PQC info itself had sent before
 	for idx, cert := range pbft.storeMgr.certStore {
-		// send all PQC that n > h, since it maybe wait others to execute
+		// send all PQC that n > h in current view, since it maybe wait others to execute
 		if idx.n > h && idx.v == pbft.view {
 			if cert.prePrepare == nil {
 				pbft.logger.Warningf("Replica %d in returnRcPQC finds nil pre-prepare for view=%d/seqNo=%d",
@@ -520,17 +517,17 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 				prepres = append(prepres, cert.prePrepare)
 			}
 			for pre := range cert.prepare {
-				if pre.ReplicaId != dest {
+				// remove the prepare sent from destID as the dest node must have these messages
+				if pre.ReplicaId != destID {
 					prepare := pre
 					pres = append(pres, &prepare)
-					//break
 				}
 			}
 			for cmt := range cert.commit {
-				if cmt.ReplicaId != dest {
+				// remove the commit sent from destID as the dest node must have these messages
+				if cmt.ReplicaId != destID {
 					commit := cmt
 					cmts = append(cmts, &commit)
-					//break
 				}
 			}
 		}
@@ -559,16 +556,15 @@ func (pbft *pbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 		Payload: payload,
 	}
 	conMsg := cMsgToPbMsg(msg, pbft.id)
-	pbft.helper.InnerUnicast(conMsg, dest)
+	pbft.helper.InnerUnicast(conMsg, destID)
 
 	pbft.logger.Debugf("Replica %d send recovery_return_pqc %v", pbft.id, rcReturn)
 
 	return nil
 }
 
-// recvRecoveryReturnPQC process PQC info target peers return
+// recvRecoveryReturnPQC re-processes all the PQC received from others
 func (pbft *pbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.Event {
-
 	pbft.logger.Debugf("Replica %d now recvRecoveryReturnPQC from replica %d, return_pqc %v", pbft.id, PQCInfo.ReplicaId, PQCInfo)
 
 	sender := PQCInfo.ReplicaId

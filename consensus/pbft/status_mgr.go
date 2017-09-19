@@ -28,47 +28,39 @@ type PbftStatus struct {
 	vcToRecovery      int32
 }
 
-//activeState sets the states to true
+// activeState sets the states to true
 func (status PbftStatus) activeState(stateName ...*int32) {
 	for _, s := range stateName {
 		atomic.StoreInt32(s, ON)
 	}
 }
 
-//inActiveState sets the states to false
+// inActiveState sets the states to false
 func (status PbftStatus) inActiveState(stateName ...*int32) {
 	for _, s := range stateName {
 		atomic.StoreInt32(s, OFF)
 	}
 }
 
-func (status PbftStatus) negCurrentState(stateName *int32) bool {
-	tmp := atomic.LoadInt32(stateName)
-	return (ON - tmp) == ON
-}
-
+// getState returns the state of specified state name, true means ON, false means OFF
 func (status PbftStatus) getState(stateName *int32) bool {
 	return atomic.LoadInt32(stateName) == ON
 }
 
-func toBool(stateName *int32) bool {
-	return atomic.LoadInt32(stateName) == ON
-}
-
-//checkStatesAnd checks the result of several status and each other
+// checkStatesAnd checks the result of several status computed with each other using '&&'
 func (status PbftStatus) checkStatesAnd(stateName ...*int32) bool {
 	var rs bool = true
 	for _, s := range stateName {
-		rs = rs && toBool(s)
+		rs = rs && status.getState(s)
 	}
 	return rs
 }
 
-//checkStatesAnd checks the result of several status or each other
+// checkStatesOr checks the result of several status computed with each other using '||'
 func (status PbftStatus) checkStatesOr(stateName ...*int32) bool {
 	var rs bool = false
 	for _, s := range stateName {
-		rs = rs || toBool(s)
+		rs = rs || status.getState(s)
 	}
 	return rs
 }

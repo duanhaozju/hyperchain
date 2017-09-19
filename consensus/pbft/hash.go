@@ -13,7 +13,6 @@ import (
 
 // encode the []byte to string
 func hash(msg interface{}) string {
-
 	var raw []byte
 	switch converted := msg.(type) {
 	case *types.Transaction:
@@ -21,23 +20,25 @@ func hash(msg interface{}) string {
 	case *TransactionBatch:
 		raw, _ = proto.Marshal(converted)
 	default:
-		//logger.Errorf("Asked to hash non-supported message type, ignoring")
 		return ""
 	}
 
 	return base64.StdEncoding.EncodeToString(computeCryptoHash(raw))
 }
 
+// computeCryptoHash computes hash using sha256
 func computeCryptoHash(data []byte) (hash []byte) {
 	hash = make([]byte, 64)
 	sha3.ShakeSum256(hash, data)
 	return
 }
 
+// hashByte returns the base64 encoded result of CryptoHash
 func hashByte(data []byte) string {
 	return base64.StdEncoding.EncodeToString(computeCryptoHash(data))
 }
 
+// byteToString returns the base64 encoded result of data
 func byteToString(data []byte) string {
 	return base64.StdEncoding.EncodeToString(data)
 }

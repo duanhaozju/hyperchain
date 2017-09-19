@@ -12,19 +12,19 @@ import (
 	"hyperchain/manager/event"
 )
 
-// batchManager manage basic batch issues
-// exp:
-//      1.batch events timer management
+// batchManager manages basic batch issues, including:
+// 1. txPool which manages all transactions received from client or
+// 2. batch events timer management
 type batchManager struct {
 	txPool           txpool.TxPool
 	eventMux         *event.TypeMux
-	batchSub         event.Subscription
+	batchSub         event.Subscription	// subscription channel for batch event posted from txPool module
 	close            chan bool
 	pbftQueue        events.Queue
-	batchTimerActive bool
+	batchTimerActive bool			// track the batch timer event, true means there exists an undergoing batch timer event
 }
 
-//batchValidator used to manager batch validate issues.
+// batchValidator manages batch validate issues
 type batchValidator struct {
 	lastVid             uint64                 // track the last validate batch seqNo
 	currentVid          *uint64                // track the current validate batch seqNo
@@ -35,58 +35,62 @@ type batchValidator struct {
 	preparedCert    map[vidx]string // track the prepared cert to help validate
 }
 
+// setLastVid sets the lastVid to lvid
 func (bv *batchValidator) setLastVid(lvid uint64) {
 	bv.lastVid = lvid
 }
 
-//saveToCVB save the cacheBatch into cacheValidatedBatch.
+// saveToCVB saves the cacheBatch into cacheValidatedBatch.
 func (bv *batchValidator) saveToCVB(digest string, cb *cacheBatch) {
 	bv.cacheValidatedBatch[digest] = cb
 }
 
-//containsInCVB judge whether the cache in cacheValidatedBatch.
+// containsInCVB judges whether the digest is in cacheValidatedBatch or not.
 func (bv *batchValidator) containsInCVB(digest string) bool {
 	_, ok := bv.cacheValidatedBatch[digest]
 	return ok
 }
 
-//update lastVid  and currentVid
+// updateLCVid updates lastVid to the value of currentVid and reset currentVid to nil
 func (bv *batchValidator) updateLCVid() {
 	bv.lastVid = *bv.currentVid
 	bv.currentVid = nil
 }
 
+// setCurrentVid sets the value of currentVid
 func (bv *batchValidator) setCurrentVid(cvid *uint64) {
 	bv.currentVid = cvid
 }
 
-//getCVB get cacheValidatedBatch
+// getCVB gets cacheValidatedBatch
 func (bv *batchValidator) getCVB() map[string]*cacheBatch {
 	return bv.cacheValidatedBatch
 }
 
-//getCacheBatchFromCVB get cacheBatch form cacheValidatedBatch.
+// getCacheBatchFromCVB gets cacheBatch from cacheValidatedBatch with specified digest
 func (bv *batchValidator) getCacheBatchFromCVB(digest string) *cacheBatch {
 	return bv.cacheValidatedBatch[digest]
 }
 
-//deleteCacheFromCVB delete cacheBatch from cachedValidatedBatch.
+// deleteCacheFromCVB deletes cacheBatch from cachedValidatedBatch with specified digest
 func (bv *batchValidator) deleteCacheFromCVB(digest string) {
 	delete(bv.cacheValidatedBatch, digest)
 }
 
+// newBatchValidator initializes an instance of batchValidator
 func newBatchValidator() *batchValidator {
-
 	bv := &batchValidator{}
 	bv.cacheValidatedBatch = make(map[string]*cacheBatch)
 	bv.preparedCert = make(map[vidx]string)
 	return bv
 }
 
-// newBatchManager init a instance of batchManager.
+// newBatchManager initializes an instance of batchManager. batchManager subscribes TxHashBatch from txPool module
+// and push it to pbftQueue for primary to construct TransactionBatch for consensus
 func newBatchManager(pbft *pbftImpl) *batchManager {
 	bm := &batchManager{}
 
+	// subscribe TxHashBatch
 	bm.eventMux = new(event.TypeMux)
 	bm.batchSub = bm.eventMux.Subscribe(txpool.TxHashBatch{})
 	bm.close = make(chan bool)
@@ -98,11 +102,12 @@ func newBatchManager(pbft *pbftImpl) *batchManager {
 	if err != nil {
 		pbft.logger.Criticalf("Cannot parse batch timeout: %s", err)
 	}
-	if batchTimeout >= pbft.timerMgr.requestTimeout { //TODO: change the pbftTimerMgr to batchTimerMgr
+	if batchTimeout >= pbft.timerMgr.requestTimeout {
 		pbft.timerMgr.requestTimeout = 3 * batchTimeout / 2
 		pbft.logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", pbft.timerMgr.requestTimeout)
 	}
 
+	// new instance for txPool
 	bm.txPool, err = txpool.NewTxPool(pbft.namespace, poolSize, bm.eventMux, batchSize)
 	if err != nil {
 		panic(fmt.Errorf("Cannot create txpool: %s", err))
@@ -114,18 +119,22 @@ func newBatchManager(pbft *pbftImpl) *batchManager {
 	return bm
 }
 
+// start starts a go-routine to listen TxPool Event which continuously waits for TxHashBatch
 func (bm *batchManager) start(queue events.Queue) {
 	bm.pbftQueue = queue
 	go bm.listenTxPoolEvent()
 }
 
+// stop closes the bm.close channel which will stop the listening go-routine
 func (bm *batchManager) stop() {
 	if bm.close != nil {
 		close(bm.close)
+		bm.close = nil
 	}
 }
 
-// listenTxPoolEvent start the thread of listening the TxHashBatch sent by txpool
+// listenTxPoolEvent continuously listens the TxHashBatch event sent from txPool or the bm.close flag which will stop
+// this listening go-routine
 func (bm *batchManager) listenTxPoolEvent() {
 	for {
 		select {
@@ -140,11 +149,12 @@ func (bm *batchManager) listenTxPoolEvent() {
 	}
 }
 
+// isBatchTimerActive returns if the batch timer is active or not
 func (bm *batchManager) isBatchTimerActive() bool {
 	return bm.batchTimerActive
 }
 
-// startBatchTimer start the batch timer
+// startBatchTimer starts the batch timer and sets the batchTimerActive to true
 func (pbft *pbftImpl) startBatchTimer() {
 	event := &LocalEvent{
 		Service:   CORE_PBFT_SERVICE,
@@ -156,14 +166,14 @@ func (pbft *pbftImpl) startBatchTimer() {
 	pbft.logger.Debugf("Primary %d started the batch timer", pbft.id)
 }
 
-// stopBatchTimer stop the batch timer
+// stopBatchTimer stops the batch timer and reset the batchTimerActive to false
 func (pbft *pbftImpl) stopBatchTimer() {
 	pbft.timerMgr.stopTimer(BATCH_TIMER)
 	pbft.batchMgr.batchTimerActive = false
 	pbft.logger.Debugf("Primary %d stopped the batch timer", pbft.id)
 }
 
-// restartBatchTimer restart the batch timer
+// restartBatchTimer restarts the batch timer
 func (pbft *pbftImpl) restartBatchTimer() {
 	pbft.timerMgr.stopTimer(BATCH_TIMER)
 
@@ -177,8 +187,10 @@ func (pbft *pbftImpl) restartBatchTimer() {
 	pbft.logger.Debugf("Primary %d restarted the batch timer", pbft.id)
 }
 
+// primaryValidateBatch used by primary helps primary pre-validate the batch and stores this TransactionBatch
 func (pbft *pbftImpl) primaryValidateBatch(digest string, batch *TransactionBatch, seqNo uint64) {
 	// for keep the previous vid before viewchange
+	// will specifies the vid to start validate batch)
 	var n uint64
 	if seqNo != 0 {
 		n = seqNo
@@ -188,18 +200,22 @@ func (pbft *pbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 
 	pbft.seqNo = n
 
+	// store batch to outstandingReqBatches until execute this batch
 	pbft.storeMgr.outstandingReqBatches[digest] = batch
 	pbft.storeMgr.txBatchStore[digest] = batch
 
 	pbft.logger.Debugf("Primary %d try to validate batch for view=%d/seqNo=%d, batch size: %d", pbft.id, pbft.view, n, len(batch.HashList))
+	// here we soft start a new view timer with requestTimeout+validateTimeout, if primary cannot execute this batch
+	// during that timeout, we think there may exist some problems with this primary which will trigger viewchange
 	pbft.softStartNewViewTimer(pbft.timerMgr.requestTimeout+pbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
 		fmt.Sprintf("new request batch for view=%d/seqNo=%d", pbft.view, n))
 	pbft.helper.ValidateBatch(digest, batch.TxList, batch.Timestamp, n, pbft.view, true)
 
 }
 
+// validatePending used by backup nodes validates pending batched stored in preparedCert
 func (pbft *pbftImpl) validatePending() {
-
+	// avoid validate multi batches simultaneously
 	if pbft.batchVdr.currentVid != nil {
 		pbft.logger.Debugf("Backup %d not attempting to send validate because it is currently validate %d", pbft.id, *pbft.batchVdr.currentVid)
 		return
@@ -262,6 +278,7 @@ func (pbft *pbftImpl) findNextValidateBatch() (find bool, digest string, txBatch
 	return
 }
 
+// execValidate used by backup nodes actually sends validate event
 func (pbft *pbftImpl) execValidate(digest string, txBatch *TransactionBatch, idx vidx) {
 
 	pbft.logger.Debugf("Backup %d try to validate batch for view=%d/seqNo=%d, batch size: %d", pbft.id, idx.view, idx.seqNo, len(txBatch.TxList))

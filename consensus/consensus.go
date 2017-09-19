@@ -8,17 +8,18 @@ package consensus
 // Consenter provides functions related to consensus to be invoked by outer services
 // Every consensus algorithm needs to implement this interface.
 type Consenter interface {
-	//RecvMsg called serially with incoming messages from gRPC.
+	// RecvMsg is called serially with incoming messages from gRPC.
 	RecvMsg(msgPayload []byte) error
 
-	//RecvMsg called if local service pass message to consensus module.
+	// RecvMsg is called if local service pass message to consensus module.
 	RecvLocal(msg interface{}) error
 
-	//Start start the consensus service
+	// Start starts the consensus service
 	Start()
 
-	//Close close the consenter service
+	// Close closes the consensus service
 	Close()
 
+	// GetStatus returns the current status of consensus service
 	GetStatus() (normal bool, full bool)
 }

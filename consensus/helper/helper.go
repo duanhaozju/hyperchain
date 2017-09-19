@@ -19,21 +19,36 @@ type helper struct {
 	externalMux *event.TypeMux
 }
 
+// Stack helps pbftImpl send message to other components of system. PbftImpl
+// would generate some messages and post these messages to other components,
+// in order to send messages to other vp nodes, let other components validate or
+// execute transactions, or send messages to clients.
 type Stack interface {
+	// InnerBroadcast broadcast the consensus message to all other vp nodes
 	InnerBroadcast(msg *pb.Message) error
+	// InnerUnicast unicast the transaction message to a specific vp node
 	InnerUnicast(msg *pb.Message, to uint64) error
+	// Execute transfers the transactions decided by consensus to outer to execute these transactions
 	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
+	// UpdateState transfers the UpdateStateEvent to outer
 	UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error
+	// ValidateBatch transfers the ValidationEvent to outer
 	ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
+	// VcReset reset vid when view change is done, clear the validate cache larger than seqNo
 	VcReset(seqNo uint64) error
+	// InformPrimary send the primary id to update info after negotiate view or view change
 	InformPrimary(primary uint64) error
+	// BroadcastAddNode broadcast addnode message to others
 	BroadcastAddNode(msg *pb.Message) error
+	// BroadcastDelNode broadcast delnode message to others
 	BroadcastDelNode(msg *pb.Message) error
+	// UpdateTable inform to update routing table
 	UpdateTable(payload []byte, flag bool) error
+	// SendFilterEvent sends event to subscription system, then the system would return message to clients which subscribe this message.
 	SendFilterEvent(informType int, message ...interface{}) error
 }
 
-// InnerBroadcast broadcast the consensus message between vp nodes
+// InnerBroadcast broadcasts the consensus message between VP nodes
 func (h *helper) InnerBroadcast(msg *pb.Message) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -52,7 +67,7 @@ func (h *helper) InnerBroadcast(msg *pb.Message) error {
 	return nil
 }
 
-// InnerUnicast unicast the transaction message between to primary
+// InnerUnicast unicasts message to the specified VP node
 func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -106,7 +121,7 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 	return nil
 }
 
-// UpdateState transfers the UpdateStateEvent to outer
+// ValidateBatch transfers the ValidateEvent to outer
 func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error {
 
 	validateEvent := event.ValidationEvent{
@@ -124,7 +139,7 @@ func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStam
 	return nil
 }
 
-// VcReset reset vid when view change is done
+// VcReset resets vid after in recovery, viewchange or add/delete nodes
 func (h *helper) VcReset(seqNo uint64) error {
 
 	vcResetEvent := event.VCResetEvent{
@@ -133,12 +148,11 @@ func (h *helper) VcReset(seqNo uint64) error {
 
 	// No need to "go h.msgQ.Post...", we'll wait for it to return
 	h.innerMux.Post(vcResetEvent)
-	//time.Sleep(time.Millisecond * 50)
 
 	return nil
 }
 
-// Inform the primary id after negotiate or
+// InformPrimary informs the primary id after negotiate or viewchanged
 func (h *helper) InformPrimary(primary uint64) error {
 
 	informPrimaryEvent := event.InformPrimaryEvent{
@@ -150,7 +164,7 @@ func (h *helper) InformPrimary(primary uint64) error {
 	return nil
 }
 
-// Broadcast addnode message to others
+// BroadcastAddNode broadcasts addnode message to others
 func (h *helper) BroadcastAddNode(msg *pb.Message) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -169,7 +183,7 @@ func (h *helper) BroadcastAddNode(msg *pb.Message) error {
 	return nil
 }
 
-// Broadcast delnode message to others
+// BroadcastDelNode broadcasts delnode message to others
 func (h *helper) BroadcastDelNode(msg *pb.Message) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -188,7 +202,7 @@ func (h *helper) BroadcastDelNode(msg *pb.Message) error {
 	return nil
 }
 
-// Inform to update routing table
+// UpdateTable informs to update routing table
 func (h *helper) UpdateTable(payload []byte, flag bool) error {
 
 	updateTable := event.UpdateRoutingTableEvent{
@@ -212,12 +226,12 @@ func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *helper {
 	return h
 }
 
-// PostExternal post event to outer event mux
+// PostExternal posts event to outer event mux
 func (h *helper) PostExternal(ev interface{}) {
 	h.externalMux.Post(ev)
 }
 
-// sendFilterEvent - send event to subscription system.
+// sendFilterEvent sends event to subscription system.
 func (h *helper) SendFilterEvent(informType int, message ...interface{}) error {
 	switch informType {
 	case consensus.FILTER_View_Change_Finish:
