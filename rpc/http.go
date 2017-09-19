@@ -32,8 +32,6 @@ var (
 )
 
 type httpServerImpl struct {
-	stopHp    chan bool
-	restartHp chan bool
 	nr        namespace.NamespaceManager
 	port      int
 
@@ -46,8 +44,6 @@ func GetHttpServer(nr namespace.NamespaceManager) internalRPCServer {
 	if hs == nil {
 		hs = &httpServerImpl{
 			nr:                 nr,
-			stopHp:             nr.GetStopFlag(),
-			restartHp:          nr.GetRestartFlag(),
 			httpAllowedOrigins: []string{"*"},
 			port:               nr.GlobalConfig().GetInt(common.JSON_RPC_PORT),
 		}
@@ -66,7 +62,7 @@ func (hi *httpServerImpl) start() error {
 	config := hi.nr.GlobalConfig()
 
 	// start http listener
-	handler := NewServer(hi.nr, hi.stopHp, hi.restartHp)
+	handler := NewServer(hi.nr)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", admin.LoginServer)

@@ -25,8 +25,6 @@ var (
 )
 
 type wsServerImpl struct {
-	stopHp    chan bool
-	restartHp chan bool
 	nr        namespace.NamespaceManager
 	port      int
 
@@ -46,8 +44,6 @@ type httpReadWriteCloser struct {
 func GetWSServer(nr namespace.NamespaceManager) internalRPCServer {
 	if wsS == nil {
 		wsS = &wsServerImpl{
-			stopHp:           nr.GetStopFlag(),
-			restartHp:        nr.GetRestartFlag(),
 			nr:               nr,
 			wsAllowedOrigins: []string{"*"},
 			wsConns:          make(map[*websocket.Conn]*Notifier),
@@ -67,7 +63,7 @@ func (wssi *wsServerImpl) start() error {
 	)
 
 	// start websocket listener
-	handler := NewServer(wssi.nr, wssi.stopHp, wssi.restartHp)
+	handler := NewServer(wssi.nr)
 	if listener, err = net.Listen("tcp", fmt.Sprintf(":%d", wssi.port)); err != nil {
 		log.Errorf("%v", err)
 		return err

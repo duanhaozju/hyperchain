@@ -80,21 +80,19 @@ type Administrator struct {
 	Check         bool
 	NsMgr         namespace.NamespaceManager
 	CmdExecutor   map[string]func(command *Command) *CommandResult
-	StopServer    chan bool
-	RestartServer chan bool
 }
 
 //StopServer stop hyperchain server.
 func (adm *Administrator) stopServer(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
-	adm.StopServer <- true
+	adm.NsMgr.GetStopFlag() <- true
 	return &CommandResult{Ok: true, Result: "stop server success!"}
 }
 
 //RestartServer start hyperchain server.
 func (adm *Administrator) restartServer(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
-	adm.RestartServer <- true
+	adm.NsMgr.GetRestartFlag() <- true
 	return &CommandResult{Ok: true, Result: "restart server success!"}
 }
 

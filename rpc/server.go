@@ -33,7 +33,7 @@ const (
 )
 
 // NewServer will create a new server instance with no registered handlers.
-func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartHp chan bool) *Server {
+func NewServer(nr namespace.NamespaceManager) *Server {
 	server := &Server{
 		codecs:       set.New(),
 		run:          1,
@@ -43,8 +43,6 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 	server.admin = &admin.Administrator{
 		Check:         nr.GlobalConfig().GetBool(common.ADMIN_CHECK),
 		NsMgr:         server.namespaceMgr,
-		StopServer:    stopHyperchain,
-		RestartServer: restartHp,
 	}
 	server.admin.Init()
 	return server
