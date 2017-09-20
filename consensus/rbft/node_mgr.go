@@ -932,32 +932,51 @@ func (rbft *rbftImpl) handleTailAfterUpdate() events.Event {
 	rbft.seqNo = rbft.exec.lastExec
 	rbft.batchVdr.lastVid = rbft.exec.lastExec
 
+	rbft.putBackTxBatches(update.Xset)
+
 	// New Primary validate the batch built by xset
 	if rbft.isPrimary(rbft.id) {
-		xSetLen := len(update.Xset)
-		upper := uint64(xSetLen) + rbft.h + uint64(1)
-		for i := rbft.h + uint64(1); i < upper; i++ {
-			d, ok := update.Xset[i]
-			if !ok {
-				rbft.logger.Critical("update_n Xset miss batch number %d", i)
-			} else if d == "" {
-				// This should not happen
-				rbft.logger.Critical("update_n Xset has null batch, kick it out")
-			} else {
-				batch, ok := rbft.storeMgr.txBatchStore[d]
-				if !ok {
-					rbft.logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, rbft.id)
-				} else if i > rbft.seqNo {
-					rbft.primaryValidateBatch(d, batch, i)
-				}
-			}
-		}
+		rbft.primaryResendBatch(update.Xset)
 	}
 
 	return &LocalEvent{
 		Service:   NODE_MGR_SERVICE,
 		EventType: NODE_MGR_UPDATEDN_EVENT,
 	}
+}
+
+func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
+
+	var keys []uint64
+	var hashList []string
+	hashSet := make(map[string]bool)
+	targetSet := make(map[uint64]string)
+
+	for _, hash := range xset {
+		hashSet[hash] = true
+	}
+	for hash, batch := range rbft.storeMgr.txBatchStore {
+		if batch.SeqNo <= rbft.exec.lastExec {
+			continue
+		}
+		if ok := hashSet[hash]; ok {
+			continue
+		}
+		targetSet[batch.SeqNo] = hash
+	}
+
+	i := 0
+	for n := range targetSet {
+		keys[i] = n
+		i++
+	}
+	sort.Sort(sortableUint64Slice(keys))
+
+	for _, hash := range targetSet {
+		hashList = append(hashList, hash)
+	}
+
+	rbft.batchMgr.txPool.GetTxsBack(hashList)
 }
 
 // rebuildCertStoreForUpdate rebuilds the certStore after finished updating,
