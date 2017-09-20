@@ -97,7 +97,7 @@ func (hsi *httpServerImpl) start() error {
 			return err
 		}
 
-		srv := newHTTPServer(mux, tlsConfig)
+		srv = newHTTPServer(mux, tlsConfig)
 
 	} else {
 
