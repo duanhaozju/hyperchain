@@ -10,6 +10,12 @@ import (
 	"sync"
 )
 
+// ValidationTag unique identification for validation result.
+type ValidationTag struct {
+	hash  string
+	seqNo uint64
+}
+
 // represent a validation result collection
 type ValidationResultRecord struct {
 	TxRoot      []byte                            // hash of a batch of transactions
@@ -125,7 +131,7 @@ func (executor *Executor) process(validationEvent event.ValidationEvent, done fu
 	hash := executor.calculateValidationResultHash(validateResult.MerkleRoot, validateResult.TxRoot, validateResult.ReceiptRoot)
 	executor.logger.Debugf("[Namespace = %s] invalid transaction number %d", executor.namespace, len(validateResult.InvalidTxs))
 	executor.logger.Debugf("[Namespace = %s] valid transaction number %d", executor.namespace, len(validateResult.ValidTxs))
-	executor.saveValidationResult(validateResult, hash)
+	executor.saveValidationResult(validateResult, validationEvent.SeqNo, hash)
 	executor.sendValidationResult(validateResult, validationEvent, hash)
 	return nil, true
 }
@@ -264,8 +270,8 @@ func (executor *Executor) throwInvalidTransactionBack(invalidtxs []*types.Invali
 }
 
 // saveValidationResult - save validation result to cache.
-func (executor *Executor) saveValidationResult(res *ValidationResultRecord, hash common.Hash) {
-	executor.addValidationResult(hash.Hex(), res)
+func (executor *Executor) saveValidationResult(res *ValidationResultRecord, seqNo uint64, hash common.Hash) {
+	executor.addValidationResult(ValidationTag{hash.Hex(), seqNo}, res)
 }
 
 // sendValidationResult - send validation result to consensus module.
