@@ -21,14 +21,33 @@ message Message {
         NETWORK   = 4;
     }
 
-    Type type       = 1; //The basic message type.
-    FROM from       = 2; //Define where the message come from.
-    bytes payload   = 3; //The message body.
+    Type type       = 1; // The basic message type.
+    FROM from       = 2; // Define where the message come from.
+    bytes payload   = 3; // The message body.
 }
 
+//RegisterMessage used by service component to connect to Dispatcher.
 message RegisterMessage {
     string address      = 1;
     string port         = 2;
     string namespace    = 3;
-    bytes payload       = 4; //retained field
+    bytes payload       = 4; // retained field
+}
+
+//ServiceMessage used by service component to send to Dispatcher.
+message ServiceMessage {
+    enum Type {
+
+    }
+    Type type = 1;
+    bytes payload = 2;
+}
+
+//DispatcherMessage used by Dispatcher to send to specific service node.
+message DispatcherMessage {
+    enum Type {
+
+    }
+    Type type = 1;
+    bytes payload = 2;
 }
