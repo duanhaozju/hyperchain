@@ -1,16 +1,17 @@
 package db_utils
 
 import (
-	"testing"
-	"reflect"
-	"hyperchain/hyperdb/mdb"
-	"hyperchain/core/test_util"
 	"bytes"
+	"hyperchain/common"
+	"hyperchain/core/test_util"
 	"hyperchain/core/types"
+	"hyperchain/hyperdb/mdb"
+	"reflect"
+	"testing"
 )
 
 func TestGetBlock(t *testing.T) {
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	// Get block number
 	dbBlock, _ := GetBlockByNumberFunc(db, test_util.BlockCases.Number)
@@ -33,7 +34,7 @@ func TestPersistBlockWitoutFlush(t *testing.T) {
 	var (
 		dbBlock *types.Block
 	)
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	// persist without flush
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, false, false)
 	dbBlock, _ = GetBlockFunc(db, test_util.BlockCases.BlockHash)
@@ -52,7 +53,7 @@ func TestPersistBlockWithVersion(t *testing.T) {
 	var (
 		dbBlock *types.Block
 	)
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	// (1) persis block with default version tag
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	dbBlock, _ = GetBlockFunc(db, test_util.BlockCases.BlockHash)
@@ -78,7 +79,7 @@ func TestPersistBlockWithVersion(t *testing.T) {
 }
 
 func TestDeleteBlock(t *testing.T) {
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	// delete block by hash
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	DeleteBlockFunc(db, db.NewBatch(), test_util.BlockCases.BlockHash, true, true)
@@ -92,4 +93,3 @@ func TestDeleteBlock(t *testing.T) {
 		t.Error("expect deletion success")
 	}
 }
-

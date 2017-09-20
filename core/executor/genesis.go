@@ -1,16 +1,16 @@
 package executor
 
 import (
-	"math/big"
-	"time"
-	"hyperchain/core/hyperstate"
-	edb "hyperchain/core/db_utils"
 	"hyperchain/common"
-	"strconv"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/core/hyperstate"
 	"hyperchain/core/types"
-	"hyperchain/hyperdb/db"
-	"hyperchain/hyperdb"
 	"hyperchain/core/vm"
+	"hyperchain/hyperdb"
+	"hyperchain/hyperdb/db"
+	"math/big"
+	"strconv"
+	"time"
 )
 
 // CreateInitBlock - create genesis for a specific namespace.
@@ -73,11 +73,11 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 
 // NewStateDb - create a empty stateDb handler.
 func NewStateDb(conf *common.Config, db db.Database, namespace string) (vm.Database, error) {
-	archieveDb, err := hyperdb.GetArchieveDbByNamespace(namespace)
+	archiveDb, err := hyperdb.GetArchiveDbByNamespace(namespace)
 	if err != nil {
 		return nil, err
 	}
-	stateDb, err := hyperstate.New(common.Hash{}, db, archieveDb, conf, 0, namespace)
+	stateDb, err := hyperstate.New(common.Hash{}, db, archiveDb, conf, 0, namespace)
 	if err != nil {
 		return nil, err
 	}

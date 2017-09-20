@@ -1,23 +1,23 @@
 package types
 
 import (
-	"testing"
 	"hyperchain/common"
+	"testing"
 )
 
 func TestReceipt_MakeBloom(t *testing.T) {
 	logs := Logs{
 		{
-			Address:  common.BytesToAddress([]byte("address")),
-			Topics:   []common.Hash{
+			Address: common.BytesToAddress([]byte("address")),
+			Topics: []common.Hash{
 				common.BytesToHash([]byte("topic1")),
 				common.BytesToHash([]byte("topic2")),
 				common.BytesToHash([]byte("topic3")),
 			},
 		},
 		{
-			Address:  common.BytesToAddress([]byte("address")),
-			Topics:   []common.Hash{
+			Address: common.BytesToAddress([]byte("address")),
+			Topics: []common.Hash{
 				common.BytesToHash([]byte("topic3")),
 				common.BytesToHash([]byte("topic4")),
 				common.BytesToHash([]byte("topic5")),

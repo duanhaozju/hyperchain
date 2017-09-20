@@ -1,10 +1,10 @@
 package vm
 
 import (
-	"math/big"
-	"hyperchain/hyperdb/db"
 	"hyperchain/common"
 	"hyperchain/core/types"
+	"hyperchain/hyperdb/db"
+	"math/big"
 )
 
 type Database interface {
@@ -56,6 +56,8 @@ type Database interface {
 	Purge()
 
 	Commit() (common.Hash, error)
+	RecomputeCryptoHash() (common.Hash, error)
+	ResetToTarget(uint64, common.Hash)
 	Reset() error
 	// Query
 	GetAccounts() map[string]Account
@@ -63,7 +65,6 @@ type Database interface {
 	GetTree() interface{}
 	GetCurrentTxHash() common.Hash
 	NewIterator(common.Address, *IterRange) (Iterator, error)
-
 
 	// Atomic Related
 	MarkProcessStart(uint64)
@@ -73,18 +74,19 @@ type Database interface {
 	DeleteBatch(seqNo uint64)
 	MakeArchive(uint64)
 	ShowArchive(common.Address, string) map[string]map[string]string
+	Apply(db.Database, db.Batch, common.Hash) error
 }
 
 type Iterator interface {
-	Next()    bool
-	Key()     []byte
-	Value()   []byte
+	Next() bool
+	Key() []byte
+	Value() []byte
 	Release()
 }
 
 type IterRange struct {
-	Start     *common.Hash
-	Limit     *common.Hash
+	Start *common.Hash
+	Limit *common.Hash
 }
 
 func BytesPrefix(prefix []byte) *IterRange {
@@ -98,8 +100,8 @@ func BytesPrefix(prefix []byte) *IterRange {
 			break
 		}
 	}
-	startH := common.BytesToHash(prefix)
-	limitH := common.BytesToHash(limit)
+	startH := common.BytesToRightPaddingHash(prefix)
+	limitH := common.BytesToRightPaddingHash(limit)
 	return &IterRange{
 		Start: &startH,
 		Limit: &limitH,

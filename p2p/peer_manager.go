@@ -1,10 +1,3 @@
-// peer manager
-// author: Lizhong kuang
-// date: 2016-08-24
-// last modified:2016-08-25 Quan Chen
-// change log:	modified the  PeerManager interface definition
-//		implements GrpcPeerManager methods
-// 2016-12-23: change the interface definition (Chen Quan)
 package p2p
 
 // PeerManager provides the basic functions which supports the peer to peer
@@ -58,6 +51,8 @@ type DeleteNode interface {
 type InfoGetter interface {
 	// Get local node id
 	GetNodeId() int
+	// Get current N
+	GetN() int
 	//get the peer information of all nodes.
 	GetPeerInfo() PeerInfos
 	// set

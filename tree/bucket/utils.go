@@ -49,8 +49,6 @@ func GenerateUUID() string {
 	return uuidBytesToStr(uuid)
 }
 
-
-
 //GenerateHashFromSignature returns a hash of the combined parameters
 func GenerateHashFromSignature(path string, ctor string, args []string) []byte {
 	fargs := ctor
@@ -94,7 +92,7 @@ func uuidBytesToStr(uuid []byte) string {
 // FindMissingElements identifies the elements of the first slice that are not present in the second
 // The second slice is expected to be a subset of the first slice
 func FindMissingElements(all []string, some []string) (delta []string) {
-	all:
+all:
 	for _, v1 := range all {
 		for _, v2 := range some {
 			if strings.Compare(v1, v2) == 0 {
@@ -106,11 +104,10 @@ func FindMissingElements(all []string, some []string) (delta []string) {
 	return
 }
 
-
 // Append the [][]byte with separator,it will be more efficient in high concurrency
 func JoinBytes(data [][]byte, separator string) []byte {
 	// count the length of separator
-	if(data == nil || len(data)==0){
+	if data == nil || len(data) == 0 {
 		return nil
 	}
 	n := len(separator) * (len(data) - 1)
@@ -132,7 +129,7 @@ func JoinBytes(data [][]byte, separator string) []byte {
 // Append the []string with separator,it will be more efficient in high concurrency
 func JoinString(data []string, separator string) string {
 	// count the length of separator
-	if(data == nil || len(data)==0){
+	if data == nil || len(data) == 0 {
 		return ""
 	}
 	n := len(separator) * (len(data) - 1)
@@ -150,4 +147,3 @@ func JoinString(data []string, separator string) string {
 	}
 	return string(mem)
 }
-

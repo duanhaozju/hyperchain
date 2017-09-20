@@ -1,13 +1,12 @@
 package db_utils
 
 import (
+	"encoding/json"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
-	"encoding/json"
-	"github.com/pkg/errors"
 )
 
 // GetInvaildTxErrType - gets ErrType of invalid tx
@@ -47,20 +46,19 @@ func GetTransactionFunc(db db.Database, key []byte) (*types.Transaction, error) 
 
 	bi, ti := GetTxWithBlockFunc(db, key)
 	if bi == 0 && ti == 0 {
-		return nil, errors.New("not found tx meta")
+		return nil, NotFindTxMetaErr
 	}
 
 	block, err := GetBlockByNumberFunc(db, bi)
 	if err != nil {
-		return nil, errors.New("not found block")
+		return nil, NotFindBlockErr
 	}
 
-	if len(block.Transactions) < int(ti + 1) {
-		return nil, errors.New("out of slice range")
+	if len(block.Transactions) < int(ti+1) {
+		return nil, OutOfSliceRangeErr
 	}
 	return block.Transactions[int(ti)], nil
 }
-
 
 func GetAllTransaction(namespace string) ([]*types.Transaction, error) {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
@@ -72,8 +70,8 @@ func GetAllTransaction(namespace string) ([]*types.Transaction, error) {
 
 func GetAllTransactionFunc(db db.Database) ([]*types.Transaction, error) {
 	var (
-		ts []*types.Transaction = make([]*types.Transaction, 0)
-		index            uint64
+		ts    []*types.Transaction = make([]*types.Transaction, 0)
+		index uint64
 	)
 	chain, err := getChainFn(db)
 	if err != nil {
@@ -222,6 +220,54 @@ func GetAllDiscardTransactionFunc(db db.Database) ([]*types.InvalidTransactionRe
 	return ts, err
 }
 
+func DeleteAllDiscardTransaction(db db.Database, batch db.Batch, flush, sync bool) error {
+	iter := db.NewIterator(InvalidTransactionPrefix)
+	defer iter.Release()
+	for iter.Next() {
+		batch.Delete(iter.Key())
+	}
+	err := iter.Error()
+	// flush to disk immediately
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return err
+}
+
+func DumpDiscardTransactionInRange(db db.Database, batch db.Batch, dumpBatch db.Batch, start, end int64, flush, sync bool) (error, uint64) {
+	// flush to disk immediately
+	iter := db.NewIterator(InvalidTransactionPrefix)
+	defer iter.Release()
+	var cnt uint64
+	for iter.Next() {
+		var t types.InvalidTransactionRecord
+		value := iter.Value()
+		if err := proto.Unmarshal(value, &t); err != nil {
+			continue
+		}
+		if t.Tx != nil && t.Tx.Timestamp < end && t.Tx.Timestamp >= start {
+			cnt += 1
+			batch.Delete(iter.Key())
+			dumpBatch.Put(iter.Key(), iter.Value())
+		}
+	}
+	err := iter.Error()
+	if flush {
+		if sync {
+			batch.Write()
+			dumpBatch.Write()
+		} else {
+			go batch.Write()
+			go dumpBatch.Write()
+		}
+	}
+	return err, cnt
+}
+
 func GetDiscardTransaction(namespace string, key []byte) (*types.InvalidTransactionRecord, error) {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
@@ -246,18 +292,18 @@ func EncodeTransaction(transaction *types.Transaction) ([]byte, error) {
 	// There use transaction's signature directly
 	// Since the same signature means the consensus field of both are equal.
 	type ConsensusTransaction struct {
-		From            []byte      `json:"from,omitempty"`
-		To              []byte      `json:"to,omitempty"`
-		Value           []byte      `json:"value,omitempty"`
-		Timestamp       int64       `json:"timestamp,omitempty"`
-		Nonce           int64       `json:"nonce,omitempty"`
+		From      []byte `json:"from,omitempty"`
+		To        []byte `json:"to,omitempty"`
+		Value     []byte `json:"value,omitempty"`
+		Timestamp int64  `json:"timestamp,omitempty"`
+		Nonce     int64  `json:"nonce,omitempty"`
 	}
 
 	return json.Marshal(&ConsensusTransaction{
-		From:       transaction.From,
-		To:         transaction.To,
-		Value:      transaction.Value,
-		Timestamp:  transaction.Timestamp,
-		Nonce:      transaction.Nonce,
+		From:      transaction.From,
+		To:        transaction.To,
+		Value:     transaction.Value,
+		Timestamp: transaction.Timestamp,
+		Nonce:     transaction.Nonce,
 	})
 }

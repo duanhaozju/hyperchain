@@ -2,8 +2,8 @@ package api
 
 import (
 	"hyperchain/admittance"
-	"regexp"
 	"hyperchain/common"
+	"regexp"
 )
 
 type CertArgs struct {
@@ -30,22 +30,26 @@ func NewCertAPI(namespace string, cm *admittance.CAManager) *Cert {
 func (node *Cert) GetTCert(args CertArgs) (*TCertReturn, error) {
 	log := common.GetLogger(node.namespace, "api")
 	if node.cm == nil {
-		return nil, &common.CallbackError{Message:"CAManager is nil"}
+		return nil, &common.CallbackError{Message: "CAManager is nil"}
 	}
 
 	reg := regexp.MustCompile(`^[0-9a-fA-F]+$`)
 	if !reg.MatchString(args.Pubkey) {
-		return nil, &common.InvalidParamsError{Message:"Invalid params, please use hex string"}
+		return nil, &common.InvalidParamsError{Message: "Invalid params, please use hex string"}
 	}
 
 	//tcert, err := node.cm.SignTCert(args.Pubkey)
 	tcert, err := node.cm.GenTCert(args.Pubkey)
-
 	if err != nil {
 		log.Error(err)
-		return nil, &common.CertError{Message:"Signed tcert failed"}
+		return nil, &common.CertError{Message: "Signed tcert failed"}
+	}
+	err = admittance.RegisterCert([]byte(tcert))
+	if err != nil {
+		log.Error(err)
+		return nil, &common.CertError{Message: "Register tcert failed"}
 	}
 	tcert = common.TransportEncode(tcert)
-	return &TCertReturn{TCert:tcert }, nil
+	return &TCertReturn{TCert: tcert}, nil
 
 }

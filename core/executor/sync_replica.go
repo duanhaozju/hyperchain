@@ -1,11 +1,11 @@
 package executor
 
 import (
-	"time"
-	edb "hyperchain/core/db_utils"
-	"hyperchain/core/types"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
+	"hyperchain/core/types"
+	"time"
 )
 
 func (executor *Executor) syncReplica() {
@@ -19,10 +19,10 @@ func (executor *Executor) sendReplicaInfo() {
 	ticker := time.NewTicker(interval)
 	for {
 		select {
-		case <- executor.getExit(IDENTIFIER_REPLICA_SYNC):
+		case <-executor.getExit(IDENTIFIER_REPLICA_SYNC):
 			executor.logger.Notice("replica sync backend exit")
 			return
-		case <- ticker.C:
+		case <-ticker.C:
 			executor.informP2P(NOTIFY_SYNC_REPLICA, edb.GetChainCopy(executor.namespace))
 		}
 	}

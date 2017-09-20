@@ -12,10 +12,10 @@ import (
 	//"net"
 	//"strconv"
 	//"time"
-	"hyperchain/core/hyperstate"
 	"hyperchain/common"
-	"hyperchain/hyperdb/mdb"
+	"hyperchain/core/hyperstate"
 	"hyperchain/core/vm"
+	"hyperchain/hyperdb/mdb"
 	"os"
 	"path"
 	//"github.com/op/go-logging"
@@ -27,9 +27,8 @@ var logger *logging.Logger
 const (
 	address     = "localhost:50051"
 	defaultName = "world"
-	configPath = "./namespaces/global/config/global.yaml"
+	configPath  = "./namespaces/global/config/global.yaml"
 )
-
 
 func init() {
 	logger = logging.MustGetLogger("test")
@@ -41,7 +40,7 @@ func initConfig() *common.Config {
 }
 
 func initDb() vm.Database {
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	stateDb, _ := hyperstate.New(common.Hash{}, db, db, initConfig(), 0, "global")
 	stateDb.CreateAccount(common.HexToAddress("e81e714395549ba939403c7634172de21367f8b5"))
 	stateDb.Commit()
@@ -97,12 +96,12 @@ func main() {
 }
 
 func switchToExeLoc() string {
-	owd,  _ := os.Getwd()
+	owd, _ := os.Getwd()
 	os.Chdir(path.Join(common.GetGoPath(), "src/hyperchain/configuration"))
 	return owd
 }
 
-func initLog() *common.Config{
+func initLog() *common.Config {
 	globalConfig := common.NewConfig(configPath)
 	common.InitHyperLoggerManager(globalConfig)
 	globalConfig.Set(common.NAMESPACE, "global")

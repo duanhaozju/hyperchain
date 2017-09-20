@@ -1,10 +1,10 @@
 package vm
 
 import (
-	"math/big"
-	"hyperchain/common"
 	"github.com/op/go-logging"
+	"hyperchain/common"
 	"hyperchain/core/types"
+	"math/big"
 )
 
 type Type byte
@@ -59,6 +59,8 @@ type Environment interface {
 	Transfer(from, to Account, amount *big.Int)
 	// Adds a LOG to the state
 	AddLog(*types.Log)
+	// Dump vm execution trace info
+	DumpStructLog()
 	// Type of the VM
 	Vm() Vm
 	// Get the curret calling depth
@@ -74,4 +76,3 @@ type Environment interface {
 	// Create a new contract
 	Create(me ContractRef, data []byte, gas, price, value *big.Int) ([]byte, common.Address, error)
 }
-

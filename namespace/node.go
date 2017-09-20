@@ -20,27 +20,27 @@ type Node struct {
 
 func NewNode(id, grpc, rpc int, addr, extAddr string) *Node {
 	return &Node{
-		Id:id,
-		Addr:addr,
-		ExternalAddr:extAddr,
-		GrpcPort:grpc,
-		RpcPort:rpc,
+		Id:           id,
+		Addr:         addr,
+		ExternalAddr: extAddr,
+		GrpcPort:     grpc,
+		RpcPort:      rpc,
 	}
 }
 
 //NamespaceInfo basic information of this namespace.
 type NamespaceInfo struct {
-	name       string
-	desc       string
-	logger     *logging.Logger
+	name   string
+	desc   string
+	logger *logging.Logger
 
 	nodes map[int]*Node
 	//config *common.ConfigReader
-	lock        *sync.RWMutex
+	lock *sync.RWMutex
 }
 
 //NewNamespaceInfo new namespace info by peerconfig file.
-func NewNamespaceInfo(peerConfigPath, namespace string, logger *logging.Logger) (*NamespaceInfo, error)  {
+func NewNamespaceInfo(peerConfigPath, namespace string, logger *logging.Logger) (*NamespaceInfo, error) {
 	ni := &NamespaceInfo{
 		name:   namespace,
 		logger: logger,
@@ -113,7 +113,7 @@ func (ni *NamespaceInfo) AddNode(node *Node) error {
 	return nil
 }
 
-func (ni *NamespaceInfo) PrintInfo()  {
+func (ni *NamespaceInfo) PrintInfo() {
 	ni.lock.RLock()
 	defer ni.lock.RUnlock()
 	for _, node := range ni.nodes {

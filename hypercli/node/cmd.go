@@ -3,10 +3,10 @@
 package node
 
 import (
-	"github.com/urfave/cli"
 	"fmt"
+	"github.com/urfave/cli"
 	"hyperchain/hypercli/common"
-	"hyperchain/api/jsonrpc/core"
+	"hyperchain/rpc"
 	"strconv"
 )
 
@@ -14,10 +14,10 @@ import (
 func NewNodeCMD() []cli.Command {
 	return []cli.Command{
 		{
-			Name:    "delete",
-			Usage:   "delete a node from specified namespace",
-			Action:  delNode,
-			Flags:   []cli.Flag{
+			Name:   "delete",
+			Usage:  "delete a node from specified namespace",
+			Action: delNode,
+			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "namespace, n",
 					Value: "global",
@@ -35,7 +35,6 @@ func NewNodeCMD() []cli.Command {
 				},
 			},
 		},
-
 	}
 }
 
@@ -128,7 +127,7 @@ func getPeerInfo(namespace, ip, port string) (peerinfos, error) {
 
 }
 
-func sendDelNode(namespace, hash string, peers peerinfos) error{
+func sendDelNode(namespace, hash string, peers peerinfos) error {
 	params := fmt.Sprintf("[{\"nodehash\":\"%s\"}]", hash)
 	for i, ip := range peers.ips {
 		fmt.Printf("send del node to %v:%v\n", ip, peers.ports[i])

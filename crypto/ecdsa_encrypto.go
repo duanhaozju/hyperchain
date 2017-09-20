@@ -7,6 +7,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hyperchain/common"
 	"hyperchain/crypto/secp256k1"
@@ -15,7 +16,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"errors"
 )
 
 type EcdsaEncrypto struct {
@@ -185,11 +185,11 @@ func zeroBytes(bytes []byte) {
 }
 
 //ParsePublicKey From JAVA SDK HexString
-func GetPublickFromHex(pubStr string) (*ecdsa.PublicKey,error){
+func GetPublickFromHex(pubStr string) (*ecdsa.PublicKey, error) {
 	pubByte := common.Hex2Bytes(pubStr)
 	if len(pubByte) != 65 {
-		errStr := fmt.Sprintf("the Publickey Byte length must be 65!Your PublicKey length is %d !" , len(pubByte))
-		return nil,errors.New(errStr)
+		errStr := fmt.Sprintf("the Publickey Byte length must be 65!Your PublicKey length is %d !", len(pubByte))
+		return nil, errors.New(errStr)
 	}
 	X := pubByte[1:33]
 	Y := pubByte[33:65]
@@ -202,11 +202,11 @@ func GetPublickFromHex(pubStr string) (*ecdsa.PublicKey,error){
 	pubkey.X = x
 	pubkey.Y = y
 
-	return pubkey,nil
+	return pubkey, nil
 }
 
 //JAVA SDK TRANSPORT VERIFY SIGNTURE
-func VerifyTransportSign(publicKey interface{},msg,sign string) (bool,error)  {
+func VerifyTransportSign(publicKey interface{}, msg, sign string) (bool, error) {
 
 	pub := publicKey.(*(ecdsa.PublicKey))
 	pubAddress := PubkeyToAddress(*pub)
@@ -222,5 +222,5 @@ func VerifyTransportSign(publicKey interface{},msg,sign string) (bool,error)  {
 	recoveredPubkey.X = common.Bytes2Big(pubBytes[1:33])
 	recoveredPubkey.Y = common.Bytes2Big(pubBytes[33:65])
 	addr := PubkeyToAddress(*recoveredPubkey)
-	return pubAddress==addr,nil
+	return pubAddress == addr, nil
 }

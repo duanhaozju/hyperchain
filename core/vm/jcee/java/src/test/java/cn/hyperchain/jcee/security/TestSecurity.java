@@ -1,6 +1,6 @@
 package cn.hyperchain.jcee.security;
 
-import cn.hyperchain.jcee.contract.security.ByteCodeChecker;
+import cn.hyperchain.jcee.server.contract.security.ByteCodeChecker;
 import org.junit.Assert;
 import org.junit.Test;
 

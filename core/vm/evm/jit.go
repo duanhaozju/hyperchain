@@ -9,9 +9,10 @@ import (
 
 	"github.com/hashicorp/golang-lru"
 	"hyperchain/common"
-	"hyperchain/core/vm/evm/params"
 	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm/params"
 	"hyperchain/crypto"
+	"io"
 )
 
 // progStatus is the type for the JIT program status.
@@ -276,11 +277,11 @@ func CompileProgram(program *Program) (err error) {
 
 // RunProgram runs the program given the environment and contract and returns an
 // error if the execution failed (non-consensus)
-func RunProgram(program *Program, env vm.Environment, contract *Contract, input []byte) ([]byte, error) {
-	return runProgram(program, 0, NewMemory(), newstack(), env, contract, input)
+func RunProgram(evm *EVM, program *Program, env vm.Environment, contract *Contract, input []byte) ([]byte, error) {
+	return runProgram(evm, program, 0, NewMemory(), newstack(), env, contract, input)
 }
 
-func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env vm.Environment, contract *Contract, input []byte) ([]byte, error) {
+func runProgram(evm *EVM, program *Program, pcstart uint64, mem *Memory, stack *stack, env vm.Environment, contract *Contract, input []byte) ([]byte, error) {
 	contract.Input = input
 
 	var (
@@ -292,7 +293,12 @@ func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env
 		instrCount++
 
 		instr := program.instructions[pc]
+		if evm.cfg.Debug {
+			evm.logger.captureState(pc, instr.Op(), contract.Gas, big.NewInt(0), mem, stack, contract, evm.env.Depth(), nil)
+		}
+
 		ret, err := instr.do(program, &pc, env, contract, mem, stack)
+
 		if err != nil {
 			return nil, err
 		}
@@ -305,6 +311,14 @@ func runProgram(program *Program, pcstart uint64, mem *Memory, stack *stack, env
 	contract.Input = nil
 
 	return nil, nil
+}
+
+func PrintProgram(program *Program, writer io.Writer) {
+	fmt.Fprint(writer, "[[  Print Compiled program detail  ]]\n")
+	fmt.Fprint(writer, ">>>>>  Instructions \n")
+	for idx, instr := range program.instructions {
+		fmt.Fprintf(writer, "(%d) opcode :%s\n", idx, instr.Op().String())
+	}
 }
 
 // validDest checks if the given destination is a valid one given the

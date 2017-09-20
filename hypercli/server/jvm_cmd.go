@@ -3,10 +3,10 @@
 package server
 
 import (
-	"github.com/urfave/cli"
-	admin "hyperchain/api/jsonrpc/core"
-	"hyperchain/hypercli/common"
 	"fmt"
+	"github.com/urfave/cli"
+	admin "hyperchain/api/admin"
+	"hyperchain/hypercli/common"
 )
 
 func NewJvmCMD() []cli.Command {

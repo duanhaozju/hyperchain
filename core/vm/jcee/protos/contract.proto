@@ -5,11 +5,34 @@ option java_package = "cn.hyperchain.protos";
 option java_outer_classname = "ContractProto";
 
 service Contract {
-    //used tp execute contract method remotely
-    rpc Execute (Request) returns (Response) {}
-    //used to detect the health state of contract
+    //HeartBeat used to detect the health of server
     rpc HeartBeat(Request) returns (Response) {}
-    //used to transfer data between hyperchain and contract
+
+    //Interface that provides support to jvm execution which will estabilish a stream between Server
+    //and Client. Message type provide the context necessary for server to respond appropriately.
+    rpc Register(stream Message) returns(stream Message) {}
+}
+
+//Message is the wrapper of specific message
+message Message {
+
+    enum Type {
+        UNDEFINED = 0;
+        REGISTER = 1;
+        TRANSACTION = 2;
+        GET = 3;
+        PUT = 4;
+        DELETE = 5;
+        BATCH_READ = 6;
+        BATCH_WRITE = 7;
+        RANGE_QUERY = 8;
+        POST_EVENT = 9;
+        RESPONSE = 10;
+        HEART_BEAT = 11;
+    }
+
+    Type type = 1;
+    bytes   payload = 2;
 }
 
 message Request {
@@ -43,6 +66,7 @@ service Ledger {
     rpc RangeQuery(Range) returns(stream BathValue) {}
 
     rpc Post(Event) returns (Response) {}
+    rpc Register(stream Message) returns(stream Message) {}
 }
 
 message Event {
@@ -80,7 +104,6 @@ message Range {
     bytes start = 2;
     bytes end = 3;
 }
-
 
 message Value{
     string id = 1;

@@ -8,20 +8,18 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"hyperchain/hyperdb/db"
 	"hyperchain/common"
-	pa "path/filepath"
+	hcom "hyperchain/hyperdb/common"
+	"hyperchain/hyperdb/db"
 )
 
-const (
-	LEVEL_DB_PATH = "database.leveldb.path"
-)
 // the Database for LevelDB
 // LDBDatabase implements the DataBase interface
 
 type LDBDatabase struct {
 	path      string
 	db        *leveldb.DB
+	conf      *common.Config
 	namespace string
 }
 
@@ -33,16 +31,27 @@ type LDBDatabase struct {
 // DB can be recovered with Recover function.
 // the return *LDBDatabase is goruntine-safe
 // the LDBDataBase instance must be close after use, by calling Close method
-func NewLDBDataBase(conf *common.Config,filepath string, namespace string) (*LDBDatabase, error) {
-	if conf!=nil {
-		filepath= pa.Join(conf.GetString(LEVEL_DB_PATH), filepath)
-	}
+func NewLDBDataBase(conf *common.Config, filepath string, namespace string) (*LDBDatabase, error) {
 	db, err := leveldb.OpenFile(filepath, nil)
+	t := db.NewIterator(nil, nil)
+	t.Last()
 	return &LDBDatabase{
-		path:          filepath,
-		db:            db,
-		namespace:     namespace,
+		path:      filepath,
+		db:        db,
+		conf:      conf,
+		namespace: namespace,
 	}, err
+}
+
+func NewRawLDBDatabase(db *leveldb.DB, namespace string) *LDBDatabase {
+	return &LDBDatabase{
+		db:        db,
+		namespace: namespace,
+	}
+}
+
+func LDBDataBasePath(conf *common.Config) string {
+	return conf.GetString(hcom.LEVEL_DB_ROOT_DIR)
 }
 
 // Put sets value for the given key, if the key exists, it will overwrite
@@ -55,6 +64,9 @@ func (self *LDBDatabase) Put(key []byte, value []byte) error {
 // the Database does not contains the key
 func (self *LDBDatabase) Get(key []byte) ([]byte, error) {
 	dat, err := self.db.Get(key, nil)
+	if err == leveldb.ErrNotFound {
+		err = db.DB_NOT_FOUND
+	}
 	return dat, err
 }
 
@@ -115,6 +127,32 @@ func (self *LDBDatabase) LDB() *leveldb.DB {
 // it allows batch-operation
 func (db *LDBDatabase) NewBatch() db.Batch {
 	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
+}
+
+func (db *LDBDatabase) MakeSnapshot(backupPath string, fields []string) error {
+	backupDb, err := NewLDBDataBase(db.conf, backupPath, db.namespace)
+	if err != nil {
+		return err
+	}
+	defer backupDb.Close()
+
+	snapshot, err := db.db.GetSnapshot()
+	if err != nil {
+		return err
+	}
+	defer snapshot.Release()
+
+	for _, field := range fields {
+		iter := snapshot.NewIterator(util.BytesPrefix([]byte(field)), nil)
+		for iter.Next() {
+			if err := backupDb.Put(iter.Key(), iter.Value()); err != nil {
+				iter.Release()
+				return err
+			}
+		}
+		iter.Release()
+	}
+	return nil
 }
 
 // The Batch for LevelDB

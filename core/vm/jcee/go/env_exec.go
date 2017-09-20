@@ -1,17 +1,18 @@
 package jvm
+
 import (
-	"hyperchain/common"
-	"hyperchain/core/vm/evm/params"
-	"math/big"
-	"hyperchain/core/types"
-	"hyperchain/core/hyperstate"
-	"hyperchain/core/vm"
-	er "hyperchain/core/errors"
-	"os"
-	"github.com/golang/protobuf/proto"
 	"errors"
-	"hyperchain/crypto"
 	"fmt"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/common"
+	er "hyperchain/core/errors"
+	"hyperchain/core/hyperstate"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm/params"
+	"hyperchain/crypto"
+	"math/big"
+	"os"
 )
 
 // Call executes within the given contract
@@ -36,7 +37,6 @@ func Call(env vm.Environment, caller vm.ContractRef, addr common.Address, input 
 	}
 	return ret, err
 }
-
 
 // Create creates a new contract with the given code
 func Create(env vm.Environment, caller vm.ContractRef, buf []byte, gas, gasPrice, value *big.Int) (ret []byte, address common.Address, err error) {
@@ -90,7 +90,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 	var (
 		// from = env.Db().GetAccount(caller.Address())
-		to   vm.Account
+		to vm.Account
 	)
 	if createAccount {
 		to = env.Db().CreateAccount(*address)
@@ -135,7 +135,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	}
 	/*
 		RUN VM
-	 */
+	*/
 	if env.Db().GetStatus(to.Address()) != hyperstate.STATEOBJECT_STATUS_NORMAL {
 		env.Logger().Debugf("account %s has been frozen", to.Address().Hex())
 		env.SetSnapshot(snapshotPreTransfer)
@@ -195,7 +195,7 @@ func prepare(buf []byte) (error, []byte, string, string) {
 	var args types.InvokeArgs
 	var codePath string
 	var codeDigest []byte
-	var err  error
+	var err error
 
 	if err = proto.Unmarshal(buf, &args); err != nil {
 		return err, codeDigest, codePath, DecompressErr
@@ -236,4 +236,3 @@ func isNormal(opcode types.TransactionValue_Opcode) bool {
 func isSpecialOperation(op types.TransactionValue_Opcode) bool {
 	return op == types.TransactionValue_UPDATE || op == types.TransactionValue_FREEZE || op == types.TransactionValue_UNFREEZE
 }
-

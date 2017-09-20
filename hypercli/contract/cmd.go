@@ -3,17 +3,17 @@
 package contract
 
 import (
-	"github.com/urfave/cli"
+	"encoding/hex"
 	"fmt"
+	"github.com/golang/protobuf/proto"
+	"github.com/urfave/cli"
+	"hyperchain/core/types"
 	"hyperchain/hypercli/common"
 	"io/ioutil"
-	"encoding/hex"
 	"math/rand"
-	"time"
 	"os"
-	"hyperchain/core/types"
 	"strings"
-	"github.com/golang/protobuf/proto"
+	"time"
 )
 
 var commonFlags = []cli.Flag{
@@ -42,10 +42,10 @@ var commonFlags = []cli.Flag{
 func NewContractCMD() []cli.Command {
 	return []cli.Command{
 		{
-			Name:    "deploy",
-			Usage:   "Deploy a contract",
-			Action:  deploy,
-			Flags:   append(commonFlags, []cli.Flag{
+			Name:   "deploy",
+			Usage:  "Deploy a contract",
+			Action: deploy,
+			Flags: append(commonFlags, []cli.Flag{
 				cli.StringFlag{
 					Name:  "deploycmd, c",
 					Value: "",
@@ -59,10 +59,10 @@ func NewContractCMD() []cli.Command {
 			}...),
 		},
 		{
-			Name:    "invoke",
-			Usage:   "Invoke a contract",
-			Action:  invoke,
-			Flags:   append(commonFlags, []cli.Flag{
+			Name:   "invoke",
+			Usage:  "Invoke a contract",
+			Action: invoke,
+			Flags: append(commonFlags, []cli.Flag{
 				cli.StringFlag{
 					Name:  "invokecmd, c",
 					Value: "",
@@ -76,11 +76,6 @@ func NewContractCMD() []cli.Command {
 					Usage: "specify the contract address",
 				},
 				cli.StringFlag{
-					Name:  "method, m",
-					Value: "",
-					Usage: "specify the method of invoke contract",
-				},
-				cli.StringFlag{
 					Name:  "args, a",
 					Value: "",
 					Usage: "specify the args of invoke contract",
@@ -88,10 +83,10 @@ func NewContractCMD() []cli.Command {
 			}...),
 		},
 		{
-			Name:    "update",
-			Usage:   "Update a contract",
-			Action:  update,
-			Flags:   append(commonFlags, []cli.Flag{
+			Name:   "update",
+			Usage:  "Update a contract",
+			Action: update,
+			Flags: append(commonFlags, []cli.Flag{
 				cli.StringFlag{
 					Name:  "updatecmd, c",
 					Value: "",
@@ -110,10 +105,10 @@ func NewContractCMD() []cli.Command {
 			}...),
 		},
 		{
-			Name:    "frozen",
-			Usage:   "Frozen a contract",
-			Action:  frozen,
-			Flags:   append(commonFlags, []cli.Flag{
+			Name:   "frozen",
+			Usage:  "Frozen a contract",
+			Action: frozen,
+			Flags: append(commonFlags, []cli.Flag{
 				cli.StringFlag{
 					Name:  "frozencmd, c",
 					Value: "",
@@ -127,10 +122,10 @@ func NewContractCMD() []cli.Command {
 			}...),
 		},
 		{
-			Name:    "unfrozen",
-			Usage:   "Unfrozen a contract",
-			Action:  unfrozen,
-			Flags:   append(commonFlags, []cli.Flag{
+			Name:   "unfrozen",
+			Usage:  "Unfrozen a contract",
+			Action: unfrozen,
+			Flags: append(commonFlags, []cli.Flag{
 				cli.StringFlag{
 					Name:  "unfrozencmd, c",
 					Value: "",
@@ -144,10 +139,10 @@ func NewContractCMD() []cli.Command {
 			}...),
 		},
 		{
-			Name:    "destroy",
-			Usage:   "Destroy a contract",
-			Action:  destroy,
-			Flags:   append(commonFlags, []cli.Flag{
+			Name:   "destroy",
+			Usage:  "Destroy a contract",
+			Action: destroy,
+			Flags: append(commonFlags, []cli.Flag{
 				cli.StringFlag{
 					Name:  "destroycmd, c",
 					Value: "",
@@ -202,7 +197,7 @@ func invoke(c *cli.Context) error {
 	if c.String("invokecmd") != "" {
 		invokeCmd = c.String("invokecmd")
 	} else {
-		invokeParams := []string{"from", "to", "payload", "method", "args"}
+		invokeParams := []string{"from", "to", "payload", "args"}
 		invokeCmd = getCmd(method, invokeParams, 0, c)
 	}
 	//fmt.Println(invokeCmd)
@@ -227,7 +222,7 @@ func invoke(c *cli.Context) error {
 
 // update updates the contract
 func update(c *cli.Context) error {
-	if err := maintain(c, 1, "updatecmd") ; err != nil {
+	if err := maintain(c, 1, "updatecmd"); err != nil {
 		fmt.Println("Error in update contract!")
 		fmt.Println(err)
 		os.Exit(1)
@@ -237,7 +232,7 @@ func update(c *cli.Context) error {
 
 // frozen frozen the contract
 func frozen(c *cli.Context) error {
-	if err := maintain(c, 2, "frozencmd") ; err != nil {
+	if err := maintain(c, 2, "frozencmd"); err != nil {
 		fmt.Println("Error in frozen contract!")
 		fmt.Println(err)
 		os.Exit(1)
@@ -247,7 +242,7 @@ func frozen(c *cli.Context) error {
 
 // unfrozen unfrozen the contract
 func unfrozen(c *cli.Context) error {
-	if err := maintain(c, 3, "unfrozencmd") ; err != nil {
+	if err := maintain(c, 3, "unfrozencmd"); err != nil {
 		fmt.Println("Error in unfrozen contract!")
 		fmt.Println(err)
 		os.Exit(1)
@@ -257,7 +252,7 @@ func unfrozen(c *cli.Context) error {
 
 // destroy destroys the contract
 func destroy(c *cli.Context) error {
-	if err := maintain(c, 4, "destroycmd") ; err != nil {
+	if err := maintain(c, 4, "destroycmd"); err != nil {
 		fmt.Println("Error in destroy contract!")
 		fmt.Println(err)
 		os.Exit(1)
@@ -339,11 +334,6 @@ func getCmd(method string, need_params []string, opcode int32, c *cli.Context) s
 
 		case "opcode":
 			params = params + fmt.Sprintf("\"%s\":%d", param, opcode)
-
-		case "method":
-			if c.Bool("jvm") {
-				invokemethod = common.GetNonEmptyValueByName(c, "method")
-			}
 
 		case "args":
 			if c.Bool("jvm") {

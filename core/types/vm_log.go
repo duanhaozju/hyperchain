@@ -1,28 +1,10 @@
 package types
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"hyperchain/common"
 )
-
-const (
-	LogVmType_EVM = iota
-	LogVmType_JVM
-)
-
-type LogVmType int
-
-func (vmType LogVmType) String() string {
-	switch vmType {
-	case LogVmType_EVM:
-		return "EVM"
-	case LogVmType_JVM:
-		return "JVM"
-	default:
-		return ""
-	}
-}
 
 type Log struct {
 	// consensus fields
@@ -73,14 +55,14 @@ func DecodeLogs(buf []byte) (Logs, error) {
 }
 
 type LogTrans struct {
-	Address     string	`json:"address"`
-	Topics      []string	`json:"topics"`
-	Data        string	`json:"data"`
-	BlockNumber uint64	`json:"blockNumber"`
-	BlockHash   string	`json:"blockHash"`
-	TxHash      string	`json:"txHash"`
-	TxIndex     uint	`json:"txIndex"`
-	Index       uint	`json:"index"`
+	Address     string   `json:"address"`
+	Topics      []string `json:"topics"`
+	Data        string   `json:"data"`
+	BlockNumber uint64   `json:"blockNumber"`
+	BlockHash   string   `json:"blockHash"`
+	TxHash      string   `json:"txHash"`
+	TxIndex     uint     `json:"txIndex"`
+	Index       uint     `json:"index"`
 }
 
 func (ls Logs) ToLogsTrans() []LogTrans {

@@ -3,14 +3,19 @@
 
 package consensus
 
-
 // consensus algorithm name
 const (
-	PBFT = "PBFT"
+	RBFT = "RBFT"
 	NBFT = "NBFT"
 )
 
 // key for consensus
 const (
 	CONSENSUS_ALGO = "consensus.algo"
+)
+
+// Subscription type definitions
+const (
+	FILTER_View_Change_Finish = iota
+	FILTER_Nextthing
 )

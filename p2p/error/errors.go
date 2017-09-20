@@ -9,7 +9,7 @@ const (
 	SignVerifyFailed
 )
 
-func New(errType int)error{
+func New(errType int) error {
 	switch errType {
 	case SignVerifyFailed:
 		return &ErrCertSignVerifyFailed{}
@@ -24,44 +24,51 @@ func New(errType int)error{
 	}
 }
 
-func Campare(origin interface{},shouldBe int)bool{
+func Campare(origin interface{}, shouldBe int) bool {
 	if origin == nil {
 		return false
 	}
-	return reflect.TypeOf(origin)== reflect.TypeOf(New(shouldBe))
+	return reflect.TypeOf(origin) == reflect.TypeOf(New(shouldBe))
 }
 
-type ErrCertPemParseFailed struct {}
-func (e ErrCertPemParseFailed)Error() string{
+type ErrCertPemParseFailed struct{}
+
+func (e ErrCertPemParseFailed) Error() string {
 	return "Cert PEM parse failed."
 }
 
-type ErrECertVerifyFailed struct {}
-func (e ErrECertVerifyFailed)Error()string{
+type ErrECertVerifyFailed struct{}
+
+func (e ErrECertVerifyFailed) Error() string {
 	return "ECert Verify Failed."
 }
 
 type ErrRCertVerifyFailed struct{}
-func (e ErrRCertVerifyFailed)Error() string{
+
+func (e ErrRCertVerifyFailed) Error() string {
 	return "RCert Verify failed."
 }
 
 type ErrCertSignVerifyFailed struct{}
-func (e ErrCertSignVerifyFailed)Error()string{
+
+func (e ErrCertSignVerifyFailed) Error() string {
 	return "Cert Signature Verified failed."
 }
 
 type ErrUnknown struct{}
-func (e ErrUnknown)Error()string{
+
+func (e ErrUnknown) Error() string {
 	return "unKnown error."
 }
 
-type ErrDecryptFailed struct {}
-func (e ErrDecryptFailed)Error()string{
+type ErrDecryptFailed struct{}
+
+func (e ErrDecryptFailed) Error() string {
 	return "Decrypt Failed"
 }
 
-type ErrEncryptFailed struct {}
-func (e ErrEncryptFailed)Error()string{
+type ErrEncryptFailed struct{}
+
+func (e ErrEncryptFailed) Error() string {
 	return "Encrypt Failed."
 }

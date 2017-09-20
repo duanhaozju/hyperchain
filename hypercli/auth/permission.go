@@ -2,7 +2,7 @@ package auth
 
 import (
 	"github.com/urfave/cli"
-	admin "hyperchain/api/jsonrpc/core"
+	admin "hyperchain/api/admin"
 
 	"fmt"
 	"hyperchain/hypercli/common"
@@ -55,7 +55,7 @@ func alterUser(c *cli.Context) error {
 		MethodName: "admin_alterUser",
 		Args:       args,
 	}
-	result:= client.InvokeCmd(cmd)
+	result := client.InvokeCmd(cmd)
 	fmt.Print(result)
 	return nil
 }
@@ -67,11 +67,15 @@ func dropUser(c *cli.Context) error {
 		fmt.Println("Need only 1 param(username)")
 		return common.ErrInvalidArgsNum
 	}
+	if c.Args().Get(0) == "root" {
+		fmt.Println("Can not delete root!")
+		return nil
+	}
 	cmd := &admin.Command{
 		MethodName: "admin_delUser",
 		Args:       c.Args(),
 	}
-	result:= client.InvokeCmd(cmd)
+	result := client.InvokeCmd(cmd)
 	fmt.Print(result)
 	return nil
 }
@@ -94,7 +98,7 @@ func grant(c *cli.Context) error {
 		Args:       permissions,
 	}
 
-	result:= client.InvokeCmd(cmd)
+	result := client.InvokeCmd(cmd)
 	fmt.Print(result)
 	return nil
 }
@@ -117,7 +121,7 @@ func revoke(c *cli.Context) error {
 		Args:       permissions,
 	}
 
-	result:= client.InvokeCmd(cmd)
+	result := client.InvokeCmd(cmd)
 	fmt.Print(result)
 	return nil
 }
@@ -142,7 +146,7 @@ func list(c *cli.Context) error {
 		Args:       username,
 	}
 
-	result:= client.InvokeCmd(cmd)
+	result := client.InvokeCmd(cmd)
 
 	response, err := common.GetJSONResponse(result)
 	if err != nil {
@@ -151,12 +155,12 @@ func list(c *cli.Context) error {
 	}
 
 	if permissions, ok := response.Result.([]interface{}); !ok {
-		fmt.Printf("Sorry, %s have no permissions to do anything, " +
+		fmt.Printf("Sorry, %s have no permissions to do anything, "+
 			"please contact to the administrator...\n", username)
 		return nil
 	} else {
 		if len(permissions) == 0 {
-			fmt.Printf("Sorry, %s have no permissions to do anything, " +
+			fmt.Printf("Sorry, %s have no permissions to do anything, "+
 				"please contact to the administrator...\n", username)
 			return nil
 		}

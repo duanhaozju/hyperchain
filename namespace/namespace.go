@@ -3,7 +3,6 @@
 package namespace
 
 import (
-	"errors"
 	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/admittance"
@@ -74,13 +73,14 @@ func (s *Status) getState() NsState {
 
 //namespaceImpl implementation of Namespace
 type namespaceImpl struct {
-	logger    *logging.Logger
+	logger *logging.Logger
 
-	nsInfo    *NamespaceInfo
-	status    *Status
+	nsInfo *NamespaceInfo
+	status *Status
 
 	conf      *common.Config
 	eventMux  *event.TypeMux
+	filterMux *event.TypeMux
 	consenter consensus.Consenter
 	caMgr     *admittance.CAManager
 	am        *accounts.AccountManager
@@ -88,20 +88,14 @@ type namespaceImpl struct {
 	peerMgr   p2p.PeerManager
 	executor  *executor.Executor
 
-	rpc       rpc.RequestProcessor
-	restart   bool
-	delFlag   chan bool
-}
-
-type API struct {
-	Srvname string      // srvname under which the rpc methods of Service are exposed
-	Version string      // api version for DApp's
-	Service interface{} // receiver instance which holds the methods
-	Public  bool        // indication if the methods must be considered safe for public use
+	rpc     rpc.RequestProcessor
+	restart bool
+	delFlag chan bool
 }
 
 func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*namespaceImpl, error) {
 	// Init Hyperlogger
+	conf.Set(common.NAMESPACE, name)
 	if err := common.InitHyperLogger(name, conf); err != nil {
 		return nil, err
 	}
@@ -111,19 +105,20 @@ func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*nam
 		desc:  "startting",
 		lock:  new(sync.RWMutex),
 	}
-
-	nsInfo, err := NewNamespaceInfo(conf.GetString(common.PEER_CONFIG_PATH), name, common.GetLogger(name, "namespace"))
+	ppath := common.GetPath(name, conf.GetString(common.PEER_CONFIG_PATH))
+	nsInfo, err := NewNamespaceInfo(ppath, name, common.GetLogger(name, "namespace"))
 	//nsInfo.PrintInfo()
 	if err != nil {
 		return nil, err
 	}
 	ns := &namespaceImpl{
-		nsInfo:   nsInfo,
-		status:   status,
-		conf:     conf,
-		eventMux: new(event.TypeMux),
-		restart:  false,
-		delFlag:  delFlag,
+		nsInfo:    nsInfo,
+		status:    status,
+		conf:      conf,
+		eventMux:  new(event.TypeMux),
+		filterMux: new(event.TypeMux),
+		restart:   false,
+		delFlag:   delFlag,
 	}
 	ns.logger = common.GetLogger(name, "namespace")
 	return ns, nil
@@ -147,15 +142,14 @@ func (ns *namespaceImpl) init() error {
 	}
 	ns.caMgr = cm
 
-
-	peerconf := ns.conf.GetString(common.PEER_CONFIG_PATH)
+	peerconf := common.GetPath(ns.Name(), ns.conf.GetString(common.PEER_CONFIG_PATH))
 	if !common.FileExist(peerconf) {
 		panic("cannot find the peer config")
 	}
 
 	//3. init peer manager to start grpc server and client
-	logger.Warning("getPeerManager for",ns.Name())
-	peerMgr, err := p2p.GetPeerManager(ns.Name(),peerconf,ns.eventMux, ns.delFlag)
+	logger.Warning("getPeerManager for", ns.Name())
+	peerMgr, err := p2p.GetPeerManager(ns.Name(), peerconf, ns.eventMux, ns.delFlag)
 	if err != nil {
 		ns.logger.Error(err)
 		return err
@@ -164,7 +158,7 @@ func (ns *namespaceImpl) init() error {
 	ns.peerMgr = peerMgr
 
 	//4.init pbft consensus
-	consenter, err := csmgr.Consenter(ns.Name(), ns.conf, ns.eventMux)
+	consenter, err := csmgr.Consenter(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, peerMgr.GetN())
 	if err != nil {
 		logger.Errorf("init Consenter for namespace %s error, %v", ns.Name(), err)
 		return err
@@ -173,20 +167,21 @@ func (ns *namespaceImpl) init() error {
 
 	//5.init account manager
 	am := accounts.NewAccountManager(ns.conf)
-	am.UnlockAllAccount(ns.conf.GetString(common.KEY_STORE_DIR))
+	am.UnlockAllAccount(common.GetPath(ns.Name(), ns.conf.GetString(common.KEY_STORE_DIR)))
 	ns.am = am
 
 	//6.init block pool to save block
-	executor := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux)
-	if executor == nil {
-		return errors.New("Initialize Executor failed")
+	executor, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux)
+	if err != nil {
+		logger.Errorf("init Executor for namespace %s error, %v", ns.Name(), err)
+		return err
 	}
 
 	executor.CreateInitBlock(ns.conf)
 	ns.executor = executor
 
 	//7. init eventhub
-	eh := manager.New(ns.Name(), ns.eventMux, executor, ns.peerMgr, consenter, am, cm)
+	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, executor, ns.peerMgr, consenter, am, cm)
 	ns.eh = eh
 	ns.status.setState(initialized)
 
@@ -233,19 +228,31 @@ func (ns *namespaceImpl) Start() error {
 	//1.start consenter
 	ns.consenter.Start()
 	//2.start executor
-	ns.executor.Start()
+	err := ns.executor.Start()
+	if err != nil {
+		return err
+	}
+
 	//3.start event hub
 	ns.eh.Start()
+
 	//4.start grpc manager
-	ns.peerMgr.Start()
+	err = ns.peerMgr.Start()
+	if err != nil {
+		return err
+	}
+
 	//5 consensue the routers
 	ns.passRouters()
+
 	//6. negotiateView
-	if ns.peerMgr.IsVP(){
+	if ns.peerMgr.IsVP() {
 		ns.negotiateView()
 	}
 
-	ns.rpc.Start()
+	if err = ns.rpc.Start(); err != nil {
+		return err
+	}
 	ns.status.setState(running)
 	ns.logger.Noticef("namespace: %s start successful", ns.Name())
 	ns.restart = true
@@ -277,13 +284,19 @@ func (ns *namespaceImpl) Stop() error {
 		ns.logger.Criticalf("namespace: %s not running now, need not to stop", ns.Name())
 	}
 	//1.stop request processor
-	ns.rpc.Stop()
+	err := ns.rpc.Stop()
+	if err != nil {
+		ns.logger.Error(err)
+	}
 
 	//2.stop eventhub
 	ns.eh.Stop()
 
 	//3.stop executor
-	ns.executor.Stop()
+	err = ns.executor.Stop()
+	if err != nil {
+		ns.logger.Error(err)
+	}
 
 	//4.stop consensus service
 	ns.consenter.Close()
@@ -294,7 +307,10 @@ func (ns *namespaceImpl) Stop() error {
 	ns.status.setState(closed)
 	//ns.logger.Notice()
 	//close related database
-	hyperdb.StopDatabase(ns.Name())
+	err = hyperdb.StopDatabase(ns.Name())
+	if err != nil {
+		ns.logger.Error(err)
+	}
 
 	ns.logger.Noticef("namespace: %s stopped!", ns.Name())
 	return nil

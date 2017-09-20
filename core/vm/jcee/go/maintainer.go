@@ -2,12 +2,9 @@ package jvm
 
 import (
 	"github.com/looplab/fsm"
-	"google.golang.org/grpc"
-	"hyperchain/core/vm/jcee/protos"
-	"time"
 	"github.com/op/go-logging"
+	"time"
 )
-
 
 const (
 	conn_init   = "init"
@@ -16,28 +13,27 @@ const (
 )
 
 const (
-	initialize       = "initialize"
-	ping_success     = "ping_success"
-	ping_failed      = "ping_failed"
-	rebirth          = "rebirth"
+	initialize   = "initialize"
+	ping_success = "ping_success"
+	ping_failed  = "ping_failed"
+	rebirth      = "rebirth"
 )
 
 const retryThreshold = 5
 
 type ConnMaintainer struct {
-	fsm      *fsm.FSM
-	cli      *contractExecutorImpl
+	fsm *fsm.FSM
+	cli *contractExecutorImpl
 
-	rc       int32
-	pc       int32
-	exit     chan bool
-
-	logger   *logging.Logger
+	rc     int32
+	pc     int32
+	exit   chan bool
+	logger *logging.Logger
 }
 
 func NewConnMaintainer(cli *contractExecutorImpl, logger *logging.Logger) *ConnMaintainer {
 	exit := make(chan bool)
-	mr :=  &ConnMaintainer{
+	mr := &ConnMaintainer{
 		cli:    cli,
 		exit:   exit,
 		logger: logger,
@@ -51,9 +47,9 @@ func NewConnMaintainer(cli *contractExecutorImpl, logger *logging.Logger) *ConnM
 			{Name: rebirth, Src: []string{conn_sick}, Dst: conn_health},
 		},
 		fsm.Callbacks{
-			"before_" + ping_success: func(e *fsm.Event) {mr.pingS(e)},
-			"before_" + ping_failed: func(e *fsm.Event) {mr.pingF(e)},
-			"after_" + ping_failed: func(e *fsm.Event) {mr.reconn(e)},
+			"before_" + ping_success: func(e *fsm.Event) { mr.pingS(e) },
+			"before_" + ping_failed:  func(e *fsm.Event) { mr.pingF(e) },
+			"after_" + ping_failed:   func(e *fsm.Event) { mr.reconn(e) },
 		},
 	)
 	mr.fsm.Event(initialize)
@@ -106,21 +102,13 @@ func (maintainer *ConnMaintainer) ping() error {
 	}
 }
 
-
 func (maintainer *ConnMaintainer) conn() error {
-	conn, err := grpc.Dial(maintainer.cli.address, grpc.WithInsecure(), grpc.FailOnNonTempDialError(true), grpc.WithTimeout(500 * time.Millisecond), grpc.WithBlock())
-	if err != nil {
-		maintainer.logger.Warningf("did not connect: %v", err)
-		return err
-	}
-	maintainer.cli.client = contract.NewContractClient(conn)
-	maintainer.cli.conn = conn
-	return nil
+	return maintainer.cli.client.Connect()
 }
 
 /*
 	Callbacks
- */
+*/
 
 func (maintainer *ConnMaintainer) pingS(e *fsm.Event) {
 	maintainer.logger.Debug("ping success")
@@ -134,17 +122,16 @@ func (maintainer *ConnMaintainer) pingF(e *fsm.Event) {
 	maintainer.pc += 1
 }
 
-
 func (maintainer *ConnMaintainer) reconn(e *fsm.Event) {
 	if maintainer.pc < retryThreshold || !maintainer.fsm.Is(conn_sick) {
-		maintainer.logger.Debugf("try to reconnect to %s, doesn't satisify.", maintainer.cli.address)
+		maintainer.logger.Debugf("try to reconnect to %s, doesn't satisify.", maintainer.cli.Address())
 		return
 	}
 	if err := maintainer.conn(); err != nil {
-		maintainer.logger.Warningf("connect to %s failed", maintainer.cli.address)
+		maintainer.logger.Warningf("connect to %s failed", maintainer.cli.Address())
 		return
 	} else {
-		maintainer.logger.Debugf("connect to %s success", maintainer.cli.address)
+		maintainer.logger.Debugf("connect to %s success", maintainer.cli.Address())
 		maintainer.pc = 0
 		return
 	}
@@ -153,4 +140,3 @@ func (maintainer *ConnMaintainer) reconn(e *fsm.Event) {
 func (maintainer *ConnMaintainer) trace(e *fsm.Event) {
 	maintainer.logger.Debugf("[FSM TRACE] event %s", e.Event)
 }
-

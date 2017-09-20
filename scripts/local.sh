@@ -58,17 +58,12 @@ f_check_local_env(){
 
 # kill hyperchain process
 f_kill_process(){
-    #echo "kill the bind port process"
-    #PID=`ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}'`
-    #if [ "$PID" != "" ]
-    #then
-    #    ps -ax | grep hyperchain | grep -v grep | grep -v ssh | awk '{print $1}' | xargs kill -9
-    #fi
 	pkill hyperchain
 }
 
 # clear data
 f_delete_data(){
+echo "Delete old node data"
 for (( j=1; j<=$MAXPEERNUM; j++ ))
 do
     # Clear the old data
@@ -110,7 +105,7 @@ do
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
     #peerconfig.toml
     cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.toml
-    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/ns1/config/peerconfig.toml
+    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/ns_2e6160583867/config/peerconfig.toml
     #namespace's global
 
     cp -rf  ${CONF_PATH}/global.toml ${DUMP_PATH}/node${j}/global.toml
@@ -120,19 +115,21 @@ do
         sed -i "" "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "" "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "" "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/10001/1000${j}/g" ${DUMP_PATH}/node${j}/global.toml
     else
         sed -i "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/10001/1000${j}/g" ${DUMP_PATH}/node${j}/global.toml
     fi
 
     cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.toml ${DUMP_PATH}/node${j}/addr.toml
     cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
     #tls configuration
     cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/certs/
-    cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/ns1/config/certs/
+    cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/ns_2e6160583867/config/certs/
 
     #certs
     cp -rf  ${CONF_PATH}/tls ${DUMP_PATH}/node${j}/
@@ -205,15 +202,6 @@ start_hyperjvm() {
         cp -rf ${PROJECT_PATH}/core/vm/jcee/java/hyperjvm ${DUMP_PATH}/node$j/
     done
     cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./stop_hyperjvm.sh
-
-#    case "$_SYSTYPE" in
-#          MAC*)
-#                osascript -e 'tell app "Terminal" to do script "cd '${DUMP_PATH}/node1/hyperjvm/bin/' && ./local_start_hyperjvm.sh"'
-#          ;;
-#          LINUX*)
-#                cd ${DUMP_PATH}/node1/hyperjvm/bin/ && ./local_start_hyperjvm.sh
-#          ;;
-#    esac
 }
 
 f_sleep(){
@@ -267,7 +255,7 @@ REBUILD=true
 HYPERCLI=false
 
 # distribute jvm or not? default = false
-HYPERJVM=false
+HYPERJVM=true
 
 # run process or not? default = true
 RUN=true
@@ -331,7 +319,7 @@ f_distribute $MAXPEERNUM
 
 # run hyperchain node
 if ${HYPERJVM}; then
-start_hyperjvm
+    start_hyperjvm
 fi
 
 if ${RUN}; then

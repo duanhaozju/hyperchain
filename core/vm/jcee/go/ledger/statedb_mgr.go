@@ -1,9 +1,9 @@
 package jcee
 
 import (
+	"errors"
 	"hyperchain/core/vm"
 	"sync"
-	"errors"
 	//"hyperchain/common"
 )
 
@@ -12,14 +12,14 @@ var (
 )
 
 type StateManager struct {
-	stateDbs    map[string]vm.Database
-	lock        sync.RWMutex
+	stateDbs map[string]vm.Database
+	lock     sync.RWMutex
 }
 
 func NewStateManager() *StateManager {
 	stateDbs := make(map[string]vm.Database)
 	return &StateManager{
-		stateDbs:  stateDbs,
+		stateDbs: stateDbs,
 	}
 }
 
@@ -50,4 +50,3 @@ func (mgr *StateManager) UnReigister(namespace string) error {
 	delete(mgr.stateDbs, namespace)
 	return nil
 }
-

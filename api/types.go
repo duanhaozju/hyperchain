@@ -5,11 +5,11 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"hyperchain/common"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
-	"math"
-	"hyperchain/common"
 )
 
 // API describes the set of methods offered over the RPC interface
@@ -115,7 +115,7 @@ func (n BlockNumber) BlockNumberToUint64(latest uint64) (uint64, error) {
 		if input == "latest" {
 			if latest == 0 {
 				return 0, &common.InvalidParamsError{Message: "There is no block generated!"}
-			}else {
+			} else {
 				return latest, nil
 			}
 		} else if input == "earliest" {
@@ -178,4 +178,3 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 }
-

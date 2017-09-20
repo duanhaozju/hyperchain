@@ -7,12 +7,12 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	"hyperchain/core/types"
+	"hyperchain/core/vm"
 	"hyperchain/hyperdb/db"
 	"hyperchain/tree/pmt"
 	"math/big"
 	"sync"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
 )
 
 var (
@@ -50,7 +50,7 @@ func init() {
 // created.
 var StartingNonce uint64
 
-// StateDBs within the ethereum protocol are used to store anything
+// StateDBs within the hyperchain protocol are used to store anything
 // within the merkle trie. StateDBs take care of caching and storing
 // nested states. It's the general query interface to retrieve:
 // * Contracts
@@ -170,7 +170,7 @@ func (self *StateDB) Exist(addr common.Address) bool {
 	return self.GetStateObject(addr) != nil
 }
 
-func (self *StateDB) GetAccount(addr common.Address) *StateObject{
+func (self *StateDB) GetAccount(addr common.Address) *StateObject {
 	return self.GetStateObject(addr)
 }
 
@@ -524,4 +524,3 @@ func (self *StateDB) Snapshot() *StateDB {
 func (self *StateDB) RevertToSnapshot(statedb *StateDB) {
 	self.Set(statedb)
 }
-

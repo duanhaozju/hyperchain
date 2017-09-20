@@ -5,7 +5,7 @@ package log
 import (
 	"fmt"
 	"github.com/urfave/cli"
-	admin "hyperchain/api/jsonrpc/core"
+	admin "hyperchain/api/admin"
 	"hyperchain/hypercli/common"
 )
 
@@ -13,14 +13,14 @@ import (
 func NewLogCMD() []cli.Command {
 	return []cli.Command{
 		{
-			Name:    "getLevel",
-			Usage:   "getLevel get a logger's level",
-			Action:  getLevel,
+			Name:   "getLevel",
+			Usage:  "getLevel get a logger's level",
+			Action: getLevel,
 		},
 		{
-			Name:    "setLevel",
-			Usage:   "setLevel set a logger's level",
-			Action:  setLevel,
+			Name:   "setLevel",
+			Usage:  "setLevel set a logger's level",
+			Action: setLevel,
 		},
 	}
 }

@@ -5,8 +5,9 @@ package events
 import (
 	"time"
 
-	"github.com/op/go-logging"
 	"hyperchain/common"
+
+	"github.com/op/go-logging"
 )
 
 var logger *logging.Logger // package-level logger
@@ -56,9 +57,9 @@ func (t *threaded) Halt() {
 // a Receiver on the other side of the queue
 type Manager interface {
 	Inject(Event)            // A temporary interface to allow the event manager thread to skip the queue
-	Queue() chan interface{} //event Queue
+	Queue() chan interface{} // event Queue
 	SetReceiver(Receiver)    // Set the target to route events to
-	Start()                  // Starts the Manager thread TODO, these thread management things should probably go away
+	Start()                  // Starts the Manager thread
 	Halt()                   // Stops the Manager thread
 	Stop()
 }
@@ -73,11 +74,11 @@ type managerImpl struct {
 
 // NewManagerImpl creates an instance of managerImpl
 func NewManagerImpl(name string) Manager {
-	logger:=common.GetLogger(name,"event")
+	logger := common.GetLogger(name, "event")
 	return &managerImpl{
 		events:   make(chan interface{}),
 		threaded: threaded{make(chan struct{})},
-		logger: logger,
+		logger:   logger,
 	}
 }
 

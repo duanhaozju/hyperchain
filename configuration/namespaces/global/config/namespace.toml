@@ -25,24 +25,24 @@ title = "namespace configurations"
 #
 ############################################################################################################
 [consensus]
-algo = "PBFT"
+algo = "RBFT"
 
-    [consensus.pbft]        #PBFT configurations
-    nodes           = 4     # Number of replicas
-    batchsize       = 500   # How many transactions should the primary pack before sending pre-prepare
+    [consensus.rbft]        #RBFT configurations
+    batchsize       = 100   # How many transactions should the primary pack before sending pre-prepare
+    poolsize        = 50000  # How many transactions could the txPool stores in total
     vcresendlimit   = 10    # How many times of same vc from self before a replica start recovery
 
-        [consensus.pbft.timeout]
+        [consensus.rbft.timeout]
             negoview        = "6s"  # How long to wait for N-f responses after send negotiate view
             recovery        = "15s" # How long to wait before recovery finished(This is for release1.2)
             firstrequest    = "30s" # How long to wait before first request should come
-            batch           = "1s"  # Primary send a pre-prepare if there are pending requests, although batchsize isn't reached yet,
+            batch           = "0.5s"  # Primary send a pre-prepare if there are pending requests, although batchsize isn't reached yet,
             request         = "6s"  # How long may a request(transaction batch) take between reception and execution, must be greater than the batch timeout
             validate        = "1s"  # How long may a validate (transaction batch) process will take by local Validation
             nullrequest     = "6s"  # Primary send it to inform aliveness, must be greater than request timeout
             viewchange      = "8s"  # How long may a view change take
             resendviewchange= "10s" # How long to wait for a view change quorum before resending (the same) view change
-            cleanviewchange = "30s" # How long to clean out-of-data view change message
+            cleanviewchange = "60s" # How long to clean out-of-data view change message
             update          = "4s"  # How long may a update-n take
 
 ############################################################################################################
@@ -54,23 +54,28 @@ algo = "PBFT"
 ############################################################################################################
 [encryption]
 [encryption.ecert]
- eca    = "namespaces/global/config/certs/eca.cert"
- ecert  = "namespaces/global/config/certs/ecert.cert"
- priv   = "namespaces/global/config/certs/ecert.priv"
+ eca    = "config/certs/eca.cert"
+ ecert  = "config/certs/ecert.cert"
+ priv   = "config/certs/ecert.priv"
 
 [encryption.rcert]
   # if you do not have rcert, leave this item blank
- rca    = "namespaces/global/config/certs/rca.cert"
- rcert  = "namespaces/global/config/certs/rcert.cert"
- priv   = "namespaces/global/config/certs/rcert.priv"
+ rca    = "config/certs/rca.cert"
+ rcert  = "config/certs/rcert.cert"
+ priv   = "config/certs/rcert.priv"
+
+[encryption.tcert]
+  # Tcert whitelist configuration.
+ whiteList = false
+ listDir  = "config/certs/tcerts"
 
 [encryption.check]
- enable     = true
- sign       = false
- enableT    = false
+ enable     = true  #enable RCert
+ sign       = false  #enable Signature
+ enableT    = false  #enable TCert
 
 [encryption.security]
- algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des or sm4)
+ algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des,aes or sm4)
 
 
 ############################################################################################################
@@ -84,9 +89,9 @@ algo = "PBFT"
 [database]
     type = 0001
     [database.leveldb]
-    path        = "./namespaces/global/data/leveldb" #leveldb table root dir
+    root_dir    = "data/leveldb" #leveldb table root dir
     log_status  = false
-    log_path    = "./namespaces/global/data/db.log"
+    log_path    = "data/db.log"
 
 
 ############################################################################################################
@@ -95,9 +100,17 @@ algo = "PBFT"
 #
 ############################################################################################################
 [executor]
-    [executor.sync_chain]
-    sync_batch_size         = 500
-    sync_resend_interval    = "1m"
+    [executor.syncer]
+    max_block_fetch         = 50
+    block_fetch_timeout     = "1m"
+    state_fetch_enable      = true
+    state_fetch_packet_size = 1024  # 1024KB
+
+    [executor.archive] 
+    snapshot_manifest = "data/snapshot.meta"
+    archive_manifest  = "data/archive.meta"
+    threshold = 0
+    force_consistency = false
 
     [executor.nvp]
     exitflag = false
@@ -133,7 +146,7 @@ algo = "PBFT"
 [log]
 dump_file       = true # dump the log file or not
 dump_interval   = "24h"  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h". such as "300ms", "2h45m".
-log_dir         = "./namespaces/global/data/logs"
+log_dir         = "data/logs"
 log_level       = "NOTICE" # default loglevel for all modules which can be override by module level log setting
 file_format     = "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
 console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
@@ -152,12 +165,12 @@ max_log_size    = "200mb"  # "mb", "kb"
 #
 ############################################################################################################
 [account]
-keystoredir = "namespaces/global/config/keystore"
-keynodesdir = "namespaces/global/config/keynodes"
+keystoredir = "config/keystore"
+keynodesdir = "config/keynodes"
 
 [config.path]
-caconfig        = "namespaces/global/config/namespace.toml"
-peerconfig      = "namespaces/global/config/peerconfig.toml"
+caconfig        = "config/namespace.toml"
+peerconfig      = "config/peerconfig.toml"
 
 #TODO: flow.control.ratelimit configs should move to global.toml finally
 [flow.control.ratelimit]

@@ -1,10 +1,8 @@
 package p2p_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"testing"
 	"fmt"
+	"testing"
 )
 
 func TestP2p(t *testing.T) {
@@ -12,8 +10,8 @@ func TestP2p(t *testing.T) {
 	RunSpecs(t, "P2P Suite")
 }
 
-var _ = BeforeSuite(func(){
-	Describe("P2P module",func(){
+var _ = BeforeSuite(func() {
+	Describe("P2P module", func() {
 		fmt.Println("start p2p module test")
 	})
-});
+})

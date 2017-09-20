@@ -1,8 +1,8 @@
 package executor
 
 import (
-	"testing"
 	"hyperchain/common"
+	"testing"
 )
 
 func TestSplitVpId1(t *testing.T) {

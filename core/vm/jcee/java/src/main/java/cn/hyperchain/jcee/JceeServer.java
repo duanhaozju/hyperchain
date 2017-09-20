@@ -4,7 +4,7 @@
  */
 package cn.hyperchain.jcee;
 
-import cn.hyperchain.jcee.executor.ContractHandler;
+import cn.hyperchain.jcee.server.executor.ContractHandler;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import org.apache.log4j.Logger;
@@ -51,8 +51,8 @@ public class JceeServer implements IServer {
             server.awaitTermination();
         }catch (Exception e) {
             logger.error(e);
-            e.printStackTrace();
-            System.exit(-1);
+        }finally {
+            server.shutdownNow();
         }
     }
 

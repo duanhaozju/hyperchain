@@ -3,15 +3,9 @@ package db
 import "errors"
 
 var (
-	logPath  = ""
-	grpcPort = 8001
 	// TODO @ZSX return common not found error later
-	DB_NOT_FOUND =errors.New("leveldb: not found")
+	DB_NOT_FOUND = errors.New("db not found")
 )
-
-func GetLogPath() string {
-	return logPath
-}
 
 //func writeLog(funcName string, num int, err error) {
 //	f, err1 := os.OpenFile(GetLogPath(), os.O_WRONLY|os.O_CREATE, 0644)

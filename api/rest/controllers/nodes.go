@@ -1,9 +1,9 @@
 package controllers
 
 import (
+	"encoding/json"
 	"github.com/astaxie/beego"
 	"hyperchain/api"
-	"encoding/json"
 	"hyperchain/common"
 )
 
@@ -46,7 +46,7 @@ func (n *NodesController) DelNode() {
 		return
 	}
 
-	isSuccess, err :=  n.PublicNodeAPI.DelNode(args)
+	isSuccess, err := n.PublicNodeAPI.DelNode(args)
 	if err != nil {
 		n.Data["json"] = NewJSONObject(nil, err)
 	} else {

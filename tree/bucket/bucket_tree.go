@@ -5,10 +5,12 @@ import (
 	"errors"
 	"github.com/hashicorp/golang-lru"
 	"github.com/op/go-logging"
-	"math/big"
-	"sync"
-	hdb "hyperchain/hyperdb/db"
 	"hyperchain/common"
+	tp "hyperchain/common/threadpool"
+	hdb "hyperchain/hyperdb/db"
+	"math/big"
+	"runtime"
+	"sync"
 )
 
 var (
@@ -120,40 +122,48 @@ func (bucketTree *BucketTree) ComputeCryptoHash() ([]byte, error) {
 }
 
 func (bucketTree *BucketTree) processDataNodeDelta() error {
+	var wg sync.WaitGroup
 	afftectedBuckets := bucketTree.dataNodesDelta.getAffectedBuckets()
 
-	var wg sync.WaitGroup
+	wg.Add(len(afftectedBuckets))
+
+	handler := func(obj interface{}) interface{} {
+		defer wg.Done()
+		bucketKey, ok := obj.(*BucketKey)
+		if !ok {
+			return errors.New("expect bucket key")
+		}
+
+		updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
+		// thread safe
+		existingDataNodes, err := bucketTree.dataNodeCache.FetchDataNodesFromCache(bucketTree.db, *bucketKey)
+		if err != nil {
+			bucketTree.log.Errorf("fetch datanodes failed. %s", err.Error())
+			return err
+		}
+		// thread safe
+		cryptoHashForBucket, newDataNodes := computeDataNodesCryptoHash(bucketKey, updatedDataNodes, existingDataNodes)
+
+		// thread safe
+		bucketTree.updateDataNodeCache(*bucketKey, newDataNodes)
+
+		//log.Debugf("Crypto-hash for lowest-level bucket [%s] is [%x]", bucketKey, cryptoHashForBucket)
+		// thread safe
+		parentBucket := bucketTree.bucketTreeDelta.getOrCreateBucketNode(bucketKey.getParentKey())
+		// thread safe
+		parentBucket.setChildCryptoHash(bucketKey, cryptoHashForBucket)
+		//log.Debugf("bucket tree prefix %s bucket key %s, bucket hash %s",
+		//	bucketTree.treePrefix, bucketKey.String(), common.Bytes2Hex(cryptoHashForBucket))
+		return nil
+	}
+
+	pool, _ := tp.CreatePool(runtime.NumCPU()+1, handler).Open()
+	defer pool.Close()
+
 	for _, bucketKey := range afftectedBuckets {
-		wg.Add(1)
-		go func(bucketKey *BucketKey) {
-			updatedDataNodes := bucketTree.dataNodesDelta.getSortedDataNodesFor(bucketKey)
-
-			// thread safe
-			existingDataNodes, err := bucketTree.dataNodeCache.FetchDataNodesFromCache(bucketTree.db, *bucketKey)
-			if err != nil {
-				bucketTree.log.Errorf("fetch datanodes failed. %s", err.Error())
-				wg.Done()
-				return
-			}
-
-			// thread safe
-			cryptoHashForBucket, newDataNodes := computeDataNodesCryptoHash(bucketKey, updatedDataNodes, existingDataNodes)
-
-			// thread safe
-			bucketTree.updateDataNodeCache(*bucketKey, newDataNodes)
-
-			//log.Debugf("Crypto-hash for lowest-level bucket [%s] is [%x]", bucketKey, cryptoHashForBucket)
-			// thread safe
-			parentBucket := bucketTree.bucketTreeDelta.getOrCreateBucketNode(bucketKey.getParentKey())
-			// thread safe
-			parentBucket.setChildCryptoHash(bucketKey, cryptoHashForBucket)
-			//log.Debugf("bucket tree prefix %s bucket key %s, bucket hash %s",
-			//	bucketTree.treePrefix, bucketKey.String(), common.Bytes2Hex(cryptoHashForBucket))
-			wg.Done()
-		}(bucketKey)
+		pool.SendWorkAsync(bucketKey, nil)
 	}
 	wg.Wait()
-
 	return nil
 }
 
@@ -164,34 +174,43 @@ func (bucketTree *BucketTree) processBucketTreeDelta() error {
 		bucketNodes := bucketTree.bucketTreeDelta.getBucketNodesAt(level)
 		//log.Debugf("Bucket tree delta. Number of buckets at level [%d] are [%d]", level, len(bucketNodes))
 		var wg sync.WaitGroup
+		wg.Add(len(bucketNodes))
+
+		handler := func(obj interface{}) interface{} {
+			defer wg.Done()
+			bucketNode, ok := obj.(*BucketNode)
+			if !ok {
+				return errors.New("expect to be bucketnode")
+			}
+			//log.Debugf("bucketNode in tree-delta [%s]", bucketNode)
+			dbBucketNode, err := bucketTree.bucketCache.fetchBucketNodeFromCache(bucketTree.db, *bucketNode.bucketKey)
+			//log.Debugf("bucket node from db [%s]", dbBucketNode)
+			if err != nil {
+				bucketTree.log.Errorf("get bucketnode from cache failed. %s", err.Error())
+				return err
+			}
+			if dbBucketNode != nil {
+				bucketNode.mergeBucketNode(dbBucketNode)
+				//log.Debugf("After merge... bucketNode in tree-delta [%s]", bucketNode)
+			}
+			if level == 0 {
+				return nil
+			}
+			//log.Debugf("Computing cryptoHash for bucket [%s]", bucketNode)
+			cryptoHash := bucketNode.computeCryptoHash(bucketTree.log)
+			//log.Debugf("cryptoHash for bucket [%s] is [%x]", bucketNode, cryptoHash)
+			parentBucket := bucketTree.bucketTreeDelta.getOrCreateBucketNode(bucketNode.bucketKey.getParentKey())
+			parentBucket.setChildCryptoHash(bucketNode.bucketKey, cryptoHash)
+			return nil
+		}
+
+		pool, _ := tp.CreatePool(runtime.NumCPU()+1, handler).Open()
+
 		for _, bucketNode := range bucketNodes {
-			wg.Add(1)
-			go func(bucketNode *BucketNode) {
-				//log.Debugf("bucketNode in tree-delta [%s]", bucketNode)
-				dbBucketNode, err := bucketTree.bucketCache.fetchBucketNodeFromCache(bucketTree.db, *bucketNode.bucketKey)
-				//log.Debugf("bucket node from db [%s]", dbBucketNode)
-				if err != nil {
-					bucketTree.log.Errorf("get bucketnode from cache failed. %s", err.Error())
-					wg.Done()
-					return
-				}
-				if dbBucketNode != nil {
-					bucketNode.mergeBucketNode(dbBucketNode)
-					//log.Debugf("After merge... bucketNode in tree-delta [%s]", bucketNode)
-				}
-				if level == 0 {
-					wg.Done()
-					return
-				}
-				//log.Debugf("Computing cryptoHash for bucket [%s]", bucketNode)
-				cryptoHash := bucketNode.computeCryptoHash(bucketTree.log)
-				//log.Debugf("cryptoHash for bucket [%s] is [%x]", bucketNode, cryptoHash)
-				parentBucket := bucketTree.bucketTreeDelta.getOrCreateBucketNode(bucketNode.bucketKey.getParentKey())
-				parentBucket.setChildCryptoHash(bucketNode.bucketKey, cryptoHash)
-				wg.Done()
-			}(bucketNode)
+			pool.SendWorkAsync(bucketNode, nil)
 		}
 		wg.Wait()
+		pool.Close()
 	}
 	return nil
 }
@@ -250,11 +269,11 @@ func computeDataNodesCryptoHash(bucketKey *BucketKey, updatedNodes DataNodes, ex
 		remainingNodes = existingNodes[j:]
 		newDataNodes = append(newDataNodes, remainingNodes...)
 	}
-	hashingDataArray := make([][]byte,len(newDataNodes))
+	hashingDataArray := make([][]byte, len(newDataNodes))
 	for i, dataNode := range newDataNodes {
 		hashingDataArray[i] = dataNode.getValue()
 	}
-	bucketHashCalculator.setHashingData(JoinBytes(hashingDataArray,""))
+	bucketHashCalculator.setHashingData(JoinBytes(hashingDataArray, ""))
 	return bucketHashCalculator.computeCryptoHash(), newDataNodes
 }
 
@@ -306,8 +325,6 @@ func (bucketTree *BucketTree) addBucketNodeChangesForPersistence(writeBatch hdb.
 		}
 	}
 }
-
-
 
 // TODO test
 func (bucketTree *BucketTree) updateCacheWithoutPersist(currentBlockNum *big.Int) {
@@ -423,8 +440,6 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hdb.Batch, currentB
 			continue
 		}
 
-
-
 		bucketTree.PrepareWorkingSet(keyValueMap, big.NewInt(i))
 		bucketTree.AddChangesForPersistence(writeBatch, big.NewInt(i))
 
@@ -448,7 +463,7 @@ func (bucketTree *BucketTree) RevertToTargetBlock(writeBatch hdb.Batch, currentB
 	return nil
 }
 
-func (bucketTree *BucketTree) ClearAllCache(){
+func (bucketTree *BucketTree) ClearAllCache() {
 	bucketTree.dataNodeCache.ClearDataNodeCache()
 	bucketTree.bucketCache.clearAllCache()
 	globalDataNodeCache.ClearAllCache()
@@ -467,5 +482,3 @@ func (bucketTree *BucketTree) initLastComputed() error {
 	}
 	return nil
 }
-
-

@@ -1,16 +1,16 @@
 package db_utils
 
 import (
-	"testing"
-	"hyperchain/hyperdb/mdb"
-	"hyperchain/core/test_util"
-	"hyperchain/common"
 	"bytes"
+	"hyperchain/common"
+	"hyperchain/core/test_util"
+	"hyperchain/hyperdb/mdb"
 	"reflect"
+	"testing"
 )
 
 func TestGetReceipt(t *testing.T) {
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	receipt := test_util.Receipt
 	receipt.TxHash = common.BytesToHash(receipt.TxHash).Bytes()
 	PersistReceipt(db.NewBatch(), &receipt, true, true)
@@ -21,7 +21,7 @@ func TestGetReceipt(t *testing.T) {
 }
 
 func TestPersistReceiptWithVersion(t *testing.T) {
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	receipt := test_util.Receipt
 	receipt.TxHash = common.BytesToHash(receipt.TxHash).Bytes()
 	PersistReceipt(db.NewBatch(), &receipt, true, true, "1.4")
@@ -32,7 +32,7 @@ func TestPersistReceiptWithVersion(t *testing.T) {
 }
 
 func TestDeleteReceipt(t *testing.T) {
-	db, _ := mdb.NewMemDatabase()
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	receipt := test_util.Receipt
 	receipt.TxHash = common.BytesToHash(receipt.TxHash).Bytes()
 	PersistReceipt(db.NewBatch(), &receipt, true, true, "1.4")

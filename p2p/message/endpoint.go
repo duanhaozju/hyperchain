@@ -10,4 +10,3 @@ func NewEndpoint(hostname string, namespace string, hash string) *Endpoint {
 		UUID:     []byte(hash),
 	}
 }
-

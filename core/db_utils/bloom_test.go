@@ -24,16 +24,14 @@ var _ = checker.Suite(&BloomSuite{})
 var (
 	config     *common.Config
 	ns         string   = common.DEFAULT_NAMESPACE
-	dbconf     string   = "../../configuration/namespaces/global/config/db.yaml"
-	globalconf string   = "../../configuration/namespaces/global/config/global.yaml"
-	dbList     []string = []string{"Archive", "blockchain", "Consensus", "namespaces"}
+	globalconf string   = "../../configuration/namespaces/global/config/namespace.toml"
+	dbList     []string = []string{"Archive", "blockchain", "consensus", "namespaces"}
 )
 
 // Run once when the suite starts running.
 func (suite *BloomSuite) SetUpSuite(c *checker.C) {
 	// init conf
 	config = common.NewConfig(globalconf)
-	config.MergeConfig(dbconf)
 	config.Set(RebuildTime, 3)
 	config.Set(RebuildInterval, 24)
 	config.Set(BloomBit, 10000)
@@ -70,7 +68,7 @@ func (suite *BloomSuite) TestLook(c *checker.C) {
 		another []*types.Transaction = RandomTxs()
 	)
 	cache := NewBloomCache(config)
-	// defer cache.Close()
+	defer cache.Close()
 	err = cache.Register(ns)
 	if err != nil {
 		c.Error(err.Error())
@@ -90,7 +88,7 @@ func (suite *BloomSuite) TestBuildInTimeScope(c *checker.C) {
 	)
 	db, _ = hyperdb.GetDBDatabaseByNamespace(ns)
 	cache := NewBloomCache(config)
-	// defer cache.Close()
+	defer cache.Close()
 	err = cache.Register(ns)
 	if err != nil {
 		c.Error(err.Error())
@@ -120,7 +118,7 @@ func (suite *BloomSuite) TestBuildOutTimeScope(c *checker.C) {
 	)
 	db, _ = hyperdb.GetDBDatabaseByNamespace(ns)
 	cache := NewBloomCache(config)
-	// defer cache.Close()
+	defer cache.Close()
 	err = cache.Register(ns)
 	if err != nil {
 		c.Error(err.Error())
@@ -151,7 +149,7 @@ func (suite *BloomSuite) TestBuildConcurrently(c *checker.C) {
 	)
 	db, _ = hyperdb.GetDBDatabaseByNamespace(ns)
 	cache := NewBloomCache(config)
-	// defer cache.Close()
+	defer cache.Close()
 	err = cache.Register(ns)
 	if err != nil {
 		c.Error(err.Error())
@@ -203,7 +201,7 @@ func (suite *BloomSuite) BenchmarkWrite(c *checker.C) {
 		err error
 	)
 	cache := NewBloomCache(config)
-	// defer cache.Close()
+	defer cache.Close()
 	err = cache.Register(ns)
 	if err != nil {
 		c.Error(err.Error())

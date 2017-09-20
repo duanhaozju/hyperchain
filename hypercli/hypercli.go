@@ -7,17 +7,19 @@ import (
 	"hyperchain/hypercli/contract"
 	"hyperchain/hypercli/log"
 	"hyperchain/hypercli/namespace"
-	"hyperchain/hypercli/server"
 	"hyperchain/hypercli/node"
+	"hyperchain/hypercli/server"
 
+	"hyperchain/common"
+	"hyperchain/hypercli/auth"
 	"os"
 	"time"
-	"hyperchain/hypercli/auth"
 )
 
 var app *cli.App
 
 func initApp() {
+	initLogger()
 	app = cli.NewApp()
 	app.Name = "hypercli"
 	app.Version = "1.4.0"
@@ -73,6 +75,11 @@ func initApp() {
 		},
 	}
 
+}
+
+func initLogger() {
+	conf := common.NewRawConfig()
+	common.InitHyperLogger(common.DEFAULT_NAMESPACE, conf)
 }
 
 func main() {

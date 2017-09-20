@@ -2,39 +2,52 @@ package executor
 
 import (
 	"hyperchain/common"
+	er "hyperchain/core/errors"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"sort"
 	"sync"
-	er "hyperchain/core/errors"
 )
 
-// represent a validation result
+// represent a validation result collection
 type ValidationResultRecord struct {
 	TxRoot      []byte                            // hash of a batch of transactions
 	ReceiptRoot []byte                            // hash of a batch of receipts
-	MerkleRoot  []byte                            // hash of state
+	MerkleRoot  []byte                            // hash of current world state
 	InvalidTxs  []*types.InvalidTransactionRecord // invalid transaction list
 	ValidTxs    []*types.Transaction              // valid transaction list
 	Receipts    []*types.Receipt                  // receipt list
-	SeqNo       uint64                            // temp block number for this batch
-	VID         uint64                            // validation ID. may larger than SeqNo
+	SeqNo       uint64                            // sequence number
+	SubscriptionData
 }
 
+type SubscriptionData struct {
+	Block *types.Block
+	Logs  []*types.Log
+}
+
+// Validate - the entry function of the validation process.
+// Receive the validation event as a parameter and cached them in the channel
+// if the pressure is too high.
 func (executor *Executor) Validate(validationEvent event.ValidationEvent) {
 	executor.addValidationEvent(validationEvent)
 }
 
-// listenValidationEvent - validation backend process, use to listen new validation event and dispatch it to a processor.
+// listenValidationEvent - validation backend process, use to listen new validation event and dispatch it to the processor.
 func (executor *Executor) listenValidationEvent() {
 	executor.logger.Notice("validation backend start")
 	for {
 		select {
-		case <- executor.getExit(IDENTIFIER_VALIDATION):
+		case <-executor.getExit(IDENTIFIER_VALIDATION):
 			executor.logger.Notice("validation backend exit")
 			return
-		case ev := <- executor.fetchValidationEvent():
+		case v := <-executor.getSuspend(IDENTIFIER_VALIDATION):
+			if v {
+				executor.logger.Notice("pause validation process")
+				executor.pauseValidation()
+			}
+		case ev := <-executor.fetchValidationEvent():
 			if executor.isReadyToValidation() {
 				if success := executor.processValidationEvent(ev, executor.processValidationDone); success == false {
 					executor.logger.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
@@ -46,7 +59,7 @@ func (executor *Executor) listenValidationEvent() {
 	}
 }
 
-// processValidationEvent - process validation event, return true if process success, otherwise false will be return.
+// processValidationEvent - process validation event, return true if process successfully, otherwise false will been returned.
 func (executor *Executor) processValidationEvent(validationEvent event.ValidationEvent, done func()) bool {
 	executor.markValidationBusy()
 	defer executor.markValidationIdle()
@@ -61,10 +74,11 @@ func (executor *Executor) processValidationEvent(validationEvent event.Validatio
 	return executor.processPendingValidationEvent(done)
 }
 
+// processPendingValidationEvent - handle the validation event that is cached in the queue.
 func (executor *Executor) processPendingValidationEvent(done func()) bool {
 	if executor.cache.pendingValidationEventQ.Len() > 0 {
 		// there is still some events remain.
-		for  {
+		for {
 			if executor.cache.pendingValidationEventQ.Contains(executor.getDemandSeqNo()) {
 				ev, _ := executor.fetchPendingValidationEvent(executor.getDemandSeqNo())
 				if _, success := executor.process(ev, done); success == false {
@@ -89,15 +103,21 @@ func (executor *Executor) dropValdiateEvent(validationEvent event.ValidationEven
 	executor.logger.Noticef("[Namespace = %s] drop validation event %d", executor.namespace, validationEvent.SeqNo)
 }
 
-// Process an ValidationEvent
+// process - Specific implementation logic, including the signature checking,
+// the execution of transactions, ledger hash re-computation and etc.
 func (executor *Executor) process(validationEvent event.ValidationEvent, done func()) (error, bool) {
+	// invoke the callback no matter success or failed
 	defer done()
-	var validtxs []*types.Transaction
-	var invalidtxs []*types.InvalidTransactionRecord
+
+	var (
+		validtxs   []*types.Transaction
+		invalidtxs []*types.InvalidTransactionRecord
+	)
 
 	invalidtxs, validtxs = executor.checkSign(validationEvent.Transactions)
-	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo, executor.getTempBlockNumber())
+	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo)
 	if err != nil {
+		// short circuit if error occur during the transaction execution
 		executor.logger.Errorf("[Namespace = %s] process transaction batch #%d failed.", executor.namespace, validationEvent.SeqNo)
 		return err, false
 	}
@@ -105,21 +125,21 @@ func (executor *Executor) process(validationEvent event.ValidationEvent, done fu
 	hash := executor.calculateValidationResultHash(validateResult.MerkleRoot, validateResult.TxRoot, validateResult.ReceiptRoot)
 	executor.logger.Debugf("[Namespace = %s] invalid transaction number %d", executor.namespace, len(validateResult.InvalidTxs))
 	executor.logger.Debugf("[Namespace = %s] valid transaction number %d", executor.namespace, len(validateResult.ValidTxs))
-	executor.saveValidationResult(validateResult, validationEvent, hash)
+	executor.saveValidationResult(validateResult, hash)
 	executor.sendValidationResult(validateResult, validationEvent, hash)
-	if len(validateResult.ValidTxs) == 0 {
-		executor.dealEmptyBlock(validateResult, validationEvent)
-	}
 	return nil, true
 }
 
-// checkSign - check the sender's signature of the transaction.
+// checkSign - check the sender's signature validity.
 func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidTransactionRecord, []*types.Transaction) {
-	var invalidtxs []*types.InvalidTransactionRecord
-	// (1) check signature for each transaction
-	var wg sync.WaitGroup
-	var index []int
-	var mu sync.Mutex
+	var (
+		invalidtxs []*types.InvalidTransactionRecord
+		wg         sync.WaitGroup
+		index      []int
+		mu         sync.Mutex
+	)
+
+	// check signature for each transaction parallelly
 	for i := range txs {
 		wg.Add(1)
 		go func(i int) {
@@ -152,16 +172,18 @@ func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidT
 	return invalidtxs, txs
 }
 
-// applyTransactions - execute transactions one by one.
-func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo, tempBlockNumber uint64) (error, *ValidationResultRecord) {
-	var validtxs []*types.Transaction
-	var receipts []*types.Receipt
+// applyTransactions - execute transaction one by one.
+func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *ValidationResultRecord) {
+	var (
+		validtxs []*types.Transaction
+		receipts []*types.Receipt
+	)
 
 	executor.initCalculator()
-	executor.statedb.MarkProcessStart(tempBlockNumber)
-	// execute transactions one by one
+	executor.statedb.MarkProcessStart(seqNo)
+	// execute transaction one by one
 	for i, tx := range txs {
-		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, executor.getTempBlockNumber())
+		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, seqNo)
 		if err != nil {
 			errType := executor.classifyInvalid(err)
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
@@ -182,8 +204,8 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 		return err, nil
 	}
 	executor.resetStateDb()
-	executor.logger.Debugf("[Namespace = %s] validate result temp block number #%d, vid #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
-		executor.namespace, executor.getTempBlockNumber(), seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
+	executor.logger.Debugf("[Namespace = %s] validate result seqNo #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+		executor.namespace, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &ValidationResultRecord{
 		TxRoot:      txRoot,
 		ReceiptRoot: receiptRoot,
@@ -191,6 +213,7 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 		Receipts:    receipts,
 		ValidTxs:    validtxs,
 		InvalidTxs:  invalidTxs,
+		SeqNo:       seqNo,
 	}
 }
 
@@ -241,14 +264,8 @@ func (executor *Executor) throwInvalidTransactionBack(invalidtxs []*types.Invali
 }
 
 // saveValidationResult - save validation result to cache.
-func (executor *Executor) saveValidationResult(res *ValidationResultRecord, ev event.ValidationEvent, hash common.Hash) {
-	if len(res.ValidTxs) != 0 {
-		res.VID = ev.SeqNo
-		res.SeqNo = executor.getTempBlockNumber()
-		// regard the batch as a valid block
-		executor.incTempBlockNumber()
-		executor.addValidationResult(hash.Hex(), res)
-	}
+func (executor *Executor) saveValidationResult(res *ValidationResultRecord, hash common.Hash) {
+	executor.addValidationResult(hash.Hex(), res)
 }
 
 // sendValidationResult - send validation result to consensus module.
@@ -259,14 +276,17 @@ func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev e
 		View:         ev.View,
 		Hash:         hash.Hex(),
 		Timestamp:    ev.Timestamp,
+		Digest:       ev.Digest,
 	})
 }
 
-// dealEmptyBlock - deal with empty block.
-func (executor *Executor) dealEmptyBlock(res *ValidationResultRecord, ev event.ValidationEvent) {
-	if ev.IsPrimary {
-		executor.informConsensus(NOTIFY_REMOVE_CACHE, protos.RemoveCache{Vid: ev.SeqNo})
-		executor.throwInvalidTransactionBack(res.InvalidTxs)
+// pauseValidation - stop validation process for a while.
+// continue by a signal invocation.
+func (executor *Executor) pauseValidation() {
+	for {
+		if v := <-executor.getSuspend(IDENTIFIER_VALIDATION); !v {
+			executor.logger.Notice("un-pause validation process")
+			return
+		}
 	}
 }
-

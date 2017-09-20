@@ -1,16 +1,16 @@
 package network
 
 import (
-	"time"
 	"github.com/terasum/viper"
+	"time"
 )
 
 type clientConf struct {
 	// configurations
-	keepAliveDuration time.Duration
+	keepAliveDuration  time.Duration
 	keepAliveFailTimes int
 
-	pendingDuration time.Duration
+	pendingDuration  time.Duration
 	pendingFailTimes int
 
 	//connection pool init capacity
@@ -21,15 +21,15 @@ type clientConf struct {
 	connIdleTime time.Duration
 }
 
-func NewClientConf(vip *viper.Viper) *clientConf{
+func NewClientConf(vip *viper.Viper) *clientConf {
 	cconf := &clientConf{
-		keepAliveDuration:vip.GetDuration("p2p.keepAliveDuration"),
-		keepAliveFailTimes:vip.GetInt("p2p.keepAliveFailTimes"),
-		pendingDuration:vip.GetDuration("p2p.pendingDuration"),
-		pendingFailTimes:vip.GetInt("p2p.pendingFailTimes"),
-		connInitCap:vip.GetInt("p2p.connInitCap"),
-		connUpperlimit:vip.GetInt("p2p.connUpperlimit"),
-		connIdleTime:vip.GetDuration("p2p.connIdleTime"),
+		keepAliveDuration:  vip.GetDuration("p2p.keepAliveDuration"),
+		keepAliveFailTimes: vip.GetInt("p2p.keepAliveFailTimes"),
+		pendingDuration:    vip.GetDuration("p2p.pendingDuration"),
+		pendingFailTimes:   vip.GetInt("p2p.pendingFailTimes"),
+		connInitCap:        vip.GetInt("p2p.connInitCap"),
+		connUpperlimit:     vip.GetInt("p2p.connUpperlimit"),
+		connIdleTime:       vip.GetDuration("p2p.connIdleTime"),
 	}
 	return cconf
 }

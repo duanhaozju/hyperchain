@@ -8,12 +8,13 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"hyperchain/common"
+	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	pb "hyperchain/core/vm/jcee/protos"
+	"hyperchain/hyperdb/db"
+	"io"
 	"net"
 	"strings"
-	"hyperchain/hyperdb/db"
-	"hyperchain/core/types"
 )
 
 var (
@@ -21,7 +22,7 @@ var (
 	InvalidRequestErr    = errors.New("invalid request permission")
 )
 
-const  (
+const (
 	BatchSize = 100
 )
 
@@ -34,19 +35,19 @@ type LedgerProxy struct {
 }
 
 type Iterator struct {
-	dbIter     db.Iterator
-	stateIdx   int
+	dbIter   db.Iterator
+	stateIdx int
 }
 
 func NewLedgerProxy(conf *common.Config) *LedgerProxy {
 	return &LedgerProxy{
-		stateMgr:   NewStateManager(),
-		conf:       conf,
-		iterStack:  make(map[string]*Iterator),
+		stateMgr:  NewStateManager(),
+		conf:      conf,
+		iterStack: make(map[string]*Iterator),
 	}
 }
 
-func (lp *LedgerProxy) Register(namespace string, db vm.Database) error {
+func (lp *LedgerProxy) RegisterDB(namespace string, db vm.Database) error {
 	return lp.stateMgr.Register(namespace, db)
 }
 
@@ -70,6 +71,29 @@ func (lp *LedgerProxy) StopServer() {
 	lp.server.Stop()
 }
 
+func (lp *LedgerProxy) Register(stream pb.Ledger_RegisterServer) error {
+	messages := make(chan *pb.Message, 1000)
+
+	handler := NewHandler(messages, stream)
+	handler.stateMgr = lp.stateMgr
+	handler.logger = common.GetLogger(lp.conf.GetString(common.NAMESPACE), "ledger/handler")
+	go handler.handle()
+
+	for { // close judge
+		msg, err := stream.Recv()
+		if err == io.EOF {
+			fmt.Println(err)
+			return err
+		}
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		messages <- msg
+	}
+	return nil
+}
+
 func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) {
 	exist, state := lp.stateMgr.GetStateDb(key.Context.Namespace)
 	if exist == false {
@@ -78,10 +102,10 @@ func (lp *LedgerProxy) Get(ctx context.Context, key *pb.Key) (*pb.Value, error) 
 	if valid := lp.requestCheck(key.Context); !valid {
 		return nil, InvalidRequestErr
 	}
-	_, value := state.GetState(common.HexToAddress(key.Context.Cid), common.BytesToHash(key.K))
+	_, value := state.GetState(common.HexToAddress(key.Context.Cid), common.BytesToRightPaddingHash(key.K))
 	v := &pb.Value{
 		Id: key.Context.Txid,
-		V: value,
+		V:  value,
 	}
 	return v, nil
 }
@@ -94,7 +118,7 @@ func (lp *LedgerProxy) Put(ctx context.Context, kv *pb.KeyValue) (*pb.Response, 
 	if valid := lp.requestCheck(kv.Context); !valid {
 		return &pb.Response{Ok: false}, InvalidRequestErr
 	}
-	state.SetState(common.HexToAddress(kv.Context.Cid), common.BytesToHash(kv.K), kv.V, 0)
+	state.SetState(common.HexToAddress(kv.Context.Cid), common.BytesToRightPaddingHash(kv.K), kv.V, 0)
 	return &pb.Response{Ok: true}, nil
 }
 
@@ -108,7 +132,7 @@ func (lp *LedgerProxy) BatchRead(ctx context.Context, batch *pb.BatchKey) (*pb.B
 	}
 	response := &pb.BathValue{}
 	for _, key := range batch.K {
-		exist, value := state.GetState(common.HexToAddress(batch.Context.Cid), common.BytesToHash(key))
+		exist, value := state.GetState(common.HexToAddress(batch.Context.Cid), common.BytesToRightPaddingHash(key))
 		if exist == true {
 			response.V = append(response.V, value)
 		} else {
@@ -128,12 +152,12 @@ func (lp *LedgerProxy) BatchWrite(ctx context.Context, batch *pb.BatchKV) (*pb.R
 		return &pb.Response{Ok: false}, InvalidRequestErr
 	}
 	for _, kv := range batch.Kv {
-		state.SetState(common.HexToAddress(batch.Context.Cid), common.BytesToHash(kv.K), kv.V, 0)
+		state.SetState(common.HexToAddress(batch.Context.Cid), common.BytesToRightPaddingHash(kv.K), kv.V, 0)
 	}
 	return &pb.Response{Ok: true}, nil
 }
 
-func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer) error  {
+func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer) error {
 	exist, state := lp.stateMgr.GetStateDb(r.Context.Namespace)
 	if exist == false {
 		return NamespaceNotExistErr
@@ -141,12 +165,12 @@ func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer
 	if valid := lp.requestCheck(r.Context); !valid {
 		return InvalidRequestErr
 	}
-	start := common.BytesToHash(r.Start)
-	limit := common.BytesToHash(r.End)
+	start := common.BytesToRightPaddingHash(r.Start)
+	limit := common.BytesToRightPaddingHash(r.End)
 
 	iterRange := vm.IterRange{
-		Start:   &start,
-		Limit:   &limit,
+		Start: &start,
+		Limit: &limit,
 	}
 	iter, err := state.NewIterator(common.BytesToAddress(common.FromHex(r.Context.Cid)), &iterRange)
 	if err != nil {
@@ -154,7 +178,7 @@ func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer
 	}
 	cnt := 0
 	batchValue := pb.BathValue{
-		Id:  r.Context.Txid,
+		Id: r.Context.Txid,
 	}
 	for iter.Next() {
 		s := make([]byte, len(iter.Value()))
@@ -168,7 +192,7 @@ func (lp *LedgerProxy) RangeQuery(r *pb.Range, stream pb.Ledger_RangeQueryServer
 			}
 			cnt = 0
 			batchValue = pb.BathValue{
-				Id:  r.Context.Txid,
+				Id: r.Context.Txid,
 			}
 		}
 	}
@@ -187,7 +211,7 @@ func (lp *LedgerProxy) Delete(ctx context.Context, in *pb.Key) (*pb.Response, er
 	if valid := lp.requestCheck(in.Context); !valid {
 		return &pb.Response{Ok: false}, InvalidRequestErr
 	}
-	state.SetState(common.HexToAddress(in.Context.Cid), common.BytesToHash(in.K), nil, 0)
+	state.SetState(common.HexToAddress(in.Context.Cid), common.BytesToRightPaddingHash(in.K), nil, 0)
 	return &pb.Response{Ok: true}, nil
 }
 
@@ -210,7 +234,7 @@ func (lp *LedgerProxy) Post(ctx context.Context, event *pb.Event) (*pb.Response,
 	state.AddLog(log)
 
 	return &pb.Response{
-		Ok:true,
+		Ok: true,
 	}, nil
 }
 

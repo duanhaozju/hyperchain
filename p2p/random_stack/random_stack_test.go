@@ -1,8 +1,8 @@
 package random_stack
 
 import (
-	"testing"
 	"fmt"
+	"testing"
 )
 
 func TestStack_Push(t *testing.T) {
@@ -45,12 +45,11 @@ func TestStack_RandomPop(t *testing.T) {
 
 func BenchmarkStack_RandomPop(b *testing.B) {
 	stack := NewStack()
-	for i:=0;i<b.N;i++{
+	for i := 0; i < b.N; i++ {
 		stack.Push(1)
 	}
 
-	for i:=0;i<b.N;i++{
+	for i := 0; i < b.N; i++ {
 		stack.RandomPop()
 	}
 }
-

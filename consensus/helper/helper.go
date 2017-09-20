@@ -5,31 +5,50 @@ package helper
 import (
 	"time"
 
+	"hyperchain/consensus"
+	"hyperchain/core/types"
+	"hyperchain/manager/appstat"
 	"hyperchain/manager/event"
 	pb "hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
-	"hyperchain/core/types"
 )
 
 type helper struct {
-	msgQ *event.TypeMux
+	innerMux    *event.TypeMux
+	externalMux *event.TypeMux
 }
 
+// Stack helps rbftImpl send message to other components of system. PbftImpl
+// would generate some messages and post these messages to other components,
+// in order to send messages to other vp nodes, let other components validate or
+// execute transactions, or send messages to clients.
 type Stack interface {
+	// InnerBroadcast broadcast the consensus message to all other vp nodes
 	InnerBroadcast(msg *pb.Message) error
+	// InnerUnicast unicast the transaction message to a specific vp node
 	InnerUnicast(msg *pb.Message, to uint64) error
+	// Execute transfers the transactions decided by consensus to outer to execute these transactions
 	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
-	UpdateState(myId uint64, height uint64, blockHash []byte, replicaId []uint64) error
-	ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
+	// UpdateState transfers the UpdateStateEvent to outer
+	UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error
+	// ValidateBatch transfers the ValidationEvent to outer
+	ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
+	// VcReset reset vid when view change is done, clear the validate cache larger than seqNo
 	VcReset(seqNo uint64) error
+	// InformPrimary send the primary id to update info after negotiate view or view change
 	InformPrimary(primary uint64) error
+	// BroadcastAddNode broadcast addnode message to others
 	BroadcastAddNode(msg *pb.Message) error
+	// BroadcastDelNode broadcast delnode message to others
 	BroadcastDelNode(msg *pb.Message) error
+	// UpdateTable inform to update routing table
 	UpdateTable(payload []byte, flag bool) error
+	// SendFilterEvent sends event to subscription system, then the system would return message to clients which subscribe this message.
+	SendFilterEvent(informType int, message ...interface{}) error
 }
 
-// InnerBroadcast broadcast the consensus message between vp nodes
+// InnerBroadcast broadcasts the consensus message between VP nodes
 func (h *helper) InnerBroadcast(msg *pb.Message) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -43,12 +62,12 @@ func (h *helper) InnerBroadcast(msg *pb.Message) error {
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(broadcastEvent)
+	go h.innerMux.Post(broadcastEvent)
 
 	return nil
 }
 
-// InnerUnicast unicast the transaction message between to primary
+// InnerUnicast unicasts message to the specified VP node
 func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -63,7 +82,7 @@ func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(unicastEvent)
+	go h.innerMux.Post(unicastEvent)
 
 	return nil
 }
@@ -82,45 +101,45 @@ func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, t
 
 	// Post the event to outer
 	// !!! CANNOT use go, it will result in concurrent problems when writing blocks
-	h.msgQ.Post(writeEvent)
+	h.innerMux.Post(writeEvent)
 
 	return nil
 }
 
 // UpdateState transfers the UpdateStateEvent to outer
-func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, replicaId []uint64) error {
-
+func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error {
 	updateStateEvent := event.ChainSyncReqEvent{
 		Id:              myId,
 		TargetHeight:    height,
 		TargetBlockHash: blockHash,
-		Replicas:        replicaId,
+		Replicas:        replicas,
 	}
 
 	// Post the event to outer
-	go h.msgQ.Post(updateStateEvent)
+	go h.innerMux.Post(updateStateEvent)
 
 	return nil
 }
 
-// UpdateState transfers the UpdateStateEvent to outer
-func (h *helper) ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error {
+// ValidateBatch transfers the ValidateEvent to outer
+func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error {
 
 	validateEvent := event.ValidationEvent{
+		Digest:       digest,
 		Transactions: txs,
 		Timestamp:    timeStamp,
-		SeqNo:	      seqNo,
-		View:	      view,
+		SeqNo:        seqNo,
+		View:         view,
 		IsPrimary:    isPrimary,
 	}
 
 	// Post the event to outer
-	h.msgQ.Post(validateEvent)
+	h.innerMux.Post(validateEvent)
 
 	return nil
 }
 
-// VcReset reset vid when view change is done
+// VcReset resets vid after in recovery, viewchange or add/delete nodes
 func (h *helper) VcReset(seqNo uint64) error {
 
 	vcResetEvent := event.VCResetEvent{
@@ -128,25 +147,24 @@ func (h *helper) VcReset(seqNo uint64) error {
 	}
 
 	// No need to "go h.msgQ.Post...", we'll wait for it to return
-	h.msgQ.Post(vcResetEvent)
-	//time.Sleep(time.Millisecond * 50)
+	h.innerMux.Post(vcResetEvent)
 
 	return nil
 }
 
-// Inform the primary id after negotiate or
+// InformPrimary informs the primary id after negotiate or viewchanged
 func (h *helper) InformPrimary(primary uint64) error {
 
 	informPrimaryEvent := event.InformPrimaryEvent{
 		Primary: primary,
 	}
 
-	go h.msgQ.Post(informPrimaryEvent)
+	go h.innerMux.Post(informPrimaryEvent)
 
 	return nil
 }
 
-// Broadcast addnode message to others
+// BroadcastAddNode broadcasts addnode message to others
 func (h *helper) BroadcastAddNode(msg *pb.Message) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -160,12 +178,12 @@ func (h *helper) BroadcastAddNode(msg *pb.Message) error {
 	}
 
 	// Post the event to outer
-	h.msgQ.Post(broadcastEvent)
+	h.innerMux.Post(broadcastEvent)
 
 	return nil
 }
 
-// Broadcast delnode message to others
+// BroadcastDelNode broadcasts delnode message to others
 func (h *helper) BroadcastDelNode(msg *pb.Message) error {
 
 	tmpMsg, err := proto.Marshal(msg)
@@ -179,31 +197,60 @@ func (h *helper) BroadcastDelNode(msg *pb.Message) error {
 	}
 
 	// Post the event to outer
-	h.msgQ.Post(broadcastEvent)
+	h.innerMux.Post(broadcastEvent)
 
 	return nil
 }
 
-// Inform to update routing table
+// UpdateTable informs to update routing table
 func (h *helper) UpdateTable(payload []byte, flag bool) error {
 
 	updateTable := event.UpdateRoutingTableEvent{
 		Payload: payload,
-		Type:	 flag,
+		Type:    flag,
 	}
 
-	h.msgQ.Post(updateTable)
+	h.innerMux.Post(updateTable)
 
 	return nil
 }
 
-
 // NewHelper initializes a helper object
-func NewHelper(m *event.TypeMux) *helper {
+func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *helper {
 
 	h := &helper{
-		msgQ: m,
+		innerMux:    innerMux,
+		externalMux: externalMux,
 	}
 
 	return h
+}
+
+// PostExternal posts event to outer event mux
+func (h *helper) PostExternal(ev interface{}) {
+	h.externalMux.Post(ev)
+}
+
+// sendFilterEvent sends event to subscription system.
+func (h *helper) SendFilterEvent(informType int, message ...interface{}) error {
+	switch informType {
+	case consensus.FILTER_View_Change_Finish:
+		// NewBlock event
+		if len(message) != 1 {
+			return nil
+		}
+		msg, ok := message[0].(string)
+		if ok == false {
+			return nil
+		}
+		h.PostExternal(event.FilterSystemStatusEvent{
+			Module:  appstat.ExceptionModule_Consenus,
+			Status:  appstat.Normal,
+			Subtype: appstat.ExceptionSubType_ViewChange,
+			Message: msg,
+		})
+		return nil
+	default:
+		return nil
+	}
 }

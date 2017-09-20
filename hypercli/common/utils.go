@@ -3,22 +3,23 @@
 package common
 
 import (
-	"fmt"
-	"github.com/urfave/cli"
-	"hyperchain/core/types"
-	"github.com/golang/protobuf/proto"
-	"hyperchain/common"
-	"hyperchain/accounts"
-	"hyperchain/crypto"
-	"encoding/json"
-	"hyperchain/api/jsonrpc/core"
-	"strings"
-	"time"
-	"path/filepath"
-	"os"
-	"os/exec"
 	"bufio"
 	"encoding/gob"
+	"encoding/json"
+	"fmt"
+	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
+	"github.com/urfave/cli"
+	"hyperchain/accounts"
+	"hyperchain/common"
+	"hyperchain/core/types"
+	"hyperchain/crypto"
+	"hyperchain/rpc"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
 )
 
 const (
@@ -30,7 +31,7 @@ const (
 )
 
 var (
-	kec256Hash       = crypto.NewKeccak256Hash("keccak256")
+	kec256Hash = crypto.NewKeccak256Hash("keccak256")
 )
 
 type UserInfo struct {
@@ -74,10 +75,18 @@ func GetJSONResponse(result string) (jsonrpc.JSONResponse, error) {
 	return response, nil
 }
 
+func checkToken(result string) error {
+	tokenErr := &common.InvalidTokenError{}
+	response, err := GetJSONResponse(result)
+	if err == nil && response.Code == tokenErr.Code() {
+		return errors.New(response.Message)
+	}
+	return nil
+}
+
 // GenSignature generates the transaction signature by many params ...
-func GenSignature(from string, to string, timestamp int64, amount int64, payload string, nonce int64, opcode int32, vmtype types.TransactionValue_VmType) ([]byte, error){
+func GenSignature(from string, to string, timestamp int64, amount int64, payload string, nonce int64, opcode int32, vmtype types.TransactionValue_VmType) ([]byte, error) {
 	conf := common.NewRawConfig()
-	conf.Set(common.C_NODE_ID, 1)
 	conf.Set(common.KEY_NODE_DIR, "./keyconfigs/keynodes")
 	conf.Set(common.KEY_STORE_DIR, "./keyconfigs/keystore")
 
@@ -116,7 +125,7 @@ func GetTransactionReceipt(txHash string, namespace string, client *CmdClient) e
 	cmd := getTransactionReceiptCmd(txHash, namespace)
 	method := "tx_getTransactionReceipt"
 
-	for i:= 1; i<= frequency; i ++ {
+	for i := 1; i <= frequency; i++ {
 		response, err := client.Call(cmd, method)
 		if err != nil {
 			return err

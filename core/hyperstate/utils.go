@@ -2,6 +2,7 @@ package hyperstate
 
 import (
 	"bytes"
+	"hyperchain/common"
 	"strconv"
 	"time"
 )
@@ -19,9 +20,6 @@ const ConfigNumBuckets = "numBuckets"
 
 // ConfigMaxGroupingAtEachLevel - config name 'maxGroupingAtEachLevel' as it appears in yaml file
 const ConfigMaxGroupingAtEachLevel = "maxGroupingAtEachLevel"
-
-// ConfigCacheSize - config name "bucketCacheSize" as it appears in yaml file
-const ConfigCacheSize = "bucketCacheSize"
 
 // ConfigBucketCacheMaxSize - config name 'bucketCacheMaxSize' as it appears in yaml file
 const ConfigBucketCacheMaxSize = "bucketCacheMaxSize"
@@ -48,6 +46,17 @@ func SplitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) {
 		return key[prefixLen:], true
+	} else {
+		return nil, false
+	}
+}
+
+func RetrieveAddrFromStorageKey(key []byte) ([]byte, bool) {
+	// Address is const 20byte length
+	prefix := []byte(storageIdentifier)
+	prefixLen := len(prefix)
+	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen+common.AddressLength {
+		return key[prefixLen : prefixLen+common.AddressLength], true
 	} else {
 		return nil, false
 	}
@@ -86,7 +95,7 @@ func GetArchieveDate(address []byte, key []byte) ([]byte, bool) {
 	prefix := append([]byte(storageIdentifier), address...)
 	prefixLen := len(prefix) + 8
 	if bytes.HasPrefix(key, prefix) && len(key) >= prefixLen {
-		return key[len(prefix): prefixLen], true
+		return key[len(prefix):prefixLen], true
 	} else {
 		return nil, false
 	}
@@ -99,6 +108,27 @@ func GetArchieveDate(address []byte, key []byte) ([]byte, bool) {
 func CompositeCodeHash(address []byte, codeHash []byte) []byte {
 	ret := append([]byte(codeIdentifier), address...)
 	return append(ret, codeHash...)
+}
+
+func SplitCompositeCodeHash(address []byte, key []byte) ([]byte, bool) {
+	prefix := append([]byte(codeIdentifier), address...)
+	prefixLen := len(prefix)
+	if bytes.HasPrefix(key, prefix) && len(key) >= prefixLen {
+		return key[prefixLen:], true
+	} else {
+		return nil, false
+	}
+}
+
+func RetrieveAddrFromCodeHash(key []byte) ([]byte, bool) {
+	// Address is const 20byte length
+	prefix := []byte(codeIdentifier)
+	prefixLen := len(prefix)
+	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen+common.AddressLength {
+		return key[prefixLen : prefixLen+common.AddressLength], true
+	} else {
+		return nil, false
+	}
 }
 
 /*

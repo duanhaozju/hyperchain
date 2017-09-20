@@ -15,8 +15,8 @@ import (
 	"strings"
 
 	"hyperchain/common"
-	"path"
 	"hyperchain/crypto"
+	"path"
 )
 
 var (
@@ -161,7 +161,6 @@ func (sol *Solidity) Compile(source string) (map[string]*Contract, error) {
 		cmd.Dir = wd
 		cmd.Args = append(cmd.Args, path.Base(sourceFile.Name()))
 	}
-
 
 	if err := cmd.Run(); err != nil {
 		return nil, fmt.Errorf("solc: %v\n%s", err, string(stderr.Bytes()))

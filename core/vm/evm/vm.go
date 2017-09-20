@@ -7,17 +7,19 @@ import (
 	"math/big"
 
 	"hyperchain/common"
-	"hyperchain/core/vm/evm/params"
 	"hyperchain/core/vm"
+	"hyperchain/core/vm/evm/params"
 	"hyperchain/crypto"
+	"os"
 )
 
 // Config are the configuration options for the EVM
 type Config struct {
-	Debug     bool
-	EnableJit bool
-	ForceJit  bool
-	Logger    LogConfig
+	Debug              bool
+	EnableJit          bool
+	ForceJit           bool
+	Logger             LogConfig
+	DisableGasMetering bool
 }
 
 // EVM is used to run Ethereum based contracts and will utilise the
@@ -36,7 +38,7 @@ type EVM struct {
 func New(env vm.Environment, cfg Config) *EVM {
 	var logger *Logger
 	if cfg.Debug {
-		logger = newLogger(cfg.Logger, env)
+		logger = NewLogger(cfg.Logger, env)
 	}
 
 	return &EVM{
@@ -60,13 +62,9 @@ func (evm *EVM) Run(context vm.VmContext, input []byte) (ret []byte, err error) 
 
 	// 2.判断CodeAddr是否为空,如果不为空就去找已编译好的合约地址,然后运行该原生的智能合约
 	if contract.CodeAddr != nil {
-
-		//fmt.Println("the length is",len(Precompiled))
 		if p := Precompiled[contract.CodeAddr.Str()]; p != nil {
-			//fmt.Println("we have the codeAddr")
 			return evm.RunPrecompiled(p, input, contract)
 		}
-		//fmt.Println("the codeAddr is not exist")
 	}
 
 	// Don't bother with the execution if there's no code.
@@ -88,7 +86,7 @@ func (evm *EVM) Run(context vm.VmContext, input []byte) (ret []byte, err error) 
 		switch GetProgramStatus(codehash) {
 		// 判断是否已经可用,如果可用直接用找
 		case progReady:
-			return RunProgram(GetProgram(codehash), evm.env, contract, input)
+			return RunProgram(evm, GetProgram(codehash), evm.env, contract, input)
 		case progUnknown:
 			// 如果不可用,且强制jit,则顺序执行且立刻执行
 			if evm.cfg.ForceJit {
@@ -96,7 +94,7 @@ func (evm *EVM) Run(context vm.VmContext, input []byte) (ret []byte, err error) 
 				program = NewProgram(contract.Code)
 				perr := CompileProgram(program)
 				if perr == nil {
-					return RunProgram(program, evm.env, contract, input)
+					return RunProgram(evm, program, evm.env, contract, input)
 				}
 			} else {
 				// 否则可以另开一个线程
@@ -369,5 +367,19 @@ func (evm *EVM) RunPrecompiled(p *PrecompiledAccount, input []byte, contract *Co
 		return ret, nil
 	} else {
 		return nil, OutOfGasError
+	}
+}
+
+func (evm *EVM) Finalize() {
+	if evm.cfg.Debug {
+		fmt.Fprintf(os.Stdout, "[[   Dirty Accounts %08d:   ]]\n", len(evm.logger.changedValues))
+		for addr, entries := range evm.logger.changedValues {
+			fmt.Fprintf(os.Stdout, "### address %s ###\n", addr.Hex())
+			for key, value := range entries {
+				fmt.Fprintf(os.Stdout, "%s => %s\n", key.Hex(), value.Hex())
+			}
+			fmt.Fprint(os.Stdout, "### done ###\n")
+		}
+		evm.env.DumpStructLog()
 	}
 }

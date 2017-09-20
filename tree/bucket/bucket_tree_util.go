@@ -2,10 +2,10 @@ package bucket
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"encoding/binary"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"crypto/sha1"
 	"hyperchain/crypto"
 )
 
@@ -21,6 +21,7 @@ func ComputeCryptoHashWithTrim(data []byte) []byte {
 	bs := h.Sum(nil)[:5]
 	return bs
 }
+
 // ComputeCryptoHash should be used in openchain code so that we can change the actual algo used for crypto-hash at one place
 func ComputeCryptoHash(data []byte) []byte {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")

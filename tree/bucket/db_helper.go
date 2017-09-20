@@ -2,8 +2,8 @@ package bucket
 
 import (
 	"errors"
-	hdb "hyperchain/hyperdb/db"
 	"hyperchain/common"
+	hdb "hyperchain/hyperdb/db"
 )
 
 type rawKey []byte

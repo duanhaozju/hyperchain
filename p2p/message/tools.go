@@ -3,11 +3,9 @@
 package message
 
 import (
-	"hyperchain/crypto/sha3"
 	"hyperchain/common"
+	"hyperchain/crypto/sha3"
 )
-
-
 
 func GetHash(needHashString string) string {
 	hasher := sha3.NewKeccak256()

@@ -1,6 +1,8 @@
 package peerevent
-type NVPConnect struct {
-	Namespace string
-	Hostname  string
-	Hash string
+
+type S_NVPConnect struct {
+	Namespace   string
+	Hostname    string
+	Hash        string
+	IsReconnect bool
 }

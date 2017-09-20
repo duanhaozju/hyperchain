@@ -4,7 +4,7 @@ import (
 	pb "hyperchain/p2p/message"
 )
 
-type MsgHandler interface{
+type MsgHandler interface {
 	BidiHandler
 	SingleHandler
 }
@@ -16,6 +16,5 @@ type BidiHandler interface {
 }
 
 type SingleHandler interface {
-	Execute(msg *pb.Message) (*pb.Message,error)
+	Execute(msg *pb.Message) (*pb.Message, error)
 }
-

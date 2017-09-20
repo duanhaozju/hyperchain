@@ -1,8 +1,8 @@
 package errors
 
 import (
-	"fmt"
 	"errors"
+	"fmt"
 )
 
 type ValueTransferError struct {
@@ -20,9 +20,10 @@ func IsValueTransferErr(e error) bool {
 	_, ok := e.(*ValueTransferError)
 	return ok
 }
+
 /*
 	SignatureError
- */
+*/
 type SignatureError struct {
 	message string
 }
@@ -40,7 +41,7 @@ func IsSignatureErr(e error) bool {
 
 /*
 	ExecContractError
- */
+*/
 type ExecContractError struct {
 	message string
 	errType int
@@ -67,7 +68,7 @@ func IsExecContractErr(e error) bool {
 
 /*
 	InvalidInvokePermissionError
- */
+*/
 type InvalidInvokePermissionError struct {
 	message string
 }
@@ -84,15 +85,13 @@ func IsInvalidInvokePermissionErr(e error) bool {
 	return ok
 }
 
-
 /*
 	Constant errors
- */
+*/
 var (
 	InvalidParamsErr = errors.New("invalid params")
 	NoDefinedCaseErr = errors.New("no defined case")
 	EmptyPointerErr  = errors.New("nil pointer")
-	TxIdLenErr = errors.New("tx's id length does not match.")
+	TxIdLenErr       = errors.New("tx's id length does not match.")
+	MarshalFailedErr = errors.New("marshal failed")
 )
-
-

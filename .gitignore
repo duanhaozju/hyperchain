@@ -15,12 +15,13 @@ db/*
 
 # build vendor
 build
-#hyperchain
+hyperchain
 hyperchain.iml
 core/vm/jcee/java/target
 core/vm/jcee/java/*.iml
 core/vm/jcee/java/.idea
 hypercli/hypercli
+hypercli/keyconfigs/keynodes
 
 core/vm/jcee/java/hyperjvm
 
@@ -30,4 +31,3 @@ core/.DSTORE
 logs
 .token
 
-hyperchain

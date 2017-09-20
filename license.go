@@ -1,15 +1,15 @@
 package main
 
 import (
-	"time"
+	"fmt"
+	"hyperchain/common"
+	"hyperchain/p2p/hts/secimpl"
 	"io/ioutil"
 	"regexp"
-	"strings"
-	"hyperchain/common"
-	"strconv"
-	"fmt"
-	"hyperchain/p2p/hts/secimpl"
 	"runtime"
+	"strconv"
+	"strings"
+	"time"
 )
 
 const (
@@ -20,18 +20,20 @@ func CheckLicense(exit chan bool) {
 	// this ensures that license checker always hit in `os thread` to avoid jmuping to other threads
 	// since in this approach, working directory will not be affected by other operators.
 	runtime.LockOSThread()
-	ticker := time.NewTicker(1 * time.Hour)
+	// check license immediately once hyperchain start.
+	timer := time.NewTimer(0)
 	for {
 		select {
-		case <-ticker.C:
+		case <-timer.C:
 			if expired := isLicenseExpired(); expired {
 				notifySystemExit(exit)
 				return
+			} else {
+				timer.Reset(1 * time.Hour)
 			}
 		}
 	}
 }
-
 
 // isLicenseExpired - check whether license is expired.
 func isLicenseExpired() (expired bool) {
@@ -57,7 +59,7 @@ func isLicenseExpired() (expired bool) {
 	}
 	pattern, _ := regexp.Compile("Identification: (.*)")
 	identification := pattern.FindString(string(license))[16:]
-	ctx, err := secimpl.TripleDesDec([]byte(privateKey),common.Hex2Bytes(identification))
+	ctx, err := secimpl.TripleDesDecrypt8(common.Hex2Bytes(identification), []byte(privateKey))
 	if err != nil {
 		fmt.Println("invalid license.")
 		expired = true

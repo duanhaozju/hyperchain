@@ -1,8 +1,8 @@
 package cn.hyperchain.jcee.security;
 
 import cn.hyperchain.jcee.common.ExecuteResult;
-import cn.hyperchain.jcee.contract.ContractTemplate;
-import cn.hyperchain.jcee.ledger.Result;
+import cn.hyperchain.jcee.client.contract.ContractTemplate;
+import cn.hyperchain.jcee.client.ledger.Result;
 import com.google.protobuf.ByteString;
 
 import java.util.List;
@@ -11,11 +11,6 @@ import java.util.List;
  * Created by Think on 4/27/17.
  */
 public class NormalContract extends ContractTemplate {
-
-    @Override
-    public ExecuteResult invoke(String funcName, List<String> args) {
-        return null;
-    }
 
     //String account, double num
         private boolean issue(List<String> args) {

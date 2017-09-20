@@ -14,8 +14,9 @@ type BroadcastConsensusEvent struct{ Payload []byte }
 //general tx local
 type NewTxEvent struct {
 	Transaction *types.Transaction
-	Simulate bool
-	Ch chan bool
+	Simulate    bool
+	SnapshotId  string
+	Ch          chan bool
 }
 
 type TxUniqueCastEvent struct {
@@ -24,11 +25,17 @@ type TxUniqueCastEvent struct {
 }
 
 //node receive checkpoint sync event and then,check db and send block require request to peers
-type ChainSyncReqEvent struct{
+type SyncReplica struct {
+	Id      uint64
+	Height  uint64
+	Genesis uint64
+}
+
+type ChainSyncReqEvent struct {
 	Id              uint64
 	TargetHeight    uint64
 	TargetBlockHash []byte
-	Replicas        []uint64
+	Replicas        []SyncReplica
 }
 
 type SessionEvent struct {
@@ -37,6 +44,7 @@ type SessionEvent struct {
 
 //receive new block event from node consensus event for consensus module
 type ValidationEvent struct {
+	Digest       string
 	Transactions []*types.Transaction
 	SeqNo        uint64
 	View         uint64
@@ -103,19 +111,17 @@ type BroadcastDelPeerEvent struct {
 	Payload []byte
 }
 
-
 /*
 	Non verified peer events definition
- */
+*/
 
 type VerifiedBlock struct {
-	Payload  []byte
+	Payload []byte
 }
 
 type ReceiveVerifiedBlock struct {
-	Payload  []byte
+	Payload []byte
 }
-
 
 type CommitedBlockEvent struct {
 	Payload []byte
@@ -123,21 +129,39 @@ type CommitedBlockEvent struct {
 
 /*
 	Executor events
- */
+*/
 type ExecutorToConsensusEvent struct {
 	Payload interface{}
 	Type    int
 }
 
 type ExecutorToP2PEvent struct {
-	Payload []byte
-	Type    int
-	Peers   []uint64
-	PeersHash   []string
+	Payload   []byte
+	Type      int
+	Peers     []uint64
+	PeersHash []string
+}
+
+/*
+	Admin events
+*/
+
+type SnapshotEvent struct {
+	FilterId    string
+	BlockNumber uint64
+}
+
+type DeleteSnapshotEvent struct {
+	FilterId string
+	Cont     chan error
+}
+
+type ArchiveEvent struct {
+	FilterId string
+	Cont     chan error
 }
 
 // receive tx from a nvp
 type NvpRelayTxEvent struct {
 	Payload []byte
 }
-

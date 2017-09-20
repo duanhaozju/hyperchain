@@ -1,0 +1,256 @@
+/*
+Copyright Hyperchain Corp. 2016 All Rights Reserved.
+*/
+
+syntax = "proto3";
+
+import "hyperchain/core/types/transaction.proto";
+
+package pbft;
+/*
+ * mapping to PBFT paper names
+ *
+ * PBFT name: local name
+ *
+ * o: transaction
+ * t: timestamp
+ * c: client
+ * v: view
+ * n: sequenceNumber
+ * D(m): requestDigest
+ * i: replicaId
+ */
+
+message consensus_message {
+    enum Type {
+        TRANSACTION = 0;
+        PRE_PREPARE = 1;
+        PREPARE = 2;
+        COMMIT = 3;
+        CHECKPOINT = 4;
+        VIEW_CHANGE = 5;
+        NEW_VIEW = 6;
+        FINISH_VCRESET = 7;
+        FRTCH_REQUEST_BATCH = 8;
+        RETURN_REQUEST_BATCH = 9;
+        NEGOTIATE_VIEW = 10;
+        NEGOTIATE_VIEW_RESPONSE = 11;
+        RECOVERY_INIT = 12;
+        RECOVERY_RESPONSE = 13;
+        RECOVERY_FETCH_QPC = 14;
+        RECOVERY_RETURN_QPC = 15;
+        ADD_NODE = 16;
+        DEL_NODE = 17;
+        READY_FOR_N = 18;
+        AGREE_UPDATE_N = 19;
+        UPDATE_N = 20;
+        FINISH_UPDATE = 21;
+        FETCH_MISSING_TRANSACTION = 22;
+        RETURN_MISSING_TRANSACTION = 23;
+    }
+    Type type = 1;
+    bytes payload = 2;
+}
+
+message transaction_batch {
+    repeated types.Transaction tx_list = 1;
+    repeated string hash_list = 2;
+    int64 timestamp = 3;
+    uint64 seq_no = 4;
+    string resultHash = 5;
+}
+
+message hash_batch {
+    repeated string list = 1;
+    int64 timestamp = 2;
+}
+
+message return_request_batch {
+    transaction_batch batch = 1;
+    string batch_digest = 2;
+    uint64 replica_id = 3;
+}
+
+message fetch_missing_transaction {
+    uint64 view = 1;
+    uint64 sequence_number = 2;
+    string batch_digest = 3;
+    repeated string hash_list = 4;
+    uint64 replica_id = 5;
+}
+
+message return_missing_transaction {
+    uint64 view = 1;
+    uint64 sequence_number = 2;
+    string batch_digest = 3;
+    repeated string hash_list = 4;
+    repeated types.Transaction tx_list = 5;
+    uint64 replica_id = 6;
+}
+
+message pre_prepare {
+    uint64 view = 1;
+    uint64 sequence_number = 2;
+    string batch_digest = 3;
+    string result_hash = 4;
+    hash_batch hash_batch = 5;
+    uint64 replica_id = 6;
+}
+
+message prepare {
+    uint64 view = 1;
+    uint64 sequence_number = 2;
+    string batch_digest = 3;
+    string result_hash = 4;
+    uint64 replica_id = 5;
+}
+
+message commit {
+    uint64 view = 1;
+    uint64 sequence_number = 2;
+    string batch_digest = 3;
+    string result_hash = 4;
+    uint64 replica_id = 5;
+}
+
+message block_info {
+    uint64 block_number = 1;
+    bytes block_hash = 2;
+}
+
+message checkpoint {
+    uint64 sequence_number = 1;
+    uint64 replica_id = 2;
+    string id = 3;
+    uint64 genesis = 4;
+}
+
+message view_change {
+    /* This message should go away and become a checkpoint once replica_id is removed */
+    message C {
+        uint64 sequence_number = 1;
+        string id = 3;
+    }
+    message PQ {
+        uint64 sequence_number = 1;
+        string batch_digest = 2;
+        uint64 view = 3;
+    }
+
+    uint64 view = 1;
+    uint64 h = 2;
+    repeated C cset = 3;
+    repeated PQ pset = 4;
+    repeated PQ qset = 5;
+    uint64 replica_id = 6;
+    bytes signature = 7;
+    uint64 genesis = 8;
+    int64 timestamp = 9;
+}
+
+message new_view {
+    uint64 view = 1;
+    repeated view_change vset = 2;
+    map<uint64, string> xset = 3;
+    uint64 replica_id = 4;
+}
+
+message finish_vcReset {
+    uint64 replica_id = 1;
+    uint64 view = 2;
+    uint64 low_h = 3;
+}
+
+message fetch_request_batch {
+    string batch_digest = 1;
+    uint64 replica_id = 2;
+}
+
+message negotiate_view {
+    uint64 replica_id = 1;
+}
+
+message negotiate_view_response {
+    uint64 replica_id = 1;
+    uint64 view = 2;
+    uint64 n = 3;
+    bytes routers = 4;
+}
+
+message recovery_init {
+    uint64 replica_id = 1;
+}
+
+message recovery_response {
+    uint64 replica_id = 1;
+    map<uint64, string> chkpts = 2;
+    uint64 blockHeight = 3;
+    string lastBlockHash = 4;
+    uint64 genesis = 5;
+}
+
+message recovery_fetchPQC {
+    uint64 replica_id = 1;
+    uint64 h = 2;
+}
+
+message recovery_returnPQC {
+    uint64 replica_id = 1;
+    repeated pre_prepare prepre_set = 2;
+    repeated prepare pre_set = 3;
+    repeated commit cmt_set = 4;
+}
+
+message Pset {
+    repeated prepare set = 1;
+}
+
+message Cset {
+    repeated commit set = 1;
+}
+
+message add_node {
+    uint64 replica_id = 1;
+    string key = 2;
+}
+
+message del_node {
+    uint64 replica_id = 1;
+    string key = 2;
+    string router_hash = 3;
+}
+
+message ready_for_n {
+    uint64 replica_id = 2;
+    string key = 3;
+}
+
+message agree_update_n {
+    bool flag = 1;
+    uint64 replica_id = 2;
+    string key = 3;
+    string routerHash = 4;
+    int64 n = 5;
+    uint64 view = 6;
+    uint64 h = 7;
+    repeated view_change.C cset = 8;
+    repeated view_change.PQ pset = 9;
+    repeated view_change.PQ qset = 10;
+    uint64 genesis = 11;
+}
+
+message update_n {
+    bool flag = 1;
+    uint64 replica_id = 2;
+    string key = 3;
+    int64 n = 4;
+    uint64 view = 5;
+    repeated agree_update_n aset = 6;
+    map<uint64, string> xset = 7;
+}
+
+message finish_update {
+    uint64 replica_id = 1;
+    uint64 view = 2;
+    uint64 low_h = 3;
+}

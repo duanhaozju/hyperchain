@@ -33,13 +33,13 @@ func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.
 }
 
 //New Account according to args from html
-func (acc *Account) NewAccountAPI(password string) (common.Address, error) {
+func (acc *Account) NewAccount(password string) (common.Address, error) {
 	log := common.GetLogger(acc.namespace, "api")
 	am := acc.eh.GetAccountManager()
 	ac, err := am.NewAccount(password)
 	if err != nil {
 		log.Errorf("New Account error,%v", err)
-		return common.Address{}, &common.CallbackError{Message:err.Error()}
+		return common.Address{}, &common.CallbackError{Message: err.Error()}
 	}
 	return ac.Address, nil
 }
@@ -61,7 +61,7 @@ func (acc *Account) UnlockAccount(args UnlockParas) (bool, error) {
 	ac := accounts.Account{Address: args.Address, File: am.KeyStore.JoinPath(s)}
 	err := am.Unlock(ac, args.Password)
 	if err != nil {
-		return false, &common.InvalidParamsError{Message:"incorrect address or password!"}
+		return false, &common.InvalidParamsError{Message: "incorrect address or password!"}
 	}
 	return true, nil
 }
@@ -95,7 +95,7 @@ func (acc *Account) GetBalance(addr common.Address) (string, error) {
 		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 		} else {
-			return "", &common.LeveldbNotFoundError{Message:"stateobject, the account may not exist"}
+			return "", &common.LeveldbNotFoundError{Message: "stateobject, the account may not exist"}
 		}
 	}
 

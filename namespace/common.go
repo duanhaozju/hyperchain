@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	ErrNoSuchNamespace   = errors.New("namespace/nsmgr: no such namespace found")
 	ErrInvalidNs         = errors.New("namespace/nsmgr: invalid namespace")
 	ErrCannotNewNs       = errors.New("namespace/nsmgr: can not new namespace")
 	ErrRegistered        = errors.New("namespace/nsmgr: namespace has been registered")
@@ -21,7 +22,7 @@ var (
 )
 
 //constructConfigFromDir read all info needed by
-func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, error) {
+func (nr *nsManagerImpl) constructConfigFromDir(namespace, path string) (*common.Config, error) {
 	var conf *common.Config
 	nsConfigPath := path + "/namespace.toml"
 	if _, err := os.Stat(nsConfigPath); os.IsNotExist(err) {
@@ -30,7 +31,7 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, er
 	}
 	conf = common.NewConfig(nsConfigPath)
 	// init peer configurations
-	peerConfigPath := conf.GetString(common.PEER_CONFIG_PATH)
+	peerConfigPath := common.GetPath(namespace, conf.GetString(common.PEER_CONFIG_PATH))
 	peerViper := viper.New()
 	peerViper.SetConfigFile(peerConfigPath)
 	err := peerViper.ReadInConfig()
@@ -38,8 +39,8 @@ func (nr *nsManagerImpl) constructConfigFromDir(path string) (*common.Config, er
 		logger.Errorf("err %v", err)
 	}
 	// global part
-	conf.Set(common.P2P_PORT,  nr.conf.GetInt(common.P2P_PORT))
-	conf.Set(common.JVM_PORT,   nr.conf.GetInt(common.JVM_PORT))
+	conf.Set(common.P2P_PORT, nr.conf.GetInt(common.P2P_PORT))
+	conf.Set(common.JVM_PORT, nr.conf.GetInt(common.JVM_PORT))
 	// ns part
 	conf.Set(common.C_NODE_ID, peerViper.GetInt("self.id"))
 	return conf, nil
@@ -49,39 +50,49 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 	return map[string]*api.API{
 		"tx": {
 			Srvname: "tx",
-			Version: "1.4",
+			Version: "1.5",
 			Service: api.NewPublicTransactionAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"node": {
 			Srvname: "node",
-			Version: "1.4",
+			Version: "1.5",
 			Service: api.NewPublicNodeAPI(namespace, ns.eh),
 			Public:  true,
 		},
 		"block": {
 			Srvname: "block",
-			Version: "1.4",
+			Version: "1.5",
 			Service: api.NewPublicBlockAPI(namespace),
 			Public:  true,
 		},
 		"account": {
 			Srvname: "account",
-			Version: "1.4",
+			Version: "1.5",
 			Service: api.NewPublicAccountAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"contract": {
 			Srvname: "contract",
-			Version: "1.4",
+			Version: "1.5",
 			Service: api.NewPublicContractAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"cert": {
 			Srvname: "cert",
-			Version: "1.4",
+			Version: "1.5",
 			Service: api.NewCertAPI(namespace, ns.caMgr),
 			Public:  true,
+		},
+		"sub": {
+			Srvname: "sub",
+			Version: "1.5",
+			Service: api.NewFilterAPI(namespace, ns.eh, ns.conf),
+		},
+		"archive": {
+			Srvname: "archive",
+			Version: "1.5",
+			Service: api.NewPublicArchiveAPI(namespace, ns.eh, ns.conf),
 		},
 	}
 }

@@ -6,12 +6,14 @@ package namespace
 
 import (
 	"errors"
+	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"io/ioutil"
-	"sync"
-	"os"
 	"hyperchain/core/db_utils"
+	"io/ioutil"
+	"os"
+	"strings"
+	"sync"
 )
 
 var logger *logging.Logger
@@ -61,9 +63,9 @@ type nsManagerImpl struct {
 	rwLock      *sync.RWMutex
 	namespaces  map[string]Namespace
 	jvmManager  *JvmManager
-	bloomfilter *db_utils.BloomFilterCache   // transaciton bloom filter
+	bloomfilter *db_utils.BloomFilterCache // transaciton bloom filter
 	// help to do transaction duplication checking
-	conf        *common.Config
+	conf *common.Config
 }
 
 //NewNsManager new a namespace manager
@@ -135,7 +137,6 @@ func (nr *nsManagerImpl) Start() error {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -174,6 +175,16 @@ func (nr *nsManagerImpl) List() (names []string) {
 	return names
 }
 
+func (nr *nsManagerImpl) checkNamespaceName(name string) bool {
+	if name == "global" {
+		return true
+	}
+	if len(name) == 13 && strings.HasPrefix(name, "ns_") {
+		return true
+	}
+	return false
+}
+
 //Register register a new namespace, by the new namespace config dir.
 func (nr *nsManagerImpl) Register(name string) error {
 	logger.Noticef("Register namespace: %s", name)
@@ -191,7 +202,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return ErrNonExistConfig
 	}
 	nsConfigDir := nsRootPath + "/config"
-	nsConfig, err := nr.constructConfigFromDir(nsConfigDir)
+	nsConfig, err := nr.constructConfigFromDir(name, nsConfigDir)
 	if err != nil {
 		return err
 	}
@@ -210,7 +221,18 @@ func (nr *nsManagerImpl) Register(name string) error {
 		logger.Error("register bloom filter failed", err.Error())
 		return err
 	}
+	if err = updateNamespaceStartConfig(name, nr.conf); err != nil {
+		logger.Criticalf("Update namespace start for [%s] config failed", name)
+	}
 	go nr.ListenDelNode(name, delFlag)
+	return nil
+}
+
+func updateNamespaceStartConfig(name string, conf *common.Config) error {
+	if !conf.ContainsKey(fmt.Sprintf("namespace.start.%s", name)) {
+		return common.SeekAndAppend("[namespace.start]", conf.GetString(common.GLOBAL_CONFIG_PATH),
+			fmt.Sprintf("    %s = true", name))
+	}
 	return nil
 }
 
@@ -227,7 +249,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 		}
 	} else {
 		logger.Warningf("namespace %s not exist, please register first.", name)
-		return ErrInvalidNs
+		return ErrNoSuchNamespace
 	}
 	nr.bloomfilter.UnRegister(name)
 	logger.Criticalf("namespace: %s stopped", name)
@@ -261,9 +283,10 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
 		if err := ns.Start(); err != nil {
+			ns.Stop() //start failed, try to stop some started components
 			return err
 		} else {
-			nr.jvmManager.ledgerProxy.Register(name, ns.GetExecutor().FetchStateDb())
+			nr.jvmManager.ledgerProxy.RegisterDB(name, ns.GetExecutor().FetchStateDb())
 			return nil
 		}
 
@@ -332,10 +355,10 @@ func (nr *nsManagerImpl) RestartJvm() error {
 }
 
 //ListenDelNode listen delete node event
-func (nr *nsManagerImpl) ListenDelNode(name string, delFlag chan bool ) {
+func (nr *nsManagerImpl) ListenDelNode(name string, delFlag chan bool) {
 	for {
 		select {
-		case <- delFlag:
+		case <-delFlag:
 			nr.StopNamespace(name)
 			nr.DeRegister(name)
 		}

@@ -3,10 +3,11 @@
 package api
 
 import (
-	"hyperchain/manager/event"
-	"hyperchain/manager"
-	"hyperchain/p2p"
+	"fmt"
 	"hyperchain/common"
+	"hyperchain/manager"
+	"hyperchain/manager/event"
+	"hyperchain/p2p"
 )
 
 type NodeArgs struct {
@@ -14,8 +15,8 @@ type NodeArgs struct {
 }
 
 type Node struct {
-	namespace   string
-	eh *manager.EventHub
+	namespace string
+	eh        *manager.EventHub
 }
 
 type NodeResult struct {
@@ -29,15 +30,15 @@ type NodeResult struct {
 
 func NewPublicNodeAPI(namespace string, eh *manager.EventHub) *Node {
 	return &Node{
-		namespace:   namespace,
-		eh: eh,
+		namespace: namespace,
+		eh:        eh,
 	}
 }
 
 // GetNodes returns status of all the nodes
 func (node *Node) GetNodes() (p2p.PeerInfos, error) {
 	if node.eh == nil {
-		return nil, &common.CallbackError{Message:"protocolManager is nil"}
+		return nil, &common.CallbackError{Message: "protocolManager is nil"}
 	}
 
 	return node.eh.GetPeerManager().GetPeerInfo(), nil
@@ -45,24 +46,24 @@ func (node *Node) GetNodes() (p2p.PeerInfos, error) {
 
 func (node *Node) GetNodeHash() (string, error) {
 	if node.eh == nil {
-		return "", &common.CallbackError{Message:"protocolManager is nil"}
+		return "", &common.CallbackError{Message: "protocolManager is nil"}
 	}
 	return node.eh.GetPeerManager().GetLocalNodeHash(), nil
 }
 
 func (node *Node) DeleteVP(args NodeArgs) (string, error) {
 	if node.eh == nil {
-		return "", &common.CallbackError{Message:"protocolManager is nil"}
+		return "", &common.CallbackError{Message: "protocolManager is nil"}
 	}
 	go node.eh.GetEventObject().Post(event.DelVPEvent{
 		Payload: []byte(args.NodeHash),
 	})
-	return "successful request to delete vp node", nil
+	return fmt.Sprintf("successful request to delete vp node, hash %s", args.NodeHash), nil
 }
 
 func (node *Node) DeleteNVP(args NodeArgs) (string, error) {
 	if node.eh == nil {
-		return "", &common.CallbackError{Message:"protocolManager is nil"}
+		return "", &common.CallbackError{Message: "protocolManager is nil"}
 	}
 	go node.eh.GetEventObject().Post(event.DelNVPEvent{
 		Payload: []byte(args.NodeHash),
@@ -74,4 +75,3 @@ func (node *Node) DeleteNVP(args NodeArgs) (string, error) {
 func (node *Node) DelNode(args NodeArgs) (string, error) {
 	return node.DeleteVP(args)
 }
-

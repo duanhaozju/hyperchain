@@ -8,10 +8,10 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"golang.org/x/crypto/sha3"
 	"io"
 	"math/big"
 	"strings"
-	"golang.org/x/crypto/sha3"
 )
 
 type alg struct {
@@ -59,8 +59,6 @@ func GenerateUUID() string {
 	uuid := GenerateBytesUUID()
 	return uuidBytesToStr(uuid)
 }
-
-
 
 //GenerateHashFromSignature returns a hash of the combined parameters
 func GenerateHashFromSignature(path string, ctor string, args []string) []byte {
