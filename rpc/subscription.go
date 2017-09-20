@@ -58,7 +58,7 @@ func (notifier *Notifier) waittingReq() {
 
 	for {
 		select {
-		case ctx := <-common.CtxCh:
+		case ctx := <-common.CtxCh: 	// receive a request to subscribe
 			log.Debug("receive context request")
 			notifier, supported := NotifierFromContext(ctx)
 			if !supported {
@@ -72,7 +72,7 @@ func (notifier *Notifier) waittingReq() {
 			notifier.subChs.SubscriptionCh <- rpcSub
 
 			go notifier.waittingSubData(rpcSub)
-		case <-notifier.Closed():
+		case <-notifier.Closed():		// connection closed
 			log.Debug("quit request listener of this connection")
 			return
 
@@ -132,13 +132,7 @@ func (n *Notifier) CreateSubscription() *common.Subscription {
 	return s
 }
 
-// Closed returns a channel that is closed when the RPC connection is closed.
-//func (n *Notifier) Closed() <-chan interface{} {
-//	return n.codec.Closed()
-//}
-
-// unsubscribe a subscription.
-// If the subscription could not be found ErrSubscriptionNotFound is returned.
+// Unsubscribe unsubscribes a subscription. If the subscription could not be found ErrSubscriptionNotFound is returned.
 func (n *Notifier) Unsubscribe(id common.ID) error {
 	n.subMu.Lock()
 	defer n.subMu.Unlock()
@@ -150,13 +144,16 @@ func (n *Notifier) Unsubscribe(id common.ID) error {
 	return ErrSubscriptionNotFound
 }
 
-func (n *Notifier) Closed() <-chan interface{} {
-	return n.closed
-}
-
+// Close releases notifier resources when connection closed.
 func (n *Notifier) Close() {
 	close(n.closed)
+	n.codec.Close()
 	n.subChs.Close()
+}
+
+// Closed returns a chnnel that is closed when the websocket connection is closed.
+func (n *Notifier) Closed() <-chan interface{} {
+	return n.closed
 }
 
 // activate enables a subscription. Until a subscription is enabled all

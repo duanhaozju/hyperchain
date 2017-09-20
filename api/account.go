@@ -7,12 +7,14 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/manager"
+	"github.com/op/go-logging"
 )
 
 type Account struct {
 	eh        *manager.EventHub
 	namespace string
 	config    *common.Config
+	log       *logging.Logger
 }
 
 type AccountResult struct {
@@ -29,22 +31,22 @@ func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.
 		namespace: namespace,
 		eh:        eh,
 		config:    config,
+		log:	   common.GetLogger(namespace, "api"),
 	}
 }
 
-//New Account according to args from html
+// NewAccount creates a new account under the given password.
 func (acc *Account) NewAccount(password string) (common.Address, error) {
-	log := common.GetLogger(acc.namespace, "api")
 	am := acc.eh.GetAccountManager()
 	ac, err := am.NewAccount(password)
 	if err != nil {
-		log.Errorf("New Account error,%v", err)
+		acc.log.Errorf("New Account error, %v", err)
 		return common.Address{}, &common.CallbackError{Message: err.Error()}
 	}
 	return ac.Address, nil
 }
 
-// UnlockAccount unlocks account according to args(address,password), if success, return true.
+// UnlockAccount unlocks account for given account address and password, if success, return true.
 func (acc *Account) UnlockAccount(args UnlockParas) (bool, error) {
 
 	am := acc.eh.GetAccountManager()
@@ -66,13 +68,12 @@ func (acc *Account) UnlockAccount(args UnlockParas) (bool, error) {
 	return true, nil
 }
 
-// GetAllBalances returns all account's balance in the db,NOT CACHE DB!
+// GetAccounts returns all account's balance in the ledger.
 func (acc *Account) GetAccounts() ([]*AccountResult, error) {
-	log := common.GetLogger(acc.namespace, "api")
 	var acts []*AccountResult
 	stateDB, err := NewStateDb(acc.config, acc.namespace)
 	if err != nil {
-		log.Errorf("Get stateDB error, %v", err)
+		acc.log.Errorf("Get stateDB error, %v", err)
 		return nil, &common.CallbackError{Message: err.Error()}
 	}
 	ctx := stateDB.GetAccounts()

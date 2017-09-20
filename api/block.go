@@ -57,7 +57,7 @@ type intArgs struct {
 	to   uint64
 }
 
-// If the client send BlockNumber "",it will convert to 0.If client send BlockNumber 0,it will return error
+// If the client send BlockNumber "", it will be converted to 0. If client send BlockNumber 0, it will return error.
 func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) {
 	if args.From == nil || args.To == nil {
 		return nil, &common.InvalidParamsError{Message: "missing params 'from' or 'to'"}
@@ -67,11 +67,11 @@ func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) 
 		latest := chain.Height
 		from, err := args.From.BlockNumberToUint64(latest)
 		if err != nil {
-			return nil, err
+			return nil, &common.InvalidParamsError{Message: err.Error()}
 		}
 		to, err := args.To.BlockNumberToUint64(latest)
 		if err != nil {
-			return nil, err
+			return nil, &common.InvalidParamsError{Message: err.Error()}
 		}
 
 		if from > to || from < 1 || to < 1 {
@@ -90,7 +90,7 @@ func prepareBlockNumber(n BlockNumber, namespace string) (uint64, error) {
 	latest := chain.Height
 	number, err := n.BlockNumberToUint64(latest)
 	if err != nil {
-		return 0, err
+		return 0, &common.InvalidParamsError{Message: err.Error()}
 	}
 	return number, nil
 }
@@ -105,7 +105,7 @@ func (blk *Block) GetBlocks(args IntervalArgs) ([]*BlockResult, error) {
 	}
 }
 
-// GetPlainBlocks returns all the block for given block number.
+// GetPlainBlocks returns all the block for given block number without transactions.
 func (blk *Block) GetPlainBlocks(args IntervalArgs) ([]*BlockResult, error) {
 	trueArgs, err := prepareIntervalArgs(args, blk.namespace)
 	if err != nil {
@@ -115,7 +115,7 @@ func (blk *Block) GetPlainBlocks(args IntervalArgs) ([]*BlockResult, error) {
 	}
 }
 
-// LatestBlock returns the number and hash of the lastest block.
+// LatestBlock returns the lastest block.
 func (blk *Block) LatestBlock() (*BlockResult, error) {
 	return latestBlock(blk.namespace)
 }
@@ -125,10 +125,10 @@ func (blk *Block) GetBlockByHash(hash common.Hash) (*BlockResult, error) {
 	return getBlockByHash(blk.namespace, hash, false)
 }
 
-// GenesisBlock return current genesis block number.
+// GenesisBlock returns current genesis block number.
 func (blk *Block) GenesisBlock() (uint64, error) {
 	err, genesis := edb.GetGenesisTag(blk.namespace)
-	return genesis, err
+	return genesis, &common.CallbackError{Message: err.Error()}
 }
 
 // GetPlainBlockByHash returns the block for the given block hash.
@@ -146,7 +146,7 @@ func (blk *Block) GetBlockByNumber(n BlockNumber) (*BlockResult, error) {
 	}
 }
 
-// GetPlainBlockByNumber returns the block for the given block number.
+// GetPlainBlockByNumber returns the block for the given block number without transactions.
 func (blk *Block) GetPlainBlockByNumber(n BlockNumber) (*BlockResult, error) {
 	number, err := prepareBlockNumber(n, blk.namespace)
 	if err != nil {
@@ -162,7 +162,7 @@ type BlocksIntervalResult struct {
 	EndBlock    *BlockNumber `json:"endBlock"`
 }
 
-// GetBlocksByTime returns the block for the given block time duration.
+// GetBlocksByTime returns the number of blocks, starting block and ending block for the given time duration.
 func (blk *Block) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, error) {
 
 	if args.StartTime > args.Endtime {
@@ -181,6 +181,7 @@ func (blk *Block) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, err
 	}, nil
 }
 
+// GetAvgGenerateTimeByBlockNumber calculates the average generation time of all blocks for the given block number.
 func (blk *Block) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, error) {
 	intargs, err := prepareIntervalArgs(args, blk.namespace)
 	if err != nil {
@@ -221,7 +222,7 @@ func latestBlock(namespace string) (*BlockResult, error) {
 	return getBlockByNumber(namespace, lastestBlkHeight, false)
 }
 
-// getBlockByNumber convert type Block to type BlockResult for the given block number.
+
 func getBlockByNumber(namespace string, number uint64, isPlain bool) (*BlockResult, error) {
 	if blk, err := edb.GetBlockByNumber(namespace, number); err != nil && err.Error() == leveldb_not_found_error {
 		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("block by %d", number)}
@@ -229,14 +230,13 @@ func getBlockByNumber(namespace string, number uint64, isPlain bool) (*BlockResu
 		return nil, &common.CallbackError{Message: err.Error()}
 	} else {
 		if edb.GetHeightOfChain(namespace) == 0 {
-			//return nil, nil
 			return nil, &common.NoBlockGeneratedError{Message: "There is no block generated!"}
 		}
 		return outputBlockResult(namespace, blk, isPlain)
 	}
 }
 
-// getBlocksByTime returns the bolck for the given block time duration.
+
 func getBlocksByTime(namespace string, startTime, endTime int64) (sumOfBlocks uint64, startBlock, endBlock *BlockNumber, err error) {
 	currentChain, err := edb.GetChain(namespace)
 	if err != nil {
@@ -269,16 +269,16 @@ func getBlocksByTime(namespace string, startTime, endTime int64) (sumOfBlocks ui
 	return sumOfBlocks, startBlock, endBlock, nil
 }
 
+// outputBlockResult makes type conversion.
 func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*BlockResult, error) {
-	log := common.GetLogger(namespace, "api")
+
+	var err error
 
 	txCounts := int64(len(block.Transactions))
-	//count, percent :=types.go.CalcResponseCount(block.Number, int64(200))
-
 	transactions := make([]interface{}, txCounts)
-	var err error
+
 	for i, tx := range block.Transactions {
-		if transactions[i], err = outputTransaction(tx, namespace, log); err != nil {
+		if transactions[i], err = outputTransaction(tx, namespace); err != nil {
 			return nil, err
 		}
 	}
@@ -301,12 +301,9 @@ func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*Blo
 		Number:     Uint64ToBlockNumber(block.Number),
 		Hash:       common.BytesToHash(block.BlockHash),
 		ParentHash: common.BytesToHash(block.ParentHash),
-		//WriteTime:    time.Unix(block.WriteTime/int64(time.Second), 0).Format("2006-01-02 15:04:05"),
 		WriteTime: block.WriteTime,
 		AvgTime:   NewInt64ToNumber(edb.CalcResponseAVGTime(namespace, block.Number, block.Number)),
 		TxCounts:  NewInt64ToNumber(txCounts),
-		//Counts:       NewInt64ToNumber(count),
-		//Percents:     strconv.FormatFloat(percent*100, 'f', 2, 32) + "%",
 		MerkleRoot:   common.BytesToHash(block.MerkleRoot),
 		Transactions: transactions,
 	}, nil
@@ -329,7 +326,6 @@ func getBlockByHash(namespace string, hash common.Hash, isPlain bool) (*BlockRes
 }
 
 func getBlocks(args *intArgs, namespace string, isPlain bool) ([]*BlockResult, error) {
-	log := common.GetLogger(namespace, "api")
 	var blocks []*BlockResult
 
 	from := args.from
@@ -338,7 +334,6 @@ func getBlocks(args *intArgs, namespace string, isPlain bool) ([]*BlockResult, e
 	for from <= to {
 		b, err := getBlockByNumber(namespace, to, isPlain)
 		if err != nil {
-			log.Errorf("%v", err)
 			return nil, err
 		}
 		blocks = append(blocks, b)
@@ -356,7 +351,7 @@ type BatchTimeResult struct {
 	BatchTime  int64
 }
 
-// QueryCommitAndBatchTime returns commit time and batch time between from block and to block
+// QueryCommitAndBatchTime returns commit time and batch time between from block and to block.
 func (blk *Block) QueryCommitAndBatchTime(args IntervalArgs) (*BatchTimeResult, error) {
 	trueArgs, err := prepareIntervalArgs(args, blk.namespace)
 	if err != nil {
@@ -371,7 +366,7 @@ func (blk *Block) QueryCommitAndBatchTime(args IntervalArgs) (*BatchTimeResult, 
 	}, nil
 }
 
-// QueryEvmAvgTime returns EVM average time between from block and to block
+// QueryEvmAvgTime returns EVM average time between from block and to block.
 func (blk *Block) QueryEvmAvgTime(args IntervalArgs) (int64, error) {
 	trueArgs, err := prepareIntervalArgs(args, blk.namespace)
 	if err != nil {

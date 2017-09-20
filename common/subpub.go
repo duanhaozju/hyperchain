@@ -45,6 +45,7 @@ type SubChs struct {
 	NotifyDataCh   chan NotifyPayload
 	Err            chan error       	// error happened in the context
 	closed         chan interface{} 	// connection close
+	closer		   sync.Once		    // close once
 }
 
 var (
@@ -84,11 +85,13 @@ func GetSubChs(ctx context.Context) *SubChs {
 	}
 }
 
+// Close releases subChs resource when connection closed.
 func (subChs *SubChs) Close() {
-	// todo dose it need lock？
-	close(subChs.closed)
-	close(subChs.Err)
-	delete(subChsMap, subChs.Ctx)
+	subChs.closer.Do(func() {
+		close(subChs.closed)
+		close(subChs.Err)
+		delete(subChsMap, subChs.Ctx)
+	})
 }
 
 func (subChs *SubChs) Closed() <-chan interface{} {

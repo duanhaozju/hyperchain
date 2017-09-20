@@ -51,13 +51,15 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	log := common.GetLogger(namespace, "api")
 
 	var tx *types.Transaction
+
+	// verify if the parameters are valid
 	realArgs, err := prepareExcute(args, txType)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
+	// create a transaction instance
 	payload := common.FromHex(realArgs.Payload)
-
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
 		realArgs.Value.ToInt64(), payload, args.Opcode, parseVmType(realArgs.VmType))
 
@@ -68,37 +70,35 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 
 	if args.To == nil {
 		tx = types.NewTransaction(realArgs.From[:], nil, value, realArgs.Timestamp, realArgs.Nonce)
-
 	} else {
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	}
+
 	if contract.eh.NodeIdentification() == manager.IdentificationVP {
 		tx.Id = uint64(contract.eh.GetPeerManager().GetNodeId())
 	} else {
 		hash := contract.eh.GetPeerManager().GetLocalNodeHash()
-		err := tx.SetNVPHash(hash)
-		if err != nil {
+		if err := tx.SetNVPHash(hash); err != nil {
 			log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
-			return common.Hash{}, &common.MarshalError{Message: "marshal nvp hash error"}
+			return common.Hash{}, &common.CallbackError{Message: "marshal nvp hash error"}
 		}
 	}
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()
-	//delete repeated tx
+
+	// check if there is duplicated transaction
 	var exist bool
 	if err, exist = edb.LookupTransaction(contract.namespace, tx.GetHash()); err != nil || exist == true {
-		exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash)
+		if exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash); exist {
+			return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx " + common.ToHex(tx.TransactionHash)}
+		}
 	}
 
-	if exist {
-		return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx " + common.ToHex(tx.TransactionHash)}
-	}
-
-	// Unsign Test
+	// verify transaction signature
 	if !tx.ValidateSign(contract.eh.GetAccountManager().Encryption, kec256Hash) {
 		log.Error("invalid signature")
 		// ATTENTION, return invalid transactino directly
-		return common.Hash{}, &common.SignatureInvalidError{Message: "invalid signature"}
+		return common.Hash{}, &common.SignatureInvalidError{Message: "invalid signature, tx hash " + common.ToHex(tx.TransactionHash)}
 	}
 
 	if contract.eh.NodeIdentification() == manager.IdentificationNVP {

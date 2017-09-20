@@ -5,7 +5,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/common"
 	"math"
 	"math/big"
 	"strconv"
@@ -114,27 +113,27 @@ func (n BlockNumber) BlockNumberToUint64(latest uint64) (uint64, error) {
 	if !ok {
 		if input == "latest" {
 			if latest == 0 {
-				return 0, &common.InvalidParamsError{Message: "There is no block generated!"}
+				return 0, fmt.Errorf("There is no block generated!")
 			} else {
 				return latest, nil
 			}
 		} else if input == "earliest" {
 			//TODO
-			return 0, &common.InvalidParamsError{Message: "Support later..."}
+			return 0, fmt.Errorf("Support later...")
 		} else if input == "pending" {
 			//TODO
-			return 0, &common.InvalidParamsError{Message: "Support later..."}
+			return 0, fmt.Errorf("Support later...")
 		} else {
-			return 0, &common.InvalidParamsError{Message: fmt.Sprintf("invalid block number %s", input)}
+			return 0, fmt.Errorf("invalid block number %s", input)
 		}
 	}
 
 	if num, err := strconv.ParseUint(input, 0, 64); err != nil {
-		return 0, &common.InvalidParamsError{Message: fmt.Sprintf("block number %v may be out of range", input)}
+		return 0, fmt.Errorf("block number %v may be out of range", input)
 	} else if num <= 0 {
-		return 0, &common.InvalidParamsError{Message: fmt.Sprintf("block number can't be negative or zero, but get %v", input)}
+		return 0, fmt.Errorf("block number can't be negative or zero, but get %v", input)
 	} else if num > latest {
-		return 0, &common.InvalidParamsError{Message: fmt.Sprintf("block number is out of range, and now latest block number is %d", latest)}
+		return 0, fmt.Errorf("block number is out of range, and now latest block number is %d", latest)
 	} else {
 		return num, nil
 	}

@@ -159,24 +159,20 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 		tx.Id = uint64(tran.eh.GetPeerManager().GetNodeId())
 	} else {
 		hash := tran.eh.GetPeerManager().GetLocalNodeHash()
-		err := tx.SetNVPHash(hash)
-		if err != nil {
+		if err := tx.SetNVPHash(hash); err != nil {
 			tran.log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
-			return common.Hash{}, &common.MarshalError{Message: "marshal nvp hash error"}
+			return common.Hash{}, &common.CallbackError{Message: "marshal nvp hash error"}
 		}
 	}
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()
 
-	//delete repeated tx
+	// check if there is duplicated transaction
 	var exist bool
 	if err, exist = edb.LookupTransaction(tran.namespace, tx.GetHash()); err != nil || exist == true {
-		// recheck by query db
-		exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash)
-	}
-
-	if exist {
-		return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx " + common.ToHex(tx.TransactionHash)}
+		if exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash); exist {
+			return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx " + common.ToHex(tx.TransactionHash)}
+		}
 	}
 
 	// verify tx signature
@@ -297,7 +293,7 @@ func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) 
 	var transactions []*TransactionResult
 
 	for _, red := range reds {
-		if ts, err := outputTransaction(red, tran.namespace, tran.log); err != nil {
+		if ts, err := outputTransaction(red, tran.namespace); err != nil {
 			return nil, err
 		} else {
 			transactions = append(transactions, ts)
@@ -326,7 +322,7 @@ func (tran *Transaction) GetDiscardTransactionsByTime(args IntervalTime) ([]*Tra
 
 	for _, red := range reds {
 		if red.Tx.Timestamp <= args.Endtime && red.Tx.Timestamp >= args.StartTime {
-			if ts, err := outputTransaction(red, tran.namespace, tran.log); err != nil {
+			if ts, err := outputTransaction(red, tran.namespace); err != nil {
 				return nil, err
 			} else {
 				transactions = append(transactions, ts)
@@ -349,7 +345,7 @@ func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*Transac
 		return nil, &common.CallbackError{Message: err.Error()}
 	}
 
-	return outputTransaction(red, tran.namespace, tran.log)
+	return outputTransaction(red, tran.namespace)
 }
 
 // GetTransactionByHash returns the transaction for the given transaction hash.
@@ -361,7 +357,7 @@ func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionRes
 		return nil, &common.CallbackError{Message: err.Error()}
 	}
 
-	return outputTransaction(tx, tran.namespace, tran.log)
+	return outputTransaction(tx, tran.namespace)
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
@@ -389,7 +385,7 @@ func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, ind
 
 		tx := block.Transactions[index]
 
-		return outputTransaction(tx, tran.namespace, tran.log)
+		return outputTransaction(tx, tran.namespace)
 	}
 
 	return nil, nil
@@ -426,7 +422,7 @@ func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, inde
 
 		tx := block.Transactions[index]
 
-		return outputTransaction(tx, tran.namespace, tran.log)
+		return outputTransaction(tx, tran.namespace)
 	}
 
 	return nil, nil
@@ -459,7 +455,7 @@ func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*Transactio
 			trans := block.GetTransactions()
 
 			for _, t := range trans {
-				tx, err := outputTransaction(t, tran.namespace, tran.log)
+				tx, err := outputTransaction(t, tran.namespace)
 				if err != nil {
 					return nil, err
 				}
@@ -1088,8 +1084,8 @@ func (tran *Transaction) filterTransactionsByAddress(txs []interface{}, address 
 	return result, nil
 }
 
-func outputTransaction(trans interface{}, namespace string, log *logging.Logger) (*TransactionResult, error) {
-
+func outputTransaction(trans interface{}, namespace string) (*TransactionResult, error) {
+	log := common.GetLogger(namespace, "api")
 	var txValue types.TransactionValue
 
 	var txRes *TransactionResult

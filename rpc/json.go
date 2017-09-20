@@ -21,7 +21,6 @@ import (
 
 const (
 	JSONRPCVersion         = "2.0"
-	serviceMethodSeparator = "_"
 )
 
 // JSON-RPC request
@@ -41,6 +40,7 @@ type JSONResponse struct {
 	Code      int         `json:"code"`
 	Message   string      `json:"message"`
 	Result    interface{} `json:"result,omitempty"`
+	Info      interface{} `json:"info,omitempty"`
 }
 
 // JSON-RPC notification payload
@@ -59,7 +59,7 @@ type jsonNotification struct {
 
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It
 // also has support for parsing arguments and serializing (result) objects.
-type jsonCodec struct {
+type jsonCodecImpl struct {
 	closer sync.Once          // close closed channel once
 	closed chan interface{}   // closed on Close
 	decMu  sync.Mutex         // guards d
@@ -76,7 +76,7 @@ type jsonCodec struct {
 func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.NamespaceManager, conn *websocket.Conn) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
-	return &jsonCodec{
+	return &jsonCodecImpl{
 		closed: make(chan interface{}),
 		d:      d,
 		e:      json.NewEncoder(rwc),
@@ -88,7 +88,7 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 }
 
 // CheckHttpHeaders will check http header.
-func (c *jsonCodec) CheckHttpHeaders(namespace string, method string) common.RPCError {
+func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common.RPCError {
 	ns := c.nr.GetNamespaceByName(namespace)
 	if ns == nil {
 		return &common.NamespaceNotFound{Name: namespace}
@@ -137,10 +137,10 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string, method string) common.RPC
 	return nil
 }
 
-// ReadRequestHeaders will read new requests without parsing the arguments. It will
+// ReadRawRequest will read new requests without parsing the arguments. It will
 // return a collection of requests, an indication if these requests are in batch
 // form or an error when the incoming message could not be read/parsed.
-func (c *jsonCodec) ReadRequestHeaders(options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
+func (c *jsonCodecImpl) ReadRawRequest(options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
@@ -156,7 +156,7 @@ func (c *jsonCodec) ReadRequestHeaders(options CodecOption) ([]*common.RPCReques
 }
 
 // GatAuthInfo read authentication info (token and method) from http header
-func (c *jsonCodec) GetAuthInfo() (string, string) {
+func (c *jsonCodecImpl) GetAuthInfo() (string, string) {
 	token := c.req.Header.Get("Authorization")
 	method := c.req.Header.Get("Method")
 	return token, method
@@ -232,7 +232,7 @@ func parseRequest(incomingMsg json.RawMessage, options CodecOption) ([]*common.R
 	}
 
 	// regular RPC call
-	elems := strings.Split(in.Method, serviceMethodSeparator)
+	elems := strings.Split(in.Method, common.ServiceMethodSeparator)
 	if len(elems) != 2 {
 		return nil, false, &common.MethodNotFoundError{Service: in.Method, Method: ""}
 	}
@@ -260,7 +260,7 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool,
 
 		id := &in[i].Id
 
-		elems := strings.Split(r.Method, serviceMethodSeparator)
+		elems := strings.Split(r.Method, common.ServiceMethodSeparator)
 		if len(elems) != 2 {
 			return nil, true, &common.MethodNotFoundError{Service: r.Method, Method: ""}
 		}
@@ -276,7 +276,7 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool,
 }
 
 // CreateResponse will create a JSON-RPC success response with the given id and reply as result.
-func (c *jsonCodec) CreateResponse(id interface{}, namespace string, reply interface{}) interface{} {
+func (c *jsonCodecImpl) CreateResponse(id interface{}, namespace string, reply interface{}) interface{} {
 	if isHexNum(reflect.TypeOf(reply)) {
 		return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
 	}
@@ -284,18 +284,18 @@ func (c *jsonCodec) CreateResponse(id interface{}, namespace string, reply inter
 }
 
 // CreateErrorResponse will create a JSON-RPC error response with the given id and error.
-func (c *jsonCodec) CreateErrorResponse(id interface{}, namespace string, err common.RPCError) interface{} {
+func (c *jsonCodecImpl) CreateErrorResponse(id interface{}, namespace string, err common.RPCError) interface{} {
 	return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: err.Code(), Message: err.Error()}
 }
 
 // CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
 // info is optional and contains additional information about the error. When an empty string is passed it is ignored.
-func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, namespace string, err common.RPCError, info interface{}) interface{} {
-	return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
+func (c *jsonCodecImpl) CreateErrorResponseWithInfo(id interface{}, namespace string, err common.RPCError, info interface{}) interface{} {
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: err.Code(), Message: err.Error(), Info: info}
 }
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
-func (s *jsonCodec) CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{} {
+func (s *jsonCodecImpl) CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{} {
 	if isHexNum(reflect.TypeOf(event)) {
 		//return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace, Method: service + NotificationMethodSuffix,
 		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace,
@@ -308,14 +308,14 @@ func (s *jsonCodec) CreateNotification(subid common.ID, service, method, namespa
 }
 
 // Write message to client
-func (c *jsonCodec) Write(res interface{}) error {
+func (c *jsonCodecImpl) Write(res interface{}) error {
 	c.encMu.Lock()
 	defer c.encMu.Unlock()
 
 	return c.e.Encode(res)
 }
 
-func (c *jsonCodec) WriteNotify(res interface{}) error {
+func (c *jsonCodecImpl) WriteNotify(res interface{}) error {
 	c.encMu.Lock()
 	defer c.encMu.Unlock()
 
@@ -344,7 +344,7 @@ func (c *jsonCodec) WriteNotify(res interface{}) error {
 }
 
 // Close the underlying connection
-func (c *jsonCodec) Close() {
+func (c *jsonCodecImpl) Close() {
 	c.closer.Do(func() {
 		close(c.closed)
 		c.rw.Close()
@@ -352,6 +352,6 @@ func (c *jsonCodec) Close() {
 }
 
 // Closed returns a channel which will be closed when Close is called
-func (c *jsonCodec) Closed() <-chan interface{} {
+func (c *jsonCodecImpl) Closed() <-chan interface{} {
 	return c.closed
 }

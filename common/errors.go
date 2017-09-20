@@ -3,7 +3,7 @@ package common
 import "fmt"
 
 const (
-	serviceMethodSeparator = "_"
+	ServiceMethodSeparator = "_"
 )
 
 // JSON-RPC specified error
@@ -39,7 +39,6 @@ const (
 	custom_SubNotExistError
 	custom_SnapshotError
 	custom_InternalServerError
-	custom_MarshalError
 )
 
 // RPCError implements RPC error, is add support for error codec over regular go errors
@@ -68,7 +67,7 @@ type MethodNotFoundError struct {
 func (e *MethodNotFoundError) Code() int { return specified_MethodNotFoundError }
 func (e *MethodNotFoundError) Error() string {
 	return fmt.Sprintf("The method %s%s%s does not exist/is not available",
-		e.Service, serviceMethodSeparator, e.Method)
+		e.Service, ServiceMethodSeparator, e.Method)
 }
 
 // unable to decode supplied params, or an invalid number of parameters
@@ -217,12 +216,3 @@ type CertError struct {
 
 func (e *CertError) Code() int     { return custom_CertError }
 func (e *CertError) Error() string { return e.Message }
-
-type MarshalError struct {
-	Message string
-}
-
-func (e *MarshalError) Code() int {
-	return custom_MarshalError
-}
-func (e *MarshalError) Error() string { return e.Message }
