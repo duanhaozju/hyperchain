@@ -28,17 +28,17 @@ type TxPool interface {
 	GetOneTxsBack(hash string) error
 	GetTxsByHashList(id string, hashList []string) (txs []*types.Transaction, missingTxsHash []string, err error)
 	ReturnFetchTxs(id string, missingHashList []string) (txs []*types.Transaction, err error)
-	GotMissingTxs(id string, txs []*types.Transaction) ([]string, error)
+	GotMissingTxs(id string, txs []*types.Transaction) error
 }
 
 // txPoolImpl implement the txpool
 type txPoolImpl struct {
 	txPool         map[string]*types.Transaction // store all non-batched txs
 	txPoolHash     []string                      // store all non-batched txs' hash by order
-	batchStore     []*TxHashBatch                // store all batch using batch hash as key
-	batchedTxs     map[string]bool               // store batched txs' hash
-	cachedHashList map[string][]string           // cached hash list of missing batch using batch hash as key
-	missingTxs     map[string][]string           // store missing tx hash using batch hash as key
+	batchStore     []*TxHashBatch                // store all batches created by current primary in order, removed in
+	                                             // viewchange as new primary may create batches in other order
+	batchedTxs     map[string]bool               // store batched txs' hash corresponding to batchStore
+	missingTxs     map[string][]string           // store missing txs' hash using missing batch's id as key
 	poolSize       int                           // upper limit of txPool
 	queue          *event.TypeMux                // when we generate a batch, we would post it to this channel
 	batchSize      int                           // a batch contains how many transactions
@@ -50,8 +50,10 @@ func NewTxPool(namespace string, poolsize int, queue *event.TypeMux, batchsize i
 	return newTxPoolImpl(namespace, poolsize, queue, batchsize)
 }
 
-// AddNewTx add a transaction to txPool, and when current node is primary, isPrimary
-// should be true, and if we this insertion should check the poolSize, checkPool should bt true.
+// AddNewTx adds a transaction to txPool, and when current node is primary, isPrimary should be true. checkPool is used
+// to guarantee cached txs' size in tx pool, when we receive txs from local(which is sent from client), we need to check
+// pool size before add txs into tx pool, else, when we receive txs from other nodes(which has been added to other's
+// tx pool), we need not to check pool size as this tx has go through hpc layer, must be committed to blockchain.
 func (pool *txPoolImpl) AddNewTx(tx *types.Transaction, isPrimary bool, checkPool bool) (bool, error) {
 	if isPrimary {
 		return pool.primaryAddNewTx(tx, checkPool)
@@ -60,21 +62,35 @@ func (pool *txPoolImpl) AddNewTx(tx *types.Transaction, isPrimary bool, checkPoo
 	}
 }
 
-// addTxs attempts to queue a batch of transactions into the pool without check pool size.
+// addTxs attempts to queue a batch of transactions into the pool without check pool size after receiving missing txs
+// from primary.
 func (pool *txPoolImpl) addTxs(txs []*types.Transaction) error {
+	tmpPool := pool.txPool
+	tmpPoolHash := pool.txPoolHash
 	for _, tx := range txs {
 		isDuplicate := false
 		txHash := tx.GetHash().Hex()
-		_, ok := pool.batchedTxs[txHash]
-		if pool.txPool[txHash] != nil || ok { // check if exists
-			pool.logger.Warningf("Duplicate transaction with hash : %s", txHash)
+
+		// find tx in batchStore(batched txs)
+		if _, ok := pool.batchedTxs[txHash]; ok {
+			pool.logger.Warningf("Duplicate transaction with hash : %s which has been batched", txHash)
+			return ErrDuplicateTx
+		}
+
+		// find tx in txPool(non-batched txs)
+		if pool.txPool[txHash] != nil {
+			pool.logger.Debugf("Duplicate transaction with hash : %s, may be caused by receiving certain tx" +
+				"during fetching missing tx from primary", txHash)
 			isDuplicate = true
 		}
+
 		if isDuplicate == false {
-			pool.txPool[txHash] = tx
-			pool.txPoolHash = append(pool.txPoolHash, txHash)
+			tmpPool[txHash] = tx
+			tmpPoolHash = append(tmpPoolHash, txHash)
 		}
 	}
+	pool.txPool = tmpPool
+	pool.txPoolHash = tmpPoolHash
 	pool.logger.Debugf("Replica add transactions, and there are %d transactions in txpool",
 		len(pool.txPool))
 	return nil
@@ -115,7 +131,7 @@ func (pool *txPoolImpl) GetTxsByHashList(id string, hashList []string) (txs []*t
 				txs = append(txs, pool.txPool[hash])
 			}
 		} else {
-			pool.logger.Warningf("Can't find tx by hash: %s from txpool", hash)
+			pool.logger.Infof("Can't find tx by hash: %s from txpool", hash)
 			hasMissing = true
 			missingTxsHash = append(missingTxsHash, hash)
 		}
@@ -123,7 +139,6 @@ func (pool *txPoolImpl) GetTxsByHashList(id string, hashList []string) (txs []*t
 
 	// fetch missing txs if found missing txs from txpool
 	if hasMissing {
-		pool.cachedHashList[id] = hashList
 		txs = nil
 		pool.missingTxs[id] = missingTxsHash
 		return
@@ -176,32 +191,27 @@ func (pool *txPoolImpl) ReturnFetchTxs(id string, missingHashList []string) (txs
 }
 
 // GotMissingTxs receives txs fetched from primary and add txs to txpool
-func (pool *txPoolImpl) GotMissingTxs(id string, txs []*types.Transaction) ([]string, error) {
+func (pool *txPoolImpl) GotMissingTxs(id string, txs []*types.Transaction) error {
 	if _, ok := pool.missingTxs[id]; !ok {
-		return nil, ErrNoBatch
+		pool.logger.Errorf("Received missing txs, but can't find corresponding batch hash: %s", id)
+		return ErrNoBatch
 	}
 	if len(txs) != len(pool.missingTxs[id]) {
-		return nil, ErrNoBatch
+		return ErrMismatch
 	}
 	for i, tx := range txs {
 		txHash := tx.GetHash().Hex()
 		if txHash != pool.missingTxs[id][i] {
 			pool.logger.Warningf("Received missing txs, but find an unmatch tx hash: %s", txHash)
-			return nil, ErrMismatch
+			return ErrMismatch
 		}
 	}
 
-	if pool.cachedHashList[id] == nil {
-		pool.logger.Errorf("Received missing txs, but can't find batch hash: %d in cachedHashList", id)
-		return nil, ErrNoCachedBatch
-	} else {
-		pool.addTxs(txs)
-		hashList := pool.cachedHashList[id]
-		delete(pool.cachedHashList, id)
-		delete(pool.missingTxs, id)
-		return hashList, nil
+	if err := pool.addTxs(txs); err != nil {
+		return err
 	}
-
+	delete(pool.missingTxs, id)
+	return nil
 }
 
 // removeTxBatch removes several batches by given digests of transaction batches from the pool(batchedTxs).
@@ -228,7 +238,7 @@ func (pool *txPoolImpl) RemoveBatchedTxs(hashList []string) error {
 	return nil
 }
 
-// removeOneTxBatch removes one batch by given digest of transaction batch from the pool(batchedTxs).
+// RemoveOneTxBatch removes one batch by given digest of transaction batch from the pool(batchedTxs).
 func (pool *txPoolImpl) RemoveOneBatchedTxs(hash string) error {
 	find := false
 	index := 0
@@ -301,7 +311,6 @@ func newTxPoolImpl(namespace string, poolsize int, queue *event.TypeMux, batchsi
 	txpool.txPoolHash = nil
 	txpool.batchStore = nil
 	txpool.batchedTxs = make(map[string]bool)
-	txpool.cachedHashList = make(map[string][]string)
 	txpool.missingTxs = make(map[string][]string)
 	txpool.logger = common.GetLogger(namespace, "txpool")
 	return txpool, nil
@@ -316,9 +325,13 @@ func (pool *txPoolImpl) primaryAddNewTx(tx *types.Transaction, checkPool bool) (
 		}
 	}
 	txHash := tx.GetHash().Hex()
-	_, ok := pool.batchedTxs[txHash]
-	if pool.txPool[txHash] != nil || ok {
-		pool.logger.Warningf("Duplicate transaction with hash : %s", txHash)
+	if _, ok := pool.batchedTxs[txHash]; ok {
+		pool.logger.Warningf("Duplicate transaction with hash : %s in batched txs", txHash)
+		return false, ErrDuplicateTx
+	}
+
+	if pool.txPool[txHash] != nil {
+		pool.logger.Warningf("Duplicate transaction with hash : %s in tx pool", txHash)
 		return false, ErrDuplicateTx
 	}
 	pool.txPool[txHash] = tx
@@ -346,9 +359,13 @@ func (pool *txPoolImpl) replicaAddNewTx(tx *types.Transaction, checkPool bool) (
 	}
 
 	txHash := tx.GetHash().Hex()
-	_, ok := pool.batchedTxs[txHash]
-	if pool.txPool[txHash] != nil || ok {
-		pool.logger.Warningf("Duplicate transaction with hash : %s", txHash)
+	if _, ok := pool.batchedTxs[txHash]; ok {
+		pool.logger.Warningf("Duplicate transaction with hash : %s in batched txs", txHash)
+		return false, ErrDuplicateTx
+	}
+
+	if pool.txPool[txHash] != nil {
+		pool.logger.Warningf("Duplicate transaction with hash : %s in tx pool", txHash)
 		return false, ErrDuplicateTx
 	}
 	pool.txPool[txHash] = tx
@@ -362,6 +379,7 @@ func (pool *txPoolImpl) IsPoolFull() bool {
 	return length >= pool.poolSize
 }
 
+// HasTxInPool checks if there exists tx(s) in tx pool
 func (pool *txPoolImpl) HasTxInPool() bool {
 	length := len(pool.txPool)
 	return length > 0
@@ -403,6 +421,7 @@ func (pool *txPoolImpl) newTxBatch() *TxHashBatch {
 	for _, hash := range hashList {
 		if tx, ok := pool.txPool[hash]; !ok {
 			pool.logger.Errorf("Can't find transaction by hash %s in txPool", hash)
+			return nil
 		} else {
 			txList = append(txList, tx)
 			delete(pool.txPool, hash)
@@ -446,5 +465,5 @@ func (pool *txPoolImpl) getBatchById(id string) (*TxHashBatch, error) {
 			return batch, nil
 		}
 	}
-	return nil, ErrNoTxHash
+	return nil, ErrNoBatch
 }

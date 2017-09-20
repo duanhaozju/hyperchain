@@ -73,6 +73,7 @@ func (mgr *JvmManager) startLedgerServer() error {
 }
 
 func (mgr *JvmManager) startJvmServer() error {
+	mgr.logger.Noticef("Try to start jvm server")
 	binHome, err := getBinDir()
 	if err != nil {
 		return err
@@ -86,12 +87,12 @@ func (mgr *JvmManager) startJvmServer() error {
 	var out bytes.Buffer
 	cmd.Stdout = &out
 
-	err = cmd.Run()
+	err = cmd.Start()
 	if err != nil {
 		mgr.logger.Error(out.String())
 		return err
 	}
-	mgr.logger.Info("execute start hyperjvm command successful")
+	mgr.logger.Info("executor start hyperjvm command successful")
 	return nil
 }
 
