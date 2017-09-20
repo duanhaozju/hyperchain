@@ -91,7 +91,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	}
 
 	if exist {
-		return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx "+common.ToHex(tx.TransactionHash)}
+		return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx " + common.ToHex(tx.TransactionHash)}
 	}
 
 	// Unsign Test
