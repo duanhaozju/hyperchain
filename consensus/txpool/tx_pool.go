@@ -131,7 +131,7 @@ func (pool *txPoolImpl) GetTxsByHashList(id string, hashList []string) (txs []*t
 				txs = append(txs, pool.txPool[hash])
 			}
 		} else {
-			pool.logger.Warningf("Can't find tx by hash: %s from txpool", hash)
+			pool.logger.Infof("Can't find tx by hash: %s from txpool", hash)
 			hasMissing = true
 			missingTxsHash = append(missingTxsHash, hash)
 		}
