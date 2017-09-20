@@ -176,7 +176,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	}
 
 	if exist {
-		return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx"}
+		return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx " + common.ToHex(tx.TransactionHash)}
 	}
 
 	// verify tx signature
