@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+//Dispatcher response for Message distribute.
+service Dispatcher {
+    rpc Register(stream Message) returns(stream Message) {}
+}
+
+//Message is the wrapper of specific message
+message Message {
+
+    enum Type {
+        UNDEFINED = 0;
+        REGISTER = 1;
+    }
+
+    enum FROM {
+        UNDEFINED = 0;
+        APISERVER = 1;
+        CONSENSUS = 2;
+        EXECUTOR  = 3;
+        NETWORK   = 4;
+    }
+
+    Type type       = 1; //The basic message type.
+    FROM from       = 2; //Define where the message come from.
+    bytes payload   = 3; //The message body.
+}
+
+message RegisterMessage {
+    string address      = 1;
+    string port         = 2;
+    string namespace    = 3;
+    bytes payload       = 4; //retained field
+}
