@@ -14,12 +14,6 @@ import (
 	"time"
 )
 
-const (
-	SubscribeMethodSuffix    = "_subscribe"
-	NotificationMethodSuffix = "_subscription"
-	UnsubscribeMethodSuffix  = "_unsubscribe"
-)
-
 var (
 	subscriptionIDGenMu sync.Mutex
 	subscriptionIDGen   = idGenerator()
@@ -66,7 +60,6 @@ func (notifier *Notifier) waittingReq() {
 		select {
 		case ctx := <-common.CtxCh:
 			log.Debug("receive context request")
-			log.Debugf("current system CtxSubChsMap length = %v", len(common.SubChsMap))
 			notifier, supported := NotifierFromContext(ctx)
 			if !supported {
 				notifier.subChs.Err <- ErrNotificationsUnsupported

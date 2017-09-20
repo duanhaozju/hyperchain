@@ -14,9 +14,9 @@ import (
 
 // API describes the set of methods offered over the RPC interface
 type API struct {
-	Srvname string      // srvname under which the rpc methods of Service are exposed
+	Srvname string      // service name
 	Version string      // api version
-	Service interface{} // receiver instance which holds the methods
+	Service interface{} // api service instance which holds the methods
 	Public  bool        // indication if the methods must be considered safe for public use
 }
 

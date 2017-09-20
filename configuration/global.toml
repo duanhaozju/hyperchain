@@ -39,7 +39,8 @@ console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shor
 #
 ##########################################################
 [http]
-# allowed origins
+# allowedOrigins should be a comma-separated list of allowed origin URLs
+# to allow connections with any origin, pass "*".
 allowedOrigins=["*"]
 # if true, it will enable secure http connection(https).
 security    = false

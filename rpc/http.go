@@ -49,27 +49,26 @@ func GetHttpServer(nr namespace.NamespaceManager, config *common.Config) interna
 	return hs
 }
 
-// start starts the http RPC endpoint.
-func (hi *httpServerImpl) start() error {
+// start starts the http RPC endpoint. It will start the appropriate server based on the parameters of the configuration file.
+func (hsi *httpServerImpl) start() error {
 
 	var (
 		listener net.Listener
+		srv		 *http.Server
 		err      error
 	)
 
-	config := hi.config
-
-	handler := NewServer(hi.nr, config)
+	handler := NewServer(hsi.nr, hsi.config)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", admin.LoginServer)
-	mux.Handle("/", newCorsHandler(handler, config.GetStringSlice(common.HTTP_ALLOWEDORIGINS)))
+	mux.Handle("/", newCorsHandler(handler, hsi.config.GetStringSlice(common.HTTP_ALLOWEDORIGINS)))
 
-	isVersion2 := config.GetBool(common.HTTP_VERSION2)
-	isHTTPS := config.GetBool(common.HTTP_SECURITY)
+	isVersion2 := hsi.config.GetBool(common.HTTP_VERSION2)
+	isHTTPS := hsi.config.GetBool(common.HTTP_SECURITY)
 
 	// prepare tls.Config
-	tlsConfig, err := hi.secureConfig()
+	tlsConfig, err := hsi.secureConfig()
 	if err != nil {
 		return err
 	}
@@ -77,66 +76,63 @@ func (hi *httpServerImpl) start() error {
 	if isVersion2 && isHTTPS {
 
 		// http2, https
-		log.Noticef("starting http/2 service at port %v ... , secure connection is enabled.", hi.port)
+		log.Noticef("starting http/2 service at port %v ... , secure connection is enabled.", hsi.port)
 
 		// start http listener with secure connection and http/2
 		tlsConfig.NextProtos = []string{"h2"}
-		if listener, err = tls.Listen("tcp", fmt.Sprintf(":%d", hi.port), tlsConfig); err != nil {
-			log.Error(err)
+		if listener, err = tls.Listen("tcp", fmt.Sprintf(":%d", hsi.port), tlsConfig); err != nil {
 			return err
 		}
 
-		srv := newHTTPServer(mux, tlsConfig)
+		srv = newHTTPServer(mux, tlsConfig)
 		http2.ConfigureServer(srv, &http2.Server{})
-
-		go srv.Serve(listener)
 
 	} else if !isVersion2 && isHTTPS {
 
 		// http1.1, https
-		log.Noticef("starting http/1.1 service at port %v ... , secure connection is enabled.", hi.port)
+		log.Noticef("starting http/1.1 service at port %v ... , secure connection is enabled.", hsi.port)
 
 		// start http listener with secure connection and http/1.1
-		if listener, err = tls.Listen("tcp", fmt.Sprintf(":%d", hi.port), tlsConfig); err != nil {
-			log.Error(err)
+		if listener, err = tls.Listen("tcp", fmt.Sprintf(":%d", hsi.port), tlsConfig); err != nil {
 			return err
 		}
 
 		srv := newHTTPServer(mux, tlsConfig)
 
-		go srv.Serve(listener)
-
 	} else {
 
 		// http1.1, disable https
-		log.Noticef("starting http/1.1 service at port %v ... , secure connection is disenabled.", hi.port)
+		log.Noticef("starting http/1.1 service at port %v ... , secure connection is disenabled.", hsi.port)
 
 		// start http listener with http/1.1
-		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", hi.port))
+		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", hsi.port))
 		if err != nil {
 			return err
 		}
 
-		go newHTTPServer(mux, nil).Serve(listener)
+		srv = newHTTPServer(mux, nil)
+
 	}
 
-	hi.httpListener = listener
-	hi.httpHandler = handler
+	go srv.Serve(listener)
+
+	hsi.httpListener = listener
+	hsi.httpHandler = handler
 
 	return nil
 }
 
 // stop stops the http RPC endpoint.
-func (hi *httpServerImpl) stop() error {
-	log.Noticef("stopping http service at port %v ...", hi.port)
-	if hi.httpListener != nil {
-		hi.httpListener.Close()
-		hi.httpListener = nil
+func (hsi *httpServerImpl) stop() error {
+	log.Noticef("stopping http service at port %v ...", hsi.port)
+	if hsi.httpListener != nil {
+		hsi.httpListener.Close()
+		hsi.httpListener = nil
 	}
 
-	if hi.httpHandler != nil {
-		hi.httpHandler.Stop()
-		hi.httpHandler = nil
+	if hsi.httpHandler != nil {
+		hsi.httpHandler.Stop()
+		hsi.httpHandler = nil
 
 		// wait for ReadTimeout to close all the established connection
 		time.Sleep(ReadTimeout)
@@ -147,40 +143,40 @@ func (hi *httpServerImpl) stop() error {
 }
 
 // restart restarts the http RPC endpoint.
-func (hi *httpServerImpl) restart() error {
-	log.Noticef("restarting http service at port %v ...", hi.port)
-	if err := hi.stop(); err != nil {
+func (hsi *httpServerImpl) restart() error {
+	log.Noticef("restarting http service at port %v ...", hsi.port)
+	if err := hsi.stop(); err != nil {
 		return err
 	}
-	if err := hi.start(); err != nil {
+	if err := hsi.start(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (hi *httpServerImpl) getPort() int {
-	return hi.port
+func (hsi *httpServerImpl) getPort() int {
+	return hsi.port
 }
 
-func (hi *httpServerImpl) setPort(port int) error {
+func (hsi *httpServerImpl) setPort(port int) error {
 	if port == 0 {
 		return errors.New("please offer http port")
 	}
-	hi.port = port
+	hsi.port = port
 	return nil
 }
 
-func (hi *httpServerImpl) secureConfig() (*tls.Config, error) {
+func (hsi *httpServerImpl) secureConfig() (*tls.Config, error) {
 
 	pool := x509.NewCertPool()
-	caCrt, err := ioutil.ReadFile(hi.config.GetString(common.P2P_TLS_CA))
+	caCrt, err := ioutil.ReadFile(hsi.config.GetString(common.P2P_TLS_CA))
 	if err != nil {
 		fmt.Println("ReadFile err:", err)
 		return nil, err
 	}
 	pool.AppendCertsFromPEM(caCrt)
 
-	serverCert, err := tls.LoadX509KeyPair(hi.config.GetString(common.P2P_TLS_CERT), hi.config.GetString(common.P2P_TLS_CERT_PRIV))
+	serverCert, err := tls.LoadX509KeyPair(hsi.config.GetString(common.P2P_TLS_CERT), hsi.config.GetString(common.P2P_TLS_CERT_PRIV))
 	if err != nil {
 		log.Errorf("Loadx509keypair err: ", err)
 		return nil, err

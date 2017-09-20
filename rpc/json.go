@@ -203,7 +203,7 @@ func parseRequest(incomingMsg json.RawMessage, options CodecOption) ([]*common.R
 	}
 
 	// subscribe are special, they will always use `subscribeMethod` as first param in the payload
-	if strings.HasSuffix(in.Method, SubscribeMethodSuffix) {
+	if strings.HasSuffix(in.Method, common.SubscribeMethodSuffix) {
 		if options == OptionMethodInvocation {
 			return nil, false, &common.CallbackError{Message: ErrNotificationsUnsupported.Error()}
 		}
@@ -219,14 +219,14 @@ func parseRequest(incomingMsg json.RawMessage, options CodecOption) ([]*common.R
 				return nil, false, &common.InvalidParamsError{Message: "Please give a subscription name as the first param"}
 			}
 
-			reqs[0].Service, reqs[0].Method = strings.TrimSuffix(in.Method, SubscribeMethodSuffix), subscribeMethod[0]
+			reqs[0].Service, reqs[0].Method = strings.TrimSuffix(in.Method, common.SubscribeMethodSuffix), subscribeMethod[0]
 			reqs[0].Params = in.Payload
 			return reqs, false, nil
 		}
 		return nil, false, &common.InvalidRequestError{Message: "Unable to parse subscription request"}
 	}
 
-	if strings.HasSuffix(in.Method, UnsubscribeMethodSuffix) {
+	if strings.HasSuffix(in.Method, common.UnsubscribeMethodSuffix) {
 		return []*common.RPCRequest{{Id: &in.Id, IsPubSub: true,
 			Method: in.Method, Params: in.Payload}}, false, nil
 	}
