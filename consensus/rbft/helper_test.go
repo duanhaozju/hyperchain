@@ -248,10 +248,10 @@ package rbft
 //}
 //
 //type mockReceiver struct {
-//	processEventImpl func(event events.Event) events.Event
+//	processEventImpl func(event event) event
 //}
 //
-//func (mr *mockReceiver) ProcessEvent(event events.Event) events.Event {
+//func (mr *mockReceiver) ProcessEvent(event event) event {
 //	if mr.processEventImpl != nil {
 //		return mr.processEventImpl(event)
 //	}
@@ -262,11 +262,11 @@ package rbft
 //	pbft := new(pbftImpl)
 //
 //	tx := &types.Transaction{Id:123}
-//	evts := make(chan events.Event)
+//	evts := make(chan event)
 //
 //	pbft.batchManager = events.NewManagerImpl()
 //	pbft.batchManager.SetReceiver(&mockReceiver{
-//		processEventImpl : func(event events.Event) events.Event{
+//		processEventImpl : func(event event) event{
 //			evts <- event
 //			return nil
 //		},
@@ -290,10 +290,10 @@ package rbft
 //	pbft := new(pbftImpl)
 //	mEvent := &mockEvent{info:"pbftEvent"}
 //
-//	evts := make(chan events.Event)
+//	evts := make(chan event)
 //	pbft.pbftEventManager = events.NewManagerImpl()
 //	pbft.pbftEventManager.SetReceiver(&mockReceiver{
-//		processEventImpl : func(event events.Event) events.Event{
+//		processEventImpl : func(event event) event{
 //			evts <- event
 //			return nil
 //		},

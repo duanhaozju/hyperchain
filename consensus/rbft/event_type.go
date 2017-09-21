@@ -47,3 +47,6 @@ type LocalEvent struct {
 	EventType int
 	Event     interface{}
 }
+
+// Event is a type meant to clearly convey that the return type or parameter to a function will be supplied to/from an events.Manager
+type consensusEvent interface{}

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"hyperchain/consensus/events"
 	"hyperchain/consensus/txpool"
 	"hyperchain/manager/event"
 )
@@ -20,7 +19,7 @@ type batchManager struct {
 	eventMux         *event.TypeMux
 	batchSub         event.Subscription // subscription channel for batch event posted from txPool module
 	close            chan bool
-	rbftQueue        events.Queue
+	rbftQueue        *event.TypeMux
 	batchTimerActive bool // track the batch timer event, true means there exists an undergoing batch timer event
 }
 
@@ -30,7 +29,6 @@ type batchValidator struct {
 	currentVid          *uint64                // track the current validate batch seqNo
 	cacheValidatedBatch map[string]*cacheBatch // track the cached validated batch
 
-	validateTimer   events.Timer
 	validateTimeout time.Duration
 	preparedCert    map[vidx]string // track the prepared cert to help validate
 }
@@ -120,7 +118,7 @@ func newBatchManager(rbft *rbftImpl) *batchManager {
 }
 
 // start starts a go-routine to listen TxPool Event which continuously waits for TxHashBatch
-func (bm *batchManager) start(queue events.Queue) {
+func (bm *batchManager) start(queue *event.TypeMux) {
 	bm.rbftQueue = queue
 	go bm.listenTxPoolEvent()
 }
@@ -143,7 +141,7 @@ func (bm *batchManager) listenTxPoolEvent() {
 		case obj := <-bm.batchSub.Chan():
 			switch ev := obj.Data.(type) {
 			case txpool.TxHashBatch:
-				go bm.rbftQueue.Push(ev)
+				go bm.rbftQueue.Post(ev)
 			}
 		}
 	}
@@ -161,7 +159,7 @@ func (rbft *rbftImpl) startBatchTimer() {
 		EventType: CORE_BATCH_TIMER_EVENT,
 	}
 
-	rbft.timerMgr.startTimer(BATCH_TIMER, event, rbft.rbftEventQueue)
+	rbft.timerMgr.startTimer(BATCH_TIMER, event, rbft.eventMux)
 	rbft.batchMgr.batchTimerActive = true
 	rbft.logger.Debugf("Primary %d started the batch timer", rbft.id)
 }
@@ -182,7 +180,7 @@ func (rbft *rbftImpl) restartBatchTimer() {
 		EventType: CORE_BATCH_TIMER_EVENT,
 	}
 
-	rbft.timerMgr.startTimer(BATCH_TIMER, event, rbft.rbftEventQueue)
+	rbft.timerMgr.startTimer(BATCH_TIMER, event, rbft.eventMux)
 	rbft.batchMgr.batchTimerActive = true
 	rbft.logger.Debugf("Primary %d restarted the batch timer", rbft.id)
 }

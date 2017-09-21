@@ -13,12 +13,13 @@ import (
 	"sync/atomic"
 
 	"hyperchain/common"
-	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
 	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
+	"hyperchain/manager/event"
+	"hyperchain/consensus/txpool"
 )
 
 /**
@@ -75,12 +76,13 @@ func (rbft *rbftImpl) RecvLocal(msg interface{}) error {
 			tx: tx,
 			new: true,
 		}
-		go rbft.rbftEventQueue.Push(req)
+		//go rbft.rbftEventQueue.Push(req)
+		go rbft.eventMux.Post(req)
 
 		return nil
 	}
 
-	go rbft.rbftEventQueue.Push(msg)
+	go rbft.eventMux.Post(msg)
 
 	return nil
 }
@@ -93,15 +95,20 @@ func (rbft *rbftImpl) Start() {
 	rbft.initStatus()
 
 	atomic.StoreUint32(&rbft.activeView, 1)
-	rbft.rbftManager.Start()
-	rbft.rbftEventQueue = events.GetQueue(rbft.rbftManager.Queue())
+	//rbft.rbftManager.Start()
+	//rbft.rbftEventQueue = events.GetQueue(rbft.rbftManager.Queue())
+
+	rbft.eventMux = new(event.TypeMux)
+	rbft.batchSub = rbft.eventMux.Subscribe(txRequest{}, txpool.TxHashBatch{}, protos.RoutersMessage{}, &LocalEvent{}, &ConsensusMessage{})
+	rbft.close = make(chan bool)
 
 	rbft.restoreState()
 	rbft.vcMgr.viewChangeSeqNo = ^uint64(0)
 	rbft.vcMgr.updateViewChangeSeqNo(rbft.seqNo, rbft.K, rbft.id)
-	rbft.batchMgr.start(rbft.rbftEventQueue)
+	rbft.batchMgr.start(rbft.eventMux)
 	rbft.timerMgr.makeRequestTimeoutLegal()
 
+	go rbft.listenEvent()
 	rbft.logger.Noticef("======== PBFT finish start, nodeID: %d", rbft.id)
 }
 
@@ -110,7 +117,12 @@ func (rbft *rbftImpl) Close() {
 	rbft.logger.Notice("PBFT stop event process service")
 	rbft.timerMgr.Stop()
 	rbft.batchMgr.stop()
-	rbft.rbftManager.Stop()
+	//rbft.rbftManager.Stop()
+
+	if rbft.close != nil {
+		close(rbft.close)
+		rbft.close = nil
+	}
 
 	rbft.logger.Notice("PBFT clear some resources")
 	rbft.vcMgr = newVcManager(rbft)

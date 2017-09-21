@@ -5,10 +5,8 @@ package rbft
 
 import (
 	"time"
-
-	"hyperchain/consensus/events"
-
 	"github.com/op/go-logging"
+	"hyperchain/manager/event"
 )
 
 /**
@@ -58,7 +56,7 @@ func (tm *timerManager) Stop() {
 
 // startTimer starts the timer with the given name and default timeout, then sets the event which will be triggered
 // after this timeout
-func (tm *timerManager) startTimer(name string, event *LocalEvent, queue events.Queue) int {
+func (tm *timerManager) startTimer(name string, event *LocalEvent, queue *event.TypeMux) int {
 	tm.stopTimer(name)
 
 	tm.ttimers[name].isActive = append(tm.ttimers[name].isActive, true)
@@ -66,7 +64,7 @@ func (tm *timerManager) startTimer(name string, event *LocalEvent, queue events.
 
 	send := func() {
 		if tm.ttimers[name].isActive[counts-1] {
-			queue.Push(event)
+			queue.Post(event)
 		}
 	}
 	time.AfterFunc(tm.ttimers[name].timeout, send)
@@ -75,7 +73,7 @@ func (tm *timerManager) startTimer(name string, event *LocalEvent, queue events.
 
 // startTimerWithNewTT starts the timer with the given name and timeout, then sets the event which will be triggered
 // after this timeout
-func (tm *timerManager) startTimerWithNewTT(name string, d time.Duration, event *LocalEvent, queue events.Queue) int {
+func (tm *timerManager) startTimerWithNewTT(name string, d time.Duration, event *LocalEvent, queue *event.TypeMux) int {
 	tm.stopTimer(name)
 
 	tm.ttimers[name].isActive = append(tm.ttimers[name].isActive, true)
@@ -83,7 +81,7 @@ func (tm *timerManager) startTimerWithNewTT(name string, d time.Duration, event 
 
 	send := func() {
 		if tm.ttimers[name].isActive[counts-1] {
-			queue.Push(event)
+			queue.Post(event)
 		}
 	}
 	time.AfterFunc(d, send)

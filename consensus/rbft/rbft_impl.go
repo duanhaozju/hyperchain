@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"hyperchain/common"
-	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus/helper/persist"
 	"hyperchain/consensus/txpool"
@@ -50,8 +49,12 @@ type rbftImpl struct {
 
 	helper helper.Stack // send message to other components of system
 
-	rbftManager    events.Manager // manage rbft event
-	rbftEventQueue events.Queue   // transfer PBFT related event
+	//rbftManager    events.Manager // manage rbft event
+	//rbftEventQueue events.Queue   // transfer PBFT related event
+
+	eventMux         *event.TypeMux
+	batchSub         event.Subscription // subscription channel for all events posted from consensus sub-modules
+	close            chan bool	// channel to close this event process
 
 	config *common.Config  // get configuration info
 	logger *logging.Logger // write logger to record some info
@@ -80,8 +83,8 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 	rbft.L = rbft.logMultiplier * rbft.K // log size
 
 	//rbftManage manage consensus events
-	rbft.rbftManager = events.NewManagerImpl(rbft.namespace)
-	rbft.rbftManager.SetReceiver(rbft)
+	//rbft.rbftManager = events.NewManagerImpl(rbft.namespace)
+	//rbft.rbftManager.SetReceiver(rbft)
 
 	rbft.initMsgEventMap()
 
@@ -134,8 +137,32 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 // =============================================================================
 
 // ProcessEvent implements event.Receiver, dispatch messages according to their types
-func (rbft *rbftImpl) ProcessEvent(ee events.Event) events.Event {
+func (rbft *rbftImpl) listenEvent() {
+	for {
+		select {
+		case <-rbft.close:
+			return
+		case obj := <-rbft.batchSub.Chan():
+			ee := obj.Data
+			var next consensusEvent
+			var ok bool
+			if next, ok = ee.(consensusEvent); !ok {
+				rbft.logger.Error("Can't recognize event type")
+				return
+			}
+			for {
+				next = rbft.processEvent(next)
+				if next == nil {
+					break
+				}
+			}
 
+			
+		}
+	}
+}
+
+func (rbft *rbftImpl) processEvent(ee consensusEvent) consensusEvent {
 	switch e := ee.(type) {
 	case txRequest:
 		return rbft.processTransaction(e)
@@ -169,7 +196,7 @@ func (rbft *rbftImpl) ProcessEvent(ee events.Event) events.Event {
 }
 
 // dispatchCorePbftMsg dispatch core PBFT consensus messages.
-func (rbft *rbftImpl) dispatchCorePbftMsg(e events.Event) events.Event {
+func (rbft *rbftImpl) dispatchCorePbftMsg(e consensusEvent) consensusEvent {
 	switch et := e.(type) {
 	case *PrePrepare:
 		return rbft.recvPrePrepare(et)
@@ -207,9 +234,9 @@ func (rbft *rbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 			tx: tx,
 			new: false,
 		}
-		go rbft.rbftEventQueue.Push(req)
+		go rbft.eventMux.Post(req)
 	} else {
-		go rbft.rbftEventQueue.Push(consensus)
+		go rbft.eventMux.Post(consensus)
 	}
 
 	return nil
@@ -546,7 +573,7 @@ func (rbft *rbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 			Type:    ConsensusMessage_COMMIT,
 			Payload: payload,
 		}
-		go rbft.rbftEventQueue.Push(consensusMsg)
+		go rbft.eventMux.Post(consensusMsg)
 		msg := cMsgToPbMsg(consensusMsg, rbft.id)
 		return rbft.helper.InnerBroadcast(msg)
 	}
@@ -676,7 +703,7 @@ func (rbft *rbftImpl) recvFetchMissingTransaction(fetch *FetchMissingTransaction
 
 // recvReturnMissingTransaction processes ReturnMissingTransaction from primary.
 // Add these transactions to txPool and see if it has correct transactions.
-func (rbft *rbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction) events.Event {
+func (rbft *rbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction) consensusEvent {
 
 	rbft.logger.Debugf("Replica %d received ReturnMissingTransaction from replica %d", rbft.id, re.ReplicaId)
 
@@ -819,13 +846,11 @@ func (rbft *rbftImpl) afterCommitBlock(idx msgID) {
 //=============================================================================
 
 //processTxEvent process received transaction event
-func (rbft *rbftImpl) processTransaction(req txRequest) events.Event {
+func (rbft *rbftImpl) processTransaction(req txRequest) consensusEvent {
 
 	var err error
 	var isGenerated bool
-
-	// TODO: function processes transaction from client, so should check poolSize
-
+	
 	// this node is not normal, just add a transaction without generating batch.
 	if atomic.LoadUint32(&rbft.activeView) == 0 ||
 		atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 ||
@@ -909,7 +934,7 @@ func (rbft *rbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 			}
 			rbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
 
-			go rbft.rbftEventQueue.Push(&LocalEvent{
+			go rbft.eventMux.Post(&LocalEvent{
 				Service:   RECOVERY_SERVICE,
 				EventType: RECOVERY_DONE_EVENT,
 			})
@@ -1014,7 +1039,7 @@ func (rbft *rbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 }
 
 // recvCheckpoint processes logic after receive checkpoint.
-func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
+func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) consensusEvent {
 
 	rbft.logger.Debugf("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
 		rbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.Id)

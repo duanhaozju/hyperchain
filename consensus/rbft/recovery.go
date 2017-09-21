@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"sync/atomic"
 
-	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper/persist"
 
 	"github.com/golang/protobuf/proto"
@@ -38,7 +37,7 @@ func newRecoveryMgr() *recoveryManager {
 }
 
 // dispatchRecoveryMsg dispatches recovery service messages using service type
-func (rbft *rbftImpl) dispatchRecoveryMsg(e events.Event) events.Event {
+func (rbft *rbftImpl) dispatchRecoveryMsg(e consensusEvent) consensusEvent {
 	switch et := e.(type) {
 	case *NegotiateView:
 		return rbft.recvNegoView(et)
@@ -75,7 +74,7 @@ func (rbft *rbftImpl) initNegoView() error {
 		EventType: RECOVERY_NEGO_VIEW_RSP_TIMER_EVENT,
 	}
 
-	rbft.timerMgr.startTimer(NEGO_VIEW_RSP_TIMER, event, rbft.rbftEventQueue)
+	rbft.timerMgr.startTimer(NEGO_VIEW_RSP_TIMER, event, rbft.eventMux)
 
 	rbft.recoveryMgr.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 
@@ -112,7 +111,8 @@ func (rbft *rbftImpl) initNegoView() error {
 		Type:    ConsensusMessage_NEGOTIATE_VIEW_RESPONSE,
 		Payload: consensusPayload,
 	}
-	go rbft.rbftEventQueue.Push(responseMsg)
+	rbft.logger.Error("return responseMsg")
+	go rbft.eventMux.Post(responseMsg)
 
 	return nil
 }
@@ -124,7 +124,7 @@ func (rbft *rbftImpl) restartNegoView() {
 }
 
 // recvNegoView firstly checks current state, then send response to the sender
-func (rbft *rbftImpl) recvNegoView(nv *NegotiateView) events.Event {
+func (rbft *rbftImpl) recvNegoView(nv *NegotiateView) consensusEvent {
 	if atomic.LoadUint32(&rbft.activeView) == 0 {
 		rbft.logger.Warningf("Replica %d is in viewChange, reject negoView from replica %d", rbft.id, nv.ReplicaId)
 		return nil
@@ -155,7 +155,7 @@ func (rbft *rbftImpl) recvNegoView(nv *NegotiateView) events.Event {
 
 // recvNegoViewRsp stores the negotiate view response, if the counts of negoViewRsp reach the commonCaseQuorum, update
 // current info if needed
-func (rbft *rbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
+func (rbft *rbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) consensusEvent {
 	if !rbft.status.getState(&rbft.status.inNegoView) {
 		rbft.logger.Debugf("Replica %d already finished nego_view, ignore incoming nego_view_rsp", rbft.id)
 		return nil
@@ -218,6 +218,7 @@ func (rbft *rbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 			if needUpdate {
 				rbft.parseSpecifyCertStore()
 			}
+			rbft.logger.Error("finish recovery")
 			return &LocalEvent{
 				Service:   RECOVERY_SERVICE,
 				EventType: RECOVERY_NEGO_VIEW_DONE_EVENT,
@@ -229,7 +230,7 @@ func (rbft *rbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) events.Event {
 
 // initRecovery broadcasts a procative recovery message to ask others for recent blocks info and send RecoveryResponse
 // to itself
-func (rbft *rbftImpl) initRecovery() events.Event {
+func (rbft *rbftImpl) initRecovery() consensusEvent {
 	rbft.logger.Debugf("Replica %d now initRecovery", rbft.id)
 
 	rbft.recoveryMgr.recoveryToSeqNo = nil
@@ -256,7 +257,7 @@ func (rbft *rbftImpl) initRecovery() events.Event {
 		Service:   RECOVERY_SERVICE,
 		EventType: RECOVERY_RESTART_TIMER_EVENT,
 	}
-	rbft.timerMgr.startTimer(RECOVERY_RESTART_TIMER, event, rbft.rbftEventQueue)
+	rbft.timerMgr.startTimer(RECOVERY_RESTART_TIMER, event, rbft.eventMux)
 
 	// send RecoveryResponse to itself
 	height, curHash := persist.GetBlockHeightAndHash(rbft.namespace)
@@ -286,7 +287,7 @@ func (rbft *rbftImpl) restartRecovery() {
 }
 
 // recvRecovery processes incoming proactive recovery message and send the response to the sender
-func (rbft *rbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
+func (rbft *rbftImpl) recvRecovery(recoveryInit *RecoveryInit) consensusEvent {
 	rbft.logger.Debugf("Replica %d now recvRecovery from replica %d", rbft.id, recoveryInit.ReplicaId)
 
 	if rbft.status.getState(&rbft.status.skipInProgress) {
@@ -326,7 +327,7 @@ func (rbft *rbftImpl) recvRecovery(recoveryInit *RecoveryInit) events.Event {
 
 // recvRecoveryRsp stores the recovery response, if the counts of rcRspStore reach the commonCaseQuorum, find highest
 // checkpoint quorum and use that checkpoint seqNo as the recovery target to continue recovery
-func (rbft *rbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) events.Event {
+func (rbft *rbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) consensusEvent {
 	rbft.logger.Debugf("Replica %d now recvRecoveryRsp from replica %d for block height=%d", rbft.id, rsp.ReplicaId, rsp.BlockHeight)
 
 	if !rbft.status.getState(&rbft.status.inRecovery) {
@@ -467,7 +468,7 @@ func (rbft *rbftImpl) findHighestChkptQuorum() (chkptSeqNo uint64, chkptId strin
 }
 
 // fetchRecoveryPQC always fetches PQC info after recovery done to fetch PQC info after target checkpoint
-func (rbft *rbftImpl) fetchRecoveryPQC() events.Event {
+func (rbft *rbftImpl) fetchRecoveryPQC() consensusEvent {
 	rbft.logger.Debugf("Replica %d now fetchRecoveryPQC", rbft.id)
 	rbft.recoveryMgr.rcPQCSenderStore = make(map[uint64]bool)
 
@@ -492,7 +493,7 @@ func (rbft *rbftImpl) fetchRecoveryPQC() events.Event {
 }
 
 // returnRecoveryPQC returns all PQC info we have sent before to the sender
-func (rbft *rbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
+func (rbft *rbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) consensusEvent {
 	rbft.logger.Debugf("Replica %d now returnRecoveryPQC", rbft.id)
 
 	destID, h := fetch.ReplicaId, fetch.H
@@ -564,7 +565,7 @@ func (rbft *rbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) events.Event {
 }
 
 // recvRecoveryReturnPQC re-processes all the PQC received from others
-func (rbft *rbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) events.Event {
+func (rbft *rbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) consensusEvent {
 	rbft.logger.Debugf("Replica %d now recvRecoveryReturnPQC from replica %d, return_pqc %v", rbft.id, PQCInfo.ReplicaId, PQCInfo)
 
 	sender := PQCInfo.ReplicaId

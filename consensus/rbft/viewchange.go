@@ -9,7 +9,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"hyperchain/consensus/events"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -33,7 +32,7 @@ type vcManager struct {
 }
 
 //dispatchViewChangeMsg dispatch view change consensus messages from other peers And push them into corresponding function
-func (rbft *rbftImpl) dispatchViewChangeMsg(e events.Event) events.Event {
+func (rbft *rbftImpl) dispatchViewChangeMsg(e consensusEvent) consensusEvent {
 	switch et := e.(type) {
 	case *ViewChange:
 		return rbft.recvViewChange(et)
@@ -162,7 +161,7 @@ func (rbft *rbftImpl) calcPSet() map[uint64]*ViewChange_PQ {
 
 //sendViewChange send view change message to other peers use broadcast
 //Then it send view change message to itself and jump to recvViewChange
-func (rbft *rbftImpl) sendViewChange() events.Event {
+func (rbft *rbftImpl) sendViewChange() consensusEvent {
 
 	//Do some check and do some preparation
 	//such as stop nullRequest timer , clean batchVdr.cacheValidatedBatch and so on.
@@ -221,14 +220,14 @@ func (rbft *rbftImpl) sendViewChange() events.Event {
 		EventType: VIEW_CHANGE_RESEND_TIMER_EVENT,
 	}
 	//Start VC_RESEND_TIMER. If peers can't viewChange successfully within the given time. timer well resend viewChange message
-	rbft.timerMgr.startTimer(VC_RESEND_TIMER, event, rbft.rbftEventQueue)
+	rbft.timerMgr.startTimer(VC_RESEND_TIMER, event, rbft.eventMux)
 	return rbft.recvViewChange(vc)
 }
 
 //recvViewChange process ViewChange message from itself or other peers
 //if the number of ViewChange message for equal view reach on allCorrectReplicasQuorum, return VIEW_CHANGE_QUORUM_EVENT
 // else peers may resend vc or wait more vc message arrived
-func (rbft *rbftImpl) recvViewChange(vc *ViewChange) events.Event {
+func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 	rbft.logger.Warningf("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		rbft.id, vc.ReplicaId, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
 
@@ -370,7 +369,7 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) events.Event {
 //processing enter here when peer is primary and it receive allCorrectReplicasQuorum for new view.
 //sendNewView  select suitable pqc from viewChangeStore as a new view message and broadcast to replica peers.
 //Then jump into primaryProcessNewView.
-func (rbft *rbftImpl) sendNewView() events.Event {
+func (rbft *rbftImpl) sendNewView() consensusEvent {
 
 	//if inNegoView return nil.
 	if rbft.status.getState(&rbft.status.inNegoView) {
@@ -429,7 +428,7 @@ func (rbft *rbftImpl) sendNewView() events.Event {
 }
 
 //recvNewView
-func (rbft *rbftImpl) recvNewView(nv *NewView) events.Event {
+func (rbft *rbftImpl) recvNewView(nv *NewView) consensusEvent {
 	rbft.logger.Infof("Replica %d received new-view %d",
 		rbft.id, nv.View)
 
@@ -467,7 +466,7 @@ func (rbft *rbftImpl) recvNewView(nv *NewView) events.Event {
 }
 
 //processNewView
-func (rbft *rbftImpl) processNewView() events.Event {
+func (rbft *rbftImpl) processNewView() consensusEvent {
 	nv, ok := rbft.vcMgr.newViewStore[rbft.view]
 	if !ok {
 		rbft.logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", rbft.id, rbft.view)
@@ -513,7 +512,7 @@ func (rbft *rbftImpl) processNewView() events.Event {
 
 //do some prepare for change to New view
 //such as get moveWatermarks to ViewChange checkpoint and fetch missed batches
-func (rbft *rbftImpl) primaryProcessNewView(initialCp ViewChange_C, replicas []replicaInfo, nv *NewView) events.Event {
+func (rbft *rbftImpl) primaryProcessNewView(initialCp ViewChange_C, replicas []replicaInfo, nv *NewView) consensusEvent {
 
 	// Check if primary need state update
 	err := rbft.checkIfNeedStateUpdate(initialCp, replicas)
@@ -572,7 +571,7 @@ func (rbft *rbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing
 	return newReqBatchMissing
 }
 
-func (rbft *rbftImpl) processReqInNewView(nv *NewView) events.Event {
+func (rbft *rbftImpl) processReqInNewView(nv *NewView) consensusEvent {
 	rbft.logger.Debugf("Replica %d accepting new-view to view %d", rbft.id, rbft.view)
 
 	//if vcHandled active return nill, else set vcHandled active
@@ -614,7 +613,7 @@ func (rbft *rbftImpl) processReqInNewView(nv *NewView) events.Event {
 
 //Processing enters here after receiving FinishVcReset message
 //Do some state check
-func (rbft *rbftImpl) recvFinishVcReset(finish *FinishVcReset) events.Event {
+func (rbft *rbftImpl) recvFinishVcReset(finish *FinishVcReset) consensusEvent {
 	//Check whether we are in viewChange
 	if atomic.LoadUint32(&rbft.activeView) == 1 {
 		rbft.logger.Warningf("Replica %d is not in viewChange, but received FinishVcReset from replica %d", rbft.id, finish.ReplicaId)
@@ -645,7 +644,7 @@ func (rbft *rbftImpl) recvFinishVcReset(finish *FinishVcReset) events.Event {
 //HandleTailInNewView check whether we can finish view change
 //such as number of peers send finishVcReset.
 //If view change success,processing will send VIEW_CHANGED_EVENT to rbft
-func (rbft *rbftImpl) handleTailInNewView() events.Event {
+func (rbft *rbftImpl) handleTailInNewView() consensusEvent {
 
 	quorum := 0
 	hasPrimary := false
@@ -851,7 +850,7 @@ func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 //Processing enters here after peer Determined the new view and finished VCReset
 //FinishViewChange Broadcast FinishVcReset to other peers and
 //send it to itself.
-func (rbft *rbftImpl) finishViewChange() events.Event {
+func (rbft *rbftImpl) finishViewChange() consensusEvent {
 
 	finish := &FinishVcReset{
 		ReplicaId: rbft.id,
@@ -1100,7 +1099,7 @@ func (rbft *rbftImpl) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
 
 //Receive the RequestBatch from other peers
 //If receive all request batch,processing jump to processReqInNewView or processReqInUpdate
-func (rbft *rbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) events.Event {
+func (rbft *rbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) consensusEvent {
 	//Check if in inNegoView
 	if rbft.status.getState(&rbft.status.inNegoView) {
 		rbft.logger.Debugf("Replica %d try to recvReturnRequestBatch, but it's in nego-view", rbft.id)
@@ -1169,7 +1168,7 @@ func (rbft *rbftImpl) startNewViewTimer(timeout time.Duration, reason string) {
 		EventType: VIEW_CHANGE_TIMER_EVENT,
 	}
 
-	rbft.timerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, event, rbft.rbftEventQueue)
+	rbft.timerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, event, rbft.eventMux)
 }
 
 //softstartNewViewTimer start a new view timer no matter how many existed new view timer
@@ -1183,7 +1182,7 @@ func (rbft *rbftImpl) softStartNewViewTimer(timeout time.Duration, reason string
 		EventType: VIEW_CHANGE_TIMER_EVENT,
 	}
 
-	rbft.timerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, event, rbft.rbftEventQueue)
+	rbft.timerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, event, rbft.eventMux)
 }
 
 //Check if View change messages correct
