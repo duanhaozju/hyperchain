@@ -972,8 +972,8 @@ func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
 	}
 	sort.Sort(sortableUint64Slice(keys))
 
-	for _, hash := range targetSet {
-		hashList = append(hashList, hash)
+	for _, seqNo := range keys {
+		hashList = append(hashList, targetSet[seqNo])
 	}
 
 	rbft.batchMgr.txPool.GetTxsBack(hashList)
