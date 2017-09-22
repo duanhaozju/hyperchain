@@ -856,26 +856,27 @@ func (rbft *rbftImpl) processTransaction(req txRequest) consensusEvent {
 		atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 ||
 		rbft.status.checkStatesOr(&rbft.status.inNegoView) {
 		_, err = rbft.batchMgr.txPool.AddNewTx(req.tx, false, req.new)
-	}
-	// primary nodes would check if this transaction triggered generating a batch or not
-	if rbft.isPrimary(rbft.id) {
-		if !rbft.batchMgr.isBatchTimerActive() { // start batch timer when this node receives the first transaction of a batch
-			rbft.startBatchTimer()
-		}
-		isGenerated, err = rbft.batchMgr.txPool.AddNewTx(req.tx, true, req.new)
-		if isGenerated { // If this transaction triggers generating a batch, stop batch timer
-			rbft.stopBatchTimer()
-		}
 	} else {
-		_, err = rbft.batchMgr.txPool.AddNewTx(req.tx, false, req.new)
-	}
-
-	if rbft.batchMgr.txPool.IsPoolFull() {
-		atomic.StoreUint32(&rbft.poolFull, 1)
+		// primary nodes would check if this transaction triggered generating a batch or not
+		if rbft.isPrimary(rbft.id) {
+			if !rbft.batchMgr.isBatchTimerActive() { // start batch timer when this node receives the first transaction of a batch
+				rbft.startBatchTimer()
+			}
+			isGenerated, err = rbft.batchMgr.txPool.AddNewTx(req.tx, true, req.new)
+			if isGenerated { // If this transaction triggers generating a batch, stop batch timer
+				rbft.stopBatchTimer()
+			}
+		} else {
+			_, err = rbft.batchMgr.txPool.AddNewTx(req.tx, false, req.new)
+		}
 	}
 
 	if err != nil {
 		rbft.logger.Warningf(err.Error())
+	}
+
+	if rbft.batchMgr.txPool.IsPoolFull() {
+		atomic.StoreUint32(&rbft.poolFull, 1)
 	}
 
 	return nil

@@ -4,8 +4,7 @@ package txpool
 
 import "errors"
 
-// batchTimerEvent is sent when the batch timer expires
-type batchTimerEvent struct{}
+
 
 var (
 	// ErrDuplicateTx is returned if the transaction is a duplicate one.

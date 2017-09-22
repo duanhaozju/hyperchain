@@ -111,7 +111,6 @@ func (rbft *rbftImpl) initNegoView() error {
 		Type:    ConsensusMessage_NEGOTIATE_VIEW_RESPONSE,
 		Payload: consensusPayload,
 	}
-	rbft.logger.Error("return responseMsg")
 	go rbft.eventMux.Post(responseMsg)
 
 	return nil
@@ -218,7 +217,6 @@ func (rbft *rbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) consensusEvent
 			if needUpdate {
 				rbft.parseSpecifyCertStore()
 			}
-			rbft.logger.Error("finish recovery")
 			return &LocalEvent{
 				Service:   RECOVERY_SERVICE,
 				EventType: RECOVERY_NEGO_VIEW_DONE_EVENT,

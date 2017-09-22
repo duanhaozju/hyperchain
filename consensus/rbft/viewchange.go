@@ -479,7 +479,8 @@ func (rbft *rbftImpl) processNewView() consensusEvent {
 		return nil
 	}
 
-	cp, ok, replicas := rbft.selectInitialCheckpoint(nv.Vset)
+	vset := rbft.getViewChanges()
+	cp, ok, replicas := rbft.selectInitialCheckpoint(vset)
 	if !ok {
 		rbft.logger.Warningf("Replica %d could not determine initial checkpoint: %+v",
 			rbft.id, rbft.vcMgr.viewChangeStore)
@@ -488,7 +489,7 @@ func (rbft *rbftImpl) processNewView() consensusEvent {
 
 
 	// Check if the xset sent by new primary is built correctly by the aset
-	msgList := rbft.assignSequenceNumbers(nv.Vset, cp.SequenceNumber)
+	msgList := rbft.assignSequenceNumbers(vset, cp.SequenceNumber)
 	if msgList == nil {
 		rbft.logger.Warningf("Replica %d could not assign sequence numbers: %+v",
 			rbft.id, rbft.vcMgr.viewChangeStore)
@@ -882,9 +883,9 @@ func (rbft *rbftImpl) getViewChanges() (vset []*ViewChange) {
 	return
 }
 
-//SelectInitialCheckpointselect checkpoint from received ViewChange message
-//If find suitable checkpoint ,it return a certain checkpoint and the  replicas id list which replicas has this checkpoint
-//The checkpoint is max checkpoint which exists in at least oneCorrectQuorum peers and greater then low waterMark
+// selectInitialCheckpointselect checkpoint from received ViewChange message
+// If find suitable checkpoint ,it return a certain checkpoint and the  replicas id list which replicas has this checkpoint
+// The checkpoint is max checkpoint which exists in at least oneCorrectQuorum peers and greater then low waterMark
 // in at least commonCaseQuorum.
 func (rbft *rbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint ViewChange_C, ok bool, replicas []replicaInfo) {
 	checkpoints := make(map[ViewChange_C][]*ViewChange)
@@ -945,11 +946,11 @@ func (rbft *rbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 	return
 }
 
-//Find the suitable batches for recovery to according to ViewChange and low waterMark
-//The selected bathes match following condition
-//If batch is not a NullRequest batch, the pre-prepare of this batch is equal or greater than commonCaseQuorum
-//and the prepare is equal or greater then oneCorrectQuorum.
-//In this release, batch should not be NUllRequest batch
+// Find the suitable batches for recovery to according to ViewChange and low waterMark
+// The selected bathes match following condition
+// If batch is not a NullRequest batch, the pre-prepare of this batch is equal or greater than commonCaseQuorum
+// and the prepare is equal or greater then oneCorrectQuorum.
+// In this release, batch should not be NUllRequest batch
 func (rbft *rbftImpl) assignSequenceNumbers(vset []*ViewChange, h uint64) map[uint64]string {
 	msgList := make(map[uint64]string)
 
@@ -971,7 +972,10 @@ nLoop:
 					}
 					// "∀<n,d',v'> ∈ m'.P"
 					for _, emp := range mp.Pset {
-						if n == emp.SequenceNumber && !(emp.View < em.View || (emp.View == em.View && emp.BatchDigest == em.BatchDigest)) {
+						if n != emp.SequenceNumber {
+							continue
+						}
+						if !(emp.View < em.View || (emp.View == em.View && emp.BatchDigest == em.BatchDigest)) {
 							continue mpLoop
 						}
 					}
@@ -987,8 +991,12 @@ nLoop:
 				for _, mp := range vset {
 					// "∃<n,d',v'> ∈ m'.Q"
 					for _, emp := range mp.Qset {
-						if n == emp.SequenceNumber && emp.View >= em.View && emp.BatchDigest == em.BatchDigest {
+						if n != emp.SequenceNumber {
+							continue
+						}
+						if emp.View >= em.View && emp.BatchDigest == em.BatchDigest {
 							quorum++
+							break
 						}
 					}
 				}
@@ -1009,7 +1017,11 @@ nLoop:
 		// "else if ∃2f+1 messages m ∈ S"
 	nullLoop:
 		for _, m := range vset {
-			// "m.P has no entry"
+			// "m.h < n"
+			if m.H >= n {
+				continue
+			}
+			// "m.P has no entry for n"
 			for _, em := range m.Pset {
 				if em.SequenceNumber == n {
 					continue nullLoop
