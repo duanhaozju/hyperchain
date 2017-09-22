@@ -85,34 +85,21 @@ func TestUnmarshalJSON(t *testing.T) {
 }
 func TestToInt64(t *testing.T) {
 	n := Number(456)
-	ref := n.ToInt64()
+	ref := n.Int64()
 	if ref != int64(456) {
 		t.Errorf("ToInt64 wrong")
 	}
 	var n2 *Number
 
-	ref = n2.ToInt64()
+	ref = n2.Int64()
 	if ref != int64(0) {
 		t.Errorf("ToInt64.1 wrong")
 	}
 }
 
-func TestToUint64(t *testing.T) {
-	n := Number(456)
-	ref := n.ToUint64()
-	if ref != uint64(456) {
-		t.Errorf("ToUInt64.1 wrong")
-	}
-	n = Number(-5)
-	ref = n.ToUint64()
-	if ref != uint64(0) {
-		t.Errorf("ToUInt64.2 wrong")
-	}
-}
-
 func TestToInt(t *testing.T) {
 	n := Number(456)
-	ref := n.ToInt()
+	ref := n.Int()
 	if ref != int(456) {
 		t.Errorf("ToInt.1 wrong")
 	}

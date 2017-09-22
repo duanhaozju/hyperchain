@@ -30,17 +30,17 @@ func GetApiObjectByNamespace(name string) *API {
 
 type Number int64
 
-func NewInt64ToNumber(n int64) *Number {
+func int64ToNumber(n int64) *Number {
 	num := Number(n)
 	return &num
 }
 
-func NewUint64ToNumber(n uint64) *Number {
+func uint64ToNumber(n uint64) *Number {
 	num := Number(n)
 	return &num
 }
 
-func NewIntToNumber(n int) *Number {
+func intToNumber(n int) *Number {
 	num := Number(n)
 	return &num
 }
@@ -72,26 +72,19 @@ func (n *Number) UnmarshalJSON(data []byte) error {
 	} else if v < 0 {
 		return fmt.Errorf("number can't be negative or zero, but get %v", input)
 	} else {
-		*n = *NewUint64ToNumber(v)
+		*n = *uint64ToNumber(v)
 		return nil
 	}
 }
 
-func (n *Number) ToInt64() int64 {
-	if n == nil {
-		return 0
-	}
-	return int64(*n)
-}
-
-func (n Number) ToUint64() uint64 {
+func (n Number) Int64() int64 {
 	if n <= 0 {
 		return 0
 	}
-	return uint64(n)
+	return int64(n)
 }
 
-func (n Number) ToInt() int {
+func (n Number) Int() int {
 	if n <= 0 {
 		return 0
 	}
@@ -100,7 +93,7 @@ func (n Number) ToInt() int {
 
 type BlockNumber string
 
-func Uint64ToBlockNumber(n uint64) *BlockNumber {
+func uint64ToBlockNumber(n uint64) *BlockNumber {
 	number := BlockNumber(strconv.FormatUint(n, 10))
 	return &number
 }

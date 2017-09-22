@@ -61,7 +61,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	// 2. create a new transaction instance
 	payload := common.FromHex(realArgs.Payload)
 	txValue := types.NewTransactionValue(DEFAULT_GAS_PRICE, DEFAULT_GAS,
-		realArgs.Value.ToInt64(), payload, args.Opcode, parseVmType(realArgs.VmType))
+		realArgs.Value.Int64(), payload, args.Opcode, parseVmType(realArgs.VmType))
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
@@ -204,39 +204,54 @@ func (contract *Contract) GetContractCountByAddr(addr common.Address) (*Number, 
 		return nil, &common.AccountNotExistError{Message: addr.Hex()}
 	}
 
-	return NewUint64ToNumber(stateDb.GetNonce(addr)), nil
+	return uint64ToNumber(stateDb.GetNonce(addr)), nil
 
 }
 
-// TODO add annotation
+// EncryptoArgs sepcifies parameters for Contract.EncryptoMessage function call.
 type EncryptoArgs struct {
-	Balance   Number `json:"balance"`
-	Amount    Number `json:"amount"`
-	HmBalance string `json:"hmBalance"`
+
+	// The balance(plain text) of account A before transferring money to account B.
+	Balance   Number 		`json:"balance"`
+
+	// The amount(plain text) that account A will transfer to account B.
+	Amount    Number 		`json:"amount"`
+
+	// Invalid homomorphic encryption transaction amount of account A when a person transfers money(amount homomorphic encryption) that
+	// can't be verified by account A. InvalidHmValue is optional.
+	// For example, account C transfers 10 dollars to account A, but this transaction fails to pass validation of account A. Therefore,
+	// account A saves 10 value encrypted as invalid homomorphic encryption value.
+	InvalidHmValue string 	`json:"invalidHmValue"`
 }
 
 type HmResult struct {
+
+	// The homomorphic sum of the homomorphic encryption balance of account A after transferring money to account B (balance - amount)
+	// and invalid homomorphic value of account A.
 	NewBalance_hm string `json:"newBalance"`
+
+	// The amount(homomorphic encryption text) that account A will transfer to account B.
 	Amount_hm     string `json:"amount"`
 }
 
+// EncryptoMessage encrypts data by homomorphic encryption.
 func (contract *Contract) EncryptoMessage(args EncryptoArgs) (*HmResult, error) {
 
 	balance_bigint := new(big.Int)
-	balance_bigint.SetInt64(args.Balance.ToInt64())
+	balance_bigint.SetInt64(args.Balance.Int64())
 
 	amount_bigint := new(big.Int)
-	amount_bigint.SetInt64(args.Amount.ToInt64())
+	amount_bigint.SetInt64(args.Amount.Int64())
 	var isValid bool
 	var newBalance_hm []byte
 	var amount_hm []byte
 
-	if args.HmBalance == "" {
+	if args.InvalidHmValue == "" {
 		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(),
 			amount_bigint.Bytes(), nil, getPaillierPublickey(contract.config))
 	} else {
 		hmBalance_bigint := new(big.Int)
-		hmBalance_bigint.SetString(args.HmBalance, 10)
+		hmBalance_bigint.SetString(args.InvalidHmValue, 10)
 		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(),
 			amount_bigint.Bytes(), hmBalance_bigint.Bytes(), getPaillierPublickey(contract.config))
 	}
@@ -254,18 +269,31 @@ func (contract *Contract) EncryptoMessage(args EncryptoArgs) (*HmResult, error) 
 	}, nil
 }
 
-type ValueArgs struct {
+// CheckArgs sepcifies parameters for Contract.CheckHmValue function call.
+type CheckArgs struct {
+
+	// All unverified transaction amount list (plain text).
+	// For example, account A transfers 10 dollars to B twice, RawValue is [10,10].
 	RawValue   []int64  `json:"rawValue"`
+
+	// All unverified transaction amount list (homomorphic encryption).
+	// For example, account A transfers 10 dollars to B twice, EncryValue is [(encrypted 10), (encrypted 10)].
 	EncryValue []string `json:"encryValue"`
+
+	// Invalid homomorphic encryption value of account B.
 	Illegalhm  string   `json:"illegalhm"`
 }
 
+
 type HmCheckResult struct {
 	CheckResult        []bool `json:"checkResult"`
+
+	// The homomorphic sum of all invalid homomorphic encryption transaction amount of B.
 	SumIllegalHmAmount string `json:"illegalHmAmount"`
 }
 
-func (contract *Contract) CheckHmValue(args ValueArgs) (*HmCheckResult, error) {
+// CheckHmValue returns verification result that account B verifies transaction amount that account A transfers to B.
+func (contract *Contract) CheckHmValue(args CheckArgs) (*HmCheckResult, error) {
 	if len(args.RawValue) != len(args.EncryValue) {
 		return nil, &common.InvalidParamsError{Message: "invalid params, the length of rawValue is " +
 			strconv.Itoa(len(args.RawValue)) + ", but the length of encryValue is " +

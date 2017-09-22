@@ -137,7 +137,7 @@ func (blk *Block) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, err
 	}
 
 	return &BlocksIntervalResult{
-		SumOfBlocks: NewUint64ToNumber(sumOfBlocks),
+		SumOfBlocks: uint64ToNumber(sumOfBlocks),
 		StartBlock:  startBlock,
 		EndBlock:    endBlock,
 	}, nil
@@ -155,7 +155,7 @@ func (blk *Block) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, er
 	} else if err != nil {
 		return 0, &common.CallbackError{Message: err.Error()}
 	} else {
-		return *NewInt64ToNumber(t), nil
+		return *int64ToNumber(t), nil
 	}
 }
 
@@ -167,7 +167,7 @@ func (blk *Block) GetChainHeight() (*BlockNumber, error) {
 	} else if chain.Height == 0 {
 		return nil, &common.NoBlockGeneratedError{Message: "There is no block generated!"}
 	}
-	return Uint64ToBlockNumber(chain.Height), nil
+	return uint64ToBlockNumber(chain.Height), nil
 }
 
 func latestBlock(namespace string) (*BlockResult, error) {
@@ -214,19 +214,19 @@ func getBlocksByTime(namespace string, startTime, endTime int64) (sumOfBlocks ui
 		}
 		if block.WriteTime < startTime {
 			if i != height {
-				startBlock = Uint64ToBlockNumber(i + 1)
+				startBlock = uint64ToBlockNumber(i + 1)
 			}
 			return sumOfBlocks, startBlock, endBlock, nil
 		}
 		if block.WriteTime >= startTime && block.WriteTime <= endTime {
 			sumOfBlocks += 1
 			if sumOfBlocks == 1 {
-				endBlock = Uint64ToBlockNumber(i)
+				endBlock = uint64ToBlockNumber(i)
 			}
 		}
 	}
 	if i != height {
-		startBlock = Uint64ToBlockNumber(i + 1)
+		startBlock = uint64ToBlockNumber(i + 1)
 	}
 	return sumOfBlocks, startBlock, endBlock, nil
 }
@@ -248,24 +248,24 @@ func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*Blo
 	if isPlain {
 		return &BlockResult{
 			Version:    string(block.Version),
-			Number:     Uint64ToBlockNumber(block.Number),
+			Number:     uint64ToBlockNumber(block.Number),
 			Hash:       common.BytesToHash(block.BlockHash),
 			ParentHash: common.BytesToHash(block.ParentHash),
 			WriteTime:  block.WriteTime,
-			AvgTime:    NewInt64ToNumber(edb.CalcResponseAVGTime(namespace, block.Number, block.Number)),
-			TxCounts:   NewInt64ToNumber(txCounts),
+			AvgTime:    int64ToNumber(edb.CalcResponseAVGTime(namespace, block.Number, block.Number)),
+			TxCounts:   int64ToNumber(txCounts),
 			MerkleRoot: common.BytesToHash(block.MerkleRoot),
 		}, nil
 	}
 
 	return &BlockResult{
 		Version:    string(block.Version),
-		Number:     Uint64ToBlockNumber(block.Number),
+		Number:     uint64ToBlockNumber(block.Number),
 		Hash:       common.BytesToHash(block.BlockHash),
 		ParentHash: common.BytesToHash(block.ParentHash),
 		WriteTime: block.WriteTime,
-		AvgTime:   NewInt64ToNumber(edb.CalcResponseAVGTime(namespace, block.Number, block.Number)),
-		TxCounts:  NewInt64ToNumber(txCounts),
+		AvgTime:   int64ToNumber(edb.CalcResponseAVGTime(namespace, block.Number, block.Number)),
+		TxCounts:  int64ToNumber(txCounts),
 		MerkleRoot:   common.BytesToHash(block.MerkleRoot),
 		Transactions: transactions,
 	}, nil
