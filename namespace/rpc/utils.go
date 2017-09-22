@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"unicode"
 	"unicode/utf8"
+	"strconv"
 )
 
 var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
@@ -101,6 +102,29 @@ func isPubSub(methodType reflect.Type) bool {
 	return isContextType(methodType.In(1)) &&
 		isIDType(methodType.Out(0)) &&
 		isErrorType(methodType.Out(1))
+}
+
+func isEmpty(v reflect.Value) bool {
+	k := v.Kind()
+	switch k {
+	case reflect.String:
+		return v.String() == ""
+	case reflect.Ptr, reflect.Chan, reflect.Func, reflect.Map, reflect.Interface, reflect.Slice:
+		return v.IsNil()
+	case reflect.Int, reflect.Int8, reflect.Int16,
+		reflect.Int32, reflect.Int64:
+		return strconv.FormatInt(v.Int(), 10) == "0"
+	case reflect.Uint, reflect.Uint8, reflect.Uint16,
+		reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return strconv.FormatUint(v.Uint(), 10) == "0"
+	default:
+		if addr, ok := v.Interface().(common.Address); ok {
+			return addr.IsZero()
+		} else if hash, ok := v.Interface().(common.Hash); ok {
+			return common.EmptyHash(hash)
+		}
+		return true
+	}
 }
 
 // suitableCallbacks iterates over the methods of the given type. It will determine if a method satisfies the criteria

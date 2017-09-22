@@ -57,44 +57,6 @@ type intArgs struct {
 	to   uint64
 }
 
-// If the client send BlockNumber "", it will be converted to 0. If client send BlockNumber 0, it will return error.
-func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) {
-	if args.From == nil || args.To == nil {
-		return nil, &common.InvalidParamsError{Message: "missing params 'from' or 'to'"}
-	} else if chain, err := edb.GetChain(namespace); err != nil {
-		return nil, &common.CallbackError{Message: err.Error()}
-	} else {
-		latest := chain.Height
-		from, err := args.From.BlockNumberToUint64(latest)
-		if err != nil {
-			return nil, &common.InvalidParamsError{Message: err.Error()}
-		}
-		to, err := args.To.BlockNumberToUint64(latest)
-		if err != nil {
-			return nil, &common.InvalidParamsError{Message: err.Error()}
-		}
-
-		if from > to || from < 1 || to < 1 {
-			return nil, &common.InvalidParamsError{Message: "invalid params from or to"}
-		} else {
-			return &intArgs{from: from, to: to}, nil
-		}
-	}
-}
-
-func prepareBlockNumber(n BlockNumber, namespace string) (uint64, error) {
-	chain, err := edb.GetChain(namespace)
-	if err != nil {
-		return 0, &common.CallbackError{Message: err.Error()}
-	}
-	latest := chain.Height
-	number, err := n.BlockNumberToUint64(latest)
-	if err != nil {
-		return 0, &common.InvalidParamsError{Message: err.Error()}
-	}
-	return number, nil
-}
-
 // GetBlocks returns all the block for given block number.
 func (blk *Block) GetBlocks(args IntervalArgs) ([]*BlockResult, error) {
 	trueArgs, err := prepareIntervalArgs(args, blk.namespace)

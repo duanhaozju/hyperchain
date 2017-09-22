@@ -52,15 +52,15 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 
 	var tx *types.Transaction
 
-	// verify if the parameters are valid
+	// 1. verify if the parameters are valid
 	realArgs, err := prepareExcute(args, txType)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	// create a transaction instance
+	// 2. create a new transaction instance
 	payload := common.FromHex(realArgs.Payload)
-	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
+	txValue := types.NewTransactionValue(DEFAULT_GAS_PRICE, DEFAULT_GAS,
 		realArgs.Value.ToInt64(), payload, args.Opcode, parseVmType(realArgs.VmType))
 
 	value, err := proto.Marshal(txValue)
@@ -86,7 +86,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	tx.Signature = common.FromHex(realArgs.Signature)
 	tx.TransactionHash = tx.Hash().Bytes()
 
-	// check if there is duplicated transaction
+	// 3. check if there is duplicated transaction
 	var exist bool
 	if err, exist = edb.LookupTransaction(contract.namespace, tx.GetHash()); err != nil || exist == true {
 		if exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash); exist {
@@ -94,13 +94,13 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 		}
 	}
 
-	// verify transaction signature
+	// 4. verify transaction signature
 	if !tx.ValidateSign(contract.eh.GetAccountManager().Encryption, kec256Hash) {
-		log.Error("invalid signature")
-		// ATTENTION, return invalid transactino directly
+		log.Errorf("invalid signature %v", common.ToHex(tx.TransactionHash))
 		return common.Hash{}, &common.SignatureInvalidError{Message: "invalid signature, tx hash " + common.ToHex(tx.TransactionHash)}
 	}
 
+	// 5. post transaction event
 	if contract.eh.NodeIdentification() == manager.IdentificationNVP {
 		ch := make(chan bool)
 		go contract.eh.GetEventObject().Post(event.NewTxEvent{
@@ -112,6 +112,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 		res := <-ch
 		close(ch)
 		if res == false {
+			// nvp node fails to forward tx to vp node
 			return common.Hash{}, &common.CallbackError{Message: "send tx to nvp failed."}
 		}
 
@@ -132,7 +133,7 @@ type CompileCode struct {
 	Types []string `json:"types"`
 }
 
-// ComplieContract complies contract to ABI
+// ComplieContract complies solidity contract. It will return abi, bin and contract name.
 func (contract *Contract) CompileContract(ct string) (*CompileCode, error) {
 	abi, bin, names, err := compiler.CompileSourcefile(ct)
 
@@ -163,6 +164,7 @@ func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
 	return deployOrInvoke(contract, args, 2, contract.namespace)
 }
 
+// MaintainContract maintains contract, including upgrade contract, freeze contract and unfreeze contract.
 func (contract *Contract) MaintainContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{Message: "system is too busy to response "}
@@ -206,6 +208,7 @@ func (contract *Contract) GetContractCountByAddr(addr common.Address) (*Number, 
 
 }
 
+// TODO add annotation
 type EncryptoArgs struct {
 	Balance   Number `json:"balance"`
 	Amount    Number `json:"amount"`
@@ -297,35 +300,7 @@ func (contract *Contract) CheckHmValue(args ValueArgs) (*HmCheckResult, error) {
 	}, nil
 }
 
-// GetStorageByAddr returns the storage by given contract address and bock number.
-// The method is offered for hyperchain internal test.
-func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]string, error) {
-	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
-
-	if err != nil {
-		return nil, err
-	}
-	mp := make(map[string]string)
-
-	if obj := stateDb.GetAccount(addr); obj == nil {
-		return nil, &common.AccountNotExistError{Message: addr.Hex()}
-	} else {
-		cb := func(key common.Hash, value []byte) bool {
-			return true
-		}
-		storages := obj.ForEachStorage(cb)
-		if len(storages) == 0 {
-			return nil, nil
-		}
-
-		for k, v := range storages {
-			mp[k.Hex()] = common.Bytes2Hex(v)
-		}
-	}
-	return mp, nil
-}
-
-// GetDeployedList return all deployed contracts list (include suicided)
+// GetDeployedList returns all deployed contracts list (including destroyed).
 func (contract *Contract) GetDeployedList(addr common.Address) ([]string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
@@ -338,7 +313,7 @@ func (contract *Contract) GetDeployedList(addr common.Address) ([]string, error)
 	}
 }
 
-// GetCreator return creator address
+// GetCreator returns contract creator address.
 func (contract *Contract) GetCreator(addr common.Address) (common.Address, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
@@ -354,7 +329,7 @@ func (contract *Contract) GetCreator(addr common.Address) (common.Address, error
 	}
 }
 
-// GetStatus return contract status
+// GetStatus returns current contract status.
 func (contract *Contract) GetStatus(addr common.Address) (string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
@@ -378,7 +353,7 @@ func (contract *Contract) GetStatus(addr common.Address) (string, error) {
 	}
 }
 
-// GetCreateTime return contract status
+// GetCreateTime returns contract creation time.
 func (contract *Contract) GetCreateTime(addr common.Address) (string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
@@ -397,20 +372,6 @@ func (contract *Contract) GetCreateTime(addr common.Address) (string, error) {
 		}
 		return time.Unix(blk.Timestamp/1e9, blk.Timestamp%1e9).String(), nil
 	}
-}
-
-// Deprecated
-func (contract *Contract) GetArchive(addr common.Address, date string) (map[string]map[string]string, error) {
-	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
-	if err != nil {
-		return nil, err
-	}
-
-	if obj := stateDb.GetAccount(addr); obj == nil {
-		return nil, &common.AccountNotExistError{Message: addr.Hex()}
-	}
-
-	return stateDb.ShowArchive(addr, date), nil
 }
 
 func getBlockStateDb(namespace string, config *common.Config) (vm.Database, error) {

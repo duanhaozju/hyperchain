@@ -39,7 +39,7 @@ type httpReadWriteCloser struct {
 	io.WriteCloser
 }
 
-// GetWSServer creates a new wsServerImpl instance implements internalRPCServer interface.
+// GetWSServer creates and returns a new wsServerImpl instance implements internalRPCServer interface.
 func GetWSServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
 	if wsS == nil {
 		wsS = &wsServerImpl{

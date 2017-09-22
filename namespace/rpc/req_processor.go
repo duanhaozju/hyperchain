@@ -296,7 +296,7 @@ func (jrpi *JsonRpcProcessorImpl) handle(ctx context.Context, req *serverRequest
 	if req.callb.errPos >= 0 { // test if method returned an error
 		if !reply[req.callb.errPos].IsNil() {
 			e := reply[req.callb.errPos].Interface().(common.RPCError)
-			if !reply[0].IsNil() {
+			if !isEmpty(reply[0]) {
 				return jrpi.CreateErrorResponseWithInfo(&req.id, e, reply[0].Interface()), nil
 			}
 			return jrpi.CreateErrorResponse(&req.id, e), nil

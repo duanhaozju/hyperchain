@@ -18,9 +18,9 @@ type Node struct {
 	namespace string
 	eh        *manager.EventHub
 }
-
+// TODO add annotation, fix bug about GetNodes returns null
 type NodeResult struct {
-	Status      int         `json:"status"`
+	Status      int         `json:"status"`		//
 	CName       string      `json:"cName"`
 	IP          string      `json:"ip"`
 	Port        int         `json:"port"`
@@ -35,7 +35,7 @@ func NewPublicNodeAPI(namespace string, eh *manager.EventHub) *Node {
 	}
 }
 
-// GetNodes returns status of all the nodes
+// GetNodes returns all nodes information.
 func (node *Node) GetNodes() (p2p.PeerInfos, error) {
 	if node.eh == nil {
 		return nil, &common.CallbackError{Message: "protocolManager is nil"}

@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"path"
 	"time"
+	"fmt"
 )
 
 const (
@@ -120,4 +121,92 @@ func substr(str string, start int, end int) string {
 	rs := []rune(str)
 
 	return string(rs[start:end])
+}
+
+// 0 value for txType means sends normal transaction, 1 means deploys contract, 2 means invokes contract,
+// 3 means signHash, 4 means maintains contract.
+func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
+	if args.From.Hex() == (common.Address{}).Hex() {
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "address 'from' is invalid"}
+	}
+	if (txType == 0 || txType == 2 || txType == 4) && args.To == nil {
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "address 'to' is invalid"}
+	}
+	if args.Timestamp <= 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "'timestamp' is invalid"}
+	}
+	if txType != 3 && args.Signature == "" {
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "'signature' can't be empty"}
+	}
+	if args.Nonce <= 0 {
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "'nonce' is invalid"}
+	}
+	if txType == 4 && args.Opcode == 1 && (args.Payload == "" || args.Payload == "0x") {
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "contract code is empty"}
+	}
+	if txType == 1 && (args.Payload == "" || args.Payload == "0x") {
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "contract code is empty"}
+	}
+	if args.SnapshotId != "" && args.Simulate != true {
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "can not query history ledger without `simulate` mode"}
+	}
+	if args.Timestamp+time.Duration(24*time.Hour).Nanoseconds() < time.Now().UnixNano() {
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "transaction out of date"}
+	}
+
+	return args, nil
+}
+
+// If the client send BlockNumber "", it will be converted to 0. If client send BlockNumber 0, it will return error.
+func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) {
+	if args.From == nil || args.To == nil {
+		return nil, &common.InvalidParamsError{Message: "missing params 'from' or 'to'"}
+	} else if chain, err := edb.GetChain(namespace); err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	} else {
+		latest := chain.Height
+		from, err := args.From.BlockNumberToUint64(latest)
+		if err != nil {
+			return nil, &common.InvalidParamsError{Message: err.Error()}
+		}
+		to, err := args.To.BlockNumberToUint64(latest)
+		if err != nil {
+			return nil, &common.InvalidParamsError{Message: err.Error()}
+		}
+
+		if from > to || from < 1 || to < 1 {
+			return nil, &common.InvalidParamsError{Message: "invalid params from or to"}
+		} else {
+			return &intArgs{from: from, to: to}, nil
+		}
+	}
+}
+
+func prepareBlockNumber(n BlockNumber, namespace string) (uint64, error) {
+	chain, err := edb.GetChain(namespace)
+	if err != nil {
+		return 0, &common.CallbackError{Message: err.Error()}
+	}
+	latest := chain.Height
+	number, err := n.BlockNumberToUint64(latest)
+	if err != nil {
+		return 0, &common.InvalidParamsError{Message: err.Error()}
+	}
+	return number, nil
+}
+
+func preparePagingArgs(args PagingArgs) (PagingArgs, error) {
+	if args.PageSize == 0 {
+		return PagingArgs{}, &common.InvalidParamsError{"'pageSize' can't be zero or empty"}
+	} else if args.Separated%args.PageSize != 0 {
+		return PagingArgs{}, &common.InvalidParamsError{"invalid 'pageSize' or 'separated'"}
+	} else if args.BlkNumber < args.MinBlkNumber || args.BlkNumber > args.MaxBlkNumber {
+		return PagingArgs{}, &common.InvalidParamsError{fmt.Sprintf("'blkNumber' is out of range, it must be in the range %d to %d", args.MinBlkNumber, args.MaxBlkNumber)}
+	} else if args.MaxBlkNumber == BlockNumber(0) || args.MinBlkNumber == BlockNumber(0) {
+		return PagingArgs{}, &common.InvalidParamsError{"'minBlkNumber' or 'maxBlkNumber' can't be zero or empty"}
+	} else if args.ContractAddr == nil {
+		return PagingArgs{}, &common.InvalidParamsError{"'address' can't be empty"}
+	}
+
+	return args, nil
 }

@@ -39,8 +39,7 @@ type RPCServerImpl struct {
 	wsServer   internalRPCServer
 }
 
-// GetRPCServer creates a new RPCServerImpl instance
-// implements RPCServer interface.
+// GetRPCServer creates and returns a new RPCServerImpl instance implements RPCServer interface.
 func GetRPCServer(nr namespace.NamespaceManager, config *common.Config) RPCServer {
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
 	once.Do(func() {

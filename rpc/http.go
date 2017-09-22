@@ -37,7 +37,7 @@ type httpServerImpl struct {
 	httpHandler        *Server
 }
 
-// GetHttpServer creates a new httpServerImpl instance implements internalRPCServer interface.
+// GetHttpServer creates and returns a new httpServerImpl instance implements internalRPCServer interface.
 func GetHttpServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
 	if hs == nil {
 		hs = &httpServerImpl{
