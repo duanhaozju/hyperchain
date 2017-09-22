@@ -11,14 +11,14 @@ message Message {
     enum Type {
         UNDEFINED = 0;
         REGISTER = 1;
+        INVOKE = 2;
     }
 
     enum FROM {
-        UNDEFINED = 0;
-        APISERVER = 1;
-        CONSENSUS = 2;
-        EXECUTOR  = 3;
-        NETWORK   = 4;
+        APISERVER = 0;
+        CONSENSUS = 1;
+        EXECUTOR  = 2;
+        NETWORK   = 3;
     }
 
     Type type       = 1; // The basic message type.
@@ -37,16 +37,18 @@ message RegisterMessage {
 //ServiceMessage used by service component to send to Dispatcher.
 message ServiceMessage {
     enum Type {
-
+        InformPrimaryEvent = 0;
+        VCResetEvent = 1;
     }
     Type type = 1;
-    bytes payload = 2;
+    string namespace = 2;
+    bytes payload = 3;
 }
 
 //DispatcherMessage used by Dispatcher to send to specific service node.
 message DispatcherMessage {
     enum Type {
-
+        Test = 0;
     }
     Type type = 1;
     bytes payload = 2;
