@@ -126,7 +126,7 @@ func (n BlockNumber) BlockNumberToUint64(latest uint64) (uint64, error) {
 	} else if num <= 0 {
 		return 0, fmt.Errorf("block number can't be negative or zero, but get %v", input)
 	} else if num > latest {
-		return 0, fmt.Errorf("block number is out of range, and now latest block number is %d", latest)
+		return 0, fmt.Errorf("block number %v is out of range, and now latest block number is %d", input, latest)
 	} else {
 		return num, nil
 	}

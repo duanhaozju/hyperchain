@@ -11,7 +11,6 @@ import (
 	"math/big"
 	"path"
 	"time"
-	"fmt"
 )
 
 const (
@@ -197,15 +196,13 @@ func prepareBlockNumber(n BlockNumber, namespace string) (uint64, error) {
 
 func preparePagingArgs(args PagingArgs) (PagingArgs, error) {
 	if args.PageSize == 0 {
-		return PagingArgs{}, &common.InvalidParamsError{"'pageSize' can't be zero or empty"}
+		return PagingArgs{}, &common.InvalidParamsError{Message: "'pageSize' can't be zero or empty"}
 	} else if args.Separated%args.PageSize != 0 {
-		return PagingArgs{}, &common.InvalidParamsError{"invalid 'pageSize' or 'separated'"}
-	} else if args.BlkNumber < args.MinBlkNumber || args.BlkNumber > args.MaxBlkNumber {
-		return PagingArgs{}, &common.InvalidParamsError{fmt.Sprintf("'blkNumber' is out of range, it must be in the range %d to %d", args.MinBlkNumber, args.MaxBlkNumber)}
+		return PagingArgs{}, &common.InvalidParamsError{Message: "invalid 'pageSize' or 'separated'"}
 	} else if args.MaxBlkNumber == BlockNumber(0) || args.MinBlkNumber == BlockNumber(0) {
-		return PagingArgs{}, &common.InvalidParamsError{"'minBlkNumber' or 'maxBlkNumber' can't be zero or empty"}
+		return PagingArgs{}, &common.InvalidParamsError{Message: "'minBlkNumber' or 'maxBlkNumber' can't be zero or empty"}
 	} else if args.ContractAddr == nil {
-		return PagingArgs{}, &common.InvalidParamsError{"'address' can't be empty"}
+		return PagingArgs{}, &common.InvalidParamsError{Message: "'address' can't be empty"}
 	}
 
 	return args, nil

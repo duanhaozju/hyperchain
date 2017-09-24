@@ -669,13 +669,26 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 		return nil, err
 	}
 
+	blkNumber, err := prepareBlockNumber(realArgs.BlkNumber, tran.namespace)
+	if err != nil {
+		return nil, err
+	}
+	min, err := prepareBlockNumber(realArgs.MinBlkNumber, tran.namespace)
+	if err != nil {
+		return nil, err
+	}
+	max, err := prepareBlockNumber(realArgs.MaxBlkNumber, tran.namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	if blkNumber < min || blkNumber > max {
+		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("'blkNumber' %v is out of range, it must be in the range %v to %v", blkNumber, min, max)}
+	}
+
 	txs := make([]interface{}, 0)
 
 	// to comfirm starting position
-	blkNumber, err := prepareBlockNumber(realArgs.BlkNumber, tran.namespace) // 3
-	if err != nil {
-		return nil, &common.CallbackError{Message: err.Error()}
-	}
 	index := realArgs.TxIndex.Int()
 	separated := realArgs.Separated.Int()
 	contractAddr := realArgs.ContractAddr
@@ -749,14 +762,8 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 			blkNumber++
 			index = 0
 		} else {
-			return nil, &common.InvalidParamsError{fmt.Sprintf("'txIndex' %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blockTxCount)}
+			return nil, &common.InvalidParamsError{Message: fmt.Sprintf("'txIndex' %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blockTxCount)}
 		}
-	}
-
-	min, err := prepareBlockNumber(realArgs.MinBlkNumber, tran.namespace)
-	max, err := prepareBlockNumber(realArgs.MaxBlkNumber, tran.namespace)
-	if err != nil {
-		return nil, &common.InvalidParamsError{Message: err.Error()}
 	}
 
 	tran.log.Debugf("current transaction index = %v\n", index)
@@ -782,13 +789,26 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 		return nil, err
 	}
 
+	blkNumber, err := prepareBlockNumber(realArgs.BlkNumber, tran.namespace)
+	if err != nil {
+		return nil, err
+	}
+	min, err := prepareBlockNumber(realArgs.MinBlkNumber, tran.namespace)
+	if err != nil {
+		return nil, err
+	}
+	max, err := prepareBlockNumber(realArgs.MaxBlkNumber, tran.namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	if blkNumber < min || blkNumber > max {
+		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("'blkNumber' %v is out of range, it must be in the range %v to %v", blkNumber, min, max)}
+	}
+
 	txs := make([]interface{}, 0)
 
 	// to comfirm end position
-	blkNumber, err := prepareBlockNumber(realArgs.BlkNumber, tran.namespace) // 3
-	if err != nil {
-		return nil, &common.CallbackError{Message: err.Error()}
-	}
 	index := realArgs.TxIndex.Int() // 40
 	separated := realArgs.Separated.Int()
 	txCounts := 0
@@ -861,12 +881,6 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 		} else {
 			index--
 		}
-	}
-
-	min, err := prepareBlockNumber(realArgs.MinBlkNumber, tran.namespace)
-	max, err := prepareBlockNumber(realArgs.MaxBlkNumber, tran.namespace)
-	if err != nil {
-		return nil, &common.InvalidParamsError{Message: err.Error()}
 	}
 
 	tran.log.Debugf("current transaction index = %v\n", index)
