@@ -341,7 +341,7 @@ func (rbft *rbftImpl) nullReqTimerReset() {
 		EventType: CORE_NULL_REQUEST_TIMER_EVENT,
 	}
 
-	rbft.timerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, event, rbft.rbftEventQueue)
+	rbft.timerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, event, rbft.eventMux)
 }
 
 // stopFirstRequestTimer stops the first request timer event if current node is not primary

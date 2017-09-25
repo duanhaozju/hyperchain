@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"hyperchain/consensus/events"
 	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
@@ -26,7 +25,6 @@ type nodeManager struct {
 
 	routers           []byte // track the vp replicas' routers
 	inUpdatingN       uint32 // track if there are updating
-	updateTimer       events.Timer
 	updateTimeout     time.Duration          // time limit for N-f agree on update n
 	agreeUpdateStore  map[aidx]*AgreeUpdateN // track agree-update-n message
 	updateStore       map[uidx]*UpdateN      // track last update-n we received or sent
@@ -50,7 +48,7 @@ func newNodeMgr() *nodeManager {
 
 // dispatchNodeMgrMsg dispatches node manager service messages from other peers
 // and uses corresponding function to handle them.
-func (rbft *rbftImpl) dispatchNodeMgrMsg(e events.Event) events.Event {
+func (rbft *rbftImpl) dispatchNodeMgrMsg(e consensusEvent) consensusEvent {
 	switch et := e.(type) {
 	case *AddNode:
 		return rbft.recvAgreeAddNode(et)
@@ -68,7 +66,7 @@ func (rbft *rbftImpl) dispatchNodeMgrMsg(e events.Event) events.Event {
 	return nil
 }
 
-// recvLocalNewNode handles the local event about NewNode, which announces the
+// recvLocalNewNode handles the local consensusEvent about NewNode, which announces the
 // consentor that it's a new node.
 func (rbft *rbftImpl) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 
@@ -99,7 +97,7 @@ func (rbft *rbftImpl) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 	return nil
 }
 
-// recvLocalAddNode handles the local event about AddNode, which announces the
+// recvLocalAddNode handles the local consensusEvent about AddNode, which announces the
 // consentor that a new node want to participate in the consensus as a VP node.
 func (rbft *rbftImpl) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 
@@ -122,7 +120,7 @@ func (rbft *rbftImpl) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 	return nil
 }
 
-// recvLocalAddNode handles the local event about DelNode, which announces the
+// recvLocalAddNode handles the local consensusEvent about DelNode, which announces the
 // consentor that a VP node want to leave the consensus. Notice: the node
 // that want to leave away from consensus should also have this message
 func (rbft *rbftImpl) recvLocalDelNode(msg *protos.DelNodeMessage) error {
@@ -147,7 +145,7 @@ func (rbft *rbftImpl) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 	return nil
 }
 
-// recvLocalRouters handles the local event about the change of local routers.
+// recvLocalRouters handles the local consensusEvent about the change of local routers.
 func (rbft *rbftImpl) recvLocalRouters(routers []byte) {
 
 	rbft.logger.Debugf("Replica %d received local routers: %v", rbft.id, routers)
@@ -384,7 +382,7 @@ func (rbft *rbftImpl) sendReadyForN() error {
 }
 
 // recvReadyforNforAdd handles the ReadyForN message sent by new node.
-func (rbft *rbftImpl) recvReadyforNforAdd(ready *ReadyForN) events.Event {
+func (rbft *rbftImpl) recvReadyforNforAdd(ready *ReadyForN) consensusEvent {
 
 	rbft.logger.Debugf("Replica %d received ready_for_n from replica %d", rbft.id, ready.ReplicaId)
 
@@ -418,7 +416,7 @@ func (rbft *rbftImpl) recvReadyforNforAdd(ready *ReadyForN) events.Event {
 
 // sendAgreeUpdateNForAdd broadcasts the AgreeUpdateN message to others.
 // This will be only called after receiving the ReadyForN message sent by new node.
-func (rbft *rbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) events.Event {
+func (rbft *rbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) consensusEvent {
 
 	if atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 {
 		rbft.logger.Debugf("Replica %d already in updatingN, ignore send agree-update-n again")
@@ -513,8 +511,8 @@ func (rbft *rbftImpl) sendAgreeUpdateNforDel(key string) error {
 }
 
 // recvAgreeUpdateN handles the AgreeUpdateN message sent by others,
-// checks the correctness and judges if it can move on to QuorumEvent.
-func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
+// checks the correctness and judges if it can move on to QuorumconsensusEvent.
+func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 
 	rbft.logger.Debugf("Replica %d received agree-update-n from replica %d, v:%d, n:%d, flag:%v, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		rbft.id, agree.ReplicaId, agree.View, agree.N, agree.Flag, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
@@ -584,7 +582,7 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 
 	rbft.logger.Debugf("Replica %d now has %d agree-update requests for view=%d/n=%d", rbft.id, quorum, agree.View, agree.N)
 
-	// Quorum of AgreeUpdateN reach the N, replica can jump to NODE_MGR_AGREE_UPDATEN_QUORUM_EVENT,
+	// Quorum of AgreeUpdateN reach the N, replica can jump to NODE_MGR_AGREE_UPDATEN_QUORUM_consensusEvent,
 	// which mean all nodes agree in updating N
 	if quorum >= rbft.allCorrectReplicasQuorum() {
 		rbft.nodeMgr.updateTarget = uidx{v: agree.View, n: agree.N, flag: agree.Flag, key: agree.Key}
@@ -599,7 +597,7 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) events.Event {
 
 // sendUpdateN broadcasts the UpdateN message to other, it will only be called
 // by primary like the NewView.
-func (rbft *rbftImpl) sendUpdateN() events.Event {
+func (rbft *rbftImpl) sendUpdateN() consensusEvent {
 
 	if rbft.status.getState(&rbft.status.inNegoView) {
 		rbft.logger.Debugf("Replica %d try to sendUpdateN, but it's in nego-view", rbft.id)
@@ -656,7 +654,7 @@ func (rbft *rbftImpl) sendUpdateN() events.Event {
 }
 
 // recvUpdateN handles the UpdateN message sent by primary.
-func (rbft *rbftImpl) recvUpdateN(update *UpdateN) events.Event {
+func (rbft *rbftImpl) recvUpdateN(update *UpdateN) consensusEvent {
 
 	rbft.logger.Infof("Replica %d received update-n from replica %d",
 		rbft.id, update.ReplicaId)
@@ -709,7 +707,7 @@ func (rbft *rbftImpl) recvUpdateN(update *UpdateN) events.Event {
 
 // primaryProcessUpdateN processes the UpdateN message after it has already reached
 // updateN-quorum.
-func (rbft *rbftImpl) primaryProcessUpdateN(initialCp ViewChange_C, replicas []replicaInfo, update *UpdateN) events.Event {
+func (rbft *rbftImpl) primaryProcessUpdateN(initialCp ViewChange_C, replicas []replicaInfo, update *UpdateN) consensusEvent {
 
 	// Check if primary need state update
 	err := rbft.checkIfNeedStateUpdate(initialCp, replicas)
@@ -731,7 +729,7 @@ func (rbft *rbftImpl) primaryProcessUpdateN(initialCp ViewChange_C, replicas []r
 
 // processUpdateN handles the UpdateN message sent from primary, it can only be called
 // once replica has reached update-quorum.
-func (rbft *rbftImpl) processUpdateN() events.Event {
+func (rbft *rbftImpl) processUpdateN() consensusEvent {
 
 	// Get the UpdateN from the local cache
 	update, ok := rbft.nodeMgr.updateStore[rbft.nodeMgr.updateTarget]
@@ -786,7 +784,7 @@ func (rbft *rbftImpl) processUpdateN() events.Event {
 }
 
 // processReqInUpdate resets all the variables that need to be updated after updating n
-func (rbft *rbftImpl) processReqInUpdate(update *UpdateN) events.Event {
+func (rbft *rbftImpl) processReqInUpdate(update *UpdateN) consensusEvent {
 	rbft.logger.Debugf("Replica %d accepting update-n to target %v", rbft.id, rbft.nodeMgr.updateTarget)
 
 	if rbft.status.getState(&rbft.status.updateHandled) {
@@ -840,7 +838,7 @@ func (rbft *rbftImpl) processReqInUpdate(update *UpdateN) events.Event {
 
 // sendFinishUpdate broadcasts the FinisheUpdate message to others to inform that
 // it has finished VcReset of updating
-func (rbft *rbftImpl) sendFinishUpdate() events.Event {
+func (rbft *rbftImpl) sendFinishUpdate() consensusEvent {
 
 	finish := &FinishUpdate{
 		ReplicaId: rbft.id,
@@ -866,7 +864,7 @@ func (rbft *rbftImpl) sendFinishUpdate() events.Event {
 }
 
 // recvFinishUpdate handles the FinishUpdate messages sent from others
-func (rbft *rbftImpl) recvFinishUpdate(finish *FinishUpdate) events.Event {
+func (rbft *rbftImpl) recvFinishUpdate(finish *FinishUpdate) consensusEvent {
 
 	if atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 0 {
 		rbft.logger.Debugf("Replica %d is not in updatingN, but received FinishUpdate from replica %d", rbft.id, finish.ReplicaId)
@@ -884,7 +882,7 @@ func (rbft *rbftImpl) recvFinishUpdate(finish *FinishUpdate) events.Event {
 }
 
 // handleTailAfterUpdate handles the tail after stable checkpoint
-func (rbft *rbftImpl) handleTailAfterUpdate() events.Event {
+func (rbft *rbftImpl) handleTailAfterUpdate() consensusEvent {
 
 	// Get the quorum of FinishUpdate messages, and if has new primary's
 	quorum := 0

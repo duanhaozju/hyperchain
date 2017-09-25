@@ -1,7 +1,7 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
 
-//Package namespace provide mechanism to manage namespaces and request process
+// Package namespace provides mechanism to manage namespaces and request process
 package namespace
 
 import (
@@ -16,6 +16,21 @@ import (
 	"sync"
 )
 
+// This file defines the Namespace Manager interface, which managers all
+// the namespaces this node has participated in. Start/stop NamespaceManager
+// will start/stop all namespaces registered to Namespace Manager and then
+// start/stop jvm manager which manages jvm executor. So be careful when
+// system administrator wants to stop NamespaceManager.
+
+// Nodes join into a namespace by register and then start, exit a namespace
+// by stop and then de-register from that namespace. De-registration from
+// a namespace directly will first stop that namespace and then de-register
+// by default. So life cycle of a namespace should be like:
+// register ===> start ===> running ===> stop ===> de-register.
+
+// Requests sent from clients will be dispatched to different namespace's
+// request processor with the given namespace name.
+
 var logger *logging.Logger
 
 const (
@@ -26,55 +41,99 @@ const (
 var once sync.Once
 var nr NamespaceManager
 
-//NamespaceManager namespace manager.
+// NamespaceManager manages all namespaces registered to this node.
 type NamespaceManager interface {
-	//Start start namespace manager service.
+	// Start starts the namespace manager service.
 	Start() error
-	//Stop stop namespace manager.
+
+	// Stop stops the namespace manager service.
 	Stop() error
-	//List list all namespace names in system.
+
+	// List returns all namespace names in system.
 	List() []string
-	//Register register a new namespace.
+
+	// Register registers a new namespace by the given name, if the namespace
+	// has been registered to system before or the config path of that
+	// namespace(./namespace/name) doesn't exist, returns an error, else,
+	// constructs new namespace config and init a new namespace.
+	// NOTICE: namespace must registered before start.
 	Register(name string) error
-	//DeRegister de-register namespace from system by name.
+
+	// DeRegister de-registers namespace from system by the given name.
+	// NOTICE: DeRegister should be called after registering that namespace,
+	// and we recommend stopping namespace first if you want to de-register a namespace.
 	DeRegister(name string) error
-	//StartJvm start jvm manager
-	StartJvm() error
-	//StopJvm stop jvm manager
-	StopJvm() error
-	//RestartJvm restart jvm manager
-	RestartJvm() error
-	//GetNamespaceByName get namespace instance by name.
+
+	// GetNamespaceByName returns the namespace instance by name.
 	GetNamespaceByName(name string) Namespace
-	//ProcessRequest process received request
+
+	// ProcessRequest dispatches received requests to corresponding namespace
+	// processor.
+	// Requests are sent from RPC layer, so responses are returned to RPC layer
+	// with the certain namespace.
 	ProcessRequest(namespace string, request interface{}) interface{}
-	//StartNamespace start namespace by name.
+
+	// StartNamespace starts namespace by name. This should only be called by
+	// hypercli admin interface.
 	StartNamespace(name string) error
-	//StopNamespace stop namespace by name.
+
+	// StopNamespace stops namespace by name. This should only be called by
+	// hypercli admin interface.
 	StopNamespace(name string) error
-	//RestartNamespace restart namespace by name.
+
+	// RestartNamespace restarts namespace by name. This should only be called
+	// by hypercli admin interface.
 	RestartNamespace(name string) error
-	//GlobalConfig global configuration of the system.
+
+	// StartJvm starts jvm manager. This should only be called by hypercli
+	// admin interface.
+	StartJvm() error
+
+	// StopJvm stops jvm manager. This should only be called by hypercli
+	// admin interface.
+	StopJvm() error
+
+	// RestartJvm restarts jvm manager. This should only be called by
+	// hypercli admin interface.
+	RestartJvm() error
+
+	// GlobalConfig returns the global configuration of the system.
 	GlobalConfig() *common.Config
-	//GetStopFlag returns the flag of stop hyperchain server
+
+	// GetStopFlag returns the flag of stop hyperchain server
 	GetStopFlag() chan bool
-	//GetRestartFlag returns the flag of restart hyperchain server
+
+	// GetRestartFlag returns the flag of restart hyperchain server
 	GetRestartFlag() chan bool
 }
 
-//nsManagerImpl implementation of NsRegistry.
+// nsManagerImpl implements the NamespaceManager interface.
 type nsManagerImpl struct {
+	// Since param "namespaces" may be read/write in different go-routines,
+	// it should be protected by a rwLock.
 	rwLock      *sync.RWMutex
+
+	// namespaces stores all the namespace instances registered in the system
 	namespaces  map[string]Namespace
+
+	// jvmManager manages the jvm executor in system, since executor is a
+	// pluggable components, so start jvm manager or not should be written
+	// in the config file.
 	jvmManager  *JvmManager
-	bloomfilter *db_utils.BloomFilterCache // transaciton bloom filter
-	// help to do transaction duplication checking
+
+	// bloomfilter is the transaction bloom filter, helps to do transaction
+	// duplication checking
+	bloomfilter *db_utils.BloomFilterCache
+
+	// conf is the global config file of the system, contains global configs
+	// of the node
 	conf *common.Config
+
 	stopHp      chan bool
 	restartHp   chan bool
 }
 
-//NewNsManager new a namespace manager
+// newNsManager news a namespace manager implement and init.
 func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *nsManagerImpl {
 	nr := &nsManagerImpl{
 		namespaces:  make(map[string]Namespace),
@@ -92,7 +151,9 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 	return nr
 }
 
-//GetNamespaceManager get namespace registry instance.
+// GetNamespaceManager returns the namespace manager instance.
+// This function can only be called once, if called more than once,
+// only returns the unique NamespaceManager.
 func GetNamespaceManager(conf *common.Config, stopHp chan bool, restartHp chan bool) NamespaceManager {
 	logger = common.GetLogger(common.DEFAULT_LOG, "nsmgr")
 	once.Do(func() {
@@ -101,7 +162,10 @@ func GetNamespaceManager(conf *common.Config, stopHp chan bool, restartHp chan b
 	return nr
 }
 
-//init the namespace registry by configuration.
+// init initializes the nsManagerImpl and retrieves the namespaces
+// with the name of dirs under the NS_CONFIG_DIR_ROOT path, if the
+// namespace name has been set true in config file, register the
+// namespace, else, retrieves the next.
 func (nr *nsManagerImpl) init() error {
 	configRootDir := nr.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
@@ -118,6 +182,8 @@ func (nr *nsManagerImpl) init() error {
 			if !start {
 				continue
 			}
+			// only register namespace whose name has been set true
+			// in config file.
 			nr.Register(name)
 		} else {
 			logger.Errorf("Invalid folder %v", d)
@@ -126,8 +192,8 @@ func (nr *nsManagerImpl) init() error {
 	return nil
 }
 
-//Start start namespace registry service.
-//which will also start all namespace in this Namespace Registry
+// Start starts namespace manager service which will start all namespaces
+// registered in system and then start jvm manager if needed.
 func (nr *nsManagerImpl) Start() error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
@@ -148,7 +214,8 @@ func (nr *nsManagerImpl) Start() error {
 	return nil
 }
 
-//Stop stop namespace registry.
+// Stop stops namespace manager service which will stop all namespaces
+// registered in system and then stop jvm manager.
 func (nr *nsManagerImpl) Stop() error {
 	logger.Noticef("Try to stop NamespaceManager ...")
 	nr.rwLock.RLock()
@@ -160,11 +227,6 @@ func (nr *nsManagerImpl) Stop() error {
 			return err
 		}
 	}
-	// err := nr.hyperjvm.Stop()
-	// if err != nil {
-	//	logger.Errorf("Stop hyperjvm error %v", err)
-	//	return err
-	//}
 	if err := nr.jvmManager.Stop(); err != nil {
 		logger.Errorf("Stop hyperjvm error %v", err)
 	}
@@ -173,7 +235,7 @@ func (nr *nsManagerImpl) Stop() error {
 	return nil
 }
 
-//List list all namespace names in system.
+// List returns all namespace names in system.
 func (nr *nsManagerImpl) List() (names []string) {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
@@ -183,6 +245,9 @@ func (nr *nsManagerImpl) List() (names []string) {
 	return names
 }
 
+// checkNamespaceName checks the format of namespace name, it must be:
+// global or other unique namespace name generated by hypercli whose length
+// must be 13 and prefixed by "ns_".
 func (nr *nsManagerImpl) checkNamespaceName(name string) bool {
 	if name == "global" {
 		return true
@@ -193,7 +258,8 @@ func (nr *nsManagerImpl) checkNamespaceName(name string) bool {
 	return false
 }
 
-//Register register a new namespace, by the new namespace config dir.
+// Register registers a new namespace to system by the new namespace
+// config dir and update the config file if needed.
 func (nr *nsManagerImpl) Register(name string) error {
 	logger.Noticef("Register namespace: %s", name)
 	if _, ok := nr.namespaces[name]; ok {
@@ -234,27 +300,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 	return nil
 }
 
-func updateNamespaceStartConfig(name string, conf *common.Config) error {
-	if !conf.ContainsKey(fmt.Sprintf("namespace.start.%s", name)) {
-		return common.SeekAndAppend("[namespace.start]", conf.GetString(common.GLOBAL_CONFIG_PATH),
-			fmt.Sprintf("    %s = true", name))
-	}
-	return nil
-}
-
-func (nr *nsManagerImpl) removeNamespace(name string)  {
-	nr.rwLock.Lock()
-	delete(nr.namespaces, name)
-	nr.rwLock.Unlock()
-}
-
-func (nr *nsManagerImpl) addNamespace(ns Namespace)  {
-	nr.rwLock.Lock()
-	nr.namespaces[ns.Name()] = ns
-	nr.rwLock.Unlock()
-}
-
-//DeRegister de-register namespace from system by name.
+// DeRegister de-registers namespace from system by name.
 func (nr *nsManagerImpl) DeRegister(name string) error {
 	logger.Criticalf("Try to deregister the namespace:%s ", name)
 	if ns, ok := nr.namespaces[name]; ok {
@@ -273,7 +319,31 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 	return nil
 }
 
-//GetNamespaceByName get namespace instance by name.
+// updateNamespaceStartConfig updates the config file with the specified name
+func updateNamespaceStartConfig(name string, conf *common.Config) error {
+	if !conf.ContainsKey(fmt.Sprintf("namespace.start.%s", name)) {
+		return common.SeekAndAppend("[namespace.start]", conf.GetString(common.GLOBAL_CONFIG_PATH),
+			fmt.Sprintf("    %s = true", name))
+	}
+	return nil
+}
+
+// removeNamespace removes the namespace instance with the given
+// name from system.
+func (nr *nsManagerImpl) removeNamespace(name string)  {
+	nr.rwLock.Lock()
+	delete(nr.namespaces, name)
+	nr.rwLock.Unlock()
+}
+
+// addNamespace adds the namespace instance with the given name to system.
+func (nr *nsManagerImpl) addNamespace(ns Namespace)  {
+	nr.rwLock.Lock()
+	nr.namespaces[ns.Name()] = ns
+	nr.rwLock.Unlock()
+}
+
+// GetNamespaceByName get namespace instance by name.
 func (nr *nsManagerImpl) GetNamespaceByName(name string) Namespace {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
@@ -283,7 +353,7 @@ func (nr *nsManagerImpl) GetNamespaceByName(name string) Namespace {
 	return nil
 }
 
-//ProcessRequest process received request
+// ProcessRequest dispatches the request to the specified namespace processor.
 func (nr *nsManagerImpl) ProcessRequest(namespace string, request interface{}) interface{} {
 	ns := nr.GetNamespaceByName(namespace)
 	if ns == nil {
@@ -293,7 +363,7 @@ func (nr *nsManagerImpl) ProcessRequest(namespace string, request interface{}) i
 	return ns.ProcessRequest(request)
 }
 
-//StartNamespace start namespace by name
+// StartNamespace starts namespace instance by name.
 func (nr *nsManagerImpl) StartNamespace(name string) error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
@@ -311,7 +381,7 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 	return ErrInvalidNs
 }
 
-//StopNamespace stop namespace by name
+// StopNamespace stops namespace instance by name.
 func (nr *nsManagerImpl) StopNamespace(name string) error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
@@ -327,7 +397,7 @@ func (nr *nsManagerImpl) StopNamespace(name string) error {
 	return ErrInvalidNs
 }
 
-//RestartNamespace restart namespace by name
+// RestartNamespace restarts namespace by name.
 func (nr *nsManagerImpl) RestartNamespace(name string) error {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
@@ -338,12 +408,12 @@ func (nr *nsManagerImpl) RestartNamespace(name string) error {
 	return ErrInvalidNs
 }
 
-//GlobalConfig global configuration of the system.
+// GlobalConfig returns the global configuration of the system.
 func (nr *nsManagerImpl) GlobalConfig() *common.Config {
 	return nr.conf
 }
 
-//StartJvm starts the jvm manager
+// StartJvm starts the jvm manager.
 func (nr *nsManagerImpl) StartJvm() error {
 	if err := nr.jvmManager.Start(); err != nil {
 		return err
@@ -351,7 +421,7 @@ func (nr *nsManagerImpl) StartJvm() error {
 	return nil
 }
 
-//StopJvm stops the jvm manager
+// StopJvm stops the jvm manager.
 func (nr *nsManagerImpl) StopJvm() error {
 	if err := nr.jvmManager.Stop(); err != nil {
 		return err
@@ -359,7 +429,7 @@ func (nr *nsManagerImpl) StopJvm() error {
 	return nil
 }
 
-//RestartJvm restarts the jvm manager
+// RestartJvm restarts the jvm manager
 func (nr *nsManagerImpl) RestartJvm() error {
 	if err := nr.jvmManager.Stop(); err != nil {
 		return err
@@ -370,7 +440,7 @@ func (nr *nsManagerImpl) RestartJvm() error {
 	return nil
 }
 
-//ListenDelNode listen delete node event
+// ListenDelNode listens delete node event from p2p module.
 func (nr *nsManagerImpl) ListenDelNode(name string, delFlag chan bool) {
 	for {
 		select {

@@ -1,10 +1,13 @@
 package jsonrpc
 
-func grantpermission(username string, module string, permissions []string) ([]string, error) {
+// grantpermission grants the user with some permissions, permission must
+// be specified with a module name(used to specify group) and a permission
+// name. If user gave some non-existing permissions, returns to client.
+func (adm *Administrator) grantpermission(username string, module string, permissions []string) ([]string, error) {
 	// record non-existing permissions
 	var invalidPms []string
 	log.Debugf("grant permissions %v to %s module: %s", permissions, username, module)
-	if _, err := IsUserExist(username, ""); err == ErrUserNotExist {
+	if _, err := isUserExist(username, ""); err == ErrUserNotExist {
 		return nil, err
 	}
 	//grant all permissions
@@ -31,11 +34,14 @@ func grantpermission(username string, module string, permissions []string) ([]st
 	return invalidPms, nil
 }
 
-func revokepermission(username string, module string, permissions []string) ([]string, error) {
+// revokepermission revokes the user of some permissions, permission must
+// be specified with a module name(used to specify group) and a permission
+// name. If user gave some non-existing permissions, returns to client.
+func (adm *Administrator) revokepermission(username string, module string, permissions []string) ([]string, error) {
 	// record non-existing permissions
 	var invalidPms []string
 	log.Debugf("revoke permissions %v to %s", permissions, username)
-	if _, err := IsUserExist(username, ""); err == ErrUserNotExist {
+	if _, err := isUserExist(username, ""); err == ErrUserNotExist {
 		return nil, err
 	}
 	// clear all permissions
@@ -62,10 +68,11 @@ func revokepermission(username string, module string, permissions []string) ([]s
 	return invalidPms, nil
 }
 
-func listpermission(username string) ([]int, error) {
+// listpermission lists the permissions of the given user.
+func (adm *Administrator) listpermission(username string) ([]int, error) {
 	var permissions []int
 	log.Debugf("list permissions of %s", username)
-	if _, err := IsUserExist(username, ""); err == ErrUserNotExist {
+	if _, err := isUserExist(username, ""); err == ErrUserNotExist {
 		return nil, err
 	}
 	for scope := range user_scope[username] {

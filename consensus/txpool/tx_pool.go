@@ -3,6 +3,9 @@
 package txpool
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+
 	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
@@ -30,6 +33,26 @@ type TxPool interface {
 	ReturnFetchTxs(id string, missingHashList []string) (txs []*types.Transaction, err error)
 	GotMissingTxs(id string, txs []*types.Transaction) error
 }
+
+// TxHashBatch contains transactions that batched by primary.
+type TxHashBatch struct {
+	BatchHash  string
+	TxHashList []string
+	TxList     []*types.Transaction
+}
+
+type MissingTxHashList struct {
+	TxHashList []string
+	BatchHash  string
+}
+
+type ReturnFetchTxs struct {
+	BatchHash        string
+	ReturnedFetchTxs []*types.Transaction
+}
+
+// batchTimerEvent is sent when the batch timer expires
+type batchTimerEvent struct{}
 
 // txPoolImpl implement the txpool
 type txPoolImpl struct {
@@ -312,7 +335,7 @@ func newTxPoolImpl(namespace string, poolsize int, queue *event.TypeMux, batchsi
 	txpool.batchStore = nil
 	txpool.batchedTxs = make(map[string]bool)
 	txpool.missingTxs = make(map[string][]string)
-	txpool.logger = common.GetLogger(namespace, "txpool")
+	txpool.logger = common.GetLogger(namespace, "consensus")
 	return txpool, nil
 }
 
@@ -466,4 +489,13 @@ func (pool *txPoolImpl) getBatchById(id string) (*TxHashBatch, error) {
 		}
 	}
 	return nil, ErrNoBatch
+}
+
+
+func hash(batch *TxHashBatch) string {
+	h := md5.New()
+	for _, hash := range batch.TxHashList {
+		h.Write([]byte(hash))
+	}
+	return hex.EncodeToString(h.Sum(nil))
 }

@@ -16,23 +16,28 @@ import (
 	"time"
 )
 
-// permissionSet used to maintain user permissions
+// permissionSet is used to maintain user permissions
 type permissionSet map[int]bool
 
+// valid_user records the current valid users with its password.
 var valid_user = map[string]string{
 	"root": "hyperchain",
-	"hpc":  "hpc",
 }
 
+// user_scope records the current user with its permissions.
 var user_scope = map[string]permissionSet{
 	"root": rootScopes(),
 }
 
+//user_opTimer records the current user with its last operation time.
 var user_opTime = map[string]int64{
 	"root": 0,
 }
 
-func IsUserExist(username, password string) (bool, error) {
+// isUserExist checks the username in valid_user, if username is not existed,
+// returns ErrUserNotExist; if username is existed but password is not correct,
+// returns ErrUnMatch; else returns true.
+func isUserExist(username, password string) (bool, error) {
 	for k, v := range valid_user {
 		if k == username {
 			if v == password {
@@ -45,19 +50,18 @@ func IsUserExist(username, password string) (bool, error) {
 	return false, ErrUserNotExist
 }
 
-func IsUserPermit(username string, scope int) bool {
-	for name, scopes := range user_scope {
+// isUserPermit returns if the user has the permission with the given scope.
+func isUserPermit(username string, scope int) bool {
+	for name, pSet := range user_scope {
 		if name == username {
-			return contains(scopes, scope)
+			return pSet[scope]
 		}
 	}
 	return false
 }
 
-func contains(pset permissionSet, scope int) bool {
-	return pset[scope]
-}
-
+// basicAuth decodes username and password from http request and returns
+// an error if encountered an error.
 func basicAuth(req *http.Request) (string, string, error) {
 	var username, password string
 	auth := req.Header.Get("Authorization")
@@ -94,7 +98,7 @@ func basicAuth(req *http.Request) (string, string, error) {
 	}
 }
 
-// Create, sign, and output a token.
+// signToken creates, signs, and outputs a token.
 func signToken(username, keypath, algorithm string) (string, error) {
 	// create a token
 	var claims jwt.MapClaims
@@ -106,21 +110,20 @@ func signToken(username, keypath, algorithm string) (string, error) {
 	claims["aud"] = "www.hyperchain.cn"
 	claims["usr"] = username
 
-	// get the key
 	var key interface{}
 	key, err := loadData(keypath)
 	if err != nil {
 		return "", fmt.Errorf("Couldn't read key: %v", err)
 	}
 
-	// get the signing alg
+	// get the signing algorithm.
 	alg := jwt.GetSigningMethod(algorithm)
 
 	if alg == nil {
 		return "", fmt.Errorf("Couldn't find signing method: %v", algorithm)
 	}
 
-	// create a new token
+	// create a new token.
 	token := jwt.NewWithClaims(alg, claims)
 
 	if isEs(algorithm) {
@@ -146,15 +149,15 @@ func signToken(username, keypath, algorithm string) (string, error) {
 	return token.SignedString(key)
 }
 
-// Verify a token and output the claims.
+// verifyToken Verifies a token and output the claims.
 func verifyToken(auth, keypath, algorithm string) ([]byte, error) {
-	// get the token
+	// get the token.
 	tokData := []byte(auth)
 
-	// trim possible whitespace from token
+	// trim possible whitespace from token.
 	tokData = regexp.MustCompile(`\s*$`).ReplaceAll(tokData, []byte{})
 
-	// Parse the token. Load the key
+	// Parse the token. Load the key.
 	token, err := jwt.Parse(string(tokData), func(t *jwt.Token) (interface{}, error) {
 		data, err := loadData(keypath)
 		if err != nil {
@@ -169,7 +172,7 @@ func verifyToken(auth, keypath, algorithm string) ([]byte, error) {
 		return data, nil
 	})
 
-	// Print an error if we can't parse for some reason
+	// Print an error if we can't parse for some reason.
 	if err != nil {
 		log.Debugf("Couldn't parse token %s, error: %v", auth, err)
 		return nil, ErrTokenInvalid
@@ -180,7 +183,7 @@ func verifyToken(auth, keypath, algorithm string) ([]byte, error) {
 		return nil, ErrTokenInvalid
 	}
 
-	// get claims
+	// get claims.
 	if claims, err := getJSONFromClaims(token.Claims); err != nil {
 		log.Debugf("Failed to parase claims: %v", err)
 		return nil, ErrInternal
@@ -189,7 +192,7 @@ func verifyToken(auth, keypath, algorithm string) ([]byte, error) {
 	}
 }
 
-// loadData reads input from specified file
+// loadData reads input from specified file.
 func loadData(p string) ([]byte, error) {
 	if p == "" {
 		return nil, fmt.Errorf("No path specified")
@@ -213,7 +216,7 @@ func isRs(alg string) bool {
 	return strings.HasPrefix(alg, "RS")
 }
 
-// getJSONFromClaims returns a json string from claims
+// getJSONFromClaims returns a json string from claims.
 func getJSONFromClaims(j interface{}) ([]byte, error) {
 	var out []byte
 	var err error
@@ -227,14 +230,14 @@ func getJSONFromClaims(j interface{}) ([]byte, error) {
 	}
 }
 
-// checkPermission checks permission by username in input claims
+// checkPermission checks permission by username in input claims.
 func checkPermission(username, method string) (bool, error) {
 	scope := convertToScope(method)
 	if scope == -1 {
 		return false, ErrPermission
 	}
 
-	if IsUserPermit(username, scope) {
+	if isUserPermit(username, scope) {
 		return true, nil
 	} else {
 		return false, ErrPermission
@@ -242,7 +245,7 @@ func checkPermission(username, method string) (bool, error) {
 
 }
 
-// createUser creates a new account with given username and password
+// createUser creates a new account with the given username and password.
 func createUser(username, password, group string) error {
 	groupPermission := getGroupPermission(group)
 	if groupPermission == nil {
@@ -253,25 +256,28 @@ func createUser(username, password, group string) error {
 	return nil
 }
 
-// alterUser alters an existed account with given username and password
+// alterUser alters an existed account with given username and password.
 func alterUser(username, password string) {
 	valid_user[username] = password
 }
 
-// delUser deletes an account
+// delUser deletes an account.
 func delUser(username string) {
 	delete(valid_user, username)
 	delete(user_scope, username)
 }
 
+// updateLastOperationTime updates the last operation time.
 func updateLastOperationTime(username string) {
 	user_opTime[username] = time.Now().Unix()
 }
 
+// checkOpTimeExpire checks if the given user's operation time has expired.
 func checkOpTimeExpire(username string) bool {
 	return float64(time.Now().Unix()-user_opTime[username]) > expiration.Seconds()
 }
 
+// getUserFromClaim returns the username parsed from input claims.
 func getUserFromClaim(input []byte) string {
 	var claims jwt.MapClaims
 	if err := json.Unmarshal(input, &claims); err != nil {

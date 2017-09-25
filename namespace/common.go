@@ -11,17 +11,29 @@ import (
 )
 
 var (
+	// ErrNoSuchNamespace returns when de-register a non-exist namespace.
 	ErrNoSuchNamespace   = errors.New("namespace/nsmgr: no such namespace found")
+
+	// ErrInvalidNs returns when no namespace instance found.
 	ErrInvalidNs         = errors.New("namespace/nsmgr: invalid namespace")
+
+	// ErrCannotNewNs returns when get namespace failed.
 	ErrCannotNewNs       = errors.New("namespace/nsmgr: can not new namespace")
+
+	// ErrRegistered returns when register a registered namespace.
 	ErrRegistered        = errors.New("namespace/nsmgr: namespace has been registered")
-	ErrNsClosed          = errors.New("namespace/nsmgr: namespace closed")
+
+	// ErrNodeNotFound returns when cannot find node by id.
 	ErrNodeNotFound      = errors.New("namespace/node: nod not found")
+
+	// ErrIllegalNodeConfig returns when add an illegal node config.
 	ErrIllegalNodeConfig = errors.New("namespace/node: illegal node config")
+
+	// ErrNonExistConfig returns when specified config file doesn't exist.
 	ErrNonExistConfig    = errors.New("namespace/nsmgr: namespace config file doesn't exist")
 )
 
-//constructConfigFromDir read all info needed by
+// constructConfigFromDir constructs namespace's config from specified config path.
 func (nr *nsManagerImpl) constructConfigFromDir(namespace, path string) (*common.Config, error) {
 	var conf *common.Config
 	nsConfigPath := path + "/namespace.toml"
@@ -46,6 +58,7 @@ func (nr *nsManagerImpl) constructConfigFromDir(namespace, path string) (*common
 	return conf, nil
 }
 
+// GetApis returns the RPC api of specified namespace.
 func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 	return map[string]*api.API{
 		"tx": {
