@@ -280,7 +280,9 @@ func (pmgr *peerManagerImpl) listening() {
 				case ev := <-s.Chan():
 					{
 						// distribute all event to handlers
-						pmgr.distribute(t, ev.Data)
+						if ev != nil{
+							pmgr.distribute(t, ev.Data)
+						}
 					}
 				}
 			}
