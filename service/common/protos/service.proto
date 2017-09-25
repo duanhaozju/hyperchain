@@ -1,17 +1,18 @@
 syntax = "proto3";
 
-//Dispatcher response for Message distribute.
+// Dispatcher response for Message distribute.
 service Dispatcher {
     rpc Register(stream Message) returns(stream Message) {}
 }
 
-//Message is the wrapper of specific message
+// Message is the wrapper of specific message
 message Message {
 
     enum Type {
         UNDEFINED = 0;
         REGISTER = 1;
         INVOKE = 2;
+        ADMIN = 3;
     }
 
     enum FROM {
@@ -26,7 +27,7 @@ message Message {
     bytes payload   = 3; // The message body.
 }
 
-//RegisterMessage used by service component to connect to Dispatcher.
+// RegisterMessage used by service component to connect to Dispatcher.
 message RegisterMessage {
     string address      = 1;
     string port         = 2;
@@ -34,7 +35,7 @@ message RegisterMessage {
     bytes payload       = 4; // retained field
 }
 
-//ServiceMessage used by service component to send to Dispatcher.
+// ServiceMessage used by service component to send to Dispatcher.
 message ServiceMessage {
     enum Type {
         InformPrimaryEvent = 0;
@@ -45,7 +46,7 @@ message ServiceMessage {
     bytes payload = 3;
 }
 
-//DispatcherMessage used by Dispatcher to send to specific service node.
+// DispatcherMessage used by Dispatcher to send to specific service node.
 message DispatcherMessage {
     enum Type {
         Test = 0;
