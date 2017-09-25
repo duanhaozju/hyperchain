@@ -61,6 +61,7 @@ func NewBloomCache(config *common.Config) *BloomFilterCache {
 		updateCh:   make(chan request),
 		registerCh: make(chan request),
 		writeCh:    make(chan message),
+		remove:     make(chan string),
 		config:     config,
 	}
 	go filter.loop()

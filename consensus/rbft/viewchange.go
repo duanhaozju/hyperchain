@@ -3,9 +3,7 @@
 package rbft
 
 import (
-	"encoding/base64"
 	"errors"
-	"fmt"
 	"reflect"
 	"sort"
 	"sync/atomic"
@@ -488,51 +486,26 @@ func (rbft *rbftImpl) processNewView() events.Event {
 			rbft.id, rbft.vcMgr.viewChangeStore)
 		return rbft.sendViewChange()
 	}
-	// 以上 primary 不必做
-	speculativeLastExec := rbft.exec.lastExec
-	if rbft.exec.currentExec != nil {
-		speculativeLastExec = *rbft.exec.currentExec
-	}
 
-	// --
+
+	// Check if the xset sent by new primary is built correctly by the aset
 	msgList := rbft.assignSequenceNumbers(nv.Vset, cp.SequenceNumber)
-
 	if msgList == nil {
 		rbft.logger.Warningf("Replica %d could not assign sequence numbers: %+v",
 			rbft.id, rbft.vcMgr.viewChangeStore)
 		return rbft.sendViewChange()
 	}
-
 	if !(len(msgList) == 0 && len(nv.Xset) == 0) && !reflect.DeepEqual(msgList, nv.Xset) {
 		rbft.logger.Warningf("Replica %d failed to verify new-view Xset: computed %+v, received %+v",
 			rbft.id, msgList, nv.Xset)
 		return rbft.sendViewChange()
 	}
-	// -- primary 不必做
-	if rbft.h < cp.SequenceNumber {
-		rbft.moveWatermarks(cp.SequenceNumber)
-	}
 
-	if speculativeLastExec < cp.SequenceNumber {
-		rbft.logger.Warningf("Replica %d missing base checkpoint %d (%s), our most recent execution %d", rbft.id, cp.SequenceNumber, cp.Id, speculativeLastExec)
-
-		snapshotID, err := base64.StdEncoding.DecodeString(cp.Id)
-		if nil != err {
-			err = fmt.Errorf("Replica %d received a view change whose hash could not be decoded (%s)", rbft.id, cp.Id)
-			rbft.logger.Error(err.Error())
-			return nil
-		}
-
-		target := &stateUpdateTarget{
-			checkpointMessage: checkpointMessage{
-				seqNo: cp.SequenceNumber,
-				id:    snapshotID,
-			},
-			replicas: replicas,
-		}
-
-		rbft.updateHighStateTarget(target)
-		rbft.stateTransfer(target)
+	// Check if primary need state update
+	err := rbft.checkIfNeedStateUpdate(cp, replicas)
+	if err != nil {
+		rbft.logger.Error(err.Error())
+		return nil
 	}
 
 	return rbft.processReqInNewView(nv)
@@ -541,45 +514,16 @@ func (rbft *rbftImpl) processNewView() events.Event {
 //do some prepare for change to New view
 //such as get moveWatermarks to ViewChange checkpoint and fetch missed batches
 func (rbft *rbftImpl) primaryProcessNewView(initialCp ViewChange_C, replicas []replicaInfo, nv *NewView) events.Event {
-	var newReqBatchMissing bool
 
-	speculativeLastExec := rbft.exec.lastExec
-	//if there is block in committing, set speculativeLastExec to block seq
-	if rbft.exec.currentExec != nil {
-		speculativeLastExec = *rbft.exec.currentExec
+	// Check if primary need state update
+	err := rbft.checkIfNeedStateUpdate(initialCp, replicas)
+	if err != nil {
+		rbft.logger.Error(err.Error())
+		return nil
 	}
 
-	//moveWatermarks to recovery checkpoint height
-	if rbft.h < initialCp.SequenceNumber {
-		rbft.moveWatermarks(initialCp.SequenceNumber)
-	}
-
-	// true means we can not execToTarget need state transfer
-	if speculativeLastExec < initialCp.SequenceNumber {
-		rbft.logger.Warningf("Replica %d missing base checkpoint %d (%s), our most recent execution %d", rbft.id, initialCp.SequenceNumber, initialCp.Id, speculativeLastExec)
-
-		snapshotID, err := base64.StdEncoding.DecodeString(initialCp.Id)
-		if nil != err {
-			err = fmt.Errorf("Replica %d received a view change whose hash could not be decoded (%s)", rbft.id, initialCp.Id)
-			rbft.logger.Error(err.Error())
-			return nil
-		}
-
-		target := &stateUpdateTarget{
-			checkpointMessage: checkpointMessage{
-				seqNo: initialCp.SequenceNumber,
-				id:    snapshotID,
-			},
-			replicas: replicas,
-		}
-		//set stateTransfer Target to target
-		rbft.updateHighStateTarget(target)
-		//fetch missed block asynchronous
-		rbft.stateTransfer(target)
-	}
 	//check if we have all block from low waterMark to recovery seq
-	newReqBatchMissing = rbft.feedMissingReqBatchIfNeeded(nv.Xset)
-
+	newReqBatchMissing := rbft.feedMissingReqBatchIfNeeded(nv.Xset)
 	if len(rbft.storeMgr.missingReqBatches) == 0 {
 		return rbft.processReqInNewView(nv)
 	} else if newReqBatchMissing {
@@ -737,33 +681,42 @@ func (rbft *rbftImpl) handleTailInNewView() events.Event {
 	rbft.seqNo = rbft.exec.lastExec
 	rbft.batchVdr.setLastVid(rbft.exec.lastExec)
 
+	rbft.putBackTxBatches(nv.Xset)
+
 	//Primary validate batches which has seq > low watermark
 	//Batch will transfer to pre-prepare
 	if rbft.isPrimary(rbft.id) {
-		xSetLen := len(nv.Xset)
-		upper := uint64(xSetLen) + rbft.h + uint64(1)
-		for i := rbft.h + uint64(1); i < upper; i++ {
-			d, ok := nv.Xset[i]
-			if !ok {
-				rbft.logger.Critical("view change Xset miss batch number %d", i)
-			} else if d == "" {
-				// This should not happen
-				rbft.logger.Critical("view change Xset has null batch, kick it out")
-			} else {
-				batch, ok := rbft.storeMgr.txBatchStore[d]
-				if !ok {
-					rbft.logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, rbft.id)
-				} else if i > rbft.exec.lastExec {
-					rbft.primaryValidateBatch(d, batch, i)
-				}
-			}
-		}
+		rbft.primaryResendBatch(nv.Xset)
 	}
 
 	return &LocalEvent{
 		Service:   VIEW_CHANGE_SERVICE,
 		EventType: VIEW_CHANGED_EVENT,
 	}
+}
+
+// primaryResendBatch validates batches which has seq > low watermark
+func (rbft *rbftImpl) primaryResendBatch(xset Xset) {
+
+	xSetLen := len(xset)
+	upper := uint64(xSetLen) + rbft.h + uint64(1)
+	for i := rbft.h + uint64(1); i < upper; i++ {
+		d, ok := xset[i]
+		if !ok {
+			rbft.logger.Critical("view change Xset miss batch number %d", i)
+		} else if d == "" {
+			// This should not happen
+			rbft.logger.Critical("view change Xset has null batch, kick it out")
+		} else {
+			batch, ok := rbft.storeMgr.txBatchStore[d]
+			if !ok {
+				rbft.logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, rbft.id)
+			} else if i > rbft.exec.lastExec {
+				rbft.primaryValidateBatch(d, batch, i)
+			}
+		}
+	}
+
 }
 
 //Rebuild Cert for Vc
@@ -781,7 +734,7 @@ func (rbft *rbftImpl) rebuildCertStoreForVC() {
 //rebuild certStore according to Xset
 //Broadcast qpc for batches which has been confirmed in view change.
 //So that, all correct peers will reach the seq that select in view change
-func (rbft *rbftImpl) rebuildCertStore(xset map[uint64]string) {
+func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 
 	for n, d := range xset {
 		if n <= rbft.h || n > rbft.exec.lastExec {

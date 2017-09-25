@@ -3,6 +3,8 @@
 
 package rbft
 
+import "hyperchain/core/types"
+
 /**
 This file defines the structs uesd in PBFT
 */
@@ -119,4 +121,13 @@ type replicaInfo struct {
 type stateUpdateTarget struct {
 	checkpointMessage
 	replicas []replicaInfo
+}
+
+// -----------transaction related structs-----------------
+
+// Mark a transaction if it's new:
+// for new, check the pool size; for old, do not check
+type txRequest struct {
+	tx	*types.Transaction
+	new bool
 }

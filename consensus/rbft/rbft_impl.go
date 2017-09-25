@@ -137,7 +137,7 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 func (rbft *rbftImpl) ProcessEvent(ee events.Event) events.Event {
 
 	switch e := ee.(type) {
-	case *types.Transaction: //local transaction
+	case txRequest:
 		return rbft.processTransaction(e)
 
 	case txpool.TxHashBatch:
@@ -203,7 +203,11 @@ func (rbft *rbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 			rbft.logger.Errorf("processConsensus, unmarshal error: can not unmarshal ConsensusMessage", err)
 			return err
 		}
-		go rbft.rbftEventQueue.Push(tx)
+		req := txRequest{
+			tx: tx,
+			new: false,
+		}
+		go rbft.rbftEventQueue.Push(req)
 	} else {
 		go rbft.rbftEventQueue.Push(consensus)
 	}
@@ -815,7 +819,7 @@ func (rbft *rbftImpl) afterCommitBlock(idx msgID) {
 //=============================================================================
 
 //processTxEvent process received transaction event
-func (rbft *rbftImpl) processTransaction(tx *types.Transaction) events.Event {
+func (rbft *rbftImpl) processTransaction(req txRequest) events.Event {
 
 	var err error
 	var isGenerated bool
@@ -826,19 +830,19 @@ func (rbft *rbftImpl) processTransaction(tx *types.Transaction) events.Event {
 	if atomic.LoadUint32(&rbft.activeView) == 0 ||
 		atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 ||
 		rbft.status.checkStatesOr(&rbft.status.inNegoView) {
-		_, err = rbft.batchMgr.txPool.AddNewTx(tx, false, true)
+		_, err = rbft.batchMgr.txPool.AddNewTx(req.tx, false, req.new)
 	}
 	// primary nodes would check if this transaction triggered generating a batch or not
 	if rbft.isPrimary(rbft.id) {
 		if !rbft.batchMgr.isBatchTimerActive() { // start batch timer when this node receives the first transaction of a batch
 			rbft.startBatchTimer()
 		}
-		isGenerated, err = rbft.batchMgr.txPool.AddNewTx(tx, true, true)
+		isGenerated, err = rbft.batchMgr.txPool.AddNewTx(req.tx, true, req.new)
 		if isGenerated { // If this transaction triggers generating a batch, stop batch timer
 			rbft.stopBatchTimer()
 		}
 	} else {
-		_, err = rbft.batchMgr.txPool.AddNewTx(tx, false, true)
+		_, err = rbft.batchMgr.txPool.AddNewTx(req.tx, false, req.new)
 	}
 
 	if rbft.batchMgr.txPool.IsPoolFull() {
@@ -1460,8 +1464,6 @@ func (rbft *rbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 		if result.Hash == cert.resultHash {
 			cert.validated = true
 			batch := rbft.storeMgr.outstandingReqBatches[result.Digest]
-			batch.SeqNo = result.SeqNo
-			batch.ResultHash = result.Hash
 			rbft.storeMgr.outstandingReqBatches[result.Digest] = batch
 			rbft.storeMgr.txBatchStore[result.Digest] = batch
 			rbft.persistTxBatch(result.Digest)
