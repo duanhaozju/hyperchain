@@ -612,7 +612,6 @@ func (rbft *rbftImpl) sendUpdateN() consensusEvent {
 	}
 
 	// Assign the seqNo according to the set of AgreeUpdateN and the initial checkpoint
-	//msgList := rbft.assignSequenceNumbersForUpdate(aset, cp.SequenceNumber)
 	msgList := rbft.assignSequenceNumbers(nset, cp.SequenceNumber)
 	if msgList == nil {
 		rbft.logger.Infof("Replica %d could not assign sequence numbers for new view", rbft.id)
@@ -745,7 +744,6 @@ func (rbft *rbftImpl) processUpdateN() consensusEvent {
 
 	// Find the initial checkpoint
 	_, nset := rbft.getAgreeUpdates()
-	//cp, ok, replicas := rbft.selectInitialCheckpointForUpdate(aset)
 	cp, ok, replicas := rbft.selectInitialCheckpoint(nset)
 	if !ok {
 		rbft.logger.Warningf("Replica %d could not determine initial checkpoint: %+v",
@@ -754,7 +752,6 @@ func (rbft *rbftImpl) processUpdateN() consensusEvent {
 	}
 
 	// Check if the xset sent by new primary is built correctly by the aset
-	//msgList := rbft.assignSequenceNumbersForUpdate(aset, cp.SequenceNumber)
 	msgList := rbft.assignSequenceNumbers(nset, cp.SequenceNumber)
 	if msgList == nil {
 		rbft.logger.Warningf("Replica %d could not assign sequence numbers: %+v",
@@ -1123,188 +1120,3 @@ func (rbft *rbftImpl) getAgreeUpdates() (agrees []*AgreeUpdateN, nset []*VCNODE)
 	}
 	return
 }
-//
-//// selectInitialCheckpointForUpdate selects the highest checkpoint
-//// that reached f+1 quorum.
-//func (rbft *rbftImpl) selectInitialCheckpointForUpdate(aset []*AgreeUpdateN) (checkpoint ViewChange_C, ok bool, replicas []replicaInfo) {
-//
-//	// For the checkpoint as key, find the corresponding AgreeUpdateN messages
-//	checkpoints := make(map[ViewChange_C][]*AgreeUpdateN)
-//	for _, agree := range aset {
-//		// Verify that we strip duplicate checkpoints from this Cset
-//		set := make(map[ViewChange_C]bool)
-//		for _, c := range agree.Cset {
-//			if ok := set[*c]; ok {
-//				continue
-//			}
-//			checkpoints[*c] = append(checkpoints[*c], agree)
-//			set[*c] = true
-//			rbft.logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s", rbft.id, agree.ReplicaId, agree.H, c.SequenceNumber, c.Id)
-//		}
-//	}
-//
-//	// Indicate that replica cannot find any checkpoint
-//	if len(checkpoints) == 0 {
-//		rbft.logger.Debugf("Replica %d has no checkpoints to select from: %d %s",
-//			rbft.id, len(rbft.vcMgr.viewChangeStore), checkpoints)
-//		return
-//	}
-//
-//	for idx, vcList := range checkpoints {
-//		// Need weak certificate for the checkpoint
-//		if len(vcList) < rbft.oneCorrectQuorum() { // type casting necessary to match types
-//			rbft.logger.Debugf("Replica %d has no weak certificate for n:%d, vcList was %d long",
-//				rbft.id, idx.SequenceNumber, len(vcList))
-//			continue
-//		}
-//
-//		quorum := 0
-//		// Note, this is the whole vset (S) in the paper, not just this checkpoint set (S') (vcList)
-//		// We need 2f+1 low watermarks from S below this seqNo from all replicas
-//		// We need f+1 matching checkpoints at this seqNo (S')
-//		for _, vc := range aset {
-//			if vc.H <= idx.SequenceNumber {
-//				quorum++
-//			}
-//		}
-//
-//		if quorum < rbft.commonCaseQuorum() {
-//			rbft.logger.Debugf("Replica %d has no quorum for n:%d", rbft.id, idx.SequenceNumber)
-//			continue
-//		}
-//
-//		// Find the highest checkpoint
-//		if checkpoint.SequenceNumber <= idx.SequenceNumber {
-//			replicas = make([]replicaInfo, len(vcList))
-//			for i, vc := range vcList {
-//				replicas[i] = replicaInfo{
-//					id:      vc.ReplicaId,
-//					height:  vc.H,
-//					genesis: vc.Genesis,
-//				}
-//			}
-//
-//			checkpoint = idx
-//			ok = true
-//		}
-//	}
-//
-//	return
-//}
-//
-//// assignSequenceNumbersForUpdate assigns the new seqNo of each valid batch in new view:
-//// 1. finds all the batch that both prepared and pre-prepared;
-//// 2. assigns the seqNo to batches ignoring the invalid ones.
-//// Example: we have 1, 3, 4, 5, 6 prepared and pre-prepared, we get {1, 2, 3, 4, 5}
-//func (rbft *rbftImpl) assignSequenceNumbersForUpdate(aset []*AgreeUpdateN, h uint64) map[uint64]string {
-//	msgList := make(map[uint64]string)
-//
-//	maxN := h + 1
-//
-//	// "for all n such that h < n <= h + L"
-//nLoop:
-//	for n := h + 1; n <= h+rbft.L; n++ {
-//		// "∃m ∈ S..."
-//		for _, m := range aset {
-//			// "...with <n,d,v> ∈ m.P"
-//			for _, em := range m.Pset {
-//				quorum := 0
-//				// "A1. ∃2f+1 messages m' ∈ S"
-//			mpLoop:
-//				for _, mp := range aset {
-//					if mp.H >= n {
-//						continue
-//					}
-//					// "∀<n,d',v'> ∈ m'.P"
-//					for _, emp := range mp.Pset {
-//						if n != emp.SequenceNumber {
-//							continue
-//						}
-//						if !(emp.View < em.View || (emp.View == em.View && emp.BatchDigest == em.BatchDigest)) {
-//							continue mpLoop
-//						}
-//					}
-//					quorum++
-//				}
-//
-//				if quorum < rbft.commonCaseQuorum() {
-//					continue
-//				}
-//
-//				quorum = 0
-//				// "A2. ∃f+1 messages m' ∈ S"
-//				for _, mp := range aset {
-//					// "∃<n,d',v'> ∈ m'.Q"
-//					for _, emp := range mp.Qset {
-//						if n != emp.SequenceNumber {
-//							continue
-//						}
-//						if emp.View >= em.View && emp.BatchDigest == em.BatchDigest {
-//							quorum++
-//							break
-//						}
-//					}
-//				}
-//
-//				if quorum < rbft.oneCorrectQuorum() {
-//					continue
-//				}
-//
-//				// "then select the request with digest d for number n"
-//				msgList[n] = em.BatchDigest
-//				maxN = n
-//
-//				continue nLoop
-//			}
-//		}
-//
-//		quorum := 0
-//		// "else if ∃2f+1 messages m ∈ S"
-//	nullLoop:
-//		for _, m := range aset {
-//			// "m.P has no entry"
-//			for _, em := range m.Pset {
-//				if em.SequenceNumber == n {
-//					continue nullLoop
-//				}
-//			}
-//			quorum++
-//		}
-//
-//		if quorum >= rbft.commonCaseQuorum() {
-//			// "then select the null request for number n"
-//			msgList[n] = ""
-//
-//			continue nLoop
-//		}
-//
-//		rbft.logger.Warningf("Replica %d could not assign value to contents of seqNo %d, found only %d missing P entries", rbft.id, n, quorum)
-//		return nil
-//	}
-//
-//	// Prune top null requests
-//	for n, msg := range msgList {
-//		if n > maxN || msg == "" {
-//			delete(msgList, n)
-//		}
-//	}
-//
-//	// Sort the msgList, as it's random ranged
-//	keys := make([]uint64, len(msgList))
-//	i := 0
-//	for n := range msgList {
-//		keys[i] = n
-//		i++
-//	}
-//	sort.Sort(sortableUint64Slice(keys))
-//
-//	// Sequentially assign the seqNo
-//	x := h + 1
-//	list := make(map[uint64]string)
-//	for _, n := range keys {
-//		list[x] = msgList[n]
-//		x++
-//	}
-//
-//	return list
-//}
