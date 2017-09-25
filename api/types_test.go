@@ -9,31 +9,9 @@ import (
 	"hyperchain/hyperdb"
 	"strings"
 	"testing"
+	"math"
 )
 
-func TestNewInt64ToNumber(t *testing.T) {
-	n := int64(1024)
-	ref := NewInt64ToNumber(n)
-	if int64(*ref) != n {
-		t.Errorf("NewInt64ToNumber wrong")
-	}
-}
-
-func TestNewUint64ToNumber(t *testing.T) {
-	n := uint64(1024)
-	ref := NewUint64ToNumber(n)
-	if uint64(*ref) != n {
-		t.Errorf("NewUint64ToNumber wrong")
-	}
-}
-
-func TestNewIntToNumber(t *testing.T) {
-	n := int(1024)
-	ref := NewIntToNumber(n)
-	if int(*ref) != n {
-		t.Errorf("NewInt64ToNumber wrong")
-	}
-}
 func TestHex(t *testing.T) {
 	n := Number(1024)
 	ref := n.Hex()
@@ -108,12 +86,18 @@ func TestToInt(t *testing.T) {
 func Test_Block(t *testing.T) {
 	n := BlockNumber(456)
 
-	ref := n.Hex()
+	ref, err := n.Hex()
+	if err != nil {
+		t.Errorf("%v", err)
+	}
 	if ref != "0x1c8" {
 		t.Errorf("BlockNumber.Hex() fail")
 	}
 
-	ref2 := n.ToUint64()
+	ref2, err := n.BlockNumberToUint64(math.MaxUint64)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
 	if ref2 != uint64(456) {
 		t.Errorf("BlockNumber.ToUint64() fail")
 	}

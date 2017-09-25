@@ -642,13 +642,16 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 //
 // For example, pageSize is 10. From page 1 to page 2, so "separated" value is 0. From page 1 to page 3, so "separated" value is 10.
 type PagingArgs struct {
-	BlkNumber      BlockNumber     `json:"blkNumber"`		// the current block number
 	MaxBlkNumber   BlockNumber     `json:"maxBlkNumber"`    // the maximum block number of allowing to query
 	MinBlkNumber   BlockNumber     `json:"minBlkNumber"`	// the minimum block number of allowing to query
+	BlkNumber      BlockNumber     `json:"blkNumber"`		// the current block number
 	TxIndex        Number          `json:"txIndex"`			// index of the transaction in the current block
 	Separated      Number          `json:"separated"`		// specify how many transactions to skip.
 	PageSize       Number          `json:"pageSize"`		// specify the number of transaction returned
-	ContainCurrent bool            `json:"containCurrent"`  // specify if the returned transactions contain current transaction
+
+	// specify if the returned transactions contain current transaction(BlkNumber and TxIndex)
+	// or if contain current transaction(BlkNumber and TxIndex) when calculating the number of transactions.
+	ContainCurrent bool            `json:"containCurrent"`
 	ContractAddr   *common.Address `json:"address"`			// specify which contract transactions belong to
 	MethodID       string          `json:"methodID"`		// specify which contract method transactions belong to
 }
@@ -664,6 +667,7 @@ type pagingArgs struct {
 // GetNextPageTransactions returns next page data.
 func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}, error) {
 
+	// check paging parameters
 	realArgs, err := preparePagingArgs(args)
 	if err != nil {
 		return nil, err
@@ -686,69 +690,18 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("'blkNumber' %v is out of range, it must be in the range %v to %v", blkNumber, min, max)}
 	}
 
+	// find the starting position
 	txs := make([]interface{}, 0)
-
-	// to comfirm starting position
 	index := realArgs.TxIndex.Int()
 	separated := realArgs.Separated.Int()
 	contractAddr := realArgs.ContractAddr
-	txCounts := 0
+	txCounts := 0		// how many transactions have been skipped
 	txCounts_temp := 0
-	filteredTxs := make([]interface{}, 0)
-	isFirstTx := true
-
-	for txCounts < separated {
-		block, err := getBlockByNumber(tran.namespace, blkNumber, false)
-		if err != nil {
-			return nil, err
-		}
-
-		blockTxCount := block.TxCounts.Int()
-		if blockTxCount <= index {
-			return nil, &common.InvalidParamsError{fmt.Sprintf("'txIndex' %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blockTxCount)}
-		}
-
-		// filter
-		if filteredTxsByAddr, err := tran.filterTransactionsByAddress(block.Transactions[index:], contractAddr); err != nil {
-			return nil, err
-		} else if realArgs.MethodID != "" {
-
-			if filteredTxs, err = tran.filterTransactionsByMethodID(filteredTxsByAddr, realArgs.MethodID); err != nil {
-				return nil, err
-			}
-
-		} else {
-			filteredTxs = filteredTxsByAddr
-		}
-		filtedTxsCount := len(filteredTxs)
-		if filtedTxsCount != blockTxCount {
-			blockTxCount = filtedTxsCount
-			index = 0
-		}
-
-		if !isFirstTx && index == 0 {
-			txCounts_temp = txCounts + blockTxCount
-		} else {
-			// if the tx is the first tx and index is equal to 0, exclude this tx.
-			txCounts_temp = txCounts + (blockTxCount - (index + 1))
-		}
-
-		if txCounts_temp < separated {
-			txCounts = txCounts_temp
-			blkNumber++
-			index = 0
-		} else if txCounts_temp == separated {
-			index = blockTxCount - 1
-			txCounts = txCounts_temp
-		} else {
-			index = separated - txCounts + index - 1
-			txCounts += index + 1
-		}
-
-		isFirstTx = false
-	}
+	filteredBlkTxs := make([]interface{}, 0)
 
 	if !args.ContainCurrent {
+
+		// skip current transaction, to choose the next transaction as the first transaction.
 		block, err := getBlockByNumber(tran.namespace, blkNumber, false)
 		if err != nil {
 			return nil, err
@@ -766,11 +719,54 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 		}
 	}
 
-	tran.log.Debugf("current transaction index = %v\n", index)
-	tran.log.Debugf("     current block number = %v\n", blkNumber)
-	tran.log.Debugf("     minimum block number = %v\n", min)
-	tran.log.Debugf("     maximum block number = %v\n", max)
-	tran.log.Debugf("				 pageSize = %v\n", realArgs.PageSize.Int())
+	// if separated value is not equal to 0, reset starting position
+	for txCounts < separated {
+		block, err := getBlockByNumber(tran.namespace, blkNumber, false)
+		if err != nil {
+			return nil, err
+		}
+
+		blkTxsCount := block.TxCounts.Int()
+		if blkTxsCount <= index {
+			return nil, &common.InvalidParamsError{Message: fmt.Sprintf("'txIndex' %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blkTxsCount)}
+		}
+
+		// starting with the specified index of the block transactions, filter all the eligible transaction
+		if filteredBlkTxsByAddr, err := tran.filterTransactionsByAddress(block.Transactions[index:], contractAddr); err != nil {
+			return nil, err
+		} else if realArgs.MethodID != "" {
+
+			if filteredBlkTxs, err = tran.filterTransactionsByMethodID(filteredBlkTxsByAddr, realArgs.MethodID); err != nil {
+				return nil, err
+			}
+
+		} else {
+			filteredBlkTxs = filteredBlkTxsByAddr
+		}
+
+		txCounts_temp = txCounts + len(filteredBlkTxs)
+
+		if txCounts_temp <= separated {
+
+			// all transactions in the current block should be skipped
+			txCounts = txCounts_temp
+			blkNumber++
+			index = 0
+		} else {
+
+			// part of transactions in the current block should be skipped
+			tx := filteredBlkTxs[separated - txCounts].(*TransactionResult)
+			index = tx.TxIndex.Int()
+			txCounts = separated
+		}
+
+	}
+
+	tran.log.Debugf("current transaction index = %v", index)
+	tran.log.Debugf("     current block number = %v", blkNumber)
+	tran.log.Debugf("     minimum block number = %v", min)
+	tran.log.Debugf("     maximum block number = %v", max)
+	tran.log.Debugf("				 pageSize = %v", realArgs.PageSize.Int())
 
 	return tran.getNextPagingTransactions(txs, blkNumber, index, pagingArgs{
 		pageSize:     realArgs.PageSize.Int(),
@@ -784,6 +780,7 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 // GetNextPageTransactions returns previous page data.
 func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}, error) {
 
+	// check paging parameters
 	realArgs, err := preparePagingArgs(args)
 	if err != nil {
 		return nil, err
@@ -806,62 +803,18 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("'blkNumber' %v is out of range, it must be in the range %v to %v", blkNumber, min, max)}
 	}
 
+	// find the starting position
 	txs := make([]interface{}, 0)
-
-	// to comfirm end position
-	index := realArgs.TxIndex.Int() // 40
+	index := realArgs.TxIndex.Int()
 	separated := realArgs.Separated.Int()
 	txCounts := 0
+	txCounts_temp := 0
 	contractAddr := realArgs.ContractAddr
-	filteredTxs := make([]interface{}, 0)
-
-	for txCounts < separated {
-		if blkNumber == 0 {
-			break
-		}
-		block, err := getBlockByNumber(tran.namespace, blkNumber, false)
-		if err != nil {
-			return nil, err
-		}
-		blockTxCount := block.TxCounts.Int()
-		if blockTxCount <= index {
-			return nil, &common.InvalidParamsError{fmt.Sprintf("'txIndex' %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blockTxCount)}
-		}
-
-		if index == -1 {
-			index = blockTxCount
-		}
-
-		// filter
-		if filteredTxsByAddr, err := tran.filterTransactionsByAddress(block.Transactions[:index], contractAddr); err != nil {
-			return nil, err
-		} else if realArgs.MethodID != "" {
-
-			if filteredTxs, err = tran.filterTransactionsByMethodID(filteredTxsByAddr, realArgs.MethodID); err != nil {
-				return nil, err
-			}
-
-		} else {
-			filteredTxs = filteredTxsByAddr
-		}
-		filtedTxsCount := len(filteredTxs)
-		//log.Noticef("blkNumber = %d, index = %d, txCounts = %d, blockTxCount = %d, filtedTxsCount = %d",blkNumber, index, txCounts, blockTxCount,filtedTxsCount)
-		if filtedTxsCount != blockTxCount {
-			index = filtedTxsCount
-		}
-
-		txCounts += index
-		if txCounts < separated {
-			blkNumber--
-			index = -1
-		} else if txCounts == separated {
-			index = 0
-		} else {
-			index = txCounts - separated
-		}
-	}
+	filteredBlkTxs := make([]interface{}, 0)
 
 	if !args.ContainCurrent {
+
+		// skip current transaction, to choose the last transaction as the first transaction.
 		block, err := getBlockByNumber(tran.namespace, blkNumber, false)
 		if err != nil {
 			return nil, err
@@ -883,10 +836,58 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 		}
 	}
 
-	tran.log.Debugf("current transaction index = %v\n", index)
-	tran.log.Debugf("     current block number = %v\n", blkNumber)
-	tran.log.Debugf("     minimum block number = %v\n", min)
-	tran.log.Debugf("     maximum block number = %v\n", max)
+	// if separated value is not equal to 0, reset the starting position
+	for txCounts <= separated && separated != 0 {
+		if blkNumber == 0 || txCounts == separated {
+			break
+		}
+		block, err := getBlockByNumber(tran.namespace, blkNumber, false)
+		if err != nil {
+			return nil, err
+		}
+		blkTxsCount := block.TxCounts.Int()
+		if blkTxsCount <= index {
+			return nil, &common.InvalidParamsError{fmt.Sprintf("'txIndex' %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blkTxsCount)}
+		}
+
+		if index == -1 {
+			index = blkTxsCount - 1
+		}
+
+		// starting with the specified index of the block transactions, filter all the eligible transaction
+		if filteredTxsByAddr, err := tran.filterTransactionsByAddress(block.Transactions[:index + 1], contractAddr); err != nil {
+			return nil, err
+		} else if realArgs.MethodID != "" {
+
+			if filteredBlkTxs, err = tran.filterTransactionsByMethodID(filteredTxsByAddr, realArgs.MethodID); err != nil {
+				return nil, err
+			}
+
+		} else {
+			filteredBlkTxs = filteredTxsByAddr
+		}
+		filtedBlkTxsCount := len(filteredBlkTxs)
+		txCounts_temp = txCounts + filtedBlkTxsCount
+
+		if txCounts_temp <= separated {
+
+			// all transactions in the current block should be skipped
+			blkNumber--
+			index = -1
+			txCounts = txCounts_temp
+		}  else {
+
+			// part of transactions in the current block should be skipped
+			tx := filteredBlkTxs[filtedBlkTxsCount - (separated - txCounts) - 1].(*TransactionResult)
+			index = tx.TxIndex.Int()
+			txCounts = separated
+		}
+	}
+
+	tran.log.Debugf("current transaction index = %v", index)
+	tran.log.Debugf("     current block number = %v", blkNumber)
+	tran.log.Debugf("     minimum block number = %v", min)
+	tran.log.Debugf("     maximum block number = %v", max)
 	tran.log.Debugf("				 pageSize = %v\n", realArgs.PageSize.Int())
 
 	return tran.getPrevPagingTransactions(txs, blkNumber, index, pagingArgs{
