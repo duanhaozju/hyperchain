@@ -178,26 +178,10 @@ func (rbft *rbftImpl) sendViewChange() consensusEvent {
 		ReplicaId: rbft.id,
 	}
 
-	for n, id := range rbft.storeMgr.chkpts {
-		vc.Cset = append(vc.Cset, &ViewChange_C{
-			SequenceNumber: n,
-			Id:             id,
-		})
-	}
-
-	for _, p := range rbft.vcMgr.plist {
-		if p.SequenceNumber < rbft.h {
-			rbft.logger.Errorf("BUG! Replica %d should not have anything in our pset less than h, found %+v", rbft.id, p)
-		}
-		vc.Pset = append(vc.Pset, p)
-	}
-
-	for _, q := range rbft.vcMgr.qlist {
-		if q.SequenceNumber < rbft.h {
-			rbft.logger.Errorf("BUG! Replica %d should not have anything in our qset less than h, found %+v", rbft.id, q)
-		}
-		vc.Qset = append(vc.Qset, q)
-	}
+	cSet, pSet, qSet := rbft.gatherPQC()
+	vc.Cset = append(vc.Cset, cSet...)
+	vc.Pset = append(vc.Pset, pSet...)
+	vc.Qset = append(vc.Qset, qSet...)
 
 	rbft.logger.Warningf("Replica %d sending view-change, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		rbft.id, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
@@ -382,19 +366,18 @@ func (rbft *rbftImpl) sendNewView() consensusEvent {
 		return nil
 	}
 	//get all viewChange message in viewChangeStore.
-	vset := rbft.getViewChanges()
+	vset, nset := rbft.getViewChanges()
 
 	//get suitable checkpoint for later recovery, replicas contains the peer id who has this checkpoint.
 	//if can't find suitable checkpoint, ok return false.
-	cp, ok, replicas := rbft.selectInitialCheckpoint(vset)
-
+	cp, ok, replicas := rbft.selectInitialCheckpoint(nset)
 	if !ok {
 		rbft.logger.Infof("Replica %d could not find consistent checkpoint: %+v", rbft.id, rbft.vcMgr.viewChangeStore)
 		return nil
 	}
 	//select suitable pqcCerts for later recovery.Their sequence is greater then cp
 	//if msgList is nil, must some bug happened
-	msgList := rbft.assignSequenceNumbers(vset, cp.SequenceNumber)
+	msgList := rbft.assignSequenceNumbers(nset, cp.SequenceNumber)
 	if msgList == nil {
 		rbft.logger.Infof("Replica %d could not assign sequence numbers for new view", rbft.id)
 		return nil
@@ -479,8 +462,8 @@ func (rbft *rbftImpl) processNewView() consensusEvent {
 		return nil
 	}
 
-	vset := rbft.getViewChanges()
-	cp, ok, replicas := rbft.selectInitialCheckpoint(vset)
+	_, nset := rbft.getViewChanges()
+	cp, ok, replicas := rbft.selectInitialCheckpoint(nset)
 	if !ok {
 		rbft.logger.Warningf("Replica %d could not determine initial checkpoint: %+v",
 			rbft.id, rbft.vcMgr.viewChangeStore)
@@ -489,7 +472,7 @@ func (rbft *rbftImpl) processNewView() consensusEvent {
 
 
 	// Check if the xset sent by new primary is built correctly by the aset
-	msgList := rbft.assignSequenceNumbers(vset, cp.SequenceNumber)
+	msgList := rbft.assignSequenceNumbers(nset, cp.SequenceNumber)
 	if msgList == nil {
 		rbft.logger.Warningf("Replica %d could not assign sequence numbers: %+v",
 			rbft.id, rbft.vcMgr.viewChangeStore)
@@ -876,9 +859,18 @@ func (rbft *rbftImpl) finishViewChange() consensusEvent {
 }
 
 //Return all viewChange message from viewChangeStore
-func (rbft *rbftImpl) getViewChanges() (vset []*ViewChange) {
+func (rbft *rbftImpl) getViewChanges() (vset []*ViewChange, nset []*VCNODE) {
 	for _, vc := range rbft.vcMgr.viewChangeStore {
 		vset = append(vset, vc)
+		nset = append(nset, &VCNODE{
+			View:		vc.View,
+			H:		vc.H,
+			Cset:		vc.Cset,
+			Pset:		vc.Pset,
+			Qset:		vc.Qset,
+			ReplicaId:	vc.ReplicaId,
+			Genesis:	vc.Genesis,
+		})
 	}
 	return
 }
@@ -887,17 +879,23 @@ func (rbft *rbftImpl) getViewChanges() (vset []*ViewChange) {
 // If find suitable checkpoint ,it return a certain checkpoint and the  replicas id list which replicas has this checkpoint
 // The checkpoint is max checkpoint which exists in at least oneCorrectQuorum peers and greater then low waterMark
 // in at least commonCaseQuorum.
-func (rbft *rbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint ViewChange_C, ok bool, replicas []replicaInfo) {
-	checkpoints := make(map[ViewChange_C][]*ViewChange)
-	//Store ViewChange according to checkpoint cert
-	for _, vc := range vset {
-		for _, c := range vc.Cset {
-			// TODO, verify that we strip duplicate checkpoints from this set
-			checkpoints[*c] = append(checkpoints[*c], vc)
-			rbft.logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s", rbft.id, vc.ReplicaId, c.SequenceNumber, vc.H, c.Id)
+func (rbft *rbftImpl) selectInitialCheckpoint(set []*VCNODE) (checkpoint ViewChange_C, find bool, replicas []replicaInfo) {
+	// For the checkpoint as key, find the corresponding AgreeUpdateN messages
+	checkpoints := make(map[ViewChange_C][]*VCNODE)
+	for _, agree := range set {
+		// Verify that we strip duplicate checkpoints from this Cset
+		set := make(map[ViewChange_C]bool)
+		for _, c := range agree.Cset {
+			if ok := set[*c]; ok {
+				continue
+			}
+			checkpoints[*c] = append(checkpoints[*c], agree)
+			set[*c] = true
+			rbft.logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s", rbft.id, agree.ReplicaId, agree.H, c.SequenceNumber, c.Id)
 		}
 	}
 
+	// Indicate that replica cannot find any checkpoint
 	if len(checkpoints) == 0 {
 		rbft.logger.Debugf("Replica %d has no checkpoints to select from: %d %s",
 			rbft.id, len(rbft.vcMgr.viewChangeStore), checkpoints)
@@ -906,8 +904,7 @@ func (rbft *rbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 
 	for idx, vcList := range checkpoints {
 		// Need weak certificate for the checkpoint
-		if len(vcList) < rbft.oneCorrectQuorum() {
-			// type casting necessary to match types
+		if len(vcList) < rbft.oneCorrectQuorum() { // type casting necessary to match types
 			rbft.logger.Debugf("Replica %d has no weak certificate for n:%d, vcList was %d long",
 				rbft.id, idx.SequenceNumber, len(vcList))
 			continue
@@ -917,17 +914,18 @@ func (rbft *rbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 		// Note, this is the whole vset (S) in the paper, not just this checkpoint set (S') (vcList)
 		// We need 2f+1 low watermarks from S below this seqNo from all replicas
 		// We need f+1 matching checkpoints at this seqNo (S')
-		for _, vc := range vset {
+		for _, vc := range set {
 			if vc.H <= idx.SequenceNumber {
 				quorum++
 			}
 		}
-		//Check if this checkpoint is greater then low waterMark in at least commonCaseQuorum peers
+
 		if quorum < rbft.commonCaseQuorum() {
 			rbft.logger.Debugf("Replica %d has no quorum for n:%d", rbft.id, idx.SequenceNumber)
 			continue
 		}
-		//Choose the max checkpoint match  condition
+
+		// Find the highest checkpoint
 		if checkpoint.SequenceNumber <= idx.SequenceNumber {
 			replicas = make([]replicaInfo, len(vcList))
 			for i, vc := range vcList {
@@ -939,7 +937,7 @@ func (rbft *rbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 			}
 
 			checkpoint = idx
-			ok = true
+			find = true
 		}
 	}
 
@@ -951,22 +949,22 @@ func (rbft *rbftImpl) selectInitialCheckpoint(vset []*ViewChange) (checkpoint Vi
 // If batch is not a NullRequest batch, the pre-prepare of this batch is equal or greater than commonCaseQuorum
 // and the prepare is equal or greater then oneCorrectQuorum.
 // In this release, batch should not be NUllRequest batch
-func (rbft *rbftImpl) assignSequenceNumbers(vset []*ViewChange, h uint64) map[uint64]string {
+func (rbft *rbftImpl) assignSequenceNumbers(set []*VCNODE, h uint64) map[uint64]string {
 	msgList := make(map[uint64]string)
 
 	maxN := h + 1
 
 	// "for all n such that h < n <= h + L"
-nLoop:
+	nLoop:
 	for n := h + 1; n <= h+rbft.L; n++ {
 		// "∃m ∈ S..."
-		for _, m := range vset {
+		for _, m := range set {
 			// "...with <n,d,v> ∈ m.P"
 			for _, em := range m.Pset {
 				quorum := 0
 				// "A1. ∃2f+1 messages m' ∈ S"
-			mpLoop:
-				for _, mp := range vset {
+				mpLoop:
+				for _, mp := range set {
 					if mp.H >= n {
 						continue
 					}
@@ -988,7 +986,7 @@ nLoop:
 
 				quorum = 0
 				// "A2. ∃f+1 messages m' ∈ S"
-				for _, mp := range vset {
+				for _, mp := range set {
 					// "∃<n,d',v'> ∈ m'.Q"
 					for _, emp := range mp.Qset {
 						if n != emp.SequenceNumber {
@@ -1015,8 +1013,8 @@ nLoop:
 
 		quorum := 0
 		// "else if ∃2f+1 messages m ∈ S"
-	nullLoop:
-		for _, m := range vset {
+		nullLoop:
+		for _, m := range set {
 			// "m.h < n"
 			if m.H >= n {
 				continue
@@ -1256,4 +1254,31 @@ func (rbft *rbftImpl) beforeSendVC() error {
 		}
 	}
 	return nil
+}
+
+func (rbft *rbftImpl) gatherPQC() (cset []*ViewChange_C, pset []*ViewChange_PQ, qset []*ViewChange_PQ) {
+	// Gather all the checkpoints
+	for n, id := range rbft.storeMgr.chkpts {
+		cset = append(cset, &ViewChange_C{
+			SequenceNumber: n,
+			Id:             id,
+		})
+	}
+	// Gather all the p entries
+	for _, p := range rbft.vcMgr.plist {
+		if p.SequenceNumber < rbft.h {
+			rbft.logger.Errorf("BUG! Replica %d should not have anything in our pset less than h, found %+v", rbft.id, p)
+		}
+		pset = append(pset, p)
+	}
+
+	// Gather all the q entries
+	for _, q := range rbft.vcMgr.qlist {
+		if q.SequenceNumber < rbft.h {
+			rbft.logger.Errorf("BUG! Replica %d should not have anything in our qset less than h, found %+v", rbft.id, q)
+		}
+		qset = append(qset, q)
+	}
+
+	return
 }

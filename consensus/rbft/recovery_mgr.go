@@ -408,14 +408,14 @@ func (rbft *rbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) consensusEvent {
 func (rbft *rbftImpl) findHighestChkptQuorum() (chkptSeqNo uint64, chkptId string, replicas []replicaInfo, find bool, chkptBehind bool) {
 	rbft.logger.Debugf("Replica %d now enter findHighestChkptQuorum", rbft.id)
 
-	chkpts := make(map[cidx]map[replicaInfo]bool)
+	chkpts := make(map[chkptID]map[replicaInfo]bool)
 
 	// classify the checkpoints using Checkpoint index(seqNo,digest)
 	for from, rsp := range rbft.recoveryMgr.rcRspStore {
 		for chkptN, chkptD := range rsp.GetChkpts() {
-			chkptIdx := cidx{
-				n: chkptN,
-				d: chkptD,
+			chkptIdx := chkptID{
+				n:  chkptN,
+				id: chkptD,
 			}
 			peers, ok := chkpts[chkptIdx]
 			if ok {
@@ -450,7 +450,7 @@ func (rbft *rbftImpl) findHighestChkptQuorum() (chkptSeqNo uint64, chkptId strin
 			find = true
 			if ci.n >= chkptSeqNo {
 				chkptSeqNo = ci.n
-				chkptId = ci.d
+				chkptId = ci.id
 				replicas = make([]replicaInfo, 0, len(peers))
 				for peer := range peers {
 					replicas = append(replicas, peer)
