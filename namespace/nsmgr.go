@@ -99,6 +99,12 @@ type NamespaceManager interface {
 
 	// GlobalConfig returns the global configuration of the system.
 	GlobalConfig() *common.Config
+
+	// GetStopFlag returns the flag of stop hyperchain server
+	GetStopFlag() chan bool
+
+	// GetRestartFlag returns the flag of restart hyperchain server
+	GetRestartFlag() chan bool
 }
 
 // nsManagerImpl implements the NamespaceManager interface.
@@ -122,15 +128,20 @@ type nsManagerImpl struct {
 	// conf is the global config file of the system, contains global configs
 	// of the node
 	conf *common.Config
+
+	stopHp      chan bool
+	restartHp   chan bool
 }
 
 // newNsManager news a namespace manager implement and init.
-func newNsManager(conf *common.Config) *nsManagerImpl {
+func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *nsManagerImpl {
 	nr := &nsManagerImpl{
 		namespaces:  make(map[string]Namespace),
 		conf:        conf,
 		jvmManager:  NewJvmManager(conf),
 		bloomfilter: db_utils.NewBloomCache(conf),
+		stopHp:      stopHp,
+		restartHp:   restartHp,
 	}
 	nr.rwLock = new(sync.RWMutex)
 	err := nr.init()
@@ -143,10 +154,10 @@ func newNsManager(conf *common.Config) *nsManagerImpl {
 // GetNamespaceManager returns the namespace manager instance.
 // This function can only be called once, if called more than once,
 // only returns the unique NamespaceManager.
-func GetNamespaceManager(conf *common.Config) NamespaceManager {
+func GetNamespaceManager(conf *common.Config, stopHp chan bool, restartHp chan bool) NamespaceManager {
 	logger = common.GetLogger(common.DEFAULT_LOG, "nsmgr")
 	once.Do(func() {
-		nr = newNsManager(conf)
+		nr = newNsManager(conf, stopHp, restartHp)
 	})
 	return nr
 }
@@ -438,4 +449,14 @@ func (nr *nsManagerImpl) ListenDelNode(name string, delFlag chan bool) {
 			nr.DeRegister(name)
 		}
 	}
+}
+
+//GetStopFlag returns the flag of stop hyperchain server
+func (nr *nsManagerImpl) GetStopFlag() chan bool {
+	return nr.stopHp
+}
+
+//GetRestartFlag returns the flag of restart hyperchain server
+func (nr *nsManagerImpl) GetRestartFlag() chan bool {
+	return nr.restartHp
 }

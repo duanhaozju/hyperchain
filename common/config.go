@@ -87,6 +87,12 @@ func (cf *Config) GetStringMap(key string) map[string]interface{} {
 	return cf.conf.GetStringMap(key)
 }
 
+func (cf *Config) GetStringSlice(key string) []string {
+	cf.lock.RLock()
+	defer cf.lock.RUnlock()
+	return cf.conf.GetStringSlice(key)
+}
+
 func (cf *Config) GetBytes(key string) uint {
 	cf.lock.RLock()
 	defer cf.lock.RUnlock()

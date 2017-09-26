@@ -12,10 +12,6 @@ import (
 	"strings"
 )
 
-const (
-	UnsubscribeMethodSuffix = "_unsubscribe"
-)
-
 type RequestProcessor interface {
 	Start() error
 	Stop() error
@@ -29,7 +25,7 @@ type JsonRpcProcessorImpl struct {
 	log       *logging.Logger
 }
 
-//NewJsonRpcProcessorImpl new an instance of JsonRpcProcessorImpl with namespace and apis
+// NewJsonRpcProcessorImpl creates a new JsonRpcProcessorImpl instance for given namespace and apis.
 func NewJsonRpcProcessorImpl(namespace string, apis map[string]*api.API) *JsonRpcProcessorImpl {
 	jpri := &JsonRpcProcessorImpl{
 		namespace: namespace,
@@ -40,16 +36,11 @@ func NewJsonRpcProcessorImpl(namespace string, apis map[string]*api.API) *JsonRp
 	return jpri
 }
 
-func (jrpi *JsonRpcProcessorImpl) ProcessRequest(request *common.RPCRequest) *common.RPCResponse {
-	sr := jrpi.checkRequestParams(request)
-	return jrpi.exec(request.Ctx, sr)
-}
-
-//Start starts an instance of JsonRpcProcessorImpl.
+// Start registers all the JSON-RPC API service.
 func (jrpi *JsonRpcProcessorImpl) Start() error {
-	err := jrpi.registerAllName()
+	err := jrpi.registerAllAPIService()
 	if err != nil {
-		jrpi.log.Errorf("Failed to start RPC Manager of namespace %s!!!", jrpi.namespace)
+		jrpi.log.Errorf("Failed to start JSON-RPC processor of namespace %s .", jrpi.namespace)
 		return err
 	}
 	return nil
@@ -59,14 +50,20 @@ func (jrpi *JsonRpcProcessorImpl) Stop() error {
 	return nil
 }
 
-//RegisterAllName registers all namespace of given JsonRpcProcessorImpl.
-func (jrpi *JsonRpcProcessorImpl) registerAllName() error {
+// ProcessRequest checks request parameters and then executes the given request.
+func (jrpi *JsonRpcProcessorImpl) ProcessRequest(request *common.RPCRequest) *common.RPCResponse {
+	sr := jrpi.checkRequestParams(request)
+	return jrpi.exec(request.Ctx, sr)
+}
+
+// registerAllAPIService will register all the JSON-RPC API service. If there are no services offered, an error is returned.
+func (jrpi *JsonRpcProcessorImpl) registerAllAPIService() error {
 	if jrpi.apis == nil || len(jrpi.apis) == 0 {
-		return errors.New("no api methods registered")
+		return errors.New("no api service will be registered")
 	}
 	for _, api := range jrpi.apis {
-		if err := jrpi.registerName(api.Srvname, api.Service); err != nil {
-			jrpi.log.Errorf("registerName error: %v ", err)
+		if err := jrpi.registerAPIService(api.Srvname, api.Service); err != nil {
+			jrpi.log.Errorf("registerAPIService error: %v ", err)
 			return err
 		}
 	}
@@ -74,15 +71,15 @@ func (jrpi *JsonRpcProcessorImpl) registerAllName() error {
 	return nil
 }
 
-// registerName will create an service for the given rcvr type under the given name. When no methods on the given rcvr
+// registerAPIService will create a service for the given rcvr type under the given srvname. When no methods on the given rcvr
 // match the criteria to be either a RPC method or a subscription, then an error is returned. Otherwise a new service is
 // created and added to the service collection this server instance serves.
-func (jrpi *JsonRpcProcessorImpl) registerName(name string, rcvr interface{}) error {
+func (jrpi *JsonRpcProcessorImpl) registerAPIService(srvname string, rcvr interface{}) error {
 	svc := new(service)
 	svc.typ = reflect.TypeOf(rcvr)
 	rcvrVal := reflect.ValueOf(rcvr)
 
-	if name == "" {
+	if srvname == "" {
 		return fmt.Errorf("no service name for type %s", svc.typ.String())
 	}
 
@@ -90,8 +87,8 @@ func (jrpi *JsonRpcProcessorImpl) registerName(name string, rcvr interface{}) er
 		return fmt.Errorf("%s is not exported", reflect.Indirect(rcvrVal).Type().Name())
 	}
 
-	// already a previous service register under given sname, merge methods/subscriptions
-	if regsvc, present := jrpi.services[name]; present {
+	// already a previous service register under given srvname, merge methods/subscriptions
+	if regsvc, present := jrpi.services[srvname]; present {
 		methods, subscriptions := suitableCallbacks(rcvrVal, svc.typ)
 		if len(methods) == 0 && len(subscriptions) == 0 {
 			return fmt.Errorf("Service %T doesn't have any suitable methods/subscriptions to expose", rcvr)
@@ -107,7 +104,7 @@ func (jrpi *JsonRpcProcessorImpl) registerName(name string, rcvr interface{}) er
 		return nil
 	}
 
-	svc.name = name
+	svc.name = srvname
 	svc.callbacks, svc.subscriptions = suitableCallbacks(rcvrVal, svc.typ)
 
 	if len(svc.callbacks) == 0 && len(svc.subscriptions) == 0 {
@@ -127,10 +124,10 @@ func (jrpi *JsonRpcProcessorImpl) checkRequestParams(req *common.RPCRequest) *se
 	var ok bool
 	var svc *service
 
-	if req.IsPubSub && strings.HasSuffix(req.Method, UnsubscribeMethodSuffix) {
+	if req.IsPubSub && strings.HasSuffix(req.Method, common.UnsubscribeMethodSuffix) {
 		sr = &serverRequest{id: req.Id, isUnsubscribe: true}
 		argTypes := []reflect.Type{reflect.TypeOf("")} // expect subscription id as first arg
-		if args, err := jrpi.ParseRequestArguments(argTypes, req.Params); err == nil {
+		if args, err := jrpi.parseRequestArguments(argTypes, req.Params); err == nil {
 			sr.args = args
 		} else {
 			sr.err = &common.InvalidParamsError{Message: err.Error()}
@@ -143,13 +140,13 @@ func (jrpi *JsonRpcProcessorImpl) checkRequestParams(req *common.RPCRequest) *se
 		return sr
 	}
 
-	if req.IsPubSub { // eth_subscribe, r.method contains the subscription method name
+	if req.IsPubSub { // sub_subscribe, r.method contains the subscription method name
 		if callb, ok := svc.subscriptions[req.Method]; ok {
 			sr = &serverRequest{id: req.Id, svcname: svc.name, callb: callb}
 			if req.Params != nil && len(callb.argTypes) > 0 {
 				argTypes := []reflect.Type{reflect.TypeOf("")}
 				argTypes = append(argTypes, callb.argTypes...)
-				if args, err := jrpi.ParseRequestArguments(argTypes, req.Params); err == nil {
+				if args, err := jrpi.parseRequestArguments(argTypes, req.Params); err == nil {
 					sr.args = args[1:] // first one is service.method name which isn't an actual argument
 				} else {
 					sr.err = &common.InvalidParamsError{Message: err.Error()}
@@ -164,7 +161,7 @@ func (jrpi *JsonRpcProcessorImpl) checkRequestParams(req *common.RPCRequest) *se
 	if callb, ok := svc.callbacks[req.Method]; ok { // lookup RPC method
 		sr = &serverRequest{id: req.Id, svcname: svc.name, callb: callb}
 		if req.Params != nil && len(callb.argTypes) > 0 {
-			if args, err := jrpi.ParseRequestArguments(callb.argTypes, req.Params); err == nil {
+			if args, err := jrpi.parseRequestArguments(callb.argTypes, req.Params); err == nil {
 				sr.args = args
 			} else {
 				sr.err = &common.InvalidParamsError{Message: err.Error()}
@@ -181,9 +178,9 @@ func (jrpi *JsonRpcProcessorImpl) checkRequestParams(req *common.RPCRequest) *se
 
 }
 
-// ParseRequestArguments tries to parse the given params (json.RawMessage) with the given types. It returns the parsed
+// parseRequestArguments tries to parse the given params (json.RawMessage) with the given types. It returns the parsed
 // values or an error when the parsing failed.
-func (jrpi *JsonRpcProcessorImpl) ParseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, error) {
+func (jrpi *JsonRpcProcessorImpl) parseRequestArguments(argTypes []reflect.Type, params interface{}) ([]reflect.Value, error) {
 	if args, ok := params.(json.RawMessage); !ok {
 		return nil, &common.InvalidParamsError{
 			Message: "Invalid params supplied",
@@ -249,7 +246,7 @@ func (jrpi *JsonRpcProcessorImpl) exec(ctx context.Context, req *serverRequest) 
 	return response
 }
 
-// handle executes a request and returns the response from the callback.
+// handle executes a request and returns the response from the method callback.
 func (jrpi *JsonRpcProcessorImpl) handle(ctx context.Context, req *serverRequest) (*common.RPCResponse, func()) {
 	if req.err != nil {
 		return jrpi.CreateErrorResponse(&req.id, req.err), nil
@@ -299,8 +296,10 @@ func (jrpi *JsonRpcProcessorImpl) handle(ctx context.Context, req *serverRequest
 	if req.callb.errPos >= 0 { // test if method returned an error
 		if !reply[req.callb.errPos].IsNil() {
 			e := reply[req.callb.errPos].Interface().(common.RPCError)
-			res := jrpi.CreateErrorResponse(&req.id, e)
-			return res, nil
+			if !isEmpty(reply[0]) {
+				return jrpi.CreateErrorResponseWithInfo(&req.id, e, reply[0].Interface()), nil
+			}
+			return jrpi.CreateErrorResponse(&req.id, e), nil
 		}
 	}
 	return jrpi.CreateResponse(req.id, reply[0].Interface()), nil
@@ -329,13 +328,6 @@ func (jrpi *JsonRpcProcessorImpl) CreateResponse(id interface{}, reply interface
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
 func (jrpi *JsonRpcProcessorImpl) CreateNotification(subid common.ID, service, namespace string, event interface{}) *common.RPCNotification {
-	//if isHexNum(reflect.TypeOf(event)) {
-	//	return &common.RPCNotification{Version: jsonrpcVersion, Method: namespace + common.NotificationMethodSuffix,
-	//		Params: jsonSubscription{Subscription: subid, Result: fmt.Sprintf(`%#x`, event)}}
-	//}
-	//
-	//return &jsonNotification{Version: jsonrpcVersion, Method: namespace + notificationMethodSuffix,
-	//	Params: jsonSubscription{Subscription: subid, Result: event}}
 	return &common.RPCNotification{
 		Namespace: namespace,
 		Service:   service,
@@ -373,6 +365,5 @@ func (jrpi *JsonRpcProcessorImpl) createSubscription(ctx context.Context, req *s
 		return "", reply[1].Interface().(error)
 	}
 
-	//return reply[0].Interface().(*common.Subscription).ID, nil
 	return reply[0].Interface().(common.ID), nil
 }
