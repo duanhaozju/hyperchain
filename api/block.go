@@ -3,12 +3,17 @@
 package api
 
 import (
-	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
+	"fmt"
 )
+
+/*
+    This file implements the handler of block service API
+	which can be invoked by client in JSON-RPC request.
+ */
 
 type Block struct {
 	namespace string
@@ -128,7 +133,7 @@ type BlocksIntervalResult struct {
 func (blk *Block) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, error) {
 
 	if args.StartTime > args.Endtime {
-		return nil, &common.InvalidParamsError{Message: "invalid params"}
+		return nil, &common.InvalidParamsError{Message: "Invalid params"}
 	}
 
 	sumOfBlocks, startBlock, endBlock, err := getBlocksByTime(blk.namespace, args.StartTime, args.Endtime)
@@ -151,7 +156,7 @@ func (blk *Block) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, er
 	}
 
 	if t, err := edb.CalBlockGenerateAvgTime(blk.namespace, intargs.from, intargs.to); err != nil && err.Error() == leveldb_not_found_error {
-		return 0, &common.LeveldbNotFoundError{Message: "block"}
+		return 0, &common.DBNotFoundError{Type: BLOCK}
 	} else if err != nil {
 		return 0, &common.CallbackError{Message: err.Error()}
 	} else {
@@ -165,7 +170,7 @@ func (blk *Block) GetChainHeight() (*BlockNumber, error) {
 	if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
 	} else if chain.Height == 0 {
-		return nil, &common.NoBlockGeneratedError{Message: "There is no block generated!"}
+		return nil, &common.NoBlockGeneratedError{}
 	}
 	return uint64ToBlockNumber(chain.Height), nil
 }
@@ -178,7 +183,7 @@ func latestBlock(namespace string) (*BlockResult, error) {
 	lastestBlkHeight := chain.Height
 
 	if lastestBlkHeight == 0 {
-		return nil, &common.NoBlockGeneratedError{Message: "There is no block generated!"}
+		return nil, &common.NoBlockGeneratedError{}
 	}
 
 	return getBlockByNumber(namespace, lastestBlkHeight, false)
@@ -187,12 +192,12 @@ func latestBlock(namespace string) (*BlockResult, error) {
 
 func getBlockByNumber(namespace string, number uint64, isPlain bool) (*BlockResult, error) {
 	if blk, err := edb.GetBlockByNumber(namespace, number); err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("block by %d", number)}
+		return nil, &common.DBNotFoundError{Type: BLOCK, Id: fmt.Sprintf("number %#x", number)}
 	} else if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
 	} else {
 		if edb.GetHeightOfChain(namespace) == 0 {
-			return nil, &common.NoBlockGeneratedError{Message: "There is no block generated!"}
+			return nil, &common.NoBlockGeneratedError{}
 		}
 		return outputBlockResult(namespace, blk, isPlain)
 	}
@@ -274,12 +279,12 @@ func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*Blo
 func getBlockByHash(namespace string, hash common.Hash, isPlain bool) (*BlockResult, error) {
 
 	if common.EmptyHash(hash) == true {
-		return nil, &common.InvalidParamsError{Message: "invalid hash"}
+		return nil, &common.InvalidParamsError{Message: "Invalid hash"}
 	}
 
 	block, err := edb.GetBlock(namespace, hash[:])
 	if err != nil && err.Error() == leveldb_not_found_error {
-		return nil, &common.LeveldbNotFoundError{Message: fmt.Sprintf("block by %#x", hash)}
+		return nil, &common.DBNotFoundError{Type: BLOCK, Id: hash.Hex()}
 	} else if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
 	}

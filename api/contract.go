@@ -20,6 +20,11 @@ import (
 	"time"
 )
 
+/*
+    This file implements the handler of contract service API
+	which can be invoked by client in JSON-RPC request.
+ */
+
 type Contract struct {
 	namespace   string
 	eh          *manager.EventHub
@@ -90,14 +95,14 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	var exist bool
 	if err, exist = edb.LookupTransaction(contract.namespace, tx.GetHash()); err != nil || exist == true {
 		if exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash); exist {
-			return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx " + common.ToHex(tx.TransactionHash)}
+			return common.Hash{}, &common.RepeadedTxError{TxHash: common.ToHex(tx.TransactionHash)}
 		}
 	}
 
 	// 4. verify transaction signature
 	if !tx.ValidateSign(contract.eh.GetAccountManager().Encryption, kec256Hash) {
 		log.Errorf("invalid signature %v", common.ToHex(tx.TransactionHash))
-		return common.Hash{}, &common.SignatureInvalidError{Message: "invalid signature, tx hash " + common.ToHex(tx.TransactionHash)}
+		return common.Hash{}, &common.SignatureInvalidError{Message: "Invalid signature, tx hash " + common.ToHex(tx.TransactionHash)}
 	}
 
 	// 5. post transaction event
@@ -113,7 +118,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 		close(ch)
 		if res == false {
 			// nvp node fails to forward tx to vp node
-			return common.Hash{}, &common.CallbackError{Message: "send tx to nvp failed."}
+			return common.Hash{}, &common.CallbackError{Message: "Send tx to nvp failed."}
 		}
 
 	} else {
@@ -151,7 +156,7 @@ func (contract *Contract) CompileContract(ct string) (*CompileCode, error) {
 // DeployContract deploys contract.
 func (contract *Contract) DeployContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{Message: "system is too busy to response "}
+		return common.Hash{}, &common.SystemTooBusyError{}
 	}
 	return deployOrInvoke(contract, args, 1, contract.namespace)
 }
@@ -159,7 +164,7 @@ func (contract *Contract) DeployContract(args SendTxArgs) (common.Hash, error) {
 // InvokeContract invokes contract.
 func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{Message: "system is too busy to response "}
+		return common.Hash{}, &common.SystemTooBusyError{}
 	}
 	return deployOrInvoke(contract, args, 2, contract.namespace)
 }
@@ -167,7 +172,7 @@ func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
 // MaintainContract maintains contract, including upgrade contract, freeze contract and unfreeze contract.
 func (contract *Contract) MaintainContract(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{Message: "system is too busy to response "}
+		return common.Hash{}, &common.SystemTooBusyError{}
 	}
 	return deployOrInvoke(contract, args, 4, contract.namespace)
 }
@@ -184,7 +189,7 @@ func (contract *Contract) GetCode(addr common.Address) (string, error) {
 
 	acc := stateDb.GetAccount(addr)
 	if acc == nil {
-		return "", &common.AccountNotExistError{Message: addr.Hex()}
+		return "", &common.AccountNotExistError{Address: addr.Hex()}
 	}
 
 	return fmt.Sprintf(`0x%x`, stateDb.GetCode(addr)), nil
@@ -201,7 +206,7 @@ func (contract *Contract) GetContractCountByAddr(addr common.Address) (*Number, 
 
 	acc := stateDb.GetAccount(addr)
 	if acc == nil {
-		return nil, &common.AccountNotExistError{Message: addr.Hex()}
+		return nil, &common.AccountNotExistError{Address: addr.Hex()}
 	}
 
 	return uint64ToNumber(stateDb.GetNonce(addr)), nil
@@ -295,7 +300,7 @@ type HmCheckResult struct {
 // CheckHmValue returns verification result that account B verifies transaction amount that account A transfers to B.
 func (contract *Contract) CheckHmValue(args CheckArgs) (*HmCheckResult, error) {
 	if len(args.RawValue) != len(args.EncryValue) {
-		return nil, &common.InvalidParamsError{Message: "invalid params, the length of rawValue is " +
+		return nil, &common.InvalidParamsError{Message: "Invalid params, the length of rawValue is " +
 			strconv.Itoa(len(args.RawValue)) + ", but the length of encryValue is " +
 			strconv.Itoa(len(args.EncryValue))}
 	}
@@ -335,7 +340,7 @@ func (contract *Contract) GetDeployedList(addr common.Address) ([]string, error)
 		return nil, err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return nil, &common.AccountNotExistError{Message: addr.Hex()}
+		return nil, &common.AccountNotExistError{Address: addr.Hex()}
 	} else {
 		return stateDb.GetDeployedContract(addr), nil
 	}
@@ -348,7 +353,7 @@ func (contract *Contract) GetCreator(addr common.Address) (common.Address, error
 		return common.Address{}, err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return common.Address{}, &common.AccountNotExistError{Message: addr.Hex()}
+		return common.Address{}, &common.AccountNotExistError{Address: addr.Hex()}
 	} else {
 		if !isContractAccount(stateDb, addr) {
 			return common.Address{}, nil
@@ -364,7 +369,7 @@ func (contract *Contract) GetStatus(addr common.Address) (string, error) {
 		return "", err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return "", &common.AccountNotExistError{Message: addr.Hex()}
+		return "", &common.AccountNotExistError{Address: addr.Hex()}
 	} else {
 		status := stateDb.GetStatus(addr)
 		if !isContractAccount(stateDb, addr) {
@@ -388,7 +393,7 @@ func (contract *Contract) GetCreateTime(addr common.Address) (string, error) {
 		return "", err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return "", &common.AccountNotExistError{Message: addr.Hex()}
+		return "", &common.AccountNotExistError{Address: addr.Hex()}
 	} else {
 		if !isContractAccount(stateDb, addr) {
 			return "", nil
@@ -396,7 +401,7 @@ func (contract *Contract) GetCreateTime(addr common.Address) (string, error) {
 		blkNum := stateDb.GetCreateTime(addr)
 		blk, err := edb.GetBlockByNumber(contract.namespace, blkNum)
 		if err != nil {
-			return "", &common.LeveldbNotFoundError{Message: "create block doesn't exist"}
+			return "", &common.DBNotFoundError{Type: BLOCK, Id: fmt.Sprintf("number %#x", blkNum)}
 		}
 		return time.Unix(blk.Timestamp/1e9, blk.Timestamp%1e9).String(), nil
 	}

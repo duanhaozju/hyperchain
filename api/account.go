@@ -10,6 +10,11 @@ import (
 	"github.com/op/go-logging"
 )
 
+/*
+    This file implements the handler of account service API
+	which can be invoked by client in JSON-RPC request.
+ */
+
 type Account struct {
 	eh        *manager.EventHub
 	namespace string
@@ -21,6 +26,7 @@ type AccountResult struct {
 	Account string `json:"account"`
 	Balance string `json:"balance"`
 }
+
 type UnlockParas struct {
 	Address  common.Address `json:"address"`
 	Password string         `json:"password"`
@@ -63,7 +69,7 @@ func (acc *Account) UnlockAccount(args UnlockParas) (bool, error) {
 	ac := accounts.Account{Address: args.Address, File: am.KeyStore.JoinPath(s)}
 	err := am.Unlock(ac, args.Password)
 	if err != nil {
-		return false, &common.InvalidParamsError{Message: "incorrect address or password!"}
+		return false, &common.InvalidParamsError{Message: "Incorrect address or password!"}
 	}
 	return true, nil
 }
@@ -96,7 +102,7 @@ func (acc *Account) GetBalance(addr common.Address) (string, error) {
 		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 		} else {
-			return "", &common.LeveldbNotFoundError{Message: "stateobject, the account may not exist"}
+			return "", &common.AccountNotExistError{Address: addr.Hex()}
 		}
 	}
 
