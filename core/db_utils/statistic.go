@@ -117,6 +117,7 @@ func CalBlockGPS(namespace string, begin, end int64) (error, string) {
 	var blockCounter float64 = 0
 	var txCounter float64 = 0
 	var blockNum uint64 = 0
+	var totallatency  int64 = 0
 	for i := tag; i <= height; i++ {
 		block, err := GetBlockByNumber(namespace, i)
 		if err != nil {
@@ -130,13 +131,18 @@ func CalBlockGPS(namespace string, begin, end int64) (error, string) {
 			txCounter += float64(len(block.Transactions))
 			blockCounter += 1
 			blockNum += 1
+			for _, tx := range block.Transactions {
+				totallatency += block.WriteTime - tx.Timestamp
+			}
 		}
 	}
+	latency := float64(totallatency) / float64(time.Second.Nanoseconds()) / float64(txCounter) * 1000.0
 	s = s + "total block:" + strconv.FormatUint(blockNum, 10) + ";"
 	blockCounter = blockCounter / (float64(end-begin) * 1.0 / float64(time.Second.Nanoseconds()))
 	txCounter = txCounter / (float64(end-begin) * 1.0 / float64(time.Second.Nanoseconds()))
 	s = s + "blocks per second:" + strconv.FormatFloat(blockCounter, 'f', 2, 32) + ";"
-	s = s + "tps:" + strconv.FormatFloat(txCounter, 'f', 2, 32)
+	s = s + "tps:" + strconv.FormatFloat(txCounter, 'f', 2, 32)+ ";"
+	s = s + "latency:" + strconv.FormatFloat(latency, 'f', 2, 32)
 	return nil, s
 }
 
