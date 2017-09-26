@@ -2,6 +2,11 @@
 //Copyright (C) 2016 The Hyperchain Authors.
 package api
 
+/*
+    This file implements the handler of node service API
+	which can be invoked by client in JSON-RPC request.
+ */
+
 import (
 	"fmt"
 	"hyperchain/common"
@@ -38,7 +43,7 @@ func NewPublicNodeAPI(namespace string, eh *manager.EventHub) *Node {
 // GetNodes returns all nodes information.
 func (node *Node) GetNodes() (p2p.PeerInfos, error) {
 	if node.eh == nil {
-		return nil, &common.CallbackError{Message: "protocolManager is nil"}
+		return nil, &common.CallbackError{Message: "EventHub is nil"}
 	}
 
 	return node.eh.GetPeerManager().GetPeerInfo(), nil
@@ -46,14 +51,14 @@ func (node *Node) GetNodes() (p2p.PeerInfos, error) {
 
 func (node *Node) GetNodeHash() (string, error) {
 	if node.eh == nil {
-		return "", &common.CallbackError{Message: "protocolManager is nil"}
+		return "", &common.CallbackError{Message: "EventHub is nil"}
 	}
 	return node.eh.GetPeerManager().GetLocalNodeHash(), nil
 }
 
 func (node *Node) DeleteVP(args NodeArgs) (string, error) {
 	if node.eh == nil {
-		return "", &common.CallbackError{Message: "protocolManager is nil"}
+		return "", &common.CallbackError{Message: "EventHub is nil"}
 	}
 	go node.eh.GetEventObject().Post(event.DelVPEvent{
 		Payload: []byte(args.NodeHash),
@@ -63,7 +68,7 @@ func (node *Node) DeleteVP(args NodeArgs) (string, error) {
 
 func (node *Node) DeleteNVP(args NodeArgs) (string, error) {
 	if node.eh == nil {
-		return "", &common.CallbackError{Message: "protocolManager is nil"}
+		return "", &common.CallbackError{Message: "EventHub is nil"}
 	}
 	go node.eh.GetEventObject().Post(event.DelNVPEvent{
 		Payload: []byte(args.NodeHash),

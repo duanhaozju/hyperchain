@@ -6,6 +6,11 @@ import (
 	"regexp"
 )
 
+/*
+    This file implements the handler of certificate service API
+	which can be invoked by client in JSON-RPC request.
+ */
+
 type CertArgs struct {
 	Pubkey string `json:"pubkey"`
 }
