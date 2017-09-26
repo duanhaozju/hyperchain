@@ -155,7 +155,7 @@ func (blk *Block) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, er
 		return 0, err
 	}
 
-	if t, err := edb.CalBlockGenerateAvgTime(blk.namespace, intargs.from, intargs.to); err != nil && err.Error() == leveldb_not_found_error {
+	if t, err := edb.CalBlockGenerateAvgTime(blk.namespace, intargs.from, intargs.to); err != nil && err.Error() == db_not_found_error {
 		return 0, &common.DBNotFoundError{Type: BLOCK}
 	} else if err != nil {
 		return 0, &common.CallbackError{Message: err.Error()}
@@ -191,7 +191,7 @@ func latestBlock(namespace string) (*BlockResult, error) {
 
 
 func getBlockByNumber(namespace string, number uint64, isPlain bool) (*BlockResult, error) {
-	if blk, err := edb.GetBlockByNumber(namespace, number); err != nil && err.Error() == leveldb_not_found_error {
+	if blk, err := edb.GetBlockByNumber(namespace, number); err != nil && err.Error() == db_not_found_error {
 		return nil, &common.DBNotFoundError{Type: BLOCK, Id: fmt.Sprintf("number %#x", number)}
 	} else if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
@@ -283,7 +283,7 @@ func getBlockByHash(namespace string, hash common.Hash, isPlain bool) (*BlockRes
 	}
 
 	block, err := edb.GetBlock(namespace, hash[:])
-	if err != nil && err.Error() == leveldb_not_found_error {
+	if err != nil && err.Error() == db_not_found_error {
 		return nil, &common.DBNotFoundError{Type: BLOCK, Id: hash.Hex()}
 	} else if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
