@@ -135,6 +135,12 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 // SendTransaction is to build a transaction object,and then post event NewTxEvent,
 // if the sender's balance is enough, return tx hash
 func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
+	consentor := tran.eh.GetConsentor()
+	normal, full := consentor.GetStatus()
+	if !normal || full {
+		return common.Hash{}, &common.SystemTooBusyError{Message: "system is too busy to response "}
+	}
+
 	if getRateLimitEnable(tran.config) && tran.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{Message: "system is too busy to response "}
 	}
