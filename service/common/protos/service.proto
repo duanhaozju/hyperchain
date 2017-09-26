@@ -13,6 +13,7 @@ message Message {
         REGISTER = 1;
         INVOKE = 2;
         ADMIN = 3;
+        RESPONSE = 4;
     }
 
     enum FROM {
@@ -24,7 +25,8 @@ message Message {
 
     Type type       = 1; // The basic message type.
     FROM from       = 2; // Define where the message come from.
-    bytes payload   = 3; // The message body.
+    bool ok         = 3;
+    bytes payload   = 4; // The message body.
 }
 
 // RegisterMessage used by service component to connect to Dispatcher.
