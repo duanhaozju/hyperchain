@@ -303,7 +303,7 @@ func (registry *SnapshotRegistry) CalculateStateHash(filterId string, compareTag
 	if err != nil {
 		return common.Hash{}, err
 	}
-	localState, err := state.New(compareTag, localDb, nil, registry.executor.conf, height, registry.executor.namespace)
+	localState, err := state.New(compareTag, localDb, nil, registry.executor.conf, height)
 	if err != nil {
 		return common.Hash{}, err
 	}

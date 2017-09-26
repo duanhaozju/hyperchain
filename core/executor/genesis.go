@@ -60,7 +60,7 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 		MerkleRoot: root.Bytes(),
 	}
 	// flush block content to disk immediately
-	batch := stateDb.FetchBatch(0)
+	batch := stateDb.FetchBatch(0, state.BATCH_NORMAL)
 	if err, _ := edb.PersistBlock(batch, &block, true, true); err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func NewStateDb(conf *common.Config, db db.Database, namespace string) (vm.Datab
 	if err != nil {
 		return nil, err
 	}
-	stateDb, err := state.New(common.Hash{}, db, archiveDb, conf, 0, namespace)
+	stateDb, err := state.New(common.Hash{}, db, archiveDb, conf, 0)
 	if err != nil {
 		return nil, err
 	}

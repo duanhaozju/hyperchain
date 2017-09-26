@@ -1,3 +1,18 @@
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 package state
 
 import (
@@ -15,24 +30,18 @@ import (
 	"sync"
 )
 
-var emptyCodeHash = crypto.Keccak256(nil)
+var (
+	emptyCodeHash = crypto.Keccak256(nil)
+	kec256Hash    = crypto.NewKeccak256Hash("keccak256")
+)
 
 type Code []byte
 
 func (self Code) String() string {
-	return string(self) //strings.Join(Disassemble(self), " ")
+	return string(self)
 }
 
 type Storage map[common.Hash][]byte
-
-const (
-	STATEOBJECT_STATUS_NORMAL = iota
-	STATEOBJECT_STATUS_FROZON
-)
-
-const (
-	OPCODE_ARCHIVE = 100
-)
 
 func (self Storage) String() (str string) {
 	for key, value := range self {
@@ -46,7 +55,6 @@ func (self Storage) Copy() Storage {
 	for key, value := range self {
 		cpy[key] = value
 	}
-
 	return cpy
 }
 
@@ -66,24 +74,22 @@ type StateObject struct {
 	// unable to deal with database-level errors. Any error that occurs
 	// during a database read is memoized here and will eventually be returned
 	// by StateDB.Commit.
-	dbErr error
-
-	code           Code                   // contract bytecode, which gets set when code is loaded
+	dbErr          error
+	code           Code                   // Contract bytecode, which gets set when code is loaded
 	cachedStorage  Storage                // Storage entry cache to avoid duplicate reads
 	dirtyStorage   Storage                // Storage entries that need to be flushed to disk
-	archiveStorage Storage                // Storage entries that need to be flushed to disk
-	evictList      map[common.Hash]uint64 // record storage lasted modify block number
+	archiveStorage Storage                // Storage entries that need to be archive
+	evictList      map[common.Hash]uint64 // Record storage entry latest block number being modified
 
-	bucketTree *bucket.BucketTree     // a bucket tree use to calculate fingerprint of storage efficiency
-	bucketConf map[string]interface{} // bucket tree config
+	tree       *bucket.BucketTree     // a bucket tree use to calculate fingerprint of storage efficiency
+	treeConfig map[string]interface{} // bucket tree config
 	// Cache flags.
 	// When an object is marked suicided it will be delete from the db
 	// during the "update" phase of the state transition.
 	dirtyCode bool // true if the code was updated
 	suicided  bool
-	touched   bool
 	deleted   bool
-	onDirty   func(addr common.Address) // Callback method to mark a state object newly dirty
+	onDirty   func(addr common.Address) // Callback method to mark a state object dirty
 	logger    *logging.Logger
 }
 
@@ -92,7 +98,7 @@ func (s *StateObject) empty() bool {
 	return s.data.Nonce == 0 && s.data.Balance.BitLen() == 0 && bytes.Equal(s.data.CodeHash, emptyCodeHash)
 }
 
-// Account is the hyperchain consensus representation of accounts.
+// Account is the hyperchain consensus representation format.
 type Account struct {
 	Nonce             uint64         `json:"nonce"`
 	Balance           *big.Int       `json:"balance"`
@@ -104,14 +110,14 @@ type Account struct {
 	CreateTime        uint64         `json:"createTime"`
 }
 
-// MemAccount use for state object marshal and unmarshal in journal
+// MemAccount used for state object marshal and unmarshal in journal.
 type MemAccount struct {
 	Address common.Address
 	Account
 }
 
 // newObject creates a state object.
-func newObject(db *StateDB, address common.Address, data Account, onDirty func(addr common.Address), setup bool, bktConf map[string]interface{}, logger *logging.Logger) *StateObject {
+func newObject(db *StateDB, address common.Address, data Account, onDirty func(addr common.Address), setup bool, conf map[string]interface{}, logger *logging.Logger) *StateObject {
 	if data.Balance == nil {
 		data.Balance = new(big.Int)
 	}
@@ -129,12 +135,12 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 		logger:         logger,
 		evictList:      make(map[common.Hash]uint64),
 	}
-	// initialize bucket tree
+	// Initialize bucket tree
 	if setup {
-		prefix, _ := CompositeStorageBucketPrefix(address.Hex())
-		obj.bucketTree = bucket.NewBucketTree(db.db, string(prefix))
-		obj.bucketTree.Initialize(bktConf)
-		obj.bucketConf = bktConf
+		prefix := CompositeStorageBucketPrefix(address.Hex())
+		obj.tree = bucket.NewBucketTree(db.db, string(prefix))
+		obj.tree.Initialize(conf)
+		obj.treeConfig = conf
 	}
 	return obj
 }
@@ -146,6 +152,15 @@ func (c *StateObject) MarshalJSON() ([]byte, error) {
 		Account: c.data,
 	}
 	return json.Marshal(account)
+}
+
+// unmarshal state object for journal usage
+func (c *StateObject) UnmarshalJSON(data []byte) error {
+	account := &MemAccount{}
+	err := json.Unmarshal(data, account)
+	c.data = account.Account
+	c.address = account.Address
+	return err
 }
 
 // marshal for state object persist
@@ -163,16 +178,7 @@ func (c *StateObject) Marshal() ([]byte, error) {
 	return json.Marshal(account)
 }
 
-// unmarshal state object for journal usage
-func (c *StateObject) UnmarshalJSON(data []byte) error {
-	account := &MemAccount{}
-	err := json.Unmarshal(data, account)
-	c.data = account.Account
-	c.address = account.Address
-	return err
-}
-
-// Unmarshal stateObject in disk
+// Unmarshal unserialize bytes to account.
 func Unmarshal(data []byte, v interface{}) error {
 	account, ok := v.(*Account)
 	if ok == false {
@@ -182,7 +188,6 @@ func Unmarshal(data []byte, v interface{}) error {
 	return err
 }
 
-// String
 func (c *StateObject) String() string {
 	var str string
 	str = fmt.Sprintf("stateObject: %x nonce [%d], balance [%d], root [%s], codeHash [%s]\n", c.address, c.Nonce(), c.Balance(), c.Root().Hex(), common.BytesToHash(c.CodeHash()).Hex())
@@ -196,6 +201,7 @@ func (self *StateObject) setError(err error) {
 	}
 }
 
+// markSuicided marks the object has been deleted.
 func (self *StateObject) markSuicided() {
 	self.suicided = true
 	if self.onDirty != nil {
@@ -203,18 +209,6 @@ func (self *StateObject) markSuicided() {
 		self.onDirty = nil
 	}
 	self.logger.Infof("%x: #%d %v X\n", self.Address(), self.Nonce(), self.Balance())
-}
-
-func (c *StateObject) touch() {
-	c.db.journal.JournalList = append(c.db.journal.JournalList, &TouchChange{
-		Account: &c.address,
-		Prev:    c.touched,
-	})
-	if c.onDirty != nil {
-		c.onDirty(c.Address())
-		c.onDirty = nil
-	}
-	c.touched = true
 }
 
 // GetState from live state object return a storage entry's value if existed
@@ -227,7 +221,7 @@ func (self *StateObject) GetState(key common.Hash) (bool, []byte) {
 	}
 }
 
-// GetState from database return a storage entry's value if existed
+// GetState loads from database return a storage entry's value if existed
 func GetStateFromDB(db db.Database, address common.Address, key common.Hash) (bool, []byte) {
 	// Load from DB in case it is missing.
 	val, err := db.Get(CompositeStorageKey(address.Bytes(), key.Bytes()))
@@ -249,7 +243,7 @@ func (self *StateObject) SetState(db db.Database, key common.Hash, value []byte,
 	})
 	self.logger.Debugf("set state key %s value %s existed %v", key.Hex(), common.Bytes2Hex(value), exist)
 	self.setState(key, value)
-	if self.isArchive(opcode) {
+	if isArchive(opcode) {
 		self.archive(key, previous, value)
 	}
 }
@@ -266,10 +260,6 @@ func (self *StateObject) setState(key common.Hash, value []byte) {
 	}
 }
 
-func (self *StateObject) updateStorageLastModify(key common.Hash, lastModify uint64) {
-	self.evictList[key] = lastModify
-}
-
 // remove storage entry from storage cache instead of setting empty value
 // otherwise an entry will been leave in database
 // only use in undo `add storage entry` vm operation
@@ -280,12 +270,13 @@ func (self *StateObject) removeState(key common.Hash) {
 }
 
 func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
-	// IMPORTANT root should calculate first
-	// otherwise dirty storage will be removed in persist phase
 	var wg sync.WaitGroup
+	wg.Add(2)
 	go self.onEvict(wg)
 	go self.doArchive(wg)
 
+	// IMPORTANT root should calculate first
+	// otherwise dirty storage will be removed in persist phase
 	self.GenerateFingerPrintOfStorage()
 	self.logger.Debugf("begin to flush dirty storage")
 	for key, value := range self.dirtyStorage {
@@ -304,9 +295,9 @@ func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 		}
 	}
 	// flush all bucket tree modified to batch
-	self.bucketTree.Commit(db)
-	self.archiveStorage = make(Storage)
+	self.tree.Commit(db)
 	wg.Wait()
+	self.archiveStorage = make(Storage)
 	return nil
 }
 
@@ -335,6 +326,7 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 			if len(v) == 0 {
 				workingSet[k.Hex()] = nil
 			} else {
+				// Padding the value to at least 32 bytes.
 				if len(v) <= common.HashLength {
 					workingSet[k.Hex()] = common.BytesToHash(v).Bytes()
 				} else {
@@ -343,9 +335,9 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 				self.logger.Debugf("working set key %s value %s", k.Hex(), common.Bytes2Hex(v))
 			}
 		}
-		self.bucketTree.Prepare(workingSet)
+		self.tree.Prepare(workingSet)
 		// 2. calculate hash
-		hash, err := self.bucketTree.Process()
+		hash, err := self.tree.Process()
 		if err != nil {
 			self.logger.Errorf("calculate storage hash for stateObject [%s] failed", self.address.Hex())
 			return common.Hash{}
@@ -368,27 +360,6 @@ func (self *StateObject) GenerateFingerPrintOfStorage() common.Hash {
 
 // Return the gas back to the origin. Used by the Virtual machine or Closures
 func (c *StateObject) ReturnGas(gas, price *big.Int) {}
-
-// Deprecated
-func (self *StateObject) deepCopy(db *StateDB, onDirty func(addr common.Address)) *StateObject {
-	copyEvictList := func(evistList map[common.Hash]uint64) map[common.Hash]uint64 {
-		ret := make(map[common.Hash]uint64)
-		for k, v := range evistList {
-			ret[k] = v
-		}
-		return ret
-	}
-
-	stateObject := newObject(db, self.address, self.data, onDirty, true, self.bucketConf, self.logger)
-	stateObject.code = self.code
-	stateObject.dirtyStorage = self.dirtyStorage.Copy()
-	stateObject.cachedStorage = self.dirtyStorage.Copy()
-	stateObject.suicided = self.suicided
-	stateObject.dirtyCode = self.dirtyCode
-	stateObject.deleted = self.deleted
-	stateObject.evictList = copyEvictList(self.evictList)
-	return stateObject
-}
 
 //
 // Attribute accessors
@@ -680,15 +651,16 @@ func (self *StateObject) archive(key common.Hash, originValue, value []byte) {
 		self.archiveStorage[key] = originValue
 	}
 }
-func (self *StateObject) isArchive(opcode int32) bool {
-	return opcode == OPCODE_ARCHIVE
+
+func isArchive(opcode int32) bool {
+	return opcode == opcodeArchive
 }
 
+// onEvict drops `old enough` keyvalue pairs avoid too much memory occupation.
 func (self *StateObject) onEvict(wg sync.WaitGroup) {
 	defer func() {
 		wg.Done()
 	}()
-	wg.Add(1)
 	for key, brith := range self.evictList {
 		if brith < self.db.oldestSeqNo {
 			delete(self.evictList, key)
@@ -701,7 +673,6 @@ func (self *StateObject) doArchive(wg sync.WaitGroup) {
 	defer func() {
 		wg.Done()
 	}()
-	wg.Add(1)
 	batch := self.db.archiveDb.NewBatch()
 	for key, value := range self.archiveStorage {
 		if len(value) != 0 {

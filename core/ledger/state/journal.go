@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package state
 
 import (
@@ -19,14 +32,85 @@ const (
 	NonceChangeType            = "NonceChange"
 	StorageChangeType          = "StorageChange"
 	CodeChangeType             = "CodeChange"
-	RefundChangeType           = "RefundChange"
 	AddLogChangeType           = "AddLogChange"
-	TouchChangeType            = "TouchChange"
 	StorageHashChangeType      = "StorageHashChange"
 	StatusChangeType           = "StatusChange"
 	DeployedContractChangeType = "DeployedContractChange"
 	SetCreatorChangeType       = "SetCreatorChange"
 	SetCreateTimeChangeType    = "SetCreateTimeChange"
+)
+
+type (
+	// Changes to the account database
+	CreateObjectChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Type    string          `json:"type,omitempty"`
+	}
+	ResetObjectChange struct {
+		Prev *StateObject `json:"prev,omitempty"`
+		Type string       `json:"type,omitempty"`
+	}
+	SuicideChange struct {
+		Account     *common.Address `json:"account,omitempty"`
+		Prev        bool            `json:"prev,omitempty"` // whether account had already suicided
+		Prevbalance *big.Int        `json:"prevbalance,omitempty"`
+		PreObject   *StateObject    `json:"preObject,omitempty"`
+		Type        string          `json:"type,omitempty"`
+	}
+	// Changes to individual accounts.
+	BalanceChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Prev    *big.Int        `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
+	}
+	NonceChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Prev    uint64          `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
+	}
+	StorageChange struct {
+		Account    *common.Address `json:"account,omitempty"`
+		Key        common.Hash     `json:"key,omitempty"`
+		Prevalue   []byte          `json:"prevalue,omitempty"`
+		Exist      bool            `json:"exist,omitempty"`
+		LastModify uint64          `json:"brith,omitempty"`
+		Type       string          `json:"type,omitempty"`
+	}
+	CodeChange struct {
+		Account  *common.Address `json:"account,omitempty"`
+		Prevcode []byte          `json:"prevcode,omitempty"`
+		Prevhash []byte          `json:"prevhash,omitempty"`
+		Type     string          `json:"type,omitempty"`
+	}
+	StatusChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Prev    int             `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
+	}
+	DeployedContractChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Prev    *common.Address `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
+	}
+	SetCreatorChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Prev    common.Address  `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
+	}
+	SetCreateTimeChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Prev    uint64          `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
+	}
+	AddLogChange struct {
+		Txhash common.Hash `json:"txhash,omitempty"`
+		Type   string      `json:"type,omitempty"`
+	}
+	StorageHashChange struct {
+		Account *common.Address `json:"account,omitempty"`
+		Prev    []byte          `json:"prev,omitempty"`
+		Type    string          `json:"type,omitempty"`
+	}
 )
 
 type JournalEntry interface {
@@ -78,105 +162,91 @@ func UnmarshalJournal(data []byte) (*Journal, error) {
 		}
 		m := jo.(map[string]interface{})
 		switch m["type"] {
-		case "CreateObjectChange":
+		case CreateObjectChangeType:
 			var tmp CreateObjectChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
-		case "ResetObjectChange":
+		case ResetObjectChangeType:
 			var tmp ResetObjectChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
-		case "RefundChange":
-			var tmp RefundChange
-			err = json.Unmarshal(res, &tmp)
-			if err != nil {
-				return nil, err
-			}
-			jos = append(jos, &tmp)
-		case "AddLogChange":
+		case AddLogChangeType:
 			var tmp AddLogChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
-		case "BalanceChange":
+		case BalanceChangeType:
 			var tmp BalanceChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
-		case "NonceChange":
+		case NonceChangeType:
 			var tmp NonceChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
-		case "TouchChange":
-			var tmp TouchChange
-			err = json.Unmarshal(res, &tmp)
-			if err != nil {
-				return nil, err
-			}
-			jos = append(jos, &tmp)
-		case "SuicideChange":
+		case SuicideChangeType:
 			var tmp SuicideChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
-		case "StorageChange":
+		case StorageChangeType:
 			var tmp StorageChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
-		case "CodeChange":
+		case CodeChangeType:
 			var tmp CodeChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
-		case "StorageHashChange":
+		case StorageHashChangeType:
 			var tmp StorageHashChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
-		case "StatusChange":
+		case StatusChangeType:
 			var tmp StatusChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
-		case "DeployedContractChange":
+		case DeployedContractChangeType:
 			var tmp DeployedContractChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
-		case "SetCreatorChange":
+		case SetCreatorChangeType:
 			var tmp SetCreatorChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
 				return nil, err
 			}
 			jos = append(jos, &tmp)
-		case "SetCreateTimeChange":
+		case SetCreateTimeChangeType:
 			var tmp SetCreateTimeChange
 			err = json.Unmarshal(res, &tmp)
 			if err != nil {
@@ -193,91 +263,6 @@ func UnmarshalJournal(data []byte) (*Journal, error) {
 	}
 	return ret, nil
 }
-
-type (
-	// Changes to the account database
-	CreateObjectChange struct {
-		Account *common.Address `json:"account,omitempty"`
-		Type    string          `json:"type,omitempty"`
-	}
-	ResetObjectChange struct {
-		Prev *StateObject `json:"prev,omitempty"`
-		Type string       `json:"type,omitempty"`
-	}
-	SuicideChange struct {
-		Account     *common.Address `json:"account,omitempty"`
-		Prev        bool            `json:"prev,omitempty"` // whether account had already suicided
-		Prevbalance *big.Int        `json:"prevbalance,omitempty"`
-		PreObject   *StateObject    `json:"preObject,omitempty"`
-		Type        string          `json:"type,omitempty"`
-	}
-
-	// Changes to individual accounts.
-	BalanceChange struct {
-		Account *common.Address `json:"account,omitempty"`
-		Prev    *big.Int        `json:"prev,omitempty"`
-		Type    string          `json:"type,omitempty"`
-	}
-	NonceChange struct {
-		Account *common.Address `json:"account,omitempty"`
-		Prev    uint64          `json:"prev,omitempty"`
-		Type    string          `json:"type,omitempty"`
-	}
-	StorageChange struct {
-		Account    *common.Address `json:"account,omitempty"`
-		Key        common.Hash     `json:"key,omitempty"`
-		Prevalue   []byte          `json:"prevalue,omitempty"`
-		Exist      bool            `json:"exist,omitempty"`
-		LastModify uint64          `json:"brith,omitempty"`
-		Type       string          `json:"type,omitempty"`
-	}
-	CodeChange struct {
-		Account  *common.Address `json:"account,omitempty"`
-		Prevcode []byte          `json:"prevcode,omitempty"`
-		Prevhash []byte          `json:"prevhash,omitempty"`
-		Type     string          `json:"type,omitempty"`
-	}
-	StatusChange struct {
-		Account *common.Address `json:"account,omitempty"`
-		Prev    int             `json:"prev,omitempty"`
-		Type    string          `json:"type,omitempty"`
-	}
-	DeployedContractChange struct {
-		Account *common.Address `json:"account,omitempty"`
-		Prev    *common.Address `json:"prev,omitempty"`
-		Type    string          `json:"type,omitempty"`
-	}
-	SetCreatorChange struct {
-		Account *common.Address `json:"account,omitempty"`
-		Prev    common.Address  `json:"prev,omitempty"`
-		Type    string          `json:"type,omitempty"`
-	}
-	SetCreateTimeChange struct {
-		Account *common.Address `json:"account,omitempty"`
-		Prev    uint64          `json:"prev,omitempty"`
-		Type    string          `json:"type,omitempty"`
-	}
-
-	// Changes to other state values.
-	RefundChange struct {
-		Prev *big.Int `json:"prev,omitempty"`
-		Type string   `json:"type,omitempty"`
-	}
-	AddLogChange struct {
-		Txhash common.Hash `json:"txhash,omitempty"`
-		Type   string      `json:"type,omitempty"`
-	}
-	TouchChange struct {
-		Account *common.Address `json:"account,omitempty"`
-		Prev    bool            `json:"prev,omitempty"`
-		Type    string          `json:"type,omitempty"`
-	}
-	StorageHashChange struct {
-		Account *common.Address `json:"account,omitempty"`
-		Prev    []byte          `json:"prev,omitempty"`
-		Type    string          `json:"type,omitempty"`
-	}
-)
 
 // createObjectChange
 func (ch *CreateObjectChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
@@ -365,35 +350,6 @@ func (ch *SuicideChange) SetType() {
 	ch.Type = SuicideChangeType
 }
 func (ch *SuicideChange) GetType() string {
-	return ch.Type
-}
-
-// touchChange
-var ripemd = common.HexToAddress("0000000000000000000000000000000000000003")
-
-// Deprecated
-func (ch *TouchChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
-	if !writeThrough {
-		if !ch.Prev && *ch.Account != ripemd {
-			delete(s.stateObjects, *ch.Account)
-			delete(s.stateObjectsDirty, *ch.Account)
-		}
-	} else {
-		// TODO
-	}
-}
-func (ch *TouchChange) String() string {
-	var str string
-	str = fmt.Sprintf("journal [touchChange] %s %#v\n", ch.Account.Hex(), ch.Prev)
-	return str
-}
-func (ch *TouchChange) Marshal() ([]byte, error) {
-	return json.Marshal(ch)
-}
-func (ch *TouchChange) SetType() {
-	ch.Type = TouchChangeType
-}
-func (ch *TouchChange) GetType() string {
 	return ch.Type
 }
 
@@ -497,7 +453,7 @@ func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, w
 		if ch.Exist {
 			if obj := s.GetStateObject(*ch.Account); obj != nil {
 				obj.setState(ch.Key, ch.Prevalue)
-				obj.updateStorageLastModify(ch.Key, ch.LastModify)
+				obj.evictList[ch.Key] = ch.LastModify
 			}
 		} else {
 			if obj := s.GetStateObject(*ch.Account); obj != nil {
@@ -527,29 +483,6 @@ func (ch *StorageChange) SetType() {
 	ch.Type = StorageChangeType
 }
 func (ch *StorageChange) GetType() string {
-	return ch.Type
-}
-
-// refundChange
-func (ch *RefundChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
-	if !writeThrough {
-		s.refund = ch.Prev
-	} else {
-		// TODO
-	}
-}
-func (ch *RefundChange) String() string {
-	var str string
-	str = fmt.Sprintf("journal [refundChange] previous value %s \n", ch.Prev.String())
-	return str
-}
-func (ch *RefundChange) Marshal() ([]byte, error) {
-	return json.Marshal(ch)
-}
-func (ch *RefundChange) SetType() {
-	ch.Type = RefundChangeType
-}
-func (ch *RefundChange) GetType() string {
 	return ch.Type
 }
 
@@ -622,9 +555,9 @@ func (ch *StatusChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, wr
 func (ch *StatusChange) String() string {
 	var str string
 	var status string
-	if ch.Prev == STATEOBJECT_STATUS_NORMAL {
+	if ch.Prev == OBJ_NORMAL {
 		status = "normal"
-	} else if ch.Prev == STATEOBJECT_STATUS_FROZON {
+	} else if ch.Prev == OBJ_FROZON {
 		status = "frozen"
 	} else {
 		status = "Undefined"

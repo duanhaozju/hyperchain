@@ -183,7 +183,7 @@ func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, er
 			db.Close()
 		}
 
-		stateDb, err := state.New(common.BytesToHash(blk.MerkleRoot), db, nil, executor.conf, manifest.Height, executor.namespace)
+		stateDb, err := state.New(common.BytesToHash(blk.MerkleRoot), db, nil, executor.conf, manifest.Height)
 		return stateDb, err, closeDb
 	}
 }
@@ -195,7 +195,7 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 		executor.logger.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
 		return nil, err
 	}
-	stateDb, err := state.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.archiveDb, executor.conf, edb.GetHeightOfChain(executor.namespace), executor.namespace)
+	stateDb, err := state.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.archiveDb, executor.conf, edb.GetHeightOfChain(executor.namespace))
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] new stateDb failed, err : %s", executor.namespace, err.Error())
 		return nil, err

@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
@@ -82,7 +83,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	var filterLogs []*types.Log
 	// fetch the relative db batch obj from the batch buffer
 	// attention: state changes has already been push into the batch obj
-	batch := executor.statedb.FetchBatch(record.SeqNo)
+	batch := executor.statedb.FetchBatch(record.SeqNo, state.BATCH_NORMAL)
 	// persist transaction data
 	if err := executor.persistTransactions(batch, block.Transactions, block.Number); err != nil {
 		executor.logger.Errorf("persist transactions of #%d failed.", block.Number)

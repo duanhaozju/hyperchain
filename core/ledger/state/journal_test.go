@@ -144,9 +144,9 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 			name: "SetStatus",
 			fn: func(a testAction, s *StateDB) {
 				if a.args[0] < 10000/2 {
-					s.SetStatus(addr, STATEOBJECT_STATUS_NORMAL)
+					s.SetStatus(addr, OBJ_NORMAL)
 				} else {
-					s.SetStatus(addr, STATEOBJECT_STATUS_FROZON)
+					s.SetStatus(addr, OBJ_FROZON)
 				}
 			},
 			args: make([]int64, 1),

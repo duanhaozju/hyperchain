@@ -1,3 +1,18 @@
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 package state
 
 import (
@@ -9,7 +24,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/deckarep/golang-set"
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"hyperchain/common"
@@ -22,15 +36,6 @@ import (
 	"sync/atomic"
 )
 
-const (
-	// Number of codehash->size associations to keep.
-	codeSizeCacheSize = 100000
-	// whether turn on fake hash function
-	enableFakeHashFn = false
-	// whether to remove empty stateObject
-	deleteEmptyObjects = true
-)
-
 type revision struct {
 	id           int
 	journalIndex int
@@ -40,16 +45,13 @@ type revision struct {
 // * Contracts
 // * Accounts
 type StateDB struct {
-	db            db.Database
-	archiveDb     db.Database
-	root          common.Hash
-	codeSizeCache *lru.Cache
+	db        db.Database
+	archiveDb db.Database
+	root      common.Hash
 
 	// This map holds 'live' objects, which will get modified while processing a state transition.
 	stateObjects      map[common.Address]*StateObject
 	stateObjectsDirty map[common.Address]struct{}
-	// The refund counter, also used by state transitioning.
-	refund *big.Int
 
 	thash, bhash common.Hash
 	txIndex      int
@@ -63,115 +65,62 @@ type StateDB struct {
 	nextRevisionId int
 
 	// bucket tree related
-	bktConf    *common.Config
-	bucketTree *bucket.BucketTree
-	lock       sync.Mutex
+	conf *common.Config
+	tree *bucket.BucketTree
+	lock sync.Mutex
 	// current block pool status
 	curSeqNo    uint64 // current seqNo in process
 	oldestSeqNo uint64 // oldest seqNo in content cache cache
 	// atomic related
-	batchCache    *common.Cache // use to store batch handler for different block process
-	archieveCache *common.Cache // use to store batch handler for different block process
-	contentCache  *common.Cache // use to store modification set for different block process
+	batchCache   *common.Cache // use to store batch handler for different block process
+	archiveCache *common.Cache // use to store batch handler for different block process
+	contentCache *common.Cache // use to store modification set for different block process
 
 	logger *logging.Logger
 }
 
-// New - Create a new state from a given root
-func New(root common.Hash, db db.Database, archiveDb db.Database, bktConf *common.Config, height uint64, namespace string) (*StateDB, error) {
-	logger := common.GetLogger(namespace, "state")
-	csc, _ := lru.New(codeSizeCacheSize)
+// New creates a new state with the given root and height.
+func New(root common.Hash, db, archiveDb db.Database, conf *common.Config, height uint64) (*StateDB, error) {
 	// initialize bucket tree
-	bucketPrefix, _ := CompositeStateBucketPrefix()
-	bucketTree := bucket.NewBucketTree(db, string(bucketPrefix))
+	bucketTree := bucket.NewBucketTree(db, string(CompositeStateBucketPrefix()))
 	// initialize cache
 	batchCache, _ := common.NewCache()
 	contentCache, _ := common.NewCache()
-	archieveCache, _ := common.NewCache()
+	archiveCache, _ := common.NewCache()
 	state := &StateDB{
 		db:                db,
 		archiveDb:         archiveDb,
 		root:              root,
-		codeSizeCache:     csc,
 		stateObjects:      make(map[common.Address]*StateObject),
 		stateObjectsDirty: make(map[common.Address]struct{}),
-		refund:            new(big.Int),
 		logs:              make(map[common.Hash]types.Logs),
-		bktConf:           bktConf,
-		bucketTree:        bucketTree,
+		conf:              conf,
+		tree:              bucketTree,
 		batchCache:        batchCache,
 		contentCache:      contentCache,
-		archieveCache:     archieveCache,
-		logger:            logger,
+		archiveCache:      archiveCache,
+		logger:            common.GetLogger(db.Namespace(), "state"),
 	}
-	err := bucketTree.Initialize(SetupBucketConfig(state.GetBucketSize(STATEDB), state.GetBucketLevelGroup(STATEDB), state.GetBucketCacheSize(STATEDB), state.GetDataNodeCacheSize(STATEDB)))
+	err := bucketTree.Initialize(InitTreeConfig(state.GetCapacity(STATEDB), state.GetAggreation(STATEDB),
+		state.GetMerkleCacheSize(STATEDB), state.GetBucketCacheSize(STATEDB)))
 	curHash, err := bucketTree.Process()
-	logger.Debugf("latest state root %s", common.Bytes2Hex(curHash))
+	state.logger.Debugf("latest state root %s", common.Bytes2Hex(curHash))
 	if err != nil {
-		logger.Errorf("new state db failed, error message %s", err.Error())
+		state.logger.Errorf("new state db failed, error message %s", err.Error())
 		return nil, err
 	}
 	if !validateRoot(root, common.BytesToHash(curHash)) {
-		logger.Errorf("invalid root, correct root hash of state bucket tree is %s", common.Bytes2Hex(curHash))
+		state.logger.Errorf("invalid root, correct root hash of state bucket tree is %s", common.Bytes2Hex(curHash))
 		return nil, errors.New("invalid state bucket tree root")
 	}
 	// set oldest seqNo
-	logger.Debugf("oldest height when initialize %d", height+1)
+	state.logger.Debugf("oldest height when initialize %d", height+1)
 	state.setLatest(height + 1)
 	return state, nil
 }
 
-/*
-	Just for test
-*/
-func NewRaw(db db.Database, height uint64, namespace string, conf *common.Config) *StateDB {
-	logger := common.GetLogger(namespace, "state")
-	csc, _ := lru.New(codeSizeCacheSize)
-	batchCache, _ := common.NewCache()
-	contentCache, _ := common.NewCache()
-	archieveCache, _ := common.NewCache()
-	return &StateDB{
-		db:                db,
-		archiveDb:         db,
-		codeSizeCache:     csc,
-		stateObjects:      make(map[common.Address]*StateObject),
-		stateObjectsDirty: make(map[common.Address]struct{}),
-		refund:            new(big.Int),
-		logs:              make(map[common.Hash]types.Logs),
-		batchCache:        batchCache,
-		contentCache:      contentCache,
-		archieveCache:     archieveCache,
-		oldestSeqNo:       height + 1,
-		bktConf:           conf,
-		logger:            logger,
-	}
-}
-
-// New - New creates a new statedb by reusing journalled data to avoid costly
-// disk io.
-// Deprecated
-func (self *StateDB) New(root common.Hash) (*StateDB, error) {
-	self.lock.Lock()
-	defer self.lock.Unlock()
-	bucketPrefix, _ := CompositeStateBucketPrefix()
-	bucketTree := bucket.NewBucketTree(self.db, string(bucketPrefix))
-	state := &StateDB{
-		db:                self.db,
-		codeSizeCache:     self.codeSizeCache,
-		root:              root,
-		stateObjects:      make(map[common.Address]*StateObject),
-		stateObjectsDirty: make(map[common.Address]struct{}),
-		refund:            new(big.Int),
-		logs:              make(map[common.Hash]types.Logs),
-		bktConf:           self.bktConf,
-		bucketTree:        bucketTree,
-	}
-	bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB), self.GetBucketCacheSize(STATEDB), self.GetDataNodeCacheSize(STATEDB)))
-	return state, nil
-}
-
-// Reset - clears out all emphemeral state objects from the state db, but keeps
-// the underlying state trie to avoid reloading data for the next operations.
+// Reset clears out all emphemeral state objects from the state db, but keeps
+// the latest modified objects to avoid reloading data for the next operations.
 func (self *StateDB) Reset() error {
 	self.lock.Lock()
 	defer self.lock.Unlock()
@@ -179,7 +128,7 @@ func (self *StateDB) Reset() error {
 	if self.curSeqNo == 0 {
 		self.logger.Warning("make sure current seqNo is zero during the state reset")
 	}
-	// IMPORTANT reset obj.onDirty callback function and bucket tree
+	// reset obj.onDirty callback function
 	dirtyCopy := make(map[common.Address]*StateObject)
 	for _, obj := range self.stateObjects {
 		if _, dirty := self.stateObjectsDirty[obj.address]; dirty == true && !cm.IsPrecompiledAccount(obj.address) {
@@ -202,16 +151,15 @@ func (self *StateDB) Reset() error {
 	return nil
 }
 
-// MarkProcessStart - mark a block's process is begin
-// initialize some stuff.
+// MarkProcessStart marks a block's process is begin to initialize some stuff.
 func (self *StateDB) MarkProcessStart(seqNo uint64) {
 	// set current seqNo
 	self.logger.Debugf("current process seqNo #%d", seqNo)
 	atomic.StoreUint64(&self.curSeqNo, seqNo)
 }
 
-// MarkProcessFinish - mark a block's process has finished
-// remove some stuff in cache to avoid of memory leak.
+// MarkProcessFinish marks a block's process has finished.
+// Remove cached content in cache to avoid of memory leak.
 func (self *StateDB) MarkProcessFinish(seqNo uint64) {
 	// remove all batch handler with related seqNo less than `seqNo`
 	// because if empty valiation event happen(no validate transaction in a batch), this type of validation event
@@ -232,17 +180,18 @@ func (self *StateDB) MarkProcessFinish(seqNo uint64) {
 	self.contentCache.RemoveWithCond(seqNo, judge)
 }
 
-// setLatest - set oldest when state been initialize
+// setLatest sets oldest when state been initialize
 // seqNo should be the chain's height.
 func (self *StateDB) setLatest(seqNo uint64) {
 	atomic.StoreUint64(&self.oldestSeqNo, seqNo)
 }
 
-// Purge - clear out all uncommitted data
+// Purge clears out all uncommitted data.
 func (self *StateDB) Purge() {
 	self.batchCache.Purge()
 	self.contentCache.Purge()
-	self.archieveCache.Purge()
+	self.archiveCache.Purge()
+	self.tree.Clear()
 
 	self.stateObjects = make(map[common.Address]*StateObject)
 	self.stateObjectsDirty = make(map[common.Address]struct{})
@@ -253,75 +202,64 @@ func (self *StateDB) Purge() {
 	self.logSize = 0
 }
 
-// ResetToTarget - reset oldest seqNo and root to target.
+// ResetToTarget resets oldest seqNo and root to target.
 func (self *StateDB) ResetToTarget(oldest uint64, root common.Hash) {
 	atomic.StoreUint64(&self.oldestSeqNo, oldest)
 	self.root = root
+	self.Purge()
 }
 
-// FetchBatch - batch cache related
-// fetch a batch from batch cache with correspondent seqNo
+// FetchBatch fetchs a batch from batch collection with correspondent seqNo
 // create a new batch if not exist in cache.
-func (self *StateDB) FetchBatch(seqNo uint64) db.Batch {
-	if self.batchCache.Contains(seqNo) {
+func (self *StateDB) FetchBatch(seqNo uint64, typ int) db.Batch {
+	var c *common.Cache
+	if typ == BATCH_NORMAL {
+		c = self.batchCache
+	} else {
+		c = self.archiveCache
+	}
+	if c.Contains(seqNo) {
 		// already exist
 		self.logger.Debugf("fetch batch for #%d exist in batch cache", seqNo)
-		batch, _ := self.batchCache.Get(seqNo)
+		batch, _ := c.Get(seqNo)
 		return batch.(db.Batch)
 	} else {
 		// not exist right now
 		self.logger.Debugf("create one batch for #%d", seqNo)
 		batch := self.db.NewBatch()
-		self.batchCache.Add(seqNo, batch)
+		c.Add(seqNo, batch)
 		return batch
 	}
 }
 
-func (self *StateDB) FetchArchieveBatch(seqNo uint64) db.Batch {
-	if self.archieveCache.Contains(seqNo) {
-		// already exist
-		self.logger.Debugf("fetch archieve batch for #%d exist in batch cache", seqNo)
-		batch, _ := self.archieveCache.Get(seqNo)
-		return batch.(db.Batch)
-	} else {
-		// not exist right now
-		self.logger.Debugf("create one archieve batch for #%d", seqNo)
-		batch := self.archiveDb.NewBatch()
-		self.archieveCache.Add(seqNo, batch)
-		return batch
-	}
-}
-
+// MakeArchive flushs all cached archived content to historical database.
 func (self *StateDB) MakeArchive(seqNo uint64) {
-	batch := self.FetchArchieveBatch(seqNo)
-	self.archieveCache.Remove(seqNo)
+	batch := self.FetchBatch(seqNo, BATCH_ARCHIVE)
+	self.archiveCache.Remove(seqNo)
 	self.logger.Debugf("make archieve seqNo %d, totally %d elements contained.", seqNo, batch.Len())
 	go batch.Write()
 }
 
-// DeleteBatch - delete a batch handler in cache with correspondent seqNo
-// avoid memory leak.
+// DeleteBatch deletes a batch handler in cache with correspondent seqNo
+// avoid of memory leak.
 func (self *StateDB) DeleteBatch(seqNo uint64) {
 	self.logger.Criticalf("remove batch for #%d from batch cache", seqNo)
 	self.batchCache.Remove(seqNo)
 }
 
-// CompareRoot - compare the current state root value with the input
+// CompareRoot compares the current state root value with the input
 func (self *StateDB) CompareRoot(root common.Hash) bool {
 	return bytes.Compare(root.Bytes(), self.root.Bytes()) == 0
 }
 
-// StartRecord - mark a transaction process's beginning.
+// StartRecord marks a transaction process's beginning.
 func (self *StateDB) StartRecord(thash, bhash common.Hash, ti int) {
 	self.thash = thash
 	self.bhash = bhash
 	self.txIndex = ti
 }
 
-// add logs generated in vm to state
-// doesn't assign block hash now
-// because the blcok hash hasn't been calculated
-// correctly block  hash will be assigned in the commit phase
+// AddLog adds logs generated in vm to state,
 func (self *StateDB) AddLog(log *types.Log) {
 	self.journal.JournalList = append(self.journal.JournalList, &AddLogChange{Txhash: self.thash})
 	log.TxHash = self.thash
@@ -331,25 +269,18 @@ func (self *StateDB) AddLog(log *types.Log) {
 	self.logSize++
 }
 
-// obtain logs by transaction hash
+// GetLogs obtains logs by transaction hash
 func (self *StateDB) GetLogs(hash common.Hash) types.Logs {
 	return self.logs[hash]
 }
 
-// get all logs in state
+// Logs gets all logs in state
 func (self *StateDB) Logs() types.Logs {
 	var logs types.Logs
 	for _, lgs := range self.logs {
 		logs = append(logs, lgs...)
 	}
 	return logs
-}
-
-// add refund to state temporarily
-// Deprecated
-func (self *StateDB) AddRefund(gas *big.Int) {
-	self.journal.JournalList = append(self.journal.JournalList, &RefundChange{Prev: new(big.Int).Set(self.refund)})
-	self.refund.Add(self.refund, gas)
 }
 
 // Exist reports whether the given account address exists in the state.
@@ -359,13 +290,13 @@ func (self *StateDB) Exist(addr common.Address) bool {
 }
 
 // Empty returns whether the state object is either non-existant
-// or empty according to the EIP161 specification (balance = nonce = code = 0)
+// or empty according to the EIP161 specification (balance = nonce = code = 0).
 func (self *StateDB) Empty(addr common.Address) bool {
 	so := self.GetStateObject(addr)
 	return so == nil || so.empty()
 }
 
-// Get account by address
+// GetAccount retrieves account by address.
 func (self *StateDB) GetAccount(addr common.Address) vm.Account {
 	ret := self.GetStateObject(addr)
 	if ret != nil {
@@ -375,10 +306,10 @@ func (self *StateDB) GetAccount(addr common.Address) vm.Account {
 	}
 }
 
-// Get all account in database
+// Get all accounts in database.
 func (self *StateDB) GetAccounts() map[string]vm.Account {
 	ret := make(map[string]vm.Account)
-	iter := self.db.NewIterator([]byte(accountIdentifier))
+	iter := self.db.NewIterator([]byte(accountPrefix))
 	for iter.Next() {
 		addr, ok := SplitCompositeAccountKey(iter.Key())
 		if ok == false {
@@ -387,13 +318,13 @@ func (self *StateDB) GetAccounts() map[string]vm.Account {
 		address := common.BytesToAddress(addr)
 		var account Account
 		json.Unmarshal(iter.Value(), &account)
-		newobj := newObject(self, address, account, self.MarkStateObjectDirty, false, nil, self.logger)
+		newobj := newObject(self, address, account, nil, false, nil, self.logger)
 		ret[address.Hex()] = newobj
 	}
 	return ret
 }
 
-// Retrieve the balance from the given address or 0 if object not found
+// GetBalance retrieves the balance from the given address or 0 if object not found.
 func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
@@ -402,7 +333,7 @@ func (self *StateDB) GetBalance(addr common.Address) *big.Int {
 	return common.Big0
 }
 
-// Nonce is the contract number state object has deployed
+// GetNonce nonce is the contract number state object has deployed.
 func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
@@ -412,36 +343,25 @@ func (self *StateDB) GetNonce(addr common.Address) uint64 {
 	return 0
 }
 
-// code is the contract's code
+// GetCode code is the contract's code.
 func (self *StateDB) GetCode(addr common.Address) []byte {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
-		code := stateObject.Code(self.db)
-		key := common.BytesToHash(stateObject.CodeHash())
-		self.codeSizeCache.Add(key, len(code))
-		return code
+		return stateObject.Code(self.db)
 	}
 	return nil
 }
 
-// Get code len
+// GetCodeSize gets code len.
 func (self *StateDB) GetCodeSize(addr common.Address) int {
 	stateObject := self.GetStateObject(addr)
 	if stateObject == nil {
 		return 0
 	}
-	key := common.BytesToHash(stateObject.CodeHash())
-	if cached, ok := self.codeSizeCache.Get(key); ok {
-		return cached.(int)
-	}
-	size := len(stateObject.Code(self.db))
-	if stateObject.dbErr == nil {
-		self.codeSizeCache.Add(key, size)
-	}
-	return size
+	return len(stateObject.Code(self.db))
 }
 
-// Get code hash
+// GetCodeHash gets code hash.
 func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	stateObject := self.GetStateObject(addr)
 	if stateObject == nil {
@@ -450,7 +370,7 @@ func (self *StateDB) GetCodeHash(addr common.Address) common.Hash {
 	return common.BytesToHash(stateObject.CodeHash())
 }
 
-// get a storage entry in stateObject
+// GetState retrieves specified contract state with given address and state key.
 func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, []byte) {
 	// Prefer `live` object
 	var liveObj *StateObject
@@ -513,7 +433,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, []byte) {
 				return false, nil
 			}
 			// Insert into the live set.
-			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT), self.GetDataNodeCacheSize(STATEOBJECT)), self.logger)
+			obj := newObject(self, a, account, self.MarkStateObjectDirty, true, InitTreeConfig(self.GetCapacity(STATEOBJ), self.GetAggreation(STATEOBJ), self.GetMerkleCacheSize(STATEOBJ), self.GetBucketCacheSize(STATEOBJ)), self.logger)
 			obj.cachedStorage[b] = value
 			self.setStateObject(obj)
 		} else {
@@ -527,7 +447,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, []byte) {
 	return false, nil
 }
 
-// GetDeployedContract return deployed contract list.
+// GetDeployedContract retrieves deployed contract list.
 func (self *StateDB) GetDeployedContract(addr common.Address) []string {
 	obj := self.GetStateObject(addr)
 	if obj != nil {
@@ -536,7 +456,7 @@ func (self *StateDB) GetDeployedContract(addr common.Address) []string {
 	return nil
 }
 
-// AddDeployedContract - add a new created contract address to the maintain list.
+// AddDeployedContract adds a new created contract address to the maintain list.
 func (self *StateDB) AddDeployedContract(addr common.Address, contract common.Address) {
 	self.logger.Debugf("state object %s add contract %s to deployed list", addr.Hex(), contract.Hex())
 	creator := self.GetStateObject(addr)
@@ -547,6 +467,9 @@ func (self *StateDB) AddDeployedContract(addr common.Address, contract common.Ad
 	creator.AppendDeployedContract(contract)
 }
 
+// GetCreator retrieve creator address.
+// If this account is an EOA(Enternal Owned Account), the creator is 0x0000000,
+// Otherwise, for contract account, returns the actual creator.
 func (self *StateDB) GetCreator(addr common.Address) common.Address {
 	obj := self.GetStateObject(addr)
 	if obj != nil {
@@ -555,7 +478,7 @@ func (self *StateDB) GetCreator(addr common.Address) common.Address {
 	return common.Address{}
 }
 
-// SetCreator - set creator.
+// SetCreator sets creator.
 func (self *StateDB) SetCreator(addr common.Address, creator common.Address) {
 	self.logger.Debugf("state object %s set creator as %s", addr.Hex(), creator.Hex())
 	obj := self.GetStateObject(addr)
@@ -566,7 +489,7 @@ func (self *StateDB) SetCreator(addr common.Address, creator common.Address) {
 	obj.SetCreator(creator)
 }
 
-// GetStatus - get state object current status
+// GetStatus gets account status.
 func (self *StateDB) GetStatus(address common.Address) int {
 	obj := self.GetStateObject(address)
 	if obj != nil {
@@ -575,7 +498,7 @@ func (self *StateDB) GetStatus(address common.Address) int {
 	return -1
 }
 
-// SetStatus - set specific account's status with given one.
+// SetStatus set specific account's status with given one.
 func (self *StateDB) SetStatus(address common.Address, status int) {
 	obj := self.GetStateObject(address)
 	if obj == nil {
@@ -585,7 +508,7 @@ func (self *StateDB) SetStatus(address common.Address, status int) {
 	obj.SetStatus(status)
 }
 
-// GetCreateTime - return the brith block number of object.
+// GetCreateTime returns the brith block number of object.
 func (self *StateDB) GetCreateTime(address common.Address) uint64 {
 	obj := self.GetStateObject(address)
 	if obj != nil {
@@ -594,7 +517,7 @@ func (self *StateDB) GetCreateTime(address common.Address) uint64 {
 	return 0
 }
 
-// SetCreateTime - set the brith block number of object.
+// SetCreateTime sets the brith block number of object.
 func (self *StateDB) SetCreateTime(address common.Address, time uint64) {
 	obj := self.GetStateObject(address)
 	if obj == nil {
@@ -604,28 +527,12 @@ func (self *StateDB) SetCreateTime(address common.Address, time uint64) {
 	obj.SetCreateTime(time)
 }
 
-// check whether an account has been suicide
-func (self *StateDB) IsDeleted(addr common.Address) bool {
-	stateObject := self.GetStateObject(addr)
-	if stateObject != nil {
-		return stateObject.suicided
-	}
-	return false
-}
-
-// GetTree - implement database interface, get bucket tree instance
-func (self *StateDB) GetTree() interface{} {
-	return self.bucketTree
-}
-
+// GetCurrentTxHash returns current transaction hash under processing.
 func (self *StateDB) GetCurrentTxHash() common.Hash {
 	return self.thash
 }
 
-/*
- * SETTERS
- */
-// add balance to an account
+// AddBalance adds balance to an account.
 func (self *StateDB) AddBalance(addr common.Address, amount *big.Int) {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
@@ -635,7 +542,7 @@ func (self *StateDB) AddBalance(addr common.Address, amount *big.Int) {
 	}
 }
 
-// set balance
+// SetBalance sets balance.
 func (self *StateDB) SetBalance(addr common.Address, amount *big.Int) {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
@@ -645,7 +552,7 @@ func (self *StateDB) SetBalance(addr common.Address, amount *big.Int) {
 	}
 }
 
-// set nonce
+// SetNonce sets nonce.
 func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
@@ -655,7 +562,7 @@ func (self *StateDB) SetNonce(addr common.Address, nonce uint64) {
 	}
 }
 
-// set code
+// SetCode sets code.
 func (self *StateDB) SetCode(addr common.Address, code []byte) {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
@@ -665,7 +572,7 @@ func (self *StateDB) SetCode(addr common.Address, code []byte) {
 	}
 }
 
-// set a storage entry to a state object
+// SetState sets a storage entry to a state object.
 func (self *StateDB) SetState(addr common.Address, key common.Hash, value []byte, opcode int32) {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {
@@ -701,7 +608,7 @@ func (self *StateDB) Delete(addr common.Address) bool {
 // Setting, updating & deleting state object methods
 //
 
-// updateStateObject writes the given object to the trie.
+// updateStateObject writes the given object to the database.
 func (self *StateDB) updateStateObject(batch db.Batch, stateObject *StateObject) []byte {
 	addr := stateObject.Address()
 	data, err := stateObject.Marshal()
@@ -725,7 +632,7 @@ func (self *StateDB) deleteStateObject(batch db.Batch, stateObject *StateObject)
 	}
 }
 
-// Retrieve a state object given my the address. Returns nil if not found.
+// GetStateObject retrieves a state object given my the address. Returns nil if not found.
 func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 	// Prefer 'live' objects.
 	if obj := self.stateObjects[addr]; obj != nil {
@@ -770,22 +677,13 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 	}
 	// Insert into the live set.
 	self.logger.Debugf("find state object %x in database, add it to live objects", addr)
-	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT), self.GetDataNodeCacheSize(STATEOBJECT)), self.logger)
+	obj := newObject(self, addr, account, self.MarkStateObjectDirty, true, InitTreeConfig(self.GetCapacity(STATEOBJ), self.GetAggreation(STATEOBJ), self.GetMerkleCacheSize(STATEOBJ), self.GetBucketCacheSize(STATEOBJ)), self.logger)
 	self.setStateObject(obj)
 	return obj
 }
 
 func (self *StateDB) setStateObject(object *StateObject) {
 	self.stateObjects[object.Address()] = object
-}
-
-// Retrieve a state object or create a new state object if nil
-func (self *StateDB) GetOrNewStateObject(addr common.Address) *StateObject {
-	stateObject := self.GetStateObject(addr)
-	if stateObject == nil || stateObject.suicided {
-		stateObject, _ = self.createObject(addr)
-	}
-	return stateObject
 }
 
 // MarkStateObjectDirty adds the specified object to the dirty map to avoid costly
@@ -798,7 +696,7 @@ func (self *StateDB) MarkStateObjectDirty(addr common.Address) {
 // the given address, it is overwritten and returned as the second return value.
 func (self *StateDB) createObject(addr common.Address) (newobj, prev *StateObject) {
 	prev = self.GetStateObject(addr)
-	newobj = newObject(self, addr, Account{}, self.MarkStateObjectDirty, true, SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT), self.GetDataNodeCacheSize(STATEOBJECT)), self.logger)
+	newobj = newObject(self, addr, Account{}, self.MarkStateObjectDirty, true, InitTreeConfig(self.GetCapacity(STATEOBJ), self.GetAggreation(STATEOBJ), self.GetMerkleCacheSize(STATEOBJ), self.GetBucketCacheSize(STATEOBJ)), self.logger)
 	newobj.setNonce(0) // sets the object to dirty
 	if prev == nil {
 		self.logger.Infof("(+) %x\n", addr)
@@ -826,35 +724,6 @@ func (self *StateDB) CreateAccount(addr common.Address) vm.Account {
 		new.setBalance(prev.data.Balance)
 	}
 	return new
-}
-
-// Copy creates a deep, independent copy of the state.
-// Snapshots of the copied state cannot be applied to the copy.
-func (self *StateDB) Copy() *StateDB {
-	self.lock.Lock()
-	defer self.lock.Unlock()
-
-	// Copy all the basic fields, initialize the memory ones
-	state := &StateDB{
-		db:                self.db,
-		root:              self.root,
-		codeSizeCache:     self.codeSizeCache,
-		stateObjects:      make(map[common.Address]*StateObject, len(self.stateObjectsDirty)),
-		stateObjectsDirty: make(map[common.Address]struct{}, len(self.stateObjectsDirty)),
-		refund:            new(big.Int).Set(self.refund),
-		logs:              make(map[common.Hash]types.Logs, len(self.logs)),
-		logSize:           self.logSize,
-	}
-	// Copy the dirty states and logs
-	for addr := range self.stateObjectsDirty {
-		state.stateObjects[addr] = self.stateObjects[addr].deepCopy(state, state.MarkStateObjectDirty)
-		state.stateObjectsDirty[addr] = struct{}{}
-	}
-	for hash, logs := range self.logs {
-		state.logs[hash] = make(types.Logs, len(logs))
-		copy(state.logs[hash], logs)
-	}
-	return state
 }
 
 // Snapshot returns an identifier for the current revision of the state.
@@ -895,12 +764,14 @@ func (self *StateDB) RevertToSnapshot(copy interface{}) {
 }
 
 // RevertToJournal reverts all state changes made since the target height.
-func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, targetRoot []byte, batch db.Batch) error {
-	dirtyStateObjectSet := mapset.NewSet()
-	stateObjectStorageHashs := make(map[common.Address][]byte)
+func (self *StateDB) RevertToJournal(target uint64, current uint64, targetRoot []byte, batch db.Batch) error {
+	var (
+		dirtyObjects      = mapset.NewSet()
+		dirtyObjectHashes = make(map[common.Address][]byte)
+	)
 
 	journalCache := NewJournalCache(self.db, self.logger)
-	for i := currentHeight; i >= targetHeight+1; i -= 1 {
+	for i := current; i >= target+1; i -= 1 {
 		self.logger.Debugf("undo changes for #%d", i)
 		j, err := self.db.Get(CompositeJournalKey(uint64(i)))
 		if err != nil {
@@ -919,43 +790,44 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 			journal.JournalList[j].Undo(self, journalCache, batch, true)
 			if journal.JournalList[j].GetType() == StorageHashChangeType {
 				tmp := journal.JournalList[j].(*StorageHashChange)
-				dirtyStateObjectSet.Add(*tmp.Account)
-				stateObjectStorageHashs[*tmp.Account] = tmp.Prev
+				dirtyObjects.Add(*tmp.Account)
+				dirtyObjectHashes[*tmp.Account] = tmp.Prev
 			}
 		}
 		// remove persisted journals
 		batch.Delete(CompositeJournalKey(uint64(i)))
 	}
+
 	if err := journalCache.Flush(batch); err != nil {
 		self.logger.Errorf("flush modified content failed. %s", err.Error())
 		return err
 	}
 	// revert related stateObject storage bucket tree
-	for addr := range dirtyStateObjectSet.Iter() {
+	for addr := range dirtyObjects.Iter() {
 		address := addr.(common.Address)
-		prefix, _ := CompositeStorageBucketPrefix(address.Hex())
-		bucketTree := bucket.NewBucketTree(self.db, string(prefix))
-		bucketTree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEOBJECT), self.GetBucketLevelGroup(STATEOBJECT), self.GetBucketCacheSize(STATEOBJECT), self.GetDataNodeCacheSize(STATEOBJECT)))
+		bucketTree := bucket.NewBucketTree(self.db, string(CompositeStorageBucketPrefix(address.Hex())))
+		bucketTree.Initialize(InitTreeConfig(self.GetCapacity(STATEOBJ), self.GetAggreation(STATEOBJ),
+			self.GetMerkleCacheSize(STATEOBJ), self.GetBucketCacheSize(STATEOBJ)))
+		// clear out cached stuff in global cache.
 		bucketTree.Clear()
 		// don't flush into disk util all operations finish
-		bucketTree.Prepare(journalCache.GetWorkingSet(WORKINGSET_TYPE_STATEOBJECT, address))
-		//bucketTree.RevertToTargetBlock(batch, big.NewInt(currentNumber), big.NewInt(targetNumber), false, false)
+		bucketTree.Prepare(journalCache.GetWorkingSet(ObjectWorkingSet, address))
 		hash, _ := bucketTree.Process()
 		bucketTree.Commit(batch)
 		self.logger.Debugf("re-compute %s storage hash %s", address.Hex(), common.Bytes2Hex(hash))
-		stateObjectHash := stateObjectStorageHashs[address]
-		if common.BytesToHash(hash).Hex() != common.BytesToHash(stateObjectHash).Hex() {
+		expect := dirtyObjectHashes[address]
+		if common.BytesToHash(hash).Hex() != common.BytesToHash(expect).Hex() {
 			self.logger.Errorf("after revert to #%d, state object %s revert failed, required storage hash %s, got %s",
-				targetHeight, address.Hex(), common.Bytes2Hex(stateObjectHash), common.Bytes2Hex(hash))
+				target, address.Hex(), common.Bytes2Hex(expect), common.Bytes2Hex(hash))
 			return errors.New("revert state failed.")
 		}
 	}
 	// revert state bucket tree
-	tree := self.bucketTree
-	tree.Initialize(SetupBucketConfig(self.GetBucketSize(STATEDB), self.GetBucketLevelGroup(STATEDB), self.GetBucketCacheSize(STATEDB), self.GetDataNodeCacheSize(STATEDB)))
+	tree := self.tree
+	tree.Initialize(InitTreeConfig(self.GetCapacity(STATEDB), self.GetAggreation(STATEDB),
+		self.GetMerkleCacheSize(STATEDB), self.GetBucketCacheSize(STATEDB)))
 	tree.Clear()
-	// don't flush into disk util all operations finish
-	tree.Prepare(journalCache.GetWorkingSet(WORKINGSET_TYPE_STATE, common.Address{}))
+	tree.Prepare(journalCache.GetWorkingSet(StateWorkingSet, common.Address{}))
 	currentRootHash, err := tree.Process()
 	if err != nil {
 		self.logger.Errorf("re-compute state bucket tree hash failed, error :%s", err.Error())
@@ -969,53 +841,15 @@ func (self *StateDB) RevertToJournal(targetHeight uint64, currentHeight uint64, 
 		return errors.New("revert state failed")
 	}
 	// revert state instance oldest and root
-	self.ResetToTarget(uint64(targetHeight+1), common.BytesToHash(targetRoot))
-	self.logger.Debugf("revert state from #%d to #%d success", currentHeight, targetHeight)
+	self.ResetToTarget(uint64(target+1), common.BytesToHash(targetRoot))
+	self.logger.Debugf("revert state from #%d to #%d success", current, target)
 	return nil
 
-}
-
-// GetRefund returns the current value of the refund counter.
-// The return value must not be modified by the caller and will become
-// invalid at the next call to AddRefund.
-func (self *StateDB) GetRefund() *big.Int {
-	return self.refund
-}
-
-// IntermediateRoot computes the current root hash of the state trie.
-// It is called in between transactions to get the root hash that
-// goes into transaction receipts.
-// Deprecated
-func (s *StateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
-	return common.Hash{}
-}
-
-// DeleteSuicides flags the suicided objects for deletion so that it
-// won't be referenced again when called / queried up on.
-//
-// DeleteSuicides should not be used for consensus related updates
-// under any circumstances.
-// Deprecated
-func (s *StateDB) DeleteSuicides() {
-	// Reset refund so that any used-gas calculations can use this method.
-	// s.clearJournalAndRefund()
-
-	for addr := range s.stateObjectsDirty {
-		stateObject := s.stateObjects[addr]
-
-		// If the object has been removed by a suicide
-		// flag the object as deleted.
-		if stateObject.suicided {
-			stateObject.deleted = true
-		}
-		delete(s.stateObjectsDirty, addr)
-	}
 }
 
 // Commit commits all state changes to the database.
 func (s *StateDB) Commit() (common.Hash, error) {
 	root, _ := s.CommitBatch(deleteEmptyObjects)
-	// IMPORTANT doesn't flush batch util recv commit event for atomic assurance
 	return root, nil
 }
 
@@ -1024,9 +858,9 @@ func (s *StateDB) Commit() (common.Hash, error) {
 // the root hash stored in a block.
 func (s *StateDB) CommitBatch(deleteEmptyObjects bool) (root common.Hash, batch db.Batch) {
 	curSeqNo := atomic.LoadUint64(&s.curSeqNo)
-	batch = s.FetchBatch(curSeqNo)
-	archieveBatch := s.FetchArchieveBatch(curSeqNo)
-	root, _ = s.commit(batch, archieveBatch, deleteEmptyObjects)
+	batch = s.FetchBatch(curSeqNo, BATCH_NORMAL)
+	archiveBatch := s.FetchBatch(curSeqNo, BATCH_ARCHIVE)
+	root, _ = s.commit(batch, archiveBatch, deleteEmptyObjects)
 	return root, batch
 }
 
@@ -1047,8 +881,6 @@ func (s *StateDB) clearJournalAndRefund() {
 	// 2. clear journal
 	s.journal = Journal{}
 	s.validRevisions = s.validRevisions[:0]
-	// 3. clear refund
-	s.refund = new(big.Int)
 	batch.Write()
 }
 
@@ -1103,21 +935,19 @@ func (s *StateDB) commit(dbw db.Batch, archieveDb db.Batch, deleteEmptyObjects b
 	} else {
 		// Use bucket tree instead
 		s.logger.Debugf("begin to calculate state db root hash for #%d", s.curSeqNo)
-
-		s.bucketTree.Prepare(workingSet)
-
-		hash, err := s.bucketTree.Process()
+		s.tree.Prepare(workingSet)
+		hash, err := s.tree.Process()
 		if err != nil {
 			s.logger.Error("calculate hash for statedb failed")
 			return common.Hash{}, err
 		}
 		s.root = common.BytesToHash(hash)
-		s.bucketTree.Commit(dbw)
+		s.tree.Commit(dbw)
 	}
 	return s.root, err
 }
 
-// check bucket root validation
+// validateRoot compares two root hash is equal or not.
 func validateRoot(root common.Hash, curRoot common.Hash) bool {
 	if root != curRoot {
 		return false
@@ -1126,32 +956,12 @@ func validateRoot(root common.Hash, curRoot common.Hash) bool {
 	}
 }
 
-func (self *StateDB) ShowArchive(address common.Address, date string) map[string]map[string]string {
-	storages := make(map[string]map[string]string)
-	iter := self.archiveDb.NewIterator(GetArchieveStorageKeyWithDatePrefix(address.Bytes(), []byte(date)))
-	defer iter.Release()
-	for iter.Next() {
-		d, ok := GetArchieveDate(address.Bytes(), iter.Key())
-		if ok == false {
-			continue
-		}
-		k, ok := SplitCompositeArchieveStorageKey(address.Bytes(), iter.Key())
-		if ok == false {
-			continue
-		}
-		m, existed := storages[string(d)]
-		if existed == false {
-			m = make(map[string]string)
-			storages[string(d)] = m
-		}
-		m[common.Bytes2Hex(k)] = common.Bytes2Hex(iter.Value())
-	}
-	return storages
-}
-
+// RecomputeCryptoHash rehashs the whole world state.
 func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
-	dirtyStateObjects := bucket.NewEntries()
-	accountIter := s.db.NewIterator([]byte(accountIdentifier))
+	var (
+		dirtyObjects = bucket.NewEntries()
+		accountIter  = s.db.NewIterator([]byte(accountPrefix))
+	)
 	defer accountIter.Release()
 	for accountIter.Next() {
 		addr, ok := SplitCompositeAccountKey(accountIter.Key())
@@ -1164,7 +974,7 @@ func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
 		if err != nil {
 			return common.Hash{}, err
 		}
-		stateObject := newObject(s, address, account, s.MarkStateObjectDirty, true, SetupBucketConfig(s.GetBucketSize(STATEOBJECT), s.GetBucketLevelGroup(STATEOBJECT), s.GetBucketCacheSize(STATEOBJECT), s.GetDataNodeCacheSize(STATEOBJECT)), s.logger)
+		stateObject := newObject(s, address, account, s.MarkStateObjectDirty, true, InitTreeConfig(s.GetCapacity(STATEOBJ), s.GetAggreation(STATEOBJ), s.GetMerkleCacheSize(STATEOBJ), s.GetBucketCacheSize(STATEOBJ)), s.logger)
 		dirtyStorage := bucket.NewEntries()
 		iter := stateObject.db.db.NewIterator(GetStorageKeyPrefix(stateObject.address.Bytes()))
 		for iter.Next() {
@@ -1180,99 +990,113 @@ func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
 			}
 			dirtyStorage[common.BytesToHash(key).Hex()] = valueCopy
 		}
-		stateObject.bucketTree.Prepare(dirtyStorage)
-		hash, err := stateObject.bucketTree.Process()
+		stateObject.tree.Prepare(dirtyStorage)
+		hash, err := stateObject.tree.Process()
 		if err != nil {
 			return common.Hash{}, err
 		}
 		stateObject.SetRoot(common.BytesToHash(hash))
 		valueOfStateObject, _ := stateObject.MarshalJSON()
-		dirtyStateObjects[stateObject.address.Hex()] = valueOfStateObject
+		dirtyObjects[stateObject.address.Hex()] = valueOfStateObject
 		iter.Release()
 	}
-	s.bucketTree.Prepare(dirtyStateObjects)
-	hash, err := s.bucketTree.Process()
+	s.tree.Prepare(dirtyObjects)
+	hash, err := s.tree.Process()
 	if err != nil {
 		return common.Hash{}, err
 	}
 	return common.BytesToHash(hash), nil
 }
 
-func (s *StateDB) Apply(db db.Database, batch db.Batch, expect common.Hash) error {
+// Merge merges another world status with current.
+// Note, during the merge, account meta data should be merged first.
+func (s *StateDB) Merge(db db.Database, batch db.Batch, expect common.Hash) error {
+	applyAccount := func(k, v []byte) {
+		blob, success := SplitCompositeAccountKey(k)
+		if !success {
+			return
+		}
+		var account Account
+		err := Unmarshal(v, &account)
+		if err != nil {
+			return
+		}
+		addr := common.BytesToAddress(blob)
+		obj := newObject(s, addr, account, s.MarkStateObjectDirty, true, InitTreeConfig(s.GetCapacity(STATEOBJ), s.GetAggreation(STATEOBJ), s.GetMerkleCacheSize(STATEOBJ), s.GetBucketCacheSize(STATEOBJ)), s.logger)
+		s.setStateObject(obj)
+		obj.onDirty(addr)
+	}
+	applyStorage := func(k, v []byte) {
+		blob, success := RetrieveAddrFromStorageKey(k)
+		if !success {
+			return
+		}
+		addr := common.BytesToAddress(blob)
+		blob, success = SplitCompositeStorageKey(addr.Bytes(), k)
+		if !success {
+			return
+		}
+		key := common.BytesToHash(blob)
+		val := make([]byte, len(v))
+		copy(val, v)
+		s.SetState(addr, key, val, 0)
+	}
+	applyCode := func(k, v []byte) {
+		blob, success := RetrieveAddrFromCodeHash(k)
+		if !success {
+			return
+		}
+		addr := common.BytesToAddress(blob)
+		blob, success = SplitCompositeCodeHash(addr.Bytes(), k)
+		if !success {
+			return
+		}
+		codeHash := blob
+		obj := s.GetStateObject(addr)
+		if obj == nil {
+			return
+		}
+		if bytes.Compare(codeHash, obj.CodeHash()) != 0 {
+			return
+		}
+		s.SetCode(addr, v)
+	}
+
 	entryPrefixes := cm.RetrieveSnapshotFileds()
 	for _, entry := range entryPrefixes {
-		if entry == "-account" {
+		switch entry {
+		case "-account":
 			iter := db.NewIterator([]byte(entry))
 			for iter.Next() {
-				blob, success := SplitCompositeAccountKey(iter.Key())
-				if !success {
-					continue
-				}
-				var account Account
-				err := Unmarshal(iter.Value(), &account)
-				if err != nil {
-					continue
-				}
-				addr := common.BytesToAddress(blob)
-				obj := newObject(s, addr, account, s.MarkStateObjectDirty, true, SetupBucketConfig(s.GetBucketSize(STATEOBJECT), s.GetBucketLevelGroup(STATEOBJECT), s.GetBucketCacheSize(STATEOBJECT), s.GetDataNodeCacheSize(STATEOBJECT)), s.logger)
-				s.setStateObject(obj)
-				obj.onDirty(addr)
+				applyAccount(iter.Key(), iter.Value())
 			}
 			iter.Release()
-		} else if entry == "-storage" {
+		case "-storage":
 			iter := db.NewIterator([]byte(entry))
 			for iter.Next() {
-				blob, success := RetrieveAddrFromStorageKey(iter.Key())
-				if !success {
-					continue
-				}
-				addr := common.BytesToAddress(blob)
-				blob, success = SplitCompositeStorageKey(addr.Bytes(), iter.Key())
-				if !success {
-					continue
-				}
-				key := common.BytesToHash(blob)
-				val := make([]byte, len(iter.Value()))
-				copy(val, iter.Value())
-				s.SetState(addr, key, val, 0)
+				applyStorage(iter.Key(), iter.Value())
 			}
 			iter.Release()
-		} else if entry == "-code" {
+		case "-code":
 			iter := db.NewIterator([]byte(entry))
 			for iter.Next() {
-				blob, success := RetrieveAddrFromCodeHash(iter.Key())
-				if !success {
-					continue
-				}
-				addr := common.BytesToAddress(blob)
-				blob, success = SplitCompositeCodeHash(addr.Bytes(), iter.Key())
-				if !success {
-					continue
-				}
-				codeHash := blob
-				obj := s.GetStateObject(addr)
-				if obj == nil {
-					continue
-				}
-				if bytes.Compare(codeHash, obj.CodeHash()) != 0 {
-					continue
-				}
-				s.SetCode(addr, iter.Value())
+				applyCode(iter.Key(), iter.Value())
 			}
 			iter.Release()
 		}
 	}
 
-	tmpHash, err := s.commit(batch, batch, deleteEmptyObjects)
+	h, err := s.commit(batch, batch, deleteEmptyObjects)
 	if err != nil {
 		return err
 	}
-	if tmpHash != expect {
+	if h != expect {
 		return errors.New("different hash compared with recorded")
 	}
 	return nil
 }
 
+// NewIterator returns a iterator to traverse contract storage content.
 func (self *StateDB) NewIterator(addr common.Address, slice *vm.IterRange) (vm.Iterator, error) {
 	stateObject := self.GetStateObject(addr)
 	if stateObject != nil {

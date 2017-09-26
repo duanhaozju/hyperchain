@@ -1,48 +1,70 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package state
 
 import (
 	"bytes"
 	"hyperchain/common"
 	"strconv"
-	"time"
 )
 
 const (
-	storageIdentifier    = "-storage"
-	accountIdentifier    = "-account"
-	codeIdentifier       = "-code"
-	bucketTreeIdentifier = "-bucket"
-	journalIdentifier    = "-journal"
+	storagePrefix = "-storage" // storagePrefix + address + key -> contract storage entry
+	accountPrefix = "-account" // accountPrefix + address -> account
+	codePrefix    = "-code"    // codePrefix + address + codeHash -> code
+	journalPrefix = "-journal" // journalPrefix + block number -> state journal
+	treePrefix    = "-bucket"
 )
 
-// ConfigNumBuckets - config name 'numBuckets' as it appears in yaml file
-const ConfigNumBuckets = "capacity"
+const (
+	TreeCapacity        = "capacity"
+	TreeAggreation      = "aggreation"
+	MerkleNodeCacheSize = "merkleNodeCache"
+	BucketCacheSize     = "bucketCache"
+)
 
-// ConfigMaxGroupingAtEachLevel - config name 'maxGroupingAtEachLevel' as it appears in yaml file
-const ConfigMaxGroupingAtEachLevel = "aggreation"
+const (
+	STATEDB              = "state"
+	StateCapacity        = "executor.buckettree.state.capacity"
+	StateAggreation      = "executor.buckettree.state.aggreation"
+	StateMerkleCacheSize = "executor.buckettree.state.merklenode_cache"
+	StateBucketCacheSize = "executor.buckettree.state.bucket_cache"
 
-// ConfigBucketCacheMaxSize - config name 'bucketCacheMaxSize' as it appears in yaml file
-const ConfigBucketCacheMaxSize = "merkleNodeCache"
+	STATEOBJ                   = "stateObject"
+	StateObjectCapacity        = "executor.buckettree.storage.capacity"
+	StateObjectAggreation      = "executor.buckettree.storage.aggreation"
+	StateObjectMerkleCacheSize = "executor.buckettree.storage.merklenode_cache"
+	StateObjectBucketCacheSize = "executor.buckettree.storage.bucket_cache"
+)
 
-// ConfigDataNodeCacheMaxSize - config name 'dataNodeCacheMaxSize' as it appears in yaml file
-const ConfigDataNodeCacheMaxSize = "bucketCache"
-
-/*
-	Storage
-*/
+// CompositeStorageKey constructs contract storage entry's key.
 func CompositeStorageKey(address []byte, key []byte) []byte {
-	ret := append([]byte(storageIdentifier), address...)
+	ret := append([]byte(storagePrefix), address...)
 	ret = append(ret, key...)
 	return ret
 }
 
+// GetStorageKeyPrefix constructs contract storage prefix by contract address.
+// It is offen used in database traverse.
 func GetStorageKeyPrefix(address []byte) []byte {
-	ret := append([]byte(storageIdentifier), address...)
+	ret := append([]byte(storagePrefix), address...)
 	return ret
 }
 
+// SplitCompositeStorageKey splits the composite key to get the actual key.
 func SplitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
-	prefix := append([]byte(storageIdentifier), address...)
+	prefix := append([]byte(storagePrefix), address...)
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) {
 		return key[prefixLen:], true
@@ -51,9 +73,9 @@ func SplitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
 	}
 }
 
+// RetrieveAddrFromStorageKey splits the composite key to get address info.
 func RetrieveAddrFromStorageKey(key []byte) ([]byte, bool) {
-	// Address is const 20byte length
-	prefix := []byte(storageIdentifier)
+	prefix := []byte(storagePrefix)
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen+common.AddressLength {
 		return key[prefixLen : prefixLen+common.AddressLength], true
@@ -62,56 +84,15 @@ func RetrieveAddrFromStorageKey(key []byte) ([]byte, bool) {
 	}
 }
 
-func CompositeArchieveStorageKey(address []byte, key []byte) []byte {
-	date := time.Now().Format("20060102")
-	ret := append([]byte(storageIdentifier), address...)
-	ret = append(ret, []byte(date)...)
-	ret = append(ret, key...)
-	return ret
-}
-
-func GetArchieveStorageKeyPrefix(address []byte) []byte {
-	ret := append([]byte(storageIdentifier), address...)
-	return ret
-}
-
-func GetArchieveStorageKeyWithDatePrefix(address []byte, date []byte) []byte {
-	ret := append([]byte(storageIdentifier), address...)
-	ret = append(ret, date...)
-	return ret
-}
-
-func SplitCompositeArchieveStorageKey(address []byte, key []byte) ([]byte, bool) {
-	prefix := append([]byte(storageIdentifier), address...)
-	prefixLen := len(prefix) + 8
-	if bytes.HasPrefix(key, prefix) && len(key) >= prefixLen {
-		return key[prefixLen:], true
-	} else {
-		return nil, false
-	}
-}
-
-func GetArchieveDate(address []byte, key []byte) ([]byte, bool) {
-	prefix := append([]byte(storageIdentifier), address...)
-	prefixLen := len(prefix) + 8
-	if bytes.HasPrefix(key, prefix) && len(key) >= prefixLen {
-		return key[len(prefix):prefixLen], true
-	} else {
-		return nil, false
-	}
-
-}
-
-/*
-	Code
-*/
+// CompositeCodeHash constructs code key with given address and codehash.
 func CompositeCodeHash(address []byte, codeHash []byte) []byte {
-	ret := append([]byte(codeIdentifier), address...)
+	ret := append([]byte(codePrefix), address...)
 	return append(ret, codeHash...)
 }
 
+// SplitCompositeCodeHash splits the composite key to retrieve codehash.
 func SplitCompositeCodeHash(address []byte, key []byte) ([]byte, bool) {
-	prefix := append([]byte(codeIdentifier), address...)
+	prefix := append([]byte(codePrefix), address...)
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) && len(key) >= prefixLen {
 		return key[prefixLen:], true
@@ -120,9 +101,9 @@ func SplitCompositeCodeHash(address []byte, key []byte) ([]byte, bool) {
 	}
 }
 
+// RetrieveAddrFromCodeHash splits the composite key to retrieve address.
 func RetrieveAddrFromCodeHash(key []byte) ([]byte, bool) {
-	// Address is const 20byte length
-	prefix := []byte(codeIdentifier)
+	prefix := []byte(codePrefix)
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen+common.AddressLength {
 		return key[prefixLen : prefixLen+common.AddressLength], true
@@ -131,47 +112,97 @@ func RetrieveAddrFromCodeHash(key []byte) ([]byte, bool) {
 	}
 }
 
-/*
-	Account
-*/
+// CompositeAccountKey constructs account key with given address.
 func CompositeAccountKey(address []byte) []byte {
-	return append([]byte(accountIdentifier), address...)
+	return append([]byte(accountPrefix), address...)
 }
 
+// SplitCompositeAccountKey splits composite key to retrieve address.
 func SplitCompositeAccountKey(key []byte) ([]byte, bool) {
-	identifierLen := len([]byte(accountIdentifier))
-	if bytes.HasPrefix(key, []byte(accountIdentifier)) {
+	identifierLen := len([]byte(accountPrefix))
+	if bytes.HasPrefix(key, []byte(accountPrefix)) {
 		return key[identifierLen:], true
 	} else {
 		return nil, false
 	}
 }
 
-/*
-	Bucket Tree
-*/
-func CompositeStateBucketPrefix() ([]byte, bool) {
-	return append([]byte(bucketTreeIdentifier), []byte("-state")...), true
-}
-func CompositeStorageBucketPrefix(address string) ([]byte, bool) {
-	return []byte(bucketTreeIdentifier + address), true
+func CompositeStateBucketPrefix() []byte {
+	return append([]byte(treePrefix), []byte("-state")...)
 }
 
-// construct bucket tree configuration
-func SetupBucketConfig(size, levelGroup, bucketCacheMaxSize, dataNodeCacheMaxSize int) map[string]interface{} {
+func CompositeStorageBucketPrefix(address string) []byte {
+	return []byte(treePrefix + address)
+}
+
+// InitTreeConfig constructs bucket tree configuration.
+func InitTreeConfig(cap, aggreation, msize, bsize int) map[string]interface{} {
 	ret := make(map[string]interface{})
-	ret[ConfigNumBuckets] = size
-	ret[ConfigMaxGroupingAtEachLevel] = levelGroup
-	ret[ConfigBucketCacheMaxSize] = bucketCacheMaxSize
-	ret[ConfigDataNodeCacheMaxSize] = dataNodeCacheMaxSize
+	ret[TreeCapacity] = cap
+	ret[TreeAggreation] = aggreation
+	ret[MerkleNodeCacheSize] = msize
+	ret[BucketCacheSize] = bsize
 	return ret
 }
 
-/*
-	Journal
-*/
-
+// CompositeJournalKey constructs journal key with prefix and block number.
 func CompositeJournalKey(blockNumber uint64) []byte {
 	s := strconv.FormatUint(blockNumber, 10)
-	return append([]byte(journalIdentifier), []byte(s)...)
+	return append([]byte(journalPrefix), []byte(s)...)
+}
+
+/*
+	Configuration
+*/
+
+// GetCapacity reads tree capacity.
+func (stateDB *StateDB) GetCapacity(typ string) int {
+	switch typ {
+	case STATEDB:
+		return stateDB.conf.GetInt(StateCapacity)
+	case STATEOBJ:
+		return stateDB.conf.GetInt(StateObjectCapacity)
+	default:
+		stateDB.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJ)
+		return 0
+	}
+}
+
+// GetAggreation reads tree aggreation.
+func (stateDB *StateDB) GetAggreation(typ string) int {
+	switch typ {
+	case STATEDB:
+		return stateDB.conf.GetInt(StateAggreation)
+	case STATEOBJ:
+		return stateDB.conf.GetInt(StateObjectAggreation)
+	default:
+		stateDB.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJ)
+		return 0
+	}
+}
+
+// GetMerkleCacheSize gets tree merkle cache max size.
+func (stateDB *StateDB) GetMerkleCacheSize(typ string) int {
+	switch typ {
+	case STATEDB:
+		return stateDB.conf.GetInt(StateMerkleCacheSize)
+	case STATEOBJ:
+		return stateDB.conf.GetInt(StateObjectMerkleCacheSize)
+	default:
+		stateDB.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJ)
+		return 0
+	}
+}
+
+// GetMerkleCacheSize gets tree bucket cache max size.
+func (stateDB *StateDB) GetBucketCacheSize(typ string) int {
+	switch typ {
+	case STATEDB:
+		return stateDB.conf.GetInt(StateBucketCacheSize)
+	case STATEOBJ:
+		return stateDB.conf.GetInt(StateObjectBucketCacheSize)
+	default:
+		stateDB.logger.Errorf("no choice specified. %s or %s", STATEDB, STATEOBJ)
+		return 0
+	}
 }

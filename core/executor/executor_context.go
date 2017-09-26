@@ -3,7 +3,6 @@ package executor
 import (
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/core/ledger/tree/bucket"
 	"sync/atomic"
 	"time"
 )
@@ -216,9 +215,6 @@ func (executor *Executor) waitUtilRollbackAvailable() {
 
 	// clear all cached stuff
 	executor.statedb.Purge()
-	tree := executor.statedb.GetTree()
-	bucketTree := tree.(*bucket.BucketTree)
-	bucketTree.Clear()
 }
 
 // rollbackDone - rollback callback function to notify rollback finish.
@@ -240,9 +236,6 @@ func (executor *Executor) waitUtilSyncAvailable() {
 
 	// clear all cached stuff
 	executor.statedb.Purge()
-	tree := executor.statedb.GetTree()
-	bucketTree := tree.(*bucket.BucketTree)
-	bucketTree.Clear()
 }
 
 // syncDone - sync callback function to notify sync finish.

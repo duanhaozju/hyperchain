@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package state
 
 import (
@@ -8,25 +21,25 @@ import (
 )
 
 const (
-	WORKINGSET_TYPE_STATE       = 0
-	WORKINGSET_TYPE_STATEOBJECT = 1
+	StateWorkingSet = iota
+	ObjectWorkingSet
 )
 
 type JournalCache struct {
-	stateObjects           map[common.Address]*StateObject
-	db                     db.Database
-	stateWorkingSet        bucket.Entries
-	stateObjectsWorkingSet map[common.Address]bucket.Entries
-	logger                 *logging.Logger
+	stateObjects      map[common.Address]*StateObject
+	db                db.Database
+	stateWorkingSet   bucket.Entries
+	objectsWorkingSet map[common.Address]bucket.Entries
+	logger            *logging.Logger
 }
 
 func NewJournalCache(db db.Database, logger *logging.Logger) *JournalCache {
 	return &JournalCache{
-		db:                     db,
-		logger:                 logger,
-		stateObjects:           make(map[common.Address]*StateObject),
-		stateWorkingSet:        bucket.NewEntries(),
-		stateObjectsWorkingSet: make(map[common.Address]bucket.Entries),
+		db:                db,
+		logger:            logger,
+		stateObjects:      make(map[common.Address]*StateObject),
+		stateWorkingSet:   bucket.NewEntries(),
+		objectsWorkingSet: make(map[common.Address]bucket.Entries),
 	}
 }
 
@@ -34,7 +47,7 @@ func (cache *JournalCache) Add(stateObject *StateObject) {
 	cache.stateObjects[stateObject.address] = stateObject
 }
 
-// Fetch - fetch a object with specific address.
+// Fetch fetchs a object with specific address.
 // load from database if not hit in cache.
 func (cache *JournalCache) Fetch(address common.Address) *StateObject {
 	if obj, existed := cache.stateObjects[address]; existed == true {
@@ -89,7 +102,7 @@ func (cache *JournalCache) Flush(batch db.Batch) error {
 			}
 			cache.deleteStateObject(batch, stateObject)
 			cache.stateWorkingSet[stateObject.address.Hex()] = nil
-			cache.stateObjectsWorkingSet[stateObject.address] = workingSet
+			cache.objectsWorkingSet[stateObject.address] = workingSet
 		} else {
 			cache.logger.Debugf("state object %s been updated", stateObject.address.Hex())
 			// Write any storage changes in the state object to its storage trie.
@@ -113,9 +126,9 @@ func (cache *JournalCache) Flush(batch db.Batch) error {
 			}
 			// Update the object in the main account trie.
 			cache.updateStateObject(batch, stateObject)
-			d, _ := stateObject.MarshalJSON()
+			d, _ := stateObject.Marshal()
 			cache.stateWorkingSet[stateObject.address.Hex()] = d
-			cache.stateObjectsWorkingSet[stateObject.address] = workingSet
+			cache.objectsWorkingSet[stateObject.address] = workingSet
 		}
 	}
 	return nil
@@ -124,10 +137,10 @@ func (cache *JournalCache) Flush(batch db.Batch) error {
 // GetWorkingSet - return required working set.
 func (cache *JournalCache) GetWorkingSet(workingSetType int, address common.Address) bucket.Entries {
 	switch workingSetType {
-	case WORKINGSET_TYPE_STATE:
+	case StateWorkingSet:
 		return cache.stateWorkingSet
-	case WORKINGSET_TYPE_STATEOBJECT:
-		return cache.stateObjectsWorkingSet[address]
+	case ObjectWorkingSet:
+		return cache.objectsWorkingSet[address]
 	default:
 		return nil
 	}

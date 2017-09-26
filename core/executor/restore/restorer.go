@@ -6,12 +6,12 @@ import (
 	"hyperchain/common"
 	cm "hyperchain/core/common"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/core/ledger/state"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"os"
 	"path"
 	"strings"
-	"hyperchain/core/ledger/state"
 )
 
 var (
@@ -51,7 +51,7 @@ func (handler *Handler) Restore(sid string) error {
 	}
 
 	// check
-	if res := checkIntegrity(common.Hex2Bytes(meta.MerkleRoot), meta.Height, meta.Namespace, sdb, handler.conf); !res {
+	if res := checkIntegrity(common.Hex2Bytes(meta.MerkleRoot), meta.Height, sdb, handler.conf); !res {
 		return StateInvalidErr
 	}
 
@@ -78,7 +78,7 @@ func (handler *Handler) Restore(sid string) error {
 	}
 
 	// recheck
-	if res := checkIntegrity(blk.MerkleRoot, blk.Number, meta.Namespace, handler.db, handler.conf); !res {
+	if res := checkIntegrity(blk.MerkleRoot, blk.Number, handler.db, handler.conf); !res {
 		return StateInvalidErr
 	}
 
@@ -113,8 +113,8 @@ func checkExist(ns, id string, conf *common.Config) (bool, error) {
 	return true, nil
 }
 
-func checkIntegrity(merkleRoot []byte, height uint64, namespace string, db db.Database, conf *common.Config) bool {
-	stateDb, err := state.New(common.BytesToHash(merkleRoot), db, db, conf, height, namespace)
+func checkIntegrity(merkleRoot []byte, height uint64, db db.Database, conf *common.Config) bool {
+	stateDb, err := state.New(common.BytesToHash(merkleRoot), db, db, conf, height)
 	if err != nil {
 		return false
 	}

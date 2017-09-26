@@ -1,5 +1,18 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
+// Copyright 2014 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 package state
 
 import (
@@ -8,6 +21,7 @@ import (
 	"hyperchain/common"
 )
 
+// User a user friendly account representation.
 type User struct {
 	Balance          string            `json:"balance"`
 	Nonce            uint64            `json:"nonce"`
@@ -21,17 +35,19 @@ type User struct {
 	CreateTime       uint64            `json:"createTime"`
 }
 
+// World represents all accounts collection.
 type World struct {
 	Root  string          `json:"root"`
 	Users map[string]User `json:"accounts"`
 }
 
+// RawDump gathers all account info and converts them to a user friendly representation format.
 func (self *StateDB) RawDump() World {
 	world := World{
 		Users: make(map[string]User),
 	}
 
-	it := self.db.NewIterator([]byte(accountIdentifier))
+	it := self.db.NewIterator([]byte(accountPrefix))
 	for it.Next() {
 		address, ok := SplitCompositeAccountKey(it.Key())
 		if ok == false {
@@ -58,12 +74,11 @@ func (self *StateDB) RawDump() World {
 		storageIt := self.db.NewIterator(GetStorageKeyPrefix(address))
 		for storageIt.Next() {
 			storageKey, _ := SplitCompositeStorageKey(address, storageIt.Key())
-			self.logger.Debugf("dump key %s value %s", common.Bytes2Hex(storageKey), common.Bytes2Hex(storageIt.Value()))
 			user.Storage[common.Bytes2Hex(storageKey)] = common.Bytes2Hex(storageIt.Value())
 		}
-		if account.Status == STATEOBJECT_STATUS_NORMAL {
-			user.Status = "normal"
-		} else if account.Status == STATEOBJECT_STATUS_FROZON {
+		// assign status
+		user.Status = "normal"
+		if account.Status == OBJ_FROZON {
 			user.Status = "frozen"
 		}
 		world.Users[common.Bytes2Hex(address)] = user

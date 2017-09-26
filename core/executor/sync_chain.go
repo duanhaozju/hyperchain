@@ -9,7 +9,7 @@ import (
 	"hyperchain/common"
 	cm "hyperchain/core/common"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/core/ledger/tree/bucket"
+	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
@@ -366,7 +366,7 @@ func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *
 	if err != nil {
 		return err, nil
 	}
-	batch := executor.statedb.FetchBatch(seqNo)
+	batch := executor.statedb.FetchBatch(seqNo, state.BATCH_NORMAL)
 	if err := executor.persistTransactions(batch, block.Transactions, seqNo); err != nil {
 		return err, nil
 	}
@@ -382,9 +382,6 @@ func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *
 // ClearStateUnCommitted - remove all cached stuff
 func (executor *Executor) clearStatedb() {
 	executor.statedb.Purge()
-	tree := executor.statedb.GetTree()
-	bucketTree := tree.(*bucket.BucketTree)
-	bucketTree.Clear()
 }
 
 // assertApplyResult - check apply result whether equal with other's.
@@ -536,7 +533,7 @@ func (executor *Executor) sendStateUpdatedEvent() {
 
 // accpet - accept block synchronization result.
 func (executor *Executor) accpet(seqNo uint64, block *types.Block, result *ValidationResultRecord) error {
-	batch := executor.statedb.FetchBatch(seqNo)
+	batch := executor.statedb.FetchBatch(seqNo, state.BATCH_NORMAL)
 	if err := edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false); err != nil {
 		executor.logger.Errorf("update chain to (#%d) failed, err: %s", err.Error())
 		return err
@@ -653,7 +650,7 @@ func (executor *Executor) applyWorldState(fPath string, filterId string, root co
 
 	writeBatch := executor.db.NewBatch()
 
-	if err := executor.statedb.Apply(wsDb, writeBatch, root); err != nil {
+	if err := executor.statedb.Merge(wsDb, writeBatch, root); err != nil {
 		return err
 	}
 

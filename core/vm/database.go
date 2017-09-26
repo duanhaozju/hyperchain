@@ -34,15 +34,11 @@ type Database interface {
 	SetCreateTime(common.Address, uint64)
 	GetCreateTime(common.Address) uint64
 
-	AddRefund(*big.Int)
-	GetRefund() *big.Int
-
 	GetState(common.Address, common.Hash) (bool, []byte)
 	SetState(common.Address, common.Hash, []byte, int32)
 
 	Delete(common.Address) bool
 	Exist(common.Address) bool
-	IsDeleted(common.Address) bool
 
 	// Log
 	StartRecord(common.Hash, common.Hash, int)
@@ -52,7 +48,7 @@ type Database interface {
 	Snapshot() interface{}
 	RevertToSnapshot(interface{})
 	RevertToJournal(uint64, uint64, []byte, db.Batch) error
-	// Reset statuso
+	// Clear out all extemporaneous status
 	Purge()
 
 	Commit() (common.Hash, error)
@@ -62,7 +58,6 @@ type Database interface {
 	// Query
 	GetAccounts() map[string]Account
 	Dump() []byte
-	GetTree() interface{}
 	GetCurrentTxHash() common.Hash
 	NewIterator(common.Address, *IterRange) (Iterator, error)
 
@@ -70,11 +65,10 @@ type Database interface {
 	MarkProcessStart(uint64)
 	MarkProcessFinish(uint64)
 
-	FetchBatch(seqNo uint64) db.Batch
+	FetchBatch(seqNo uint64, typ int) db.Batch
 	DeleteBatch(seqNo uint64)
 	MakeArchive(uint64)
-	ShowArchive(common.Address, string) map[string]map[string]string
-	Apply(db.Database, db.Batch, common.Hash) error
+	Merge(db.Database, db.Batch, common.Hash) error
 }
 
 type Iterator interface {

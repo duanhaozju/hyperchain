@@ -103,7 +103,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		if isSpecialOperation(op) && !isUpdate(op) {
 			switch {
 			case isFreeze(op):
-				if env.Db().GetStatus(to.Address()) == state.STATEOBJECT_STATUS_FROZON {
+				if env.Db().GetStatus(to.Address()) == state.OBJ_FROZON {
 					env.Logger().Warningf("try to freeze a frozen account %s", to.Address().Hex())
 					env.SetSnapshot(snapshotPreTransfer)
 					return nil, common.Address{}, er.ExecContractErr(1, "duplicate freeze operation")
@@ -114,9 +114,9 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 					return nil, common.Address{}, er.ExecContractErr(1, "freeze a non-contract account")
 				}
 				env.Logger().Debugf("freeze account %s", to.Address().Hex())
-				env.Db().SetStatus(to.Address(), state.STATEOBJECT_STATUS_FROZON)
+				env.Db().SetStatus(to.Address(), state.OBJ_FROZON)
 			case isUnFreeze(op):
-				if env.Db().GetStatus(to.Address()) == state.STATEOBJECT_STATUS_NORMAL {
+				if env.Db().GetStatus(to.Address()) == state.OBJ_NORMAL {
 					env.Logger().Warningf("try to unfreeze a normal account %s", to.Address().Hex())
 					env.SetSnapshot(snapshotPreTransfer)
 					return nil, common.Address{}, er.ExecContractErr(1, "duplicate unfreeze operation")
@@ -127,7 +127,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 					return nil, common.Address{}, er.ExecContractErr(1, "unfreeze a non-contract account")
 				}
 				env.Logger().Debugf("unfreeze account %s", to.Address().Hex())
-				env.Db().SetStatus(to.Address(), state.STATEOBJECT_STATUS_NORMAL)
+				env.Db().SetStatus(to.Address(), state.OBJ_NORMAL)
 			}
 			return nil, common.Address{}, nil
 		}
@@ -136,7 +136,7 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 	/*
 		RUN VM
 	*/
-	if env.Db().GetStatus(to.Address()) != state.STATEOBJECT_STATUS_NORMAL {
+	if env.Db().GetStatus(to.Address()) != state.OBJ_NORMAL {
 		env.Logger().Debugf("account %s has been frozen", to.Address().Hex())
 		env.SetSnapshot(snapshotPreTransfer)
 		return nil, common.Address{}, er.ExecContractErr(1, "Try to invoke a frozen contract")

@@ -16,66 +16,60 @@ package bucket
 
 import (
 	"bytes"
+	"encoding/json"
 	"hyperchain/common"
 	"hyperchain/hyperdb/mdb"
+	"io/ioutil"
 	"testing"
 )
 
-type HashTestCase struct {
-	input  Entries
-	expect []byte
+type KV struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
-func TestBucketTree_ComputeHash(t *testing.T) {
-	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
-	tree := NewBucketTree(db, "prefix")
-	for _, c := range generateHashTestCases() {
+type BucketTestCase struct {
+	Base   []KV              `json:"base"`
+	Input  map[string]string `json:"input"`
+	Expect string            `json:"expect"`
+}
+
+func ReadTestCase() ([]BucketTestCase, error) {
+	blob, err := ioutil.ReadFile("testcases.json")
+	if err != nil {
+		return nil, err
+	}
+	var cases []BucketTestCase = make([]BucketTestCase, 0)
+	if err := json.Unmarshal(blob, &cases); err != nil {
+		return nil, err
+	}
+	return cases, nil
+}
+
+func TestBucketTree_Process(t *testing.T) {
+	cases, err := ReadTestCase()
+	if err != nil {
+		t.Error(err.Error())
+	}
+	for i, c := range cases {
+		var (
+			db      *mdb.MemDatabase
+			entries Entries = NewEntries()
+			hash    []byte
+		)
+		db, _ = mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
+		for _, kv := range c.Base {
+			db.Set(common.Hex2Bytes(kv.Key), common.Hex2Bytes(kv.Value))
+		}
+		for k, v := range c.Input {
+			entries[k] = []byte(v)
+		}
+		tree := NewBucketTree(db, "prefix")
 		tree.Initialize(NewTestConfig())
-		tree.Prepare(c.input)
-		h, err := tree.Process()
-		if err != nil {
-			t.Error(err.Error())
+		tree.Prepare(entries)
+		hash, _ = tree.Process()
+		if bytes.Compare(hash, common.Hex2Bytes(c.Expect)) != 0 {
+			t.Errorf("expect to be same hash result for case [%d]", i)
 		}
-		if bytes.Compare(h, c.expect) != 0 {
-			t.Error("expect to be same")
-		}
-		tree.Clear()
-	}
-}
-
-func TestBucketTree_ComputeWithBase(t *testing.T) {
-	var (
-		db, _  = mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
-		batch  = db.NewBatch()
-		cases  = generateHashTestCases()
-		tree   = NewBucketTree(db, "prefix")
-		hash   []byte
-		expect = []byte{35, 120, 81, 252, 124, 230, 225, 223, 198, 131, 17, 47, 236, 15, 143, 177, 60, 107, 103, 94, 17, 250, 164, 77, 81, 228, 149, 64, 55, 152, 247, 213}
-	)
-	tree.Initialize(NewTestConfig())
-	tree.Prepare(cases[0].input)
-	tree.Process()
-	tree.Commit(batch)
-	batch.Write()
-
-	tree.Prepare(cases[1].input)
-	hash, _ = tree.Process()
-	tree.Commit(batch)
-
-	if bytes.Compare(hash, expect) != 0 {
-		t.Error("expect to be same")
-	}
-}
-
-func generateHashTestCases() []HashTestCase {
-	return []HashTestCase{
-		{
-			// share the same bucket
-			Entries{"key1": []byte("value1"), "key2": []byte("value2"), "key3": []byte("value3")},
-			[]byte{240, 2, 195, 167, 87},
-		}, {
-			Entries{"key100": []byte("value100"), "key200": []byte("value200"), "key300": []byte("value300")},
-			[]byte{205, 215, 10, 4, 248, 44, 79, 183, 117, 33, 238, 14, 99, 189, 215, 177, 62, 230, 194, 36, 121, 123, 206, 198, 128, 239, 238, 52, 85, 25, 197, 162},
-		},
 	}
 }

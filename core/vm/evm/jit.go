@@ -403,9 +403,7 @@ func jitCalculateGasAndSize(env vm.Environment, contract *Contract, instr instru
 	//}
 	//gas.Set(g)
 	case SUICIDE:
-		if !statedb.IsDeleted(contract.Address()) {
-			statedb.AddRefund(params.SuicideRefundGas)
-		}
+		// Do nothing
 	case MLOAD:
 		newMemSize = calcMemSize(stack.peek(), u256(32))
 	case MSTORE8:

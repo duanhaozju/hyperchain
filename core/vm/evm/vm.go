@@ -8,7 +8,6 @@ import (
 
 	"hyperchain/common"
 	"hyperchain/core/vm"
-	"hyperchain/core/vm/evm/params"
 	"hyperchain/crypto"
 	"os"
 )
@@ -295,9 +294,7 @@ func calculateGasAndSize(env vm.Environment, contract *Contract, caller vm.Contr
 	//}
 	//gas.Set(g)
 	case SUICIDE:
-		if !statedb.IsDeleted(contract.Address()) {
-			statedb.AddRefund(params.SuicideRefundGas)
-		}
+		// Do nothing
 	case MLOAD:
 		newMemSize = calcMemSize(stack.peek(), u256(32))
 	case MSTORE8:

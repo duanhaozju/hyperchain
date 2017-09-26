@@ -42,8 +42,6 @@ func (db *MemDatabase) Put(key []byte, value []byte) error {
 }
 
 func (db *MemDatabase) Set(key []byte, value []byte) {
-	db.lock.Lock()
-	defer db.lock.Unlock()
 	db.Put(key, value)
 }
 
