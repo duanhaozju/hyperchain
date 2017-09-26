@@ -15,7 +15,7 @@ import (
 	"net/http"
 )
 
-// LoginServer implements the basic auth login
+// LoginServer implements the basic auth login.
 func LoginServer(w http.ResponseWriter, req *http.Request) {
 	log.Debug("start listen login function...")
 
@@ -29,7 +29,7 @@ func LoginServer(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// judge if the user exist or not
-	if ok, err := IsUserExist(username, password); !ok {
+	if ok, err := isUserExist(username, password); !ok {
 		log.Debugf("User %s: %s", username, err.Error())
 		w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic releam=%s", err.Error()))
 		w.WriteHeader(http.StatusUnauthorized)
@@ -37,7 +37,7 @@ func LoginServer(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// generate token
+	// generate signed token
 	token, err := signToken(username, pri_key, "RS256")
 	if err != nil {
 		log.Error("Failed to generate signed token:", err)
@@ -46,6 +46,8 @@ func LoginServer(w http.ResponseWriter, req *http.Request) {
 		io.WriteString(w, err.Error())
 		return
 	}
+
+	// update last operation time of this user.
 	updateLastOperationTime(username)
 	w.Header().Set("Authorization", token)
 	w.WriteHeader(http.StatusOK)
