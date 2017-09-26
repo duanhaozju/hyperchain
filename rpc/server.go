@@ -16,11 +16,6 @@ import (
 	"time"
 )
 
-const (
-	stopPendingRequestTimeout = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
-	adminService              = "admin"
-)
-
 // CodecOption specifies which type of messages this codec supports
 type CodecOption int
 
@@ -32,8 +27,24 @@ const (
 	OptionSubscriptions
 )
 
+const (
+	stopPendingRequestTimeout = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
+	adminService              = "admin"
+)
+
+// Server represents a RPC server
+type Server struct {
+	run          int32
+	codecsMu     sync.Mutex
+	codecs       *set.Set
+	namespaceMgr namespace.NamespaceManager
+	admin        *admin.Administrator
+	requestMgrMu sync.Mutex
+	requestMgr   map[string]*requestManager
+}
+
 // NewServer will create a new server instance with no registered handlers.
-func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartHp chan bool) *Server {
+func NewServer(nr namespace.NamespaceManager, config *common.Config) *Server {
 	server := &Server{
 		codecs:       set.New(),
 		run:          1,
@@ -41,10 +52,9 @@ func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartH
 		requestMgr:   make(map[string]*requestManager),
 	}
 	server.admin = &admin.Administrator{
-		Check:         nr.GlobalConfig().GetBool(common.ADMIN_CHECK),
+		Check:         config.GetBool(common.ADMIN_CHECK),
 		NsMgr:         server.namespaceMgr,
-		StopServer:    stopHyperchain,
-		RestartServer: restartHp,
+		Config:        config,
 	}
 	server.admin.Init()
 	return server
@@ -91,22 +101,6 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 
 		return
 	}()
-
-	//ctx, cancel := context.WithCancel(context.Background())
-	//
-	////defer func() {
-	////	fmt.Println("context cancel()")
-	////	cancel()
-	////}()
-	//defer cancel()
-	//
-	//// if the codec supports notification include a notifier that callbacks can use
-	//// to send notification to clients. It is thight to the codec/connection. If the
-	//// connection is closed the notifier will stop and cancels all active subscriptions.
-	//if options&OptionSubscriptions == OptionSubscriptions {
-	//	//ctx = context.WithValue(ctx, common.NotifierKey{}, common.NewNotifier(codec))
-	//	ctx = context.WithValue(ctx, NotifierKey{}, NewNotifier(codec))
-	//}
 
 	s.codecsMu.Lock()
 	if atomic.LoadInt32(&s.run) != 1 { // server stopped
@@ -199,7 +193,7 @@ func (s *Server) Stop() {
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
 func (s *Server) readRequest(codec ServerCodec, options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
-	reqs, batch, err := codec.ReadRequestHeaders(options)
+	reqs, batch, err := codec.ReadRawRequest(options)
 	if err != nil {
 		return nil, batch, err
 	}
@@ -237,7 +231,7 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 			}
 			var rm *requestManager
 
-			s.reqMgrMu.Lock()
+			s.requestMgrMu.Lock()
 			if _, ok := s.requestMgr[name]; !ok {
 				rm = NewRequestManager(name, s, codec)
 				s.requestMgr[name] = rm
@@ -246,7 +240,7 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 				s.requestMgr[name].codec = codec
 				rm = s.requestMgr[name]
 			}
-			s.reqMgrMu.Unlock()
+			s.requestMgrMu.Unlock()
 
 			rm.requests <- request
 			result <- (<-rm.response)
@@ -280,8 +274,10 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 	}
 
 	if response, ok := r.(*common.RPCResponse); ok {
-		if response.Error != nil {
+		if response.Error != nil && response.Reply == nil {
 			return codec.CreateErrorResponse(response.Id, response.Namespace, response.Error)
+		} else if response.Error != nil && response.Reply != nil {
+			return codec.CreateErrorResponseWithInfo(response.Id, response.Namespace, response.Error, response.Reply)
 		} else if response.Reply != nil {
 			if response.IsPubSub {
 				notifier, supported := NotifierFromContext(req.Ctx)

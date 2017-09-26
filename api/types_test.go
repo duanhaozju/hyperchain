@@ -9,31 +9,9 @@ import (
 	"hyperchain/hyperdb"
 	"strings"
 	"testing"
+	"math"
 )
 
-func TestNewInt64ToNumber(t *testing.T) {
-	n := int64(1024)
-	ref := NewInt64ToNumber(n)
-	if int64(*ref) != n {
-		t.Errorf("NewInt64ToNumber wrong")
-	}
-}
-
-func TestNewUint64ToNumber(t *testing.T) {
-	n := uint64(1024)
-	ref := NewUint64ToNumber(n)
-	if uint64(*ref) != n {
-		t.Errorf("NewUint64ToNumber wrong")
-	}
-}
-
-func TestNewIntToNumber(t *testing.T) {
-	n := int(1024)
-	ref := NewIntToNumber(n)
-	if int(*ref) != n {
-		t.Errorf("NewInt64ToNumber wrong")
-	}
-}
 func TestHex(t *testing.T) {
 	n := Number(1024)
 	ref := n.Hex()
@@ -85,34 +63,21 @@ func TestUnmarshalJSON(t *testing.T) {
 }
 func TestToInt64(t *testing.T) {
 	n := Number(456)
-	ref := n.ToInt64()
+	ref := n.Int64()
 	if ref != int64(456) {
 		t.Errorf("ToInt64 wrong")
 	}
 	var n2 *Number
 
-	ref = n2.ToInt64()
+	ref = n2.Int64()
 	if ref != int64(0) {
 		t.Errorf("ToInt64.1 wrong")
 	}
 }
 
-func TestToUint64(t *testing.T) {
-	n := Number(456)
-	ref := n.ToUint64()
-	if ref != uint64(456) {
-		t.Errorf("ToUInt64.1 wrong")
-	}
-	n = Number(-5)
-	ref = n.ToUint64()
-	if ref != uint64(0) {
-		t.Errorf("ToUInt64.2 wrong")
-	}
-}
-
 func TestToInt(t *testing.T) {
 	n := Number(456)
-	ref := n.ToInt()
+	ref := n.Int()
 	if ref != int(456) {
 		t.Errorf("ToInt.1 wrong")
 	}
@@ -121,12 +86,18 @@ func TestToInt(t *testing.T) {
 func Test_Block(t *testing.T) {
 	n := BlockNumber(456)
 
-	ref := n.Hex()
+	ref, err := n.Hex()
+	if err != nil {
+		t.Errorf("%v", err)
+	}
 	if ref != "0x1c8" {
 		t.Errorf("BlockNumber.Hex() fail")
 	}
 
-	ref2 := n.ToUint64()
+	ref2, err := n.BlockNumberToUint64(math.MaxUint64)
+	if err != nil {
+		t.Errorf("%v", err)
+	}
 	if ref2 != uint64(456) {
 		t.Errorf("BlockNumber.ToUint64() fail")
 	}

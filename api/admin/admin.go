@@ -64,9 +64,9 @@ type Administrator struct {
 
 	// CmdExecutor maps the interface name to the processing functions.
 	CmdExecutor   map[string]func(command *Command) *CommandResult
-	StopServer    chan bool
-	RestartServer chan bool
-}
+
+	Config        *common.Config
+	}
 
 // PreHandle is used to verify token, update and check user permission
 // before handling admin services if admin.Check is true.
@@ -105,7 +105,7 @@ func (adm *Administrator) PreHandle(token, method string) error {
 // successfully.
 func (adm *Administrator) stopServer(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
-	adm.StopServer <- true
+	adm.NsMgr.GetStopFlag() <- true
 	return &CommandResult{Ok: true, Result: "stop server success!"}
 }
 
@@ -113,7 +113,7 @@ func (adm *Administrator) stopServer(cmd *Command) *CommandResult {
 // successfully.
 func (adm *Administrator) restartServer(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
-	adm.RestartServer <- true
+	adm.NsMgr.GetRestartFlag() <- true
 	return &CommandResult{Ok: true, Result: "restart server success!"}
 }
 
@@ -409,7 +409,7 @@ func (adm *Administrator) delUser(cmd *Command) *CommandResult {
 // Init initializes the CmdExecutor map.
 func (adm *Administrator) Init() {
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc/admin")
-	expiration = adm.NsMgr.GlobalConfig().GetDuration(common.ADMIN_EXPIRATION)
+	expiration = adm.Config.GetDuration(common.ADMIN_EXPIRATION)
 
 	adm.CmdExecutor = make(map[string]func(command *Command) *CommandResult)
 	adm.CmdExecutor["stopServer"] = adm.stopServer

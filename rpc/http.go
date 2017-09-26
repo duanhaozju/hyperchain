@@ -3,10 +3,7 @@
 package jsonrpc
 
 import (
-	//"github.com/astaxie/beego"
-	//"github.com/astaxie/beego/logs"
 	"github.com/rs/cors"
-	//"hyperchain/api/rest/routers"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
@@ -24,7 +21,7 @@ import (
 
 const (
 	maxHTTPRequestContentLength = 1024 * 256
-	ReadTimeout                 = 3 * time.Second
+	ReadTimeout                 = 5 * time.Second
 )
 
 var (
@@ -32,134 +29,113 @@ var (
 )
 
 type httpServerImpl struct {
-	stopHp    chan bool
-	restartHp chan bool
 	nr        namespace.NamespaceManager
 	port      int
+	config    *common.Config
 
 	httpListener       net.Listener
 	httpHandler        *Server
-	httpAllowedOrigins []string
 }
 
-func GetHttpServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) internalRPCServer {
+// GetHttpServer creates and returns a new httpServerImpl instance implements internalRPCServer interface.
+func GetHttpServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
 	if hs == nil {
 		hs = &httpServerImpl{
 			nr:                 nr,
-			stopHp:             stopHp,
-			restartHp:          restartHp,
-			httpAllowedOrigins: []string{"*"},
-			port:               nr.GlobalConfig().GetInt(common.JSON_RPC_PORT),
+			port:               config.GetInt(common.JSON_RPC_PORT),
+			config:				config,
 		}
 	}
 	return hs
 }
 
-// start starts the http RPC endpoint.
-func (hi *httpServerImpl) start() error {
+// start starts the http RPC endpoint. It will start the appropriate server based on the parameters of the configuration file.
+func (hsi *httpServerImpl) start() error {
 
 	var (
 		listener net.Listener
+		srv		 *http.Server
 		err      error
 	)
 
-	config := hi.nr.GlobalConfig()
-
-	// start http listener
-	handler := NewServer(hi.nr, hi.stopHp, hi.restartHp)
+	handler := NewServer(hsi.nr, hsi.config)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", admin.LoginServer)
-	mux.Handle("/", newCorsHandler(handler, hi.httpAllowedOrigins))
+	mux.Handle("/", newCorsHandler(handler, hsi.config.GetStringSlice(common.HTTP_ALLOWEDORIGINS)))
 
-	isVersion2 := config.GetBool(common.HTTP_VERSION2)
-	isHTTPS := config.GetBool(common.HTTP_SECURITY)
+	isVersion2 := hsi.config.GetBool(common.HTTP_VERSION2)
+	isHTTPS := hsi.config.GetBool(common.HTTP_SECURITY)
 
-	pool := x509.NewCertPool()
-	caCrt, err := ioutil.ReadFile(config.GetString(common.P2P_TLS_CA))
+	// prepare tls.Config
+	tlsConfig, err := hsi.secureConfig()
 	if err != nil {
-		fmt.Println("ReadFile err:", err)
 		return err
-	}
-	pool.AppendCertsFromPEM(caCrt)
-
-	serverCert, err := tls.LoadX509KeyPair(config.GetString(common.P2P_TLS_CERT), config.GetString(common.P2P_TLS_CERT_PRIV))
-	if err != nil {
-		log.Errorf("Loadx509keypair err: ", err)
-		return err
-	}
-	tlsConfig := &tls.Config{
-		ClientCAs:    pool,
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		Certificates: []tls.Certificate{serverCert},
 	}
 
 	if isVersion2 && isHTTPS {
 
 		// http2, https
-		log.Noticef("starting http/2 service at port %v ... , secure connection is enabled.", hi.port)
+		log.Noticef("starting http/2 service at port %v ... , secure connection is enabled.", hsi.port)
 
+		// start http listener with secure connection and http/2
 		tlsConfig.NextProtos = []string{"h2"}
-		if listener, err = tls.Listen("tcp", ":"+config.GetString(common.JSON_RPC_PORT), tlsConfig); err != nil {
-			log.Error(err)
+		if listener, err = tls.Listen("tcp", fmt.Sprintf(":%d", hsi.port), tlsConfig); err != nil {
 			return err
 		}
 
-		srv := newHTTPServer(mux, &tls.Config{
-			ClientCAs:  pool,
-			ClientAuth: tls.RequireAndVerifyClientCert,
-		})
+		srv = newHTTPServer(mux, tlsConfig)
 		http2.ConfigureServer(srv, &http2.Server{})
-
-		go srv.Serve(listener)
 
 	} else if !isVersion2 && isHTTPS {
 
 		// http1.1, https
-		log.Noticef("starting http/1.1 service at port %v ... , secure connection is enabled.", hi.port)
+		log.Noticef("starting http/1.1 service at port %v ... , secure connection is enabled.", hsi.port)
 
-		if listener, err = tls.Listen("tcp", ":"+config.GetString(common.JSON_RPC_PORT), tlsConfig); err != nil {
-			log.Error(err)
+		// start http listener with secure connection and http/1.1
+		if listener, err = tls.Listen("tcp", fmt.Sprintf(":%d", hsi.port), tlsConfig); err != nil {
 			return err
 		}
 
-		srv := newHTTPServer(mux, &tls.Config{
-			ClientCAs:  pool,
-			ClientAuth: tls.RequireAndVerifyClientCert,
-		})
-
-		go srv.Serve(listener)
+		srv = newHTTPServer(mux, tlsConfig)
 
 	} else {
 
 		// http1.1, disable https
-		log.Noticef("starting http/1.1 service at port %v ... , secure connection is disenabled.", hi.port)
-		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", hi.port))
+		log.Noticef("starting http/1.1 service at port %v ... , secure connection is disenabled.", hsi.port)
+
+		// start http listener with http/1.1
+		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", hsi.port))
 		if err != nil {
 			return err
 		}
 
-		go newHTTPServer(mux, nil).Serve(listener)
+		srv = newHTTPServer(mux, nil)
+
 	}
 
-	hi.httpListener = listener
-	hi.httpHandler = handler
+	go srv.Serve(listener)
+
+	hsi.httpListener = listener
+	hsi.httpHandler = handler
 
 	return nil
 }
 
 // stop stops the http RPC endpoint.
-func (hi *httpServerImpl) stop() error {
-	log.Noticef("stopping http service at port %v ...", hi.port)
-	if hi.httpListener != nil {
-		hi.httpListener.Close()
-		hi.httpListener = nil
+func (hsi *httpServerImpl) stop() error {
+	log.Noticef("stopping http service at port %v ...", hsi.port)
+	if hsi.httpListener != nil {
+		hsi.httpListener.Close()
+		hsi.httpListener = nil
 	}
 
-	if hi.httpHandler != nil {
-		hi.httpHandler.Stop()
-		hi.httpHandler = nil
-		time.Sleep(4 * time.Second)
+	if hsi.httpHandler != nil {
+		hsi.httpHandler.Stop()
+		hsi.httpHandler = nil
+
+		// wait for ReadTimeout to close all the established connection
+		time.Sleep(ReadTimeout)
 	}
 
 	log.Notice("http service stopped")
@@ -167,53 +143,52 @@ func (hi *httpServerImpl) stop() error {
 }
 
 // restart restarts the http RPC endpoint.
-func (hi *httpServerImpl) restart() error {
-	log.Noticef("restarting http service at port %v ...", hi.port)
-	if err := hi.stop(); err != nil {
+func (hsi *httpServerImpl) restart() error {
+	log.Noticef("restarting http service at port %v ...", hsi.port)
+	if err := hsi.stop(); err != nil {
 		return err
 	}
-	if err := hi.start(); err != nil {
+	if err := hsi.start(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (hi *httpServerImpl) getPort() int {
-	return hi.port
+func (hsi *httpServerImpl) getPort() int {
+	return hsi.port
 }
 
-func (hi *httpServerImpl) setPort(port int) error {
+func (hsi *httpServerImpl) setPort(port int) error {
 	if port == 0 {
 		return errors.New("please offer http port")
 	}
-	hi.port = port
+	hsi.port = port
 	return nil
 }
 
-type httpReadWrite struct {
-	io.Reader
-	io.Writer
-}
+func (hsi *httpServerImpl) secureConfig() (*tls.Config, error) {
 
-func (hrw *httpReadWrite) Close() error {
-	return nil
-}
+	pool := x509.NewCertPool()
+	caCrt, err := ioutil.ReadFile(hsi.config.GetString(common.P2P_TLS_CA))
+	if err != nil {
+		fmt.Println("ReadFile err:", err)
+		return nil, err
+	}
+	pool.AppendCertsFromPEM(caCrt)
 
-//func startRestService(srv *Server) {
-//	config := srv.namespaceMgr.GlobalConfig()
-//	restPort := config.GetInt(common.C_REST_PORT)
-//	logsPath := config.GetString(common.LOG_DUMP_FILE_DIR)
-//
-//	// rest service
-//	routers.NewRouter()
-//	beego.BConfig.CopyRequestBody = true
-//	beego.SetLogFuncCall(true)
-//
-//	logs.SetLogger(logs.AdapterFile, `{"filename": "`+logsPath+"/RESTful-API-"+strconv.Itoa(restPort)+"-"+time.Now().Format("2006-01-02 15:04:05")+`"}`)
-//	beego.BeeLogger.DelLogger("console")
-//
-//	beego.Run("0.0.0.0:" + strconv.Itoa(restPort))
-//}
+	serverCert, err := tls.LoadX509KeyPair(hsi.config.GetString(common.P2P_TLS_CERT), hsi.config.GetString(common.P2P_TLS_CERT_PRIV))
+	if err != nil {
+		log.Errorf("Loadx509keypair err: ", err)
+		return nil, err
+	}
+	tlsConfig := &tls.Config{
+		ClientCAs:    pool,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		Certificates: []tls.Certificate{serverCert},
+	}
+
+	return tlsConfig, nil
+}
 
 // newHTTPServer creates a new http RPC server around an API provider.
 func newHTTPServer(mux *http.ServeMux, tlsConfig *tls.Config) *http.Server {
@@ -238,6 +213,13 @@ func newCorsHandler(srv *Server, allowedOrigins []string) http.Handler {
 	})
 	return c.Handler(srv)
 }
+
+type httpReadWrite struct {
+	io.Reader
+	io.Writer
+}
+
+func (hrw *httpReadWrite) Close() error {return nil}
 
 // ServeHTTP serves JSON-RPC requests over HTTP.
 func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

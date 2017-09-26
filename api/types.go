@@ -5,7 +5,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/common"
 	"math"
 	"math/big"
 	"strconv"
@@ -14,9 +13,9 @@ import (
 
 // API describes the set of methods offered over the RPC interface
 type API struct {
-	Srvname string      // srvname under which the rpc methods of Service are exposed
+	Srvname string      // service name
 	Version string      // api version
-	Service interface{} // receiver instance which holds the methods
+	Service interface{} // api service instance which holds the methods
 	Public  bool        // indication if the methods must be considered safe for public use
 }
 
@@ -31,17 +30,17 @@ func GetApiObjectByNamespace(name string) *API {
 
 type Number int64
 
-func NewInt64ToNumber(n int64) *Number {
+func int64ToNumber(n int64) *Number {
 	num := Number(n)
 	return &num
 }
 
-func NewUint64ToNumber(n uint64) *Number {
+func uint64ToNumber(n uint64) *Number {
 	num := Number(n)
 	return &num
 }
 
-func NewIntToNumber(n int) *Number {
+func intToNumber(n int) *Number {
 	num := Number(n)
 	return &num
 }
@@ -73,26 +72,19 @@ func (n *Number) UnmarshalJSON(data []byte) error {
 	} else if v < 0 {
 		return fmt.Errorf("number can't be negative or zero, but get %v", input)
 	} else {
-		*n = *NewUint64ToNumber(v)
+		*n = *uint64ToNumber(v)
 		return nil
 	}
 }
 
-func (n *Number) ToInt64() int64 {
-	if n == nil {
-		return 0
-	}
-	return int64(*n)
-}
-
-func (n Number) ToUint64() uint64 {
+func (n Number) Int64() int64 {
 	if n <= 0 {
 		return 0
 	}
-	return uint64(n)
+	return int64(n)
 }
 
-func (n Number) ToInt() int {
+func (n Number) Int() int {
 	if n <= 0 {
 		return 0
 	}
@@ -101,7 +93,7 @@ func (n Number) ToInt() int {
 
 type BlockNumber string
 
-func Uint64ToBlockNumber(n uint64) *BlockNumber {
+func uint64ToBlockNumber(n uint64) *BlockNumber {
 	number := BlockNumber(strconv.FormatUint(n, 10))
 	return &number
 }
@@ -114,27 +106,27 @@ func (n BlockNumber) BlockNumberToUint64(latest uint64) (uint64, error) {
 	if !ok {
 		if input == "latest" {
 			if latest == 0 {
-				return 0, &common.InvalidParamsError{Message: "There is no block generated!"}
+				return 0, fmt.Errorf("There is no block generated!")
 			} else {
 				return latest, nil
 			}
 		} else if input == "earliest" {
 			//TODO
-			return 0, &common.InvalidParamsError{Message: "Support later..."}
+			return 0, fmt.Errorf("Support later...")
 		} else if input == "pending" {
 			//TODO
-			return 0, &common.InvalidParamsError{Message: "Support later..."}
+			return 0, fmt.Errorf("Support later...")
 		} else {
-			return 0, &common.InvalidParamsError{Message: fmt.Sprintf("invalid block number %s", input)}
+			return 0, fmt.Errorf("invalid block number %s", input)
 		}
 	}
 
 	if num, err := strconv.ParseUint(input, 0, 64); err != nil {
-		return 0, &common.InvalidParamsError{Message: fmt.Sprintf("block number %v may be out of range", input)}
+		return 0, fmt.Errorf("block number %v may be out of range", input)
 	} else if num <= 0 {
-		return 0, &common.InvalidParamsError{Message: fmt.Sprintf("block number can't be negative or zero, but get %v", input)}
+		return 0, fmt.Errorf("block number can't be negative or zero, but get %v", input)
 	} else if num > latest {
-		return 0, &common.InvalidParamsError{Message: fmt.Sprintf("block number is out of range, and now latest block number is %d", latest)}
+		return 0, fmt.Errorf("block number %v is out of range, and now latest block number is %d", input, latest)
 	} else {
 		return num, nil
 	}

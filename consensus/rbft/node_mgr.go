@@ -866,11 +866,6 @@ func (rbft *rbftImpl) recvFinishUpdate(finish *FinishUpdate) consensusEvent {
 	}
 	rbft.logger.Debugf("Replica %d received FinishUpdate from replica %d, view=%d/h=%d", rbft.id, finish.ReplicaId, finish.View, finish.LowH)
 
-	if finish.View != rbft.view {
-		rbft.logger.Warningf("Replica %d received FinishUpdate from replica %d, expect view=%d, but get view=%d", rbft.id, finish.ReplicaId, rbft.view, finish.View)
-		// We don't ignore it as there may be delay during receiveUpdate from primary between new node and other non-primary old replicas
-	}
-
 	ok := rbft.nodeMgr.finishUpdateStore[*finish]
 	if ok {
 		rbft.logger.Warningf("Replica %d ignored duplicator agree FinishUpdate from %d", rbft.id, finish.ReplicaId)
