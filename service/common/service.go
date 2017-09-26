@@ -1,33 +1,55 @@
 package common
 
+import (
+	pb "hyperchain/service/common/protos"
+)
+
 //Service interface to be implemented by component.
 type Service interface {
 	Namespace() string
-	Id() string                // service identifier.
-	Send(msg interface{})      // sync send msg.
-	AsyncSend(msg interface{}) // async send msg.
+	Id() string // service identifier.
+	Send(syn bool, msg *pb.Message)
 	Close()
+	Serve()
 }
 
 type serviceImpl struct {
-
+	namespace string
+	id        string
+	stream    pb.Dispatcher_RegisterServer
 }
 
-func (si serviceImpl) Namespace() string  {
-	return ""
+func NewService(namespace, id string, stream pb.Dispatcher_RegisterServer) Service {
+	return &serviceImpl{
+		namespace: namespace,
+		id:        id,
+		stream:    stream,
+	}
+}
+
+func (si serviceImpl) Namespace() string {
+	return si.namespace
 }
 
 // Id service identifier.
 func (si *serviceImpl) Id() string {
-	return ""
+	return si.id
 }
 
 // Send sync send msg.
-func (si *serviceImpl) Send(msg interface{}) {
-
+func (si *serviceImpl) Send(sync bool, msg *pb.Message) {
+	if !sync {
+		si.stream.Send(msg)
+	} else {
+		//TODO: syn send operation
+	}
 }
 
-// AsyncSend async send msg.
-func (si *serviceImpl) AsyncSend(msg interface{}) {
+func (si *serviceImpl) Close() {
+	//TODO: close service
+}
+
+//Serve handle logic impl here.
+func (si *serviceImpl) Serve() {
 
 }
