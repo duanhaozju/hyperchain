@@ -126,11 +126,11 @@ message checkpoint {
 }
 
 /* This message should go away and become a checkpoint once replica_id is removed */
-message vc_Cset {
+message vc_C {
     uint64 sequence_number = 1;
     string id = 2;
 }
-message vc_PQset {
+message vc_PQ {
     uint64 sequence_number = 1;
     string batch_digest = 2;
     uint64 view = 3;
@@ -139,9 +139,9 @@ message vc_PQset {
 message vc_basis {
     uint64 view = 1;
     uint64 h = 2;
-    repeated view_change.C cset = 3;
-    repeated view_change.PQ pset = 4;
-    repeated view_change.PQ qset = 5;
+    repeated vc_C cset = 3;
+    repeated vc_PQ pset = 4;
+    repeated vc_PQ qset = 5;
     uint64 replica_id = 6;
     uint64 genesis = 7;
 }
@@ -154,7 +154,6 @@ message view_change {
 
 message new_view {
     uint64 view = 1;
-    repeated view_change vset = 2;
     map<uint64, string> xset = 3;
     uint64 replica_id = 4;
 }
