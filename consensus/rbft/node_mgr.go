@@ -606,17 +606,17 @@ func (rbft *rbftImpl) sendUpdateN() consensusEvent {
 		return nil
 	}
 
-	nset := rbft.getAgreeUpdates()
+	aset := rbft.getAgreeUpdates()
 
 	// Check if primary can find the initial checkpoint for updating
-	cp, ok, replicas := rbft.selectInitialCheckpoint(nset)
+	cp, ok, replicas := rbft.selectInitialCheckpoint(aset)
 	if !ok {
 		rbft.logger.Infof("Replica %d could not find consistent checkpoint: %+v", rbft.id, rbft.vcMgr.viewChangeStore)
 		return nil
 	}
 
 	// Assign the seqNo according to the set of AgreeUpdateN and the initial checkpoint
-	msgList := rbft.assignSequenceNumbers(nset, cp.SequenceNumber)
+	msgList := rbft.assignSequenceNumbers(aset, cp.SequenceNumber)
 	if msgList == nil {
 		rbft.logger.Infof("Replica %d could not assign sequence numbers for new view", rbft.id)
 		return nil
@@ -645,7 +645,7 @@ func (rbft *rbftImpl) sendUpdateN() consensusEvent {
 	msg := cMsgToPbMsg(consensusMsg, rbft.id)
 	rbft.helper.InnerBroadcast(msg)
 	rbft.nodeMgr.updateStore[rbft.nodeMgr.updateTarget] = update
-	return rbft.primaryProcessUpdateN(cp, replicas, update)
+	return rbft.primaryCheckUpdateN(cp, replicas, update)
 }
 
 // recvUpdateN handles the UpdateN message sent by primary.
@@ -697,12 +697,12 @@ func (rbft *rbftImpl) recvUpdateN(update *UpdateN) consensusEvent {
 		return nil
 	}
 
-	return rbft.processUpdateN()
+	return rbft.replicaCheckUpdateN()
 }
 
 // primaryProcessUpdateN processes the UpdateN message after it has already reached
 // updateN-quorum.
-func (rbft *rbftImpl) primaryProcessUpdateN(initialCp Vc_C, replicas []replicaInfo, update *UpdateN) consensusEvent {
+func (rbft *rbftImpl) primaryCheckUpdateN(initialCp Vc_C, replicas []replicaInfo, update *UpdateN) consensusEvent {
 
 	// Check if primary need state update
 	err := rbft.checkIfNeedStateUpdate(initialCp, replicas)
@@ -714,7 +714,7 @@ func (rbft *rbftImpl) primaryProcessUpdateN(initialCp Vc_C, replicas []replicaIn
 	// Check if primary need fetch missing requests
 	newReqBatchMissing := rbft.feedMissingReqBatchIfNeeded(update.Xset)
 	if len(rbft.storeMgr.missingReqBatches) == 0 {
-		return rbft.processReqInUpdate(update)
+		return rbft.resetStateForUpdate(update)
 	} else if newReqBatchMissing {
 		rbft.fetchRequestBatches()
 	}
@@ -724,7 +724,7 @@ func (rbft *rbftImpl) primaryProcessUpdateN(initialCp Vc_C, replicas []replicaIn
 
 // processUpdateN handles the UpdateN message sent from primary, it can only be called
 // once replica has reached update-quorum.
-func (rbft *rbftImpl) processUpdateN() consensusEvent {
+func (rbft *rbftImpl) replicaCheckUpdateN() consensusEvent {
 
 	// Get the UpdateN from the local cache
 	update, ok := rbft.nodeMgr.updateStore[rbft.nodeMgr.updateTarget]
@@ -746,8 +746,8 @@ func (rbft *rbftImpl) processUpdateN() consensusEvent {
 	}
 
 	// Find the initial checkpoint
-	nset := rbft.getAgreeUpdates()
-	cp, ok, replicas := rbft.selectInitialCheckpoint(nset)
+	aset := rbft.getAgreeUpdates()
+	cp, ok, replicas := rbft.selectInitialCheckpoint(aset)
 	if !ok {
 		rbft.logger.Warningf("Replica %d could not determine initial checkpoint: %+v",
 			rbft.id, rbft.vcMgr.viewChangeStore)
@@ -755,7 +755,7 @@ func (rbft *rbftImpl) processUpdateN() consensusEvent {
 	}
 
 	// Check if the xset sent by new primary is built correctly by the aset
-	msgList := rbft.assignSequenceNumbers(nset, cp.SequenceNumber)
+	msgList := rbft.assignSequenceNumbers(aset, cp.SequenceNumber)
 	if msgList == nil {
 		rbft.logger.Warningf("Replica %d could not assign sequence numbers: %+v",
 			rbft.id, rbft.vcMgr.viewChangeStore)
@@ -774,12 +774,12 @@ func (rbft *rbftImpl) processUpdateN() consensusEvent {
 		return nil
 	}
 
-	return rbft.processReqInUpdate(update)
+	return rbft.resetStateForUpdate(update)
 
 }
 
 // processReqInUpdate resets all the variables that need to be updated after updating n
-func (rbft *rbftImpl) processReqInUpdate(update *UpdateN) consensusEvent {
+func (rbft *rbftImpl) resetStateForUpdate(update *UpdateN) consensusEvent {
 	rbft.logger.Debugf("Replica %d accepting update-n to target %v", rbft.id, rbft.nodeMgr.updateTarget)
 
 	if rbft.status.getState(&rbft.status.updateHandled) {
@@ -878,11 +878,11 @@ func (rbft *rbftImpl) recvFinishUpdate(finish *FinishUpdate) consensusEvent {
 	}
 	rbft.nodeMgr.finishUpdateStore[*finish] = true
 
-	return rbft.handleTailAfterUpdate()
+	return rbft.processReqInUpdate()
 }
 
 // handleTailAfterUpdate handles the tail after stable checkpoint
-func (rbft *rbftImpl) handleTailAfterUpdate() consensusEvent {
+func (rbft *rbftImpl) processReqInUpdate() consensusEvent {
 
 	// Get the quorum of FinishUpdate messages, and if has new primary's
 	quorum := 0
@@ -937,6 +937,12 @@ func (rbft *rbftImpl) handleTailAfterUpdate() consensusEvent {
 		EventType: NODE_MGR_UPDATEDN_EVENT,
 	}
 }
+
+
+//##########################################################################
+//           node management auxiliary functions
+//##########################################################################
+
 
 func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
 
@@ -1108,9 +1114,9 @@ func (rbft *rbftImpl) checkIfNeedStateUpdate(initialCp Vc_C, replicas []replicaI
 }
 
 // getAgreeUpdates gets all the AgreeUpdateN messages the replica received.
-func (rbft *rbftImpl) getAgreeUpdates() (nset []*VcBasis) {
+func (rbft *rbftImpl) getAgreeUpdates() (aset []*VcBasis) {
 	for _, agree := range rbft.nodeMgr.agreeUpdateStore {
-		nset = append(nset, agree.Basis)
+		aset = append(aset, agree.Basis)
 	}
 	return
 }

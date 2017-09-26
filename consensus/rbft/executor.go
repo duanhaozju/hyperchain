@@ -173,7 +173,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 			// primary construct and send new view message
 			return rbft.sendNewView()
 		}
-		return rbft.processNewView()
+		return rbft.replicaCheckNewView()
 
 	case VIEW_CHANGE_VC_RESET_DONE_EVENT:
 		rbft.status.inActiveState(&rbft.status.inVcReset)
@@ -246,7 +246,7 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) consensusEvent {
 		if rbft.isPrimary(rbft.id) {
 			return rbft.sendUpdateN()
 		}
-		return rbft.processUpdateN()
+		return rbft.replicaCheckUpdateN()
 	case NODE_MGR_UPDATEDN_EVENT:
 		rbft.startTimerIfOutstandingRequests()
 		rbft.vcMgr.vcResendCount = 0
