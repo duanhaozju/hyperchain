@@ -366,7 +366,7 @@ func (rbft *rbftImpl) sendNewView() consensusEvent {
 		return nil
 	}
 	//get all viewChange message in viewChangeStore.
-	vset, nset := rbft.getViewChanges()
+	nset := rbft.getViewChanges()
 
 	//get suitable checkpoint for later recovery, replicas contains the peer id who has this checkpoint.
 	//if can't find suitable checkpoint, ok return false.
@@ -385,7 +385,6 @@ func (rbft *rbftImpl) sendNewView() consensusEvent {
 	//create new view message
 	nv := &NewView{
 		View:      rbft.view,
-		Vset:      vset,
 		Xset:      msgList,
 		ReplicaId: rbft.id,
 	}
@@ -462,7 +461,7 @@ func (rbft *rbftImpl) processNewView() consensusEvent {
 		return nil
 	}
 
-	_, nset := rbft.getViewChanges()
+	nset := rbft.getViewChanges()
 	cp, ok, replicas := rbft.selectInitialCheckpoint(nset)
 	if !ok {
 		rbft.logger.Warningf("Replica %d could not determine initial checkpoint: %+v",
@@ -859,9 +858,8 @@ func (rbft *rbftImpl) finishViewChange() consensusEvent {
 }
 
 //Return all viewChange message from viewChangeStore
-func (rbft *rbftImpl) getViewChanges() (vset []*ViewChange, nset []*VCNODE) {
+func (rbft *rbftImpl) getViewChanges() (nset []*VCNODE) {
 	for _, vc := range rbft.vcMgr.viewChangeStore {
-		vset = append(vset, vc)
 		nset = append(nset, &VCNODE{
 			View:		vc.View,
 			H:		vc.H,
