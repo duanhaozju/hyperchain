@@ -140,8 +140,8 @@ func (rbft *rbftImpl) cleanAllCache() {
 
 	// we should clear the qlist & plist, since we may send viewchange after recovery
 	// those previous viewchange msg will make viewchange-check incorrect
-	rbft.vcMgr.qlist = make(map[qidx]*ViewChange_PQ)
-	rbft.vcMgr.plist = make(map[uint64]*ViewChange_PQ)
+	rbft.vcMgr.qlist = make(map[qidx]*Vc_PQ)
+	rbft.vcMgr.plist = make(map[uint64]*Vc_PQ)
 
 }
 

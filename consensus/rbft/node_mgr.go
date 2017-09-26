@@ -395,12 +395,14 @@ func (rbft *rbftImpl) recvReadyforNforAdd(ready *ReadyForN) consensusEvent {
 
 	// Broadcast the AgreeUpdateN message
 	agree := &AgreeUpdateN{
-		Flag:      true,
-		ReplicaId: rbft.id,
-		Key:       ready.Key,
-		N:         n,
-		View:      view,
-		H:         rbft.h,
+		Basis:	&VcBasis{
+			ReplicaId: rbft.id,
+			View:      view,
+			H:         rbft.h,
+		},
+		Flag:	true,
+		Key:	ready.Key,
+		N:	n,
 	}
 
 	return rbft.sendAgreeUpdateNForAdd(agree)
@@ -417,7 +419,7 @@ func (rbft *rbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) consensusEvent
 
 	// Replica may receive ReadyForN after it has already finished updatingN
 	// (it happens in bad network environment)
-	if int(agree.N) == rbft.N && agree.View == rbft.view {
+	if int(agree.N) == rbft.N && agree.Basis.View == rbft.view {
 		rbft.logger.Debugf("Replica %d alreay finish update for N=%d/view=%d", rbft.id, rbft.N, rbft.view)
 		return nil
 	}
@@ -434,7 +436,7 @@ func (rbft *rbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) consensusEvent
 	// Generate the AgreeUpdateN message and broadcast it to others
 	rbft.agreeUpdateHelper(agree)
 	rbft.logger.Infof("Replica %d sending agree-update-N, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
-		rbft.id, agree.View, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
+		rbft.id, agree.Basis.View, agree.Basis.H, len(agree.Basis.Cset), len(agree.Basis.Pset), len(agree.Basis.Qset))
 
 	payload, err := proto.Marshal(agree)
 	if err != nil {
@@ -475,17 +477,19 @@ func (rbft *rbftImpl) sendAgreeUpdateNforDel(key string) error {
 	n, view := rbft.getDelNV(cert.delId)
 
 	agree := &AgreeUpdateN{
+		Basis:	&VcBasis{
+			ReplicaId: rbft.id,
+			View:      view,
+			H:         rbft.h,
+		},
 		Flag:      false,
-		ReplicaId: rbft.id,
 		Key:       key,
 		N:         n,
-		View:      view,
-		H:         rbft.h,
 	}
 
 	rbft.agreeUpdateHelper(agree)
 	rbft.logger.Infof("Replica %d sending agree-update-n, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
-		rbft.id, agree.View, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
+		rbft.id, agree.Basis.View, agree.Basis.H, len(agree.Basis.Cset), len(agree.Basis.Pset), len(agree.Basis.Qset))
 
 	payload, err := proto.Marshal(agree)
 	if err != nil {
@@ -507,7 +511,7 @@ func (rbft *rbftImpl) sendAgreeUpdateNforDel(key string) error {
 func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 
 	rbft.logger.Debugf("Replica %d received agree-update-n from replica %d, v:%d, n:%d, flag:%v, h:%d, |C|:%d, |P|:%d, |Q|:%d",
-		rbft.id, agree.ReplicaId, agree.View, agree.N, agree.Flag, agree.H, len(agree.Cset), len(agree.Pset), len(agree.Qset))
+		rbft.id, agree.Basis.ReplicaId, agree.Basis.View, agree.N, agree.Flag, agree.Basis.H, len(agree.Basis.Cset), len(agree.Basis.Pset), len(agree.Basis.Qset))
 
 	// Reject response to updating N as replica is in viewChange, negoView or recovery
 	if atomic.LoadUint32(&rbft.activeView) == 0 {
@@ -530,16 +534,16 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 	}
 
 	key := aidx{
-		v:    agree.View,
+		v:    agree.Basis.View,
 		n:    agree.N,
-		id:   agree.ReplicaId,
+		id:   agree.Basis.ReplicaId,
 		flag: agree.Flag,
 	}
 
 	// Cast the vote of AgreeUpdateN into an existing or new tally
 	if _, ok := rbft.nodeMgr.agreeUpdateStore[key]; ok {
 		rbft.logger.Warningf("Replica %d already has a agree-update-n message"+
-			" for view=%d/n=%d from replica %d", rbft.id, agree.View, agree.N, agree.ReplicaId)
+			" for view=%d/n=%d from replica %d", rbft.id, agree.Basis.View, agree.N, agree.Basis.ReplicaId)
 		return nil
 	}
 	rbft.nodeMgr.agreeUpdateStore[key] = agree
@@ -547,7 +551,7 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 	// Count of the amount of AgreeUpdateN message for the same key
 	replicas := make(map[uint64]bool)
 	for idx := range rbft.nodeMgr.agreeUpdateStore {
-		if !(idx.v == agree.View && idx.n == agree.N && idx.flag == agree.Flag) {
+		if !(idx.v == agree.Basis.View && idx.n == agree.N && idx.flag == agree.Flag) {
 			continue
 		}
 		replicas[idx.id] = true
@@ -559,7 +563,7 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 		rbft.logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForAdd",
 			rbft.id)
 		rbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
-		agree.ReplicaId = rbft.id
+		agree.Basis.ReplicaId = rbft.id
 		return rbft.sendAgreeUpdateNForAdd(agree)
 	}
 
@@ -568,16 +572,16 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 		rbft.logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForDel",
 			rbft.id)
 		rbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
-		agree.ReplicaId = rbft.id
+		agree.Basis.ReplicaId = rbft.id
 		return rbft.sendAgreeUpdateNforDel(agree.Key)
 	}
 
-	rbft.logger.Debugf("Replica %d now has %d agree-update requests for view=%d/n=%d", rbft.id, quorum, agree.View, agree.N)
+	rbft.logger.Debugf("Replica %d now has %d agree-update requests for view=%d/n=%d", rbft.id, quorum, agree.Basis.View, agree.N)
 
 	// Quorum of AgreeUpdateN reach the N, replica can jump to NODE_MGR_AGREE_UPDATEN_QUORUM_consensusEvent,
 	// which mean all nodes agree in updating N
 	if quorum >= rbft.allCorrectReplicasQuorum() {
-		rbft.nodeMgr.updateTarget = uidx{v: agree.View, n: agree.N, flag: agree.Flag, key: agree.Key}
+		rbft.nodeMgr.updateTarget = uidx{v: agree.Basis.View, n: agree.N, flag: agree.Flag, key: agree.Key}
 		return &LocalEvent{
 			Service:   NODE_MGR_SERVICE,
 			EventType: NODE_MGR_AGREE_UPDATEN_QUORUM_EVENT,
@@ -602,7 +606,7 @@ func (rbft *rbftImpl) sendUpdateN() consensusEvent {
 		return nil
 	}
 
-	aset, nset := rbft.getAgreeUpdates()
+	nset := rbft.getAgreeUpdates()
 
 	// Check if primary can find the initial checkpoint for updating
 	cp, ok, replicas := rbft.selectInitialCheckpoint(nset)
@@ -623,7 +627,6 @@ func (rbft *rbftImpl) sendUpdateN() consensusEvent {
 		N:         rbft.nodeMgr.updateTarget.n,
 		View:      rbft.nodeMgr.updateTarget.v,
 		Key:       rbft.nodeMgr.updateTarget.key,
-		Aset:      aset,
 		Xset:      msgList,
 		ReplicaId: rbft.id,
 	}
@@ -699,7 +702,7 @@ func (rbft *rbftImpl) recvUpdateN(update *UpdateN) consensusEvent {
 
 // primaryProcessUpdateN processes the UpdateN message after it has already reached
 // updateN-quorum.
-func (rbft *rbftImpl) primaryProcessUpdateN(initialCp ViewChange_C, replicas []replicaInfo, update *UpdateN) consensusEvent {
+func (rbft *rbftImpl) primaryProcessUpdateN(initialCp Vc_C, replicas []replicaInfo, update *UpdateN) consensusEvent {
 
 	// Check if primary need state update
 	err := rbft.checkIfNeedStateUpdate(initialCp, replicas)
@@ -743,7 +746,7 @@ func (rbft *rbftImpl) processUpdateN() consensusEvent {
 	}
 
 	// Find the initial checkpoint
-	_, nset := rbft.getAgreeUpdates()
+	nset := rbft.getAgreeUpdates()
 	cp, ok, replicas := rbft.selectInitialCheckpoint(nset)
 	if !ok {
 		rbft.logger.Warningf("Replica %d could not determine initial checkpoint: %+v",
@@ -992,15 +995,15 @@ func (rbft *rbftImpl) agreeUpdateHelper(agree *AgreeUpdateN) {
 	rbft.vcMgr.qlist = qset
 
 	for idx := range rbft.nodeMgr.agreeUpdateStore {
-		if !(idx.v == agree.View && idx.n == agree.N && idx.flag == agree.Flag) {
+		if !(idx.v == agree.Basis.View && idx.n == agree.N && idx.flag == agree.Flag) {
 			delete(rbft.nodeMgr.agreeUpdateStore, idx)
 		}
 	}
 
 	cSet, pSet, qSet := rbft.gatherPQC()
-	agree.Cset = append(agree.Cset, cSet...)
-	agree.Pset = append(agree.Pset, pSet...)
-	agree.Qset = append(agree.Qset, qSet...)
+	agree.Basis.Cset = append(agree.Basis.Cset, cSet...)
+	agree.Basis.Pset = append(agree.Basis.Pset, pSet...)
+	agree.Basis.Qset = append(agree.Basis.Qset, qSet...)
 
 }
 
@@ -1017,15 +1020,15 @@ func (rbft *rbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 
 		// Check the N and view after updating
 		n, view := rbft.getAddNV()
-		if n != agree.N || view != agree.View {
-			rbft.logger.Debugf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", rbft.id, n, view, agree.N, agree.View)
+		if n != agree.N || view != agree.Basis.View {
+			rbft.logger.Debugf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", rbft.id, n, view, agree.N, agree.Basis.View)
 			return false
 		}
 
 		// Check if there's any invalid p or q entry
-		for _, p := range append(agree.Pset, agree.Qset...) {
-			if !(p.View <= agree.View && p.SequenceNumber > agree.H && p.SequenceNumber <= agree.H+rbft.L) {
-				rbft.logger.Debugf("Replica %d invalid p entry in agree-update: agree(v:%d h:%d) p(v:%d n:%d)", rbft.id, agree.View, agree.H, p.View, p.SequenceNumber)
+		for _, p := range append(agree.Basis.Pset, agree.Basis.Qset...) {
+			if !(p.View <= agree.Basis.View && p.SequenceNumber > agree.Basis.H && p.SequenceNumber <= agree.Basis.H+rbft.L) {
+				rbft.logger.Debugf("Replica %d invalid p entry in agree-update: agree(v:%d h:%d) p(v:%d n:%d)", rbft.id, agree.Basis.View, agree.Basis.H, p.View, p.SequenceNumber)
 				return false
 			}
 		}
@@ -1040,15 +1043,15 @@ func (rbft *rbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 
 		// Check the N and view after updating
 		n, view := rbft.getDelNV(cert.delId)
-		if n != agree.N || view != agree.View {
-			rbft.logger.Debugf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", rbft.id, n, view, agree.N, agree.View)
+		if n != agree.N || view != agree.Basis.View {
+			rbft.logger.Debugf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", rbft.id, n, view, agree.N, agree.Basis.View)
 			return false
 		}
 
 		// Check if there's any invalid p or q entry
-		for _, p := range append(agree.Pset, agree.Qset...) {
-			if !(p.View <= agree.View+1 && p.SequenceNumber > agree.H && p.SequenceNumber <= agree.H+rbft.L) {
-				rbft.logger.Debugf("Replica %d invalid p entry in agree-update: agree(v:%d h:%d) p(v:%d n:%d)", rbft.id, agree.View, agree.H, p.View, p.SequenceNumber)
+		for _, p := range append(agree.Basis.Pset, agree.Basis.Qset...) {
+			if !(p.View <= agree.Basis.View+1 && p.SequenceNumber > agree.Basis.H && p.SequenceNumber <= agree.Basis.H+rbft.L) {
+				rbft.logger.Debugf("Replica %d invalid p entry in agree-update: agree(v:%d h:%d) p(v:%d n:%d)", rbft.id, agree.Basis.View, agree.Basis.H, p.View, p.SequenceNumber)
 				return false
 			}
 		}
@@ -1056,9 +1059,9 @@ func (rbft *rbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 	}
 
 	// Check if there's invalid checkpoint
-	for _, c := range agree.Cset {
-		if !(c.SequenceNumber >= agree.H && c.SequenceNumber <= agree.H+rbft.L) {
-			rbft.logger.Warningf("Replica %d invalid c entry in agree-update: agree(v:%d h:%d) c(n:%d)", rbft.id, agree.View, agree.H, c.SequenceNumber)
+	for _, c := range agree.Basis.Cset {
+		if !(c.SequenceNumber >= agree.Basis.H && c.SequenceNumber <= agree.Basis.H+rbft.L) {
+			rbft.logger.Warningf("Replica %d invalid c entry in agree-update: agree(v:%d h:%d) c(n:%d)", rbft.id, agree.Basis.View, agree.Basis.H, c.SequenceNumber)
 			return false
 		}
 	}
@@ -1067,7 +1070,7 @@ func (rbft *rbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 }
 
 // checkIfNeedStateUpdate checks if a replica need to do state update
-func (rbft *rbftImpl) checkIfNeedStateUpdate(initialCp ViewChange_C, replicas []replicaInfo) error {
+func (rbft *rbftImpl) checkIfNeedStateUpdate(initialCp Vc_C, replicas []replicaInfo) error {
 
 	speculativeLastExec := rbft.exec.lastExec
 	if rbft.exec.currentExec != nil {
@@ -1105,18 +1108,9 @@ func (rbft *rbftImpl) checkIfNeedStateUpdate(initialCp ViewChange_C, replicas []
 }
 
 // getAgreeUpdates gets all the AgreeUpdateN messages the replica received.
-func (rbft *rbftImpl) getAgreeUpdates() (agrees []*AgreeUpdateN, nset []*VCNODE) {
+func (rbft *rbftImpl) getAgreeUpdates() (nset []*VcBasis) {
 	for _, agree := range rbft.nodeMgr.agreeUpdateStore {
-		agrees = append(agrees, agree)
-		nset = append(nset, &VCNODE{
-			View:		agree.View,
-			H:		agree.H,
-			Cset:		agree.Cset,
-			Pset:		agree.Pset,
-			Qset:		agree.Qset,
-			ReplicaId:	agree.ReplicaId,
-			Genesis:	agree.Genesis,
-		})
+		nset = append(nset, agree.Basis)
 	}
 	return
 }

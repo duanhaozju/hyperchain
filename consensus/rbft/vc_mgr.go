@@ -22,8 +22,8 @@ type vcManager struct {
 	lastNewViewTimeout time.Duration // last timeout we used during this view change
 	newViewTimerReason string        // what triggered the timer
 
-	qlist map[qidx]*ViewChange_PQ   //store Pre-Prepares  for view change
-	plist map[uint64]*ViewChange_PQ //store Prepares for view change
+	qlist map[qidx]*Vc_PQ   //store Pre-Prepares  for view change
+	plist map[uint64]*Vc_PQ //store Prepares for view change
 
 	newViewStore    map[uint64]*NewView    // track last new-view we received or sent
 	viewChangeStore map[vcidx]*ViewChange  // track view-change messages
@@ -54,8 +54,8 @@ func newVcManager(rbft *rbftImpl) *vcManager {
 
 	//init vcManage maps
 	vcm.vcResetStore = make(map[FinishVcReset]bool)
-	vcm.qlist = make(map[qidx]*ViewChange_PQ)
-	vcm.plist = make(map[uint64]*ViewChange_PQ)
+	vcm.qlist = make(map[qidx]*Vc_PQ)
+	vcm.plist = make(map[uint64]*Vc_PQ)
 	vcm.newViewStore = make(map[uint64]*NewView)
 	vcm.viewChangeStore = make(map[vcidx]*ViewChange)
 
@@ -94,8 +94,8 @@ func newVcManager(rbft *rbftImpl) *vcManager {
 //select Pre-prepares which satisfy the following conditions
 //Pre-prepares in previous qlist
 //Pre-prepares from certStore which is preprepared and (its view <= its idx.v or not in qlist
-func (rbft *rbftImpl) calcQSet() map[qidx]*ViewChange_PQ {
-	qset := make(map[qidx]*ViewChange_PQ)
+func (rbft *rbftImpl) calcQSet() map[qidx]*Vc_PQ {
+	qset := make(map[qidx]*Vc_PQ)
 
 	for n, q := range rbft.vcMgr.qlist {
 		qset[n] = q
@@ -115,7 +115,7 @@ func (rbft *rbftImpl) calcQSet() map[qidx]*ViewChange_PQ {
 			continue
 		}
 
-		qset[qi] = &ViewChange_PQ{
+		qset[qi] = &Vc_PQ{
 			SequenceNumber: idx.n,
 			BatchDigest:    idx.d,
 			View:           idx.v,
@@ -129,8 +129,8 @@ func (rbft *rbftImpl) calcQSet() map[qidx]*ViewChange_PQ {
 //select prepares which satisfy the following conditions
 //prepares in previous qlist
 //prepares from certStore which is prepared and (its view <= its idx.v or not in plist)
-func (rbft *rbftImpl) calcPSet() map[uint64]*ViewChange_PQ {
-	pset := make(map[uint64]*ViewChange_PQ)
+func (rbft *rbftImpl) calcPSet() map[uint64]*Vc_PQ {
+	pset := make(map[uint64]*Vc_PQ)
 
 	for n, p := range rbft.vcMgr.plist {
 		pset[n] = p
@@ -149,7 +149,7 @@ func (rbft *rbftImpl) calcPSet() map[uint64]*ViewChange_PQ {
 			continue
 		}
 
-		pset[idx.n] = &ViewChange_PQ{
+		pset[idx.n] = &Vc_PQ{
 			SequenceNumber: idx.n,
 			BatchDigest:    idx.d,
 			View:           idx.v,
@@ -172,19 +172,22 @@ func (rbft *rbftImpl) sendViewChange() consensusEvent {
 	}
 
 	//create viewChange message
+
 	vc := &ViewChange{
-		View:      rbft.view,
-		H:         rbft.h,
-		ReplicaId: rbft.id,
+		Basis: &VcBasis{
+			View:      rbft.view,
+			H:         rbft.h,
+			ReplicaId: rbft.id,
+		},
 	}
 
 	cSet, pSet, qSet := rbft.gatherPQC()
-	vc.Cset = append(vc.Cset, cSet...)
-	vc.Pset = append(vc.Pset, pSet...)
-	vc.Qset = append(vc.Qset, qSet...)
+	vc.Basis.Cset = append(vc.Basis.Cset, cSet...)
+	vc.Basis.Pset = append(vc.Basis.Pset, pSet...)
+	vc.Basis.Qset = append(vc.Basis.Qset, qSet...)
 
 	rbft.logger.Warningf("Replica %d sending view-change, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
-		rbft.id, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
+		rbft.id, vc.Basis.View, vc.Basis.H, len(vc.Basis.Cset), len(vc.Basis.Pset), len(vc.Basis.Qset))
 
 	payload, err := proto.Marshal(vc)
 	if err != nil {
@@ -213,7 +216,7 @@ func (rbft *rbftImpl) sendViewChange() consensusEvent {
 // else peers may resend vc or wait more vc message arrived
 func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 	rbft.logger.Warningf("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
-		rbft.id, vc.ReplicaId, vc.View, vc.H, len(vc.Cset), len(vc.Pset), len(vc.Qset))
+		rbft.id, vc.Basis.ReplicaId, vc.Basis.View, vc.Basis.H, len(vc.Basis.Cset), len(vc.Basis.Pset), len(vc.Basis.Qset))
 
 	//check if inNegoView
 	//if inNegoView, will return nil
@@ -229,8 +232,8 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 		return nil
 	}
 
-	if vc.View < rbft.view {
-		rbft.logger.Warningf("Replica %d found view-change message for old view from replica %d: self view=%d, vc view=%d", rbft.id, vc.ReplicaId, rbft.view, vc.View)
+	if vc.Basis.View < rbft.view {
+		rbft.logger.Warningf("Replica %d found view-change message for old view from replica %d: self view=%d, vc view=%d", rbft.id, vc.Basis.ReplicaId, rbft.view, vc.Basis.View)
 		return nil
 	}
 	//check whether there is pqset which its view is less then vc's view and SequenceNumber more then low watermark
@@ -242,21 +245,21 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 	}
 
 	//if vc.ReplicaId == rbft.id increase the count of vcResend
-	if vc.ReplicaId == rbft.id {
+	if vc.Basis.ReplicaId == rbft.id {
 		rbft.vcMgr.vcResendCount++
 		rbft.logger.Warningf("======== Replica %d already recv view change from itself for %d times", rbft.id, rbft.vcMgr.vcResendCount)
 	}
 	//check if this viewchange has stored in viewChangeStore
 	//if so,return nil
-	if old, ok := rbft.vcMgr.viewChangeStore[vcidx{vc.View, vc.ReplicaId}]; ok {
+	if old, ok := rbft.vcMgr.viewChangeStore[vcidx{vc.Basis.View, vc.Basis.ReplicaId}]; ok {
 		if reflect.DeepEqual(old, vc) {
 			rbft.logger.Warningf("Replica %d already has a repeated view change message"+
-				" for view %d from replica %d, replcace it", rbft.id, vc.View, vc.ReplicaId)
+				" for view %d from replica %d, replcace it", rbft.id, vc.Basis.View, vc.Basis.ReplicaId)
 			return nil
 		}
 
 		rbft.logger.Warningf("Replica %d already has a updated view change message"+
-			" for view %d from replica %d", rbft.id, vc.View, vc.ReplicaId)
+			" for view %d from replica %d", rbft.id, vc.Basis.View, vc.Basis.ReplicaId)
 	}
 	//check whether vcResendCount>=vcResendLimit
 	//if so , reset view and stop vc and newView timer.
@@ -279,7 +282,7 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 	vc.Timestamp = time.Now().UnixNano()
 
 	//store vc to viewChangeStore
-	rbft.vcMgr.viewChangeStore[vcidx{vc.View, vc.ReplicaId}] = vc
+	rbft.vcMgr.viewChangeStore[vcidx{vc.Basis.View, vc.Basis.ReplicaId}] = vc
 
 	// RBFT TOCS 4.5.1 Liveness: "if a replica receives a set of
 	// f+1 valid VIEW-CHANGE messages from other replicas for
@@ -290,7 +293,7 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 	minView := uint64(0)
 	for idx := range rbft.vcMgr.viewChangeStore {
 		if vc.Timestamp+int64(rbft.timerMgr.getTimeoutValue(CLEAN_VIEW_CHANGE_TIMER)) < time.Now().UnixNano() {
-			rbft.logger.Warningf("Replica %d dropped an out-of-time view change message from replica %d", rbft.id, vc.ReplicaId)
+			rbft.logger.Warningf("Replica %d dropped an out-of-time view change message from replica %d", rbft.id, vc.Basis.ReplicaId)
 			delete(rbft.vcMgr.viewChangeStore, idx)
 			continue
 		}
@@ -325,7 +328,7 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 
 	//if in viewchange and vc.view=rbft.view and quorum>allCorrectReplicasQuorum
 	//rbft find new view success and jump into VIEW_CHANGE_QUORUM_EVENT
-	if atomic.LoadUint32(&rbft.activeView) == 0 && vc.View == rbft.view && quorum >= rbft.allCorrectReplicasQuorum() {
+	if atomic.LoadUint32(&rbft.activeView) == 0 && vc.Basis.View == rbft.view && quorum >= rbft.allCorrectReplicasQuorum() {
 		//close VC_RESEND_TIMER
 		rbft.timerMgr.stopTimer(VC_RESEND_TIMER)
 
@@ -343,7 +346,7 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 		}
 	}
 	//if message from primary, peers send view change to other peers directly
-	if atomic.LoadUint32(&rbft.activeView) == 1 && rbft.isPrimary(vc.ReplicaId) {
+	if atomic.LoadUint32(&rbft.activeView) == 1 && rbft.isPrimary(vc.Basis.ReplicaId) {
 		rbft.sendViewChange()
 	}
 
@@ -495,7 +498,7 @@ func (rbft *rbftImpl) processNewView() consensusEvent {
 
 //do some prepare for change to New view
 //such as get moveWatermarks to ViewChange checkpoint and fetch missed batches
-func (rbft *rbftImpl) primaryProcessNewView(initialCp ViewChange_C, replicas []replicaInfo, nv *NewView) consensusEvent {
+func (rbft *rbftImpl) primaryProcessNewView(initialCp Vc_C, replicas []replicaInfo, nv *NewView) consensusEvent {
 
 	// Check if primary need state update
 	err := rbft.checkIfNeedStateUpdate(initialCp, replicas)
@@ -814,11 +817,11 @@ func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 		msg := cMsgToPbMsg(consensusMsg, rbft.id)
 		rbft.helper.InnerBroadcast(msg)
 		// rebuild pqlist according to xset
-		rbft.vcMgr.qlist = make(map[qidx]*ViewChange_PQ)
-		rbft.vcMgr.plist = make(map[uint64]*ViewChange_PQ)
+		rbft.vcMgr.qlist = make(map[qidx]*Vc_PQ)
+		rbft.vcMgr.plist = make(map[uint64]*Vc_PQ)
 
 		id := qidx{d, n}
-		pqItem := &ViewChange_PQ{
+		pqItem := &Vc_PQ{
 			SequenceNumber: n,
 			BatchDigest:    d,
 			View:           rbft.view,
@@ -858,17 +861,9 @@ func (rbft *rbftImpl) finishViewChange() consensusEvent {
 }
 
 //Return all viewChange message from viewChangeStore
-func (rbft *rbftImpl) getViewChanges() (nset []*VCNODE) {
+func (rbft *rbftImpl) getViewChanges() (nset []*VcBasis) {
 	for _, vc := range rbft.vcMgr.viewChangeStore {
-		nset = append(nset, &VCNODE{
-			View:		vc.View,
-			H:		vc.H,
-			Cset:		vc.Cset,
-			Pset:		vc.Pset,
-			Qset:		vc.Qset,
-			ReplicaId:	vc.ReplicaId,
-			Genesis:	vc.Genesis,
-		})
+		nset = append(nset, vc.Basis)
 	}
 	return
 }
@@ -877,12 +872,12 @@ func (rbft *rbftImpl) getViewChanges() (nset []*VCNODE) {
 // If find suitable checkpoint ,it return a certain checkpoint and the  replicas id list which replicas has this checkpoint
 // The checkpoint is max checkpoint which exists in at least oneCorrectQuorum peers and greater then low waterMark
 // in at least commonCaseQuorum.
-func (rbft *rbftImpl) selectInitialCheckpoint(set []*VCNODE) (checkpoint ViewChange_C, find bool, replicas []replicaInfo) {
+func (rbft *rbftImpl) selectInitialCheckpoint(set []*VcBasis) (checkpoint Vc_C, find bool, replicas []replicaInfo) {
 	// For the checkpoint as key, find the corresponding AgreeUpdateN messages
-	checkpoints := make(map[ViewChange_C][]*VCNODE)
+	checkpoints := make(map[Vc_C][]*VcBasis)
 	for _, agree := range set {
 		// Verify that we strip duplicate checkpoints from this Cset
-		set := make(map[ViewChange_C]bool)
+		set := make(map[Vc_C]bool)
 		for _, c := range agree.Cset {
 			if ok := set[*c]; ok {
 				continue
@@ -947,7 +942,7 @@ func (rbft *rbftImpl) selectInitialCheckpoint(set []*VCNODE) (checkpoint ViewCha
 // If batch is not a NullRequest batch, the pre-prepare of this batch is equal or greater than commonCaseQuorum
 // and the prepare is equal or greater then oneCorrectQuorum.
 // In this release, batch should not be NUllRequest batch
-func (rbft *rbftImpl) assignSequenceNumbers(set []*VCNODE, h uint64) map[uint64]string {
+func (rbft *rbftImpl) assignSequenceNumbers(set []*VcBasis, h uint64) map[uint64]string {
 	msgList := make(map[uint64]string)
 
 	maxN := h + 1
@@ -1197,18 +1192,18 @@ func (rbft *rbftImpl) softStartNewViewTimer(timeout time.Duration, reason string
 //pqset ' view should less then vc.View and SequenceNumber should greater then vc.H.
 //checkpoint's SequenceNumber should greater then vc.H
 func (rbft *rbftImpl) correctViewChange(vc *ViewChange) bool {
-	for _, p := range append(vc.Pset, vc.Qset...) {
-		if !(p.View < vc.View && p.SequenceNumber > vc.H) {
+	for _, p := range append(vc.Basis.Pset, vc.Basis.Qset...) {
+		if !(p.View < vc.Basis.View && p.SequenceNumber > vc.Basis.H) {
 			rbft.logger.Debugf("Replica %d invalid p entry in view-change: vc(v:%d h:%d) p(v:%d n:%d)",
-				rbft.id, vc.View, vc.H, p.View, p.SequenceNumber)
+				rbft.id, vc.Basis.View, vc.Basis.H, p.View, p.SequenceNumber)
 			return false
 		}
 	}
 
-	for _, c := range vc.Cset {
-		if !(c.SequenceNumber >= vc.H) {
+	for _, c := range vc.Basis.Cset {
+		if !(c.SequenceNumber >= vc.Basis.H) {
 			rbft.logger.Debugf("Replica %d invalid c entry in view-change: vc(v:%d h:%d) c(n:%d)",
-				rbft.id, vc.View, vc.H, c.SequenceNumber)
+				rbft.id, vc.Basis.View, vc.Basis.H, c.SequenceNumber)
 			return false
 		}
 	}
@@ -1254,10 +1249,10 @@ func (rbft *rbftImpl) beforeSendVC() error {
 	return nil
 }
 
-func (rbft *rbftImpl) gatherPQC() (cset []*ViewChange_C, pset []*ViewChange_PQ, qset []*ViewChange_PQ) {
+func (rbft *rbftImpl) gatherPQC() (cset []*Vc_C, pset []*Vc_PQ, qset []*Vc_PQ) {
 	// Gather all the checkpoints
 	for n, id := range rbft.storeMgr.chkpts {
-		cset = append(cset, &ViewChange_C{
+		cset = append(cset, &Vc_C{
 			SequenceNumber: n,
 			Id:             id,
 		})

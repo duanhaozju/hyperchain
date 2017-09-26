@@ -64,18 +64,6 @@ type vidx struct {
 	seqNo uint64
 }
 
-// -----viewchange and node addition/deletion related interface----
-
-type VCNODE struct {
-	View      uint64
-	H         uint64
-	Cset      []*ViewChange_C
-	Pset      []*ViewChange_PQ
-	Qset      []*ViewChange_PQ
-	ReplicaId uint64
-	Genesis   uint64
-
-}
 // -----------viewchange related structs-----------------
 // viewchange index
 type vcidx struct {

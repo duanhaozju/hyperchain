@@ -6,7 +6,7 @@ syntax = "proto3";
 
 import "hyperchain/core/types/transaction.proto";
 
-package pbft;
+package rbft;
 /*
  * mapping to PBFT paper names
  *
@@ -147,15 +147,15 @@ message vc_basis {
 }
 
 message view_change {
-    uint64 vc_basis = 1;
+    vc_basis basis = 1;
     bytes signature = 2;
     int64 timestamp = 3;
 }
 
 message new_view {
     uint64 view = 1;
-    map<uint64, string> xset = 3;
-    uint64 replica_id = 4;
+    map<uint64, string> xset = 2;
+    uint64 replica_id = 3;
 }
 
 message finish_vcReset {
@@ -224,12 +224,12 @@ message del_node {
 }
 
 message ready_for_n {
-    uint64 replica_id = 2;
-    string key = 3;
+    uint64 replica_id = 1;
+    string key = 2;
 }
 
 message agree_update_n {
-    uint64 vc_basis = 1;
+    vc_basis basis = 1;
     bool flag = 2;
     string key = 3;
     string routerHash = 4;
@@ -243,8 +243,7 @@ message update_n {
     string key = 3;
     int64 n = 4;
     uint64 view = 5;
-    repeated agree_update_n aset = 6;
-    map<uint64, string> xset = 7;
+    map<uint64, string> xset = 6;
 }
 
 message finish_update {
