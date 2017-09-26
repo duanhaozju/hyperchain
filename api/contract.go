@@ -48,6 +48,12 @@ func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common
 }
 
 func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace string) (common.Hash, error) {
+	consentor := contract.eh.GetConsentor()
+	normal, full := consentor.GetStatus()
+	if !normal || full {
+		return common.Hash{}, &common.SystemTooBusyError{Message: "system is too busy to response "}
+	}
+
 	log := common.GetLogger(namespace, "api")
 
 	var tx *types.Transaction
