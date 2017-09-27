@@ -783,7 +783,44 @@ func (pmgr *peerManagerImpl) GetN() int {
 
 //get the peer information of all nodes.
 func (pmgr *peerManagerImpl) GetPeerInfo() PeerInfos {
-	return PeerInfos{}
+
+	var peerInfos PeerInfos
+	peers := pmgr.GetAllPeers()
+
+	pkg := pb.NewPkg([]byte("ping"), pb.ControlType_KeepAlive)
+	sHostName := pmgr.node.info.Hostname
+	ip, port := pmgr.hyperNet.GetDNS(sHostName)
+
+	for _, p := range peers {
+
+		dHostName := p.info.GetHostName()
+		peerInfo :=  PeerInfo{
+			ID: p.info.GetID(),
+			Namespace: p.info.GetNameSpace(),
+			Hash: p.info.GetHash(),
+			Hostname: dHostName,
+			IsPrimary: p.info.GetPrimary(),
+			IsVP: p.info.GetVP(),
+			IP:    ip,
+			Port: port,
+		}
+
+		start := time.Now().UnixNano()
+		resp, err := p.net.Discuss(p.info.Hostname, pkg)
+		if err != nil {
+			peerInfo.Status = STOP
+		} else if resp.Type == pb.ControlType_Response {
+			peerInfo.Status = ALIVE
+		}
+
+		if dHostName != sHostName {
+			peerInfo.Delay = time.Now().UnixNano() - start
+		}
+
+		peerInfos = append(peerInfos, peerInfo)
+	}
+
+	return peerInfos
 }
 
 // use by new peer when join the chain dynamically only
