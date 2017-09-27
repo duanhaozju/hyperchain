@@ -87,7 +87,8 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 	}
 }
 
-// CheckHttpHeaders will check http header.
+// CheckHttpHeaders will check http header. If it is verified, client has access to interact with the server,
+// otherwise, unauthorized error will be returned.
 func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common.RPCError {
 	ns := c.nr.GetNamespaceByName(namespace)
 	if ns == nil {
@@ -102,6 +103,7 @@ func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
+	// parse certificate
 	tcertPem := common.TransportDecode(c.req.Header.Get("tcert"))
 	tcert, err := primitives.ParseCertificate([]byte(tcertPem))
 	if err != nil {
@@ -109,15 +111,7 @@ func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common
 		return &common.UnauthorizedError{}
 	}
 
-	/**
-	Review 如果客户端没有tcert 则会用ecert充当tcert，此时需要验证是否合法
-	由于tcert 应当是用ecert签出的，那么应该同时可以被根证书验证通过，但是
-	问题是ecert之间无法相互验证，所有的tcert 和ecert都应该用 eca.ca验证
-	这样可以确保所有的签名都可以验证通过
-	在sdk端需要生成相应的signature 需要用私钥对数据进行签名
-	签名算法为 ECDSAWithSHA256
-	这部分需要SDK端实现，hyperchain端已经实现了验证方法
-	*/
+	// verify signature
 	pubKey := tcert.PublicKey.(*(ecdsa.PublicKey))
 	signature := c.req.Header.Get("signature")
 	msg := common.TransportDecode(c.req.Header.Get("msg"))
@@ -129,6 +123,7 @@ func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common
 		return &common.UnauthorizedError{}
 	}
 
+	// verfiy tcert
 	verifyTcert, err := cm.VerifyTCert(tcertPem, method)
 	if verifyTcert == false || err != nil {
 		log.Error("Fail to verify tcert!", err)
@@ -155,7 +150,7 @@ func (c *jsonCodecImpl) ReadRawRequest(options CodecOption) ([]*common.RPCReques
 	return parseRequest(incomingMsg, options)
 }
 
-// GatAuthInfo read authentication info (token and method) from http header
+// GatAuthInfo read authentication info (token and method) from http header.
 func (c *jsonCodecImpl) GetAuthInfo() (string, string) {
 	token := c.req.Header.Get("Authorization")
 	method := c.req.Header.Get("Method")

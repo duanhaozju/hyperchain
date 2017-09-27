@@ -549,8 +549,8 @@ func (tran *Transaction) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, e
 	return *int64ToNumber(exeTime), nil
 }
 
-// GetTransactionsCountByContractAddr returns the number of eligible transaction, the latest block number and transaction index
-// of eligible transaction in the block for the given block number, contract address.
+// GetTransactionsCountByContractAddr returns the number of eligible transaction, the latest block number and
+// transaction index of eligible transaction in the block for the given block number, contract address.
 func (tran *Transaction) GetTransactionsCountByContractAddr(args IntervalArgs) (interface{}, error) {
 	if args.ContractAddr == nil {
 		return nil, &common.InvalidParamsError{"Invalid params. 'address' can't be empty"}
@@ -560,8 +560,9 @@ func (tran *Transaction) GetTransactionsCountByContractAddr(args IntervalArgs) (
 	return tran.getTransactionsCountByBlockNumber(args)
 }
 
-// GetTransactionsCountByMethodID returns the number of eligible transaction, the latest block number and transaction index
-// of eligible transaction in the block for the given block number, methodID. Method id is contract method identifier in a contract.
+// GetTransactionsCountByMethodID returns the number of eligible transaction, the latest block number and
+// transaction index of eligible transaction in the block for the given block number, methodID. Method id
+// is contract method identifier in a contract.
 func (tran *Transaction) GetTransactionsCountByMethodID(args IntervalArgs) (interface{}, error) {
 	if args.ContractAddr == nil {
 		return nil, &common.InvalidParamsError{"Invalid params. 'address' can't be empty"}
@@ -644,10 +645,12 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 
 }
 
-// PagingArgs specifies conditions that transactions filter for transaction paging. PagingArgs determines starting position including
-// current block number and index of the transaction in the current block, quantity of returned transactions and filter conditions.
+// PagingArgs specifies conditions that transactions filter for transaction paging. PagingArgs determines
+// starting position including current block number and index of the transaction in the current block,
+// quantity of returned transactions and filter conditions.
 //
-// For example, pageSize is 10. From page 1 to page 2, so "separated" value is 0. From page 1 to page 3, so "separated" value is 10.
+// For example, pageSize is 10. From page 1 to page 2, so "separated" value is 0. From page 1 to page 3,
+// so "separated" value is 10.
 type PagingArgs struct {
 	MaxBlkNumber   BlockNumber     `json:"maxBlkNumber"`    // the maximum block number of allowing to query
 	MinBlkNumber   BlockNumber     `json:"minBlkNumber"`	// the minimum block number of allowing to query
