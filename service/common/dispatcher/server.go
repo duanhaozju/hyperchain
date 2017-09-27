@@ -8,7 +8,7 @@ import (
 	pb "hyperchain/service/common/protos"
 )
 
-//DispatchServer dispatch service
+//DispatchServer handleDispatch service
 type DispatchServer struct {
 	port   int
 	host   string
@@ -40,10 +40,10 @@ func (ds *DispatchServer) Register(stream pb.Dispatcher_RegisterServer) error {
 		switch msg.Type {
 		case pb.Message_REGISTER:
 			ds.handleRegister(msg, stream)
+		case pb.Message_DISPATCH:
+			ds.handleDispatch(msg)
 		case pb.Message_ADMIN:
 			//TODO: other types todo
-		case pb.Message_INVOKE:
-			ds.handleInvoke(msg)
 		case pb.Message_RESPONSE:
 		}
 	}
@@ -51,9 +51,24 @@ func (ds *DispatchServer) Register(stream pb.Dispatcher_RegisterServer) error {
 	return nil
 }
 
-//dispatch dispatch messages
-func (ds *DispatchServer) dispatch() {
+//handleDispatch handleDispatch messages
+func (ds *DispatchServer) handleDispatch(msg *pb.Message) {
+	switch msg.From {
+	case pb.Message_APISERVER:
+		ds.dispatchAPIServerMsg(msg)
+	case pb.Message_CONSENSUS:
+		ds.dispatchConsensusMsg(msg)
+	case pb.Message_EXECUTOR:
+		ds.dispatchExecutorMsg(msg)
+	case pb.Message_NETWORK:
+		ds.dispatchNetworkMsg(msg)
+	default:
+		ds.logger.Errorf("Undefined message: %v", msg)
+	}
+}
 
+func (ds *DispatchServer) handleAdmin(msg *pb.Message) {
+	//TODO: handle admin messages
 }
 
 //handleRegister parse msg and register this stream
@@ -73,11 +88,6 @@ func (ds *DispatchServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_R
 	service := common.NewService(rm.Namespace, serviceId(msg), stream)
 	ds.sr.Register(service)
 	go service.Serve()
-}
-
-//handleInvoke handle message invocation
-func (ds *DispatchServer) handleInvoke(msg *pb.Message) {
-	//dispatch message
 }
 
 //serviceId generate service id
