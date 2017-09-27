@@ -11,7 +11,7 @@ message Message {
     enum Type {
         UNDEFINED = 0;
         REGISTER = 1;
-        INVOKE = 2;
+        DISPATCH = 2;
         ADMIN = 3;
         RESPONSE = 4;
     }
@@ -37,8 +37,7 @@ message RegisterMessage {
     bytes payload       = 4; // retained field
 }
 
-// ServiceMessage used by service component to send to Dispatcher.
-message ServiceMessage {
+message ConsenterMessage {
     enum Type {
         InformPrimaryEvent = 0;
         VCResetEvent = 1;
@@ -48,11 +47,32 @@ message ServiceMessage {
     bytes payload = 3;
 }
 
-// DispatcherMessage used by Dispatcher to send to specific service node.
-message DispatcherMessage {
+message ExecutorMessage {
     enum Type {
-        Test = 0;
+        UNDEFINED = 0;
+        //TODO: specific message type
     }
     Type type = 1;
-    bytes payload = 2;
+    string namespace = 2;
+    bytes payload = 3;
+}
+
+message NetworkMessage {
+    enum Type {
+        UNDEFINED = 0;
+        //TODO: specific message type
+    }
+    Type type = 1;
+    string namespace = 2;
+    bytes payload = 3;
+}
+
+message APIServerMessage {
+    enum Type {
+        UNDEFINED = 0;
+        //TODO: specific message type
+    }
+    Type type = 1;
+    string namespace = 2;
+    bytes payload = 3;
 }
