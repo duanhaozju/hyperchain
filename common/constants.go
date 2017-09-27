@@ -9,16 +9,9 @@ const (
 )
 
 const (
-	OP_UPDATE   = 1
-	OP_FREEZE   = 2
-	OP_UNFREEZE = 3
 	OP_ARCHIVE  = 100
 )
 
-const (
-	DB_LEVELDB int = iota
-	DB_SLDB
-)
 
 const (
 	NAMESPACE          = "namespace.name"

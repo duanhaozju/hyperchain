@@ -6,99 +6,86 @@ package common
 import (
 	"fmt"
 	"os"
-	"reflect"
 	"testing"
 	"time"
+	"github.com/stretchr/testify/assert"
 )
+
+func getTestConfig() *Config {
+	testConfigPath  := "/src/hyperchain/common/testhelper/resources/global.toml"
+	return NewConfig(os.Getenv("GOPATH") + testConfigPath)
+}
 
 func TestNewEmptyConfig(t *testing.T) {
 	conf := NewRawConfig()
 	conf.Set("k1", "v1")
 	v := conf.GetString("k1")
-	if v != "v1" {
-		t.Error("config set or put error")
-	}
+	assert.Equal(t, "v1", v, "config set or put error")
 }
 
 func TestGetString(t *testing.T) {
-	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
+	var conf = getTestConfig()
 
-	vk := "server.version"
-	expect := "0.1"
+	key1 := "title"
+	expect1 := "Hyperchain global configurations"
+	rs1 := conf.GetString(key1)
+	assert.Equal(t, expect1, rs1, fmt.Sprintf("GetString(%q) = %s, actual: %s", key1, rs1, expect1))
 
-	rs := conf.GetString(vk)
-	if rs != expect {
-		t.Errorf("GetString(%q) = %s, actual: %s", vk, rs, expect)
-	}
+	key2 := "log.module.p2p"
+	expect2 := "DEBUG"
+	rs2 := conf.GetString(key2)
+	assert.Equal(t, expect2, rs2, fmt.Sprintf("GetString(%q) = %s, actual: %s", key2, rs2, expect2))
 }
 
 func TestGetInt(t *testing.T) {
-	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
+	var conf = getTestConfig()
 
-	key := "server.port"
-	expect := int64(50051)
+	key := "port.jsonrpc"
+	expect := int64(8081)
 
 	rs := conf.GetInt64(key)
-	if rs != expect {
-		t.Errorf("GetInt64(%q) = %d, actual : %d", key, rs, expect)
-	}
+	assert.Equal(t, expect, rs, fmt.Sprintf("GetInt64(%q) = %d, actual : %d", key, rs, expect))
 }
 
 func TestGetDuration(t *testing.T) {
-	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
+	var conf = getTestConfig()
 
-	key := "server.duration"
+	key := "p2p.keepAliveDuration"
 	expect, _ := time.ParseDuration("3s")
 	rs := conf.GetDuration(key)
 
-	if !reflect.DeepEqual(rs, expect) {
-		t.Errorf("GetDuration(%q) = %v, actual: %v", key, rs, expect)
-	}
-}
-
-func TestGetFloat64(t *testing.T) {
-	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
-
-	key := "server.tls.key.value"
-	expect := 12.34
-
-	rs := conf.GetFloat64(key)
-	if rs != expect {
-		t.Errorf("GetFloat64(%q) = %f, actual : %f", key, rs, expect)
-	}
+	assert.Equal(t, expect, rs, fmt.Sprintf("GetDuration(%q) = %v, actual: %v", key, rs, expect))
 }
 
 func TestGetBool(t *testing.T) {
-	var conf = NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/config/test/config_test.yaml")
+	var conf = getTestConfig()
 
-	key := "server.tls.cert.need"
+	key := "admin.check"
 	expect := false
 
 	rs := conf.GetBool(key)
-	if rs != expect {
-		t.Errorf("GetBool(%q) = %t, actual: %t", key, rs, expect)
-	}
+	assert.Equal(t, expect, rs, fmt.Sprintf("GetBool(%q) = %t, actual: %t", key, rs, expect))
 }
 
 func TestReadConfigFile(t *testing.T) {
-	conf := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/namespaces/global/config/namespace.toml")
+	conf := getTestConfig()
 	conf.Print()
 	fmt.Println(conf.GetStringMap("log.module"))
 }
 
 func TestConfigMerge(t *testing.T) {
-	conf := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/namespaces/global/config/pbft.yaml")
-	conf.Print()
+	expect := 100
+	conf := getTestConfig()
+	assert.NotEqual(t, expect, conf.GetInt("consensus.rbft.batchsize"), "This config file should not contain this value")
 
-	conf.MergeConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/namespaces/global/config/namespace.toml")
-	conf.Print()
+
+	conf.MergeConfig(os.Getenv("GOPATH") +"/src/hyperchain/common/testhelper/resources/namespace.toml")
+	assert.Equal(t, expect, conf.GetInt("consensus.rbft.batchsize"), "This config file should contain this value after merging")
 }
 
 func TestReadTomlConfigFile(t *testing.T) {
-	conf := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/global.toml")
-	conf2 := NewConfig("/Users/wangxiaoyi/codes/go/src/hyperchain/configuration/global.yaml")
+	conf := getTestConfig()
+	conf2 := NewConfig(os.Getenv("GOPATH") +"/src/hyperchain/common/testhelper/resources/namespace.toml")
 
-	fmt.Println(conf.equals(conf2))
-
-	conf.Print()
+	assert.NotEqual(t, true, conf.equals(conf2), "These two config file are not the same")
 }

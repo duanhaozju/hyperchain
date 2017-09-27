@@ -1,3 +1,6 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
+
 package common
 
 import "fmt"
@@ -38,7 +41,6 @@ const (
 	custom_NoBlockGeneratedError
 	custom_SubNotExistError
 	custom_SnapshotError
-	custom_InternalServerError
 )
 
 // RPCError implements RPC error, is add support for error codec over regular go errors
