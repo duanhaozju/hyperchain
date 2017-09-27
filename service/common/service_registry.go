@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	pb "hyperchain/service/common/protos"
 	"sync"
 )
 
@@ -15,6 +16,62 @@ type ServiceRegistry interface {
 type NamespaceComponent struct {
 	services map[string]Service //<service name, service>
 	lock     sync.RWMutex
+
+	cq MessageQueue // consenter message queue
+	eq MessageQueue // executor message queue
+	nq MessageQueue // network message queue
+	aq MessageQueue // apiserver message queue
+}
+
+func newNamespaceComponent() *NamespaceComponent {
+	size := 1000
+	return &NamespaceComponent{
+		services: make(map[string]Service),
+		cq:       newMQImpl(size),
+		eq:       newMQImpl(size),
+		nq:       newMQImpl(size),
+		aq:       newMQImpl(size),
+	}
+}
+
+func (nc *NamespaceComponent) dispatch() {
+
+}
+
+func (nc *NamespaceComponent) dispatchCQ() {
+	for {
+		msg, err := nc.cq.Get()
+		if err != nil {
+			//TODO handle error
+		}
+		if cm, ok := msg.(pb.ConsenterMessage); ok {
+			switch cm.Type {
+			case pb.ConsenterMessage_InformPrimaryEvent:
+				//inform primary
+
+				m := &pb.Message{
+				//Type:
+				}
+
+				nc.services[NETWORK].Send(true, m)
+			case pb.ConsenterMessage_VCResetEvent:
+				//vc reset
+			default:
+				//undefined message
+			}
+		} else {
+			//TODO handle error
+		}
+
+	}
+}
+
+func (nc *NamespaceComponent) dispatchEQ() {
+
+}
+
+func (nc *NamespaceComponent) dispatchAQ() {
+
 }
 
 func (nc *NamespaceComponent) AddService(service Service) {
@@ -52,7 +109,7 @@ func (nc *NamespaceComponent) Close() {
 
 type serviceRegistryImpl struct {
 	lock       sync.RWMutex
-	components map[string]NamespaceComponent // <namespace, component>
+	components map[string]*NamespaceComponent // <namespace, component>
 }
 
 // Init init the service registry.
@@ -61,9 +118,18 @@ func (sri *serviceRegistryImpl) Init() error {
 	return nil
 }
 
+func (sri *serviceRegistryImpl) AddNamespaceComponent(namespace string) {
+	sri.lock.Lock()
+	defer sri.lock.Unlock()
+	sri.components[namespace] = newNamespaceComponent()
+}
+
 // Register register new service.
 func (sri *serviceRegistryImpl) Register(s Service) error {
 	sri.lock.Lock()
+	if _, ok := sri.components[s.Namespace()]; !ok {
+		sri.AddNamespaceComponent(s.Namespace())
+	}
 	sri.components[s.Namespace()].AddService(s)
 	sri.lock.Unlock()
 	return nil
