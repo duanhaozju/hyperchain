@@ -90,6 +90,10 @@ func (hmi *hyperLoggerMgrImpl) setLoggerLevel(namespace, module, level string) e
 	if hl == nil {
 		return fmt.Errorf("namespace: %s logger system is not init yet!", namespace)
 	}
+	ml := hl.getModuleLogger(module)
+	if ml == nil {
+		hyperLoggerMgr.getLogger(namespace, module)
+	}
 	l, err := logging.LogLevel(level)
 	if err != nil {
 		return err
@@ -105,10 +109,6 @@ func (hmi *hyperLoggerMgrImpl) getLoggerLevel(namespace, module string) (string,
 	hl := hyperLoggerMgr.getHyperLogger(namespace)
 	if hl == nil {
 		return "", fmt.Errorf("namespace: %s logger system is not init yet!", namespace)
-	}
-	ml := hl.getModuleLogger(module)
-	if ml == nil {
-		return "", fmt.Errorf("GetLogLevel Error: %s::%s not exist", namespace, module)
 	}
 	hl.backendLock.RLock()
 	defer hl.backendLock.RUnlock()

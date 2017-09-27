@@ -230,53 +230,6 @@ func getJSONFromClaims(j interface{}) ([]byte, error) {
 	}
 }
 
-// checkPermission checks permission by username in input claims.
-func checkPermission(username, method string) (bool, error) {
-	scope := convertToScope(method)
-	if scope == -1 {
-		return false, ErrPermission
-	}
-
-	if isUserPermit(username, scope) {
-		return true, nil
-	} else {
-		return false, ErrPermission
-	}
-
-}
-
-// createUser creates a new account with the given username and password.
-func createUser(username, password, group string) error {
-	groupPermission := getGroupPermission(group)
-	if groupPermission == nil {
-		return fmt.Errorf("Unrecoginzed group %s", group)
-	}
-	valid_user[username] = password
-	user_scope[username] = groupPermission
-	return nil
-}
-
-// alterUser alters an existed account with given username and password.
-func alterUser(username, password string) {
-	valid_user[username] = password
-}
-
-// delUser deletes an account.
-func delUser(username string) {
-	delete(valid_user, username)
-	delete(user_scope, username)
-}
-
-// updateLastOperationTime updates the last operation time.
-func updateLastOperationTime(username string) {
-	user_opTime[username] = time.Now().Unix()
-}
-
-// checkOpTimeExpire checks if the given user's operation time has expired.
-func checkOpTimeExpire(username string) bool {
-	return float64(time.Now().Unix()-user_opTime[username]) > expiration.Seconds()
-}
-
 // getUserFromClaim returns the username parsed from input claims.
 func getUserFromClaim(input []byte) string {
 	var claims jwt.MapClaims
@@ -288,4 +241,9 @@ func getUserFromClaim(input []byte) string {
 	} else {
 		return usr
 	}
+}
+
+// updateLastOperationTime updates the last operation time.
+func updateLastOperationTime(username string) {
+	user_opTime[username] = time.Now().Unix()
 }

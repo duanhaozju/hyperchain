@@ -8,6 +8,7 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"strings"
+	"time"
 )
 
 // This file defines the hypercli admin interface. Users invoke
@@ -58,26 +59,27 @@ type Administrator struct {
 	// checks token or not, used for test
 	Check         bool
 
+	// expiration records the expire timeout from last operation.
+	Expiration    time.Duration
+
 	// NsMgr is the global namespace Manager, used to get the system
 	// level interface.
 	NsMgr         namespace.NamespaceManager
 
 	// CmdExecutor maps the interface name to the processing functions.
 	CmdExecutor   map[string]func(command *Command) *CommandResult
-
-	Config        *common.Config
-	}
+}
 
 // PreHandle is used to verify token, update and check user permission
 // before handling admin services if admin.Check is true.
 func (adm *Administrator) PreHandle(token, method string) error {
-	if method == "" {
-		return ErrNotSupport
-	}
 	if token == "" {
 		return ErrTokenInvalid
 	}
 
+	if method == "" {
+		return ErrNotSupport
+	}
 	// verify signed token.
 	if claims, err := verifyToken(token, pub_key, "RS256"); err != nil {
 		return err
@@ -86,15 +88,15 @@ func (adm *Administrator) PreHandle(token, method string) error {
 		if username == "" {
 			return ErrPermission
 		}
-		// check if operation has expired, if expired, return error,
+		// check if operation has expired or not, if expired, return error,
 		// else update last operation time.
-		if checkOpTimeExpire(username) {
+		if adm.checkOpTimeExpire(username) {
 			return ErrTimeoutPermission
 		}
 		updateLastOperationTime(username)
 
 		// check permission.
-		if ok, err := checkPermission(username, method); !ok {
+		if ok, err := adm.checkPermission(username, method); !ok {
 			return err
 		}
 	}
@@ -123,7 +125,7 @@ func (adm *Administrator) startNsMgr(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	err := adm.NsMgr.Start()
 	if err != nil {
-		log.Errorf("start namespace manager error %v", err)
+		log.Errorf("start namespace manager error: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "start namespace manager successful"}
@@ -135,7 +137,7 @@ func (adm *Administrator) stopNsMgr(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	err := adm.NsMgr.Stop()
 	if err != nil {
-		log.Errorf("stop namespace manager error %v", err)
+		log.Errorf("stop namespace manager error: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "stop namespace manager successful"}
@@ -145,13 +147,16 @@ func (adm *Administrator) stopNsMgr(cmd *Command) *CommandResult {
 // successfully.
 func (adm *Administrator) startNamespace(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
-	if len(cmd.Args) != 1 {
+	argLen := len(cmd.Args)
+	if argLen != 1 {
+		log.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
 	err := adm.NsMgr.StartNamespace(cmd.Args[0])
 	if err != nil {
-		log.Error(err)
+		log.Errorf("start namespace error: %v", err)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: err.Error()}}
 	}
 
 	return &CommandResult{Ok: true, Result: "start namespace cmd executed!"}
@@ -161,13 +166,16 @@ func (adm *Administrator) startNamespace(cmd *Command) *CommandResult {
 // successfully.
 func (adm *Administrator) stopNamespace(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
-	if len(cmd.Args) != 1 {
+	argLen := len(cmd.Args)
+	if argLen != 1 {
+		log.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
 	err := adm.NsMgr.StopNamespace(cmd.Args[0])
 	if err != nil {
-		log.Error(err)
+		log.Errorf("stop namespace error: %v", err)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: err.Error()}}
 	}
 
 	return &CommandResult{Ok: true, Result: "stop namespace cmd executed!"}
@@ -177,12 +185,15 @@ func (adm *Administrator) stopNamespace(cmd *Command) *CommandResult {
 // successfully.
 func (adm *Administrator) restartNamespace(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
-	if len(cmd.Args) != 1 {
+	argLen := len(cmd.Args)
+	if argLen != 1 {
+		log.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
 	err := adm.NsMgr.RestartNamespace(cmd.Args[0])
 	if err != nil {
+		log.Errorf("restart namespace error: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 
@@ -193,12 +204,15 @@ func (adm *Administrator) restartNamespace(cmd *Command) *CommandResult {
 // successfully.
 func (adm *Administrator) registerNamespace(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
-	if len(cmd.Args) != 1 {
+	argLen := len(cmd.Args)
+	if argLen != 1 {
+		log.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
 	err := adm.NsMgr.Register(cmd.Args[0])
 	if err != nil {
+		log.Errorf("register namespace error: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 
@@ -209,11 +223,14 @@ func (adm *Administrator) registerNamespace(cmd *Command) *CommandResult {
 // successfully.
 func (adm *Administrator) deregisterNamespace(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
-	if len(cmd.Args) != 1 {
+	argLen := len(cmd.Args)
+	if argLen != 1 {
+		log.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 	err := adm.NsMgr.DeRegister(cmd.Args[0])
 	if err != nil {
+		log.Errorf("deregister namespace error: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "deregister namespace successful"}
@@ -231,11 +248,13 @@ func (adm *Administrator) getLevel(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 2 {
-		log.Errorf("Invalid cmd nums %d", argLen)
-		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2 parameters, got %d", argLen)}}
+		log.Errorf("Invalid arg numbers: %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message:
+			fmt.Sprintf("Invalid parameter numbers, expects 2 parameters, got %d", argLen)}}
 	}
 	level, err := common.GetLogLevel(cmd.Args[0], cmd.Args[1])
 	if err != nil {
+		log.Errorf("get log level failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: level}
@@ -246,12 +265,14 @@ func (adm *Administrator) setLevel(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 3 {
-		log.Errorf("Invalid cmd nums %d", argLen)
-		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 3 parameters, got %d", argLen)}}
+		log.Errorf("Invalid arg numbers: %d", argLen)
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message:
+			fmt.Sprintf("Invalid parameter numbers, expects 3 parameters, got %d", argLen)}}
 	}
 
 	err := common.SetLogLevel(cmd.Args[0], cmd.Args[1], cmd.Args[2])
 	if err != nil {
+		log.Errorf("set log level failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	rs := strings.Join(cmd.Args, "_")
@@ -263,7 +284,7 @@ func (adm *Administrator) setLevel(cmd *Command) *CommandResult {
 func (adm *Administrator) startJvmServer(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	if err := adm.NsMgr.StartJvm(); err != nil {
-		log.Notice(err)
+		log.Noticef("start jvm server failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "start jvm successful."}
@@ -274,7 +295,7 @@ func (adm *Administrator) startJvmServer(cmd *Command) *CommandResult {
 func (adm *Administrator) stopJvmServer(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	if err := adm.NsMgr.StopJvm(); err != nil {
-		log.Notice(err)
+		log.Noticef("stop jvm server failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "stop jvm successful."}
@@ -285,7 +306,7 @@ func (adm *Administrator) stopJvmServer(cmd *Command) *CommandResult {
 func (adm *Administrator) restartJvmServer(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	if err := adm.NsMgr.RestartJvm(); err != nil {
-		log.Notice(err)
+		log.Noticef("restart jvm server failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "restart jvm successful."}
@@ -296,11 +317,12 @@ func (adm *Administrator) grantPermission(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen < 3 {
-		log.Warningf("Invalid cmd nums %d", argLen)
+		log.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects >=3 parameters, got %d", argLen)}}
 	}
 	invalidPms, err := adm.grantpermission(cmd.Args[0], cmd.Args[1], cmd.Args[2:])
 	if err != nil {
+		log.Errorf("grant permission failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	if len(invalidPms) == 0 {
@@ -314,11 +336,12 @@ func (adm *Administrator) revokePermission(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen < 3 {
-		log.Warningf("Invalid cmd nums %d", argLen)
+		log.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects >=3 parameters, got %d", argLen)}}
 	}
 	invalidPms, err := adm.revokepermission(cmd.Args[0], cmd.Args[1], cmd.Args[2:])
 	if err != nil {
+		log.Errorf("revoke permission failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	if len(invalidPms) == 0 {
@@ -332,11 +355,12 @@ func (adm *Administrator) listPermission(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 1 {
-		log.Warningf("Invalid cmd nums %d", argLen)
+		log.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen)}}
 	}
 	result, err := adm.listpermission(cmd.Args[0])
 	if err != nil {
+		log.Errorf("list permission failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: result}
@@ -348,7 +372,7 @@ func (adm *Administrator) createUser(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 3 {
-		log.Warningf("Invalid cmd nums %d", argLen)
+		log.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2/3 parameters, got %d", argLen)}}
 	}
 	username := cmd.Args[0]
@@ -360,8 +384,9 @@ func (adm *Administrator) createUser(cmd *Command) *CommandResult {
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrDuplicateUsername.Error()}}
 	}
 
-	err := createUser(username, password, group)
+	err := adm.createuser(username, password, group)
 	if err != nil {
+		log.Errorf("create user failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "Create user successfully"}
@@ -372,7 +397,7 @@ func (adm *Administrator) alterUser(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 2 {
-		log.Warningf("Invalid cmd nums %d", argLen)
+		log.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen-1)}}
 	}
 	username := cmd.Args[0]
@@ -383,7 +408,7 @@ func (adm *Administrator) alterUser(cmd *Command) *CommandResult {
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrUserNotExist.Error()}}
 	}
 
-	alterUser(username, password)
+	adm.alteruser(username, password)
 	return &CommandResult{Ok: true, Result: "Alter user password successfully"}
 }
 
@@ -392,24 +417,25 @@ func (adm *Administrator) delUser(cmd *Command) *CommandResult {
 	log.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 1 {
-		log.Warningf("Invalid cmd nums %d", argLen)
+		log.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen)}}
 	}
 	username := cmd.Args[0]
 	// judge if the user exist or not, if username exists, return a duplicate name error
 	if _, err := isUserExist(username, ""); err == ErrUserNotExist {
-		log.Debugf("User %s: %s", username, ErrUserNotExist.Error())
+		log.Errorf("User %s: %s", username, ErrUserNotExist.Error())
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrUserNotExist.Error()}}
 	}
 
-	delUser(username)
+	adm.deluser(username)
 	return &CommandResult{Ok: true, Result: "Delete user successfully"}
 }
 
 // Init initializes the CmdExecutor map.
 func (adm *Administrator) Init() {
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc/admin")
-	expiration = adm.Config.GetDuration(common.ADMIN_EXPIRATION)
+	log.Debugf("Start administrator with check permission: %v; expire " +
+		"timeout: %v", adm.Check, adm.Expiration)
 
 	adm.CmdExecutor = make(map[string]func(command *Command) *CommandResult)
 	adm.CmdExecutor["stopServer"] = adm.stopServer

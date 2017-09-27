@@ -1,5 +1,10 @@
 package jsonrpc
 
+import (
+	"fmt"
+	"time"
+)
+
 // grantpermission grants the user with some permissions, permission must
 // be specified with a module name(used to specify group) and a permission
 // name. If user gave some non-existing permissions, returns to client.
@@ -79,4 +84,46 @@ func (adm *Administrator) listpermission(username string) ([]int, error) {
 		permissions = append(permissions, scope)
 	}
 	return permissions, nil
+}
+
+// checkPermission checks permission by username in input claims.
+func (adm *Administrator) checkPermission(username, method string) (bool, error) {
+	scope := convertToScope(method)
+	if scope == -1 {
+		return false, ErrPermission
+	}
+
+	if isUserPermit(username, scope) {
+		return true, nil
+	} else {
+		return false, ErrPermission
+	}
+
+}
+
+// createUser creates a new account with the given username and password.
+func (adm *Administrator) createuser(username, password, group string) error {
+	groupPermission := getGroupPermission(group)
+	if groupPermission == nil {
+		return fmt.Errorf("Unrecoginzed group %s", group)
+	}
+	valid_user[username] = password
+	user_scope[username] = groupPermission
+	return nil
+}
+
+// alterUser alters an existed account with given username and password.
+func (adm *Administrator) alteruser(username, password string) {
+	valid_user[username] = password
+}
+
+// delUser deletes an account.
+func (adm *Administrator) deluser(username string) {
+	delete(valid_user, username)
+	delete(user_scope, username)
+}
+
+// checkOpTimeExpire checks if the given user's operation time has expired.
+func (adm *Administrator) checkOpTimeExpire(username string) bool {
+	return float64(time.Now().Unix()-user_opTime[username]) > adm.Expiration.Seconds()
 }

@@ -18,7 +18,7 @@ var (
 	ErrInvalidNs         = errors.New("namespace/nsmgr: invalid namespace")
 
 	// ErrCannotNewNs returns when get namespace failed.
-	ErrCannotNewNs       = errors.New("namespace/nsmgr: can not new namespace")
+	ErrCannotNewNs       = errors.New("namespace/nsmgr: can not newed namespace")
 
 	// ErrRegistered returns when register a registered namespace.
 	ErrRegistered        = errors.New("namespace/nsmgr: namespace has been registered")

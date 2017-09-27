@@ -53,8 +53,8 @@ func NewServer(nr namespace.NamespaceManager, config *common.Config) *Server {
 	}
 	server.admin = &admin.Administrator{
 		Check:         config.GetBool(common.ADMIN_CHECK),
+		Expiration:    config.GetDuration(common.ADMIN_EXPIRATION),
 		NsMgr:         server.namespaceMgr,
-		Config:        config,
 	}
 	server.admin.Init()
 	return server
