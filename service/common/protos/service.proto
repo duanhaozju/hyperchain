@@ -21,6 +21,7 @@ message Message {
         CONSENSUS = 1;
         EXECUTOR  = 2;
         NETWORK   = 3;
+        EVENTHUB  = 4;
     }
 
     Type type       = 1; // The basic message type.
