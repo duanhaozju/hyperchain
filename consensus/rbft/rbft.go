@@ -5,7 +5,7 @@
 //The PBFT key features:
 //	1. atomic sequence transactions guarantee
 //      2. leader selection by viewchange
-//      3. dynamic add or delete new node
+//      3. dynamically add or delete new node
 //      4. support self recovery
 package rbft
 
@@ -23,7 +23,7 @@ import (
 )
 
 /**
-This file implement the API of consensus
+This file implements the API of consensus
 which can be invoked by outer services.
 */
 
@@ -52,7 +52,7 @@ func (rbft *rbftImpl) RecvMsg(e []byte) error {
 	}
 }
 
-// RecvLocal receives messages form local other modules
+// RecvLocal receives messages form other modules of local system
 func (rbft *rbftImpl) RecvLocal(msg interface{}) error {
 	if negoView, ok := msg.(*protos.Message); ok {
 		if negoView.Type == protos.Message_NEGOTIATE_VIEW {

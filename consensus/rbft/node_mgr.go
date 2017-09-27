@@ -218,8 +218,7 @@ func (rbft *rbftImpl) recvAgreeAddNode(add *AddNode) error {
 	cert := rbft.getAddNodeCert(add.Key)
 	ok := cert.addNodes[*add]
 	if ok {
-		rbft.logger.Warningf("Replica %d ignored duplicate addnode from %d", rbft.id, add.ReplicaId)
-		return nil
+		rbft.logger.Warningf("Replica %d received duplicate addnode from replica %d, replace it", rbft.id, add.ReplicaId)
 	}
 	cert.addNodes[*add] = true
 
@@ -236,8 +235,7 @@ func (rbft *rbftImpl) recvAgreeDelNode(del *DelNode) error {
 	cert := rbft.getDelNodeCert(del.Key)
 	ok := cert.delNodes[*del]
 	if ok {
-		rbft.logger.Warningf("Replica %d ignored duplicate agree delnode from %d", rbft.id, del.ReplicaId)
-		return nil
+		rbft.logger.Warningf("Replica %d received duplicate agree delnode from replica %d, replace it", rbft.id, del.ReplicaId)
 	}
 	cert.delNodes[*del] = true
 
