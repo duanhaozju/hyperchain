@@ -24,11 +24,6 @@ var (
 	configPath = "../../configuration/namespaces/global/config/namespace.toml"
 )
 
-func init() {
-	common.InitHyperLoggerManager(tutil.InitConfig(configPath))
-	common.InitRawHyperLogger(common.DEFAULT_NAMESPACE)
-}
-
 type JournalSuite struct {
 }
 
@@ -40,6 +35,7 @@ var _ = checker.Suite(&JournalSuite{})
 
 // Run once when the suite starts running.
 func (suite *JournalSuite) SetUpSuite(c *checker.C) {
+	NewTestLog()
 }
 
 // Run before each test or benchmark starts running.

@@ -2,16 +2,45 @@ package state
 
 import (
 	"bytes"
+	"github.com/op/go-logging"
 	"hyperchain/common"
 	tutil "hyperchain/core/test_util"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb/mdb"
+	"sync"
 	"testing"
 )
 
 type KV struct {
 	Key   common.Hash
 	Value []byte
+}
+
+var (
+	LogOnce sync.Once
+	logger  *logging.Logger
+)
+
+func NewTestLog() *logging.Logger {
+	LogOnce.Do(func() {
+		conf := common.NewRawConfig()
+		common.InitHyperLogger(common.DEFAULT_NAMESPACE, conf)
+		logger = common.GetLogger(common.DEFAULT_NAMESPACE, "state")
+	})
+	return logger
+}
+
+func NewTestConfig() *common.Config {
+	conf := common.NewRawConfig()
+	conf.Set(StateCapacity, 10009)
+	conf.Set(StateAggreation, 10)
+	conf.Set(StateMerkleCacheSize, 10000)
+	conf.Set(StateBucketCacheSize, 10000)
+
+	conf.Set(StateObjectCapacity, 10009)
+	conf.Set(StateObjectAggreation, 10)
+	conf.Set(StateObjectMerkleCacheSize, 10000)
+	conf.Set(StateObjectBucketCacheSize, 10000)
 }
 
 func TestMemIterator_Iter(t *testing.T) {
@@ -62,7 +91,7 @@ func TestMemIterator_Iter(t *testing.T) {
 }
 
 func TestStorageIteratorWithPrefix(t *testing.T) {
-	stateDb := InitTestState()
+	stateDb := PrepareTestCase()
 	if !CheckIteratorResult(stateDb, common.BytesToAddress([]byte("address001")),
 		vm.BytesPrefix([]byte("key")).Start.Bytes(), vm.BytesPrefix([]byte("key")).Limit.Bytes(), ExpectResult()[1:]) {
 		t.Error("iter with prefix failed")
@@ -70,7 +99,7 @@ func TestStorageIteratorWithPrefix(t *testing.T) {
 }
 
 func TestStorageIteratorWithRange(t *testing.T) {
-	stateDb := InitTestState()
+	stateDb := PrepareTestCase()
 	// Checking
 	// 1. dump all
 	if !CheckIteratorResult(stateDb, common.BytesToAddress([]byte("address001")), nil, nil, ExpectResult()) {
@@ -90,33 +119,26 @@ func TestStorageIteratorWithRange(t *testing.T) {
 	}
 }
 
-func InitTestState() *StateDB {
-	configPath := "../../configuration/namespaces/global/config/namespace.toml"
-	conf := tutil.InitConfig(configPath)
-	common.InitHyperLoggerManager(conf)
-	common.InitRawHyperLogger(common.DEFAULT_NAMESPACE)
+func PrepareTestCase() *StateDB {
+	NewTestLog()
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
-
-	stateDb, _ := New(common.Hash{}, db, db, conf, 0, common.DEFAULT_NAMESPACE)
+	stateDb, _ := New(common.Hash{}, db, db, NewTestConfig(), 0)
 	stateDb.MarkProcessStart(1)
-	stateDb.CreateAccount(common.BytesToAddress([]byte("address001")))
 
+	stateDb.CreateAccount(common.BytesToAddress([]byte("address001")))
 	for k, v := range InitData1() {
 		stateDb.SetState(common.BytesToAddress([]byte("address001")), k, v, 0)
 	}
-
 	stateDb.Commit()
-	batch := stateDb.FetchBatch(1)
+	batch := stateDb.FetchBatch(1, BATCH_NORMAL)
 	batch.Write()
 	stateDb.MarkProcessFinish(1)
 
 	stateDb.MarkProcessStart(2)
-
 	for k, v := range InitData2() {
 		stateDb.SetState(common.BytesToAddress([]byte("address001")), k, v, 0)
 	}
 	return stateDb
-
 }
 
 func CheckIteratorResult(stateDb *StateDB, addr common.Address, start, limit []byte, expect []KV) bool {

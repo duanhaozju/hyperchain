@@ -656,7 +656,7 @@ func isArchive(opcode int32) bool {
 	return opcode == opcodeArchive
 }
 
-// onEvict drops `old enough` keyvalue pairs avoid too much memory occupation.
+// onEvict drops `old enough` keyvalue pairs to avoid too much memory occupation.
 func (self *StateObject) onEvict(wg sync.WaitGroup) {
 	defer func() {
 		wg.Done()
@@ -669,6 +669,7 @@ func (self *StateObject) onEvict(wg sync.WaitGroup) {
 	}
 }
 
+// doArchive flushs all archived entries to historical database.
 func (self *StateObject) doArchive(wg sync.WaitGroup) {
 	defer func() {
 		wg.Done()

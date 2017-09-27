@@ -36,6 +36,7 @@ import (
 	"sync/atomic"
 )
 
+// Revision one snapshot meta information.
 type revision struct {
 	id           int
 	journalIndex int

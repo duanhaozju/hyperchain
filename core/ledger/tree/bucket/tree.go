@@ -100,7 +100,7 @@ func (bucketTree *BucketTree) Process() ([]byte, error) {
 		bucketTree.hash = bucketTree.computeRootNodeCryptoHash()
 		bucketTree.dirty = false
 	} else {
-		bucketTree.log.Debug("clear tree, return cached hash %s directly", common.Bytes2Hex(bucketTree.hash))
+		bucketTree.log.Debugf("clear tree, return cached hash %s directly", common.Bytes2Hex(bucketTree.hash))
 	}
 	return bucketTree.hash, nil
 }

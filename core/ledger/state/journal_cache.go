@@ -25,6 +25,8 @@ const (
 	ObjectWorkingSet
 )
 
+// JournalCache journal cache is an auxiliary helper used in state revert.
+// All temporary changes will saved here and commit to db together.
 type JournalCache struct {
 	stateObjects      map[common.Address]*StateObject
 	db                db.Database
@@ -33,6 +35,7 @@ type JournalCache struct {
 	logger            *logging.Logger
 }
 
+// NewJournalCache creates a journal cache with given db.
 func NewJournalCache(db db.Database, logger *logging.Logger) *JournalCache {
 	return &JournalCache{
 		db:                db,
@@ -43,6 +46,8 @@ func NewJournalCache(db db.Database, logger *logging.Logger) *JournalCache {
 	}
 }
 
+// Add adds a modified object to dirty collection.
+// If exists, replace it directly. Since we only care about the last status.
 func (cache *JournalCache) Add(stateObject *StateObject) {
 	cache.stateObjects[stateObject.address] = stateObject
 }
@@ -78,14 +83,14 @@ func (cache *JournalCache) Fetch(address common.Address) *StateObject {
 	return obj
 }
 
-// Create - create a empty object.
+// Create creates an empty object.
 func (cache *JournalCache) Create(address common.Address, s *StateDB) *StateObject {
 	obj := newObject(s, address, Account{}, nil, false, nil, s.logger)
 	cache.stateObjects[address] = obj
 	return obj
 }
 
-// Flush - flush all modification to batch.
+// Flush flushs all modification to batch.
 func (cache *JournalCache) Flush(batch db.Batch) error {
 	for _, stateObject := range cache.stateObjects {
 		if stateObject.suicided || (deleteEmptyObjects && stateObject.empty()) {
@@ -126,7 +131,7 @@ func (cache *JournalCache) Flush(batch db.Batch) error {
 			}
 			// Update the object in the main account trie.
 			cache.updateStateObject(batch, stateObject)
-			d, _ := stateObject.Marshal()
+			d, _ := stateObject.MarshalJSON()
 			cache.stateWorkingSet[stateObject.address.Hex()] = d
 			cache.objectsWorkingSet[stateObject.address] = workingSet
 		}
@@ -134,7 +139,7 @@ func (cache *JournalCache) Flush(batch db.Batch) error {
 	return nil
 }
 
-// GetWorkingSet - return required working set.
+// GetWorkingSet returns required working set.
 func (cache *JournalCache) GetWorkingSet(workingSetType int, address common.Address) bucket.Entries {
 	switch workingSetType {
 	case StateWorkingSet:
@@ -146,7 +151,7 @@ func (cache *JournalCache) GetWorkingSet(workingSetType int, address common.Addr
 	}
 }
 
-// deleteStateObject - removes the given object from the database.
+// deleteStateObject removes the given object from the database.
 func (cache *JournalCache) deleteStateObject(batch db.Batch, stateObject *StateObject) {
 	stateObject.deleted = true
 	addr := stateObject.Address()
@@ -158,7 +163,7 @@ func (cache *JournalCache) deleteStateObject(batch db.Batch, stateObject *StateO
 	}
 }
 
-// updateStateObject - writes the given object to the database
+// updateStateObject writes the given object to the database
 func (cache *JournalCache) updateStateObject(batch db.Batch, stateObject *StateObject) []byte {
 	addr := stateObject.Address()
 	data, err := stateObject.Marshal()

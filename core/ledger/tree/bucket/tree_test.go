@@ -71,5 +71,15 @@ func TestBucketTree_Process(t *testing.T) {
 		if bytes.Compare(hash, common.Hex2Bytes(c.Expect)) != 0 {
 			t.Errorf("expect to be same hash result for case [%d]", i)
 		}
+		batch := db.NewBatch()
+		tree.Commit(batch)
+		batch.Write()
+		// Test content reload
+		tree.Clear()
+		tree.Initialize(NewTestConfig())
+		hash, _ = tree.Process()
+		if bytes.Compare(hash, common.Hex2Bytes(c.Expect)) != 0 {
+			t.Errorf("expect to be same hash result for case [%d]", i)
+		}
 	}
 }

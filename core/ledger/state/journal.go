@@ -494,6 +494,7 @@ func (ch *AddLogChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, wr
 	} else {
 		s.logs[ch.Txhash] = logs[:len(logs)-1]
 	}
+	s.logSize--
 }
 func (ch *AddLogChange) String() string {
 	var str string
