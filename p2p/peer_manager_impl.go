@@ -786,14 +786,12 @@ func (pmgr *peerManagerImpl) GetPeerInfo() PeerInfos {
 
 	var peerInfos PeerInfos
 	peers := pmgr.GetAllPeers()
-
-	pkg := pb.NewPkg([]byte("ping"), pb.ControlType_KeepAlive)
 	sHostName := pmgr.node.info.Hostname
-	ip, port := pmgr.hyperNet.GetDNS(sHostName)
 
 	for _, p := range peers {
 
 		dHostName := p.info.GetHostName()
+		ip, port := pmgr.hyperNet.GetDNS(dHostName)
 		peerInfo :=  PeerInfo{
 			ID: p.info.GetID(),
 			Namespace: p.info.GetNameSpace(),
@@ -806,7 +804,7 @@ func (pmgr *peerManagerImpl) GetPeerInfo() PeerInfos {
 		}
 
 		start := time.Now().UnixNano()
-		resp, err := p.net.Discuss(p.info.Hostname, pkg)
+		resp, err := p.net.Discuss(dHostName, pb.NewPkg([]byte("ping"), pb.ControlType_KeepAlive))
 		if err != nil {
 			peerInfo.Status = STOP
 		} else if resp.Type == pb.ControlType_Response {
