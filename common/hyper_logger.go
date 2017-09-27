@@ -36,6 +36,7 @@ func InitHyperLoggerManager(conf *Config) {
 	commonLogger = GetLogger(DEFAULT_NAMESPACE, "common")
 }
 
+// newHyperLoggerMgr init the HyperLoggerMgr only once
 func newHyperLoggerMgr() {
 	once.Do(func() {
 		if hyperLoggerMgr == nil {
@@ -44,7 +45,7 @@ func newHyperLoggerMgr() {
 	})
 }
 
-//InitRawHyperLogger init hyperlogger for a namespace by default setting.
+// InitRawHyperLogger init hyperlogger for a namespace by default setting.
 func InitRawHyperLogger(namespace string) error {
 	nsConf := NewRawConfig()
 	nsConf.Set(NAMESPACE, namespace)
@@ -57,7 +58,7 @@ func InitRawHyperLogger(namespace string) error {
 	return nil
 }
 
-//InitHyperLogger init hyperlogger for a namespace by namespace config.
+// InitHyperLogger init hyperlogger for a namespace by namespace config.
 func InitHyperLogger(namespace string, nsConf *Config) error {
 	nsConf.Set(NAMESPACE, namespace)
 	newHyperLoggerMgr()
@@ -69,7 +70,7 @@ func InitHyperLogger(namespace string, nsConf *Config) error {
 	return nil
 }
 
-//GetLogger getLogger with specific namespace and module.
+// GetLogger getLogger with specific namespace and module.
 func GetLogger(namespace string, module string) *logging.Logger {
 	if hyperLoggerMgr == nil {
 		commonLogger.Warningf("Hyper logger sytem is not init, init it by default configs")
@@ -78,16 +79,17 @@ func GetLogger(namespace string, module string) *logging.Logger {
 	return hyperLoggerMgr.getLogger(namespace, module)
 }
 
-//SetLogLevel set log level by specific namespace module and the level provided by user.
+// SetLogLevel set log level by specific namespace module and the level provided by user.
 func SetLogLevel(namespace string, module string, level string) error {
 	return hyperLoggerMgr.setLoggerLevel(namespace, module, level)
 }
 
-//GetLogLevel get log level info by namespace and module.
+// GetLogLevel get log level info by namespace and module.
 func GetLogLevel(namespace, module string) (string, error) {
 	return hyperLoggerMgr.getLoggerLevel(namespace, module)
 }
 
+// defaultLoggerConfig return a default config
 func defaultLoggerConfig() *Config {
 	conf := NewRawConfig()
 	conf.Set(LOG_BASE_LOG_LEVEL, "DEBUG")
