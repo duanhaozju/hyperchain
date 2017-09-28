@@ -3,20 +3,15 @@
 package api
 
 import (
-	"hyperchain/manager"
-	"fmt"
-)
-
-// This file implements the handler of Node service API which
-// can be invoked by client in JSON-RPC request.
-
-import (
 	"fmt"
 	"hyperchain/common"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
 	"hyperchain/p2p"
 )
+
+// This file implements the handler of Node service API which
+// can be invoked by client in JSON-RPC request.
 
 type NodeArgs struct {
 	NodeHash string `json:"nodehash"`
