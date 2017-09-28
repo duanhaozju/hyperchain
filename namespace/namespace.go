@@ -21,18 +21,18 @@ import (
 	"time"
 )
 
-// This file defines the Namespace interface, which managers all the
+// This file defines the Namespace interface, which manages all the
 // operations related to a certain namespace.
 // There are 7 components in one namespace:
-// 1. DB: Database used to store data of this namespace.
-// 2. CAManager: Authority management used to authenticate identity
+// 1. DB: Database is used to store data about this namespace.
+// 2. CAManager: Authority management is used to authenticate identity
 //    in network.
-// 3. PeerManager: Network p2p management used to deliver connection
-//    and consensus messages.
-// 4. Consenter: Consensus component used to order the coming requests
+// 3. PeerManager: Network p2p management is used to establish connection
+// 	  then deliver connection and consensus messages.
+// 4. Consenter: Consensus component is used to order the coming requests
 //    and guarantee the consistency of all consensus nodes.
-// 5. Executor: Executor mainly used to validate and commit blocks.
-// 6. EventHub: The component used to help internal components to
+// 5. Executor: Executor is mainly used to validate and commit blocks.
+// 6. EventHub: The component is used to help internal components to
 //    interact with each other.
 // 7. JsonRpcProcess: Requests sent from clients are dispatched by
 //    NamespaceManager to corresponding namespace processor first, then
@@ -149,9 +149,9 @@ type namespaceImpl struct {
 
 // newNamespaceImpl returns a newed Namespace instance with
 // the given name and config
-func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*namespaceImpl, error) {
-	conf.Set(common.NAMESPACE, name)
-	if err := common.InitHyperLogger(name, conf); err != nil {
+func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool) (*namespaceImpl, error) {
+	conf.Set(common.NAMESPACE, namespace)
+	if err := common.InitHyperLogger(namespace, conf); err != nil {
 		return nil, err
 	}
 
@@ -160,8 +160,8 @@ func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*nam
 		desc:  "newed",
 		lock:  new(sync.RWMutex),
 	}
-	ppath := common.GetPath(name, conf.GetString(common.PEER_CONFIG_PATH))
-	nsInfo, err := NewNamespaceInfo(ppath, name, common.GetLogger(name, "namespace"))
+	ppath := common.GetPath(namespace, conf.GetString(common.PEER_CONFIG_PATH))
+	nsInfo, err := NewNamespaceInfo(ppath, namespace, common.GetLogger(namespace, "namespace"))
 
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*nam
 		restart:   false,
 		delFlag:   delFlag,
 	}
-	ns.logger = common.GetLogger(name, "namespace")
+	ns.logger = common.GetLogger(namespace, "namespace")
 	return ns, nil
 }
 
