@@ -20,10 +20,8 @@ import (
 	"time"
 )
 
-/*
-    This file implements the handler of Contract service API
-	which can be invoked by client in JSON-RPC request.
- */
+// This file implements the handler of Contract service API which
+// can be invoked by client in JSON-RPC request.
 
 type Contract struct {
 	namespace   string
@@ -297,6 +295,8 @@ type CheckArgs struct {
 
 
 type HmCheckResult struct {
+
+	// The result if it is verified.
 	CheckResult        []bool `json:"checkResult"`
 
 	// The homomorphic sum of all invalid homomorphic encryption transaction amount of B.

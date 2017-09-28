@@ -34,7 +34,7 @@ const (
 	snapshotManifestPath  = "executor.archive.snapshot_manifest"
 )
 
-// getRateLimitEnable - get rate limit switch value
+// getRateLimitEnable returns rate limit switch value.
 func getRateLimitEnable(conf *common.Config) bool {
 	return conf.GetBool(rateLimitEnable)
 }
@@ -43,7 +43,7 @@ func getManifestPath(conf *common.Config) string {
 	return conf.GetString(snapshotManifestPath)
 }
 
-// getRateLimitPeak - get rate limit peak value
+// getRateLimitPeak returns rate limit peak value.
 func getRateLimitPeak(namespace string, conf *common.Config, choice string) int64 {
 	log := common.GetLogger(namespace, "api")
 	switch choice {
@@ -57,7 +57,7 @@ func getRateLimitPeak(namespace string, conf *common.Config, choice string) int6
 	}
 }
 
-// getFillRate - get rate limit fill speed
+// getFillRate returns rate limit fill speed.
 func getFillRate(namespace string, conf *common.Config, choice string) (time.Duration, error) {
 	log := common.GetLogger(namespace, "api")
 	switch choice {
@@ -71,7 +71,7 @@ func getFillRate(namespace string, conf *common.Config, choice string) (time.Dur
 	}
 }
 
-// getPaillierPublickey - get public key for hmEncryption
+// getPaillierPublickey returns public key for hmEncryption.
 func getPaillierPublickey(config *common.Config) hmEncryption.PaillierPublickey {
 	bigN := new(big.Int)
 	bigNsquare := new(big.Int)
@@ -86,6 +86,7 @@ func getPaillierPublickey(config *common.Config) hmEncryption.PaillierPublickey 
 	}
 }
 
+// NewStateDb creates a new state db from latest block root.
 func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	chain, err := edb.GetChain(namespace)
 	if err != nil {
@@ -108,6 +109,7 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, archiveDb, conf, height, namespace)
 }
 
+// NewSnapshotStateDb creates a new state db from given root.
 func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte, height uint64, namespace string) (vm.Database, func(), error) {
 	db, err := hyperdb.NewDatabase(conf, path.Join("snapshots", "SNAPSHOT_"+filterId), hyperdb.GetDatabaseType(conf), namespace)
 	if err != nil {
@@ -126,8 +128,9 @@ func substr(str string, start int, end int) string {
 	return string(rs[start:end])
 }
 
-// 0 value for txType means sends normal transaction, 1 means deploys contract, 2 means invokes contract,
-// 3 means signHash, 4 means maintains contract.
+// prepareExcute checks if arguments are valid.
+// 0 value for txType means sending normal transaction, 1 means deploying contract, 2 means invoking contract,
+// 3 means signing hash, 4 means maintaining contract.
 func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	if args.From.Hex() == (common.Address{}).Hex() {
 		return SendTxArgs{}, &common.InvalidParamsError{Message: "address 'from' is invalid"}
@@ -160,6 +163,7 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	return args, nil
 }
 
+// prepareIntervalArgs checks if arguments are valid.
 // If the client send BlockNumber "", it will be converted to 0. If client send BlockNumber 0, it will return error.
 func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) {
 	if args.From == nil || args.To == nil {
@@ -185,6 +189,7 @@ func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) 
 	}
 }
 
+// prepareBlockNumber converts type BlockNumber to uint64.
 func prepareBlockNumber(n BlockNumber, namespace string) (uint64, error) {
 	chain, err := edb.GetChain(namespace)
 	if err != nil {
@@ -198,6 +203,7 @@ func prepareBlockNumber(n BlockNumber, namespace string) (uint64, error) {
 	return number, nil
 }
 
+// preparePagingArgs checks if paging arguments are valid.
 func preparePagingArgs(args PagingArgs) (PagingArgs, error) {
 	if args.PageSize == 0 {
 		return PagingArgs{}, &common.InvalidParamsError{Message: "'pageSize' can't be zero or empty"}

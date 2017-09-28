@@ -17,10 +17,8 @@ import (
 	"time"
 )
 
-/*
-    This file implements the handler of Transaction service API
-	which can be invoked by client in JSON-RPC request.
- */
+// This file implements the handler of Transaction service API which
+// can be invoked by client in JSON-RPC request.
 
 const (
 	DEFAULT_GAS      int64 = 100000000
@@ -52,8 +50,8 @@ type SendTxArgs struct {
 	Nonce      int64           `json:"nonce"`		// 16-bit random decimal number, for example 5956491387995926
 	VmType     string          `json:"type"`		// specify which engine executes contract
 
-	// 1 value for Opcode means upgrades contract, 2 means freezes contract,
-	// 3 means unfreezes contract, 100 means archives data.
+	// 1 value for Opcode means upgrading contract, 2 means freezing contract,
+	// 3 means unfreezing contract, 100 means archiving data.
 	Opcode     int32           `json:"opcode"`
 
 	// Snapshot saves the state of ledger at a moment.
@@ -99,7 +97,7 @@ func NewPublicTransactionAPI(namespace string, eh *manager.EventHub, config *com
 	}
 }
 
-// SendTransaction is to build a transaction object, and then post event NewTxEvent,
+// SendTransaction is to create a transaction object, and then post event NewTxEvent,
 // if the sender's balance is enough, return tx hash.
 func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	consentor := tran.eh.GetConsentor()
