@@ -51,12 +51,7 @@ func NewServer(nr namespace.NamespaceManager, config *common.Config) *Server {
 		namespaceMgr: nr,
 		requestMgr:   make(map[string]*requestManager),
 	}
-	server.admin = &admin.Administrator{
-		Check:         config.GetBool(common.ADMIN_CHECK),
-		Expiration:    config.GetDuration(common.ADMIN_EXPIRATION),
-		NsMgr:         server.namespaceMgr,
-	}
-	server.admin.Init()
+	server.admin = admin.NewAdministrator(nr, config)
 	return server
 }
 
@@ -310,12 +305,10 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 }
 
 func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RPCResponse {
-	if s.admin.Check {
-		token, method := codec.GetAuthInfo()
-		err := s.admin.PreHandle(token, method)
-		if err != nil {
-			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidTokenError{Message: err.Error()}}
-		}
+	token, method := codec.GetAuthInfo()
+	err := s.admin.PreHandle(token, method)
+	if err != nil {
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidTokenError{Message: err.Error()}}
 	}
 
 	cmd := &admin.Command{MethodName: req.Method}

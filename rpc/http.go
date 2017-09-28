@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"golang.org/x/net/http2"
-	admin "hyperchain/api/admin"
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"io"
@@ -61,7 +60,7 @@ func (hsi *httpServerImpl) start() error {
 	handler := NewServer(hsi.nr, hsi.config)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/login", admin.LoginServer)
+	mux.HandleFunc("/login", handler.admin.LoginServer)
 	mux.Handle("/", newCorsHandler(handler, hsi.config.GetStringSlice(common.HTTP_ALLOWEDORIGINS)))
 
 	isVersion2 := hsi.config.GetBool(common.HTTP_VERSION2)

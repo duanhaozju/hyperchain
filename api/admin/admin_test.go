@@ -57,12 +57,12 @@ func TestAdministrator_PreHandle(t *testing.T) {
 	ast.EqualError(err, ErrTimeoutPermission.Error(), "An Timeout error was expected!")
 
 	// mock: last operation time of root is just now.
-	user_opTime["root"] = time.Now().Unix()
+	admin.user_opTime["root"] = time.Now().Unix()
 	err = admin.PreHandle(token, "admin_getLevel")
 	ast.Nil(err, "No error was expected!")
 	// sleep a duration with expiration seconds
-	time.Sleep(admin.Expiration)
-	time.Sleep(admin.Expiration)
+	time.Sleep(admin.expiration)
+	time.Sleep(admin.expiration)
 	err = admin.PreHandle(token, "admin_getLevel")
 	ast.EqualError(err, ErrTimeoutPermission.Error(), "An Timeout error was expected!")
 }
@@ -71,13 +71,13 @@ func TestStopServer(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 	stop := make(chan bool)
 	mockNSMgr.On("GetStopFlag").Return(stop)
 
 	// start a go-routine to listen the stop flag.
 	go func(){
-		flag := <- admin.NsMgr.GetStopFlag()
+		flag := <- admin.nsMgr.GetStopFlag()
 		t.Logf("Got stop flag: %v", flag)
 	}()
 
@@ -94,13 +94,13 @@ func TestRestartServer(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 	restart := make(chan bool)
 	mockNSMgr.On("GetRestartFlag").Return(restart)
 
 	// start a go-routine to listen the restart flag.
 	go func(){
-		flag := <- admin.NsMgr.GetRestartFlag()
+		flag := <- admin.nsMgr.GetRestartFlag()
 		t.Logf("Got restart flag: %v", flag)
 	}()
 
@@ -117,7 +117,7 @@ func TestStartNsMgr(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	// mock: start nsMgr with no error return, limit only 1 return time
 	// as we need to call Start() interface below two times, if we don't
@@ -143,7 +143,7 @@ func TestStopNsMgr(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	// mock: stop nsMgr with no error return, limit only 1 return time
 	// as we need to call Stop() interface below two times, if we don't
@@ -169,7 +169,7 @@ func TestStartNamespace(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	mockNSMgr.On("StartNamespace", "global").Return(nil)
 	mockNSMgr.On("StartNamespace", "mock_ns").Return(mockError)
@@ -208,7 +208,7 @@ func TestStopNamespace(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	mockNSMgr.On("StopNamespace", "global").Return(nil)
 	mockNSMgr.On("StopNamespace", "mock_ns").Return(mockError)
@@ -247,7 +247,7 @@ func TestRestartNamespace(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	mockNSMgr.On("RestartNamespace", "global").Return(nil)
 	mockNSMgr.On("RestartNamespace", "mock_ns").Return(mockError)
@@ -286,7 +286,7 @@ func TestRegisterNamespace(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	mockNSMgr.On("Register", "global").Return(nil)
 	mockNSMgr.On("Register", "mock_ns").Return(mockError)
@@ -325,7 +325,7 @@ func TestDeRegisterNamespace(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	mockNSMgr.On("DeRegister", "global").Return(nil)
 	mockNSMgr.On("DeRegister", "mock_ns").Return(mockError)
@@ -364,7 +364,7 @@ func TestListNamespace(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	mockList := []string{"global", "mock_ns"}
 	mockNSMgr.On("List").Return(mockList)
@@ -384,7 +384,7 @@ func TestGetLevel(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	common.InitRawHyperLogger("global")
 	common.SetLogLevel("global", "consensus", "debug")
@@ -423,7 +423,7 @@ func TestSetLevel(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	common.InitRawHyperLogger("global")
 	common.SetLogLevel("global", "consensus", "debug")
@@ -464,7 +464,7 @@ func TestStartJvmServer(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	// mock: start jvm server with no error return, limit only 1 return time
 	// as we need to call StartJvm() interface below two times, if we don't
@@ -491,7 +491,7 @@ func TestRestartJvmServer(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	// mock: restart jvm server with no error return, limit only 1 return time
 	// as we need to call RestartJvm() interface below two times, if we don't
@@ -518,7 +518,7 @@ func TestStopJvmServer(t *testing.T) {
 	ast := assert.New(t)
 	admin := getAdmin()
 	mockNSMgr := &mocks.MockNSMgr{}
-	admin.NsMgr = mockNSMgr
+	admin.nsMgr = mockNSMgr
 
 	// mock: stop jvm server with no error return, limit only 1 return time
 	// as we need to call StopJvm() interface below two times, if we don't
@@ -702,13 +702,6 @@ func TestCreateUser(t *testing.T) {
 	result = admin.createUser(cmd)
 	ast.True(result.Ok, "We should create successfully.")
 
-	// delete useless data.
-	cmd = &Command{
-		MethodName: "delUser",
-		Args:       []string{"hpc"},
-	}
-	admin.delUser(cmd)
-
 }
 
 func TestAlterUser(t *testing.T) {
@@ -781,11 +774,14 @@ func TestDelUser(t *testing.T) {
 
 func getAdmin() *Administrator{
 	admin := &Administrator{
-		Check:       true,
-		Expiration:  1 * time.Second,
+		check:       true,
+		expiration:  1 * time.Second,
 		CmdExecutor: make(map[string]func(command *Command) *CommandResult),
+		valid_user:  make(map[string]string),
+		user_scope:  make(map[string]permissionSet),
+		user_opTime: make(map[string]int64),
 	}
-	admin.Init()
+	admin.init()
 	return admin
 }
 
