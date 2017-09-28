@@ -1,3 +1,6 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
+
 package common
 
 import (
@@ -20,6 +23,7 @@ var (
 	NotFileErr        = errors.New("is not file")
 )
 
+// NewSectionReader returns a SectionReader, contains filePath and an open file.
 func NewSectionReader(filePath string, shardLen int64) (error, *SectionReader) {
 	fd, err := os.OpenFile(filePath, os.O_RDONLY, 0755)
 	if err != nil {
@@ -52,6 +56,7 @@ func NewSectionReader(filePath string, shardLen int64) (error, *SectionReader) {
 	}
 }
 
+// ReadNext reads the next shard of the latestShard
 func (sectionReader *SectionReader) ReadNext() (n int, buf []byte, err error) {
 	defer func() {
 		if err == nil {
@@ -73,17 +78,20 @@ func (sectionReader *SectionReader) ReadNext() (n int, buf []byte, err error) {
 	return
 }
 
+// ReadAt reads the sidth shard
 func (sectionReader *SectionReader) ReadAt(sid int64) (int, []byte, error) {
 	sectionReader.latestShard = sid - 1
 	return sectionReader.ReadNext()
 }
 
+// Close closes the open file
 func (sectionReader *SectionReader) Close() {
 	if sectionReader.fd != nil {
 		sectionReader.fd.Close()
 	}
 }
 
+// check checks that if sid is legal or not
 func (sectionReader *SectionReader) check(sid int64) bool {
 	if sid == 0 || sid > sectionReader.shardNum {
 		return false

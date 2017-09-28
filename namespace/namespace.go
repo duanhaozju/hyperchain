@@ -54,7 +54,7 @@ type Namespace interface {
 	Restart() error
 
 	// Status returns the current namespace status, which may be:
-	// 1. initnew: after new this namespace instance, before initialize
+	// 1. newed: after newed this namespace instance, before initialize
 	// 2. initialized: after initialized
 	// 3. running: after Start
 	// 4. closed: after Close
@@ -79,7 +79,7 @@ type Namespace interface {
 type NsState int
 
 const (
-	initnew NsState = 1 << iota
+	newed       NsState = 1 << iota
 	initialized
 	running
 	closed
@@ -111,8 +111,8 @@ func (s *Status) getState() NsState {
 // setDescription updates the current description by current state.
 func (s *Status) setDescription() {
 	switch s.state{
-	case initnew:
-		s.desc = "new"
+	case newed:
+		s.desc = "newed"
 	case initialized:
 		s.desc = "initialized"
 	case running:
@@ -147,7 +147,7 @@ type namespaceImpl struct {
 	delFlag chan bool
 }
 
-// newNamespaceImpl returns a new Namespace instance with
+// newNamespaceImpl returns a newed Namespace instance with
 // the given name and config
 func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*namespaceImpl, error) {
 	conf.Set(common.NAMESPACE, name)
@@ -156,8 +156,8 @@ func newNamespaceImpl(name string, conf *common.Config, delFlag chan bool) (*nam
 	}
 
 	status := &Status{
-		state: initnew,
-		desc:  "new",
+		state: newed,
+		desc:  "newed",
 		lock:  new(sync.RWMutex),
 	}
 	ppath := common.GetPath(name, conf.GetString(common.PEER_CONFIG_PATH))
@@ -239,10 +239,11 @@ func (ns *namespaceImpl) init() error {
 	// 7. init Eventhub to coordinate message delivery between local modules.
 	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, executor, ns.peerMgr, consenter, am, cm)
 	ns.eh = eh
-	ns.status.setState(initialized)
 
 	// 8. init JsonRpcProcessor to process incoming requests.
 	ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
+
+	ns.status.setState(initialized)
 	return nil
 }
 
@@ -342,6 +343,7 @@ func (ns *namespaceImpl) Stop() error {
 	state := ns.status.getState()
 	if state != running {
 		ns.logger.Criticalf("namespace: %s not running now, need not to stop", ns.Name())
+		return nil
 	}
 	// 1. stop request processor.
 	err := ns.rpc.Stop()

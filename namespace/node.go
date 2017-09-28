@@ -93,8 +93,8 @@ func (ni *NamespaceInfo) AddNode(node *Node) error {
 		ni.logger.Warningf("node with id %d is existed, update it.", node.Id)
 		ni.nodes[node.Id] = node
 	}
-	ni.logger.Info("Add new node with id %d ", node.Id)
-	ni.logger.Debugf("Add new node: %v ", node)
+	ni.logger.Info("Add newed node with id %d ", node.Id)
+	ni.logger.Debugf("Add newed node: %v ", node)
 	ni.nodes[node.Id] = node
 	return nil
 }

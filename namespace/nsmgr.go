@@ -52,10 +52,10 @@ type NamespaceManager interface {
 	// List returns all namespace names in system.
 	List() []string
 
-	// Register registers a new namespace by the given name, if the namespace
+	// Register registers a newed namespace by the given name, if the namespace
 	// has been registered to system before or the config path of that
 	// namespace(./namespace/name) doesn't exist, returns an error, else,
-	// constructs new namespace config and init a new namespace.
+	// constructs newed namespace config and init a newed namespace.
 	// NOTICE: namespace must registered before start.
 	Register(name string) error
 
@@ -129,25 +129,30 @@ type nsManagerImpl struct {
 	// of the node
 	conf *common.Config
 
+	status *Status
+
 	stopHp      chan bool
 	restartHp   chan bool
 }
 
 // newNsManager news a namespace manager implement and init.
 func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *nsManagerImpl {
+	status := &Status{
+		state: newed,
+		desc:  "newed",
+		lock:  new(sync.RWMutex),
+	}
+
 	nr := &nsManagerImpl{
 		namespaces:  make(map[string]Namespace),
 		conf:        conf,
 		jvmManager:  NewJvmManager(conf),
 		bloomfilter: db_utils.NewBloomCache(conf),
+		status:      status,
 		stopHp:      stopHp,
 		restartHp:   restartHp,
 	}
 	nr.rwLock = new(sync.RWMutex)
-	err := nr.init()
-	if err != nil {
-		panic(err)
-	}
 	return nr
 }
 
@@ -189,12 +194,26 @@ func (nr *nsManagerImpl) init() error {
 			logger.Errorf("Invalid folder %v", d)
 		}
 	}
+	nr.status.setState(initialized)
 	return nil
 }
 
 // Start starts namespace manager service which will start all namespaces
 // registered in system and then start jvm manager if needed.
 func (nr *nsManagerImpl) Start() error {
+	state := nr.status.getState()
+	if state < initialized {
+		err := nr.init()
+		if err != nil {
+			logger.Errorf("Init namespace manager failed: %v", err)
+			return err
+		}
+	}
+	if nr.status.getState() == running {
+		logger.Critical("namespace manager is already running")
+		return nil
+	}
+
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	for name := range nr.namespaces {
@@ -211,12 +230,19 @@ func (nr *nsManagerImpl) Start() error {
 			return err
 		}
 	}
+	nr.status.setState(running)
 	return nil
 }
 
 // Stop stops namespace manager service which will stop all namespaces
 // registered in system and then stop jvm manager.
 func (nr *nsManagerImpl) Stop() error {
+	state := nr.status.getState()
+	if state != running {
+		logger.Critical("namespace manager is not running now, need not to stop")
+		return nil
+	}
+
 	logger.Noticef("Try to stop NamespaceManager ...")
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
@@ -231,6 +257,7 @@ func (nr *nsManagerImpl) Stop() error {
 		logger.Errorf("Stop hyperjvm error %v", err)
 	}
 	nr.bloomfilter.Close()
+	nr.status.setState(closed)
 	logger.Noticef("NamespaceManager stopped!")
 	return nil
 }
@@ -258,7 +285,7 @@ func (nr *nsManagerImpl) checkNamespaceName(name string) bool {
 	return false
 }
 
-// Register registers a new namespace to system by the new namespace
+// Register registers a newed namespace to system by the newed namespace
 // config dir and update the config file if needed.
 func (nr *nsManagerImpl) Register(name string) error {
 	logger.Noticef("Register namespace: %s", name)

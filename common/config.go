@@ -137,10 +137,13 @@ func (cf *Config) Print() {
 }
 
 func (cf *Config) equals(anotherConfig *Config) bool {
+	if len(cf.conf.AllKeys()) != len(anotherConfig.conf.AllKeys()) {
+		return false
+	}
 	for _, key := range anotherConfig.conf.AllKeys() {
 		if !cf.ContainsKey(key) {
 			fmt.Printf("No value for key %s found \n", key)
-			return true
+			return false
 		}
 	}
 	return true

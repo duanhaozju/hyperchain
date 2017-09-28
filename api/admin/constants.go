@@ -2,14 +2,10 @@ package jsonrpc
 
 import (
 	"strings"
-	"time"
 )
 
-// expiration is the timeout from user's last operation.
-var expiration = 300 * time.Second
-
 // public/private key locations.
-const (
+var (
 	pri_key string = "./hypercli/keyconfigs/key/key"
 	pub_key string = "./hypercli/keyconfigs/key/key.pub"
 )
