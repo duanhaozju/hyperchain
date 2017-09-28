@@ -10,10 +10,8 @@ import (
 	"fmt"
 )
 
-/*
-    This file implements the handler of block service API
-	which can be invoked by client in JSON-RPC request.
- */
+// This file implements the handler of Block service API which
+// can be invoked by client in JSON-RPC request.
 
 type Block struct {
 	namespace string

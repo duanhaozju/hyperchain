@@ -58,7 +58,7 @@ func (api *PublicFilterAPI) timeoutLoop() {
 	}
 }
 
-// NewBlockFilter creates a filter that fetches blocks that are imported into the chain.
+// NewBlockSubscription creates a filter that fetches blocks that are imported into the chain.
 // It is part of the filter package since polling goes with getFilterChanges.
 func (api *PublicFilterAPI) NewBlockSubscription(isVerbose bool) string {
 	var (
@@ -90,6 +90,8 @@ func (api *PublicFilterAPI) NewBlockSubscription(isVerbose bool) string {
 	return blockSub.ID
 }
 
+// NewEventSubscription subscribes a vm event. A filter will be created to fetch vm event,
+// subscription ID will be returned.
 func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string {
 	var (
 		logCh  = make(chan interface{})
@@ -121,6 +123,8 @@ func (api *PublicFilterAPI) NewEventSubscription(crit flt.FilterCriteria) string
 
 }
 
+// NewArchiveSubscription subscribes a archive event. A filter will be created to fetch archive information,
+// Subscription ID will be returned.
 func (api *PublicFilterAPI) NewArchiveSubscription() string {
 	var (
 		ch  = make(chan interface{})
@@ -149,6 +153,7 @@ func (api *PublicFilterAPI) NewArchiveSubscription() string {
 	return sub.ID
 }
 
+// NewSystemStatusSubscription subscribes a system status event. Subscription ID will be returned.
 func (api *PublicFilterAPI) NewSystemStatusSubscription(crit flt.FilterCriteria) string {
 	var (
 		ch  = make(chan interface{})
@@ -179,7 +184,7 @@ func (api *PublicFilterAPI) NewSystemStatusSubscription(crit flt.FilterCriteria)
 }
 
 // GetFilterChanges returns the logs for the filter with the given id since
-// last time is was called. This can be used for polling.
+// last time was called. This can be used for polling.
 //
 // For pending transaction and block filters the result is []common.Hash.
 // (pending)Log filters return []Log.
@@ -242,6 +247,7 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 	return []interface{}{}, &common.SubNotExistError{Message: "required subscription does not existed or has expired"}
 }
 
+// UnSubscription unsubscribes a given event.
 func (api *PublicFilterAPI) UnSubscription(id string) error {
 	api.filtersMu.Lock()
 	defer api.filtersMu.Unlock()
@@ -253,6 +259,7 @@ func (api *PublicFilterAPI) UnSubscription(id string) error {
 	return &common.SubNotExistError{Message: "required subscription does not existed or has expired"}
 }
 
+// GetLogs returns eligible vm event logs.
 func (api *PublicFilterAPI) GetLogs(crit flt.FilterCriteria) (interface{}, error) {
 	err, genesis := edb.GetGenesisTag(api.namespace)
 	if err != nil {
@@ -314,6 +321,8 @@ func returnLogs(logs []interface{}) []types.LogTrans {
 	return ret.ToLogsTrans()
 }
 
+// returnSystemStatus is a helper that will return an empty system status array in case the given
+// system status array is nil, otherwise the given logs array is returned.
 func returnSystemStatus(data []interface{}) []event.FilterSystemStatusEvent {
 	if len(data) == 0 {
 		return []event.FilterSystemStatusEvent{}

@@ -17,10 +17,8 @@ import (
 	"time"
 )
 
-/*
-    This file implements the handler of transaction service API
-	which can be invoked by client in JSON-RPC request.
- */
+// This file implements the handler of Transaction service API which
+// can be invoked by client in JSON-RPC request.
 
 const (
 	DEFAULT_GAS      int64 = 100000000
@@ -52,8 +50,8 @@ type SendTxArgs struct {
 	Nonce      int64           `json:"nonce"`		// 16-bit random decimal number, for example 5956491387995926
 	VmType     string          `json:"type"`		// specify which engine executes contract
 
-	// 1 value for Opcode means upgrades contract, 2 means freezes contract,
-	// 3 means unfreezes contract, 100 means archives data.
+	// 1 value for Opcode means upgrading contract, 2 means freezing contract,
+	// 3 means unfreezing contract, 100 means archiving data.
 	Opcode     int32           `json:"opcode"`
 
 	// Snapshot saves the state of ledger at a moment.
@@ -99,7 +97,7 @@ func NewPublicTransactionAPI(namespace string, eh *manager.EventHub, config *com
 	}
 }
 
-// SendTransaction is to build a transaction object, and then post event NewTxEvent,
+// SendTransaction is to create a transaction object, and then post event NewTxEvent,
 // if the sender's balance is enough, return tx hash.
 func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	consentor := tran.eh.GetConsentor()
@@ -549,8 +547,8 @@ func (tran *Transaction) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, e
 	return *int64ToNumber(exeTime), nil
 }
 
-// GetTransactionsCountByContractAddr returns the number of eligible transaction, the latest block number and transaction index
-// of eligible transaction in the block for the given block number, contract address.
+// GetTransactionsCountByContractAddr returns the number of eligible transaction, the latest block number and
+// transaction index of eligible transaction in the block for the given block number, contract address.
 func (tran *Transaction) GetTransactionsCountByContractAddr(args IntervalArgs) (interface{}, error) {
 	if args.ContractAddr == nil {
 		return nil, &common.InvalidParamsError{"Invalid params. 'address' can't be empty"}
@@ -560,8 +558,9 @@ func (tran *Transaction) GetTransactionsCountByContractAddr(args IntervalArgs) (
 	return tran.getTransactionsCountByBlockNumber(args)
 }
 
-// GetTransactionsCountByMethodID returns the number of eligible transaction, the latest block number and transaction index
-// of eligible transaction in the block for the given block number, methodID. Method id is contract method identifier in a contract.
+// GetTransactionsCountByMethodID returns the number of eligible transaction, the latest block number and
+// transaction index of eligible transaction in the block for the given block number, methodID. Method id
+// is contract method identifier in a contract.
 func (tran *Transaction) GetTransactionsCountByMethodID(args IntervalArgs) (interface{}, error) {
 	if args.ContractAddr == nil {
 		return nil, &common.InvalidParamsError{"Invalid params. 'address' can't be empty"}
@@ -644,10 +643,12 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 
 }
 
-// PagingArgs specifies conditions that transactions filter for transaction paging. PagingArgs determines starting position including
-// current block number and index of the transaction in the current block, quantity of returned transactions and filter conditions.
+// PagingArgs specifies conditions that transactions filter for transaction paging. PagingArgs determines
+// starting position including current block number and index of the transaction in the current block,
+// quantity of returned transactions and filter conditions.
 //
-// For example, pageSize is 10. From page 1 to page 2, so "separated" value is 0. From page 1 to page 3, so "separated" value is 10.
+// For example, pageSize is 10. From page 1 to page 2, so "separated" value is 0. From page 1 to page 3,
+// so "separated" value is 10.
 type PagingArgs struct {
 	MaxBlkNumber   BlockNumber     `json:"maxBlkNumber"`    // the maximum block number of allowing to query
 	MinBlkNumber   BlockNumber     `json:"minBlkNumber"`	// the minimum block number of allowing to query
