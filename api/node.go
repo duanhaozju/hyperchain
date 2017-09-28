@@ -22,6 +22,7 @@ type Node struct {
 	eh        *manager.EventHub
 }
 
+// NewPublicNodeAPI creates and returns a new Node instance for given namespace name.
 func NewPublicNodeAPI(namespace string, eh *manager.EventHub) *Node {
 	return &Node{
 		namespace: namespace,

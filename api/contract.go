@@ -30,6 +30,7 @@ type Contract struct {
 	config      *common.Config
 }
 
+// NewPublicContractAPI creates and returns a new Contract instance for given namespace name.
 func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common.Config) *Contract {
 	log := common.GetLogger(namespace, "api")
 	fillrate, err := getFillRate(namespace, config, CONTRACT)

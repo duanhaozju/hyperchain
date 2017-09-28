@@ -20,11 +20,6 @@ import (
 // This file implements the handler of Transaction service API which
 // can be invoked by client in JSON-RPC request.
 
-const (
-	DEFAULT_GAS      int64 = 100000000
-	DEFAULT_GAS_PRICE int64 = 10000
-)
-
 var (
 	kec256Hash              = crypto.NewKeccak256Hash("keccak256")
 	db_not_found_error = db.DB_NOT_FOUND.Error()
@@ -76,6 +71,7 @@ type TransactionResult struct {
 	InvalidMsg  string  `json:"invalidMsg,omitempty"`
 }
 
+// NewPublicTransactionAPI creates and returns a new Transaction instance for given namespace name.
 func NewPublicTransactionAPI(namespace string, eh *manager.EventHub, config *common.Config) *Transaction {
 	log := common.GetLogger(namespace, "api")
 	fillrate, err := getFillRate(namespace, config, TRANSACTION)

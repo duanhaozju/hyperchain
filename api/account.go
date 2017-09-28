@@ -30,6 +30,7 @@ type UnlockParas struct {
 	Password string         `json:"password"`
 }
 
+// NewPublicAccountAPI creates and returns a new Account instance for given namespace name.
 func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.Config) *Account {
 	return &Account{
 		namespace: namespace,

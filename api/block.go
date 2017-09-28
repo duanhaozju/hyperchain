@@ -36,28 +36,12 @@ type StatisticResult struct {
 	TimeList []string `json:"TimeList"`
 }
 
+// NewPublicBlockAPI creates and returns a new Block instance for given namespace name.
 func NewPublicBlockAPI(namespace string) *Block {
 	return &Block{
 		namespace: namespace,
 		log:       common.GetLogger(namespace, "api"),
 	}
-}
-
-type IntervalArgs struct {
-	From         *BlockNumber    `json:"from"`
-	To           *BlockNumber    `json:"to"`
-	ContractAddr *common.Address `json:"address"`
-	MethodID     string          `json:"methodID"`
-}
-
-type IntervalTime struct {
-	StartTime int64 `json:"startTime"`
-	Endtime   int64 `json:"endTime"`
-}
-
-type intArgs struct {
-	from uint64
-	to   uint64
 }
 
 // GetBlocks returns all the block for given block number.
@@ -187,7 +171,6 @@ func latestBlock(namespace string) (*BlockResult, error) {
 	return getBlockByNumber(namespace, lastestBlkHeight, false)
 }
 
-
 func getBlockByNumber(namespace string, number uint64, isPlain bool) (*BlockResult, error) {
 	if blk, err := edb.GetBlockByNumber(namespace, number); err != nil && err.Error() == db_not_found_error {
 		return nil, &common.DBNotFoundError{Type: BLOCK, Id: fmt.Sprintf("number %#x", number)}
@@ -200,7 +183,6 @@ func getBlockByNumber(namespace string, number uint64, isPlain bool) (*BlockResu
 		return outputBlockResult(namespace, blk, isPlain)
 	}
 }
-
 
 func getBlocksByTime(namespace string, startTime, endTime int64) (sumOfBlocks uint64, startBlock, endBlock *BlockNumber, err error) {
 	currentChain, err := edb.GetChain(namespace)

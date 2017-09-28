@@ -18,6 +18,7 @@ type Archive struct {
 	isPublic  bool
 }
 
+// NewPublicArchiveAPI creates and returns a new Archive instance for given namespace name.
 func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.Config) *Archive {
 	return &Archive{
 		namespace: namespace,

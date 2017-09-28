@@ -33,3 +33,8 @@ type ServerCodec interface {
 	// Closed when underlying connection is closed
 	Closed() <-chan interface{}
 }
+
+// receiver implements handling RPC request in channel.
+type receiver interface {
+	handleChannelReq(codec ServerCodec, rq *common.RPCRequest) interface{}
+}

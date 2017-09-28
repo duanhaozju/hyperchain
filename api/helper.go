@@ -16,15 +16,9 @@ import (
 const (
 	rateLimitEnable = "flow.control.ratelimit.enable"
 
-	BLOCK				= "block"
-	TRANSACTION         = "transaction"
-	RECEIPT				= "receipt"
-	DISCARDTXS			= "discard transactions"
-	DISCARDTX			= "discard transaction"
 	transactionPeak     = "flow.control.ratelimit.txRatePeak"
 	transactionFillRate = "flow.control.ratelimit.txFillRate"
 
-	CONTRACT         = "contract"
 	contractPeak     = "flow.control.ratelimit.contractRatePeak"
 	contractFillRate = "flow.control.ratelimit.contractFillRate"
 
@@ -32,6 +26,18 @@ const (
 	paillpublickeynsquare = "global.configs.hmpublickey.Nsquare"
 	paillpublickeyG       = "global.configs.hmpublickey.G"
 	snapshotManifestPath  = "executor.archive.snapshot_manifest"
+
+	BLOCK				= "block"
+	TRANSACTION         = "transaction"
+	CONTRACT            = "contract"
+	RECEIPT				= "receipt"
+
+	DEFAULT_GAS      int64 = 100000000
+	DEFAULT_GAS_PRICE int64 = 10000
+
+	DISCARDTXS			= "discard transactions"
+	DISCARDTX			= "discard transaction"
+
 )
 
 // getRateLimitEnable returns rate limit switch value.
@@ -126,6 +132,23 @@ func substr(str string, start int, end int) string {
 	rs := []rune(str)
 
 	return string(rs[start:end])
+}
+
+type IntervalArgs struct {
+	From         *BlockNumber    `json:"from"`
+	To           *BlockNumber    `json:"to"`
+	ContractAddr *common.Address `json:"address"`
+	MethodID     string          `json:"methodID"`
+}
+
+type IntervalTime struct {
+	StartTime int64 `json:"startTime"`
+	Endtime   int64 `json:"endTime"`
+}
+
+type intArgs struct {
+	from uint64
+	to   uint64
 }
 
 // prepareExcute checks if arguments are valid.

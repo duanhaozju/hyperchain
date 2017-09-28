@@ -265,7 +265,7 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 	}
 }
 
-// handleChannelReq will implement an interface to handle request in channel and return jsonrpc response
+// handleChannelReq implements receiver.handleChannelReq interface to handle request in channel and return jsonrpc response.
 func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) interface{} {
 	r := s.namespaceMgr.ProcessRequest(req.Namespace, req)
 	if r == nil {
