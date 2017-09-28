@@ -7,7 +7,7 @@ import (
 )
 
 /*
-    This file implements the handler of certificate service API
+    This file implements the handler of Certificate service API
 	which can be invoked by client in JSON-RPC request.
  */
 

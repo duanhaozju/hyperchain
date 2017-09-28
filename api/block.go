@@ -11,7 +11,7 @@ import (
 )
 
 /*
-    This file implements the handler of block service API
+    This file implements the handler of Block service API
 	which can be invoked by client in JSON-RPC request.
  */
 

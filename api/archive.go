@@ -9,7 +9,7 @@ import (
 )
 
 /*
-    This file implements the handler of archive service API
+    This file implements the handler of Archive service API
 	which can be invoked by client in JSON-RPC request.
  */
 
