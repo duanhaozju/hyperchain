@@ -7,27 +7,12 @@ service Dispatcher {
 
 // Message is the wrapper of specific message
 message Message {
-
-    enum Type {
-        UNDEFINED = 0;
-        REGISTER = 1;
-        DISPATCH = 2;
-        ADMIN = 3;
-        RESPONSE = 4;
-    }
-
-    enum FROM {
-        APISERVER = 0;
-        CONSENSUS = 1;
-        EXECUTOR  = 2;
-        NETWORK   = 3;
-        EVENTHUB  = 4;
-    }
-
-    Type type       = 1; // The basic message type.
-    FROM from       = 2; // Define where the message come from.
-    bool ok         = 3;
-    bytes payload   = 4; // The message body.
+    uint64 id       = 1;
+    Type type       = 2; // The basic message type.
+    FROM from       = 3; // Define where the message come from.
+    Event event     = 4; // Define the event type.
+    bool ok         = 5; // used for response
+    bytes payload   = 6; // The message body.
 }
 
 // RegisterMessage used by service component to connect to Dispatcher.
@@ -38,42 +23,43 @@ message RegisterMessage {
     bytes payload       = 4; // retained field
 }
 
-message ConsenterMessage {
-    enum Type {
-        InformPrimaryEvent = 0;
-        VCResetEvent = 1;
-    }
-    Type type = 1;
-    string namespace = 2;
-    bytes payload = 3;
+enum Type {
+    UNDEFINED = 0;
+    REGISTER = 1;
+    DISPATCH = 2;
+    ADMIN = 3;
+    RESPONSE = 4;
 }
 
-message ExecutorMessage {
-    enum Type {
-        UNDEFINED = 0;
-        //TODO: specific message type
-    }
-    Type type = 1;
-    string namespace = 2;
-    bytes payload = 3;
+enum FROM {
+    APISERVER = 0;
+    CONSENSUS = 1;
+    EXECUTOR  = 2;
+    NETWORK   = 3;
+    EVENTHUB  = 4;
+    ADMINISTRATOR = 5;
 }
 
-message NetworkMessage {
-    enum Type {
-        UNDEFINED = 0;
-        //TODO: specific message type
-    }
-    Type type = 1;
-    string namespace = 2;
-    bytes payload = 3;
-}
+enum Event {
+    //1.APIServer event
 
-message APIServerMessage {
-    enum Type {
-        UNDEFINED = 0;
-        //TODO: specific message type
-    }
-    Type type = 1;
-    string namespace = 2;
-    bytes payload = 3;
+    //2.Consensus event
+    InformPrimaryEvent = 0;
+    VCResetEvent = 1;
+    BroadcastConsensusEvent = 3;
+    TxUniqueCastEvent = 4;
+    CommitEvent = 5;
+    ChainSyncReqEvent = 6;
+    BroadcastNewPeerEvent = 7;
+    BroadcastDelPeerEvent = 8;
+    UpdateRoutingTableEvent = 9;
+    FilterSystemStatusEvent = 10;
+
+    //3.Executor event
+
+    //4.Network event
+
+    //5.Eventhub event
+
+    //6.Administrator event
 }
