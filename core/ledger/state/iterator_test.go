@@ -40,8 +40,8 @@ func NewTestLog() *logging.Logger {
 		common.InitHyperLogger(common.DEFAULT_NAMESPACE, conf)
 		logger = common.GetLogger(common.DEFAULT_NAMESPACE, "state")
 		common.GetLogger(common.DEFAULT_NAMESPACE, "buckettree")
-		common.SetLogLevel(common.DEFAULT_NAMESPACE, "state", "NOTICE")
-		common.SetLogLevel(common.DEFAULT_NAMESPACE, "buckettree", "NOTICE")
+		common.SetLogLevel(common.DEFAULT_NAMESPACE, "state", "WARNING")
+		common.SetLogLevel(common.DEFAULT_NAMESPACE, "buckettree", "WARNING")
 	})
 	return logger
 }

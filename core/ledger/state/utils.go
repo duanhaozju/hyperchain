@@ -50,7 +50,7 @@ const (
 )
 
 // CompositeStorageKey constructs contract storage entry's key.
-func CompositeStorageKey(address []byte, key []byte) []byte {
+func compositeStorageKey(address []byte, key []byte) []byte {
 	ret := append([]byte(storagePrefix), address...)
 	ret = append(ret, key...)
 	return ret
@@ -58,13 +58,13 @@ func CompositeStorageKey(address []byte, key []byte) []byte {
 
 // GetStorageKeyPrefix constructs contract storage prefix by contract address.
 // It is offen used in database traverse.
-func GetStorageKeyPrefix(address []byte) []byte {
+func getStorageKeyPrefix(address []byte) []byte {
 	ret := append([]byte(storagePrefix), address...)
 	return ret
 }
 
 // SplitCompositeStorageKey splits the composite key to get the actual key.
-func SplitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
+func splitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
 	prefix := append([]byte(storagePrefix), address...)
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) {
@@ -75,7 +75,7 @@ func SplitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
 }
 
 // RetrieveAddrFromStorageKey splits the composite key to get address info.
-func RetrieveAddrFromStorageKey(key []byte) ([]byte, bool) {
+func retrieveAddrFromStorageKey(key []byte) ([]byte, bool) {
 	prefix := []byte(storagePrefix)
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen+common.AddressLength {
@@ -86,13 +86,13 @@ func RetrieveAddrFromStorageKey(key []byte) ([]byte, bool) {
 }
 
 // CompositeCodeHash constructs code key with given address and codehash.
-func CompositeCodeHash(address []byte, codeHash []byte) []byte {
+func compositeCodeHash(address []byte, codeHash []byte) []byte {
 	ret := append([]byte(codePrefix), address...)
 	return append(ret, codeHash...)
 }
 
 // SplitCompositeCodeHash splits the composite key to retrieve codehash.
-func SplitCompositeCodeHash(address []byte, key []byte) ([]byte, bool) {
+func splitCompositeCodeHash(address []byte, key []byte) ([]byte, bool) {
 	prefix := append([]byte(codePrefix), address...)
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) && len(key) >= prefixLen {
@@ -103,7 +103,7 @@ func SplitCompositeCodeHash(address []byte, key []byte) ([]byte, bool) {
 }
 
 // RetrieveAddrFromCodeHash splits the composite key to retrieve address.
-func RetrieveAddrFromCodeHash(key []byte) ([]byte, bool) {
+func retrieveAddrFromCodeHash(key []byte) ([]byte, bool) {
 	prefix := []byte(codePrefix)
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen+common.AddressLength {
@@ -114,12 +114,12 @@ func RetrieveAddrFromCodeHash(key []byte) ([]byte, bool) {
 }
 
 // CompositeAccountKey constructs account key with given address.
-func CompositeAccountKey(address []byte) []byte {
+func compositeAccountKey(address []byte) []byte {
 	return append([]byte(accountPrefix), address...)
 }
 
 // SplitCompositeAccountKey splits composite key to retrieve address.
-func SplitCompositeAccountKey(key []byte) ([]byte, bool) {
+func splitCompositeAccountKey(key []byte) ([]byte, bool) {
 	identifierLen := len([]byte(accountPrefix))
 	if bytes.HasPrefix(key, []byte(accountPrefix)) {
 		return key[identifierLen:], true
@@ -128,16 +128,16 @@ func SplitCompositeAccountKey(key []byte) ([]byte, bool) {
 	}
 }
 
-func CompositeStateBucketPrefix() []byte {
+func compositeStateBucketPrefix() []byte {
 	return append([]byte(treePrefix), []byte("-state")...)
 }
 
-func CompositeStorageBucketPrefix(address string) []byte {
+func compositeStorageBucketPrefix(address string) []byte {
 	return []byte(treePrefix + address)
 }
 
 // InitTreeConfig constructs bucket tree configuration.
-func InitTreeConfig(cap, aggreation, msize, bsize int) map[string]interface{} {
+func initTreeConfig(cap, aggreation, msize, bsize int) map[string]interface{} {
 	ret := make(map[string]interface{})
 	ret[TreeCapacity] = cap
 	ret[TreeAggreation] = aggreation
@@ -147,7 +147,7 @@ func InitTreeConfig(cap, aggreation, msize, bsize int) map[string]interface{} {
 }
 
 // CompositeJournalKey constructs journal key with prefix and block number.
-func CompositeJournalKey(blockNumber uint64) []byte {
+func compositeJournalKey(blockNumber uint64) []byte {
 	s := strconv.FormatUint(blockNumber, 10)
 	return append([]byte(journalPrefix), []byte(s)...)
 }
@@ -157,7 +157,7 @@ func CompositeJournalKey(blockNumber uint64) []byte {
 */
 
 // GetCapacity reads tree capacity.
-func (stateDB *StateDB) GetCapacity(typ string) int {
+func (stateDB *StateDB) getCapacity(typ string) int {
 	switch typ {
 	case STATEDB:
 		return stateDB.conf.GetInt(StateCapacity)
@@ -170,7 +170,7 @@ func (stateDB *StateDB) GetCapacity(typ string) int {
 }
 
 // GetAggreation reads tree aggreation.
-func (stateDB *StateDB) GetAggreation(typ string) int {
+func (stateDB *StateDB) getAggreation(typ string) int {
 	switch typ {
 	case STATEDB:
 		return stateDB.conf.GetInt(StateAggreation)
@@ -183,7 +183,7 @@ func (stateDB *StateDB) GetAggreation(typ string) int {
 }
 
 // GetMerkleCacheSize gets tree merkle cache max size.
-func (stateDB *StateDB) GetMerkleCacheSize(typ string) int {
+func (stateDB *StateDB) getMerkleCacheSize(typ string) int {
 	switch typ {
 	case STATEDB:
 		return stateDB.conf.GetInt(StateMerkleCacheSize)
@@ -196,7 +196,7 @@ func (stateDB *StateDB) GetMerkleCacheSize(typ string) int {
 }
 
 // GetMerkleCacheSize gets tree bucket cache max size.
-func (stateDB *StateDB) GetBucketCacheSize(typ string) int {
+func (stateDB *StateDB) getBucketCacheSize(typ string) int {
 	switch typ {
 	case STATEDB:
 		return stateDB.conf.GetInt(StateBucketCacheSize)
