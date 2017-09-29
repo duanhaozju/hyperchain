@@ -22,7 +22,7 @@ type KV struct {
 	value []byte
 }
 
-type KVs []KV
+type KVs []*KV
 
 func (kvs KVs) Len() int           { return len(kvs) }
 func (kvs KVs) Swap(i, j int)      { kvs[i], kvs[j] = kvs[j], kvs[i] }
@@ -54,7 +54,7 @@ func (db *MemDatabase) Put(key []byte, value []byte) error {
 		}
 	}
 
-	db.kvs = append(db.kvs, KV{
+	db.kvs = append(db.kvs, &KV{
 		key:   common.Bytes2Hex(key),
 		value: CopyBytes(value),
 	})
@@ -209,7 +209,7 @@ func (iter *Iter) Seek(key []byte) bool {
 
 type memBatch struct {
 	db     *MemDatabase
-	writes []KV
+	writes []*KV
 	lock   sync.RWMutex
 }
 
@@ -222,14 +222,14 @@ func (db *MemDatabase) NewBatch() hdb.Batch {
 func (b *memBatch) Put(key, value []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	b.writes = append(b.writes, KV{common.Bytes2Hex(key), CopyBytes(value)})
+	b.writes = append(b.writes, &KV{common.Bytes2Hex(key), CopyBytes(value)})
 	return nil
 }
 
 func (b *memBatch) Delete(key []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	b.writes = append(b.writes, KV{common.Bytes2Hex(key), nil})
+	b.writes = append(b.writes, &KV{common.Bytes2Hex(key), nil})
 	return nil
 }
 
