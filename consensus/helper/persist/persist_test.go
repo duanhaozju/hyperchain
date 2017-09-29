@@ -9,101 +9,99 @@ package persist
 
 import (
 	"bytes"
-	"github.com/syndtr/goleveldb/leveldb/errors"
 	"testing"
 	"hyperchain/common"
+	mdb "hyperchain/hyperdb/mdb"
+	"github.com/stretchr/testify/assert"
+
 )
 
-//func TestDaoOnState(t *testing.T) {
-//	namespace := "1"
-//	k := "k"
-//	v1 := []byte("v1")
-//	v2 := []byte("v2")
-//
-//	common.InitRawHyperLogger(namespace)
-//	common.SetLogLevel(namespace, "hyperdb", "ERROR")
-//
-//
-//	var err = StoreState(namespace, k, v1)
-//	if err != nil {
-//		t.Errorf(`error type %v : StoreState(%q, %v)`, err, k, v1)
-//	}
-//	value, err := ReadState(namespace, k)
-//	if bytes.Compare(value, v1) != 0 || err != nil {
-//		t.Errorf(`error type %v : ReadState(%q) = %v, actual: %v`, err, k, value, v1)
-//	}
-//
-//	err = StoreState(namespace, k, v2)
-//	if err != nil {
-//		t.Errorf(`error type %v : StoreState(%q, %v)`, err, k, v2)
-//	}
-//
-//	value2, err := ReadState(namespace, k)
-//	if bytes.Compare(value2, v2) != 0 || err != nil {
-//		t.Errorf(`error type %v : ReadState(%q) = %v, actual: %v`, err, k, value2, v2)
-//	}
-//
-//	nk := "no_exists_key"
-//	err = DelState(namespace, nk)
-//	if err != nil {
-//		t.Errorf(`error type %v : DelState(%q)`, err, nk)
-//	}
-//
-//	DelState(namespace, k)
-//	_, err = ReadState(namespace, k)
-//	if err != nil && err != errors.ErrNotFound {
-//		t.Errorf(`error type % v: ReadState(%q)`, err, k)
-//	}
-//}
+func TestDaoOnState(t *testing.T) {
+	k := "k"
+	v1 := []byte("v1")
+	v2 := []byte("v2")
 
-//func TestReadStateSet(t *testing.T) {
-//	kvs := map[string][]byte{
-//		"key1":     []byte("hello1"),
-//		"key2":     []byte("hello2"),
-//		"sssdddss": []byte("hello3"),
-//	}
-//	for k, v := range kvs {
-//		StoreState(k, v)
-//	}
-//	var v, err = ReadStateSet("key1")
-//	var target = map[string][]byte{
-//		"key1": []byte("hello1"),
-//	}
-//	if err != nil || !reflect.DeepEqual(target, v) {
-//		t.Errorf(`"error ReadStateSet("key1") not found "hello1"`)
-//	}
-//
-//	v, err = ReadStateSet("k")
-//	target = map[string][]byte{
-//		"key1": []byte("hello1"),
-//		"key2": []byte("hello2"),
-//	}
-//
-//	if err != nil || !reflect.DeepEqual(target, v) {
-//		t.Errorf(`"error ReadStateSet("k")`)
-//	}
-//
-//	v, err = ReadStateSet("")
-//	target = map[string][]byte{
-//		"key1":     []byte("hello1"),
-//		"key2":     []byte("hello2"),
-//		"sssdddss": []byte("hello3"),
-//	}
-//	if err != nil || !reflect.DeepEqual(target, v) {
-//		t.Errorf(`"error ReadStateSet("k")`)
-//	}
-//
-//	v, err = ReadStateSet("no key")
-//	target = map[string][]byte{}
-//
-//	if err != nil || !reflect.DeepEqual(target, v) {
-//		t.Errorf(`"error ReadStateSet("k")`)
-//	}
-//	for k := range kvs { // clear the test data
-//		DelState(k)
-//	}
-//}
+	db, err := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
+	persister := New(db)
 
-func TestGetHeightofChain(t *testing.T) {
-	//GetHeightofChain()
+
+	err = persister.StoreState(k, v1)
+	if err != nil {
+		t.Errorf(`error type %v : StoreState(%q, %v)`, err, k, v1)
+	}
+	value, err := persister.ReadState(k)
+	if err != nil || bytes.Compare(value, v1) != 0 {
+		t.Errorf(`error type %v : ReadState(%q) = %v, actual: %v`, err, k, value, v1)
+	}
+
+	err = persister.StoreState(k, v2)
+	if err != nil {
+		t.Errorf(`error type %v : StoreState(%q, %v)`, err, k, v2)
+	}
+
+	value2, err := persister.ReadState(k)
+	if err != nil || bytes.Compare(value2, v2) != 0 {
+		t.Errorf(`error type %v : ReadState(%q) = %v, actual: %v`, err, k, value2, v2)
+	}
+
+
+	nk := "no_exists_key"
+	err = persister.DelState(nk)
+	if err != nil {
+		t.Errorf(`error type %v : DelState(%q)`, err, nk)
+	}
+
+	persister.DelState(k)
+	_, err = persister.ReadState(k)
+	if err != nil {
+		assert.EqualError(t, err, "db not found", "should not read a deleted item")
+	}
+}
+
+func TestReadStateSet(t *testing.T) {
+	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
+	persister := New(db)
+	ast := assert.New(t)
+
+	kvs := map[string][]byte{
+		"key1":     []byte("hello1"),
+		"key2":     []byte("hello2"),
+		"sssdddss": []byte("hello3"),
+	}
+
+	for k, v := range kvs {
+		persister.StoreState(k, v)
+	}
+
+	v, err := persister.ReadStateSet("key1")
+	var target = map[string][]byte{
+		"key1": []byte("hello1"),
+	}
+	ast.Nil(err, "error ReadStateSet('key1') not found 'hello1'")
+	ast.Equal(target, v, "error ReadStateSet('key1') not found 'hello1'")
+
+	v, err = persister.ReadStateSet("k")
+	target = map[string][]byte{
+		"key1": []byte("hello1"),
+		"key2": []byte("hello2"),
+	}
+	ast.Nil(err, "error ReadStateSet('k')")
+	ast.Equal(target, v, "error ReadStateSet('k')")
+
+
+	v, err = persister.ReadStateSet("")
+	target = map[string][]byte{
+		"key1":     []byte("hello1"),
+		"key2":     []byte("hello2"),
+		"sssdddss": []byte("hello3"),
+	}
+	ast.Nil(err, "error ReadStateSet('')")
+	ast.Equal(target, v, "error ReadStateSet('')")
+
+	v, err = persister.ReadStateSet("no key")
+	ast.Equal(0, len(v), "error ReadStateSet('no key')")
+
+	for k := range kvs { // clear the test data
+		persister.DelState(k)
+	}
 }

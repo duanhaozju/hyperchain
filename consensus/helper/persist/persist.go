@@ -65,10 +65,13 @@ func (persister *persisterImpl) ReadStateSet(prefix string) (map[string][]byte, 
 		err := errors.New(fmt.Sprintf("Cannot find key with %s in database", prefixRaw))
 		return nil, err
 	}
-	for ; bytes.HasPrefix(it.Key(), prefixRaw); it.Next() {
+	for ; bytes.HasPrefix(it.Key(), prefixRaw); {
 		key := string(it.Key())
 		key = key[len("consensus."):]
 		ret[key] = append([]byte(nil), it.Value()...)
+		if !it.Next() {
+			break
+		}
 	}
 	it.Release()
 	return ret, nil

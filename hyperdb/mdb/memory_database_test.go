@@ -193,6 +193,23 @@ func TestMemDatabase_Iterator(t *testing.T) {
 	}
 }
 
+func TestMemBatch_Seek(t *testing.T) {
+	db, _ := NewMemDatabase(common.DEFAULT_NAMESPACE)
+	for _, kv := range expect {
+		db.Put([]byte(kv.key), kv.value)
+	}
+	iter := db.NewIterator([]byte("key"))
+	if !iter.Seek([]byte("-")) || bytes.Compare(iter.Key(), []byte("-")) != 0 || bytes.Compare(iter.Value(), []byte("value-")) != 0{
+		t.Error("iterator seek for key failed")
+	}
+	if !iter.Seek([]byte("key")) || bytes.Compare(iter.Key(), []byte("key")) != 0 || bytes.Compare(iter.Value(), []byte("value")) != 0{
+		t.Error("iterator seek for key failed")
+	}
+	if !iter.Seek([]byte("key1")) || bytes.Compare(iter.Key(), []byte("key1")) != 0 || bytes.Compare(iter.Value(), []byte("value1")) != 0{
+		t.Error("iterator seek for key failed")
+	}
+}
+
 func checkEqual(iter hdb.Iterator, expect []KV) (equal bool) {
 	defer func() {
 		if r := recover(); r != nil {
