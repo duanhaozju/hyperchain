@@ -5,9 +5,6 @@ package rbft
 import (
 	"encoding/base64"
 	"sync/atomic"
-
-	"hyperchain/consensus/helper/persist"
-
 	"github.com/golang/protobuf/proto"
 )
 
@@ -258,7 +255,7 @@ func (rbft *rbftImpl) initRecovery() consensusEvent {
 	rbft.timerMgr.startTimer(RECOVERY_RESTART_TIMER, event, rbft.eventMux)
 
 	// send RecoveryResponse to itself
-	height, curHash := persist.GetBlockHeightAndHash(rbft.namespace)
+	height, curHash := rbft.persister.GetBlockHeightAndHash(rbft.namespace)
 	genesis := rbft.getGenesisInfo()
 	rc := &RecoveryResponse{
 		ReplicaId:     rbft.id,
@@ -293,7 +290,7 @@ func (rbft *rbftImpl) recvRecovery(recoveryInit *RecoveryInit) consensusEvent {
 		return nil
 	}
 
-	height, curHash := persist.GetBlockHeightAndHash(rbft.namespace)
+	height, curHash := rbft.persister.GetBlockHeightAndHash(rbft.namespace)
 	genesis := rbft.getGenesisInfo()
 
 	rc := &RecoveryResponse{

@@ -20,6 +20,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"hyperchain/hyperdb"
 )
 
 // rbftImpl is the core struct of rbft module, which handles all functions about consensus
@@ -49,15 +50,13 @@ type rbftImpl struct {
 
 	helper helper.Stack // send message to other components of system
 
-	//rbftManager    events.Manager // manage rbft event
-	//rbftEventQueue events.Queue   // transfer PBFT related event
-
 	eventMux         *event.TypeMux
 	batchSub         event.Subscription // subscription channel for all events posted from consensus sub-modules
 	close            chan bool	// channel to close this event process
 
 	config *common.Config  // get configuration info
 	logger *logging.Logger // write logger to record some info
+	persister persist.Persister
 
 	normal   uint32 // system is normal or not
 	poolFull uint32 // txPool is full or not
@@ -68,6 +67,13 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 	var err error
 	rbft := &rbftImpl{}
 	rbft.logger = common.GetLogger(namespace, "consensus")
+
+	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
+	if err != nil {
+		return nil, err
+	}
+	rbft.persister = persist.New(db)
+
 	rbft.namespace = namespace
 	rbft.helper = h
 	rbft.config = config
@@ -81,10 +87,6 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 	rbft.K = uint64(10)
 	rbft.logMultiplier = uint64(4)
 	rbft.L = rbft.logMultiplier * rbft.K // log size
-
-	//rbftManage manage consensus events
-	//rbft.rbftManager = events.NewManagerImpl(rbft.namespace)
-	//rbft.rbftManager.SetReceiver(rbft)
 
 	rbft.initMsgEventMap()
 
@@ -1340,7 +1342,8 @@ func (rbft *rbftImpl) moveWatermarks(n uint64) {
 	rbft.storeMgr.moveWatermarks(rbft, h)
 
 	rbft.h = h
-	err := persist.StoreState(rbft.namespace, "rbft.h", []byte(strconv.FormatUint(h, 10)))
+
+	err := rbft.persister.StoreState("rbft.h", []byte(strconv.FormatUint(h, 10)))
 	if err != nil {
 		panic("persist rbft.h failed " + err.Error())
 	}

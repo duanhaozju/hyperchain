@@ -10,46 +10,53 @@ import (
 	"encoding/base64"
 	ndb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
-	"hyperchain/hyperdb"
+	"hyperchain/hyperdb/db"
 )
 
-// StoreState stores a key,value pair to the database with the given namespace
-func StoreState(namespace string, key string, value []byte) error {
-	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
-	if err != nil {
-		return err
+type Persister interface {
+	StoreState(key string, value []byte) error
+	DelState(key string) error
+	ReadState(key string) ([]byte, error)
+	ReadStateSet(prefix string) (map[string][]byte, error)
+	GetBlockchainInfo(namespace string) *types.Chain
+	GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte)
+	GetBlockHeightAndHash(namespace string) (uint64, string)
+	GetHeightOfChain(namespace string) uint64
+	GetGenesisOfChain(namespace string) (error, uint64)
+}
+
+type persisterImpl struct {
+	db     db.Database
+}
+
+func New(db db.Database) *persisterImpl {
+	persister := &persisterImpl{
+		db:	db,
 	}
-	return db.Put([]byte("consensus."+key), value)
+	return persister
+}
+
+// StoreState stores a key,value pair to the database with the given namespace
+func (persister *persisterImpl) StoreState(key string, value []byte) error {
+	return persister.db.Put([]byte("consensus."+key), value)
 }
 
 // DelState removes a key,value pair from the database with the given namespace
-func DelState(namesapce string, key string) error {
-	db, err := hyperdb.GetDBConsensusByNamespace(namesapce)
-	if err != nil {
-		return err
-	}
-	return db.Delete([]byte("consensus." + key))
+func (persister *persisterImpl) DelState(key string) error {
+	return persister.db.Delete([]byte("consensus." + key))
 }
 
 // ReadState retrieves a value to a key from the database with the given namespace
-func ReadState(namespace string, key string) ([]byte, error) {
-	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
-	if err != nil {
-		return nil, err
-	}
-	return db.Get([]byte("consensus." + key))
+func (persister *persisterImpl) ReadState(key string) ([]byte, error) {
+	return persister.db.Get([]byte("consensus." + key))
 }
 
 // ReadStateSet retrieves all key-value pairs where the key starts with prefix from the database with the given namespace
-func ReadStateSet(namespace string, prefix string) (map[string][]byte, error) {
-	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
-	if err != nil {
-		return nil, err
-	}
+func (persister *persisterImpl) ReadStateSet(prefix string) (map[string][]byte, error) {
 	prefixRaw := []byte("consensus." + prefix)
 
 	ret := make(map[string][]byte)
-	it := db.NewIterator(prefixRaw)
+	it := persister.db.NewIterator(prefixRaw)
 	if it == nil {
 		err := errors.New(fmt.Sprint("Can't get Iterator"))
 		return nil, err
@@ -69,30 +76,30 @@ func ReadStateSet(namespace string, prefix string) (map[string][]byte, error) {
 
 // GetBlockchainInfo waits until the executor module executes to a checkpoint then returns the blockchain info with the
 // given namespace
-func GetBlockchainInfo(namespace string) *types.Chain {
+func (persister *persisterImpl) GetBlockchainInfo(namespace string) *types.Chain {
 	bcInfo := ndb.GetChainUntil(namespace)
 	return bcInfo
 }
 
 // GetCurrentBlockInfo returns the current blockchain info with the given namespace immediately
-func GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte) {
+func (persister *persisterImpl) GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte) {
 	info := ndb.GetChainCopy(namespace)
 	return info.Height, info.LatestBlockHash, info.ParentBlockHash
 }
 
 // GetBlockHeightAndHash returns the current block height and hash with the given namespace immediately
-func GetBlockHeightAndHash(namespace string) (uint64, string) {
+func (persister *persisterImpl) GetBlockHeightAndHash(namespace string) (uint64, string) {
 	bcInfo := ndb.GetChainCopy(namespace)
 	hash := base64.StdEncoding.EncodeToString(bcInfo.LatestBlockHash)
 	return bcInfo.Height, hash
 }
 
 // GetHeightOfChain returns the current block height with the given namespace immediately
-func GetHeightOfChain(namespace string) uint64 {
+func (persister *persisterImpl) GetHeightOfChain(namespace string) uint64 {
 	return ndb.GetHeightOfChain(namespace)
 }
 
 // GetGenesisOfChain returns the genesis block info of the ledger with the given namespace
-func GetGenesisOfChain(namespace string) (error, uint64) {
+func (persister *persisterImpl) GetGenesisOfChain(namespace string) (error, uint64) {
 	return ndb.GetGenesisTag(namespace)
 }
