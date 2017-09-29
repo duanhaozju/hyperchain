@@ -4,7 +4,7 @@ package runtime
 
 import (
 	"hyperchain/common"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/state"
 	"hyperchain/core/vm/evm"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
@@ -27,7 +27,7 @@ type Config struct {
 	DisableJit  bool // "disable" so it's enabled by default
 	Debug       bool
 
-	State     *hyperstate.StateDB
+	State     *state.StateDB
 	GetHashFn func(n uint64) common.Hash
 
 	logs           []evm.StructLog
@@ -79,14 +79,14 @@ func setDefaults(cfg *Config) {
 // Executes sets up a in memory, temporarily, environment for the execution of
 // the given code. It enabled the JIT by default and make sure that it's restored
 // to it's original state afterwards.
-func Execute(db db.Database, code, input []byte, cfg *Config) ([]byte, *hyperstate.StateDB, []evm.StructLog, error) {
+func Execute(db db.Database, code, input []byte, cfg *Config) ([]byte, *state.StateDB, []evm.StructLog, error) {
 	if cfg == nil {
 		cfg = new(Config)
 	}
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		cfg.State = hyperstate.NewRaw(db, 0, "global", cfg.conf)
+		cfg.State = state.NewRaw(db, 0, "global", cfg.conf)
 	}
 	var (
 		vmenv    = NewEnv(cfg, cfg.State)
@@ -117,7 +117,7 @@ func Create(db db.Database, input []byte, cfg *Config) ([]byte, common.Address, 
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		cfg.State = hyperstate.NewRaw(db, 0, "global", cfg.conf)
+		cfg.State = state.NewRaw(db, 0, "global", cfg.conf)
 	}
 	var (
 		vmenv  = NewEnv(cfg, cfg.State)
@@ -161,17 +161,17 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, error) {
 
 func InitConf() *common.Config {
 	conf := common.NewRawConfig()
-	conf.Set(hyperstate.StateObjectBucketSize, 1000003)
-	conf.Set(hyperstate.StateObjectBucketLevelGroup, 5)
-	conf.Set(hyperstate.StateObjectBucketCacheSize, 100000)
-	conf.Set(hyperstate.StateObjectDataNodeCacheSize, 100000)
+	conf.Set(state.StateObjectBucketSize, 1000003)
+	conf.Set(state.StateObjectBucketLevelGroup, 5)
+	conf.Set(state.StateObjectBucketCacheSize, 100000)
+	conf.Set(state.StateObjectDataNodeCacheSize, 100000)
 
-	conf.Set(hyperstate.StateBucketSize, 1000003)
-	conf.Set(hyperstate.StateBucketLevelGroup, 5)
-	conf.Set(hyperstate.StateBucketCacheSize, 100000)
-	conf.Set(hyperstate.StateDataNodeCacheSize, 100000)
+	conf.Set(state.StateBucketSize, 1000003)
+	conf.Set(state.StateBucketLevelGroup, 5)
+	conf.Set(state.StateBucketCacheSize, 100000)
+	conf.Set(state.StateDataNodeCacheSize, 100000)
 
-	conf.Set(hyperstate.GlobalDataNodeCacheSize, 100000)
-	conf.Set(hyperstate.GlobalDataNodeCacheLength, 20)
+	conf.Set(state.GlobalDataNodeCacheSize, 100000)
+	conf.Set(state.GlobalDataNodeCacheLength, 20)
 	return conf
 }

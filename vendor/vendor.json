@@ -9,6 +9,18 @@
 			"revisionTime": "2017-06-30T14:11:02Z"
 		},
 		{
+			"checksumSHA1": "5+mDl1Q3txX5Ld5OA92FZXy0DPg=",
+			"path": "github.com/ToQoz/gopwt/assert",
+			"revision": "828bf6130d8d504f500b625f2315b6f024dd475e",
+			"revisionTime": "2016-09-08T17:04:13Z"
+		},
+		{
+			"checksumSHA1": "ZanKlIpt9gLzNQd01AA106iXzIU=",
+			"path": "github.com/ToQoz/gopwt/translatedassert",
+			"revision": "828bf6130d8d504f500b625f2315b6f024dd475e",
+			"revisionTime": "2016-09-08T17:04:13Z"
+		},
+		{
 			"checksumSHA1": "BNhHkda5O2SrTrR4ZnLYBLvnJW4=",
 			"path": "github.com/abiosoft/ishell",
 			"revision": "882d93fdb8756b26764a5e225dbcf0a416375fc3",

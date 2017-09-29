@@ -119,21 +119,17 @@ algo = "RBFT"
     interval    = "500s"
     enable      = false
 
-    [executor.buckettree.global]
-    globalDataNodeCacheSize     = 10000
-    globalDataNodeCacheLength   = 20
-
     [executor.buckettree.state]
-    size                = 1000003
-    levelGroup          = 5
-    bucketCacheSize     = 100000
-    dataNodeCacheSize   = 100000
+    capacity         = 1000003
+    aggreation       = 5
+    merklenode_cache = 100000
+    bucket_cache     = 100000
 
     [executor.buckettree.storage]
-     size               = 1000003
-     levelGroup         = 5
-     bucketCacheSize    = 100000
-     dataNodeCacheSize  = 100000
+     capacity         = 1000003
+     aggreation       = 5
+     merklenode_cache = 100000
+     bucket_cache     = 100000
 
 ############################################################################################################
 #
@@ -158,6 +154,7 @@ max_log_size    = "200mb"  # "mb", "kb"
     hyperdb     = "NOTICE"
     eventhub    = "NOTICE"
     executor    = "NOTICE"
+    buckettree  = "NOTICE"
 
 ############################################################################################################
 #

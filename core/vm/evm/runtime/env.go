@@ -5,7 +5,7 @@ package runtime
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/evm"
@@ -16,7 +16,7 @@ import (
 type Env struct {
 	namespace  string
 	depth      int
-	state      *hyperstate.StateDB
+	state      *state.StateDB
 	origin     common.Address
 	coinbase   common.Address
 	number     *big.Int
@@ -29,7 +29,7 @@ type Env struct {
 }
 
 // NewEnv returns a new vm.Environment
-func NewEnv(cfg *Config, state *hyperstate.StateDB) vm.Environment {
+func NewEnv(cfg *Config, state *state.StateDB) vm.Environment {
 	env := &Env{
 		state:      state,
 		origin:     cfg.Origin,

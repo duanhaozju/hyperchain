@@ -184,3 +184,6 @@ func (b *ldbBatch) Write() error {
 func (b *ldbBatch) Len() int {
 	return b.b.Len()
 }
+
+type Iterator struct {
+}

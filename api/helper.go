@@ -4,7 +4,7 @@ import (
 	"errors"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/ledger/state"
 	"hyperchain/core/vm"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/hyperdb"
@@ -16,6 +16,11 @@ import (
 const (
 	rateLimitEnable = "flow.control.ratelimit.enable"
 
+	BLOCK               = "block"
+	TRANSACTION         = "transaction"
+	RECEIPT             = "receipt"
+	DISCARDTXS          = "discard transactions"
+	DISCARDTX           = "discard transaction"
 	transactionPeak     = "flow.control.ratelimit.txRatePeak"
 	transactionFillRate = "flow.control.ratelimit.txFillRate"
 
@@ -27,17 +32,9 @@ const (
 	paillpublickeyG       = "global.configs.hmpublickey.G"
 	snapshotManifestPath  = "executor.archive.snapshot_manifest"
 
-	BLOCK				= "block"
-	TRANSACTION         = "transaction"
 	CONTRACT            = "contract"
-	RECEIPT				= "receipt"
-
 	DEFAULT_GAS      int64 = 100000000
 	DEFAULT_GAS_PRICE int64 = 10000
-
-	DISCARDTXS			= "discard transactions"
-	DISCARDTX			= "discard transaction"
-
 )
 
 // getRateLimitEnable returns rate limit switch value.
@@ -112,7 +109,7 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	return hyperstate.New(common.BytesToHash(latestBlk.MerkleRoot), db, archiveDb, conf, height, namespace)
+	return state.New(common.BytesToHash(latestBlk.MerkleRoot), db, archiveDb, conf, height)
 }
 
 // NewSnapshotStateDb creates a new state db from given root.
@@ -124,7 +121,7 @@ func NewSnapshotStateDb(conf *common.Config, filterId string, merkleRoot []byte,
 	closer := func() {
 		db.Close()
 	}
-	state, err := hyperstate.New(common.BytesToHash(merkleRoot), db, nil, conf, height, namespace)
+	state, err := state.New(common.BytesToHash(merkleRoot), db, nil, conf, height)
 	return state, closer, err
 }
 

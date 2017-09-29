@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"hyperchain/common"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/state"
 	"hyperchain/core/vm/evm"
 	"hyperchain/hyperdb/mdb"
 )
@@ -79,7 +79,7 @@ func TestExecute(t *testing.T) {
 
 func TestCall(t *testing.T) {
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
-	state := hyperstate.NewRaw(db, 0, "global", InitConf())
+	state := state.NewRaw(db, 0, "global", InitConf())
 	address := common.HexToAddress("0x0a")
 	state.CreateAccount(address)
 	state.SetCode(address, []byte{
