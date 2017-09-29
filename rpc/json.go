@@ -292,17 +292,15 @@ func (c *jsonCodecImpl) CreateErrorResponseWithInfo(id interface{}, namespace st
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
 func (s *jsonCodecImpl) CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{} {
 	if isHexNum(reflect.TypeOf(event)) {
-		//return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace, Method: service + NotificationMethodSuffix,
 		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace,
 			Result: jsonSubscription{Subscription: fmt.Sprintf(`%s`, subid), Data: fmt.Sprintf(`%#x`, event)}}
 	}
 
-	//return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace, Method: service + NotificationMethodSuffix,
 	return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace,
 		Result: jsonSubscription{Event: method, Subscription: fmt.Sprintf(`%s`, subid), Data: event}}
 }
 
-// Write message to client
+// Write will write response to client.
 func (c *jsonCodecImpl) Write(res interface{}) error {
 	c.encMu.Lock()
 	defer c.encMu.Unlock()
@@ -310,6 +308,7 @@ func (c *jsonCodecImpl) Write(res interface{}) error {
 	return c.e.Encode(res)
 }
 
+// WriteNotify will write websocket message to client.
 func (c *jsonCodecImpl) WriteNotify(res interface{}) error {
 	c.encMu.Lock()
 	defer c.encMu.Unlock()
@@ -338,7 +337,7 @@ func (c *jsonCodecImpl) WriteNotify(res interface{}) error {
 	return nil
 }
 
-// Close the underlying connection
+// Close will close the underlying connection.
 func (c *jsonCodecImpl) Close() {
 	c.closer.Do(func() {
 		close(c.closed)
@@ -346,7 +345,7 @@ func (c *jsonCodecImpl) Close() {
 	})
 }
 
-// Closed returns a channel which will be closed when Close is called
+// Closed returns a channel which will be closed when Close is called.
 func (c *jsonCodecImpl) Closed() <-chan interface{} {
 	return c.closed
 }

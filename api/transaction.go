@@ -56,19 +56,19 @@ type SendTxArgs struct {
 
 type TransactionResult struct {
 	Version     string         `json:"version"`					// hyperchain version when the transaction is executed
-	Hash        common.Hash    `json:"hash"`
-	BlockNumber *BlockNumber   `json:"blockNumber,omitempty"`
-	BlockHash   *common.Hash   `json:"blockHash,omitempty"`
-	TxIndex     *Number        `json:"txIndex,omitempty"`
-	From        common.Address `json:"from"`
-	To          common.Address `json:"to"`
-	Amount      *Number        `json:"amount,omitempty"`
+	Hash        common.Hash    `json:"hash"`					// transaction hash
+	BlockNumber *BlockNumber   `json:"blockNumber,omitempty"`	// block number that transaction belongs to
+	BlockHash   *common.Hash   `json:"blockHash,omitempty"`		// block hash that transaction belongs to
+	TxIndex     *Number        `json:"txIndex,omitempty"`		// the index of transaction in the block
+	From        common.Address `json:"from"`					// transaction sender
+	To          common.Address `json:"to"`						// transaction receiver
+	Amount      *Number        `json:"amount,omitempty"`		// the amount of transaction
 	Timestamp   int64   `json:"timestamp"`
 	Nonce       int64   `json:"nonce"`
-	ExecuteTime *Number `json:"executeTime,omitempty"`
+	ExecuteTime *Number `json:"executeTime,omitempty"`			// the time it takes to execute the transaction
 	Payload     string  `json:"payload,omitempty"`
-	Invalid     bool    `json:"invalid,omitempty"`
-	InvalidMsg  string  `json:"invalidMsg,omitempty"`
+	Invalid     bool    `json:"invalid,omitempty"`				// indicate whether it is invalid or not
+	InvalidMsg  string  `json:"invalidMsg,omitempty"`			// if Invalid is true, printing invalid message
 }
 
 // NewPublicTransactionAPI creates and returns a new Transaction instance for given namespace name.
