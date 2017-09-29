@@ -46,6 +46,14 @@ func (db *MemDatabase) Put(key []byte, value []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
+	// check existence
+	for _, kv := range db.kvs {
+		if common.Bytes2Hex(key) == kv.key {
+			kv.value = CopyBytes(value)
+			return
+		}
+	}
+
 	db.kvs = append(db.kvs, KV{
 		key:   common.Bytes2Hex(key),
 		value: CopyBytes(value),
