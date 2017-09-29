@@ -8,7 +8,7 @@ package consensus
 // This file defines the Consenter interface, which manages all
 // operations related to a certain consenter.
 
-// Consenter provides functions related to consensus to be invoked by outer services.
+// Consenter provides functions related to consensus invoked by outer services.
 // Every consensus algorithm needs to implement this interface.
 type Consenter interface {
 	// RecvMsg is called serially with incoming messages from gRPC.
@@ -24,7 +24,8 @@ type Consenter interface {
 	Close()
 
 	// GetStatus returns the current status of consensus service,
-	// normal means this system is working well or not, and full
-	// means the txPool in this node is full or not. If this
+	// normal means this system is working well, and full
+	// means this node can't process transactions any more. If this node
+	// is abnormal or full, it can't work in that moment.
 	GetStatus() (normal bool, full bool)
 }

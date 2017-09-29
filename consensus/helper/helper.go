@@ -26,26 +26,47 @@ type helper struct {
 type Stack interface {
 	// InnerBroadcast broadcast the consensus message to all other vp nodes
 	InnerBroadcast(msg *pb.Message) error
+
 	// InnerUnicast unicast the transaction message to a specific vp node
 	InnerUnicast(msg *pb.Message, to uint64) error
+
 	// Execute transfers the transactions decided by consensus to outer to execute these transactions
 	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
+
 	// UpdateState transfers the UpdateStateEvent to outer
 	UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error
+
 	// ValidateBatch transfers the ValidationEvent to outer
 	ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
+
 	// VcReset reset vid when view change is done, clear the validate cache larger than seqNo
 	VcReset(seqNo uint64) error
+
 	// InformPrimary send the primary id to update info after negotiate view or view change
 	InformPrimary(primary uint64) error
+
 	// BroadcastAddNode broadcast addnode message to others
 	BroadcastAddNode(msg *pb.Message) error
+
 	// BroadcastDelNode broadcast delnode message to others
 	BroadcastDelNode(msg *pb.Message) error
+
 	// UpdateTable inform to update routing table
 	UpdateTable(payload []byte, flag bool) error
+
 	// SendFilterEvent sends event to subscription system, then the system would return message to clients which subscribe this message.
 	SendFilterEvent(informType int, message ...interface{}) error
+}
+
+// NewHelper initializes a helper object
+func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *helper {
+
+	h := &helper{
+		innerMux:    innerMux,
+		externalMux: externalMux,
+	}
+
+	return h
 }
 
 // InnerBroadcast broadcasts the consensus message between VP nodes
@@ -213,17 +234,6 @@ func (h *helper) UpdateTable(payload []byte, flag bool) error {
 	h.innerMux.Post(updateTable)
 
 	return nil
-}
-
-// NewHelper initializes a helper object
-func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *helper {
-
-	h := &helper{
-		innerMux:    innerMux,
-		externalMux: externalMux,
-	}
-
-	return h
 }
 
 // PostExternal posts event to outer event mux

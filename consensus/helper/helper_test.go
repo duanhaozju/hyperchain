@@ -11,50 +11,52 @@ import (
 	"github.com/golang/protobuf/proto"
 	"hyperchain/manager/event"
 	pb "hyperchain/manager/protos"
-	"reflect"
 	"testing"
 	"time"
+	"github.com/stretchr/testify/assert"
+	"hyperchain/manager/appstat"
+	"hyperchain/consensus"
 )
 
 func TestNewHelper(t *testing.T) {
-	m := &event.TypeMux{}
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+
 	h := &helper{
-		innerMux: m,
+		innerMux: 		im,
+		externalMux: 	em,
 	}
 
-	help := NewHelper(m)
-	if !reflect.DeepEqual(help, h) {
-		t.Error("error NewHelper")
-	}
+	help := NewHelper(im, em)
+	assert.Equal(t, h, help, "error NewHelper")
 }
 
 func TestInnerBroadcast(t *testing.T) {
-	mux := &event.TypeMux{}
-	h := NewHelper(mux)
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+	h := NewHelper(im, em)
 	msg := &pb.Message{Type: pb.Message_CONSENSUS, Id: 1}
 
 	tmpMsg, _ := proto.Marshal(msg)
 	broadcastEvent := event.BroadcastConsensusEvent{
 		Payload: tmpMsg,
 	}
-	sub := mux.Subscribe(event.BroadcastConsensusEvent{})
+	sub := im.Subscribe(event.BroadcastConsensusEvent{})
 
-	h.InnerBroadcast(msg)
-	go func() {
-		select {
-		case e := <-sub.Chan():
-			if !reflect.DeepEqual(e.Data, broadcastEvent) {
-				t.Fatal("Received wrong message from sub.Chan")
-			}
-		case <-time.After(1 * time.Second):
-			t.Fatal("Timed out waiting for message to fire")
-		}
-	}()
+	go h.InnerBroadcast(msg)
+
+	select {
+	case e := <-sub.Chan():
+		assert.Equal(t, broadcastEvent, e.Data, "Received wrong message from sub.Chan")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for message to fire")
+	}
 }
 
 func TestInnerUnicast(t *testing.T) {
-	mux := &event.TypeMux{}
-	h := NewHelper(mux)
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+	h := NewHelper(im, em)
 	msg := &pb.Message{Type: pb.Message_CONSENSUS, Id: 2}
 	tmpMsg, _ := proto.Marshal(msg)
 
@@ -62,127 +64,228 @@ func TestInnerUnicast(t *testing.T) {
 		Payload: tmpMsg,
 		PeerId:  100,
 	}
-	sub := mux.Subscribe(event.TxUniqueCastEvent{})
-	h.InnerUnicast(msg, 100)
-	go func() {
-		select {
-		case e := <-sub.Chan():
-			if !reflect.DeepEqual(e.Data, unicastEvent) {
-				t.Fatal("Received wrong message from sub.Chan")
-			}
-		case <-time.After(1 * time.Second):
-			t.Fatal("Timed out waiting for message to fire")
-		}
-	}()
+	sub := im.Subscribe(event.TxUniqueCastEvent{})
+	go h.InnerUnicast(msg, 100)
+
+	select {
+	case e := <-sub.Chan():
+		assert.Equal(t, unicastEvent, e.Data, "Received wrong message from sub.Chan")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for message to fire")
+	}
 }
 
 func TestExecute(t *testing.T) {
-	mux := &event.TypeMux{}
-	h := NewHelper(mux)
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+	h := NewHelper(im, em)
 	timestamp := time.Now().Unix()
 
-	sub := mux.Subscribe(event.CommitOrRollbackBlockEvent{})
-	go func() {
-		select {
-		case <-sub.Chan():
-			{
+	sub := im.Subscribe(event.CommitEvent{})
 
-			}
-		case <-time.After(1 * time.Second):
-			t.Fatal("Timed out waiting for message to fire")
+	go h.Execute(1, "hhhhhaaaaahhhh", true, false, timestamp)
+
+	select {
+	case e := <-sub.Chan():
+		if commit, ok :=  e.Data.(event.CommitEvent); !ok{
+			t.Error("Received wrong type message from sub.Chan")
+		} else {
+			assert.Equal(t, "hhhhhaaaaahhhh", commit.Hash)
 		}
-	}()
-	h.Execute(1, "hhhhhaaaaahhhh", true, false, timestamp)
-
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for message to fire")
+	}
 }
 
 func TestUpdateState(t *testing.T) {
-	mux := &event.TypeMux{}
-	h := NewHelper(mux)
-	updateState := &pb.UpdateStateMessage{Id: 12, SeqNo: 21}
-
-	tmpMsg, _ := proto.Marshal(updateState)
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+	h := NewHelper(im, em)
 
 	updateStateEvent := event.ChainSyncReqEvent{
-		Payload: tmpMsg,
+		Id:              1,
+		TargetHeight:    10,
+		TargetBlockHash: []byte{1,2,3},
+		Replicas:        nil,
 	}
-	sub := mux.Subscribe(event.ChainSyncReqEvent{})
-	go func() {
-		select {
-		case e := <-sub.Chan():
-			if !reflect.DeepEqual(e.Data, updateStateEvent) {
-				t.Fatal("Received wrong message from sub.Chan")
-			}
-		case <-time.After(1 * time.Second):
-			t.Fatal("Timed out waiting for message to fire")
-		}
-	}()
-	h.UpdateState(updateState)
+	sub := im.Subscribe(event.ChainSyncReqEvent{})
+
+	go h.UpdateState(1,10,[]byte{1,2,3},nil)
+
+	select {
+	case e := <-sub.Chan():
+		assert.Equal(t, updateStateEvent, e.Data, "Received wrong message from sub.Chan")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for message to fire")
+	}
 }
 
 func TestValidateBatch(t *testing.T) {
-	mux := &event.TypeMux{}
-	h := NewHelper(mux)
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+	h := NewHelper(im, em)
 	timestamp := time.Now().Unix()
-	validateEvent := event.ExeTxsEvent{
-		Transactions: nil,
-		Timestamp:    timestamp,
-		SeqNo:        123,
-		View:         123,
-		IsPrimary:    true,
+	validateEvent := event.ValidationEvent{
+		Digest: 		"something",
+		Transactions: 	nil,
+		Timestamp:    	timestamp,
+		SeqNo:        	123,
+		View:         	123,
+		IsPrimary:    	true,
 	}
-	sub := mux.Subscribe(event.ExeTxsEvent{})
-	go func() {
-		select {
-		case e := <-sub.Chan():
-			if !reflect.DeepEqual(e.Data, validateEvent) {
-				t.Fatal("Received wrong message from sub.Chan")
-			}
-		case <-time.After(1 * time.Second):
-			t.Fatal("Timed out waiting for message to fire")
-		}
-	}()
+	sub := im.Subscribe(event.ValidationEvent{})
 
-	h.ValidateBatch(nil, timestamp, 123, 123, true)
+	go h.ValidateBatch("something",nil, timestamp, 123, 123, true)
+
+	select {
+	case e := <-sub.Chan():
+		assert.Equal(t, validateEvent, e.Data, "Received wrong message from sub.Chan")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for message to fire")
+	}
 }
 
 func TestVcReset(t *testing.T) {
-	mux := &event.TypeMux{}
-	h := NewHelper(mux)
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+	h := NewHelper(im, em)
 	vcResetEvent := event.VCResetEvent{
 		SeqNo: 12345,
 	}
-	sub := mux.Subscribe(vcResetEvent)
-	go func() {
-		select {
-		case e := <-sub.Chan():
-			if !reflect.DeepEqual(e.Data, vcResetEvent) {
-				t.Fatal("Received wrong message from sub.Chan")
-			}
-		case <-time.After(5 * time.Second):
-			t.Fatal("Timed out waiting for message to fire")
-		}
-	}()
-	h.VcReset(12345)
+	sub := im.Subscribe(vcResetEvent)
+
+	go h.VcReset(12345)
+
+	select {
+	case e := <-sub.Chan():
+		assert.Equal(t, vcResetEvent, e.Data, "Received wrong message from sub.Chan")
+	case <-time.After(5 * time.Second):
+		t.Fatal("Timed out waiting for message to fire")
+	}
 }
 
 func TestInformPrimary(t *testing.T) {
-	mux := &event.TypeMux{}
-	h := NewHelper(mux)
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+	h := NewHelper(im, em)
 	informPrimaryEvent := event.InformPrimaryEvent{
 		Primary: 9,
 	}
-	sub := mux.Subscribe(event.InformPrimaryEvent{})
-	go func() {
-		select {
-		case e := <-sub.Chan():
-			if !reflect.DeepEqual(e.Data, informPrimaryEvent) {
-				t.Fatal("Received wrong message from sub.Chan")
-			}
-		case <-time.After(1 * time.Second):
-			t.Fatal("Timed out waiting for message to fire")
-		}
-	}()
-	h.InformPrimary(9)
+	sub := im.Subscribe(event.InformPrimaryEvent{})
+	go h.InformPrimary(9)
 
+	select {
+	case e := <-sub.Chan():
+		assert.Equal(t, informPrimaryEvent, e.Data, "Received wrong message from sub.Chan")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for message to fire")
+	}
+}
+
+func TestBroadcastAddNode(t *testing.T) {
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+	h := NewHelper(im, em)
+
+	msg := &pb.Message{Type: pb.Message_CONSENSUS, Id: 2}
+	tmpMsg, _ := proto.Marshal(msg)
+	broadcastEvent := event.BroadcastNewPeerEvent{
+		Payload: tmpMsg,
+	}
+
+	sub := im.Subscribe(event.BroadcastNewPeerEvent{})
+	go h.BroadcastAddNode(msg)
+
+	select {
+	case e := <-sub.Chan():
+		assert.Equal(t, broadcastEvent, e.Data, "Received wrong message from sub.Chan")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for message to fire")
+	}
+
+}
+
+func TestBroadcastDelNode(t *testing.T) {
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+	h := NewHelper(im, em)
+	msg := &pb.Message{Type: pb.Message_CONSENSUS, Id: 2}
+	tmpMsg, _ := proto.Marshal(msg)
+	broadcastEvent := event.BroadcastDelPeerEvent{
+		Payload: tmpMsg,
+	}
+	sub := im.Subscribe(event.BroadcastDelPeerEvent{})
+	go h.BroadcastDelNode(msg)
+
+	select {
+	case e := <-sub.Chan():
+		assert.Equal(t, broadcastEvent, e.Data, "Received wrong message from sub.Chan")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for message to fire")
+	}
+}
+
+func TestUpdateTable(t *testing.T) {
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+	h := NewHelper(im, em)
+	msg := &pb.Message{Type: pb.Message_CONSENSUS, Id: 2}
+	tmpMsg, _ := proto.Marshal(msg)
+
+	broadcastEvent := event.UpdateRoutingTableEvent{
+		Payload: tmpMsg,
+		Type:	 true,
+	}
+	sub := im.Subscribe(event.UpdateRoutingTableEvent{})
+	go h.UpdateTable(tmpMsg, true)
+
+	select {
+	case e := <-sub.Chan():
+		assert.Equal(t, broadcastEvent, e.Data, "Received wrong message from sub.Chan")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for message to fire")
+	}
+}
+
+func TestPostExternal(t *testing.T) {
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+	h := NewHelper(im, em)
+	informPrimaryEvent := event.InformPrimaryEvent{
+		Primary: 9,
+	}
+	sub := em.Subscribe(event.InformPrimaryEvent{})
+
+	go h.PostExternal(informPrimaryEvent)
+
+	select {
+	case e := <-sub.Chan():
+		assert.Equal(t, informPrimaryEvent, e.Data, "Received wrong message from sub.Chan")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for message to fire")
+	}
+}
+
+func TestSendFilterEvent(t *testing.T) {
+	im := &event.TypeMux{}
+	em := &event.TypeMux{}
+	h := NewHelper(im, em)
+	msg := "test"
+
+	filterSystemStatusEvent := event.FilterSystemStatusEvent{
+		Module:  appstat.ExceptionModule_Consenus,
+		Status:  appstat.Normal,
+		Subtype: appstat.ExceptionSubType_ViewChange,
+		Message: msg,
+	}
+	sub := em.Subscribe(event.FilterSystemStatusEvent{})
+
+	go h.SendFilterEvent(consensus.FILTER_View_Change_Finish, msg)
+
+	select {
+	case e := <-sub.Chan():
+		assert.Equal(t, filterSystemStatusEvent, e.Data, "Received wrong message from sub.Chan")
+	case <-time.After(1 * time.Second):
+		t.Fatal("Timed out waiting for message to fire")
+	}
 }
