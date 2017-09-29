@@ -50,7 +50,7 @@ func (db *MemDatabase) Put(key []byte, value []byte) error {
 	for _, kv := range db.kvs {
 		if common.Bytes2Hex(key) == kv.key {
 			kv.value = CopyBytes(value)
-			return
+			return nil
 		}
 	}
 
