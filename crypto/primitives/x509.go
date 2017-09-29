@@ -372,16 +372,3 @@ func CheckCertAgainRoot(x509Cert *x509.Certificate, certPool *x509.CertPool) ([]
 
 	return x509Cert.Verify(opts)
 }
-
-// CheckCertAgainstSKAndRoot checks the passed certificate against the passed secretkey and certPool
-func CheckCertAgainstSKAndRoot(x509Cert *x509.Certificate, privateKey interface{}, certPool *x509.CertPool) error {
-	if err := CheckCertPKAgainstSK(x509Cert, privateKey); err != nil {
-		return err
-	}
-
-	if _, err := CheckCertAgainRoot(x509Cert, certPool); err != nil {
-		return err
-	}
-
-	return nil
-}

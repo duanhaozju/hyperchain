@@ -153,6 +153,10 @@ func (bucket Bucket) merge(another Bucket) Bucket {
 }
 
 func (bucket Bucket) computeCryptoHash() []byte {
+	// Short circuit if bucket is empty.
+	if len(bucket) == 0 {
+		return nil
+	}
 	buffer := make([][]byte, len(bucket))
 	for i, entry := range bucket {
 		buffer[i] = entry.getValue()

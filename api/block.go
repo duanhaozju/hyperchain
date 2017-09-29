@@ -3,11 +3,11 @@
 package api
 
 import (
+	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
-	"fmt"
 )
 
 // This file implements the handler of Block service API which
@@ -28,7 +28,7 @@ type BlockResult struct {
 	AvgTime      *Number       `json:"avgTime"`
 	TxCounts     *Number       `json:"txcounts"`
 	MerkleRoot   common.Hash   `json:"merkleRoot"`
-	Transactions []interface{} `json:"transactions,omitempty"`
+	Transactions []interface{} `json:"transactions"`
 }
 
 type StatisticResult struct {
@@ -244,13 +244,13 @@ func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*Blo
 	}
 
 	return &BlockResult{
-		Version:    string(block.Version),
-		Number:     uint64ToBlockNumber(block.Number),
-		Hash:       common.BytesToHash(block.BlockHash),
-		ParentHash: common.BytesToHash(block.ParentHash),
-		WriteTime: block.WriteTime,
-		AvgTime:   int64ToNumber(edb.CalcResponseAVGTime(namespace, block.Number, block.Number)),
-		TxCounts:  int64ToNumber(txCounts),
+		Version:      string(block.Version),
+		Number:       uint64ToBlockNumber(block.Number),
+		Hash:         common.BytesToHash(block.BlockHash),
+		ParentHash:   common.BytesToHash(block.ParentHash),
+		WriteTime:    block.WriteTime,
+		AvgTime:      int64ToNumber(edb.CalcResponseAVGTime(namespace, block.Number, block.Number)),
+		TxCounts:     int64ToNumber(txCounts),
 		MerkleRoot:   common.BytesToHash(block.MerkleRoot),
 		Transactions: transactions,
 	}, nil

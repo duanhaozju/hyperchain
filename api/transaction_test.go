@@ -260,7 +260,7 @@ func Test_GetTransactionReceipt(t *testing.T) {
 	if err.Error() != "lack of param timestamp" {
 		fmt.Println(ref7)
 		fmt.Println(err)
-		t.Errorf("publicTransactionAPI.GetSighHash(args) fail")
+		t.Errorf("publicTransactionAPI.GetSignHash(args) fail")
 	}
 	//from 为空
 	ref7, err = publicTransactionAPI.GetSignHash(args8)
@@ -272,7 +272,7 @@ func Test_GetTransactionReceipt(t *testing.T) {
 	if err != nil {
 		fmt.Println(ref7)
 		fmt.Println(err)
-		t.Errorf("publicTransactionAPI.GetSighHash(args) fail")
+		t.Errorf("publicTransactionAPI.GetSignHash(args) fail")
 	}
 
 	//没有to为部署合约
@@ -280,7 +280,7 @@ func Test_GetTransactionReceipt(t *testing.T) {
 	if err != nil {
 		fmt.Println(ref7)
 		fmt.Println(err)
-		t.Errorf("publicTransactionAPI.GetSighHash(args) fail")
+		t.Errorf("publicTransactionAPI.GetSignHash(args) fail")
 	}
 
 	ref8, err := publicTransactionAPI.GetTransactionsCount()

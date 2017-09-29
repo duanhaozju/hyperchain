@@ -21,7 +21,7 @@ import (
 // can be invoked by client in JSON-RPC request.
 
 var (
-	kec256Hash              = crypto.NewKeccak256Hash("keccak256")
+	kec256Hash         = crypto.NewKeccak256Hash("keccak256")
 	db_not_found_error = db.DB_NOT_FOUND.Error()
 )
 
@@ -33,42 +33,42 @@ type Transaction struct {
 	log         *logging.Logger
 }
 
-// SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
+// SendTxArgs represents the arguments to submit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	From       common.Address  `json:"from"`		// transaction sender address
-	To         *common.Address `json:"to"`		    // transaction receiver address
-	Value      Number         `json:"value"`		// transaction amount
-	Payload    string          `json:"payload"`		// contract payload
-	Signature  string          `json:"signature"`	// signature of sender for the transaction
-	Timestamp  int64           `json:"timestamp"`	// timestamp of the transaction happened
-	Simulate   bool            `json:"simulate"`	// Simulate determines if the transaction requires consensus, if true, no consensus.
-	Nonce      int64           `json:"nonce"`		// 16-bit random decimal number, for example 5956491387995926
-	VmType     string          `json:"type"`		// specify which engine executes contract
+	From      common.Address  `json:"from"`      // transaction sender address
+	To        *common.Address `json:"to"`        // transaction receiver address
+	Value     Number          `json:"value"`     // transaction amount
+	Payload   string          `json:"payload"`   // contract payload
+	Signature string          `json:"signature"` // signature of sender for the transaction
+	Timestamp int64           `json:"timestamp"` // timestamp of the transaction happened
+	Simulate  bool            `json:"simulate"`  // Simulate determines if the transaction requires consensus, if true, no consensus.
+	Nonce     int64           `json:"nonce"`     // 16-bit random decimal number, for example 5956491387995926
+	VmType    string          `json:"type"`      // specify which engine executes contract
 
 	// 1 value for Opcode means upgrading contract, 2 means freezing contract,
 	// 3 means unfreezing contract, 100 means archiving data.
-	Opcode     int32           `json:"opcode"`
+	Opcode int32 `json:"opcode"`
 
 	// Snapshot saves the state of ledger at a moment.
 	// SnapshotId specifies the based ledger when client sends transaction or invokes contract with Simulate=true.
-	SnapshotId string          `json:"snapshotId"`
+	SnapshotId string `json:"snapshotId"`
 }
 
 type TransactionResult struct {
-	Version     string         `json:"version"`					// hyperchain version when the transaction is executed
-	Hash        common.Hash    `json:"hash"`					// transaction hash
-	BlockNumber *BlockNumber   `json:"blockNumber,omitempty"`	// block number that transaction belongs to
-	BlockHash   *common.Hash   `json:"blockHash,omitempty"`		// block hash that transaction belongs to
-	TxIndex     *Number        `json:"txIndex,omitempty"`		// the index of transaction in the block
-	From        common.Address `json:"from"`					// transaction sender
-	To          common.Address `json:"to"`						// transaction receiver
-	Amount      *Number        `json:"amount,omitempty"`		// the amount of transaction
-	Timestamp   int64   `json:"timestamp"`
-	Nonce       int64   `json:"nonce"`
-	ExecuteTime *Number `json:"executeTime,omitempty"`			// the time it takes to execute the transaction
-	Payload     string  `json:"payload,omitempty"`
-	Invalid     bool    `json:"invalid,omitempty"`				// indicate whether it is invalid or not
-	InvalidMsg  string  `json:"invalidMsg,omitempty"`			// if Invalid is true, printing invalid message
+	Version     string         `json:"version"`               // hyperchain version when the transaction is executed
+	Hash        common.Hash    `json:"hash"`                  // transaction hash
+	BlockNumber *BlockNumber   `json:"blockNumber,omitempty"` // block number that transaction belongs to
+	BlockHash   *common.Hash   `json:"blockHash,omitempty"`   // block hash that transaction belongs to
+	TxIndex     *Number        `json:"txIndex,omitempty"`     // the index of transaction in the block
+	From        common.Address `json:"from"`                  // transaction sender
+	To          common.Address `json:"to"`                    // transaction receiver
+	Amount      *Number        `json:"amount,omitempty"`      // the amount of transaction
+	Timestamp   int64          `json:"timestamp"`
+	Nonce       int64          `json:"nonce"`
+	ExecuteTime *Number        `json:"executeTime,omitempty"` // the time it takes to execute the transaction
+	Payload     string         `json:"payload,omitempty"`
+	Invalid     bool           `json:"invalid,omitempty"`    // indicate whether it is invalid or not
+	InvalidMsg  string         `json:"invalidMsg,omitempty"` // if Invalid is true, printing invalid message
 }
 
 // NewPublicTransactionAPI creates and returns a new Transaction instance for given namespace name.
@@ -94,7 +94,7 @@ func NewPublicTransactionAPI(namespace string, eh *manager.EventHub, config *com
 }
 
 // SendTransaction is to create a transaction object, and then post event NewTxEvent,
-// if the sender's balance is enough, return tx hash.
+// if the sender's balance is not enough, account transfer will fail.
 func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	consentor := tran.eh.GetConsentor()
 	normal, full := consentor.GetStatus()
@@ -105,70 +105,17 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	if getRateLimitEnable(tran.config) && tran.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{}
 	}
-	var tx *types.Transaction
 
-	// 1. verify if the parameters are valid
-	realArgs, err := prepareExcute(args, 0)
+	// 1. create a new transaction instance
+	tx, err := prepareTransaction(args, 0, tran.namespace, tran.eh)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	// 2. create a new transaction instance
-	txValue := types.NewTransactionValue(DEFAULT_GAS_PRICE, DEFAULT_GAS,
-		realArgs.Value.Int64(), nil, 0, types.TransactionValue_EVM)
-
-	value, err := proto.Marshal(txValue)
+	// 2. post a event.NewTxEvent event
+	err = postNewTxEvent(args, tx, tran.eh)
 	if err != nil {
-		return common.Hash{}, &common.CallbackError{err.Error()}
-	}
-
-	tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
-	if tran.eh.NodeIdentification() == manager.IdentificationVP {
-		tx.Id = uint64(tran.eh.GetPeerManager().GetNodeId())
-	} else {
-		hash := tran.eh.GetPeerManager().GetLocalNodeHash()
-		if err := tx.SetNVPHash(hash); err != nil {
-			tran.log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
-			return common.Hash{}, &common.CallbackError{Message: "Marshal nvp hash error"}
-		}
-	}
-	tx.Signature = common.FromHex(realArgs.Signature)
-	tx.TransactionHash = tx.Hash().Bytes()
-
-	// 3. check if there is duplicated transaction
-	var exist bool
-	if err, exist = edb.LookupTransaction(tran.namespace, tx.GetHash()); err != nil || exist == true {
-		if exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash); exist {
-			return common.Hash{}, &common.RepeadedTxError{TxHash: common.ToHex(tx.TransactionHash)}
-		}
-	}
-
-	// 4. verify transaction signature
-	if !tx.ValidateSign(tran.eh.GetAccountManager().Encryption, kec256Hash) {
-		tran.log.Error("invalid signature")
-		return common.Hash{}, &common.SignatureInvalidError{Message: "Invalid signature, tx hash " + common.ToHex(tx.TransactionHash)}
-	}
-
-	// 5. post transaction event
-	if tran.eh.NodeIdentification() == manager.IdentificationNVP {
-		ch := make(chan bool)
-		go tran.eh.GetEventObject().Post(event.NewTxEvent{
-			Transaction: tx,
-			Simulate:    args.Simulate,
-			Ch:          ch,
-		})
-		res := <-ch
-		close(ch)
-		if res == false {
-			// nvp node fails to forward tx to vp node
-			return common.Hash{}, &common.CallbackError{Message: "Send tx to nvp failed."}
-		}
-	} else {
-		go tran.eh.GetEventObject().Post(event.NewTxEvent{
-			Transaction: tx,
-			Simulate:    args.Simulate,
-			SnapshotId:  args.SnapshotId,
-		})
+		return common.Hash{}, err
 	}
 
 	return tx.GetHash(), nil
@@ -222,7 +169,8 @@ func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult
 
 }
 
-// GetTransactions return all transactions in the given block number.
+// GetTransactions returns all transactions in the given block number. Parameters include
+// start block number and end block number.
 func (tran *Transaction) GetTransactions(args IntervalArgs) ([]*TransactionResult, error) {
 	trueArgs, err := prepareIntervalArgs(args, tran.namespace)
 	if err != nil {
@@ -247,7 +195,7 @@ func (tran *Transaction) GetTransactions(args IntervalArgs) ([]*TransactionResul
 	return transactions, nil
 }
 
-// GetDiscardTransactions returns all invalid transactions that dont be saved in the ledger.
+// GetDiscardTransactions returns all invalid transactions that don't be saved in the ledger.
 func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) {
 
 	reds, err := edb.GetAllDiscardTransaction(tran.namespace)
@@ -275,7 +223,7 @@ func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) 
 func (tran *Transaction) GetDiscardTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
 	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0 {
-		return nil, &common.InvalidParamsError{Message: "Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
+		return nil, &common.InvalidParamsError{Message: "Invalid params, both startTime and endTime must be positive, startTime must be less than endTime"}
 	}
 
 	reds, err := edb.GetAllDiscardTransaction(tran.namespace)
@@ -296,7 +244,6 @@ func (tran *Transaction) GetDiscardTransactionsByTime(args IntervalTime) ([]*Tra
 				transactions = append(transactions, ts)
 			}
 		}
-
 	}
 
 	return transactions, nil
@@ -316,7 +263,7 @@ func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*Transac
 	return outputTransaction(red, tran.namespace)
 }
 
-// GetTransactionByHash returns the transaction for the given transaction hash. The method
+// GetTransactionByHash returns the transaction in the ledger for the given transaction hash.
 func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 	tx, err := edb.GetTransaction(tran.namespace, hash[:])
 	if err != nil && err == edb.NotFindTxMetaErr {
@@ -368,7 +315,7 @@ func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, inde
 	latest := chain.Height
 	blknumber, err := n.BlockNumberToUint64(latest)
 	if err != nil {
-		return nil,  &common.InvalidParamsError{Message: err.Error()}
+		return nil, &common.InvalidParamsError{Message: err.Error()}
 	}
 
 	block, err := edb.GetBlockByNumber(tran.namespace, blknumber)
@@ -395,7 +342,7 @@ func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, inde
 	return nil, nil
 }
 
-// GetTransactionsByTime returns the transactions in the given time duration.
+// GetTransactionsByTime returns the transactions in the ledger in the given time duration.
 func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
 	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0 {
@@ -468,7 +415,7 @@ func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*Numbe
 
 	block, err := edb.GetBlockByNumber(tran.namespace, blknumber)
 	if err != nil && err.Error() == db_not_found_error {
-		return nil, &common.DBNotFoundError{Type: BLOCK,  Id: fmt.Sprintf("number %#x", n)}
+		return nil, &common.DBNotFoundError{Type: BLOCK, Id: fmt.Sprintf("number %#x", n)}
 	} else if err != nil {
 		tran.log.Errorf("%v", err)
 		return nil, &common.CallbackError{Message: err.Error()}
@@ -479,7 +426,7 @@ func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*Numbe
 	return intToNumber(txCount), nil
 }
 
-// GetSignHash returns hash of transaction content for client signature.
+// GetSignHash returns transaction content hash used for the client signature.
 func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
 	var tx *types.Transaction
@@ -503,11 +450,11 @@ func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 		tx = types.NewTransaction(realArgs.From[:], nil, value, realArgs.Timestamp, realArgs.Nonce)
 
 	} else {
-		// send contract or send transaction
+		// invoke contract or send transaction
 		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
 	}
 
-	return tx.SighHash(kec256Hash), nil
+	return tx.SignHash(kec256Hash), nil
 }
 
 // GetTransactionsCount returns the number of transaction in ledger.
@@ -528,6 +475,7 @@ func (tran *Transaction) GetTransactionsCount() (interface{}, error) {
 }
 
 // GetTxAvgTimeByBlockNumber calculates the average execution time of all transactions in the given block number.
+// Parameters include start block number and end block number.
 func (tran *Transaction) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, error) {
 	intargs, err := prepareIntervalArgs(args, tran.namespace)
 	if err != nil {
@@ -544,7 +492,8 @@ func (tran *Transaction) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, e
 }
 
 // GetTransactionsCountByContractAddr returns the number of eligible transaction, the latest block number and
-// transaction index of eligible transaction in the block for the given block number, contract address.
+// index of eligible last transaction in the latest block. Parameters include start block number, end block
+// number and contract address.
 func (tran *Transaction) GetTransactionsCountByContractAddr(args IntervalArgs) (interface{}, error) {
 	if args.ContractAddr == nil {
 		return nil, &common.InvalidParamsError{"Invalid params. 'address' can't be empty"}
@@ -555,8 +504,8 @@ func (tran *Transaction) GetTransactionsCountByContractAddr(args IntervalArgs) (
 }
 
 // GetTransactionsCountByMethodID returns the number of eligible transaction, the latest block number and
-// transaction index of eligible transaction in the block for the given block number, methodID. Method id
-// is contract method identifier in a contract.
+// index of eligible last transaction in the latest block. Parameters include start block number, end block
+// number and method ID. Method ID is contract method identifier in a contract.
 func (tran *Transaction) GetTransactionsCountByMethodID(args IntervalArgs) (interface{}, error) {
 	if args.ContractAddr == nil {
 		return nil, &common.InvalidParamsError{"Invalid params. 'address' can't be empty"}
@@ -609,13 +558,11 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 					lastIndex = txIndex
 					lastBlockNum = blockNum
 				}
-
 			}
 
 			if args.MethodID == "" && to.IsZero() {
 				if receipt, err := tran.GetTransactionReceipt(txResult.Hash); err != nil {
 					return 0, err
-				//} else if receipt.ContractAddress == contractAddr {
 				} else if receipt.ContractAddress == contractAddr.Hex() {
 					txCounts++
 					lastIndex = txIndex
@@ -639,25 +586,25 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 
 }
 
-// PagingArgs specifies conditions that transactions filter for transaction paging. PagingArgs determines
-// starting position including current block number and index of the transaction in the current block,
+// PagingArgs specifies filter conditions for transaction paging. PagingArgs determines starting
+// position including current block number and index of the transaction in the current block,
 // quantity of returned transactions and filter conditions.
 //
 // For example, pageSize is 10. From page 1 to page 2, so "separated" value is 0. From page 1 to page 3,
-// so "separated" value is 10.
+// "separated" value is 10.
 type PagingArgs struct {
-	MaxBlkNumber   BlockNumber     `json:"maxBlkNumber"`    // the maximum block number of allowing to query
-	MinBlkNumber   BlockNumber     `json:"minBlkNumber"`	// the minimum block number of allowing to query
-	BlkNumber      BlockNumber     `json:"blkNumber"`		// the current block number
-	TxIndex        Number          `json:"txIndex"`			// index of the transaction in the current block
-	Separated      Number          `json:"separated"`		// specify how many transactions to skip.
-	PageSize       Number          `json:"pageSize"`		// specify the number of transaction returned
+	MaxBlkNumber BlockNumber `json:"maxBlkNumber"` // the maximum block number of allowing to query
+	MinBlkNumber BlockNumber `json:"minBlkNumber"` // the minimum block number of allowing to query
+	BlkNumber    BlockNumber `json:"blkNumber"`    // the current block number
+	TxIndex      Number      `json:"txIndex"`      // index of the transaction in the current block
+	Separated    Number      `json:"separated"`    // specify how many transactions to skip.
+	PageSize     Number      `json:"pageSize"`     // specify the number of transaction returned
 
 	// specify if the returned transactions contain current transaction(BlkNumber and TxIndex)
 	// or if contain current transaction(BlkNumber and TxIndex) when calculating the number of transactions.
 	ContainCurrent bool            `json:"containCurrent"`
-	ContractAddr   *common.Address `json:"address"`			// specify which contract transactions belong to
-	MethodID       string          `json:"methodID"`		// specify which contract method transactions belong to
+	ContractAddr   *common.Address `json:"address"`  // specify which contract transactions belong to
+	MethodID       string          `json:"methodID"` // specify which contract method transactions belong to
 }
 
 type pagingArgs struct {
@@ -699,7 +646,7 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 	index := realArgs.TxIndex.Int()
 	separated := realArgs.Separated.Int()
 	contractAddr := realArgs.ContractAddr
-	txCounts := 0		// how many transactions have been skipped
+	txCounts := 0 // how many transactions have been skipped
 	txCounts_temp := 0
 	filteredBlkTxs := make([]interface{}, 0)
 
@@ -759,7 +706,7 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 		} else {
 
 			// part of transactions in the current block should be skipped
-			tx := filteredBlkTxs[separated - txCounts].(*TransactionResult)
+			tx := filteredBlkTxs[separated-txCounts].(*TransactionResult)
 			index = tx.TxIndex.Int()
 			txCounts = separated
 		}
@@ -859,7 +806,7 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 		}
 
 		// starting with the specified index of the block transactions, filter all the eligible transaction
-		if filteredTxsByAddr, err := tran.filterTransactionsByAddress(block.Transactions[:index + 1], contractAddr); err != nil {
+		if filteredTxsByAddr, err := tran.filterTransactionsByAddress(block.Transactions[:index+1], contractAddr); err != nil {
 			return nil, err
 		} else if realArgs.MethodID != "" {
 
@@ -879,10 +826,10 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 			blkNumber--
 			index = -1
 			txCounts = txCounts_temp
-		}  else {
+		} else {
 
 			// part of transactions in the current block should be skipped
-			tx := filteredBlkTxs[filtedBlkTxsCount - (separated - txCounts) - 1].(*TransactionResult)
+			tx := filteredBlkTxs[filtedBlkTxsCount-(separated-txCounts)-1].(*TransactionResult)
 			index = tx.TxIndex.Int()
 			txCounts = separated
 		}
@@ -1064,6 +1011,96 @@ func (tran *Transaction) filterTransactionsByAddress(txs []interface{}, address 
 	return result, nil
 }
 
+func prepareTransaction(args SendTxArgs, txType int, namespace string, eh *manager.EventHub) (*types.Transaction, error) {
+
+	var tx *types.Transaction
+	var txValue *types.TransactionValue
+
+	log := common.GetLogger(namespace, "api")
+
+	// 1. verify if the parameters are valid
+	realArgs, err := prepareExcute(args, txType)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. create a new transaction instance
+	if txType == 0 {
+		txValue = types.NewTransactionValue(DEFAULT_GAS_PRICE, DEFAULT_GAS,
+			realArgs.Value.Int64(), nil, 0, types.TransactionValue_EVM)
+	} else {
+		payload := common.FromHex(realArgs.Payload)
+		txValue = types.NewTransactionValue(DEFAULT_GAS_PRICE, DEFAULT_GAS,
+			realArgs.Value.Int64(), payload, args.Opcode, parseVmType(realArgs.VmType))
+	}
+
+	value, err := proto.Marshal(txValue)
+	if err != nil {
+		return nil, &common.CallbackError{err.Error()}
+	}
+
+	if args.To == nil {
+		tx = types.NewTransaction(realArgs.From[:], nil, value, realArgs.Timestamp, realArgs.Nonce)
+	} else {
+		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
+	}
+
+	if eh.NodeIdentification() == manager.IdentificationVP {
+		tx.Id = uint64(eh.GetPeerManager().GetNodeId())
+	} else {
+		hash := eh.GetPeerManager().GetLocalNodeHash()
+		if err := tx.SetNVPHash(hash); err != nil {
+			log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
+			return nil, &common.CallbackError{Message: "Marshal nvp hash error"}
+		}
+	}
+	tx.Signature = common.FromHex(realArgs.Signature)
+	tx.TransactionHash = tx.Hash().Bytes()
+
+	// 3. check if there is duplicated transaction
+	var exist bool
+	if err, exist = edb.LookupTransaction(namespace, tx.GetHash()); err != nil || exist == true {
+		if exist, _ = edb.JudgeTransactionExist(namespace, tx.TransactionHash); exist {
+			return nil, &common.RepeadedTxError{TxHash: common.ToHex(tx.TransactionHash)}
+		}
+	}
+
+	// 4. verify transaction signature
+	if !tx.ValidateSign(eh.GetAccountManager().Encryption, kec256Hash) {
+		log.Errorf("invalid signature, tx hash %v", common.ToHex(tx.TransactionHash))
+		return nil, &common.SignatureInvalidError{Message: "Invalid signature, tx hash " + common.ToHex(tx.TransactionHash)}
+	}
+
+	return tx, nil
+}
+
+func postNewTxEvent(args SendTxArgs, tx *types.Transaction, eh *manager.EventHub) error {
+
+	// post transaction event
+	if eh.NodeIdentification() == manager.IdentificationNVP {
+		ch := make(chan bool)
+		go eh.GetEventObject().Post(event.NewTxEvent{
+			Transaction: tx,
+			Simulate:    args.Simulate,
+			SnapshotId:  args.SnapshotId,
+			Ch:          ch,
+		})
+		res := <-ch
+		close(ch)
+		if res == false {
+			// nvp node fails to forward tx to vp node
+			return &common.CallbackError{Message: "Send tx to nvp failed."}
+		}
+	} else {
+		go eh.GetEventObject().Post(event.NewTxEvent{
+			Transaction: tx,
+			Simulate:    args.Simulate,
+			SnapshotId:  args.SnapshotId,
+		})
+	}
+	return nil
+}
+
 // outputTransaction makes type conversion.
 func outputTransaction(trans interface{}, namespace string) (*TransactionResult, error) {
 	log := common.GetLogger(namespace, "api")
@@ -1110,12 +1147,12 @@ func outputTransaction(trans interface{}, namespace string) (*TransactionResult,
 		}
 		txHash := t.Tx.GetHash()
 		txRes = &TransactionResult{
-			Version: string(t.Tx.Version),
-			Hash:    txHash,
-			From:    common.BytesToAddress(t.Tx.From),
-			To:      common.BytesToAddress(t.Tx.To),
-			Amount:  int64ToNumber(txValue.Amount),
-			Nonce:   t.Tx.Nonce,
+			Version:    string(t.Tx.Version),
+			Hash:       txHash,
+			From:       common.BytesToAddress(t.Tx.From),
+			To:         common.BytesToAddress(t.Tx.To),
+			Amount:     int64ToNumber(txValue.Amount),
+			Nonce:      t.Tx.Nonce,
 			Timestamp:  t.Tx.Timestamp,
 			Payload:    common.ToHex(txValue.Payload),
 			Invalid:    true,

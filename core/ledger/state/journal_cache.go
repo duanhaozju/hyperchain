@@ -59,8 +59,7 @@ func (cache *JournalCache) Fetch(address common.Address) *StateObject {
 		return obj
 	}
 	// load from database
-	// Load the object from the database.
-	data, err := cache.db.Get(CompositeAccountKey(address.Bytes()))
+	data, err := cache.db.Get(compositeAccountKey(address.Bytes()))
 	if err != nil {
 		cache.logger.Debugf("no state object been find")
 		return nil
@@ -117,13 +116,13 @@ func (cache *JournalCache) Flush(batch db.Batch) error {
 				if len(value) == 0 {
 					// delete
 					cache.logger.Debugf("flush dirty storage address [%s] delete item key: [%s]", stateObject.address.Hex(), key.Hex())
-					if err := batch.Delete(CompositeStorageKey(stateObject.address.Bytes(), key.Bytes())); err != nil {
+					if err := batch.Delete(compositeStorageKey(stateObject.address.Bytes(), key.Bytes())); err != nil {
 						return err
 					}
 					workingSet[key.Hex()] = nil
 				} else {
 					cache.logger.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", stateObject.address.Hex(), key.Hex(), common.Bytes2Hex(value))
-					if err := batch.Put(CompositeStorageKey(stateObject.address.Bytes(), key.Bytes()), value); err != nil {
+					if err := batch.Put(compositeStorageKey(stateObject.address.Bytes(), key.Bytes()), value); err != nil {
 						return err
 					}
 					workingSet[key.Hex()] = value
@@ -140,7 +139,7 @@ func (cache *JournalCache) Flush(batch db.Batch) error {
 }
 
 // GetWorkingSet returns required working set.
-func (cache *JournalCache) GetWorkingSet(workingSetType int, address common.Address) bucket.Entries {
+func (cache *JournalCache) getWorkingSet(workingSetType int, address common.Address) bucket.Entries {
 	switch workingSetType {
 	case StateWorkingSet:
 		return cache.stateWorkingSet
@@ -155,9 +154,9 @@ func (cache *JournalCache) GetWorkingSet(workingSetType int, address common.Addr
 func (cache *JournalCache) deleteStateObject(batch db.Batch, stateObject *StateObject) {
 	stateObject.deleted = true
 	addr := stateObject.Address()
-	batch.Delete(CompositeAccountKey(addr.Bytes()))
+	batch.Delete(compositeAccountKey(addr.Bytes()))
 	// delete related storage content
-	iter := cache.db.NewIterator(GetStorageKeyPrefix(stateObject.address.Bytes()))
+	iter := cache.db.NewIterator(getStorageKeyPrefix(stateObject.address.Bytes()))
 	for iter.Next() {
 		batch.Delete(iter.Key())
 	}
@@ -171,6 +170,6 @@ func (cache *JournalCache) updateStateObject(batch db.Batch, stateObject *StateO
 		cache.logger.Error("marshal stateobject failed", addr.Hex())
 		return nil
 	}
-	batch.Put(CompositeAccountKey(addr.Bytes()), data)
+	batch.Put(compositeAccountKey(addr.Bytes()), data)
 	return data
 }

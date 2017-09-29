@@ -20,8 +20,6 @@ func NewEcdsaEncrypto(name string) *EcdsaEncryption {
 }
 
 func (ee *EcdsaEncryption) Sign(payload []byte, pri interface{}) ([]byte, error) {
-	//log.Notice("payload",payload,"pri",pri)
-
 	sign, err := ECDSASign(pri, payload)
 
 	if err != nil {
