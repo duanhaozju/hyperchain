@@ -35,7 +35,7 @@ func (self *Transaction) GetHash() common.Hash {
 	return common.BytesToHash(self.TransactionHash)
 }
 
-func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
+func (self *Transaction) SignHash(ch crypto.CommonHash) common.Hash {
 	/*
 		from=0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
 		&to=0x80958818f0a025273111fba92ed14c3dd483caeb
@@ -59,7 +59,7 @@ func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
 	return hashResult
 }
 
-func (self *Transaction) SighHashSM3(pubX, pubY []byte) []byte {
+func (self *Transaction) SignHashSM3(pubX, pubY []byte) []byte {
 	/*
 		from=0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
 		&to=0x80958818f0a025273111fba92ed14c3dd483caeb
@@ -163,7 +163,7 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 			log.Error(err)
 			return false
 		}
-		hash := self.SighHashSM3(puk.X, puk.Y)
+		hash := self.SignHashSM3(puk.X, puk.Y)
 		bol, err := puk.VerifySignature(sign, hash)
 		if err != nil {
 			log.Error(err)
@@ -171,7 +171,7 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 		}
 		return bol
 	}
-	hash := self.SighHash(ch)
+	hash := self.SignHash(ch)
 	addr, err := encryption.UnSign(hash[:], self.Signature[1:])
 	if err != nil {
 		log.Error(err)

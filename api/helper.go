@@ -32,8 +32,8 @@ const (
 	paillpublickeyG       = "global.configs.hmpublickey.G"
 	snapshotManifestPath  = "executor.archive.snapshot_manifest"
 
-	CONTRACT            = "contract"
-	DEFAULT_GAS      int64 = 100000000
+	CONTRACT                = "contract"
+	DEFAULT_GAS       int64 = 100000000
 	DEFAULT_GAS_PRICE int64 = 10000
 )
 
@@ -132,8 +132,8 @@ func substr(str string, start int, end int) string {
 }
 
 type IntervalArgs struct {
-	From         *BlockNumber    `json:"from"`
-	To           *BlockNumber    `json:"to"`
+	From         *BlockNumber    `json:"from"` // start block number
+	To           *BlockNumber    `json:"to"`   // end block number
 	ContractAddr *common.Address `json:"address"`
 	MethodID     string          `json:"methodID"`
 }
@@ -149,8 +149,8 @@ type intArgs struct {
 }
 
 // prepareExcute checks if arguments are valid.
-// 0 value for txType means sending normal transaction, 1 means deploying contract, 2 means invoking contract,
-// 3 means signing hash, 4 means maintaining contract.
+// 0 value for txType means sending normal transaction, 1 means deploying contract,
+// 2 means invoking contract, 3 means signing hash, 4 means maintaining contract.
 func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	if args.From.Hex() == (common.Address{}).Hex() {
 		return SendTxArgs{}, &common.InvalidParamsError{Message: "address 'from' is invalid"}
@@ -183,8 +183,9 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	return args, nil
 }
 
-// prepareIntervalArgs checks if arguments are valid.
-// If the client send BlockNumber "", it will be converted to 0. If client send BlockNumber 0, it will return error.
+// prepareIntervalArgs checks whether arguments are valid.
+// If the client sends BlockNumber "", it will be converted to 0.
+// If client sends BlockNumber 0, error will be returned.
 func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) {
 	if args.From == nil || args.To == nil {
 		return nil, &common.InvalidParamsError{Message: "missing params 'from' or 'to'"}
@@ -223,7 +224,7 @@ func prepareBlockNumber(n BlockNumber, namespace string) (uint64, error) {
 	return number, nil
 }
 
-// preparePagingArgs checks if paging arguments are valid.
+// preparePagingArgs checks whether paging arguments are valid.
 func preparePagingArgs(args PagingArgs) (PagingArgs, error) {
 	if args.PageSize == 0 {
 		return PagingArgs{}, &common.InvalidParamsError{Message: "'pageSize' can't be zero or empty"}

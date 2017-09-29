@@ -4,7 +4,6 @@ package api
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"github.com/juju/ratelimit"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
@@ -13,7 +12,6 @@ import (
 	"hyperchain/core/vm/evm/compiler"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/manager"
-	"hyperchain/manager/event"
 	"math/big"
 	"strconv"
 	"strings"
@@ -51,87 +49,48 @@ func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common
 	}
 }
 
-func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace string) (common.Hash, error) {
+// DeployContract deploys contract.
+func (contract *Contract) DeployContract(args SendTxArgs) (common.Hash, error) {
+	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
+		return common.Hash{}, &common.SystemTooBusyError{}
+	}
+	return contract.postContract(args, 1)
+}
+
+// InvokeContract invokes contract.
+func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
+	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
+		return common.Hash{}, &common.SystemTooBusyError{}
+	}
+	return contract.postContract(args, 2)
+}
+
+// MaintainContract maintains contract, including upgrade contract, freeze contract and unfreeze contract.
+func (contract *Contract) MaintainContract(args SendTxArgs) (common.Hash, error) {
+	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
+		return common.Hash{}, &common.SystemTooBusyError{}
+	}
+	return contract.postContract(args, 4)
+}
+
+// postContract will create a new transaction instance and post a NewTxEvent event.
+func (contract *Contract) postContract(args SendTxArgs, txType int) (common.Hash, error) {
 	consentor := contract.eh.GetConsentor()
 	normal, full := consentor.GetStatus()
 	if !normal || full {
 		return common.Hash{}, &common.SystemTooBusyError{}
 	}
 
-	log := common.GetLogger(namespace, "api")
-
-	var tx *types.Transaction
-
-	// 1. verify if the parameters are valid
-	realArgs, err := prepareExcute(args, txType)
+	// 1. create a new transaction instance
+	tx, err := prepareTransaction(args, txType, contract.namespace, contract.eh)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	// 2. create a new transaction instance
-	payload := common.FromHex(realArgs.Payload)
-	txValue := types.NewTransactionValue(DEFAULT_GAS_PRICE, DEFAULT_GAS,
-		realArgs.Value.Int64(), payload, args.Opcode, parseVmType(realArgs.VmType))
-
-	value, err := proto.Marshal(txValue)
+	// 2. post a event.NewTxEvent event
+	err = postNewTxEvent(args, tx, contract.eh)
 	if err != nil {
-		return common.Hash{}, &common.CallbackError{Message: err.Error()}
-	}
-
-	if args.To == nil {
-		tx = types.NewTransaction(realArgs.From[:], nil, value, realArgs.Timestamp, realArgs.Nonce)
-	} else {
-		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
-	}
-
-	if contract.eh.NodeIdentification() == manager.IdentificationVP {
-		tx.Id = uint64(contract.eh.GetPeerManager().GetNodeId())
-	} else {
-		hash := contract.eh.GetPeerManager().GetLocalNodeHash()
-		if err := tx.SetNVPHash(hash); err != nil {
-			log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
-			return common.Hash{}, &common.CallbackError{Message: "marshal nvp hash error"}
-		}
-	}
-	tx.Signature = common.FromHex(realArgs.Signature)
-	tx.TransactionHash = tx.Hash().Bytes()
-
-	// 3. check if there is duplicated transaction
-	var exist bool
-	if err, exist = edb.LookupTransaction(contract.namespace, tx.GetHash()); err != nil || exist == true {
-		if exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash); exist {
-			return common.Hash{}, &common.RepeadedTxError{TxHash: common.ToHex(tx.TransactionHash)}
-		}
-	}
-
-	// 4. verify transaction signature
-	if !tx.ValidateSign(contract.eh.GetAccountManager().Encryption, kec256Hash) {
-		log.Errorf("invalid signature %v", common.ToHex(tx.TransactionHash))
-		return common.Hash{}, &common.SignatureInvalidError{Message: "Invalid signature, tx hash " + common.ToHex(tx.TransactionHash)}
-	}
-
-	// 5. post transaction event
-	if contract.eh.NodeIdentification() == manager.IdentificationNVP {
-		ch := make(chan bool)
-		go contract.eh.GetEventObject().Post(event.NewTxEvent{
-			Transaction: tx,
-			Simulate:    args.Simulate,
-			SnapshotId:  args.SnapshotId,
-			Ch:          ch,
-		})
-		res := <-ch
-		close(ch)
-		if res == false {
-			// nvp node fails to forward tx to vp node
-			return common.Hash{}, &common.CallbackError{Message: "Send tx to nvp failed."}
-		}
-
-	} else {
-		go contract.eh.GetEventObject().Post(event.NewTxEvent{
-			Transaction: tx,
-			Simulate:    args.Simulate,
-			SnapshotId:  args.SnapshotId,
-		})
+		return common.Hash{}, err
 	}
 	return tx.GetHash(), nil
 
@@ -158,30 +117,6 @@ func (contract *Contract) CompileContract(ct string) (*CompileCode, error) {
 	}, nil
 }
 
-// DeployContract deploys contract.
-func (contract *Contract) DeployContract(args SendTxArgs) (common.Hash, error) {
-	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{}
-	}
-	return deployOrInvoke(contract, args, 1, contract.namespace)
-}
-
-// InvokeContract invokes contract.
-func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
-	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{}
-	}
-	return deployOrInvoke(contract, args, 2, contract.namespace)
-}
-
-// MaintainContract maintains contract, including upgrade contract, freeze contract and unfreeze contract.
-func (contract *Contract) MaintainContract(args SendTxArgs) (common.Hash, error) {
-	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{}
-	}
-	return deployOrInvoke(contract, args, 4, contract.namespace)
-}
-
 // GetCode returns the code from the given contract address.
 func (contract *Contract) GetCode(addr common.Address) (string, error) {
 	log := common.GetLogger(contract.namespace, "api")
@@ -200,8 +135,8 @@ func (contract *Contract) GetCode(addr common.Address) (string, error) {
 	return fmt.Sprintf(`0x%x`, stateDb.GetCode(addr)), nil
 }
 
-// GetContractCountByAddr returns the number of contract that has been deployed by given account address,
-// if addr is nil, returns the number of all the contract that has been deployed.
+// GetContractCountByAddr returns the number of contract that has been deployed by given account address.
+// If account doesn't exist, error will be returned.
 func (contract *Contract) GetContractCountByAddr(addr common.Address) (*Number, error) {
 
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
@@ -218,30 +153,31 @@ func (contract *Contract) GetContractCountByAddr(addr common.Address) (*Number, 
 
 }
 
-// EncryptoArgs sepcifies parameters for Contract.EncryptoMessage function call.
+// EncryptoArgs specifies parameters for Contract.EncryptoMessage function call.
 type EncryptoArgs struct {
 
 	// The balance(plain text) of account A before transferring money to account B.
-	Balance   Number 		`json:"balance"`
+	Balance Number `json:"balance"`
 
 	// The amount(plain text) that account A will transfer to account B.
-	Amount    Number 		`json:"amount"`
+	Amount Number `json:"amount"`
 
-	// Invalid homomorphic encryption transaction amount of account A when a person transfers money(amount homomorphic encryption) that
-	// can't be verified by account A. InvalidHmValue is optional.
-	// For example, account C transfers 10 dollars to account A, but this transaction fails to pass validation of account A. Therefore,
-	// account A saves 10 value encrypted as invalid homomorphic encryption value.
-	InvalidHmValue string 	`json:"invalidHmValue"`
+	// InvalidHmValue is optional. It represents invalid homomorphic encryption transaction amount of account A
+	// when a person transfers money(amount homomorphic encryption) to A that can't be verified by account A.
+	//
+	// For example, account C transfers 10 dollars to account A, but this transaction fails to pass validation
+	// of account A. Therefore, account A saves 10 value encrypted as invalid homomorphic encryption value.
+	InvalidHmValue string `json:"invalidHmValue"`
 }
 
 type HmResult struct {
 
-	// The homomorphic sum of the homomorphic encryption balance of account A after transferring money to account B (balance - amount)
-	// and invalid homomorphic value of account A.
+	// The homomorphic sum of the homomorphic encryption balance of account A after transferring money to
+	// account B (balance - amount) and invalid homomorphic value of account A.
 	NewBalance_hm string `json:"newBalance"`
 
 	// The amount(homomorphic encryption text) that account A will transfer to account B.
-	Amount_hm     string `json:"amount"`
+	Amount_hm string `json:"amount"`
 }
 
 // EncryptoMessage encrypts data by homomorphic encryption.
@@ -279,26 +215,27 @@ func (contract *Contract) EncryptoMessage(args EncryptoArgs) (*HmResult, error) 
 	}, nil
 }
 
-// CheckArgs sepcifies parameters for Contract.CheckHmValue function call.
+// CheckArgs specifies parameters for Contract.CheckHmValue function call.
 type CheckArgs struct {
 
 	// All unverified transaction amount list (plain text).
 	// For example, account A transfers 10 dollars to B twice, RawValue is [10,10].
-	RawValue   []int64  `json:"rawValue"`
+	RawValue []int64 `json:"rawValue"`
 
 	// All unverified transaction amount list (homomorphic encryption).
 	// For example, account A transfers 10 dollars to B twice, EncryValue is [(encrypted 10), (encrypted 10)].
 	EncryValue []string `json:"encryValue"`
 
 	// Invalid homomorphic encryption value of account B.
-	Illegalhm  string   `json:"illegalhm"`
+	Illegalhm string `json:"illegalhm"`
 }
-
 
 type HmCheckResult struct {
 
-	// The result if it is verified.
-	CheckResult        []bool `json:"checkResult"`
+	// Data validation results.
+	// For example, account A transfers 10 dollars to B twice, but the first transfer validation fails,
+	// CheckResult is [false, true]
+	CheckResult []bool `json:"checkResult"`
 
 	// The homomorphic sum of all invalid homomorphic encryption transaction amount of B.
 	SumIllegalHmAmount string `json:"illegalHmAmount"`
