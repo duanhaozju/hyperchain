@@ -2,7 +2,7 @@ package common
 
 import (
 	"fmt"
-	pb "hyperchain/service/common/protos"
+	//pb "hyperchain/service/common/protos"
 	"sync"
 )
 
@@ -39,31 +39,32 @@ func (nc *NamespaceComponent) dispatch() {
 }
 
 func (nc *NamespaceComponent) dispatchCQ() {
-	for {
-		msg, err := nc.cq.Get()
-		if err != nil {
-			//TODO handle error
-		}
-		if cm, ok := msg.(pb.ConsenterMessage); ok {
-			switch cm.Type {
-			case pb.ConsenterMessage_InformPrimaryEvent:
-				//inform primary
-
-				m := &pb.Message{
-				//Type:
-				}
-
-				nc.services[NETWORK].Send(true, m)
-			case pb.ConsenterMessage_VCResetEvent:
-				//vc reset
-			default:
-				//undefined message
-			}
-		} else {
-			//TODO handle error
-		}
-
-	}
+	//for {
+	//	//msg, err := nc.cq.Get()
+	//	//if err != nil {
+	//	//	//TODO handle error
+	//	//}
+	//	//if cm, ok := msg.(pb.ConsenterMessage); ok {
+	//	//	switch cm.Type {
+	//	//	case pb.ConsenterMessage_InformPrimaryEvent:
+	//	//		//inform primary
+	//	//
+	//	//		m := &pb.Message{
+	//	//		}
+	//	//
+	//	//
+	//	//
+	//	//		nc.services[NETWORK].Send(true, m)
+	//	//	case pb.ConsenterMessage_VCResetEvent:
+	//	//		//vc reset
+	//	//	default:
+	//	//		//undefined message
+	//	//	}
+	//	//} else {
+	//	//	//TODO handle error
+	//	//}
+	//
+	//}
 }
 
 func (nc *NamespaceComponent) dispatchEQ() {
