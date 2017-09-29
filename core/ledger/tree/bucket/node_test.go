@@ -94,9 +94,16 @@ func TestMerkleNodeDelta(t *testing.T) {
 	for _, pos := range poses {
 		delta.getOrCreate(pos)
 	}
-	for idx, n := range delta.getLevel(4) {
-		if !n.pos.equals(poses[idx]) {
+	for _, n := range delta.getLevel(4) {
+		var flag bool
+		for _, p := range poses {
+			if n.pos.equals(p) {
+				flag = true
+			}
+		}
+		if !flag {
 			t.Error("expect to be same got merkle node from delta")
 		}
+		flag = false
 	}
 }

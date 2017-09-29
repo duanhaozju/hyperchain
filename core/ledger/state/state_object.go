@@ -272,8 +272,8 @@ func (self *StateObject) removeState(key common.Hash) {
 func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go self.onEvict(wg)
-	go self.doArchive(wg)
+	go self.onEvict(&wg)
+	go self.doArchive(&wg)
 
 	// IMPORTANT root should calculate first
 	// otherwise dirty storage will be removed in persist phase
@@ -657,9 +657,9 @@ func isArchive(opcode int32) bool {
 }
 
 // onEvict drops `old enough` keyvalue pairs to avoid too much memory occupation.
-func (self *StateObject) onEvict(wg sync.WaitGroup) {
+func (self *StateObject) onEvict(wg *sync.WaitGroup) {
 	defer func() {
-		wg.Done()
+		(*wg).Done()
 	}()
 	for key, brith := range self.evictList {
 		if brith < self.db.oldestSeqNo {
@@ -670,9 +670,9 @@ func (self *StateObject) onEvict(wg sync.WaitGroup) {
 }
 
 // doArchive flushs all archived entries to historical database.
-func (self *StateObject) doArchive(wg sync.WaitGroup) {
+func (self *StateObject) doArchive(wg *sync.WaitGroup) {
 	defer func() {
-		wg.Done()
+		(*wg).Done()
 	}()
 	batch := self.db.archiveDb.NewBatch()
 	for key, value := range self.archiveStorage {

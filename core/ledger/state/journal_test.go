@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package state
 
 import (
@@ -6,12 +19,9 @@ import (
 	"fmt"
 	checker "gopkg.in/check.v1"
 	"hyperchain/common"
-	tutil "hyperchain/core/test_util"
-	//"hyperchain/core/vm"
+	"hyperchain/core/types"
 	"hyperchain/hyperdb/mdb"
 	"math"
-	//"math/big"
-	"hyperchain/core/types"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -20,12 +30,7 @@ import (
 	"testing/quick"
 )
 
-var (
-	configPath = "../../configuration/namespaces/global/config/namespace.toml"
-)
-
-type JournalSuite struct {
-}
+type JournalSuite struct{}
 
 func TestJournal(t *testing.T) {
 	checker.TestingT(t)
@@ -51,14 +56,26 @@ func (suite *JournalSuite) TearDownSuite(c *checker.C) {
 }
 
 func (suite *JournalSuite) TestSnapshotRandom(c *checker.C) {
-	config := &quick.Config{MaxCount: 3}
-	err := quick.Check((*snapshotTest).run, config)
+	config := &quick.Config{MaxCount: 50}
+	err := quick.Check((*snapshotTest).revertToSnapshot, config)
 	if cerr, ok := err.(*quick.CheckError); ok {
 		test := cerr.In[0].(*snapshotTest)
 		c.Errorf("%v:\n%s", test.err, test)
 	} else if err != nil {
 		c.Error(err)
 	}
+}
+
+func (suite *JournalSuite) TestRevertRandom(c *checker.C) {
+	config := &quick.Config{MaxCount: 50}
+	err := quick.Check((*snapshotTest).revertToTarget, config)
+	if cerr, ok := err.(*quick.CheckError); ok {
+		test := cerr.In[0].(*snapshotTest)
+		c.Errorf("%v:\n%s", test.err, test)
+	} else if err != nil {
+		c.Error(err)
+	}
+
 }
 
 // The test works as follows:
@@ -205,7 +222,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 // derived from r.
 func (*snapshotTest) Generate(r *rand.Rand, size int) reflect.Value {
 	// Generate random actions.
-	addrs := make([]common.Address, 10)
+	addrs := make([]common.Address, 5)
 	for i := range addrs {
 		addrs[i] = common.HexToAddress(RandomString(40))
 	}
@@ -241,11 +258,11 @@ func (test *snapshotTest) String() string {
 	return out.String()
 }
 
-func (test *snapshotTest) run() bool {
+func (test *snapshotTest) revertToSnapshot() bool {
 	// Run all actions and create snapshots.
 	var (
 		db, _        = mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
-		state, _     = New(common.Hash{}, db, db, tutil.InitConfig(configPath), 10, common.DEFAULT_NAMESPACE)
+		state, _     = New(common.Hash{}, db, db, NewTestConfig(), 10)
 		snapshotRevs = make([]int, len(test.snapshots))
 		sindex       = 0
 	)
@@ -261,13 +278,53 @@ func (test *snapshotTest) run() bool {
 	// Revert all snapshots in reverse order. Each revert must yield a state
 	// that is equivalent to fresh state with all actions up the snapshot applied.
 	for sindex--; sindex >= 0; sindex-- {
-		checkstate, _ := New(common.Hash{}, db, db, tutil.InitConfig(configPath), 10, common.DEFAULT_NAMESPACE)
+		checkstate, _ := New(common.Hash{}, db, db, NewTestConfig(), 10)
 		for _, action := range test.actions[:test.snapshots[sindex]] {
 			action.fn(action, checkstate)
 		}
 		state.RevertToSnapshot(snapshotRevs[sindex])
 		if err := test.checkEqual(state, checkstate); err != nil {
 			test.err = fmt.Errorf("state mismatch after revert to snapshot %d\n%v", sindex, err)
+			return false
+		}
+	}
+	return true
+}
+
+func (test *snapshotTest) revertToTarget() bool {
+	// Run all actions and create snapshots.
+	var (
+		db, _             = mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
+		state, _          = New(common.Hash{}, db, db, NewTestConfig(), 10)
+		targetHash        = make([]common.Hash, len(test.snapshots))
+		sindex            = 0
+		seqNo      uint64 = 11
+	)
+	// Test snapshot
+	state.MarkProcessStart(seqNo)
+	for i, action := range test.actions {
+		if len(test.snapshots) > sindex && i == test.snapshots[sindex] {
+			hash, err := state.Commit()
+			if err != nil {
+				return false
+			}
+			targetHash[sindex] = hash
+			sindex++
+			state.MarkProcessFinish(seqNo)
+			state.FetchBatch(seqNo, BATCH_NORMAL).Write()
+			seqNo++
+			state.MarkProcessStart(seqNo)
+		}
+		action.fn(action, state)
+	}
+	state.Commit()
+	state.MarkProcessFinish(seqNo)
+	state.FetchBatch(seqNo, BATCH_NORMAL).Write()
+
+	// Revert all snapshots in reverse order. Each revert must yield a state
+	// that is equivalent to fresh state with all actions up the snapshot applied.
+	for ; sindex > 0; sindex-- {
+		if err := state.RevertToJournal(uint64(sindex+11), uint64(sindex+10), targetHash[sindex-1].Bytes(), db.NewBatch()); err != nil {
 			return false
 		}
 	}
@@ -287,7 +344,6 @@ func (test *snapshotTest) checkEqual(state, checkstate *StateDB) error {
 		}
 		// Check basic accessor methods.
 		checkeq("Exist", state.Exist(addr), checkstate.Exist(addr))
-		checkeq("IsDeleted", state.IsDeleted(addr), checkstate.IsDeleted(addr))
 		checkeq("GetBalance", state.GetBalance(addr), checkstate.GetBalance(addr))
 		checkeq("GetNonce", state.GetNonce(addr), checkstate.GetNonce(addr))
 		checkeq("GetCode", state.GetCode(addr), checkstate.GetCode(addr))

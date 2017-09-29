@@ -3,6 +3,7 @@ package mdb
 import (
 	"bytes"
 	"hyperchain/common"
+	hdb "hyperchain/hyperdb/db"
 	"testing"
 )
 
@@ -78,7 +79,7 @@ func TestMemDatabase_Delete(t *testing.T) {
 	for k, v := range kvs {
 		if cnt%2 == 0 {
 			_, err := db.Get([]byte(k))
-			if err == nil {
+			if err == nil || err != hdb.DB_NOT_FOUND {
 				t.Error("expect to been deleted")
 			}
 		} else {
@@ -112,7 +113,7 @@ func TestMemBatch_Write(t *testing.T) {
 	// check whether batch put will affect db
 	for k := range kvs {
 		_, err := db.Get([]byte(k))
-		if err == nil {
+		if err == nil || err != hdb.DB_NOT_FOUND {
 			t.Error("expect to be nil")
 		}
 	}
@@ -137,7 +138,7 @@ func TestMemBatch_Write(t *testing.T) {
 	for k, v := range kvs {
 		if cnt%2 == 0 {
 			_, err := db.Get([]byte(k))
-			if err == nil {
+			if err == nil || err != hdb.DB_NOT_FOUND {
 				t.Error("expect to been deleted")
 			}
 		} else {
@@ -149,87 +150,64 @@ func TestMemBatch_Write(t *testing.T) {
 	}
 }
 
-func TestMemDatabase_NewIterator(t *testing.T) {
+func TestMemDatabase_Iterator(t *testing.T) {
 	db, _ := NewMemDatabase(common.DEFAULT_NAMESPACE)
-
-	kvs := map[string][]byte{
-		"key1":   []byte("value1"),
-		"key2":   []byte("value2"),
-		"key3":   []byte("value3"),
-		"key100": []byte("value100"),
-		"key":    []byte("value"),
-		"1":      []byte("value11"),
-		"2":      []byte("value22"),
-		"3":      []byte("value33"),
-		"-":      []byte("value-"),
-		"~":      []byte("value~"),
+	for _, kv := range expect {
+		db.Put([]byte(kv.key), kv.value)
 	}
 
-	for k, v := range kvs {
-		db.Put([]byte(k), v)
-	}
-	// With Prefix
 	iter := db.NewIterator([]byte("key"))
-	iterContent := make(map[string][]byte)
+	if checkEqual(iter, expect[1:]) {
+		t.Error("iterator with specified prefix failed")
+	}
+
+	iter = db.Scan(nil, nil)
+	if checkEqual(iter, expect[:]) {
+		t.Error("iterator with empty start and empty limit failed")
+	}
+
+	iter = db.Scan([]byte("key"), nil)
+	if checkEqual(iter, expect[1:]) {
+		t.Error("iterator with specified start and empty limit failed")
+	}
+
+	iter = db.Scan(nil, []byte("key2"))
+	if checkEqual(iter, expect[:6]) {
+		t.Error("iterator with empty start and specified limit failed")
+	}
+
+	iter = db.Scan([]byte("key"), []byte("key2"))
+	if checkEqual(iter, expect[1:6]) {
+		t.Error("iterator with specified start and limit failed")
+	}
+}
+
+func checkEqual(iter hdb.Iterator, expect []KV) (equal bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			equal = false
+		}
+	}()
+	var index int
 	for iter.Next() {
-		iterContent[string(iter.Key())] = CopyBytes(iter.Value())
-	}
-
-	for k, v := range kvs {
-		if bytes.HasPrefix([]byte(k), []byte("key")) {
-			if v1, ok := iterContent[k]; !ok || bytes.Compare(v, v1) != 0 {
-				t.Error("expect to be same")
-			}
+		if string(iter.Key()) != expect[index].key {
+			equal = false
+			return
+		}
+		if bytes.Compare(iter.Value(), expect[index].value) != 0 {
+			equal = false
+			return
 		}
 	}
+	return true
+}
 
-	for k, v := range iterContent {
-		if v1, ok := kvs[k]; !ok || bytes.Compare(v, v1) != 0 {
-			t.Error("expect to be same")
-		}
-	}
-
-	// With empty start and empty limit
-	iterContent = make(map[string][]byte)
-	iter1 := db.Scan(nil, nil)
-
-	for iter1.Next() {
-		iterContent[string(iter1.Key())] = CopyBytes(iter1.Value())
-	}
-
-	for k, v := range kvs {
-		if v1, ok := iterContent[k]; !ok || bytes.Compare(v, v1) != 0 {
-			t.Error("expect to be same")
-		}
-	}
-
-	// With empty start but a limit
-	iter2 := db.Scan(nil, []byte("key3"))
-	expect := map[string][]byte{
-		"key1":   []byte("value1"),
-		"key2":   []byte("value2"),
-		"key":    []byte("value"),
-		"key100": []byte("value100"),
-		"1":      []byte("value11"),
-		"2":      []byte("value22"),
-		"3":      []byte("value33"),
-		"-":      []byte("value-"),
-	}
-	for iter2.Next() {
-		if v, ok := expect[string(iter2.Key())]; !ok || bytes.Compare(v, iter2.Value()) != 0 {
-			t.Error("expect to be same")
-		}
-	}
-	// With a non-empty start and a limit
-	iter3 := db.Scan([]byte("key1"), []byte("key3"))
-	expect = map[string][]byte{
-		"key1":   []byte("value1"),
-		"key2":   []byte("value2"),
-		"key100": []byte("value100"),
-	}
-	for iter3.Next() {
-		if v, ok := expect[string(iter3.Key())]; !ok || bytes.Compare(v, iter3.Value()) != 0 {
-			t.Error("expect to be same")
-		}
-	}
+var expect = []KV{
+	{"-", []byte("value-")},
+	{"key", []byte("value")},
+	{"key01", []byte("value01")},
+	{"key1", []byte("value1")},
+	{"key10", []byte("value10")},
+	{"key11", []byte("value11")},
+	{"key2", []byte("value2")},
 }

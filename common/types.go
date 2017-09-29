@@ -143,6 +143,14 @@ func EmptyHash(h Hash) bool {
 	return h == Hash{}
 }
 
+func FullHash() Hash {
+	var h Hash
+	for i := 0; i < HashLength; i += 1 {
+		h[i] = 0xff
+	}
+	return h
+}
+
 func BytesToAddress(b []byte) Address {
 	var a Address
 	a.SetBytes(b)
@@ -170,7 +178,7 @@ func (a Address) Bytes() []byte { return a[:] }
 func (a Address) Big() *big.Int { return Bytes2Big(a[:]) }
 func (a Address) Hash() Hash    { return BytesToHash(a[:]) }
 func (a Address) Hex() string   { return "0x" + Bytes2Hex(a[:]) }
-func (a Address) IsZero() bool  { return a == Address{}}
+func (a Address) IsZero() bool  { return a == Address{} }
 
 // Sets the address to the value of b. If b is larger than len(a) it will panic
 func (a *Address) SetBytes(b []byte) {

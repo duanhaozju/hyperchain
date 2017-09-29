@@ -159,7 +159,6 @@ func (bucketTree *BucketTree) processNodes() error {
 		nodes := bucketTree.nodeDelta.getLevel(level)
 		var wg sync.WaitGroup
 		wg.Add(len(nodes))
-
 		handler := func(obj interface{}) interface{} {
 			defer wg.Done()
 			node, ok := obj.(*MerkleNode)

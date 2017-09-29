@@ -32,7 +32,8 @@ func NewTestLog() *logging.Logger {
 	LogOnce.Do(func() {
 		conf := common.NewRawConfig()
 		common.InitHyperLogger(common.DEFAULT_NAMESPACE, conf)
-		logger = common.GetLogger(common.DEFAULT_NAMESPACE, "bucket")
+		logger = common.GetLogger(common.DEFAULT_NAMESPACE, "buckettree")
+		common.SetLogLevel(common.DEFAULT_NAMESPACE, "buckettree", "NOTICE")
 	})
 	return logger
 }

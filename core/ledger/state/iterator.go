@@ -32,10 +32,11 @@ func (array sortable) Less(i, j int) bool {
 type MemIterator struct {
 	cache     Storage
 	cacheKeys sortable
+	deleted   Storage
 	index     int
 }
 
-func NewMemIterator(kvs Storage) *MemIterator {
+func NewMemIterator(kvs, deleted Storage) *MemIterator {
 	cache := make(Storage)
 	var key sortable
 	for k, v := range kvs {
@@ -46,6 +47,7 @@ func NewMemIterator(kvs Storage) *MemIterator {
 	return &MemIterator{
 		cache:     cache,
 		cacheKeys: key,
+		deleted:   deleted,
 		index:     -1,
 	}
 }
@@ -83,6 +85,9 @@ func (iter *MemIterator) Value() []byte {
 // Exist checks whether the entry is existed in dirty storage by given key.
 func (iter *MemIterator) Exist(key common.Hash) bool {
 	_, exist := iter.cache[key]
+	if !exist {
+		_, exist = iter.deleted[key]
+	}
 	return exist
 }
 
@@ -121,6 +126,7 @@ type StorageIterator struct {
 func NewStorageIterator(obj *StateObject, start, limit *common.Hash) *StorageIterator {
 	var (
 		mem        Storage = make(Storage)
+		deleted    Storage = make(Storage)
 		startBytes []byte
 		limitBytes []byte
 	)
@@ -137,13 +143,23 @@ func NewStorageIterator(obj *StateObject, start, limit *common.Hash) *StorageIte
 		if isLarger(start, k.Bytes()) && isLess(limit, k.Bytes()) && v != nil {
 			mem[k] = v
 		}
+		if v == nil {
+			deleted[k] = []byte{0x1}
+		}
 	}
-	memIter := NewMemIterator(mem)
+	memIter := NewMemIterator(mem, deleted)
 	var dbIter db.Iterator
 	if start == nil && limit == nil {
 		dbIter = obj.db.db.NewIterator(GetStorageKeyPrefix(obj.address.Bytes()))
 	} else {
-		dbIter = obj.db.db.Scan(CompositeStorageKey(obj.address.Bytes(), startBytes), CompositeStorageKey(obj.address.Bytes(), limitBytes))
+		var (
+			dbStart []byte = CompositeStorageKey(obj.address.Bytes(), startBytes)
+			dbLimit []byte = CompositeStorageKey(obj.address.Bytes(), limitBytes)
+		)
+		if limit == nil {
+			dbLimit = CompositeStorageKey(obj.address.Bytes(), common.FullHash().Bytes())
+		}
+		dbIter = obj.db.db.Scan(dbStart, dbLimit)
 	}
 	return &StorageIterator{
 		memIter: memIter,
@@ -163,7 +179,11 @@ func (iter *StorageIterator) Next() bool {
 			iter.exhausted[1] = true
 			break
 		}
-		if iter.memIter.Exist(common.BytesToRightPaddingHash(iter.dbIter.Key())) {
+		actualKey, match := SplitCompositeStorageKey(iter.addr.Bytes(), iter.dbIter.Key())
+		if !match {
+			panic("expect to match with contract storage key pattern")
+		}
+		if iter.memIter.Exist(common.BytesToRightPaddingHash(actualKey)) {
 			continue
 		}
 		break
@@ -176,7 +196,11 @@ func (iter *StorageIterator) Next() bool {
 	case iter.exhausted[0] && !iter.exhausted[1]:
 		iter.plexer = true
 	case !iter.exhausted[0] && !iter.exhausted[1]:
-		if bytes.Compare(iter.memIter.Key(), iter.dbIter.Key()) <= 0 {
+		actualKey, match := SplitCompositeStorageKey(iter.addr.Bytes(), iter.dbIter.Key())
+		if !match {
+			panic("expect to match with contract storage key pattern")
+		}
+		if bytes.Compare(iter.memIter.Key(), actualKey) <= 0 {
 			// move db iterator back
 			iter.plexer = false
 			iter.dbIter.Prev()
