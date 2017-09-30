@@ -235,11 +235,13 @@ func (admin *Administrator) startNamespace(cmd *Command) *CommandResult {
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
-	err := admin.nsMgr.StartNamespace(cmd.Args[0])
-	if err != nil {
-		admin.logger.Errorf("start namespace error: %v", err)
-		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: err.Error()}}
-	}
+	go func(){
+		err := admin.nsMgr.StartNamespace(cmd.Args[0])
+		if err != nil {
+			admin.logger.Errorf("start namespace error: %v", err)
+			return
+		}
+	}()
 
 	return &CommandResult{Ok: true, Result: "start namespace cmd executed!"}
 }
@@ -254,11 +256,13 @@ func (admin *Administrator) stopNamespace(cmd *Command) *CommandResult {
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
-	err := admin.nsMgr.StopNamespace(cmd.Args[0])
-	if err != nil {
-		admin.logger.Errorf("stop namespace error: %v", err)
-		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: err.Error()}}
-	}
+	go func(){
+		err := admin.nsMgr.StopNamespace(cmd.Args[0])
+		if err != nil {
+			admin.logger.Errorf("stop namespace error: %v", err)
+			return
+		}
+	}()
 
 	return &CommandResult{Ok: true, Result: "stop namespace cmd executed!"}
 }
@@ -273,13 +277,15 @@ func (admin *Administrator) restartNamespace(cmd *Command) *CommandResult {
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
-	err := admin.nsMgr.RestartNamespace(cmd.Args[0])
-	if err != nil {
-		admin.logger.Errorf("restart namespace error: %v", err)
-		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
-	}
+	go func(){
+		err := admin.nsMgr.RestartNamespace(cmd.Args[0])
+		if err != nil {
+			admin.logger.Errorf("restart namespace error: %v", err)
+			return
+		}
+	}()
 
-	return &CommandResult{Ok: true, Result: "restart namespace successful"}
+	return &CommandResult{Ok: true, Result: "restart namespace cmd executed!"}
 }
 
 // RegisterNamespace registers a new namespace, waiting for the command to be executed

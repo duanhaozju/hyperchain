@@ -212,40 +212,48 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 	//log.Error("-----------enter handle batch req---------------")
 	number := len(reqs)
 	response := make([]interface{}, number)
-	result := make(chan interface{}, number)
+	//result := make(chan interface{}, number)
 
+	i := 0
 	for _, req := range reqs {
 		req.Ctx = ctx
 
-		go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}) {
-			name := request.Namespace
-			if err := codec.CheckHttpHeaders(name, request.Method); err != nil {
-				log.Errorf("CheckHttpHeaders error: %v", err)
-				result <- codec.CreateErrorResponse(request.Id, request.Namespace, &common.CertError{Message: err.Error()})
-				return
-			}
-			var rm *requestManager
-
-			s.requestMgrMu.Lock()
-			if _, ok := s.requestMgr[name]; !ok {
-				rm = NewRequestManager(name, s, codec)
-				s.requestMgr[name] = rm
-				rm.Start()
-			} else {
-				s.requestMgr[name].codec = codec
-				rm = s.requestMgr[name]
-			}
-			s.requestMgrMu.Unlock()
-
-			rm.requests <- request
-			result <- (<-rm.response)
-			return
-		}(s, req, codec, result)
+		//go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}) {
+		//	name := request.Namespace
+		//	if err := codec.CheckHttpHeaders(name, request.Method); err != nil {
+		//		log.Errorf("CheckHttpHeaders error: %v", err)
+		//		result <- codec.CreateErrorResponse(request.Id, request.Namespace, &common.CertError{Message: err.Error()})
+		//		return
+		//	}
+		//	var rm *requestManager
+		//
+		//	s.requestMgrMu.Lock()
+		//	if _, ok := s.requestMgr[name]; !ok {
+		//		rm = NewRequestManager(name, s, codec)
+		//		s.requestMgr[name] = rm
+		//		rm.Start()
+		//	} else {
+		//		s.requestMgr[name].codec = codec
+		//		rm = s.requestMgr[name]
+		//	}
+		//	s.requestMgrMu.Unlock()
+		//
+		//	rm.requests <- request
+		//	result <- <-rm.response
+		//	return
+		//}(s, req, codec, result)
+		if err := codec.CheckHttpHeaders(req.Namespace, req.Method); err != nil {
+			log.Errorf("CheckHttpHeaders error: %v", err)
+			response[i] = codec.CreateErrorResponse(req.Id, req.Namespace, &common.CertError{Message: err.Error()})
+			break
+		}
+		response[i] = s.handleChannelReq(codec, req)
+		i++
 	}
 
-	for i := 0; i < number; i++ {
-		response[i] = <-result
-	}
+	//for i := 0; i < number; i++ {
+	//	response[i] = <-result
+	//}
 
 	if number == 1 {
 		if err := codec.Write(response[0]); err != nil {

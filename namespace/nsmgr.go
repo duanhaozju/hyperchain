@@ -478,12 +478,12 @@ func (nr *nsManagerImpl) ListenDelNode(name string, delFlag chan bool) {
 	}
 }
 
-//GetStopFlag returns the flag of stop hyperchain server
+// GetStopFlag returns the flag of stop hyperchain server
 func (nr *nsManagerImpl) GetStopFlag() chan bool {
 	return nr.stopHp
 }
 
-//GetRestartFlag returns the flag of restart hyperchain server
+// GetRestartFlag returns the flag of restart hyperchain server
 func (nr *nsManagerImpl) GetRestartFlag() chan bool {
 	return nr.restartHp
 }

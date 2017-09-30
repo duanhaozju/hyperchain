@@ -62,48 +62,48 @@ func (nr *nsManagerImpl) constructConfigFromDir(namespace, path string) (*common
 func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 	return map[string]*api.API{
 		"tx": {
-			Srvname: "tx",
+			Svcname: "tx",
 			Version: "1.5",
 			Service: api.NewPublicTransactionAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"node": {
-			Srvname: "node",
+			Svcname: "node",
 			Version: "1.5",
 			Service: api.NewPublicNodeAPI(namespace, ns.eh),
 			Public:  true,
 		},
 		"block": {
-			Srvname: "block",
+			Svcname: "block",
 			Version: "1.5",
 			Service: api.NewPublicBlockAPI(namespace),
 			Public:  true,
 		},
 		"account": {
-			Srvname: "account",
+			Svcname: "account",
 			Version: "1.5",
 			Service: api.NewPublicAccountAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"contract": {
-			Srvname: "contract",
+			Svcname: "contract",
 			Version: "1.5",
 			Service: api.NewPublicContractAPI(namespace, ns.eh, ns.conf),
 			Public:  true,
 		},
 		"cert": {
-			Srvname: "cert",
+			Svcname: "cert",
 			Version: "1.5",
 			Service: api.NewCertAPI(namespace, ns.caMgr),
 			Public:  true,
 		},
 		"sub": {
-			Srvname: "sub",
+			Svcname: "sub",
 			Version: "1.5",
 			Service: api.NewFilterAPI(namespace, ns.eh, ns.conf),
 		},
 		"archive": {
-			Srvname: "archive",
+			Svcname: "archive",
 			Version: "1.5",
 			Service: api.NewPublicArchiveAPI(namespace, ns.eh, ns.conf),
 		},

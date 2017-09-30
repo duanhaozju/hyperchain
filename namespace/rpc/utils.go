@@ -5,26 +5,11 @@ package rpc
 import (
 	"context"
 	"hyperchain/common"
-	"math/big"
 	"reflect"
 	"unicode"
 	"unicode/utf8"
 	"strconv"
 )
-
-var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
-
-// Indication if this type should be serialized in hex
-func isHexNum(t reflect.Type) bool {
-	if t == nil {
-		return false
-	}
-	for t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	return t == bigIntType
-}
 
 // Is this an exported - upper case - name?
 func isExported(name string) bool {
@@ -71,16 +56,6 @@ func formatName(name string) string {
 	return string(ret)
 }
 
-var subscriptionType = reflect.TypeOf((*common.Subscription)(nil)).Elem()
-
-// isSubscriptionType returns an indication if the given t is of Subscription or *Subscription type
-func isSubscriptionType(t reflect.Type) bool {
-	for t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	return t == subscriptionType
-}
-
 var IDType = reflect.TypeOf((*common.ID)(nil)).Elem()
 
 // isIDType returns an indication if the given t is of ID or *ID type
@@ -91,10 +66,11 @@ func isIDType(t reflect.Type) bool {
 	return t == IDType
 }
 
-// isPubSub tests whether the given method has as as first argument a context.Context
-// and returns the pair (Subscription, error)
+// isPubSub tests whether the given method has a first argument whose type is
+// context.Context or not.
 func isPubSub(methodType reflect.Type) bool {
-	// numIn(0) is the receiver type
+	// The first input param numIn(0) is the receiver type, so Subscription methods have
+	// at least 2 input params(receiver type and context.Context).
 	if methodType.NumIn() < 2 || methodType.NumOut() != 2 {
 		return false
 	}
@@ -127,9 +103,9 @@ func isEmpty(v reflect.Value) bool {
 	}
 }
 
-// suitableCallbacks iterates over the methods of the given type. It will determine if a method satisfies the criteria
-// for a RPC callback or a subscription callback and adds it to the collection of callbacks or subscriptions. See server
-// documentation for a summary of these criteria.
+// suitableCallbacks iterates over the methods of the given type. It will determine if a
+// method satisfies the criteria for a RPC callback or a subscription callback and adds
+// it to the collection of callbacks or subscriptions.
 func suitableCallbacks(rcvr reflect.Value, typ reflect.Type) (callbacks, subscriptions) {
 	callbacks := make(callbacks)
 	subscriptions := make(subscriptions)
@@ -139,7 +115,9 @@ METHODS:
 		method := typ.Method(m)
 		mtype := method.Type
 		mname := formatName(method.Name)
-		if method.PkgPath != "" { // method must be exported
+
+		// method must be exported
+		if method.PkgPath != "" {
 			continue
 		}
 
@@ -156,8 +134,10 @@ METHODS:
 			firstArg = 2
 		}
 
+		// process subscribe method.
 		if h.isSubscribe {
-			h.argTypes = make([]reflect.Type, numIn-firstArg) // skip rcvr type
+			// skip receiver type
+			h.argTypes = make([]reflect.Type, numIn-firstArg)
 			for i := firstArg; i < numIn; i++ {
 				argType := mtype.In(i)
 				if isExportedOrBuiltinType(argType) {
@@ -205,7 +185,8 @@ METHODS:
 		case 0, 1:
 			break
 		case 2:
-			if h.errPos == -1 { // method must one return value and 1 error
+			// method must one return value and 1 error
+			if h.errPos == -1 {
 				continue METHODS
 			}
 			break
