@@ -309,7 +309,6 @@ func (bucketTree *BucketTree) Clear() {
 	bucketTree.mcache.clear()
 	globalBucketCache.clear()
 	bucketTree.dirty = false
-	// bucketTree.loadLatestHash()
 }
 
 // loadLatestHash load root node from database and record its hash value.
