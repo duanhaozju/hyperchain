@@ -28,6 +28,7 @@ import (
 	"strings"
 	"testing"
 	"testing/quick"
+	"time"
 )
 
 type JournalSuite struct{}
@@ -56,7 +57,8 @@ func (suite *JournalSuite) TearDownSuite(c *checker.C) {
 }
 
 func (suite *JournalSuite) TestSnapshotRandom(c *checker.C) {
-	config := &quick.Config{MaxCount: 50}
+	rnd := rand.New(rand.NewSource(time.Now().Unix()))
+	config := &quick.Config{MaxCount: 50, Rand: rnd}
 	err := quick.Check((*snapshotTest).revertToSnapshot, config)
 	if cerr, ok := err.(*quick.CheckError); ok {
 		test := cerr.In[0].(*snapshotTest)
@@ -67,7 +69,8 @@ func (suite *JournalSuite) TestSnapshotRandom(c *checker.C) {
 }
 
 func (suite *JournalSuite) TestRevertRandom(c *checker.C) {
-	config := &quick.Config{MaxCount: 20}
+	rnd := rand.New(rand.NewSource(time.Now().Unix()))
+	config := &quick.Config{MaxCount: 50, Rand: rnd}
 	err := quick.Check((*snapshotTest).revertToTarget, config)
 	if cerr, ok := err.(*quick.CheckError); ok {
 		test := cerr.In[0].(*snapshotTest)
@@ -222,6 +225,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 // derived from r.
 func (*snapshotTest) Generate(r *rand.Rand, size int) reflect.Value {
 	// Generate random actions.
+	size = size * 50
 	addrs := make([]common.Address, 2)
 	for i := range addrs {
 		addrs[i] = common.HexToAddress(RandomString(40))

@@ -119,6 +119,10 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 			} else {
 				txc += 1
 			}
+			// If the transaction is invalid, there will no related receipt been saved.
+			if receipt == nil {
+				continue
+			}
 			if err, _ := edb.PersistReceipt(avBatch, receipt, false, false); err != nil {
 				mgr.logger.Errorf("[Namespace = %s] archive receipt in block %d to historic database failed, error msg %s", mgr.namespace, i, err.Error())
 				return err

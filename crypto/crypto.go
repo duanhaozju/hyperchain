@@ -6,10 +6,10 @@ import (
 	"crypto/sha256"
 	"golang.org/x/crypto/ripemd160"
 	"hyperchain/common"
-	"hyperchain/crypto/rlp"
 	"hyperchain/crypto/secp256k1"
 	"hyperchain/crypto/sha3"
 	"math/big"
+	"encoding/binary"
 )
 
 func Keccak256Hash(data ...[]byte) (h common.Hash) {
@@ -22,9 +22,11 @@ func Keccak256Hash(data ...[]byte) (h common.Hash) {
 }
 
 // Creates an hyperchain address given the bytes and the nonce
-func CreateAddress(b common.Address, nonce uint64) common.Address {
-	data, _ := rlp.EncodeToBytes([]interface{}{b, nonce})
-	return common.BytesToAddress(Keccak256(data)[12:])
+func CreateAddress(addr common.Address, nonce uint64) common.Address {
+	buf := make([]byte, common.AddressLength + binary.MaxVarintLen64)
+	copy(buf, addr.Bytes())
+	binary.PutUvarint(buf[common.AddressLength:], nonce)
+	return common.BytesToAddress(Keccak256(buf)[12:])
 }
 
 func Sha256(data []byte) []byte {
