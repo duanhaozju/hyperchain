@@ -63,7 +63,7 @@ type rbftImpl struct {
 }
 
 // newPBFT init the PBFT instance
-func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*rbftImpl, error) {
+func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*rbftImpl, error) {
 	var err error
 	rbft := &rbftImpl{}
 	rbft.logger = common.GetLogger(namespace, "consensus")

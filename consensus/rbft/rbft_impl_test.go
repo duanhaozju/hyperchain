@@ -13,7 +13,7 @@ import (
 func TestPbftImpl_NewPbft(t *testing.T) {
 
 	//new PBFT
-	pbft, conf, err := TNewPbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	pbft, conf, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
 
 	ensure.Nil(t, err)
 
@@ -45,7 +45,7 @@ func TestPbftImpl_NewPbft(t *testing.T) {
 //Id:        id,
 //}
 func TestProcessNullRequest(t *testing.T) {
-	pbft, _, err := TNewPbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
+	pbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	ensure.Nil(t, err)
 	pbMsg := &protos.Message{
 		Type:      protos.Message_NULL_REQUEST,
