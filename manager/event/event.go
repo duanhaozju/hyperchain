@@ -69,10 +69,11 @@ type VCResetEvent struct {
 	SeqNo uint64
 }
 
-//set primary in peerManager when new view and primary
-type InformPrimaryEvent struct {
-	Primary uint64
-}
+////set primary in peerManager when new view and primary
+//type InformPrimaryEvent struct {
+//	Primary uint64
+//}
+//TODO:transfer all this event to proto defined
 
 /* Peer Maintain Event */
 //a new peer past ca validation

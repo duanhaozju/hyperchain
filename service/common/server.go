@@ -1,34 +1,34 @@
-package dispatcher
+package common
 
 import (
+	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/op/go-logging"
-	"hyperchain/service/common"
 	pb "hyperchain/service/common/protos"
-	"fmt"
+	"time"
 )
 
 //DispatchServer handleDispatch service
 type DispatchServer struct {
 	port   int
 	host   string
-	sr     common.ServiceRegistry
+	sr     ServiceRegistry
 	logger *logging.Logger
 }
 
 func NewDispatchServer(port int, host string) (*DispatchServer, error) {
 	ds := &DispatchServer{
-		port:   port,
-		host:   host,
+		port: port,
+		host: host,
 		//logger: hcomm.GetLogger("system", "dispatcher"),
-		sr:     common.NewServiceRegistry(),
+		sr:     NewServiceRegistry(),
 		logger: logging.MustGetLogger("dispatcher"),
 	}
 
 	return ds, nil
 }
 
-func (ds *DispatchServer) Addr() string  {
+func (ds *DispatchServer) Addr() string {
 	return fmt.Sprintf("%s:%d", ds.host, ds.port)
 }
 
@@ -36,38 +36,43 @@ func (ds *DispatchServer) Addr() string  {
 func (ds *DispatchServer) Register(stream pb.Dispatcher_RegisterServer) error {
 
 	ds.logger.Infof("Receive new service connection!")
+	register := true
 	for {
-		msg, err := stream.Recv()
-		if err != nil {
-			ds.logger.Error(err)
-			//TODO: handle broken stream
-			return err
+		if register {
+			msg, err := stream.Recv()
+			if err != nil {
+				ds.logger.Error(err)
+				//TODO: handle broken stream
+				return err
+			}
+			switch msg.Type {
+			case pb.Type_REGISTER:
+				ds.handleRegister(msg, stream)
+			}
+			register = false
+		} else {
+			//TODO: health check
+			time.Sleep(1 * time.Second)
 		}
-		switch msg.Type {
-		case pb.Type_REGISTER:
-			ds.handleRegister(msg, stream)
-		case pb.Type_DISPATCH:
-			ds.handleDispatch(msg)
-		case pb.Type_ADMIN:
-			//TODO: other types todo
-		case pb.Type_RESPONSE:
-		}
+
 	}
 
 	return nil
 }
 
 //handleDispatch handleDispatch messages
-func (ds *DispatchServer) handleDispatch(msg *pb.Message) {
+func (ds *DispatchServer) HandleDispatch(namespace string, msg *pb.Message) {
+	//ds.logger.Debugf("try to handle dispatch message: %v for namespace: %s", msg, namespace)
+
 	switch msg.From {
 	case pb.FROM_APISERVER:
-		ds.dispatchAPIServerMsg(msg)
+		ds.dispatchAPIServerMsg(namespace, msg)
 	case pb.FROM_CONSENSUS:
-		ds.dispatchConsensusMsg(msg)
+		ds.dispatchConsensusMsg(namespace, msg)
 	case pb.FROM_EXECUTOR:
-		ds.dispatchExecutorMsg(msg)
+		ds.dispatchExecutorMsg(namespace, msg)
 	case pb.FROM_NETWORK:
-		ds.dispatchNetworkMsg(msg)
+		ds.dispatchNetworkMsg(namespace, msg)
 	default:
 		ds.logger.Errorf("Undefined message: %v", msg)
 	}
@@ -92,16 +97,15 @@ func (ds *DispatchServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_R
 		rm.Namespace = "global"
 	}
 
-	service := common.NewService(rm.Namespace, serviceId(msg), stream)
+	service := NewService(rm.Namespace, serviceId(msg), stream, ds)
 	ds.sr.Register(service)
 	ds.logger.Debug("Send register ok response!")
 	if err := stream.Send(&pb.Message{
-		Type:pb.Type_RESPONSE,
-		Ok:true,
+		Type: pb.Type_RESPONSE,
+		Ok:   true,
 	}); err != nil {
 		ds.logger.Error(err)
 	}
-
 	go service.Serve()
 }
 
@@ -109,13 +113,13 @@ func (ds *DispatchServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_R
 func serviceId(msg *pb.Message) string {
 	switch msg.From {
 	case pb.FROM_CONSENSUS:
-		return common.CONSENTER
+		return CONSENTER
 	case pb.FROM_APISERVER:
-		return common.APISERVER
+		return APISERVER
 	case pb.FROM_NETWORK:
-		return common.NETWORK
+		return NETWORK
 	case pb.FROM_EXECUTOR:
-		return common.EXECUTOR
+		return EXECUTOR
 	default:
 		return ""
 	}
