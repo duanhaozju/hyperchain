@@ -45,7 +45,7 @@ func TestPbftImpl_NewPbft(t *testing.T) {
 //Id:        id,
 //}
 func TestProcessNullRequest(t *testing.T) {
-	pbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	ensure.Nil(t, err)
 	pbMsg := &protos.Message{
 		Type:      protos.Message_NULL_REQUEST,
@@ -54,9 +54,9 @@ func TestProcessNullRequest(t *testing.T) {
 		Id:        1,
 	}
 	event, err := proto.Marshal(pbMsg)
-	pbft.RecvMsg(event)
+	rbft.RecvMsg(event)
 	time.Sleep(3 * time.Second)
-	err = CleanData()
+	err = CleanData(rbft.namespace)
 	ensure.Nil(t, err)
 
 }

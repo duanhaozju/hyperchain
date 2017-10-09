@@ -7,7 +7,7 @@ import (
 )
 
 func TestStatusMgr(t *testing.T) {
-	var status PbftStatus
+	var status RbftStatus
 	status.activeState(&status.byzantine)
 	status.inActiveState(&status.isNewNode)
 
