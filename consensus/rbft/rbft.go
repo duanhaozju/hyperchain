@@ -29,7 +29,7 @@ which can be invoked by outer services.
 
 // New return a instance of rbftImpl
 func New(namespace string, conf *common.Config, h helper.Stack, n int) (*rbftImpl, error) {
-	return newPBFT(namespace, conf, h, n)
+	return newRBFT(namespace, conf, h, n)
 }
 
 // RecvMsg receives messages from other validating peers
