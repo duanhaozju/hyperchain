@@ -58,18 +58,18 @@ func NewServer(nr namespace.NamespaceManager, config *common.Config) *Server {
 // ServeCodec reads incoming requests from codec, calls the appropriate callback and writes the
 // response back using the given codec. It will block until the codec is closed or the server is
 // stopped. In either case the codec is closed.
-func (s *Server) ServeCodec(codec ServerCodec, options CodecOption, ctx context.Context) {
+func (s *Server) ServeCodec(codec ServerCodec, options CodecOption, ctx context.Context) error {
 	defer codec.Close()
-	s.serveRequest(codec, false, options, ctx)
+	return s.serveRequest(codec, false, options, ctx)
 }
 
 // ServeSingleRequest reads and processes a single RPC request from the given codec. It will not
 // close the codec unless a non-recoverable error has occurred. Note, this method will return after
 // a single request has been processed!
-func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
+func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	s.serveRequest(codec, true, options, ctx)
+	return s.serveRequest(codec, true, options, ctx)
 }
 
 // serveRequest will reads requests from the codec, calls the RPC callback and
@@ -87,6 +87,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			const size = 64 << 10
 			buf := make([]byte, size)
 			buf = buf[:runtime.Stack(buf, false)]
+			log.Errorf("panic message: %v", err)
 			log.Errorf(string(buf))
 		}
 
@@ -112,7 +113,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 		if err != nil {
 			// If a parsing error occurred, send an error
 			if err.Error() != "EOF" {
-				log.Debug(fmt.Sprintf("read error %v\n", err))
+				log.Debug(fmt.Sprintf("read error: %v\n", err))
 				codec.Write(codec.CreateErrorResponse(nil, "", err))
 			}
 			// Error or end of stream, wait for requests and tear down

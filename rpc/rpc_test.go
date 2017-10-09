@@ -9,7 +9,7 @@ import (
 
 var (
 	configPath = "../configuration/global.toml"
-	ns			= common.DEFAULT_NAMESPACE
+	defaultNS    = common.DEFAULT_NAMESPACE
 	rpc			RPCServer
 )
 
@@ -21,7 +21,7 @@ func initial() {
 	config.Set(common.P2P_TLS_CERT_PRIV, "./test/"+config.GetString(common.P2P_TLS_CERT_PRIV))
 	// init logger
 	config.Set(common.LOG_DUMP_FILE, false)
-	common.InitHyperLogger(ns, config)
+	common.InitHyperLogger(defaultNS, config)
 
 	rpc = GetRPCServer(nil, config)
 }
