@@ -24,15 +24,28 @@ func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.
 	}
 }
 
-func (admin *ArchivePublicAPI) Snapshot(blockNumber uint64) string {
+func (admin *ArchivePublicAPI) Snapshot(blockNumber uint64) (string, error) {
 	log := common.GetLogger(admin.namespace, "api")
+	handler := common.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
+
+	chainHeight := edb.GetHeightOfChain(admin.namespace)
+	if blockNumber < chainHeight && blockNumber != 0 {
+		return "", &common.SnapshotErr{Message: "trigger block number is less than chain height"}
+	}
+	if _, meta := handler.Search(chainHeight); (meta != common.Manifest{}) && blockNumber == 0 {
+		return "", &common.SnapshotErr{Message: "duplicate snapshot requirement for same height"}
+	}
+	if _, meta := handler.Search(blockNumber); (meta != common.Manifest{}) && blockNumber != 0 {
+		return "", &common.SnapshotErr{Message: "duplicate snapshot requirement for same height"}
+	}
+
 	filterId := flt.NewFilterID()
 	log.Debugf("receive snapshot rpc command, params: (block number #%d), filterId: (%s)", blockNumber, filterId)
 	admin.eh.GetEventObject().Post(event.SnapshotEvent{
 		FilterId:    filterId,
 		BlockNumber: blockNumber,
 	})
-	return filterId
+	return filterId, nil
 }
 
 func (admin *ArchivePublicAPI) QuerySnapshotExist(filterId string) bool {
@@ -106,13 +119,14 @@ func (admin *ArchivePublicAPI) CheckSnapshot(filterId string) (bool, error) {
 	return true, nil
 }
 
-func (admin *ArchivePublicAPI) Archive(filterId string) (bool, error) {
+func (admin *ArchivePublicAPI) Archive(filterId string, sync bool) (bool, error) {
 	log := common.GetLogger(admin.namespace, "api")
 	log.Debugf("receive archive command, params: filterId: (%s)", filterId)
 	cont := make(chan error)
 	admin.eh.GetEventObject().Post(event.ArchiveEvent{
 		FilterId: filterId,
 		Cont:     cont,
+		Sync:     sync,
 	})
 	err := <-cont
 	if err != nil {

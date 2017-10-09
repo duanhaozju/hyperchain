@@ -36,20 +36,29 @@ func NewArchiveManager(namespace string, executor *Executor, registry *SnapshotR
 */
 func (mgr *ArchiveManager) Archive(event event.ArchiveEvent) {
 	var manifest common.Manifest
+	if !event.Sync {
+		close(event.Cont)
+	}
 	if !mgr.registry.rwc.Contain(event.FilterId) {
 		mgr.feedback(false, event.FilterId, SnapshotNotExistMsg)
-		event.Cont <- SnapshotDoesntExistErr
+		if event.Sync {
+			event.Cont <- SnapshotDoesntExistErr
+		}
 	} else {
 		_, manifest = mgr.registry.rwc.Read(event.FilterId)
 		if err := mgr.migrate(manifest); err != nil {
 			mgr.logger.Noticef("archive for (filter %s) failed, detail %s", event.FilterId, err.Error())
 			mgr.feedback(false, event.FilterId, ArchiveFailedMsg)
-			event.Cont <- ArchiveFailedErr
+			if event.Sync {
+				event.Cont <- err
+			}
 		} else {
 			mgr.logger.Noticef("archive for (filter %s) success, genesis block changes to %d and the relative genesis world state %s",
 				event.FilterId, manifest.Height, manifest.FilterId)
 			mgr.feedback(true, event.FilterId, EmptyMessage)
-			close(event.Cont)
+			if event.Sync {
+				close(event.Cont)
+			}
 		}
 	}
 }
