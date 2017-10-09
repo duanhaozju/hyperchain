@@ -13,6 +13,12 @@ type ServiceRegistry interface {
 	Close()                                 // Close close the service registry.
 }
 
+func NewServiceRegistry() ServiceRegistry {
+	return &serviceRegistryImpl{
+		components:make(map[string]*NamespaceComponent),
+	}
+}
+
 type NamespaceComponent struct {
 	services map[string]Service //<service name, service>
 	lock     sync.RWMutex
@@ -128,17 +134,18 @@ func (sri *serviceRegistryImpl) AddNamespaceComponent(namespace string) {
 // Register register new service.
 func (sri *serviceRegistryImpl) Register(s Service) error {
 	sri.lock.Lock()
+	defer sri.lock.Unlock()
 	if _, ok := sri.components[s.Namespace()]; !ok {
-		sri.AddNamespaceComponent(s.Namespace())
+		sri.components[s.Namespace()] = newNamespaceComponent()
 	}
 	sri.components[s.Namespace()].AddService(s)
-	sri.lock.Unlock()
 	return nil
 }
 
 // UnRegister service by service id.
 func (sri *serviceRegistryImpl) UnRegister(namespace, sid string) error {
 	sri.lock.Lock()
+	defer sri.lock.Unlock()
 	//delete(sri.components, sid)
 	if !sri.ContainsNamespace(namespace) {
 		return fmt.Errorf("UnRegister error: namespace[%s] is not found!", namespace)
@@ -150,7 +157,7 @@ func (sri *serviceRegistryImpl) UnRegister(namespace, sid string) error {
 		c.Service(sid).Close()
 		c.Remove(sid)
 	}
-	sri.lock.Unlock()
+
 	return nil
 }
 

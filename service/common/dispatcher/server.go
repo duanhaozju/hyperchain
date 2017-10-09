@@ -3,9 +3,9 @@ package dispatcher
 import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/op/go-logging"
-	hcomm "hyperchain/common"
 	"hyperchain/service/common"
 	pb "hyperchain/service/common/protos"
+	"fmt"
 )
 
 //DispatchServer handleDispatch service
@@ -20,9 +20,16 @@ func NewDispatchServer(port int, host string) (*DispatchServer, error) {
 	ds := &DispatchServer{
 		port:   port,
 		host:   host,
-		logger: hcomm.GetLogger("system", "dispatcher"),
+		//logger: hcomm.GetLogger("system", "dispatcher"),
+		sr:     common.NewServiceRegistry(),
+		logger: logging.MustGetLogger("dispatcher"),
 	}
+
 	return ds, nil
+}
+
+func (ds *DispatchServer) Addr() string  {
+	return fmt.Sprintf("%s:%d", ds.host, ds.port)
 }
 
 //Register receive a new connection
@@ -72,6 +79,7 @@ func (ds *DispatchServer) handleAdmin(msg *pb.Message) {
 
 //handleRegister parse msg and register this stream
 func (ds *DispatchServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_RegisterServer) {
+	ds.logger.Debugf("handle register msg: %v", msg)
 	rm := pb.RegisterMessage{}
 	err := proto.Unmarshal(msg.Payload, &rm)
 	if err != nil {
@@ -86,6 +94,14 @@ func (ds *DispatchServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_R
 
 	service := common.NewService(rm.Namespace, serviceId(msg), stream)
 	ds.sr.Register(service)
+	ds.logger.Debug("Send register ok response!")
+	if err := stream.Send(&pb.Message{
+		Type:pb.Type_RESPONSE,
+		Ok:true,
+	}); err != nil {
+		ds.logger.Error(err)
+	}
+
 	go service.Serve()
 }
 
