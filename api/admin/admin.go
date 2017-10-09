@@ -58,7 +58,7 @@ type permissionSet map[int]bool
 // administrator to manage hyperchain.
 type Administrator struct {
 	// CmdExecutor maps the interface name to the processing functions.
-	CmdExecutor   map[string]func(command *Command) *CommandResult
+	CmdExecutor map[string]func(command *Command) *CommandResult
 
 	// checks token or not, used for test
 	check bool
@@ -71,16 +71,16 @@ type Administrator struct {
 	nsMgr namespace.NamespaceManager
 
 	// valid_user records the current valid users with its password.
-	valid_user    map[string]string
+	valid_user map[string]string
 
 	// user_scope records the current user with its permissions.
-	user_scope    map[string]permissionSet
+	user_scope map[string]permissionSet
 
 	// user_opTimer records the current user with its last operation time.
-	user_opTime   map[string]int64
+	user_opTime map[string]int64
 
-	config        *common.Config
-	logger        *logging.Logger
+	config *common.Config
+	logger *logging.Logger
 }
 
 // NewAdministrator news a raw administrator with default settings.
@@ -115,7 +115,7 @@ func (admin *Administrator) init() {
 	}
 
 	admin.logger = common.GetLogger(common.DEFAULT_LOG, "jsonrpc/admin")
-	admin.logger.Debugf("Start administrator with check permission: %v; expire " +
+	admin.logger.Debugf("Start administrator with check permission: %v; expire "+
 		"timeout: %v", admin.check, admin.expiration)
 
 	admin.CmdExecutor = make(map[string]func(command *Command) *CommandResult)
@@ -235,7 +235,7 @@ func (admin *Administrator) startNamespace(cmd *Command) *CommandResult {
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
-	go func(){
+	go func() {
 		err := admin.nsMgr.StartNamespace(cmd.Args[0])
 		if err != nil {
 			admin.logger.Errorf("start namespace error: %v", err)
@@ -256,7 +256,7 @@ func (admin *Administrator) stopNamespace(cmd *Command) *CommandResult {
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
-	go func(){
+	go func() {
 		err := admin.nsMgr.StopNamespace(cmd.Args[0])
 		if err != nil {
 			admin.logger.Errorf("stop namespace error: %v", err)
@@ -277,7 +277,7 @@ func (admin *Administrator) restartNamespace(cmd *Command) *CommandResult {
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
-	go func(){
+	go func() {
 		err := admin.nsMgr.RestartNamespace(cmd.Args[0])
 		if err != nil {
 			admin.logger.Errorf("restart namespace error: %v", err)
@@ -337,8 +337,7 @@ func (admin *Administrator) getLevel(cmd *Command) *CommandResult {
 	argLen := len(cmd.Args)
 	if argLen != 2 {
 		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
-		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message:
-			fmt.Sprintf("Invalid parameter numbers, expects 2 parameters, got %d", argLen)}}
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2 parameters, got %d", argLen)}}
 	}
 	level, err := common.GetLogLevel(cmd.Args[0], cmd.Args[1])
 	if err != nil {
@@ -354,8 +353,7 @@ func (admin *Administrator) setLevel(cmd *Command) *CommandResult {
 	argLen := len(cmd.Args)
 	if argLen != 3 {
 		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
-		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message:
-			fmt.Sprintf("Invalid parameter numbers, expects 3 parameters, got %d", argLen)}}
+		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 3 parameters, got %d", argLen)}}
 	}
 
 	err := common.SetLogLevel(cmd.Args[0], cmd.Args[1], cmd.Args[2])
@@ -518,4 +516,3 @@ func (admin *Administrator) delUser(cmd *Command) *CommandResult {
 	admin.deluser(username)
 	return &CommandResult{Ok: true, Result: "Delete user successfully"}
 }
-

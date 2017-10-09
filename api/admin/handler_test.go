@@ -1,10 +1,10 @@
 package jsonrpc
 
 import (
-	"testing"
-	"net/http"
 	"bytes"
 	"github.com/stretchr/testify/assert"
+	"net/http"
+	"testing"
 )
 
 func TestBasicAuth(t *testing.T) {

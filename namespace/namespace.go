@@ -79,7 +79,7 @@ type Namespace interface {
 type NsState int
 
 const (
-	newed       NsState = 1 << iota
+	newed NsState = 1 << iota
 	initialized
 	running
 	closed
@@ -110,7 +110,7 @@ func (s *Status) getState() NsState {
 
 // setDescription updates the current description by current state.
 func (s *Status) setDescription() {
-	switch s.state{
+	switch s.state {
 	case newed:
 		s.desc = "newed"
 	case initialized:
@@ -138,11 +138,11 @@ type namespaceImpl struct {
 	eh        *manager.EventHub
 	peerMgr   p2p.PeerManager
 	executor  *executor.Executor
-	rpc     rpc.RequestProcessor
+	rpc       rpc.RequestProcessor
 
-	nsInfo *NamespaceInfo
-	status *Status
-	conf      *common.Config
+	nsInfo  *NamespaceInfo
+	status  *Status
+	conf    *common.Config
 	restart bool
 	delFlag chan bool
 }
@@ -351,7 +351,7 @@ func (ns *namespaceImpl) Stop() error {
 		ns.logger.Error(err)
 	}
 
-	// 2. stop Eventhub.
+	// 2. stop eventhub.
 	ns.eh.Stop()
 
 	// 3. stop executor.
@@ -412,7 +412,8 @@ func (ns namespaceImpl) GetExecutor() *executor.Executor {
 	return ns.executor
 }
 
-// ProcessRequest processes request under this namespace
+// ProcessRequest processes request under this namespace, and dispatch request
+// to corresponding handler(now support json request only).
 func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
 	if ns.status.getState() == running {
 		if request != nil {

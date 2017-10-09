@@ -1,8 +1,8 @@
 package jsonrpc
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestSignToken(t *testing.T) {
