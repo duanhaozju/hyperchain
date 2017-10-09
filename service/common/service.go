@@ -2,6 +2,7 @@ package common
 
 import (
 	pb "hyperchain/service/common/protos"
+	"github.com/op/go-logging"
 )
 
 //Service interface to be implemented by component.
@@ -14,16 +15,20 @@ type Service interface {
 }
 
 type serviceImpl struct {
+	ds        *DispatchServer
 	namespace string
 	id        string
 	stream    pb.Dispatcher_RegisterServer
+	logger   *logging.Logger
 }
 
-func NewService(namespace, id string, stream pb.Dispatcher_RegisterServer) Service {
+func NewService(namespace, id string, stream pb.Dispatcher_RegisterServer, ds *DispatchServer) Service {
 	return &serviceImpl{
 		namespace: namespace,
 		id:        id,
 		stream:    stream,
+		logger:    logging.MustGetLogger("service"),
+		ds:        ds,
 	}
 }
 
@@ -51,5 +56,21 @@ func (si *serviceImpl) Close() {
 
 //Serve handle logic impl here.
 func (si *serviceImpl) Serve() {
-
+	for {
+		msg, err := si.stream.Recv()
+		if err != nil {
+			si.logger.Error(err)
+			//TODO: handle broken stream
+		}
+		switch msg.Type {
+		case pb.Type_REGISTER:
+			//ds.handleRegister(msg, stream)
+			//No register event should be here
+		case pb.Type_DISPATCH:
+			si.ds.HandleDispatch(si.namespace, msg)
+		case pb.Type_ADMIN:
+				//TODO: other types todo
+		case pb.Type_RESPONSE:
+		}
+	}
 }

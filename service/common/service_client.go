@@ -17,6 +17,7 @@ type ServiceClient struct {
 	msgs   chan *pb.Message
 	stream pb.Dispatcher_RegisterClient
 	logger *logging.Logger
+	h      Handler
 }
 
 func New(host string, port int) (*ServiceClient, error) {
@@ -86,12 +87,35 @@ func (sc *ServiceClient) Send(msg *pb.Message) error {
 	return sc.stream.Send(msg)
 }
 
-func (sc *ServiceClient) SyncSend(msg *pb.Message) (*pb.Message, error) {
-	err := sc.stream.Send(msg)
-	if err != nil {
-		return nil, err
-	}
-	//TODO: should receive notification when the coresponding response is matched
+//AddHandler add self defined message handler.
+func (sc *ServiceClient) AddHandler(h Handler) {
+	sc.h = h
+}
 
-	return nil, nil
+func (sc *ServiceClient) ProcessMessages() {
+
+	go func() {
+		for  {
+			msg, err := sc.stream.Recv()
+			if err != nil {
+				sc.logger.Error(err)
+			}
+
+			sc.msgs <- msg
+		}
+	}()
+
+
+	//TODO: add process status judge
+	sc.logger.Debug("Start Message processing go routine")
+	for {
+		msg := <-sc.msgs
+		if sc.h == nil {
+			sc.logger.Debug("No handler to handle message: %v")
+		} else {
+			sc.h.Handle(msg)
+		}
+
+	}
+
 }
