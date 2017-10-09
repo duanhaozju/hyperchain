@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package evm
 
 import (
@@ -8,7 +21,10 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"math/big"
-	"strconv"
+)
+
+const (
+	RC1_2_TXGASUPPERLIMIT = 100000000
 )
 
 type Message struct {
@@ -64,6 +80,7 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 	} else {
 		ret, err = vmenv.Call(sender, *to, data, gas, gasPrice, value, int32(op))
 		if err != nil {
+			ret = nil
 			vmenv.Logger().Error("VM call err:", err)
 		}
 	}
@@ -108,10 +125,8 @@ func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, ga
 }
 
 func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger, namespace string, txHash common.Hash) vm.Environment {
-	env := make(map[string]string)
-	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
-	env["currentGasLimit"] = "200000000"
-	vmenv := NewEnv(state, env, logger, namespace, txHash)
+	// TODO pass block package time to env
+	vmenv := NewEnv(state, int64(seqNo), 0, logger, namespace, txHash)
 	return vmenv
 }
 
@@ -126,7 +141,7 @@ func setDefaults(tx *types.Transaction) Message {
 		return Message{
 			From:     common.BytesToAddress(tx.From),
 			To:       common.BytesToAddress(tx.To),
-			Gas:      big.NewInt(100000000),
+			Gas:      big.NewInt(RC1_2_TXGASUPPERLIMIT),
 			GasPrice: tv.RetrieveGasPrice(),
 			Amount:   tv.RetrieveAmount(),
 			Payload:  tv.RetrievePayload(),

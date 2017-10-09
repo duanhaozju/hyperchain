@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package vm
 
 import (
@@ -10,19 +23,12 @@ import (
 type Type byte
 
 const (
-	StdVmTy Type = iota // Default standard VM
-	JitVmTy             // LLVM JIT VM
-	MaxVmTy
+	StdVmTy Type = iota // Default standard ethereum VM
 	JavaVmTy
+	MaxVmTy
 )
 
-// RuleSet is an interface that defines the current rule set during the
-// execution of the EVM instructions (e.g. whether it's homestead)
-type RuleSet interface {
-	IsHomestead(*big.Int) bool
-}
-
-// Environment is an EVM requirement and helper which allows access to outside
+// Environment is a VM requirement and helper which allows access to outside
 // information such as states.
 type Environment interface {
 	// The state database
@@ -37,14 +43,8 @@ type Environment interface {
 	BlockNumber() *big.Int
 	// The n'th hash ago from this block number
 	GetHash(uint64) common.Hash
-	// The handler's address
-	Coinbase() common.Address
 	// The current time (block time)
 	Time() *big.Int
-	// Difficulty set on the current block
-	Difficulty() *big.Int
-	// The gas limit of the block
-	GasLimit() *big.Int
 	// Determines vm type
 	VmType() Type
 	// Env logger
@@ -53,10 +53,6 @@ type Environment interface {
 	Namespace() string
 	// Current transaction hash
 	TransactionHash() common.Hash
-	// Determines whether it's possible to transact
-	CanTransfer(from common.Address, balance *big.Int) bool
-	// Transfers amount from one account to the other
-	Transfer(from, to Account, amount *big.Int)
 	// Adds a LOG to the state
 	AddLog(*types.Log)
 	// Dump vm execution trace info
