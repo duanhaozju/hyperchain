@@ -45,7 +45,7 @@ func (sc *ServiceClient) Connect() error {
 	if err != nil {
 		return err
 	}
-
+	sc.logger.Debug("service client connect successful")
 	sc.stream = stream
 	return nil
 }
@@ -63,11 +63,15 @@ func (sc *ServiceClient) Register(serviceType pb.FROM, rm *pb.RegisterMessage) e
 		return err
 	}
 
+	sc.logger.Debug("try to wait the register response")
+
 	//timeout detection
 	msg, err := sc.stream.Recv()
 	if err != nil {
 		return err
 	}
+
+	sc.logger.Debug("register successful")
 
 	if msg.Type == pb.Type_RESPONSE && msg.Ok == true {
 		sc.logger.Infof("Service %v in namespace %v register successful", serviceType, rm.Namespace)
