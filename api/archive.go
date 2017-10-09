@@ -106,13 +106,14 @@ func (admin *ArchivePublicAPI) CheckSnapshot(filterId string) (bool, error) {
 	return true, nil
 }
 
-func (admin *ArchivePublicAPI) Archive(filterId string) (bool, error) {
+func (admin *ArchivePublicAPI) Archive(filterId string, sync bool) (bool, error) {
 	log := common.GetLogger(admin.namespace, "api")
 	log.Debugf("receive archive command, params: filterId: (%s)", filterId)
 	cont := make(chan error)
 	admin.eh.GetEventObject().Post(event.ArchiveEvent{
 		FilterId: filterId,
 		Cont:     cont,
+		Sync:     sync,
 	})
 	err := <-cont
 	if err != nil {
