@@ -11,15 +11,17 @@ type ServiceRegistry interface {
 	Register(s Service) error               // Register register new service.
 	UnRegister(namespace, sid string) error // UnRegister service by service id.
 	Close()                                 // Close close the service registry.
+	ContainsNamespace(name string) bool
+	Namespace(name string) *Namespace
 }
 
 func NewServiceRegistry() ServiceRegistry {
 	return &serviceRegistryImpl{
-		components:make(map[string]*NamespaceComponent),
+		components: make(map[string]*Namespace),
 	}
 }
 
-type NamespaceComponent struct {
+type Namespace struct {
 	services map[string]Service //<service name, service>
 	lock     sync.RWMutex
 
@@ -29,9 +31,9 @@ type NamespaceComponent struct {
 	aq MessageQueue // apiserver message queue
 }
 
-func newNamespaceComponent() *NamespaceComponent {
+func newNamespace() *Namespace {
 	size := 1000
-	return &NamespaceComponent{
+	return &Namespace{
 		services: make(map[string]Service),
 		cq:       newMQImpl(size),
 		eq:       newMQImpl(size),
@@ -40,11 +42,11 @@ func newNamespaceComponent() *NamespaceComponent {
 	}
 }
 
-func (nc *NamespaceComponent) dispatch() {
+func (nc *Namespace) dispatch() {
 
 }
 
-func (nc *NamespaceComponent) dispatchCQ() {
+func (nc *Namespace) dispatchCQ() {
 	//for {
 	//	//msg, err := nc.cq.Get()
 	//	//if err != nil {
@@ -73,42 +75,42 @@ func (nc *NamespaceComponent) dispatchCQ() {
 	//}
 }
 
-func (nc *NamespaceComponent) dispatchEQ() {
+func (nc *Namespace) dispatchEQ() {
 
 }
 
-func (nc *NamespaceComponent) dispatchAQ() {
+func (nc *Namespace) dispatchAQ() {
 
 }
 
-func (nc *NamespaceComponent) AddService(service Service) {
+func (nc *Namespace) AddService(service Service) {
 	nc.lock.Lock()
 	nc.services[service.Id()] = service //TODO: add duplicate detect
 	nc.lock.Unlock()
 }
 
 //Remove delete service by service id
-func (nc *NamespaceComponent) Remove(sid string) {
+func (nc *Namespace) Remove(sid string) {
 	nc.lock.Lock()
 	delete(nc.services, sid) //TODO: add existence detect
 	nc.lock.Unlock()
 }
 
-func (nc *NamespaceComponent) Service(sid string) Service {
+func (nc *Namespace) Service(sid string) Service {
 	nc.lock.RLock()
 	defer nc.lock.RUnlock()
 	return nc.services[sid] //TODO: add existence detect
 }
 
-//Contains NamespaceComponent whether contains service with sid.
-func (nc *NamespaceComponent) Contains(sid string) bool {
+//Contains Namespace whether contains service with sid.
+func (nc *Namespace) Contains(sid string) bool {
 	nc.lock.RLock()
 	defer nc.lock.RUnlock()
 	_, ok := nc.services[sid]
 	return ok
 }
 
-func (nc *NamespaceComponent) Close() {
+func (nc *Namespace) Close() {
 	for _, s := range nc.services {
 		s.Close()
 	}
@@ -116,7 +118,7 @@ func (nc *NamespaceComponent) Close() {
 
 type serviceRegistryImpl struct {
 	lock       sync.RWMutex
-	components map[string]*NamespaceComponent // <namespace, component>
+	components map[string]*Namespace // <namespace, component>
 }
 
 // Init init the service registry.
@@ -125,10 +127,10 @@ func (sri *serviceRegistryImpl) Init() error {
 	return nil
 }
 
-func (sri *serviceRegistryImpl) AddNamespaceComponent(namespace string) {
+func (sri *serviceRegistryImpl) AddNamespace(namespace string) {
 	sri.lock.Lock()
 	defer sri.lock.Unlock()
-	sri.components[namespace] = newNamespaceComponent()
+	sri.components[namespace] = newNamespace()
 }
 
 // Register register new service.
@@ -136,7 +138,7 @@ func (sri *serviceRegistryImpl) Register(s Service) error {
 	sri.lock.Lock()
 	defer sri.lock.Unlock()
 	if _, ok := sri.components[s.Namespace()]; !ok {
-		sri.components[s.Namespace()] = newNamespaceComponent()
+		sri.components[s.Namespace()] = newNamespace()
 	}
 	sri.components[s.Namespace()].AddService(s)
 	return nil
@@ -173,4 +175,10 @@ func (sri *serviceRegistryImpl) ContainsNamespace(namespace string) bool {
 	defer sri.lock.RUnlock()
 	_, ok := sri.components[namespace]
 	return ok
+}
+
+func (sri *serviceRegistryImpl) Namespace(name string) *Namespace {
+	sri.lock.RLock()
+	defer sri.lock.RUnlock()
+	return sri.components[name]
 }
