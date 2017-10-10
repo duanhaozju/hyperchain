@@ -17,7 +17,7 @@ type ServiceRegistry interface {
 
 func NewServiceRegistry() ServiceRegistry {
 	return &serviceRegistryImpl{
-		components: make(map[string]*Namespace),
+		namespaces: make(map[string]*Namespace),
 	}
 }
 
@@ -118,7 +118,7 @@ func (nc *Namespace) Close() {
 
 type serviceRegistryImpl struct {
 	lock       sync.RWMutex
-	components map[string]*Namespace // <namespace, component>
+	namespaces map[string]*Namespace // <namespace, component>
 }
 
 // Init init the service registry.
@@ -130,17 +130,17 @@ func (sri *serviceRegistryImpl) Init() error {
 func (sri *serviceRegistryImpl) AddNamespace(namespace string) {
 	sri.lock.Lock()
 	defer sri.lock.Unlock()
-	sri.components[namespace] = newNamespace()
+	sri.namespaces[namespace] = newNamespace()
 }
 
 // Register register new service.
 func (sri *serviceRegistryImpl) Register(s Service) error {
 	sri.lock.Lock()
 	defer sri.lock.Unlock()
-	if _, ok := sri.components[s.Namespace()]; !ok {
-		sri.components[s.Namespace()] = newNamespace()
+	if _, ok := sri.namespaces[s.Namespace()]; !ok {
+		sri.namespaces[s.Namespace()] = newNamespace()
 	}
-	sri.components[s.Namespace()].AddService(s)
+	sri.namespaces[s.Namespace()].AddService(s)
 	return nil
 }
 
@@ -148,11 +148,11 @@ func (sri *serviceRegistryImpl) Register(s Service) error {
 func (sri *serviceRegistryImpl) UnRegister(namespace, sid string) error {
 	sri.lock.Lock()
 	defer sri.lock.Unlock()
-	//delete(sri.components, sid)
+	//delete(sri.namespaces, sid)
 	if !sri.ContainsNamespace(namespace) {
 		return fmt.Errorf("UnRegister error: namespace[%s] is not found!", namespace)
 	} else {
-		c := sri.components[namespace]
+		c := sri.namespaces[namespace]
 		if !c.Contains(sid) {
 			return fmt.Errorf("UnRegister error: service id[%s] is not found", sid)
 		}
@@ -165,7 +165,7 @@ func (sri *serviceRegistryImpl) UnRegister(namespace, sid string) error {
 
 // Close close the service registry.
 func (sri *serviceRegistryImpl) Close() {
-	for _, c := range sri.components {
+	for _, c := range sri.namespaces {
 		c.Close()
 	}
 }
@@ -173,12 +173,12 @@ func (sri *serviceRegistryImpl) Close() {
 func (sri *serviceRegistryImpl) ContainsNamespace(namespace string) bool {
 	sri.lock.RLock()
 	defer sri.lock.RUnlock()
-	_, ok := sri.components[namespace]
+	_, ok := sri.namespaces[namespace]
 	return ok
 }
 
 func (sri *serviceRegistryImpl) Namespace(name string) *Namespace {
 	sri.lock.RLock()
 	defer sri.lock.RUnlock()
-	return sri.components[name]
+	return sri.namespaces[name]
 }

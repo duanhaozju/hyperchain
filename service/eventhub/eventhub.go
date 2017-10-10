@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
+	"hyperchain/service/common"
 	pb "hyperchain/service/common/protos"
 	"net"
-	"hyperchain/service/common"
 )
 
 var logger *logging.Logger
