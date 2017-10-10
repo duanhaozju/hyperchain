@@ -95,16 +95,14 @@ func (sc *ServiceClient) AddHandler(h Handler) {
 func (sc *ServiceClient) ProcessMessages() {
 
 	go func() {
-		for  {
+		for {
 			msg, err := sc.stream.Recv()
 			if err != nil {
 				sc.logger.Error(err)
 			}
-
 			sc.msgs <- msg
 		}
 	}()
-
 
 	//TODO: add process status judge
 	sc.logger.Debug("Start Message processing go routine")
