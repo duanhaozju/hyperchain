@@ -92,7 +92,7 @@ func GetLogLevel(namespace, module string) (string, error) {
 // defaultLoggerConfig return a default config
 func defaultLoggerConfig() *Config {
 	conf := NewRawConfig()
-	conf.Set(LOG_BASE_LOG_LEVEL, "DEBUG")
+	conf.Set(LOG_BASE_LOG_LEVEL, default_logger_level)
 	conf.Set(LOG_DUMP_FILE, false)
 	conf.Set(LOG_CONSOLE_FORMAT, "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}")
 	return conf

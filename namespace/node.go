@@ -35,7 +35,7 @@ type NamespaceInfo struct {
 	logger *logging.Logger
 
 	nodes map[int]*Node
-	lock *sync.RWMutex
+	lock  *sync.RWMutex
 }
 
 // NewNamespaceInfo returns namespace info by peerconfig file.

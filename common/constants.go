@@ -5,7 +5,7 @@ package common
 
 //constants for input args
 const (
-	C_NODE_ID = "global.id"
+	C_NODE_ID = "self.id"
 )
 
 const (

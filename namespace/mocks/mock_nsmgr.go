@@ -2,8 +2,8 @@ package mocks
 
 import (
 	"github.com/stretchr/testify/mock"
-	"hyperchain/namespace"
 	"hyperchain/common"
+	"hyperchain/namespace"
 )
 
 type MockNSMgr struct {
