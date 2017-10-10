@@ -39,7 +39,6 @@ func main() {
 	go func() {
 		var i uint64 = 0
 		for ; i < 10000000; i ++ {
-
 			e := &event.InformPrimaryEvent{
 				Primary:i,
 			}
@@ -60,12 +59,9 @@ func main() {
 			}
 			//time.Sleep(1 * time.Second)
 		}
-
-
 	}()
 
 
 	exit := make(chan struct{})
-
 	<-exit
 }
