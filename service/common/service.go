@@ -14,6 +14,7 @@ type Service interface {
 	Close()
 	Serve() error
 	isHealth() bool
+	Response() chan *pb.Message
 }
 
 type serviceImpl struct {
@@ -67,7 +68,6 @@ func (si *serviceImpl) Serve() error {
 	for {
 		msg, err := si.stream.Recv()
 		if err != nil {
-			si.logger.Error(err)
 			return err
 		}
 		switch msg.Type {
@@ -80,10 +80,15 @@ func (si *serviceImpl) Serve() error {
 		case pb.Type_RESPONSE:
 			si.r <- msg
 		}
+		si.logger.Debugf("%s, %s service serve", si.namespace, si.id)
 	}
 }
 
 func (si *serviceImpl) isHealth() bool {
 	//TODO: more to check
 	return si.stream != nil
+}
+
+func (si *serviceImpl) Response() chan *pb.Message  {
+	return si.r
 }

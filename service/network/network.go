@@ -15,7 +15,7 @@ func init() {
 
 func main() {
 
-	client, err := common.New("127.0.0.1", 60061)
+	client, err := common.New(60061, "127.0.0.1", common.NETWORK, "global")
 	if err != nil {
 		logger.Error(err)
 	}
@@ -33,9 +33,6 @@ func main() {
 		logger.Error(err)
 	}
 	logger.Debugf("Network register successful")
-	go client.ProcessMessages()
 
-	exit := make(chan struct{})
-
-	<-exit
+	client.ProcessMessagesUntilExit()
 }

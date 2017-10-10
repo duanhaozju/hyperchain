@@ -18,7 +18,7 @@ func (ds *DispatchServer) dispatchConsensusMsg(namespace string, msg *pb.Message
 		if service != nil {
 			service.Send(false, msg)
 		}else {
-			ds.logger.Error("No service found for [%s]", NETWORK)
+			ds.logger.Errorf("No service found for [%s]", NETWORK)
 		}
 	}
 }
