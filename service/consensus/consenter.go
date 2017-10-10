@@ -7,6 +7,7 @@ import (
 	//"time"
 	"hyperchain/manager/event"
 	"github.com/gogo/protobuf/proto"
+	"time"
 )
 
 var logger *logging.Logger
@@ -17,7 +18,7 @@ func init() {
 
 func main() {
 
-	client, err := common.New("127.0.0.1", 60061)
+	client, err := common.New(60061,"127.0.0.1", common.CONSENTER, "global")
 	if err != nil {
 		logger.Error(err)
 	}
@@ -57,7 +58,7 @@ func main() {
 				logger.Error(err)
 				return
 			}
-			//time.Sleep(1 * time.Second)
+			time.Sleep(1 * time.Second)
 		}
 	}()
 
