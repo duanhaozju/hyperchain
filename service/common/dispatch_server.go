@@ -5,6 +5,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/op/go-logging"
 	pb "hyperchain/service/common/protos"
+	"sync"
 )
 
 //DispatchServer handleDispatch service
@@ -35,6 +36,7 @@ func (ds *DispatchServer) Register(stream pb.Dispatcher_RegisterServer) error {
 	ds.logger.Infof("Receive new service connection!")
 
 	var s Service
+	var lock sync.RWMutex
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
@@ -43,19 +45,26 @@ func (ds *DispatchServer) Register(stream pb.Dispatcher_RegisterServer) error {
 		}
 		switch msg.Type {
 		case pb.Type_REGISTER:
+			lock.Lock()
 			s = ds.handleRegister(msg, stream)
+			lock.Unlock()
 		default:
 			ds.logger.Errorf("Message undefined %v", msg)
 		}
 
+		lock.RLock()
 		if s != nil && s.isHealth() {
+			lock.RUnlock()
 			err := s.Serve()
 			if err != nil {
 				ds.logger.Error(err)
 				return err
 			}
 			return nil
+		}else {
+			ds.logger.Errorf("Service register error, msg %v", msg)
 		}
+		lock.RUnlock()
 
 	}
 	return nil
