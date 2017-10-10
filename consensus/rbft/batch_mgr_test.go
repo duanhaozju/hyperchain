@@ -246,23 +246,3 @@ func TestHandleTransactionsAfterAbnormal(t *testing.T) {
 	ast.Equal(true, rbft.batchMgr.txPool.HasTxInPool(), "add transaction failed")
 	rbft.handleTransactionsAfterAbnormal()
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
