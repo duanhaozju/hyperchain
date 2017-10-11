@@ -23,3 +23,7 @@ message Receipt {
     VmType vmType = 11;
 }
 
+message ReceiptWrapper {
+    bytes receiptVersion = 1;
+    bytes receipt = 2;
+}

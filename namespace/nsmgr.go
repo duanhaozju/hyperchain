@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/core/db_utils"
+	"hyperchain/core/ledger/bloom"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -123,7 +123,7 @@ type nsManagerImpl struct {
 
 	// bloomfilter is the transaction bloom filter, helps to do transaction
 	// duplication checking
-	bloomfilter *db_utils.BloomFilterCache
+	bloomfilter *bloom.BloomFilterCache
 
 	// conf is the global config file of the system, contains global configs
 	// of the node
@@ -147,7 +147,7 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 		namespaces:  make(map[string]Namespace),
 		conf:        conf,
 		jvmManager:  NewJvmManager(conf),
-		bloomfilter: db_utils.NewBloomCache(conf),
+		bloomfilter: bloom.NewBloomCache(conf),
 		status:      status,
 		stopHp:      stopHp,
 		restartHp:   restartHp,

@@ -9,6 +9,7 @@ import (
 	"hyperchain/common"
 	cm "hyperchain/core/common"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/core/ledger/bloom"
 	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
@@ -498,7 +499,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 			blks, _ := executor.fetchFromSyncCache(tmp)
 			for hash, blk := range blks {
 				if hash == common.Bytes2Hex(tmpHash) {
-					edb.PersistBlock(executor.db.NewBatch(), &blk, true, true)
+					edb.PersistBlock(executor.db.NewBatch(), &blk, true, true, string(block.Version), getTxVersion(block))
 					executor.cache.syncCache.Remove(tmp)
 					tmp = tmp - 1
 					tmpHash = blk.ParentHash
@@ -539,7 +540,7 @@ func (executor *Executor) accpet(seqNo uint64, block *types.Block, result *Valid
 		return err
 	}
 	// write bloom filter first
-	edb.WriteTxBloomFilter(executor.namespace, block.Transactions)
+	bloom.WriteTxBloomFilter(executor.namespace, block.Transactions)
 
 	if err := batch.Write(); err != nil {
 		executor.logger.Errorf("commit (#%d) changes failed, err: %s", err.Error())

@@ -4,7 +4,8 @@ package runtime
 
 import (
 	"hyperchain/common"
-	"hyperchain/core/state"
+	"hyperchain/core/ledger/state"
+	"hyperchain/core/vm"
 	"hyperchain/core/vm/evm"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
@@ -15,10 +16,8 @@ import (
 // Config is a basic type specifying certain configuration flags for running
 // the EVM.
 type Config struct {
-	Difficulty  *big.Int
 	Origin      common.Address
 	Receiver    common.Address
-	Coinbase    common.Address
 	BlockNumber *big.Int
 	Time        *big.Int
 	GasLimit    *big.Int
@@ -45,9 +44,6 @@ func setDefaults(cfg *Config) {
 	if (cfg.Receiver == common.Address{}) {
 		cfg.Receiver = common.StringToAddress("receiver")
 	}
-	if cfg.Difficulty == nil {
-		cfg.Difficulty = new(big.Int)
-	}
 	if cfg.Time == nil {
 		cfg.Time = big.NewInt(time.Now().Unix())
 	}
@@ -69,7 +65,7 @@ func setDefaults(cfg *Config) {
 		}
 	}
 	if cfg.conf == nil {
-		cfg.conf = InitConf()
+		cfg.conf = DefaultConf()
 	}
 }
 
@@ -86,7 +82,7 @@ func Execute(db db.Database, code, input []byte, cfg *Config) ([]byte, *state.St
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		cfg.State = state.NewRaw(db, 0, "global", cfg.conf)
+		cfg.State, _ = state.New(common.Hash{}, db, db, cfg.conf, 0)
 	}
 	var (
 		vmenv    = NewEnv(cfg, cfg.State)
@@ -117,7 +113,7 @@ func Create(db db.Database, input []byte, cfg *Config) ([]byte, common.Address, 
 	setDefaults(cfg)
 
 	if cfg.State == nil {
-		cfg.State = state.NewRaw(db, 0, "global", cfg.conf)
+		cfg.State, _ = state.New(common.Hash{}, db, db, cfg.conf, 0)
 	}
 	var (
 		vmenv  = NewEnv(cfg, cfg.State)
@@ -141,11 +137,15 @@ func Create(db db.Database, input []byte, cfg *Config) ([]byte, common.Address, 
 // Call, unlike Execute, requires a config and also requires the State field to
 // be set.
 func Call(address common.Address, input []byte, cfg *Config) ([]byte, error) {
+	var sender vm.ContractRef
 	setDefaults(cfg)
 
 	vmenv := NewEnv(cfg, cfg.State)
 
-	sender := cfg.State.GetOrNewStateObject(cfg.Origin)
+	sender = cfg.State.GetStateObject(cfg.Origin)
+	if sender == nil {
+		sender = cfg.State.CreateAccount(cfg.Origin)
+	}
 	// Call the code with the given configuration.
 	ret, err := vmenv.Call(
 		sender,
@@ -159,19 +159,16 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, error) {
 	return ret, err
 }
 
-func InitConf() *common.Config {
+func DefaultConf() *common.Config {
 	conf := common.NewRawConfig()
-	conf.Set(state.StateObjectBucketSize, 1000003)
-	conf.Set(state.StateObjectBucketLevelGroup, 5)
-	conf.Set(state.StateObjectBucketCacheSize, 100000)
-	conf.Set(state.StateObjectDataNodeCacheSize, 100000)
-
-	conf.Set(state.StateBucketSize, 1000003)
-	conf.Set(state.StateBucketLevelGroup, 5)
+	conf.Set(state.StateCapacity, 1000003)
+	conf.Set(state.StateAggreation, 5)
+	conf.Set(state.StateMerkleCacheSize, 100000)
 	conf.Set(state.StateBucketCacheSize, 100000)
-	conf.Set(state.StateDataNodeCacheSize, 100000)
 
-	conf.Set(state.GlobalDataNodeCacheSize, 100000)
-	conf.Set(state.GlobalDataNodeCacheLength, 20)
+	conf.Set(state.StateObjectCapacity, 1000003)
+	conf.Set(state.StateObjectAggreation, 5)
+	conf.Set(state.StateObjectMerkleCacheSize, 100000)
+	conf.Set(state.StateObjectBucketCacheSize, 100000)
 	return conf
 }

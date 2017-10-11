@@ -8,16 +8,16 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"math/big"
-	"strconv"
 )
 
 func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, logger *logging.Logger, namespace string, jvmCli ContractExecutor) (*types.Receipt, []byte, common.Address, error) {
 	var (
-		from = common.BytesToAddress(tx.From)
-		to   = common.BytesToAddress(tx.To)
-		tv   = tx.GetTransactionValue()
-		data = tv.RetrievePayload()
-		op   = tv.GetOp()
+		from   = common.BytesToAddress(tx.From)
+		to     = common.BytesToAddress(tx.To)
+		tv     = tx.GetTransactionValue()
+		data   = tv.RetrievePayload()
+		amount = tv.RetrieveAmount()
+		op     = tv.GetOp()
 	)
 	env := initEnvironment(db, blockNumber, logger, namespace, tx.GetHash(), jvmCli)
 	if env == nil {
@@ -29,19 +29,21 @@ func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber
 	}
 	if tx.To == nil {
 		// deploy
-		ret, addr, err := Exec(env, &from, nil, data, op)
+		ret, addr, err := Exec(env, &from, nil, amount, data, op)
 		receipt := makeReceipt(env, addr, tx.GetHash(), ret, err)
 		return receipt, ret, addr, err
 	} else {
 		// invoke
-		ret, addr, err := Exec(env, &from, &to, data, op)
+		ret, addr, err := Exec(env, &from, &to, amount, data, op)
 		receipt := makeReceipt(env, common.Address{}, tx.GetHash(), ret, err)
 		return receipt, ret, addr, err
 	}
 }
 
-func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
-	var sender vm.Account
+func Exec(vmenv vm.Environment, from, to *common.Address, value *big.Int, data []byte, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
+	var (
+		sender vm.Account
+	)
 
 	if !(vmenv.Db().Exist(*from)) {
 		sender = vmenv.Db().CreateAccount(*from)
@@ -52,14 +54,13 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, op types.
 	contractCreation := (nil == to)
 
 	if contractCreation {
-		ret, addr, err = vmenv.Create(sender, data, nil, nil, nil)
+		ret, addr, err = vmenv.Create(sender, data, nil, nil, value)
 		if err != nil {
 			ret = nil
 			vmenv.Logger().Errorf("VM create err: %v", err)
 		}
 	} else {
-
-		ret, err = vmenv.Call(sender, *to, data, nil, nil, nil, int32(op))
+		ret, err = vmenv.Call(sender, *to, data, nil, nil, value, int32(op))
 		if err != nil {
 			vmenv.Logger().Errorf("VM call err: %v", err)
 		}
@@ -68,10 +69,7 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, op types.
 }
 
 func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger, namespace string, txHash common.Hash, jvmCli ContractExecutor) vm.Environment {
-	env := make(map[string]string)
-	env["currentNumber"] = strconv.FormatUint(seqNo, 10)
-	env["currentGasLimit"] = "200000000"
-	vmenv := NewEnv(state, env, logger, namespace, txHash, jvmCli)
+	vmenv := NewEnv(state, int64(seqNo), 0, logger, namespace, txHash, jvmCli)
 	if vmenv == nil {
 		return nil
 	}
