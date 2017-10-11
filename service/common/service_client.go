@@ -8,21 +8,26 @@ import (
 	"google.golang.org/grpc"
 	pb "hyperchain/service/common/protos"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 // ServiceClient used to send messages to eventhub or receive message
 // from the event hub.
 type ServiceClient struct {
-	host   string
-	port   int
-	msgs   chan *pb.Message
+	host string
+	port int
+	sid  string // service id
+	ns   string // namespace
+
+	msgs   chan *pb.Message //received messages from eventhub
 	slock  sync.RWMutex
 	client pb.Dispatcher_RegisterClient
+
 	logger *logging.Logger
 	h      Handler
-	sid    string // service id
-	ns     string // namespace
+	close  chan struct{}
+	closed int32
 }
 
 func New(port int, host, sid, ns string) (*ServiceClient, error) {
@@ -33,9 +38,12 @@ func New(port int, host, sid, ns string) (*ServiceClient, error) {
 		host:   host,
 		port:   port,
 		msgs:   make(chan *pb.Message, 1024),
-		logger: logging.MustGetLogger("service_client"), // TODO: replace this logger with hyperlogger
+		logger: logging.MustGetLogger("service_client"),
+		// TODO: replace this logger with hyperlogger ?
 		sid:    sid,
 		ns:     ns,
+		close:  make(chan struct{}, 2),
+		closed: 0,
 	}, nil
 }
 
@@ -65,13 +73,13 @@ func (sc *ServiceClient) Connect() error {
 	if err != nil {
 		return err
 	}
-	sc.logger.Debug("service client connect successful")
+	sc.logger.Debug("%s connect successful", sc.string())
 	sc.setStream(stream)
 	return nil
 }
 
 func (sc *ServiceClient) reconnect() error {
-	maxRetryT := 10
+	maxRetryT := 10 //TODO: make these params configurable
 	sleepT := 1
 	for i := 0; i < maxRetryT; i++ {
 		err := sc.Connect()
@@ -86,12 +94,12 @@ func (sc *ServiceClient) reconnect() error {
 			return nil
 		} else {
 			d, _ := time.ParseDuration(fmt.Sprintf("%ds", sleepT))
-			sc.logger.Debugf("Sleep %v then try to reconnect", d)
+			sc.logger.Debugf("Reconnect error %v, sleep %v then try to reconnect", err, d)
 			time.Sleep(d)
 			sleepT *= 2
 		}
 	}
-	return nil
+	return fmt.Errorf("Recoonect error, exceed retry times: %d", maxRetryT)
 }
 
 func (sc *ServiceClient) Register(serviceType pb.FROM, rm *pb.RegisterMessage) error {
@@ -117,24 +125,45 @@ func (sc *ServiceClient) Register(serviceType pb.FROM, rm *pb.RegisterMessage) e
 		return err
 	}
 
-	sc.logger.Debug("register successful")
+	sc.logger.Debugf("%s connect successful", sc.string())
 
 	if msg.Type == pb.Type_RESPONSE && msg.Ok == true {
-		sc.logger.Infof("Service %v in namespace %v register successful", serviceType, rm.Namespace)
+		sc.logger.Infof("%s register successful", sc.string())
 		return nil
 	} else {
-		return fmt.Errorf("Service %v in namespace %v register failed", serviceType, rm.Namespace)
+		return fmt.Errorf("%s register failed", sc.string())
 	}
+}
+
+func (sc *ServiceClient) Close() {
+	atomic.StoreInt32(&sc.closed, 1)
+	sc.close <- struct{}{} //close receive goroutine
+	sc.close <- struct{}{} //close message process goroutine
+	if sc.client != nil {
+		if err := sc.client.CloseSend(); err != nil {
+			sc.logger.Error(err)
+		}
+	}
+	sc.logger.Criticalf("%s closed!", sc.string())
+}
+
+func (sc *ServiceClient) isClosed() bool {
+	return atomic.LoadInt32(&sc.closed) == 1
 }
 
 //Send msg asynchronous
 func (sc *ServiceClient) Send(msg *pb.Message) error {
+	//TODO: Add msg format check
 	if sc.stream == nil {
 		sc.reconnect()
 	}
 	err := sc.stream().Send(msg)
 	if err != nil {
-		sc.reconnect()
+		err = sc.reconnect()
+		if err != nil {
+			sc.Close()
+			return err
+		}
 		return sc.stream().Send(msg)
 	}
 	return nil
@@ -146,21 +175,21 @@ func (sc *ServiceClient) AddHandler(h Handler) {
 }
 
 func (sc *ServiceClient) ProcessMessagesUntilExit() {
-	exit := make(chan struct{})
 	go func() {
 		for {
 			msg, err := sc.stream().Recv()
 			if err != nil {
 				sc.logger.Error(err)
-				err = sc.reconnect()
-				if err != nil {
-					sc.logger.Errorf("Reconnect failed, %v", err)
-					exit <- struct{}{}
-					return
+				if !sc.isClosed() {
+					err = sc.reconnect()
+					if err != nil {
+						sc.logger.Errorf("Reconnect failed, %v", err)
+						sc.Close()
+						return
+					}
 				}
 			}
 			if msg != nil {
-				//sc.logger.Debugf("Receive message: %v", msg)
 				sc.msgs <- msg
 			}
 		}
@@ -175,10 +204,15 @@ func (sc *ServiceClient) ProcessMessagesUntilExit() {
 			} else {
 				sc.h.Handle(msg)
 			}
-		case <-exit:
+		case <-sc.close:
 			return
 		}
 	}
+}
+
+//string service client description
+func (sc *ServiceClient) string() string {
+	return fmt.Sprintf("ServiceClient[namespace: %s, serviceId: %s]", sc.ns, sc.sid)
 }
 
 func getFrom(sid string) pb.FROM {
