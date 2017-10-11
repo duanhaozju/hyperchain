@@ -525,9 +525,6 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		} else {
 			hub.send(m.SessionMessage_UNICAST_INVALID, ev.Payload, ev.Peers)
 		}
-	case executor.NOTIFY_BROADCAST_SINGLE:
-		hub.logger.Debugf("message middleware: [broadcast single]")
-		hub.send(m.SessionMessage_BROADCAST_SINGLE_BLK, ev.Payload, ev.Peers)
 	case executor.NOTIFY_UNICAST_BLOCK:
 		hub.logger.Debugf("message middleware: [unicast block]")
 		toNVP := func() bool {

@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
@@ -26,7 +39,7 @@ func (executor *Executor) listenCommitEvent() {
 	executor.logger.Notice("commit backend start")
 	for {
 		select {
-		case <-executor.getExit(IDENTIFIER_COMMIT):
+		case <-executor.context.exit:
 			executor.logger.Notice("commit backend exit")
 			return
 		case v := <-executor.getSuspend(IDENTIFIER_COMMIT):
@@ -74,7 +87,7 @@ func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) 
 		// TODO save invalid transaction by itself
 		executor.throwInvalidTransactionBack(record.InvalidTxs)
 	}
-	executor.incDemandNumber()
+	executor.incDemand(DemandNumber)
 	executor.cache.validationResultCache.Remove(ValidationTag{ev.Hash, ev.SeqNo})
 	return true
 }
@@ -183,7 +196,7 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 // commitValidationCheck - check whether this commit event is the demand one.
 func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 	// 1. verify that the block height is consistent
-	if !executor.isDemandNumber(ev.SeqNo) {
+	if !executor.isDemand(DemandNumber, ev.SeqNo) {
 		executor.logger.Errorf("receive a commit event %d which is not demand, drop it.", ev.SeqNo)
 		return false
 	}

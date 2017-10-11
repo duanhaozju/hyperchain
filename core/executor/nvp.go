@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
@@ -269,7 +282,7 @@ func (nvp *NVPImpl) process(block *types.Block) error {
 		return err
 	}
 	if nvp.getExecutor().assertApplyResult(block, result) == false {
-		if nvp.getExecutor().GetExitFlag() {
+		if nvp.getExecutor().conf.GetExitFlag() {
 			batch := nvp.getExecutor().db.NewBatch()
 			for i := block.Number; ; i += 1 {
 				// delete persisted blocks number larger than chain height
@@ -302,8 +315,8 @@ func (nvp *NVPImpl) process(block *types.Block) error {
 }
 
 func (nvp *NVPImpl) resendBackend() {
-	ticker := time.NewTicker(nvp.getExecutor().GetSyncResendInterval())
-	nvp.getExecutor().logger.Debugf("sync request resend interval: ", nvp.getExecutor().GetSyncResendInterval().String())
+	ticker := time.NewTicker(nvp.getExecutor().conf.GetSyncResendInterval())
+	nvp.getExecutor().logger.Debugf("sync request resend interval: ", nvp.getExecutor().conf.GetSyncResendInterval().String())
 	up := nvp.getCtx().getUpper()
 	down := nvp.getCtx().getDown()
 	for {
@@ -339,10 +352,10 @@ func (nvp *NVPImpl) getExecutor() *Executor {
 // a sync chain required block number can not more than `sync batch size` in config file.
 func (nvp *NVPImpl) calUpper() uint64 {
 	total := nvp.getCtx().getMax() - nvp.getCtx().getDown()
-	if total < nvp.getExecutor().GetSyncMaxBatchSize() {
+	if total < nvp.getExecutor().conf.GetSyncMaxBatchSize() {
 		nvp.getCtx().setUpper(nvp.getCtx().getMax())
 	} else {
-		nvp.ctx.setUpper(nvp.getCtx().getDown() + nvp.getExecutor().GetSyncMaxBatchSize())
+		nvp.ctx.setUpper(nvp.getCtx().getDown() + nvp.getExecutor().conf.GetSyncMaxBatchSize())
 	}
 	nvp.getExecutor().logger.Debugf("update max demand number in batch to %d of NVP", nvp.getCtx().getUpper())
 	return nvp.getCtx().getUpper()
