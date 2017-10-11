@@ -111,6 +111,12 @@
 			"revisionTime": "2017-06-08T00:51:49Z"
 		},
 		{
+			"checksumSHA1": "Doemb0pCb5TGHWrVzVBan7hgu6I=",
+			"path": "github.com/ethereum/go-ethereum/rlp",
+			"revision": "3680cd5926c1185b2338648bad29fae15e5f34b8",
+			"revisionTime": "2017-10-10T08:56:33Z"
+		},
+		{
 			"checksumSHA1": "DSKGn08DPp1+9p1xdwoVQY0IuV4=",
 			"path": "github.com/facebookgo/ensure",
 			"revision": "b4ab57deab51ee655ae4bd85281f0715a068016d",
