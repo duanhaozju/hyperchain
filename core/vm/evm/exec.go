@@ -87,6 +87,7 @@ func Exec(vmenv vm.Environment, from, to *common.Address, data []byte, gas,
 	return ret, addr, err
 }
 
+// checkPermission make sure the caller is the contract creator if the opcode is special.
 func checkPermission(env vm.Environment, from, to common.Address, op types.TransactionValue_Opcode) bool {
 	if op == types.TransactionValue_UPDATE || op == types.TransactionValue_FREEZE || op == types.TransactionValue_UNFREEZE {
 		env.Logger().Debugf("caller address %s", from.Hex())
@@ -103,6 +104,7 @@ func checkPermission(env vm.Environment, from, to common.Address, op types.Trans
 	return true
 }
 
+// makeReceipt encapsulates execution result to a receipt.
 func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, gasRemained, gas *big.Int, ret []byte, err error) *types.Receipt {
 	receipt := types.NewReceipt(gasRemained, 0)
 	receipt.ContractAddress = addr.Bytes()
@@ -124,12 +126,14 @@ func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, ga
 	return receipt
 }
 
+// initEnvironment creates a transaction environment with given env info.
 func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger, namespace string, txHash common.Hash) vm.Environment {
 	// TODO pass block package time to env
 	vmenv := NewEnv(state, int64(seqNo), 0, logger, namespace, txHash)
 	return vmenv
 }
 
+// setDefaults for backward compatibility.
 func setDefaults(tx *types.Transaction) Message {
 	tv := tx.GetTransactionValue()
 	switch string(tx.Version) {
