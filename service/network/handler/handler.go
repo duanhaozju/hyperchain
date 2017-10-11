@@ -24,6 +24,7 @@ func New() common.Handler {
 func (nmh *NetworkMessageHandler) Handle(msg *pb.Message) {
 	switch msg.Event {
 	case pb.Event_InformPrimaryEvent:
+		logger.Error(msg)
 		event := &event.InformPrimaryEvent{}
 		err := proto.Unmarshal(msg.Payload, event)
 		if err != nil {
