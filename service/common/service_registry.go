@@ -2,7 +2,6 @@ package common
 
 import (
 	"fmt"
-	//pb "hyperchain/service/common/protos"
 	"sync"
 )
 
