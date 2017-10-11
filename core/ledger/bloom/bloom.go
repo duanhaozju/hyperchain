@@ -1,10 +1,25 @@
-package db_utils
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package bloom
 
 import (
 	"errors"
 	"github.com/op/go-logging"
 	"github.com/willf/bloom"
 	"hyperchain/common"
+	edb "hyperchain/core/db_utils"
 	"hyperchain/core/types"
 	"sync"
 	"time"
@@ -56,7 +71,7 @@ type message struct {
 func NewBloomCache(config *common.Config) *BloomFilterCache {
 	filter := &BloomFilterCache{
 		c:          make(map[string]*bloom.BloomFilter),
-		log:        common.GetLogger(common.DEFAULT_NAMESPACE, "db_utils"),
+		log:        common.GetLogger(common.DEFAULT_NAMESPACE, "bloom"),
 		closed:     make(chan struct{}),
 		updateCh:   make(chan request),
 		registerCh: make(chan request),
@@ -101,7 +116,7 @@ func (cache *BloomFilterCache) loop() {
 		case msg := <-cache.writeCh:
 			var filter *bloom.BloomFilter
 			cache.lock.RLock()
-			filter = cache.c[msg.namespace]
+			filter = cache.c[msg.namespace].Copy()
 			cache.lock.RUnlock()
 			// create a copy of filter, so that the computation procedure won't affect the online filter
 			go func() {
@@ -109,7 +124,6 @@ func (cache *BloomFilterCache) loop() {
 					msg.cont <- false
 					cache.log.Debugf("write %s bloom filter failed.", msg.namespace)
 				} else {
-					filter = filter.Copy()
 					for _, hash := range msg.hashes {
 						filter.Add(hash.Bytes())
 					}
@@ -265,7 +279,7 @@ func (cache *BloomFilterCache) InitBloomFilter(bloomBit int, namespace string, s
 		chain   *types.Chain
 	)
 
-	chain, err = GetChain(namespace)
+	chain, err = edb.GetChain(namespace)
 	if err != nil {
 		return nil
 	}
@@ -279,7 +293,7 @@ func (cache *BloomFilterCache) InitBloomFilter(bloomBit int, namespace string, s
 		if cur == 0 || cur < genesis {
 			break
 		}
-		blk, err := GetBlockByNumber(namespace, cur)
+		blk, err := edb.GetBlockByNumber(namespace, cur)
 		if err != nil {
 			cache.log.Warningf("missing block (#%d) when building tx bloom filter", cur)
 			cur -= 1
@@ -300,8 +314,8 @@ func (cache *BloomFilterCache) InitBloomFilter(bloomBit int, namespace string, s
 	}
 	// Add new blocks while generated during the last stage.
 	var repeat int = 0
-	for cur = head + 1; cur <= GetHeightOfChain(namespace); cur += 1 {
-		blk, err := GetBlockByNumber(namespace, cur)
+	for cur = head + 1; cur <= edb.GetHeightOfChain(namespace); cur += 1 {
+		blk, err := edb.GetBlockByNumber(namespace, cur)
 		if err != nil {
 			// Since block persistence is delayed compare with memory chain heigh updating.
 			// So use a tiny loop to capture the latest block content.

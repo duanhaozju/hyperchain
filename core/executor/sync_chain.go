@@ -9,6 +9,7 @@ import (
 	"hyperchain/common"
 	cm "hyperchain/core/common"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/core/ledger/bloom"
 	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
@@ -539,7 +540,7 @@ func (executor *Executor) accpet(seqNo uint64, block *types.Block, result *Valid
 		return err
 	}
 	// write bloom filter first
-	edb.WriteTxBloomFilter(executor.namespace, block.Transactions)
+	bloom.WriteTxBloomFilter(executor.namespace, block.Transactions)
 
 	if err := batch.Write(); err != nil {
 		executor.logger.Errorf("commit (#%d) changes failed, err: %s", err.Error())

@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	edb "hyperchain/core/db_utils"
+	"hyperchain/core/ledger/bloom"
 	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb/db"
@@ -107,7 +108,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 		return err
 	}
 	// write bloom filter first
-	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
+	if err, _ := bloom.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
 		executor.logger.Warning("write tx to bloom filter failed", err.Error())
 	}
 
