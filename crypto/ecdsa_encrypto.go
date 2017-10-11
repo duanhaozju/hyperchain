@@ -70,12 +70,6 @@ func (ee *EcdsaEncrypto) GeneralKey() (interface{}, error) {
 
 }
 
-//load key by given port
-//func (ee *EcdsaEncrypto)GetKey() (interface{},error) {
-//	file := keystoredir+ee.port
-//	return LoadECDSA(file)
-//}
-
 func (ee *EcdsaEncrypto) GenerateNodeKey(nodeID string, keyNodeDir string) error {
 	ee.id = nodeID
 	nodeDir := path.Join(keyNodeDir, "node")
