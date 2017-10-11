@@ -70,7 +70,7 @@ func TestPrimary(t *testing.T) {
 	ast.Equal(false, rbft.sendInWV(9, 101), fmt.Sprintf("sendInWV(%d, %d) = true, actual false", 9, 101))
 }
 
-func TestGetCert(t *testing.T) {
+func TestGetNodeCert(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
 	defer CleanData(rbft.namespace)

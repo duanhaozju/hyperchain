@@ -13,9 +13,6 @@ import (
 	mdb "hyperchain/hyperdb/mdb"
 
 	"github.com/stretchr/testify/assert"
-	//"hyperchain/core/types"
-	//"github.com/pkg/errors"
-	//"hyperchain/core"
 )
 
 func TestPersistAndRestoreAndDelPSet(t *testing.T) {
