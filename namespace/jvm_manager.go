@@ -204,7 +204,7 @@ func (mgr *JvmManager) checkJvmExist() bool {
 			return false
 		} else {
 			mgr.logger.Error(err.Error())
-			return true
+			return false
 		}
 	} else {
 		return true
