@@ -26,9 +26,9 @@ func TestMoveWatermarks(t *testing.T) {
 	rbft.storeMgr.chkpts[uint64(10)] = "10"
 	rbft.storeMgr.chkpts[uint64(11)] = "11"
 
-	rbft.vcMgr.qlist[qidx{n:uint64(9)}] = nil
-	rbft.vcMgr.qlist[qidx{n:uint64(10)}] = nil
-	rbft.vcMgr.qlist[qidx{n:uint64(11)}] = nil
+	rbft.vcMgr.qlist[qidx{n: uint64(9)}] = nil
+	rbft.vcMgr.qlist[qidx{n: uint64(10)}] = nil
+	rbft.vcMgr.qlist[qidx{n: uint64(11)}] = nil
 
 	rbft.vcMgr.plist[uint64(9)] = nil
 	rbft.vcMgr.plist[uint64(10)] = nil
@@ -59,7 +59,7 @@ func TestGetCert(t *testing.T) {
 
 	v = uint64(11)
 	cert := &msgCert{
-		resultHash:	"cert",
+		resultHash: "cert",
 	}
 	rbft.storeMgr.certStore[msgID{v, n, d}] = cert
 	cert3 := rbft.storeMgr.getCert(v, n, d)
@@ -84,7 +84,7 @@ func TestGetChkptCert(t *testing.T) {
 
 	n = uint64(11)
 	cert := &chkptCert{
-		chkptCount:	10,
+		chkptCount: 10,
 	}
 	rbft.storeMgr.chkptCertStore[chkptID{n, id}] = cert
 	cert3 := rbft.storeMgr.getChkptCert(n, id)

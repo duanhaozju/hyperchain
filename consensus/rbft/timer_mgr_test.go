@@ -4,8 +4,8 @@
 package rbft
 
 import (
-	"time"
 	"testing"
+	"time"
 
 	"hyperchain/common"
 	"hyperchain/consensus/helper/persist"
@@ -13,10 +13,9 @@ import (
 	"hyperchain/manager/event"
 
 	"github.com/stretchr/testify/assert"
-
 )
 
-func TestPbftTimeFunctions(t *testing.T)  {
+func TestPbftTimeFunctions(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
 	defer CleanData(rbft.namespace)
@@ -32,15 +31,15 @@ func TestPbftTimeFunctions(t *testing.T)  {
 	ok := rbft.timerMgr.containsTimer(timerName)
 	ast.Equal(true, ok, "newTimer failed")
 	ast.Equal(timerDuration, rbft.timerMgr.getTimeoutValue(timerName), "getTimeoutValue failed")
-	ast.Equal(0 * time.Second, rbft.timerMgr.getTimeoutValue("notexist"), "getTimeoutValue failed")
-	rbft.timerMgr.setTimeoutValue(timerName, 10 * time.Second)
-	rbft.timerMgr.setTimeoutValue("notexist", 10 * time.Second)
-	ast.Equal(10 * time.Second, rbft.timerMgr.getTimeoutValue(timerName), "setTimeoutValue failed")
+	ast.Equal(0*time.Second, rbft.timerMgr.getTimeoutValue("notexist"), "getTimeoutValue failed")
+	rbft.timerMgr.setTimeoutValue(timerName, 10*time.Second)
+	rbft.timerMgr.setTimeoutValue("notexist", 10*time.Second)
+	ast.Equal(10*time.Second, rbft.timerMgr.getTimeoutValue(timerName), "setTimeoutValue failed")
 
 	queue := &event.TypeMux{}
 	rbft.timerMgr.startTimer(timerName, nil, queue)
 	ast.Equal(1, len(rbft.timerMgr.ttimers[timerName].isActive), "startTimer failed")
-	rbft.timerMgr.startTimerWithNewTT(timerName, 20 * time.Second, nil, queue)
+	rbft.timerMgr.startTimerWithNewTT(timerName, 20*time.Second, nil, queue)
 	ast.Equal(2, len(rbft.timerMgr.ttimers[timerName].isActive), "startTimer failed")
 
 	rbft.timerMgr.stopOneTimer(timerName, 1)
