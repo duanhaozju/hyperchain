@@ -23,8 +23,8 @@ type nodeManager struct {
 	addNodeCertStore map[string]*addNodeCert // track the received add node agree message
 	delNodeCertStore map[string]*delNodeCert // track the received add node agree message
 
-	routers           []byte // track the vp replicas' routers
-	inUpdatingN       uint32 // track if there are updating
+	routers           []byte                 // track the vp replicas' routers
+	inUpdatingN       uint32                 // track if there are updating
 	updateTimeout     time.Duration          // time limit for N-f agree on update n
 	agreeUpdateStore  map[aidx]*AgreeUpdateN // track agree-update-n message
 	updateStore       map[uidx]*UpdateN      // track last update-n we received or sent
@@ -393,14 +393,14 @@ func (rbft *rbftImpl) recvReadyforNforAdd(ready *ReadyForN) consensusEvent {
 
 	// Broadcast the AgreeUpdateN message
 	agree := &AgreeUpdateN{
-		Basis:	&VcBasis{
+		Basis: &VcBasis{
 			ReplicaId: rbft.id,
 			View:      view,
 			H:         rbft.h,
 		},
-		Flag:	true,
-		Key:	ready.Key,
-		N:	n,
+		Flag: true,
+		Key:  ready.Key,
+		N:    n,
 	}
 
 	return rbft.sendAgreeUpdateNForAdd(agree)
@@ -475,14 +475,14 @@ func (rbft *rbftImpl) sendAgreeUpdateNforDel(key string) error {
 	n, view := rbft.getDelNV(cert.delId)
 
 	agree := &AgreeUpdateN{
-		Basis:	&VcBasis{
+		Basis: &VcBasis{
 			ReplicaId: rbft.id,
 			View:      view,
 			H:         rbft.h,
 		},
-		Flag:      false,
-		Key:       key,
-		N:         n,
+		Flag: false,
+		Key:  key,
+		N:    n,
 	}
 
 	rbft.agreeUpdateHelper(agree)
@@ -931,11 +931,9 @@ func (rbft *rbftImpl) processReqInUpdate() consensusEvent {
 	}
 }
 
-
 //##########################################################################
 //           node management auxiliary functions
 //##########################################################################
-
 
 func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
 

@@ -3,12 +3,12 @@
 package txpool
 
 import (
-	"testing"
-	"hyperchain/manager/event"
+	"github.com/stretchr/testify/assert"
 	"hyperchain/common"
 	"hyperchain/core/types"
+	"hyperchain/manager/event"
+	"testing"
 	"time"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNewTxPoolImpl(t *testing.T) {
@@ -54,7 +54,6 @@ func TestPrimaryAddNewTx(t *testing.T) {
 	ast.NotEqual(nil, err, "should return a duplicate transaction error")
 	ast.Equal(false, isGenerated, "should not generate a batch")
 
-
 	tx2 := &types.Transaction{
 		From:            []byte{1},
 		To:              []byte{2},
@@ -67,7 +66,7 @@ func TestPrimaryAddNewTx(t *testing.T) {
 	go func() {
 		isGenerated, err = txPool.primaryAddNewTx(tx2, false)
 		assert.Equal(t, nil, err, "primary add transaction fail")
-	} ()
+	}()
 	select {
 	case e := <-batchSub.Chan():
 		batch, ok := e.Data.(TxHashBatch)
@@ -331,19 +330,17 @@ func TestGetTxsByHashList(t *testing.T) {
 			TransactionHash: []byte("hash4"),
 		},
 	}
-	hashBatch1 :=  &TxHashBatch{BatchHash: "1", TxHashList: []string{"1", "2"}, TxList: txlist}
+	hashBatch1 := &TxHashBatch{BatchHash: "1", TxHashList: []string{"1", "2"}, TxList: txlist}
 	txPool.batchStore = append(txPool.batchStore, hashBatch1)
 	id := hash(txPool.batchStore[0])
 	txs, _, err := txPool.GetTxsByHashList(id, []string{})
 	ast.Equal(txlist, txs, "This batch already exists, should return itself")
-
 
 	missingBatchId := "miss"
 	missingBatchHash := []string{"hello", "world"}
 	txPool.missingTxs[missingBatchId] = missingBatchHash
 	_, miss, err := txPool.GetTxsByHashList(missingBatchId, nil)
 	ast.Equal(missingBatchHash, miss, "Should return before missingTxsHash")
-
 
 	txPool.txPool["a"] = &types.Transaction{}
 	txPool.txPool["b"] = &types.Transaction{}
@@ -474,7 +471,7 @@ func TestGetTxsBack(t *testing.T) {
 	}
 }
 
-func TestGetOneTxsBack(t *testing.T)  {
+func TestGetOneTxsBack(t *testing.T) {
 	ast := assert.New(t)
 	namespace := "1"
 	common.InitRawHyperLogger(namespace)
@@ -654,8 +651,8 @@ func TestGetBatchById(t *testing.T) {
 	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1", TxHashList: []string{"1", "2"}})
 	h := hash(txPool.batchStore[0])
 	batch, err := txPool.getBatchById(h)
-	ast.Nil(err,err)
-	ast.Equal("1",batch.BatchHash, "Get a wrong batch")
+	ast.Nil(err, err)
+	ast.Equal("1", batch.BatchHash, "Get a wrong batch")
 
 	batch, err = txPool.getBatchById("a")
 	ast.Equal(ErrNoBatch, err, "should not get a batch")

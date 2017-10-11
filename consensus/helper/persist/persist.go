@@ -26,12 +26,12 @@ type Persister interface {
 }
 
 type persisterImpl struct {
-	db     db.Database
+	db db.Database
 }
 
 func New(db db.Database) *persisterImpl {
 	persister := &persisterImpl{
-		db:	db,
+		db: db,
 	}
 	return persister
 }
@@ -65,7 +65,7 @@ func (persister *persisterImpl) ReadStateSet(prefix string) (map[string][]byte, 
 		err := errors.New(fmt.Sprintf("Cannot find key with %s in database", prefixRaw))
 		return nil, err
 	}
-	for ; bytes.HasPrefix(it.Key(), prefixRaw); {
+	for bytes.HasPrefix(it.Key(), prefixRaw) {
 		key := string(it.Key())
 		key = key[len("consensus."):]
 		ret[key] = append([]byte(nil), it.Value()...)

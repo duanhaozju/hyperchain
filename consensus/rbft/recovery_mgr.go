@@ -4,8 +4,8 @@ package rbft
 
 import (
 	"encoding/base64"
-	"sync/atomic"
 	"github.com/golang/protobuf/proto"
+	"sync/atomic"
 )
 
 /**

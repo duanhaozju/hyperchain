@@ -93,9 +93,9 @@ func (rbft *rbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
 	payload, err := rbft.persister.ReadStateSet("qset.")
 	if err == nil {
 		for key, set := range payload {
-			var v, n, vid uint64
+			var v, n uint64
 			var d string
-			if _, err = fmt.Sscanf(key, "qset.%d.%d.%d.%s", &v, &n, &vid, &d); err != nil {
+			if _, err = fmt.Sscanf(key, "qset.%d.%d.%s", &v, &n, &d); err != nil {
 				rbft.logger.Warningf("Replica %d could not restore qset key %s", rbft.id, key)
 			} else {
 				preprep := &PrePrepare{}
@@ -177,11 +177,11 @@ func (rbft *rbftImpl) restoreCSet() (map[msgID]*Cset, error) {
 func (rbft *rbftImpl) restoreCert() {
 	qset, _ := rbft.restoreQSet()
 	for idx, q := range qset {
-		cert := rbft.storeMgr.getCert(idx.v, idx.n, idx.d)
 		if idx.n > rbft.exec.lastExec {
 			rbft.persistDelQSet(idx.v, idx.n, idx.d)
 			continue
 		}
+		cert := rbft.storeMgr.getCert(idx.v, idx.n, idx.d)
 		cert.prePrepare = q
 		cert.resultHash = q.ResultHash
 	}
@@ -281,7 +281,7 @@ func (rbft *rbftImpl) persistTxBatch(digest string) {
 
 // persistDelTxBatch removes one marshaled transaction batch with the given digest from database
 func (rbft *rbftImpl) persistDelTxBatch(digest string) {
-	rbft.persister.DelState("txBatch."+digest)
+	rbft.persister.DelState("txBatch." + digest)
 }
 
 // persistDelAllTxBatches removes all marshaled transaction batches from database

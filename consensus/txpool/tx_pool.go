@@ -91,16 +91,16 @@ type TxHashBatch struct {
 
 // txPoolImpl implements the TxPool interface
 type txPoolImpl struct {
-	txPool         map[string]*types.Transaction // store all non-batched txs
-	txPoolHash     []string                      // store all non-batched txs' hash by order
-	batchStore     []*TxHashBatch                // store all batches created by current primary in order, removed in
-	                                             // viewchange as new primary may create batches in other order
-	batchedTxs     map[string]bool               // store batched txs' hash corresponding to batchStore
-	missingTxs     map[string][]string           // store missing txs' hash using missing batch's id as key
-	poolSize       int                           // upper limit of txPool
-	queue          *event.TypeMux                // when we generate a batch, we would post it to this channel
-	batchSize      int                           // a batch contains how many transactions
-	logger         *logging.Logger
+	txPool     map[string]*types.Transaction // store all non-batched txs
+	txPoolHash []string                      // store all non-batched txs' hash by order
+	batchStore []*TxHashBatch                // store all batches created by current primary in order, removed in
+	// viewchange as new primary may create batches in other order
+	batchedTxs map[string]bool     // store batched txs' hash corresponding to batchStore
+	missingTxs map[string][]string // store missing txs' hash using missing batch's id as key
+	poolSize   int                 // upper limit of txPool
+	queue      *event.TypeMux      // when we generate a batch, we would post it to this channel
+	batchSize  int                 // a batch contains how many transactions
+	logger     *logging.Logger
 }
 
 // NewTxPool creates a new transaction pool
@@ -140,7 +140,7 @@ func (pool *txPoolImpl) addTxs(txs []*types.Transaction) error {
 
 		// find tx in txPool(non-batched txs)
 		if pool.txPool[txHash] != nil {
-			pool.logger.Debugf("Duplicate transaction with hash : %s, may be caused by receiving certain tx" +
+			pool.logger.Debugf("Duplicate transaction with hash : %s, may be caused by receiving certain tx"+
 				"during fetching missing tx from primary", txHash)
 			isDuplicate = true
 		}
@@ -544,7 +544,6 @@ func (pool *txPoolImpl) getBatchById(id string) (*TxHashBatch, error) {
 	}
 	return nil, ErrNoBatch
 }
-
 
 func hash(batch *TxHashBatch) string {
 	h := md5.New()
