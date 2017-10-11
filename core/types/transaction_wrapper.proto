@@ -1,7 +1,0 @@
-syntax = "proto3";
-package types;
-
-message TransactionWrapper {
-    bytes transactionVersion = 1;
-    bytes transaction = 2;
-}

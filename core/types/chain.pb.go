@@ -28,7 +28,7 @@ type Chain struct {
 func (m *Chain) Reset()                    { *m = Chain{} }
 func (m *Chain) String() string            { return proto.CompactTextString(m) }
 func (*Chain) ProtoMessage()               {}
-func (*Chain) Descriptor() ([]byte, []int) { return fileDescriptor2, []int{0} }
+func (*Chain) Descriptor() ([]byte, []int) { return fileDescriptor1, []int{0} }
 
 func (m *Chain) GetLatestBlockHash() []byte {
 	if m != nil {
@@ -97,9 +97,9 @@ func init() {
 	proto.RegisterType((*Chain)(nil), "types.Chain")
 }
 
-func init() { proto.RegisterFile("chain.proto", fileDescriptor2) }
+func init() { proto.RegisterFile("chain.proto", fileDescriptor1) }
 
-var fileDescriptor2 = []byte{
+var fileDescriptor1 = []byte{
 	// 220 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x64, 0x90, 0x31, 0x4e, 0x03, 0x31,
 	0x10, 0x45, 0xb5, 0x21, 0xde, 0xc0, 0x24, 0x12, 0x68, 0x84, 0x90, 0xcb, 0x55, 0xaa, 0x15, 0x05,
