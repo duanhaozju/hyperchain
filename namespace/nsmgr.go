@@ -111,15 +111,15 @@ type NamespaceManager interface {
 type nsManagerImpl struct {
 	// Since param "namespaces" may be read/write in different go-routines,
 	// it should be protected by a rwLock.
-	rwLock      *sync.RWMutex
+	rwLock *sync.RWMutex
 
 	// namespaces stores all the namespace instances registered in the system
-	namespaces  map[string]Namespace
+	namespaces map[string]Namespace
 
 	// jvmManager manages the jvm executor in system, since executor is a
 	// pluggable components, so start jvm manager or not should be written
 	// in the config file.
-	jvmManager  *JvmManager
+	jvmManager *JvmManager
 
 	// bloomfilter is the transaction bloom filter, helps to do transaction
 	// duplication checking
@@ -131,8 +131,8 @@ type nsManagerImpl struct {
 
 	status *Status
 
-	stopHp      chan bool
-	restartHp   chan bool
+	stopHp    chan bool
+	restartHp chan bool
 }
 
 // newNsManager news a namespace manager implement and init.
@@ -307,8 +307,6 @@ func (nr *nsManagerImpl) Register(name string) error {
 	if err != nil {
 		return err
 	}
-	nsConfig.Set(common.NAMESPACE, name)
-	nsConfig.Set(common.C_JVM_START, nr.GlobalConfig().GetBool(common.C_JVM_START))
 	delFlag := make(chan bool)
 	ns, err := GetNamespace(name, nsConfig, delFlag)
 	if err != nil {
@@ -342,7 +340,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 	}
 	nr.bloomfilter.UnRegister(name)
 	logger.Criticalf("namespace: %s stopped", name)
-	//TODO: need to delete the data?
+	//TODO: need to delete the data and stop listen del node.
 	return nil
 }
 
@@ -357,14 +355,14 @@ func updateNamespaceStartConfig(name string, conf *common.Config) error {
 
 // removeNamespace removes the namespace instance with the given
 // name from system.
-func (nr *nsManagerImpl) removeNamespace(name string)  {
+func (nr *nsManagerImpl) removeNamespace(name string) {
 	nr.rwLock.Lock()
 	delete(nr.namespaces, name)
 	nr.rwLock.Unlock()
 }
 
 // addNamespace adds the namespace instance with the given name to system.
-func (nr *nsManagerImpl) addNamespace(ns Namespace)  {
+func (nr *nsManagerImpl) addNamespace(ns Namespace) {
 	nr.rwLock.Lock()
 	nr.namespaces[ns.Name()] = ns
 	nr.rwLock.Unlock()
@@ -478,12 +476,12 @@ func (nr *nsManagerImpl) ListenDelNode(name string, delFlag chan bool) {
 	}
 }
 
-//GetStopFlag returns the flag of stop hyperchain server
+// GetStopFlag returns the flag of stop hyperchain server
 func (nr *nsManagerImpl) GetStopFlag() chan bool {
 	return nr.stopHp
 }
 
-//GetRestartFlag returns the flag of restart hyperchain server
+// GetRestartFlag returns the flag of restart hyperchain server
 func (nr *nsManagerImpl) GetRestartFlag() chan bool {
 	return nr.restartHp
 }

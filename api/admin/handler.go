@@ -3,11 +3,11 @@
 package jsonrpc
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
-	"encoding/base64"
 )
 
 // LoginServer implements the basic auth login.

@@ -30,17 +30,16 @@ type JvmManager struct {
 	ledgerProxy *ledger.LedgerProxy
 
 	// system jvm client, for health maintain
-	jvmCli      jvm.ContractExecutor
+	jvmCli jvm.ContractExecutor
 
 	// lsofPath is used to locate "lsof" as different systems may not
 	// contain this executable file, we must locate it before using it
 	// to check the monitoring of specific ports.
-	lsofPath    string
+	lsofPath string
 
-	logger      *logging.Logger
-	conf        *common.Config
-	exit        chan bool
-
+	logger *logging.Logger
+	conf   *common.Config
+	exit   chan bool
 }
 
 // NewJvmManager returns a JvmManager instance using given config.
@@ -205,7 +204,7 @@ func (mgr *JvmManager) checkJvmExist() bool {
 			return false
 		} else {
 			mgr.logger.Error(err.Error())
-			return true
+			return false
 		}
 	} else {
 		return true

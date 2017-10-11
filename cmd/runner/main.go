@@ -37,10 +37,6 @@ var (
 		Name:  "nostorage",
 		Usage: "disable storage output",
 	}
-	DisableGasMeteringFlag = cli.BoolFlag{
-		Name:  "nogasmetering",
-		Usage: "disable gas metering",
-	}
 	DebugFlag = cli.BoolFlag{
 		Name:  "debug",
 		Usage: "output all debug trace info",
@@ -48,10 +44,6 @@ var (
 	CodeFlag = cli.StringFlag{
 		Name:  "code",
 		Usage: "EVM code",
-	}
-	StatFlag = cli.BoolFlag{
-		Name:  "stat",
-		Usage: "output all stat info",
 	}
 	CodeFileFlag = cli.StringFlag{
 		Name:  "codefile",
@@ -61,6 +53,10 @@ var (
 		Name:  "input",
 		Usage: "invoke input",
 	}
+	StatFlag = cli.BoolFlag{
+		Name:  "stat",
+		Usage: "output all stat info",
+	}
 	DisableExtendDBFlag = cli.BoolFlag{
 		Name:  "nodb",
 		Usage: "disable db, use empty memory db as default",
@@ -68,14 +64,6 @@ var (
 	DbFileFlag = cli.StringFlag{
 		Name:  "dbfile",
 		Usage: "database path",
-	}
-	MemProfileFlag = cli.StringFlag{
-		Name:  "memprofile",
-		Usage: "creates a memory profile at the given path",
-	}
-	CPUProfileFlag = cli.StringFlag{
-		Name:  "cpuprofile",
-		Usage: "creates a CPU profile at the given path",
 	}
 )
 
@@ -110,12 +98,9 @@ func main() {
 
 func initLog() {
 	conf := cm.NewRawConfig()
-	conf.Set(cm.LOG_DUMP_FILE, false)
-	conf.Set(cm.LOG_BASE_LOG_LEVEL, "NOTICE")
-	conf.Set(cm.LOG_FILE_FORMAT, "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}")
-	conf.Set(cm.LOG_CONSOLE_FORMAT, "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}")
-	conf.Set(cm.LOG_DUMP_FILE_DIR, "")
-	conf.Set(cm.NAMESPACE, cm.DEFAULT_NAMESPACE)
-	cm.InitHyperLoggerManager(conf)
 	cm.InitHyperLogger(cm.DEFAULT_NAMESPACE, conf)
+	cm.GetLogger(cm.DEFAULT_NAMESPACE, "state")
+	cm.SetLogLevel(cm.DEFAULT_NAMESPACE, "state", "NOTICE")
+	cm.GetLogger(cm.DEFAULT_NAMESPACE, "buckettree")
+	cm.SetLogLevel(cm.DEFAULT_NAMESPACE, "buckettree", "NOTICE")
 }

@@ -25,45 +25,45 @@ import (
 
 // rbftImpl is the core struct of rbft module, which handles all functions about consensus
 type rbftImpl struct {
-	namespace     string // this node belongs to which namespace
-	activeView    uint32 // view change happening, this view is active now or not
-	f             int    // max. number of byzantine validators we can tolerate
-	N             int    // max. number of validators in the network
-	h             uint64 // low watermark
-	id            uint64 // replica ID; PBFT `i`
-	K             uint64 // how long this checkpoint period is
-	logMultiplier uint64 // use this value to calculate log size : k*logMultiplier
-	L             uint64 // log size: k*logMultiplier
-	seqNo         uint64 // PBFT "n", strictly monotonic increasing sequence number
-	view          uint64 // current view
+	namespace     string                // this node belongs to which namespace
+	activeView    uint32                // view change happening, this view is active now or not
+	f             int                   // max. number of byzantine validators we can tolerate
+	N             int                   // max. number of validators in the network
+	h             uint64                // low watermark
+	id            uint64                // replica ID; PBFT `i`
+	K             uint64                // how long this checkpoint period is
+	logMultiplier uint64                // use this value to calculate log size : k*logMultiplier
+	L             uint64                // log size: k*logMultiplier
+	seqNo         uint64                // PBFT "n", strictly monotonic increasing sequence number
+	view          uint64                // current view
 
-	status PbftStatus // keep all basic status of rbft in this object
+	status        RbftStatus            // keep all basic status of rbft in this object
 
-	batchMgr    *batchManager    // manage batch related issues
-	batchVdr    *batchValidator  // manage batch validate issues
-	timerMgr    *timerManager    // manage rbft event timers
-	storeMgr    *storeManager    // manage storage
-	nodeMgr     *nodeManager     // manage node delete or add
-	recoveryMgr *recoveryManager // manage recovery issues
-	vcMgr       *vcManager       // manage viewchange issues
-	exec        *executor        // manage transaction exec
+	batchMgr      *batchManager         // manage batch related issues
+	batchVdr      *batchValidator       // manage batch validate issues
+	timerMgr      *timerManager         // manage rbft event timers
+	storeMgr      *storeManager         // manage storage
+	nodeMgr       *nodeManager          // manage node delete or add
+	recoveryMgr   *recoveryManager      // manage recovery issues
+	vcMgr         *vcManager            // manage viewchange issues
+	exec          *executor             // manage transaction exec
 
-	helper helper.Stack // send message to other components of system
+	helper helper.Stack                 // send message to other components of system
 
 	eventMux         *event.TypeMux
 	batchSub         event.Subscription // subscription channel for all events posted from consensus sub-modules
-	close            chan bool	// channel to close this event process
+	close            chan bool          // channel to close this event process
 
-	config *common.Config  // get configuration info
-	logger *logging.Logger // write logger to record some info
+	config *common.Config               // get configuration info
+	logger *logging.Logger              // write logger to record some info
 	persister persist.Persister
 
-	normal   uint32 // system is normal or not
-	poolFull uint32 // txPool is full or not
+	normal   uint32                     // system is normal or not
+	poolFull uint32                     // txPool is full or not
 }
 
 // newPBFT init the PBFT instance
-func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*rbftImpl, error) {
+func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*rbftImpl, error) {
 	var err error
 	rbft := &rbftImpl{}
 	rbft.logger = common.GetLogger(namespace, "consensus")

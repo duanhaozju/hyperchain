@@ -3,9 +3,9 @@
 package namespace
 
 import (
-	"testing"
-	"sync"
 	"github.com/stretchr/testify/assert"
+	"sync"
+	"testing"
 )
 
 func TestStatus(t *testing.T) {

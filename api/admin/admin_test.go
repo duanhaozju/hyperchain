@@ -1,14 +1,14 @@
 package jsonrpc
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
 	"hyperchain/namespace/mocks"
+	"testing"
 
-	"hyperchain/common"
-	"time"
-	"strings"
 	"errors"
+	"hyperchain/common"
+	"strings"
+	"time"
 )
 
 var keyPath = "../../hypercli/keyconfigs/key/key"
@@ -50,7 +50,6 @@ func TestAdministrator_PreHandle(t *testing.T) {
 	if err != nil {
 		t.Error("Faild in sign token", err)
 	}
-	t.Logf("signed token for root is: %s", token)
 	pub_key = "../../hypercli/keyconfigs/key/key.pub"
 	// here we don't set the last operation time of root.
 	err = admin.PreHandle(token, "admin_getLevel")
@@ -76,8 +75,8 @@ func TestStopServer(t *testing.T) {
 	mockNSMgr.On("GetStopFlag").Return(stop)
 
 	// start a go-routine to listen the stop flag.
-	go func(){
-		flag := <- admin.nsMgr.GetStopFlag()
+	go func() {
+		flag := <-admin.nsMgr.GetStopFlag()
 		t.Logf("Got stop flag: %v", flag)
 	}()
 
@@ -99,8 +98,8 @@ func TestRestartServer(t *testing.T) {
 	mockNSMgr.On("GetRestartFlag").Return(restart)
 
 	// start a go-routine to listen the restart flag.
-	go func(){
-		flag := <- admin.nsMgr.GetRestartFlag()
+	go func() {
+		flag := <-admin.nsMgr.GetRestartFlag()
 		t.Logf("Got restart flag: %v", flag)
 	}()
 
@@ -135,7 +134,7 @@ func TestStartNsMgr(t *testing.T) {
 	// mock: start nsMgr with an error, do not need to limit return times.
 	mockNSMgr.On("Start").Return(mockError)
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to start " +
+	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to start "+
 		"the namespace manager because of some errors.")
 }
 
@@ -161,7 +160,7 @@ func TestStopNsMgr(t *testing.T) {
 	// mock: stop nsMgr with an error, do not need to limit return times.
 	mockNSMgr.On("Stop").Return(mockError)
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to stop " +
+	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to stop "+
 		"the namespace manager because of some errors.")
 }
 
@@ -200,8 +199,8 @@ func TestStartNamespace(t *testing.T) {
 		Args:       []string{"mock_ns"},
 	}
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to start the " +
-		"namespace <mock_ns> because of some errors.")
+	ast.True(result.Ok, "We should successfully start the namespace <global> "+
+		"as we start namespace in another go-routine, we always send 'start namespace cmd' successfully.")
 }
 
 func TestStopNamespace(t *testing.T) {
@@ -239,8 +238,8 @@ func TestStopNamespace(t *testing.T) {
 		Args:       []string{"mock_ns"},
 	}
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to stop the " +
-		"namespace <mock_ns> because of some errors.")
+	ast.True(result.Ok, "We should successfully start the namespace <global> "+
+		"as we start namespace in another go-routine, we always send 'stop namespace cmd' successfully.")
 }
 
 func TestRestartNamespace(t *testing.T) {
@@ -278,8 +277,8 @@ func TestRestartNamespace(t *testing.T) {
 		Args:       []string{"mock_ns"},
 	}
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to restart the " +
-		"namespace <mock_ns> because of some errors.")
+	ast.True(result.Ok, "We should successfully start the namespace <global> "+
+		"as we start namespace in another go-routine, we always send 'restart namespace cmd' successfully.")
 }
 
 func TestRegisterNamespace(t *testing.T) {
@@ -317,7 +316,7 @@ func TestRegisterNamespace(t *testing.T) {
 		Args:       []string{"mock_ns"},
 	}
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to register the " +
+	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to register the "+
 		"namespace <mock_ns> because of some errors.")
 }
 
@@ -356,7 +355,7 @@ func TestDeRegisterNamespace(t *testing.T) {
 		Args:       []string{"mock_ns"},
 	}
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to deregister the " +
+	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to deregister the "+
 		"namespace <mock_ns> because of some errors.")
 }
 
@@ -407,7 +406,7 @@ func TestGetLevel(t *testing.T) {
 	}
 	service = getService(cmd.MethodName, t)
 	result = admin.CmdExecutor[service](cmd)
-	ast.True(result.Ok, "We should successfully get the log level of " +
+	ast.True(result.Ok, "We should successfully get the log level of "+
 		"<consensus> module in namespace <global>.")
 
 	// mock: get log level with an error.
@@ -446,7 +445,7 @@ func TestSetLevel(t *testing.T) {
 	}
 	service = getService(cmd.MethodName, t)
 	result = admin.CmdExecutor[service](cmd)
-	ast.True(result.Ok, "We should successfully set the log level of " +
+	ast.True(result.Ok, "We should successfully set the log level of "+
 		"<consensus> module in namespace <global>.")
 	level, _ := common.GetLogLevel("global", "consensus")
 	ast.Equal("ERROR", level, "They should be equal.")
@@ -482,7 +481,7 @@ func TestStartJvmServer(t *testing.T) {
 	// mock: start jvm server with an error, do not need to limit return times.
 	mockNSMgr.On("StartJvm").Return(mockError)
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to " +
+	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to "+
 		"start the jvm manager because of some errors.")
 
 }
@@ -509,7 +508,7 @@ func TestRestartJvmServer(t *testing.T) {
 	// mock: restart jvm server with an error, do not need to limit return times.
 	mockNSMgr.On("RestartJvm").Return(mockError)
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to " +
+	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to "+
 		"restart the jvm manager because of some errors.")
 
 }
@@ -536,7 +535,7 @@ func TestStopJvmServer(t *testing.T) {
 	// mock: stop jvm server with an error, do not need to limit return times.
 	mockNSMgr.On("StopJvm").Return(mockError)
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to " +
+	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to "+
 		"stop the jvm manager because of some errors.")
 
 }
@@ -552,7 +551,7 @@ func TestGrantPermission(t *testing.T) {
 	}
 	result := admin.grantPermission(cmd)
 	invalidParamsError := &common.InvalidParamsError{}
-	ast.Equal(invalidParamsError.Code(),result.Error.Code(),
+	ast.Equal(invalidParamsError.Code(), result.Error.Code(),
 		"Grant failed as we only provide 2 args.")
 
 	// mock: grant permission to a non-exist user.
@@ -595,7 +594,7 @@ func TestRevokePermission(t *testing.T) {
 	}
 	result := admin.revokePermission(cmd)
 	invalidParamsError := &common.InvalidParamsError{}
-	ast.Equal(invalidParamsError.Code(),result.Error.Code(),
+	ast.Equal(invalidParamsError.Code(), result.Error.Code(),
 		"Revoke failed as we only provide 2 args.")
 
 	// mock: revoke permission to a non-exist user.
@@ -638,7 +637,7 @@ func TestListPermission(t *testing.T) {
 	}
 	result := admin.listPermission(cmd)
 	invalidParamsError := &common.InvalidParamsError{}
-	ast.Equal(invalidParamsError.Code(),result.Error.Code(),
+	ast.Equal(invalidParamsError.Code(), result.Error.Code(),
 		"Revoke failed as we provide 2 args.")
 
 	// mock: list permission to a non-exist user.
@@ -672,7 +671,7 @@ func TestCreateUser(t *testing.T) {
 	}
 	result := admin.createUser(cmd)
 	invalidParamsError := &common.InvalidParamsError{}
-	ast.Equal(invalidParamsError.Code(),result.Error.Code(),
+	ast.Equal(invalidParamsError.Code(), result.Error.Code(),
 		"Create failed as we provide 2 args.")
 
 	// mock: create user with an exist user.
@@ -715,7 +714,7 @@ func TestAlterUser(t *testing.T) {
 	}
 	result := admin.alterUser(cmd)
 	invalidParamsError := &common.InvalidParamsError{}
-	ast.Equal(invalidParamsError.Code(),result.Error.Code(),
+	ast.Equal(invalidParamsError.Code(), result.Error.Code(),
 		"Alter failed as we provide 1 args.")
 
 	// mock: alter user with a non-exist user.
@@ -749,7 +748,7 @@ func TestDelUser(t *testing.T) {
 	}
 	result := admin.delUser(cmd)
 	invalidParamsError := &common.InvalidParamsError{}
-	ast.Equal(invalidParamsError.Code(),result.Error.Code(),
+	ast.Equal(invalidParamsError.Code(), result.Error.Code(),
 		"Delete failed as we provide 2 args.")
 
 	// mock: delete user with a non-exist user.
@@ -772,7 +771,7 @@ func TestDelUser(t *testing.T) {
 
 }
 
-func getAdmin() *Administrator{
+func getAdmin() *Administrator {
 	admin := &Administrator{
 		check:       true,
 		expiration:  1 * time.Second,
@@ -788,7 +787,7 @@ func getAdmin() *Administrator{
 func getService(name string, t *testing.T) string {
 	ss := strings.Split(name, common.ServiceMethodSeparator)
 	if len(ss) != 2 {
-		t.Errorf("Invalid Method name(%s) which should be splited to" +
+		t.Errorf("Invalid Method name(%s) which should be splited to"+
 			" 2 components by separator '%s'", name, common.ServiceMethodSeparator)
 	}
 	return ss[1]
