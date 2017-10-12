@@ -22,7 +22,7 @@ type Persister interface {
 	GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte)
 	GetBlockHeightAndHash(namespace string) (uint64, string)
 	GetHeightOfChain(namespace string) uint64
-	GetGenesisOfChain(namespace string) (error, uint64)
+	GetGenesisOfChain(namespace string) (uint64, error)
 }
 
 type persisterImpl struct {

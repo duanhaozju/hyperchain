@@ -1060,8 +1060,8 @@ func prepareTransaction(args SendTxArgs, txType int, namespace string, eh *manag
 
 	// 3. check if there is duplicated transaction
 	var exist bool
-	if err, exist = bloom.LookupTransaction(namespace, tx.GetHash()); err != nil || exist == true {
-		if exist, _ = edb.JudgeTransactionExist(namespace, tx.TransactionHash); exist {
+	if exist, err = bloom.LookupTransaction(namespace, tx.GetHash()); err != nil || exist == true {
+		if exist, _ = edb.IsTransactionExist(namespace, tx.TransactionHash); exist {
 			return nil, &common.RepeadedTxError{TxHash: common.ToHex(tx.TransactionHash)}
 		}
 	}
