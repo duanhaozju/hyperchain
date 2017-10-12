@@ -40,27 +40,34 @@ type HyperNet struct {
 	cconf *clientConf
 }
 
+// NewHyperNet creates and returns a new HyperNet instance.
 func NewHyperNet(config *viper.Viper, identifier string) (*HyperNet, error) {
 	logger = common.GetLogger(common.DEFAULT_LOG, "hypernet")
 	if config == nil {
 		return nil, errors.New("Readin host config failed, the viper instance is nil")
 	}
 
-	hostconf := config.GetString(common.P2P_HOSTS)
+	// check grpc port
 	port_i := config.GetInt(common.P2P_PORT)
 	if port_i == 0 {
 		return nil, errors.New("invalid grpc server port")
 	}
 	port := ":" + strconv.Itoa(port_i)
+
+	// check if hosts.toml file exists
+	hostconf := config.GetString(common.P2P_HOSTS)
 	if !common.FileExist(hostconf) {
-		fmt.Errorf("hosts config file not exist: %s", hostconf)
+		logger.Errorf("hosts config file not exist: %s", hostconf)
 		return nil, errors.New(fmt.Sprintf("connot find the hosts config file: %s", hostconf))
 	}
+
+	// check if addr.toml file exists
 	addrconf := config.GetString(common.P2P_ADDR)
 	if !common.FileExist(addrconf) {
-		fmt.Errorf("addr config file not exist: %s", hostconf)
+		logger.Errorf("addr config file not exist: %s", addrconf)
 		return nil, errors.New(fmt.Sprintf("connot find the addr config file: %s", addrconf))
 	}
+
 	ia, domain, err := inneraddr.GetInnerAddr(addrconf)
 	if err != nil {
 		return nil, err

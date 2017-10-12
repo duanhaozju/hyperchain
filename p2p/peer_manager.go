@@ -1,7 +1,7 @@
 package p2p
 
 // PeerManager provides the basic functions which supports the peer to peer
-// data transfer. Those should be invoked by the higher layer.
+// data transfer and node operation. Those should be invoked by the higher layer.
 type PeerManager interface {
 	AddNode
 	DeleteNode
@@ -12,54 +12,74 @@ type PeerManager interface {
 	Stop()
 }
 
-// MsgSender Send msg to others peer
+// MsgSender sends message to other peers.
 type MsgSender interface {
-	// broadcast information to peers
+
+	// Broadcast broadcasts message to peers.
+	// todo 向所有已连接的vp广播？
 	Broadcast(payLoad []byte)
 
-	// send a message to specific peer  UNICAST
+	// SendMsg sends a message to specific peer.(UNICAST)
+	// todo 向指定VP发送？
 	SendMsg(payLoad []byte, peerList []uint64)
 
-	// random select a VP and send msg to it
+	// SendRandomVP sends a message to a random VP.
 	SendRandomVP(payload []byte) error
 
-	// broadcast information to NVP peers
+	// BroadcastNVP broadcasts message to NVP peers.
 	BroadcastNVP(payLoad []byte) error
 
-	// send a message to specific NVP peer (by nvp hash) UNICAST
+	// SendMsgNVP sends a message to specific NVP peer (by nvp hash).(UNICAST)
 	SendMsgNVP(payLoad []byte, nvpList []string) error
 }
 
-// AddNode
+// AddNode specifies some methods should be invoked when a new node will join.
 type AddNode interface {
-	// update routing table when new peer's join request is accepted
+
+	// UpdateRoutingTable updates routing table when a new request to join is accepted.
 	UpdateRoutingTable(payLoad []byte)
+
+	// GetLocalAddressPayload returns the serialization information for the new node.
 	GetLocalAddressPayload() []byte
+
+	// SetOnline represents the node starts up successfully.
 	SetOnline()
 }
 
-// DeleteNode interface
+// DeleteNode specifies some methods should be invoked when a existing node will be deleted.
 type DeleteNode interface {
+
+	// GetLocalNodeHash returns local node hash.
 	GetLocalNodeHash() string
+
+	//todo GetRouterHashifDelete
 	GetRouterHashifDelete(hash string) (string, uint64, uint64)
-	DeleteNode(hash string) error // if self {...} else{...}
-	//Delete NVP node which is connect to self
+
+	// DeleteNode delete the specific hash node.
+	DeleteNode(hash string) error
+
+	// DeleteNVPNode deletes NVP node which connects to current VP node.
 	DeleteNVPNode(hash string) error
 }
 
-// InfoGetter get the peer info to manager
+// InfoGetter specifies some methods to get node/peer information.
 type InfoGetter interface {
-	// Get local node id
+
+	// GetNodeId returns local node id.
 	GetNodeId() int
-	// Get current N
+
+	// GetN returns the number of connected node.
 	GetN() int
-	//get the peer information of all nodes.
+
+	// GetPeerInfo returns all the peer information of local node, including itself.
 	GetPeerInfo() PeerInfos
-	// set
+
+	// SetPrimary sets the specific node as the primary node.
 	SetPrimary(id uint64) error
-	// use by new peer when join the chain dynamically only
+
+	// GetRouters is used by new peer when join the chain dynamically only.
 	GetRouters() []byte
 
-	//ISVP local node is vp node or not
+	// IsVP returns whether local node is VP node or not.
 	IsVP() bool
 }

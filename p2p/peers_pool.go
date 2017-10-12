@@ -19,13 +19,13 @@ var (
 
 type PeersPool struct {
 	namespace string
-	vpPool    *threadsafe.Heap
+	vpPool    *threadsafe.Heap          //todo 当前namespace所有vp节点？
 	//nvp hasn't id so use map to storage it
-	nvpPool cmap.ConcurrentMap
+	nvpPool cmap.ConcurrentMap			//todo 当前namespace所有跟node／peer	连的nvp节点？
 	//put the exist peers into this exist
-	existMap cmap.ConcurrentMap
+	existMap cmap.ConcurrentMap			//todo 当前namespace中所有节点, 包括vp节点和nvp节点？
 	// pending map
-	pendingMap cmap.ConcurrentMap
+	pendingMap cmap.ConcurrentMap		//todo 当前namespace中准备连接的节点，可能是vp节点也可能是nvp节点？
 	evMux      *event.TypeMux
 	//for configuration persist
 	pts     *PeerTriples
@@ -34,7 +34,7 @@ type PeersPool struct {
 	logger *logging.Logger
 }
 
-//NewPeersPool new a peers pool
+// NewPeersPool creates and returns a new PeersPool instance.
 func NewPeersPool(namespace string, ev *event.TypeMux, pts *PeerTriples, peercnf *peerCnf) *PeersPool {
 	return &PeersPool{
 		namespace:  namespace,

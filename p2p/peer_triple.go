@@ -8,8 +8,8 @@ import (
 
 var (
 	P_STAT_CONNECTED = "CONNECTED"
-	P_STAT_PENDDINGD = "CONNECTED"
-	P_STAT_CLOSED    = "CONNECTED"
+	P_STAT_PENDDINGD = "PENDDINGD"
+	P_STAT_CLOSED    = "CLOSED"
 )
 
 type PeerTriple struct {
@@ -30,30 +30,38 @@ func NewPeerTriple(namespace string, id int, hostname string) *PeerTriple {
 	}
 }
 
-//set the peer tripe status off
+// SetOn sets the peer status to CONNECTED.
 func (pt *PeerTriple) SetOn() {
 	pt.rwlock.Lock()
 	defer pt.rwlock.Unlock()
 	pt.status = P_STAT_CONNECTED
 }
 
-//set the peer tripe status off
+// SetOff sets the peer status to CLOSED.
 func (pt *PeerTriple) SetOff() {
 	pt.rwlock.Lock()
 	defer pt.rwlock.Unlock()
 	pt.status = P_STAT_CLOSED
 }
 
-//get current peer tripe's stat
+// GetStat returns the peer current status.
 func (pt *PeerTriple) GetStat() string {
 	pt.rwlock.RLock()
 	defer pt.rwlock.RUnlock()
 	return pt.status
 }
 
+// PeerTriples implements Len(), Less(), Swap() three methods for calling the standard library sort.Sort.
 type PeerTriples struct {
 	rwlock  *sync.RWMutex
 	triples []*PeerTriple
+}
+
+func NewPeerTriples() *PeerTriples {
+	return &PeerTriples{
+		rwlock:  new(sync.RWMutex),
+		triples: make([]*PeerTriple, 0),
+	}
 }
 
 func QuickParsePeerTriples(namespcace string, nodes []interface{}) (*PeerTriples, error) {
@@ -63,7 +71,7 @@ func QuickParsePeerTriples(namespcace string, nodes []interface{}) (*PeerTriples
 		var hostname string
 		node, ok := item.(map[string]interface{})
 		if !ok {
-			return nil, errors.New("cannot parse the peer config nodes list, please check the peerconfig.yaml file")
+			return nil, errors.New("cannot parse the peer config nodes list, please check the peerconfig.toml file")
 		}
 		for key, value := range node {
 			if key == "id" {
@@ -96,13 +104,6 @@ func PersistPeerTriples(vip *viper.Viper, pts *PeerTriples) error {
 	vip.Set("nodes", s)
 	vip.Set("self.n", int64(len(s)))
 	return vip.WriteConfig()
-}
-
-func NewPeerTriples() *PeerTriples {
-	return &PeerTriples{
-		rwlock:  new(sync.RWMutex),
-		triples: make([]*PeerTriple, 0),
-	}
 }
 
 func (pts *PeerTriples) Has(id int, namespace, hostname string) bool {
