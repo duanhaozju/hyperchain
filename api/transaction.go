@@ -8,8 +8,8 @@ import (
 	"github.com/juju/ratelimit"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
-	"hyperchain/core/ledger/bloom"
+	"hyperchain/core/bloom"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
@@ -267,7 +267,7 @@ func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*Transac
 // GetTransactionByHash returns the transaction in the ledger for the given transaction hash.
 func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 	tx, err := edb.GetTransaction(tran.namespace, hash[:])
-	if err != nil && err == edb.NotFindTxMetaErr {
+	if err != nil && err == edb.ErrNotFindTxMeta {
 		return tran.getDiscardTransactionByHash(hash)
 	} else if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
@@ -1060,8 +1060,8 @@ func prepareTransaction(args SendTxArgs, txType int, namespace string, eh *manag
 
 	// 3. check if there is duplicated transaction
 	var exist bool
-	if err, exist = bloom.LookupTransaction(namespace, tx.GetHash()); err != nil || exist == true {
-		if exist, _ = edb.JudgeTransactionExist(namespace, tx.TransactionHash); exist {
+	if exist, err = bloom.LookupTransaction(namespace, tx.GetHash()); err != nil || exist == true {
+		if exist, _ = edb.IsTransactionExist(namespace, tx.TransactionHash); exist {
 			return nil, &common.RepeadedTxError{TxHash: common.ToHex(tx.TransactionHash)}
 		}
 	}

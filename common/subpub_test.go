@@ -4,9 +4,9 @@
 package common
 
 import (
-	"testing"
 	"context"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestGetSubChs(t *testing.T) {

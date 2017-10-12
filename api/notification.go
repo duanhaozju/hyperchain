@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/db_utils"
 	flt "hyperchain/manager/filter"
 	"sync"
 )
@@ -64,7 +64,7 @@ func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, isVerbose boo
 	select {
 	case err := <-subChs.Err:
 		return common.ID(""), err
-	case rpcSub := <-subChs.SubscriptionCh:	// a JSON-RPC subscription is created
+	case rpcSub := <-subChs.SubscriptionCh: // a JSON-RPC subscription is created
 		api.log.Debugf("receive subscription %v", rpcSub.ID)
 
 		go func() {

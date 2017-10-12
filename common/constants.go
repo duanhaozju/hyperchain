@@ -9,9 +9,8 @@ const (
 )
 
 const (
-	OP_ARCHIVE  = 100
+	OP_ARCHIVE = 100
 )
-
 
 const (
 	NAMESPACE          = "namespace.name"
@@ -65,8 +64,8 @@ const (
 
 // constants for http configuration keys
 const (
-	HTTP_SECURITY 		= "http.security"
-	HTTP_VERSION2 		= "http.http_2"
+	HTTP_SECURITY       = "http.security"
+	HTTP_VERSION2       = "http.http_2"
 	HTTP_ALLOWEDORIGINS = "http.allowedOrigins"
 )
 

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"hyperchain/core"
 	"hyperchain/hyperdb"
+	"math"
 	"strings"
 	"testing"
-	"math"
 )
 
 func TestHex(t *testing.T) {

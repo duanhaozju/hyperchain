@@ -14,15 +14,15 @@ import (
 
 func TestFileExist(t *testing.T) {
 	directoryPath := os.Getenv("GOPATH") + "/src/hyperchain/common/testhelper/resources"
-	assert.Equal(t, true, FileExist(directoryPath + "/global.toml"), "This file should exist")
-	
-	assert.Equal(t, false, FileExist(directoryPath + "/gl.toml"), "This file should not exist")
+	assert.Equal(t, true, FileExist(directoryPath+"/global.toml"), "This file should exist")
+
+	assert.Equal(t, false, FileExist(directoryPath+"/gl.toml"), "This file should not exist")
 }
 
 func TestGetPath(t *testing.T) {
 	namespace := "global"
 	shortPath := "something"
-	assert.Equal(t, "namespaces/" + namespace + "/" + shortPath, GetPath(namespace,shortPath), "should be equal")
+	assert.Equal(t, "namespaces/"+namespace+"/"+shortPath, GetPath(namespace, shortPath), "should be equal")
 }
 
 func TestSeekAndAppend(t *testing.T) {

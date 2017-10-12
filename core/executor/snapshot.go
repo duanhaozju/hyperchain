@@ -4,7 +4,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	cm "hyperchain/core/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/ledger/state"
 	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
@@ -372,7 +372,7 @@ func (registry *SnapshotRegistry) checkDeletionRequest(event event.DeleteSnapsho
 	if err != nil {
 		return false
 	}
-	err, curGenesis := edb.GetGenesisTag(registry.namespace)
+	curGenesis, err := edb.GetGenesisTag(registry.namespace)
 	if err != nil {
 		return false
 	}

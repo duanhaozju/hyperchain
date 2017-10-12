@@ -14,7 +14,7 @@ func TestGetBlock(t *testing.T) {
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
 	// Get block number
-	dbBlock, _ := GetBlockByNumberFunc(db, test_util.BlockCases.Number)
+	dbBlock, _ := getBlockByNumberFunc(db, test_util.BlockCases.Number)
 	if !reflect.DeepEqual(&test_util.BlockCases, dbBlock) {
 		t.Error("expect to be same")
 	}
@@ -24,7 +24,7 @@ func TestGetBlock(t *testing.T) {
 		t.Error("expect to be same")
 	}
 	// Get block hash by number
-	blockHash, _ := GetBlockHashFunc(db, test_util.BlockCases.Number)
+	blockHash, _ := getBlockHashFunc(db, test_util.BlockCases.Number)
 	if bytes.Compare(test_util.BlockCases.BlockHash, blockHash) != 0 {
 		t.Error("expect to be same")
 	}
@@ -82,14 +82,14 @@ func TestDeleteBlock(t *testing.T) {
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	// delete block by hash
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	DeleteBlockFunc(db, db.NewBatch(), test_util.BlockCases.BlockHash, true, true)
+	deleteBlockFunc(db, db.NewBatch(), test_util.BlockCases.BlockHash, true, true)
 	if blk, _ := GetBlockFunc(db, test_util.BlockCases.BlockHash); blk != nil {
 		t.Error("expect deletion success")
 	}
 	// delete block by number
 	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	DeleteBlockByNumFunc(db, db.NewBatch(), test_util.BlockCases.Number, true, true)
-	if blk, _ := GetBlockByNumberFunc(db, test_util.BlockCases.Number); blk != nil {
+	deleteBlockByNumFunc(db, db.NewBatch(), test_util.BlockCases.Number, true, true)
+	if blk, _ := getBlockByNumberFunc(db, test_util.BlockCases.Number); blk != nil {
 		t.Error("expect deletion success")
 	}
 }
