@@ -17,6 +17,8 @@ import (
 	"time"
 )
 
+const HyperchainVersion ="Hyperchain Version:\nRelease1.4-20171012-f415e9"
+
 type hyperchain struct {
 	nsMgr       namespace.NamespaceManager
 	hs          jsonrpc.RPCServer
@@ -85,6 +87,7 @@ func (h *hyperchain) restart() {
 
 type argT struct {
 	cli.Helper
+	Version		  bool	`cli:"version" usage:"get the version of hyperchain"`
 	RestoreEnable bool   `cli:"r,restore" usage:"enable restore system status from dumpfile"`
 	SId           string `cli:"sid" usage:"use to specify snapshot" dft:""`
 	Namespace     string `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
@@ -108,6 +111,12 @@ func main() {
 		}()
 
 		argv := ctx.Argv().(*argT)
+
+		if argv.Version {
+			fmt.Println(HyperchainVersion)
+			return nil
+		}
+
 		globalConfig := common.NewConfig(argv.ConfigPath)
 
 		switch {

@@ -179,11 +179,11 @@ func (rbft *rbftImpl) restoreCSet() (map[msgID]*Cset, error) {
 func (rbft *rbftImpl) restoreCert() {
 	qset, _ := rbft.restoreQSet()
 	for idx, q := range qset {
-		cert := rbft.storeMgr.getCert(idx.v, idx.n, idx.d)
 		if idx.n > rbft.exec.lastExec {
 			rbft.persistDelQSet(idx.v, idx.n, idx.d)
 			continue
 		}
+		cert := rbft.storeMgr.getCert(idx.v, idx.n, idx.d)
 		cert.prePrepare = q
 		cert.resultHash = q.ResultHash
 	}
