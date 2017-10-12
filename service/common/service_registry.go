@@ -23,63 +23,12 @@ func NewServiceRegistry() ServiceRegistry {
 type Namespace struct {
 	services map[string]Service //<service name, service>
 	lock     sync.RWMutex
-
-	cq MessageQueue // consenter message queue
-	eq MessageQueue // executor message queue
-	nq MessageQueue // network message queue
-	aq MessageQueue // apiserver message queue
 }
 
 func newNamespace() *Namespace {
-	size := 1000
 	return &Namespace{
 		services: make(map[string]Service),
-		cq:       newMQImpl(size),
-		eq:       newMQImpl(size),
-		nq:       newMQImpl(size),
-		aq:       newMQImpl(size),
 	}
-}
-
-func (nc *Namespace) dispatch() {
-
-}
-
-func (nc *Namespace) dispatchCQ() {
-	//for {
-	//	//msg, err := nc.cq.Get()
-	//	//if err != nil {
-	//	//	//TODO handle error
-	//	//}
-	//	//if cm, ok := msg.(pb.ConsenterMessage); ok {
-	//	//	switch cm.Type {
-	//	//	case pb.ConsenterMessage_InformPrimaryEvent:
-	//	//		//inform primary
-	//	//
-	//	//		m := &pb.Message{
-	//	//		}
-	//	//
-	//	//
-	//	//
-	//	//		nc.services[NETWORK].Send(true, m)
-	//	//	case pb.ConsenterMessage_VCResetEvent:
-	//	//		//vc reset
-	//	//	default:
-	//	//		//undefined message
-	//	//	}
-	//	//} else {
-	//	//	//TODO handle error
-	//	//}
-	//
-	//}
-}
-
-func (nc *Namespace) dispatchEQ() {
-
-}
-
-func (nc *Namespace) dispatchAQ() {
-
 }
 
 func (nc *Namespace) AddService(service Service) {
