@@ -345,11 +345,11 @@ func (pmgr *peerManagerImpl) GetN() int {
 	return pmgr.n
 }
 
-// GetPeerInfo returns all the peer information of local node, including itself.
+// GetPeerInfo returns information of all VP peers wich local node connects, including itself.
 func (pmgr *peerManagerImpl) GetPeerInfo() PeerInfos {
 
 	var peerInfos PeerInfos
-	peers := pmgr.GetAllPeers()
+	peers := pmgr.GetVPPeers()
 	sHostName := pmgr.node.info.Hostname
 
 	for _, p := range peers {
