@@ -607,10 +607,10 @@ func (rbft *rbftImpl) recvCommit(commit *Commit) error {
 }
 
 // fetchMissingTransaction fetch missing transactions from primary which this node didn't receive but primary received
-func (rbft *rbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing []string) error {
+func (rbft *rbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing map[uint64]string) error {
 
-	rbft.logger.Debugf("Replica %d try to fetch missing txs for view=%d/seqNo=%d from primary %d",
-		rbft.id, preprep.View, preprep.SequenceNumber, preprep.ReplicaId)
+	rbft.logger.Debugf("Replica %d try to fetch missing txs for view=%d/seqNo=%d/digest=%s from primary %d",
+		rbft.id, preprep.View, preprep.SequenceNumber, preprep.BatchDigest, preprep.ReplicaId)
 
 	fetch := &FetchMissingTransaction{
 		View:           preprep.View,
@@ -639,31 +639,20 @@ func (rbft *rbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing []str
 // recvFetchMissingTransaction returns transactions to a node which didn't receive some transactions and ask primary for them.
 func (rbft *rbftImpl) recvFetchMissingTransaction(fetch *FetchMissingTransaction) error {
 
-	rbft.logger.Debugf("Primary %d received FetchMissingTransaction request for view=%d/seqNo=%d from replica %d",
-		rbft.id, fetch.View, fetch.SequenceNumber, fetch.ReplicaId)
+	rbft.logger.Debugf("Primary %d received FetchMissingTransaction request for view=%d/seqNo=%d/digest=%s from replica %d",
+		rbft.id, fetch.View, fetch.SequenceNumber, fetch.BatchDigest, fetch.ReplicaId)
 
-	var txList []*types.Transaction
+	txList := make(map[uint64]*types.Transaction)
 	var err error
 
 	if batch := rbft.storeMgr.txBatchStore[fetch.BatchDigest]; batch != nil {
-		i := 0
-		// If all transactions in fetch missingHashList are in this batch, they should keep the order
-		// So we can find them all by scanning this batch in order.
-		batchLen := len(batch.HashList)
-		for _, hash := range fetch.HashList {
-			for i < batchLen {
-				if batch.HashList[i] == hash {
-					txList = append(txList, batch.TxList[i])
-					i++
-					break
-				}
-				i++
-			}
-
-			if i == batchLen && len(txList) != len(fetch.HashList) {
-				rbft.logger.Error("Unmatch tx hash after receive return fetch txList")
+		batchLen := uint64(len(batch.HashList))
+		for i, hash := range fetch.HashList {
+			if i >= batchLen || batch.HashList[i] != hash {
+				rbft.logger.Errorf("Primary %d finds mismatch tx hash when return fetch missing transactions", rbft.id)
 				return nil
 			}
+			txList[i] = batch.TxList[i]
 		}
 	} else {
 		txList, err = rbft.batchMgr.txPool.ReturnFetchTxs(fetch.BatchDigest, fetch.HashList)
