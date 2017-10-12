@@ -263,10 +263,10 @@ func (rbft *rbftImpl) findNextValidateBatch() (find bool, digest string, txBatch
 		rbft.batchVdr.setCurrentVid(&currentVid)
 
 		txBatch = &TransactionBatch{
-			TxList:    batch,
-			HashList:  preprep.HashBatch.List,
-			Timestamp: preprep.HashBatch.Timestamp,
-			SeqNo: preprep.SequenceNumber,
+			TxList:     batch,
+			HashList:   preprep.HashBatch.List,
+			Timestamp:  preprep.HashBatch.Timestamp,
+			SeqNo:      preprep.SequenceNumber,
 			ResultHash: preprep.ResultHash,
 		}
 		rbft.storeMgr.txBatchStore[preprep.BatchDigest] = txBatch

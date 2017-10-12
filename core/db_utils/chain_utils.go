@@ -284,6 +284,10 @@ func UpdateChainByBlcokNum(namespace string, batch db.Batch, blockNumber uint64,
 	return UpdateChain(namespace, batch, block, block.Number == 0, flush, sync)
 }
 
+func PutChain(batch db.Batch, chain *types.Chain, flush, sync bool) error {
+	return putChain(batch, chain, flush, sync)
+}
+
 func UpdateGenesisTag(namespace string, genesis uint64, batch db.Batch, flush bool, sync bool) error {
 	chain := chains.GetChain(namespace)
 	if chain == nil {

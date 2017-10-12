@@ -411,7 +411,8 @@ func CreatRBFT(t *testing.T, N int, dbPath string, confPath string, namespace st
 //}
 
 //remove the data and namespace directory in ./
-func CleanData() error {
+func CleanData(namespace string) error {
+	hyperdb.StopDatabase(namespace)
 	err := os.RemoveAll("./data")
 	if err != nil {
 		return err

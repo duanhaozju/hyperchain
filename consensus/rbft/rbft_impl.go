@@ -37,7 +37,7 @@ type rbftImpl struct {
 	seqNo         uint64 // PBFT "n", strictly monotonic increasing sequence number
 	view          uint64 // current view
 
-	status PbftStatus // keep all basic status of rbft in this object
+	status RbftStatus // keep all basic status of rbft in this object
 
 	batchMgr    *batchManager    // manage batch related issues
 	batchVdr    *batchValidator  // manage batch validate issues
@@ -50,12 +50,12 @@ type rbftImpl struct {
 
 	helper helper.Stack // send message to other components of system
 
-	eventMux         *event.TypeMux
-	batchSub         event.Subscription // subscription channel for all events posted from consensus sub-modules
-	close            chan bool	// channel to close this event process
+	eventMux *event.TypeMux
+	batchSub event.Subscription // subscription channel for all events posted from consensus sub-modules
+	close    chan bool          // channel to close this event process
 
-	config *common.Config  // get configuration info
-	logger *logging.Logger // write logger to record some info
+	config    *common.Config  // get configuration info
+	logger    *logging.Logger // write logger to record some info
 	persister persist.Persister
 
 	normal   uint32 // system is normal or not
@@ -159,7 +159,6 @@ func (rbft *rbftImpl) listenEvent() {
 				}
 			}
 
-			
 		}
 	}
 }
@@ -233,7 +232,7 @@ func (rbft *rbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 			return err
 		}
 		req := txRequest{
-			tx: tx,
+			tx:  tx,
 			new: false,
 		}
 		go rbft.eventMux.Post(req)
@@ -852,7 +851,7 @@ func (rbft *rbftImpl) processTransaction(req txRequest) consensusEvent {
 
 	var err error
 	var isGenerated bool
-	
+
 	// this node is not normal, just add a transaction without generating batch.
 	if atomic.LoadUint32(&rbft.activeView) == 0 ||
 		atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 ||

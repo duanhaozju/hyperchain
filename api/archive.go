@@ -30,15 +30,28 @@ func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.
 
 // Snapshot makes the snapshot for given block number. It returns the snapshot id
 // for the client to query.
-func (admin *Archive) Snapshot(blockNumber uint64) string {
+func (admin *Archive) Snapshot(blockNumber uint64) (string, error) {
 	log := common.GetLogger(admin.namespace, "api")
+	handler := common.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
+
+	chainHeight := edb.GetHeightOfChain(admin.namespace)
+	if blockNumber < chainHeight && blockNumber != 0 {
+		return "", &common.SnapshotErr{Message: "trigger block number is less than chain height"}
+	}
+	if _, meta := handler.Search(chainHeight); (meta != common.Manifest{}) && blockNumber == 0 {
+		return "", &common.SnapshotErr{Message: "duplicate snapshot requirement for same height"}
+	}
+	if _, meta := handler.Search(blockNumber); (meta != common.Manifest{}) && blockNumber != 0 {
+		return "", &common.SnapshotErr{Message: "duplicate snapshot requirement for same height"}
+	}
+
 	filterId := flt.NewFilterID()
 	log.Debugf("receive snapshot rpc command, params: (block number #%d), filterId: (%s)", blockNumber, filterId)
 	admin.eh.GetEventObject().Post(event.SnapshotEvent{
 		FilterId:    filterId,
 		BlockNumber: blockNumber,
 	})
-	return filterId
+	return filterId, nil
 }
 
 // QuerySnapshotExist checks if the given snapshot existed, so you can confirm that
@@ -120,13 +133,14 @@ func (admin *Archive) CheckSnapshot(filterId string) (bool, error) {
 }
 
 // Archive will archive data of the given snapshot. If successful, returns true.
-func (admin *Archive) Archive(filterId string) (bool, error) {
+func (admin *Archive) Archive(filterId string, sync bool) (bool, error) {
 	log := common.GetLogger(admin.namespace, "api")
 	log.Debugf("receive archive command, params: filterId: (%s)", filterId)
 	cont := make(chan error)
 	admin.eh.GetEventObject().Post(event.ArchiveEvent{
 		FilterId: filterId,
 		Cont:     cont,
+		Sync:     sync,
 	})
 	err := <-cont
 	if err != nil {

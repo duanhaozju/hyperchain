@@ -2,9 +2,9 @@ package mocks
 
 import (
 	"github.com/stretchr/testify/mock"
-	"hyperchain/namespace"
 	"hyperchain/admittance"
 	"hyperchain/core/executor"
+	"hyperchain/namespace"
 )
 
 type MockNS struct {

@@ -23,7 +23,7 @@ type ReplicaInfo struct {
 func (m *ReplicaInfo) Reset()                    { *m = ReplicaInfo{} }
 func (m *ReplicaInfo) String() string            { return proto.CompactTextString(m) }
 func (*ReplicaInfo) ProtoMessage()               {}
-func (*ReplicaInfo) Descriptor() ([]byte, []int) { return fileDescriptor5, []int{0} }
+func (*ReplicaInfo) Descriptor() ([]byte, []int) { return fileDescriptor3, []int{0} }
 
 func (m *ReplicaInfo) GetChain() *Chain {
 	if m != nil {
@@ -57,9 +57,9 @@ func init() {
 	proto.RegisterType((*ReplicaInfo)(nil), "types.ReplicaInfo")
 }
 
-func init() { proto.RegisterFile("replica.proto", fileDescriptor5) }
+func init() { proto.RegisterFile("replica.proto", fileDescriptor3) }
 
-var fileDescriptor5 = []byte{
+var fileDescriptor3 = []byte{
 	// 146 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0x2d, 0x4a, 0x2d, 0xc8,
 	0xc9, 0x4c, 0x4e, 0xd4, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2d, 0xa9, 0x2c, 0x48, 0x2d,
