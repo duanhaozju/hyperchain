@@ -207,6 +207,12 @@ func (blk *Block) GetChainHeight() (*BlockNumber, error) {
 	return Uint64ToBlockNumber(chain.Height), nil
 }
 
+// GetGenesisBlock returns genesis block number.
+func (blk *Block) GetGenesisBlock() (uint64, error){
+	err, number := edb.GetGenesisTag(blk.namespace)
+	return number, err
+}
+
 func latestBlock(namespace string) (*BlockResult, error) {
 	chain, err := edb.GetChain(namespace)
 	if err != nil {
