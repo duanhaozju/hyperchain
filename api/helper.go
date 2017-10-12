@@ -3,7 +3,7 @@ package api
 import (
 	"errors"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/ledger/state"
 	"hyperchain/core/vm"
 	"hyperchain/crypto/hmEncryption"
@@ -32,8 +32,8 @@ const (
 	paillpublickeyG       = "global.configs.hmpublickey.G"
 	snapshotManifestPath  = "executor.archive.snapshot_manifest"
 
-	CONTRACT            = "contract"
-	DEFAULT_GAS      int64 = 100000000
+	CONTRACT                = "contract"
+	DEFAULT_GAS       int64 = 100000000
 	DEFAULT_GAS_PRICE int64 = 10000
 )
 

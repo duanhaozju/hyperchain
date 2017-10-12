@@ -3,7 +3,7 @@ package executor
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"time"
@@ -58,7 +58,7 @@ func (mgr *ArchiveManager) Archive(event event.ArchiveEvent) {
 	Internal Functions
 */
 func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
-	err, curGenesis := edb.GetGenesisTag(mgr.namespace)
+	curGenesis, err := edb.GetGenesisTag(mgr.namespace)
 	if err != nil {
 		return err
 	}
@@ -119,7 +119,7 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 			} else {
 				txc += 1
 			}
-			if err, _ := edb.PersistReceipt(avBatch, receipt, false, false); err != nil {
+			if _, err := edb.PersistReceipt(avBatch, receipt, false, false); err != nil {
 				mgr.logger.Errorf("[Namespace = %s] archive receipt in block %d to historic database failed, error msg %s", mgr.namespace, i, err.Error())
 				return err
 			} else {
@@ -142,7 +142,7 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 		return err
 	}
 	// delete invalid records
-	if err, ic = edb.DumpDiscardTransactionInRange(mgr.executor.db, olBatch, avBatch, tb, te, false, false); err != nil {
+	if ic, err = edb.DumpDiscardTransactionInRange(mgr.executor.db, olBatch, avBatch, tb, te, false, false); err != nil {
 		mgr.logger.Errorf("[Namespace = %s] archive useless invalid records failed, error msg %s", mgr.namespace, err.Error())
 		return err
 	}
@@ -195,7 +195,7 @@ func (mgr *ArchiveManager) getTimestampRange(begin, end uint64) (error, int64, i
 // 2. archive db is continuous with current blockchain (optional)
 func (mgr *ArchiveManager) checkRequest(manifest common.Manifest, meta common.ArchiveMeta) bool {
 	curHeigit := edb.GetHeightOfChain(mgr.namespace)
-	err, genesis := edb.GetGenesisTag(mgr.namespace)
+	genesis, err := edb.GetGenesisTag(mgr.namespace)
 	if err != nil {
 		return false
 	}

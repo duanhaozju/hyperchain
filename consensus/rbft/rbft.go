@@ -18,8 +18,8 @@ import (
 	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
-	"hyperchain/manager/event"
 	"hyperchain/consensus/txpool"
+	"hyperchain/manager/event"
 )
 
 /**
@@ -73,7 +73,7 @@ func (rbft *rbftImpl) RecvLocal(msg interface{}) error {
 		rbft.helper.InnerBroadcast(pbMsg)
 
 		req := txRequest{
-			tx: tx,
+			tx:  tx,
 			new: true,
 		}
 		//go rbft.rbftEventQueue.Push(req)

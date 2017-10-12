@@ -3,11 +3,11 @@
 package jsonrpc
 
 import (
-	"github.com/rs/cors"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"hyperchain/common"
 	"hyperchain/namespace"
@@ -28,21 +28,21 @@ var (
 )
 
 type httpServerImpl struct {
-	nr        namespace.NamespaceManager
-	port      int
-	config    *common.Config
+	nr     namespace.NamespaceManager
+	port   int
+	config *common.Config
 
-	httpListener       net.Listener
-	httpHandler        *Server
+	httpListener net.Listener
+	httpHandler  *Server
 }
 
 // GetHttpServer creates and returns a new httpServerImpl instance implements internalRPCServer interface.
 func GetHttpServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
 	if hs == nil {
 		hs = &httpServerImpl{
-			nr:                 nr,
-			port:               config.GetInt(common.JSON_RPC_PORT),
-			config:				config,
+			nr:     nr,
+			port:   config.GetInt(common.JSON_RPC_PORT),
+			config: config,
 		}
 	}
 	return hs
@@ -53,7 +53,7 @@ func (hsi *httpServerImpl) start() error {
 
 	var (
 		listener net.Listener
-		srv		 *http.Server
+		srv      *http.Server
 		err      error
 	)
 
@@ -218,7 +218,7 @@ type httpReadWrite struct {
 	io.Writer
 }
 
-func (hrw *httpReadWrite) Close() error {return nil}
+func (hrw *httpReadWrite) Close() error { return nil }
 
 // ServeHTTP serves JSON-RPC requests over HTTP.
 func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

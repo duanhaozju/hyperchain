@@ -1,30 +1,30 @@
 package rpc
 
 import (
-	"testing"
-	"hyperchain/api"
-	"fmt"
-	"hyperchain/common"
 	"context"
+	"fmt"
+	"hyperchain/api"
+	"hyperchain/common"
+	"testing"
 )
 
 var (
-	ns = "global"
+	ns         = "global"
 	configPath = "../../configuration/global.toml"
 )
 
-type ServiceAPI struct {}
+type ServiceAPI struct{}
 
-func NewPublicServiceAPI() *ServiceAPI{
+func NewPublicServiceAPI() *ServiceAPI {
 	return &ServiceAPI{}
 }
 
-func (api *ServiceAPI) Hello() (string, error){
+func (api *ServiceAPI) Hello() (string, error) {
 	fmt.Println("welcome to use hyperchain")
 	return "welcome to use hyperchain", nil
 }
 
-func getApis() map[string]*api.API{
+func getApis() map[string]*api.API {
 	return map[string]*api.API{
 		"test": {
 			Srvname: "test",
@@ -46,15 +46,13 @@ func TestJsonRpcProcessorImpl_ProcessRequest(t *testing.T) {
 	jrpi := NewJsonRpcProcessorImpl(ns, getApis())
 	jrpi.Start()
 	req := &common.RPCRequest{
-		Service: "test",
-		Method: "hello",
+		Service:   "test",
+		Method:    "hello",
 		Namespace: ns,
-		Id: 1,
-		IsPubSub: false,
-		Params: nil,
-		Ctx: context.Background(),
-
-
+		Id:        1,
+		IsPubSub:  false,
+		Params:    nil,
+		Ctx:       context.Background(),
 	}
 	resp := jrpi.ProcessRequest(req)
 	if resp.Error != nil {

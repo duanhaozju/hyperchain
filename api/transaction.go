@@ -8,7 +8,8 @@ import (
 	"github.com/juju/ratelimit"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	"hyperchain/core/bloom"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
@@ -21,7 +22,7 @@ import (
 // can be invoked by client in JSON-RPC request.
 
 var (
-	kec256Hash              = crypto.NewKeccak256Hash("keccak256")
+	kec256Hash         = crypto.NewKeccak256Hash("keccak256")
 	db_not_found_error = db.DB_NOT_FOUND.Error()
 )
 
@@ -35,40 +36,40 @@ type Transaction struct {
 
 // SendTxArgs represents the arguments to sumbit a new transaction into the transaction pool.
 type SendTxArgs struct {
-	From       common.Address  `json:"from"`		// transaction sender address
-	To         *common.Address `json:"to"`		    // transaction receiver address
-	Value      Number         `json:"value"`		// transaction amount
-	Payload    string          `json:"payload"`		// contract payload
-	Signature  string          `json:"signature"`	// signature of sender for the transaction
-	Timestamp  int64           `json:"timestamp"`	// timestamp of the transaction happened
-	Simulate   bool            `json:"simulate"`	// Simulate determines if the transaction requires consensus, if true, no consensus.
-	Nonce      int64           `json:"nonce"`		// 16-bit random decimal number, for example 5956491387995926
-	VmType     string          `json:"type"`		// specify which engine executes contract
+	From      common.Address  `json:"from"`      // transaction sender address
+	To        *common.Address `json:"to"`        // transaction receiver address
+	Value     Number          `json:"value"`     // transaction amount
+	Payload   string          `json:"payload"`   // contract payload
+	Signature string          `json:"signature"` // signature of sender for the transaction
+	Timestamp int64           `json:"timestamp"` // timestamp of the transaction happened
+	Simulate  bool            `json:"simulate"`  // Simulate determines if the transaction requires consensus, if true, no consensus.
+	Nonce     int64           `json:"nonce"`     // 16-bit random decimal number, for example 5956491387995926
+	VmType    string          `json:"type"`      // specify which engine executes contract
 
 	// 1 value for Opcode means upgrading contract, 2 means freezing contract,
 	// 3 means unfreezing contract, 100 means archiving data.
-	Opcode     int32           `json:"opcode"`
+	Opcode int32 `json:"opcode"`
 
 	// Snapshot saves the state of ledger at a moment.
 	// SnapshotId specifies the based ledger when client sends transaction or invokes contract with Simulate=true.
-	SnapshotId string          `json:"snapshotId"`
+	SnapshotId string `json:"snapshotId"`
 }
 
 type TransactionResult struct {
-	Version     string         `json:"version"`					// hyperchain version when the transaction is executed
-	Hash        common.Hash    `json:"hash"`					// transaction hash
-	BlockNumber *BlockNumber   `json:"blockNumber,omitempty"`	// block number that transaction belongs to
-	BlockHash   *common.Hash   `json:"blockHash,omitempty"`		// block hash that transaction belongs to
-	TxIndex     *Number        `json:"txIndex,omitempty"`		// the index of transaction in the block
-	From        common.Address `json:"from"`					// transaction sender
-	To          common.Address `json:"to"`						// transaction receiver
-	Amount      *Number        `json:"amount,omitempty"`		// the amount of transaction
-	Timestamp   int64   `json:"timestamp"`
-	Nonce       int64   `json:"nonce"`
-	ExecuteTime *Number `json:"executeTime,omitempty"`			// the time it takes to execute the transaction
-	Payload     string  `json:"payload,omitempty"`
-	Invalid     bool    `json:"invalid,omitempty"`				// indicate whether it is invalid or not
-	InvalidMsg  string  `json:"invalidMsg,omitempty"`			// if Invalid is true, printing invalid message
+	Version     string         `json:"version"`               // hyperchain version when the transaction is executed
+	Hash        common.Hash    `json:"hash"`                  // transaction hash
+	BlockNumber *BlockNumber   `json:"blockNumber,omitempty"` // block number that transaction belongs to
+	BlockHash   *common.Hash   `json:"blockHash,omitempty"`   // block hash that transaction belongs to
+	TxIndex     *Number        `json:"txIndex,omitempty"`     // the index of transaction in the block
+	From        common.Address `json:"from"`                  // transaction sender
+	To          common.Address `json:"to"`                    // transaction receiver
+	Amount      *Number        `json:"amount,omitempty"`      // the amount of transaction
+	Timestamp   int64          `json:"timestamp"`
+	Nonce       int64          `json:"nonce"`
+	ExecuteTime *Number        `json:"executeTime,omitempty"` // the time it takes to execute the transaction
+	Payload     string         `json:"payload,omitempty"`
+	Invalid     bool           `json:"invalid,omitempty"`    // indicate whether it is invalid or not
+	InvalidMsg  string         `json:"invalidMsg,omitempty"` // if Invalid is true, printing invalid message
 }
 
 // NewPublicTransactionAPI creates and returns a new Transaction instance for given namespace name.
@@ -137,8 +138,8 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 
 	// 3. check if there is duplicated transaction
 	var exist bool
-	if err, exist = edb.LookupTransaction(tran.namespace, tx.GetHash()); err != nil || exist == true {
-		if exist, _ = edb.JudgeTransactionExist(tran.namespace, tx.TransactionHash); exist {
+	if exist, err = bloom.LookupTransaction(tran.namespace, tx.GetHash()); err != nil || exist == true {
+		if exist, _ = edb.IsTransactionExist(tran.namespace, tx.TransactionHash); exist {
 			return common.Hash{}, &common.RepeadedTxError{TxHash: common.ToHex(tx.TransactionHash)}
 		}
 	}
@@ -319,7 +320,7 @@ func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*Transac
 // GetTransactionByHash returns the transaction for the given transaction hash. The method
 func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 	tx, err := edb.GetTransaction(tran.namespace, hash[:])
-	if err != nil && err == edb.NotFindTxMetaErr {
+	if err != nil && err == edb.ErrNotFindTxMeta {
 		return tran.getDiscardTransactionByHash(hash)
 	} else if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
@@ -368,7 +369,7 @@ func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, inde
 	latest := chain.Height
 	blknumber, err := n.BlockNumberToUint64(latest)
 	if err != nil {
-		return nil,  &common.InvalidParamsError{Message: err.Error()}
+		return nil, &common.InvalidParamsError{Message: err.Error()}
 	}
 
 	block, err := edb.GetBlockByNumber(tran.namespace, blknumber)
@@ -468,7 +469,7 @@ func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*Numbe
 
 	block, err := edb.GetBlockByNumber(tran.namespace, blknumber)
 	if err != nil && err.Error() == db_not_found_error {
-		return nil, &common.DBNotFoundError{Type: BLOCK,  Id: fmt.Sprintf("number %#x", n)}
+		return nil, &common.DBNotFoundError{Type: BLOCK, Id: fmt.Sprintf("number %#x", n)}
 	} else if err != nil {
 		tran.log.Errorf("%v", err)
 		return nil, &common.CallbackError{Message: err.Error()}
@@ -615,7 +616,7 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 			if args.MethodID == "" && to.IsZero() {
 				if receipt, err := tran.GetTransactionReceipt(txResult.Hash); err != nil {
 					return 0, err
-				//} else if receipt.ContractAddress == contractAddr {
+					//} else if receipt.ContractAddress == contractAddr {
 				} else if receipt.ContractAddress == contractAddr.Hex() {
 					txCounts++
 					lastIndex = txIndex
@@ -646,18 +647,18 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 // For example, pageSize is 10. From page 1 to page 2, so "separated" value is 0. From page 1 to page 3,
 // so "separated" value is 10.
 type PagingArgs struct {
-	MaxBlkNumber   BlockNumber     `json:"maxBlkNumber"`    // the maximum block number of allowing to query
-	MinBlkNumber   BlockNumber     `json:"minBlkNumber"`	// the minimum block number of allowing to query
-	BlkNumber      BlockNumber     `json:"blkNumber"`		// the current block number
-	TxIndex        Number          `json:"txIndex"`			// index of the transaction in the current block
-	Separated      Number          `json:"separated"`		// specify how many transactions to skip.
-	PageSize       Number          `json:"pageSize"`		// specify the number of transaction returned
+	MaxBlkNumber BlockNumber `json:"maxBlkNumber"` // the maximum block number of allowing to query
+	MinBlkNumber BlockNumber `json:"minBlkNumber"` // the minimum block number of allowing to query
+	BlkNumber    BlockNumber `json:"blkNumber"`    // the current block number
+	TxIndex      Number      `json:"txIndex"`      // index of the transaction in the current block
+	Separated    Number      `json:"separated"`    // specify how many transactions to skip.
+	PageSize     Number      `json:"pageSize"`     // specify the number of transaction returned
 
 	// specify if the returned transactions contain current transaction(BlkNumber and TxIndex)
 	// or if contain current transaction(BlkNumber and TxIndex) when calculating the number of transactions.
 	ContainCurrent bool            `json:"containCurrent"`
-	ContractAddr   *common.Address `json:"address"`			// specify which contract transactions belong to
-	MethodID       string          `json:"methodID"`		// specify which contract method transactions belong to
+	ContractAddr   *common.Address `json:"address"`  // specify which contract transactions belong to
+	MethodID       string          `json:"methodID"` // specify which contract method transactions belong to
 }
 
 type pagingArgs struct {
@@ -699,7 +700,7 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 	index := realArgs.TxIndex.Int()
 	separated := realArgs.Separated.Int()
 	contractAddr := realArgs.ContractAddr
-	txCounts := 0		// how many transactions have been skipped
+	txCounts := 0 // how many transactions have been skipped
 	txCounts_temp := 0
 	filteredBlkTxs := make([]interface{}, 0)
 
@@ -759,7 +760,7 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 		} else {
 
 			// part of transactions in the current block should be skipped
-			tx := filteredBlkTxs[separated - txCounts].(*TransactionResult)
+			tx := filteredBlkTxs[separated-txCounts].(*TransactionResult)
 			index = tx.TxIndex.Int()
 			txCounts = separated
 		}
@@ -859,7 +860,7 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 		}
 
 		// starting with the specified index of the block transactions, filter all the eligible transaction
-		if filteredTxsByAddr, err := tran.filterTransactionsByAddress(block.Transactions[:index + 1], contractAddr); err != nil {
+		if filteredTxsByAddr, err := tran.filterTransactionsByAddress(block.Transactions[:index+1], contractAddr); err != nil {
 			return nil, err
 		} else if realArgs.MethodID != "" {
 
@@ -879,10 +880,10 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 			blkNumber--
 			index = -1
 			txCounts = txCounts_temp
-		}  else {
+		} else {
 
 			// part of transactions in the current block should be skipped
-			tx := filteredBlkTxs[filtedBlkTxsCount - (separated - txCounts) - 1].(*TransactionResult)
+			tx := filteredBlkTxs[filtedBlkTxsCount-(separated-txCounts)-1].(*TransactionResult)
 			index = tx.TxIndex.Int()
 			txCounts = separated
 		}
@@ -1110,12 +1111,12 @@ func outputTransaction(trans interface{}, namespace string) (*TransactionResult,
 		}
 		txHash := t.Tx.GetHash()
 		txRes = &TransactionResult{
-			Version: string(t.Tx.Version),
-			Hash:    txHash,
-			From:    common.BytesToAddress(t.Tx.From),
-			To:      common.BytesToAddress(t.Tx.To),
-			Amount:  int64ToNumber(txValue.Amount),
-			Nonce:   t.Tx.Nonce,
+			Version:    string(t.Tx.Version),
+			Hash:       txHash,
+			From:       common.BytesToAddress(t.Tx.From),
+			To:         common.BytesToAddress(t.Tx.To),
+			Amount:     int64ToNumber(txValue.Amount),
+			Nonce:      t.Tx.Nonce,
 			Timestamp:  t.Tx.Timestamp,
 			Payload:    common.ToHex(txValue.Payload),
 			Invalid:    true,

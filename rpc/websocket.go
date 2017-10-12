@@ -24,14 +24,14 @@ var (
 )
 
 type wsServerImpl struct {
-	nr        namespace.NamespaceManager
-	port      int
-	config    *common.Config
+	nr     namespace.NamespaceManager
+	port   int
+	config *common.Config
 
-	wsConns          map[*websocket.Conn]*Notifier
-	wsConnsMux       sync.Mutex
-	wsHandler        *Server
-	wsListener       net.Listener
+	wsConns    map[*websocket.Conn]*Notifier
+	wsConnsMux sync.Mutex
+	wsHandler  *Server
+	wsListener net.Listener
 }
 
 type httpReadWriteCloser struct {
@@ -43,10 +43,10 @@ type httpReadWriteCloser struct {
 func GetWSServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
 	if wsS == nil {
 		wsS = &wsServerImpl{
-			nr:               nr,
-			wsConns:          make(map[*websocket.Conn]*Notifier),
-			port:             config.GetInt(common.WEBSOCKET_PORT),
-			config:			  config,
+			nr:      nr,
+			wsConns: make(map[*websocket.Conn]*Notifier),
+			port:    config.GetInt(common.WEBSOCKET_PORT),
+			config:  config,
 		}
 	}
 	return wsS

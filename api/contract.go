@@ -7,7 +7,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/ratelimit"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	"hyperchain/core/bloom"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/evm/compiler"
@@ -98,8 +99,8 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 
 	// 3. check if there is duplicated transaction
 	var exist bool
-	if err, exist = edb.LookupTransaction(contract.namespace, tx.GetHash()); err != nil || exist == true {
-		if exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash); exist {
+	if exist, err = bloom.LookupTransaction(contract.namespace, tx.GetHash()); err != nil || exist == true {
+		if exist, _ = edb.IsTransactionExist(contract.namespace, tx.TransactionHash); exist {
 			return common.Hash{}, &common.RepeadedTxError{TxHash: common.ToHex(tx.TransactionHash)}
 		}
 	}
@@ -222,16 +223,16 @@ func (contract *Contract) GetContractCountByAddr(addr common.Address) (*Number, 
 type EncryptoArgs struct {
 
 	// The balance(plain text) of account A before transferring money to account B.
-	Balance   Number 		`json:"balance"`
+	Balance Number `json:"balance"`
 
 	// The amount(plain text) that account A will transfer to account B.
-	Amount    Number 		`json:"amount"`
+	Amount Number `json:"amount"`
 
 	// Invalid homomorphic encryption transaction amount of account A when a person transfers money(amount homomorphic encryption) that
 	// can't be verified by account A. InvalidHmValue is optional.
 	// For example, account C transfers 10 dollars to account A, but this transaction fails to pass validation of account A. Therefore,
 	// account A saves 10 value encrypted as invalid homomorphic encryption value.
-	InvalidHmValue string 	`json:"invalidHmValue"`
+	InvalidHmValue string `json:"invalidHmValue"`
 }
 
 type HmResult struct {
@@ -241,7 +242,7 @@ type HmResult struct {
 	NewBalance_hm string `json:"newBalance"`
 
 	// The amount(homomorphic encryption text) that account A will transfer to account B.
-	Amount_hm     string `json:"amount"`
+	Amount_hm string `json:"amount"`
 }
 
 // EncryptoMessage encrypts data by homomorphic encryption.
@@ -284,21 +285,20 @@ type CheckArgs struct {
 
 	// All unverified transaction amount list (plain text).
 	// For example, account A transfers 10 dollars to B twice, RawValue is [10,10].
-	RawValue   []int64  `json:"rawValue"`
+	RawValue []int64 `json:"rawValue"`
 
 	// All unverified transaction amount list (homomorphic encryption).
 	// For example, account A transfers 10 dollars to B twice, EncryValue is [(encrypted 10), (encrypted 10)].
 	EncryValue []string `json:"encryValue"`
 
 	// Invalid homomorphic encryption value of account B.
-	Illegalhm  string   `json:"illegalhm"`
+	Illegalhm string `json:"illegalhm"`
 }
-
 
 type HmCheckResult struct {
 
 	// The result if it is verified.
-	CheckResult        []bool `json:"checkResult"`
+	CheckResult []bool `json:"checkResult"`
 
 	// The homomorphic sum of all invalid homomorphic encryption transaction amount of B.
 	SumIllegalHmAmount string `json:"illegalHmAmount"`

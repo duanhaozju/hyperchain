@@ -52,9 +52,9 @@ type rbftImpl struct {
 	//rbftManager    events.Manager // manage rbft event
 	//rbftEventQueue events.Queue   // transfer PBFT related event
 
-	eventMux         *event.TypeMux
-	batchSub         event.Subscription // subscription channel for all events posted from consensus sub-modules
-	close            chan bool	// channel to close this event process
+	eventMux *event.TypeMux
+	batchSub event.Subscription // subscription channel for all events posted from consensus sub-modules
+	close    chan bool          // channel to close this event process
 
 	config *common.Config  // get configuration info
 	logger *logging.Logger // write logger to record some info
@@ -157,7 +157,6 @@ func (rbft *rbftImpl) listenEvent() {
 				}
 			}
 
-			
 		}
 	}
 }
@@ -231,7 +230,7 @@ func (rbft *rbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 			return err
 		}
 		req := txRequest{
-			tx: tx,
+			tx:  tx,
 			new: false,
 		}
 		go rbft.eventMux.Post(req)
@@ -850,7 +849,7 @@ func (rbft *rbftImpl) processTransaction(req txRequest) consensusEvent {
 
 	var err error
 	var isGenerated bool
-	
+
 	// this node is not normal, just add a transaction without generating batch.
 	if atomic.LoadUint32(&rbft.activeView) == 0 ||
 		atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 ||

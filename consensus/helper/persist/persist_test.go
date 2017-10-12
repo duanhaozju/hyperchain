@@ -10,8 +10,8 @@ package persist
 import (
 	"bytes"
 	"github.com/syndtr/goleveldb/leveldb/errors"
-	"testing"
 	"hyperchain/common"
+	"testing"
 )
 
 //func TestDaoOnState(t *testing.T) {

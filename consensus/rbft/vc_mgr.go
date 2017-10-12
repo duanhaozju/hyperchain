@@ -599,7 +599,6 @@ func (rbft *rbftImpl) finishViewChange() consensusEvent {
 	return rbft.recvFinishVcReset(finish)
 }
 
-
 //Return the request of fetching missing assigned, non-checkpointed
 //Return should not happen in inNegoView and inRecovery.
 func (rbft *rbftImpl) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
@@ -692,7 +691,6 @@ func (rbft *rbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) consensu
 	return nil
 
 }
-
 
 //##########################################################################
 //           view change auxiliary functions
@@ -978,7 +976,7 @@ func (rbft *rbftImpl) assignSequenceNumbers(set []*VcBasis, h uint64) map[uint64
 	maxN := h + 1
 
 	// "for all n such that h < n <= h + L"
-	nLoop:
+nLoop:
 	for n := h + 1; n <= h+rbft.L; n++ {
 		// "∃m ∈ S..."
 		for _, m := range set {
@@ -986,7 +984,7 @@ func (rbft *rbftImpl) assignSequenceNumbers(set []*VcBasis, h uint64) map[uint64
 			for _, em := range m.Pset {
 				quorum := 0
 				// "A1. ∃2f+1 messages m' ∈ S"
-				mpLoop:
+			mpLoop:
 				for _, mp := range set {
 					if mp.H >= n {
 						continue
@@ -1036,7 +1034,7 @@ func (rbft *rbftImpl) assignSequenceNumbers(set []*VcBasis, h uint64) map[uint64
 
 		quorum := 0
 		// "else if ∃2f+1 messages m ∈ S"
-		nullLoop:
+	nullLoop:
 		for _, m := range set {
 			// "m.h < n"
 			if m.H >= n {
@@ -1122,7 +1120,6 @@ func (rbft *rbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing
 	}
 	return newReqBatchMissing
 }
-
 
 // primaryResendBatch validates batches which has seq > low watermark
 func (rbft *rbftImpl) primaryResendBatch(xset Xset) {

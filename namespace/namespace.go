@@ -9,8 +9,8 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus"
 	"hyperchain/consensus/csmgr"
-	"hyperchain/core/db_utils"
 	"hyperchain/core/executor"
+	"hyperchain/core/ledger/db_utils"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
@@ -79,7 +79,7 @@ type Namespace interface {
 type NsState int
 
 const (
-	newed       NsState = 1 << iota
+	newed NsState = 1 << iota
 	initialized
 	running
 	closed
@@ -110,7 +110,7 @@ func (s *Status) getState() NsState {
 
 // setDescription updates the current description by current state.
 func (s *Status) setDescription() {
-	switch s.state{
+	switch s.state {
 	case newed:
 		s.desc = "newed"
 	case initialized:
@@ -138,11 +138,11 @@ type namespaceImpl struct {
 	eh        *manager.EventHub
 	peerMgr   p2p.PeerManager
 	executor  *executor.Executor
-	rpc     rpc.RequestProcessor
+	rpc       rpc.RequestProcessor
 
-	nsInfo *NamespaceInfo
-	status *Status
-	conf      *common.Config
+	nsInfo  *NamespaceInfo
+	status  *Status
+	conf    *common.Config
 	restart bool
 	delFlag chan bool
 }

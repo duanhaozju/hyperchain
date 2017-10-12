@@ -139,3 +139,4 @@ expiration = "300s"
  interval          = 24
  rebuild_time      = 3
  bloombit          = 100000000
+ active_time       = "24h"

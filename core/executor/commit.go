@@ -5,7 +5,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	"hyperchain/core/bloom"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb/db"
@@ -107,7 +108,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 		return err
 	}
 	// write bloom filter first
-	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
+	if _, err := bloom.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
 		executor.logger.Warning("write tx to bloom filter failed", err.Error())
 	}
 
@@ -235,11 +236,11 @@ func (executor *Executor) persistReceipts(batch db.Batch, transaction []*types.T
 		filterLogs = append(filterLogs, logs...)
 
 		if transaction[idx].Version != nil {
-			if err, _ := edb.PersistReceipt(batch, receipt, false, false, string(transaction[idx].Version)); err != nil {
+			if _, err := edb.PersistReceipt(batch, receipt, false, false, string(transaction[idx].Version)); err != nil {
 				return err, nil
 			}
 		} else {
-			if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
+			if _, err := edb.PersistReceipt(batch, receipt, false, false); err != nil {
 				return err, nil
 			}
 		}

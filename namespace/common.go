@@ -12,25 +12,25 @@ import (
 
 var (
 	// ErrNoSuchNamespace returns when de-register a non-exist namespace.
-	ErrNoSuchNamespace   = errors.New("namespace/nsmgr: no such namespace found")
+	ErrNoSuchNamespace = errors.New("namespace/nsmgr: no such namespace found")
 
 	// ErrInvalidNs returns when no namespace instance found.
-	ErrInvalidNs         = errors.New("namespace/nsmgr: invalid namespace")
+	ErrInvalidNs = errors.New("namespace/nsmgr: invalid namespace")
 
 	// ErrCannotNewNs returns when get namespace failed.
-	ErrCannotNewNs       = errors.New("namespace/nsmgr: can not newed namespace")
+	ErrCannotNewNs = errors.New("namespace/nsmgr: can not newed namespace")
 
 	// ErrRegistered returns when register a registered namespace.
-	ErrRegistered        = errors.New("namespace/nsmgr: namespace has been registered")
+	ErrRegistered = errors.New("namespace/nsmgr: namespace has been registered")
 
 	// ErrNodeNotFound returns when cannot find node by id.
-	ErrNodeNotFound      = errors.New("namespace/node: nod not found")
+	ErrNodeNotFound = errors.New("namespace/node: nod not found")
 
 	// ErrIllegalNodeConfig returns when add an illegal node config.
 	ErrIllegalNodeConfig = errors.New("namespace/node: illegal node config")
 
 	// ErrNonExistConfig returns when specified config file doesn't exist.
-	ErrNonExistConfig    = errors.New("namespace/nsmgr: namespace config file doesn't exist")
+	ErrNonExistConfig = errors.New("namespace/nsmgr: namespace config file doesn't exist")
 )
 
 // constructConfigFromDir constructs namespace's config from specified config path.

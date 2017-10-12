@@ -4,8 +4,6 @@ package txpool
 
 import "errors"
 
-
-
 var (
 	ErrNoBatch = errors.New("can't find batch with id")
 

@@ -123,6 +123,6 @@ type stateUpdateTarget struct {
 // Mark a transaction if it's new:
 // for new, check the pool size; for old, do not check
 type txRequest struct {
-	tx	*types.Transaction
+	tx  *types.Transaction
 	new bool
 }

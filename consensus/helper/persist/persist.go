@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"encoding/base64"
-	ndb "hyperchain/core/db_utils"
+	ndb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 )
@@ -93,6 +93,6 @@ func GetHeightOfChain(namespace string) uint64 {
 }
 
 // GetGenesisOfChain returns the genesis block info of the ledger with the given namespace
-func GetGenesisOfChain(namespace string) (error, uint64) {
+func GetGenesisOfChain(namespace string) (uint64, error) {
 	return ndb.GetGenesisTag(namespace)
 }

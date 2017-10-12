@@ -5,7 +5,7 @@ package rbft
 // mesage type
 const (
 	// 1.rbft core
-	CORE_BATCH_TIMER_EVENT         = iota
+	CORE_BATCH_TIMER_EVENT = iota
 	CORE_NULL_REQUEST_TIMER_EVENT
 	CORE_FIRST_REQUEST_TIMER_EVENT
 	CORE_STATE_UPDATE_EVENT
@@ -34,7 +34,7 @@ const (
 
 // service type
 const (
-	CORE_RBFT_SERVICE   = iota
+	CORE_RBFT_SERVICE = iota
 	VIEW_CHANGE_SERVICE
 	RECOVERY_SERVICE
 	NODE_MGR_SERVICE

@@ -7,8 +7,9 @@ import (
 	"github.com/cheggaaa/pb"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
+	"hyperchain/core/bloom"
 	cm "hyperchain/core/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
@@ -539,7 +540,7 @@ func (executor *Executor) accpet(seqNo uint64, block *types.Block, result *Valid
 		return err
 	}
 	// write bloom filter first
-	edb.WriteTxBloomFilter(executor.namespace, block.Transactions)
+	bloom.WriteTxBloomFilter(executor.namespace, block.Transactions)
 
 	if err := batch.Write(); err != nil {
 		executor.logger.Errorf("commit (#%d) changes failed, err: %s", err.Error())

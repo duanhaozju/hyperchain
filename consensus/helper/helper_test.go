@@ -9,13 +9,13 @@ package helper
 
 import (
 	"github.com/golang/protobuf/proto"
+	"github.com/stretchr/testify/assert"
+	"hyperchain/consensus"
+	"hyperchain/manager/appstat"
 	"hyperchain/manager/event"
 	pb "hyperchain/manager/protos"
 	"testing"
 	"time"
-	"github.com/stretchr/testify/assert"
-	"hyperchain/manager/appstat"
-	"hyperchain/consensus"
 )
 
 func TestNewHelper(t *testing.T) {
@@ -23,8 +23,8 @@ func TestNewHelper(t *testing.T) {
 	em := &event.TypeMux{}
 
 	h := &helper{
-		innerMux: 		im,
-		externalMux: 	em,
+		innerMux:    im,
+		externalMux: em,
 	}
 
 	help := NewHelper(im, em)
@@ -87,7 +87,7 @@ func TestExecute(t *testing.T) {
 
 	select {
 	case e := <-sub.Chan():
-		if commit, ok :=  e.Data.(event.CommitEvent); !ok{
+		if commit, ok := e.Data.(event.CommitEvent); !ok {
 			t.Error("Received wrong type message from sub.Chan")
 		} else {
 			assert.Equal(t, "hhhhhaaaaahhhh", commit.Hash)
@@ -105,12 +105,12 @@ func TestUpdateState(t *testing.T) {
 	updateStateEvent := event.ChainSyncReqEvent{
 		Id:              1,
 		TargetHeight:    10,
-		TargetBlockHash: []byte{1,2,3},
+		TargetBlockHash: []byte{1, 2, 3},
 		Replicas:        nil,
 	}
 	sub := im.Subscribe(event.ChainSyncReqEvent{})
 
-	go h.UpdateState(1,10,[]byte{1,2,3},nil)
+	go h.UpdateState(1, 10, []byte{1, 2, 3}, nil)
 
 	select {
 	case e := <-sub.Chan():
@@ -126,16 +126,16 @@ func TestValidateBatch(t *testing.T) {
 	h := NewHelper(im, em)
 	timestamp := time.Now().Unix()
 	validateEvent := event.ValidationEvent{
-		Digest: 		"something",
-		Transactions: 	nil,
-		Timestamp:    	timestamp,
-		SeqNo:        	123,
-		View:         	123,
-		IsPrimary:    	true,
+		Digest:       "something",
+		Transactions: nil,
+		Timestamp:    timestamp,
+		SeqNo:        123,
+		View:         123,
+		IsPrimary:    true,
 	}
 	sub := im.Subscribe(event.ValidationEvent{})
 
-	go h.ValidateBatch("something",nil, timestamp, 123, 123, true)
+	go h.ValidateBatch("something", nil, timestamp, 123, 123, true)
 
 	select {
 	case e := <-sub.Chan():
@@ -234,7 +234,7 @@ func TestUpdateTable(t *testing.T) {
 
 	broadcastEvent := event.UpdateRoutingTableEvent{
 		Payload: tmpMsg,
-		Type:	 true,
+		Type:    true,
 	}
 	sub := im.Subscribe(event.UpdateRoutingTableEvent{})
 	go h.UpdateTable(tmpMsg, true)

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/core/db_utils"
+	"hyperchain/core/bloom"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -111,19 +111,19 @@ type NamespaceManager interface {
 type nsManagerImpl struct {
 	// Since param "namespaces" may be read/write in different go-routines,
 	// it should be protected by a rwLock.
-	rwLock      *sync.RWMutex
+	rwLock *sync.RWMutex
 
 	// namespaces stores all the namespace instances registered in the system
-	namespaces  map[string]Namespace
+	namespaces map[string]Namespace
 
 	// jvmManager manages the jvm executor in system, since executor is a
 	// pluggable components, so start jvm manager or not should be written
 	// in the config file.
-	jvmManager  *JvmManager
+	jvmManager *JvmManager
 
 	// bloomfilter is the transaction bloom filter, helps to do transaction
 	// duplication checking
-	bloomfilter *db_utils.BloomFilterCache
+	bloomFilter bloom.TxBloomFilter
 
 	// conf is the global config file of the system, contains global configs
 	// of the node
@@ -131,8 +131,8 @@ type nsManagerImpl struct {
 
 	status *Status
 
-	stopHp      chan bool
-	restartHp   chan bool
+	stopHp    chan bool
+	restartHp chan bool
 }
 
 // newNsManager news a namespace manager implement and init.
@@ -147,12 +147,13 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 		namespaces:  make(map[string]Namespace),
 		conf:        conf,
 		jvmManager:  NewJvmManager(conf),
-		bloomfilter: db_utils.NewBloomCache(conf),
+		bloomFilter: bloom.NewBloomFilterCache(conf),
 		status:      status,
 		stopHp:      stopHp,
 		restartHp:   restartHp,
 	}
 	nr.rwLock = new(sync.RWMutex)
+	nr.bloomFilter.Start()
 	return nr
 }
 
@@ -256,7 +257,7 @@ func (nr *nsManagerImpl) Stop() error {
 	if err := nr.jvmManager.Stop(); err != nil {
 		logger.Errorf("Stop hyperjvm error %v", err)
 	}
-	nr.bloomfilter.Close()
+	nr.bloomFilter.Close()
 	nr.status.setState(closed)
 	logger.Noticef("NamespaceManager stopped!")
 	return nil
@@ -316,7 +317,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return ErrCannotNewNs
 	}
 	nr.addNamespace(ns)
-	if err := nr.bloomfilter.Register(name); err != nil {
+	if err := nr.bloomFilter.Register(name); err != nil {
 		logger.Error("register bloom filter failed", err.Error())
 		return err
 	}
@@ -340,7 +341,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 		logger.Warningf("namespace %s not exist, please register first.", name)
 		return ErrNoSuchNamespace
 	}
-	nr.bloomfilter.UnRegister(name)
+	nr.bloomFilter.UnRegister(name)
 	logger.Criticalf("namespace: %s stopped", name)
 	//TODO: need to delete the data?
 	return nil
@@ -357,14 +358,14 @@ func updateNamespaceStartConfig(name string, conf *common.Config) error {
 
 // removeNamespace removes the namespace instance with the given
 // name from system.
-func (nr *nsManagerImpl) removeNamespace(name string)  {
+func (nr *nsManagerImpl) removeNamespace(name string) {
 	nr.rwLock.Lock()
 	delete(nr.namespaces, name)
 	nr.rwLock.Unlock()
 }
 
 // addNamespace adds the namespace instance with the given name to system.
-func (nr *nsManagerImpl) addNamespace(ns Namespace)  {
+func (nr *nsManagerImpl) addNamespace(ns Namespace) {
 	nr.rwLock.Lock()
 	nr.namespaces[ns.Name()] = ns
 	nr.rwLock.Unlock()

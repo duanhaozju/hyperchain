@@ -7,9 +7,9 @@ import (
 	"hyperchain/common"
 	"math/big"
 	"reflect"
+	"strconv"
 	"unicode"
 	"unicode/utf8"
-	"strconv"
 )
 
 var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()

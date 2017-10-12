@@ -295,7 +295,7 @@ func (rbft *rbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 
 // getGenesisInfo returns the genesis block information of the current namespace
 func (rbft *rbftImpl) getGenesisInfo() uint64 {
-	_, genesis := persist.GetGenesisOfChain(rbft.namespace)
+	genesis, _ := persist.GetGenesisOfChain(rbft.namespace)
 	return genesis
 }
 
