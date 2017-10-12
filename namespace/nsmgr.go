@@ -308,8 +308,6 @@ func (nr *nsManagerImpl) Register(name string) error {
 	if err != nil {
 		return err
 	}
-	nsConfig.Set(common.NAMESPACE, name)
-	nsConfig.Set(common.C_JVM_START, nr.GlobalConfig().GetBool(common.C_JVM_START))
 	delFlag := make(chan bool)
 	ns, err := GetNamespace(name, nsConfig, delFlag)
 	if err != nil {
@@ -343,7 +341,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 	}
 	nr.bloomFilter.UnRegister(name)
 	logger.Criticalf("namespace: %s stopped", name)
-	//TODO: need to delete the data?
+	//TODO: need to delete the data and stop listen del node.
 	return nil
 }
 
@@ -479,12 +477,12 @@ func (nr *nsManagerImpl) ListenDelNode(name string, delFlag chan bool) {
 	}
 }
 
-//GetStopFlag returns the flag of stop hyperchain server
+// GetStopFlag returns the flag of stop hyperchain server
 func (nr *nsManagerImpl) GetStopFlag() chan bool {
 	return nr.stopHp
 }
 
-//GetRestartFlag returns the flag of restart hyperchain server
+// GetRestartFlag returns the flag of restart hyperchain server
 func (nr *nsManagerImpl) GetRestartFlag() chan bool {
 	return nr.restartHp
 }

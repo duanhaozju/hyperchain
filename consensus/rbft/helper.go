@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"hyperchain/consensus/helper/persist"
 	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
@@ -268,7 +267,7 @@ func nullRequestMsgToPbMsg(id uint64) *protos.Message {
 // getBlockchainInfo used after commit gets the current blockchain information from database when our lastExec reached
 // the checkpoint, so here we wait until the executor module executes to a checkpoint to return the current BlockchainInfo
 func (rbft *rbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
-	bcInfo := persist.GetBlockchainInfo(rbft.namespace)
+	bcInfo := rbft.persister.GetBlockchainInfo(rbft.namespace)
 
 	height := bcInfo.Height
 	curBlkHash := bcInfo.LatestBlockHash
@@ -285,7 +284,7 @@ func (rbft *rbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
 // waiting until the executor module executes to a checkpoint as the current height must be a checkpoint if we reach the
 // checkpoint after state update
 func (rbft *rbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
-	height, curHash, prevHash := persist.GetCurrentBlockInfo(rbft.namespace)
+	height, curHash, prevHash := rbft.persister.GetCurrentBlockInfo(rbft.namespace)
 	return &protos.BlockchainInfo{
 		Height:            height,
 		CurrentBlockHash:  curHash,
@@ -295,7 +294,7 @@ func (rbft *rbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 
 // getGenesisInfo returns the genesis block information of the current namespace
 func (rbft *rbftImpl) getGenesisInfo() uint64 {
-	genesis, _ := persist.GetGenesisOfChain(rbft.namespace)
+	genesis, _ := rbft.persister.GetGenesisOfChain(rbft.namespace)
 	return genesis
 }
 

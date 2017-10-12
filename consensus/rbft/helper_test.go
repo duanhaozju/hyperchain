@@ -1,485 +1,415 @@
-//// author: Xiaoyi Wang
-//// email: wangxiaoyi@hyperchain.cn
-//// date: 16/11/1
-//// last modified: 16/11/1
-//// last Modified Author: Xiaoyi Wang
-//// change log: new test for helper
-//
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
+
 package rbft
 
-//
-//import (
-//	"testing"
-//	"time"
-//	"hyperchain/consensus/events"
-//	"strings"
-//
-//	//"hyperchain/core/types"
-//	//"reflect"
-//	"hyperchain/core/types"
-//	"reflect"
-//)
-//
-//func TestSortableUint64SliceFunctions(t *testing.T) {
-//	slice := sortableUint64Slice{1, 2, 3, 4, 5}
-//	if slice.Len() != 5{
-//		t.Error("error slice.len != 5")
-//	}
-//	if slice.Less(2, 3) != true{
-//		t.Error("error slice[2] >= slice[3]")
-//	}
-//	if slice.Swap(2, 3); !(slice[2] == 4 && slice[3] ==3){
-//		t.Error("error exchange slice[2], slice[3]")
-//	}
-//}
-//
-//
-//func TestPbftStateFunctions(t *testing.T)  {
-//	pp := new(pbftImpl)
-//	pp.valid = false
-//
-//	pp.validateState()
-//	if pp.valid == false {
-//		t.Errorf("pbftProtocal %s function not worked!", "validateState")
-//	}
-//
-//	pp.valid = true;
-//	pp.invalidateState()
-//
-//	if pp.valid == true {
-//		t.Errorf("pbftProtocal %s function not worked!", "invalidateState")
-//	}
-//}
-//
-//func TestPbftTimeFunctions(t *testing.T)  {
-//	pp := new (pbftImpl)
-//	pp.batchTimeout = 1 * time.Second
-//	pp.batchTimerActive = false;
-//	pp.batchTimer = events.NewTimerFactoryImpl(events.NewManagerImpl()).CreateTimer()
-//
-//	pp.startBatchTimer()
-//	if(pp.batchTimeout != 1 * time.Second || pp.batchTimerActive == false){
-//		t.Errorf("pbftProtocal %s not work!", "startBatchTimer")
-//	}
-//
-//	pp.stopBatchTimer()
-//	if pp.batchTimerActive == true {
-//		t.Errorf("pbftProtocal %s not work!", "stopBatchTimer")
-//	}
-//
-//	pp.newViewTimer =  events.NewTimerFactoryImpl(events.NewManagerImpl()).CreateTimer()
-//	pp.startNewViewTimer(2 * time.Second, "test pbftProtocol viewTimer")
-//	if pp.timerActive == false {
-//		t.Errorf("pbftProtocal %s not work!", "startTimer")
-//	}
-//
-//	pp.stopNewViewTimer()
-//	if pp.timerActive == true {
-//		t.Errorf("pbftProtocal %s not work!", "stopTimer")
-//	}
-//	rs := "test pbftProtocol softSDtartTimer"
-//	pp.softStartTimer(1 * time.Second, rs)
-//	if pp.timerActive == false || strings.Compare(pp.newViewTimerReason, rs) != 0 {
-//		t.Errorf(`pbftProtocal %s not work!`, "softStartTimer")
-//	}
-//
-//	/*pp.nullRequestTimer = events.NewTimerFactoryImpl(events.NewManagerImpl()).CreateTimer()
-//	pp.nullRequestTimeout = 2 * time.Second
-//	pp.id = 1
-//	pp.view = 1
-//	pp.requestTimeout = 3
-//
-//
-//	pp.nullReqTimerReset()
-//	pp.nullRequestTimer*/
-//}
-//
-//func TestPrimary(t *testing.T)  {
-//	pp := new (pbftImpl)
-//	pp.N = 100
-//	x := pp.primary(3)
-//	if x != 4 {
-//		t.Errorf("primary(%d) == %d, actual: %d", 3, x, 4)
-//	}
-//
-//	r1 := pp.primary(0)
-//	if r1 != 1 {
-//		t.Errorf("primary(%d) == %d, actual: %d", 0, r1, 1)
-//	}
-//
-//	pp.h = 0
-//	pp.L = 100
-//
-//	if !pp.inW(100) {
-//		t.Errorf("inw(%d) = false, actual true", 100)
-//	}
-//	if pp.inW(101) {
-//		t.Errorf("inw(%d) = true, actual false", 101)
-//	}
-//
-//	pp.view = 9
-//
-//	if !pp.inWV(9, 30) {
-//		t.Errorf("inWV(%d, %d) = false, actual true", 9, 30)
-//	}
-//
-//	if pp.inWV(8, 30) {
-//		t.Errorf("inWV(%d, %d) = true, actual false", 9, 30)
-//	}
-//
-//	if pp.inWV(9, 200) {
-//		t.Errorf("inWV(%d, %d) = true, actual false", 9, 30)
-//	}
-//}
-//
-//func TestGetSert(t *testing.T)  {
-//	pp := new (pbftImpl)
-//	pp.certStore = make(map[msgID]*msgCert)
-//	pp.getCert(1, 2)
-//
-//	idx := msgID{1, 2}
-//	_, ok := pp.certStore[idx]
-//	if !ok {
-//		t.Error("getCert not worked")
-//	}
-//
-//	pp.chkptCertStore = make(map[chkptID]*chkptCert)
-//	idx2 := chkptID{1, "123"}
-//	pp.getChkptCert(1, "123")
-//
-//	_, ok = pp.chkptCertStore[idx2]
-//	if !ok {
-//		t.Error("getChkptCert error")
-//	}
-//}
-//
-//func TestPrePrepared(t *testing.T)  {
-//	pbft := new(pbftImpl)
-//	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
-//	pbft.view = 2
-//	pbft.seqNo = 100
-//
-//	pbft.validatedBatchStore["d1"] = &TransactionBatch{nil, int64(1001)}
-//
-//	digest := ""
-//	v := uint64(2)
-//	seqNo := uint64(100)
-//
-//	rs := pbft.prePrepared(digest, v, seqNo)
-//
-//	if rs {
-//		t.Errorf("error prePrepared(%q, %d, %d) = %t, actual: %t", digest, v, seqNo, rs, false)
-//	}
-//	digest = "d1"
-//	pbft.certStore = make(map[msgID]*msgCert)
-//	prepare := make(map[Prepare]bool)
-//	prePrepare0 := &PrePrepare{
-//				View:v,
-//				SequenceNumber:seqNo,
-//				BatchDigest: digest,
-//	}
-//
-//	commit := make(map[Commit]bool)
-//	cert0 := &msgCert{
-//		prepare:	prepare,
-//		commit:		commit,
-//		digest:     digest,
-//		prePrepare: prePrepare0,
-//
-//	}
-//
-//	idx := msgID{v, seqNo}
-//	pbft.certStore[idx] = cert0
-//
-//	rs = pbft.prePrepared(digest, v, seqNo)
-//
-//	if !rs {
-//		t.Errorf("error prePrepared(%q, %d, %d) = %t, actual: %t", digest, v, seqNo, rs, true)
-//	}
-//}
-//
-//func TestPreparedReplicasQuorum(t *testing.T)  {
-//	pbft := new (pbftImpl)
-//	pbft.f = 1
-//	k := pbft.preparedReplicasQuorum()
-//	if  k != 2 {
-//		t.Errorf("error preparedReplicasQuorum() = %d, expected: 2", k)
-//	}
-//}
-//
-//func TestCommittedReplicasQuorum(t *testing.T)  {
-//	pbft := new (pbftImpl)
-//	pbft.f = 1
-//	k := pbft.committedReplicasQuorum()
-//	if  k != 3 {
-//		t.Errorf("error committedReplicasQuorum() = %d, expected: 3", k)
-//	}
-//}
-//
-//func TestIntersectionQuorum(t *testing.T)  {
-//	pbft := new (pbftImpl)
-//	pbft.N = 1
-//	pbft.f = 1
-//	k := pbft.intersectionQuorum()
-//	if k != 2 {
-//		t.Errorf("error intersectionQuorum() = %d, expected: %d", k, 2)
-//	}
-//	pbft.N = 1
-//	pbft.f = 4
-//	k = pbft.intersectionQuorum()
-//	if k != 3 {
-//		t.Errorf("error intersectionQuorum() = %d, expected: %d", k, 3)
-//	}
-//}
-//
-//func TestAllCorrectReplicasQuorum(t *testing.T)  {
-//	pbft := new (pbftImpl)
-//	pbft.N = 100
-//	pbft.f = 33
-//	k := pbft.allCorrectReplicasQuorum()
-//	if k != 67 {
-//		t.Errorf("error allCorrectReplicasQuorum() = %d, expected: %d", k, 67)
-//	}
-//}
-//
-//
-//type mockEvent struct {
-//	info string
-//}
-//
-//type mockReceiver struct {
-//	processEventImpl func(event event) event
-//}
-//
-//func (mr *mockReceiver) ProcessEvent(event event) event {
-//	if mr.processEventImpl != nil {
-//		return mr.processEventImpl(event)
-//	}
-//	return nil
-//}
-//
-//func TestPostRequestEvent(t *testing.T)  {
-//	pbft := new(pbftImpl)
-//
-//	tx := &types.Transaction{Id:123}
-//	evts := make(chan event)
-//
-//	pbft.batchManager = events.NewManagerImpl()
-//	pbft.batchManager.SetReceiver(&mockReceiver{
-//		processEventImpl : func(event event) event{
-//			evts <- event
-//			return nil
-//		},
-//	})
-//	pbft.batchManager.Start()
-//	pbft.postRequestEvent(tx)
-//
-//	go func() {
-//		select {
-//		case e := <- evts:
-//			if !reflect.DeepEqual(e, tx) {
-//				t.Error("error postRequestEvent ")
-//			}
-//		case <- time.After(3*time.Second) :
-//			t.Error("error postRequestEvent event not received")
-//		}
-//	}()
-//}
-//
-//func TestPostPbftEvent(t *testing.T)  {
-//	pbft := new(pbftImpl)
-//	mEvent := &mockEvent{info:"pbftEvent"}
-//
-//	evts := make(chan event)
-//	pbft.pbftEventManager = events.NewManagerImpl()
-//	pbft.pbftEventManager.SetReceiver(&mockReceiver{
-//		processEventImpl : func(event event) event{
-//			evts <- event
-//			return nil
-//		},
-//	})
-//	pbft.pbftEventManager.Start()
-//
-//	pbft.postPbftEvent(mEvent)
-//
-//	go func() {
-//		select {
-//		case e := <- evts:
-//			if !reflect.DeepEqual(e, mEvent) {
-//				t.Error("error postPbftEvent ")
-//			}
-//		case <- time.After(3*time.Second) :
-//			t.Error("error postPbftEvent event not received")
-//		}
-//	}()
-//}
-//
-//func TestPrepared(t *testing.T)  {
-//	pbft := new(pbftImpl)
-//
-//	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
-//	pbft.view = 2
-//	pbft.seqNo = 100
-//
-//	pbft.validatedBatchStore["d1"] = &TransactionBatch{nil, int64(1001)}
-//
-//	digest := ""
-//	v := uint64(2)
-//	seqNo := uint64(100)
-//
-//	pbft.prePrepared(digest, v, seqNo)
-//
-//	rs := pbft.prepared("xxx", 12, 12)
-//	if rs {
-//		t.Errorf("error prepared(%s, %d, %d) = true, expected: false", "xxx", 12, 12)
-//	}
-//
-//	digest = "d1"
-//	pbft.certStore = make(map[msgID]*msgCert)
-//	prepare := make(map[Prepare]bool)
-//	prePrepare0 := &PrePrepare{
-//		View:v,
-//		SequenceNumber:seqNo,
-//		BatchDigest: digest,
-//	}
-//
-//	commit := make(map[Commit]bool)
-//	cert0 := &msgCert{
-//		prepare:	prepare,
-//		commit:		commit,
-//		digest:     digest,
-//		prePrepare: prePrepare0,
-//
-//	}
-//
-//	idx := msgID{v, seqNo}
-//	pbft.certStore[idx] = cert0
-//
-//	rs = pbft.prepared(digest, v, seqNo)
-//	if rs == false {
-//		t.Errorf("error prepared(%s, %d, %d) = false, expected: true", digest, v, seqNo)
-//	}
-//
-//}
-//
-//func TestConsensusMsgHelper(t *testing.T)  {
-//	msg := &ConsensusMessage{
-//		Type:ConsensusMessage_CHECKPOINT,
-//	}
-//	rs := cMsgToPbMsg(msg, 1211)
-//	if rs.Id != 1211 {
-//		t.Error("error consensusMsgHelper failed!")
-//	}
-//}
-//
-//func TestNullRequestMsgHelper(t *testing.T)  {
-//	msg := nullRequestMsgToPbMsg(1211)
-//	if msg.Id != 1211 {
-//		t.Errorf("error nullRequestMsgHelper(%d) failed!", 1211)
-//	}
-//}
-//
-//func TestStateUpdateHelper(t *testing.T)  {
-//	r := []uint64 {121111}
-//	msg := stateUpdateHelper(1, 2, []byte("121111"), r)
-//
-//	if msg.Id != 1 || msg.SeqNo != 2 ||
-//		!reflect.DeepEqual(msg.Replicas, r)||
-//		!reflect.DeepEqual(msg.TargetId, []byte("121111")) {
-//		t.Error("error stateUpdateHelper failed!")
-//	}
-//}
-//
-//func TestCommitted(t *testing.T)  {
-//	pbft := new(pbftImpl)
-//
-//	pbft.validatedBatchStore = make(map[string]*TransactionBatch)
-//	pbft.view = 2
-//	pbft.seqNo = 100
-//
-//	pbft.validatedBatchStore["d1"] = &TransactionBatch{nil, int64(1001)}
-//
-//	digest := ""
-//	v := uint64(2)
-//	seqNo := uint64(100)
-//
-//	pbft.prePrepared(digest, v, seqNo)
-//
-//	rs := pbft.committed(digest, v, seqNo)
-//	if rs {
-//		t.Errorf("error committed(%s, %d, %d) = true, expected: false", digest, v, seqNo)
-//	}
-//
-//	digest = "d1"
-//	pbft.certStore = make(map[msgID]*msgCert)
-//	prepare := make(map[Prepare]bool)
-//	prePrepare0 := &PrePrepare{
-//		View:v,
-//		SequenceNumber:seqNo,
-//		BatchDigest: digest,
-//	}
-//
-//	commit := make(map[Commit]bool)
-//	cert0 := &msgCert{
-//		prepare:	prepare,
-//		commit:		commit,
-//		digest:     digest,
-//		prePrepare: prePrepare0,
-//
-//	}
-//	cert0.commitCount = 100
-//
-//	idx := msgID{v, seqNo}
-//	pbft.certStore[idx] = cert0
-//
-//	rs = pbft.committed(digest, v, seqNo)
-//
-//	if rs == false {
-//		t.Errorf("error committed(%s, %d, %d) = false, expected: true", digest, v, seqNo)
-//	}
-//}
-//
-//func TestNullReqTimerReset(t *testing.T)  {
-//	pbft := new(pbftImpl)
-//	pbft.nullRequestTimeout = 5 * time.Second
-//	pbft.view = 3
-//	pbft.id = 3
-//	pbft.requestTimeout = 3 * time.Second
-//	pbft.N = 2
-//
-//	pbft.pbftEventManager = events.NewManagerImpl()
-//	pbftTimerFactory := events.NewTimerFactoryImpl(pbft.pbftEventManager)
-//	pbft.nullRequestTimer = pbftTimerFactory.CreateTimer()
-//
-//	pbft.nullReqTimerReset()
-//	pbft.id = 5
-//	pbft.nullReqTimerReset()
-//}
-//
-//func TestStartTimerIfOutstandingRequests(t *testing.T)  {
-//	pbft := new(pbftImpl)
-//	pbft.skipInProgress = true
-//
-//	pbft.startTimerIfOutstandingRequests()
-//	pbft.skipInProgress = false
-//
-//	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
-//	pbft.outstandingReqBatches["t1"] = &TransactionBatch{Timestamp:121}
-//	pbft.pbftEventManager = events.NewManagerImpl()
-//	pbftTimerFactory := events.NewTimerFactoryImpl(pbft.pbftEventManager)
-//	pbft.newViewTimer = pbftTimerFactory.CreateTimer()
-//	pbft.timerActive = false
-//	pbft.startTimerIfOutstandingRequests()
-//
-//	if pbft.timerActive == false {
-//		t.Error("error startTimerIfOutstandingRequests failed!")
-//	}
-//	pbft.timerActive = false
-//	pbft.outstandingReqBatches = make(map[string]*TransactionBatch)
-//	pbft.startTimerIfOutstandingRequests()
-//
-//	if pbft.timerActive == true {
-//		t.Error("error startTimerIfOutstandingRequests failed!")
-//	}
-//
-//}
+import (
+	"fmt"
+	"sync/atomic"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestSortableUint64SliceFunctions(t *testing.T) {
+	slice := sortableUint64Slice{1, 2, 3, 4, 5}
+	if slice.Len() != 5 {
+		t.Error("error slice.len != 5")
+	}
+	if slice.Less(2, 3) != true {
+		t.Error("error slice[2] >= slice[3]")
+	}
+	if slice.Swap(2, 3); !(slice[2] == 4 && slice[3] == 3) {
+		t.Error("error exchange slice[2], slice[3]")
+	}
+}
+
+func TestPbftStateFunctions(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	rbft.status.inActiveState(&rbft.status.valid)
+	ast.Equal(false, rbft.status.getState(&rbft.status.valid), "should be set to inActive")
+
+	rbft.validateState()
+	ast.Equal(true, rbft.status.getState(&rbft.status.valid), "should be set to active")
+
+	rbft.invalidateState()
+	ast.Equal(false, rbft.status.getState(&rbft.status.valid), "should be set to inActive")
+}
+
+func TestPrimary(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	rbft.N = 100
+	x := rbft.primary(3)
+	ast.Equal(uint64(4), x, fmt.Sprintf("primary(%d) == %d, actual: %d", 3, x, 4))
+
+	r1 := rbft.primary(0)
+	ast.Equal(uint64(1), rbft.primary(0), fmt.Sprintf("primary(%d) == %d, actual: %d", 0, r1, 1))
+
+	rbft.view = 1
+	ast.Equal(true, rbft.isPrimary(2), "2 should be the primary node")
+
+	rbft.h = 0
+	rbft.L = 100
+	ast.Equal(true, rbft.inW(100), fmt.Sprintf("inw(%d) = false, actual true", 100))
+
+	rbft.view = 9
+	ast.Equal(true, rbft.inWV(9, 30), fmt.Sprintf("inWV(%d, %d) = false, actual true", 9, 30))
+	ast.Equal(false, rbft.inWV(8, 30), fmt.Sprintf("inWV(%d, %d) = true, actual false", 9, 30))
+
+	ast.Equal(true, rbft.sendInWV(9, 100), fmt.Sprintf("sendInWV(%d, %d) = false, actual true", 9, 100))
+	ast.Equal(false, rbft.sendInWV(9, 101), fmt.Sprintf("sendInWV(%d, %d) = true, actual false", 9, 101))
+}
+
+func TestGetNodeCert(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	cert1 := rbft.getAddNodeCert("addHash")
+	cert2 := rbft.getAddNodeCert("addHash")
+	ast.Equal(cert1, cert2, "getAddNodeCert failed")
+
+	cert3 := rbft.getDelNodeCert("delHash")
+	cert4 := rbft.getDelNodeCert("delHash")
+	ast.Equal(cert3, cert4, "getDelNodeCert failed")
+}
+
+func TestGetNV(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	rbft.N, rbft.view = 3, 1
+	n, v := rbft.getAddNV()
+	ast.Equal(int64(4), n, "getAddNv failed, expect 4")
+	ast.Equal(uint64(5), v, "getAddNv failed, expect 5")
+
+	rbft.view = 10
+	n, v = rbft.getAddNV()
+	ast.Equal(int64(4), n, "getAddNv failed, expect 4")
+	ast.Equal(uint64(13), v, "getAddNv failed, expect 13")
+
+	rbft.N, rbft.view = 4, 2
+	n, v = rbft.getDelNV(uint64(1))
+	ast.Equal(int64(3), n, "getDelNV failed, expect 3")
+	ast.Equal(uint64(4), v, "getDelNV failed, expect 4")
+
+	n, v = rbft.getDelNV(uint64(3))
+	ast.Equal(int64(3), n, "getDelNV failed, expect 3")
+	ast.Equal(uint64(5), v, "getDelNV failed, expect 5")
+}
+
+func TestCommonCaseQuorum(t *testing.T) {
+	rbft := new(rbftImpl)
+	rbft.f = 1
+	rbft.N = 4
+	k := rbft.commonCaseQuorum()
+	assert.Equal(t, 3, k, fmt.Sprintf("error commonCaseQuorum() = %d, expected: 3", k))
+}
+
+func TestAllCorrectReplicasQuorum(t *testing.T) {
+	rbft := new(rbftImpl)
+	rbft.N = 100
+	rbft.f = 33
+	k := rbft.allCorrectReplicasQuorum()
+	assert.Equal(t, 67, k, fmt.Sprintf("error allCorrectReplicasQuorum() = %d, expected: %d", k, 67))
+}
+
+func TestOneCorrectQuorum(t *testing.T) {
+	rbft := new(rbftImpl)
+	rbft.f = 1
+	rbft.N = 4
+	k := rbft.oneCorrectQuorum()
+	assert.Equal(t, 2, k, fmt.Sprintf("error oneCorrectQuorum() = %d, expected: 2", k))
+}
+
+func TestIntersectionQuorum(t *testing.T) {
+	rbft := new(rbftImpl)
+	rbft.N = 1
+	rbft.f = 1
+	k := rbft.allCorrectQuorum()
+	assert.Equal(t, 1, k, fmt.Sprintf("error allCorrectQuorum() = %d, expected: 1", k))
+}
+
+func TestPrePrepared(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	rbft.view = 2
+	rbft.seqNo = 100
+	digest := ""
+	v := uint64(2)
+	seqNo := uint64(100)
+	res := rbft.prePrepared(digest, v, seqNo)
+	ast.Equal(false, res, fmt.Sprintf("error prePrepared(%q, %d, %d) = %t, actual: %t", digest, v, seqNo, res, false))
+
+	digest = "d1"
+	prePrepare := &PrePrepare{
+		View:           v,
+		SequenceNumber: seqNo,
+		BatchDigest:    digest,
+	}
+	cert := &msgCert{
+		prePrepare: prePrepare,
+	}
+	idx := msgID{v, seqNo, digest}
+	rbft.storeMgr.certStore[idx] = cert
+
+	res = rbft.prePrepared(digest, v, seqNo)
+	ast.Equal(true, res, fmt.Sprintf("error prePrepared(%q, %d, %d) = %t, actual: %t", digest, v, seqNo, res, true))
+}
+
+func TestPrepared(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	rbft.view = 2
+	rbft.seqNo = 100
+
+	digest := ""
+	v := uint64(2)
+	seqNo := uint64(100)
+
+	res := rbft.prepared("xxx", 12, 12)
+	ast.Equal(false, res, fmt.Sprintf("error prepared(%q, %d, %d) = %t, expected: %t", digest, v, seqNo, res, false))
+
+	digest = "d1"
+	prePrepare := &PrePrepare{
+		View:           v,
+		SequenceNumber: seqNo,
+		BatchDigest:    digest,
+	}
+	cert := &msgCert{
+		prePrepare: prePrepare,
+	}
+	idx := msgID{v, seqNo, digest}
+	rbft.storeMgr.certStore[idx] = cert
+	res = rbft.prepared(digest, v, seqNo)
+	ast.Equal(false, res, fmt.Sprintf("error prepared(%q, %d, %d) = %t, expected: %t", digest, v, seqNo, res, false))
+	cert.prepare = make(map[Prepare]bool)
+	cert.prepare[Prepare{ReplicaId: uint64(0)}] = true
+	cert.prepare[Prepare{ReplicaId: uint64(1)}] = true
+	cert.prepare[Prepare{ReplicaId: uint64(2)}] = true
+
+	res = rbft.prepared(digest, v, seqNo)
+	ast.Equal(true, res, fmt.Sprintf("error prepared(%q, %d, %d) = %t, expected: %t", digest, v, seqNo, res, true))
+}
+
+func TestCommitted(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	rbft.view = 2
+	rbft.seqNo = 100
+
+	digest := ""
+	v := uint64(2)
+	seqNo := uint64(100)
+	digest = "d1"
+	prePrepare := &PrePrepare{
+		View:           v,
+		SequenceNumber: seqNo,
+		BatchDigest:    digest,
+	}
+	cert := &msgCert{
+		prePrepare: prePrepare,
+	}
+	idx := msgID{v, seqNo, digest}
+	rbft.storeMgr.certStore[idx] = cert
+	cert.prepare = make(map[Prepare]bool)
+	cert.prepare[Prepare{ReplicaId: uint64(0)}] = true
+	cert.prepare[Prepare{ReplicaId: uint64(1)}] = true
+	cert.prepare[Prepare{ReplicaId: uint64(2)}] = true
+
+	res := rbft.committed(digest, v, seqNo)
+	ast.Equal(false, res, fmt.Sprintf("error committed(%q, %d, %d) = %t, expected: %t", digest, v, seqNo, res, false))
+
+	cert.commit = make(map[Commit]bool)
+	cert.commit[Commit{ReplicaId: uint64(0)}] = true
+	cert.commit[Commit{ReplicaId: uint64(1)}] = true
+	cert.commit[Commit{ReplicaId: uint64(2)}] = true
+	res = rbft.committed(digest, v, seqNo)
+	ast.Equal(true, res, fmt.Sprintf("error committed(%q, %d, %d) = %t, expected: %t", digest, v, seqNo, res, true))
+}
+
+func TestStartTimerIfOutstandingRequests(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	rbft.status.activeState(&rbft.status.skipInProgress)
+	rbft.startTimerIfOutstandingRequests()
+	ast.Equal(false, rbft.status.getState(&rbft.status.timerActive), "should not start newView timer")
+
+	rbft.status.inActiveState(&rbft.status.skipInProgress)
+	rbft.exec.setCurrentExec(nil)
+	rbft.startTimerIfOutstandingRequests()
+	ast.Equal(false, rbft.status.getState(&rbft.status.timerActive), "should not start newView timer")
+
+	rbft.storeMgr.outstandingReqBatches["something"] = nil
+	rbft.startTimerIfOutstandingRequests()
+	ast.Equal(true, rbft.status.getState(&rbft.status.timerActive), "should start newView timer")
+}
+
+func TestConsensusMsgHelper(t *testing.T) {
+	msg := &ConsensusMessage{
+		Type: ConsensusMessage_CHECKPOINT,
+	}
+	rs := cMsgToPbMsg(msg, 1211)
+	assert.Equal(t, uint64(1211), rs.Id, "error consensusMsgHelper failed!")
+}
+
+func TestNullRequestMsgHelper(t *testing.T) {
+	msg := nullRequestMsgToPbMsg(1211)
+	assert.Equal(t, uint64(1211), msg.Id, fmt.Sprintf("error nullRequestMsgHelper(%d) failed!", 1211))
+}
+
+func TestDeleteExistedTx(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	currentVid := uint64(100)
+	rbft.batchVdr.setCurrentVid(&currentVid)
+	digest := "something"
+	rbft.batchVdr.saveToCVB(digest, nil)
+	rbft.storeMgr.outstandingReqBatches[digest] = nil
+
+	rbft.deleteExistedTx(digest)
+	ast.Equal(uint64(100), rbft.batchVdr.lastVid, "deleteExistedTx failed")
+	ast.Nil(rbft.batchVdr.currentVid, "deleteExistedTx failed")
+	_, ok := rbft.batchVdr.cacheValidatedBatch[digest]
+	ast.Equal(false, ok, "deleteExistedTx failed")
+	_, ok = rbft.storeMgr.outstandingReqBatches[digest]
+	ast.Equal(false, ok, "deleteExistedTx failed")
+}
+
+func TestIsPrePrepareLegal(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	v := uint64(1)
+	seqNo := uint64(100)
+	digest := "d"
+	prePrepare := &PrePrepare{
+		View:           v,
+		SequenceNumber: seqNo,
+		BatchDigest:    digest,
+		ReplicaId:      2,
+	}
+
+	rbft.status.activeState(&rbft.status.inNegoView)
+	res := rbft.isPrePrepareLegal(prePrepare)
+	ast.Equal(false, res, "isPrePrepareLegal failed")
+
+	rbft.status.inActiveState(&rbft.status.inNegoView)
+	atomic.StoreUint32(&rbft.activeView, 0)
+	res = rbft.isPrePrepareLegal(prePrepare)
+	ast.Equal(false, res, "isPrePrepareLegal failed")
+
+	atomic.StoreUint32(&rbft.activeView, 1)
+	res = rbft.isPrePrepareLegal(prePrepare)
+	ast.Equal(false, res, "isPrePrepareLegal failed")
+
+	prePrepare.ReplicaId = 1
+	res = rbft.isPrePrepareLegal(prePrepare)
+	ast.Equal(false, res, "isPrePrepareLegal failed")
+
+	prePrepare.View = 0
+	res = rbft.isPrePrepareLegal(prePrepare)
+	ast.Equal(true, res, "isPrePrepareLegal failed")
+}
+
+func TestIsPrepareLegal(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	v := uint64(2)
+	seqNo := uint64(100)
+	digest := "d"
+	prepare := &Prepare{
+		View:           v,
+		SequenceNumber: seqNo,
+		BatchDigest:    digest,
+		ReplicaId:      1,
+	}
+
+	rbft.status.activeState(&rbft.status.inNegoView)
+	res := rbft.isPrepareLegal(prepare)
+	ast.Equal(false, res, "isPrepareLegal failed")
+
+	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.status.inActiveState(&rbft.status.inRecovery)
+	res = rbft.isPrepareLegal(prepare)
+	ast.Equal(false, res, "isPrepareLegal failed")
+
+	rbft.status.activeState(&rbft.status.inRecovery)
+	res = rbft.isPrepareLegal(prepare)
+	ast.Equal(false, res, "isPrePrepareLegal failed")
+
+	prepare.View = 0
+	res = rbft.isPrepareLegal(prepare)
+	ast.Equal(true, res, "isPrePrepareLegal failed")
+}
+
+func TestIsCommitLegal(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	v := uint64(2)
+	seqNo := uint64(100)
+	digest := "d"
+	commit := &Commit{
+		View:           v,
+		SequenceNumber: seqNo,
+		BatchDigest:    digest,
+		ReplicaId:      1,
+	}
+	rbft.status.activeState(&rbft.status.inNegoView)
+	res := rbft.isCommitLegal(commit)
+	ast.Equal(false, res, "isCommitLegal failed")
+
+	rbft.status.inActiveState(&rbft.status.inNegoView)
+	res = rbft.isCommitLegal(commit)
+	ast.Equal(false, res, "isCommitLegal failed")
+
+	commit.View = 0
+	res = rbft.isCommitLegal(commit)
+	ast.Equal(true, res, "isCommitLegal failed")
+}

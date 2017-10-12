@@ -52,7 +52,8 @@ func (c *Client) Connect() error {
 	if c.stream == nil {
 		return nil
 	} else {
-		return fmt.Errorf("jvm client connect to server failed")
+	    c.stream = nil
+        return fmt.Errorf("jvm client connect to server failed")
 	}
 }
 

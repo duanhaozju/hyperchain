@@ -499,7 +499,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 			blks, _ := executor.fetchFromSyncCache(tmp)
 			for hash, blk := range blks {
 				if hash == common.Bytes2Hex(tmpHash) {
-					edb.PersistBlock(executor.db.NewBatch(), &blk, true, true)
+					edb.PersistBlock(executor.db.NewBatch(), &blk, true, true, string(block.Version), getTxVersion(block))
 					executor.cache.syncCache.Remove(tmp)
 					tmp = tmp - 1
 					tmpHash = blk.ParentHash

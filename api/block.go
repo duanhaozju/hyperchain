@@ -28,7 +28,7 @@ type BlockResult struct {
 	AvgTime      *Number       `json:"avgTime"`
 	TxCounts     *Number       `json:"txcounts"`
 	MerkleRoot   common.Hash   `json:"merkleRoot"`
-	Transactions []interface{} `json:"transactions,omitempty"`
+	Transactions []interface{} `json:"transactions"`
 }
 
 type StatisticResult struct {

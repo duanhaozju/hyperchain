@@ -106,6 +106,12 @@ func (i *Info) GetPrimary() bool {
 	return i.isPrimary
 }
 
+func (i *Info) GetVP() bool {
+	i.rwmutex.RLock()
+	defer i.rwmutex.RUnlock()
+	return i.IsVP
+}
+
 func (i *Info) Serialize() []byte {
 	b, e := json.Marshal(i)
 	if e != nil {

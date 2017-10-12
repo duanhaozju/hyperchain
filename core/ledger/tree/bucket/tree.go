@@ -99,6 +99,7 @@ func (bucketTree *BucketTree) Process() ([]byte, error) {
 		}
 		bucketTree.hash = bucketTree.computeRootNodeCryptoHash()
 		bucketTree.dirty = false
+		bucketTree.log.Debugf("crypto hash calculation result %s", common.Bytes2Hex(bucketTree.hash))
 	} else {
 		bucketTree.log.Debugf("clear tree, return cached hash %s directly", common.Bytes2Hex(bucketTree.hash))
 	}
@@ -128,8 +129,11 @@ func (bucketTree *BucketTree) processBuckets() error {
 			bucketTree.log.Errorf("fetch original bucket failed. %s", err.Error())
 			return err
 		}
+		bucketTree.log.Debugf("bucket merge original %v, modified %v", oldBucket, modifiedBucket)
 		newBucket := oldBucket.merge(modifiedBucket)
+		bucketTree.log.Debugf("after bucket merge result %v", newBucket)
 		cryptoHash := newBucket.computeCryptoHash()
+		bucketTree.log.Debugf("bucket crypto hash %v", common.Bytes2Hex(cryptoHash))
 		bucketTree.updateBucketCache(*pos, newBucket)
 		parentBucket := bucketTree.nodeDelta.getOrCreate(pos.getParent())
 		parentBucket.setChild(pos, cryptoHash)
@@ -305,7 +309,6 @@ func (bucketTree *BucketTree) Clear() {
 	bucketTree.mcache.clear()
 	globalBucketCache.clear()
 	bucketTree.dirty = false
-	bucketTree.loadLatestHash()
 }
 
 // loadLatestHash load root node from database and record its hash value.

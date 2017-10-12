@@ -44,17 +44,19 @@ type Database interface {
 	StartRecord(common.Hash, common.Hash, int)
 	AddLog(log *types.Log)
 	GetLogs(hash common.Hash) types.Logs
+
 	// Dump and Load
 	Snapshot() interface{}
 	RevertToSnapshot(interface{})
 	RevertToJournal(uint64, uint64, []byte, db.Batch) error
+
 	// Clear out all extemporaneous status
 	Purge()
-
 	Commit() (common.Hash, error)
 	RecomputeCryptoHash() (common.Hash, error)
 	ResetToTarget(uint64, common.Hash)
 	Reset() error
+
 	// Query
 	GetAccounts() map[string]Account
 	Dump() []byte

@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package types
 
 import (
@@ -9,6 +22,7 @@ import (
 	"hyperchain/crypto/guomi"
 	"hyperchain/crypto/sha3"
 	"strconv"
+	"math/big"
 )
 
 var log *logging.Logger // package-level logger
@@ -35,7 +49,7 @@ func (self *Transaction) GetHash() common.Hash {
 	return common.BytesToHash(self.TransactionHash)
 }
 
-func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
+func (self *Transaction) SignHash(ch crypto.CommonHash) common.Hash {
 	/*
 		from=0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
 		&to=0x80958818f0a025273111fba92ed14c3dd483caeb
@@ -59,7 +73,7 @@ func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
 	return hashResult
 }
 
-func (self *Transaction) SighHashSM3(pubX, pubY []byte) []byte {
+func (self *Transaction) SignHashSM3(pubX, pubY []byte) []byte {
 	/*
 		from=0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
 		&to=0x80958818f0a025273111fba92ed14c3dd483caeb
@@ -104,7 +118,6 @@ func (self *Transaction) SighHashSM3(pubX, pubY []byte) []byte {
 		needHash = "from=" + common.ToHex(self.From) + "&to=" + common.ToHex(self.To) + "&value=" + common.ToHex(value.Payload) + "&timestamp=0x" + strconv.FormatInt(self.Timestamp, 16) + "&nonce=0x" + strconv.FormatInt(self.Nonce, 16)
 	}
 	log.Debug(needHash)
-	//修改为sm3hash方法
 	h2.Write(res)
 	h2.Write([]byte(needHash))
 	hashResult := h2.Sum(nil)
@@ -134,18 +147,11 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 	}
 	flag := self.Signature[0]
 	if flag == 1 {
-		//sm2p256v1 := guomi.Curve(1)
-		//puk, err := guomi.ParsePublicKeyByDerEncode(sm2p256v1,self.Puk)
 		pub := make([]byte, 65)
 		copy(pub[:], self.Signature[1:66])
 		sign := make([]byte, len(self.Signature)-66)
 		copy(sign[:], self.Signature[66:])
-		//if len(pub) > 65 {
-		//	log.Error("The Public Key is wrong!Publick Length is ",len(pub),"!")
-		//	return false
-		//}
 
-		//验证来源
 		var addr common.Address
 		copy(addr[:], Keccak256(pub[0:])[12:])
 		from := common.BytesToAddress(self.From)
@@ -163,7 +169,7 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 			log.Error(err)
 			return false
 		}
-		hash := self.SighHashSM3(puk.X, puk.Y)
+		hash := self.SignHashSM3(puk.X, puk.Y)
 		bol, err := puk.VerifySignature(sign, hash)
 		if err != nil {
 			log.Error(err)
@@ -171,7 +177,7 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 		}
 		return bol
 	}
-	hash := self.SighHash(ch)
+	hash := self.SignHash(ch)
 	addr, err := encryption.UnSign(hash[:], self.Signature[1:])
 	if err != nil {
 		log.Error(err)
@@ -213,6 +219,27 @@ func (tx *Transaction) GetTransactionValue() *TransactionValue {
 	return transactionValue
 }
 
+func (tx *Transaction) GetNVPHash() (string, error) {
+	var txExtra TxExtra
+	err := proto.Unmarshal(tx.Extra, &txExtra)
+	if err != nil {
+		return "", err
+	}
+	return common.Bytes2Hex(txExtra.NodeHash), nil
+}
+
+func (tx *Transaction) SetNVPHash(hash string) error {
+	txExtra := &TxExtra{
+		NodeHash: common.Hex2Bytes(hash),
+	}
+	extra, err := proto.Marshal(txExtra)
+	if err != nil {
+		return err
+	}
+	tx.Extra = extra
+	return nil
+}
+
 func Keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()
 	for _, b := range data {
@@ -220,3 +247,20 @@ func Keccak256(data ...[]byte) []byte {
 	}
 	return d.Sum(nil)
 }
+
+func (tv *TransactionValue) RetrievePayload() []byte {
+	return common.CopyBytes(tv.Payload)
+}
+
+func (tv *TransactionValue) RetrieveGas() *big.Int {
+	return new(big.Int).Set(big.NewInt(tv.GasLimit))
+}
+
+func (tv *TransactionValue) RetrieveGasPrice() *big.Int {
+	return new(big.Int).Set(big.NewInt(tv.Price))
+}
+
+func (tv *TransactionValue) RetrieveAmount() *big.Int {
+	return new(big.Int).Set(big.NewInt(tv.Amount))
+}
+

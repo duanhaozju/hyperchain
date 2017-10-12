@@ -7,6 +7,17 @@ import (
 	"testing"
 )
 
+func TestMemDatabase_DoubleGet(t *testing.T) {
+	db, _ := NewMemDatabase(common.DEFAULT_NAMESPACE)
+	db.Put([]byte("key"), []byte("value"))
+	db.Put([]byte("key"), []byte("newvalue"))
+
+	v, _ := db.Get([]byte("key"))
+	if bytes.Compare(v, []byte("newvalue")) != 0 {
+		t.Error("expect the return should be same with new value")
+	}
+}
+
 func TestMemDatabase_PutGet(t *testing.T) {
 	db, _ := NewMemDatabase(common.DEFAULT_NAMESPACE)
 
@@ -179,6 +190,23 @@ func TestMemDatabase_Iterator(t *testing.T) {
 	iter = db.Scan([]byte("key"), []byte("key2"))
 	if checkEqual(iter, expect[1:6]) {
 		t.Error("iterator with specified start and limit failed")
+	}
+}
+
+func TestMemBatch_Seek(t *testing.T) {
+	db, _ := NewMemDatabase(common.DEFAULT_NAMESPACE)
+	for _, kv := range expect {
+		db.Put([]byte(kv.key), kv.value)
+	}
+	iter := db.NewIterator([]byte("key"))
+	if !iter.Seek([]byte("-")) || bytes.Compare(iter.Key(), []byte("-")) != 0 || bytes.Compare(iter.Value(), []byte("value-")) != 0{
+		t.Error("iterator seek for key failed")
+	}
+	if !iter.Seek([]byte("key")) || bytes.Compare(iter.Key(), []byte("key")) != 0 || bytes.Compare(iter.Value(), []byte("value")) != 0{
+		t.Error("iterator seek for key failed")
+	}
+	if !iter.Seek([]byte("key1")) || bytes.Compare(iter.Key(), []byte("key1")) != 0 || bytes.Compare(iter.Value(), []byte("value1")) != 0{
+		t.Error("iterator seek for key failed")
 	}
 }
 

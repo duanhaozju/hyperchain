@@ -22,7 +22,7 @@ type KV struct {
 	value []byte
 }
 
-type KVs []KV
+type KVs []*KV
 
 func (kvs KVs) Len() int           { return len(kvs) }
 func (kvs KVs) Swap(i, j int)      { kvs[i], kvs[j] = kvs[j], kvs[i] }
@@ -46,7 +46,15 @@ func (db *MemDatabase) Put(key []byte, value []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
 
-	db.kvs = append(db.kvs, KV{
+	// check existence
+	for _, kv := range db.kvs {
+		if common.Bytes2Hex(key) == kv.key {
+			kv.value = CopyBytes(value)
+			return nil
+		}
+	}
+
+	db.kvs = append(db.kvs, &KV{
 		key:   common.Bytes2Hex(key),
 		value: CopyBytes(value),
 	})
@@ -196,12 +204,21 @@ func (iter *Iter) Error() error {
 }
 
 func (iter *Iter) Seek(key []byte) bool {
-	panic("not support")
+	if iter.ptr == nil || iter.ptr.kvs == nil || len(iter.ptr.kvs) == 0{
+		return false
+	}
+	for i, kv := range iter.ptr.kvs{
+		if isLarger(key, common.Hex2Bytes(kv.key)) {
+			iter.index = i
+			return true
+		}
+	}
+	return false
 }
 
 type memBatch struct {
 	db     *MemDatabase
-	writes []KV
+	writes []*KV
 	lock   sync.RWMutex
 }
 
@@ -214,14 +231,14 @@ func (db *MemDatabase) NewBatch() hdb.Batch {
 func (b *memBatch) Put(key, value []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	b.writes = append(b.writes, KV{common.Bytes2Hex(key), CopyBytes(value)})
+	b.writes = append(b.writes, &KV{common.Bytes2Hex(key), CopyBytes(value)})
 	return nil
 }
 
 func (b *memBatch) Delete(key []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
-	b.writes = append(b.writes, KV{common.Bytes2Hex(key), nil})
+	b.writes = append(b.writes, &KV{common.Bytes2Hex(key), nil})
 	return nil
 }
 

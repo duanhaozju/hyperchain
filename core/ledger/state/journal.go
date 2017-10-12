@@ -272,7 +272,7 @@ func (ch *CreateObjectChange) Undo(s *StateDB, cache *JournalCache, batch db.Bat
 	} else {
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
-			s.logger.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
+			s.logger.Noticef("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
 			return
 		}
 		obj.suicided = true
@@ -298,6 +298,8 @@ func (ch *ResetObjectChange) Undo(s *StateDB, cache *JournalCache, batch db.Batc
 	if !writeThrough {
 		s.setStateObject(ch.Prev)
 	} else {
+		ch.Prev.cachedStorage = make(Storage)
+		ch.Prev.dirtyStorage = make(Storage)
 		cache.Add(ch.Prev)
 	}
 }
@@ -334,6 +336,9 @@ func (ch *SuicideChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, w
 			return
 		} else {
 			obj := ch.PreObject
+			obj.setBalance(ch.Prevbalance)
+			obj.cachedStorage = make(Storage)
+			obj.dirtyStorage = make(Storage)
 			cache.Add(obj)
 		}
 	}
@@ -427,9 +432,9 @@ func (ch *CodeChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writ
 			s.logger.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
 			obj = cache.Create(*ch.Account, s)
 		}
-		batch.Delete(CompositeCodeHash(ch.Account.Bytes(), obj.data.CodeHash))
+		batch.Delete(compositeCodeHash(ch.Account.Bytes(), obj.data.CodeHash))
 		obj.data.CodeHash = ch.Prevhash
-		batch.Put(CompositeCodeHash(ch.Account.Bytes(), ch.Prevhash), ch.Prevcode)
+		batch.Put(compositeCodeHash(ch.Account.Bytes(), ch.Prevhash), ch.Prevcode)
 	}
 }
 func (ch *CodeChange) String() string {
@@ -464,7 +469,7 @@ func (ch *StorageChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, w
 		obj := cache.Fetch(*ch.Account)
 		if obj == nil {
 			// should never happen
-			s.logger.Warningf("missing state object %s, it should not happen when undo storage change", ch.Account.Hex())
+			s.logger.Noticef("missing state object %s, it should not happen when undo storage change", ch.Account.Hex())
 			return
 		}
 		obj.cachedStorage[ch.Key] = ch.Prevalue
@@ -488,6 +493,10 @@ func (ch *StorageChange) GetType() string {
 
 // addLogChange
 func (ch *AddLogChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writeThrough bool) {
+	// Short circuit if write through
+	if writeThrough {
+		return
+	}
 	logs := s.logs[ch.Txhash]
 	if len(logs) == 1 {
 		delete(s.logs, ch.Txhash)

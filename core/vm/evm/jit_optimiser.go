@@ -1,5 +1,18 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 package evm
 
 import (
@@ -15,23 +28,6 @@ func optimiseProgram(program *Program) {
 		statsJump = 0
 		statsPush = 0
 	)
-
-	/*
-		code := Parse(program.code)
-		for _, test := range [][]OpCode{
-			[]OpCode{PUSH, PUSH, ADD},
-			[]OpCode{PUSH, PUSH, SUB},
-			[]OpCode{PUSH, PUSH, MUL},
-			[]OpCode{PUSH, PUSH, DIV},
-		} {
-			matchCount := 0
-			MatchFn(code, test, func(i int) bool {
-				matchCount++
-				return true
-			})
-			fmt.Printf("found %d match count on: %v\n", matchCount, test)
-		}
-	*/
 
 	for i := 0; i < len(program.instructions); i++ {
 		instr := program.instructions[i].(instruction)

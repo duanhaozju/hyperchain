@@ -21,3 +21,8 @@ message Block {
 message Blocks{
     repeated Block batch = 1;
 }
+
+message BlockWrapper {
+    bytes blockVersion = 1;
+    bytes block = 2;
+}

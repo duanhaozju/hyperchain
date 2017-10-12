@@ -50,7 +50,6 @@ func TestAdministrator_PreHandle(t *testing.T) {
 	if err != nil {
 		t.Error("Faild in sign token", err)
 	}
-	t.Logf("signed token for root is: %s", token)
 	pub_key = "../../hypercli/keyconfigs/key/key.pub"
 	// here we don't set the last operation time of root.
 	err = admin.PreHandle(token, "admin_getLevel")
@@ -200,8 +199,8 @@ func TestStartNamespace(t *testing.T) {
 		Args:       []string{"mock_ns"},
 	}
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to start the "+
-		"namespace <mock_ns> because of some errors.")
+	ast.True(result.Ok, "We should successfully start the namespace <global> "+
+		"as we start namespace in another go-routine, we always send 'start namespace cmd' successfully.")
 }
 
 func TestStopNamespace(t *testing.T) {
@@ -239,8 +238,8 @@ func TestStopNamespace(t *testing.T) {
 		Args:       []string{"mock_ns"},
 	}
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to stop the "+
-		"namespace <mock_ns> because of some errors.")
+	ast.True(result.Ok, "We should successfully start the namespace <global> "+
+		"as we start namespace in another go-routine, we always send 'stop namespace cmd' successfully.")
 }
 
 func TestRestartNamespace(t *testing.T) {
@@ -278,8 +277,8 @@ func TestRestartNamespace(t *testing.T) {
 		Args:       []string{"mock_ns"},
 	}
 	result = admin.CmdExecutor[service](cmd)
-	ast.Equal(result.Error.Error(), mockError.Error(), "We should fail to restart the "+
-		"namespace <mock_ns> because of some errors.")
+	ast.True(result.Ok, "We should successfully start the namespace <global> "+
+		"as we start namespace in another go-routine, we always send 'restart namespace cmd' successfully.")
 }
 
 func TestRegisterNamespace(t *testing.T) {

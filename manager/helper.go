@@ -8,7 +8,9 @@ import (
 	m "hyperchain/manager/message"
 )
 
-func (hub *EventHub) invokePbftLocal(serviceType, eventType int, content interface{}) {
+// invokeRbftLocal helps wrapper event to consensus event type and then
+// invoke consensus module.
+func (hub *EventHub) invokeRbftLocal(serviceType, eventType int, content interface{}) {
 	e := &rbft.LocalEvent{
 		Service:   serviceType,
 		EventType: eventType,
@@ -17,6 +19,7 @@ func (hub *EventHub) invokePbftLocal(serviceType, eventType int, content interfa
 	hub.consenter.RecvLocal(e)
 }
 
+// broadcast helps check the broadcast type and then broadcast to suitable nodes.
 func (hub *EventHub) broadcast(bType int, t m.SessionMessage_Type, message []byte) {
 	hub.logger.Debugf("broadcast session message %s", t.String())
 	if ctx, err := proto.Marshal(&m.SessionMessage{
@@ -37,6 +40,7 @@ func (hub *EventHub) broadcast(bType int, t m.SessionMessage_Type, message []byt
 	}
 }
 
+// send helps send message to a specified node.
 func (hub *EventHub) send(t m.SessionMessage_Type, message []byte, peers []uint64) {
 	hub.logger.Debugf("send session message %s", t.String())
 	if ctx, err := proto.Marshal(&m.SessionMessage{
@@ -50,6 +54,7 @@ func (hub *EventHub) send(t m.SessionMessage_Type, message []byte, peers []uint6
 	}
 }
 
+// sendToRandomVP helps send messages to a random VP.
 func (hub *EventHub) sendToRandomVP(t m.SessionMessage_Type, message []byte) error {
 	hub.logger.Debugf("send session message %s", t.String())
 	if ctx, err := proto.Marshal(&m.SessionMessage{
@@ -64,6 +69,7 @@ func (hub *EventHub) sendToRandomVP(t m.SessionMessage_Type, message []byte) err
 	}
 }
 
+// sendToNVP helps send messages to specified NVPs.
 func (hub *EventHub) sendToNVP(t m.SessionMessage_Type, message []byte, peers []string) {
 	hub.logger.Debugf("send session message %s", t.String())
 	if ctx, err := proto.Marshal(&m.SessionMessage{

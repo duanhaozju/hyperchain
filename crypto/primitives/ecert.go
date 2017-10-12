@@ -10,11 +10,21 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"io/ioutil"
-	//"fmt"
-	//"sync"
 	"crypto/ecdsa"
 	"github.com/pkg/errors"
+	"github.com/op/go-logging"
+	"crypto/elliptic"
 )
+
+var (
+	log = logging.MustGetLogger("crypto")
+	defaultCurve elliptic.Curve
+)
+
+// GetDefaultCurve returns the default elliptic curve used by the crypto layer
+func GetDefaultCurve() elliptic.Curve {
+	return defaultCurve
+}
 
 //读取config文件
 func GetConfig(path string) (string, error) {
@@ -57,15 +67,6 @@ func VerifyCert(cert *x509.Certificate, ca *x509.Certificate) (bool, error) {
 
 }
 
-//验证证书的来源
-func VerifySignature(cert *x509.Certificate, signed string, signature string) (bool, error) {
-	err := cert.CheckSignature(x509.ECDSAWithSHA256, []byte(signed), []byte(signature))
-	if err != nil {
-		log.Error("verified the cert failed", err)
-		return false, err
-	}
-	return true, nil
-}
 
 func ParseKey(derPri []byte) (interface{}, error) {
 	block, _ := pem.Decode(derPri)

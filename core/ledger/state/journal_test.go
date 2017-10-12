@@ -28,6 +28,7 @@ import (
 	"strings"
 	"testing"
 	"testing/quick"
+	"time"
 )
 
 type JournalSuite struct{}
@@ -56,7 +57,8 @@ func (suite *JournalSuite) TearDownSuite(c *checker.C) {
 }
 
 func (suite *JournalSuite) TestSnapshotRandom(c *checker.C) {
-	config := &quick.Config{MaxCount: 50}
+	rnd := rand.New(rand.NewSource(time.Now().Unix()))
+	config := &quick.Config{MaxCount: 50, Rand: rnd}
 	err := quick.Check((*snapshotTest).revertToSnapshot, config)
 	if cerr, ok := err.(*quick.CheckError); ok {
 		test := cerr.In[0].(*snapshotTest)
@@ -67,7 +69,8 @@ func (suite *JournalSuite) TestSnapshotRandom(c *checker.C) {
 }
 
 func (suite *JournalSuite) TestRevertRandom(c *checker.C) {
-	config := &quick.Config{MaxCount: 50}
+	rnd := rand.New(rand.NewSource(time.Now().Unix()))
+	config := &quick.Config{MaxCount: 50, Rand: rnd}
 	err := quick.Check((*snapshotTest).revertToTarget, config)
 	if cerr, ok := err.(*quick.CheckError); ok {
 		test := cerr.In[0].(*snapshotTest)
@@ -165,7 +168,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 			args: make([]int64, 1),
 		},
 		{
-			name: "DeployedContractChange",
+			name: "AddDeployedContract",
 			fn: func(a testAction, s *StateDB) {
 				contract := make([]byte, 16)
 				binary.BigEndian.PutUint64(contract, uint64(a.args[0]))
@@ -222,7 +225,8 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 // derived from r.
 func (*snapshotTest) Generate(r *rand.Rand, size int) reflect.Value {
 	// Generate random actions.
-	addrs := make([]common.Address, 5)
+	size = size * 50
+	addrs := make([]common.Address, 2)
 	for i := range addrs {
 		addrs[i] = common.HexToAddress(RandomString(40))
 	}
@@ -300,7 +304,7 @@ func (test *snapshotTest) revertToTarget() bool {
 		sindex            = 0
 		seqNo      uint64 = 11
 	)
-	// Test snapshot
+	// Apply actions
 	state.MarkProcessStart(seqNo)
 	for i, action := range test.actions {
 		if len(test.snapshots) > sindex && i == test.snapshots[sindex] {
@@ -309,24 +313,26 @@ func (test *snapshotTest) revertToTarget() bool {
 				return false
 			}
 			targetHash[sindex] = hash
-			sindex++
-			state.MarkProcessFinish(seqNo)
 			state.FetchBatch(seqNo, BATCH_NORMAL).Write()
+			state.MarkProcessFinish(seqNo)
+			sindex++
 			seqNo++
 			state.MarkProcessStart(seqNo)
 		}
 		action.fn(action, state)
 	}
 	state.Commit()
-	state.MarkProcessFinish(seqNo)
 	state.FetchBatch(seqNo, BATCH_NORMAL).Write()
-
+	state.MarkProcessFinish(seqNo)
+	state.Purge()
 	// Revert all snapshots in reverse order. Each revert must yield a state
 	// that is equivalent to fresh state with all actions up the snapshot applied.
 	for ; sindex > 0; sindex-- {
-		if err := state.RevertToJournal(uint64(sindex+11), uint64(sindex+10), targetHash[sindex-1].Bytes(), db.NewBatch()); err != nil {
+		batch := db.NewBatch()
+		if err := state.RevertToJournal(uint64(sindex+10), uint64(sindex+11), targetHash[sindex-1].Bytes(), batch); err != nil {
 			return false
 		}
+		batch.Write()
 	}
 	return true
 }
