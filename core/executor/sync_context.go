@@ -14,7 +14,7 @@
 package executor
 
 import (
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/manager/event"
 
 	"github.com/op/go-logging"

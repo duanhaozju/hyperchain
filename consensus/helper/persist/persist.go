@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"encoding/base64"
-	ndb "hyperchain/core/ledger/db_utils"
+	ndb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb/db"
 )

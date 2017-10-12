@@ -17,7 +17,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	cm "hyperchain/core/common"
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/ledger/state"
 	"hyperchain/hyperdb"
 	"hyperchain/manager/event"

@@ -10,7 +10,7 @@ import (
 	"hyperchain/consensus"
 	"hyperchain/consensus/csmgr"
 	"hyperchain/core/executor"
-	"hyperchain/core/ledger/db_utils"
+	"hyperchain/core/ledger/chain"
 	"hyperchain/hyperdb"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
@@ -185,7 +185,7 @@ func (ns *namespaceImpl) init() error {
 	ns.logger.Criticalf("Init namespace %s", ns.Name())
 
 	// 1. init DB for current namespace.
-	err := db_utils.InitDBForNamespace(ns.conf, ns.Name())
+	err := chain.InitDBForNamespace(ns.conf, ns.Name())
 	if err != nil {
 		ns.logger.Errorf("Init db for namespace: %s error, %v", ns.Name(), err)
 		return err

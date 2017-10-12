@@ -1,4 +1,4 @@
-package db_utils
+package chain
 
 import (
 	"errors"
@@ -211,6 +211,11 @@ func UpdateChain(namespace string, batch db.Batch, block *types.Block, genesis b
 	}
 	chain := chains.GetChain(namespace)
 	return putChain(batch, &chain.data, flush, sync)
+}
+
+// PutChain persists chain with given data.
+func PutChain(batch db.Batch, chain *types.Chain, flush, sync bool) error {
+	return putChain(batch, chain, flush, sync)
 }
 
 // UpdateChainByBlcokNum updates chain according block number, sets chain current height to the block number,

@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/viper"
 	"hyperchain/common"
 	"hyperchain/consensus/helper"
-	"hyperchain/core/ledger/db_utils"
-	edb "hyperchain/core/ledger/db_utils"
+	"hyperchain/core/ledger/chain"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
@@ -63,7 +63,7 @@ func TNewRbft(dbpath, path, namespace string, nodeId int, t *testing.T) (*rbftIm
 	if dbpath != "" {
 		conf.Set("database.leveldb.path", dbpath)
 	}
-	err := db_utils.InitDBForNamespace(conf, namespace)
+	err := chain.InitDBForNamespace(conf, namespace)
 	if err != nil {
 		t.Errorf("init db for namespace: %s error, %v", namespace, err)
 	}

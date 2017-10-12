@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/juju/ratelimit"
 	"hyperchain/common"
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/evm/compiler"

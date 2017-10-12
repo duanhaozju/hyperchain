@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 	"hyperchain/common"
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	flt "hyperchain/manager/filter"
 	"sync"
 )

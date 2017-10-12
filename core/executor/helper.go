@@ -16,7 +16,7 @@ package executor
 import (
 	"github.com/golang/protobuf/proto"
 	er "hyperchain/core/errors"
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"

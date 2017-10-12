@@ -15,7 +15,7 @@ package executor
 
 import (
 	"hyperchain/common"
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"sync/atomic"
 	"time"
 )
