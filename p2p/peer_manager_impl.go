@@ -409,7 +409,7 @@ func (pmgr *peerManagerImpl) SetPrimary(_id uint64) error {
 
 // GetRouters is used by new peer when join the chain dynamically only.
 func (pmgr *peerManagerImpl) GetRouters() []byte {
-	b, e := pmgr.peerPool.Serlize()
+	b, e := pmgr.peerPool.Serialize()
 	if e != nil {
 		pmgr.logger.Errorf("cannot serialize the peerpool,err:%s ", e.Error())
 		return nil
@@ -722,7 +722,7 @@ func (pmgr *peerManagerImpl) linking() {
 					}
 					//the exist peer
 					if wait.PeerType == PEERTYPE_VP {
-						if p, ok := pmgr.peerPool.GetPeersByHostname(wait.Hostname); ok {
+						if p, ok := pmgr.peerPool.GetPeerByHostname(wait.Hostname); ok {
 							err := p.clientHello(false, false)
 							if err != nil {
 								pmgr.logger.Warning("connect to vp %s failed, retry after 3 second", wait.Hostname)
@@ -781,7 +781,7 @@ func (pmgr *peerManagerImpl) linking() {
 // bind the namespace+id -> hostname
 func (pmgr *peerManagerImpl) bind(peerType int, namespace string, id int, hostname string, hash string) {
 	pmgr.logger.Debugf("bind to peer [%s](%s)", namespace, hostname)
-	_, ok1 := pmgr.peerPool.GetPeersByHostname(hostname)
+	_, ok1 := pmgr.peerPool.GetPeerByHostname(hostname)
 	_, ok2 := pmgr.peerPool.GetNVPByHostname(hostname)
 	_, ok3 := pmgr.peerPool.pendingMap.Get(namespace + ":" + hostname)
 	if !ok1 && !ok2 && !ok3 {
@@ -796,7 +796,7 @@ func (pmgr *peerManagerImpl) bind(peerType int, namespace string, id int, hostna
 	}
 
 	if peerType == PEERTYPE_VP {
-		if vp, exist := pmgr.peerPool.GetPeersByHostname(hostname); exist {
+		if vp, exist := pmgr.peerPool.GetPeerByHostname(hostname); exist {
 			pmgr.logger.Debugf("rebind to peer [%s](%s) hash: %s", namespace, hostname, vp.info.Hash)
 			pmgr.peerMgrEv.Post(peerevent.S_UPDATE_SESSION_KEY{vp.info.Hash})
 		}

@@ -19,16 +19,16 @@ var (
 
 type PeersPool struct {
 	namespace string
-	vpPool    *threadsafe.Heap          //todo 当前namespace所有vp节点？
-	//nvp hasn't id so use map to storage it
-	nvpPool cmap.ConcurrentMap			//todo 当前namespace所有跟node／peer	连的nvp节点？
-	//put the exist peers into this exist
-	existMap cmap.ConcurrentMap			//todo 当前namespace中所有节点, 包括vp节点和nvp节点？
-	// pending map
-	pendingMap cmap.ConcurrentMap		//todo 当前namespace中准备连接的节点，可能是vp节点也可能是nvp节点？
+
+	vpPool    *threadsafe.Heap          // all the VP peer under the namespace
+	nvpPool cmap.ConcurrentMap			// all the NVP peer under the namespace
+
+	existMap cmap.ConcurrentMap			// all the VP peer and NVP peer under the namespace
+	pendingMap cmap.ConcurrentMap		// all the pending peer, maybe VP peer or NVP peer
+
 	evMux      *event.TypeMux
-	//for configuration persist
-	pts     *PeerTriples
+
+	pts     *PeerTriples				// for persisting configuration
 	peercnf *peerCnf
 
 	logger *logging.Logger
@@ -49,11 +49,12 @@ func NewPeersPool(namespace string, ev *event.TypeMux, pts *PeerTriples, peercnf
 	}
 }
 
+// Ready returns true if the VP pool not nil.
 func (pool *PeersPool) Ready() bool {
 	return pool.vpPool != nil
 }
 
-//AddVPPeer add a peer into peers pool instance
+// AddVPPeer adds a VP peer into VP pool.
 func (pool *PeersPool) AddVPPeer(id int, p *Peer) error {
 	if pool.vpPool == nil {
 		pool.vpPool = threadsafe.NewHeap(p)
@@ -65,6 +66,17 @@ func (pool *PeersPool) AddVPPeer(id int, p *Peer) error {
 	return nil
 }
 
+// AddNVPPeer adds a NVP peer into NVP pool.
+func (pool *PeersPool) AddNVPPeer(hash string, p *Peer) error {
+	if tipe, ok := pool.existMap.Get(hash); ok {
+		return errors.New(fmt.Sprintf("this peer already in peers pool type: [%s]", tipe.(string)))
+	}
+	pool.nvpPool.Set(hash, p)
+	pool.existMap.Set(hash, _NVP_FLAG)
+	return nil
+}
+
+// PersistList will persist peer pool.
 func (pool *PeersPool) PersistList() error {
 	pool.peercnf.Lock()
 	defer pool.peercnf.Unlock()
@@ -77,17 +89,7 @@ func (pool *PeersPool) PersistList() error {
 	return PersistPeerTriples(pool.peercnf.vip, tmppts)
 }
 
-//AddNVPPeer add a peer into peers pool instance
-func (pool *PeersPool) AddNVPPeer(hash string, p *Peer) error {
-	if tipe, ok := pool.existMap.Get(hash); ok {
-		return errors.New(fmt.Sprintf("this peer already in peers pool type: [%s]", tipe.(string)))
-	}
-	pool.nvpPool.Set(hash, p)
-	pool.existMap.Set(hash, _NVP_FLAG)
-	return nil
-}
-
-//GetPeers get all peer list
+// GetPeers returns all VP peers.
 func (pool *PeersPool) GetPeers() []*Peer {
 	list := make([]*Peer, 0)
 	if pool.vpPool == nil {
@@ -100,6 +102,7 @@ func (pool *PeersPool) GetPeers() []*Peer {
 	return list
 }
 
+// MaxID returns the maximum peer ID from VP pool.
 func (pool *PeersPool) MaxID() int {
 	max := 1
 	l := pool.vpPool.Sort()
@@ -111,6 +114,7 @@ func (pool *PeersPool) MaxID() int {
 	return max
 }
 
+// GetPeerByHash returns a peer for given peer hash.
 func (pool *PeersPool) GetPeerByHash(hash string) *Peer {
 	if pool.vpPool == nil {
 		return nil
@@ -125,7 +129,8 @@ func (pool *PeersPool) GetPeerByHash(hash string) *Peer {
 	return nil
 }
 
-func (pool *PeersPool) GetPeersByHostname(hostname string) (*Peer, bool) {
+// GetPeerByHostname returns a peer for given hostname.
+func (pool *PeersPool) GetPeerByHostname(hostname string) (*Peer, bool) {
 	if pool.vpPool == nil {
 		return nil, false
 	}
@@ -139,6 +144,7 @@ func (pool *PeersPool) GetPeersByHostname(hostname string) (*Peer, bool) {
 	return nil, false
 }
 
+// GetNVPByHostname returns a nvp peer for given hostname.
 func (pool *PeersPool) GetNVPByHostname(hostname string) (*Peer, bool) {
 	if pool.nvpPool == nil {
 		return nil, false
@@ -153,6 +159,7 @@ func (pool *PeersPool) GetNVPByHostname(hostname string) (*Peer, bool) {
 	return nil, false
 }
 
+// GetNVPByHash returns a nvp peer for given nvp peer hash.
 func (pool *PeersPool) GetNVPByHash(hash string) *Peer {
 	if pool.nvpPool == nil {
 		return nil
@@ -167,7 +174,7 @@ func (pool *PeersPool) GetNVPByHash(hash string) *Peer {
 	return nil
 }
 
-//TryDelete the specific hash node
+// TryDelete readies to delete the specific node.
 func (pool *PeersPool) TryDelete(selfHash, delHash string) (routerhash string, selfnewid uint64, deleteid uint64, err error) {
 	pool.logger.Critical("selfhash", selfHash, "delhash", delHash)
 	temppool := pool.vpPool.Duplicate()
@@ -200,7 +207,7 @@ func (pool *PeersPool) TryDelete(selfHash, delHash string) (routerhash string, s
 
 	pools := struct {
 		Routers []string `json:"routers"`
-	}{}
+	}{data}
 	b, err := json.Marshal(pools)
 	if err != nil {
 		return
@@ -212,7 +219,7 @@ func (pool *PeersPool) TryDelete(selfHash, delHash string) (routerhash string, s
 
 }
 
-//DeleteVPPeer delete a peer from peers pool instance
+// DeleteVPPeer deletes a peer from VP pool for given peer id and update all peer's id.
 func (pool *PeersPool) DeleteVPPeer(id int) error {
 	if pool.vpPool == nil {
 		return nil
@@ -230,6 +237,7 @@ func (pool *PeersPool) DeleteVPPeer(id int) error {
 	return nil
 }
 
+// DeleteVPPeerByHash deletes a peer from VP pool for given hash.
 func (pool *PeersPool) DeleteVPPeerByHash(hash string) error {
 	p := pool.GetPeerByHash(hash)
 	if p != nil {
@@ -241,7 +249,7 @@ func (pool *PeersPool) DeleteVPPeerByHash(hash string) error {
 	return pool.DeleteVPPeer(p.info.Id)
 }
 
-//DeleteNVPPeer delete the nvp peer
+// DeleteNVPPeer deletes the nvp peer for given hash.
 func (pool *PeersPool) DeleteNVPPeer(hash string) error {
 	if _, ok := pool.existMap.Get(hash); ok {
 		pool.existMap.Remove(hash)
@@ -252,15 +260,18 @@ func (pool *PeersPool) DeleteNVPPeer(hash string) error {
 	return nil
 }
 
+// GetVPNum returns the number of VP peers.
 func (pool *PeersPool) GetVPNum() int {
 	return len(pool.vpPool.Sort())
 }
 
+// GetNVPNum returns the number of NVP peers.
 func (pool *PeersPool) GetNVPNum() int {
 	return pool.nvpPool.Count()
 }
 
-func (pool *PeersPool) Serlize() ([]byte, error) {
+// Serialize serializes the peer pool.
+func (pool *PeersPool) Serialize() ([]byte, error) {
 	peers := pool.GetPeers()
 	data := make([]string, 0)
 	for _, peer := range peers {
@@ -269,7 +280,7 @@ func (pool *PeersPool) Serlize() ([]byte, error) {
 
 	pools := struct {
 		Routers []string `json:"routers"`
-	}{}
+	}{data}
 	b, e := json.Marshal(pools)
 	return b, e
 }
