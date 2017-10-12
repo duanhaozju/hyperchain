@@ -4,10 +4,10 @@ package api
 
 import (
 	"fmt"
+	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/manager"
-	"github.com/op/go-logging"
 )
 
 // This file implements the handler of Account service API which
@@ -36,7 +36,7 @@ func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.
 		namespace: namespace,
 		eh:        eh,
 		config:    config,
-		log:	   common.GetLogger(namespace, "api"),
+		log:       common.GetLogger(namespace, "api"),
 	}
 }
 

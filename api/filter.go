@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
@@ -261,7 +261,7 @@ func (api *PublicFilterAPI) UnSubscription(id string) error {
 
 // GetLogs returns eligible vm event logs.
 func (api *PublicFilterAPI) GetLogs(crit flt.FilterCriteria) (interface{}, error) {
-	err, genesis := edb.GetGenesisTag(api.namespace)
+	genesis, err := edb.GetGenesisTag(api.namespace)
 	if err != nil {
 		return nil, &common.CallbackError{Message: "obtain genesis tag failed"}
 	}

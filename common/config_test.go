@@ -5,14 +5,14 @@ package common
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 	"time"
-	"github.com/stretchr/testify/assert"
 )
 
 func getTestConfig() *Config {
-	testConfigPath  := "/src/hyperchain/common/testhelper/resources/global.toml"
+	testConfigPath := "/src/hyperchain/common/testhelper/resources/global.toml"
 	return NewConfig(os.Getenv("GOPATH") + testConfigPath)
 }
 
@@ -78,14 +78,13 @@ func TestConfigMerge(t *testing.T) {
 	conf := getTestConfig()
 	assert.NotEqual(t, expect, conf.GetInt("consensus.rbft.batchsize"), "This config file should not contain this value")
 
-
-	conf.MergeConfig(os.Getenv("GOPATH") +"/src/hyperchain/common/testhelper/resources/namespace.toml")
+	conf.MergeConfig(os.Getenv("GOPATH") + "/src/hyperchain/common/testhelper/resources/namespace.toml")
 	assert.Equal(t, expect, conf.GetInt("consensus.rbft.batchsize"), "This config file should contain this value after merging")
 }
 
 func TestReadTomlConfigFile(t *testing.T) {
 	conf := getTestConfig()
-	conf2 := NewConfig(os.Getenv("GOPATH") +"/src/hyperchain/common/testhelper/resources/namespace.toml")
+	conf2 := NewConfig(os.Getenv("GOPATH") + "/src/hyperchain/common/testhelper/resources/namespace.toml")
 
 	assert.NotEqual(t, true, conf.equals(conf2), "These two config file are not the same")
 }

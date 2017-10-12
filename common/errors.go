@@ -104,8 +104,8 @@ func (e *ShutdownError) Error() string { return "Server is shutting down" }
 
 // JSONRPC custom ERRORS
 type DBNotFoundError struct {
-	Type    string
-	Id 		string
+	Type string
+	Id   string
 }
 
 func (e *DBNotFoundError) Code() int     { return custom_DBNotFoundError }
@@ -139,10 +139,10 @@ type ContractInvokeError struct {
 func (e *ContractInvokeError) Code() int     { return custom_ContractInvokeError }
 func (e *ContractInvokeError) Error() string { return e.Message }
 
-type SystemTooBusyError struct {}
+type SystemTooBusyError struct{}
 
 func (e *SystemTooBusyError) Code() int     { return custom_SystemTooBusyError }
-func (e *SystemTooBusyError) Error() string { return "System is too busy to response. %s"}
+func (e *SystemTooBusyError) Error() string { return "System is too busy to response. %s" }
 
 type RepeadedTxError struct {
 	TxHash string
@@ -178,7 +178,7 @@ func (e *NamespaceNotFound) Error() string {
 	return fmt.Sprintf("The namespace '%s' does not exist", e.Name)
 }
 
-type NoBlockGeneratedError struct {}
+type NoBlockGeneratedError struct{}
 
 func (e *NoBlockGeneratedError) Code() int     { return custom_NoBlockGeneratedError }
 func (e *NoBlockGeneratedError) Error() string { return "There is no block generated!" }

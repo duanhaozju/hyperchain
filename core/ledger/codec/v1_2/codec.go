@@ -2,12 +2,18 @@ package v1_2
 
 import (
 	"errors"
-	"github.com/golang/protobuf/proto"
-	v1_2_types "hyperchain/core/db_utils/codec/v1.2/types"
+
+	v1_2_types "hyperchain/core/ledger/codec/v1_2/types"
 	"hyperchain/core/types"
+
+	"github.com/golang/protobuf/proto"
 )
 
-func EncodeTransaction(tx *types.Transaction) ([]byte, error) {
+// V1_2Encoder is the encoder for transaction v1.2
+type V1_2Encoder struct{}
+
+// EncodeTransaction encodes the transaction of v1.2 to bytes.
+func (encoder *V1_2Encoder) EncodeTransaction(tx *types.Transaction) ([]byte, error) {
 	if tx == nil {
 		return nil, errors.New("empty pointer")
 	}
@@ -33,7 +39,8 @@ func EncodeTransaction(tx *types.Transaction) ([]byte, error) {
 	return proto.Marshal(wrapper)
 }
 
-func EncodeReceipt(receipt *types.Receipt) ([]byte, error) {
+// EncodeReceipt encodes the receipt of v1.2 to bytes.
+func (encoder *V1_2Encoder) EncodeReceipt(receipt *types.Receipt) ([]byte, error) {
 	if receipt == nil {
 		return nil, errors.New("empty pointer")
 	}

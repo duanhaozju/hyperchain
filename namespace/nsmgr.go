@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/core/ledger/bloom"
+	"hyperchain/core/bloom"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -123,7 +123,7 @@ type nsManagerImpl struct {
 
 	// bloomfilter is the transaction bloom filter, helps to do transaction
 	// duplication checking
-	bloomfilter *bloom.BloomFilterCache
+	bloomFilter bloom.TxBloomFilter
 
 	// conf is the global config file of the system, contains global configs
 	// of the node
@@ -147,12 +147,13 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 		namespaces:  make(map[string]Namespace),
 		conf:        conf,
 		jvmManager:  NewJvmManager(conf),
-		bloomfilter: bloom.NewBloomCache(conf),
+		bloomFilter: bloom.NewBloomFilterCache(conf),
 		status:      status,
 		stopHp:      stopHp,
 		restartHp:   restartHp,
 	}
 	nr.rwLock = new(sync.RWMutex)
+	nr.bloomFilter.Start()
 	return nr
 }
 
@@ -256,7 +257,7 @@ func (nr *nsManagerImpl) Stop() error {
 	if err := nr.jvmManager.Stop(); err != nil {
 		logger.Errorf("Stop hyperjvm error %v", err)
 	}
-	nr.bloomfilter.Close()
+	nr.bloomFilter.Close()
 	nr.status.setState(closed)
 	logger.Noticef("NamespaceManager stopped!")
 	return nil
@@ -314,7 +315,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return ErrCannotNewNs
 	}
 	nr.addNamespace(ns)
-	if err := nr.bloomfilter.Register(name); err != nil {
+	if err := nr.bloomFilter.Register(name); err != nil {
 		logger.Error("register bloom filter failed", err.Error())
 		return err
 	}
@@ -338,7 +339,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 		logger.Warningf("namespace %s not exist, please register first.", name)
 		return ErrNoSuchNamespace
 	}
-	nr.bloomfilter.UnRegister(name)
+	nr.bloomFilter.UnRegister(name)
 	logger.Criticalf("namespace: %s stopped", name)
 	//TODO: need to delete the data and stop listen del node.
 	return nil
