@@ -327,9 +327,9 @@ func (rbft *rbftImpl) findNextPrePrepareBatch() (find bool, digest string, resul
 			continue
 		}
 
-		// restrict the speed of sending prePrepare，and in view change, when send new view,
+		// restrict the speed of sending prePrepare, and in view change, when send new view,
 		// we need to assign seqNo and there is an upper limit. So we cannot break the high watermark.
-		if !rbft.sendInWV(rbft.view, n) {
+		if !rbft.sendInW(n) {
 			rbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because "+
 				"batch seqNo=%d is out of sequence numbers", rbft.id, digest, n)
 			rbft.batchVdr.currentVid = nil // don't send this message this time, send it after move watermark
@@ -478,7 +478,7 @@ func (rbft *rbftImpl) recvPrepare(prep *Prepare) error {
 			return nil
 		} else {
 			// this is abnormal in common case
-			rbft.logger.Warningf("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
+			rbft.logger.Infof("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
 				prep.ReplicaId, prep.View, prep.SequenceNumber)
 			return nil
 		}
@@ -575,7 +575,7 @@ func (rbft *rbftImpl) recvCommit(commit *Commit) error {
 			return nil
 		} else {
 			// this is abnormal in common case
-			rbft.logger.Warningf("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
+			rbft.logger.Infof("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
 				commit.ReplicaId, commit.View, commit.SequenceNumber)
 			return nil
 		}
@@ -642,11 +642,36 @@ func (rbft *rbftImpl) recvFetchMissingTransaction(fetch *FetchMissingTransaction
 	rbft.logger.Debugf("Primary %d received FetchMissingTransaction request for view=%d/seqNo=%d from replica %d",
 		rbft.id, fetch.View, fetch.SequenceNumber, fetch.ReplicaId)
 
-	txList, err := rbft.batchMgr.txPool.ReturnFetchTxs(fetch.BatchDigest, fetch.HashList)
-	if err != nil {
-		rbft.logger.Warningf("Primary %d cannot find the digest %d, missing txs: %v",
-			rbft.id, fetch.BatchDigest, fetch.HashList)
-		return nil
+	var txList []*types.Transaction
+	var err error
+
+	if batch := rbft.storeMgr.txBatchStore[fetch.BatchDigest]; batch != nil {
+		i := 0
+		// If all transactions in fetch missingHashList are in this batch, they should keep the order
+		// So we can find them all by scanning this batch in order.
+		batchLen := len(batch.HashList)
+		for _, hash := range fetch.HashList {
+			for i < batchLen {
+				if batch.HashList[i] == hash {
+					txList = append(txList, batch.TxList[i])
+					i++
+					break
+				}
+				i++
+			}
+
+			if i == batchLen && len(txList) != len(fetch.HashList) {
+				rbft.logger.Error("Unmatch tx hash after receive return fetch txList")
+				return nil
+			}
+		}
+	} else {
+		txList, err = rbft.batchMgr.txPool.ReturnFetchTxs(fetch.BatchDigest, fetch.HashList)
+		if err != nil {
+			rbft.logger.Warningf("Primary %d cannot find the digest %d, missing txList: %v, err: %s",
+				rbft.id, fetch.BatchDigest, fetch.HashList, err)
+			return nil
+		}
 	}
 
 	re := &ReturnMissingTransaction{

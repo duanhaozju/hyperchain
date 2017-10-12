@@ -95,9 +95,9 @@ func (rbft *rbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
 	payload, err := persist.ReadStateSet(rbft.namespace, "qset.")
 	if err == nil {
 		for key, set := range payload {
-			var v, n, vid uint64
+			var v, n uint64
 			var d string
-			if _, err = fmt.Sscanf(key, "qset.%d.%d.%d.%s", &v, &n, &vid, &d); err != nil {
+			if _, err = fmt.Sscanf(key, "qset.%d.%d.%s", &v, &n, &d); err != nil {
 				rbft.logger.Warningf("Replica %d could not restore qset key %s", rbft.id, key)
 			} else {
 				preprep := &PrePrepare{}
