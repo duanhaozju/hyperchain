@@ -2,7 +2,7 @@ package api
 
 import (
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
 	flt "hyperchain/manager/filter"
@@ -158,7 +158,7 @@ func (admin *Archive) QueryArchiveExist(filterId string) (bool, error) {
 	if err, manifest = manifestHandler.Read(filterId); err != nil {
 		return false, &common.SnapshotErr{Message: err.Error()}
 	}
-	err, genesis := edb.GetGenesisTag(admin.namespace)
+	genesis, err := edb.GetGenesisTag(admin.namespace)
 	if err != nil {
 		return false, &common.SnapshotErr{Message: err.Error()}
 	}

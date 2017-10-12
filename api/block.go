@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/types"
 )
 
@@ -76,7 +76,7 @@ func (blk *Block) GetBlockByHash(hash common.Hash) (*BlockResult, error) {
 
 // GenesisBlock returns current genesis block number.
 func (blk *Block) GenesisBlock() (uint64, error) {
-	err, genesis := edb.GetGenesisTag(blk.namespace)
+	genesis, err := edb.GetGenesisTag(blk.namespace)
 	return genesis, &common.CallbackError{Message: err.Error()}
 }
 
@@ -327,7 +327,7 @@ func (blk *Block) QueryEvmAvgTime(args IntervalArgs) (int64, error) {
 }
 
 func (blk *Block) QueryTPS(args IntervalTime) (string, error) {
-	err, ret := edb.CalBlockGPS(blk.namespace, int64(args.StartTime), int64(args.Endtime))
+	ret, err := edb.CalBlockGPS(blk.namespace, int64(args.StartTime), int64(args.Endtime))
 	if err != nil {
 		return "", &common.CallbackError{Message: err.Error()}
 	}
@@ -339,7 +339,7 @@ func (blk *Block) QueryWriteTime(args IntervalArgs) (*StatisticResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	err, ret := edb.GetBlockWriteTime(blk.namespace, int64(trueArgs.from), int64(trueArgs.to))
+	ret, err := edb.GetBlockWriteTime(blk.namespace, trueArgs.from, trueArgs.to)
 	if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
 	}

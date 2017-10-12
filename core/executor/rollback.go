@@ -1,7 +1,7 @@
 package executor
 
 import (
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"

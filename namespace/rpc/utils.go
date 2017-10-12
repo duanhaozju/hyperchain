@@ -6,9 +6,9 @@ import (
 	"context"
 	"hyperchain/common"
 	"reflect"
+	"strconv"
 	"unicode"
 	"unicode/utf8"
-	"strconv"
 )
 
 // Is this an exported - upper case - name?

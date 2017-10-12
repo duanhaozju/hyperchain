@@ -58,7 +58,7 @@ func (notifier *Notifier) waittingReq() {
 
 	for {
 		select {
-		case ctx := <-common.CtxCh: 	// receive a request to subscribe
+		case ctx := <-common.CtxCh: // receive a request to subscribe
 			log.Debug("receive context request")
 			notifier, supported := NotifierFromContext(ctx)
 			if !supported {
@@ -72,7 +72,7 @@ func (notifier *Notifier) waittingReq() {
 			notifier.subChs.SubscriptionCh <- rpcSub
 
 			go notifier.waittingSubData(rpcSub)
-		case <-notifier.Closed():		// connection closed
+		case <-notifier.Closed(): // connection closed
 			log.Debug("quit request listener of this connection")
 			return
 

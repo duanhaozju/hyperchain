@@ -2,7 +2,7 @@ package executor
 
 import (
 	"github.com/golang/protobuf/proto"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 )
@@ -49,7 +49,7 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction, snapshotId string)
 		return nil
 	} else {
 		// persist execution result to local
-		err, _ := edb.PersistReceipt(executor.db.NewBatch(), receipt, true, true)
+		_, err := edb.PersistReceipt(executor.db.NewBatch(), receipt, true, true)
 		if err != nil {
 			executor.logger.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err

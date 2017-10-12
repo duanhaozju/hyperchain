@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
-	"hyperchain/core/db_utils"
+	"hyperchain/core/ledger/db_utils"
 	"hyperchain/core/types"
 	"sync"
 	"sync/atomic"

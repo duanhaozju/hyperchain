@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	SubscribeMethodSuffix    = "_subscribe"
-	UnsubscribeMethodSuffix  = "_unsubscribe"
+	SubscribeMethodSuffix   = "_subscribe"
+	UnsubscribeMethodSuffix = "_unsubscribe"
 )
 
 // ID defines a pseudo random number that is used to identify RPC subscriptions.
@@ -46,15 +46,15 @@ type SubChs struct {
 
 	SubscriptionCh chan *Subscription
 	NotifyDataCh   chan NotifyPayload
-	Err            chan error       	// error happened in the context
-	closed         chan interface{} 	// connection close
-	closer		   sync.Once		    // close once
+	Err            chan error       // error happened in the context
+	closed         chan interface{} // connection close
+	closer         sync.Once        // close once
 }
 
 var (
 	// CtxCh channel will input a context when api service receive a request to subscribe, while notifier will
 	// output it in a for loop and then create a subscription, this subscription will be input SubChs.SubscriptionCh.
-	CtxCh     chan context.Context
+	CtxCh chan context.Context
 
 	// subChsMap records current websocket connection resource, releases resource when error happened or connection closed.
 	subChsMap map[context.Context]*SubChs

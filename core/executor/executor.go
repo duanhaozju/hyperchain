@@ -5,7 +5,7 @@ package executor
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/ledger/state"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/jcee/go"

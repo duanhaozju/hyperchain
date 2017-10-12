@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	JSONRPCVersion         = "2.0"
+	JSONRPCVersion = "2.0"
 )
 
 // JSON-RPC request
@@ -52,7 +52,7 @@ type jsonSubscription struct {
 
 // JSON-RPC notification
 type jsonNotification struct {
-	Version string `json:"jsonrpc"`
+	Version   string           `json:"jsonrpc"`
 	Namespace string           `json:"namespace"`
 	Result    jsonSubscription `json:"result"`
 }

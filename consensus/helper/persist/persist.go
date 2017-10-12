@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"encoding/base64"
-	ndb "hyperchain/core/db_utils"
+	ndb "hyperchain/core/ledger/db_utils"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb/db"
 )
@@ -22,7 +22,7 @@ type Persister interface {
 	GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte)
 	GetBlockHeightAndHash(namespace string) (uint64, string)
 	GetHeightOfChain(namespace string) uint64
-	GetGenesisOfChain(namespace string) (error, uint64)
+	GetGenesisOfChain(namespace string) (uint64, error)
 }
 
 type persisterImpl struct {
@@ -103,6 +103,6 @@ func (persister *persisterImpl) GetHeightOfChain(namespace string) uint64 {
 }
 
 // GetGenesisOfChain returns the genesis block info of the ledger with the given namespace
-func (persister *persisterImpl) GetGenesisOfChain(namespace string) (error, uint64) {
+func (persister *persisterImpl) GetGenesisOfChain(namespace string) (uint64, error) {
 	return ndb.GetGenesisTag(namespace)
 }

@@ -2,9 +2,10 @@ package executor
 
 import (
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
-	"hyperchain/core/db_utils/codec/v1.2"
 	er "hyperchain/core/errors"
+	"hyperchain/core/ledger/codec"
+	"hyperchain/core/ledger/codec/consensus"
+	"hyperchain/core/ledger/codec/v1_2"
 	"hyperchain/core/types"
 )
 
@@ -42,8 +43,9 @@ func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Tr
 
 	if flush == false {
 		var (
-			data []byte
-			err  error
+			data    []byte
+			err     error
+			encoder codec.Encoder
 		)
 		// Determine the serialization policy based on the data structure version tag.
 		// The purpose is to be compatible with older version of the block chain data.
@@ -53,9 +55,11 @@ func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Tr
 		case "1.1":
 			fallthrough
 		case "1.2":
-			data, err = v1_2.EncodeTransaction(transaction)
+			encoder = new(v1_2.V1_2Encoder)
+			data, err = encoder.EncodeTransaction(transaction)
 		default:
-			data, err = edb.EncodeTransaction(transaction)
+			encoder = new(consensus.ConEncoder)
+			data, err = encoder.EncodeTransaction(transaction)
 		}
 		if err != nil {
 			executor.logger.Errorf("[Namespace = %s] invalid receipt struct to marshal! error msg, ", executor.namespace, err.Error())
@@ -83,8 +87,9 @@ func (executor *Executor) calculateReceiptFingerprint(tx *types.Transaction, rec
 	}
 	if flush == false {
 		var (
-			data []byte
-			err  error
+			data    []byte
+			err     error
+			encoder codec.Encoder
 		)
 		// Determine the serialization policy based on the data structure version tag.
 		// The purpose is to be compatible with older version of the block chain data.
@@ -94,9 +99,11 @@ func (executor *Executor) calculateReceiptFingerprint(tx *types.Transaction, rec
 		case "1.1":
 			fallthrough
 		case "1.2":
-			data, err = v1_2.EncodeReceipt(receipt)
+			encoder = new(v1_2.V1_2Encoder)
+			data, err = encoder.EncodeReceipt(receipt)
 		default:
-			data, err = edb.EncodeReceipt(receipt)
+			encoder = new(consensus.ConEncoder)
+			data, err = encoder.EncodeReceipt(receipt)
 		}
 		if err != nil {
 			executor.logger.Errorf("[Namespace = %s] invalid receipt struct to marshal! error msg, ", executor.namespace, err.Error())
