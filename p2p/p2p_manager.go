@@ -22,13 +22,13 @@ type P2PManager interface {
 	// Start starts services under this namespace.
 	Start() error
 
-	//Stop stops services under this namespace.
+	// Stop stops services under this namespace.
 	Stop() error
 
-	//Restart restarts services under this namespace.
+	// Restart restarts services under this namespace.
 	Restart() error
 
-	//GetPeerManager returns a PeerManager instance.
+	// GetPeerManager returns a PeerManager instance.
 	GetPeerManager(namespace string, conf *viper.Viper, eventMux *event.TypeMux, delChan chan bool) (PeerManager, error)
 }
 

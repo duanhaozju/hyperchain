@@ -31,7 +31,7 @@ type Peer struct {
 	logger    *logging.Logger
 }
 
-//NewPeer get a new peer which chat/greeting/whisper functions
+// NewPeer create and returns a new Peer instance.
 func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, net *network.HyperNet, chts *hts.ClientHTS, evhub *event.TypeMux) (*Peer, error) {
 	peer := &Peer{
 		info:      info.NewInfo(id, hostname, namespace),
@@ -49,15 +49,16 @@ func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, ne
 	return peer, nil
 }
 
-//implements the WeightItem interface
+// Weight returns the node ID.
 func (peer *Peer) Weight() int {
 	return peer.info.Id
 }
+
 func (peer *Peer) Value() interface{} {
 	return peer
 }
 
-//Chat send a stream message to remote peer
+// Chat sends a stream message to remote peer.
 func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
 	peer.logger.Debug("Chat msg to ", peer.info.Hostname)
 	//here will wrapper the message
@@ -83,7 +84,7 @@ func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
 	return resp, nil
 }
 
-//Whisper send a whisper message to remote peer
+// Whisper sends a whisper message to remote peer.
 func (peer *Peer) Whisper(in *pb.Message) (*pb.Message, error) {
 	in.From = &pb.Endpoint{
 		Field:    []byte(peer.local.GetNameSpace()),
@@ -104,7 +105,7 @@ func (peer *Peer) Whisper(in *pb.Message) (*pb.Message, error) {
 	return response, nil
 }
 
-//Greeting send a greeting message to remote peer
+// Greeting sends a greeting message to remote peer.
 func (peer *Peer) Greeting(in *pb.Message) (*pb.Message, error) {
 	in.From = &pb.Endpoint{
 		Field:    []byte(peer.local.GetNameSpace()),
@@ -119,7 +120,7 @@ func (peer *Peer) Greeting(in *pb.Message) (*pb.Message, error) {
 	return response, nil
 }
 
-//Serialize the peer
+// Serialize serialize the peer information.
 func (peer *Peer) Serialize() []byte {
 	ps := struct {
 		Hostname  string `json:"hostname"`
@@ -136,8 +137,8 @@ func (peer *Peer) Serialize() []byte {
 	return b
 }
 
-//Unserialize the peer
-func PeerUnSerialize(raw []byte) (hostname string, namespace string, hash string, err error) {
+// PeerDeSerialize deserialize the peer information.
+func PeerDeSerialize(raw []byte) (hostname string, namespace string, hash string, err error) {
 	ps := &struct {
 		Hostname  string `json:"hostname"`
 		Namespace string `json:"namespace"`
@@ -174,7 +175,7 @@ func PeerUnSerialize(raw []byte) (hostname string, namespace string, hash string
                                <------------
 */
 
-//this is peer should do things
+// session key negotiation
 func (peer *Peer) clientHello(isOrg, isRec bool) error {
 	peer.logger.Debug("send client hello message")
 	// if self return nil do not need verify

@@ -19,6 +19,7 @@ type Server struct {
 	sec      *Sec
 }
 
+// NewServer creates and returns a new hypernet server instance.
 func NewServer(identifier string, cn chan [2]string, sec *Sec) *Server {
 	return &Server{
 		selfIdentifier: identifier,
@@ -32,7 +33,7 @@ func (s *Server) Claim() string {
 	return s.selfIdentifier
 }
 
-// StartServer start the gRPC server
+// StartServer creates a the gRPC server and listens gRPC port.
 func (s *Server) StartServer(port string) error {
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
@@ -47,20 +48,28 @@ func (s *Server) StartServer(port string) error {
 	return nil
 }
 
+// StopServer stops the gRPC server.
 func (s *Server) StopServer() {
 	if s.server != nil {
 		s.server.Stop()
 	}
 }
 
+// RegisterSlot registers a handler to slot under the namespace for specific message type,
+// if the slot under the namespace doesn't exist, create a new slot instance for the namespace.
+// Parameter `filed` is namespace name.
 func (s *Server) RegisterSlot(filed string, msgType pb.MsgType, msgHandler msg.MsgHandler) error {
 	if s.slots == nil {
 		s.slots = msg.NewMsgSlots()
 	}
 
 	if slot, err := s.slots.GetSlot(filed); err == nil {
+
+		// if slot under the namespace exists, register handler
 		slot.Register(msgType, msgHandler)
 	} else {
+
+		// if there is no slot under the namespace, create it and register handler
 		slot = msg.NewMsgSlot()
 		slot.Register(msgType, msgHandler)
 		s.slots.Register(filed, slot)
@@ -70,6 +79,7 @@ func (s *Server) RegisterSlot(filed string, msgType pb.MsgType, msgHandler msg.M
 	return nil
 }
 
+// DeregisterSlot deregisters a handler from a slot under given namespace name.
 func (s *Server) DeregisterSlot(filed string, msgType pb.MsgType) error {
 	slot, e := s.slots.GetSlot(filed)
 	if e != nil {
@@ -79,6 +89,7 @@ func (s *Server) DeregisterSlot(filed string, msgType pb.MsgType) error {
 	return nil
 }
 
+// DeregisterSlots deregisters a slot from slot set.
 func (s *Server) DeregisterSlots(filed string) {
 	if slot, err := s.slots.GetSlot(filed); err == nil {
 		slot.Clear()
@@ -86,7 +97,7 @@ func (s *Server) DeregisterSlots(filed string) {
 	s.slots.DeRegister(filed)
 }
 
-// dibi data tranfer
+// Chat chats with remote peer by bi-directional streaming.
 func (s Server) Chat(ccServer Chat_ChatServer) error {
 	if s.slots == nil {
 		return errors.New(fmt.Sprintf("this server (%s) hasn't register any handler.cannot handle this massage", s.selfIdentifier))
@@ -125,7 +136,7 @@ func (s Server) Chat(ccServer Chat_ChatServer) error {
 	return nil
 }
 
-// Greeting doube arrow greeting message transfer
+// Greeting will execute handler for given message type.
 func (s Server) Greeting(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
 	if msg.From != nil && msg.From.Hostname != nil && msg.From.Extend != nil && msg.From.Extend.IP != nil {
 		go func(from, ip string) {
@@ -150,11 +161,12 @@ func (s Server) Greeting(ctx context.Context, msg *pb.Message) (*pb.Message, err
 	return nil, errors.New(fmt.Sprintf("This message type is not support, %v", msg.MessageType))
 }
 
-// Whisper Transfer the the node health information
+// Whisper will execute handler for given message type.
 func (s Server) Whisper(ctx context.Context, msg *pb.Message) (*pb.Message, error) {
+
+	// if the server doesn't connect to client, to connect
 	if msg.From != nil && msg.From.Hostname != nil && msg.From.Extend != nil && msg.From.Extend.IP != nil {
 		go func(from, ip string) {
-			//fmt.Println("check to reverse...",from,ip)
 			m := [2]string{from, ip}
 			s.hostchan <- m
 		}(string(msg.From.Hostname), string(msg.From.Extend.IP))
@@ -184,7 +196,7 @@ func (s Server) Whisper(ctx context.Context, msg *pb.Message) (*pb.Message, erro
 	return nil, errors.New(fmt.Sprintf("This message type is not support, %v", msg.MessageType))
 }
 
-// Discuss Transfer the the node health information
+// Discuss transfers the the node health information.
 func (s Server) Discuss(ctx context.Context, pkg *pb.Package) (*pb.Package, error) {
 	if pkg.Type == pb.ControlType_Close {
 		logger.Warning("[Discuss] close this peer (current will not close the remote peer)")

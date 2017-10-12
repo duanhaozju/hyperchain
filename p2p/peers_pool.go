@@ -284,7 +284,7 @@ func PeerPoolUnmarshal(raw []byte) ([]string, error) {
 	}
 	hostnames := make([]string, 0)
 	for _, peers := range pools.Routers {
-		h, _, _, e := PeerUnSerialize([]byte(peers))
+		h, _, _, e := PeerDeSerialize([]byte(peers))
 		if e != nil {
 			fmt.Errorf("cannot unmarsal peer,%s", e.Error())
 			continue

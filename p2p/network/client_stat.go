@@ -70,7 +70,6 @@ func (c *Client) s_Closed(e *fsm.Event) {
 	logger.Info("client was closed")
 }
 
-// client stat change and keep methods
 func (c *Client) working() {
 	go func(c *Client) {
 		ticker := time.NewTicker(c.cconf.keepAliveDuration)
@@ -102,7 +101,7 @@ func (c *Client) working() {
 	}(c)
 }
 
-// when the connection is pending, keep recoverying
+// when the connection is pending, keep recoverying.
 func (c *Client) pending() {
 	go func(c *Client) {
 		ticker := time.NewTicker(c.cconf.pendingDuration)
@@ -127,7 +126,7 @@ func (c *Client) pending() {
 	}(c)
 }
 
-// reborn reset the connection
+// reborn resets the connection.
 func (c *Client) reborn() {
 	logger.Infof("recovery successful, and restart working (%s)", c.addr)
 	c.connPool.Release()

@@ -57,7 +57,6 @@ type peerManagerImpl struct {
 	peerPool *PeersPool // peerPool stores all the peer instance under the current namespace
 	peercnf *peerCnf 	// peercnf is for persisting the config
 
-	// todo handler channel
 	blackHole chan interface{}
 
 	// this channel will input value true if one node in current namespace was deleted,
@@ -73,7 +72,7 @@ type peerManagerImpl struct {
 	peerMgrSub     	cmap.ConcurrentMap	// peer manager event subscription
 
 	pendingChan  	chan struct{}		// the channel to wait for new peer to attend
-	pendingSkMap cmap.ConcurrentMap		// todo
+	pendingSkMap cmap.ConcurrentMap		// the session key readying to update of peer
 
 	logger *logging.Logger
 }
@@ -288,7 +287,7 @@ func (pmgr *peerManagerImpl) GetLocalNodeHash() string {
 	return pmgr.node.info.Hash
 }
 
-// todo GetRouterHashifDelete returns after delete specific peer, the router table hash , self new id and the delete id
+// GetRouterHashifDelete returns routing table hash after deleting specific peer.
 func (pmgr *peerManagerImpl) GetRouterHashifDelete(hash string) (afterDelRouterHash string, selfNewId uint64, delID uint64) {
 	afterDelRouterHash, selfNewId, delID, err := pmgr.peerPool.TryDelete(pmgr.GetLocalNodeHash(), hash)
 	if err != nil {
@@ -481,7 +480,7 @@ func (pmgr *peerManagerImpl) prepare() error {
 		return err
 	}
 
-	// bind the handler of the specified message type
+	// bind the handler of the specified message type to node
 	clientHelloHandler := msg.NewClientHelloHandler(serverHTS, pmgr.peerMgrEv, pmgr.node.info, pmgr.isOrg, pmgr.logger)
 	pmgr.node.Bind(pb.MsgType_CLIENTHELLO, clientHelloHandler)
 
@@ -934,8 +933,8 @@ func (pmgr *peerManagerImpl) sendMsgNVP(msgType pb.MsgType, payLoad []byte, nvpL
 	if !pmgr.isOnline() || !pmgr.IsVP() {
 		return nil
 	}
-	// use IterBuffered for better performance
-	for t := range pmgr.peerPool.nvpPool.Iter() {
+
+	for t := range pmgr.peerPool.nvpPool.IterBuffered() {
 		for _, nvphash := range nvpList {
 			if nvphash != t.Key {
 				continue

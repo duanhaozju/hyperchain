@@ -7,7 +7,6 @@ type PeerManager interface {
 	DeleteNode
 	MsgSender
 	InfoGetter
-	// initialize the peerManager which is for init the local node
 	Start() error
 	Stop()
 }
@@ -15,12 +14,10 @@ type PeerManager interface {
 // MsgSender sends message to other peers.
 type MsgSender interface {
 
-	// Broadcast broadcasts message to peers.
-	// todo 向所有已连接的vp广播？
+	// Broadcast broadcasts message to VP peers.
 	Broadcast(payLoad []byte)
 
-	// SendMsg sends a message to specific peer.(UNICAST)
-	// todo 向指定VP发送？
+	// SendMsg sends a message to specific VP peer.(UNICAST)
 	SendMsg(payLoad []byte, peerList []uint64)
 
 	// SendRandomVP sends a message to a random VP.
@@ -52,7 +49,7 @@ type DeleteNode interface {
 	// GetLocalNodeHash returns local node hash.
 	GetLocalNodeHash() string
 
-	//todo GetRouterHashifDelete
+	// GetRouterHashifDelete returns routing table hash after deleting specific peer.
 	GetRouterHashifDelete(hash string) (string, uint64, uint64)
 
 	// DeleteNode delete the specific hash node.
