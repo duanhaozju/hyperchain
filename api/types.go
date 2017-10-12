@@ -92,7 +92,7 @@ func (n Number) ToUint64() uint64 {
 	return uint64(n)
 }
 
-func (n Number) ToInt() int {
+func (n Number) Int() int {
 	if n <= 0 {
 		return 0
 	}
