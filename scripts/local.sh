@@ -103,6 +103,8 @@ do
     fi
 
     cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
+    rm -rf ${DUMP_PATH}/node${j}/peerconfigs
+    rm -rf ${DUMP_PATH}/node${j}/tls
     #peerconfig.toml
     cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.toml
     cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/ns_2e6160583867/config/peerconfig.toml
@@ -132,7 +134,10 @@ do
     cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/ns_2e6160583867/config/certs/
 
     #certs
-    cp -rf  ${CONF_PATH}/tls ${DUMP_PATH}/node${j}/
+    mkdir ${DUMP_PATH}/node${j}/tls
+    cp -rf  ${CONF_PATH}/tls/tls_peer${j}.cert ${DUMP_PATH}/node${j}/tls/tls_peer.cert
+    cp -rf  ${CONF_PATH}/tls/tls_peer${j}.priv ${DUMP_PATH}/node${j}/tls/tls_peer.priv
+    cp -rf  ${CONF_PATH}/tls/tlsca.ca ${DUMP_PATH}/node${j}/tls/tlsca.ca
 
     # distribute hypercli
     if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
