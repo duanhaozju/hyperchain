@@ -87,7 +87,7 @@ func (h *hyperchain) restart() {
 
 type argT struct {
 	cli.Helper
-	Version		  bool	`cli:"version" usage:"get the version of hyperchain"`
+	Version		  bool	 `cli:"v,version" usage:"get the version of hyperchain"`
 	RestoreEnable bool   `cli:"r,restore" usage:"enable restore system status from dumpfile"`
 	SId           string `cli:"sid" usage:"use to specify snapshot" dft:""`
 	Namespace     string `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
