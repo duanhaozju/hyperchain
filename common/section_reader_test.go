@@ -1,3 +1,6 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
+
 package common
 
 import (
@@ -16,7 +19,7 @@ func init() {
 func TestSectionReader_ReatAt(t *testing.T) {
 	var filesize int64 = 10005
 	var shardLen int64 = 100
-	buf := RandStringRunes(int(filesize))
+	buf := RandBytes(filesize)
 	ioutil.WriteFile("tmp", buf, 0644)
 	defer os.Remove("tmp")
 
@@ -39,7 +42,7 @@ func TestSectionReader_ReatAt(t *testing.T) {
 func TestSectionReader_ReadNext(t *testing.T) {
 	var filesize int64 = 1000005
 	var shardLen int64 = 1000
-	buf := RandStringRunes(int(filesize))
+	buf := RandBytes(int(filesize))
 	ioutil.WriteFile("tmp", buf, 0644)
 	defer os.Remove("tmp")
 
@@ -72,14 +75,4 @@ func TestSectionReader_ReadNext(t *testing.T) {
 	if bytes.Compare(buf, newBuf) != 0 {
 		t.Error("different content")
 	}
-}
-
-var letterBytes = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-func RandStringRunes(n int) []byte {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return b
 }

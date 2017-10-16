@@ -6,6 +6,9 @@ import (
 	"regexp"
 )
 
+// This file implements the handler of Certificate service API which
+// can be invoked by client in JSON-RPC request.
+
 type CertArgs struct {
 	Pubkey string `json:"pubkey"`
 }
@@ -26,7 +29,7 @@ func NewCertAPI(namespace string, cm *admittance.CAManager) *Cert {
 	}
 }
 
-// GetNodes returns status of all the nodes
+// GetTCert creates a new tcert for the given public key.
 func (node *Cert) GetTCert(args CertArgs) (*TCertReturn, error) {
 	log := common.GetLogger(node.namespace, "api")
 	if node.cm == nil {
@@ -38,12 +41,12 @@ func (node *Cert) GetTCert(args CertArgs) (*TCertReturn, error) {
 		return nil, &common.InvalidParamsError{Message: "Invalid params, please use hex string"}
 	}
 
-	//tcert, err := node.cm.SignTCert(args.Pubkey)
 	tcert, err := node.cm.GenTCert(args.Pubkey)
 	if err != nil {
 		log.Error(err)
 		return nil, &common.CertError{Message: "Signed tcert failed"}
 	}
+
 	err = admittance.RegisterCert([]byte(tcert))
 	if err != nil {
 		log.Error(err)

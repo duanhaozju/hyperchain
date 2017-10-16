@@ -1,8 +1,0 @@
-syntax = "proto3";
-package types;
-
-message BlockWrapper {
-    bytes blockVersion = 1;
-    bytes block = 2;
-}
-

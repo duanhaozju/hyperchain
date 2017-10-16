@@ -8,7 +8,7 @@ import (
 )
 
 // PbftStatus is used to store all the status in rbft
-type PbftStatus struct {
+type RbftStatus struct {
 	byzantine         int32 // whether this node is intentionally acting as byzantine
 	activeView        int32 // track if replica is in active view
 	skipInProgress    int32 // set when we have detested a fall behind scenario until we pick a new starting point
@@ -29,26 +29,26 @@ type PbftStatus struct {
 }
 
 // activeState sets the states to true
-func (status PbftStatus) activeState(stateName ...*int32) {
+func (status RbftStatus) activeState(stateName ...*int32) {
 	for _, s := range stateName {
 		atomic.StoreInt32(s, ON)
 	}
 }
 
 // inActiveState sets the states to false
-func (status PbftStatus) inActiveState(stateName ...*int32) {
+func (status RbftStatus) inActiveState(stateName ...*int32) {
 	for _, s := range stateName {
 		atomic.StoreInt32(s, OFF)
 	}
 }
 
 // getState returns the state of specified state name, true means ON, false means OFF
-func (status PbftStatus) getState(stateName *int32) bool {
+func (status RbftStatus) getState(stateName *int32) bool {
 	return atomic.LoadInt32(stateName) == ON
 }
 
 // checkStatesAnd checks the result of several status computed with each other using '&&'
-func (status PbftStatus) checkStatesAnd(stateName ...*int32) bool {
+func (status RbftStatus) checkStatesAnd(stateName ...*int32) bool {
 	var rs bool = true
 	for _, s := range stateName {
 		rs = rs && status.getState(s)
@@ -57,7 +57,7 @@ func (status PbftStatus) checkStatesAnd(stateName ...*int32) bool {
 }
 
 // checkStatesOr checks the result of several status computed with each other using '||'
-func (status PbftStatus) checkStatesOr(stateName ...*int32) bool {
+func (status RbftStatus) checkStatesOr(stateName ...*int32) bool {
 	var rs bool = false
 	for _, s := range stateName {
 		rs = rs || status.getState(s)

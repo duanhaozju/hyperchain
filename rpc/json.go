@@ -20,8 +20,7 @@ import (
 )
 
 const (
-	JSONRPCVersion         = "2.0"
-	serviceMethodSeparator = "_"
+	JSONRPCVersion = "2.0"
 )
 
 // JSON-RPC request
@@ -41,6 +40,7 @@ type JSONResponse struct {
 	Code      int         `json:"code"`
 	Message   string      `json:"message"`
 	Result    interface{} `json:"result,omitempty"`
+	Info      interface{} `json:"info,omitempty"`
 }
 
 // JSON-RPC notification payload
@@ -52,16 +52,14 @@ type jsonSubscription struct {
 
 // JSON-RPC notification
 type jsonNotification struct {
-	Version string `json:"jsonrpc"`
-	//Method  	string           	`json:"method"`
-	//Params  	jsonSubscription 	`json:"params"`
+	Version   string           `json:"jsonrpc"`
 	Namespace string           `json:"namespace"`
 	Result    jsonSubscription `json:"result"`
 }
 
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It
 // also has support for parsing arguments and serializing (result) objects.
-type jsonCodec struct {
+type jsonCodecImpl struct {
 	closer sync.Once          // close closed channel once
 	closed chan interface{}   // closed on Close
 	decMu  sync.Mutex         // guards d
@@ -78,7 +76,7 @@ type jsonCodec struct {
 func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.NamespaceManager, conn *websocket.Conn) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
-	return &jsonCodec{
+	return &jsonCodecImpl{
 		closed: make(chan interface{}),
 		d:      d,
 		e:      json.NewEncoder(rwc),
@@ -89,8 +87,9 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 	}
 }
 
-// CheckHttpHeaders will check http header.
-func (c *jsonCodec) CheckHttpHeaders(namespace string, method string) common.RPCError {
+// CheckHttpHeaders will check http header. If it is verified, client has access to interact with the server,
+// otherwise, unauthorized error will be returned.
+func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common.RPCError {
 	ns := c.nr.GetNamespaceByName(namespace)
 	if ns == nil {
 		return &common.NamespaceNotFound{Name: namespace}
@@ -104,6 +103,7 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string, method string) common.RPC
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
+	// parse certificate
 	tcertPem := common.TransportDecode(c.req.Header.Get("tcert"))
 	tcert, err := primitives.ParseCertificate([]byte(tcertPem))
 	if err != nil {
@@ -111,15 +111,7 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string, method string) common.RPC
 		return &common.UnauthorizedError{}
 	}
 
-	/**
-	Review 如果客户端没有tcert 则会用ecert充当tcert，此时需要验证是否合法
-	由于tcert 应当是用ecert签出的，那么应该同时可以被根证书验证通过，但是
-	问题是ecert之间无法相互验证，所有的tcert 和ecert都应该用 eca.ca验证
-	这样可以确保所有的签名都可以验证通过
-	在sdk端需要生成相应的signature 需要用私钥对数据进行签名
-	签名算法为 ECDSAWithSHA256
-	这部分需要SDK端实现，hyperchain端已经实现了验证方法
-	*/
+	// verify signature
 	pubKey := tcert.PublicKey.(*(ecdsa.PublicKey))
 	signature := c.req.Header.Get("signature")
 	msg := common.TransportDecode(c.req.Header.Get("msg"))
@@ -131,6 +123,7 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string, method string) common.RPC
 		return &common.UnauthorizedError{}
 	}
 
+	// verfiy tcert
 	verifyTcert, err := cm.VerifyTCert(tcertPem, method)
 	if verifyTcert == false || err != nil {
 		log.Error("Fail to verify tcert!", err)
@@ -139,10 +132,10 @@ func (c *jsonCodec) CheckHttpHeaders(namespace string, method string) common.RPC
 	return nil
 }
 
-// ReadRequestHeaders will read new requests without parsing the arguments. It will
+// ReadRawRequest will read new requests without parsing the arguments. It will
 // return a collection of requests, an indication if these requests are in batch
 // form or an error when the incoming message could not be read/parsed.
-func (c *jsonCodec) ReadRequestHeaders(options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
+func (c *jsonCodecImpl) ReadRawRequest(options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
@@ -157,8 +150,8 @@ func (c *jsonCodec) ReadRequestHeaders(options CodecOption) ([]*common.RPCReques
 	return parseRequest(incomingMsg, options)
 }
 
-// GatAuthInfo read authentication info (token and method) from http header
-func (c *jsonCodec) GetAuthInfo() (string, string) {
+// GatAuthInfo read authentication info (token and method) from http header.
+func (c *jsonCodecImpl) GetAuthInfo() (string, string) {
 	token := c.req.Header.Get("Authorization")
 	method := c.req.Header.Get("Method")
 	return token, method
@@ -205,7 +198,7 @@ func parseRequest(incomingMsg json.RawMessage, options CodecOption) ([]*common.R
 	}
 
 	// subscribe are special, they will always use `subscribeMethod` as first param in the payload
-	if strings.HasSuffix(in.Method, SubscribeMethodSuffix) {
+	if strings.HasSuffix(in.Method, common.SubscribeMethodSuffix) {
 		if options == OptionMethodInvocation {
 			return nil, false, &common.CallbackError{Message: ErrNotificationsUnsupported.Error()}
 		}
@@ -221,20 +214,20 @@ func parseRequest(incomingMsg json.RawMessage, options CodecOption) ([]*common.R
 				return nil, false, &common.InvalidParamsError{Message: "Please give a subscription name as the first param"}
 			}
 
-			reqs[0].Service, reqs[0].Method = strings.TrimSuffix(in.Method, SubscribeMethodSuffix), subscribeMethod[0]
+			reqs[0].Service, reqs[0].Method = strings.TrimSuffix(in.Method, common.SubscribeMethodSuffix), subscribeMethod[0]
 			reqs[0].Params = in.Payload
 			return reqs, false, nil
 		}
 		return nil, false, &common.InvalidRequestError{Message: "Unable to parse subscription request"}
 	}
 
-	if strings.HasSuffix(in.Method, UnsubscribeMethodSuffix) {
+	if strings.HasSuffix(in.Method, common.UnsubscribeMethodSuffix) {
 		return []*common.RPCRequest{{Id: &in.Id, IsPubSub: true,
 			Method: in.Method, Params: in.Payload}}, false, nil
 	}
 
 	// regular RPC call
-	elems := strings.Split(in.Method, serviceMethodSeparator)
+	elems := strings.Split(in.Method, common.ServiceMethodSeparator)
 	if len(elems) != 2 {
 		return nil, false, &common.MethodNotFoundError{Service: in.Method, Method: ""}
 	}
@@ -262,7 +255,7 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool,
 
 		id := &in[i].Id
 
-		elems := strings.Split(r.Method, serviceMethodSeparator)
+		elems := strings.Split(r.Method, common.ServiceMethodSeparator)
 		if len(elems) != 2 {
 			return nil, true, &common.MethodNotFoundError{Service: r.Method, Method: ""}
 		}
@@ -278,7 +271,7 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool,
 }
 
 // CreateResponse will create a JSON-RPC success response with the given id and reply as result.
-func (c *jsonCodec) CreateResponse(id interface{}, namespace string, reply interface{}) interface{} {
+func (c *jsonCodecImpl) CreateResponse(id interface{}, namespace string, reply interface{}) interface{} {
 	if isHexNum(reflect.TypeOf(reply)) {
 		return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
 	}
@@ -286,38 +279,37 @@ func (c *jsonCodec) CreateResponse(id interface{}, namespace string, reply inter
 }
 
 // CreateErrorResponse will create a JSON-RPC error response with the given id and error.
-func (c *jsonCodec) CreateErrorResponse(id interface{}, namespace string, err common.RPCError) interface{} {
+func (c *jsonCodecImpl) CreateErrorResponse(id interface{}, namespace string, err common.RPCError) interface{} {
 	return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: err.Code(), Message: err.Error()}
 }
 
 // CreateErrorResponseWithInfo will create a JSON-RPC error response with the given id and error.
 // info is optional and contains additional information about the error. When an empty string is passed it is ignored.
-func (c *jsonCodec) CreateErrorResponseWithInfo(id interface{}, namespace string, err common.RPCError, info interface{}) interface{} {
-	return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: err.Code(), Message: err.Error(), Result: info}
+func (c *jsonCodecImpl) CreateErrorResponseWithInfo(id interface{}, namespace string, err common.RPCError, info interface{}) interface{} {
+	return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: err.Code(), Message: err.Error(), Info: info}
 }
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
-func (s *jsonCodec) CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{} {
+func (s *jsonCodecImpl) CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{} {
 	if isHexNum(reflect.TypeOf(event)) {
-		//return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace, Method: service + NotificationMethodSuffix,
 		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace,
 			Result: jsonSubscription{Subscription: fmt.Sprintf(`%s`, subid), Data: fmt.Sprintf(`%#x`, event)}}
 	}
 
-	//return &jsonNotification{Version: JSONRPCVersion,  Namespace: namespace, Method: service + NotificationMethodSuffix,
 	return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace,
 		Result: jsonSubscription{Event: method, Subscription: fmt.Sprintf(`%s`, subid), Data: event}}
 }
 
-// Write message to client
-func (c *jsonCodec) Write(res interface{}) error {
+// Write will write response to client.
+func (c *jsonCodecImpl) Write(res interface{}) error {
 	c.encMu.Lock()
 	defer c.encMu.Unlock()
 
 	return c.e.Encode(res)
 }
 
-func (c *jsonCodec) WriteNotify(res interface{}) error {
+// WriteNotify will write websocket message to client.
+func (c *jsonCodecImpl) WriteNotify(res interface{}) error {
 	c.encMu.Lock()
 	defer c.encMu.Unlock()
 
@@ -345,15 +337,15 @@ func (c *jsonCodec) WriteNotify(res interface{}) error {
 	return nil
 }
 
-// Close the underlying connection
-func (c *jsonCodec) Close() {
+// Close will close the underlying connection.
+func (c *jsonCodecImpl) Close() {
 	c.closer.Do(func() {
 		close(c.closed)
 		c.rw.Close()
 	})
 }
 
-// Closed returns a channel which will be closed when Close is called
-func (c *jsonCodec) Closed() <-chan interface{} {
+// Closed returns a channel which will be closed when Close is called.
+func (c *jsonCodecImpl) Closed() <-chan interface{} {
 	return c.closed
 }

@@ -4,21 +4,22 @@ package api
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"github.com/juju/ratelimit"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/evm/compiler"
 	"hyperchain/crypto/hmEncryption"
 	"hyperchain/manager"
-	"hyperchain/manager/event"
 	"math/big"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// This file implements the handler of Contract service API which
+// can be invoked by client in JSON-RPC request.
 
 type Contract struct {
 	namespace   string
@@ -27,6 +28,7 @@ type Contract struct {
 	config      *common.Config
 }
 
+// NewPublicContractAPI creates and returns a new Contract instance for given namespace name.
 func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common.Config) *Contract {
 	log := common.GetLogger(namespace, "api")
 	fillrate, err := getFillRate(namespace, config, CONTRACT)
@@ -47,86 +49,48 @@ func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common
 	}
 }
 
-func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace string) (common.Hash, error) {
+// DeployContract deploys contract.
+func (contract *Contract) DeployContract(args SendTxArgs) (common.Hash, error) {
+	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
+		return common.Hash{}, &common.SystemTooBusyError{}
+	}
+	return contract.postContract(args, 1)
+}
+
+// InvokeContract invokes contract.
+func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
+	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
+		return common.Hash{}, &common.SystemTooBusyError{}
+	}
+	return contract.postContract(args, 2)
+}
+
+// MaintainContract maintains contract, including upgrade contract, freeze contract and unfreeze contract.
+func (contract *Contract) MaintainContract(args SendTxArgs) (common.Hash, error) {
+	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
+		return common.Hash{}, &common.SystemTooBusyError{}
+	}
+	return contract.postContract(args, 4)
+}
+
+// postContract will create a new transaction instance and post a NewTxEvent event.
+func (contract *Contract) postContract(args SendTxArgs, txType int) (common.Hash, error) {
 	consentor := contract.eh.GetConsentor()
 	normal, full := consentor.GetStatus()
 	if !normal || full {
-		return common.Hash{}, &common.SystemTooBusyError{Message: "system is too busy to response "}
+		return common.Hash{}, &common.SystemTooBusyError{}
 	}
 
-	log := common.GetLogger(namespace, "api")
-
-	var tx *types.Transaction
-	realArgs, err := prepareExcute(args, txType)
+	// 1. create a new transaction instance
+	tx, err := prepareTransaction(args, txType, contract.namespace, contract.eh)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
-	payload := common.FromHex(realArgs.Payload)
-
-	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
-		realArgs.Value.ToInt64(), payload, realArgs.Opcode, []byte(realArgs.Extra), parseVmType(realArgs.VmType))
-
-	value, err := proto.Marshal(txValue)
+	// 2. post a event.NewTxEvent event
+	err = postNewTxEvent(args, tx, contract.eh)
 	if err != nil {
-		return common.Hash{}, &common.CallbackError{Message: err.Error()}
-	}
-
-	if args.To == nil {
-		tx = types.NewTransaction(realArgs.From[:], nil, value, realArgs.Timestamp, realArgs.Nonce)
-
-	} else {
-		tx = types.NewTransaction(realArgs.From[:], (*realArgs.To)[:], value, realArgs.Timestamp, realArgs.Nonce)
-	}
-	if contract.eh.NodeIdentification() == manager.IdentificationVP {
-		tx.Id = uint64(contract.eh.GetPeerManager().GetNodeId())
-	} else {
-		hash := contract.eh.GetPeerManager().GetLocalNodeHash()
-		err := tx.SetNVPHash(hash)
-		if err != nil {
-			log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
-			return common.Hash{}, &common.MarshalError{Message: "marshal nvp hash error"}
-		}
-	}
-	tx.Signature = common.FromHex(realArgs.Signature)
-	tx.TransactionHash = tx.Hash().Bytes()
-	//delete repeated tx
-	var exist bool
-	if err, exist = edb.LookupTransaction(contract.namespace, tx.GetHash()); err != nil || exist == true {
-		exist, _ = edb.JudgeTransactionExist(contract.namespace, tx.TransactionHash)
-	}
-
-	if exist {
-		return common.Hash{}, &common.RepeadedTxError{Message: "repeated tx " + common.ToHex(tx.TransactionHash)}
-	}
-
-	// Unsign Test
-	if !tx.ValidateSign(contract.eh.GetAccountManager().Encryption, kec256Hash) {
-		log.Error("invalid signature")
-		// ATTENTION, return invalid transactino directly
-		return common.Hash{}, &common.SignatureInvalidError{Message: "invalid signature"}
-	}
-
-	if contract.eh.NodeIdentification() == manager.IdentificationNVP {
-		ch := make(chan bool)
-		go contract.eh.GetEventObject().Post(event.NewTxEvent{
-			Transaction: tx,
-			Simulate:    args.Simulate,
-			SnapshotId:  args.SnapshotId,
-			Ch:          ch,
-		})
-		res := <-ch
-		close(ch)
-		if res == false {
-			return common.Hash{}, &common.CallbackError{Message: "send tx to nvp failed."}
-		}
-
-	} else {
-		go contract.eh.GetEventObject().Post(event.NewTxEvent{
-			Transaction: tx,
-			Simulate:    args.Simulate,
-			SnapshotId:  args.SnapshotId,
-		})
+		return common.Hash{}, err
 	}
 	return tx.GetHash(), nil
 
@@ -138,7 +102,7 @@ type CompileCode struct {
 	Types []string `json:"types"`
 }
 
-// ComplieContract complies contract to ABI
+// ComplieContract complies solidity contract. It will return abi, bin and contract name.
 func (contract *Contract) CompileContract(ct string) (*CompileCode, error) {
 	abi, bin, names, err := compiler.CompileSourcefile(ct)
 
@@ -153,29 +117,6 @@ func (contract *Contract) CompileContract(ct string) (*CompileCode, error) {
 	}, nil
 }
 
-// DeployContract deploys contract.
-func (contract *Contract) DeployContract(args SendTxArgs) (common.Hash, error) {
-	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{Message: "system is too busy to response "}
-	}
-	return deployOrInvoke(contract, args, 1, contract.namespace)
-}
-
-// InvokeContract invokes contract.
-func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
-	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{Message: "system is too busy to response "}
-	}
-	return deployOrInvoke(contract, args, 2, contract.namespace)
-}
-
-func (contract *Contract) MaintainContract(args SendTxArgs) (common.Hash, error) {
-	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
-		return common.Hash{}, &common.SystemTooBusyError{Message: "system is too busy to response "}
-	}
-	return deployOrInvoke(contract, args, 4, contract.namespace)
-}
-
 // GetCode returns the code from the given contract address.
 func (contract *Contract) GetCode(addr common.Address) (string, error) {
 	log := common.GetLogger(contract.namespace, "api")
@@ -188,14 +129,14 @@ func (contract *Contract) GetCode(addr common.Address) (string, error) {
 
 	acc := stateDb.GetAccount(addr)
 	if acc == nil {
-		return "", &common.AccountNotExistError{Message: addr.Hex()}
+		return "", &common.AccountNotExistError{Address: addr.Hex()}
 	}
 
 	return fmt.Sprintf(`0x%x`, stateDb.GetCode(addr)), nil
 }
 
-// GetContractCountByAddr returns the number of contract that has been deployed by given account address,
-// if addr is nil, returns the number of all the contract that has been deployed.
+// GetContractCountByAddr returns the number of contract that has been deployed by given account address.
+// If account doesn't exist, error will be returned.
 func (contract *Contract) GetContractCountByAddr(addr common.Address) (*Number, error) {
 
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
@@ -205,41 +146,58 @@ func (contract *Contract) GetContractCountByAddr(addr common.Address) (*Number, 
 
 	acc := stateDb.GetAccount(addr)
 	if acc == nil {
-		return nil, &common.AccountNotExistError{Message: addr.Hex()}
+		return nil, &common.AccountNotExistError{Address: addr.Hex()}
 	}
 
-	return NewUint64ToNumber(stateDb.GetNonce(addr)), nil
+	return uint64ToNumber(stateDb.GetNonce(addr)), nil
 
 }
 
+// EncryptoArgs specifies parameters for Contract.EncryptoMessage function call.
 type EncryptoArgs struct {
-	Balance   Number `json:"balance"`
-	Amount    Number `json:"amount"`
-	HmBalance string `json:"hmBalance"`
+
+	// The balance(plain text) of account A before transferring money to account B.
+	Balance Number `json:"balance"`
+
+	// The amount(plain text) that account A will transfer to account B.
+	Amount Number `json:"amount"`
+
+	// InvalidHmValue is optional. It represents invalid homomorphic encryption transaction amount of account A
+	// when a person transfers money(amount homomorphic encryption) to A that can't be verified by account A.
+	//
+	// For example, account C transfers 10 dollars to account A, but this transaction fails to pass validation
+	// of account A. Therefore, account A saves 10 value encrypted as invalid homomorphic encryption value.
+	InvalidHmValue string `json:"invalidHmValue"`
 }
 
 type HmResult struct {
+
+	// The homomorphic sum of the homomorphic encryption balance of account A after transferring money to
+	// account B (balance - amount) and invalid homomorphic value of account A.
 	NewBalance_hm string `json:"newBalance"`
-	Amount_hm     string `json:"amount"`
+
+	// The amount(homomorphic encryption text) that account A will transfer to account B.
+	Amount_hm string `json:"amount"`
 }
 
+// EncryptoMessage encrypts data by homomorphic encryption.
 func (contract *Contract) EncryptoMessage(args EncryptoArgs) (*HmResult, error) {
 
 	balance_bigint := new(big.Int)
-	balance_bigint.SetInt64(args.Balance.ToInt64())
+	balance_bigint.SetInt64(args.Balance.Int64())
 
 	amount_bigint := new(big.Int)
-	amount_bigint.SetInt64(args.Amount.ToInt64())
+	amount_bigint.SetInt64(args.Amount.Int64())
 	var isValid bool
 	var newBalance_hm []byte
 	var amount_hm []byte
 
-	if args.HmBalance == "" {
+	if args.InvalidHmValue == "" {
 		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(),
 			amount_bigint.Bytes(), nil, getPaillierPublickey(contract.config))
 	} else {
 		hmBalance_bigint := new(big.Int)
-		hmBalance_bigint.SetString(args.HmBalance, 10)
+		hmBalance_bigint.SetString(args.InvalidHmValue, 10)
 		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(),
 			amount_bigint.Bytes(), hmBalance_bigint.Bytes(), getPaillierPublickey(contract.config))
 	}
@@ -257,20 +215,36 @@ func (contract *Contract) EncryptoMessage(args EncryptoArgs) (*HmResult, error) 
 	}, nil
 }
 
-type ValueArgs struct {
-	RawValue   []int64  `json:"rawValue"`
+// CheckArgs specifies parameters for Contract.CheckHmValue function call.
+type CheckArgs struct {
+
+	// All unverified transaction amount list (plain text).
+	// For example, account A transfers 10 dollars to B twice, RawValue is [10,10].
+	RawValue []int64 `json:"rawValue"`
+
+	// All unverified transaction amount list (homomorphic encryption).
+	// For example, account A transfers 10 dollars to B twice, EncryValue is [(encrypted 10), (encrypted 10)].
 	EncryValue []string `json:"encryValue"`
-	Illegalhm  string   `json:"illegalhm"`
+
+	// Invalid homomorphic encryption value of account B.
+	Illegalhm string `json:"illegalhm"`
 }
 
 type HmCheckResult struct {
-	CheckResult        []bool `json:"checkResult"`
+
+	// Data validation results.
+	// For example, account A transfers 10 dollars to B twice, but the first transfer validation fails,
+	// CheckResult is [false, true]
+	CheckResult []bool `json:"checkResult"`
+
+	// The homomorphic sum of all invalid homomorphic encryption transaction amount of B.
 	SumIllegalHmAmount string `json:"illegalHmAmount"`
 }
 
-func (contract *Contract) CheckHmValue(args ValueArgs) (*HmCheckResult, error) {
+// CheckHmValue returns verification result that account B verifies transaction amount that account A transfers to B.
+func (contract *Contract) CheckHmValue(args CheckArgs) (*HmCheckResult, error) {
 	if len(args.RawValue) != len(args.EncryValue) {
-		return nil, &common.InvalidParamsError{Message: "invalid params, the length of rawValue is " +
+		return nil, &common.InvalidParamsError{Message: "Invalid params, the length of rawValue is " +
 			strconv.Itoa(len(args.RawValue)) + ", but the length of encryValue is " +
 			strconv.Itoa(len(args.EncryValue))}
 	}
@@ -303,55 +277,27 @@ func (contract *Contract) CheckHmValue(args ValueArgs) (*HmCheckResult, error) {
 	}, nil
 }
 
-// GetStorageByAddr returns the storage by given contract address and bock number.
-// The method is offered for hyperchain internal test.
-func (contract *Contract) GetStorageByAddr(addr common.Address) (map[string]string, error) {
-	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
-
-	if err != nil {
-		return nil, err
-	}
-	mp := make(map[string]string)
-
-	if obj := stateDb.GetAccount(addr); obj == nil {
-		return nil, &common.AccountNotExistError{Message: addr.Hex()}
-	} else {
-		cb := func(key common.Hash, value []byte) bool {
-			return true
-		}
-		storages := obj.ForEachStorage(cb)
-		if len(storages) == 0 {
-			return nil, nil
-		}
-
-		for k, v := range storages {
-			mp[k.Hex()] = common.Bytes2Hex(v)
-		}
-	}
-	return mp, nil
-}
-
-// GetDeployedList return all deployed contracts list (include suicided)
+// GetDeployedList returns all deployed contracts list (including destroyed).
 func (contract *Contract) GetDeployedList(addr common.Address) ([]string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
 		return nil, err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return nil, &common.AccountNotExistError{Message: addr.Hex()}
+		return nil, &common.AccountNotExistError{Address: addr.Hex()}
 	} else {
 		return stateDb.GetDeployedContract(addr), nil
 	}
 }
 
-// GetCreator return creator address
+// GetCreator returns contract creator address.
 func (contract *Contract) GetCreator(addr common.Address) (common.Address, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
 		return common.Address{}, err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return common.Address{}, &common.AccountNotExistError{Message: addr.Hex()}
+		return common.Address{}, &common.AccountNotExistError{Address: addr.Hex()}
 	} else {
 		if !isContractAccount(stateDb, addr) {
 			return common.Address{}, nil
@@ -360,14 +306,14 @@ func (contract *Contract) GetCreator(addr common.Address) (common.Address, error
 	}
 }
 
-// GetStatus return contract status
+// GetStatus returns current contract status.
 func (contract *Contract) GetStatus(addr common.Address) (string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
 		return "", err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return "", &common.AccountNotExistError{Message: addr.Hex()}
+		return "", &common.AccountNotExistError{Address: addr.Hex()}
 	} else {
 		status := stateDb.GetStatus(addr)
 		if !isContractAccount(stateDb, addr) {
@@ -384,14 +330,14 @@ func (contract *Contract) GetStatus(addr common.Address) (string, error) {
 	}
 }
 
-// GetCreateTime return contract status
+// GetCreateTime returns contract creation time.
 func (contract *Contract) GetCreateTime(addr common.Address) (string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
 		return "", err
 	}
 	if obj := stateDb.GetAccount(addr); obj == nil {
-		return "", &common.AccountNotExistError{Message: addr.Hex()}
+		return "", &common.AccountNotExistError{Address: addr.Hex()}
 	} else {
 		if !isContractAccount(stateDb, addr) {
 			return "", nil
@@ -399,24 +345,10 @@ func (contract *Contract) GetCreateTime(addr common.Address) (string, error) {
 		blkNum := stateDb.GetCreateTime(addr)
 		blk, err := edb.GetBlockByNumber(contract.namespace, blkNum)
 		if err != nil {
-			return "", &common.LeveldbNotFoundError{Message: "create block doesn't exist"}
+			return "", &common.DBNotFoundError{Type: BLOCK, Id: fmt.Sprintf("number %#x", blkNum)}
 		}
 		return time.Unix(blk.Timestamp/1e9, blk.Timestamp%1e9).String(), nil
 	}
-}
-
-// Deprecated
-func (contract *Contract) GetArchive(addr common.Address, date string) (map[string]map[string]string, error) {
-	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
-	if err != nil {
-		return nil, err
-	}
-
-	if obj := stateDb.GetAccount(addr); obj == nil {
-		return nil, &common.AccountNotExistError{Message: addr.Hex()}
-	}
-
-	return stateDb.ShowArchive(addr, date), nil
 }
 
 func getBlockStateDb(namespace string, config *common.Config) (vm.Database, error) {

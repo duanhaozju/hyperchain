@@ -14,21 +14,35 @@ import (
 	"time"
 )
 
+// This file defines JVM related functions. In hyperchain, we use two
+// kinds of executor, which EVM is the default executor, and JVM is
+// an optional.
+
 const (
 	BinHome    = "hyperjvm/bin"
 	StartShell = "start_hyperjvm.sh"
 	StopShell  = "stop_hyperjvm.sh"
 )
 
+// JvmManager manages the JVM executor.
 type JvmManager struct {
-	ledgerProxy *ledger.LedgerProxy  // ledger server handler, use to support ledger service
-	jvmCli      jvm.ContractExecutor // system jvm client, for health maintain
-	logger      *logging.Logger      // logger
-	conf        *common.Config
-	exit        chan bool
-	lsofPath    string
+	// ledger server handler, use to support ledger service
+	ledgerProxy *ledger.LedgerProxy
+
+	// system jvm client, for health maintain
+	jvmCli jvm.ContractExecutor
+
+	// lsofPath is used to locate "lsof" as different systems may not
+	// contain this executable file, we must locate it before using it
+	// to check the monitoring of specific ports.
+	lsofPath string
+
+	logger *logging.Logger
+	conf   *common.Config
+	exit   chan bool
 }
 
+// NewJvmManager returns a JvmManager instance using given config.
 func NewJvmManager(conf *common.Config) *JvmManager {
 	return &JvmManager{
 		ledgerProxy: ledger.NewLedgerProxy(conf),
@@ -39,7 +53,8 @@ func NewJvmManager(conf *common.Config) *JvmManager {
 	}
 }
 
-// Start turn on jvm service, include set up a ledger server, start jvm and establish a jvm connect for health check.
+// Start turns on jvm service, including setting up a ledger server, starting
+// jvm and establishing a jvm connection for health check.
 func (mgr *JvmManager) Start() error {
 	if err := mgr.startLedgerServer(); err != nil {
 		return err
@@ -52,7 +67,7 @@ func (mgr *JvmManager) Start() error {
 	return nil
 }
 
-// Start turn off jvm service.
+// Start turns off jvm service.
 func (mgr *JvmManager) Stop() error {
 	if err := mgr.stopLedgerServer(); err != nil {
 		return err
@@ -64,6 +79,7 @@ func (mgr *JvmManager) Stop() error {
 	return nil
 }
 
+// startLedgerServer starts the hyperchain ledger server.
 func (mgr *JvmManager) startLedgerServer() error {
 	err := mgr.ledgerProxy.Server()
 	if err != nil {
@@ -72,6 +88,7 @@ func (mgr *JvmManager) startLedgerServer() error {
 	return nil
 }
 
+// startJvmServer starts the Jvm server.
 func (mgr *JvmManager) startJvmServer() error {
 	mgr.logger.Noticef("Try to start jvm server")
 	binHome, err := getBinDir()
@@ -96,12 +113,14 @@ func (mgr *JvmManager) startJvmServer() error {
 	return nil
 }
 
+// stopLedgerServer stops the ledger server.
 func (mgr *JvmManager) stopLedgerServer() error {
 	mgr.ledgerProxy.StopServer()
 	mgr.logger.Info("stop ledger server success")
 	return nil
 }
 
+// stopJvmServer stops the Jvm server.
 func (mgr *JvmManager) stopJvmServer() error {
 	binHome, err := getBinDir()
 	if err != nil {
@@ -117,6 +136,7 @@ func (mgr *JvmManager) stopJvmServer() error {
 	return nil
 }
 
+// startJvmServerDaemon starts to check the heartbeat of Jvm server.
 func (mgr *JvmManager) startJvmServerDaemon() {
 	time.Sleep(10 * time.Second)
 	ticker := time.NewTicker(2 * time.Second)
@@ -134,6 +154,7 @@ func (mgr *JvmManager) startJvmServerDaemon() {
 	}
 }
 
+// restartJvmServer restarts the Jvm server.
 func (mgr *JvmManager) restartJvmServer() {
 	mgr.logger.Info("try to restart jvm server")
 	err := mgr.startJvmServer()
@@ -146,10 +167,12 @@ func (mgr *JvmManager) startLedgerServerDaemon() {
 
 }
 
+// notifyToExit defines the exit interface of Jvm server.
 func (mgr *JvmManager) notifyToExit() {
 	mgr.exit <- true
 }
 
+// checkJvmExist checks if Jvm server is running.
 func (mgr *JvmManager) checkJvmExist() bool {
 	noLsof := true
 	if len(mgr.lsofPath) == 0 {
@@ -188,6 +211,8 @@ func (mgr *JvmManager) checkJvmExist() bool {
 	}
 }
 
+// findExecutable locates and checks if there exists the specific
+// executable file.
 func findExecutable(file string) error {
 	d, err := os.Stat(file)
 	if err != nil {
@@ -199,6 +224,7 @@ func findExecutable(file string) error {
 	return os.ErrPermission
 }
 
+// getBinDir returns the bin directory.
 func getBinDir() (string, error) {
 	cur, err := os.Getwd()
 	if err != nil {

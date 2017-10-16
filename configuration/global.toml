@@ -31,6 +31,7 @@ console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shor
     core        = "NOTICE"
     hyperdb     = "NOTICE"
     eventhub    = "NOTICE"
+    jsonrpc     = "NOTICE"
 
 ##########################################################
 #
@@ -38,11 +39,14 @@ console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shor
 #
 ##########################################################
 [http]
+# allowedOrigins should be a comma-separated list of allowed origin URLs
+# to allow connections with any origin, pass "*".
+allowedOrigins=["*"]
 # if true, it will enable secure http connection(https).
 security    = false
 # if true, use http/2, otherwise use http/1.1.
 # WARN: if version_2 is true, option sercurity must be true, otherwise use default http/1.1 without https.
-version_2   = true
+http_2   = false
 
 ##########################################################
 #
@@ -135,3 +139,4 @@ expiration = "300s"
  interval          = 24
  rebuild_time      = 3
  bloombit          = 100000000
+ active_time       = "24h"

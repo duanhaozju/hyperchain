@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
-	"time"
 )
 
 const (
@@ -25,17 +24,14 @@ var (
 )
 
 type wsServerImpl struct {
-	stopHp    chan bool
-	restartHp chan bool
-	nr        namespace.NamespaceManager
-	port      int
+	nr     namespace.NamespaceManager
+	port   int
+	config *common.Config
 
-	wsConns          map[*websocket.Conn]*Notifier
-	wsConnsMux       sync.Mutex
-	wsHandler        *Server
-	wsListener       net.Listener
-	wsAllowedOrigins []string // allowedOrigins should be a comma-separated list of allowed origin URLs.
-	// To allow connections with any origin, pass "*".
+	wsConns    map[*websocket.Conn]*Notifier
+	wsConnsMux sync.Mutex
+	wsHandler  *Server
+	wsListener net.Listener
 }
 
 type httpReadWriteCloser struct {
@@ -43,15 +39,14 @@ type httpReadWriteCloser struct {
 	io.WriteCloser
 }
 
-func GetWSServer(nr namespace.NamespaceManager, stopHp chan bool, restartHp chan bool) internalRPCServer {
+// GetWSServer creates and returns a new wsServerImpl instance implements internalRPCServer interface.
+func GetWSServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
 	if wsS == nil {
 		wsS = &wsServerImpl{
-			stopHp:           stopHp,
-			restartHp:        restartHp,
-			nr:               nr,
-			wsAllowedOrigins: []string{"*"},
-			wsConns:          make(map[*websocket.Conn]*Notifier),
-			port:             nr.GlobalConfig().GetInt(common.WEBSOCKET_PORT),
+			nr:      nr,
+			wsConns: make(map[*websocket.Conn]*Notifier),
+			port:    config.GetInt(common.WEBSOCKET_PORT),
+			config:  config,
 		}
 	}
 	return wsS
@@ -67,9 +62,8 @@ func (wssi *wsServerImpl) start() error {
 	)
 
 	// start websocket listener
-	handler := NewServer(wssi.nr, wssi.stopHp, wssi.restartHp)
+	handler := NewServer(wssi.nr, wssi.config)
 	if listener, err = net.Listen("tcp", fmt.Sprintf(":%d", wssi.port)); err != nil {
-		log.Errorf("%v", err)
 		return err
 	}
 	go wssi.newWSServer(handler).Serve(listener)
@@ -91,11 +85,9 @@ func (wssi *wsServerImpl) stop() error {
 	if wssi.wsHandler != nil {
 		wssi.wsHandler.Stop()
 		wssi.wsHandler = nil
-
-		time.Sleep(4 * time.Second)
 	}
 
-	// todo this loop may be wrapped by a lock
+	// todo this loop may be wrapped by a lock?
 	// close all the opened connection, and release its resource
 	for c, n := range wssi.wsConns {
 		wssi.closeConnection(n, c)
@@ -138,6 +130,8 @@ func (wssi *wsServerImpl) newWSServer(srv *Server) *http.Server {
 // newWebsocketHandler returns a handler that serves JSON-RPC to WebSocket connections.
 func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		// upgrading an HTTP connection to a WebSocket connection
 		upgrader := websocket.Upgrader{
 			ReadBufferSize:  ReadBufferSize,
 			WriteBufferSize: WriteBufferSize,
@@ -155,11 +149,10 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 
 		ctx, cancel := context.WithCancel(context.Background())
 
-		//if options&OptionSubscriptions == OptionSubscriptions {
+		// create a notifier to push message for the connection
 		notifier := NewNotifier()
 		ctx = context.WithValue(ctx, NotifierKey{}, notifier)
 		notifier.subChs = common.GetSubChs(ctx)
-		//}
 
 		wssi.wsConnsMux.Lock()
 		wssi.wsConns[conn] = notifier
@@ -171,6 +164,7 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 		}()
 
 		for {
+			// waitting for new message from client
 			_, nr, err := conn.NextReader()
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
@@ -181,7 +175,6 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 
 			nw, err := conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				// TODO need write error
 				log.Error(err)
 				break
 			}
@@ -198,10 +191,12 @@ func (wssi *wsServerImpl) isOriginAllowed(origin string) bool {
 		return false
 	}
 
+	allowedOrigins := wssi.config.GetStringSlice(common.HTTP_ALLOWEDORIGINS)
+
 	if u, err := url.Parse(origin); err != nil {
 		return false
 	} else {
-		for _, o := range wssi.wsAllowedOrigins {
+		for _, o := range allowedOrigins {
 			if o == "*" {
 				return true
 			} else if o == u.Host {

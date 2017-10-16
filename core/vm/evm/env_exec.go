@@ -1,9 +1,24 @@
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 package evm
 
 import (
 	"hyperchain/common"
 	er "hyperchain/core/errors"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/evm/params"
@@ -43,6 +58,11 @@ func Create(env vm.Environment, caller vm.ContractRef, code []byte, gas, gasPric
 }
 
 func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int, op types.TransactionValue_Opcode) (ret []byte, addr common.Address, err error) {
+	var (
+		createAccount bool
+		from          = env.Db().GetAccount(caller.Address())
+		to            vm.Account
+	)
 	virtualMachine := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -52,24 +72,20 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		return nil, common.Address{}, er.ExecContractErr(1, "Max call depth exceeded 1024")
 	}
 
-	if !env.CanTransfer(caller.Address(), value) {
+	if env.Db().GetBalance(caller.Address()).Cmp(value) < 0 {
 		return nil, common.Address{}, er.ValueTransferErr("insufficient funds to transfer value. Req %v, has %v", value, env.Db().GetBalance(caller.Address()))
 	}
 
-	var createAccount bool
 	// create address
 	if address == nil {
 		// Create a new account on the state
+		// Increase account nonce if a new account has been created.
 		nonce := env.Db().GetNonce(caller.Address())
 		env.Db().SetNonce(caller.Address(), nonce+1)
 		addr = crypto.CreateAddress(caller.Address(), nonce)
 		address = &addr
 		createAccount = true
 	}
-	var (
-		from = env.Db().GetAccount(caller.Address())
-		to   vm.Account
-	)
 	if createAccount {
 		to = env.Db().CreateAccount(*address)
 	} else {
@@ -78,43 +94,17 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 		} else {
 			to = env.Db().GetAccount(*address)
 		}
-		if isSpecialOperation(op) && !isUpdate(op) {
-			switch {
-			case isFreeze(op):
-				if env.Db().GetStatus(to.Address()) == hyperstate.STATEOBJECT_STATUS_FROZON {
-					env.Logger().Warningf("try to freeze a frozen account %s", to.Address().Hex())
-					env.SetSnapshot(snapshotPreTransfer)
-					return nil, common.Address{}, er.ExecContractErr(1, "duplicate freeze operation")
-				}
-				if env.Db().GetCode(to.Address()) == nil {
-					env.Logger().Warningf("try to freeze a non-contract account %s", to.Address().Hex())
-					env.SetSnapshot(snapshotPreTransfer)
-					return nil, common.Address{}, er.ExecContractErr(1, "freeze a non-contract account")
-				}
-				env.Logger().Debugf("freeze account %s", to.Address().Hex())
-				env.Db().SetStatus(to.Address(), hyperstate.STATEOBJECT_STATUS_FROZON)
-			case isUnFreeze(op):
-				if env.Db().GetStatus(to.Address()) == hyperstate.STATEOBJECT_STATUS_NORMAL {
-					env.Logger().Warningf("try to unfreeze a normal account %s", to.Address().Hex())
-					env.SetSnapshot(snapshotPreTransfer)
-					return nil, common.Address{}, er.ExecContractErr(1, "duplicate unfreeze operation")
-				}
-				if env.Db().GetCode(to.Address()) == nil {
-					env.Logger().Warningf("try to unfreeze a non-contract account %s", to.Address().Hex())
-					env.SetSnapshot(snapshotPreTransfer)
-					return nil, common.Address{}, er.ExecContractErr(1, "unfreeze a non-contract account")
-				}
-				env.Logger().Debugf("unfreeze account %s", to.Address().Hex())
-				env.Db().SetStatus(to.Address(), hyperstate.STATEOBJECT_STATUS_NORMAL)
-			}
-			return nil, common.Address{}, nil
-		}
-		env.Transfer(from, to, value)
 	}
+	if err := manageAccount(env, op, to); err != nil {
+		env.SetSnapshot(snapshotPreTransfer)
+		return nil, common.Address{}, err
+	}
+	Transfer(from, to, value)
+
 	/*
 		RUN VM
 	*/
-	if env.Db().GetStatus(to.Address()) != hyperstate.STATEOBJECT_STATUS_NORMAL {
+	if env.Db().GetStatus(to.Address()) != state.OBJ_NORMAL {
 		env.Logger().Debugf("account %s has been frozen", to.Address().Hex())
 		env.SetSnapshot(snapshotPreTransfer)
 		return nil, common.Address{}, er.ExecContractErr(1, "Try to invoke a frozen contract")
@@ -178,7 +168,6 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 }
 
 func execDelegateCall(env vm.Environment, caller vm.ContractRef, originAddr, toAddr, codeAddr *common.Address, input, code []byte, gas, gasPrice, value *big.Int) (ret []byte, addr common.Address, err error) {
-	//fmt.Println("execDelegateCall")
 	virtualMachine := env.Vm()
 	// Depth check execution. Fail if we're trying to execute above the
 	// limit.
@@ -218,22 +207,52 @@ func Transfer(from, to vm.Account, amount *big.Int) {
 	to.AddBalance(amount)
 }
 
+// isUpdate judges the opcode is contract updation op.
 func isUpdate(opcode types.TransactionValue_Opcode) bool {
 	return opcode == types.TransactionValue_UPDATE
 }
 
+// isFreeze judges the opcode is contract freeze op.
 func isFreeze(opcode types.TransactionValue_Opcode) bool {
 	return opcode == types.TransactionValue_FREEZE
 }
 
+// isUnfreeze judges the opcode is contract unfreeze op.
 func isUnFreeze(opcode types.TransactionValue_Opcode) bool {
 	return opcode == types.TransactionValue_UNFREEZE
 }
 
-func isNormal(opcode types.TransactionValue_Opcode) bool {
-	return opcode == types.TransactionValue_NORMAL
-}
-
 func isSpecialOperation(op types.TransactionValue_Opcode) bool {
 	return op == types.TransactionValue_UPDATE || op == types.TransactionValue_FREEZE || op == types.TransactionValue_UNFREEZE
+}
+
+// manageAccount freeze or unfreeze a account with given op.
+func manageAccount(env vm.Environment, op types.TransactionValue_Opcode, to vm.Account) error {
+	if isSpecialOperation(op) && !isUpdate(op) {
+		switch {
+		case isFreeze(op):
+			if env.Db().GetStatus(to.Address()) == state.OBJ_FROZON {
+				env.Logger().Warningf("try to freeze a frozen account %s", to.Address().Hex())
+				return er.ExecContractErr(1, "duplicate freeze operation")
+			}
+			if env.Db().GetCode(to.Address()) == nil {
+				env.Logger().Warningf("try to freeze a non-contract account %s", to.Address().Hex())
+				return er.ExecContractErr(1, "freeze a non-contract account")
+			}
+			env.Logger().Debugf("freeze account %s", to.Address().Hex())
+			env.Db().SetStatus(to.Address(), state.OBJ_FROZON)
+		case isUnFreeze(op):
+			if env.Db().GetStatus(to.Address()) == state.OBJ_NORMAL {
+				env.Logger().Warningf("try to unfreeze a normal account %s", to.Address().Hex())
+				return er.ExecContractErr(1, "duplicate unfreeze operation")
+			}
+			if env.Db().GetCode(to.Address()) == nil {
+				env.Logger().Warningf("try to unfreeze a non-contract account %s", to.Address().Hex())
+				return er.ExecContractErr(1, "unfreeze a non-contract account")
+			}
+			env.Logger().Debugf("unfreeze account %s", to.Address().Hex())
+			env.Db().SetStatus(to.Address(), state.OBJ_NORMAL)
+		}
+	}
+	return nil
 }

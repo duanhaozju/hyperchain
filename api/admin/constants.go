@@ -2,12 +2,10 @@ package jsonrpc
 
 import (
 	"strings"
-	"time"
 )
 
-var expiration = 300 * time.Second
-
-const (
+// public/private key locations.
+var (
 	pri_key string = "./hypercli/keyconfigs/key/key"
 	pub_key string = "./hypercli/keyconfigs/key/key.pub"
 )
@@ -91,7 +89,7 @@ var nodeGroup = []int{node_getNodes, node_getNodeHash, node_delNode}
 
 var txGroup = []int{tx_getTransactionReceipt}
 
-// convertToScope converts method name to corresponding scope
+// convertToScope converts method name to corresponding scope.
 func convertToScope(method string) int {
 	method = toUpper(method)
 	switch method {
@@ -163,7 +161,7 @@ func convertToScope(method string) int {
 	}
 }
 
-// convertToIntegers converts scope to corresponding integers
+// convertToIntegers converts scope to corresponding integer.
 func convertToIntegers(scope string) []int {
 	switch scope {
 	case "server::stop":
@@ -252,6 +250,8 @@ func convertToIntegers(scope string) []int {
 	}
 }
 
+// ReadablePermission returns the user readable permission
+// of the given scope.
 func ReadablePermission(scope float64) string {
 	permission := int(scope)
 	switch permission {
@@ -319,10 +319,12 @@ func ReadablePermission(scope float64) string {
 		return "tx::getTransactionReceipt"
 
 	default:
-		return "Undified permission!"
+		return "Undefined permission!"
 	}
 }
 
+// getGroupPermission returns the group's permissions
+// of the given group name.
 func getGroupPermission(group string) permissionSet {
 	group = toUpper(group)
 	switch group {
@@ -350,6 +352,8 @@ func getGroupPermission(group string) permissionSet {
 	}
 }
 
+// rootScopes returns root user's permissions, which is
+// all the permissions.
 func rootScopes() permissionSet {
 	pset := make(permissionSet)
 	for i := 0; i < MAXNUM; i++ {
@@ -358,42 +362,52 @@ func rootScopes() permissionSet {
 	return pset
 }
 
+// defaultScopes returns the default user permissions.
 func defaultScopes() permissionSet {
 	return getScope(defaultGroup)
 }
 
+// namespaceScopes returns the namespace group permissions.
 func namespaceScopes() permissionSet {
 	return getScope(namespaceGroup)
 }
 
+// httpScopes returns the http group permissions.
 func httpScopes() permissionSet {
 	return getScope(httpGroup)
 }
 
+// logScopes returns the log group permissions.
 func logScopes() permissionSet {
 	return getScope(logGroup)
 }
 
+// authScopes returns the auth group permissions.
 func authScopes() permissionSet {
 	return getScope(authGroup)
 }
 
+// contractScopes returns the contract group permissions.
 func contractScopes() permissionSet {
 	return getScope(contractGroup)
 }
 
+// nodeScopes returns the node group permissions.
 func nodeScopes() permissionSet {
 	return getScope(nodeGroup)
 }
 
+// txScopes returns the transaction group permissions.
 func txScopes() permissionSet {
 	return getScope(txGroup)
 }
 
+// toUpper converts the given string to all upper letters.
 func toUpper(origin string) string {
 	return strings.ToUpper(origin)
 }
 
+// getScope returns the scopes, all users have the default scopes.
 func getScope(scope []int) permissionSet {
 	pset := make(permissionSet)
 	for _, pms := range scope {

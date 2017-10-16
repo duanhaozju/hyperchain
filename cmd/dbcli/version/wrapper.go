@@ -10,7 +10,7 @@ import (
 	"hyperchain/cmd/dbcli/version/versionAccount"
 	"hyperchain/cmd/dbcli/version/wrapper"
 	"hyperchain/common"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/state"
 	"hyperchain/hyperdb"
 	"os"
 	"regexp"
@@ -419,7 +419,7 @@ func (self *Version) GetChainHeight() (string, error) {
 
 /*-------------------------------------account--------------------------------------*/
 func (self *Version) GetAccountByAddress(address, path string, parameter *constant.Parameter) {
-	data, err := self.db.Get(hyperstate.CompositeAccountKey(common.Hex2Bytes(address)))
+	data, err := self.db.Get(state.CompositeAccountKey(common.Hex2Bytes(address)))
 	if err != nil {
 		fmt.Println(constant.ErrQuery.Error(), err.Error())
 		return
@@ -436,17 +436,17 @@ func (self *Version) GetAccountByAddress(address, path string, parameter *consta
 		return
 	}
 	if parameter.GetVerbose() {
-		code, _ := self.db.Get(hyperstate.CompositeCodeHash(common.Hex2Bytes(address), account.CodeHash))
+		code, _ := self.db.Get(state.CompositeCodeHash(common.Hex2Bytes(address), account.CodeHash))
 		prefixRes := account.EncodeVerbose(address, common.Bytes2Hex(code))
 		if path != "" {
 			utils.Append(file, prefixRes)
 		} else {
 			fmt.Println(utils.Decorate(prefixRes))
 		}
-		storageIt := self.db.NewIterator(hyperstate.GetStorageKeyPrefix(common.Hex2Bytes(address)))
+		storageIt := self.db.NewIterator(state.GetStorageKeyPrefix(common.Hex2Bytes(address)))
 		var storageRes string
 		for storageIt.Next() {
-			storageKey, _ := hyperstate.SplitCompositeStorageKey(common.Hex2Bytes(address), storageIt.Key())
+			storageKey, _ := state.SplitCompositeStorageKey(common.Hex2Bytes(address), storageIt.Key())
 			if storageRes != "" {
 				storageRes += ","
 				if path != "" {
@@ -492,7 +492,7 @@ func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
 	var accountAddress []string
 	iter := self.db.NewIterator([]byte(accountIdentifier))
 	for iter.Next() {
-		address, ok := hyperstate.SplitCompositeAccountKey(iter.Key())
+		address, ok := state.SplitCompositeAccountKey(iter.Key())
 		if ok == false {
 			fmt.Println(constant.ErrQuery.Error(), "split account address error.")
 			continue
@@ -503,7 +503,7 @@ func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
 
 	var result1 string
 	for index := 0; index < len(accountAddress); index++ {
-		data, err := self.db.Get(hyperstate.CompositeAccountKey(common.Hex2Bytes(accountAddress[index])))
+		data, err := self.db.Get(state.CompositeAccountKey(common.Hex2Bytes(accountAddress[index])))
 		if err != nil {
 			fmt.Println(constant.ErrQuery.Error(), err.Error())
 			break
@@ -523,7 +523,7 @@ func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
 					fmt.Println(utils.Decorate(result1))
 				}
 			}
-			code, _ := self.db.Get(hyperstate.CompositeCodeHash(common.Hex2Bytes(accountAddress[index]), account.CodeHash))
+			code, _ := self.db.Get(state.CompositeCodeHash(common.Hex2Bytes(accountAddress[index]), account.CodeHash))
 			prefixRes := account.EncodeVerbose(accountAddress[index], common.Bytes2Hex(code))
 			prefixRes = strings.Replace("\t"+prefixRes, "\n", "\n\t", -1)
 			if path != "" {
@@ -531,10 +531,10 @@ func (self *Version) GetAllAccount(path string, parameter *constant.Parameter) {
 			} else {
 				fmt.Println(utils.Decorate(prefixRes))
 			}
-			storageIt := self.db.NewIterator(hyperstate.GetStorageKeyPrefix(common.Hex2Bytes(accountAddress[index])))
+			storageIt := self.db.NewIterator(state.GetStorageKeyPrefix(common.Hex2Bytes(accountAddress[index])))
 			var storageRes string
 			for storageIt.Next() {
-				storageKey, _ := hyperstate.SplitCompositeStorageKey(common.Hex2Bytes(accountAddress[index]), storageIt.Key())
+				storageKey, _ := state.SplitCompositeStorageKey(common.Hex2Bytes(accountAddress[index]), storageIt.Key())
 				if storageRes != "" {
 					storageRes += ","
 					if path != "" {
@@ -653,7 +653,7 @@ func (self *Version) RevertDB(ns, globalConf, path string, number uint64, parame
 		fmt.Println(constant.ErrQuery.Error(), err.Error())
 		return
 	}
-	stateDb, err := hyperstate.New(root, db, nil, config, uint64(height), ns)
+	stateDb, err := state.New(root, db, nil, config, uint64(height), ns)
 	if err != nil {
 		fmt.Println(constant.ErrQuery.Error(), err.Error())
 		return
@@ -676,18 +676,18 @@ func (self *Version) RevertDB(ns, globalConf, path string, number uint64, parame
 
 func DefaultConfig() *common.Config {
 	config := common.NewRawConfig()
-	config.Set(hyperstate.GlobalDataNodeCacheSize, 10000)
-	config.Set(hyperstate.GlobalDataNodeCacheLength, 20)
+	config.Set(state.GlobalDataNodeCacheSize, 10000)
+	config.Set(state.GlobalDataNodeCacheLength, 20)
 
-	config.Set(hyperstate.StateBucketSize, 1000003)
-	config.Set(hyperstate.StateBucketLevelGroup, 5)
-	config.Set(hyperstate.StateBucketCacheSize, 100000)
-	config.Set(hyperstate.StateDataNodeCacheSize, 100000)
+	config.Set(state.StateBucketSize, 1000003)
+	config.Set(state.StateBucketLevelGroup, 5)
+	config.Set(state.StateBucketCacheSize, 100000)
+	config.Set(state.StateDataNodeCacheSize, 100000)
 
-	config.Set(hyperstate.StateObjectBucketSize, 1000003)
-	config.Set(hyperstate.StateObjectBucketLevelGroup, 5)
-	config.Set(hyperstate.StateObjectBucketCacheSize, 100000)
-	config.Set(hyperstate.StateObjectDataNodeCacheSize, 100000)
+	config.Set(state.StateObjectBucketSize, 1000003)
+	config.Set(state.StateObjectBucketLevelGroup, 5)
+	config.Set(state.StateObjectBucketCacheSize, 100000)
+	config.Set(state.StateObjectDataNodeCacheSize, 100000)
 
 	config.Set(common.LOG_BASE_LOG_LEVEL, "NOTICE")
 	return config

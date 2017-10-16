@@ -5,7 +5,7 @@
 //The PBFT key features:
 //	1. atomic sequence transactions guarantee
 //      2. leader selection by viewchange
-//      3. dynamic add or delete new node
+//      3. dynamically add or delete new node
 //      4. support self recovery
 package rbft
 
@@ -13,22 +13,23 @@ import (
 	"sync/atomic"
 
 	"hyperchain/common"
-	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
 	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
+	"hyperchain/consensus/txpool"
+	"hyperchain/manager/event"
 )
 
 /**
-This file implement the API of consensus
+This file implements the API of consensus
 which can be invoked by outer services.
 */
 
 // New return a instance of rbftImpl
 func New(namespace string, conf *common.Config, h helper.Stack, n int) (*rbftImpl, error) {
-	return newPBFT(namespace, conf, h, n)
+	return newRBFT(namespace, conf, h, n)
 }
 
 // RecvMsg receives messages from other validating peers
@@ -51,7 +52,7 @@ func (rbft *rbftImpl) RecvMsg(e []byte) error {
 	}
 }
 
-// RecvLocal receives messages form local other modules
+// RecvLocal receives messages form other modules of local system
 func (rbft *rbftImpl) RecvLocal(msg interface{}) error {
 	if negoView, ok := msg.(*protos.Message); ok {
 		if negoView.Type == protos.Message_NEGOTIATE_VIEW {
@@ -72,15 +73,16 @@ func (rbft *rbftImpl) RecvLocal(msg interface{}) error {
 		rbft.helper.InnerBroadcast(pbMsg)
 
 		req := txRequest{
-			tx: tx,
+			tx:  tx,
 			new: true,
 		}
-		go rbft.rbftEventQueue.Push(req)
+		//go rbft.rbftEventQueue.Push(req)
+		go rbft.eventMux.Post(req)
 
 		return nil
 	}
 
-	go rbft.rbftEventQueue.Push(msg)
+	go rbft.eventMux.Post(msg)
 
 	return nil
 }
@@ -93,15 +95,20 @@ func (rbft *rbftImpl) Start() {
 	rbft.initStatus()
 
 	atomic.StoreUint32(&rbft.activeView, 1)
-	rbft.rbftManager.Start()
-	rbft.rbftEventQueue = events.GetQueue(rbft.rbftManager.Queue())
+	//rbft.rbftManager.Start()
+	//rbft.rbftEventQueue = events.GetQueue(rbft.rbftManager.Queue())
+
+	rbft.eventMux = new(event.TypeMux)
+	rbft.batchSub = rbft.eventMux.Subscribe(txRequest{}, txpool.TxHashBatch{}, protos.RoutersMessage{}, &LocalEvent{}, &ConsensusMessage{})
+	rbft.close = make(chan bool)
 
 	rbft.restoreState()
 	rbft.vcMgr.viewChangeSeqNo = ^uint64(0)
 	rbft.vcMgr.updateViewChangeSeqNo(rbft.seqNo, rbft.K, rbft.id)
-	rbft.batchMgr.start(rbft.rbftEventQueue)
+	rbft.batchMgr.start(rbft.eventMux)
 	rbft.timerMgr.makeRequestTimeoutLegal()
 
+	go rbft.listenEvent()
 	rbft.logger.Noticef("======== PBFT finish start, nodeID: %d", rbft.id)
 }
 
@@ -110,7 +117,12 @@ func (rbft *rbftImpl) Close() {
 	rbft.logger.Notice("PBFT stop event process service")
 	rbft.timerMgr.Stop()
 	rbft.batchMgr.stop()
-	rbft.rbftManager.Stop()
+	//rbft.rbftManager.Stop()
+
+	if rbft.close != nil {
+		close(rbft.close)
+		rbft.close = nil
+	}
 
 	rbft.logger.Notice("PBFT clear some resources")
 	rbft.vcMgr = newVcManager(rbft)

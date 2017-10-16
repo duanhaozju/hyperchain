@@ -12,7 +12,6 @@ import (
 func TestCryptoInitInheritsLoggingLevel(t *testing.T) {
 	logging.SetLevel(logging.WARNING, "crypto")
 
-	Init()
 
 	assertCryptoLoggingLevel(t, logging.WARNING)
 }
@@ -21,7 +20,6 @@ func TestCryptoInitDoesntOverrideLoggingLevel(t *testing.T) {
 	logging.SetLevel(logging.WARNING, "crypto")
 	viper.Set("logging.crypto", "info")
 
-	Init()
 
 	assertCryptoLoggingLevel(t, logging.WARNING)
 }

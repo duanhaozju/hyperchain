@@ -13,7 +13,7 @@ import (
 	"hyperchain/manager/event"
 )
 
-// new initializes the consentor instance.
+// newConsenter initializes the consentor instance, and now only rbft works.
 func newConsenter(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux, n int) (cs.Consenter, error) {
 	h := helper.NewHelper(eventMux, filterMux)
 	algo := conf.GetString(cs.CONSENSUS_ALGO)

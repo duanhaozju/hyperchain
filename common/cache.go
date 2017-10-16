@@ -31,7 +31,7 @@ func (c *Cache) Purge() {
 	}
 }
 
-// Add  a value to the cache, return false if the entry already exists in cache and update the value
+// Add adds a value to the cache, return false if the entry already exists in cache and update the value
 func (c *Cache) Add(key, value interface{}) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -55,7 +55,7 @@ func (c *Cache) Get(key interface{}) (interface{}, bool) {
 	return nil, false
 }
 
-// Check if a key is in the cache, without return the value related to the key
+// Contains checks if a key is in the cache, without return the value related to the key
 func (c *Cache) Contains(key interface{}) (ok bool) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -95,6 +95,8 @@ func (c *Cache) Len() int {
 	return len(c.items)
 }
 
+// RemoveWithCond removes elements if their keys are equal to the
+// provided key according to fn
 func (c *Cache) RemoveWithCond(key interface{}, fn cond) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()

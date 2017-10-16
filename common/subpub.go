@@ -1,8 +1,16 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
+
 package common
 
 import (
 	"context"
 	"sync"
+)
+
+const (
+	SubscribeMethodSuffix   = "_subscribe"
+	UnsubscribeMethodSuffix = "_unsubscribe"
 )
 
 // ID defines a pseudo random number that is used to identify RPC subscriptions.
@@ -23,37 +31,47 @@ func (s *Subscription) Err() <-chan error {
 	return s.Error
 }
 
+// NotifyPayload created by server will be pushed to client.
 type NotifyPayload struct {
 	SubID ID
 	Data  interface{}
 }
 
+// SubChs is the type that wraps several channel used to communication between jsonrpc module and api module, which
+// prevents package circular import. When a websocket connection is established, we will create a new SubChs instance.
 type SubChs struct {
+
+	// context is unique identifier of a SubChs instance, it corresponds to a websocket connection
 	Ctx context.Context
-	//Mux           sync.Mutex
+
 	SubscriptionCh chan *Subscription
 	NotifyDataCh   chan NotifyPayload
-	Err            chan error       // context error
+	Err            chan error       // error happened in the context
 	closed         chan interface{} // connection close
-	//Unsubscribe       chan ID	// event unsubscribe
+	closer         sync.Once        // close once
 }
 
 var (
-	SubChsMap map[context.Context]*SubChs
-	CtxCh     chan context.Context
+	// CtxCh channel will input a context when api service receive a request to subscribe, while notifier will
+	// output it in a for loop and then create a subscription, this subscription will be input SubChs.SubscriptionCh.
+	CtxCh chan context.Context
+
+	// subChsMap records current websocket connection resource, releases resource when error happened or connection closed.
+	subChsMap map[context.Context]*SubChs
 	mux       sync.Mutex
 )
 
 func init() {
-	SubChsMap = make(map[context.Context]*SubChs)
+	subChsMap = make(map[context.Context]*SubChs)
 	CtxCh = make(chan context.Context)
 }
 
+// GetSubChs will create a new SubChs instance for the given context or return it if existed.
 func GetSubChs(ctx context.Context) *SubChs {
 	mux.Lock()
 	defer mux.Unlock()
 
-	if subChs, ok := SubChsMap[ctx]; ok {
+	if subChs, ok := subChsMap[ctx]; ok {
 		return subChs
 	} else {
 		subChs := &SubChs{
@@ -64,17 +82,19 @@ func GetSubChs(ctx context.Context) *SubChs {
 			closed:         make(chan interface{}),
 		}
 
-		SubChsMap[ctx] = subChs
+		subChsMap[ctx] = subChs
 
 		return subChs
 	}
 }
 
+// Close releases subChs resource when connection closed.
 func (subChs *SubChs) Close() {
-	// todo 是否需要加锁？
-	close(subChs.closed)
-	close(subChs.Err)
-	delete(SubChsMap, subChs.Ctx)
+	subChs.closer.Do(func() {
+		close(subChs.closed)
+		close(subChs.Err)
+		delete(subChsMap, subChs.Ctx)
+	})
 }
 
 func (subChs *SubChs) Closed() <-chan interface{} {

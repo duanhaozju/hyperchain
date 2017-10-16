@@ -2,21 +2,25 @@ package api
 
 import (
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
 	flt "hyperchain/manager/filter"
 )
 
-type ArchivePublicAPI struct {
+// This file implements the handler of Archive service API which
+// can be invoked by client in JSON-RPC request.
+
+type Archive struct {
 	eh        *manager.EventHub
 	namespace string
 	config    *common.Config
 	isPublic  bool
 }
 
-func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.Config) *ArchivePublicAPI {
-	return &ArchivePublicAPI{
+// NewPublicArchiveAPI creates and returns a new Archive instance for given namespace name.
+func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.Config) *Archive {
+	return &Archive{
 		namespace: namespace,
 		eh:        eh,
 		config:    config,
@@ -24,7 +28,9 @@ func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.
 	}
 }
 
-func (admin *ArchivePublicAPI) Snapshot(blockNumber uint64) (string, error) {
+// Snapshot makes the snapshot for given block number. It returns the snapshot id
+// for the client to query.
+func (admin *Archive) Snapshot(blockNumber uint64) (string, error) {
 	log := common.GetLogger(admin.namespace, "api")
 	handler := common.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
 
@@ -48,7 +54,9 @@ func (admin *ArchivePublicAPI) Snapshot(blockNumber uint64) (string, error) {
 	return filterId, nil
 }
 
-func (admin *ArchivePublicAPI) QuerySnapshotExist(filterId string) bool {
+// QuerySnapshotExist checks if the given snapshot existed, so you can confirm that
+// the last step Archive.Snapshot is successful.
+func (admin *Archive) QuerySnapshotExist(filterId string) bool {
 	manifestHandler := common.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
 	if manifestHandler.Contain(filterId) {
 		return true
@@ -57,7 +65,8 @@ func (admin *ArchivePublicAPI) QuerySnapshotExist(filterId string) bool {
 	}
 }
 
-func (admin *ArchivePublicAPI) ReadSnapshot(filterId string) (interface{}, error) {
+// ReadSnapshot returns the snapshot information for the given snapshot ID.
+func (admin *Archive) ReadSnapshot(filterId string) (interface{}, error) {
 	manifestHandler := common.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
 	var manifest common.Manifest
 	var err error
@@ -67,7 +76,8 @@ func (admin *ArchivePublicAPI) ReadSnapshot(filterId string) (interface{}, error
 	return manifest, nil
 }
 
-func (admin *ArchivePublicAPI) ListSnapshot() (common.Manifests, error) {
+// ListSnapshot returns all the existed snapshot information.
+func (admin *Archive) ListSnapshot() (common.Manifests, error) {
 	manifestHandler := common.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
 	if err, manifests := manifestHandler.List(); err != nil {
 		return nil, &common.SnapshotErr{Message: err.Error()}
@@ -76,7 +86,8 @@ func (admin *ArchivePublicAPI) ListSnapshot() (common.Manifests, error) {
 	}
 }
 
-func (admin *ArchivePublicAPI) DeleteSnapshot(filterId string) (bool, error) {
+// DeleteSnapshot deletes snapshot under the given snapshot ID.
+func (admin *Archive) DeleteSnapshot(filterId string) (bool, error) {
 	log := common.GetLogger(admin.namespace, "api")
 	log.Debugf("receive delete snapshot rpc command, filterId: (%s)", filterId)
 	cont := make(chan error)
@@ -92,7 +103,9 @@ func (admin *ArchivePublicAPI) DeleteSnapshot(filterId string) (bool, error) {
 	}
 }
 
-func (admin *ArchivePublicAPI) CheckSnapshot(filterId string) (bool, error) {
+// CheckSnapshot will check that the snapshot is correct. If correct, returns true.
+// Otherwise, returns false.
+func (admin *Archive) CheckSnapshot(filterId string) (bool, error) {
 	manifestHandler := common.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
 	var manifest common.Manifest
 	var err error
@@ -119,7 +132,8 @@ func (admin *ArchivePublicAPI) CheckSnapshot(filterId string) (bool, error) {
 	return true, nil
 }
 
-func (admin *ArchivePublicAPI) Archive(filterId string, sync bool) (bool, error) {
+// Archive will archive data of the given snapshot. If successful, returns true.
+func (admin *Archive) Archive(filterId string, sync bool) (bool, error) {
 	log := common.GetLogger(admin.namespace, "api")
 	log.Debugf("receive archive command, params: filterId: (%s)", filterId)
 	cont := make(chan error)
@@ -136,14 +150,15 @@ func (admin *ArchivePublicAPI) Archive(filterId string, sync bool) (bool, error)
 	}
 }
 
-func (admin *ArchivePublicAPI) QueryArchiveResult(filterId string) (bool, error) {
+// QueryArchiveExist checks if the given snapshot has been archived.
+func (admin *Archive) QueryArchiveExist(filterId string) (bool, error) {
 	manifestHandler := common.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
 	var manifest common.Manifest
 	var err error
 	if err, manifest = manifestHandler.Read(filterId); err != nil {
 		return false, &common.SnapshotErr{Message: err.Error()}
 	}
-	err, genesis := edb.GetGenesisTag(admin.namespace)
+	genesis, err := edb.GetGenesisTag(admin.namespace)
 	if err != nil {
 		return false, &common.SnapshotErr{Message: err.Error()}
 	}

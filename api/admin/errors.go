@@ -4,7 +4,6 @@ import (
 	"errors"
 )
 
-// Error constants
 var (
 	ErrNotLogin           = errors.New("Need User Login")
 	ErrUnMatch            = errors.New("Username or password invalid")
@@ -18,6 +17,6 @@ var (
 	ErrTokenInvalid       = errors.New("Invalid token, please login first")
 	ErrDuplicateUsername  = errors.New("Duplicate username during register, please register with a new username")
 	ErrInvalidGroup       = errors.New("Unrecognized group, please contact to the administrator")
-	ErrInvalidParams      = errors.New("invalid args")
-	ErrInvalidParamFormat = errors.New("invalid args, params must start with '[' and wnd with ']'")
+	ErrInvalidParams      = errors.New("Invalid args")
+	ErrInvalidParamFormat = errors.New("Invalid args, params must start with '[' and wnd with ']'")
 )

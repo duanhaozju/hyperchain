@@ -228,13 +228,13 @@ func (peer *Peer) clientHello(isOrg, isRec bool) error {
 
 func (peer *Peer) negotiateShareKey(in *pb.Message, rand []byte) error {
 	/*
-		   ^ServerReject
-	                or
-	            ^ServerHello
-	             *ServerCertificate
-		     *ServerSignature
-	             *ServerCipherSpec
-	             *ServerKeyExchange
+			   ^ServerReject
+		                or
+		            ^ServerHello
+		             *ServerCertificate
+			     *ServerSignature
+		             *ServerCipherSpec
+		             *ServerKeyExchange
 	*/
 	if in == nil || in.Payload == nil {
 		return errors.New("invalid server return message")

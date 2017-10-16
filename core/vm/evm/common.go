@@ -1,11 +1,25 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
+// Copyright 2015 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 package evm
 
 import (
+	"errors"
+	"fmt"
 	"hyperchain/common"
-	//"hyperchain/core/vm/params"
-	"math"
+	"hyperchain/core/vm/evm/params"
 	"math/big"
 )
 
@@ -13,14 +27,15 @@ import (
 
 var (
 	Pow256 = common.BigPow(2, 256) // Pow256 is 2**256
+	U256   = common.U256           // Shortcut to common.U256
+	S256   = common.S256           // Shortcut to common.S256
+	Zero   = common.Big0           // Shortcut to common.Big0
+)
 
-	U256 = common.U256 // Shortcut to common.U256
-	S256 = common.S256 // Shortcut to common.S256
-
-	Zero = common.Big0 // Shortcut to common.Big0
-	One  = common.Big1 // Shortcut to common.Big1
-
-	max = big.NewInt(math.MaxInt64) // Maximum 64 bit integer
+var (
+	OutOfGasError          = errors.New("Out of gas")
+	CodeStoreOutOfGasError = errors.New("Contract creation code storage out of gas")
+	DepthError             = fmt.Errorf("Max call depth exceeded (%d)", params.CallCreateDepth)
 )
 
 // calculates the memory size required for a step
@@ -43,17 +58,6 @@ func quadMemGas(mem *Memory, newMemSize *big.Int) {
 // Simple helper
 func u256(n int64) *big.Int {
 	return big.NewInt(n)
-}
-
-// Mainly used for print variables and passing to Print*
-func toValue(val *big.Int) interface{} {
-	// Let's assume a string on right padded zero's
-	b := val.Bytes()
-	if b[0] != 0 && b[len(b)-1] == 0x0 && b[len(b)-2] == 0x0 {
-		return string(b)
-	}
-
-	return val
 }
 
 // getData returns a slice from the data based on the start and size and pads

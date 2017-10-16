@@ -1,9 +1,22 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"time"
@@ -27,7 +40,7 @@ func NewArchiveManager(namespace string, executor *Executor, registry *SnapshotR
 		executor:  executor,
 		registry:  registry,
 		logger:    logger,
-		rwc:       common.NewArchiveMetaHandler(executor.GetArchiveMetaPath()),
+		rwc:       common.NewArchiveMetaHandler(executor.conf.GetArchiveMetaPath()),
 	}
 }
 
@@ -67,7 +80,7 @@ func (mgr *ArchiveManager) Archive(event event.ArchiveEvent) {
 	Internal Functions
 */
 func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
-	err, curGenesis := edb.GetGenesisTag(mgr.namespace)
+	curGenesis, err := edb.GetGenesisTag(mgr.namespace)
 	if err != nil {
 		return err
 	}
@@ -132,7 +145,7 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 			if receipt == nil {
 				continue
 			}
-			if err, _ := edb.PersistReceipt(avBatch, receipt, false, false); err != nil {
+			if _, err := edb.PersistReceipt(avBatch, receipt, false, false); err != nil {
 				mgr.logger.Errorf("[Namespace = %s] archive receipt in block %d to historic database failed, error msg %s", mgr.namespace, i, err.Error())
 				return err
 			} else {
@@ -155,7 +168,7 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 		return err
 	}
 	// delete invalid records
-	if err, ic = edb.DumpDiscardTransactionInRange(mgr.executor.db, olBatch, avBatch, tb, te, false, false); err != nil {
+	if ic, err = edb.DumpDiscardTransactionInRange(mgr.executor.db, olBatch, avBatch, tb, te, false, false); err != nil {
 		mgr.logger.Errorf("[Namespace = %s] archive useless invalid records failed, error msg %s", mgr.namespace, err.Error())
 		return err
 	}
@@ -208,17 +221,17 @@ func (mgr *ArchiveManager) getTimestampRange(begin, end uint64) (error, int64, i
 // 2. archive db is continuous with current blockchain (optional)
 func (mgr *ArchiveManager) checkRequest(manifest common.Manifest, meta common.ArchiveMeta) bool {
 	curHeigit := edb.GetHeightOfChain(mgr.namespace)
-	err, genesis := edb.GetGenesisTag(mgr.namespace)
+	genesis, err := edb.GetGenesisTag(mgr.namespace)
 	if err != nil {
 		return false
 	}
-	if curHeigit < uint64(mgr.executor.GetArchiveThreshold())+manifest.Height {
+	if curHeigit < uint64(mgr.executor.conf.GetArchiveThreshold())+manifest.Height {
 		return false
 	}
 	// Optional. If user set the `force consistency` config item as true,
 	// which means if archived chain is not continuous with the online chain,
 	// the request can be regarded as a invalid one.
-	if mgr.executor.IsArchiveForceConsistency() {
+	if mgr.executor.conf.IsArchiveForceConsistency() {
 		if genesis != meta.Height+1 {
 			return false
 		}

@@ -37,11 +37,6 @@ type msgCert struct {
 }
 
 // -----------checkpoint related structs-----------------
-// Checkpoint index
-type cidx struct {
-	n uint64 // checkpoint number
-	d string // checkpoint digest
-}
 
 // chkptCertStore index
 type chkptID struct {
@@ -128,6 +123,6 @@ type stateUpdateTarget struct {
 // Mark a transaction if it's new:
 // for new, check the pool size; for old, do not check
 type txRequest struct {
-	tx	*types.Transaction
+	tx  *types.Transaction
 	new bool
 }

@@ -125,34 +125,37 @@ message checkpoint {
     uint64 genesis = 4;
 }
 
-message view_change {
-    /* This message should go away and become a checkpoint once replica_id is removed */
-    message C {
-        uint64 sequence_number = 1;
-        string id = 3;
-    }
-    message PQ {
-        uint64 sequence_number = 1;
-        string batch_digest = 2;
-        uint64 view = 3;
-    }
+/* This message should go away and become a checkpoint once replica_id is removed */
+message vc_C {
+    uint64 sequence_number = 1;
+    string id = 2;
+}
+message vc_PQ {
+    uint64 sequence_number = 1;
+    string batch_digest = 2;
+    uint64 view = 3;
+}
 
+message vc_basis {
     uint64 view = 1;
     uint64 h = 2;
-    repeated C cset = 3;
-    repeated PQ pset = 4;
-    repeated PQ qset = 5;
+    repeated vc_C cset = 3;
+    repeated vc_PQ pset = 4;
+    repeated vc_PQ qset = 5;
     uint64 replica_id = 6;
-    bytes signature = 7;
-    uint64 genesis = 8;
-    int64 timestamp = 9;
+    uint64 genesis = 7;
+}
+
+message view_change {
+    vc_basis basis = 1;
+    bytes signature = 2;
+    int64 timestamp = 3;
 }
 
 message new_view {
     uint64 view = 1;
-    repeated view_change vset = 2;
-    map<uint64, string> xset = 3;
-    uint64 replica_id = 4;
+    map<uint64, string> xset = 2;
+    uint64 replica_id = 3;
 }
 
 message finish_vcReset {
@@ -221,22 +224,17 @@ message del_node {
 }
 
 message ready_for_n {
-    uint64 replica_id = 2;
-    string key = 3;
+    uint64 replica_id = 1;
+    string key = 2;
 }
 
 message agree_update_n {
-    bool flag = 1;
-    uint64 replica_id = 2;
+    vc_basis basis = 1;
+    bool flag = 2;
     string key = 3;
     string routerHash = 4;
     int64 n = 5;
-    uint64 view = 6;
-    uint64 h = 7;
-    repeated view_change.C cset = 8;
-    repeated view_change.PQ pset = 9;
-    repeated view_change.PQ qset = 10;
-    uint64 genesis = 11;
+
 }
 
 message update_n {
@@ -245,8 +243,7 @@ message update_n {
     string key = 3;
     int64 n = 4;
     uint64 view = 5;
-    repeated agree_update_n aset = 6;
-    map<uint64, string> xset = 7;
+    map<uint64, string> xset = 6;
 }
 
 message finish_update {

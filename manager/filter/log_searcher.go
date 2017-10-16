@@ -3,7 +3,7 @@ package filter
 import (
 	"github.com/willf/bloom"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 )
 

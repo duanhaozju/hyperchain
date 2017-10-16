@@ -7,8 +7,6 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"hyperchain/consensus/helper/persist"
-
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"strconv"
@@ -22,7 +20,7 @@ func (rbft *rbftImpl) persistQSet(preprep *PrePrepare) {
 		return
 	}
 	key := fmt.Sprintf("qset.%d.%d.%s", preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
-	persist.StoreState(rbft.namespace, key, raw)
+	rbft.persister.StoreState(key, raw)
 }
 
 // persistPSet persists marshaled prepare messages in the cert with the given msgID(v,n,d) to database
@@ -41,7 +39,7 @@ func (rbft *rbftImpl) persistPSet(v uint64, n uint64, d string) {
 		return
 	}
 	key := fmt.Sprintf("pset.%d.%d.%s", v, n, d)
-	persist.StoreState(rbft.namespace, key, raw)
+	rbft.persister.StoreState(key, raw)
 }
 
 // persistCSet persists marshaled commit messages in the cert with the given msgID(v,n,d) to database
@@ -60,25 +58,25 @@ func (rbft *rbftImpl) persistCSet(v uint64, n uint64, d string) {
 		return
 	}
 	key := fmt.Sprintf("cset.%d.%d.%s", v, n, d)
-	persist.StoreState(rbft.namespace, key, raw)
+	rbft.persister.StoreState(key, raw)
 }
 
 // persistDelQSet deletes marshaled pre-prepare message with the given key from database
 func (rbft *rbftImpl) persistDelQSet(v uint64, n uint64, d string) {
 	qset := fmt.Sprintf("qset.%d.%d.%s", v, n, d)
-	persist.DelState(rbft.namespace, qset)
+	rbft.persister.DelState(qset)
 }
 
 // persistDelPSet deletes marshaled prepare messages with the given key from database
 func (rbft *rbftImpl) persistDelPSet(v uint64, n uint64, d string) {
 	pset := fmt.Sprintf("pset.%d.%d.%s", v, n, d)
-	persist.DelState(rbft.namespace, pset)
+	rbft.persister.DelState(pset)
 }
 
 // persistDelCSet deletes marshaled commit messages with the given key from database
 func (rbft *rbftImpl) persistDelCSet(v uint64, n uint64, d string) {
 	cset := fmt.Sprintf("cset.%d.%d.%s", v, n, d)
-	persist.DelState(rbft.namespace, cset)
+	rbft.persister.DelState(cset)
 }
 
 // persistDelQPCSet deletes marshaled pre-prepare,prepare,commit messages with the given key from database
@@ -92,7 +90,7 @@ func (rbft *rbftImpl) persistDelQPCSet(v uint64, n uint64, d string) {
 func (rbft *rbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
 	qset := make(map[msgID]*PrePrepare)
 
-	payload, err := persist.ReadStateSet(rbft.namespace, "qset.")
+	payload, err := rbft.persister.ReadStateSet("qset.")
 	if err == nil {
 		for key, set := range payload {
 			var v, n uint64
@@ -121,7 +119,7 @@ func (rbft *rbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
 func (rbft *rbftImpl) restorePSet() (map[msgID]*Pset, error) {
 	pset := make(map[msgID]*Pset)
 
-	payload, err := persist.ReadStateSet(rbft.namespace, "pset.")
+	payload, err := rbft.persister.ReadStateSet("pset.")
 	if err == nil {
 		for key, set := range payload {
 			var v, n uint64
@@ -150,7 +148,7 @@ func (rbft *rbftImpl) restorePSet() (map[msgID]*Pset, error) {
 func (rbft *rbftImpl) restoreCSet() (map[msgID]*Cset, error) {
 	cset := make(map[msgID]*Cset)
 
-	payload, err := persist.ReadStateSet(rbft.namespace, "cset.")
+	payload, err := rbft.persister.ReadStateSet("cset.")
 	if err == nil {
 		for key, set := range payload {
 			var v, n uint64
@@ -278,23 +276,23 @@ func (rbft *rbftImpl) persistTxBatch(digest string) {
 		rbft.logger.Warningf("Replica %d could not persist request batch %s: %s", rbft.id, digest, err)
 		return
 	}
-	persist.StoreState(rbft.namespace, "txBatch."+digest, txBatchPacked)
+	rbft.persister.StoreState("txBatch."+digest, txBatchPacked)
 }
 
 // persistDelTxBatch removes one marshaled transaction batch with the given digest from database
 func (rbft *rbftImpl) persistDelTxBatch(digest string) {
-	persist.DelState(rbft.namespace, "txBatch."+digest)
+	rbft.persister.DelState("txBatch." + digest)
 }
 
 // persistDelAllTxBatches removes all marshaled transaction batches from database
 func (rbft *rbftImpl) persistDelAllTxBatches() {
-	reqBatches, err := persist.ReadStateSet(rbft.namespace, "txBatch.")
+	reqBatches, err := rbft.persister.ReadStateSet("txBatch.")
 	if err != nil {
 		rbft.logger.Errorf("Read State Set Error %s", err)
 		return
 	} else {
 		for k := range reqBatches {
-			persist.DelState(rbft.namespace, k)
+			rbft.persister.DelState(k)
 		}
 	}
 }
@@ -303,13 +301,13 @@ func (rbft *rbftImpl) persistDelAllTxBatches() {
 // checkpoint ID
 func (rbft *rbftImpl) persistCheckpoint(seqNo uint64, id []byte) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)
-	persist.StoreState(rbft.namespace, key, id)
+	rbft.persister.StoreState(key, id)
 }
 
 // persistDelCheckpoint deletes checkpoint with the given seqNo from database
 func (rbft *rbftImpl) persistDelCheckpoint(seqNo uint64) {
 	key := fmt.Sprintf("chkpt.%d", seqNo)
-	persist.DelState(rbft.namespace, key)
+	rbft.persister.DelState(key)
 }
 
 // persistView persists current view to database
@@ -317,13 +315,13 @@ func (rbft *rbftImpl) persistView(view uint64) {
 	key := fmt.Sprint("view")
 	b := make([]byte, 8)
 	binary.LittleEndian.PutUint64(b, view)
-	persist.StoreState(rbft.namespace, key, b)
+	rbft.persister.StoreState(key, b)
 }
 
 // persistDelView deletes the view entries from database
 func (rbft *rbftImpl) persistDelView() {
 	key := fmt.Sprint("view")
-	persist.DelState(rbft.namespace, key)
+	rbft.persister.DelState(key)
 }
 
 // persistN persists current N to database
@@ -331,7 +329,7 @@ func (rbft *rbftImpl) persistN(n int) {
 	key := fmt.Sprint("nodes")
 	res := make([]byte, 8)
 	binary.LittleEndian.PutUint64(res, uint64(n))
-	persist.StoreState(rbft.namespace, key, res)
+	rbft.persister.StoreState(key, res)
 }
 
 // persistNewNode persists new node message to database
@@ -339,24 +337,24 @@ func (rbft *rbftImpl) persistNewNode(new uint64) {
 	key := fmt.Sprint("new")
 	res := make([]byte, 8)
 	binary.LittleEndian.PutUint64(res, new)
-	persist.StoreState(rbft.namespace, key, res)
+	rbft.persister.StoreState(key, res)
 }
 
 // persistLocalKey persists hash of local key to database
 func (rbft *rbftImpl) persistLocalKey(hash []byte) {
 	key := fmt.Sprint("localkey")
-	persist.StoreState(rbft.namespace, key, hash)
+	rbft.persister.StoreState(key, hash)
 }
 
 // persistDelLocal key deletes local key info from database
 func (rbft *rbftImpl) persistDellLocalKey() {
 	key := fmt.Sprint("localkey")
-	persist.DelState(rbft.namespace, key)
+	rbft.persister.DelState(key)
 }
 
 // restoreView restores current view from database and then re-construct certStore
 func (rbft *rbftImpl) restoreView() {
-	v, err := persist.ReadState(rbft.namespace, "view")
+	v, err := rbft.persister.ReadState("view")
 	if err == nil {
 		view := binary.LittleEndian.Uint64(v)
 		rbft.view = view
@@ -369,7 +367,8 @@ func (rbft *rbftImpl) restoreView() {
 
 // restoreTxBatchStore restores transaction batches from database
 func (rbft *rbftImpl) restoreTxBatchStore() {
-	payload, err := persist.ReadStateSet(rbft.namespace, "txBatch.")
+
+	payload, err := rbft.persister.ReadStateSet("txBatch.")
 	if err == nil {
 		for key, set := range payload {
 			var digest string
@@ -404,7 +403,7 @@ func (rbft *rbftImpl) restoreState() {
 
 	rbft.restoreTxBatchStore()
 
-	chkpts, err := persist.ReadStateSet(rbft.namespace, "chkpt.")
+	chkpts, err := rbft.persister.ReadStateSet("chkpt.")
 	if err == nil {
 		for key, id := range chkpts {
 			var seqNo uint64
@@ -419,7 +418,7 @@ func (rbft *rbftImpl) restoreState() {
 	} else {
 		rbft.logger.Warningf("Replica %d could not restore checkpoints: %s", rbft.id, err)
 	}
-	hstr, err := persist.ReadState(rbft.namespace, "rbft.h")
+	hstr, err := rbft.persister.ReadState("rbft.h")
 	if err != nil {
 		rbft.logger.Warningf("Replica %d could not restore h: %s", rbft.id, err)
 	} else {
@@ -429,7 +428,8 @@ func (rbft *rbftImpl) restoreState() {
 		}
 		rbft.moveWatermarks(h)
 	}
-	n, err := persist.ReadState(rbft.namespace, "nodes")
+	rbft.persister.ReadState("nodes")
+	n, err := rbft.persister.ReadState("nodes")
 	if err == nil {
 		nodes := binary.LittleEndian.Uint64(n)
 		rbft.N = int(nodes)
@@ -437,7 +437,7 @@ func (rbft *rbftImpl) restoreState() {
 	}
 	rbft.logger.Noticef("========= restore N=%d, f=%d =======", rbft.N, rbft.f)
 
-	new, err := persist.ReadState(rbft.namespace, "new")
+	new, err := rbft.persister.ReadState("new")
 	if err == nil {
 		newNode := binary.LittleEndian.Uint64(new)
 		if newNode == 1 {
@@ -445,7 +445,7 @@ func (rbft *rbftImpl) restoreState() {
 		}
 	}
 
-	localKey, err := persist.ReadState(rbft.namespace, "localkey")
+	localKey, err := rbft.persister.ReadState("localkey")
 	if err == nil {
 		rbft.nodeMgr.localKey = string(localKey)
 	}
@@ -467,7 +467,7 @@ func (rbft *rbftImpl) restoreLastSeqNo() {
 // getLastSeqNo retrieves database and returns the last block number
 func (rbft *rbftImpl) getLastSeqNo() (uint64, error) {
 	var err error
-	h := persist.GetHeightOfChain(rbft.namespace)
+	h := rbft.persister.GetHeightOfChain(rbft.namespace)
 	if h == 0 {
 		err = errors.Errorf("Height of chain is 0")
 		return h, err

@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"hyperchain/common"
-	"hyperchain/consensus/events"
 	"hyperchain/consensus/helper"
 	"hyperchain/consensus/helper/persist"
 	"hyperchain/consensus/txpool"
@@ -21,6 +20,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"hyperchain/hyperdb"
 )
 
 // rbftImpl is the core struct of rbft module, which handles all functions about consensus
@@ -37,7 +37,7 @@ type rbftImpl struct {
 	seqNo         uint64 // PBFT "n", strictly monotonic increasing sequence number
 	view          uint64 // current view
 
-	status PbftStatus // keep all basic status of rbft in this object
+	status RbftStatus // keep all basic status of rbft in this object
 
 	batchMgr    *batchManager    // manage batch related issues
 	batchVdr    *batchValidator  // manage batch validate issues
@@ -50,21 +50,30 @@ type rbftImpl struct {
 
 	helper helper.Stack // send message to other components of system
 
-	rbftManager    events.Manager // manage rbft event
-	rbftEventQueue events.Queue   // transfer PBFT related event
+	eventMux *event.TypeMux
+	batchSub event.Subscription // subscription channel for all events posted from consensus sub-modules
+	close    chan bool          // channel to close this event process
 
-	config *common.Config  // get configuration info
-	logger *logging.Logger // write logger to record some info
+	config    *common.Config  // get configuration info
+	logger    *logging.Logger // write logger to record some info
+	persister persist.Persister
 
 	normal   uint32 // system is normal or not
 	poolFull uint32 // txPool is full or not
 }
 
 // newPBFT init the PBFT instance
-func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*rbftImpl, error) {
+func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*rbftImpl, error) {
 	var err error
 	rbft := &rbftImpl{}
 	rbft.logger = common.GetLogger(namespace, "consensus")
+
+	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
+	if err != nil {
+		return nil, err
+	}
+	rbft.persister = persist.New(db)
+
 	rbft.namespace = namespace
 	rbft.helper = h
 	rbft.config = config
@@ -78,10 +87,6 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 	rbft.K = uint64(10)
 	rbft.logMultiplier = uint64(4)
 	rbft.L = rbft.logMultiplier * rbft.K // log size
-
-	//rbftManage manage consensus events
-	rbft.rbftManager = events.NewManagerImpl(rbft.namespace)
-	rbft.rbftManager.SetReceiver(rbft)
 
 	rbft.initMsgEventMap()
 
@@ -134,8 +139,31 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 // =============================================================================
 
 // ProcessEvent implements event.Receiver, dispatch messages according to their types
-func (rbft *rbftImpl) ProcessEvent(ee events.Event) events.Event {
+func (rbft *rbftImpl) listenEvent() {
+	for {
+		select {
+		case <-rbft.close:
+			return
+		case obj := <-rbft.batchSub.Chan():
+			ee := obj.Data
+			var next consensusEvent
+			var ok bool
+			if next, ok = ee.(consensusEvent); !ok {
+				rbft.logger.Error("Can't recognize event type")
+				return
+			}
+			for {
+				next = rbft.processEvent(next)
+				if next == nil {
+					break
+				}
+			}
 
+		}
+	}
+}
+
+func (rbft *rbftImpl) processEvent(ee consensusEvent) consensusEvent {
 	switch e := ee.(type) {
 	case txRequest:
 		return rbft.processTransaction(e)
@@ -169,7 +197,7 @@ func (rbft *rbftImpl) ProcessEvent(ee events.Event) events.Event {
 }
 
 // dispatchCorePbftMsg dispatch core PBFT consensus messages.
-func (rbft *rbftImpl) dispatchCorePbftMsg(e events.Event) events.Event {
+func (rbft *rbftImpl) dispatchCorePbftMsg(e consensusEvent) consensusEvent {
 	switch et := e.(type) {
 	case *PrePrepare:
 		return rbft.recvPrePrepare(et)
@@ -204,12 +232,12 @@ func (rbft *rbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 			return err
 		}
 		req := txRequest{
-			tx: tx,
+			tx:  tx,
 			new: false,
 		}
-		go rbft.rbftEventQueue.Push(req)
+		go rbft.eventMux.Post(req)
 	} else {
-		go rbft.rbftEventQueue.Push(consensus)
+		go rbft.eventMux.Post(consensus)
 	}
 
 	return nil
@@ -546,7 +574,7 @@ func (rbft *rbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 			Type:    ConsensusMessage_COMMIT,
 			Payload: payload,
 		}
-		go rbft.rbftEventQueue.Push(consensusMsg)
+		go rbft.eventMux.Post(consensusMsg)
 		msg := cMsgToPbMsg(consensusMsg, rbft.id)
 		return rbft.helper.InnerBroadcast(msg)
 	}
@@ -690,7 +718,7 @@ func (rbft *rbftImpl) recvFetchMissingTransaction(fetch *FetchMissingTransaction
 
 // recvReturnMissingTransaction processes ReturnMissingTransaction from primary.
 // Add these transactions to txPool and see if it has correct transactions.
-func (rbft *rbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction) events.Event {
+func (rbft *rbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction) consensusEvent {
 
 	rbft.logger.Debugf("Replica %d received ReturnMissingTransaction from replica %d", rbft.id, re.ReplicaId)
 
@@ -833,38 +861,37 @@ func (rbft *rbftImpl) afterCommitBlock(idx msgID) {
 //=============================================================================
 
 //processTxEvent process received transaction event
-func (rbft *rbftImpl) processTransaction(req txRequest) events.Event {
+func (rbft *rbftImpl) processTransaction(req txRequest) consensusEvent {
 
 	var err error
 	var isGenerated bool
-
-	// TODO: function processes transaction from client, so should check poolSize
 
 	// this node is not normal, just add a transaction without generating batch.
 	if atomic.LoadUint32(&rbft.activeView) == 0 ||
 		atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 ||
 		rbft.status.checkStatesOr(&rbft.status.inNegoView) {
 		_, err = rbft.batchMgr.txPool.AddNewTx(req.tx, false, req.new)
-	}
-	// primary nodes would check if this transaction triggered generating a batch or not
-	if rbft.isPrimary(rbft.id) {
-		if !rbft.batchMgr.isBatchTimerActive() { // start batch timer when this node receives the first transaction of a batch
-			rbft.startBatchTimer()
-		}
-		isGenerated, err = rbft.batchMgr.txPool.AddNewTx(req.tx, true, req.new)
-		if isGenerated { // If this transaction triggers generating a batch, stop batch timer
-			rbft.stopBatchTimer()
-		}
 	} else {
-		_, err = rbft.batchMgr.txPool.AddNewTx(req.tx, false, req.new)
-	}
-
-	if rbft.batchMgr.txPool.IsPoolFull() {
-		atomic.StoreUint32(&rbft.poolFull, 1)
+		// primary nodes would check if this transaction triggered generating a batch or not
+		if rbft.isPrimary(rbft.id) {
+			if !rbft.batchMgr.isBatchTimerActive() { // start batch timer when this node receives the first transaction of a batch
+				rbft.startBatchTimer()
+			}
+			isGenerated, err = rbft.batchMgr.txPool.AddNewTx(req.tx, true, req.new)
+			if isGenerated { // If this transaction triggers generating a batch, stop batch timer
+				rbft.stopBatchTimer()
+			}
+		} else {
+			_, err = rbft.batchMgr.txPool.AddNewTx(req.tx, false, req.new)
+		}
 	}
 
 	if err != nil {
 		rbft.logger.Warningf(err.Error())
+	}
+
+	if rbft.batchMgr.txPool.IsPoolFull() {
+		atomic.StoreUint32(&rbft.poolFull, 1)
 	}
 
 	return nil
@@ -923,7 +950,7 @@ func (rbft *rbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 			}
 			rbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
 
-			go rbft.rbftEventQueue.Push(&LocalEvent{
+			go rbft.eventMux.Post(&LocalEvent{
 				Service:   RECOVERY_SERVICE,
 				EventType: RECOVERY_DONE_EVENT,
 			})
@@ -1028,7 +1055,7 @@ func (rbft *rbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 }
 
 // recvCheckpoint processes logic after receive checkpoint.
-func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) events.Event {
+func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) consensusEvent {
 
 	rbft.logger.Debugf("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
 		rbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.Id)
@@ -1328,7 +1355,8 @@ func (rbft *rbftImpl) moveWatermarks(n uint64) {
 	rbft.storeMgr.moveWatermarks(rbft, h)
 
 	rbft.h = h
-	err := persist.StoreState(rbft.namespace, "rbft.h", []byte(strconv.FormatUint(h, 10)))
+
+	err := rbft.persister.StoreState("rbft.h", []byte(strconv.FormatUint(h, 10)))
 	if err != nil {
 		panic("persist rbft.h failed " + err.Error())
 	}

@@ -10,6 +10,9 @@ import (
 	"hyperchain/p2p"
 )
 
+// This file implements the handler of Node service API which
+// can be invoked by client in JSON-RPC request.
+
 type NodeArgs struct {
 	NodeHash string `json:"nodehash"`
 }
@@ -19,15 +22,7 @@ type Node struct {
 	eh        *manager.EventHub
 }
 
-type NodeResult struct {
-	Status      int         `json:"status"`
-	CName       string      `json:"cName"`
-	IP          string      `json:"ip"`
-	Port        int         `json:"port"`
-	delayTime   string      `json:"delayTime"`   //latency between nodes
-	LatestBlock interface{} `json:"latestBlock"` //newest block of current block
-}
-
+// NewPublicNodeAPI creates and returns a new Node instance for given namespace name.
 func NewPublicNodeAPI(namespace string, eh *manager.EventHub) *Node {
 	return &Node{
 		namespace: namespace,
@@ -35,25 +30,29 @@ func NewPublicNodeAPI(namespace string, eh *manager.EventHub) *Node {
 	}
 }
 
-// GetNodes returns status of all the nodes
+// GetNodes returns all vp nodes information in the namespace.
 func (node *Node) GetNodes() (p2p.PeerInfos, error) {
 	if node.eh == nil {
-		return nil, &common.CallbackError{Message: "protocolManager is nil"}
+		return nil, &common.CallbackError{Message: "EventHub is nil"}
 	}
 
 	return node.eh.GetPeerManager().GetPeerInfo(), nil
 }
 
+// GetNodeHash returns current node hash.
 func (node *Node) GetNodeHash() (string, error) {
 	if node.eh == nil {
-		return "", &common.CallbackError{Message: "protocolManager is nil"}
+		return "", &common.CallbackError{Message: "EventHub is nil"}
 	}
 	return node.eh.GetPeerManager().GetLocalNodeHash(), nil
 }
 
+// DeleteVP sends a request to delete vp node. Client can't judge from the returned results
+// whether the deletion is successful. But client can call Node.GetNodes to determine whether
+// the deletion is successful.
 func (node *Node) DeleteVP(args NodeArgs) (string, error) {
 	if node.eh == nil {
-		return "", &common.CallbackError{Message: "protocolManager is nil"}
+		return "", &common.CallbackError{Message: "EventHub is nil"}
 	}
 	go node.eh.GetEventObject().Post(event.DelVPEvent{
 		Payload: []byte(args.NodeHash),
@@ -61,17 +60,18 @@ func (node *Node) DeleteVP(args NodeArgs) (string, error) {
 	return fmt.Sprintf("successful request to delete vp node, hash %s", args.NodeHash), nil
 }
 
+// DeleteNVP sends a request to delete nvp node.
 func (node *Node) DeleteNVP(args NodeArgs) (string, error) {
 	if node.eh == nil {
-		return "", &common.CallbackError{Message: "protocolManager is nil"}
+		return "", &common.CallbackError{Message: "EventHub is nil"}
 	}
 	go node.eh.GetEventObject().Post(event.DelNVPEvent{
 		Payload: []byte(args.NodeHash),
 	})
-	return "successful request to delete nvp node", nil
+	return fmt.Sprintf("successful request to delete nvp node, hash %s", args.NodeHash), nil
 }
 
-// DelNode is in order to be compatible with sdk for release1.2
+// DelNode is compatible with sdk for release1.2.
 func (node *Node) DelNode(args NodeArgs) (string, error) {
 	return node.DeleteVP(args)
 }

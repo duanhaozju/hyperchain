@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import "errors"
@@ -13,6 +26,11 @@ const (
 	IDLE = 0
 )
 
+const (
+	DemandSeqNo = iota
+	DemandNumber
+)
+
 // Hyperchain protocol message definitions
 const (
 	// consensus
@@ -23,7 +41,6 @@ const (
 	NOTIFY_UNICAST_INVALID
 	NOTIFY_BROADCAST_DEMAND
 	NOTIFY_UNICAST_BLOCK
-	NOTIFY_BROADCAST_SINGLE
 	NOTIFY_REQUEST_WORLD_STATE
 	NOTIFY_SEND_WORLD_STATE_HANDSHAKE
 	NOTIFY_SEND_WS_ACK

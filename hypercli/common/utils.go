@@ -103,7 +103,7 @@ func GenSignature(from string, to string, timestamp int64, amount int64, payload
 		tx = types.NewTransaction(common.HexToAddress(from).Bytes(), common.HexToAddress(to).Bytes(), value, timestamp, nonce)
 	}
 
-	signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SighHash(kec256Hash).Bytes(), password)
+	signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SignHash(kec256Hash).Bytes(), password)
 
 	if err != nil {
 		fmt.Println("Sign Transaction failed!, detail error message: ", err)

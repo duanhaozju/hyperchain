@@ -7,7 +7,7 @@ import (
 	"hyperchain/common"
 )
 
-//handleJsonRequest handle JsonRequest under current namespace.
+// handleJsonRequest handles JsonRequest under current namespace.
 func (ns *namespaceImpl) handleJsonRequest(request *common.RPCRequest) *common.RPCResponse {
 	return ns.rpc.ProcessRequest(request)
 }

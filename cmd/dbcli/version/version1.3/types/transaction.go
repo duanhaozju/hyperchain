@@ -28,7 +28,7 @@ func (self *Transaction) GetHash() common.Hash {
 	return common.BytesToHash(self.TransactionHash)
 }
 
-func (self *Transaction) SighHash(ch crypto.CommonHash) common.Hash {
+func (self *Transaction) SignHash(ch crypto.CommonHash) common.Hash {
 	/*
 		from=0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
 		&to=0x80958818f0a025273111fba92ed14c3dd483caeb
@@ -70,7 +70,7 @@ func (self *Transaction) FString() string {
 //if addr recovered from signature != tx.from return false
 func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.CommonHash) bool {
 
-	hash := self.SighHash(ch)
+	hash := self.SignHash(ch)
 	addr, _ := encryption.UnSign(hash[:], self.Signature)
 	from := common.BytesToAddress(self.From)
 	return addr == from

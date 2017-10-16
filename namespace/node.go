@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-//Node basic node info exposed in namespace.
+// Node contains the basic node info exposed in namespace.
 type Node struct {
 	Id           int
 	Addr         string
@@ -28,18 +28,17 @@ func NewNode(id, grpc, rpc int, addr, extAddr string) *Node {
 	}
 }
 
-//NamespaceInfo basic information of this namespace.
+// NamespaceInfo contains the basic information of this namespace.
 type NamespaceInfo struct {
 	name   string
 	desc   string
 	logger *logging.Logger
 
 	nodes map[int]*Node
-	//config *common.ConfigReader
-	lock *sync.RWMutex
+	lock  *sync.RWMutex
 }
 
-//NewNamespaceInfo new namespace info by peerconfig file.
+// NewNamespaceInfo returns namespace info by peerconfig file.
 func NewNamespaceInfo(peerConfigPath, namespace string, logger *logging.Logger) (*NamespaceInfo, error) {
 	ni := &NamespaceInfo{
 		name:   namespace,
@@ -49,22 +48,9 @@ func NewNamespaceInfo(peerConfigPath, namespace string, logger *logging.Logger) 
 	return ni, ni.init(peerConfigPath, namespace)
 }
 
-//if add node or delete node, this method must be invoked.
+// During add node or delete node, this method must be invoked.
 func (ni *NamespaceInfo) init(peerConfigPath, namespace string) error {
 	//TODO: complement namespace info gathering
-	//ni.logger.Critical(peerConfigPath)
-	//ni.lock.Lock()
-	//defer ni.lock.Unlock()
-	//config := common.NewConfigReader(peerConfigPath, namespace)
-	//if (config == nil) {
-	//	return errors.New("can not read config file " + peerConfigPath)
-	//}
-	//ni.config = config
-	//ni.nodes = make(map[int]*Node, config.MaxNum())
-	//peerConfigNodes := config.Peers()
-	//for _, pn := range peerConfigNodes {
-	//	ni.nodes[pn.ID] = NewNode(pn.ID, pn.Port, pn.RPCPort, pn.Address, pn.ExternalAddress)
-	//}
 	return nil
 }
 
@@ -86,7 +72,7 @@ func (ni *NamespaceInfo) Desc() string {
 	return ni.name
 }
 
-//Node get node by node id.
+// Node returns node by node id.
 func (ni *NamespaceInfo) Node(id int) (*Node, error) {
 	ni.lock.RLock()
 	defer ni.lock.RUnlock()
@@ -107,8 +93,8 @@ func (ni *NamespaceInfo) AddNode(node *Node) error {
 		ni.logger.Warningf("node with id %d is existed, update it.", node.Id)
 		ni.nodes[node.Id] = node
 	}
-	ni.logger.Info("Add new node with id %d ", node.Id)
-	ni.logger.Debugf("Add new node: %v ", node)
+	ni.logger.Info("Add newed node with id %d ", node.Id)
+	ni.logger.Debugf("Add newed node: %v ", node)
 	ni.nodes[node.Id] = node
 	return nil
 }
@@ -121,7 +107,7 @@ func (ni *NamespaceInfo) PrintInfo() {
 	}
 }
 
-//isNodeConfigLegal node config legality check
+// isNodeConfigLegal checks the legality of node config.
 func isNodeConfigLegal(node *Node) bool {
 	//TODO: more limits?
 	if node == nil ||

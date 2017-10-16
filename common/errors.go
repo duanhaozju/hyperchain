@@ -1,9 +1,12 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
+
 package common
 
 import "fmt"
 
 const (
-	serviceMethodSeparator = "_"
+	ServiceMethodSeparator = "_"
 )
 
 // JSON-RPC specified error
@@ -25,7 +28,7 @@ const (
 	custom_CertError         int = -32099
 )
 const (
-	custom_LeveldbNotFoundError int = -32001 - iota
+	custom_DBNotFoundError int = -32001 - iota
 	custom_OutofBalanceError
 	custom_SignatureInvalidError
 	custom_ContractDeployError
@@ -38,8 +41,6 @@ const (
 	custom_NoBlockGeneratedError
 	custom_SubNotExistError
 	custom_SnapshotError
-	custom_InternalServerError
-	custom_MarshalError
 )
 
 // RPCError implements RPC error, is add support for error codec over regular go errors
@@ -68,7 +69,7 @@ type MethodNotFoundError struct {
 func (e *MethodNotFoundError) Code() int { return specified_MethodNotFoundError }
 func (e *MethodNotFoundError) Error() string {
 	return fmt.Sprintf("The method %s%s%s does not exist/is not available",
-		e.Service, serviceMethodSeparator, e.Method)
+		e.Service, ServiceMethodSeparator, e.Method)
 }
 
 // unable to decode supplied params, or an invalid number of parameters
@@ -99,15 +100,16 @@ func (e *CallbackError) Error() string { return e.Message }
 type ShutdownError struct{}
 
 func (e *ShutdownError) Code() int     { return specified_ShutdownError }
-func (e *ShutdownError) Error() string { return "server is shutting down" }
+func (e *ShutdownError) Error() string { return "Server is shutting down" }
 
 // JSONRPC custom ERRORS
-type LeveldbNotFoundError struct {
-	Message string
+type DBNotFoundError struct {
+	Type string
+	Id   string
 }
 
-func (e *LeveldbNotFoundError) Code() int     { return custom_LeveldbNotFoundError }
-func (e *LeveldbNotFoundError) Error() string { return "Not found " + e.Message }
+func (e *DBNotFoundError) Code() int     { return custom_DBNotFoundError }
+func (e *DBNotFoundError) Error() string { return fmt.Sprintf("Not found %v %v", e.Type, e.Id) }
 
 type OutofBalanceError struct {
 	Message string
@@ -137,19 +139,17 @@ type ContractInvokeError struct {
 func (e *ContractInvokeError) Code() int     { return custom_ContractInvokeError }
 func (e *ContractInvokeError) Error() string { return e.Message }
 
-type SystemTooBusyError struct {
-	Message string
-}
+type SystemTooBusyError struct{}
 
 func (e *SystemTooBusyError) Code() int     { return custom_SystemTooBusyError }
-func (e *SystemTooBusyError) Error() string { return e.Message }
+func (e *SystemTooBusyError) Error() string { return "System is too busy to response. %s" }
 
 type RepeadedTxError struct {
-	Message string
+	TxHash string
 }
 
 func (e *RepeadedTxError) Code() int     { return custom_RepeadedTxError }
-func (e *RepeadedTxError) Error() string { return e.Message }
+func (e *RepeadedTxError) Error() string { return "Repeated transaction " + e.TxHash }
 
 type ContractPermissionError struct {
 	Message string
@@ -161,12 +161,12 @@ func (e *ContractPermissionError) Error() string {
 }
 
 type AccountNotExistError struct {
-	Message string
+	Address string
 }
 
 func (e *AccountNotExistError) Code() int { return custom_AccountNotExistError }
 func (e *AccountNotExistError) Error() string {
-	return fmt.Sprintf("The account dose not exist '%s'", e.Message)
+	return fmt.Sprintf("The account dose not exist '%s'", e.Address)
 }
 
 type NamespaceNotFound struct {
@@ -178,12 +178,10 @@ func (e *NamespaceNotFound) Error() string {
 	return fmt.Sprintf("The namespace '%s' does not exist", e.Name)
 }
 
-type NoBlockGeneratedError struct {
-	Message string
-}
+type NoBlockGeneratedError struct{}
 
 func (e *NoBlockGeneratedError) Code() int     { return custom_NoBlockGeneratedError }
-func (e *NoBlockGeneratedError) Error() string { return fmt.Sprintf(e.Message) }
+func (e *NoBlockGeneratedError) Error() string { return "There is no block generated!" }
 
 type InvalidTokenError struct {
 	Message string
@@ -217,12 +215,3 @@ type CertError struct {
 
 func (e *CertError) Code() int     { return custom_CertError }
 func (e *CertError) Error() string { return e.Message }
-
-type MarshalError struct {
-	Message string
-}
-
-func (e *MarshalError) Code() int {
-	return custom_MarshalError
-}
-func (e *MarshalError) Error() string { return e.Message }

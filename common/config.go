@@ -87,6 +87,12 @@ func (cf *Config) GetStringMap(key string) map[string]interface{} {
 	return cf.conf.GetStringMap(key)
 }
 
+func (cf *Config) GetStringSlice(key string) []string {
+	cf.lock.RLock()
+	defer cf.lock.RUnlock()
+	return cf.conf.GetStringSlice(key)
+}
+
 func (cf *Config) GetBytes(key string) uint {
 	cf.lock.RLock()
 	defer cf.lock.RUnlock()
@@ -131,10 +137,13 @@ func (cf *Config) Print() {
 }
 
 func (cf *Config) equals(anotherConfig *Config) bool {
+	if len(cf.conf.AllKeys()) != len(anotherConfig.conf.AllKeys()) {
+		return false
+	}
 	for _, key := range anotherConfig.conf.AllKeys() {
 		if !cf.ContainsKey(key) {
 			fmt.Printf("No value for key %s found \n", key)
-			return true
+			return false
 		}
 	}
 	return true
