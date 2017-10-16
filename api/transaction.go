@@ -49,6 +49,7 @@ type SendTxArgs struct {
 	Simulate   bool            `json:"simulate"`
 	Opcode     int32           `json:"opcode"`
 	Nonce      int64           `json:"nonce"`
+	Extra      string          `json:"extra"`
 	SnapshotId string          `json:"snapshotId"`
 	VmType     string          `json:"type"`
 }
@@ -66,6 +67,7 @@ type TransactionResult struct {
 	//GasPrice    *Number        `json:"gasPrice"`
 	Timestamp   int64   `json:"timestamp"`
 	Nonce       int64   `json:"nonce"`
+	Extra       string  `json:"extra"`
 	ExecuteTime *Number `json:"executeTime,omitempty"`
 	Payload     string  `json:"payload,omitempty"`
 	Invalid     bool    `json:"invalid,omitempty"`
@@ -152,7 +154,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	}
 
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
-		realArgs.Value.ToInt64(), nil, 0, types.TransactionValue_EVM)
+		realArgs.Value.ToInt64(), nil, 0, []byte(realArgs.Extra), types.TransactionValue_EVM)
 
 	value, err := proto.Marshal(txValue)
 
@@ -534,7 +536,8 @@ func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
 	payload := common.FromHex(realArgs.Payload)
 
-	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(), realArgs.Value.ToInt64(), payload, args.Opcode, types.TransactionValue_EVM)
+	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
+		realArgs.Value.ToInt64(), payload, realArgs.Opcode, []byte(realArgs.Extra), types.TransactionValue_EVM)
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
@@ -1109,7 +1112,6 @@ func (tran *Transaction) filterTransactionsByAddress(txs []interface{}, address 
 	return result, nil
 }
 
-
 func outputTransaction(trans interface{}, namespace string, log *logging.Logger) (*TransactionResult, error) {
 
 	var txValue types.TransactionValue
@@ -1138,6 +1140,7 @@ func outputTransaction(trans interface{}, namespace string, log *logging.Logger)
 				To:          common.BytesToAddress(t.To),
 				Amount:      NewInt64ToNumber(txValue.Amount),
 				Nonce:       t.Nonce,
+				Extra:       string(t.GetTransactionValue().GetExtra()),
 				//Gas: 		NewInt64ToNumber(txValue.GasLimit),
 				//GasPrice: 	NewInt64ToNumber(txValue.Price),
 				Timestamp:   t.Timestamp,
@@ -1163,6 +1166,7 @@ func outputTransaction(trans interface{}, namespace string, log *logging.Logger)
 			To:      common.BytesToAddress(t.Tx.To),
 			Amount:  NewInt64ToNumber(txValue.Amount),
 			Nonce:   t.Tx.Nonce,
+			Extra:   string(t.Tx.GetTransactionValue().GetExtra()),
 			//Gas: 		NewInt64ToNumber(txValue.GasLimit),
 			//GasPrice: 	NewInt64ToNumber(txValue.Price),
 			Timestamp:  t.Tx.Timestamp,

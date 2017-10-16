@@ -65,7 +65,7 @@ func deployOrInvoke(contract *Contract, args SendTxArgs, txType int, namespace s
 	payload := common.FromHex(realArgs.Payload)
 
 	txValue := types.NewTransactionValue(realArgs.GasPrice.ToInt64(), realArgs.Gas.ToInt64(),
-		realArgs.Value.ToInt64(), payload, args.Opcode, parseVmType(realArgs.VmType))
+		realArgs.Value.ToInt64(), payload, realArgs.Opcode, []byte(realArgs.Extra), parseVmType(realArgs.VmType))
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {

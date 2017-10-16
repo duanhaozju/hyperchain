@@ -14,6 +14,7 @@ message TransactionValue {
             UPDATE = 1;
             FREEZE = 2;
             UNFREEZE = 3;
+            SKIPVM  = 4;
             ARCHIVE = 100;
     }
 	Opcode op = 8;
@@ -23,6 +24,7 @@ message TransactionValue {
 
     }
     VmType vmType = 9;
+    bytes extra = 10;
 }
 
 message InvokeArgs {
@@ -31,6 +33,3 @@ message InvokeArgs {
     repeated bytes args = 3;
 }
 
-message TxExtra {
-    bytes nodeHash = 1;
-}

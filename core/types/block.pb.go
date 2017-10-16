@@ -28,9 +28,9 @@ It has these top-level messages:
 	InvalidTransactionRecord
 	InvalidTransactionRecords
 	TransactionMeta
+	NonHash
 	TransactionValue
 	InvokeArgs
-	TxExtra
 	TransactionWrapper
 */
 package types

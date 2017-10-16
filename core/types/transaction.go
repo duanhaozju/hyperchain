@@ -196,12 +196,13 @@ func NewTransaction(from []byte, to []byte, value []byte, timestamp int64, nonce
 	return transaction
 }
 
-func NewTransactionValue(price, gasLimit, amount int64, payload []byte, opcode int32, vmType TransactionValue_VmType) *TransactionValue {
+func NewTransactionValue(price, gasLimit, amount int64, payload []byte, opcode int32, extra []byte, vmType TransactionValue_VmType) *TransactionValue {
 	return &TransactionValue{
 		Price:    price,
 		GasLimit: gasLimit,
 		Amount:   amount,
 		Payload:  payload,
+		Extra:    extra,
 		Op:       TransactionValue_Opcode(opcode),
 		VmType:   vmType,
 	}
@@ -219,4 +220,13 @@ func Keccak256(data ...[]byte) []byte {
 		d.Write(b)
 	}
 	return d.Sum(nil)
+}
+
+func (tx *Transaction) GetNVPHash() string {
+	return common.Bytes2Hex(tx.GetOther().NodeHash)
+}
+
+func (tx *Transaction) SetNVPHash(hash string) error {
+	tx.GetOther().NodeHash = common.Hex2Bytes(hash)
+	return nil
 }
