@@ -20,6 +20,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"reflect"
+	"errors"
 )
 
 //path struct should match
@@ -419,4 +421,36 @@ func CleanData(namespace string) error {
 	}
 	err = os.RemoveAll("./namespaces")
 	return err
+}
+
+func checkNilElems(i interface{}) (string, []string, error) {
+	typ := reflect.TypeOf(i)
+	value := reflect.Indirect(reflect.ValueOf(i))
+
+	if typ.Kind() != reflect.Ptr {
+		return "", nil, errors.New("Got a non-ptr to check if has nil elements.")
+	}
+	typ = typ.Elem()
+	if typ.Kind() != reflect.Struct {
+		return "", nil, errors.New("Got a non-struct to check if has nil elements.")
+	}
+
+	structName := typ.Name()
+	nilElems := []string{}
+	hasNil := false
+
+	for i := 0; i<typ.NumField(); i ++ {
+		kind := typ.Field(i).Type.Kind()
+		if kind == reflect.Chan || kind == reflect.Map {
+			elemName := typ.Field(i).Name
+			if value.FieldByName(elemName).IsNil() {
+				nilElems = append(nilElems, elemName)
+				hasNil = true
+			}
+		}
+	}
+	if hasNil {
+		return structName, nilElems, nil
+	}
+	return structName, nil, nil
 }
