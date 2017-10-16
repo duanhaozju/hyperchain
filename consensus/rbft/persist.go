@@ -6,11 +6,44 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"strconv"
+
+	ndb "hyperchain/core/ledger/chain"
+	"hyperchain/core/types"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
-	"strconv"
 )
+
+// GetBlockchainInfo waits until the executor module executes to a checkpoint then returns the blockchain info with the
+// given namespace
+func (rbft *rbftImpl) GetBlockchainInfo(namespace string) *types.Chain {
+	bcInfo := ndb.GetChainUntil(namespace)
+	return bcInfo
+}
+
+// GetCurrentBlockInfo returns the current blockchain info with the given namespace immediately
+func (rbft *rbftImpl) GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte) {
+	info := ndb.GetChainCopy(namespace)
+	return info.Height, info.LatestBlockHash, info.ParentBlockHash
+}
+
+// GetBlockHeightAndHash returns the current block height and hash with the given namespace immediately
+func (rbft *rbftImpl) GetBlockHeightAndHash(namespace string) (uint64, string) {
+	bcInfo := ndb.GetChainCopy(namespace)
+	hash := base64.StdEncoding.EncodeToString(bcInfo.LatestBlockHash)
+	return bcInfo.Height, hash
+}
+
+// GetHeightOfChain returns the current block height with the given namespace immediately
+func (rbft *rbftImpl) GetHeightOfChain(namespace string) uint64 {
+	return ndb.GetHeightOfChain(namespace)
+}
+
+// GetGenesisOfChain returns the genesis block info of the ledger with the given namespace
+func (rbft *rbftImpl) GetGenesisOfChain(namespace string) (uint64, error) {
+	return ndb.GetGenesisTag(namespace)
+}
 
 // persistQSet persists marshaled pre-prepare message to database
 func (rbft *rbftImpl) persistQSet(preprep *PrePrepare) {
@@ -467,7 +500,7 @@ func (rbft *rbftImpl) restoreLastSeqNo() {
 // getLastSeqNo retrieves database and returns the last block number
 func (rbft *rbftImpl) getLastSeqNo() (uint64, error) {
 	var err error
-	h := rbft.persister.GetHeightOfChain(rbft.namespace)
+	h := rbft.GetHeightOfChain(rbft.namespace)
 	if h == 0 {
 		err = errors.Errorf("Height of chain is 0")
 		return h, err
