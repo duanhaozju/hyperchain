@@ -137,7 +137,7 @@ func newPBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 func (rbft *rbftImpl) ProcessEvent(ee events.Event) events.Event {
 
 	switch e := ee.(type) {
-	case *types.Transaction: //local transaction
+	case txRequest:
 		return rbft.processTransaction(e)
 
 	case txpool.TxHashBatch:
@@ -203,7 +203,11 @@ func (rbft *rbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 			rbft.logger.Errorf("processConsensus, unmarshal error: can not unmarshal ConsensusMessage", err)
 			return err
 		}
-		go rbft.rbftEventQueue.Push(tx)
+		req := txRequest{
+			tx: tx,
+			new: false,
+		}
+		go rbft.rbftEventQueue.Push(req)
 	} else {
 		go rbft.rbftEventQueue.Push(consensus)
 	}
@@ -323,9 +327,9 @@ func (rbft *rbftImpl) findNextPrePrepareBatch() (find bool, digest string, resul
 			continue
 		}
 
-		// restrict the speed of sending prePrepare，and in view change, when send new view,
+		// restrict the speed of sending prePrepare, and in view change, when send new view,
 		// we need to assign seqNo and there is an upper limit. So we cannot break the high watermark.
-		if !rbft.sendInWV(rbft.view, n) {
+		if !rbft.sendInW(n) {
 			rbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because "+
 				"batch seqNo=%d is out of sequence numbers", rbft.id, digest, n)
 			rbft.batchVdr.currentVid = nil // don't send this message this time, send it after move watermark
@@ -474,7 +478,7 @@ func (rbft *rbftImpl) recvPrepare(prep *Prepare) error {
 			return nil
 		} else {
 			// this is abnormal in common case
-			rbft.logger.Warningf("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
+			rbft.logger.Infof("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
 				prep.ReplicaId, prep.View, prep.SequenceNumber)
 			return nil
 		}
@@ -571,7 +575,7 @@ func (rbft *rbftImpl) recvCommit(commit *Commit) error {
 			return nil
 		} else {
 			// this is abnormal in common case
-			rbft.logger.Warningf("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
+			rbft.logger.Infof("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
 				commit.ReplicaId, commit.View, commit.SequenceNumber)
 			return nil
 		}
@@ -603,10 +607,10 @@ func (rbft *rbftImpl) recvCommit(commit *Commit) error {
 }
 
 // fetchMissingTransaction fetch missing transactions from primary which this node didn't receive but primary received
-func (rbft *rbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing []string) error {
+func (rbft *rbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing map[uint64]string) error {
 
-	rbft.logger.Debugf("Replica %d try to fetch missing txs for view=%d/seqNo=%d from primary %d",
-		rbft.id, preprep.View, preprep.SequenceNumber, preprep.ReplicaId)
+	rbft.logger.Debugf("Replica %d try to fetch missing txs for view=%d/seqNo=%d/digest=%s from primary %d",
+		rbft.id, preprep.View, preprep.SequenceNumber, preprep.BatchDigest, preprep.ReplicaId)
 
 	fetch := &FetchMissingTransaction{
 		View:           preprep.View,
@@ -635,14 +639,28 @@ func (rbft *rbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing []str
 // recvFetchMissingTransaction returns transactions to a node which didn't receive some transactions and ask primary for them.
 func (rbft *rbftImpl) recvFetchMissingTransaction(fetch *FetchMissingTransaction) error {
 
-	rbft.logger.Debugf("Primary %d received FetchMissingTransaction request for view=%d/seqNo=%d from replica %d",
-		rbft.id, fetch.View, fetch.SequenceNumber, fetch.ReplicaId)
+	rbft.logger.Debugf("Primary %d received FetchMissingTransaction request for view=%d/seqNo=%d/digest=%s from replica %d",
+		rbft.id, fetch.View, fetch.SequenceNumber, fetch.BatchDigest, fetch.ReplicaId)
 
-	txList, err := rbft.batchMgr.txPool.ReturnFetchTxs(fetch.BatchDigest, fetch.HashList)
-	if err != nil {
-		rbft.logger.Warningf("Primary %d cannot find the digest %d, missing txs: %v",
-			rbft.id, fetch.BatchDigest, fetch.HashList)
-		return nil
+	txList := make(map[uint64]*types.Transaction)
+	var err error
+
+	if batch := rbft.storeMgr.txBatchStore[fetch.BatchDigest]; batch != nil {
+		batchLen := uint64(len(batch.HashList))
+		for i, hash := range fetch.HashList {
+			if i >= batchLen || batch.HashList[i] != hash {
+				rbft.logger.Errorf("Primary %d finds mismatch tx hash when return fetch missing transactions", rbft.id)
+				return nil
+			}
+			txList[i] = batch.TxList[i]
+		}
+	} else {
+		txList, err = rbft.batchMgr.txPool.ReturnFetchTxs(fetch.BatchDigest, fetch.HashList)
+		if err != nil {
+			rbft.logger.Warningf("Primary %d cannot find the digest %d, missing txList: %v, err: %s",
+				rbft.id, fetch.BatchDigest, fetch.HashList, err)
+			return nil
+		}
 	}
 
 	re := &ReturnMissingTransaction{
@@ -815,7 +833,7 @@ func (rbft *rbftImpl) afterCommitBlock(idx msgID) {
 //=============================================================================
 
 //processTxEvent process received transaction event
-func (rbft *rbftImpl) processTransaction(tx *types.Transaction) events.Event {
+func (rbft *rbftImpl) processTransaction(req txRequest) events.Event {
 
 	var err error
 	var isGenerated bool
@@ -826,19 +844,19 @@ func (rbft *rbftImpl) processTransaction(tx *types.Transaction) events.Event {
 	if atomic.LoadUint32(&rbft.activeView) == 0 ||
 		atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 ||
 		rbft.status.checkStatesOr(&rbft.status.inNegoView) {
-		_, err = rbft.batchMgr.txPool.AddNewTx(tx, false, true)
+		_, err = rbft.batchMgr.txPool.AddNewTx(req.tx, false, req.new)
 	}
 	// primary nodes would check if this transaction triggered generating a batch or not
 	if rbft.isPrimary(rbft.id) {
 		if !rbft.batchMgr.isBatchTimerActive() { // start batch timer when this node receives the first transaction of a batch
 			rbft.startBatchTimer()
 		}
-		isGenerated, err = rbft.batchMgr.txPool.AddNewTx(tx, true, true)
+		isGenerated, err = rbft.batchMgr.txPool.AddNewTx(req.tx, true, req.new)
 		if isGenerated { // If this transaction triggers generating a batch, stop batch timer
 			rbft.stopBatchTimer()
 		}
 	} else {
-		_, err = rbft.batchMgr.txPool.AddNewTx(tx, false, true)
+		_, err = rbft.batchMgr.txPool.AddNewTx(req.tx, false, req.new)
 	}
 
 	if rbft.batchMgr.txPool.IsPoolFull() {
@@ -1460,8 +1478,6 @@ func (rbft *rbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 		if result.Hash == cert.resultHash {
 			cert.validated = true
 			batch := rbft.storeMgr.outstandingReqBatches[result.Digest]
-			batch.SeqNo = result.SeqNo
-			batch.ResultHash = result.Hash
 			rbft.storeMgr.outstandingReqBatches[result.Digest] = batch
 			rbft.storeMgr.txBatchStore[result.Digest] = batch
 			rbft.persistTxBatch(result.Digest)

@@ -70,6 +70,14 @@ func (rbft *rbftImpl) RecvLocal(msg interface{}) error {
 		}
 		pbMsg := cMsgToPbMsg(consensusMsg, rbft.id)
 		rbft.helper.InnerBroadcast(pbMsg)
+
+		req := txRequest{
+			tx: tx,
+			new: true,
+		}
+		go rbft.rbftEventQueue.Push(req)
+
+		return nil
 	}
 
 	go rbft.rbftEventQueue.Push(msg)

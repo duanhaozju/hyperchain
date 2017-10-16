@@ -57,7 +57,7 @@ func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) 
 		executor.logger.Errorf("construct new block for %d commit event failed.", ev.SeqNo)
 		return false
 	}
-	record := executor.getValidateRecord(ev.Hash)
+	record := executor.getValidateRecord(ValidationTag{ev.Hash, ev.SeqNo})
 	if record == nil {
 		executor.logger.Errorf("no validation record for #%d found", ev.SeqNo)
 		return false
@@ -73,7 +73,7 @@ func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) 
 		executor.throwInvalidTransactionBack(record.InvalidTxs)
 	}
 	executor.incDemandNumber()
-	executor.cache.validationResultCache.Remove(ev.Hash)
+	executor.cache.validationResultCache.Remove(ValidationTag{ev.Hash, ev.SeqNo})
 	return true
 }
 
@@ -137,10 +137,10 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 
 // getValidateRecord - get validate record with given hash identification.
 // nil will be return if no record been found.
-func (executor *Executor) getValidateRecord(hash string) *ValidationResultRecord {
-	ret, existed := executor.fetchValidationResult(hash)
+func (executor *Executor) getValidateRecord(tag ValidationTag) *ValidationResultRecord {
+	ret, existed := executor.fetchValidationResult(tag)
 	if !existed {
-		executor.logger.Noticef("no validation result found when commit block, hash %s", hash)
+		executor.logger.Noticef("no validation result found when commit block, hash %s, seqNo %d", tag.hash, tag.seqNo)
 		return nil
 	}
 	return ret
@@ -148,7 +148,7 @@ func (executor *Executor) getValidateRecord(hash string) *ValidationResultRecord
 
 // generateBlock - generate a block with given data.
 func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
-	record := executor.getValidateRecord(ev.Hash)
+	record := executor.getValidateRecord(ValidationTag{ev.Hash, ev.SeqNo})
 	if record == nil {
 		return nil
 	}
@@ -186,7 +186,7 @@ func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 		return false
 	}
 	// 2. verify whether validation result exist
-	record := executor.getValidateRecord(ev.Hash)
+	record := executor.getValidateRecord(ValidationTag{ev.Hash, ev.SeqNo})
 	if record == nil {
 		return false
 	}

@@ -9,7 +9,6 @@ import (
 	"hyperchain/common"
 	cm "hyperchain/core/common"
 	edb "hyperchain/core/db_utils"
-	er "hyperchain/core/errors"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
@@ -361,15 +360,7 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 	executor.recordSyncReqArgs(upstream, downstream)
 }
 
-// ApplyBlock - apply all transactions in block into state during the `state update` process.
 func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
-	if block.Transactions == nil {
-		return er.EmptyPointerErr, nil
-	}
-	return executor.applyBlock(block, seqNo)
-}
-
-func (executor *Executor) applyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
 	var filterLogs []*types.Log
 	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
 	if err != nil {
@@ -463,6 +454,9 @@ func (executor *Executor) processSyncBlocks() {
 				if err != nil || executor.assertApplyResult(blk, result) == false {
 					executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
 						executor.namespace, executor.context.syncFlag.SyncDemandBlockNum+1, executor.context.syncFlag.SyncTarget, edb.GetHeightOfChain(executor.namespace))
+					if err != nil {
+						executor.logger.Errorf("detail error %s", err.Error())
+					}
 					executor.reject()
 					return
 				} else {
@@ -507,7 +501,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 			blks, _ := executor.fetchFromSyncCache(tmp)
 			for hash, blk := range blks {
 				if hash == common.Bytes2Hex(tmpHash) {
-					edb.PersistBlock(executor.db.NewBatch(), &blk, true, true)
+					edb.PersistBlock(executor.db.NewBatch(), &blk, true, true, string(block.Version), getTxVersion(block))
 					executor.cache.syncCache.Remove(tmp)
 					tmp = tmp - 1
 					tmpHash = blk.ParentHash

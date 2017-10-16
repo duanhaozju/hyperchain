@@ -314,6 +314,7 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 }
 
 func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RPCResponse {
+	req.Namespace = common.DEFAULT_NAMESPACE
 	if s.admin.Check {
 		token, method := codec.GetAuthInfo()
 		err := s.admin.PreHandle(token, method)

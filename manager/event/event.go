@@ -160,6 +160,7 @@ type DeleteSnapshotEvent struct {
 type ArchiveEvent struct {
 	FilterId string
 	Cont     chan error
+	Sync     bool
 }
 
 // receive tx from a nvp

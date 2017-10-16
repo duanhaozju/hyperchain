@@ -268,6 +268,8 @@ func (rbft *rbftImpl) findNextValidateBatch() (find bool, digest string, txBatch
 			TxList:    batch,
 			HashList:  preprep.HashBatch.List,
 			Timestamp: preprep.HashBatch.Timestamp,
+			SeqNo: preprep.SequenceNumber,
+			ResultHash: preprep.ResultHash,
 		}
 		rbft.storeMgr.txBatchStore[preprep.BatchDigest] = txBatch
 		rbft.storeMgr.outstandingReqBatches[preprep.BatchDigest] = txBatch

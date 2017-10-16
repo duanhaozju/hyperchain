@@ -11,6 +11,7 @@ import (
 	"hyperchain/common"
 	hcom "hyperchain/hyperdb/common"
 	"hyperchain/hyperdb/db"
+	"path"
 )
 
 // the Database for LevelDB
@@ -130,7 +131,8 @@ func (db *LDBDatabase) NewBatch() db.Batch {
 }
 
 func (db *LDBDatabase) MakeSnapshot(backupPath string, fields []string) error {
-	backupDb, err := NewLDBDataBase(db.conf, backupPath, db.namespace)
+	p := path.Join(common.GetPath(db.namespace, LDBDataBasePath(db.conf)), backupPath)
+	backupDb, err := NewLDBDataBase(db.conf, p, db.namespace)
 	if err != nil {
 		return err
 	}

@@ -214,9 +214,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 		logger.Errorf("Construct namespace %s error, %v", name, err)
 		return ErrCannotNewNs
 	}
-	nr.rwLock.Lock()
-	nr.namespaces[name] = ns
-	nr.rwLock.Unlock()
+	nr.addNamespace(ns)
 	if err := nr.bloomfilter.Register(name); err != nil {
 		logger.Error("register bloom filter failed", err.Error())
 		return err
@@ -236,6 +234,18 @@ func updateNamespaceStartConfig(name string, conf *common.Config) error {
 	return nil
 }
 
+func (nr *nsManagerImpl) removeNamespace(name string)  {
+	nr.rwLock.Lock()
+	delete(nr.namespaces, name)
+	nr.rwLock.Unlock()
+}
+
+func (nr *nsManagerImpl) addNamespace(ns Namespace)  {
+	nr.rwLock.Lock()
+	nr.namespaces[ns.Name()] = ns
+	nr.rwLock.Unlock()
+}
+
 //DeRegister de-register namespace from system by name.
 func (nr *nsManagerImpl) DeRegister(name string) error {
 	logger.Criticalf("Try to deregister the namespace:%s ", name)
@@ -243,10 +253,8 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 		if ns.Status().state == running {
 			logger.Noticef("namespace: %s is running, stop it first", name)
 			ns.Stop()
-			nr.rwLock.Lock()
-			delete(nr.namespaces, name)
-			nr.rwLock.Unlock()
 		}
+		nr.removeNamespace(name)
 	} else {
 		logger.Warningf("namespace %s not exist, please register first.", name)
 		return ErrNoSuchNamespace

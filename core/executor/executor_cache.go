@@ -71,13 +71,13 @@ func (executor *Executor) clearPendingValidationEventQ() {
 }
 
 // addValidationResult - save a validation result to cache.
-func (executor *Executor) addValidationResult(hash string, res *ValidationResultRecord) {
-	executor.cache.validationResultCache.Add(hash, res)
+func (executor *Executor) addValidationResult(tag ValidationTag, res *ValidationResultRecord) {
+	executor.cache.validationResultCache.Add(tag, res)
 }
 
 // fetchValidationResult - fetch a validation result via hash.
-func (executor *Executor) fetchValidationResult(hash string) (*ValidationResultRecord, bool) {
-	v, existed := executor.cache.validationResultCache.Get(hash)
+func (executor *Executor) fetchValidationResult(tag ValidationTag) (*ValidationResultRecord, bool) {
+	v, existed := executor.cache.validationResultCache.Get(tag)
 	if existed == false {
 		return nil, false
 	}
