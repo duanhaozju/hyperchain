@@ -30,16 +30,16 @@ const (
 	PEERTYPE_NVP
 )
 
-// peerManagerImpl implements PeerManager interface. A node can participate in
-// multiple namespace, one namespace only own one peerManagerImpl instance to
-// manage node and network communication under the namespace.
+// peerManagerImpl implements PeerManager interface. A Hyperchain replica can participate in
+// multiple namespaces, one namespace only owns a peerManagerImpl instance to
+// manage peers and network communication under this namespace.
 type peerManagerImpl struct {
 
-	// current instance own which namespace
+	// current instance owns which namespace
 	namespace string
 
 	// here use the concurrent map to keep thread safe
-	// use this map will lose some tps, and idHostMap functional are same as the old version peersPool
+	// use this map will lose performance, and idHostMap function are same as the old version peersPool
 	// idHostMap -> map[string]string => map[id]hostname
 	hyperNet *network.HyperNet
 
@@ -49,10 +49,10 @@ type peerManagerImpl struct {
 	n int
 
 	isonline *threadsafe.SpinLock // node online status under the current namespace
-	isNew bool // symbol that the node is new to hyperchain
-	isOrg bool // symbol that the node is origin to hyperchain. If isNew is true, isOrg is false, and vice versa.
-	isVP  bool // symbol that the node is VP
-	isRec bool // symbol that the node should be reconnected
+	isNew bool // shows that the node is new to hyperchain
+	isOrg bool // shows that the node is origin to hyperchain. If isNew is true, isOrg is false, and vice versa.
+	isVP  bool // shows that the node is VP
+	isRec bool // shows that the node should be reconnected
 
 	peerPool *PeersPool // peerPool stores all the peer instance under the current namespace
 	peercnf *peerCnf 	// peercnf is for persisting the config
@@ -273,7 +273,7 @@ func (pmgr *peerManagerImpl) SetOnline() {
 	pmgr.isonline.UnLock()
 }
 
-// SetOffline represents the node is going to start up or has been off-line.
+// SetOffline represents the node is going to start up or has been offline.
 func (pmgr *peerManagerImpl) SetOffline() {
 	pmgr.isonline.TryLock()
 }
