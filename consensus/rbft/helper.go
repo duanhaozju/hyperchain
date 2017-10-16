@@ -58,10 +58,10 @@ func (rbft *rbftImpl) inWV(v uint64, n uint64) bool {
 	return rbft.inV(v) && rbft.inW(n)
 }
 
-// sendInWV used in findNextPrePrepareBatch firstly check the given view equals the current view or not and then check
-// the given seqNo is between low watermark and high watermark or not
-func (rbft *rbftImpl) sendInWV(v uint64, n uint64) bool {
-	return rbft.view == v && n > rbft.h && n <= rbft.h+rbft.L
+// sendInW used in findNextPrePrepareBatch checks the given seqNo is between low
+// watermark and high watermark or not.
+func (rbft *rbftImpl) sendInW(n uint64) bool {
+	return n > rbft.h && n <= rbft.h+rbft.L
 }
 
 // getAddNodeCert returns the addnode Cert with the given addHash

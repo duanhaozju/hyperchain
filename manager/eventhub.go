@@ -670,7 +670,7 @@ func (hub *EventHub) isSendToNVP(payload []byte) (bool, []string) {
 	if err != nil {
 		hub.logger.Error("unmarshal invalid transaction record payload failed")
 	}
-	hash, err := invalidTx.Tx.GetNVPHash()
+	hash := invalidTx.Tx.GetNVPHash()
 	if err != nil {
 		hub.logger.Error("get NVP hash failed. Err Msg: %v.", err.Error())
 	}

@@ -166,7 +166,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Error("marshal invalid record error")
 			return err
 		}
-		hash, err := r.Tx.GetNVPHash()
+		hash := r.Tx.GetNVPHash()
 		if err != nil {
 			executor.logger.Errorf("get nvp hash failde. Err Mag:%v.", err.Error())
 		}

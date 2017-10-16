@@ -202,12 +202,13 @@ func NewTransaction(from []byte, to []byte, value []byte, timestamp int64, nonce
 	return transaction
 }
 
-func NewTransactionValue(price, gasLimit, amount int64, payload []byte, opcode int32, vmType TransactionValue_VmType) *TransactionValue {
+func NewTransactionValue(price, gasLimit, amount int64, payload []byte, opcode int32, extra []byte, vmType TransactionValue_VmType) *TransactionValue {
 	return &TransactionValue{
 		Price:    price,
 		GasLimit: gasLimit,
 		Amount:   amount,
 		Payload:  payload,
+		Extra:    extra,
 		Op:       TransactionValue_Opcode(opcode),
 		VmType:   vmType,
 	}
@@ -217,27 +218,6 @@ func (tx *Transaction) GetTransactionValue() *TransactionValue {
 	transactionValue := &TransactionValue{}
 	proto.Unmarshal(tx.Value, transactionValue)
 	return transactionValue
-}
-
-func (tx *Transaction) GetNVPHash() (string, error) {
-	var txExtra TxExtra
-	err := proto.Unmarshal(tx.Extra, &txExtra)
-	if err != nil {
-		return "", err
-	}
-	return common.Bytes2Hex(txExtra.NodeHash), nil
-}
-
-func (tx *Transaction) SetNVPHash(hash string) error {
-	txExtra := &TxExtra{
-		NodeHash: common.Hex2Bytes(hash),
-	}
-	extra, err := proto.Marshal(txExtra)
-	if err != nil {
-		return err
-	}
-	tx.Extra = extra
-	return nil
 }
 
 func Keccak256(data ...[]byte) []byte {
@@ -264,3 +244,11 @@ func (tv *TransactionValue) RetrieveAmount() *big.Int {
 	return new(big.Int).Set(big.NewInt(tv.Amount))
 }
 
+func (tx *Transaction) GetNVPHash() string {
+	return common.Bytes2Hex(tx.GetOther().NodeHash)
+}
+
+func (tx *Transaction) SetNVPHash(hash string) error {
+	tx.GetOther().NodeHash = common.Hex2Bytes(hash)
+	return nil
+}

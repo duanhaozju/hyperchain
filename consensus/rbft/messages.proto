@@ -8,7 +8,7 @@ import "hyperchain/core/types/transaction.proto";
 
 package rbft;
 /*
- * mapping to PBFT paper names
+ * mapping to RBFT paper names
  *
  * PBFT name: local name
  *
@@ -75,7 +75,7 @@ message fetch_missing_transaction {
     uint64 view = 1;
     uint64 sequence_number = 2;
     string batch_digest = 3;
-    repeated string hash_list = 4;
+    map<uint64, string> hash_list = 4;
     uint64 replica_id = 5;
 }
 
@@ -83,8 +83,8 @@ message return_missing_transaction {
     uint64 view = 1;
     uint64 sequence_number = 2;
     string batch_digest = 3;
-    repeated string hash_list = 4;
-    repeated types.Transaction tx_list = 5;
+    map<uint64, string> hash_list = 4;
+    map<uint64, types.Transaction> tx_list = 5;
     uint64 replica_id = 6;
 }
 
