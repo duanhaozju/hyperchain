@@ -94,7 +94,7 @@ func GenSignature(from string, to string, timestamp int64, amount int64, payload
 
 	payload = common.StringToHex(payload)
 	// TODO ASK @DUANHAO ADD EXTRA SUPPORT
-	txValue := types.NewTransactionValue(int64(defaultGasPrice), int64(defaultGas), amount, common.FromHex(payload), nil, opcode, vmtype)
+	txValue := types.NewTransactionValue(int64(defaultGasPrice), int64(defaultGas), amount, common.FromHex(payload), opcode, nil, vmtype)
 	value, _ := proto.Marshal(txValue)
 	var tx *types.Transaction
 	if to == "" {
