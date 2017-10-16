@@ -84,6 +84,7 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
 	receivePb = common.InitPb(int64(ev.TargetHeight-edb.GetHeightOfChain(executor.namespace)), "receive block")
 	receivePb.Start()
+	executor.context.closeW.Add(1)
 	go executor.syncChainResendBackend()
 }
 
@@ -92,6 +93,9 @@ func (executor *Executor) syncChainResendBackend() {
 	up, down := executor.context.syncCtx.getRequest()
 	for {
 		select {
+		case <-executor.context.stateUpdated:
+			executor.context.closeW.Done()
+			return
 		case <-ticker.C:
 			// resend
 			if executor.context.syncCtx.getResendMode() == ResendMode_Block {
