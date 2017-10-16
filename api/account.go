@@ -4,47 +4,54 @@ package api
 
 import (
 	"fmt"
+	"github.com/op/go-logging"
 	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/manager"
 )
 
+// This file implements the handler of Account service API which
+// can be invoked by client in JSON-RPC request.
+
 type Account struct {
 	eh        *manager.EventHub
 	namespace string
 	config    *common.Config
+	log       *logging.Logger
 }
 
 type AccountResult struct {
 	Account string `json:"account"`
 	Balance string `json:"balance"`
 }
+
 type UnlockParas struct {
 	Address  common.Address `json:"address"`
 	Password string         `json:"password"`
 }
 
+// NewPublicAccountAPI creates and returns a new Account instance for given namespace name.
 func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.Config) *Account {
 	return &Account{
 		namespace: namespace,
 		eh:        eh,
 		config:    config,
+		log:       common.GetLogger(namespace, "api"),
 	}
 }
 
-//New Account according to args from html
+// NewAccount creates a new account under the given password.
 func (acc *Account) NewAccount(password string) (common.Address, error) {
-	log := common.GetLogger(acc.namespace, "api")
 	am := acc.eh.GetAccountManager()
 	ac, err := am.NewAccount(password)
 	if err != nil {
-		log.Errorf("New Account error,%v", err)
+		acc.log.Errorf("New Account error, %v", err)
 		return common.Address{}, &common.CallbackError{Message: err.Error()}
 	}
 	return ac.Address, nil
 }
 
-// UnlockAccount unlocks account according to args(address,password), if success, return true.
+// UnlockAccount unlocks account for given account address and password, if success, return true.
 func (acc *Account) UnlockAccount(args UnlockParas) (bool, error) {
 
 	am := acc.eh.GetAccountManager()
@@ -61,18 +68,17 @@ func (acc *Account) UnlockAccount(args UnlockParas) (bool, error) {
 	ac := accounts.Account{Address: args.Address, File: am.KeyStore.JoinPath(s)}
 	err := am.Unlock(ac, args.Password)
 	if err != nil {
-		return false, &common.InvalidParamsError{Message: "incorrect address or password!"}
+		return false, &common.InvalidParamsError{Message: "Incorrect address or password!"}
 	}
 	return true, nil
 }
 
-// GetAllBalances returns all account's balance in the db,NOT CACHE DB!
+// GetAccounts returns all account's balance in the ledger.
 func (acc *Account) GetAccounts() ([]*AccountResult, error) {
-	log := common.GetLogger(acc.namespace, "api")
 	var acts []*AccountResult
 	stateDB, err := NewStateDb(acc.config, acc.namespace)
 	if err != nil {
-		log.Errorf("Get stateDB error, %v", err)
+		acc.log.Errorf("Get stateDB error, %v", err)
 		return nil, &common.CallbackError{Message: err.Error()}
 	}
 	ctx := stateDB.GetAccounts()
@@ -95,7 +101,7 @@ func (acc *Account) GetBalance(addr common.Address) (string, error) {
 		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
 			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
 		} else {
-			return "", &common.LeveldbNotFoundError{Message: "stateobject, the account may not exist"}
+			return "", &common.AccountNotExistError{Address: addr.Hex()}
 		}
 	}
 

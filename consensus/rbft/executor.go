@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 
 	"hyperchain/consensus"
-	"hyperchain/consensus/events"
 	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
@@ -49,7 +48,7 @@ func (rbft *rbftImpl) msgToEvent(msg *ConsensusMessage) (interface{}, error) {
 }
 
 // dispatchLocalEvent dispatches local Event to corresponding handles using its service type
-func (rbft *rbftImpl) dispatchLocalEvent(e *LocalEvent) events.Event {
+func (rbft *rbftImpl) dispatchLocalEvent(e *LocalEvent) consensusEvent {
 	switch e.Service {
 	case CORE_RBFT_SERVICE:
 		return rbft.handleCorePbftEvent(e)
@@ -66,7 +65,7 @@ func (rbft *rbftImpl) dispatchLocalEvent(e *LocalEvent) events.Event {
 }
 
 // handleCorePbftEvent handles core RBFT service events
-func (rbft *rbftImpl) handleCorePbftEvent(e *LocalEvent) events.Event {
+func (rbft *rbftImpl) handleCorePbftEvent(e *LocalEvent) consensusEvent {
 	switch e.EventType {
 
 	case CORE_BATCH_TIMER_EVENT:
@@ -99,7 +98,7 @@ func (rbft *rbftImpl) handleCorePbftEvent(e *LocalEvent) events.Event {
 }
 
 // handleViewChangeEvent handles view change service related events.
-func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
+func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 	switch e.EventType {
 	case VIEW_CHANGE_TIMER_EVENT:
 		rbft.logger.Warningf("Replica %d view change timer expired, sending view change: %s", rbft.id, rbft.vcMgr.newViewTimerReason)
@@ -174,7 +173,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 			// primary construct and send new view message
 			return rbft.sendNewView()
 		}
-		return rbft.processNewView()
+		return rbft.replicaCheckNewView()
 
 	case VIEW_CHANGE_VC_RESET_DONE_EVENT:
 		rbft.status.inActiveState(&rbft.status.inVcReset)
@@ -229,7 +228,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) events.Event {
 }
 
 // handleNodeMgrEvent handles node management service related events.
-func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
+func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) consensusEvent {
 	var err error
 	switch e.EventType {
 	case NODE_MGR_NEW_NODE_EVENT:
@@ -247,7 +246,7 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 		if rbft.isPrimary(rbft.id) {
 			return rbft.sendUpdateN()
 		}
-		return rbft.processUpdateN()
+		return rbft.replicaCheckUpdateN()
 	case NODE_MGR_UPDATEDN_EVENT:
 		rbft.startTimerIfOutstandingRequests()
 		rbft.vcMgr.vcResendCount = 0
@@ -283,7 +282,7 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) events.Event {
 }
 
 // handleRecoveryEvent handles recovery services related events.
-func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
+func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) consensusEvent {
 	switch e.EventType {
 	case RECOVERY_DONE_EVENT:
 		rbft.status.inActiveState(&rbft.status.inRecovery)
@@ -312,7 +311,7 @@ func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 				EventType: CORE_FIRST_REQUEST_TIMER_EVENT,
 			}
 
-			rbft.timerMgr.startTimer(FIRST_REQUEST_TIMER, event, rbft.rbftEventQueue)
+			rbft.timerMgr.startTimer(FIRST_REQUEST_TIMER, event, rbft.eventMux)
 		}
 
 		// if this recovery was triggered by 10 viewchange, inactive vcToRecovery
@@ -378,7 +377,7 @@ func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) events.Event {
 }
 
 // dispatchConsensusMsg dispatches consensus messages to corresponding handlers using its service type
-func (rbft *rbftImpl) dispatchConsensusMsg(e events.Event) events.Event {
+func (rbft *rbftImpl) dispatchConsensusMsg(e consensusEvent) consensusEvent {
 	rbft.logger.Debugf("start processing consensus message")
 	service := rbft.dispatchMsgToService(e)
 	switch service {
@@ -401,7 +400,7 @@ func (rbft *rbftImpl) dispatchConsensusMsg(e events.Event) events.Event {
 // 2. VIEW_CHANGE_SERVICE
 // 3. RECOVERY_SERVICE
 // 4. NODE_MGR_SERVICE
-func (rbft *rbftImpl) dispatchMsgToService(e events.Event) int {
+func (rbft *rbftImpl) dispatchMsgToService(e consensusEvent) int {
 	switch e.(type) {
 	// core RBFT service
 	case *TransactionBatch:

@@ -8,7 +8,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"hyperchain/consensus/helper/persist"
 	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
@@ -140,8 +139,8 @@ func (rbft *rbftImpl) cleanAllCache() {
 
 	// we should clear the qlist & plist, since we may send viewchange after recovery
 	// those previous viewchange msg will make viewchange-check incorrect
-	rbft.vcMgr.qlist = make(map[qidx]*ViewChange_PQ)
-	rbft.vcMgr.plist = make(map[uint64]*ViewChange_PQ)
+	rbft.vcMgr.qlist = make(map[qidx]*Vc_PQ)
+	rbft.vcMgr.plist = make(map[uint64]*Vc_PQ)
 
 }
 
@@ -268,7 +267,7 @@ func nullRequestMsgToPbMsg(id uint64) *protos.Message {
 // getBlockchainInfo used after commit gets the current blockchain information from database when our lastExec reached
 // the checkpoint, so here we wait until the executor module executes to a checkpoint to return the current BlockchainInfo
 func (rbft *rbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
-	bcInfo := persist.GetBlockchainInfo(rbft.namespace)
+	bcInfo := rbft.persister.GetBlockchainInfo(rbft.namespace)
 
 	height := bcInfo.Height
 	curBlkHash := bcInfo.LatestBlockHash
@@ -285,7 +284,7 @@ func (rbft *rbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
 // waiting until the executor module executes to a checkpoint as the current height must be a checkpoint if we reach the
 // checkpoint after state update
 func (rbft *rbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
-	height, curHash, prevHash := persist.GetCurrentBlockInfo(rbft.namespace)
+	height, curHash, prevHash := rbft.persister.GetCurrentBlockInfo(rbft.namespace)
 	return &protos.BlockchainInfo{
 		Height:            height,
 		CurrentBlockHash:  curHash,
@@ -295,7 +294,7 @@ func (rbft *rbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 
 // getGenesisInfo returns the genesis block information of the current namespace
 func (rbft *rbftImpl) getGenesisInfo() uint64 {
-	_, genesis := persist.GetGenesisOfChain(rbft.namespace)
+	genesis, _ := rbft.persister.GetGenesisOfChain(rbft.namespace)
 	return genesis
 }
 
@@ -341,7 +340,7 @@ func (rbft *rbftImpl) nullReqTimerReset() {
 		EventType: CORE_NULL_REQUEST_TIMER_EVENT,
 	}
 
-	rbft.timerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, event, rbft.rbftEventQueue)
+	rbft.timerMgr.startTimerWithNewTT(NULL_REQUEST_TIMER, timeout, event, rbft.eventMux)
 }
 
 // stopFirstRequestTimer stops the first request timer event if current node is not primary

@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/viper"
 	"hyperchain/common"
 	"hyperchain/consensus/helper"
-	"hyperchain/core/db_utils"
-	edb "hyperchain/core/db_utils"
+	"hyperchain/core/ledger/chain"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
@@ -57,18 +57,18 @@ func TNewConfig(fatherpath, name string, nodeId int) *common.Config {
 // ../../configuration/namespaces/
 // If the namespace is global
 // The directory of namesapces.toml should be   ../../configuration/namespaces/global/config/namespace.toml
-func TNewPbft(dbpath, path, namespace string, nodeId int, t *testing.T) (*rbftImpl, *common.Config, error) {
+func TNewRbft(dbpath, path, namespace string, nodeId int, t *testing.T) (*rbftImpl, *common.Config, error) {
 	conf := TNewConfig(path, namespace, nodeId)
 	namespace = conf.GetString(common.NAMESPACE)
 	if dbpath != "" {
 		conf.Set("database.leveldb.path", dbpath)
 	}
-	err := db_utils.InitDBForNamespace(conf, namespace)
+	err := chain.InitDBForNamespace(conf, namespace)
 	if err != nil {
 		t.Errorf("init db for namespace: %s error, %v", namespace, err)
 	}
 	h := helper.NewHelper(new(event.TypeMux), new(event.TypeMux))
-	pbft, err := newPBFT(namespace, conf, h, conf.GetInt("self.N"))
+	pbft, err := newRBFT(namespace, conf, h, conf.GetInt("self.N"))
 	return pbft, conf, err
 }
 
@@ -226,19 +226,19 @@ func (TH *TestHelp) BroadcastDelNode(msg *pb.Message) error                     
 func (TH *TestHelp) UpdateTable(payload []byte, flag bool) error                  { return nil }
 func (TH *TestHelp) SendFilterEvent(informType int, message ...interface{}) error { return nil }
 
-type PBFTNode struct {
+type RBFTNode struct {
 	nodeId    int
 	dbPath    string
 	confPath  string
 	namesapce string
 }
 
-func CreatPBFT(t *testing.T, N int, dbPath string, confPath string, namespace string, nodes []*PBFTNode) (pbftList []*rbftImpl) {
+func CreatRBFT(t *testing.T, N int, dbPath string, confPath string, namespace string, nodes []*RBFTNode) (rbftList []*rbftImpl) {
 
 	if N < 4 {
 		t.Error("N is too small to create PBFT network")
 	}
-	pbftList = make([]*rbftImpl, N+1) //pbft id start from 1 not zero ,so Create N+1 slice
+	rbftList = make([]*rbftImpl, N+1) //pbft id start from 1 not zero ,so Create N+1 slice
 	mcList := make([]*MessageChanel, N+1)
 	thList := make([]*TestHelp, N+1)
 	var err error
@@ -248,14 +248,14 @@ func CreatPBFT(t *testing.T, N int, dbPath string, confPath string, namespace st
 			t.Log("node id is greater then N")
 			continue
 		}
-		pbftList[nodes[i].nodeId], _, err = TNewPbft(nodes[i].dbPath, nodes[i].confPath, nodes[i].namesapce, 0, t)
+		rbftList[nodes[i].nodeId], _, err = TNewRbft(nodes[i].dbPath, nodes[i].confPath, nodes[i].namesapce, 0, t)
 		ensure.Nil(t, err)
 	}
 
 	//init node not in nodes
 	for i := 1; i < N+1; i++ {
-		if pbftList[i] == nil {
-			pbftList[i], _, err = TNewPbft(dbPath, confPath, namespace, i, t)
+		if rbftList[i] == nil {
+			rbftList[i], _, err = TNewRbft(dbPath, confPath, namespace, i, t)
 			ensure.Nil(t, err)
 		}
 	}
@@ -264,25 +264,25 @@ func CreatPBFT(t *testing.T, N int, dbPath string, confPath string, namespace st
 		mcList[i] = &MessageChanel{
 			MsgChan: make(chan *pb.Message),
 		}
-		go mcList[i].Start(pbftList[i])
+		go mcList[i].Start(rbftList[i])
 	}
 
 	//init helper and replace the helper in pbft
 	for i := 1; i < N+1; i++ {
 		thList[i] = &TestHelp{
-			rbft:      pbftList[i],
+			rbft:      rbftList[i],
 			PbftID:    i,
 			PbftList:  mcList,
-			namespace: pbftList[i].namespace,
+			namespace: rbftList[i].namespace,
 			batchMap:  make(map[common.Hash]*protos.ValidatedTxs),
 			PbftLen:   N,
 		}
-		pbftList[i].helper = thList[i]
+		rbftList[i].helper = thList[i]
 	}
 
 	logger.Notice("Full system initialization completed. Now try to start pbft")
 	for i := 1; i < N+1; i++ {
-		pbftList[i].Start()
+		rbftList[i].Start()
 	}
 
 	logger.Debug("start negotiate view")
@@ -293,7 +293,7 @@ func CreatPBFT(t *testing.T, N int, dbPath string, confPath string, namespace st
 			Payload:   nil,
 			Id:        0,
 		}
-		pbftList[i].RecvLocal(negoView)
+		rbftList[i].RecvLocal(negoView)
 	}
 	return
 	//pbft1,_,err:=TNewPbft("./Testdatabase/","../../build/node1/namespaces/","global",0,t)
@@ -411,7 +411,8 @@ func CreatPBFT(t *testing.T, N int, dbPath string, confPath string, namespace st
 //}
 
 //remove the data and namespace directory in ./
-func CleanData() error {
+func CleanData(namespace string) error {
+	hyperdb.StopDatabase(namespace)
 	err := os.RemoveAll("./data")
 	if err != nil {
 		return err

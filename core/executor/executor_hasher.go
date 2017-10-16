@@ -1,10 +1,24 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
-	"hyperchain/core/db_utils/codec/v1.2"
 	er "hyperchain/core/errors"
+	"hyperchain/core/ledger/codec"
+	"hyperchain/core/ledger/codec/consensus"
+	"hyperchain/core/ledger/codec/v1_2"
 	"hyperchain/core/types"
 )
 
@@ -42,8 +56,9 @@ func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Tr
 
 	if flush == false {
 		var (
-			data []byte
-			err  error
+			data    []byte
+			err     error
+			encoder codec.Encoder
 		)
 		// Determine the serialization policy based on the data structure version tag.
 		// The purpose is to be compatible with older version of the block chain data.
@@ -53,9 +68,11 @@ func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Tr
 		case "1.1":
 			fallthrough
 		case "1.2":
-			data, err = v1_2.EncodeTransaction(transaction)
+			encoder = new(v1_2.V1_2Encoder)
+			data, err = encoder.EncodeTransaction(transaction)
 		default:
-			data, err = edb.EncodeTransaction(transaction)
+			encoder = new(consensus.ConEncoder)
+			data, err = encoder.EncodeTransaction(transaction)
 		}
 		if err != nil {
 			executor.logger.Errorf("[Namespace = %s] invalid receipt struct to marshal! error msg, ", executor.namespace, err.Error())
@@ -83,8 +100,9 @@ func (executor *Executor) calculateReceiptFingerprint(tx *types.Transaction, rec
 	}
 	if flush == false {
 		var (
-			data []byte
-			err  error
+			data    []byte
+			err     error
+			encoder codec.Encoder
 		)
 		// Determine the serialization policy based on the data structure version tag.
 		// The purpose is to be compatible with older version of the block chain data.
@@ -94,9 +112,11 @@ func (executor *Executor) calculateReceiptFingerprint(tx *types.Transaction, rec
 		case "1.1":
 			fallthrough
 		case "1.2":
-			data, err = v1_2.EncodeReceipt(receipt)
+			encoder = new(v1_2.V1_2Encoder)
+			data, err = encoder.EncodeReceipt(receipt)
 		default:
-			data, err = edb.EncodeReceipt(receipt)
+			encoder = new(consensus.ConEncoder)
+			data, err = encoder.EncodeReceipt(receipt)
 		}
 		if err != nil {
 			executor.logger.Errorf("[Namespace = %s] invalid receipt struct to marshal! error msg, ", executor.namespace, err.Error())

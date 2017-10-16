@@ -1,0 +1,181 @@
+###########################################################
+#  _   _                        ____ _           _        #
+# | | | |_   _ _ __   ___ _ __ / ___| |__   __ _(_)_ __   #
+# | |_| | | | | '_ \ / _ \ '__| |   | '_ \ / _\` | | '_ \ #
+# |  _  | |_| | |_) |  __/ |  | |___| | | | (_| | | | | | #
+# |_| |_|\__, | .__/ \___|_|   \____|_| |_|\__,_|_|_| |_| #
+#        |___/|_|                                         #
+###########################################################
+title = "namespace configurations"
+
+[genesis]
+    [genesis.alloc]
+     "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd" = "1000000000"
+     "e93b92f1da08f925bdee44e91e7768380ae83307" = "1000000000"
+     "6201cb0448964ac597faf6fdf1f472edf2a22b89" = "1000000000"
+     "b18c8575e3284e79b92100025a31378feb8100d6" = "1000000000"
+     "856E2B9A5FA82FD1B031D1FF6863864DBAC7995D" = "1000000000"
+     "fbca6a7e9e29728773b270d3f00153c75d04e1ad" = "1000000000"
+
+############################################################################################################
+# consensus algorithm configuration section
+#
+# 1. choose which consensus algorithm to use
+# 2. define the algorithm related configurations
+#
+############################################################################################################
+[consensus]
+algo = "RBFT"
+
+    [consensus.rbft]        #RBFT configurations
+    batchsize       = 100   # How many transactions should the primary pack before sending pre-prepare
+    poolsize        = 50000  # How many transactions could the txPool stores in total
+    vcresendlimit   = 10    # How many times of same vc from self before a replica start recovery
+
+        [consensus.rbft.timeout]
+            negoview        = "6s"  # How long to wait for N-f responses after send negotiate view
+            recovery        = "15s" # How long to wait before recovery finished(This is for release1.2)
+            firstrequest    = "30s" # How long to wait before first request should come
+            batch           = "0.5s"  # Primary send a pre-prepare if there are pending requests, although batchsize isn't reached yet,
+            request         = "6s"  # How long may a request(transaction batch) take between reception and execution, must be greater than the batch timeout
+            validate        = "1s"  # How long may a validate (transaction batch) process will take by local Validation
+            nullrequest     = "6s"  # Primary send it to inform aliveness, must be greater than request timeout
+            viewchange      = "8s"  # How long may a view change take
+            resendviewchange= "10s" # How long to wait for a view change quorum before resending (the same) view change
+            cleanviewchange = "60s" # How long to clean out-of-data view change message
+            update          = "4s"  # How long may a update-n take
+
+############################################################################################################
+# encryption algorithm configuration section
+#   CA & CERT configs
+#   this config will never change by hyperchain
+#   please ensure the file not end with the `/` (slash)
+#
+############################################################################################################
+[encryption]
+[encryption.ecert]
+ eca    = "config/certs/eca.cert"
+ ecert  = "config/certs/ecert.cert"
+ priv   = "config/certs/ecert.priv"
+
+[encryption.rcert]
+  # if you do not have rcert, leave this item blank
+ rca    = "config/certs/rca.cert"
+ rcert  = "config/certs/rcert.cert"
+ priv   = "config/certs/rcert.priv"
+
+[encryption.tcert]
+  # Tcert whitelist configuration.
+ whiteList = false
+ listDir  = "config/certs/tcerts"
+
+[encryption.check]
+ enable     = true  #enable RCert
+ sign       = false  #enable Signature
+ enableT    = false  #enable TCert
+
+[encryption.security]
+ algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des,aes or sm4)
+
+
+############################################################################################################
+#
+# database configuration section
+# db type:
+# LEVEL_DB          #      0001
+# SUPER_LEVEL_DB    #      0010
+#
+############################################################################################################
+[database]
+    type = 0001
+    [database.leveldb]
+    root_dir    = "data/leveldb" #leveldb table root dir
+    log_status  = false
+    log_path    = "data/db.log"
+
+
+############################################################################################################
+#
+# executor configuration section
+#
+############################################################################################################
+[executor]
+    [executor.syncer]
+    max_block_fetch         = 50
+    block_fetch_timeout     = "1m"
+    state_fetch_enable      = true
+    state_fetch_packet_size = 1024  # 1024KB
+
+    [executor.archive] 
+    snapshot_manifest = "data/snapshot.meta"
+    archive_manifest  = "data/archive.meta"
+    threshold = 0
+    force_consistency = false
+
+    [executor.nvp]
+    exitflag = false
+
+    [executor.sync_replica]
+    interval    = "500s"
+    enable      = false
+
+    [executor.buckettree.global]
+    globalDataNodeCacheSize     = 10000
+    globalDataNodeCacheLength   = 20
+
+    [executor.buckettree.state]
+    size                = 1000003
+    levelGroup          = 5
+    bucketCacheSize     = 100000
+    dataNodeCacheSize   = 100000
+
+    [executor.buckettree.storage]
+     size               = 1000003
+     levelGroup         = 5
+     bucketCacheSize    = 100000
+     dataNodeCacheSize  = 100000
+
+############################################################################################################
+#
+# executor configuration section
+# config log's level by module
+# CRITICAL ERROR WARNING NOTICE INFO DEBUG
+# high <------------- log level -------> low
+#
+############################################################################################################
+[log]
+dump_file       = true # dump the log file or not
+dump_interval   = "24h"  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h". such as "300ms", "2h45m".
+log_dir         = "data/logs"
+log_level       = "NOTICE" # default loglevel for all modules which can be override by module level log setting
+file_format     = "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
+console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
+max_log_size    = "200mb"  # "mb", "kb"
+
+    [log.module] #set log level by module
+    p2p         = "NOTICE"
+    consensus   = "NOTICE"
+    hyperdb     = "NOTICE"
+    eventhub    = "NOTICE"
+    executor    = "NOTICE"
+
+############################################################################################################
+#
+# other configurations
+#
+############################################################################################################
+[account]
+keystoredir = "config/keystore"
+keynodesdir = "config/keynodes"
+
+[config.path]
+caconfig        = "config/namespace.toml"
+peerconfig      = "config/peerconfig.toml"
+
+#TODO: flow.control.ratelimit configs should move to global.toml finally
+[flow.control.ratelimit]
+ enable            = true
+ txRatePeak        = 100
+ txFillRate        = "0.5ms"
+ contractRatePeak  = 100
+ contractFillRate  = "0.5ms"

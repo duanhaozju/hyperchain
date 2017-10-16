@@ -1,9 +1,22 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
-	"hyperchain/core/hyperstate"
+	edb "hyperchain/core/ledger/chain"
+	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
@@ -60,7 +73,7 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 		MerkleRoot: root.Bytes(),
 	}
 	// flush block content to disk immediately
-	batch := stateDb.FetchBatch(0)
+	batch := stateDb.FetchBatch(0, state.BATCH_NORMAL)
 	if err, _ := edb.PersistBlock(batch, &block, true, true); err != nil {
 		return err
 	}
@@ -77,7 +90,7 @@ func NewStateDb(conf *common.Config, db db.Database, namespace string) (vm.Datab
 	if err != nil {
 		return nil, err
 	}
-	stateDb, err := hyperstate.New(common.Hash{}, db, archiveDb, conf, 0, namespace)
+	stateDb, err := state.New(common.Hash{}, db, archiveDb, conf, 0)
 	if err != nil {
 		return nil, err
 	}

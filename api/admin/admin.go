@@ -8,55 +8,30 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"strings"
+	"time"
 )
 
-var log *logging.Logger
+// This file defines the hypercli admin interface. Users invoke
+// admin services with the format Command as shown below and gets
+// a result in the format CommandResult using JSON-RPC.
 
-func (adm *Administrator) PreHandle(token, method string) error {
-	if method == "" {
-		return ErrNotSupport
-	}
-	if token == "" {
-		return ErrTokenInvalid
-	}
-
-	// verify signed token
-	if claims, err := verifyToken(token, pub_key, "RS256"); err != nil {
-		return err
-	} else {
-		username := getUserFromClaim(claims)
-		if username == "" {
-			return ErrPermission
-		}
-		// check if operation has expired, if expired, return error, else update last operation time
-		if checkOpTimeExpire(username) {
-			return ErrTimeoutPermission
-		}
-		updateLastOperationTime(username)
-		if ok, err := checkPermission(username, method); !ok {
-			return err
-		}
-	}
-	return nil
-}
-
-//Command command send from client.
+// Command defines the command format sent from client.
 type Command struct {
 	MethodName string   `json:"methodname"`
 	Args       []string `json:"args"`
 }
 
-//ToJson transform command into jsonrpc format string
+// ToJson transfers the command into JSON-RPC format string.
 func (cmd *Command) ToJson() string {
 	var args = ""
-	len := len(cmd.Args)
-	if len > 0 {
+	length := len(cmd.Args)
+	if length > 0 {
 		args = cmd.Args[0]
-		if len > 1 {
+		if length > 1 {
 			args = args + ","
 		}
-		for i := 1; i < len; i++ {
-			if i == len-1 {
+		for i := 1; i < length; i++ {
+			if i == length-1 {
 				args = args + cmd.Args[i]
 			} else {
 				args = args + cmd.Args[i] + ","
@@ -69,207 +44,371 @@ func (cmd *Command) ToJson() string {
 
 }
 
-//CommandResult command execute result send back to the user.
+// CommandResult defines the result format sent back to the user.
 type CommandResult struct {
 	Ok     bool
 	Result interface{}
 	Error  common.RPCError
 }
 
+// permissionSet is used to maintain user permissions
+type permissionSet map[int]bool
+
+// Administrator manages the admin interface used by system
+// administrator to manage hyperchain.
 type Administrator struct {
-	Check         bool
-	NsMgr         namespace.NamespaceManager
-	CmdExecutor   map[string]func(command *Command) *CommandResult
-	StopServer    chan bool
-	RestartServer chan bool
+	// CmdExecutor maps the interface name to the processing functions.
+	CmdExecutor map[string]func(command *Command) *CommandResult
+
+	// checks token or not, used for test
+	check bool
+
+	// expiration records the expire timeout from last operation.
+	expiration time.Duration
+
+	// nsMgr is the global namespace Manager, used to get the system
+	// level interface.
+	nsMgr namespace.NamespaceManager
+
+	// valid_user records the current valid users with its password.
+	valid_user map[string]string
+
+	// user_scope records the current user with its permissions.
+	user_scope map[string]permissionSet
+
+	// user_opTimer records the current user with its last operation time.
+	user_opTime map[string]int64
+
+	config *common.Config
+	logger *logging.Logger
 }
 
-//StopServer stop hyperchain server.
-func (adm *Administrator) stopServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	adm.StopServer <- true
+// NewAdministrator news a raw administrator with default settings.
+func NewAdministrator(nr namespace.NamespaceManager, config *common.Config) *Administrator {
+	adm := &Administrator{
+		CmdExecutor: make(map[string]func(command *Command) *CommandResult),
+		valid_user:  make(map[string]string),
+		user_scope:  make(map[string]permissionSet),
+		user_opTime: make(map[string]int64),
+		check:       config.GetBool(common.ADMIN_CHECK),
+		expiration:  config.GetDuration(common.ADMIN_EXPIRATION),
+		nsMgr:       nr,
+		config:      config,
+	}
+	adm.init()
+	return adm
+}
+
+// init initializes administrator with a root account who has all permissions
+// and initializes the CmdExecutor map.
+func (admin *Administrator) init() {
+	admin.valid_user = map[string]string{
+		"root": "hyperchain",
+	}
+
+	admin.user_scope = map[string]permissionSet{
+		"root": rootScopes(),
+	}
+
+	admin.user_opTime = map[string]int64{
+		"root": 0,
+	}
+
+	admin.logger = common.GetLogger(common.DEFAULT_LOG, "jsonrpc/admin")
+	admin.logger.Debugf("Start administrator with check permission: %v; expire "+
+		"timeout: %v", admin.check, admin.expiration)
+
+	admin.CmdExecutor = make(map[string]func(command *Command) *CommandResult)
+	admin.CmdExecutor["stopServer"] = admin.stopServer
+	admin.CmdExecutor["restartServer"] = admin.restartServer
+
+	admin.CmdExecutor["startNsMgr"] = admin.startNsMgr
+	admin.CmdExecutor["stopNsMgr"] = admin.stopNsMgr
+	admin.CmdExecutor["startNamespace"] = admin.startNamespace
+	admin.CmdExecutor["stopNamespace"] = admin.stopNamespace
+	admin.CmdExecutor["restartNamespace"] = admin.restartNamespace
+	admin.CmdExecutor["registerNamespace"] = admin.registerNamespace
+	admin.CmdExecutor["deregisterNamespace"] = admin.deregisterNamespace
+	admin.CmdExecutor["listNamespaces"] = admin.listNamespaces
+
+	admin.CmdExecutor["getLevel"] = admin.getLevel
+	admin.CmdExecutor["setLevel"] = admin.setLevel
+
+	admin.CmdExecutor["startJvmServer"] = admin.startJvmServer
+	admin.CmdExecutor["stopJvmServer"] = admin.stopJvmServer
+	admin.CmdExecutor["restartJvmServer"] = admin.restartJvmServer
+
+	admin.CmdExecutor["grantPermission"] = admin.grantPermission
+	admin.CmdExecutor["revokePermission"] = admin.revokePermission
+	admin.CmdExecutor["listPermission"] = admin.listPermission
+
+	admin.CmdExecutor["createUser"] = admin.createUser
+	admin.CmdExecutor["alterUser"] = admin.alterUser
+	admin.CmdExecutor["delUser"] = admin.delUser
+}
+
+// PreHandle is used to verify token, update and check user permission
+// before handling admin services if admin.check is true.
+func (admin *Administrator) PreHandle(token, method string) error {
+	// if we don't need to check permission, return directly.
+	if !admin.check {
+		return nil
+	}
+
+	if token == "" {
+		return ErrTokenInvalid
+	}
+
+	if method == "" {
+		return ErrNotSupport
+	}
+	// verify signed token.
+	if claims, err := verifyToken(token, pub_key, "RS256"); err != nil {
+		return err
+	} else {
+		username := getUserFromClaim(claims)
+		if username == "" {
+			return ErrPermission
+		}
+		// check if operation has expired or not, if expired, return error,
+		// else update last operation time.
+		if admin.checkOpTimeExpire(username) {
+			return ErrTimeoutPermission
+		}
+		admin.updateLastOperationTime(username)
+
+		// check permission.
+		if ok, err := admin.checkPermission(username, method); !ok {
+			return err
+		}
+	}
+	return nil
+}
+
+// StopServer stops hyperchain server, waiting for the command to be delivered
+// successfully.
+func (admin *Administrator) stopServer(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	admin.nsMgr.GetStopFlag() <- true
 	return &CommandResult{Ok: true, Result: "stop server success!"}
 }
 
-//RestartServer start hyperchain server.
-func (adm *Administrator) restartServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	adm.RestartServer <- true
+// RestartServer restarts hyperchain server, waiting for the command to be delivered
+// successfully.
+func (admin *Administrator) restartServer(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	admin.nsMgr.GetRestartFlag() <- true
 	return &CommandResult{Ok: true, Result: "restart server success!"}
 }
 
-//StartMgr start namespace manager.
-func (adm *Administrator) startNsMgr(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	err := adm.NsMgr.Start()
+// StartMgr starts namespace manager, waiting for the command to be executed
+// successfully.
+func (admin *Administrator) startNsMgr(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	err := admin.nsMgr.Start()
 	if err != nil {
-		log.Errorf("start namespace manager error %v", err)
+		admin.logger.Errorf("start namespace manager error: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "start namespace manager successful"}
 }
 
-//StopNsMgr stop namespace manager.
-func (adm *Administrator) stopNsMgr(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	err := adm.NsMgr.Stop()
+// StopNsMgr stops namespace manager, waiting for the command to be executed
+// successfully.
+func (admin *Administrator) stopNsMgr(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	err := admin.nsMgr.Stop()
 	if err != nil {
-		log.Errorf("stop namespace manager error %v", err)
+		admin.logger.Errorf("stop namespace manager error: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "stop namespace manager successful"}
 }
 
-//StartNamespace start namespace by name.
-func (adm *Administrator) startNamespace(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	if len(cmd.Args) != 1 {
+// StartNamespace starts namespace by name, waiting for the command to be executed
+// successfully.
+func (admin *Administrator) startNamespace(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	argLen := len(cmd.Args)
+	if argLen != 1 {
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
-	//TODO: and synchronized start command
+
 	go func() {
-		err := adm.NsMgr.StartNamespace(cmd.Args[0])
+		err := admin.nsMgr.StartNamespace(cmd.Args[0])
 		if err != nil {
-			log.Error(err)
+			admin.logger.Errorf("start namespace error: %v", err)
+			return
 		}
 	}()
 
 	return &CommandResult{Ok: true, Result: "start namespace cmd executed!"}
 }
 
-//StartNamespace stop namespace by name.
-func (adm *Administrator) stopNamespace(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	if len(cmd.Args) != 1 {
+// StartNamespace stops namespace by name, waiting for the command to be executed
+// successfully.
+func (admin *Administrator) stopNamespace(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	argLen := len(cmd.Args)
+	if argLen != 1 {
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
+
 	go func() {
-		err := adm.NsMgr.StopNamespace(cmd.Args[0])
+		err := admin.nsMgr.StopNamespace(cmd.Args[0])
 		if err != nil {
-			log.Error(err)
+			admin.logger.Errorf("stop namespace error: %v", err)
+			return
 		}
 	}()
 
 	return &CommandResult{Ok: true, Result: "stop namespace cmd executed!"}
 }
 
-//RestartNamespace restart namespace by name.
-func (adm *Administrator) restartNamespace(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	if len(cmd.Args) != 1 {
+// RestartNamespace restarts namespace by name, waiting for the command to be executed
+// successfully.
+func (admin *Administrator) restartNamespace(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	argLen := len(cmd.Args)
+	if argLen != 1 {
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
-	err := adm.NsMgr.RestartNamespace(cmd.Args[0])
-	if err != nil {
-		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
-	}
+	go func() {
+		err := admin.nsMgr.RestartNamespace(cmd.Args[0])
+		if err != nil {
+			admin.logger.Errorf("restart namespace error: %v", err)
+			return
+		}
+	}()
 
-	return &CommandResult{Ok: true, Result: "restart namespace successful"}
+	return &CommandResult{Ok: true, Result: "restart namespace cmd executed!"}
 }
 
-//RegisterNamespace register a new namespace.
-func (adm *Administrator) registerNamespace(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	if len(cmd.Args) != 1 {
+// RegisterNamespace registers a new namespace, waiting for the command to be executed
+// successfully.
+func (admin *Administrator) registerNamespace(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	argLen := len(cmd.Args)
+	if argLen != 1 {
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
 
-	err := adm.NsMgr.Register(cmd.Args[0])
+	err := admin.nsMgr.Register(cmd.Args[0])
 	if err != nil {
+		admin.logger.Errorf("register namespace error: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 
 	return &CommandResult{Ok: true, Result: "register namespace successful"}
 }
 
-//DeregisterNamespace deregister a namespace
-func (adm *Administrator) deregisterNamespace(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	if len(cmd.Args) != 1 {
+// DeregisterNamespace deregisters a namespace, waiting for the command to be executed
+// successfully.
+func (admin *Administrator) deregisterNamespace(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	argLen := len(cmd.Args)
+	if argLen != 1 {
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: "Need only 1 param."}}
 	}
-	err := adm.NsMgr.DeRegister(cmd.Args[0])
+	err := admin.nsMgr.DeRegister(cmd.Args[0])
 	if err != nil {
+		admin.logger.Errorf("deregister namespace error: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "deregister namespace successful"}
 }
 
-func (adm *Administrator) listNamespaces(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	names := adm.NsMgr.List()
+// listNamespaces lists the namespaces participating in currently.
+func (admin *Administrator) listNamespaces(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	names := admin.nsMgr.List()
 	return &CommandResult{Ok: true, Result: names}
 }
 
-//GetLevel get a log level.
-func (adm *Administrator) getLevel(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
+// GetLevel returns the log level with the given namespace and module.
+func (admin *Administrator) getLevel(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 2 {
-		log.Errorf("Invalid cmd nums %d", argLen)
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2 parameters, got %d", argLen)}}
 	}
 	level, err := common.GetLogLevel(cmd.Args[0], cmd.Args[1])
 	if err != nil {
+		admin.logger.Errorf("get log level failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: level}
 }
 
-//SetLevel set a module log level.
-func (adm *Administrator) setLevel(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
+// SetLevel sets the log level of the given namespace and module.
+func (admin *Administrator) setLevel(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 3 {
-		log.Errorf("Invalid cmd nums %d", argLen)
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 3 parameters, got %d", argLen)}}
 	}
 
 	err := common.SetLogLevel(cmd.Args[0], cmd.Args[1], cmd.Args[2])
 	if err != nil {
+		admin.logger.Errorf("set admin.logger level failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	rs := strings.Join(cmd.Args, "_")
 	return &CommandResult{Ok: true, Result: rs}
 }
 
-func (adm *Administrator) startJvmServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	if err := adm.NsMgr.StartJvm(); err != nil {
-		log.Notice(err)
+// startJvmServer starts the JVM service, waiting for the command to be executed
+// successfully.
+func (admin *Administrator) startJvmServer(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	if err := admin.nsMgr.StartJvm(); err != nil {
+		admin.logger.Noticef("start jvm server failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "start jvm successful."}
 }
 
-func (adm *Administrator) stopJvmServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	if err := adm.NsMgr.StopJvm(); err != nil {
-		log.Notice(err)
+// stopJvmServer stops the JVM service, waiting for the command to be executed
+// successfully.
+func (admin *Administrator) stopJvmServer(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	if err := admin.nsMgr.StopJvm(); err != nil {
+		admin.logger.Noticef("stop jvm server failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "stop jvm successful."}
 }
 
-func (adm *Administrator) restartJvmServer(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
-	if err := adm.NsMgr.RestartJvm(); err != nil {
-		log.Notice(err)
+// restartJvmServer restarts the JVM service, waiting for the command to be executed
+// successfully.
+func (admin *Administrator) restartJvmServer(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
+	if err := admin.nsMgr.RestartJvm(); err != nil {
+		admin.logger.Noticef("restart jvm server failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "restart jvm successful."}
 }
 
-func (adm *Administrator) grantPermission(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
+// grantPermission grants the modular permissions to the given user.
+func (admin *Administrator) grantPermission(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen < 3 {
-		log.Warningf("Invalid cmd nums %d", argLen)
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects >=3 parameters, got %d", argLen)}}
 	}
-	invalidPms, err := grantpermission(cmd.Args[0], cmd.Args[1], cmd.Args[2:])
+	invalidPms, err := admin.grantpermission(cmd.Args[0], cmd.Args[1], cmd.Args[2:])
 	if err != nil {
+		admin.logger.Errorf("grant permission failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	if len(invalidPms) == 0 {
@@ -278,15 +417,17 @@ func (adm *Administrator) grantPermission(cmd *Command) *CommandResult {
 	return &CommandResult{Ok: true, Result: fmt.Sprintf("grant permission successfully, but there are some invalid permissions: %v", invalidPms)}
 }
 
-func (adm *Administrator) revokePermission(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
+// revokePermission revokes the modular permissions from the given user.
+func (admin *Administrator) revokePermission(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen < 3 {
-		log.Warningf("Invalid cmd nums %d", argLen)
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects >=3 parameters, got %d", argLen)}}
 	}
-	invalidPms, err := revokepermission(cmd.Args[0], cmd.Args[1], cmd.Args[2:])
+	invalidPms, err := admin.revokepermission(cmd.Args[0], cmd.Args[1], cmd.Args[2:])
 	if err != nil {
+		admin.logger.Errorf("revoke permission failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	if len(invalidPms) == 0 {
@@ -295,109 +436,83 @@ func (adm *Administrator) revokePermission(cmd *Command) *CommandResult {
 	return &CommandResult{Ok: true, Result: fmt.Sprintf("revoke permission successfully, but there are some invalid permissions: %v", invalidPms)}
 }
 
-func (adm *Administrator) listPermission(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
+// listPermission lists the permission of the given user.
+func (admin *Administrator) listPermission(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 1 {
-		log.Warningf("Invalid cmd nums %d", argLen)
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen)}}
 	}
-	result, err := listpermission(cmd.Args[0])
+	result, err := admin.listpermission(cmd.Args[0])
 	if err != nil {
+		admin.logger.Errorf("list permission failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: result}
 }
 
-func (adm *Administrator) createUser(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
+// createUser is used by root user to create other users with the
+// given password and group.
+func (admin *Administrator) createUser(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 3 {
-		log.Warningf("Invalid cmd nums %d", argLen)
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 2/3 parameters, got %d", argLen)}}
 	}
 	username := cmd.Args[0]
 	password := cmd.Args[1]
 	group := cmd.Args[2]
 	// judge if the user exist or not, if username exists, return a duplicate name error
-	if _, err := IsUserExist(username, password); err != ErrUserNotExist {
-		log.Debugf("User %s: %s", username, ErrDuplicateUsername.Error())
+	if _, err := admin.isUserExist(username, password); err != ErrUserNotExist {
+		admin.logger.Debugf("User %s: %s", username, ErrDuplicateUsername.Error())
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrDuplicateUsername.Error()}}
 	}
 
-	err := createUser(username, password, group)
+	err := admin.createuser(username, password, group)
 	if err != nil {
+		admin.logger.Errorf("create user failed: %v", err)
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
 	return &CommandResult{Ok: true, Result: "Create user successfully"}
 }
 
-func (adm *Administrator) alterUser(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
+// alterUser is used by all users to modify their password.
+func (admin *Administrator) alterUser(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 2 {
-		log.Warningf("Invalid cmd nums %d", argLen)
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen-1)}}
 	}
 	username := cmd.Args[0]
 	password := cmd.Args[1]
 	// judge if the user exist or not, if username exists, return a duplicate name error
-	if _, err := IsUserExist(username, password); err == ErrUserNotExist {
-		log.Debugf("User %s: %s", username, ErrUserNotExist.Error())
+	if _, err := admin.isUserExist(username, password); err == ErrUserNotExist {
+		admin.logger.Debugf("User %s: %s", username, ErrUserNotExist.Error())
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrUserNotExist.Error()}}
 	}
 
-	alterUser(username, password)
+	admin.alteruser(username, password)
 	return &CommandResult{Ok: true, Result: "Alter user password successfully"}
 }
 
-func (adm *Administrator) delUser(cmd *Command) *CommandResult {
-	log.Noticef("process cmd %v", cmd.MethodName)
+// delUser is used by root user to delete user with the given name.
+func (admin *Administrator) delUser(cmd *Command) *CommandResult {
+	admin.logger.Noticef("process cmd %v", cmd.MethodName)
 	argLen := len(cmd.Args)
 	if argLen != 1 {
-		log.Warningf("Invalid cmd nums %d", argLen)
+		admin.logger.Errorf("Invalid arg numbers: %d", argLen)
 		return &CommandResult{Ok: false, Error: &common.InvalidParamsError{Message: fmt.Sprintf("Invalid parameter numbers, expects 1 parameters, got %d", argLen)}}
 	}
 	username := cmd.Args[0]
 	// judge if the user exist or not, if username exists, return a duplicate name error
-	if _, err := IsUserExist(username, ""); err == ErrUserNotExist {
-		log.Debugf("User %s: %s", username, ErrUserNotExist.Error())
+	if _, err := admin.isUserExist(username, ""); err == ErrUserNotExist {
+		admin.logger.Errorf("User %s: %s", username, ErrUserNotExist.Error())
 		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: ErrUserNotExist.Error()}}
 	}
 
-	delUser(username)
+	admin.deluser(username)
 	return &CommandResult{Ok: true, Result: "Delete user successfully"}
-}
-
-func (adm *Administrator) Init() {
-	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc/admin")
-	expiration = adm.NsMgr.GlobalConfig().GetDuration(common.ADMIN_EXPIRATION)
-
-	adm.CmdExecutor = make(map[string]func(command *Command) *CommandResult)
-	adm.CmdExecutor["stopServer"] = adm.stopServer
-	adm.CmdExecutor["restartServer"] = adm.restartServer
-
-	adm.CmdExecutor["startNsMgr"] = adm.startNsMgr
-	adm.CmdExecutor["stopNsMgr"] = adm.stopNsMgr
-	adm.CmdExecutor["startNamespace"] = adm.startNamespace
-	adm.CmdExecutor["stopNamespace"] = adm.stopNamespace
-	adm.CmdExecutor["restartNamespace"] = adm.restartNamespace
-	adm.CmdExecutor["registerNamespace"] = adm.registerNamespace
-	adm.CmdExecutor["deregisterNamespace"] = adm.deregisterNamespace
-	adm.CmdExecutor["listNamespaces"] = adm.listNamespaces
-
-	adm.CmdExecutor["getLevel"] = adm.getLevel
-	adm.CmdExecutor["setLevel"] = adm.setLevel
-
-	adm.CmdExecutor["startJvmServer"] = adm.startJvmServer
-	adm.CmdExecutor["stopJvmServer"] = adm.stopJvmServer
-	adm.CmdExecutor["restartJvmServer"] = adm.restartJvmServer
-
-	adm.CmdExecutor["grantPermission"] = adm.grantPermission
-	adm.CmdExecutor["revokePermission"] = adm.revokePermission
-	adm.CmdExecutor["listPermission"] = adm.listPermission
-
-	adm.CmdExecutor["createUser"] = adm.createUser
-	adm.CmdExecutor["alterUser"] = adm.alterUser
-	adm.CmdExecutor["delUser"] = adm.delUser
 }

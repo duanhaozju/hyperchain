@@ -46,17 +46,19 @@ func (rsi *RPCServerImpl) Command(args []string, ret *[]string) error {
 					}
 
 					log.Noticef("[IPC] service http %v %v", args[1], args[2])
-					if err := rsi.StartHttpServer(int(i)); err != nil {
+					rsi.httpServer.setPort(int(i))
+					if err := rsi.httpServer.start(); err != nil {
 						*ret = append(*ret, fmt.Sprintf("failed to start http service at port %s. Err: %v", port, err))
 					} else {
-						*ret = append(*ret, fmt.Sprintf("success to start http service at port  %s.", port))
+						*ret = append(*ret, fmt.Sprintf("success to start http service at port %s.", port))
 					}
 					break
 				}
 			case STOP:
 				{
 					log.Noticef("[IPC] service http %v", args[1])
-					if err := rsi.StopHttpServer(); err != nil {
+					*ret = append(*ret, fmt.Sprintf("waitting for %v to stop...\n", ReadTimeout))
+					if err := rsi.httpServer.stop(); err != nil {
 						*ret = append(*ret, fmt.Sprintf("failed to stop http service. Err: %v", err))
 					} else {
 						*ret = append(*ret, fmt.Sprintf("success to stop http service at port %v", rsi.httpServer.getPort()))
@@ -66,7 +68,7 @@ func (rsi *RPCServerImpl) Command(args []string, ret *[]string) error {
 			case RESTART:
 				{
 					log.Noticef("[IPC] service http %v", args[1])
-					if err := rsi.RestartHttpServer(); err != nil {
+					if err := rsi.httpServer.restart(); err != nil {
 						*ret = append(*ret, fmt.Sprintf("failed to restart http service. Err: %v", err))
 					} else {
 						*ret = append(*ret, "success to restart http service.")
@@ -104,17 +106,18 @@ func (rsi *RPCServerImpl) Command(args []string, ret *[]string) error {
 					}
 
 					log.Noticef("[IPC] service websocket %v %v", args[1], args[2])
-					if err := rsi.StartWSServer(int(i)); err != nil {
+					rsi.wsServer.setPort(int(i))
+					if err := rsi.wsServer.start(); err != nil {
 						*ret = append(*ret, fmt.Sprintf("failed to start websocket service at port %s. Err: %v", port, err))
 					} else {
-						*ret = append(*ret, fmt.Sprintf("success to start websocket service at port  %s.", port))
+						*ret = append(*ret, fmt.Sprintf("success to start websocket service at port %s.", port))
 					}
 					break
 				}
 			case STOP:
 				{
 					log.Noticef("[IPC] service websocket %v", args[1])
-					if err := rsi.StopWSServer(); err != nil {
+					if err := rsi.wsServer.stop(); err != nil {
 						*ret = append(*ret, fmt.Sprintf("failed to stop websocket service. Err: %v", err))
 					} else {
 						*ret = append(*ret, fmt.Sprintf("success to stop websocket service at port %v", rsi.wsServer.getPort()))
@@ -124,7 +127,7 @@ func (rsi *RPCServerImpl) Command(args []string, ret *[]string) error {
 			case RESTART:
 				{
 					log.Noticef("[IPC] service websocket %v", args[1])
-					if err := rsi.RestartWSServer(); err != nil {
+					if err := rsi.wsServer.restart(); err != nil {
 						*ret = append(*ret, fmt.Sprintf("failed to restart websocket service. Err: %v", err))
 					} else {
 						*ret = append(*ret, "success to restart websocket service.")

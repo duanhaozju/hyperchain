@@ -7,7 +7,7 @@ import (
 	rcm "hyperchain/cmd/radar/core/common"
 	"hyperchain/cmd/radar/core/types"
 	"hyperchain/common"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/state"
 	"hyperchain/crypto"
 	"math"
 	"math/big"
@@ -206,7 +206,7 @@ func DealDynamic(contractVariable *types.ContractVariable, contractVariables []*
 		use = ""
 		remain = ""
 	}
-	dbKey := hyperstate.CompositeStorageKey(common.Hex2Bytes(contractAddress), contractVariable.StartAddressOfSlot)
+	dbKey := state.CompositeStorageKey(common.Hex2Bytes(contractAddress), contractVariable.StartAddressOfSlot)
 	temp, err := db.Get(dbKey, nil)
 	if err != nil && !strings.Contains(err.Error(), "leveldb: not found") {
 		return contractVariables, err

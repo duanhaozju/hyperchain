@@ -95,6 +95,7 @@ config_root_dir = "./namespaces"
 
     [namespace.start] # define start which namespaces when node starts
     ns1 = true
+    ns1 = true
     global          = true
     ns_2e6160583867 = false
 

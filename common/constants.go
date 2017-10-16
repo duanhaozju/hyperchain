@@ -5,19 +5,11 @@ package common
 
 //constants for input args
 const (
-	C_NODE_ID = "global.id"
+	C_NODE_ID = "self.id"
 )
 
 const (
-	OP_UPDATE   = 1
-	OP_FREEZE   = 2
-	OP_UNFREEZE = 3
-	OP_ARCHIVE  = 100
-)
-
-const (
-	DB_LEVELDB int = iota
-	DB_SLDB
+	OP_ARCHIVE = 100
 )
 
 const (
@@ -72,8 +64,9 @@ const (
 
 // constants for http configuration keys
 const (
-	HTTP_SECURITY = "http.security"
-	HTTP_VERSION2 = "http.version_2"
+	HTTP_SECURITY       = "http.security"
+	HTTP_VERSION2       = "http.http_2"
+	HTTP_ALLOWEDORIGINS = "http.allowedOrigins"
 )
 
 //constants for encryption configuration keys

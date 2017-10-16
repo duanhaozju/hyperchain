@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
@@ -45,7 +58,7 @@ func (executor *Executor) listenValidationEvent() {
 	executor.logger.Notice("validation backend start")
 	for {
 		select {
-		case <-executor.getExit(IDENTIFIER_VALIDATION):
+		case <-executor.context.exit:
 			executor.logger.Notice("validation backend exit")
 			return
 		case v := <-executor.getSuspend(IDENTIFIER_VALIDATION):
@@ -69,14 +82,14 @@ func (executor *Executor) listenValidationEvent() {
 func (executor *Executor) processValidationEvent(validationEvent event.ValidationEvent, done func()) bool {
 	executor.markValidationBusy()
 	defer executor.markValidationIdle()
-	if !executor.isDemandSeqNo(validationEvent.SeqNo) {
+	if !executor.isDemand(DemandSeqNo, validationEvent.SeqNo) {
 		executor.addPendingValidationEvent(validationEvent)
 		return true
 	}
 	if _, success := executor.process(validationEvent, done); success == false {
 		return false
 	}
-	executor.incDemandSeqNo()
+	executor.incDemand(DemandSeqNo)
 	return executor.processPendingValidationEvent(done)
 }
 
@@ -85,12 +98,12 @@ func (executor *Executor) processPendingValidationEvent(done func()) bool {
 	if executor.cache.pendingValidationEventQ.Len() > 0 {
 		// there is still some events remain.
 		for {
-			if executor.cache.pendingValidationEventQ.Contains(executor.getDemandSeqNo()) {
-				ev, _ := executor.fetchPendingValidationEvent(executor.getDemandSeqNo())
+			if executor.cache.pendingValidationEventQ.Contains(executor.getDemand(DemandSeqNo)) {
+				ev, _ := executor.fetchPendingValidationEvent(executor.getDemand(DemandSeqNo))
 				if _, success := executor.process(ev, done); success == false {
 					return false
 				} else {
-					executor.incDemandSeqNo()
+					executor.incDemand(DemandSeqNo)
 					executor.cache.pendingValidationEventQ.RemoveWithCond(ev.SeqNo, RemoveLessThan)
 				}
 			} else {
@@ -254,7 +267,6 @@ func (executor *Executor) submitValidationResult() (error, []byte, []byte, []byt
 	txRoot := res.Bytes()
 	res, _ = executor.calculateReceiptFingerprint(nil, nil, true)
 	receiptRoot := res.Bytes()
-	executor.recordStateHash(root)
 	return nil, merkleRoot, txRoot, receiptRoot
 }
 

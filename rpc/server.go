@@ -16,11 +16,6 @@ import (
 	"time"
 )
 
-const (
-	stopPendingRequestTimeout = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
-	adminService              = "admin"
-)
-
 // CodecOption specifies which type of messages this codec supports
 type CodecOption int
 
@@ -32,39 +27,49 @@ const (
 	OptionSubscriptions
 )
 
+const (
+	stopPendingRequestTimeout = 3 * time.Second // give pending requests stopPendingRequestTimeout the time to finish when the server is stopped
+	adminService              = "admin"
+)
+
+// Server represents a RPC server
+type Server struct {
+	run          int32
+	codecsMu     sync.Mutex
+	codecs       *set.Set
+	namespaceMgr namespace.NamespaceManager
+	admin        *admin.Administrator
+	requestMgrMu sync.Mutex
+	requestMgr   map[string]*requestManager
+}
+
 // NewServer will create a new server instance with no registered handlers.
-func NewServer(nr namespace.NamespaceManager, stopHyperchain chan bool, restartHp chan bool) *Server {
+func NewServer(nr namespace.NamespaceManager, config *common.Config) *Server {
 	server := &Server{
 		codecs:       set.New(),
 		run:          1,
 		namespaceMgr: nr,
 		requestMgr:   make(map[string]*requestManager),
 	}
-	server.admin = &admin.Administrator{
-		Check:         nr.GlobalConfig().GetBool(common.ADMIN_CHECK),
-		NsMgr:         server.namespaceMgr,
-		StopServer:    stopHyperchain,
-		RestartServer: restartHp,
-	}
-	server.admin.Init()
+	server.admin = admin.NewAdministrator(nr, config)
 	return server
 }
 
 // ServeCodec reads incoming requests from codec, calls the appropriate callback and writes the
 // response back using the given codec. It will block until the codec is closed or the server is
 // stopped. In either case the codec is closed.
-func (s *Server) ServeCodec(codec ServerCodec, options CodecOption, ctx context.Context) {
+func (s *Server) ServeCodec(codec ServerCodec, options CodecOption, ctx context.Context) error {
 	defer codec.Close()
-	s.serveRequest(codec, false, options, ctx)
+	return s.serveRequest(codec, false, options, ctx)
 }
 
 // ServeSingleRequest reads and processes a single RPC request from the given codec. It will not
 // close the codec unless a non-recoverable error has occurred. Note, this method will return after
 // a single request has been processed!
-func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) {
+func (s *Server) ServeSingleRequest(codec ServerCodec, options CodecOption) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	s.serveRequest(codec, true, options, ctx)
+	return s.serveRequest(codec, true, options, ctx)
 }
 
 // serveRequest will reads requests from the codec, calls the RPC callback and
@@ -82,6 +87,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			const size = 64 << 10
 			buf := make([]byte, size)
 			buf = buf[:runtime.Stack(buf, false)]
+			log.Errorf("panic message: %v", err)
 			log.Errorf(string(buf))
 		}
 
@@ -91,22 +97,6 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 
 		return
 	}()
-
-	//ctx, cancel := context.WithCancel(context.Background())
-	//
-	////defer func() {
-	////	fmt.Println("context cancel()")
-	////	cancel()
-	////}()
-	//defer cancel()
-	//
-	//// if the codec supports notification include a notifier that callbacks can use
-	//// to send notification to clients. It is thight to the codec/connection. If the
-	//// connection is closed the notifier will stop and cancels all active subscriptions.
-	//if options&OptionSubscriptions == OptionSubscriptions {
-	//	//ctx = context.WithValue(ctx, common.NotifierKey{}, common.NewNotifier(codec))
-	//	ctx = context.WithValue(ctx, NotifierKey{}, NewNotifier(codec))
-	//}
 
 	s.codecsMu.Lock()
 	if atomic.LoadInt32(&s.run) != 1 { // server stopped
@@ -123,7 +113,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 		if err != nil {
 			// If a parsing error occurred, send an error
 			if err.Error() != "EOF" {
-				log.Debug(fmt.Sprintf("read error %v\n", err))
+				log.Debug(fmt.Sprintf("read error: %v\n", err))
 				codec.Write(codec.CreateErrorResponse(nil, "", err))
 			}
 			// Error or end of stream, wait for requests and tear down
@@ -199,7 +189,7 @@ func (s *Server) Stop() {
 // of requests, an indication if the request was a batch, the invalid request identifier and an
 // error when the request could not be read/parsed.
 func (s *Server) readRequest(codec ServerCodec, options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
-	reqs, batch, err := codec.ReadRequestHeaders(options)
+	reqs, batch, err := codec.ReadRawRequest(options)
 	if err != nil {
 		return nil, batch, err
 	}
@@ -223,40 +213,48 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 	//log.Error("-----------enter handle batch req---------------")
 	number := len(reqs)
 	response := make([]interface{}, number)
-	result := make(chan interface{}, number)
+	//result := make(chan interface{}, number)
 
+	i := 0
 	for _, req := range reqs {
 		req.Ctx = ctx
 
-		go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}) {
-			name := request.Namespace
-			if err := codec.CheckHttpHeaders(name, request.Method); err != nil {
-				log.Errorf("CheckHttpHeaders error: %v", err)
-				result <- codec.CreateErrorResponse(request.Id, request.Namespace, &common.CertError{Message: err.Error()})
-				return
-			}
-			var rm *requestManager
-
-			s.reqMgrMu.Lock()
-			if _, ok := s.requestMgr[name]; !ok {
-				rm = NewRequestManager(name, s, codec)
-				s.requestMgr[name] = rm
-				rm.Start()
-			} else {
-				s.requestMgr[name].codec = codec
-				rm = s.requestMgr[name]
-			}
-			s.reqMgrMu.Unlock()
-
-			rm.requests <- request
-			result <- (<-rm.response)
-			return
-		}(s, req, codec, result)
+		//go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}) {
+		//	name := request.Namespace
+		//	if err := codec.CheckHttpHeaders(name, request.Method); err != nil {
+		//		log.Errorf("CheckHttpHeaders error: %v", err)
+		//		result <- codec.CreateErrorResponse(request.Id, request.Namespace, &common.CertError{Message: err.Error()})
+		//		return
+		//	}
+		//	var rm *requestManager
+		//
+		//	s.requestMgrMu.Lock()
+		//	if _, ok := s.requestMgr[name]; !ok {
+		//		rm = NewRequestManager(name, s, codec)
+		//		s.requestMgr[name] = rm
+		//		rm.Start()
+		//	} else {
+		//		s.requestMgr[name].codec = codec
+		//		rm = s.requestMgr[name]
+		//	}
+		//	s.requestMgrMu.Unlock()
+		//
+		//	rm.requests <- request
+		//	result <- <-rm.response
+		//	return
+		//}(s, req, codec, result)
+		if err := codec.CheckHttpHeaders(req.Namespace, req.Method); err != nil {
+			log.Errorf("CheckHttpHeaders error: %v", err)
+			response[i] = codec.CreateErrorResponse(req.Id, req.Namespace, &common.CertError{Message: err.Error()})
+			break
+		}
+		response[i] = s.handleChannelReq(codec, req)
+		i++
 	}
 
-	for i := 0; i < number; i++ {
-		response[i] = <-result
-	}
+	//for i := 0; i < number; i++ {
+	//	response[i] = <-result
+	//}
 
 	if number == 1 {
 		if err := codec.Write(response[0]); err != nil {
@@ -271,7 +269,7 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 	}
 }
 
-// handleChannelReq will implement an interface to handle request in channel and return jsonrpc response
+// handleChannelReq implements receiver.handleChannelReq interface to handle request in channel and return jsonrpc response.
 func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) interface{} {
 	r := s.namespaceMgr.ProcessRequest(req.Namespace, req)
 	if r == nil {
@@ -280,8 +278,10 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 	}
 
 	if response, ok := r.(*common.RPCResponse); ok {
-		if response.Error != nil {
+		if response.Error != nil && response.Reply == nil {
 			return codec.CreateErrorResponse(response.Id, response.Namespace, response.Error)
+		} else if response.Error != nil && response.Reply != nil {
+			return codec.CreateErrorResponseWithInfo(response.Id, response.Namespace, response.Error, response.Reply)
 		} else if response.Reply != nil {
 			if response.IsPubSub {
 				notifier, supported := NotifierFromContext(req.Ctx)
@@ -314,13 +314,10 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 }
 
 func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RPCResponse {
-	req.Namespace = common.DEFAULT_NAMESPACE
-	if s.admin.Check {
-		token, method := codec.GetAuthInfo()
-		err := s.admin.PreHandle(token, method)
-		if err != nil {
-			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidTokenError{Message: err.Error()}}
-		}
+	token, method := codec.GetAuthInfo()
+	err := s.admin.PreHandle(token, method)
+	if err != nil {
+		return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidTokenError{Message: err.Error()}}
 	}
 
 	cmd := &admin.Command{MethodName: req.Method}

@@ -11,7 +11,7 @@ message Transaction {
 	uint64 id = 7;
 	bytes transactionHash = 8;
 	int64  nonce = 9;
-	bytes extra = 10;
+	NonHash other = 10;
 }
 
 message InvalidTransactionRecord {
@@ -33,4 +33,45 @@ message InvalidTransactionRecords {
 message TransactionMeta {
     uint64 BlockIndex = 1;
     int64  Index = 2;
+}
+
+message TransactionWrapper {
+    bytes transactionVersion = 1;
+    bytes transaction = 2;
+}
+
+message TransactionValue {
+	int64 price = 1;
+	int64 gasLimit = 2;
+	int64 amount = 3;
+	bytes payload = 4;
+	bytes encryptedAmount = 5;
+	bytes homomorphicAmount = 6;
+	bytes homomorphicBalance = 7;
+	enum Opcode {
+            NORMAL = 0;
+            UPDATE = 1;
+            FREEZE = 2;
+            UNFREEZE = 3;
+            SKIPVM = 4;
+            ARCHIVE = 100;
+    }
+	Opcode op = 8;
+    enum VmType {
+            EVM = 0;
+            JVM = 1;
+
+    }
+    VmType vmType = 9;
+    bytes extra = 10;
+}
+
+message InvokeArgs {
+    bytes  code         = 1;
+    string methodName   = 2;
+    repeated bytes args = 3;
+}
+
+message NonHash {
+    bytes nodeHash = 1;
 }

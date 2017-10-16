@@ -11,10 +11,12 @@ import (
 	"strings"
 )
 
-var DecompressErr = "decompress source contract failed"
-var InvalidSourceCodeErr = "invalid source contract code"
-var CompileSourceCodeErr = "compile source contract failed"
-var SigSourceCodeErr = "generate signature for contract failed"
+var (
+	DecompressErr        = "decompress source contract failed"
+	InvalidSourceCodeErr = "invalid source contract code"
+	CompileSourceCodeErr = "compile source contract failed"
+	SigSourceCodeErr     = "generate signature for contract failed"
+)
 
 type ContractProperties struct {
 	MainClass    string

@@ -3,10 +3,14 @@ package api
 import (
 	"context"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	flt "hyperchain/manager/filter"
 	"sync"
 )
+
+// This file defines some public API handler for websocket message.
+// If a kind of subscription is created successfully, server will
+// push specific data to client.
 
 var (
 	subscribedEvents map[context.Context][]Event
@@ -22,31 +26,25 @@ func init() {
 	subscribedEvents = make(map[context.Context][]Event)
 }
 
-/*******************************************************************************
-**									      **
-**			Webscoket Event	Subscription			      **
-**									      **
-********************************************************************************/
-
-// Block creates a subscription that send a notification each time when a new block is appended to the chain.
+// Block creates a subscription that sends a notification each time when a new block is appended to the chain.
 func (api *PublicFilterAPI) Block(ctx context.Context, isVerbose bool) (common.ID, error) {
 	api.log.Debug("ready to deal with newBlock event request")
 	return api.handleWSSubscribe(ctx, isVerbose, flt.BlocksSubscription, flt.FilterCriteria{})
 }
 
-// SystemStatus creates a subscription that send a notification each time when exception is threw.
+// SystemStatus creates a subscription that sends a notification each time when system status is changed.
 func (api *PublicFilterAPI) SystemStatus(ctx context.Context, crit flt.FilterCriteria) (common.ID, error) {
 	api.log.Debug("ready to deal with newException event request")
 	return api.handleWSSubscribe(ctx, false, flt.SystemStatusSubscription, crit)
 }
 
-// Logs creates a subscription that send a notification each time when contract event is triggered.
+// Logs creates a subscription that sends a notification each time when contract event is triggered.
 func (api *PublicFilterAPI) Logs(ctx context.Context, crit flt.FilterCriteria) (common.ID, error) {
 	api.log.Debug("ready to deal with newLogs event request")
 	return api.handleWSSubscribe(ctx, false, flt.LogsSubscription, crit)
 }
 
-// GetAllSubscription returns all the event had been subscribed and its subscription id for the connection.
+// GetAllSubscription returns all the event has been subscribed and its subscription id for the connection.
 func (api *PublicFilterAPI) GetAllSubscription(ctx context.Context) ([]Event, error) {
 	events := subscribedEvents[ctx]
 	if len(events) == 0 {
@@ -66,7 +64,7 @@ func (api *PublicFilterAPI) handleWSSubscribe(ctx context.Context, isVerbose boo
 	select {
 	case err := <-subChs.Err:
 		return common.ID(""), err
-	case rpcSub := <-subChs.SubscriptionCh:
+	case rpcSub := <-subChs.SubscriptionCh: // a JSON-RPC subscription is created
 		api.log.Debugf("receive subscription %v", rpcSub.ID)
 
 		go func() {

@@ -6,7 +6,7 @@ import (
 	"github.com/urfave/cli"
 	cm "hyperchain/cmd/common"
 	"hyperchain/common"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/ledger/state"
 	"hyperchain/core/vm/evm"
 	"hyperchain/core/vm/evm/compiler"
 	"hyperchain/core/vm/evm/runtime"
@@ -36,7 +36,7 @@ func runCmd(ctx *cli.Context) error {
 		sender   string
 		receiver string
 		block    *big.Int
-		state    *hyperstate.StateDB
+		stateDb  *state.StateDB
 		code     []byte
 		input    []byte
 		log      *cm.CWriter = &cm.CWriter{os.Stdout}
@@ -90,13 +90,17 @@ func runCmd(ctx *cli.Context) error {
 		block = big.NewInt(1)
 	}
 	// initialize state
-	state = hyperstate.NewRaw(db, block.Uint64(), common.DEFAULT_NAMESPACE, runtime.InitConf())
+	if ctx.GlobalBool(DisableExtendDBFlag.Name) {
+		stateDb, _ = state.New(common.Hash{}, db, db, runtime.DefaultConf(), block.Uint64())
+	} else {
+		// TODO establishes a transient state correctly
+	}
 
 	runtimeConfig := &runtime.Config{
 		Origin:         common.HexToAddress(sender),
 		Receiver:       common.HexToAddress(receiver),
 		BlockNumber:    block,
-		State:          state,
+		State:          stateDb,
 		Debug:          ctx.GlobalBool(DebugFlag.Name),
 		DisableMemory:  ctx.GlobalBool(DisableMemoryFlag.Name),
 		DisableStack:   ctx.GlobalBool(DisableStackFlag.Name),
@@ -109,6 +113,7 @@ func runCmd(ctx *cli.Context) error {
 		structLogs []evm.StructLog
 		start      time.Time
 		elapsed    time.Duration
+		addr       common.Address
 	)
 
 	if invoke {
@@ -117,14 +122,15 @@ func runCmd(ctx *cli.Context) error {
 		elapsed = time.Since(start)
 	} else {
 		if rawCode {
-			code, _, _ = runtime.Create(db, code, runtimeConfig)
+			code, addr, _ = runtime.Create(db, code, runtimeConfig)
+			runtimeConfig.Receiver = addr
 		}
 		start = time.Now()
 		ret, _, structLogs, runtimeErr = runtime.Execute(db, code, input, runtimeConfig)
 		elapsed = time.Since(start)
 	}
 
-	logs := state.Logs()
+	logs := stateDb.Logs()
 
 	log.WriteF(color.FgHiGreen, "[Result]:        %v\n", common.Bytes2Hex(ret))
 	log.WriteF(color.FgHiRed, "[Error]:         %v\n", runtimeErr)

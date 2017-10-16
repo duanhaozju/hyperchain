@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
@@ -5,7 +18,9 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	"hyperchain/core/ledger/bloom"
+	edb "hyperchain/core/ledger/chain"
+	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
@@ -24,7 +39,7 @@ func (executor *Executor) listenCommitEvent() {
 	executor.logger.Notice("commit backend start")
 	for {
 		select {
-		case <-executor.getExit(IDENTIFIER_COMMIT):
+		case <-executor.context.exit:
 			executor.logger.Notice("commit backend exit")
 			return
 		case v := <-executor.getSuspend(IDENTIFIER_COMMIT):
@@ -72,7 +87,7 @@ func (executor *Executor) processCommitEvent(ev event.CommitEvent, done func()) 
 		// TODO save invalid transaction by itself
 		executor.throwInvalidTransactionBack(record.InvalidTxs)
 	}
-	executor.incDemandNumber()
+	executor.incDemand(DemandNumber)
 	executor.cache.validationResultCache.Remove(ValidationTag{ev.Hash, ev.SeqNo})
 	return true
 }
@@ -82,7 +97,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	var filterLogs []*types.Log
 	// fetch the relative db batch obj from the batch buffer
 	// attention: state changes has already been push into the batch obj
-	batch := executor.statedb.FetchBatch(record.SeqNo)
+	batch := executor.statedb.FetchBatch(record.SeqNo, state.BATCH_NORMAL)
 	// persist transaction data
 	if err := executor.persistTransactions(batch, block.Transactions, block.Number); err != nil {
 		executor.logger.Errorf("persist transactions of #%d failed.", block.Number)
@@ -106,7 +121,7 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 		return err
 	}
 	// write bloom filter first
-	if err, _ := edb.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
+	if _, err := bloom.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
 		executor.logger.Warning("write tx to bloom filter failed", err.Error())
 	}
 
@@ -181,7 +196,7 @@ func (executor *Executor) constructBlock(ev event.CommitEvent) *types.Block {
 // commitValidationCheck - check whether this commit event is the demand one.
 func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
 	// 1. verify that the block height is consistent
-	if !executor.isDemandNumber(ev.SeqNo) {
+	if !executor.isDemand(DemandNumber, ev.SeqNo) {
 		executor.logger.Errorf("receive a commit event %d which is not demand, drop it.", ev.SeqNo)
 		return false
 	}
@@ -234,11 +249,11 @@ func (executor *Executor) persistReceipts(batch db.Batch, transaction []*types.T
 		filterLogs = append(filterLogs, logs...)
 
 		if transaction[idx].Version != nil {
-			if err, _ := edb.PersistReceipt(batch, receipt, false, false, string(transaction[idx].Version)); err != nil {
+			if _, err := edb.PersistReceipt(batch, receipt, false, false, string(transaction[idx].Version)); err != nil {
 				return err, nil
 			}
 		} else {
-			if err, _ := edb.PersistReceipt(batch, receipt, false, false); err != nil {
+			if _, err := edb.PersistReceipt(batch, receipt, false, false); err != nil {
 				return err, nil
 			}
 		}

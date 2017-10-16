@@ -5,7 +5,7 @@ import (
 	rcm "hyperchain/cmd/radar/core/common"
 	"hyperchain/cmd/radar/core/types"
 	"hyperchain/common"
-	"hyperchain/core/hyperstate"
+	"hyperchain/core/state"
 	"hyperchain/crypto"
 	"math"
 	"strconv"
@@ -19,7 +19,7 @@ func GetResult(db *leveldb.DB, contractAddress string, contractVariables []*type
 	for i := 0; i < len(contractVariables); i++ {
 		contractVariable := contractVariables[i]
 		if !contractVariable.Variable.GetIsAddress() {
-			dbKey := hyperstate.CompositeStorageKey(common.Hex2Bytes(contractAddress), contractVariable.StartAddressOfSlot)
+			dbKey := state.CompositeStorageKey(common.Hex2Bytes(contractAddress), contractVariable.StartAddressOfSlot)
 			temp, err := db.Get(dbKey, nil)
 			if err != nil {
 				if !strings.Contains(err.Error(), "leveldb: not found") {
