@@ -49,7 +49,7 @@ func NewPeersPool(namespace string, ev *event.TypeMux, pts *PeerTriples, peercnf
 	}
 }
 
-// Ready returns true if the VP pool not nil.
+// Ready returns true if the VP pool is not nil.
 func (pool *PeersPool) Ready() bool {
 	return pool.vpPool != nil
 }

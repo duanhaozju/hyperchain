@@ -20,6 +20,7 @@ type PeerTriple struct {
 	rwlock    *sync.RWMutex
 }
 
+// NewPeerTriple creates and returns a new PeerTriple instance.
 func NewPeerTriple(namespace string, id int, hostname string) *PeerTriple {
 	return &PeerTriple{
 		namespace: namespace,
@@ -57,6 +58,7 @@ type PeerTriples struct {
 	triples []*PeerTriple
 }
 
+// NewPeerTriples creates and returns a new PeerTriples instance.
 func NewPeerTriples() *PeerTriples {
 	return &PeerTriples{
 		rwlock:  new(sync.RWMutex),
@@ -64,6 +66,7 @@ func NewPeerTriples() *PeerTriples {
 	}
 }
 
+// QuickParsePeerTriples transfer type []interface{} to PeerTriples.
 func QuickParsePeerTriples(namespcace string, nodes []interface{}) (*PeerTriples, error) {
 	pts := NewPeerTriples()
 	for _, item := range nodes {
@@ -87,10 +90,7 @@ func QuickParsePeerTriples(namespcace string, nodes []interface{}) (*PeerTriples
 	return pts, nil
 }
 
-func SwitchPeerTriples(pts *PeerTriples, tpts *PeerTriples) {
-	pts = tpts
-}
-
+// PersistPeerTriples will write PeerTriples information to file.
 func PersistPeerTriples(vip *viper.Viper, pts *PeerTriples) error {
 	pts.rwlock.RLock()
 	defer pts.rwlock.RUnlock()

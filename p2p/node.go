@@ -23,7 +23,7 @@ func NewNode(namespace string, id int, hostname string, net *network.HyperNet) *
 	return node
 }
 
-// Bind binds msgType and its handler for this namespace
+// Bind binds msgType and its handler for this namespace.
 func (node *Node) Bind(msgType message.MsgType, handler msg.MsgHandler) {
 	node.net.RegisterHandler(node.namespace, msgType, handler)
 }

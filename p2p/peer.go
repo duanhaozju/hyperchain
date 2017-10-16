@@ -17,9 +17,6 @@ import (
 	"hyperchain/p2p/payloads"
 )
 
-// init the package-level logger system,
-// after this declare and init function,
-// you can use the `log` whole the package scope
 type Peer struct {
 	hostname  string
 	info      *info.Info
@@ -120,7 +117,7 @@ func (peer *Peer) Greeting(in *pb.Message) (*pb.Message, error) {
 	return response, nil
 }
 
-// Serialize serialize the peer information.
+// Serialize serializes the peer information.
 func (peer *Peer) Serialize() []byte {
 	ps := struct {
 		Hostname  string `json:"hostname"`
@@ -137,7 +134,7 @@ func (peer *Peer) Serialize() []byte {
 	return b
 }
 
-// PeerDeSerialize deserialize the peer information.
+// PeerDeSerialize deserializes the peer information.
 func PeerDeSerialize(raw []byte) (hostname string, namespace string, hash string, err error) {
 	ps := &struct {
 		Hostname  string `json:"hostname"`
@@ -279,7 +276,7 @@ Sharekey %s
 }
 
 // handle the double side handshake process,
-// when got a serverhello, this peer should response by clientResponse.
+// when got a serverhello, if accept, this peer should response by clientResponse.
 func (peer *Peer) clientResponse(serverHello *pb.Message) error {
 	payload := []byte("client accept [msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTACCEPT, payload)
@@ -292,7 +289,7 @@ func (peer *Peer) clientResponse(serverHello *pb.Message) error {
 }
 
 // handle the double side handshake process,
-// when got a serverhello, this peer should response by clientResponse.
+// when got a serverhello, if reject, this peer should response by clientReject.
 func (peer *Peer) clientReject(serverHello *pb.Message) error {
 	payload := []byte("client accept [msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTREJECT, payload)
