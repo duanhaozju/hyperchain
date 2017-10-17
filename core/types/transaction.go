@@ -197,6 +197,7 @@ func NewTransaction(from []byte, to []byte, value []byte, timestamp int64, nonce
 		Value:     value,
 		Timestamp: timestamp,
 		Nonce:     nonce,
+		Other:     &NonHash{},
 	}
 
 	return transaction
