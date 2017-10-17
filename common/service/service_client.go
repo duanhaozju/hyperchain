@@ -1,4 +1,4 @@
-package common
+package service
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
-	pb "hyperchain/service/common/protos"
+	pb "hyperchain/common/protos"
 	"sync"
 	"sync/atomic"
 	"time"

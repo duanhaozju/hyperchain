@@ -1,10 +1,10 @@
-package common
+package service
 
 import (
 	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/op/go-logging"
-	pb "hyperchain/service/common/protos"
+	pb "hyperchain/common/protos"
 	"sync"
 )
 

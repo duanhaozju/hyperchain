@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
-	"hyperchain/service/common"
-	pb "hyperchain/service/common/protos"
+	pb "hyperchain/common/protos"
 	"net"
+	"hyperchain/common/service"
 )
 
 var logger *logging.Logger
@@ -17,7 +17,7 @@ func init() {
 
 func main() {
 
-	if ds, err := common.NewDispatchServer(60061, "127.0.0.1"); err == nil {
+	if ds, err := service.NewDispatchServer(60061, "127.0.0.1"); err == nil {
 		logger.Debugf("Eventhub try to listen on addr: %s", ds.Addr())
 
 		lis, err := net.Listen("tcp", ds.Addr())

@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/op/go-logging"
-	"hyperchain/service/common"
-	pb "hyperchain/service/common/protos"
+	"hyperchain/common/service"
+	pb "hyperchain/common/protos"
 	//"time"
 	"github.com/gogo/protobuf/proto"
 	"hyperchain/manager/event"
@@ -18,7 +18,7 @@ func init() {
 
 func main() {
 
-	client, err := common.New(60061, "127.0.0.1", common.CONSENTER, "global")
+	client, err := service.New(60061, "127.0.0.1", service.CONSENTER, "global")
 	if err != nil {
 		logger.Error(err)
 	}

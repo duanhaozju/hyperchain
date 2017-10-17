@@ -1,7 +1,7 @@
-package common
+package service
 
 import (
-	pb "hyperchain/service/common/protos"
+	pb "hyperchain/common/protos"
 )
 
 func (ds *DispatchServer) dispatchConsensusMsg(namespace string, msg *pb.Message) {

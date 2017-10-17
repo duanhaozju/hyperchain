@@ -1,9 +1,9 @@
-package common
+package service
 
 import (
 	"fmt"
 	"github.com/op/go-logging"
-	pb "hyperchain/service/common/protos"
+	pb "hyperchain/common/protos"
 )
 
 //Service interface to be implemented by component.
