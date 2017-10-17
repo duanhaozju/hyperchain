@@ -3,6 +3,7 @@ package executor
 import (
 	"hyperchain/common"
 	"hyperchain/core/executor"
+    "hyperchain/common/service"
     "io/ioutil"
     "errors"
     "github.com/op/go-logging"
@@ -27,29 +28,32 @@ type ecManagerImpl struct {
 
 	executors map[string]*executor.Executor
 
+	// manager the connect, it can be included in the ExecutorRemote when it add
+	services map[string]service.Service
+
 	// conf is the global config file of the system, contains global configs
 	// of the node
 	conf *common.Config
 
-	stopHp    chan bool
-	restartHp chan bool
+	stopEm    chan bool
+	restartEm chan bool
 }
 
-func newExecutorManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *ecManagerImpl {
+func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bool) *ecManagerImpl {
 	em := &ecManagerImpl{
 		executors:  make(map[string]executor.Executor),
 
 		conf:        conf,
-		stopHp:      stopHp,
-		restartHp:   restartHp,
+		stopEm:      stopEm,
+		restartEm:   restartEm,
 	}
 	return em
 }
 
-func GetExecutorMgr(conf *common.Config, stopHp chan bool, restartHp chan bool) *ecManagerImpl{
+func GetExecutorMgr(conf *common.Config, stopEm chan bool, restartEM chan bool) *ecManagerImpl{
     logger = common.GetLogger(common.DEFAULT_LOG, "nsmgr")
 
-    return newExecutorManager(conf, stopHp,restartHp)
+    return newExecutorManager(conf, stopEm, restartEM)
 }
 
 
