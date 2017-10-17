@@ -7,6 +7,7 @@ import (
     "io/ioutil"
     "errors"
     "github.com/op/go-logging"
+    "hyperchain/namespace"
 )
 
 var logger *logging.Logger
@@ -31,6 +32,7 @@ type ecManagerImpl struct {
 	// manager the connect, it can be included in the ExecutorRemote when it add
 	services map[string]service.Service
 
+    jvmManager *namespace.JvmManager
 	// conf is the global config file of the system, contains global configs
 	// of the node
 	conf *common.Config
@@ -41,9 +43,9 @@ type ecManagerImpl struct {
 
 func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bool) *ecManagerImpl {
 	em := &ecManagerImpl{
-		executors:  make(map[string]executor.Executor),
-
-		conf:        conf,
+		executors:  make(map[string]*executor.Executor),
+        jvmManager:  namespace.NewJvmManager(conf),
+        conf:        conf,
 		stopEm:      stopEm,
 		restartEm:   restartEm,
 	}
@@ -51,7 +53,7 @@ func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bo
 }
 
 func GetExecutorMgr(conf *common.Config, stopEm chan bool, restartEM chan bool) *ecManagerImpl{
-    logger = common.GetLogger(common.DEFAULT_LOG, "nsmgr")
+    logger = common.GetLogger(common.DEFAULT_LOG, "executorMgr")
 
     return newExecutorManager(conf, stopEm, restartEM)
 }
@@ -74,13 +76,19 @@ func (em *ecManagerImpl) Start() error {
             if !start {
                 continue
             }
-            e, err := executor.NewExecutor(name, em.conf, nil, nil)
+            exec, err := executor.NewExecutor(name, em.conf, nil, nil)
             if err != nil {
                 logger.Errorf("NewExecutor is fault")
             }
-            em.executors[name] = e
+            em.executors[name] = exec
         } else {
             logger.Errorf("Invalid folder %v", d)
+        }
+    }
+    if em.conf.GetBool(common.C_JVM_START) == true {
+        if err := em.jvmManager.Start(); err != nil {
+            logger.Error(err)
+            return err
         }
     }
     return nil
