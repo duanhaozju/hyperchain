@@ -8,16 +8,16 @@ import (
 	"sync"
 )
 
-//DispatchServer handleDispatch service
-type DispatchServer struct {
+//InternalServer handle internal service connections
+type InternalServer struct {
 	port   int
 	host   string
-	sr     ServiceRegistry
+	sr     serviceRegistry
 	logger *logging.Logger
 }
 
-func NewDispatchServer(port int, host string) (*DispatchServer, error) {
-	ds := &DispatchServer{
+func NewInternalServer(port int, host string) (*InternalServer, error) {
+	ds := &InternalServer{
 		port:   port,
 		host:   host,
 		sr:     NewServiceRegistry(),
@@ -27,12 +27,12 @@ func NewDispatchServer(port int, host string) (*DispatchServer, error) {
 	return ds, nil
 }
 
-func (ds *DispatchServer) Addr() string {
+func (ds *InternalServer) Addr() string {
 	return fmt.Sprintf("%s:%d", ds.host, ds.port)
 }
 
 //Register receive a new connection
-func (ds *DispatchServer) Register(stream pb.Dispatcher_RegisterServer) error {
+func (ds *InternalServer) Register(stream pb.Dispatcher_RegisterServer) error {
 	ds.logger.Infof("Receive new service connection!")
 
 	var s Service
@@ -61,7 +61,7 @@ func (ds *DispatchServer) Register(stream pb.Dispatcher_RegisterServer) error {
 				return err
 			}
 			return nil
-		}else {
+		} else {
 			ds.logger.Errorf("Service register error, msg %v", msg)
 		}
 		lock.RUnlock()
@@ -71,9 +71,8 @@ func (ds *DispatchServer) Register(stream pb.Dispatcher_RegisterServer) error {
 }
 
 //handleDispatch handleDispatch messages
-func (ds *DispatchServer) HandleDispatch(namespace string, msg *pb.Message) {
-	//ds.logger.Debugf("try to handle dispatch message: %v for namespace: %s", msg, namespace)
-
+func (ds *InternalServer) HandleDispatch(namespace string, msg *pb.Message) {
+	ds.logger.Debugf("try to handle dispatch message: %v for namespace: %s", msg, namespace)
 	switch msg.From {
 	case pb.FROM_APISERVER:
 		ds.dispatchAPIServerMsg(namespace, msg)
@@ -88,12 +87,12 @@ func (ds *DispatchServer) HandleDispatch(namespace string, msg *pb.Message) {
 	}
 }
 
-func (ds *DispatchServer) handleAdmin(namespace string, msg *pb.Message) {
+func (ds *InternalServer) HandleAdmin(namespace string, msg *pb.Message) {
 	//TODO: handle admin messages
 }
 
 //handleRegister parse msg and register this stream
-func (ds *DispatchServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_RegisterServer) Service {
+func (ds *InternalServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_RegisterServer) Service {
 	ds.logger.Debugf("handle register msg: %v", msg)
 	rm := pb.RegisterMessage{}
 	err := proto.Unmarshal(msg.Payload, &rm)
@@ -107,7 +106,7 @@ func (ds *DispatchServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_R
 		rm.Namespace = "global"
 	}
 
-	service := NewService(rm.Namespace, serviceId(msg), stream, ds)
+	service := NewRemoteService(rm.Namespace, serviceId(msg), stream, ds)
 	ds.sr.Register(service)
 	ds.logger.Debug("Send register ok response!")
 	if err := stream.Send(&pb.Message{

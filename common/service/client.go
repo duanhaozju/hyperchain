@@ -20,7 +20,7 @@ type ServiceClient struct {
 	sid  string // service id
 	ns   string // namespace
 
-	msgs   chan *pb.Message //received messages from eventhub
+	msgs   chan *pb.Message //received messages from server
 	slock  sync.RWMutex
 	client pb.Dispatcher_RegisterClient
 
@@ -32,7 +32,7 @@ type ServiceClient struct {
 
 func New(port int, host, sid, ns string) (*ServiceClient, error) {
 	if len(host) == 0 || port < 0 {
-		return nil, fmt.Errorf("Invalid host or port, %s:%d", host, port)
+		return nil, fmt.Errorf("Invalid host or port, %s:%d ", host, port)
 	}
 	return &ServiceClient{
 		host:   host,
@@ -99,7 +99,7 @@ func (sc *ServiceClient) reconnect() error {
 			sleepT *= 2
 		}
 	}
-	return fmt.Errorf("Recoonect error, exceed retry times: %d", maxRetryT)
+	return fmt.Errorf("Recoonect error, exceed retry times: %d ", maxRetryT)
 }
 
 func (sc *ServiceClient) Register(serviceType pb.FROM, rm *pb.RegisterMessage) error {

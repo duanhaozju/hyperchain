@@ -54,7 +54,6 @@ enum Event {
     BroadcastDelPeerEvent = 8;
     UpdateRoutingTableEvent = 9;
     FilterSystemStatusEvent = 10;
-
     //3.Executor event
 
     //4.Network event
