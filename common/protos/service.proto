@@ -56,6 +56,8 @@ enum Event {
     FilterSystemStatusEvent = 10;
     //3.Executor event
 
+    ExecutorToP2PEvent = 11;
+    ExecutorToConsensusEvent = 12;
     //4.Network event
 
     //5.Eventhub event

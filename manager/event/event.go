@@ -42,10 +42,6 @@ type SessionEvent struct {
 	Message []byte
 }
 
-////set primary in peerManager when new view and primary
-//type InformPrimaryEvent struct {
-//	Primary uint64
-//}
 //TODO:transfer all this event to proto defined
 
 /* Peer Maintain Event */
@@ -105,7 +101,7 @@ type CommitedBlockEvent struct {
 	Executor events
 */
 type ExecutorToConsensusEvent struct {
-	Payload interface{}
+	Payload interface{} //TODO: change this to be type of byte[]
 	Type    int
 }
 

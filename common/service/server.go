@@ -27,29 +27,29 @@ func NewInternalServer(port int, host string) (*InternalServer, error) {
 	return ds, nil
 }
 
-func (ds *InternalServer) Addr() string {
-	return fmt.Sprintf("%s:%d", ds.host, ds.port)
+func (is *InternalServer) Addr() string {
+	return fmt.Sprintf("%s:%d", is.host, is.port)
 }
 
 //Register receive a new connection
-func (ds *InternalServer) Register(stream pb.Dispatcher_RegisterServer) error {
-	ds.logger.Infof("Receive new service connection!")
+func (is *InternalServer) Register(stream pb.Dispatcher_RegisterServer) error {
+	is.logger.Infof("Receive new service connection!")
 
 	var s Service
 	var lock sync.RWMutex
 	for {
 		msg, err := stream.Recv()
 		if err != nil {
-			ds.logger.Error(err)
+			is.logger.Error(err)
 			return err
 		}
 		switch msg.Type {
 		case pb.Type_REGISTER:
 			lock.Lock()
-			s = ds.handleRegister(msg, stream)
+			s = is.handleRegister(msg, stream)
 			lock.Unlock()
 		default:
-			ds.logger.Errorf("Message undefined %v", msg)
+			is.logger.Errorf("Message undefined %v", msg)
 		}
 
 		lock.RLock()
@@ -57,12 +57,12 @@ func (ds *InternalServer) Register(stream pb.Dispatcher_RegisterServer) error {
 			lock.RUnlock()
 			err := s.Serve()
 			if err != nil {
-				ds.logger.Error(err)
+				is.logger.Error(err)
 				return err
 			}
 			return nil
 		} else {
-			ds.logger.Errorf("Service register error, msg %v", msg)
+			is.logger.Errorf("Service register error, msg %v", msg)
 		}
 		lock.RUnlock()
 
@@ -70,50 +70,54 @@ func (ds *InternalServer) Register(stream pb.Dispatcher_RegisterServer) error {
 	return nil
 }
 
+func (is *InternalServer) RegisterLocal(s Service)  {
+	is.sr.Register(s)
+}
+
 //handleDispatch handleDispatch messages
-func (ds *InternalServer) HandleDispatch(namespace string, msg *pb.Message) {
-	ds.logger.Debugf("try to handle dispatch message: %v for namespace: %s", msg, namespace)
+func (is *InternalServer) HandleDispatch(namespace string, msg *pb.Message) {
+	is.logger.Debugf("try to handle dispatch message: %v for namespace: %s", msg, namespace)
 	switch msg.From {
 	case pb.FROM_APISERVER:
-		ds.dispatchAPIServerMsg(namespace, msg)
+		is.dispatchAPIServerMsg(namespace, msg)
 	case pb.FROM_CONSENSUS:
-		ds.dispatchConsensusMsg(namespace, msg)
+		is.dispatchConsensusMsg(namespace, msg)
 	case pb.FROM_EXECUTOR:
-		ds.dispatchExecutorMsg(namespace, msg)
+		is.dispatchExecutorMsg(namespace, msg)
 	case pb.FROM_NETWORK:
-		ds.dispatchNetworkMsg(namespace, msg)
+		is.dispatchNetworkMsg(namespace, msg)
 	default:
-		ds.logger.Errorf("Undefined message: %v", msg)
+		is.logger.Errorf("Undefined message: %v", msg)
 	}
 }
 
-func (ds *InternalServer) HandleAdmin(namespace string, msg *pb.Message) {
+func (is *InternalServer) HandleAdmin(namespace string, msg *pb.Message) {
 	//TODO: handle admin messages
 }
 
 //handleRegister parse msg and register this stream
-func (ds *InternalServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_RegisterServer) Service {
-	ds.logger.Debugf("handle register msg: %v", msg)
+func (is *InternalServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_RegisterServer) Service {
+	is.logger.Debugf("handle register msg: %v", msg)
 	rm := pb.RegisterMessage{}
 	err := proto.Unmarshal(msg.Payload, &rm)
 	if err != nil {
-		ds.logger.Errorf("unmarshal register message error: %v", err)
+		is.logger.Errorf("unmarshal register message error: %v", err)
 		return nil
 	}
 
 	if len(rm.Namespace) == 0 {
-		ds.logger.Error("namespace error, no namespace specified, using global instead")
+		is.logger.Error("namespace error, no namespace specified, using global instead")
 		rm.Namespace = "global"
 	}
 
-	service := NewRemoteService(rm.Namespace, serviceId(msg), stream, ds)
-	ds.sr.Register(service)
-	ds.logger.Debug("Send register ok response!")
+	service := NewRemoteService(rm.Namespace, serviceId(msg), stream, is)
+	is.sr.Register(service)
+	is.logger.Debug("Send register ok response!")
 	if err := stream.Send(&pb.Message{
 		Type: pb.Type_RESPONSE,
 		Ok:   true,
 	}); err != nil {
-		ds.logger.Error(err)
+		is.logger.Error(err)
 	}
 	return service
 }
