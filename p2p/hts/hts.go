@@ -108,34 +108,30 @@ type HTS struct {
 	cg  *CertGroup
 }
 
-//NewHTS return a Hyper Transport Security instance
+// NewHTS creates and returns a new HTS(Hyper Transport Security) instance.
 func NewHTS(namespace string, sec Security, caConfigPath string) (*HTS, error) {
 	hts := &HTS{
 		sec: sec,
 		cg:  new(CertGroup),
 	}
+
 	// check ca config path
 	if !common.FileExist(caConfigPath) {
-		return nil, errors.New("CA config not exist, please check it.")
+		return nil, errors.New(fmt.Sprintf("CA config file %s doesn't exist, please check it.", caConfigPath))
 	}
+
 	// read in config, and get all certs
 	vip := viper.New()
 	vip.SetConfigFile(caConfigPath)
 	err := vip.ReadInConfig()
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("cann't read in the caconfig, reason: %s ", err.Error()))
+		return nil, errors.New(fmt.Sprintf("cannot read in the caconfig, reason: %s ", err.Error()))
 	}
 
-	//ecert group
-	//enable ecert ?
-	enEnroll := vip.GetBool(common.ENCRYPTION_CHECK_ENABLE)
-	enSign := vip.GetBool(common.ENCRYPTION_CHECK_SIGN)
-	hts.cg.enableEnroll = enEnroll
-	hts.cg.sign = enSign
-	//if enable the ene, readin all ecert
+	// read in ECA
 	ecap := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_ECERT_ECA))
 	if !common.FileExist(ecap) {
-		return nil, errors.New(fmt.Sprintf("cannot read in eca,reason: file not exist (%s)", ecap))
+		return nil, errors.New(fmt.Sprintf("cannot read in eca, reason: file not exist (%s)", ecap))
 	}
 	eca, err := ioutil.ReadFile(ecap)
 	if err != nil {
@@ -148,7 +144,7 @@ func NewHTS(namespace string, sec Security, caConfigPath string) (*HTS, error) {
 	}
 	hts.cg.eCA_S = ecas
 
-	//parse eca
+	// read in ECERT
 	ecertp := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_ECERT_ECERT))
 	if !common.FileExist(ecertp) {
 		return nil, errors.New(fmt.Sprintf("cannot read in ecert,reason: file not exist (%s)", ecertp))
@@ -164,6 +160,7 @@ func NewHTS(namespace string, sec Security, caConfigPath string) (*HTS, error) {
 	}
 	hts.cg.eCERT_S = ecerts
 
+	// read in ECERT private key
 	eprivp := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_ECERT_PRIV))
 	if !common.FileExist(eprivp) {
 		return nil, errors.New(fmt.Sprintf("cannot read in ecert priv,reason: file not exist (%s)", eprivp))
@@ -183,7 +180,15 @@ func NewHTS(namespace string, sec Security, caConfigPath string) (*HTS, error) {
 	}
 	hts.cg.eCERTPriv_S = ep_s
 
+	// if enable RCERT, enEnroll is true
+	enEnroll := vip.GetBool(common.ENCRYPTION_CHECK_ENABLE)
+	enSign := vip.GetBool(common.ENCRYPTION_CHECK_SIGN)
+	hts.cg.enableEnroll = enEnroll
+	hts.cg.sign = enSign
+
 	if enEnroll {
+
+		// read in RCA
 		rcap := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_RCERT_RCA))
 		if !common.FileExist(rcap) {
 			return nil, errors.New(fmt.Sprintf("cannot read in rca,reason: file not exist (%s)", rcap))
@@ -199,6 +204,7 @@ func NewHTS(namespace string, sec Security, caConfigPath string) (*HTS, error) {
 		}
 		hts.cg.rCA_S = rcas
 
+		// read in RCERT
 		rcertp := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_RCERT_RCERT))
 		if !common.FileExist(rcertp) {
 			return nil, errors.New(fmt.Sprintf("cannot read in rcert,reason: file not exist (%s)", rcertp))
@@ -208,13 +214,13 @@ func NewHTS(namespace string, sec Security, caConfigPath string) (*HTS, error) {
 			return nil, err
 		}
 		hts.cg.rCERT = []byte(rcert)
-
 		rcerts, err := primitives.ParseCertificate(rcert)
 		if err != nil {
 			return nil, errors.New(fmt.Sprintf("cannot parse the r certificate, reason %s", err.Error()))
 		}
 		hts.cg.rCERT_S = rcerts
 
+		// read in RCERT private key
 		rprivp := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_RCERT_PRIV))
 		if !common.FileExist(rprivp) {
 			return nil, errors.New(fmt.Sprintf("cannot read in rcert priv,reason: file not exist (%s)", eprivp))
@@ -233,14 +239,12 @@ func NewHTS(namespace string, sec Security, caConfigPath string) (*HTS, error) {
 			return nil, errors.New(fmt.Sprintf("cannot parse the r private key, reason %s", "cannot convert private key into *ecdsa.PrivateKey"))
 		}
 		hts.cg.rCERTPriv_S = rp_s
-
 	}
 
 	return hts, nil
 }
 
-//GetAClientHTS return a client HTS instance,
-//this func will self invoke generate generate private key
+// GetAClientHTS creates and returns a new client HTS instance.
 func (hts *HTS) GetAClientHTS() (*ClientHTS, error) {
 	chts, err := NewClientHTS(hts.sec, hts.cg)
 	if err != nil {
@@ -249,8 +253,8 @@ func (hts *HTS) GetAClientHTS() (*ClientHTS, error) {
 	return chts, nil
 }
 
-//GetServerHTS  generally this function will be invoke only once in a namespace
-//this func will self invoke generate generate private key
+// GetServerHTS creates and returns a new server HTS instance.
+// Generally this function will be invoked only once in a namespace.
 func (hts *HTS) GetServerHTS(peermgrEv *event.TypeMux) (*ServerHTS, error) {
 	shts, err := NewServerHTS(hts.sec, hts.cg, peermgrEv)
 	if err != nil {

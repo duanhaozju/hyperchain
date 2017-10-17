@@ -41,27 +41,34 @@ type HyperNet struct {
 	cconf *clientConf
 }
 
+// NewHyperNet creates and returns a new HyperNet instance.
 func NewHyperNet(config *viper.Viper, identifier string) (*HyperNet, error) {
 	logger = common.GetLogger(common.DEFAULT_LOG, "hypernet")
 	if config == nil {
 		return nil, errors.New("Readin host config failed, the viper instance is nil")
 	}
 
-	hostconf := config.GetString(common.P2P_HOSTS)
+	// check grpc port
 	port_i := config.GetInt(common.P2P_PORT)
 	if port_i == 0 {
 		return nil, errors.New("invalid grpc server port")
 	}
 	port := ":" + strconv.Itoa(port_i)
+
+	// check if hosts.toml file exists
+	hostconf := config.GetString(common.P2P_HOSTS)
 	if !common.FileExist(hostconf) {
-		fmt.Errorf("hosts config file not exist: %s", hostconf)
+		logger.Errorf("hosts config file not exist: %s", hostconf)
 		return nil, errors.New(fmt.Sprintf("connot find the hosts config file: %s", hostconf))
 	}
+
+	// check if addr.toml file exists
 	addrconf := config.GetString(common.P2P_ADDR)
 	if !common.FileExist(addrconf) {
-		fmt.Errorf("addr config file not exist: %s", hostconf)
+		logger.Errorf("addr config file not exist: %s", addrconf)
 		return nil, errors.New(fmt.Sprintf("connot find the addr config file: %s", addrconf))
 	}
+
 	ia, domain, err := inneraddr.GetInnerAddr(addrconf)
 	if err != nil {
 		return nil, err
@@ -76,6 +83,7 @@ func NewHyperNet(config *viper.Viper, identifier string) (*HyperNet, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	// connection configuration
 	cconf := NewClientConf(config)
 	rq := make(chan [2]string)
@@ -130,7 +138,7 @@ func (hn *HyperNet) InitClients() error {
 	return nil
 }
 
-// if a connection failed, here will retry to connect the host name
+// if a connection failed, here will retry to connect to the host name.
 func (hn *HyperNet) retry() error {
 	td := hn.conf.GetDuration(common.P2P_RETRY_TIME)
 	if td == 0*time.Second {
@@ -155,7 +163,7 @@ func (hn *HyperNet) retry() error {
 	return nil
 }
 
-// if a connection failed, here will retry to connect the host name
+// if a host name need to reverse connection, here will connect to the host name.
 func (hn *HyperNet) reverse() error {
 	logger.Info("start reverse process")
 	go func(h *HyperNet) {
@@ -199,7 +207,7 @@ func (hn *HyperNet) reverse() error {
 	return nil
 }
 
-//Connect to specific host endpoint
+// ConnectByAddr will connects to specific host endpoint.
 func (hn *HyperNet) ConnectByAddr(hostname, addr string) error {
 	client, err := NewClient(hostname, addr, hn.sec, hn.cconf)
 	if err != nil {
@@ -215,7 +223,7 @@ func (hn *HyperNet) ConnectByAddr(hostname, addr string) error {
 	return nil
 }
 
-//Connect to specific host endpoint
+// Connect will connect to specific hostname.
 func (hn *HyperNet) Connect(hostname string) error {
 	addr, err := hn.dns.GetDNS(hostname)
 	logger.Info("connect to ", addr)
@@ -236,7 +244,7 @@ func (hn *HyperNet) Connect(hostname string) error {
 	return nil
 }
 
-//Disconnect to specific endpoint and delete the client from map
+// Disconnect will disconnect specific endpoint and delete the client from map.
 //TODO here should also handle the filed queue, find the specific host,
 //TODO and cancel the retry process of this hostname
 func (hn *HyperNet) DisConnect(hostname string) (err error) {
@@ -262,7 +270,7 @@ func (hn *HyperNet) DisConnect(hostname string) (err error) {
 	return
 }
 
-//HealthCheck check the connection is available or not at regular intervals
+// HealthCheck checks if the connection is available at regular intervals.
 func (hyperNet *HyperNet) HealthCheck(hostname string) {
 	// TODO NetWork Health check
 }

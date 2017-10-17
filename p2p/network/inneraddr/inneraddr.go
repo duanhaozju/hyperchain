@@ -12,7 +12,7 @@ import (
 
 type InnerAddr struct {
 	//domain ipaddr
-	addrs map[string]string
+	addrs map[string]string	// key is domain name, value is IP address
 	lock  *sync.RWMutex
 }
 
