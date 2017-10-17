@@ -1,7 +1,35 @@
 syntax = "proto3";
+
+import "hyperchain/core/types/transaction.proto";
 package event;
 
 message InformPrimaryEvent {
     uint64 Primary = 1;
 }
 
+// if the CommitStatus is true, we will commit the blocks and save the statedb
+// or we will rollback the statedb
+// Flag == true, commit; Flag == false, rollback
+message CommitEvent {
+    uint64 SeqNo = 1;
+    int64 Timestamp = 2;
+    int64 CommitTime = 3;
+    bool Flag = 4;
+    string Hash = 5;
+    bool IsPrimary = 6;
+}
+
+//receive new block event from node consensus event for consensus module
+message ValidationEvent {
+    string Digest = 1;
+    repeated types.Transaction Transactions = 2;
+    uint64 SeqNo = 3;
+    uint64 View = 4;
+    bool IsPrimary = 5;
+    int64 Timestamp = 6;
+}
+
+// reset blockchain to a stable checkpoint status when `viewchange` occur
+message VCResetEvent {
+    uint64 SeqNo = 1;
+}

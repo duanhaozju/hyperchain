@@ -42,33 +42,6 @@ type SessionEvent struct {
 	Message []byte
 }
 
-//receive new block event from node consensus event for consensus module
-type ValidationEvent struct {
-	Digest       string
-	Transactions []*types.Transaction
-	SeqNo        uint64
-	View         uint64
-	IsPrimary    bool
-	Timestamp    int64
-}
-
-// if the CommitStatus is true, we will commit the blocks and save the statedb
-// or we will rollback the statedb
-// Flag == true, commit; Flag == false, rollback
-type CommitEvent struct {
-	SeqNo      uint64
-	Timestamp  int64
-	CommitTime int64
-	Flag       bool
-	Hash       string
-	IsPrimary  bool
-}
-
-// reset blockchain to a stable checkpoint status when `viewchange` occur
-type VCResetEvent struct {
-	SeqNo uint64
-}
-
 ////set primary in peerManager when new view and primary
 //type InformPrimaryEvent struct {
 //	Primary uint64
