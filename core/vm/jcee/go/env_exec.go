@@ -101,9 +101,16 @@ func exec(env vm.Environment, caller vm.ContractRef, address, codeAddr *common.A
 			to = env.Db().GetAccount(*address)
 		}
 	}
-	if err := manageAccount(env, op, to); err != nil {
-		env.SetSnapshot(snapshotPreTransfer)
-		return nil, common.Address{}, err
+	// Account status management.
+	// Short circuit no matter success or not, don't bother vm execution.
+	if isFreeze(op) || isUnFreeze(op) {
+		if err := manageAccount(env, op, to); err != nil {
+			env.SetSnapshot(snapshotPreTransfer)
+			return nil, common.Address{}, err
+		} else {
+			// No error occurs, break the execution frame immediately.
+			return nil, common.Address{}, nil
+		}
 	}
 	Transfer(from, to, value)
 	/*
@@ -214,31 +221,29 @@ func Transfer(from, to vm.Account, amount *big.Int) {
 
 // manageAccount freeze or unfreeze a account with given op.
 func manageAccount(env vm.Environment, op types.TransactionValue_Opcode, to vm.Account) error {
-	if isSpecialOperation(op) && !isUpdate(op) {
-		switch {
-		case isFreeze(op):
-			if env.Db().GetStatus(to.Address()) == state.OBJ_FROZON {
-				env.Logger().Warningf("try to freeze a frozen account %s", to.Address().Hex())
-				return er.ExecContractErr(1, "duplicate freeze operation")
-			}
-			if env.Db().GetCode(to.Address()) == nil {
-				env.Logger().Warningf("try to freeze a non-contract account %s", to.Address().Hex())
-				return er.ExecContractErr(1, "freeze a non-contract account")
-			}
-			env.Logger().Debugf("freeze account %s", to.Address().Hex())
-			env.Db().SetStatus(to.Address(), state.OBJ_FROZON)
-		case isUnFreeze(op):
-			if env.Db().GetStatus(to.Address()) == state.OBJ_NORMAL {
-				env.Logger().Warningf("try to unfreeze a normal account %s", to.Address().Hex())
-				return er.ExecContractErr(1, "duplicate unfreeze operation")
-			}
-			if env.Db().GetCode(to.Address()) == nil {
-				env.Logger().Warningf("try to unfreeze a non-contract account %s", to.Address().Hex())
-				return er.ExecContractErr(1, "unfreeze a non-contract account")
-			}
-			env.Logger().Debugf("unfreeze account %s", to.Address().Hex())
-			env.Db().SetStatus(to.Address(), state.OBJ_NORMAL)
+	switch {
+	case isFreeze(op):
+		if env.Db().GetStatus(to.Address()) == state.OBJ_FROZON {
+			env.Logger().Warningf("try to freeze a frozen account %s", to.Address().Hex())
+			return er.ExecContractErr(1, "duplicate freeze operation")
 		}
+		if env.Db().GetCode(to.Address()) == nil {
+			env.Logger().Warningf("try to freeze a non-contract account %s", to.Address().Hex())
+			return er.ExecContractErr(1, "freeze a non-contract account")
+		}
+		env.Logger().Debugf("freeze account %s", to.Address().Hex())
+		env.Db().SetStatus(to.Address(), state.OBJ_FROZON)
+	case isUnFreeze(op):
+		if env.Db().GetStatus(to.Address()) == state.OBJ_NORMAL {
+			env.Logger().Warningf("try to unfreeze a normal account %s", to.Address().Hex())
+			return er.ExecContractErr(1, "duplicate unfreeze operation")
+		}
+		if env.Db().GetCode(to.Address()) == nil {
+			env.Logger().Warningf("try to unfreeze a non-contract account %s", to.Address().Hex())
+			return er.ExecContractErr(1, "unfreeze a non-contract account")
+		}
+		env.Logger().Debugf("unfreeze account %s", to.Address().Hex())
+		env.Db().SetStatus(to.Address(), state.OBJ_NORMAL)
 	}
 	return nil
 }
