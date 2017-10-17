@@ -1,11 +1,22 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/ledger/state"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/jcee/go"
@@ -16,7 +27,7 @@ import (
 	"path"
 )
 
-// Executor represents a hyperchain exector implementation
+// Executor represents a hyperchain executor implementation
 type Executor struct {
 	// Namespace should contain the official namespace name,
 	// often a fixed size random word.
@@ -25,7 +36,7 @@ type Executor struct {
 	archiveDb   db.Database       // Archivedb refers a offline historical database handler
 	commonHash  crypto.CommonHash // Keccak256 hasher
 	encryption  crypto.Encryption // ECDSA encrypter
-	conf        *common.Config    // Conf refers a configuration reader
+	conf        *Config           // Conf refers a configuration reader
 	context     ExecutorContext
 	hasher      Hasher
 	cache       Cache
@@ -47,22 +58,23 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 
 	executor := &Executor{
 		namespace:  namespace,
-		conf:       conf,
+		conf:       &Config{conf, namespace},
 		commonHash: kec256Hash,
 		encryption: encryption,
 		helper:     helper,
-		jvmCli:     jvm.NewContractExecutor(conf, namespace),
+		logger:     common.GetLogger(namespace, "executor"),
 	}
 
 	// initialise jvm client if jvm is been permissible
-	if executor.isJvmEnable() {
+	if executor.conf.isJvmEnable() {
 		executor.jvmCli = jvm.NewContractExecutor(conf, namespace)
 	}
 
-	executor.logger = common.GetLogger(namespace, "executor")
+	// initialise several components.
 	executor.snapshotReg = NewSnapshotRegistry(namespace, executor.logger, executor)
 	executor.archiveMgr = NewArchiveManager(namespace, executor, executor.snapshotReg, executor.logger)
 	executor.nvp = NewNVPImpl(executor)
+
 	// TODO doesn't know why to add this statement here.
 	// TODO ask @Rongjialei to fix this.
 	if err := executor.initDb(); err != nil {
@@ -134,7 +146,7 @@ func (executor *Executor) initialize() error {
 	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()
 	go executor.syncReplica()
-	if executor.isJvmEnable() {
+	if executor.conf.isJvmEnable() {
 		executor.jvmCli.Start()
 	}
 	return nil
@@ -142,11 +154,11 @@ func (executor *Executor) initialize() error {
 
 // setExit - notify all backend to exit.
 func (executor *Executor) finailize() error {
-	go executor.setValidationExit()
-	go executor.setCommitExit()
-	go executor.setReplicaSyncExit()
+	if executor.context.exit != nil {
+		close(executor.context.exit)
+	}
 	go executor.snapshotReg.Stop()
-	if executor.isJvmEnable() {
+	if executor.conf.isJvmEnable() {
 		executor.jvmCli.Stop()
 	}
 	return nil
@@ -174,7 +186,7 @@ func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, er
 			return nil, err, nil
 		}
 
-		db, err := hyperdb.NewDatabase(executor.conf, path.Join("snapshots", "SNAPSHOT_"+snapshotId), hyperdb.GetDatabaseType(executor.conf), executor.namespace)
+		db, err := hyperdb.NewDatabase(executor.conf.conf, path.Join("snapshots", "SNAPSHOT_"+snapshotId), hyperdb.GetDatabaseType(executor.conf.conf), executor.namespace)
 		if err != nil {
 			return nil, err, nil
 		}
@@ -183,7 +195,7 @@ func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, er
 			db.Close()
 		}
 
-		stateDb, err := state.New(common.BytesToHash(blk.MerkleRoot), db, nil, executor.conf, manifest.Height)
+		stateDb, err := state.New(common.BytesToHash(blk.MerkleRoot), db, nil, executor.conf.conf, manifest.Height)
 		return stateDb, err, closeDb
 	}
 }
@@ -195,7 +207,7 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 		executor.logger.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
 		return nil, err
 	}
-	stateDb, err := state.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.archiveDb, executor.conf, edb.GetHeightOfChain(executor.namespace))
+	stateDb, err := state.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.archiveDb, executor.conf.conf, edb.GetHeightOfChain(executor.namespace))
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] new stateDb failed, err : %s", executor.namespace, err.Error())
 		return nil, err

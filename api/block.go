@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 )
 
@@ -155,6 +155,12 @@ func (blk *Block) GetChainHeight() (*BlockNumber, error) {
 		return nil, &common.NoBlockGeneratedError{}
 	}
 	return uint64ToBlockNumber(chain.Height), nil
+}
+
+// GetGenesisBlock returns genesis block number.
+func (blk *Block) GetGenesisBlock() (uint64, error) {
+	number, err := edb.GetGenesisTag(blk.namespace)
+	return number, err
 }
 
 func latestBlock(namespace string) (*BlockResult, error) {

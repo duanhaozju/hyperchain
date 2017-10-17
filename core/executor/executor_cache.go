@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
@@ -44,7 +57,7 @@ func (executor *Executor) PurgeCache() {
 
 // addPendingValidationEvent - push a validation event to pending queue.
 func (executor *Executor) addPendingValidationEvent(validationEvent event.ValidationEvent) {
-	executor.logger.Warningf("[Namespace = %s] receive validation event %d while %d is required, save into cache temporarily.", executor.namespace, validationEvent.SeqNo, executor.getDemandSeqNo())
+	executor.logger.Warningf("[Namespace = %s] receive validation event %d while %d is required, save into cache temporarily.", executor.namespace, validationEvent.SeqNo, executor.getDemand(DemandSeqNo))
 	executor.cache.pendingValidationEventQ.Add(validationEvent.SeqNo, validationEvent)
 }
 

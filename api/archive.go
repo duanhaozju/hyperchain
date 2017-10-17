@@ -2,7 +2,7 @@ package api
 
 import (
 	"hyperchain/common"
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
 	flt "hyperchain/manager/filter"

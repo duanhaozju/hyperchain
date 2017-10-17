@@ -1,9 +1,22 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
 	"github.com/golang/protobuf/proto"
 	er "hyperchain/core/errors"
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
@@ -102,7 +115,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		required := ChainSyncRequest{
 			RequiredNumber: message[0].(uint64),
 			CurrentNumber:  message[1].(uint64),
-			PeerId:         executor.context.syncFlag.LocalId,
+			PeerId:         executor.context.syncCtx.localId,
 		}
 		payload, err := proto.Marshal(&required)
 		if err != nil {
@@ -153,7 +166,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Error("marshal invalid record error")
 			return err
 		}
-		hash, err := r.Tx.GetNVPHash()
+		hash := r.Tx.GetNVPHash()
 		if err != nil {
 			executor.logger.Errorf("get nvp hash failde. Err Mag:%v.", err.Error())
 		}
@@ -162,32 +175,6 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			Type:      NOTIFY_UNICAST_INVALID,
 			Peers:     []uint64{r.Tx.Id},
 			PeersHash: []string{hash},
-		})
-		return nil
-	case NOTIFY_BROADCAST_SINGLE:
-		// Broadcast a single block fetch request
-		// Include the params:
-		// (1) Target block number
-		// (2) Current chain height
-		// (3) Current peer identification
-		executor.logger.Debug("inform p2p broadcast single demand")
-		if !checkParams([]reflect.Kind{reflect.Uint64}, message...) {
-			return er.InvalidParamsErr
-		}
-		request := ChainSyncRequest{
-			RequiredNumber: message[0].(uint64),
-			CurrentNumber:  edb.GetHeightOfChain(executor.namespace),
-			PeerId:         executor.context.syncFlag.LocalId,
-		}
-		payload, err := proto.Marshal(&request)
-		if err != nil {
-			executor.logger.Error("broadcast demand block, marshal message failed")
-			return err
-		}
-		executor.helper.PostInner(event.ExecutorToP2PEvent{
-			Payload: payload,
-			Type:    NOTIFY_BROADCAST_SINGLE,
-			Peers:   executor.context.syncFlag.SyncPeers,
 		})
 		return nil
 	case NOTIFY_SYNC_REPLICA:
@@ -223,8 +210,8 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		}
 		request := &WsRequest{
 			Target:      message[0].(uint64),
-			InitiatorId: executor.context.syncFlag.LocalId,
-			ReceiverId:  executor.context.syncCtx.GetCurrentPeer(),
+			InitiatorId: executor.context.syncCtx.localId,
+			ReceiverId:  executor.context.syncCtx.getCurrentPeer(),
 		}
 		payload, err := proto.Marshal(request)
 		if err != nil {
@@ -233,7 +220,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_REQUEST_WORLD_STATE,
-			Peers:   []uint64{executor.context.syncCtx.GetCurrentPeer()},
+			Peers:   []uint64{executor.context.syncCtx.getCurrentPeer()},
 		})
 		return nil
 	case NOTIFY_SEND_WORLD_STATE_HANDSHAKE:

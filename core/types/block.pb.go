@@ -27,7 +27,7 @@ It has these top-level messages:
 	TransactionWrapper
 	TransactionValue
 	InvokeArgs
-	TxExtra
+	NonHash
 */
 package types
 

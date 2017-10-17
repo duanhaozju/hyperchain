@@ -11,7 +11,7 @@ message Transaction {
 	uint64 id = 7;
 	bytes transactionHash = 8;
 	int64  nonce = 9;
-	bytes extra = 10;
+	NonHash other = 10;
 }
 
 message InvalidTransactionRecord {
@@ -53,6 +53,7 @@ message TransactionValue {
             UPDATE = 1;
             FREEZE = 2;
             UNFREEZE = 3;
+            SKIPVM = 4;
             ARCHIVE = 100;
     }
 	Opcode op = 8;
@@ -62,6 +63,7 @@ message TransactionValue {
 
     }
     VmType vmType = 9;
+    bytes extra = 10;
 }
 
 message InvokeArgs {
@@ -70,6 +72,6 @@ message InvokeArgs {
     repeated bytes args = 3;
 }
 
-message TxExtra {
+message NonHash {
     bytes nodeHash = 1;
 }

@@ -1,10 +1,23 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	cm "hyperchain/core/common"
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/ledger/state"
 	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
@@ -51,7 +64,7 @@ func NewSnapshotRegistry(namespace string, logger *logging.Logger, executor *Exe
 		newBlockC: make(chan uint64),
 		exitC:     make(chan struct{}),
 		executor:  executor,
-		rwc:       common.NewManifestHandler(executor.GetManifestPath()),
+		rwc:       common.NewManifestHandler(executor.conf.GetManifestPath()),
 	}
 }
 
@@ -115,24 +128,24 @@ func (registry *SnapshotRegistry) CompressSnapshot(filterId string) (error, int6
 }
 
 func (registry *SnapshotRegistry) CompressedSnapshotPath(filterId string) string {
-	return path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf), "snapshots", registry.snapshotId(filterId)+".tar.gz")
+	return path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf.conf), "snapshots", registry.snapshotId(filterId)+".tar.gz")
 }
 
 func (registry *SnapshotRegistry) Insert(meta common.Manifest) {
-	sdir := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf), "snapshots")
+	sdir := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf.conf), "snapshots")
 	if _, err := os.Stat(sdir); os.IsNotExist(err) {
 		c := cmd.Command("mkdir", "-p", sdir)
 		if e := c.Run(); e != nil {
 			return
 		}
 	}
-	spath := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf), "ws", "ws_"+meta.FilterId, "SNAPSHOT_"+meta.FilterId)
+	spath := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf.conf), "ws", "ws_"+meta.FilterId, "SNAPSHOT_"+meta.FilterId)
 	dump := cmd.Command("mv", "-f", spath, sdir)
 	if e := dump.Run(); e != nil {
 		return
 	}
 
-	clear := cmd.Command("rm", "-rf", path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf), "ws"))
+	clear := cmd.Command("rm", "-rf", path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf.conf), "ws"))
 	if e := clear.Run(); e != nil {
 		return
 	}
@@ -247,7 +260,7 @@ func (registry *SnapshotRegistry) pushBlock(filterId string, number uint64) erro
 		return err
 	}
 	p := path.Join("snapshots", registry.snapshotId(filterId))
-	sdb, err := hyperdb.NewDatabase(registry.executor.conf, p, hyperdb.GetDatabaseType(registry.executor.conf), registry.namespace)
+	sdb, err := hyperdb.NewDatabase(registry.executor.conf.conf, p, hyperdb.GetDatabaseType(registry.executor.conf.conf), registry.namespace)
 	if err != nil {
 		return err
 	}
@@ -283,7 +296,7 @@ func (registry *SnapshotRegistry) writeMeta(filterId string, number uint64) erro
 	}
 
 	p := path.Join("snapshots", registry.snapshotId(filterId))
-	sdb, err := hyperdb.NewDatabase(registry.executor.conf, p, hyperdb.GetDatabaseType(registry.executor.conf), registry.namespace)
+	sdb, err := hyperdb.NewDatabase(registry.executor.conf.conf, p, hyperdb.GetDatabaseType(registry.executor.conf.conf), registry.namespace)
 	if err != nil {
 		return err
 	}
@@ -298,12 +311,12 @@ func (registry *SnapshotRegistry) writeMeta(filterId string, number uint64) erro
 
 // CalculateStateHash use bucket tree to force recompute the whole state hash fingerprint.
 func (registry *SnapshotRegistry) CalculateStateHash(filterId string, compareTag common.Hash, height uint64) (common.Hash, error) {
-	localDb, err := hyperdb.NewDatabase(registry.executor.conf, path.Join("snapshots", registry.snapshotId(filterId)), hyperdb.GetDatabaseType(registry.executor.conf), registry.namespace)
+	localDb, err := hyperdb.NewDatabase(registry.executor.conf.conf, path.Join("snapshots", registry.snapshotId(filterId)), hyperdb.GetDatabaseType(registry.executor.conf.conf), registry.namespace)
 	defer localDb.Close()
 	if err != nil {
 		return common.Hash{}, err
 	}
-	localState, err := state.New(compareTag, localDb, nil, registry.executor.conf, height)
+	localState, err := state.New(compareTag, localDb, nil, registry.executor.conf.conf, height)
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -318,9 +331,7 @@ func (registry *SnapshotRegistry) CalculateStateHash(filterId string, compareTag
 
 // deleteSnapshot remove specific snapshot.
 func (registry *SnapshotRegistry) deleteSnapshot(filterId string) error {
-	conf := registry.executor.conf
-	fId := registry.snapshotId(filterId)
-	sPath := registry.snapshotPath(cm.GetDatabaseHome(registry.namespace, conf), fId)
+	sPath := registry.snapshotPath(cm.GetDatabaseHome(registry.namespace, registry.executor.conf.conf), registry.snapshotId(filterId))
 	localCmd := cmd.Command("rm", "-rf", sPath)
 	if err := localCmd.Run(); err != nil {
 		return err
@@ -333,7 +344,7 @@ func (registry *SnapshotRegistry) compress(filterId string) (error, int64) {
 	if !registry.rwc.Contain(filterId) {
 		return SnapshotDoesntExistErr, 0
 	}
-	spath := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf), "snapshots", registry.snapshotId(filterId))
+	spath := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf.conf), "snapshots", registry.snapshotId(filterId))
 	localCmd := cmd.Command("tar", "-C", filepath.Dir(spath), "-czvf", spath+".tar.gz", registry.snapshotId(filterId))
 	if err := localCmd.Run(); err != nil {
 		return err, 0

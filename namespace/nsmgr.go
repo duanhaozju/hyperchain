@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/core/bloom"
+	"hyperchain/core/ledger/bloom"
 	"io/ioutil"
 	"os"
 	"strings"

@@ -60,8 +60,8 @@ ipc                     = "hpc_1.ipc"
 enableTLS               = true
 tlsCA                   = "./tls/tlsca.ca"
 tlsServerHostOverride   = "hyperchain.cn"
-tlsCert                 = "./tls/tls_peer1.cert"  #TODO: rename peer1 to peer ?
-tlsCertPriv             = "./tls/tls_peer1.priv"
+tlsCert                 = "./tls/tls_peer.cert"
+tlsCertPriv             = "./tls/tls_peer.priv"
 
 hosts                   = "./hosts.toml"
 addr                    = "./addr.toml"

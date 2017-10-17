@@ -1,10 +1,25 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/manager/event"
 
+	"github.com/op/go-logging"
 	"github.com/pkg/errors"
+	"hyperchain/common"
 	"sync/atomic"
 )
 
@@ -20,31 +35,40 @@ const (
 	ResendMode_Nope
 )
 
-/*
-	chain synchronization context
-	// TODO merge other flags related to `sync` here
-*/
-type ChainSyncContext struct {
-	FullPeers []uint64 // peers list which contains all required blocks. experiential this type peer has
-	// higher priority to make chain synchronization
-	PartPeers []PartPeer // peers list which just has a part of required blocks. If this type peer be chosen as target
-	// chain synchronization must through world state transition
-	CurrentPeer    uint64 // current sync target peer id
-	CurrentGenesis uint64 // target peer's genesis tag
-	ResendMode     uint32 // resend mode. All include (1) block (2) world state req (3) world state piece
-
-	UpdateGenesis      bool   // whether world state transition is necessary. If target peer chose from `partpeer` collections, this flag is `True`
-	GenesisTranstioned bool   // whether world state transition has finished
-	Handshaked         bool   // whether world state transition handshake has received
-	ReceiveAll         bool   // whether all content has received
-	WorldStatePieceId  uint64 // represent current demand world state piece id
-
-	// WS related
-	hs     *WsHandshake
-	wsHome string
+type syncFlag struct {
+	syncDemandBlockNum  uint64 // latest demand block number
+	syncDemandBlockHash []byte // latest demand block hash
+	syncTarget          uint64 // target block number in this synchronization
+	localId             uint64 // local node id
+	tempDownstream      uint64 // current sync request low height(all required blocks will be split to
+	// several batches to fetch, this field represents the low height of a request batch)
+	latestUpstream   uint64 // latest sync request high height
+	latestDownstream uint64 // latest sync request low height
 }
 
-func NewChainSyncContext(namespace string, event event.ChainSyncReqEvent) *ChainSyncContext {
+// chain synchronization context, includes some status varints, target peers qos data.
+type chainSyncContext struct {
+	syncFlag
+	fullPeers []uint64 // peers list which contains all required blocks. experiential this type peer has
+	// higher priority to make chain synchronization
+	partPeers []PartPeer // peers list which just has a part of required blocks. If this type peer be chosen as target
+	// chain synchronization must through world state transition
+	currentPeer    uint64 // current sync target peer id
+	currentGenesis uint64 // target peer's genesis tag
+	resendMode     uint32 // resend mode. Includes (1) block (2) world state req (3) world state piece three modes.
+
+	updateGenesis      bool   // whether world state transition is necessary. If target peer chosen from `partpeer` collections, this flag is `True`
+	genesisTranstioned bool   // whether world state transition has finished
+	handshaked         bool   // whether world state transition handshake has received
+	receiveAll         bool   // whether all content has received
+	worldStatePieceId  uint64 // represent current demand world state piece id
+	// WS related
+	hs      *WsHandshake
+	wsHome  string
+	qosStat *QosStat // peer selector before send sync request, adhere `BEST PEER` algorithm
+}
+
+func newChainSyncContext(namespace string, event event.ChainSyncReqEvent, config *common.Config, logger *logging.Logger) *chainSyncContext {
 	var fullPeers []uint64
 	var partPeers []PartPeer
 	curHeight := edb.GetHeightOfChain(namespace)
@@ -60,95 +84,132 @@ func NewChainSyncContext(namespace string, event event.ChainSyncReqEvent) *Chain
 		}
 	}
 	updateGenesis := (len(fullPeers) == 0)
-	return &ChainSyncContext{
-		FullPeers:     fullPeers,
-		PartPeers:     partPeers,
-		UpdateGenesis: updateGenesis,
+	ctx := &chainSyncContext{
+		fullPeers:     fullPeers,
+		partPeers:     partPeers,
+		updateGenesis: updateGenesis,
 	}
+	// pre-select a best peer
+	ctx.qosStat = NewQos(ctx, config, namespace, logger)
+	ctx.setCurrentPeer(ctx.qosStat.SelectPeer())
+
+	// assign initial sync target
+	ctx.syncTarget = event.TargetHeight
+	ctx.syncDemandBlockNum = event.TargetHeight
+	ctx.syncDemandBlockHash = event.TargetBlockHash
+	ctx.tempDownstream = event.TargetHeight
+
+	// assign target peer and local identification
+	ctx.localId = event.Id
+
+	return ctx
 }
 
-func (ctx *ChainSyncContext) GetFullPeersId() []uint64 {
-	return ctx.FullPeers
+// update updates demand block number, related hash and target during the sync.
+func (ctx *chainSyncContext) update(num uint64, hash []byte) {
+	ctx.syncDemandBlockNum = num
+	ctx.syncDemandBlockHash = hash
 }
 
-func (ctx *ChainSyncContext) GetPartPeersId() []uint64 {
+// recordRequest records current sync request's high height and low height.
+func (ctx *chainSyncContext) recordRequest(upstream, downstream uint64) {
+	atomic.StoreUint64(&ctx.latestUpstream, upstream)
+	atomic.StoreUint64(&ctx.latestDownstream, downstream)
+}
+
+// getRequest returns latest recorded request.
+func (ctx *chainSyncContext) getRequest() (uint64, uint64) {
+	return atomic.LoadUint64(&ctx.latestUpstream), atomic.LoadUint64(&ctx.latestDownstream)
+}
+
+// setDownstream saves latest sync request down stream.
+// return 0 if hasn't been set.
+func (ctx *chainSyncContext) setDownstream(num uint64) {
+	ctx.tempDownstream = num
+}
+
+// getDownstream gets latest sync request down stream.
+func (ctx *chainSyncContext) getDownstream() uint64 {
+	return ctx.tempDownstream
+}
+
+// getFullPeersId returns the whole full peer id list.
+func (ctx *chainSyncContext) getFullPeersId() []uint64 {
+	return ctx.fullPeers
+}
+
+// getFullPeersId returns the whole part peer id list.
+func (ctx *chainSyncContext) getPartPeersId() []uint64 {
 	var ids []uint64
-	for _, p := range ctx.PartPeers {
+	for _, p := range ctx.partPeers {
 		ids = append(ids, p.Id)
 	}
 	return ids
 }
 
-func (ctx *ChainSyncContext) SetCurrentPeer(id uint64) {
-	ctx.CurrentPeer = id
+// setCurrentPeer records given peer id as the chosen one.
+func (ctx *chainSyncContext) setCurrentPeer(id uint64) {
+	ctx.currentPeer = id
 }
 
-func (ctx *ChainSyncContext) GetCurrentPeer() uint64 {
-	return ctx.CurrentPeer
+// getCurrentPeer returns current chosen target peer id.
+func (ctx *chainSyncContext) getCurrentPeer() uint64 {
+	return ctx.currentPeer
 }
 
-func (ctx *ChainSyncContext) GetCurrentGenesis() (error, uint64) {
-	for _, id := range ctx.FullPeers {
-		if ctx.CurrentPeer == id {
+// getTargerGenesis returns the genesis block number during this synchronization.
+func (ctx *chainSyncContext) getTargerGenesis() (error, uint64) {
+	for _, id := range ctx.fullPeers {
+		if ctx.currentPeer == id {
 			return nil, 0
 		}
 	}
-	for _, p := range ctx.PartPeers {
-		if ctx.CurrentPeer == p.Id {
+	for _, p := range ctx.partPeers {
+		if ctx.currentPeer == p.Id {
 			return nil, p.Genesis
 		}
 	}
 	return errors.New("no genesis exist"), 0
 }
 
-func (ctx *ChainSyncContext) GetGenesis(pid uint64) (error, uint64) {
-	for _, id := range ctx.FullPeers {
-		if pid == id {
-			return nil, 0
-		}
-	}
-	for _, p := range ctx.PartPeers {
-		if pid == p.Id {
-			return nil, p.Genesis
-		}
-	}
-	return errors.New("no genesis exist"), 0
+func (ctx *chainSyncContext) setResendMode(mode uint32) {
+	atomic.StoreUint32(&ctx.resendMode, mode)
 }
 
-func (ctx *ChainSyncContext) SetResendMode(mode uint32) {
-	atomic.StoreUint32(&ctx.ResendMode, mode)
+func (ctx *chainSyncContext) getResendMode() uint32 {
+	return atomic.LoadUint32(&ctx.resendMode)
 }
 
-func (ctx *ChainSyncContext) GetResendMode() uint32 {
-	return atomic.LoadUint32(&ctx.ResendMode)
-}
-
-func (ctx *ChainSyncContext) SetWsHome(p string) {
+func (ctx *chainSyncContext) setWsHome(p string) {
 	ctx.wsHome = p
 }
 
-func (ctx *ChainSyncContext) GetWsHome() string {
+func (ctx *chainSyncContext) getWsHome() string {
 	return ctx.wsHome
 }
 
-func (ctx *ChainSyncContext) SetTransitioned() {
-	ctx.GenesisTranstioned = true
+func (ctx *chainSyncContext) setTransitioned() {
+	ctx.genesisTranstioned = true
 }
 
-func (ctx *ChainSyncContext) GetTranstioned() bool {
-	return ctx.GenesisTranstioned
+func (ctx *chainSyncContext) getTranstioned() bool {
+	return ctx.genesisTranstioned
 }
 
-func (ctx *ChainSyncContext) RecordWsHandshake(hs *WsHandshake) {
+// recordWsHandshake saves world state transition handshake data, converts resend mode
+// to resend_ws_piece.
+func (ctx *chainSyncContext) recordWsHandshake(hs *WsHandshake) {
 	ctx.hs = hs
-	ctx.Handshaked = true
-	ctx.SetResendMode(ResendMode_WorldState_Piece)
+	ctx.handshaked = true
+	ctx.setResendMode(ResendMode_WorldState_Piece)
 }
 
-func (ctx *ChainSyncContext) SetWsId(id uint64) {
-	atomic.StoreUint64(&ctx.WorldStatePieceId, id)
+// setWsId records latest received world state piece id by given one.
+func (ctx *chainSyncContext) setWsId(id uint64) {
+	atomic.StoreUint64(&ctx.worldStatePieceId, id)
 }
 
-func (ctx *ChainSyncContext) GetWsId() uint64 {
-	return atomic.LoadUint64(&ctx.WorldStatePieceId)
+// getWsId returns latest received world state piece id.
+func (ctx *chainSyncContext) getWsId() uint64 {
+	return atomic.LoadUint64(&ctx.worldStatePieceId)
 }

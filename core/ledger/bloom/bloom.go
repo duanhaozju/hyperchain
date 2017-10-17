@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"hyperchain/common"
-	"hyperchain/core/ledger/db_utils"
+	"hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 
 	"github.com/op/go-logging"
@@ -47,7 +47,7 @@ type message struct {
 func NewBloomFilterCache(config *common.Config) *BloomFilterCache {
 	filter := &BloomFilterCache{
 		config:     config,
-		log:        common.GetLogger(common.DEFAULT_NAMESPACE, "db_utils"),
+		log:        common.GetLogger(common.DEFAULT_NAMESPACE, "bloom"),
 		bloomMap:   make(map[string]*bloom.BloomFilter),
 		closed:     make(chan struct{}),
 		updateCh:   make(chan request),
@@ -185,7 +185,7 @@ func (cache *BloomFilterCache) loop() {
 		case msg := <-cache.writeCh:
 			var filter *bloom.BloomFilter
 			cache.lock.RLock()
-			filter = cache.bloomMap[msg.namespace]
+			filter = cache.bloomMap[msg.namespace].Copy()
 			cache.lock.RUnlock()
 			// create a copy of filter, so that the computation procedure won't affect the online filter
 			go func() {
@@ -193,7 +193,6 @@ func (cache *BloomFilterCache) loop() {
 					msg.resp <- false
 					cache.log.Debugf("write %s bloom filter failed.", msg.namespace)
 				} else {
-					filter = filter.Copy()
 					for _, hash := range msg.hashes {
 						filter.Add(hash.Bytes())
 					}
@@ -277,17 +276,17 @@ func (cache *BloomFilterCache) initBloomFilter(bloomBit int, namespace string, s
 		current    uint64
 		counter    int
 		repeat     int
-		chain      *types.Chain
+		c          *types.Chain
 		filter     *bloom.BloomFilter = bloom.New(uint(bloomBit), 3)
 		err        error
 	)
 
-	chain, err = db_utils.GetChain(namespace)
+	c, err = chain.GetChain(namespace)
 	if err != nil {
 		return nil
 	}
-	head = chain.Height
-	genesis = chain.Genesis
+	head = c.Height
+	genesis = c.Genesis
 	current = head
 
 	duration, err = time.ParseDuration(cache.config.GetString(ActiveTime))
@@ -302,7 +301,7 @@ func (cache *BloomFilterCache) initBloomFilter(bloomBit int, namespace string, s
 		if current == 0 || current < genesis {
 			break
 		}
-		blk, err := db_utils.GetBlockByNumber(namespace, current)
+		blk, err := chain.GetBlockByNumber(namespace, current)
 		if err != nil {
 			cache.log.Warningf("missing block (#%d) when building tx bloom filter", current)
 			current--
@@ -324,8 +323,8 @@ func (cache *BloomFilterCache) initBloomFilter(bloomBit int, namespace string, s
 	}
 	// Add new blocks while generated during the last stage.
 	repeat = 0
-	for current = head + 1; current <= db_utils.GetHeightOfChain(namespace); current++ {
-		blk, err := db_utils.GetBlockByNumber(namespace, current)
+	for current = head + 1; current <= chain.GetHeightOfChain(namespace); current++ {
+		blk, err := chain.GetBlockByNumber(namespace, current)
 		if err != nil {
 			// Since block persistence is delayed compare with memory chain height updating,
 			// use a tiny loop to capture the latest block content.

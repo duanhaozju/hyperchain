@@ -1,9 +1,22 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	edb "hyperchain/core/ledger/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"time"
@@ -27,7 +40,7 @@ func NewArchiveManager(namespace string, executor *Executor, registry *SnapshotR
 		executor:  executor,
 		registry:  registry,
 		logger:    logger,
-		rwc:       common.NewArchiveMetaHandler(executor.GetArchiveMetaPath()),
+		rwc:       common.NewArchiveMetaHandler(executor.conf.GetArchiveMetaPath()),
 	}
 }
 
@@ -212,13 +225,13 @@ func (mgr *ArchiveManager) checkRequest(manifest common.Manifest, meta common.Ar
 	if err != nil {
 		return false
 	}
-	if curHeigit < uint64(mgr.executor.GetArchiveThreshold())+manifest.Height {
+	if curHeigit < uint64(mgr.executor.conf.GetArchiveThreshold())+manifest.Height {
 		return false
 	}
 	// Optional. If user set the `force consistency` config item as true,
 	// which means if archived chain is not continuous with the online chain,
 	// the request can be regarded as a invalid one.
-	if mgr.executor.IsArchiveForceConsistency() {
+	if mgr.executor.conf.IsArchiveForceConsistency() {
 		if genesis != meta.Height+1 {
 			return false
 		}
