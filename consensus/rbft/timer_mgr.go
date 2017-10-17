@@ -4,9 +4,9 @@
 package rbft
 
 import (
-	"time"
 	"github.com/op/go-logging"
 	"hyperchain/manager/event"
+	"time"
 )
 
 /**

@@ -8,7 +8,8 @@ import (
 	"github.com/juju/ratelimit"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	"hyperchain/core/ledger/bloom"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/hyperdb/db"
@@ -43,6 +44,7 @@ type SendTxArgs struct {
 	Timestamp int64           `json:"timestamp"` // timestamp of the transaction happened
 	Simulate  bool            `json:"simulate"`  // Simulate determines if the transaction requires consensus, if true, no consensus.
 	Nonce     int64           `json:"nonce"`     // 16-bit random decimal number, for example 5956491387995926
+	Extra     string          `json:"extra"`     // extra data stored in transaction
 	VmType    string          `json:"type"`      // specify which engine executes contract
 
 	// 1 value for Opcode means upgrading contract, 2 means freezing contract,
@@ -65,6 +67,7 @@ type TransactionResult struct {
 	Amount      *Number        `json:"amount,omitempty"`      // the amount of transaction
 	Timestamp   int64          `json:"timestamp"`
 	Nonce       int64          `json:"nonce"`
+	Extra       string         `json:"extra"`
 	ExecuteTime *Number        `json:"executeTime,omitempty"` // the time it takes to execute the transaction
 	Payload     string         `json:"payload,omitempty"`
 	Invalid     bool           `json:"invalid,omitempty"`    // indicate whether it is invalid or not
@@ -266,7 +269,7 @@ func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*Transac
 // GetTransactionByHash returns the transaction in the ledger for the given transaction hash.
 func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 	tx, err := edb.GetTransaction(tran.namespace, hash[:])
-	if err != nil && err == edb.NotFindTxMetaErr {
+	if err != nil && err == edb.ErrNotFindTxMeta {
 		return tran.getDiscardTransactionByHash(hash)
 	} else if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
@@ -438,7 +441,7 @@ func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
 	payload := common.FromHex(realArgs.Payload)
 
-	txValue := types.NewTransactionValue(DEFAULT_GAS_PRICE, DEFAULT_GAS, realArgs.Value.Int64(), payload, args.Opcode, types.TransactionValue_EVM)
+	txValue := types.NewTransactionValue(DEFAULT_GAS_PRICE, DEFAULT_GAS, realArgs.Value.Int64(), payload, args.Opcode, []byte(args.Extra), types.TransactionValue_EVM)
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
@@ -1027,11 +1030,11 @@ func prepareTransaction(args SendTxArgs, txType int, namespace string, eh *manag
 	// 2. create a new transaction instance
 	if txType == 0 {
 		txValue = types.NewTransactionValue(DEFAULT_GAS_PRICE, DEFAULT_GAS,
-			realArgs.Value.Int64(), nil, 0, types.TransactionValue_EVM)
+			realArgs.Value.Int64(), nil, 0, []byte(args.Extra), types.TransactionValue_EVM)
 	} else {
 		payload := common.FromHex(realArgs.Payload)
 		txValue = types.NewTransactionValue(DEFAULT_GAS_PRICE, DEFAULT_GAS,
-			realArgs.Value.Int64(), payload, args.Opcode, parseVmType(realArgs.VmType))
+			realArgs.Value.Int64(), payload, args.Opcode, []byte(args.Extra), parseVmType(realArgs.VmType))
 	}
 
 	value, err := proto.Marshal(txValue)
@@ -1059,8 +1062,8 @@ func prepareTransaction(args SendTxArgs, txType int, namespace string, eh *manag
 
 	// 3. check if there is duplicated transaction
 	var exist bool
-	if err, exist = edb.LookupTransaction(namespace, tx.GetHash()); err != nil || exist == true {
-		if exist, _ = edb.JudgeTransactionExist(namespace, tx.TransactionHash); exist {
+	if exist, err = bloom.LookupTransaction(namespace, tx.GetHash()); err != nil || exist == true {
+		if exist, _ = edb.IsTransactionExist(namespace, tx.TransactionHash); exist {
 			return nil, &common.RepeadedTxError{TxHash: common.ToHex(tx.TransactionHash)}
 		}
 	}
@@ -1130,6 +1133,7 @@ func outputTransaction(trans interface{}, namespace string) (*TransactionResult,
 				To:          common.BytesToAddress(t.To),
 				Amount:      int64ToNumber(txValue.Amount),
 				Nonce:       t.Nonce,
+				Extra:       string(t.GetTransactionValue().GetExtra()),
 				Timestamp:   t.Timestamp,
 				ExecuteTime: int64ToNumber((blk.WriteTime - blk.Timestamp) / int64(time.Millisecond)),
 				Payload:     common.ToHex(txValue.Payload),
@@ -1153,6 +1157,7 @@ func outputTransaction(trans interface{}, namespace string) (*TransactionResult,
 			To:         common.BytesToAddress(t.Tx.To),
 			Amount:     int64ToNumber(txValue.Amount),
 			Nonce:      t.Tx.Nonce,
+			Extra:      string(t.Tx.GetTransactionValue().GetExtra()),
 			Timestamp:  t.Tx.Timestamp,
 			Payload:    common.ToHex(txValue.Payload),
 			Invalid:    true,

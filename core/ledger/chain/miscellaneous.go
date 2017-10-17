@@ -1,13 +1,15 @@
-package db_utils
+package chain
 
 import (
 	"encoding/json"
+	"strconv"
+
 	"hyperchain/common"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
-	"strconv"
 )
 
+// DeleteAllJournals deletes all the journals in database.
 func DeleteAllJournals(db db.Database, batch db.Batch, flush, sync bool) error {
 	iter := db.NewIterator(JournalPrefix)
 	defer iter.Release()
@@ -26,7 +28,7 @@ func DeleteAllJournals(db db.Database, batch db.Batch, flush, sync bool) error {
 	return err
 }
 
-// DeleteJournalInRange delete journals in range [start, end)
+// DeleteJournalInRange deletes journals in range [start, end).
 func DeleteJournalInRange(batch db.Batch, start uint64, end uint64, flush, sync bool) error {
 	for i := start; i < end; i += 1 {
 		s := strconv.FormatUint(i, 10)
@@ -45,9 +47,10 @@ func DeleteJournalInRange(batch db.Batch, start uint64, end uint64, flush, sync 
 	return nil
 }
 
+// PersistSnapshotMeta persists the snapshot meta into database.
 func PersistSnapshotMeta(batch db.Batch, meta *common.Manifest, flush, sync bool) error {
 	if batch == nil || meta == nil {
-		return EmptyPointerErr
+		return ErrEmptyPointer
 	}
 	blob, err := json.Marshal(meta)
 	if err != nil {
@@ -66,6 +69,7 @@ func PersistSnapshotMeta(batch db.Batch, meta *common.Manifest, flush, sync bool
 	return nil
 }
 
+// GetSnapshotMeta gets the snapshot meta with given namespace.
 func GetSnapshotMeta(namespace string) (*common.Manifest, error) {
 	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
 	if err != nil {
@@ -74,6 +78,7 @@ func GetSnapshotMeta(namespace string) (*common.Manifest, error) {
 	return GetSnapshotMetaFunc(db)
 }
 
+// GetSnapshotMetaFunc gets the snapshot meta with given db handler.
 func GetSnapshotMetaFunc(db db.Database) (*common.Manifest, error) {
 	blob, err := db.Get([]byte(SnapshotPrefix))
 	if err != nil || len(blob) == 0 {

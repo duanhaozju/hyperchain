@@ -5,26 +5,26 @@ package rbft
 
 import (
 	"fmt"
-	"testing"
 	"sync/atomic"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSortableUint64SliceFunctions(t *testing.T) {
 	slice := sortableUint64Slice{1, 2, 3, 4, 5}
-	if slice.Len() != 5{
+	if slice.Len() != 5 {
 		t.Error("error slice.len != 5")
 	}
-	if slice.Less(2, 3) != true{
+	if slice.Less(2, 3) != true {
 		t.Error("error slice[2] >= slice[3]")
 	}
-	if slice.Swap(2, 3); !(slice[2] == 4 && slice[3] ==3){
+	if slice.Swap(2, 3); !(slice[2] == 4 && slice[3] == 3) {
 		t.Error("error exchange slice[2], slice[3]")
 	}
 }
 
-func TestPbftStateFunctions(t *testing.T)  {
+func TestPbftStateFunctions(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
 	defer CleanData(rbft.namespace)
@@ -40,7 +40,6 @@ func TestPbftStateFunctions(t *testing.T)  {
 	rbft.invalidateState()
 	ast.Equal(false, rbft.status.getState(&rbft.status.valid), "should be set to inActive")
 }
-
 
 func TestPrimary(t *testing.T) {
 	ast := assert.New(t)
@@ -71,7 +70,7 @@ func TestPrimary(t *testing.T) {
 	ast.Equal(false, rbft.sendInWV(9, 101), fmt.Sprintf("sendInWV(%d, %d) = true, actual false", 9, 101))
 }
 
-func TestGetCert(t *testing.T) {
+func TestGetNodeCert(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
 	defer CleanData(rbft.namespace)
@@ -114,32 +113,32 @@ func TestGetNV(t *testing.T) {
 	ast.Equal(uint64(5), v, "getDelNV failed, expect 5")
 }
 
-func TestCommonCaseQuorum(t *testing.T)  {
-	rbft := new (rbftImpl)
+func TestCommonCaseQuorum(t *testing.T) {
+	rbft := new(rbftImpl)
 	rbft.f = 1
 	rbft.N = 4
 	k := rbft.commonCaseQuorum()
 	assert.Equal(t, 3, k, fmt.Sprintf("error commonCaseQuorum() = %d, expected: 3", k))
 }
 
-func TestAllCorrectReplicasQuorum(t *testing.T)  {
-	rbft := new (rbftImpl)
+func TestAllCorrectReplicasQuorum(t *testing.T) {
+	rbft := new(rbftImpl)
 	rbft.N = 100
 	rbft.f = 33
 	k := rbft.allCorrectReplicasQuorum()
 	assert.Equal(t, 67, k, fmt.Sprintf("error allCorrectReplicasQuorum() = %d, expected: %d", k, 67))
 }
 
-func TestOneCorrectQuorum(t *testing.T)  {
-	rbft := new (rbftImpl)
+func TestOneCorrectQuorum(t *testing.T) {
+	rbft := new(rbftImpl)
 	rbft.f = 1
 	rbft.N = 4
 	k := rbft.oneCorrectQuorum()
 	assert.Equal(t, 2, k, fmt.Sprintf("error oneCorrectQuorum() = %d, expected: 2", k))
 }
 
-func TestIntersectionQuorum(t *testing.T)  {
-	rbft := new (rbftImpl)
+func TestIntersectionQuorum(t *testing.T) {
+	rbft := new(rbftImpl)
 	rbft.N = 1
 	rbft.f = 1
 	k := rbft.allCorrectQuorum()
@@ -279,7 +278,7 @@ func TestStartTimerIfOutstandingRequests(t *testing.T) {
 
 func TestConsensusMsgHelper(t *testing.T) {
 	msg := &ConsensusMessage{
-		Type:ConsensusMessage_CHECKPOINT,
+		Type: ConsensusMessage_CHECKPOINT,
 	}
 	rs := cMsgToPbMsg(msg, 1211)
 	assert.Equal(t, uint64(1211), rs.Id, "error consensusMsgHelper failed!")
@@ -326,7 +325,7 @@ func TestIsPrePrepareLegal(t *testing.T) {
 		View:           v,
 		SequenceNumber: seqNo,
 		BatchDigest:    digest,
-		ReplicaId:	2,
+		ReplicaId:      2,
 	}
 
 	rbft.status.activeState(&rbft.status.inNegoView)
@@ -345,7 +344,6 @@ func TestIsPrePrepareLegal(t *testing.T) {
 	prePrepare.ReplicaId = 1
 	res = rbft.isPrePrepareLegal(prePrepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
-
 
 	prePrepare.View = 0
 	res = rbft.isPrePrepareLegal(prePrepare)
@@ -366,7 +364,7 @@ func TestIsPrepareLegal(t *testing.T) {
 		View:           v,
 		SequenceNumber: seqNo,
 		BatchDigest:    digest,
-		ReplicaId:	1,
+		ReplicaId:      1,
 	}
 
 	rbft.status.activeState(&rbft.status.inNegoView)
@@ -401,7 +399,7 @@ func TestIsCommitLegal(t *testing.T) {
 		View:           v,
 		SequenceNumber: seqNo,
 		BatchDigest:    digest,
-		ReplicaId:	1,
+		ReplicaId:      1,
 	}
 	rbft.status.activeState(&rbft.status.inNegoView)
 	res := rbft.isCommitLegal(commit)

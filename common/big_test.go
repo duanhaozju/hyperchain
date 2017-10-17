@@ -5,8 +5,8 @@ package common
 import (
 	"bytes"
 	"fmt"
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestMisc(t *testing.T) {

@@ -18,6 +18,7 @@ package evm
 import (
 	"fmt"
 	"hyperchain/common"
+	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/crypto"
 	"math/big"
@@ -78,8 +79,8 @@ func (evm *EVM) Run(context vm.VmContext, input []byte) (ret []byte, err error) 
 		}
 	}
 
-	// Don't bother with the execution if there's no code.
-	if len(contract.Code) == 0 {
+	// Don't bother with the execution if there's no code or a skipvm operation.
+	if len(contract.Code) == 0 || contract.Opcode == int32(types.TransactionValue_SKIPVM) {
 		return nil, nil
 	}
 

@@ -4,9 +4,9 @@
 package rbft
 
 import (
-	"time"
-	"testing"
 	"sync/atomic"
+	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"hyperchain/consensus/txpool"
@@ -33,7 +33,7 @@ func TestCVB(t *testing.T) {
 	bv := newBatchValidator()
 	ast := assert.New(t)
 	cb1 := &cacheBatch{
-		seqNo: uint64(1),
+		seqNo:      uint64(1),
 		resultHash: "cb1",
 	}
 	bv.saveToCVB(cb1.resultHash, cb1)
@@ -85,9 +85,9 @@ func TestPrimaryValidateBatch(t *testing.T) {
 		TransactionHash: []byte("txHash1"),
 	}
 	txBatch := &TransactionBatch{
-		TxList: 	[]*types.Transaction{tx1},
-		HashList: 	[]string{"txHash1"},
-		Timestamp: 	time.Now().UnixNano(),
+		TxList:    []*types.Transaction{tx1},
+		HashList:  []string{"txHash1"},
+		Timestamp: time.Now().UnixNano(),
 	}
 	rbft.primaryValidateBatch("test1", txBatch, 0)
 	ast.Equal(uint64(1), rbft.seqNo, "seqNo increase failed")
@@ -112,31 +112,30 @@ func TestFindNextValidateBatch(t *testing.T) {
 	idx2 := vidx{view: 0, seqNo: 2}
 	rbft.batchVdr.preparedCert[idx2] = "2"
 	pp2 := &PrePrepare{
-		View:             uint64(0),
-		SequenceNumber:   uint64(2),
-		BatchDigest:      "2",
-		ResultHash:	  "2",
-		HashBatch:	  &HashBatch{
-			List:	  []string{"2"},
-			Timestamp:time.Now().UnixNano(),
+		View:           uint64(0),
+		SequenceNumber: uint64(2),
+		BatchDigest:    "2",
+		ResultHash:     "2",
+		HashBatch: &HashBatch{
+			List:      []string{"2"},
+			Timestamp: time.Now().UnixNano(),
 		},
-		ReplicaId:        uint64(0),
+		ReplicaId: uint64(0),
 	}
 	cert2.prePrepare = pp2
 	rbft.findNextValidateBatch()
 	ast.NotEqual(rbft.batchVdr.currentVid, idx1.seqNo)
 
-
 	pp1 := &PrePrepare{
-		View:             uint64(0),
-		SequenceNumber:   uint64(1),
-		BatchDigest:      "1",
-		ResultHash:	  "1",
-		HashBatch:	  &HashBatch{
-			List:	  []string{},
-			Timestamp:time.Now().UnixNano(),
+		View:           uint64(0),
+		SequenceNumber: uint64(1),
+		BatchDigest:    "1",
+		ResultHash:     "1",
+		HashBatch: &HashBatch{
+			List:      []string{},
+			Timestamp: time.Now().UnixNano(),
 		},
-		ReplicaId:        uint64(0),
+		ReplicaId: uint64(0),
 	}
 	cert1.prePrepare = pp1
 	find, _, _, _ := rbft.findNextValidateBatch()
@@ -147,7 +146,6 @@ func TestFindNextValidateBatch(t *testing.T) {
 	find, _, _, _ = rbft.findNextValidateBatch()
 	ast.Equal(false, find, "findNextValidateBatch failed")
 	ast.Nil(rbft.batchVdr.currentVid, "findNextValidateBatch failed")
-
 
 	tx := &types.Transaction{
 		From:            []byte{1},
@@ -162,15 +160,15 @@ func TestFindNextValidateBatch(t *testing.T) {
 	idx3 := vidx{view: 0, seqNo: 3}
 	rbft.batchVdr.preparedCert[idx3] = "3"
 	pp3 := &PrePrepare{
-		View:             uint64(0),
-		SequenceNumber:   uint64(3),
-		BatchDigest:      "3",
-		ResultHash:	  "3",
-		HashBatch:	  &HashBatch{
-			List:	  []string{tx.GetHash().Hex()},
-			Timestamp:time.Now().UnixNano(),
+		View:           uint64(0),
+		SequenceNumber: uint64(3),
+		BatchDigest:    "3",
+		ResultHash:     "3",
+		HashBatch: &HashBatch{
+			List:      []string{tx.GetHash().Hex()},
+			Timestamp: time.Now().UnixNano(),
 		},
-		ReplicaId:        uint64(0),
+		ReplicaId: uint64(0),
 	}
 	cert3.prePrepare = pp3
 	currentVid := idx2.seqNo
@@ -198,15 +196,15 @@ func TestValidatePending(t *testing.T) {
 	idx1 := vidx{view: 0, seqNo: 1}
 	rbft.batchVdr.preparedCert[idx1] = "1"
 	pp1 := &PrePrepare{
-		View:             uint64(0),
-		SequenceNumber:   uint64(1),
-		BatchDigest:      "1",
-		ResultHash:	  "1",
-		HashBatch:	  &HashBatch{
-			List:	  []string{},
-			Timestamp:time.Now().UnixNano(),
+		View:           uint64(0),
+		SequenceNumber: uint64(1),
+		BatchDigest:    "1",
+		ResultHash:     "1",
+		HashBatch: &HashBatch{
+			List:      []string{},
+			Timestamp: time.Now().UnixNano(),
 		},
-		ReplicaId:        uint64(0),
+		ReplicaId: uint64(0),
 	}
 	cert1.prePrepare = pp1
 
@@ -240,8 +238,8 @@ func TestHandleTransactionsAfterAbnormal(t *testing.T) {
 		TransactionHash: []byte("3"),
 	}
 	rbft.processTransaction(txRequest{
-		tx:	tx,
-		new:	true,
+		tx:  tx,
+		new: true,
 	})
 	ast.Equal(true, rbft.batchMgr.txPool.HasTxInPool(), "add transaction failed")
 	rbft.handleTransactionsAfterAbnormal()

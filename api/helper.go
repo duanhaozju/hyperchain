@@ -3,7 +3,7 @@ package api
 import (
 	"errors"
 	"hyperchain/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/ledger/state"
 	"hyperchain/core/vm"
 	"hyperchain/crypto/hmEncryption"

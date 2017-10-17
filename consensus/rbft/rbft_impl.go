@@ -25,41 +25,41 @@ import (
 
 // rbftImpl is the core struct of rbft module, which handles all functions about consensus
 type rbftImpl struct {
-	namespace     string                // this node belongs to which namespace
-	activeView    uint32                // view change happening, this view is active now or not
-	f             int                   // max. number of byzantine validators we can tolerate
-	N             int                   // max. number of validators in the network
-	h             uint64                // low watermark
-	id            uint64                // replica ID; PBFT `i`
-	K             uint64                // how long this checkpoint period is
-	logMultiplier uint64                // use this value to calculate log size : k*logMultiplier
-	L             uint64                // log size: k*logMultiplier
-	seqNo         uint64                // PBFT "n", strictly monotonic increasing sequence number
-	view          uint64                // current view
+	namespace     string // this node belongs to which namespace
+	activeView    uint32 // view change happening, this view is active now or not
+	f             int    // max. number of byzantine validators we can tolerate
+	N             int    // max. number of validators in the network
+	h             uint64 // low watermark
+	id            uint64 // replica ID; PBFT `i`
+	K             uint64 // how long this checkpoint period is
+	logMultiplier uint64 // use this value to calculate log size : k*logMultiplier
+	L             uint64 // log size: k*logMultiplier
+	seqNo         uint64 // PBFT "n", strictly monotonic increasing sequence number
+	view          uint64 // current view
 
-	status        RbftStatus            // keep all basic status of rbft in this object
+	status RbftStatus // keep all basic status of rbft in this object
 
-	batchMgr      *batchManager         // manage batch related issues
-	batchVdr      *batchValidator       // manage batch validate issues
-	timerMgr      *timerManager         // manage rbft event timers
-	storeMgr      *storeManager         // manage storage
-	nodeMgr       *nodeManager          // manage node delete or add
-	recoveryMgr   *recoveryManager      // manage recovery issues
-	vcMgr         *vcManager            // manage viewchange issues
-	exec          *executor             // manage transaction exec
+	batchMgr    *batchManager    // manage batch related issues
+	batchVdr    *batchValidator  // manage batch validate issues
+	timerMgr    *timerManager    // manage rbft event timers
+	storeMgr    *storeManager    // manage storage
+	nodeMgr     *nodeManager     // manage node delete or add
+	recoveryMgr *recoveryManager // manage recovery issues
+	vcMgr       *vcManager       // manage viewchange issues
+	exec        *executor        // manage transaction exec
 
-	helper helper.Stack                 // send message to other components of system
+	helper helper.Stack // send message to other components of system
 
-	eventMux         *event.TypeMux
-	batchSub         event.Subscription // subscription channel for all events posted from consensus sub-modules
-	close            chan bool          // channel to close this event process
+	eventMux *event.TypeMux
+	batchSub event.Subscription // subscription channel for all events posted from consensus sub-modules
+	close    chan bool          // channel to close this event process
 
-	config *common.Config               // get configuration info
-	logger *logging.Logger              // write logger to record some info
+	config    *common.Config  // get configuration info
+	logger    *logging.Logger // write logger to record some info
 	persister persist.Persister
 
-	normal   uint32                     // system is normal or not
-	poolFull uint32                     // txPool is full or not
+	normal   uint32 // system is normal or not
+	poolFull uint32 // txPool is full or not
 }
 
 // newPBFT init the PBFT instance
@@ -159,7 +159,6 @@ func (rbft *rbftImpl) listenEvent() {
 				}
 			}
 
-			
 		}
 	}
 }
@@ -233,7 +232,7 @@ func (rbft *rbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 			return err
 		}
 		req := txRequest{
-			tx: tx,
+			tx:  tx,
 			new: false,
 		}
 		go rbft.eventMux.Post(req)
@@ -356,9 +355,9 @@ func (rbft *rbftImpl) findNextPrePrepareBatch() (find bool, digest string, resul
 			continue
 		}
 
-		// restrict the speed of sending prePrepare，and in view change, when send new view,
+		// restrict the speed of sending prePrepare, and in view change, when send new view,
 		// we need to assign seqNo and there is an upper limit. So we cannot break the high watermark.
-		if !rbft.sendInWV(rbft.view, n) {
+		if !rbft.sendInW(n) {
 			rbft.logger.Debugf("Replica %d is primary, not sending pre-prepare for request batch %s because "+
 				"batch seqNo=%d is out of sequence numbers", rbft.id, digest, n)
 			rbft.batchVdr.currentVid = nil // don't send this message this time, send it after move watermark
@@ -507,7 +506,7 @@ func (rbft *rbftImpl) recvPrepare(prep *Prepare) error {
 			return nil
 		} else {
 			// this is abnormal in common case
-			rbft.logger.Warningf("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
+			rbft.logger.Infof("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
 				prep.ReplicaId, prep.View, prep.SequenceNumber)
 			return nil
 		}
@@ -604,7 +603,7 @@ func (rbft *rbftImpl) recvCommit(commit *Commit) error {
 			return nil
 		} else {
 			// this is abnormal in common case
-			rbft.logger.Warningf("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
+			rbft.logger.Infof("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
 				commit.ReplicaId, commit.View, commit.SequenceNumber)
 			return nil
 		}
@@ -636,10 +635,10 @@ func (rbft *rbftImpl) recvCommit(commit *Commit) error {
 }
 
 // fetchMissingTransaction fetch missing transactions from primary which this node didn't receive but primary received
-func (rbft *rbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing []string) error {
+func (rbft *rbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing map[uint64]string) error {
 
-	rbft.logger.Debugf("Replica %d try to fetch missing txs for view=%d/seqNo=%d from primary %d",
-		rbft.id, preprep.View, preprep.SequenceNumber, preprep.ReplicaId)
+	rbft.logger.Debugf("Replica %d try to fetch missing txs for view=%d/seqNo=%d/digest=%s from primary %d",
+		rbft.id, preprep.View, preprep.SequenceNumber, preprep.BatchDigest, preprep.ReplicaId)
 
 	fetch := &FetchMissingTransaction{
 		View:           preprep.View,
@@ -668,14 +667,28 @@ func (rbft *rbftImpl) fetchMissingTransaction(preprep *PrePrepare, missing []str
 // recvFetchMissingTransaction returns transactions to a node which didn't receive some transactions and ask primary for them.
 func (rbft *rbftImpl) recvFetchMissingTransaction(fetch *FetchMissingTransaction) error {
 
-	rbft.logger.Debugf("Primary %d received FetchMissingTransaction request for view=%d/seqNo=%d from replica %d",
-		rbft.id, fetch.View, fetch.SequenceNumber, fetch.ReplicaId)
+	rbft.logger.Debugf("Primary %d received FetchMissingTransaction request for view=%d/seqNo=%d/digest=%s from replica %d",
+		rbft.id, fetch.View, fetch.SequenceNumber, fetch.BatchDigest, fetch.ReplicaId)
 
-	txList, err := rbft.batchMgr.txPool.ReturnFetchTxs(fetch.BatchDigest, fetch.HashList)
-	if err != nil {
-		rbft.logger.Warningf("Primary %d cannot find the digest %d, missing txs: %v",
-			rbft.id, fetch.BatchDigest, fetch.HashList)
-		return nil
+	txList := make(map[uint64]*types.Transaction)
+	var err error
+
+	if batch := rbft.storeMgr.txBatchStore[fetch.BatchDigest]; batch != nil {
+		batchLen := uint64(len(batch.HashList))
+		for i, hash := range fetch.HashList {
+			if i >= batchLen || batch.HashList[i] != hash {
+				rbft.logger.Errorf("Primary %d finds mismatch tx hash when return fetch missing transactions", rbft.id)
+				return nil
+			}
+			txList[i] = batch.TxList[i]
+		}
+	} else {
+		txList, err = rbft.batchMgr.txPool.ReturnFetchTxs(fetch.BatchDigest, fetch.HashList)
+		if err != nil {
+			rbft.logger.Warningf("Primary %d cannot find the digest %d, missing txList: %v, err: %s",
+				rbft.id, fetch.BatchDigest, fetch.HashList, err)
+			return nil
+		}
 	}
 
 	re := &ReturnMissingTransaction{
@@ -852,7 +865,7 @@ func (rbft *rbftImpl) processTransaction(req txRequest) consensusEvent {
 
 	var err error
 	var isGenerated bool
-	
+
 	// this node is not normal, just add a transaction without generating batch.
 	if atomic.LoadUint32(&rbft.activeView) == 0 ||
 		atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 ||

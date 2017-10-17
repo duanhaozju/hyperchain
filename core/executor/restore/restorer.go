@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"hyperchain/common"
 	cm "hyperchain/core/common"
-	edb "hyperchain/core/db_utils"
+	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/ledger/state"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"

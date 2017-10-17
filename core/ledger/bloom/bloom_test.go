@@ -1,12 +1,27 @@
-package db_utils
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package bloom
 
 import (
 	"crypto/rand"
 	checker "gopkg.in/check.v1"
 	"hyperchain/common"
-	"hyperchain/core/test_util"
+	"hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
+	hcom "hyperchain/hyperdb/common"
 	"hyperchain/hyperdb/db"
 	"os"
 	"testing"
@@ -22,40 +37,38 @@ func TestBloom(t *testing.T) {
 var _ = checker.Suite(&BloomSuite{})
 
 var (
-	config     *common.Config
-	ns         string   = common.DEFAULT_NAMESPACE
-	globalconf string   = "../../configuration/namespaces/global/config/namespace.toml"
-	dbList     []string = []string{"Archive", "blockchain", "consensus", "namespaces"}
+	config *common.Config
+	ns     string = common.DEFAULT_NAMESPACE
 )
 
 // Run once when the suite starts running.
 func (suite *BloomSuite) SetUpSuite(c *checker.C) {
 	// init conf
-	config = common.NewConfig(globalconf)
+	config = common.NewRawConfig()
 	config.Set(RebuildTime, 3)
+	config.Set(ActiveTime, "24h")
 	config.Set(RebuildInterval, 24)
 	config.Set(BloomBit, 10000)
+	config.Set(hcom.DB_TYPE, hcom.LDB_DB)
 	// init logger
-	config.Set(common.LOG_DUMP_FILE, false)
-	common.InitHyperLogger(ns, config)
+	common.InitHyperLogger(common.DEFAULT_NAMESPACE, config)
+	common.GetLogger(common.DEFAULT_NAMESPACE, "bloom")
+	common.SetLogLevel(common.DEFAULT_NAMESPACE, "bloom", "NOTICE")
 	// init db
 	hyperdb.StartDatabase(config, ns)
 	// init chan
-	InitializeChain(ns)
-
+	chain.InitializeChain(ns)
 }
 
 // Run before each test or benchmark starts running.
 func (suite *BloomSuite) SetUpTest(c *checker.C) {
 	db, _ := hyperdb.GetDBDatabaseByNamespace(ns)
-	putChain(db.NewBatch(), &types.Chain{}, true, true)
+	chain.PutChain(db.NewBatch(), &types.Chain{}, true, true)
 }
 
 // Run after each test or benchmark runs.
 func (suite *BloomSuite) TearDownTest(c *checker.C) {
-	for _, dbname := range dbList {
-		os.RemoveAll(dbname)
-	}
+	os.RemoveAll("namespaces")
 }
 
 // Run once after all tests or benchmarks have finished running.
@@ -67,7 +80,8 @@ func (suite *BloomSuite) TestLook(c *checker.C) {
 		txs     []*types.Transaction = RandomTxs()
 		another []*types.Transaction = RandomTxs()
 	)
-	cache := NewBloomCache(config)
+	cache := NewBloomFilterCache(config)
+	cache.Start()
 	defer cache.Close()
 	err = cache.Register(ns)
 	if err != nil {
@@ -87,20 +101,20 @@ func (suite *BloomSuite) TestBuildInTimeScope(c *checker.C) {
 		db      db.Database
 	)
 	db, _ = hyperdb.GetDBDatabaseByNamespace(ns)
-	cache := NewBloomCache(config)
+	cache := NewBloomFilterCache(config)
+	cache.Start()
 	defer cache.Close()
 	err = cache.Register(ns)
 	if err != nil {
 		c.Error(err.Error())
 	}
-	block := test_util.BlockCases
+	block := RandomBlock()
 	block.Number = 1
 	block.Transactions = txs
 	block.Timestamp = time.Now().UnixNano()
 
-	WriteTxBloomFilter(ns, txs)
-	PersistBlock(db.NewBatch(), &block, true, true)
-	UpdateChain(ns, db.NewBatch(), &block, false, true, true)
+	chain.PersistBlock(db.NewBatch(), block, true, true)
+	chain.UpdateChain(ns, db.NewBatch(), block, false, true, true)
 
 	cache.rebuild(nil)
 
@@ -117,20 +131,20 @@ func (suite *BloomSuite) TestBuildOutTimeScope(c *checker.C) {
 		db      db.Database
 	)
 	db, _ = hyperdb.GetDBDatabaseByNamespace(ns)
-	cache := NewBloomCache(config)
+	cache := NewBloomFilterCache(config)
+	cache.Start()
 	defer cache.Close()
 	err = cache.Register(ns)
 	if err != nil {
 		c.Error(err.Error())
 	}
-	block := test_util.BlockCases
+	block := RandomBlock()
 	block.Number = 1
 	block.Transactions = txs
 	block.Timestamp = time.Now().UnixNano() - 2*24*time.Hour.Nanoseconds()
 
-	WriteTxBloomFilter(ns, txs)
-	PersistBlock(db.NewBatch(), &block, true, true)
-	UpdateChain(ns, db.NewBatch(), &block, false, true, true)
+	chain.PersistBlock(db.NewBatch(), block, true, true)
+	chain.UpdateChain(ns, db.NewBatch(), block, false, true, true)
 
 	cache.rebuild(nil)
 
@@ -142,53 +156,57 @@ func (suite *BloomSuite) TestBuildOutTimeScope(c *checker.C) {
 
 func (suite *BloomSuite) TestBuildConcurrently(c *checker.C) {
 	var (
-		err     error
-		txs     []*types.Transaction = RandomTxs()
-		another []*types.Transaction = RandomTxs()
-		db      db.Database
+		err      error
+		txs      []*types.Transaction
+		checkTxs []*types.Transaction
+		another  []*types.Transaction = RandomTxs()
+		db       db.Database
 	)
 	db, _ = hyperdb.GetDBDatabaseByNamespace(ns)
-	cache := NewBloomCache(config)
+	cache := NewBloomFilterCache(config)
+	cache.Start()
 	defer cache.Close()
 	err = cache.Register(ns)
 	if err != nil {
 		c.Error(err.Error())
 	}
-	block := test_util.BlockCases
-	block.Number = 1
-	block.Transactions = txs
-	block.Timestamp = time.Now().UnixNano()
 
 	barrier := make(chan struct{})
 
 	go func(sig chan struct{}) {
 		hook := func() {
-			time.Sleep(2 * time.Second)
+			time.Sleep(1 * time.Second)
 		}
 		cache.rebuild(hook)
 		close(sig)
 	}(barrier)
 
-	WriteTxBloomFilter(ns, txs)
-	PersistBlock(db.NewBatch(), &block, true, true)
-	UpdateChain(ns, db.NewBatch(), &block, false, true, true)
-
+	for i := 0; i < 100; i += 1 {
+		block := RandomBlock()
+		txs = RandomTxs()
+		checkTxs = append(checkTxs, txs...)
+		block.Number = uint64(i + 1)
+		block.Transactions = txs
+		block.Timestamp = time.Now().UnixNano()
+		WriteTxBloomFilter(ns, txs)
+		chain.PersistBlock(db.NewBatch(), block, true, true)
+		chain.UpdateChain(ns, db.NewBatch(), block, false, true, true)
+	}
 	<-barrier
-
-	if !checkExist(txs, another) {
+	if !checkExist(checkTxs, another) {
 		c.Error("bloom filter check failed")
 	}
 }
 
 func checkExist(existSet []*types.Transaction, notExistSet []*types.Transaction) bool {
 	for _, tx := range existSet {
-		_, res := LookupTransaction(ns, tx.GetHash())
+		res, _ := LookupTransaction(ns, tx.GetHash())
 		if res != true {
 			return false
 		}
 	}
 	for _, tx := range notExistSet {
-		_, res := LookupTransaction(ns, tx.GetHash())
+		res, _ := LookupTransaction(ns, tx.GetHash())
 		if res != false {
 			return false
 		}
@@ -200,7 +218,8 @@ func (suite *BloomSuite) BenchmarkWrite(c *checker.C) {
 	var (
 		err error
 	)
-	cache := NewBloomCache(config)
+	cache := NewBloomFilterCache(config)
+	cache.Start()
 	defer cache.Close()
 	err = cache.Register(ns)
 	if err != nil {
@@ -219,4 +238,15 @@ func RandomTxs() []*types.Transaction {
 		txs = append(txs, &types.Transaction{TransactionHash: hashBuf})
 	}
 	return txs
+}
+
+func RandomBlock() *types.Block {
+	blockHash := make([]byte, 32)
+	parentHash := make([]byte, 32)
+	rand.Read(blockHash)
+	rand.Read(parentHash)
+	return &types.Block{
+		BlockHash:  blockHash,
+		ParentHash: parentHash,
+	}
 }

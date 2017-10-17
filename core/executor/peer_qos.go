@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package executor
 
 import (
@@ -13,23 +26,23 @@ type QosStat struct {
 	conf              *common.Config
 	latestSelected    uint64
 	logger            *logging.Logger
-	ctx               *ChainSyncContext
+	ctx               *chainSyncContext
 	needUpdateGenesis bool
 	once              sync.Once
 	namespace         string
 }
 
-func NewQos(ctx *ChainSyncContext, conf *common.Config, namespace string, logger *logging.Logger) *QosStat {
+func NewQos(ctx *chainSyncContext, conf *common.Config, namespace string, logger *logging.Logger) *QosStat {
 	// assign init score
 	score := make(map[uint64]int64)
 	var needUpdateGenesis bool
-	if len(ctx.FullPeers) == 0 {
-		for _, peer := range ctx.PartPeers {
+	if len(ctx.fullPeers) == 0 {
+		for _, peer := range ctx.partPeers {
 			score[peer.Id] = 0
 		}
 		needUpdateGenesis = true
 	} else {
-		for _, peer := range ctx.FullPeers {
+		for _, peer := range ctx.fullPeers {
 			score[peer] = 0
 		}
 		needUpdateGenesis = false
@@ -61,13 +74,14 @@ func (qosStat *QosStat) SelectPeer() uint64 {
 	if qosStat.needUpdateGenesis {
 		// Simple selection, use the peer has lowest genesis as target peer,
 		// target peer will never change during the sync.
-		if len(qosStat.ctx.PartPeers) > 0 {
-			bPeer = Min(qosStat.ctx.PartPeers)
+		if len(qosStat.ctx.partPeers) > 0 {
+			bPeer = Min(qosStat.ctx.partPeers)
 			qosStat.logger.Noticef("select peer %d from `PartPeer` collections", bPeer)
 		} else {
 			return 0
 		}
 	} else {
+		// Select peer with higest score as the best peer.
 		for peer, score := range qosStat.score {
 			if max < score {
 				bPeer = peer

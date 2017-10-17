@@ -58,10 +58,10 @@ func (rbft *rbftImpl) inWV(v uint64, n uint64) bool {
 	return rbft.inV(v) && rbft.inW(n)
 }
 
-// sendInWV used in findNextPrePrepareBatch firstly check the given view equals the current view or not and then check
-// the given seqNo is between low watermark and high watermark or not
-func (rbft *rbftImpl) sendInWV(v uint64, n uint64) bool {
-	return rbft.view == v && n > rbft.h && n <= rbft.h+rbft.L
+// sendInW used in findNextPrePrepareBatch checks the given seqNo is between low
+// watermark and high watermark or not.
+func (rbft *rbftImpl) sendInW(n uint64) bool {
+	return n > rbft.h && n <= rbft.h+rbft.L
 }
 
 // getAddNodeCert returns the addnode Cert with the given addHash
@@ -267,7 +267,7 @@ func nullRequestMsgToPbMsg(id uint64) *protos.Message {
 // getBlockchainInfo used after commit gets the current blockchain information from database when our lastExec reached
 // the checkpoint, so here we wait until the executor module executes to a checkpoint to return the current BlockchainInfo
 func (rbft *rbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
-	bcInfo := rbft.persister.GetBlockchainInfo(rbft.namespace)
+	bcInfo := rbft.GetBlockchainInfo(rbft.namespace)
 
 	height := bcInfo.Height
 	curBlkHash := bcInfo.LatestBlockHash
@@ -284,7 +284,7 @@ func (rbft *rbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
 // waiting until the executor module executes to a checkpoint as the current height must be a checkpoint if we reach the
 // checkpoint after state update
 func (rbft *rbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
-	height, curHash, prevHash := rbft.persister.GetCurrentBlockInfo(rbft.namespace)
+	height, curHash, prevHash := rbft.GetCurrentBlockInfo(rbft.namespace)
 	return &protos.BlockchainInfo{
 		Height:            height,
 		CurrentBlockHash:  curHash,
@@ -294,7 +294,7 @@ func (rbft *rbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 
 // getGenesisInfo returns the genesis block information of the current namespace
 func (rbft *rbftImpl) getGenesisInfo() uint64 {
-	_, genesis := rbft.persister.GetGenesisOfChain(rbft.namespace)
+	genesis, _ := rbft.GetGenesisOfChain(rbft.namespace)
 	return genesis
 }
 

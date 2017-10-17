@@ -25,7 +25,7 @@ func TestPbftImpl_NewPbft(t *testing.T) {
 	ensure.DeepEqual(t, rbft.id, uint64(conf.GetInt64(common.C_NODE_ID)))
 	ensure.DeepEqual(t, rbft.K, uint64(10))
 	ensure.DeepEqual(t, rbft.logMultiplier, uint64(4))
-	ensure.DeepEqual(t, rbft.L, rbft.logMultiplier* rbft.K)
+	ensure.DeepEqual(t, rbft.L, rbft.logMultiplier*rbft.K)
 	ensure.DeepEqual(t, rbft.seqNo, uint64(0))
 	ensure.DeepEqual(t, rbft.view, uint64(0))
 

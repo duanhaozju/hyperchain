@@ -5,11 +5,10 @@ package persist
 
 import (
 	"bytes"
-	"testing"
+	"github.com/stretchr/testify/assert"
 	"hyperchain/common"
 	mdb "hyperchain/hyperdb/mdb"
-	"github.com/stretchr/testify/assert"
-
+	"testing"
 )
 
 func TestDaoOnState(t *testing.T) {
@@ -19,7 +18,6 @@ func TestDaoOnState(t *testing.T) {
 
 	db, err := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	persister := New(db)
-
 
 	err = persister.StoreState(k, v1)
 	if err != nil {
@@ -39,7 +37,6 @@ func TestDaoOnState(t *testing.T) {
 	if err != nil || bytes.Compare(value2, v2) != 0 {
 		t.Errorf(`error type %v : ReadState(%q) = %v, actual: %v`, err, k, value2, v2)
 	}
-
 
 	nk := "no_exists_key"
 	err = persister.DelState(nk)
@@ -83,7 +80,6 @@ func TestReadStateSet(t *testing.T) {
 	}
 	ast.Nil(err, "error ReadStateSet('k')")
 	ast.Equal(target, v, "error ReadStateSet('k')")
-
 
 	v, err = persister.ReadStateSet("")
 	target = map[string][]byte{
