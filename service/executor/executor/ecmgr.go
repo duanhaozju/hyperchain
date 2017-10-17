@@ -76,11 +76,14 @@ func (em *ecManagerImpl) Start() error {
             if !start {
                 continue
             }
+
             exec, err := executor.NewExecutor(name, em.conf, nil, nil)
             if err != nil {
                 logger.Errorf("NewExecutor is fault")
             }
             em.executors[name] = exec
+
+
         } else {
             logger.Errorf("Invalid folder %v", d)
         }
@@ -95,5 +98,18 @@ func (em *ecManagerImpl) Start() error {
 }
 
 func (em *ecManagerImpl) Stop() error {
+
+    // 1. stop executor
+    for ns := range em.executors {
+        err := em.executors[ns].Stop()
+        if err != nil {
+            logger.Error(err)
+        }
+    }
+
+    // 2. stop jvm
+    if err := em.jvmManager.Stop(); err != nil {
+        logger.Errorf("Stop hyperjvm error %v", err)
+    }
     return nil
 }
