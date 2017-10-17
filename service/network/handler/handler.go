@@ -4,8 +4,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/manager/event"
-	"hyperchain/service/common"
-	pb "hyperchain/service/common/protos"
+	pb "hyperchain/common/protos"
+	"hyperchain/common/service"
 )
 
 var logger *logging.Logger
@@ -17,7 +17,7 @@ func init() {
 type NetworkMessageHandler struct {
 }
 
-func New() common.Handler {
+func New() service.Handler {
 	return &NetworkMessageHandler{}
 }
 

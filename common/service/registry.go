@@ -1,11 +1,11 @@
-package common
+package service
 
 import (
 	"fmt"
 	"sync"
 )
 
-type ServiceRegistry interface {
+type serviceRegistry interface {
 	Init() error                            // Init init the service registry.
 	Register(s Service) error               // Register register new service.
 	UnRegister(namespace, sid string) error // UnRegister service by service id.
@@ -14,7 +14,7 @@ type ServiceRegistry interface {
 	Namespace(name string) *Namespace
 }
 
-func NewServiceRegistry() ServiceRegistry {
+func NewServiceRegistry() serviceRegistry {
 	return &serviceRegistryImpl{
 		namespaces: make(map[string]*Namespace),
 	}
@@ -98,7 +98,7 @@ func (sri *serviceRegistryImpl) UnRegister(namespace, sid string) error {
 	defer sri.lock.Unlock()
 	//delete(sri.namespaces, sid)
 	if !sri.ContainsNamespace(namespace) {
-		return fmt.Errorf("UnRegister error: namespace[%s] is not found!", namespace)
+		return fmt.Errorf("deregister error: namespace[%s] is not found! ", namespace)
 	} else {
 		c := sri.namespaces[namespace]
 		if !c.Contains(sid) {

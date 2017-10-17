@@ -7,6 +7,7 @@ import (
 	"github.com/mkideal/cli"
 	"github.com/op/go-logging"
 	"github.com/terasum/viper"
+	"google.golang.org/grpc"
 	"hyperchain/common"
 	"hyperchain/hyperdb"
 	"hyperchain/ipc"
@@ -15,18 +16,21 @@ import (
 	"hyperchain/rpc"
 	_ "net/http/pprof"
 	"time"
+	"net"
 )
 
 const HyperchainVersion = "Hyperchain Version:\nRelease1.4-20171012-f415e9"
 
 type hyperchain struct {
-	nsMgr       namespace.NamespaceManager
-	hs          jsonrpc.RPCServer
-	ipcShell    *ipc.IPCServer
-	p2pmgr      p2p.P2PManager
-	stopFlag    chan bool
-	restartFlag chan bool
-	args        *argT
+	nsMgr          namespace.NamespaceManager
+	hs             jsonrpc.RPCServer
+	ipcShell       *ipc.IPCServer
+	p2pmgr         p2p.P2PManager
+	internalServer *grpc.Server //server used to handle internal service connection
+	stopFlag       chan bool
+	restartFlag    chan bool
+	args           *argT
+	conf           *common.Config
 }
 
 func newHyperchain(argV *argT) *hyperchain {
@@ -49,6 +53,7 @@ func newHyperchain(argV *argT) *hyperchain {
 		panic(err)
 	}
 
+	hp.internalServer = grpc.NewServer()
 	hp.ipcShell = ipc.NEWIPCServer(globalConfig.GetString(common.P2P_IPC))
 	p2pManager, err := p2p.GetP2PManager(vip)
 	if err != nil {
@@ -57,17 +62,23 @@ func newHyperchain(argV *argT) *hyperchain {
 	hp.p2pmgr = p2pManager
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig, hp.stopFlag, hp.restartFlag)
 	hp.hs = jsonrpc.GetRPCServer(hp.nsMgr, hp.nsMgr.GlobalConfig())
-
+	hp.conf = hp.nsMgr.GlobalConfig()
 	return hp
 }
 
 func (h *hyperchain) start() {
 	logger.Notice("Hyperchain server starting...")
 	hyperdb.InitDBMgr(h.nsMgr.GlobalConfig())
+	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", h.conf.Get(common.INTERNAL_PORT)))
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
 	go h.nsMgr.Start()
 	go h.hs.Start()
 	go CheckLicense(h.stopFlag)
 	go h.ipcShell.Start()
+	go h.internalServer.Serve(lis)//TODO: when should this serve, when should we try to make consensus
 }
 
 func (h *hyperchain) stop() {

@@ -7,6 +7,7 @@ import (
 	"hyperchain/accounts"
 	"hyperchain/admittance"
 	"hyperchain/common"
+	"hyperchain/common/service"
 	"hyperchain/consensus"
 	"hyperchain/consensus/csmgr"
 	"hyperchain/core/executor"
@@ -74,6 +75,9 @@ type Namespace interface {
 
 	// GetExecutor returns the executor module of current namespace.
 	GetExecutor() *executor.Executor
+
+	//LocalService return local service
+	LocalService() service.Service
 }
 
 type NsState int
@@ -143,6 +147,7 @@ type namespaceImpl struct {
 	nsInfo  *NamespaceInfo
 	status  *Status
 	conf    *common.Config
+	ls      service.Service
 	restart bool
 	delFlag chan bool
 }
@@ -175,6 +180,7 @@ func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool) 
 		restart:   false,
 		delFlag:   delFlag,
 	}
+	ns.ls = service.NewLocalService(namespace, service.EVENTHUB, ns.eventMux)
 	ns.logger = common.GetLogger(namespace, "namespace")
 	return ns, nil
 }
@@ -421,10 +427,14 @@ func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
 			case *common.RPCRequest:
 				return ns.handleJsonRequest(r)
 			default:
-				ns.logger.Errorf("event not supportted %v", r)
+				ns.logger.Errorf("event not supported %v", r)
 			}
 		}
 	}
 	ns.logger.Errorf("Process request error, namespace %s is not running now!", ns.Name())
 	return nil
+}
+
+func (ns *namespaceImpl) LocalService() service.Service  {
+	return ns.ls
 }

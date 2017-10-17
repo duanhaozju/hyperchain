@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	"hyperchain/common/service"
 	"hyperchain/core/ledger/bloom"
 	"io/ioutil"
 	"os"
@@ -131,6 +132,8 @@ type nsManagerImpl struct {
 
 	status *Status
 
+	is *service.InternalServer
+
 	stopHp    chan bool
 	restartHp chan bool
 }
@@ -143,6 +146,11 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 		lock:  new(sync.RWMutex),
 	}
 
+	server, err := service.NewInternalServer(conf.GetInt(common.INTERNAL_PORT), "0.0.0.0")
+	if err != nil {
+		panic(err)
+	}
+
 	nr := &nsManagerImpl{
 		namespaces:  make(map[string]Namespace),
 		conf:        conf,
@@ -151,6 +159,7 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 		status:      status,
 		stopHp:      stopHp,
 		restartHp:   restartHp,
+		is:          server,
 	}
 	nr.rwLock = new(sync.RWMutex)
 	nr.bloomFilter.Start()
@@ -175,7 +184,7 @@ func GetNamespaceManager(conf *common.Config, stopHp chan bool, restartHp chan b
 func (nr *nsManagerImpl) init() error {
 	configRootDir := nr.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
-		return errors.New("Namespace config root dir is not valid")
+		return errors.New("Namespace config root dir is not valid ")
 	}
 	dirs, err := ioutil.ReadDir(configRootDir)
 	if err != nil {
@@ -296,7 +305,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 	}
 	configRootDir := nr.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
-		return errors.New("Namespace config root dir is not valid")
+		return errors.New("Namespace config root dir is not valid ")
 	}
 	nsRootPath := configRootDir + "/" + name
 	if _, err := os.Stat(nsRootPath); os.IsNotExist(err) {
@@ -310,6 +319,8 @@ func (nr *nsManagerImpl) Register(name string) error {
 	}
 	delFlag := make(chan bool)
 	ns, err := GetNamespace(name, nsConfig, delFlag)
+
+	nr.is.RegisterLocal(ns.LocalService()) // register local service
 	if err != nil {
 		logger.Errorf("Construct namespace %s error, %v", name, err)
 		return ErrCannotNewNs

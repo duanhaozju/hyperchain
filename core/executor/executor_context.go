@@ -16,6 +16,7 @@ package executor
 import (
 	"hyperchain/common"
 	edb "hyperchain/core/ledger/chain"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -33,10 +34,13 @@ type ExecutorContext struct {
 
 	exit chan struct{} // executor exit flag
 
-	validationSuspend  chan bool         // validation suspend notifier
-	commitSuspend      chan bool         // commit suspend notifier
-	syncReplicaSuspend chan bool         // replica sync suspend notifier
-	syncCtx            *chainSyncContext // synchronization context
+	validationSuspend  chan bool // validation suspend notifier
+	commitSuspend      chan bool // commit suspend notifier
+	syncReplicaSuspend chan bool // replica sync suspend notifier
+
+	stateUpdated chan struct{}
+	closeW       sync.WaitGroup
+	syncCtx      *chainSyncContext // synchronization context
 }
 
 // initializeExecutorContext restores histrical status from db.
@@ -46,6 +50,7 @@ func initializeExecutorContext(executor *Executor) error {
 	executor.context.validationSuspend = make(chan bool)
 	executor.context.commitSuspend = make(chan bool)
 	executor.context.syncReplicaSuspend = make(chan bool)
+	executor.context.stateUpdated = make(chan struct{})
 
 	currentChain := edb.GetChainCopy(executor.namespace)
 	executor.initDemand(currentChain.Height + 1)
@@ -228,6 +233,8 @@ func (executor *Executor) syncDone() {
 // clearSyncFlag - clear all sync flag fields.
 func (executor *Executor) clearSyncFlag() {
 	executor.context.syncCtx = nil
+	executor.context.stateUpdated <- struct{}{}
+	executor.context.closeW.Wait()
 }
 
 func (executor *Executor) getSuspend(identifier int) chan bool {

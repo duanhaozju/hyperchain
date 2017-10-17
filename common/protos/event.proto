@@ -33,3 +33,15 @@ message ValidationEvent {
 message VCResetEvent {
     uint64 SeqNo = 1;
 }
+
+message ExecutorToConsensusEvent {
+    bytes Payload = 1; //TODO: changed from interface to bytes, should modify the related code
+    int32 Type = 2;
+}
+
+message ExecutorToP2PEvent {
+    bytes Payload = 1;
+    int32 Type = 2;
+    repeated uint64 Peers = 3;
+    repeated string PeersHash = 4;
+}
