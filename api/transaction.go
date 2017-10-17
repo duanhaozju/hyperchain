@@ -48,7 +48,7 @@ type SendTxArgs struct {
 	VmType    string          `json:"type"`      // specify which engine executes contract
 
 	// 1 value for Opcode means upgrading contract, 2 means freezing contract,
-	// 3 means unfreezing contract, 100 means archiving data.
+	// 3 means unfreezing contract, 4 means vm skipping, 100 means archiving data.
 	Opcode int32 `json:"opcode"`
 
 	// Snapshot saves the state of ledger at a moment.
