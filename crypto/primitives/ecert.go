@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/op/go-logging"
 	"crypto/elliptic"
+	"time"
 )
 
 var (
@@ -31,7 +32,6 @@ func GetConfig(path string) (string, error) {
 	content, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		//fmt.Println()
 		return "", err
 	}
 
@@ -59,6 +59,17 @@ func ParseCertificate(cert []byte) (*x509.Certificate, error) {
 //验证证书中的签名
 func VerifyCert(cert *x509.Certificate, ca *x509.Certificate) (bool, error) {
 	err := cert.CheckSignatureFrom(ca)
+
+	endTime := cert.NotAfter
+	startTime := cert.NotBefore
+
+	today := time.Now()
+
+	if startTime.Before(today) || endTime.After(today) {
+		log.Error("This Cert is overdue.Please check it!")
+		return false,errors.New("This Cert is overdue.Please check it!")
+	}
+
 	if err != nil {
 		log.Error("verified the cert failed", err)
 		return false, err

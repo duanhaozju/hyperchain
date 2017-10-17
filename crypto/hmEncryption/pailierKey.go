@@ -4,7 +4,6 @@ package hmEncryption
 
 import (
 	"crypto/rand"
-	//"fmt"
 	"math/big"
 )
 
