@@ -22,7 +22,7 @@ import (
 	"hyperchain/core/types"
 )
 
-// A tool use to calculate hash of transactions, receipts.
+// A tool used to calculate hash of transactions, receipts.
 type Hasher struct {
 	transactionCalculator interface{} // a batch of transactions calculator
 	receiptCalculator     interface{} // a batch of receipts calculator

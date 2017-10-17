@@ -46,7 +46,7 @@ type Executor struct {
 	jvmCli      jvm.ContractExecutor // jvm client
 	snapshotReg *SnapshotRegistry    // snapshot registry
 	archiveMgr  *ArchiveManager      // archive manager
-	nvp         NVP
+	nvp         NonVerifyingPeer
 }
 
 // NewExecutor creates a new Hyperchain object (including the
@@ -178,7 +178,7 @@ func initializeExecutorStateDb(executor *Executor) error {
 // initHistoryStateDb - open a historical database for snapshot content query.
 func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, error, func()) {
 	// never forget to close db
-	if err, manifest := executor.snapshotReg.rwc.Read(snapshotId); err != nil {
+	if err, manifest := executor.snapshotReg.rw.Read(snapshotId); err != nil {
 		return nil, err, nil
 	} else {
 		blk, err := edb.GetBlockByNumber(executor.namespace, manifest.Height)
@@ -221,6 +221,6 @@ func (executor *Executor) FetchStateDb() vm.Database {
 }
 
 // GetNVP get nvp handler.
-func (executor *Executor) GetNVP() NVP {
+func (executor *Executor) GetNVP() NonVerifyingPeer {
 	return executor.nvp
 }
