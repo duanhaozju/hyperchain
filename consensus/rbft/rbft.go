@@ -59,7 +59,7 @@ func (rbft *rbftImpl) RecvLocal(msg interface{}) error {
 			return rbft.initNegoView()
 		}
 	} else if tx, ok := msg.(*types.Transaction); ok {
-		// if we receive transaction from local module, we will broadcast it to others
+		// if we receive transaction from local module, we will broadcast it to others.
 		payload, err := proto.Marshal(tx)
 		if err != nil {
 			rbft.logger.Errorf("ConsensusMessage_TRANSACTION Marshal Error", err)
@@ -76,7 +76,6 @@ func (rbft *rbftImpl) RecvLocal(msg interface{}) error {
 			tx:  tx,
 			new: true,
 		}
-		//go rbft.rbftEventQueue.Push(req)
 		go rbft.eventMux.Post(req)
 
 		return nil

@@ -101,6 +101,9 @@ func (rbft *rbftImpl) recvLocalNewNode(msg *protos.NewNodeMessage) error {
 // consentor that a new node want to participate in the consensus as a VP node.
 func (rbft *rbftImpl) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 
+	key := string(msg.Payload)
+	rbft.logger.Debugf("Replica %d received local addNode message for new node %v", rbft.id, key)
+
 	if rbft.status.getState(&rbft.status.isNewNode) {
 		rbft.logger.Warningf("New replica received local addNode message, there may be something wrong")
 		return nil
@@ -111,9 +114,6 @@ func (rbft *rbftImpl) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 		return nil
 	}
 
-	key := string(msg.Payload)
-	rbft.logger.Debugf("Replica %d received local addNode message for new node %v", rbft.id, key)
-
 	rbft.status.activeState(&rbft.status.inAddingNode)
 	rbft.sendAgreeAddNode(key)
 
@@ -121,14 +121,15 @@ func (rbft *rbftImpl) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 }
 
 // recvLocalAddNode handles the local consensusEvent about DelNode, which announces the
-// consentor that a VP node want to leave the consensus. Notice: the node
-// that want to leave away from consensus should also have this message
+// consentor that a VP node wants to leave the consensus. If there only exists less than
+// 5 VP nodes, we don't allow delete node.
+// Notice: the node that wants to leave away from consensus should also handle this message.
 func (rbft *rbftImpl) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 
 	key := string(msg.DelPayload)
 	rbft.logger.Debugf("Replica %d received local delnode message for newId: %d, del node: %d", rbft.id, msg.Id, msg.Del)
 
-	// We only support deleting when the nodes >= 5
+	// We only support deleting when number of all VP nodes >= 5
 	if rbft.N == 4 {
 		rbft.logger.Criticalf("Replica %d receive del msg, but we don't support delete as there're only 4 nodes", rbft.id)
 		return nil
@@ -182,7 +183,7 @@ func (rbft *rbftImpl) sendAgreeAddNode(key string) {
 // that itself had received the leave-away request from one node.
 func (rbft *rbftImpl) sendAgreeDelNode(key string, routerHash string, newId uint64, delId uint64) {
 
-	rbft.logger.Debugf("Replica %d try to send delnode message for quit node", rbft.id)
+	rbft.logger.Debugf("Replica %d try to send delnode message for quit node %d", rbft.id, delId)
 
 	cert := rbft.getDelNodeCert(key)
 	cert.newId = newId
@@ -263,7 +264,7 @@ func (rbft *rbftImpl) maybeUpdateTableForAdd(key string) error {
 		if cert.finishAdd {
 			// This indicates a byzantine behavior that
 			// some nodes repeatedly send AgreeAddNode messages.
-			rbft.logger.Warningf("Replica %d has already finished adding node, but still recevice add msg from someone else", rbft.id)
+			rbft.logger.Warningf("Replica %d has already finished adding node, but still received add msg from someone else", rbft.id)
 			return nil
 		} else {
 			// This replica hasn't be connected by new node.
@@ -418,7 +419,7 @@ func (rbft *rbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) consensusEvent
 	// Replica may receive ReadyForN after it has already finished updatingN
 	// (it happens in bad network environment)
 	if int(agree.N) == rbft.N && agree.Basis.View == rbft.view {
-		rbft.logger.Debugf("Replica %d alreay finish update for N=%d/view=%d", rbft.id, rbft.N, rbft.view)
+		rbft.logger.Debugf("Replica %d already finish update for N=%d/view=%d", rbft.id, rbft.N, rbft.view)
 		return nil
 	}
 
@@ -457,14 +458,14 @@ func (rbft *rbftImpl) sendAgreeUpdateNforDel(key string) error {
 	rbft.logger.Debugf("Replica %d try to send update_n after finish del node", rbft.id)
 
 	if atomic.LoadUint32(&rbft.activeView) == 0 {
-		rbft.logger.Warningf("Primary %d is in view change, reject the ready_for_n message", rbft.id)
+		rbft.logger.Warningf("Replica %d is in view change, reject send agree update N", rbft.id)
 		return nil
 	}
 
 	cert := rbft.getDelNodeCert(key)
 
 	if !cert.finishDel {
-		rbft.logger.Errorf("Primary %d has not done with delnode for key=%s", rbft.id, key)
+		rbft.logger.Errorf("Replica %d has not done with delnode for key=%s", rbft.id, key)
 		return nil
 	}
 	delete(rbft.nodeMgr.updateStore, rbft.nodeMgr.updateTarget)
