@@ -1,4 +1,4 @@
-package executor
+package manager
 
 import (
 	"hyperchain/common"
@@ -30,7 +30,7 @@ type ecManagerImpl struct {
 	executors map[string]*executor.Executor
 
 	// manager the connect, it can be included in the ExecutorRemote when it add
-	services map[string]service.Service
+	services map[string]*service.ServiceClient
 
     jvmManager *namespace.JvmManager
 	// conf is the global config file of the system, contains global configs
@@ -83,7 +83,15 @@ func (em *ecManagerImpl) Start() error {
             }
             em.executors[name] = exec
 
-
+            s, err := service.New(60061, "127.0.0.1", service.EXECUTOR, name)
+            if err != nil {
+                logger.Errorf("new service failed in %v")
+            }
+            err = s.Connect()
+            if err != nil {
+                logger.Error("service Connect failed")
+            }
+            em.services[name] = s
         } else {
             logger.Errorf("Invalid folder %v", d)
         }

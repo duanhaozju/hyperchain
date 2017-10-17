@@ -25,7 +25,6 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
 	"path"
-	"hyperchain/common/service"
 )
 
 // Executor represents a hyperchain executor implementation
