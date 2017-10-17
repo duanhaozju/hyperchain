@@ -19,6 +19,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestNewRecoveryMgr(t *testing.T) {
+	recoveryMgr := newRecoveryMgr()
+	structName, nilElems, err := checkNilElems(recoveryMgr)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if nilElems != nil {
+		t.Errorf("There exists some nil elements: %v in struct: %s", nilElems, structName)
+	}
+}
+
 func TestInitNegoView(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)

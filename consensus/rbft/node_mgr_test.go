@@ -11,9 +11,9 @@ import (
 
 func TestNewNodeMgr(t *testing.T) {
 	nodeMgr := newNodeMgr()
-    structName, nilElems, err := checkNilElems(nodeMgr)
-    if err != nil {
-    	t.Error(err.Error())
+    	structName, nilElems, err := checkNilElems(nodeMgr)
+    	if err != nil {
+    		t.Error(err.Error())
 	}
 	if nilElems != nil {
 		t.Errorf("There exists some nil elements: %v in struct: %s", nilElems, structName)
