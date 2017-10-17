@@ -40,10 +40,11 @@ func GetExecutorMgr(conf *common.Config, stopHp chan bool, restartHp chan bool) 
 	return newExecutorManager(conf, stopHp,restartHp)
 }
 
-func (em *ecManagerImpl) Start(){
+func (em *ecManagerImpl) Start() error {
 	//TODO: 读配置文件,开启多个executor实例
+	return nil
 }
 
-func (em *ecManagerImpl) Stop(){
-
+func (em *ecManagerImpl) Stop() error {
+    return nil
 }

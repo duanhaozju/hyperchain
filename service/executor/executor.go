@@ -63,7 +63,7 @@ func main() {
 }
 
 
-func (h *executorGlobal) start() {
+func (h *executorGlobal) start() error {
 	err := h.exeMgr.Start()
 	if err != nil {
 		return err
