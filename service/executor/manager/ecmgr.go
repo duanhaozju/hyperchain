@@ -8,7 +8,6 @@ import (
     "errors"
     "github.com/op/go-logging"
     "hyperchain/namespace"
-    "hyperchain/service/executor/handler"
 )
 
 var logger *logging.Logger
@@ -28,10 +27,8 @@ type ExecutorManager interface {
 
 type ecManagerImpl struct {
 
-	executors map[string]*executor.Executor
-
 	// manager the connect, it can be included in the ExecutorRemote when it add
-	services map[string]*service.ServiceClient
+	services map[string]executorService
 
     jvmManager *namespace.JvmManager
 	// conf is the global config file of the system, contains global configs
@@ -42,9 +39,10 @@ type ecManagerImpl struct {
 	restartEm chan bool
 }
 
+
 func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bool) *ecManagerImpl {
 	em := &ecManagerImpl{
-		executors:  make(map[string]*executor.Executor),
+		services:  make(map[string]*executorService),
         jvmManager:  namespace.NewJvmManager(conf),
         conf:        conf,
 		stopEm:      stopEm,
@@ -61,7 +59,6 @@ func GetExecutorMgr(conf *common.Config, stopEm chan bool, restartEM chan bool) 
 
 
 func (em *ecManagerImpl) Start() error {
-    //TODO: 读配置文件,开启多个executor实例
     configRootDir := em.conf.GetString(NS_CONFIG_DIR_ROOT)
     if configRootDir == "" {
         return errors.New("Namespace config root dir is not valid ")
@@ -70,6 +67,8 @@ func (em *ecManagerImpl) Start() error {
     if err != nil {
         return err
     }
+
+    // start all executor service
     for _, d := range dirs {
         if d.IsDir() {
             name := d.Name()
@@ -77,30 +76,18 @@ func (em *ecManagerImpl) Start() error {
             if !start {
                 continue
             }
-
-            exec, err := executor.NewExecutor(name, em.conf, nil, nil)
+            service := NewExecutorService(name, em.conf)
+            err := service.Start()
             if err != nil {
-                logger.Errorf("NewExecutor is fault")
+                logger.Error(err)
             }
-            em.executors[name] = exec
-
-            s, err := service.New(em.conf.GetInt(common.EXECUTOR_PORT), "127.0.0.1", service.EXECUTOR, name)
-            if err != nil {
-                logger.Errorf("new service failed in %v")
-            }
-            err = s.Connect()
-            if err != nil {
-                logger.Error("service Connect failed")
-            }
-            // Add executor handler
-            h := handler.New(exec)
-            s.AddHandler(h)
-            em.services[name] = s
-
+            em.services[name] = service
         } else {
             logger.Errorf("Invalid folder %v", d)
         }
     }
+
+    // start jvm
     if em.conf.GetBool(common.C_JVM_START) == true {
         if err := em.jvmManager.Start(); err != nil {
             logger.Error(err)
@@ -111,16 +98,14 @@ func (em *ecManagerImpl) Start() error {
 }
 
 func (em *ecManagerImpl) Stop() error {
-
-    // 1. stop executor
-    for ns := range em.executors {
-        err := em.executors[ns].Stop()
+    // stop all executor service
+    for ns := range em.services {
+        err := em.services[ns].Stop()
         if err != nil {
             logger.Error(err)
         }
     }
-
-    // 2. stop jvm
+    // stop jvm
     if err := em.jvmManager.Stop(); err != nil {
         logger.Errorf("Stop hyperjvm error %v", err)
     }
