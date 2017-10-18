@@ -5,8 +5,10 @@ import (
 	"hyperchain/common/service"
 	"hyperchain/core/executor"
 	"hyperchain/service/executor/handler"
-    "github.com/pkg/errors"
     pb "hyperchain/common/protos"
+    "github.com/op/go-logging"
+    "hyperchain/core/ledger/chain"
+    "hyperchain/hyperdb"
 )
 
 type executorService interface {
@@ -23,50 +25,105 @@ type executorServiceImpl struct {
 	service *service.ServiceClient
 	// config
 	conf *common.Config
+	// logger
+	logger *logging.Logger
 }
 
 func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
-	return &executorServiceImpl{
+    return &executorServiceImpl{
 		namespace: ns,
 		conf:      conf,
-	}
+		logger:    common.GetLogger(ns, "executor_service"),
+    }
+}
+
+func (es *executorServiceImpl) init() error {
+    es.logger.Criticalf("Init executor service %s", es.namespace)
+
+    // 1. init DB for current executor service.
+    err := chain.InitDBForNamespace(es.conf, es.namespace)
+    if err != nil {
+        es.logger.Errorf("Init db for namespace: %s error, %v", es.namespace, err)
+        return err
+    }
+
+    // 2. initial executor
+    executor, err := executor.NewExecutor(es.namespace, es.conf, nil, nil)
+    if err != nil {
+        es.logger.Errorf("Init executor service for namespace %s error, %v", es.namespace, err)
+        return err
+    }
+    executor.CreateInitBlock(es.conf)
+    es.executor = executor
+
+    // 3. initial service client
+    service, err := service.New(es.conf.GetInt(common.EXECUTOR_PORT), "127.0.0.1", service.EXECUTOR, es.namespace)
+    if err != nil {
+        es.logger.Errorf("Init service client for namespace %s error, %v", es.namespace, err)
+        return err
+    }
+    es.service = service
+
+    // 4. add executor handler
+    h := handler.New(executor)
+    service.AddHandler(h)
+
+    return nil
 }
 
 func (es *executorServiceImpl) Start() error {
-    // initial executor
-	exec, err := executor.NewExecutor(es.namespace, es.conf, nil, nil)
-	if err != nil {
-		return errors.New("NewExecutor is fault")
-	}
-	es.executor = exec
+    es.logger.Noticef("try to start namespace: %s", es.namespace)
 
-	// initial service client
-	s, err := service.New(es.conf.GetInt(common.EXECUTOR_PORT), "127.0.0.1", service.EXECUTOR, es.namespace)
-	if err != nil {
-        return errors.New("new service failed in %v")
-	}
-	es.service = s
+    // 1. initial executor and service client
+    err := hyperdb.StartDatabase(es.conf, es.namespace)
+    if err != nil {
+        es.logger.Errorf("Start database for namespace %s error, %v", es.namespace, err)
+        return err
+    }
+    es.logger.Noticef("start db for namespace: %s successful", es.namespace)
 
-    // establish connection
-    err = s.Connect()
-	if err != nil {
-		return errors.New("service Connect failed")
-	}
-	// Add executor handler
-	h := handler.New(exec)
-	s.AddHandler(h)
+    // 2. start executor
+    err = es.executor.Start()
+    if err != nil {
+        es.logger.Errorf("Start executor for namespace %s error, %v", es.namespace, err)
+        return err
+    }
 
-    //register the namespace
-    err = s.Register(pb.FROM_EXECUTOR, &pb.RegisterMessage{
+    // 3. establish connection
+    err = es.service.Connect()
+	if err != nil {
+        es.logger.Errorf("Establish connection for namespace %s error, %v", es.namespace, err)
+        return err
+	}
+
+    // 4. register the namespace
+    err = es.service.Register(pb.FROM_EXECUTOR, &pb.RegisterMessage{
         Namespace: es.namespace,
     })
     if err != nil{
-        logger.Error("service Register failed")
+        es.logger.Errorf("Executor service register failed for namespace %s error, %v", es.namespace, err)
+        return err
     }
 	return nil
 }
 
 func (es *executorServiceImpl) Stop() error {
-    es.executor.Stop()
+    es.logger.Noticef("try to stop namespace: %s", es.namespace)
+
+    // 1. stop executor.
+    err := es.executor.Stop()
+    if err != nil {
+        es.logger.Errorf("Stop executor for namespace %s error, %v", es.namespace, err)
+        return err
+    }
+
+    // 2. close related database.
+    err = hyperdb.StopDatabase(es.namespace)
+    if err != nil {
+        es.logger.Errorf("Stop database for namespace %s error, %v", es.namespace, err)
+        return err
+    }
+
+    es.logger.Noticef("namespace: %s stopped!", es.namespace)
     return nil
 }
