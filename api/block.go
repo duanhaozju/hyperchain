@@ -74,12 +74,6 @@ func (blk *Block) GetBlockByHash(hash common.Hash) (*BlockResult, error) {
 	return getBlockByHash(blk.namespace, hash, false)
 }
 
-// GenesisBlock returns current genesis block number.
-func (blk *Block) GenesisBlock() (uint64, error) {
-	genesis, err := edb.GetGenesisTag(blk.namespace)
-	return genesis, &common.CallbackError{Message: err.Error()}
-}
-
 // GetPlainBlockByHash returns the block for the given block hash.
 func (blk *Block) GetPlainBlockByHash(hash common.Hash) (*BlockResult, error) {
 	return getBlockByHash(blk.namespace, hash, true)
@@ -157,10 +151,15 @@ func (blk *Block) GetChainHeight() (*BlockNumber, error) {
 	return uint64ToBlockNumber(chain.Height), nil
 }
 
-// GetGenesisBlock returns genesis block number.
-func (blk *Block) GetGenesisBlock() (uint64, error) {
-	number, err := edb.GetGenesisTag(blk.namespace)
-	return number, err
+// GetGenesisBlock returns current genesis block number.
+func (blk *Block) GetGenesisBlock() (*BlockNumber, error) {
+	genesis, err := edb.GetGenesisTag(blk.namespace)
+	if err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	} else if genesis == 0 {
+		return nil, &common.NoBlockGeneratedError{}
+	}
+	return uint64ToBlockNumber(genesis), nil
 }
 
 func latestBlock(namespace string) (*BlockResult, error) {
