@@ -83,7 +83,7 @@ func (em *ecManagerImpl) Start() error {
             }
             em.executors[name] = exec
 
-            s, err := service.New(60061, "127.0.0.1", service.EXECUTOR, name)
+            s, err := service.New(em.conf.GetInt(common.EXECUTOR_PORT), "127.0.0.1", service.EXECUTOR, name)
             if err != nil {
                 logger.Errorf("new service failed in %v")
             }
