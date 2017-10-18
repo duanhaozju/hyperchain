@@ -54,6 +54,7 @@ func TNewConfig(fatherpath, name string, nodeId int) *common.Config {
 	namespace := name + "-" + strconv.Itoa(conf.GetInt(common.C_NODE_ID))
 	conf.Set(common.NAMESPACE, namespace)
 	common.InitHyperLogger(namespace, conf)
+	common.SetLogLevel(namespace, "consensus", "DEBUG")
 	return conf
 }
 
@@ -426,6 +427,8 @@ func CleanData(namespace string) error {
 	return err
 }
 
+// checkNilElems checks if provided param has nil elements, returns error if provided
+// param is not a struct pointer and returns nil elements' name if has.
 func checkNilElems(i interface{}) (string, []string, error) {
 	typ := reflect.TypeOf(i)
 	value := reflect.Indirect(reflect.ValueOf(i))

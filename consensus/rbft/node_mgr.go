@@ -416,6 +416,11 @@ func (rbft *rbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) consensusEvent
 		return nil
 	}
 
+	if rbft.status.getState(&rbft.status.isNewNode) {
+		rbft.logger.Debugf("Replica %d does not need to send agree-update-n", rbft.id)
+		return nil
+	}
+
 	// Replica may receive ReadyForN after it has already finished updatingN
 	// (it happens in bad network environment)
 	if int(agree.N) == rbft.N && agree.Basis.View == rbft.view {
@@ -426,11 +431,6 @@ func (rbft *rbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) consensusEvent
 	delete(rbft.nodeMgr.updateStore, rbft.nodeMgr.updateTarget)
 	rbft.stopNewViewTimer()
 	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 1)
-
-	if rbft.status.getState(&rbft.status.isNewNode) {
-		rbft.logger.Debugf("Replica %d does not need to send agree-update-n", rbft.id)
-		return nil
-	}
 
 	// Generate the AgreeUpdateN message and broadcast it to others
 	rbft.agreeUpdateHelper(agree)
@@ -685,8 +685,8 @@ func (rbft *rbftImpl) recvUpdateN(update *UpdateN) consensusEvent {
 
 	// Count of the amount of AgreeUpdateN message for the same key
 	quorum := 0
-	for idx := range rbft.nodeMgr.agreeUpdateStore {
-		if idx.v == update.View {
+	for idx, agree := range rbft.nodeMgr.agreeUpdateStore {
+		if idx.v == update.View && idx.n == update.N && idx.flag == update.Flag && agree.Key == update.Key {
 			quorum++
 		}
 	}
@@ -782,7 +782,7 @@ func (rbft *rbftImpl) resetStateForUpdate(update *UpdateN) consensusEvent {
 	rbft.logger.Debugf("Replica %d accepting update-n to target %v", rbft.id, rbft.nodeMgr.updateTarget)
 
 	if rbft.status.getState(&rbft.status.updateHandled) {
-		rbft.logger.Debugf("Replica %d repeated enter processReqInUpdate, ignore it")
+		rbft.logger.Debugf("Replica %d repeated enter processReqInUpdate, ignore it", rbft.id)
 		return nil
 	}
 	rbft.status.activeState(&rbft.status.updateHandled)
@@ -795,6 +795,10 @@ func (rbft *rbftImpl) resetStateForUpdate(update *UpdateN) consensusEvent {
 	rbft.N = int(update.N)
 	rbft.f = (rbft.N - 1) / 3
 
+	// In adding node, node id will not change as new node will use N+1 as id, and old nodes
+	// don't need to change their id.
+	// But in deleting node, if deleting node id is not the largest one, old nodes' id need
+	// to be rearranged in an ascending order.
 	if !update.Flag {
 		cert := rbft.getDelNodeCert(update.Key)
 		rbft.id = cert.newId
@@ -822,7 +826,7 @@ func (rbft *rbftImpl) resetStateForUpdate(update *UpdateN) consensusEvent {
 		// after update timer expired
 		rbft.logger.Warningf("New primary %d need to catch up other, waiting", rbft.id)
 	} else {
-		// Replica can just respone the update no matter what happened
+		// Replica can just response the update no matter what happened
 		rbft.logger.Warningf("Replica %d cannot process local vcReset, but also send finishVcReset", rbft.id)
 		rbft.sendFinishUpdate()
 	}
@@ -937,9 +941,6 @@ func (rbft *rbftImpl) processReqInUpdate() consensusEvent {
 //##########################################################################
 
 func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
-
-	var keys []uint64
-	var hashList []string
 	hashSet := make(map[string]bool)
 	targetSet := make(map[uint64]string)
 
@@ -955,6 +956,8 @@ func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
 		}
 		targetSet[batch.SeqNo] = hash
 	}
+	keys := make([]uint64, len(targetSet))
+	hashList := make([]string, len(targetSet))
 
 	i := 0
 	for n := range targetSet {
@@ -963,8 +966,8 @@ func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
 	}
 	sort.Sort(sortableUint64Slice(keys))
 
-	for _, seqNo := range keys {
-		hashList = append(hashList, targetSet[seqNo])
+	for i, seqNo := range keys {
+		hashList[i] = targetSet[seqNo]
 	}
 
 	rbft.batchMgr.txPool.GetTxsBack(hashList)
