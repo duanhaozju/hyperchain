@@ -69,7 +69,7 @@ func (h *executorGlobal) start() error {
 		return err
 	}
 
-	h.apiServer.Start()
+	//h.apiServer.Start()
     return nil
 
 }

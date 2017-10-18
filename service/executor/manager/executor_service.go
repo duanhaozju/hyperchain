@@ -57,7 +57,7 @@ func (es *executorServiceImpl) init() error {
     es.executor = executor
 
     // 3. initial service client
-    service, err := service.New(es.conf.GetInt(common.EXECUTOR_PORT), "127.0.0.1", service.EXECUTOR, es.namespace)
+    service, err := service.New(50071, "127.0.0.1", service.EXECUTOR, es.namespace)
     if err != nil {
         es.logger.Errorf("Init service client for namespace %s error, %v", es.namespace, err)
         return err
@@ -73,14 +73,18 @@ func (es *executorServiceImpl) init() error {
 
 func (es *executorServiceImpl) Start() error {
     es.logger.Noticef("try to start namespace: %s", es.namespace)
-
-    // 1. initial executor and service client
-    err := hyperdb.StartDatabase(es.conf, es.namespace)
+    err := es.init()
     if err != nil {
-        es.logger.Errorf("Start database for namespace %s error, %v", es.namespace, err)
+        es.logger.Errorf("Executor service initialization failed %v", err)
         return err
     }
-    es.logger.Noticef("start db for namespace: %s successful", es.namespace)
+    // 1. start executor and service client
+    //err = hyperdb.StartDatabase(es.conf, es.namespace)
+    //if err != nil {
+    //    es.logger.Errorf("Start database for namespace %s error, %v", es.namespace, err)
+    //    return err
+    //}
+    //es.logger.Noticef("start db for namespace: %s successful", es.namespace)
 
     // 2. start executor
     err = es.executor.Start()

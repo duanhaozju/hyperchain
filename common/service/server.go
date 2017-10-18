@@ -5,6 +5,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/op/go-logging"
 	pb "hyperchain/common/protos"
+	e "hyperchain/manager/event"
 	"sync"
 )
 
@@ -119,6 +120,21 @@ func (is *InternalServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_R
 	}); err != nil {
 		is.logger.Error(err)
 	}
+
+	v := &e.ValidationEvent{
+	    Digest: "xcc",
+	    IsPrimary: true,
+	    View: 111,
+	    SeqNo: 222,
+    }
+	mv, err := proto.Marshal(v)
+    if err := stream.Send(&pb.Message{
+        Type: pb.Type_DISPATCH,
+        Event:pb.Event_ValidationEvent,
+        Payload: mv,
+    }); err != nil {
+        is.logger.Error(err)
+    }
 	return service
 }
 
