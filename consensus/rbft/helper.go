@@ -113,10 +113,10 @@ func (rbft *rbftImpl) getAddNV() (n int64, v uint64) {
 // getDelNV calculates the new N and view after delete a new node
 func (rbft *rbftImpl) getDelNV(del uint64) (n int64, v uint64) {
 	n = int64(rbft.N) - 1
+	rbft.logger.Debug("N: ", rbft.N, " view: ", rbft.view, " del: ", del)
 	if rbft.primary(rbft.view) > del {
 		v = rbft.view%uint64(rbft.N) - 1 + (uint64(rbft.N)-1)*(rbft.view/uint64(rbft.N)+1)
 	} else {
-		rbft.logger.Debug("N: ", rbft.N, " view: ", rbft.view, " del: ", del)
 		v = rbft.view%uint64(rbft.N) + (uint64(rbft.N)-1)*(rbft.view/uint64(rbft.N)+1)
 	}
 

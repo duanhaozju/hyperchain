@@ -13,6 +13,32 @@ import (
 	"hyperchain/core/types"
 )
 
+func TestNewBatchValidator(t *testing.T) {
+	batchVd := newBatchValidator()
+	structName, nilElems, err := checkNilElems(batchVd)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if nilElems != nil {
+		t.Errorf("There exists some nil elements: %v in struct: %s", nilElems, structName)
+	}
+}
+
+func TestNewBatchManager(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+	structName, nilElems, err := checkNilElems(rbft.batchMgr)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if nilElems != nil {
+		t.Errorf("There exists some nil elements: %v in struct: %s", nilElems, structName)
+	}
+}
+
 func TestVid(t *testing.T) {
 	bv := newBatchValidator()
 	ast := assert.New(t)

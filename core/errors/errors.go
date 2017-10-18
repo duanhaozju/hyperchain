@@ -1,3 +1,16 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 package errors
 
 import (
@@ -5,6 +18,7 @@ import (
 	"fmt"
 )
 
+// ValueTransferError refers a balance transfer error.
 type ValueTransferError struct {
 	message string
 }
@@ -21,9 +35,7 @@ func IsValueTransferErr(e error) bool {
 	return ok
 }
 
-/*
-	SignatureError
-*/
+// SignatureError refers an invalid signature error.
 type SignatureError struct {
 	message string
 }
@@ -39,9 +51,7 @@ func IsSignatureErr(e error) bool {
 	return ok
 }
 
-/*
-	ExecContractError
-*/
+// ExecContractError refers a virtual machine execution failed error.
 type ExecContractError struct {
 	message string
 	errType int
@@ -66,9 +76,8 @@ func IsExecContractErr(e error) bool {
 	return ok
 }
 
-/*
-	InvalidInvokePermissionError
-*/
+// InvalidInvokePermissionError refers a permission error.
+// Always occurs when the caller doesn't have enough permission.
 type InvalidInvokePermissionError struct {
 	message string
 }

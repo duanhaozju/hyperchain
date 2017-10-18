@@ -66,8 +66,8 @@ func TestPrimary(t *testing.T) {
 	ast.Equal(true, rbft.inWV(9, 30), fmt.Sprintf("inWV(%d, %d) = false, actual true", 9, 30))
 	ast.Equal(false, rbft.inWV(8, 30), fmt.Sprintf("inWV(%d, %d) = true, actual false", 9, 30))
 
-	ast.Equal(true, rbft.sendInWV(9, 100), fmt.Sprintf("sendInWV(%d, %d) = false, actual true", 9, 100))
-	ast.Equal(false, rbft.sendInWV(9, 101), fmt.Sprintf("sendInWV(%d, %d) = true, actual false", 9, 101))
+	ast.Equal(true, rbft.sendInW(100), fmt.Sprintf("sendInWV(%d, %d) = false, actual true", 9, 100))
+	ast.Equal(false, rbft.sendInW(101), fmt.Sprintf("sendInWV(%d, %d) = true, actual false", 9, 101))
 }
 
 func TestGetNodeCert(t *testing.T) {
