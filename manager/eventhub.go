@@ -496,13 +496,34 @@ func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEve
 	switch ev.Type {
 	case executor.NOTIFY_VC_DONE:
 		hub.logger.Debugf("message middleware: [vc done]")
-		hub.invokeRbftLocal(rbft.VIEW_CHANGE_SERVICE, rbft.VIEW_CHANGE_VC_RESET_DONE_EVENT, ev.Payload)
+
+		event := &protos.VcResetDone{}
+		err := proto.Unmarshal(ev.Payload, event)
+		if err != nil {
+			hub.logger.Error(err)
+			return
+		}
+		hub.invokeRbftLocal(rbft.VIEW_CHANGE_SERVICE, rbft.VIEW_CHANGE_VC_RESET_DONE_EVENT, *event)
 	case executor.NOTIFY_VALIDATION_RES:
 		hub.logger.Debugf("message middleware: [validation result]")
-		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_VALIDATED_TXS_EVENT, ev.Payload)
+
+		event := &protos.ValidatedTxs{}
+		err := proto.Unmarshal(ev.Payload, event)
+		if err != nil {
+			hub.logger.Error(err)
+			return
+		}
+		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_VALIDATED_TXS_EVENT, *event)
 	case executor.NOTIFY_SYNC_DONE:
 		hub.logger.Debugf("message middleware: [sync done]")
-		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_STATE_UPDATE_EVENT, ev.Payload)
+
+		event := &protos.StateUpdatedMessage{}
+		err := proto.Unmarshal(ev.Payload, event)
+		if err != nil {
+			hub.logger.Error(err)
+			return
+		}
+		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_STATE_UPDATE_EVENT, *event)
 	}
 }
 

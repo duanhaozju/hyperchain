@@ -2,11 +2,11 @@ syntax = "proto3";
 
 // Dispatcher response for Message distribute.
 service Dispatcher {
-    rpc Register(stream Message) returns(stream Message) {}
+    rpc Register(stream IMessage) returns(stream IMessage) {}
 }
 
-// Message is the wrapper of specific message
-message Message {
+// IMessage is the wrapper of specific message used for internal component
+message IMessage {
     uint64 id       = 1;
     Type type       = 2; // The basic message type.
     FROM from       = 3; // Define where the message come from.

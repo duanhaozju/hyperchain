@@ -4,7 +4,7 @@ import (
 	pb "hyperchain/common/protos"
 )
 
-func (is *InternalServer) dispatchConsensusMsg(namespace string, msg *pb.Message) {
+func (is *InternalServer) dispatchConsensusMsg(namespace string, msg *pb.IMessage) {
 	is.logger.Debugf("dispatch consensus message: %v for namespace: %s", msg, namespace)
 
 	if !is.sr.ContainsNamespace(namespace) {
@@ -23,7 +23,7 @@ func (is *InternalServer) dispatchConsensusMsg(namespace string, msg *pb.Message
 	}
 }
 
-func (is *InternalServer) dispatchExecutorMsg(namespace string, msg *pb.Message) {
+func (is *InternalServer) dispatchExecutorMsg(namespace string, msg *pb.IMessage) {
 
 	is.logger.Debugf("dispatch executor message: %v for namespace: %s", msg, namespace)
 
@@ -40,10 +40,10 @@ func (is *InternalServer) dispatchExecutorMsg(namespace string, msg *pb.Message)
 	//TODO: 3.send the message
 }
 
-func (is *InternalServer) dispatchNetworkMsg(namespace string, msg *pb.Message) {
+func (is *InternalServer) dispatchNetworkMsg(namespace string, msg *pb.IMessage) {
 
 }
 
-func (is *InternalServer) dispatchAPIServerMsg(namespace string, msg *pb.Message) {
+func (is *InternalServer) dispatchAPIServerMsg(namespace string, msg *pb.IMessage) {
 
 }

@@ -16,7 +16,7 @@ import (
 	"hyperchain/rpc"
 	_ "net/http/pprof"
 	"time"
-	"net"
+	//"net"
 )
 
 const HyperchainVersion = "Hyperchain Version:\nRelease1.4-20171012-f415e9"
@@ -69,16 +69,16 @@ func newHyperchain(argV *argT) *hyperchain {
 func (h *hyperchain) start() {
 	logger.Notice("Hyperchain server starting...")
 	hyperdb.InitDBMgr(h.nsMgr.GlobalConfig())
-	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", h.conf.Get(common.INTERNAL_PORT)))
-	if err != nil {
-		fmt.Print(err)
-		return
-	}
+	//lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", h.conf.Get(common.INTERNAL_PORT)))
+	//if err != nil {
+	//	fmt.Print(err)
+	//	return
+	//}
 	go h.nsMgr.Start()
 	go h.hs.Start()
 	go CheckLicense(h.stopFlag)
 	go h.ipcShell.Start()
-	go h.internalServer.Serve(lis)//TODO: when should this serve, when should we try to make consensus
+	//go h.internalServer.Serve(lis)//TODO: when should this serve, when should we try to make consensus
 }
 
 func (h *hyperchain) stop() {

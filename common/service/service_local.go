@@ -9,7 +9,7 @@ type localServiceImpl struct {
 	eventMux  *event.TypeMux // used to post message to event hub
 	namespace string
 	id        string
-	r         chan *pb.Message
+	r         chan *pb.IMessage
 }
 
 func NewLocalService(namespace, id string, em *event.TypeMux) Service {
@@ -17,7 +17,7 @@ func NewLocalService(namespace, id string, em *event.TypeMux) Service {
 		id:        id,
 		namespace: namespace,
 		eventMux:  em,
-		r:         make(chan *pb.Message),
+		r:         make(chan *pb.IMessage),
 	}
 }
 
@@ -30,7 +30,7 @@ func (lsi *localServiceImpl) Id() string {
 }
 
 func (lsi *localServiceImpl) Send(event interface{}) error {
-	lsi.eventMux.Post(event)
+	return lsi.eventMux.Post(event)
 }
 
 func (lsi *localServiceImpl) Close() {
@@ -45,6 +45,6 @@ func (lsi *localServiceImpl) isHealth() bool {
 	return true
 }
 
-func (lsi *localServiceImpl) Response() chan *pb.Message {
+func (lsi *localServiceImpl) Response() chan *pb.IMessage {
 	return lsi.r
 }

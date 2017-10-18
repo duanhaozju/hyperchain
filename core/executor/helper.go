@@ -69,8 +69,14 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		if !ok {
 			return er.InvalidParamsErr
 		}
+
+		payload, err := proto.Marshal(&msg)
+		if err != nil {
+			return err
+		}
+
 		executor.helper.PostInner(event.ExecutorToConsensusEvent{
-			Payload: msg,
+			Payload: payload,
 			Type:    NOTIFY_VALIDATION_RES,
 		})
 	case NOTIFY_VC_DONE:
@@ -79,8 +85,14 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		if !ok {
 			return er.InvalidParamsErr
 		}
+
+		payload, err := proto.Marshal(&msg)
+		if err != nil {
+			return err
+		}
+
 		executor.helper.PostInner(event.ExecutorToConsensusEvent{
-			Payload: msg,
+			Payload: payload,
 			Type:    NOTIFY_VC_DONE,
 		})
 	case NOTIFY_SYNC_DONE:
@@ -89,8 +101,13 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 		if !ok {
 			return er.InvalidParamsErr
 		}
+
+		payload, err := proto.Marshal(&msg)
+		if err != nil {
+			return err
+		}
 		executor.helper.PostInner(event.ExecutorToConsensusEvent{
-			Payload: msg,
+			Payload: payload,
 			Type:    NOTIFY_SYNC_DONE,
 		})
 	default:

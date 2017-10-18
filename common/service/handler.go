@@ -5,5 +5,5 @@ import (
 )
 
 type Handler interface {
-	Handle(msg *pb.Message)
+	Handle(msg *pb.IMessage)
 }
