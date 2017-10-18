@@ -248,15 +248,15 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 }
 
 // UnSubscription unsubscribes a given event.
-func (api *PublicFilterAPI) UnSubscription(id string) error {
+func (api *PublicFilterAPI) UnSubscription(id string) (bool, error) {
 	api.filtersMu.Lock()
 	defer api.filtersMu.Unlock()
 	if f, found := api.filters[id]; found {
 		f.GetSubsctiption().Unsubscribe()
 		delete(api.filters, id)
-		return nil
+		return true, nil
 	}
-	return &common.SubNotExistError{Message: "required subscription does not existed or has expired"}
+	return false, &common.SubNotExistError{Message: "required subscription does not existed or has expired"}
 }
 
 // GetLogs returns eligible vm event logs.
