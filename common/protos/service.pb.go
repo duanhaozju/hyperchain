@@ -102,6 +102,7 @@ const (
 	// 2.Consensus event
 	Event_InformPrimaryEvent       Event = 0
 	Event_VCResetEvent             Event = 1
+	Event_ValidationEvent          Event = 2
 	Event_BroadcastConsensusEvent  Event = 3
 	Event_TxUniqueCastEvent        Event = 4
 	Event_CommitEvent              Event = 5

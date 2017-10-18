@@ -8,6 +8,7 @@ import (
     "errors"
     "github.com/op/go-logging"
     "hyperchain/namespace"
+    "hyperchain/service/executor/handler"
 )
 
 var logger *logging.Logger
@@ -91,7 +92,11 @@ func (em *ecManagerImpl) Start() error {
             if err != nil {
                 logger.Error("service Connect failed")
             }
+            // Add executor handler
+            h := handler.New(exec)
+            s.AddHandler(h)
             em.services[name] = s
+
         } else {
             logger.Errorf("Invalid folder %v", d)
         }

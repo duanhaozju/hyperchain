@@ -46,6 +46,7 @@ enum Event {
     //2.Consensus event
     InformPrimaryEvent = 0;
     VCResetEvent = 1;
+    ValidationEvent = 2;
     BroadcastConsensusEvent = 3;
     TxUniqueCastEvent = 4;
     CommitEvent = 5;
