@@ -10,15 +10,15 @@ import (
 	"hyperchain/consensus"
 	"hyperchain/consensus/rbft"
 	"hyperchain/core/executor"
+	"hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
+	flt "hyperchain/manager/filter"
 	m "hyperchain/manager/message"
 	"hyperchain/manager/protos"
 	"hyperchain/p2p"
-	"time"
-
-	flt "hyperchain/manager/filter"
 	"sync"
+	"time"
 )
 
 // This file defines a transfer station called Eventhub which is used to deliver
@@ -544,7 +544,7 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		hub.logger.Debug("message middleware: [transit block]")
 		hub.broadcast(BROADCAST_NVP, m.SessionMessage_TRANSIT_BLOCK, ev.Payload)
 	case executor.NOTIFY_NVP_SYNC:
-		hub.logger.Debug("message middleware: [NVP sync]")
+		hub.logger.Debug("message middleware: [nvp sync]")
 		syncMsg := &executor.ChainSyncRequest{}
 		proto.Unmarshal(ev.Payload, syncMsg)
 		syncMsg.PeerHash = hub.peerManager.GetLocalNodeHash()
@@ -554,6 +554,17 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 			return
 		}
 		hub.sendToRandomVP(m.SessionMessage_SYNC_REQ, payload)
+	case executor.NOTIFY_NVP_CONSULT:
+		hub.logger.Debug("message middleware: [nvp consult]")
+		syncMsg := &executor.Consult{}
+		proto.Unmarshal(ev.Payload, syncMsg)
+		syncMsg.NodeHash = hub.peerManager.GetLocalNodeHash()
+		payload, err := proto.Marshal(syncMsg)
+		if err != nil {
+			hub.logger.Error("message middleware: SendNVPSyncRequest marshal message failed")
+			return
+		}
+		hub.broadcast(BROADCAST_VP, m.SessionMessage_NVP_CONSULT, payload)
 	case executor.NOTIFY_REQUEST_WORLD_STATE:
 		hub.logger.Debugf("message middleware: [request world state]")
 		hub.send(m.SessionMessage_SYNC_WORLD_STATE, ev.Payload, ev.Peers)
@@ -621,6 +632,22 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 		go hub.GetEventObject().Post(event.NvpRelayTxEvent{
 			Payload: message.Payload,
 		})
+	case m.SessionMessage_NVP_CONSULT:
+		consult := &executor.Consult{}
+		proto.Unmarshal(ev.Message, consult)
+		var reply []byte
+		genesis, _ := chain.GetGenesisTag(hub.namespace)
+		if genesis <= consult.Height+1 {
+			// state transition is not necessary
+			reply = []byte{0x00}
+		} else {
+			// state transition is necessary
+			reply = []byte{0x01}
+		}
+		hub.sendToNVP(m.SessionMessage_NVP_CONSULT_REPLY, reply, []string{consult.NodeHash})
+	case m.SessionMessage_NVP_CONSULT_REPLY:
+		// TODO
+		hub.logger.Error("receive nvp consult reply", ev.Message)
 	default:
 		hub.logger.Error("receive a undefined session event")
 	}

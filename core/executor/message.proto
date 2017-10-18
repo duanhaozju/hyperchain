@@ -9,6 +9,12 @@ message ChainSyncRequest{
     string  peerHash       = 4;
 }
 
+// nvp sends Consult message to vps to make sure whether genesis state transition is necessary.
+message Consult {
+    string nodeHash = 1;
+    uint64 height = 2;
+}
+
 message WsContext {
     string  filterId      = 1;
     uint64  initiatorId   = 2;

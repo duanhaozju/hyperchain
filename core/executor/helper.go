@@ -311,7 +311,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		})
 		return nil
 	case NOTIFY_NVP_SYNC:
-		executor.logger.Debug("inform p2p to sync NVP")
+		executor.logger.Debug("inform p2p to sync nvp")
 		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64}, message...) {
 			return er.InvalidParamsErr
 		}
@@ -329,6 +329,25 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			Type:    NOTIFY_NVP_SYNC,
 		})
 		return nil
+	case NOTIFY_NVP_CONSULT:
+		executor.logger.Debug("inform p2p from nvp to negotiate ")
+		if !checkParams([]reflect.Kind{reflect.Chan}, message...) {
+			return er.InvalidParamsErr
+		}
+		consult := &Consult{
+			Height: edb.GetHeightOfChain(executor.namespace),
+		}
+		payload, err := proto.Marshal(consult)
+		if err != nil {
+			executor.logger.Errorf("marshal consult message failed")
+			return err
+		}
+		executor.helper.PostInner(event.ExecutorToP2PEvent{
+			Payload: payload,
+			Type:    NOTIFY_NVP_CONSULT,
+		})
+		return nil
+
 	default:
 		return er.NoDefinedCaseErr
 	}
