@@ -97,14 +97,6 @@ type CommitedBlockEvent struct {
 	Payload []byte
 }
 
-///*
-//	Executor events
-//*/
-//type ExecutorToConsensusEvent struct {
-//	Payload interface{} //TODO: change this to be type of byte[]
-//	Type    int
-//}
-
 /*
 	Admin events
 */

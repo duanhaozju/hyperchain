@@ -491,8 +491,8 @@ func (hub *EventHub) NegotiateView() {
 	hub.consenter.RecvLocal(negoView)
 }
 
-// dispatchExecutorToConsensus dispatches executor event to consensus module by its type.
-func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
+// DispatchExecutorToConsensus dispatches executor event to consensus module by its type.
+func (hub *EventHub) DispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_VC_DONE:
 		hub.logger.Debugf("message middleware: [vc done]")
@@ -527,8 +527,8 @@ func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEve
 	}
 }
 
-// dispatchExecutorToP2P dispatches executor event to p2p module by its type.
-func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
+// DispatchExecutorToP2P dispatches executor event to p2p module by its type.
+func (hub *EventHub) DispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_BROADCAST_DEMAND:
 		hub.logger.Debugf("message middleware: [broadcast demand]")
