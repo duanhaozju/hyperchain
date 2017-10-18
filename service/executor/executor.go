@@ -31,6 +31,7 @@ func newExecutorGlobal(argV *argT) *executorGlobal{
 	eg.exeMgr = manager.GetExecutorMgr(globalConfig, eg.stopFlag, eg.restartFlag)
 
 	//eg.apiServer = apiserver.GetAPIServer()
+	//TODO provides params to create a APIServer
 
 	return eg
 }
