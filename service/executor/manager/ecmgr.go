@@ -2,8 +2,6 @@ package manager
 
 import (
 	"hyperchain/common"
-	"hyperchain/core/executor"
-    "hyperchain/common/service"
     "io/ioutil"
     "errors"
     "github.com/op/go-logging"
@@ -39,10 +37,9 @@ type ecManagerImpl struct {
 	restartEm chan bool
 }
 
-
 func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bool) *ecManagerImpl {
 	em := &ecManagerImpl{
-		services:  make(map[string]*executorService),
+		services:  make(map[string]executorService),
         jvmManager:  namespace.NewJvmManager(conf),
         conf:        conf,
 		stopEm:      stopEm,
@@ -76,6 +73,7 @@ func (em *ecManagerImpl) Start() error {
             if !start {
                 continue
             }
+            // start each executor service
             service := NewExecutorService(name, em.conf)
             err := service.Start()
             if err != nil {

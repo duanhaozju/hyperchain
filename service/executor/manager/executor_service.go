@@ -6,6 +6,7 @@ import (
 	"hyperchain/core/executor"
 	"hyperchain/service/executor/handler"
     "github.com/pkg/errors"
+    pb "hyperchain/common/protos"
 )
 
 type executorService interface {
@@ -40,13 +41,23 @@ func (es *executorServiceImpl) Start() error {
 	if err != nil {
         return errors.New("new service failed in %v")
 	}
-	err = s.Connect()
+
+    //establish connection
+    err = s.Connect()
 	if err != nil {
 		return errors.New("service Connect failed")
 	}
 	// Add executor handler
 	h := handler.New(exec)
 	s.AddHandler(h)
+
+    //register the namespace
+    err = s.Register(pb.FROM_EXECUTOR, &pb.RegisterMessage{
+        Namespace: es.namespace,
+    })
+    if err != nil{
+        logger.Error("service Register failed")
+    }
 	return nil
 }
 

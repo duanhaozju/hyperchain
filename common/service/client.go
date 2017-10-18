@@ -200,18 +200,21 @@ func (sc *ServiceClient) listenProcessMsg() {
 	}()
 
 	sc.logger.Debug("Start Message processing go routine")
-	for {
-		select {
-		case msg := <-sc.msgRecv:
-			if sc.h == nil {
-				sc.logger.Debug("No handler to handle message: %v")
-			} else {
-				sc.h.Handle(msg)
+
+	go func() {
+		for {
+			select {
+			case msg := <-sc.msgRecv:
+				if sc.h == nil {
+					sc.logger.Debug("No handler to handle message: %v")
+				} else {
+					sc.h.Handle(msg)
+				}
+			case <-sc.close:
+				return
 			}
-		case <-sc.close:
-			return
 		}
-	}
+	}()
 }
 
 //string service client description
