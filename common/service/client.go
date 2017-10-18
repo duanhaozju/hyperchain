@@ -20,7 +20,8 @@ type ServiceClient struct {
 	sid  string // service id
 	ns   string // namespace
 
-	msgs   chan *pb.Message //received messages from server
+	msgRecv		chan *pb.Message //received messages from server
+	msgSend		chan *pb.Message //send message to server
 	slock  sync.RWMutex
 	client pb.Dispatcher_RegisterClient
 
@@ -37,7 +38,8 @@ func New(port int, host, sid, ns string) (*ServiceClient, error) {
 	return &ServiceClient{
 		host:   host,
 		port:   port,
-		msgs:   make(chan *pb.Message, 1024),
+		msgRecv:   make(chan *pb.Message, 1024),
+		msgSend:   make(chan *pb.Message, 1024),
 		logger: logging.MustGetLogger("service_client"),
 		// TODO: replace this logger with hyperlogger ?
 		sid:    sid,
@@ -129,6 +131,8 @@ func (sc *ServiceClient) Register(serviceType pb.FROM, rm *pb.RegisterMessage) e
 
 	if msg.Type == pb.Type_RESPONSE && msg.Ok == true {
 		sc.logger.Infof("%s register successful", sc.string())
+		sc.listenStreamMsg()
+		sc.listenProcessMsg()
 		return nil
 	} else {
 		return fmt.Errorf("%s register failed", sc.string())
@@ -174,7 +178,7 @@ func (sc *ServiceClient) AddHandler(h Handler) {
 	sc.h = h
 }
 
-func (sc *ServiceClient) ProcessMessagesUntilExit() {
+func (sc *ServiceClient) listenProcessMsg() {
 	go func() {
 		for {
 			msg, err := sc.stream().Recv()
@@ -190,7 +194,7 @@ func (sc *ServiceClient) ProcessMessagesUntilExit() {
 				}
 			}
 			if msg != nil {
-				sc.msgs <- msg
+				sc.msgRecv <- msg
 			}
 		}
 	}()
@@ -198,7 +202,7 @@ func (sc *ServiceClient) ProcessMessagesUntilExit() {
 	sc.logger.Debug("Start Message processing go routine")
 	for {
 		select {
-		case msg := <-sc.msgs:
+		case msg := <-sc.msgRecv:
 			if sc.h == nil {
 				sc.logger.Debug("No handler to handle message: %v")
 			} else {
@@ -227,4 +231,16 @@ func getFrom(sid string) pb.FROM {
 		return pb.FROM_APISERVER
 	}
 	return -1
+}
+
+//send message outer when executor generated
+func (sc *ServiceClient) listenStreamMsg(){
+	go func() {
+		for {
+			select {
+			case msg := <-sc.msgSend:
+			sc.Send(msg)
+			}
+		}
+	}()
 }

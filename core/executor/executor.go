@@ -48,6 +48,8 @@ type Executor struct {
 	snapshotReg *SnapshotRegistry    // snapshot registry
 	archiveMgr  *ArchiveManager      // archive manager
 	nvp         NVP
+	chSend		chan interface{}
+	chRecv		chan interface{}
 }
 
 // NewExecutor creates a new Hyperchain object (including the
