@@ -7,6 +7,7 @@ import (
 	"hyperchain/service/executor/handler"
     "github.com/pkg/errors"
     pb "hyperchain/common/protos"
+	"hyperchain/service/executor/api"
 )
 
 type executorService interface {
@@ -23,6 +24,9 @@ type executorServiceImpl struct {
 	service *service.ServiceClient
 	// config
 	conf *common.Config
+
+	executorApi api.ExecutorApi
+
 }
 
 func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
@@ -42,6 +46,7 @@ func (es *executorServiceImpl) Start() error {
         return errors.New("new service failed in %v")
 	}
 
+	es.executorApi = api.NewExecutorApi(exec, es.namespace)
     //establish connection
     err = s.Connect()
 	if err != nil {
