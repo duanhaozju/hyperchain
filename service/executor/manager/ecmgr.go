@@ -9,6 +9,7 @@ import (
     "github.com/op/go-logging"
     "hyperchain/namespace"
     "hyperchain/service/executor/handler"
+    pb "hyperchain/common/protos"
 )
 
 var logger *logging.Logger
@@ -88,13 +89,23 @@ func (em *ecManagerImpl) Start() error {
             if err != nil {
                 logger.Errorf("new service failed in %v")
             }
+			//establish connection
             err = s.Connect()
             if err != nil {
                 logger.Error("service Connect failed")
             }
+			//register the namespace
+            err = s.Register(service.EXECUTOR, &pb.RegisterMessage{
+                Namespace: name,
+            })
+            if err != nil{
+                logger.Error("service Register failed")
+            }
+
             // Add executor handler
             h := handler.New(exec)
             s.AddHandler(h)
+
             em.services[name] = s
 
         } else {

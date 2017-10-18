@@ -9,11 +9,3 @@ type Handler interface {
 	//deal and response
 }
 
-type handlerImpl struct {
-}
-
-func (*handlerImpl) Handle(msg *pb.Message) {
-	//call executor method
-
-
-}
