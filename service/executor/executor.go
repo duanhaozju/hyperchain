@@ -6,11 +6,11 @@ import (
 	"hyperchain/common"
 	"github.com/op/go-logging"
 	"hyperchain/service/executor/apiserver"
-	"hyperchain/service/executor/executor"
+	"hyperchain/service/executor/manager"
 )
 
 type executorGlobal struct {
-	exeMgr		executor.ExecutorManager
+	exeMgr		manager.ExecutorManager
 	apiServer	apiserver.APIServer
 	stopFlag    chan bool
 	restartFlag chan bool
@@ -28,7 +28,7 @@ func newExecutorGlobal(argV *argT) *executorGlobal{
 	common.InitHyperLoggerManager(globalConfig)
 	logger = common.GetLogger(common.DEFAULT_LOG, "main")
 
-	eg.exeMgr = executor.GetExecutorMgr(globalConfig, eg.stopFlag, eg.restartFlag)
+	eg.exeMgr = manager.GetExecutorMgr(globalConfig, eg.stopFlag, eg.restartFlag)
 
 	//eg.apiServer = apiserver.GetAPIServer()
 
@@ -63,14 +63,14 @@ func main() {
 }
 
 
-func (h *executorGlobal) start() {
+func (h *executorGlobal) start() error {
 	err := h.exeMgr.Start()
 	if err != nil {
 		return err
 	}
 
 	h.apiServer.Start()
-
+    return nil
 
 }
 
@@ -90,7 +90,7 @@ type argT struct {
 	RestoreEnable bool   `cli:"r,restore" usage:"enable restore system status from dumpfile"`
 	SId           string `cli:"sid" usage:"use to specify snapshot" dft:""`
 	Namespace     string `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
-	ConfigPath    string `cli:"c,conf" usage:"config file path" dft:"./global.toml"`
+	ConfigPath    string `cli:"c,conf" usage:"config file path" dft:"../../configuration/global.toml"`
 	IPCEndpoint   string `cli:"ipc" usage:"ipc interactive shell attach endpoint" dft:"./hpc.ipc"`
 	Shell         bool   `cli:"s,shell" usage:"start interactive shell" dft:"false"`
 	PProfEnable   bool   `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`

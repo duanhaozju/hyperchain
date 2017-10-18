@@ -31,6 +31,7 @@ func (lsi *localServiceImpl) Id() string {
 
 func (lsi *localServiceImpl) Send(event interface{}) error {
 	lsi.eventMux.Post(event)
+	return nil
 }
 
 func (lsi *localServiceImpl) Close() {
