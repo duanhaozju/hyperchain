@@ -6,6 +6,7 @@ import (
 	"hyperchain/manager"
 	"hyperchain/manager/event"
 	flt "hyperchain/manager/filter"
+	hm "hyperchain/service/executor/manager"
 )
 
 // This file implements the handler of Archive service API which
@@ -16,15 +17,18 @@ type Archive struct {
 	namespace string
 	config    *common.Config
 	isPublic  bool
+	em        *hm.ExecutorManager
 }
 
 // NewPublicArchiveAPI creates and returns a new Archive instance for given namespace name.
-func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.Config) *Archive {
+func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.Config,
+em *hm.ExecutorManager) *Archive {
 	return &Archive{
 		namespace: namespace,
 		eh:        eh,
 		config:    config,
 		isPublic:  true,
+		em:        em,
 	}
 }
 
@@ -47,10 +51,13 @@ func (admin *Archive) Snapshot(blockNumber uint64) (string, error) {
 
 	filterId := flt.NewFilterID()
 	log.Debugf("receive snapshot rpc command, params: (block number #%d), filterId: (%s)", blockNumber, filterId)
-	admin.eh.GetEventObject().Post(event.SnapshotEvent{
-		FilterId:    filterId,
-		BlockNumber: blockNumber,
-	})
+	//admin.eh.GetEventObject().Post(event.SnapshotEvent{
+	//	FilterId:    filterId,
+	//	BlockNumber: blockNumber,
+	//})
+	//admin.em.GetExecutorByName(admin. namespace).Snapshot()
+
+
 	return filterId, nil
 }
 
@@ -137,11 +144,12 @@ func (admin *Archive) Archive(filterId string, sync bool) (bool, error) {
 	log := common.GetLogger(admin.namespace, "api")
 	log.Debugf("receive archive command, params: filterId: (%s)", filterId)
 	cont := make(chan error)
-	admin.eh.GetEventObject().Post(event.ArchiveEvent{
-		FilterId: filterId,
-		Cont:     cont,
-		Sync:     sync,
-	})
+
+	//admin.eh.GetEventObject().Post(event.ArchiveEvent{
+	//	FilterId: filterId,
+	//	Cont:     cont,
+	//	Sync:     sync,
+	//})
 	err := <-cont
 	if err != nil {
 		return false, &common.SnapshotErr{Message: err.Error()}
