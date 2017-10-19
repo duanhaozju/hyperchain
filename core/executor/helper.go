@@ -63,6 +63,22 @@ func (helper *Helper) PostInner(ev interface{}) {
 
 // PostExternal post event to outer event mux
 func (helper *Helper) PostExternal(ev interface{}) {
+    msg := &pb.IMessage{
+        Type: pb.Type_DISPATCH,
+        From: pb.FROM_EXECUTOR,
+    }
+    switch ev.(type) {
+    case event.ExecutorToConsensusEvent:
+        msg.Event = pb.Event_ExecutorToConsensusEvent
+        mv, err := proto.Marshal(ev.(*event.ExecutorToConsensusEvent))
+        msg.Payload = mv
+    case event.ExecutorToP2PEvent:
+        msg.Event = pb.Event_ExecutorToP2PEvent
+        mv, err := proto.Marshal(ev.(*event.ExecutorToP2PEvent))
+        msg.Payload = mv
+    }
+    helper.client.Send(msg)
+    return
 	helper.externalMux.Post(ev)
 }
 
