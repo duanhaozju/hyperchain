@@ -74,6 +74,10 @@ func (tm *timerManager) startTimer(name string, event *LocalEvent, queue *event.
 // startTimerWithNewTT starts the timer with the given name and timeout, then sets the event which will be triggered
 // after this timeout
 func (tm *timerManager) startTimerWithNewTT(name string, d time.Duration, event *LocalEvent, queue *event.TypeMux) int {
+	if queue == nil {
+		tm.logger.Error("find a nil TypeMux when start %s with duration: %v", name, d)
+		return 0
+	}
 	tm.stopTimer(name)
 
 	tm.ttimers[name].isActive = append(tm.ttimers[name].isActive, true)

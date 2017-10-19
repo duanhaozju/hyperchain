@@ -27,7 +27,7 @@ type batchManager struct {
 type batchValidator struct {
 	lastVid             uint64  // track the last validate batch seqNo
 	currentVid          *uint64 // track the current validate batch seqNo
-	validateCount       int32
+	validateCount       uint64   // track the validate event which has been sent to executor module but hasn't been committed
 	cacheValidatedBatch map[string]*cacheBatch // track the cached validated batch
 
 	validateTimeout time.Duration
@@ -81,6 +81,7 @@ func newBatchValidator() *batchValidator {
 	bv := &batchValidator{}
 	bv.cacheValidatedBatch = make(map[string]*cacheBatch)
 	bv.preparedCert = make(map[vidx]string)
+	bv.validateCount = 0
 	return bv
 }
 
@@ -197,7 +198,14 @@ func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 		n = rbft.seqNo + 1
 	}
 
+	// ignore too many validated batch as we limited the high watermark in send pre-prepare
+	if rbft.batchVdr.validateCount >= rbft.L {
+		rbft.logger.Warningf("Primary %d try to validate batch for vid=%d, but we had already send %d ValidateEvent", rbft.id, n, rbft.batchVdr.validateCount)
+		return
+	}
+
 	rbft.seqNo = n
+	rbft.batchVdr.validateCount ++
 
 	// store batch to outstandingReqBatches until execute this batch
 	rbft.storeMgr.outstandingReqBatches[digest] = batch

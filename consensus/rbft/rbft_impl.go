@@ -75,6 +75,7 @@ func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 
 	rbft.namespace = namespace
 	rbft.helper = h
+	rbft.eventMux = new(event.TypeMux)
 	rbft.config = config
 	if !config.ContainsKey(common.C_NODE_ID) {
 		err = fmt.Errorf("No hyperchain id specified!, key: %s", common.C_NODE_ID)
@@ -249,6 +250,7 @@ func (rbft *rbftImpl) enqueueConsensusMsg(msg *protos.Message) error {
 // processNullRequest process null request when it come
 func (rbft *rbftImpl) processNullRequest(msg *protos.Message) error {
 	if rbft.status.getState(&rbft.status.inNegoView) {
+		rbft.logger.Warningf("Replica %d is in negotiate view, reject null request from replica %d", rbft.id, msg.Id)
 		return nil
 	}
 
@@ -351,6 +353,7 @@ func (rbft *rbftImpl) findNextPrePrepareBatch() (find bool, digest string, resul
 		// check for other PRE-PREPARE for same digest, but different seqNo
 		if rbft.storeMgr.existedDigest(n, rbft.view, digest) {
 			rbft.deleteExistedTx(digest)
+			rbft.batchVdr.validateCount --
 			continue
 		}
 
@@ -768,7 +771,9 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 			rbft.logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", rbft.id, idx.v, idx.n)
 			rbft.persistCSet(idx.v, idx.n, idx.d)
 			isPrimary := rbft.isPrimary(rbft.id)
-			//rbft.vcMgr.vcResendCount = 0
+			if isPrimary {
+				rbft.batchVdr.validateCount --
+			}
 			rbft.helper.Execute(idx.n, cert.resultHash, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)
 			cert.sentExecute = true
 			rbft.afterCommitBlock(idx)

@@ -5,12 +5,10 @@ package rbft
 
 import (
 	"fmt"
-	"strconv"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"hyperchain/common"
 	"hyperchain/consensus/consensusMocks"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
@@ -19,6 +17,8 @@ import (
 	"github.com/facebookgo/ensure"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
+	"strconv"
+	"hyperchain/common"
 )
 
 //for test, make a cert pre-prepared.
@@ -102,10 +102,9 @@ func TestPbftImpl_NewPbft(t *testing.T) {
 	ensure.DeepEqual(t, rbft.seqNo, uint64(0))
 	ensure.DeepEqual(t, rbft.view, uint64(0))
 
-	//Test Consenter interface
+	// Test Consenter interface
 	rbft.Start()
 
-	//pbft.RecvMsg()
 	rbft.Close()
 
 }

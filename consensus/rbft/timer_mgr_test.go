@@ -10,9 +10,9 @@ import (
 	"hyperchain/common"
 	"hyperchain/consensus/helper/persist"
 	mdb "hyperchain/hyperdb/mdb"
-	"hyperchain/manager/event"
 
 	"github.com/stretchr/testify/assert"
+	"hyperchain/manager/event"
 )
 
 func TestPbftTimeFunctions(t *testing.T) {

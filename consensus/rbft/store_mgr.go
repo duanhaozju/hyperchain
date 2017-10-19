@@ -126,7 +126,6 @@ func (sm *storeManager) getChkptCert(n uint64, id string) (cert *chkptCert) {
 
 // existedDigest checks if there exists another PRE-PREPARE message in certStore which has the same digest, same view,
 // but different seqNo with the given one
-// TODO change this func to rbftImpl
 func (sm *storeManager) existedDigest(n uint64, view uint64, digest string) bool {
 	for _, cert := range sm.certStore {
 		if p := cert.prePrepare; p != nil {

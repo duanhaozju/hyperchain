@@ -114,7 +114,6 @@ func (rbft *rbftImpl) Close() {
 	rbft.logger.Notice("PBFT stop event process service")
 	rbft.timerMgr.Stop()
 	rbft.batchMgr.stop()
-	//rbft.rbftManager.Stop()
 
 	if rbft.close != nil {
 		close(rbft.close)

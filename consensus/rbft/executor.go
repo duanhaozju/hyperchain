@@ -130,6 +130,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 			!rbft.status.getState(&rbft.status.skipInProgress) {
 			atomic.StoreUint32(&rbft.normal, 1)
 		}
+		rbft.batchVdr.validateCount = 0
 		rbft.logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/height=%d", rbft.id, primary, rbft.view, rbft.exec.lastExec)
 		viewChangeResult := fmt.Sprintf("Replica %d finished viewChange, primary=%d, view=%d/height=%d", rbft.id, primary, rbft.view, rbft.exec.lastExec)
 
