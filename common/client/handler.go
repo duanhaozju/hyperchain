@@ -1,4 +1,4 @@
-package service
+package client
 
 import (
 	pb "hyperchain/common/protos"

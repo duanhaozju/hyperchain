@@ -3,10 +3,10 @@ package handler
 import (
     "hyperchain/manager/event"
     "github.com/op/go-logging"
-    "hyperchain/common/service"
     pb "hyperchain/common/protos"
     "github.com/golang/protobuf/proto"
     "hyperchain/core/executor"
+    "hyperchain/common/client"
 )
 
 var logger *logging.Logger
@@ -19,7 +19,7 @@ type ExecutorHandler struct {
     executor    *executor.Executor
 }
 
-func New(executor *executor.Executor) service.Handler {
+func New(executor *executor.Executor) client.Handler {
     return &ExecutorHandler{
         executor:   executor,
     }

@@ -1,4 +1,4 @@
-package service
+package client
 
 import (
 	"context"
@@ -10,6 +10,14 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+)
+
+const (
+    CONSENTER = "consenter"
+    APISERVER = "apiserver"
+    EXECUTOR  = "executor"
+    NETWORK   = "network"
+    EVENTHUB  = "eventhub"
 )
 
 // ServiceClient used to send messages to eventhub or receive message

@@ -18,24 +18,26 @@ import (
 	er "hyperchain/core/errors"
 	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
-	"hyperchain/manager/event"
+	//"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"reflect"
     pb "hyperchain/common/protos"
+    "hyperchain/common/client"
+    "hyperchain/manager/event"
 )
 
 // Communication mux implementation
 type Helper struct {
-	innerMux    *event.TypeMux // system internal mux
-	externalMux *event.TypeMux // subscription system mux
-	//client      *service.ServiceClient
+	//innerMux    *event.TypeMux // system internal mux
+	//externalMux *event.TypeMux // subscription system mux
+	client      *client.ServiceClient
 }
 
-func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *Helper {
+func NewHelper(client *client.ServiceClient) *Helper {
 	return &Helper{
-		innerMux:    innerMux,
-		externalMux: externalMux,
-		//client:      client,
+		//innerMux:    innerMux,
+		//externalMux: externalMux,
+		client:      client,
 	}
 }
 
@@ -47,14 +49,17 @@ func (helper *Helper) handlePost(ev interface{}) *pb.IMessage {
     switch ev.(type) {
     case event.ExecutorToConsensusEvent:
         msg.Event = pb.Event_ExecutorToConsensusEvent
-        mv, err := proto.Marshal(ev.(*event.ExecutorToConsensusEvent))
+        e := ev.(event.ExecutorToConsensusEvent)
+        mv, err := proto.Marshal(&e)
+
         if err != nil {
             return nil
         }
         msg.Payload = mv
     case event.ExecutorToP2PEvent:
         msg.Event = pb.Event_ExecutorToP2PEvent
-        mv, err := proto.Marshal(ev.(*event.ExecutorToP2PEvent))
+        e := ev.(event.ExecutorToConsensusEvent)
+        mv, err := proto.Marshal(&e)
         if err != nil {
             return nil
         }
@@ -65,18 +70,18 @@ func (helper *Helper) handlePost(ev interface{}) *pb.IMessage {
 
 // PostInner post event to inner event mux
 func (helper *Helper) PostInner(ev interface{}) {
-    //msg := helper.handlePost(ev)
-    //helper.client.Send(msg)
-    //return
-	helper.innerMux.Post(ev)
+    msg := helper.handlePost(ev)
+    helper.client.Send(msg)
+    return
+    //helper.innerMux.Post(ev)
 }
 
 // PostExternal post event to outer event mux
 func (helper *Helper) PostExternal(ev interface{}) {
-    //msg := helper.handlePost(ev)
-    //helper.client.Send(msg)
-    //return
-	helper.externalMux.Post(ev)
+    msg := helper.handlePost(ev)
+    helper.client.Send(msg)
+    return
+	//helper.externalMux.Post(ev)
 }
 
 // checkParams the checker of the parameters, check whether the parameters are satisfied

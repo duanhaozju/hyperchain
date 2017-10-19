@@ -9,6 +9,7 @@ import (
     "github.com/op/go-logging"
     "hyperchain/core/ledger/chain"
     "hyperchain/hyperdb"
+    "hyperchain/common/client"
 )
 
 type executorService interface {
@@ -22,7 +23,7 @@ type executorServiceImpl struct {
 	// real executor object
 	executor *executor.Executor
 	// manager the connection with service
-	service *service.ServiceClient
+	service *client.ServiceClient
 	// config
 	conf *common.Config
 	// logger
@@ -56,8 +57,16 @@ func (es *executorServiceImpl) init() error {
         return err
     }
 
-    // 2. initial executor
-    executor, err := executor.NewExecutor(es.namespace, es.conf, nil, nil)
+    // 2. initial service client
+    service, err := client.New(50071, "127.0.0.1", service.EXECUTOR, es.namespace)
+    if err != nil {
+        es.logger.Errorf("Init service client for namespace %s error, %v", es.namespace, err)
+        return err
+    }
+    es.service = service
+
+    // 3. initial executor
+    executor, err := executor.NewExecutor(es.namespace, es.conf, es.service)
     if err != nil {
         es.logger.Errorf("Init executor service for namespace %s error, %v", es.namespace, err)
         return err
@@ -65,13 +74,7 @@ func (es *executorServiceImpl) init() error {
     executor.CreateInitBlock(es.conf)
     es.executor = executor
 
-    // 3. initial service client
-    service, err := service.New(50071, "127.0.0.1", service.EXECUTOR, es.namespace)
-    if err != nil {
-        es.logger.Errorf("Init service client for namespace %s error, %v", es.namespace, err)
-        return err
-    }
-    es.service = service
+
 
     // 4. add executor handler
     h := handler.New(executor)
