@@ -7,6 +7,7 @@ import (
 	"hyperchain/namespace"
 	"io/ioutil"
     "os"
+	"hyperchain/common/service"
 )
 
 var logger *logging.Logger
@@ -20,6 +21,8 @@ type ExecutorManager interface {
 	Start() error
 
 	Stop() error
+
+	GetExecutorByName(name string) executorService
 }
 
 type ecManagerImpl struct {
@@ -125,6 +128,15 @@ func (em *ecManagerImpl) Stop() error {
 	// stop jvm
 	if err := em.jvmManager.Stop(); err != nil {
 		logger.Errorf("Stop hyperjvm error %v", err)
+	}
+	return nil
+}
+
+func (em *ecManagerImpl) GetExecutorByName(name string) executorService  {
+	//nr.rwLock.RLock()
+	//defer nr.rwLock.RUnlock()
+	if es, ok := em.services[name]; ok {
+		return es
 	}
 	return nil
 }

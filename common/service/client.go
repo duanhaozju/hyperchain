@@ -242,7 +242,9 @@ func (sc *ServiceClient) listenStreamMsg(){
 		for {
 			select {
 			case msg := <-sc.msgSend:
-			sc.Send(msg)
+				sc.Send(msg)
+			case <- sc.close:
+				return
 			}
 		}
 	}()
