@@ -11,6 +11,7 @@ import (
     "hyperchain/hyperdb"
     "hyperchain/service/executor/api"
 	"sync"
+	"hyperchain/namespace/rpc"
 )
 
 type executorService interface {
@@ -21,6 +22,9 @@ type executorService interface {
 
 	// ProcessRequest process request under this namespace.
 	ProcessRequest(request interface{}) interface{}
+
+	// Name returns the name of current namespace.
+	Name() string
 }
 
 type executorServiceImpl struct {
@@ -38,6 +42,8 @@ type executorServiceImpl struct {
 	executorApi *api.ExecutorApi
 
 	status  *Status
+
+	rpc       rpc.RequestProcessor
 
 }
 
@@ -201,6 +207,21 @@ func (es *executorServiceImpl) Stop() error {
 }
 
 func (es *executorServiceImpl) ProcessRequest(request interface{}) interface{}{
-	//TODO Need to finish logic
+	//TODO Check finish logic
+	if es.status.getState() == running {
+		if request != nil {
+			switch r := request.(type) {
+			case *common.RPCRequest:
+				return es.handleJsonRequest(r)
+			default:
+				es.logger.Errorf("event not supported %v", r)
+			}
+		}
+	}
+	es.logger.Errorf("Process request error, namespace %s is not running now!", es.namespace)
 	return nil
+}
+
+func (es *executorServiceImpl) handleJsonRequest(request *common.RPCRequest) *common.RPCResponse {
+	return es.rpc.ProcessRequest(request)
 }

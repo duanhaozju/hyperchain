@@ -7,6 +7,7 @@ import (
 	"hyperchain/namespace"
 	"io/ioutil"
     "os"
+	"sync"
 )
 
 var logger *logging.Logger
@@ -37,7 +38,11 @@ type ecManagerImpl struct {
 	conf *common.Config
 
 	stopEm    chan bool
+
 	restartEm chan bool
+
+	rwLock *sync.RWMutex
+
 }
 
 func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bool) *ecManagerImpl {
@@ -143,6 +148,10 @@ func (em *ecManagerImpl) ProcessRequest(namespace string, request interface{}) i
 }
 
 func (em *ecManagerImpl) GetExecutorServiceByName(name string) executorService {
-	//TODO Need to finish logic
+	em.rwLock.RLock()
+	defer em.rwLock.RUnlock()
+	if es, ok := em.services[name]; ok {
+		return es
+	}
 	return nil
 }
