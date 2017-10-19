@@ -18,25 +18,24 @@ import (
 	er "hyperchain/core/errors"
 	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
-	//"hyperchain/manager/event"
+	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"reflect"
     pb "hyperchain/common/protos"
     "hyperchain/common/client"
-    "hyperchain/manager/event"
 )
 
 // Communication mux implementation
 type Helper struct {
-	//innerMux    *event.TypeMux // system internal mux
-	//externalMux *event.TypeMux // subscription system mux
+	innerMux    *event.TypeMux // system internal mux
+	externalMux *event.TypeMux // subscription system mux
 	client      *client.ServiceClient
 }
 
-func NewHelper(client *client.ServiceClient) *Helper {
+func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux, client *client.ServiceClient) *Helper {
 	return &Helper{
-		//innerMux:    innerMux,
-		//externalMux: externalMux,
+		innerMux:    innerMux,
+		externalMux: externalMux,
 		client:      client,
 	}
 }
@@ -68,20 +67,25 @@ func (helper *Helper) handlePost(ev interface{}) *pb.IMessage {
     return msg
 }
 
+var isDistributed = true
 // PostInner post event to inner event mux
 func (helper *Helper) PostInner(ev interface{}) {
-    msg := helper.handlePost(ev)
-    helper.client.Send(msg)
-    return
-    //helper.innerMux.Post(ev)
+    if isDistributed {
+        msg := helper.handlePost(ev)
+        helper.client.Send(msg)
+    } else {
+        helper.innerMux.Post(ev)
+    }
 }
 
 // PostExternal post event to outer event mux
 func (helper *Helper) PostExternal(ev interface{}) {
-    msg := helper.handlePost(ev)
-    helper.client.Send(msg)
-    return
-	//helper.externalMux.Post(ev)
+    if isDistributed {
+        msg := helper.handlePost(ev)
+        helper.client.Send(msg)
+    } else {
+        helper.externalMux.Post(ev)
+    }
 }
 
 // checkParams the checker of the parameters, check whether the parameters are satisfied
