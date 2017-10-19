@@ -234,6 +234,8 @@ func (es *executorServiceImpl) handleJsonRequest(request *common.RPCRequest) *co
 }
 
 func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
+
+	//TODO need to add more APIS
 	return map[string]*hapi.API{
 		"block": {
 			Svcname: "block",
