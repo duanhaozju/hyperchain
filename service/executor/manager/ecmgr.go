@@ -6,13 +6,13 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"io/ioutil"
-    "os"
+	"os"
 	"sync"
 )
 
 var logger *logging.Logger
 
-const (E
+const (
 	DEFAULT_NAMESPACE  = "global"
 	NS_CONFIG_DIR_ROOT = "namespace.config_root_dir"
 )
@@ -37,12 +37,11 @@ type ecManagerImpl struct {
 	// of the node
 	conf *common.Config
 
-	stopEm    chan bool
+	stopEm chan bool
 
 	restartEm chan bool
 
 	rwLock *sync.RWMutex
-
 }
 
 func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bool) *ecManagerImpl {
@@ -74,7 +73,7 @@ func (em *ecManagerImpl) Start() error {
 
 	// start all executor service
 	for _, d := range dirs {
-        if d.IsDir() {
+		if d.IsDir() {
 			name := d.Name()
 			start := em.conf.GetBool(common.START_NAMESPACE + name)
 			if !start {
@@ -105,23 +104,23 @@ func (em *ecManagerImpl) Start() error {
 }
 
 func (em *ecManagerImpl) getConfig(name string) (*common.Config, error) {
-    configRootDir := em.conf.GetString(NS_CONFIG_DIR_ROOT)
-    if configRootDir == "" {
-        return nil, errors.New("Namespace config root dir is not valid ")
-    }
-    nsRootPath := configRootDir + "/" + name
-    if _, err := os.Stat(nsRootPath); os.IsNotExist(err) {
-        logger.Errorf("namespace [%s] root path doesn't exist!", name)
-    }
-    nsConfigDir := nsRootPath + "/config"
+	configRootDir := em.conf.GetString(NS_CONFIG_DIR_ROOT)
+	if configRootDir == "" {
+		return nil, errors.New("Namespace config root dir is not valid ")
+	}
+	nsRootPath := configRootDir + "/" + name
+	if _, err := os.Stat(nsRootPath); os.IsNotExist(err) {
+		logger.Errorf("namespace [%s] root path doesn't exist!", name)
+	}
+	nsConfigDir := nsRootPath + "/config"
 
-    // init namespace configuration(namespace.toml)
-    nsConfigPath := nsConfigDir + "/namespace.toml"
-    if _, err := os.Stat(nsConfigPath); os.IsNotExist(err) {
-        logger.Error("namespace config file doesn't exist!")
-    }
-    conf := common.NewConfig(nsConfigPath)
-    return conf, nil
+	// init namespace configuration(namespace.toml)
+	nsConfigPath := nsConfigDir + "/namespace.toml"
+	if _, err := os.Stat(nsConfigPath); os.IsNotExist(err) {
+		logger.Error("namespace config file doesn't exist!")
+	}
+	conf := common.NewConfig(nsConfigPath)
+	return conf, nil
 }
 
 func (em *ecManagerImpl) Stop() error {

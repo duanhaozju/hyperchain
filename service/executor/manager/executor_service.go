@@ -1,22 +1,21 @@
 package manager
 
 import (
+	"github.com/op/go-logging"
+	hapi "hyperchain/api"
 	"hyperchain/common"
+	pb "hyperchain/common/protos"
 	"hyperchain/common/service"
 	"hyperchain/core/executor"
-	"hyperchain/service/executor/handler"
-    	pb "hyperchain/common/protos"
-    	"github.com/op/go-logging"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/hyperdb"
-	"hyperchain/service/executor/api"
-	"sync"
 	"hyperchain/namespace/rpc"
-	hapi"hyperchain/api"
+	"hyperchain/service/executor/api"
+	"hyperchain/service/executor/handler"
+	"sync"
 )
 
 type executorService interface {
-
 	Start() error
 
 	Stop() error
@@ -42,10 +41,9 @@ type executorServiceImpl struct {
 
 	executorApi *api.ExecutorApi
 
-	status  *Status
+	status *Status
 
-	rpc       rpc.RequestProcessor
-
+	rpc rpc.RequestProcessor
 }
 
 type EsState int
@@ -99,121 +97,125 @@ func (s *Status) setDescription() {
 func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
 
 	// init hyper logger for executor service
-    	conf.Set(common.NAMESPACE, ns)
-    	if err := common.InitHyperLogger(ns, conf); err != nil {
-        	return nil
-    	}
+	conf.Set(common.NAMESPACE, ns)
+	if err := common.InitHyperLogger(ns, conf); err != nil {
+		return nil
+	}
 	status := &Status{
 		state: newed,
 		desc:  "newed",
 		lock:  new(sync.RWMutex),
 	}
-    	return &executorServiceImpl{
+
+	return &executorServiceImpl{
 		namespace: ns,
 		conf:      conf,
 		logger:    common.GetLogger(ns, "executor_service"),
-	    	status:    status,
-    	}
+		status:    status,
+	}
 }
 
 func (es *executorServiceImpl) init() error {
-    es.logger.Criticalf("Init executor service %s", es.namespace)
+	es.logger.Criticalf("Init executor service %s", es.namespace)
 
-    // 1. init DB for current executor service.
-    err := chain.InitDBForNamespace(es.conf, es.namespace)
-    if err != nil {
-        es.logger.Errorf("Init db for namespace: %s error, %v", es.namespace, err)
-        return err
-    }
+	// 1. init DB for current executor service.
+	err := chain.InitDBForNamespace(es.conf, es.namespace)
+	if err != nil {
+		es.logger.Errorf("Init db for namespace: %s error, %v", es.namespace, err)
+		return err
+	}
 
-    // 2. initial executor
-    executor, err := executor.NewExecutor(es.namespace, es.conf, nil, nil)
-    if err != nil {
-        es.logger.Errorf("Init executor service for namespace %s error, %v", es.namespace, err)
-        return err
-    }
-    executor.CreateInitBlock(es.conf)
-    es.executor = executor
+	// 2. initial executor
+	executor, err := executor.NewExecutor(es.namespace, es.conf, nil, nil)
+	if err != nil {
+		es.logger.Errorf("Init executor service for namespace %s error, %v", es.namespace, err)
+		return err
+	}
+	executor.CreateInitBlock(es.conf)
+	es.executor = executor
 
-    // 3. initial service client
-    service, err := service.New(50071, "127.0.0.1", service.EXECUTOR, es.namespace)
-    if err != nil {
-        es.logger.Errorf("Init service client for namespace %s error, %v", es.namespace, err)
-        return err
-    }
-    es.service = service
+	// 3. initial service client
+	service, err := service.New(50071, "127.0.0.1", service.EXECUTOR, es.namespace)
+	if err != nil {
+		es.logger.Errorf("Init service client for namespace %s error, %v", es.namespace, err)
+		return err
+	}
+	es.service = service
 
-    // 4. add executor handler
-    h := handler.New(executor)
-    service.AddHandler(h)
+	// 4. add executor handler
+	h := handler.New(executor)
+	service.AddHandler(h)
 
-    return nil
+	// 5. add jsonrpc processor
+	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace))
+
+	return nil
 }
 
 func (es *executorServiceImpl) Start() error {
-    es.logger.Noticef("try to start namespace: %s", es.namespace)
-    err := es.init()
-    if err != nil {
-        es.logger.Errorf("Executor service initialization failed %v", err)
-        return err
-    }
-    // 1. start executor and service client
-    //err = hyperdb.StartDatabase(es.conf, es.namespace)
-    //if err != nil {
-    //    es.logger.Errorf("Start database for namespace %s error, %v", es.namespace, err)
-    //    return err
-    //}
-    //es.logger.Noticef("start db for namespace: %s successful", es.namespace)
-
-    // 2. start executor
-    err = es.executor.Start()
-    if err != nil {
-        es.logger.Errorf("Start executor for namespace %s error, %v", es.namespace, err)
-        return err
-    }
-
-    es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
-
-    // 3. establish connection
-    err = es.service.Connect()
+	es.logger.Noticef("try to start namespace: %s", es.namespace)
+	err := es.init()
 	if err != nil {
-        es.logger.Errorf("Establish connection for namespace %s error, %v", es.namespace, err)
-        return err
+		es.logger.Errorf("Executor service initialization failed %v", err)
+		return err
+	}
+	// 1. start executor and service client
+	//err = hyperdb.StartDatabase(es.conf, es.namespace)
+	//if err != nil {
+	//    es.logger.Errorf("Start database for namespace %s error, %v", es.namespace, err)
+	//    return err
+	//}
+	//es.logger.Noticef("start db for namespace: %s successful", es.namespace)
+
+	// 2. start executor
+	err = es.executor.Start()
+	if err != nil {
+		es.logger.Errorf("Start executor for namespace %s error, %v", es.namespace, err)
+		return err
 	}
 
-    // 4. register the namespace
-    err = es.service.Register(pb.FROM_EXECUTOR, &pb.RegisterMessage{
-        Namespace: es.namespace,
-    })
-    if err != nil{
-        es.logger.Errorf("Executor service register failed for namespace %s error, %v", es.namespace, err)
-        return err
-    }
+	es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
+
+	// 3. establish connection
+	err = es.service.Connect()
+	if err != nil {
+		es.logger.Errorf("Establish connection for namespace %s error, %v", es.namespace, err)
+		return err
+	}
+
+	// 4. register the namespace
+	err = es.service.Register(pb.FROM_EXECUTOR, &pb.RegisterMessage{
+		Namespace: es.namespace,
+	})
+	if err != nil {
+		es.logger.Errorf("Executor service register failed for namespace %s error, %v", es.namespace, err)
+		return err
+	}
 	return nil
 }
 
 func (es *executorServiceImpl) Stop() error {
-    es.logger.Noticef("try to stop namespace: %s", es.namespace)
+	es.logger.Noticef("try to stop namespace: %s", es.namespace)
 
-    // 1. stop executor.
-    err := es.executor.Stop()
-    if err != nil {
-        es.logger.Errorf("Stop executor for namespace %s error, %v", es.namespace, err)
-        return err
-    }
+	// 1. stop executor.
+	err := es.executor.Stop()
+	if err != nil {
+		es.logger.Errorf("Stop executor for namespace %s error, %v", es.namespace, err)
+		return err
+	}
 
-    // 2. close related database.
-    err = hyperdb.StopDatabase(es.namespace)
-    if err != nil {
-        es.logger.Errorf("Stop database for namespace %s error, %v", es.namespace, err)
-        return err
-    }
+	// 2. close related database.
+	err = hyperdb.StopDatabase(es.namespace)
+	if err != nil {
+		es.logger.Errorf("Stop database for namespace %s error, %v", es.namespace, err)
+		return err
+	}
 
-    es.logger.Noticef("namespace: %s stopped!", es.namespace)
-    return nil
+	es.logger.Noticef("namespace: %s stopped!", es.namespace)
+	return nil
 }
 
-func (es *executorServiceImpl) ProcessRequest(request interface{}) interface{}{
+func (es *executorServiceImpl) ProcessRequest(request interface{}) interface{} {
 	//TODO Check finish logic
 	if es.status.getState() == running {
 		if request != nil {

@@ -14,9 +14,9 @@ import (
 	"hyperchain/namespace"
 	"hyperchain/p2p"
 	"hyperchain/rpc"
+	"net"
 	_ "net/http/pprof"
 	"time"
-	"net"
 )
 
 const HyperchainVersion = "Hyperchain Version:\nRelease1.4-20171012-f415e9"
@@ -78,7 +78,7 @@ func (h *hyperchain) start() {
 	go h.hs.Start()
 	go CheckLicense(h.stopFlag)
 	go h.ipcShell.Start()
-	go h.internalServer.Serve(lis)//TODO: when should this serve, when should we try to make consensus
+	go h.internalServer.Serve(lis) //TODO: when should this serve, when should we try to make consensus
 }
 
 func (h *hyperchain) stop() {
