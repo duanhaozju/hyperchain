@@ -31,3 +31,8 @@ core/.DSTORE
 logs
 .token
 
+# executor
+service/executor/namespaces/global/data/*
+service/executor/logs/*
+
+
