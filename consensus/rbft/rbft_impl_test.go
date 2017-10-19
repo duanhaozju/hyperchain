@@ -12,9 +12,9 @@ import (
 
 	"hyperchain/common"
 	"hyperchain/consensus/consensusMocks"
-	"hyperchain/manager/protos"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
+	"hyperchain/manager/protos"
 
 	"github.com/facebookgo/ensure"
 	"github.com/gogo/protobuf/proto"
@@ -495,7 +495,7 @@ func TestAfterCommitBlock(t *testing.T) {
 
 	go func() {
 		chain.WriteChainChan(rbft.namespace)
-	} ()
+	}()
 	rbft.exec.setCurrentExec(&currentExec)
 	rbft.afterCommitBlock(msgID{v, n, d})
 	ast.Equal(uint64(10), rbft.exec.lastExec, "lastExec is set to currentExec, expect 10")
@@ -518,26 +518,25 @@ func TestRecvFetchMissingTransaction(t *testing.T) {
 	v := rbft.view
 	seqNo := uint64(10)
 	batchDigest := "fetch"
-	hashList1 := []string{"0","1"}
+	hashList1 := []string{"0", "1"}
 	hashList2 := make(map[uint64]string)
 	txList := []*types.Transaction{nil, nil}
 	hashList2[uint64(0)] = "0"
 	hashList2[uint64(1)] = "1"
 	hashList2[uint64(2)] = "2"
 
-
 	tranBatch := &TransactionBatch{
-		HashList:	hashList1,
-		TxList:		txList,
+		HashList: hashList1,
+		TxList:   txList,
 	}
 	rbft.storeMgr.txBatchStore[batchDigest] = tranBatch
 
 	fetch := &FetchMissingTransaction{
-		View:		v,
-		SequenceNumber:	seqNo,
-		BatchDigest:	batchDigest,
-		HashList:	hashList2,
-		ReplicaId:	rbft.id,
+		View:           v,
+		SequenceNumber: seqNo,
+		BatchDigest:    batchDigest,
+		HashList:       hashList2,
+		ReplicaId:      rbft.id,
 	}
 	err = rbft.recvFetchMissingTransaction(fetch)
 	ast.Nil(err, "mismatch tx hash, expect nil")
@@ -615,8 +614,8 @@ func TestProcessTransaction(t *testing.T) {
 		TransactionHash: []byte("hash"),
 	}
 	txRequest := txRequest{
-		tx:	tx,
-		new:	true,
+		tx:  tx,
+		new: true,
 	}
 	rbft.processTransaction(txRequest)
 
@@ -750,8 +749,8 @@ func TestCheckpoint(t *testing.T) {
 	idString, _ := rbft.storeMgr.chkpts[seqNo]
 	ast.Equal(idAsString, idString, "checkpoint failed")
 
-	rbft.checkpoint(uint64(1),bcInfo)
-	if _ , ok := rbft.storeMgr.chkpts[uint64(1)]; ok{
+	rbft.checkpoint(uint64(1), bcInfo)
+	if _, ok := rbft.storeMgr.chkpts[uint64(1)]; ok {
 		t.Error("n % pbft.K != 0")
 	}
 }
@@ -787,7 +786,7 @@ func TestRecvCheckpoint(t *testing.T) {
 	rbft.recvCheckpoint(chkpt)
 	ast.Equal(uint64(10), rbft.h, "should movewatermarks")
 
-	delete(rbft.storeMgr.chkpts,seqNo)
+	delete(rbft.storeMgr.chkpts, seqNo)
 	rbft.status.activeState(&rbft.status.skipInProgress, &rbft.status.inRecovery)
 	rbft.recvCheckpoint(chkpt)
 	ast.Equal(uint64(10), rbft.h, "should movewatermarks")
@@ -827,21 +826,20 @@ func TestWeakCheckpointSetOutOfRange(t *testing.T) {
 	rbft.storeMgr.hChkpts[uint64(3)] = uint64(50)
 	chkpt.SequenceNumber = uint64(10)
 	rbft.weakCheckpointSetOutOfRange(chkpt)
-	if _ , ok := rbft.storeMgr.hChkpts[uint64(3)]; ok{
+	if _, ok := rbft.storeMgr.hChkpts[uint64(3)]; ok {
 		t.Error("should be deleted, expect false")
 	}
 
 	rbft.exec.lastExec = uint64(100)
 	chkpt.SequenceNumber = seqNo
 	ok := rbft.weakCheckpointSetOutOfRange(chkpt)
-	if !ok || rbft.status.getState(&rbft.status.skipInProgress){
+	if !ok || rbft.status.getState(&rbft.status.skipInProgress) {
 		t.Error("Replica is ahead of others, expect true")
 	}
 
-
 	rbft.exec.lastExec = uint64(10)
 	ok = rbft.weakCheckpointSetOutOfRange(chkpt)
-	if _ , ok := rbft.storeMgr.hChkpts[uint64(3)]; !ok{
+	if _, ok := rbft.storeMgr.hChkpts[uint64(3)]; !ok {
 		t.Error("should be deleted, expect true")
 	}
 	ast.NotEqual(0, rbft.h, "should movewatermarks")
@@ -885,7 +883,6 @@ func TestWitnessCheckpointWeakCert(t *testing.T) {
 	ast.NotNil(rbft.storeMgr.highStateTarget, "should update highStateTarget")
 }
 
-
 func TestMainMoveWatermarks(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
@@ -902,7 +899,7 @@ func TestMainMoveWatermarks(t *testing.T) {
 	digest := "v0n1digest"
 	// fill some record into store
 	rbft.storeMgr.getCert(uint64(0), uint64(1), digest)
-	rbft.storeMgr.txBatchStore["123"] = &TransactionBatch{SeqNo:uint64(30)}
+	rbft.storeMgr.txBatchStore["123"] = &TransactionBatch{SeqNo: uint64(30)}
 
 	rbft.batchVdr.preparedCert[vidx{uint64(0), uint64(1)}] = "123"
 	rbft.storeMgr.committedCert[msgID{uint64(0), uint64(1), digest}] = "123"
@@ -915,7 +912,6 @@ func TestMainMoveWatermarks(t *testing.T) {
 
 	// chkptCertStore
 	rbft.storeMgr.getChkptCert(uint64(10), "chkptId")
-
 
 	// pset
 	vcP := &Vc_PQ{}
@@ -1005,7 +1001,6 @@ func TestUpdateHighStateTarget(t *testing.T) {
 	rbft.updateHighStateTarget(newTargetSmaller)
 	ast.Equal(curTarget.checkpointMessage.seqNo, rbft.storeMgr.highStateTarget.seqNo, "should not update high state target, expect not change")
 
-
 	// new target seqNo > cur target seqNo
 	newCheckpoint2 := checkpointMessage{
 		seqNo: uint64(30),
@@ -1036,14 +1031,14 @@ func TestStateTransfer(t *testing.T) {
 	}
 	peers := []replicaInfo{}
 	peers = append(peers, replicaInfo{
-		id:	uint64(1),
-		height:	uint64(10),
-		genesis:uint64(10),
+		id:      uint64(1),
+		height:  uint64(10),
+		genesis: uint64(10),
 	})
 	peers = append(peers, replicaInfo{
-		id:	uint64(2),
-		height:	uint64(10),
-		genesis:uint64(10),
+		id:      uint64(2),
+		height:  uint64(10),
+		genesis: uint64(10),
 	})
 	target := &stateUpdateTarget{
 		checkpointMessage: newCheckpoint,
@@ -1060,7 +1055,7 @@ func TestStateTransfer(t *testing.T) {
 	ast.Equal(true, rbft.status.getState(&rbft.status.stateTransferring), "shoud be actived, expect true")
 
 	rbft.status.inActiveState(&rbft.status.stateTransferring)
-	info := &protos.BlockchainInfo{Height:uint64(100)}
+	info := &protos.BlockchainInfo{Height: uint64(100)}
 	id, _ := proto.Marshal(info)
 	target.id = id
 	rbft.stateTransfer(target)
@@ -1075,12 +1070,12 @@ func TestRecvValidatedResult(t *testing.T) {
 
 	txes := make([]*types.Transaction, 1)
 	vali := protos.ValidatedTxs{
-		Transactions:	txes,
-		Hash:		"hash",
-		SeqNo:		uint64(1),
-		View:		uint64(0),
-		Timestamp:	time.Now().UnixNano(),
-		Digest:		"hash",
+		Transactions: txes,
+		Hash:         "hash",
+		SeqNo:        uint64(1),
+		View:         uint64(0),
+		Timestamp:    time.Now().UnixNano(),
+		Digest:       "hash",
 	}
 
 	currentVid := uint64(10)
@@ -1118,7 +1113,6 @@ func TestRecvValidatedResult(t *testing.T) {
 	rbft.recvValidatedResult(vali)
 	cert, ok := rbft.storeMgr.certStore[msgID{v: vali.View, n: vali.SeqNo, d: vali.Digest}]
 	ast.Equal(false, ok, "not inV, expect not exist in cert store")
-
 
 	vali.View = uint64(0)
 	rbft.recvValidatedResult(vali)

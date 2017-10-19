@@ -1,133 +1,69 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package accounts
+package common
 
 import (
 	"bytes"
-	"crypto/aes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ecdsa"
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"
-	"hyperchain/common"
 	"hyperchain/crypto"
-	"hyperchain/crypto/csprng"
 )
 
-const (
-	keyHeaderKDF = "scrypt"
-
-	// n,r,p = 2^18, 8, 1 uses 256MB memory and approx 1s CPU time on a modern CPU.
-	StandardScryptN = 1 << 18
-	StandardScryptP = 1
-
-	// n,r,p = 2^12, 8, 6 uses 4MB memory and approx 100ms CPU time on a modern CPU.
-	LightScryptN = 1 << 12
-	LightScryptP = 6
-
-	scryptR     = 8
-	scryptDKLen = 32
-)
-
-type keyStorePassphrase struct {
-	keysDirPath string
-	scryptN     int
-	scryptP     int
+type plainKeyJSON struct {
+	Address    string `json:"address"`
+	PrivateKey string `json:"privatekey"`
+	Version    int    `json:"version"`
 }
 
-func (ks keyStorePassphrase) GetKey(addr common.Address, filename, auth string) (*Key, error) {
+type encryptedKeyJSONV3 struct {
+	Address string     `json:"address"`
+	Crypto  cryptoJSON `json:"crypto"`
+	Version int        `json:"version"`
+}
+
+type encryptedKeyJSONV1 struct {
+	Address string     `json:"address"`
+	Crypto  cryptoJSON `json:"crypto"`
+	Version string     `json:"version"`
+}
+
+type cryptoJSON struct {
+	Cipher       string                 `json:"cipher"`
+	CipherText   string                 `json:"ciphertext"`
+	CipherParams cipherparamsJSON       `json:"cipherparams"`
+	KDF          string                 `json:"kdf"`
+	KDFParams    map[string]interface{} `json:"kdfparams"`
+	MAC          string                 `json:"mac"`
+}
+
+type cipherparamsJSON struct {
+	IV string `json:"iv"`
+}
+
+func getKey(filename, auth string) (*ecdsa.PrivateKey, error) {
 	// Load the key from the keystore and decrypt its contents
 	keyjson, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
-	key, err := DecryptKey(keyjson, auth)
+	key, err := decryptKey(keyjson, auth)
 	if err != nil {
 		return nil, err
-	}
-	// Make sure we're really operating on the requested key (no swap attacks)
-	if key.Address != addr {
-		return nil, fmt.Errorf("key content mismatch: have account %x, want %x", key.Address, addr)
 	}
 	return key, nil
 }
 
-func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) error {
-	keyjson, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
-	if err != nil {
-		return err
-	}
-	return writeKeyFile(filename, keyjson)
-}
-
-func (ks keyStorePassphrase) JoinPath(filename string) string {
-	if filepath.IsAbs(filename) {
-		return filename
-	} else {
-		return filepath.Join(ks.keysDirPath, filename)
-	}
-}
-
-// EncryptKey encrypts a key using the specified scrypt parameters into a json
-// blob that can be decrypted later on.
-func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
-	authArray := []byte(auth)
-	salt, err := csprng.CSPRNG(32)
-	if err != nil {
-		return nil, err
-	}
-	derivedKey, err := scrypt.Key(authArray, salt, scryptN, scryptR, scryptP, scryptDKLen)
-	if err != nil {
-		return nil, err
-	}
-	encryptKey := derivedKey[:16]
-	keyBytes := crypto.FromECDSA(key.PrivateKey.(*ecdsa.PrivateKey))
-
-	iv, err := csprng.CSPRNG(aes.BlockSize)
-	if err != nil {
-		return nil, err
-	}
-	cipherText, err := aesCTRXOR(encryptKey, keyBytes, iv)
-	if err != nil {
-		return nil, err
-	}
-	mac := crypto.Keccak256(derivedKey[16:32], cipherText)
-
-	scryptParamsJSON := make(map[string]interface{}, 5)
-	scryptParamsJSON["n"] = scryptN
-	scryptParamsJSON["r"] = scryptR
-	scryptParamsJSON["p"] = scryptP
-	scryptParamsJSON["dklen"] = scryptDKLen
-	scryptParamsJSON["salt"] = hex.EncodeToString(salt)
-
-	cipherParamsJSON := cipherparamsJSON{
-		IV: hex.EncodeToString(iv),
-	}
-
-	cryptoStruct := cryptoJSON{
-		Cipher:       "aes-128-ctr",
-		CipherText:   hex.EncodeToString(cipherText),
-		CipherParams: cipherParamsJSON,
-		KDF:          "scrypt",
-		KDFParams:    scryptParamsJSON,
-		MAC:          hex.EncodeToString(mac),
-	}
-	encryptedKeyJSONV3 := encryptedKeyJSONV3{
-		hex.EncodeToString(key.Address[:]),
-		cryptoStruct,
-		version,
-	}
-	return json.Marshal(encryptedKeyJSONV3)
-}
-
-// DecryptKey decrypts a key from a json blob, returning the private key itself.
-func DecryptKey(keyjson []byte, auth string) (*Key, error) {
+// decryptKey decrypts a key from a json blob, returning the private key itself.
+func decryptKey(keyjson []byte, auth string) (*ecdsa.PrivateKey, error) {
 	// Parse the json into a simple map to fetch the key version
 	m := make(map[string]interface{})
 	if err := json.Unmarshal(keyjson, &m); err != nil {
@@ -159,14 +95,11 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		return nil, err
 	}
 	key := crypto.ToECDSA(keyBytes)
-	return &Key{
-		Address:    crypto.PubkeyToAddress(key.PublicKey),
-		PrivateKey: key,
-	}, nil
+	return key, nil
 }
 
 func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byte, err error) {
-	if keyProtected.Version != version {
+	if keyProtected.Version != 3 {
 		return nil, fmt.Errorf("Version not supported: %v", keyProtected.Version)
 	}
 
@@ -265,7 +198,6 @@ func getKDFKey(cryptoJSON cryptoJSON, auth string) ([]byte, error) {
 	return nil, fmt.Errorf("Unsupported KDF: %s", cryptoJSON.KDF)
 }
 
-// TODO: can we do without this when unmarshalling dynamic JSON?
 // why do integers in KDF params end up as float64 and not int after
 // unmarshal?
 func ensureInt(x interface{}) int {
@@ -274,4 +206,52 @@ func ensureInt(x interface{}) int {
 		res = int(x.(float64))
 	}
 	return res
+}
+
+func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
+	// AES-128 is selected due to size of encryptKey.
+	aesBlock, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	stream := cipher.NewCTR(aesBlock, iv)
+	outText := make([]byte, len(inText))
+	stream.XORKeyStream(outText, inText)
+	return outText, err
+}
+
+func aesCBCDecrypt(key, cipherText, iv []byte) ([]byte, error) {
+	aesBlock, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	decrypter := cipher.NewCBCDecrypter(aesBlock, iv)
+	paddedPlaintext := make([]byte, len(cipherText))
+	decrypter.CryptBlocks(paddedPlaintext, cipherText)
+	plaintext := pkcs7Unpad(paddedPlaintext)
+	if plaintext == nil {
+		return nil, ErrDecrypt
+	}
+	return plaintext, err
+}
+
+// From https://leanpub.com/gocrypto/read#leanpub-auto-block-cipher-modes
+func pkcs7Unpad(in []byte) []byte {
+	if len(in) == 0 {
+		return nil
+	}
+
+	padding := in[len(in)-1]
+	if int(padding) > len(in) || padding > aes.BlockSize {
+		return nil
+	} else if padding == 0 {
+		return nil
+	}
+
+	for i := len(in) - 1; i > len(in)-int(padding)-1; i-- {
+		if in[i] != padding {
+			return nil
+		}
+	}
+	return in[:len(in)-int(padding)]
 }

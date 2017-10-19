@@ -12,7 +12,7 @@ import (
 )
 
 // batchManager manages basic batch issues, including:
-// 1. txPool which manages all transactions received from client or
+// 1. txPool which manages all transactions received from client or rpc layer
 // 2. batch events timer management
 type batchManager struct {
 	txPool           txpool.TxPool

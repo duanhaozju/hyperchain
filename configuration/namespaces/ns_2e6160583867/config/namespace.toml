@@ -27,7 +27,7 @@ title = "namespace configurations"
 [consensus]
 algo = "RBFT"
 
-    [consensus.rbft]        #PBFT configurations
+    [consensus.rbft]        #RBFT configurations
     batchsize       = 100   # How many transactions should the primary pack before sending pre-prepare
     poolsize        = 50000  # How many transactions could the txPool stores in total
     vcresendlimit   = 10    # How many times of same vc from self before a replica start recovery
@@ -161,9 +161,6 @@ max_log_size    = "200mb"  # "mb", "kb"
 # other configurations
 #
 ############################################################################################################
-[account]
-keystoredir = "config/keystore"
-keynodesdir = "config/keynodes"
 
 [config.path]
 caconfig        = "config/namespace.toml"

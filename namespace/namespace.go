@@ -4,7 +4,6 @@ package namespace
 
 import (
 	"github.com/op/go-logging"
-	"hyperchain/accounts"
 	"hyperchain/admittance"
 	"hyperchain/common"
 	"hyperchain/consensus"
@@ -134,7 +133,6 @@ type namespaceImpl struct {
 
 	consenter consensus.Consenter
 	caMgr     *admittance.CAManager
-	am        *accounts.AccountManager
 	eh        *manager.EventHub
 	peerMgr   p2p.PeerManager
 	executor  *executor.Executor
@@ -221,12 +219,7 @@ func (ns *namespaceImpl) init() error {
 	}
 	ns.consenter = consenter
 
-	// 5. init AccountManager.
-	am := accounts.NewAccountManager(ns.conf)
-	am.UnlockAllAccount(common.GetPath(ns.Name(), ns.conf.GetString(common.KEY_STORE_DIR)))
-	ns.am = am
-
-	// 6. init Executor to validate and commit block.
+	// 5. init Executor to validate and commit block.
 	executor, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux)
 	if err != nil {
 		ns.logger.Errorf("init Executor for namespace %s error, %v", ns.Name(), err)
@@ -236,11 +229,11 @@ func (ns *namespaceImpl) init() error {
 	executor.CreateInitBlock(ns.conf)
 	ns.executor = executor
 
-	// 7. init Eventhub to coordinate message delivery between local modules.
-	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, executor, ns.peerMgr, consenter, am, cm)
+	// 6. init Eventhub to coordinate message delivery between local modules.
+	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, executor, ns.peerMgr, consenter, cm)
 	ns.eh = eh
 
-	// 8. init JsonRpcProcessor to process incoming requests.
+	// 7. init JsonRpcProcessor to process incoming requests.
 	ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
 
 	ns.status.setState(initialized)
