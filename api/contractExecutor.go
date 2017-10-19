@@ -37,7 +37,7 @@ func NewContarctExAPI(namespace string, config *common.Config) *ContractEx{
 		log.Errorf("got invalid ratelimit peak parameters as 0. use default peak parameters 500")
 		peak = 500
 	}
-	return &Contract{
+	return &ContractEx{
 		namespace:   namespace,
 		tokenBucket: ratelimit.NewBucket(fillrate, peak),
 		config:      config,

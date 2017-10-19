@@ -18,7 +18,7 @@ type AccountResult struct {
 }
 
 func NewPublicAccountExecutorAPI(namespace string, config *common.Config) *AccountDB {
-	return &Account{
+	return &AccountDB{
 		namespace: namespace,
 		config:    config,
 		log:       common.GetLogger(namespace, "api"),

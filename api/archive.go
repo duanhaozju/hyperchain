@@ -6,7 +6,7 @@ import (
 	"hyperchain/manager"
 	//"hyperchain/manager/event"
 	flt "hyperchain/manager/filter"
-	hm "hyperchain/service/executor/manager"
+	//hm "hyperchain/service/executor/manager"
 )
 
 // This file implements the handler of Archive service API which
@@ -17,18 +17,17 @@ type Archive struct {
 	namespace string
 	config    *common.Config
 	isPublic  bool
-	em        *hm.ExecutorManager
+	//em        *hm.ExecutorManager
 }
 
 // NewPublicArchiveAPI creates and returns a new Archive instance for given namespace name.
-func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.Config,
-em *hm.ExecutorManager) *Archive {
+func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.Config) *Archive {
 	return &Archive{
 		namespace: namespace,
 		//eh:        eh,
 		config:    config,
 		isPublic:  true,
-		em:        em,
+		//em:        em,
 	}
 }
 

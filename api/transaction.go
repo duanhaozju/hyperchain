@@ -3,7 +3,6 @@
 package api
 
 import (
-	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/ratelimit"
 	"github.com/op/go-logging"

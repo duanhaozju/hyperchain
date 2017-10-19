@@ -8,16 +8,8 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
-	"hyperchain/crypto"
-	"hyperchain/hyperdb/db"
 	"time"
 )
-
-var (
-	kec256Hash         = crypto.NewKeccak256Hash("keccak256")
-	db_not_found_error = db.DB_NOT_FOUND.Error()
-)
-
 type TransactionResult struct {
 	Version     string         `json:"version"`               // hyperchain version when the transaction is executed
 	Hash        common.Hash    `json:"hash"`                  // transaction hash
