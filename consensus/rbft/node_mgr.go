@@ -940,6 +940,8 @@ func (rbft *rbftImpl) processReqInUpdate() consensusEvent {
 //           node management auxiliary functions
 //##########################################################################
 
+// putBackTxBatches put batches whose seqNo is larger than lastExec
+// and not in xset back to txPool
 func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
 	hashSet := make(map[string]bool)
 	targetSet := make(map[uint64]string)
