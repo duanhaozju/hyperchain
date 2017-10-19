@@ -29,7 +29,7 @@ type executorServiceImpl struct {
 	// logger
 	logger *logging.Logger
 
-	executorApi *api.ExecutorApi
+	//executorApi *api.ExecutorApi
 
 }
 
@@ -103,7 +103,7 @@ func (es *executorServiceImpl) Start() error {
         return err
     }
 
-    es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
+    //es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
 
     // 3. establish connection
     err = es.service.Connect()
