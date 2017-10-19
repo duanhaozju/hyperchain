@@ -384,9 +384,9 @@ func (hub *EventHub) listenExecutorEvent() {
 		case obj := <-hub.GetSubscription(SUB_EXEC).Chan():
 			switch ev := obj.Data.(type) {
 			case event.ExecutorToConsensusEvent:
-				hub.dispatchExecutorToConsensus(ev)
+				hub.DispatchExecutorToConsensus(ev)
 			case event.ExecutorToP2PEvent:
-				hub.dispatchExecutorToP2P(ev)
+				hub.DispatchExecutorToP2P(ev)
 			}
 
 		}

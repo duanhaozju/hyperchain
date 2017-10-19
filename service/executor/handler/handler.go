@@ -25,7 +25,7 @@ func New(executor *executor.Executor) service.Handler {
     }
 }
 
-func (eh *ExecutorHandler) Handle(msg *pb.Message) {
+func (eh *ExecutorHandler) Handle(msg *pb.IMessage) {
     switch msg.Event {
     case pb.Event_ValidationEvent:
         e := &event.ValidationEvent{}

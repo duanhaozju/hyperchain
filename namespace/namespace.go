@@ -180,7 +180,7 @@ func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool) 
 		restart:   false,
 		delFlag:   delFlag,
 	}
-	ns.ls = service.NewLocalService(namespace, service.EVENTHUB, ns.eventMux)
+	//ns.ls = service.NewLocalService(namespace, service.EVENTHUB, ns.eventMux)
 	ns.logger = common.GetLogger(namespace, "namespace")
 	return ns, nil
 }

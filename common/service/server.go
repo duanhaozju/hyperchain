@@ -128,7 +128,7 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 	    SeqNo: 222,
     }
 	mv, err := proto.Marshal(v)
-    if err := stream.Send(&pb.Message{
+    if err := stream.Send(&pb.IMessage{
         Type: pb.Type_DISPATCH,
         Event:pb.Event_ValidationEvent,
         Payload: mv,
