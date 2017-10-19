@@ -37,7 +37,7 @@ func (rsi *remoteServiceImpl) Id() string {
 }
 
 // Send sync send msg.
-func (rsi *remoteServiceImpl) Send(event interface{}) error {
+func (rsi *remoteServiceImpl) Send(event serviceEvent) error {
 	if msg, ok := event.(*pb.IMessage); !ok {
 		return fmt.Errorf("send message type error, %v need pb.IMessage ", event)
 	}else {

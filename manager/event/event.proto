@@ -47,3 +47,22 @@ message ExecutorToP2PEvent {
     repeated uint64 Peers = 3;
     repeated string PeersHash = 4;
 }
+
+//node receive checkpoint sync event and then,check db and send block require request to peers
+message SyncReplica {
+    uint64 Id = 1;
+    uint64 Height = 2;
+    uint64 Genesis = 3;
+}
+
+message ChainSyncReqEvent {
+    uint64 Id = 1;
+    uint64 TargetHeight = 2;
+    bytes  TargetBlockHash = 3;
+    repeated SyncReplica Replicas = 4;
+}
+
+message SnapshotEvent {
+    string FilterId = 1;
+    uint64 BlockNumber = 2;
+}
