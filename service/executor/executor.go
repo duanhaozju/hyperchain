@@ -7,6 +7,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/service/executor/apiserver"
 	"hyperchain/service/executor/manager"
+    "hyperchain/hyperdb"
 )
 
 type executorGlobal struct {
@@ -27,6 +28,7 @@ func newExecutorGlobal(argV *argT) *executorGlobal{
 	globalConfig.Set(common.GLOBAL_CONFIG_PATH, eg.args.ConfigPath)
 	common.InitHyperLoggerManager(globalConfig)
 	logger = common.GetLogger(common.DEFAULT_LOG, "main")
+    hyperdb.InitDBMgr(globalConfig)
 
 	eg.exeMgr = manager.GetExecutorMgr(globalConfig, eg.stopFlag, eg.restartFlag)
 
@@ -91,7 +93,7 @@ type argT struct {
 	RestoreEnable bool   `cli:"r,restore" usage:"enable restore system status from dumpfile"`
 	SId           string `cli:"sid" usage:"use to specify snapshot" dft:""`
 	Namespace     string `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
-	ConfigPath    string `cli:"c,conf" usage:"config file path" dft:"../../configuration/global.toml"`
+	ConfigPath    string `cli:"c,conf" usage:"config file path" dft:"./global.toml"`
 	IPCEndpoint   string `cli:"ipc" usage:"ipc interactive shell attach endpoint" dft:"./hpc.ipc"`
 	Shell         bool   `cli:"s,shell" usage:"start interactive shell" dft:"false"`
 	PProfEnable   bool   `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`

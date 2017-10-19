@@ -54,7 +54,6 @@ func GetExecutorMgr(conf *common.Config, stopEm chan bool, restartEM chan bool) 
 
 func (em *ecManagerImpl) Start() error {
 	configRootDir := em.conf.GetString(NS_CONFIG_DIR_ROOT)
-	logger.Criticalf("configRootDir", configRootDir)
 	if configRootDir == "" {
 		return errors.New("Namespace config root dir is not valid ")
 	}
@@ -63,7 +62,6 @@ func (em *ecManagerImpl) Start() error {
 		return err
 	}
 
-	logger.Criticalf("dirs are %v", dirs)
 	// start all executor service
 	for _, d := range dirs {
         if d.IsDir() {

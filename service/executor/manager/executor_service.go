@@ -34,6 +34,12 @@ type executorServiceImpl struct {
 }
 
 func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
+    // init hyper logger for executor service
+    conf.Set(common.NAMESPACE, ns)
+    if err := common.InitHyperLogger(ns, conf); err != nil {
+        return nil
+    }
+
     return &executorServiceImpl{
 		namespace: ns,
 		conf:      conf,

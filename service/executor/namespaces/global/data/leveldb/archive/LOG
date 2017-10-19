@@ -76,3 +76,30 @@
 23:38:00.460301 version@stat F·[] S·0B[] Sc·[]
 23:38:00.462320 db@janitor F·2 G·0
 23:38:00.462356 db@open done T·8.0856ms
+=============== Oct 19, 2017 (CST) ===============
+12:09:37.517586 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+12:09:37.518204 version@stat F·[] S·0B[] Sc·[]
+12:09:37.518216 db@open opening
+12:09:37.518264 journal@recovery F·1
+12:09:37.520887 journal@recovery recovering @16
+12:09:37.522363 version@stat F·[] S·0B[] Sc·[]
+12:09:37.524207 db@janitor F·2 G·0
+12:09:37.524247 db@open done T·6.023335ms
+=============== Oct 19, 2017 (CST) ===============
+12:10:41.986945 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+12:10:41.987134 version@stat F·[] S·0B[] Sc·[]
+12:10:41.987152 db@open opening
+12:10:41.987228 journal@recovery F·1
+12:10:41.990980 journal@recovery recovering @18
+12:10:41.992509 version@stat F·[] S·0B[] Sc·[]
+12:10:41.996497 db@janitor F·2 G·0
+12:10:41.996551 db@open done T·9.389318ms
+=============== Oct 19, 2017 (CST) ===============
+12:37:44.563035 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+12:37:44.563600 version@stat F·[] S·0B[] Sc·[]
+12:37:44.563619 db@open opening
+12:37:44.563687 journal@recovery F·1
+12:37:44.566871 journal@recovery recovering @20
+12:37:44.569084 version@stat F·[] S·0B[] Sc·[]
+12:37:44.571302 db@janitor F·2 G·0
+12:37:44.571342 db@open done T·7.714647ms
