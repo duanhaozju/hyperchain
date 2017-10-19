@@ -10,10 +10,13 @@ import (
     "hyperchain/core/ledger/chain"
     "hyperchain/hyperdb"
     "hyperchain/service/executor/api"
+	"sync"
 )
 
 type executorService interface {
+
 	Start() error
+
 	Stop() error
 
 	// ProcessRequest process request under this namespace.
@@ -34,6 +37,56 @@ type executorServiceImpl struct {
 
 	executorApi *api.ExecutorApi
 
+	status  *Status
+
+}
+
+type EsState int
+
+const (
+	newed EsState = 1 << iota
+	initialized
+	running
+	closed
+)
+
+// Status describes the dynamic state of current namespace.
+type Status struct {
+	lock  *sync.RWMutex
+	state EsState
+	desc  string
+}
+
+// setState sets the current namespace status, and update the description.
+func (s *Status) setState(state EsState) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.state = state
+	s.setDescription()
+}
+
+// getState returns the current namespace status.
+func (s *Status) getState() EsState {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	state := s.state
+	return state
+}
+
+// setDescription updates the current description by current state.
+func (s *Status) setDescription() {
+	switch s.state {
+	case newed:
+		s.desc = "newed"
+	case initialized:
+		s.desc = "initialized"
+	case running:
+		s.desc = "running"
+	case closed:
+		s.desc = "closed"
+	default:
+		s.desc = "Unknown state"
+	}
 }
 
 func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
