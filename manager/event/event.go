@@ -98,21 +98,6 @@ type CommitedBlockEvent struct {
 }
 
 /*
-	Executor events
-*/
-type ExecutorToConsensusEvent struct {
-	Payload interface{} //TODO: change this to be type of byte[]
-	Type    int
-}
-
-type ExecutorToP2PEvent struct {
-	Payload   []byte
-	Type      int
-	Peers     []uint64
-	PeersHash []string
-}
-
-/*
 	Admin events
 */
 

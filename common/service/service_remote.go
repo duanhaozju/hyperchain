@@ -12,7 +12,7 @@ type remoteServiceImpl struct {
 	namespace string
 	id        string
 	stream    pb.Dispatcher_RegisterServer
-	r         chan *pb.Message
+	r         chan *pb.IMessage
 	logger    *logging.Logger
 }
 
@@ -23,7 +23,7 @@ func NewRemoteService(namespace, id string, stream pb.Dispatcher_RegisterServer,
 		stream:    stream,
 		logger:    logging.MustGetLogger("service"),
 		ds:        ds,
-		r:         make(chan *pb.Message),
+		r:         make(chan *pb.IMessage),
 	}
 }
 
@@ -38,8 +38,8 @@ func (rsi *remoteServiceImpl) Id() string {
 
 // Send sync send msg.
 func (rsi *remoteServiceImpl) Send(event interface{}) error {
-	if msg, ok := event.(*pb.Message); !ok {
-		return fmt.Errorf("send message type error, %v need pb.Message ", event)
+	if msg, ok := event.(*pb.IMessage); !ok {
+		return fmt.Errorf("send message type error, %v need pb.IMessage ", event)
 	}else {
 		if rsi.stream == nil {
 			return fmt.Errorf("[%s:%s]stream is empty, wait for this component to reconnect", rsi.namespace, rsi.id)
@@ -78,6 +78,6 @@ func (rsi *remoteServiceImpl) isHealth() bool {
 	return rsi.stream != nil
 }
 
-func (rsi *remoteServiceImpl) Response() chan *pb.Message {
+func (rsi *remoteServiceImpl) Response() chan *pb.IMessage {
 	return rsi.r
 }

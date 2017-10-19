@@ -5,7 +5,5 @@ import (
 )
 
 type Handler interface {
-	Handle(msg *pb.Message)
-	//deal and response
+	Handle(msg *pb.IMessage)
 }
-

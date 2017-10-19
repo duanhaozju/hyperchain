@@ -29,16 +29,18 @@ message ValidationEvent {
     int64 Timestamp = 6;
 }
 
-// reset blockchain to a stable checkpoint status when `viewchange` occur
+// reset blockchain to a stable checkpoint status when `viewchange` occur.
 message VCResetEvent {
     uint64 SeqNo = 1;
 }
 
+//event send from executor to consensus.
 message ExecutorToConsensusEvent {
     bytes Payload = 1; //TODO: changed from interface to bytes, should modify the related code
     int32 Type = 2;
 }
 
+//event send from executor to p2p.
 message ExecutorToP2PEvent {
     bytes Payload = 1;
     int32 Type = 2;

@@ -12,5 +12,5 @@ type Service interface {
 	Close()
 	Serve() error
 	isHealth() bool
-	Response() chan *pb.Message
+	Response() chan *pb.IMessage
 }

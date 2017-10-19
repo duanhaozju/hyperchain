@@ -246,6 +246,8 @@ func (ns *namespaceImpl) init() error {
 	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, executor, ns.peerMgr, consenter, am, cm)
 	ns.eh = eh
 
+	ns.ls = service.NewLocalService(ns.Name(), service.EVENTHUB, ns.eh)
+
 	// 8. init JsonRpcProcessor to process incoming requests.
 	ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
 

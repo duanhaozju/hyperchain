@@ -76,7 +76,7 @@ func (is *InternalServer) RegisterLocal(s Service)  {
 }
 
 //handleDispatch handleDispatch messages
-func (is *InternalServer) HandleDispatch(namespace string, msg *pb.Message) {
+func (is *InternalServer) HandleDispatch(namespace string, msg *pb.IMessage) {
 	is.logger.Debugf("try to handle dispatch message: %v for namespace: %s", msg, namespace)
 	switch msg.From {
 	case pb.FROM_APISERVER:
@@ -92,12 +92,12 @@ func (is *InternalServer) HandleDispatch(namespace string, msg *pb.Message) {
 	}
 }
 
-func (is *InternalServer) HandleAdmin(namespace string, msg *pb.Message) {
+func (is *InternalServer) HandleAdmin(namespace string, msg *pb.IMessage) {
 	//TODO: handle admin messages
 }
 
 //handleRegister parse msg and register this stream
-func (is *InternalServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_RegisterServer) Service {
+func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_RegisterServer) Service {
 	is.logger.Debugf("handle register msg: %v", msg)
 	rm := pb.RegisterMessage{}
 	err := proto.Unmarshal(msg.Payload, &rm)
@@ -114,7 +114,7 @@ func (is *InternalServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_R
 	service := NewRemoteService(rm.Namespace, serviceId(msg), stream, is)
 	is.sr.Register(service)
 	is.logger.Debug("Send register ok response!")
-	if err := stream.Send(&pb.Message{
+	if err := stream.Send(&pb.IMessage{
 		Type: pb.Type_RESPONSE,
 		Ok:   true,
 	}); err != nil {
@@ -139,7 +139,7 @@ func (is *InternalServer) handleRegister(msg *pb.Message, stream pb.Dispatcher_R
 }
 
 //serviceId generate service id
-func serviceId(msg *pb.Message) string {
+func serviceId(msg *pb.IMessage) string {
 	switch msg.From {
 	case pb.FROM_CONSENSUS:
 		return CONSENTER
