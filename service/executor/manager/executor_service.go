@@ -9,6 +9,7 @@ import (
     "github.com/op/go-logging"
     "hyperchain/core/ledger/chain"
     "hyperchain/hyperdb"
+    "hyperchain/service/executor/api"
 )
 
 type executorService interface {
@@ -27,6 +28,9 @@ type executorServiceImpl struct {
 	conf *common.Config
 	// logger
 	logger *logging.Logger
+
+	executorApi *api.ExecutorApi
+
 }
 
 func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
@@ -92,6 +96,8 @@ func (es *executorServiceImpl) Start() error {
         es.logger.Errorf("Start executor for namespace %s error, %v", es.namespace, err)
         return err
     }
+
+    es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
 
     // 3. establish connection
     err = es.service.Connect()
