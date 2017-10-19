@@ -15,6 +15,9 @@ import (
 type executorService interface {
 	Start() error
 	Stop() error
+
+	// ProcessRequest process request under this namespace.
+	ProcessRequest(request interface{}) interface{}
 }
 
 type executorServiceImpl struct {
@@ -142,4 +145,9 @@ func (es *executorServiceImpl) Stop() error {
 
     es.logger.Noticef("namespace: %s stopped!", es.namespace)
     return nil
+}
+
+func (es *executorServiceImpl) ProcessRequest(request interface{}) interface{}{
+	//TODO Need to finish logic
+	return nil
 }

@@ -11,7 +11,7 @@ import (
 
 var logger *logging.Logger
 
-const (
+const (E
 	DEFAULT_NAMESPACE  = "global"
 	NS_CONFIG_DIR_ROOT = "namespace.config_root_dir"
 )
@@ -20,6 +20,10 @@ type ExecutorManager interface {
 	Start() error
 
 	Stop() error
+
+	ProcessRequest(namespace string, request interface{}) interface{}
+
+	GetExecutorServiceByName(name string) executorService
 }
 
 type ecManagerImpl struct {
@@ -126,5 +130,19 @@ func (em *ecManagerImpl) Stop() error {
 	if err := em.jvmManager.Stop(); err != nil {
 		logger.Errorf("Stop hyperjvm error %v", err)
 	}
+	return nil
+}
+
+func (em *ecManagerImpl) ProcessRequest(namespace string, request interface{}) interface{} {
+	es := em.GetExecutorServiceByName(namespace)
+	if es == nil {
+		logger.Noticef("no namespace found for name: %s", namespace)
+		return nil
+	}
+	return es.ProcessRequest(request)
+}
+
+func (em *ecManagerImpl) GetExecutorServiceByName(name string) executorService {
+	//TODO Need to finish logic
 	return nil
 }
