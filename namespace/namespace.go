@@ -233,17 +233,21 @@ func (ns *namespaceImpl) init() error {
 	ns.am = am
 
 	// 6. init Executor to validate and commit block.
-	executor, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux)
-	if err != nil {
-		ns.logger.Errorf("init Executor for namespace %s error, %v", ns.Name(), err)
-		return err
+	if ns.conf.GetBool(common.EXECUTOR_EMBEDDED) {
+		ns.logger.Errorf("executor embedded %v", ns.conf.GetBool(common.EXECUTOR_EMBEDDED))
+		er, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux)
+		if err != nil {
+			ns.logger.Errorf("init Executor for namespace %s error, %v", ns.Name(), err)
+			return err
+		}
+		er.CreateInitBlock(ns.conf)
+		ns.executor = er
+	} else {
+		er := executor.NewRemoteExecutorProxy()
+		ns.executor = er
 	}
-
-	executor.CreateInitBlock(ns.conf)
-	ns.executor = executor
-
 	// 7. init Eventhub to coordinate message delivery between local modules.
-	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, executor, ns.peerMgr, consenter, am, cm)
+	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, ns.executor, ns.peerMgr, consenter, am, cm)
 	ns.eh = eh
 
 	ns.ls = service.NewLocalService(ns.Name(), service.EVENTHUB, ns.eh)
