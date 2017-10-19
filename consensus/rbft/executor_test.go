@@ -62,7 +62,7 @@ func TestHandleCorePbftEvent(t *testing.T) {
 	rbft.Start()
 	rbft.status.inActiveState(&rbft.status.inNegoView)
 	rbft.status.inActiveState(&rbft.status.inRecovery)
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 
 	event := &LocalEvent{
 		Service:   CORE_RBFT_SERVICE,
@@ -73,18 +73,18 @@ func TestHandleCorePbftEvent(t *testing.T) {
 	rbft.dispatchLocalEvent(event)
 	ast.Equal(false, rbft.batchMgr.isBatchTimerActive(), "handle CORE_BATCH_TIMER_EVENT failed")
 
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	event.EventType = CORE_NULL_REQUEST_TIMER_EVENT
 	rbft.dispatchLocalEvent(event)
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.activeView), "handle CORE_NULL_REQUEST_TIMER_EVENT failed")
+	ast.Equal(true, rbft.status.getState(&rbft.status.inViewChange), "handle CORE_NULL_REQUEST_TIMER_EVENT failed")
 
 	rbft.status.inActiveState(&rbft.status.inNegoView)
 	rbft.status.inActiveState(&rbft.status.inRecovery)
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	atomic.StoreUint32(&rbft.normal, 1)
 	event.EventType = CORE_FIRST_REQUEST_TIMER_EVENT
 	rbft.dispatchLocalEvent(event)
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.activeView), "handle CORE_FIRST_REQUEST_TIMER_EVENT failed")
+	ast.Equal(true, rbft.status.getState(&rbft.status.inViewChange), "handle CORE_FIRST_REQUEST_TIMER_EVENT failed")
 
 	rbft.status.activeState(&rbft.status.stateTransferring)
 	event.EventType = CORE_STATE_UPDATE_EVENT
@@ -92,8 +92,8 @@ func TestHandleCorePbftEvent(t *testing.T) {
 	rbft.dispatchLocalEvent(event)
 	ast.Equal(false, rbft.status.getState(&rbft.status.stateTransferring))
 
-	atomic.StoreUint32(&rbft.activeView, 1)
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 0)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.status.inActiveState(&rbft.status.inUpdatingN)
 	event.EventType = CORE_VALIDATED_TXS_EVENT
 	event.Event = protos.ValidatedTxs{}
 	rbft.dispatchLocalEvent(event)
@@ -110,7 +110,7 @@ func TestViewChangeTimerEvent(t *testing.T) {
 	rbft.Start()
 	rbft.status.inActiveState(&rbft.status.inNegoView)
 	rbft.status.inActiveState(&rbft.status.inRecovery)
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.status.activeState(&rbft.status.timerActive)
 
 	event := &LocalEvent{
@@ -130,8 +130,8 @@ func TestViewChangedEventAndViewChangeResendTimerEvent(t *testing.T) {
 	rbft.status.inActiveState(&rbft.status.inNegoView)
 	rbft.status.inActiveState(&rbft.status.inRecovery)
 	rbft.status.inActiveState(&rbft.status.skipInProgress)
-	atomic.StoreUint32(&rbft.activeView, 0)
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.status.inActiveState(&rbft.status.inUpdatingN)
 	rbft.status.activeState(&rbft.status.timerActive)
 
 	event := &LocalEvent{
@@ -141,7 +141,7 @@ func TestViewChangedEventAndViewChangeResendTimerEvent(t *testing.T) {
 	rbft.dispatchLocalEvent(event)
 
 	ast.Equal(0, rbft.vcMgr.vcResendCount, "handle VIEW_CHANGED_EVENT, set vcResendCount failed")
-	ast.Equal(uint32(1), atomic.LoadUint32(&rbft.activeView), "handle VIEW_CHANGED_EVENT failed")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inViewChange), "handle VIEW_CHANGED_EVENT failed")
 	ast.Equal(uint32(1), atomic.LoadUint32(&rbft.normal), "handle VIEW_CHANGED_EVENT failed")
 
 	rbft.view = uint64(10)
@@ -218,8 +218,8 @@ func TestRecoveryNegoViewDoneEvent(t *testing.T) {
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 0)
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inUpdatingN)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.status.inActiveState(&rbft.status.skipInProgress)
 
 	event := &LocalEvent{

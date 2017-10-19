@@ -26,7 +26,6 @@ import (
 // rbftImpl is the core struct of rbft module, which handles all functions about consensus
 type rbftImpl struct {
 	namespace     string // this node belongs to which namespace
-	activeView    uint32 // view change happening, this view is active now or not
 	f             int    // max. number of byzantine validators we can tolerate
 	N             int    // max. number of validators in the network
 	h             uint64 // low watermark
@@ -118,7 +117,7 @@ func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 	//rbft.reqStore = newRequestStore()
 	rbft.recoveryMgr = newRecoveryMgr()
 
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 
 	rbft.logger.Infof("PBFT Max number of validating peers (N) = %v", rbft.N)
 	rbft.logger.Infof("PBFT Max number of failing peers (f) = %v", rbft.f)
@@ -138,7 +137,7 @@ func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 // general event process method
 // =============================================================================
 
-// ProcessEvent implements event.Receiver, dispatch messages according to their types
+// listenEvent listens and dispatches messages according to their types
 func (rbft *rbftImpl) listenEvent() {
 	for {
 		select {
@@ -253,7 +252,7 @@ func (rbft *rbftImpl) processNullRequest(msg *protos.Message) error {
 		return nil
 	}
 
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
+	if rbft.status.getState(&rbft.status.inViewChange) {
 		rbft.logger.Warningf("Replica %d is in viewchange, reject null request from replica %d", rbft.id, msg.Id)
 		return nil
 	}
@@ -281,7 +280,7 @@ func (rbft *rbftImpl) handleNullRequestTimerEvent() {
 		return
 	}
 
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
+	if rbft.status.getState(&rbft.status.inViewChange) {
 		return
 	}
 
@@ -867,8 +866,8 @@ func (rbft *rbftImpl) processTransaction(req txRequest) consensusEvent {
 	var isGenerated bool
 
 	// this node is not normal, just add a transaction without generating batch.
-	if atomic.LoadUint32(&rbft.activeView) == 0 ||
-		atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 ||
+	if rbft.status.getState(&rbft.status.inViewChange) ||
+		rbft.status.getState(&rbft.status.inUpdatingN) ||
 		rbft.status.checkStatesOr(&rbft.status.inNegoView) {
 		_, err = rbft.batchMgr.txPool.AddNewTx(req.tx, false, req.new)
 	} else {
@@ -927,7 +926,7 @@ func (rbft *rbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 		rbft.checkpoint(et.SeqNo, bcInfo)
 	}
 
-	if atomic.LoadUint32(&rbft.activeView) == 1 || atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 0 &&
+	if !rbft.status.getState(&rbft.status.inViewChange) || !rbft.status.getState(&rbft.status.inUpdatingN) &&
 		!rbft.status.getState(&rbft.status.inNegoView) {
 		atomic.StoreUint32(&rbft.normal, 1)
 	}
@@ -982,7 +981,7 @@ func (rbft *rbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 		Timestamp: time.Now().UnixNano(),
 	}
 
-	if atomic.LoadUint32(&rbft.activeView) == 1 && rbft.isPrimary(rbft.id) &&
+	if !rbft.status.getState(&rbft.status.inViewChange) && rbft.isPrimary(rbft.id) &&
 		!rbft.status.checkStatesOr(&rbft.status.inNegoView, &rbft.status.inRecovery) {
 		rbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 		rbft.primaryValidateBatch(reqBatch.BatchHash, txBatch, 0)
@@ -1377,7 +1376,7 @@ func (rbft *rbftImpl) moveWatermarks(n uint64) {
 
 // updateHighStateTarget updates high state target
 func (rbft *rbftImpl) updateHighStateTarget(target *stateUpdateTarget) {
-	if atomic.LoadUint32(&rbft.activeView) == 1 && rbft.storeMgr.highStateTarget != nil && rbft.storeMgr.highStateTarget.seqNo >= target.seqNo {
+	if !rbft.status.getState(&rbft.status.inViewChange) && rbft.storeMgr.highStateTarget != nil && rbft.storeMgr.highStateTarget.seqNo >= target.seqNo {
 		rbft.logger.Infof("Replica %d not updating state target to seqNo %d, has target for seqNo %d",
 			rbft.id, target.seqNo, rbft.storeMgr.highStateTarget.seqNo)
 		return
@@ -1459,12 +1458,12 @@ func (rbft *rbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, rep
 
 // recvValidatedResult processes ValidatedResult
 func (rbft *rbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
-		rbft.logger.Debugf("Replica %d ignoring ValidatedResult as we sre in view change", rbft.id)
+	if rbft.status.getState(&rbft.status.inViewChange) {
+		rbft.logger.Debugf("Replica %d ignoring ValidatedResult as we are in view change", rbft.id)
 		return nil
 	}
 
-	if atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 {
+	if rbft.status.getState(&rbft.status.inUpdatingN) {
 		rbft.logger.Debugf("Replica %d ignoring ValidatedResult as we are in updating N", rbft.id)
 		return nil
 	}

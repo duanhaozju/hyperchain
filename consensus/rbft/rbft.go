@@ -93,9 +93,7 @@ func (rbft *rbftImpl) Start() {
 	rbft.initTimers()
 	rbft.initStatus()
 
-	atomic.StoreUint32(&rbft.activeView, 1)
-	//rbft.rbftManager.Start()
-	//rbft.rbftEventQueue = events.GetQueue(rbft.rbftManager.Queue())
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 
 	rbft.eventMux = new(event.TypeMux)
 	rbft.batchSub = rbft.eventMux.Subscribe(txRequest{}, txpool.TxHashBatch{}, protos.RoutersMessage{}, &LocalEvent{}, &ConsensusMessage{})

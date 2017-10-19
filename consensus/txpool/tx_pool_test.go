@@ -4,8 +4,8 @@ package txpool
 
 import (
 	"fmt"
-	"time"
 	"testing"
+	"time"
 
 	"hyperchain/common"
 	"hyperchain/core/types"
@@ -218,7 +218,7 @@ func TestReturnFetchTxs(t *testing.T) {
 	missingHashList := make(map[uint64]string)
 	missingHashList[uint64(1)] = "1"
 	_, err = txPool.ReturnFetchTxs("1", missingHashList)
-	ast.NotEqual(nil, err, fmt.Sprintf("should not find this batch, err is %v",err))
+	ast.NotEqual(nil, err, fmt.Sprintf("should not find this batch, err is %v", err))
 	txBatch := &TxHashBatch{
 		TxHashList: []string{"1", "2", "3", "4"},
 		TxList: []*types.Transaction{

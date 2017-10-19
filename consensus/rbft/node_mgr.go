@@ -3,14 +3,11 @@ package rbft
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/golang/protobuf/proto"
+	"hyperchain/manager/protos"
 	"reflect"
 	"sort"
-	"sync/atomic"
 	"time"
-
-	"hyperchain/manager/protos"
-
-	"github.com/golang/protobuf/proto"
 )
 
 /**
@@ -24,7 +21,6 @@ type nodeManager struct {
 	delNodeCertStore map[string]*delNodeCert // track the received add node agree message
 
 	routers           []byte                 // track the vp replicas' routers
-	inUpdatingN       uint32                 // track if there are updating
 	updateTimeout     time.Duration          // time limit for N-f agree on update n
 	agreeUpdateStore  map[aidx]*AgreeUpdateN // track agree-update-n message
 	updateStore       map[uidx]*UpdateN      // track last update-n we received or sent
@@ -40,8 +36,6 @@ func newNodeMgr() *nodeManager {
 	nm.agreeUpdateStore = make(map[aidx]*AgreeUpdateN)
 	nm.updateStore = make(map[uidx]*UpdateN)
 	nm.finishUpdateStore = make(map[FinishUpdate]bool)
-
-	atomic.StoreUint32(&nm.inUpdatingN, 0)
 
 	return nm
 }
@@ -317,7 +311,7 @@ func (rbft *rbftImpl) maybeUpdateTableForDel(key string) error {
 	// If we return too immediately, we may fail at broadcasting to new node.
 	time.Sleep(20 * time.Millisecond)
 	rbft.status.inActiveState(&rbft.status.inDeletingNode)
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 1)
+	rbft.status.activeState(&rbft.status.inUpdatingN)
 
 	// As for deleting node, replicas broadcast AgreeUpdateN just after
 	// updating routing table
@@ -342,13 +336,13 @@ func (rbft *rbftImpl) sendReadyForN() error {
 		return nil
 	}
 
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
+	if rbft.status.getState(&rbft.status.inViewChange) {
 		rbft.logger.Errorf("New replica %d finds itself in viewchange, not sending ready_for_n", rbft.id)
 		return nil
 	}
 
 	rbft.logger.Noticef("Replica %d send ready_for_n as it already finished recovery", rbft.id)
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 1)
+	rbft.status.activeState(&rbft.status.inUpdatingN)
 
 	ready := &ReadyForN{
 		ReplicaId: rbft.id,
@@ -377,7 +371,7 @@ func (rbft *rbftImpl) recvReadyforNforAdd(ready *ReadyForN) consensusEvent {
 
 	rbft.logger.Debugf("Replica %d received ready_for_n from replica %d", rbft.id, ready.ReplicaId)
 
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
+	if rbft.status.getState(&rbft.status.inViewChange) {
 		rbft.logger.Warningf("Replica %d is in view change, reject the ready_for_n message", rbft.id)
 		return nil
 	}
@@ -411,7 +405,7 @@ func (rbft *rbftImpl) recvReadyforNforAdd(ready *ReadyForN) consensusEvent {
 // This will be only called after receiving the ReadyForN message sent by new node.
 func (rbft *rbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) consensusEvent {
 
-	if atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 {
+	if rbft.status.getState(&rbft.status.inUpdatingN) {
 		rbft.logger.Debugf("Replica %d already in updatingN, ignore send agree-update-n again")
 		return nil
 	}
@@ -430,7 +424,7 @@ func (rbft *rbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) consensusEvent
 
 	delete(rbft.nodeMgr.updateStore, rbft.nodeMgr.updateTarget)
 	rbft.stopNewViewTimer()
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 1)
+	rbft.status.activeState(&rbft.status.inUpdatingN)
 
 	// Generate the AgreeUpdateN message and broadcast it to others
 	rbft.agreeUpdateHelper(agree)
@@ -457,7 +451,7 @@ func (rbft *rbftImpl) sendAgreeUpdateNforDel(key string) error {
 
 	rbft.logger.Debugf("Replica %d try to send update_n after finish del node", rbft.id)
 
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
+	if rbft.status.getState(&rbft.status.inViewChange) {
 		rbft.logger.Warningf("Replica %d is in view change, reject send agree update N", rbft.id)
 		return nil
 	}
@@ -470,7 +464,7 @@ func (rbft *rbftImpl) sendAgreeUpdateNforDel(key string) error {
 	}
 	delete(rbft.nodeMgr.updateStore, rbft.nodeMgr.updateTarget)
 	rbft.stopNewViewTimer()
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 1)
+	rbft.status.activeState(&rbft.status.inUpdatingN)
 
 	// Calculate the new N and view
 	n, view := rbft.getDelNV(cert.delId)
@@ -513,7 +507,7 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 		rbft.id, agree.Basis.ReplicaId, agree.Basis.View, agree.N, agree.Flag, agree.Basis.H, len(agree.Basis.Cset), len(agree.Basis.Pset), len(agree.Basis.Qset))
 
 	// Reject response to updating N as replica is in viewChange, negoView or recovery
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
+	if rbft.status.getState(&rbft.status.inViewChange) {
 		rbft.logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in view-change", rbft.id)
 		return nil
 	}
@@ -558,7 +552,7 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 	quorum := len(replicas)
 
 	// We only enter this if there are enough agree-update-n messages but locally not inUpdateN
-	if agree.Flag && quorum > rbft.oneCorrectQuorum() && atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 0 {
+	if agree.Flag && quorum > rbft.oneCorrectQuorum() && !rbft.status.getState(&rbft.status.inUpdatingN) {
 		rbft.logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForAdd",
 			rbft.id)
 		rbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
@@ -567,7 +561,7 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 	}
 
 	// We only enter this if there are enough agree-update-n messages but locally not inUpdateN
-	if !agree.Flag && quorum >= rbft.oneCorrectQuorum() && atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 0 {
+	if !agree.Flag && quorum >= rbft.oneCorrectQuorum() && !rbft.status.getState(&rbft.status.inUpdatingN) {
 		rbft.logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForDel",
 			rbft.id)
 		rbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
@@ -654,7 +648,7 @@ func (rbft *rbftImpl) recvUpdateN(update *UpdateN) consensusEvent {
 		rbft.id, update.ReplicaId)
 
 	// Reject response to updating N as replica is in viewChange, negoView or recovery
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
+	if rbft.status.getState(&rbft.status.inViewChange) {
 		rbft.logger.Warningf("Replica %d try to recvUpdateN, but it's in view-change", rbft.id)
 		return nil
 	}
@@ -732,13 +726,13 @@ func (rbft *rbftImpl) replicaCheckUpdateN() consensusEvent {
 		return nil
 	}
 
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
+	if rbft.status.getState(&rbft.status.inViewChange) {
 		rbft.logger.Infof("Replica %d ignoring update-n from %d, v:%d: we are in view change to view=%d",
 			rbft.id, update.ReplicaId, update.View, rbft.view)
 		return nil
 	}
 
-	if atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 0 {
+	if !rbft.status.getState(&rbft.status.inUpdatingN) {
 		rbft.logger.Infof("Replica %d ignoring update-n from %d, v:%d: we are not in updatingN",
 			rbft.id, update.ReplicaId, update.View)
 		return nil
@@ -864,7 +858,7 @@ func (rbft *rbftImpl) sendFinishUpdate() consensusEvent {
 // recvFinishUpdate handles the FinishUpdate messages sent from others
 func (rbft *rbftImpl) recvFinishUpdate(finish *FinishUpdate) consensusEvent {
 
-	if atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 0 {
+	if !rbft.status.getState(&rbft.status.inUpdatingN) {
 		rbft.logger.Debugf("Replica %d is not in updatingN, but received FinishUpdate from replica %d", rbft.id, finish.ReplicaId)
 	}
 	rbft.logger.Debugf("Replica %d received FinishUpdate from replica %d, view=%d/h=%d", rbft.id, finish.ReplicaId, finish.View, finish.LowH)

@@ -5,7 +5,6 @@ package rbft
 
 import (
 	"fmt"
-	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -333,11 +332,11 @@ func TestIsPrePrepareLegal(t *testing.T) {
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 
 	rbft.status.inActiveState(&rbft.status.inNegoView)
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	res = rbft.isPrePrepareLegal(prePrepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	res = rbft.isPrePrepareLegal(prePrepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 

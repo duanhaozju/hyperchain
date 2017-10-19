@@ -4,7 +4,6 @@
 package rbft
 
 import (
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -205,7 +204,7 @@ func TestFindNextValidateBatch(t *testing.T) {
 	rbft.batchMgr.txPool.GenerateTxBatch()
 	find, _, _, _ = rbft.findNextValidateBatch()
 	ast.Equal(false, find, "findNextValidateBatch failed")
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.activeView), "sendViewChange failed")
+	ast.Equal(false, !rbft.status.getState(&rbft.status.inViewChange), "sendViewChange failed")
 
 }
 

@@ -9,7 +9,6 @@ import (
 	"hyperchain/consensus/helper/persist"
 	"hyperchain/hyperdb/mdb"
 	"hyperchain/manager/protos"
-	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -266,15 +265,15 @@ func TestSendAgreeUpdateNforDel(t *testing.T) {
 	}
 
 	// test sendAgreeUpdateNforDel when in viewchange.
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.sendAgreeUpdateNforDel(key)
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendAgreeUpdateNforDel with finishDel being false.
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.nodeMgr.delNodeCertStore[key].finishDel = false
 	rbft.sendAgreeUpdateNforDel(key)
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendAgreeUpdateNforDel with normal case.
 	rbft.nodeMgr.delNodeCertStore[key].finishDel = true
@@ -292,7 +291,7 @@ func TestSendAgreeUpdateNforDel(t *testing.T) {
 		ast.Equal(false, agree.Flag, "flag of delete node should be false.")
 	}()
 	rbft.sendAgreeUpdateNforDel(key)
-	ast.Equal(uint32(1), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should be in updating N.")
+	ast.Equal(true, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should be in updating N.")
 
 }
 
@@ -410,11 +409,11 @@ func TestRecvAgreeUpdateN(t *testing.T) {
 	}
 
 	// test recvAgreeUpdateN when in viewchange.
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.recvAgreeUpdateN(agreeDel1)
 
 	// test recvAgreeUpdateN when in negotiate view.
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.status.activeState(&rbft.status.inNegoView)
 	rbft.recvAgreeUpdateN(agreeDel1)
 
@@ -460,7 +459,7 @@ func TestRecvAgreeUpdateN(t *testing.T) {
 	rbft.N = 4
 	rbft.view = 0
 	// test recvAgreeUpdateN with finishAdd being false.
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 0)
+	rbft.status.inActiveState(&rbft.status.inUpdatingN)
 	rbft.nodeMgr.addNodeCertStore[addKey].finishAdd = false
 	rbft.recvAgreeUpdateN(agreeAdd1)
 
@@ -511,23 +510,23 @@ func TestSendReadyForN(t *testing.T) {
 	// test sendReadyForN with a non-new node.
 	rbft.status.inActiveState(&rbft.status.isNewNode)
 	rbft.sendReadyForN()
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendReadyForN with a blank localKey.
 	rbft.nodeMgr.localKey = ""
 	rbft.sendReadyForN()
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendReadyForN when in viewchange.
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.sendReadyForN()
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendReadyForN in normal case.
 	rbft.status.activeState(&rbft.status.isNewNode)
 	key := "test-local-key"
 	rbft.nodeMgr.localKey = key
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	go func() {
 		event := <-eChan
 		e, ok := event.(*protos.Message)
@@ -542,7 +541,7 @@ func TestSendReadyForN(t *testing.T) {
 		ast.Equal(key, readyForN.Key, "local key shoule be equal.")
 	}()
 	rbft.sendReadyForN()
-	ast.Equal(uint32(1), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should be in updating N.")
+	ast.Equal(true, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should be in updating N.")
 
 }
 
@@ -560,14 +559,14 @@ func TestRecvReadyforNforAdd(t *testing.T) {
 		ReplicaId: 2,
 		Key:       key,
 	}
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 1)
+	rbft.status.activeState(&rbft.status.inUpdatingN)
 
 	// test sendReadyForN when in viewchange.
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.recvReadyforNforAdd(ready)
 
 	// test sendReadyForN with finishAdd being false.
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.recvReadyforNforAdd(ready)
 
 	// test sendReadyForN with normal case.
@@ -623,12 +622,12 @@ func TestSendAgreeUpdateNforAdd(t *testing.T) {
 	// test sendAgreeUpdateNForAdd with a new node.
 	rbft.status.activeState(&rbft.status.isNewNode)
 	rbft.sendAgreeUpdateNForAdd(agree)
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendAgreeUpdateNForAdd with incorrect N or view.
 	rbft.status.inActiveState(&rbft.status.isNewNode)
 	rbft.sendAgreeUpdateNForAdd(agree)
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendAgreeUpdateNForAdd in normal case.
 	agree.N = 5
@@ -647,7 +646,7 @@ func TestSendAgreeUpdateNforAdd(t *testing.T) {
 		ast.Equal(key, agree.Key, "local key shoule be equal.")
 	}()
 	rbft.sendAgreeUpdateNForAdd(agree)
-	ast.Equal(uint32(1), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should be in updating N.")
+	ast.Equal(true, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should be in updating N.")
 
 }
 
@@ -886,11 +885,11 @@ func TestRecvUpdateN(t *testing.T) {
 	rbft.persister = persist.New(db)
 
 	// test recvUpdateN when in viewchange.
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	updateN := &UpdateN{}
 	rbft.recvUpdateN(updateN)
 	ast.Equal(0, len(rbft.nodeMgr.updateStore), "updateStore should be nil.")
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 
 	// test recvUpdateN when in negotiate view.
 	rbft.status.activeState(&rbft.status.inNegoView)
@@ -1222,16 +1221,16 @@ func TestReplicaCheckUpdateN(t *testing.T) {
 	rbft.nodeMgr.updateStore[rbft.nodeMgr.updateTarget] = updateN
 
 	// test replicaCheckUpdateN when in viewchange.
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.replicaCheckUpdateN()
 	ast.Equal(4, rbft.N)
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 
 	// test replicaCheckUpdateN when not in updatingN.
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 0)
+	rbft.status.inActiveState(&rbft.status.inUpdatingN)
 	rbft.replicaCheckUpdateN()
 	ast.Equal(4, rbft.N)
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 1)
+	rbft.status.activeState(&rbft.status.inUpdatingN)
 
 	// test replicaCheckUpdateN with incorrect Cset.
 	rbft.nodeMgr.agreeUpdateStore[aidx1].Basis.Cset = []*Vc_C{}
@@ -1311,7 +1310,7 @@ func TestSendFinishUpdate(t *testing.T) {
 	rbft.view = 5
 	rbft.h = 0
 
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 0)
+	rbft.status.inActiveState(&rbft.status.inUpdatingN)
 	go func() {
 		event := <-eChan
 		e, ok := event.(*protos.Message)

@@ -91,7 +91,7 @@ func TestPbftImpl_NewPbft(t *testing.T) {
 	ensure.Nil(t, err)
 
 	ensure.DeepEqual(t, rbft.namespace, "global-"+strconv.Itoa(int(rbft.id)))
-	ensure.DeepEqual(t, rbft.activeView, uint32(1))
+	ensure.DeepEqual(t, rbft.status.getState(&rbft.status.inViewChange), false)
 	ensure.DeepEqual(t, rbft.f, (rbft.N-1)/3)
 	ensure.DeepEqual(t, rbft.N, conf.GetInt("self.N"))
 	ensure.DeepEqual(t, rbft.h, uint64(0))
@@ -123,10 +123,10 @@ func TestProcessNullRequest(t *testing.T) {
 	rbft.RecvMsg(event)
 
 	rbft.status.inActiveState(&rbft.status.inNegoView)
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.RecvMsg(event)
 
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.RecvMsg(event)
 
 	err = CleanData(rbft.namespace)
@@ -892,7 +892,7 @@ func TestMainMoveWatermarks(t *testing.T) {
 
 	rbft.id = uint64(2)
 	rbft.status.inActiveState(&rbft.status.inNegoView)
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.seqNo = uint64(0)
 	// set current h to 50
 	rbft.h = uint64(50)
@@ -975,7 +975,7 @@ func TestUpdateHighStateTarget(t *testing.T) {
 
 	rbft.id = uint64(2)
 	rbft.status.inActiveState(&rbft.status.inNegoView)
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.seqNo = uint64(0)
 
 	checkpoint := checkpointMessage{
@@ -1080,16 +1080,16 @@ func TestRecvValidatedResult(t *testing.T) {
 
 	currentVid := uint64(10)
 	rbft.batchVdr.setCurrentVid(&currentVid)
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	err = rbft.recvValidatedResult(vali)
 	ast.Nil(err, "activeView is 0, expect nil")
 
-	atomic.StoreUint32(&rbft.activeView, 1)
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.status.activeState(&rbft.status.inUpdatingN)
 	err = rbft.recvValidatedResult(vali)
 	ast.Nil(err, "inUpdatingN is 1, expect nil")
 
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 0)
+	rbft.status.inActiveState(&rbft.status.inUpdatingN)
 	rbft.seqNo = uint64(0)
 
 	// primary recv ValidateResult

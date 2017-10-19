@@ -5,7 +5,6 @@ package rbft
 
 import (
 	"fmt"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -89,7 +88,7 @@ func TestRecvNegoView(t *testing.T) {
 		ast.Equal(from, to, "recvNegoView failed")
 	}()
 
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	negoViewMsg := &NegotiateView{
 		ReplicaId: from,
 	}
@@ -124,7 +123,7 @@ func TestRecvNegoViewRsp(t *testing.T) {
 
 	rbft.id = uint64(2)
 	rbft.status.activeState(&rbft.status.inNegoView)
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.seqNo = uint64(0)
 	rbft.recoveryMgr.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 	// duplicate negoViewRsp

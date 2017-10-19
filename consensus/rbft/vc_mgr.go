@@ -207,7 +207,7 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 		// after 10 viewchange without response from others, we will restart recovery, and set vcToRecovery to
 		// true, which, after negotiate view done, we need to parse certStore
 		rbft.status.activeState(&rbft.status.inNegoView, &rbft.status.inRecovery, &rbft.status.vcToRecovery)
-		atomic.StoreUint32(&rbft.activeView, 1)
+		rbft.status.inActiveState(&rbft.status.inViewChange)
 		rbft.initNegoView()
 		return nil
 	}
@@ -261,7 +261,7 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 
 	//if in viewchange and vc.view=rbft.view and quorum>allCorrectReplicasQuorum
 	//rbft find new view success and jump into VIEW_CHANGE_QUORUM_EVENT
-	if atomic.LoadUint32(&rbft.activeView) == 0 && vc.Basis.View == rbft.view && quorum >= rbft.allCorrectReplicasQuorum() {
+	if rbft.status.getState(&rbft.status.inViewChange) && vc.Basis.View == rbft.view && quorum >= rbft.allCorrectReplicasQuorum() {
 		//close VC_RESEND_TIMER
 		rbft.timerMgr.stopTimer(VC_RESEND_TIMER)
 
@@ -279,7 +279,7 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 		}
 	}
 	//if message from primary, peers send view change to other peers directly
-	if atomic.LoadUint32(&rbft.activeView) == 1 && rbft.isPrimary(vc.Basis.ReplicaId) {
+	if !rbft.status.getState(&rbft.status.inViewChange) && rbft.isPrimary(vc.Basis.ReplicaId) {
 		rbft.sendViewChange()
 	}
 
@@ -417,7 +417,7 @@ func (rbft *rbftImpl) replicaCheckNewView() consensusEvent {
 		return nil
 	}
 
-	if atomic.LoadUint32(&rbft.activeView) == 1 {
+	if !rbft.status.getState(&rbft.status.inViewChange) {
 		rbft.logger.Infof("Replica %d ignoring new-view from %d, v:%d: we are active in view %d",
 			rbft.id, nv.ReplicaId, nv.View, rbft.view)
 		return nil
@@ -498,7 +498,7 @@ func (rbft *rbftImpl) resetStateForNewView() consensusEvent {
 // recvFinishVcReset does some state check after receiving FinishVcReset message
 func (rbft *rbftImpl) recvFinishVcReset(finish *FinishVcReset) consensusEvent {
 	//Check whether we are in viewChange
-	if atomic.LoadUint32(&rbft.activeView) == 1 {
+	if !rbft.status.getState(&rbft.status.inViewChange) {
 		rbft.logger.Warningf("Replica %d is not in viewChange, but received FinishVcReset from replica %d", rbft.id, finish.ReplicaId)
 		return nil
 	}
@@ -675,7 +675,7 @@ func (rbft *rbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) consensu
 	//if validatedBatchStore jump to processReqInNewView
 	//if inUpdatingN jump to processReqInUpdate
 	if len(rbft.storeMgr.missingReqBatches) == 0 {
-		if atomic.LoadUint32(&rbft.activeView) == 0 {
+		if rbft.status.getState(&rbft.status.inViewChange) {
 			_, ok := rbft.vcMgr.newViewStore[rbft.view]
 			if !ok {
 				rbft.logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", rbft.id, rbft.view)
@@ -683,7 +683,7 @@ func (rbft *rbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) consensu
 			}
 			return rbft.resetStateForNewView()
 		}
-		if atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 {
+		if rbft.status.getState(&rbft.status.inUpdatingN) {
 			update, ok := rbft.nodeMgr.updateStore[rbft.nodeMgr.updateTarget]
 			if !ok {
 				rbft.logger.Debugf("Replica %d ignoring processUpdateN as it could not find target %v in its updateStore", rbft.id, rbft.nodeMgr.updateTarget)
@@ -824,7 +824,7 @@ func (rbft *rbftImpl) beforeSendVC() error {
 
 	delete(rbft.vcMgr.newViewStore, rbft.view)
 	rbft.view++
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.status.inActiveState(&rbft.status.vcHandled)
 	atomic.StoreUint32(&rbft.normal, 0)
 

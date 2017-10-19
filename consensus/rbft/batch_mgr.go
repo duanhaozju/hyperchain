@@ -25,8 +25,9 @@ type batchManager struct {
 
 // batchValidator manages batch validate issues
 type batchValidator struct {
-	lastVid             uint64                 // track the last validate batch seqNo
-	currentVid          *uint64                // track the current validate batch seqNo
+	lastVid             uint64  // track the last validate batch seqNo
+	currentVid          *uint64 // track the current validate batch seqNo
+	validateCount       int32
 	cacheValidatedBatch map[string]*cacheBatch // track the cached validated batch
 
 	validateTimeout time.Duration

@@ -4,77 +4,70 @@
 package rbft
 
 import (
-	"fmt"
-	"time"
-	"testing"
-	"sync/atomic"
-	"reflect"
 	"encoding/base64"
-
-	"hyperchain/manager/protos"
-	//"hyperchain/event"
-	//"hyperchain/consensus/helper"
-	//"hyperchain/core"
-	//"hyperchain/core/types"
-
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"hyperchain/consensus/consensusMocks"
 	"hyperchain/core/types"
+	"hyperchain/manager/protos"
+	"reflect"
+	"testing"
+	"time"
 )
 
 func getTestViewChange() (vc *ViewChange) {
 	vc = &ViewChange{
-		Basis:		&VcBasis{
-					View:	uint64(1),
-					H:	uint64(50),
-					Cset: []*Vc_C{
-						{
-							SequenceNumber: 60,
-							Id:             "chkpoint---digest60",
-						},
-						{
-							SequenceNumber: 70,
-							Id:             "chkpoint---digest70",
-						},
-					},
-					Pset: []*Vc_PQ{
-						{
-							SequenceNumber: 51,
-							BatchDigest:    "batch---P1",
-							View:           0,
-						},
-						{
-							SequenceNumber: 52,
-							BatchDigest:    "batch---P2",
-							View:           0,
-						},
-						{
-							SequenceNumber: 53,
-							BatchDigest:    "batch---P3",
-							View:           0,
-						},
-					},
-					Qset: []*Vc_PQ{
-						{
-							SequenceNumber: 54,
-							BatchDigest:    "batch---Q4",
-							View:           0,
-						},
-						{
-							SequenceNumber: 55,
-							BatchDigest:    "batch---Q5",
-							View:           0,
-						},
-						{
-							SequenceNumber: 56,
-							BatchDigest:    "batch---Q6",
-							View:           0,
-						},
-					},
-					ReplicaId: 2,
+		Basis: &VcBasis{
+			View: uint64(1),
+			H:    uint64(50),
+			Cset: []*Vc_C{
+				{
+					SequenceNumber: 60,
+					Id:             "chkpoint---digest60",
 				},
-		Timestamp:	time.Now().UnixNano(),
+				{
+					SequenceNumber: 70,
+					Id:             "chkpoint---digest70",
+				},
+			},
+			Pset: []*Vc_PQ{
+				{
+					SequenceNumber: 51,
+					BatchDigest:    "batch---P1",
+					View:           0,
+				},
+				{
+					SequenceNumber: 52,
+					BatchDigest:    "batch---P2",
+					View:           0,
+				},
+				{
+					SequenceNumber: 53,
+					BatchDigest:    "batch---P3",
+					View:           0,
+				},
+			},
+			Qset: []*Vc_PQ{
+				{
+					SequenceNumber: 54,
+					BatchDigest:    "batch---Q4",
+					View:           0,
+				},
+				{
+					SequenceNumber: 55,
+					BatchDigest:    "batch---Q5",
+					View:           0,
+				},
+				{
+					SequenceNumber: 56,
+					BatchDigest:    "batch---Q6",
+					View:           0,
+				},
+			},
+			ReplicaId: 2,
+		},
+		Timestamp: time.Now().UnixNano(),
 	}
 
 	return
@@ -127,7 +120,7 @@ func TestCalcPSet(t *testing.T) {
 	ast.Equal(0, len(calc_pset), fmt.Sprintf("pset should be nil, but it is :%v", calc_pset))
 
 	//plist map[uint64]*Vc_PQ
-	rbft.vcMgr.plist[uint64(10)] = &Vc_PQ{SequenceNumber:uint64(10), View:uint64(3)}
+	rbft.vcMgr.plist[uint64(10)] = &Vc_PQ{SequenceNumber: uint64(10), View: uint64(3)}
 	v := uint64(1)
 	n := uint64(10)
 	d := "1"
@@ -158,7 +151,7 @@ func TestCalcQSet(t *testing.T) {
 	calc_qset := rbft.calcQSet()
 	ast.Equal(0, len(calc_qset), fmt.Sprintf("qset should be nil, but it is :%v", calc_qset))
 
-	rbft.vcMgr.qlist[qidx{d:"10", n:uint64(10)}] = &Vc_PQ{SequenceNumber:uint64(10), View:uint64(3)}
+	rbft.vcMgr.qlist[qidx{d: "10", n: uint64(10)}] = &Vc_PQ{SequenceNumber: uint64(10), View: uint64(3)}
 	v := uint64(1)
 	n := uint64(10)
 	d := "10"
@@ -227,8 +220,8 @@ func TestGatherPQC(t *testing.T) {
 	ast.Equal(nil, err, err)
 	rbft.Start()
 
-	rbft.vcMgr.plist[uint64(20)] = &Vc_PQ{SequenceNumber:uint64(20), View:uint64(3)}
-	rbft.vcMgr.qlist[qidx{d:"20", n:uint64(20)}] = &Vc_PQ{SequenceNumber:uint64(20), View:uint64(3)}
+	rbft.vcMgr.plist[uint64(20)] = &Vc_PQ{SequenceNumber: uint64(20), View: uint64(3)}
+	rbft.vcMgr.qlist[qidx{d: "20", n: uint64(20)}] = &Vc_PQ{SequenceNumber: uint64(20), View: uint64(3)}
 	rbft.storeMgr.chkpts[uint64(20)] = "20"
 	cset, pset, qset := rbft.gatherPQC()
 	ast.Equal(2, len(cset), "should contain two checkpoint")
@@ -236,8 +229,8 @@ func TestGatherPQC(t *testing.T) {
 	ast.Equal(1, len(qset), "should contain one prePrepare")
 
 	rbft.h = uint64(10)
-	rbft.vcMgr.plist[uint64(5)] = &Vc_PQ{SequenceNumber:uint64(5), View:uint64(3)}
-	rbft.vcMgr.qlist[qidx{d:"5", n:uint64(5)}] = &Vc_PQ{SequenceNumber:uint64(5), View:uint64(3)}
+	rbft.vcMgr.plist[uint64(5)] = &Vc_PQ{SequenceNumber: uint64(5), View: uint64(3)}
+	rbft.vcMgr.qlist[qidx{d: "5", n: uint64(5)}] = &Vc_PQ{SequenceNumber: uint64(5), View: uint64(3)}
 	cset, pset, qset = rbft.gatherPQC()
 	ast.Equal(2, len(cset), "should contain two checkpoint")
 	ast.Equal(1, len(pset), "should contain one prepare")
@@ -253,7 +246,7 @@ func TestRecvAndSendViewChange(t *testing.T) { // test some pre-check procedure 
 
 	rbft.status.inActiveState(&rbft.status.inNegoView)
 	rbft.status.activeState(&rbft.status.inRecovery)
-	if err := rbft.sendViewChange(); err != nil{
+	if err := rbft.sendViewChange(); err != nil {
 		t.Error("should end in inRecovery, expect nil")
 	}
 
@@ -290,7 +283,7 @@ func TestRecvAndSendViewChange(t *testing.T) { // test some pre-check procedure 
 	ast.Equal(0, rbft.vcMgr.vcResendCount, "should recover, expect 0")
 }
 
-func TestRecvAndSendViewChange2(t *testing.T) {// test normal case
+func TestRecvAndSendViewChange2(t *testing.T) { // test normal case
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
@@ -306,14 +299,14 @@ func TestRecvAndSendViewChange2(t *testing.T) {// test normal case
 	vc2.Basis.ReplicaId = 3
 	vc3.Basis.ReplicaId = 2
 
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.status.inActiveState(&rbft.status.timerActive)
 	rbft.recvViewChange(vc)
 	rbft.recvViewChange(vc2)
 	ast.Equal(uint64(1), rbft.view, "should send view change, expect 1")
 	ast.Equal(true, rbft.status.getState(&rbft.status.timerActive), "should startNewViewTimer, expect true")
 
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.recvViewChange(vc3)
 	ast.Equal(uint64(2), rbft.view, "should send view change again, expect 2")
 }
@@ -505,30 +498,30 @@ func TestSendAndRecvNewView(t *testing.T) {
 	}
 
 	vcBasis1 := &VcBasis{
-		View:		1,
-		H:		40,
-		ReplicaId:	1,
+		View:      1,
+		H:         40,
+		ReplicaId: 1,
 	}
 	vc1 := &ViewChange{Basis: vcBasis1}
 
 	vcBasis2 := &VcBasis{
-		View:		2,
-		H:		40,
-		ReplicaId:	2,
+		View:      2,
+		H:         40,
+		ReplicaId: 2,
 	}
 	vc2 := &ViewChange{Basis: vcBasis2}
 
 	vcBasis3 := &VcBasis{
-		View:		2,
-		H:		50,
-		ReplicaId:	3,
+		View:      2,
+		H:         50,
+		ReplicaId: 3,
 	}
 	vc3 := &ViewChange{Basis: vcBasis3}
 
 	vcBasis4 := &VcBasis{
-		View:		2,
-		H:		50,
-		ReplicaId:	4,
+		View:      2,
+		H:         50,
+		ReplicaId: 4,
 	}
 	vc4 := &ViewChange{Basis: vcBasis4}
 
@@ -537,10 +530,10 @@ func TestSendAndRecvNewView(t *testing.T) {
 	vcidx3 := vcidx{v: vc3.Basis.View, id: vc3.Basis.ReplicaId}
 	vcidx4 := vcidx{v: vc4.Basis.View, id: vc4.Basis.ReplicaId}
 	rbft.vcMgr.viewChangeStore = map[vcidx]*ViewChange{
-		vcidx1 : vc1,
-		vcidx2 : vc2,
-		vcidx3 : vc3,
-		vcidx4 : vc4,
+		vcidx1: vc1,
+		vcidx2: vc2,
+		vcidx3: vc3,
+		vcidx4: vc4,
 	}
 
 	rbft.status.activeState(&rbft.status.inNegoView)
@@ -589,8 +582,7 @@ func TestSendAndRecvNewView(t *testing.T) {
 	ast.Equal(nv, rbft.vcMgr.newViewStore[rbft.view], "should be the same, expect equal")
 
 	rbft2.view = uint64(2)
-	atomic.StoreUint32(&rbft2.activeView, 0)
-	rbft2.status.activeState(&rbft2.status.inNegoView)
+	rbft2.status.activeState(&rbft2.status.inNegoView, &rbft2.status.inViewChange)
 	ast.Nil(rbft2.recvNewView(nv), "In nego-view, so it should not receive this message")
 
 	rbft2.status.inActiveState(&rbft2.status.inNegoView)
@@ -645,8 +637,8 @@ func TestPrimaryCheckNewView(t *testing.T) {
 
 	rbft.h = uint64(10)
 	initialCp := Vc_C{
-		SequenceNumber:	uint64(10),
-		Id:		"123",
+		SequenceNumber: uint64(10),
+		Id:             "123",
 	}
 	replicas := []replicaInfo{}
 	ast.Nil(rbft.primaryCheckNewView(initialCp, replicas, nil), "hash could not be decoded, expect nil")
@@ -846,42 +838,42 @@ func TestReplicaCheckNewView(t *testing.T) {
 	}
 
 	vcBasis1 := &VcBasis{
-		View:		1,
-		H:		40,
-		ReplicaId:	1,
-		Cset:		vcC1,
-		Pset:		vcP1,
-		Qset:		vcQ1,
+		View:      1,
+		H:         40,
+		ReplicaId: 1,
+		Cset:      vcC1,
+		Pset:      vcP1,
+		Qset:      vcQ1,
 	}
 	vc1 := &ViewChange{Basis: vcBasis1}
 
 	vcBasis2 := &VcBasis{
-		View:		2,
-		H:		40,
-		ReplicaId:	2,
-		Cset:		vcC2,
-		Pset:		vcP2,
-		Qset:		vcQ2,
+		View:      2,
+		H:         40,
+		ReplicaId: 2,
+		Cset:      vcC2,
+		Pset:      vcP2,
+		Qset:      vcQ2,
 	}
 	vc2 := &ViewChange{Basis: vcBasis2}
 
 	vcBasis3 := &VcBasis{
-		View:		2,
-		H:		50,
-		ReplicaId:	3,
-		Cset:		vcC3,
-		Pset:		vcP3,
-		Qset:		vcQ3,
+		View:      2,
+		H:         50,
+		ReplicaId: 3,
+		Cset:      vcC3,
+		Pset:      vcP3,
+		Qset:      vcQ3,
 	}
 	vc3 := &ViewChange{Basis: vcBasis3}
 
 	vcBasis4 := &VcBasis{
-		View:		2,
-		H:		50,
-		ReplicaId:	4,
-		Cset:		vcC4,
-		Pset:		vcP4,
-		Qset:		vcQ4,
+		View:      2,
+		H:         50,
+		ReplicaId: 4,
+		Cset:      vcC4,
+		Pset:      vcP4,
+		Qset:      vcQ4,
 	}
 	vc4 := &ViewChange{Basis: vcBasis4}
 
@@ -905,52 +897,52 @@ func TestReplicaCheckNewView(t *testing.T) {
 		ReplicaId: rbft.id,
 	}
 	rbft.vcMgr.newViewStore[rbft.view] = nv
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	ast.Nil(rbft.replicaCheckNewView(), "activeView is 1, expect nil")
 
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.status.inActiveState(&rbft.status.inNegoView)
 	rbft.status.inActiveState(&rbft.status.inRecovery)
 	rbft.replicaCheckNewView()
 	ast.Equal(uint64(1), rbft.view, "selectInitialCheckpoint failed and sendViewChange, expect 1")
 
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.status.inActiveState(&rbft.status.inNegoView)
 	rbft.status.inActiveState(&rbft.status.inRecovery)
 	rbft.vcMgr.viewChangeStore = map[vcidx]*ViewChange{
-		vcidx1 : vc1,
-		vcidx2 : vc2,
-		vcidx3 : vc3,
+		vcidx1: vc1,
+		vcidx2: vc2,
+		vcidx3: vc3,
 	}
 	rbft.vcMgr.newViewStore[rbft.view] = nv
 	rbft.replicaCheckNewView()
 	ast.Equal(uint64(2), rbft.view, "assignSequenceNumbers failed and sendViewChange, expect 1")
 
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.status.inActiveState(&rbft.status.inNegoView)
 	rbft.status.inActiveState(&rbft.status.inRecovery)
 	rbft.vcMgr.viewChangeStore = map[vcidx]*ViewChange{
-		vcidx1 : vc1,
-		vcidx2 : vc2,
-		vcidx3 : vc3,
-		vcidx4 : vc4,
+		vcidx1: vc1,
+		vcidx2: vc2,
+		vcidx3: vc3,
+		vcidx4: vc4,
 	}
 	rbft.vcMgr.newViewStore[rbft.view] = &NewView{
-		View:		uint64(100),
-		Xset:		make(map[uint64]string),
-		ReplicaId:	uint64(3),
+		View:      uint64(100),
+		Xset:      make(map[uint64]string),
+		ReplicaId: uint64(3),
 	}
 	rbft.replicaCheckNewView()
 	ast.Equal(uint64(3), rbft.view, "nv's vset is different and sendViewChange, expect 1")
 
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.status.inActiveState(&rbft.status.inNegoView)
 	rbft.status.inActiveState(&rbft.status.inRecovery)
 	rbft.vcMgr.viewChangeStore = map[vcidx]*ViewChange{
-		vcidx1 : vc1,
-		vcidx2 : vc2,
-		vcidx3 : vc3,
-		vcidx4 : vc4,
+		vcidx1: vc1,
+		vcidx2: vc2,
+		vcidx3: vc3,
+		vcidx4: vc4,
 	}
 	rbft.vcMgr.newViewStore[rbft.view] = nv
 	ast.Nil(rbft.replicaCheckNewView(), "hash could not be decoded, expect nil")
@@ -979,17 +971,17 @@ func TestRecvFinishVcReset(t *testing.T) {
 	rbft.Start()
 
 	finish := &FinishVcReset{
-		ReplicaId:	rbft.id,
-		View:		uint64(100),
-		LowH:		uint64(100),
+		ReplicaId: rbft.id,
+		View:      uint64(100),
+		LowH:      uint64(100),
 	}
 
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.recvFinishVcReset(finish)
 	ok := rbft.vcMgr.vcResetStore[*finish]
 	ast.Equal(false, ok, "activeView is 1, should not received, expect false")
 
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.recvFinishVcReset(finish)
 	ok = rbft.vcMgr.vcResetStore[*finish]
 	ast.Equal(false, ok, "view is not the same as rbft, should not received, expect false")
@@ -1497,33 +1489,33 @@ func TestRecvReturnRequestBatch(t *testing.T) {
 	ast.Nil(rbft.recvReturnRequestBatch(nil), "in recovery, expect nil")
 
 	batch := &ReturnRequestBatch{
-		Batch:		nil,
-		BatchDigest:	"batch",
-		ReplicaId:	rbft.id,
+		Batch:       nil,
+		BatchDigest: "batch",
+		ReplicaId:   rbft.id,
 	}
 	rbft.status.inActiveState(&rbft.status.inRecovery)
 	ast.Nil(rbft.recvReturnRequestBatch(batch), "didn't store this in missingReqBatches, expect nil")
 
 	rbft.storeMgr.missingReqBatches[batch.BatchDigest] = true
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	ast.Nil(rbft.recvReturnRequestBatch(batch), "didn't store newView in newViewStore, expect nil")
 	_, ok := rbft.storeMgr.missingReqBatches[batch.BatchDigest]
 	ast.Equal(false, ok, "should be deleted, expect false")
 
 	rbft.storeMgr.missingReqBatches[batch.BatchDigest] = true
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.vcMgr.newViewStore[rbft.view] = nil
 	rbft.status.inActiveState(&rbft.status.vcHandled)
 	rbft.recvReturnRequestBatch(batch)
 	ast.Equal(true, rbft.status.getState(&rbft.status.vcHandled), "resetStateForNewView, expect true")
 
 	rbft.storeMgr.missingReqBatches[batch.BatchDigest] = true
-	atomic.StoreUint32(&rbft.activeView, 1)
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 0)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.status.inActiveState(&rbft.status.inUpdatingN)
 	ast.Nil(rbft.recvReturnRequestBatch(batch), "no missing batch and activeView and not in updatingN, expect nil")
 
 	rbft.storeMgr.missingReqBatches[batch.BatchDigest] = true
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 1)
+	rbft.status.activeState(&rbft.status.inUpdatingN)
 	ast.Nil(rbft.recvReturnRequestBatch(batch), "no stored UpdateN, expect nil")
 }
 
@@ -1540,7 +1532,7 @@ func TestPrimaryResendBatch(t *testing.T) {
 	xset[uint64(3)] = "3"
 	xset[uint64(5)] = "5"
 
-	rbft.storeMgr.txBatchStore["3"] = &TransactionBatch{HashList:[]string{}}
+	rbft.storeMgr.txBatchStore["3"] = &TransactionBatch{HashList: []string{}}
 	rbft.primaryResendBatch(xset)
 	_, ok := rbft.storeMgr.outstandingReqBatches["3"]
 	ast.Equal(true, ok, "should validate this batch, expect true")
@@ -1560,11 +1552,11 @@ func TestRebuildCertStore(t *testing.T) {
 	xset[uint64(51)] = "51"
 	xset[uint64(52)] = "52"
 	rbft.storeMgr.txBatchStore["52"] = &TransactionBatch{
-		TxList:		[]*types.Transaction{},
-		HashList:	[]string{},
-		Timestamp:	time.Now().UnixNano(),
-		SeqNo:		uint64(52),
-		ResultHash:	"52",
+		TxList:     []*types.Transaction{},
+		HashList:   []string{},
+		Timestamp:  time.Now().UnixNano(),
+		SeqNo:      uint64(52),
+		ResultHash: "52",
 	}
 	rbft.rebuildCertStore(xset)
 	cert := rbft.storeMgr.getCert(rbft.view, uint64(52), "52")
@@ -1574,11 +1566,11 @@ func TestRebuildCertStore(t *testing.T) {
 	rbft.id = uint64(2)
 	xset[uint64(53)] = "53"
 	rbft.storeMgr.txBatchStore["53"] = &TransactionBatch{
-		TxList:		[]*types.Transaction{},
-		HashList:	[]string{},
-		Timestamp:	time.Now().UnixNano(),
-		SeqNo:		uint64(53),
-		ResultHash:	"53",
+		TxList:     []*types.Transaction{},
+		HashList:   []string{},
+		Timestamp:  time.Now().UnixNano(),
+		SeqNo:      uint64(53),
+		ResultHash: "53",
 	}
 	rbft.rebuildCertStore(xset)
 	cert = rbft.storeMgr.getCert(rbft.view, uint64(53), "53")
