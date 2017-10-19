@@ -53,6 +53,7 @@ func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bo
 		stopEm:     stopEm,
 		restartEm:  restartEm,
 	}
+	em.rwLock = new(sync.RWMutex)
 	return em
 }
 

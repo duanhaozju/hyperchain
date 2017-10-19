@@ -96,17 +96,23 @@ func (s *Status) setDescription() {
 }
 
 func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
-    // init hyper logger for executor service
-    conf.Set(common.NAMESPACE, ns)
-    if err := common.InitHyperLogger(ns, conf); err != nil {
-        return nil
-    }
 
-    return &executorServiceImpl{
+	// init hyper logger for executor service
+    	conf.Set(common.NAMESPACE, ns)
+    	if err := common.InitHyperLogger(ns, conf); err != nil {
+        	return nil
+    	}
+	status := &Status{
+		state: newed,
+		desc:  "newed",
+		lock:  new(sync.RWMutex),
+	}
+    	return &executorServiceImpl{
 		namespace: ns,
 		conf:      conf,
 		logger:    common.GetLogger(ns, "executor_service"),
-    }
+	    	status:    status,
+    	}
 }
 
 func (es *executorServiceImpl) init() error {
