@@ -8,9 +8,11 @@ import (
 type Service interface {
 	Namespace() string
 	Id() string // service identifier.
-	Send(msg interface{}) error
+	Send(se serviceEvent) error
 	Close()
 	Serve() error
 	isHealth() bool
 	Response() chan *pb.IMessage
 }
+
+type serviceEvent interface {}

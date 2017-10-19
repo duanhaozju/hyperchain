@@ -24,20 +24,6 @@ type TxUniqueCastEvent struct {
 	PeerId  uint64
 }
 
-//node receive checkpoint sync event and then,check db and send block require request to peers
-type SyncReplica struct {
-	Id      uint64
-	Height  uint64
-	Genesis uint64
-}
-
-type ChainSyncReqEvent struct {
-	Id              uint64
-	TargetHeight    uint64
-	TargetBlockHash []byte
-	Replicas        []SyncReplica
-}
-
 type SessionEvent struct {
 	Message []byte
 }
@@ -101,19 +87,14 @@ type CommitedBlockEvent struct {
 	Admin events
 */
 
-type SnapshotEvent struct {
-	FilterId    string
-	BlockNumber uint64
-}
-
 type DeleteSnapshotEvent struct {
 	FilterId string
-	Cont     chan error
+	Cont     chan error //TODO: need to fix
 }
 
 type ArchiveEvent struct {
 	FilterId string
-	Cont     chan error
+	Cont     chan error //TODO: need to fix
 	Sync     bool
 }
 

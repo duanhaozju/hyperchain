@@ -1,8 +1,11 @@
 package service
 
 import (
+	//"fmt"
 	pb "hyperchain/common/protos"
 	"hyperchain/manager"
+	"hyperchain/manager/event"
+	"fmt"
 )
 
 type localServiceImpl struct {
@@ -29,19 +32,17 @@ func (lsi *localServiceImpl) Id() string {
 	return lsi.id
 }
 
-func (lsi *localServiceImpl) Send(event interface{}) error {
-	//return lsi.eventMux.Post(event)
-	//switch e := event.(type) {
-	//case event.ExecutorToConsensusEvent:
-	//	lsi.hub.DispatchExecutorToConsensus(e)
-	//	return nil
-	//case event.ExecutorToP2PEvent:
-	//	lsi.hub.DispatchExecutorToP2P(e)
-	//	return nil
-	//default:
-	//	return fmt.Errorf("no event handler found for %v", event)
-	//}
-	return nil
+func (lsi *localServiceImpl) Send(se serviceEvent) error {
+	switch e := se.(type) {
+	case event.ExecutorToConsensusEvent:
+		lsi.hub.DispatchExecutorToConsensus(e)
+		return nil
+	case event.ExecutorToP2PEvent:
+		lsi.hub.DispatchExecutorToP2P(e)
+		return nil
+	default:
+		return fmt.Errorf("no event handler found for %v", se)
+	}
 }
 
 func (lsi *localServiceImpl) Close() {

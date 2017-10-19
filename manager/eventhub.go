@@ -83,7 +83,8 @@ type EventHub struct {
 	namespace string
 
 	// module services
-	executor       *executor.Executor
+	//executor       *executor.Executor
+	executor       executor.IExecutor
 	peerManager    p2p.PeerManager
 	consenter      consensus.Consenter
 	accountManager *accounts.AccountManager
@@ -102,12 +103,12 @@ type EventHub struct {
 }
 
 // New creates and returns a new Eventhub instance with the given namespace.
-func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
+func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor executor.IExecutor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
 	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, filterMux, consenter, am)
 	return eventHub
 }
 
-func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, filterMux *event.TypeMux, consenter consensus.Consenter,
+func NewEventHub(namespace string, executor executor.IExecutor, peerManager p2p.PeerManager, eventMux *event.TypeMux, filterMux *event.TypeMux, consenter consensus.Consenter,
 	am *accounts.AccountManager) *EventHub {
 	hub := &EventHub{
 		namespace:      namespace,
@@ -166,7 +167,7 @@ func (hub *EventHub) GetPeerManager() p2p.PeerManager {
 	return hub.peerManager
 }
 
-func (hub *EventHub) GetExecutor() *executor.Executor {
+func (hub *EventHub) GetExecutor() executor.IExecutor {
 	return hub.executor
 }
 

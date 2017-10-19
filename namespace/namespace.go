@@ -74,7 +74,7 @@ type Namespace interface {
 	GetCAManager() *admittance.CAManager
 
 	// GetExecutor returns the executor module of current namespace.
-	GetExecutor() *executor.Executor
+	GetExecutor() executor.IExecutor
 
 	//LocalService return local service
 	LocalService() service.Service
@@ -141,7 +141,7 @@ type namespaceImpl struct {
 	am        *accounts.AccountManager
 	eh        *manager.EventHub
 	peerMgr   p2p.PeerManager
-	executor  *executor.Executor
+	executor  executor.IExecutor
 	rpc       rpc.RequestProcessor
 
 	nsInfo  *NamespaceInfo
@@ -180,7 +180,7 @@ func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool) 
 		restart:   false,
 		delFlag:   delFlag,
 	}
-	//ns.ls = service.NewLocalService(namespace, service.EVENTHUB, ns.eventMux)
+	ns.ls = service.NewLocalService(namespace, service.EVENTHUB, ns.eh)
 	ns.logger = common.GetLogger(namespace, "namespace")
 	return ns, nil
 }
@@ -416,7 +416,7 @@ func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
 }
 
 // GetExecutor returns the executor of this namespace.
-func (ns namespaceImpl) GetExecutor() *executor.Executor {
+func (ns namespaceImpl) GetExecutor() executor.IExecutor {
 	return ns.executor
 }
 
@@ -437,6 +437,6 @@ func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
 	return nil
 }
 
-func (ns *namespaceImpl) LocalService() service.Service  {
+func (ns *namespaceImpl) LocalService() service.Service {
 	return ns.ls
 }
