@@ -125,7 +125,7 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 	    Digest: "xcc",
 	    IsPrimary: true,
 	    View: 111,
-	    SeqNo: 222,
+	    SeqNo: 1,
     }
 	mv, err := proto.Marshal(v)
     if err := stream.Send(&pb.IMessage{
