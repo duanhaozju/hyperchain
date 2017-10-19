@@ -5,13 +5,14 @@ import (
 	"hyperchain/common/service"
 	"hyperchain/core/executor"
 	"hyperchain/service/executor/handler"
-    pb "hyperchain/common/protos"
-    "github.com/op/go-logging"
-    "hyperchain/core/ledger/chain"
-    "hyperchain/hyperdb"
-    "hyperchain/service/executor/api"
+    	pb "hyperchain/common/protos"
+    	"github.com/op/go-logging"
+	"hyperchain/core/ledger/chain"
+	"hyperchain/hyperdb"
+	"hyperchain/service/executor/api"
 	"sync"
 	"hyperchain/namespace/rpc"
+	hapi"hyperchain/api"
 )
 
 type executorService interface {
@@ -230,4 +231,15 @@ func (es *executorServiceImpl) ProcessRequest(request interface{}) interface{}{
 
 func (es *executorServiceImpl) handleJsonRequest(request *common.RPCRequest) *common.RPCResponse {
 	return es.rpc.ProcessRequest(request)
+}
+
+func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
+	return map[string]*hapi.API{
+		"block": {
+			Svcname: "block",
+			Version: "1.5",
+			Service: hapi.NewPublicBlockAPI(namespace),
+			Public:  true,
+		},
+	}
 }
