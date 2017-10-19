@@ -21,23 +21,43 @@ import (
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"reflect"
+    "hyperchain/common/service"
+    pb "hyperchain/common/protos"
 )
 
 // Communication mux implementation
 type Helper struct {
 	innerMux    *event.TypeMux // system internal mux
 	externalMux *event.TypeMux // subscription system mux
+	client      *service.ServiceClient
 }
 
-func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *Helper {
+func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux, client *service.ServiceClient) *Helper {
 	return &Helper{
 		innerMux:    innerMux,
 		externalMux: externalMux,
+		client:      client,
 	}
 }
 
 // PostInner post event to inner event mux
 func (helper *Helper) PostInner(ev interface{}) {
+    msg := &pb.IMessage{
+        Type: pb.Type_DISPATCH,
+        From: pb.FROM_EXECUTOR,
+    }
+    switch ev.(type) {
+    case event.ExecutorToConsensusEvent:
+        msg.Event = pb.Event_ExecutorToConsensusEvent
+        mv, err := proto.Marshal(ev.(*event.ExecutorToConsensusEvent))
+        msg.Payload = mv
+    case event.ExecutorToP2PEvent:
+        msg.Event = pb.Event_ExecutorToP2PEvent
+        mv, err := proto.Marshal(ev.(*event.ExecutorToP2PEvent))
+        msg.Payload = mv
+    }
+    helper.client.Send(msg)
+    return
 	helper.innerMux.Post(ev)
 }
 
