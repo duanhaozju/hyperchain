@@ -131,7 +131,6 @@ func (sc *ServiceClient) Register(serviceType pb.FROM, rm *pb.RegisterMessage) e
 
 	if msg.Type == pb.Type_RESPONSE && msg.Ok == true {
 		sc.logger.Infof("%s register successful", sc.string())
-		sc.listenStreamMsg()
 		sc.listenProcessMsg()
 		return nil
 	} else {
@@ -236,16 +235,3 @@ func getFrom(sid string) pb.FROM {
 	return -1
 }
 
-//send message outer when executor generated
-func (sc *ServiceClient) listenStreamMsg(){
-	go func() {
-		for {
-			select {
-			case msg := <-sc.msgSend:
-				sc.Send(msg)
-			case <- sc.close:
-				return
-			}
-		}
-	}()
-}

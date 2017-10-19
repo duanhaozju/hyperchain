@@ -45,6 +45,15 @@ func (eh *ExecutorHandler) Handle(msg *pb.IMessage) {
             logger.Debugf("handle event: %v", e)
         }
         eh.executor.CommitBlock(*e)
+    case pb.Event_VCResetEvent:
+        e := &event.VCResetEvent{}
+        err := proto.Unmarshal(msg.Payload, e)
+        if err != nil {
+            logger.Error(err)
+        } else {
+            logger.Debugf("handle event: %v", e)
+        }
+        eh.executor.Rollback(*e)
     default:
         logger.Error("Undefined event.")
     }
