@@ -233,8 +233,7 @@ func (ns *namespaceImpl) init() error {
 	ns.am = am
 
 	// 6. init Executor to validate and commit block.
-	//executor, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux)
-	executor, err := executor.NewExecutor(ns.Name(), ns.conf, nil)
+	executor, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, nil)
 	if err != nil {
 		ns.logger.Errorf("init Executor for namespace %s error, %v", ns.Name(), err)
 		return err

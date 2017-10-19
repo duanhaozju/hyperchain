@@ -23,6 +23,7 @@ import (
 	"hyperchain/crypto"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
+	"hyperchain/manager/event"
 	"path"
     "hyperchain/common/client"
 )
@@ -52,11 +53,11 @@ type Executor struct {
 }
 
 // NewExecutor creates a new Hyperchain object (including the
-// initialisation of the common hyperchain object
-func NewExecutor(namespace string, conf *common.Config, client *client.ServiceClient) (*Executor, error) {
+// initialisation of the common hyperchain object)
+func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux, client *client.ServiceClient) (*Executor, error) {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	helper := NewHelper(client)
+	helper := NewHelper(eventMux, filterMux, client)
 
 	executor := &Executor{
 		namespace:  namespace,

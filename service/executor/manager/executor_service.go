@@ -2,7 +2,6 @@ package manager
 
 import (
 	"hyperchain/common"
-	"hyperchain/common/service"
 	"hyperchain/core/executor"
 	"hyperchain/service/executor/handler"
     pb "hyperchain/common/protos"
@@ -58,7 +57,7 @@ func (es *executorServiceImpl) init() error {
     }
 
     // 2. initial service client
-    service, err := client.New(50071, "127.0.0.1", service.EXECUTOR, es.namespace)
+    service, err := client.New(50071, "127.0.0.1", client.EXECUTOR, es.namespace)
     if err != nil {
         es.logger.Errorf("Init service client for namespace %s error, %v", es.namespace, err)
         return err
@@ -66,7 +65,7 @@ func (es *executorServiceImpl) init() error {
     es.service = service
 
     // 3. initial executor
-    executor, err := executor.NewExecutor(es.namespace, es.conf, es.service)
+    executor, err := executor.NewExecutor(es.namespace, es.conf, nil, nil, es.service)
     if err != nil {
         es.logger.Errorf("Init executor service for namespace %s error, %v", es.namespace, err)
         return err
