@@ -23,6 +23,7 @@ import (
 	"reflect"
     "hyperchain/common/service"
     pb "hyperchain/common/protos"
+    "hyperchain/p2p/msg"
 )
 
 // Communication mux implementation
@@ -40,8 +41,7 @@ func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux, client *serv
 	}
 }
 
-// PostInner post event to inner event mux
-func (helper *Helper) PostInner(ev interface{}) {
+func (helper *Helper) handlePost(ev interface{}) *pb.IMessage {
     msg := &pb.IMessage{
         Type: pb.Type_DISPATCH,
         From: pb.FROM_EXECUTOR,
@@ -50,12 +50,23 @@ func (helper *Helper) PostInner(ev interface{}) {
     case event.ExecutorToConsensusEvent:
         msg.Event = pb.Event_ExecutorToConsensusEvent
         mv, err := proto.Marshal(ev.(*event.ExecutorToConsensusEvent))
+        if err != nil {
+            return nil
+        }
         msg.Payload = mv
     case event.ExecutorToP2PEvent:
         msg.Event = pb.Event_ExecutorToP2PEvent
         mv, err := proto.Marshal(ev.(*event.ExecutorToP2PEvent))
+        if err != nil {
+            return nil
+        }
         msg.Payload = mv
     }
+}
+
+// PostInner post event to inner event mux
+func (helper *Helper) PostInner(ev interface{}) {
+    msg := helper.handlePost(ev)
     helper.client.Send(msg)
     return
 	helper.innerMux.Post(ev)
@@ -63,20 +74,7 @@ func (helper *Helper) PostInner(ev interface{}) {
 
 // PostExternal post event to outer event mux
 func (helper *Helper) PostExternal(ev interface{}) {
-    msg := &pb.IMessage{
-        Type: pb.Type_DISPATCH,
-        From: pb.FROM_EXECUTOR,
-    }
-    switch ev.(type) {
-    case event.ExecutorToConsensusEvent:
-        msg.Event = pb.Event_ExecutorToConsensusEvent
-        mv, err := proto.Marshal(ev.(*event.ExecutorToConsensusEvent))
-        msg.Payload = mv
-    case event.ExecutorToP2PEvent:
-        msg.Event = pb.Event_ExecutorToP2PEvent
-        mv, err := proto.Marshal(ev.(*event.ExecutorToP2PEvent))
-        msg.Payload = mv
-    }
+    msg := helper.handlePost(ev)
     helper.client.Send(msg)
     return
 	helper.externalMux.Post(ev)

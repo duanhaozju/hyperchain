@@ -9,7 +9,6 @@ import (
     "github.com/op/go-logging"
     "hyperchain/core/ledger/chain"
     "hyperchain/hyperdb"
-    "hyperchain/service/executor/api"
 )
 
 type executorService interface {

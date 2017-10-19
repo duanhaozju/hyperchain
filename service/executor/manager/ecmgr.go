@@ -7,7 +7,6 @@ import (
 	"hyperchain/namespace"
 	"io/ioutil"
     "os"
-	"hyperchain/common/service"
 )
 
 var logger *logging.Logger
