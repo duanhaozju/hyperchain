@@ -30,20 +30,12 @@ func TestRPCServerImpl_Start(t *testing.T) {
 	initial()
 	err := rpc.Start()
 	if err != nil {
-		t.Error(err)
-	}
-}
-
-func TestRPCServerImpl_Stop(t *testing.T) {
-	initial()
-	err := rpc.Start()
-	if err != nil {
-		t.Error(err)
+		t.Fatalf("Start error: %v", err)
 	}
 
 	err = rpc.Stop()
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("Stop error: %v", err)
 	}
 }
 
