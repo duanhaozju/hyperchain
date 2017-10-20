@@ -29,19 +29,40 @@ message ValidationEvent {
     int64 Timestamp = 6;
 }
 
-// reset blockchain to a stable checkpoint status when `viewchange` occur
+// reset blockchain to a stable checkpoint status when `viewchange` occur.
 message VCResetEvent {
     uint64 SeqNo = 1;
 }
 
+//event send from executor to consensus.
 message ExecutorToConsensusEvent {
     bytes Payload = 1; //TODO: changed from interface to bytes, should modify the related code
     int32 Type = 2;
 }
 
+//event send from executor to p2p.
 message ExecutorToP2PEvent {
     bytes Payload = 1;
     int32 Type = 2;
     repeated uint64 Peers = 3;
     repeated string PeersHash = 4;
+}
+
+//node receive checkpoint sync event and then,check db and send block require request to peers
+message SyncReplica {
+    uint64 Id = 1;
+    uint64 Height = 2;
+    uint64 Genesis = 3;
+}
+
+message ChainSyncReqEvent {
+    uint64 Id = 1;
+    uint64 TargetHeight = 2;
+    bytes  TargetBlockHash = 3;
+    repeated SyncReplica Replicas = 4;
+}
+
+message SnapshotEvent {
+    string FilterId = 1;
+    uint64 BlockNumber = 2;
 }

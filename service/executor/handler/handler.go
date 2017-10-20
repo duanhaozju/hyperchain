@@ -3,10 +3,10 @@ package handler
 import (
     "hyperchain/manager/event"
     "github.com/op/go-logging"
-    "hyperchain/common/service"
     pb "hyperchain/common/protos"
     "github.com/golang/protobuf/proto"
     "hyperchain/core/executor"
+    "hyperchain/common/client"
 )
 
 var logger *logging.Logger
@@ -19,13 +19,13 @@ type ExecutorHandler struct {
     executor    *executor.Executor
 }
 
-func New(executor *executor.Executor) service.Handler {
+func New(executor *executor.Executor) client.Handler {
     return &ExecutorHandler{
         executor:   executor,
     }
 }
 
-func (eh *ExecutorHandler) Handle(msg *pb.Message) {
+func (eh *ExecutorHandler) Handle(msg *pb.IMessage) {
     switch msg.Event {
     case pb.Event_ValidationEvent:
         e := &event.ValidationEvent{}
@@ -45,6 +45,15 @@ func (eh *ExecutorHandler) Handle(msg *pb.Message) {
             logger.Debugf("handle event: %v", e)
         }
         eh.executor.CommitBlock(*e)
+    case pb.Event_VCResetEvent:
+        e := &event.VCResetEvent{}
+        err := proto.Unmarshal(msg.Payload, e)
+        if err != nil {
+            logger.Error(err)
+        } else {
+            logger.Debugf("handle event: %v", e)
+        }
+        eh.executor.Rollback(*e)
     default:
         logger.Error("Undefined event.")
     }

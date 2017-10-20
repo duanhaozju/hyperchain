@@ -1,4 +1,4 @@
-package service
+package client
 
 import (
 	"context"
@@ -12,6 +12,14 @@ import (
 	"time"
 )
 
+const (
+    CONSENTER = "consenter"
+    APISERVER = "apiserver"
+    EXECUTOR  = "executor"
+    NETWORK   = "network"
+    EVENTHUB  = "eventhub"
+)
+
 // ServiceClient used to send messages to eventhub or receive message
 // from the event hub.
 type ServiceClient struct {
@@ -20,8 +28,8 @@ type ServiceClient struct {
 	sid  string // service id
 	ns   string // namespace
 
-	msgRecv		chan *pb.Message //received messages from server
-	msgSend		chan *pb.Message //send message to server
+	msgRecv		chan *pb.IMessage //received messages from server
+	msgSend		chan *pb.IMessage //send message to server
 	slock  sync.RWMutex
 	client pb.Dispatcher_RegisterClient
 
@@ -38,8 +46,8 @@ func New(port int, host, sid, ns string) (*ServiceClient, error) {
 	return &ServiceClient{
 		host:   host,
 		port:   port,
-		msgRecv:   make(chan *pb.Message, 1024),
-		msgSend:   make(chan *pb.Message, 1024),
+		msgRecv:   make(chan *pb.IMessage, 1024),
+		msgSend:   make(chan *pb.IMessage, 1024),
 		logger: logging.MustGetLogger("service_client"),
 		// TODO: replace this logger with hyperlogger ?
 		sid:    sid,
@@ -111,7 +119,7 @@ func (sc *ServiceClient) Register(serviceType pb.FROM, rm *pb.RegisterMessage) e
 	if err != nil {
 		return err
 	}
-	if err = sc.stream().Send(&pb.Message{
+	if err = sc.stream().Send(&pb.IMessage{
 		Type:    pb.Type_REGISTER,
 		From:    serviceType,
 		Payload: payload,
@@ -131,7 +139,6 @@ func (sc *ServiceClient) Register(serviceType pb.FROM, rm *pb.RegisterMessage) e
 
 	if msg.Type == pb.Type_RESPONSE && msg.Ok == true {
 		sc.logger.Infof("%s register successful", sc.string())
-		sc.listenStreamMsg()
 		sc.listenProcessMsg()
 		return nil
 	} else {
@@ -156,7 +163,7 @@ func (sc *ServiceClient) isClosed() bool {
 }
 
 //Send msg asynchronous
-func (sc *ServiceClient) Send(msg *pb.Message) error {
+func (sc *ServiceClient) Send(msg *pb.IMessage) error {
 	//TODO: Add msg format check
 	if sc.stream == nil {
 		sc.reconnect()
@@ -236,14 +243,3 @@ func getFrom(sid string) pb.FROM {
 	return -1
 }
 
-//send message outer when executor generated
-func (sc *ServiceClient) listenStreamMsg(){
-	go func() {
-		for {
-			select {
-			case msg := <-sc.msgSend:
-			sc.Send(msg)
-			}
-		}
-	}()
-}

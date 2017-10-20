@@ -74,7 +74,7 @@ type Namespace interface {
 	GetCAManager() *admittance.CAManager
 
 	// GetExecutor returns the executor module of current namespace.
-	GetExecutor() *executor.Executor
+	GetExecutor() executor.IExecutor
 
 	//LocalService return local service
 	LocalService() service.Service
@@ -141,7 +141,7 @@ type namespaceImpl struct {
 	am        *accounts.AccountManager
 	eh        *manager.EventHub
 	peerMgr   p2p.PeerManager
-	executor  *executor.Executor
+	executor  executor.IExecutor
 	rpc       rpc.RequestProcessor
 
 	nsInfo  *NamespaceInfo
@@ -180,7 +180,7 @@ func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool) 
 		restart:   false,
 		delFlag:   delFlag,
 	}
-	ns.ls = service.NewLocalService(namespace, service.EVENTHUB, ns.eventMux)
+	ns.ls = service.NewLocalService(namespace, service.EVENTHUB, ns.eh)
 	ns.logger = common.GetLogger(namespace, "namespace")
 	return ns, nil
 }
@@ -233,7 +233,7 @@ func (ns *namespaceImpl) init() error {
 	ns.am = am
 
 	// 6. init Executor to validate and commit block.
-	executor, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux)
+	executor, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, nil)
 	if err != nil {
 		ns.logger.Errorf("init Executor for namespace %s error, %v", ns.Name(), err)
 		return err
@@ -245,6 +245,8 @@ func (ns *namespaceImpl) init() error {
 	// 7. init Eventhub to coordinate message delivery between local modules.
 	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, executor, ns.peerMgr, consenter, am, cm)
 	ns.eh = eh
+
+	ns.ls = service.NewLocalService(ns.Name(), service.EVENTHUB, ns.eh)
 
 	// 8. init JsonRpcProcessor to process incoming requests.
 	ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
@@ -414,7 +416,7 @@ func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
 }
 
 // GetExecutor returns the executor of this namespace.
-func (ns namespaceImpl) GetExecutor() *executor.Executor {
+func (ns namespaceImpl) GetExecutor() executor.IExecutor {
 	return ns.executor
 }
 
@@ -435,6 +437,6 @@ func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
 	return nil
 }
 
-func (ns *namespaceImpl) LocalService() service.Service  {
+func (ns *namespaceImpl) LocalService() service.Service {
 	return ns.ls
 }

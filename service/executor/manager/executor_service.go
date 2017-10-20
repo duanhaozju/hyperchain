@@ -5,14 +5,12 @@ import (
 	hapi "hyperchain/api"
 	"hyperchain/common"
 	pb "hyperchain/common/protos"
-	"hyperchain/common/service"
 	"hyperchain/core/executor"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/hyperdb"
 	"hyperchain/namespace/rpc"
-	"hyperchain/service/executor/api"
-	"hyperchain/service/executor/handler"
 	"sync"
+	"hyperchain/common/client"
 )
 
 type executorService interface {
@@ -33,13 +31,13 @@ type executorServiceImpl struct {
 	// real executor object
 	executor *executor.Executor
 	// manager the connection with service
-	service *service.ServiceClient
+	service *client.ServiceClient
 	// config
 	conf *common.Config
 	// logger
 	logger *logging.Logger
 
-	executorApi *api.ExecutorApi
+	//executorApi *api.ExecutorApi
 
 	status *Status
 
@@ -125,8 +123,16 @@ func (es *executorServiceImpl) init() error {
 		return err
 	}
 
-	// 2. initial executor
-	executor, err := executor.NewExecutor(es.namespace, es.conf, nil, nil)
+	// 2. initial service client
+	service, err := client.New(50071, "127.0.0.1", client.EXECUTOR, es.namespace)
+	if err != nil {
+		es.logger.Errorf("Init service client for namespace %s error, %v", es.namespace, err)
+		return err
+	}
+	es.service = service
+
+	// 3. initial executor
+	executor, err := executor.NewExecutor(es.namespace, es.conf, nil, nil, es.service)
 	if err != nil {
 		es.logger.Errorf("Init executor service for namespace %s error, %v", es.namespace, err)
 		return err
@@ -134,17 +140,6 @@ func (es *executorServiceImpl) init() error {
 	executor.CreateInitBlock(es.conf)
 	es.executor = executor
 
-	// 3. initial service client
-	service, err := service.New(50071, "127.0.0.1", service.EXECUTOR, es.namespace)
-	if err != nil {
-		es.logger.Errorf("Init service client for namespace %s error, %v", es.namespace, err)
-		return err
-	}
-	es.service = service
-
-	// 4. add executor handler
-	h := handler.New(executor)
-	service.AddHandler(h)
 
 	// 5. add jsonrpc processor
 	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace))
@@ -174,7 +169,7 @@ func (es *executorServiceImpl) Start() error {
 		return err
 	}
 
-	es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
+    //es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
 
 	// 3. establish connection
 	err = es.service.Connect()
@@ -236,7 +231,6 @@ func (es *executorServiceImpl) handleJsonRequest(request *common.RPCRequest) *co
 }
 
 func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
-
 	//TODO need to add more APIS
 	return map[string]*hapi.API{
 		"block": {

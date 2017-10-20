@@ -83,7 +83,8 @@ type EventHub struct {
 	namespace string
 
 	// module services
-	executor       *executor.Executor
+	//executor       *executor.Executor
+	executor       executor.IExecutor
 	peerManager    p2p.PeerManager
 	consenter      consensus.Consenter
 	accountManager *accounts.AccountManager
@@ -102,12 +103,12 @@ type EventHub struct {
 }
 
 // New creates and returns a new Eventhub instance with the given namespace.
-func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
+func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor executor.IExecutor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
 	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, filterMux, consenter, am)
 	return eventHub
 }
 
-func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, filterMux *event.TypeMux, consenter consensus.Consenter,
+func NewEventHub(namespace string, executor executor.IExecutor, peerManager p2p.PeerManager, eventMux *event.TypeMux, filterMux *event.TypeMux, consenter consensus.Consenter,
 	am *accounts.AccountManager) *EventHub {
 	hub := &EventHub{
 		namespace:      namespace,
@@ -166,7 +167,7 @@ func (hub *EventHub) GetPeerManager() p2p.PeerManager {
 	return hub.peerManager
 }
 
-func (hub *EventHub) GetExecutor() *executor.Executor {
+func (hub *EventHub) GetExecutor() executor.IExecutor {
 	return hub.executor
 }
 
@@ -384,9 +385,9 @@ func (hub *EventHub) listenExecutorEvent() {
 		case obj := <-hub.GetSubscription(SUB_EXEC).Chan():
 			switch ev := obj.Data.(type) {
 			case event.ExecutorToConsensusEvent:
-				hub.dispatchExecutorToConsensus(ev)
+				hub.DispatchExecutorToConsensus(ev)
 			case event.ExecutorToP2PEvent:
-				hub.dispatchExecutorToP2P(ev)
+				hub.DispatchExecutorToP2P(ev)
 			}
 
 		}
@@ -491,23 +492,44 @@ func (hub *EventHub) NegotiateView() {
 	hub.consenter.RecvLocal(negoView)
 }
 
-// dispatchExecutorToConsensus dispatches executor event to consensus module by its type.
-func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
+// DispatchExecutorToConsensus dispatches executor event to consensus module by its type.
+func (hub *EventHub) DispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_VC_DONE:
 		hub.logger.Debugf("message middleware: [vc done]")
-		hub.invokeRbftLocal(rbft.VIEW_CHANGE_SERVICE, rbft.VIEW_CHANGE_VC_RESET_DONE_EVENT, ev.Payload)
+
+		event := &protos.VcResetDone{}
+		err := proto.Unmarshal(ev.Payload, event)
+		if err != nil {
+			hub.logger.Error(err)
+			return
+		}
+		hub.invokeRbftLocal(rbft.VIEW_CHANGE_SERVICE, rbft.VIEW_CHANGE_VC_RESET_DONE_EVENT, *event)
 	case executor.NOTIFY_VALIDATION_RES:
 		hub.logger.Debugf("message middleware: [validation result]")
-		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_VALIDATED_TXS_EVENT, ev.Payload)
+
+		event := &protos.ValidatedTxs{}
+		err := proto.Unmarshal(ev.Payload, event)
+		if err != nil {
+			hub.logger.Error(err)
+			return
+		}
+		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_VALIDATED_TXS_EVENT, *event)
 	case executor.NOTIFY_SYNC_DONE:
 		hub.logger.Debugf("message middleware: [sync done]")
-		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_STATE_UPDATE_EVENT, ev.Payload)
+
+		event := &protos.StateUpdatedMessage{}
+		err := proto.Unmarshal(ev.Payload, event)
+		if err != nil {
+			hub.logger.Error(err)
+			return
+		}
+		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_STATE_UPDATE_EVENT, *event)
 	}
 }
 
-// dispatchExecutorToP2P dispatches executor event to p2p module by its type.
-func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
+// DispatchExecutorToP2P dispatches executor event to p2p module by its type.
+func (hub *EventHub) DispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_BROADCAST_DEMAND:
 		hub.logger.Debugf("message middleware: [broadcast demand]")
