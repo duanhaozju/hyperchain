@@ -3,52 +3,48 @@
 
 package rbft
 
-import (
-	"sync/atomic"
-)
-
-// PbftStatus is used to store all the status in rbft
+// RbftStatus is used to store all the status in rbft
 type RbftStatus struct {
-	byzantine         int32 // whether this node is intentionally acting as byzantine
-	activeView        int32 // track if replica is in active view
-	skipInProgress    int32 // set when we have detested a fall behind scenario until we pick a new starting point
-	stateTransferring int32 // set when state transfer is executing
-	valid             int32 //
-	timerActive       int32
-	inRecovery        int32
-	inNegoView        int32
-	inUpdatingN       int32
-	isNewNode         int32
-	inAddingNode      int32
-	inDeletingNode    int32
-	inVcReset         int32 // track if replica itself in vcReset
-	vcHandled         int32 // track if replica handled the vc after receive newview
-	newNodeReady      int32
-	updateHandled     int32
-	vcToRecovery      int32
+	byzantine         bool // whether this node is intentionally acting as byzantine
+	skipInProgress    bool // set when we have detested a fall behind scenario until we pick a new starting point
+	stateTransferring bool // set when state transfer is executing
+	valid             bool
+	timerActive       bool
+	inRecovery        bool
+	inNegoView        bool
+	inUpdatingN       bool
+	isNewNode         bool
+	inAddingNode      bool
+	inDeletingNode    bool
+	inVcReset         bool // track if replica itself in vcReset
+	vcHandled         bool // track if replica handled the vc after receive newview
+	newNodeReady      bool
+	updateHandled     bool
+	vcToRecovery      bool
+	inViewChange      bool
 }
 
 // activeState sets the states to true
-func (status RbftStatus) activeState(stateName ...*int32) {
+func (status RbftStatus) activeState(stateName ...*bool) {
 	for _, s := range stateName {
-		atomic.StoreInt32(s, ON)
+		*s = true
 	}
 }
 
 // inActiveState sets the states to false
-func (status RbftStatus) inActiveState(stateName ...*int32) {
+func (status RbftStatus) inActiveState(stateName ...*bool) {
 	for _, s := range stateName {
-		atomic.StoreInt32(s, OFF)
+		*s = false
 	}
 }
 
 // getState returns the state of specified state name, true means ON, false means OFF
-func (status RbftStatus) getState(stateName *int32) bool {
-	return atomic.LoadInt32(stateName) == ON
+func (status RbftStatus) getState(stateName *bool) bool {
+	return *stateName
 }
 
 // checkStatesAnd checks the result of several status computed with each other using '&&'
-func (status RbftStatus) checkStatesAnd(stateName ...*int32) bool {
+func (status RbftStatus) checkStatesAnd(stateName ...*bool) bool {
 	var rs bool = true
 	for _, s := range stateName {
 		rs = rs && status.getState(s)
@@ -57,7 +53,7 @@ func (status RbftStatus) checkStatesAnd(stateName ...*int32) bool {
 }
 
 // checkStatesOr checks the result of several status computed with each other using '||'
-func (status RbftStatus) checkStatesOr(stateName ...*int32) bool {
+func (status RbftStatus) checkStatesOr(stateName ...*bool) bool {
 	var rs bool = false
 	for _, s := range stateName {
 		rs = rs || status.getState(s)

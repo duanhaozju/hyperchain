@@ -5,7 +5,6 @@ package rbft
 
 import (
 	"fmt"
-	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +23,7 @@ func TestSortableUint64SliceFunctions(t *testing.T) {
 	}
 }
 
-func TestPbftStateFunctions(t *testing.T) {
+func TestRbftStateFunctions(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
 	defer CleanData(rbft.namespace)
@@ -333,11 +332,11 @@ func TestIsPrePrepareLegal(t *testing.T) {
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 
 	rbft.status.inActiveState(&rbft.status.inNegoView)
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	res = rbft.isPrePrepareLegal(prePrepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	res = rbft.isPrePrepareLegal(prePrepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 

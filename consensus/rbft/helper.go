@@ -5,7 +5,6 @@ package rbft
 import (
 	"fmt"
 	"math"
-	"sync/atomic"
 	"time"
 
 	"hyperchain/manager/protos"
@@ -383,7 +382,7 @@ func (rbft *rbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 		return false
 	}
 
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
+	if rbft.status.getState(&rbft.status.inViewChange) {
 		rbft.logger.Debugf("Replica %d ignoring pre-prepare as we are in view change", rbft.id)
 		return false
 	}

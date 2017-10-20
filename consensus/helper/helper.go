@@ -19,7 +19,7 @@ type helper struct {
 	externalMux *event.TypeMux
 }
 
-// Stack helps rbftImpl send message to other components of system. PbftImpl
+// Stack helps rbftImpl send message to other components of system. RbftImpl
 // would generate some messages and post these messages to other components,
 // in order to send messages to other vp nodes, let other components validate or
 // execute transactions, or send messages to clients.

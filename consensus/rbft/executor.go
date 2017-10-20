@@ -51,7 +51,7 @@ func (rbft *rbftImpl) msgToEvent(msg *ConsensusMessage) (interface{}, error) {
 func (rbft *rbftImpl) dispatchLocalEvent(e *LocalEvent) consensusEvent {
 	switch e.Service {
 	case CORE_RBFT_SERVICE:
-		return rbft.handleCorePbftEvent(e)
+		return rbft.handleCoreRbftEvent(e)
 	case VIEW_CHANGE_SERVICE:
 		return rbft.handleViewChangeEvent(e)
 	case NODE_MGR_SERVICE:
@@ -64,8 +64,8 @@ func (rbft *rbftImpl) dispatchLocalEvent(e *LocalEvent) consensusEvent {
 	}
 }
 
-// handleCorePbftEvent handles core RBFT service events
-func (rbft *rbftImpl) handleCorePbftEvent(e *LocalEvent) consensusEvent {
+// handleCoreRbftEvent handles core RBFT service events
+func (rbft *rbftImpl) handleCoreRbftEvent(e *LocalEvent) consensusEvent {
 	switch e.EventType {
 
 	case CORE_BATCH_TIMER_EVENT:
@@ -121,12 +121,13 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 		rbft.helper.InformPrimary(primary)
 
 		rbft.persistView(rbft.view)
-		atomic.StoreUint32(&rbft.activeView, 1)
+		rbft.status.inActiveState(&rbft.status.inViewChange)
 		rbft.status.inActiveState(&rbft.status.vcHandled)
 
 		// set normal to 1 which indicates system comes into normal status after viewchange
-		if atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 0 &&
-			!rbft.status.getState(&rbft.status.inNegoView) && !rbft.status.getState(&rbft.status.skipInProgress) {
+		if !rbft.status.getState(&rbft.status.inUpdatingN) &&
+			!rbft.status.getState(&rbft.status.inNegoView) &&
+			!rbft.status.getState(&rbft.status.skipInProgress) {
 			atomic.StoreUint32(&rbft.normal, 1)
 		}
 		rbft.logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/height=%d", rbft.id, primary, rbft.view, rbft.exec.lastExec)
@@ -143,7 +144,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 		rbft.handleTransactionsAfterAbnormal()
 
 	case VIEW_CHANGE_RESEND_TIMER_EVENT:
-		if atomic.LoadUint32(&rbft.activeView) == 1 {
+		if !rbft.status.getState(&rbft.status.inViewChange) {
 			rbft.logger.Warningf("Replica %d had its view change resend timer expire but it's in an active view, this is benign but may indicate a bug", rbft.id)
 		}
 		rbft.logger.Warningf("Replica %d view change resend timer expired before view change quorum was reached, resending", rbft.id)
@@ -178,7 +179,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 	case VIEW_CHANGE_VC_RESET_DONE_EVENT:
 		rbft.status.inActiveState(&rbft.status.inVcReset)
 		rbft.logger.Debugf("Replica %d received local VcResetDone", rbft.id)
-		if atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 {
+		if rbft.status.getState(&rbft.status.inUpdatingN) {
 			return rbft.sendFinishUpdate()
 		}
 		var seqNo uint64
@@ -208,7 +209,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 				return rbft.recvStateUpdatedEvent(state)
 			}
 		}
-		if atomic.LoadUint32(&rbft.activeView) == 1 {
+		if !rbft.status.getState(&rbft.status.inViewChange) {
 			rbft.logger.Warningf("Replica %d is not in viewChange, but received local VcResetDone", rbft.id)
 			return nil
 		}
@@ -259,9 +260,9 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) consensusEvent {
 		if rbft.status.getState(&rbft.status.isNewNode) {
 			rbft.status.inActiveState(&rbft.status.isNewNode)
 		}
-		atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 0)
+		rbft.status.inActiveState(&rbft.status.inUpdatingN)
 		rbft.rebuildCertStoreForUpdate()
-		if atomic.LoadUint32(&rbft.activeView) == 1 &&
+		if !rbft.status.getState(&rbft.status.inViewChange) &&
 			!rbft.status.getState(&rbft.status.inNegoView) && !rbft.status.getState(&rbft.status.skipInProgress) {
 			atomic.StoreUint32(&rbft.normal, 1)
 		}
@@ -338,8 +339,9 @@ func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) consensusEvent {
 
 	case RECOVERY_NEGO_VIEW_DONE_EVENT:
 		// set normal to 1 which indicates system comes into normal status after negotiate done
-		if atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 0 &&
-			atomic.LoadUint32(&rbft.activeView) == 1 && !rbft.status.getState(&rbft.status.skipInProgress) {
+		if !rbft.status.getState(&rbft.status.inUpdatingN) &&
+			!rbft.status.getState(&rbft.status.inViewChange) &&
+			!rbft.status.getState(&rbft.status.skipInProgress) {
 			atomic.StoreUint32(&rbft.normal, 1)
 		}
 		rbft.logger.Criticalf("======== Replica %d finished negotiating view: %d / N=%d", rbft.id, rbft.view, rbft.N)
@@ -382,7 +384,7 @@ func (rbft *rbftImpl) dispatchConsensusMsg(e consensusEvent) consensusEvent {
 	service := rbft.dispatchMsgToService(e)
 	switch service {
 	case CORE_RBFT_SERVICE:
-		return rbft.dispatchCorePbftMsg(e)
+		return rbft.dispatchCoreRbftMsg(e)
 	case VIEW_CHANGE_SERVICE:
 		return rbft.dispatchViewChangeMsg(e)
 	case NODE_MGR_SERVICE:

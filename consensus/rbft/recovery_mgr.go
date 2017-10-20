@@ -121,7 +121,7 @@ func (rbft *rbftImpl) restartNegoView() {
 
 // recvNegoView firstly checks current state, then send response to the sender
 func (rbft *rbftImpl) recvNegoView(nv *NegotiateView) consensusEvent {
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
+	if rbft.status.getState(&rbft.status.inViewChange) {
 		rbft.logger.Warningf("Replica %d is in viewChange, reject negoView from replica %d", rbft.id, nv.ReplicaId)
 		return nil
 	}
@@ -208,8 +208,8 @@ func (rbft *rbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) consensusEvent
 			rbft.N = int(quorumResp.n)
 			rbft.f = (rbft.N - 1) / 3
 			rbft.status.inActiveState(&rbft.status.inNegoView)
-			if atomic.LoadUint32(&rbft.activeView) == 0 {
-				atomic.StoreUint32(&rbft.activeView, 1)
+			if rbft.status.getState(&rbft.status.inViewChange) {
+				rbft.status.inActiveState(&rbft.status.inViewChange)
 			}
 			if needUpdate {
 				rbft.parseSpecifyCertStore()

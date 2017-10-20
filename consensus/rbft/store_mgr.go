@@ -6,10 +6,10 @@ package rbft
 import "github.com/op/go-logging"
 
 /**
-This file provide a mechanism to manage the storage in PBFT
+This file provide a mechanism to manage the storage in RBFT
 */
 
-// storeManager manages common store data structures for PBFT.
+// storeManager manages common store data structures for RBFT.
 type storeManager struct {
 	logger *logging.Logger
 
@@ -126,7 +126,6 @@ func (sm *storeManager) getChkptCert(n uint64, id string) (cert *chkptCert) {
 
 // existedDigest checks if there exists another PRE-PREPARE message in certStore which has the same digest, same view,
 // but different seqNo with the given one
-// TODO change this func to rbftImpl
 func (sm *storeManager) existedDigest(n uint64, view uint64, digest string) bool {
 	for _, cert := range sm.certStore {
 		if p := cert.prePrepare; p != nil {

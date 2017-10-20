@@ -5,7 +5,6 @@ package manager
 import (
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
-	"hyperchain/accounts"
 	"hyperchain/admittance"
 	"hyperchain/common"
 	"hyperchain/consensus"
@@ -86,7 +85,6 @@ type EventHub struct {
 	executor       *executor.Executor
 	peerManager    p2p.PeerManager
 	consenter      consensus.Consenter
-	accountManager *accounts.AccountManager
 
 	eventMux  *event.TypeMux
 	filterMux *event.TypeMux
@@ -102,13 +100,12 @@ type EventHub struct {
 }
 
 // New creates and returns a new Eventhub instance with the given namespace.
-func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
-	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, filterMux, consenter, am)
+func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, cm *admittance.CAManager) *EventHub {
+	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, filterMux, consenter)
 	return eventHub
 }
 
-func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, filterMux *event.TypeMux, consenter consensus.Consenter,
-	am *accounts.AccountManager) *EventHub {
+func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, filterMux *event.TypeMux, consenter consensus.Consenter) *EventHub {
 	hub := &EventHub{
 		namespace:      namespace,
 		executor:       executor,
@@ -116,7 +113,6 @@ func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.
 		filterMux:      filterMux,
 		consenter:      consenter,
 		peerManager:    peerManager,
-		accountManager: am,
 		filterSystem:   flt.NewEventSystem(filterMux),
 	}
 	hub.logger = common.GetLogger(namespace, "eventhub")
@@ -168,10 +164,6 @@ func (hub *EventHub) GetPeerManager() p2p.PeerManager {
 
 func (hub *EventHub) GetExecutor() *executor.Executor {
 	return hub.executor
-}
-
-func (hub *EventHub) GetAccountManager() *accounts.AccountManager {
-	return hub.accountManager
 }
 
 func (hub *EventHub) GetFilterSystem() *flt.EventSystem {

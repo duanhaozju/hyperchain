@@ -1,16 +1,15 @@
 package rbft
 
 import (
-	"testing"
-	"hyperchain/hyperdb/mdb"
-	"github.com/stretchr/testify/assert"
-	"hyperchain/common"
-	"hyperchain/consensus/helper/persist"
-	"hyperchain/manager/protos"
-	"hyperchain/consensus/consensusMocks"
-	"sync/atomic"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/stretchr/testify/assert"
+	"hyperchain/common"
+	"hyperchain/consensus/consensusMocks"
+	"hyperchain/consensus/helper/persist"
+	"hyperchain/hyperdb/mdb"
+	"hyperchain/manager/protos"
+	"testing"
 	"time"
 )
 
@@ -18,14 +17,14 @@ func TestNewNodeMgr(t *testing.T) {
 	nodeMgr := newNodeMgr()
 	structName, nilElems, err := checkNilElems(nodeMgr)
 	if err != nil {
-    		t.Error(err.Error())
+		t.Error(err.Error())
 	}
 	if nilElems != nil {
 		t.Errorf("There exists some nil elements: %v in struct: %s", nilElems, structName)
 	}
 }
 
-func TestRecvLocalNewNode(t *testing.T){
+func TestRecvLocalNewNode(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
@@ -116,8 +115,8 @@ func TestPrepareDelNode(t *testing.T) {
 	payload := []byte{'a', 'b', 'c'}
 	msg := &protos.DelNodeMessage{
 		RouterHash: "delete",
-		Id: 1,
-		Del: 5,
+		Id:         1,
+		Del:        5,
 		DelPayload: payload,
 	}
 
@@ -156,10 +155,10 @@ func TestMaybeUpdateTableForAdd(t *testing.T) {
 	mockHelper.On("UpdateTable").Return(nil)
 
 	key := "test_add_key"
-	addNode1 := AddNode{ReplicaId:1, Key: key}
-	addNode2 := AddNode{ReplicaId:2, Key: key}
-	addNode3 := AddNode{ReplicaId:3, Key: key}
-	addNode4 := AddNode{ReplicaId:4, Key: key}
+	addNode1 := AddNode{ReplicaId: 1, Key: key}
+	addNode2 := AddNode{ReplicaId: 2, Key: key}
+	addNode3 := AddNode{ReplicaId: 3, Key: key}
+	addNode4 := AddNode{ReplicaId: 4, Key: key}
 	rbft.nodeMgr.addNodeCertStore[key] = &addNodeCert{
 		addNodes: map[AddNode]bool{
 			addNode1: true,
@@ -203,10 +202,10 @@ func TestMaybeUpdateTableForDel(t *testing.T) {
 	rbft.persister = persist.New(db)
 
 	key := "test_delete_key"
-	delNode1 := DelNode{ReplicaId:1, Key: key}
-	delNode2 := DelNode{ReplicaId:2, Key: key}
-	delNode3 := DelNode{ReplicaId:3, Key: key}
-	delNode4 := DelNode{ReplicaId:4, Key: key}
+	delNode1 := DelNode{ReplicaId: 1, Key: key}
+	delNode2 := DelNode{ReplicaId: 2, Key: key}
+	delNode3 := DelNode{ReplicaId: 3, Key: key}
+	delNode4 := DelNode{ReplicaId: 4, Key: key}
 	rbft.nodeMgr.delNodeCertStore[key] = &delNodeCert{
 		delNodes: map[DelNode]bool{
 			delNode1: true,
@@ -251,10 +250,10 @@ func TestSendAgreeUpdateNforDel(t *testing.T) {
 	mockHelper.On("InnerBroadcast").Return(nil)
 
 	key := "test_delete_key"
-	delNode1 := DelNode{ReplicaId:1, Key: key}
-	delNode2 := DelNode{ReplicaId:2, Key: key}
-	delNode3 := DelNode{ReplicaId:3, Key: key}
-	delNode4 := DelNode{ReplicaId:4, Key: key}
+	delNode1 := DelNode{ReplicaId: 1, Key: key}
+	delNode2 := DelNode{ReplicaId: 2, Key: key}
+	delNode3 := DelNode{ReplicaId: 3, Key: key}
+	delNode4 := DelNode{ReplicaId: 4, Key: key}
 	rbft.nodeMgr.delNodeCertStore[key] = &delNodeCert{
 		delNodes: map[DelNode]bool{
 			delNode1: true,
@@ -266,15 +265,15 @@ func TestSendAgreeUpdateNforDel(t *testing.T) {
 	}
 
 	// test sendAgreeUpdateNforDel when in viewchange.
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.sendAgreeUpdateNforDel(key)
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendAgreeUpdateNforDel with finishDel being false.
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.nodeMgr.delNodeCertStore[key].finishDel = false
 	rbft.sendAgreeUpdateNforDel(key)
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendAgreeUpdateNforDel with normal case.
 	rbft.nodeMgr.delNodeCertStore[key].finishDel = true
@@ -292,7 +291,7 @@ func TestSendAgreeUpdateNforDel(t *testing.T) {
 		ast.Equal(false, agree.Flag, "flag of delete node should be false.")
 	}()
 	rbft.sendAgreeUpdateNforDel(key)
-	ast.Equal(uint32(1), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should be in updating N.")
+	ast.Equal(true, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should be in updating N.")
 
 }
 
@@ -328,10 +327,10 @@ func TestRecvAgreeUpdateN(t *testing.T) {
 	}
 
 	delKey := "test-delete"
-	delNode1 := DelNode{ReplicaId:1, Key: delKey}
-	delNode2 := DelNode{ReplicaId:2, Key: delKey}
-	delNode3 := DelNode{ReplicaId:3, Key: delKey}
-	delNode4 := DelNode{ReplicaId:4, Key: delKey}
+	delNode1 := DelNode{ReplicaId: 1, Key: delKey}
+	delNode2 := DelNode{ReplicaId: 2, Key: delKey}
+	delNode3 := DelNode{ReplicaId: 3, Key: delKey}
+	delNode4 := DelNode{ReplicaId: 4, Key: delKey}
 	rbft.nodeMgr.delNodeCertStore[delKey] = &delNodeCert{
 		delNodes: map[DelNode]bool{
 			delNode1: true,
@@ -339,7 +338,7 @@ func TestRecvAgreeUpdateN(t *testing.T) {
 			delNode3: true,
 			delNode4: true,
 		},
-		delId: 5,
+		delId:     5,
 		finishDel: true,
 	}
 
@@ -410,11 +409,11 @@ func TestRecvAgreeUpdateN(t *testing.T) {
 	}
 
 	// test recvAgreeUpdateN when in viewchange.
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.recvAgreeUpdateN(agreeDel1)
 
 	// test recvAgreeUpdateN when in negotiate view.
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.status.activeState(&rbft.status.inNegoView)
 	rbft.recvAgreeUpdateN(agreeDel1)
 
@@ -460,7 +459,7 @@ func TestRecvAgreeUpdateN(t *testing.T) {
 	rbft.N = 4
 	rbft.view = 0
 	// test recvAgreeUpdateN with finishAdd being false.
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 0)
+	rbft.status.inActiveState(&rbft.status.inUpdatingN)
 	rbft.nodeMgr.addNodeCertStore[addKey].finishAdd = false
 	rbft.recvAgreeUpdateN(agreeAdd1)
 
@@ -511,23 +510,23 @@ func TestSendReadyForN(t *testing.T) {
 	// test sendReadyForN with a non-new node.
 	rbft.status.inActiveState(&rbft.status.isNewNode)
 	rbft.sendReadyForN()
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendReadyForN with a blank localKey.
 	rbft.nodeMgr.localKey = ""
 	rbft.sendReadyForN()
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendReadyForN when in viewchange.
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.sendReadyForN()
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendReadyForN in normal case.
 	rbft.status.activeState(&rbft.status.isNewNode)
 	key := "test-local-key"
 	rbft.nodeMgr.localKey = key
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	go func() {
 		event := <-eChan
 		e, ok := event.(*protos.Message)
@@ -542,7 +541,7 @@ func TestSendReadyForN(t *testing.T) {
 		ast.Equal(key, readyForN.Key, "local key shoule be equal.")
 	}()
 	rbft.sendReadyForN()
-	ast.Equal(uint32(1), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should be in updating N.")
+	ast.Equal(true, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should be in updating N.")
 
 }
 
@@ -558,23 +557,23 @@ func TestRecvReadyforNforAdd(t *testing.T) {
 	key := "test-ready-for-n"
 	ready := &ReadyForN{
 		ReplicaId: 2,
-		Key: key,
+		Key:       key,
 	}
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 1)
+	rbft.status.activeState(&rbft.status.inUpdatingN)
 
 	// test sendReadyForN when in viewchange.
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.recvReadyforNforAdd(ready)
 
 	// test sendReadyForN with finishAdd being false.
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 	rbft.recvReadyforNforAdd(ready)
 
 	// test sendReadyForN with normal case.
-	addNode1 := AddNode{ReplicaId:1, Key: key}
-	addNode2 := AddNode{ReplicaId:2, Key: key}
-	addNode3 := AddNode{ReplicaId:3, Key: key}
-	addNode4 := AddNode{ReplicaId:4, Key: key}
+	addNode1 := AddNode{ReplicaId: 1, Key: key}
+	addNode2 := AddNode{ReplicaId: 2, Key: key}
+	addNode3 := AddNode{ReplicaId: 3, Key: key}
+	addNode4 := AddNode{ReplicaId: 4, Key: key}
 	rbft.nodeMgr.addNodeCertStore[key] = &addNodeCert{
 		addNodes: map[AddNode]bool{
 			addNode1: true,
@@ -623,12 +622,12 @@ func TestSendAgreeUpdateNforAdd(t *testing.T) {
 	// test sendAgreeUpdateNForAdd with a new node.
 	rbft.status.activeState(&rbft.status.isNewNode)
 	rbft.sendAgreeUpdateNForAdd(agree)
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendAgreeUpdateNForAdd with incorrect N or view.
 	rbft.status.inActiveState(&rbft.status.isNewNode)
 	rbft.sendAgreeUpdateNForAdd(agree)
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendAgreeUpdateNForAdd in normal case.
 	agree.N = 5
@@ -647,7 +646,7 @@ func TestSendAgreeUpdateNforAdd(t *testing.T) {
 		ast.Equal(key, agree.Key, "local key shoule be equal.")
 	}()
 	rbft.sendAgreeUpdateNForAdd(agree)
-	ast.Equal(uint32(1), atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN), "Replica should be in updating N.")
+	ast.Equal(true, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should be in updating N.")
 
 }
 
@@ -683,37 +682,37 @@ func TestSendUpdateN(t *testing.T) {
 
 	addKey := "test-add-key"
 	aidx1 := aidx{
-		v: 5,
-		n: 5,
-		id: 1,
+		v:    5,
+		n:    5,
+		id:   1,
 		flag: true,
 	}
 
 	aidx2 := aidx{
-		v: 5,
-		n: 5,
-		id: 2,
+		v:    5,
+		n:    5,
+		id:   2,
 		flag: true,
 	}
 
 	aidx3 := aidx{
-		v: 5,
-		n: 5,
-		id: 3,
+		v:    5,
+		n:    5,
+		id:   3,
 		flag: true,
 	}
 
 	aidx4 := aidx{
-		v: 5,
-		n: 5,
-		id: 4,
+		v:    5,
+		n:    5,
+		id:   4,
 		flag: true,
 	}
 
 	agreeUpdate1 := &AgreeUpdateN{
 		Basis: &VcBasis{
 			View: 5,
-			H: 0,
+			H:    0,
 			Cset: []*Vc_C{
 				{SequenceNumber: 0, Id: "chkpt0"},
 			},
@@ -724,18 +723,18 @@ func TestSendUpdateN(t *testing.T) {
 				{SequenceNumber: 1, BatchDigest: "batch1", View: 0},
 			},
 			ReplicaId: 1,
-			Genesis: 0,
+			Genesis:   0,
 		},
-		Flag: true,
-		Key: addKey,
+		Flag:       true,
+		Key:        addKey,
 		RouterHash: "",
-		N: 5,
+		N:          5,
 	}
 
 	agreeUpdate2 := &AgreeUpdateN{
 		Basis: &VcBasis{
 			View: 5,
-			H: 0,
+			H:    0,
 			Cset: []*Vc_C{
 				{SequenceNumber: 0, Id: "chkpt0"},
 			},
@@ -746,18 +745,18 @@ func TestSendUpdateN(t *testing.T) {
 				{SequenceNumber: 1, BatchDigest: "batch1", View: 0},
 			},
 			ReplicaId: 2,
-			Genesis: 0,
+			Genesis:   0,
 		},
-		Flag: true,
-		Key: addKey,
+		Flag:       true,
+		Key:        addKey,
 		RouterHash: "",
-		N: 5,
+		N:          5,
 	}
 
 	agreeUpdate3 := &AgreeUpdateN{
 		Basis: &VcBasis{
 			View: 5,
-			H: 0,
+			H:    0,
 			Cset: []*Vc_C{
 				{SequenceNumber: 0, Id: "chkpt0"},
 			},
@@ -768,18 +767,18 @@ func TestSendUpdateN(t *testing.T) {
 				{SequenceNumber: 1, BatchDigest: "batch1", View: 0},
 			},
 			ReplicaId: 3,
-			Genesis: 0,
+			Genesis:   0,
 		},
-		Flag: true,
-		Key: addKey,
+		Flag:       true,
+		Key:        addKey,
 		RouterHash: "",
-		N: 5,
+		N:          5,
 	}
 
 	agreeUpdate4 := &AgreeUpdateN{
 		Basis: &VcBasis{
 			View: 5,
-			H: 0,
+			H:    0,
 			Cset: []*Vc_C{
 				{SequenceNumber: 0, Id: "chkpt0"},
 			},
@@ -790,12 +789,12 @@ func TestSendUpdateN(t *testing.T) {
 				{SequenceNumber: 1, BatchDigest: "batch1", View: 0},
 			},
 			ReplicaId: 4,
-			Genesis: 0,
+			Genesis:   0,
 		},
-		Flag: true,
-		Key: addKey,
+		Flag:       true,
+		Key:        addKey,
 		RouterHash: "",
-		N: 5,
+		N:          5,
 	}
 
 	// test sendUpdateN when primary is lack of some batches.
@@ -864,7 +863,7 @@ func TestPrimaryCheckUpdateN(t *testing.T) {
 
 	cp := Vc_C{
 		SequenceNumber: 10,
-		Id: "test-vc",
+		Id:             "test-vc",
 	}
 	replicas := []replicaInfo{
 		{id: 2, height: 10, genesis: 0},
@@ -886,11 +885,11 @@ func TestRecvUpdateN(t *testing.T) {
 	rbft.persister = persist.New(db)
 
 	// test recvUpdateN when in viewchange.
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	updateN := &UpdateN{}
 	rbft.recvUpdateN(updateN)
 	ast.Equal(0, len(rbft.nodeMgr.updateStore), "updateStore should be nil.")
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 
 	// test recvUpdateN when in negotiate view.
 	rbft.status.activeState(&rbft.status.inNegoView)
@@ -911,11 +910,11 @@ func TestRecvUpdateN(t *testing.T) {
 
 	addKey := "test-add"
 	updateN = &UpdateN{
-		Flag: true,
+		Flag:      true,
 		ReplicaId: 1,
-		Key: addKey,
-		N: 5,
-		View: 5,
+		Key:       addKey,
+		N:         5,
+		View:      5,
 		Xset: map[uint64]string{
 			1: "batch1",
 			2: "batch2",
@@ -924,37 +923,37 @@ func TestRecvUpdateN(t *testing.T) {
 	}
 
 	aidx1 := aidx{
-		v: 5,
-		n: 5,
-		id: 1,
+		v:    5,
+		n:    5,
+		id:   1,
 		flag: true,
 	}
 
 	aidx2 := aidx{
-		v: 5,
-		n: 5,
-		id: 2,
+		v:    5,
+		n:    5,
+		id:   2,
 		flag: true,
 	}
 
 	aidx3 := aidx{
-		v: 5,
-		n: 5,
-		id: 3,
+		v:    5,
+		n:    5,
+		id:   3,
 		flag: true,
 	}
 
 	aidx4 := aidx{
-		v: 5,
-		n: 5,
-		id: 4,
+		v:    5,
+		n:    5,
+		id:   4,
 		flag: true,
 	}
 
 	agreeUpdate1 := &AgreeUpdateN{
 		Basis: &VcBasis{
 			View: 5,
-			H: 0,
+			H:    0,
 			Cset: []*Vc_C{
 				{SequenceNumber: 0, Id: "chkpt0"},
 			},
@@ -967,18 +966,18 @@ func TestRecvUpdateN(t *testing.T) {
 				{SequenceNumber: 1, BatchDigest: "batch1", View: 0},
 			},
 			ReplicaId: 1,
-			Genesis: 0,
+			Genesis:   0,
 		},
-		Flag: true,
-		Key: addKey,
+		Flag:       true,
+		Key:        addKey,
 		RouterHash: "",
-		N: 5,
+		N:          5,
 	}
 
 	agreeUpdate2 := &AgreeUpdateN{
 		Basis: &VcBasis{
 			View: 5,
-			H: 0,
+			H:    0,
 			Cset: []*Vc_C{
 				{SequenceNumber: 0, Id: "chkpt0"},
 			},
@@ -991,18 +990,18 @@ func TestRecvUpdateN(t *testing.T) {
 				{SequenceNumber: 2, BatchDigest: "batch2", View: 0},
 			},
 			ReplicaId: 2,
-			Genesis: 0,
+			Genesis:   0,
 		},
-		Flag: true,
-		Key: addKey,
+		Flag:       true,
+		Key:        addKey,
 		RouterHash: "",
-		N: 5,
+		N:          5,
 	}
 
 	agreeUpdate3 := &AgreeUpdateN{
 		Basis: &VcBasis{
 			View: 5,
-			H: 0,
+			H:    0,
 			Cset: []*Vc_C{
 				{SequenceNumber: 0, Id: "chkpt0"},
 			},
@@ -1015,18 +1014,18 @@ func TestRecvUpdateN(t *testing.T) {
 				{SequenceNumber: 2, BatchDigest: "batch2", View: 0},
 			},
 			ReplicaId: 3,
-			Genesis: 0,
+			Genesis:   0,
 		},
-		Flag: true,
-		Key: addKey,
+		Flag:       true,
+		Key:        addKey,
 		RouterHash: "",
-		N: 5,
+		N:          5,
 	}
 
 	agreeUpdate4 := &AgreeUpdateN{
 		Basis: &VcBasis{
 			View: 5,
-			H: 0,
+			H:    0,
 			Cset: []*Vc_C{
 				{SequenceNumber: 0, Id: "chkpt0"},
 			},
@@ -1040,12 +1039,12 @@ func TestRecvUpdateN(t *testing.T) {
 				{SequenceNumber: 2, BatchDigest: "batch2", View: 0},
 			},
 			ReplicaId: 4,
-			Genesis: 0,
+			Genesis:   0,
 		},
-		Flag: true,
-		Key: addKey,
+		Flag:       true,
+		Key:        addKey,
 		RouterHash: "",
-		N: 5,
+		N:          5,
 	}
 	rbft.nodeMgr.agreeUpdateStore[aidx1] = agreeUpdate1
 	rbft.nodeMgr.agreeUpdateStore[aidx2] = agreeUpdate2
@@ -1074,11 +1073,11 @@ func TestReplicaCheckUpdateN(t *testing.T) {
 
 	addKey := "test-add"
 	updateN := &UpdateN{
-		Flag: true,
+		Flag:      true,
 		ReplicaId: 1,
-		Key: addKey,
-		N: 5,
-		View: 5,
+		Key:       addKey,
+		N:         5,
+		View:      5,
 		Xset: map[uint64]string{
 			1: "batch1",
 			2: "batch2",
@@ -1086,37 +1085,37 @@ func TestReplicaCheckUpdateN(t *testing.T) {
 	}
 
 	aidx1 := aidx{
-		v: 5,
-		n: 5,
-		id: 1,
+		v:    5,
+		n:    5,
+		id:   1,
 		flag: true,
 	}
 
 	aidx2 := aidx{
-		v: 5,
-		n: 5,
-		id: 2,
+		v:    5,
+		n:    5,
+		id:   2,
 		flag: true,
 	}
 
 	aidx3 := aidx{
-		v: 5,
-		n: 5,
-		id: 3,
+		v:    5,
+		n:    5,
+		id:   3,
 		flag: true,
 	}
 
 	aidx4 := aidx{
-		v: 5,
-		n: 5,
-		id: 4,
+		v:    5,
+		n:    5,
+		id:   4,
 		flag: true,
 	}
 
 	agreeUpdate1 := &AgreeUpdateN{
 		Basis: &VcBasis{
 			View: 5,
-			H: 0,
+			H:    0,
 			Cset: []*Vc_C{
 				{SequenceNumber: 0, Id: "chkpt0"},
 			},
@@ -1129,18 +1128,18 @@ func TestReplicaCheckUpdateN(t *testing.T) {
 				{SequenceNumber: 1, BatchDigest: "batch1", View: 0},
 			},
 			ReplicaId: 1,
-			Genesis: 0,
+			Genesis:   0,
 		},
-		Flag: true,
-		Key: addKey,
+		Flag:       true,
+		Key:        addKey,
 		RouterHash: "",
-		N: 5,
+		N:          5,
 	}
 
 	agreeUpdate2 := &AgreeUpdateN{
 		Basis: &VcBasis{
 			View: 5,
-			H: 0,
+			H:    0,
 			Cset: []*Vc_C{
 				{SequenceNumber: 0, Id: "chkpt0"},
 			},
@@ -1153,18 +1152,18 @@ func TestReplicaCheckUpdateN(t *testing.T) {
 				{SequenceNumber: 2, BatchDigest: "batch2", View: 0},
 			},
 			ReplicaId: 2,
-			Genesis: 0,
+			Genesis:   0,
 		},
-		Flag: true,
-		Key: addKey,
+		Flag:       true,
+		Key:        addKey,
 		RouterHash: "",
-		N: 5,
+		N:          5,
 	}
 
 	agreeUpdate3 := &AgreeUpdateN{
 		Basis: &VcBasis{
 			View: 5,
-			H: 0,
+			H:    0,
 			Cset: []*Vc_C{
 				{SequenceNumber: 0, Id: "chkpt0"},
 			},
@@ -1177,18 +1176,18 @@ func TestReplicaCheckUpdateN(t *testing.T) {
 				{SequenceNumber: 2, BatchDigest: "batch2", View: 0},
 			},
 			ReplicaId: 3,
-			Genesis: 0,
+			Genesis:   0,
 		},
-		Flag: true,
-		Key: addKey,
+		Flag:       true,
+		Key:        addKey,
 		RouterHash: "",
-		N: 5,
+		N:          5,
 	}
 
 	agreeUpdate4 := &AgreeUpdateN{
 		Basis: &VcBasis{
 			View: 5,
-			H: 0,
+			H:    0,
 			Cset: []*Vc_C{
 				{SequenceNumber: 0, Id: "chkpt0"},
 			},
@@ -1201,12 +1200,12 @@ func TestReplicaCheckUpdateN(t *testing.T) {
 				{SequenceNumber: 2, BatchDigest: "batch2", View: 0},
 			},
 			ReplicaId: 4,
-			Genesis: 0,
+			Genesis:   0,
 		},
-		Flag: true,
-		Key: addKey,
+		Flag:       true,
+		Key:        addKey,
 		RouterHash: "",
-		N: 5,
+		N:          5,
 	}
 	rbft.nodeMgr.agreeUpdateStore[aidx1] = agreeUpdate1
 	rbft.nodeMgr.agreeUpdateStore[aidx2] = agreeUpdate2
@@ -1222,16 +1221,16 @@ func TestReplicaCheckUpdateN(t *testing.T) {
 	rbft.nodeMgr.updateStore[rbft.nodeMgr.updateTarget] = updateN
 
 	// test replicaCheckUpdateN when in viewchange.
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.status.activeState(&rbft.status.inViewChange)
 	rbft.replicaCheckUpdateN()
 	ast.Equal(4, rbft.N)
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.status.inActiveState(&rbft.status.inViewChange)
 
 	// test replicaCheckUpdateN when not in updatingN.
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 0)
+	rbft.status.inActiveState(&rbft.status.inUpdatingN)
 	rbft.replicaCheckUpdateN()
 	ast.Equal(4, rbft.N)
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 1)
+	rbft.status.activeState(&rbft.status.inUpdatingN)
 
 	// test replicaCheckUpdateN with incorrect Cset.
 	rbft.nodeMgr.agreeUpdateStore[aidx1].Basis.Cset = []*Vc_C{}
@@ -1311,7 +1310,7 @@ func TestSendFinishUpdate(t *testing.T) {
 	rbft.view = 5
 	rbft.h = 0
 
-	atomic.StoreUint32(&rbft.nodeMgr.inUpdatingN, 0)
+	rbft.status.inActiveState(&rbft.status.inUpdatingN)
 	go func() {
 		event := <-eChan
 		e, ok := event.(*protos.Message)
@@ -1355,28 +1354,28 @@ func TestProcessReqInUpdate(t *testing.T) {
 
 	finish1 := &FinishUpdate{
 		ReplicaId: 1,
-		View: 5,
-		LowH: 0,
+		View:      5,
+		LowH:      0,
 	}
 	finish2 := &FinishUpdate{
 		ReplicaId: 2,
-		View: 5,
-		LowH: 0,
+		View:      5,
+		LowH:      0,
 	}
 	finish3 := &FinishUpdate{
 		ReplicaId: 3,
-		View: 5,
-		LowH: 0,
+		View:      5,
+		LowH:      0,
 	}
 	finish4 := &FinishUpdate{
 		ReplicaId: 4,
-		View: 5,
-		LowH: 0,
+		View:      5,
+		LowH:      0,
 	}
 	finish5 := &FinishUpdate{
 		ReplicaId: 5,
-		View: 5,
-		LowH: 0,
+		View:      5,
+		LowH:      0,
 	}
 
 	rbft.id = 5
@@ -1398,11 +1397,11 @@ func TestProcessReqInUpdate(t *testing.T) {
 
 	addKey := "test-add"
 	updateN := &UpdateN{
-		Flag: true,
+		Flag:      true,
 		ReplicaId: 1,
-		Key: addKey,
-		N: 5,
-		View: 5,
+		Key:       addKey,
+		N:         5,
+		View:      5,
 		Xset: map[uint64]string{
 			1: "batch1",
 			2: "batch2",
@@ -1437,11 +1436,11 @@ func TestPutBackTxBatches(t *testing.T) {
 	}
 	rbft.exec.lastExec = 2
 	rbft.storeMgr.txBatchStore = map[string]*TransactionBatch{
-		"batch1": {SeqNo:1},
-		"batch2": {SeqNo:2},
-		"batch3": {SeqNo:3},
-		"batch4": {SeqNo:4},
-		"batch5": {SeqNo:5},
+		"batch1": {SeqNo: 1},
+		"batch2": {SeqNo: 2},
+		"batch3": {SeqNo: 3},
+		"batch4": {SeqNo: 4},
+		"batch5": {SeqNo: 5},
 	}
 
 	rbft.putBackTxBatches(xset)
@@ -1463,12 +1462,12 @@ func TestRebuildCertStoreForUpdate(t *testing.T) {
 	// test rebuildCertStoreForUpdate with no nil Xset.
 	addKey := "test-add"
 	updateN := &UpdateN{
-		Flag: true,
+		Flag:      true,
 		ReplicaId: 1,
-		Key: addKey,
-		N: 5,
-		View: 5,
-		Xset: make(map[uint64]string),
+		Key:       addKey,
+		N:         5,
+		View:      5,
+		Xset:      make(map[uint64]string),
 	}
 	rbft.nodeMgr.updateTarget = uidx{
 		flag: updateN.Flag,

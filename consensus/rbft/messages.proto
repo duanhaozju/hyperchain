@@ -10,7 +10,7 @@ package rbft;
 /*
  * mapping to RBFT paper names
  *
- * PBFT name: local name
+ * RBFT name: local name
  *
  * o: transaction
  * t: timestamp
