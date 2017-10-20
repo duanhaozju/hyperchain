@@ -25,9 +25,9 @@ type batchManager struct {
 
 // batchValidator manages batch validate issues
 type batchValidator struct {
-	lastVid             uint64  // track the last validate batch seqNo
-	currentVid          *uint64 // track the current validate batch seqNo
-	validateCount       uint64   // track the validate event which has been sent to executor module but hasn't been committed
+	lastVid             uint64                 // track the last validate batch seqNo
+	currentVid          *uint64                // track the current validate batch seqNo
+	validateCount       uint64                 // track the validate event which has been sent to executor module but hasn't been committed
 	cacheValidatedBatch map[string]*cacheBatch // track the cached validated batch
 
 	validateTimeout time.Duration
@@ -110,7 +110,7 @@ func newBatchManager(rbft *rbftImpl) *batchManager {
 	// new instance for txPool
 	bm.txPool, err = txpool.NewTxPool(rbft.namespace, poolSize, bm.eventMux, batchSize)
 	if err != nil {
-		panic(fmt.Errorf("Cannot create txpool: %s", err))
+		panic(fmt.Errorf("cannot create txpool: %s", err))
 	}
 
 	rbft.logger.Infof("RBFT Batch size = %d", batchSize)
@@ -156,12 +156,12 @@ func (bm *batchManager) isBatchTimerActive() bool {
 
 // startBatchTimer starts the batch timer and sets the batchTimerActive to true
 func (rbft *rbftImpl) startBatchTimer() {
-	event := &LocalEvent{
+	localEvent := &LocalEvent{
 		Service:   CORE_RBFT_SERVICE,
 		EventType: CORE_BATCH_TIMER_EVENT,
 	}
 
-	rbft.timerMgr.startTimer(BATCH_TIMER, event, rbft.eventMux)
+	rbft.timerMgr.startTimer(BATCH_TIMER, localEvent, rbft.eventMux)
 	rbft.batchMgr.batchTimerActive = true
 	rbft.logger.Debugf("Primary %d started the batch timer", rbft.id)
 }
@@ -177,20 +177,19 @@ func (rbft *rbftImpl) stopBatchTimer() {
 func (rbft *rbftImpl) restartBatchTimer() {
 	rbft.timerMgr.stopTimer(BATCH_TIMER)
 
-	event := &LocalEvent{
+	localEvent := &LocalEvent{
 		Service:   CORE_RBFT_SERVICE,
 		EventType: CORE_BATCH_TIMER_EVENT,
 	}
 
-	rbft.timerMgr.startTimer(BATCH_TIMER, event, rbft.eventMux)
+	rbft.timerMgr.startTimer(BATCH_TIMER, localEvent, rbft.eventMux)
 	rbft.batchMgr.batchTimerActive = true
 	rbft.logger.Debugf("Primary %d restarted the batch timer", rbft.id)
 }
 
 // primaryValidateBatch used by primary helps primary pre-validate the batch and stores this TransactionBatch
 func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatch, seqNo uint64) {
-	// for keep the previous vid before viewchange
-	// will specifies the vid to start validate batch)
+	// for keep the previous vid before viewchange, we may need to specify the vid to start validate batch
 	var n uint64
 	if seqNo != 0 {
 		n = seqNo
@@ -205,7 +204,7 @@ func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 	}
 
 	rbft.seqNo = n
-	rbft.batchVdr.validateCount ++
+	rbft.batchVdr.validateCount++
 
 	// store batch to outstandingReqBatches until execute this batch
 	rbft.storeMgr.outstandingReqBatches[digest] = batch

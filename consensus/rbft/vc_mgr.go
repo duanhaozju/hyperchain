@@ -17,7 +17,7 @@ type vcManager struct {
 	vcResendLimit      int           // vcResendLimit indicates a replica's view change resending upbound.
 	vcResendCount      int           // vcResendCount represent times of same view change info resend
 	viewChangePeriod   uint64        // period between automatic view changes. Default value is 0 means close automatic view changes
-	viewChangeSeqNo    uint64        // next seqNo to perform view change TODO: NO usage
+	viewChangeSeqNo    uint64        // next seqNo to perform view change
 	lastNewViewTimeout time.Duration // last timeout we used during this view change
 	newViewTimerReason string        // what triggered the timer
 
@@ -811,12 +811,12 @@ func (rbft *rbftImpl) softStartNewViewTimer(timeout time.Duration, reason string
 func (rbft *rbftImpl) beforeSendVC() error {
 	if rbft.status.getState(&rbft.status.inNegoView) {
 		rbft.logger.Debugf("Replica %d try to send view change, but it's in nego-view", rbft.id)
-		return errors.New("node is in nego view now!")
+		return errors.New("node is in negotiate view now")
 	}
 
 	if rbft.status.getState(&rbft.status.inRecovery) {
 		rbft.logger.Noticef("Replica %d try to send view change, but it's in recovery", rbft.id)
-		return errors.New("node is in recovery now!")
+		return errors.New("node is in recovery now")
 	}
 
 	rbft.stopNewViewTimer()
@@ -1134,6 +1134,8 @@ func (rbft *rbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing
 // primaryResendBatch validates batches which has seq > low watermark
 func (rbft *rbftImpl) primaryResendBatch(xset Xset) {
 
+	// reset validateCount before new primary validate batches.
+	rbft.batchVdr.validateCount = 0
 	xSetLen := len(xset)
 	upper := uint64(xSetLen) + rbft.h + uint64(1)
 	for i := rbft.h + uint64(1); i < upper; i++ {

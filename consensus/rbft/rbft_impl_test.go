@@ -17,8 +17,8 @@ import (
 	"github.com/facebookgo/ensure"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
-	"strconv"
 	"hyperchain/common"
+	"strconv"
 )
 
 //for test, make a cert pre-prepared.

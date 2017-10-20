@@ -78,7 +78,7 @@ func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 	rbft.eventMux = new(event.TypeMux)
 	rbft.config = config
 	if !config.ContainsKey(common.C_NODE_ID) {
-		err = fmt.Errorf("No hyperchain id specified!, key: %s", common.C_NODE_ID)
+		err = fmt.Errorf("no hyperchain id specified!, key: %s", common.C_NODE_ID)
 		return nil, err
 	}
 	rbft.id = uint64(config.GetInt64(common.C_NODE_ID))
@@ -346,14 +346,14 @@ func (rbft *rbftImpl) findNextPrePrepareBatch() (find bool, digest string, resul
 			continue
 		}
 
-		currentVid := cache.seqNo
-		rbft.batchVdr.setCurrentVid(&currentVid)
+		vid := cache.seqNo
+		rbft.batchVdr.setCurrentVid(&vid)
 
-		n := currentVid + 1
+		n := vid + 1
 		// check for other PRE-PREPARE for same digest, but different seqNo
 		if rbft.storeMgr.existedDigest(n, rbft.view, digest) {
 			rbft.deleteExistedTx(digest)
-			rbft.batchVdr.validateCount --
+			rbft.batchVdr.validateCount--
 			continue
 		}
 
@@ -772,7 +772,7 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 			rbft.persistCSet(idx.v, idx.n, idx.d)
 			isPrimary := rbft.isPrimary(rbft.id)
 			if isPrimary {
-				rbft.batchVdr.validateCount --
+				rbft.batchVdr.validateCount--
 			}
 			rbft.helper.Execute(idx.n, cert.resultHash, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)
 			cert.sentExecute = true
@@ -1235,8 +1235,6 @@ func (rbft *rbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 				rbft.status.activeState(&rbft.status.skipInProgress)
 				rbft.invalidateState()
 				rbft.stopNewViewTimer()
-
-				// TODO: state update here, this will make recovery faster, though it is presently correct
 				return true
 			}
 		}
