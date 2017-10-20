@@ -8,10 +8,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/op/go-logging"
+	"google.golang.org/grpc"
 	"hyperchain/common"
-	"hyperchain/common/service"
+	pb "hyperchain/common/protos"
+	"hyperchain/common/service/server"
 	"hyperchain/core/ledger/bloom"
 	"io/ioutil"
+	"net"
 	"os"
 	"strings"
 	"sync"
@@ -132,7 +135,7 @@ type nsManagerImpl struct {
 
 	status *Status
 
-	is *service.InternalServer
+	is *server.InternalServer
 
 	stopHp    chan bool
 	restartHp chan bool
@@ -146,9 +149,24 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 		lock:  new(sync.RWMutex),
 	}
 
-	server, err := service.NewInternalServer(conf.GetInt(common.INTERNAL_PORT), "0.0.0.0")
-	if err != nil {
-		panic(err)
+	//TODO: refactor this later
+	var s *server.InternalServer
+	if !conf.GetBool(common.EXECUTOR_EMBEDDED) {
+		srv, err := server.NewInternalServer(conf.GetInt(common.INTERNAL_PORT), "0.0.0.0")
+		if err != nil {
+			panic(err)
+		}
+		lis, err := net.Listen("tcp", srv.Addr())
+		if err != nil {
+			panic(lis)
+		}
+
+		grpcServer := grpc.NewServer()
+		pb.RegisterDispatcherServer(grpcServer, srv)
+
+		logger.Criticalf("InternalServer start successful on %v !", srv.Addr())
+		go grpcServer.Serve(lis)
+		s = srv
 	}
 
 	nr := &nsManagerImpl{
@@ -159,8 +177,9 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 		status:      status,
 		stopHp:      stopHp,
 		restartHp:   restartHp,
-		is:          server,
+		is:          s,
 	}
+
 	nr.rwLock = new(sync.RWMutex)
 	nr.bloomFilter.Start()
 	return nr
@@ -318,9 +337,11 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return err
 	}
 	delFlag := make(chan bool)
-	ns, err := GetNamespace(name, nsConfig, delFlag)
-
-	nr.is.RegisterLocal(ns.LocalService()) // register local service
+	ns, err := GetNamespace(name, nsConfig, delFlag, nr.is)
+	logger.Error(nr.is == nil)
+	if nr.conf.GetBool(common.EXECUTOR_EMBEDDED) == false {
+		nr.is.RegisterLocal(ns.LocalService()) // register local service
+	}
 	if err != nil {
 		logger.Errorf("Construct namespace %s error, %v", name, err)
 		return ErrCannotNewNs

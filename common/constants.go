@@ -22,8 +22,9 @@ const (
 )
 
 const (
-	START_NAMESPACE = "namespace.start."
-	C_JVM_START     = "hypervm.jvm"
+	EXECUTOR_EMBEDDED = "executor.embedded"
+	START_NAMESPACE   = "namespace.start."
+	C_JVM_START       = "hypervm.jvm"
 )
 
 //constants for logger keys

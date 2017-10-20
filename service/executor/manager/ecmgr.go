@@ -6,7 +6,8 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"io/ioutil"
-    "os"
+	"os"
+	"sync"
 )
 
 var logger *logging.Logger
@@ -21,7 +22,9 @@ type ExecutorManager interface {
 
 	Stop() error
 
-	GetExecutorByName(name string) executorService
+	ProcessRequest(namespace string, request interface{}) interface{}
+
+	GetExecutorServiceByName(name string) executorService
 }
 
 type ecManagerImpl struct {
@@ -34,8 +37,11 @@ type ecManagerImpl struct {
 	// of the node
 	conf *common.Config
 
-	stopEm    chan bool
+	stopEm chan bool
+
 	restartEm chan bool
+
+	rwLock *sync.RWMutex
 }
 
 func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bool) *ecManagerImpl {
@@ -46,6 +52,7 @@ func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bo
 		stopEm:     stopEm,
 		restartEm:  restartEm,
 	}
+	em.rwLock = new(sync.RWMutex)
 	return em
 }
 
@@ -66,7 +73,7 @@ func (em *ecManagerImpl) Start() error {
 
 	// start all executor service
 	for _, d := range dirs {
-        if d.IsDir() {
+		if d.IsDir() {
 			name := d.Name()
 			start := em.conf.GetBool(common.START_NAMESPACE + name)
 			if !start {
@@ -97,23 +104,23 @@ func (em *ecManagerImpl) Start() error {
 }
 
 func (em *ecManagerImpl) getConfig(name string) (*common.Config, error) {
-    configRootDir := em.conf.GetString(NS_CONFIG_DIR_ROOT)
-    if configRootDir == "" {
-        return nil, errors.New("Namespace config root dir is not valid ")
-    }
-    nsRootPath := configRootDir + "/" + name
-    if _, err := os.Stat(nsRootPath); os.IsNotExist(err) {
-        logger.Errorf("namespace [%s] root path doesn't exist!", name)
-    }
-    nsConfigDir := nsRootPath + "/config"
+	configRootDir := em.conf.GetString(NS_CONFIG_DIR_ROOT)
+	if configRootDir == "" {
+		return nil, errors.New("Namespace config root dir is not valid ")
+	}
+	nsRootPath := configRootDir + "/" + name
+	if _, err := os.Stat(nsRootPath); os.IsNotExist(err) {
+		logger.Errorf("namespace [%s] root path doesn't exist!", name)
+	}
+	nsConfigDir := nsRootPath + "/config"
 
-    // init namespace configuration(namespace.toml)
-    nsConfigPath := nsConfigDir + "/namespace.toml"
-    if _, err := os.Stat(nsConfigPath); os.IsNotExist(err) {
-        logger.Error("namespace config file doesn't exist!")
-    }
-    conf := common.NewConfig(nsConfigPath)
-    return conf, nil
+	// init namespace configuration(namespace.toml)
+	nsConfigPath := nsConfigDir + "/namespace.toml"
+	if _, err := os.Stat(nsConfigPath); os.IsNotExist(err) {
+		logger.Error("namespace config file doesn't exist!")
+	}
+	conf := common.NewConfig(nsConfigPath)
+	return conf, nil
 }
 
 func (em *ecManagerImpl) Stop() error {
@@ -131,9 +138,18 @@ func (em *ecManagerImpl) Stop() error {
 	return nil
 }
 
-func (em *ecManagerImpl) GetExecutorByName(name string) executorService  {
-	//nr.rwLock.RLock()
-	//defer nr.rwLock.RUnlock()
+func (em *ecManagerImpl) ProcessRequest(namespace string, request interface{}) interface{} {
+	es := em.GetExecutorServiceByName(namespace)
+	if es == nil {
+		logger.Noticef("no namespace found for name: %s", namespace)
+		return nil
+	}
+	return es.ProcessRequest(request)
+}
+
+func (em *ecManagerImpl) GetExecutorServiceByName(name string) executorService {
+	em.rwLock.RLock()
+	defer em.rwLock.RUnlock()
 	if es, ok := em.services[name]; ok {
 		return es
 	}
