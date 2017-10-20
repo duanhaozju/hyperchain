@@ -1,4 +1,4 @@
-package service
+package local
 
 import (
 	//"fmt"
@@ -6,6 +6,7 @@ import (
 	"hyperchain/manager"
 	"hyperchain/manager/event"
 	"fmt"
+	"hyperchain/common/service"
 )
 
 type localServiceImpl struct {
@@ -15,7 +16,7 @@ type localServiceImpl struct {
 	hub       *manager.EventHub
 }
 
-func NewLocalService(namespace, id string, hub *manager.EventHub) Service {
+func NewLocalService(namespace, id string, hub *manager.EventHub) service.Service {
 	return &localServiceImpl{
 		id:        id,
 		namespace: namespace,
@@ -32,7 +33,7 @@ func (lsi *localServiceImpl) Id() string {
 	return lsi.id
 }
 
-func (lsi *localServiceImpl) Send(se serviceEvent) error {
+func (lsi *localServiceImpl) Send(se service.ServiceEvent) error {
 	switch e := se.(type) {
 	case event.ExecutorToConsensusEvent:
 		lsi.hub.DispatchExecutorToConsensus(e)
@@ -53,7 +54,7 @@ func (lsi *localServiceImpl) Serve() error {
 	return nil
 }
 
-func (lsi *localServiceImpl) isHealth() bool {
+func (lsi *localServiceImpl) IsHealth() bool {
 	return true
 }
 
