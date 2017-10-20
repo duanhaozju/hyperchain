@@ -936,9 +936,6 @@ func (rbft *rbftImpl) processReqInUpdate() consensusEvent {
 //##########################################################################
 
 func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
-
-	var keys []uint64
-	var hashList []string
 	hashSet := make(map[string]bool)
 	targetSet := make(map[uint64]string)
 
@@ -954,6 +951,8 @@ func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
 		}
 		targetSet[batch.SeqNo] = hash
 	}
+	keys := make([]uint64, len(targetSet))
+	hashList := make([]string, len(targetSet))
 
 	i := 0
 	for n := range targetSet {
@@ -962,8 +961,8 @@ func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
 	}
 	sort.Sort(sortableUint64Slice(keys))
 
-	for _, seqNo := range keys {
-		hashList = append(hashList, targetSet[seqNo])
+	for i, seqNo := range keys {
+		hashList[i] = targetSet[seqNo]
 	}
 
 	rbft.batchMgr.txPool.GetTxsBack(hashList)
