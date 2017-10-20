@@ -100,7 +100,7 @@ algo = "RBFT"
 #
 ############################################################################################################
 [executor]
-    embedded = true # whether executor execute in a standlone mode
+    embedded = false # whether executor execute in a standlone mode
 
     [executor.syncer]
     max_block_fetch         = 50

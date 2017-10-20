@@ -1,10 +1,15 @@
 package executor
 
 import (
+	"github.com/gogo/protobuf/proto"
+	"github.com/op/go-logging"
 	"hyperchain/common"
+	pb "hyperchain/common/protos"
+	"hyperchain/common/service"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/manager/event"
+	"hyperchain/common/service/server"
 )
 
 type IExecutor interface {
@@ -51,19 +56,57 @@ type IExecutor interface {
 }
 
 //proxy for remote executor.
+
 type remoteExecutorProxy struct {
+	namespace string
+	is        *server.InternalServer
+	logger    *logging.Logger
 }
 
-func NewRemoteExecutorProxy() IExecutor {
-	return &remoteExecutorProxy{}
+func NewRemoteExecutorProxy(is *server.InternalServer, config *common.Config) IExecutor {
+	rep := &remoteExecutorProxy{
+		is:        is,
+		namespace: config.GetString(common.NAMESPACE),
+	}
+	rep.logger = common.GetLogger(rep.namespace, "executor")
+	return rep
+}
+
+func (re *remoteExecutorProxy) Start() error {
+	//TODO: wait until this namespace registered
+	return nil
 }
 
 func (re *remoteExecutorProxy) Validate(ve event.ValidationEvent) {
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_ValidationEvent,
+	}
 
+	payload, err := proto.Marshal(&ve)
+	if err != nil {
+		//TODO: handle error
+	}
+
+	msg.Payload = payload
+	re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
 }
 
 func (re *remoteExecutorProxy) CommitBlock(ce event.CommitEvent) {
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_CommitEvent,
+	}
 
+	payload, err := proto.Marshal(&ce)
+	if err != nil {
+		//TODO: handle error
+	}
+
+	msg.Payload = payload
+	re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
 }
 
 func (re *remoteExecutorProxy) RunInSandBox(tx *types.Transaction, snapshotId string) error {
@@ -130,10 +173,6 @@ func (re *remoteExecutorProxy) CreateInitBlock(config *common.Config) error {
 }
 
 func (re *remoteExecutorProxy) FetchStateDb() vm.Database {
-	return nil
-}
-
-func (re *remoteExecutorProxy) Start() error {
 	return nil
 }
 

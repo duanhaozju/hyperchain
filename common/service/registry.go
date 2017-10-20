@@ -5,60 +5,60 @@ import (
 	"sync"
 )
 
-type serviceRegistry interface {
+type ServiceRegistry interface {
 	Init() error                            // Init init the service registry.
 	Register(s Service) error               // Register register new service.
 	UnRegister(namespace, sid string) error // UnRegister service by service id.
 	Close()                                 // Close close the service registry.
 	ContainsNamespace(name string) bool
-	Namespace(name string) *Namespace
+	Namespace(name string) *NamespaceServices
 }
 
-func NewServiceRegistry() serviceRegistry {
+func NewServiceRegistry() ServiceRegistry {
 	return &serviceRegistryImpl{
-		namespaces: make(map[string]*Namespace),
+		namespaces: make(map[string]*NamespaceServices),
 	}
 }
 
-type Namespace struct {
+type NamespaceServices struct {
 	services map[string]Service //<service name, service>
 	lock     sync.RWMutex
 }
 
-func newNamespace() *Namespace {
-	return &Namespace{
+func newNamespace() *NamespaceServices {
+	return &NamespaceServices{
 		services: make(map[string]Service),
 	}
 }
 
-func (nc *Namespace) AddService(service Service) {
+func (nc *NamespaceServices) AddService(service Service) {
 	nc.lock.Lock()
 	nc.services[service.Id()] = service //TODO: add duplicate detect
 	nc.lock.Unlock()
 }
 
 //Remove delete service by service id
-func (nc *Namespace) Remove(sid string) {
+func (nc *NamespaceServices) Remove(sid string) {
 	nc.lock.Lock()
 	delete(nc.services, sid) //TODO: add existence detect
 	nc.lock.Unlock()
 }
 
-func (nc *Namespace) Service(sid string) Service {
+func (nc *NamespaceServices) Service(sid string) Service {
 	nc.lock.RLock()
 	defer nc.lock.RUnlock()
 	return nc.services[sid] //TODO: add existence detect
 }
 
-//Contains Namespace whether contains service with sid.
-func (nc *Namespace) Contains(sid string) bool {
+//Contains NamespaceServices whether contains service with sid.
+func (nc *NamespaceServices) Contains(sid string) bool {
 	nc.lock.RLock()
 	defer nc.lock.RUnlock()
 	_, ok := nc.services[sid]
 	return ok
 }
 
-func (nc *Namespace) Close() {
+func (nc *NamespaceServices) Close() {
 	for _, s := range nc.services {
 		s.Close()
 	}
@@ -66,7 +66,7 @@ func (nc *Namespace) Close() {
 
 type serviceRegistryImpl struct {
 	lock       sync.RWMutex
-	namespaces map[string]*Namespace // <namespace, component>
+	namespaces map[string]*NamespaceServices // <namespace, component>
 }
 
 // Init init the service registry.
@@ -125,7 +125,7 @@ func (sri *serviceRegistryImpl) ContainsNamespace(namespace string) bool {
 	return ok
 }
 
-func (sri *serviceRegistryImpl) Namespace(name string) *Namespace {
+func (sri *serviceRegistryImpl) Namespace(name string) *NamespaceServices {
 	sri.lock.RLock()
 	defer sri.lock.RUnlock()
 	return sri.namespaces[name]

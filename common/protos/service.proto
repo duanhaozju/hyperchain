@@ -29,6 +29,7 @@ enum Type {
     DISPATCH = 2;
     ADMIN = 3;
     RESPONSE = 4;
+    EVENT = 5;
 }
 
 enum FROM {
@@ -58,9 +59,7 @@ enum Event {
 
     ExecutorToP2PEvent = 11;
     ExecutorToConsensusEvent = 12;
-    //4.Network event
 
-    //5.Eventhub event
-
-    //6.Administrator event
+    //3.1 to executor
+    ValidationEvent = 13;
 }
