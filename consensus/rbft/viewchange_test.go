@@ -6,14 +6,16 @@ package rbft
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	"github.com/stretchr/testify/assert"
-	"hyperchain/consensus/consensusMocks"
-	"hyperchain/core/types"
-	"hyperchain/manager/protos"
 	"reflect"
 	"testing"
 	"time"
+
+	"hyperchain/consensus/consensusMocks"
+	"hyperchain/core/types"
+	"hyperchain/manager/protos"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 )
 
 func getTestViewChange() (vc *ViewChange) {
@@ -582,15 +584,15 @@ func TestSendAndRecvNewView(t *testing.T) {
 	ast.Equal(nv, rbft.vcMgr.newViewStore[rbft.view], "should be the same, expect equal")
 
 	rbft2.view = uint64(2)
-	rbft2.status.activeState(&rbft2.status.inNegoView, &rbft2.status.inViewChange)
+	rbft2.on(inNegotiateView, inViewChange)
 	ast.Nil(rbft2.recvNewView(nv), "in nego-view, so it should not receive this message")
 
-	rbft2.status.inActiveState(&rbft2.status.inNegoView)
-	rbft2.status.activeState(&rbft2.status.inRecovery)
+	rbft2.off(inNegotiateView)
+	rbft2.on(inRecovery)
 	ast.Nil(rbft2.recvNewView(nv), "in recovery, so it should not receive this message")
 	ast.Equal(true, rbft2.recoveryMgr.recvNewViewInRecovery, "receive newView message in recovery, expect true")
 
-	rbft2.status.inActiveState(&rbft2.status.inRecovery)
+	rbft2.off(inRecovery)
 	rbft2.recoveryMgr.recvNewViewInRecovery = false
 	ast.Nil(rbft2.recvNewView(nv), "nv's view is smaller than rbft2.view, so it should not receive this message")
 

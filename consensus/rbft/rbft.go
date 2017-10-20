@@ -12,12 +12,12 @@ package rbft
 import (
 	"hyperchain/common"
 	"hyperchain/consensus/helper"
+	"hyperchain/consensus/txpool"
 	"hyperchain/core/types"
+	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
-	"hyperchain/consensus/txpool"
-	"hyperchain/manager/event"
 )
 
 /**
@@ -90,8 +90,6 @@ func (rbft *rbftImpl) Start() {
 	rbft.timerMgr = newTimerMgr(rbft)
 	rbft.initTimers()
 	rbft.initStatus()
-
-	rbft.off(inViewChange)
 
 	rbft.eventMux = new(event.TypeMux)
 	rbft.batchSub = rbft.eventMux.Subscribe(txRequest{}, txpool.TxHashBatch{}, protos.RoutersMessage{}, &LocalEvent{}, &ConsensusMessage{})

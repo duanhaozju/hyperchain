@@ -5,10 +5,11 @@ package rbft
 
 import (
 	"fmt"
-	"sync/atomic"
+	"strconv"
 	"testing"
 	"time"
 
+	"hyperchain/common"
 	"hyperchain/consensus/consensusMocks"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
@@ -17,8 +18,6 @@ import (
 	"github.com/facebookgo/ensure"
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/assert"
-	"hyperchain/common"
-	"strconv"
 )
 
 //for test, make a cert pre-prepared.

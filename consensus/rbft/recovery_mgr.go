@@ -4,6 +4,7 @@ package rbft
 
 import (
 	"encoding/base64"
+
 	"github.com/golang/protobuf/proto"
 )
 
@@ -388,7 +389,7 @@ func (rbft *rbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) consensusEvent {
 		// if we are behind by checkpoint, move watermark and state transfer to the target
 		rbft.moveWatermarks(chkptSeqNo)
 		rbft.stateTransfer(target)
-	} else if !rbft.in(skipInProgress) && !rbft.in(inVcReset) {
+	} else if !rbft.inOne(skipInProgress, inVcReset) {
 		// if we are not behind by checkpoint, just VcReset to delete the useless tmp validate result, after
 		// VcResetDone, we will finish recovery or come into stateUpdate
 		rbft.helper.VcReset(rbft.exec.lastExec + 1)

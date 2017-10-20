@@ -2,15 +2,17 @@ package rbft
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	"github.com/stretchr/testify/assert"
+	"testing"
+	"time"
+
 	"hyperchain/common"
 	"hyperchain/consensus/consensusMocks"
 	"hyperchain/consensus/helper/persist"
 	"hyperchain/hyperdb/mdb"
 	"hyperchain/manager/protos"
-	"testing"
-	"time"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewNodeMgr(t *testing.T) {

@@ -5,7 +5,7 @@ package rbft
 
 import "sync/atomic"
 
-// specify the position of corresponding status name in rbft.status
+// consensus status type.
 const (
 	inNegotiateView = iota
 	inRecovery
@@ -57,21 +57,21 @@ func (st *statusManager) hasBit(position uint64) bool {
 	return val > 0
 }
 
-// on sets the status of specified positions
+// on sets the status of specified positions.
 func (rbft *rbftImpl) on(statusPos ...uint64) {
 	for _, pos := range statusPos {
 		rbft.status.setBit(pos)
 	}
 }
 
-// off resets the status of specified positions
+// off resets the status of specified positions.
 func (rbft *rbftImpl) off(statusPos ...uint64) {
 	for _, pos := range statusPos {
 		rbft.status.clearBit(pos)
 	}
 }
 
-// in returns the status of specified position
+// in returns the status of specified position.
 func (rbft *rbftImpl) in(pos uint64) bool {
 	return rbft.status.hasBit(pos)
 }
@@ -94,26 +94,33 @@ func (rbft *rbftImpl) inOne(poss ...uint64) bool {
 	return rs
 }
 
+// setNormal sets system to normal.
 func (rbft *rbftImpl) setNormal() {
 	atomic.StoreUint32(&rbft.status.normal, 1)
 }
 
+// setAbNormal sets system to abnormal which means system may be in viewchange,
+// recovery, state update...
 func (rbft *rbftImpl) setAbNormal() {
 	atomic.StoreUint32(&rbft.status.normal, 0)
 }
 
+// setFull means tx pool has reached the pool size.
 func (rbft *rbftImpl) setFull() {
 	atomic.StoreUint32(&rbft.status.poolFull, 1)
 }
 
+// setNotFull means tx pool hasn't reached the pool size.
 func (rbft *rbftImpl) setNotFull() {
 	atomic.StoreUint32(&rbft.status.poolFull, 0)
 }
 
+// isNormal checks and returns if system is normal or not.
 func (rbft *rbftImpl) isNormal() bool {
 	return atomic.LoadUint32(&rbft.status.normal) == 1
 }
 
+// isPoolFull checks and returns if tx pool is full or not.
 func (rbft *rbftImpl) isPoolFull() bool {
 	return atomic.LoadUint32(&rbft.status.poolFull) == 1
 }

@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"hyperchain/consensus/txpool"
 	"hyperchain/core/types"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewBatchValidator(t *testing.T) {

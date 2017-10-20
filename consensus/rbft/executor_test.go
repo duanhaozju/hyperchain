@@ -4,7 +4,6 @@
 package rbft
 
 import (
-	"sync/atomic"
 	"testing"
 
 	"hyperchain/manager/protos"

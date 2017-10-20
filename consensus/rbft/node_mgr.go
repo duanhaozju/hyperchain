@@ -3,11 +3,13 @@ package rbft
 import (
 	"encoding/base64"
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	"hyperchain/manager/protos"
 	"reflect"
 	"sort"
 	"time"
+
+	"hyperchain/manager/protos"
+
+	"github.com/golang/protobuf/proto"
 )
 
 /**
@@ -810,8 +812,7 @@ func (rbft *rbftImpl) resetStateForUpdate(update *UpdateN) consensusEvent {
 	rbft.nodeMgr.delNodeCertStore = make(map[string]*delNodeCert)
 
 	resetTarget := rbft.exec.lastExec + 1
-	if !rbft.in(skipInProgress) &&
-		!rbft.in(inVcReset) {
+	if !rbft.inOne(skipInProgress, inVcReset) {
 		// in most common case, do VcReset
 		rbft.helper.VcReset(resetTarget)
 		rbft.on(inVcReset)

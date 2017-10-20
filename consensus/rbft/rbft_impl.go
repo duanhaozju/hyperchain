@@ -14,12 +14,12 @@ import (
 	"hyperchain/consensus/helper/persist"
 	"hyperchain/consensus/txpool"
 	"hyperchain/core/types"
+	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
-	"hyperchain/hyperdb"
 )
 
 // rbftImpl is the core struct of rbft module, which handles all functions about consensus
@@ -81,14 +81,14 @@ func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 	rbft.f = (rbft.N - 1) / 3
 	rbft.K = uint64(10)
 	rbft.logMultiplier = uint64(4)
-	rbft.L = rbft.logMultiplier * rbft.K // log size
+	rbft.L = rbft.logMultiplier * rbft.K
 
 	rbft.initMsgEventMap()
 
 	// new executor
 	rbft.exec = newExecutor()
 
-	//new timer manager
+	// new timer manager
 	rbft.timerMgr = newTimerMgr(rbft)
 	rbft.initTimers()
 
@@ -113,7 +113,6 @@ func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 	rbft.batchMgr = newBatchManager(rbft) // init after rbftEventQueue
 	// new batch manager
 	rbft.batchVdr = newBatchValidator()
-	//rbft.reqStore = newRequestStore()
 	rbft.recoveryMgr = newRecoveryMgr()
 
 	rbft.logger.Infof("RBFT Max number of validating peers (N) = %v", rbft.N)
@@ -925,8 +924,7 @@ func (rbft *rbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 		rbft.checkpoint(et.SeqNo, bcInfo)
 	}
 
-	if !rbft.in(inViewChange) || !rbft.in(inUpdatingN) &&
-		!rbft.in(inNegotiateView) {
+	if !rbft.inOne(inViewChange, inUpdatingN, inNegotiateView) {
 		rbft.setNormal()
 	}
 
