@@ -54,6 +54,15 @@ func (eh *ExecutorHandler) Handle(msg *pb.IMessage) {
             logger.Debugf("handle event: %v", e)
         }
         eh.executor.Rollback(*e)
+    case pb.Event_ChainSyncReqEvent:
+        e := &event.ChainSyncReqEvent{}
+        err := proto.Unmarshal(msg.Payload, e)
+        if err != nil {
+            logger.Error(err)
+        } else {
+            logger.Debugf("handle event: %v", e)
+        }
+        eh.executor.SyncChain(*e)
     default:
         logger.Error("Undefined event.")
     }
