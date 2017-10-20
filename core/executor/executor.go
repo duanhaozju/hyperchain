@@ -25,6 +25,7 @@ import (
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
 	"path"
+    "hyperchain/common/client"
 )
 
 // Executor represents a hyperchain executor implementation
@@ -47,14 +48,16 @@ type Executor struct {
 	snapshotReg *SnapshotRegistry    // snapshot registry
 	archiveMgr  *ArchiveManager      // archive manager
 	nvp         NVP
+	chSend		chan interface{}
+	chRecv		chan interface{}
 }
 
 // NewExecutor creates a new Hyperchain object (including the
 // initialisation of the common hyperchain object)
-func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) (IExecutor, error) {
+func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux, client *client.ServiceClient) (*Executor, error) {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	helper := NewHelper(eventMux, filterMux)
+	helper := NewHelper(eventMux, filterMux, client)
 
 	executor := &Executor{
 		namespace:  namespace,

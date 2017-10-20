@@ -4,27 +4,30 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/ledger/chain"
 	"hyperchain/manager"
-	"hyperchain/manager/event"
+	//"hyperchain/manager/event"
 	flt "hyperchain/manager/filter"
+	//hm "hyperchain/service/executor/manager"
 )
 
 // This file implements the handler of Archive service API which
 // can be invoked by client in JSON-RPC request.
 
 type Archive struct {
-	eh        *manager.EventHub
+	//eh        *manager.EventHub
 	namespace string
 	config    *common.Config
 	isPublic  bool
+	//em        *hm.ExecutorManager
 }
 
 // NewPublicArchiveAPI creates and returns a new Archive instance for given namespace name.
 func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.Config) *Archive {
 	return &Archive{
 		namespace: namespace,
-		eh:        eh,
+		//eh:        eh,
 		config:    config,
 		isPublic:  true,
+		//em:        em,
 	}
 }
 
@@ -47,10 +50,13 @@ func (admin *Archive) Snapshot(blockNumber uint64) (string, error) {
 
 	filterId := flt.NewFilterID()
 	log.Debugf("receive snapshot rpc command, params: (block number #%d), filterId: (%s)", blockNumber, filterId)
-	admin.eh.GetEventObject().Post(event.SnapshotEvent{
-		FilterId:    filterId,
-		BlockNumber: blockNumber,
-	})
+	//admin.eh.GetEventObject().Post(event.SnapshotEvent{
+	//	FilterId:    filterId,
+	//	BlockNumber: blockNumber,
+	//})
+	//admin.em.GetExecutorByName(admin. namespace).Snapshot(filterId, blockNumber)
+
+
 	return filterId, nil
 }
 
@@ -90,17 +96,20 @@ func (admin *Archive) ListSnapshot() (common.Manifests, error) {
 func (admin *Archive) DeleteSnapshot(filterId string) (bool, error) {
 	log := common.GetLogger(admin.namespace, "api")
 	log.Debugf("receive delete snapshot rpc command, filterId: (%s)", filterId)
-	cont := make(chan error)
-	admin.eh.GetEventObject().Post(event.DeleteSnapshotEvent{
-		FilterId: filterId,
-		Cont:     cont,
-	})
-	err := <-cont
-	if err != nil {
-		return false, &common.SnapshotErr{Message: err.Error()}
-	} else {
-		return true, nil
-	}
+	//cont := make(chan error)
+	//admin.eh.GetEventObject().Post(event.DeleteSnapshotEvent{
+	//	FilterId: filterId,
+	//	Cont:     cont,
+	//})
+	//err := <-cont
+
+	//err := admin.em.GetExecutorByName(admin.namespace).DeleteSnapshot(filterId);
+	//if err != nil {
+	//	return false, &common.SnapshotErr{Message: err}
+	//} else {
+	//	return true, nil
+	//}
+	return true, nil
 }
 
 // CheckSnapshot will check that the snapshot is correct. If correct, returns true.
@@ -136,18 +145,22 @@ func (admin *Archive) CheckSnapshot(filterId string) (bool, error) {
 func (admin *Archive) Archive(filterId string, sync bool) (bool, error) {
 	log := common.GetLogger(admin.namespace, "api")
 	log.Debugf("receive archive command, params: filterId: (%s)", filterId)
-	cont := make(chan error)
-	admin.eh.GetEventObject().Post(event.ArchiveEvent{
-		FilterId: filterId,
-		Cont:     cont,
-		Sync:     sync,
-	})
-	err := <-cont
-	if err != nil {
-		return false, &common.SnapshotErr{Message: err.Error()}
-	} else {
-		return true, nil
-	}
+	//cont := make(chan error)
+
+	//admin.eh.GetEventObject().Post(event.ArchiveEvent{
+	//	FilterId: filterId,
+	//	Cont:     cont,
+	//	Sync:     sync,
+	//})
+	//err := <-cont
+
+	//err := admin.em.GetExecutorByName(admin.namespace).Archive(filterId, sync)
+	//if err != nil {
+	//	return false, &common.SnapshotErr{Message: err.Error()}
+	//} else {
+	//	return true, nil
+	//}
+	return true, nil
 }
 
 // QueryArchiveExist checks if the given snapshot has been archived.

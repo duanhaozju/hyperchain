@@ -1,4 +1,4 @@
-package service
+package client
 
 import (
 	"context"
@@ -12,6 +12,14 @@ import (
 	"time"
 )
 
+const (
+    CONSENTER = "consenter"
+    APISERVER = "apiserver"
+    EXECUTOR  = "executor"
+    NETWORK   = "network"
+    EVENTHUB  = "eventhub"
+)
+
 // ServiceClient used to send messages to eventhub or receive message
 // from the event hub.
 type ServiceClient struct {
@@ -20,7 +28,8 @@ type ServiceClient struct {
 	sid  string // service id
 	ns   string // namespace
 
-	msgs   chan *pb.IMessage //received messages from server
+	msgRecv		chan *pb.IMessage //received messages from server
+	msgSend		chan *pb.IMessage //send message to server
 	slock  sync.RWMutex
 	client pb.Dispatcher_RegisterClient
 
@@ -37,7 +46,8 @@ func New(port int, host, sid, ns string) (*ServiceClient, error) {
 	return &ServiceClient{
 		host:   host,
 		port:   port,
-		msgs:   make(chan *pb.IMessage, 1024),
+		msgRecv:   make(chan *pb.IMessage, 1024),
+		msgSend:   make(chan *pb.IMessage, 1024),
 		logger: logging.MustGetLogger("service_client"),
 		// TODO: replace this logger with hyperlogger ?
 		sid:    sid,
@@ -129,6 +139,7 @@ func (sc *ServiceClient) Register(serviceType pb.FROM, rm *pb.RegisterMessage) e
 
 	if msg.Type == pb.Type_RESPONSE && msg.Ok == true {
 		sc.logger.Infof("%s register successful", sc.string())
+		sc.listenProcessMsg()
 		return nil
 	} else {
 		return fmt.Errorf("%s register failed", sc.string())
@@ -174,7 +185,7 @@ func (sc *ServiceClient) AddHandler(h Handler) {
 	sc.h = h
 }
 
-func (sc *ServiceClient) ProcessMessagesUntilExit() {
+func (sc *ServiceClient) listenProcessMsg() {
 	go func() {
 		for {
 			msg, err := sc.stream().Recv()
@@ -190,24 +201,27 @@ func (sc *ServiceClient) ProcessMessagesUntilExit() {
 				}
 			}
 			if msg != nil {
-				sc.msgs <- msg
+				sc.msgRecv <- msg
 			}
 		}
 	}()
 
 	sc.logger.Debug("Start Message processing go routine")
-	for {
-		select {
-		case msg := <-sc.msgs:
-			if sc.h == nil {
-				sc.logger.Debug("No handler to handle message: %v")
-			} else {
-				sc.h.Handle(msg)
+
+	go func() {
+		for {
+			select {
+			case msg := <-sc.msgRecv:
+				if sc.h == nil {
+					sc.logger.Debug("No handler to handle message: %v")
+				} else {
+					sc.h.Handle(msg)
+				}
+			case <-sc.close:
+				return
 			}
-		case <-sc.close:
-			return
 		}
-	}
+	}()
 }
 
 //string service client description
@@ -228,3 +242,4 @@ func getFrom(sid string) pb.FROM {
 	}
 	return -1
 }
+

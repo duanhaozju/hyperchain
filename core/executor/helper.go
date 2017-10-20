@@ -21,29 +21,71 @@ import (
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"reflect"
+    pb "hyperchain/common/protos"
+    "hyperchain/common/client"
 )
 
 // Communication mux implementation
 type Helper struct {
 	innerMux    *event.TypeMux // system internal mux
 	externalMux *event.TypeMux // subscription system mux
+	client      *client.ServiceClient
 }
 
-func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *Helper {
+func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux, client *client.ServiceClient) *Helper {
 	return &Helper{
 		innerMux:    innerMux,
 		externalMux: externalMux,
+		client:      client,
 	}
 }
 
+func (helper *Helper) handlePost(ev interface{}) *pb.IMessage {
+    msg := &pb.IMessage{
+        Type: pb.Type_DISPATCH,
+        From: pb.FROM_EXECUTOR,
+    }
+    switch ev.(type) {
+    case event.ExecutorToConsensusEvent:
+        msg.Event = pb.Event_ExecutorToConsensusEvent
+        e := ev.(event.ExecutorToConsensusEvent)
+        mv, err := proto.Marshal(&e)
+
+        if err != nil {
+            return nil
+        }
+        msg.Payload = mv
+    case event.ExecutorToP2PEvent:
+        msg.Event = pb.Event_ExecutorToP2PEvent
+        e := ev.(event.ExecutorToConsensusEvent)
+        mv, err := proto.Marshal(&e)
+        if err != nil {
+            return nil
+        }
+        msg.Payload = mv
+    }
+    return msg
+}
+
+var isDistributed = true
 // PostInner post event to inner event mux
 func (helper *Helper) PostInner(ev interface{}) {
-	helper.innerMux.Post(ev)
+    if isDistributed {
+        msg := helper.handlePost(ev)
+        helper.client.Send(msg)
+    } else {
+        helper.innerMux.Post(ev)
+    }
 }
 
 // PostExternal post event to outer event mux
 func (helper *Helper) PostExternal(ev interface{}) {
-	helper.externalMux.Post(ev)
+    if isDistributed {
+        msg := helper.handlePost(ev)
+        helper.client.Send(msg)
+    } else {
+        helper.externalMux.Post(ev)
+    }
 }
 
 // checkParams the checker of the parameters, check whether the parameters are satisfied
