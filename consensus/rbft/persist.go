@@ -474,7 +474,7 @@ func (rbft *rbftImpl) restoreState() {
 	if err == nil {
 		newNode := binary.LittleEndian.Uint64(new)
 		if newNode == 1 {
-			rbft.status.activeState(&rbft.status.isNewNode)
+			rbft.on(isNewNode)
 		}
 	}
 

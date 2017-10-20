@@ -35,9 +35,3 @@ const (
 	RBFT_FIRST_REQUEST_TIMEOUT     = "consensus.rbft.timeout.firstrequest"
 	RBFT_UPDATE_TIMEOUT            = "consensus.rbft.timeout.update"
 )
-
-// type for rbft status
-const (
-	ON  = 1
-	OFF = 0
-)

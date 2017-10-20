@@ -10,7 +10,7 @@ import (
 )
 
 func TestStatusMgr(t *testing.T) {
-	var status RbftStatus
+	var status StatusManager
 	status.activeState(&status.byzantine)
 	status.inActiveState(&status.isNewNode)
 	ast := assert.New(t)

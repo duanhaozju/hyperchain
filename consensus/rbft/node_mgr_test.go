@@ -39,20 +39,20 @@ func TestRecvLocalNewNode(t *testing.T) {
 	}
 
 	// test recvLocalNewNode with isNewNode being true.
-	rbft.status.activeState(&rbft.status.isNewNode)
+	rbft.on(isNewNode)
 	rbft.recvLocalNewNode(msg)
-	ast.Equal(true, rbft.status.getState(&rbft.status.isNewNode), "isNewNode should be true.")
+	ast.Equal(true, rbft.in(isNewNode), "isNewNode should be true.")
 
 	// test recvLocalNewNode with nil payload.
-	rbft.status.inActiveState(&rbft.status.isNewNode)
+	rbft.off(isNewNode)
 	msg.Payload = nil
 	rbft.recvLocalNewNode(msg)
-	ast.Equal(false, rbft.status.getState(&rbft.status.isNewNode), "isNewNode should be false.")
+	ast.Equal(false, rbft.in(isNewNode), "isNewNode should be false.")
 
 	// test recvLocalNewNode with isNewNode being false.
 	msg.Payload = payload
 	rbft.recvLocalNewNode(msg)
-	ast.Equal(true, rbft.status.getState(&rbft.status.isNewNode), "isNewNode should be true.")
+	ast.Equal(true, rbft.in(isNewNode), "isNewNode should be true.")
 
 }
 
@@ -78,20 +78,20 @@ func TestPrepareAddNode(t *testing.T) {
 	}
 
 	// test recvLocalAddNode with isNewNode being true.
-	rbft.status.activeState(&rbft.status.isNewNode)
+	rbft.on(isNewNode)
 	rbft.recvLocalAddNode(msg)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inAddingNode), "inAddingNode should be false.")
+	ast.Equal(false, rbft.in(inAddingNode), "inAddingNode should be false.")
 
 	// test recvLocalAddNode with nil payload.
-	rbft.status.inActiveState(&rbft.status.isNewNode)
+	rbft.off(isNewNode)
 	msg.Payload = nil
 	rbft.recvLocalAddNode(msg)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inAddingNode), "inAddingNode should be false.")
+	ast.Equal(false, rbft.in(inAddingNode), "inAddingNode should be false.")
 
 	// test recvLocalAddNode with normal msg.
 	msg.Payload = payload
 	rbft.recvLocalAddNode(msg)
-	ast.Equal(true, rbft.status.getState(&rbft.status.inAddingNode), "inAddingNode should be true.")
+	ast.Equal(true, rbft.in(inAddingNode), "inAddingNode should be true.")
 	rbft.recvLocalAddNode(msg)
 
 }
@@ -123,18 +123,18 @@ func TestPrepareDelNode(t *testing.T) {
 	// test recvLocalDelNode with less than 5 nodes in system.
 	rbft.N = 4
 	rbft.recvLocalDelNode(msg)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inDeletingNode), "inDeletingNode should be false.")
+	ast.Equal(false, rbft.in(inDeletingNode), "inDeletingNode should be false.")
 
 	// test recvLocalDelNode with nil payload.
 	rbft.N = 5
 	msg.DelPayload = nil
 	rbft.recvLocalDelNode(msg)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inDeletingNode), "inDeletingNode should be false.")
+	ast.Equal(false, rbft.in(inDeletingNode), "inDeletingNode should be false.")
 
 	// test recvLocalAddNode with normal msg.
 	msg.DelPayload = payload
 	rbft.recvLocalDelNode(msg)
-	ast.Equal(true, rbft.status.getState(&rbft.status.inDeletingNode), "inDeletingNode should be true.")
+	ast.Equal(true, rbft.in(inDeletingNode), "inDeletingNode should be true.")
 	rbft.recvLocalDelNode(msg)
 }
 
@@ -169,27 +169,27 @@ func TestMaybeUpdateTableForAdd(t *testing.T) {
 		finishAdd: true,
 	}
 
-	rbft.status.activeState(&rbft.status.inAddingNode)
+	rbft.on(inAddingNode)
 	// test maybeUpdateTableForAdd with isNewNode being true.
-	rbft.status.activeState(&rbft.status.isNewNode)
+	rbft.on(isNewNode)
 	rbft.maybeUpdateTableForAdd(key)
-	ast.Equal(true, rbft.status.getState(&rbft.status.inAddingNode), "inAddingNode should be true.")
+	ast.Equal(true, rbft.in(inAddingNode), "inAddingNode should be true.")
 
 	// test maybeUpdateTableForAdd with inAddingNode being false.
-	rbft.status.inActiveState(&rbft.status.isNewNode)
-	rbft.status.inActiveState(&rbft.status.inAddingNode)
+	rbft.off(isNewNode)
+	rbft.off(inAddingNode)
 	rbft.maybeUpdateTableForAdd(key)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inAddingNode), "inAddingNode should be false.")
+	ast.Equal(false, rbft.in(inAddingNode), "inAddingNode should be false.")
 
 	// test maybeUpdateTableForAdd with finishAdd being false.
 	rbft.nodeMgr.addNodeCertStore[key].finishAdd = false
 	rbft.maybeUpdateTableForAdd(key)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inAddingNode), "inAddingNode should be false.")
+	ast.Equal(false, rbft.in(inAddingNode), "inAddingNode should be false.")
 
 	// test maybeUpdateTableForAdd with normal case.
-	rbft.status.activeState(&rbft.status.inAddingNode)
+	rbft.on(inAddingNode)
 	rbft.maybeUpdateTableForAdd(key)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inAddingNode), "inAddingNode should be false.")
+	ast.Equal(false, rbft.in(inAddingNode), "inAddingNode should be false.")
 }
 
 func TestMaybeUpdateTableForDel(t *testing.T) {
@@ -217,19 +217,19 @@ func TestMaybeUpdateTableForDel(t *testing.T) {
 	}
 
 	// test maybeUpdateTableForAdd with inDeletingNode being false.
-	rbft.status.inActiveState(&rbft.status.inDeletingNode)
+	rbft.off(inDeletingNode)
 	rbft.maybeUpdateTableForDel(key)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inDeletingNode), "inDeletingNode should be false.")
+	ast.Equal(false, rbft.in(inDeletingNode), "inDeletingNode should be false.")
 
 	// test maybeUpdateTableForAdd with finishDel being false.
 	rbft.nodeMgr.delNodeCertStore[key].finishDel = false
 	rbft.maybeUpdateTableForDel(key)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inDeletingNode), "inDeletingNode should be false.")
+	ast.Equal(false, rbft.in(inDeletingNode), "inDeletingNode should be false.")
 
 	// test maybeUpdateTableForAdd with normal case.
-	rbft.status.activeState(&rbft.status.inDeletingNode)
+	rbft.on(inDeletingNode)
 	rbft.maybeUpdateTableForDel(key)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inDeletingNode), "inDeletingNode should be false.")
+	ast.Equal(false, rbft.in(inDeletingNode), "inDeletingNode should be false.")
 
 }
 
@@ -265,15 +265,15 @@ func TestSendAgreeUpdateNforDel(t *testing.T) {
 	}
 
 	// test sendAgreeUpdateNforDel when in viewchange.
-	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.on(inViewChange)
 	rbft.sendAgreeUpdateNforDel(key)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.in(inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendAgreeUpdateNforDel with finishDel being false.
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inViewChange)
 	rbft.nodeMgr.delNodeCertStore[key].finishDel = false
 	rbft.sendAgreeUpdateNforDel(key)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.in(inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendAgreeUpdateNforDel with normal case.
 	rbft.nodeMgr.delNodeCertStore[key].finishDel = true
@@ -291,7 +291,7 @@ func TestSendAgreeUpdateNforDel(t *testing.T) {
 		ast.Equal(false, agree.Flag, "flag of delete node should be false.")
 	}()
 	rbft.sendAgreeUpdateNforDel(key)
-	ast.Equal(true, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should be in updating N.")
+	ast.Equal(true, rbft.in(inUpdatingN), "Replica should be in updating N.")
 
 }
 
@@ -409,21 +409,21 @@ func TestRecvAgreeUpdateN(t *testing.T) {
 	}
 
 	// test recvAgreeUpdateN when in viewchange.
-	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.on(inViewChange)
 	rbft.recvAgreeUpdateN(agreeDel1)
 
 	// test recvAgreeUpdateN when in negotiate view.
-	rbft.status.inActiveState(&rbft.status.inViewChange)
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.off(inViewChange)
+	rbft.on(inNegotiateView)
 	rbft.recvAgreeUpdateN(agreeDel1)
 
 	// test recvAgreeUpdateN when in recovery.
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.off(inNegotiateView)
+	rbft.on(inRecovery)
 	rbft.recvAgreeUpdateN(agreeDel1)
 
 	// test recvAgreeUpdateN in normal status.
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inRecovery)
 	rbft.N = 5
 	rbft.view = 0
 
@@ -459,7 +459,7 @@ func TestRecvAgreeUpdateN(t *testing.T) {
 	rbft.N = 4
 	rbft.view = 0
 	// test recvAgreeUpdateN with finishAdd being false.
-	rbft.status.inActiveState(&rbft.status.inUpdatingN)
+	rbft.off(inUpdatingN)
 	rbft.nodeMgr.addNodeCertStore[addKey].finishAdd = false
 	rbft.recvAgreeUpdateN(agreeAdd1)
 
@@ -508,25 +508,25 @@ func TestSendReadyForN(t *testing.T) {
 	mockHelper.On("InnerBroadcast").Return(nil)
 
 	// test sendReadyForN with a non-new node.
-	rbft.status.inActiveState(&rbft.status.isNewNode)
+	rbft.off(isNewNode)
 	rbft.sendReadyForN()
-	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.in(inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendReadyForN with a blank localKey.
 	rbft.nodeMgr.localKey = ""
 	rbft.sendReadyForN()
-	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.in(inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendReadyForN when in viewchange.
-	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.on(inViewChange)
 	rbft.sendReadyForN()
-	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.in(inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendReadyForN in normal case.
-	rbft.status.activeState(&rbft.status.isNewNode)
+	rbft.on(isNewNode)
 	key := "test-local-key"
 	rbft.nodeMgr.localKey = key
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inViewChange)
 	go func() {
 		event := <-eChan
 		e, ok := event.(*protos.Message)
@@ -541,7 +541,7 @@ func TestSendReadyForN(t *testing.T) {
 		ast.Equal(key, readyForN.Key, "local key shoule be equal.")
 	}()
 	rbft.sendReadyForN()
-	ast.Equal(true, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should be in updating N.")
+	ast.Equal(true, rbft.in(inUpdatingN), "Replica should be in updating N.")
 
 }
 
@@ -559,14 +559,14 @@ func TestRecvReadyforNforAdd(t *testing.T) {
 		ReplicaId: 2,
 		Key:       key,
 	}
-	rbft.status.activeState(&rbft.status.inUpdatingN)
+	rbft.on(inUpdatingN)
 
 	// test sendReadyForN when in viewchange.
-	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.on(inViewChange)
 	rbft.recvReadyforNforAdd(ready)
 
 	// test sendReadyForN with finishAdd being false.
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inViewChange)
 	rbft.recvReadyforNforAdd(ready)
 
 	// test sendReadyForN with normal case.
@@ -620,14 +620,14 @@ func TestSendAgreeUpdateNforAdd(t *testing.T) {
 	}
 
 	// test sendAgreeUpdateNForAdd with a new node.
-	rbft.status.activeState(&rbft.status.isNewNode)
+	rbft.on(isNewNode)
 	rbft.sendAgreeUpdateNForAdd(agree)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.in(inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendAgreeUpdateNForAdd with incorrect N or view.
-	rbft.status.inActiveState(&rbft.status.isNewNode)
+	rbft.off(isNewNode)
 	rbft.sendAgreeUpdateNForAdd(agree)
-	ast.Equal(false, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should not be in updating N.")
+	ast.Equal(false, rbft.in(inUpdatingN), "Replica should not be in updating N.")
 
 	// test sendAgreeUpdateNForAdd in normal case.
 	agree.N = 5
@@ -646,7 +646,7 @@ func TestSendAgreeUpdateNforAdd(t *testing.T) {
 		ast.Equal(key, agree.Key, "local key shoule be equal.")
 	}()
 	rbft.sendAgreeUpdateNForAdd(agree)
-	ast.Equal(true, rbft.status.getState(&rbft.status.inUpdatingN), "Replica should be in updating N.")
+	ast.Equal(true, rbft.in(inUpdatingN), "Replica should be in updating N.")
 
 }
 
@@ -667,10 +667,10 @@ func TestSendUpdateN(t *testing.T) {
 	mockHelper.On("InnerBroadcast").Return(nil)
 
 	// test sendUpdateN when in negotiate view.
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	rbft.sendUpdateN()
 	ast.Equal(0, len(rbft.nodeMgr.updateStore), "updateStore should be nil.")
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 
 	// test sendUpdateN with existed updateTarget
 	updateTarget := uidx{}
@@ -885,23 +885,23 @@ func TestRecvUpdateN(t *testing.T) {
 	rbft.persister = persist.New(db)
 
 	// test recvUpdateN when in viewchange.
-	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.on(inViewChange)
 	updateN := &UpdateN{}
 	rbft.recvUpdateN(updateN)
 	ast.Equal(0, len(rbft.nodeMgr.updateStore), "updateStore should be nil.")
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inViewChange)
 
 	// test recvUpdateN when in negotiate view.
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	rbft.recvUpdateN(updateN)
 	ast.Equal(0, len(rbft.nodeMgr.updateStore), "updateStore should be nil.")
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 
 	// test recvUpdateN when in recovery.
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.on(inRecovery)
 	rbft.recvUpdateN(updateN)
 	ast.Equal(0, len(rbft.nodeMgr.updateStore), "updateStore should be nil.")
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inRecovery)
 
 	// test recvUpdateN with msg sent from non-primary.
 	updateN.ReplicaId = 2
@@ -1221,16 +1221,16 @@ func TestReplicaCheckUpdateN(t *testing.T) {
 	rbft.nodeMgr.updateStore[rbft.nodeMgr.updateTarget] = updateN
 
 	// test replicaCheckUpdateN when in viewchange.
-	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.on(inViewChange)
 	rbft.replicaCheckUpdateN()
 	ast.Equal(4, rbft.N)
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inViewChange)
 
 	// test replicaCheckUpdateN when not in updatingN.
-	rbft.status.inActiveState(&rbft.status.inUpdatingN)
+	rbft.off(inUpdatingN)
 	rbft.replicaCheckUpdateN()
 	ast.Equal(4, rbft.N)
-	rbft.status.activeState(&rbft.status.inUpdatingN)
+	rbft.on(inUpdatingN)
 
 	// test replicaCheckUpdateN with incorrect Cset.
 	rbft.nodeMgr.agreeUpdateStore[aidx1].Basis.Cset = []*Vc_C{}
@@ -1267,10 +1267,10 @@ func TestReplicaCheckUpdateN(t *testing.T) {
 	}
 
 	// test replicaCheckUpdateN with updateHandled being true.
-	rbft.status.activeState(&rbft.status.updateHandled)
+	rbft.on(updateHandled)
 	rbft.replicaCheckUpdateN()
 	ast.Equal(4, rbft.N)
-	rbft.status.inActiveState(&rbft.status.updateHandled)
+	rbft.off(updateHandled)
 
 	// test replicaCheckUpdateN in normal case.
 	rbft.replicaCheckUpdateN()
@@ -1282,11 +1282,11 @@ func TestReplicaCheckUpdateN(t *testing.T) {
 	rbft.nodeMgr.agreeUpdateStore[aidx4] = agreeUpdate4
 	rbft.N = 4
 	rbft.view = 0
-	rbft.status.inActiveState(&rbft.status.updateHandled)
-	rbft.status.activeState(&rbft.status.skipInProgress)
+	rbft.off(updateHandled)
+	rbft.on(skipInProgress)
 	rbft.replicaCheckUpdateN()
 	ast.Equal(5, rbft.N)
-	rbft.status.inActiveState(&rbft.status.skipInProgress)
+	rbft.off(skipInProgress)
 
 }
 
@@ -1310,7 +1310,7 @@ func TestSendFinishUpdate(t *testing.T) {
 	rbft.view = 5
 	rbft.h = 0
 
-	rbft.status.inActiveState(&rbft.status.inUpdatingN)
+	rbft.off(inUpdatingN)
 	go func() {
 		event := <-eChan
 		e, ok := event.(*protos.Message)
@@ -1388,9 +1388,9 @@ func TestProcessReqInUpdate(t *testing.T) {
 	rbft.recvFinishUpdate(finish3)
 	rbft.recvFinishUpdate(finish4)
 	rbft.recvFinishUpdate(finish5)
-	rbft.status.activeState(&rbft.status.inVcReset)
+	rbft.on(inVcReset)
 	rbft.recvFinishUpdate(finish1)
-	rbft.status.inActiveState(&rbft.status.inVcReset)
+	rbft.off(inVcReset)
 	delete(rbft.nodeMgr.finishUpdateStore, *finish1)
 	rbft.recvFinishUpdate(finish1)
 	ast.Equal(uint64(0), rbft.seqNo)

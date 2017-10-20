@@ -91,7 +91,7 @@ func TestRbftImpl_NewRbft(t *testing.T) {
 	ensure.Nil(t, err)
 
 	ensure.DeepEqual(t, rbft.namespace, "global-"+strconv.Itoa(int(rbft.id)))
-	ensure.DeepEqual(t, rbft.status.getState(&rbft.status.inViewChange), false)
+	ensure.DeepEqual(t, rbft.in(inViewChange), false)
 	ensure.DeepEqual(t, rbft.f, (rbft.N-1)/3)
 	ensure.DeepEqual(t, rbft.N, conf.GetInt("self.N"))
 	ensure.DeepEqual(t, rbft.h, uint64(0))
@@ -121,11 +121,11 @@ func TestProcessNullRequest(t *testing.T) {
 	event, err := proto.Marshal(pbMsg)
 	rbft.RecvMsg(event)
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.off(inNegotiateView)
+	rbft.on(inViewChange)
 	rbft.RecvMsg(event)
 
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inViewChange)
 	rbft.RecvMsg(event)
 
 	err = CleanData(rbft.namespace)
@@ -263,7 +263,7 @@ func TestRecvPrePrepare(t *testing.T) {
 	v := uint64(0)
 	seqNo := uint64(1)
 	digest := "d1"
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 	pp := &PrePrepare{
 		View:           v,
 		SequenceNumber: seqNo,
@@ -286,7 +286,7 @@ func TestRecvPrepare(t *testing.T) {
 	rbft.Start()
 
 	rbft.id = uint64(2)
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 
 	v := uint64(0)
 	seqNo := uint64(10)
@@ -302,7 +302,7 @@ func TestRecvPrepare(t *testing.T) {
 	ast.Nil(err, "should succeed, expect nil")
 	err = rbft.recvPrepare(prep)
 	ast.Nil(err, "duplicate prepare, expect nil")
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inRecovery)
 	err = rbft.recvPrepare(prep)
 	ast.Nil(err, "duplicate prepare, expect nil")
 }
@@ -322,11 +322,11 @@ func TestMaybeSendCommit(t *testing.T) {
 	err = rbft.maybeSendCommit(digest, v, seqNo)
 	ast.Nil(err, "cert is not prepared, expect nil")
 	rbft.getCertPrepared(digest, v, seqNo)
-	rbft.status.activeState(&rbft.status.skipInProgress)
+	rbft.on(skipInProgress)
 	err = rbft.maybeSendCommit(digest, v, seqNo)
 	ast.Nil(err, "skipInProgress, expect nil")
 
-	rbft.status.inActiveState(&rbft.status.skipInProgress)
+	rbft.off(skipInProgress)
 	err = rbft.maybeSendCommit(digest, v, seqNo)
 	d, ok := rbft.batchVdr.preparedCert[vidx{view: v, seqNo: seqNo}]
 	ast.Equal(true, ok, "maybeSendCommit failed")
@@ -384,12 +384,12 @@ func TestRecvCommit(t *testing.T) {
 		ReplicaId:      replicaId,
 	}
 
-	//inNegoView
+	//inNegotiateView
 	err = rbft.recvCommit(cmt)
-	ast.Nil(err, "should end in inNegoView, expect nil")
+	ast.Nil(err, "should end in inNegotiateView, expect nil")
 
 	//not inWV
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 	cmt.View = uint64(2)
 	err = rbft.recvCommit(cmt)
 	ast.Nil(err, "should end in inWV, expect nil")
@@ -404,7 +404,7 @@ func TestRecvCommit(t *testing.T) {
 	rbft.startNewViewTimer(5*time.Second, "nothing")
 	err = rbft.recvCommit(cmt)
 	ast.Nil(err, "not prepared, expect nil")
-	ast.Equal(true, rbft.status.getState(&rbft.status.timerActive))
+	ast.Equal(true, rbft.in(timerActive))
 
 	cert.commit = make(map[Commit]bool)
 	rbft.getCertPrepared(cmt.BatchDigest, cmt.View, cmt.SequenceNumber)
@@ -425,10 +425,10 @@ func TestRecvCommit(t *testing.T) {
 		BatchDigest:    d,
 		ReplicaId:      uint64(3),
 	}
-	ast.Equal(true, rbft.status.getState(&rbft.status.timerActive))
+	ast.Equal(true, rbft.in(timerActive))
 	rbft.recvCommit(cmt2)
 	rbft.recvCommit(cmt3) //now committed
-	ast.Equal(false, rbft.status.getState(&rbft.status.timerActive), "should stop new view timer, expect false")
+	ast.Equal(false, rbft.in(timerActive), "should stop new view timer, expect false")
 	cert.validated = true
 	delete(cert.commit, *cmt3)
 	rbft.recvCommit(cmt3)
@@ -460,11 +460,11 @@ func TestFindNextCommitTx(t *testing.T) {
 	ast.Equal(false, find, "n is not equal to lastExec + 1, expect false")
 
 	rbft.exec.setLastExec(uint64(0))
-	rbft.status.activeState(&rbft.status.skipInProgress)
+	rbft.on(skipInProgress)
 	find, _, _ = rbft.findNextCommitTx()
 	ast.Equal(false, find, "skipInProgress, expect false")
 
-	rbft.status.inActiveState(&rbft.status.skipInProgress)
+	rbft.off(skipInProgress)
 	find, _, _ = rbft.findNextCommitTx()
 	ast.Equal(false, find, "not committed, expect false")
 
@@ -485,11 +485,11 @@ func TestAfterCommitBlock(t *testing.T) {
 	n := uint64(1)
 	d := "digest"
 
-	rbft.status.inActiveState(&rbft.status.skipInProgress)
+	rbft.off(skipInProgress)
 	currentExec := uint64(10)
 	rbft.exec.setCurrentExec(nil)
 	rbft.afterCommitBlock(msgID{v, n, d})
-	ast.Equal(true, rbft.status.getState(&rbft.status.skipInProgress), "currentExec is not nil, expect true")
+	ast.Equal(true, rbft.in(skipInProgress), "currentExec is not nil, expect true")
 	ast.Nil(rbft.exec.currentExec, "currentExec should be set to nil")
 
 	go func() {
@@ -618,7 +618,7 @@ func TestProcessTransaction(t *testing.T) {
 	}
 	rbft.processTransaction(txRequest)
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 	rbft.processTransaction(txRequest)
 	ast.Equal(true, rbft.batchMgr.batchTimerActive, "should start batch timer, expect true")
 
@@ -652,7 +652,7 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 		replicas: []replicaInfo{},
 	}
 	rbft.recvStateUpdatedEvent(e)
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.normal), "et.SeqNo < rbft.h and et.SeqNo < highStateTarget.seqNo, expect 0")
+	ast.Equal(false, rbft.isNormal(), "et.SeqNo < rbft.h and et.SeqNo < highStateTarget.seqNo, expect 0")
 
 	rbft.storeMgr.highStateTarget.seqNo = 40
 	err = rbft.recvStateUpdatedEvent(e)
@@ -661,12 +661,12 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 	e = protos.StateUpdatedMessage{
 		SeqNo: uint64(80),
 	}
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 	err = rbft.recvStateUpdatedEvent(e)
 	ast.Equal(e.SeqNo, rbft.exec.lastExec, "recvStateUpdatedEvent, rbft should update lastExec")
-	ast.Equal(uint32(1), atomic.LoadUint32(&rbft.normal), "should be set to 1, expect 1")
+	ast.Equal(true, rbft.isNormal(), "should be set to 1, expect 1")
 
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.on(inRecovery)
 	err = rbft.recvStateUpdatedEvent(e)
 	ast.Nil(err, "recoveryToSeqNo == nil, expect nil")
 	recoveryToSeqNo := uint64(70)
@@ -677,10 +677,10 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 
 	recoveryToSeqNo = uint64(90)
 	rbft.recoveryMgr.recoveryToSeqNo = &recoveryToSeqNo
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.on(inRecovery)
 	err = rbft.recvStateUpdatedEvent(e)
-	ast.Equal(true, rbft.status.getState(&rbft.status.inNegoView), "restartRecovery, expect true")
-	ast.Equal(true, rbft.status.getState(&rbft.status.inRecovery), "restartRecovery, expect true")
+	ast.Equal(true, rbft.in(inNegotiateView), "restartRecovery, expect true")
+	ast.Equal(true, rbft.in(inRecovery), "restartRecovery, expect true")
 }
 
 func TestExecuteAfterStateUpdate(t *testing.T) {
@@ -759,7 +759,7 @@ func TestRecvCheckpoint(t *testing.T) {
 	rbft.Start()
 
 	rbft.id = uint64(2)
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 	rbft.seqNo = uint64(0)
 
 	bcInfo := &protos.BlockchainInfo{
@@ -783,14 +783,14 @@ func TestRecvCheckpoint(t *testing.T) {
 	ast.Equal(uint64(10), rbft.h, "should movewatermarks")
 
 	delete(rbft.storeMgr.chkpts, seqNo)
-	rbft.status.activeState(&rbft.status.skipInProgress, &rbft.status.inRecovery)
+	rbft.on(skipInProgress, inRecovery)
 	rbft.recvCheckpoint(chkpt)
 	ast.Equal(uint64(10), rbft.h, "should movewatermarks")
 
 	chkpt.SequenceNumber = 30
 	cert = rbft.storeMgr.getChkptCert(30, chkpt.Id)
 	cert.chkptCount = rbft.commonCaseQuorum() - 1
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inRecovery)
 	rbft.recvCheckpoint(chkpt)
 	ast.Equal(uint64(30), rbft.h, "should movewatermarks")
 }
@@ -829,7 +829,7 @@ func TestWeakCheckpointSetOutOfRange(t *testing.T) {
 	rbft.exec.lastExec = uint64(100)
 	chkpt.SequenceNumber = seqNo
 	ok := rbft.weakCheckpointSetOutOfRange(chkpt)
-	if !ok || rbft.status.getState(&rbft.status.skipInProgress) {
+	if !ok || rbft.in(skipInProgress) {
 		t.Error("Replica is ahead of others, expect true")
 	}
 
@@ -839,7 +839,7 @@ func TestWeakCheckpointSetOutOfRange(t *testing.T) {
 		t.Error("should be deleted, expect true")
 	}
 	ast.NotEqual(0, rbft.h, "should movewatermarks")
-	ast.Equal(true, rbft.status.getState(&rbft.status.skipInProgress), "should skip in progress")
+	ast.Equal(true, rbft.in(skipInProgress), "should skip in progress")
 }
 
 func TestWitnessCheckpointWeakCert(t *testing.T) {
@@ -887,8 +887,8 @@ func TestMainMoveWatermarks(t *testing.T) {
 	rbft.Start()
 
 	rbft.id = uint64(2)
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inNegotiateView)
+	rbft.off(inViewChange)
 	rbft.seqNo = uint64(0)
 	// set current h to 50
 	rbft.h = uint64(50)
@@ -970,8 +970,8 @@ func TestUpdateHighStateTarget(t *testing.T) {
 	rbft.Start()
 
 	rbft.id = uint64(2)
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inNegotiateView)
+	rbft.off(inViewChange)
 	rbft.seqNo = uint64(0)
 
 	checkpoint := checkpointMessage{
@@ -1017,9 +1017,9 @@ func TestStateTransfer(t *testing.T) {
 	ast.Equal(nil, err, err)
 	rbft.Start()
 
-	rbft.status.inActiveState(&rbft.status.skipInProgress)
+	rbft.off(skipInProgress)
 	rbft.stateTransfer(nil)
-	ast.Equal(true, rbft.status.getState(&rbft.status.skipInProgress), "should be actived, expect true")
+	ast.Equal(true, rbft.in(skipInProgress), "should be actived, expect true")
 
 	newCheckpoint := checkpointMessage{
 		seqNo: 10,
@@ -1040,17 +1040,17 @@ func TestStateTransfer(t *testing.T) {
 		checkpointMessage: newCheckpoint,
 		replicas:          peers,
 	}
-	rbft.status.activeState(&rbft.status.stateTransferring)
+	rbft.on(stateTransferring)
 	rbft.stateTransfer(nil)
 
-	rbft.status.inActiveState(&rbft.status.stateTransferring)
+	rbft.off(stateTransferring)
 	rbft.stateTransfer(nil)
 
 	rbft.storeMgr.highStateTarget = target
 	rbft.stateTransfer(nil)
-	ast.Equal(true, rbft.status.getState(&rbft.status.stateTransferring), "shoud be actived, expect true")
+	ast.Equal(true, rbft.in(stateTransferring), "shoud be actived, expect true")
 
-	rbft.status.inActiveState(&rbft.status.stateTransferring)
+	rbft.off(stateTransferring)
 	info := &protos.BlockchainInfo{Height: uint64(100)}
 	id, _ := proto.Marshal(info)
 	target.id = id
@@ -1076,16 +1076,16 @@ func TestRecvValidatedResult(t *testing.T) {
 
 	currentVid := uint64(10)
 	rbft.batchVdr.setCurrentVid(&currentVid)
-	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.on(inViewChange)
 	err = rbft.recvValidatedResult(vali)
 	ast.Nil(err, "activeView is 0, expect nil")
 
-	rbft.status.inActiveState(&rbft.status.inViewChange)
-	rbft.status.activeState(&rbft.status.inUpdatingN)
+	rbft.off(inViewChange)
+	rbft.on(inUpdatingN)
 	err = rbft.recvValidatedResult(vali)
 	ast.Nil(err, "inUpdatingN is 1, expect nil")
 
-	rbft.status.inActiveState(&rbft.status.inUpdatingN)
+	rbft.off(inUpdatingN)
 	rbft.seqNo = uint64(0)
 
 	// primary recv ValidateResult
@@ -1124,7 +1124,7 @@ func TestRecvValidatedResult(t *testing.T) {
 	ast.Equal(true, cert.validated, "replica recv validated result, expect validated")
 
 	cert.resultHash = "notexist"
-	rbft.status.inActiveState(&rbft.status.inNegoView, &rbft.status.inRecovery)
+	rbft.off(inNegotiateView, inRecovery)
 	rbft.recvValidatedResult(vali)
 	ast.Equal(uint64(1), rbft.view, "view change, expect 1")
 }

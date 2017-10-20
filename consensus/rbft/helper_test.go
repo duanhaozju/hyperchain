@@ -30,14 +30,14 @@ func TestRbftStateFunctions(t *testing.T) {
 	ast.Equal(nil, err, err)
 	rbft.Start()
 
-	rbft.status.inActiveState(&rbft.status.valid)
-	ast.Equal(false, rbft.status.getState(&rbft.status.valid), "should be set to inActive")
+	rbft.off(valid)
+	ast.Equal(false, rbft.in(valid), "should be set to inActive")
 
 	rbft.validateState()
-	ast.Equal(true, rbft.status.getState(&rbft.status.valid), "should be set to active")
+	ast.Equal(true, rbft.in(valid), "should be set to active")
 
 	rbft.invalidateState()
-	ast.Equal(false, rbft.status.getState(&rbft.status.valid), "should be set to inActive")
+	ast.Equal(false, rbft.in(valid), "should be set to inActive")
 }
 
 func TestPrimary(t *testing.T) {
@@ -261,18 +261,18 @@ func TestStartTimerIfOutstandingRequests(t *testing.T) {
 	ast.Equal(nil, err, err)
 	rbft.Start()
 
-	rbft.status.activeState(&rbft.status.skipInProgress)
+	rbft.on(skipInProgress)
 	rbft.startTimerIfOutstandingRequests()
-	ast.Equal(false, rbft.status.getState(&rbft.status.timerActive), "should not start newView timer")
+	ast.Equal(false, rbft.in(timerActive), "should not start newView timer")
 
-	rbft.status.inActiveState(&rbft.status.skipInProgress)
+	rbft.off(skipInProgress)
 	rbft.exec.setCurrentExec(nil)
 	rbft.startTimerIfOutstandingRequests()
-	ast.Equal(false, rbft.status.getState(&rbft.status.timerActive), "should not start newView timer")
+	ast.Equal(false, rbft.in(timerActive), "should not start newView timer")
 
 	rbft.storeMgr.outstandingReqBatches["something"] = nil
 	rbft.startTimerIfOutstandingRequests()
-	ast.Equal(true, rbft.status.getState(&rbft.status.timerActive), "should start newView timer")
+	ast.Equal(true, rbft.in(timerActive), "should start newView timer")
 }
 
 func TestConsensusMsgHelper(t *testing.T) {
@@ -327,16 +327,16 @@ func TestIsPrePrepareLegal(t *testing.T) {
 		ReplicaId:      2,
 	}
 
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	res := rbft.isPrePrepareLegal(prePrepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.off(inNegotiateView)
+	rbft.on(inViewChange)
 	res = rbft.isPrePrepareLegal(prePrepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inViewChange)
 	res = rbft.isPrePrepareLegal(prePrepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 
@@ -366,16 +366,16 @@ func TestIsPrepareLegal(t *testing.T) {
 		ReplicaId:      1,
 	}
 
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	res := rbft.isPrepareLegal(prepare)
 	ast.Equal(false, res, "isPrepareLegal failed")
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inNegotiateView)
+	rbft.off(inRecovery)
 	res = rbft.isPrepareLegal(prepare)
 	ast.Equal(false, res, "isPrepareLegal failed")
 
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.on(inRecovery)
 	res = rbft.isPrepareLegal(prepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 
@@ -400,11 +400,11 @@ func TestIsCommitLegal(t *testing.T) {
 		BatchDigest:    digest,
 		ReplicaId:      1,
 	}
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	res := rbft.isCommitLegal(commit)
 	ast.Equal(false, res, "isCommitLegal failed")
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 	res = rbft.isCommitLegal(commit)
 	ast.Equal(false, res, "isCommitLegal failed")
 

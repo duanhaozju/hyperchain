@@ -10,8 +10,6 @@
 package rbft
 
 import (
-	"sync/atomic"
-
 	"hyperchain/common"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/types"
@@ -93,7 +91,7 @@ func (rbft *rbftImpl) Start() {
 	rbft.initTimers()
 	rbft.initStatus()
 
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inViewChange)
 
 	rbft.eventMux = new(event.TypeMux)
 	rbft.batchSub = rbft.eventMux.Subscribe(txRequest{}, txpool.TxHashBatch{}, protos.RoutersMessage{}, &LocalEvent{}, &ConsensusMessage{})
@@ -136,14 +134,8 @@ func (rbft *rbftImpl) Close() {
 // 1. normal: true means not in viewchange, negotiate or state transfer
 // 2. full: true means txPool is full
 func (rbft *rbftImpl) GetStatus() (normal bool, full bool) {
-	normal = false
-	full = false
+	normal = rbft.isNormal()
+	full = rbft.isPoolFull()
 
-	if atomic.LoadUint32(&rbft.normal) == 1 {
-		normal = true
-	}
-	if atomic.LoadUint32(&rbft.poolFull) == 1 {
-		full = true
-	}
 	return
 }

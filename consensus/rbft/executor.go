@@ -5,7 +5,6 @@ package rbft
 
 import (
 	"fmt"
-	"sync/atomic"
 
 	"hyperchain/consensus"
 	"hyperchain/manager/protos"
@@ -102,7 +101,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 	switch e.EventType {
 	case VIEW_CHANGE_TIMER_EVENT:
 		rbft.logger.Warningf("Replica %d view change timer expired, sending view change: %s", rbft.id, rbft.vcMgr.newViewTimerReason)
-		rbft.status.inActiveState(&rbft.status.timerActive)
+		rbft.off(timerActive)
 
 		// Here, we directly send viewchange with a bigger target view (which is rbft.view+1) because it is the
 		// new view timer who triggered this VIEW_CHANGE_TIMER_EVENT so we send a new viewchange request
@@ -121,21 +120,19 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 		rbft.helper.InformPrimary(primary)
 
 		rbft.persistView(rbft.view)
-		rbft.status.inActiveState(&rbft.status.inViewChange)
-		rbft.status.inActiveState(&rbft.status.vcHandled)
+		rbft.off(inViewChange)
+		rbft.off(vcHandled)
 
 		// set normal to 1 which indicates system comes into normal status after viewchange
-		if !rbft.status.getState(&rbft.status.inUpdatingN) &&
-			!rbft.status.getState(&rbft.status.inNegoView) &&
-			!rbft.status.getState(&rbft.status.skipInProgress) {
-			atomic.StoreUint32(&rbft.normal, 1)
+		if !rbft.inOne(inUpdatingN, inNegotiateView, skipInProgress) {
+			rbft.setNormal()
 		}
 		rbft.logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/height=%d", rbft.id, primary, rbft.view, rbft.exec.lastExec)
 		viewChangeResult := fmt.Sprintf("Replica %d finished viewChange, primary=%d, view=%d/height=%d", rbft.id, primary, rbft.view, rbft.exec.lastExec)
 
 		// send viewchange result to web socket API
 		rbft.helper.SendFilterEvent(consensus.FILTER_View_Change_Finish, viewChangeResult)
-		if rbft.status.getState(&rbft.status.isNewNode) {
+		if rbft.in(isNewNode) {
 			rbft.sendReadyForN()
 			return nil
 		}
@@ -144,7 +141,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 		rbft.handleTransactionsAfterAbnormal()
 
 	case VIEW_CHANGE_RESEND_TIMER_EVENT:
-		if !rbft.status.getState(&rbft.status.inViewChange) {
+		if !rbft.in(inViewChange) {
 			rbft.logger.Warningf("Replica %d had its view change resend timer expire but it's in an active view, this is benign but may indicate a bug", rbft.id)
 		}
 		rbft.logger.Warningf("Replica %d view change resend timer expired before view change quorum was reached, resending", rbft.id)
@@ -159,7 +156,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 
 	case VIEW_CHANGE_QUORUM_EVENT:
 		rbft.logger.Debugf("Replica %d received view change quorum, processing new view", rbft.id)
-		if rbft.status.getState(&rbft.status.inNegoView) {
+		if rbft.in(inNegotiateView) {
 			rbft.logger.Debugf("Replica %d try to process viewChangeQuorumEvent, but it's in nego-view", rbft.id)
 			return nil
 		}
@@ -168,7 +165,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 			// send a new viewchange whose seqNo=previous viewchange's seqNo + 1 because of new view timeout
 			// and eventually others will finish viewchange with a new view in which primary is not in
 			// skipInProgress
-			if rbft.status.getState(&rbft.status.skipInProgress) {
+			if rbft.in(skipInProgress) {
 				return nil
 			}
 			// primary construct and send new view message
@@ -177,9 +174,9 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 		return rbft.replicaCheckNewView()
 
 	case VIEW_CHANGE_VC_RESET_DONE_EVENT:
-		rbft.status.inActiveState(&rbft.status.inVcReset)
+		rbft.off(inVcReset)
 		rbft.logger.Debugf("Replica %d received local VcResetDone", rbft.id)
-		if rbft.status.getState(&rbft.status.inUpdatingN) {
+		if rbft.in(inUpdatingN) {
 			return rbft.sendFinishUpdate()
 		}
 		var seqNo uint64
@@ -198,7 +195,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 		// execute to 30+ or 40+..., which triggered moveWatermarks in recvCheckpoint(), recoveryToSeqNo may have
 		// been changed to 30 or 40 or bigger, in this case, after VcResetDone, we will come into
 		// recvStateUpdatedEvent in which we will retryStateTransfer to the new checkpoint
-		if rbft.status.getState(&rbft.status.inRecovery) && rbft.recoveryMgr.recoveryToSeqNo != nil {
+		if rbft.in(inRecovery) && rbft.recoveryMgr.recoveryToSeqNo != nil {
 			if seqNo-1 >= *rbft.recoveryMgr.recoveryToSeqNo {
 				return &LocalEvent{
 					Service:   RECOVERY_SERVICE,
@@ -209,7 +206,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 				return rbft.recvStateUpdatedEvent(state)
 			}
 		}
-		if !rbft.status.getState(&rbft.status.inViewChange) {
+		if !rbft.in(inViewChange) {
 			rbft.logger.Warningf("Replica %d is not in viewChange, but received local VcResetDone", rbft.id)
 			return nil
 		}
@@ -240,7 +237,7 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) consensusEvent {
 		err = rbft.recvLocalDelNode(e.Event.(*protos.DelNodeMessage))
 	case NODE_MGR_AGREE_UPDATEN_QUORUM_EVENT:
 		rbft.logger.Debugf("Replica %d received agree-update-n quorum, processing update-n", rbft.id)
-		if rbft.status.getState(&rbft.status.inNegoView) {
+		if rbft.in(inNegotiateView) {
 			rbft.logger.Debugf("Replica %d try to process agreeUpdateNQuorumEvent, but it's in nego-view", rbft.id)
 			return nil
 		}
@@ -256,15 +253,14 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) consensusEvent {
 		rbft.persistNewNode(uint64(0))
 		rbft.persistDellLocalKey()
 		rbft.persistN(rbft.N)
-		rbft.status.inActiveState(&rbft.status.updateHandled)
-		if rbft.status.getState(&rbft.status.isNewNode) {
-			rbft.status.inActiveState(&rbft.status.isNewNode)
+		rbft.off(updateHandled)
+		if rbft.in(isNewNode) {
+			rbft.off(isNewNode)
 		}
-		rbft.status.inActiveState(&rbft.status.inUpdatingN)
+		rbft.off(inUpdatingN)
 		rbft.rebuildCertStoreForUpdate()
-		if !rbft.status.getState(&rbft.status.inViewChange) &&
-			!rbft.status.getState(&rbft.status.inNegoView) && !rbft.status.getState(&rbft.status.skipInProgress) {
-			atomic.StoreUint32(&rbft.normal, 1)
+		if !rbft.inOne(inViewChange, inNegotiateView, skipInProgress) {
+			rbft.setNormal()
 		}
 		rbft.logger.Criticalf("======== Replica %d finished UpdatingN, primary=%d, n=%d/f=%d/view=%d/h=%d", rbft.id, rbft.primary(rbft.view), rbft.N, rbft.f, rbft.view, rbft.h)
 		rbft.handleTransactionsAfterAbnormal()
@@ -286,7 +282,7 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) consensusEvent {
 func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) consensusEvent {
 	switch e.EventType {
 	case RECOVERY_DONE_EVENT:
-		rbft.status.inActiveState(&rbft.status.inRecovery)
+		rbft.off(inRecovery)
 		rbft.recoveryMgr.recoveryToSeqNo = nil
 		rbft.timerMgr.stopTimer(RECOVERY_RESTART_TIMER)
 		rbft.logger.Criticalf("======== Replica %d finished recovery, height: %d", rbft.id, rbft.exec.lastExec)
@@ -296,7 +292,7 @@ func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) consensusEvent {
 		if rbft.recoveryMgr.recvNewViewInRecovery {
 			rbft.logger.Noticef("#  Replica %d find itself received NewView during Recovery"+
 				", will restart negotiate view", rbft.id)
-			rbft.status.activeState(&rbft.status.inRecovery, &rbft.status.inNegoView)
+			rbft.on(inRecovery, inNegotiateView)
 			rbft.recoveryMgr.recvNewViewInRecovery = false
 			rbft.restartNegoView()
 			return nil
@@ -316,10 +312,10 @@ func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) consensusEvent {
 		}
 
 		// if this recovery was triggered by 10 viewchange, inactive vcToRecovery
-		if rbft.status.getState(&rbft.status.vcToRecovery) {
-			rbft.status.inActiveState(&rbft.status.vcToRecovery)
+		if rbft.in(vcToRecovery) {
+			rbft.off(vcToRecovery)
 		}
-		if rbft.status.getState(&rbft.status.isNewNode) {
+		if rbft.in(isNewNode) {
 			rbft.sendReadyForN()
 			return nil
 		}
@@ -339,16 +335,14 @@ func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) consensusEvent {
 
 	case RECOVERY_NEGO_VIEW_DONE_EVENT:
 		// set normal to 1 which indicates system comes into normal status after negotiate done
-		if !rbft.status.getState(&rbft.status.inUpdatingN) &&
-			!rbft.status.getState(&rbft.status.inViewChange) &&
-			!rbft.status.getState(&rbft.status.skipInProgress) {
-			atomic.StoreUint32(&rbft.normal, 1)
+		if !rbft.inOne(inUpdatingN, inViewChange, skipInProgress) {
+			rbft.setNormal()
 		}
 		rbft.logger.Criticalf("======== Replica %d finished negotiating view: %d / N=%d", rbft.id, rbft.view, rbft.N)
 		primary := rbft.primary(rbft.view)
 
 		// re-construct certStore if this recovery was triggered by 10 viewchange as view may have been changed
-		if rbft.status.getState(&rbft.status.vcToRecovery) {
+		if rbft.in(vcToRecovery) {
 			rbft.parseSpecifyCertStore()
 		}
 		// clean useless cache which may influence subsequent consensus process
@@ -362,7 +356,7 @@ func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) consensusEvent {
 		return nil
 
 	case RECOVERY_NEGO_VIEW_RSP_TIMER_EVENT:
-		if !rbft.status.getState(&rbft.status.inNegoView) {
+		if !rbft.in(inNegotiateView) {
 			rbft.logger.Warningf("Replica %d had its nego-view response timer expire but it's not in nego-view, this is benign but may indicate a bug", rbft.id)
 		}
 		rbft.logger.Debugf("Replica %d nego-view response timer expired before N-f was reached, resending", rbft.id)

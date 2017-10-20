@@ -96,17 +96,17 @@ func TestNewViewTimer(t *testing.T) {
 	ast.Equal(nil, err, err)
 	rbft.Start()
 
-	rbft.status.inActiveState(&rbft.status.timerActive)
-	ast.Equal(false, rbft.status.getState(&rbft.status.timerActive), "be set to inActive, expect false")
+	rbft.off(timerActive)
+	ast.Equal(false, rbft.in(timerActive), "be set to inActive, expect false")
 
 	rbft.startNewViewTimer(time.Second, "nothing")
-	ast.Equal(true, rbft.status.getState(&rbft.status.timerActive), "startNewViewTimer set this to active, expect true")
+	ast.Equal(true, rbft.in(timerActive), "startNewViewTimer set this to active, expect true")
 
 	rbft.stopNewViewTimer()
-	ast.Equal(false, rbft.status.getState(&rbft.status.timerActive), "stopNewViewTimer set it to inActive, expect false")
+	ast.Equal(false, rbft.in(timerActive), "stopNewViewTimer set it to inActive, expect false")
 
 	rbft.softStartNewViewTimer(time.Second, "nothing")
-	ast.Equal(true, rbft.status.getState(&rbft.status.timerActive), "softStartNewViewTimer set this to active, expect true")
+	ast.Equal(true, rbft.in(timerActive), "softStartNewViewTimer set this to active, expect true")
 }
 
 func TestCalcPSet(t *testing.T) {
@@ -175,21 +175,21 @@ func TestBeforeSendVC(t *testing.T) {
 	ast.Equal(nil, err, err)
 	rbft.Start()
 
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	err = rbft.beforeSendVC()
-	ast.NotNil(err, "inNegoView, expect err not nil")
+	ast.NotNil(err, "inNegotiateView, expect err not nil")
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.off(inNegotiateView)
+	rbft.on(inRecovery)
 	err = rbft.beforeSendVC()
 	ast.NotNil(err, "inRecovery, expect err not nil")
 
-	rbft.status.inActiveState(&rbft.status.inRecovery)
-	rbft.status.activeState(&rbft.status.timerActive)
+	rbft.off(inRecovery)
+	rbft.on(timerActive)
 	rbft.vcMgr.viewChangeStore[vcidx{uint64(0), uint64(1)}] = nil
 	err = rbft.beforeSendVC()
 	ast.Nil(err, "go on, expect nil")
-	ast.Equal(false, rbft.status.getState(&rbft.status.timerActive), "stopNewViewTimer in beforeSendVC failed")
+	ast.Equal(false, rbft.in(timerActive), "stopNewViewTimer in beforeSendVC failed")
 	ast.Equal(uint64(1), rbft.view, "beforeSendVC failed")
 	ast.Equal(0, len(rbft.vcMgr.viewChangeStore), "delete old vc failed")
 }
@@ -244,22 +244,22 @@ func TestRecvAndSendViewChange(t *testing.T) { // test some pre-check procedure 
 	ast.Equal(nil, err, err)
 	rbft.Start()
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.off(inNegotiateView)
+	rbft.on(inRecovery)
 	if err := rbft.sendViewChange(); err != nil {
 		t.Error("should end in inRecovery, expect nil")
 	}
 
 	vc := getTestViewChange()
 
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	ast.Nil(rbft.recvViewChange(vc), fmt.Sprintf("Replica %d is in negoview, so it should not receive this view-change message", rbft.id))
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.off(inNegotiateView)
+	rbft.on(inRecovery)
 	ast.Nil(rbft.recvViewChange(vc), fmt.Sprintf("Replica %d is in recovery, so it should not receive this view-change message", rbft.id))
 
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inRecovery)
 
 	rbft.view = uint64(3)
 	ast.Nil(rbft.recvViewChange(vc), fmt.Sprintf("Replica %d found view-change message for old view, so it should not receive this view-change message", rbft.id))
@@ -290,8 +290,8 @@ func TestRecvAndSendViewChange2(t *testing.T) { // test normal case
 	ast.Equal(nil, err, err)
 	rbft.Start()
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inNegotiateView)
+	rbft.off(inRecovery)
 	vc := getTestViewChange()
 	vc2 := getTestViewChange()
 	vc3 := getTestViewChange()
@@ -299,14 +299,14 @@ func TestRecvAndSendViewChange2(t *testing.T) { // test normal case
 	vc2.Basis.ReplicaId = 3
 	vc3.Basis.ReplicaId = 2
 
-	rbft.status.activeState(&rbft.status.inViewChange)
-	rbft.status.inActiveState(&rbft.status.timerActive)
+	rbft.on(inViewChange)
+	rbft.off(timerActive)
 	rbft.recvViewChange(vc)
 	rbft.recvViewChange(vc2)
 	ast.Equal(uint64(1), rbft.view, "should send view change, expect 1")
-	ast.Equal(true, rbft.status.getState(&rbft.status.timerActive), "should startNewViewTimer, expect true")
+	ast.Equal(true, rbft.in(timerActive), "should startNewViewTimer, expect true")
 
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inViewChange)
 	rbft.recvViewChange(vc3)
 	ast.Equal(uint64(2), rbft.view, "should send view change again, expect 2")
 }
@@ -536,10 +536,10 @@ func TestSendAndRecvNewView(t *testing.T) {
 		vcidx4: vc4,
 	}
 
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	ast.Nil(rbft.sendNewView(), fmt.Sprintf("Replica %d try to sendNewView, but it's in nego-view", rbft.id))
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 	rbft.vcMgr.newViewStore[rbft.view] = nil
 	ast.Nil(rbft.sendNewView(), fmt.Sprintf("Replica %d try to sendNewView, but there is the same view in newViewStore", rbft.id))
 
@@ -583,11 +583,11 @@ func TestSendAndRecvNewView(t *testing.T) {
 
 	rbft2.view = uint64(2)
 	rbft2.status.activeState(&rbft2.status.inNegoView, &rbft2.status.inViewChange)
-	ast.Nil(rbft2.recvNewView(nv), "In nego-view, so it should not receive this message")
+	ast.Nil(rbft2.recvNewView(nv), "in nego-view, so it should not receive this message")
 
 	rbft2.status.inActiveState(&rbft2.status.inNegoView)
 	rbft2.status.activeState(&rbft2.status.inRecovery)
-	ast.Nil(rbft2.recvNewView(nv), "In recovery, so it should not receive this message")
+	ast.Nil(rbft2.recvNewView(nv), "in recovery, so it should not receive this message")
 	ast.Equal(true, rbft2.recoveryMgr.recvNewViewInRecovery, "receive newView message in recovery, expect true")
 
 	rbft2.status.inActiveState(&rbft2.status.inRecovery)
@@ -646,7 +646,7 @@ func TestPrimaryCheckNewView(t *testing.T) {
 	xset := make(map[uint64]string)
 	xset[uint64(51)] = ""
 	nv := &NewView{Xset: xset}
-	rbft.status.inActiveState(&rbft.status.vcHandled)
+	rbft.off(vcHandled)
 	rbft.storeMgr.outstandingReqBatches["1"] = nil
 	ast.Equal(1, len(rbft.storeMgr.outstandingReqBatches), "store one, expect 1")
 	rbft.exec.lastExec = uint64(100)
@@ -897,18 +897,18 @@ func TestReplicaCheckNewView(t *testing.T) {
 		ReplicaId: rbft.id,
 	}
 	rbft.vcMgr.newViewStore[rbft.view] = nv
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inViewChange)
 	ast.Nil(rbft.replicaCheckNewView(), "activeView is 1, expect nil")
 
-	rbft.status.activeState(&rbft.status.inViewChange)
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.on(inViewChange)
+	rbft.off(inNegotiateView)
+	rbft.off(inRecovery)
 	rbft.replicaCheckNewView()
 	ast.Equal(uint64(1), rbft.view, "selectInitialCheckpoint failed and sendViewChange, expect 1")
 
-	rbft.status.activeState(&rbft.status.inViewChange)
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.on(inViewChange)
+	rbft.off(inNegotiateView)
+	rbft.off(inRecovery)
 	rbft.vcMgr.viewChangeStore = map[vcidx]*ViewChange{
 		vcidx1: vc1,
 		vcidx2: vc2,
@@ -918,9 +918,9 @@ func TestReplicaCheckNewView(t *testing.T) {
 	rbft.replicaCheckNewView()
 	ast.Equal(uint64(2), rbft.view, "assignSequenceNumbers failed and sendViewChange, expect 1")
 
-	rbft.status.activeState(&rbft.status.inViewChange)
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.on(inViewChange)
+	rbft.off(inNegotiateView)
+	rbft.off(inRecovery)
 	rbft.vcMgr.viewChangeStore = map[vcidx]*ViewChange{
 		vcidx1: vc1,
 		vcidx2: vc2,
@@ -935,9 +935,9 @@ func TestReplicaCheckNewView(t *testing.T) {
 	rbft.replicaCheckNewView()
 	ast.Equal(uint64(3), rbft.view, "nv's vset is different and sendViewChange, expect 1")
 
-	rbft.status.activeState(&rbft.status.inViewChange)
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.on(inViewChange)
+	rbft.off(inNegotiateView)
+	rbft.off(inRecovery)
 	rbft.vcMgr.viewChangeStore = map[vcidx]*ViewChange{
 		vcidx1: vc1,
 		vcidx2: vc2,
@@ -955,12 +955,12 @@ func TestResetStateForNewView(t *testing.T) {
 	ast.Equal(nil, err, err)
 	rbft.Start()
 
-	rbft.status.activeState(&rbft.status.vcHandled)
+	rbft.on(vcHandled)
 	ast.Nil(rbft.resetStateForNewView(), "vcHandled, expect true")
 
-	rbft.status.inActiveState(&rbft.status.vcHandled)
+	rbft.off(vcHandled)
 	rbft.resetStateForNewView()
-	ast.Equal(true, rbft.status.getState(&rbft.status.vcHandled), "should be actived, expect true")
+	ast.Equal(true, rbft.in(vcHandled), "should be actived, expect true")
 }
 
 func TestRecvFinishVcReset(t *testing.T) {
@@ -976,12 +976,12 @@ func TestRecvFinishVcReset(t *testing.T) {
 		LowH:      uint64(100),
 	}
 
-	rbft.status.inActiveState(&rbft.status.inViewChange)
+	rbft.off(inViewChange)
 	rbft.recvFinishVcReset(finish)
 	ok := rbft.vcMgr.vcResetStore[*finish]
 	ast.Equal(false, ok, "activeView is 1, should not received, expect false")
 
-	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.on(inViewChange)
 	rbft.recvFinishVcReset(finish)
 	ok = rbft.vcMgr.vcResetStore[*finish]
 	ast.Equal(false, ok, "view is not the same as rbft, should not received, expect false")
@@ -1026,11 +1026,11 @@ func TestProcessReqInNewView(t *testing.T) {
 	ast.Nil(rbft.processReqInNewView(), "less than quorum, expect nil")
 
 	rbft.vcMgr.vcResetStore[finish1] = true
-	rbft.status.activeState(&rbft.status.inVcReset)
-	rbft.status.inActiveState(&rbft.status.skipInProgress)
+	rbft.on(inVcReset)
+	rbft.off(skipInProgress)
 	ast.Nil(rbft.processReqInNewView(), "has not done with vcReset and not in stateUpdate, expect nil")
 
-	rbft.status.inActiveState(&rbft.status.inVcReset)
+	rbft.off(inVcReset)
 	ast.Nil(rbft.processReqInNewView(), "have not stored new view, expect nil")
 
 	rbft.h = uint64(10)
@@ -1454,14 +1454,14 @@ func TestRecvFetchRequestBatch(t *testing.T) {
 		ReplicaId:   rbft.id,
 	}
 
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	ast.Nil(rbft.recvFetchRequestBatch(frb), "replica in negotiate view, expect nil")
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.off(inNegotiateView)
+	rbft.on(inRecovery)
 	ast.Nil(rbft.recvFetchRequestBatch(frb), "replica in recovery, expect nil")
 
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inRecovery)
 	ast.Nil(rbft.recvFetchRequestBatch(frb), "didn't have this batch, expect nil")
 
 	rbft.storeMgr.txBatchStore[frb.BatchDigest] = nil
@@ -1481,11 +1481,11 @@ func TestRecvReturnRequestBatch(t *testing.T) {
 	ast.Equal(nil, err, err)
 	rbft.Start()
 
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	ast.Nil(rbft.recvReturnRequestBatch(nil), "in negotiate view, expect nil")
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.off(inNegotiateView)
+	rbft.on(inRecovery)
 	ast.Nil(rbft.recvReturnRequestBatch(nil), "in recovery, expect nil")
 
 	batch := &ReturnRequestBatch{
@@ -1493,29 +1493,29 @@ func TestRecvReturnRequestBatch(t *testing.T) {
 		BatchDigest: "batch",
 		ReplicaId:   rbft.id,
 	}
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inRecovery)
 	ast.Nil(rbft.recvReturnRequestBatch(batch), "didn't store this in missingReqBatches, expect nil")
 
 	rbft.storeMgr.missingReqBatches[batch.BatchDigest] = true
-	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.on(inViewChange)
 	ast.Nil(rbft.recvReturnRequestBatch(batch), "didn't store newView in newViewStore, expect nil")
 	_, ok := rbft.storeMgr.missingReqBatches[batch.BatchDigest]
 	ast.Equal(false, ok, "should be deleted, expect false")
 
 	rbft.storeMgr.missingReqBatches[batch.BatchDigest] = true
-	rbft.status.activeState(&rbft.status.inViewChange)
+	rbft.on(inViewChange)
 	rbft.vcMgr.newViewStore[rbft.view] = nil
-	rbft.status.inActiveState(&rbft.status.vcHandled)
+	rbft.off(vcHandled)
 	rbft.recvReturnRequestBatch(batch)
-	ast.Equal(true, rbft.status.getState(&rbft.status.vcHandled), "resetStateForNewView, expect true")
+	ast.Equal(true, rbft.in(vcHandled), "resetStateForNewView, expect true")
 
 	rbft.storeMgr.missingReqBatches[batch.BatchDigest] = true
-	rbft.status.inActiveState(&rbft.status.inViewChange)
-	rbft.status.inActiveState(&rbft.status.inUpdatingN)
+	rbft.off(inViewChange)
+	rbft.off(inUpdatingN)
 	ast.Nil(rbft.recvReturnRequestBatch(batch), "no missing batch and activeView and not in updatingN, expect nil")
 
 	rbft.storeMgr.missingReqBatches[batch.BatchDigest] = true
-	rbft.status.activeState(&rbft.status.inUpdatingN)
+	rbft.on(inUpdatingN)
 	ast.Nil(rbft.recvReturnRequestBatch(batch), "no stored UpdateN, expect nil")
 }
 
