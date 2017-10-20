@@ -29,11 +29,11 @@ type rbftImpl struct {
 	f             int    // max. number of byzantine validators we can tolerate
 	N             int    // max. number of validators in the network
 	h             uint64 // low watermark
-	id            uint64 // replica ID; PBFT `i`
+	id            uint64 // replica ID; RBFT `i`
 	K             uint64 // how long this checkpoint period is
 	logMultiplier uint64 // use this value to calculate log size : k*logMultiplier
 	L             uint64 // log size: k*logMultiplier
-	seqNo         uint64 // PBFT "n", strictly monotonic increasing sequence number
+	seqNo         uint64 // RBFT "n", strictly monotonic increasing sequence number
 	view          uint64 // current view
 
 	status RbftStatus // keep all basic status of rbft in this object
@@ -61,7 +61,7 @@ type rbftImpl struct {
 	poolFull uint32 // txPool is full or not
 }
 
-// newPBFT init the PBFT instance
+// newRBFT init the RBFT instance
 func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*rbftImpl, error) {
 	var err error
 	rbft := &rbftImpl{}
@@ -99,9 +99,9 @@ func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 	rbft.initStatus()
 
 	if rbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
-		rbft.logger.Infof("PBFT null requests timeout = %v", rbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
+		rbft.logger.Infof("RBFT null requests timeout = %v", rbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
 	} else {
-		rbft.logger.Infof("PBFT null requests disabled")
+		rbft.logger.Infof("RBFT null requests disabled")
 	}
 
 	rbft.vcMgr = newVcManager(rbft)
@@ -120,13 +120,13 @@ func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 
 	rbft.status.inActiveState(&rbft.status.inViewChange)
 
-	rbft.logger.Infof("PBFT Max number of validating peers (N) = %v", rbft.N)
-	rbft.logger.Infof("PBFT Max number of failing peers (f) = %v", rbft.f)
-	rbft.logger.Infof("PBFT byzantine flag = %v", rbft.status.getState(&rbft.status.byzantine))
-	rbft.logger.Infof("PBFT request timeout = %v", rbft.timerMgr.requestTimeout)
-	rbft.logger.Infof("PBFT Checkpoint period (K) = %v", rbft.K)
-	rbft.logger.Infof("PBFT Log multiplier = %v", rbft.logMultiplier)
-	rbft.logger.Infof("PBFT log size (L) = %v", rbft.L)
+	rbft.logger.Infof("RBFT Max number of validating peers (N) = %v", rbft.N)
+	rbft.logger.Infof("RBFT Max number of failing peers (f) = %v", rbft.f)
+	rbft.logger.Infof("RBFT byzantine flag = %v", rbft.status.getState(&rbft.status.byzantine))
+	rbft.logger.Infof("RBFT request timeout = %v", rbft.timerMgr.requestTimeout)
+	rbft.logger.Infof("RBFT Checkpoint period (K) = %v", rbft.K)
+	rbft.logger.Infof("RBFT Log multiplier = %v", rbft.logMultiplier)
+	rbft.logger.Infof("RBFT log size (L) = %v", rbft.L)
 
 	atomic.StoreUint32(&rbft.normal, 1)
 	atomic.StoreUint32(&rbft.poolFull, 0)
@@ -196,8 +196,8 @@ func (rbft *rbftImpl) processEvent(ee consensusEvent) consensusEvent {
 	return nil
 }
 
-// dispatchCorePbftMsg dispatch core PBFT consensus messages.
-func (rbft *rbftImpl) dispatchCorePbftMsg(e consensusEvent) consensusEvent {
+// dispatchCoreRbftMsg dispatch core RBFT consensus messages.
+func (rbft *rbftImpl) dispatchCoreRbftMsg(e consensusEvent) consensusEvent {
 	switch et := e.(type) {
 	case *PrePrepare:
 		return rbft.recvPrePrepare(et)

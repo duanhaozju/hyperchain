@@ -23,7 +23,7 @@ func TestSortableUint64SliceFunctions(t *testing.T) {
 	}
 }
 
-func TestPbftStateFunctions(t *testing.T) {
+func TestRbftStateFunctions(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
 	defer CleanData(rbft.namespace)

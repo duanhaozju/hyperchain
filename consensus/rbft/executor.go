@@ -51,7 +51,7 @@ func (rbft *rbftImpl) msgToEvent(msg *ConsensusMessage) (interface{}, error) {
 func (rbft *rbftImpl) dispatchLocalEvent(e *LocalEvent) consensusEvent {
 	switch e.Service {
 	case CORE_RBFT_SERVICE:
-		return rbft.handleCorePbftEvent(e)
+		return rbft.handleCoreRbftEvent(e)
 	case VIEW_CHANGE_SERVICE:
 		return rbft.handleViewChangeEvent(e)
 	case NODE_MGR_SERVICE:
@@ -64,8 +64,8 @@ func (rbft *rbftImpl) dispatchLocalEvent(e *LocalEvent) consensusEvent {
 	}
 }
 
-// handleCorePbftEvent handles core RBFT service events
-func (rbft *rbftImpl) handleCorePbftEvent(e *LocalEvent) consensusEvent {
+// handleCoreRbftEvent handles core RBFT service events
+func (rbft *rbftImpl) handleCoreRbftEvent(e *LocalEvent) consensusEvent {
 	switch e.EventType {
 
 	case CORE_BATCH_TIMER_EVENT:
@@ -384,7 +384,7 @@ func (rbft *rbftImpl) dispatchConsensusMsg(e consensusEvent) consensusEvent {
 	service := rbft.dispatchMsgToService(e)
 	switch service {
 	case CORE_RBFT_SERVICE:
-		return rbft.dispatchCorePbftMsg(e)
+		return rbft.dispatchCoreRbftMsg(e)
 	case VIEW_CHANGE_SERVICE:
 		return rbft.dispatchViewChangeMsg(e)
 	case NODE_MGR_SERVICE:

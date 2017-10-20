@@ -308,16 +308,16 @@ func TestRecvRecoveryRsp(t *testing.T) {
 	}
 	rr3.Chkpts[uint64(60)] = encode60
 
-	// pbft not in recovery, should just return
+	// rbft not in recovery, should just return
 	rbft.status.inActiveState(&rbft.status.inRecovery)
 	rbft.recvRecoveryRsp(rr1)
 	_, ok := rbft.recoveryMgr.rcRspStore[uint64(1)]
-	ast.Equal(false, ok, "Pbft not in recovery, expect false")
+	ast.Equal(false, ok, "Rbft not in recovery, expect false")
 
 	rbft.status.activeState(&rbft.status.inRecovery)
 	rbft.recvRecoveryRsp(rr1)
 	_, ok = rbft.recoveryMgr.rcRspStore[uint64(1)]
-	ast.Equal(true, ok, "Pbft in recovery, expect true")
+	ast.Equal(true, ok, "Rbft in recovery, expect true")
 
 	recoveryToSeqNo := uint64(10)
 	rbft.recoveryMgr.recoveryToSeqNo = &recoveryToSeqNo

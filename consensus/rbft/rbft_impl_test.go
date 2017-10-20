@@ -83,9 +83,9 @@ func (rbft *rbftImpl) getCertCommitted(digest string, v uint64, n uint64) {
 	cert.commit[*cmt3] = true
 }
 
-func TestPbftImpl_NewPbft(t *testing.T) {
+func TestRbftImpl_NewRbft(t *testing.T) {
 
-	//new PBFT
+	//new RBFT
 	rbft, conf, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
 	defer CleanData(rbft.namespace)
 	ensure.Nil(t, err)
@@ -635,7 +635,6 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 	rbft.Start()
 
 	// normal
-	// et.seqNo < pbft.h  hightStateTarget == nil
 	e := protos.StateUpdatedMessage{
 		SeqNo: uint64(40),
 	}
@@ -645,7 +644,6 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 	err = rbft.recvStateUpdatedEvent(e)
 	ast.Nil(err, "et.SeqNo < rbft.h and highStateTarget is nil, expect nil")
 
-	// et.seqNo < pbft.h  et.seqNo<pbft.highStateTarget.seqNo
 	rbft.storeMgr.highStateTarget = &stateUpdateTarget{
 		checkpointMessage: checkpointMessage{
 			seqNo: 80,
@@ -660,7 +658,6 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 	err = rbft.recvStateUpdatedEvent(e)
 	ast.Nil(err, "et.SeqNo < rbft.h, expect nil")
 
-	// et.seqNo >= pbft.h
 	e = protos.StateUpdatedMessage{
 		SeqNo: uint64(80),
 	}
@@ -750,7 +747,7 @@ func TestCheckpoint(t *testing.T) {
 
 	rbft.checkpoint(uint64(1), bcInfo)
 	if _, ok := rbft.storeMgr.chkpts[uint64(1)]; ok {
-		t.Error("n % pbft.K != 0")
+		t.Error("n % rbft.K != 0")
 	}
 }
 

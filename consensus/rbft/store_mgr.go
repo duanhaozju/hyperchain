@@ -6,10 +6,10 @@ package rbft
 import "github.com/op/go-logging"
 
 /**
-This file provide a mechanism to manage the storage in PBFT
+This file provide a mechanism to manage the storage in RBFT
 */
 
-// storeManager manages common store data structures for PBFT.
+// storeManager manages common store data structures for RBFT.
 type storeManager struct {
 	logger *logging.Logger
 

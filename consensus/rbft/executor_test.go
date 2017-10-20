@@ -54,7 +54,7 @@ func TestMsgToEvent(t *testing.T) {
 	ast.Nil(err, "msgToEvent failed")
 }
 
-func TestHandleCorePbftEvent(t *testing.T) {
+func TestHandleCoreRbftEvent(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
 	defer CleanData(rbft.namespace)

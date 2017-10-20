@@ -15,7 +15,7 @@ import (
 	"hyperchain/manager/event"
 )
 
-func TestPbftTimeFunctions(t *testing.T) {
+func TestRbftTimeFunctions(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
 	defer CleanData(rbft.namespace)

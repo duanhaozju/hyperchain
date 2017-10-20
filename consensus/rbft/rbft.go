@@ -2,7 +2,7 @@
 //Copyright (C) 2016 The Hyperchain Authors.
 
 //Package rbft implement the rbft algorithm
-//The PBFT key features:
+//The RBFT key features:
 //	1. atomic sequence transactions guarantee
 //      2. leader selection by viewchange
 //      3. dynamically add or delete new node
@@ -88,7 +88,7 @@ func (rbft *rbftImpl) RecvLocal(msg interface{}) error {
 
 // Start initializes and starts the consensus service
 func (rbft *rbftImpl) Start() {
-	rbft.logger.Noticef("--------PBFT starting, nodeID: %d--------", rbft.id)
+	rbft.logger.Noticef("--------RBFT starting, nodeID: %d--------", rbft.id)
 	rbft.timerMgr = newTimerMgr(rbft)
 	rbft.initTimers()
 	rbft.initStatus()
@@ -106,12 +106,12 @@ func (rbft *rbftImpl) Start() {
 	rbft.timerMgr.makeRequestTimeoutLegal()
 
 	go rbft.listenEvent()
-	rbft.logger.Noticef("======== PBFT finish start, nodeID: %d", rbft.id)
+	rbft.logger.Noticef("======== RBFT finish start, nodeID: %d", rbft.id)
 }
 
 // Close closes the consensus service
 func (rbft *rbftImpl) Close() {
-	rbft.logger.Notice("PBFT stop event process service")
+	rbft.logger.Notice("RBFT stop event process service")
 	rbft.timerMgr.Stop()
 	rbft.batchMgr.stop()
 
@@ -120,7 +120,7 @@ func (rbft *rbftImpl) Close() {
 		rbft.close = nil
 	}
 
-	rbft.logger.Notice("PBFT clear some resources")
+	rbft.logger.Notice("RBFT clear some resources")
 	rbft.vcMgr = newVcManager(rbft)
 	rbft.storeMgr = newStoreMgr()
 	rbft.nodeMgr = newNodeMgr()
@@ -129,7 +129,7 @@ func (rbft *rbftImpl) Close() {
 	rbft.batchVdr = newBatchValidator()
 	rbft.recoveryMgr = newRecoveryMgr()
 
-	rbft.logger.Noticef("PBFT stopped!")
+	rbft.logger.Noticef("RBFT stopped!")
 }
 
 // GetStatus returns the current consensus status:

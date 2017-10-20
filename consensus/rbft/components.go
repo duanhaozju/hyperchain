@@ -6,7 +6,7 @@ package rbft
 import "hyperchain/core/types"
 
 /**
-This file defines the structs uesd in PBFT
+This file defines the structs uesd in RBFT
 */
 
 // -----------certStore related structs-----------------
