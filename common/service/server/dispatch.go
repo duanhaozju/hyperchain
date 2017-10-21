@@ -1,12 +1,13 @@
-package service
+package server
 
 import (
 	"github.com/gogo/protobuf/proto"
 	pb "hyperchain/common/protos"
+	"hyperchain/common/service"
 	"hyperchain/manager/event"
 )
 
-func (is *InternalServer) dispatchConsensusMsg(namespace string, msg *pb.IMessage) {
+func (is *InternalServer) DispatchConsensusMsg(namespace string, msg *pb.IMessage) {
 	is.logger.Debugf("dispatch consensus message: %v for namespace: %s", msg, namespace)
 
 	if !is.sr.ContainsNamespace(namespace) {
@@ -16,16 +17,16 @@ func (is *InternalServer) dispatchConsensusMsg(namespace string, msg *pb.IMessag
 
 	switch msg.Event {
 	case pb.Event_InformPrimaryEvent:
-		service := is.sr.Namespace(namespace).Service(NETWORK)
+		service := is.sr.Namespace(namespace).Service(service.NETWORK)
 		if service != nil {
 			service.Send(msg)
 		} else {
-			is.logger.Errorf("No service found for [%s]", NETWORK)
+			//is.logger.Errorf("No service found for [%s]", service.NETWORK)
 		}
 	}
 }
 
-func (is *InternalServer) dispatchExecutorMsg(namespace string, msg *pb.IMessage) {
+func (is *InternalServer) DispatchExecutorMsg(namespace string, msg *pb.IMessage) {
 
 	is.logger.Debugf("dispatch executor message: %v for namespace: %s", msg, namespace)
 
@@ -42,7 +43,7 @@ func (is *InternalServer) dispatchExecutorMsg(namespace string, msg *pb.IMessage
 			is.logger.Error(err)
 			return
 		}
-		is.sr.Namespace(namespace).Service(EVENTHUB).Send(e) //send this message to event hub
+		is.sr.Namespace(namespace).Service(service.EVENTHUB).Send(e) //send this message to event hub
 
 	case pb.Event_ExecutorToP2PEvent:
 		e := &event.ExecutorToP2PEvent{}
@@ -50,14 +51,14 @@ func (is *InternalServer) dispatchExecutorMsg(namespace string, msg *pb.IMessage
 			is.logger.Error(err)
 			return
 		}
-		is.sr.Namespace(namespace).Service(EVENTHUB).Send(e)
+		is.sr.Namespace(namespace).Service(service.EVENTHUB).Send(e)
 	}
 }
 
-func (is *InternalServer) dispatchNetworkMsg(namespace string, msg *pb.IMessage) {
+func (is *InternalServer) DispatchNetworkMsg(namespace string, msg *pb.IMessage) {
 
 }
 
-func (is *InternalServer) dispatchAPIServerMsg(namespace string, msg *pb.IMessage) {
+func (is *InternalServer) DispatchAPIServerMsg(namespace string, msg *pb.IMessage) {
 
 }

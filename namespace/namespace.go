@@ -8,6 +8,8 @@ import (
 	"hyperchain/admittance"
 	"hyperchain/common"
 	"hyperchain/common/service"
+	"hyperchain/common/service/local"
+	"hyperchain/common/service/server"
 	"hyperchain/consensus"
 	"hyperchain/consensus/csmgr"
 	"hyperchain/core/executor"
@@ -144,17 +146,19 @@ type namespaceImpl struct {
 	executor  executor.IExecutor
 	rpc       rpc.RequestProcessor
 
-	nsInfo  *NamespaceInfo
-	status  *Status
-	conf    *common.Config
-	ls      service.Service
+	nsInfo *NamespaceInfo
+	status *Status
+	conf   *common.Config
+	ls     service.Service
+
+	is      *server.InternalServer
 	restart bool
 	delFlag chan bool
 }
 
 // newNamespaceImpl returns a newed Namespace instance with
 // the given name and config
-func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool) (*namespaceImpl, error) {
+func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool, is *server.InternalServer) (*namespaceImpl, error) {
 	conf.Set(common.NAMESPACE, namespace)
 	if err := common.InitHyperLogger(namespace, conf); err != nil {
 		return nil, err
@@ -179,8 +183,9 @@ func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool) 
 		filterMux: new(event.TypeMux),
 		restart:   false,
 		delFlag:   delFlag,
+		is:        is,
 	}
-	ns.ls = service.NewLocalService(namespace, service.EVENTHUB, ns.eh)
+	ns.ls = local.NewLocalService(namespace, service.EVENTHUB, ns.eh)
 	ns.logger = common.GetLogger(namespace, "namespace")
 	return ns, nil
 }
@@ -233,20 +238,24 @@ func (ns *namespaceImpl) init() error {
 	ns.am = am
 
 	// 6. init Executor to validate and commit block.
-	executor, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, nil)
-	if err != nil {
-		ns.logger.Errorf("init Executor for namespace %s error, %v", ns.Name(), err)
-		return err
+	ns.logger.Errorf("executor embedded %v", ns.conf.GetBool(common.EXECUTOR_EMBEDDED))
+	if ns.conf.GetBool(common.EXECUTOR_EMBEDDED) {
+		er, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux)
+		if err != nil {
+			ns.logger.Errorf("init Executor for namespace %s error, %v", ns.Name(), err)
+			return err
+		}
+		er.CreateInitBlock(ns.conf)
+		ns.executor = er
+	} else {
+		er := executor.NewRemoteExecutorProxy(ns.is, ns.conf)
+		ns.executor = er
 	}
-
-	executor.CreateInitBlock(ns.conf)
-	ns.executor = executor
-
 	// 7. init Eventhub to coordinate message delivery between local modules.
-	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, executor, ns.peerMgr, consenter, am, cm)
+	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, ns.executor, ns.peerMgr, consenter, am, cm)
 	ns.eh = eh
 
-	ns.ls = service.NewLocalService(ns.Name(), service.EVENTHUB, ns.eh)
+	ns.ls = local.NewLocalService(ns.Name(), service.EVENTHUB, ns.eh)
 
 	// 8. init JsonRpcProcessor to process incoming requests.
 	ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
@@ -256,8 +265,8 @@ func (ns *namespaceImpl) init() error {
 }
 
 // GetNamespace returns the Namespace instance of the given name.
-func GetNamespace(name string, conf *common.Config, delFlag chan bool) (Namespace, error) {
-	ns, err := newNamespaceImpl(name, conf, delFlag)
+func GetNamespace(name string, conf *common.Config, delFlag chan bool, is *server.InternalServer) (Namespace, error) {
+	ns, err := newNamespaceImpl(name, conf, delFlag, is)
 	if err != nil {
 		ns.logger.Errorf("namespace %s init error", name)
 		return ns, err

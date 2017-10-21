@@ -1,9 +1,10 @@
-package service
+package server
 
 import (
 	"fmt"
 	"github.com/op/go-logging"
 	pb "hyperchain/common/protos"
+	"hyperchain/common/service"
 )
 
 //remoteServiceImpl represent a remote service.
@@ -16,7 +17,7 @@ type remoteServiceImpl struct {
 	logger    *logging.Logger
 }
 
-func NewRemoteService(namespace, id string, stream pb.Dispatcher_RegisterServer, ds *InternalServer) Service {
+func NewRemoteService(namespace, id string, stream pb.Dispatcher_RegisterServer, ds *InternalServer) service.Service {
 	return &remoteServiceImpl{
 		namespace: namespace,
 		id:        id,
@@ -37,7 +38,7 @@ func (rsi *remoteServiceImpl) Id() string {
 }
 
 // Send sync send msg.
-func (rsi *remoteServiceImpl) Send(event serviceEvent) error {
+func (rsi *remoteServiceImpl) Send(event service.ServiceEvent) error {
 	if msg, ok := event.(*pb.IMessage); !ok {
 		return fmt.Errorf("send message type error, %v need pb.IMessage ", event)
 	}else {
@@ -73,7 +74,7 @@ func (rsi *remoteServiceImpl) Serve() error {
 	}
 }
 
-func (rsi *remoteServiceImpl) isHealth() bool {
+func (rsi *remoteServiceImpl) IsHealth() bool {
 	//TODO: more to check
 	return rsi.stream != nil
 }
