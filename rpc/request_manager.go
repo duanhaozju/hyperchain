@@ -2,7 +2,7 @@ package jsonrpc
 
 import "hyperchain/common"
 
-type requestManager struct {
+type RequestManager struct {
 	namespace string
 	receiver  receiver
 	codec     ServerCodec
@@ -12,8 +12,8 @@ type requestManager struct {
 }
 
 // NewRequestManager creates and returns a new requestManager instance for given namespace name.
-func NewRequestManager(namespace string, s *Server, codec ServerCodec) *requestManager {
-	return &requestManager{
+func NewRequestManager(namespace string, s *Server, codec ServerCodec) *RequestManager {
+	return &RequestManager{
 		namespace: namespace,
 		receiver:  s,
 		requests:  make(chan *common.RPCRequest),
@@ -24,22 +24,22 @@ func NewRequestManager(namespace string, s *Server, codec ServerCodec) *requestM
 }
 
 // Start creates a goroutine to wait for a new RPC request in the namespace.
-func (rm *requestManager) Start() {
+func (rm *RequestManager) Start() {
 	log.Debug("start a new jsonrpc request manager")
 	go rm.loop()
 }
 
 // Stop will break for loops, requestManager will not receive new RPC request.
-func (rm *requestManager) Stop() {
+func (rm *RequestManager) Stop() {
 	close(rm.exit)
 }
 
 // ProcessRequest will process RPC request.
-func (rm *requestManager) ProcessRequest(request *common.RPCRequest) {
+func (rm *RequestManager) ProcessRequest(request *common.RPCRequest) {
 	rm.response <- rm.receiver.handleChannelReq(rm.codec, request) //TODO: add timeout detect
 }
 
-func (rm *requestManager) loop() {
+func (rm *RequestManager) loop() {
 	for {
 		select {
 		case request := <-rm.requests:

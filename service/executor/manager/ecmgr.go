@@ -150,6 +150,7 @@ func (em *ecManagerImpl) ProcessRequest(namespace string, request interface{}) i
 func (em *ecManagerImpl) GetExecutorServiceByName(name string) executorService {
 	em.rwLock.RLock()
 	defer em.rwLock.RUnlock()
+	logger.Critical("services : %v", em.services)
 	if es, ok := em.services[name]; ok {
 		return es
 	}

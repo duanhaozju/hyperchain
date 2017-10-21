@@ -100,7 +100,7 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 		"archive": {
 			Svcname: "archive",
 			Version: "1.5",
-			Service: api.NewPublicArchiveAPI(namespace, ns.eh, ns.conf),
+			Service: api.NewPublicArchiveAPI(namespace, ns.conf),
 		},
 	}
 }

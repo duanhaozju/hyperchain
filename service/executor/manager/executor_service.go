@@ -11,6 +11,7 @@ import (
 	"hyperchain/namespace/rpc"
 	"sync"
 	"hyperchain/common/client"
+	"hyperchain/admittance"
 )
 
 type executorService interface {
@@ -23,6 +24,8 @@ type executorService interface {
 
 	// Name returns the name of current namespace.
 	Name() string
+
+	GetCAManager() *admittance.CAManager
 }
 
 type executorServiceImpl struct {
@@ -42,6 +45,8 @@ type executorServiceImpl struct {
 	status *Status
 
 	rpc rpc.RequestProcessor
+
+	caManager *admittance.CAManager
 }
 
 type EsState int
@@ -186,6 +191,7 @@ func (es *executorServiceImpl) Start() error {
 		es.logger.Errorf("Executor service register failed for namespace %s error, %v", es.namespace, err)
 		return err
 	}
+
 	return nil
 }
 
@@ -212,6 +218,8 @@ func (es *executorServiceImpl) Stop() error {
 
 func (es *executorServiceImpl) ProcessRequest(request interface{}) interface{} {
 	//TODO Check finish logic
+	logger.Critical("request : %v", request)
+	logger.Critical("namespace stauts: %v", es.status.getState())
 	if es.status.getState() == running {
 		if request != nil {
 			switch r := request.(type) {
@@ -240,4 +248,19 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Public:  true,
 		},
 	}
+}
+
+func (es *executorServiceImpl) GetCAManager() *admittance.CAManager{
+	//TODO: add CAManager to the struct.
+	cm, err := admittance.NewCAManager(es.conf)
+	if err != nil {
+		es.logger.Error(err)
+		panic("Cannot initialize the CAManager!")
+	}
+	es.caManager = cm
+	return cm
+}
+
+func (es *executorServiceImpl) Name() string {
+	return ""
 }

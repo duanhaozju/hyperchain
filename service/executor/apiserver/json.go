@@ -1,6 +1,4 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
-package jsonrpc
+package apiserver
 
 import (
 	"crypto/ecdsa"
@@ -10,13 +8,14 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/crypto/primitives"
-	"hyperchain/namespace"
 	"io"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+	hm "hyperchain/service/executor/manager"
+	hrpc "hyperchain/rpc"
 )
 
 const (
@@ -68,12 +67,12 @@ type jsonCodecImpl struct {
 	e      *json.Encoder      // encodes responses
 	rw     io.ReadWriteCloser // connection
 	req    *http.Request
-	nr     namespace.NamespaceManager
+	er     hm.ExecutorManager
 	conn   *websocket.Conn
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.NamespaceManager, conn *websocket.Conn) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, er hm.ExecutorManager, conn *websocket.Conn) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
 	return &jsonCodecImpl{
@@ -82,7 +81,7 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 		e:      json.NewEncoder(rwc),
 		rw:     rwc,
 		req:    req,
-		nr:     nr,
+		er:     er,
 		conn:   conn,
 	}
 }
@@ -90,12 +89,12 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 // CheckHttpHeaders will check http header. If it is verified, client has access to interact with the server,
 // otherwise, unauthorized error will be returned.
 func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common.RPCError {
-	ns := c.nr.GetNamespaceByName(namespace)
-	if ns == nil {
+	es := c.er.GetExecutorServiceByName(namespace)
+	if es == nil {
 		return &common.NamespaceNotFound{Name: namespace}
 	}
 
-	cm := ns.GetCAManager()
+	cm := es.GetCAManager()
 	if !cm.IsCheckTCert() {
 		return nil
 	}
@@ -123,19 +122,19 @@ func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common
 		return &common.UnauthorizedError{}
 	}
 
-	//// verfiy tcert
-	//verifyTcert, err := cm.VerifyTCert(tcertPem, method)
-	//if verifyTcert == false || err != nil {
-	//	log.Error("Fail to verify tcert!", err)
-	//	return &common.UnauthorizedError{}
-	//}
+	// verfiy tcert
+	verifyTcert, err := cm.VerifyTCert(tcertPem, method)
+	if verifyTcert == false || err != nil {
+		log.Error("Fail to verify tcert!", err)
+		return &common.UnauthorizedError{}
+	}
 	return nil
 }
 
 // ReadRawRequest will read new requests without parsing the arguments. It will
 // return a collection of requests, an indication if these requests are in batch
 // form or an error when the incoming message could not be read/parsed.
-func (c *jsonCodecImpl) ReadRawRequest(options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
+func (c *jsonCodecImpl) ReadRawRequest(options hrpc.CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
 	c.decMu.Lock()
 	defer c.decMu.Unlock()
 
@@ -188,7 +187,7 @@ func checkReqId(reqId json.RawMessage) error {
 // parseRequest will parse a single request from the given RawMessage. It will return
 // the parsed request, an indication if the request was a batch or an error when
 // the request could not be parsed.
-func parseRequest(incomingMsg json.RawMessage, options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
+func parseRequest(incomingMsg json.RawMessage, options hrpc.CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
 	var in JSONRequest
 	if err := json.Unmarshal(incomingMsg, &in); err != nil {
 		return nil, false, &common.InvalidMessageError{Message: err.Error()}
@@ -199,8 +198,8 @@ func parseRequest(incomingMsg json.RawMessage, options CodecOption) ([]*common.R
 
 	// subscribe are special, they will always use `subscribeMethod` as first param in the payload
 	if strings.HasSuffix(in.Method, common.SubscribeMethodSuffix) {
-		if options == OptionMethodInvocation {
-			return nil, false, &common.CallbackError{Message: ErrNotificationsUnsupported.Error()}
+		if options == hrpc.OptionMethodInvocation {
+			return nil, false, &common.CallbackError{Message: hrpc.ErrNotificationsUnsupported.Error()}
 		}
 		reqs := []*common.RPCRequest{{Id: &in.Id, IsPubSub: true}}
 		if len(in.Payload) > 0 {
@@ -272,7 +271,7 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool,
 
 // CreateResponse will create a JSON-RPC success response with the given id and reply as result.
 func (c *jsonCodecImpl) CreateResponse(id interface{}, namespace string, reply interface{}) interface{} {
-	if IsHexNum(reflect.TypeOf(reply)) {
+	if hrpc.IsHexNum(reflect.TypeOf(reply)) {
 		return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
 	}
 	return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: 0, Message: "SUCCESS", Result: reply}
@@ -291,7 +290,7 @@ func (c *jsonCodecImpl) CreateErrorResponseWithInfo(id interface{}, namespace st
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
 func (s *jsonCodecImpl) CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{} {
-	if IsHexNum(reflect.TypeOf(event)) {
+	if hrpc.IsHexNum(reflect.TypeOf(event)) {
 		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace,
 			Result: jsonSubscription{Subscription: fmt.Sprintf(`%s`, subid), Data: fmt.Sprintf(`%#x`, event)}}
 	}
@@ -349,3 +348,4 @@ func (c *jsonCodecImpl) Close() {
 func (c *jsonCodecImpl) Closed() <-chan interface{} {
 	return c.closed
 }
+
