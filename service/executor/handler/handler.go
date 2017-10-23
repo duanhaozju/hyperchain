@@ -31,7 +31,7 @@ func (eh *ExecutorHandler) Handle(msg *pb.IMessage) {
         e := &event.ValidationEvent{}
         err := proto.Unmarshal(msg.Payload, e)
         if err != nil {
-            logger.Error(err)
+            logger.Error(err) //TODO: no return here?
         } else {
             logger.Debugf("handle event: %v", e)
         }

@@ -58,6 +58,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	helper := NewHelper(eventMux, filterMux, client)
+	helper.conf = conf
 
 	executor := &Executor{
 		namespace:  namespace,
