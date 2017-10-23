@@ -241,3 +241,7 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 		},
 	}
 }
+
+func (es *executorServiceImpl) Name() string  {
+	return es.namespace
+}

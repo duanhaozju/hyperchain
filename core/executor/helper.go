@@ -24,7 +24,6 @@ import (
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"reflect"
-	"fabric/gossip/comm"
 )
 
 // Communication mux implementation
