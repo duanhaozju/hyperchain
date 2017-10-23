@@ -62,8 +62,8 @@ message TransactionValue {
             JVM = 1;
 
     }
-    VmType vmType = 9;
-    bytes extra = 10;
+    bytes extra = 9;
+    VmType vmType = 10;
 }
 
 message InvokeArgs {
