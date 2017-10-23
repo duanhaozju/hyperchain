@@ -11,6 +11,7 @@ import (
 	"sync"
 	"hyperchain/common/client"
     "hyperchain/core/ledger/chain"
+    "hyperchain/service/executor/handler"
 )
 
 type executorService interface {
@@ -133,6 +134,7 @@ func (es *executorServiceImpl) init() error {
 	}
 	es.service = service
 
+
 	// 3. initial executor
 	executor, err := executor.NewExecutor(es.namespace, es.conf, nil, nil, es.service)
 	if err != nil {
@@ -142,6 +144,8 @@ func (es *executorServiceImpl) init() error {
 	executor.CreateInitBlock(es.conf)
 	es.executor = executor
 
+    h := handler.New(executor)
+    service.AddHandler(h)
 
 	// 4. add jsonrpc processor
 	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace))

@@ -20,6 +20,7 @@ import (
 
 	flt "hyperchain/manager/filter"
 	"sync"
+    "fmt"
 )
 
 // This file defines a transfer station called Eventhub which is used to deliver
@@ -496,8 +497,8 @@ func (hub *EventHub) NegotiateView() {
 func (hub *EventHub) DispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_VC_DONE:
-		hub.logger.Debugf("message middleware: [vc done]")
-
+		hub.logger.Criticalf("message middleware: [vc done]")
+        fmt.Println("message middleware: [vc done]")
 		event := &protos.VcResetDone{}
 		err := proto.Unmarshal(ev.Payload, event)
 		if err != nil {

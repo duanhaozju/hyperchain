@@ -196,9 +196,12 @@ f_x_in_linux_cmd(){
 }
 
 f_x_in_mac_cmd(){
+
     osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/bin' && ./start.sh"'
+    sleep 3s
 #    cd ${DUMP_PATH}/node${1}/executor && ./executor &
     osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}' && ./executor"'
+
 }
 
 # run process by os type

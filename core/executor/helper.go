@@ -62,7 +62,7 @@ func (helper *Helper) handlePost(ev interface{}) (*pb.IMessage, error) {
         msg.Payload = mv
     case event.ExecutorToP2PEvent:
         msg.Event = pb.Event_ExecutorToP2PEvent
-        e := ev.(event.ExecutorToConsensusEvent)
+        e := ev.(event.ExecutorToP2PEvent)
         mv, err := proto.Marshal(&e)
         if err != nil {
             return nil, err
