@@ -119,7 +119,7 @@ func (es *executorServiceImpl) init() error {
 	es.logger.Criticalf("Init executor service for namespace %s", es.namespace)
 
 	// 1. init DB for current executor service.
-	err := chain.InitDBForNamespace(es.conf, es.namespace)
+	err := chain.InitExecutorDBForNamespace(es.conf, es.namespace)
 	if err != nil {
 		es.logger.Errorf("Init db for namespace: %s error, %v", es.namespace, err)
 		return err

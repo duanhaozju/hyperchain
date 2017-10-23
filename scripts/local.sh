@@ -95,12 +95,12 @@ f_rebuild_executor(){
     cd ${EXECUTOR_PATH} && govendor build
     for (( j=1; j<=$MAXPEERNUM; j++ ))
     do
-        if [ ! -d "${DUMP_PATH}/node${j}/executor" ]; then
-            mkdir ${DUMP_PATH}/node${j}/executor
-        fi
-        cp ${EXECUTOR_PATH}/executor ${DUMP_PATH}/node${j}/executor
-        cp ${DUMP_PATH}/node${j}/global.toml ${DUMP_PATH}/node${j}/executor
-        cp -rf ${DUMP_PATH}/node${j}/namespaces ${DUMP_PATH}/node${j}/executor
+#        if [ ! -d "${DUMP_PATH}/node${j}/executor" ]; then
+#            mkdir ${DUMP_PATH}/node${j}/executor
+#        fi
+        cp ${EXECUTOR_PATH}/executor ${DUMP_PATH}/node${j}
+#        cp ${DUMP_PATH}/node${j}/global.toml ${DUMP_PATH}/node${j}/executor
+#        cp -rf ${DUMP_PATH}/node${j}/namespaces ${DUMP_PATH}/node${j}/executor
     done
 
 }
@@ -198,7 +198,7 @@ f_x_in_linux_cmd(){
 f_x_in_mac_cmd(){
     osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/bin' && ./start.sh"'
 #    cd ${DUMP_PATH}/node${1}/executor && ./executor &
-    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/executor' && ./executor"'
+    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}' && ./executor"'
 }
 
 # run process by os type

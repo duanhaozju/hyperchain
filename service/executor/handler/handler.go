@@ -32,6 +32,7 @@ func (eh *ExecutorHandler) Handle(msg *pb.IMessage) {
         err := proto.Unmarshal(msg.Payload, e)
         if err != nil {
             logger.Error(err)
+            return
         } else {
             logger.Debugf("handle event: %v", e)
         }
@@ -41,6 +42,7 @@ func (eh *ExecutorHandler) Handle(msg *pb.IMessage) {
         err := proto.Unmarshal(msg.Payload, e)
         if err != nil {
             logger.Error(err)
+            return
         } else {
             logger.Debugf("handle event: %v", e)
         }
@@ -50,6 +52,7 @@ func (eh *ExecutorHandler) Handle(msg *pb.IMessage) {
         err := proto.Unmarshal(msg.Payload, e)
         if err != nil {
             logger.Error(err)
+            return
         } else {
             logger.Debugf("handle event: %v", e)
         }
@@ -59,6 +62,7 @@ func (eh *ExecutorHandler) Handle(msg *pb.IMessage) {
         err := proto.Unmarshal(msg.Payload, e)
         if err != nil {
             logger.Error(err)
+            return
         } else {
             logger.Debugf("handle event: %v", e)
         }

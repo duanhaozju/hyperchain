@@ -25,6 +25,8 @@ import (
     "hyperchain/common/client"
 )
 
+var isEmbedded = true 
+
 // Communication mux implementation
 type Helper struct {
 	innerMux    *event.TypeMux // system internal mux
@@ -33,6 +35,9 @@ type Helper struct {
 }
 
 func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux, client *client.ServiceClient) *Helper {
+    if client != nil {
+       isEmbedded = false 
+    }
 	return &Helper{
 		innerMux:    innerMux,
 		externalMux: externalMux,
@@ -40,7 +45,7 @@ func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux, client *clie
 	}
 }
 
-func (helper *Helper) handlePost(ev interface{}) *pb.IMessage {
+func (helper *Helper) handlePost(ev interface{}) (*pb.IMessage, error) {
     msg := &pb.IMessage{
         Type: pb.Type_DISPATCH,
         From: pb.FROM_EXECUTOR,
@@ -52,7 +57,7 @@ func (helper *Helper) handlePost(ev interface{}) *pb.IMessage {
         mv, err := proto.Marshal(&e)
 
         if err != nil {
-            return nil
+            return nil, err
         }
         msg.Payload = mv
     case event.ExecutorToP2PEvent:
@@ -60,18 +65,20 @@ func (helper *Helper) handlePost(ev interface{}) *pb.IMessage {
         e := ev.(event.ExecutorToConsensusEvent)
         mv, err := proto.Marshal(&e)
         if err != nil {
-            return nil
+            return nil, err
         }
         msg.Payload = mv
     }
-    return msg
+    return msg, nil
 }
 
-var isDistributed = true
 // PostInner post event to inner event mux
 func (helper *Helper) PostInner(ev interface{}) {
-    if isDistributed {
-        msg := helper.handlePost(ev)
+    if !isEmbedded {
+        msg, err := helper.handlePost(ev)
+        if err != nil {
+            
+        }
         helper.client.Send(msg)
     } else {
         helper.innerMux.Post(ev)
@@ -80,8 +87,11 @@ func (helper *Helper) PostInner(ev interface{}) {
 
 // PostExternal post event to outer event mux
 func (helper *Helper) PostExternal(ev interface{}) {
-    if isDistributed {
-        msg := helper.handlePost(ev)
+    if !isEmbedded {
+        msg, err := helper.handlePost(ev)
+        if err != nil {
+
+        }
         helper.client.Send(msg)
     } else {
         helper.externalMux.Post(ev)
