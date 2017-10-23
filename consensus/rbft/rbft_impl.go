@@ -996,6 +996,11 @@ func (rbft *rbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 // executeAfterStateUpdate processes logic after state update
 func (rbft *rbftImpl) executeAfterStateUpdate() {
 
+	if rbft.isPrimary(rbft.id) {
+		rbft.logger.Debugf("Replica %d is primary, not execute after state update", rbft.id)
+		return
+	}
+
 	rbft.logger.Debugf("Replica %d try to execute after state update", rbft.id)
 
 	for idx, cert := range rbft.storeMgr.certStore {
