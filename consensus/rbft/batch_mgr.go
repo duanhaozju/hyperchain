@@ -221,6 +221,12 @@ func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 
 // validatePending used by backup nodes validates pending batched stored in preparedCert
 func (rbft *rbftImpl) validatePending() {
+
+	if rbft.in(inUpdatingN) {
+		rbft.logger.Debugf("Backup %d not attempting to send validate because it is currently in updatingN.")
+		return
+	}
+
 	// avoid validate multi batches simultaneously
 	if rbft.batchVdr.currentVid != nil {
 		rbft.logger.Debugf("Backup %d not attempting to send validate because it is currently validate %d", rbft.id, *rbft.batchVdr.currentVid)
@@ -243,6 +249,12 @@ func (rbft *rbftImpl) findNextValidateBatch() (find bool, digest string, txBatch
 
 	for idx, digest = range rbft.batchVdr.preparedCert {
 		cert := rbft.storeMgr.getCert(idx.view, idx.seqNo, digest)
+
+		if idx.view != rbft.view {
+			// TODO need to delete cert with view < current view ?
+			rbft.logger.Debugf("Backup %d finds incorrect view in prepared cert with view=%d/seqNo=%d", rbft.id, idx.view, idx.seqNo)
+			continue
+		}
 
 		if idx.seqNo != rbft.batchVdr.lastVid+1 {
 			rbft.logger.Debugf("Backup %d gets validateBatch seqNo=%d, but expect seqNo=%d", rbft.id, idx.seqNo, rbft.batchVdr.lastVid+1)
@@ -298,11 +310,17 @@ func (rbft *rbftImpl) execValidate(digest string, txBatch *TransactionBatch, idx
 }
 
 // handleTransactionsAfterAbnormal handles the transactions put in txPool during
-// viewChange, updateN and recovery
+// viewChange, updateN and recovery if current node is new primary, else, validate
+// pending transactions
 func (rbft *rbftImpl) handleTransactionsAfterAbnormal() {
 
-	// backup does not need to process it
 	if !rbft.isPrimary(rbft.id) {
+		// after abnormal cases, such as recovery, viewchange or updatingN, execute pending
+		// using the PQC information received during that process.
+		// NOTICE: these PQC are not the PQC fetched using fetchPQC() because fetched PQC are
+		// executed after recvRecoveryReturnPQC, these PQC are received during abnormal cases
+		// whose seqNo may be higher than lastExec.
+		rbft.executeAfterStateUpdate()
 		return
 	}
 
