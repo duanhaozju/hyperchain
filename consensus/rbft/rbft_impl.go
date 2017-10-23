@@ -871,11 +871,13 @@ func (rbft *rbftImpl) processTransaction(req txRequest) consensusEvent {
 	} else {
 		// primary nodes would check if this transaction triggered generating a batch or not
 		if rbft.isPrimary(rbft.id) {
-			if !rbft.batchMgr.isBatchTimerActive() { // start batch timer when this node receives the first transaction of a batch
+			// start batch timer when this node receives the first transaction of a batch
+			if !rbft.batchMgr.isBatchTimerActive() {
 				rbft.startBatchTimer()
 			}
 			isGenerated, err = rbft.batchMgr.txPool.AddNewTx(req.tx, true, req.new)
-			if isGenerated { // If this transaction triggers generating a batch, stop batch timer
+			// If this transaction triggers generating a batch, stop batch timer
+			if isGenerated {
 				rbft.stopBatchTimer()
 			}
 		} else {
@@ -993,14 +995,10 @@ func (rbft *rbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 // executeAfterStateUpdate processes logic after state update
 func (rbft *rbftImpl) executeAfterStateUpdate() {
 
-	if rbft.isPrimary(rbft.id) {
-		rbft.logger.Debugf("Replica %d is primary, not execute after state update", rbft.id)
-		return
-	}
 	rbft.logger.Debugf("Replica %d try to execute after state update", rbft.id)
 
 	for idx, cert := range rbft.storeMgr.certStore {
-		// If this node is primary, it would validate first, then send prePrepare
+		// If this node is not primary, it would validate pending transactions.
 		if idx.n > rbft.seqNo && rbft.prepared(idx.d, idx.v, idx.n) && !cert.validated {
 			rbft.logger.Debugf("Replica %d try to vaidate batch %s", rbft.id, idx.d)
 			id := vidx{idx.v, idx.n}

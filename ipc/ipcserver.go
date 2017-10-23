@@ -41,10 +41,6 @@ func (server *IPCServer) Start() error {
 		logger.Errorf("some error occured: %s", err.Error())
 		return err
 	}
-	if err != nil {
-		logger.Errorf("some error occured: %s", err.Error())
-		return err
-	}
 
 	go func() {
 		err = http.Serve(listener, nil)
