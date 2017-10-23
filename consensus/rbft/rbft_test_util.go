@@ -5,9 +5,14 @@ package rbft
 
 import (
 	"errors"
-	"github.com/facebookgo/ensure"
-	"github.com/golang/protobuf/proto"
-	"github.com/spf13/viper"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strconv"
+	"sync"
+	"testing"
+	"time"
+
 	"hyperchain/common"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/ledger/chain"
@@ -18,13 +23,10 @@ import (
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	pb "hyperchain/manager/protos"
-	"os"
-	"path/filepath"
-	"reflect"
-	"strconv"
-	"sync"
-	"testing"
-	"time"
+
+	"github.com/facebookgo/ensure"
+	"github.com/golang/protobuf/proto"
+	"github.com/spf13/viper"
 )
 
 //path struct should match

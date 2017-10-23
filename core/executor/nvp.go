@@ -158,6 +158,7 @@ func (nvp *nvp) handleUndemand(block *types.Block) error {
 	// The arrival block is not the demand one.
 	nvp.logger.Debugf("receive unexpected block number: %d, hash: %s", block.Number, common.Bytes2Hex(block.BlockHash))
 	if !nvp.getCtx().inSync {
+		nvp.consult()
 		// TODO negotiate with vp to assure whether genesis transition is necessary.
 		// Set up block synchronization if nvp is not in sync status.
 		nvp.getCtx().initSync(block.Number-1, chain.GetHeightOfChain(nvp.getExecutor().namespace))
@@ -350,4 +351,10 @@ func (nvp *nvp) decUpper(block *types.Block) {
 		nvp.getCtx().setUpper(nvp.getCtx().getUpper() - 1)
 		blk, err = chain.GetBlockByNumber(nvp.getExecutor().namespace, nvp.getCtx().getUpper())
 	}
+}
+
+// negotiate nvp sends a consult message to connected vps to assure whether genesis status transition is necesary.
+func (nvp *nvp) consult() {
+	done := make(chan bool)
+	nvp.executor.informP2P(NOTIFY_NVP_CONSULT, done)
 }

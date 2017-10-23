@@ -48,6 +48,7 @@ const (
 	NOTIFY_SYNC_REPLICA
 	NOTIFY_TRANSIT_BLOCK
 	NOTIFY_NVP_SYNC
+	NOTIFY_NVP_CONSULT
 )
 
 // Subscription type definitions
