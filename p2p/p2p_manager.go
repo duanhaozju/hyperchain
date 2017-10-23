@@ -54,6 +54,10 @@ func GetP2PManager(vip *viper.Viper) (P2PManager, error) {
 	return globalP2PManager, nil
 }
 
+func ClearP2PManager() {
+	globalP2PManager = nil
+}
+
 // newP2PManager creates and returns a new p2pManagerImpl instance, starts p2pManager service.
 func newP2PManager(vip *viper.Viper) (*p2pManagerImpl, error) {
 	sname := vip.GetString(common.P2P_SERVERNAME)
@@ -65,7 +69,10 @@ func newP2PManager(vip *viper.Viper) (*p2pManagerImpl, error) {
 		hypernet: net,
 		conf:     vip,
 	}
-	p2pmgr.Start()
+
+	if err := p2pmgr.Start(); err != nil {
+		return nil, err
+	}
 
 	ipc.RegisterFunc("network", p2pmgr.hypernet.Command)
 	return p2pmgr, nil

@@ -93,23 +93,21 @@
 package hts
 
 import (
-	"crypto/ecdsa"
 	"fmt"
 	"github.com/pkg/errors"
 	"github.com/terasum/viper"
 	"hyperchain/common"
-	"hyperchain/crypto/primitives"
 	"hyperchain/manager/event"
-	"io/ioutil"
+	"hyperchain/p2p/hts/secimpl"
 )
 
 type HTS struct {
-	sec Security
+	sec secimpl.Security
 	cg  *CertGroup
 }
 
 // NewHTS creates and returns a new HTS(Hyper Transport Security) instance.
-func NewHTS(namespace string, sec Security, caConfigPath string) (*HTS, error) {
+func NewHTS(namespace string, sec secimpl.Security, caConfigPath string) (*HTS, error) {
 	hts := &HTS{
 		sec: sec,
 		cg:  new(CertGroup),
@@ -128,117 +126,8 @@ func NewHTS(namespace string, sec Security, caConfigPath string) (*HTS, error) {
 		return nil, errors.New(fmt.Sprintf("cannot read in the caconfig, reason: %s ", err.Error()))
 	}
 
-	// read in ECA
-	ecap := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_ECERT_ECA))
-	if !common.FileExist(ecap) {
-		return nil, errors.New(fmt.Sprintf("cannot read in eca, reason: file not exist (%s)", ecap))
-	}
-	eca, err := ioutil.ReadFile(ecap)
-	if err != nil {
+	if hts.cg, err = NewCertGroup(namespace, vip); err != nil {
 		return nil, err
-	}
-	hts.cg.eCA = eca
-	ecas, err := primitives.ParseCertificate(eca)
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("cannot parse the eca certificate, reason: %s", err.Error()))
-	}
-	hts.cg.eCA_S = ecas
-
-	// read in ECERT
-	ecertp := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_ECERT_ECERT))
-	if !common.FileExist(ecertp) {
-		return nil, errors.New(fmt.Sprintf("cannot read in ecert,reason: file not exist (%s)", ecertp))
-	}
-	ecert, err := ioutil.ReadFile(ecertp)
-	if err != nil {
-		return nil, err
-	}
-	hts.cg.eCERT = ecert
-	ecerts, err := primitives.ParseCertificate(ecert)
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("cannot parse the e certificate, reason %s", err.Error()))
-	}
-	hts.cg.eCERT_S = ecerts
-
-	// read in ECERT private key
-	eprivp := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_ECERT_PRIV))
-	if !common.FileExist(eprivp) {
-		return nil, errors.New(fmt.Sprintf("cannot read in ecert priv,reason: file not exist (%s)", eprivp))
-	}
-	epriv, err := ioutil.ReadFile(eprivp)
-	if err != nil {
-		return nil, err
-	}
-	hts.cg.eCERTPriv = epriv
-	eps, err := primitives.ParseKey(epriv)
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("cannot parse the private key, reason %s", err.Error()))
-	}
-	ep_s, ok := eps.(*ecdsa.PrivateKey)
-	if !ok {
-		return nil, errors.New(fmt.Sprintf("cannot parse the private key, reason %s", "cannot convert private key into *ecdsa.PrivateKey"))
-	}
-	hts.cg.eCERTPriv_S = ep_s
-
-	// if enable RCERT, enEnroll is true
-	enEnroll := vip.GetBool(common.ENCRYPTION_CHECK_ENABLE)
-	enSign := vip.GetBool(common.ENCRYPTION_CHECK_SIGN)
-	hts.cg.enableEnroll = enEnroll
-	hts.cg.sign = enSign
-
-	if enEnroll {
-
-		// read in RCA
-		rcap := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_RCERT_RCA))
-		if !common.FileExist(rcap) {
-			return nil, errors.New(fmt.Sprintf("cannot read in rca,reason: file not exist (%s)", rcap))
-		}
-		rca, err := ioutil.ReadFile(rcap)
-		if err != nil {
-			return nil, err
-		}
-		hts.cg.rCA = rca
-		rcas, err := primitives.ParseCertificate(rca)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("cannot parse the rca certificate, reason: %s", err.Error()))
-		}
-		hts.cg.rCA_S = rcas
-
-		// read in RCERT
-		rcertp := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_RCERT_RCERT))
-		if !common.FileExist(rcertp) {
-			return nil, errors.New(fmt.Sprintf("cannot read in rcert,reason: file not exist (%s)", rcertp))
-		}
-		rcert, err := ioutil.ReadFile(rcertp)
-		if err != nil {
-			return nil, err
-		}
-		hts.cg.rCERT = []byte(rcert)
-		rcerts, err := primitives.ParseCertificate(rcert)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("cannot parse the r certificate, reason %s", err.Error()))
-		}
-		hts.cg.rCERT_S = rcerts
-
-		// read in RCERT private key
-		rprivp := common.GetPath(namespace, vip.GetString(common.ENCRYPTION_RCERT_PRIV))
-		if !common.FileExist(rprivp) {
-			return nil, errors.New(fmt.Sprintf("cannot read in rcert priv,reason: file not exist (%s)", eprivp))
-		}
-		rpriv, err := ioutil.ReadFile(rprivp)
-		if err != nil {
-			return nil, err
-		}
-		hts.cg.rCERTPriv = rpriv
-		rps, err := primitives.ParseKey(rpriv)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("cannot parse the r private key, reason %s", err.Error()))
-		}
-		rp_s, ok := rps.(*ecdsa.PrivateKey)
-		if !ok {
-			return nil, errors.New(fmt.Sprintf("cannot parse the r private key, reason %s", "cannot convert private key into *ecdsa.PrivateKey"))
-		}
-		hts.cg.rCERTPriv_S = rp_s
 	}
 
 	return hts, nil

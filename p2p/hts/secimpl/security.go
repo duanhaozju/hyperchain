@@ -1,4 +1,4 @@
-package hts
+package secimpl
 
 // Security defined the security layer issues,
 // including the Diffie-Hellman key exchange algorithm ECDH or SM2DH,

@@ -164,20 +164,23 @@ func (pmgr *peerManagerImpl) Start() error {
 
 	// new attend Process
 	pmgr.logger.Notice("waiting...")
-	<-pmgr.pendingChan
-	if pmgr.isNew && pmgr.isVP {
-		pmgr.logger.Critical("NEW PEER CONNECT")
-		//this should wait until all nodes reverse connect to self.
-		pmgr.broadcast(pb.MsgType_ATTEND, []byte(pmgr.GetLocalAddressPayload()))
-		pmgr.eventHub.Post(event.AlreadyInChainEvent{})
-	} else if !pmgr.isVP {
-		if pmgr.isRec {
-			pmgr.broadcast(pb.MsgType_NVPATTEND, []byte("True"))
-		} else {
-			pmgr.broadcast(pb.MsgType_NVPATTEND, []byte("False"))
+	go func() {
+		<-pmgr.pendingChan
+		if pmgr.isNew && pmgr.isVP {
+			pmgr.logger.Critical("NEW PEER CONNECT")
+			//this should wait until all nodes reverse connect to self.
+			pmgr.broadcast(pb.MsgType_ATTEND, []byte(pmgr.GetLocalAddressPayload()))
+			pmgr.eventHub.Post(event.AlreadyInChainEvent{})
+		} else if !pmgr.isVP {
+			if pmgr.isRec {
+				pmgr.broadcast(pb.MsgType_NVPATTEND, []byte("True"))
+			} else {
+				pmgr.broadcast(pb.MsgType_NVPATTEND, []byte("False"))
+			}
 		}
-	}
-	pmgr.logger.Infof("SELF hash: %s", pmgr.node.info.Hash)
+		pmgr.logger.Infof("SELF hash: %s", pmgr.node.info.Hash)
+	}()
+
 
 	return nil
 }
