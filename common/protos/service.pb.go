@@ -117,7 +117,7 @@ const (
 	Event_ExecutorToP2PEvent       Event = 11
 	Event_ExecutorToConsensusEvent Event = 12
 	// 3.1 to executor
-	Event_ValidationEvent Event = 13
+	//Event_ValidationEvent Event = 13
 )
 
 var Event_name = map[int32]string{

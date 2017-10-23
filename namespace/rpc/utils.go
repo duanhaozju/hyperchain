@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"unicode"
 	"unicode/utf8"
+	"fmt"
 )
 
 // Is this an exported - upper case - name?
@@ -115,6 +116,8 @@ METHODS:
 		method := typ.Method(m)
 		mtype := method.Type
 		mname := formatName(method.Name)
+
+		fmt.Println("type, name: %s %s", mtype, mname)
 
 		// method must be exported
 		if method.PkgPath != "" {
