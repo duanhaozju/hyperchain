@@ -72,44 +72,81 @@ func InitDatabase(conf *common.Config, namespace string) error {
 		return errors.New("Try to init inited db " + namespace)
 	}
 
-	db, err := NewDatabase(conf, "blockchain", dbType, namespace)
-	if err != nil {
-		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-		log.Error(err.Error())
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-	}
+    db1, err1 := NewDatabase(conf, "consensus", 0001, namespace)
 
-	archieveDb, err := NewDatabase(conf, "archive", 0001, namespace)
+    if err1 != nil {
+        log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+        return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+    }
 
-	if err != nil {
-		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-		log.Error(err.Error())
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-	}
+    dbMgr.dbMap[getConsensusDbName(namespace)] = &DBInstance{
+        state: opened,
+        db:    db1,
+    }
+    if conf.GetBool(common.EXECUTOR_EMBEDDED) {
+        db, err := NewDatabase(conf, "blockchain", dbType, namespace)
+        if err != nil {
+            log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+            log.Error(err.Error())
+            return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+        }
 
-	db1, err1 := NewDatabase(conf, "consensus", 0001, namespace)
+        archieveDb, err := NewDatabase(conf, "archive", 0001, namespace)
 
-	if err1 != nil {
-		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-	}
+        if err != nil {
+            log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+            log.Error(err.Error())
+            return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+        }
 
-	dbMgr.dbMap[getDbName(namespace)] = &DBInstance{
-		state: opened,
-		db:    db,
-	}
+        dbMgr.dbMap[getDbName(namespace)] = &DBInstance{
+            state: opened,
+            db:    db,
+        }
 
-	dbMgr.dbMap[getConsensusDbName(namespace)] = &DBInstance{
-		state: opened,
-		db:    db1,
-	}
+        dbMgr.dbMap[getArchiveDbName(namespace)] = &DBInstance{
+            state: opened,
+            db:    archieveDb,
+        }
+    }
 
-	dbMgr.dbMap[getArchiveDbName(namespace)] = &DBInstance{
-		state: opened,
-		db:    archieveDb,
-	}
+	return nil
+}
 
-	return err
+func InitBlockDatabase(conf *common.Config, namespace string) error {
+
+    log := getLogger(namespace)
+    db, err := NewDatabase(conf, "blockchain", dbType, namespace)
+    if err != nil {
+        log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+        log.Error(err.Error())
+        return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+    }
+
+    dbMgr.dbMap[getDbName(namespace)] = &DBInstance{
+        state: opened,
+        db:    db,
+    }
+    return nil
+}
+
+func InitArchiveDatabase(conf *common.Config, namespace string) error {
+
+    log := getLogger(namespace)
+
+    archieveDb, err := NewDatabase(conf, "archive", 0001, namespace)
+
+    if err != nil {
+        log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+        log.Error(err.Error())
+        return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+    }
+
+    dbMgr.dbMap[getArchiveDbName(namespace)] = &DBInstance{
+        state: opened,
+        db:    archieveDb,
+    }
+    return nil
 }
 
 //StopDatabase start the namespace by namespace.

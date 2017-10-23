@@ -115,11 +115,35 @@ func (re *remoteExecutorProxy) RunInSandBox(tx *types.Transaction, snapshotId st
 }
 
 func (re *remoteExecutorProxy) Rollback(ev event.VCResetEvent) {
+    msg := &pb.IMessage{
+        Type:  pb.Type_EVENT,
+        From:  pb.FROM_EVENTHUB,
+        Event: pb.Event_VCResetEvent,
+    }
 
+    payload, err := proto.Marshal(&ev)
+    if err != nil {
+        //TODO: handle error
+    }
+
+    msg.Payload = payload
+    re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
 }
 
 func (re *remoteExecutorProxy) SyncChain(ev event.ChainSyncReqEvent) {
+    msg := &pb.IMessage{
+        Type:  pb.Type_EVENT,
+        From:  pb.FROM_EVENTHUB,
+        Event: pb.Event_VCResetEvent,
+    }
 
+    payload, err := proto.Marshal(&ev)
+    if err != nil {
+        //TODO: handle error
+    }
+
+    msg.Payload = payload
+    re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
 }
 
 func (re *remoteExecutorProxy) Snapshot(ev event.SnapshotEvent) {

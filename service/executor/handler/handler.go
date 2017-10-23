@@ -31,9 +31,10 @@ func (eh *ExecutorHandler) Handle(msg *pb.IMessage) {
         e := &event.ValidationEvent{}
         err := proto.Unmarshal(msg.Payload, e)
         if err != nil {
-            logger.Error(err) //TODO: no return here?
+            logger.Error(err)
+            return
         } else {
-            logger.Debugf("handle event: %v", e)
+            //logger.Errorf("handle event: %v", e)
         }
         eh.executor.Validate(*e)
     case pb.Event_CommitEvent:
@@ -41,8 +42,9 @@ func (eh *ExecutorHandler) Handle(msg *pb.IMessage) {
         err := proto.Unmarshal(msg.Payload, e)
         if err != nil {
             logger.Error(err)
+            return
         } else {
-            logger.Debugf("handle event: %v", e)
+            //logger.Debugf("handle event: %v", e)
         }
         eh.executor.CommitBlock(*e)
     case pb.Event_VCResetEvent:
@@ -50,10 +52,21 @@ func (eh *ExecutorHandler) Handle(msg *pb.IMessage) {
         err := proto.Unmarshal(msg.Payload, e)
         if err != nil {
             logger.Error(err)
+            return
         } else {
-            logger.Debugf("handle event: %v", e)
+            //logger.Criticalf("handle event: %v", e)
         }
         eh.executor.Rollback(*e)
+    case pb.Event_ChainSyncReqEvent:
+        e := &event.ChainSyncReqEvent{}
+        err := proto.Unmarshal(msg.Payload, e)
+        if err != nil {
+            logger.Error(err)
+            return
+        } else {
+            //logger.Debugf("handle event: %v", e)
+        }
+        eh.executor.SyncChain(*e)
     default:
         logger.Error("Undefined event.")
     }

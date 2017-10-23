@@ -300,14 +300,18 @@ func (ns *namespaceImpl) Start() error {
 		ns.logger.Noticef("start db for namespace: %s successful", ns.Name())
 	}
 
+    // 3. start executor
+    err := ns.executor.Start()
+    if err != nil {
+        return err
+    }
+
+    time.Sleep(5*time.Second)
+
 	// 2. start consenter
 	ns.consenter.Start()
 
-	// 3. start executor
-	err := ns.executor.Start()
-	if err != nil {
-		return err
-	}
+
 
 	// 4. start event hub
 	ns.eh.Start()

@@ -120,6 +120,7 @@ func (em *ecManagerImpl) getConfig(name string) (*common.Config, error) {
 		logger.Error("namespace config file doesn't exist!")
 	}
 	conf := common.NewConfig(nsConfigPath)
+	conf.Set(common.INTERNAL_PORT, em.conf.GetInt(common.INTERNAL_PORT))
 	return conf, nil
 }
 

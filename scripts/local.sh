@@ -89,6 +89,23 @@ echo "Rebuild hypercli ..."
 cd ${CLI_PATH} && govendor build
 }
 
+# build executor
+f_rebuild_executor(){
+    echo "Build executor ..."
+    cd ${EXECUTOR_PATH} && govendor build
+    for (( j=1; j<=$MAXPEERNUM; j++ ))
+    do
+#        if [ ! -d "${DUMP_PATH}/node${j}/executor" ]; then
+#            mkdir ${DUMP_PATH}/node${j}/executor
+#        fi
+        cp ${EXECUTOR_PATH}/executor ${DUMP_PATH}/node${j}
+#        cp ${DUMP_PATH}/node${j}/global.toml ${DUMP_PATH}/node${j}/executor
+#        cp -rf ${DUMP_PATH}/node${j}/namespaces ${DUMP_PATH}/node${j}/executor
+    done
+
+}
+
+
 # distribute node package
 f_distribute(){
 # cp the config files into nodes
@@ -153,6 +170,7 @@ do
     cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
 
     BIN_PATH=${DUMP_PATH}/node${j}/bin
+
     # distribute bin
     if [ -d ${BIN_PATH} ];then
         rm -rf ${BIN_PATH}
@@ -178,7 +196,12 @@ f_x_in_linux_cmd(){
 }
 
 f_x_in_mac_cmd(){
+
     osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/bin' && ./start.sh"'
+    sleep 3s
+#    cd ${DUMP_PATH}/node${1}/executor && ./executor &
+    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}' && ./executor"'
+
 }
 
 # run process by os type
@@ -242,6 +265,9 @@ GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/namespace.toml"
 
 # hypercli root path
 CLI_PATH="${PROJECT_PATH}/hypercli"
+
+# executor root path
+EXECUTOR_PATH="${PROJECT_PATH}/service/executor"
 
 # peerconfig
 PEER_CONFIG_FILE_NAME=`confer read ${GLOBAL_CONFIG} global.configs.peers |sed 's/"//g'`
@@ -324,6 +350,9 @@ fi
 
 # distribute files
 f_distribute $MAXPEERNUM
+
+f_rebuild_executor
+
 
 # run hyperchain node
 if ${HYPERJVM}; then
