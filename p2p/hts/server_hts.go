@@ -7,10 +7,11 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/manager/event"
 	"hyperchain/p2p/peerevent"
+	"hyperchain/p2p/hts/secimpl"
 )
 
 type ServerHTS struct {
-	security       Security
+	security       secimpl.Security
 	priKey         []byte
 	priKey_s       crypto.PrivateKey
 	sessionKeyPool cmap.ConcurrentMap	// key -> peer hash, value -> session key
@@ -19,7 +20,7 @@ type ServerHTS struct {
 }
 
 // NewServerHTS creates and returns a new ServerHTS instance.
-func NewServerHTS(sec Security, cg *CertGroup, ev *event.TypeMux) (*ServerHTS, error) {
+func NewServerHTS(sec secimpl.Security, cg *CertGroup, ev *event.TypeMux) (*ServerHTS, error) {
 	sh := &ServerHTS{
 		sessionKeyPool: cmap.New(),
 		security:       sec,

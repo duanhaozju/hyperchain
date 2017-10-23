@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"github.com/pkg/errors"
 	"sync"
+	"hyperchain/p2p/hts/secimpl"
 )
 
 type ClientHTS struct {
@@ -12,13 +13,13 @@ type ClientHTS struct {
 	pubKey_s   crypto.PublicKey
 	pubKey     []byte
 	sessionKey *SessionKey
-	security   Security
+	security   secimpl.Security
 	CG         *CertGroup
 	rwlock     *sync.RWMutex
 }
 
 // NewClientHTS creates and returns a new ClientHTS instance.
-func NewClientHTS(sec Security, cg *CertGroup) (*ClientHTS, error) {
+func NewClientHTS(sec secimpl.Security, cg *CertGroup) (*ClientHTS, error) {
 	chts := &ClientHTS{
 		security: sec,
 		CG:       cg,
@@ -70,6 +71,9 @@ func (ch *ClientHTS) Encrypt(msg []byte) ([]byte, error) {
 func (ch *ClientHTS) Decrypt(msg []byte) ([]byte, error) {
 	ch.rwlock.RLock()
 	defer ch.rwlock.RUnlock()
+	if ch.sessionKey == nil {
+		return nil, errors.New("cannot get session Key,dec failed (nil).")
+	}
 	sKey := ch.sessionKey.GetKey()
 	if sKey == nil {
 		return nil, errors.New("cannot get session Key,enc failed.")

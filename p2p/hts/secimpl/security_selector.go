@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"github.com/terasum/viper"
 	"hyperchain/common"
-	"hyperchain/p2p/hts"
 )
 
-func NewSecuritySelector(caconf string) hts.Security {
+// NewSecuritySelector will select the appropriate security encryption algorithm
+// according to the specified configuration.
+func NewSecuritySelector(caconf string) Security {
 	log := common.GetLogger(common.DEFAULT_NAMESPACE, "p2p")
 	// read in config, and get all certs
 	vip := viper.New()
