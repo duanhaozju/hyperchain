@@ -725,7 +725,8 @@ func (rbft *rbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 	}
 
 	if re.SequenceNumber <= rbft.batchVdr.lastVid {
-		rbft.logger.Warningf("Replica %d received validated missing transactions, seqNo=%d <= lastVid=%d, ignore it",
+		rbft.logger.Debugf("Replica %d received return missing transactions which has been validated, " +
+			"returned seqNo=%d <= lastVid=%d, ignore it",
 			rbft.id, re.SequenceNumber, rbft.batchVdr.lastVid)
 		return nil
 	}

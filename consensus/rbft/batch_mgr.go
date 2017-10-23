@@ -250,6 +250,12 @@ func (rbft *rbftImpl) findNextValidateBatch() (find bool, digest string, txBatch
 	for idx, digest = range rbft.batchVdr.preparedCert {
 		cert := rbft.storeMgr.getCert(idx.view, idx.seqNo, digest)
 
+		if idx.view != rbft.view {
+			// TODO need to delete cert with view < current view ?
+			rbft.logger.Debugf("Backup %d finds incorrect view in prepared cert with view=%d/seqNo=%d", rbft.id, idx.view, idx.seqNo)
+			continue
+		}
+
 		if idx.seqNo != rbft.batchVdr.lastVid+1 {
 			rbft.logger.Debugf("Backup %d gets validateBatch seqNo=%d, but expect seqNo=%d", rbft.id, idx.seqNo, rbft.batchVdr.lastVid+1)
 			continue

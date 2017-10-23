@@ -457,7 +457,7 @@ func (rbft *rbftImpl) replicaCheckNewView() consensusEvent {
 func (rbft *rbftImpl) resetStateForNewView() consensusEvent {
 	rbft.logger.Debugf("Replica %d accepting new-view to view %d", rbft.id, rbft.view)
 
-	//if vcHandled active return nill, else set vcHandled active
+	//if vcHandled active return nil, else set vcHandled active
 	if rbft.in(vcHandled) {
 		rbft.logger.Debugf("Replica %d repeated enter processReqInNewView, ignore it", rbft.id)
 		return nil
