@@ -811,6 +811,11 @@ func (rbft *rbftImpl) resetStateForUpdate(update *UpdateN) consensusEvent {
 	rbft.nodeMgr.addNodeCertStore = make(map[string]*addNodeCert)
 	rbft.nodeMgr.delNodeCertStore = make(map[string]*delNodeCert)
 
+	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
+	rbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
+	rbft.batchVdr.preparedCert = make(map[vidx]string)
+	rbft.storeMgr.committedCert = make(map[msgID]string)
+
 	resetTarget := rbft.exec.lastExec + 1
 	if !rbft.inOne(skipInProgress, inVcReset) {
 		// in most common case, do VcReset
@@ -916,7 +921,7 @@ func (rbft *rbftImpl) processReqInUpdate() consensusEvent {
 
 	// Reset the seqNo and vid
 	rbft.seqNo = rbft.exec.lastExec
-	rbft.batchVdr.lastVid = rbft.exec.lastExec
+	rbft.batchVdr.setLastVid(rbft.exec.lastExec)
 
 	rbft.putBackTxBatches(update.Xset)
 

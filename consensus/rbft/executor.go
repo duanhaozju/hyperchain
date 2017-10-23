@@ -253,11 +253,10 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) consensusEvent {
 		rbft.persistNewNode(uint64(0))
 		rbft.persistDellLocalKey()
 		rbft.persistN(rbft.N)
-		rbft.off(updateHandled)
 		if rbft.in(isNewNode) {
 			rbft.off(isNewNode)
 		}
-		rbft.off(inUpdatingN)
+		rbft.off(updateHandled, inUpdatingN)
 		rbft.rebuildCertStoreForUpdate()
 		if !rbft.inOne(inViewChange, inNegotiateView, skipInProgress) {
 			rbft.setNormal()
@@ -327,10 +326,6 @@ func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) consensusEvent {
 
 		rbft.handleTransactionsAfterAbnormal()
 
-		// execute after recovery using the PQC information received during recovery
-		// NOTICE: these PQC are not the PQC fetched above as fetched PQC are executed after recvRecoveryReturnPQC
-		// these PQC are received during recovery whose seqNo may be higher than fetched PQC
-		rbft.executeAfterStateUpdate()
 		return nil
 
 	case RECOVERY_NEGO_VIEW_DONE_EVENT:
