@@ -15,7 +15,7 @@ package executor
 
 import (
 	"bytes"
-	"certgen/common"
+	"hyperchain/common"
 	"encoding/binary"
 	"hyperchain/core/types"
 	"strconv"
