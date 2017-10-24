@@ -128,7 +128,6 @@ func (es *executorServiceImpl) init() error {
 	// 5. add jsonrpc processor
 	//TODO: adjust back
 	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace))
-	es.rpc.Start()
 
 	// 1. init DB for current executor service.
 	err := chain.InitExecutorDBForNamespace(es.conf, es.namespace)
@@ -221,6 +220,12 @@ func (es *executorServiceImpl) Start() error {
 	}
 
 	es.status.setState(running)
+
+	// 8. start rpc processor
+	if err = es.rpc.Start(); err != nil {
+		return err
+	}
+
 	return nil
 
 }
