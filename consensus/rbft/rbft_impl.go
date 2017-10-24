@@ -14,7 +14,6 @@ import (
 	"hyperchain/consensus/helper/persist"
 	"hyperchain/consensus/txpool"
 	"hyperchain/core/types"
-	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 
@@ -61,12 +60,6 @@ func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 	var err error
 	rbft := &rbftImpl{}
 	rbft.logger = common.GetLogger(namespace, "consensus")
-
-	db, err := hyperdb.GetDBConsensusByNamespace(namespace)
-	if err != nil {
-		return nil, err
-	}
-	rbft.persister = persist.New(db)
 
 	rbft.namespace = namespace
 	rbft.helper = h

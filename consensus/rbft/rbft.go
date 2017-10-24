@@ -18,6 +18,8 @@ import (
 	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
+	"hyperchain/hyperdb"
+	"hyperchain/consensus/helper/persist"
 )
 
 /**
@@ -87,6 +89,13 @@ func (rbft *rbftImpl) RecvLocal(msg interface{}) error {
 // Start initializes and starts the consensus service
 func (rbft *rbftImpl) Start() {
 	rbft.logger.Noticef("--------RBFT starting, nodeID: %d--------", rbft.id)
+
+	db, err := hyperdb.GetDBConsensusByNamespace(rbft.namespace)
+	if err != nil {
+		rbft.logger.Error("get db failed.")
+		return
+	}
+	rbft.persister = persist.New(db)
 
 	// new timer manager
 	rbft.timerMgr = newTimerMgr(rbft.logger)
