@@ -131,6 +131,11 @@ func substr(str string, start int, end int) string {
 	return string(rs[start:end])
 }
 
+type BatchArgs struct {
+	Hashes  []common.Hash `json:"hashes"`
+	Numbers []BlockNumber `json:"numbers"`
+}
+
 type IntervalArgs struct {
 	From         *BlockNumber    `json:"from"` // start block number
 	To           *BlockNumber    `json:"to"`   // end block number

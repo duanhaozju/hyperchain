@@ -173,6 +173,25 @@ func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult
 
 }
 
+// GetBatchReceipt returns transaction's receipt for given hash list.
+func (tran *Transaction) GetBatchReceipt(args BatchArgs) ([]*ReceiptResult, error) {
+	if args.Hashes == nil {
+		return nil, &common.InvalidParamsError{Message: "invalid parameter, please specify transaction hash list"}
+	}
+
+	var receipts []*ReceiptResult = make([]*ReceiptResult, 0)
+
+	for _, txHash := range args.Hashes {
+		if tx, err := tran.GetTransactionReceipt(txHash); err != nil {
+			return nil, err
+		} else {
+			receipts = append(receipts, tx)
+		}
+	}
+
+	return receipts, nil
+}
+
 // GetTransactions returns all transactions in the given block number. Parameters include
 // start block number and end block number.
 func (tran *Transaction) GetTransactions(args IntervalArgs) ([]*TransactionResult, error) {
@@ -181,7 +200,7 @@ func (tran *Transaction) GetTransactions(args IntervalArgs) ([]*TransactionResul
 		return nil, err
 	}
 
-	var transactions []*TransactionResult
+	var transactions []*TransactionResult = make([]*TransactionResult, 0)
 
 	if blocks, err := getBlocks(trueArgs, tran.namespace, false); err != nil {
 		return nil, err
@@ -193,6 +212,25 @@ func (tran *Transaction) GetTransactions(args IntervalArgs) ([]*TransactionResul
 				tx, _ := t.(*TransactionResult)
 				transactions = append(transactions, tx)
 			}
+		}
+	}
+
+	return transactions, nil
+}
+
+// GetBatchTransactions returns all transactions for given hash list.
+func (tran *Transaction) GetBatchTransactions(args BatchArgs) ([]*TransactionResult, error) {
+	if args.Hashes == nil {
+		return nil, &common.InvalidParamsError{Message: "invalid parameter, please specify transaction hash list"}
+	}
+
+	var transactions []*TransactionResult = make([]*TransactionResult, 0)
+
+	for _, txHash := range args.Hashes {
+		if tx, err := tran.GetTransactionByHash(txHash); err != nil {
+			return nil, err
+		} else {
+			transactions = append(transactions, tx)
 		}
 	}
 
