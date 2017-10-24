@@ -93,10 +93,11 @@ func(asi *APIServerImpl) Start() error{
 	}
 
 	// start websocket server
-	if err := asi.wsServer.start(); err != nil {
-		log.Error(err)
-		return err
-	}
+	//TODO start WebSocket
+	//if err := asi.wsServer.start(); err != nil {
+	//	log.Error(err)
+	//	return err
+	//}
 	return nil
 }
 

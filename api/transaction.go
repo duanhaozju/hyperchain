@@ -101,7 +101,6 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	if err != nil {
 		return common.Hash{}, err
 	}
-
 	return tx.GetHash(), nil
 }
 

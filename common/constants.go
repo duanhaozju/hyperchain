@@ -43,6 +43,7 @@ const (
 //constants for port keys
 const (
 	JSON_RPC_PORT  = "port.jsonrpc"
+	JSON_RPC_PORT2  = "port.jsonrpc_executor"
 	JVM_PORT       = "port.jvm"
 	LEDGER_PORT    = "port.ledger"
 	P2P_PORT       = "port.grpc"
