@@ -140,6 +140,13 @@ func (rbft *rbftImpl) Start() {
 	rbft.close = make(chan bool)
 	go rbft.listenEvent()
 
+	rbft.logger.Infof("RBFT Max number of validating peers (N) = %v", rbft.N)
+	rbft.logger.Infof("RBFT Max number of failing peers (f) = %v", rbft.f)
+	rbft.logger.Infof("RBFT byzantine flag = %v", rbft.in(byzantine))
+	rbft.logger.Infof("RBFT Checkpoint period (K) = %v", rbft.K)
+	rbft.logger.Infof("RBFT Log multiplier = %v", rbft.logMultiplier)
+	rbft.logger.Infof("RBFT log size (L) = %v", rbft.L)
+
 	rbft.logger.Noticef("======== RBFT finished start, nodeID: %d", rbft.id)
 }
 
@@ -160,13 +167,7 @@ func (rbft *rbftImpl) Stop() {
 	rbft.timerMgr.Stop()
 
 	rbft.logger.Notice("RBFT clear some resources...")
-	rbft.exec = new(executor)
-	rbft.storeMgr = new(storeManager)
-	rbft.batchMgr = new(batchManager)
-	rbft.batchVdr = new(batchValidator)
-	rbft.recoveryMgr = new(recoveryManager)
-	rbft.vcMgr = new(vcManager)
-	rbft.nodeMgr = new(nodeManager)
+	rbft.resetComponents()
 
 	rbft.logger.Noticef("======== RBFT stopped!")
 }

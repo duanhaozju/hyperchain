@@ -76,45 +76,21 @@ func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 	rbft.logMultiplier = uint64(4)
 	rbft.L = rbft.logMultiplier * rbft.K
 
+	rbft.resetComponents()
+	return rbft, nil
+}
+
+func (rbft *rbftImpl) resetComponents() {
 	rbft.initMsgEventMap()
 
-	// new timer manager
-	rbft.timerMgr = newTimerMgr(rbft.logger)
-	rbft.initTimers()
-
-	// new status manager
-	rbft.status = newStatusMgr()
-	rbft.initStatus()
-
-	// new executor
-	rbft.exec = newExecutor()
-
-	// new store manager
-	rbft.storeMgr = newStoreMgr(rbft.logger)
-
-	// new batch manager
-	rbft.batchMgr = newBatchManager(namespace, config, rbft.logger)
-
-	// new batch validator
-	rbft.batchVdr = newBatchValidator()
-
-	// new recovery manager
-	rbft.recoveryMgr = newRecoveryMgr()
-
-	// new viewchange manager
-	rbft.vcMgr = newVcManager(config, rbft.logger)
-
-	// new node manager
-	rbft.nodeMgr = newNodeMgr()
-
-	rbft.logger.Infof("RBFT Max number of validating peers (N) = %v", rbft.N)
-	rbft.logger.Infof("RBFT Max number of failing peers (f) = %v", rbft.f)
-	rbft.logger.Infof("RBFT byzantine flag = %v", rbft.in(byzantine))
-	rbft.logger.Infof("RBFT Checkpoint period (K) = %v", rbft.K)
-	rbft.logger.Infof("RBFT Log multiplier = %v", rbft.logMultiplier)
-	rbft.logger.Infof("RBFT log size (L) = %v", rbft.L)
-
-	return rbft, nil
+	rbft.timerMgr = new(timerManager)
+	rbft.exec = new(executor)
+	rbft.storeMgr = new(storeManager)
+	rbft.batchMgr = new(batchManager)
+	rbft.batchVdr = new(batchValidator)
+	rbft.recoveryMgr = new(recoveryManager)
+	rbft.vcMgr = new(vcManager)
+	rbft.nodeMgr = new(nodeManager)
 }
 
 // =============================================================================

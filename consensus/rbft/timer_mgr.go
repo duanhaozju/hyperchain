@@ -52,7 +52,6 @@ func (tm *timerManager) Stop() {
 	for timerName := range tm.ttimers {
 		tm.stopTimer(timerName)
 	}
-	tm = &timerManager{}
 }
 
 // startTimer starts the timer with the given name and default timeout, then sets the event which will be triggered
