@@ -142,7 +142,7 @@ func (e *ContractInvokeError) Error() string { return e.Message }
 type SystemTooBusyError struct{}
 
 func (e *SystemTooBusyError) Code() int     { return custom_SystemTooBusyError }
-func (e *SystemTooBusyError) Error() string { return "System is too busy to response. %s" }
+func (e *SystemTooBusyError) Error() string { return "System is too busy to response." }
 
 type RepeadedTxError struct {
 	TxHash string
