@@ -87,19 +87,19 @@ func (em *ecManagerImpl) Start() error {
 			if err != nil {
 				logger.Error(err)
 			}
+			em.jvmManager.LedgerProxy().RegisterDB(name, service.executor.FetchStateDb())
 			em.services[name] = service
 		} else {
 			logger.Errorf("Invalid folder %v", d)
 		}
 	}
 
-	// start jvm
-	//if em.conf.GetBool(common.C_JVM_START) == true {
-	//	if err := em.jvmManager.Start(); err != nil {
-	//		logger.Error(err)
-	//		return err
-	//	}
-	//}
+	if em.conf.GetBool(common.C_JVM_START) == true {
+		if err := em.jvmManager.Start(); err != nil {
+			logger.Error(err)
+			return err
+		}
+	}
 	return nil
 }
 
@@ -120,6 +120,10 @@ func (em *ecManagerImpl) getConfig(name string) (*common.Config, error) {
 		logger.Error("namespace config file doesn't exist!")
 	}
 	conf := common.NewConfig(nsConfigPath)
+	conf.Set(common.INTERNAL_PORT, em.conf.GetInt(common.INTERNAL_PORT))
+	conf.Set(common.NAMESPACE, name)
+	conf.Set(common.JVM_PORT, em.conf.GetInt(common.JVM_PORT))
+	conf.Set(common.C_JVM_START, em.conf.GetBool(common.C_JVM_START))
 	return conf, nil
 }
 

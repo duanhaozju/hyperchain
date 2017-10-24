@@ -61,6 +61,4 @@ enum Event {
     ExecutorToP2PEvent = 11;
     ExecutorToConsensusEvent = 12;
 
-    //3.1 to executor
-    ValidationEvent = 13;
 }

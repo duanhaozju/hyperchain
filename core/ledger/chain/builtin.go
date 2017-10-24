@@ -43,9 +43,25 @@ func InitDBForNamespace(conf *common.Config, namespace string) error {
 	if err != nil {
 		return err
 	}
-	InitializeChain(namespace)
+    //if conf.GetBool(common.EXECUTOR_EMBEDDED) {
+        InitializeChain(namespace)
+    //}
 	return err
 }
+
+func InitExecutorDBForNamespace(conf *common.Config, namespace string) error {
+    err := hyperdb.InitBlockDatabase(conf, namespace)
+    if err != nil {
+        return err
+    }
+    err = hyperdb.InitArchiveDatabase(conf, namespace)
+    if err != nil {
+        return err
+    }
+    InitializeChain(namespace)
+    return err
+}
+
 
 // logger returns the logger with given namespace
 func logger(namespace string) *logging.Logger {

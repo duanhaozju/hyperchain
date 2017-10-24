@@ -211,6 +211,10 @@ func (mgr *JvmManager) checkJvmExist() bool {
 	}
 }
 
+func (mgr *JvmManager) LedgerProxy() *ledger.LedgerProxy  {
+	return mgr.ledgerProxy
+}
+
 // findExecutable locates and checks if there exists the specific
 // executable file.
 func findExecutable(file string) error {

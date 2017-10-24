@@ -7,6 +7,7 @@ import (
 	"hyperchain/manager/event"
 	"fmt"
 	"hyperchain/common/service"
+    "hyperchain/common"
 )
 
 type localServiceImpl struct {
@@ -34,14 +35,18 @@ func (lsi *localServiceImpl) Id() string {
 }
 
 func (lsi *localServiceImpl) Send(se service.ServiceEvent) error {
+    logger := common.GetLogger("global", "localservice")
+    //logger.Criticalf("send %v", se)
 	switch e := se.(type) {
-	case event.ExecutorToConsensusEvent:
-		lsi.hub.DispatchExecutorToConsensus(e)
+	case *event.ExecutorToConsensusEvent:
+	    //logger.Criticalf("Send event: %v", e)
+		lsi.hub.DispatchExecutorToConsensus(*e)
 		return nil
-	case event.ExecutorToP2PEvent:
-		lsi.hub.DispatchExecutorToP2P(e)
+	case *event.ExecutorToP2PEvent:
+		lsi.hub.DispatchExecutorToP2P(*e)
 		return nil
 	default:
+	    logger.Criticalf("Send default %v", e)
 		return fmt.Errorf("no event handler found for %v", se)
 	}
 }
