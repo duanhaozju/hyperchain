@@ -37,6 +37,10 @@ import (
 
 var logger *logging.Logger
 
+func init()  {
+	logger = common.GetLogger(common.DEFAULT_LOG, "nsmgr")
+}
+
 const (
 	DEFAULT_NAMESPACE  = "global"
 	NS_CONFIG_DIR_ROOT = "namespace.config_root_dir"
@@ -253,7 +257,7 @@ func (nr *nsManagerImpl) Start() error {
 			}
 		}(name)
 	}
-	if nr.conf.GetBool(common.C_JVM_START) == true {
+	if nr.conf.GetBool(common.C_JVM_START) == true && nr.conf.GetBool(common.EXECUTOR_EMBEDDED){
 		if err := nr.jvmManager.Start(); err != nil {
 			logger.Error(err)
 			return err

@@ -79,8 +79,6 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 	executor.archiveMgr = NewArchiveManager(namespace, executor, executor.snapshotReg, executor.logger)
 	executor.nvp = NewNVPImpl(executor)
 
-	// TODO doesn't know why to add this statement here.
-	// TODO ask @Rongjialei to fix this.
 	if err := executor.initDb(); err != nil {
 		return nil, err
 	}

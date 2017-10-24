@@ -31,7 +31,7 @@ func (c *Client) Connect() error {
 	retryTime := 10
 	for ; c.stream == nil && retryTime > 0; retryTime-- {
 		c.addr = fmt.Sprintf("localhost:%s", c.config.GetString(common.JVM_PORT))
-		c.logger.Debugf("%d times try to connect to %s", retryTime, c.addr)
+		c.logger.Criticalf("%d times try to connect to %s", retryTime, c.addr)
 		conn, err := grpc.Dial(c.addr, grpc.WithInsecure())
 		if err != nil {
 			continue
@@ -49,12 +49,8 @@ func (c *Client) Connect() error {
 		}
 		return nil
 	}
-	if c.stream == nil {
-		return nil
-	} else {
-	    c.stream = nil
-        return fmt.Errorf("jvm client connect to server failed")
-	}
+	c.stream = nil
+	return fmt.Errorf("jvm client connect to server failed")
 }
 
 func (c *Client) sendMsg(msg *pb.Message) error {

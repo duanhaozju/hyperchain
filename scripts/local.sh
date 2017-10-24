@@ -95,13 +95,9 @@ f_rebuild_executor(){
     cd ${EXECUTOR_PATH} && govendor build
     for (( j=1; j<=$MAXPEERNUM; j++ ))
     do
-#        if [ ! -d "${DUMP_PATH}/node${j}/executor" ]; then
-#            mkdir ${DUMP_PATH}/node${j}/executor
-#        fi
         cp ${EXECUTOR_PATH}/executor ${DUMP_PATH}/node${j}
-#        cp ${DUMP_PATH}/node${j}/global.toml ${DUMP_PATH}/node${j}/executor
-#        cp -rf ${DUMP_PATH}/node${j}/namespaces ${DUMP_PATH}/node${j}/executor
     done
+    rm ${EXECUTOR_PATH}/executor
 
 }
 
