@@ -123,12 +123,12 @@ func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common
 		return &common.UnauthorizedError{}
 	}
 
-	// verfiy tcert
-	verifyTcert, err := cm.VerifyTCert(tcertPem, method)
-	if verifyTcert == false || err != nil {
-		log.Error("Fail to verify tcert!", err)
-		return &common.UnauthorizedError{}
-	}
+	//// verfiy tcert
+	//verifyTcert, err := cm.VerifyTCert(tcertPem, method)
+	//if verifyTcert == false || err != nil {
+	//	log.Error("Fail to verify tcert!", err)
+	//	return &common.UnauthorizedError{}
+	//}
 	return nil
 }
 
@@ -272,7 +272,7 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool,
 
 // CreateResponse will create a JSON-RPC success response with the given id and reply as result.
 func (c *jsonCodecImpl) CreateResponse(id interface{}, namespace string, reply interface{}) interface{} {
-	if isHexNum(reflect.TypeOf(reply)) {
+	if IsHexNum(reflect.TypeOf(reply)) {
 		return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
 	}
 	return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: 0, Message: "SUCCESS", Result: reply}
@@ -291,7 +291,7 @@ func (c *jsonCodecImpl) CreateErrorResponseWithInfo(id interface{}, namespace st
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
 func (s *jsonCodecImpl) CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{} {
-	if isHexNum(reflect.TypeOf(event)) {
+	if IsHexNum(reflect.TypeOf(event)) {
 		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace,
 			Result: jsonSubscription{Subscription: fmt.Sprintf(`%s`, subid), Data: fmt.Sprintf(`%#x`, event)}}
 	}

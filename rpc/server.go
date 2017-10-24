@@ -40,7 +40,7 @@ type Server struct {
 	namespaceMgr namespace.NamespaceManager
 	admin        *admin.Administrator
 	requestMgrMu sync.Mutex
-	requestMgr   map[string]*requestManager
+	requestMgr   map[string]*RequestManager
 }
 
 // NewServer will create a new server instance with no registered handlers.
@@ -49,7 +49,7 @@ func NewServer(nr namespace.NamespaceManager, config *common.Config) *Server {
 		codecs:       set.New(),
 		run:          1,
 		namespaceMgr: nr,
-		requestMgr:   make(map[string]*requestManager),
+		requestMgr:   make(map[string]*RequestManager),
 	}
 	server.admin = admin.NewAdministrator(nr, config)
 	return server
@@ -325,7 +325,7 @@ func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RP
 		log.Notice("nil parms in json")
 		cmd.Args = nil
 	} else {
-		args, err := splitRawMessage(args)
+		args, err := SplitRawMessage(args)
 		if err != nil {
 			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidParamsError{Message: err.Error()}}
 		}

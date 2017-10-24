@@ -1,0 +1,28 @@
+[self]
+"N"         = 4
+id          = 1
+hostname    = "node1"
+org         = true
+vp          = true
+rec         = false
+caconf      = "config/namespace.toml" #TODO: duplicate config with namespace.toml
+
+[[nodes]]
+id          = 1
+hostname    = "node1"
+static      = true
+
+[[nodes]]
+id          = 2
+hostname    = "node2"
+static      = true
+
+[[nodes]]
+id          = 3
+hostname    = "node3"
+static      = true
+
+[[nodes]]
+id          = 4
+hostname    = "node4"
+static      = true

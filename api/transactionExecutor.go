@@ -109,7 +109,7 @@ func /*(tran *Transaction)*/(tran *TransactionDBRelated) GetTransactionReceipt(h
 
 // GetTransactions returns all transactions in the given block number. Parameters include
 // start block number and end block number.
-func (tran *Transaction) GetTransactions(args IntervalArgs) ([]*TransactionResult, error) {
+func (tran *TransactionDBRelated) GetTransactions(args IntervalArgs) ([]*TransactionResult, error) {
 	trueArgs, err := prepareIntervalArgs(args, tran.namespace)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (tran *Transaction) GetTransactions(args IntervalArgs) ([]*TransactionResul
 }
 
 // GetDiscardTransactions returns all invalid transactions that don't be saved in the ledger.
-func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) {
+func (tran *TransactionDBRelated) GetDiscardTransactions() ([]*TransactionResult, error) {
 
 	reds, err := edb.GetAllDiscardTransaction(tran.namespace)
 	if err != nil && err.Error() == db_not_found_error {
@@ -158,7 +158,7 @@ func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) 
 }
 
 // GetDiscardTransactionsByTime returns the invalid transactions in the given time duration.
-func (tran *Transaction) GetDiscardTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
+func (tran *TransactionDBRelated) GetDiscardTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
 	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0 {
 		return nil, &common.InvalidParamsError{Message: "Invalid params, both startTime and endTime must be positive, startTime must be less than endTime"}
@@ -188,7 +188,7 @@ func (tran *Transaction) GetDiscardTransactionsByTime(args IntervalTime) ([]*Tra
 }
 
 // getDiscardTransactionByHash returns the invalid transaction for the given transaction hash.
-func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*TransactionResult, error) {
+func (tran *TransactionDBRelated) getDiscardTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 
 	red, err := edb.GetDiscardTransaction(tran.namespace, hash.Bytes())
 	if err != nil && err.Error() == db_not_found_error {
@@ -202,7 +202,7 @@ func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*Transac
 }
 
 // GetTransactionByHash returns the transaction in the ledger for the given transaction hash.
-func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
+func (tran *TransactionDBRelated) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 	tx, err := edb.GetTransaction(tran.namespace, hash[:])
 	if err != nil && err == edb.ErrNotFindTxMeta {
 		return tran.getDiscardTransactionByHash(hash)
@@ -214,7 +214,7 @@ func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionRes
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and transaction index.
-func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
+func (tran *TransactionDBRelated) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
 	if common.EmptyHash(hash) == true {
 		return nil, &common.InvalidParamsError{Message: "Invalid hash"}
 	}
@@ -244,7 +244,7 @@ func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, ind
 }
 
 // GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and transaction index.
-func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, index Number) (*TransactionResult, error) {
+func (tran *TransactionDBRelated) GetTransactionByBlockNumberAndIndex(n BlockNumber, index Number) (*TransactionResult, error) {
 	chain, err := edb.GetChain(tran.namespace)
 	if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
@@ -281,7 +281,7 @@ func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, inde
 }
 
 // GetTransactionsByTime returns the transactions in the ledger in the given time duration.
-func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
+func (tran *TransactionDBRelated) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
 	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0 {
 		return nil, &common.InvalidParamsError{Message: "Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
@@ -319,7 +319,7 @@ func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*Transactio
 }
 
 // GetBlockTransactionCountByHash returns the number of block transactions for given block hash.
-func (tran *Transaction) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
+func (tran *TransactionDBRelated) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
 
 	if common.EmptyHash(hash) == true {
 		return nil, &common.InvalidParamsError{Message: "Invalid hash"}
@@ -339,7 +339,7 @@ func (tran *Transaction) GetBlockTransactionCountByHash(hash common.Hash) (*Numb
 }
 
 // GetBlockTransactionCountByNumber returns the number of block transactions for given block number.
-func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*Number, error) {
+func (tran *TransactionDBRelated) GetBlockTransactionCountByNumber(n BlockNumber) (*Number, error) {
 	chain, err := edb.GetChain(tran.namespace)
 	if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
@@ -365,7 +365,7 @@ func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*Numbe
 }
 
 // GetSignHash returns transaction content hash used for the client signature.
-func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
+func (tran *TransactionDBRelated) GetSignHash(args SendTxArgs) (common.Hash, error) {
 
 	var tx *types.Transaction
 
@@ -396,7 +396,7 @@ func (tran *Transaction) GetSignHash(args SendTxArgs) (common.Hash, error) {
 }
 
 // GetTransactionsCount returns the number of transaction in ledger.
-func (tran *Transaction) GetTransactionsCount() (interface{}, error) {
+func (tran *TransactionDBRelated) GetTransactionsCount() (interface{}, error) {
 
 	chain, err := edb.GetChain(tran.namespace)
 	if err != nil {
@@ -414,7 +414,7 @@ func (tran *Transaction) GetTransactionsCount() (interface{}, error) {
 
 // GetTxAvgTimeByBlockNumber calculates the average execution time of all transactions in the given block number.
 // Parameters include start block number and end block number.
-func (tran *Transaction) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, error) {
+func (tran *TransactionDBRelated) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, error) {
 	intargs, err := prepareIntervalArgs(args, tran.namespace)
 	if err != nil {
 		return 0, err

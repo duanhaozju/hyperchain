@@ -3,7 +3,7 @@ package api
 import (
 	"hyperchain/common"
 	edb "hyperchain/core/ledger/chain"
-	"hyperchain/manager"
+	//"hyperchain/manager"
 	//"hyperchain/manager/event"
 	flt "hyperchain/manager/filter"
 	//hm "hyperchain/service/executor/manager"
@@ -21,7 +21,7 @@ type Archive struct {
 }
 
 // NewPublicArchiveAPI creates and returns a new Archive instance for given namespace name.
-func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.Config) *Archive {
+func NewPublicArchiveAPI(namespace string, /*eh *manager.EventHub,em *hm.ExecutorManager,*/ config *common.Config) *Archive {
 	return &Archive{
 		namespace: namespace,
 		//eh:        eh,

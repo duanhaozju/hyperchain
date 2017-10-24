@@ -240,7 +240,7 @@ func (ns *namespaceImpl) init() error {
 	// 6. init Executor to validate and commit block.
 	ns.logger.Errorf("executor embedded %v", ns.conf.GetBool(common.EXECUTOR_EMBEDDED))
 	if ns.conf.GetBool(common.EXECUTOR_EMBEDDED) {
-		er, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux)
+		er, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, nil)
 		if err != nil {
 			ns.logger.Errorf("init Executor for namespace %s error, %v", ns.Name(), err)
 			return err
