@@ -13,32 +13,46 @@ This file provide a mechanism to manage the storage in RBFT
 type storeManager struct {
 	logger *logging.Logger
 
-	certStore     map[msgID]*msgCert // track quorum certificates for messages
-	committedCert map[msgID]string   // track the committed cert to help execute
+	// track quorum certificates for messages
+	certStore     map[msgID]*msgCert
 
-	outstandingReqBatches map[string]*TransactionBatch // track whether we are waiting for transaction batches to execute
-	txBatchStore          map[string]*TransactionBatch // track L cached transaction batches produced from txPool
+	// track the committed cert to help execute
+	committedCert map[msgID]string
 
-	missingReqBatches map[string]bool // for all the assigned, non-checkpointed request batches we might miss
+	// track whether we are waiting for transaction batches to execute
+	outstandingReqBatches map[string]*TransactionBatch
+
+	// track L cached transaction batches produced from txPool
+	txBatchStore          map[string]*TransactionBatch
+
+	// for all the assigned, non-checkpointed request batches we might miss
 	// some transactions in some batches, record batch id
-	highStateTarget *stateUpdateTarget // Set to the highest weak checkpoint cert we have observed
+	missingReqBatches map[string]bool
+
+	// Set to the highest weak checkpoint cert we have observed
+	highStateTarget *stateUpdateTarget
 
 	// ---------------checkpoint related--------------------
-	chkpts map[uint64]string // checkpoints that we reached by ourselves after commit a block with a
+	// checkpoints that we reached by ourselves after commit a block with a
 	// block number == integer multiple of K; map lastExec to a base64
 	// encoded BlockchainInfo
+	chkpts map[uint64]string
 
-	hChkpts map[uint64]uint64 // checkpoint numbers received from others which are bigger than our
+	// checkpoint numbers received from others which are bigger than our
 	// H(=h+L); map replicaID to the last checkpoint number received from
 	// that replica bigger than H
+	hChkpts map[uint64]uint64
 
-	checkpointStore map[Checkpoint]bool    // track all non-repeating checkpoints received from others
-	chkptCertStore  map[chkptID]*chkptCert // track quorum certificates for checkpoints with the same chkptID; map
+	// track all non-repeating checkpoints received from others
+	checkpointStore map[Checkpoint]bool
+
+	// track quorum certificates for checkpoints with the same chkptID; map
 	// chkptID(seqNo and id) to chkptCert(all checkpoints with that chkptID)
+	chkptCertStore  map[chkptID]*chkptCert
 }
 
 // newStoreMgr news an instance of storeManager
-func newStoreMgr() *storeManager {
+func newStoreMgr(logger *logging.Logger) *storeManager {
 	sm := &storeManager{}
 
 	sm.chkpts = make(map[uint64]string)
@@ -46,14 +60,13 @@ func newStoreMgr() *storeManager {
 	sm.hChkpts = make(map[uint64]uint64)
 	sm.checkpointStore = make(map[Checkpoint]bool)
 	sm.chkptCertStore = make(map[chkptID]*chkptCert)
-
 	sm.certStore = make(map[msgID]*msgCert)
 	sm.committedCert = make(map[msgID]string)
-
 	sm.outstandingReqBatches = make(map[string]*TransactionBatch)
 	sm.txBatchStore = make(map[string]*TransactionBatch)
-
 	sm.missingReqBatches = make(map[string]bool)
+
+	sm.logger = logger
 	return sm
 }
 

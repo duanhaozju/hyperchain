@@ -9,6 +9,8 @@ import (
 
 	"hyperchain/consensus/txpool"
 	"hyperchain/manager/event"
+	"github.com/op/go-logging"
+	"hyperchain/common"
 )
 
 // batchManager manages basic batch issues, including:
@@ -21,6 +23,7 @@ type batchManager struct {
 	close            chan bool
 	rbftQueue        *event.TypeMux
 	batchTimerActive bool // track the batch timer event, true means there exists an undergoing batch timer event
+	logger           *logging.Logger
 }
 
 // batchValidator manages batch validate issues
@@ -87,34 +90,32 @@ func newBatchValidator() *batchValidator {
 
 // newBatchManager initializes an instance of batchManager. batchManager subscribes TxHashBatch from txPool module
 // and push it to rbftQueue for primary to construct TransactionBatch for consensus
-func newBatchManager(rbft *rbftImpl) *batchManager {
+func newBatchManager(namespace string, config *common.Config, logger *logging.Logger) *batchManager {
 	bm := &batchManager{}
+	bm.logger = logger
 
 	// subscribe TxHashBatch
 	bm.eventMux = new(event.TypeMux)
 	bm.batchSub = bm.eventMux.Subscribe(txpool.TxHashBatch{})
 	bm.close = make(chan bool)
 
-	batchSize := rbft.config.GetInt(RBFT_BATCH_SIZE)
-	poolSize := rbft.config.GetInt(RBFT_POOL_SIZE)
-
-	batchTimeout, err := time.ParseDuration(rbft.config.GetString(RBFT_BATCH_TIMEOUT))
-	if err != nil {
-		rbft.logger.Criticalf("Cannot parse batch timeout: %s", err)
+	batchSize := config.GetInt(RBFT_BATCH_SIZE)
+	if batchSize <= 0 {
+		bm.logger.Warning("batch size must be larger than 0!")
 	}
-	if batchTimeout >= rbft.timerMgr.requestTimeout {
-		rbft.timerMgr.requestTimeout = 3 * batchTimeout / 2
-		rbft.logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", rbft.timerMgr.requestTimeout)
+	poolSize := config.GetInt(RBFT_POOL_SIZE)
+	if poolSize <= 0 {
+		bm.logger.Warning("tx pool size must be larger than 0!")
 	}
+	logger.Infof("RBFT Batch size = %d", batchSize)
+	logger.Infof("RBFT tx pool size = %d", poolSize)
 
 	// new instance for txPool
-	bm.txPool, err = txpool.NewTxPool(rbft.namespace, poolSize, bm.eventMux, batchSize)
+	var err error
+	bm.txPool, err = txpool.NewTxPool(namespace, poolSize, bm.eventMux, batchSize)
 	if err != nil {
 		panic(fmt.Errorf("cannot create txpool: %s", err))
 	}
-
-	rbft.logger.Infof("RBFT Batch size = %d", batchSize)
-	rbft.logger.Infof("RBFT Batch timeout = %v", batchTimeout)
 
 	return bm
 }
@@ -213,7 +214,7 @@ func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 	rbft.logger.Debugf("Primary %d try to validate batch for view=%d/seqNo=%d, batch size: %d", rbft.id, rbft.view, n, len(batch.HashList))
 	// here we soft start a new view timer with requestTimeout+validateTimeout, if primary cannot execute this batch
 	// during that timeout, we think there may exist some problems with this primary which will trigger viewchange
-	rbft.softStartNewViewTimer(rbft.timerMgr.requestTimeout+rbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
+	rbft.softStartNewViewTimer(rbft.timerMgr.getTimeoutValue(REQUEST_TIMER)+rbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
 		fmt.Sprintf("new request batch for view=%d/seqNo=%d", rbft.view, n))
 	rbft.helper.ValidateBatch(digest, batch.TxList, batch.Timestamp, n, rbft.view, true)
 

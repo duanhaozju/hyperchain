@@ -85,46 +85,41 @@ func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 
 	rbft.initMsgEventMap()
 
-	// new executor
-	rbft.exec = newExecutor()
-
 	// new timer manager
-	rbft.timerMgr = newTimerMgr(rbft)
+	rbft.timerMgr = newTimerMgr(rbft.logger)
 	rbft.initTimers()
 
 	// new status manager
 	rbft.status = newStatusMgr()
 	rbft.initStatus()
 
-	if rbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
-		rbft.logger.Infof("RBFT null requests timeout = %v", rbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER))
-	} else {
-		rbft.logger.Infof("RBFT null requests disabled")
-	}
+	// new executor
+	rbft.exec = newExecutor()
 
-	rbft.vcMgr = newVcManager(rbft)
-	// init the data logs
-	rbft.storeMgr = newStoreMgr()
-	rbft.storeMgr.logger = rbft.logger
+	// new store manager
+	rbft.storeMgr = newStoreMgr(rbft.logger)
 
-	// initialize state transfer
-	rbft.nodeMgr = newNodeMgr()
-
-	rbft.batchMgr = newBatchManager(rbft) // init after rbftEventQueue
 	// new batch manager
+	rbft.batchMgr = newBatchManager(namespace, config, rbft.logger)
+
+	// new batch validator
 	rbft.batchVdr = newBatchValidator()
+
+	// new recovery manager
 	rbft.recoveryMgr = newRecoveryMgr()
+
+	// new viewchange manager
+	rbft.vcMgr = newVcManager(config, rbft.logger)
+
+	// new node manager
+	rbft.nodeMgr = newNodeMgr()
 
 	rbft.logger.Infof("RBFT Max number of validating peers (N) = %v", rbft.N)
 	rbft.logger.Infof("RBFT Max number of failing peers (f) = %v", rbft.f)
 	rbft.logger.Infof("RBFT byzantine flag = %v", rbft.in(byzantine))
-	rbft.logger.Infof("RBFT request timeout = %v", rbft.timerMgr.requestTimeout)
 	rbft.logger.Infof("RBFT Checkpoint period (K) = %v", rbft.K)
 	rbft.logger.Infof("RBFT Log multiplier = %v", rbft.logMultiplier)
 	rbft.logger.Infof("RBFT log size (L) = %v", rbft.L)
-
-	rbft.setNormal()
-	rbft.setNotFull()
 
 	return rbft, nil
 }
@@ -442,7 +437,7 @@ func (rbft *rbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 
 	if !rbft.inOne(skipInProgress, inRecovery) &&
 		preprep.SequenceNumber > rbft.exec.lastExec {
-		rbft.softStartNewViewTimer(rbft.timerMgr.requestTimeout,
+		rbft.softStartNewViewTimer(rbft.timerMgr.getTimeoutValue(REQUEST_TIMER),
 			fmt.Sprintf("new pre-prepare for request batch view=%d/seqNo=%d, hash=%s",
 				preprep.View, preprep.SequenceNumber, preprep.BatchDigest))
 	}
@@ -614,10 +609,12 @@ func (rbft *rbftImpl) recvCommit(commit *Commit) error {
 		idx := msgID{v: commit.View, n: commit.SequenceNumber, d: commit.BatchDigest}
 		if !cert.sentExecute && cert.validated {
 
-			rbft.vcMgr.lastNewViewTimeout = rbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 			delete(rbft.storeMgr.outstandingReqBatches, commit.BatchDigest)
 			rbft.storeMgr.committedCert[idx] = commit.BatchDigest
 			rbft.commitPendingBlocks()
+
+			// reset last new view timeout after commit one block successfully.
+			rbft.vcMgr.lastNewViewTimeout = rbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 			if commit.SequenceNumber == rbft.vcMgr.viewChangeSeqNo {
 				rbft.logger.Warningf("Replica %d cycling view for seqNo=%d", rbft.id, commit.SequenceNumber)
 				rbft.sendViewChange()

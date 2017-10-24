@@ -14,7 +14,13 @@ import (
 )
 
 func TestNewStoreMgr(t *testing.T) {
-	storeMgr := newStoreMgr()
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	storeMgr := newStoreMgr(rbft.logger)
 	structName, nilElems, err := checkNilElems(storeMgr)
 	if err != nil {
 		t.Error(err.Error())

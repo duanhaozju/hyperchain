@@ -26,16 +26,14 @@ type titletimer struct {
 // timerManager manages common used timers.
 type timerManager struct {
 	ttimers        map[string]*titletimer
-	requestTimeout time.Duration
 	logger         *logging.Logger
 }
 
 // newTimerMgr news an instance of timerManager.
-func newTimerMgr(rbft *rbftImpl) *timerManager {
+func newTimerMgr(logger *logging.Logger) *timerManager {
 	tm := &timerManager{
 		ttimers:        make(map[string]*titletimer),
-		requestTimeout: rbft.config.GetDuration(RBFT_REQUEST_TIMEOUT),
-		logger:         rbft.logger,
+		logger:         logger,
 	}
 
 	return tm
@@ -54,6 +52,7 @@ func (tm *timerManager) Stop() {
 	for timerName := range tm.ttimers {
 		tm.stopTimer(timerName)
 	}
+	tm = &timerManager{}
 }
 
 // startTimer starts the timer with the given name and default timeout, then sets the event which will be triggered
@@ -146,15 +145,48 @@ func (tm *timerManager) setTimeoutValue(timerName string, d time.Duration) {
 	tm.ttimers[timerName].timeout = d
 }
 
-// makeRequestTimeoutLegal checks if requestTimeout is legal or not, if not, make it legal, which, nullRequest timeout
-// must be larger than requestTimeout
-func (tm *timerManager) makeRequestTimeoutLegal() {
+// makeNullRequestTimeoutLegal checks if nullrequestTimeout is legal or not, if not, make it
+// legal, which, nullRequest timeout must be larger than requestTimeout
+func (tm *timerManager) makeNullRequestTimeoutLegal() {
 	nullRequestTimeout := tm.getTimeoutValue(NULL_REQUEST_TIMER)
-	requestTimeout := tm.requestTimeout
+	requestTimeout := tm.getTimeoutValue(REQUEST_TIMER)
 
 	if requestTimeout >= nullRequestTimeout && nullRequestTimeout != 0 {
-		tm.setTimeoutValue(NULL_REQUEST_TIMER, 3*requestTimeout/2)
+		tm.setTimeoutValue(NULL_REQUEST_TIMER, 3*requestTimeout / 2)
 		tm.logger.Warningf("Configured null request timeout must be greater "+
 			"than request timeout, setting to %v", tm.getTimeoutValue(NULL_REQUEST_TIMER))
+	}
+
+	if tm.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
+		tm.logger.Infof("RBFT null request timeout = %v", tm.getTimeoutValue(NULL_REQUEST_TIMER))
+	} else {
+		tm.logger.Infof("RBFT null request disabled")
+	}
+}
+
+// makeCleanVcTimeoutLegal checks if requestTimeout is legal or not, if not, make it
+// legal, which, request timeout must be lager than batch timeout
+func (tm *timerManager) makeRequestTimeoutLegal() {
+	requestTimeout := tm.getTimeoutValue(REQUEST_TIMER)
+	batchTimeout := tm.getTimeoutValue(BATCH_TIMER)
+	tm.logger.Infof("RBFT Batch timeout = %v", batchTimeout)
+
+	if batchTimeout >= requestTimeout {
+		tm.setTimeoutValue(REQUEST_TIMER, 3 * batchTimeout / 2)
+		tm.logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", tm.getTimeoutValue(REQUEST_TIMER))
+	}
+	tm.logger.Infof("RBFT request timeout = %v", tm.getTimeoutValue(REQUEST_TIMER))
+}
+
+// makeCleanVcTimeoutLegal checks if clean vc timeout is legal or not, if not, make it
+// legal, which, cleanVcTimeout should more then 6* viewChange time
+func (tm *timerManager) makeCleanVcTimeoutLegal() {
+	cleanVcTimeout:= tm.getTimeoutValue(CLEAN_VIEW_CHANGE_TIMER)
+	nvTimeout := tm.getTimeoutValue(NEW_VIEW_TIMER)
+
+	if cleanVcTimeout < 6 * nvTimeout {
+		cleanVcTimeout = 6 * nvTimeout
+		tm.setTimeoutValue(CLEAN_VIEW_CHANGE_TIMER, cleanVcTimeout)
+		tm.logger.Criticalf("set timeout of cleaning out-of-time view change message to %v since it's too short", 6 * nvTimeout)
 	}
 }

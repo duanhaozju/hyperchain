@@ -109,7 +109,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 
 	case VIEW_CHANGED_EVENT:
 		// set a viewChangeSeqNo if needed
-		rbft.vcMgr.updateViewChangeSeqNo(rbft.seqNo, rbft.K, rbft.id)
+		rbft.updateViewChangeSeqNo(rbft.seqNo, rbft.K, rbft.id)
 
 		rbft.startTimerIfOutstandingRequests()
 		rbft.vcMgr.vcResendCount = 0

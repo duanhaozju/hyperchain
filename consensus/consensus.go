@@ -21,7 +21,7 @@ type Consenter interface {
 	Start()
 
 	// Close closes the consensus service
-	Close()
+	Stop()
 
 	// GetStatus returns the current status of consensus service,
 	// normal means this system is working well, and full

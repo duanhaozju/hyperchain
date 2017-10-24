@@ -354,7 +354,7 @@ func (ns *namespaceImpl) Stop() error {
 	}
 
 	// 4. stop consensus service.
-	ns.consenter.Close()
+	ns.consenter.Stop()
 
 	// 5. stop peerManager.
 	ns.peerMgr.Stop()

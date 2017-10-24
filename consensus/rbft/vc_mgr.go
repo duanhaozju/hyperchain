@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
+	"hyperchain/common"
 )
 
 // vcManager manages the whole process of view change
@@ -26,7 +28,8 @@ type vcManager struct {
 	newViewStore    map[uint64]*NewView    // track last new-view we received or sent
 	viewChangeStore map[vcidx]*ViewChange  // track view-change messages
 	vcResetStore    map[FinishVcReset]bool // track vcReset message from others
-	cleanVcTimeout  time.Duration          // how long dose view-change messages keep in viewChangeStore
+
+	logger          *logging.Logger
 }
 
 // dispatchViewChangeMsg dispatches view change consensus messages from
@@ -49,8 +52,9 @@ func (rbft *rbftImpl) dispatchViewChangeMsg(e consensusEvent) consensusEvent {
 
 // newVcManager init a instance of view change manager and initialize each parameter
 // according to the configuration file.
-func newVcManager(rbft *rbftImpl) *vcManager {
+func newVcManager(config *common.Config, logger *logging.Logger) *vcManager {
 	vcm := &vcManager{}
+	vcm.logger = logger
 
 	//init vcManage maps
 	vcm.vcResetStore = make(map[FinishVcReset]bool)
@@ -59,33 +63,17 @@ func newVcManager(rbft *rbftImpl) *vcManager {
 	vcm.newViewStore = make(map[uint64]*NewView)
 	vcm.viewChangeStore = make(map[vcidx]*ViewChange)
 
-	// clean out-of-data view change message
-	var err error
-	vcm.cleanVcTimeout, err = time.ParseDuration(rbft.config.GetString(RBFT_CLEAN_VIEWCHANGE_TIMEOUT))
-	if err != nil {
-		rbft.logger.Criticalf("Cannot parse clean out-of-data view change message timeout: %s", err)
-	}
-	nvTimeout := rbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
-	//cleanVcTimeout should more then 6* viewChange time
-	if vcm.cleanVcTimeout < 6*nvTimeout {
-		vcm.cleanVcTimeout = 6 * nvTimeout
-		rbft.logger.Criticalf("Replica %d set timeout of cleaning out-of-time view change message to %v since it's too short", rbft.id, 6*nvTimeout)
-	}
-
 	vcm.viewChangePeriod = uint64(0)
-	//automatic view changes is off by default
+	// automatic view changes is off by default(should be read from config)
 	if vcm.viewChangePeriod > 0 {
-		rbft.logger.Infof("RBFT view change period = %v", vcm.viewChangePeriod)
+		vcm.logger.Infof("RBFT view change period = %v", vcm.viewChangePeriod)
 	} else {
-		rbft.logger.Infof("RBFT automatic view change disabled")
+		vcm.logger.Infof("RBFT automatic view change disabled")
 	}
-	//if Viewchange failed,lastNewViewTimeout well increase
-	vcm.lastNewViewTimeout = rbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 
-	// vcResendLimit
-	vcm.vcResendLimit = rbft.config.GetInt(RBFT_VC_RESEND_LIMIT)
-	rbft.logger.Debugf("Replica %d set vcResendLimit %d", rbft.id, vcm.vcResendLimit)
-	vcm.vcResendCount = 0
+	vcm.lastNewViewTimeout = config.GetDuration(NEW_VIEW_TIMER)
+	vcm.vcResendLimit = config.GetInt(RBFT_VC_RESEND_LIMIT)
+	vcm.logger.Debugf("RBFT vcResendLimit= %d", vcm.vcResendLimit)
 
 	return vcm
 }
@@ -1091,13 +1079,12 @@ nLoop:
 }
 
 // updateViewChangeSeqNo updates viewChangeSeqNo by viewChangePeriod
-func (vcm *vcManager) updateViewChangeSeqNo(seqNo, K, id uint64) {
-	if vcm.viewChangePeriod <= 0 {
+func (rbft *rbftImpl) updateViewChangeSeqNo(seqNo, K, id uint64) {
+	if rbft.vcMgr.viewChangePeriod <= 0 {
 		return
 	}
 	// Ensure the view change always occurs at a checkpoint boundary
-	vcm.viewChangeSeqNo = seqNo + vcm.viewChangePeriod*K - seqNo%K
-	//logger.Debugf("Replica %d updating view change sequence number to %d", id, vcm.viewChangeSeqNo)
+	rbft.vcMgr.viewChangeSeqNo = seqNo - seqNo % K + rbft.vcMgr.viewChangePeriod * K
 }
 
 // feedMissingReqBatchIfNeeded feeds needed reqBatch when this node

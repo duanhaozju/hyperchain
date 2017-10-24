@@ -317,7 +317,7 @@ func (rbft *rbftImpl) startTimerIfOutstandingRequests() {
 			}
 			return digests
 		}()
-		rbft.softStartNewViewTimer(rbft.timerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v, batches: %v", len(getOutstandingDigests), getOutstandingDigests))
+		rbft.softStartNewViewTimer(rbft.timerMgr.getTimeoutValue(REQUEST_TIMER), fmt.Sprintf("outstanding request batches num=%v, batches: %v", len(getOutstandingDigests), getOutstandingDigests))
 	} else if rbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
 		rbft.nullReqTimerReset()
 	}
@@ -331,7 +331,7 @@ func (rbft *rbftImpl) nullReqTimerReset() {
 	timeout := rbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
 	if !rbft.isPrimary(rbft.id) {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
-		timeout = 3*timeout + rbft.timerMgr.requestTimeout
+		timeout = 3 * timeout + rbft.timerMgr.getTimeoutValue(REQUEST_TIMER)
 	}
 
 	event := &LocalEvent{
