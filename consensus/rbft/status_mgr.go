@@ -3,64 +3,124 @@
 
 package rbft
 
-import (
-	"sync/atomic"
+import "sync/atomic"
+
+// consensus status type.
+const (
+	inNegotiateView = iota
+	inRecovery
+	inViewChange
+	byzantine
+	skipInProgress
+	stateTransferring
+	valid
+	timerActive
+	inUpdatingN
+	isNewNode
+	inAddingNode
+	inDeletingNode
+	inVcReset
+	vcHandled
+	newNodeReady
+	updateHandled
+	vcToRecovery
 )
 
-// PbftStatus is used to store all the status in rbft
-type RbftStatus struct {
-	byzantine         int32 // whether this node is intentionally acting as byzantine
-	activeView        int32 // track if replica is in active view
-	skipInProgress    int32 // set when we have detested a fall behind scenario until we pick a new starting point
-	stateTransferring int32 // set when state transfer is executing
-	valid             int32 //
-	timerActive       int32
-	inRecovery        int32
-	inNegoView        int32
-	inUpdatingN       int32
-	isNewNode         int32
-	inAddingNode      int32
-	inDeletingNode    int32
-	inVcReset         int32 // track if replica itself in vcReset
-	vcHandled         int32 // track if replica handled the vc after receive newview
-	newNodeReady      int32
-	updateHandled     int32
-	vcToRecovery      int32
+type statusManager struct {
+	status   uint64 // consensus status
+	normal   uint32 // system is normal or not
+	poolFull uint32 // txPool is full or not
 }
 
-// activeState sets the states to true
-func (status RbftStatus) activeState(stateName ...*int32) {
-	for _, s := range stateName {
-		atomic.StoreInt32(s, ON)
+func newStatusMgr() *statusManager {
+	return &statusManager{}
+}
+
+// reset only resets consensus status to 0.
+func (st *statusManager) reset() {
+	st.status = 0
+}
+
+// setBit sets the bit at position in integer n.
+func (st *statusManager) setBit(position uint64) {
+	st.status |= 1 << position
+}
+
+// clearBit clears the bit at position in integer n.
+func (st *statusManager) clearBit(position uint64) {
+	st.status &= ^(1 << position)
+}
+
+// hasBit checks whether a bit position is set.
+func (st *statusManager) hasBit(position uint64) bool {
+	val := st.status & (1 << position)
+	return val > 0
+}
+
+// on sets the status of specified positions.
+func (rbft *rbftImpl) on(statusPos ...uint64) {
+	for _, pos := range statusPos {
+		rbft.status.setBit(pos)
 	}
 }
 
-// inActiveState sets the states to false
-func (status RbftStatus) inActiveState(stateName ...*int32) {
-	for _, s := range stateName {
-		atomic.StoreInt32(s, OFF)
+// off resets the status of specified positions.
+func (rbft *rbftImpl) off(statusPos ...uint64) {
+	for _, pos := range statusPos {
+		rbft.status.clearBit(pos)
 	}
 }
 
-// getState returns the state of specified state name, true means ON, false means OFF
-func (status RbftStatus) getState(stateName *int32) bool {
-	return atomic.LoadInt32(stateName) == ON
+// in returns the status of specified position.
+func (rbft *rbftImpl) in(pos uint64) bool {
+	return rbft.status.hasBit(pos)
 }
 
-// checkStatesAnd checks the result of several status computed with each other using '&&'
-func (status RbftStatus) checkStatesAnd(stateName ...*int32) bool {
+// inAll checks the result of several status computed with each other using '&&'
+func (rbft *rbftImpl) inAll(poss ...uint64) bool {
 	var rs bool = true
-	for _, s := range stateName {
-		rs = rs && status.getState(s)
+	for _, pos := range poss {
+		rs = rs && rbft.in(pos)
 	}
 	return rs
 }
 
-// checkStatesOr checks the result of several status computed with each other using '||'
-func (status RbftStatus) checkStatesOr(stateName ...*int32) bool {
+// inOne checks the result of several status computed with each other using '||'
+func (rbft *rbftImpl) inOne(poss ...uint64) bool {
 	var rs bool = false
-	for _, s := range stateName {
-		rs = rs || status.getState(s)
+	for _, pos := range poss {
+		rs = rs || rbft.in(pos)
 	}
 	return rs
+}
+
+// setNormal sets system to normal.
+func (rbft *rbftImpl) setNormal() {
+	atomic.StoreUint32(&rbft.status.normal, 1)
+}
+
+// setAbNormal sets system to abnormal which means system may be in viewchange,
+// recovery, state update...
+func (rbft *rbftImpl) setAbNormal() {
+	atomic.StoreUint32(&rbft.status.normal, 0)
+}
+
+// setFull means tx pool has reached the pool size.
+func (rbft *rbftImpl) setFull() {
+	atomic.StoreUint32(&rbft.status.poolFull, 1)
+}
+
+// setNotFull means tx pool hasn't reached the pool size.
+func (rbft *rbftImpl) setNotFull() {
+	atomic.StoreUint32(&rbft.status.poolFull, 0)
+}
+
+// isNormal checks and returns if system is normal or not.
+func (rbft *rbftImpl) isNormal() bool {
+	return atomic.LoadUint32(&rbft.status.normal) == 1
+}
+
+// isPoolFull checks and returns if tx pool is full or not.
+func (rbft *rbftImpl) isPoolFull() bool {
+	return atomic.LoadUint32(&rbft.status.poolFull) == 1
 }

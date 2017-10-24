@@ -46,7 +46,6 @@ type ExecutorContext struct {
 // initializeExecutorContext restores histrical status from db.
 func initializeExecutorContext(executor *Executor) error {
 	executor.context.exit = make(chan struct{})
-
 	executor.context.validationSuspend = make(chan bool)
 	executor.context.commitSuspend = make(chan bool)
 	executor.context.syncReplicaSuspend = make(chan bool)

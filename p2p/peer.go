@@ -17,9 +17,6 @@ import (
 	"hyperchain/p2p/payloads"
 )
 
-// init the package-level logger system,
-// after this declare and init function,
-// you can use the `log` whole the package scope
 type Peer struct {
 	hostname  string
 	info      *info.Info
@@ -31,7 +28,7 @@ type Peer struct {
 	logger    *logging.Logger
 }
 
-//NewPeer get a new peer which chat/greeting/whisper functions
+// NewPeer create and returns a new Peer instance.
 func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, net *network.HyperNet, chts *hts.ClientHTS, evhub *event.TypeMux) (*Peer, error) {
 	peer := &Peer{
 		info:      info.NewInfo(id, hostname, namespace),
@@ -49,15 +46,16 @@ func NewPeer(namespace string, hostname string, id int, localInfo *info.Info, ne
 	return peer, nil
 }
 
-//implements the WeightItem interface
+// Weight returns the node ID.
 func (peer *Peer) Weight() int {
 	return peer.info.Id
 }
+
 func (peer *Peer) Value() interface{} {
 	return peer
 }
 
-//Chat send a stream message to remote peer
+// Chat sends a stream message to remote peer.
 func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
 	peer.logger.Debug("Chat msg to ", peer.info.Hostname)
 	//here will wrapper the message
@@ -83,7 +81,7 @@ func (peer *Peer) Chat(in *pb.Message) (*pb.Message, error) {
 	return resp, nil
 }
 
-//Whisper send a whisper message to remote peer
+// Whisper sends a whisper message to remote peer.
 func (peer *Peer) Whisper(in *pb.Message) (*pb.Message, error) {
 	in.From = &pb.Endpoint{
 		Field:    []byte(peer.local.GetNameSpace()),
@@ -104,7 +102,7 @@ func (peer *Peer) Whisper(in *pb.Message) (*pb.Message, error) {
 	return response, nil
 }
 
-//Greeting send a greeting message to remote peer
+// Greeting sends a greeting message to remote peer.
 func (peer *Peer) Greeting(in *pb.Message) (*pb.Message, error) {
 	in.From = &pb.Endpoint{
 		Field:    []byte(peer.local.GetNameSpace()),
@@ -119,7 +117,7 @@ func (peer *Peer) Greeting(in *pb.Message) (*pb.Message, error) {
 	return response, nil
 }
 
-//Serialize the peer
+// Serialize serializes the peer information.
 func (peer *Peer) Serialize() []byte {
 	ps := struct {
 		Hostname  string `json:"hostname"`
@@ -136,8 +134,8 @@ func (peer *Peer) Serialize() []byte {
 	return b
 }
 
-//Unserialize the peer
-func PeerUnSerialize(raw []byte) (hostname string, namespace string, hash string, err error) {
+// PeerDeSerialize deserializes the peer information.
+func PeerDeSerialize(raw []byte) (hostname string, namespace string, hash string, err error) {
 	ps := &struct {
 		Hostname  string `json:"hostname"`
 		Namespace string `json:"namespace"`
@@ -174,7 +172,7 @@ func PeerUnSerialize(raw []byte) (hostname string, namespace string, hash string
                                <------------
 */
 
-//this is peer should do things
+// session key negotiation
 func (peer *Peer) clientHello(isOrg, isRec bool) error {
 	peer.logger.Debug("send client hello message")
 	// if self return nil do not need verify
@@ -278,7 +276,7 @@ Sharekey %s
 }
 
 // handle the double side handshake process,
-// when got a serverhello, this peer should response by clientResponse.
+// when got a serverhello, if accept, this peer should response by clientResponse.
 func (peer *Peer) clientResponse(serverHello *pb.Message) error {
 	payload := []byte("client accept [msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTACCEPT, payload)
@@ -291,7 +289,7 @@ func (peer *Peer) clientResponse(serverHello *pb.Message) error {
 }
 
 // handle the double side handshake process,
-// when got a serverhello, this peer should response by clientResponse.
+// when got a serverhello, if reject, this peer should response by clientReject.
 func (peer *Peer) clientReject(serverHello *pb.Message) error {
 	payload := []byte("client accept [msg test]")
 	msg := pb.NewMsg(pb.MsgType_CLIENTREJECT, payload)

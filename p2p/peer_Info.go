@@ -22,14 +22,3 @@ type PeerInfo struct {
 }
 
 type PeerInfos []PeerInfo
-
-func NewPeerInfos(pis ...PeerInfo) PeerInfos {
-	var peerInfos PeerInfos
-	for _, pers := range pis {
-		peerInfos = append(peerInfos, pers)
-	}
-	return peerInfos
-}
-func (this *PeerInfos) GetNumber() int {
-	return len(*this)
-}

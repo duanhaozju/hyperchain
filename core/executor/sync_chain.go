@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/cheggaaa/pb"
 	"github.com/golang/protobuf/proto"
 	"hyperchain/common"
 	cm "hyperchain/core/common"
@@ -33,11 +32,8 @@ import (
 	cmd "os/exec"
 	"path"
 	"path/filepath"
+	"sync/atomic"
 	"time"
-)
-
-var (
-	receivePb *pb.ProgressBar
 )
 
 /*
@@ -49,18 +45,24 @@ var (
 func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	executor.logger.Noticef("[Namespace = %s] send sync block request to fetch missing block, current height %d, target height %d",
 		executor.namespace, edb.GetHeightOfChain(executor.namespace), ev.TargetHeight)
-	if executor.context.syncCtx != nil && executor.context.syncCtx.syncTarget >= ev.TargetHeight || edb.GetHeightOfChain(executor.namespace) > ev.TargetHeight {
+	// Ignore invalid state synchronization request.
+	// Invalid request includes:
+	// 1. last synchronization has not finished and current sync target is less than the in-flight one.
+	// 2. sync target is less than chain height.
+	if executor.context.syncCtx != nil && executor.context.syncCtx.target >= ev.TargetHeight || edb.GetHeightOfChain(executor.namespace) > ev.TargetHeight {
 		executor.logger.Errorf("[Namespace = %s] receive invalid state update request, just ignore it", executor.namespace)
 		executor.reject()
 		return
 	}
 
+	// If sync target is equal with current chain height, compare sync target block hash with local block hash.
 	if edb.GetHeightOfChain(executor.namespace) == ev.TargetHeight {
 		executor.logger.Debugf("[Namespace = %s] recv target height same with current chain height", executor.namespace)
 		if executor.isBlockHashEqual(ev.TargetBlockHash) == true {
 			executor.logger.Infof("[Namespace = %s] current chain latest block hash equal with target hash, send state updated event", executor.namespace)
 			executor.sendStateUpdatedEvent()
 		} else {
+			// Local latest block is invalid.
 			executor.logger.Warningf("[Namespace = %s] current chain latest block hash not equal with target hash, cut down local block %d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
 			if err := executor.CutdownBlock(edb.GetHeightOfChain(executor.namespace)); err != nil {
 				executor.logger.Errorf("[Namespace = %s] cut down block %d failed.", executor.namespace, edb.GetHeightOfChain(executor.namespace))
@@ -72,22 +74,27 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 
 	executor.setupContext(ev)
 
+	// If synchronization has to depend on world state transition,
+	// check whether world state transition is enable or not.
 	if executor.context.syncCtx.updateGenesis && !executor.conf.IsSyncWsEable() {
 		executor.logger.Noticef("World state transition is not supported, chain synchronization can not been arcieved since there has no required blocks over the network. system exit")
 		os.Exit(1)
 	}
+
+	// If synchronization has to depend on world state transition,
+	// check whether there exists available block data in network.
 	if len(executor.context.syncCtx.getFullPeersId()) == 0 && len(executor.context.syncCtx.getPartPeersId()) == 0 {
 		executor.logger.Noticef("There is no satisfied peers over the blockchain network to make chain synchronization, hold on some time to retry. system exit")
 		os.Exit(1)
 	}
 
 	executor.SendSyncRequest(ev.TargetHeight, executor.calcuDownstream())
-	receivePb = common.InitPb(int64(ev.TargetHeight-edb.GetHeightOfChain(executor.namespace)), "receive block")
-	receivePb.Start()
+
 	executor.context.closeW.Add(1)
 	go executor.syncChainResendBackend()
 }
 
+// syncChainResendBackend resend request if not meet requirement in time.
 func (executor *Executor) syncChainResendBackend() {
 	ticker := time.NewTicker(executor.conf.GetSyncResendInterval())
 	up, down := executor.context.syncCtx.getRequest()
@@ -97,37 +104,38 @@ func (executor *Executor) syncChainResendBackend() {
 			executor.context.closeW.Done()
 			return
 		case <-ticker.C:
-			// resend
 			if executor.context.syncCtx.getResendMode() == ResendMode_Block {
+				// resend block reqeust.
 				curUp, curDown := executor.context.syncCtx.getRequest()
 				if curUp == up && curDown == down {
-					executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.context.syncCtx.syncDemandBlockNum)
+					executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.context.syncCtx.demandBlockNum)
 					executor.context.syncCtx.qosStat.FeedBack(false)
 					executor.context.syncCtx.setCurrentPeer(executor.context.syncCtx.qosStat.SelectPeer())
-					executor.SendSyncRequest(executor.context.syncCtx.syncDemandBlockNum, down)
+					executor.SendSyncRequest(executor.context.syncCtx.demandBlockNum, down)
 					executor.context.syncCtx.recordRequest(curUp, curDown)
 				} else {
 					up = curUp
 					down = curDown
 				}
 			} else if executor.context.syncCtx.getResendMode() == ResendMode_WorldState_Hs {
-				executor.SendSyncRequestForWorldState(executor.context.syncCtx.syncDemandBlockNum + 1)
+				// resend world state transition handkshake request.
+				executor.SendSyncRequestForWorldState(executor.context.syncCtx.demandBlockNum + 1)
 			} else if executor.context.syncCtx.getResendMode() == ResendMode_WorldState_Piece {
+				// resend world state transition piece request.
 				ack := executor.constructWsAck(executor.context.syncCtx.hs.Ctx, executor.context.syncCtx.getWsId(), WsAck_OK, nil)
 				if err := executor.informP2P(NOTIFY_SEND_WS_ACK, ack); err != nil {
 					executor.logger.Warning("send ws ack failed")
 					return
 				}
-			} else {
-				return
 			}
 		}
 	}
 }
 
-// ReceiveSyncBlocks - receive request synchronization blocks from others.
+// ReceiveSyncBlocks receives synchronization request blocks from others.
 func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 
+	// check whether all blocks received or not.
 	checkNeedMore := func() bool {
 		var needNextFetch bool
 		if !executor.context.syncCtx.updateGenesis {
@@ -145,8 +153,9 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 		return needNextFetch
 	}
 
+	// check whether the latest block received from network is equal with local related block.
 	checker := func() bool {
-		lastBlk, err := edb.GetBlockByNumber(executor.namespace, executor.context.syncCtx.syncDemandBlockNum+1)
+		lastBlk, err := edb.GetBlockByNumber(executor.namespace, executor.context.syncCtx.demandBlockNum+1)
 		if err != nil {
 			return false
 		}
@@ -160,37 +169,39 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 		return true
 	}
 
+	// send block request.
 	reqNext := func(isbatch bool) {
-		executor.logger.Notice("still have some blocks to fetch")
 		executor.context.syncCtx.qosStat.FeedBack(true)
 		executor.context.syncCtx.setCurrentPeer(executor.context.syncCtx.qosStat.SelectPeer())
 		if isbatch {
-			common.AddPb(receivePb, int64(executor.conf.GetSyncMaxBatchSize()))
-			common.PrintPb(receivePb, 0, executor.logger)
+			executor.context.syncCtx.updateProgress(BlockReceiveProgress, int64(executor.conf.GetSyncMaxBatchSize()), 0)
 		}
 		prev := executor.context.syncCtx.getDownstream()
 		next := executor.calcuDownstream()
 		executor.SendSyncRequest(prev, next)
 	}
 
-	if executor.context.syncCtx != nil && executor.context.syncCtx.syncDemandBlockNum != 0 {
+	if executor.context.syncCtx != nil && executor.context.syncCtx.demandBlockNum != 0 {
 		block := &types.Block{}
 		if err := proto.Unmarshal(payload, block); err != nil {
 			executor.logger.Warning("receive a block but unmarshal failed")
 			return
 		}
-		// store blocks into database only, not process them.
+		// check block intergrity via block hash
 		if !VerifyBlockIntegrity(block) {
 			executor.logger.Warningf("[Namespace = %s] receive a broken block %d, drop it", executor.namespace, block.Number)
 			return
 		}
-		if block.Number <= executor.context.syncCtx.syncDemandBlockNum {
+		if block.Number <= executor.context.syncCtx.demandBlockNum {
 			executor.logger.Debugf("[Namespace = %s] receive block #%d  hash %s", executor.namespace, block.Number, common.BytesToHash(block.BlockHash).Hex())
 			// is demand
 			if executor.isDemandSyncBlock(block) {
 				// received block's struct definition may different from current
 				// for backward compatibility, store with original version tag.
+				// Persist receive block to dababase directly because store in memory
+				// may cause memory exhausted.
 				edb.PersistBlock(executor.db.NewBatch(), block, true, true, string(block.Version), getTxVersion(block))
+				// update sync demand and scan any available blocks in cache and persist them to db.
 				if err := executor.updateSyncDemand(block); err != nil {
 					executor.logger.Errorf("[Namespace = %s] update sync demand failed.", executor.namespace)
 					executor.reject()
@@ -204,32 +215,30 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 			}
 		}
 		if executor.receiveAllRequiredBlocks() {
+			// a batch of request blocks all received
 			executor.logger.Notice("receive a batch of blocks")
 			needNextFetch := checkNeedMore()
 			if needNextFetch {
 				reqNext(true)
 			} else {
-				executor.logger.Noticef("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.context.syncCtx.syncTarget)
-				common.SetPb(receivePb, receivePb.Total)
-				common.PrintPb(receivePb, 0, executor.logger)
-				receivePb.Finish()
+				executor.logger.Noticef("receive all required blocks. from %d to %d", edb.GetHeightOfChain(executor.namespace), executor.context.syncCtx.target)
+				executor.context.syncCtx.finishProgress(BlockReceiveProgress)
 				if executor.context.syncCtx.updateGenesis {
-					// receive world state
 					executor.logger.Notice("send request to fetch world state for status transition")
 					executor.context.syncCtx.setResendMode(ResendMode_WorldState_Hs)
-					executor.SendSyncRequestForWorldState(executor.context.syncCtx.syncDemandBlockNum + 1)
+					executor.SendSyncRequestForWorldState(executor.context.syncCtx.demandBlockNum + 1)
 				} else {
 					// check
 					if checker() {
 						executor.context.syncCtx.setResendMode(ResendMode_Nope)
 						executor.processSyncBlocks()
 					} else {
-						if err := executor.CutdownBlock(executor.context.syncCtx.syncDemandBlockNum); err != nil {
-							executor.logger.Errorf("[Namespace = %s] cut down block %d failed.", executor.namespace, executor.context.syncCtx.syncDemandBlockNum)
+						if err := executor.CutdownBlock(executor.context.syncCtx.demandBlockNum); err != nil {
+							executor.logger.Errorf("[Namespace = %s] cut down block %d failed.", executor.namespace, executor.context.syncCtx.demandBlockNum)
 							executor.reject()
 							return
 						}
-						executor.logger.Noticef("cutdown block #%d", executor.context.syncCtx.syncDemandBlockNum)
+						executor.logger.Noticef("cutdown block #%d", executor.context.syncCtx.demandBlockNum)
 						reqNext(false)
 					}
 				}
@@ -238,9 +247,10 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 	}
 }
 
-// ReceiveWsHandshake receive tag peer's ws handshake packet,
+// ReceiveWsHandshake receive target peer's ws handshake packet,
 // make some initialisation operations and send back ack.
 func (executor *Executor) ReceiveWsHandshake(payload []byte) {
+	// Short circuit if received duplicated handshake
 	if executor.context.syncCtx.handshaked {
 		return
 	}
@@ -271,11 +281,40 @@ func (executor *Executor) ReceiveWsHandshake(payload []byte) {
 	executor.logger.Debugf("send ws ack (#%d) success", ack.PacketId)
 }
 
-// ReceiveWsHandshake receive tag peer's ws packet,
+func (executor *Executor) ReceiveWorldState(payload []byte) {
+	var (
+		process  func()
+		finalize func() error
+	)
+	if executor.context.syncCtx != nil && executor.context.syncCtx.typ == VP {
+		process = executor.processSyncBlocks
+		finalize = nil
+	} else if executor.context.syncCtx != nil && executor.context.syncCtx.typ == NVP {
+		process = nil
+		finalize = func() error {
+			retry := 3
+			for retry > 0 {
+				if !atomic.CompareAndSwapInt32(&executor.context.syncCtx.waitTransition, 1, 0) {
+					retry--
+					continue
+				}
+				break
+			}
+			if retry == 0 {
+				return nil
+			} else {
+				return errors.New("finalize world state transition failed")
+			}
+		}
+	}
+	executor.receiveWorldState(payload, process, finalize)
+}
+
+// ReceiveWsHandshake receive target peer's ws packet,
 // store the slice packet and send back ack to fetch the next one.
 // If all packets has been received, assemble them and trigger to apply.
-func (executor *Executor) ReceiveWorldState(payload []byte) {
-	executor.logger.Debugf("receive ws packet")
+func (executor *Executor) receiveWorldState(payload []byte, process func(), finailize func() error) {
+	executor.logger.Debug("receive ws packet")
 	var ws Ws
 	if err := proto.Unmarshal(payload, &ws); err != nil {
 		executor.logger.Warning("unmarshal world state packet failed.")
@@ -325,31 +364,43 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 		executor.context.syncCtx.setResendMode(ResendMode_Nope)
 		executor.context.syncCtx.receiveAll = true
 
-		executor.logger.Notice("receive all ws packet, begin to assemble")
+		executor.logger.Notice("receive all ws packets, begin to assemble")
 		if err := assemble(); err != nil {
 			executor.logger.Errorf("assemble failed, err detail %s", err.Error())
 			return
 		}
 		// update genesis tag, regard the ws as the latest genesis status.
-		_, nGenesis := executor.context.syncCtx.getTargerGenesis()
-		newGenesis, err := edb.GetBlockByNumber(executor.namespace, nGenesis)
-		if err != nil {
+		var (
+			height     uint64
+			newGenesis *types.Block
+			err        error
+		)
+		height = executor.context.syncCtx.hs.Height
+
+		if newGenesis, err = edb.GetBlockByNumber(executor.namespace, height); err != nil {
 			return
 		}
+
 		if err := executor.applyWorldState(path.Join(executor.context.syncCtx.getWsHome(), "ws.tar.gz"), ws.Ctx.FilterId, common.BytesToHash(newGenesis.MerkleRoot), newGenesis.Number); err != nil {
 			executor.logger.Errorf("apply ws failed, err detail %s", err.Error())
 			return
 		}
 		executor.context.syncCtx.setTransitioned()
-		go executor.InsertSnapshot(common.Manifest{
-			Height:     nGenesis,
+		// Inserts received snapshot to local as genesis.
+		go executor.InsertSnapshot(cm.Manifest{
+			Height:     height,
 			BlockHash:  common.Bytes2Hex(newGenesis.BlockHash),
 			FilterId:   ws.Ctx.FilterId,
 			MerkleRoot: common.Bytes2Hex(newGenesis.MerkleRoot),
 			Date:       time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05"),
 			Namespace:  executor.namespace,
 		})
-		executor.processSyncBlocks()
+		if process != nil {
+			process()
+		}
+		if finailize != nil {
+			finailize()
+		}
 	} else if ws.PacketId == executor.context.syncCtx.getWsId()+1 {
 		// fetch the next slice packet.
 		store(ws.Payload, ws.PacketId, ws.Ctx.FilterId)
@@ -363,7 +414,7 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 	}
 }
 
-// SendSyncRequest - send synchronization request to other nodes.
+// SendSyncRequest sends synchronization request to other nodes.
 func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 	peer := executor.context.syncCtx.getCurrentPeer()
 	executor.logger.Debugf("send sync req to %d, require [%d] to [%d]", peer, downstream, upstream)
@@ -394,12 +445,12 @@ func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *
 	return nil, result
 }
 
-// ClearStateUnCommitted - remove all cached stuff
+// ClearStateUnCommitted removes all cached stuff
 func (executor *Executor) clearStatedb() {
 	executor.statedb.Purge()
 }
 
-// assertApplyResult - check apply result whether equal with other's.
+// assertApplyResult checks apply result whether equal with other's.
 func (executor *Executor) assertApplyResult(block *types.Block, result *ValidationResultRecord) bool {
 	if bytes.Compare(block.MerkleRoot, result.MerkleRoot) != 0 {
 		executor.logger.Warningf("[Namespace = %s] mismatch in block merkle root  of #%d, demand %s, got %s",
@@ -420,7 +471,7 @@ func (executor *Executor) assertApplyResult(block *types.Block, result *Validati
 	return true
 }
 
-// isBlockHashEqual - compare block hash.
+// isBlockHashEqual compares block hash.
 func (executor *Executor) isBlockHashEqual(targetHash []byte) bool {
 	// compare current latest block and peer's block hash
 	latestBlock, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
@@ -432,33 +483,31 @@ func (executor *Executor) isBlockHashEqual(targetHash []byte) bool {
 	return true
 }
 
-// processSyncBlocks - execute all received block one by one.
+// processSyncBlocks executes all received block one by one.
 func (executor *Executor) processSyncBlocks() {
 	if executor.context.syncCtx == nil {
 		return
 	}
-	if executor.context.syncCtx.syncDemandBlockNum <= edb.GetHeightOfChain(executor.namespace) || executor.context.syncCtx.getTranstioned() {
+	if executor.context.syncCtx.demandBlockNum <= edb.GetHeightOfChain(executor.namespace) || executor.context.syncCtx.getTranstioned() {
 		// get the first of SyncBlocks
 		executor.waitUtilSyncAvailable()
 		defer executor.syncDone()
 		// execute all received block at one time
-		var processPb *pb.ProgressBar
 		var low uint64
 		if executor.context.syncCtx.updateGenesis {
 			_, low = executor.context.syncCtx.getTargerGenesis()
 			low += 1
-			processPb = common.InitPb(int64(executor.context.syncCtx.syncTarget-low+1), "process block")
+			executor.context.syncCtx.initProgres(BlockExecuteProgress, int64(executor.context.syncCtx.target-low+1), "block-process")
 		} else {
-			low = executor.context.syncCtx.syncDemandBlockNum + 1
-			processPb = common.InitPb(int64(executor.context.syncCtx.syncTarget-edb.GetHeightOfChain(executor.namespace)), "process block")
+			low = executor.context.syncCtx.demandBlockNum + 1
+			executor.context.syncCtx.initProgres(BlockExecuteProgress, int64(executor.context.syncCtx.target-edb.GetHeightOfChain(executor.namespace)), "block-process")
 		}
-		processPb.Start()
 
-		for i := low; i <= executor.context.syncCtx.syncTarget; i += 1 {
+		for i := low; i <= executor.context.syncCtx.target; i += 1 {
 			blk, err := edb.GetBlockByNumber(executor.namespace, i)
 			if err != nil {
 				executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
-					executor.namespace, executor.context.syncCtx.syncDemandBlockNum+1, executor.context.syncCtx.syncTarget, edb.GetHeightOfChain(executor.namespace))
+					executor.namespace, executor.context.syncCtx.demandBlockNum+1, executor.context.syncCtx.target, edb.GetHeightOfChain(executor.namespace))
 				executor.reject()
 				return
 			} else {
@@ -468,7 +517,7 @@ func (executor *Executor) processSyncBlocks() {
 				err, result := executor.ApplyBlock(blk, blk.Number)
 				if err != nil || executor.assertApplyResult(blk, result) == false {
 					executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
-						executor.namespace, executor.context.syncCtx.syncDemandBlockNum+1, executor.context.syncCtx.syncTarget, edb.GetHeightOfChain(executor.namespace))
+						executor.namespace, executor.context.syncCtx.demandBlockNum+1, executor.context.syncCtx.target, edb.GetHeightOfChain(executor.namespace))
 					if err != nil {
 						executor.logger.Errorf("detail error %s", err.Error())
 					}
@@ -480,28 +529,24 @@ func (executor *Executor) processSyncBlocks() {
 						executor.reject()
 						return
 					}
-					common.AddPb(processPb, 1)
-					common.PrintPb(processPb, 10, executor.logger)
+					executor.context.syncCtx.updateProgress(BlockExecuteProgress, 1, 10)
 				}
 			}
 		}
-		if !common.IsPrintPb(processPb, 10) {
-			common.PrintPb(processPb, 0, executor.logger)
-		}
-		processPb.Finish()
-		executor.initDemand(executor.context.syncCtx.syncTarget + 1)
+		executor.context.syncCtx.finishProgress(BlockExecuteProgress)
+		executor.initDemand(executor.context.syncCtx.target + 1)
 		executor.clearSyncFlag()
 		executor.sendStateUpdatedEvent()
 	}
 }
 
-// SendSyncRequestForWorldState - send world state fetch request.
+// SendSyncRequestForWorldState sends world state fetch request.
 func (executor *Executor) SendSyncRequestForWorldState(number uint64) {
 	executor.logger.Debugf("send req to fetch world state at height (#%d)", number)
-	executor.informP2P(NOTIFY_REQUEST_WORLD_STATE, number)
+	executor.informP2P(NOTIFY_REQUEST_WORLD_STATE, number, executor.context.syncCtx.getCurrentPeer(), false)
 }
 
-// updateSyncDemand - update next demand block number and block hash.
+// updateSyncDemand updates next demand block number and block hash.
 func (executor *Executor) updateSyncDemand(block *types.Block) error {
 	var tmp = block.Number - 1
 	var tmpHash = block.ParentHash
@@ -534,18 +579,18 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 	}
 	executor.context.syncCtx.update(tmp, tmpHash)
 	executor.logger.Debugf("[Namespace = %s] Next Demand %d %s", executor.namespace,
-		executor.context.syncCtx.syncDemandBlockNum, common.BytesToHash(executor.context.syncCtx.syncDemandBlockHash).Hex())
+		executor.context.syncCtx.demandBlockNum, common.BytesToHash(executor.context.syncCtx.demandBlockHash).Hex())
 	return nil
 }
 
-// sendStateUpdatedEvent - communicate with consensus, told it state update has finished.
+// sendStateUpdatedEvent communicates with consensus, told it state update has finished.
 func (executor *Executor) sendStateUpdatedEvent() {
 	// state update success
 	executor.PurgeCache()
 	executor.informConsensus(NOTIFY_SYNC_DONE, protos.StateUpdatedMessage{edb.GetHeightOfChain(executor.namespace)})
 }
 
-// accpet - accept block synchronization result.
+// accpet accepts block synchronization result.
 func (executor *Executor) accpet(seqNo uint64, block *types.Block, result *ValidationResultRecord) error {
 	batch := executor.statedb.FetchBatch(seqNo, state.BATCH_NORMAL)
 	if err := edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false); err != nil {
@@ -570,7 +615,7 @@ func (executor *Executor) reject() {
 	executor.cache.syncCache.Purge()
 	// clear all useless stuff
 	batch := executor.db.NewBatch()
-	for i := edb.GetHeightOfChain(executor.namespace) + 1; i <= executor.context.syncCtx.syncTarget; i += 1 {
+	for i := edb.GetHeightOfChain(executor.namespace) + 1; i <= executor.context.syncCtx.target; i += 1 {
 		// delete persisted blocks number larger than chain height
 		edb.DeleteBlockByNum(executor.namespace, batch, i, false, false)
 	}
@@ -581,16 +626,16 @@ func (executor *Executor) reject() {
 	executor.sendStateUpdatedEvent()
 }
 
-// isDemandSyncBlock - check whether is the demand sync block.
+// isDemandSyncBlock checks whether the sync block is demand or not.
 func (executor *Executor) isDemandSyncBlock(block *types.Block) bool {
-	if block.Number == executor.context.syncCtx.syncDemandBlockNum &&
-		bytes.Compare(block.BlockHash, executor.context.syncCtx.syncDemandBlockHash) == 0 {
+	if block.Number == executor.context.syncCtx.demandBlockNum &&
+		bytes.Compare(block.BlockHash, executor.context.syncCtx.demandBlockHash) == 0 {
 		return true
 	}
 	return false
 }
 
-// calcuDownstream - calculate a sync request downstream
+// calcuDownstream calculates a sync request downstream
 // if a node required to sync too much blocks one time, the huge chain sync request will be split to several small one.
 // a sync chain required block number can not more than `sync batch size` in config file.
 func (executor *Executor) calcuDownstream() uint64 {
@@ -615,12 +660,12 @@ func (executor *Executor) calcuDownstream() uint64 {
 	return executor.context.syncCtx.getDownstream()
 }
 
-// receiveAllRequiredBlocks check all required blocks has been received.
+// receiveAllRequiredBlocks checks all required blocks has been received.
 func (executor *Executor) receiveAllRequiredBlocks() bool {
-	return executor.context.syncCtx.syncDemandBlockNum == executor.context.syncCtx.getDownstream()
+	return executor.context.syncCtx.demandBlockNum == executor.context.syncCtx.getDownstream()
 }
 
-// storeFilterData - store filter data in record temporarily, avoid re-generated when using.
+// storeFilterData stores filter data in record temporarily, avoid re-generated when using.
 func (executor *Executor) storeFilterData(record *ValidationResultRecord, block *types.Block, logs []*types.Log) {
 	record.Block = block
 	record.Logs = logs
@@ -633,6 +678,8 @@ func (executor *Executor) setupContext(ev event.ChainSyncReqEvent) {
 
 // applyWorldState apply the received world state, check the whole ledger hash before flush the changes to databse.
 // if success, update the genesis tag with the world state tag(means genesis transition finished).
+// Note, the whole operation is a atomic operation. If apply success, the genesis tag and current height will equal with
+// given height; otherwise, no change will flush to db.
 func (executor *Executor) applyWorldState(fPath string, filterId string, root common.Hash, genesis uint64) error {
 	uncompressCmd := cmd.Command("tar", "-zxvf", fPath, "-C", filepath.Dir(fPath))
 	if err := uncompressCmd.Run(); err != nil {
@@ -655,6 +702,11 @@ func (executor *Executor) applyWorldState(fPath string, filterId string, root co
 		return err
 	}
 
+	// update current chain height equal with given world state height
+	if err := edb.UpdateChainByBlcokNum(executor.namespace, writeBatch, genesis, false, false); err != nil {
+		return err
+	}
+
 	if err := writeBatch.Write(); err != nil {
 		return err
 	}
@@ -666,7 +718,7 @@ func (executor *Executor) applyWorldState(fPath string, filterId string, root co
 /*
 	Sync chain Receiver
 */
-// ReceiveSyncRequest - receive synchronization request from some nodes, and send back request blocks.
+// ReceiveSyncRequest receives` synchronization request from some nodes, and send back request blocks.
 func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 	var request ChainSyncRequest
 	if err := proto.Unmarshal(payload, &request); err != nil {
@@ -678,7 +730,7 @@ func (executor *Executor) ReceiveSyncRequest(payload []byte) {
 	}
 }
 
-// ReceiveWorldStateSyncRequest - receive ws request, send back handshake packet first time.
+// ReceiveWorldStateSyncRequest receives ws request, send back handshake packet first time.
 func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
 	var request WsRequest
 	var fsize int64
@@ -687,7 +739,7 @@ func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
 		return
 	}
 	executor.logger.Noticef("receive world state sync req, required (#%d)", request.Target)
-	err, manifest := executor.snapshotReg.rwc.Search(request.Target)
+	err, manifest := executor.snapshotReg.rw.Search(request.Target)
 	if err != nil {
 		executor.logger.Warning("required snapshot doesn't exist")
 		return
@@ -707,11 +759,11 @@ func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
 	}
 	hs := executor.constructWsHandshake(request, manifest.FilterId, uint64(fsize), uint64(n))
 	if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE_HANDSHAKE, hs); err != nil {
-		executor.logger.Warningf("send world state (#%s) back to (%d) failed, err msg %s", manifest.FilterId, request.InitiatorId, err.Error())
+		executor.logger.Warningf("send world state (#%s) back to (%v) failed, err msg %s", manifest.FilterId, HashOrIdString(request.InitiatorIdOrHash), err.Error())
 		return
 	}
-	executor.logger.Debugf("send world state (#%s) handshake back to (%d) success, total size %d, total packet num %d, max packet size %d",
-		manifest.FilterId, request.InitiatorId, hs.Size, hs.PacketNum, hs.PacketSize)
+	executor.logger.Debugf("send world state (#%s) handshake back to (%v) success, total size %d, total packet num %d, max packet size %d",
+		manifest.FilterId, HashOrIdString(request.InitiatorIdOrHash), hs.Size, hs.PacketNum, hs.PacketSize)
 }
 
 // ReceiveWsAck receive initiator's ack packet.
@@ -742,7 +794,7 @@ func (executor *Executor) ReceiveWsAck(payload []byte) {
 			if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE, ws); err != nil {
 				return
 			}
-			executor.logger.Debugf("send ws(#%s) packet (#%d), packet size (#%d) to peer (#%d) success", ws.Ctx.FilterId, ws.PacketId, ws.PacketSize, ws.Ctx.ReceiverId)
+			executor.logger.Debugf("send ws(#%s) packet (#%d), packet size (#%d) to peer (#%v) success", ws.Ctx.FilterId, ws.PacketId, ws.PacketSize, HashOrIdString(ws.Ctx.ReceiverIdOrHash))
 		} else if n == 0 && err != nil {
 			// TODO handler invalid ws req
 			return
@@ -768,14 +820,14 @@ func (executor *Executor) ReceiveWsAck(payload []byte) {
 	Net Packets
 */
 
-// constructWsHandshake - make ws handshake packet.
+// constructWsHandshake makes ws handshake packet.
 func (executor *Executor) constructWsHandshake(req WsRequest, filterId string, size uint64, pn uint64) *WsHandshake {
 	wsShardSize := int64(executor.conf.GetStateFetchPacketSize())
 	return &WsHandshake{
 		Ctx: &WsContext{
-			FilterId:    filterId,
-			InitiatorId: req.ReceiverId,
-			ReceiverId:  req.InitiatorId,
+			FilterId:          filterId,
+			InitiatorIdOrHash: common.CopyBytes(req.ReceiverIdOrHash),
+			ReceiverIdOrHash:  common.CopyBytes(req.InitiatorIdOrHash),
 		},
 		Height:     req.Target,
 		Size:       size,
@@ -784,13 +836,13 @@ func (executor *Executor) constructWsHandshake(req WsRequest, filterId string, s
 	}
 }
 
-// constructWsHandshake - make ws ack packet.
+// constructWsHandshake makes ws ack packet.
 func (executor *Executor) constructWsAck(ctx *WsContext, packetId uint64, status WsAck_STATUS, message []byte) *WsAck {
 	return &WsAck{
 		Ctx: &WsContext{
-			FilterId:    ctx.FilterId,
-			InitiatorId: ctx.ReceiverId,
-			ReceiverId:  ctx.InitiatorId,
+			FilterId:          ctx.FilterId,
+			InitiatorIdOrHash: common.CopyBytes(ctx.ReceiverIdOrHash),
+			ReceiverIdOrHash:  common.CopyBytes(ctx.InitiatorIdOrHash),
 		},
 		PacketId: packetId,
 		Status:   status,
@@ -798,14 +850,14 @@ func (executor *Executor) constructWsAck(ctx *WsContext, packetId uint64, status
 	}
 }
 
-// constructWsHandshake - make ws packet.
+// constructWsHandshake makes ws packet.
 func (executor *Executor) constrcutWs(ack *WsAck, packetId uint64, packetSize uint64, payload []byte) *Ws {
 	executor.logger.Debugf("construct ws packet with %d size", len(payload))
 	return &Ws{
 		Ctx: &WsContext{
-			FilterId:    ack.Ctx.FilterId,
-			InitiatorId: ack.Ctx.ReceiverId,
-			ReceiverId:  ack.Ctx.InitiatorId,
+			FilterId:          ack.Ctx.FilterId,
+			InitiatorIdOrHash: common.CopyBytes(ack.Ctx.ReceiverIdOrHash),
+			ReceiverIdOrHash:  common.CopyBytes(ack.Ctx.InitiatorIdOrHash),
 		},
 		PacketId:   packetId,
 		PacketSize: packetSize,

@@ -1083,7 +1083,8 @@ func prepareTransaction(args SendTxArgs, txType int, namespace string, eh *manag
 	}
 
 	// 4. verify transaction signature
-	if !tx.ValidateSign(eh.GetAccountManager().Encryption, kec256Hash) {
+	encryp := crypto.NewEcdsaEncrypto("ecdsa")
+	if !tx.ValidateSign(encryp, kec256Hash) {
 		log.Errorf("invalid signature, tx hash %v", common.ToHex(tx.TransactionHash))
 		return nil, &common.SignatureInvalidError{Message: "Invalid signature, tx hash " + common.ToHex(tx.TransactionHash)}
 	}

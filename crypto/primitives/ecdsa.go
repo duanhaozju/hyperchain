@@ -3,14 +3,11 @@
 package primitives
 
 import (
-	//"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"encoding/asn1"
 	"math/big"
-	//"github.com/op/go-logging"
 	hcrypto "hyperchain/crypto"
-	//"fmt"
 	"crypto/sha256"
 )
 
@@ -52,11 +49,6 @@ func ECDSAVerify(verKey interface{}, msg, signature []byte) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
-	//	R, _ := ecdsaSignature.R.MarshalText()
-	//	S, _ := ecdsaSignature.S.MarshalText()
-	//	fmt.Printf("r [%s], s [%s]\n", R, S)
-
 	temp := verKey.(ecdsa.PublicKey)
 	hasher := hcrypto.NewKeccak256Hash("keccak256Hanse")
 	h := hasher.Hash(msg).Bytes()

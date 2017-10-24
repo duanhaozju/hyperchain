@@ -52,6 +52,7 @@ func (rbft *rbftImpl) initMsgEventMap() {
 
 // initStatus init basic status when starts up
 func (rbft *rbftImpl) initStatus() {
-	rbft.status.activeState(&rbft.status.inNegoView)
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.status.reset()
+	rbft.on(inNegotiateView)
+	rbft.on(inRecovery)
 }

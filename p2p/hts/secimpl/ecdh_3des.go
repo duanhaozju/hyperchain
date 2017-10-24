@@ -2,7 +2,6 @@ package secimpl
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/cipher"
 	"crypto/des"
 	"crypto/ecdsa"
@@ -13,6 +12,7 @@ import (
 	"hyperchain/crypto/primitives"
 	"hyperchain/crypto/sha3"
 	"math/big"
+	"hyperchain/crypto"
 )
 
 // this secimpl implements the Security interface
@@ -33,9 +33,7 @@ func (ea *ECDHWith3DES) VerifySign(sign, data, rawcert []byte) (bool, error) {
 	if !ok {
 		return false, errors.New(fmt.Sprintf("cannot complete the type conversationm reason: %s", err.Error()))
 	}
-	hasher := crypto.SHA3_256.New()
-	hasher.Write(data)
-	hash := hasher.Sum(nil)
+	hash := crypto.Keccak256(data)
 	ecdsasign := struct {
 		R, S *big.Int
 	}{}

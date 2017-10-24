@@ -70,12 +70,6 @@ func (ee *EcdsaEncrypto) GeneralKey() (interface{}, error) {
 
 }
 
-//load key by given port
-//func (ee *EcdsaEncrypto)GetKey() (interface{},error) {
-//	file := keystoredir+ee.port
-//	return LoadECDSA(file)
-//}
-
 func (ee *EcdsaEncrypto) GenerateNodeKey(nodeID string, keyNodeDir string) error {
 	ee.id = nodeID
 	nodeDir := path.Join(keyNodeDir, "node")
@@ -182,45 +176,4 @@ func zeroBytes(bytes []byte) {
 	for i := range bytes {
 		bytes[i] = 0
 	}
-}
-
-//ParsePublicKey From JAVA SDK HexString
-func GetPublickFromHex(pubStr string) (*ecdsa.PublicKey, error) {
-	pubByte := common.Hex2Bytes(pubStr)
-	if len(pubByte) != 65 {
-		errStr := fmt.Sprintf("the Publickey Byte length must be 65!Your PublicKey length is %d !", len(pubByte))
-		return nil, errors.New(errStr)
-	}
-	X := pubByte[1:33]
-	Y := pubByte[33:65]
-
-	x := common.Bytes2Big(X)
-	y := common.Bytes2Big(Y)
-
-	pubkey := new(ecdsa.PublicKey)
-	pubkey.Curve = secp256k1.S256()
-	pubkey.X = x
-	pubkey.Y = y
-
-	return pubkey, nil
-}
-
-//JAVA SDK TRANSPORT VERIFY SIGNTURE
-func VerifyTransportSign(publicKey interface{}, msg, sign string) (bool, error) {
-
-	pub := publicKey.(*(ecdsa.PublicKey))
-	pubAddress := PubkeyToAddress(*pub)
-	hashB := Keccak256([]byte(msg))
-	signB := common.Hex2Bytes(sign)
-
-	pubBytes, err := secp256k1.RecoverPubkey(hashB, signB)
-	if err != nil {
-		return false, err
-	}
-	recoveredPubkey := new(ecdsa.PublicKey)
-	recoveredPubkey.Curve = secp256k1.S256()
-	recoveredPubkey.X = common.Bytes2Big(pubBytes[1:33])
-	recoveredPubkey.Y = common.Bytes2Big(pubBytes[33:65])
-	addr := PubkeyToAddress(*recoveredPubkey)
-	return pubAddress == addr, nil
 }

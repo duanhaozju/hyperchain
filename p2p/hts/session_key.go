@@ -6,13 +6,12 @@ import (
 )
 
 type SessionKey struct {
-	//if time.Now() > expire, this key should be updated
-	expire    int64
-	sharedKey []byte
-	//this is thread safe flag
+	expire    int64				// if time.Now() > expire, this key should be updated
+	sharedKey []byte			// the shared session key
 	valid *threadsafe.SpinLock
 }
 
+// NewSessionKey creates and returns a new SessionKey instance.
 func NewSessionKey(sharedKey []byte) *SessionKey {
 	sk := &SessionKey{
 		expire:    time.Now().Unix() + 3600,
@@ -24,6 +23,8 @@ func NewSessionKey(sharedKey []byte) *SessionKey {
 	return sk
 }
 
+// GetKey returns the shared session key if it is valid,
+// otherwise, returns nil.
 func (sk *SessionKey) GetKey() []byte {
 	if sk.IsValid() {
 		return sk.sharedKey
@@ -31,12 +32,14 @@ func (sk *SessionKey) GetKey() []byte {
 	return nil
 }
 
+// Update will update the shared session key and reset expiration time.
 func (sk *SessionKey) Update(updateKey []byte) {
 	if sk.IsValid() {
 		sk.SetOff()
 	}
 	sk.sharedKey = updateKey
-	//session key expire time is (now unix) + 3600s = 1hour
+
+	// session key expire time is (now unix) + 3600s = 1hour
 	sk.expire += time.Now().Unix() + 3600
 	sk.SetOn()
 }
@@ -49,6 +52,7 @@ func (sk *SessionKey) selfCheck() {
 	}
 }
 
+// IsValid returns true if unlocked.
 func (sk *SessionKey) IsValid() bool {
 	//if is locked, this key is not valid
 	return !sk.valid.IsLocked()

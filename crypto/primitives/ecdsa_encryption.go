@@ -5,10 +5,6 @@ date:16-12-22
 
 package primitives
 
-import (
-//"encoding/pem"
-)
-
 type EcdsaEncryption struct {
 	name string
 	id   string

@@ -10,4 +10,5 @@ var (
 	ErrInvalidCmd     = errors.New("hypercli/cmd: invalid command")
 	ErrEmptyHeader    = errors.New("Empty authorization header.")
 	ErrInvalidToken   = errors.New("Invalid token, please login first!")
+	ErrDecrypt        = errors.New("could not decrypt key with given passphrase")
 )

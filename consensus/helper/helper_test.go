@@ -4,14 +4,16 @@
 package helper
 
 import (
-	"github.com/golang/protobuf/proto"
-	"github.com/stretchr/testify/assert"
+	"testing"
+	"time"
+
 	"hyperchain/consensus"
 	"hyperchain/manager/appstat"
 	"hyperchain/manager/event"
 	pb "hyperchain/manager/protos"
-	"testing"
-	"time"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewHelper(t *testing.T) {

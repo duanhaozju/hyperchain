@@ -7,18 +7,20 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/manager/event"
 	"hyperchain/p2p/peerevent"
+	"hyperchain/p2p/hts/secimpl"
 )
 
 type ServerHTS struct {
-	security       Security
+	security       secimpl.Security
 	priKey         []byte
 	priKey_s       crypto.PrivateKey
-	sessionKeyPool cmap.ConcurrentMap
+	sessionKeyPool cmap.ConcurrentMap	// key -> peer hash, value -> session key
 	ev             *event.TypeMux
 	CG             *CertGroup
 }
 
-func NewServerHTS(sec Security, cg *CertGroup, ev *event.TypeMux) (*ServerHTS, error) {
+// NewServerHTS creates and returns a new ServerHTS instance.
+func NewServerHTS(sec secimpl.Security, cg *CertGroup, ev *event.TypeMux) (*ServerHTS, error) {
 	sh := &ServerHTS{
 		sessionKeyPool: cmap.New(),
 		security:       sec,
@@ -30,6 +32,7 @@ func NewServerHTS(sec Security, cg *CertGroup, ev *event.TypeMux) (*ServerHTS, e
 	return sh, nil
 }
 
+// KeyExchange generates a shared session key.
 func (sh *ServerHTS) KeyExchange(idenHash string, rand []byte, rawcert []byte) error {
 	sk, err := sh.security.GenerateShareKey(sh.priKey, rand, rawcert)
 	if err != nil {
@@ -40,6 +43,7 @@ func (sh *ServerHTS) KeyExchange(idenHash string, rand []byte, rawcert []byte) e
 	return nil
 }
 
+// Encrypt will use the shared session key to encrypt message.
 func (sh *ServerHTS) Encrypt(identify string, msg []byte) []byte {
 	defer func() {
 		rec := recover()
@@ -64,6 +68,7 @@ func (sh *ServerHTS) Encrypt(identify string, msg []byte) []byte {
 	return nil
 }
 
+// Decrypt will use the shared session key to decrypt message.
 func (sh *ServerHTS) Decrypt(identify string, msg []byte) (b []byte, err error) {
 
 	defer func() {
@@ -92,6 +97,7 @@ func (sh *ServerHTS) Decrypt(identify string, msg []byte) (b []byte, err error) 
 	return nil, errors.New(fmt.Sprintf("cannot find the session key of %s", identify))
 }
 
+// GetSK returns the shared session key that is negotiated with a peer.
 func (sh *ServerHTS) GetSK(hash string) []byte {
 	if sessionKey, ok := sh.sessionKeyPool.Get(hash); ok {
 		sessionKey := sessionKey.(*SessionKey)

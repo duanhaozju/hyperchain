@@ -1,13 +1,10 @@
 package utils
 
 import (
-	"bytes"
-	"encoding/gob"
 	"hyperchain/common"
 	"hyperchain/crypto/sha3"
 	"net"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -18,15 +15,6 @@ func GetProjectPath() string {
 		gopath = strings.Split(gopath, ":")[0]
 	}
 	return gopath + "/src/hyperchain"
-}
-
-func GetCurrentDirectory() (string, error) {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	if err != nil {
-		return "", err
-	}
-	return strings.Replace(dir, "\\", "/", -1), nil
-
 }
 
 func GetPeerHash(namespace string, id int) string {
@@ -69,14 +57,6 @@ func GetLocalIP() string {
 		}
 	}
 	return ""
-}
-
-func DeepCopy(dst, src interface{}) error {
-	var buf bytes.Buffer
-	if err := gob.NewEncoder(&buf).Encode(src); err != nil {
-		return err
-	}
-	return gob.NewDecoder(bytes.NewBuffer(buf.Bytes())).Decode(dst)
 }
 
 func Sha3(data []byte) (hash []byte) {

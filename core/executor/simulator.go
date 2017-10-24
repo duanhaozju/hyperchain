@@ -20,8 +20,8 @@ import (
 	"hyperchain/core/vm"
 )
 
-// run transaction in a simulator
-// execution result will not been add to database
+// run transaction in a simulator,
+// execution result will not been added to database.
 func (executor *Executor) RunInSandBox(tx *types.Transaction, snapshotId string) error {
 	var (
 		statedb  vm.Database

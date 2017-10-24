@@ -161,9 +161,6 @@ max_log_size    = "200mb"  # "mb", "kb"
 # other configurations
 #
 ############################################################################################################
-[account]
-keystoredir = "config/keystore"
-keynodesdir = "config/keynodes"
 
 [config.path]
 caconfig        = "config/namespace.toml"

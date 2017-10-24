@@ -3,12 +3,15 @@
 package txpool
 
 import (
-	"github.com/stretchr/testify/assert"
+	"fmt"
+	"testing"
+	"time"
+
 	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
-	"testing"
-	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewTxPoolImpl(t *testing.T) {
@@ -212,12 +215,14 @@ func TestReturnFetchTxs(t *testing.T) {
 	ast.Equal(nil, err, "new txPool fail")
 
 	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1", TxHashList: []string{"1", "2"}})
-	_, err = txPool.ReturnFetchTxs("1", []string{"1"})
-	ast.NotEqual(nil, err, "should not find this batch")
+	missingHashList := make(map[uint64]string)
+	missingHashList[uint64(1)] = "1"
+	_, err = txPool.ReturnFetchTxs("1", missingHashList)
+	ast.NotEqual(nil, err, fmt.Sprintf("should not find this batch, err is %v", err))
 	txBatch := &TxHashBatch{
 		TxHashList: []string{"1", "2", "3", "4"},
 		TxList: []*types.Transaction{
-			&types.Transaction{
+			{
 				From:            []byte{1},
 				To:              []byte{2},
 				Value:           []byte{1},
@@ -226,7 +231,7 @@ func TestReturnFetchTxs(t *testing.T) {
 				Id:              uint64(1),
 				TransactionHash: []byte("hash1"),
 			},
-			&types.Transaction{
+			{
 				From:            []byte{1},
 				To:              []byte{2},
 				Value:           []byte{1},
@@ -235,7 +240,7 @@ func TestReturnFetchTxs(t *testing.T) {
 				Id:              uint64(1),
 				TransactionHash: []byte("hash2"),
 			},
-			&types.Transaction{
+			{
 				From:            []byte{1},
 				To:              []byte{2},
 				Value:           []byte{1},
@@ -244,7 +249,7 @@ func TestReturnFetchTxs(t *testing.T) {
 				Id:              uint64(1),
 				TransactionHash: []byte("hash3"),
 			},
-			&types.Transaction{
+			{
 				From:            []byte{1},
 				To:              []byte{2},
 				Value:           []byte{1},
@@ -257,14 +262,27 @@ func TestReturnFetchTxs(t *testing.T) {
 	}
 	txBatch.BatchHash = hash(txBatch)
 	txPool.batchStore = append(txPool.batchStore, txBatch)
-	txBatches, err := txPool.ReturnFetchTxs(txBatch.BatchHash, []string{"5"})
+	missingHashList = make(map[uint64]string)
+	missingHashList[uint64(1)] = "5"
+	txs, err := txPool.ReturnFetchTxs(txBatch.BatchHash, missingHashList)
 	ast.NotEqual(nil, err, "should not find this transanction")
 
-	txBatches, err = txPool.ReturnFetchTxs(txBatch.BatchHash, []string{"2", "4"})
+	missingHashList = make(map[uint64]string)
+	missingHashList[uint64(1)] = "2"
+	missingHashList[uint64(3)] = "4"
+	txs, err = txPool.ReturnFetchTxs(txBatch.BatchHash, missingHashList)
 	ast.Equal(nil, err, "should find these transanctions")
-	ast.Equal(2, len(txBatches), "should get two transanctions")
-	ast.Equal("hash2", string(txBatches[0].TransactionHash), "should find transanctions whose hash values are 'hash2' and 'hash4'")
-	ast.Equal("hash4", string(txBatches[1].TransactionHash), "should find transanctions whose hash values are 'hash2' and 'hash4'")
+	ast.Equal(2, len(txs), "should get two transanctions")
+	_, ok1 := txs[uint64(1)]
+	ast.Equal(true, ok1, "should return this transaction")
+	_, ok3 := txs[uint64(3)]
+	ast.Equal(true, ok3, "should return this transaction")
+	if ok1 {
+		ast.Equal("hash2", string(txs[uint64(1)].TransactionHash), "should find transanctions whose hash values are 'hash2' and 'hash4'")
+	}
+	if ok3 {
+		ast.Equal("hash4", string(txs[uint64(3)].TransactionHash), "should find transanctions whose hash values are 'hash2' and 'hash4'")
+	}
 }
 
 func TestGotMissingTxs(t *testing.T) {
@@ -276,27 +294,38 @@ func TestGotMissingTxs(t *testing.T) {
 	txPool, err := newTxPoolImpl(namespace, 100, eventMux, 10)
 	ast.Equal(nil, err, "new txPool fail")
 
-	txs := []*types.Transaction{
-		{
-			From:            []byte{1},
-			To:              []byte{2},
-			Value:           []byte{1},
-			Timestamp:       time.Now().UnixNano(),
-			Signature:       []byte("test2"),
-			Id:              uint64(1),
-			TransactionHash: []byte("hash2"),
-		},
-		{
-			From:            []byte{1},
-			To:              []byte{2},
-			Value:           []byte{1},
-			Timestamp:       time.Now().UnixNano(),
-			Signature:       []byte("test4"),
-			Id:              uint64(1),
-			TransactionHash: []byte("hash4"),
-		},
+	txs := make(map[uint64]*types.Transaction)
+	txs[uint64(2)] = &types.Transaction{
+		From:            []byte{1},
+		To:              []byte{2},
+		Value:           []byte{1},
+		Timestamp:       time.Now().UnixNano(),
+		Signature:       []byte("test2"),
+		Id:              uint64(1),
+		TransactionHash: []byte("hash2"),
 	}
-	txPool.missingTxs["2"] = []string{txs[0].GetHash().Hex(), txs[1].GetHash().Hex()}
+	txs[uint64(4)] = &types.Transaction{
+		From:            []byte{1},
+		To:              []byte{2},
+		Value:           []byte{1},
+		Timestamp:       time.Now().UnixNano(),
+		Signature:       []byte("test4"),
+		Id:              uint64(1),
+		TransactionHash: []byte("hash4"),
+	}
+	err = txPool.GotMissingTxs("2", txs)
+	ast.Equal(ErrNoBatch, err, "should not find this missingTx, expect ErrNoBatch")
+
+	txPool.missingTxs["2"] = make(map[uint64]string)
+	txPool.missingTxs["2"][uint64(2)] = txs[uint64(2)].GetHash().Hex()
+	err = txPool.GotMissingTxs("2", txs)
+	ast.Equal(ErrMismatch, err, "not match, expect ErrMismatch")
+
+	txPool.missingTxs["2"][uint64(4)] = "notexist"
+	err = txPool.GotMissingTxs("2", txs)
+	ast.Equal(ErrMismatch, err, "not match, expect ErrMismatch")
+
+	txPool.missingTxs["2"][uint64(4)] = txs[uint64(4)].GetHash().Hex()
 	err = txPool.GotMissingTxs("2", txs)
 	ast.Equal(nil, err, err)
 }
@@ -337,7 +366,9 @@ func TestGetTxsByHashList(t *testing.T) {
 	ast.Equal(txlist, txs, "This batch already exists, should return itself")
 
 	missingBatchId := "miss"
-	missingBatchHash := []string{"hello", "world"}
+	missingBatchHash := make(map[uint64]string)
+	missingBatchHash[uint64(0)] = "hello"
+	missingBatchHash[uint64(1)] = "world"
 	txPool.missingTxs[missingBatchId] = missingBatchHash
 	_, miss, err := txPool.GetTxsByHashList(missingBatchId, nil)
 	ast.Equal(missingBatchHash, miss, "Should return before missingTxsHash")
@@ -414,6 +445,21 @@ func TestRemoveOneBatchedTxs(t *testing.T) {
 	if err != nil || txPool.batchStore[1].BatchHash != "3" {
 		t.Error("the batch should be removed")
 	}
+}
+
+func TestHasTxInPool(t *testing.T) {
+	ast := assert.New(t)
+	namespace := "1"
+	common.InitRawHyperLogger(namespace)
+	common.SetLogLevel(namespace, "hyperdb", "ERROR")
+	eventMux := new(event.TypeMux)
+	txPool, err := newTxPoolImpl(namespace, 100, eventMux, 10)
+	ast.Equal(nil, err, "new txPool fail")
+
+	ast.Equal(false, txPool.HasTxInPool(), "contains no tx in txPool, expect false")
+
+	txPool.txPool["1"] = nil
+	ast.Equal(true, txPool.HasTxInPool(), "contains one tx in txPool, expect false")
 }
 
 func TestGetTxsBack(t *testing.T) {

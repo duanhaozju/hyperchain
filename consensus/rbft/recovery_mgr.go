@@ -4,8 +4,8 @@ package rbft
 
 import (
 	"encoding/base64"
+
 	"github.com/golang/protobuf/proto"
-	"sync/atomic"
 )
 
 /**
@@ -57,12 +57,12 @@ func (rbft *rbftImpl) dispatchRecoveryMsg(e consensusEvent) consensusEvent {
 // 2. broadcast negotiate view
 // 3. construct NegotiateViewResponse and send it to self
 func (rbft *rbftImpl) initNegoView() error {
-	if !rbft.status.getState(&rbft.status.inNegoView) {
-		rbft.logger.Errorf("Replica %d try to negotiateView, but it's not inNegoView. This indicates a bug", rbft.id)
+	if !rbft.in(inNegotiateView) {
+		rbft.logger.Errorf("Replica %d try to negotiateView, but it's not inNegotiateView. This indicates a bug", rbft.id)
 		return nil
 	}
 
-	atomic.StoreUint32(&rbft.normal, 0)
+	rbft.setAbNormal()
 
 	rbft.logger.Debugf("Replica %d now negotiate view...", rbft.id)
 
@@ -121,7 +121,7 @@ func (rbft *rbftImpl) restartNegoView() {
 
 // recvNegoView firstly checks current state, then send response to the sender
 func (rbft *rbftImpl) recvNegoView(nv *NegotiateView) consensusEvent {
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
+	if rbft.in(inViewChange) {
 		rbft.logger.Warningf("Replica %d is in viewChange, reject negoView from replica %d", rbft.id, nv.ReplicaId)
 		return nil
 	}
@@ -152,7 +152,7 @@ func (rbft *rbftImpl) recvNegoView(nv *NegotiateView) consensusEvent {
 // recvNegoViewRsp stores the negotiate view response, if the counts of negoViewRsp reach the commonCaseQuorum, update
 // current info if needed
 func (rbft *rbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) consensusEvent {
-	if !rbft.status.getState(&rbft.status.inNegoView) {
+	if !rbft.in(inNegotiateView) {
 		rbft.logger.Debugf("Replica %d already finished nego_view, ignore incoming nego_view_rsp", rbft.id)
 		return nil
 	}
@@ -207,9 +207,9 @@ func (rbft *rbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) consensusEvent
 			// update N and f
 			rbft.N = int(quorumResp.n)
 			rbft.f = (rbft.N - 1) / 3
-			rbft.status.inActiveState(&rbft.status.inNegoView)
-			if atomic.LoadUint32(&rbft.activeView) == 0 {
-				atomic.StoreUint32(&rbft.activeView, 1)
+			rbft.off(inNegotiateView)
+			if rbft.in(inViewChange) {
+				rbft.off(inViewChange)
 			}
 			if needUpdate {
 				rbft.parseSpecifyCertStore()
@@ -255,7 +255,7 @@ func (rbft *rbftImpl) initRecovery() consensusEvent {
 	rbft.timerMgr.startTimer(RECOVERY_RESTART_TIMER, event, rbft.eventMux)
 
 	// send RecoveryResponse to itself
-	height, curHash := rbft.persister.GetBlockHeightAndHash(rbft.namespace)
+	height, curHash := rbft.GetBlockHeightAndHash(rbft.namespace)
 	genesis := rbft.getGenesisInfo()
 	rc := &RecoveryResponse{
 		ReplicaId:     rbft.id,
@@ -276,8 +276,8 @@ func (rbft *rbftImpl) restartRecovery() {
 	rbft.recoveryMgr.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 	rbft.recoveryMgr.rcRspStore = make(map[uint64]*RecoveryResponse)
 
-	rbft.status.activeState(&rbft.status.inNegoView)
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.on(inNegotiateView)
+	rbft.on(inRecovery)
 	rbft.initNegoView()
 }
 
@@ -285,12 +285,12 @@ func (rbft *rbftImpl) restartRecovery() {
 func (rbft *rbftImpl) recvRecovery(recoveryInit *RecoveryInit) consensusEvent {
 	rbft.logger.Debugf("Replica %d now recvRecovery from replica %d", rbft.id, recoveryInit.ReplicaId)
 
-	if rbft.status.getState(&rbft.status.skipInProgress) {
+	if rbft.in(skipInProgress) {
 		rbft.logger.Debugf("Replica %d recvRecovery, but it's in state transfer and ignores it.", rbft.id)
 		return nil
 	}
 
-	height, curHash := rbft.persister.GetBlockHeightAndHash(rbft.namespace)
+	height, curHash := rbft.GetBlockHeightAndHash(rbft.namespace)
 	genesis := rbft.getGenesisInfo()
 
 	rc := &RecoveryResponse{
@@ -325,7 +325,7 @@ func (rbft *rbftImpl) recvRecovery(recoveryInit *RecoveryInit) consensusEvent {
 func (rbft *rbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) consensusEvent {
 	rbft.logger.Debugf("Replica %d now recvRecoveryRsp from replica %d for block height=%d", rbft.id, rsp.ReplicaId, rsp.BlockHeight)
 
-	if !rbft.status.getState(&rbft.status.inRecovery) {
+	if !rbft.in(inRecovery) {
 		rbft.logger.Debugf("Replica %d finished recovery, ignore recovery response", rbft.id)
 		return nil
 	}
@@ -389,11 +389,11 @@ func (rbft *rbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) consensusEvent {
 		// if we are behind by checkpoint, move watermark and state transfer to the target
 		rbft.moveWatermarks(chkptSeqNo)
 		rbft.stateTransfer(target)
-	} else if !rbft.status.getState(&rbft.status.skipInProgress) && !rbft.status.getState(&rbft.status.inVcReset) {
+	} else if !rbft.inOne(skipInProgress, inVcReset) {
 		// if we are not behind by checkpoint, just VcReset to delete the useless tmp validate result, after
 		// VcResetDone, we will finish recovery or come into stateUpdate
 		rbft.helper.VcReset(rbft.exec.lastExec + 1)
-		rbft.status.activeState(&rbft.status.inVcReset)
+		rbft.on(inVcReset)
 	} else {
 		// if we are state transferring, just continue
 		rbft.logger.Debugf("Replica %d try to recovery but find itself in state update", rbft.id)
@@ -440,7 +440,7 @@ func (rbft *rbftImpl) findHighestChkptQuorum() (chkptSeqNo uint64, chkptId strin
 	chkptSeqNo = rbft.h
 
 	// Since replica sends all of its chkpt, we may encounter several, instead of single one, chkpts, which
-	// reach oneCorrectQuorum. In this case, others will move watermarks sooner or later, so we find the highest
+	// reach oneCorrectQuorum. in this case, others will move watermarks sooner or later, so we find the highest
 	// quorum checkpoint as the recovery target.
 	for ci, peers := range chkpts {
 		if len(peers) >= rbft.oneCorrectQuorum() {

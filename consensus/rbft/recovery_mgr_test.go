@@ -5,7 +5,6 @@ package rbft
 
 import (
 	"fmt"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -18,6 +17,17 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestNewRecoveryMgr(t *testing.T) {
+	recoveryMgr := newRecoveryMgr()
+	structName, nilElems, err := checkNilElems(recoveryMgr)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if nilElems != nil {
+		t.Errorf("There exists some nil elements: %v in struct: %s", nilElems, structName)
+	}
+}
 
 func TestInitNegoView(t *testing.T) {
 	ast := assert.New(t)
@@ -48,10 +58,10 @@ func TestInitNegoView(t *testing.T) {
 		ast.Equal(rbft.id, negoView.ReplicaId, "initNegoView failed")
 	}()
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 	rbft.initNegoView()
 
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	rbft.initNegoView()
 
 	time.Sleep(1 * time.Nanosecond)
@@ -78,7 +88,7 @@ func TestRecvNegoView(t *testing.T) {
 		ast.Equal(from, to, "recvNegoView failed")
 	}()
 
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.off(inViewChange)
 	negoViewMsg := &NegotiateView{
 		ReplicaId: from,
 	}
@@ -106,14 +116,14 @@ func TestRecvNegoViewRsp(t *testing.T) {
 	rbft.persister = persist.New(db)
 
 	var ret consensusEvent
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 	nvr := &NegotiateViewResponse{}
 	ret = rbft.recvNegoViewRsp(nvr)
-	ast.Nil(ret, "not in inNegoView, expect ret nil")
+	ast.Nil(ret, "not in inNegotiateView, expect ret nil")
 
 	rbft.id = uint64(2)
-	rbft.status.activeState(&rbft.status.inNegoView)
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.on(inNegotiateView)
+	rbft.off(inViewChange)
 	rbft.seqNo = uint64(0)
 	rbft.recoveryMgr.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
 	// duplicate negoViewRsp
@@ -210,19 +220,19 @@ func TestRestartRecovery(t *testing.T) {
 	rbft.recoveryMgr.rcRspStore[uint64(1)] = rr1
 	rbft.recoveryMgr.rcRspStore[uint64(2)] = rr2
 
-	rbft.status.inActiveState(&rbft.status.inNegoView, &rbft.status.inRecovery)
+	rbft.off(inNegotiateView, inRecovery)
 
 	ast.Equal(2, len(rbft.recoveryMgr.negoViewRspStore), "set failed")
 	ast.Equal(2, len(rbft.recoveryMgr.rcRspStore), "set failed")
-	ast.Equal(false, rbft.status.getState(&rbft.status.inNegoView), "inActiveState failed")
-	ast.Equal(false, rbft.status.getState(&rbft.status.inRecovery), "inActiveState failed")
+	ast.Equal(false, rbft.in(inNegotiateView), "off failed")
+	ast.Equal(false, rbft.in(inRecovery), "off failed")
 
 	rbft.restartRecovery()
 
 	ast.Equal(0, len(rbft.recoveryMgr.negoViewRspStore), "restartRecovery failed")
 	ast.Equal(0, len(rbft.recoveryMgr.rcRspStore), "restartRecovery failed")
-	ast.Equal(true, rbft.status.getState(&rbft.status.inNegoView), "restartRecovery failed")
-	ast.Equal(true, rbft.status.getState(&rbft.status.inRecovery), "restartRecovery failed")
+	ast.Equal(true, rbft.in(inNegotiateView), "restartRecovery failed")
+	ast.Equal(true, rbft.in(inRecovery), "restartRecovery failed")
 }
 
 func TestRecvRecovery(t *testing.T) {
@@ -246,14 +256,14 @@ func TestRecvRecovery(t *testing.T) {
 		ast.Equal(from, to, "recvRecovery failed")
 	}()
 
-	rbft.status.activeState(&rbft.status.skipInProgress)
+	rbft.on(skipInProgress)
 	recoveryMsg := &RecoveryInit{
 		ReplicaId: from,
 	}
 	event := rbft.recvRecovery(recoveryMsg)
 	ast.Nil(event, "skipInProgress, expect nil")
 
-	rbft.status.inActiveState(&rbft.status.skipInProgress)
+	rbft.off(skipInProgress)
 	rbft.recvRecovery(recoveryMsg)
 
 	time.Sleep(1 * time.Nanosecond)
@@ -298,16 +308,16 @@ func TestRecvRecoveryRsp(t *testing.T) {
 	}
 	rr3.Chkpts[uint64(60)] = encode60
 
-	// pbft not in recovery, should just return
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	// rbft not in recovery, should just return
+	rbft.off(inRecovery)
 	rbft.recvRecoveryRsp(rr1)
 	_, ok := rbft.recoveryMgr.rcRspStore[uint64(1)]
-	ast.Equal(false, ok, "Pbft not in recovery, expect false")
+	ast.Equal(false, ok, "Rbft not in recovery, expect false")
 
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.on(inRecovery)
 	rbft.recvRecoveryRsp(rr1)
 	_, ok = rbft.recoveryMgr.rcRspStore[uint64(1)]
-	ast.Equal(true, ok, "Pbft in recovery, expect true")
+	ast.Equal(true, ok, "Rbft in recovery, expect true")
 
 	recoveryToSeqNo := uint64(10)
 	rbft.recoveryMgr.recoveryToSeqNo = &recoveryToSeqNo

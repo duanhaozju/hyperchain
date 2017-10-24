@@ -46,12 +46,12 @@ type Executor struct {
 	jvmCli      jvm.ContractExecutor // jvm client
 	snapshotReg *SnapshotRegistry    // snapshot registry
 	archiveMgr  *ArchiveManager      // archive manager
-	nvp         NVP
+	nvp         NonVerifyingPeer
 }
 
 // NewExecutor creates a new Hyperchain object (including the
 // initialisation of the common hyperchain object)
-func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) (*Executor, error) {
+func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux, localhash string) (*Executor, error) {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	helper := NewHelper(eventMux, filterMux)
@@ -73,7 +73,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 	// initialise several components.
 	executor.snapshotReg = NewSnapshotRegistry(namespace, executor.logger, executor)
 	executor.archiveMgr = NewArchiveManager(namespace, executor, executor.snapshotReg, executor.logger)
-	executor.nvp = NewNVPImpl(executor)
+	executor.nvp = NewNVPImpl(executor, localhash)
 
 	// TODO doesn't know why to add this statement here.
 	// TODO ask @Rongjialei to fix this.
@@ -178,7 +178,7 @@ func initializeExecutorStateDb(executor *Executor) error {
 // initHistoryStateDb - open a historical database for snapshot content query.
 func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, error, func()) {
 	// never forget to close db
-	if err, manifest := executor.snapshotReg.rwc.Read(snapshotId); err != nil {
+	if err, manifest := executor.snapshotReg.rw.Read(snapshotId); err != nil {
 		return nil, err, nil
 	} else {
 		blk, err := edb.GetBlockByNumber(executor.namespace, manifest.Height)
@@ -221,6 +221,6 @@ func (executor *Executor) FetchStateDb() vm.Database {
 }
 
 // GetNVP get nvp handler.
-func (executor *Executor) GetNVP() NVP {
+func (executor *Executor) GetNVP() NonVerifyingPeer {
 	return executor.nvp
 }
