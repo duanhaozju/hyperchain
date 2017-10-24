@@ -82,9 +82,9 @@ type EventHub struct {
 	namespace string
 
 	// module services
-	executor       *executor.Executor
-	peerManager    p2p.PeerManager
-	consenter      consensus.Consenter
+	executor    *executor.Executor
+	peerManager p2p.PeerManager
+	consenter   consensus.Consenter
 
 	eventMux  *event.TypeMux
 	filterMux *event.TypeMux
@@ -107,13 +107,13 @@ func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, ex
 
 func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, filterMux *event.TypeMux, consenter consensus.Consenter) *EventHub {
 	hub := &EventHub{
-		namespace:      namespace,
-		executor:       executor,
-		eventMux:       eventMux,
-		filterMux:      filterMux,
-		consenter:      consenter,
-		peerManager:    peerManager,
-		filterSystem:   flt.NewEventSystem(filterMux),
+		namespace:    namespace,
+		executor:     executor,
+		eventMux:     eventMux,
+		filterMux:    filterMux,
+		consenter:    consenter,
+		peerManager:  peerManager,
+		filterSystem: flt.NewEventSystem(filterMux),
 	}
 	hub.logger = common.GetLogger(namespace, "eventhub")
 	return hub
@@ -254,7 +254,6 @@ func (hub *EventHub) listenConsensusEvent() {
 				hub.logger.Debugf("message middleware: [tx unicast]")
 				hub.send(m.SessionMessage_FOWARD_TX, ev.Payload, []uint64{ev.PeerId})
 			}
-
 		}
 	}
 }
@@ -550,33 +549,60 @@ func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		syncMsg.PeerHash = hub.peerManager.GetLocalNodeHash()
 		payload, err := proto.Marshal(syncMsg)
 		if err != nil {
-			hub.logger.Error("message middleware: SendNVPSyncRequest marshal message failed")
+			hub.logger.Error("message middleware: marshal nvp sync message failed")
 			return
 		}
-		hub.sendToRandomVP(m.SessionMessage_SYNC_REQ, payload)
+		if ev.Peers != nil {
+			hub.send(m.SessionMessage_SYNC_REQ, payload, ev.Peers)
+		} else {
+			hub.sendToRandomVP(m.SessionMessage_SYNC_REQ, payload)
+		}
 	case executor.NOTIFY_NVP_CONSULT:
 		hub.logger.Debug("message middleware: [nvp consult]")
-		syncMsg := &executor.Consult{}
-		proto.Unmarshal(ev.Payload, syncMsg)
-		syncMsg.NodeHash = hub.peerManager.GetLocalNodeHash()
-		payload, err := proto.Marshal(syncMsg)
+		consult := &executor.Consult{
+			Height:   chain.GetHeightOfChain(hub.namespace),
+			NodeHash: hub.peerManager.GetLocalNodeHash(),
+		}
+		payload, err := proto.Marshal(consult)
 		if err != nil {
-			hub.logger.Error("message middleware: SendNVPSyncRequest marshal message failed")
+			hub.logger.Error("message middleware: marshal nvp consult message failed")
 			return
 		}
 		hub.broadcast(BROADCAST_VP, m.SessionMessage_NVP_CONSULT, payload)
 	case executor.NOTIFY_REQUEST_WORLD_STATE:
 		hub.logger.Debugf("message middleware: [request world state]")
-		hub.send(m.SessionMessage_SYNC_WORLD_STATE, ev.Payload, ev.Peers)
+		if ev.Peers != nil {
+			go hub.send(m.SessionMessage_SYNC_WORLD_STATE, ev.Payload, ev.Peers)
+		} else {
+			// Actually this part code can never been access.
+			hub.sendToNVP(m.SessionMessage_SYNC_WORLD_STATE, ev.Payload, ev.PeersHash)
+		}
+		hub.logger.Debugf("message middleware: [request world state] done")
 	case executor.NOTIFY_SEND_WORLD_STATE_HANDSHAKE:
 		hub.logger.Debugf("message middleware: [send world state handshake packet]")
-		hub.send(m.SessionMessage_SEND_WS_HS, ev.Payload, ev.Peers)
+		if ev.Peers != nil {
+			// If initiator is a vp
+			hub.send(m.SessionMessage_SEND_WS_HS, ev.Payload, ev.Peers)
+		} else {
+			// If initiator is a nvp
+			hub.sendToNVP(m.SessionMessage_SEND_WS_HS, ev.Payload, ev.PeersHash)
+		}
 	case executor.NOTIFY_SEND_WORLD_STATE:
 		hub.logger.Debugf("message middleware: [request world state]")
-		hub.send(m.SessionMessage_SEND_WORLD_STATE, ev.Payload, ev.Peers)
+		if ev.Peers != nil {
+			hub.send(m.SessionMessage_SEND_WORLD_STATE, ev.Payload, ev.Peers)
+		} else {
+			hub.sendToNVP(m.SessionMessage_SEND_WORLD_STATE, ev.Payload, ev.PeersHash)
+		}
 	case executor.NOTIFY_SEND_WS_ACK:
 		hub.logger.Debugf("message middleware: [send ws ack]")
-		hub.send(m.SessionMessage_SEND_WS_ACK, ev.Payload, ev.Peers)
+		if ev.Peers != nil {
+			hub.send(m.SessionMessage_SEND_WS_ACK, ev.Payload, ev.Peers)
+		} else {
+			// Actually this part of code should never been access
+			// since nvp should not been allowed as a sync target peer.
+			hub.sendToNVP(m.SessionMessage_SEND_WS_ACK, ev.Payload, ev.PeersHash)
+		}
 	}
 }
 
@@ -602,7 +628,9 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 		if hub.NodeIdentification() == IdentificationVP {
 			hub.executor.ReceiveSyncBlocks(message.Payload)
 		} else {
-			hub.executor.GetNVP().ReceiveBlock(message.Payload)
+			// Thread out here since the goroutine may block here
+			// Reason: nvp may send consult message and will block util receive reply
+			go hub.executor.GetNVP().ReceiveBlock(message.Payload)
 		}
 	case m.SessionMessage_UNICAST_INVALID:
 		sendToNVP, hash := hub.isSendToNVP(message.Payload)
@@ -619,6 +647,7 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 	case m.SessionMessage_SYNC_REQ:
 		hub.executor.ReceiveSyncRequest(message.Payload)
 	case m.SessionMessage_SYNC_WORLD_STATE:
+		hub.logger.Debug("receive SessionMessage_SYNC_WORLD_STATE")
 		hub.executor.ReceiveWorldStateSyncRequest(message.Payload)
 	case m.SessionMessage_SEND_WORLD_STATE:
 		hub.executor.ReceiveWorldState(message.Payload)
@@ -627,27 +656,44 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 	case m.SessionMessage_SEND_WS_ACK:
 		hub.executor.ReceiveWsAck(message.Payload)
 	case m.SessionMessage_TRANSIT_BLOCK:
-		hub.executor.GetNVP().ReceiveBlock(message.Payload)
+		// Thread out here since the goroutine may block here
+		// Reason: nvp may send consult message and will block util receive reply
+		go hub.executor.GetNVP().ReceiveBlock(message.Payload)
 	case m.SessionMessage_NVP_RELAY:
 		go hub.GetEventObject().Post(event.NvpRelayTxEvent{
 			Payload: message.Payload,
 		})
 	case m.SessionMessage_NVP_CONSULT:
 		consult := &executor.Consult{}
-		proto.Unmarshal(ev.Message, consult)
-		var reply []byte
+		err := proto.Unmarshal(message.Payload, consult)
+		if err != nil {
+			hub.logger.Error("unmarshal consult failed", err.Error())
+		}
 		genesis, _ := chain.GetGenesisTag(hub.namespace)
+		blk, err := chain.GetBlockByNumber(hub.namespace, genesis)
+		if err != nil {
+			hub.logger.Errorf("get genesis block %d from database failed", genesis)
+		}
+		reply := &executor.ConsultReply{
+			PeerId:       uint64(hub.peerManager.GetNodeId()),
+			GenesisBlock: blk,
+		}
 		if genesis <= consult.Height+1 {
 			// state transition is not necessary
-			reply = []byte{0x00}
+			reply.Transition = false
 		} else {
 			// state transition is necessary
-			reply = []byte{0x01}
+			reply.Transition = true
 		}
-		hub.sendToNVP(m.SessionMessage_NVP_CONSULT_REPLY, reply, []string{consult.NodeHash})
+		payload, err := proto.Marshal(reply)
+		if err != nil {
+			hub.logger.Error("marshal consult reply failed", err.Error())
+		} else {
+			hub.sendToNVP(m.SessionMessage_NVP_CONSULT_REPLY, payload, []string{consult.NodeHash})
+		}
+		hub.logger.Debug("send nvp consult reply done")
 	case m.SessionMessage_NVP_CONSULT_REPLY:
-		// TODO
-		hub.logger.Error("receive nvp consult reply", ev.Message)
+		hub.executor.GetNVP().ReceiveConsult(message.Payload, hub.peerManager.GetN())
 	default:
 		hub.logger.Error("receive a undefined session event")
 	}

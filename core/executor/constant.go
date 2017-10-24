@@ -67,6 +67,11 @@ const (
 )
 
 const (
+	VP = iota
+	NVP
+)
+
+const (
 	LatestBlockNumber     uint64 = 0
 	MaxPendingSnapshotReq        = 1024
 )

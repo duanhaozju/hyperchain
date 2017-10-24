@@ -51,7 +51,7 @@ type Executor struct {
 
 // NewExecutor creates a new Hyperchain object (including the
 // initialisation of the common hyperchain object)
-func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) (*Executor, error) {
+func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux, localhash string) (*Executor, error) {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	helper := NewHelper(eventMux, filterMux)
@@ -73,7 +73,7 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 	// initialise several components.
 	executor.snapshotReg = NewSnapshotRegistry(namespace, executor.logger, executor)
 	executor.archiveMgr = NewArchiveManager(namespace, executor, executor.snapshotReg, executor.logger)
-	executor.nvp = NewNVPImpl(executor)
+	executor.nvp = NewNVPImpl(executor, localhash)
 
 	// TODO doesn't know why to add this statement here.
 	// TODO ask @Rongjialei to fix this.

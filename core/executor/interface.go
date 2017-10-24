@@ -23,4 +23,6 @@ package executor
 // Besides, nvp also provide blockchain data query and transaction simulation.
 type NonVerifyingPeer interface {
 	ReceiveBlock([]byte)
+	ReceiveConsult([]byte, int)
+	GetLocalHash() string
 }

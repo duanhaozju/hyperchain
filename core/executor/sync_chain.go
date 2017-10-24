@@ -32,6 +32,7 @@ import (
 	cmd "os/exec"
 	"path"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 )
 
@@ -280,11 +281,40 @@ func (executor *Executor) ReceiveWsHandshake(payload []byte) {
 	executor.logger.Debugf("send ws ack (#%d) success", ack.PacketId)
 }
 
+func (executor *Executor) ReceiveWorldState(payload []byte) {
+	var (
+		process  func()
+		finalize func() error
+	)
+	if executor.context.syncCtx != nil && executor.context.syncCtx.typ == VP {
+		process = executor.processSyncBlocks
+		finalize = nil
+	} else if executor.context.syncCtx != nil && executor.context.syncCtx.typ == NVP {
+		process = nil
+		finalize = func() error {
+			retry := 3
+			for retry > 0 {
+				if !atomic.CompareAndSwapInt32(&executor.context.syncCtx.waitTransition, 1, 0) {
+					retry--
+					continue
+				}
+				break
+			}
+			if retry == 0 {
+				return nil
+			} else {
+				return errors.New("finalize world state transition failed")
+			}
+		}
+	}
+	executor.receiveWorldState(payload, process, finalize)
+}
+
 // ReceiveWsHandshake receive target peer's ws packet,
 // store the slice packet and send back ack to fetch the next one.
 // If all packets has been received, assemble them and trigger to apply.
-func (executor *Executor) ReceiveWorldState(payload []byte) {
-	executor.logger.Debugf("receive ws packet")
+func (executor *Executor) receiveWorldState(payload []byte, process func(), finailize func() error) {
+	executor.logger.Debug("receive ws packet")
 	var ws Ws
 	if err := proto.Unmarshal(payload, &ws); err != nil {
 		executor.logger.Warning("unmarshal world state packet failed.")
@@ -340,11 +370,17 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 			return
 		}
 		// update genesis tag, regard the ws as the latest genesis status.
-		_, nGenesis := executor.context.syncCtx.getTargerGenesis()
-		newGenesis, err := edb.GetBlockByNumber(executor.namespace, nGenesis)
-		if err != nil {
+		var (
+			height     uint64
+			newGenesis *types.Block
+			err        error
+		)
+		height = executor.context.syncCtx.hs.Height
+
+		if newGenesis, err = edb.GetBlockByNumber(executor.namespace, height); err != nil {
 			return
 		}
+
 		if err := executor.applyWorldState(path.Join(executor.context.syncCtx.getWsHome(), "ws.tar.gz"), ws.Ctx.FilterId, common.BytesToHash(newGenesis.MerkleRoot), newGenesis.Number); err != nil {
 			executor.logger.Errorf("apply ws failed, err detail %s", err.Error())
 			return
@@ -352,14 +388,19 @@ func (executor *Executor) ReceiveWorldState(payload []byte) {
 		executor.context.syncCtx.setTransitioned()
 		// Inserts received snapshot to local as genesis.
 		go executor.InsertSnapshot(cm.Manifest{
-			Height:     nGenesis,
+			Height:     height,
 			BlockHash:  common.Bytes2Hex(newGenesis.BlockHash),
 			FilterId:   ws.Ctx.FilterId,
 			MerkleRoot: common.Bytes2Hex(newGenesis.MerkleRoot),
 			Date:       time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05"),
 			Namespace:  executor.namespace,
 		})
-		executor.processSyncBlocks()
+		if process != nil {
+			process()
+		}
+		if finailize != nil {
+			finailize()
+		}
 	} else if ws.PacketId == executor.context.syncCtx.getWsId()+1 {
 		// fetch the next slice packet.
 		store(ws.Payload, ws.PacketId, ws.Ctx.FilterId)
@@ -502,7 +543,7 @@ func (executor *Executor) processSyncBlocks() {
 // SendSyncRequestForWorldState sends world state fetch request.
 func (executor *Executor) SendSyncRequestForWorldState(number uint64) {
 	executor.logger.Debugf("send req to fetch world state at height (#%d)", number)
-	executor.informP2P(NOTIFY_REQUEST_WORLD_STATE, number)
+	executor.informP2P(NOTIFY_REQUEST_WORLD_STATE, number, executor.context.syncCtx.getCurrentPeer(), false)
 }
 
 // updateSyncDemand updates next demand block number and block hash.
@@ -637,6 +678,8 @@ func (executor *Executor) setupContext(ev event.ChainSyncReqEvent) {
 
 // applyWorldState apply the received world state, check the whole ledger hash before flush the changes to databse.
 // if success, update the genesis tag with the world state tag(means genesis transition finished).
+// Note, the whole operation is a atomic operation. If apply success, the genesis tag and current height will equal with
+// given height; otherwise, no change will flush to db.
 func (executor *Executor) applyWorldState(fPath string, filterId string, root common.Hash, genesis uint64) error {
 	uncompressCmd := cmd.Command("tar", "-zxvf", fPath, "-C", filepath.Dir(fPath))
 	if err := uncompressCmd.Run(); err != nil {
@@ -656,6 +699,11 @@ func (executor *Executor) applyWorldState(fPath string, filterId string, root co
 	}
 
 	if err := edb.UpdateGenesisTag(executor.namespace, genesis, writeBatch, false, false); err != nil {
+		return err
+	}
+
+	// update current chain height equal with given world state height
+	if err := edb.UpdateChainByBlcokNum(executor.namespace, writeBatch, genesis, false, false); err != nil {
 		return err
 	}
 
@@ -711,11 +759,11 @@ func (executor *Executor) ReceiveWorldStateSyncRequest(payload []byte) {
 	}
 	hs := executor.constructWsHandshake(request, manifest.FilterId, uint64(fsize), uint64(n))
 	if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE_HANDSHAKE, hs); err != nil {
-		executor.logger.Warningf("send world state (#%s) back to (%d) failed, err msg %s", manifest.FilterId, request.InitiatorId, err.Error())
+		executor.logger.Warningf("send world state (#%s) back to (%v) failed, err msg %s", manifest.FilterId, HashOrIdString(request.InitiatorIdOrHash), err.Error())
 		return
 	}
-	executor.logger.Debugf("send world state (#%s) handshake back to (%d) success, total size %d, total packet num %d, max packet size %d",
-		manifest.FilterId, request.InitiatorId, hs.Size, hs.PacketNum, hs.PacketSize)
+	executor.logger.Debugf("send world state (#%s) handshake back to (%v) success, total size %d, total packet num %d, max packet size %d",
+		manifest.FilterId, HashOrIdString(request.InitiatorIdOrHash), hs.Size, hs.PacketNum, hs.PacketSize)
 }
 
 // ReceiveWsAck receive initiator's ack packet.
@@ -746,7 +794,7 @@ func (executor *Executor) ReceiveWsAck(payload []byte) {
 			if err := executor.informP2P(NOTIFY_SEND_WORLD_STATE, ws); err != nil {
 				return
 			}
-			executor.logger.Debugf("send ws(#%s) packet (#%d), packet size (#%d) to peer (#%d) success", ws.Ctx.FilterId, ws.PacketId, ws.PacketSize, ws.Ctx.ReceiverId)
+			executor.logger.Debugf("send ws(#%s) packet (#%d), packet size (#%d) to peer (#%v) success", ws.Ctx.FilterId, ws.PacketId, ws.PacketSize, HashOrIdString(ws.Ctx.ReceiverIdOrHash))
 		} else if n == 0 && err != nil {
 			// TODO handler invalid ws req
 			return
@@ -777,9 +825,9 @@ func (executor *Executor) constructWsHandshake(req WsRequest, filterId string, s
 	wsShardSize := int64(executor.conf.GetStateFetchPacketSize())
 	return &WsHandshake{
 		Ctx: &WsContext{
-			FilterId:    filterId,
-			InitiatorId: req.ReceiverId,
-			ReceiverId:  req.InitiatorId,
+			FilterId:          filterId,
+			InitiatorIdOrHash: common.CopyBytes(req.ReceiverIdOrHash),
+			ReceiverIdOrHash:  common.CopyBytes(req.InitiatorIdOrHash),
 		},
 		Height:     req.Target,
 		Size:       size,
@@ -792,9 +840,9 @@ func (executor *Executor) constructWsHandshake(req WsRequest, filterId string, s
 func (executor *Executor) constructWsAck(ctx *WsContext, packetId uint64, status WsAck_STATUS, message []byte) *WsAck {
 	return &WsAck{
 		Ctx: &WsContext{
-			FilterId:    ctx.FilterId,
-			InitiatorId: ctx.ReceiverId,
-			ReceiverId:  ctx.InitiatorId,
+			FilterId:          ctx.FilterId,
+			InitiatorIdOrHash: common.CopyBytes(ctx.ReceiverIdOrHash),
+			ReceiverIdOrHash:  common.CopyBytes(ctx.InitiatorIdOrHash),
 		},
 		PacketId: packetId,
 		Status:   status,
@@ -807,9 +855,9 @@ func (executor *Executor) constrcutWs(ack *WsAck, packetId uint64, packetSize ui
 	executor.logger.Debugf("construct ws packet with %d size", len(payload))
 	return &Ws{
 		Ctx: &WsContext{
-			FilterId:    ack.Ctx.FilterId,
-			InitiatorId: ack.Ctx.ReceiverId,
-			ReceiverId:  ack.Ctx.InitiatorId,
+			FilterId:          ack.Ctx.FilterId,
+			InitiatorIdOrHash: common.CopyBytes(ack.Ctx.ReceiverIdOrHash),
+			ReceiverIdOrHash:  common.CopyBytes(ack.Ctx.InitiatorIdOrHash),
 		},
 		PacketId:   packetId,
 		PacketSize: packetSize,

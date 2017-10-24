@@ -98,9 +98,13 @@ func IsInvalidInvokePermissionErr(e error) bool {
 	Constant errors
 */
 var (
-	InvalidParamsErr = errors.New("invalid params")
-	NoDefinedCaseErr = errors.New("no defined case")
-	EmptyPointerErr  = errors.New("nil pointer")
-	TxIdLenErr       = errors.New("tx's id length does not match.")
-	MarshalFailedErr = errors.New("marshal failed")
+	InvalidParamsErr   = errors.New("invalid params")
+	NoDefinedCaseErr   = errors.New("no defined case")
+	EmptyPointerErr    = errors.New("nil pointer")
+	TxIdLenErr         = errors.New("tx's id length does not match.")
+	MarshalFailedErr   = errors.New("marshal failed")
+	NotEnoughReplyErr  = errors.New("not enough reply")
+	BlockIntegrityErr  = errors.New("block in not integrated")
+	SeizeLockFailedErr = errors.New("failed to seize the lock")
+	TimeoutErr         = errors.New("timeout")
 )

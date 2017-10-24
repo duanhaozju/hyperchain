@@ -1,5 +1,5 @@
 syntax="proto3";
-
+import "hyperchain/core/types/block.proto";
 package executor;
 
 message ChainSyncRequest{
@@ -15,16 +15,22 @@ message Consult {
     uint64 height = 2;
 }
 
+message ConsultReply {
+    bool        transition = 1;
+    types.Block genesisBlock = 2;
+    uint64      peerId = 3;
+}
+
 message WsContext {
-    string  filterId      = 1;
-    uint64  initiatorId   = 2;
-    uint64  receiverId    = 3;
+    string  filterId            = 1;
+    bytes  initiatorIdOrHash   = 2;
+    bytes  receiverIdOrHash    = 3;
 }
 
 message WsRequest {
-    uint64  target        = 1;
-    uint64  initiatorId   = 2;
-    uint64  receiverId    = 3;
+    uint64  target              = 1;
+    bytes   initiatorIdOrHash   = 2;
+    bytes   receiverIdOrHash    = 3;
 }
 
 message WsHandshake {

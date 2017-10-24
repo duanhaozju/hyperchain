@@ -44,18 +44,18 @@ type peerManagerImpl struct {
 	hyperNet *network.HyperNet
 
 	// current node instance
-	node     *Node
+	node *Node
 	// the number of node
 	n int
 
 	isonline *threadsafe.SpinLock // node online status under the current namespace
-	isNew bool // shows that the node is new to hyperchain
-	isOrg bool // shows that the node is origin to hyperchain. If isNew is true, isOrg is false, and vice versa.
-	isVP  bool // shows that the node is VP
-	isRec bool // shows that the node should be reconnected
+	isNew    bool                 // shows that the node is new to hyperchain
+	isOrg    bool                 // shows that the node is origin to hyperchain. If isNew is true, isOrg is false, and vice versa.
+	isVP     bool                 // shows that the node is VP
+	isRec    bool                 // shows that the node should be reconnected
 
 	peerPool *PeersPool // peerPool stores all the peer instance under the current namespace
-	peercnf *peerCnf 	// peercnf is for persisting the config
+	peercnf  *peerCnf   // peercnf is for persisting the config
 
 	blackHole chan interface{}
 
@@ -66,13 +66,13 @@ type peerManagerImpl struct {
 
 	hts *hts.HTS
 
-	eventHub  		*event.TypeMux 		// dispatcher for events that communicate with the upper module
-	peerMgrEv      	*event.TypeMux		// dispatcher for peer manager event
-	peerMgrEvClose 	chan interface{}	// closed when node is stopped
-	peerMgrSub     	cmap.ConcurrentMap	// peer manager event subscription
+	eventHub       *event.TypeMux     // dispatcher for events that communicate with the upper module
+	peerMgrEv      *event.TypeMux     // dispatcher for peer manager event
+	peerMgrEvClose chan interface{}   // closed when node is stopped
+	peerMgrSub     cmap.ConcurrentMap // peer manager event subscription
 
-	pendingChan  	chan struct{}		// the channel to wait for new peer to attend
-	pendingSkMap cmap.ConcurrentMap		// the session key readying to update of peer
+	pendingChan  chan struct{}      // the channel to wait for new peer to attend
+	pendingSkMap cmap.ConcurrentMap // the session key readying to update of peer
 
 	logger *logging.Logger
 }
@@ -120,7 +120,7 @@ func newPeerManagerImpl(namespace string, peercnf *viper.Viper, ev *event.TypeMu
 		eventHub:     ev,
 		hyperNet:     net,
 		node:         NewNode(namespace, selfID, selfHostname, net),
-		n:      N,
+		n:            N,
 		blackHole:    make(chan interface{}),
 		peerMgrEv:    new(event.TypeMux),
 		peerMgrSub:   cmap.New(),
@@ -358,15 +358,15 @@ func (pmgr *peerManagerImpl) GetPeerInfo() PeerInfos {
 
 		dHostName := p.info.GetHostName()
 		ip, port := pmgr.hyperNet.GetDNS(dHostName)
-		peerInfo :=  PeerInfo{
-			ID: p.info.GetID(),
+		peerInfo := PeerInfo{
+			ID:        p.info.GetID(),
 			Namespace: p.info.GetNameSpace(),
-			Hash: p.info.GetHash(),
-			Hostname: dHostName,
+			Hash:      p.info.GetHash(),
+			Hostname:  dHostName,
 			IsPrimary: p.info.GetPrimary(),
-			IsVP: p.info.GetVP(),
-			IP:    ip,
-			Port: port,
+			IsVP:      p.info.GetVP(),
+			IP:        ip,
+			Port:      port,
 		}
 
 		start := time.Now().UnixNano()
@@ -824,7 +824,7 @@ func (pmgr *peerManagerImpl) unbindAll() error {
 
 // sendMsg sends message to specific VP peer.
 func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType, payload []byte, peers []uint64) {
-	if !pmgr.isOnline() || !pmgr.IsVP() {
+	if !pmgr.isOnline() {
 		return
 	}
 	//TODO here can be improved, such as pre-calculate the peers' hash

@@ -75,16 +75,46 @@ type wsSyncStatus struct {
 	wsHome string
 }
 
+// nvpSyncStatus records all status flag nvp synchronization used.
+type nvpSyncStatus struct {
+	max              uint64 // max demand block number during sync
+	upper            uint64 // max demand block number in a single request batch
+	down             uint64 // min demand block number in a single request batch
+	remote           uint64 // target peer id, 0 means any vp is fine.
+	waitConsultReply int32  // consult procedure flag, 1 means in procedure, 0 means not.
+	waitTransition   int32  // world state transition procedure flag, 1 means in procedure, 0 means not.
+	reply            *ConsultReply
+	replys           []*ConsultReply
+}
+
+func (ctx *nvpSyncStatus) getUpper() uint64 {
+	return atomic.LoadUint64(&ctx.upper)
+}
+
+func (ctx *nvpSyncStatus) setUpper(num uint64) {
+	atomic.StoreUint64(&ctx.upper, num)
+}
+
+func (ctx *nvpSyncStatus) getDown() uint64 {
+	return atomic.LoadUint64(&ctx.down)
+}
+
+func (ctx *nvpSyncStatus) setDown(num uint64) {
+	atomic.StoreUint64(&ctx.down, num)
+}
+
 // chainSyncContext records all synchronization related status, including target peer qos.
 type chainSyncContext struct {
 	blockSyncStatus
 	wsSyncStatus
+	nvpSyncStatus
 	fullPeers []uint64 // peers list which contains all required blocks. experiential this type peer has
 	// higher priority to make chain synchronization
 	partPeers []PartPeer // peers list which just has a part of required blocks. If this type peer be chosen as target
 	// chain synchronization must through world state transition
 	currentPeer uint64   // current sync target peer id
 	resendMode  uint32   // resend mode. Includes (1) block (2) world state req (3) world state piece three modes.
+	typ         int      // vp sync or nvp.
 	qosStat     *QosStat // peer selector before send sync request, adhere `BEST PEER` algorithm
 	logger      *logging.Logger
 }
@@ -108,6 +138,7 @@ func newChainSyncContext(namespace string, event event.ChainSyncReqEvent, config
 		fullPeers: fullPeers,
 		partPeers: partPeers,
 		logger:    logger,
+		typ:       VP,
 	}
 	// pre-select a best peer
 	ctx.qosStat = NewQos(ctx, config, namespace, logger)
@@ -126,6 +157,12 @@ func newChainSyncContext(namespace string, event event.ChainSyncReqEvent, config
 	// assign target peer and local identification
 	ctx.localId = event.Id
 
+	return ctx
+}
+
+func newNVPSyncContext(number, chainheight uint64) *chainSyncContext {
+	ctx := &chainSyncContext{typ: NVP}
+	ctx.max, ctx.down = number, chainheight
 	return ctx
 }
 

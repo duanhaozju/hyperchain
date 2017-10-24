@@ -14,6 +14,7 @@
 package executor
 
 import (
+	"encoding/binary"
 	"github.com/golang/protobuf/proto"
 	er "hyperchain/core/errors"
 	edb "hyperchain/core/ledger/chain"
@@ -205,13 +206,23 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// (2) Request peer identification
 		// (3) Target peer identification
 		executor.logger.Debug("inform p2p sync world state")
-		if !checkParams([]reflect.Kind{reflect.Uint64}, message...) {
+		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64, reflect.Bool}, message...) {
 			return er.InvalidParamsErr
 		}
 		request := &WsRequest{
-			Target:      message[0].(uint64),
-			InitiatorId: executor.context.syncCtx.localId,
-			ReceiverId:  executor.context.syncCtx.getCurrentPeer(),
+			Target: message[0].(uint64),
+		}
+		if !message[2].(bool) {
+			// initiator is a vp.
+			request.InitiatorIdOrHash = make([]byte, binary.MaxVarintLen64)
+			binary.PutUvarint(request.InitiatorIdOrHash, executor.context.syncCtx.localId)
+			request.ReceiverIdOrHash = make([]byte, binary.MaxVarintLen64)
+			binary.PutUvarint(request.ReceiverIdOrHash, executor.context.syncCtx.getCurrentPeer())
+		} else {
+			// initiator is a nvp.
+			request.InitiatorIdOrHash = []byte(executor.GetNVP().GetLocalHash())
+			request.ReceiverIdOrHash = make([]byte, binary.MaxVarintLen64)
+			binary.PutUvarint(request.ReceiverIdOrHash, executor.context.syncCtx.remote)
 		}
 		payload, err := proto.Marshal(request)
 		if err != nil {
@@ -220,7 +231,8 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_REQUEST_WORLD_STATE,
-			Peers:   []uint64{executor.context.syncCtx.getCurrentPeer()},
+			// Note. now only vp can be the potential sync target peer
+			Peers: []uint64{message[1].(uint64)},
 		})
 		return nil
 	case NOTIFY_SEND_WORLD_STATE_HANDSHAKE:
@@ -242,11 +254,17 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		if err != nil {
 			return er.MarshalFailedErr
 		}
-		executor.helper.PostInner(event.ExecutorToP2PEvent{
+		ev := event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_SEND_WORLD_STATE_HANDSHAKE,
-			Peers:   []uint64{hs.Ctx.ReceiverId},
-		})
+		}
+		if len(hs.Ctx.ReceiverIdOrHash) > binary.MaxVarintLen64 {
+			ev.PeersHash = []string{string(hs.Ctx.ReceiverIdOrHash)}
+		} else {
+			id, _ := binary.Uvarint(hs.Ctx.ReceiverIdOrHash)
+			ev.Peers = []uint64{id}
+		}
+		executor.helper.PostInner(ev)
 		return nil
 	case NOTIFY_SEND_WS_ACK:
 		// Unicast world state transmission ack message.
@@ -267,11 +285,17 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		if err != nil {
 			return er.MarshalFailedErr
 		}
-		executor.helper.PostInner(event.ExecutorToP2PEvent{
+		ev := event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_SEND_WS_ACK,
-			Peers:   []uint64{ack.Ctx.ReceiverId},
-		})
+		}
+		if len(ack.Ctx.ReceiverIdOrHash) > binary.MaxVarintLen64 {
+			ev.PeersHash = []string{string(ack.Ctx.ReceiverIdOrHash)}
+		} else {
+			id, _ := binary.Uvarint(ack.Ctx.ReceiverIdOrHash)
+			ev.Peers = []uint64{id}
+		}
+		executor.helper.PostInner(ev)
 		return nil
 	case NOTIFY_SEND_WORLD_STATE:
 		// Unicast world state transmission ws packet.
@@ -290,11 +314,17 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		if err != nil {
 			return er.MarshalFailedErr
 		}
-		executor.helper.PostInner(event.ExecutorToP2PEvent{
+		ev := event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_SEND_WORLD_STATE,
-			Peers:   []uint64{ws.Ctx.ReceiverId},
-		})
+		}
+		if len(ws.Ctx.ReceiverIdOrHash) > binary.MaxVarintLen64 {
+			ev.PeersHash = []string{string(ws.Ctx.ReceiverIdOrHash)}
+		} else {
+			id, _ := binary.Uvarint(ws.Ctx.ReceiverIdOrHash)
+			ev.Peers = []uint64{id}
+		}
+		executor.helper.PostInner(ev)
 	case NOTIFY_TRANSIT_BLOCK:
 		// for nvp extension
 		executor.logger.Debug("inform p2p to transit commited block")
@@ -312,7 +342,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		return nil
 	case NOTIFY_NVP_SYNC:
 		executor.logger.Debug("inform p2p to sync nvp")
-		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64}, message...) {
+		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64, reflect.Uint64}, message...) {
 			return er.InvalidParamsErr
 		}
 		required := ChainSyncRequest{
@@ -324,27 +354,19 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			executor.logger.Errorf("sync chain request marshal message failed of NVP")
 			return err
 		}
-		executor.helper.PostInner(event.ExecutorToP2PEvent{
+		ev := event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_NVP_SYNC,
-		})
+		}
+		if message[2].(uint64) != 0 {
+			ev.Peers = []uint64{message[2].(uint64)}
+		}
+		executor.helper.PostInner(ev)
 		return nil
 	case NOTIFY_NVP_CONSULT:
-		executor.logger.Debug("inform p2p from nvp to negotiate ")
-		if !checkParams([]reflect.Kind{reflect.Chan}, message...) {
-			return er.InvalidParamsErr
-		}
-		consult := &Consult{
-			Height: edb.GetHeightOfChain(executor.namespace),
-		}
-		payload, err := proto.Marshal(consult)
-		if err != nil {
-			executor.logger.Errorf("marshal consult message failed")
-			return err
-		}
+		executor.logger.Debug("inform p2p from nvp to consult")
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
-			Payload: payload,
-			Type:    NOTIFY_NVP_CONSULT,
+			Type: NOTIFY_NVP_CONSULT,
 		})
 		return nil
 

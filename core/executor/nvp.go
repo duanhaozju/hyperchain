@@ -15,13 +15,13 @@ package executor
 
 import (
 	"encoding/hex"
-	"errors"
-	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	er "hyperchain/core/errors"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
+	"math"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -38,67 +38,26 @@ func (executor *Executor) TransitVerifiedBlock(block *types.Block) {
 	executor.informP2P(NOTIFY_TRANSIT_BLOCK, data)
 }
 
-type nvpContext struct {
-	demandNumber uint64        // current demand number for commit
-	inSync       bool          // indicates whether nvp is in status synchronization
-	max          uint64        // max demand block number during sync
-	upper        uint64        // max demand block number in a single request batch
-	down         uint64        // min demand block number in a single request batch
-	resendExit   chan struct{} // resend backend exit notifier
-}
-
-func (ctx *nvpContext) updateDemand() {
-	ctx.demandNumber += 1
-}
-
-func (ctx *nvpContext) isDemand(id uint64) bool {
-	return ctx.demandNumber == id
-}
-
-func (ctx *nvpContext) getUpper() uint64 {
-	return atomic.LoadUint64(&ctx.upper)
-}
-
-func (ctx *nvpContext) setUpper(num uint64) {
-	atomic.StoreUint64(&ctx.upper, num)
-}
-
-func (ctx *nvpContext) getDown() uint64 {
-	return atomic.LoadUint64(&ctx.down)
-}
-
-func (ctx *nvpContext) setDown(num uint64) {
-	atomic.StoreUint64(&ctx.down, num)
-}
-
-func (ctx *nvpContext) initSync(num, chainHeight uint64) {
-	ctx.max, ctx.down = num, chainHeight
-	ctx.inSync = true
-	ctx.resendExit = make(chan struct{})
-}
-
-func (ctx *nvpContext) clear() {
-	ctx.inSync = false
-	ctx.max, ctx.down, ctx.upper = 0, 0, 0
-	close(ctx.resendExit)
-}
-
 /*
 	Non-Verifying Peer
 */
 
 type nvp struct {
-	lock     sync.Mutex // block processor preventor
-	ctx      *nvpContext
-	executor *Executor
-	logger   *logging.Logger
+	lock         sync.Mutex
+	executor     *Executor
+	logger       *logging.Logger
+	localhash    string
+	demandNumber uint64
+	resendExit   chan struct{}
 }
 
-func NewNVPImpl(executor *Executor) *nvp {
+func NewNVPImpl(executor *Executor, localhash string) *nvp {
 	return &nvp{
-		ctx:      &nvpContext{demandNumber: chain.GetChainCopy(executor.namespace).Height + 1},
-		executor: executor,
-		logger:   executor.logger,
+		demandNumber: chain.GetChainCopy(executor.namespace).Height + 1,
+		localhash:    localhash,
+		executor:     executor,
+		logger:       executor.logger,
+		resendExit:   make(chan struct{}),
 	}
 }
 
@@ -108,14 +67,16 @@ func (nvp *nvp) ReceiveBlock(payload []byte) {
 	nvp.lock.Lock()
 	defer nvp.lock.Unlock()
 
-	var err error
-
-	block, err := nvp.preprocess(payload)
+	block, err, skip := nvp.preprocess(payload)
+	if skip {
+		return
+	}
 	if err != nil {
 		nvp.logger.Error(err)
 		return
 	}
-	if nvp.getCtx().isDemand(block.Number) {
+
+	if nvp.isDemand(block.Number) {
 		err = nvp.handleDemand(block)
 	} else {
 		err = nvp.handleUndemand(block)
@@ -125,6 +86,42 @@ func (nvp *nvp) ReceiveBlock(payload []byte) {
 	}
 }
 
+func (nvp *nvp) ReceiveConsult(payload []byte, n int) {
+	nvp.logger.Debugf("receive consult reply, max reply number %d", n)
+	if nvp.getSyncContext() == nil {
+		// ignore consult reply if state update finish.
+		return
+	}
+	if wait := atomic.LoadInt32(&nvp.getSyncContext().waitConsultReply); wait == 0 {
+		// ignore consult reply if not in wait stage
+		return
+	}
+	reply := &ConsultReply{}
+	if err := proto.Unmarshal(payload, reply); err != nil {
+		nvp.logger.Error("unmarshal consult reply failed", err.Error())
+		return
+	}
+	nvp.getSyncContext().replys = append(nvp.getSyncContext().replys, reply)
+	if !reply.Transition || len(nvp.getSyncContext().replys) == n {
+		retry := 3
+		for retry > 0 {
+			if atomic.CompareAndSwapInt32(&nvp.getSyncContext().waitConsultReply, 1, 0) {
+				nvp.logger.Notice("receive enough consult reply, stop waiting")
+				break
+			}
+			retry--
+		}
+		if retry == 0 {
+			nvp.logger.Error("receive enough consult replys, but shut down wait failed")
+		}
+	}
+}
+
+// GetLocalHash returns nvp's identification.
+func (nvp *nvp) GetLocalHash() string {
+	return nvp.localhash
+}
+
 // handleDemand receives demand block and process it.
 // Note. Nvp maybe in state synchronization, if so, modify some control flags.
 func (nvp *nvp) handleDemand(block *types.Block) error {
@@ -132,21 +129,23 @@ func (nvp *nvp) handleDemand(block *types.Block) error {
 		nvp.logger.Errorf("apply block #%d failed. %s", block.Number, err.Error())
 		return err
 	}
-	if err := nvp.applyRemainBlock(nvp.ctx.demandNumber); err != nil {
+	if err := nvp.applyRemainBlock(nvp.demandNumber); err != nil {
 		nvp.logger.Errorf("apply remain block failed. %s", block.Number, err.Error())
 		return err
 	}
-	if nvp.getCtx().inSync {
-		if nvp.getCtx().max == chain.GetHeightOfChain(nvp.getExecutor().namespace)-1 {
+	if nvp.getSyncContext() != nil {
+		if nvp.getSyncContext().max == chain.GetHeightOfChain(nvp.getExecutor().namespace)-1 {
 			// All blocks received
-			nvp.getCtx().clear()
+			nvp.clearSyncContext()
 		} else {
 			// Still have some unreceived blocks, try to fetch another batch blocks.
-			if nvp.getCtx().getDown() >= nvp.getCtx().getUpper() {
+			if nvp.getSyncContext().getDown() >= nvp.getSyncContext().getUpper() {
 				nvp.calUpper()
 				nvp.decUpper(block)
-				nvp.sendSyncRequest(nvp.getCtx().getUpper(), nvp.getCtx().getDown())
-				nvp.getExecutor().logger.Debugf("In sync phase! next batch: minNumInBatch is %v. maxNumInBatch is %v.", nvp.getCtx().getDown(), nvp.getCtx().getUpper())
+				nvp.sendSyncRequest(nvp.getSyncContext().getUpper(), nvp.getSyncContext().getDown(),
+					nvp.getSyncContext().remote)
+				nvp.logger.Debugf("try to fetch next batch: (%d - %d]",
+					nvp.getSyncContext().getDown(), nvp.getSyncContext().getUpper())
 			}
 		}
 	}
@@ -157,18 +156,40 @@ func (nvp *nvp) handleDemand(block *types.Block) error {
 func (nvp *nvp) handleUndemand(block *types.Block) error {
 	// The arrival block is not the demand one.
 	nvp.logger.Debugf("receive unexpected block number: %d, hash: %s", block.Number, common.Bytes2Hex(block.BlockHash))
-	if !nvp.getCtx().inSync {
-		nvp.consult()
-		// TODO negotiate with vp to assure whether genesis transition is necessary.
-		// Set up block synchronization if nvp is not in sync status.
-		nvp.getCtx().initSync(block.Number-1, chain.GetHeightOfChain(nvp.getExecutor().namespace))
+	if nvp.getSyncContext() == nil {
+		nvp.setupSyncContext(block.Number-1, chain.GetHeightOfChain(nvp.getExecutor().namespace))
 		nvp.logger.Debug("local blockchain is not continuous with the vp blockchain, start to synchronization")
-		nvp.logger.Debugf("require to fetch (%d - %d] block", nvp.getCtx().getDown(), nvp.getCtx().max)
-		nvp.sendSyncRequest(nvp.calUpper(), nvp.getCtx().getDown())
+		nvp.logger.Debugf("require to fetch (%d - %d] block", nvp.getSyncContext().getDown(), nvp.getSyncContext().max)
+
+		var reply *ConsultReply = nvp.consult()
+		if reply == nil {
+			nvp.logger.Error("doesn't receive enough consult reply in 5 minutes. Maybe this peer is isolated with others")
+			nvp.clearSyncContext()
+			return er.NotEnoughReplyErr
+		}
+		if reply.Transition {
+			// Make world state transition.
+			// Same with consult, this procedure will also block util it finish.
+
+			// Persist new genesis block here.
+			chain.PersistBlock(nvp.executor.db.NewBatch(), reply.GenesisBlock, true, true, getTxVersion(reply.GenesisBlock))
+			nvp.logger.Debugf("world state transition is required. target genesis %d, target peer %d",
+				reply.GenesisBlock.Number, reply.PeerId)
+
+			nvp.getSyncContext().remote = reply.PeerId
+			nvp.getSyncContext().down = reply.GenesisBlock.Number
+			nvp.demandNumber = reply.GenesisBlock.Number + 1
+
+			if err := nvp.fetchWorldState(reply); err != nil {
+				nvp.clearSyncContext()
+				return err
+			}
+		}
+		nvp.sendSyncRequest(nvp.calUpper(), nvp.getSyncContext().getDown(), nvp.getSyncContext().remote)
 		go nvp.resendBackend()
 	}
-	if block.Number > nvp.getCtx().max {
-		nvp.ctx.max = block.Number - 1
+	if block.Number > nvp.getSyncContext().max {
+		nvp.getSyncContext().max = block.Number - 1
 	}
 	nvp.decUpper(block)
 	return nil
@@ -180,21 +201,20 @@ func (nvp *nvp) handleUndemand(block *types.Block) error {
 // 2. Ignore block which number is not larger than chain height;
 // 3. Verify block intergrity via block hash;
 // 4. Persist to database if meet demand;
-func (nvp *nvp) preprocess(payload []byte) (*types.Block, error) {
-	nvp.getExecutor().logger.Debugf("pre-process block of NVP start!")
+func (nvp *nvp) preprocess(payload []byte) (*types.Block, error, bool) {
+	nvp.logger.Debugf("preprocess received block")
 	block := &types.Block{}
 	err := proto.Unmarshal(payload, block)
 	if err != nil {
-		nvp.getExecutor().logger.Errorf("receive invalid verified block, unmarshal failed.")
-		return nil, err
+		nvp.logger.Errorf("receive invalid verified block, unmarshal failed.")
+		return nil, err, false
 	}
 	if chain.GetHeightOfChain(nvp.getExecutor().namespace) < block.Number {
 		blk, err := chain.GetBlockByNumber(nvp.getExecutor().namespace, block.Number)
 		if err != nil {
 			// The block with given number doesn't exist in database.
 			if !VerifyBlockIntegrity(block) {
-				errStr := fmt.Sprintf("verify block integrity fail! receive a broken block %d, drop it.", block.Number)
-				return nil, errors.New(errStr)
+				return nil, er.BlockIntegrityErr, false
 			}
 			if block.Version != nil {
 				// Receive block with version tag
@@ -203,18 +223,17 @@ func (nvp *nvp) preprocess(payload []byte) (*types.Block, error) {
 				err, _ = chain.PersistBlock(nvp.getExecutor().db.NewBatch(), block, true, true)
 			}
 			if err != nil {
-				return nil, errors.New("persisit block failed." + err.Error())
+				return nil, err, false
 			}
 			nvp.logger.Debugf("pre-process block #%d done!", block.Number)
-			return block, nil
+			return block, nil, false
 		} else {
 			// Ignore duplicated block
 			nvp.logger.Debugf("ignore duplicated block %d, hash %s, skip persistence", block.Number, common.Bytes2Hex(block.BlockHash))
-			return blk, nil
+			return blk, nil, false
 		}
 	} else {
-		errStr := fmt.Sprintf("unexpected block #%d received", block.Number)
-		return nil, errors.New(errStr)
+		return nil, nil, true
 	}
 }
 
@@ -223,10 +242,10 @@ func (nvp *nvp) applyBlock(block *types.Block) error {
 	if err := nvp.process(block); err != nil {
 		return err
 	}
-	nvp.getCtx().updateDemand()
+	nvp.updateDemand()
 	// increase down bound if nvp is in status synchronization
-	if nvp.getCtx().inSync {
-		nvp.getCtx().setDown(block.Number)
+	if nvp.getSyncContext() != nil {
+		nvp.getSyncContext().setDown(block.Number)
 	}
 	return nil
 }
@@ -241,16 +260,17 @@ func (nvp *nvp) applyRemainBlock(number uint64) error {
 	if err := nvp.process(block); err != nil {
 		return err
 	}
-	nvp.getCtx().updateDemand()
+	nvp.updateDemand()
 	// increase down bound if nvp is in status synchronization
-	if nvp.getCtx().inSync {
-		nvp.getCtx().setDown(block.Number)
+	if nvp.getSyncContext() != nil {
+		nvp.getSyncContext().setDown(block.Number)
 	}
-	return nvp.applyRemainBlock(nvp.getCtx().demandNumber)
+	return nvp.applyRemainBlock(nvp.demandNumber)
 }
 
 // process applys given block to make blockchain status transition.
 func (nvp *nvp) process(block *types.Block) error {
+	nvp.executor.stateTransition(block.Number+1, common.BytesToHash(block.MerkleRoot))
 	err, result := nvp.getExecutor().ApplyBlock(block, block.Number)
 	if err != nil {
 		return err
@@ -265,7 +285,7 @@ func (nvp *nvp) process(block *types.Block) error {
 			} else {
 				nvp.logger.Debugf("delete block number #%v in batch success!", i)
 			}
-			if !nvp.getCtx().inSync || i == nvp.getCtx().max+1 {
+			if nvp.getSyncContext() == nil || i == nvp.getSyncContext().max+1 {
 				break
 			}
 		}
@@ -285,31 +305,29 @@ func (nvp *nvp) process(block *types.Block) error {
 
 func (nvp *nvp) resendBackend() {
 	ticker := time.NewTicker(nvp.getExecutor().conf.GetSyncResendInterval())
-	nvp.logger.Debugf("sync request resend interval: ", nvp.getExecutor().conf.GetSyncResendInterval().String())
-	up := nvp.getCtx().getUpper()
-	down := nvp.getCtx().getDown()
+	nvp.logger.Debug("sync request resend interval: ", nvp.getExecutor().conf.GetSyncResendInterval().String())
+	up := nvp.getSyncContext().getUpper()
+	down := nvp.getSyncContext().getDown()
 	for {
 		select {
-		case <-nvp.getCtx().resendExit:
-			nvp.logger.Notice("state update finish")
+		case <-nvp.resendExit:
 			return
 		case <-ticker.C:
 			// resend
-			curUp := nvp.getCtx().getUpper()
-			curDown := nvp.getCtx().getDown()
+			if nvp.getSyncContext() == nil {
+				continue
+			}
+			curUp := nvp.getSyncContext().getUpper()
+			curDown := nvp.getSyncContext().getDown()
 			if curUp == up && curDown == down {
-				nvp.logger.Noticef("resend sync request of NVP. want [%d] - [%d]", down, up)
-				nvp.sendSyncRequest(up, down)
+				nvp.logger.Noticef("resend sync request, want [%d] - [%d]", down, up)
+				nvp.sendSyncRequest(up, down, nvp.getSyncContext().remote)
 			} else {
 				up = curUp
 				down = curDown
 			}
 		}
 	}
-}
-
-func (nvp *nvp) getCtx() *nvpContext {
-	return nvp.ctx
 }
 
 func (nvp *nvp) getExecutor() *Executor {
@@ -320,19 +338,19 @@ func (nvp *nvp) getExecutor() *Executor {
 // if a node required to sync too much blocks one time, the huge chain sync request will be split to several small one.
 // a sync chain required block number can not more than `sync batch size` in config file.
 func (nvp *nvp) calUpper() uint64 {
-	total := nvp.getCtx().max - nvp.getCtx().getDown()
+	total := nvp.getSyncContext().max - nvp.getSyncContext().getDown()
 	if total < nvp.getExecutor().conf.GetSyncMaxBatchSize() {
-		nvp.getCtx().setUpper(nvp.getCtx().max)
+		nvp.getSyncContext().setUpper(nvp.getSyncContext().max)
 	} else {
-		nvp.ctx.setUpper(nvp.getCtx().getDown() + nvp.getExecutor().conf.GetSyncMaxBatchSize())
+		nvp.getSyncContext().setUpper(nvp.getSyncContext().getDown() + nvp.getExecutor().conf.GetSyncMaxBatchSize())
 	}
-	nvp.getExecutor().logger.Debugf("update upper to %d", nvp.getCtx().getUpper())
-	return nvp.getCtx().getUpper()
+	nvp.logger.Debugf("update upper to %d", nvp.getSyncContext().getUpper())
+	return nvp.getSyncContext().getUpper()
 }
 
 // sendSyncRequest sends synchronization request to other vp nodes.
-func (nvp *nvp) sendSyncRequest(upstream, downstream uint64) {
-	if err := nvp.getExecutor().informP2P(NOTIFY_NVP_SYNC, upstream, downstream); err != nil {
+func (nvp *nvp) sendSyncRequest(upstream, downstream, peerId uint64) {
+	if err := nvp.getExecutor().informP2P(NOTIFY_NVP_SYNC, upstream, downstream, peerId); err != nil {
 		nvp.getExecutor().logger.Errorf("[Namespace = %s] send sync req failed. %s", nvp.getExecutor().namespace, err.Error())
 		return
 	}
@@ -340,21 +358,126 @@ func (nvp *nvp) sendSyncRequest(upstream, downstream uint64) {
 
 // decUpper decrease upper in a single batch request.
 func (nvp *nvp) decUpper(block *types.Block) {
-	if nvp.getCtx().getUpper() == block.Number {
-		nvp.getCtx().setUpper(block.Number - 1)
+	if nvp.getSyncContext().getUpper() == block.Number {
+		nvp.getSyncContext().setUpper(block.Number - 1)
 	}
-	for blk, err := chain.GetBlockByNumber(nvp.getExecutor().namespace, nvp.getCtx().getUpper()); err == nil; {
-		if nvp.getCtx().getUpper() <= nvp.getCtx().getDown() {
+	for blk, err := chain.GetBlockByNumber(nvp.getExecutor().namespace, nvp.getSyncContext().getUpper()); err == nil; {
+		// TODO error can not be NOTFOUND
+		if nvp.getSyncContext().getUpper() <= nvp.getSyncContext().getDown() {
 			break
 		}
 		nvp.logger.Debugf("db already has block number #%v. block hash %v.", blk.Number, common.Bytes2Hex(blk.BlockHash))
-		nvp.getCtx().setUpper(nvp.getCtx().getUpper() - 1)
-		blk, err = chain.GetBlockByNumber(nvp.getExecutor().namespace, nvp.getCtx().getUpper())
+		nvp.getSyncContext().setUpper(nvp.getSyncContext().getUpper() - 1)
+		blk, err = chain.GetBlockByNumber(nvp.getExecutor().namespace, nvp.getSyncContext().getUpper())
 	}
 }
 
 // negotiate nvp sends a consult message to connected vps to assure whether genesis status transition is necesary.
-func (nvp *nvp) consult() {
-	done := make(chan bool)
-	nvp.executor.informP2P(NOTIFY_NVP_CONSULT, done)
+// Presume sync context is not nil.
+func (nvp *nvp) consult() *ConsultReply {
+	// hold the lock
+	retry := 3
+	for retry > 0 {
+		if atomic.CompareAndSwapInt32(&nvp.getSyncContext().waitConsultReply, 0, 1) {
+			break
+		}
+		retry--
+	}
+	if retry == 0 {
+		return nil
+	}
+
+	nvp.executor.informP2P(NOTIFY_NVP_CONSULT)
+	// wait consult result. return false if doesn't get result in time.
+	ticker := time.NewTicker(time.Second)
+	timeout := time.NewTimer(5 * time.Minute)
+
+	analysis := func() *ConsultReply {
+		replys := nvp.getSyncContext().replys
+		// clear immediately
+		nvp.getSyncContext().replys = nil
+		var (
+			reply *ConsultReply
+			min   uint64 = math.MaxUint64
+		)
+		for _, r := range replys {
+			// full node always has the highest priority
+			if !r.Transition {
+				return r
+			}
+			// lower genesis node has higher priority
+			if min > r.GenesisBlock.Number {
+				min = r.GenesisBlock.Number
+				reply = r
+			}
+		}
+		nvp.getSyncContext().reply = reply
+		return reply
+	}
+	for {
+		select {
+		case <-ticker.C:
+			if wait := atomic.LoadInt32(&nvp.getSyncContext().waitConsultReply); wait == 0 {
+				return analysis()
+			} else {
+				nvp.logger.Debug("haven't receive enough reply")
+			}
+		case <-timeout.C:
+			nvp.logger.Warning("wait more than 5 minutes to receive enough replys. return any available right now")
+			atomic.StoreInt32(&nvp.getSyncContext().waitConsultReply, 0)
+			return analysis()
+		}
+	}
+}
+
+func (nvp *nvp) fetchWorldState(reply *ConsultReply) error {
+	// mark world transition begin
+	retry := 3
+	for retry > 0 {
+		if atomic.CompareAndSwapInt32(&nvp.getSyncContext().waitTransition, 0, 1) {
+			break
+		}
+		retry--
+	}
+	if retry == 0 {
+		return er.SeizeLockFailedErr
+	}
+	nvp.executor.informP2P(NOTIFY_REQUEST_WORLD_STATE, reply.GenesisBlock.Number, reply.PeerId, true)
+	ticker := time.NewTicker(time.Second)
+	timeout := time.NewTimer(24 * time.Hour)
+	for {
+		select {
+		case <-ticker.C:
+			if wait := atomic.LoadInt32(&nvp.getSyncContext().waitTransition); wait == 0 {
+				return nil
+			} else {
+				nvp.logger.Debug("wait world state transition finish")
+			}
+		case <-timeout.C:
+			nvp.logger.Error("exceed 24 hours waiting for world state transition")
+			return er.TimeoutErr
+		}
+	}
+}
+
+func (nvp *nvp) getSyncContext() *chainSyncContext {
+	return nvp.executor.context.syncCtx
+}
+
+func (nvp *nvp) setupSyncContext(num, chainHeight uint64) {
+	nvp.executor.context.syncCtx = newNVPSyncContext(num, chainHeight)
+}
+
+func (nvp *nvp) clearSyncContext() {
+	nvp.executor.context.syncCtx = nil
+	nvp.resendExit <- struct{}{}
+	nvp.logger.Notice("state update finish")
+}
+
+func (nvp *nvp) updateDemand() {
+	nvp.demandNumber += 1
+}
+
+func (nvp *nvp) isDemand(id uint64) bool {
+	return nvp.demandNumber == id
 }
