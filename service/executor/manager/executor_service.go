@@ -4,7 +4,7 @@ import (
 	"github.com/op/go-logging"
 	hapi "hyperchain/api"
 	"hyperchain/common"
-	//pb "hyperchain/common/protos"
+	pb "hyperchain/common/protos"
 	"hyperchain/core/executor"
 	"hyperchain/hyperdb"
 	"hyperchain/namespace/rpc"
@@ -212,7 +212,6 @@ func (es *executorServiceImpl) Start() error {
 		return err
 	}
 
-	// 4. register the executor service for namespace
 	err = es.service.Register(pb.FROM_EXECUTOR, &pb.RegisterMessage{
 		Namespace: es.namespace,
 	})
@@ -223,6 +222,7 @@ func (es *executorServiceImpl) Start() error {
 
 	es.status.setState(running)
 	return nil
+
 }
 
 func (es *executorServiceImpl) Stop() error {
