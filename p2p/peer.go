@@ -203,7 +203,7 @@ func (peer *Peer) clientHello(isOrg, isRec bool) error {
 	if err != nil {
 		return err
 	}
-	// peer should
+
 	identify := payloads.NewIdentify(peer.local.IsVP, isOrg, isRec, peer.namespace, peer.local.Hostname, peer.local.Id, certpayload)
 	payload, err := identify.Serialize()
 	if err != nil {

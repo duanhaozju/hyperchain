@@ -21,22 +21,27 @@ var logger *logging.Logger
 
 type HyperNet struct {
 	conf          *viper.Viper
-	dns           *DNSResolver
+
 	server        *Server
 	hostClientMap cmap.ConcurrentMap
+
+	// key-value pair for hostname -> IP address, read or write hosts.toml
+	dns           *DNSResolver
+	// key-value pair for domain -> IP address, read or write addr.toml
+	addr *inneraddr.InnerAddr
 
 	// failed queue
 	failedQueue *lane.Queue
 	//reverse queue
 	reverseQueue chan [2]string
 
+	// grpc port
 	listenPort string
+	// security connection options
 	sec        *Sec
 
 	// self belong domain
 	domain string
-
-	addr *inneraddr.InnerAddr
 
 	cconf *clientConf
 }
@@ -108,22 +113,14 @@ func NewHyperNet(config *viper.Viper, identifier string) (*HyperNet, error) {
 	return net, nil
 }
 
-//Register server msg handler
-//ensure this before than init server
-func (hn *HyperNet) RegisterHandler(filed string, msgType pb.MsgType, handler msg.MsgHandler) error {
-	return hn.server.RegisterSlot(filed, msgType, handler)
-}
-
-func (hn *HyperNet) DeRegisterHandlers(filed string) {
-	hn.server.DeregisterSlots(filed)
-}
-
-//InitServer start self hypernet server listening server
+// InitServer starts self hypernet server listening service.
 func (hn *HyperNet) InitServer() error {
 	hn.reverse()
 	return hn.server.StartServer(hn.listenPort)
 }
 
+// InitClients will connect to all hosts. If connect failed,
+// the hostname will be put in failedQueue.
 func (hn *HyperNet) InitClients() error {
 	for _, hostname := range hn.dns.listHostnames() {
 		logger.Info("Now connect to host:", hostname)
@@ -136,6 +133,17 @@ func (hn *HyperNet) InitClients() error {
 		}
 	}
 	return nil
+}
+
+// RegisterHandler registers message handler for filed(or namespace) which must do
+// before init server.
+func (hn *HyperNet) RegisterHandler(filed string, msgType pb.MsgType, handler msg.MsgHandler) error {
+	return hn.server.RegisterSlot(filed, msgType, handler)
+}
+
+// DeRegisterHandlers deregisters all message handler under the filed(or namespace).
+func (hn *HyperNet) DeRegisterHandlers(filed string) {
+	hn.server.DeregisterSlots(filed)
 }
 
 // if a connection failed, here will retry to connect to the host name.
@@ -223,7 +231,7 @@ func (hn *HyperNet) ConnectByAddr(hostname, addr string) error {
 	return nil
 }
 
-// Connect will connect to specific hostname.
+// Connect will create a Client instance for given hostname and connect to it.
 func (hn *HyperNet) Connect(hostname string) error {
 	addr, err := hn.dns.GetDNS(hostname)
 	logger.Info("connect to ", addr)
