@@ -11,21 +11,27 @@ import (
 
 //InternalServer handle internal service connections
 type InternalServer struct {
-	port   int
-	host   string
-	sr     service.ServiceRegistry
-	logger *logging.Logger
+	port          int
+	host          string
+	sr            service.ServiceRegistry
+	logger        *logging.Logger
+	adminRegister chan struct{}
 }
 
 func NewInternalServer(port int, host string) (*InternalServer, error) {
 	ds := &InternalServer{
-		port:   port,
-		host:   host,
-		sr:     service.NewServiceRegistry(),
-		logger: logging.MustGetLogger("dispatcher"),
+		port:          port,
+		host:          host,
+		sr:            service.NewServiceRegistry(),
+		logger:        logging.MustGetLogger("dispatcher"),
+		adminRegister: make(chan struct{}, 100),
 	}
 
 	return ds, nil
+}
+
+func (is *InternalServer) AdminRegister() chan struct{}  {
+	return is.adminRegister
 }
 
 func (is *InternalServer) Addr() string {
@@ -52,6 +58,9 @@ func (is *InternalServer) Register(stream pb.Dispatcher_RegisterServer) error {
 		case pb.Type_REGISTER:
 			lock.Lock()
 			s = is.handleRegister(msg, stream)
+			if s != nil && msg.Event == pb.Event_AdminRegisterEvent {
+				is.adminRegister <- struct{}{}
+			}
 			lock.Unlock()
 		default:
 			is.logger.Errorf("Message undefined %v", msg)
@@ -110,22 +119,38 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 		is.logger.Errorf("unmarshal register message error: %v", err)
 		return nil
 	}
+	if msg.Event == pb.Event_AdminRegisterEvent {
+		// the admin stream register
+		service := NewRemoteService(rm.Namespace, adminId(&rm), stream, is)
+		is.sr.AddAdminService(service)
+		is.logger.Debug("Send admin register ok response!")
 
-	if len(rm.Namespace) == 0 {
-		is.logger.Error("namespace error, no namespace specified, using global instead")
-		rm.Namespace = "global"
-	}
+		if err := stream.Send(&pb.IMessage{
+			Type: pb.Type_RESPONSE,
+			Ok:   true,
+		}); err != nil {
+			is.logger.Error(err)
+		}
+		return service
+	} else {
+		// normal stream register
 
-	service := NewRemoteService(rm.Namespace, serviceId(msg), stream, is)
-	is.sr.Register(service)
-	is.logger.Debug("Send register ok response!")
-	if err := stream.Send(&pb.IMessage{
-		Type: pb.Type_RESPONSE,
-		Ok:   true,
-	}); err != nil {
-		is.logger.Error(err)
+		if len(rm.Namespace) == 0 {
+			is.logger.Error("namespace error, no namespace specified, using global instead")
+			rm.Namespace = "global"
+		}
+
+		service := NewRemoteService(rm.Namespace, serviceId(msg), stream, is)
+		is.sr.Register(service)
+		is.logger.Debug("Send register ok response!")
+		if err := stream.Send(&pb.IMessage{
+			Type: pb.Type_RESPONSE,
+			Ok:   true,
+		}); err != nil {
+			is.logger.Error(err)
+		}
+		return service
 	}
-	return service
 }
 
 //serviceId generate service id
@@ -142,4 +167,8 @@ func serviceId(msg *pb.IMessage) string {
 	default:
 		return ""
 	}
+}
+
+func adminId(msg *pb.RegisterMessage) string {
+	return fmt.Sprintf("%s:%s", msg.Address, msg.Port)
 }

@@ -37,7 +37,7 @@ import (
 
 var logger *logging.Logger
 
-func init()  {
+func init() {
 	logger = common.GetLogger(common.DEFAULT_LOG, "nsmgr")
 }
 
@@ -247,6 +247,11 @@ func (nr *nsManagerImpl) Start() error {
 		return nil
 	}
 
+	if !nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
+		logger.Criticalf("waitting for executor admin to connect ...")
+		admin := <-nr.is.AdminRegister()
+		logger.Criticalf("executor admin at %v connected", admin)
+	}
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	for name := range nr.namespaces {
@@ -257,7 +262,7 @@ func (nr *nsManagerImpl) Start() error {
 			}
 		}(name)
 	}
-	if nr.conf.GetBool(common.C_JVM_START) == true && nr.conf.GetBool(common.EXECUTOR_EMBEDDED){
+	if nr.conf.GetBool(common.C_JVM_START) == true && nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
 		if err := nr.jvmManager.Start(); err != nil {
 			logger.Error(err)
 			return err
@@ -433,7 +438,7 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 		if err := ns.Start(); err != nil {
 			ns.Stop() //start failed, try to stop some started components
 			return err
-		} else {
+		} else if nr.conf.GetBool(common.EXECUTOR_EMBEDDED){
 			nr.jvmManager.ledgerProxy.RegisterDB(name, ns.GetExecutor().FetchStateDb())
 			return nil
 		}

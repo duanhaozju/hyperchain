@@ -12,16 +12,21 @@ type ServiceRegistry interface {
 	Close()                                 // Close close the service registry.
 	ContainsNamespace(name string) bool
 	Namespace(name string) *NamespaceServices
+	AdminService(aid string) Service
+	AddAdminService(adminSrv Service)
 }
 
 func NewServiceRegistry() ServiceRegistry {
 	return &serviceRegistryImpl{
 		namespaces: make(map[string]*NamespaceServices),
+		admins:     make(map[string]Service),
 	}
 }
 
 type NamespaceServices struct {
 	services map[string]Service //<service name, service>
+	adlock   sync.RWMutex
+	adminSrv Service
 	lock     sync.RWMutex
 }
 
@@ -29,6 +34,18 @@ func newNamespace() *NamespaceServices {
 	return &NamespaceServices{
 		services: make(map[string]Service),
 	}
+}
+
+func (nc *NamespaceServices) AddAdminSrv(service Service) {
+	nc.adlock.Lock()
+	nc.adminSrv = service
+	nc.adlock.Unlock()
+}
+
+func (nc *NamespaceServices) AdminService() Service {
+	nc.adlock.RLock()
+	defer nc.adlock.RUnlock()
+	return nc.adminSrv
 }
 
 func (nc *NamespaceServices) AddService(service Service) {
@@ -67,6 +84,21 @@ func (nc *NamespaceServices) Close() {
 type serviceRegistryImpl struct {
 	lock       sync.RWMutex
 	namespaces map[string]*NamespaceServices // <namespace, component>
+
+	adlock sync.RWMutex
+	admins map[string]Service
+}
+
+func (sri *serviceRegistryImpl) AdminService(aid string) Service {
+	sri.adlock.RLock()
+	defer sri.adlock.RUnlock()
+	return sri.admins[aid]
+}
+
+func (sri *serviceRegistryImpl) AddAdminService(adminSrv Service) {
+	sri.adlock.Lock()
+	defer sri.adlock.Unlock()
+	sri.admins[adminSrv.Id()] = adminSrv
 }
 
 // Init init the service registry.

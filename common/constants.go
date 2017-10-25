@@ -23,6 +23,7 @@ const (
 
 const (
 	EXECUTOR_EMBEDDED = "executor.embedded"
+	EXECUTOR_HOST_ADDR  = "executor.host.addr"
 	START_NAMESPACE   = "namespace.start."
 	C_JVM_START       = "hypervm.jvm"
 )

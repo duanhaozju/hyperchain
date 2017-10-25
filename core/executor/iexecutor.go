@@ -1,15 +1,16 @@
 package executor
 
 import (
+	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	pb "hyperchain/common/protos"
 	"hyperchain/common/service"
+	"hyperchain/common/service/server"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/manager/event"
-	"hyperchain/common/service/server"
 )
 
 type IExecutor interface {
@@ -61,12 +62,14 @@ type remoteExecutorProxy struct {
 	namespace string
 	is        *server.InternalServer
 	logger    *logging.Logger
+	conf      *common.Config
 }
 
 func NewRemoteExecutorProxy(is *server.InternalServer, config *common.Config) IExecutor {
 	rep := &remoteExecutorProxy{
 		is:        is,
 		namespace: config.GetString(common.NAMESPACE),
+		conf:      config,
 	}
 	rep.logger = common.GetLogger(rep.namespace, "executor")
 	return rep
@@ -74,6 +77,17 @@ func NewRemoteExecutorProxy(is *server.InternalServer, config *common.Config) IE
 
 func (re *remoteExecutorProxy) Start() error {
 	//TODO: wait until this namespace registered
+	executorHostAddr := re.conf.GetString(common.EXECUTOR_HOST_ADDR)
+	if len(executorHostAddr) == 0 {
+		return fmt.Errorf("No executor host addr found for this executor ")
+	}
+	adminSrv := re.is.ServerRegistry().AdminService(executorHostAddr)
+	if adminSrv == nil {
+		return fmt.Errorf("No executor admin found for %s ", executorHostAddr)
+	}
+
+	//adminSrv.Send()
+
 	return nil
 }
 
@@ -115,35 +129,35 @@ func (re *remoteExecutorProxy) RunInSandBox(tx *types.Transaction, snapshotId st
 }
 
 func (re *remoteExecutorProxy) Rollback(ev event.VCResetEvent) {
-    msg := &pb.IMessage{
-        Type:  pb.Type_EVENT,
-        From:  pb.FROM_EVENTHUB,
-        Event: pb.Event_VCResetEvent,
-    }
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_VCResetEvent,
+	}
 
-    payload, err := proto.Marshal(&ev)
-    if err != nil {
-        //TODO: handle error
-    }
+	payload, err := proto.Marshal(&ev)
+	if err != nil {
+		//TODO: handle error
+	}
 
-    msg.Payload = payload
-    re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
+	msg.Payload = payload
+	re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
 }
 
 func (re *remoteExecutorProxy) SyncChain(ev event.ChainSyncReqEvent) {
-    msg := &pb.IMessage{
-        Type:  pb.Type_EVENT,
-        From:  pb.FROM_EVENTHUB,
-        Event: pb.Event_VCResetEvent,
-    }
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_VCResetEvent,
+	}
 
-    payload, err := proto.Marshal(&ev)
-    if err != nil {
-        //TODO: handle error
-    }
+	payload, err := proto.Marshal(&ev)
+	if err != nil {
+		//TODO: handle error
+	}
 
-    msg.Payload = payload
-    re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
+	msg.Payload = payload
+	re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
 }
 
 func (re *remoteExecutorProxy) Snapshot(ev event.SnapshotEvent) {

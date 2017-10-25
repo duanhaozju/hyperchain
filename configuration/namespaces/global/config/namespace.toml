@@ -101,6 +101,8 @@ algo = "RBFT"
 ############################################################################################################
 [executor]
     embedded = false # whether executor execute in a standlone mode
+    [executor.host]
+    addr = "127.0.0.1:50071"
 
     [executor.syncer]
     max_block_fetch         = 50
