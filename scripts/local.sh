@@ -190,6 +190,8 @@ f_all_in_one_cmd(){
 
 f_x_in_linux_cmd(){
     gnome-terminal -x bash -c "cd $DUMP_PATH/node${1}/bin && ./start.sh"
+    sleep 3s
+    gnome-terminal -x bash -c "cd $DUMP_PATH/node${1} && ./executor"
 }
 
 f_x_in_mac_cmd(){

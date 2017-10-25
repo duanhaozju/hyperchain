@@ -66,3 +66,16 @@ message SnapshotEvent {
     string FilterId = 1;
     uint64 BlockNumber = 2;
 }
+
+message AddNamespaceEvent {
+    string namespace  = 1;
+}
+
+message DeleteNamespaceEvent {
+    string namespace  = 1;
+}
+
+message AdminResponseEvent{
+    bool Ok = 1;
+    bytes Payload = 2;
+}

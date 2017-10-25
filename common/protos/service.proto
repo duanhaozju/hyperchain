@@ -61,5 +61,8 @@ enum Event {
     ExecutorToP2PEvent = 11;
     ExecutorToConsensusEvent = 12;
 
-    AdminRegisterEvent = 13;
+    //4.Admin event
+    AddNamespaceEvent = 13;
+    DeleteNamespaceEvent = 14;
+    AdminResponseEvent = 15;
 }
