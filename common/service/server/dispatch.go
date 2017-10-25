@@ -14,16 +14,6 @@ func (is *InternalServer) DispatchConsensusMsg(namespace string, msg *pb.IMessag
 		is.logger.Errorf("no namespace found [%s]", namespace)
 		return
 	}
-
-	switch msg.Event {
-	case pb.Event_InformPrimaryEvent:
-		service := is.sr.Namespace(namespace).Service(service.NETWORK)
-		if service != nil {
-			service.Send(msg)
-		} else {
-			//is.logger.Errorf("No service found for [%s]", service.NETWORK)
-		}
-	}
 }
 
 func (is *InternalServer) DispatchExecutorMsg(namespace string, msg *pb.IMessage) {

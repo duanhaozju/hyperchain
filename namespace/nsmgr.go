@@ -222,7 +222,10 @@ func (nr *nsManagerImpl) init() error {
 			}
 			// only register namespace whose name has been set true
 			// in config file.
-			nr.Register(name)
+			if err := nr.Register(name); err != nil {
+				logger.Error(err)
+				return err
+			}
 		} else {
 			logger.Errorf("Invalid folder %v", d)
 		}
@@ -249,6 +252,7 @@ func (nr *nsManagerImpl) Start() error {
 
 	if !nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
 		logger.Criticalf("waitting for executor admin to connect ...")
+		//TODO: add timeout detect
 		admin := <-nr.is.AdminRegister()
 		logger.Criticalf("executor admin at %v connected", admin)
 	}
@@ -347,7 +351,6 @@ func (nr *nsManagerImpl) Register(name string) error {
 	}
 	delFlag := make(chan bool)
 	ns, err := GetNamespace(name, nsConfig, delFlag, nr.is)
-	logger.Error(nr.is == nil)
 	if nr.conf.GetBool(common.EXECUTOR_EMBEDDED) == false {
 		nr.is.RegisterLocal(ns.LocalService()) // register local service
 	}
@@ -356,10 +359,13 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return ErrCannotNewNs
 	}
 	nr.addNamespace(ns)
-	if err := nr.bloomFilter.Register(name); err != nil {
-		logger.Error("register bloom filter failed", err.Error())
-		return err
+	if nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
+		if err := nr.bloomFilter.Register(name); err != nil {
+			logger.Error("register bloom filter failed", err.Error())
+			return err
+		}
 	}
+
 	if err = updateNamespaceStartConfig(name, nr.conf); err != nil {
 		logger.Criticalf("Update namespace start for [%s] config failed", name)
 	}
@@ -438,11 +444,12 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 		if err := ns.Start(); err != nil {
 			ns.Stop() //start failed, try to stop some started components
 			return err
-		} else if nr.conf.GetBool(common.EXECUTOR_EMBEDDED){
-			nr.jvmManager.ledgerProxy.RegisterDB(name, ns.GetExecutor().FetchStateDb())
+		} else {
+			if nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
+				nr.jvmManager.ledgerProxy.RegisterDB(name, ns.GetExecutor().FetchStateDb())
+			}
 			return nil
 		}
-
 	}
 	logger.Errorf("No namespace instance for %s found", name)
 	return ErrInvalidNs

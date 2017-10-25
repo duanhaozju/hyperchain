@@ -115,6 +115,7 @@ func (sri *serviceRegistryImpl) AddNamespace(namespace string) {
 
 // Register register new service.
 func (sri *serviceRegistryImpl) Register(s Service) error {
+	fmt.Println("register service ", s.Id(), s.Namespace())
 	sri.lock.Lock()
 	defer sri.lock.Unlock()
 	if _, ok := sri.namespaces[s.Namespace()]; !ok {

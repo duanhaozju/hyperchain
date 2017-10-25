@@ -29,7 +29,8 @@ func NewAdministrator(ecMgr manager.ExecutorManager, conf *common.Config) *Admin
 
 func (admin *Administrator) Start() error {
 	//TODO : wait for "namespace" param delete
-	address := "127.0.0.1"
+	address := admin.conf.GetString(common.EXECUTOR_HOST_ADDR)
+
 	adminClient, err := client.New(admin.conf.GetInt(common.INTERNAL_PORT), "127.0.0.1", client.EXECUTOR, "global")
 	if err != nil {
 		return err
@@ -72,10 +73,9 @@ func listenSendResponse(e *AdminHandler, adminConnect *client.ServiceClient) {
 		case ev := <-e.Ch:
 			payload, _ := proto.Marshal(ev)
 			err := adminConnect.Send(&pb.IMessage{
-				Type:    pb.Type_ADMIN,
-				From:    pb.FROM_ADMINISTRATOR,
-				Event:   pb.Event_AdminResponseEvent,
-				Payload: payload,
+				Type:    pb.Type_RESPONSE,
+				Ok:      true,
+				Payload: payload, //TODO: refactor payload
 			})
 			if err != nil {
 				//logger.Errorf("adminclient %s Send message to hyperchain filed", "IP")

@@ -53,6 +53,7 @@ type IExecutor interface {
 	FetchStateDb() vm.Database
 
 	Start() error
+
 	Stop() error
 }
 
@@ -86,9 +87,29 @@ func (re *remoteExecutorProxy) Start() error {
 		return fmt.Errorf("No executor admin found for %s ", executorHostAddr)
 	}
 
-	//adminSrv.Send()
+	ane := event.AddNamespaceEvent{
+		Namespace: re.namespace,
+	}
 
-	return nil
+	payload, _ := proto.Marshal(&ane)
+
+	msg := &pb.IMessage{
+		Event:   pb.Event_AddNamespaceEvent,
+		Payload: payload,
+	}
+
+	err := adminSrv.Send(msg)
+	if err != nil {
+		return err
+	}
+
+	rsp := <-adminSrv.Response()
+	if rsp.Type == pb.Type_RESPONSE && rsp.Ok == true {
+		return nil
+	} else {
+		//TODO : parse error info  form rsp.Payload
+		return fmt.Errorf("Start executor failed, %v ", rsp.Payload)
+	}
 }
 
 func (re *remoteExecutorProxy) Validate(ve event.ValidationEvent) {
@@ -141,6 +162,8 @@ func (re *remoteExecutorProxy) Rollback(ev event.VCResetEvent) {
 	}
 
 	msg.Payload = payload
+	re.logger.Error(re.is.ServerRegistry().Namespace(re.namespace) == nil)
+	re.logger.Error(re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR) == nil)
 	re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
 }
 

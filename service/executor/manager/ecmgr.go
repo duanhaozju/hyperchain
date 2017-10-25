@@ -72,7 +72,7 @@ func (em *ecManagerImpl) Start(namespace string) error {
 		return err
 	}
 	//start the specify executor service
-	flag := false
+	//flag := false
 	for _, d := range dirs {
 		if d.IsDir() {
 			name := d.Name()
@@ -87,25 +87,21 @@ func (em *ecManagerImpl) Start(namespace string) error {
 				logger.Error(err)
 				return err
 			}
+			em.jvmManager.LedgerProxy().RegisterDB(name, service.executor.FetchStateDb())
 			em.services[name] = service
-			flag = true
+			//flag = true
 			break
 		} else {
 			logger.Errorf("Invalid folder %v", d)
 		}
 	}
 
-	if !flag {
-		//TODO: NewExecutorService for this namespace and write config to file
+	if em.conf.GetBool(common.C_JVM_START) == true {
+		if err := em.jvmManager.Start(); err != nil {
+			logger.Error(err)
+			return err
+		}
 	}
-
-	// start jvm
-	//if em.conf.GetBool(common.C_JVM_START) == true {
-	//	if err := em.jvmManager.Start(); err != nil {
-	//		logger.Error(err)
-	//		return err
-	//	}
-	//}
 	return nil
 }
 
@@ -127,6 +123,9 @@ func (em *ecManagerImpl) getConfig(name string) (*common.Config, error) {
 	}
 	conf := common.NewConfig(nsConfigPath)
 	conf.Set(common.INTERNAL_PORT, em.conf.GetInt(common.INTERNAL_PORT))
+	conf.Set(common.NAMESPACE, name)
+	conf.Set(common.JVM_PORT, em.conf.GetInt(common.JVM_PORT))
+	conf.Set(common.C_JVM_START, em.conf.GetBool(common.C_JVM_START))
 	return conf, nil
 }
 
