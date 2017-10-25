@@ -136,7 +136,6 @@ func (c *Client) reborn() {
 		MaxCap:     c.cconf.connUpperlimit,
 		Factory:    connCreator,
 		Close:      connCloser,
-		//链接最大空闲时间，超过该时间的链接 将会关闭，可避免空闲时链接EOF，自动失效的问题
 		IdleTimeout: c.cconf.connIdleTime,
 		EndPoint:    c.addr,
 		Options:     c.sec.GetGrpcClientOpts(),

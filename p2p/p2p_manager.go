@@ -39,8 +39,8 @@ type p2pManagerImpl struct {
 	ipcShell *ipc.IPCServer
 }
 
-// GetP2PManager creates a new p2pManagerImpl instance and starts p2pManager service.
-// If p2pManagerImpl instance existed, returns it.
+// GetP2PManager creates a new p2pManagerImpl instance for config file global.toml
+// and starts p2pManager service. If p2pManagerImpl instance existed, returns it.
 func GetP2PManager(vip *viper.Viper) (P2PManager, error) {
 	glogger = common.GetLogger(common.DEFAULT_LOG, "p2p")
 	if globalP2PManager == nil {
@@ -78,7 +78,7 @@ func newP2PManager(vip *viper.Viper) (*p2pManagerImpl, error) {
 	return p2pmgr, nil
 }
 
-// Start initializes hypernet server and client.
+// Start will start hypernet gRPC server and connect to all hosts.
 func (mgr *p2pManagerImpl) Start() (err error) {
 	// if there are something wrong cause a panic,
 	// here will recover
