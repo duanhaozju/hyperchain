@@ -42,24 +42,16 @@ enum FROM {
 }
 
 enum Event {
-    //1.APIServer event
+    //1.Admin event
+    AddNamespaceEvent = 0;
+    DeleteNamespaceEvent = 1;
+    AdminResponseEvent = 2;
 
-    //2.Consensus event
-    InformPrimaryEvent = 0;
-    VCResetEvent = 1;
-    ValidationEvent = 2;
-    BroadcastConsensusEvent = 3;
-    TxUniqueCastEvent = 4;
+    // 1.Executor event
+    VCResetEvent = 3;
+    ValidationEvent = 4;
     CommitEvent = 5;
     ChainSyncReqEvent = 6;
-    BroadcastNewPeerEvent = 7;
-    BroadcastDelPeerEvent = 8;
-    UpdateRoutingTableEvent = 9;
-    FilterSystemStatusEvent = 10;
-    //3.Executor event
-
-    ExecutorToP2PEvent = 11;
-    ExecutorToConsensusEvent = 12;
-
-    AdminRegisterEvent = 13;
+    ExecutorToP2PEvent = 7;
+    ExecutorToConsensusEvent = 8;
 }

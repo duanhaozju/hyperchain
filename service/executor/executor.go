@@ -3,22 +3,24 @@ package main
 import (
 	"fmt"
 	"github.com/mkideal/cli"
-	"hyperchain/common"
 	"github.com/op/go-logging"
+	"hyperchain/common"
+	"hyperchain/hyperdb"
+	"hyperchain/service/executor/admin"
 	"hyperchain/service/executor/apiserver"
 	"hyperchain/service/executor/manager"
-    "hyperchain/hyperdb"
 )
 
 type executorGlobal struct {
-	exeMgr		manager.ExecutorManager
-	apiServer	apiserver.APIServer
+	exeMgr      manager.ExecutorManager
+	admin       *admin.Administrator
+	apiServer   apiserver.APIServer
 	stopFlag    chan bool
 	restartFlag chan bool
 	args        *argT
 }
 
-func newExecutorGlobal(argV *argT) *executorGlobal{
+func newExecutorGlobal(argV *argT) *executorGlobal {
 	eg := &executorGlobal{
 		stopFlag:    make(chan bool),
 		restartFlag: make(chan bool),
@@ -28,9 +30,10 @@ func newExecutorGlobal(argV *argT) *executorGlobal{
 	globalConfig.Set(common.GLOBAL_CONFIG_PATH, eg.args.ConfigPath)
 	common.InitHyperLoggerManager(globalConfig)
 	logger = common.GetLogger(common.DEFAULT_LOG, "main")
-    hyperdb.InitDBMgr(globalConfig)
+	hyperdb.InitDBMgr(globalConfig)
 
 	eg.exeMgr = manager.GetExecutorMgr(globalConfig, eg.stopFlag, eg.restartFlag)
+	eg.admin = admin.NewAdministrator(eg.exeMgr, globalConfig)
 
 	//eg.apiServer = apiserver.GetAPIServer()
 	//TODO provides params to create a APIServer
@@ -65,15 +68,15 @@ func main() {
 	})
 }
 
-
 func (h *executorGlobal) start() error {
-	err := h.exeMgr.Start()
+	//err := h.exeMgr.Start()
+	err := h.admin.Start()
 	if err != nil {
 		return err
 	}
 
 	//h.apiServer.Start()
-    return nil
+	return nil
 
 }
 
@@ -104,7 +107,6 @@ var (
 	logger *logging.Logger
 )
 
-
 func run(inst *executorGlobal, argv *argT) {
 	inst.start()
 	for {
@@ -116,4 +118,3 @@ func run(inst *executorGlobal, argv *argT) {
 		}
 	}
 }
-

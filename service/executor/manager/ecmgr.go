@@ -7,6 +7,7 @@ import (
 	"hyperchain/namespace"
 	"io/ioutil"
 	"os"
+	"strings"
 	"sync"
 )
 
@@ -18,9 +19,9 @@ const (
 )
 
 type ExecutorManager interface {
-	Start() error
+	Start(namespace string) error
 
-	Stop() error
+	Stop(namespace string) error
 
 	ProcessRequest(namespace string, request interface{}) interface{}
 
@@ -61,7 +62,7 @@ func GetExecutorMgr(conf *common.Config, stopEm chan bool, restartEM chan bool) 
 	return newExecutorManager(conf, stopEm, restartEM)
 }
 
-func (em *ecManagerImpl) Start() error {
+func (em *ecManagerImpl) Start(namespace string) error {
 	configRootDir := em.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
 		return errors.New("Namespace config root dir is not valid ")
@@ -70,25 +71,26 @@ func (em *ecManagerImpl) Start() error {
 	if err != nil {
 		return err
 	}
-
-	// start all executor service
+	//start the specify executor service
+	//flag := false
 	for _, d := range dirs {
 		if d.IsDir() {
 			name := d.Name()
-			start := em.conf.GetBool(common.START_NAMESPACE + name)
-			if !start {
+			if strings.Compare(name, namespace) != 0 {
 				continue
 			}
-
 			// start each executor service
 			conf, err := em.getConfig(name)
 			service := NewExecutorService(name, conf)
 			err = service.Start()
 			if err != nil {
 				logger.Error(err)
+				return err
 			}
 			em.jvmManager.LedgerProxy().RegisterDB(name, service.executor.FetchStateDb())
 			em.services[name] = service
+			//flag = true
+			break
 		} else {
 			logger.Errorf("Invalid folder %v", d)
 		}
@@ -127,7 +129,7 @@ func (em *ecManagerImpl) getConfig(name string) (*common.Config, error) {
 	return conf, nil
 }
 
-func (em *ecManagerImpl) Stop() error {
+func (em *ecManagerImpl) Stop(namespace string) error {
 	// stop all executor service
 	for ns := range em.services {
 		err := em.services[ns].Stop()
@@ -138,6 +140,7 @@ func (em *ecManagerImpl) Stop() error {
 	// stop jvm
 	if err := em.jvmManager.Stop(); err != nil {
 		logger.Errorf("Stop hyperjvm error %v", err)
+		return err
 	}
 	return nil
 }

@@ -30,7 +30,7 @@ func NewInternalServer(port int, host string) (*InternalServer, error) {
 	return ds, nil
 }
 
-func (is *InternalServer) AdminRegister() chan struct{}  {
+func (is *InternalServer) AdminRegister() chan struct{} {
 	return is.adminRegister
 }
 
@@ -58,7 +58,7 @@ func (is *InternalServer) Register(stream pb.Dispatcher_RegisterServer) error {
 		case pb.Type_REGISTER:
 			lock.Lock()
 			s = is.handleRegister(msg, stream)
-			if s != nil && msg.Event == pb.Event_AdminRegisterEvent {
+			if s != nil && msg.From == pb.FROM_ADMINISTRATOR {
 				is.adminRegister <- struct{}{}
 			}
 			lock.Unlock()
@@ -85,7 +85,6 @@ func (is *InternalServer) Register(stream pb.Dispatcher_RegisterServer) error {
 }
 
 func (is *InternalServer) RegisterLocal(s service.Service) {
-	is.logger.Error(is.sr == nil)
 	is.sr.Register(s)
 }
 
@@ -119,9 +118,10 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 		is.logger.Errorf("unmarshal register message error: %v", err)
 		return nil
 	}
-	if msg.Event == pb.Event_AdminRegisterEvent {
+	if msg.From == pb.FROM_ADMINISTRATOR {
 		// the admin stream register
 		service := NewRemoteService(rm.Namespace, adminId(&rm), stream, is)
+		is.logger.Debugf("admin addr %v", rm.Address)
 		is.sr.AddAdminService(service)
 		is.logger.Debug("Send admin register ok response!")
 
@@ -131,6 +131,7 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 		}); err != nil {
 			is.logger.Error(err)
 		}
+		go service.Serve()
 		return service
 	} else {
 		// normal stream register
@@ -139,7 +140,6 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 			is.logger.Error("namespace error, no namespace specified, using global instead")
 			rm.Namespace = "global"
 		}
-
 		service := NewRemoteService(rm.Namespace, serviceId(msg), stream, is)
 		is.sr.Register(service)
 		is.logger.Debug("Send register ok response!")
@@ -170,5 +170,5 @@ func serviceId(msg *pb.IMessage) string {
 }
 
 func adminId(msg *pb.RegisterMessage) string {
-	return fmt.Sprintf("%s:%s", msg.Address, msg.Port)
+	return msg.Address
 }
