@@ -162,8 +162,6 @@ func (re *remoteExecutorProxy) Rollback(ev event.VCResetEvent) {
 	}
 
 	msg.Payload = payload
-	re.logger.Error(re.is.ServerRegistry().Namespace(re.namespace) == nil)
-	re.logger.Error(re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR) == nil)
 	re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
 }
 

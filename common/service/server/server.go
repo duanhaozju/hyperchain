@@ -90,7 +90,7 @@ func (is *InternalServer) RegisterLocal(s service.Service) {
 
 //handleDispatch handleDispatch messages
 func (is *InternalServer) HandleDispatch(namespace string, msg *pb.IMessage) {
-	is.logger.Debugf("try to handle dispatch message: %v for namespace: %s", msg, namespace)
+	//is.logger.Debugf("try to handle dispatch message: %v for namespace: %s", msg, namespace)
 	switch msg.From {
 	case pb.FROM_APISERVER:
 		is.DispatchAPIServerMsg(namespace, msg)

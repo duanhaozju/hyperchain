@@ -26,7 +26,7 @@ file_format     = "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %
 console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
 
     [log.module] #set log level by module
-    p2p         = "DEBUG"
+    p2p         = "NOTICE"
     consensus   = "NOTICE"
     core        = "NOTICE"
     hyperdb     = "NOTICE"

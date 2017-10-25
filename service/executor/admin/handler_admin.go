@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	pb "hyperchain/common/protos"
