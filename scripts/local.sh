@@ -80,7 +80,15 @@ echo "Rebuild the project..."
 if [ -s "${DUMP_PATH}/hyperchain" ]; then
     rm ${DUMP_PATH}/hyperchain
 fi
-cd ${PROJECT_PATH} && govendor build -ldflags -s -o ${DUMP_PATH}/hyperchain -tags=embed
+
+if [ -d ${DUMP_PATH} ]; then
+    rm -r ${DUMP_PATH}
+fi
+mkdir -p ${DUMP_PATH}
+
+./build.sh ${PROJECT_PATH}
+
+mv ${PROJECT_PATH}/hyperchain ${DUMP_PATH}/
 }
 
 # rebuild hypercli
