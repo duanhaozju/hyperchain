@@ -162,6 +162,44 @@ func (blk *Block) GetGenesisBlock() (*BlockNumber, error) {
 	return uint64ToBlockNumber(genesis), nil
 }
 
+
+// GetBatchBlocksByNumber returns all the block for given block number list.
+func (blk *Block) GetBatchBlocksByNumber(args BatchArgs) ([]*BlockResult, error) {
+	if args.Numbers == nil {
+		return nil, &common.InvalidParamsError{Message: "invalid parameter, please specify block number list"}
+	}
+
+	var blocks []*BlockResult = make([]*BlockResult, 0)
+
+	for _, number := range args.Numbers {
+		if block, err := blk.GetBlockByNumber(number); err != nil {
+			return nil, err
+		} else {
+			blocks = append(blocks, block)
+		}
+	}
+	return blocks, nil
+}
+
+// GetBatchBlocksByHash returns all the block for given block hash list.
+func (blk *Block) GetBatchBlocksByHash(args BatchArgs) ([]*BlockResult, error) {
+	blk.log.Error(args.Hashes)
+	if args.Hashes == nil {
+		return nil, &common.InvalidParamsError{Message: "invalid parameter, please specify block hash list"}
+	}
+
+	var blocks []*BlockResult = make([]*BlockResult, 0)
+
+	for _, blockHash := range args.Hashes {
+		if block, err := blk.GetBlockByHash(blockHash); err != nil {
+			return nil, err
+		} else {
+			blocks = append(blocks, block)
+		}
+	}
+	return blocks, nil
+}
+
 func latestBlock(namespace string) (*BlockResult, error) {
 	chain, err := edb.GetChain(namespace)
 	if err != nil {
@@ -278,7 +316,7 @@ func getBlockByHash(namespace string, hash common.Hash, isPlain bool) (*BlockRes
 }
 
 func getBlocks(args *intArgs, namespace string, isPlain bool) ([]*BlockResult, error) {
-	var blocks []*BlockResult
+	var blocks []*BlockResult = make([]*BlockResult, 0)
 
 	from := args.from
 	to := args.to
