@@ -102,15 +102,15 @@ jvm = false
 #
 ##########################################################
 [port]
-jsonrpc     = 8081
+jsonrpc          = 8081
 jsonrpc_executor = 9091
-restful     = 9001
-websocket   = 10001
-jvm         = 50081
-ledger      = 50051
-grpc        = 50011 # p2p
-internal    = 50061 # TODO: used to handle intrnal services connection
-executor    = 50071 # used by executor service
+restful          = 9001
+websocket        = 10001
+jvm              = 50081
+ledger           = 50051
+grpc             = 50011 # p2p
+internal         = 50061 # TODO: used to handle intrnal services connection
+executor         = 50071 # used by executor service
 
 ##########################################################
 #

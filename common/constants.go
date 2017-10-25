@@ -42,14 +42,14 @@ const (
 
 //constants for port keys
 const (
-	JSON_RPC_PORT  = "port.jsonrpc"
-	JSON_RPC_PORT2  = "port.jsonrpc_executor"
-	JVM_PORT       = "port.jvm"
-	LEDGER_PORT    = "port.ledger"
-	P2P_PORT       = "port.grpc"
-	WEBSOCKET_PORT = "port.websocket"
-	INTERNAL_PORT  = "port.internal"
-	EXECUTOR_PORT  = "port.executor"
+	JSON_RPC_PORT  		= "port.jsonrpc"
+	JSON_RPC_PORT_EXECUTOR  = "port.jsonrpc_executor"
+	JVM_PORT      		= "port.jvm"
+	LEDGER_PORT    		= "port.ledger"
+	P2P_PORT       		= "port.grpc"
+	WEBSOCKET_PORT 		= "port.websocket"
+	INTERNAL_PORT  		= "port.internal"
+	EXECUTOR_PORT  		= "port.executor"
 )
 
 //constants for p2p configuration keys
