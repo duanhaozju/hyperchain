@@ -8,9 +8,9 @@ const (
 	DB_TYPE           = "database.type"
 
 	// database type
-	LDB_DB         = 0001
-	SUPER_LEVEL_DB = 10
-	CASSABDRA      = 100
+	LDB_DB         = "leveldb"
+	SUPER_LEVEL_DB = "super_leveldb"
+	CASSANDRA      = "cassandra"
 
 	//cassandra
 	NODE_NUM    = "database.cassabdra.node_num"

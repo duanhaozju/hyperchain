@@ -82,12 +82,13 @@ algo = "RBFT"
 #
 # database configuration section
 # db type:
-# LEVEL_DB          #      0001
-# SUPER_LEVEL_DB    #      0010
+# LEVEL_DB          #      "leveldb"
+# SUPER_LEVEL_DB    #      "super_leveldb"
+# CASSANDRA         #      "cassandra"
 #
 ############################################################################################################
 [database]
-    type = 0001
+    type = "leveldb"
     [database.leveldb]
     root_dir    = "data/leveldb" #leveldb table root dir
     log_status  = false

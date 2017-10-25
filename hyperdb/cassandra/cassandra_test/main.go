@@ -46,7 +46,6 @@ func main() {
 	cluster := gocql.NewCluster(nodes...)
 	cluster.Keyspace = "example"
 	cluster.Consistency = gocql.All
-	//设置连接池的数量,默认是2个（针对每一个host,都建立起NumConns个连接）
 	cluster.NumConns = 3
 
 	session, _ := cluster.CreateSession()
@@ -54,7 +53,6 @@ func main() {
 
 	defer session.Close()
 
-	////unlogged batch, 进行批量插入，最好是partition key 一致的情况
 	//t := time.Now()
 	//batch := session.NewBatch(gocql.UnloggedBatch)
 	//for i := 0; i < 1000; i++ {

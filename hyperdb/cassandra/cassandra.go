@@ -2,10 +2,8 @@ package cassandra
 
 import (
 	"github.com/gocql/gocql"
-	"hyperchain/common"
-	//"fmt"
-	"fmt"
 	"github.com/op/go-logging"
+	"hyperchain/common"
 	hcom "hyperchain/hyperdb/common"
 	dbutils "hyperchain/hyperdb/db"
 	"strconv"
@@ -43,7 +41,6 @@ func NewCassandra(conf *common.Config, namespace string) (*CassandraClient, erro
 	nodes := make([]string, num)
 	for i := 0; i < num; i++ {
 		nodes[i] = conf.GetString(hcom.NODE_prefix + strconv.Itoa(i+1)) //ip num from 1 so add 1
-		fmt.Println(nodes[i])
 	}
 	cluster := gocql.NewCluster(nodes...)
 	cluster.Keyspace = "example"
