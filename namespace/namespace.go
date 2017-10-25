@@ -258,7 +258,12 @@ func (ns *namespaceImpl) init() error {
 	ns.ls = local.NewLocalService(ns.Name(), service.EVENTHUB, ns.eh)
 
 	// 8. init JsonRpcProcessor to process incoming requests.
-	ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
+
+	if ns.conf.GetBool(common.EXECUTOR_EMBEDDED) {
+		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetAllApis(ns.Name()))
+	}else{
+		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
+	}
 
 	ns.status.setState(initialized)
 	return nil

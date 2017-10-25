@@ -277,20 +277,20 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Service: hapi.NewPublicBlockAPI(namespace),
 			Public:  true,
 		},
-		"tx":{
-			Svcname: "tx",
+		"txdb":{
+			Svcname: "txdb",
 			Version: "1,5",
 			Service: hapi.NewDBTransactionAPI(namespace, es.conf),
 			Public: true,
 		},
-		"account": {
-			Svcname: "account",
+		"accountdb": {
+			Svcname: "accountdb",
 			Version: "1.5",
 			Service: hapi.NewPublicAccountExecutorAPI(namespace, es.conf),
 			Public:  true,
 		},
-		"contract": {
-			Svcname: "contract",
+		"contractExe": {
+			Svcname: "contractExe",
 			Version: "1.5",
 			Service: hapi.NewContarctExAPI(namespace, es.conf),
 			Public:  true,
@@ -309,6 +309,7 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Version: "1.5",
 			Service: hapi.NewPublicArchiveAPI(namespace, es.conf),
 		},
+		//TODO: implements cert API for module2
 	}
 }
 
