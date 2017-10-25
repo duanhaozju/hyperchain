@@ -9,5 +9,10 @@ const (
 
 	// database type
 	LDB_DB         = 0001
-	SUPER_LEVEL_DB = 0010
+	SUPER_LEVEL_DB = 10
+	CASSABDRA      = 100
+
+	//cassandra
+	NODE_NUM    = "database.cassabdra.node_num"
+	NODE_prefix = "database.cassabdra.ip_port_"
 )
