@@ -167,7 +167,6 @@ func (hsi *httpServerImpl) setPort(port int) error {
 func (hsi *httpServerImpl) secureConfig() (*tls.Config, error) {
 
 	pool := x509.NewCertPool()
-	log.Errorf("P2P %v", hsi.config.GetString(common.P2P_TLS_CA))
 	caCrt, err := ioutil.ReadFile(hsi.config.GetString(common.P2P_TLS_CA))
 	if err != nil {
 		fmt.Println("ReadFile err:", err)

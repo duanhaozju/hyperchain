@@ -7,8 +7,8 @@ import (
 )
 
 func TestAPIServerImpl_Restart(t *testing.T) {
-	conf := common.NewConfig("../namespaces/global/config/namespace.toml")
-	conf.MergeConfig("../global.toml")
+	conf := common.NewConfig("/Users/guowei/go/src/hyperchain/configuration/namespaces/global/config/namespace.toml")
+	conf.MergeConfig("/Users/guowei/go/src/hyperchain/configuration/global.toml")
 	conf.Set(common.P2P_TLS_CA, conf.GetString(common.P2P_TLS_CA))
 
 	conf.Set(common.P2P_TLS_CERT, conf.GetString(common.P2P_TLS_CERT))
