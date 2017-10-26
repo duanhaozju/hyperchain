@@ -648,7 +648,7 @@ func (self *Version) RevertDB(ns, globalConf, path string, number uint64, parame
 
 	self.GetDB().Close()
 
-	db, err := hyperdb.NewDatabase(nil, path, 0001, ns)
+	db, err := hyperdb.NewDatabase(nil, path, "leveldb", ns)
 	if err != nil {
 		fmt.Println(constant.ErrQuery.Error(), err.Error())
 		return

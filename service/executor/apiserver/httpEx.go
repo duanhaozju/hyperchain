@@ -40,7 +40,7 @@ func GetHttpServer(er hm.ExecutorManager, config *common.Config) internalRPCServ
 	if hs == nil {
 		hs = &httpServerImpl{
 			er:     er,
-			port:   config.GetInt(common.JSON_RPC_PORT2),
+			port:   config.GetInt(common.JSON_RPC_PORT_EXECUTOR),
 			config: config,
 		}
 	}

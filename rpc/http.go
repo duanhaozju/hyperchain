@@ -10,12 +10,12 @@ import (
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"hyperchain/common"
-	"hyperchain/namespace"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"time"
+	"hyperchain/common/interface"
 )
 
 const (
@@ -28,21 +28,20 @@ var (
 )
 
 type httpServerImpl struct {
-	nr     namespace.NamespaceManager
-	port   int
-	config *common.Config
-
-	httpListener net.Listener
-	httpHandler  *Server
+	nsMgrProcessor  intfc.NsMgrProcessor
+	port   		int
+	config 		*common.Config
+	httpListener 	net.Listener
+	httpHandler  	*Server
 }
 
 // GetHttpServer creates and returns a new httpServerImpl instance implements internalRPCServer interface.
-func GetHttpServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
+func GetHttpServer(nsMgrProcessor intfc.NsMgrProcessor,config *common.Config) internalRPCServer {
 	if hs == nil {
 		hs = &httpServerImpl{
-			nr:     nr,
-			port:   config.GetInt(common.JSON_RPC_PORT),
-			config: config,
+			nsMgrProcessor: nsMgrProcessor,
+			port:   	config.GetInt(common.JSON_RPC_PORT),
+			config: 	config,
 		}
 	}
 	return hs
@@ -57,7 +56,7 @@ func (hsi *httpServerImpl) start() error {
 		err      error
 	)
 
-	handler := NewServer(hsi.nr, hsi.config)
+	handler := NewServer(hsi.nsMgrProcessor, hsi.config)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", handler.admin.LoginServer)
@@ -230,7 +229,7 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("content-type", "application/json")
-	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr, nil)
+	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.nsMgrProcessor, nil)
 	defer codec.Close()
 	srv.ServeSingleRequest(codec, OptionMethodInvocation)
 }

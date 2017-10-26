@@ -44,7 +44,6 @@ func NewServerEx(er hm.ExecutorManager, config *common.Config) *ServerEx {
 		er:           er,
 		requestMgr:   make(map[string]*hrpc.RequestManager),
 	}
-	server.admin = admin.NewAdministratorEx(er, config)
 	return server
 }
 

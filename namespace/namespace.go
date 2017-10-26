@@ -66,20 +66,19 @@ type Namespace interface {
 	// Info returns the basic information of current namespace.
 	Info() *NamespaceInfo
 
-	// ProcessRequest process request under this namespace.
-	ProcessRequest(request interface{}) interface{}
-
 	// Name returns the name of current namespace.
 	Name() string
-
-	// GetCAManager returns the CAManager of current namespace.
-	GetCAManager() *admittance.CAManager
 
 	// GetExecutor returns the executor module of current namespace.
 	GetExecutor() executor.IExecutor
 
 	//LocalService return local service
 	LocalService() service.Service
+
+	GetCAManager() *admittance.CAManager
+
+	// ProcessRequest process request under this namespace.
+	ProcessRequest(request interface{}) interface{}
 }
 
 type NsState int
@@ -238,7 +237,7 @@ func (ns *namespaceImpl) init() error {
 	ns.am = am
 
 	// 6. init Executor to validate and commit block.
-	ns.logger.Errorf("executor embedded %v", ns.conf.GetBool(common.EXECUTOR_EMBEDDED))
+	ns.logger.Debugf("executor embedded %v", ns.conf.GetBool(common.EXECUTOR_EMBEDDED))
 	if ns.conf.GetBool(common.EXECUTOR_EMBEDDED) {
 		er, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, nil)
 		if err != nil {
@@ -308,6 +307,7 @@ func (ns *namespaceImpl) Start() error {
     // 3. start executor
     err := ns.executor.Start()
     if err != nil {
+    	ns.logger.Error(err)
         return err
     }
 
