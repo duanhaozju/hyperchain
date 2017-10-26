@@ -7,8 +7,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
-
-	"github.com/golang/protobuf/proto"
+    "github.com/golang/protobuf/proto"
 )
 
 // ChainNotExistErr is thrown by UpdateGenesisTag or GetGenesisTag call if chain is nil
@@ -44,6 +43,8 @@ func (chains *memChains) AddChain(namespace string, chain *memChain) error {
 	return nil
 }
 
+
+
 // GetChain returns the chain with given namespace.
 func (chains *memChains) GetChain(namespace string) *memChain {
 	chains.lock.RLock()
@@ -52,9 +53,20 @@ func (chains *memChains) GetChain(namespace string) *memChain {
 }
 
 var (
-	chains         *memChains // Singleton chains of memChains
+	chains         iChain // Singleton chains of memChains
 	chainsInitOnce sync.Once  // Ensure chains will only be created once
 )
+
+func GetMemChain(namespace string) *types.MemChain {
+    chain := chains.(*memChains).chains[namespace]
+    cpChan := <-chain.cpChan
+    memChain := &types.MemChain{
+        Data: &chain.data,
+        CpChan: &cpChan,
+        TxDelta: chain.txDelta,
+    }
+    return memChain
+}
 
 // ==========================================================
 // Public functions that invoked by outer service

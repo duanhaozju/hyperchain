@@ -63,7 +63,7 @@ func TNewRbft(dbpath, path, namespace string, nodeId int, t *testing.T) (*rbftIm
 	if dbpath != "" {
 		conf.Set("database.leveldb.path", dbpath)
 	}
-	err := chain.InitDBForNamespace(conf, namespace)
+	err := chain.InitDBForNamespace(conf, namespace, nil)
 	if err != nil {
 		t.Errorf("init db for namespace: %s error, %v", namespace, err)
 	}

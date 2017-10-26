@@ -195,7 +195,7 @@ func (ns *namespaceImpl) init() error {
 	ns.logger.Criticalf("Init namespace %s", ns.Name())
 
 	// 1. init DB for current namespace.
-	err := chain.InitDBForNamespace(ns.conf, ns.Name())
+	err := chain.InitDBForNamespace(ns.conf, ns.Name(), ns.is)
 	if err != nil {
 		ns.logger.Errorf("Init db for namespace: %s error, %v", ns.Name(), err)
 		return err

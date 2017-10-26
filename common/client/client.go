@@ -10,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+    "hyperchain/core/ledger/chain"
 )
 
 const (
@@ -215,7 +216,26 @@ func (sc *ServiceClient) listenProcessMsg() {
 				if sc.h == nil {
 					sc.logger.Debug("No handler to handle message: %v")
 				} else {
-					sc.h.Handle(msg)
+                    if msg.Type == pb.Type_RESPONSE {
+                        if msg.Type == pb.Type_RESPONSE {
+                            ns := string(msg.Payload)
+                            m := chain.GetMemChain(ns)
+                            payload, err := proto.Marshal(m)
+                            if err != nil {
+                                sc.logger.Error(err)
+                                return
+                            }
+                            msg := &pb.IMessage{
+                                Type:  pb.Type_RESPONSE,
+                                From:  pb.FROM_EXECUTOR,
+                                Payload: payload,
+                            }
+                            sc.client.Send(msg)
+                            return
+                        }
+                    } else {
+                        sc.h.Handle(msg)
+                    }
 				}
 			case <-sc.close:
 				return
