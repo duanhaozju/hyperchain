@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/namespace"
 	"strings"
 	"time"
-	"hyperchain/service/executor/manager"
+	"hyperchain/namespace"
+	"hyperchain/common/interface"
 )
 
 // This file defines the hypercli admin interface. Users invoke
@@ -69,7 +69,9 @@ type Administrator struct {
 
 	// nsMgr is the global namespace Manager, used to get the system
 	// level interface.
-	nsMgr namespace.NamespaceManager
+	nsMgr	       namespace.NamespaceManager
+
+	nsMgrProcessor intfc.NsMgrProcessor
 
 	// valid_user records the current valid users with its password.
 	valid_user map[string]string
@@ -83,36 +85,20 @@ type Administrator struct {
 	config *common.Config
 	logger *logging.Logger
 
-	//append: add ExecutorManager
-	ecMgr manager.ExecutorManager
 }
 
 // NewAdministrator news a raw administrator with default settings.
-func NewAdministrator(nr namespace.NamespaceManager, config *common.Config) *Administrator {
+func NewAdministrator(nsMgrProcessor intfc.NsMgrProcessor,config *common.Config) *Administrator {
 	adm := &Administrator{
-		CmdExecutor: make(map[string]func(command *Command) *CommandResult),
-		valid_user:  make(map[string]string),
-		user_scope:  make(map[string]permissionSet),
-		user_opTime: make(map[string]int64),
-		check:       config.GetBool(common.ADMIN_CHECK),
-		expiration:  config.GetDuration(common.ADMIN_EXPIRATION),
-		nsMgr:       nr,
-		config:      config,
-	}
-	adm.init()
-	return adm
-}
-
-func NewAdministratorEx(em manager.ExecutorManager, config *common.Config) *Administrator {
-	adm := &Administrator{
-		CmdExecutor: make(map[string]func(command *Command) *CommandResult),
-		valid_user:  make(map[string]string),
-		user_scope:  make(map[string]permissionSet),
-		user_opTime: make(map[string]int64),
-		check:       config.GetBool(common.ADMIN_CHECK),
-		expiration:  config.GetDuration(common.ADMIN_EXPIRATION),
-		ecMgr:       em,
-		config:      config,
+		CmdExecutor:		make(map[string]func(command *Command) *CommandResult),
+		valid_user:  		make(map[string]string),
+		user_scope:  		make(map[string]permissionSet),
+		user_opTime: 		make(map[string]int64),
+		check:       		config.GetBool(common.ADMIN_CHECK),
+		expiration:  		config.GetDuration(common.ADMIN_EXPIRATION),
+		nsMgrProcessor:         nsMgrProcessor,
+		config:      		config,
+		nsMgr:			nsMgrProcessor.(namespace.NamespaceManager),
 	}
 	adm.init()
 	return adm

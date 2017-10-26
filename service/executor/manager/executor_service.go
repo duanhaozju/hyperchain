@@ -20,13 +20,14 @@ type executorService interface {
 
 	Stop() error
 
-	// ProcessRequest process request under this namespace.
-	ProcessRequest(request interface{}) interface{}
-
 	// Name returns the name of current namespace.
 	Name() string
 
+	// ProcessRequest process request under this namespace.
+	ProcessRequest(request interface{}) interface{}
+
 	GetCAManager() *admittance.CAManager
+
 }
 
 type executorServiceImpl struct {

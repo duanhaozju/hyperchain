@@ -4,8 +4,8 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/ipc"
-	"hyperchain/namespace"
 	"sync"
+	"hyperchain/common/interface"
 )
 
 var (
@@ -40,18 +40,18 @@ type RPCServerImpl struct {
 }
 
 // GetRPCServer creates and returns a new RPCServerImpl instance implements RPCServer interface.
-func GetRPCServer(nr namespace.NamespaceManager, config *common.Config) RPCServer {
+func GetRPCServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config) RPCServer {
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
 	once.Do(func() {
-		rpcs = newRPCServer(nr, config)
+		rpcs = newRPCServer(nsMgrProcessor, config)
 	})
 	return rpcs
 }
 
-func newRPCServer(nr namespace.NamespaceManager, config *common.Config) *RPCServerImpl {
+func newRPCServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config) *RPCServerImpl {
 	rsi := &RPCServerImpl{}
-	rsi.httpServer = GetHttpServer(nr, config)
-	rsi.wsServer = GetWSServer(nr, config)
+	rsi.httpServer = GetHttpServer(nsMgrProcessor, config)
+	rsi.wsServer = GetWSServer(nsMgrProcessor, config)
 
 	ipc.RegisterFunc("service", rsi.Command)
 	return rsi

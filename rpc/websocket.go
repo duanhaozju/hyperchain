@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"hyperchain/common"
-	"hyperchain/namespace"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
+	"hyperchain/common/interface"
 )
 
 const (
@@ -24,7 +24,7 @@ var (
 )
 
 type wsServerImpl struct {
-	nr     namespace.NamespaceManager
+	nsMgrProcessor intfc.NsMgrProcessor
 	port   int
 	config *common.Config
 
@@ -40,13 +40,13 @@ type httpReadWriteCloser struct {
 }
 
 // GetWSServer creates and returns a new wsServerImpl instance implements internalRPCServer interface.
-func GetWSServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
+func GetWSServer(nsMgrProcessor intfc.NsMgrProcessor,config *common.Config) internalRPCServer {
 	if wsS == nil {
 		wsS = &wsServerImpl{
-			nr:      nr,
-			wsConns: make(map[*websocket.Conn]*Notifier),
-			port:    config.GetInt(common.WEBSOCKET_PORT),
-			config:  config,
+			nsMgrProcessor:      nsMgrProcessor,
+			wsConns: 	     make(map[*websocket.Conn]*Notifier),
+			port:                config.GetInt(common.WEBSOCKET_PORT),
+			config:              config,
 		}
 	}
 	return wsS
@@ -62,7 +62,7 @@ func (wssi *wsServerImpl) start() error {
 	)
 
 	// start websocket listener
-	handler := NewServer(wssi.nr, wssi.config)
+	handler := NewServer(wssi.nsMgrProcessor, wssi.config)
 	if listener, err = net.Listen("tcp", fmt.Sprintf(":%d", wssi.port)); err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 				break
 			}
 
-			codec := NewJSONCodec(&httpReadWriteCloser{nr, nw}, r, srv.namespaceMgr, conn)
+			codec := NewJSONCodec(&httpReadWriteCloser{nr, nw}, r, srv.nsMgrProcessor, conn)
 			notifier.codec = codec
 			srv.ServeCodec(codec, OptionMethodInvocation|OptionSubscriptions, ctx)
 		}

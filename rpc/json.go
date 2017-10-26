@@ -10,13 +10,13 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/crypto/primitives"
-	"hyperchain/namespace"
 	"io"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+	"hyperchain/common/interface"
 )
 
 const (
@@ -68,29 +68,29 @@ type jsonCodecImpl struct {
 	e      *json.Encoder      // encodes responses
 	rw     io.ReadWriteCloser // connection
 	req    *http.Request
-	nr     namespace.NamespaceManager
+	nsMgrProcessor intfc.NsMgrProcessor
 	conn   *websocket.Conn
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.NamespaceManager, conn *websocket.Conn) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nsMgrProcessor intfc.NsMgrProcessor, conn *websocket.Conn) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
 	return &jsonCodecImpl{
-		closed: make(chan interface{}),
-		d:      d,
-		e:      json.NewEncoder(rwc),
-		rw:     rwc,
-		req:    req,
-		nr:     nr,
-		conn:   conn,
+		closed: 	make(chan interface{}),
+		d:     		d,
+		e:      	json.NewEncoder(rwc),
+		rw:     	rwc,
+		req:    	req,
+		nsMgrProcessor: nsMgrProcessor,
+		conn:   	conn,
 	}
 }
 
 // CheckHttpHeaders will check http header. If it is verified, client has access to interact with the server,
 // otherwise, unauthorized error will be returned.
 func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common.RPCError {
-	ns := c.nr.GetNamespaceByName(namespace)
+	ns := c.nsMgrProcessor.GetNamespaceProcessorName(namespace)
 	if ns == nil {
 		return &common.NamespaceNotFound{Name: namespace}
 	}

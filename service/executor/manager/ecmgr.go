@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"sync"
+	"hyperchain/common/interface"
 )
 
 var logger *logging.Logger
@@ -22,9 +23,16 @@ type ExecutorManager interface {
 
 	Stop() error
 
+	GetExecutorServiceByName(name string) executorService
+
+	// ProcessRequest dispatches received requests to corresponding namespace
+	// processor.
+	// Requests are sent from RPC layer, so responses are returned to RPC layer
+	// with the certain namespace.
 	ProcessRequest(namespace string, request interface{}) interface{}
 
-	GetExecutorServiceByName(name string) executorService
+	// GetNamespaceProcessorName returns the namespace instance by name.
+	GetNamespaceProcessorName(name string) intfc.NamespaceProcessor
 }
 
 type ecManagerImpl struct {
@@ -143,12 +151,22 @@ func (em *ecManagerImpl) Stop() error {
 }
 
 func (em *ecManagerImpl) ProcessRequest(namespace string, request interface{}) interface{} {
-	es := em.GetExecutorServiceByName(namespace)
-	if es == nil {
+	np := em.GetNamespaceProcessorName(namespace)
+	if np == nil {
 		logger.Noticef("no namespace found for name: %s", namespace)
 		return nil
 	}
-	return es.ProcessRequest(request)
+	return np.ProcessRequest(request)
+}
+
+func (em *ecManagerImpl) GetNamespaceProcessorName(name string) intfc.NamespaceProcessor {
+	em.rwLock.RLock()
+	defer em.rwLock.RUnlock()
+	logger.Critical("services : %v", em.services)
+	if es, ok := em.services[name]; ok {
+		return es
+	}
+	return nil
 }
 
 func (em *ecManagerImpl) GetExecutorServiceByName(name string) executorService {
