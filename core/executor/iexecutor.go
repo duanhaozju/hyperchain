@@ -180,7 +180,7 @@ func (re *remoteExecutorProxy) SyncChain(ev event.ChainSyncReqEvent) {
 	msg := &pb.IMessage{
 		Type:  pb.Type_EVENT,
 		From:  pb.FROM_EVENTHUB,
-		Event: pb.Event_VCResetEvent,
+		Event: pb.Event_ChainSyncReqEvent,
 	}
 
 	payload, err := proto.Marshal(&ev)
