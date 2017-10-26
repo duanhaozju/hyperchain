@@ -79,3 +79,12 @@ message AdminResponseEvent{
     bool Ok = 1;
     bytes Payload = 2;
 }
+
+message DeleteSnapEvent{
+    string FilterId = 1;
+}
+
+message ArchEvent{
+    string FilterId = 1;
+    bool Sync = 2;
+}
