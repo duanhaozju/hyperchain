@@ -466,7 +466,7 @@ func TestRestoreState(t *testing.T) {
 
 	rbft.persistNewNode(1)
 	rbft.restoreState()
-	ast.Equal(true, rbft.status.getState(&rbft.status.isNewNode), "restoreState: restore newNode failed")
+	ast.Equal(true, rbft.in(isNewNode), "restoreState: restore newNode failed")
 
 	localKeyHash := []byte("localkey00000000001")
 	localKey := string(localKeyHash)

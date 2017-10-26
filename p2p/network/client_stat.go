@@ -70,7 +70,6 @@ func (c *Client) s_Closed(e *fsm.Event) {
 	logger.Info("client was closed")
 }
 
-// client stat change and keep methods
 func (c *Client) working() {
 	go func(c *Client) {
 		ticker := time.NewTicker(c.cconf.keepAliveDuration)
@@ -102,7 +101,7 @@ func (c *Client) working() {
 	}(c)
 }
 
-// when the connection is pending, keep recoverying
+// when the connection is pending, keep recoverying.
 func (c *Client) pending() {
 	go func(c *Client) {
 		ticker := time.NewTicker(c.cconf.pendingDuration)
@@ -127,7 +126,7 @@ func (c *Client) pending() {
 	}(c)
 }
 
-// reborn reset the connection
+// reborn resets the connection.
 func (c *Client) reborn() {
 	logger.Infof("recovery successful, and restart working (%s)", c.addr)
 	c.connPool.Release()
@@ -137,7 +136,6 @@ func (c *Client) reborn() {
 		MaxCap:     c.cconf.connUpperlimit,
 		Factory:    connCreator,
 		Close:      connCloser,
-		//链接最大空闲时间，超过该时间的链接 将会关闭，可避免空闲时链接EOF，自动失效的问题
 		IdleTimeout: c.cconf.connIdleTime,
 		EndPoint:    c.addr,
 		Options:     c.sec.GetGrpcClientOpts(),

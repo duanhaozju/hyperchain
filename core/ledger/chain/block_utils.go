@@ -121,6 +121,15 @@ func GetLatestBlock(namespace string) (*types.Block, error) {
 	return GetBlockByNumber(namespace, height)
 }
 
+// BlockExist returns a bool to indicates the specific block is existed or not.
+func BlockExist(namespace string, height uint64) bool {
+	if blk, _ := GetBlockByNumber(namespace, height); blk == nil {
+		return false
+	} else {
+		return true
+	}
+}
+
 // DeleteBlockByNum deletes block data and block.num <---> block.hash
 func DeleteBlockByNum(namepspace string, batch db.Batch, blockNum uint64, flush, sync bool) error {
 	hash, err := getBlockHash(namepspace, blockNum)

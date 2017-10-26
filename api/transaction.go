@@ -16,6 +16,7 @@ import (
 	"hyperchain/manager"
 	"hyperchain/manager/event"
 	"time"
+	"strings"
 )
 
 // This file implements the handler of Transaction service API which
@@ -202,11 +203,13 @@ func (tran *Transaction) GetTransactions(args IntervalArgs) ([]*TransactionResul
 func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) {
 
 	reds, err := edb.GetAllDiscardTransaction(tran.namespace)
-	if err != nil && err.Error() == db_not_found_error {
+	if (err != nil && err.Error() == db_not_found_error) {
 		return nil, &common.DBNotFoundError{Type: DISCARDTXS}
 	} else if err != nil {
 		tran.log.Errorf("GetAllDiscardTransaction error: %v", err)
 		return nil, &common.CallbackError{Message: err.Error()}
+	} else if len(reds) == 0 {
+		return nil, &common.DBNotFoundError{Type: DISCARDTXS}
 	}
 
 	var transactions []*TransactionResult
@@ -235,6 +238,8 @@ func (tran *Transaction) GetDiscardTransactionsByTime(args IntervalTime) ([]*Tra
 	} else if err != nil {
 		tran.log.Errorf("GetDiscardTransactionsByTime error: %v", err)
 		return nil, &common.CallbackError{Message: err.Error()}
+	} else if len(reds) == 0{
+		return nil, &common.DBNotFoundError{Type: DISCARDTXS}
 	}
 
 	var transactions []*TransactionResult
@@ -257,7 +262,7 @@ func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*Transac
 
 	red, err := edb.GetDiscardTransaction(tran.namespace, hash.Bytes())
 	if err != nil && err.Error() == db_not_found_error {
-		return nil, &common.DBNotFoundError{Type: DISCARDTX, Id: hash.Hex()}
+		return nil, &common.DBNotFoundError{Type: TRANSACTION, Id: hash.Hex()}
 	} else if err != nil {
 		tran.log.Errorf("GetDiscardTransaction error: %v", err)
 		return nil, &common.CallbackError{Message: err.Error()}
@@ -380,6 +385,11 @@ func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*Transactio
 			}
 		}
 	}
+
+	if len(txs) == 0 {
+		return nil, &common.DBNotFoundError{Type: TRANSACTIONS}
+	}
+
 	return txs, nil
 }
 
@@ -515,6 +525,10 @@ func (tran *Transaction) GetTransactionsCountByMethodID(args IntervalArgs) (inte
 	} else if args.MethodID == "" {
 		return nil, &common.InvalidParamsError{"Invalid params. 'methodID' can't be empty"}
 	}
+	mid := strings.TrimSpace(args.MethodID)
+	if strings.HasPrefix(mid, "0x") {
+		args.MethodID = substr(mid, 2, len(mid))
+	}
 	return tran.getTransactionsCountByBlockNumber(args)
 }
 
@@ -522,7 +536,7 @@ func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (i
 
 	realArgs, err := prepareIntervalArgs(args, tran.namespace)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	from := realArgs.from
@@ -1069,7 +1083,8 @@ func prepareTransaction(args SendTxArgs, txType int, namespace string, eh *manag
 	}
 
 	// 4. verify transaction signature
-	if !tx.ValidateSign(eh.GetAccountManager().Encryption, kec256Hash) {
+	encryp := crypto.NewEcdsaEncrypto("ecdsa")
+	if !tx.ValidateSign(encryp, kec256Hash) {
 		log.Errorf("invalid signature, tx hash %v", common.ToHex(tx.TransactionHash))
 		return nil, &common.SignatureInvalidError{Message: "Invalid signature, tx hash " + common.ToHex(tx.TransactionHash)}
 	}

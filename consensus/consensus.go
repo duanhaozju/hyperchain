@@ -2,7 +2,7 @@
 //Copyright (C) 2016 The Hyperchain Authors.
 
 //Package consensus provide consensus service for blockchian
-//the consensus algorithm is pluggable, the default implementation is PBFT.
+//the consensus algorithm is pluggable, the default implementation is RBFT.
 package consensus
 
 // This file defines the Consenter interface, which manages all
@@ -21,7 +21,7 @@ type Consenter interface {
 	Start()
 
 	// Close closes the consensus service
-	Close()
+	Stop()
 
 	// GetStatus returns the current status of consensus service,
 	// normal means this system is working well, and full

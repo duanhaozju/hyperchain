@@ -108,6 +108,8 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryCommitAndBatch
 # 查询EVM平均处理时间
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_queryEvmAvgTime","params":[{"from":"the number of block","to":"the number of block"}],"id": 1}'
 
+# 查询创世区块
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"block_getGenesisBlock","params":[],"id": 1}'
 
 ################################## account服务 ##################################
 # 新建一个账户 NewAccount

@@ -14,15 +14,26 @@
 package executor
 
 import (
-	"hyperchain/common"
+	"time"
+
+	com "hyperchain/common"
 	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
-	"time"
 
 	"github.com/op/go-logging"
 )
 
+// Data archives are based on state snapshots, if you want do a archive operation,
+// a valid snapshot is the precondition.
+//
+// e.g.
+// Current chain height is 100, and current genesis block is 0.
+// A snapshot s is created when chain height is 30(s is the world state backup file when chain height is 30)
+// An archive operation based on s will dump blocks [0-29] and related transactions, receipts to historical database.
+// Genesis block number trans to 30, and s becomes the new genesis world state.
+
+// Archive accepts an archive request.
 func (executor *Executor) Archive(event event.ArchiveEvent) {
 	executor.archiveMgr.Archive(event)
 }
@@ -32,7 +43,7 @@ type ArchiveManager struct {
 	registry  *SnapshotRegistry
 	namespace string
 	logger    *logging.Logger
-	rwc       common.ArchiveMetaRWC
+	rw        com.ArchiveMetaRW
 }
 
 func NewArchiveManager(namespace string, executor *Executor, registry *SnapshotRegistry, logger *logging.Logger) *ArchiveManager {
@@ -41,7 +52,7 @@ func NewArchiveManager(namespace string, executor *Executor, registry *SnapshotR
 		executor:  executor,
 		registry:  registry,
 		logger:    logger,
-		rwc:       common.NewArchiveMetaHandler(executor.conf.GetArchiveMetaPath()),
+		rw:        com.NewArchiveMetaHandler(executor.conf.GetArchiveMetaPath()),
 	}
 }
 
@@ -49,17 +60,17 @@ func NewArchiveManager(namespace string, executor *Executor, registry *SnapshotR
 	External Functions
 */
 func (mgr *ArchiveManager) Archive(event event.ArchiveEvent) {
-	var manifest common.Manifest
+	var manifest com.Manifest
 	if !event.Sync {
 		close(event.Cont)
 	}
-	if !mgr.registry.rwc.Contain(event.FilterId) {
+	if !mgr.registry.rw.Contain(event.FilterId) {
 		mgr.feedback(false, event.FilterId, SnapshotNotExistMsg)
 		if event.Sync {
 			event.Cont <- SnapshotDoesntExistErr
 		}
 	} else {
-		_, manifest = mgr.registry.rwc.Read(event.FilterId)
+		_, manifest = mgr.registry.rw.Read(event.FilterId)
 		if err := mgr.migrate(manifest); err != nil {
 			mgr.logger.Noticef("archive for (filter %s) failed, detail %s", event.FilterId, err.Error())
 			mgr.feedback(false, event.FilterId, ArchiveFailedMsg)
@@ -80,7 +91,7 @@ func (mgr *ArchiveManager) Archive(event event.ArchiveEvent) {
 /*
 	Internal Functions
 */
-func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
+func (mgr *ArchiveManager) migrate(manifest com.Manifest) error {
 	curGenesis, err := edb.GetGenesisTag(mgr.namespace)
 	if err != nil {
 		return err
@@ -88,10 +99,10 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 	olBatch := mgr.executor.db.NewBatch()
 	avBatch := mgr.executor.archiveDb.NewBatch()
 
-	var meta common.ArchiveMeta
+	var meta com.ArchiveMeta
 
-	if mgr.rwc.Exist() {
-		if err, lmeta := mgr.rwc.Read(); err != nil {
+	if mgr.rw.Exist() {
+		if err, lmeta := mgr.rw.Read(); err != nil {
 			return err
 		} else {
 			meta = lmeta
@@ -188,7 +199,7 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 		return err
 	}
 
-	if err := mgr.rwc.Write(common.ArchiveMeta{
+	if err := mgr.rw.Write(com.ArchiveMeta{
 		Height:       manifest.Height - 1,
 		TransactionN: meta.TransactionN + txc,
 		ReceiptN:     meta.ReceiptN + rectc,
@@ -220,7 +231,7 @@ func (mgr *ArchiveManager) getTimestampRange(begin, end uint64) (error, int64, i
 // check archive request is valid
 // 1. specified snapshot is safe enough to do archive operation (snapshot.Height + threshold < height)
 // 2. archive db is continuous with current blockchain (optional)
-func (mgr *ArchiveManager) checkRequest(manifest common.Manifest, meta common.ArchiveMeta) bool {
+func (mgr *ArchiveManager) checkRequest(manifest com.Manifest, meta com.ArchiveMeta) bool {
 	curHeigit := edb.GetHeightOfChain(mgr.namespace)
 	genesis, err := edb.GetGenesisTag(mgr.namespace)
 	if err != nil {

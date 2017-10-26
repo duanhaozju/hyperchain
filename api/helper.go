@@ -18,9 +18,9 @@ const (
 
 	BLOCK               = "block"
 	TRANSACTION         = "transaction"
+	TRANSACTIONS         = "transactions"
 	RECEIPT             = "receipt"
 	DISCARDTXS          = "discard transactions"
-	DISCARDTX           = "discard transaction"
 	transactionPeak     = "flow.control.ratelimit.txRatePeak"
 	transactionFillRate = "flow.control.ratelimit.txFillRate"
 

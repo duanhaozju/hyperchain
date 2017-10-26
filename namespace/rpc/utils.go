@@ -93,6 +93,8 @@ func isEmpty(v reflect.Value) bool {
 	case reflect.Uint, reflect.Uint8, reflect.Uint16,
 		reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		return strconv.FormatUint(v.Uint(), 10) == "0"
+	case reflect.Bool:
+		return v.Bool() == false
 	default:
 		if addr, ok := v.Interface().(common.Address); ok {
 			return addr.IsZero()

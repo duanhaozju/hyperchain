@@ -1,10 +1,18 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
+
 package rbft
 
 import (
 	"errors"
-	"github.com/facebookgo/ensure"
-	"github.com/golang/protobuf/proto"
-	"github.com/spf13/viper"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strconv"
+	"sync"
+	"testing"
+	"time"
+
 	"hyperchain/common"
 	"hyperchain/consensus/helper"
 	"hyperchain/core/ledger/chain"
@@ -15,13 +23,10 @@ import (
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	pb "hyperchain/manager/protos"
-	"os"
-	"path/filepath"
-	"reflect"
-	"strconv"
-	"sync"
-	"testing"
-	"time"
+
+	"github.com/facebookgo/ensure"
+	"github.com/golang/protobuf/proto"
+	"github.com/spf13/viper"
 )
 
 //path struct should match
@@ -51,10 +56,11 @@ func TNewConfig(fatherpath, name string, nodeId int) *common.Config {
 	namespace := name + "-" + strconv.Itoa(conf.GetInt(common.C_NODE_ID))
 	conf.Set(common.NAMESPACE, namespace)
 	common.InitHyperLogger(namespace, conf)
+	common.SetLogLevel(namespace, "consensus", "DEBUG")
 	return conf
 }
 
-//Return a pbft according to config path
+//Return a rbft according to config path
 //path for example
 // ../../configuration/namespaces/
 // If the namespace is global
@@ -70,8 +76,8 @@ func TNewRbft(dbpath, path, namespace string, nodeId int, t *testing.T) (*rbftIm
 		t.Errorf("init db for namespace: %s error, %v", namespace, err)
 	}
 	h := helper.NewHelper(new(event.TypeMux), new(event.TypeMux))
-	pbft, err := newRBFT(namespace, conf, h, conf.GetInt("self.N"))
-	return pbft, conf, err
+	rbft, err := newRBFT(namespace, conf, h, conf.GetInt("self.N"))
+	return rbft, conf, err
 }
 
 /////////////////////////////////////////////////////
@@ -94,20 +100,20 @@ type MessageChanel struct {
 	MsgChan chan *pb.Message
 }
 
-func (MS *MessageChanel) Start(pbft *rbftImpl) {
+func (MS *MessageChanel) Start(rbft *rbftImpl) {
 	for msg := range MS.MsgChan {
 		message, err := proto.Marshal(msg)
 		if err != nil {
-			pbft.logger.Error("Marshal failed")
+			rbft.logger.Error("Marshal failed")
 		}
-		pbft.RecvMsg(message)
+		rbft.RecvMsg(message)
 	}
 }
 
 type TestHelp struct {
-	PbftList     []*MessageChanel //save pbftHandle for communicate. Because the id of node is from 1,so the Pbftlist[0] always nil
-	PbftID       int
-	PbftLen      int
+	RbftList     []*MessageChanel //save rbftHandle for communicate. Because the id of node is from 1,so the Rbftlist[0] always nil
+	RbftID       int
+	RbftLen      int
 	namespace    string
 	batchMap     map[common.Hash]*protos.ValidatedTxs
 	batchMapLock sync.Mutex //no currency read, so don;t use RWMutex
@@ -115,13 +121,13 @@ type TestHelp struct {
 }
 
 func (TH *TestHelp) InnerBroadcast(msg *pb.Message) error {
-	for i := 1; i <= TH.PbftLen; i++ {
-		if i != TH.PbftID {
-			if TH.PbftList[i] == nil {
+	for i := 1; i <= TH.RbftLen; i++ {
+		if i != TH.RbftID {
+			if TH.RbftList[i] == nil {
 				continue
 			}
 			TH.rbft.logger.Debugf("broadcast to %v", i)
-			TH.PbftList[i].MsgChan <- msg
+			TH.RbftList[i].MsgChan <- msg
 		}
 	}
 	return nil
@@ -129,9 +135,9 @@ func (TH *TestHelp) InnerBroadcast(msg *pb.Message) error {
 
 func (TH *TestHelp) InnerUnicast(msg *pb.Message, to uint64) error {
 	to1 := int(to)
-	if to1 <= TH.PbftLen {
-		if TH.PbftList[to1] != nil {
-			TH.PbftList[to1].MsgChan <- msg
+	if to1 <= TH.RbftLen {
+		if TH.RbftList[to1] != nil {
+			TH.RbftList[to1].MsgChan <- msg
 		}
 	}
 	return nil
@@ -192,7 +198,7 @@ func (TH *TestHelp) Execute(seqNo uint64, hashS string, flag bool, isPrimary boo
 		Transactions: vtx.Transactions,
 		Number:       vtx.SeqNo,
 	}
-	if _, err := edb.PersistBlock(batch, block, false, false); err != nil {
+	if err, _ := edb.PersistBlock(batch, block, false, false); err != nil {
 		TH.rbft.logger.Errorf("persist block #%d into database failed.", block.Number, err.Error())
 		return nil
 	}
@@ -238,9 +244,9 @@ type RBFTNode struct {
 func CreatRBFT(t *testing.T, N int, dbPath string, confPath string, namespace string, nodes []*RBFTNode) (rbftList []*rbftImpl) {
 
 	if N < 4 {
-		t.Error("N is too small to create PBFT network")
+		t.Error("N is too small to create RBFT network")
 	}
-	rbftList = make([]*rbftImpl, N+1) //pbft id start from 1 not zero ,so Create N+1 slice
+	rbftList = make([]*rbftImpl, N+1) // rbft id start from 1 not zero ,so Create N+1 slice
 	mcList := make([]*MessageChanel, N+1)
 	thList := make([]*TestHelp, N+1)
 	var err error
@@ -269,20 +275,20 @@ func CreatRBFT(t *testing.T, N int, dbPath string, confPath string, namespace st
 		go mcList[i].Start(rbftList[i])
 	}
 
-	//init helper and replace the helper in pbft
+	//init helper and replace the helper in rbft
 	for i := 1; i < N+1; i++ {
 		thList[i] = &TestHelp{
 			rbft:      rbftList[i],
-			PbftID:    i,
-			PbftList:  mcList,
+			RbftID:    i,
+			RbftList:  mcList,
 			namespace: rbftList[i].namespace,
 			batchMap:  make(map[common.Hash]*protos.ValidatedTxs),
-			PbftLen:   N,
+			RbftLen:   N,
 		}
 		rbftList[i].helper = thList[i]
 	}
 
-	logger.Notice("Full system initialization completed. Now try to start pbft")
+	logger.Notice("Full system initialization completed. Now try to start rbft")
 	for i := 1; i < N+1; i++ {
 		rbftList[i].Start()
 	}
@@ -298,119 +304,7 @@ func CreatRBFT(t *testing.T, N int, dbPath string, confPath string, namespace st
 		rbftList[i].RecvLocal(negoView)
 	}
 	return
-	//pbft1,_,err:=TNewPbft("./Testdatabase/","../../build/node1/namespaces/","global",0,t)
-	//ensure.Nil(t,err)
-	//pbft2,_,err:=TNewPbft("./Testdatabase/","../../build/node2/namespaces/","global",0,t)
-	//ensure.Nil(t,err)
-	//pbft3,_,err:=TNewPbft("./Testdatabase/","../../build/node3/namespaces/","global",0,t)
-	//ensure.Nil(t,err)
-	//pbft4,_,err:=TNewPbft("./Testdatabase/","../../build/node4/namespaces/","global",0,t)
-	//ensure.Nil(t,err)
-	//
-	//mc1:=&MessageChanel{
-	//	MsgChan:make(chan *pb.Message),
-	//}
-	//go mc1.Start(pbft1)
-	//
-	//mc2:=&MessageChanel{
-	//	MsgChan:make(chan *pb.Message),
-	//}
-	//go mc2.Start(pbft2)
-	//
-	//mc3:=&MessageChanel{
-	//	MsgChan:make(chan *pb.Message),
-	//}
-	//go mc3.Start(pbft3)
-	//
-	//mc4:=&MessageChanel{
-	//	MsgChan:make(chan *pb.Message),
-	//}
-	//go mc4.Start(pbft4)
-	//
-	//mcList :=make([]*MessageChanel,4+1)
-	//mcList[1]=mc1
-	//mcList[2]=mc2
-	//mcList[3]=mc3
-	//mcList[4]=mc4
-	//th1:=&TestHelp{
-	//	pbft:pbft1,
-	//	PbftID:1,
-	//	PbftList:mcList,
-	//	namespace:pbft1.namespace,
-	//	batchMap:make(map[common.Hash]*protos.ValidatedTxs),
-	//	PbftLen:4,
-	//}
-	//
-	//th2:=&TestHelp{
-	//	pbft:pbft2,
-	//	PbftID:2,
-	//	PbftList:mcList,
-	//	namespace:pbft2.namespace,
-	//	batchMap:make(map[common.Hash]*protos.ValidatedTxs),
-	//	PbftLen:4,
-	//}
-	//
-	//th3:=&TestHelp{
-	//	pbft:pbft3,
-	//	PbftID:3,
-	//	PbftList:mcList,
-	//	namespace:pbft3.namespace,
-	//	batchMap:make(map[common.Hash]*protos.ValidatedTxs),
-	//	PbftLen:4,
-	//}
-	//
-	//
-	//th4:=&TestHelp{
-	//	pbft:pbft4,
-	//	PbftID:4,
-	//	PbftList:mcList,
-	//	namespace:pbft4.namespace,
-	//	batchMap:make(map[common.Hash]*protos.ValidatedTxs),
-	//	PbftLen:4,
-	//}
-	//
-	//pbft1.helper=th1
-	//pbft2.helper=th2
-	//pbft3.helper=th3
-	//pbft4.helper=th4
-	//pbft1.Start()
-	//pbft2.Start()
-	//pbft3.Start()
-	//pbft4.Start()
-	//negoView1 := &protos.Message{
-	//	Type:      protos.Message_NEGOTIATE_VIEW,
-	//	Timestamp: time.Now().UnixNano(),
-	//	Payload:   nil,
-	//	Id:        0,
-	//}
-	//negoView2 := &protos.Message{
-	//	Type:      protos.Message_NEGOTIATE_VIEW,
-	//	Timestamp: time.Now().UnixNano(),
-	//	Payload:   nil,
-	//	Id:        0,
-	//}
-	//negoView3 := &protos.Message{
-	//	Type:      protos.Message_NEGOTIATE_VIEW,
-	//	Timestamp: time.Now().UnixNano(),
-	//	Payload:   nil,
-	//	Id:        0,
-	//}
-	//negoView4 := &protos.Message{
-	//	Type:      protos.Message_NEGOTIATE_VIEW,
-	//	Timestamp: time.Now().UnixNano(),
-	//	Payload:   nil,
-	//	Id:        0,
-	//}
-	// pbft1.RecvLocal(negoView1)
-	// pbft2.RecvLocal(negoView2)
-	// pbft3.RecvLocal(negoView3)
-	// pbft4.RecvLocal(negoView4)
 }
-
-//
-//func MsgForRecvMsg(msgType int32,)[]byte{
-//
-//}
 
 //remove the data and namespace directory in ./
 func CleanData(namespace string) error {
@@ -423,6 +317,8 @@ func CleanData(namespace string) error {
 	return err
 }
 
+// checkNilElems checks if provided param has nil elements, returns error if provided
+// param is not a struct pointer and returns nil elements' name if has.
 func checkNilElems(i interface{}) (string, []string, error) {
 	typ := reflect.TypeOf(i)
 	value := reflect.Indirect(reflect.ValueOf(i))

@@ -5,7 +5,6 @@ package rbft
 
 import (
 	"fmt"
-	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,21 +23,21 @@ func TestSortableUint64SliceFunctions(t *testing.T) {
 	}
 }
 
-func TestPbftStateFunctions(t *testing.T) {
+func TestRbftStateFunctions(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
 
-	rbft.status.inActiveState(&rbft.status.valid)
-	ast.Equal(false, rbft.status.getState(&rbft.status.valid), "should be set to inActive")
+	rbft.off(valid)
+	ast.Equal(false, rbft.in(valid), "should be set to inActive")
 
 	rbft.validateState()
-	ast.Equal(true, rbft.status.getState(&rbft.status.valid), "should be set to active")
+	ast.Equal(true, rbft.in(valid), "should be set to active")
 
 	rbft.invalidateState()
-	ast.Equal(false, rbft.status.getState(&rbft.status.valid), "should be set to inActive")
+	ast.Equal(false, rbft.in(valid), "should be set to inActive")
 }
 
 func TestPrimary(t *testing.T) {
@@ -66,8 +65,8 @@ func TestPrimary(t *testing.T) {
 	ast.Equal(true, rbft.inWV(9, 30), fmt.Sprintf("inWV(%d, %d) = false, actual true", 9, 30))
 	ast.Equal(false, rbft.inWV(8, 30), fmt.Sprintf("inWV(%d, %d) = true, actual false", 9, 30))
 
-	ast.Equal(true, rbft.sendInWV(9, 100), fmt.Sprintf("sendInWV(%d, %d) = false, actual true", 9, 100))
-	ast.Equal(false, rbft.sendInWV(9, 101), fmt.Sprintf("sendInWV(%d, %d) = true, actual false", 9, 101))
+	ast.Equal(true, rbft.sendInW(100), fmt.Sprintf("sendInWV(%d, %d) = false, actual true", 9, 100))
+	ast.Equal(false, rbft.sendInW(101), fmt.Sprintf("sendInWV(%d, %d) = true, actual false", 9, 101))
 }
 
 func TestGetNodeCert(t *testing.T) {
@@ -262,18 +261,18 @@ func TestStartTimerIfOutstandingRequests(t *testing.T) {
 	ast.Equal(nil, err, err)
 	rbft.Start()
 
-	rbft.status.activeState(&rbft.status.skipInProgress)
+	rbft.on(skipInProgress)
 	rbft.startTimerIfOutstandingRequests()
-	ast.Equal(false, rbft.status.getState(&rbft.status.timerActive), "should not start newView timer")
+	ast.Equal(false, rbft.in(timerActive), "should not start newView timer")
 
-	rbft.status.inActiveState(&rbft.status.skipInProgress)
+	rbft.off(skipInProgress)
 	rbft.exec.setCurrentExec(nil)
 	rbft.startTimerIfOutstandingRequests()
-	ast.Equal(false, rbft.status.getState(&rbft.status.timerActive), "should not start newView timer")
+	ast.Equal(false, rbft.in(timerActive), "should not start newView timer")
 
 	rbft.storeMgr.outstandingReqBatches["something"] = nil
 	rbft.startTimerIfOutstandingRequests()
-	ast.Equal(true, rbft.status.getState(&rbft.status.timerActive), "should start newView timer")
+	ast.Equal(true, rbft.in(timerActive), "should start newView timer")
 }
 
 func TestConsensusMsgHelper(t *testing.T) {
@@ -328,16 +327,16 @@ func TestIsPrePrepareLegal(t *testing.T) {
 		ReplicaId:      2,
 	}
 
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	res := rbft.isPrePrepareLegal(prePrepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	atomic.StoreUint32(&rbft.activeView, 0)
+	rbft.off(inNegotiateView)
+	rbft.on(inViewChange)
 	res = rbft.isPrePrepareLegal(prePrepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 
-	atomic.StoreUint32(&rbft.activeView, 1)
+	rbft.off(inViewChange)
 	res = rbft.isPrePrepareLegal(prePrepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 
@@ -367,16 +366,16 @@ func TestIsPrepareLegal(t *testing.T) {
 		ReplicaId:      1,
 	}
 
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	res := rbft.isPrepareLegal(prepare)
 	ast.Equal(false, res, "isPrepareLegal failed")
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inNegotiateView)
+	rbft.off(inRecovery)
 	res = rbft.isPrepareLegal(prepare)
 	ast.Equal(false, res, "isPrepareLegal failed")
 
-	rbft.status.activeState(&rbft.status.inRecovery)
+	rbft.on(inRecovery)
 	res = rbft.isPrepareLegal(prepare)
 	ast.Equal(false, res, "isPrePrepareLegal failed")
 
@@ -401,11 +400,11 @@ func TestIsCommitLegal(t *testing.T) {
 		BatchDigest:    digest,
 		ReplicaId:      1,
 	}
-	rbft.status.activeState(&rbft.status.inNegoView)
+	rbft.on(inNegotiateView)
 	res := rbft.isCommitLegal(commit)
 	ast.Equal(false, res, "isCommitLegal failed")
 
-	rbft.status.inActiveState(&rbft.status.inNegoView)
+	rbft.off(inNegotiateView)
 	res = rbft.isCommitLegal(commit)
 	ast.Equal(false, res, "isCommitLegal failed")
 

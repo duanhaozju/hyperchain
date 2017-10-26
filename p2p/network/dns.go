@@ -14,10 +14,12 @@ var (
 
 type DNSResolver struct {
 	hostConfig *viper.Viper
-	DNSItems   map[string]string
+	DNSItems   map[string]string // key is hostname, value is IP address
 	lock       *sync.RWMutex
 }
 
+// NewDNSResolver creates and returns a new DNSResolver instance
+// for given file hosts.toml.
 func NewDNSResolver(hostsPath string) (*DNSResolver, error) {
 	vip := viper.New()
 	vip.SetConfigFile(hostsPath)

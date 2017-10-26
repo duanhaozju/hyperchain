@@ -22,7 +22,7 @@ import (
 )
 
 // RunInSandBox is used to run transaction in a simulator,
-// in which way the execution result will not been add to database.
+// in which way the execution result will not been added to database.
 func (executor *Executor) RunInSandBox(tx *types.Transaction, snapshotId string) error {
 	var (
 		statedb  vm.Database

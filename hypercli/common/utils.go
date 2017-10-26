@@ -1,5 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package common
 
 import (
@@ -10,13 +11,13 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
-	"hyperchain/accounts"
 	"hyperchain/common"
 	"hyperchain/core/types"
 	"hyperchain/crypto"
 	"hyperchain/rpc"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -28,6 +29,7 @@ const (
 	defaultGas      = 10000
 	defaultGasPrice = 10000
 	frequency       = 10
+	hexAddr         = "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd"
 )
 
 var (
@@ -86,14 +88,7 @@ func checkToken(result string) error {
 
 // GenSignature generates the transaction signature by many params ...
 func GenSignature(from string, to string, timestamp int64, amount int64, payload string, nonce int64, opcode int32, vmtype types.TransactionValue_VmType) ([]byte, error) {
-	conf := common.NewRawConfig()
-	conf.Set(common.KEY_NODE_DIR, "./keyconfigs/keynodes")
-	conf.Set(common.KEY_STORE_DIR, "./keyconfigs/keystore")
-
-	am := accounts.NewAccountManager(conf)
-
 	payload = common.StringToHex(payload)
-	// TODO ASK @DUANHAO ADD EXTRA SUPPORT
 	txValue := types.NewTransactionValue(int64(defaultGasPrice), int64(defaultGas), amount, common.FromHex(payload), opcode, nil, vmtype)
 	value, _ := proto.Marshal(txValue)
 	var tx *types.Transaction
@@ -103,12 +98,21 @@ func GenSignature(from string, to string, timestamp int64, amount int64, payload
 		tx = types.NewTransaction(common.HexToAddress(from).Bytes(), common.HexToAddress(to).Bytes(), value, timestamp, nonce)
 	}
 
-	signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SignHash(kec256Hash).Bytes(), password)
+	hash := tx.SignHash(kec256Hash).Bytes()
+	file := path.Join("./keyconfigs/keystore", hexAddr)
+	privKey, err := getKey(file, password)
+	if err != nil {
+		fmt.Println("Get private key failed!, detail error message: ", err)
+		return nil, err
+	}
 
+	encryp := crypto.NewEcdsaEncrypto("ecdsa")
+	signature, err := encryp.Sign(hash, privKey)
 	if err != nil {
 		fmt.Println("Sign Transaction failed!, detail error message: ", err)
 		return nil, err
 	}
+
 	return signature, nil
 }
 
@@ -170,8 +174,6 @@ func DelCompressedFile(file string) {
 }
 
 func ReadFile(path string, object interface{}) error {
-	//token, err := ioutil.ReadFile(file)
-	//return string(token[:]), err
 	file, err := os.Open(path)
 	defer file.Close()
 	if err == nil {
@@ -196,7 +198,6 @@ func SaveToFile(file, username, token string) error {
 	userinfo := &UserInfo{Username: username, Token: token}
 	encoder := gob.NewEncoder(f)
 	return encoder.Encode(userinfo)
-	//f.WriteString(token)
 }
 
 func ReadPermissionsFromFile(file string) ([]string, error) {

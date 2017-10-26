@@ -1,5 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package rbft
 
 import (
@@ -474,7 +475,7 @@ func (rbft *rbftImpl) restoreState() {
 	if err == nil {
 		newNode := binary.LittleEndian.Uint64(new)
 		if newNode == 1 {
-			rbft.status.activeState(&rbft.status.isNewNode)
+			rbft.on(isNewNode)
 		}
 	}
 

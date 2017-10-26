@@ -5,10 +5,12 @@ package persist
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
+	"testing"
+
 	"hyperchain/common"
 	mdb "hyperchain/hyperdb/mdb"
-	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDaoOnState(t *testing.T) {

@@ -1,5 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package contract
 
 import (
@@ -35,6 +36,11 @@ var commonFlags = []cli.Flag{
 		Name:  "payload, p",
 		Value: "",
 		Usage: "specify the contract payload",
+	},
+	cli.StringFlag{
+		Name:  "extra, e",
+		Value: "",
+		Usage: "specify the extra information",
 	},
 }
 
@@ -176,7 +182,6 @@ func deploy(c *cli.Context) error {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	//fmt.Println(result.Result)
 
 	txHash := getTransactionHash(result)
 	err = common.GetTransactionReceipt(txHash, c.String("namespace"), client)
@@ -277,7 +282,6 @@ func maintain(c *cli.Context, opcode int32, maintainMethod string) error {
 		fmt.Printf("Error in call %s request\n", maintainCmd)
 		return err
 	}
-	//fmt.Print(result.Result)
 
 	txHash := getTransactionHash(result)
 	err = common.GetTransactionReceipt(txHash, c.String("namespace"), client)
@@ -327,7 +331,7 @@ func getCmd(method string, need_params []string, opcode int32, c *cli.Context) s
 			from = c.String("from")
 			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, from)
 
-		//below params must be input by user
+		// below params must be input by user
 		case "to":
 			to = common.GetNonEmptyValueByName(c, "to")
 			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, to)
@@ -349,6 +353,7 @@ func getCmd(method string, need_params []string, opcode int32, c *cli.Context) s
 			os.Exit(1)
 		}
 	}
+	// jvm contract
 	if c.Bool("jvm") {
 		params = params + "," + fmt.Sprint("\"type\":\"jvm\"")
 	}
@@ -389,12 +394,18 @@ func getCmd(method string, need_params []string, opcode int32, c *cli.Context) s
 	signature := "00" + hex.EncodeToString(sig)
 	params = params + "," + fmt.Sprintf("\"signature\":\"%s\"", signature)
 
+	// extra string
+	if c.String("extra") != "" {
+		params = params + "," + fmt.Sprintf("\"extra\":\"%s\"", c.String("extra"))
+	}
+
 	// end of params
 	params = params + "}]"
 
-	return fmt.Sprintf(
+	cmd := fmt.Sprintf(
 		"{\"jsonrpc\":\"2.0\",\"namespace\":\"%s\",\"method\":\"%s\",\"params\":%s,\"id\":1}",
 		namespace, method, params)
+	return cmd
 }
 
 func getPayloadFromPath(dir string) []byte {

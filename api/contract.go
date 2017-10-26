@@ -227,7 +227,7 @@ type CheckArgs struct {
 	EncryValue []string `json:"encryValue"`
 
 	// Invalid homomorphic encryption value of account B.
-	Illegalhm string `json:"illegalhm"`
+	InvalidHmValue string `json:"invalidHmValue"`
 }
 
 type HmCheckResult struct {
@@ -255,8 +255,8 @@ func (contract *Contract) CheckHmValue(args CheckArgs) (*HmCheckResult, error) {
 	illegalHmAmount := make([]byte, 16)
 	sumIllegal := make([]byte, 16)
 
-	if args.Illegalhm != "" {
-		illegalHmAmount_bigint.SetString(args.Illegalhm, 10)
+	if args.InvalidHmValue != "" {
+		illegalHmAmount_bigint.SetString(args.InvalidHmValue, 10)
 		illegalHmAmount = illegalHmAmount_bigint.Bytes()
 	}
 	var isvalid bool

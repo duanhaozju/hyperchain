@@ -1,0 +1,30 @@
+
+[[nodes]]
+  hostname = "node1"
+  id = 1
+  static = true
+
+[[nodes]]
+  hostname = "node2"
+  id = 2
+  static = true
+
+[[nodes]]
+  hostname = "node3"
+  id = 3
+  static = true
+
+[[nodes]]
+  hostname = "node4"
+  id = 4
+  static = true
+
+[self]
+  caconf = "test/namespace.toml"
+  hostname = "node1"
+  id = 1
+  n = 4
+  new = false
+  org = false
+  rec = true
+  vp = true

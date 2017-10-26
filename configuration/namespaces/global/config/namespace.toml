@@ -71,8 +71,8 @@ algo = "RBFT"
 
 [encryption.check]
  enable     = true  #enable RCert
- sign       = true  #enable Signature
- enableT    = false #enable TCert
+ sign       = false  #enable Signature
+ enableT    = false  #enable TCert
 
 [encryption.security]
  algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des,aes or sm4)
@@ -161,9 +161,6 @@ max_log_size    = "200mb"  # "mb", "kb"
 # other configurations
 #
 ############################################################################################################
-[account]
-keystoredir = "config/keystore"
-keynodesdir = "config/keynodes"
 
 [config.path]
 caconfig        = "config/namespace.toml"

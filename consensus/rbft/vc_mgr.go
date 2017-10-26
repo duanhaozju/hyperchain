@@ -1,23 +1,25 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package rbft
 
 import (
 	"errors"
 	"reflect"
 	"sort"
-	"sync/atomic"
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
+	"hyperchain/common"
 )
 
-//view change manager
+// vcManager manages the whole process of view change
 type vcManager struct {
 	vcResendLimit      int           // vcResendLimit indicates a replica's view change resending upbound.
 	vcResendCount      int           // vcResendCount represent times of same view change info resend
 	viewChangePeriod   uint64        // period between automatic view changes. Default value is 0 means close automatic view changes
-	viewChangeSeqNo    uint64        // next seqNo to perform view change TODO: NO usage
+	viewChangeSeqNo    uint64        // next seqNo to perform view change
 	lastNewViewTimeout time.Duration // last timeout we used during this view change
 	newViewTimerReason string        // what triggered the timer
 
@@ -27,10 +29,12 @@ type vcManager struct {
 	newViewStore    map[uint64]*NewView    // track last new-view we received or sent
 	viewChangeStore map[vcidx]*ViewChange  // track view-change messages
 	vcResetStore    map[FinishVcReset]bool // track vcReset message from others
-	cleanVcTimeout  time.Duration          // how long dose view-change messages keep in viewChangeStore
+
+	logger *logging.Logger
 }
 
-//dispatchViewChangeMsg dispatch view change consensus messages from other peers And push them into corresponding function
+// dispatchViewChangeMsg dispatches view change consensus messages from
+// other peers And push them into corresponding function
 func (rbft *rbftImpl) dispatchViewChangeMsg(e consensusEvent) consensusEvent {
 	switch et := e.(type) {
 	case *ViewChange:
@@ -47,9 +51,11 @@ func (rbft *rbftImpl) dispatchViewChangeMsg(e consensusEvent) consensusEvent {
 	return nil
 }
 
-//newVcManager init a instance of view change manager and initialize each parameter according to the configuration file.
-func newVcManager(rbft *rbftImpl) *vcManager {
+// newVcManager init a instance of view change manager and initialize each parameter
+// according to the configuration file.
+func newVcManager(config *common.Config, logger *logging.Logger) *vcManager {
 	vcm := &vcManager{}
+	vcm.logger = logger
 
 	//init vcManage maps
 	vcm.vcResetStore = make(map[FinishVcReset]bool)
@@ -58,39 +64,23 @@ func newVcManager(rbft *rbftImpl) *vcManager {
 	vcm.newViewStore = make(map[uint64]*NewView)
 	vcm.viewChangeStore = make(map[vcidx]*ViewChange)
 
-	// clean out-of-data view change message
-	var err error
-	vcm.cleanVcTimeout, err = time.ParseDuration(rbft.config.GetString(RBFT_CLEAN_VIEWCHANGE_TIMEOUT))
-	if err != nil {
-		rbft.logger.Criticalf("Cannot parse clean out-of-data view change message timeout: %s", err)
-	}
-	nvTimeout := rbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
-	//cleanVcTimeout should more then 6* viewChange time
-	if vcm.cleanVcTimeout < 6*nvTimeout {
-		vcm.cleanVcTimeout = 6 * nvTimeout
-		rbft.logger.Criticalf("Replica %d set timeout of cleaning out-of-time view change message to %v since it's too short", rbft.id, 6*nvTimeout)
-	}
-
 	vcm.viewChangePeriod = uint64(0)
-	//automatic view changes is off by default
+	// automatic view changes is off by default(should be read from config)
 	if vcm.viewChangePeriod > 0 {
-		rbft.logger.Infof("RBFT view change period = %v", vcm.viewChangePeriod)
+		vcm.logger.Infof("RBFT view change period = %v", vcm.viewChangePeriod)
 	} else {
-		rbft.logger.Infof("RBFT automatic view change disabled")
+		vcm.logger.Infof("RBFT automatic view change disabled")
 	}
-	//if Viewchange failed,lastNewViewTimeout well increase
-	vcm.lastNewViewTimeout = rbft.timerMgr.getTimeoutValue(NEW_VIEW_TIMER)
 
-	// vcResendLimit
-	vcm.vcResendLimit = rbft.config.GetInt(RBFT_VC_RESEND_LIMIT)
-	rbft.logger.Debugf("Replica %d set vcResendLimit %d", rbft.id, vcm.vcResendLimit)
-	vcm.vcResendCount = 0
+	vcm.lastNewViewTimeout = config.GetDuration(RBFT_VIEWCHANGE_TIMEOUT)
+	vcm.vcResendLimit = config.GetInt(RBFT_VC_RESEND_LIMIT)
+	vcm.logger.Debugf("RBFT vcResendLimit= %d", vcm.vcResendLimit)
 
 	return vcm
 }
 
-//sendViewChange send view change message to other peers use broadcast
-//Then it send view change message to itself and jump to recvViewChange
+// sendViewChange sends view change message to other peers using broadcast.
+// Then it sends view change message to itself and jump to recvViewChange.
 func (rbft *rbftImpl) sendViewChange() consensusEvent {
 
 	//Do some check and do some preparation
@@ -141,23 +131,24 @@ func (rbft *rbftImpl) sendViewChange() consensusEvent {
 	return rbft.recvViewChange(vc)
 }
 
-//recvViewChange process ViewChange message from itself or other peers
-//if the number of ViewChange message for equal view reach on allCorrectReplicasQuorum, return VIEW_CHANGE_QUORUM_EVENT
-// else peers may resend vc or wait more vc message arrived
+// recvViewChange processes ViewChange message from itself or other peers
+// If the number of ViewChange message for equal view reach on
+// allCorrectReplicasQuorum, return VIEW_CHANGE_QUORUM_EVENT.
+// Else peers may resend vc or wait more vc message arrived.
 func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 	rbft.logger.Warningf("Replica %d received view-change from replica %d, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		rbft.id, vc.Basis.ReplicaId, vc.Basis.View, vc.Basis.H, len(vc.Basis.Cset), len(vc.Basis.Pset), len(vc.Basis.Qset))
 
-	//check if inNegoView
-	//if inNegoView, will return nil
-	if rbft.status.getState(&rbft.status.inNegoView) {
+	//check if inNegotiateView
+	//if inNegotiateView, will return nil
+	if rbft.in(inNegotiateView) {
 		rbft.logger.Debugf("Replica %d try to recvViewChange, but it's in nego-view", rbft.id)
 		return nil
 	}
 
 	//check if inRecovery
 	//if inRecovery, will return nil
-	if rbft.status.getState(&rbft.status.inRecovery) {
+	if rbft.in(inRecovery) {
 		rbft.logger.Noticef("Replica %d try to recvcViewChange, but it's in recovery", rbft.id)
 		return nil
 	}
@@ -193,7 +184,7 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 	}
 	//check whether vcResendCount>=vcResendLimit
 	//if so , reset view and stop vc and newView timer.
-	//Set state to inNegoView and inRecovery
+	//Set state to inNegotiateView and inRecovery
 	//Finally, jump to initNegoView()
 	if rbft.vcMgr.vcResendCount >= rbft.vcMgr.vcResendLimit {
 		rbft.logger.Noticef("Replica %d view change resend reach upbound, try to recovery", rbft.id)
@@ -203,8 +194,8 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 		rbft.restoreView()
 		// after 10 viewchange without response from others, we will restart recovery, and set vcToRecovery to
 		// true, which, after negotiate view done, we need to parse certStore
-		rbft.status.activeState(&rbft.status.inNegoView, &rbft.status.inRecovery, &rbft.status.vcToRecovery)
-		atomic.StoreUint32(&rbft.activeView, 1)
+		rbft.on(inNegotiateView, inRecovery, vcToRecovery)
+		rbft.off(inViewChange)
 		rbft.initNegoView()
 		return nil
 	}
@@ -258,7 +249,7 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 
 	//if in viewchange and vc.view=rbft.view and quorum>allCorrectReplicasQuorum
 	//rbft find new view success and jump into VIEW_CHANGE_QUORUM_EVENT
-	if atomic.LoadUint32(&rbft.activeView) == 0 && vc.Basis.View == rbft.view && quorum >= rbft.allCorrectReplicasQuorum() {
+	if rbft.in(inViewChange) && vc.Basis.View == rbft.view && quorum >= rbft.allCorrectReplicasQuorum() {
 		//close VC_RESEND_TIMER
 		rbft.timerMgr.stopTimer(VC_RESEND_TIMER)
 
@@ -276,20 +267,21 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 		}
 	}
 	//if message from primary, peers send view change to other peers directly
-	if atomic.LoadUint32(&rbft.activeView) == 1 && rbft.isPrimary(vc.Basis.ReplicaId) {
+	if !rbft.in(inViewChange) && rbft.isPrimary(vc.Basis.ReplicaId) {
 		rbft.sendViewChange()
 	}
 
 	return nil
 }
 
-//processing enter here when peer is primary and it receive allCorrectReplicasQuorum for new view.
-//sendNewView  select suitable pqc from viewChangeStore as a new view message and broadcast to replica peers.
-//Then jump into primaryProcessNewView.
+// sendNewView select suitable pqc from viewChangeStore as a new view message and
+// broadcast to replica peers when peer is primary and it receives
+// allCorrectReplicasQuorum for new view.
+// Then jump into primaryProcessNewView.
 func (rbft *rbftImpl) sendNewView() consensusEvent {
 
-	//if inNegoView return nil.
-	if rbft.status.getState(&rbft.status.inNegoView) {
+	//if inNegotiateView return nil.
+	if rbft.in(inNegotiateView) {
 		rbft.logger.Debugf("Replica %d try to sendNewView, but it's in nego-view", rbft.id)
 		return nil
 	}
@@ -342,17 +334,18 @@ func (rbft *rbftImpl) sendNewView() consensusEvent {
 	return rbft.primaryCheckNewView(cp, replicas, nv)
 }
 
-//recvNewView
+// recvNewView receives new view message and check if this node could
+// process this message or not.
 func (rbft *rbftImpl) recvNewView(nv *NewView) consensusEvent {
 	rbft.logger.Infof("Replica %d received new-view %d",
 		rbft.id, nv.View)
 
-	if rbft.status.getState(&rbft.status.inNegoView) {
+	if rbft.in(inNegotiateView) {
 		rbft.logger.Debugf("Replica %d try to recvNewView, but it's in nego-view", rbft.id)
 		return nil
 	}
 
-	if rbft.status.getState(&rbft.status.inRecovery) {
+	if rbft.in(inRecovery) {
 		rbft.logger.Warningf("Replica %d try to recvNewView, but it's in recovery", rbft.id)
 		rbft.recoveryMgr.recvNewViewInRecovery = true
 		return nil
@@ -380,8 +373,8 @@ func (rbft *rbftImpl) recvNewView(nv *NewView) consensusEvent {
 	return rbft.replicaCheckNewView()
 }
 
-//do some prepare for change to New view
-//such as get moveWatermarks to ViewChange checkpoint and fetch missed batches
+// primaryCheckNewView do some prepare for change to New view
+// such as check if primary need state update and fetch missed batches
 func (rbft *rbftImpl) primaryCheckNewView(initialCp Vc_C, replicas []replicaInfo, nv *NewView) consensusEvent {
 
 	// Check if primary need state update
@@ -404,6 +397,7 @@ func (rbft *rbftImpl) primaryCheckNewView(initialCp Vc_C, replicas []replicaInfo
 	return nil
 }
 
+// replicaCheckNewView checkes this newView message and see if it's legal.
 func (rbft *rbftImpl) replicaCheckNewView() consensusEvent {
 	nv, ok := rbft.vcMgr.newViewStore[rbft.view]
 	if !ok {
@@ -411,7 +405,7 @@ func (rbft *rbftImpl) replicaCheckNewView() consensusEvent {
 		return nil
 	}
 
-	if atomic.LoadUint32(&rbft.activeView) == 1 {
+	if !rbft.in(inViewChange) {
 		rbft.logger.Infof("Replica %d ignoring new-view from %d, v:%d: we are active in view %d",
 			rbft.id, nv.ReplicaId, nv.View, rbft.view)
 		return nil
@@ -448,15 +442,16 @@ func (rbft *rbftImpl) replicaCheckNewView() consensusEvent {
 	return rbft.resetStateForNewView()
 }
 
+// resetStateForNewView reset all states for new view
 func (rbft *rbftImpl) resetStateForNewView() consensusEvent {
 	rbft.logger.Debugf("Replica %d accepting new-view to view %d", rbft.id, rbft.view)
 
-	//if vcHandled active return nill, else set vcHandled active
-	if rbft.status.getState(&rbft.status.vcHandled) {
+	//if vcHandled active return nil, else set vcHandled active
+	if rbft.in(vcHandled) {
 		rbft.logger.Debugf("Replica %d repeated enter processReqInNewView, ignore it", rbft.id)
 		return nil
 	}
-	rbft.status.activeState(&rbft.status.vcHandled)
+	rbft.on(vcHandled)
 
 	// empty the outstandingReqBatch, it is useless since new primary will resend pre-prepare
 	rbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
@@ -474,10 +469,10 @@ func (rbft *rbftImpl) resetStateForNewView() consensusEvent {
 	//else if in stateTransfe or inVcReset
 	//if it is primary, we should not finishViewChange
 	//else jump into finishViewChange
-	if !rbft.status.getState(&rbft.status.skipInProgress) &&
-		!rbft.status.getState(&rbft.status.inVcReset) {
+	if !rbft.in(skipInProgress) &&
+		!rbft.in(inVcReset) {
 		rbft.helper.VcReset(backendVid)
-		rbft.status.activeState(&rbft.status.inVcReset)
+		rbft.on(inVcReset)
 	} else if rbft.isPrimary(rbft.id) {
 		rbft.logger.Warningf("New primary %d need to catch up other, wating", rbft.id)
 	} else {
@@ -488,11 +483,10 @@ func (rbft *rbftImpl) resetStateForNewView() consensusEvent {
 	return nil
 }
 
-//Processing enters here after receiving FinishVcReset message
-//Do some state check
+// recvFinishVcReset does some state check after receiving FinishVcReset message
 func (rbft *rbftImpl) recvFinishVcReset(finish *FinishVcReset) consensusEvent {
 	//Check whether we are in viewChange
-	if atomic.LoadUint32(&rbft.activeView) == 1 {
+	if !rbft.in(inViewChange) {
 		rbft.logger.Warningf("Replica %d is not in viewChange, but received FinishVcReset from replica %d", rbft.id, finish.ReplicaId)
 		return nil
 	}
@@ -517,10 +511,9 @@ func (rbft *rbftImpl) recvFinishVcReset(finish *FinishVcReset) consensusEvent {
 	return rbft.processReqInNewView()
 }
 
-// After recvFinishVcReset(), enter this function.
-//HandleTailInNewView check whether we can finish view change
-//such as number of peers send finishVcReset.
-//If view change success,processing will send VIEW_CHANGED_EVENT to rbft
+// processReqInNewView checkes whether we can finish view change
+// After recvFinishVcReset(), such as number of peers send finishVcReset.
+// If view change success, processing will send VIEW_CHANGED_EVENT to rbft
 func (rbft *rbftImpl) processReqInNewView() consensusEvent {
 
 	quorum := 0
@@ -540,7 +533,7 @@ func (rbft *rbftImpl) processReqInNewView() consensusEvent {
 		return nil
 	}
 	//if itself has not done with vcReset and not in stateUpdate return nil
-	if rbft.status.getState(&rbft.status.inVcReset) && !rbft.status.getState(&rbft.status.skipInProgress) {
+	if rbft.in(inVcReset) && !rbft.in(skipInProgress) {
 		rbft.logger.Debugf("Replica %d itself has not done with vcReset and not in stateUpdate", rbft.id)
 		return nil
 	}
@@ -571,10 +564,9 @@ func (rbft *rbftImpl) processReqInNewView() consensusEvent {
 	}
 }
 
-// finishVcReset
-//Processing enters here after peer Determined the new view and finished VCReset
-//FinishViewChange Broadcast FinishVcReset to other peers and
-//send it to itself.
+// FinishViewChange broadcasts FinishVcReset to other peers and
+// send it to itself. Processing enters here after peer determined
+// the new view and finished VCReset
 func (rbft *rbftImpl) finishViewChange() consensusEvent {
 
 	finish := &FinishVcReset{
@@ -599,16 +591,15 @@ func (rbft *rbftImpl) finishViewChange() consensusEvent {
 	return rbft.recvFinishVcReset(finish)
 }
 
-//Return the request of fetching missing assigned, non-checkpointed
-//Return should not happen in inNegoView and inRecovery.
+// recvFetchRequestBatch returns the requested batch
 func (rbft *rbftImpl) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
-	//Check if inNegoView
-	if rbft.status.getState(&rbft.status.inNegoView) {
+	//Check if inNegotiateView
+	if rbft.in(inNegotiateView) {
 		rbft.logger.Debugf("Replica %d try to recvFetchRequestBatch, but it's in nego-view", rbft.id)
 		return nil
 	}
 	//Check if inRecovery
-	if rbft.status.getState(&rbft.status.inRecovery) {
+	if rbft.in(inRecovery) {
 		rbft.logger.Noticef("Replica %d try to recvFetchRequestBatch, but it's in recovery", rbft.id)
 		return nil
 	}
@@ -643,16 +634,17 @@ func (rbft *rbftImpl) recvFetchRequestBatch(fr *FetchRequestBatch) (err error) {
 	return
 }
 
-//Receive the RequestBatch from other peers
-//If receive all request batch,processing jump to processReqInNewView or processReqInUpdate
+// recvReturnRequestBatch receives the RequestBatch from other peers
+// If receive all request batch, processing jump to processReqInNewView
+// or processReqInUpdate
 func (rbft *rbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) consensusEvent {
-	//Check if in inNegoView
-	if rbft.status.getState(&rbft.status.inNegoView) {
+	//Check if in inNegotiateView
+	if rbft.in(inNegotiateView) {
 		rbft.logger.Debugf("Replica %d try to recvReturnRequestBatch, but it's in nego-view", rbft.id)
 		return nil
 	}
 	//Check if in inRecovery
-	if rbft.status.getState(&rbft.status.inRecovery) {
+	if rbft.in(inRecovery) {
 		rbft.logger.Noticef("Replica %d try to recvReturnRequestBatch, but it's in recovery", rbft.id)
 		return nil
 	}
@@ -671,7 +663,7 @@ func (rbft *rbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) consensu
 	//if validatedBatchStore jump to processReqInNewView
 	//if inUpdatingN jump to processReqInUpdate
 	if len(rbft.storeMgr.missingReqBatches) == 0 {
-		if atomic.LoadUint32(&rbft.activeView) == 0 {
+		if rbft.in(inViewChange) {
 			_, ok := rbft.vcMgr.newViewStore[rbft.view]
 			if !ok {
 				rbft.logger.Debugf("Replica %d ignoring processNewView as it could not find view %d in its newViewStore", rbft.id, rbft.view)
@@ -679,7 +671,7 @@ func (rbft *rbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) consensu
 			}
 			return rbft.resetStateForNewView()
 		}
-		if atomic.LoadUint32(&rbft.nodeMgr.inUpdatingN) == 1 {
+		if rbft.in(inUpdatingN) {
 			update, ok := rbft.nodeMgr.updateStore[rbft.nodeMgr.updateTarget]
 			if !ok {
 				rbft.logger.Debugf("Replica %d ignoring processUpdateN as it could not find target %v in its updateStore", rbft.id, rbft.nodeMgr.updateTarget)
@@ -696,10 +688,9 @@ func (rbft *rbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) consensu
 //           view change auxiliary functions
 //##########################################################################
 
-//calcQSet
-//select Pre-prepares which satisfy the following conditions
-//Pre-prepares in previous qlist
-//Pre-prepares from certStore which is preprepared and (its view <= its idx.v or not in qlist
+// calcQSet selects Pre-prepares which satisfy the following conditions
+// 1. Pre-prepares in previous qlist
+// 2. Pre-prepares from certStore which is preprepared and (its view <= its idx.v or not in qlist
 func (rbft *rbftImpl) calcQSet() map[qidx]*Vc_PQ {
 	qset := make(map[qidx]*Vc_PQ)
 
@@ -731,10 +722,9 @@ func (rbft *rbftImpl) calcQSet() map[qidx]*Vc_PQ {
 	return qset
 }
 
-//calcPSet
-//select prepares which satisfy the following conditions
-//prepares in previous qlist
-//prepares from certStore which is prepared and (its view <= its idx.v or not in plist)
+// calcPSet selects prepares which satisfy the following conditions:
+// 1. prepares in previous qlist
+// 2. prepares from certStore which is prepared and (its view <= its idx.v or not in plist)
 func (rbft *rbftImpl) calcPSet() map[uint64]*Vc_PQ {
 	pset := make(map[uint64]*Vc_PQ)
 
@@ -765,18 +755,18 @@ func (rbft *rbftImpl) calcPSet() map[uint64]*Vc_PQ {
 	return pset
 }
 
-//stopNewViewTimer
+// stopNewViewTimer stops NEW_VIEW_TIMER
 func (rbft *rbftImpl) stopNewViewTimer() {
 	rbft.logger.Debugf("Replica %d stopping a running new view timer", rbft.id)
-	rbft.status.inActiveState(&rbft.status.timerActive)
+	rbft.off(timerActive)
 	rbft.timerMgr.stopTimer(NEW_VIEW_TIMER)
 }
 
-//startNewViewTimer stop all running new view timers and  start a new view timer
+// startNewViewTimer stops all running new view timers and start a new view timer
 func (rbft *rbftImpl) startNewViewTimer(timeout time.Duration, reason string) {
 	rbft.logger.Debugf("Replica %d starting new view timer for %s: %s", rbft.id, timeout, reason)
 	rbft.vcMgr.newViewTimerReason = reason
-	rbft.status.activeState(&rbft.status.timerActive)
+	rbft.on(timerActive)
 
 	event := &LocalEvent{
 		Service:   VIEW_CHANGE_SERVICE,
@@ -786,11 +776,11 @@ func (rbft *rbftImpl) startNewViewTimer(timeout time.Duration, reason string) {
 	rbft.timerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, event, rbft.eventMux)
 }
 
-//softstartNewViewTimer start a new view timer no matter how many existed new view timer
+// softstartNewViewTimer starts a new view timer no matter how many existed new view timer
 func (rbft *rbftImpl) softStartNewViewTimer(timeout time.Duration, reason string) {
 	rbft.logger.Debugf("Replica %d soft starting new view timer for %s: %s", rbft.id, timeout, reason)
 	rbft.vcMgr.newViewTimerReason = reason
-	rbft.status.activeState(&rbft.status.timerActive)
+	rbft.on(timerActive)
 
 	event := &LocalEvent{
 		Service:   VIEW_CHANGE_SERVICE,
@@ -800,21 +790,21 @@ func (rbft *rbftImpl) softStartNewViewTimer(timeout time.Duration, reason string
 	rbft.timerMgr.startTimerWithNewTT(NEW_VIEW_TIMER, timeout, event, rbft.eventMux)
 }
 
-//beforeSendVC operations before send view change
-//1 Check rbft.state. State should not inNegoView or inRecovery
-//2 Stop NewViewTimer and NULL_REQUEST_TIMER
-//3 increase the view and delete new view of old view in newViewStore
-//4 update pqlist
-//5 delete old viewChange message
+// beforeSendVC operates before send view change
+// 1. Check rbft.state. State should not inNegotiateView or inRecovery
+// 2. Stop NewViewTimer and NULL_REQUEST_TIMER
+// 3. increase the view and delete new view of old view in newViewStore
+// 4. update pqlist
+// 5. delete old viewChange message
 func (rbft *rbftImpl) beforeSendVC() error {
-	if rbft.status.getState(&rbft.status.inNegoView) {
+	if rbft.in(inNegotiateView) {
 		rbft.logger.Debugf("Replica %d try to send view change, but it's in nego-view", rbft.id)
-		return errors.New("node is in nego view now!")
+		return errors.New("node is in negotiate view now")
 	}
 
-	if rbft.status.getState(&rbft.status.inRecovery) {
+	if rbft.in(inRecovery) {
 		rbft.logger.Noticef("Replica %d try to send view change, but it's in recovery", rbft.id)
-		return errors.New("node is in recovery now!")
+		return errors.New("node is in recovery now")
 	}
 
 	rbft.stopNewViewTimer()
@@ -822,9 +812,9 @@ func (rbft *rbftImpl) beforeSendVC() error {
 
 	delete(rbft.vcMgr.newViewStore, rbft.view)
 	rbft.view++
-	atomic.StoreUint32(&rbft.activeView, 0)
-	rbft.status.inActiveState(&rbft.status.vcHandled)
-	atomic.StoreUint32(&rbft.normal, 0)
+	rbft.on(inViewChange)
+	rbft.off(vcHandled)
+	rbft.setAbNormal()
 
 	rbft.vcMgr.plist = rbft.calcPSet()
 	rbft.vcMgr.qlist = rbft.calcQSet()
@@ -838,9 +828,9 @@ func (rbft *rbftImpl) beforeSendVC() error {
 	return nil
 }
 
-//Check if View change messages correct
-//pqset ' view should less then vc.View and SequenceNumber should greater then vc.H.
-//checkpoint's SequenceNumber should greater then vc.H
+// correctViewChange checkes if view change messages correct
+// 1. pqsets' view should be less then vc.View and SequenceNumber should greater then vc.H.
+// 2. checkpoint's SequenceNumber should greater then vc.H
 func (rbft *rbftImpl) correctViewChange(vc *ViewChange) bool {
 	for _, p := range append(vc.Basis.Pset, vc.Basis.Qset...) {
 		if !(p.View < vc.Basis.View && p.SequenceNumber > vc.Basis.H) {
@@ -861,7 +851,7 @@ func (rbft *rbftImpl) correctViewChange(vc *ViewChange) bool {
 	return true
 }
 
-//Return all viewChange message from viewChangeStore
+// getViewChanges returns all viewChange message from viewChangeStore
 func (rbft *rbftImpl) getViewChanges() (vset []*VcBasis) {
 	for _, vc := range rbft.vcMgr.viewChangeStore {
 		vset = append(vset, vc.Basis)
@@ -869,6 +859,7 @@ func (rbft *rbftImpl) getViewChanges() (vset []*VcBasis) {
 	return
 }
 
+// gatherPQC just gather all checkpoints, p entries and q entries.
 func (rbft *rbftImpl) gatherPQC() (cset []*Vc_C, pset []*Vc_PQ, qset []*Vc_PQ) {
 	// Gather all the checkpoints
 	for n, id := range rbft.storeMgr.chkpts {
@@ -881,6 +872,7 @@ func (rbft *rbftImpl) gatherPQC() (cset []*Vc_C, pset []*Vc_PQ, qset []*Vc_PQ) {
 	for _, p := range rbft.vcMgr.plist {
 		if p.SequenceNumber < rbft.h {
 			rbft.logger.Errorf("BUG! Replica %d should not have anything in our pset less than h, found %+v", rbft.id, p)
+			continue
 		}
 		pset = append(pset, p)
 	}
@@ -889,6 +881,7 @@ func (rbft *rbftImpl) gatherPQC() (cset []*Vc_C, pset []*Vc_PQ, qset []*Vc_PQ) {
 	for _, q := range rbft.vcMgr.qlist {
 		if q.SequenceNumber < rbft.h {
 			rbft.logger.Errorf("BUG! Replica %d should not have anything in our qset less than h, found %+v", rbft.id, q)
+			continue
 		}
 		qset = append(qset, q)
 	}
@@ -896,10 +889,11 @@ func (rbft *rbftImpl) gatherPQC() (cset []*Vc_C, pset []*Vc_PQ, qset []*Vc_PQ) {
 	return
 }
 
-// selectInitialCheckpointselect checkpoint from received ViewChange message
-// If find suitable checkpoint ,it return a certain checkpoint and the  replicas id list which replicas has this checkpoint
-// The checkpoint is max checkpoint which exists in at least oneCorrectQuorum peers and greater then low waterMark
-// in at least commonCaseQuorum.
+// selectInitialCheckpoint selects checkpoint from received ViewChange message
+// If find suitable checkpoint, it return a certain checkpoint and the replicas
+// id list which replicas has this checkpoint.
+// The checkpoint is the max checkpoint which exists in at least oneCorrectQuorum
+// peers and greater then low waterMark in at least commonCaseQuorum.
 func (rbft *rbftImpl) selectInitialCheckpoint(set []*VcBasis) (checkpoint Vc_C, find bool, replicas []replicaInfo) {
 	// For the checkpoint as key, find the corresponding AgreeUpdateN messages
 	checkpoints := make(map[Vc_C][]*VcBasis)
@@ -965,11 +959,12 @@ func (rbft *rbftImpl) selectInitialCheckpoint(set []*VcBasis) (checkpoint Vc_C, 
 	return
 }
 
-// Find the suitable batches for recovery to according to ViewChange and low waterMark
-// The selected bathes match following condition
-// If batch is not a NullRequest batch, the pre-prepare of this batch is equal or greater than commonCaseQuorum
+// assignSequenceNumbers finds the suitable batches for recovery to according
+// to ViewChange and low waterMark.
+// The selected batches match following condition: If batch is not a NullRequest
+// batch, the pre-prepare of this batch is equal or greater than commonCaseQuorum
 // and the prepare is equal or greater then oneCorrectQuorum.
-// In this release, batch should not be NUllRequest batch
+// in this release, batch should not be NUllRequest batch
 func (rbft *rbftImpl) assignSequenceNumbers(set []*VcBasis, h uint64) map[uint64]string {
 	msgList := make(map[uint64]string)
 
@@ -1084,15 +1079,17 @@ nLoop:
 	return list
 }
 
-func (vcm *vcManager) updateViewChangeSeqNo(seqNo, K, id uint64) {
-	if vcm.viewChangePeriod <= 0 {
+// updateViewChangeSeqNo updates viewChangeSeqNo by viewChangePeriod
+func (rbft *rbftImpl) updateViewChangeSeqNo(seqNo, K, id uint64) {
+	if rbft.vcMgr.viewChangePeriod <= 0 {
 		return
 	}
 	// Ensure the view change always occurs at a checkpoint boundary
-	vcm.viewChangeSeqNo = seqNo + vcm.viewChangePeriod*K - seqNo%K
-	//logger.Debugf("Replica %d updating view change sequence number to %d", id, vcm.viewChangeSeqNo)
+	rbft.vcMgr.viewChangeSeqNo = seqNo - seqNo%K + rbft.vcMgr.viewChangePeriod*K
 }
 
+// feedMissingReqBatchIfNeeded feeds needed reqBatch when this node
+// doesn't have all reqBatch in xset.
 func (rbft *rbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing bool) {
 	newReqBatchMissing = false
 	for n, d := range xset {
@@ -1124,6 +1121,8 @@ func (rbft *rbftImpl) feedMissingReqBatchIfNeeded(xset Xset) (newReqBatchMissing
 // primaryResendBatch validates batches which has seq > low watermark
 func (rbft *rbftImpl) primaryResendBatch(xset Xset) {
 
+	// reset validateCount before new primary validate batches.
+	rbft.batchVdr.validateCount = 0
 	xSetLen := len(xset)
 	upper := uint64(xSetLen) + rbft.h + uint64(1)
 	for i := rbft.h + uint64(1); i < upper; i++ {
@@ -1136,7 +1135,7 @@ func (rbft *rbftImpl) primaryResendBatch(xset Xset) {
 		} else {
 			batch, ok := rbft.storeMgr.txBatchStore[d]
 			if !ok {
-				rbft.logger.Criticalf("In Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, rbft.id)
+				rbft.logger.Criticalf("in Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, rbft.id)
 			} else if i > rbft.exec.lastExec {
 				rbft.primaryValidateBatch(d, batch, i)
 			}
@@ -1145,7 +1144,7 @@ func (rbft *rbftImpl) primaryResendBatch(xset Xset) {
 
 }
 
-//Rebuild Cert for Vc
+// rebuildCertStoreForVC rebuilds cert according to xset
 func (rbft *rbftImpl) rebuildCertStoreForVC() {
 	//Check whether new view has stored in newViewStore
 	nv, ok := rbft.vcMgr.newViewStore[rbft.view]
@@ -1157,9 +1156,9 @@ func (rbft *rbftImpl) rebuildCertStoreForVC() {
 	rbft.rebuildCertStore(nv.Xset)
 }
 
-//rebuild certStore according to Xset
-//Broadcast qpc for batches which has been confirmed in view change.
-//So that, all correct peers will reach the seq that select in view change
+// rebuildCertStore rebuilds certStore according to Xset
+// Broadcast qpc for batches which has been confirmed in view change.
+// So that, all correct peers will reach the seq that select in view change
 func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 
 	for n, d := range xset {
@@ -1169,6 +1168,7 @@ func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 		batch, ok := rbft.storeMgr.txBatchStore[d]
 		if !ok && d != "" {
 			rbft.logger.Criticalf("Replica %d is missing tx batch for seqNo=%d with digest '%s' for assigned prepare", rbft.id)
+			continue
 		}
 
 		hashBatch := &HashBatch{
