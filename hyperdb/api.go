@@ -7,19 +7,19 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	"hyperchain/hyperdb/cassandra"
 	hcom "hyperchain/hyperdb/common"
 	"hyperchain/hyperdb/db"
 	"hyperchain/hyperdb/hleveldb"
 	"hyperchain/hyperdb/sldb"
 	"path"
-	"strconv"
 	"sync"
 )
 
 var (
 	logPath   = ""
 	logStatus = false
-	dbType    = 0001
+	dbType    = "leveldb"
 )
 
 const (
@@ -57,7 +57,7 @@ func init() {
 }
 
 func InitDatabase(conf *common.Config, namespace string) error {
-	dbType = conf.GetInt(hcom.DB_TYPE)
+	dbType = conf.GetString(hcom.DB_TYPE)
 
 	logStatus = conf.GetBool("database.leveldb.log_status")
 	logPath = common.GetPath(namespace, conf.GetString("database.leveldb.log_path"))
@@ -72,81 +72,81 @@ func InitDatabase(conf *common.Config, namespace string) error {
 		return errors.New("Try to init inited db " + namespace)
 	}
 
-    db1, err1 := NewDatabase(conf, "consensus", 0001, namespace)
+	db1, err1 := NewDatabase(conf, "consensus", "leveldb", namespace)
 
-    if err1 != nil {
-        log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-        return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-    }
+	if err1 != nil {
+		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+	}
 
-    dbMgr.dbMap[getConsensusDbName(namespace)] = &DBInstance{
-        state: opened,
-        db:    db1,
-    }
-    if conf.GetBool(common.EXECUTOR_EMBEDDED) {
-        db, err := NewDatabase(conf, "blockchain", dbType, namespace)
-        if err != nil {
-            log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-            log.Error(err.Error())
-            return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-        }
+	dbMgr.dbMap[getConsensusDbName(namespace)] = &DBInstance{
+		state: opened,
+		db:    db1,
+	}
+	if conf.GetBool(common.EXECUTOR_EMBEDDED) {
+		db, err := NewDatabase(conf, "blockchain", dbType, namespace)
+		if err != nil {
+			log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+			log.Error(err.Error())
+			return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+		}
 
-        archieveDb, err := NewDatabase(conf, "archive", 0001, namespace)
+		archieveDb, err := NewDatabase(conf, "archive", "leveldb", namespace)
 
-        if err != nil {
-            log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-            log.Error(err.Error())
-            return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-        }
+		if err != nil {
+			log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+			log.Error(err.Error())
+			return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+		}
 
-        dbMgr.dbMap[getDbName(namespace)] = &DBInstance{
-            state: opened,
-            db:    db,
-        }
+		dbMgr.dbMap[getDbName(namespace)] = &DBInstance{
+			state: opened,
+			db:    db,
+		}
 
-        dbMgr.dbMap[getArchiveDbName(namespace)] = &DBInstance{
-            state: opened,
-            db:    archieveDb,
-        }
-    }
+		dbMgr.dbMap[getArchiveDbName(namespace)] = &DBInstance{
+			state: opened,
+			db:    archieveDb,
+		}
+	}
 
 	return nil
 }
 
 func InitBlockDatabase(conf *common.Config, namespace string) error {
 
-    log := getLogger(namespace)
-    db, err := NewDatabase(conf, "blockchain", dbType, namespace)
-    if err != nil {
-        log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-        log.Error(err.Error())
-        return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-    }
+	log := getLogger(namespace)
+	db, err := NewDatabase(conf, "blockchain", dbType, namespace)
+	if err != nil {
+		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+		log.Error(err.Error())
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+	}
 
-    dbMgr.dbMap[getDbName(namespace)] = &DBInstance{
-        state: opened,
-        db:    db,
-    }
-    return nil
+	dbMgr.dbMap[getDbName(namespace)] = &DBInstance{
+		state: opened,
+		db:    db,
+	}
+	return nil
 }
 
 func InitArchiveDatabase(conf *common.Config, namespace string) error {
 
-    log := getLogger(namespace)
+	log := getLogger(namespace)
 
-    archieveDb, err := NewDatabase(conf, "archive", 0001, namespace)
+	archieveDb, err := NewDatabase(conf, "archive", "leveldb", namespace)
 
-    if err != nil {
-        log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-        log.Error(err.Error())
-        return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-    }
+	if err != nil {
+		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+		log.Error(err.Error())
+		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+	}
 
-    dbMgr.dbMap[getArchiveDbName(namespace)] = &DBInstance{
-        state: opened,
-        db:    archieveDb,
-    }
-    return nil
+	dbMgr.dbMap[getArchiveDbName(namespace)] = &DBInstance{
+		state: opened,
+		db:    archieveDb,
+	}
+	return nil
 }
 
 //StopDatabase start the namespace by namespace.
@@ -239,7 +239,7 @@ func GetDBConsensusByNamespace(namespace string) (db.Database, error) {
 }
 
 func GetDatabaseHome(conf *common.Config) string {
-	dbType := conf.GetInt(hcom.DB_TYPE)
+	dbType := conf.GetString(hcom.DB_TYPE)
 	switch dbType {
 	case hcom.LDB_DB:
 		return hleveldb.LDBDataBasePath(conf)
@@ -250,19 +250,21 @@ func GetDatabaseHome(conf *common.Config) string {
 	}
 }
 
-func GetDatabaseType(conf *common.Config) int {
-	return conf.GetInt(hcom.DB_TYPE)
+func GetDatabaseType(conf *common.Config) string {
+	return conf.GetString(hcom.DB_TYPE)
 }
 
-func NewDatabase(conf *common.Config, dbname string, dbType int, namespace string) (db.Database, error) {
+func NewDatabase(conf *common.Config, dbname string, dbType string, namespace string) (db.Database, error) {
 	switch dbType {
 	case hcom.LDB_DB:
 		dbpath := path.Join(common.GetPath(namespace, conf.GetString(hcom.LEVEL_DB_ROOT_DIR)), dbname)
 		return hleveldb.NewLDBDataBase(conf, dbpath, namespace)
 	case hcom.SUPER_LEVEL_DB:
 		return sldb.NewSLDB(conf, dbname, namespace)
+	case hcom.CASSANDRA:
+		return cassandra.NewCassandra(conf, namespace)
 	default:
-		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
+		return nil, errors.New("Wrong dbType:" + dbType)
 	}
 }
 
