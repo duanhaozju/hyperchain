@@ -11,10 +11,8 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/namespace/rpc"
 	"sync"
-	"hyperchain/common/client"
 	"hyperchain/admittance"
-    "hyperchain/core/ledger/chain"
-    "hyperchain/service/executor/handler"
+	"hyperchain/service/executor/handler"
 )
 
 type executorService interface {

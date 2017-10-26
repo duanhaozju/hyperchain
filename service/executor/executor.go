@@ -9,7 +9,6 @@ import (
 	"hyperchain/service/executor/admin"
 	"hyperchain/service/executor/apiserver"
 	"hyperchain/service/executor/manager"
-    	"hyperchain/hyperdb"
 )
 
 type executorGlobal struct {
@@ -36,7 +35,7 @@ func newExecutorGlobal(argV *argT) *executorGlobal {
 	eg.exeMgr = manager.GetExecutorMgr(globalConfig, eg.stopFlag, eg.restartFlag)
 	eg.admin = admin.NewAdministrator(eg.exeMgr, globalConfig)
 
-	eg.apiServer = apiserver.GetAPIServer(eg.exeMgr,globalConfig)
+	eg.apiServer = apiserver.GetAPIServer(eg.exeMgr, globalConfig)
 	//TODO provides params to create a APIServer
 
 	return eg
