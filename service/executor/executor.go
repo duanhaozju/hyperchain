@@ -7,14 +7,14 @@ import (
 	"hyperchain/common"
 	"hyperchain/hyperdb"
 	"hyperchain/service/executor/admin"
-	"hyperchain/service/executor/apiserver"
 	"hyperchain/service/executor/manager"
+	"hyperchain/rpc"
 )
 
 type executorGlobal struct {
 	exeMgr      manager.ExecutorManager
 	admin       *admin.Administrator
-	apiServer   apiserver.APIServer
+	apiServer   jsonrpc.RPCServer
 	stopFlag    chan bool
 	restartFlag chan bool
 	args        *argT
@@ -33,9 +33,9 @@ func newExecutorGlobal(argV *argT) *executorGlobal {
 	hyperdb.InitDBMgr(globalConfig)
 
 	eg.exeMgr = manager.GetExecutorMgr(globalConfig, eg.stopFlag, eg.restartFlag)
-	eg.admin = admin.NewAdministrator(eg.exeMgr, globalConfig)
+	//eg.admin = admin.NewAdministrator(eg.exeMgr, globalConfig)
 
-	eg.apiServer = apiserver.GetAPIServer(eg.exeMgr,globalConfig)
+	eg.apiServer = jsonrpc.GetRPCServer(eg.exeMgr,globalConfig, true)
 	//TODO provides params to create a APIServer
 
 	return eg

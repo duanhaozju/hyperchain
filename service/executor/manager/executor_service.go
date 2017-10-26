@@ -285,7 +285,7 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 		},
 		"txdb":{
 			Svcname: "txdb",
-			Version: "1,5",
+			Version: "1.5",
 			Service: hapi.NewDBTransactionAPI(namespace, es.conf),
 			Public: true,
 		},
@@ -314,6 +314,7 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Svcname: "archive",
 			Version: "1.5",
 			Service: hapi.NewPublicArchiveAPI(namespace, es.conf),
+			Public:	 true,
 		},
 		//TODO: implements cert API for module2
 	}

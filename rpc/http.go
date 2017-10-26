@@ -33,15 +33,28 @@ type httpServerImpl struct {
 	config 		*common.Config
 	httpListener 	net.Listener
 	httpHandler  	*Server
+	forExe 		bool
 }
 
 // GetHttpServer creates and returns a new httpServerImpl instance implements internalRPCServer interface.
-func GetHttpServer(nsMgrProcessor intfc.NsMgrProcessor,config *common.Config) internalRPCServer {
-	if hs == nil {
-		hs = &httpServerImpl{
-			nsMgrProcessor: nsMgrProcessor,
-			port:   	config.GetInt(common.JSON_RPC_PORT),
-			config: 	config,
+func GetHttpServer(nsMgrProcessor intfc.NsMgrProcessor,config *common.Config, forExe bool) internalRPCServer {
+	if config.GetBool(common.EXECUTOR_EMBEDDED) && forExe{
+		if hs == nil {
+			hs = &httpServerImpl{
+				nsMgrProcessor: nsMgrProcessor,
+				port:   	config.GetInt(common.JSON_RPC_PORT_EXECUTOR),
+				config: 	config,
+				forExe: 	forExe,
+			}
+		}
+	}else {
+		if hs == nil {
+			hs = &httpServerImpl{
+				nsMgrProcessor: nsMgrProcessor,
+				port:        config.GetInt(common.JSON_RPC_PORT),
+				config:        config,
+				forExe:		forExe,
+			}
 		}
 	}
 	return hs
@@ -56,7 +69,7 @@ func (hsi *httpServerImpl) start() error {
 		err      error
 	)
 
-	handler := NewServer(hsi.nsMgrProcessor, hsi.config)
+	handler := NewServer(hsi.nsMgrProcessor, hsi.config, hsi.forExe)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", handler.admin.LoginServer)
