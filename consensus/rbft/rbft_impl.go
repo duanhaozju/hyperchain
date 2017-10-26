@@ -685,7 +685,8 @@ func (rbft *rbftImpl) recvFetchMissingTransaction(fetch *FetchMissingTransaction
 // Add these transactions to txPool and see if it has correct transactions.
 func (rbft *rbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction) consensusEvent {
 
-	rbft.logger.Debugf("Replica %d received returnMissingTransaction from replica %d", rbft.id, re.ReplicaId)
+	rbft.logger.Debugf("Replica %d received returnMissingTransaction for view=%d/seqNo=%d/digest=%s from replica %d",
+		rbft.id, re.View, re.SequenceNumber, re.BatchDigest, re.ReplicaId)
 
 	if len(re.TxList) != len(re.HashList) {
 		rbft.logger.Warningf("Replica %d received mismatch length return %v", rbft.id, re)
