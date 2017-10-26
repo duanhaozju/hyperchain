@@ -1,15 +1,16 @@
 package executor
 
 import (
+	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	pb "hyperchain/common/protos"
 	"hyperchain/common/service"
+	"hyperchain/common/service/server"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/manager/event"
-	"hyperchain/common/service/server"
 )
 
 type IExecutor interface {
@@ -52,6 +53,7 @@ type IExecutor interface {
 	FetchStateDb() vm.Database
 
 	Start() error
+
 	Stop() error
 }
 
@@ -61,23 +63,57 @@ type remoteExecutorProxy struct {
 	namespace string
 	is        *server.InternalServer
 	logger    *logging.Logger
+	conf      *common.Config
 }
 
 func NewRemoteExecutorProxy(is *server.InternalServer, config *common.Config) IExecutor {
 	rep := &remoteExecutorProxy{
 		is:        is,
 		namespace: config.GetString(common.NAMESPACE),
+		conf:      config,
 	}
 	rep.logger = common.GetLogger(rep.namespace, "executor")
 	return rep
 }
 
 func (re *remoteExecutorProxy) Start() error {
-	//TODO: wait until this namespace registered
-	return nil
+	executorHostAddr := re.conf.GetString(common.EXECUTOR_HOST_ADDR)
+	if len(executorHostAddr) == 0 {
+		return fmt.Errorf("No executor host addr found for this executor ")
+	}
+	adminSrv := re.is.ServerRegistry().AdminService(executorHostAddr)
+	if adminSrv == nil {
+		return fmt.Errorf("No executor admin found for %s ", executorHostAddr)
+	}
+
+	ane := event.AddNamespaceEvent{
+		Namespace: re.namespace,
+	}
+
+	payload, _ := proto.Marshal(&ane)
+
+	msg := &pb.IMessage{
+		Event:   pb.Event_AddNamespaceEvent,
+		Payload: payload,
+	}
+
+	err := adminSrv.Send(msg)
+	if err != nil {
+		return err
+	}
+
+	rsp := <-adminSrv.Response()
+	if rsp.Type == pb.Type_RESPONSE && rsp.Ok == true {
+		return nil
+	} else {
+		//TODO : parse error info  form rsp.Payload
+		return fmt.Errorf("Start executor failed, %v ", rsp.Payload)
+	}
 }
 
 func (re *remoteExecutorProxy) Validate(ve event.ValidationEvent) {
+	var err error
+	defer func() { re.handleError(err) }()
 	msg := &pb.IMessage{
 		Type:  pb.Type_EVENT,
 		From:  pb.FROM_EVENTHUB,
@@ -86,14 +122,16 @@ func (re *remoteExecutorProxy) Validate(ve event.ValidationEvent) {
 
 	payload, err := proto.Marshal(&ve)
 	if err != nil {
-		//TODO: handle error
+		return
 	}
 
 	msg.Payload = payload
-	re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
+	err = re.sendToExecutor(re.namespace, msg)
 }
 
 func (re *remoteExecutorProxy) CommitBlock(ce event.CommitEvent) {
+	var err error
+	defer func() { re.handleError(err) }()
 	msg := &pb.IMessage{
 		Type:  pb.Type_EVENT,
 		From:  pb.FROM_EVENTHUB,
@@ -102,104 +140,282 @@ func (re *remoteExecutorProxy) CommitBlock(ce event.CommitEvent) {
 
 	payload, err := proto.Marshal(&ce)
 	if err != nil {
-		//TODO: handle error
+		return
 	}
 
 	msg.Payload = payload
-	re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
+	err = re.sendToExecutor(re.namespace, msg)
 }
 
 func (re *remoteExecutorProxy) RunInSandBox(tx *types.Transaction, snapshotId string) error {
+	var err error
+	defer func() { re.handleError(err) }()
 
 	return nil
 }
 
 func (re *remoteExecutorProxy) Rollback(ev event.VCResetEvent) {
-    msg := &pb.IMessage{
-        Type:  pb.Type_EVENT,
-        From:  pb.FROM_EVENTHUB,
-        Event: pb.Event_VCResetEvent,
-    }
+	var err error
+	defer func() { re.handleError(err) }()
 
-    payload, err := proto.Marshal(&ev)
-    if err != nil {
-        //TODO: handle error
-    }
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_VCResetEvent,
+	}
 
-    msg.Payload = payload
-    re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
+	payload, err := proto.Marshal(&ev)
+	if err != nil {
+		return
+	}
+
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
 }
 
 func (re *remoteExecutorProxy) SyncChain(ev event.ChainSyncReqEvent) {
-    msg := &pb.IMessage{
-        Type:  pb.Type_EVENT,
-        From:  pb.FROM_EVENTHUB,
-        Event: pb.Event_VCResetEvent,
-    }
+	var err error
+	defer func() { re.handleError(err) }()
 
-    payload, err := proto.Marshal(&ev)
-    if err != nil {
-        //TODO: handle error
-    }
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_ChainSyncReqEvent,
+	}
 
-    msg.Payload = payload
-    re.is.ServerRegistry().Namespace(re.namespace).Service(service.EXECUTOR).Send(msg)
+	payload, err := proto.Marshal(&ev)
+	if err != nil {
+		return
+	}
+
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
 }
 
 func (re *remoteExecutorProxy) Snapshot(ev event.SnapshotEvent) {
+	var err error
+	defer func() { re.handleError(err) }()
 
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_SnapshotEvent,
+	}
+
+	payload, err := proto.Marshal(&ev)
+	if err != nil {
+		return
+	}
+
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
 }
 
 func (re *remoteExecutorProxy) DeleteSnapshot(ev event.DeleteSnapshotEvent) {
+	var err error
+	defer func() { re.handleError(err) }()
 
+	//TODO: refactor this method
+	//
+	//msg := &pb.IMessage{
+	//	Type: pb.Type_EVENT,
+	//	From: pb.FROM_EVENTHUB,
+	//	Event:pb.Event_SnapshotEvent,
+	//}
+	//
+	//payload, err := proto.Marshal(&ev)
+	//if err != nil {
+	//	return
+	//}
+	//
+	//msg.Payload = payload
+	//err = re.sendToExecutor(re.namespace, msg)
 }
 
 func (re *remoteExecutorProxy) Archive(event event.ArchiveEvent) {
+	var err error
+	defer func() { re.handleError(err) }()
 
+	//TODO: refactor this event
 }
 
 func (re *remoteExecutorProxy) StoreInvalidTransaction(payload []byte) {
-
+	var err error
+	defer func() { re.handleError(err) }()
+	//wait for store successful ?
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_StoreInvalidTransactionEvent,
+	}
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
 }
 
 func (re *remoteExecutorProxy) ReceiveReplicaInfo(payload []byte) {
+	var err error
+	defer func() { re.handleError(err) }()
 
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_ReceiveReplicaInfoEvent,
+	}
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
 }
 
 func (re *remoteExecutorProxy) ReceiveSyncBlocks(payload []byte) {
+	var err error
+	defer func() { re.handleError(err) }()
 
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_ReceiveSyncBlocksEvent,
+	}
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
 }
 
 func (re *remoteExecutorProxy) GetNVP() NVP {
+	//TODO: nvp?
 	return nil
 }
 
 func (re *remoteExecutorProxy) ReceiveSyncRequest(payload []byte) {
-
+	var err error
+	defer func() { re.handleError(err) }()
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_ReceiveSyncRequestEvent,
+	}
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
 }
 
 func (re *remoteExecutorProxy) ReceiveWorldStateSyncRequest(payload []byte) {
+	var err error
+	defer func() { re.handleError(err) }()
 
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_ReceiveWorldStateSyncRequestEvent,
+	}
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
 }
 
 func (re *remoteExecutorProxy) ReceiveWorldState(payload []byte) {
+	var err error
+	defer func() { re.handleError(err) }()
 
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_ReceiveWorldStateEvent,
+	}
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
 }
 
 func (re *remoteExecutorProxy) ReceiveWsHandshake(payload []byte) {
+	var err error
+	defer func() { re.handleError(err) }()
 
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_ReceiveWsHandshakeEvent,
+	}
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
 }
 
-func (re *remoteExecutorProxy) ReceiveWsAck(payload []byte) {}
+func (re *remoteExecutorProxy) ReceiveWsAck(payload []byte) {
+	var err error
+	defer func() { re.handleError(err) }()
+
+	msg := &pb.IMessage{
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_ReceiveWsAckEvent,
+	}
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
+}
 
 func (re *remoteExecutorProxy) CreateInitBlock(config *common.Config) error {
+	var err error
+	defer func() { re.handleError(err) }()
+	err = fmt.Errorf("Executor run in distributed mode, should not invoke CreateInitBlock this method! ")
 	return nil
 }
 
 func (re *remoteExecutorProxy) FetchStateDb() vm.Database {
+	var err error
+	defer func() { re.handleError(err) }()
+	err = fmt.Errorf("Executor run in distributed mode, should not invoke FetchStateDb this method! ")
 	return nil
 }
 
 func (re *remoteExecutorProxy) Stop() error {
+	var err error
+	defer func() { re.handleError(err) }()
+	executorHostAddr := re.conf.GetString(common.EXECUTOR_HOST_ADDR)
+	if len(executorHostAddr) == 0 {
+		return fmt.Errorf("No executor host addr found for this executor ")
+	}
+	adminSrv := re.is.ServerRegistry().AdminService(executorHostAddr)
+	if adminSrv == nil {
+		return fmt.Errorf("No executor admin found for %s ", executorHostAddr)
+	}
+
+	ane := event.DeleteNamespaceEvent{
+		Namespace: re.namespace,
+	}
+
+	payload, _ := proto.Marshal(&ane)
+
+	msg := &pb.IMessage{
+		Event:   pb.Event_DeleteNamespaceEvent,
+		Payload: payload,
+	}
+
+	err = adminSrv.Send(msg)
+	if err != nil {
+		return err
+	}
+
+	rsp := <-adminSrv.Response()
+	if rsp.Type == pb.Type_RESPONSE && rsp.Ok == true {
+		return nil
+	} else {
+		//TODO : parse error info  form rsp.Payload
+		return fmt.Errorf("Start executor failed, %v ", rsp.Payload)
+	}
 	return nil
+}
+
+//sendToExecutor send message to executor by namespace.
+func (re *remoteExecutorProxy) sendToExecutor(namespace string, msg *pb.IMessage) error {
+
+	ns := re.is.ServerRegistry().Namespace(namespace)
+	if ns == nil {
+		return fmt.Errorf("No services found for namespace %s ", namespace)
+	}
+
+	srv := ns.Service(service.EXECUTOR)
+	if srv == nil {
+		return fmt.Errorf("No service found for %s ", service.EXECUTOR)
+	}
+
+	return srv.Send(msg)
+}
+
+//handleError handle all kind of errors here.
+func (re *remoteExecutorProxy) handleError(err error) {
+	re.logger.Error(err)
 }

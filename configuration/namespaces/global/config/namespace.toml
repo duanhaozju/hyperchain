@@ -82,17 +82,23 @@ algo = "RBFT"
 #
 # database configuration section
 # db type:
-# LEVEL_DB          #      0001
-# SUPER_LEVEL_DB    #      0010
+# LEVEL_DB          #      "leveldb"
+# SUPER_LEVEL_DB    #      "super_leveldb"
+# CASSANDRA         #      "cassandra"
 #
 ############################################################################################################
 [database]
-    type = 0001
+    type = "leveldb"
     [database.leveldb]
     root_dir    = "data/leveldb" #leveldb table root dir
     log_status  = false
     log_path    = "data/db.log"
 
+   [database.cassabdra]
+    node_num    = 3
+    ip_port_1   = "172.16.0.11"
+    ip_port_2   = "172.16.0.12"
+    ip_port_3   = "172.16.0.14"
 
 ############################################################################################################
 #
@@ -101,6 +107,8 @@ algo = "RBFT"
 ############################################################################################################
 [executor]
     embedded = false # whether executor execute in a standlone mode
+    [executor.host]
+    addr = "127.0.0.1:50071"
 
     [executor.syncer]
     max_block_fetch         = 50

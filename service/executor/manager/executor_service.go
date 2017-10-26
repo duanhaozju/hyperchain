@@ -4,8 +4,10 @@ import (
 	"github.com/op/go-logging"
 	hapi "hyperchain/api"
 	"hyperchain/common"
+	"hyperchain/common/client"
 	pb "hyperchain/common/protos"
 	"hyperchain/core/executor"
+	"hyperchain/core/ledger/chain"
 	"hyperchain/hyperdb"
 	"hyperchain/namespace/rpc"
 	"sync"
@@ -125,10 +127,6 @@ func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
 func (es *executorServiceImpl) init() error {
 	es.logger.Criticalf("Init executor service for namespace %s", es.namespace)
 
-	//adjust: adjust the init sequence to finish test.
-	// 5. add jsonrpc processor
-	//TODO: adjust back
-	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace))
 
 	// 1. init DB for current executor service.
 	err := chain.InitExecutorDBForNamespace(es.conf, es.namespace)
@@ -145,7 +143,6 @@ func (es *executorServiceImpl) init() error {
 	}
 	es.service = service
 
-
 	// 3. initial executor
 	executor, err := executor.NewExecutor(es.namespace, es.conf, nil, nil, es.service)
 	if err != nil {
@@ -155,8 +152,8 @@ func (es *executorServiceImpl) init() error {
 	executor.CreateInitBlock(es.conf)
 	es.executor = executor
 
-    h := handler.New(executor)
-    service.AddHandler(h)
+	h := handler.New(executor)
+	service.AddHandler(h)
 
 	// 4. add jsonrpc processor
 	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace))
@@ -171,18 +168,18 @@ func (es *executorServiceImpl) Start() error {
 	es.logger.Noticef("Try to start executor service for namespace: %s", es.namespace)
 
 	state := es.status.getState()
-    if state < initialized {
-        err := es.init()
-        if err != nil {
-            es.logger.Errorf("Executor service for namespace %s initialization failed %v", es.namespace, err)
-            return err
-        }
-    }
+	if state < initialized {
+		err := es.init()
+		if err != nil {
+			es.logger.Errorf("Executor service for namespace %s initialization failed %v", es.namespace, err)
+			return err
+		}
+	}
 
-    if es.status.getState() == running {
-        es.logger.Errorf("Executor service for namespace %s is already running", es.namespace)
-        return nil
-    }
+	if es.status.getState() == running {
+		es.logger.Errorf("Executor service for namespace %s is already running", es.namespace)
+		return nil
+	}
 
 	// 1. start executor and service client
 	//err = hyperdb.StartDatabase(es.conf, es.namespace)
@@ -233,11 +230,11 @@ func (es *executorServiceImpl) Start() error {
 
 func (es *executorServiceImpl) Stop() error {
 	es.logger.Noticef("try to stop namespace: %s", es.namespace)
-    state := es.status.getState()
-    if state != running {
-        es.logger.Criticalf("Executor service for namespace: %s not running now, need not to stop", es.namespace)
-        return nil
-    }
+	state := es.status.getState()
+	if state != running {
+		es.logger.Criticalf("Executor service for namespace: %s not running now, need not to stop", es.namespace)
+		return nil
+	}
 
 	// 1. stop executor.
 	err := es.executor.Stop()

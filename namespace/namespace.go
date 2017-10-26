@@ -237,7 +237,7 @@ func (ns *namespaceImpl) init() error {
 	ns.am = am
 
 	// 6. init Executor to validate and commit block.
-	ns.logger.Errorf("executor embedded %v", ns.conf.GetBool(common.EXECUTOR_EMBEDDED))
+	ns.logger.Debugf("executor embedded %v", ns.conf.GetBool(common.EXECUTOR_EMBEDDED))
 	if ns.conf.GetBool(common.EXECUTOR_EMBEDDED) {
 		er, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, nil)
 		if err != nil {
@@ -302,6 +302,7 @@ func (ns *namespaceImpl) Start() error {
     // 3. start executor
     err := ns.executor.Start()
     if err != nil {
+    	ns.logger.Error(err)
         return err
     }
 

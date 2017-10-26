@@ -11,7 +11,6 @@ import (
 // invokeRbftLocal helps wrapper event to consensus event type and then
 // invoke consensus module.
 func (hub *EventHub) invokeRbftLocal(serviceType, eventType int, content interface{}) {
-    fmt.Println("invokeRbftLocal")
 	e := &rbft.LocalEvent{
 		Service:   serviceType,
 		EventType: eventType,

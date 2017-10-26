@@ -38,7 +38,7 @@ import (
 
 var logger *logging.Logger
 
-func init()  {
+func init() {
 	logger = common.GetLogger(common.DEFAULT_LOG, "nsmgr")
 }
 
@@ -229,7 +229,10 @@ func (nr *nsManagerImpl) init() error {
 			}
 			// only register namespace whose name has been set true
 			// in config file.
-			nr.Register(name)
+			if err := nr.Register(name); err != nil {
+				logger.Error(err)
+				return err
+			}
 		} else {
 			logger.Errorf("Invalid folder %v", d)
 		}
@@ -254,6 +257,12 @@ func (nr *nsManagerImpl) Start() error {
 		return nil
 	}
 
+	if !nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
+		logger.Criticalf("waitting for executor admin to connect ...")
+		//TODO: add timeout detect
+		admin := <-nr.is.AdminRegister()
+		logger.Criticalf("executor admin at %v connected", admin)
+	}
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	for name := range nr.namespaces {
@@ -264,7 +273,7 @@ func (nr *nsManagerImpl) Start() error {
 			}
 		}(name)
 	}
-	if nr.conf.GetBool(common.C_JVM_START) == true && nr.conf.GetBool(common.EXECUTOR_EMBEDDED){
+	if nr.conf.GetBool(common.C_JVM_START) == true && nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
 		if err := nr.jvmManager.Start(); err != nil {
 			logger.Error(err)
 			return err
@@ -351,7 +360,6 @@ func (nr *nsManagerImpl) Register(name string) error {
 	}
 	delFlag := make(chan bool)
 	ns, err := GetNamespace(name, nsConfig, delFlag, nr.is)
-	logger.Error(nr.is == nil)
 	if nr.conf.GetBool(common.EXECUTOR_EMBEDDED) == false {
 		nr.is.RegisterLocal(ns.LocalService()) // register local service
 	}
@@ -360,10 +368,13 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return ErrCannotNewNs
 	}
 	nr.addNamespace(ns)
-	if err := nr.bloomFilter.Register(name); err != nil {
-		logger.Error("register bloom filter failed", err.Error())
-		return err
+	if nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
+		if err := nr.bloomFilter.Register(name); err != nil {
+			logger.Error("register bloom filter failed", err.Error())
+			return err
+		}
 	}
+
 	if err = updateNamespaceStartConfig(name, nr.conf); err != nil {
 		logger.Criticalf("Update namespace start for [%s] config failed", name)
 	}
@@ -452,10 +463,11 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 			ns.Stop() //start failed, try to stop some started components
 			return err
 		} else {
-			nr.jvmManager.ledgerProxy.RegisterDB(name, ns.GetExecutor().FetchStateDb())
+			if nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
+				nr.jvmManager.ledgerProxy.RegisterDB(name, ns.GetExecutor().FetchStateDb())
+			}
 			return nil
 		}
-
 	}
 	logger.Errorf("No namespace instance for %s found", name)
 	return ErrInvalidNs

@@ -301,6 +301,9 @@ fs__generate_node_peer_configs(){
     fi
     cp -rf  ${GOPATH}/src/hyperchain/configuration/peerconfigs/cert${ni}/* ./namespaces/global/config/certs/
     cp -rf  ${GOPATH}/src/hyperchain/configuration/tls ./
+    cp  ${GOPATH}/src/hyperchain/configuration/tls/tls_peer${ni}.cert ./tls/tls_peer.cert
+    cp  ${GOPATH}/src/hyperchain/configuration/tls/tls_peer${ni}.priv ./tls/tls_peer.priv
+    cp  ${GOPATH}/src/hyperchain/configuration/tls/tlsca.ca ./tls/tlsca.ca
     mkdir ./bin
     cp ${GOPATH}/src/hyperchain/scripts/sub_scripts/start.sh ./bin
     ((ni+=1))
