@@ -42,15 +42,18 @@ func (chains *remoteMemChains) GetChain(namespace string) *memChain {
 	s := chains.is.ServerRegistry().Namespace(namespace).Service(service.EXECUTOR)
 	s.Send(msg)
 	respMsg := <-s.Response()
-	if respMsg.Type == pb.Type_RESPONSE {
-		chain := &types.MemChain{}
-		proto.Unmarshal(respMsg.Payload, chain)
-		memChain := &memChain{}
-		memChain.data = *chain.Data
-		memChain.cpChan <- *chain.CpChan
-		memChain.txDelta = chain.TxDelta
-		return memChain
-	}
+    if respMsg.Type == pb.Type_RESPONSE || respMsg.Ok == true {
+        chain := &types.MemChain{}
+        proto.Unmarshal(respMsg.Payload, chain)
+        memChain := &memChain{}
+        memChain.data = *chain.Data
+        //memChain.cpChan <- *chain.CpChan
+        memChain.txDelta = chain.TxDelta
+        return memChain
+    } else {
+        logger(namespace).Errorf("get remote chain err")
+    }
+
 	return nil
 }
 
@@ -66,3 +69,4 @@ func InitializeRemoteChain(is *server.InternalServer, namespace string) {
         chains = NewRemoteMemChains(is)
 	})
 }
+

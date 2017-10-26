@@ -59,10 +59,10 @@ var (
 
 func GetMemChain(namespace string) *types.MemChain {
     chain := chains.(*memChains).chains[namespace]
-    cpChan := <-chain.cpChan
+    //cpChan := <-chain.cpChan
     memChain := &types.MemChain{
         Data: &chain.data,
-        CpChan: &cpChan,
+        //CpChan: &cpChan,
         TxDelta: chain.txDelta,
     }
     return memChain

@@ -203,7 +203,7 @@ func (sc *ServiceClient) listenProcessMsg() {
 			}
 			if msg != nil {
 				sc.msgRecv <- msg
-			}
+            }
 		}
 	}()
 
@@ -214,25 +214,24 @@ func (sc *ServiceClient) listenProcessMsg() {
 			select {
 			case msg := <-sc.msgRecv:
 				if sc.h == nil {
-					sc.logger.Debug("No handler to handle message: %v")
+					sc.logger.Debugf("No handler to handle message: %v", msg)
 				} else {
                     if msg.Type == pb.Type_RESPONSE {
-                        if msg.Type == pb.Type_RESPONSE {
-                            ns := string(msg.Payload)
-                            m := chain.GetMemChain(ns)
-                            payload, err := proto.Marshal(m)
-                            if err != nil {
-                                sc.logger.Error(err)
-                                return
-                            }
-                            msg := &pb.IMessage{
-                                Type:  pb.Type_RESPONSE,
-                                From:  pb.FROM_EXECUTOR,
-                                Payload: payload,
-                            }
-                            sc.client.Send(msg)
+                        ns := string(msg.Payload)
+                        m := chain.GetMemChain(ns)
+
+                        payload, err := proto.Marshal(m)
+                        if err != nil {
+                            sc.logger.Error(err)
                             return
                         }
+                        msg := &pb.IMessage{
+                            Type:  pb.Type_RESPONSE,
+                            From:  pb.FROM_EXECUTOR,
+                            Ok: true,
+                            Payload: payload,
+                        }
+                        sc.client.Send(msg)
                     } else {
                         sc.h.Handle(msg)
                     }

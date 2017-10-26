@@ -47,6 +47,7 @@ func InitDBForNamespace(conf *common.Config, namespace string, is *server.Intern
     if conf.GetBool(common.EXECUTOR_EMBEDDED) {
         InitializeChain(namespace)
     } else {
+        logger(namespace).Criticalf("InitializeRemoteChain")
         InitializeRemoteChain(is, namespace)
     }
 	return err
