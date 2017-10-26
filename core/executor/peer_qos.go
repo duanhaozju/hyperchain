@@ -14,10 +14,12 @@
 package executor
 
 import (
-	"github.com/op/go-logging"
-	"hyperchain/common"
 	"math"
 	"sync"
+
+	"hyperchain/common"
+
+	"github.com/op/go-logging"
 )
 
 // Peer qos (Quality of Service) statistic implementation

@@ -14,10 +14,11 @@
 package executor
 
 import (
-	"hyperchain/common"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"hyperchain/common"
 )
 
 // ExecutorContext a collection of all executor status.

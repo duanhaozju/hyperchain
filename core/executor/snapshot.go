@@ -21,19 +21,21 @@
 package executor
 
 import (
-	"github.com/op/go-logging"
-	"hyperchain/common"
-	cm "hyperchain/core/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/ledger/state"
-	"hyperchain/hyperdb"
-	"hyperchain/manager/event"
 	"os"
 	cmd "os/exec"
 	"path"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"hyperchain/common"
+	cm "hyperchain/core/common"
+	edb "hyperchain/core/ledger/chain"
+	"hyperchain/core/ledger/state"
+	"hyperchain/hyperdb"
+	"hyperchain/manager/event"
+
+	"github.com/op/go-logging"
 )
 
 // Snapshot creates a state snapshot in the specified block height.

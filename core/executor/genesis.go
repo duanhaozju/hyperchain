@@ -14,6 +14,10 @@
 package executor
 
 import (
+	"math/big"
+	"strconv"
+	"time"
+
 	"hyperchain/common"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/core/ledger/state"
@@ -21,9 +25,6 @@ import (
 	"hyperchain/core/vm"
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
-	"math/big"
-	"strconv"
-	"time"
 )
 
 // CreateInitBlock creates genesis block for a specific namespace.

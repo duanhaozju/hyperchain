@@ -14,7 +14,8 @@
 package executor
 
 import (
-	"github.com/op/go-logging"
+	"path"
+
 	"hyperchain/common"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/core/ledger/state"
@@ -24,7 +25,8 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/hyperdb/db"
 	"hyperchain/manager/event"
-	"path"
+
+	"github.com/op/go-logging"
 )
 
 // Executor represents a hyperchain executor implementation

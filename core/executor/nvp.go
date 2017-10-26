@@ -15,17 +15,19 @@ package executor
 
 import (
 	"encoding/hex"
-	"github.com/golang/protobuf/proto"
-	"github.com/op/go-logging"
-	"hyperchain/common"
-	er "hyperchain/core/errors"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
 	"math"
 	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
+
+	"hyperchain/common"
+	er "hyperchain/core/errors"
+	"hyperchain/core/ledger/chain"
+	"hyperchain/core/types"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
 )
 
 // TransitVerifiedBlock transits a verified block to non-verified peers.
@@ -42,6 +44,7 @@ func (executor *Executor) TransitVerifiedBlock(block *types.Block) {
 	Non-Verifying Peer
 */
 
+// nvp implements the NonVerifyingPeer interface.
 type nvp struct {
 	lock         sync.Mutex
 	executor     *Executor
@@ -51,6 +54,7 @@ type nvp struct {
 	resendExit   chan struct{}
 }
 
+// NewNVPImpl creates the nvp object.
 func NewNVPImpl(executor *Executor, localhash string) *nvp {
 	return &nvp{
 		demandNumber: chain.GetChainCopy(executor.namespace).Height + 1,
@@ -86,6 +90,7 @@ func (nvp *nvp) ReceiveBlock(payload []byte) {
 	}
 }
 
+// ReceiveConsult
 func (nvp *nvp) ReceiveConsult(payload []byte, n int) {
 	nvp.logger.Debugf("receive consult reply, max reply number %d", n)
 	if nvp.getSyncContext() == nil {

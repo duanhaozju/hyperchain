@@ -198,7 +198,7 @@ func (TH *TestHelp) Execute(seqNo uint64, hashS string, flag bool, isPrimary boo
 		Transactions: vtx.Transactions,
 		Number:       vtx.SeqNo,
 	}
-	if err, _ := edb.PersistBlock(batch, block, false, false); err != nil {
+	if _, err := edb.PersistBlock(batch, block, false, false); err != nil {
 		TH.rbft.logger.Errorf("persist block #%d into database failed.", block.Number, err.Error())
 		return nil
 	}

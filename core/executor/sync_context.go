@@ -14,15 +14,16 @@
 package executor
 
 import (
-	edb "hyperchain/core/ledger/chain"
+	"sync/atomic"
+
+	"hyperchain/core/ledger/chain"
 	"hyperchain/manager/event"
+	"hyperchain/common"
+	com "hyperchain/core/common"
 
 	"github.com/cheggaaa/pb"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
-	"hyperchain/common"
-	com "hyperchain/core/common"
-	"sync/atomic"
 )
 
 // PartPeer refers peers who don't have full request blocks.
@@ -122,7 +123,7 @@ type chainSyncContext struct {
 func newChainSyncContext(namespace string, event event.ChainSyncReqEvent, config *common.Config, logger *logging.Logger) *chainSyncContext {
 	var fullPeers []uint64
 	var partPeers []PartPeer
-	curHeight := edb.GetHeightOfChain(namespace)
+	curHeight := chain.GetHeightOfChain(namespace)
 	target := event.TargetHeight
 	for _, r := range event.Replicas {
 		if r.Genesis <= curHeight {
@@ -149,7 +150,7 @@ func newChainSyncContext(namespace string, event event.ChainSyncReqEvent, config
 	ctx.demandBlockNum = event.TargetHeight
 	ctx.demandBlockHash = event.TargetBlockHash
 	ctx.tempDownstream = event.TargetHeight
-	ctx.initProgres(BlockReceiveProgress, int64(event.TargetHeight-edb.GetHeightOfChain(namespace)), "block-collection")
+	ctx.initProgres(BlockReceiveProgress, int64(event.TargetHeight-chain.GetHeightOfChain(namespace)), "block-collection")
 
 	// assign world state transition related
 	ctx.updateGenesis = (len(fullPeers) == 0)

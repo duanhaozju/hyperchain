@@ -15,13 +15,15 @@ package executor
 
 import (
 	"encoding/binary"
-	"github.com/golang/protobuf/proto"
+	"reflect"
+
 	er "hyperchain/core/errors"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
-	"reflect"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // Helper implements the helper mux used in communication.

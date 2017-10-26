@@ -17,7 +17,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/golang/protobuf/proto"
+	"io/ioutil"
+	"os"
+	cmd "os/exec"
+	"path"
+	"path/filepath"
+	"sync/atomic"
+	"time"
+
 	"hyperchain/common"
 	cm "hyperchain/core/common"
 	"hyperchain/core/ledger/bloom"
@@ -27,13 +34,8 @@ import (
 	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
-	"io/ioutil"
-	"os"
-	cmd "os/exec"
-	"path"
-	"path/filepath"
-	"sync/atomic"
-	"time"
+
+	"github.com/golang/protobuf/proto"
 )
 
 /*
@@ -110,7 +112,7 @@ func (executor *Executor) syncChainResendBackend() {
 				if curUp == up && curDown == down {
 					executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.context.syncCtx.demandBlockNum)
 					executor.context.syncCtx.qosStat.feedBack(false)
-					executor.context.syncCtx.setCurrentPeer(executor.context.syncCtx.qosStat.SelectPeer())
+					executor.context.syncCtx.setCurrentPeer(executor.context.syncCtx.qosStat.selectPeer())
 					executor.SendSyncRequest(executor.context.syncCtx.demandBlockNum, down)
 					executor.context.syncCtx.recordRequest(curUp, curDown)
 				} else {
@@ -172,7 +174,7 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 	// Send block request.
 	reqNext := func(isbatch bool) {
 		executor.context.syncCtx.qosStat.feedBack(true)
-		executor.context.syncCtx.setCurrentPeer(executor.context.syncCtx.qosStat.SelectPeer())
+		executor.context.syncCtx.setCurrentPeer(executor.context.syncCtx.qosStat.selectPeer())
 		if isbatch {
 			executor.context.syncCtx.updateProgress(BlockReceiveProgress, int64(executor.conf.GetSyncMaxBatchSize()), 0)
 		}
