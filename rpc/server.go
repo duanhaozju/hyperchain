@@ -45,14 +45,14 @@ type Server struct {
 }
 
 // NewServer will create a new server instance with no registered handlers.
-func NewServer(np intfc.NsMgrProcessor, config *common.Config) *Server {
+func NewServer(np intfc.NsMgrProcessor, config *common.Config, forExe bool) *Server {
 	server := &Server{
 		codecs:         set.New(),
 		run:            1,
 		nsMgrProcessor: np,
 		requestMgr:     make(map[string]*RequestManager),
 	}
-	server.admin = admin.NewAdministrator(np, config)
+	server.admin = admin.NewAdministrator(np, config, forExe)
 	return server
 }
 

@@ -72,6 +72,7 @@ func GetExecutorMgr(conf *common.Config, stopEm chan bool, restartEM chan bool) 
 
 func (em *ecManagerImpl) Start(namespace string) error {
 	configRootDir := em.conf.GetString(NS_CONFIG_DIR_ROOT)
+	logger.Critical("namespace configRootDir:", configRootDir)
 	if configRootDir == "" {
 		return errors.New("Namespace config root dir is not valid ")
 	}

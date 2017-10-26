@@ -196,7 +196,6 @@ func (es *executorServiceImpl) Start() error {
 
 	//append: to satisfy apiserver tests.
 	es.status.setState(running)
-	logger.Critical(es.status.getState())
 
     //es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
 
@@ -284,20 +283,20 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Service: hapi.NewPublicBlockAPI(namespace),
 			Public:  true,
 		},
-		"tx":{
-			Svcname: "tx",
-			Version: "1,5",
+		"txdb":{
+			Svcname: "txdb",
+			Version: "1.5",
 			Service: hapi.NewDBTransactionAPI(namespace, es.conf),
 			Public: true,
 		},
-		"account": {
-			Svcname: "account",
+		"accountdb": {
+			Svcname: "accountdb",
 			Version: "1.5",
 			Service: hapi.NewPublicAccountExecutorAPI(namespace, es.conf),
 			Public:  true,
 		},
-		"contract": {
-			Svcname: "contract",
+		"contractExe": {
+			Svcname: "contractExe",
 			Version: "1.5",
 			Service: hapi.NewContarctExAPI(namespace, es.conf),
 			Public:  true,
@@ -315,7 +314,9 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Svcname: "archive",
 			Version: "1.5",
 			Service: hapi.NewPublicArchiveAPI(namespace, es.conf),
+			Public:	 true,
 		},
+		//TODO: implements cert API for module2
 	}
 }
 
