@@ -47,11 +47,24 @@ enum Event {
     DeleteNamespaceEvent = 1;
     AdminResponseEvent = 2;
 
-    // 1.Executor event
+    //2.Executor event
     VCResetEvent = 3;
     ValidationEvent = 4;
     CommitEvent = 5;
     ChainSyncReqEvent = 6;
     ExecutorToP2PEvent = 7;
     ExecutorToConsensusEvent = 8;
+    SnapshotEvent = 9;
+    DeleteSnapshotEvent = 10;
+
+    //3.Self defined event
+    StoreInvalidTransactionEvent = 11;
+    ReceiveReplicaInfoEvent = 12;
+    ReceiveSyncBlocksEvent = 13;
+    ReceiveSyncRequestEvent = 14;
+    ReceiveWorldStateSyncRequestEvent = 15;
+    ReceiveWorldStateEvent = 16;
+    ReceiveWsHandshakeEvent = 17;
+    ReceiveWsAckEvent = 18;
+
 }
