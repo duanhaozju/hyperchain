@@ -11,7 +11,7 @@ import (
 
 func TestGetStatus(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()

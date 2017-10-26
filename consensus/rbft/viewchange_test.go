@@ -77,7 +77,7 @@ func getTestViewChange() (vc *ViewChange) {
 
 func TestNewVcManager(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -93,7 +93,7 @@ func TestNewVcManager(t *testing.T) {
 
 func TestNewViewTimer(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -1440,7 +1440,7 @@ func TestAssignSequenceNumbers(t *testing.T) {
 
 func TestRecvFetchRequestBatch(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -1478,7 +1478,7 @@ func TestRecvFetchRequestBatch(t *testing.T) {
 
 func TestRecvReturnRequestBatch(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
