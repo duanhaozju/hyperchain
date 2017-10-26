@@ -173,7 +173,7 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 	//check if this viewchange has stored in viewChangeStore
 	//if so,return nil
 	if old, ok := rbft.vcMgr.viewChangeStore[vcidx{vc.Basis.View, vc.Basis.ReplicaId}]; ok {
-		if reflect.DeepEqual(old, vc) {
+		if reflect.DeepEqual(old.Basis, vc.Basis) {
 			rbft.logger.Warningf("Replica %d already has a repeated view change message"+
 				" for view %d from replica %d, replcace it", rbft.id, vc.Basis.View, vc.Basis.ReplicaId)
 			return nil

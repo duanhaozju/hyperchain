@@ -951,6 +951,7 @@ func (rbft *rbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 
 	if !rbft.in(inViewChange) && rbft.isPrimary(rbft.id) &&
 		!rbft.inOne(inNegotiateView, inRecovery) {
+		rbft.restartBatchTimer()
 		rbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
 		rbft.primaryValidateBatch(reqBatch.BatchHash, txBatch, 0)
 	} else {

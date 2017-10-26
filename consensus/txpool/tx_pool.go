@@ -395,6 +395,7 @@ func newTxPoolImpl(namespace string, poolsize int, queue *event.TypeMux, batchsi
 
 // primaryAddNewTx enqueues a single new transaction into the pool with check pool size and batch size.
 func (pool *txPoolImpl) primaryAddNewTx(tx *types.Transaction, checkPool bool) (bool, error) {
+	pool.logger.Errorf("Primary adds a transaction, checkPool: %v", checkPool)
 	if checkPool {
 		if pool.IsPoolFull() {
 			pool.logger.Warningf("Reach the upper limit of txPool")
@@ -428,6 +429,7 @@ func (pool *txPoolImpl) primaryAddNewTx(tx *types.Transaction, checkPool bool) (
 
 // replicaAddNewTx enqueues a single new transaction into the pool with check pool size, but don't generate a new batch
 func (pool *txPoolImpl) replicaAddNewTx(tx *types.Transaction, checkPool bool) (bool, error) {
+	pool.logger.Errorf("Replica adds a transaction, checkPool: %v", checkPool)
 	if checkPool {
 		if pool.IsPoolFull() {
 			pool.logger.Warningf("Reach the upper limit of txPool")
