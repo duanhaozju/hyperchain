@@ -14,10 +14,10 @@
 package executor
 
 import (
-	"hyperchain/core/ledger/chain"
-	"hyperchain/hyperdb/db"
-	"hyperchain/manager/event"
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/manager/protos"
 )
 
 // Rollback is called by manager to reset blockchain to a stable checkpoint status when `viewchange` occurs.

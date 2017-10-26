@@ -1,12 +1,12 @@
 package p2p
 
 import (
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/info"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/terasum/viper"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/info"
-	"hyperchain/p2p/utils"
 )
 
 var _ = Describe("PeersPool", func() {

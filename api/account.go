@@ -4,9 +4,9 @@ package api
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/manager"
 )
 
 // This file implements the handler of Account service API which

@@ -18,9 +18,9 @@ package evm
 import (
 	"math/big"
 
-	"hyperchain/common"
-	"hyperchain/core/vm/evm/params"
-	"hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/vm/evm/params"
+	"github.com/hyperchain/hyperchain/crypto"
 )
 
 // PrecompiledAccount represents a native hyperchain contract

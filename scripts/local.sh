@@ -223,7 +223,7 @@ f_sleep(){
 # system type
 _SYSTYPE="MAC"
 
-PROJECT_PATH="${GOPATH}/src/hyperchain"
+PROJECT_PATH="${GOPATH}/src/github.com/hyperchain/hyperchain"
 
 # work path
 CURRENT_PATH=`pwd`

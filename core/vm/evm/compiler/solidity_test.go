@@ -22,7 +22,7 @@ import (
 	"path"
 	"testing"
 
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 const solcVersion = "0.1.1"

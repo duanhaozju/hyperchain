@@ -1,9 +1,9 @@
 package hts
 
 import (
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/p2p/hts/secimpl"
 	"github.com/stretchr/testify/assert"
-	"hyperchain/crypto"
-	"hyperchain/p2p/hts/secimpl"
 	"testing"
 )
 

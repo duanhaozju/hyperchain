@@ -7,12 +7,12 @@ import (
 	"path"
 	"strings"
 
-	"hyperchain/common"
-	cm "hyperchain/core/common"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/core/ledger/state"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/common"
+	cm "github.com/hyperchain/hyperchain/core/common"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 )
 
 var (

@@ -5,13 +5,13 @@ package api
 
 import (
 	"fmt"
-	"hyperchain/accounts"
-	"hyperchain/common"
-	"hyperchain/core"
+	"github.com/hyperchain/hyperchain/accounts"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core"
 
-	"hyperchain/crypto"
-	"hyperchain/hyperdb"
-	"hyperchain/manager"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/manager"
 	"testing"
 )
 

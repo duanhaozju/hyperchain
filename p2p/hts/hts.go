@@ -94,11 +94,11 @@ package hts
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/hts/secimpl"
 	"github.com/pkg/errors"
 	"github.com/terasum/viper"
-	"hyperchain/common"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/hts/secimpl"
 )
 
 type HTS struct {

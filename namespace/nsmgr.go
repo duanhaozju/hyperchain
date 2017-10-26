@@ -7,9 +7,9 @@ package namespace
 import (
 	"errors"
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/bloom"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/core/ledger/bloom"
 	"io/ioutil"
 	"os"
 	"strings"

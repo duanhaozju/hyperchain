@@ -13,7 +13,7 @@
 // limitations under the License.
 
 syntax="proto3";
-import "hyperchain/core/types/block.proto";
+import "github.com/hyperchain/hyperchain/core/types/block.proto";
 package executor;
 
 message ChainSyncRequest{

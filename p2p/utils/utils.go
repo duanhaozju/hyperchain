@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"hyperchain/common"
-	"hyperchain/crypto/sha3"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto/sha3"
 	"net"
 	"os"
 	"strconv"

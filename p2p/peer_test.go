@@ -1,11 +1,11 @@
 package p2p_test
 
 import (
+	"github.com/hyperchain/hyperchain/p2p"
+	"github.com/hyperchain/hyperchain/p2p/info"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"hyperchain/p2p"
-	"hyperchain/p2p/info"
-	//pb "hyperchain/p2p/message"
+	//pb "github.com/hyperchain/hyperchain/p2p/message"
 )
 
 var _ = Describe("Peer", func() {

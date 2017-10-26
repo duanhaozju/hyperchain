@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"hyperchain/hypercli/common"
+	"github.com/hyperchain/hyperchain/hypercli/common"
 
 	"github.com/urfave/cli"
 )

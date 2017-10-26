@@ -18,7 +18,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 type Log struct {

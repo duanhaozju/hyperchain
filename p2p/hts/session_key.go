@@ -1,7 +1,7 @@
 package hts
 
 import (
-	"hyperchain/p2p/threadsafe"
+	"github.com/hyperchain/hyperchain/p2p/threadsafe"
 	"time"
 )
 

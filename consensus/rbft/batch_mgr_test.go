@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/consensus/txpool"
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/consensus/txpool"
+	"github.com/hyperchain/hyperchain/core/types"
 
 	"github.com/stretchr/testify/assert"
 )

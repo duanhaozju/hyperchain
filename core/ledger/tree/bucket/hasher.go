@@ -16,8 +16,8 @@ package bucket
 
 import (
 	"crypto/sha1"
+	"github.com/hyperchain/hyperchain/crypto"
 	"hash"
-	"hyperchain/crypto"
 	"sync"
 )
 

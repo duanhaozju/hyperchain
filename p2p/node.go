@@ -1,10 +1,10 @@
 package p2p
 
 import (
-	"hyperchain/p2p/info"
-	"hyperchain/p2p/message"
-	"hyperchain/p2p/msg"
-	"hyperchain/p2p/network"
+	"github.com/hyperchain/hyperchain/p2p/info"
+	"github.com/hyperchain/hyperchain/p2p/message"
+	"github.com/hyperchain/hyperchain/p2p/msg"
+	"github.com/hyperchain/hyperchain/p2p/network"
 )
 
 type Node struct {

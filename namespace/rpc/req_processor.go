@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hyperchain/hyperchain/api"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/op/go-logging"
-	"hyperchain/api"
-	"hyperchain/common"
 	"reflect"
 	"strings"
 )

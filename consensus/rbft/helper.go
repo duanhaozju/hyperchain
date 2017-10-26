@@ -8,7 +8,7 @@ import (
 	"math"
 	"time"
 
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 )

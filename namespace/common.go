@@ -4,8 +4,8 @@ package namespace
 
 import (
 	"errors"
-	"hyperchain/api"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/api"
+	"github.com/hyperchain/hyperchain/common"
 	"os"
 )
 

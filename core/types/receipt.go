@@ -14,8 +14,8 @@
 package types
 
 import (
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/willf/bloom"
-	"hyperchain/common"
 	"math/big"
 )
 

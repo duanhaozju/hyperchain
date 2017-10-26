@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"strconv"
 
-	ndb "hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
+	ndb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"

@@ -21,10 +21,10 @@ import (
 	"sync/atomic"
 
 	"github.com/hashicorp/golang-lru"
-	"hyperchain/common"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/evm/params"
-	"hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/core/vm/evm/params"
+	"github.com/hyperchain/hyperchain/crypto"
 	"io"
 )
 

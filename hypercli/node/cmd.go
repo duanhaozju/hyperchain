@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strconv"
 
-	"hyperchain/hypercli/common"
-	"hyperchain/rpc"
+	"github.com/hyperchain/hyperchain/hypercli/common"
+	"github.com/hyperchain/hyperchain/rpc"
 
 	"github.com/urfave/cli"
 )

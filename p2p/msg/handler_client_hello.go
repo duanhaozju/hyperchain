@@ -2,16 +2,16 @@ package msg
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto/csprng"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/hts"
+	"github.com/hyperchain/hyperchain/p2p/info"
+	pb "github.com/hyperchain/hyperchain/p2p/message"
+	"github.com/hyperchain/hyperchain/p2p/payloads"
+	"github.com/hyperchain/hyperchain/p2p/peerevent"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
-	"hyperchain/common"
-	"hyperchain/crypto/csprng"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/hts"
-	"hyperchain/p2p/info"
-	pb "hyperchain/p2p/message"
-	"hyperchain/p2p/payloads"
-	"hyperchain/p2p/peerevent"
 )
 
 type ClientHelloMsgHandler struct {

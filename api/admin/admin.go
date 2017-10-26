@@ -5,9 +5,9 @@ package admin
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/namespace"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/namespace"
 	"strings"
 	"time"
 )

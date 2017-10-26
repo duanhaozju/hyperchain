@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/common"
-	"hyperchain/consensus/helper/persist"
-	mdb "hyperchain/hyperdb/mdb"
-	"hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus/helper/persist"
+	mdb "github.com/hyperchain/hyperchain/hyperdb/mdb"
+	"github.com/hyperchain/hyperchain/manager/event"
 
 	"github.com/stretchr/testify/assert"
 )

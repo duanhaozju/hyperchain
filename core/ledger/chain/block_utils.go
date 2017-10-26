@@ -19,10 +19,10 @@ import (
 	"strconv"
 	"time"
 
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 
 	"github.com/golang/protobuf/proto"
 )

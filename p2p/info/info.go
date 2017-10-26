@@ -2,9 +2,9 @@ package info
 
 import (
 	"encoding/json"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/p2p/utils"
 	"sync"
 )
 

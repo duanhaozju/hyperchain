@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/consensus/consensusMocks"
-	"hyperchain/core/types"
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/consensus/consensusMocks"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"

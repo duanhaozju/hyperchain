@@ -6,8 +6,8 @@ package rbft
 import (
 	"fmt"
 
-	"hyperchain/consensus"
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/consensus"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 )

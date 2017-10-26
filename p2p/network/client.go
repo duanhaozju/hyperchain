@@ -1,15 +1,15 @@
 package network
 
-import "hyperchain/p2p/hts"
+import "github.com/hyperchain/hyperchain/p2p/hts"
 
 import (
 	"fmt"
+	pb "github.com/hyperchain/hyperchain/p2p/message"
 	"github.com/looplab/fsm"
 	"github.com/pkg/errors"
 	"github.com/terasum/pool"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	pb "hyperchain/p2p/message"
 	"regexp"
 	"time"
 )

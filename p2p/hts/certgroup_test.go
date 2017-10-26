@@ -2,9 +2,9 @@ package hts
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/terasum/viper"
-	"hyperchain/p2p/utils"
 	"testing"
 )
 

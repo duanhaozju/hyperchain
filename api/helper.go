@@ -2,12 +2,12 @@ package api
 
 import (
 	"errors"
-	"hyperchain/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/ledger/state"
-	"hyperchain/core/vm"
-	"hyperchain/crypto/hmEncryption"
-	"hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/common"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/crypto/hmEncryption"
+	"github.com/hyperchain/hyperchain/hyperdb"
 	"math/big"
 	"path"
 	"time"

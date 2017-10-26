@@ -3,13 +3,13 @@ package p2p
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/threadsafe"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	"github.com/op/go-logging"
 	"github.com/orcaman/concurrent-map"
 	"github.com/pkg/errors"
-	"hyperchain/common"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/threadsafe"
-	"hyperchain/p2p/utils"
 )
 
 var (

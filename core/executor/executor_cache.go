@@ -16,9 +16,9 @@ package executor
 import (
 	"sync/atomic"
 
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/event"
 )
 
 // Cache represents the caches that used in executor.

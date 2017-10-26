@@ -2,11 +2,11 @@ package network
 
 import (
 	"fmt"
+	pb "github.com/hyperchain/hyperchain/p2p/message"
+	"github.com/hyperchain/hyperchain/p2p/msg"
 	"github.com/pkg/errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	pb "hyperchain/p2p/message"
-	"hyperchain/p2p/msg"
 	"net"
 )
 

@@ -3,10 +3,10 @@ package network
 import (
 	"context"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"github.com/hyperchain/hyperchain/p2p/message"
 	"github.com/looplab/fsm"
 	"github.com/terasum/pool"
 	"google.golang.org/grpc"
-	"hyperchain/p2p/message"
 	"regexp"
 	"time"
 )

@@ -4,9 +4,9 @@
 package consensusMocks
 
 import (
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
-	pb "hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/event"
+	pb "github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/stretchr/testify/mock"
 )

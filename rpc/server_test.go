@@ -2,9 +2,9 @@ package jsonrpc
 
 import (
 	"context"
+	"github.com/hyperchain/hyperchain/common"
+	ns "github.com/hyperchain/hyperchain/namespace/mocks"
 	"github.com/stretchr/testify/assert"
-	"hyperchain/common"
-	ns "hyperchain/namespace/mocks"
 	"testing"
 )
 

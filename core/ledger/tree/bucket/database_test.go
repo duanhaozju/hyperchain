@@ -15,10 +15,10 @@
 package bucket
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/hyperdb/db"
-	"hyperchain/hyperdb/mdb"
 	"math/rand"
 	"reflect"
 	"testing"

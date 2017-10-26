@@ -2,10 +2,10 @@ package network_test
 
 import (
 	"github.com/golang/mock/gomock"
+	pb "github.com/hyperchain/hyperchain/p2p/message"
+	"github.com/hyperchain/hyperchain/p2p/network"
+	"github.com/hyperchain/hyperchain/p2p/network/mock"
 	. "github.com/smartystreets/goconvey/convey"
-	pb "hyperchain/p2p/message"
-	"hyperchain/p2p/network"
-	"hyperchain/p2p/network/mock"
 	"testing"
 )
 

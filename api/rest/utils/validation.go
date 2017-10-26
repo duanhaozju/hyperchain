@@ -2,8 +2,8 @@ package utils
 
 import (
 	"encoding/json"
-	"hyperchain/api"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/api"
+	"github.com/hyperchain/hyperchain/common"
 	"strconv"
 )
 

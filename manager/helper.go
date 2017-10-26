@@ -3,9 +3,9 @@ package manager
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/consensus/rbft"
+	m "github.com/hyperchain/hyperchain/manager/message"
 	"github.com/syndtr/goleveldb/leveldb/errors"
-	"hyperchain/consensus/rbft"
-	m "hyperchain/manager/message"
 )
 
 // invokeRbftLocal helps wrapper event to consensus event type and then

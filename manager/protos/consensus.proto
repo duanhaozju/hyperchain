@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "hyperchain/core/types/transaction.proto";
+import "github.com/hyperchain/hyperchain/core/types/transaction.proto";
 
 package protos;
 

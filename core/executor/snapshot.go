@@ -28,12 +28,12 @@ import (
 	"sync"
 	"time"
 
-	"hyperchain/common"
-	cm "hyperchain/core/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/ledger/state"
-	"hyperchain/hyperdb"
-	"hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/common"
+	cm "github.com/hyperchain/hyperchain/core/common"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/manager/event"
 
 	"github.com/op/go-logging"
 )

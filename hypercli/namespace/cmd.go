@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"time"
 
-	"hyperchain/api/admin"
-	cm "hyperchain/common"
-	"hyperchain/crypto"
-	"hyperchain/hypercli/common"
+	"github.com/hyperchain/hyperchain/api/admin"
+	cm "github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/hypercli/common"
 
 	"github.com/urfave/cli"
 )

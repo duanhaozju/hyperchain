@@ -16,9 +16,9 @@ package executor
 import (
 	"time"
 
-	"hyperchain/common"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
 
 	"github.com/golang/protobuf/proto"
 )

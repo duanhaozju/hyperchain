@@ -1,7 +1,7 @@
 package inneraddr
 
 import (
-	"hyperchain/p2p/utils"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	"testing"
 )
 

@@ -18,8 +18,8 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/pkg/errors"
-	"hyperchain/common"
 	"sort"
 )
 

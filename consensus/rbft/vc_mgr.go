@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/op/go-logging"
-	"hyperchain/common"
 )
 
 // vcManager manages the whole process of view change

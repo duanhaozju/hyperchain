@@ -14,12 +14,12 @@
 package executor
 
 import (
-	"hyperchain/common"
-	"hyperchain/core/errors"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/evm"
-	"hyperchain/core/vm/jcee/go"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/errors"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/core/vm/evm"
+	"github.com/hyperchain/hyperchain/core/vm/jcee/go"
 )
 
 // ExecTransaction executes the single transaction in evm or jvm.

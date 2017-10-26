@@ -1,8 +1,8 @@
 package main
 
 import (
+	"github.com/hyperchain/hyperchain/cmd/radar/contract"
 	"github.com/urfave/cli"
-	"hyperchain/cmd/radar/contract"
 	"os"
 	"time"
 )

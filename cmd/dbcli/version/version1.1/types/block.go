@@ -3,8 +3,8 @@ package version1_1
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/common"
-	"hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto"
 )
 
 func (self *Block) Hash(ch crypto.CommonHash) common.Hash {

@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/hyperdb/mdb"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 )
 
 func genRandomBlock() *types.Block {

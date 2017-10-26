@@ -15,11 +15,11 @@ package evm
 
 import (
 	"bytes"
+	"github.com/hyperchain/hyperchain/common"
+	er "github.com/hyperchain/hyperchain/core/errors"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/vm"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	er "hyperchain/core/errors"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
 	"math/big"
 )
 

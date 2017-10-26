@@ -19,12 +19,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"hyperchain/common"
-	cm "hyperchain/core/common"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/evm/params"
-	"hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/common"
+	cm "github.com/hyperchain/hyperchain/core/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/core/vm/evm/params"
+	"github.com/hyperchain/hyperchain/crypto"
 )
 
 type programInstruction interface {

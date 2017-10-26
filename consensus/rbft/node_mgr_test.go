@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/common"
-	"hyperchain/consensus/consensusMocks"
-	"hyperchain/consensus/helper/persist"
-	"hyperchain/hyperdb/mdb"
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus/consensusMocks"
+	"github.com/hyperchain/hyperchain/consensus/helper/persist"
+	"github.com/hyperchain/hyperchain/hyperdb/mdb"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"

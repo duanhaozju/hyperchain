@@ -1,7 +1,7 @@
 package version1_2
 
 import (
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"math/big"
 )
 

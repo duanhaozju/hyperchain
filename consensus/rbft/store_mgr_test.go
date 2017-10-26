@@ -6,9 +6,9 @@ package rbft
 import (
 	"testing"
 
-	"hyperchain/common"
-	"hyperchain/consensus/helper/persist"
-	mdb "hyperchain/hyperdb/mdb"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus/helper/persist"
+	mdb "github.com/hyperchain/hyperchain/hyperdb/mdb"
 
 	"github.com/stretchr/testify/assert"
 )

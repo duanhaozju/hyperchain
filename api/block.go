@@ -4,10 +4,10 @@ package api
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
 )
 
 // This file implements the handler of Block service API which

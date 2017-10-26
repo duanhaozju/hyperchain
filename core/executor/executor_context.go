@@ -18,7 +18,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 // ExecutorContext a collection of all executor status.

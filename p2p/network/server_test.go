@@ -1,9 +1,9 @@
 package network_test
 
 import (
+	. "github.com/hyperchain/hyperchain/p2p/network"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "hyperchain/p2p/network"
 )
 
 var _ = Describe("Server", func() {

@@ -2,7 +2,7 @@ package routers
 
 import (
 	"github.com/astaxie/beego"
-	"hyperchain/api/rest/controllers"
+	"github.com/hyperchain/hyperchain/api/rest/controllers"
 )
 
 func NewRouter() {

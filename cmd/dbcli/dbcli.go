@@ -1,12 +1,12 @@
 package main
 
 import (
+	"github.com/hyperchain/hyperchain/cmd/dbcli/account"
+	"github.com/hyperchain/hyperchain/cmd/dbcli/block"
+	"github.com/hyperchain/hyperchain/cmd/dbcli/chain"
+	"github.com/hyperchain/hyperchain/cmd/dbcli/receipt"
+	"github.com/hyperchain/hyperchain/cmd/dbcli/transaction"
 	"github.com/urfave/cli"
-	"hyperchain/cmd/dbcli/account"
-	"hyperchain/cmd/dbcli/block"
-	"hyperchain/cmd/dbcli/chain"
-	"hyperchain/cmd/dbcli/receipt"
-	"hyperchain/cmd/dbcli/transaction"
 	"os"
 	"time"
 )

@@ -2,11 +2,11 @@ package network
 
 import (
 	"crypto"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/pkg/errors"
 	"github.com/terasum/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"hyperchain/common"
 )
 
 type Sec struct {

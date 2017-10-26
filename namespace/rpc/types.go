@@ -1,7 +1,7 @@
 package rpc
 
 import (
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"reflect"
 )
 

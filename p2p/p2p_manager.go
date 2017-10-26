@@ -2,13 +2,13 @@ package p2p
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/ipc"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/network"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"github.com/terasum/viper"
-	"hyperchain/common"
-	"hyperchain/ipc"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/network"
 )
 
 var (

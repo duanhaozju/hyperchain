@@ -2,9 +2,9 @@ package runtime_test
 
 import (
 	"fmt"
-	"hyperchain/common"
-	"hyperchain/core/vm/evm/runtime"
-	"hyperchain/hyperdb/mdb"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/vm/evm/runtime"
+	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 )
 
 func ExampleExecute() {

@@ -2,8 +2,8 @@ package hts
 
 import (
 	"crypto"
+	"github.com/hyperchain/hyperchain/p2p/hts/secimpl"
 	"github.com/pkg/errors"
-	"hyperchain/p2p/hts/secimpl"
 	"sync"
 )
 

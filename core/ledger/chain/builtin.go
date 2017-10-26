@@ -17,8 +17,8 @@ package chain
 import (
 	"errors"
 
-	"hyperchain/common"
-	"hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/hyperdb"
 
 	"github.com/op/go-logging"
 )

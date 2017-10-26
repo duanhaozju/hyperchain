@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"os"
 
-	"hyperchain/api/admin"
+	"github.com/hyperchain/hyperchain/api/admin"
 )
 
 // CmdClient manages a connection to the host:port which may be used once in

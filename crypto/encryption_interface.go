@@ -2,7 +2,7 @@
 //Copyright (C) 2016 The Hyperchain Authors.
 package crypto
 
-import "hyperchain/common"
+import "github.com/hyperchain/hyperchain/common"
 
 type KeyType interface {
 	sign()

@@ -3,9 +3,9 @@ package inneraddr
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/pkg/errors"
 	"github.com/terasum/viper"
-	"hyperchain/common"
 	"strings"
 	"sync"
 )

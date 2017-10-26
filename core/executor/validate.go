@@ -17,11 +17,11 @@ import (
 	"sort"
 	"sync"
 
-	"hyperchain/common"
-	"hyperchain/core/errors"
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/errors"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/manager/protos"
 )
 
 // ValidationTag unique identification for validation result,

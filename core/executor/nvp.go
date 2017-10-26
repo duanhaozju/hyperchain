@@ -21,10 +21,10 @@ import (
 	"syscall"
 	"time"
 
-	"hyperchain/common"
-	er "hyperchain/core/errors"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/common"
+	er "github.com/hyperchain/hyperchain/core/errors"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"

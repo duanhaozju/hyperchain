@@ -3,8 +3,8 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"hyperchain/common"
-	"hyperchain/crypto/secp256k1"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto/secp256k1"
 	"testing"
 )
 

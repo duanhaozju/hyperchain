@@ -14,10 +14,10 @@
 package state
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/tree/bucket"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/core/ledger/tree/bucket"
-	"hyperchain/hyperdb/db"
 )
 
 const (

@@ -3,7 +3,7 @@ package version1_1
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 func (self *Chain) Encode() string {

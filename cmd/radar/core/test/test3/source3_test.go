@@ -3,10 +3,10 @@ package test
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hyperchain/hyperchain/cmd/radar/contract"
+	"github.com/hyperchain/hyperchain/cmd/radar/core/api"
+	"github.com/hyperchain/hyperchain/cmd/radar/core/test"
 	"github.com/syndtr/goleveldb/leveldb"
-	"hyperchain/cmd/radar/contract"
-	"hyperchain/cmd/radar/core/api"
-	"hyperchain/cmd/radar/core/test"
 	"io/ioutil"
 	"testing"
 )

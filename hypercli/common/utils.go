@@ -14,10 +14,10 @@ import (
 	"strings"
 	"time"
 
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/crypto"
-	"hyperchain/rpc"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/rpc"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"

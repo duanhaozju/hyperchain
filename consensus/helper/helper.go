@@ -5,11 +5,11 @@ package helper
 import (
 	"time"
 
-	"hyperchain/consensus"
-	"hyperchain/core/types"
-	"hyperchain/manager/appstat"
-	"hyperchain/manager/event"
-	pb "hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/consensus"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/appstat"
+	"github.com/hyperchain/hyperchain/manager/event"
+	pb "github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 )

@@ -17,11 +17,11 @@ import (
 	"encoding/binary"
 	"reflect"
 
-	er "hyperchain/core/errors"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
-	"hyperchain/manager/protos"
+	er "github.com/hyperchain/hyperchain/core/errors"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 )

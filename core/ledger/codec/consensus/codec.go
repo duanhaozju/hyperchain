@@ -1,10 +1,10 @@
 package consensus
 
 import (
-	consensus "hyperchain/core/ledger/codec/consensus/types"
-	"hyperchain/core/types"
+	consensus "github.com/hyperchain/hyperchain/core/ledger/codec/consensus/types"
+	"github.com/hyperchain/hyperchain/core/types"
 
-	"github.com/golang/proto"
+	"github.com/golang/protobuf/proto"
 )
 
 // ConEncoder is the encoder for transaction that used in consensus comparison

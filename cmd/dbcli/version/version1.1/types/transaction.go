@@ -3,17 +3,17 @@ package version1_1
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"hyperchain/common"
-	"hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto"
 	"io/ioutil"
 	"os"
 	"strconv"
 	"time"
-	//"hyperchain/crypto/guomi"
-	//"hyperchain/admittance"
+	//"github.com/hyperchain/hyperchain/crypto/guomi"
+	//"github.com/hyperchain/hyperchain/admittance"
 	"encoding/json"
+	"github.com/hyperchain/hyperchain/crypto/sha3"
 	"github.com/op/go-logging"
-	"hyperchain/crypto/sha3"
 )
 
 var log *logging.Logger // package-level logger
@@ -220,7 +220,7 @@ func ReadSourceFromFile(filePath string) string {
 
 func NewTestCreateTransaction() *Transaction {
 	// it is the code of hyperchain/core/vm/tests/solidity_files/example3.solc
-	/*_,bins,_,err := compiler.CompileSourcefile(ReadSourceFromFile("hyperchain/core/vm/tests/solidity_files/test.solc"))
+	/*_,bins,_,err := compiler.CompileSourcefile(ReadSourceFromFile("github.com/hyperchain/hyperchain/core/vm/tests/solidity_files/test.solc"))
 	if err!=nil{
 		log.Errorf("the compiled source has error")
 		return nil

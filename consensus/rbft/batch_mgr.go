@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus/txpool"
+	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/consensus/txpool"
-	"hyperchain/manager/event"
 )
 
 // batchManager manages basic batch issues, including:

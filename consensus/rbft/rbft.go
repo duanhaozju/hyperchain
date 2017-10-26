@@ -4,14 +4,14 @@
 package rbft
 
 import (
-	"hyperchain/common"
-	"hyperchain/consensus/helper"
-	"hyperchain/consensus/helper/persist"
-	"hyperchain/consensus/txpool"
-	"hyperchain/core/types"
-	"hyperchain/hyperdb"
-	"hyperchain/manager/event"
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus/helper"
+	"github.com/hyperchain/hyperchain/consensus/helper/persist"
+	"github.com/hyperchain/hyperchain/consensus/txpool"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 )

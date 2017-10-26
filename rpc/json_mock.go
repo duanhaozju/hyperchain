@@ -1,8 +1,8 @@
 package jsonrpc
 
 import (
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/stretchr/testify/mock"
-	"hyperchain/common"
 )
 
 type MockjsonCodecImpl struct {

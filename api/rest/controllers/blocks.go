@@ -2,9 +2,9 @@ package controllers
 
 import (
 	"github.com/astaxie/beego"
-	"hyperchain/api"
-	"hyperchain/api/rest/utils"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/api"
+	"github.com/hyperchain/hyperchain/api/rest/utils"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 type BlocksController struct {

@@ -4,13 +4,13 @@ package hleveldb
 
 import (
 	"bytes"
+	"github.com/hyperchain/hyperchain/common"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"hyperchain/common"
-	hcom "hyperchain/hyperdb/common"
-	"hyperchain/hyperdb/db"
 	"path"
 )
 

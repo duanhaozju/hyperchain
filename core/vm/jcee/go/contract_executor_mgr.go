@@ -7,7 +7,7 @@ import "sync"
 */
 
 import (
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 var ClientMgr *ClientManager

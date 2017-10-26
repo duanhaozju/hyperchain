@@ -27,7 +27,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/crypto"
 
 	"golang.org/x/crypto/pbkdf2"
 	"golang.org/x/crypto/scrypt"

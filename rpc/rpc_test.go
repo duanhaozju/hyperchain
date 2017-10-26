@@ -3,7 +3,7 @@
 package jsonrpc
 
 import (
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"testing"
 )
 

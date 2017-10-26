@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/common"
-	"hyperchain/consensus/consensusMocks"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus/consensusMocks"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/facebookgo/ensure"
 	"github.com/gogo/protobuf/proto"

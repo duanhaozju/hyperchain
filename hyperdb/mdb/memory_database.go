@@ -4,8 +4,8 @@ package mdb
 
 import (
 	"bytes"
-	"hyperchain/common"
-	hdb "hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/common"
+	hdb "github.com/hyperchain/hyperchain/hyperdb/db"
 	"sort"
 	"sync"
 )

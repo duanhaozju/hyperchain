@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 type JSONObject struct {

@@ -2,8 +2,8 @@ package secimpl
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/terasum/viper"
-	"hyperchain/common"
 )
 
 // NewSecuritySelector will select the appropriate security encryption algorithm

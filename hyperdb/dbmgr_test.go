@@ -5,9 +5,9 @@ package hyperdb
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	hcomm "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/stretchr/testify/assert"
-	"hyperchain/common"
-	hcomm "hyperchain/hyperdb/common"
 	"math/rand"
 	"os"
 	"sync"

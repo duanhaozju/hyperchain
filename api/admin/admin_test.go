@@ -4,12 +4,12 @@
 package admin
 
 import (
+	"github.com/hyperchain/hyperchain/namespace/mocks"
 	"github.com/stretchr/testify/assert"
-	"hyperchain/namespace/mocks"
 	"testing"
 
 	"errors"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"strings"
 	"time"
 )

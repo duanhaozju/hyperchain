@@ -1,7 +1,7 @@
 package test
 
 import (
-	"hyperchain/cmd/radar/core/api"
+	"github.com/hyperchain/hyperchain/cmd/radar/core/api"
 	"testing"
 )
 

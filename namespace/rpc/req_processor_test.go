@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/hyperchain/hyperchain/api"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/stretchr/testify/assert"
-	"hyperchain/api"
-	"hyperchain/common"
 	"testing"
 )
 

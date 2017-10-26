@@ -4,15 +4,15 @@ package main
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/ipc"
+	"github.com/hyperchain/hyperchain/namespace"
+	"github.com/hyperchain/hyperchain/p2p"
+	"github.com/hyperchain/hyperchain/rpc"
 	"github.com/mkideal/cli"
 	"github.com/op/go-logging"
 	"github.com/terasum/viper"
-	"hyperchain/common"
-	"hyperchain/hyperdb"
-	"hyperchain/ipc"
-	"hyperchain/namespace"
-	"hyperchain/p2p"
-	"hyperchain/rpc"
 	_ "net/http/pprof"
 	"time"
 )

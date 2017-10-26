@@ -18,8 +18,8 @@ import (
 	"encoding/binary"
 	"strconv"
 
-	"hyperchain/common"
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
 )
 
 var RemoveLessThan = func(key interface{}, iterKey interface{}) bool {

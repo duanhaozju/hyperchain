@@ -1,8 +1,8 @@
 package jvm
 
 import (
-	"hyperchain/common"
-	"hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/vm"
 )
 
 type Context struct {

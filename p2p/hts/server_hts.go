@@ -3,11 +3,11 @@ package hts
 import (
 	"crypto"
 	"fmt"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/hts/secimpl"
+	"github.com/hyperchain/hyperchain/p2p/peerevent"
 	"github.com/orcaman/concurrent-map"
 	"github.com/pkg/errors"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/hts/secimpl"
-	"hyperchain/p2p/peerevent"
 )
 
 type ServerHTS struct {

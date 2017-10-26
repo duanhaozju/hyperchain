@@ -6,7 +6,7 @@ package rbft
 import (
 	"encoding/base64"
 
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/types"
 
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/crypto/sha3"

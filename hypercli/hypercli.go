@@ -7,12 +7,12 @@ import (
 	"os"
 	"time"
 
-	"hyperchain/hypercli/auth"
-	"hyperchain/hypercli/contract"
-	"hyperchain/hypercli/log"
-	"hyperchain/hypercli/namespace"
-	"hyperchain/hypercli/node"
-	"hyperchain/hypercli/server"
+	"github.com/hyperchain/hyperchain/hypercli/auth"
+	"github.com/hyperchain/hyperchain/hypercli/contract"
+	"github.com/hyperchain/hyperchain/hypercli/log"
+	"github.com/hyperchain/hyperchain/hypercli/namespace"
+	"github.com/hyperchain/hyperchain/hypercli/node"
+	"github.com/hyperchain/hyperchain/hypercli/server"
 
 	"github.com/urfave/cli"
 )

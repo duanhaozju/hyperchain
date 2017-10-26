@@ -1,10 +1,10 @@
 package hts
 
 import (
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/hts/secimpl"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	"github.com/stretchr/testify/assert"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/hts/secimpl"
-	"hyperchain/p2p/utils"
 	"testing"
 )
 

@@ -6,9 +6,9 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/event"
 
 	"github.com/op/go-logging"
 )

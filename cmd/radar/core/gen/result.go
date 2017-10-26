@@ -1,12 +1,12 @@
 package gen
 
 import (
+	rcm "github.com/hyperchain/hyperchain/cmd/radar/core/common"
+	"github.com/hyperchain/hyperchain/cmd/radar/core/types"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/state"
+	"github.com/hyperchain/hyperchain/crypto"
 	"github.com/syndtr/goleveldb/leveldb"
-	rcm "hyperchain/cmd/radar/core/common"
-	"hyperchain/cmd/radar/core/types"
-	"hyperchain/common"
-	"hyperchain/core/state"
-	"hyperchain/crypto"
 	"math"
 	"strconv"
 	"strings"

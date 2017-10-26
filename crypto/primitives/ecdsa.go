@@ -7,7 +7,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/asn1"
-	hcrypto "hyperchain/crypto"
+	hcrypto "github.com/hyperchain/hyperchain/crypto"
 	"math/big"
 )
 

@@ -1,12 +1,12 @@
 package api
 
 import (
-	"hyperchain/common"
-	com "hyperchain/core/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/manager"
-	"hyperchain/manager/event"
-	flt "hyperchain/manager/filter"
+	"github.com/hyperchain/hyperchain/common"
+	com "github.com/hyperchain/hyperchain/core/common"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/manager"
+	"github.com/hyperchain/hyperchain/manager/event"
+	flt "github.com/hyperchain/hyperchain/manager/filter"
 )
 
 // This file implements the handler of Archive service API which

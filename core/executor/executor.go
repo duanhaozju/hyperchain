@@ -16,15 +16,15 @@ package executor
 import (
 	"path"
 
-	"hyperchain/common"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/core/ledger/state"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/jcee/go"
-	"hyperchain/crypto"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
-	"hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/core/vm/jcee/go"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/manager/event"
 
 	"github.com/op/go-logging"
 )

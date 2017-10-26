@@ -15,8 +15,8 @@
 package bloom
 
 import (
-	"hyperchain/common"
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
 )
 
 func LookupTransaction(namespace string, txHash common.Hash) (bool, error) {

@@ -16,10 +16,10 @@ package executor
 import (
 	"sync/atomic"
 
-	"hyperchain/core/ledger/chain"
-	"hyperchain/manager/event"
-	"hyperchain/common"
-	com "hyperchain/core/common"
+	"github.com/hyperchain/hyperchain/common"
+	com "github.com/hyperchain/hyperchain/core/common"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/manager/event"
 
 	"github.com/cheggaaa/pb"
 	"github.com/op/go-logging"

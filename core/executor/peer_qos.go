@@ -17,7 +17,7 @@ import (
 	"math"
 	"sync"
 
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 
 	"github.com/op/go-logging"
 )

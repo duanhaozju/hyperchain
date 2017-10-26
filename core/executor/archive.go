@@ -16,10 +16,10 @@ package executor
 import (
 	"time"
 
-	com "hyperchain/core/common"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
+	com "github.com/hyperchain/hyperchain/core/common"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/event"
 
 	"github.com/op/go-logging"
 )

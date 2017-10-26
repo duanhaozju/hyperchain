@@ -1,8 +1,8 @@
 package version1_2
 
 import (
-	"hyperchain/common"
-	"hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto"
 	//"fmt"
 	//"encoding/json"
 	"encoding/json"

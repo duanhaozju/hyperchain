@@ -18,13 +18,13 @@ import (
 	"strconv"
 	"time"
 
-	"hyperchain/common"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/core/ledger/state"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 )
 
 // CreateInitBlock creates genesis block for a specific namespace.

@@ -1,7 +1,7 @@
 package event
 
 import (
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/types"
 	"time"
 )
 

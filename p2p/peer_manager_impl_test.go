@@ -1,13 +1,13 @@
 package p2p_test
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/terasum/viper"
-	"hyperchain/common"
-	"hyperchain/manager/event"
-	"hyperchain/p2p"
-	"hyperchain/p2p/utils"
 )
 
 var _ = Describe("PeerManagerImpl", func() {

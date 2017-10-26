@@ -16,10 +16,10 @@ package bucket
 import (
 	"errors"
 	"github.com/hashicorp/golang-lru"
+	"github.com/hyperchain/hyperchain/common"
+	tp "github.com/hyperchain/hyperchain/common/threadpool"
+	hdb "github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	tp "hyperchain/common/threadpool"
-	hdb "hyperchain/hyperdb/db"
 	"runtime"
 	"sync"
 )

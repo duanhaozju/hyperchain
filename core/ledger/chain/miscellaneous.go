@@ -16,9 +16,9 @@ package chain
 
 import (
 	"encoding/json"
-	com "hyperchain/core/common"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
+	com "github.com/hyperchain/hyperchain/core/common"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"strconv"
 )
 

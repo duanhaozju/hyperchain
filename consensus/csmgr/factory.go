@@ -6,11 +6,11 @@ package csmgr
 import (
 	"fmt"
 
-	"hyperchain/common"
-	cs "hyperchain/consensus"
-	"hyperchain/consensus/helper"
-	"hyperchain/consensus/rbft"
-	"hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/common"
+	cs "github.com/hyperchain/hyperchain/consensus"
+	"github.com/hyperchain/hyperchain/consensus/helper"
+	"github.com/hyperchain/hyperchain/consensus/rbft"
+	"github.com/hyperchain/hyperchain/manager/event"
 )
 
 // newConsenter initializes the consentor instance, and now only rbft works.

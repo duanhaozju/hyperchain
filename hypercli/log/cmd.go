@@ -6,8 +6,8 @@ package log
 import (
 	"fmt"
 
-	"hyperchain/api/admin"
-	"hyperchain/hypercli/common"
+	"github.com/hyperchain/hyperchain/api/admin"
+	"github.com/hyperchain/hyperchain/hypercli/common"
 
 	"github.com/urfave/cli"
 )

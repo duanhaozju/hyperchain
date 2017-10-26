@@ -14,12 +14,12 @@
 package executor
 
 import (
-	"hyperchain/common"
-	"hyperchain/core/errors"
-	"hyperchain/core/ledger/codec"
-	"hyperchain/core/ledger/codec/consensus"
-	"hyperchain/core/ledger/codec/v1_2"
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/errors"
+	"github.com/hyperchain/hyperchain/core/ledger/codec"
+	"github.com/hyperchain/hyperchain/core/ledger/codec/consensus"
+	"github.com/hyperchain/hyperchain/core/ledger/codec/v1_2"
+	"github.com/hyperchain/hyperchain/core/types"
 )
 
 // Hasher is the tool used to calculate hash of transactions, receipts.

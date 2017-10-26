@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"hyperchain/core/types"
-	"hyperchain/hypercli/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hypercli/common"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/urfave/cli"

@@ -16,7 +16,7 @@ package executor
 import (
 	"time"
 
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 const (

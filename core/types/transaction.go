@@ -16,11 +16,11 @@ package types
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/crypto/guomi"
+	"github.com/hyperchain/hyperchain/crypto/sha3"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/crypto"
-	"hyperchain/crypto/guomi"
-	"hyperchain/crypto/sha3"
 	"math/big"
 	"strconv"
 )

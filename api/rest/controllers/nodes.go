@@ -3,8 +3,8 @@ package controllers
 import (
 	"encoding/json"
 	"github.com/astaxie/beego"
-	"hyperchain/api"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/api"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 type NodesController struct {

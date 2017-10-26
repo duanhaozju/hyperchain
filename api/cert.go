@@ -1,8 +1,8 @@
 package api
 
 import (
-	"hyperchain/admittance"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/admittance"
+	"github.com/hyperchain/hyperchain/common"
 	"regexp"
 )
 

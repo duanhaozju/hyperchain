@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
-	//"hyperchain/crypto"
+	//"github.com/hyperchain/hyperchain/crypto"
 	//"github.com/astaxie/beego/toolbox"
 )
 

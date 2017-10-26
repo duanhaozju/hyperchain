@@ -3,8 +3,8 @@ package versionAccount
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/common"
-	"hyperchain/core/state"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/state"
 	"math/big"
 	"strings"
 )

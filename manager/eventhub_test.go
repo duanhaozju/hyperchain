@@ -1,8 +1,8 @@
 package manager
 
 import (
-	"hyperchain/common"
-	"hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager/event"
 	"testing"
 )
 

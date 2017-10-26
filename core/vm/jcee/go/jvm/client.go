@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
+	pb "github.com/hyperchain/hyperchain/core/vm/jcee/protos"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
-	"hyperchain/common"
-	pb "hyperchain/core/vm/jcee/protos"
 	"time"
 )
 

@@ -18,7 +18,7 @@ import (
 	//"net"
 	"time"
 
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"os"
 )
 

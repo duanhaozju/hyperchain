@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/types"
 )
 
 func TestHash(t *testing.T) {

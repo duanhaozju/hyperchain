@@ -14,9 +14,9 @@
 package executor
 
 import (
-	"hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/vm"
 
 	"github.com/golang/protobuf/proto"
 )

@@ -17,8 +17,8 @@ package executor
 import (
 	"fmt"
 
-	"hyperchain/manager/appstat"
-	"hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/manager/appstat"
+	"github.com/hyperchain/hyperchain/manager/event"
 )
 
 // NotifyViewChange posts the ViewChange to FilterSystemStatusEvent.
