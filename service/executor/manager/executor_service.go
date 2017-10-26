@@ -124,6 +124,11 @@ func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
 func (es *executorServiceImpl) init() error {
 	es.logger.Criticalf("Init executor service for namespace %s", es.namespace)
 
+	//adjust: adjust the init sequence to finish test.
+	// 5. add jsonrpc processor
+	//TODO: adjust back
+	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace))
+
 	// 1. init DB for current executor service.
 	err := chain.InitExecutorDBForNamespace(es.conf, es.namespace)
 	if err != nil {
@@ -154,7 +159,6 @@ func (es *executorServiceImpl) init() error {
 
 	// 4. add jsonrpc processor
 	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace))
-	es.rpc.Start()
 
 	// 5. initialized status
 	es.status.setState(initialized)
@@ -215,6 +219,12 @@ func (es *executorServiceImpl) Start() error {
 	}
 
 	es.status.setState(running)
+
+	// 8. start rpc processor
+	if err = es.rpc.Start(); err != nil {
+		return err
+	}
+
 	return nil
 
 }
