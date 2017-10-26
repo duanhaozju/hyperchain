@@ -5,13 +5,15 @@ package node
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
+	"strconv"
+
 	"hyperchain/hypercli/common"
 	"hyperchain/rpc"
-	"strconv"
+
+	"github.com/urfave/cli"
 )
 
-//NewNodeCMD new node related commands.
+// NewNodeCMD new node related commands.
 func NewNodeCMD() []cli.Command {
 	return []cli.Command{
 		{
@@ -39,11 +41,13 @@ func NewNodeCMD() []cli.Command {
 	}
 }
 
+// peerinfos records all connected nodes' ips and ports.
 type peerinfos struct {
 	ips   []string
 	ports []string
 }
 
+// delNode helps delete node with the given ip and port.
 func delNode(c *cli.Context) error {
 	namespace := common.GetNonEmptyValueByName(c, "namespace")
 	ip := common.GetNonEmptyValueByName(c, "ip")
@@ -74,6 +78,8 @@ func delNode(c *cli.Context) error {
 
 }
 
+// getHttpResponse constructs and returns the json-format response using the given
+// method and params.
 func getHttpResponse(namespace, ip, port, method, params string) (jsonrpc.JSONResponse, error) {
 	var response jsonrpc.JSONResponse
 	client := common.NewRpcClient(ip, port)
@@ -89,6 +95,7 @@ func getHttpResponse(namespace, ip, port, method, params string) (jsonrpc.JSONRe
 	return common.GetJSONResponse(result)
 }
 
+// getDelNodeHash gets the deleting node's hash.
 func getDelNodeHash(namespace, ip, port string) (string, error) {
 	response, err := getHttpResponse(namespace, ip, port, "node_getNodeHash", "[{}]")
 	if err != nil {
@@ -102,6 +109,7 @@ func getDelNodeHash(namespace, ip, port string) (string, error) {
 	}
 }
 
+// getPeerInfo returns all connected nodes' info.
 func getPeerInfo(namespace, ip, port string) (peerinfos, error) {
 	var info peerinfos
 
@@ -128,6 +136,7 @@ func getPeerInfo(namespace, ip, port string) (peerinfos, error) {
 
 }
 
+// sendDelNode sends delete node requests to to nodes recorded in the peerinfos.
 func sendDelNode(namespace, hash string, peers peerinfos) error {
 	params := fmt.Sprintf("[{\"nodehash\":\"%s\"}]", hash)
 	for i, ip := range peers.ips {

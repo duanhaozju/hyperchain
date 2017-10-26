@@ -5,19 +5,14 @@ package server
 
 import (
 	"fmt"
-	"github.com/op/go-logging"
-	"github.com/urfave/cli"
-	admin "hyperchain/api/admin"
+
+	"hyperchain/api/admin"
 	"hyperchain/hypercli/common"
+
+	"github.com/urfave/cli"
 )
 
-var logger *logging.Logger
-
-func init() {
-	logger = logging.MustGetLogger("hypercli/server")
-}
-
-//NewServerCMD new server related commands.
+// NewServerCMD new server related commands.
 func NewServerCMD() []cli.Command {
 	return []cli.Command{
 		{
@@ -38,13 +33,15 @@ func NewServerCMD() []cli.Command {
 	}
 }
 
+// Not support yet!
 func start(c *cli.Context) error {
 	fmt.Println("Not Support Yet!")
 	return nil
 }
 
+// stop helps stop hyperchain service.
 func stop(c *cli.Context) error {
-	client := common.GetCmdClient(c)
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	cmd := &admin.Command{
 		MethodName: "admin_stopServer",
 		Args:       c.Args(),
@@ -54,8 +51,9 @@ func stop(c *cli.Context) error {
 	return nil
 }
 
+// restart helps restart hyperchain service.
 func restart(c *cli.Context) error {
-	client := common.GetCmdClient(c)
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	cmd := &admin.Command{
 		MethodName: "admin_restartServer",
 		Args:       c.Args(),

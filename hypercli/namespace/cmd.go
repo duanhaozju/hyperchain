@@ -5,19 +5,21 @@ package namespace
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
-	admin "hyperchain/api/admin"
-	cm "hyperchain/common"
-	"hyperchain/crypto"
-	"hyperchain/hypercli/common"
 	"math/rand"
 	"os"
 	"path"
 	"strconv"
 	"time"
+
+	"hyperchain/api/admin"
+	cm "hyperchain/common"
+	"hyperchain/crypto"
+	"hyperchain/hypercli/common"
+
+	"github.com/urfave/cli"
 )
 
-//NewNamespaceCMD new namespace related
+// NewNamespaceCMD newNsId namespace related
 func NewNamespaceCMD() []cli.Command {
 	return []cli.Command{
 		{
@@ -33,7 +35,7 @@ func NewNamespaceCMD() []cli.Command {
 		{
 			Name:   "new",
 			Usage:  "generate a unique namespace id",
-			Action: new,
+			Action: newNsId,
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "configDir, d",
@@ -75,8 +77,10 @@ func NewNamespaceCMD() []cli.Command {
 	}
 }
 
+// start helps start the namespace manager.
 func start(c *cli.Context) error {
-	client := common.GetCmdClient(c)
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+
 	cmd := &admin.Command{
 		MethodName: "admin_startNsMgr",
 		Args:       c.Args(),
@@ -86,8 +90,10 @@ func start(c *cli.Context) error {
 	return nil
 }
 
+// stop helps stop the namespace manager.
 func stop(c *cli.Context) error {
-	client := common.GetCmdClient(c)
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+
 	cmd := &admin.Command{
 		MethodName: "admin_stopNsMgr",
 		Args:       c.Args(),
@@ -97,10 +103,11 @@ func stop(c *cli.Context) error {
 	return nil
 }
 
-func new(c *cli.Context) error {
+// newNsId generates a new namespace ID using the given directory.
+func newNsId(c *cli.Context) error {
 	dir := c.String("configDir")
 	if len(dir) == 0 {
-		fmt.Printf("%s is invalid namespace config dir!", dir)
+		fmt.Println("Please specify namespace config dir using '-d' flag!")
 		return nil
 	}
 	configPath := path.Join(dir, "peerconfig.toml")
@@ -123,7 +130,7 @@ func new(c *cli.Context) error {
 			}
 		}
 		name := generateNamespaceId(hostNames)
-		fmt.Printf("new namespace id is: %s\n", name)
+		fmt.Printf("newNsId namespace id is: %s\n", name)
 	} else {
 		fmt.Println("invalid peerconfig")
 	}
@@ -131,93 +138,109 @@ func new(c *cli.Context) error {
 	return nil
 }
 
-//namespace generate functions
+// generateNamespaceId generates a unique ID using hostsName and timestamp.
 func generateNamespaceId(hostNames string) string {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	hashString := hostNames + time.Now().String() + strconv.Itoa(rand.Intn(1000000))
-	//fmt.Println(hashString)
 	hash := kec256Hash.Hash(hashString).Hex()
-	//fmt.Println(hash)
+
 	return "ns_" + hash[2:14]
 }
 
+// startNamespace helps start a namespace.
 func startNamespace(c *cli.Context) error {
-	client := common.GetCmdClient(c)
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+
+	if c.NArg() != 1 {
+		fmt.Println(common.ErrInvalidArgsNum)
+		return common.ErrInvalidArgsNum
+	}
+
 	cmd := &admin.Command{
 		MethodName: "admin_startNamespace",
 		Args:       c.Args(),
 	}
-	if len(cmd.Args) != 1 {
-		fmt.Println(common.ErrInvalidArgsNum)
-		return common.ErrInvalidArgsNum
-	}
 	result := client.InvokeCmd(cmd)
 	fmt.Print(result)
 	return nil
 }
 
+// stopNamespace helps stop a namespace.
 func stopNamespace(c *cli.Context) error {
-	client := common.GetCmdClient(c)
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+
+	if c.NArg() != 1 {
+		fmt.Println(common.ErrInvalidArgsNum)
+		return common.ErrInvalidArgsNum
+	}
+
 	cmd := &admin.Command{
 		MethodName: "admin_stopNamespace",
 		Args:       c.Args(),
 	}
-	if len(cmd.Args) != 1 {
-		fmt.Println(common.ErrInvalidArgsNum)
-		return common.ErrInvalidArgsNum
-	}
 	result := client.InvokeCmd(cmd)
 	fmt.Print(result)
 	return nil
 }
 
+// restartNamespace helps restart a namespace.
 func restartNamespace(c *cli.Context) error {
-	client := common.GetCmdClient(c)
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+
+	if c.NArg() != 1 {
+		fmt.Println(common.ErrInvalidArgsNum)
+		return common.ErrInvalidArgsNum
+	}
+
 	cmd := &admin.Command{
 		MethodName: "admin_restartNamespace",
 		Args:       c.Args(),
 	}
-	if len(cmd.Args) != 1 {
-		fmt.Println(common.ErrInvalidArgsNum)
-		return common.ErrInvalidArgsNum
-	}
 	result := client.InvokeCmd(cmd)
 	fmt.Print(result)
 	return nil
 }
 
+// registerNamespace helps register a namespace.
 func registerNamespace(c *cli.Context) error {
-	client := common.GetCmdClient(c)
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+
+	if c.NArg() != 1 {
+		fmt.Println(common.ErrInvalidArgsNum)
+		return common.ErrInvalidArgsNum
+	}
+
 	cmd := &admin.Command{
 		MethodName: "admin_registerNamespace",
 		Args:       c.Args(),
 	}
-	if len(cmd.Args) != 1 {
-		fmt.Println(common.ErrInvalidArgsNum)
-		return common.ErrInvalidArgsNum
-	}
 	result := client.InvokeCmd(cmd)
 	fmt.Print(result)
 	return nil
 }
 
+// deregisterNamespace helps deregister a namespace.
 func deregisterNamespace(c *cli.Context) error {
-	client := common.GetCmdClient(c)
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+
+	if c.NArg() != 1 {
+		fmt.Println(common.ErrInvalidArgsNum)
+		return common.ErrInvalidArgsNum
+	}
+
 	cmd := &admin.Command{
 		MethodName: "admin_deregisterNamespace",
 		Args:       c.Args(),
 	}
-	if len(cmd.Args) != 1 {
-		fmt.Println(common.ErrInvalidArgsNum)
-		return common.ErrInvalidArgsNum
-	}
 	result := client.InvokeCmd(cmd)
 	fmt.Print(result)
 	return nil
 }
 
+// listNamespaces lists all namespace names the given nodes participates in.
 func listNamespaces(c *cli.Context) error {
-	client := common.GetCmdClient(c)
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+
 	cmd := &admin.Command{
 		MethodName: "admin_listNamespaces",
 		Args:       c.Args(),
