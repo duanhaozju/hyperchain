@@ -1,31 +1,28 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
 
-//Package rbft implement the rbft algorithm
-//The RBFT key features:
-//	1. atomic sequence transactions guarantee
-//      2. leader selection by viewchange
-//      3. dynamically add or delete new node
-//      4. support self recovery
 package rbft
 
 import (
 	"hyperchain/common"
 	"hyperchain/consensus/helper"
+	"hyperchain/consensus/helper/persist"
 	"hyperchain/consensus/txpool"
 	"hyperchain/core/types"
+	"hyperchain/hyperdb"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
-	"hyperchain/hyperdb"
-	"hyperchain/consensus/helper/persist"
 )
 
-/**
-This file implements the API of consensus
-which can be invoked by outer services.
-*/
+// Package rbft implement the rbft algorithm
+// The RBFT key features:
+// 1. atomic sequence transactions guarantee
+// 2. leader selection by viewchange
+// 3. dynamically add or delete new node
+// 4. support self recovery
+// This file implements the API of consensus which can be invoked by outer services.
 
 // New return a instance of rbftImpl
 func New(namespace string, conf *common.Config, h helper.Stack, n int) (*rbftImpl, error) {

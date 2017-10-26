@@ -297,7 +297,7 @@ func TestRecvAndSendViewChange2(t *testing.T) { // test normal case
 	vc := getTestViewChange()
 	vc2 := getTestViewChange()
 	vc3 := getTestViewChange()
-	vc.Basis.ReplicaId = 0
+	vc.Basis.ReplicaId = 4
 	vc2.Basis.ReplicaId = 3
 	vc3.Basis.ReplicaId = 2
 

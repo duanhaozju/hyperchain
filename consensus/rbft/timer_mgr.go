@@ -25,15 +25,15 @@ type titletimer struct {
 
 // timerManager manages common used timers.
 type timerManager struct {
-	ttimers        map[string]*titletimer
-	logger         *logging.Logger
+	ttimers map[string]*titletimer
+	logger  *logging.Logger
 }
 
 // newTimerMgr news an instance of timerManager.
 func newTimerMgr(logger *logging.Logger) *timerManager {
 	tm := &timerManager{
-		ttimers:        make(map[string]*titletimer),
-		logger:         logger,
+		ttimers: make(map[string]*titletimer),
+		logger:  logger,
 	}
 
 	return tm
@@ -151,7 +151,7 @@ func (tm *timerManager) makeNullRequestTimeoutLegal() {
 	requestTimeout := tm.getTimeoutValue(REQUEST_TIMER)
 
 	if requestTimeout >= nullRequestTimeout && nullRequestTimeout != 0 {
-		tm.setTimeoutValue(NULL_REQUEST_TIMER, 3*requestTimeout / 2)
+		tm.setTimeoutValue(NULL_REQUEST_TIMER, 3*requestTimeout/2)
 		tm.logger.Warningf("Configured null request timeout must be greater "+
 			"than request timeout, setting to %v", tm.getTimeoutValue(NULL_REQUEST_TIMER))
 	}
@@ -171,7 +171,7 @@ func (tm *timerManager) makeRequestTimeoutLegal() {
 	tm.logger.Infof("RBFT Batch timeout = %v", batchTimeout)
 
 	if batchTimeout >= requestTimeout {
-		tm.setTimeoutValue(REQUEST_TIMER, 3 * batchTimeout / 2)
+		tm.setTimeoutValue(REQUEST_TIMER, 3*batchTimeout/2)
 		tm.logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", tm.getTimeoutValue(REQUEST_TIMER))
 	}
 	tm.logger.Infof("RBFT request timeout = %v", tm.getTimeoutValue(REQUEST_TIMER))
@@ -180,12 +180,12 @@ func (tm *timerManager) makeRequestTimeoutLegal() {
 // makeCleanVcTimeoutLegal checks if clean vc timeout is legal or not, if not, make it
 // legal, which, cleanVcTimeout should more then 6* viewChange time
 func (tm *timerManager) makeCleanVcTimeoutLegal() {
-	cleanVcTimeout:= tm.getTimeoutValue(CLEAN_VIEW_CHANGE_TIMER)
+	cleanVcTimeout := tm.getTimeoutValue(CLEAN_VIEW_CHANGE_TIMER)
 	nvTimeout := tm.getTimeoutValue(NEW_VIEW_TIMER)
 
-	if cleanVcTimeout < 6 * nvTimeout {
+	if cleanVcTimeout < 6*nvTimeout {
 		cleanVcTimeout = 6 * nvTimeout
 		tm.setTimeoutValue(CLEAN_VIEW_CHANGE_TIMER, cleanVcTimeout)
-		tm.logger.Criticalf("set timeout of cleaning out-of-time view change message to %v since it's too short", 6 * nvTimeout)
+		tm.logger.Criticalf("set timeout of cleaning out-of-time view change message to %v since it's too short", 6*nvTimeout)
 	}
 }

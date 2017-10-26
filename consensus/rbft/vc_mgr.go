@@ -1,5 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package rbft
 
 import (
@@ -29,7 +30,7 @@ type vcManager struct {
 	viewChangeStore map[vcidx]*ViewChange  // track view-change messages
 	vcResetStore    map[FinishVcReset]bool // track vcReset message from others
 
-	logger          *logging.Logger
+	logger *logging.Logger
 }
 
 // dispatchViewChangeMsg dispatches view change consensus messages from
@@ -71,7 +72,7 @@ func newVcManager(config *common.Config, logger *logging.Logger) *vcManager {
 		vcm.logger.Infof("RBFT automatic view change disabled")
 	}
 
-	vcm.lastNewViewTimeout = config.GetDuration(NEW_VIEW_TIMER)
+	vcm.lastNewViewTimeout = config.GetDuration(RBFT_VIEWCHANGE_TIMEOUT)
 	vcm.vcResendLimit = config.GetInt(RBFT_VC_RESEND_LIMIT)
 	vcm.logger.Debugf("RBFT vcResendLimit= %d", vcm.vcResendLimit)
 
@@ -1084,7 +1085,7 @@ func (rbft *rbftImpl) updateViewChangeSeqNo(seqNo, K, id uint64) {
 		return
 	}
 	// Ensure the view change always occurs at a checkpoint boundary
-	rbft.vcMgr.viewChangeSeqNo = seqNo - seqNo % K + rbft.vcMgr.viewChangePeriod * K
+	rbft.vcMgr.viewChangeSeqNo = seqNo - seqNo%K + rbft.vcMgr.viewChangePeriod*K
 }
 
 // feedMissingReqBatchIfNeeded feeds needed reqBatch when this node

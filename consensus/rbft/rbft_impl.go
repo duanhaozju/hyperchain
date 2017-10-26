@@ -1,5 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package rbft
 
 import (
@@ -35,14 +36,14 @@ type rbftImpl struct {
 	view          uint64 // current view
 
 	status      *statusManager   // keep all basic status of rbft in this object
+	timerMgr    *timerManager    // manage rbft event timers
+	exec        *executor        // manage transaction exec
+	storeMgr    *storeManager    // manage storage
 	batchMgr    *batchManager    // manage batch related issues
 	batchVdr    *batchValidator  // manage batch validate issues
-	timerMgr    *timerManager    // manage rbft event timers
-	storeMgr    *storeManager    // manage storage
-	nodeMgr     *nodeManager     // manage node delete or add
 	recoveryMgr *recoveryManager // manage recovery issues
 	vcMgr       *vcManager       // manage viewchange issues
-	exec        *executor        // manage transaction exec
+	nodeMgr     *nodeManager     // manage node delete or add
 
 	helper helper.Stack // send message to other components of system
 
@@ -83,6 +84,7 @@ func newRBFT(namespace string, config *common.Config, h helper.Stack, n int) (*r
 func (rbft *rbftImpl) resetComponents() {
 	rbft.initMsgEventMap()
 
+	rbft.status = new(statusManager)
 	rbft.timerMgr = new(timerManager)
 	rbft.exec = new(executor)
 	rbft.storeMgr = new(storeManager)
@@ -691,7 +693,7 @@ func (rbft *rbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 	}
 
 	if re.SequenceNumber <= rbft.batchVdr.lastVid {
-		rbft.logger.Debugf("Replica %d received return missing transactions which has been validated, " +
+		rbft.logger.Debugf("Replica %d received return missing transactions which has been validated, "+
 			"returned seqNo=%d <= lastVid=%d, ignore it",
 			rbft.id, re.SequenceNumber, rbft.batchVdr.lastVid)
 		return nil

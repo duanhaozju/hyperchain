@@ -14,7 +14,7 @@ type storeManager struct {
 	logger *logging.Logger
 
 	// track quorum certificates for messages
-	certStore     map[msgID]*msgCert
+	certStore map[msgID]*msgCert
 
 	// track the committed cert to help execute
 	committedCert map[msgID]string
@@ -23,7 +23,7 @@ type storeManager struct {
 	outstandingReqBatches map[string]*TransactionBatch
 
 	// track L cached transaction batches produced from txPool
-	txBatchStore          map[string]*TransactionBatch
+	txBatchStore map[string]*TransactionBatch
 
 	// for all the assigned, non-checkpointed request batches we might miss
 	// some transactions in some batches, record batch id
@@ -48,7 +48,7 @@ type storeManager struct {
 
 	// track quorum certificates for checkpoints with the same chkptID; map
 	// chkptID(seqNo and id) to chkptCert(all checkpoints with that chkptID)
-	chkptCertStore  map[chkptID]*chkptCert
+	chkptCertStore map[chkptID]*chkptCert
 }
 
 // newStoreMgr news an instance of storeManager

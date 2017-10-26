@@ -1,5 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package rbft
 
 import (
@@ -331,7 +332,7 @@ func (rbft *rbftImpl) nullReqTimerReset() {
 	timeout := rbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
 	if !rbft.isPrimary(rbft.id) {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
-		timeout = 3 * timeout + rbft.timerMgr.getTimeoutValue(REQUEST_TIMER)
+		timeout = 3*timeout + rbft.timerMgr.getTimeoutValue(REQUEST_TIMER)
 	}
 
 	event := &LocalEvent{

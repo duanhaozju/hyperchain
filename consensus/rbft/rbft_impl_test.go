@@ -88,6 +88,7 @@ func TestRbftImpl_NewRbft(t *testing.T) {
 	rbft, conf, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
 	defer CleanData(rbft.namespace)
 	ensure.Nil(t, err)
+	rbft.Start()
 
 	ensure.DeepEqual(t, rbft.namespace, "global-"+strconv.Itoa(int(rbft.id)))
 	ensure.DeepEqual(t, rbft.in(inViewChange), false)
@@ -104,13 +105,15 @@ func TestRbftImpl_NewRbft(t *testing.T) {
 	// Test Consenter interface
 	rbft.Start()
 
-	rbft.Close()
+	rbft.Stop()
 
 }
 
 func TestProcessNullRequest(t *testing.T) {
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	ensure.Nil(t, err)
+	rbft.Start()
+
 	pbMsg := &protos.Message{
 		Type:      protos.Message_NULL_REQUEST,
 		Payload:   nil,
