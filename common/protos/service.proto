@@ -56,15 +56,16 @@ enum Event {
     ExecutorToConsensusEvent = 8;
     SnapshotEvent = 9;
     DeleteSnapshotEvent = 10;
+    ArchiveEvent = 11;
 
     //3.Self defined event
-    StoreInvalidTransactionEvent = 11;
-    ReceiveReplicaInfoEvent = 12;
-    ReceiveSyncBlocksEvent = 13;
-    ReceiveSyncRequestEvent = 14;
-    ReceiveWorldStateSyncRequestEvent = 15;
-    ReceiveWorldStateEvent = 16;
-    ReceiveWsHandshakeEvent = 17;
-    ReceiveWsAckEvent = 18;
+    StoreInvalidTransactionEvent = 12;
+    ReceiveReplicaInfoEvent = 13;
+    ReceiveSyncBlocksEvent = 14;
+    ReceiveSyncRequestEvent = 15;
+    ReceiveWorldStateSyncRequestEvent = 16;
+    ReceiveWorldStateEvent = 17;
+    ReceiveWsHandshakeEvent = 18;
+    ReceiveWsAckEvent = 19;
 
 }
