@@ -92,7 +92,7 @@ cd ${CLI_PATH} && govendor build
 # build executor
 f_rebuild_executor(){
     echo "Build executor ..."
-    cd ${EXECUTOR_PATH} && govendor build -i -ldflags -s
+    cd ${EXECUTOR_PATH} && govendor build -ldflags -s
     for (( j=1; j<=$MAXPEERNUM; j++ ))
     do
         cp ${EXECUTOR_PATH}/executor ${DUMP_PATH}/node${j}

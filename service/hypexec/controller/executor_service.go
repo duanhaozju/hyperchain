@@ -335,15 +335,9 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 	}
 }
 
-func (es *executorServiceImpl) GetCAManager() *admittance.CAManager {
-	//TODO: add CAManager to the struct.
-	cm, err := admittance.NewCAManager(es.conf)
-	if err != nil {
-		es.logger.Error(err)
-		panic("Cannot initialize the CAManager!")
-	}
-	es.caManager = cm
-	return cm
+
+func (es *executorServiceImpl) GetCAManager() *admittance.CAManager{
+	return es.caManager
 }
 
 func (es *executorServiceImpl) Name() string {
