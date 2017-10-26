@@ -2,8 +2,8 @@ package threadsafe
 
 import (
 	"fmt"
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 type tesItem struct {

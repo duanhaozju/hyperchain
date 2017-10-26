@@ -5,10 +5,10 @@ package primitives
 import (
 	"crypto/ecdsa"
 	"crypto/rand"
-	"encoding/asn1"
-	"math/big"
-	hcrypto "hyperchain/crypto"
 	"crypto/sha256"
+	"encoding/asn1"
+	hcrypto "hyperchain/crypto"
+	"math/big"
 )
 
 // ECDSASignature represents an ECDSA signature
@@ -32,7 +32,6 @@ func ECDSASign(signKey interface{}, msg []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 
 	raw, err := asn1.Marshal(ECDSASignature{r, s})
 	if err != nil {

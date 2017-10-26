@@ -3,8 +3,8 @@ package p2p_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"hyperchain/p2p/info"
 	"hyperchain/p2p"
+	"hyperchain/p2p/info"
 	//pb "hyperchain/p2p/message"
 )
 
@@ -13,7 +13,7 @@ var _ = Describe("Peer", func() {
 
 		var (
 			peer *p2p.Peer
-			err error
+			err  error
 		)
 
 		Context("with self information", func() {
@@ -57,7 +57,6 @@ var _ = Describe("Peer", func() {
 		//		Expect(peer).NotTo(BeNil())
 		//	})
 		//})
-
 
 		Context("and then getting peer id", func() {
 			It("should get successfully", func() {

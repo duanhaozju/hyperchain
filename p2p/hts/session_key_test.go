@@ -1,8 +1,8 @@
 package hts
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestNewSessionKey(t *testing.T) {

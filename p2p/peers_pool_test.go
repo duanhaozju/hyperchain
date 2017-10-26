@@ -3,10 +3,10 @@ package p2p
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/utils"
 	"github.com/terasum/viper"
+	"hyperchain/manager/event"
 	"hyperchain/p2p/info"
+	"hyperchain/p2p/utils"
 )
 
 var _ = Describe("PeersPool", func() {
@@ -15,7 +15,7 @@ var _ = Describe("PeersPool", func() {
 		var peersPool *PeersPool
 
 		ev := new(event.TypeMux)
-		peerConfigPath := utils.GetProjectPath()+"/p2p/test/peerconfig.toml"
+		peerConfigPath := utils.GetProjectPath() + "/p2p/test/peerconfig.toml"
 		peerConfig := viper.New()
 		peerConfig.SetConfigFile(peerConfigPath)
 
@@ -37,7 +37,7 @@ var _ = Describe("PeersPool", func() {
 
 			var (
 				peer *Peer
-				err error
+				err  error
 			)
 
 			Context("with a new vp peer", func() {

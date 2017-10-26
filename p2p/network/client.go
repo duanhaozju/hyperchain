@@ -38,14 +38,14 @@ func connCloser(v interface{}) error {
 func NewClient(hostname, addr string, sec *Sec, cconf *clientConf) (*Client, error) {
 
 	poolConfig := &pool.PoolConfig{
-		InitialCap: cconf.connInitCap, 		// the minimum number of connections in the connection pool
-		MaxCap:     cconf.connUpperlimit,   // the maximum number of connections in the connection pool
-		Factory:    connCreator,
-		Close:      connCloser,
-		IdleTimeout: cconf.connIdleTime, 	// the maximum idle time for the connection.
-											// The connection will be closed if this time is exceeded.
-		EndPoint:    addr, 					// the address to connect
-		Options:     sec.GetGrpcClientOpts(),
+		InitialCap:  cconf.connInitCap,    // the minimum number of connections in the connection pool
+		MaxCap:      cconf.connUpperlimit, // the maximum number of connections in the connection pool
+		Factory:     connCreator,
+		Close:       connCloser,
+		IdleTimeout: cconf.connIdleTime, // the maximum idle time for the connection.
+		// The connection will be closed if this time is exceeded.
+		EndPoint: addr, // the address to connect
+		Options:  sec.GetGrpcClientOpts(),
 	}
 	p, err := pool.NewChannelPool(poolConfig)
 	if err != nil {

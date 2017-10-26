@@ -1,14 +1,14 @@
 package jsonrpc
 
 import (
-	"testing"
 	"bufio"
 	"bytes"
-	"github.com/stretchr/testify/assert"
 	"encoding/json"
-	"strconv"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"net/http"
+	"strconv"
+	"testing"
 )
 
 type rwc struct {

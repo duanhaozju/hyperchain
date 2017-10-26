@@ -1,11 +1,11 @@
 package hts
 
 import (
-	"testing"
-	"hyperchain/p2p/utils"
-	"github.com/stretchr/testify/assert"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"github.com/terasum/viper"
+	"hyperchain/p2p/utils"
+	"testing"
 )
 
 //func initialCertGroup() {

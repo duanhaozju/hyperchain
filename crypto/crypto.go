@@ -4,12 +4,12 @@ package crypto
 
 import (
 	"crypto/sha256"
+	"github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/ripemd160"
 	"hyperchain/common"
 	"hyperchain/crypto/secp256k1"
 	"hyperchain/crypto/sha3"
 	"math/big"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 func Keccak256Hash(data ...[]byte) (h common.Hash) {

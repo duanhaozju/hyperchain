@@ -15,8 +15,8 @@ package executor
 
 import (
 	"bytes"
-	"hyperchain/common"
 	"encoding/binary"
+	"hyperchain/common"
 	"hyperchain/core/types"
 	"strconv"
 )

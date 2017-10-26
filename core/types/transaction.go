@@ -21,8 +21,8 @@ import (
 	"hyperchain/crypto"
 	"hyperchain/crypto/guomi"
 	"hyperchain/crypto/sha3"
-	"strconv"
 	"math/big"
+	"strconv"
 )
 
 var log *logging.Logger // package-level logger

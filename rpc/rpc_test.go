@@ -3,14 +3,14 @@
 package jsonrpc
 
 import (
-	"testing"
 	"hyperchain/common"
+	"testing"
 )
 
 var (
 	configPath = "../configuration/global.toml"
-	defaultNS    = common.DEFAULT_NAMESPACE
-	rpc			RPCServer
+	defaultNS  = common.DEFAULT_NAMESPACE
+	rpc        RPCServer
 )
 
 func initial() {
@@ -46,4 +46,3 @@ func TestRPCServerImpl_Restart(t *testing.T) {
 		t.Error(err)
 	}
 }
-

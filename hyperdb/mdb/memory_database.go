@@ -204,10 +204,10 @@ func (iter *Iter) Error() error {
 }
 
 func (iter *Iter) Seek(key []byte) bool {
-	if iter.ptr == nil || iter.ptr.kvs == nil || len(iter.ptr.kvs) == 0{
+	if iter.ptr == nil || iter.ptr.kvs == nil || len(iter.ptr.kvs) == 0 {
 		return false
 	}
-	for i, kv := range iter.ptr.kvs{
+	for i, kv := range iter.ptr.kvs {
 		if isLarger(key, common.Hex2Bytes(kv.key)) {
 			iter.index = i
 			return true

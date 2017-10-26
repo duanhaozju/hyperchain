@@ -11,7 +11,7 @@ import (
 )
 
 type InnerAddr struct {
-	addrs map[string]string	// key is domain name, value is IP address
+	addrs map[string]string // key is domain name, value is IP address
 	lock  *sync.RWMutex
 }
 

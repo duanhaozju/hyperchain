@@ -181,7 +181,6 @@ func (pmgr *peerManagerImpl) Start() error {
 		pmgr.logger.Infof("SELF hash: %s", pmgr.node.info.Hash)
 	}()
 
-
 	return nil
 }
 
