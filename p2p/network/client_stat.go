@@ -132,10 +132,10 @@ func (c *Client) reborn() {
 	c.connPool.Release()
 	// recreate the connection pool
 	poolConfig := &pool.PoolConfig{
-		InitialCap: c.cconf.connInitCap,
-		MaxCap:     c.cconf.connUpperlimit,
-		Factory:    connCreator,
-		Close:      connCloser,
+		InitialCap:  c.cconf.connInitCap,
+		MaxCap:      c.cconf.connUpperlimit,
+		Factory:     connCreator,
+		Close:       connCloser,
 		IdleTimeout: c.cconf.connIdleTime,
 		EndPoint:    c.addr,
 		Options:     c.sec.GetGrpcClientOpts(),

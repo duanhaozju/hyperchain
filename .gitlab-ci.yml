@@ -8,11 +8,22 @@ before_script:
   - cd "$GO_DIR"
 
 stages:
-  - test
   - build
-  - deploy
+  - test
 
-job-test:
+project-build:
+  stage: build
+  script:
+    - pwd
+    - go env
+    - go get -u github.com/kardianos/govendor
+    - govendor build
+  except:
+    -  /^release1.2-.*$/ # ignore all release1.2* branches
+    -  release1.1
+
+
+unit-test:
   stage: test
   script:
     - pwd
@@ -20,7 +31,6 @@ job-test:
     - go get -u github.com/kardianos/govendor
     - govendor sync
     - govendor test +local
-  only:
-    - develop
-  tags:
-    - golang
+  except:
+    -  /^release1.2-.*$/ # ignore all release1.2* branches
+    -  release1.1

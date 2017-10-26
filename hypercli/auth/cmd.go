@@ -7,7 +7,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-//NewLoginCMD new login commands.
+// NewLoginCMD new login commands.
 func NewLoginCMD() cli.Command {
 	return cli.Command{
 		Name:   "login",
@@ -28,7 +28,7 @@ func NewLoginCMD() cli.Command {
 	}
 }
 
-//NewLogoutCMD new logout commands.
+// NewLogoutCMD new logout commands.
 func NewLogoutCMD() cli.Command {
 	return cli.Command{
 		Name:   "logout",
@@ -37,7 +37,7 @@ func NewLogoutCMD() cli.Command {
 	}
 }
 
-//NewAuthCMD new auth specific commands.
+// NewAuthCMD new auth related commands.
 func NewAuthCMD() []cli.Command {
 	return []cli.Command{
 		{

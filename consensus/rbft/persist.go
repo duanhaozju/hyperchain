@@ -138,7 +138,7 @@ func (rbft *rbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
 					idx := msgID{v, n, d}
 					qset[idx] = preprep
 				} else {
-					rbft.logger.Warningf("Replica %d could not restore pre-prepare key %v, err: %v", rbft.id, set, err)
+					rbft.logger.Warningf("Replica %d could not restore prePrepare key %v, err: %v", rbft.id, set, err)
 				}
 			}
 		}

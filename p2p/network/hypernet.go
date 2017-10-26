@@ -20,13 +20,13 @@ import (
 var logger *logging.Logger
 
 type HyperNet struct {
-	conf          *viper.Viper
+	conf *viper.Viper
 
 	server        *Server
 	hostClientMap cmap.ConcurrentMap
 
 	// key-value pair for hostname -> IP address, read or write hosts.toml
-	dns           *DNSResolver
+	dns *DNSResolver
 	// key-value pair for domain -> IP address, read or write addr.toml
 	addr *inneraddr.InnerAddr
 
@@ -38,7 +38,7 @@ type HyperNet struct {
 	// grpc port
 	listenPort string
 	// security connection options
-	sec        *Sec
+	sec *Sec
 
 	// self belong domain
 	domain string

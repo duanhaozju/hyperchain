@@ -133,13 +133,13 @@ func (pool *txPoolImpl) addTxs(txs []*types.Transaction) error {
 
 		// find tx in batchStore(batched txs)
 		if _, ok := pool.batchedTxs[txHash]; ok {
-			pool.logger.Warningf("Duplicate transaction with hash : %s which has been batched", txHash)
+			pool.logger.Warningf("Duplicate transaction in addTxs with hash : %s which has been batched", txHash)
 			return ErrDuplicateTx
 		}
 
 		// find tx in txPool(non-batched txs)
 		if pool.txPool[txHash] != nil {
-			pool.logger.Debugf("Duplicate transaction with hash : %s, may be caused by receiving certain tx"+
+			pool.logger.Debugf("Duplicate transaction in addTxs with hash : %s, may be caused by receiving certain tx"+
 				"during fetching missing tx from primary", txHash)
 			isDuplicate = true
 		}
@@ -193,7 +193,7 @@ func (pool *txPoolImpl) GetTxsByHashList(id string, hashList []string) (txs []*t
 	for i, hash := range hashList {
 		_, ok := pool.batchedTxs[hash] // If this transaction has been batched
 		if ok {
-			pool.logger.Warningf("Duplicate transaction with hash : %s", hash)
+			pool.logger.Warningf("Duplicate transaction in getTxsByHashList with hash : %s, batch id : %s", hash, id)
 			err = ErrDuplicateTx
 			missingTxsHash = nil
 			return
@@ -265,12 +265,14 @@ func (pool *txPoolImpl) ReturnFetchTxs(id string, missingHashList map[uint64]str
 
 // GotMissingTxs receives txs fetched from primary and add txs to txpool
 func (pool *txPoolImpl) GotMissingTxs(id string, txs map[uint64]*types.Transaction) error {
+	pool.logger.Debugf("Replica received %d missingTxs, batch id : %s", len(txs), id)
 	var validTxs []*types.Transaction
 	if _, ok := pool.missingTxs[id]; !ok {
 		pool.logger.Errorf("Received missing txs, but can't find corresponding batch hash: %s", id)
 		return ErrNoBatch
 	}
 	if len(txs) != len(pool.missingTxs[id]) {
+		pool.logger.Errorf("Received missing txs, but not match, expect length: %d, received length", len(pool.missingTxs[id]), len(txs))
 		return ErrMismatch
 	}
 	for i, tx := range txs {
@@ -395,6 +397,7 @@ func newTxPoolImpl(namespace string, poolsize int, queue *event.TypeMux, batchsi
 
 // primaryAddNewTx enqueues a single new transaction into the pool with check pool size and batch size.
 func (pool *txPoolImpl) primaryAddNewTx(tx *types.Transaction, checkPool bool) (bool, error) {
+	pool.logger.Errorf("Primary adds a transaction, checkPool: %v", checkPool)
 	if checkPool {
 		if pool.IsPoolFull() {
 			pool.logger.Warningf("Reach the upper limit of txPool")
@@ -403,12 +406,12 @@ func (pool *txPoolImpl) primaryAddNewTx(tx *types.Transaction, checkPool bool) (
 	}
 	txHash := tx.GetHash().Hex()
 	if _, ok := pool.batchedTxs[txHash]; ok {
-		pool.logger.Warningf("Duplicate transaction with hash : %s in batched txs", txHash)
+		pool.logger.Warningf("Duplicate transaction in primaryAddNewTx with hash : %s in batched txs", txHash)
 		return false, ErrDuplicateTx
 	}
 
 	if pool.txPool[txHash] != nil {
-		pool.logger.Warningf("Duplicate transaction with hash : %s in tx pool", txHash)
+		pool.logger.Warningf("Duplicate transaction in primaryAddNewTx with hash : %s in tx pool", txHash)
 		return false, ErrDuplicateTx
 	}
 	pool.txPool[txHash] = tx
@@ -428,6 +431,7 @@ func (pool *txPoolImpl) primaryAddNewTx(tx *types.Transaction, checkPool bool) (
 
 // replicaAddNewTx enqueues a single new transaction into the pool with check pool size, but don't generate a new batch
 func (pool *txPoolImpl) replicaAddNewTx(tx *types.Transaction, checkPool bool) (bool, error) {
+	pool.logger.Errorf("Replica adds a transaction, checkPool: %v", checkPool)
 	if checkPool {
 		if pool.IsPoolFull() {
 			pool.logger.Warningf("Reach the upper limit of txPool")
@@ -437,12 +441,12 @@ func (pool *txPoolImpl) replicaAddNewTx(tx *types.Transaction, checkPool bool) (
 
 	txHash := tx.GetHash().Hex()
 	if _, ok := pool.batchedTxs[txHash]; ok {
-		pool.logger.Warningf("Duplicate transaction with hash : %s in batched txs", txHash)
+		pool.logger.Warningf("Duplicate transaction in replicaAddNewTx with hash : %s in batched txs", txHash)
 		return false, ErrDuplicateTx
 	}
 
 	if pool.txPool[txHash] != nil {
-		pool.logger.Warningf("Duplicate transaction with hash : %s in tx pool", txHash)
+		pool.logger.Warningf("Duplicate transaction in replicaAddNewTx with hash : %s in tx pool", txHash)
 		return false, ErrDuplicateTx
 	}
 	pool.txPool[txHash] = tx

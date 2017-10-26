@@ -20,15 +20,15 @@ var (
 type PeersPool struct {
 	namespace string
 
-	vpPool    *threadsafe.Heap          // all the VP peer under the namespace
-	nvpPool cmap.ConcurrentMap			// all the NVP peer under the namespace
+	vpPool  *threadsafe.Heap   // all the VP peer under the namespace
+	nvpPool cmap.ConcurrentMap // all the NVP peer under the namespace
 
-	existMap cmap.ConcurrentMap			// all the VP peer and NVP peer under the namespace
-	pendingMap cmap.ConcurrentMap		// all the pending peer, maybe VP peer or NVP peer
+	existMap   cmap.ConcurrentMap // all the VP peer and NVP peer under the namespace
+	pendingMap cmap.ConcurrentMap // all the pending peer, maybe VP peer or NVP peer
 
-	evMux      *event.TypeMux
+	evMux *event.TypeMux
 
-	pts     *PeerTriples				// for persisting configuration
+	pts     *PeerTriples // for persisting configuration
 	peercnf *peerCnf
 
 	logger *logging.Logger

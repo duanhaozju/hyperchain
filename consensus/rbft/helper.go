@@ -181,7 +181,7 @@ func (rbft *rbftImpl) prePrepared(digest string, v uint64, n uint64) bool {
 		}
 	}
 
-	rbft.logger.Debugf("Replica %d does not have view=%d/seqNo=%d pre-prepared",
+	rbft.logger.Debugf("Replica %d does not have view=%d/seqNo=%d prePrepared",
 		rbft.id, v, n)
 
 	return false
@@ -379,30 +379,30 @@ func (rbft *rbftImpl) deleteExistedTx(digest string) {
 // itself is legal or not
 func (rbft *rbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 	if rbft.in(inNegotiateView) {
-		rbft.logger.Debugf("Replica %d try recvPrePrepare, but it's in nego-view", rbft.id)
+		rbft.logger.Debugf("Replica %d try recvPrePrepare, but it's in negotiateView", rbft.id)
 		return false
 	}
 
 	if rbft.in(inViewChange) {
-		rbft.logger.Debugf("Replica %d ignoring pre-prepare as we are in view change", rbft.id)
+		rbft.logger.Debugf("Replica %d ignoring prePrepare as we are in viewChange", rbft.id)
 		return false
 	}
 
 	if !rbft.isPrimary(preprep.ReplicaId) {
-		rbft.logger.Warningf("Pre-prepare from other than primary: got %d, should be %d",
+		rbft.logger.Warningf("PrePrepare from other than primary: got %d, should be %d",
 			preprep.ReplicaId, rbft.primary(rbft.view))
 		return false
 	}
 
 	if !rbft.inWV(preprep.View, preprep.SequenceNumber) {
 		if preprep.SequenceNumber != rbft.h && !rbft.in(skipInProgress) {
-			rbft.logger.Warningf("Replica %d pre-prepare view different, or sequence number outside "+
-				"watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
+			rbft.logger.Warningf("Replica %d prePrepare view different, or sequence number outside "+
+				"watermarks: preprep.View %d, expected.View %d, seqNo %d, low water mark %d",
 				rbft.id, preprep.View, rbft.view, preprep.SequenceNumber, rbft.h)
 		} else {
 			// This is perfectly normal
-			rbft.logger.Debugf("Replica %d pre-prepare view different, or sequence number outside "+
-				"watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
+			rbft.logger.Debugf("Replica %d prePrepare view different, or sequence number outside "+
+				"watermarks: preprep.View %d, expected.View %d, seqNo %d, low water mark %d",
 				rbft.id, preprep.View, rbft.view, preprep.SequenceNumber, rbft.h)
 		}
 		return false
@@ -414,7 +414,7 @@ func (rbft *rbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 // legal or not
 func (rbft *rbftImpl) isPrepareLegal(prep *Prepare) bool {
 	if rbft.in(inNegotiateView) {
-		rbft.logger.Debugf("Replica %d try to recvPrepare, but it's in nego-view", rbft.id)
+		rbft.logger.Debugf("Replica %d try to recvPrepare, but it's in negotiateView", rbft.id)
 		return false
 	}
 
@@ -428,11 +428,11 @@ func (rbft *rbftImpl) isPrepareLegal(prep *Prepare) bool {
 
 	if !rbft.inWV(prep.View, prep.SequenceNumber) {
 		if prep.SequenceNumber != rbft.h && !rbft.in(skipInProgress) {
-			rbft.logger.Warningf("Replica %d ignoring prepare from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
+			rbft.logger.Warningf("Replica %d ignoring prepare from replica %d for view=%d/seqNo=%d: not inWv, in view %d, low water mark %d",
 				rbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber, rbft.view, rbft.h)
 		} else {
 			// This is perfectly normal
-			rbft.logger.Debugf("Replica %d ignoring prepare from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
+			rbft.logger.Debugf("Replica %d ignoring prepare from replica %d for view=%d/seqNo=%d: not inWv, in view %d, low water mark %d",
 				rbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber, rbft.view, rbft.h)
 		}
 
@@ -445,16 +445,16 @@ func (rbft *rbftImpl) isPrepareLegal(prep *Prepare) bool {
 // or not
 func (rbft *rbftImpl) isCommitLegal(commit *Commit) bool {
 	if rbft.in(inNegotiateView) {
-		rbft.logger.Debugf("Replica %d try to recvCommit, but it's in nego-view", rbft.id)
+		rbft.logger.Debugf("Replica %d try to recvCommit, but it's in negotiateView", rbft.id)
 		return false
 	}
 
 	if !rbft.inWV(commit.View, commit.SequenceNumber) {
 		if commit.SequenceNumber != rbft.h && !rbft.in(skipInProgress) {
-			rbft.logger.Warningf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", rbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, rbft.view, rbft.h)
+			rbft.logger.Warningf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not inWv, in view %d, low water mark %d", rbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, rbft.view, rbft.h)
 		} else {
 			// This is perfectly normal
-			rbft.logger.Debugf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", rbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, rbft.view, rbft.h)
+			rbft.logger.Debugf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not inWv, in view %d, low water mark %d", rbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, rbft.view, rbft.h)
 		}
 		return false
 	}

@@ -4,23 +4,22 @@
 package main
 
 import (
-	"github.com/urfave/cli"
+	"os"
+	"time"
+
+	"hyperchain/hypercli/auth"
 	"hyperchain/hypercli/contract"
 	"hyperchain/hypercli/log"
 	"hyperchain/hypercli/namespace"
 	"hyperchain/hypercli/node"
 	"hyperchain/hypercli/server"
 
-	"hyperchain/common"
-	"hyperchain/hypercli/auth"
-	"os"
-	"time"
+	"github.com/urfave/cli"
 )
 
 var app *cli.App
 
 func initApp() {
-	initLogger()
 	app = cli.NewApp()
 	app.Name = "hypercli"
 	app.Version = "1.4.0"
@@ -28,6 +27,7 @@ func initApp() {
 	app.Usage = "Hyperchain command line client"
 	app.Description = "Run 'hypercli COMMAND --help' for more information on a command"
 
+	// default global flags
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
 			Name:  "host, H",
@@ -81,11 +81,6 @@ func initApp() {
 		},
 	}
 
-}
-
-func initLogger() {
-	conf := common.NewRawConfig()
-	common.InitHyperLogger(common.DEFAULT_NAMESPACE, conf)
 }
 
 func main() {

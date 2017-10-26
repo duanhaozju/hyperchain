@@ -186,6 +186,6 @@ func (tm *timerManager) makeCleanVcTimeoutLegal() {
 	if cleanVcTimeout < 6*nvTimeout {
 		cleanVcTimeout = 6 * nvTimeout
 		tm.setTimeoutValue(CLEAN_VIEW_CHANGE_TIMER, cleanVcTimeout)
-		tm.logger.Criticalf("set timeout of cleaning out-of-time view change message to %v since it's too short", 6*nvTimeout)
+		tm.logger.Criticalf("set timeout of cleaning out-of-time viewChange message to %v since it's too short", 6*nvTimeout)
 	}
 }

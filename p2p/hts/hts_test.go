@@ -2,10 +2,10 @@ package hts
 
 import (
 	"github.com/stretchr/testify/assert"
+	"hyperchain/manager/event"
+	"hyperchain/p2p/hts/secimpl"
 	"hyperchain/p2p/utils"
 	"testing"
-	"hyperchain/p2p/hts/secimpl"
-	"hyperchain/manager/event"
 )
 
 var (
@@ -13,12 +13,12 @@ var (
 )
 
 func TestNewHTS(t *testing.T) {
-	_, err := NewHTS("", nil,nsCnfigPath)
+	_, err := NewHTS("", nil, nsCnfigPath)
 	assert.Nil(t, err, "err should be nil")
 }
 
 func TestHTS_GetAClientHTS(t *testing.T) {
-	hts, err := NewHTS("", nil,nsCnfigPath)
+	hts, err := NewHTS("", nil, nsCnfigPath)
 	assert.Nil(t, err, "err should be nil")
 
 	chts, err := hts.GetAClientHTS()

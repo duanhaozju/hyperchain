@@ -5,12 +5,14 @@ package log
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
-	admin "hyperchain/api/admin"
+
+	"hyperchain/api/admin"
 	"hyperchain/hypercli/common"
+
+	"github.com/urfave/cli"
 )
 
-//NewLogCMD new log related commands.
+// NewLogCMD new log related commands.
 func NewLogCMD() []cli.Command {
 	return []cli.Command{
 		{
@@ -26,8 +28,12 @@ func NewLogCMD() []cli.Command {
 	}
 }
 
+// setLevel sets the log level of specified namespace:module with 3 params:
+// the first param specifies the namespace
+// the second param specifies the module(such as p2p, consensus...)
+// the third param specifies the new log level user wants to set.
 func setLevel(c *cli.Context) error {
-	client := common.GetCmdClient(c)
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	cmd := &admin.Command{
 		MethodName: "admin_setLevel",
 		Args:       c.Args(),
@@ -42,8 +48,11 @@ func setLevel(c *cli.Context) error {
 	return nil
 }
 
+// getLevel gets the log level of specified namespace:module with 2 params:
+// the first param specifies the namespace
+// the second param specifies the module(such as p2p, consensus...)
 func getLevel(c *cli.Context) error {
-	client := common.GetCmdClient(c)
+	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	cmd := &admin.Command{
 		MethodName: "admin_getLevel",
 		Args:       c.Args(),

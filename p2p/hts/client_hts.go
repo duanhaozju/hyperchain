@@ -3,8 +3,8 @@ package hts
 import (
 	"crypto"
 	"github.com/pkg/errors"
-	"sync"
 	"hyperchain/p2p/hts/secimpl"
+	"sync"
 )
 
 type ClientHTS struct {
