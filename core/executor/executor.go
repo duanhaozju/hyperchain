@@ -16,7 +16,7 @@ package executor
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	edb "hyperchain/core/ledger/chain"
+	"hyperchain/core/ledger/chain"
 	"hyperchain/core/ledger/state"
 	"hyperchain/core/vm"
 	"hyperchain/core/vm/jcee/go"
@@ -37,15 +37,15 @@ type Executor struct {
 	commonHash  crypto.CommonHash // Keccak256 hasher
 	encryption  crypto.Encryption // ECDSA encrypter
 	conf        *Config           // Conf refers a configuration reader
-	context     ExecutorContext
+	context     *ExecutorContext
 	hasher      Hasher
-	cache       Cache
+	cache       *Cache
 	helper      *Helper     // Helper refers a communication mux
-	statedb     vm.Database // world state handler
+	statedb     vm.Database // World state handler
 	logger      *logging.Logger
-	jvmCli      jvm.ContractExecutor // jvm client
-	snapshotReg *SnapshotRegistry    // snapshot registry
-	archiveMgr  *ArchiveManager      // archive manager
+	jvmCli      jvm.ContractExecutor // Jvm client
+	snapshotReg *SnapshotRegistry    // Snapshot registry
+	archiveMgr  *ArchiveManager      // Archive manager
 	nvp         NVP
 }
 
@@ -54,7 +54,7 @@ type Executor struct {
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) (*Executor, error) {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	helper := NewHelper(eventMux, filterMux)
+	helper := newHelper(eventMux, filterMux)
 
 	executor := &Executor{
 		namespace:  namespace,
@@ -65,25 +65,27 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 		logger:     common.GetLogger(namespace, "executor"),
 	}
 
-	// initialise jvm client if jvm is been permissible
+	// Init jvm client if jvm is been permissible
 	if executor.conf.isJvmEnable() {
 		executor.jvmCli = jvm.NewContractExecutor(conf, namespace)
 	}
 
-	// initialise several components.
+	// Init several components.
 	executor.snapshotReg = NewSnapshotRegistry(namespace, executor.logger, executor)
 	executor.archiveMgr = NewArchiveManager(namespace, executor, executor.snapshotReg, executor.logger)
 	executor.nvp = NewNVPImpl(executor)
+	executor.cache = newExecutorCache()
+	executor.context = newExecutorContext()
 
-	// TODO doesn't know why to add this statement here.
-	// TODO ask @Rongjialei to fix this.
 	if err := executor.initDb(); err != nil {
+		executor.logger.Errorf("[Namespace = %s] executor initialize db failed. %s", executor.namespace, err.Error())
 		return nil, err
 	}
+
 	return executor, nil
 }
 
-// initDb make the initilisation of the database handler.
+// initDb initializes the normal database handler and archive database handler.
 func (executor *Executor) initDb() error {
 	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
 	if err != nil {
@@ -98,7 +100,7 @@ func (executor *Executor) initDb() error {
 	return nil
 }
 
-// Start - start service.
+// Start starts the executor's services.
 func (executor *Executor) Start() error {
 	if err := executor.initialize(); err != nil {
 		return err
@@ -107,42 +109,34 @@ func (executor *Executor) Start() error {
 	return nil
 }
 
-// Stop - stop service.
+// Stop stops all the services provided by executor.
 func (executor *Executor) Stop() error {
-	if err := executor.finailize(); err != nil {
+	if err := executor.finalize(); err != nil {
 		return err
 	}
 	executor.logger.Noticef("[Namespace = %s] executor stop", executor.namespace)
 	return nil
 }
 
-// Status - obtain executor status.
-func (executor *Executor) Status() {
-
-}
-
+// initialize inits some components of executor and start the services.
 func (executor *Executor) initialize() error {
-	if err := executor.initDb(); err != nil {
-		executor.logger.Errorf("executor initiailize db failed. %s", err.Error())
+
+	if err := executor.initExecutorContext(); err != nil {
+		executor.logger.Errorf("executor initialize status failed. %s", err.Error())
 		return err
 	}
-	if err := initializeExecutorContext(executor); err != nil {
-		executor.logger.Errorf("executor initiailize status failed. %s", err.Error())
+
+	if err := initStateDb(executor); err != nil {
+		executor.logger.Errorf("executor initialize state failed. %s", err.Error())
 		return err
 	}
-	if err := initializeExecutorCache(executor); err != nil {
-		executor.logger.Errorf("executor initiailize cache failed. %s", err.Error())
-		return err
-	}
-	if err := initializeExecutorStateDb(executor); err != nil {
-		executor.logger.Errorf("executor initiailize state failed. %s", err.Error())
-		return err
-	}
+
 	if err := executor.snapshotReg.Start(); err != nil {
-		executor.logger.Errorf("executor initiailize snapshot registry failed. %s", err.Error())
+		executor.logger.Errorf("executor initialize snapshot registry failed. %s", err.Error())
 		return err
 	}
-	// start to listen for process commit event or validation event
+
+	// Start to listen for process commit event or validation event
 	go executor.listenCommitEvent()
 	go executor.listenValidationEvent()
 	go executor.syncReplica()
@@ -152,8 +146,8 @@ func (executor *Executor) initialize() error {
 	return nil
 }
 
-// setExit - notify all backend to exit.
-func (executor *Executor) finailize() error {
+// finalize stops all the services of executor.
+func (executor *Executor) finalize() error {
 	if executor.context.exit != nil {
 		close(executor.context.exit)
 	}
@@ -164,24 +158,38 @@ func (executor *Executor) finailize() error {
 	return nil
 }
 
-// initializeExecutorStateDb - initialize statedb.
-func initializeExecutorStateDb(executor *Executor) error {
+// initExecutorContext inits the ExecutorContext
+func (executor *Executor) initExecutorContext() error {
+	currentChain := chain.GetChainCopy(executor.namespace)
+	blk, err := chain.GetBlockByNumber(executor.namespace, currentChain.Height)
+	if err != nil {
+		executor.logger.Errorf("[Namespace = %s] get block #%d failed.", executor.namespace, currentChain.Height)
+		return err
+	}
+	executor.context.initDemand(currentChain.Height + 1)
+	executor.logger.Noticef("[Namespace = %s] initialize executor status success. demand block number %d, demand seqNo %d, latest state hash %s",
+		executor.namespace, executor.context.demandNumber, executor.context.demandSeqNo, common.Bytes2Hex(blk.MerkleRoot))
+
+	return nil
+}
+
+// initStateDb inits the statedb.
+func initStateDb(executor *Executor) error {
 	stateDb, err := executor.newStateDb()
 	if err != nil {
-		executor.logger.Errorf("[Namespace = %s] executor init stateDb failed, err : %s", executor.namespace, err.Error())
 		return err
 	}
 	executor.statedb = stateDb
 	return nil
 }
 
-// initHistoryStateDb - open a historical database for snapshot content query.
+// initHistoryStateDb inits a historical database for snapshot content query.
 func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, error, func()) {
 	// never forget to close db
 	if err, manifest := executor.snapshotReg.rwc.Read(snapshotId); err != nil {
 		return nil, err, nil
 	} else {
-		blk, err := edb.GetBlockByNumber(executor.namespace, manifest.Height)
+		blk, err := chain.GetBlockByNumber(executor.namespace, manifest.Height)
 		if err != nil {
 			return nil, err, nil
 		}
@@ -200,14 +208,14 @@ func (executor *Executor) initHistoryStateDb(snapshotId string) (vm.Database, er
 	}
 }
 
-// NewStateDb - create a latest state.
+// newStateDb creates a latest state db.
 func (executor *Executor) newStateDb() (vm.Database, error) {
-	blk, err := edb.GetBlockByNumber(executor.namespace, edb.GetHeightOfChain(executor.namespace))
+	blk, err := chain.GetBlockByNumber(executor.namespace, chain.GetHeightOfChain(executor.namespace))
 	if err != nil {
-		executor.logger.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, edb.GetHeightOfChain(executor.namespace))
+		executor.logger.Errorf("[Namespace = %s] can not find block #%d", executor.namespace, chain.GetHeightOfChain(executor.namespace))
 		return nil, err
 	}
-	stateDb, err := state.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.archiveDb, executor.conf.conf, edb.GetHeightOfChain(executor.namespace))
+	stateDb, err := state.New(common.BytesToHash(blk.MerkleRoot), executor.db, executor.archiveDb, executor.conf.conf, chain.GetHeightOfChain(executor.namespace))
 	if err != nil {
 		executor.logger.Errorf("[Namespace = %s] new stateDb failed, err : %s", executor.namespace, err.Error())
 		return nil, err
@@ -215,12 +223,12 @@ func (executor *Executor) newStateDb() (vm.Database, error) {
 	return stateDb, nil
 }
 
-// FetchStateDb - fetch state db
+// FetchStateDb fetches the state db
 func (executor *Executor) FetchStateDb() vm.Database {
 	return executor.statedb
 }
 
-// GetNVP get nvp handler.
+// GetNVP gets the nvp handler.
 func (executor *Executor) GetNVP() NVP {
 	return executor.nvp
 }

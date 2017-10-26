@@ -14,12 +14,13 @@
 package executor
 
 import (
-	"github.com/op/go-logging"
 	"hyperchain/common"
 	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"time"
+
+	"github.com/op/go-logging"
 )
 
 func (executor *Executor) Archive(event event.ArchiveEvent) {
@@ -158,7 +159,7 @@ func (mgr *ArchiveManager) migrate(manifest common.Manifest) error {
 			return err
 		}
 
-		if err, _ := edb.PersistBlock(avBatch, block, false, false); err != nil {
+		if _, err := edb.PersistBlock(avBatch, block, false, false); err != nil {
 			mgr.logger.Errorf("[Namespace = %s] archive block %d to historic database failed. error msg %s", mgr.namespace, i, err.Error())
 			return err
 		}

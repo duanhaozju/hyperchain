@@ -14,8 +14,9 @@
 package executor
 
 import (
-	"hyperchain/common"
 	"time"
+
+	"hyperchain/common"
 )
 
 const (

@@ -199,13 +199,13 @@ func TestMemBatch_Seek(t *testing.T) {
 		db.Put([]byte(kv.key), kv.value)
 	}
 	iter := db.NewIterator([]byte("key"))
-	if !iter.Seek([]byte("-")) || bytes.Compare(iter.Key(), []byte("-")) != 0 || bytes.Compare(iter.Value(), []byte("value-")) != 0{
+	if !iter.Seek([]byte("-")) || bytes.Compare(iter.Key(), []byte("-")) != 0 || bytes.Compare(iter.Value(), []byte("value-")) != 0 {
 		t.Error("iterator seek for key failed")
 	}
-	if !iter.Seek([]byte("key")) || bytes.Compare(iter.Key(), []byte("key")) != 0 || bytes.Compare(iter.Value(), []byte("value")) != 0{
+	if !iter.Seek([]byte("key")) || bytes.Compare(iter.Key(), []byte("key")) != 0 || bytes.Compare(iter.Value(), []byte("value")) != 0 {
 		t.Error("iterator seek for key failed")
 	}
-	if !iter.Seek([]byte("key1")) || bytes.Compare(iter.Key(), []byte("key1")) != 0 || bytes.Compare(iter.Value(), []byte("value1")) != 0{
+	if !iter.Seek([]byte("key1")) || bytes.Compare(iter.Key(), []byte("key1")) != 0 || bytes.Compare(iter.Value(), []byte("value1")) != 0 {
 		t.Error("iterator seek for key failed")
 	}
 }

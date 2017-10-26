@@ -84,7 +84,7 @@ func (handler *Handler) Restore(sid string) error {
 
 	// apply blk and chain
 	writeBatch := handler.db.NewBatch()
-	if err, _ := edb.PersistBlock(writeBatch, blk, false, false); err != nil {
+	if _, err := edb.PersistBlock(writeBatch, blk, false, false); err != nil {
 		return err
 	}
 	if err := edb.UpdateChain(meta.Namespace, writeBatch, blk, false, false, false); err != nil {

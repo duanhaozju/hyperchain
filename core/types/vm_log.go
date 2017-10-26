@@ -100,4 +100,3 @@ func (ls Logs) ToLogsTrans() []LogTrans {
 	}
 	return ret
 }
-

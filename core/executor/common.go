@@ -15,6 +15,7 @@ package executor
 
 import (
 	"bytes"
+
 	"hyperchain/core/types"
 )
 

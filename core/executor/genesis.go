@@ -15,7 +15,7 @@ package executor
 
 import (
 	"hyperchain/common"
-	edb "hyperchain/core/ledger/chain"
+	"hyperchain/core/ledger/chain"
 	"hyperchain/core/ledger/state"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
@@ -26,9 +26,9 @@ import (
 	"time"
 )
 
-// CreateInitBlock - create genesis for a specific namespace.
+// CreateInitBlock creates genesis block for a specific namespace.
 func (executor *Executor) CreateInitBlock(config *common.Config) error {
-	if edb.IsGenesisFinish(executor.namespace) {
+	if chain.IsGenesisFinish(executor.namespace) {
 		executor.logger.Infof("[Namespace = %s] already genesis", executor.namespace)
 		return nil
 	}
@@ -64,7 +64,7 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 	if err != nil {
 		return err
 	}
-	// flush state change to disk immediately
+	// Flush state change to disk immediately
 	block := types.Block{
 		ParentHash: common.FromHex("0x0000000000000000000000000000000000000000000000000000000000000000"),
 		Timestamp:  time.Now().Unix(),
@@ -72,19 +72,19 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 		Number:     uint64(0),
 		MerkleRoot: root.Bytes(),
 	}
-	// flush block content to disk immediately
+	// Flush block content to disk immediately
 	batch := stateDb.FetchBatch(0, state.BATCH_NORMAL)
-	if err, _ := edb.PersistBlock(batch, &block, true, true); err != nil {
+	if _, err := chain.PersistBlock(batch, &block, true, true); err != nil {
 		return err
 	}
-	// flush change of chain to disk immediately
-	edb.UpdateChain(executor.namespace, batch, &block, true, false, false)
+	// Flush change of chain to disk immediately
+	chain.UpdateChain(executor.namespace, batch, &block, true, false, false)
 	batch.Write()
 	stateDb.MarkProcessFinish(0)
 	return nil
 }
 
-// NewStateDb - create a empty stateDb handler.
+// NewStateDb creates a new stateDb handler.
 func NewStateDb(conf *common.Config, db db.Database, namespace string) (vm.Database, error) {
 	archiveDb, err := hyperdb.GetArchiveDbByNamespace(namespace)
 	if err != nil {

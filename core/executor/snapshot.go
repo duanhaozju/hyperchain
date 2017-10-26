@@ -266,7 +266,7 @@ func (registry *SnapshotRegistry) pushBlock(filterId string, number uint64) erro
 	}
 	defer sdb.Close()
 	wb := sdb.NewBatch()
-	err, _ = edb.PersistBlock(wb, blk, true, true)
+	_, err = edb.PersistBlock(wb, blk, true, true)
 	if err != nil {
 		return err
 	}

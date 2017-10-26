@@ -237,9 +237,9 @@ func (nvp *NVPImpl) preProcess(payload []byte) (*types.Block, error) {
 			}
 			if block.Version != nil {
 				// Receive block with version tag
-				err, _ = chain.PersistBlock(nvp.getExecutor().db.NewBatch(), block, true, true, string(block.Version), getTxVersion(block))
+				_, err = chain.PersistBlock(nvp.getExecutor().db.NewBatch(), block, true, true, string(block.Version), getTxVersion(block))
 			} else {
-				err, _ = chain.PersistBlock(nvp.getExecutor().db.NewBatch(), block, true, true)
+				_, err = chain.PersistBlock(nvp.getExecutor().db.NewBatch(), block, true, true)
 			}
 			if err != nil {
 				return nil, errors.New("put block into DB failed." + err.Error())

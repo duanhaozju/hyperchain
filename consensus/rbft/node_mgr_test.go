@@ -1,19 +1,19 @@
 package rbft
 
 import (
-	"testing"
-	"hyperchain/hyperdb/mdb"
 	"github.com/stretchr/testify/assert"
 	"hyperchain/common"
 	"hyperchain/consensus/helper/persist"
+	"hyperchain/hyperdb/mdb"
 	"hyperchain/manager/protos"
+	"testing"
 )
 
 func TestNewNodeMgr(t *testing.T) {
 	nodeMgr := newNodeMgr()
-    structName, nilElems, err := checkNilElems(nodeMgr)
-    if err != nil {
-    	t.Error(err.Error())
+	structName, nilElems, err := checkNilElems(nodeMgr)
+	if err != nil {
+		t.Error(err.Error())
 	}
 	if nilElems != nil {
 		t.Errorf("There exists some nil elements: %v in struct: %s", nilElems, structName)
@@ -21,7 +21,7 @@ func TestNewNodeMgr(t *testing.T) {
 	}
 }
 
-func TestRecvLocalNewNode(t *testing.T){
+func TestRecvLocalNewNode(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)

@@ -90,8 +90,8 @@ func newChainSyncContext(namespace string, event event.ChainSyncReqEvent, config
 		updateGenesis: updateGenesis,
 	}
 	// pre-select a best peer
-	ctx.qosStat = NewQos(ctx, config, namespace, logger)
-	ctx.setCurrentPeer(ctx.qosStat.SelectPeer())
+	ctx.qosStat = newQos(ctx, config, namespace, logger)
+	ctx.setCurrentPeer(ctx.qosStat.selectPeer())
 
 	// assign initial sync target
 	ctx.syncTarget = event.TargetHeight

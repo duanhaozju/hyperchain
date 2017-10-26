@@ -72,7 +72,7 @@ algo = "RBFT"
 [encryption.check]
  enable     = true  #enable RCert
  sign       = true  #enable Signature
- enableT    = true  #enable TCert
+ enableT    = false #enable TCert
 
 [encryption.security]
  algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des,aes or sm4)

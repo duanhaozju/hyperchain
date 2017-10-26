@@ -1,6 +1,7 @@
 package rbft
 
 import (
+	"errors"
 	"github.com/facebookgo/ensure"
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
@@ -16,12 +17,11 @@ import (
 	pb "hyperchain/manager/protos"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"sync"
 	"testing"
 	"time"
-	"reflect"
-	"errors"
 )
 
 //path struct should match
@@ -192,7 +192,7 @@ func (TH *TestHelp) Execute(seqNo uint64, hashS string, flag bool, isPrimary boo
 		Transactions: vtx.Transactions,
 		Number:       vtx.SeqNo,
 	}
-	if err, _ := edb.PersistBlock(batch, block, false, false); err != nil {
+	if _, err := edb.PersistBlock(batch, block, false, false); err != nil {
 		TH.rbft.logger.Errorf("persist block #%d into database failed.", block.Number, err.Error())
 		return nil
 	}
@@ -439,7 +439,7 @@ func checkNilElems(i interface{}) (string, []string, error) {
 	nilElems := []string{}
 	hasNil := false
 
-	for i := 0; i<typ.NumField(); i ++ {
+	for i := 0; i < typ.NumField(); i++ {
 		kind := typ.Field(i).Type.Kind()
 		if kind == reflect.Chan || kind == reflect.Map {
 			elemName := typ.Field(i).Name

@@ -15,7 +15,6 @@ package executor
 
 import (
 	"hyperchain/common"
-	edb "hyperchain/core/ledger/chain"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -30,7 +29,7 @@ type ExecutorContext struct {
 	commitQueueLen     int32 // commit buffer size
 
 	demandNumber uint64 // demand number for commit
-	demandSeqNo  uint64 // emand seqNo for validation
+	demandSeqNo  uint64 // demand seqNo for validation
 
 	exit chan struct{} // executor exit flag
 
@@ -43,71 +42,59 @@ type ExecutorContext struct {
 	syncCtx      *chainSyncContext // synchronization context
 }
 
-// initializeExecutorContext restores histrical status from db.
-func initializeExecutorContext(executor *Executor) error {
-	executor.context.exit = make(chan struct{})
+// newExecutorContext restores histrical status from db.
+func newExecutorContext() *ExecutorContext {
 
-	executor.context.validationSuspend = make(chan bool)
-	executor.context.commitSuspend = make(chan bool)
-	executor.context.syncReplicaSuspend = make(chan bool)
-	executor.context.stateUpdated = make(chan struct{})
+	context := &ExecutorContext{
+		exit:               make(chan struct{}),
+		validationSuspend:  make(chan bool),
+		commitSuspend:      make(chan bool),
+		syncReplicaSuspend: make(chan bool),
+		stateUpdated:       make(chan struct{}),
+	}
 
-	currentChain := edb.GetChainCopy(executor.namespace)
-	executor.initDemand(currentChain.Height + 1)
-	blk, err := edb.GetBlockByNumber(executor.namespace, currentChain.Height)
-	if err != nil {
-		executor.logger.Errorf("[Namespace = %s] get block #%d failed.", executor.namespace, currentChain.Height)
-		return err
+	return context
+}
+
+// initDemand inits the demand of number and seqNo.
+func (context *ExecutorContext) initDemand(num uint64) {
+	context.demandNumber = num
+	context.demandSeqNo = num
+}
+
+// incDemand increases the demand by plussing one.
+func (context *ExecutorContext) incDemand(typ int) {
+	if typ == DemandSeqNo {
+		context.demandSeqNo += 1
 	} else {
-		executor.logger.Noticef("[Namespace = %s] initialize executor status success. demand block number %d, demand seqNo %d, latest state hash %s",
-			executor.namespace, executor.context.demandNumber, executor.context.demandSeqNo, common.Bytes2Hex(blk.MerkleRoot))
-		return nil
+		context.demandNumber += 1
 	}
 }
 
-func (executor *Executor) initDemand(num uint64) {
-	executor.context.demandNumber = num
-	executor.context.demandSeqNo = num
-}
-
-func (executor *Executor) stateTransition(id uint64, root common.Hash) {
-	executor.statedb.ResetToTarget(id, root)
-}
-
-// Demand number
-func (executor *Executor) incDemand(typ int) {
+// setDemand sets the demand with given num.
+func (context *ExecutorContext) setDemand(typ int, num uint64) {
 	if typ == DemandSeqNo {
-		executor.context.demandSeqNo += 1
-		executor.logger.Debugf("[Namespace = %s] increase demand seqNo to %d", executor.namespace, executor.context.demandSeqNo)
+		context.demandSeqNo = num
 	} else {
-		executor.context.demandNumber += 1
-		executor.logger.Debugf("[Namespace = %s] increase demand number to %d", executor.namespace, executor.context.demandNumber)
+		context.demandNumber = num
 	}
 }
 
-func (executor *Executor) setDemand(typ int, num uint64) {
+// getDemand gets the demand seqNo.
+func (context *ExecutorContext) getDemand(typ int) uint64 {
 	if typ == DemandSeqNo {
-		executor.context.demandSeqNo = num
-		executor.logger.Debugf("[Namespace = %s] set demand seqNo to %d", executor.namespace, executor.context.demandSeqNo)
+		return context.demandSeqNo
 	} else {
-		executor.context.demandNumber = num
-		executor.logger.Debugf("[Namespace = %s] set demand number to %d", executor.namespace, executor.context.demandNumber)
+		return context.demandNumber
 	}
 }
 
-func (executor *Executor) getDemand(typ int) uint64 {
+// isDemand returns true if given seqNo is the demand one.
+func (context *ExecutorContext) isDemand(typ int, num uint64) bool {
 	if typ == DemandSeqNo {
-		return executor.context.demandSeqNo
+		return context.demandSeqNo == num
 	} else {
-		return executor.context.demandNumber
-	}
-}
-
-func (executor *Executor) isDemand(typ int, num uint64) bool {
-	if typ == DemandSeqNo {
-		return executor.context.demandSeqNo == num
-	} else {
-		return executor.context.demandNumber == num
+		return context.demandNumber == num
 	}
 }
 
@@ -211,6 +198,12 @@ func (executor *Executor) rollbackDone() {
 /*
 	CHAIN SYNCHRONIZATION
 */
+
+// stateTransition resets statedb's seqNo and root to target.
+func (executor *Executor) stateTransition(id uint64, root common.Hash) {
+	executor.statedb.ResetToTarget(id, root)
+}
+
 // waitUtilSyncAvailable waits validation processor and commit processor become idle.
 func (executor *Executor) waitUtilSyncAvailable() {
 	executor.logger.Debugf("[Namespace = %s] wait util sync available", executor.namespace)
@@ -219,24 +212,25 @@ func (executor *Executor) waitUtilSyncAvailable() {
 	executor.waitUtilValidationIdle()
 	executor.wailUtilCommitIdle()
 
-	// clear all cached stuff
+	// Clear all cached stuff
 	executor.statedb.Purge()
 }
 
-// syncDone sync callback function to notify sync finish.
+// syncDone is the callback function to notify sync finish.
 func (executor *Executor) syncDone() {
 	executor.logger.Debugf("[Namespace = %s] sync done", executor.namespace)
 	executor.turnOnValidationSwitch()
 	executor.cache.syncCache.Purge()
 }
 
-// clearSyncFlag - clear all sync flag fields.
+// clearSyncFlag clears all sync flag fields.
 func (executor *Executor) clearSyncFlag() {
 	executor.context.syncCtx = nil
 	executor.context.stateUpdated <- struct{}{}
 	executor.context.closeW.Wait()
 }
 
+// getSuspend the corresponding notifier with given identifier.
 func (executor *Executor) getSuspend(identifier int) chan bool {
 	switch identifier {
 	case IDENTIFIER_VALIDATION:
@@ -249,6 +243,7 @@ func (executor *Executor) getSuspend(identifier int) chan bool {
 	return nil
 }
 
+// setSuspend sets the corresponding suspend into true with given identifier.
 func (executor *Executor) setSuspend(identifier int) {
 	switch identifier {
 	case IDENTIFIER_VALIDATION:
@@ -260,6 +255,7 @@ func (executor *Executor) setSuspend(identifier int) {
 	}
 }
 
+// unsetSuspend sets the corresponding suspend into false with given identifier.
 func (executor *Executor) unsetSuspend(identifier int) {
 	switch identifier {
 	case IDENTIFIER_VALIDATION:

@@ -11,14 +11,17 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package executor
 
 import (
 	"fmt"
+
 	"hyperchain/manager/appstat"
 	"hyperchain/manager/event"
 )
 
+// NotifyViewChange posts the ViewChange to FilterSystemStatusEvent.
 func NotifyViewChange(helper *Helper, seqNo uint64) {
 	message := fmt.Sprintf("required viewchange to %d", seqNo)
 	helper.PostExternal(event.FilterSystemStatusEvent{

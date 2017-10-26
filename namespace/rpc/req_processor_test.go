@@ -1,21 +1,21 @@
 package rpc
 
 import (
-	"testing"
-	"hyperchain/api"
-	"fmt"
-	"hyperchain/common"
 	"context"
-	"github.com/stretchr/testify/assert"
 	"encoding/json"
+	"fmt"
+	"github.com/stretchr/testify/assert"
+	"hyperchain/api"
+	"hyperchain/common"
+	"testing"
 )
 
 var (
-	namespace  = "test"
+	namespace = "test"
 )
 
 // Normal API used to test normal flow.
-type NormalAPI struct {}
+type NormalAPI struct{}
 
 func NewNormalAPI() *NormalAPI {
 	return &NormalAPI{}
@@ -43,7 +43,7 @@ func (api *NormalAPI) Name(name string) (string, error) {
 	return cmpName, nil
 }
 
-func (api *NormalAPI) Company(name string, age int) (string) {
+func (api *NormalAPI) Company(name string, age int) string {
 	cmpInfo := fmt.Sprintf("Company name: %s, age: %d.", name, age)
 	fmt.Print(cmpInfo)
 	return cmpInfo
@@ -66,9 +66,9 @@ func getEmptyNameApis() map[string]*api.API {
 }
 
 // unExport API whose receiver is unexported.
-type unExportAPI struct {}
+type unExportAPI struct{}
 
-func NewUnExportAPI() *unExportAPI{
+func NewUnExportAPI() *unExportAPI {
 	return &unExportAPI{}
 }
 
@@ -84,9 +84,9 @@ func getUnexportApis() map[string]*api.API {
 }
 
 // ExportAPI whose receiver is exported.
-type ExportAPI struct {}
+type ExportAPI struct{}
 
-func NewExportAPI() *ExportAPI{
+func NewExportAPI() *ExportAPI {
 	return &ExportAPI{}
 }
 
@@ -208,7 +208,6 @@ func TestInvalidParams(t *testing.T) {
 	resp = jrpi.ProcessRequest(req)
 	ast.Equal(invalidParamsErr.Code(), resp.Error.Code(),
 		"We should get a invalidParamsEr.r")
-
 
 	mockParams = []byte(`["hyperchain"]`)
 	msg = json.RawMessage(mockParams)

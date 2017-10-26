@@ -27,13 +27,13 @@ type JsonRpcProcessorImpl struct {
 	namespace string
 
 	// apis this namespace provides.
-	apis      map[string]*api.API
+	apis map[string]*api.API
 
 	// register the apis of this namespace to this processor.
-	services  serviceRegistry
+	services serviceRegistry
 
 	// logger implementation
-	logger    *logging.Logger
+	logger *logging.Logger
 }
 
 // NewJsonRpcProcessorImpl creates a new JsonRpcProcessorImpl instance for given namespace and apis.
@@ -281,8 +281,7 @@ func (jrpi *JsonRpcProcessorImpl) handle(ctx context.Context, req *serverRequest
 
 			return cres, nil
 		}
-		return jrpi.CreateErrorResponse(&req.id, &common.InvalidParamsError{Message:
-			"Expected subscription id as first argument"}), nil
+		return jrpi.CreateErrorResponse(&req.id, &common.InvalidParamsError{Message: "Expected subscription id as first argument"}), nil
 	}
 
 	if req.callb.isSubscribe {

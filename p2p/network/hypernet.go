@@ -13,8 +13,8 @@ import (
 	"hyperchain/p2p/network/inneraddr"
 	"hyperchain/p2p/utils"
 	"strconv"
-	"time"
 	"strings"
+	"time"
 )
 
 var logger *logging.Logger
@@ -348,7 +348,7 @@ func (hn *HyperNet) pkgWrapper(pkg *pb.Package, hostname string) {
 	pkg.DstHost = hostname
 }
 
-func (hn *HyperNet) GetDNS(hostname string) (string, string){
+func (hn *HyperNet) GetDNS(hostname string) (string, string) {
 	addr, err := hn.dns.GetDNS(hostname)
 	if err != nil {
 		logger.Errorf("GetDNS err: %v", err)

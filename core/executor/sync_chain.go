@@ -102,8 +102,8 @@ func (executor *Executor) syncChainResendBackend() {
 				curUp, curDown := executor.context.syncCtx.getRequest()
 				if curUp == up && curDown == down {
 					executor.logger.Noticef("resend sync request. want [%d] - [%d]", down, executor.context.syncCtx.syncDemandBlockNum)
-					executor.context.syncCtx.qosStat.FeedBack(false)
-					executor.context.syncCtx.setCurrentPeer(executor.context.syncCtx.qosStat.SelectPeer())
+					executor.context.syncCtx.qosStat.feedBack(false)
+					executor.context.syncCtx.setCurrentPeer(executor.context.syncCtx.qosStat.selectPeer())
 					executor.SendSyncRequest(executor.context.syncCtx.syncDemandBlockNum, down)
 					executor.context.syncCtx.recordRequest(curUp, curDown)
 				} else {
@@ -162,8 +162,8 @@ func (executor *Executor) ReceiveSyncBlocks(payload []byte) {
 
 	reqNext := func(isbatch bool) {
 		executor.logger.Notice("still have some blocks to fetch")
-		executor.context.syncCtx.qosStat.FeedBack(true)
-		executor.context.syncCtx.setCurrentPeer(executor.context.syncCtx.qosStat.SelectPeer())
+		executor.context.syncCtx.qosStat.feedBack(true)
+		executor.context.syncCtx.setCurrentPeer(executor.context.syncCtx.qosStat.selectPeer())
 		if isbatch {
 			common.AddPb(receivePb, int64(executor.conf.GetSyncMaxBatchSize()))
 			common.PrintPb(receivePb, 0, executor.logger)
@@ -385,7 +385,7 @@ func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *
 	if err := executor.persistTransactions(batch, block.Transactions, seqNo); err != nil {
 		return err, nil
 	}
-	if err, logs := executor.persistReceipts(batch, block.Transactions, result.Receipts, seqNo, common.BytesToHash(block.BlockHash)); err != nil {
+	if logs, err := executor.persistReceipts(batch, block.Transactions, result.Receipts, seqNo, common.BytesToHash(block.BlockHash)); err != nil {
 		return err, nil
 	} else {
 		filterLogs = logs
@@ -463,7 +463,7 @@ func (executor *Executor) processSyncBlocks() {
 				return
 			} else {
 				// set temporary block number as block number since block number is already here
-				executor.initDemand(blk.Number)
+				executor.context.initDemand(blk.Number)
 				executor.stateTransition(blk.Number+1, common.BytesToHash(blk.MerkleRoot))
 				err, result := executor.ApplyBlock(blk, blk.Number)
 				if err != nil || executor.assertApplyResult(blk, result) == false {
@@ -489,7 +489,7 @@ func (executor *Executor) processSyncBlocks() {
 			common.PrintPb(processPb, 0, executor.logger)
 		}
 		processPb.Finish()
-		executor.initDemand(executor.context.syncCtx.syncTarget + 1)
+		executor.context.initDemand(executor.context.syncCtx.syncTarget + 1)
 		executor.clearSyncFlag()
 		executor.sendStateUpdatedEvent()
 	}
@@ -541,7 +541,7 @@ func (executor *Executor) updateSyncDemand(block *types.Block) error {
 // sendStateUpdatedEvent - communicate with consensus, told it state update has finished.
 func (executor *Executor) sendStateUpdatedEvent() {
 	// state update success
-	executor.PurgeCache()
+	executor.purgeCache()
 	executor.informConsensus(NOTIFY_SYNC_DONE, protos.StateUpdatedMessage{edb.GetHeightOfChain(executor.namespace)})
 }
 
@@ -575,7 +575,7 @@ func (executor *Executor) reject() {
 		edb.DeleteBlockByNum(executor.namespace, batch, i, false, false)
 	}
 	batch.Write()
-	executor.initDemand(edb.GetHeightOfChain(executor.namespace) + 1)
+	executor.context.initDemand(edb.GetHeightOfChain(executor.namespace) + 1)
 	executor.clearStatedb()
 	executor.clearSyncFlag()
 	executor.sendStateUpdatedEvent()

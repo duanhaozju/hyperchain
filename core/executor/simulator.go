@@ -14,14 +14,15 @@
 package executor
 
 import (
-	"github.com/golang/protobuf/proto"
-	edb "hyperchain/core/ledger/chain"
+	"hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
+
+	"github.com/golang/protobuf/proto"
 )
 
-// run transaction in a simulator
-// execution result will not been add to database
+// RunInSandBox is used to run transaction in a simulator,
+// in which way the execution result will not been add to database.
 func (executor *Executor) RunInSandBox(tx *types.Transaction, snapshotId string) error {
 	var (
 		statedb  vm.Database
@@ -36,14 +37,15 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction, snapshotId string)
 	if err != nil {
 		return err
 	}
-	// release history db handler
+	// Release history db handler
 	defer func() {
 		if callback != nil {
 			callback()
 		}
 	}()
-	// initialize execution environment
-	fakeBlockNumber := edb.GetHeightOfChain(executor.namespace) + 1
+	// Init execution environment
+	fakeBlockNumber := chain.GetHeightOfChain(executor.namespace) + 1
+	// Execute the tx
 	receipt, _, _, err := executor.ExecTransaction(statedb, tx, 0, fakeBlockNumber)
 	if err != nil {
 		errType := executor.classifyInvalid(err)
@@ -57,12 +59,12 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction, snapshotId string)
 			executor.logger.Error("Marshal tx error")
 			return err
 		}
-		// persist execution result to local
+		// Persist execution result to local
 		executor.StoreInvalidTransaction(payload)
 		return nil
 	} else {
-		// persist execution result to local
-		_, err := edb.PersistReceipt(executor.db.NewBatch(), receipt, true, true)
+		// Persist execution result to local
+		_, err := chain.PersistReceipt(executor.db.NewBatch(), receipt, true, true)
 		if err != nil {
 			executor.logger.Error("Put receipt data into database failed! error msg, ", err.Error())
 			return err

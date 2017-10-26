@@ -94,11 +94,11 @@ type txPoolImpl struct {
 	txPoolHash []string                      // store all non-batched txs' hash by order
 	batchStore []*TxHashBatch                // store all batches created by current primary in order, removed in
 	// viewchange as new primary may create batches in other order
-	batchedTxs map[string]bool     // store batched txs' hash corresponding to batchStore
+	batchedTxs map[string]bool              // store batched txs' hash corresponding to batchStore
 	missingTxs map[string]map[uint64]string // store missing txs' hash using missing batch's id as key
-	poolSize   int                 // upper limit of txPool
-	queue      *event.TypeMux      // when we generate a batch, we would post it to this channel
-	batchSize  int                 // a batch contains how many transactions
+	poolSize   int                          // upper limit of txPool
+	queue      *event.TypeMux               // when we generate a batch, we would post it to this channel
+	batchSize  int                          // a batch contains how many transactions
 	logger     *logging.Logger
 }
 
@@ -205,7 +205,7 @@ func (pool *txPoolImpl) GetTxsByHashList(id string, hashList []string) (txs []*t
 		} else {
 			pool.logger.Infof("Can't find tx by hash: %s from txPool", hash)
 			hasMissing = true
-			missingTxsHash[uint64(i)]= hash
+			missingTxsHash[uint64(i)] = hash
 		}
 	}
 

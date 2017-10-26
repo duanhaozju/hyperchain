@@ -1,20 +1,35 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package chain
 
 import (
 	"bytes"
-	"hyperchain/common"
-	"hyperchain/core/test_util"
-	"hyperchain/hyperdb/mdb"
 	"reflect"
 	"testing"
+
+	"hyperchain/common"
+	"hyperchain/core/types"
+	"hyperchain/hyperdb/mdb"
 )
 
 func TestGetReceipt(t *testing.T) {
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
-	receipt := test_util.Receipt
+	receipt := types.Receipt{}
 	receipt.TxHash = common.BytesToHash(receipt.TxHash).Bytes()
 	PersistReceipt(db.NewBatch(), &receipt, true, true)
-	dbReceipt := GetReceiptFunc(db, common.BytesToHash(receipt.TxHash))
+	dbReceipt := getReceiptFunc(db, common.BytesToHash(receipt.TxHash))
 	if dbReceipt == nil || !reflect.DeepEqual(&receipt, dbReceipt) {
 		t.Error("not exist in db or not deep equal exactly")
 	}
@@ -22,10 +37,10 @@ func TestGetReceipt(t *testing.T) {
 
 func TestPersistReceiptWithVersion(t *testing.T) {
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
-	receipt := test_util.Receipt
+	receipt := types.Receipt{}
 	receipt.TxHash = common.BytesToHash(receipt.TxHash).Bytes()
 	PersistReceipt(db.NewBatch(), &receipt, true, true, "1.4")
-	dbReceipt := GetReceiptFunc(db, common.BytesToHash(receipt.TxHash))
+	dbReceipt := getReceiptFunc(db, common.BytesToHash(receipt.TxHash))
 	if dbReceipt == nil || bytes.Compare(dbReceipt.Version, []byte("1.4")) != 0 {
 		t.Error("not exist in db or not deep equal exactly")
 	}
@@ -33,12 +48,12 @@ func TestPersistReceiptWithVersion(t *testing.T) {
 
 func TestDeleteReceipt(t *testing.T) {
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
-	receipt := test_util.Receipt
+	receipt := types.Receipt{}
 	receipt.TxHash = common.BytesToHash(receipt.TxHash).Bytes()
 	PersistReceipt(db.NewBatch(), &receipt, true, true, "1.4")
 	DeleteReceipt(db.NewBatch(), receipt.TxHash, true, true)
 
-	if dbReceipt := GetReceiptFunc(db, common.BytesToHash(receipt.TxHash)); dbReceipt != nil {
+	if dbReceipt := getReceiptFunc(db, common.BytesToHash(receipt.TxHash)); dbReceipt != nil {
 		t.Error("expect to be nil")
 	}
 }

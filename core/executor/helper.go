@@ -14,22 +14,24 @@
 package executor
 
 import (
-	"github.com/golang/protobuf/proto"
-	er "hyperchain/core/errors"
-	edb "hyperchain/core/ledger/chain"
+	"hyperchain/core/errors"
+	"hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
 	"hyperchain/manager/event"
 	"hyperchain/manager/protos"
 	"reflect"
+
+	"github.com/golang/protobuf/proto"
 )
 
-// Communication mux implementation
+// Helper implements the helper mux used in communication.
 type Helper struct {
-	innerMux    *event.TypeMux // system internal mux
-	externalMux *event.TypeMux // subscription system mux
+	innerMux    *event.TypeMux // System internal mux
+	externalMux *event.TypeMux // Subscription system mux
 }
 
-func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *Helper {
+// newHelper creates the helper that manage the inner and external communications.
+func newHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *Helper {
 	return &Helper{
 		innerMux:    innerMux,
 		externalMux: externalMux,
@@ -60,46 +62,49 @@ func checkParams(expect []reflect.Kind, params ...interface{}) bool {
 	return true
 }
 
-// informConsensus - communicate with consensus module.
+// informConsensus communicates with consensus module.
 func (executor *Executor) informConsensus(informType int, message interface{}) error {
 	switch informType {
 	case NOTIFY_VALIDATION_RES:
+		// Post the validated result back to consensus
 		executor.logger.Debugf("[Namespace = %s] inform consenus validation result", executor.namespace)
 		msg, ok := message.(protos.ValidatedTxs)
 		if !ok {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		executor.helper.PostInner(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_VALIDATION_RES,
 		})
 	case NOTIFY_VC_DONE:
+		// Post the VcResetDone event to consensus
 		executor.logger.Debug("inform consenus vc done")
 		msg, ok := message.(protos.VcResetDone)
 		if !ok {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		executor.helper.PostInner(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_VC_DONE,
 		})
 	case NOTIFY_SYNC_DONE:
+		// Post the stateUpdated event to consensus
 		executor.logger.Debug("inform consenus sync done")
 		msg, ok := message.(protos.StateUpdatedMessage)
 		if !ok {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		executor.helper.PostInner(event.ExecutorToConsensusEvent{
 			Payload: msg,
 			Type:    NOTIFY_SYNC_DONE,
 		})
 	default:
-		return er.NoDefinedCaseErr
+		return errors.NoDefinedCaseErr
 	}
 	return nil
 }
 
-// informP2P - communicate with p2p module.
+// informP2P communicates with p2p module.
 func (executor *Executor) informP2P(informType int, message ...interface{}) error {
 	switch informType {
 	case NOTIFY_BROADCAST_DEMAND:
@@ -110,7 +115,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// (3) Current peer identification
 		executor.logger.Debug("inform p2p broadcast demand")
 		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64, reflect.Uint64}, message...) {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		required := ChainSyncRequest{
 			RequiredNumber: message[0].(uint64),
@@ -132,9 +137,9 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// Unicast block data to the fetcher.
 		executor.logger.Debug("inform p2p unicast block")
 		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64, reflect.String}, message...) {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
-		block, err := edb.GetBlockByNumber(executor.namespace, message[0].(uint64))
+		block, err := chain.GetBlockByNumber(executor.namespace, message[0].(uint64))
 		if err != nil {
 			executor.logger.Errorf("no demand block number: %d", message[0].(uint64))
 			return err
@@ -155,11 +160,11 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// Unicast the invalid transaction to the original peer
 		executor.logger.Debug("inform p2p unicast invalid tx")
 		if len(message) != 1 {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		r, ok := message[0].(*types.InvalidTransactionRecord)
 		if !ok {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		payload, err := proto.Marshal(r)
 		if err != nil {
@@ -186,11 +191,11 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// (4) etc
 		executor.logger.Debug("inform p2p sync replica")
 		if len(message) != 1 {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		chain, ok := message[0].(*types.Chain)
 		if !ok {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		payload, _ := proto.Marshal(chain)
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
@@ -206,7 +211,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// (3) Target peer identification
 		executor.logger.Debug("inform p2p sync world state")
 		if !checkParams([]reflect.Kind{reflect.Uint64}, message...) {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		request := &WsRequest{
 			Target:      message[0].(uint64),
@@ -215,7 +220,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		}
 		payload, err := proto.Marshal(request)
 		if err != nil {
-			return er.MarshalFailedErr
+			return errors.MarshalFailedErr
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
@@ -232,15 +237,15 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// (4) relative block number
 		executor.logger.Debug("inform p2p send world state handshake packet")
 		if len(message) != 1 {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		hs, ok := message[0].(*WsHandshake)
 		if ok == false {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		payload, err := proto.Marshal(hs)
 		if err != nil {
-			return er.MarshalFailedErr
+			return errors.MarshalFailedErr
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
@@ -257,15 +262,15 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// (4) extra message
 		executor.logger.Debug("inform p2p send ws ack")
 		if len(message) != 1 {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		ack, ok := message[0].(*WsAck)
 		if ok == false {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		payload, err := proto.Marshal(ack)
 		if err != nil {
-			return er.MarshalFailedErr
+			return errors.MarshalFailedErr
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
@@ -280,15 +285,15 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// (2) worldstate slice content
 		executor.logger.Debug("inform p2p sync world state")
 		if len(message) != 1 {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		ws, ok := message[0].(*Ws)
 		if ok == false {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		payload, err := proto.Marshal(ws)
 		if err != nil {
-			return er.MarshalFailedErr
+			return errors.MarshalFailedErr
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
@@ -299,11 +304,11 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		// for nvp extension
 		executor.logger.Debug("inform p2p to transit commited block")
 		if len(message) != 1 {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		block, ok := message[0].([]byte)
 		if !ok {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: block,
@@ -313,7 +318,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	case NOTIFY_NVP_SYNC:
 		executor.logger.Debug("inform p2p to sync NVP")
 		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64}, message...) {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		required := ChainSyncRequest{
 			RequiredNumber: message[0].(uint64),
@@ -330,40 +335,40 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		})
 		return nil
 	default:
-		return er.NoDefinedCaseErr
+		return errors.NoDefinedCaseErr
 	}
 	return nil
 }
 
-// sendFilterEvent - send event to subscription system.
+// sendFilterEvent sends event to subscription system.
 func (executor *Executor) sendFilterEvent(informType int, message ...interface{}) error {
 	switch informType {
 	case FILTER_NEW_BLOCK:
 		// NewBlock event
 		if len(message) != 1 {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		blk, ok := message[0].(*types.Block)
 		if ok == false {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		executor.helper.PostExternal(event.FilterNewBlockEvent{blk})
 		return nil
 	case FILTER_NEW_LOG:
 		// New virtual machine log event
 		if len(message) != 1 {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		logs, ok := message[0].([]*types.Log)
 		if ok == false {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		executor.helper.PostExternal(event.FilterNewLogEvent{logs})
 		return nil
 	case FILTER_SNAPSHOT_RESULT:
 		// Snapshot operation result event
 		if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		executor.helper.PostExternal(event.FilterArchive{
 			Type:     event.FilterMakeSnapshot,
@@ -375,7 +380,7 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 	case FILTER_DELETE_SNAPSHOT:
 		// Snapshot deletion result event
 		if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		executor.helper.PostExternal(event.FilterArchive{
 			Type:     event.FilterDeleteSnapshot,
@@ -385,9 +390,9 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		})
 		return nil
 	case FILTER_ARCHIVE:
-		// archive operation result event
+		// Archive operation result event
 		if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
-			return er.InvalidParamsErr
+			return errors.InvalidParamsErr
 		}
 		executor.helper.PostExternal(event.FilterArchive{
 			Type:     event.FilterDoArchive,
@@ -397,6 +402,6 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		})
 		return nil
 	default:
-		return er.NoDefinedCaseErr
+		return errors.NoDefinedCaseErr
 	}
 }

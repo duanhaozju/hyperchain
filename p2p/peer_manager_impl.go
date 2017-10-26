@@ -792,15 +792,15 @@ func (pmgr *peerManagerImpl) GetPeerInfo() PeerInfos {
 
 		dHostName := p.info.GetHostName()
 		ip, port := pmgr.hyperNet.GetDNS(dHostName)
-		peerInfo :=  PeerInfo{
-			ID: p.info.GetID(),
+		peerInfo := PeerInfo{
+			ID:        p.info.GetID(),
 			Namespace: p.info.GetNameSpace(),
-			Hash: p.info.GetHash(),
-			Hostname: dHostName,
+			Hash:      p.info.GetHash(),
+			Hostname:  dHostName,
 			IsPrimary: p.info.GetPrimary(),
-			IsVP: p.info.GetVP(),
-			IP:    ip,
-			Port: port,
+			IsVP:      p.info.GetVP(),
+			IP:        ip,
+			Port:      port,
 		}
 
 		start := time.Now().UnixNano()

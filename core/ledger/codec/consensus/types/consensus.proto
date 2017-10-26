@@ -1,0 +1,18 @@
+syntax = "proto3";
+package types;
+
+// ConsensusTransaction is used in consensus comparison of generating bytes.
+message ConsensusTransaction {
+    bytes from = 1;
+    bytes to = 2;
+    bytes value = 3;
+    int64 timestamp = 4;
+    int64 nonce = 5;
+}
+
+// ConsensusReceipt is used in consensus comparison of generating bytes.
+message ConsensusReceipt {
+    int64 gas_used = 1;
+    bytes ret = 2;
+    bytes logs = 3;
+}
