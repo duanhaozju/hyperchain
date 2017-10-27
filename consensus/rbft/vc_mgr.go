@@ -64,7 +64,7 @@ func newVcManager(config *common.Config, logger *logging.Logger) *vcManager {
 	vcm.newViewStore = make(map[uint64]*NewView)
 	vcm.viewChangeStore = make(map[vcidx]*ViewChange)
 
-	vcm.viewChangePeriod = uint64(0)
+	vcm.viewChangePeriod = uint64(config.GetInt(RBFT_VC_PERIOD))
 	// automatic view changes is off by default(should be read from config)
 	if vcm.viewChangePeriod > 0 {
 		vcm.logger.Infof("RBFT viewChange period = %v", vcm.viewChangePeriod)
