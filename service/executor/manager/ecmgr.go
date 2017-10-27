@@ -33,7 +33,7 @@ type ExecutorManager interface {
 	ProcessRequest(namespace string, request interface{}) interface{}
 
 	// GetNamespaceProcessorName returns the namespace instance by name.
-	GetNamespaceProcessorName(name string) intfc.NamespaceProcessor
+	GetNamespaceProcessor(name string) intfc.NamespaceProcessor
 }
 
 type ecManagerImpl struct {
@@ -155,7 +155,7 @@ func (em *ecManagerImpl) Stop(namespace string) error {
 }
 
 func (em *ecManagerImpl) ProcessRequest(namespace string, request interface{}) interface{} {
-	np := em.GetNamespaceProcessorName(namespace)
+	np := em.GetNamespaceProcessor(namespace)
 	if np == nil {
 		logger.Noticef("no namespace found for name: %s", namespace)
 		return nil
@@ -163,7 +163,7 @@ func (em *ecManagerImpl) ProcessRequest(namespace string, request interface{}) i
 	return np.ProcessRequest(request)
 }
 
-func (em *ecManagerImpl) GetNamespaceProcessorName(name string) intfc.NamespaceProcessor {
+func (em *ecManagerImpl) GetNamespaceProcessor(name string) intfc.NamespaceProcessor {
 	em.rwLock.RLock()
 	defer em.rwLock.RUnlock()
 	logger.Critical("services : %v", em.services)

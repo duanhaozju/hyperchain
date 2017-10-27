@@ -90,7 +90,7 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nsMgrProcessor intf
 // CheckHttpHeaders will check http header. If it is verified, client has access to interact with the server,
 // otherwise, unauthorized error will be returned.
 func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common.RPCError {
-	ns := c.nsMgrProcessor.GetNamespaceProcessorName(namespace)
+	ns := c.nsMgrProcessor.GetNamespaceProcessor(namespace)
 	if ns == nil {
 		return &common.NamespaceNotFound{Name: namespace}
 	}

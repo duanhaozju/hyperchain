@@ -44,9 +44,6 @@ func NewJsonRpcProcessorImpl(namespace string, apis map[string]*api.API) *JsonRp
 		services:  make(serviceRegistry),
 		logger:    common.GetLogger(namespace, "rpc"),
 	}
-	for key,value:= range jpri.apis{
-		jpri.logger.Critical("key, value:", key, reflect.TypeOf(value.Service))
-	}
 	return jpri
 }
 

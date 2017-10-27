@@ -11,7 +11,7 @@ type NsMgrProcessor interface {
 	ProcessRequest(namespace string, request interface{}) interface{}
 
 	// GetNamespaceProcessorName returns the namespace instance by name.
-	GetNamespaceProcessorName(name string) NamespaceProcessor
+	GetNamespaceProcessor(name string) NamespaceProcessor
 
 }
 
