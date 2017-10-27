@@ -40,16 +40,16 @@ type RPCServerImpl struct {
 }
 
 // GetRPCServer creates and returns a new RPCServerImpl instance implements RPCServer interface.
-func GetRPCServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, forExe bool) RPCServer {
+func GetRPCServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, is_executor bool) RPCServer {
 	//TODO: implements singleton
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
-	rpcs = newRPCServer(nsMgrProcessor, config, forExe)
+	rpcs = newRPCServer(nsMgrProcessor, config, is_executor)
 	return rpcs
 }
 
-func newRPCServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, forExe bool) *RPCServerImpl {
+func newRPCServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, is_executor bool) *RPCServerImpl {
 	rsi := &RPCServerImpl{}
-	rsi.httpServer = GetHttpServer(nsMgrProcessor, config, forExe)
+	rsi.httpServer = GetHttpServer(nsMgrProcessor, config, is_executor)
 	//rsi.wsServer = GetWSServer(nsMgrProcessor, config, forExe)
 
 	ipc.RegisterFunc("service", rsi.Command)

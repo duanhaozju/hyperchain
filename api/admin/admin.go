@@ -88,8 +88,10 @@ type Administrator struct {
 }
 
 // NewAdministrator news a raw administrator with default settings.
-func NewAdministrator(nsMgrProcessor intfc.NsMgrProcessor,config *common.Config, forExe bool) *Administrator {
-	if forExe{return nil;}
+func NewAdministrator(nsMgrProcessor intfc.NsMgrProcessor,config *common.Config, is_executor bool) *Administrator {
+	if is_executor {
+		return nil;
+	}
 	adm := &Administrator{
 		CmdExecutor:		make(map[string]func(command *Command) *CommandResult),
 		valid_user:  		make(map[string]string),
