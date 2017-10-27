@@ -3,10 +3,10 @@ package hleveldb
 import (
 	"errors"
 	Lru "github.com/hashicorp/golang-lru"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
 	"github.com/syndtr/goleveldb/leveldb"
-	"hyperchain/common"
-	"hyperchain/hyperdb/db"
 	"sync"
 )
 

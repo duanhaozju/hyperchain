@@ -27,8 +27,8 @@ import (
 	"regexp"
 	"strings"
 
-	"hyperchain/common"
-	"hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto"
 	"path"
 )
 

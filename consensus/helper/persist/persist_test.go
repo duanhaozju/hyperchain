@@ -7,8 +7,8 @@ import (
 	"bytes"
 	"testing"
 
-	"hyperchain/common"
-	mdb "hyperchain/hyperdb/mdb"
+	"github.com/hyperchain/hyperchain/common"
+	mdb "github.com/hyperchain/hyperchain/hyperdb/mdb"
 
 	"github.com/stretchr/testify/assert"
 )

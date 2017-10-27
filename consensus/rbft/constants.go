@@ -5,6 +5,7 @@ package rbft
 
 // constant timer names
 const (
+	REQUEST_TIMER           = "requestTimer"
 	BATCH_TIMER             = "batchTimer"           // timer triggering package a batch
 	VALIDATE_TIMER          = "validateTimer"        // timer expected to spend in validate
 	VC_RESEND_TIMER         = "vcResendTimer"        // timer triggering resend of a view change
@@ -16,13 +17,14 @@ const (
 	CLEAN_VIEW_CHANGE_TIMER = "cleanViewChangeTimer" // timer track how long a viewchange msg will store in memory
 )
 
-//rbft config keys
+// rbft config keys
 const (
 	RBFT_BATCH_SIZE      = "consensus.rbft.batchsize"
 	RBFT_POOL_SIZE       = "consensus.rbft.poolsize"
 	RBFT_VC_RESEND_LIMIT = "consensus.rbft.vcresendlimit"
+	RBFT_VC_PERIOD 		 = "consensus.rbft.vcperiod"
 
-	//timeout keys
+	// timeout keys
 	RBFT_NEGOVIEW_TIMEOUT          = "consensus.rbft.timeout.negoview"
 	RBFT_RECOVERY_TIMEOUT          = "consensus.rbft.timeout.recovery"
 	RBFT_VIEWCHANGE_TIMEOUT        = "consensus.rbft.timeout.viewchange"
@@ -33,5 +35,4 @@ const (
 	RBFT_VALIDATE_TIMEOUT          = "consensus.rbft.timeout.validate"
 	RBFT_NULLREQUEST_TIMEOUT       = "consensus.rbft.timeout.nullrequest"
 	RBFT_FIRST_REQUEST_TIMEOUT     = "consensus.rbft.timeout.firstrequest"
-	RBFT_UPDATE_TIMEOUT            = "consensus.rbft.timeout.update"
 )

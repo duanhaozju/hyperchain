@@ -1,7 +1,7 @@
 package guomi
 
 import (
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"testing"
 )
 

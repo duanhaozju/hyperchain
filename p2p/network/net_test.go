@@ -1,8 +1,8 @@
 package network_test
 
 import (
+	. "github.com/hyperchain/hyperchain/p2p/network"
 	. "github.com/smartystreets/goconvey/convey"
-	. "hyperchain/p2p/network"
 	"testing"
 )
 

@@ -14,12 +14,14 @@
 package executor
 
 import (
-	"github.com/op/go-logging"
-	com "hyperchain/core/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
 	"time"
+
+	com "github.com/hyperchain/hyperchain/core/common"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/event"
+
+	"github.com/op/go-logging"
 )
 
 // Data archives are based on state snapshots, if you want do a archive operation,
@@ -90,7 +92,7 @@ func (mgr *ArchiveManager) Archive(event event.ArchiveEvent) {
 	Internal Functions
 */
 func (mgr *ArchiveManager) migrate(manifest com.Manifest) error {
-	curGenesis, err := edb.GetGenesisTag(mgr.namespace)
+	curGenesis, err := chain.GetGenesisTag(mgr.namespace)
 	if err != nil {
 		return err
 	}
@@ -125,18 +127,18 @@ func (mgr *ArchiveManager) migrate(manifest com.Manifest) error {
 		return err
 	}
 	for i := curGenesis; i < manifest.Height; i += 1 {
-		block, err := edb.GetBlockByNumber(mgr.namespace, i)
+		block, err := chain.GetBlockByNumber(mgr.namespace, i)
 		if err != nil {
 			mgr.logger.Errorf("miss block %d ,error msg %s", i, err.Error())
 			return err
 		}
 		for idx, tx := range block.Transactions {
-			if edb.DeleteTransactionMeta(olBatch, tx.GetHash().Bytes(), false, false); err != nil {
+			if chain.DeleteTransactionMeta(olBatch, tx.GetHash().Bytes(), false, false); err != nil {
 				mgr.logger.Errorf("[Namespace = %s] archive useless transaction meta in block %d failed, error msg %s", mgr.namespace, i, err.Error())
 				return err
 			}
-			receipt := edb.GetRawReceipt(mgr.namespace, tx.GetHash())
-			if err := edb.DeleteReceipt(olBatch, tx.GetHash().Bytes(), false, false); err != nil {
+			receipt := chain.GetRawReceipt(mgr.namespace, tx.GetHash())
+			if err := chain.DeleteReceipt(olBatch, tx.GetHash().Bytes(), false, false); err != nil {
 				mgr.logger.Errorf("[Namespace = %s] archive useless receipt in block %d failed, error msg %s", mgr.namespace, i, err.Error())
 				return err
 			}
@@ -145,7 +147,7 @@ func (mgr *ArchiveManager) migrate(manifest com.Manifest) error {
 				BlockIndex: i,
 				Index:      int64(idx),
 			}
-			if err := edb.PersistTransactionMeta(avBatch, meta, tx.GetHash(), false, false); err != nil {
+			if err := chain.PersistTransactionMeta(avBatch, meta, tx.GetHash(), false, false); err != nil {
 				mgr.logger.Errorf("[Namespace = %s] archive txmeta in block %d to historic database failed, error msg %s", mgr.namespace, i, err.Error())
 				return err
 			} else {
@@ -155,7 +157,7 @@ func (mgr *ArchiveManager) migrate(manifest com.Manifest) error {
 			if receipt == nil {
 				continue
 			}
-			if _, err := edb.PersistReceipt(avBatch, receipt, false, false); err != nil {
+			if _, err := chain.PersistReceipt(avBatch, receipt, false, false); err != nil {
 				mgr.logger.Errorf("[Namespace = %s] archive receipt in block %d to historic database failed, error msg %s", mgr.namespace, i, err.Error())
 				return err
 			} else {
@@ -163,28 +165,28 @@ func (mgr *ArchiveManager) migrate(manifest com.Manifest) error {
 			}
 		}
 		// delete block
-		if err := edb.DeleteBlockByNum(mgr.namespace, olBatch, i, false, false); err != nil {
+		if err := chain.DeleteBlockByNum(mgr.namespace, olBatch, i, false, false); err != nil {
 			mgr.logger.Errorf("[Namespace = %s] archive useless block %d failed, error msg %s", mgr.namespace, i, err.Error())
 			return err
 		}
 
-		if err, _ := edb.PersistBlock(avBatch, block, false, false); err != nil {
+		if _, err := chain.PersistBlock(avBatch, block, false, false); err != nil {
 			mgr.logger.Errorf("[Namespace = %s] archive block %d to historic database failed. error msg %s", mgr.namespace, i, err.Error())
 			return err
 		}
 	}
-	if err := edb.DeleteJournalInRange(olBatch, curGenesis, manifest.Height, false, false); err != nil {
+	if err := chain.DeleteJournalInRange(olBatch, curGenesis, manifest.Height, false, false); err != nil {
 		mgr.logger.Errorf("[Namespace = %s] archive useless journals failed, error msg %s", mgr.namespace, err.Error())
 		return err
 	}
 	// delete invalid records
-	if ic, err = edb.DumpDiscardTransactionInRange(mgr.executor.db, olBatch, avBatch, tb, te, false, false); err != nil {
+	if ic, err = chain.DumpDiscardTransactionInRange(mgr.executor.db, olBatch, avBatch, tb, te, false, false); err != nil {
 		mgr.logger.Errorf("[Namespace = %s] archive useless invalid records failed, error msg %s", mgr.namespace, err.Error())
 		return err
 	}
 
 	// update chain
-	if err := edb.UpdateGenesisTag(mgr.namespace, manifest.Height, olBatch, false, false); err != nil {
+	if err := chain.UpdateGenesisTag(mgr.namespace, manifest.Height, olBatch, false, false); err != nil {
 		mgr.logger.Errorf("[Namespace = %s] update chain genesis field failed, error msg %s", mgr.namespace, err.Error())
 		return err
 	}
@@ -215,11 +217,11 @@ func (mgr *ArchiveManager) feedback(isSuccess bool, filterId string, message str
 }
 
 func (mgr *ArchiveManager) getTimestampRange(begin, end uint64) (error, int64, int64) {
-	bk, err := edb.GetBlockByNumber(mgr.namespace, begin)
+	bk, err := chain.GetBlockByNumber(mgr.namespace, begin)
 	if err != nil {
 		return err, 0, 0
 	}
-	ek, err := edb.GetBlockByNumber(mgr.namespace, end)
+	ek, err := chain.GetBlockByNumber(mgr.namespace, end)
 	if err != nil {
 		return err, 0, 0
 	}
@@ -230,8 +232,8 @@ func (mgr *ArchiveManager) getTimestampRange(begin, end uint64) (error, int64, i
 // 1. specified snapshot is safe enough to do archive operation (snapshot.Height + threshold < height)
 // 2. archive db is continuous with current blockchain (optional)
 func (mgr *ArchiveManager) checkRequest(manifest com.Manifest, meta com.ArchiveMeta) bool {
-	curHeigit := edb.GetHeightOfChain(mgr.namespace)
-	genesis, err := edb.GetGenesisTag(mgr.namespace)
+	curHeigit := chain.GetHeightOfChain(mgr.namespace)
+	genesis, err := chain.GetGenesisTag(mgr.namespace)
 	if err != nil {
 		return false
 	}

@@ -1,14 +1,14 @@
 package hts
 
 import (
-	"hyperchain/p2p/threadsafe"
+	"github.com/hyperchain/hyperchain/p2p/threadsafe"
 	"time"
 )
 
 type SessionKey struct {
-	expire    int64				// if time.Now() > expire, this key should be updated
-	sharedKey []byte			// the shared session key
-	valid *threadsafe.SpinLock
+	expire    int64  // if time.Now() > expire, this key should be updated
+	sharedKey []byte // the shared session key
+	valid     *threadsafe.SpinLock
 }
 
 // NewSessionKey creates and returns a new SessionKey instance.

@@ -2,7 +2,7 @@ package codec
 
 // Package codec implement the encoder library for old version of transactions.
 
-import "hyperchain/core/types"
+import "github.com/hyperchain/hyperchain/core/types"
 
 // Encoder encodes the transaction and receipt
 type Encoder interface {

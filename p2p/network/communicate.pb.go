@@ -14,8 +14,8 @@ package network
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import message2 "hyperchain/p2p/message"
-import message3 "hyperchain/p2p/message"
+import message2 "github.com/hyperchain/hyperchain/p2p/message"
+import message3 "github.com/hyperchain/hyperchain/p2p/message"
 
 import (
 	context "golang.org/x/net/context"

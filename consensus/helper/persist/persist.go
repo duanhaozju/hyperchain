@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 )
 
 type Persister interface {

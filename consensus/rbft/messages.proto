@@ -4,7 +4,7 @@ Copyright Hyperchain Corp. 2016 All Rights Reserved.
 
 syntax = "proto3";
 
-import "hyperchain/core/types/transaction.proto";
+import "github.com/hyperchain/hyperchain/core/types/transaction.proto";
 
 package rbft;
 /*

@@ -5,8 +5,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/core"
-	"hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/core"
+	"github.com/hyperchain/hyperchain/hyperdb"
 	"math"
 	"strings"
 	"testing"

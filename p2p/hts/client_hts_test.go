@@ -1,13 +1,13 @@
 package hts
 
 import (
-	"testing"
-	"hyperchain/p2p/hts/secimpl"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/p2p/hts/secimpl"
 	"github.com/stretchr/testify/assert"
-	"hyperchain/crypto"
+	"testing"
 )
 
-func initialClientHTS(t *testing.T) *ClientHTS{
+func initialClientHTS(t *testing.T) *ClientHTS {
 	hts, err := NewHTS("", secimpl.NewSecuritySelector(nsCnfigPath), nsCnfigPath)
 	if err != nil {
 		t.Fatalf("NewHTS error: %v", err)

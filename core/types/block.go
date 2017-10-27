@@ -14,8 +14,8 @@
 package types
 
 import (
-	"hyperchain/common"
-	"hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto"
 )
 
 func (self *Block) Hash() common.Hash {

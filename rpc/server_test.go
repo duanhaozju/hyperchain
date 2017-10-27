@@ -1,17 +1,17 @@
 package jsonrpc
 
 import (
-	"testing"
-	ns "hyperchain/namespace/mocks"
-	"hyperchain/common"
 	"context"
+	"github.com/hyperchain/hyperchain/common"
+	ns "github.com/hyperchain/hyperchain/namespace/mocks"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 var (
 	rpcReqs []*common.RPCRequest
-	rpcReq *common.RPCRequest
-	config *common.Config
+	rpcReq  *common.RPCRequest
+	config  *common.Config
 )
 
 func initialData() {
@@ -19,13 +19,13 @@ func initialData() {
 	config = common.NewConfig(configPath)
 	rpcReqs = make([]*common.RPCRequest, 0)
 	rpcReq = &common.RPCRequest{
-		Service: "test",
-		Method: "hello",
+		Service:   "test",
+		Method:    "hello",
 		Namespace: defaultNS,
-		Id: 1,
-		IsPubSub: false,
-		Params: nil,
-		Ctx: context.Background(),
+		Id:        1,
+		IsPubSub:  false,
+		Params:    nil,
+		Ctx:       context.Background(),
 	}
 }
 
@@ -35,18 +35,18 @@ func TestServer_ServeSingleRequest(t *testing.T) {
 
 	successRPCRes := &common.RPCResponse{
 		Namespace: defaultNS,
-		Id: 1,
-		Reply: "response data",
-		Error: nil,
-		IsPubSub: false,
-		IsUnsub: false,
+		Id:        1,
+		Reply:     "response data",
+		Error:     nil,
+		IsPubSub:  false,
+		IsUnsub:   false,
 	}
 	successJSONRes := &JSONResponse{
-		Version: JSONRPCVersion,
+		Version:   JSONRPCVersion,
 		Namespace: defaultNS,
-		Id: 1, Code: 0,
+		Id:        1, Code: 0,
 		Message: "SUCCESS",
-		Result: "response data",
+		Result:  "response data",
 	}
 
 	mockCodec := &MockjsonCodecImpl{}
@@ -83,14 +83,14 @@ func TestNoRequestFound(t *testing.T) {
 	ast := assert.New(t)
 	initialData()
 
-	rpcErr :=  &common.InvalidRequestError{Message: "no request found"}
+	rpcErr := &common.InvalidRequestError{Message: "no request found"}
 	errorRPCRes := &common.RPCResponse{
 		Namespace: defaultNS,
-		Id: 1,
-		Reply: nil,
-		Error: rpcErr,
-		IsPubSub: false,
-		IsUnsub: false,
+		Id:        1,
+		Reply:     nil,
+		Error:     rpcErr,
+		IsPubSub:  false,
+		IsUnsub:   false,
 	}
 	errorJSONRes := &JSONResponse{Version: JSONRPCVersion, Namespace: defaultNS, Id: 1, Code: rpcErr.Code(), Message: rpcErr.Error()}
 
@@ -127,14 +127,14 @@ func TestCheckHttpHeaderError(t *testing.T) {
 	ast := assert.New(t)
 	initialData()
 
-	rpcErr :=  &common.CertError{Message: "cert error"}
+	rpcErr := &common.CertError{Message: "cert error"}
 	errorRPCRes := &common.RPCResponse{
 		Namespace: defaultNS,
-		Id: 1,
-		Reply: nil,
-		Error: rpcErr,
-		IsPubSub: false,
-		IsUnsub: false,
+		Id:        1,
+		Reply:     nil,
+		Error:     rpcErr,
+		IsPubSub:  false,
+		IsUnsub:   false,
 	}
 	errorJSONRes := &JSONResponse{Version: JSONRPCVersion, Namespace: defaultNS, Id: 1, Code: rpcErr.Code(), Message: rpcErr.Error()}
 

@@ -2,11 +2,11 @@ package msg
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager/event"
+	pb "github.com/hyperchain/hyperchain/p2p/message"
+	"github.com/hyperchain/hyperchain/p2p/peerevent"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/manager/event"
-	pb "hyperchain/p2p/message"
-	"hyperchain/p2p/peerevent"
 )
 
 type NVPAttendMsgHandler struct {

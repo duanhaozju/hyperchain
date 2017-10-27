@@ -1,16 +1,20 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
+
 package auth
 
 import (
-	"github.com/urfave/cli"
-	admin "hyperchain/api/admin"
-
 	"fmt"
-	"hyperchain/hypercli/common"
 	"os"
 	"sort"
+
+	"github.com/hyperchain/hyperchain/api/admin"
+	"github.com/hyperchain/hyperchain/hypercli/common"
+
+	"github.com/urfave/cli"
 )
 
-// createUser implements the create user logic in hypercli, this method can only be called by root successfully
+// createUser implements the create user logic in hypercli, this method can only be called by root.
 func createUser(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	args := c.Args()
@@ -33,10 +37,11 @@ func createUser(c *cli.Context) error {
 	return nil
 }
 
-// alterUser implements the alter user logic in hypercli, this method can only be called by root successfully
+// alterUser implements the alter user logic in hypercli, this method can only be called by root.
 func alterUser(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	var args []string
+
 	// get current login user
 	currentUser := common.GetCurrentUser()
 	if currentUser == "" {
@@ -51,6 +56,7 @@ func alterUser(c *cli.Context) error {
 		return common.ErrInvalidArgsNum
 	}
 	args = append(args, c.Args()...)
+
 	cmd := &admin.Command{
 		MethodName: "admin_alterUser",
 		Args:       args,
@@ -60,7 +66,7 @@ func alterUser(c *cli.Context) error {
 	return nil
 }
 
-// dropUser implements the drop user logic in hypercli, this method can only be called by root successfully
+// dropUser implements the drop user logic in hypercli, this method can only be called by root.
 func dropUser(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	if c.NArg() != 1 {
@@ -71,6 +77,7 @@ func dropUser(c *cli.Context) error {
 		fmt.Println("Can not delete root!")
 		return nil
 	}
+
 	cmd := &admin.Command{
 		MethodName: "admin_delUser",
 		Args:       c.Args(),
@@ -80,7 +87,7 @@ func dropUser(c *cli.Context) error {
 	return nil
 }
 
-// grant grants the permissions to given username
+// grant grants the permissions to user with the given username.
 func grant(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	var permissions []string
@@ -97,13 +104,12 @@ func grant(c *cli.Context) error {
 		MethodName: "admin_grantPermission",
 		Args:       permissions,
 	}
-
 	result := client.InvokeCmd(cmd)
 	fmt.Print(result)
 	return nil
 }
 
-// revoke revokes the permissions from given username
+// revoke revokes the permissions from user with given username.
 func revoke(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	var permissions []string
@@ -120,13 +126,12 @@ func revoke(c *cli.Context) error {
 		MethodName: "admin_revokePermission",
 		Args:       permissions,
 	}
-
 	result := client.InvokeCmd(cmd)
 	fmt.Print(result)
 	return nil
 }
 
-// list lists the permission of current user
+// list lists the permission of current user.
 func list(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	username := c.Args()
@@ -141,11 +146,11 @@ func list(c *cli.Context) error {
 		fmt.Println("Need only 1 params(username)")
 		return common.ErrInvalidArgsNum
 	}
+
 	cmd := &admin.Command{
 		MethodName: "admin_listPermission",
 		Args:       username,
 	}
-
 	result := client.InvokeCmd(cmd)
 
 	response, err := common.GetJSONResponse(result)
@@ -154,6 +159,7 @@ func list(c *cli.Context) error {
 		os.Exit(1)
 	}
 
+	// parse response
 	if permissions, ok := response.Result.([]interface{}); !ok {
 		fmt.Printf("Sorry, %s have no permissions to do anything, "+
 			"please contact to the administrator...\n", username)

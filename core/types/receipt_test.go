@@ -14,7 +14,7 @@
 package types
 
 import (
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"testing"
 )
 

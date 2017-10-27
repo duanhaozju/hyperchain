@@ -3,13 +3,13 @@ package p2p
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/threadsafe"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	"github.com/op/go-logging"
 	"github.com/orcaman/concurrent-map"
 	"github.com/pkg/errors"
-	"hyperchain/common"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/threadsafe"
-	"hyperchain/p2p/utils"
 )
 
 var (
@@ -20,15 +20,15 @@ var (
 type PeersPool struct {
 	namespace string
 
-	vpPool    *threadsafe.Heap          // all the VP peer under the namespace
-	nvpPool cmap.ConcurrentMap			// all the NVP peer under the namespace
+	vpPool  *threadsafe.Heap   // all the VP peer under the namespace
+	nvpPool cmap.ConcurrentMap // all the NVP peer under the namespace
 
-	existMap cmap.ConcurrentMap			// all the VP peer and NVP peer under the namespace
-	pendingMap cmap.ConcurrentMap		// all the pending peer, maybe VP peer or NVP peer
+	existMap   cmap.ConcurrentMap // all the VP peer and NVP peer under the namespace
+	pendingMap cmap.ConcurrentMap // all the pending peer, maybe VP peer or NVP peer
 
-	evMux      *event.TypeMux
+	evMux *event.TypeMux
 
-	pts     *PeerTriples				// for persisting configuration
+	pts     *PeerTriples // for persisting configuration
 	peercnf *peerCnf
 
 	logger *logging.Logger

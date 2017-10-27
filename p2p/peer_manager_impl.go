@@ -2,21 +2,21 @@ package p2p
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/hts"
+	"github.com/hyperchain/hyperchain/p2p/hts/secimpl"
+	"github.com/hyperchain/hyperchain/p2p/info"
+	pb "github.com/hyperchain/hyperchain/p2p/message"
+	"github.com/hyperchain/hyperchain/p2p/msg"
+	"github.com/hyperchain/hyperchain/p2p/network"
+	"github.com/hyperchain/hyperchain/p2p/peerevent"
+	"github.com/hyperchain/hyperchain/p2p/random_stack"
+	"github.com/hyperchain/hyperchain/p2p/threadsafe"
 	"github.com/op/go-logging"
 	"github.com/orcaman/concurrent-map"
 	"github.com/pkg/errors"
 	"github.com/terasum/viper"
-	"hyperchain/common"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/hts"
-	"hyperchain/p2p/hts/secimpl"
-	"hyperchain/p2p/info"
-	pb "hyperchain/p2p/message"
-	"hyperchain/p2p/msg"
-	"hyperchain/p2p/network"
-	"hyperchain/p2p/peerevent"
-	"hyperchain/p2p/random_stack"
-	"hyperchain/p2p/threadsafe"
 	"math"
 	"reflect"
 	"regexp"
@@ -180,7 +180,6 @@ func (pmgr *peerManagerImpl) Start() error {
 		}
 		pmgr.logger.Infof("SELF hash: %s", pmgr.node.info.Hash)
 	}()
-
 
 	return nil
 }

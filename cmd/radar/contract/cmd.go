@@ -3,9 +3,9 @@ package contract
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hyperchain/hyperchain/cmd/radar/core/api"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/urfave/cli"
-	"hyperchain/cmd/radar/core/api"
 	"io/ioutil"
 )
 

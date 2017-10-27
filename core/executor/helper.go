@@ -15,22 +15,25 @@ package executor
 
 import (
 	"encoding/binary"
-	"github.com/golang/protobuf/proto"
-	er "hyperchain/core/errors"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
-	"hyperchain/manager/protos"
 	"reflect"
+
+	er "github.com/hyperchain/hyperchain/core/errors"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/manager/protos"
+
+	"github.com/golang/protobuf/proto"
 )
 
-// Communication mux implementation
+// Helper implements the helper mux used in communication.
 type Helper struct {
-	innerMux    *event.TypeMux // system internal mux
-	externalMux *event.TypeMux // subscription system mux
+	innerMux    *event.TypeMux // System internal mux
+	externalMux *event.TypeMux // Subscription system mux
 }
 
-func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *Helper {
+// newHelper creates the helper that manage the inner and external communications.
+func newHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *Helper {
 	return &Helper{
 		innerMux:    innerMux,
 		externalMux: externalMux,
@@ -61,10 +64,11 @@ func checkParams(expect []reflect.Kind, params ...interface{}) bool {
 	return true
 }
 
-// informConsensus - communicate with consensus module.
+// informConsensus communicates with consensus module.
 func (executor *Executor) informConsensus(informType int, message interface{}) error {
 	switch informType {
 	case NOTIFY_VALIDATION_RES:
+		// Post the validated result back to consensus
 		executor.logger.Debugf("[Namespace = %s] inform consenus validation result", executor.namespace)
 		msg, ok := message.(protos.ValidatedTxs)
 		if !ok {
@@ -75,6 +79,7 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 			Type:    NOTIFY_VALIDATION_RES,
 		})
 	case NOTIFY_VC_DONE:
+		// Post the VcResetDone event to consensus
 		executor.logger.Debug("inform consenus vc done")
 		msg, ok := message.(protos.VcResetDone)
 		if !ok {
@@ -85,6 +90,7 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 			Type:    NOTIFY_VC_DONE,
 		})
 	case NOTIFY_SYNC_DONE:
+		// Post the stateUpdated event to consensus
 		executor.logger.Debug("inform consenus sync done")
 		msg, ok := message.(protos.StateUpdatedMessage)
 		if !ok {
@@ -100,7 +106,7 @@ func (executor *Executor) informConsensus(informType int, message interface{}) e
 	return nil
 }
 
-// informP2P - communicate with p2p module.
+// informP2P communicates with p2p module.
 func (executor *Executor) informP2P(informType int, message ...interface{}) error {
 	switch informType {
 	case NOTIFY_BROADCAST_DEMAND:
@@ -135,7 +141,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		if !checkParams([]reflect.Kind{reflect.Uint64, reflect.Uint64, reflect.String}, message...) {
 			return er.InvalidParamsErr
 		}
-		block, err := edb.GetBlockByNumber(executor.namespace, message[0].(uint64))
+		block, err := chain.GetBlockByNumber(executor.namespace, message[0].(uint64))
 		if err != nil {
 			executor.logger.Errorf("no demand block number: %d", message[0].(uint64))
 			return err
@@ -231,7 +237,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 		executor.helper.PostInner(event.ExecutorToP2PEvent{
 			Payload: payload,
 			Type:    NOTIFY_REQUEST_WORLD_STATE,
-			// Note. now only vp can be the potential sync target peer
+			// Note: now only vp can be the potential sync target peer
 			Peers: []uint64{message[1].(uint64)},
 		})
 		return nil
@@ -376,7 +382,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 	return nil
 }
 
-// sendFilterEvent - send event to subscription system.
+// sendFilterEvent sends event to subscription system.
 func (executor *Executor) sendFilterEvent(informType int, message ...interface{}) error {
 	switch informType {
 	case FILTER_NEW_BLOCK:
@@ -426,7 +432,7 @@ func (executor *Executor) sendFilterEvent(informType int, message ...interface{}
 		})
 		return nil
 	case FILTER_ARCHIVE:
-		// archive operation result event
+		// Archive operation result event
 		if !checkParams([]reflect.Kind{reflect.Bool, reflect.String, reflect.String}, message...) {
 			return er.InvalidParamsErr
 		}

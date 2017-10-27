@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/consensus"
-	"hyperchain/manager/appstat"
-	"hyperchain/manager/event"
-	pb "hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/consensus"
+	"github.com/hyperchain/hyperchain/manager/appstat"
+	"github.com/hyperchain/hyperchain/manager/event"
+	pb "github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"

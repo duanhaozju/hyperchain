@@ -4,7 +4,7 @@
 package namespace
 
 import (
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 // handleJsonRequest handles JsonRequest under current namespace.

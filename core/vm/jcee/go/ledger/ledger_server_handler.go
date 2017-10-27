@@ -2,11 +2,11 @@ package jcee
 
 import (
 	"github.com/gogo/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/vm"
+	pb "github.com/hyperchain/hyperchain/core/vm/jcee/protos"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	pb "hyperchain/core/vm/jcee/protos"
 	"strings"
 )
 

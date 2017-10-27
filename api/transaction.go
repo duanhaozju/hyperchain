@@ -5,18 +5,18 @@ package api
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/bloom"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/manager"
+	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/juju/ratelimit"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/core/ledger/bloom"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
-	"hyperchain/crypto"
-	"hyperchain/hyperdb/db"
-	"hyperchain/manager"
-	"hyperchain/manager/event"
-	"time"
 	"strings"
+	"time"
 )
 
 // This file implements the handler of Transaction service API which
@@ -241,7 +241,7 @@ func (tran *Transaction) GetBatchTransactions(args BatchArgs) ([]*TransactionRes
 func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) {
 
 	reds, err := edb.GetAllDiscardTransaction(tran.namespace)
-	if (err != nil && err.Error() == db_not_found_error) {
+	if err != nil && err.Error() == db_not_found_error {
 		return nil, &common.DBNotFoundError{Type: DISCARDTXS}
 	} else if err != nil {
 		tran.log.Errorf("GetAllDiscardTransaction error: %v", err)
@@ -276,7 +276,7 @@ func (tran *Transaction) GetDiscardTransactionsByTime(args IntervalTime) ([]*Tra
 	} else if err != nil {
 		tran.log.Errorf("GetDiscardTransactionsByTime error: %v", err)
 		return nil, &common.CallbackError{Message: err.Error()}
-	} else if len(reds) == 0{
+	} else if len(reds) == 0 {
 		return nil, &common.DBNotFoundError{Type: DISCARDTXS}
 	}
 

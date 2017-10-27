@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"hyperchain/core/vm/evm/params"
+	"github.com/hyperchain/hyperchain/core/vm/evm/params"
 )
 
 var (

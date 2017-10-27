@@ -14,26 +14,29 @@
 package executor
 
 import (
-	"github.com/op/go-logging"
-	"hyperchain/common"
 	"math"
 	"sync"
+
+	"github.com/hyperchain/hyperchain/common"
+
+	"github.com/op/go-logging"
 )
 
-// Peer qos statistic implementation
+// Peer qos (Quality of Service) statistic implementation
 type QosStat struct {
-	score             map[uint64]int64
-	conf              *common.Config
-	latestSelected    uint64
-	logger            *logging.Logger
-	ctx               *chainSyncContext
-	needUpdateGenesis bool
-	once              sync.Once
-	namespace         string
+	score             map[uint64]int64  // Track the quality score of each peer
+	conf              *common.Config    // Refers a configuration reader
+	latestSelected    uint64            // Track the last selected peer
+	logger            *logging.Logger   // Refer the logger
+	ctx               *chainSyncContext // Refer the chain synchronization context
+	needUpdateGenesis bool              // Track if genesis need to be updated
+	once              sync.Once         // Sync variable that control the once using
+	namespace         string            // Refer the namespace
 }
 
-func NewQos(ctx *chainSyncContext, conf *common.Config, namespace string, logger *logging.Logger) *QosStat {
-	// assign init score
+// newQos creates the qos manager of peers, inits the original score of each peer.
+func newQos(ctx *chainSyncContext, conf *common.Config, namespace string, logger *logging.Logger) *QosStat {
+	// Assign init scores
 	score := make(map[uint64]int64)
 	var needUpdateGenesis bool
 	if len(ctx.fullPeers) == 0 {
@@ -55,19 +58,22 @@ func NewQos(ctx *chainSyncContext, conf *common.Config, namespace string, logger
 		ctx:               ctx,
 		namespace:         namespace,
 	}
-	staticPeers := qosStat.ReadStaticPeer()
+
+	// Read the static config the peer from file, and plus 10 to the init score
+	staticPeers := qosStat.readStaticPeer()
 	for _, peer := range staticPeers {
 		if _, exist := score[peer]; exist == true {
 			qosStat.score[peer] += 10
 		}
 	}
-	qosStat.PrintScoreboard()
+	qosStat.printScoreboard()
+
 	return qosStat
 }
 
-// SelectPeer select a best network status via selection strategy
+// selectPeer select a best network status via selection strategy
 // regard as the target peer in state update.
-func (qosStat *QosStat) SelectPeer() uint64 {
+func (qosStat *QosStat) selectPeer() uint64 {
 	var max int64 = int64(math.MinInt64)
 	var bPeer uint64
 	// select other with higest score
@@ -94,8 +100,8 @@ func (qosStat *QosStat) SelectPeer() uint64 {
 	return bPeer
 }
 
-// FeedBack feedback state update result(success or not), to affect the peer statistic data.
-func (qosStat *QosStat) FeedBack(success bool) {
+// feedBack gives a feedback result of state update(success or not), to affect the peer statistic data.
+func (qosStat *QosStat) feedBack(success bool) {
 	if success {
 		qosStat.incScore()
 	} else {
@@ -103,8 +109,8 @@ func (qosStat *QosStat) FeedBack(success bool) {
 	}
 }
 
-// ReadStaticPeer load preconfig peer info
-func (qosStat *QosStat) ReadStaticPeer() []uint64 {
+// readStaticPeer loads the peer info set in config file.
+func (qosStat *QosStat) readStaticPeer() []uint64 {
 	var ret []uint64
 	qosStat.once.Do(func() {
 		qosStat.conf.MergeConfig(common.GetPath(qosStat.namespace, qosStat.conf.GetString(common.PEER_CONFIG_PATH)))
@@ -124,13 +130,15 @@ func (qosStat *QosStat) ReadStaticPeer() []uint64 {
 	return ret
 }
 
+// incScore increases the score of the latest selected peer.
 func (qosStat *QosStat) incScore() {
-	qosStat.logger.Debugf("increase peer %d score from %d to %d", qosStat.latestSelected, qosStat.score[qosStat.latestSelected], qosStat.score[qosStat.latestSelected]+1)
 	qosStat.score[qosStat.latestSelected] = qosStat.score[qosStat.latestSelected] + 1
+	qosStat.logger.Debugf("increase peer %d score from %d to %d", qosStat.latestSelected, qosStat.score[qosStat.latestSelected], qosStat.score[qosStat.latestSelected]+1)
 }
 
+// decScore decreases the score of the latest selected peer according to different rules.
 func (qosStat *QosStat) decScore() {
-	qosStat.logger.Debugf("increase peer %d score from %d to %d", qosStat.latestSelected, qosStat.score[qosStat.latestSelected], qosStat.score[qosStat.latestSelected]-1)
+	origin := qosStat.score[qosStat.latestSelected]
 	if qosStat.score[qosStat.latestSelected] > 10 {
 		qosStat.score[qosStat.latestSelected] = qosStat.score[qosStat.latestSelected] / 2
 	} else if qosStat.score[qosStat.latestSelected] > -10 {
@@ -138,9 +146,11 @@ func (qosStat *QosStat) decScore() {
 	} else {
 		qosStat.score[qosStat.latestSelected] = qosStat.score[qosStat.latestSelected] * 2
 	}
+	qosStat.logger.Debugf("decrease peer %d score from %d to %d", qosStat.latestSelected, origin, qosStat.score[qosStat.latestSelected])
 }
 
-func (qosStat *QosStat) PrintScoreboard() {
+// printScoreboard print the scores of each peer.
+func (qosStat *QosStat) printScoreboard() {
 	qosStat.logger.Debug("<====== scoreboard =======>")
 	for pId, score := range qosStat.score {
 		qosStat.logger.Debugf("<====== peer (id #%d), score (#%d) =======>", pId, score)
@@ -148,6 +158,8 @@ func (qosStat *QosStat) PrintScoreboard() {
 	qosStat.logger.Debug("<======     end    =======>")
 }
 
+// Min finds the peer whose genesis is the smallest,
+// which means that peer has more unsnapped blocks for state update.
 func Min(peers []PartPeer) uint64 {
 	var genesis uint64 = math.MaxUint64
 	var peer PartPeer

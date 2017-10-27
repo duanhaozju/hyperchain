@@ -17,8 +17,8 @@ package bucket
 import (
 	"bytes"
 	"encoding/json"
-	"hyperchain/common"
-	"hyperchain/hyperdb/mdb"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 	"io/ioutil"
 	"testing"
 )

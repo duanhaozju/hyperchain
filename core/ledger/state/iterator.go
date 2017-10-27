@@ -15,8 +15,8 @@ package state
 
 import (
 	"bytes"
-	"hyperchain/common"
-	"hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"sort"
 )
 

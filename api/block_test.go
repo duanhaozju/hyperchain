@@ -4,9 +4,9 @@ package api
 
 import (
 	"fmt"
-	//"hyperchain/common"
-	"hyperchain/core"
-	"hyperchain/hyperdb"
+	//"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core"
+	"github.com/hyperchain/hyperchain/hyperdb"
 	"testing"
 )
 

@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"hyperchain/common"
-	"hyperchain/p2p/hts/secimpl"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/p2p/hts/secimpl"
 	"io/ioutil"
 	"strconv"
 	"time"

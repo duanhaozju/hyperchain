@@ -4,16 +4,16 @@
 package hyperdb
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/hyperdb/hleveldb"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
-	"hyperchain/common"
-	"hyperchain/hyperdb/db"
-	"hyperchain/hyperdb/hleveldb"
 	"path"
 	"sync"
 
 	"fmt"
-	hcomm "hyperchain/hyperdb/common"
+	hcomm "github.com/hyperchain/hyperchain/hyperdb/common"
 )
 
 //func init() {

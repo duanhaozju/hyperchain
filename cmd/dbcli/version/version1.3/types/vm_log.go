@@ -3,7 +3,7 @@ package version1_3
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 const (

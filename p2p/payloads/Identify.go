@@ -2,7 +2,7 @@ package payloads
 
 import (
 	"github.com/golang/protobuf/proto"
-	"hyperchain/p2p/utils"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 )
 
 func NewIdentify(isvp, isOriginal, isReconnect bool, namespace, hostname string, id int, payload []byte) *Identify {

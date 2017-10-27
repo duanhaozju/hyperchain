@@ -4,8 +4,8 @@ package crypto
 
 import (
 	"encoding/json"
-	"hyperchain/common"
-	"hyperchain/crypto/sha3"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto/sha3"
 )
 
 //Keccak256Hash is a kind of hash method which implements CommomHash interface

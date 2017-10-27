@@ -12,8 +12,13 @@ func (rbft *rbftImpl) initTimers() {
 	rbft.timerMgr.newTimer(NEGO_VIEW_RSP_TIMER, rbft.config.GetDuration(RBFT_NEGOVIEW_TIMEOUT))
 	rbft.timerMgr.newTimer(RECOVERY_RESTART_TIMER, rbft.config.GetDuration(RBFT_RECOVERY_TIMEOUT))
 	rbft.timerMgr.newTimer(BATCH_TIMER, rbft.config.GetDuration(RBFT_BATCH_TIMEOUT))
-	rbft.timerMgr.newTimer(CLEAN_VIEW_CHANGE_TIMER, rbft.config.GetDuration(RBFT_BATCH_TIMEOUT))
+	rbft.timerMgr.newTimer(REQUEST_TIMER, rbft.config.GetDuration(RBFT_REQUEST_TIMEOUT))
+	rbft.timerMgr.newTimer(CLEAN_VIEW_CHANGE_TIMER, rbft.config.GetDuration(RBFT_CLEAN_VIEWCHANGE_TIMEOUT))
 	rbft.timerMgr.newTimer(VALIDATE_TIMER, rbft.config.GetDuration(RBFT_VALIDATE_TIMEOUT))
+
+	rbft.timerMgr.makeNullRequestTimeoutLegal()
+	rbft.timerMgr.makeRequestTimeoutLegal()
+	rbft.timerMgr.makeCleanVcTimeoutLegal()
 }
 
 var eventCreators map[ConsensusMessage_Type]func() interface{}
@@ -55,4 +60,7 @@ func (rbft *rbftImpl) initStatus() {
 	rbft.status.reset()
 	rbft.on(inNegotiateView)
 	rbft.on(inRecovery)
+
+	rbft.setNormal()
+	rbft.setNotFull()
 }

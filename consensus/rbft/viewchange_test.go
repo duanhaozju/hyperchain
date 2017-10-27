@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/consensus/consensusMocks"
-	"hyperchain/core/types"
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/consensus/consensusMocks"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
@@ -77,7 +77,7 @@ func getTestViewChange() (vc *ViewChange) {
 
 func TestNewVcManager(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -93,7 +93,7 @@ func TestNewVcManager(t *testing.T) {
 
 func TestNewViewTimer(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -297,7 +297,7 @@ func TestRecvAndSendViewChange2(t *testing.T) { // test normal case
 	vc := getTestViewChange()
 	vc2 := getTestViewChange()
 	vc3 := getTestViewChange()
-	vc.Basis.ReplicaId = 0
+	vc.Basis.ReplicaId = 4
 	vc2.Basis.ReplicaId = 3
 	vc3.Basis.ReplicaId = 2
 
@@ -1440,7 +1440,7 @@ func TestAssignSequenceNumbers(t *testing.T) {
 
 func TestRecvFetchRequestBatch(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -1478,7 +1478,7 @@ func TestRecvFetchRequestBatch(t *testing.T) {
 
 func TestRecvReturnRequestBatch(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()

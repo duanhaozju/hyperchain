@@ -16,8 +16,8 @@ package bucket
 
 import (
 	"github.com/ToQoz/gopwt/assert"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/op/go-logging"
-	"hyperchain/common"
 	"reflect"
 	"sync"
 	"testing"

@@ -16,9 +16,9 @@ package state
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/pkg/errors"
-	"hyperchain/common"
-	"hyperchain/hyperdb/db"
 	"math/big"
 	"sort"
 )

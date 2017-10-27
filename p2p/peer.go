@@ -5,16 +5,16 @@ package p2p
 
 import (
 	"encoding/json"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto/csprng"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/hts"
+	"github.com/hyperchain/hyperchain/p2p/info"
+	pb "github.com/hyperchain/hyperchain/p2p/message"
+	"github.com/hyperchain/hyperchain/p2p/network"
+	"github.com/hyperchain/hyperchain/p2p/payloads"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
-	"hyperchain/common"
-	"hyperchain/crypto/csprng"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/hts"
-	"hyperchain/p2p/info"
-	pb "hyperchain/p2p/message"
-	"hyperchain/p2p/network"
-	"hyperchain/p2p/payloads"
 )
 
 type Peer struct {
@@ -203,7 +203,7 @@ func (peer *Peer) clientHello(isOrg, isRec bool) error {
 	if err != nil {
 		return err
 	}
-	// peer should
+
 	identify := payloads.NewIdentify(peer.local.IsVP, isOrg, isRec, peer.namespace, peer.local.Hostname, peer.local.Id, certpayload)
 	payload, err := identify.Serialize()
 	if err != nil {

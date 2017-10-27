@@ -3,8 +3,8 @@
 package message
 
 import (
-	"hyperchain/common"
-	"hyperchain/crypto/sha3"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto/sha3"
 )
 
 func GetHash(needHashString string) string {

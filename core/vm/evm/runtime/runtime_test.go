@@ -4,10 +4,10 @@ import (
 	"math/big"
 	"testing"
 
-	"hyperchain/common"
-	"hyperchain/core/ledger/state"
-	"hyperchain/core/vm/evm"
-	"hyperchain/hyperdb/mdb"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/core/vm/evm"
+	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 )
 
 func TestDefaults(t *testing.T) {

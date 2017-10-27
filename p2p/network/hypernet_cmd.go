@@ -2,8 +2,8 @@ package network
 
 import (
 	"fmt"
-	"hyperchain/p2p/message"
-	"hyperchain/p2p/utils"
+	"github.com/hyperchain/hyperchain/p2p/message"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	"strconv"
 	"strings"
 	"time"

@@ -1,3 +1,17 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package chain
 
 import (
@@ -5,10 +19,10 @@ import (
 	"strconv"
 	"time"
 
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -18,30 +32,30 @@ import (
 // ==========================================================
 
 // PersistBlock persists a block, using param to control whether flush to disk immediately.
-func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool, extra ...interface{}) (error, []byte) {
+func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool, extra ...interface{}) ([]byte, error) {
 	if hyperdb.IfLogStatus() {
 		go blockTime(block)
 	}
 	// Check pointer value
 	if block == nil || batch == nil {
-		return ErrEmptyPointer, nil
+		return nil, ErrEmptyPointer
 	}
 
 	// Encapsulates block for specify block structure version
-	err, data := encapsulateBlock(block, extra...)
+	data, err := encapsulateBlock(block, extra...)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// Batch-Put the block in db
 	if err := batch.Put(append(BlockPrefix, block.BlockHash...), data); err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// save number <-> hash associate
 	keyNum := strconv.FormatUint(block.Number, 10)
 	if err := batch.Put(append(BlockNumPrefix, []byte(keyNum)...), block.BlockHash); err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// flush to disk immediately
@@ -53,7 +67,7 @@ func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool, ext
 		}
 	}
 
-	return nil, data
+	return data, nil
 }
 
 // GetBlock retrieves block with block hash.
@@ -147,14 +161,14 @@ func IsGenesisFinish(namespace string) bool {
 // ==========================================================
 
 // encapsulateBlock encapsulates block with a wrapper for specify block structure version.
-func encapsulateBlock(block *types.Block, extra ...interface{}) (error, []byte) {
+func encapsulateBlock(block *types.Block, extra ...interface{}) ([]byte, error) {
 	var (
 		blkVersion string = BlockVersion
 		txVersion  string = TransactionVersion
 	)
 
 	if block == nil {
-		return ErrEmptyPointer, nil
+		return nil, ErrEmptyPointer
 	}
 
 	// Parse block and transaction version
@@ -178,7 +192,7 @@ func encapsulateBlock(block *types.Block, extra ...interface{}) (error, []byte) 
 	}
 	data, err := proto.Marshal(block)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	wrapper := &types.BlockWrapper{
@@ -187,10 +201,10 @@ func encapsulateBlock(block *types.Block, extra ...interface{}) (error, []byte) 
 	}
 	data, err = proto.Marshal(wrapper)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
-	return nil, data
+	return data, nil
 }
 
 // getBlockHash retrieves block hash with related block number.

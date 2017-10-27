@@ -7,18 +7,18 @@ verify ecert and signature
 package primitives
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
-	"crypto/ecdsa"
-	"github.com/pkg/errors"
 	"github.com/op/go-logging"
-	"crypto/elliptic"
+	"github.com/pkg/errors"
+	"io/ioutil"
 	"time"
 )
 
 var (
-	log = logging.MustGetLogger("crypto")
+	log          = logging.MustGetLogger("crypto")
 	defaultCurve elliptic.Curve
 )
 
@@ -67,7 +67,7 @@ func VerifyCert(cert *x509.Certificate, ca *x509.Certificate) (bool, error) {
 
 	if startTime.Before(today) || endTime.After(today) {
 		log.Error("This Cert is overdue.Please check it!")
-		return false,errors.New("This Cert is overdue.Please check it!")
+		return false, errors.New("This Cert is overdue.Please check it!")
 	}
 
 	if err != nil {
@@ -77,7 +77,6 @@ func VerifyCert(cert *x509.Certificate, ca *x509.Certificate) (bool, error) {
 	return true, nil
 
 }
-
 
 func ParseKey(derPri []byte) (interface{}, error) {
 	block, _ := pem.Decode(derPri)

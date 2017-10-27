@@ -2,9 +2,9 @@ package api
 
 import (
 	"context"
-	"hyperchain/common"
-	edb "hyperchain/core/ledger/chain"
-	flt "hyperchain/manager/filter"
+	"github.com/hyperchain/hyperchain/common"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	flt "github.com/hyperchain/hyperchain/manager/filter"
 	"sync"
 )
 

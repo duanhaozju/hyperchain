@@ -6,14 +6,14 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/asn1"
-	"github.com/pkg/errors"
-	"hyperchain/crypto/primitives"
-	"math/big"
-	crypto2 "hyperchain/crypto"
 	"fmt"
-	"io/ioutil"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
+	crypto2 "github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/crypto/primitives"
+	"github.com/pkg/errors"
 	"github.com/terasum/viper"
+	"io/ioutil"
+	"math/big"
 )
 
 type CertGroup struct {
@@ -38,7 +38,7 @@ type CertGroup struct {
 }
 
 // NewCertGroup creates and returns a new CertGroup instance.
-func NewCertGroup(namespace string, vip *viper.Viper) (*CertGroup, error){
+func NewCertGroup(namespace string, vip *viper.Viper) (*CertGroup, error) {
 
 	var cg *CertGroup = new(CertGroup)
 

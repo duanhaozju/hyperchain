@@ -17,8 +17,8 @@ package bucket
 import (
 	"fmt"
 	"github.com/hashicorp/golang-lru"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
-	"hyperchain/hyperdb/db"
 	"sync"
 )
 

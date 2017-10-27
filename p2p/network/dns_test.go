@@ -1,8 +1,8 @@
 package network
 
 import (
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	. "github.com/smartystreets/goconvey/convey"
-	"hyperchain/p2p/utils"
 	"testing"
 )
 

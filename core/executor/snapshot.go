@@ -21,19 +21,21 @@
 package executor
 
 import (
-	"github.com/op/go-logging"
-	"hyperchain/common"
-	cm "hyperchain/core/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/ledger/state"
-	"hyperchain/hyperdb"
-	"hyperchain/manager/event"
 	"os"
 	cmd "os/exec"
 	"path"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/hyperchain/hyperchain/common"
+	cm "github.com/hyperchain/hyperchain/core/common"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/manager/event"
+
+	"github.com/op/go-logging"
 )
 
 // Snapshot creates a state snapshot in the specified block height.
@@ -278,7 +280,7 @@ func (registry *SnapshotRegistry) pushBlock(filterId string, number uint64) erro
 	}
 	defer sdb.Close()
 	wb := sdb.NewBatch()
-	err, _ = edb.PersistBlock(wb, blk, true, true)
+	_, err = edb.PersistBlock(wb, blk, true, true)
 	if err != nil {
 		return err
 	}

@@ -2,9 +2,9 @@ package jvm
 
 import (
 	"github.com/gogo/protobuf/proto"
-	"hyperchain/common"
-	"hyperchain/core/types"
-	pb "hyperchain/core/vm/jcee/protos"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	pb "github.com/hyperchain/hyperchain/core/vm/jcee/protos"
 	"os"
 	"path"
 	"strings"

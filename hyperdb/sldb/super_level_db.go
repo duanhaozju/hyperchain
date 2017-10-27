@@ -5,12 +5,12 @@ package sldb
 import (
 	"bytes"
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"hyperchain/common"
-	"hyperchain/hyperdb/db"
 	pa "path/filepath"
 	"time"
 )

@@ -17,10 +17,10 @@ package evm
 
 import (
 	"fmt"
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	"hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/crypto"
 	"math/big"
 	"os"
 )

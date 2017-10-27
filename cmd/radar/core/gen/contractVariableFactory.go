@@ -2,7 +2,7 @@ package gen
 
 import (
 	"fmt"
-	"hyperchain/cmd/radar/core/types"
+	"github.com/hyperchain/hyperchain/cmd/radar/core/types"
 )
 
 func GenerateContractVariableFactory(status Status, id uint) *types.ContractVariable {

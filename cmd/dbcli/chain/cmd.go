@@ -2,11 +2,11 @@ package chain
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/cmd/dbcli/constant"
+	"github.com/hyperchain/hyperchain/cmd/dbcli/database"
+	"github.com/hyperchain/hyperchain/cmd/dbcli/utils"
+	"github.com/hyperchain/hyperchain/cmd/dbcli/version"
 	"github.com/urfave/cli"
-	"hyperchain/cmd/dbcli/constant"
-	"hyperchain/cmd/dbcli/database"
-	"hyperchain/cmd/dbcli/utils"
-	"hyperchain/cmd/dbcli/version"
 )
 
 func NewChainCMD() []cli.Command {

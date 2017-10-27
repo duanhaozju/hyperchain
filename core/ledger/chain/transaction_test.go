@@ -1,28 +1,73 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package chain
 
 import (
-	"hyperchain/common"
-	"hyperchain/core/test_util"
-	"hyperchain/core/types"
-	"hyperchain/hyperdb/mdb"
+	"math/rand"
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 )
+
+const charset = "abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "0123456789"
+
+func genRandomByte(length int) []byte {
+	var seed *rand.Rand = rand.New(
+		rand.NewSource(time.Now().UnixNano()))
+	ret := make([]byte, length)
+	for i := range ret {
+		ret[i] = charset[seed.Intn(len(charset))]
+	}
+
+	return ret
+}
+
+func genRandomTransaction() *types.Transaction {
+	return &types.Transaction{
+		Version:         genRandomByte(3),
+		From:            genRandomByte(40),
+		To:              genRandomByte(40),
+		Value:           genRandomByte(5),
+		Timestamp:       time.Now().UnixNano(),
+		Signature:       genRandomByte(128),
+		Id:              rand.Uint64(),
+		TransactionHash: genRandomByte(64),
+		Nonce:           rand.Int63(),
+		Other:           &types.NonHash{genRandomByte(32)},
+	}
+}
 
 func TestGetTransaction(t *testing.T) {
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
-	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
+	block := genRandomBlock()
+	PersistBlock(db.NewBatch(), block, true, true)
 
-	for idx, tx := range test_util.TransactionCases {
+	for idx, tx := range block.Transactions {
 		meta := &types.TransactionMeta{
-			BlockIndex: test_util.BlockCases.Number,
+			BlockIndex: block.Number,
 			Index:      int64(idx),
 		}
 		PersistTransactionMeta(db.NewBatch(), meta, common.BytesToHash(tx.TransactionHash), true, true)
 	}
 
-	for _, tx := range test_util.TransactionCases {
-		dbTx, err := GetTransactionFunc(db, common.BytesToHash(tx.TransactionHash).Bytes())
+	for _, tx := range block.Transactions {
+		dbTx, err := getTransactionFunc(db, common.BytesToHash(tx.TransactionHash).Bytes())
 		if err != nil {
 			t.Error(err.Error())
 		}
@@ -34,17 +79,18 @@ func TestGetTransaction(t *testing.T) {
 
 func TestJudgeTransactionExist(t *testing.T) {
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
-	PersistBlock(db.NewBatch(), &test_util.BlockCases, true, true)
-	for idx, tx := range test_util.TransactionCases {
+	block := genRandomBlock()
+	PersistBlock(db.NewBatch(), block, true, true)
+	for idx, tx := range block.Transactions {
 		meta := &types.TransactionMeta{
-			BlockIndex: test_util.BlockCases.Number,
+			BlockIndex: block.Number,
 			Index:      int64(idx),
 		}
 		PersistTransactionMeta(db.NewBatch(), meta, common.BytesToHash(tx.TransactionHash), true, true)
 	}
 
-	for _, tx := range test_util.TransactionCases {
-		if exist, _ := JudgeTransactionExistFunc(db, common.BytesToHash(tx.TransactionHash).Bytes()); !exist {
+	for _, tx := range block.Transactions {
+		if exist, _ := isTransactionExistFunc(db, common.BytesToHash(tx.TransactionHash).Bytes()); !exist {
 			t.Error("expect to be not exist")
 		}
 	}
@@ -53,14 +99,14 @@ func TestJudgeTransactionExist(t *testing.T) {
 // TestGetInvaildTx tests for GetDiscardTransaction
 func TestGetInvaildTx(t *testing.T) {
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
-	tx := test_util.TransactionCases[0]
+	tx := genRandomTransaction()
 	record := &types.InvalidTransactionRecord{
 		Tx:      tx,
 		ErrType: types.InvalidTransactionRecord_OUTOFBALANCE,
 	}
 	PersistInvalidTransactionRecord(db.NewBatch(), record, true, true)
 
-	dbRecord, err := GetDiscardTransactionFunc(db, tx.TransactionHash)
+	dbRecord, err := getDiscardTransactionFunc(db, tx.TransactionHash)
 	if err != nil {
 		t.Error(err.Error())
 	}

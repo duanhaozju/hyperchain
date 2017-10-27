@@ -1,5 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package rbft
 
 import (
@@ -8,8 +9,8 @@ import (
 	"fmt"
 	"strconv"
 
-	ndb "hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
+	ndb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -137,7 +138,7 @@ func (rbft *rbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
 					idx := msgID{v, n, d}
 					qset[idx] = preprep
 				} else {
-					rbft.logger.Warningf("Replica %d could not restore pre-prepare key %v, err: %v", rbft.id, set, err)
+					rbft.logger.Warningf("Replica %d could not restore prePrepare key %v, err: %v", rbft.id, set, err)
 				}
 			}
 		}

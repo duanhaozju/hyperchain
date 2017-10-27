@@ -16,13 +16,13 @@
 package evm
 
 import (
-	"hyperchain/common"
-	er "hyperchain/core/errors"
-	"hyperchain/core/ledger/state"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/evm/params"
-	"hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/common"
+	er "github.com/hyperchain/hyperchain/core/errors"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/core/vm/evm/params"
+	"github.com/hyperchain/hyperchain/crypto"
 	"math/big"
 )
 

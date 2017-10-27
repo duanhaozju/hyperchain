@@ -1,21 +1,21 @@
 package p2p_test
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"hyperchain/common"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/utils"
-	"hyperchain/p2p"
 	"github.com/terasum/viper"
 )
 
 var _ = Describe("PeerManagerImpl", func() {
 
 	var (
-		p2pMgr p2p.P2PManager
-		p2pMgrErr error
-		peerMgr p2p.PeerManager
+		p2pMgr     p2p.P2PManager
+		p2pMgrErr  error
+		peerMgr    p2p.PeerManager
 		peerMgrErr error
 	)
 
@@ -26,7 +26,6 @@ var _ = Describe("PeerManagerImpl", func() {
 	vip.Set(common.P2P_PORT, 50019)
 
 	Describe("creating a new PeerManager instance", func() {
-
 
 		BeforeEach(func() {
 			p2pMgr, p2pMgrErr = p2p.GetP2PManager(vip)

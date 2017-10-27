@@ -6,7 +6,7 @@ package rbft
 import (
 	"testing"
 
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"

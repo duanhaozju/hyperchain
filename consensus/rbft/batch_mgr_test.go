@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/consensus/txpool"
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/consensus/txpool"
+	"github.com/hyperchain/hyperchain/core/types"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -26,7 +26,7 @@ func TestNewBatchValidator(t *testing.T) {
 
 func TestNewBatchManager(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -75,7 +75,7 @@ func TestCVB(t *testing.T) {
 
 func TestBatchTimer(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	ast.Equal(false, rbft.batchMgr.isBatchTimerActive(), "batchTimer initialize failed")
@@ -95,7 +95,7 @@ func TestBatchTimer(t *testing.T) {
 
 func TestPrimaryValidateBatch(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	ast.Equal(false, rbft.batchMgr.isBatchTimerActive(), "batchTimer initialize failed")
@@ -123,7 +123,7 @@ func TestPrimaryValidateBatch(t *testing.T) {
 
 func TestFindNextValidateBatch(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -211,7 +211,7 @@ func TestFindNextValidateBatch(t *testing.T) {
 
 func TestValidatePending(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()

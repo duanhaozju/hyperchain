@@ -14,15 +14,16 @@
 package executor
 
 import (
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/manager/event"
+	"sync/atomic"
+
+	"github.com/hyperchain/hyperchain/common"
+	com "github.com/hyperchain/hyperchain/core/common"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/manager/event"
 
 	"github.com/cheggaaa/pb"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
-	"hyperchain/common"
-	com "hyperchain/core/common"
-	"sync/atomic"
 )
 
 // PartPeer refers peers who don't have full request blocks.
@@ -122,7 +123,7 @@ type chainSyncContext struct {
 func newChainSyncContext(namespace string, event event.ChainSyncReqEvent, config *common.Config, logger *logging.Logger) *chainSyncContext {
 	var fullPeers []uint64
 	var partPeers []PartPeer
-	curHeight := edb.GetHeightOfChain(namespace)
+	curHeight := chain.GetHeightOfChain(namespace)
 	target := event.TargetHeight
 	for _, r := range event.Replicas {
 		if r.Genesis <= curHeight {
@@ -141,15 +142,15 @@ func newChainSyncContext(namespace string, event event.ChainSyncReqEvent, config
 		typ:       VP,
 	}
 	// pre-select a best peer
-	ctx.qosStat = NewQos(ctx, config, namespace, logger)
-	ctx.setCurrentPeer(ctx.qosStat.SelectPeer())
+	ctx.qosStat = newQos(ctx, config, namespace, logger)
+	ctx.setCurrentPeer(ctx.qosStat.selectPeer())
 
 	// assign initial sync target
 	ctx.target = event.TargetHeight
 	ctx.demandBlockNum = event.TargetHeight
 	ctx.demandBlockHash = event.TargetBlockHash
 	ctx.tempDownstream = event.TargetHeight
-	ctx.initProgres(BlockReceiveProgress, int64(event.TargetHeight-edb.GetHeightOfChain(namespace)), "block-collection")
+	ctx.initProgres(BlockReceiveProgress, int64(event.TargetHeight-chain.GetHeightOfChain(namespace)), "block-collection")
 
 	// assign world state transition related
 	ctx.updateGenesis = (len(fullPeers) == 0)

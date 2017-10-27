@@ -15,7 +15,7 @@ package state
 
 import (
 	"bytes"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"sort"
 	"strconv"
 )

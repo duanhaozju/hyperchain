@@ -3,10 +3,10 @@ package namespace
 import (
 	"bytes"
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/vm/jcee/go"
+	ledger "github.com/hyperchain/hyperchain/core/vm/jcee/go/ledger"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/core/vm/jcee/go"
-	ledger "hyperchain/core/vm/jcee/go/ledger"
 	"os"
 	"os/exec"
 	"path"

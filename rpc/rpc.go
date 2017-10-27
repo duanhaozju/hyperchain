@@ -1,10 +1,10 @@
 package jsonrpc
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/ipc"
+	"github.com/hyperchain/hyperchain/namespace"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/ipc"
-	"hyperchain/namespace"
 	"sync"
 )
 

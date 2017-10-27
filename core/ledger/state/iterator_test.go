@@ -15,10 +15,10 @@ package state
 
 import (
 	"bytes"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/core/vm"
-	"hyperchain/hyperdb/mdb"
 	"math/big"
 	"sync"
 	"testing"

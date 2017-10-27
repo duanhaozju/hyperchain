@@ -15,10 +15,11 @@ package executor
 
 import (
 	"bytes"
-	"hyperchain/common"
 	"encoding/binary"
-	"hyperchain/core/types"
 	"strconv"
+
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
 )
 
 var RemoveLessThan = func(key interface{}, iterKey interface{}) bool {

@@ -2,9 +2,9 @@ package msg
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/p2p/message"
 	"github.com/orcaman/concurrent-map"
 	"github.com/pkg/errors"
-	"hyperchain/p2p/message"
 	"strconv"
 )
 

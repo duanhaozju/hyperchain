@@ -1,8 +1,8 @@
 package ipc
 
 import (
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/op/go-logging"
-	"hyperchain/common"
 	"net"
 	"net/http"
 	"net/rpc"

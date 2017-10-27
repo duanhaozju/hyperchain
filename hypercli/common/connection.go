@@ -1,50 +1,43 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package common
 
 import (
 	"bytes"
 	"fmt"
-	"github.com/op/go-logging"
-	"github.com/urfave/cli"
-	admin "hyperchain/api/admin"
 	"io/ioutil"
 	"net/http"
 	"os"
+
+	"github.com/hyperchain/hyperchain/api/admin"
 )
 
-var logger *logging.Logger
-
-func init() {
-	logger = logging.MustGetLogger("hypercli/common")
-}
-
-func GetCmdClient(c *cli.Context) *CmdClient {
-	client := NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
-	return client
-}
-
+// CmdClient manages a connection to the host:port which may be used once in
+// one cli command.
 type CmdClient struct {
-	host   string
-	port   string
+	// host name (ip)
+	host string
+
+	// host port
+	port string
+
+	// http client instance
 	client *http.Client
 }
 
-func (cc *CmdClient) init() {
-	client := &http.Client{}
-	cc.client = client
-}
-
+// NewRpcClient returns a new client connection to the given host and port.
 func NewRpcClient(host, port string) *CmdClient {
-	client := &CmdClient{
+	cc := &CmdClient{
 		host: host,
 		port: port,
 	}
-	client.init()
-	return client
+	client := &http.Client{}
+	cc.client = client
+	return cc
 }
 
-//InvokeCmd invoke a command using json admin client and wait for the response.
+//InvokeCmd invokes a command using json-format request and waits for the response.
 func (cc *CmdClient) InvokeCmd(cmd *admin.Command) string {
 	rs, err := cc.Call(cmd.ToJson(), cmd.MethodName)
 	if err != nil {
@@ -55,6 +48,7 @@ func (cc *CmdClient) InvokeCmd(cmd *admin.Command) string {
 	return rs
 }
 
+// Call actually sends Command to hyperchain server using the given cmd.
 func (cc *CmdClient) Call(cmd string, method string) (string, error) {
 	reqJson := []byte(cmd)
 	urlStr := fmt.Sprintf("http://%s:%s", cc.host, cc.port)
@@ -80,12 +74,16 @@ func (cc *CmdClient) Call(cmd string, method string) (string, error) {
 		return "", err
 	}
 	result := string(body)
+
+	// check if returns a token error
 	if err = checkToken(result); err != nil {
 		return "", err
 	}
 	return result, nil
 }
 
+// Login actually sends login request to hyperchain server with the given username
+// and password.
 func (cc *CmdClient) Login(username, password string) (string, error) {
 	reqJson := []byte("")
 	urlStr := fmt.Sprintf("http://%s:%s%s", cc.host, cc.port, "/login")
@@ -111,6 +109,8 @@ func (cc *CmdClient) Login(username, password string) (string, error) {
 		return "", fmt.Errorf(result)
 	}
 	fmt.Println(result)
+
+	// token will be stored in Authorization head
 	token := rs.Header.Get("Authorization")
 	if token == "" {
 		return "", ErrEmptyHeader

@@ -1,9 +1,9 @@
 package secimpl
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto/csprng"
 	"github.com/stretchr/testify/assert"
-	"hyperchain/common"
-	"hyperchain/crypto/csprng"
 	"testing"
 )
 

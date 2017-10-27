@@ -1,3 +1,6 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
+
 package rbft
 
 import (
@@ -7,7 +10,7 @@ import (
 	"sort"
 	"time"
 
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -123,11 +126,11 @@ func (rbft *rbftImpl) recvLocalAddNode(msg *protos.AddNodeMessage) error {
 func (rbft *rbftImpl) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 
 	key := string(msg.DelPayload)
-	rbft.logger.Debugf("Replica %d received local delnode message for newId: %d, del node: %d", rbft.id, msg.Id, msg.Del)
+	rbft.logger.Debugf("Replica %d received local delNode message for newId: %d, del node: %d", rbft.id, msg.Id, msg.Del)
 
 	// We only support deleting when number of all VP nodes >= 5
 	if rbft.N == 4 {
-		rbft.logger.Criticalf("Replica %d receive del msg, but we don't support delete as there're only 4 nodes", rbft.id)
+		rbft.logger.Criticalf("Replica %d received delNode message, but we don't support delete as there're only 4 nodes", rbft.id)
 		return nil
 	}
 
@@ -146,11 +149,11 @@ func (rbft *rbftImpl) recvLocalDelNode(msg *protos.DelNodeMessage) error {
 // that itself had received the add-in request from new node.
 func (rbft *rbftImpl) sendAgreeAddNode(key string) {
 
-	rbft.logger.Debugf("Replica %d try to send addnode message for new node", rbft.id)
+	rbft.logger.Debugf("Replica %d try to send addNode message for new node", rbft.id)
 
 	// AgreeAddNode message can only sent by original nodes
 	if rbft.in(isNewNode) {
-		rbft.logger.Warningf("New replica try to send addnode message, there may be something wrong")
+		rbft.logger.Warningf("New replica try to send addNode message, there may be something wrong")
 		return
 	}
 
@@ -179,7 +182,7 @@ func (rbft *rbftImpl) sendAgreeAddNode(key string) {
 // that itself had received the leave-away request from one node.
 func (rbft *rbftImpl) sendAgreeDelNode(key string, routerHash string, newId uint64, delId uint64) {
 
-	rbft.logger.Debugf("Replica %d try to send delnode message for quit node %d", rbft.id, delId)
+	rbft.logger.Debugf("Replica %d try to send delNode message for quit node %d", rbft.id, delId)
 
 	cert := rbft.getDelNodeCert(key)
 	cert.newId = newId
@@ -209,13 +212,13 @@ func (rbft *rbftImpl) sendAgreeDelNode(key string, routerHash string, newId uint
 // recvAgreeAddNode handles the AgreeAddNode message sent by others
 func (rbft *rbftImpl) recvAgreeAddNode(add *AddNode) error {
 
-	rbft.logger.Debugf("Replica %d received addnode from replica %d", rbft.id, add.ReplicaId)
+	rbft.logger.Debugf("Replica %d received addNode from replica %d", rbft.id, add.ReplicaId)
 
 	// Cast the vote of AgreeAddNode into an existing or new tally
 	cert := rbft.getAddNodeCert(add.Key)
 	ok := cert.addNodes[*add]
 	if ok {
-		rbft.logger.Warningf("Replica %d received duplicate addnode from replica %d, replace it", rbft.id, add.ReplicaId)
+		rbft.logger.Warningf("Replica %d received duplicate addNode from replica %d, replace it", rbft.id, add.ReplicaId)
 	}
 	cert.addNodes[*add] = true
 
@@ -225,14 +228,14 @@ func (rbft *rbftImpl) recvAgreeAddNode(add *AddNode) error {
 // recvAgreeDelNode handles the AgreeDelNode message sent by others
 func (rbft *rbftImpl) recvAgreeDelNode(del *DelNode) error {
 
-	rbft.logger.Debugf("Replica %d received agree delnode from replica %d",
+	rbft.logger.Debugf("Replica %d received agree delNode from replica %d",
 		rbft.id, del.ReplicaId)
 
 	// Cast the vote of AgreeDelNode into an existing or new tally
 	cert := rbft.getDelNodeCert(del.Key)
 	ok := cert.delNodes[*del]
 	if ok {
-		rbft.logger.Warningf("Replica %d received duplicate agree delnode from replica %d, replace it", rbft.id, del.ReplicaId)
+		rbft.logger.Warningf("Replica %d received duplicate agree delNode from replica %d, replace it", rbft.id, del.ReplicaId)
 	}
 	cert.delNodes[*del] = true
 
@@ -246,7 +249,7 @@ func (rbft *rbftImpl) maybeUpdateTableForAdd(key string) error {
 
 	// New node needn't to update the routing table since it already has the newest one
 	if rbft.in(isNewNode) {
-		rbft.logger.Debugf("Replica %d is new node, reject update routingTable", rbft.id)
+		rbft.logger.Debugf("Replica %d is a new node, reject update routingTable", rbft.id)
 		return nil
 	}
 
@@ -260,7 +263,7 @@ func (rbft *rbftImpl) maybeUpdateTableForAdd(key string) error {
 		if cert.finishAdd {
 			// This indicates a byzantine behavior that
 			// some nodes repeatedly send AgreeAddNode messages.
-			rbft.logger.Warningf("Replica %d has already finished adding node, but still received add msg from someone else", rbft.id)
+			rbft.logger.Warningf("Replica %d has already finished addingNode, but still received add msg from someone else", rbft.id)
 			return nil
 		} else {
 			// This replica hasn't be connected by new node.
@@ -294,7 +297,7 @@ func (rbft *rbftImpl) maybeUpdateTableForDel(key string) error {
 		if cert.finishDel {
 			// This indicates a byzantine behavior that
 			// some nodes repeatedly send AgreeDelNode messages.
-			rbft.logger.Warningf("Replica %d has already finished deleting node, but still recevice del msg from someone else", rbft.id)
+			rbft.logger.Warningf("Replica %d has already finished deletingNode, but still recevice del msg from someone else", rbft.id)
 			return nil
 		} else {
 			// This replica hasn't be connected by new node.
@@ -328,22 +331,22 @@ func (rbft *rbftImpl) maybeUpdateTableForDel(key string) error {
 func (rbft *rbftImpl) sendReadyForN() error {
 
 	if !rbft.in(isNewNode) {
-		rbft.logger.Errorf("Replica %d is not new one, but try to send ready_for_n", rbft.id)
+		rbft.logger.Errorf("Replica %d is not new one, but try to send readyForN", rbft.id)
 		return nil
 	}
 
 	// If new node loses the local key, there may be something wrong
 	if rbft.nodeMgr.localKey == "" {
-		rbft.logger.Errorf("New replica %d doesn't have local key for ready_for_n", rbft.id)
+		rbft.logger.Errorf("New replica %d doesn't have local key for readyForN", rbft.id)
 		return nil
 	}
 
 	if rbft.in(inViewChange) {
-		rbft.logger.Errorf("New replica %d finds itself in viewchange, not sending ready_for_n", rbft.id)
+		rbft.logger.Errorf("New replica %d finds itself in viewChange, not sending readyForN", rbft.id)
 		return nil
 	}
 
-	rbft.logger.Noticef("Replica %d send ready_for_n as it already finished recovery", rbft.id)
+	rbft.logger.Noticef("Replica %d send readyForN as it already finished recovery", rbft.id)
 	rbft.on(inUpdatingN)
 
 	ready := &ReadyForN{
@@ -371,17 +374,17 @@ func (rbft *rbftImpl) sendReadyForN() error {
 // recvReadyforNforAdd handles the ReadyForN message sent by new node.
 func (rbft *rbftImpl) recvReadyforNforAdd(ready *ReadyForN) consensusEvent {
 
-	rbft.logger.Debugf("Replica %d received ready_for_n from replica %d", rbft.id, ready.ReplicaId)
+	rbft.logger.Debugf("Replica %d received readyForN from replica %d", rbft.id, ready.ReplicaId)
 
 	if rbft.in(inViewChange) {
-		rbft.logger.Warningf("Replica %d is in view change, reject the ready_for_n message", rbft.id)
+		rbft.logger.Warningf("Replica %d is in viewChange, reject the readyForN message", rbft.id)
 		return nil
 	}
 
 	cert := rbft.getAddNodeCert(ready.Key)
 
 	if !cert.finishAdd {
-		rbft.logger.Debugf("Replica %d has not done with addnode for key=%s", rbft.id, ready.Key)
+		rbft.logger.Debugf("Replica %d has not done with addNode for key=%s", rbft.id, ready.Key)
 		return nil
 	}
 
@@ -408,19 +411,19 @@ func (rbft *rbftImpl) recvReadyforNforAdd(ready *ReadyForN) consensusEvent {
 func (rbft *rbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) consensusEvent {
 
 	if rbft.in(inUpdatingN) {
-		rbft.logger.Debugf("Replica %d already in updatingN, ignore send agree-update-n again")
+		rbft.logger.Debugf("Replica %d already in updatingN, ignore send agreeUpdateN again")
 		return nil
 	}
 
 	if rbft.in(isNewNode) {
-		rbft.logger.Debugf("Replica %d does not need to send agree-update-n", rbft.id)
+		rbft.logger.Debugf("Replica %d does not need to send agreeUpdateN", rbft.id)
 		return nil
 	}
 
 	// Replica may receive ReadyForN after it has already finished updatingN
 	// (it happens in bad network environment)
 	if int(agree.N) == rbft.N && agree.Basis.View == rbft.view {
-		rbft.logger.Debugf("Replica %d already finish update for N=%d/view=%d", rbft.id, rbft.N, rbft.view)
+		rbft.logger.Debugf("Replica %d already finished updateN for N=%d/view=%d", rbft.id, rbft.N, rbft.view)
 		return nil
 	}
 
@@ -430,7 +433,7 @@ func (rbft *rbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) consensusEvent
 
 	// Generate the AgreeUpdateN message and broadcast it to others
 	rbft.agreeUpdateHelper(agree)
-	rbft.logger.Infof("Replica %d sending agree-update-N, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
+	rbft.logger.Infof("Replica %d sending agreeUpdateN, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		rbft.id, agree.Basis.View, agree.Basis.H, len(agree.Basis.Cset), len(agree.Basis.Pset), len(agree.Basis.Qset))
 
 	payload, err := proto.Marshal(agree)
@@ -451,17 +454,17 @@ func (rbft *rbftImpl) sendAgreeUpdateNForAdd(agree *AgreeUpdateN) consensusEvent
 // that it agree update the View & N as deleting a node.
 func (rbft *rbftImpl) sendAgreeUpdateNforDel(key string) error {
 
-	rbft.logger.Debugf("Replica %d try to send update_n after finish del node", rbft.id)
+	rbft.logger.Debugf("Replica %d try to send updateN after finished delNode", rbft.id)
 
 	if rbft.in(inViewChange) {
-		rbft.logger.Warningf("Replica %d is in view change, reject send agree update N", rbft.id)
+		rbft.logger.Warningf("Replica %d is in viewChange, reject sending agreeUpdateN", rbft.id)
 		return nil
 	}
 
 	cert := rbft.getDelNodeCert(key)
 
 	if !cert.finishDel {
-		rbft.logger.Errorf("Replica %d has not done with delnode for key=%s", rbft.id, key)
+		rbft.logger.Errorf("Replica %d has not done with delNode for key=%s", rbft.id, key)
 		return nil
 	}
 	delete(rbft.nodeMgr.updateStore, rbft.nodeMgr.updateTarget)
@@ -483,7 +486,7 @@ func (rbft *rbftImpl) sendAgreeUpdateNforDel(key string) error {
 	}
 
 	rbft.agreeUpdateHelper(agree)
-	rbft.logger.Infof("Replica %d sending agree-update-n, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
+	rbft.logger.Infof("Replica %d sending agreeUpdateN, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		rbft.id, agree.Basis.View, agree.Basis.H, len(agree.Basis.Cset), len(agree.Basis.Pset), len(agree.Basis.Qset))
 
 	payload, err := proto.Marshal(agree)
@@ -505,16 +508,16 @@ func (rbft *rbftImpl) sendAgreeUpdateNforDel(key string) error {
 // checks the correctness and judges if it can move on to QuorumconsensusEvent.
 func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 
-	rbft.logger.Debugf("Replica %d received agree-update-n from replica %d, v:%d, n:%d, flag:%v, h:%d, |C|:%d, |P|:%d, |Q|:%d",
+	rbft.logger.Debugf("Replica %d received agreeUpdateN from replica %d, v:%d, n:%d, flag:%v, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		rbft.id, agree.Basis.ReplicaId, agree.Basis.View, agree.N, agree.Flag, agree.Basis.H, len(agree.Basis.Cset), len(agree.Basis.Pset), len(agree.Basis.Qset))
 
 	// Reject response to updating N as replica is in viewChange, negoView or recovery
 	if rbft.in(inViewChange) {
-		rbft.logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in view-change", rbft.id)
+		rbft.logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in viewChange", rbft.id)
 		return nil
 	}
 	if rbft.in(inNegotiateView) {
-		rbft.logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in nego-view", rbft.id)
+		rbft.logger.Warningf("Replica %d try to recvAgreeUpdateN, but it's in negotiateView", rbft.id)
 		return nil
 	}
 	if rbft.in(inRecovery) {
@@ -524,7 +527,7 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 
 	// Check if the AgreeUpdateN message is valid or not
 	if !rbft.checkAgreeUpdateN(agree) {
-		rbft.logger.Debugf("Replica %d found agree-update-n message incorrect", rbft.id)
+		rbft.logger.Debugf("Replica %d found agreeUpdateN message incorrect", rbft.id)
 		return nil
 	}
 
@@ -537,7 +540,7 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 
 	// Cast the vote of AgreeUpdateN into an existing or new tally
 	if _, ok := rbft.nodeMgr.agreeUpdateStore[key]; ok {
-		rbft.logger.Warningf("Replica %d already has a agree-update-n message"+
+		rbft.logger.Warningf("Replica %d already has a agreeUpdateN message"+
 			" for view=%d/n=%d from replica %d", rbft.id, agree.Basis.View, agree.N, agree.Basis.ReplicaId)
 		return nil
 	}
@@ -555,7 +558,7 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 
 	// We only enter this if there are enough agree-update-n messages but locally not inUpdateN
 	if agree.Flag && quorum > rbft.oneCorrectQuorum() && !rbft.in(inUpdatingN) {
-		rbft.logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForAdd",
+		rbft.logger.Warningf("Replica %d received f+1 agreeUpdateN messages, triggering sendAgreeUpdateNForAdd",
 			rbft.id)
 		rbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 		agree.Basis.ReplicaId = rbft.id
@@ -564,14 +567,14 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 
 	// We only enter this if there are enough agree-update-n messages but locally not inUpdateN
 	if !agree.Flag && quorum >= rbft.oneCorrectQuorum() && !rbft.in(inUpdatingN) {
-		rbft.logger.Warningf("Replica %d received f+1 agree-update-n messages, triggering sendAgreeUpdateNForDel",
+		rbft.logger.Warningf("Replica %d received f+1 agreeUpdateN messages, triggering sendAgreeUpdateNForDel",
 			rbft.id)
 		rbft.timerMgr.stopTimer(FIRST_REQUEST_TIMER)
 		agree.Basis.ReplicaId = rbft.id
 		return rbft.sendAgreeUpdateNforDel(agree.Key)
 	}
 
-	rbft.logger.Debugf("Replica %d now has %d agree-update requests for view=%d/n=%d", rbft.id, quorum, agree.Basis.View, agree.N)
+	rbft.logger.Debugf("Replica %d now has %d agreeUpdate requests for view=%d/n=%d", rbft.id, quorum, agree.Basis.View, agree.N)
 
 	// Quorum of AgreeUpdateN reach the N, replica can jump to NODE_MGR_AGREE_UPDATEN_QUORUM_consensusEvent,
 	// which mean all nodes agree in updating N
@@ -591,13 +594,13 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 func (rbft *rbftImpl) sendUpdateN() consensusEvent {
 
 	if rbft.in(inNegotiateView) {
-		rbft.logger.Debugf("Replica %d try to sendUpdateN, but it's in nego-view", rbft.id)
+		rbft.logger.Debugf("Replica %d try to sendUpdateN, but it's in negotiateView", rbft.id)
 		return nil
 	}
 
 	// Reject repeatedly broadcasting of UpdateN message
 	if _, ok := rbft.nodeMgr.updateStore[rbft.nodeMgr.updateTarget]; ok {
-		rbft.logger.Debugf("Replica %d already has update in store for n=%d/view=%d, skipping", rbft.id, rbft.nodeMgr.updateTarget.n, rbft.nodeMgr.updateTarget.v)
+		rbft.logger.Debugf("Replica %d already has updateN in store for n=%d/view=%d, skipping", rbft.id, rbft.nodeMgr.updateTarget.n, rbft.nodeMgr.updateTarget.v)
 		return nil
 	}
 
@@ -613,7 +616,7 @@ func (rbft *rbftImpl) sendUpdateN() consensusEvent {
 	// Assign the seqNo according to the set of AgreeUpdateN and the initial checkpoint
 	msgList := rbft.assignSequenceNumbers(aset, cp.SequenceNumber)
 	if msgList == nil {
-		rbft.logger.Infof("Replica %d could not assign sequence numbers for new view", rbft.id)
+		rbft.logger.Infof("Replica %d could not assign sequence numbers for updateN", rbft.id)
 		return nil
 	}
 
@@ -626,7 +629,7 @@ func (rbft *rbftImpl) sendUpdateN() consensusEvent {
 		ReplicaId: rbft.id,
 	}
 
-	rbft.logger.Infof("Replica %d is new primary, sending update-n, v:%d, X:%+v",
+	rbft.logger.Infof("Replica %d is new primary, sending updateN, v:%d, X:%+v",
 		rbft.id, update.View, update.Xset)
 	payload, err := proto.Marshal(update)
 	if err != nil {
@@ -646,16 +649,16 @@ func (rbft *rbftImpl) sendUpdateN() consensusEvent {
 // recvUpdateN handles the UpdateN message sent by primary.
 func (rbft *rbftImpl) recvUpdateN(update *UpdateN) consensusEvent {
 
-	rbft.logger.Infof("Replica %d received update-n from replica %d",
+	rbft.logger.Infof("Replica %d received updateN from replica %d",
 		rbft.id, update.ReplicaId)
 
 	// Reject response to updating N as replica is in viewChange, negoView or recovery
 	if rbft.in(inViewChange) {
-		rbft.logger.Warningf("Replica %d try to recvUpdateN, but it's in view-change", rbft.id)
+		rbft.logger.Warningf("Replica %d try to recvUpdateN, but it's in viewChange", rbft.id)
 		return nil
 	}
 	if rbft.in(inNegotiateView) {
-		rbft.logger.Debugf("Replica %d try to recvUpdateN, but it's in nego-view", rbft.id)
+		rbft.logger.Debugf("Replica %d try to recvUpdateN, but it's in negotiateView", rbft.id)
 		return nil
 	}
 	if rbft.in(inRecovery) {
@@ -666,7 +669,7 @@ func (rbft *rbftImpl) recvUpdateN(update *UpdateN) consensusEvent {
 
 	// UpdateN can only be sent by primary
 	if !(update.View >= 0 && rbft.isPrimary(update.ReplicaId)) {
-		rbft.logger.Infof("Replica %d rejecting invalid UpdateN from %d, v:%d",
+		rbft.logger.Infof("Replica %d rejecting invalid updateN from %d, v:%d",
 			rbft.id, update.ReplicaId, update.View)
 		return nil
 	}
@@ -729,13 +732,13 @@ func (rbft *rbftImpl) replicaCheckUpdateN() consensusEvent {
 	}
 
 	if rbft.in(inViewChange) {
-		rbft.logger.Infof("Replica %d ignoring update-n from %d, v:%d: we are in view change to view=%d",
+		rbft.logger.Infof("Replica %d ignoring updateN from %d, v:%d: we are in viewChange to view=%d",
 			rbft.id, update.ReplicaId, update.View, rbft.view)
 		return nil
 	}
 
 	if !rbft.in(inUpdatingN) {
-		rbft.logger.Infof("Replica %d ignoring update-n from %d, v:%d: we are not in updatingN",
+		rbft.logger.Infof("Replica %d ignoring updateN from %d, v:%d: we are not in updatingN",
 			rbft.id, update.ReplicaId, update.View)
 		return nil
 	}
@@ -757,7 +760,7 @@ func (rbft *rbftImpl) replicaCheckUpdateN() consensusEvent {
 		return rbft.sendViewChange()
 	}
 	if !(len(msgList) == 0 && len(update.Xset) == 0) && !reflect.DeepEqual(msgList, update.Xset) {
-		rbft.logger.Warningf("Replica %d failed to verify new-view Xset: computed %+v, received %+v",
+		rbft.logger.Warningf("Replica %d failed to verify updateN Xset: computed %+v, received %+v",
 			rbft.id, msgList, update.Xset)
 		return rbft.sendViewChange()
 	}
@@ -775,7 +778,7 @@ func (rbft *rbftImpl) replicaCheckUpdateN() consensusEvent {
 
 // processReqInUpdate resets all the variables that need to be updated after updating n
 func (rbft *rbftImpl) resetStateForUpdate(update *UpdateN) consensusEvent {
-	rbft.logger.Debugf("Replica %d accepting update-n to target %v", rbft.id, rbft.nodeMgr.updateTarget)
+	rbft.logger.Debugf("Replica %d accepting updateN to target %v", rbft.id, rbft.nodeMgr.updateTarget)
 
 	if rbft.in(updateHandled) {
 		rbft.logger.Debugf("Replica %d repeated enter processReqInUpdate, ignore it", rbft.id)
@@ -856,7 +859,7 @@ func (rbft *rbftImpl) sendFinishUpdate() consensusEvent {
 
 	broadcast := cMsgToPbMsg(msg, rbft.id)
 	rbft.helper.InnerBroadcast(broadcast)
-	rbft.logger.Debugf("Replica %d broadcast FinishUpdate for view=%d, h=%d", rbft.id, rbft.view, rbft.h)
+	rbft.logger.Debugf("Replica %d broadcast finishUpdate for view=%d, h=%d", rbft.id, rbft.view, rbft.h)
 
 	return rbft.recvFinishUpdate(finish)
 }
@@ -865,13 +868,13 @@ func (rbft *rbftImpl) sendFinishUpdate() consensusEvent {
 func (rbft *rbftImpl) recvFinishUpdate(finish *FinishUpdate) consensusEvent {
 
 	if !rbft.in(inUpdatingN) {
-		rbft.logger.Debugf("Replica %d is not in updatingN, but received FinishUpdate from replica %d", rbft.id, finish.ReplicaId)
+		rbft.logger.Debugf("Replica %d is not in updatingN, but received finishUpdate from replica %d", rbft.id, finish.ReplicaId)
 	}
-	rbft.logger.Debugf("Replica %d received FinishUpdate from replica %d, view=%d/h=%d", rbft.id, finish.ReplicaId, finish.View, finish.LowH)
+	rbft.logger.Debugf("Replica %d received finishUpdate from replica %d, view=%d/h=%d", rbft.id, finish.ReplicaId, finish.View, finish.LowH)
 
 	ok := rbft.nodeMgr.finishUpdateStore[*finish]
 	if ok {
-		rbft.logger.Warningf("Replica %d ignored duplicator agree FinishUpdate from %d", rbft.id, finish.ReplicaId)
+		rbft.logger.Warningf("Replica %d ignored duplicator agree finishUpdate from %d", rbft.id, finish.ReplicaId)
 		return nil
 	}
 	rbft.nodeMgr.finishUpdateStore[*finish] = true
@@ -896,18 +899,18 @@ func (rbft *rbftImpl) processReqInUpdate() consensusEvent {
 
 	// We can only go on if we have arrived quorum, and we have primary's message
 	if quorum < rbft.allCorrectReplicasQuorum() {
-		rbft.logger.Debugf("Replica %d doesn't has arrive quorum FinishUpdate, expect=%d, got=%d",
+		rbft.logger.Debugf("Replica %d doesn't has arrive quorum finishUpdate, expect=%d, got=%d",
 			rbft.id, rbft.allCorrectReplicasQuorum(), quorum)
 		return nil
 	}
 	if !hasPrimary {
-		rbft.logger.Debugf("Replica %d doesn't receive FinishUpdate from primary %d",
+		rbft.logger.Debugf("Replica %d doesn't receive finishUpdate from primary %d",
 			rbft.id, rbft.primary(rbft.view))
 		return nil
 	}
 
 	if rbft.in(inVcReset) {
-		rbft.logger.Warningf("Replica %d itself has not finished update", rbft.id)
+		rbft.logger.Warningf("Replica %d itself has not finishUpdate", rbft.id)
 		return nil
 	}
 
@@ -1017,21 +1020,21 @@ func (rbft *rbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 		// Get the add-node cert
 		cert := rbft.getAddNodeCert(agree.Key)
 		if !rbft.in(isNewNode) && !cert.finishAdd {
-			rbft.logger.Debugf("Replica %d has not complete add node", rbft.id)
+			rbft.logger.Debugf("Replica %d has not complete addNode", rbft.id)
 			return false
 		}
 
 		// Check the N and view after updating
 		n, view := rbft.getAddNV()
 		if n != agree.N || view != agree.Basis.View {
-			rbft.logger.Debugf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", rbft.id, n, view, agree.N, agree.Basis.View)
+			rbft.logger.Debugf("Replica %d invalid p entry in agreeUpdateN: expected n=%d/view=%d, get n=%d/view=%d", rbft.id, n, view, agree.N, agree.Basis.View)
 			return false
 		}
 
 		// Check if there's any invalid p or q entry
 		for _, p := range append(agree.Basis.Pset, agree.Basis.Qset...) {
 			if !(p.View <= agree.Basis.View && p.SequenceNumber > agree.Basis.H && p.SequenceNumber <= agree.Basis.H+rbft.L) {
-				rbft.logger.Debugf("Replica %d invalid p entry in agree-update: agree(v:%d h:%d) p(v:%d n:%d)", rbft.id, agree.Basis.View, agree.Basis.H, p.View, p.SequenceNumber)
+				rbft.logger.Debugf("Replica %d invalid p entry in agreeUpdateN: agree(v:%d h:%d) p(v:%d n:%d)", rbft.id, agree.Basis.View, agree.Basis.H, p.View, p.SequenceNumber)
 				return false
 			}
 		}
@@ -1040,21 +1043,21 @@ func (rbft *rbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 		// Get the del-node cert
 		cert := rbft.getDelNodeCert(agree.Key)
 		if !cert.finishDel {
-			rbft.logger.Debugf("Replica %d has not complete del node", rbft.id)
+			rbft.logger.Debugf("Replica %d has not complete delNode", rbft.id)
 			return false
 		}
 
 		// Check the N and view after updating
 		n, view := rbft.getDelNV(cert.delId)
 		if n != agree.N || view != agree.Basis.View {
-			rbft.logger.Debugf("Replica %d invalid p entry in agree-update: expected n=%d/view=%d, get n=%d/view=%d", rbft.id, n, view, agree.N, agree.Basis.View)
+			rbft.logger.Debugf("Replica %d invalid p entry in agreeUpdateN: expected n=%d/view=%d, get n=%d/view=%d", rbft.id, n, view, agree.N, agree.Basis.View)
 			return false
 		}
 
 		// Check if there's any invalid p or q entry
 		for _, p := range append(agree.Basis.Pset, agree.Basis.Qset...) {
 			if !(p.View <= agree.Basis.View+1 && p.SequenceNumber > agree.Basis.H && p.SequenceNumber <= agree.Basis.H+rbft.L) {
-				rbft.logger.Debugf("Replica %d invalid p entry in agree-update: agree(v:%d h:%d) p(v:%d n:%d)", rbft.id, agree.Basis.View, agree.Basis.H, p.View, p.SequenceNumber)
+				rbft.logger.Debugf("Replica %d invalid p entry in agreeUpdateN: agree(v:%d h:%d) p(v:%d n:%d)", rbft.id, agree.Basis.View, agree.Basis.H, p.View, p.SequenceNumber)
 				return false
 			}
 		}
@@ -1064,7 +1067,7 @@ func (rbft *rbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 	// Check if there's invalid checkpoint
 	for _, c := range agree.Basis.Cset {
 		if !(c.SequenceNumber >= agree.Basis.H && c.SequenceNumber <= agree.Basis.H+rbft.L) {
-			rbft.logger.Warningf("Replica %d invalid c entry in agree-update: agree(v:%d h:%d) c(n:%d)", rbft.id, agree.Basis.View, agree.Basis.H, c.SequenceNumber)
+			rbft.logger.Warningf("Replica %d invalid c entry in agreeUpdateN: agree(v:%d h:%d) c(n:%d)", rbft.id, agree.Basis.View, agree.Basis.H, c.SequenceNumber)
 			return false
 		}
 	}
@@ -1090,7 +1093,7 @@ func (rbft *rbftImpl) checkIfNeedStateUpdate(initialCp Vc_C, replicas []replicaI
 
 		snapshotID, err := base64.StdEncoding.DecodeString(initialCp.Id)
 		if nil != err {
-			err = fmt.Errorf("Replica %d received a agree-update-n whose hash could not be decoded (%s)", rbft.id, initialCp.Id)
+			err = fmt.Errorf("Replica %d received a agreeUpdateN whose hash could not be decoded (%s)", rbft.id, initialCp.Id)
 			return err
 		}
 

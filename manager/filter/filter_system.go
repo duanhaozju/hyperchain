@@ -2,9 +2,9 @@ package filter
 
 import (
 	"errors"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/manager/event"
 	"time"
 )
 

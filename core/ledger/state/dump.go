@@ -18,7 +18,7 @@ package state
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 // User a user friendly account representation.

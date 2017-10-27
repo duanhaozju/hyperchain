@@ -1,12 +1,26 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package chain
 
 import (
 	"errors"
 	"sync"
 
-	"hyperchain/core/types"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -210,7 +224,7 @@ func UpdateChain(namespace string, batch db.Batch, block *types.Block, genesis b
 		}
 	}
 	chain := chains.GetChain(namespace)
-	return putChain(batch, &chain.data, flush, sync)
+	return PutChain(batch, &chain.data, flush, sync)
 }
 
 // PutChain persists chain with given data.
@@ -238,8 +252,28 @@ func UpdateGenesisTag(namespace string, genesis uint64, batch db.Batch, flush bo
 		chain.lock.Lock()
 		defer chain.lock.Unlock()
 		chain.data.Genesis = genesis
-		return putChain(batch, &chain.data, flush, sync)
+		return PutChain(batch, &chain.data, flush, sync)
 	}
+}
+
+// putChain put chain into database
+func putChain(batch db.Batch, t *types.Chain, flush bool, sync bool) error {
+	// assign version tag
+	data, err := proto.Marshal(t)
+	if err != nil {
+		return err
+	}
+	if err := batch.Put(ChainKey, data); err != nil {
+		return err
+	}
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return nil
 }
 
 // GetGenesisTag gets the genesis tag of the chain with given namespace.
@@ -369,26 +403,6 @@ func setParentBlockHash(namespace string, hash []byte) error {
 		chain.data.ParentBlockHash = hash
 		return nil
 	}
-}
-
-// putChain put chain into database
-func putChain(batch db.Batch, t *types.Chain, flush bool, sync bool) error {
-	// assign version tag
-	data, err := proto.Marshal(t)
-	if err != nil {
-		return err
-	}
-	if err := batch.Put(ChainKey, data); err != nil {
-		return err
-	}
-	if flush {
-		if sync {
-			batch.Write()
-		} else {
-			go batch.Write()
-		}
-	}
-	return nil
 }
 
 // getChain - get chain from database.

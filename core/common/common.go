@@ -14,8 +14,8 @@
 package common
 
 import (
-	cm "hyperchain/common"
-	"hyperchain/hyperdb"
+	cm "github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/hyperdb"
 	"path"
 )
 

@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/common"
-	"hyperchain/consensus/consensusMocks"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus/consensusMocks"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/facebookgo/ensure"
 	"github.com/gogo/protobuf/proto"
@@ -85,9 +85,10 @@ func (rbft *rbftImpl) getCertCommitted(digest string, v uint64, n uint64) {
 func TestRbftImpl_NewRbft(t *testing.T) {
 
 	//new RBFT
-	rbft, conf, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, conf, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ensure.Nil(t, err)
+	rbft.Start()
 
 	ensure.DeepEqual(t, rbft.namespace, "global-"+strconv.Itoa(int(rbft.id)))
 	ensure.DeepEqual(t, rbft.in(inViewChange), false)
@@ -104,13 +105,15 @@ func TestRbftImpl_NewRbft(t *testing.T) {
 	// Test Consenter interface
 	rbft.Start()
 
-	rbft.Close()
+	rbft.Stop()
 
 }
 
 func TestProcessNullRequest(t *testing.T) {
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	ensure.Nil(t, err)
+	rbft.Start()
+
 	pbMsg := &protos.Message{
 		Type:      protos.Message_NULL_REQUEST,
 		Payload:   nil,
@@ -133,7 +136,7 @@ func TestProcessNullRequest(t *testing.T) {
 
 func TestFindNextPrePrepareBatch(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -177,7 +180,7 @@ func TestFindNextPrePrepareBatch(t *testing.T) {
 
 func TestSendPendingPrePrepares(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -211,7 +214,7 @@ func TestSendPendingPrePrepares(t *testing.T) {
 
 func TestSendPrePrepare(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -253,7 +256,7 @@ func TestSendPrePrepare(t *testing.T) {
 
 func TestRecvPrePrepare(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -279,7 +282,7 @@ func TestRecvPrePrepare(t *testing.T) {
 
 func TestRecvPrepare(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -308,7 +311,7 @@ func TestRecvPrepare(t *testing.T) {
 
 func TestMaybeSendCommit(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -342,7 +345,7 @@ func TestMaybeSendCommit(t *testing.T) {
 
 func TestSendCommit(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -364,7 +367,7 @@ func TestSendCommit(t *testing.T) {
 
 func TestRecvCommit(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -435,7 +438,7 @@ func TestRecvCommit(t *testing.T) {
 
 func TestFindNextCommitTx(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -475,7 +478,7 @@ func TestFindNextCommitTx(t *testing.T) {
 
 func TestAfterCommitBlock(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -502,7 +505,7 @@ func TestAfterCommitBlock(t *testing.T) {
 
 func TestRecvFetchMissingTransaction(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -555,7 +558,7 @@ func TestRecvFetchMissingTransaction(t *testing.T) {
 
 func TestRecvReturnMissingTransaction(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -596,7 +599,7 @@ func TestRecvReturnMissingTransaction(t *testing.T) {
 
 func TestProcessTransaction(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -628,7 +631,7 @@ func TestProcessTransaction(t *testing.T) {
 
 func TestRecvStateUpdatedEvent(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -684,7 +687,7 @@ func TestRecvStateUpdatedEvent(t *testing.T) {
 
 func TestExecuteAfterStateUpdate(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -703,7 +706,7 @@ func TestExecuteAfterStateUpdate(t *testing.T) {
 
 func TestCheckpoint(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -752,7 +755,7 @@ func TestCheckpoint(t *testing.T) {
 
 func TestRecvCheckpoint(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -796,7 +799,7 @@ func TestRecvCheckpoint(t *testing.T) {
 
 func TestWeakCheckpointSetOutOfRange(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -843,7 +846,7 @@ func TestWeakCheckpointSetOutOfRange(t *testing.T) {
 
 func TestWitnessCheckpointWeakCert(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -880,7 +883,7 @@ func TestWitnessCheckpointWeakCert(t *testing.T) {
 
 func TestMainMoveWatermarks(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -963,7 +966,7 @@ func TestMainMoveWatermarks(t *testing.T) {
 
 func TestUpdateHighStateTarget(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -1011,7 +1014,7 @@ func TestUpdateHighStateTarget(t *testing.T) {
 
 func TestStateTransfer(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
@@ -1058,7 +1061,7 @@ func TestStateTransfer(t *testing.T) {
 
 func TestRecvValidatedResult(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()

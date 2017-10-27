@@ -3,11 +3,11 @@
 package sldb
 
 import (
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/op/go-logging"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/util"
 	"github.com/willf/bloom"
-	"hyperchain/common"
 	"os"
 	"strconv"
 	"strings"

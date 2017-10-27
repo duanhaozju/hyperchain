@@ -3,7 +3,7 @@
 package event
 
 import (
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/types"
 )
 
 type AliveEvent struct{ Payload bool }

@@ -4,7 +4,7 @@ package rpc
 
 import (
 	"context"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"reflect"
 	"strconv"
 	"unicode"

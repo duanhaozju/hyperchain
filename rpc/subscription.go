@@ -7,7 +7,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"errors"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"math/rand"
 	"strings"
 	"sync"

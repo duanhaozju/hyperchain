@@ -1,8 +1,8 @@
 package jvm
 
 import (
-	"hyperchain/common"
-	pb "hyperchain/core/vm/jcee/protos"
+	"github.com/hyperchain/hyperchain/common"
+	pb "github.com/hyperchain/hyperchain/core/vm/jcee/protos"
 	"testing"
 )
 

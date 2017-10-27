@@ -23,7 +23,7 @@ package executor
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import types1 "hyperchain/core/types"
+import types1 "github.com/hyperchain/hyperchain/core/types"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal

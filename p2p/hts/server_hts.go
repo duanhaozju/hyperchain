@@ -3,18 +3,18 @@ package hts
 import (
 	"crypto"
 	"fmt"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/hts/secimpl"
+	"github.com/hyperchain/hyperchain/p2p/peerevent"
 	"github.com/orcaman/concurrent-map"
 	"github.com/pkg/errors"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/peerevent"
-	"hyperchain/p2p/hts/secimpl"
 )
 
 type ServerHTS struct {
 	security       secimpl.Security
 	priKey         []byte
 	priKey_s       crypto.PrivateKey
-	sessionKeyPool cmap.ConcurrentMap	// key -> peer hash, value -> session key
+	sessionKeyPool cmap.ConcurrentMap // key -> peer hash, value -> session key
 	ev             *event.TypeMux
 	CG             *CertGroup
 }

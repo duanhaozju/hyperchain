@@ -1,14 +1,14 @@
 package p2p_test
 
 import (
+	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"fmt"
 	"github.com/terasum/viper"
-	"hyperchain/common"
-	"hyperchain/p2p"
-	"hyperchain/p2p/utils"
-	"hyperchain/manager/event"
 )
 
 var _ = Describe("P2PManager", func() {
@@ -23,7 +23,7 @@ var _ = Describe("P2PManager", func() {
 	vip.Set(common.P2P_TLS_CERT_PRIV, utils.GetProjectPath()+"/configuration/tls/tls_peer1.priv")
 
 	var (
-		p2pMgr p2p.P2PManager
+		p2pMgr    p2p.P2PManager
 		p2pMgrErr error
 	)
 

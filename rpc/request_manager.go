@@ -1,6 +1,6 @@
 package jsonrpc
 
-import "hyperchain/common"
+import "github.com/hyperchain/hyperchain/common"
 
 type requestManager struct {
 	namespace string

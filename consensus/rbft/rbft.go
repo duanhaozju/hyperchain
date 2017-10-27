@@ -1,29 +1,28 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
 
-//Package rbft implement the rbft algorithm
-//The RBFT key features:
-//	1. atomic sequence transactions guarantee
-//      2. leader selection by viewchange
-//      3. dynamically add or delete new node
-//      4. support self recovery
 package rbft
 
 import (
-	"hyperchain/common"
-	"hyperchain/consensus/helper"
-	"hyperchain/consensus/txpool"
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus/helper"
+	"github.com/hyperchain/hyperchain/consensus/helper/persist"
+	"github.com/hyperchain/hyperchain/consensus/txpool"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 )
 
-/**
-This file implements the API of consensus
-which can be invoked by outer services.
-*/
+// Package rbft implement the rbft algorithm
+// The RBFT key features:
+// 1. atomic sequence transactions guarantee
+// 2. leader selection by viewchange
+// 3. dynamically add or delete new node
+// 4. support self recovery
+// This file implements the API of consensus which can be invoked by outer services.
 
 // New return a instance of rbftImpl
 func New(namespace string, conf *common.Config, h helper.Stack, n int) (*rbftImpl, error) {
@@ -87,51 +86,94 @@ func (rbft *rbftImpl) RecvLocal(msg interface{}) error {
 // Start initializes and starts the consensus service
 func (rbft *rbftImpl) Start() {
 	rbft.logger.Noticef("--------RBFT starting, nodeID: %d--------", rbft.id)
-	rbft.timerMgr = newTimerMgr(rbft)
+
+	db, err := hyperdb.GetDBConsensusByNamespace(rbft.namespace)
+	if err != nil {
+		rbft.logger.Error("get db failed.")
+		return
+	}
+	rbft.persister = persist.New(db)
+
+	// new timer manager
+	rbft.timerMgr = newTimerMgr(rbft.logger)
 	rbft.initTimers()
+
+	// new status manager
+	rbft.status = newStatusMgr()
 	rbft.initStatus()
 
+	// new executor
+	rbft.exec = newExecutor()
+
+	// new store manager
+	rbft.storeMgr = newStoreMgr(rbft.logger)
+
+	// new batch manager
+	rbft.batchMgr = newBatchManager(rbft.namespace, rbft.config, rbft.logger)
+
+	// new batch validator
+	rbft.batchVdr = newBatchValidator()
+
+	// new recovery manager
+	rbft.recoveryMgr = newRecoveryMgr()
+
+	// new viewchange manager
+	rbft.vcMgr = newVcManager(rbft.config, rbft.logger)
+
+	// new node manager
+	rbft.nodeMgr = newNodeMgr()
+
+	// restore state from consensus database
+	rbft.restoreState()
+	// update viewchange seqNo after restore state which may update seqNo
+	rbft.updateViewChangeSeqNo(rbft.seqNo, rbft.K, rbft.id)
+
+	// start listen batch event from tx pool
 	rbft.eventMux = new(event.TypeMux)
 	rbft.batchSub = rbft.eventMux.Subscribe(txRequest{}, txpool.TxHashBatch{}, protos.RoutersMessage{}, &LocalEvent{}, &ConsensusMessage{})
-	rbft.close = make(chan bool)
-
-	rbft.restoreState()
-	rbft.vcMgr.viewChangeSeqNo = ^uint64(0)
-	rbft.vcMgr.updateViewChangeSeqNo(rbft.seqNo, rbft.K, rbft.id)
 	rbft.batchMgr.start(rbft.eventMux)
-	rbft.timerMgr.makeRequestTimeoutLegal()
 
+	// start listen consensus event
+	rbft.close = make(chan bool)
 	go rbft.listenEvent()
-	rbft.logger.Noticef("======== RBFT finish start, nodeID: %d", rbft.id)
+
+	rbft.logger.Infof("RBFT Max number of validating peers (N) = %v", rbft.N)
+	rbft.logger.Infof("RBFT Max number of failing peers (f) = %v", rbft.f)
+	rbft.logger.Infof("RBFT byzantine flag = %v", rbft.in(byzantine))
+	rbft.logger.Infof("RBFT Checkpoint period (K) = %v", rbft.K)
+	rbft.logger.Infof("RBFT Log multiplier = %v", rbft.logMultiplier)
+	rbft.logger.Infof("RBFT log size (L) = %v", rbft.L)
+
+	rbft.logger.Noticef("======== RBFT finished start, nodeID: %d", rbft.id)
 }
 
 // Close closes the consensus service
-func (rbft *rbftImpl) Close() {
-	rbft.logger.Notice("RBFT stop event process service")
-	rbft.timerMgr.Stop()
-	rbft.batchMgr.stop()
+func (rbft *rbftImpl) Stop() {
+	rbft.logger.Notice("RBFT stopping...")
 
+	// stop listen consensus event
 	if rbft.close != nil {
 		close(rbft.close)
 		rbft.close = nil
 	}
 
-	rbft.logger.Notice("RBFT clear some resources")
-	rbft.vcMgr = newVcManager(rbft)
-	rbft.storeMgr = newStoreMgr()
-	rbft.nodeMgr = newNodeMgr()
+	// stop listen batch event
+	rbft.batchMgr.stop()
 
-	rbft.batchMgr = newBatchManager(rbft)
-	rbft.batchVdr = newBatchValidator()
-	rbft.recoveryMgr = newRecoveryMgr()
+	// stop all timer event
+	rbft.timerMgr.Stop()
 
-	rbft.logger.Noticef("RBFT stopped!")
+	rbft.logger.Notice("RBFT clear some resources...")
+	rbft.resetComponents()
+
+	rbft.logger.Noticef("======== RBFT stopped!")
 }
 
 // GetStatus returns the current consensus status:
 // 1. normal: true means not in viewchange, negotiate or state transfer
 // 2. full: true means txPool is full
 func (rbft *rbftImpl) GetStatus() (normal bool, full bool) {
+
 	normal = rbft.isNormal()
 	full = rbft.isPoolFull()
 

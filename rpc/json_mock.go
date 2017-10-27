@@ -1,8 +1,8 @@
 package jsonrpc
 
 import (
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/stretchr/testify/mock"
-	"hyperchain/common"
 )
 
 type MockjsonCodecImpl struct {
@@ -10,7 +10,7 @@ type MockjsonCodecImpl struct {
 	mock.Mock
 }
 
-func (mc *MockjsonCodecImpl) CheckHttpHeaders(namespace string, method string) common.RPCError{
+func (mc *MockjsonCodecImpl) CheckHttpHeaders(namespace string, method string) common.RPCError {
 	args := mc.Called(namespace, method)
 	if args.Get(0) == nil {
 		return nil
@@ -18,7 +18,7 @@ func (mc *MockjsonCodecImpl) CheckHttpHeaders(namespace string, method string) c
 	return args.Get(0).(common.RPCError)
 }
 
-func (mc *MockjsonCodecImpl) ReadRawRequest(options CodecOption) ([]*common.RPCRequest, bool, common.RPCError){
+func (mc *MockjsonCodecImpl) ReadRawRequest(options CodecOption) ([]*common.RPCRequest, bool, common.RPCError) {
 	args := mc.Called(options)
 	if args.Get(2) == nil {
 		return args.Get(0).([]*common.RPCRequest), args.Bool(1), nil
@@ -68,4 +68,3 @@ func (mc *MockjsonCodecImpl) Closed() <-chan interface{} {
 	args := mc.Called()
 	return args.Get(0).(chan interface{})
 }
-

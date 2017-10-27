@@ -14,7 +14,7 @@
 package executor
 
 import (
-	edb "hyperchain/core/ledger/chain"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
 	"strconv"
 )
 

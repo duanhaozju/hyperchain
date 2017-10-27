@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"github.com/astaxie/beego"
-	"hyperchain/api"
+	"github.com/hyperchain/hyperchain/api"
 )
 
 type CertController struct {

@@ -21,8 +21,8 @@ import (
 	"os"
 	"unicode"
 
-	"hyperchain/common"
-	"hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/vm"
 )
 
 type Storage map[common.Hash]common.Hash

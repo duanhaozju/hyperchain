@@ -1,13 +1,13 @@
 package hts
 
 import (
-	"testing"
-	"hyperchain/p2p/hts/secimpl"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/hts/secimpl"
 	"github.com/stretchr/testify/assert"
-	"hyperchain/manager/event"
+	"testing"
 )
 
-func initialServerHTS(t *testing.T) *ServerHTS{
+func initialServerHTS(t *testing.T) *ServerHTS {
 	hts, err := NewHTS("", secimpl.NewSecuritySelector(nsCnfigPath), nsCnfigPath)
 	if err != nil {
 		t.Fatalf("NewHTS error: %v", err)
@@ -88,6 +88,5 @@ func TestServerHTS_GetSK(t *testing.T) {
 	}
 	shtsKey := shts.GetSK(identify)
 	assert.Equal(t, sk, shtsKey, "the session key should be equal")
-
 
 }

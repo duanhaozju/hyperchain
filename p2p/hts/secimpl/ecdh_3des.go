@@ -9,10 +9,10 @@ import (
 	"encoding/asn1"
 	"errors"
 	"fmt"
-	"hyperchain/crypto/primitives"
-	"hyperchain/crypto/sha3"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/crypto/primitives"
+	"github.com/hyperchain/hyperchain/crypto/sha3"
 	"math/big"
-	"hyperchain/crypto"
 )
 
 // this secimpl implements the Security interface

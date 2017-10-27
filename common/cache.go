@@ -101,7 +101,7 @@ func (c *Cache) RemoveWithCond(key interface{}, fn cond) bool {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	flag := false
-	for iterKey, _ := range c.items {
+	for iterKey := range c.items {
 		if fn(key, iterKey) {
 			delete(c.items, iterKey)
 			flag = true

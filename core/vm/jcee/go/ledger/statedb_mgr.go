@@ -2,9 +2,9 @@ package jcee
 
 import (
 	"errors"
-	"hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/core/vm"
 	"sync"
-	//"hyperchain/common"
+	//"github.com/hyperchain/hyperchain/common"
 )
 
 var (

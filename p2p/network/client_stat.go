@@ -3,10 +3,10 @@ package network
 import (
 	"context"
 	"github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"github.com/hyperchain/hyperchain/p2p/message"
 	"github.com/looplab/fsm"
 	"github.com/terasum/pool"
 	"google.golang.org/grpc"
-	"hyperchain/p2p/message"
 	"regexp"
 	"time"
 )
@@ -132,11 +132,10 @@ func (c *Client) reborn() {
 	c.connPool.Release()
 	// recreate the connection pool
 	poolConfig := &pool.PoolConfig{
-		InitialCap: c.cconf.connInitCap,
-		MaxCap:     c.cconf.connUpperlimit,
-		Factory:    connCreator,
-		Close:      connCloser,
-		//链接最大空闲时间，超过该时间的链接 将会关闭，可避免空闲时链接EOF，自动失效的问题
+		InitialCap:  c.cconf.connInitCap,
+		MaxCap:      c.cconf.connUpperlimit,
+		Factory:     connCreator,
+		Close:       connCloser,
 		IdleTimeout: c.cconf.connIdleTime,
 		EndPoint:    c.addr,
 		Options:     c.sec.GetGrpcClientOpts(),
