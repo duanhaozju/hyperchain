@@ -26,9 +26,9 @@ type IExecutor interface {
 
 	Snapshot(ev event.SnapshotEvent)
 
-	DeleteSnapshot(ev event.DeleteSnapshotEvent)
+	DeleteSnapshot(ev event.DeleteSnapEvent) error
 
-	Archive(event event.ArchiveEvent)
+	Archive(ev event.ArchEvent) error
 
 	StoreInvalidTransaction(payload []byte)
 
@@ -211,32 +211,45 @@ func (re *remoteExecutorProxy) Snapshot(ev event.SnapshotEvent) {
 	err = re.sendToExecutor(re.namespace, msg)
 }
 
-func (re *remoteExecutorProxy) DeleteSnapshot(ev event.DeleteSnapshotEvent) {
+func (re *remoteExecutorProxy) DeleteSnapshot(ev event.DeleteSnapEvent) error {
 	var err error
 	defer func() { re.handleError(err) }()
 
-	//TODO: refactor this method
-	//
-	//msg := &pb.IMessage{
-	//	Type: pb.Type_EVENT,
-	//	From: pb.FROM_EVENTHUB,
-	//	Event:pb.Event_SnapshotEvent,
-	//}
-	//
-	//payload, err := proto.Marshal(&ev)
-	//if err != nil {
-	//	return
-	//}
-	//
-	//msg.Payload = payload
-	//err = re.sendToExecutor(re.namespace, msg)
+	//TODO: check the logic.
+	msg := &pb.IMessage{
+		Type:	pb.Type_EVENT,
+		From:	pb.FROM_EVENTHUB,
+		Event:	pb.Event_DeleteSnapshotEvent,
+	}
+
+	payload, err := proto.Marshal(&ev)
+	if err != nil {
+		return err
+	}
+
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
+	return  err
 }
 
-func (re *remoteExecutorProxy) Archive(event event.ArchiveEvent) {
+func (re *remoteExecutorProxy) Archive(ev event.ArchEvent) error{
 	var err error
 	defer func() { re.handleError(err) }()
 
-	//TODO: refactor this event
+	//TODO: check the logic.
+	msg := &pb.IMessage{
+		Type:pb.Type_EVENT,
+		From:pb.FROM_EVENTHUB,
+		Event:pb.Event_ArchiveEvent,
+	}
+	payload, err := proto.Marshal(&ev)
+	if err != nil {
+		return err
+	}
+
+	msg.Payload = payload
+	err = re.sendToExecutor(re.namespace, msg)
+	return err
 }
 
 func (re *remoteExecutorProxy) StoreInvalidTransaction(payload []byte) {

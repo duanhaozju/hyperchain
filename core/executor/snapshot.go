@@ -34,8 +34,19 @@ func (executor *Executor) Snapshot(ev event.SnapshotEvent) {
 	executor.snapshotReg.Snapshot(ev)
 }
 
-func (executor *Executor) DeleteSnapshot(ev event.DeleteSnapshotEvent) {
-	executor.snapshotReg.DeleteSnapshot(ev)
+func (executor *Executor) DeleteSnapshot(ev event.DeleteSnapEvent) error {
+	cont := make(chan error)
+	even :=  event.DeleteSnapshotEvent{
+			FilterId: ev.FilterId,
+			Cont:     cont,
+		}
+	executor.snapshotReg.DeleteSnapshot(even)
+	err := <-cont
+	if err != nil {
+		return err
+	} else {
+		return nil
+	}
 }
 
 // Insert a snapshot to local registry.(may receive from the network)

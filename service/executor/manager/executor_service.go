@@ -10,8 +10,9 @@ import (
 	"hyperchain/core/ledger/chain"
 	"hyperchain/hyperdb"
 	"hyperchain/namespace/rpc"
-	"hyperchain/service/executor/handler"
 	"sync"
+	"hyperchain/admittance"
+	"hyperchain/service/executor/handler"
 )
 
 type executorService interface {
@@ -19,11 +20,14 @@ type executorService interface {
 
 	Stop() error
 
+	// Name returns the name of current namespace.
+	Name() string
+
 	// ProcessRequest process request under this namespace.
 	ProcessRequest(request interface{}) interface{}
 
-	// Name returns the name of current namespace.
-	Name() string
+	GetCAManager() *admittance.CAManager
+
 }
 
 type executorServiceImpl struct {
@@ -43,6 +47,8 @@ type executorServiceImpl struct {
 	status *Status
 
 	rpc rpc.RequestProcessor
+
+	caManager *admittance.CAManager
 }
 
 type EsState int
@@ -119,6 +125,7 @@ func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
 func (es *executorServiceImpl) init() error {
 	es.logger.Criticalf("Init executor service for namespace %s", es.namespace)
 
+
 	// 1. init DB for current executor service.
 	err := chain.InitExecutorDBForNamespace(es.conf, es.namespace)
 	if err != nil {
@@ -187,7 +194,10 @@ func (es *executorServiceImpl) Start() error {
 		return err
 	}
 
-	//es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
+	//append: to satisfy apiserver tests.
+	es.status.setState(running)
+
+    //es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
 
 	// 3. establish connection
 	err = es.service.Connect()
@@ -196,7 +206,6 @@ func (es *executorServiceImpl) Start() error {
 		return err
 	}
 
-	// 4. register the executor service for namespace
 	err = es.service.Register(pb.FROM_EXECUTOR, &pb.RegisterMessage{
 		Namespace: es.namespace,
 	})
@@ -206,7 +215,14 @@ func (es *executorServiceImpl) Start() error {
 	}
 
 	es.status.setState(running)
+
+	// 8. start rpc processor
+	if err = es.rpc.Start(); err != nil {
+		return err
+	}
+
 	return nil
+
 }
 
 func (es *executorServiceImpl) Stop() error {
@@ -238,6 +254,8 @@ func (es *executorServiceImpl) Stop() error {
 
 func (es *executorServiceImpl) ProcessRequest(request interface{}) interface{} {
 	//TODO Check finish logic
+	logger.Critical("request : %v", request)
+	logger.Critical("executor stauts: %v", es.status.getState())
 	if es.status.getState() == running {
 		if request != nil {
 			switch r := request.(type) {
@@ -265,9 +283,55 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Service: hapi.NewPublicBlockAPI(namespace),
 			Public:  true,
 		},
+		"txdb":{
+			Svcname: "txdb",
+			Version: "1.5",
+			Service: hapi.NewDBTransactionAPI(namespace, es.conf),
+			Public: true,
+		},
+		"accountdb": {
+			Svcname: "accountdb",
+			Version: "1.5",
+			Service: hapi.NewPublicAccountExecutorAPI(namespace, es.conf),
+			Public:  true,
+		},
+		"contractExe": {
+			Svcname: "contractExe",
+			Version: "1.5",
+			Service: hapi.NewContarctExAPI(namespace, es.conf),
+			Public:  true,
+		},
+		//"cert": {
+		//	Svcname: "cert",
+		//	Version: "1.5",
+		//	Service: hapi.NewCertAPI(namespace, es.caManager),
+		//	Public:  true,
+		//},
+		//"sub": {
+		//	//TODO: Inplements the webSocket subscription
+		//},
+		"archive": {
+			Svcname: "archive",
+			Version: "1.5",
+			Service: hapi.NewPublicArchiveAPI(namespace, es.conf),
+			Public:	 true,
+		},
+		//TODO: implements cert API for module2
 	}
 }
 
+
+func (es *executorServiceImpl) GetCAManager() *admittance.CAManager{
+	//TODO: add CAManager to the struct.
+	cm, err := admittance.NewCAManager(es.conf)
+	if err != nil {
+		es.logger.Error(err)
+		panic("Cannot initialize the CAManager!")
+	}
+	es.caManager = cm
+	return cm
+}
+
 func (es *executorServiceImpl) Name() string {
-	return ""
+	return es.namespace
 }

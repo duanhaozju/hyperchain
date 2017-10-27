@@ -7,13 +7,14 @@ import (
 	"fmt"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
-	admin "hyperchain/api/admin"
+	admin"hyperchain/api/admin"
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
+	"hyperchain/common/interface"
 )
 
 // CodecOption specifies which type of messages this codec supports
@@ -35,23 +36,23 @@ const (
 // Server represents a RPC server
 type Server struct {
 	run          int32
-	codecsMu     sync.Mutex
-	codecs       *set.Set
-	namespaceMgr namespace.NamespaceManager
-	admin        *admin.Administrator
-	requestMgrMu sync.Mutex
-	requestMgr   map[string]*requestManager
+	codecsMu        sync.Mutex
+	codecs          *set.Set
+	nsMgrProcessor  intfc.NsMgrProcessor
+	admin           *admin.Administrator
+	requestMgrMu    sync.Mutex
+	requestMgr      map[string]*RequestManager
 }
 
 // NewServer will create a new server instance with no registered handlers.
-func NewServer(nr namespace.NamespaceManager, config *common.Config) *Server {
+func NewServer(np intfc.NsMgrProcessor, config *common.Config, is_executor bool) *Server {
 	server := &Server{
-		codecs:       set.New(),
-		run:          1,
-		namespaceMgr: nr,
-		requestMgr:   make(map[string]*requestManager),
+		codecs:         set.New(),
+		run:            1,
+		nsMgrProcessor: np,
+		requestMgr:     make(map[string]*RequestManager),
 	}
-	server.admin = admin.NewAdministrator(nr, config)
+	server.admin = admin.NewAdministrator(np, config, is_executor)
 	return server
 }
 
@@ -271,7 +272,7 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 
 // handleChannelReq implements receiver.handleChannelReq interface to handle request in channel and return jsonrpc response.
 func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) interface{} {
-	r := s.namespaceMgr.ProcessRequest(req.Namespace, req)
+	r := s.nsMgrProcessor.ProcessRequest(req.Namespace, req)
 	if r == nil {
 		log.Debug("No process result")
 		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message: "no process result"})
@@ -325,7 +326,7 @@ func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RP
 		log.Notice("nil parms in json")
 		cmd.Args = nil
 	} else {
-		args, err := splitRawMessage(args)
+		args, err := SplitRawMessage(args)
 		if err != nil {
 			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidParamsError{Message: err.Error()}}
 		}

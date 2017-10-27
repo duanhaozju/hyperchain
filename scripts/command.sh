@@ -5,7 +5,7 @@
 curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"tx_sendTransaction","params":[{"from":"17d806c92fa941b4b7a8ffffc58fa2f297a3bffc","to":"000f1a7a08ccc48e5d30f80850cf1cf283aa3abd","timestamp":1481767697713000000,"nonce":6482432088169214,"value":1,"signature":"0x6dc99241793600eeeed72578e8de490894ec509bbc6c85753caf3176342c9cb85aa102f50424d508cc23d0c544763020f8136a742726a2b91bf55ff9ca45837e01"}],"id":1}'
 
 # 根据交易hash查询交易信息 GetTransactionByHash
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByHash","params":["0x975a7c1df0eafeec28624eca66ea3cfb3f5f3cba942564b5fd80da58c9ec79a7"],"id":1}'
+curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByHash","params":["0x265fe1cde1a585dcc8a16297e004a990b06cd001c5740069e74feb269e3eeabd"],"id":1}'
 
 # 根据区块hash和索引查询交易信息 GetTransactionByBlockHashAndIndex
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByBlockHashAndIndex","params":["0x9e330e8890df02d22a7ade73b5060db6651658b676dc9b30e54537853e39c81d",0],"id":1}'
@@ -17,7 +17,7 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionByBlockN
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getBlockTransactionCountByHash","params":["<block hash>"],"id":1}'
 
 # 获取交易收据Receipt GetTransactionReceipt
-curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactionReceipt","params":["<tx hash>"],"id":1}'
+curl localhost:9091 --data '{"jsonrpc":"2.0","method":"tx_getTransactionReceipt","params":["0x265fe1cde1a585dcc8a16297e004a990b06cd001c5740069e74feb269e3eeabd"],"id":1}'
 
 # 获取所有交易 GetTransactions
 curl localhost:8081 --data '{"jsonrpc":"2.0","method":"tx_getTransactions","params":[{"from":5, "to":"latest"}],"id":1}'

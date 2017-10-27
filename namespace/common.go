@@ -68,10 +68,55 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 			Service: api.NewPublicNodeAPI(namespace, ns.eh),
 			Public:  true,
 		},
-		"block": {
-			Svcname: "block",
+		//"block": {
+		//	Svcname: "block",
+		//	Version: "1.5",
+		//	Service: api.NewPublicBlockAPI(namespace),
+		//	Public:  true,
+		//},
+		"account": {
+			Svcname: "account",
 			Version: "1.5",
-			Service: api.NewPublicBlockAPI(namespace),
+			Service: api.NewPublicAccountAPI(namespace, ns.eh, ns.conf),
+			Public:  true,
+		},
+		"contract": {
+			Svcname: "contract",
+			Version: "1.5",
+			Service: api.NewPublicContractAPI(namespace, ns.eh, ns.conf),
+			Public:  true,
+		},
+		"cert": {
+			Svcname: "cert",
+			Version: "1.5",
+			Service: api.NewCertAPI(namespace, ns.caMgr),
+			Public:  true,
+		},
+		"sub": {
+			Svcname: "sub",
+			Version: "1.5",
+			Service: api.NewFilterAPI(namespace, ns.eh, ns.conf),
+		},
+		//"archive": {
+		//	Svcname: "archive",
+		//	Version: "1.5",
+		//	Service: api.NewPublicArchiveAPI(namespace, ns.conf),
+		//},
+	}
+}
+
+func (ns *namespaceImpl) GetAllApis(namespace string) map[string]*api.API {
+	return map[string]*api.API{
+		"tx": {
+			Svcname: "tx",
+			Version: "1.5",
+			Service: api.NewPublicTransactionAPI(namespace, ns.eh, ns.conf),
+			Public:  true,
+		},
+		"node": {
+			Svcname: "node",
+			Version: "1.5",
+			Service: api.NewPublicNodeAPI(namespace, ns.eh),
 			Public:  true,
 		},
 		"account": {
@@ -97,10 +142,35 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 			Version: "1.5",
 			Service: api.NewFilterAPI(namespace, ns.eh, ns.conf),
 		},
+		"block": {
+			Svcname: "block",
+			Version: "1.5",
+			Service: api.NewPublicBlockAPI(namespace),
+			Public:  true,
+		},
 		"archive": {
 			Svcname: "archive",
 			Version: "1.5",
-			Service: api.NewPublicArchiveAPI(namespace, ns.eh, ns.conf),
+			Service: api.NewPublicArchiveAPI(namespace, ns.conf),
 		},
+		"txdb":{
+			Svcname: "txdb",
+			Version: "1,5",
+			Service: api.NewDBTransactionAPI(namespace, ns.conf),
+			Public: true,
+		},
+		"accountdb": {
+			Svcname: "accountdb",
+			Version: "1.5",
+			Service: api.NewPublicAccountExecutorAPI(namespace, ns.conf),
+			Public:  true,
+		},
+		"contractExe": {
+			Svcname: "contractExe",
+			Version: "1.5",
+			Service: api.NewContarctExAPI(namespace, ns.conf),
+			Public:  true,
+		},
+
 	}
 }

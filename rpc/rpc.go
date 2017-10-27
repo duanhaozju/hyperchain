@@ -4,8 +4,8 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/ipc"
-	"hyperchain/namespace"
 	"sync"
+	"hyperchain/common/interface"
 )
 
 var (
@@ -40,18 +40,17 @@ type RPCServerImpl struct {
 }
 
 // GetRPCServer creates and returns a new RPCServerImpl instance implements RPCServer interface.
-func GetRPCServer(nr namespace.NamespaceManager, config *common.Config) RPCServer {
+func GetRPCServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, is_executor bool) RPCServer {
+	//TODO: implements singleton
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
-	once.Do(func() {
-		rpcs = newRPCServer(nr, config)
-	})
+	rpcs = newRPCServer(nsMgrProcessor, config, is_executor)
 	return rpcs
 }
 
-func newRPCServer(nr namespace.NamespaceManager, config *common.Config) *RPCServerImpl {
+func newRPCServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, is_executor bool) *RPCServerImpl {
 	rsi := &RPCServerImpl{}
-	rsi.httpServer = GetHttpServer(nr, config)
-	rsi.wsServer = GetWSServer(nr, config)
+	rsi.httpServer = GetHttpServer(nsMgrProcessor, config, is_executor)
+	//rsi.wsServer = GetWSServer(nsMgrProcessor, config, forExe)
 
 	ipc.RegisterFunc("service", rsi.Command)
 	return rsi
@@ -68,10 +67,10 @@ func (rsi *RPCServerImpl) Start() error {
 	}
 
 	// start websocket server
-	if err := rsi.wsServer.start(); err != nil {
-		log.Error(err)
-		return err
-	}
+	//if err := rsi.wsServer.start(); err != nil {
+	//	log.Error(err)
+	//	return err
+	//}
 	return nil
 }
 

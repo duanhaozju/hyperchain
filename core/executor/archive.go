@@ -22,8 +22,20 @@ import (
 	"time"
 )
 
-func (executor *Executor) Archive(event event.ArchiveEvent) {
-	executor.archiveMgr.Archive(event)
+func (executor *Executor) Archive(ev event.ArchEvent) error {
+	cont := make(chan error)
+	even := event.ArchiveEvent{
+		FilterId:ev.FilterId,
+		Sync:ev.Sync,
+		Cont:cont,
+	}
+	executor.archiveMgr.Archive(even)
+	err := <-cont
+	if err != nil {
+		return err
+	} else {
+		return nil
+	}
 }
 
 type ArchiveManager struct {

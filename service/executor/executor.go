@@ -1,20 +1,19 @@
 package main
 
 import (
-	"fmt"
 	"github.com/mkideal/cli"
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/hyperdb"
 	"hyperchain/service/executor/admin"
-	"hyperchain/service/executor/apiserver"
 	"hyperchain/service/executor/manager"
+	"hyperchain/rpc"
 )
 
 type executorGlobal struct {
 	exeMgr      manager.ExecutorManager
 	admin       *admin.Administrator
-	apiServer   apiserver.APIServer
+	apiServer   jsonrpc.RPCServer
 	stopFlag    chan bool
 	restartFlag chan bool
 	args        *argT
@@ -35,7 +34,7 @@ func newExecutorGlobal(argV *argT) *executorGlobal {
 	eg.exeMgr = manager.GetExecutorMgr(globalConfig, eg.stopFlag, eg.restartFlag)
 	eg.admin = admin.NewAdministrator(eg.exeMgr, globalConfig)
 
-	//eg.apiServer = apiserver.GetAPIServer()
+	eg.apiServer = jsonrpc.GetRPCServer(eg.exeMgr,globalConfig, true)
 	//TODO provides params to create a APIServer
 
 	return eg
@@ -52,11 +51,11 @@ func main() {
 	*/
 
 	cli.Run(new(argT), func(ctx *cli.Context) error {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("Panic: ", r)
-			}
-		}()
+		//defer func() {
+		//	if r := recover(); r != nil {
+		//		fmt.Println("Panic: ", r)
+		//	}
+		//}()
 
 		argv := ctx.Argv().(*argT)
 
@@ -70,12 +69,16 @@ func main() {
 
 func (h *executorGlobal) start() error {
 	//err := h.exeMgr.Start()
+	//if err != nil {
+	//	return err
+	//}
 	err := h.admin.Start()
 	if err != nil {
 		return err
 	}
 
 	//h.apiServer.Start()
+	go h.apiServer.Start()
 	return nil
 
 }

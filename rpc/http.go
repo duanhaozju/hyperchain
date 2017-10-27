@@ -10,12 +10,12 @@ import (
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"hyperchain/common"
-	"hyperchain/namespace"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"time"
+	"hyperchain/common/interface"
 )
 
 const (
@@ -23,29 +23,36 @@ const (
 	ReadTimeout                 = 5 * time.Second
 )
 
-var (
-	hs internalRPCServer
-)
 
 type httpServerImpl struct {
-	nr     namespace.NamespaceManager
-	port   int
-	config *common.Config
-
-	httpListener net.Listener
-	httpHandler  *Server
+	nsMgrProcessor  intfc.NsMgrProcessor
+	port   		int
+	config 		*common.Config
+	httpListener 	net.Listener
+	httpHandler  	*Server
+	is_executor 	bool
 }
 
 // GetHttpServer creates and returns a new httpServerImpl instance implements internalRPCServer interface.
-func GetHttpServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
-	if hs == nil {
-		hs = &httpServerImpl{
-			nr:     nr,
-			port:   config.GetInt(common.JSON_RPC_PORT),
-			config: config,
+func GetHttpServer(nsMgrProcessor intfc.NsMgrProcessor,config *common.Config, is_executor bool) internalRPCServer {
+	if !config.GetBool(common.EXECUTOR_EMBEDDED) && is_executor{
+		hs := &httpServerImpl{
+			nsMgrProcessor: nsMgrProcessor,
+			port:   	config.GetInt(common.JSON_RPC_PORT_EXECUTOR),
+			config: 	config,
+			is_executor: 	is_executor,
 		}
+		return hs
+	}else {
+		hs := &httpServerImpl{
+			nsMgrProcessor: nsMgrProcessor,
+			port:        config.GetInt(common.JSON_RPC_PORT),
+			config:        config,
+			is_executor:		is_executor,
+		}
+		return hs
 	}
-	return hs
+	return nil
 }
 
 // start starts the http RPC endpoint. It will start the appropriate server based on the parameters of the configuration file.
@@ -57,10 +64,10 @@ func (hsi *httpServerImpl) start() error {
 		err      error
 	)
 
-	handler := NewServer(hsi.nr, hsi.config)
+	handler := NewServer(hsi.nsMgrProcessor, hsi.config, hsi.is_executor)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/login", handler.admin.LoginServer)
+	//mux.HandleFunc("/login", handler.admin.LoginServer)
 	mux.Handle("/", newCorsHandler(handler, hsi.config.GetStringSlice(common.HTTP_ALLOWEDORIGINS)))
 
 	isVersion2 := hsi.config.GetBool(common.HTTP_VERSION2)
@@ -230,7 +237,7 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("content-type", "application/json")
-	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr, nil)
+	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.nsMgrProcessor, nil)
 	defer codec.Close()
 	srv.ServeSingleRequest(codec, OptionMethodInvocation)
 }

@@ -66,20 +66,19 @@ type Namespace interface {
 	// Info returns the basic information of current namespace.
 	Info() *NamespaceInfo
 
-	// ProcessRequest process request under this namespace.
-	ProcessRequest(request interface{}) interface{}
-
 	// Name returns the name of current namespace.
 	Name() string
-
-	// GetCAManager returns the CAManager of current namespace.
-	GetCAManager() *admittance.CAManager
 
 	// GetExecutor returns the executor module of current namespace.
 	GetExecutor() executor.IExecutor
 
 	//LocalService return local service
 	LocalService() service.Service
+
+	GetCAManager() *admittance.CAManager
+
+	// ProcessRequest process request under this namespace.
+	ProcessRequest(request interface{}) interface{}
 }
 
 type NsState int
@@ -258,7 +257,12 @@ func (ns *namespaceImpl) init() error {
 	ns.ls = local.NewLocalService(ns.Name(), service.EVENTHUB, ns.eh)
 
 	// 8. init JsonRpcProcessor to process incoming requests.
-	ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
+
+	if ns.conf.GetBool(common.EXECUTOR_EMBEDDED) {
+		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetAllApis(ns.Name()))
+	}else{
+		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
+	}
 
 	ns.status.setState(initialized)
 	return nil
