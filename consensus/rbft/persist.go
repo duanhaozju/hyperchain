@@ -425,7 +425,7 @@ func (rbft *rbftImpl) restoreTxBatchStore() {
 
 // restoreState restores lastExec, certStore, view, transaction batches, checkpoints, h and other add/del node related
 // params from database
-func (rbft *rbftImpl) restoreState() {
+func (rbft *rbftImpl) restoreState() error {
 	rbft.restoreLastSeqNo()
 	if rbft.seqNo < rbft.exec.lastExec {
 		rbft.seqNo = rbft.exec.lastExec
@@ -458,7 +458,8 @@ func (rbft *rbftImpl) restoreState() {
 	} else {
 		h, err := strconv.ParseUint(string(hstr), 10, 64)
 		if err != nil {
-			panic("transfer rbft.h from string to uint64 failed with err: " + err.Error())
+			rbft.logger.Warningf("transfer rbft.h from string to uint64 failed with err: %s", err)
+			return err
 		}
 		rbft.moveWatermarks(h)
 	}
@@ -486,6 +487,8 @@ func (rbft *rbftImpl) restoreState() {
 
 	rbft.logger.Infof("Replica %d restored state: view: %d, seqNo: %d, reqBatches: %d, chkpts: %d",
 		rbft.id, rbft.view, rbft.seqNo, len(rbft.storeMgr.txBatchStore), len(rbft.storeMgr.chkpts))
+
+	return nil
 }
 
 // restoreLastSeqNo restores lastExec from database

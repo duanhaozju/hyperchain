@@ -68,7 +68,7 @@ func (rbft *rbftImpl) handleCoreRbftEvent(e *LocalEvent) consensusEvent {
 	switch e.EventType {
 
 	case CORE_BATCH_TIMER_EVENT:
-		rbft.logger.Debugf("Primary %d batch timer expires, try to create a batch", rbft.id)
+		rbft.logger.Debugf("Primary %d batch timer expired, try to create a batch", rbft.id)
 		rbft.stopBatchTimer()
 		// call txPool module to generate a tx batch
 		rbft.batchMgr.txPool.GenerateTxBatch()
@@ -79,7 +79,7 @@ func (rbft *rbftImpl) handleCoreRbftEvent(e *LocalEvent) consensusEvent {
 		return nil
 
 	case CORE_FIRST_REQUEST_TIMER_EVENT:
-		rbft.logger.Noticef("Replica %d first request timer expires", rbft.id)
+		rbft.logger.Debugf("Replica %d first request timer expired", rbft.id)
 		return rbft.sendViewChange()
 
 	case CORE_STATE_UPDATE_EVENT:
@@ -91,7 +91,7 @@ func (rbft *rbftImpl) handleCoreRbftEvent(e *LocalEvent) consensusEvent {
 		return nil
 
 	default:
-		rbft.logger.Errorf("Invalid core rbft event : %v", e)
+		rbft.logger.Errorf("Invalid core rbft event: %v", e)
 		return nil
 	}
 }
@@ -100,7 +100,7 @@ func (rbft *rbftImpl) handleCoreRbftEvent(e *LocalEvent) consensusEvent {
 func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 	switch e.EventType {
 	case VIEW_CHANGE_TIMER_EVENT:
-		rbft.logger.Warningf("Replica %d viewChange timer expired, sending viewChange: %s", rbft.id, rbft.vcMgr.newViewTimerReason)
+		rbft.logger.Infof("Replica %d viewChange timer expired, sending viewChange: %s", rbft.id, rbft.vcMgr.newViewTimerReason)
 		rbft.off(timerActive)
 
 		// Here, we directly send viewchange with a bigger target view (which is rbft.view+1) because it is the
@@ -127,7 +127,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 		if !rbft.inOne(inUpdatingN, inNegotiateView, skipInProgress) {
 			rbft.setNormal()
 		}
-		rbft.logger.Criticalf("======== Replica %d finished viewChange, primary=%d, view=%d/height=%d", rbft.id, primary, rbft.view, rbft.exec.lastExec)
+		rbft.logger.Noticef("======== Replica %d finished viewChange, primary=%d, view=%d/height=%d", rbft.id, primary, rbft.view, rbft.exec.lastExec)
 		viewChangeResult := fmt.Sprintf("Replica %d finished viewChange, primary=%d, view=%d/height=%d", rbft.id, primary, rbft.view, rbft.exec.lastExec)
 
 		// send viewchange result to web socket API
@@ -144,7 +144,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 		if !rbft.in(inViewChange) {
 			rbft.logger.Warningf("Replica %d had its viewChange resend timer expired but it's in an active view, this is benign but may indicate a bug", rbft.id)
 		}
-		rbft.logger.Warningf("Replica %d viewChange resend timer expired before viewChange quorum was reached, resending", rbft.id)
+		rbft.logger.Debugf("Replica %d viewChange resend timer expired before viewChange quorum was reached, resending", rbft.id)
 
 		// after send viewchange, if triggered the viewchange resend timeout before receive N-f
 		// viewchange whose vc.view==rbft.view, we will resend viewchange with the same target view as the
@@ -157,7 +157,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 	case VIEW_CHANGE_QUORUM_EVENT:
 		rbft.logger.Debugf("Replica %d received viewChange quorum, processing new view", rbft.id)
 		if rbft.in(inNegotiateView) {
-			rbft.logger.Debugf("Replica %d try to process viewChangeQuorumEvent, but it's in nego-view", rbft.id)
+			rbft.logger.Warningf("Replica %d try to process viewChangeQuorumEvent, but it's in negotiateView", rbft.id)
 			return nil
 		}
 		if rbft.isPrimary(rbft.id) {
@@ -175,7 +175,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 
 	case VIEW_CHANGE_VC_RESET_DONE_EVENT:
 		rbft.off(inVcReset)
-		rbft.logger.Debugf("Replica %d received local VcResetDone", rbft.id)
+		rbft.logger.Infof("Replica %d received local vcResetDone", rbft.id)
 		if rbft.in(inUpdatingN) {
 			return rbft.sendFinishUpdate()
 		}
@@ -183,7 +183,7 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 		var event protos.VcResetDone
 		var ok bool
 		if event, ok = e.Event.(protos.VcResetDone); !ok {
-			rbft.logger.Error("type assert error!")
+			rbft.logger.Error("Type assert error!")
 			return nil
 		}
 		seqNo = event.SeqNo
@@ -212,14 +212,14 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 		}
 
 		if seqNo != rbft.exec.lastExec+1 {
-			rbft.logger.Warningf("Replica %d finds error in VcResetDone, expect=%d, but get=%d", rbft.id, rbft.exec.lastExec+1, seqNo)
+			rbft.logger.Errorf("Replica %d find error in VcResetDone, expect=%d, but get=%d", rbft.id, rbft.exec.lastExec+1, seqNo)
 			return nil
 		}
 
-		return rbft.finishViewChange()
+		return rbft.sendFinishVcReset()
 
 	default:
-		rbft.logger.Errorf("Invalid viewChange event : %v", e)
+		rbft.logger.Errorf("Invalid viewChange event: %v", e)
 		return nil
 	}
 	return nil
@@ -238,7 +238,7 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) consensusEvent {
 	case NODE_MGR_AGREE_UPDATEN_QUORUM_EVENT:
 		rbft.logger.Debugf("Replica %d received agreeUpdateN quorum, processing updateN", rbft.id)
 		if rbft.in(inNegotiateView) {
-			rbft.logger.Debugf("Replica %d try to process agreeUpdateNQuorumEvent, but it's in negotiateView", rbft.id)
+			rbft.logger.Warningf("Replica %d try to process agreeUpdateNQuorumEvent, but it's in negotiateView", rbft.id)
 			return nil
 		}
 		if rbft.isPrimary(rbft.id) {
@@ -261,12 +261,12 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) consensusEvent {
 		if !rbft.inOne(inViewChange, inNegotiateView, skipInProgress) {
 			rbft.setNormal()
 		}
-		rbft.logger.Criticalf("======== Replica %d finished updateN, primary=%d, n=%d/f=%d/view=%d/h=%d", rbft.id, rbft.primary(rbft.view), rbft.N, rbft.f, rbft.view, rbft.h)
+		rbft.logger.Noticef("======== Replica %d finished updateN, primary=%d, n=%d/f=%d/view=%d/h=%d", rbft.id, rbft.primary(rbft.view), rbft.N, rbft.f, rbft.view, rbft.h)
 		rbft.handleTransactionsAfterAbnormal()
 		delete(rbft.nodeMgr.updateStore, rbft.nodeMgr.updateTarget)
 
 	default:
-		rbft.logger.Errorf("Invalid viewChange event event : %v", e)
+		rbft.logger.Errorf("Invalid viewChange event: %v", e)
 		return nil
 	}
 
@@ -284,12 +284,12 @@ func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) consensusEvent {
 		rbft.off(inRecovery)
 		rbft.recoveryMgr.recoveryToSeqNo = nil
 		rbft.timerMgr.stopTimer(RECOVERY_RESTART_TIMER)
-		rbft.logger.Criticalf("======== Replica %d finished recovery, height: %d", rbft.id, rbft.exec.lastExec)
+		rbft.logger.Noticef("======== Replica %d finished recovery, height: %d", rbft.id, rbft.exec.lastExec)
 
 		// if we received new view or UpdateN during recovery, we will restart recovery after finish this round
 		// of recovery, as view has been changed during recovery
 		if rbft.recoveryMgr.recvNewViewInRecovery {
-			rbft.logger.Noticef("#  Replica %d find itself received newView during recovery"+
+			rbft.logger.Infof("Replica %d find itself received newView during recovery"+
 				", will restart negotiateView", rbft.id)
 			rbft.on(inRecovery, inNegotiateView)
 			rbft.recoveryMgr.recvNewViewInRecovery = false
@@ -333,7 +333,7 @@ func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) consensusEvent {
 		if !rbft.inOne(inUpdatingN, inViewChange, skipInProgress) {
 			rbft.setNormal()
 		}
-		rbft.logger.Criticalf("======== Replica %d finished negotiateView: %d / N=%d", rbft.id, rbft.view, rbft.N)
+		rbft.logger.Noticef("======== Replica %d finished negotiateView: view=%d/N=%d", rbft.id, rbft.view, rbft.N)
 		primary := rbft.primary(rbft.view)
 
 		// re-construct certStore if this recovery was triggered by 10 viewchange as view may have been changed
@@ -358,7 +358,7 @@ func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) consensusEvent {
 		rbft.restartNegoView()
 		return nil
 	case RECOVERY_RESTART_TIMER_EVENT:
-		rbft.logger.Noticef("Replica %d recovery restart timer expires", rbft.id)
+		rbft.logger.Debugf("Replica %d recovery restart timer expired", rbft.id)
 		rbft.restartRecovery()
 		return nil
 	default:
@@ -369,7 +369,7 @@ func (rbft *rbftImpl) handleRecoveryEvent(e *LocalEvent) consensusEvent {
 
 // dispatchConsensusMsg dispatches consensus messages to corresponding handlers using its service type
 func (rbft *rbftImpl) dispatchConsensusMsg(e consensusEvent) consensusEvent {
-	rbft.logger.Debugf("start processing consensus message")
+	rbft.logger.Debug("start processing consensus message")
 	service := rbft.dispatchMsgToService(e)
 	switch service {
 	case CORE_RBFT_SERVICE:

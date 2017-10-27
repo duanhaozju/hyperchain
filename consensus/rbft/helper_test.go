@@ -23,23 +23,6 @@ func TestSortableUint64SliceFunctions(t *testing.T) {
 	}
 }
 
-func TestRbftStateFunctions(t *testing.T) {
-	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
-	defer CleanData(rbft.namespace)
-	ast.Equal(nil, err, err)
-	rbft.Start()
-
-	rbft.off(valid)
-	ast.Equal(false, rbft.in(valid), "should be set to inActive")
-
-	rbft.validateState()
-	ast.Equal(true, rbft.in(valid), "should be set to active")
-
-	rbft.invalidateState()
-	ast.Equal(false, rbft.in(valid), "should be set to inActive")
-}
-
 func TestPrimary(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)

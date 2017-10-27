@@ -18,7 +18,7 @@ type Consenter interface {
 	RecvLocal(msg interface{}) error
 
 	// Start starts the consensus service
-	Start()
+	Start() error
 
 	// Close closes the consensus service
 	Stop()

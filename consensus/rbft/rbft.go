@@ -14,6 +14,7 @@ import (
 	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
+	"fmt"
 )
 
 // Package rbft implement the rbft algorithm
@@ -84,13 +85,15 @@ func (rbft *rbftImpl) RecvLocal(msg interface{}) error {
 }
 
 // Start initializes and starts the consensus service
-func (rbft *rbftImpl) Start() {
+func (rbft *rbftImpl) Start() error {
 	rbft.logger.Noticef("--------RBFT starting, nodeID: %d--------", rbft.id)
+
+	var err error
 
 	db, err := hyperdb.GetDBConsensusByNamespace(rbft.namespace)
 	if err != nil {
-		rbft.logger.Error("get db failed.")
-		return
+		rbft.logger.Errorf("get db by namespace: %s failed.", rbft.namespace)
+		return fmt.Errorf("get db by namespace: %s failed", rbft.namespace)
 	}
 	rbft.persister = persist.New(db)
 
@@ -109,7 +112,11 @@ func (rbft *rbftImpl) Start() {
 	rbft.storeMgr = newStoreMgr(rbft.logger)
 
 	// new batch manager
-	rbft.batchMgr = newBatchManager(rbft.namespace, rbft.config, rbft.logger)
+	batchMgr, err := newBatchManager(rbft.namespace, rbft.config, rbft.logger)
+	if err != nil {
+		return err
+	}
+	rbft.batchMgr = batchMgr
 
 	// new batch validator
 	rbft.batchVdr = newBatchValidator()
@@ -124,7 +131,9 @@ func (rbft *rbftImpl) Start() {
 	rbft.nodeMgr = newNodeMgr()
 
 	// restore state from consensus database
-	rbft.restoreState()
+	if err = rbft.restoreState(); err != nil {
+		return err
+	}
 	// update viewchange seqNo after restore state which may update seqNo
 	rbft.updateViewChangeSeqNo(rbft.seqNo, rbft.K, rbft.id)
 
@@ -145,6 +154,8 @@ func (rbft *rbftImpl) Start() {
 	rbft.logger.Infof("RBFT log size (L) = %v", rbft.L)
 
 	rbft.logger.Noticef("======== RBFT finished start, nodeID: %d", rbft.id)
+
+	return nil
 }
 
 // Close closes the consensus service

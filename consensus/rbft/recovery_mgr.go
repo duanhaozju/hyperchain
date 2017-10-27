@@ -58,14 +58,15 @@ func (rbft *rbftImpl) dispatchRecoveryMsg(e consensusEvent) consensusEvent {
 // 2. broadcast negotiate view
 // 3. construct NegotiateViewResponse and send it to self
 func (rbft *rbftImpl) initNegoView() error {
+
 	if !rbft.in(inNegotiateView) {
-		rbft.logger.Errorf("Replica %d try to negotiateView, but it's not inNegotiateView. This indicates a bug", rbft.id)
+		rbft.logger.Warningf("Replica %d try to send negotiateView, but it's not in negotiateView", rbft.id)
 		return nil
 	}
 
 	rbft.setAbNormal()
 
-	rbft.logger.Debugf("Replica %d now negotiateView...", rbft.id)
+	rbft.logger.Infof("Replica %d now negotiateView...", rbft.id)
 
 	event := &LocalEvent{
 		Service:   RECOVERY_SERVICE,
@@ -116,14 +117,16 @@ func (rbft *rbftImpl) initNegoView() error {
 
 // restartNegoView restarts negotiate view
 func (rbft *rbftImpl) restartNegoView() {
+
 	rbft.logger.Debugf("Replica %d restart negotiateView", rbft.id)
 	rbft.initNegoView()
 }
 
 // recvNegoView firstly checks current state, then send response to the sender
 func (rbft *rbftImpl) recvNegoView(nv *NegotiateView) consensusEvent {
+
 	if rbft.in(inViewChange) {
-		rbft.logger.Warningf("Replica %d is in viewChange, reject negotiateView from replica %d", rbft.id, nv.ReplicaId)
+		rbft.logger.Debugf("Replica %d is in viewChange, reject negotiateView from replica %d", rbft.id, nv.ReplicaId)
 		return nil
 	}
 	sender := nv.ReplicaId
@@ -153,13 +156,15 @@ func (rbft *rbftImpl) recvNegoView(nv *NegotiateView) consensusEvent {
 // recvNegoViewRsp stores the negotiate view response, if the counts of negoViewRsp reach the commonCaseQuorum, update
 // current info if needed
 func (rbft *rbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) consensusEvent {
+
 	if !rbft.in(inNegotiateView) {
-		rbft.logger.Debugf("Replica %d already finished negotiateView, ignore incoming negotiateViewResponse", rbft.id)
+		rbft.logger.Debugf("Replica %d already finished negotiateView, ignore incoming negotiateViewResponse from replica %d", rbft.id, nvr.ReplicaId)
 		return nil
 	}
 
-	if _, ok := rbft.recoveryMgr.negoViewRspStore[nvr.ReplicaId]; ok {
-		rbft.logger.Warningf("Already recv view number from replica %d, replace it with view %d", nvr.ReplicaId, nvr.View)
+	if rsp, ok := rbft.recoveryMgr.negoViewRspStore[nvr.ReplicaId]; ok {
+		rbft.logger.Warningf("Replica %d already received negotiateView response from replica %d, " +
+			"for view=%d, now receive again for view=%d, replace it", rbft.id, nvr.ReplicaId, rsp.View, nvr.View)
 	}
 
 	rbft.logger.Debugf("Replica %d received negotiateViewResponse from replica %d, view=%d/N=%d", rbft.id, nvr.ReplicaId, nvr.View, nvr.N)
@@ -227,7 +232,8 @@ func (rbft *rbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) consensusEvent
 // initRecovery broadcasts a procative recovery message to ask others for recent blocks info and send RecoveryResponse
 // to itself
 func (rbft *rbftImpl) initRecovery() consensusEvent {
-	rbft.logger.Debugf("Replica %d now initRecovery", rbft.id)
+
+	rbft.logger.Infof("Replica %d now initRecovery", rbft.id)
 
 	rbft.recoveryMgr.recoveryToSeqNo = nil
 	rbft.recoveryMgr.rcRspStore = make(map[uint64]*RecoveryResponse)
@@ -271,7 +277,8 @@ func (rbft *rbftImpl) initRecovery() consensusEvent {
 
 // restartRecovery restarts recovery immediately
 func (rbft *rbftImpl) restartRecovery() {
-	rbft.logger.Noticef("Replica %d now restartRecovery", rbft.id)
+
+	rbft.logger.Infof("Replica %d now restartRecovery", rbft.id)
 
 	// clean the negoViewRspStore and recoveryRspStore
 	rbft.recoveryMgr.negoViewRspStore = make(map[uint64]*NegotiateViewResponse)
@@ -284,10 +291,11 @@ func (rbft *rbftImpl) restartRecovery() {
 
 // recvRecovery processes incoming proactive recovery message and send the response to the sender
 func (rbft *rbftImpl) recvRecovery(recoveryInit *RecoveryInit) consensusEvent {
+
 	rbft.logger.Debugf("Replica %d now received recovery from replica %d", rbft.id, recoveryInit.ReplicaId)
 
 	if rbft.in(skipInProgress) {
-		rbft.logger.Debugf("Replica %d recvRecovery, but it's in state transfer and ignores it.", rbft.id)
+		rbft.logger.Debugf("Replica %d receive recovery, but it's in state transfer, ignore it.", rbft.id)
 		return nil
 	}
 
@@ -324,37 +332,37 @@ func (rbft *rbftImpl) recvRecovery(recoveryInit *RecoveryInit) consensusEvent {
 // recvRecoveryRsp stores the recovery response, if the counts of rcRspStore reach the commonCaseQuorum, find highest
 // checkpoint quorum and use that checkpoint seqNo as the recovery target to continue recovery
 func (rbft *rbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) consensusEvent {
-	rbft.logger.Debugf("Replica %d now received recoveryResponse from replica %d for block height=%d", rbft.id, rsp.ReplicaId, rsp.BlockHeight)
+
+	rbft.logger.Debugf("Replica %d received recoveryResponse from replica %d for block height=%d", rbft.id, rsp.ReplicaId, rsp.BlockHeight)
 
 	if !rbft.in(inRecovery) {
-		rbft.logger.Debugf("Replica %d finished recovery, ignore recoveryResponse", rbft.id)
+		rbft.logger.Debugf("Replica %d has finished recovery, ignore recoveryResponse", rbft.id)
 		return nil
 	}
 	from := rsp.ReplicaId
 	if _, ok := rbft.recoveryMgr.rcRspStore[from]; ok {
-		rbft.logger.Debugf("Replica %d received recoveryResponse again from replica %d, replace it with height: %d", rbft.id, from, rsp.BlockHeight)
+		rbft.logger.Warningf("Replica %d received recoveryResponse again from replica %d, replace it with height: %d", rbft.id, from, rsp.BlockHeight)
 	}
 	rbft.recoveryMgr.rcRspStore[from] = rsp
 
 	if len(rbft.recoveryMgr.rcRspStore) < rbft.commonCaseQuorum() {
-		rbft.logger.Debugf("Replica %d received recoveryResponse from replica %d, rsp count: %d, not "+
+		rbft.logger.Debugf("Replica %d received recoveryResponse from replica %d, response count: %d, not "+
 			"beyond %d, waiting...", rbft.id, rsp.ReplicaId, len(rbft.recoveryMgr.rcRspStore), rbft.commonCaseQuorum())
 		return nil
 	}
 
 	if rbft.recoveryMgr.recoveryToSeqNo != nil {
-		rbft.logger.Debugf("Replica %d in recovery received recoveryResponse from replica %d "+
-			"but chkpt quorum and seqNo quorum already found. "+
-			"Ignore it", rbft.id, rsp.ReplicaId)
+		rbft.logger.Debugf("Replica %d received recoveryResponse from replica %d but checkpoint quorum and " +
+			"seqNo quorum already found, ignore it", rbft.id, rsp.ReplicaId)
 		return nil
 	}
 
 	// find quorum high checkpoint
 	chkptSeqNo, chkptid, replicas, find, chkptBehind := rbft.findHighestChkptQuorum()
-	rbft.logger.Debug("chkptSeqNo: ", chkptSeqNo, "chkptid: ", chkptid, "find: ", find, "chkptBehind: ", chkptBehind)
+	rbft.logger.Debugf("chkptSeqNo: %d, chkptid: %s, find: %v, chkptBehind: %v", chkptSeqNo, chkptid, find, chkptBehind)
 
 	if !find {
-		rbft.logger.Debugf("Replica %d did not find chkpt quorum", rbft.id)
+		rbft.logger.Debugf("Replica %d could not find chkpt quorum", rbft.id)
 		return nil
 	}
 
@@ -362,7 +370,7 @@ func (rbft *rbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) consensusEvent {
 	// use the highest checkpoint seqNo as recoveryToSeqNo, and fetchPQC after recovery done
 	rbft.recoveryMgr.recoveryToSeqNo = &chkptSeqNo
 
-	rbft.logger.Debugf("Replica %d in recovery self lastExec: %d, self h: %d, others h: %d",
+	rbft.logger.Debugf("Replica %d in recovery self lastExec: %d, self h: %d, others' h: %d",
 		rbft.id, rbft.exec.lastExec, rbft.h, chkptSeqNo)
 
 	var chkptId []byte
@@ -404,7 +412,6 @@ func (rbft *rbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) consensusEvent {
 
 // findHighestChkptQuorum finds highest one of chkpts which achieve oneCorrectQuorum
 func (rbft *rbftImpl) findHighestChkptQuorum() (chkptSeqNo uint64, chkptId string, replicas []replicaInfo, find bool, chkptBehind bool) {
-	rbft.logger.Debugf("Replica %d now enter findHighestChkptQuorum", rbft.id)
 
 	chkpts := make(map[chkptID]map[replicaInfo]bool)
 
@@ -465,6 +472,7 @@ func (rbft *rbftImpl) findHighestChkptQuorum() (chkptSeqNo uint64, chkptId strin
 
 // fetchRecoveryPQC always fetches PQC info after recovery done to fetch PQC info after target checkpoint
 func (rbft *rbftImpl) fetchRecoveryPQC() consensusEvent {
+
 	rbft.logger.Debugf("Replica %d now fetchRecoveryPQC", rbft.id)
 	rbft.recoveryMgr.rcPQCSenderStore = make(map[uint64]bool)
 
@@ -490,12 +498,13 @@ func (rbft *rbftImpl) fetchRecoveryPQC() consensusEvent {
 
 // returnRecoveryPQC returns all PQC info we have sent before to the sender
 func (rbft *rbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) consensusEvent {
+
 	rbft.logger.Debugf("Replica %d now returnRecoveryPQC", rbft.id)
 
 	destID, h := fetch.ReplicaId, fetch.H
 
 	if h >= rbft.h+rbft.L {
-		rbft.logger.Errorf("Replica %d receives recoveryFetchPQC request, but its rbft.h ≥ highwatermark", rbft.id)
+		rbft.logger.Warningf("Replica %d receives recoveryFetchPQC request, but its rbft.h ≥ highwatermark", rbft.id)
 		return nil
 	}
 
@@ -562,11 +571,12 @@ func (rbft *rbftImpl) returnRecoveryPQC(fetch *RecoveryFetchPQC) consensusEvent 
 
 // recvRecoveryReturnPQC re-processes all the PQC received from others
 func (rbft *rbftImpl) recvRecoveryReturnPQC(PQCInfo *RecoveryReturnPQC) consensusEvent {
+
 	rbft.logger.Debugf("Replica %d now recvRecoveryReturnPQC from replica %d, return_pqc %v", rbft.id, PQCInfo.ReplicaId, PQCInfo)
 
 	sender := PQCInfo.ReplicaId
 	if _, exist := rbft.recoveryMgr.rcPQCSenderStore[sender]; exist {
-		rbft.logger.Warningf("Replica %d receive duplicate recoveryReturnPQC, ignore it", rbft.id)
+		rbft.logger.Warningf("Replica %d received duplicate recoveryReturnPQC from replica %d, ignore it", rbft.id, PQCInfo.ReplicaId)
 		return nil
 	}
 	rbft.recoveryMgr.rcPQCSenderStore[sender] = true
