@@ -23,9 +23,6 @@ const (
 	ReadTimeout                 = 5 * time.Second
 )
 
-var (
-	hs internalRPCServer
-)
 
 type httpServerImpl struct {
 	nsMgrProcessor  intfc.NsMgrProcessor
@@ -38,26 +35,24 @@ type httpServerImpl struct {
 
 // GetHttpServer creates and returns a new httpServerImpl instance implements internalRPCServer interface.
 func GetHttpServer(nsMgrProcessor intfc.NsMgrProcessor,config *common.Config, forExe bool) internalRPCServer {
-	if config.GetBool(common.EXECUTOR_EMBEDDED) && forExe{
-		if hs == nil {
-			hs = &httpServerImpl{
-				nsMgrProcessor: nsMgrProcessor,
-				port:   	config.GetInt(common.JSON_RPC_PORT_EXECUTOR),
-				config: 	config,
-				forExe: 	forExe,
-			}
+	if !config.GetBool(common.EXECUTOR_EMBEDDED) && forExe{
+		hs := &httpServerImpl{
+			nsMgrProcessor: nsMgrProcessor,
+			port:   	config.GetInt(common.JSON_RPC_PORT_EXECUTOR),
+			config: 	config,
+			forExe: 	forExe,
 		}
+		return hs
 	}else {
-		if hs == nil {
-			hs = &httpServerImpl{
-				nsMgrProcessor: nsMgrProcessor,
-				port:        config.GetInt(common.JSON_RPC_PORT),
-				config:        config,
-				forExe:		forExe,
-			}
+		hs := &httpServerImpl{
+			nsMgrProcessor: nsMgrProcessor,
+			port:        config.GetInt(common.JSON_RPC_PORT),
+			config:        config,
+			forExe:		forExe,
 		}
+		return hs
 	}
-	return hs
+	return nil
 }
 
 // start starts the http RPC endpoint. It will start the appropriate server based on the parameters of the configuration file.
@@ -72,7 +67,7 @@ func (hsi *httpServerImpl) start() error {
 	handler := NewServer(hsi.nsMgrProcessor, hsi.config, hsi.forExe)
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/login", handler.admin.LoginServer)
+	//mux.HandleFunc("/login", handler.admin.LoginServer)
 	mux.Handle("/", newCorsHandler(handler, hsi.config.GetStringSlice(common.HTTP_ALLOWEDORIGINS)))
 
 	isVersion2 := hsi.config.GetBool(common.HTTP_VERSION2)

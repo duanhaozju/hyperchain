@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/mkideal/cli"
 	"github.com/op/go-logging"
 	"hyperchain/common"
@@ -33,7 +32,7 @@ func newExecutorGlobal(argV *argT) *executorGlobal {
 	hyperdb.InitDBMgr(globalConfig)
 
 	eg.exeMgr = manager.GetExecutorMgr(globalConfig, eg.stopFlag, eg.restartFlag)
-	//eg.admin = admin.NewAdministrator(eg.exeMgr, globalConfig)
+	eg.admin = admin.NewAdministrator(eg.exeMgr, globalConfig)
 
 	eg.apiServer = jsonrpc.GetRPCServer(eg.exeMgr,globalConfig, true)
 	//TODO provides params to create a APIServer
@@ -52,11 +51,11 @@ func main() {
 	*/
 
 	cli.Run(new(argT), func(ctx *cli.Context) error {
-		defer func() {
-			if r := recover(); r != nil {
-				fmt.Println("Panic: ", r)
-			}
-		}()
+		//defer func() {
+		//	if r := recover(); r != nil {
+		//		fmt.Println("Panic: ", r)
+		//	}
+		//}()
 
 		argv := ctx.Argv().(*argT)
 
@@ -70,6 +69,9 @@ func main() {
 
 func (h *executorGlobal) start() error {
 	//err := h.exeMgr.Start()
+	//if err != nil {
+	//	return err
+	//}
 	err := h.admin.Start()
 	if err != nil {
 		return err

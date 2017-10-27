@@ -26,9 +26,9 @@ type IExecutor interface {
 
 	Snapshot(ev event.SnapshotEvent)
 
-	DeleteSnapshot(ev event.DeleteSnapshotEvent)
+	DeleteSnapshot(ev event.DeleteSnapEvent) error
 
-	Archive(event event.ArchiveEvent)
+	Archive(ev event.ArchEvent) error
 
 	StoreInvalidTransaction(payload []byte)
 
@@ -211,7 +211,7 @@ func (re *remoteExecutorProxy) Snapshot(ev event.SnapshotEvent) {
 	err = re.sendToExecutor(re.namespace, msg)
 }
 
-func (re *remoteExecutorProxy) DeleteSnapshot(ev event.DeleteSnapEvent) {
+func (re *remoteExecutorProxy) DeleteSnapshot(ev event.DeleteSnapEvent) error {
 	var err error
 	defer func() { re.handleError(err) }()
 
@@ -224,14 +224,15 @@ func (re *remoteExecutorProxy) DeleteSnapshot(ev event.DeleteSnapEvent) {
 
 	payload, err := proto.Marshal(&ev)
 	if err != nil {
-		return
+		return err
 	}
 
 	msg.Payload = payload
 	err = re.sendToExecutor(re.namespace, msg)
+	return  err
 }
 
-func (re *remoteExecutorProxy) Archive(ev event.ArchEvent) {
+func (re *remoteExecutorProxy) Archive(ev event.ArchEvent) error{
 	var err error
 	defer func() { re.handleError(err) }()
 
@@ -243,11 +244,12 @@ func (re *remoteExecutorProxy) Archive(ev event.ArchEvent) {
 	}
 	payload, err := proto.Marshal(&ev)
 	if err != nil {
-		return
+		return err
 	}
 
 	msg.Payload = payload
 	err = re.sendToExecutor(re.namespace, msg)
+	return err
 }
 
 func (re *remoteExecutorProxy) StoreInvalidTransaction(payload []byte) {

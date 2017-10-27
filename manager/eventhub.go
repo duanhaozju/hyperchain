@@ -462,10 +462,10 @@ func (hub *EventHub) listenMiscellaneousEvent() {
 			case event.SnapshotEvent:
 				hub.logger.Debugf("message middleware: [snapshot request]")
 				hub.executor.Snapshot(ev)
-			case event.DeleteSnapshotEvent:
+			case event.DeleteSnapEvent:
 				hub.logger.Debugf("message middleware: [delete snapshot request]")
 				hub.executor.DeleteSnapshot(ev)
-			case event.ArchiveEvent:
+			case event.ArchEvent:
 				hub.logger.Debugf("message middleware: [archive request]")
 				hub.executor.Archive(ev)
 			}
