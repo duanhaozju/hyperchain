@@ -12,6 +12,7 @@ type Encryption interface {
 
 	//sign byte
 	Sign(hash []byte, prv interface{}) (sig []byte, err error)
+	
 	UnSign(args ...interface{}) (common.Address, error)
 	//general private key
 	GeneralKey() (interface{}, error)

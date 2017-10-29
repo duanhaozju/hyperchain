@@ -49,8 +49,7 @@ func ValidateSignatureValues(v byte, r, s *big.Int, homestead bool) bool {
 		return false
 	}
 	vint := uint32(v)
-	// reject upper range of s values (ECDSA malleability)
-	// see discussion in secp256k1/libsecp256k1/include/secp256k1.h
+
 	if homestead && s.Cmp(secp256k1.HalfN) > 0 {
 		return false
 	}

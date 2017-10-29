@@ -42,14 +42,13 @@ type key struct {
 
 //CAManager this struct is for Certificate Auth manager
 type CAManager struct {
-	eCaCert  *cert
-	eCert    *cert
-	rCaCert  *cert
-	rCert    *cert
-	tCacert  *cert
-	eCertPri *key
-	rCertPri *key
-	//check flags
+	eCaCert       *cert
+	eCert         *cert
+	rCaCert       *cert
+	rCert         *cert
+	tCacert       *cert
+	eCertPri      *key
+	rCertPri      *key
 	checkERCert   bool
 	checkTCert    bool
 	checkCertSign bool
@@ -171,8 +170,6 @@ func (cm *CAManager) GenTCert(publicKey string) (string, error) {
 
 }
 
-//TCert 需要用为其签发的ECert来验证，但是在没有TCERT的时候只能够用
-//ECert 进行充当TCERT 所以需要用ECA.CERT 即ECA.CA 作为根证书进行验证
 //VerifyTCert verify the TCert is valid or not
 func (cm *CAManager) VerifyTCert(tcertPEM string, method string) (bool, error) {
 	// if check TCert flag is false, default return true
@@ -189,7 +186,6 @@ func (cm *CAManager) VerifyTCert(tcertPEM string, method string) (bool, error) {
 		return false, errFailedVerifySign
 	}
 
-	//生成TCERT METHOD
 	if strings.EqualFold("getTCert", method) {
 		ef, _ := primitives.VerifyCert(tcert, cm.eCaCert.x509cert)
 		if ef {
@@ -200,7 +196,6 @@ func (cm *CAManager) VerifyTCert(tcertPEM string, method string) (bool, error) {
 		}
 	}
 
-	//其他METHOD
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		cm.logger.Error(err)
@@ -249,16 +244,8 @@ func (cm *CAManager) VerifyECert(ecertPEM string) (bool, error) {
 	return primitives.VerifyCert(ecertToVerify, cm.eCaCert.x509cert)
 }
 
-/**
-验证签名，验证签名需要有三个参数：
-第一个是携带的数字证书，即tcert,
-第二个是签名，
-第三个是原始数据
-这个方法用来验证签名是否来自数字证书用户
-*/
 //VerifyCertSignature Verify the Signature of Cert
 func (cm *CAManager) VerifyCertSign(certPEM string, msg, sign []byte) (bool, error) {
-	// if checkCertSign == false, return true and nil
 	if !cm.checkCertSign {
 		return true, nil
 	}
@@ -281,7 +268,7 @@ func (cm *CAManager) VerifyCertSign(certPEM string, msg, sign []byte) (bool, err
 
 //VerifyRCert verify the rcert is valid or not
 func (cm *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
-	if cm.checkERCert {
+	if !cm.checkERCert {
 		return true, nil
 	}
 	rcert, err := primitives.ParseCertificate([]byte(rcertPEM))
@@ -295,7 +282,6 @@ func (cm *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
 /**
 getMethods
 */
-
 func (caManager *CAManager) GetECACertByte() []byte {
 	return caManager.eCaCert.certByte
 }
@@ -365,7 +351,7 @@ func ListDir(dirPth string, suffix string) (files []string, err error) {
 		if fi.IsDir() { // 忽略目录
 			continue
 		}
-		if strings.HasSuffix(strings.ToUpper(fi.Name()), suffix) { //匹配文件
+		if strings.HasSuffix(strings.ToUpper(fi.Name()), suffix) {
 			files = append(files, dirPth+PthSep+fi.Name())
 		}
 	}
@@ -381,9 +367,7 @@ func RegisterCert(tcert []byte) error {
 	}
 	certs, err := db.Get([]byte(CertKey))
 	tcertStr := string(tcert)
-	//First to Save CertList
 	if err != nil {
-		//log.Critical("Register TCERT:",tcertStr)
 		regLists := RegisterTcerts{[]string{tcertStr}}
 		lists, err := asn1.Marshal(regLists)
 		if err != nil {
@@ -397,7 +381,6 @@ func RegisterCert(tcert []byte) error {
 		}
 		return nil
 	}
-	//log.Critical("GET CERT LIST FROM DB:",certs)
 	Regs := struct {
 		Tcerts []string
 	}{}
