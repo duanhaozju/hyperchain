@@ -20,8 +20,8 @@ var _ = Describe("PeerManagerImpl", func() {
 	)
 
 	vip := viper.New()
-	vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/configuration/hosts.toml")
-	vip.Set(common.P2P_ADDR, utils.GetProjectPath()+"/configuration/addr.toml")
+	vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/p2p/test/hosts.toml")
+	vip.Set(common.P2P_ADDR, utils.GetProjectPath()+"/p2p/test/addr.toml")
 	vip.Set(common.P2P_RETRY_TIME, "3s")
 	vip.Set(common.P2P_PORT, 50019)
 

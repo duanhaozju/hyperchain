@@ -13,14 +13,14 @@ import (
 
 var _ = Describe("P2PManager", func() {
 	vip := viper.New()
-	vip.SetConfigFile("../configuration/global.toml")
+	vip.SetConfigFile(utils.GetProjectPath()+"/p2p/test/global.toml")
 
 	vip.Set(common.P2P_RETRY_TIME, "3s")
 	vip.Set(common.P2P_PORT, 50019)
-	vip.Set(common.P2P_ADDR, utils.GetProjectPath()+"/configuration/addr.toml")
-	vip.Set(common.P2P_TLS_CA, utils.GetProjectPath()+"/configuration/tls/tlsca.ca")
-	vip.Set(common.P2P_TLS_CERT, utils.GetProjectPath()+"/configuration/tls/tls_peer1.cert")
-	vip.Set(common.P2P_TLS_CERT_PRIV, utils.GetProjectPath()+"/configuration/tls/tls_peer1.priv")
+	vip.Set(common.P2P_ADDR, utils.GetProjectPath()+"/p2p/test/addr.toml")
+	vip.Set(common.P2P_TLS_CA, utils.GetProjectPath()+"/p2p/test/tls/tlsca.ca")
+	vip.Set(common.P2P_TLS_CERT, utils.GetProjectPath()+"/p2p/test/tls/tls_peer1.cert")
+	vip.Set(common.P2P_TLS_CERT_PRIV, utils.GetProjectPath()+"/p2p/test/tls/tls_peer1.priv")
 
 	var (
 		p2pMgr    p2p.P2PManager
@@ -41,7 +41,7 @@ var _ = Describe("P2PManager", func() {
 
 	Describe("Starting up p2p manager", func() {
 		BeforeEach(func() {
-			vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/configuration/notFound.toml")
+			vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/p2p/test/notFound.toml")
 		})
 
 		Context("with a invalid config file", func() {
@@ -59,7 +59,7 @@ var _ = Describe("P2PManager", func() {
 
 	Describe("Starting up p2p manager", func() {
 		BeforeEach(func() {
-			vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/configuration/hosts.toml")
+			vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/p2p/test/hosts.toml")
 		})
 
 		Context("with a valid config file", func() {
@@ -96,7 +96,7 @@ var _ = Describe("P2PManager", func() {
 	Describe("Create a new PeerManager", func() {
 		var peerConfigPath string
 		BeforeEach(func() {
-			vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/configuration/hosts.toml")
+			vip.Set(common.P2P_HOSTS, utils.GetProjectPath()+"/p2p/test/hosts.toml")
 			vip.Set(common.PEER_CONFIG_PATH, utils.GetProjectPath()+"/p2p/test/peerconfig.toml")
 			peerConfigPath = vip.GetString(common.PEER_CONFIG_PATH)
 
