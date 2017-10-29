@@ -55,25 +55,25 @@ algo = "RBFT"
 ############################################################################################################
 [encryption]
 [encryption.ecert]
- eca    = "config/certs/eca.cert"
- ecert  = "config/certs/ecert.cert"
- priv   = "config/certs/ecert.priv"
+ eca    = "test/certs/eca.cert"
+ ecert  = "test/certs/ecert.cert"
+ priv   = "test/certs/ecert.priv"
 
 [encryption.rcert]
   # if you do not have rcert, leave this item blank
- rca    = "config/certs/rca.cert"
- rcert  = "config/certs/rcert.cert"
- priv   = "config/certs/rcert.priv"
+ rca    = "test/certs/rca.cert"
+ rcert  = "test/certs/rcert.cert"
+ priv   = "test/certs/rcert.priv"
 
 [encryption.tcert]
   # Tcert whitelist configuration.
- whiteList = false
- listDir  = "config/certs/tcerts"
+ whiteList = true
+ listDir  = "test/certs/tcerts"
 
 [encryption.check]
  enable     = true  #enable RCert
- sign       = false  #enable Signature
- enableT    = false  #enable TCert
+ sign       = true  #enable Signature
+ enableT    = true  #enable TCert
 
 [encryption.security]
  algo   = "3des"   # Selective symmetric encryption algorithm (pure,3des,aes or sm4)
@@ -164,7 +164,7 @@ max_log_size    = "200mb"  # "mb", "kb"
 ############################################################################################################
 
 [config.path]
-caconfig        = "config/namespace.toml"
+caconfig        = "test/namespace.toml"
 peerconfig      = "config/peerconfig.toml"
 
 #TODO: flow.control.ratelimit configs should move to global.toml finally
