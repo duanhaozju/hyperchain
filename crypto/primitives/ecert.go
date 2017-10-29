@@ -1,5 +1,5 @@
 /**
-author:张珂杰
+author:ZhangKejie
 date:16-12-18
 verify ecert and signature
 */
