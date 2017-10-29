@@ -14,7 +14,7 @@ func GetProjectPath() string {
 	if strings.Contains(gopath, ":") {
 		gopath = strings.Split(gopath, ":")[0]
 	}
-	return gopath + "/src/hyperchain"
+	return gopath + "/src/github.com/hyperchain/hyperchain"
 }
 
 func GetPeerHash(namespace string, id int) string {

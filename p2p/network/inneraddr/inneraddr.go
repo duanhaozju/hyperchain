@@ -53,7 +53,8 @@ func GetInnerAddr(addrFile string) (*InnerAddr, string, error) {
 	return addrs, domain, nil
 }
 
-// Get returns IP address that the domain matches, if not exist return "".
+// Get returns IP address that the domain matches, if not exist returns the
+// first one. If there is without any IP address, return "".
 func (ia *InnerAddr) Get(domain string) string {
 	ia.lock.RLock()
 	defer ia.lock.RUnlock()
@@ -76,7 +77,7 @@ func (ia *InnerAddr) Add(domain, ipaddr string) {
 	ia.addrs[domain] = ipaddr
 }
 
-func (ia *InnerAddr) Del(domain, ipaddr string) {
+func (ia *InnerAddr) Del(domain string) {
 	ia.lock.Lock()
 	defer ia.lock.Unlock()
 	delete(ia.addrs, domain)

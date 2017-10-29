@@ -158,7 +158,6 @@ func (s Server) Greeting(ctx context.Context, msg *pb.Message) (*pb.Message, err
 		retMsg, err := handler.Execute(msg)
 		return retMsg, err
 	}
-	return nil, errors.New(fmt.Sprintf("This message type is not support, %v", msg.MessageType))
 }
 
 // Whisper will execute handler for given message type.
@@ -192,8 +191,6 @@ func (s Server) Whisper(ctx context.Context, msg *pb.Message) (*pb.Message, erro
 		retMsg, err := handler.Execute(msg)
 		return retMsg, err
 	}
-
-	return nil, errors.New(fmt.Sprintf("This message type is not support, %v", msg.MessageType))
 }
 
 // Discuss transfers the the node health information.
