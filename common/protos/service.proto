@@ -30,7 +30,7 @@ enum Type {
     ADMIN = 3;
     RESPONSE = 4;
     EVENT = 5;
-    SYNCREQUEST = 6;
+    SYNC_REQUEST = 6;
 }
 
 enum FROM {

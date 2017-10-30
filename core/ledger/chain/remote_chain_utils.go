@@ -44,7 +44,7 @@ func (chains *remoteMemChains) GetChain(namespace string, checkpoint bool) *memC
         return nil
     }
 	msg := &pb.IMessage{
-		Type:  pb.Type_SYNCREQUEST,
+		Type:  pb.Type_SYNC_REQUEST,
 		From:  pb.FROM_EVENTHUB,
 		Payload: m,
 	}

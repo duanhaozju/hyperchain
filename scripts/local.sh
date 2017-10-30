@@ -59,6 +59,7 @@ f_check_local_env(){
 # kill hyperchain process
 f_kill_process(){
 	pkill hyperchain
+	pkill executor
 }
 
 # clear data
@@ -89,16 +90,13 @@ echo "Rebuild hypercli ..."
 cd ${CLI_PATH} && govendor build
 }
 
-# build executor
+# rebuild executor
 f_rebuild_executor(){
-    echo "Build executor ..."
-    cd ${EXECUTOR_PATH} && govendor build
-    for (( j=1; j<=$MAXPEERNUM; j++ ))
-    do
-        cp ${EXECUTOR_PATH}/executor ${DUMP_PATH}/node${j}
-    done
-    rm ${EXECUTOR_PATH}/executor
-
+    echo "Rebuild executor ..."
+    if [ -s "${DUMP_PATH}/executor" ]; then
+        rm ${DUMP_PATH}/executor
+    fi
+    cd ${EXECUTOR_PATH} && govendor build -ldflags -s -o ${DUMP_PATH}/executor -tags=embed
 }
 
 
@@ -170,6 +168,9 @@ do
     cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
     cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
 
+    # distribute executor
+    cp -rf ${DUMP_PATH}/executor ${DUMP_PATH}/node${j}/
+
     BIN_PATH=${DUMP_PATH}/node${j}/bin
 
     # distribute bin
@@ -194,17 +195,12 @@ f_all_in_one_cmd(){
 
 f_x_in_linux_cmd(){
     gnome-terminal -x bash -c "cd $DUMP_PATH/node${1}/bin && ./start.sh"
-    sleep 3s
     gnome-terminal -x bash -c "cd $DUMP_PATH/node${1} && ./executor"
 }
 
 f_x_in_mac_cmd(){
-
     osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/bin' && ./start.sh"'
-    sleep 3s
-#    cd ${DUMP_PATH}/node${1}/executor && ./executor &
     osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}' && ./executor"'
-
 }
 
 # run process by os type
@@ -341,6 +337,7 @@ fi
 
 if  $REBUILD ; then
     f_rebuild
+    f_rebuild_executor
 fi
 
 if [[ $? != 0 ]]; then
@@ -353,9 +350,6 @@ fi
 
 # distribute files
 f_distribute $MAXPEERNUM
-
-f_rebuild_executor
-
 
 # run hyperchain node
 if ${HYPERJVM}; then

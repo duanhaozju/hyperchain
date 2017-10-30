@@ -217,7 +217,7 @@ func (sc *ServiceClient) listenProcessMsg() {
 				if sc.h == nil {
 					sc.logger.Debugf("No handler to handle message: %v", msg)
 				} else {
-                    if msg.Type == pb.Type_SYNCREQUEST {
+                    if msg.Type == pb.Type_SYNC_REQUEST {
                         e := &event.MemChainEvent{}
                         err := proto.Unmarshal(msg.Payload, e)
                         if err != nil {
