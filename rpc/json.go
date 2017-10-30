@@ -126,7 +126,7 @@ func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common
 	// verfiy tcert
 	verifyTcert, err := cm.VerifyTCert(tcertPem, method)
 	if verifyTcert == false || err != nil {
-		log.Error("Fail to verify tcert!", err)
+		log.Errorf("Fail to verify tcert! %v", err)
 		return &common.UnauthorizedError{}
 	}
 	return nil
