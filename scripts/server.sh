@@ -253,9 +253,10 @@ fs_distribute_the_binary(){
     source ~/.bashrc && \
     cd go/src/hyperchain && \
     govendor build -tags=embed && \
-    mv hyperchain /home/${USERNAME}/ \
+    mv hyperchain /home/${USERNAME}/
+
     cd service/executor && \
-    govendor build -tags=embed && \
+    govendor build -o executor -tags=embed && \
     mv executor /home/${USERNAME}/
 EOF
     scp ${GOPATH}/src/hyperchain/scripts/innerserverlist.txt ${USERNAME}@${PRIMARY}:${HPC_PRI_HYPERCHAIN_HOME}
@@ -365,6 +366,7 @@ EOF
     tar zxvmf node${ni}.tar.gz
     rm -rf node${ni}.tar.gz
     cp ${HPC_OTHER_HYPERCHAIN_DIR}/hyperchain ${HPC_OTHER_HYPERCHAIN_DIR}/node${ni}
+    cp ${HPC_OTHER_HYPERCHAIN_DIR}/executor ${HPC_OTHER_HYPERCHAIN_DIR}/node${ni}
 EOF
     rm -rf node${ni}.tar.gz
     ((ni+=1))
@@ -391,6 +393,8 @@ fs_run_N_terminals_linux(){
     for server_address in ${SERVER_ADDR[@]}; do
         gnome-terminal -x bash -c \
         "ssh ${USERNAME}@$server_address \" export PATH=$PATH:/usr/sbin && cd /home/${USERNAME}/node${ni} && ./hyperchain 2>error.log \""
+        gnome-terminal -x bash -c \
+        "ssh ${USERNAME}@$server_address \" export PATH=$PATH:/usr/sbin && cd /home/${USERNAME}/node${ni} && ./executor 2>executor_error.log \""
         ni=`expr ${ni} + 1`
     done
 }
@@ -398,7 +402,8 @@ fs_run_N_terminals_linux(){
 fs_run_N_terminals_mac(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
-        osascript -e 'tell app "Terminal" to do script "ssh '${USERNAME}'@'${server_address}' \" cd /home/'${USERNAME}'/node'${ni}' && export LD_LIBRARY_PATH=/usr/local/ssl/lib && ./hyperchain --pprof --pport 10091 2>error.log \""'
+        osascript -e 'tell app "Terminal" to do script "ssh '${USERNAME}'@'${server_address}' \" cd /home/'${USERNAME}'/node'${ni}' && export LD_LIBRARY_PATH=/usr/local/ssl/lib && ./hyperchain 2>error.log \""'
+        osascript -e 'tell app "Terminal" to do script "ssh '${USERNAME}'@'${server_address}' \" cd /home/'${USERNAME}'/node'${ni}' && export LD_LIBRARY_PATH=/usr/local/ssl/lib && ./executor 2>executor_error.log \""'
         ni=`expr ${ni} + 1`
     done
 }
@@ -408,6 +413,7 @@ fs_run_one_terminal(){
     ni=1
     for server_address in ${SERVER_ADDR[@]}; do
         ssh -T ${USERNAME}@${server_address} "./hyperchain" &
+        ssh -T ${USERNAME}@${server_address} "./executor" &
         ni=`expr ${ni} + 1`
     done
 }
