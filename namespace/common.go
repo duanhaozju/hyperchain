@@ -105,6 +105,40 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 	}
 }
 
+func (ns *namespaceImpl) GetRemoteApis(namespace string) map[string]*api.API {
+	return map[string]*api.API{
+		"block": {
+			Svcname: "block",
+			Version: "1.5",
+			Service: api.NewPublicBlockAPI(namespace),
+			Public:  true,
+		},
+		"archive": {
+			Svcname: "archive",
+			Version: "1.5",
+			Service: api.NewPublicArchiveAPI(namespace, ns.conf),
+		},
+		"txdb":{
+			Svcname: "txdb",
+			Version: "1,5",
+			Service: api.NewDBTransactionAPI(namespace, ns.conf),
+			Public: true,
+		},
+		"accountdb": {
+			Svcname: "accountdb",
+			Version: "1.5",
+			Service: api.NewPublicAccountExecutorAPI(namespace, ns.conf),
+			Public:  true,
+		},
+		"contractExe": {
+			Svcname: "contractExe",
+			Version: "1.5",
+			Service: api.NewContarctExAPI(namespace, ns.conf),
+			Public:  true,
+		},
+	}
+}
+
 func (ns *namespaceImpl) GetAllApis(namespace string) map[string]*api.API {
 	return map[string]*api.API{
 		"tx": {

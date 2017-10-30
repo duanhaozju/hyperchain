@@ -22,6 +22,7 @@ import (
 	"hyperchain/p2p"
 	"sync"
 	"time"
+	"strings"
 )
 
 // This file defines the Namespace interface, which manages all the
@@ -259,9 +260,10 @@ func (ns *namespaceImpl) init() error {
 	// 8. init JsonRpcProcessor to process incoming requests.
 
 	if ns.conf.GetBool(common.EXECUTOR_EMBEDDED) {
-		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetAllApis(ns.Name()))
+		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetAllApis(ns.Name()), nil, "", 0)
 	}else{
-		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
+		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()), ns.GetRemoteApis(ns.Name()),
+		strings.Split(ns.conf.GetString(common.EXECUTOR_HOST_ADDR),":")[0], ns.conf.GetInt(common.JSON_RPC_PORT_EXECUTOR))
 	}
 
 	ns.status.setState(initialized)

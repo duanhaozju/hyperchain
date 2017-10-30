@@ -3,13 +3,13 @@
 package jsonrpc
 
 import (
-	"crypto/ecdsa"
+	//"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	"hyperchain/common"
-	"hyperchain/crypto/primitives"
+	//"hyperchain/crypto/primitives"
 	"io"
 	"net/http"
 	"reflect"
@@ -95,33 +95,33 @@ func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common
 		return &common.NamespaceNotFound{Name: namespace}
 	}
 
-	cm := ns.GetCAManager()
-	if !cm.IsCheckTCert() {
-		return nil
-	}
+	//cm := ns.GetCAManager()
+	//if !cm.IsCheckTCert() {
+	//	return nil
+	//}
 
-	c.decMu.Lock()
-	defer c.decMu.Unlock()
-
-	// parse certificate
-	tcertPem := common.TransportDecode(c.req.Header.Get("tcert"))
-	tcert, err := primitives.ParseCertificate([]byte(tcertPem))
-	if err != nil {
-		log.Error("fail to parse tcert.", err)
-		return &common.UnauthorizedError{}
-	}
-
-	// verify signature
-	pubKey := tcert.PublicKey.(*(ecdsa.PublicKey))
-	signature := c.req.Header.Get("signature")
-	msg := common.TransportDecode(c.req.Header.Get("msg"))
-	signB := common.Hex2Bytes(signature)
-
-	verifySignature, err := primitives.ECDSAVerifyTransport(pubKey, []byte(msg), signB)
-	if err != nil || !verifySignature {
-		log.Error("Fail to verify Transport Signture!", err)
-		return &common.UnauthorizedError{}
-	}
+	//c.decMu.Lock()
+	//defer c.decMu.Unlock()
+	//
+	//// parse certificate
+	//tcertPem := common.TransportDecode(c.req.Header.Get("tcert"))
+	//tcert, err := primitives.ParseCertificate([]byte(tcertPem))
+	//if err != nil {
+	//	log.Error("fail to parse tcert.", err)
+	//	return &common.UnauthorizedError{}
+	//}
+	//
+	//// verify signature
+	//pubKey := tcert.PublicKey.(*(ecdsa.PublicKey))
+	//signature := c.req.Header.Get("signature")
+	//msg := common.TransportDecode(c.req.Header.Get("msg"))
+	//signB := common.Hex2Bytes(signature)
+	//
+	//verifySignature, err := primitives.ECDSAVerifyTransport(pubKey, []byte(msg), signB)
+	//if err != nil || !verifySignature {
+	//	log.Error("Fail to verify Transport Signture!", err)
+	//	return &common.UnauthorizedError{}
+	//}
 
 	//// verfiy tcert
 	//verifyTcert, err := cm.VerifyTCert(tcertPem, method)

@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	"hyperchain/manager/event"
+	"strings"
 )
 
 type executorService interface {
@@ -167,7 +168,8 @@ func (es *executorServiceImpl) init() error {
 	service.AddHandler(h)
 
 	// 5. add jsonrpc processor
-	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace))
+	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace), es.GetRemoteApis(es.namespace),
+	strings.Split(es.conf.GetString(common.EXECUTOR_HOST_ADDR), ":")[0], es.conf.GetInt(common.JSON_RPC_PORT))
 
 	// 6. initialized status
 	es.status.setState(initialized)
@@ -332,6 +334,46 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Public:  true,
 		},
 		//TODO: implements cert API for module2
+	}
+}
+
+func (es *executorServiceImpl) GetRemoteApis(namespace string) map[string]*hapi.API {
+	return map[string]*hapi.API{
+		"tx": {
+			Svcname: "tx",
+			Version: "1.5",
+			Service: hapi.NewPublicTransactionAPI(namespace, nil, es.conf),
+			Public:  true,
+		},
+		"node": {
+			Svcname: "node",
+			Version: "1.5",
+			Service: hapi.NewPublicNodeAPI(namespace, nil),
+			Public:  true,
+		},
+		"account": {
+			Svcname: "account",
+			Version: "1.5",
+			Service: hapi.NewPublicAccountAPI(namespace, nil, es.conf),
+			Public:  true,
+		},
+		"contract": {
+			Svcname: "contract",
+			Version: "1.5",
+			Service: hapi.NewPublicContractAPI(namespace, nil, es.conf),
+			Public:  true,
+		},
+		"cert": {
+			Svcname: "cert",
+			Version: "1.5",
+			Service: hapi.NewCertAPI(namespace, es.caManager),
+			Public:  true,
+		},
+		"sub": {
+			Svcname: "sub",
+			Version: "1.5",
+			Service: hapi.NewFilterAPI(namespace, nil, es.conf),
+		},
 	}
 }
 

@@ -53,22 +53,15 @@ func main() {
 	})
 }
 
-func (h *HyperExecutor) start() error {
-	if err := h.exeCtl.Start(); err != nil {
-		panic(err)
+func (h *executorGlobal) start() error {
+	//err := h.exeMgr.Start()
+	err := h.admin.Start()
+	if err != nil {
+		return err
 	}
 
-	if err := h.admin.Start(); err != nil {
-		panic(err)
-	}
-
-
-	go func() {
-		err := h.apiServer.Start()
-		if err != nil {
-			panic(err)
-		}
-	}()
+	//h.apiServer.Start()
+	go h.apiServer.Start()
 	return nil
 
 }

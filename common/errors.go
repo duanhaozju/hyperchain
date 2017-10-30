@@ -27,6 +27,11 @@ const (
 	custom_UnauthorizedError int = -32098
 	custom_CertError         int = -32099
 )
+
+const (
+	API_in_Another_Module    int = 301
+)
+
 const (
 	custom_DBNotFoundError int = -32001 - iota
 	custom_OutofBalanceError
@@ -215,3 +220,16 @@ type CertError struct {
 
 func (e *CertError) Code() int     { return custom_CertError }
 func (e *CertError) Error() string { return e.Message }
+
+type APIInAnotherModule struct {
+	Port 	int
+	Ip   	string
+	Message string
+	Service string
+	Method  string
+}
+
+func (e *APIInAnotherModule) Code() int {return API_in_Another_Module}
+func (e *APIInAnotherModule) Error() string {
+	return fmt.Sprintf("%s_%s is served at %s:%d", e.Service, e.Method, e.Ip, e.Port)
+}

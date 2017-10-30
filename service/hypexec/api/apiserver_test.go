@@ -20,6 +20,7 @@ func TestAPIServerImpl_Restart(t *testing.T) {
 	conf.Set(common.ENCRYPTION_CHECK_ENABLE_T, false)
 	conf.Set(common.EXECUTOR_EMBEDDED, true)
 	conf.Set(namespace.NS_CONFIG_DIR_ROOT, "/Users/guowei/go/src/hyperchain/configuration/namespaces")
+	conf.Set(common.JSON_RPC_PORT_EXECUTOR, "9091")
 	ecMgr := manager.GetExecutorMgr(conf, make(chan bool), make(chan bool))
 	ecMgr.Start("global")
 	api := jsonrpc.GetRPCServer(ecMgr, conf, true)
