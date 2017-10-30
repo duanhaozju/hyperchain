@@ -24,9 +24,15 @@ var (
 	dbType    = 0001
 )
 
+var (
+	dbNameBlockchain = "blockchain"
+	dbNameConsensus  = "consensus"
+	dbNameArchive    = "archive"
+)
+
 const (
 	// namespace
-	default_namespace = "global"
+	defaultNamespace = "global"
 
 	// states
 	closed stateDb = iota
@@ -62,23 +68,24 @@ func InitDatabase(conf *common.Config, namespace string) error {
 	logStatus = conf.GetBool("database.leveldb.log_status")
 	logPath = common.GetPath(namespace, conf.GetString("database.leveldb.log_path"))
 
+	dbNameBlockchain = conf.GetString(hcom.DBNAME_BLOCKCHAIN)
+	dbNameConsensus = conf.GetString(hcom.DBNAME_CONSENSUS)
+	dbNameArchive = conf.GetString(hcom.DBNAME_ARCHIVE)
+
 	log := getLogger(namespace)
 	log.Criticalf("init db for namespace %s", namespace)
 
 	dbMgr.dbSync.Lock()
 	defer dbMgr.dbSync.Unlock()
 
-	_, exists := dbMgr.dbMap[getDbNameNew(namespace, hcom.DBNAME_BLOCKCHAIN)]
+	_, exists := dbMgr.dbMap[getDbNameNew(namespace, dbNameBlockchain)]
 	if exists {
 		msg := "Try to init an inited db " + namespace
 		log.Notice(msg)
 		return errors.New(msg)
 	}
 
-	dbnames := []string{
-		hcom.DBNAME_BLOCKCHAIN,
-		hcom.DBNAME_CONSENSUS,
-		hcom.DBNAME_ARCHIVE}
+	dbnames := []string{dbNameBlockchain, dbNameConsensus, dbNameArchive}
 
 	for _, dbname := range dbnames {
 		db, err := NewDatabase(conf, dbname, dbType, namespace)
@@ -102,12 +109,12 @@ func NewDatabase(conf *common.Config, dbname string, dbType int, namespace strin
 	switch dbType {
 	case hcom.LDB_DB:
 		var dbpath string
-		if dbname == hcom.DBNAME_ARCHIVE {
-			dbpath = hcom.DBPATH_ARCHIVE
-		} else if dbname == hcom.DBPATH_BLOCKCHAIN {
-			dbpath = hcom.DBPATH_BLOCKCHAIN
-		} else if dbname == hcom.DBNAME_CONSENSUS {
-			dbpath = hcom.DBPATH_CONSENSUS
+		if dbname == dbNameArchive {
+			dbpath = path.Join(common.GetPath(namespace, conf.GetString(hcom.DBPATH_ARCHIVE)))
+		} else if dbname == dbNameBlockchain {
+			dbpath = path.Join(common.GetPath(namespace, conf.GetString(hcom.DBPATH_BLOCKCHAIN)))
+		} else if dbname == dbNameConsensus {
+			dbpath = path.Join(common.GetPath(namespace, conf.GetString(hcom.DBPATH_CONSENSUS)))
 		} else {
 			dbpath = path.Join(common.GetPath(namespace, conf.GetString(hcom.LEVEL_DB_ROOT_DIR)), dbname)
 		}
@@ -130,9 +137,9 @@ func StopDatabase(namespace string) error {
 	defer dbMgr.dbSync.Unlock()
 
 	dbnames := []string{
-		getDbNameNew(namespace, hcom.DBNAME_BLOCKCHAIN),
-		getDbNameNew(namespace, hcom.DBPATH_CONSENSUS),
-		getDbNameNew(namespace, hcom.DBNAME_ARCHIVE)}
+		getDbNameNew(namespace, dbNameBlockchain),
+		getDbNameNew(namespace, dbNameConsensus),
+		getDbNameNew(namespace, dbNameArchive)}
 
 	for _, dbname := range dbnames {
 		if db, exists := dbMgr.dbMap[dbname]; exists {
@@ -149,13 +156,14 @@ func GetDBDatabase() (db.Database, error) {
 	dbMgr.dbSync.RLock()
 	defer dbMgr.dbSync.RUnlock()
 
-	if dbMgr.dbMap[getDbName(default_namespace)].db == nil {
-		log := getLogger(default_namespace)
+	if dbMgr.dbMap[getDbName(defaultNamespace)].db == nil {
+		log := getLogger(defaultNamespace)
 		msg := "GetDBDatabase() failed because dbMgr[GlobalBlockchain] has not been inited \n"
 		log.Notice(msg)
 		return nil, errors.New(msg)
 	}
-	return dbMgr.dbMap[getDbName(default_namespace)].db, nil
+
+	return dbMgr.dbMap[getDbName(defaultNamespace)].db, nil
 }
 
 // GetDBDatabaseByNamespace gets an ordinary database by namespace.
@@ -262,17 +270,17 @@ func GetLogPath() string {
 
 // getDbName gets ordinary database name by namespace.
 func getDbName(namespace string) string {
-	return namespace + hcom.DBNAME_BLOCKCHAIN
+	return namespace + dbNameBlockchain
 }
 
 // getConsensusDbName gets consensus database name by namespace.
 func getConsensusDbName(namespace string) string {
-	return namespace + hcom.DBNAME_CONSENSUS
+	return namespace + dbNameConsensus
 }
 
 // getArchiveDbName gets archived database name by namespace.
 func getArchiveDbName(namespace string) string {
-	return namespace + hcom.DBNAME_ARCHIVE
+	return namespace + dbNameArchive
 }
 
 // getDbNameNew gets databases' name by namespace and dbname.

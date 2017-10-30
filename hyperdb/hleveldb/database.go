@@ -30,12 +30,8 @@ type LDBDatabase struct {
 // and it returns *LDBDatabase and an error if it exists.
 // the LDBDatabase instance must be closed after using, by calling Close method.
 func NewLDBDataBase(conf *common.Config, filepath string, namespace string) (*LDBDatabase, error) {
-	opt := hcom.GetLdbConfig()
-
+	opt := hcom.GetLdbConfig(conf)
 	db, err := leveldb.OpenFile(filepath, opt)
-	// TODO: unused iterator
-	//iter := db.NewIterator(nil, nil)
-	//iter.Last()
 	return &LDBDatabase{
 		path:      filepath,
 		db:        db,
@@ -70,7 +66,8 @@ func (ldb *LDBDatabase) Put(key []byte, value []byte) error {
 func (ldb *LDBDatabase) Get(key []byte) ([]byte, error) {
 	value, err := ldb.db.Get(key, nil)
 	if err == leveldb.ErrNotFound {
-		err = db.ErrKeyNotFound
+		//err = db.ErrKeyNotFound
+		err = db.DB_NOT_FOUND
 	}
 	return value, err
 }
