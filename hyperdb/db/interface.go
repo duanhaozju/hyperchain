@@ -7,10 +7,10 @@ type Database interface {
 	Get(key []byte) ([]byte, error)
 	Delete(key []byte) error
 	Close()
-	NewBatch() Batch
-	NewIterator(prefix []byte) Iterator
 	MakeSnapshot(string, []string) error
 	Namespace() string
+	NewBatch() Batch
+	NewIterator(prefix []byte) Iterator
 	Scan(begin, end []byte) Iterator
 }
 
@@ -27,6 +27,6 @@ type Iterator interface {
 	Seek(key []byte) bool
 	Next() bool
 	Prev() bool
-	Release()
 	Error() error
+	Release()
 }

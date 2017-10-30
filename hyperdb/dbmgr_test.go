@@ -5,15 +5,17 @@ package hyperdb
 
 import (
 	"fmt"
-	"github.com/hyperchain/hyperchain/common"
-	hcomm "github.com/hyperchain/hyperchain/hyperdb/common"
-	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"os"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/hyperchain/hyperchain/common"
+	hcomm "github.com/hyperchain/hyperchain/hyperdb/common"
 )
 
 var conf *common.Config

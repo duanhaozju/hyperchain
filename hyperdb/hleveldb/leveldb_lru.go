@@ -144,7 +144,7 @@ func (lldb *levelLruDatabase) NewBatch() db.Batch {
 		return nil
 	}
 	return &levelLruBatch{
-		b:           &ldbBatch{db: lldb.leveldb.db, b: new(leveldb.Batch)},
+		b:           &ldbBatch{db: lldb.leveldb.db, bat: new(leveldb.Batch)},
 		cache:       lldb.cache,
 		batchStatus: true,
 		batchMap:    make(map[string][]byte),

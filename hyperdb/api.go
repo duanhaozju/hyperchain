@@ -5,15 +5,17 @@ package hyperdb
 import (
 	"errors"
 	"fmt"
+	"path"
+	"strconv"
+	"sync"
+
+	"github.com/op/go-logging"
+
 	"github.com/hyperchain/hyperchain/common"
 	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/hyperchain/hyperchain/hyperdb/hleveldb"
-	"github.com/hyperchain/hyperchain/hyperdb/sldb"
-	"github.com/op/go-logging"
-	"path"
-	"strconv"
-	"sync"
+	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 )
 
 var (
@@ -24,17 +26,14 @@ var (
 
 const (
 	// namespace
-	blockchain = "blockchain"
-	consensus  = "consensus"
-	archive    = "archive"
-
 	default_namespace = "global"
 
-	// state
+	// states
 	closed stateDb = iota
 	opened
 )
 
+// stateDb represents db state.
 type stateDb int32
 
 type DBInstance struct {
@@ -49,6 +48,7 @@ type DbManager struct {
 
 var dbMgr *DbManager
 
+// init initializes dbMgr here.
 func init() {
 	dbMgr = &DbManager{
 		dbMap:  make(map[string]*DBInstance),
@@ -56,202 +56,232 @@ func init() {
 	}
 }
 
+// InitDatabase initiates databases by a specific namespace
 func InitDatabase(conf *common.Config, namespace string) error {
 	dbType = conf.GetInt(hcom.DB_TYPE)
-
 	logStatus = conf.GetBool("database.leveldb.log_status")
 	logPath = common.GetPath(namespace, conf.GetString("database.leveldb.log_path"))
+
 	log := getLogger(namespace)
 	log.Criticalf("init db for namespace %s", namespace)
+
 	dbMgr.dbSync.Lock()
 	defer dbMgr.dbSync.Unlock()
-	_, ok := dbMgr.dbMap[getDbName(namespace)]
 
-	if ok {
-		log.Notice("Try to init inited db " + namespace)
-		return errors.New("Try to init inited db " + namespace)
+	_, exists := dbMgr.dbMap[getDbNameNew(namespace, hcom.DBNAME_BLOCKCHAIN)]
+	if exists {
+		msg := "Try to init an inited db " + namespace
+		log.Notice(msg)
+		return errors.New(msg)
 	}
 
-	db, err := NewDatabase(conf, "blockchain", dbType, namespace)
-	if err != nil {
-		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-		log.Error(err.Error())
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
+	dbnames := []string{
+		hcom.DBNAME_BLOCKCHAIN,
+		hcom.DBNAME_CONSENSUS,
+		hcom.DBNAME_ARCHIVE}
+
+	for _, dbname := range dbnames {
+		db, err := NewDatabase(conf, dbname, dbType, namespace)
+		if err != nil {
+			msg := fmt.Sprintf("InitDatabase(%v):%v failed because it can't get a new database\n", namespace, dbname)
+			log.Errorf(msg)
+			return err
+		}
+
+		dbMgr.dbMap[getDbNameNew(namespace, dbname)] = &DBInstance{
+			state: opened,
+			db:    db,
+		}
 	}
 
-	archieveDb, err := NewDatabase(conf, "archive", 0001, namespace)
-
-	if err != nil {
-		log.Errorf(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-		log.Error(err.Error())
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-	}
-
-	db1, err1 := NewDatabase(conf, "consensus", 0001, namespace)
-
-	if err1 != nil {
-		log.Notice(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-		return errors.New(fmt.Sprintf("InitDatabase(%v) fail beacause it can't get new database \n", namespace))
-	}
-
-	dbMgr.dbMap[getDbName(namespace)] = &DBInstance{
-		state: opened,
-		db:    db,
-	}
-
-	dbMgr.dbMap[getConsensusDbName(namespace)] = &DBInstance{
-		state: opened,
-		db:    db1,
-	}
-
-	dbMgr.dbMap[getArchiveDbName(namespace)] = &DBInstance{
-		state: opened,
-		db:    archieveDb,
-	}
-
-	return err
-}
-
-//StopDatabase start the namespace by namespace.
-func StartDatabase(conf *common.Config, namespace string) error {
-	return InitDatabase(conf, namespace)
-}
-
-//StopDatabase close the database name by namespace.
-func StopDatabase(namespace string) error {
-	dbMgr.dbSync.Lock()
-	defer dbMgr.dbSync.Unlock()
-	if db, ok := dbMgr.dbMap[getDbName(namespace)]; ok {
-		db.db.Close()
-		delete(dbMgr.dbMap, getDbName(namespace))
-	}
-
-	if db, ok := dbMgr.dbMap[getConsensusDbName(namespace)]; ok {
-		db.db.Close()
-		delete(dbMgr.dbMap, getConsensusDbName(namespace))
-	}
-
-	if db, ok := dbMgr.dbMap[getArchiveDbName(namespace)]; ok {
-		db.db.Close()
-		delete(dbMgr.dbMap, getArchiveDbName(namespace))
-	}
 	return nil
 }
 
-//GetDBDatabase get db database by default namespace
-func GetDBDatabase() (db.Database, error) {
-	dbMgr.dbSync.RLock()
-	defer dbMgr.dbSync.RUnlock()
-	if dbMgr.dbMap[getDbName(default_namespace)].db == nil {
-		log := getLogger(default_namespace)
-		log.Notice("GetDBDatabase() fail beacause dbMgr[GlobalBlockchain] has not been inited \n")
-		return nil, errors.New("GetDBDatabase() fail beacause dbMgr[GlobalBlockchain] has not been inited \n")
-	}
-	return dbMgr.dbMap[getDbName(default_namespace)].db, nil
-}
-
-func GetDBDatabaseByNamespace(namespace string) (db.Database, error) {
-	log := getLogger(namespace)
-	dbMgr.dbSync.RLock()
-	defer dbMgr.dbSync.RUnlock()
-	name := getDbName(namespace)
-	if _, ok := dbMgr.dbMap[name]; !ok {
-		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
-	}
-
-	if dbMgr.dbMap[name].db == nil {
-		log.Notice(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBDatabaseByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
-	}
-	return dbMgr.dbMap[name].db, nil
-}
-
-func GetArchiveDbByNamespace(namespace string) (db.Database, error) {
-	log := getLogger(namespace)
-	dbMgr.dbSync.RLock()
-	defer dbMgr.dbSync.RUnlock()
-	name := getArchiveDbName(namespace)
-	if _, ok := dbMgr.dbMap[name]; !ok {
-		log.Notice(fmt.Sprintf("GetDBArchiveByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBArchiveByNamespace fail beacause dbMgr[%v] has not been inited \n", namespace))
-	}
-
-	if dbMgr.dbMap[name].db == nil {
-		log.Notice(fmt.Sprintf("GetDBArchiveByNamespcae fail beacause dbMgr[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBArchiveByNamespace fail beacause dbMgr[%v] has not been inited \n", namespace))
-	}
-	return dbMgr.dbMap[name].db, nil
-}
-
-func GetDBConsensusByNamespace(namespace string) (db.Database, error) {
-	log := getLogger(namespace)
-	dbMgr.dbSync.RLock()
-	defer dbMgr.dbSync.RUnlock()
-	name := getConsensusDbName(namespace)
-	if _, ok := dbMgr.dbMap[name]; !ok {
-		log.Notice(fmt.Sprintf("GetDBConsensusByNamespace fail beacause dbMgr[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespace fail beacause dbMgr[%v] has not been inited \n", namespace))
-	}
-
-	if dbMgr.dbMap[name].db == nil {
-		log.Notice(fmt.Sprintf("GetDBConsensusByNamespace fail beacause dbMgr[%v] has not been inited \n", namespace))
-		return nil, errors.New(fmt.Sprintf("GetDBConsensusByNamespace fail beacause dbMgr[%v] has not been inited \n", namespace))
-	}
-	return dbMgr.dbMap[name].db, nil
-}
-
-func GetDatabaseHome(conf *common.Config) string {
-	dbType := conf.GetInt(hcom.DB_TYPE)
-	switch dbType {
-	case hcom.LDB_DB:
-		return hleveldb.LDBDataBasePath(conf)
-	case hcom.SUPER_LEVEL_DB:
-		return sldb.SLDBPath(conf)
-	default:
-		return ""
-	}
-}
-
-func GetDatabaseType(conf *common.Config) int {
-	return conf.GetInt(hcom.DB_TYPE)
-}
-
+// NewDatabase returns a new database instance with a dbname, a dbType and a namespace.
 func NewDatabase(conf *common.Config, dbname string, dbType int, namespace string) (db.Database, error) {
 	switch dbType {
 	case hcom.LDB_DB:
-		dbpath := path.Join(common.GetPath(namespace, conf.GetString(hcom.LEVEL_DB_ROOT_DIR)), dbname)
+		var dbpath string
+		if dbname == hcom.DBNAME_ARCHIVE {
+			dbpath = hcom.DBPATH_ARCHIVE
+		} else if dbname == hcom.DBPATH_BLOCKCHAIN {
+			dbpath = hcom.DBPATH_BLOCKCHAIN
+		} else if dbname == hcom.DBNAME_CONSENSUS {
+			dbpath = hcom.DBPATH_CONSENSUS
+		} else {
+			dbpath = path.Join(common.GetPath(namespace, conf.GetString(hcom.LEVEL_DB_ROOT_DIR)), dbname)
+		}
 		return hleveldb.NewLDBDataBase(conf, dbpath, namespace)
-	case hcom.SUPER_LEVEL_DB:
-		return sldb.NewSLDB(conf, dbname, namespace)
+	case hcom.MEMORY_DB:
+		return mdb.NewMemDatabase(namespace)
 	default:
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
 	}
 }
 
+// StartDatabase starts a database by namespace.
+func StartDatabase(conf *common.Config, namespace string) error {
+	return InitDatabase(conf, namespace)
+}
+
+// StopDatabase closes a database by namespace.
+func StopDatabase(namespace string) error {
+	dbMgr.dbSync.Lock()
+	defer dbMgr.dbSync.Unlock()
+
+	dbnames := []string{
+		getDbNameNew(namespace, hcom.DBNAME_BLOCKCHAIN),
+		getDbNameNew(namespace, hcom.DBPATH_CONSENSUS),
+		getDbNameNew(namespace, hcom.DBNAME_ARCHIVE)}
+
+	for _, dbname := range dbnames {
+		if db, exists := dbMgr.dbMap[dbname]; exists {
+			db.db.Close()
+			delete(dbMgr.dbMap, dbname)
+		}
+	}
+
+	return nil
+}
+
+// GetDBDatabase gets an ordinary database by the default namespace.
+func GetDBDatabase() (db.Database, error) {
+	dbMgr.dbSync.RLock()
+	defer dbMgr.dbSync.RUnlock()
+
+	if dbMgr.dbMap[getDbName(default_namespace)].db == nil {
+		log := getLogger(default_namespace)
+		msg := "GetDBDatabase() failed because dbMgr[GlobalBlockchain] has not been inited \n"
+		log.Notice(msg)
+		return nil, errors.New(msg)
+	}
+	return dbMgr.dbMap[getDbName(default_namespace)].db, nil
+}
+
+// GetDBDatabaseByNamespace gets an ordinary database by namespace.
+func GetDBDatabaseByNamespace(namespace string) (db.Database, error) {
+	log := getLogger(namespace)
+
+	dbMgr.dbSync.RLock()
+	defer dbMgr.dbSync.RUnlock()
+
+	name := getDbName(namespace)
+
+	if db, exists := dbMgr.dbMap[name]; db == nil || !exists {
+		msg := fmt.Sprintf("GetDBDatabaseByNamespace failed because dbMgr[%v] has not been inited \n", namespace)
+		log.Notice(msg)
+		return nil, errors.New(msg)
+	}
+
+	return dbMgr.dbMap[name].db, nil
+}
+
+// GetDBConsensusByNamespace gets an consensus database by namespace.
+func GetDBConsensusByNamespace(namespace string) (db.Database, error) {
+	log := getLogger(namespace)
+
+	dbMgr.dbSync.RLock()
+	defer dbMgr.dbSync.RUnlock()
+
+	name := getConsensusDbName(namespace)
+
+	if db, exists := dbMgr.dbMap[name]; db == nil || !exists {
+		msg := fmt.Sprintf("GetDBConsensusByNamespace failed because dbMgr[%v] has not been inited \n", namespace)
+		log.Notice(msg)
+		return nil, errors.New(msg)
+	}
+
+	return dbMgr.dbMap[name].db, nil
+}
+
+// GetArchiveDbByNamespace gets an archived database by namespace.
+func GetArchiveDbByNamespace(namespace string) (db.Database, error) {
+	log := getLogger(namespace)
+
+	dbMgr.dbSync.RLock()
+	defer dbMgr.dbSync.RUnlock()
+
+	name := getArchiveDbName(namespace)
+
+	if db, exists := dbMgr.dbMap[name]; db == nil || !exists {
+		msg := fmt.Sprintf("GetArchiveDbByNamespace failed because dbMgr[%v] has not been inited \n", namespace)
+		log.Notice(msg)
+		return nil, errors.New(msg)
+	}
+
+	return dbMgr.dbMap[name].db, nil
+}
+
+// GetDBDatabaseByNamespaceNew gets a database instance by namespace and dbname.
+func GetDBDatabaseByNamespaceNew(namespace, dbname string) (db.Database, error) {
+	dbMgr.dbSync.RLock()
+	defer dbMgr.dbSync.RUnlock()
+
+	name := getDbNameNew(namespace, dbname)
+
+	if db, exists := dbMgr.dbMap[name]; db == nil || !exists {
+		var msg string
+		log := getLogger(namespace)
+		if db == nil {
+			msg = fmt.Sprintf("GetDBDatabaseByNamespace failed because dbMgr[%v] has not been inited \n", namespace)
+		} else {
+			msg = fmt.Sprintf("GetDBDatabaseByNamespace failed because database %v/%v does not exist\n", namespace, name)
+		}
+		log.Notice(msg)
+		return nil, errors.New(msg)
+	}
+
+	return dbMgr.dbMap[name].db, nil
+}
+
+// GetDatabaseHome returns database's storage root directory.
+func GetDatabaseHome(conf *common.Config) string {
+	dbType := conf.GetInt(hcom.DB_TYPE)
+	switch dbType {
+	case hcom.LDB_DB:
+		return hleveldb.LDBDatabasePath(conf)
+	default:
+		return ""
+	}
+}
+
+// GetDatabaseType returns database type in integer.
+func GetDatabaseType(conf *common.Config) int {
+	return conf.GetInt(hcom.DB_TYPE)
+}
+
+// IfLogStatus is the switch of measurement log.
 func IfLogStatus() bool {
 	return logStatus
 }
 
+// GetLogPath gets the database's log file path.
 func GetLogPath() string {
 	return logPath
 }
 
-//getConsensusDbName get consensus db composite name by namespace.
-func getConsensusDbName(namespace string) string {
-	return namespace + consensus
-}
-
-//getDbName get ordinary db composite name by namespace.
+// getDbName gets ordinary database name by namespace.
 func getDbName(namespace string) string {
-	return namespace + blockchain
+	return namespace + hcom.DBNAME_BLOCKCHAIN
 }
 
-//getDbName get ordinary db composite name by namespace.
+// getConsensusDbName gets consensus database name by namespace.
+func getConsensusDbName(namespace string) string {
+	return namespace + hcom.DBNAME_CONSENSUS
+}
+
+// getArchiveDbName gets archived database name by namespace.
 func getArchiveDbName(namespace string) string {
-	return namespace + archive
+	return namespace + hcom.DBNAME_ARCHIVE
 }
 
+// getDbNameNew gets databases' name by namespace and dbname.
+func getDbNameNew(namespace, dbname string) string {
+	return namespace + dbname
+}
+
+// getLogger gets a Logger by namespace.
 func getLogger(namespace string) *logging.Logger {
+	// common.GetLogger gets a Logger with a specific namespace and a module.
 	return common.GetLogger(namespace, "hyperdb")
 }
