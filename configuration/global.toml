@@ -95,6 +95,7 @@ jvm = true
 ############################################################################################################
 [executor]
     embedded = false # whether executor execute in a standlone mode
+    serverip = "127.0.0.1"
     [executor.host]
        addr = "127.0.0.1:50071"
 

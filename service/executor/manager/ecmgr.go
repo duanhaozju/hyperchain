@@ -5,6 +5,7 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/namespace"
+	er "hyperchain/service/executor/errors"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -57,9 +58,17 @@ type ecManagerImpl struct {
 	restartEm chan bool
 
 	rwLock *sync.RWMutex
+
+	jvmStatus *Status
 }
 
 func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bool) *ecManagerImpl {
+	js := &Status{
+		state: newed,
+		desc:  "newed",
+		lock:  new(sync.RWMutex),
+	}
+
 	em := &ecManagerImpl{
 		services:   make(map[string]executorService),
 		jvmManager: namespace.NewJvmManager(conf),
@@ -69,6 +78,7 @@ func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bo
 		restartEm:  restartEm,
 	}
 	em.rwLock = new(sync.RWMutex)
+	em.jvmStatus = js
 	return em
 }
 
@@ -92,41 +102,52 @@ func (em *ecManagerImpl) Start(namespace string) error {
     em.bloomFilter.Start()
 
 	//start the specify executor service
-	//flag := false
-	for _, d := range dirs {
-		if d.IsDir() {
-			name := d.Name()
-			if strings.Compare(name, namespace) != 0 {
-				continue
+
+	hasConfig := func(dirs []os.FileInfo, namespace string) (bool, string) {
+		for _, d := range dirs {
+			if d.IsDir() {
+				name := d.Name()
+				if strings.Compare(name, namespace) == 0 {
+					return true, name
+				}
+			} else {
+				logger.Errorf("Invalid folder %v", d)
 			}
-			// start each executor service
-			conf, err := em.getConfig(name)
-			service := NewExecutorService(name, conf)
-			err = service.Start()
-			if err != nil {
-				logger.Error(err)
-				return err
-			}
-			em.jvmManager.LedgerProxy().RegisterDB(name, service.executor.FetchStateDb())
-			em.services[name] = service
-            if err := em.bloomFilter.Register(name); err != nil {
-                logger.Error("register bloom filter failed", err.Error())
-                return err
-            }
-			//flag = true
-			break
-		} else {
-			logger.Errorf("Invalid folder %v", d)
 		}
+		logger.Errorf("No config file for namespace %s", namespace)
+		return false, ""
 	}
 
-	if em.conf.GetBool(common.C_JVM_START) == true {
-		if err := em.jvmManager.Start(); err != nil {
+	// start executor service
+	if ok, name := hasConfig(dirs, namespace); ok {
+		if _, ok = em.services[name]; ok {
+			return er.StartNamespaceErr("Namespace %s for executor already exist.", name)
+		}
+		conf, err := em.getConfig(name)
+		service := NewExecutorService(name, conf)
+		err = service.Start()
+		if err != nil {
 			logger.Error(err)
 			return err
 		}
+		em.jvmManager.LedgerProxy().RegisterDB(name, service.executor.FetchStateDb())
+		em.services[name] = service
+	} else {
+		return er.ConfigNotFoundErr("Config not found for namespace %s.", namespace)
 	}
+	logger.Info("Start executor for namespace %s ok.", namespace)
 
+	//start jvm
+	if em.jvmStatus.getState() != running {
+		if em.conf.GetBool(common.C_JVM_START) == true {
+			if err := em.jvmManager.Start(); err != nil {
+				logger.Error(err)
+				return err
+			}
+			em.jvmStatus.setState(running)
+			logger.Info("Start JVM ok.")
+		}
+	}
 	return nil
 }
 
@@ -156,16 +177,23 @@ func (em *ecManagerImpl) getConfig(name string) (*common.Config, error) {
 
 func (em *ecManagerImpl) Stop(namespace string) error {
 	// stop all executor service
-	for ns := range em.services {
-		err := em.services[ns].Stop()
+	if _, ok := em.services[namespace]; ok {
+		err := em.services[namespace].Stop()
 		if err != nil {
 			logger.Error(err)
+			return err
 		}
+		delete(em.services, namespace)
+	} else {
+		return er.StopNamespaceErr("namespace %s is not running", namespace)
 	}
+
 	// stop jvm
-	if err := em.jvmManager.Stop(); err != nil {
-		logger.Errorf("Stop hyperjvm error %v", err)
-		return err
+	if len(em.services) == 0 {
+		if err := em.jvmManager.Stop(); err != nil {
+			logger.Errorf("Stop hyperjvm error %v", err)
+			return err
+		}
 	}
 
 	// close bloom filter

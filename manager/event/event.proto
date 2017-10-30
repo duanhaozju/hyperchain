@@ -77,7 +77,7 @@ message DeleteNamespaceEvent {
 
 message AdminResponseEvent {
     bool Ok = 1;
-    bytes Payload = 2;
+    string msg = 2;
 }
 
 message MemChainEvent {

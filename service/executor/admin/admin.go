@@ -16,6 +16,7 @@ type Administrator struct {
 	adminClient *client.ServiceClient
 	conf        *common.Config
 	logger      *logging.Logger
+	stop        chan struct{}
 }
 
 func NewAdministrator(ecMgr manager.ExecutorManager, conf *common.Config) *Administrator {
@@ -24,14 +25,15 @@ func NewAdministrator(ecMgr manager.ExecutorManager, conf *common.Config) *Admin
 		conf:  conf,
 		//logger: common.GetLogger(common.DEFAULT_LOG, "admin"),
 		logger: logging.MustGetLogger("executorAdmin"),
+		stop:   make(chan struct{}, 2),
 	}
 }
 
 func (admin *Administrator) Start() error {
-	//TODO : wait for "namespace" param delete
+	//client address for mark this admin connect
 	address := admin.conf.GetString(common.EXECUTOR_HOST_ADDR)
 
-	adminClient, err := client.New(admin.conf.GetInt(common.INTERNAL_PORT), "127.0.0.1", client.EXECUTOR, "global")
+	adminClient, err := client.New(admin.conf.GetInt(common.INTERNAL_PORT), admin.conf.GetString(common.EXECUTOR_SERVER_IP), client.EXECUTOR, "")
 	if err != nil {
 		return err
 	}
@@ -59,15 +61,16 @@ func (admin *Administrator) Start() error {
 	h := NewAdminHandler(admin.ecMgr)
 	adminClient.AddHandler(h)
 	admin.adminClient = adminClient
-	go listenSendResponse(h, adminClient)
+	go admin.listenSendResponse(h, adminClient)
 	return nil
 }
 
 func (admin *Administrator) Stop() {
-
+	admin.adminClient.Close()
+	admin.stop <- struct{}{}
 }
 
-func listenSendResponse(e *AdminHandler, adminConnect *client.ServiceClient) {
+func (admin *Administrator) listenSendResponse(e *AdminHandler, adminConnect *client.ServiceClient) {
 	for {
 		select {
 		case ev := <-e.Ch:
@@ -75,14 +78,16 @@ func listenSendResponse(e *AdminHandler, adminConnect *client.ServiceClient) {
 			err := adminConnect.Send(&pb.IMessage{
 				Id:      ev.rspId, //TODO: Fix it
 				Type:    pb.Type_RESPONSE,
-				Ok:      true,
-				Payload: payload, //TODO: refactor payload
+				Ok:      ev.Ok,
+				Payload: payload,
 			})
 			if err != nil {
 				//logger.Errorf("adminclient %s Send message to hyperchain filed", "IP")
 				// check log
 				// TODO : how to deal with the send failed?
 			}
+		case <-admin.stop:
+			return
 		}
 	}
 }

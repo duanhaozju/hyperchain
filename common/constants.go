@@ -22,10 +22,11 @@ const (
 )
 
 const (
-	EXECUTOR_EMBEDDED = "executor.embedded"
-	EXECUTOR_HOST_ADDR  = "executor.host.addr"
-	START_NAMESPACE   = "namespace.start."
-	C_JVM_START       = "hypervm.jvm"
+	EXECUTOR_EMBEDDED  = "executor.embedded"
+	EXECUTOR_SERVER_IP = "executor.serverip"
+	EXECUTOR_HOST_ADDR = "executor.host.addr"
+	START_NAMESPACE    = "namespace.start."
+	C_JVM_START        = "hypervm.jvm"
 )
 
 //constants for logger keys
