@@ -253,7 +253,10 @@ fs_distribute_the_binary(){
     source ~/.bashrc && \
     cd go/src/hyperchain && \
     govendor build -tags=embed && \
-    mv hyperchain /home/${USERNAME}/
+    mv hyperchain /home/${USERNAME}/ \
+    cd service/executor && \
+    govendor build -tags=embed && \
+    mv executor /home/${USERNAME}/
 EOF
     scp ${GOPATH}/src/hyperchain/scripts/innerserverlist.txt ${USERNAME}@${PRIMARY}:${HPC_PRI_HYPERCHAIN_HOME}
 	scp ${HYPERCHAIN_DIR}/scripts/sub_scripts/server_deploy.sh ${USERNAME}@${PRIMARY}:${HPC_PRI_HYPERCHAIN_HOME}

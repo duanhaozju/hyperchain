@@ -7,6 +7,7 @@ import (
 	"hyperchain/hyperdb"
 
 	"github.com/op/go-logging"
+    "hyperchain/common/service/server"
 )
 
 var (
@@ -38,14 +39,17 @@ var (
 )
 
 // InitDBForNamespace inits the database with given namespace
-func InitDBForNamespace(conf *common.Config, namespace string) error {
+func InitDBForNamespace(conf *common.Config, namespace string, is *server.InternalServer) error {
 	err := hyperdb.InitDatabase(conf, namespace)
 	if err != nil {
 		return err
 	}
-    //if conf.GetBool(common.EXECUTOR_EMBEDDED) {
+    if conf.GetBool(common.EXECUTOR_EMBEDDED) {
         InitializeChain(namespace)
-    //}
+    } else {
+        logger(namespace).Criticalf("InitializeRemoteChain")
+        InitializeRemoteChain(is, namespace)
+    }
 	return err
 }
 

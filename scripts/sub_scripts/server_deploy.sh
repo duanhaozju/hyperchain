@@ -27,10 +27,11 @@ done < innerserverlist.txt
 
 scpfile() {
     scp ${HYPERCHAIN_DIR}/hyperchain ${USERNAME}@$1:${HYPERCHAIN_DIR}
+    scp ${HYPERCHAIN_DIR}/executor ${USERNAME}@$1:${HYPERCHAIN_DIR}
 }
 
 for server_address in ${SERVER_ADDR[@]}; do
-    echo "scp hyperchain binary to ${server_address}"
+    echo "scp hyperchain and executor binary to ${server_address}"
     scpfile ${server_address} &
 done
 

@@ -9,7 +9,8 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"hyperchain/common/interface"
+    "hyperchain/core/ledger/bloom"
+    "hyperchain/common/interface"
 )
 
 var logger *logging.Logger
@@ -42,6 +43,11 @@ type ecManagerImpl struct {
 	services map[string]executorService
 
 	jvmManager *namespace.JvmManager
+
+    // bloom filter is the transaction bloom filter, helps to do transaction
+    // duplication checking
+    bloomFilter bloom.TxBloomFilter
+
 	// conf is the global config file of the system, contains global configs
 	// of the node
 	conf *common.Config
@@ -57,6 +63,7 @@ func newExecutorManager(conf *common.Config, stopEm chan bool, restartEm chan bo
 	em := &ecManagerImpl{
 		services:   make(map[string]executorService),
 		jvmManager: namespace.NewJvmManager(conf),
+		bloomFilter: bloom.NewBloomFilterCache(conf),
 		conf:       conf,
 		stopEm:     stopEm,
 		restartEm:  restartEm,
@@ -80,6 +87,10 @@ func (em *ecManagerImpl) Start(namespace string) error {
 	if err != nil {
 		return err
 	}
+
+    // start bloom filter
+    em.bloomFilter.Start()
+
 	//start the specify executor service
 	//flag := false
 	for _, d := range dirs {
@@ -98,6 +109,10 @@ func (em *ecManagerImpl) Start(namespace string) error {
 			}
 			em.jvmManager.LedgerProxy().RegisterDB(name, service.executor.FetchStateDb())
 			em.services[name] = service
+            if err := em.bloomFilter.Register(name); err != nil {
+                logger.Error("register bloom filter failed", err.Error())
+                return err
+            }
 			//flag = true
 			break
 		} else {
@@ -111,6 +126,7 @@ func (em *ecManagerImpl) Start(namespace string) error {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -151,6 +167,10 @@ func (em *ecManagerImpl) Stop(namespace string) error {
 		logger.Errorf("Stop hyperjvm error %v", err)
 		return err
 	}
+
+	// close bloom filter
+	em.bloomFilter.Close()
+
 	return nil
 }
 

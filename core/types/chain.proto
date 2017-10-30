@@ -1,6 +1,12 @@
 syntax = "proto3";
 package types;
 
+message MemChain {
+    Chain data = 1;
+    Chain remoteChan = 2;
+    uint64 txDelta = 3;
+}
+
 message Chain {
 	bytes latestBlockHash = 1;
 	bytes parentBlockHash = 2;

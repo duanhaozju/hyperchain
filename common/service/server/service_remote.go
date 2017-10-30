@@ -41,7 +41,7 @@ func (rsi *remoteServiceImpl) Id() string {
 func (rsi *remoteServiceImpl) Send(event service.ServiceEvent) error {
 	if msg, ok := event.(*pb.IMessage); !ok {
 		return fmt.Errorf("send message type error, %v need pb.IMessage ", event)
-	}else {
+	} else {
 		if rsi.stream == nil {
 			return fmt.Errorf("[%s:%s]stream is empty, wait for this component to reconnect", rsi.namespace, rsi.id)
 		}

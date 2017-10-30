@@ -10,6 +10,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+    "hyperchain/core/ledger/chain"
+    "hyperchain/manager/event"
 )
 
 const (
@@ -202,7 +204,7 @@ func (sc *ServiceClient) listenProcessMsg() {
 			}
 			if msg != nil {
 				sc.msgRecv <- msg
-			}
+            }
 		}
 	}()
 
@@ -213,9 +215,32 @@ func (sc *ServiceClient) listenProcessMsg() {
 			select {
 			case msg := <-sc.msgRecv:
 				if sc.h == nil {
-					sc.logger.Debug("No handler to handle message: %v")
+					sc.logger.Debugf("No handler to handle message: %v", msg)
 				} else {
-					sc.h.Handle(msg)
+                    if msg.Type == pb.Type_SYNC_REQUEST {
+                        e := &event.MemChainEvent{}
+                        err := proto.Unmarshal(msg.Payload, e)
+                        if err != nil {
+                            sc.logger.Criticalf("MemChainEvent unmarshal err: %v", err)
+                        }
+                        go func() {
+                            m:= chain.GetMemChain(e.Namespace, e.Checkpoint)
+                            payload, err := proto.Marshal(m)
+                            if err != nil {
+                                sc.logger.Error(err)
+                                return
+                            }
+                            msg := &pb.IMessage{
+                                Type:  pb.Type_RESPONSE,
+                                From:  pb.FROM_EXECUTOR,
+                                Ok: true,
+                                Payload: payload,
+                            }
+                            sc.client.Send(msg)
+                        }()
+                    } else {
+                        sc.h.Handle(msg)
+                    }
 				}
 			case <-sc.close:
 				return
