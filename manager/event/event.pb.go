@@ -291,9 +291,9 @@ func (m *SyncReplica) GetGenesis() uint64 {
 }
 
 type ChainSyncReqEvent struct {
-	Id              uint64         `protobuf:"varint,1,opt,name=Id" json:"Id,omitempty"`
-	TargetHeight    uint64         `protobuf:"varint,2,opt,name=TargetHeight" json:"TargetHeight,omitempty"`
-	TargetBlockHash []byte         `protobuf:"bytes,3,opt,name=TargetBlockHash,proto3" json:"TargetBlockHash,omitempty"`
+	Id              uint64        `protobuf:"varint,1,opt,name=Id" json:"Id,omitempty"`
+	TargetHeight    uint64        `protobuf:"varint,2,opt,name=TargetHeight" json:"TargetHeight,omitempty"`
+	TargetBlockHash []byte        `protobuf:"bytes,3,opt,name=TargetBlockHash,proto3" json:"TargetBlockHash,omitempty"`
 	Replicas        []SyncReplica `protobuf:"bytes,4,rep,name=Replicas" json:"Replicas,omitempty"`
 }
 
