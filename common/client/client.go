@@ -11,8 +11,7 @@ import (
 	"sync/atomic"
 	"time"
     "hyperchain/core/ledger/chain"
-    "strings"
-    "strconv"
+    "hyperchain/manager/event"
 )
 
 const (
@@ -218,26 +217,24 @@ func (sc *ServiceClient) listenProcessMsg() {
 				if sc.h == nil {
 					sc.logger.Debugf("No handler to handle message: %v", msg)
 				} else {
-                    if msg.Type == pb.Type_RESPONSE {
-                        p := strings.Split(string(msg.Payload), ",")
-                        ns := p[0]
-                        checkpoint, err := strconv.ParseBool(p[1])
-
+                    if msg.Type == pb.Type_SYNCREQUEST {
+                        e := &event.MemChainEvent{}
+                        err := proto.Unmarshal(msg.Payload, e)
                         if err != nil {
-                            sc.logger.Criticalf("checkpoint ParseBool err: %v", err)
+                            sc.logger.Criticalf("MemChainEvent unmarshal err: %v", err)
                         }
                         go func() {
-                            m:= chain.GetMemChain(ns, checkpoint)
+                            m:= chain.GetMemChain(e.Namespace, e.Checkpoint)
                             payload, err := proto.Marshal(m)
                             if err != nil {
-                            sc.logger.Error(err)
-                            return
+                                sc.logger.Error(err)
+                                return
                             }
                             msg := &pb.IMessage{
-                            Type:  pb.Type_RESPONSE,
-                            From:  pb.FROM_EXECUTOR,
-                            Ok: true,
-                            Payload: payload,
+                                Type:  pb.Type_RESPONSE,
+                                From:  pb.FROM_EXECUTOR,
+                                Ok: true,
+                                Payload: payload,
                             }
                             sc.client.Send(msg)
                         }()

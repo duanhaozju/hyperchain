@@ -30,6 +30,7 @@ enum Type {
     ADMIN = 3;
     RESPONSE = 4;
     EVENT = 5;
+    SYNCREQUEST = 6;
 }
 
 enum FROM {
@@ -42,18 +43,19 @@ enum FROM {
 }
 
 enum Event {
-    //1.Admin event
+    // 1.Admin event
     AddNamespaceEvent = 0;
     DeleteNamespaceEvent = 1;
     AdminResponseEvent = 2;
 
-    //2.Executor event
+    // 2.Executor event
     VCResetEvent = 3;
     ValidationEvent = 4;
     CommitEvent = 5;
     ChainSyncReqEvent = 6;
     ExecutorToP2PEvent = 7;
     ExecutorToConsensusEvent = 8;
+
     SnapshotEvent = 9;
     DeleteSnapshotEvent = 10;
     ArchiveEvent = 11;
@@ -68,4 +70,6 @@ enum Event {
     ReceiveWsHandshakeEvent = 18;
     ReceiveWsAckEvent = 19;
 
+    // 4.Miscellaneous event
+    MemChainEvent = 20;
 }

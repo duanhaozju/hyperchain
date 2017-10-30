@@ -7,7 +7,7 @@ import (
 	"hyperchain/common/service/server"
 	"hyperchain/core/types"
 	"sync"
-    "strconv"
+    "hyperchain/manager/event"
 )
 
 type iChain interface {
@@ -34,10 +34,19 @@ func (chains *remoteMemChains) AddChain(namespace string, chain *memChain) error
 func (chains *remoteMemChains) GetChain(namespace string, checkpoint bool) *memChain {
 	chains.lock.RLock()
 	defer chains.lock.RUnlock()
+
+	e := &event.MemChainEvent{
+	    Namespace: namespace,
+	    Checkpoint: checkpoint,
+    }
+    m, err := proto.Marshal(e)
+    if err != nil {
+        return nil
+    }
 	msg := &pb.IMessage{
-		Type:  pb.Type_RESPONSE,
+		Type:  pb.Type_SYNCREQUEST,
 		From:  pb.FROM_EVENTHUB,
-		Payload: []byte(namespace + "," + strconv.FormatBool(checkpoint)),
+		Payload: m,
 	}
 	s := chains.is.ServerRegistry().Namespace(namespace).Service(service.EXECUTOR)
 	s.Send(msg)

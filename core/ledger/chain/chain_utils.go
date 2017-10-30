@@ -18,7 +18,6 @@ type memChain struct {
 	data    types.Chain      // Chain
 	lock    sync.RWMutex     // Lock of chain
 	cpChan  chan types.Chain // Will be written when data.Height reach check point
-	remoteChan types.Chain
 	txDelta uint64           // Transaction delta of a memChain
 }
 

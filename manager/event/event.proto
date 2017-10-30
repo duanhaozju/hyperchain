@@ -75,9 +75,14 @@ message DeleteNamespaceEvent {
     string namespace  = 1;
 }
 
-message AdminResponseEvent{
+message AdminResponseEvent {
     bool Ok = 1;
     bytes Payload = 2;
+}
+
+message MemChainEvent {
+    string namespace = 1;
+    bool checkpoint = 2;
 }
 
 message DeleteSnapEvent{
