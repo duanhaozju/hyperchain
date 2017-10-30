@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/terasum/viper"
+	"time"
 )
 
 var _ = Describe("PeerManagerImpl", func() {
@@ -25,15 +26,12 @@ var _ = Describe("PeerManagerImpl", func() {
 	vip.Set(common.P2P_PORT, 50019)
 
 	Describe("creating a new PeerManager instance", func() {
-
-		BeforeEach(func() {
-			p2pMgr, p2pMgrErr = GetP2PManager(vip)
-			Expect(p2pMgrErr).To(BeNil())
-			Expect(p2pMgr).NotTo(BeNil())
-		})
-
 		Context("with a correct config file", func() {
-			It("should return a correct instance", func() {
+			It("should create successfully", func() {
+				p2pMgr, p2pMgrErr = GetP2PManager(vip)
+				Expect(p2pMgrErr).To(BeNil())
+				Expect(p2pMgr).NotTo(BeNil())
+
 				ev := new(event.TypeMux)
 				delFlag := make(chan bool)
 
@@ -44,49 +42,38 @@ var _ = Describe("PeerManagerImpl", func() {
 				Expect(peerMgrErr).To(BeNil())
 				Expect(peerMgr).NotTo(BeNil())
 			})
-
-		})
-	})
-
-	Describe("starting to testing PeerManager", func() {
-
-		BeforeEach(func() {
-			By("preparing P2PManager")
-			if p2pMgr == nil {
-				p2pMgr, p2pMgrErr = GetP2PManager(vip)
-				Expect(p2pMgrErr).To(BeNil())
-				Expect(p2pMgr).NotTo(BeNil())
-				p2pMgr.Start()
-			}
-
-			By("preparing PeerManager")
-			if peerMgr == nil {
-				ev := new(event.TypeMux)
-				delFlag := make(chan bool)
-
-				vip.Set(common.PEER_CONFIG_PATH, utils.GetProjectPath()+"/p2p/test/peerconfig.toml")
-				peerConfigPath := vip.GetString(common.PEER_CONFIG_PATH)
-
-				peerMgr, peerMgrErr = GetPeerManager("", peerConfigPath, ev, delFlag)
-				Expect(peerMgrErr).To(BeNil())
-				Expect(peerMgr).NotTo(BeNil())
-			}
 		})
 
-		AfterEach(func() {
-			if peerMgr != nil {
-				peerMgr.Stop()
-			}
-			if p2pMgr != nil {
-				p2pMgr.Stop()
-				ClearP2PManager()
-			}
-		})
-
-		Context("staring up PeerManager", func() {
-			It("should start up PeerManager successfully", func() {
+		Context("to start PeerManager", func() {
+			It("should start successfully", func() {
 				err := peerMgr.Start()
 				Expect(err).To(BeNil())
+				time.Sleep(time.Second * 5)
+			})
+		})
+
+		Context("to send message", func() {
+			It("should send successfully", func() {
+				peerMgr.SendMsg([]byte("hello"), []uint64{1})
+				time.Sleep(time.Second * 3)
+			})
+		})
+
+		Context("to broadcast message", func() {
+			It("should broadcat successfully", func() {
+				peerMgr.Broadcast([]byte("hello"))
+			})
+		})
+
+		Context("to stop PeerManager", func() {
+			It("should stop successfully", func() {
+				if peerMgr != nil {
+					peerMgr.Stop()
+				}
+				if p2pMgr != nil {
+					p2pMgr.Stop()
+					ClearP2PManager()
+				}
 			})
 		})
 	})

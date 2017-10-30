@@ -284,23 +284,3 @@ func (pool *PeersPool) Serialize() ([]byte, error) {
 	b, e := json.Marshal(pools)
 	return b, e
 }
-
-func PeerPoolUnmarshal(raw []byte) ([]string, error) {
-	pools := &struct {
-		Routers []string `json:"routers"`
-	}{}
-	e := json.Unmarshal(raw, pools)
-	if e != nil {
-		return nil, e
-	}
-	hostnames := make([]string, 0)
-	for _, peers := range pools.Routers {
-		h, _, _, e := PeerDeSerialize([]byte(peers))
-		if e != nil {
-			fmt.Errorf("cannot unmarsal peer,%s", e.Error())
-			continue
-		}
-		hostnames = append(hostnames, h)
-	}
-	return hostnames, e
-}

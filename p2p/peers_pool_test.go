@@ -123,5 +123,84 @@ var _ = Describe("PeersPool", func() {
 				})
 			})
 		})
+
+		Describe("adding a NVP peer", func() {
+			var (
+				peer *Peer
+				err  error
+			)
+
+			It("should add successfully", func() {
+				peer, err = NewPeer("", "node5", 5, info.NewInfo(5, "node5", ""),
+					nil, nil, nil)
+				Expect(err).To(BeNil())
+				Expect(peer).NotTo(BeNil())
+				peer.info.IsVP = false
+
+				err := peersPool.AddNVPPeer(peer.info.Hash, peer)
+				Expect(err).To(BeNil())
+			})
+
+			Describe("getting NVP peer by hash", func(){
+				It("should get successfully", func() {
+					p := peersPool.GetNVPByHash(peer.info.Hash)
+					Expect(p).NotTo(BeNil())
+				})
+			})
+
+			Describe("getting NVP peer by hostname", func(){
+				It("should get successfully", func() {
+					p, isExist := peersPool.GetNVPByHostname(peer.hostname)
+					Expect(p).NotTo(BeNil())
+					Expect(isExist).Should(BeTrue())
+				})
+			})
+
+			Describe("getting NVP peers count", func(){
+				It("should get successfully", func() {
+					count := peersPool.GetNVPNum()
+					Expect(count).Should(Equal(1))
+				})
+			})
+
+			Describe("deleting NVP peer by hash", func(){
+				It("should delete successfully", func() {
+					err := peersPool.DeleteNVPPeer(peer.info.Hash)
+					Expect(err).To(BeNil())
+				})
+			})
+		})
+
+		Describe("trying to delete peer", func() {
+			It("should return no-error", func() {
+				peer1, err := NewPeer("", "node1", 1, info.NewInfo(1, "node1", ""),
+					nil, nil, nil)
+				Expect(err).To(BeNil())
+				Expect(peer1).NotTo(BeNil())
+				err = peersPool.AddVPPeer(1, peer1)
+				Expect(err).To(BeNil())
+
+				peer2, err := NewPeer("", "node2", 2, info.NewInfo(2, "node2", ""),
+					nil, nil, nil)
+				Expect(err).To(BeNil())
+				Expect(peer2).NotTo(BeNil())
+				err = peersPool.AddVPPeer(2, peer2)
+				Expect(err).To(BeNil())
+
+				routerHash, newId, deleteId, err := peersPool.TryDelete(peer1.info.Hash, peer2.info.Hash)
+				Expect(routerHash).NotTo(BeNil())
+				Expect(newId).Should(Equal(uint64(1)))
+				Expect(deleteId).Should(Equal(uint64(2)))
+				Expect(err).To(BeNil())
+			})
+		})
+
+		Describe("serialize the peer pool", func() {
+			It("should serialize successfully", func() {
+				b, err := peersPool.Serialize()
+				Expect(b).NotTo(BeNil())
+				Expect(err).To(BeNil())
+			})
+		})
 	})
 })
