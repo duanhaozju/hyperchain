@@ -368,6 +368,7 @@ func (registry *SnapshotRegistry) compress(filterId string) (error, int64) {
 	if err != nil {
 		return err, 0
 	}
+	defer fd.Close()
 	stat, err := fd.Stat()
 	if err != nil {
 		return err, 0
