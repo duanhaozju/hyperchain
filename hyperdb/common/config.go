@@ -13,28 +13,35 @@ const (
 	LEVEL_DB_ROOT_DIR = "database.leveldb.root_dir"
 	DB_TYPE           = "database.type"
 
-	// database names
-	DBNAME_ARCHIVE    = "database.dbname.archive"
-	DBNAME_BLOCKCHAIN = "database.dbname.blockchain"
-	DBNAME_CONSENSUS  = "database.dbname.consensus"
-
-	// database storage directories
-	DBPATH_ARCHIVE    = "database.dbpath.archive"
-	DBPATH_BLOCKCHAIN = "database.dbpath.blockchain"
-	DBPATH_CONSENSUS  = "database.dbpath.consensus"
-
 	// database types
 	LDB_DB         = 0001
-	SUPER_LEVEL_DB = 0010
-	MEMORY_DB      = 0011
+	MEMORY_DB      = 0010
 )
 
 const (
-	LdbBlockCacheCapacity     = "database.leveldb.BlockCacheCapacity"
-	LdbBlockSize              = "database.leveldb.BlockSize"
-	LdbWriteBuffer            = "database.leveldb.WriteBuffer"
-	LdbWriteL0PauseTrigger    = "database.leveldb.WriteL0PauseTrigger"
-	LdbWriteL0SlowdownTrigger = "database.leveldb.WriteL0SlowdownTrigger"
+	// database indexes
+	DBINDEX_BLOCKCHAIN int = iota
+	DBINDEX_CONSENSUS
+	DBINDEX_ARCHIVE
+	DBINDEX_MAX
+
+	// database names
+	DBNAME_BLOCKCHAIN = "blockchain"
+	DBNAME_CONSENSUS  = "consensus"
+	DBNAME_ARCHIVE    = "archive"
+
+	// database storage directories
+	DBPATH_BLOCKCHAIN = "database.dbpath.blockchain"
+	DBPATH_CONSENSUS  = "database.dbpath.consensus"
+	DBPATH_ARCHIVE    = "database.dbpath.archive"
+)
+
+const (
+	LdbBlockCacheCapacity     = "database.leveldb.options.block_cache_capacity"
+	LdbBlockSize              = "database.leveldb.options.block_size"
+	LdbWriteBuffer            = "database.leveldb.options.write_buffer"
+	LdbWriteL0PauseTrigger    = "database.leveldb.options.write_l0_pause_trigger"
+	LdbWriteL0SlowdownTrigger = "database.leveldb.options.write_l0_slowdown_trigger"
 )
 
 func GetLdbDefaultConfig() *opt.Options {

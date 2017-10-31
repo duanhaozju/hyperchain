@@ -5,10 +5,11 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	res "github.com/hyperchain/hyperchain/core/executor/restore"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 )
 
 func restore(conf *common.Config, sid string, namespace string) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		fmt.Println("[RESTORE] init db failed.")
 		fmt.Println("[RESTORE] detail reason: ", err.Error())

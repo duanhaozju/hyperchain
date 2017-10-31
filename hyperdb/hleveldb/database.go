@@ -61,12 +61,10 @@ func (ldb *LDBDatabase) Put(key []byte, value []byte) error {
 	return ldb.db.Put(key, value, nil)
 }
 
-// Get gets a key's value from the database,
-// it returns ErrKeyNotFound if the key does not exist.
+// Get gets a key's value from the database.
 func (ldb *LDBDatabase) Get(key []byte) ([]byte, error) {
 	value, err := ldb.db.Get(key, nil)
 	if err == leveldb.ErrNotFound {
-		//err = db.ErrKeyNotFound
 		err = db.DB_NOT_FOUND
 	}
 	return value, err

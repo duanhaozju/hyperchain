@@ -19,15 +19,9 @@ import (
 )
 
 var (
-	logPath   = ""
-	logStatus = false
-	dbType    = 0001
-)
-
-var (
-	dbNameBlockchain = "blockchain"
-	dbNameConsensus  = "consensus"
-	dbNameArchive    = "archive"
+	logPath           = ""
+	measurementEnable = false
+	dbType            = 0001
 )
 
 const (
@@ -65,12 +59,8 @@ func init() {
 // InitDatabase initiates databases by a specific namespace
 func InitDatabase(conf *common.Config, namespace string) error {
 	dbType = conf.GetInt(hcom.DB_TYPE)
-	logStatus = conf.GetBool("database.leveldb.log_status")
+	measurementEnable = conf.GetBool("database.leveldb.measurement_enable")
 	logPath = common.GetPath(namespace, conf.GetString("database.leveldb.log_path"))
-
-	dbNameBlockchain = conf.GetString(hcom.DBNAME_BLOCKCHAIN)
-	dbNameConsensus = conf.GetString(hcom.DBNAME_CONSENSUS)
-	dbNameArchive = conf.GetString(hcom.DBNAME_ARCHIVE)
 
 	log := getLogger(namespace)
 	log.Criticalf("init db for namespace %s", namespace)
@@ -78,16 +68,16 @@ func InitDatabase(conf *common.Config, namespace string) error {
 	dbMgr.dbSync.Lock()
 	defer dbMgr.dbSync.Unlock()
 
-	_, exists := dbMgr.dbMap[getDbNameNew(namespace, dbNameBlockchain)]
+	name := getDbNameByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
+	_, exists := dbMgr.dbMap[name]
 	if exists {
 		msg := "Try to init an inited db " + namespace
 		log.Notice(msg)
 		return errors.New(msg)
 	}
 
-	dbnames := []string{dbNameBlockchain, dbNameConsensus, dbNameArchive}
-
-	for _, dbname := range dbnames {
+	for idx := 0; idx < hcom.DBINDEX_MAX; idx++ {
+		dbname := getDbName(idx)
 		db, err := NewDatabase(conf, dbname, dbType, namespace)
 		if err != nil {
 			msg := fmt.Sprintf("InitDatabase(%v):%v failed because it can't get a new database\n", namespace, dbname)
@@ -95,7 +85,8 @@ func InitDatabase(conf *common.Config, namespace string) error {
 			return err
 		}
 
-		dbMgr.dbMap[getDbNameNew(namespace, dbname)] = &DBInstance{
+		name := getDbNameByNamespace(namespace, dbname)
+		dbMgr.dbMap[name] = &DBInstance{
 			state: opened,
 			db:    db,
 		}
@@ -108,21 +99,25 @@ func InitDatabase(conf *common.Config, namespace string) error {
 func NewDatabase(conf *common.Config, dbname string, dbType int, namespace string) (db.Database, error) {
 	switch dbType {
 	case hcom.LDB_DB:
-		var dbpath string
-		if dbname == dbNameArchive {
-			dbpath = path.Join(common.GetPath(namespace, conf.GetString(hcom.DBPATH_ARCHIVE)))
-		} else if dbname == dbNameBlockchain {
-			dbpath = path.Join(common.GetPath(namespace, conf.GetString(hcom.DBPATH_BLOCKCHAIN)))
-		} else if dbname == dbNameConsensus {
-			dbpath = path.Join(common.GetPath(namespace, conf.GetString(hcom.DBPATH_CONSENSUS)))
-		} else {
-			dbpath = path.Join(common.GetPath(namespace, conf.GetString(hcom.LEVEL_DB_ROOT_DIR)), dbname)
-		}
+		dbpath := getDbPath(conf, namespace, dbname)
 		return hleveldb.NewLDBDataBase(conf, dbpath, namespace)
 	case hcom.MEMORY_DB:
 		return mdb.NewMemDatabase(namespace)
 	default:
 		return nil, errors.New("Wrong dbType:" + strconv.Itoa(dbType))
+	}
+}
+
+func getDbPath(conf *common.Config, namespace, dbname string) string {
+	switch dbname {
+	case hcom.DBNAME_BLOCKCHAIN:
+		return path.Join(common.GetPath(namespace, conf.GetString(hcom.DBPATH_BLOCKCHAIN)))
+	case hcom.DBNAME_CONSENSUS:
+		return path.Join(common.GetPath(namespace, conf.GetString(hcom.DBPATH_CONSENSUS)))
+	case hcom.DBNAME_ARCHIVE:
+		return path.Join(common.GetPath(namespace, conf.GetString(hcom.DBPATH_ARCHIVE)))
+	default:
+		return path.Join(common.GetPath(namespace, conf.GetString(hcom.LEVEL_DB_ROOT_DIR)), dbname)
 	}
 }
 
@@ -136,15 +131,12 @@ func StopDatabase(namespace string) error {
 	dbMgr.dbSync.Lock()
 	defer dbMgr.dbSync.Unlock()
 
-	dbnames := []string{
-		getDbNameNew(namespace, dbNameBlockchain),
-		getDbNameNew(namespace, dbNameConsensus),
-		getDbNameNew(namespace, dbNameArchive)}
-
-	for _, dbname := range dbnames {
-		if db, exists := dbMgr.dbMap[dbname]; exists {
+	for idx := 0; idx < hcom.DBINDEX_MAX; idx++ {
+		dbname := getDbName(idx)
+		name := getDbNameByNamespace(namespace, dbname)
+		if db, exists := dbMgr.dbMap[name]; exists {
 			db.db.Close()
-			delete(dbMgr.dbMap, dbname)
+			delete(dbMgr.dbMap, name)
 		}
 	}
 
@@ -156,76 +148,24 @@ func GetDBDatabase() (db.Database, error) {
 	dbMgr.dbSync.RLock()
 	defer dbMgr.dbSync.RUnlock()
 
-	if dbMgr.dbMap[getDbName(defaultNamespace)].db == nil {
+	name := getDbNameByNamespace(defaultNamespace, hcom.DBNAME_BLOCKCHAIN)
+
+	if dbMgr.dbMap[name].db == nil {
 		log := getLogger(defaultNamespace)
 		msg := "GetDBDatabase() failed because dbMgr[GlobalBlockchain] has not been inited \n"
 		log.Notice(msg)
 		return nil, errors.New(msg)
 	}
 
-	return dbMgr.dbMap[getDbName(defaultNamespace)].db, nil
-}
-
-// GetDBDatabaseByNamespace gets an ordinary database by namespace.
-func GetDBDatabaseByNamespace(namespace string) (db.Database, error) {
-	log := getLogger(namespace)
-
-	dbMgr.dbSync.RLock()
-	defer dbMgr.dbSync.RUnlock()
-
-	name := getDbName(namespace)
-
-	if db, exists := dbMgr.dbMap[name]; db == nil || !exists {
-		msg := fmt.Sprintf("GetDBDatabaseByNamespace failed because dbMgr[%v] has not been inited \n", namespace)
-		log.Notice(msg)
-		return nil, errors.New(msg)
-	}
-
 	return dbMgr.dbMap[name].db, nil
 }
 
-// GetDBConsensusByNamespace gets an consensus database by namespace.
-func GetDBConsensusByNamespace(namespace string) (db.Database, error) {
-	log := getLogger(namespace)
-
+// GetDBDatabaseByNamespace gets a database instance by namespace and dbname.
+func GetDBDatabaseByNamespace(namespace, dbname string) (db.Database, error) {
 	dbMgr.dbSync.RLock()
 	defer dbMgr.dbSync.RUnlock()
 
-	name := getConsensusDbName(namespace)
-
-	if db, exists := dbMgr.dbMap[name]; db == nil || !exists {
-		msg := fmt.Sprintf("GetDBConsensusByNamespace failed because dbMgr[%v] has not been inited \n", namespace)
-		log.Notice(msg)
-		return nil, errors.New(msg)
-	}
-
-	return dbMgr.dbMap[name].db, nil
-}
-
-// GetArchiveDbByNamespace gets an archived database by namespace.
-func GetArchiveDbByNamespace(namespace string) (db.Database, error) {
-	log := getLogger(namespace)
-
-	dbMgr.dbSync.RLock()
-	defer dbMgr.dbSync.RUnlock()
-
-	name := getArchiveDbName(namespace)
-
-	if db, exists := dbMgr.dbMap[name]; db == nil || !exists {
-		msg := fmt.Sprintf("GetArchiveDbByNamespace failed because dbMgr[%v] has not been inited \n", namespace)
-		log.Notice(msg)
-		return nil, errors.New(msg)
-	}
-
-	return dbMgr.dbMap[name].db, nil
-}
-
-// GetDBDatabaseByNamespaceNew gets a database instance by namespace and dbname.
-func GetDBDatabaseByNamespaceNew(namespace, dbname string) (db.Database, error) {
-	dbMgr.dbSync.RLock()
-	defer dbMgr.dbSync.RUnlock()
-
-	name := getDbNameNew(namespace, dbname)
+	name := getDbNameByNamespace(namespace, dbname)
 
 	if db, exists := dbMgr.dbMap[name]; db == nil || !exists {
 		var msg string
@@ -260,7 +200,7 @@ func GetDatabaseType(conf *common.Config) int {
 
 // IfLogStatus is the switch of measurement log.
 func IfLogStatus() bool {
-	return logStatus
+	return measurementEnable
 }
 
 // GetLogPath gets the database's log file path.
@@ -268,23 +208,22 @@ func GetLogPath() string {
 	return logPath
 }
 
-// getDbName gets ordinary database name by namespace.
-func getDbName(namespace string) string {
-	return namespace + dbNameBlockchain
+// getDbName returns dbname with its corresponding index.
+func getDbName(dbindex int) string {
+	switch dbindex {
+	case hcom.DBINDEX_BLOCKCHAIN:
+		return hcom.DBNAME_BLOCKCHAIN
+	case hcom.DBINDEX_CONSENSUS:
+		return hcom.DBNAME_CONSENSUS
+	case hcom.DBINDEX_ARCHIVE:
+		return hcom.DBNAME_ARCHIVE
+	default:
+		return "default"
+	}
 }
 
-// getConsensusDbName gets consensus database name by namespace.
-func getConsensusDbName(namespace string) string {
-	return namespace + dbNameConsensus
-}
-
-// getArchiveDbName gets archived database name by namespace.
-func getArchiveDbName(namespace string) string {
-	return namespace + dbNameArchive
-}
-
-// getDbNameNew gets databases' name by namespace and dbname.
-func getDbNameNew(namespace, dbname string) string {
+// getDbNameByNamespace returns a dbname in a specific namespace.
+func getDbNameByNamespace(namespace, dbname string) string {
 	return namespace + dbname
 }
 

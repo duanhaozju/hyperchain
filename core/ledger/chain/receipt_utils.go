@@ -18,6 +18,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 
 	"github.com/golang/protobuf/proto"
@@ -25,7 +26,7 @@ import (
 
 // GetReceipt gets the receipt(web format) with given txHash.
 func GetReceipt(namespace string, txHash common.Hash) *types.ReceiptTrans {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil
 	}
@@ -38,7 +39,7 @@ func GetReceipt(namespace string, txHash common.Hash) *types.ReceiptTrans {
 
 // GetReceipt gets the receipt with given txHash.
 func GetRawReceipt(namespace string, txHash common.Hash) *types.Receipt {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil
 	}

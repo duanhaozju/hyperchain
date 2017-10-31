@@ -10,11 +10,12 @@ import (
 	"github.com/hyperchain/hyperchain/consensus/txpool"
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/hyperchain/hyperchain/manager/protos"
 
-	"github.com/golang/protobuf/proto"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 )
 
 // Package rbft implement the rbft algorithm
@@ -90,7 +91,7 @@ func (rbft *rbftImpl) Start() error {
 
 	var err error
 
-	db, err := hyperdb.GetDBConsensusByNamespace(rbft.namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(rbft.namespace, hcom.DBNAME_CONSENSUS)
 	if err != nil {
 		rbft.logger.Errorf("get db by namespace: %s failed.", rbft.namespace)
 		return fmt.Errorf("get db by namespace: %s failed", rbft.namespace)

@@ -22,6 +22,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 
 	"github.com/golang/protobuf/proto"
@@ -72,7 +73,7 @@ func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool, ext
 
 // GetBlock retrieves block with block hash.
 func GetBlock(namespace string, key []byte) (*types.Block, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +210,7 @@ func encapsulateBlock(block *types.Block, extra ...interface{}) ([]byte, error) 
 
 // getBlockHash retrieves block hash with related block number.
 func getBlockHash(namespace string, blockNumber uint64) ([]byte, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +234,7 @@ func getBlockByNumberFunc(db db.Database, blockNumber uint64) (*types.Block, err
 
 // deleteBlock deletes a block via hash.
 func deleteBlock(namespace string, batch db.Batch, key []byte, flush, sync bool) error {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return err
 	}

@@ -76,7 +76,7 @@ func (db *MemDatabase) Get(key []byte) ([]byte, error) {
 			return CopyBytes(kv.value), nil
 		}
 	}
-	return nil, hdb.ErrDbNotFound
+	return nil, hdb.DB_NOT_FOUND
 }
 
 // Delete removes a K/V pair from the database.

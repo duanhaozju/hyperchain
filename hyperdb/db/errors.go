@@ -8,8 +8,5 @@ var (
 	DB_NOT_FOUND = errors.New("db not found")
 
 	// new error codes
-	ErrDbNotFound = errors.New("ErrDbNotFound")
-	//ErrDbClosed    = errors.New("ErrDbClosed")
-	ErrKeyNotFound = errors.New("ErrKeyNotFound")
-	ErrNotSupport  = errors.New("ErrNotSupport")
+	ErrNotSupport = errors.New("ErrNotSupport")
 )

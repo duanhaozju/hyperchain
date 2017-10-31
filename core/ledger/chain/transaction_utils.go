@@ -18,6 +18,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 
 	"github.com/golang/protobuf/proto"
@@ -26,7 +27,7 @@ import (
 // GetInvaildTxErrType gets the ErrType of invalid tx.
 // Return -1 if not existed in db.
 func GetInvaildTxErrType(namespace string, key []byte) (types.InvalidTransactionRecord_ErrType, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return -1, err
 	}
@@ -35,7 +36,7 @@ func GetInvaildTxErrType(namespace string, key []byte) (types.InvalidTransaction
 
 // GetTransaction gets the transaction with given namespace and txHash.
 func GetTransaction(namespace string, key []byte) (*types.Transaction, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +45,7 @@ func GetTransaction(namespace string, key []byte) (*types.Transaction, error) {
 
 // GetAllTransaction gets all the transactions with given namespace.
 func GetAllTransaction(namespace string) ([]*types.Transaction, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +109,7 @@ func DeleteTransactionMeta(batch db.Batch, key []byte, flush, sync bool) error {
 // GetTxWithBlock gets the transaction meta with given key,
 // returns block num and tx index.
 func GetTxWithBlock(namespace string, key []byte) (uint64, int64) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return 0, 0
 	}
@@ -147,7 +148,7 @@ func PersistInvalidTransactionRecord(batch db.Batch, invalidTx *types.InvalidTra
 
 // GetAllDiscardTransaction gets all the discard transactions with given namespace.
 func GetAllDiscardTransaction(namespace string) ([]*types.InvalidTransactionRecord, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +225,7 @@ func DumpDiscardTransactionInRange(db db.Database, batch db.Batch, dumpBatch db.
 
 // GetDiscardTransaction gets the discard transaction with given key.
 func GetDiscardTransaction(namespace string, key []byte) (*types.InvalidTransactionRecord, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}

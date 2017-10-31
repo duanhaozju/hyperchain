@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	com "github.com/hyperchain/hyperchain/core/common"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"strconv"
 )
@@ -84,7 +85,7 @@ func PersistSnapshotMeta(batch db.Batch, meta *com.Manifest, flush, sync bool) e
 
 // GetSnapshotMeta gets the snapshot meta with given namespace.
 func GetSnapshotMeta(namespace string) (*com.Manifest, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
