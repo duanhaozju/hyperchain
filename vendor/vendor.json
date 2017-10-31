@@ -556,6 +556,12 @@
 			"revisionTime": "2016-03-15T20:05:05Z"
 		},
 		{
+			"checksumSHA1": "tnkdNJbJxNKuPZMWapP1xhKIIGw=",
+			"path": "github.com/opentracing/opentracing-go/log",
+			"revision": "1361b9cd60be79c4c3a7fa9841b3c132e40066a7",
+			"revisionTime": "2017-10-03T13:35:19Z"
+		},
+		{
 			"checksumSHA1": "70JYmBNhbn7E46Bk1F6zRppWnDg=",
 			"path": "github.com/orcaman/concurrent-map",
 			"revision": "2ae17bc4c860c83513ee50feb9746f3e50d7515d",
@@ -1122,5 +1128,5 @@
 			"revisionTime": "2016-09-28T15:37:09Z"
 		}
 	],
-	"rootPath": "hyperchain"
+	"rootPath": "github.com/hyperchain/hyperchain"
 }
