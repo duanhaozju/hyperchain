@@ -4,19 +4,20 @@ package hleveldb
 
 import (
 	"bytes"
-	"github.com/hyperchain/hyperchain/common"
-	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
-	"github.com/hyperchain/hyperchain/hyperdb/db"
+	"path"
+
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"path"
+
+	"github.com/hyperchain/hyperchain/common"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 )
 
 // the Database for LevelDB
-// LDBDatabase implements the DataBase interface
-
+// LDBDatabase implements the DataBase interface.
 type LDBDatabase struct {
 	path      string
 	db        *leveldb.DB
@@ -24,18 +25,13 @@ type LDBDatabase struct {
 	namespace string
 }
 
-// NewLDBDataBase new a LDBDatabase instance
-// require a data filepath
-// return *LDBDataBase and  will
-// return an error with type of
-// ErrCorrupted if corruption detected in the DB. Corrupted
-// DB can be recovered with Recover function.
-// the return *LDBDatabase is goruntine-safe
-// the LDBDataBase instance must be close after use, by calling Close method
+// NewLDBDataBase creates a new LDBDatabase instance,
+// it requires a data storage filepath, a namespace string,
+// and it returns *LDBDatabase and an error if it exists.
+// the LDBDatabase instance must be closed after using, by calling Close method.
 func NewLDBDataBase(conf *common.Config, filepath string, namespace string) (*LDBDatabase, error) {
-	db, err := leveldb.OpenFile(filepath, nil)
-	t := db.NewIterator(nil, nil)
-	t.Last()
+	opt := hcom.GetLdbConfig(conf)
+	db, err := leveldb.OpenFile(filepath, opt)
 	return &LDBDatabase{
 		path:      filepath,
 		db:        db,
@@ -44,6 +40,9 @@ func NewLDBDataBase(conf *common.Config, filepath string, namespace string) (*LD
 	}, err
 }
 
+// NewRawLDBDatabase creates a new raw LDBDatabase instance which without any config
+// it requires a specified leveldb instance and a namespace literal,
+// and it returns *LDBDatabase.
 func NewRawLDBDatabase(db *leveldb.DB, namespace string) *LDBDatabase {
 	return &LDBDatabase{
 		db:        db,
@@ -51,94 +50,46 @@ func NewRawLDBDatabase(db *leveldb.DB, namespace string) *LDBDatabase {
 	}
 }
 
-func LDBDataBasePath(conf *common.Config) string {
+// LDBDatabasePath gets database's storage root directory.
+func LDBDatabasePath(conf *common.Config) string {
 	return conf.GetString(hcom.LEVEL_DB_ROOT_DIR)
 }
 
-// Put sets value for the given key, if the key exists, it will overwrite
-// the value
-func (self *LDBDatabase) Put(key []byte, value []byte) error {
-	return self.db.Put(key, value, nil)
+// Put inserts a K/V pair to the database,
+// it will overwrite the value if the key exists.
+func (ldb *LDBDatabase) Put(key []byte, value []byte) error {
+	return ldb.db.Put(key, value, nil)
 }
 
-// Get gets value for the given key, it returns ErrNotFound if
-// the Database does not contains the key
-func (self *LDBDatabase) Get(key []byte) ([]byte, error) {
-	dat, err := self.db.Get(key, nil)
+// Get gets a key's value from the database.
+func (ldb *LDBDatabase) Get(key []byte) ([]byte, error) {
+	value, err := ldb.db.Get(key, nil)
 	if err == leveldb.ErrNotFound {
 		err = db.DB_NOT_FOUND
 	}
-	return dat, err
+	return value, err
 }
 
-// Delete deletes the value for the given key
-func (self *LDBDatabase) Delete(key []byte) error {
-	return self.db.Delete(key, nil)
+// Delete deletes the value for the given key.
+func (ldb *LDBDatabase) Delete(key []byte) error {
+	return ldb.db.Delete(key, nil)
 }
 
-// NewIterator returns a Iterator for traversing the database
-func (self *LDBDatabase) NewIterator(prefix []byte) db.Iterator {
-	return self.db.NewIterator(util.BytesPrefix(prefix), nil)
+// Close closes the LDBDatabase.
+func (ldb *LDBDatabase) Close() {
+	ldb.db.Close()
 }
 
-func (self *LDBDatabase) Scan(begin, end []byte) db.Iterator {
-	return self.db.NewIterator(&util.Range{Start: begin, Limit: end}, nil)
-}
-
-func (self *LDBDatabase) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
-	return self.db.NewIterator(util.BytesPrefix(prefix), nil)
-}
-
-func (self *LDBDatabase) Namespace() string {
-	return self.namespace
-}
-
-//Destroy, clean the whole database,
-//warning: bad performance if to many data in the db
-func (self *LDBDatabase) Destroy() error {
-	return self.DestroyByRange(nil, nil)
-}
-
-//DestroyByRange, clean data which key in range [start, end)
-func (self *LDBDatabase) DestroyByRange(start, end []byte) error {
-	if bytes.Compare(start, end) > 0 {
-		return errors.Errorf("start key: %v, is bigger than end key: %v", start, end)
-	}
-	it := self.db.NewIterator(&util.Range{Start: start, Limit: end}, nil)
-	for it.Next() {
-		err := self.Delete(it.Key())
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// Close close the LDBDataBase
-func (self *LDBDatabase) Close() {
-	self.db.Close()
-}
-
-// LDB returns *leveldb.DB instance
-func (self *LDBDatabase) LDB() *leveldb.DB {
-	return self.db
-}
-
-// NewBatch returns a Batch instance
-// it allows batch-operation
-func (db *LDBDatabase) NewBatch() db.Batch {
-	return &ldbBatch{db: db.db, b: new(leveldb.Batch)}
-}
-
-func (db *LDBDatabase) MakeSnapshot(backupPath string, fields []string) error {
-	p := path.Join(common.GetPath(db.namespace, LDBDataBasePath(db.conf)), backupPath)
-	backupDb, err := NewLDBDataBase(db.conf, p, db.namespace)
+// MakeSnapshot creates a new snapshot for the database.
+func (ldb *LDBDatabase) MakeSnapshot(backupPath string, fields []string) error {
+	p := path.Join(common.GetPath(ldb.namespace, LDBDatabasePath(ldb.conf)), backupPath)
+	backupDb, err := NewLDBDataBase(ldb.conf, p, ldb.namespace)
 	if err != nil {
 		return err
 	}
 	defer backupDb.Close()
 
-	snapshot, err := db.db.GetSnapshot()
+	snapshot, err := ldb.db.GetSnapshot()
 	if err != nil {
 		return err
 	}
@@ -157,33 +108,107 @@ func (db *LDBDatabase) MakeSnapshot(backupPath string, fields []string) error {
 	return nil
 }
 
-// The Batch for LevelDB
-// ldbBatch implements the Batch interface
+// Namespace returns database's namespace literal.
+func (ldb *LDBDatabase) Namespace() string {
+	return ldb.namespace
+}
+
+// LDB returns *leveldb.DB instance.
+func (ldb *LDBDatabase) LDB() *leveldb.DB {
+	return ldb.db
+}
+
+// Destroy cleans the whole database.
+// Warning: bad performance if too many data in the db.
+func (ldb *LDBDatabase) Destroy() error {
+	return ldb.DestroyByRange(nil, nil)
+}
+
+// DestroyByRange cleans objects in range [begin, end)
+func (ldb *LDBDatabase) DestroyByRange(begin, end []byte) error {
+	if bytes.Compare(begin, end) > 0 {
+		return errors.Errorf("begin key: %v, is larger than end key: %v", begin, end)
+	}
+	iter := ldb.db.NewIterator(&util.Range{Start: begin, Limit: end}, nil)
+	for iter.Next() {
+		err := ldb.Delete(iter.Key())
+		if err != nil {
+			iter.Release()
+			return err
+		}
+	}
+	iter.Release()
+	return nil
+}
+
+// ldbBatch implements the Batch interface.
 type ldbBatch struct {
-	db *leveldb.DB
-	b  *leveldb.Batch
+	db  *leveldb.DB
+	bat *leveldb.Batch
 }
 
-// Put put the key-value to ldbBatch
+// NewBatch returns a Batch instance.
+func (ldb *LDBDatabase) NewBatch() db.Batch {
+	return &ldbBatch{
+		db:  ldb.db,
+		bat: new(leveldb.Batch),
+	}
+}
+
+// Put appends 'put operation' of the given K/V pair to the batch.
 func (b *ldbBatch) Put(key, value []byte) error {
-	b.b.Put(key, value)
+	b.bat.Put(key, value)
 	return nil
 }
 
-// Delete delete the key-value to ldbBatch
+// Delete appends 'delete operation' of the given key to the batch.
 func (b *ldbBatch) Delete(key []byte) error {
-	b.b.Delete(key)
+	b.bat.Delete(key)
 	return nil
 }
 
-// Write write batch-operation to database
+// Write apply the given batch to the DB.
 func (b *ldbBatch) Write() error {
-	return b.db.Write(b.b, nil)
+	return b.db.Write(b.bat, nil)
 }
 
+// Len returns number of records in the batch.
 func (b *ldbBatch) Len() int {
-	return b.b.Len()
+	return b.bat.Len()
 }
 
+// Iterator implements the Iterator interface.
 type Iterator struct {
+	db   *leveldb.DB
+	iter iterator.Iterator
 }
+
+// NewIterator returns a Iterator for traversing the database.
+func (ldb *LDBDatabase) NewIterator(prefix []byte) db.Iterator {
+	iter := ldb.db.NewIterator(util.BytesPrefix(prefix), nil)
+	return &Iterator{
+		db:   ldb.db,
+		iter: iter,
+	}
+}
+
+// Scan is LDBDatabase's Scan method which scans objects in range [begin, end).
+func (ldb *LDBDatabase) Scan(begin, end []byte) db.Iterator {
+	iter := ldb.db.NewIterator(&util.Range{Start: begin, Limit: end}, nil)
+	return &Iterator{
+		db:   ldb.db,
+		iter: iter,
+	}
+}
+
+func (ldb *LDBDatabase) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
+	return ldb.db.NewIterator(util.BytesPrefix(prefix), nil)
+}
+
+func (i *Iterator) Key() []byte          { return i.iter.Key() }
+func (i *Iterator) Value() []byte        { return i.iter.Value() }
+func (i *Iterator) Seek(key []byte) bool { return i.iter.Seek(key) }
+func (i *Iterator) Next() bool           { return i.iter.Next() }
+func (i *Iterator) Prev() bool           { return i.iter.Prev() }
+func (i *Iterator) Error() error         { return i.iter.Error() }
+func (i *Iterator) Release()             { i.iter.Release() }

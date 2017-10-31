@@ -23,6 +23,7 @@ import (
 	"github.com/hyperchain/hyperchain/core/vm/jcee/go"
 	"github.com/hyperchain/hyperchain/crypto"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/hyperchain/hyperchain/manager/event"
 
@@ -89,12 +90,12 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 
 // initDb initializes the normal database handler and archive database handler.
 func (executor *Executor) initDb() error {
-	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return err
 	}
 	executor.db = db
-	archiveDb, err := hyperdb.GetArchiveDbByNamespace(executor.namespace)
+	archiveDb, err := hyperdb.GetDBDatabaseByNamespace(executor.namespace, hcom.DBNAME_ARCHIVE)
 	if err != nil {
 		return err
 	}

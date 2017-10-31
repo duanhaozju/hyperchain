@@ -2,9 +2,10 @@ package mdb
 
 import (
 	"bytes"
+	"testing"
+
 	"github.com/hyperchain/hyperchain/common"
 	hdb "github.com/hyperchain/hyperchain/hyperdb/db"
-	"testing"
 )
 
 func TestMemDatabase_DoubleGet(t *testing.T) {

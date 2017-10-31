@@ -89,11 +89,23 @@ algo = "RBFT"
 ############################################################################################################
 [database]
     type = 0001
-    [database.leveldb]
-    root_dir    = "data/leveldb" #leveldb table root dir
-    log_status  = false
-    log_path    = "data/db.log"
 
+    [database.leveldb]
+    root_dir            = "data/leveldb" #leveldb table root dir
+    log_path            = "data/db.log"
+    measurement_enable  = false
+
+    [database.leveldb.options]
+    block_cache_capacity      = "8mb" # "mb", "kb"
+    block_size                = "4kb" # "mb", "kb"
+    write_buffer              = "4mb" # "mb", "kb"
+    write_l0_pause_trigger    = 12
+    write_l0_slowdown_trigger = 8
+
+    [database.dbpath]
+    archive    = "data/leveldb/archive"
+    blockchain = "data/leveldb/blockchain"
+    consensus  = "data/leveldb/consensus"
 
 ############################################################################################################
 #

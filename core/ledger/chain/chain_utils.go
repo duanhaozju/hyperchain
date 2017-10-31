@@ -20,6 +20,7 @@ import (
 
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 
 	"github.com/golang/protobuf/proto"
@@ -407,7 +408,7 @@ func setParentBlockHash(namespace string, hash []byte) error {
 
 // getChain - get chain from database.
 func getChain(namespace string) (*types.Chain, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
