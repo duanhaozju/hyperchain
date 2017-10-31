@@ -106,6 +106,10 @@ func (executor *Executor) syncChainResendBackend() {
 			executor.context.closeW.Done()
 			return
 		case <-ticker.C:
+			// Short circuit if sync context has been cleaned.
+			if executor.context.syncCtx == nil {
+				return
+			}
 			if executor.context.syncCtx.getResendMode() == ResendMode_Block {
 				// resend block reqeust.
 				curUp, curDown := executor.context.syncCtx.getRequest()

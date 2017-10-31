@@ -226,9 +226,9 @@ func (executor *Executor) syncDone() {
 
 // clearSyncFlag clears all sync flag fields.
 func (executor *Executor) clearSyncFlag() {
-	executor.context.syncCtx = nil
 	executor.context.stateUpdated <- struct{}{}
 	executor.context.closeW.Wait()
+	executor.context.syncCtx = nil
 }
 
 // getSuspend the corresponding notifier with given identifier.
