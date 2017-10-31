@@ -13,7 +13,6 @@ const (
 	byzantine
 	skipInProgress
 	stateTransferring
-	valid
 	timerActive
 	inUpdatingN
 	isNewNode
@@ -21,7 +20,6 @@ const (
 	inDeletingNode
 	inVcReset
 	vcHandled
-	newNodeReady
 	updateHandled
 	vcToRecovery
 )

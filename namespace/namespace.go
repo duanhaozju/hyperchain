@@ -254,6 +254,9 @@ func GetNamespace(name string, conf *common.Config, delFlag chan bool) (Namespac
 // Start starts all services under this namespace.
 func (ns *namespaceImpl) Start() error {
 	ns.logger.Noticef("try to start namespace: %s", ns.Name())
+
+	var err error
+
 	state := ns.status.getState()
 	if state < initialized {
 		err := ns.init()
@@ -277,10 +280,13 @@ func (ns *namespaceImpl) Start() error {
 	}
 
 	// 2. start consenter
-	ns.consenter.Start()
+	err = ns.consenter.Start()
+	if err != nil {
+		return err
+	}
 
 	// 3. start executor
-	err := ns.executor.Start()
+	err = ns.executor.Start()
 	if err != nil {
 		return err
 	}

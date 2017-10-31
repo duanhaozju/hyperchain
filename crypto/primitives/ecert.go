@@ -1,5 +1,5 @@
 /**
-author:张珂杰
+author:ZhangKejie
 date:16-12-18
 verify ecert and signature
 */
@@ -27,7 +27,6 @@ func GetDefaultCurve() elliptic.Curve {
 	return defaultCurve
 }
 
-//读取config文件
 func GetConfig(path string) (string, error) {
 	content, err := ioutil.ReadFile(path)
 
@@ -39,7 +38,6 @@ func GetConfig(path string) (string, error) {
 
 }
 
-//解析证书
 func ParseCertificate(cert []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode(cert)
 
@@ -56,7 +54,6 @@ func ParseCertificate(cert []byte) (*x509.Certificate, error) {
 	return x509Cert, nil
 }
 
-//验证证书中的签名
 func VerifyCert(cert *x509.Certificate, ca *x509.Certificate) (bool, error) {
 	err := cert.CheckSignatureFrom(ca)
 
@@ -65,7 +62,7 @@ func VerifyCert(cert *x509.Certificate, ca *x509.Certificate) (bool, error) {
 
 	today := time.Now()
 
-	if startTime.Before(today) || endTime.After(today) {
+	if startTime.After(today) || endTime.Before(today) {
 		log.Error("This Cert is overdue.Please check it!")
 		return false, errors.New("This Cert is overdue.Please check it!")
 	}

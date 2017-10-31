@@ -129,7 +129,7 @@ func (tm *timerManager) containsTimer(timerName string) bool {
 // getTimeoutValue gets the default timeout of the given timer
 func (tm *timerManager) getTimeoutValue(timerName string) time.Duration {
 	if !tm.containsTimer(timerName) {
-		tm.logger.Warningf("Get tiemout failed!, timer %s not created yet! no time out", timerName)
+		tm.logger.Warningf("Get timeout failed!, timer %s not created yet!", timerName)
 		return 0 * time.Second
 	}
 	return tm.ttimers[timerName].timeout
@@ -138,7 +138,7 @@ func (tm *timerManager) getTimeoutValue(timerName string) time.Duration {
 // setTimeoutValue sets the default timeout of the given timer with a new timeout
 func (tm *timerManager) setTimeoutValue(timerName string, d time.Duration) {
 	if !tm.containsTimer(timerName) {
-		tm.logger.Warningf("Set tiemout failed!, timer %s not created yet! no time out", timerName)
+		tm.logger.Warningf("Set timeout failed!, timer %s not created yet!", timerName)
 		return
 	}
 	tm.ttimers[timerName].timeout = d
@@ -152,8 +152,8 @@ func (tm *timerManager) makeNullRequestTimeoutLegal() {
 
 	if requestTimeout >= nullRequestTimeout && nullRequestTimeout != 0 {
 		tm.setTimeoutValue(NULL_REQUEST_TIMER, 3*requestTimeout/2)
-		tm.logger.Warningf("Configured null request timeout must be greater "+
-			"than request timeout, setting to %v", tm.getTimeoutValue(NULL_REQUEST_TIMER))
+		tm.logger.Infof("Configured null request timeout must be greater "+
+			"than request timeout, set to %v", tm.getTimeoutValue(NULL_REQUEST_TIMER))
 	}
 
 	if tm.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
@@ -172,7 +172,7 @@ func (tm *timerManager) makeRequestTimeoutLegal() {
 
 	if batchTimeout >= requestTimeout {
 		tm.setTimeoutValue(REQUEST_TIMER, 3*batchTimeout/2)
-		tm.logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", tm.getTimeoutValue(REQUEST_TIMER))
+		tm.logger.Infof("Configured request timeout must be greater than batch timeout, set to %v", tm.getTimeoutValue(REQUEST_TIMER))
 	}
 	tm.logger.Infof("RBFT request timeout = %v", tm.getTimeoutValue(REQUEST_TIMER))
 }
@@ -186,6 +186,6 @@ func (tm *timerManager) makeCleanVcTimeoutLegal() {
 	if cleanVcTimeout < 6*nvTimeout {
 		cleanVcTimeout = 6 * nvTimeout
 		tm.setTimeoutValue(CLEAN_VIEW_CHANGE_TIMER, cleanVcTimeout)
-		tm.logger.Criticalf("set timeout of cleaning out-of-time viewChange message to %v since it's too short", 6*nvTimeout)
+		tm.logger.Infof("Configured clean viewChange timeout is too short, set to %v", 6*nvTimeout)
 	}
 }

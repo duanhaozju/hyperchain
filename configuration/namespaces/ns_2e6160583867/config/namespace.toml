@@ -151,7 +151,7 @@ max_log_size    = "200mb"  # "mb", "kb"
 
     [log.module] #set log level by module
     p2p         = "NOTICE"
-    consensus   = "NOTICE"
+    consensus   = "INFO"
     hyperdb     = "NOTICE"
     eventhub    = "NOTICE"
     executor    = "NOTICE"

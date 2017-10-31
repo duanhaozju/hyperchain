@@ -252,7 +252,7 @@ func (rbft *rbftImpl) handleNullRequestTimerEvent() {
 		rbft.logger.Warningf("Replica %d null request timer expired, sending viewChange", rbft.id)
 		rbft.sendViewChange()
 	} else {
-		rbft.logger.Infof("Primary %d null request timer expired, sending null request", rbft.id)
+		rbft.logger.Debugf("Primary %d null request timer expired, sending null request", rbft.id)
 		rbft.sendNullRequest()
 	}
 }
@@ -469,8 +469,8 @@ func (rbft *rbftImpl) recvPrepare(prep *Prepare) error {
 			return nil
 		} else {
 			// this is abnormal in common case
-			rbft.logger.Infof("Ignoring duplicate prepare from replica %d, view=%d/seqNo=%d",
-				prep.ReplicaId, prep.View, prep.SequenceNumber)
+			rbft.logger.Infof("Replica %d ignore duplicate prepare from replica %d, view=%d/seqNo=%d",
+				rbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber)
 			return nil
 		}
 	}
@@ -566,8 +566,8 @@ func (rbft *rbftImpl) recvCommit(commit *Commit) error {
 			return nil
 		} else {
 			// this is abnormal in common case
-			rbft.logger.Infof("Ignoring duplicate commit from replica %d, view=%d/seqNo=%d",
-				commit.ReplicaId, commit.View, commit.SequenceNumber)
+			rbft.logger.Infof("Replica %d ignore duplicate commit from replica %d, view=%d/seqNo=%d",
+				rbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
 			return nil
 		}
 
@@ -890,7 +890,6 @@ func (rbft *rbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 	rbft.exec.setLastExec(et.SeqNo)
 	rbft.batchVdr.setLastVid(et.SeqNo)
 	rbft.off(skipInProgress)
-	rbft.validateState()
 	if et.SeqNo%rbft.K == 0 {
 		bcInfo := rbft.getCurrentBlockInfo()
 		rbft.checkpoint(et.SeqNo, bcInfo)
@@ -1059,7 +1058,7 @@ func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) consensusEvent {
 	ok := cert.chkpts[*chkpt]
 
 	if ok {
-		rbft.logger.Warningf("Ignoring duplicate checkpoint from replica %d, seqNo=%d", chkpt.ReplicaId, chkpt.SequenceNumber)
+		rbft.logger.Warningf("Replica %d ignore duplicate checkpoint from replica %d, seqNo=%d", rbft.id, chkpt.ReplicaId, chkpt.SequenceNumber)
 		return nil
 	}
 
@@ -1199,7 +1198,6 @@ func (rbft *rbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 				rbft.moveWatermarks(m)
 				rbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
 				rbft.on(skipInProgress)
-				rbft.invalidateState()
 				rbft.stopNewViewTimer()
 				return true
 			}
@@ -1360,7 +1358,6 @@ func (rbft *rbftImpl) stateTransfer(optional *stateUpdateTarget) {
 	if !rbft.in(skipInProgress) {
 		rbft.logger.Debugf("Replica %d is out of sync, pending stateTransfer", rbft.id)
 		rbft.on(skipInProgress)
-		rbft.invalidateState()
 	}
 
 	rbft.retryStateTransfer(optional)
@@ -1428,12 +1425,12 @@ func (rbft *rbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, rep
 // recvValidatedResult processes ValidatedResult
 func (rbft *rbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 	if rbft.in(inViewChange) {
-		rbft.logger.Debugf("Replica %d ignoring ValidatedResult as we are in viewChange", rbft.id)
+		rbft.logger.Debugf("Replica %d ignore ValidatedResult as we are in viewChange", rbft.id)
 		return nil
 	}
 
 	if rbft.in(inUpdatingN) {
-		rbft.logger.Debugf("Replica %d ignoring ValidatedResult as we are in updatingN", rbft.id)
+		rbft.logger.Debugf("Replica %d ignore ValidatedResult as we are in updatingN", rbft.id)
 		return nil
 	}
 

@@ -20,6 +20,7 @@ import (
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/crypto"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/hyperchain/hyperchain/manager/protos"
 	pb "github.com/hyperchain/hyperchain/manager/protos"
@@ -186,7 +187,7 @@ func (TH *TestHelp) Execute(seqNo uint64, hashS string, flag bool, isPrimary boo
 	vtx := TH.batchMap[hash]
 	TH.batchMapLock.Unlock()
 
-	db, err := hyperdb.GetDBDatabaseByNamespace(TH.namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(TH.namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		TH.rbft.logger.Error(err.Error())
 	}

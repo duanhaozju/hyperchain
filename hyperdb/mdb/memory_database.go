@@ -4,10 +4,11 @@ package mdb
 
 import (
 	"bytes"
-	"github.com/hyperchain/hyperchain/common"
-	hdb "github.com/hyperchain/hyperchain/hyperdb/db"
 	"sort"
 	"sync"
+
+	"github.com/hyperchain/hyperchain/common"
+	hdb "github.com/hyperchain/hyperchain/hyperdb/db"
 )
 
 // CopyBytes Copy and return []byte.
@@ -22,19 +23,21 @@ type KV struct {
 	value []byte
 }
 
+// KVS implements sort functionality.
 type KVs []*KV
 
 func (kvs KVs) Len() int           { return len(kvs) }
 func (kvs KVs) Swap(i, j int)      { kvs[i], kvs[j] = kvs[j], kvs[i] }
 func (kvs KVs) Less(i, j int) bool { return kvs[i].key < kvs[j].key }
 
-// MemDatabase a type of in-memory db implementation of DataBase.
+// MemDatabase is a type of in-memory db implementation for storage.
 type MemDatabase struct {
 	kvs  KVs
 	lock sync.RWMutex
 	ns   string
 }
 
+// NewMemDatabase creates a new memory db by namespace.
 func NewMemDatabase(namespace string) (*MemDatabase, error) {
 	return &MemDatabase{
 		kvs: nil,
@@ -42,6 +45,7 @@ func NewMemDatabase(namespace string) (*MemDatabase, error) {
 	}, nil
 }
 
+// Put inserts a K/V pair to database.
 func (db *MemDatabase) Put(key []byte, value []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
@@ -62,10 +66,7 @@ func (db *MemDatabase) Put(key []byte, value []byte) error {
 	return nil
 }
 
-func (db *MemDatabase) Set(key []byte, value []byte) {
-	db.Put(key, value)
-}
-
+// Get gets a key's value from the database.
 func (db *MemDatabase) Get(key []byte) ([]byte, error) {
 	db.lock.RLock()
 	defer db.lock.RUnlock()
@@ -78,17 +79,7 @@ func (db *MemDatabase) Get(key []byte) ([]byte, error) {
 	return nil, hdb.DB_NOT_FOUND
 }
 
-func (db *MemDatabase) Keys() [][]byte {
-	db.lock.RLock()
-	defer db.lock.RUnlock()
-
-	keys := [][]byte{}
-	for _, kv := range db.kvs {
-		keys = append(keys, common.Hex2Bytes(kv.key))
-	}
-	return keys
-}
-
+// Delete removes a K/V pair from the database.
 func (db *MemDatabase) Delete(key []byte) error {
 	db.lock.Lock()
 	defer db.lock.Unlock()
@@ -102,170 +93,117 @@ func (db *MemDatabase) Delete(key []byte) error {
 	return nil
 }
 
+// Close cleans the whole in-memory db.
+func (db *MemDatabase) Close() {
+	db.lock.Lock()
+	defer db.lock.Unlock()
+
+	db.kvs = nil
+}
+
+// MakeSnapshot creates a new snapshot for the database.
+func (db *MemDatabase) MakeSnapshot(string, []string) error {
+	// TODO: returns an error instead?
+	//panic("not support")
+
+	return hdb.ErrNotSupport
+}
+
+// Namespace returns database's namespace literal.
 func (db *MemDatabase) Namespace() string {
 	return db.ns
 }
 
-func (db *MemDatabase) Close() {
-	db.lock.Lock()
-	defer db.lock.Unlock()
-	db.kvs = nil
+// Set inserts a K/V pair to database.
+func (db *MemDatabase) Set(key []byte, value []byte) {
+	db.Put(key, value)
 }
 
-func (db *MemDatabase) MakeSnapshot(string, []string) error {
-	panic("not support")
-}
+// Keys returns all keys stored in the database.
+func (db *MemDatabase) Keys() [][]byte {
+	db.lock.RLock()
+	defer db.lock.RUnlock()
 
-type Iter struct {
-	index int
-	ptr   *MemDatabase
-	start []byte
-	limit []byte
-}
-
-func (db *MemDatabase) NewIterator(prefix []byte) hdb.Iterator {
-	var limit []byte
-	for i := len(prefix) - 1; i >= 0; i-- {
-		c := prefix[i]
-		if c < 0xff {
-			limit = make([]byte, i+1)
-			copy(limit, prefix)
-			limit[i] = c + 1
-			break
-		}
+	keys := [][]byte{}
+	for _, kv := range db.kvs {
+		keys = append(keys, common.Hex2Bytes(kv.key))
 	}
-	iter := &Iter{
-		index: -1,
-		ptr:   db,
-		start: prefix,
-		limit: limit,
-	}
-
-	return iter
+	return keys
 }
 
-func (db *MemDatabase) Scan(start, limit []byte) hdb.Iterator {
-	iterator := &Iter{
-		index: -1,
-		ptr:   db,
-		start: start,
-		limit: limit,
-	}
-	return iterator
-}
-
-func (iter *Iter) Next() bool {
-	for {
-		iter.index += 1
-		if iter.index >= len(iter.ptr.kvs) {
-			iter.index -= 1
-			return false
-		}
-		if !isLarger(iter.start, common.Hex2Bytes(iter.ptr.kvs[iter.index].key)) {
-			continue
-		} else if isSmaller(iter.limit, common.Hex2Bytes(iter.ptr.kvs[iter.index].key)) {
-			return true
-		} else {
-			iter.index -= 1
-			return false
-		}
-	}
-}
-
-func (iter *Iter) Prev() bool {
-	for {
-		iter.index -= 1
-		if iter.index <= -1 {
-			return false
-		}
-		if !isLarger(iter.start, common.Hex2Bytes(iter.ptr.kvs[iter.index].key)) {
-			return false
-		} else if isSmaller(iter.limit, common.Hex2Bytes(iter.ptr.kvs[iter.index].key)) {
-			return true
-		}
-	}
-}
-
-func (iter *Iter) Key() []byte {
-	return common.Hex2Bytes(iter.ptr.kvs[iter.index].key)
-}
-
-func (iter *Iter) Value() []byte {
-	return CopyBytes(iter.ptr.kvs[iter.index].value)
-}
-
-func (iter *Iter) Release() {
-	iter.index = -1
-	iter.ptr = nil
-}
-
-func (iter *Iter) Error() error {
-	return nil
-}
-
-func (iter *Iter) Seek(key []byte) bool {
-	if iter.ptr == nil || iter.ptr.kvs == nil || len(iter.ptr.kvs) == 0 {
-		return false
-	}
-	for i, kv := range iter.ptr.kvs {
-		if isLarger(key, common.Hex2Bytes(kv.key)) {
-			iter.index = i
-			return true
-		}
-	}
-	return false
-}
-
+// memBatch implementes the Batch interface.
 type memBatch struct {
 	db     *MemDatabase
-	writes []*KV
+	writes KVs
 	lock   sync.RWMutex
 }
 
+// NewBatch returns a Batch instance.
 func (db *MemDatabase) NewBatch() hdb.Batch {
 	return &memBatch{
-		db: db,
+		db:     db,
+		writes: nil,
 	}
 }
 
+// Put appends 'put operation' of the given K/V pair to the batch.
 func (b *memBatch) Put(key, value []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
 	b.writes = append(b.writes, &KV{common.Bytes2Hex(key), CopyBytes(value)})
 	return nil
 }
 
+// Delete appends 'delete operation' of the given key to the batch.
 func (b *memBatch) Delete(key []byte) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
 	b.writes = append(b.writes, &KV{common.Bytes2Hex(key), nil})
 	return nil
 }
 
+// Write apply the given batch to the DB.
 func (b *memBatch) Write() error {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
 	b.db.lock.Lock()
 	defer b.db.lock.Unlock()
+
+	// TODO: SIEG
+	// Sort b.writes first,
+	// and record a cursor of ranged b.db.kvs,
+	// then range from the cursor position to avoid redundant range.
 	var updated bool
+	var cursor int = 0
+
+	sort.Sort(b.writes)
+
 	for _, entry := range b.writes {
 		if entry.value != nil {
-			for idx, kv := range b.db.kvs {
+			for idx, kv := range b.db.kvs[cursor:] {
 				if kv.key == entry.key {
-					b.db.kvs[idx].value = entry.value
+					b.db.kvs[cursor+idx].value = entry.value
 					updated = true
+					// update cursor to the next position
+					cursor = cursor + idx + 1
 					break
 				}
 			}
 			if !updated {
 				b.db.kvs = append(b.db.kvs, entry)
+				// reset cursor if key not found
+				cursor = 0
 			}
 			updated = false
 		} else {
-			for idx, kv := range b.db.kvs {
+			for idx, kv := range b.db.kvs[cursor:] {
 				if kv.key == entry.key {
-					b.db.kvs = append(b.db.kvs[0:idx], b.db.kvs[idx+1:]...)
+					b.db.kvs = append(b.db.kvs[0:cursor+idx], b.db.kvs[cursor+idx+1:]...)
+					// update cursor to the next position
+					cursor = cursor + idx + 1
 					break
 				}
 			}
@@ -275,19 +213,141 @@ func (b *memBatch) Write() error {
 	b.writes = nil
 	return nil
 }
+
+// Len returns number of records in the batch.
 func (b *memBatch) Len() int {
 	return len(b.writes)
 }
 
-func isLarger(start, elem []byte) bool {
-	if start == nil || bytes.Compare(start, elem) <= 0 {
+// Iterator implements the Iterator interface.
+type Iterator struct {
+	index int
+	ptr   *MemDatabase
+	begin []byte
+	end   []byte
+}
+
+// NewIterator returns a Iterator for traversing the database.
+func (db *MemDatabase) NewIterator(prefix []byte) hdb.Iterator {
+	var end []byte
+	for i := len(prefix) - 1; i >= 0; i-- {
+		c := prefix[i]
+		if c < 0xff {
+			end = make([]byte, i+1)
+			copy(end, prefix)
+			end[i] = c + 1
+			break
+		}
+	}
+	iter := &Iterator{
+		index: -1,
+		ptr:   db,
+		begin: prefix,
+		end:   end,
+	}
+
+	return iter
+}
+
+// Scan is MemDatabase's Scan method which scans objects in range [begin, end).
+func (db *MemDatabase) Scan(begin, end []byte) hdb.Iterator {
+	iterator := &Iterator{
+		index: -1,
+		ptr:   db,
+		begin: begin,
+		end:   end,
+	}
+	return iterator
+}
+
+func (iter *Iterator) Key() []byte {
+	return common.Hex2Bytes(iter.ptr.kvs[iter.index].key)
+}
+
+func (iter *Iterator) Value() []byte {
+	return CopyBytes(iter.ptr.kvs[iter.index].value)
+}
+
+// Seek moves the iterator to the first key/value pair whose key is greater
+// than or equal to the given key.
+// It returns whether such pair exist.
+func (iter *Iterator) Seek(key []byte) bool {
+	if iter.ptr == nil || iter.ptr.kvs == nil || len(iter.ptr.kvs) == 0 {
+		return false
+	}
+	for i, kv := range iter.ptr.kvs {
+		// return true if kv.key is greater than or equal to the given key
+		if isGE(common.Hex2Bytes(kv.key), key) {
+			iter.index = i
+			return true
+		}
+	}
+	return false
+}
+
+// Next moves the iterator to the next key/value pair.
+// It returns whether the iterator is exhausted.
+func (iter *Iterator) Next() bool {
+	for {
+		iter.index += 1
+		if iter.index >= len(iter.ptr.kvs) {
+			iter.index -= 1
+			return false
+		}
+		if isLT(common.Hex2Bytes(iter.ptr.kvs[iter.index].key), iter.begin) {
+			// jump to the next loop if the key is less than the iter.begin
+			continue
+		} else if isLT(common.Hex2Bytes(iter.ptr.kvs[iter.index].key), iter.end) {
+			// return true if a key is less than the iter.end
+			return true
+		} else {
+			// reset iterator's index and return false if the iterator is exhausted
+			iter.index -= 1
+			return false
+		}
+	}
+}
+
+// Prev moves the iterator to the previous key/value pair.
+// It returns whether the iterator is exhausted.
+func (iter *Iterator) Prev() bool {
+	for {
+		iter.index -= 1
+		if iter.index <= -1 {
+			return false
+		}
+		if isLT(common.Hex2Bytes(iter.ptr.kvs[iter.index].key), iter.begin) {
+			// return false if a key is less than the iter.begin
+			return false
+		} else if isLT(common.Hex2Bytes(iter.ptr.kvs[iter.index].key), iter.end) {
+			// return true if a key is less than the iter.end
+			return true
+		}
+	}
+}
+
+func (iter *Iterator) Error() error {
+	return nil
+}
+
+func (iter *Iterator) Release() {
+	iter.index = -1
+	iter.ptr = nil
+	iter.begin = nil
+	iter.end = nil
+}
+
+// isGE returns whether elem is greater than or equal to the given key.
+func isGE(elem, key []byte) bool {
+	if key == nil || bytes.Compare(elem, key) >= 0 {
 		return true
 	}
 	return false
 }
 
-func isSmaller(limit, elem []byte) bool {
-	if limit == nil || bytes.Compare(limit, elem) > 0 {
+// isLT returns whether elem is less than the given key.
+func isLT(elem, key []byte) bool {
+	if key == nil || bytes.Compare(elem, key) < 0 {
 		return true
 	}
 	return false

@@ -7,15 +7,15 @@
 #
 
 [ecert]
-ca = "test/cert/eca.ca"
-cert = "test/cert/ecert.cert"
-priv = "test/cert/ecert.priv"
+ca = "test/certs/eca.ca"
+cert = "test/certs/ecert.cert"
+priv = "test/certs/ecert.priv"
 
 [rcert]
 # if you do not have rcert, leave this item blank
-ca = "test/cert/rca.ca"
-cert = "test/cert/rcert.cert"
-priv = "test/cert/rcert.priv"
+ca = "test/certs/rca.ca"
+cert = "test/certs/rcert.cert"
+priv = "test/certs/rcert.priv"
 
 # the tls cert supply the transport layer security
 [tlscert]

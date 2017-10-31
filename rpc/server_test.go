@@ -12,6 +12,11 @@ var (
 	rpcReqs []*common.RPCRequest
 	rpcReq  *common.RPCRequest
 	config  *common.Config
+
+	successJSONRes *JSONResponse
+	errorJSONRes *JSONResponse
+	successRPCRes *common.RPCResponse
+	rpcError      common.RPCError
 )
 
 func initialData() {
@@ -27,13 +32,24 @@ func initialData() {
 		Params:    nil,
 		Ctx:       context.Background(),
 	}
-}
+	successJSONRes = &JSONResponse{
+		Version:   JSONRPCVersion,
+		Namespace: defaultNS,
+		Id:        1,
+		Code: 0,
+		Message: "SUCCESS",
+		Result:  "response data",
+	}
+	rpcError = &common.MethodNotFoundError{Service:"admin", Method:"hello"}
+	errorJSONRes = &JSONResponse{
+		Version: JSONRPCVersion,
+		Namespace: defaultNS,
+		Id: 1,
+		Code: rpcError.Code(),
+		Message: rpcError.Error(),
+	}
 
-func TestServer_ServeSingleRequest(t *testing.T) {
-	ast := assert.New(t)
-	initialData()
-
-	successRPCRes := &common.RPCResponse{
+	successRPCRes = &common.RPCResponse{
 		Namespace: defaultNS,
 		Id:        1,
 		Reply:     "response data",
@@ -41,13 +57,11 @@ func TestServer_ServeSingleRequest(t *testing.T) {
 		IsPubSub:  false,
 		IsUnsub:   false,
 	}
-	successJSONRes := &JSONResponse{
-		Version:   JSONRPCVersion,
-		Namespace: defaultNS,
-		Id:        1, Code: 0,
-		Message: "SUCCESS",
-		Result:  "response data",
-	}
+}
+
+func TestServer_ServeSingleRequest(t *testing.T) {
+	ast := assert.New(t)
+	initialData()
 
 	mockCodec := &MockjsonCodecImpl{}
 
@@ -166,4 +180,46 @@ func TestCheckHttpHeaderError(t *testing.T) {
 	}
 
 	ast.Equal(errorJSONRes, mockCodec.WriteData, "server doesn't write common.CertError to client for this request")
+}
+
+func TestHandleAdmin(t *testing.T) {
+
+	ast := assert.New(t)
+	initialData()
+
+	mockNSMgr := &ns.MockNSMgr{}
+	mockCodec := &MockjsonCodecImpl{}
+
+	adminReq := &common.RPCRequest{
+		Service:   "admin",
+		Method:    "hello",
+		Namespace: defaultNS,
+		Id:        1,
+		IsPubSub:  false,
+		Params:    nil,
+		Ctx:       context.Background(),
+	}
+	rpcReqs = append(rpcReqs, adminReq)
+	// mock: ReadRawRequest returns a batch request with one request
+	mockCodec.On("ReadRawRequest", OptionMethodInvocation).Return(rpcReqs, true, nil)
+
+	// mock: CheckHttpHeaders will pass check
+	mockCodec.On("CheckHttpHeaders", defaultNS, "hello").Return(nil)
+	mockCodec.On("GetAuthInfo").Return("", "")
+
+	// mock: CreateResponse creates and returns a successful response
+	mockCodec.On("CreateResponse", 1, defaultNS, "response data").Return(successJSONRes)
+	mockCodec.On("CreateErrorResponse", 1, defaultNS, rpcError).Return(errorJSONRes)
+
+	// mock: Write will write successful response successJSONRes to client
+	mockCodec.On("Write", errorJSONRes).Return(nil)
+	mockCodec.On("Close")
+
+	s := NewServer(mockNSMgr, config)
+
+	if err := s.ServeSingleRequest(mockCodec, OptionMethodInvocation); err != nil {
+		t.Fatalf("ServeSingleRequest error: %v", err)
+	}
+
+	ast.Equal(errorJSONRes, mockCodec.WriteData, "server doesn't write correct successful data to client for this request")
 }

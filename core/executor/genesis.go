@@ -24,6 +24,7 @@ import (
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/core/vm"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 )
 
@@ -87,7 +88,7 @@ func (executor *Executor) CreateInitBlock(config *common.Config) error {
 
 // NewStateDb creates a new stateDb handler.
 func NewStateDb(conf *common.Config, db db.Database, namespace string) (vm.Database, error) {
-	archiveDb, err := hyperdb.GetArchiveDbByNamespace(namespace)
+	archiveDb, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_ARCHIVE)
 	if err != nil {
 		return nil, err
 	}

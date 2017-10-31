@@ -8,6 +8,7 @@ import (
 	"github.com/hyperchain/hyperchain/core/vm"
 	"github.com/hyperchain/hyperchain/crypto/hmEncryption"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"math/big"
 	"path"
 	"time"
@@ -101,11 +102,11 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
-	archiveDb, err := hyperdb.GetArchiveDbByNamespace(namespace)
+	archiveDb, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_ARCHIVE)
 	if err != nil {
 		return nil, err
 	}
