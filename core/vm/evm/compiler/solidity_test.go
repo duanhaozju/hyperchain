@@ -122,15 +122,6 @@ func TestCompileError(t *testing.T) {
 	}
 }
 
-func TestNoCompiler(t *testing.T) {
-	_, err := NewCompiler("/path/to/solc")
-	if err != nil {
-		t.Logf("solidity quits with error: %v", err)
-	} else {
-		t.Errorf("no solc installed, but got no error")
-	}
-}
-
 func TestSaveInfo(t *testing.T) {
 	var cinfo ContractInfo
 	err := json.Unmarshal([]byte(info), &cinfo)

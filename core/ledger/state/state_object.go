@@ -496,7 +496,7 @@ func (self *StateObject) SetCreator(addr common.Address) {
 
 func (self *StateObject) setCreator(addr common.Address) {
 	if bytes.Compare(self.data.Creator.Bytes(), addr.Bytes()) == 0 {
-		self.logger.Warningf("state object %s set creator, same with the origin, ignore.", self.address.Hex())
+		// self.logger.Debugf("state object %s set creator, same with the origin, ignore.", self.address.Hex())
 		return
 	}
 	self.data.Creator = addr
@@ -520,7 +520,7 @@ func (self *StateObject) SetCreateTime(time uint64) {
 
 func (self *StateObject) setCreateTime(time uint64) {
 	if self.data.CreateTime == time {
-		self.logger.Warningf("state object %s set create time, same with the origin, ignore.", self.address.Hex())
+		// self.logger.Debugf("state object %s set create time, same with the origin, ignore.", self.address.Hex())
 		return
 	}
 	self.data.CreateTime = time
@@ -543,7 +543,7 @@ func (self *StateObject) Status() int {
 // SetStatus - set the status of state object.
 func (self *StateObject) SetStatus(status int) {
 	if self.data.Status == status {
-		self.logger.Noticef("state object %s set status, same with the origin status, ignore.", self.address.Hex())
+		// self.logger.Noticef("state object %s set status, same with the origin status, ignore.", self.address.Hex())
 		return
 	}
 	self.db.journal.JournalList = append(self.db.journal.JournalList, &StatusChange{

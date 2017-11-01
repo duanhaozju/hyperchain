@@ -17,6 +17,7 @@ func NewJvmClient() *Client {
 }
 
 func TestClient_SyncExecute(t *testing.T) {
+	t.Skip("@Wangxiaoyi")
 	client := NewJvmClient()
 	err := client.Connect()
 
