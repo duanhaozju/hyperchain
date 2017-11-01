@@ -19,6 +19,11 @@ message CommitEvent {
     bool IsPrimary = 6;
 }
 
+message BloomFilterEvent {
+    string namespace = 1;
+    repeated types.Transaction Transactions = 2;
+}
+
 //receive new block event from node consensus event for consensus module
 message ValidationEvent {
     string Digest = 1;
