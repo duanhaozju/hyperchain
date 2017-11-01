@@ -35,19 +35,20 @@ type ServiceClient struct {
 
 	logger *logging.Logger
 	h      Handler
-	close  chan struct{}
 	closed int32
-
+	ctx    context.Context
+	cf     context.CancelFunc
 	rspAuxMap  map[uint64]chan *pb.IMessage
 	rspAuxLock sync.RWMutex
 	syncReqId  *util.ID
+	rspAuxPool sync.Pool
 }
 
 func New(port int, host, sid, ns string) (*ServiceClient, error) {
 	if len(host) == 0 || port < 0 {
 		return nil, fmt.Errorf("Invalid host or port, %s:%d ", host, port)
 	}
-	return &ServiceClient{
+	sc := &ServiceClient{
 		host:    host,
 		port:    port,
 		msgRecv: make(chan *pb.IMessage, 1024),
@@ -55,12 +56,19 @@ func New(port int, host, sid, ns string) (*ServiceClient, error) {
 		// TODO: replace this logger with hyperlogger ?
 		sid:    sid,
 		ns:     ns,
-		close:  make(chan struct{}, 2),
 		closed: 0,
 
 		rspAuxMap: make(map[uint64]chan *pb.IMessage),
 		syncReqId: util.NewId(uint64(time.Now().Nanosecond())),
-	}, nil
+		rspAuxPool: sync.Pool{
+			New: func() interface{} {
+				return make(chan *pb.IMessage, 1)
+			},
+		},
+	}
+	sc.ctx, sc.cf = context.WithCancel(context.Background())
+
+	return sc, nil
 }
 
 func (sc *ServiceClient) stream() pb.Dispatcher_RegisterClient {
@@ -144,33 +152,11 @@ func (sc *ServiceClient) Register(cid uint64, serviceType pb.FROM, rm *pb.Regist
 			return fmt.Errorf("%s register failed", sc.string())
 		}
 	}
-
-	//
-	//
-	//
-	//if err = sc.stream().Send(&pb.IMessage{
-	//	Id:      id,
-	//	Type:    pb.Type_REGISTER,
-	//	From:    serviceType,
-	//	Payload: payload,
-	//}); err != nil {
-	//	return err
-	//}
-	//
-	//sc.logger.Debug("try to wait the register response")
-	//
-	////timeout detection
-	//msg, err := sc.stream().Recv()
-	//if err != nil {
-	//	return err
-	//}
 }
 
 func (sc *ServiceClient) Close() {
 	atomic.StoreInt32(&sc.closed, 1)
-	//TODO: use the go context instead
-	sc.close <- struct{}{} //close receive goroutine
-	sc.close <- struct{}{} //close message process goroutine
+	sc.cf()
 	if sc.client != nil {
 		if err := sc.client.CloseSend(); err != nil {
 			sc.logger.Error(err)
@@ -202,11 +188,11 @@ func (sc *ServiceClient) Send(msg *pb.IMessage) error {
 }
 
 func (sc *ServiceClient) SyncSend(msg *pb.IMessage) (*pb.IMessage, error) {
-	if msg.Type != pb.Type_SYNC_REQUEST && msg.Type != pb.Type_REGISTER{
+	if msg.Type != pb.Type_SYNC_REQUEST && msg.Type != pb.Type_REGISTER {
 		return nil, fmt.Errorf("Invalid syncsend request type: %v ", msg.Type)
 	}
 	msg.Id = sc.syncReqId.IncAndGet()
-	rspCh := make(chan *pb.IMessage, 1)
+	rspCh := sc.rspAuxPool.Get().(chan *pb.IMessage)
 
 	sc.rspAuxLock.Lock()
 	sc.rspAuxMap[msg.Id] = rspCh
@@ -231,6 +217,9 @@ func (sc *ServiceClient) AddHandler(h Handler) {
 func (sc *ServiceClient) listenProcessMsg() {
 	go func() {
 		for {
+			if atomic.LoadInt32(&sc.closed) == 1 {
+				return
+			}
 			msg, err := sc.stream().Recv()
 
 			if err != nil {
@@ -278,7 +267,7 @@ func (sc *ServiceClient) listenProcessMsg() {
 				} else {
 					sc.h.Handle(sc.client, msg)
 				}
-			case <-sc.close:
+			case <-sc.ctx.Done():
 				return
 			}
 		}

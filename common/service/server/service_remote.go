@@ -5,9 +5,9 @@ import (
 	"github.com/op/go-logging"
 	pb "hyperchain/common/protos"
 	"hyperchain/common/service"
+	"hyperchain/common/service/util"
 	"sync"
 	"time"
-	"hyperchain/common/service/util"
 )
 
 //remoteServiceImpl represent a remote service.
@@ -22,8 +22,8 @@ type remoteServiceImpl struct {
 
 	rspAuxMap  map[uint64]chan *pb.IMessage
 	rspAuxLock sync.RWMutex
-
-	close chan struct{}
+	rspAuxPool sync.Pool
+	close      chan struct{}
 }
 
 func NewRemoteService(namespace, id string, stream pb.Dispatcher_RegisterServer, ds *InternalServer) service.Service {
@@ -36,6 +36,11 @@ func NewRemoteService(namespace, id string, stream pb.Dispatcher_RegisterServer,
 		r:         make(chan *pb.IMessage),
 		syncReqId: util.NewId(uint64(time.Now().UnixNano())),
 		rspAuxMap: make(map[uint64]chan *pb.IMessage),
+		rspAuxPool: sync.Pool{
+			New: func() interface{} {
+				return make(chan *pb.IMessage, 1)
+			},
+		},
 	}
 }
 
@@ -99,10 +104,6 @@ func (rsi *remoteServiceImpl) IsHealth() bool {
 	return rsi.stream != nil
 }
 
-func (rsi *remoteServiceImpl) Response() chan *pb.IMessage {
-	return rsi.r
-}
-
 func (rsi *remoteServiceImpl) SyncSend(se service.ServiceEvent) (*pb.IMessage, error) {
 	if msg, ok := se.(*pb.IMessage); !ok {
 		return nil, fmt.Errorf("send message type error, %v need pb.IMessage ", se)
@@ -115,7 +116,7 @@ func (rsi *remoteServiceImpl) SyncSend(se service.ServiceEvent) (*pb.IMessage, e
 			return nil, fmt.Errorf("Invalid syncsend request type: %v ", msg.Type)
 		}
 		msg.Id = rsi.syncReqId.IncAndGet()
-		rspCh := make(chan *pb.IMessage, 1)
+		rspCh := rsi.rspAuxPool.Get().(chan *pb.IMessage)
 
 		rsi.rspAuxLock.Lock()
 		rsi.rspAuxMap[msg.Id] = rspCh

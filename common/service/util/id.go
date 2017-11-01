@@ -3,16 +3,16 @@ package util
 import "sync/atomic"
 
 type ID struct {
-	id uint64
+	id uint64 // base id
 }
 
 func NewId(id uint64) *ID {
 	return &ID{
-		id:id,
+		id: id,
 	}
 }
 
-func (id *ID) Inc()  {
+func (id *ID) Inc() {
 	atomic.AddUint64(&id.id, 1)
 }
 

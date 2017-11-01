@@ -4,8 +4,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/common/service/client"
 	pb "hyperchain/common/protos"
+	"hyperchain/common/service/client"
 	"hyperchain/core/executor"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/manager/event"
@@ -92,7 +92,8 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 		}
 		eh.executor.SyncChain(*e)
 	default:
-		logger.Error("Undefined event.")
+		//TODO: add more event handle mechanism
+		logger.Errorf("Undefined event %v", msg)
 	}
 }
 

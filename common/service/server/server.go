@@ -62,8 +62,6 @@ func (is *InternalServer) Register(stream pb.Dispatcher_RegisterServer) error {
 				is.adminRegister <- struct{}{}
 			}
 			lock.Unlock()
-		//case pb.Type_RESPONSE:
-		//	is.dispatchResponse(msg)
 		default:
 			is.logger.Errorf("Message undefined %v", msg)
 		}

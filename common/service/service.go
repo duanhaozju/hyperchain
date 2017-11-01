@@ -13,7 +13,6 @@ type Service interface {
 	Close()
 	Serve() error
 	IsHealth() bool
-	Response() chan *pb.IMessage //TODO: this method will be deprecated
 }
 
 type ServiceEvent interface{}

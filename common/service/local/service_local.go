@@ -1,15 +1,15 @@
 package local
 
 import (
-	//"fmt"
+	"fmt"
+	"hyperchain/common"
 	pb "hyperchain/common/protos"
+	"hyperchain/common/service"
 	"hyperchain/manager"
 	"hyperchain/manager/event"
-	"fmt"
-	"hyperchain/common/service"
-    "hyperchain/common"
 )
 
+//localServiceImpl local service dispatch msg to local eventhub
 type localServiceImpl struct {
 	namespace string
 	id        string
@@ -35,18 +35,16 @@ func (lsi *localServiceImpl) Id() string {
 }
 
 func (lsi *localServiceImpl) Send(se service.ServiceEvent) error {
-    logger := common.GetLogger("global", "localservice")
-    //logger.Criticalf("send %v", se)
+	logger := common.GetLogger("global", "localservice")
 	switch e := se.(type) {
 	case *event.ExecutorToConsensusEvent:
-	    //logger.Criticalf("Send event: %v", e)
 		lsi.hub.DispatchExecutorToConsensus(*e)
 		return nil
 	case *event.ExecutorToP2PEvent:
 		lsi.hub.DispatchExecutorToP2P(*e)
 		return nil
 	default:
-	    logger.Criticalf("Send default %v", e)
+		logger.Criticalf("Send default %v", e)
 		return fmt.Errorf("no event handler found for %v", se)
 	}
 }
@@ -63,11 +61,7 @@ func (lsi *localServiceImpl) IsHealth() bool {
 	return true
 }
 
-func (lsi *localServiceImpl) Response() chan *pb.IMessage {
-	return lsi.r
-}
-
-func (lsi *localServiceImpl) SyncSend(se service.ServiceEvent) (*pb.IMessage, error)  {
+func (lsi *localServiceImpl) SyncSend(se service.ServiceEvent) (*pb.IMessage, error) {
 
 	return nil, nil
 }
