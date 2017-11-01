@@ -66,3 +66,8 @@ func (lsi *localServiceImpl) IsHealth() bool {
 func (lsi *localServiceImpl) Response() chan *pb.IMessage {
 	return lsi.r
 }
+
+func (lsi *localServiceImpl) SyncSend(se service.ServiceEvent) (*pb.IMessage, error)  {
+
+	return nil, nil
+}

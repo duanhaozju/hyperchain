@@ -10,9 +10,8 @@ type NsMgrProcessor interface {
 	// with the certain namespace.
 	ProcessRequest(namespace string, request interface{}) interface{}
 
-	// GetNamespaceProcessorName returns the namespace instance by name.
+	// GetNamespaceProcessor returns the namespace processor instance by name.
 	GetNamespaceProcessor(name string) NamespaceProcessor
-
 }
 
 type NamespaceProcessor interface {
@@ -21,5 +20,4 @@ type NamespaceProcessor interface {
 	ProcessRequest(request interface{}) interface{}
 
 	GetCAManager() *admittance.CAManager
-
 }

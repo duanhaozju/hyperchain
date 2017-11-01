@@ -5,5 +5,5 @@ import (
 )
 
 type Handler interface {
-	Handle(msg *pb.IMessage)
+	Handle(client pb.Dispatcher_RegisterClient, msg *pb.IMessage)
 }

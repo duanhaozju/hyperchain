@@ -10,16 +10,14 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-    "hyperchain/core/ledger/chain"
-    "hyperchain/manager/event"
 )
 
 const (
-    CONSENTER = "consenter"
-    APISERVER = "apiserver"
-    EXECUTOR  = "executor"
-    NETWORK   = "network"
-    EVENTHUB  = "eventhub"
+	CONSENTER = "consenter"
+	APISERVER = "apiserver"
+	EXECUTOR  = "executor"
+	NETWORK   = "network"
+	EVENTHUB  = "eventhub"
 )
 
 // ServiceClient used to send messages to eventhub or receive message
@@ -30,10 +28,10 @@ type ServiceClient struct {
 	sid  string // service id
 	ns   string // namespace
 
-	msgRecv		chan *pb.IMessage //received messages from server
-	msgSend		chan *pb.IMessage //send message to server
-	slock  sync.RWMutex
-	client pb.Dispatcher_RegisterClient
+	msgRecv chan *pb.IMessage //received messages from server
+	msgSend chan *pb.IMessage //send message to server
+	slock   sync.RWMutex
+	client  pb.Dispatcher_RegisterClient
 
 	logger *logging.Logger
 	h      Handler
@@ -46,11 +44,11 @@ func New(port int, host, sid, ns string) (*ServiceClient, error) {
 		return nil, fmt.Errorf("Invalid host or port, %s:%d ", host, port)
 	}
 	return &ServiceClient{
-		host:   host,
-		port:   port,
-		msgRecv:   make(chan *pb.IMessage, 1024),
-		msgSend:   make(chan *pb.IMessage, 1024),
-		logger: logging.MustGetLogger("service_client"),
+		host:    host,
+		port:    port,
+		msgRecv: make(chan *pb.IMessage, 1024),
+		msgSend: make(chan *pb.IMessage, 1024),
+		logger:  logging.MustGetLogger("service_client"),
 		// TODO: replace this logger with hyperlogger ?
 		sid:    sid,
 		ns:     ns,
@@ -85,7 +83,7 @@ func (sc *ServiceClient) Connect() error {
 	if err != nil {
 		return err
 	}
-	sc.logger.Debug("%s connect successful", sc.string())
+	sc.logger.Debugf("%s connect successful", sc.string())
 	sc.setStream(stream)
 	return nil
 }
@@ -96,7 +94,7 @@ func (sc *ServiceClient) reconnect() error {
 	for i := 0; i < maxRetryT; i++ {
 		err := sc.Connect()
 		if err == nil {
-			err = sc.Register(getFrom(sc.sid), &pb.RegisterMessage{
+			err = sc.Register(0, getFrom(sc.sid), &pb.RegisterMessage{ //TODO: Fix id
 				Namespace: sc.ns,
 			})
 			if err != nil {
@@ -114,7 +112,7 @@ func (sc *ServiceClient) reconnect() error {
 	return fmt.Errorf("Recoonect error, exceed retry times: %d ", maxRetryT)
 }
 
-func (sc *ServiceClient) Register(serviceType pb.FROM, rm *pb.RegisterMessage) error {
+func (sc *ServiceClient) Register(id uint64, serviceType pb.FROM, rm *pb.RegisterMessage) error {
 	sc.slock.RLock()
 	defer sc.slock.RUnlock()
 	payload, err := proto.Marshal(rm)
@@ -122,6 +120,7 @@ func (sc *ServiceClient) Register(serviceType pb.FROM, rm *pb.RegisterMessage) e
 		return err
 	}
 	if err = sc.stream().Send(&pb.IMessage{
+		Id:      id,
 		Type:    pb.Type_REGISTER,
 		From:    serviceType,
 		Payload: payload,
@@ -150,6 +149,7 @@ func (sc *ServiceClient) Register(serviceType pb.FROM, rm *pb.RegisterMessage) e
 
 func (sc *ServiceClient) Close() {
 	atomic.StoreInt32(&sc.closed, 1)
+	//TODO: use the go context instead
 	sc.close <- struct{}{} //close receive goroutine
 	sc.close <- struct{}{} //close message process goroutine
 	if sc.client != nil {
@@ -191,6 +191,7 @@ func (sc *ServiceClient) listenProcessMsg() {
 	go func() {
 		for {
 			msg, err := sc.stream().Recv()
+
 			if err != nil {
 				sc.logger.Error(err)
 				if !sc.isClosed() {
@@ -202,45 +203,24 @@ func (sc *ServiceClient) listenProcessMsg() {
 					}
 				}
 			}
+			//sc.logger.Debugf("receive msg %v ", msg)
 			if msg != nil {
 				sc.msgRecv <- msg
-            }
+			}
 		}
 	}()
 
-	sc.logger.Debug("Start Message processing go routine")
+	sc.logger.Debug("Start Message processing goroutine")
 
 	go func() {
 		for {
 			select {
 			case msg := <-sc.msgRecv:
+				//sc.logger.Infof("handle receive msg: %v ", msg)
 				if sc.h == nil {
 					sc.logger.Debugf("No handler to handle message: %v", msg)
 				} else {
-                    if msg.Type == pb.Type_SYNC_REQUEST {
-                        e := &event.MemChainEvent{}
-                        err := proto.Unmarshal(msg.Payload, e)
-                        if err != nil {
-                            sc.logger.Criticalf("MemChainEvent unmarshal err: %v", err)
-                        }
-                        go func() {
-                            m:= chain.GetMemChain(e.Namespace, e.Checkpoint)
-                            payload, err := proto.Marshal(m)
-                            if err != nil {
-                                sc.logger.Error(err)
-                                return
-                            }
-                            msg := &pb.IMessage{
-                                Type:  pb.Type_RESPONSE,
-                                From:  pb.FROM_EXECUTOR,
-                                Ok: true,
-                                Payload: payload,
-                            }
-                            sc.client.Send(msg)
-                        }()
-                    } else {
-                        sc.h.Handle(msg)
-                    }
+					sc.h.Handle(sc.client, msg)
 				}
 			case <-sc.close:
 				return
@@ -267,4 +247,3 @@ func getFrom(sid string) pb.FROM {
 	}
 	return -1
 }
-

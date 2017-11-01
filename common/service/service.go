@@ -9,10 +9,11 @@ type Service interface {
 	Namespace() string
 	Id() string // service identifier.
 	Send(se ServiceEvent) error
+	SyncSend(se ServiceEvent) (*pb.IMessage, error)
 	Close()
 	Serve() error
 	IsHealth() bool
-	Response() chan *pb.IMessage
+	Response() chan *pb.IMessage //TODO: this method will be deprecated
 }
 
-type ServiceEvent interface {}
+type ServiceEvent interface{}

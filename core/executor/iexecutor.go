@@ -93,16 +93,24 @@ func (re *remoteExecutorProxy) Start() error {
 	payload, _ := proto.Marshal(&ane)
 
 	msg := &pb.IMessage{
+		Type:    pb.Type_SYNC_REQUEST,
 		Event:   pb.Event_AddNamespaceEvent,
 		Payload: payload,
 	}
 
-	err := adminSrv.Send(msg)
+	rsp, err := adminSrv.SyncSend(msg)
+
+	//err := adminSrv.Send(msg)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//rsp := <-adminSrv.Response()
+
 	if err != nil {
 		return err
 	}
 
-	rsp := <-adminSrv.Response()
 	if rsp.Type == pb.Type_RESPONSE && rsp.Ok == true {
 		return nil
 	} else {
@@ -217,9 +225,9 @@ func (re *remoteExecutorProxy) DeleteSnapshot(ev event.DeleteSnapEvent) error {
 
 	//TODO: check the logic.
 	msg := &pb.IMessage{
-		Type:	pb.Type_EVENT,
-		From:	pb.FROM_EVENTHUB,
-		Event:	pb.Event_DeleteSnapshotEvent,
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_DeleteSnapshotEvent,
 	}
 
 	payload, err := proto.Marshal(&ev)
@@ -229,18 +237,18 @@ func (re *remoteExecutorProxy) DeleteSnapshot(ev event.DeleteSnapEvent) error {
 
 	msg.Payload = payload
 	err = re.sendToExecutor(re.namespace, msg)
-	return  err
+	return err
 }
 
-func (re *remoteExecutorProxy) Archive(ev event.ArchEvent) error{
+func (re *remoteExecutorProxy) Archive(ev event.ArchEvent) error {
 	var err error
 	defer func() { re.handleError(err) }()
 
 	//TODO: check the logic.
 	msg := &pb.IMessage{
-		Type:pb.Type_EVENT,
-		From:pb.FROM_EVENTHUB,
-		Event:pb.Event_ArchiveEvent,
+		Type:  pb.Type_EVENT,
+		From:  pb.FROM_EVENTHUB,
+		Event: pb.Event_ArchiveEvent,
 	}
 	payload, err := proto.Marshal(&ev)
 	if err != nil {
@@ -393,16 +401,17 @@ func (re *remoteExecutorProxy) Stop() error {
 	payload, _ := proto.Marshal(&ane)
 
 	msg := &pb.IMessage{
+		Type:    pb.Type_SYNC_REQUEST,
 		Event:   pb.Event_DeleteNamespaceEvent,
 		Payload: payload,
 	}
 
-	err = adminSrv.Send(msg)
+	rsp, err := adminSrv.SyncSend(msg)
 	if err != nil {
 		return err
 	}
 
-	rsp := <-adminSrv.Response()
+	//rsp := <-adminSrv.Response()
 	if rsp.Type == pb.Type_RESPONSE && rsp.Ok == true {
 		return nil
 	} else {
@@ -420,7 +429,8 @@ func (re *remoteExecutorProxy) sendToExecutor(namespace string, msg *pb.IMessage
 		return fmt.Errorf("No services found for namespace %s ", namespace)
 	}
 
-	srv := ns.Service(service.EXECUTOR)
+	srv := ns.Service(fmt.Sprintf("EXECUTOR-%d", 0))
+	// TODO: fix it, executor should be config in the config file
 	if srv == nil {
 		return fmt.Errorf("No service found for %s ", service.EXECUTOR)
 	}
@@ -430,5 +440,7 @@ func (re *remoteExecutorProxy) sendToExecutor(namespace string, msg *pb.IMessage
 
 //handleError handle all kind of errors here.
 func (re *remoteExecutorProxy) handleError(err error) {
-	re.logger.Error(err)
+	if err != nil {
+		re.logger.Error(err)
+	}
 }

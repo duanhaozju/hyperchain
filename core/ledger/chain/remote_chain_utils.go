@@ -3,11 +3,11 @@ package chain
 import (
 	"github.com/golang/protobuf/proto"
 	pb "hyperchain/common/protos"
-	"hyperchain/common/service"
 	"hyperchain/common/service/server"
 	"hyperchain/core/types"
 	"sync"
     "hyperchain/manager/event"
+	"fmt"
 )
 
 type iChain interface {
@@ -48,9 +48,12 @@ func (chains *remoteMemChains) GetChain(namespace string, checkpoint bool) *memC
 		From:  pb.FROM_EVENTHUB,
 		Payload: m,
 	}
-	s := chains.is.ServerRegistry().Namespace(namespace).Service(service.EXECUTOR)
-	s.Send(msg)
-	respMsg := <-s.Response()
+	s := chains.is.ServerRegistry().Namespace(namespace).Service(fmt.Sprintf("EXECUTOR-%d", 0))
+	respMsg, err := s.SyncSend(msg)
+	if err != nil {
+		return nil
+	}
+
     if respMsg.Type == pb.Type_RESPONSE || respMsg.Ok == true {
         chain := &types.MemChain{}
         err := proto.Unmarshal(respMsg.Payload, chain)

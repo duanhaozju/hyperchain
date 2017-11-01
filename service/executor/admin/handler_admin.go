@@ -16,17 +16,22 @@ func init() {
 
 type AdminHandler struct {
 	ecMgr manager.ExecutorManager
-	Ch    chan *event.AdminResponseEvent
+	Ch    chan *ResponseEventWrapper
+}
+
+type ResponseEventWrapper struct { //TODO: Fix it
+	rspId uint64
+	are   *event.AdminResponseEvent
 }
 
 func NewAdminHandler(ecMgr manager.ExecutorManager) *AdminHandler {
 	return &AdminHandler{
 		ecMgr: ecMgr,
-		Ch:    make(chan *event.AdminResponseEvent),
+		Ch:    make(chan *ResponseEventWrapper),
 	}
 }
 
-func (ah *AdminHandler) Handle(msg *pb.IMessage) {
+func (ah *AdminHandler) Handle(client pb.Dispatcher_RegisterClient, msg *pb.IMessage) {
 	switch msg.Event {
 	case pb.Event_AddNamespaceEvent:
 		e := &event.AddNamespaceEvent{}
@@ -44,7 +49,10 @@ func (ah *AdminHandler) Handle(msg *pb.IMessage) {
 		} else {
 			es.Ok = true
 		}
-		ah.Ch <- es
+		ah.Ch <- &ResponseEventWrapper{
+			rspId: msg.Id,
+			are:   es,
+		}
 	case pb.Event_DeleteNamespaceEvent:
 		e := &event.DeleteNamespaceEvent{}
 		err := proto.Unmarshal(msg.Payload, e)
@@ -61,7 +69,10 @@ func (ah *AdminHandler) Handle(msg *pb.IMessage) {
 		} else {
 			es.Ok = true
 		}
-		ah.Ch <- es
+		ah.Ch <- &ResponseEventWrapper{
+			rspId: msg.Id,
+			are:   es,
+		}
 	default:
 		logger.Error("Undefined event.")
 	}

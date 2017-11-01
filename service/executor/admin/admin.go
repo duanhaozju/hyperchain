@@ -48,7 +48,7 @@ func (admin *Administrator) Start() error {
 	admin.logger.Info("connected hyperchain.")
 
 	admin.logger.Info("registering admin client...")
-	err = adminClient.Register(pb.FROM_ADMINISTRATOR, &pb.RegisterMessage{
+	err = adminClient.Register(0, pb.FROM_ADMINISTRATOR, &pb.RegisterMessage{
 		Address: address,
 	})
 	if err != nil {
@@ -71,8 +71,9 @@ func listenSendResponse(e *AdminHandler, adminConnect *client.ServiceClient) {
 	for {
 		select {
 		case ev := <-e.Ch:
-			payload, _ := proto.Marshal(ev)
+			payload, _ := proto.Marshal(ev.are)
 			err := adminConnect.Send(&pb.IMessage{
+				Id:      ev.rspId, //TODO: Fix it
 				Type:    pb.Type_RESPONSE,
 				Ok:      true,
 				Payload: payload, //TODO: refactor payload

@@ -62,6 +62,8 @@ func (is *InternalServer) Register(stream pb.Dispatcher_RegisterServer) error {
 				is.adminRegister <- struct{}{}
 			}
 			lock.Unlock()
+		//case pb.Type_RESPONSE:
+		//	is.dispatchResponse(msg)
 		default:
 			is.logger.Errorf("Message undefined %v", msg)
 		}
@@ -153,20 +155,14 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 	}
 }
 
+func (is *InternalServer) dispatchResponse(msg *pb.IMessage) {
+
+}
+
 //serviceId generate service id
 func serviceId(msg *pb.IMessage) string {
-	switch msg.From {
-	case pb.FROM_CONSENSUS:
-		return service.CONSENTER
-	case pb.FROM_APISERVER:
-		return service.APISERVER
-	case pb.FROM_NETWORK:
-		return service.NETWORK
-	case pb.FROM_EXECUTOR:
-		return service.EXECUTOR
-	default:
-		return ""
-	}
+	id := fmt.Sprintf("%s-%d", msg.From, msg.Id)
+	return id
 }
 
 func adminId(msg *pb.RegisterMessage) string {

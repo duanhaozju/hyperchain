@@ -18,13 +18,10 @@ func (is *InternalServer) DispatchConsensusMsg(namespace string, msg *pb.IMessag
 
 func (is *InternalServer) DispatchExecutorMsg(namespace string, msg *pb.IMessage) {
 
-	is.logger.Debugf("dispatch executor message: %v for namespace: %s", msg, namespace)
-
 	if !is.sr.ContainsNamespace(namespace) {
 		is.logger.Errorf("no namespace found [%s]", namespace)
 		return
 	}
-	is.logger.Debugf("receive event: %v", msg)
 	switch msg.Event {
 	//TODO: check whether we have more other messages
 	case pb.Event_ExecutorToConsensusEvent:

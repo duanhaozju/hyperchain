@@ -2,6 +2,7 @@ package manager
 
 import (
 	"github.com/op/go-logging"
+	"hyperchain/admittance"
 	hapi "hyperchain/api"
 	"hyperchain/common"
 	"hyperchain/common/client"
@@ -10,9 +11,8 @@ import (
 	"hyperchain/core/ledger/chain"
 	"hyperchain/hyperdb"
 	"hyperchain/namespace/rpc"
-	"sync"
-	"hyperchain/admittance"
 	"hyperchain/service/executor/handler"
+	"sync"
 )
 
 type executorService interface {
@@ -27,7 +27,6 @@ type executorService interface {
 	ProcessRequest(request interface{}) interface{}
 
 	GetCAManager() *admittance.CAManager
-
 }
 
 type executorServiceImpl struct {
@@ -125,7 +124,6 @@ func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
 func (es *executorServiceImpl) init() error {
 	es.logger.Criticalf("Init executor service for namespace %s", es.namespace)
 
-
 	// 1. init DB for current executor service.
 	err := chain.InitExecutorDBForNamespace(es.conf, es.namespace)
 	if err != nil {
@@ -197,7 +195,7 @@ func (es *executorServiceImpl) Start() error {
 	//append: to satisfy apiserver tests.
 	es.status.setState(running)
 
-    //es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
+	//es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
 
 	// 3. establish connection
 	err = es.service.Connect()
@@ -206,7 +204,7 @@ func (es *executorServiceImpl) Start() error {
 		return err
 	}
 
-	err = es.service.Register(pb.FROM_EXECUTOR, &pb.RegisterMessage{
+	err = es.service.Register(0, pb.FROM_EXECUTOR, &pb.RegisterMessage{ // TODO: Fix id
 		Namespace: es.namespace,
 	})
 	if err != nil {
@@ -283,11 +281,11 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Service: hapi.NewPublicBlockAPI(namespace),
 			Public:  true,
 		},
-		"txdb":{
+		"txdb": {
 			Svcname: "txdb",
 			Version: "1.5",
 			Service: hapi.NewDBTransactionAPI(namespace, es.conf),
-			Public: true,
+			Public:  true,
 		},
 		"accountdb": {
 			Svcname: "accountdb",
@@ -314,14 +312,13 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Svcname: "archive",
 			Version: "1.5",
 			Service: hapi.NewPublicArchiveAPI(namespace, es.conf),
-			Public:	 true,
+			Public:  true,
 		},
 		//TODO: implements cert API for module2
 	}
 }
 
-
-func (es *executorServiceImpl) GetCAManager() *admittance.CAManager{
+func (es *executorServiceImpl) GetCAManager() *admittance.CAManager {
 	//TODO: add CAManager to the struct.
 	cm, err := admittance.NewCAManager(es.conf)
 	if err != nil {
