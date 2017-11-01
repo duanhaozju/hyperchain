@@ -18,7 +18,7 @@ func NewKeccak256Hash(name string) *KeccakHash {
 	return s256
 }
 
-//Hash transfers object x into common.Hash with length 32
+// Hash transfers object x into common.Hash with length 32.
 func (k256 *KeccakHash) Hash(x interface{}) (h common.Hash) {
 	serialize_data, err := json.Marshal(x)
 
@@ -32,7 +32,7 @@ func (k256 *KeccakHash) Hash(x interface{}) (h common.Hash) {
 	return h
 }
 
-//ByteHash deals with params which has already been []byte
+// ByteHash deals with params which has already been []byte.
 func (k256 *KeccakHash) ByteHash(data ...[]byte) (h common.Hash) {
 
 	hw := sha3.NewKeccak256()
