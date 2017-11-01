@@ -177,33 +177,25 @@ func (b *memBatch) Write() error {
 	// and record a cursor of ranged b.db.kvs,
 	// then range from the cursor position to avoid redundant range.
 	var updated bool
-	var cursor int = 0
-
-	sort.Sort(b.writes)
 
 	for _, entry := range b.writes {
 		if entry.value != nil {
-			for idx, kv := range b.db.kvs[cursor:] {
+			for idx, kv := range b.db.kvs {
 				if kv.key == entry.key {
-					b.db.kvs[cursor+idx].value = entry.value
+					b.db.kvs[idx].value = entry.value
 					updated = true
-					// update cursor to the next position
-					cursor = cursor + idx + 1
 					break
 				}
 			}
 			if !updated {
 				b.db.kvs = append(b.db.kvs, entry)
 				// reset cursor if key not found
-				cursor = 0
 			}
 			updated = false
 		} else {
-			for idx, kv := range b.db.kvs[cursor:] {
+			for idx, kv := range b.db.kvs {
 				if kv.key == entry.key {
-					b.db.kvs = append(b.db.kvs[0:cursor+idx], b.db.kvs[cursor+idx+1:]...)
-					// update cursor to the next position
-					cursor = cursor + idx + 1
+					b.db.kvs = append(b.db.kvs[0:idx], b.db.kvs[idx+1:]...)
 					break
 				}
 			}
