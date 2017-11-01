@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
-	"hyperchain/common/client"
+	"hyperchain/common/service/client"
 	pb "hyperchain/common/protos"
 	"net"
 	"sync"
@@ -109,7 +109,7 @@ func testOneConnection(id uint64, is *InternalServer, t *testing.T) {
 	}
 }
 
-func TestRemoteServiceImpl_SyncSend(t *testing.T) {
+func TestSyncSend(t *testing.T) {
 	//TODO: clear the connection info
 	is := startServer(t)
 	wgg := sync.WaitGroup{}

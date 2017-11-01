@@ -5,7 +5,7 @@ import (
 	"hyperchain/admittance"
 	hapi "hyperchain/api"
 	"hyperchain/common"
-	"hyperchain/common/client"
+	"hyperchain/common/service/client"
 	pb "hyperchain/common/protos"
 	"hyperchain/core/executor"
 	"hyperchain/core/ledger/chain"

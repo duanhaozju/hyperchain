@@ -7,6 +7,7 @@ import (
 	"hyperchain/common/service"
 	"sync"
 	"time"
+	"hyperchain/common/service/util"
 )
 
 //remoteServiceImpl represent a remote service.
@@ -17,7 +18,7 @@ type remoteServiceImpl struct {
 	stream    pb.Dispatcher_RegisterServer
 	r         chan *pb.IMessage
 	logger    *logging.Logger
-	syncReqId *ID
+	syncReqId *util.ID
 
 	rspAuxMap  map[uint64]chan *pb.IMessage
 	rspAuxLock sync.RWMutex
@@ -33,7 +34,7 @@ func NewRemoteService(namespace, id string, stream pb.Dispatcher_RegisterServer,
 		logger:    logging.MustGetLogger("service"),
 		ds:        ds,
 		r:         make(chan *pb.IMessage),
-		syncReqId: NewId(uint64(time.Now().UnixNano())),
+		syncReqId: util.NewId(uint64(time.Now().UnixNano())),
 		rspAuxMap: make(map[uint64]chan *pb.IMessage),
 	}
 }
@@ -69,7 +70,6 @@ func (rsi *remoteServiceImpl) Close() {
 
 //Serve handle logic impl here.
 func (rsi *remoteServiceImpl) Serve() error {
-
 	//dispatch responses
 	go rsi.dispatchResponse()
 
@@ -85,6 +85,8 @@ func (rsi *remoteServiceImpl) Serve() error {
 			rsi.ds.HandleDispatch(rsi.namespace, msg)
 		case pb.Type_ADMIN:
 			rsi.ds.HandleAdmin(rsi.namespace, msg)
+		case pb.Type_SYNC_REQUEST:
+			rsi.ds.HandleSyncRequest(rsi.namespace, msg)
 		case pb.Type_RESPONSE:
 			rsi.r <- msg
 		}

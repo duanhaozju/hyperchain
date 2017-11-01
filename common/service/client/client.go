@@ -7,6 +7,7 @@ import (
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
 	pb "hyperchain/common/protos"
+	"hyperchain/common/service/util"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,7 +30,6 @@ type ServiceClient struct {
 	ns   string // namespace
 
 	msgRecv chan *pb.IMessage //received messages from server
-	msgSend chan *pb.IMessage //send message to server
 	slock   sync.RWMutex
 	client  pb.Dispatcher_RegisterClient
 
@@ -37,6 +37,10 @@ type ServiceClient struct {
 	h      Handler
 	close  chan struct{}
 	closed int32
+
+	rspAuxMap  map[uint64]chan *pb.IMessage
+	rspAuxLock sync.RWMutex
+	syncReqId  *util.ID
 }
 
 func New(port int, host, sid, ns string) (*ServiceClient, error) {
@@ -47,13 +51,15 @@ func New(port int, host, sid, ns string) (*ServiceClient, error) {
 		host:    host,
 		port:    port,
 		msgRecv: make(chan *pb.IMessage, 1024),
-		msgSend: make(chan *pb.IMessage, 1024),
 		logger:  logging.MustGetLogger("service_client"),
 		// TODO: replace this logger with hyperlogger ?
 		sid:    sid,
 		ns:     ns,
 		close:  make(chan struct{}, 2),
 		closed: 0,
+
+		rspAuxMap: make(map[uint64]chan *pb.IMessage),
+		syncReqId: util.NewId(uint64(time.Now().Nanosecond())),
 	}, nil
 }
 
@@ -85,6 +91,7 @@ func (sc *ServiceClient) Connect() error {
 	}
 	sc.logger.Debugf("%s connect successful", sc.string())
 	sc.setStream(stream)
+	sc.listenProcessMsg()
 	return nil
 }
 
@@ -112,39 +119,51 @@ func (sc *ServiceClient) reconnect() error {
 	return fmt.Errorf("Recoonect error, exceed retry times: %d ", maxRetryT)
 }
 
-func (sc *ServiceClient) Register(id uint64, serviceType pb.FROM, rm *pb.RegisterMessage) error {
+func (sc *ServiceClient) Register(cid uint64, serviceType pb.FROM, rm *pb.RegisterMessage) error {
 	sc.slock.RLock()
 	defer sc.slock.RUnlock()
 	payload, err := proto.Marshal(rm)
 	if err != nil {
 		return err
 	}
-	if err = sc.stream().Send(&pb.IMessage{
-		Id:      id,
+
+	if rsp, err := sc.SyncSend(&pb.IMessage{
 		Type:    pb.Type_REGISTER,
 		From:    serviceType,
 		Payload: payload,
+		Cid:     cid,
 	}); err != nil {
 		return err
-	}
-
-	sc.logger.Debug("try to wait the register response")
-
-	//timeout detection
-	msg, err := sc.stream().Recv()
-	if err != nil {
-		return err
-	}
-
-	sc.logger.Debugf("%s connect successful", sc.string())
-
-	if msg.Type == pb.Type_RESPONSE && msg.Ok == true {
-		sc.logger.Infof("%s register successful", sc.string())
-		sc.listenProcessMsg()
-		return nil
 	} else {
-		return fmt.Errorf("%s register failed", sc.string())
+		sc.logger.Debugf("%s connect successful", sc.string())
+
+		if rsp.Type == pb.Type_RESPONSE && rsp.Ok == true {
+			sc.logger.Infof("%s register successful", sc.string())
+			return nil
+		} else {
+			return fmt.Errorf("%s register failed", sc.string())
+		}
 	}
+
+	//
+	//
+	//
+	//if err = sc.stream().Send(&pb.IMessage{
+	//	Id:      id,
+	//	Type:    pb.Type_REGISTER,
+	//	From:    serviceType,
+	//	Payload: payload,
+	//}); err != nil {
+	//	return err
+	//}
+	//
+	//sc.logger.Debug("try to wait the register response")
+	//
+	////timeout detection
+	//msg, err := sc.stream().Recv()
+	//if err != nil {
+	//	return err
+	//}
 }
 
 func (sc *ServiceClient) Close() {
@@ -182,6 +201,28 @@ func (sc *ServiceClient) Send(msg *pb.IMessage) error {
 	return nil
 }
 
+func (sc *ServiceClient) SyncSend(msg *pb.IMessage) (*pb.IMessage, error) {
+	if msg.Type != pb.Type_SYNC_REQUEST && msg.Type != pb.Type_REGISTER{
+		return nil, fmt.Errorf("Invalid syncsend request type: %v ", msg.Type)
+	}
+	msg.Id = sc.syncReqId.IncAndGet()
+	rspCh := make(chan *pb.IMessage, 1)
+
+	sc.rspAuxLock.Lock()
+	sc.rspAuxMap[msg.Id] = rspCh
+	sc.rspAuxLock.Unlock()
+	//TODO: add recovery if stream == nil or stream is closed
+	if err := sc.client.Send(msg); err != nil {
+		sc.rspAuxLock.Lock()
+		delete(sc.rspAuxMap, msg.Id)
+		sc.rspAuxLock.Unlock()
+		return nil, err
+	}
+	//TODO: add timeout detection
+	rsp := <-rspCh
+	return rsp, nil
+}
+
 //AddHandler add self defined message handler.
 func (sc *ServiceClient) AddHandler(h Handler) {
 	sc.h = h
@@ -205,7 +246,22 @@ func (sc *ServiceClient) listenProcessMsg() {
 			}
 			//sc.logger.Debugf("receive msg %v ", msg)
 			if msg != nil {
-				sc.msgRecv <- msg
+				if msg.Type == pb.Type_RESPONSE {
+					if msg.Id == 0 {
+						sc.logger.Errorf("Response id is not true")
+					}
+
+					sc.rspAuxLock.RLock()
+					if ch, ok := sc.rspAuxMap[msg.Id]; ok {
+						ch <- msg
+					} else {
+						sc.logger.Errorf("No response channel found for %d", msg.Id)
+					}
+
+					sc.rspAuxLock.RUnlock()
+				} else {
+					sc.msgRecv <- msg
+				}
 			}
 		}
 	}()

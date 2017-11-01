@@ -5,7 +5,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/common/client"
+	"hyperchain/common/service/client"
 	pb "hyperchain/common/protos"
 	"hyperchain/service/executor/manager"
 	"time"

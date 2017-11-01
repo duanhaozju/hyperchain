@@ -111,6 +111,10 @@ func (is *InternalServer) HandleAdmin(namespace string, msg *pb.IMessage) {
 	//TODO: handle admin messages
 }
 
+func (is *InternalServer) HandleSyncRequest(namespace string, msg *pb.IMessage) {
+	//TODO: handle sync request messages
+}
+
 //handleRegister parse msg and register this stream
 func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_RegisterServer) service.Service {
 	is.logger.Debugf("handle register msg: %v", msg)
@@ -128,6 +132,7 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 		is.logger.Debug("Send admin register ok response!")
 
 		if err := stream.Send(&pb.IMessage{
+			Id:   msg.Id,
 			Type: pb.Type_RESPONSE,
 			Ok:   true,
 		}); err != nil {
@@ -146,6 +151,7 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 		is.sr.Register(service)
 		is.logger.Debug("Send register ok response!")
 		if err := stream.Send(&pb.IMessage{
+			Id:   msg.Id,
 			Type: pb.Type_RESPONSE,
 			Ok:   true,
 		}); err != nil {
@@ -161,7 +167,7 @@ func (is *InternalServer) dispatchResponse(msg *pb.IMessage) {
 
 //serviceId generate service id
 func serviceId(msg *pb.IMessage) string {
-	id := fmt.Sprintf("%s-%d", msg.From, msg.Id)
+	id := fmt.Sprintf("%s-%d", msg.From, msg.Cid)
 	return id
 }
 
