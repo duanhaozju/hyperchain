@@ -185,15 +185,14 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 		namespaces:  make(map[string]Namespace),
 		conf:        conf,
 		jvmManager:  NewJvmManager(conf),
-		bloomFilter: bloom.NewBloomFilterCache(conf),
 		status:      status,
 		stopHp:      stopHp,
 		restartHp:   restartHp,
 		is:          s,
 	}
-
-	nr.rwLock = new(sync.RWMutex)
+	nr.bloomFilter = bloom.NewBloomFilterCache(conf)
 	nr.bloomFilter.Start()
+	nr.rwLock = new(sync.RWMutex)
 	return nr
 }
 
@@ -401,7 +400,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 	}
 	nr.bloomFilter.UnRegister(name)
 	logger.Criticalf("namespace: %s stopped", name)
-	//TODO: need to delete the data and stop listen del node.
+	//TODO: need to delete the data and stop listen del rnode.
 	return nil
 }
 
