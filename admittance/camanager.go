@@ -27,20 +27,24 @@ var (
 
 const CertKey string = "tcerts"
 
+// RegisterTcerts Lists
 type RegisterTcerts struct {
 	Tcerts []string
 }
 
+// Cert struct
 type cert struct {
 	x509cert *x509.Certificate
 	certByte []byte
 }
+
+// Key struct
 type key struct {
 	priKey     interface{}
 	prikeybyte []byte
 }
 
-//CAManager this struct is for Certificate Auth manager
+// CAManager this struct is for Certificate Auth manager
 type CAManager struct {
 	eCaCert       *cert
 	eCert         *cert
@@ -56,7 +60,7 @@ type CAManager struct {
 	logger *logging.Logger
 }
 
-//NewCAManager get a new ca manager instance
+// NewCAManager get a new ca manager instance.
 func NewCAManager(conf *common.Config) (*CAManager, error) {
 	namespace := conf.GetString(common.NAMESPACE)
 	logger := common.GetLogger(namespace, "ca")
@@ -104,6 +108,7 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 		}
 	}
 
+	//Init tcert white list.
 	whiteList := config.GetBool(common.ENCRYPTION_TCERT_WHITELIST)
 	if whiteList {
 		logger.Critical("Init Tcert White list!")
@@ -144,7 +149,7 @@ func NewCAManager(conf *common.Config) (*CAManager, error) {
 
 }
 
-//Generate a TCert for SDK client.
+// Generate a TCert for SDK client.
 func (cm *CAManager) GenTCert(publicKey string) (string, error) {
 	pubpem := common.TransportDecode(publicKey)
 	if pubpem == "" {
@@ -170,7 +175,7 @@ func (cm *CAManager) GenTCert(publicKey string) (string, error) {
 
 }
 
-//VerifyTCert verify the TCert is valid or not
+// VerifyTCert verify the TCert is valid or not.
 func (cm *CAManager) VerifyTCert(tcertPEM string, method string) (bool, error) {
 	// if check TCert flag is false, default return true
 	if !cm.checkTCert {
@@ -196,6 +201,7 @@ func (cm *CAManager) VerifyTCert(tcertPEM string, method string) (bool, error) {
 		}
 	}
 
+	// Verify this tcert is in this node's tcert list.
 	db, err := hyperdb.GetDBDatabase()
 	if err != nil {
 		cm.logger.Error(err)
@@ -229,13 +235,13 @@ func (cm *CAManager) VerifyTCert(tcertPEM string, method string) (bool, error) {
 	return false, errFailedVerifySign
 }
 
-// verify the ecert is valid or not
+// Verify the ecert is valid or not.
 func (cm *CAManager) VerifyECert(ecertPEM string) (bool, error) {
 	if !cm.checkERCert {
 		return true, nil
 	}
-	// if SDK hasn't TCert it can use the ecert to send the transaction
-	// but if the switch is off, this will not check the ecert is valid or not.
+	// If SDK hasn't TCert it can use the ecert to send the transaction
+	// But if the switch is off, this will not check the ecert is valid or not.
 	ecertToVerify, err := primitives.ParseCertificate([]byte(ecertPEM))
 	if err != nil {
 		cm.logger.Error(errParseCert.Error())
@@ -244,7 +250,7 @@ func (cm *CAManager) VerifyECert(ecertPEM string) (bool, error) {
 	return primitives.VerifyCert(ecertToVerify, cm.eCaCert.x509cert)
 }
 
-//VerifyCertSignature Verify the Signature of Cert
+// VerifyCertSignature Verify the Signature of Cert.
 func (cm *CAManager) VerifyCertSign(certPEM string, msg, sign []byte) (bool, error) {
 	if !cm.checkCertSign {
 		return true, nil
@@ -266,7 +272,7 @@ func (cm *CAManager) VerifyCertSign(certPEM string, msg, sign []byte) (bool, err
 	return result, nil
 }
 
-//VerifyRCert verify the rcert is valid or not
+// VerifyRCert verify the rcert is valid or not.
 func (cm *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
 	if !cm.checkERCert {
 		return true, nil
@@ -279,35 +285,47 @@ func (cm *CAManager) VerifyRCert(rcertPEM string) (bool, error) {
 	return primitives.VerifyCert(rcert, cm.rCaCert.x509cert)
 }
 
-/**
-getMethods
-*/
+// GetECACertByte get eca.cert in bytes.
 func (caManager *CAManager) GetECACertByte() []byte {
 	return caManager.eCaCert.certByte
 }
+
+// GetECertByte get ecert.cert in bytes.
 func (caManager *CAManager) GetECertByte() []byte {
 	return caManager.eCert.certByte
 }
+
+// GetRCertByte get rcert.cert in bytes.
 func (caManager *CAManager) GetRCertByte() []byte {
 	return caManager.rCert.certByte
 }
+
+// GetRCAcertByte get rca.cert in bytes.
 func (caManager *CAManager) GetRCAcertByte() []byte {
 	return caManager.rCaCert.certByte
 }
+
+// GetECertPrivateKeyByte get ecert.priv in bytes.
 func (caManager *CAManager) GetECertPrivateKeyByte() []byte {
 	return caManager.eCertPri.prikeybyte
 }
+
+// GetECertPrivKey get ecert.priv in interface.
 func (caManager *CAManager) GetECertPrivKey() interface{} {
 	return caManager.eCertPri.priKey
 }
+
+// IsCheckSign get checkCertSign value.
 func (caManager *CAManager) IsCheckSign() bool {
 	return caManager.checkCertSign
 }
+
+// IsCheckTCert get checkTCert value.
 func (caManager *CAManager) IsCheckTCert() bool {
 	return caManager.checkTCert
 }
 
-// tool method for read cert file
+// ReadCert is a tool method for read cert file.
 func readCert(path string) (*cert, error) {
 	certb, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -323,7 +341,7 @@ func readCert(path string) (*cert, error) {
 	}, nil
 }
 
-//tool method for read key
+// ReadKey is tool method for read key.
 func readKey(path string) (*key, error) {
 	keyb, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -339,6 +357,7 @@ func readKey(path string) (*key, error) {
 	}, nil
 }
 
+// ListDir is tool method for traversing files in a folder.
 func ListDir(dirPth string, suffix string) (files []string, err error) {
 	files = make([]string, 0, 10)
 	dir, err := ioutil.ReadDir(dirPth)
@@ -346,9 +365,9 @@ func ListDir(dirPth string, suffix string) (files []string, err error) {
 		return nil, err
 	}
 	PthSep := string(os.PathSeparator)
-	suffix = strings.ToUpper(suffix) //忽略后缀匹配的大小写
+	suffix = strings.ToUpper(suffix)
 	for _, fi := range dir {
-		if fi.IsDir() { // 忽略目录
+		if fi.IsDir() {
 			continue
 		}
 		if strings.HasSuffix(strings.ToUpper(fi.Name()), suffix) {
@@ -358,6 +377,7 @@ func ListDir(dirPth string, suffix string) (files []string, err error) {
 	return files, nil
 }
 
+// Register tcert in tcerts list.
 func RegisterCert(tcert []byte) error {
 	log := common.GetLogger(common.DEFAULT_NAMESPACE, "api")
 	db, err := hyperdb.GetDBDatabase()
@@ -365,8 +385,11 @@ func RegisterCert(tcert []byte) error {
 		log.Error(err)
 		return &common.CertError{Message: "Get Database failed"}
 	}
+
 	certs, err := db.Get([]byte(CertKey))
 	tcertStr := string(tcert)
+
+	// First to save tcert list in db.
 	if err != nil {
 		regLists := RegisterTcerts{[]string{tcertStr}}
 		lists, err := asn1.Marshal(regLists)
@@ -381,6 +404,7 @@ func RegisterCert(tcert []byte) error {
 		}
 		return nil
 	}
+
 	Regs := struct {
 		Tcerts []string
 	}{}
