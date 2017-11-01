@@ -337,7 +337,7 @@ func (rbft *rbftImpl) findNextPrePrepareBatch() (find bool, digest string, resul
 // sendPrePrepare send prePrepare message.
 func (rbft *rbftImpl) sendPrePrepare(seqNo uint64, digest string, hash string, reqBatch *TransactionBatch) {
 
-	rbft.logger.Debugf("Primary %d sending prePrepare for view=%d/seqNo=%d/digest=%s",
+	rbft.logger.Debugf("Primary %d sending prePrepare for view=%d/seqNo=%d/currentVid=%d/digest=%s",
 		rbft.id, rbft.view, seqNo, *rbft.batchVdr.currentVid, digest)
 
 	hashBatch := &HashBatch{

@@ -157,7 +157,7 @@ func (pool *txPoolImpl) addTxs(txs []*types.Transaction) error {
 		}
 
 		// find tx in txPool(non-batched txs)
-		if pool.txPool[txHash] != nil {
+		if _, ok := pool.txPool[txHash]; ok {
 			pool.logger.Debugf("Duplicate transaction in addTxs with hash: %s, may be caused by receiving certain tx"+
 				"during fetching missing tx from primary", txHash)
 			isDuplicate = true
@@ -171,6 +171,7 @@ func (pool *txPoolImpl) addTxs(txs []*types.Transaction) error {
 	pool.txPool = tmpPool
 	pool.txPoolHash = tmpPoolHash
 	pool.logger.Debugf("Replica add transactions, and there are %d transactions in txPool", len(pool.txPool))
+	pool.logger.Debugf("There are %d txHash in txPool", len(pool.txPoolHash))
 	return nil
 }
 
@@ -218,7 +219,7 @@ func (pool *txPoolImpl) GetTxsByHashList(id string, hashList []string) (txs []*t
 			missingTxsHash = nil
 			return
 		}
-		if pool.txPool[hash] != nil { // If this node has this transaction
+		if _, ok := pool.txPool[hash]; ok { // If this node has this transaction
 			if !hasMissing {
 				txs = append(txs, pool.txPool[hash])
 			}
@@ -247,6 +248,7 @@ func (pool *txPoolImpl) GetTxsByHashList(id string, hashList []string) (txs []*t
 		}
 		pool.logger.Debugf("Replica generate a transaction batch by hash list, which digest is %s, and now there are %d "+
 			"pending transactions and %d batches in txPool", id, len(pool.txPool), len(pool.batchStore))
+		pool.logger.Debugf("There are %d txHash in txPool", len(pool.txPoolHash))
 		missingTxsHash = nil
 		return
 	}
@@ -440,7 +442,7 @@ func (pool *txPoolImpl) primaryAddNewTx(tx *types.Transaction, checkPool bool) (
 		return false, ErrDuplicateTx
 	}
 
-	if pool.txPool[txHash] != nil {
+	if _, ok := pool.txPool[txHash]; ok {
 		pool.logger.Warningf("Duplicate transaction in primaryAddNewTx with hash: %s in tx pool", txHash)
 		return false, ErrDuplicateTx
 	}
@@ -475,7 +477,7 @@ func (pool *txPoolImpl) replicaAddNewTx(tx *types.Transaction, checkPool bool) (
 		return false, ErrDuplicateTx
 	}
 
-	if pool.txPool[txHash] != nil {
+	if _, ok := pool.txPool[txHash]; ok {
 		pool.logger.Warningf("Duplicate transaction in replicaAddNewTx with hash : %s in tx pool", txHash)
 		return false, ErrDuplicateTx
 	}
@@ -537,6 +539,7 @@ func (pool *txPoolImpl) newTxBatch() *TxHashBatch {
 	for _, hash := range hashList {
 		if tx, ok := pool.txPool[hash]; !ok {
 			pool.logger.Errorf("Can't find transaction by hash %s in txPool", hash)
+			pool.txPoolHash = append(hashList, pool.txPoolHash...)
 			return nil
 		} else {
 			txList = append(txList, tx)
@@ -554,6 +557,7 @@ func (pool *txPoolImpl) newTxBatch() *TxHashBatch {
 	pool.batchStore = append(pool.batchStore, txbatch)
 	pool.logger.Debugf("Primary generate a transaction batch with %d txs, which hash is %s, and now there are %d "+
 		"pending transactions and %d batches in txPool", len(hashList), batchHash, len(pool.txPool), len(pool.batchStore))
+	pool.logger.Debugf("There are %d txHash in txPool", len(pool.txPoolHash))
 	return txbatch
 }
 
