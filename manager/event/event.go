@@ -103,14 +103,8 @@ type NvpRelayTxEvent struct {
 	Payload []byte
 }
 
-//type StartJVMEvent struct {
-//	Payload []byte
-//}
-//
-//type StopJVMEvent struct {
-//	Payload []byte
-//}
-//
-//type RestartJVMEvent struct {
-//	Payload []byte
-//}
+type BloomEvent struct {
+	Namespace string
+	Cont     chan error
+	Transactions []*types.Transaction
+}
