@@ -109,11 +109,15 @@ func GetBlockFunc(db db.Database, key []byte) (*types.Block, error) {
 
 // GetBlockByNumber retrieves block via block number.
 func GetBlockByNumber(namespace string, blockNumber uint64) (*types.Block, error) {
-	hash, err := getBlockHash(namespace, blockNumber)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
-	return GetBlock(namespace, hash)
+	return getBlockByNumberFunc(db, blockNumber)
+}
+
+func GetBlockByNumberFunc(db db.Database, blockNumber uint64) (*types.Block, error) {
+	return getBlockByNumberFunc(db, blockNumber)
 }
 
 // GetLatestBlock retrieves current head block.
@@ -138,6 +142,11 @@ func DeleteBlockByNum(namepspace string, batch db.Batch, blockNum uint64, flush,
 		return err
 	}
 	return deleteBlock(namepspace, batch, hash, flush, sync)
+}
+
+// DeleteBlockByNumberFunc deletes block data and block index with given db.
+func DeleteBlockByNumberFunc(db db.Database, batch db.Batch, blockNum uint64, flush, sync bool) error {
+	return deleteBlockByNumFunc(db, batch, blockNum, flush, sync)
 }
 
 // IsGenesisFinish checks whether genesis block has been mined into blockchain

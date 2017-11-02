@@ -192,7 +192,6 @@ func DeleteAllDiscardTransaction(db db.Database, batch db.Batch, flush, sync boo
 
 // DumpDiscardTransactionInRange dumps all the discard transactions in range.
 func DumpDiscardTransactionInRange(db db.Database, batch db.Batch, dumpBatch db.Batch, start, end int64, flush, sync bool) (uint64, error) {
-
 	iter := db.NewIterator(InvalidTxPrefix)
 	defer iter.Release()
 	var cnt uint64
