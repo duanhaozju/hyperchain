@@ -33,7 +33,7 @@ func (admin *Administrator) Start() error {
 	//client address for mark this admin connect
 	address := admin.conf.GetString(common.EXECUTOR_HOST_ADDR)
 
-	adminClient, err := client.New(admin.conf.GetInt(common.INTERNAL_PORT), admin.conf.GetString(common.EXECUTOR_SERVER_IP), client.EXECUTOR, "")
+	adminClient, err := client.New(admin.conf.GetInt(common.INTERNAL_PORT), admin.conf.GetString(common.EXECUTOR_SERVER_IP), client.ADMINISTRATOR, address)
 	if err != nil {
 		return err
 	}

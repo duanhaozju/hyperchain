@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	"hyperchain/common/interface"
 	"hyperchain/namespace"
 	er "hyperchain/service/executor/errors"
 	"io/ioutil"
@@ -11,7 +12,6 @@ import (
 	"strings"
 	"sync"
     "hyperchain/core/ledger/bloom"
-    "hyperchain/common/interface"
 )
 
 var logger *logging.Logger
@@ -121,7 +121,8 @@ func (em *ecManagerImpl) Start(namespace string) error {
 	// start executor service
 	if ok, name := hasConfig(dirs, namespace); ok {
 		if _, ok = em.services[name]; ok {
-			return er.StartNamespaceErr("Namespace %s for executor already exist.", name)
+			logger.Warning("Namespace %s for executor already exist.", name)
+			return nil
 		}
 		conf, err := em.getConfig(name)
 		service := NewExecutorService(name, conf)

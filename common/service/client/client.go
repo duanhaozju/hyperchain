@@ -14,20 +14,21 @@ import (
 )
 
 const (
-	CONSENTER = "consenter"
-	APISERVER = "apiserver"
-	EXECUTOR  = "executor"
-	NETWORK   = "network"
-	EVENTHUB  = "eventhub"
+	CONSENTER     = "consenter"
+	APISERVER     = "apiserver"
+	EXECUTOR      = "executor"
+	NETWORK       = "network"
+	EVENTHUB      = "eventhub"
+	ADMINISTRATOR = "administrator"
 )
 
 // ServiceClient used to send messages to eventhub or receive message
 // from the event hub.
 type ServiceClient struct {
-	host string
-	port int
-	sid  string // service id
-	ns   string // namespace
+	host   string
+	port   int
+	sid    string // service id
+	domain string // for admin is address, others is namespace
 
 	msgRecv chan *pb.IMessage //received messages from server
 	slock   sync.RWMutex
@@ -44,7 +45,7 @@ type ServiceClient struct {
 	rspAuxPool sync.Pool
 }
 
-func New(port int, host, sid, ns string) (*ServiceClient, error) {
+func New(port int, host, sid, domain string) (*ServiceClient, error) {
 	if len(host) == 0 || port < 0 {
 		return nil, fmt.Errorf("Invalid host or port, %s:%d ", host, port)
 	}
@@ -55,7 +56,7 @@ func New(port int, host, sid, ns string) (*ServiceClient, error) {
 		logger:  logging.MustGetLogger("service_client"),
 		// TODO: replace this logger with hyperlogger ?
 		sid:    sid,
-		ns:     ns,
+		domain: domain,
 		closed: 0,
 
 		rspAuxMap: make(map[uint64]chan *pb.IMessage),
@@ -109,9 +110,7 @@ func (sc *ServiceClient) reconnect() error {
 	for i := 0; i < maxRetryT; i++ {
 		err := sc.Connect()
 		if err == nil {
-			err = sc.Register(0, getFrom(sc.sid), &pb.RegisterMessage{ //TODO: Fix id
-				Namespace: sc.ns,
-			})
+			err = sc.Register(0, getFrom(sc.sid), sc.getRegMessage(sc.sid))//TODO: Fix id
 			if err != nil {
 				sc.logger.Error(err)
 				return err
@@ -276,7 +275,7 @@ func (sc *ServiceClient) listenProcessMsg() {
 
 //string service client description
 func (sc *ServiceClient) string() string {
-	return fmt.Sprintf("ServiceClient[namespace: %s, serviceId: %s]", sc.ns, sc.sid)
+	return fmt.Sprintf("ServiceClient[namespace: %s, serviceId: %s]", sc.domain, sc.sid)
 }
 
 func getFrom(sid string) pb.FROM {
@@ -289,6 +288,28 @@ func getFrom(sid string) pb.FROM {
 		return pb.FROM_EXECUTOR
 	case APISERVER:
 		return pb.FROM_APISERVER
+	case ADMINISTRATOR:
+		return pb.FROM_ADMINISTRATOR
 	}
 	return -1
+}
+
+func (sc *ServiceClient) getRegMessage(sid string) *pb.RegisterMessage {
+	switch sid {
+	case CONSENTER:
+		fallthrough
+	case NETWORK:
+		fallthrough
+	case EXECUTOR:
+		fallthrough
+	case APISERVER:
+		return &pb.RegisterMessage{
+			Namespace: sc.domain,
+		}
+	case ADMINISTRATOR:
+		return &pb.RegisterMessage{
+			Address: sc.domain,
+		}
+	}
+	return nil
 }
