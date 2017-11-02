@@ -12,6 +12,7 @@ import (
 	"path"
 	"strconv"
 	"time"
+	"sync"
 )
 
 // This file defines JVM related functions. In hyperchain, we use two
@@ -40,6 +41,9 @@ type JvmManager struct {
 	logger *logging.Logger
 	conf   *common.Config
 	exit   chan bool
+
+	//RWLock to protect JVMManager atomically start and stop.
+	rwLock *sync.RWMutex
 }
 
 // NewJvmManager returns a JvmManager instance using given config.
@@ -50,6 +54,7 @@ func NewJvmManager(conf *common.Config) *JvmManager {
 		logger:      common.GetLogger(common.DEFAULT_LOG, "nsmgr"),
 		conf:        conf,
 		exit:        make(chan bool),
+		rwLock:      new(sync.RWMutex),
 	}
 }
 
@@ -235,4 +240,15 @@ func getBinDir() (string, error) {
 		return "", err
 	}
 	return path.Join(cur, BinHome), nil
+}
+
+// restart JVM
+func (mgr *JvmManager) RestartJVM() error {
+	mgr.rwLock.Lock()
+	defer mgr.rwLock.Unlock()
+	err := mgr.Stop()
+	if err != nil {
+		return err
+	}
+	return mgr.Start()
 }
