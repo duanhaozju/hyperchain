@@ -6,13 +6,28 @@ import (
 )
 
 type ServiceRegistry interface {
-	Init() error                            // Init init the service registry.
-	Register(s Service) error               // Register register new service.
-	UnRegister(namespace, sid string) error // UnRegister service by service id.
-	Close()                                 // Close close the service registry.
+	// Init init the service registry.
+	Init() error
+
+	// Register register new service.
+	Register(s Service) error
+
+	// UnRegister service by service id.
+	UnRegister(namespace, sid string) error
+
+	// Close close the service registry.
+	Close()
+
+	// ContainsNamespace whether contains the namespace service.
 	ContainsNamespace(name string) bool
+
+	// Namespace fetch namespace services.
 	Namespace(name string) *NamespaceServices
+
+	// AdminService fetch admin service.
 	AdminService(aid string) Service
+
+	// AddAdminService add admin service.
 	AddAdminService(adminSrv Service)
 }
 
