@@ -6,7 +6,7 @@ import (
 	rcm "github.com/hyperchain/hyperchain/cmd/radar/core/common"
 	"github.com/hyperchain/hyperchain/cmd/radar/core/types"
 	"github.com/hyperchain/hyperchain/common"
-	"github.com/hyperchain/hyperchain/core/state"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
 	"github.com/hyperchain/hyperchain/crypto"
 	"github.com/syndtr/goleveldb/leveldb"
 	"math"

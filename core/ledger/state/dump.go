@@ -49,7 +49,7 @@ func (self *StateDB) RawDump() World {
 
 	it := self.db.NewIterator([]byte(accountPrefix))
 	for it.Next() {
-		address, ok := splitCompositeAccountKey(it.Key())
+		address, ok := SplitCompositeAccountKey(it.Key())
 		if ok == false {
 			continue
 		}
@@ -58,7 +58,7 @@ func (self *StateDB) RawDump() World {
 		if err != nil {
 			continue
 		}
-		code, _ := self.db.Get(compositeCodeHash(address, account.CodeHash))
+		code, _ := self.db.Get(CompositeCodeHash(address, account.CodeHash))
 		// code could by empty
 		user := User{
 			Balance:          account.Balance.String(),
@@ -71,9 +71,9 @@ func (self *StateDB) RawDump() World {
 			DeployedContract: account.DeployedContracts,
 			CreateTime:       account.CreateTime,
 		}
-		storageIt := self.db.NewIterator(getStorageKeyPrefix(address))
+		storageIt := self.db.NewIterator(GetStorageKeyPrefix(address))
 		for storageIt.Next() {
-			storageKey, _ := splitCompositeStorageKey(address, storageIt.Key())
+			storageKey, _ := SplitCompositeStorageKey(address, storageIt.Key())
 			user.Storage[common.Bytes2Hex(storageKey)] = common.Bytes2Hex(storageIt.Value())
 		}
 		// assign status

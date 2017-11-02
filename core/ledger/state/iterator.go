@@ -150,14 +150,14 @@ func NewStorageIterator(obj *StateObject, start, limit *common.Hash) *StorageIte
 	memIter := NewMemIterator(mem, deleted)
 	var dbIter db.Iterator
 	if start == nil && limit == nil {
-		dbIter = obj.db.db.NewIterator(getStorageKeyPrefix(obj.address.Bytes()))
+		dbIter = obj.db.db.NewIterator(GetStorageKeyPrefix(obj.address.Bytes()))
 	} else {
 		var (
-			dbStart []byte = compositeStorageKey(obj.address.Bytes(), startBytes)
-			dbLimit []byte = compositeStorageKey(obj.address.Bytes(), limitBytes)
+			dbStart []byte = CompositeStorageKey(obj.address.Bytes(), startBytes)
+			dbLimit []byte = CompositeStorageKey(obj.address.Bytes(), limitBytes)
 		)
 		if limit == nil {
-			dbLimit = compositeStorageKey(obj.address.Bytes(), common.FullHash().Bytes())
+			dbLimit = CompositeStorageKey(obj.address.Bytes(), common.FullHash().Bytes())
 		}
 		dbIter = obj.db.db.Scan(dbStart, dbLimit)
 	}
@@ -179,7 +179,7 @@ func (iter *StorageIterator) Next() bool {
 			iter.exhausted[1] = true
 			break
 		}
-		actualKey, match := splitCompositeStorageKey(iter.addr.Bytes(), iter.dbIter.Key())
+		actualKey, match := SplitCompositeStorageKey(iter.addr.Bytes(), iter.dbIter.Key())
 		if !match {
 			panic("expect to match with contract storage key pattern")
 		}
@@ -196,7 +196,7 @@ func (iter *StorageIterator) Next() bool {
 	case iter.exhausted[0] && !iter.exhausted[1]:
 		iter.plexer = true
 	case !iter.exhausted[0] && !iter.exhausted[1]:
-		actualKey, match := splitCompositeStorageKey(iter.addr.Bytes(), iter.dbIter.Key())
+		actualKey, match := SplitCompositeStorageKey(iter.addr.Bytes(), iter.dbIter.Key())
 		if !match {
 			panic("expect to match with contract storage key pattern")
 		}
@@ -220,7 +220,7 @@ func (iter *StorageIterator) Key() []byte {
 	if !iter.plexer {
 		return iter.memIter.Key()
 	} else {
-		tmp, _ := splitCompositeStorageKey(iter.addr.Bytes(), iter.dbIter.Key())
+		tmp, _ := SplitCompositeStorageKey(iter.addr.Bytes(), iter.dbIter.Key())
 		return tmp
 	}
 }
