@@ -25,6 +25,7 @@ var ManifestNotExistErr = errors.New("manifest not existed")
 // Manifest represents all basic information of a snapshot.
 type Manifest struct {
 	Height     uint64 `json:"height"`
+	Genesis    uint64 `json:"genesis"`
 	BlockHash  string `json:"hash"`
 	FilterId   string `json:"filterId"`
 	MerkleRoot string `json:"merkleRoot"`
@@ -33,6 +34,10 @@ type Manifest struct {
 }
 
 type Manifests []Manifest
+
+func (m Manifests) Len() int           { return len(m) }
+func (m Manifests) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
+func (m Manifests) Less(i, j int) bool { return m[i].Height < m[j].Height }
 
 /*
 	Manifest manipulator

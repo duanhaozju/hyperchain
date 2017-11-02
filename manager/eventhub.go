@@ -199,7 +199,7 @@ func (hub *EventHub) Subscribe() {
 
 	// other messages.
 	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InformPrimaryEvent{}, event.VCResetEvent{},
-		event.ChainSyncReqEvent{}, event.SnapshotEvent{}, event.DeleteSnapshotEvent{}, event.ArchiveEvent{})
+		event.ChainSyncReqEvent{}, event.SnapshotEvent{}, event.DeleteSnapshotEvent{}, event.ArchiveEvent{}, event.ArchiveRestoreEvent{})
 }
 
 // Unsubscribe unsubscribes all events registered to system.
@@ -457,7 +457,10 @@ func (hub *EventHub) listenMiscellaneousEvent() {
 				hub.executor.DeleteSnapshot(ev)
 			case event.ArchiveEvent:
 				hub.logger.Debugf("message middleware: [archive request]")
-				hub.executor.Archive(ev)
+				go hub.executor.Archive(ev)
+			case event.ArchiveRestoreEvent:
+				hub.logger.Debugf("message middleware: [archive restore]")
+				go hub.executor.ArchiveRestore(ev)
 			}
 		}
 	}

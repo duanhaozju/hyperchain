@@ -46,6 +46,11 @@ func GetRawReceipt(namespace string, txHash common.Hash) *types.Receipt {
 	return getReceiptFunc(db, txHash)
 }
 
+// GetRawReceiptFunc gets the receipt with given txHash and database.
+func GetRawReceiptFunc(db db.Database, txHash common.Hash) *types.Receipt {
+	return getReceiptFunc(db, txHash)
+}
+
 // PersistReceipt persists receipt into database using batch.
 // KEEP IN MIND call batch.Write to flush all data to disk if `flush` is false.
 func PersistReceipt(batch db.Batch, receipt *types.Receipt, flush bool, sync bool, extra ...interface{}) ([]byte, error) {

@@ -10,7 +10,7 @@ import (
 	"github.com/hyperchain/hyperchain/cmd/dbcli/version/versionAccount"
 	"github.com/hyperchain/hyperchain/cmd/dbcli/version/wrapper"
 	"github.com/hyperchain/hyperchain/common"
-	"github.com/hyperchain/hyperchain/core/state"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
 	"github.com/hyperchain/hyperchain/hyperdb"
 	"os"
 	"regexp"

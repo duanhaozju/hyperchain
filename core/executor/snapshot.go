@@ -298,8 +298,10 @@ func (registry *SnapshotRegistry) writeMeta(filterId string, number uint64) erro
 		return SnapshotContentInvalidErr
 	}
 	d := time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05")
+	genesis, _ := edb.GetGenesisTag(registry.namespace)
 	manifest := cm.Manifest{
 		Height:     number,
+		Genesis:    genesis,
 		BlockHash:  common.Bytes2Hex(blk.BlockHash),
 		FilterId:   filterId,
 		MerkleRoot: hash.Hex(),

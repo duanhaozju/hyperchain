@@ -86,7 +86,9 @@ const (
 	SnapshotNotExistMsg   = "snapshot doesn't exist"
 	DeleteSnapshotMsg     = "delete snapshot failed"
 	ArchiveFailedMsg      = "archive failed"
+	ArchiveStoreFailedMsg = "archive store failed"
 	ApplyWsErrMsg         = "apply world state failed"
+	ParentGenesisMissMsg  = "miss parent genesis"
 	EmptyMessage          = ""
 )
 
@@ -99,4 +101,5 @@ var (
 	DeleteSnapshotFailedErr       = errors.New(DeleteSnapshotMsg)
 	ArchiveFailedErr              = errors.New(ArchiveFailedMsg)
 	ApplyWsErr                    = errors.New(ApplyWsErrMsg)
+	NonAvailableParentGenesisErr  = errors.New(ParentGenesisMissMsg)
 )
