@@ -23,7 +23,7 @@ const (
 
 const (
 	EXECUTOR_EMBEDDED  = "executor.embedded"
-	EXECUTOR_SERVER_IP = "executor.serverip"
+	EXECUTOR_SERVER_IP = "executor.internalserver.ip"
 	EXECUTOR_HOST_ADDR = "executor.host.addr"
 	START_NAMESPACE    = "namespace.start."
 	C_JVM_START        = "hypervm.jvm"
@@ -44,14 +44,14 @@ const (
 
 //constants for port keys
 const (
-	JSON_RPC_PORT  		= "port.jsonrpc"
-	JSON_RPC_PORT_EXECUTOR  = "port.jsonrpc_executor"
-	JVM_PORT      		= "port.jvm"
-	LEDGER_PORT    		= "port.ledger"
-	P2P_PORT       		= "port.grpc"
-	WEBSOCKET_PORT 		= "port.websocket"
-	INTERNAL_PORT  		= "port.internal"
-	EXECUTOR_PORT  		= "port.executor"
+	JSON_RPC_PORT          = "port.jsonrpc"
+	JSON_RPC_PORT_EXECUTOR = "port.jsonrpc_executor"
+	JVM_PORT               = "port.jvm"
+	LEDGER_PORT            = "port.ledger"
+	P2P_PORT               = "port.grpc"
+	WEBSOCKET_PORT         = "port.websocket"
+	INTERNAL_PORT          = "port.internal"
+	EXECUTOR_PORT          = "port.executor"
 )
 
 //constants for p2p configuration keys

@@ -105,7 +105,7 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 	case pb.Event_ReceiveWsAckEvent:
 		eh.executor.ReceiveWsAck(msg.Payload)
 	default:
-		logger.Error("Undefined event.")
+		logger.Errorf("Undefined event %v", msg)
 	}
 }
 

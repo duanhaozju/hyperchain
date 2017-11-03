@@ -5,8 +5,8 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
 	"hyperchain/common"
-	"hyperchain/common/service/client"
 	pb "hyperchain/common/protos"
+	"hyperchain/common/service/client"
 	"hyperchain/service/executor/manager"
 	"time"
 )
@@ -78,7 +78,7 @@ func (admin *Administrator) listenSendResponse(e *AdminHandler, adminConnect *cl
 			err := adminConnect.Send(&pb.IMessage{
 				Id:      ev.rspId, //TODO: Fix it
 				Type:    pb.Type_RESPONSE,
-				Ok:      ev.Ok,
+				Ok:      ev.are.Ok,
 				Payload: payload,
 			})
 			if err != nil {
