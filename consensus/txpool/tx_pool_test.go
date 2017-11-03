@@ -504,15 +504,14 @@ func TestGetTxsBack(t *testing.T) {
 	txPool.batchedTxs[tx1.GetHash().Hex()] = true
 	txPool.batchStore = append(txPool.batchStore, batch2)
 	txPool.batchedTxs[tx2.GetHash().Hex()] = true
-	err = txPool.GetTxsBack([]string{batch1.BatchHash, "1"})
-	ast.Equal(ErrNoBatch, err, "should not move because there is no batch whose hash is '1'")
-	ast.Equal(2, len(txPool.batchStore), "should not move because there is no batch whose hash is '1'")
+	err = txPool.GetBatchesBackExcept([]string{batch1.BatchHash, "1"})
+	ast.Equal(1, len(txPool.batchStore), "all batches should be moved because there is no batch whose hash is '1'")
 
-	err = txPool.GetTxsBack([]string{batch1.BatchHash, batch2.BatchHash})
-	if err != nil || txPool.batchStore != nil {
-		t.Error("should move all batched batches")
+	err = txPool.GetBatchesBackExcept([]string{batch1.BatchHash, batch2.BatchHash})
+	if err != nil || txPool.batchStore == nil {
+		t.Error("batch1 should remain")
 	}
-	if txPool.txPoolHash[0] != tx1.GetHash().Hex() {
+	if txPool.txPoolHash[0] != tx2.GetHash().Hex() {
 		t.Error("The first transaction in batch should be the first transaction in txpool")
 	}
 }
@@ -560,10 +559,10 @@ func TestGetOneTxsBack(t *testing.T) {
 	txPool.batchStore = append(txPool.batchStore, batch2)
 	txPool.batchedTxs[tx2.GetHash().Hex()] = true
 
-	err = txPool.GetOneTxsBack("1")
+	err = txPool.GetOneBatchBack("1")
 	ast.Equal(ErrNoBatch, err, "should not move because there is no batch whose hash is '1'")
 
-	err = txPool.GetOneTxsBack(batch1.BatchHash)
+	err = txPool.GetOneBatchBack(batch1.BatchHash)
 	ast.Nil(err, "should be moved back successfully")
 	ast.Equal(1, len(txPool.batchStore), "should left only one batch")
 }

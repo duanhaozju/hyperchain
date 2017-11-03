@@ -50,11 +50,11 @@ type TxPool interface {
 	// HasTxInPool checks if there is tx(s) in tx pool or not
 	HasTxInPool() bool
 
-	// GetTxsBack move some batch in batchStore to txPool
-	GetTxsBack(hashList []string) error
+	// GetBatchesBackExcept move some batch in batchStore to txPool
+	GetBatchesBackExcept(hashList []string) error
 
-	// GetOneTxsBack move one batch in batchStore to txPool
-	GetOneTxsBack(hash string) error
+	// GetOneBatchBack move one batch in batchStore to txPool
+	GetOneBatchBack(hash string) error
 
 	// GetTxsByHashList returns the transaction list found by given hash list.
 	// When replicas receive hashList from primary, they need to generate
@@ -91,7 +91,7 @@ type TxHashBatch struct {
 // txPoolImpl implements the TxPool interface
 type txPoolImpl struct {
 	// store all non-batched txs
-	txPool     map[string]*types.Transaction
+	txPool map[string]*types.Transaction
 
 	// store all non-batched txs' hash by order
 	txPoolHash []string
@@ -107,15 +107,15 @@ type txPoolImpl struct {
 	missingTxs map[string]map[uint64]string
 
 	// upper limit of txPool
-	poolSize   int
+	poolSize int
 
 	// when we generate a batch, we would post it to this channel
-	queue      *event.TypeMux
+	queue *event.TypeMux
 
 	// a batch contains how many transactions
-	batchSize  int
+	batchSize int
 
-	logger     *logging.Logger
+	logger *logging.Logger
 }
 
 // NewTxPool creates a new transaction pool
@@ -368,34 +368,50 @@ func (pool *txPoolImpl) RemoveOneBatchedTxs(hash string) error {
 	return nil
 }
 
-// GetTxsBack move some uncommitted batch in batchStore to txPool in viewchange and updatingN
-func (pool *txPoolImpl) GetTxsBack(hashList []string) error {
+// GetBatchesBackExcept move some uncommitted batch in batchStore to txPool in viewchange and updatingN
+func (pool *txPoolImpl) GetBatchesBackExcept(hashList []string) error {
 
-	var batches []*TxHashBatch
+	var (
+		removeTxList      []string
+		restoreBatches    []*TxHashBatch
+		restoreBatchSet   map[string]bool = make(map[string]bool)
+		restoreBatchedTxs map[string]bool = make(map[string]bool)
+	)
+
 	for _, hash := range hashList {
-		if batch, e := pool.getBatchById(hash); e != nil {
-			return e
-		} else {
-			batches = append(batches, batch)
-		}
+		restoreBatchSet[hash] = true
 	}
-	pool.RemoveBatchedTxs(hashList)
-	var newTxPoolHash []string
-	for _, batch := range batches {
-		newTxPoolHash = append(newTxPoolHash, batch.TxHashList...)
-		for _, tx := range batch.TxList {
-			pool.txPool[tx.GetHash().Hex()] = tx
-		}
-	}
-	pool.txPoolHash = append(newTxPoolHash, pool.txPoolHash...)
 
+	for _, batch := range pool.batchStore {
+		if _, ok := restoreBatchSet[batch.BatchHash]; ok {
+			// Construct the restored batches
+			restoreBatches = append(restoreBatches, batch)
+			// Construct the batched txs
+			for _, hash := range batch.TxHashList {
+				restoreBatchedTxs[hash] = true
+			}
+		} else {
+			// Construct the removed txHash list, which will be added again to pool
+			removeTxList = append(removeTxList, batch.TxHashList...)
+			// Add the txs again to pool
+			for _, tx := range batch.TxList {
+				pool.txPool[tx.GetHash().Hex()] = tx
+			}
+		}
+	}
+
+	// Reset the state
+	pool.batchStore = restoreBatches
+	pool.batchedTxs = restoreBatchedTxs
+	pool.txPoolHash = append(removeTxList, pool.txPoolHash...)
 	// clear missingTxs in viewchange or updatingN
 	pool.missingTxs = make(map[string]map[uint64]string)
+
 	return nil
 }
 
-// GetOneTxsBack move one batch in batchStore to txPool
-func (pool *txPoolImpl) GetOneTxsBack(hash string) error {
+// GetOneBatchBack move one batch in batchStore to txPool
+func (pool *txPoolImpl) GetOneBatchBack(hash string) error {
 
 	batch, err := pool.getBatchById(hash)
 	if err != nil {

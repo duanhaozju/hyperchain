@@ -235,7 +235,7 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) consensusEvent {
 		err = rbft.recvLocalAddNode(e.Event.(*protos.AddNodeMessage))
 	case NODE_MGR_DEL_NODE_EVENT:
 		err = rbft.recvLocalDelNode(e.Event.(*protos.DelNodeMessage))
-	case NODE_MGR_AGREE_UPDATEN_QUORUM_EVENT:
+	case NODE_MGR_AGREE_UPDATE_QUORUM_EVENT:
 		rbft.logger.Debugf("Replica %d received agreeUpdateN quorum, processing updateN", rbft.id)
 		if rbft.in(inNegotiateView) {
 			rbft.logger.Warningf("Replica %d try to process agreeUpdateNQuorumEvent, but it's in negotiateView", rbft.id)
@@ -245,16 +245,18 @@ func (rbft *rbftImpl) handleNodeMgrEvent(e *LocalEvent) consensusEvent {
 			return rbft.sendUpdateN()
 		}
 		return rbft.replicaCheckUpdateN()
-	case NODE_MGR_UPDATEDN_EVENT:
+	case NODE_MGR_UPDATED_EVENT:
 		rbft.startTimerIfOutstandingRequests()
 		rbft.vcMgr.vcResendCount = 0
 		rbft.nodeMgr.finishUpdateStore = make(map[FinishUpdate]bool)
 		rbft.persistView(rbft.view)
-		rbft.persistNewNode(uint64(0))
-		rbft.persistDellLocalKey()
 		rbft.persistN(rbft.N)
 		if rbft.in(isNewNode) {
 			rbft.off(isNewNode)
+			rbft.persistNewNode(uint64(0))
+			rbft.persistDellLocalKey()
+			// Fetch PQC in case that new node updated slowly
+			rbft.fetchRecoveryPQC()
 		}
 		rbft.off(updateHandled, inUpdatingN)
 		rbft.rebuildCertStoreForUpdate()
