@@ -182,6 +182,9 @@ func (pool *txPoolImpl) addTxs(txs []*types.Transaction) error {
 // if there are transactions in txPool.
 func (pool *txPoolImpl) GenerateTxBatch() error {
 
+	if pool.postTxBatchIfHasPending() {
+		return nil
+	}
 	return pool.generateTxBatch()
 }
 
@@ -398,8 +401,17 @@ func (pool *txPoolImpl) GetOneBatchBack(hash string) error {
 		pool.logger.Error(err)
 		return err
 	}
-	pool.removeOneBatchedTxs(index)
 
+	// remove from batchedTxs and batchStore
+	for _, hash := range batch.TxHashList {
+		delete(pool.batchedTxs, hash)
+	}
+	pool.batchStore = append(pool.batchStore[:index], pool.batchStore[index+1:]...)
+
+	pool.logger.Debugf("Replica removes one transaction batch, which hash is %s, and now there are "+
+		"%d batches in txPool", hash, len(pool.batchStore))
+
+	// put back into txPool
 	pool.txPoolHash = append(batch.TxHashList, pool.txPoolHash...)
 	for _, tx := range batch.TxList {
 		pool.txPool[tx.GetHash().Hex()] = tx
@@ -416,6 +428,7 @@ func (pool *txPoolImpl) PutBatchIntoPending(hash string) error {
 		return err
 	}
 	pool.pendingBatches = append(pool.pendingBatches, batch)
+	pool.logger.Debugf("After append, there are %d pending batches", len(pool.pendingBatches))
 
 	return nil
 }
@@ -460,6 +473,11 @@ func (pool *txPoolImpl) primaryAddNewTx(tx *types.Transaction, checkPool bool) (
 	}
 	pool.txPool[txHash] = tx
 	pool.txPoolHash = append(pool.txPoolHash, txHash)
+
+	// if there exists pending batches, post those batches and not generate new tx batch.
+	if pool.postTxBatchIfHasPending() {
+		return false, nil
+	}
 
 	isGenerated := false
 	for len(pool.txPool) >= pool.batchSize {
@@ -527,10 +545,18 @@ func (pool *txPoolImpl) generateTxBatch() error {
 	return nil
 }
 
-// postTxBash post a batch to chan which should be listened by consensus module
+// postTxBash posts a batch to chan which should be listened by consensus module
 // if there exists some batches in pendingBatches, first post those batches by
 // order.
 func (pool *txPoolImpl) postTxBatch(msg TxHashBatch) error {
+
+	pool.queue.Post(msg)
+	return nil
+}
+
+// postTxBatchIfHasPending returns true if there exists some batches in pendingBatches
+// and post the first batch to rbft, else return false.
+func (pool *txPoolImpl) postTxBatchIfHasPending() bool {
 
 	if len(pool.pendingBatches) > 0 {
 		batch := pool.pendingBatches[0]
@@ -542,10 +568,11 @@ func (pool *txPoolImpl) postTxBatch(msg TxHashBatch) error {
 		// add batch into batchStore
 		pool.batchStore = append(pool.batchStore, batch)
 		pool.queue.Post(*batch)
-	} else {
-		pool.queue.Post(msg)
+		pool.logger.Debugf("After post a batch in pending batches, there are %d pending " +
+			"batches", len(pool.pendingBatches))
+		return true
 	}
-	return nil
+	return false
 }
 
 // newTxBatch creates a new transaction batch to store the transactions.
@@ -608,20 +635,6 @@ func (pool *txPoolImpl) removeTxPoolTxs(hashList []string) error {
 	return nil
 }
 
-// RemoveOneTxBatch removes one batch by the given digest of transaction
-// batch from the pool(batchedTxs).
-func (pool *txPoolImpl) removeOneBatchedTxs(index int) {
-
-	batch := pool.batchStore[index]
-	for _, hash := range batch.TxHashList {
-		delete(pool.batchedTxs, hash)
-	}
-	pool.batchStore = append(pool.batchStore[:index], pool.batchStore[index+1:]...)
-
-	pool.logger.Debugf("Replica removes one transaction batch, which hash is %s, and now there are "+
-		"%d batches in txPool", hash, len(pool.batchStore))
-}
-
 // getBatchById find batch together with its index in batchStore, returns error
 // if not found id in batchStore.
 func (pool *txPoolImpl) getBatchById(id string) (*TxHashBatch, int, error) {
@@ -647,24 +660,12 @@ func (pool *txPoolImpl) getBatchById(id string) (*TxHashBatch, int, error) {
 // removeBatchById removes batch with given id from batchStore.
 func (pool *txPoolImpl) removeBatchById(id string) (*TxHashBatch, error) {
 
-	var newBatches []*TxHashBatch
-	var removedBatch *TxHashBatch
-	find := false
-	for _, batch := range pool.batchStore {
-		if batch.BatchHash == id {
-			removedBatch = batch
-			find = true
-			continue
-		}
-		newBatches = append(newBatches, batch)
+	batch, index, err := pool.getBatchById(id)
+	if err != nil {
+		return nil, err
 	}
-
-	if !find {
-		return nil, ErrNoBatch
-	} else {
-		pool.batchStore = newBatches
-		return removedBatch, nil
-	}
+	pool.batchStore = append(pool.batchStore[:index], pool.batchStore[index+1:]...)
+	return batch, nil
 }
 
 func hash(batch *TxHashBatch) string {

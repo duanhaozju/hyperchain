@@ -426,27 +426,6 @@ func TestRemoveBatchedTxs(t *testing.T) {
 	ast.Equal(0, len(txPool.batchStore), "remove one batch, expect 0")
 }
 
-func TestRemoveOneBatchedTxs(t *testing.T) {
-	ast := assert.New(t)
-	namespace := "1"
-	common.InitRawHyperLogger(namespace)
-	common.SetLogLevel(namespace, "hyperdb", "ERROR")
-	eventMux := new(event.TypeMux)
-	txPool, err := newTxPoolImpl(namespace, 100, eventMux, 10)
-	ast.Equal(nil, err, "new txPool fail")
-
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1"})
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "2"})
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "3"})
-	_, _, err = txPool.getBatchById("4")
-	ast.Equal(ErrNoBatch, err, "should not find the batch whose hash is '4'")
-
-	txPool.removeOneBatchedTxs(1)
-	if txPool.batchStore[1].BatchHash == "2" {
-		t.Error("the second batch in batchStore should be removed")
-	}
-}
-
 func TestHasTxInPool(t *testing.T) {
 	ast := assert.New(t)
 	namespace := "1"
@@ -742,11 +721,10 @@ func TestPostTxBatch(t *testing.T) {
 
 	batch1 := TxHashBatch{BatchHash: "a"}
 	batch2 := TxHashBatch{BatchHash: "b"}
-	batch3 := TxHashBatch{BatchHash: "c"}
 	txPool.postTxBatch(batch1)
 	time.Sleep(time.Nanosecond)
 
 	txPool.pendingBatches = []*TxHashBatch{&batch2}
-	txPool.postTxBatch(batch3)
+	txPool.postTxBatchIfHasPending()
 	ast.Equal(0, len(txPool.pendingBatches), "pendingBatches should be nil.")
 }
