@@ -252,7 +252,7 @@ func (rbft *rbftImpl) handleNullRequestTimerEvent() {
 		rbft.logger.Warningf("Replica %d null request timer expired, sending viewChange", rbft.id)
 		rbft.sendViewChange()
 	} else {
-		rbft.logger.Debugf("Primary %d null request timer expired, sending null request", rbft.id)
+		rbft.logger.Infof("Primary %d null request timer expired, sending null request", rbft.id)
 		rbft.sendNullRequest()
 	}
 }
@@ -1284,7 +1284,7 @@ func (rbft *rbftImpl) moveWatermarks(n uint64) {
 			digestList = append(digestList, digest)
 		}
 	}
-	rbft.batchMgr.txPool.RemoveBatchedTxs(digestList)
+	rbft.batchMgr.txPool.RemoveBatches(digestList)
 
 	if !rbft.batchMgr.txPool.IsPoolFull() {
 		rbft.setNotFull()

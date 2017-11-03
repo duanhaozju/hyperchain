@@ -204,7 +204,7 @@ func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 	// ignore too many validated batch as we limited the high watermark in send pre-prepare
 	if rbft.batchVdr.validateCount >= rbft.L {
 		rbft.logger.Warningf("Primary %d try to validate batch for vid = %d, but we had already send %d ValidateEvent", rbft.id, n, rbft.batchVdr.validateCount)
-		rbft.batchMgr.txPool.GetOneBatchBack(digest)
+		rbft.batchMgr.txPool.PutBatchIntoPending(digest)
 		return
 	}
 

@@ -10,7 +10,6 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/manager/event"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -359,9 +358,10 @@ func TestGetTxsByHashList(t *testing.T) {
 			TransactionHash: []byte("hash4"),
 		},
 	}
-	hashBatch1 := &TxHashBatch{BatchHash: "1", TxHashList: []string{"1", "2"}, TxList: txlist}
+	hashBatch1 := &TxHashBatch{TxHashList: []string{"1", "2"}, TxList: txlist}
+	id := hash(hashBatch1)
+	hashBatch1.BatchHash = id
 	txPool.batchStore = append(txPool.batchStore, hashBatch1)
-	id := hash(txPool.batchStore[0])
 	txs, _, err := txPool.GetTxsByHashList(id, []string{})
 	ast.Equal(txlist, txs, "This batch already exists, should return itself")
 
@@ -416,35 +416,14 @@ func TestRemoveBatchedTxs(t *testing.T) {
 	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "2"})
 	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "3"})
 	hashList := []string{"1", "2"}
-	err = txPool.RemoveBatchedTxs(hashList)
+	err = txPool.RemoveBatches(hashList)
 	ast.Equal(nil, err, "remove batched transactions failed")
 	ast.Equal(1, len(txPool.batchStore), "remove two batch, expect 1")
 
 	hashList = []string{"2", "3"}
-	err = txPool.RemoveBatchedTxs(hashList)
+	err = txPool.RemoveBatches(hashList)
 	ast.Equal(nil, err, "remove batched transactions failed")
 	ast.Equal(0, len(txPool.batchStore), "remove one batch, expect 0")
-}
-
-func TestRemoveOneBatchedTxs(t *testing.T) {
-	ast := assert.New(t)
-	namespace := "1"
-	common.InitRawHyperLogger(namespace)
-	common.SetLogLevel(namespace, "hyperdb", "ERROR")
-	eventMux := new(event.TypeMux)
-	txPool, err := newTxPoolImpl(namespace, 100, eventMux, 10)
-	ast.Equal(nil, err, "new txPool fail")
-
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1"})
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "2"})
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "3"})
-	err = txPool.RemoveOneBatchedTxs("4")
-	ast.Equal(ErrNoBatch, err, "should not find the batch whose hash is '4'")
-
-	err = txPool.RemoveOneBatchedTxs("2")
-	if err != nil || txPool.batchStore[1].BatchHash != "3" {
-		t.Error("the batch should be removed")
-	}
 }
 
 func TestHasTxInPool(t *testing.T) {
@@ -462,7 +441,7 @@ func TestHasTxInPool(t *testing.T) {
 	ast.Equal(true, txPool.HasTxInPool(), "contains one tx in txPool, expect false")
 }
 
-func TestGetTxsBack(t *testing.T) {
+func TestGetBatchesBack(t *testing.T) {
 	ast := assert.New(t)
 	namespace := "1"
 	common.InitRawHyperLogger(namespace)
@@ -632,6 +611,7 @@ func TestNewTxBatch(t *testing.T) {
 		Id:              uint64(1),
 		TransactionHash: []byte("hash"),
 	}
+	t.Logf("tx hash is: %s", tx.GetHash().Hex())
 	tx2 := &types.Transaction{
 		From:            []byte{1},
 		To:              []byte{2},
@@ -641,6 +621,7 @@ func TestNewTxBatch(t *testing.T) {
 		Id:              uint64(1),
 		TransactionHash: []byte("hash2"),
 	}
+	t.Logf("tx2 hash is: %s", tx2.GetHash().Hex())
 	tx3 := &types.Transaction{
 		From:            []byte{1},
 		To:              []byte{2},
@@ -650,14 +631,21 @@ func TestNewTxBatch(t *testing.T) {
 		Id:              uint64(1),
 		TransactionHash: []byte("hash3"),
 	}
+	t.Logf("tx3 hash is: %s", tx3.GetHash().Hex())
+
 	txPool.AddNewTx(tx, true, false)
 	if len(txPool.txPool) != 0 || len(txPool.txPoolHash) != 0 || len(txPool.batchStore) != 1 {
 		t.Error("should generate one batch")
 	}
 	txPool.addTxs([]*types.Transaction{tx2, tx3})
 	txPool.newTxBatch()
-	if len(txPool.txPool) != 1 || len(txPool.txPoolHash) != 1 || len(txPool.batchStore) != 2 {
-		t.Error("should generate one batch again")
+	txPool.newTxBatch()
+	//if len(txPool.txPool) != 1 || len(txPool.txPoolHash) != 1 || len(txPool.batchStore) != 2 {
+	//	t.Error("should generate one batch again")
+	//}
+	for _, batch := range txPool.batchStore {
+		t.Log(batch.BatchHash)
+		t.Logf("batch hash list is: %v", batch.TxHashList)
 	}
 }
 
@@ -693,12 +681,50 @@ func TestGetBatchById(t *testing.T) {
 	txPool, err := newTxPoolImpl(namespace, 100, eventMux, 10)
 	ast.Equal(nil, err, "new txPool fail")
 
-	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "1", TxHashList: []string{"1", "2"}})
-	h := hash(txPool.batchStore[0])
-	batch, err := txPool.getBatchById(h)
-	ast.Nil(err, err)
-	ast.Equal("1", batch.BatchHash, "Get a wrong batch")
+	batch1 := &TxHashBatch{BatchHash: "1", TxHashList: []string{"1", "2"}}
+	id := hash(batch1)
+	batch1.BatchHash = id
+	txPool.batchStore = append(txPool.batchStore, batch1)
+	batch, index, err := txPool.getBatchById(id)
+	ast.Nil(err, "error should be nothing")
+	ast.Equal(0, index, "index should be 0")
+	ast.Equal(id, batch.BatchHash, "Get a wrong batch")
 
-	batch, err = txPool.getBatchById("a")
+	_, _, err = txPool.getBatchById("a")
 	ast.Equal(ErrNoBatch, err, "should not get a batch")
+}
+
+func TestPostTxBatch(t *testing.T) {
+	ast := assert.New(t)
+	namespace := "1"
+	common.InitRawHyperLogger(namespace)
+	common.SetLogLevel(namespace, "hyperdb", "ERROR")
+	eventMux := new(event.TypeMux)
+	txPool, err := newTxPoolImpl(namespace, 1, eventMux, 10)
+	ast.Equal(nil, err, "new txPool fail")
+
+	sub := txPool.queue.Subscribe(TxHashBatch{})
+	go func() {
+		for {
+			select {
+			case obj := <-sub.Chan():
+				switch ev := obj.Data.(type) {
+				case TxHashBatch:
+					t.Logf("receive TxHashBatch: %v", ev)
+					ast.Equal("a", ev.BatchHash, "Batch hash should be 'a'")
+				default:
+					t.Error("invalid event type.")
+				}
+			}
+		}
+	}()
+
+	batch1 := TxHashBatch{BatchHash: "a"}
+	batch2 := TxHashBatch{BatchHash: "b"}
+	txPool.postTxBatch(batch1)
+	time.Sleep(time.Nanosecond)
+
+	txPool.pendingBatches = []*TxHashBatch{&batch2}
+	txPool.postTxBatchIfHasPending()
+	ast.Equal(0, len(txPool.pendingBatches), "pendingBatches should be nil.")
 }

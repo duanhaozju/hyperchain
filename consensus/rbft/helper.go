@@ -385,12 +385,12 @@ func (rbft *rbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 
 	if !rbft.inWV(preprep.View, preprep.SequenceNumber) {
 		if preprep.SequenceNumber != rbft.h && !rbft.in(skipInProgress) {
-			rbft.logger.Warningf("Replica %d received prePrepare with a different view or sequence " +
+			rbft.logger.Warningf("Replica %d received prePrepare with a different view or sequence "+
 				"number outside watermarks: prePrep.View %d, expected.View %d, seqNo %d, low water mark %d",
 				rbft.id, preprep.View, rbft.view, preprep.SequenceNumber, rbft.h)
 		} else {
 			// This is perfectly normal
-			rbft.logger.Debugf("Replica %d received prePrepare with a different view or sequence " +
+			rbft.logger.Debugf("Replica %d received prePrepare with a different view or sequence "+
 				"number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low water mark %d",
 				rbft.id, preprep.View, rbft.view, preprep.SequenceNumber, rbft.h)
 		}
