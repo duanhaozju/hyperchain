@@ -54,6 +54,7 @@ func (eh *ExecutorHandler) handleSyncMsg(client pb.Dispatcher_RegisterClient, ms
 }
 
 func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, msg *pb.IMessage) {
+
 	switch msg.Event {
 	case pb.Event_ValidationEvent:
 		e := &event.ValidationEvent{}
@@ -61,7 +62,6 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 		if err != nil {
 			logger.Error(err)
 			return
-		} else {
 		}
 		eh.executor.Validate(*e)
 	case pb.Event_CommitEvent:
@@ -70,7 +70,6 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 		if err != nil {
 			logger.Error(err)
 			return
-		} else {
 		}
 		eh.executor.CommitBlock(*e)
 	case pb.Event_VCResetEvent:
@@ -79,7 +78,6 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 		if err != nil {
 			logger.Error(err)
 			return
-		} else {
 		}
 		eh.executor.Rollback(*e)
 	case pb.Event_ChainSyncReqEvent:
@@ -88,11 +86,25 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 		if err != nil {
 			logger.Error(err)
 			return
-		} else {
 		}
 		eh.executor.SyncChain(*e)
+	case pb.Event_StoreInvalidTransactionEvent:
+		eh.executor.StoreInvalidTransaction(msg.Payload)
+	case pb.Event_ReceiveReplicaInfoEvent:
+		eh.executor.ReceiveReplicaInfo(msg.Payload)
+	case pb.Event_ReceiveSyncBlocksEvent:
+		eh.executor.ReceiveSyncBlocks(msg.Payload)
+	case pb.Event_ReceiveSyncRequestEvent:
+		eh.executor.ReceiveSyncRequest(msg.Payload)
+	case pb.Event_ReceiveWorldStateSyncRequestEvent:
+		eh.executor.ReceiveWorldStateSyncRequest(msg.Payload)
+	case pb.Event_ReceiveWorldStateEvent:
+		eh.executor.ReceiveWorldState(msg.Payload)
+	case pb.Event_ReceiveWsHandshakeEvent:
+		eh.executor.ReceiveWsHandshake(msg.Payload)
+	case pb.Event_ReceiveWsAckEvent:
+		eh.executor.ReceiveWsAck(msg.Payload)
 	default:
-		//TODO: add more event handle mechanism
 		logger.Errorf("Undefined event %v", msg)
 	}
 }

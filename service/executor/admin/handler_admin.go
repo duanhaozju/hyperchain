@@ -44,8 +44,9 @@ func (ah *AdminHandler) Handle(client pb.Dispatcher_RegisterClient, msg *pb.IMes
 		err = ah.ecMgr.Start(namespace)
 		es := &event.AdminResponseEvent{}
 		if err != nil {
-			logger.Errorf("Start namespce%s filed, error is %s", namespace, err)
+			logger.Errorf("Start namespce %s failed, error is %s", namespace, err)
 			es.Ok = false
+			es.Msg = err.Error()
 		} else {
 			es.Ok = true
 		}
@@ -66,6 +67,7 @@ func (ah *AdminHandler) Handle(client pb.Dispatcher_RegisterClient, msg *pb.IMes
 		if err != nil {
 			logger.Errorf("Stop namespce%s filed, error is %s", namespace, err)
 			es.Ok = false
+			es.Msg = err.Error()
 		} else {
 			es.Ok = true
 		}

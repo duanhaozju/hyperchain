@@ -11,6 +11,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/manager/event"
+	"time"
 )
 
 type IExecutor interface {
@@ -435,7 +436,16 @@ func (re *remoteExecutorProxy) sendToExecutor(namespace string, msg *pb.IMessage
 		return fmt.Errorf("No service found for %s ", service.EXECUTOR)
 	}
 
-	return srv.Send(msg)
+	err := srv.Send(msg)
+	if err != nil {
+		time.Sleep(time.Second)
+		//TODO: check is bad request or executor down.
+		err = re.Start()
+		if err != nil {
+			re.logger.Error(err)
+		}
+	}
+	return err
 }
 
 //handleError handle all kind of errors here.

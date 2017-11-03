@@ -95,6 +95,8 @@ jvm = true
 ############################################################################################################
 [executor]
     embedded = false # whether executor execute in a standlone mode
+    [executor.internalserver]
+       ip = "127.0.0.1" # the hyperchain ip executor connect in standlone mode
     [executor.host]
        addr = "127.0.0.1:50071"
 
