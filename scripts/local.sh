@@ -294,7 +294,7 @@ do
     -c|--hypercli)
         HYPERCLI=true; shift;;
     -j|--jvm)
-        HYPERJVM=true; shift;;
+        HYPERJVM=false; shift;;
     -m|--mode)
         MODE=true; shift;;
     -n|--run)

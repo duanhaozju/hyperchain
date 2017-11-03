@@ -252,7 +252,7 @@ func (rbft *rbftImpl) handleNullRequestTimerEvent() {
 		rbft.logger.Warningf("Replica %d null request timer expired, sending viewChange", rbft.id)
 		rbft.sendViewChange()
 	} else {
-		rbft.logger.Debugf("Primary %d null request timer expired, sending null request", rbft.id)
+		rbft.logger.Infof("Primary %d null request timer expired, sending null request", rbft.id)
 		rbft.sendNullRequest()
 	}
 }
