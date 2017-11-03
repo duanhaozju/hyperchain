@@ -12,7 +12,7 @@ import (
 )
 
 func getTestConfig() *Config {
-	testConfigPath := "/src/hyperchain/common/testhelper/resources/global.toml"
+	testConfigPath := "/src/github.com/hyperchain/hyperchain/common/testhelper/resources/global.toml"
 	return NewConfig(os.Getenv("GOPATH") + testConfigPath)
 }
 
