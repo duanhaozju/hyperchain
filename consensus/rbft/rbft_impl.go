@@ -1284,7 +1284,7 @@ func (rbft *rbftImpl) moveWatermarks(n uint64) {
 			digestList = append(digestList, digest)
 		}
 	}
-	rbft.batchMgr.txPool.RemoveBatchedTxs(digestList)
+	rbft.batchMgr.txPool.RemoveBatches(digestList)
 
 	if !rbft.batchMgr.txPool.IsPoolFull() {
 		rbft.setNotFull()

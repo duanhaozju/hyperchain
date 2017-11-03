@@ -416,12 +416,12 @@ func TestRemoveBatchedTxs(t *testing.T) {
 	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "2"})
 	txPool.batchStore = append(txPool.batchStore, &TxHashBatch{BatchHash: "3"})
 	hashList := []string{"1", "2"}
-	err = txPool.RemoveBatchedTxs(hashList)
+	err = txPool.RemoveBatches(hashList)
 	ast.Equal(nil, err, "remove batched transactions failed")
 	ast.Equal(1, len(txPool.batchStore), "remove two batch, expect 1")
 
 	hashList = []string{"2", "3"}
-	err = txPool.RemoveBatchedTxs(hashList)
+	err = txPool.RemoveBatches(hashList)
 	ast.Equal(nil, err, "remove batched transactions failed")
 	ast.Equal(0, len(txPool.batchStore), "remove one batch, expect 0")
 }
@@ -462,7 +462,7 @@ func TestHasTxInPool(t *testing.T) {
 	ast.Equal(true, txPool.HasTxInPool(), "contains one tx in txPool, expect false")
 }
 
-func TestGetTxsBack(t *testing.T) {
+func TestGetBatchesBack(t *testing.T) {
 	ast := assert.New(t)
 	namespace := "1"
 	common.InitRawHyperLogger(namespace)
@@ -725,7 +725,7 @@ func TestPostTxBatch(t *testing.T) {
 	ast.Equal(nil, err, "new txPool fail")
 
 	sub := txPool.queue.Subscribe(TxHashBatch{})
-	go func(){
+	go func() {
 		for {
 			select {
 			case obj := <-sub.Chan():
@@ -740,9 +740,9 @@ func TestPostTxBatch(t *testing.T) {
 		}
 	}()
 
-	batch1 := TxHashBatch{BatchHash:"a"}
-	batch2 := TxHashBatch{BatchHash:"b"}
-	batch3 := TxHashBatch{BatchHash:"c"}
+	batch1 := TxHashBatch{BatchHash: "a"}
+	batch2 := TxHashBatch{BatchHash: "b"}
+	batch3 := TxHashBatch{BatchHash: "c"}
 	txPool.postTxBatch(batch1)
 	time.Sleep(time.Nanosecond)
 

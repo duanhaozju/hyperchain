@@ -163,7 +163,7 @@ func (rbft *rbftImpl) recvNegoViewRsp(nvr *NegotiateViewResponse) consensusEvent
 	}
 
 	if rsp, ok := rbft.recoveryMgr.negoViewRspStore[nvr.ReplicaId]; ok {
-		rbft.logger.Warningf("Replica %d already received negotiateView response from replica %d, " +
+		rbft.logger.Warningf("Replica %d already received negotiateView response from replica %d, "+
 			"for view=%d, now receive again for view=%d, replace it", rbft.id, nvr.ReplicaId, rsp.View, nvr.View)
 	}
 
@@ -352,7 +352,7 @@ func (rbft *rbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) consensusEvent {
 	}
 
 	if rbft.recoveryMgr.recoveryToSeqNo != nil {
-		rbft.logger.Debugf("Replica %d received recoveryResponse from replica %d but checkpoint quorum and " +
+		rbft.logger.Debugf("Replica %d received recoveryResponse from replica %d but checkpoint quorum and "+
 			"seqNo quorum already found, ignore it", rbft.id, rsp.ReplicaId)
 		return nil
 	}
