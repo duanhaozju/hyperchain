@@ -956,7 +956,7 @@ func (rbft *rbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 		rbft.primaryValidateBatch(reqBatch.BatchHash, txBatch, 0)
 	} else {
 		rbft.logger.Debugf("Replica %d is backup, not sending prePrepare for request batch %s", rbft.id, reqBatch.BatchHash)
-		rbft.batchMgr.txPool.GetOneTxsBack(reqBatch.BatchHash)
+		rbft.batchMgr.txPool.GetOneBatchBack(reqBatch.BatchHash)
 	}
 
 	return nil

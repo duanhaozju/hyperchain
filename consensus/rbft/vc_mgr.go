@@ -100,11 +100,7 @@ func (rbft *rbftImpl) sendViewChange() consensusEvent {
 		},
 	}
 
-	cSet, pSet, qSet := rbft.gatherPQC()
-	vc.Basis.Cset = append(vc.Basis.Cset, cSet...)
-	vc.Basis.Pset = append(vc.Basis.Pset, pSet...)
-	vc.Basis.Qset = append(vc.Basis.Qset, qSet...)
-
+	vc.Basis.Cset, vc.Basis.Pset, vc.Basis.Qset = rbft.gatherPQC()
 	rbft.logger.Infof("Replica %d sending viewChange, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		rbft.id, vc.Basis.View, vc.Basis.H, len(vc.Basis.Cset), len(vc.Basis.Pset), len(vc.Basis.Qset))
 
@@ -1171,6 +1167,15 @@ func (rbft *rbftImpl) rebuildCertStoreForVC() {
 // So that, all correct peers will reach the seq that select in view change
 func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 
+	// Clear the cert of old view
+	for idx := range rbft.storeMgr.certStore {
+		if idx.v < rbft.view {
+			delete(rbft.storeMgr.certStore, idx)
+			rbft.persistDelQPCSet(idx.v, idx.n, idx.d)
+		}
+	}
+
+	// Rebuild the certStore according to xset
 	for n, d := range xset {
 		if n <= rbft.h || n > rbft.exec.lastExec {
 			continue
