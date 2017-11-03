@@ -14,6 +14,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/p2p/hts/secimpl"
 )
 
 // the Database for LevelDB
@@ -23,6 +24,7 @@ type LDBDatabase struct {
 	db        *leveldb.DB
 	conf      *common.Config
 	namespace string
+	dbEncrypt bool
 }
 
 // NewLDBDataBase creates a new LDBDatabase instance,
@@ -37,6 +39,7 @@ func NewLDBDataBase(conf *common.Config, filepath string, namespace string) (*LD
 		db:        db,
 		conf:      conf,
 		namespace: namespace,
+		dbEncrypt: conf.GetBool(hcom.DATA_ENCRYPTION),
 	}, err
 }
 
@@ -58,7 +61,29 @@ func LDBDatabasePath(conf *common.Config) string {
 // Put inserts a K/V pair to the database,
 // it will overwrite the value if the key exists.
 func (ldb *LDBDatabase) Put(key []byte, value []byte) error {
-	return ldb.db.Put(key, value, nil)
+	var (
+		finalBytes []byte = value
+		err        error
+	)
+	if value != nil && len(value) > 0 {
+		if ldb.dbEncrypt {
+			var privateKey []byte
+			if len(key) > hcom.ENCRYPTED_KEY_LEN {
+				privateKey = key[:hcom.ENCRYPTED_KEY_LEN]
+			} else {
+				privateKey = key
+				for i := len(key); i < hcom.ENCRYPTED_KEY_LEN; i++ {
+					privateKey = append(privateKey, byte(hcom.ENCRYPTED_KEY_APPENDER))
+				}
+			}
+			finalBytes, err = secimpl.TripleDesEncrypt8(finalBytes, privateKey)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return ldb.db.Put(key, finalBytes, nil)
 }
 
 // Get gets a key's value from the database.
@@ -67,7 +92,28 @@ func (ldb *LDBDatabase) Get(key []byte) ([]byte, error) {
 	if err == leveldb.ErrNotFound {
 		err = db.DB_NOT_FOUND
 	}
-	return value, err
+
+	var finalBytes []byte = value
+	if value != nil {
+		if ldb.dbEncrypt {
+			var privateKey []byte
+
+			if len(key) > hcom.ENCRYPTED_KEY_LEN {
+				privateKey = key[:hcom.ENCRYPTED_KEY_LEN]
+			} else {
+				privateKey = key
+				for i := len(key); i < hcom.ENCRYPTED_KEY_LEN; i++ {
+					privateKey = append(privateKey, byte(hcom.ENCRYPTED_KEY_APPENDER))
+				}
+			}
+
+			finalBytes, err = secimpl.TripleDesDecrypt8(finalBytes, privateKey)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return finalBytes, err
 }
 
 // Delete deletes the value for the given key.
@@ -96,7 +142,11 @@ func (ldb *LDBDatabase) MakeSnapshot(backupPath string, fields []string) error {
 	defer snapshot.Release()
 
 	for _, field := range fields {
-		iter := snapshot.NewIterator(util.BytesPrefix([]byte(field)), nil)
+		iter := &Iterator{
+			ldb:  ldb,
+			iter: snapshot.NewIterator(util.BytesPrefix([]byte(field)), nil),
+		}
+
 		for iter.Next() {
 			if err := backupDb.Put(iter.Key(), iter.Value()); err != nil {
 				iter.Release()
@@ -179,7 +229,7 @@ func (b *ldbBatch) Len() int {
 
 // Iterator implements the Iterator interface.
 type Iterator struct {
-	db   *leveldb.DB
+	ldb  *LDBDatabase
 	iter iterator.Iterator
 }
 
@@ -187,7 +237,7 @@ type Iterator struct {
 func (ldb *LDBDatabase) NewIterator(prefix []byte) db.Iterator {
 	iter := ldb.db.NewIterator(util.BytesPrefix(prefix), nil)
 	return &Iterator{
-		db:   ldb.db,
+		ldb:  ldb,
 		iter: iter,
 	}
 }
@@ -196,17 +246,50 @@ func (ldb *LDBDatabase) NewIterator(prefix []byte) db.Iterator {
 func (ldb *LDBDatabase) Scan(begin, end []byte) db.Iterator {
 	iter := ldb.db.NewIterator(&util.Range{Start: begin, Limit: end}, nil)
 	return &Iterator{
-		db:   ldb.db,
+		ldb:  ldb,
 		iter: iter,
 	}
 }
 
-func (ldb *LDBDatabase) NewIteratorWithPrefix(prefix []byte) iterator.Iterator {
-	return ldb.db.NewIterator(util.BytesPrefix(prefix), nil)
+func (ldb *LDBDatabase) NewIteratorWithPrefix(prefix []byte) db.Iterator {
+	iter := ldb.db.NewIterator(util.BytesPrefix(prefix), nil)
+	return &Iterator{
+		ldb:  ldb,
+		iter: iter,
+	}
 }
 
-func (i *Iterator) Key() []byte          { return i.iter.Key() }
-func (i *Iterator) Value() []byte        { return i.iter.Value() }
+func (it *Iterator) Key() []byte { return it.iter.Key() }
+
+func (it *Iterator) Value() []byte {
+	var err error
+
+	value := it.iter.Value()
+	var finalBytes []byte = value
+	if value != nil {
+		key := it.iter.Key()
+		if it.ldb.dbEncrypt {
+			var privateKey []byte
+
+			if len(key) > hcom.ENCRYPTED_KEY_LEN {
+				privateKey = key[:hcom.ENCRYPTED_KEY_LEN]
+			} else {
+				privateKey = key
+				for i := len(key); i < hcom.ENCRYPTED_KEY_LEN; i++ {
+					privateKey = append(privateKey, byte(hcom.ENCRYPTED_KEY_APPENDER))
+				}
+			}
+
+			finalBytes, err = secimpl.TripleDesDecrypt8(finalBytes, privateKey)
+			if err != nil {
+				return nil
+			}
+		}
+	}
+
+	return finalBytes
+}
+
 func (i *Iterator) Seek(key []byte) bool { return i.iter.Seek(key) }
 func (i *Iterator) Next() bool           { return i.iter.Next() }
 func (i *Iterator) Prev() bool           { return i.iter.Prev() }

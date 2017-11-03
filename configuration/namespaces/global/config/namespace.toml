@@ -91,9 +91,10 @@ algo = "RBFT"
     type = 0001
 
     [database.leveldb]
-    root_dir            = "data/leveldb" #leveldb table root dir
-    log_path            = "data/db.log"
-    measurement_enable  = false
+    root_dir           = "data/leveldb" #leveldb table root dir
+    log_path           = "data/db.log"
+    measurement_enable = false
+    data_encryption    = false
 
     [database.leveldb.options]
     block_cache_capacity      = "8mb" # "mb", "kb"
