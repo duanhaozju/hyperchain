@@ -27,10 +27,10 @@
 			"revisionTime": "2017-05-30T17:17:52Z"
 		},
 		{
-			"checksumSHA1": "vOVK+3/6ip7qo5xIhgtGGWMVDvo=",
+			"checksumSHA1": "P/YiamlyGvQBE5kb9fgp3a+CckI=",
 			"path": "github.com/astaxie/beego",
-			"revision": "cab8458c1c4a5a3b4bf5192922be620e6dede15b",
-			"revisionTime": "2017-05-19T13:19:18Z"
+			"revision": "c5118e9535f237996bae7c7baebe4ed4247cb2c6",
+			"revisionTime": "2017-10-14T08:28:56Z"
 		},
 		{
 			"checksumSHA1": "bwz/1vy/v5db0uhkckArS/KZ5xI=",
@@ -57,10 +57,10 @@
 			"revisionTime": "2017-05-19T13:19:18Z"
 		},
 		{
-			"checksumSHA1": "+MEWMsS4mJ9jNhwfVeyBMpdyVCQ=",
+			"checksumSHA1": "aNA3HBmv8A9mezI/ZW92Po9I5GE=",
 			"path": "github.com/astaxie/beego/logs",
-			"revision": "cab8458c1c4a5a3b4bf5192922be620e6dede15b",
-			"revisionTime": "2017-05-19T13:19:18Z"
+			"revision": "c5118e9535f237996bae7c7baebe4ed4247cb2c6",
+			"revisionTime": "2017-10-14T08:28:56Z"
 		},
 		{
 			"checksumSHA1": "qGvZUP7mTKGvMa3ui7kqLJQiXNc=",
