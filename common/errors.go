@@ -34,7 +34,7 @@ const (
 	custom_ContractDeployError
 	custom_ContractInvokeError
 	custom_SystemTooBusyError
-	custom_RepeadedTxError
+	custom_RepeatedTxError
 	custom_ContractPermissionError
 	custom_AccountNotExistError
 	custom_NamespaceNotFoundError
@@ -144,12 +144,12 @@ type SystemTooBusyError struct{}
 func (e *SystemTooBusyError) Code() int     { return custom_SystemTooBusyError }
 func (e *SystemTooBusyError) Error() string { return "System is too busy to response." }
 
-type RepeadedTxError struct {
+type RepeatedTxError struct {
 	TxHash string
 }
 
-func (e *RepeadedTxError) Code() int     { return custom_RepeadedTxError }
-func (e *RepeadedTxError) Error() string { return "Repeated transaction " + e.TxHash }
+func (e *RepeatedTxError) Code() int     { return custom_RepeatedTxError }
+func (e *RepeatedTxError) Error() string { return "Repeated transaction " + e.TxHash }
 
 type ContractPermissionError struct {
 	Message string

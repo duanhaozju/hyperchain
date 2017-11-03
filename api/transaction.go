@@ -10,7 +10,6 @@ import (
 	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/crypto"
-	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/hyperchain/hyperchain/manager"
 	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/juju/ratelimit"
@@ -21,11 +20,6 @@ import (
 
 // This file implements the handler of Transaction service API which
 // can be invoked by client in JSON-RPC request.
-
-var (
-	kec256Hash         = crypto.NewKeccak256Hash("keccak256")
-	db_not_found_error = db.DB_NOT_FOUND.Error()
-)
 
 type Transaction struct {
 	namespace   string
@@ -117,6 +111,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 	}
 
 	// 2. post a event.NewTxEvent event
+	tran.log.Debugf("[ %v ] post event NewTxEvent")
 	err = postNewTxEvent(args, tx, tran.eh)
 	if err != nil {
 		return common.Hash{}, err
@@ -170,7 +165,6 @@ func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult
 			return nil, &common.CallbackError{Message: errType.String()}
 		}
 	}
-
 }
 
 // GetTransactions returns all transactions in the given block number. Parameters include
@@ -181,7 +175,7 @@ func (tran *Transaction) GetTransactions(args IntervalArgs) ([]*TransactionResul
 		return nil, err
 	}
 
-	var transactions []*TransactionResult
+	var transactions []*TransactionResult = make([]*TransactionResult, 0)
 
 	if blocks, err := getBlocks(trueArgs, tran.namespace, false); err != nil {
 		return nil, err
@@ -229,7 +223,7 @@ func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) 
 func (tran *Transaction) GetDiscardTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
 	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0 {
-		return nil, &common.InvalidParamsError{Message: "Invalid params, both startTime and endTime must be positive, startTime must be less than endTime"}
+		return nil, &common.InvalidParamsError{Message: "invalid params, both startTime and endTime must be positive, startTime must be less than endTime"}
 	}
 
 	reds, err := edb.GetAllDiscardTransaction(tran.namespace)
@@ -286,7 +280,7 @@ func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionRes
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and transaction index.
 func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
 	if common.EmptyHash(hash) == true {
-		return nil, &common.InvalidParamsError{Message: "Invalid hash"}
+		return nil, &common.InvalidParamsError{Message: "invalid params, missing block hash"}
 	}
 
 	block, err := edb.GetBlock(tran.namespace, hash[:])
@@ -300,7 +294,7 @@ func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, ind
 	txCount := len(block.Transactions)
 
 	if index.Int() >= txCount {
-		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("Invalid params. This block contains %v transactions, but the index %v is out of range", txCount, index)}
+		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("invalid params. This block contains %v transactions, but the index %v is out of range", txCount, index)}
 	}
 
 	if index.Int() >= 0 && index.Int() < txCount {
@@ -337,7 +331,7 @@ func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, inde
 	txCount := len(block.Transactions)
 
 	if index.Int() >= txCount {
-		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("Invalid params. This block contains %v transactions, but the index %v is out of range", txCount, index)}
+		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("invalid params. This block contains %v transactions, but the index %v is out of range", txCount, index)}
 	}
 
 	if index.Int() >= 0 && index.Int() < txCount {
@@ -354,7 +348,7 @@ func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, inde
 func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
 	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0 {
-		return nil, &common.InvalidParamsError{Message: "Invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
+		return nil, &common.InvalidParamsError{Message: "invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
 	}
 
 	currentChain, err := edb.GetChain(tran.namespace)
@@ -397,7 +391,7 @@ func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*Transactio
 func (tran *Transaction) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
 
 	if common.EmptyHash(hash) == true {
-		return nil, &common.InvalidParamsError{Message: "Invalid hash"}
+		return nil, &common.InvalidParamsError{Message: "invalid params, missing block hash"}
 	}
 
 	block, err := edb.GetBlock(tran.namespace, hash[:])
@@ -509,9 +503,9 @@ func (tran *Transaction) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, e
 // number and contract address.
 func (tran *Transaction) GetTransactionsCountByContractAddr(args IntervalArgs) (interface{}, error) {
 	if args.ContractAddr == nil {
-		return nil, &common.InvalidParamsError{"Invalid params. 'address' can't be empty"}
+		return nil, &common.InvalidParamsError{Message: "invalid params, missing params `address`"}
 	} else if args.MethodID != "" {
-		return nil, &common.InvalidParamsError{"Invalid params. 'methodID' is unrecognized"}
+		return nil, &common.InvalidParamsError{Message: "invalid params, `methodID` is unrecognized"}
 	}
 	return tran.getTransactionsCountByBlockNumber(args)
 }
@@ -521,9 +515,9 @@ func (tran *Transaction) GetTransactionsCountByContractAddr(args IntervalArgs) (
 // number and method ID. Method ID is contract method identifier in a contract.
 func (tran *Transaction) GetTransactionsCountByMethodID(args IntervalArgs) (interface{}, error) {
 	if args.ContractAddr == nil {
-		return nil, &common.InvalidParamsError{"Invalid params. 'address' can't be empty"}
+		return nil, &common.InvalidParamsError{Message: "invalid params, missing params `address`"}
 	} else if args.MethodID == "" {
-		return nil, &common.InvalidParamsError{"Invalid params. 'methodID' can't be empty"}
+		return nil, &common.InvalidParamsError{Message: "invalid params, missing params `methodID`"}
 	}
 	mid := strings.TrimSpace(args.MethodID)
 	if strings.HasPrefix(mid, "0x") {
@@ -655,7 +649,7 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 	}
 
 	if blkNumber < min || blkNumber > max {
-		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("Invalid params. 'blkNumber' %v is out of range, it must be in the range %v to %v", blkNumber, min, max)}
+		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("invalid params, `blkNumber` %v is out of range, it must be in the range %v to %v", blkNumber, min, max)}
 	}
 
 	// find the starting position
@@ -683,7 +677,7 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 			blkNumber++
 			index = 0
 		} else {
-			return nil, &common.InvalidParamsError{Message: fmt.Sprintf("Invalid params. 'txIndex' %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blockTxCount)}
+			return nil, &common.InvalidParamsError{Message: fmt.Sprintf("invalid params, `txIndex` %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blockTxCount)}
 		}
 	}
 
@@ -696,7 +690,7 @@ func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}
 
 		blkTxsCount := block.TxCounts.Int()
 		if blkTxsCount <= index {
-			return nil, &common.InvalidParamsError{Message: fmt.Sprintf("Invalid params. 'txIndex' %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blkTxsCount)}
+			return nil, &common.InvalidParamsError{Message: fmt.Sprintf("invalid params, `txIndex` %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blkTxsCount)}
 		}
 
 		// starting with the specified index of the block transactions, filter all the eligible transaction
@@ -768,7 +762,7 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 	}
 
 	if blkNumber < min || blkNumber > max {
-		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("Invalid params. 'blkNumber' %v is out of range, it must be in the range %v to %v", blkNumber, min, max)}
+		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("invalid params, `blkNumber` %v is out of range, it must be in the range %v to %v", blkNumber, min, max)}
 	}
 
 	// find the starting position
@@ -791,7 +785,7 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 		blockTxCount := block.TxCounts.Int()
 
 		if index >= blockTxCount {
-			return nil, &common.InvalidParamsError{fmt.Sprintf("Invalid params. 'txIndex' %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blockTxCount)}
+			return nil, &common.InvalidParamsError{Message: fmt.Sprintf("invalid params, `txIndex` %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blockTxCount)}
 		} else if index == 0 {
 			blkNumber--
 			blk, err := getBlockByNumber(tran.namespace, blkNumber, false)
@@ -815,7 +809,7 @@ func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}
 		}
 		blkTxsCount := block.TxCounts.Int()
 		if blkTxsCount <= index {
-			return nil, &common.InvalidParamsError{fmt.Sprintf("Invalid params. 'txIndex' %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blkTxsCount)}
+			return nil, &common.InvalidParamsError{Message: fmt.Sprintf("invalid params, `txIndex` %d is out of range, and now the number of transactions of block %d is %d", index, blkNumber, blkTxsCount)}
 		}
 
 		if index == -1 {
@@ -885,7 +879,7 @@ func (tran *Transaction) getNextPagingTransactions(txs []interface{}, currentNum
 	blockTxCount := blk.TxCounts.Int()
 
 	if currentIndex >= blockTxCount {
-		return nil, &common.InvalidParamsError{fmt.Sprintf("Invalid params. 'txIndex' %d is out of range, and now the number of transactions of block %d is %d", currentIndex, currentNumber, blockTxCount)}
+		return nil, &common.InvalidParamsError{Message: fmt.Sprintf("invalid params, `txIndex` %d is out of range, and now the number of transactions of block %d is %d", currentIndex, currentNumber, blockTxCount)}
 	}
 
 	var flag bool
@@ -1053,7 +1047,7 @@ func prepareTransaction(args SendTxArgs, txType int, namespace string, eh *manag
 
 	value, err := proto.Marshal(txValue)
 	if err != nil {
-		return nil, &common.CallbackError{err.Error()}
+		return nil, &common.CallbackError{Message: err.Error()}
 	}
 
 	if args.To == nil {
@@ -1068,7 +1062,7 @@ func prepareTransaction(args SendTxArgs, txType int, namespace string, eh *manag
 		hash := eh.GetPeerManager().GetLocalNodeHash()
 		if err := tx.SetNVPHash(hash); err != nil {
 			log.Errorf("set NVP hash failed! err Msg: %v.", err.Error())
-			return nil, &common.CallbackError{Message: "Marshal nvp hash error"}
+			return nil, &common.CallbackError{Message: "marshal nvp hash error"}
 		}
 	}
 	tx.Signature = common.FromHex(realArgs.Signature)
@@ -1078,7 +1072,8 @@ func prepareTransaction(args SendTxArgs, txType int, namespace string, eh *manag
 	var exist bool
 	if exist, err = bloom.LookupTransaction(namespace, tx.GetHash()); err != nil || exist == true {
 		if exist, _ = edb.IsTransactionExist(namespace, tx.TransactionHash); exist {
-			return nil, &common.RepeadedTxError{TxHash: common.ToHex(tx.TransactionHash)}
+			log.Errorf("repeated tx %v", common.ToHex(tx.TransactionHash))
+			return nil, &common.RepeatedTxError{TxHash: common.ToHex(tx.TransactionHash)}
 		}
 	}
 
@@ -1086,7 +1081,7 @@ func prepareTransaction(args SendTxArgs, txType int, namespace string, eh *manag
 	encryp := crypto.NewEcdsaEncrypto("ecdsa")
 	if !tx.ValidateSign(encryp, kec256Hash) {
 		log.Errorf("invalid signature, tx hash %v", common.ToHex(tx.TransactionHash))
-		return nil, &common.SignatureInvalidError{Message: "Invalid signature, tx hash " + common.ToHex(tx.TransactionHash)}
+		return nil, &common.SignatureInvalidError{Message: "invalid signature, tx hash " + common.ToHex(tx.TransactionHash)}
 	}
 
 	return tx, nil
@@ -1107,7 +1102,7 @@ func postNewTxEvent(args SendTxArgs, tx *types.Transaction, eh *manager.EventHub
 		close(ch)
 		if res == false {
 			// nvp node fails to forward tx to vp node
-			return &common.CallbackError{Message: "Send tx to nvp failed."}
+			return &common.CallbackError{Message: "send tx to nvp failed."}
 		}
 	} else {
 		go eh.GetEventObject().Post(event.NewTxEvent{

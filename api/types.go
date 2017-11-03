@@ -106,16 +106,10 @@ func (n BlockNumber) BlockNumberToUint64(latest uint64) (uint64, error) {
 	if !ok {
 		if input == "latest" {
 			if latest == 0 {
-				return 0, fmt.Errorf("There is no block generated!")
+				return 0, fmt.Errorf("there is no block generated!")
 			} else {
 				return latest, nil
 			}
-		} else if input == "earliest" {
-			//TODO
-			return 0, fmt.Errorf("Support later...")
-		} else if input == "pending" {
-			//TODO
-			return 0, fmt.Errorf("Support later...")
 		} else {
 			return 0, fmt.Errorf("invalid block number %s", input)
 		}
@@ -150,8 +144,8 @@ func (n BlockNumber) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hexNum)
 }
 
-// UnmarshalJSON parses a hash in its hex from to a number. It supports:
-// - "latest", "earliest" or "pending" as string arguments
+// UnmarshalJSON parses a hash from its hex to a number. It supports:
+// - "latest" as string arguments
 // - number
 func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 
@@ -163,7 +157,7 @@ func (n *BlockNumber) UnmarshalJSON(data []byte) error {
 	in := new(big.Int)
 	_, ok := in.SetString(input, 0)
 
-	if !ok && input != "latest" && input != "earliest" && input != "pending" {
+	if !ok && input != "latest" {
 		return fmt.Errorf("invalid block number %s", data)
 	} else {
 		*n = BlockNumber(input)
