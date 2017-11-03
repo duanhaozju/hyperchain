@@ -620,7 +620,22 @@ func (pool *txPoolImpl) removeTxPoolTxs(hashList []string) error {
 	return nil
 }
 
-// getBatchById find batch by id
+// RemoveOneTxBatch removes one batch by the given digest of transaction
+// batch from the pool(batchedTxs).
+func (pool *txPoolImpl) removeOneBatchedTxs(index int) {
+
+	batch := pool.batchStore[index]
+	for _, hash := range batch.TxHashList {
+		delete(pool.batchedTxs, hash)
+	}
+	pool.batchStore = append(pool.batchStore[:index], pool.batchStore[index+1:]...)
+
+	pool.logger.Debugf("Replica removes one transaction batch, which hash is %s, and now there are "+
+		"%d batches in txPool", hash, len(pool.batchStore))
+}
+
+// getBatchById find batch together with its index in batchStore, returns error
+// if not found id in batchStore.
 func (pool *txPoolImpl) getBatchById(id string) (*TxHashBatch, int, error) {
 
 	var batch *TxHashBatch
@@ -641,7 +656,7 @@ func (pool *txPoolImpl) getBatchById(id string) (*TxHashBatch, int, error) {
 	}
 }
 
-// removeBatchById removes batch with given id from batchStore
+// removeBatchById removes batch with given id from batchStore.
 func (pool *txPoolImpl) removeBatchById(id string) (*TxHashBatch, error) {
 
 	var newBatches []*TxHashBatch

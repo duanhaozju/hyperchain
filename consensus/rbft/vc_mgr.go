@@ -1182,7 +1182,7 @@ func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 		}
 		batch, ok := rbft.storeMgr.txBatchStore[d]
 		if !ok && d != "" {
-			rbft.logger.Errorf("Replica %d is missing tx batch for seqNo=%d with digest '%s' for assigned prepare", rbft.id)
+			rbft.logger.Errorf("Replica %d is missing tx batch for seqNo=%d with digest '%s' for assigned prepare", rbft.id, n, d)
 			continue
 		}
 
