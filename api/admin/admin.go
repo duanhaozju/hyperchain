@@ -10,6 +10,9 @@ import (
 	"time"
 	"hyperchain/namespace"
 	"hyperchain/common/interface"
+	"hyperchain/manager/event"
+	"github.com/golang/protobuf/proto"
+	pb "hyperchain/common/protos"
 )
 
 // This file defines the hypercli admin interface. Users invoke
@@ -377,11 +380,32 @@ func (admin *Administrator) setLevel(cmd *Command) *CommandResult {
 // successfully.
 func (admin *Administrator) startJvmServer(cmd *Command) *CommandResult {
 	admin.logger.Noticef("process cmd %v", cmd.MethodName)
-	if err := admin.nsMgr.StartJvm(); err != nil {
-		admin.logger.Noticef("start jvm server failed: %v", err)
-		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	//if err := admin.nsMgr.StartJvm(); err != nil {
+	//	admin.logger.Noticef("start jvm server failed: %v", err)
+	//	return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	//}
+	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
+	sje := event.StartJVMEvent{
 	}
-	return &CommandResult{Ok: true, Result: "start jvm successful."}
+
+	payload, _ := proto.Marshal(&sje)
+
+	msg := pb.IMessage{
+		Event:   pb.Event_StartJVMEvent,
+		Payload: payload,
+	}
+	adminService.Send(msg)
+	rsp := <-adminService.Response()
+	rspEvent := &event.AdminResponseEvent{}
+	err := proto.Unmarshal(rsp.Payload, rspEvent)
+	if err != nil{
+		return &CommandResult{Ok: false, Result: "start jvm failed."}
+	}else if rspEvent.Ok {
+		return &CommandResult{Ok: true, Result: "start jvm successful."}
+	}else {
+		return &CommandResult{Ok: false, Result: "start jvm failed."}
+	}
+
 }
 
 // stopJvmServer stops the JVM service, waiting for the command to be executed

@@ -102,3 +102,7 @@ type ArchiveEvent struct {
 type NvpRelayTxEvent struct {
 	Payload []byte
 }
+
+type StartJVMEvent struct {
+	Payload []byte
+}
