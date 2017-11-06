@@ -351,6 +351,9 @@ func (pool *txPoolImpl) RemoveBatches(hashList []string) error {
 // GetBatchesBackExcept move some uncommitted batch in batchStore to txPool in viewchange and updatingN
 func (pool *txPoolImpl) GetBatchesBackExcept(hashList []string) error {
 
+	pool.logger.Debugf("Before put back txs except %d batches, there are %d batches in batchStore, " +
+		"%d batches in pendingBatches", len(hashList), len(pool.batchStore), len(pool.pendingBatches))
+
 	var (
 		removeTxList      []string
 		restoreBatches    []*TxHashBatch
@@ -389,6 +392,9 @@ func (pool *txPoolImpl) GetBatchesBackExcept(hashList []string) error {
 	pool.pendingBatches = nil
 	// clear missingTxs in viewchange or updatingN
 	pool.missingTxs = make(map[string]map[uint64]string)
+
+	pool.logger.Debugf("After put back txs, there are %d batches in batchStore, " +
+		"%d batches in pendingBatches", len(hashList), len(pool.batchStore), len(pool.pendingBatches))
 
 	return nil
 }
