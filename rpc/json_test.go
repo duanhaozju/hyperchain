@@ -20,6 +20,7 @@ import (
 	"math/big"
 	"crypto/sha256"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	"os"
 )
 
 func initCodec(request string) ServerCodec {
@@ -201,7 +202,18 @@ func TestJsonCodecImpl_CheckHttpHeaders(t *testing.T) {
 	}
 
 	codec := NewJSONCodec(rwc, httpRequest, mockNSMgr, nil)
-	defer codec.Close()
+	defer func() {
+		codec.Close()
+
+		// delete test data
+		if common.FileExist("namespaces") {
+			t.Logf("hello %v", "workld")
+			err := os.RemoveAll("namespaces")
+			if err != nil {
+				t.Fatalf("delet dir error: %v", err)
+			}
+		}
+	}()
 	if err := codec.CheckHttpHeaders("", "hello"); err != nil {
 		t.Fatalf("CheckHttpHeaders error: %v", err)
 	}
