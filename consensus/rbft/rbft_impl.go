@@ -275,7 +275,7 @@ func (rbft *rbftImpl) sendPendingPrePrepares() {
 	// if we find a batch in findNextPrePrepareBatch, currentVid would be set.
 	// And currentVid would be set to nil after send a pre-prepare message.
 	if rbft.batchVdr.currentVid != nil {
-		rbft.logger.Debugf("Replica %d not attempting to send prePrepare bacause it is currently send %d, retry.", rbft.id, *rbft.batchVdr.currentVid)
+		rbft.logger.Debugf("Replica %d not attempting to send prePrepare because it is currently send %d, retry.", rbft.id, *rbft.batchVdr.currentVid)
 		return
 	}
 
@@ -283,8 +283,12 @@ func (rbft *rbftImpl) sendPendingPrePrepares() {
 
 	for stop := false; !stop; {
 		if find, digest, resultHash := rbft.findNextPrePrepareBatch(); find {
-			waitingBatch := rbft.storeMgr.outstandingReqBatches[digest]
-			rbft.sendPrePrepare(*rbft.batchVdr.currentVid, digest, resultHash, waitingBatch)
+			if waitingBatch, ok := rbft.storeMgr.outstandingReqBatches[digest]; !ok {
+				rbft.logger.Errorf("Replica %d finds batch with hash: %s in cacheValidatedBatch, but can't find it in outstandingReqBatches", rbft.id, digest)
+				return
+			} else {
+				rbft.sendPrePrepare(*rbft.batchVdr.currentVid, digest, resultHash, waitingBatch)
+			}
 		} else {
 			stop = true
 		}
@@ -294,8 +298,7 @@ func (rbft *rbftImpl) sendPendingPrePrepares() {
 // findNextPrePrepareBatch find next validated batch to send preprepare msg.
 func (rbft *rbftImpl) findNextPrePrepareBatch() (find bool, digest string, resultHash string) {
 
-	for digest = range rbft.batchVdr.cacheValidatedBatch {
-		cache := rbft.batchVdr.getCacheBatchFromCVB(digest)
+	for digest, cache := range rbft.batchVdr.cacheValidatedBatch {
 		if cache == nil {
 			rbft.logger.Debugf("Primary %d already call sendPrePrepare for batch: %s",
 				rbft.id, digest)
@@ -809,12 +812,10 @@ func (rbft *rbftImpl) afterCommitBlock(idx msgID) {
 			height := bcInfo.Height
 			if height == rbft.exec.lastExec {
 				rbft.logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", rbft.exec.lastExec, height)
-				//time.Sleep(3*time.Millisecond)
 				rbft.checkpoint(rbft.exec.lastExec, bcInfo)
 			} else {
 				// reqBatch call execute but have not done with execute
 				rbft.logger.Errorf("Fail to call the checkpoint, seqNo=%d, block height=%d", rbft.exec.lastExec, height)
-				//rbft.retryCheckpoint(rbft.lastExec)
 			}
 		}
 	} else {
