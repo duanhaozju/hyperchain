@@ -5,6 +5,7 @@ package hleveldb
 import (
 	"os"
 	"testing"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 var testMap = map[string]string{
@@ -14,14 +15,14 @@ var testMap = map[string]string{
 	"key4": "value4",
 }
 
-var db *LDBDatabase
+var testdb *LDBDatabase
 
 // TestNewLDBDataBase is unit test for NewLDBDataBase
 func TestNewLDBDataBase(t *testing.T) {
 	dir, _ := os.Getwd()
-	db, _ = NewLDBDataBase(dir + "/db")
+	testdb, _ = NewLDBDataBase(common.NewRawConfig(), dir + "/db", common.DEFAULT_NAMESPACE)
 	defer os.RemoveAll(dir + "/db")
-	if db.path != dir+"/db" && db.db == nil {
+	if testdb.path != dir+"/db" && testdb.db == nil {
 		t.Error("new ldbdatabase is wrong")
 	} else {
 		t.Log("TestNewLDBDataBase is pass")
@@ -33,7 +34,7 @@ func TestNewLDBDataBase(t *testing.T) {
 func TestLDBDatabase(t *testing.T) {
 	// put data
 	for key, value := range testMap {
-		err := db.Put([]byte(key), []byte(value))
+		err := testdb.Put([]byte(key), []byte(value))
 		if err != nil {
 			t.Error(err)
 			return
@@ -41,7 +42,7 @@ func TestLDBDatabase(t *testing.T) {
 	}
 	// get data
 	for key, value := range testMap {
-		data, err := db.Get([]byte(key))
+		data, err := testdb.Get([]byte(key))
 		if err != nil {
 			t.Error(err)
 			return
@@ -52,7 +53,7 @@ func TestLDBDatabase(t *testing.T) {
 	}
 	// delete datas
 	for key, _ := range testMap {
-		err := db.Delete([]byte(key))
+		err := testdb.Delete([]byte(key))
 		if err != nil {
 			t.Error(err)
 		}
