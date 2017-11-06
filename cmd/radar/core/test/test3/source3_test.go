@@ -9,11 +9,21 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 	"io/ioutil"
 	"testing"
+	"os"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 func TestSource3(t *testing.T) {
 	db, err := leveldb.OpenFile("blockchain", nil)
-	defer db.Close()
+	defer func() {
+		db.Close()
+		if common.FileExist("blockchain") {
+			err := os.RemoveAll("blockchain")
+			if err != nil {
+				t.Fatalf("delete dir error: %v", err)
+			}
+		}
+	}()
 	if err != nil {
 		fmt.Println(err.Error())
 	}

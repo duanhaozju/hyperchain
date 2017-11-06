@@ -207,10 +207,16 @@ func TestJsonCodecImpl_CheckHttpHeaders(t *testing.T) {
 
 		// delete test data
 		if common.FileExist("namespaces") {
-			t.Logf("hello %v", "workld")
 			err := os.RemoveAll("namespaces")
 			if err != nil {
-				t.Fatalf("delet dir error: %v", err)
+				t.Fatalf("delete dir error: %v", err)
+			}
+		}
+
+		if common.FileExist("test/data") {
+			err := os.RemoveAll("test/data")
+			if err != nil {
+				t.Fatalf("delete test/data error: %v", err)
 			}
 		}
 	}()

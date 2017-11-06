@@ -161,3 +161,12 @@ func TestCAManager_VerifyTCert2(t *testing.T) {
 	assert.Nil(t, err2)
 	assert.True(t, verifyResult)
 }
+
+func TestDeleteTestData(t *testing.T) {
+	if common.FileExist("namespaces") {
+		err := os.RemoveAll("namespaces")
+		if err != nil {
+			t.Fatalf("delete dir error: %v", err)
+		}
+	}
+}
