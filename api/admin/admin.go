@@ -412,22 +412,64 @@ func (admin *Administrator) startJvmServer(cmd *Command) *CommandResult {
 // successfully.
 func (admin *Administrator) stopJvmServer(cmd *Command) *CommandResult {
 	admin.logger.Noticef("process cmd %v", cmd.MethodName)
-	if err := admin.nsMgr.StopJvm(); err != nil {
-		admin.logger.Noticef("stop jvm server failed: %v", err)
-		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	//if err := admin.nsMgr.StopJvm(); err != nil {
+	//	admin.logger.Noticef("stop jvm server failed: %v", err)
+	//	return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	//}
+	//return &CommandResult{Ok: true, Result: "stop jvm successful."}
+	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
+	sje := event.StopJVMEvent{
 	}
-	return &CommandResult{Ok: true, Result: "stop jvm successful."}
+
+	payload, _ := proto.Marshal(&sje)
+
+	msg := pb.IMessage{
+		Event:   pb.Event_StopJVMEvent,
+		Payload: payload,
+	}
+	adminService.Send(msg)
+	rsp := <-adminService.Response()
+	rspEvent := &event.AdminResponseEvent{}
+	err := proto.Unmarshal(rsp.Payload, rspEvent)
+	if err != nil{
+		return &CommandResult{Ok: false, Result: "start jvm failed."}
+	}else if rspEvent.Ok {
+		return &CommandResult{Ok: true, Result: "start jvm successful."}
+	}else {
+		return &CommandResult{Ok: false, Result: "start jvm failed."}
+	}
 }
 
 // restartJvmServer restarts the JVM service, waiting for the command to be executed
 // successfully.
 func (admin *Administrator) restartJvmServer(cmd *Command) *CommandResult {
 	admin.logger.Noticef("process cmd %v", cmd.MethodName)
-	if err := admin.nsMgr.RestartJvm(); err != nil {
-		admin.logger.Noticef("restart jvm server failed: %v", err)
-		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	//if err := admin.nsMgr.RestartJvm(); err != nil {
+	//	admin.logger.Noticef("restart jvm server failed: %v", err)
+	//	return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	//}
+	//return &CommandResult{Ok: true, Result: "restart jvm successful."}
+	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
+	sje := event.RestartJVMEvent{
 	}
-	return &CommandResult{Ok: true, Result: "restart jvm successful."}
+
+	payload, _ := proto.Marshal(&sje)
+
+	msg := pb.IMessage{
+		Event:   pb.Event_RestartJVMEvent,
+		Payload: payload,
+	}
+	adminService.Send(msg)
+	rsp := <-adminService.Response()
+	rspEvent := &event.AdminResponseEvent{}
+	err := proto.Unmarshal(rsp.Payload, rspEvent)
+	if err != nil{
+		return &CommandResult{Ok: false, Result: "start jvm failed."}
+	}else if rspEvent.Ok {
+		return &CommandResult{Ok: true, Result: "start jvm successful."}
+	}else {
+		return &CommandResult{Ok: false, Result: "start jvm failed."}
+	}
 }
 
 // grantPermission grants the modular permissions to the given user.

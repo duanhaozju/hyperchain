@@ -103,6 +103,14 @@ type NvpRelayTxEvent struct {
 	Payload []byte
 }
 
-type StartJVMEvent struct {
-	Payload []byte
-}
+//type StartJVMEvent struct {
+//	Payload []byte
+//}
+//
+//type StopJVMEvent struct {
+//	Payload []byte
+//}
+//
+//type RestartJVMEvent struct {
+//	Payload []byte
+//}

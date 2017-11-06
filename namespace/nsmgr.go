@@ -439,7 +439,7 @@ func (nr *nsManagerImpl) GetNamespaceByName(name string) Namespace {
 	return nil
 }
 
-func (nr *nsManagerImpl)  GetNamespaceProcessorName(name string) intfc.NamespaceProcessor {
+func (nr *nsManagerImpl)  GetNamespaceProcessor(name string) intfc.NamespaceProcessor {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {
@@ -450,7 +450,7 @@ func (nr *nsManagerImpl)  GetNamespaceProcessorName(name string) intfc.Namespace
 
 // ProcessRequest dispatches the request to the specified namespace processor.
 func (nr *nsManagerImpl) ProcessRequest(namespace string, request interface{}) interface{} {
-	np := nr.GetNamespaceProcessorName(namespace)
+	np := nr.GetNamespaceProcessor(namespace)
 	if np == nil {
 		logger.Noticef("no namespace found for name: %s", namespace)
 		return nil
@@ -557,6 +557,6 @@ func (nr *nsManagerImpl) GetRestartFlag() chan bool {
 	return nr.restartHp
 }
 
-func (nr *nsManagerImpl) InternalServer() server.InternalServer {
+func (nr *nsManagerImpl) InternalServer() *server.InternalServer {
 	return nr.is
 }
