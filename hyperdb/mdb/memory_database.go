@@ -172,10 +172,6 @@ func (b *memBatch) Write() error {
 	b.db.lock.Lock()
 	defer b.db.lock.Unlock()
 
-	// TODO: SIEG
-	// Sort b.writes first,
-	// and record a cursor of ranged b.db.kvs,
-	// then range from the cursor position to avoid redundant range.
 	var updated bool
 
 	for _, entry := range b.writes {
@@ -189,7 +185,6 @@ func (b *memBatch) Write() error {
 			}
 			if !updated {
 				b.db.kvs = append(b.db.kvs, entry)
-				// reset cursor if key not found
 			}
 			updated = false
 		} else {
@@ -286,7 +281,7 @@ func (iter *Iterator) Next() bool {
 			iter.index -= 1
 			return false
 		}
-		if isLT(common.Hex2Bytes(iter.ptr.kvs[iter.index].key), iter.begin) {
+		if !isGE(common.Hex2Bytes(iter.ptr.kvs[iter.index].key), iter.begin) {
 			// jump to the next loop if the key is less than the iter.begin
 			continue
 		} else if isLT(common.Hex2Bytes(iter.ptr.kvs[iter.index].key), iter.end) {
@@ -308,7 +303,7 @@ func (iter *Iterator) Prev() bool {
 		if iter.index <= -1 {
 			return false
 		}
-		if isLT(common.Hex2Bytes(iter.ptr.kvs[iter.index].key), iter.begin) {
+		if !isGE(common.Hex2Bytes(iter.ptr.kvs[iter.index].key), iter.begin) {
 			// return false if a key is less than the iter.begin
 			return false
 		} else if isLT(common.Hex2Bytes(iter.ptr.kvs[iter.index].key), iter.end) {
