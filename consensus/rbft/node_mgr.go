@@ -947,34 +947,35 @@ func (rbft *rbftImpl) processReqInUpdate() consensusEvent {
 func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
 
 	var (
-		keys       []uint64
-		hashList   []string
-		target     uint64
-		deleteList []string
+		keys         []uint64
+		hashList     []string
+		initialChkpt uint64
+		deleteList   []string
 	)
 
-	// Remove the previous checkpoint's batches.
-	// Those batches are the dependency of duplicator,
-	// but we can remove since we already have checkpoint after viewchange.
-	if rbft.h < 10 {
-		target = 0
-	} else {
-		target = rbft.h - uint64(10)
+	// Return if xset is nil
+	if len(xset) == 0 {
+		return
 	}
-	for digest, batch := range rbft.storeMgr.txBatchStore {
-		if batch.SeqNo <= target {
-			delete(rbft.storeMgr.txBatchStore, digest)
-			rbft.persistDelTxBatch(digest)
-			deleteList = append(deleteList, digest)
-		}
-	}
-	rbft.batchMgr.txPool.RemoveBatches(deleteList)
 
 	// Sort the xset
 	for no := range xset {
 		keys = append(keys, no)
 	}
 	sort.Sort(sortableUint64Slice(keys))
+
+	// Remove all the batches that smaller than initial checkpoint.
+	// Those batches are the dependency of duplicator,
+	// but we can remove since we already have checkpoint after viewchange.
+	initialChkpt = keys[0] - 1
+	for digest, batch := range rbft.storeMgr.txBatchStore {
+		if batch.SeqNo <= initialChkpt {
+			delete(rbft.storeMgr.txBatchStore, digest)
+			rbft.persistDelTxBatch(digest)
+			deleteList = append(deleteList, digest)
+		}
+	}
+	rbft.batchMgr.txPool.RemoveBatches(deleteList)
 
 	// Construct hashList
 	for _, key := range keys {

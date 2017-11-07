@@ -298,7 +298,9 @@ func (rbft *rbftImpl) sendPendingPrePrepares() {
 // findNextPrePrepareBatch find next validated batch to send preprepare msg.
 func (rbft *rbftImpl) findNextPrePrepareBatch() (find bool, digest string, resultHash string) {
 
-	for digest, cache := range rbft.batchVdr.cacheValidatedBatch {
+	var cache *cacheBatch
+
+	for digest, cache = range rbft.batchVdr.cacheValidatedBatch {
 		if cache == nil {
 			rbft.logger.Debugf("Primary %d already call sendPrePrepare for batch: %s",
 				rbft.id, digest)
