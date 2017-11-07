@@ -106,6 +106,12 @@ func (h *Heap) Remove(priority int) interface{} {
 	}
 	if i == len(h.heap) {
 		return nil
+	} else {
+		for j := 0; j < len(h.heap); j++ {
+			if h.heap[j].priority > priority {
+				h.heap[j].priority--
+			}
+		}
 	}
 	//adjust the heap
 	h.swap(i+1, len(h.heap))
