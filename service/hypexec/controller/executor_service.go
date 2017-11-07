@@ -2,17 +2,17 @@ package controller
 
 import (
 	"github.com/op/go-logging"
-	"hyperchain/admittance"
 	hapi "hyperchain/api"
 	"hyperchain/common"
-	pb "hyperchain/common/protos"
 	"hyperchain/common/service/client"
+	pb "hyperchain/common/protos"
 	"hyperchain/core/executor"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/hyperdb"
 	"hyperchain/namespace/rpc"
 	"hyperchain/service/hypexec/handler"
 	"sync"
+	"hyperchain/admittance"
 )
 
 type executorService interface {
@@ -298,6 +298,17 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Version: "1.5",
 			Service: hapi.NewContarctExAPI(namespace, es.conf),
 			Public:  true,
+		},
+		//"cert": {
+		//	Svcname: "cert",
+		//	Version: "1.5",
+		//	Service: hapi.NewCertAPI(namespace, es.caManager),
+		//	Public:  true,
+		//},
+		"sub": {
+			Svcname: "sub",
+			Version: "1.5",
+			Service: hapi.NewFilterAPI(namespace, nil, es.conf),
 		},
 		"archive": {
 			Svcname: "archive",

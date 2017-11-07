@@ -92,11 +92,6 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 			Service: api.NewCertAPI(namespace, ns.caMgr),
 			Public:  true,
 		},
-		"sub": {
-			Svcname: "sub",
-			Version: "1.5",
-			Service: api.NewFilterAPI(namespace, ns.eh, ns.conf),
-		},
 		//"archive": {
 		//	Svcname: "archive",
 		//	Version: "1.5",
