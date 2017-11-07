@@ -322,7 +322,7 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 		"sub": {
 			Svcname: "sub",
 			Version: "1.5",
-			Service: hapi.NewFilterAPI(namespace, nil, es.conf),
+			Service: hapi.NewFilterAPI(namespace, es.filterSystem, es.conf),
 		},
 		"archive": {
 			Svcname: "archive",

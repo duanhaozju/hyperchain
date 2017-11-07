@@ -92,6 +92,11 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 			Service: api.NewCertAPI(namespace, ns.caMgr),
 			Public:  true,
 		},
+		"subh": {
+			Svcname: "sub",
+			Version: "1.5",
+			Service: api.NewHpcFilterAPI(namespace, ns.eh, ns.conf),
+		},
 		//"archive": {
 		//	Svcname: "archive",
 		//	Version: "1.5",
@@ -132,10 +137,15 @@ func (ns *namespaceImpl) GetAllApis(namespace string) map[string]*api.API {
 			Service: api.NewCertAPI(namespace, ns.caMgr),
 			Public:  true,
 		},
+		"subh": {
+			Svcname: "sub",
+			Version: "1.5",
+			Service: api.NewHpcFilterAPI(namespace, ns.eh, ns.conf),
+		},
 		"sub": {
 			Svcname: "sub",
 			Version: "1.5",
-			Service: api.NewFilterAPI(namespace, ns.eh, ns.conf),
+			Service: api.NewFilterAPI(namespace, nil, ns.conf),
 		},
 		"block": {
 			Svcname: "block",
