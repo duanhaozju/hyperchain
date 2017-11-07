@@ -953,6 +953,11 @@ func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
 		deleteList   []string
 	)
 
+	// Return if xset is nil
+	if len(xset) == 0 {
+		return
+	}
+
 	// Sort the xset
 	for no := range xset {
 		keys = append(keys, no)
@@ -962,7 +967,7 @@ func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
 	// Remove all the batches that smaller than initial checkpoint.
 	// Those batches are the dependency of duplicator,
 	// but we can remove since we already have checkpoint after viewchange.
-	initialChkpt = keys[0]
+	initialChkpt = keys[0] - 1
 	for digest, batch := range rbft.storeMgr.txBatchStore {
 		if batch.SeqNo <= initialChkpt {
 			delete(rbft.storeMgr.txBatchStore, digest)
