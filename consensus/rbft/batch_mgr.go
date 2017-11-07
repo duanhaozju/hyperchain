@@ -215,7 +215,8 @@ func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 	rbft.storeMgr.outstandingReqBatches[digest] = batch
 	rbft.storeMgr.txBatchStore[digest] = batch
 
-	rbft.logger.Debugf("Primary %d try to validate batch for view=%d/seqNo=%d, batch size: %d", rbft.id, rbft.view, n, len(batch.HashList))
+	rbft.logger.Debugf("Primary %d try to validate batch for view=%d/seqNo=%d, batch size: %d, timestamp: %d",
+		rbft.id, rbft.view, n, len(batch.HashList), batch.Timestamp)
 	// here we soft start a new view timer with requestTimeout+validateTimeout, if primary cannot execute this batch
 	// during that timeout, we think there may exist some problems with this primary which will trigger viewchange
 	rbft.softStartNewViewTimer(rbft.timerMgr.getTimeoutValue(REQUEST_TIMER)+rbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
