@@ -130,6 +130,10 @@ const (
 	Event_ReceiveWsAckEvent                 Event = 19
 	// 4.Miscellaneous event
 	Event_MemChainEvent Event = 20
+	// 5. hypercli passed event
+	Event_StartJVMEvent   Event = 21
+	Event_StopJVMEvent    Event = 22
+	Event_RestartJVMEvent Event = 23
 )
 
 var Event_name = map[int32]string{
@@ -154,6 +158,10 @@ var Event_name = map[int32]string{
 	18: "ReceiveWsHandshakeEvent",
 	19: "ReceiveWsAckEvent",
 	20: "MemChainEvent",
+	21: "StartJVMEvent",
+	22: "StopJVMEvent",
+	23: "RestartJVMEvent",
+	20: "MemChainEvent",
 }
 var Event_value = map[string]int32{
 	"AddNamespaceEvent":                 0,
@@ -177,6 +185,9 @@ var Event_value = map[string]int32{
 	"ReceiveWsHandshakeEvent":           18,
 	"ReceiveWsAckEvent":                 19,
 	"MemChainEvent":                     20,
+	"StartJVMEvent":                     21,
+	"StopJVMEvent":                      22,
+	"RestartJVMEvent":                   23,
 }
 
 func (x Event) String() string {

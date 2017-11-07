@@ -385,14 +385,10 @@ func (admin *Administrator) startJvmServer(cmd *Command) *CommandResult {
 	//	return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	//}
 	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
-	sje := event.StartJVMEvent{
-	}
-
-	payload, _ := proto.Marshal(&sje)
-
 	msg := pb.IMessage{
+		From: 	 pb.FROM_ADMINISTRATOR,
+		Type:	 pb.Type_ADMIN,
 		Event:   pb.Event_StartJVMEvent,
-		Payload: payload,
 	}
 	adminService.Send(msg)
 	rsp := <-adminService.Response()
@@ -418,14 +414,11 @@ func (admin *Administrator) stopJvmServer(cmd *Command) *CommandResult {
 	//}
 	//return &CommandResult{Ok: true, Result: "stop jvm successful."}
 	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
-	sje := event.StopJVMEvent{
-	}
-
-	payload, _ := proto.Marshal(&sje)
 
 	msg := pb.IMessage{
+		From: 	 pb.FROM_ADMINISTRATOR,
+		Type:	 pb.Type_ADMIN,
 		Event:   pb.Event_StopJVMEvent,
-		Payload: payload,
 	}
 	adminService.Send(msg)
 	rsp := <-adminService.Response()
@@ -450,14 +443,11 @@ func (admin *Administrator) restartJvmServer(cmd *Command) *CommandResult {
 	//}
 	//return &CommandResult{Ok: true, Result: "restart jvm successful."}
 	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
-	sje := event.RestartJVMEvent{
-	}
-
-	payload, _ := proto.Marshal(&sje)
 
 	msg := pb.IMessage{
+		From: 	 pb.FROM_ADMINISTRATOR,
+		Type:	 pb.Type_ADMIN,
 		Event:   pb.Event_RestartJVMEvent,
-		Payload: payload,
 	}
 	adminService.Send(msg)
 	rsp := <-adminService.Response()
