@@ -53,7 +53,8 @@ func (executor *Executor) SyncChain(ev event.ChainSyncReqEvent) {
 	// 2. sync target is less than chain height.
 	if executor.context.syncCtx != nil && executor.context.syncCtx.target >= ev.TargetHeight || edb.GetHeightOfChain(executor.namespace) > ev.TargetHeight {
 		executor.logger.Errorf("[Namespace = %s] receive invalid state update request, just ignore it", executor.namespace)
-		executor.reject()
+		// exit synchronization directly. Don't effect sync context anymore.
+		executor.sendStateUpdatedEvent()
 		return
 	}
 
