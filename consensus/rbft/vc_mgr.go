@@ -166,18 +166,7 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 		rbft.vcMgr.vcResendCount++
 		rbft.logger.Infof("======== Replica %d already receive viewChange from itself for %d times", rbft.id, rbft.vcMgr.vcResendCount)
 	}
-	//check if this viewchange has stored in viewChangeStore
-	//if so,return nil
-	if old, ok := rbft.vcMgr.viewChangeStore[vcidx{vc.Basis.View, vc.Basis.ReplicaId}]; ok {
-		if reflect.DeepEqual(old.Basis, vc.Basis) {
-			rbft.logger.Warningf("Replica %d already has a same viewChange message"+
-				" for view %d from replica %d, ignore it", rbft.id, vc.Basis.View, vc.Basis.ReplicaId)
-			return nil
-		}
 
-		rbft.logger.Debugf("Replica %d already has a updated viewChange message"+
-			" for view %d from replica %d, replace it", rbft.id, vc.Basis.View, vc.Basis.ReplicaId)
-	}
 	//check whether vcResendCount>=vcResendLimit
 	//if so , reset view and stop vc and newView timer.
 	//Set state to inNegotiateView and inRecovery
@@ -194,6 +183,20 @@ func (rbft *rbftImpl) recvViewChange(vc *ViewChange) consensusEvent {
 		rbft.off(inViewChange)
 		rbft.initNegoView()
 		return nil
+	}
+
+	//Check if this viewchange has stored in viewChangeStore, if so,return nil
+	if old, ok := rbft.vcMgr.viewChangeStore[vcidx{vc.Basis.View, vc.Basis.ReplicaId}]; ok {
+		// Check after resend limit, since we may always sending the same vc
+		// if no one response to our vc request (while the whole system keep the stage)
+		if reflect.DeepEqual(old.Basis, vc.Basis) {
+			rbft.logger.Warningf("Replica %d already has a same viewChange message"+
+				" for view %d from replica %d, ignore it", rbft.id, vc.Basis.View, vc.Basis.ReplicaId)
+			return nil
+		}
+
+		rbft.logger.Debugf("Replica %d already has a updated viewChange message"+
+			" for view %d from replica %d, replace it", rbft.id, vc.Basis.View, vc.Basis.ReplicaId)
 	}
 
 	vc.Timestamp = time.Now().UnixNano()
