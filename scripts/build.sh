@@ -35,7 +35,7 @@ f_build_hyperchain(){
 f_check_local_env
 
 if [ $# -eq 0 ]; then
-    f_build_hyperchain ${GOPATH}/src/hyperchain
+    f_build_hyperchain ${GOPATH}/src/github.com/hyperchain/hyperchain
 elif [ $# -eq 1 ]; then
     f_build_hyperchain ${1}
 else
