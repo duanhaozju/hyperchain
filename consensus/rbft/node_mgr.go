@@ -582,7 +582,7 @@ func (rbft *rbftImpl) recvAgreeUpdateN(agree *AgreeUpdateN) consensusEvent {
 		rbft.nodeMgr.updateTarget = uidx{v: agree.Basis.View, n: agree.N, flag: agree.Flag, key: agree.Key}
 		return &LocalEvent{
 			Service:   NODE_MGR_SERVICE,
-			EventType: NODE_MGR_AGREE_UPDATEN_QUORUM_EVENT,
+			EventType: NODE_MGR_AGREE_UPDATE_QUORUM_EVENT,
 		}
 	}
 
@@ -934,7 +934,7 @@ func (rbft *rbftImpl) processReqInUpdate() consensusEvent {
 
 	return &LocalEvent{
 		Service:   NODE_MGR_SERVICE,
-		EventType: NODE_MGR_UPDATEDN_EVENT,
+		EventType: NODE_MGR_UPDATED_EVENT,
 	}
 }
 
@@ -942,39 +942,48 @@ func (rbft *rbftImpl) processReqInUpdate() consensusEvent {
 //           node management auxiliary functions
 //##########################################################################
 
-// putBackTxBatches put batches whose seqNo is larger than lastExec
-// and not in xset back to txPool
+// putBackTxBatches put batches who is not in xset back to txPool.
+// For previous primary, there may be extra stored batches which haven't prepared.
 func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
-	hashSet := make(map[string]bool)
-	targetSet := make(map[uint64]string)
 
-	for _, hash := range xset {
-		hashSet[hash] = true
-	}
-	for hash, batch := range rbft.storeMgr.txBatchStore {
-		if batch.SeqNo <= rbft.exec.lastExec {
-			continue
-		}
-		if ok := hashSet[hash]; ok {
-			continue
-		}
-		targetSet[batch.SeqNo] = hash
-	}
-	keys := make([]uint64, len(targetSet))
-	hashList := make([]string, len(targetSet))
+	var (
+		keys         []uint64
+		hashList     []string
+		initialChkpt uint64
+		deleteList   []string
+	)
 
-	i := 0
-	for n := range targetSet {
-		keys[i] = n
-		i++
+	// Return if xset is nil
+	if len(xset) == 0 {
+		return
+	}
+
+	// Sort the xset
+	for no := range xset {
+		keys = append(keys, no)
 	}
 	sort.Sort(sortableUint64Slice(keys))
 
-	for i, seqNo := range keys {
-		hashList[i] = targetSet[seqNo]
+	// Remove all the batches that smaller than initial checkpoint.
+	// Those batches are the dependency of duplicator,
+	// but we can remove since we already have checkpoint after viewchange.
+	initialChkpt = keys[0] - 1
+	for digest, batch := range rbft.storeMgr.txBatchStore {
+		if batch.SeqNo <= initialChkpt {
+			delete(rbft.storeMgr.txBatchStore, digest)
+			rbft.persistDelTxBatch(digest)
+			deleteList = append(deleteList, digest)
+		}
+	}
+	rbft.batchMgr.txPool.RemoveBatches(deleteList)
+
+	// Construct hashList
+	for _, key := range keys {
+		hash := xset[key]
+		hashList = append(hashList, hash)
 	}
 
-	rbft.batchMgr.txPool.GetTxsBack(hashList)
+	rbft.batchMgr.txPool.GetBatchesBackExcept(hashList)
 }
 
 // rebuildCertStoreForUpdate rebuilds the certStore after finished updating,
@@ -1005,11 +1014,7 @@ func (rbft *rbftImpl) agreeUpdateHelper(agree *AgreeUpdateN) {
 		}
 	}
 
-	cSet, pSet, qSet := rbft.gatherPQC()
-	agree.Basis.Cset = append(agree.Basis.Cset, cSet...)
-	agree.Basis.Pset = append(agree.Basis.Pset, pSet...)
-	agree.Basis.Qset = append(agree.Basis.Qset, qSet...)
-
+	agree.Basis.Cset, agree.Basis.Pset, agree.Basis.Qset = rbft.gatherPQC()
 }
 
 // checkAgreeUpdateN checks the AgreeUpdateN message if it's valid or not.
@@ -1026,7 +1031,7 @@ func (rbft *rbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 		// Check the N and view after updating
 		n, view := rbft.getAddNV()
 		if n != agree.N || view != agree.Basis.View {
-			rbft.logger.Debugf("Replica %d received incorrect agreeUpdateN: " +
+			rbft.logger.Debugf("Replica %d received incorrect agreeUpdateN: "+
 				"expected n=%d/view=%d, get n=%d/view=%d", rbft.id, n, view, agree.N, agree.Basis.View)
 			return false
 		}
@@ -1034,7 +1039,7 @@ func (rbft *rbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 		// Check if there's any invalid p or q entry
 		for _, p := range append(agree.Basis.Pset, agree.Basis.Qset...) {
 			if !(p.View <= agree.Basis.View && p.SequenceNumber > agree.Basis.H && p.SequenceNumber <= agree.Basis.H+rbft.L) {
-				rbft.logger.Debugf("Replica %d received invalid p entry in agreeUpdateN: " +
+				rbft.logger.Debugf("Replica %d received invalid p entry in agreeUpdateN: "+
 					"agree(v:%d h:%d) p(v:%d n:%d)", rbft.id, agree.Basis.View, agree.Basis.H, p.View, p.SequenceNumber)
 				return false
 			}
@@ -1051,7 +1056,7 @@ func (rbft *rbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 		// Check the N and view after updating
 		n, view := rbft.getDelNV(cert.delId)
 		if n != agree.N || view != agree.Basis.View {
-			rbft.logger.Debugf("Replica %d received incorrect agreeUpdateN: " +
+			rbft.logger.Debugf("Replica %d received incorrect agreeUpdateN: "+
 				"expected n=%d/view=%d, get n=%d/view=%d", rbft.id, n, view, agree.N, agree.Basis.View)
 			return false
 		}
@@ -1059,7 +1064,7 @@ func (rbft *rbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 		// Check if there's any invalid p or q entry
 		for _, p := range append(agree.Basis.Pset, agree.Basis.Qset...) {
 			if !(p.View <= agree.Basis.View+1 && p.SequenceNumber > agree.Basis.H && p.SequenceNumber <= agree.Basis.H+rbft.L) {
-				rbft.logger.Debugf("Replica %d received invalid p entry in agreeUpdateN: " +
+				rbft.logger.Debugf("Replica %d received invalid p entry in agreeUpdateN: "+
 					"agree(v:%d h:%d) p(v:%d n:%d)", rbft.id, agree.Basis.View, agree.Basis.H, p.View, p.SequenceNumber)
 				return false
 			}
@@ -1070,7 +1075,7 @@ func (rbft *rbftImpl) checkAgreeUpdateN(agree *AgreeUpdateN) bool {
 	// Check if there's invalid checkpoint
 	for _, c := range agree.Basis.Cset {
 		if !(c.SequenceNumber >= agree.Basis.H && c.SequenceNumber <= agree.Basis.H+rbft.L) {
-			rbft.logger.Warningf("Replica %d received invalid c entry in agreeUpdateN: " +
+			rbft.logger.Warningf("Replica %d received invalid c entry in agreeUpdateN: "+
 				"agree(v:%d h:%d) c(n:%d)", rbft.id, agree.Basis.View, agree.Basis.H, c.SequenceNumber)
 			return false
 		}

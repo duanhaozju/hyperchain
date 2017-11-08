@@ -184,13 +184,13 @@ func TestHandleNodeMgrEvent(t *testing.T) {
 
 	event := &LocalEvent{
 		Service:   NODE_MGR_SERVICE,
-		EventType: NODE_MGR_UPDATEDN_EVENT,
+		EventType: NODE_MGR_UPDATED_EVENT,
 	}
 	rbft.dispatchLocalEvent(event)
-	ast.Equal(0, rbft.vcMgr.vcResendCount, "handle NODE_MGR_UPDATEDN_EVENT, set vcResendCount failed")
-	ast.Equal(false, rbft.in(updateHandled), "handle NODE_MGR_UPDATEDN_EVENT, inactive updateHandled failed")
+	ast.Equal(0, rbft.vcMgr.vcResendCount, "handle NODE_MGR_UPDATED_EVENT, set vcResendCount failed")
+	ast.Equal(false, rbft.in(updateHandled), "handle NODE_MGR_UPDATED_EVENT, inactive updateHandled failed")
 
-	event.EventType = NODE_MGR_AGREE_UPDATEN_QUORUM_EVENT
+	event.EventType = NODE_MGR_AGREE_UPDATE_QUORUM_EVENT
 	rbft.dispatchLocalEvent(event)
 }
 

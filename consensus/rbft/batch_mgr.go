@@ -204,17 +204,20 @@ func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 	// ignore too many validated batch as we limited the high watermark in send pre-prepare
 	if rbft.batchVdr.validateCount >= rbft.L {
 		rbft.logger.Warningf("Primary %d try to validate batch for vid = %d, but we had already send %d ValidateEvent", rbft.id, n, rbft.batchVdr.validateCount)
+		rbft.batchMgr.txPool.PutBatchIntoPending(digest)
 		return
 	}
 
 	rbft.seqNo = n
 	rbft.batchVdr.validateCount++
 
+	batch.SeqNo = n
 	// store batch to outstandingReqBatches until execute this batch
 	rbft.storeMgr.outstandingReqBatches[digest] = batch
 	rbft.storeMgr.txBatchStore[digest] = batch
 
-	rbft.logger.Debugf("Primary %d try to validate batch for view=%d/seqNo=%d, batch size: %d", rbft.id, rbft.view, n, len(batch.HashList))
+	rbft.logger.Debugf("Primary %d try to validate batch for view=%d/seqNo=%d, batch size: %d, timestamp: %d",
+		rbft.id, rbft.view, n, len(batch.HashList), batch.Timestamp)
 	// here we soft start a new view timer with requestTimeout+validateTimeout, if primary cannot execute this batch
 	// during that timeout, we think there may exist some problems with this primary which will trigger viewchange
 	rbft.softStartNewViewTimer(rbft.timerMgr.getTimeoutValue(REQUEST_TIMER)+rbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),

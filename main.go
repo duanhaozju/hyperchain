@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const HyperchainVersion = "Hyperchain Version:\nRelease1.4-20171012-f415e9"
+var branch, commitID, date string
 
 type hyperchain struct {
 	nsMgr       namespace.NamespaceManager
@@ -109,7 +109,13 @@ func main() {
 		argv := ctx.Argv().(*argT)
 
 		if argv.Version {
-			fmt.Println(HyperchainVersion)
+			if branch == "" || date == "" || commitID == "" {
+				fmt.Println("Please run ./scripts/build.sh to build hyperchain with version information.")
+				return nil
+			}
+			version := fmt.Sprintf("Hyperchain Version:\n%s-%s-%s", branch, date, commitID)
+			fmt.Println(version)
+
 			return nil
 		}
 

@@ -22,7 +22,7 @@ const (
 	RBFT_BATCH_SIZE      = "consensus.rbft.batchsize"
 	RBFT_POOL_SIZE       = "consensus.rbft.poolsize"
 	RBFT_VC_RESEND_LIMIT = "consensus.rbft.vcresendlimit"
-	RBFT_VC_PERIOD 		 = "consensus.rbft.vcperiod"
+	RBFT_VC_PERIOD       = "consensus.rbft.vcperiod"
 
 	// timeout keys
 	RBFT_NEGOVIEW_TIMEOUT          = "consensus.rbft.timeout.negoview"

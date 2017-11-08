@@ -100,11 +100,7 @@ func (rbft *rbftImpl) sendViewChange() consensusEvent {
 		},
 	}
 
-	cSet, pSet, qSet := rbft.gatherPQC()
-	vc.Basis.Cset = append(vc.Basis.Cset, cSet...)
-	vc.Basis.Pset = append(vc.Basis.Pset, pSet...)
-	vc.Basis.Qset = append(vc.Basis.Qset, qSet...)
-
+	vc.Basis.Cset, vc.Basis.Pset, vc.Basis.Qset = rbft.gatherPQC()
 	rbft.logger.Infof("Replica %d sending viewChange, v:%d, h:%d, |C|:%d, |P|:%d, |Q|:%d",
 		rbft.id, vc.Basis.View, vc.Basis.H, len(vc.Basis.Cset), len(vc.Basis.Pset), len(vc.Basis.Qset))
 
@@ -528,6 +524,7 @@ func (rbft *rbftImpl) processReqInNewView() consensusEvent {
 	//if the number of peers send finishVcReset not >= allCorrectReplicasQuorum or primary not sends finishVcReset
 	//view change can not finish and return nil
 	if quorum < rbft.allCorrectReplicasQuorum() || !hasPrimary {
+		rbft.logger.Debugf("Replica %d received %d finishVcReset, but expect %d", rbft.id, quorum, rbft.allCorrectReplicasQuorum())
 		return nil
 	}
 	//if itself has not done with vcReset and not in stateUpdate return nil
@@ -651,13 +648,14 @@ func (rbft *rbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) consensu
 
 	digest := batch.BatchDigest
 	if _, ok := rbft.storeMgr.missingReqBatches[digest]; !ok {
+		rbft.logger.Debugf("Primary %d received missing request: %s, but we don't miss this request, ignore it", digest)
 		return nil // either the wrong digest, or we got it already from someone else
 	}
 	//stored into validatedBatchStore
 	rbft.storeMgr.txBatchStore[digest] = batch.Batch
 	//delete missingReqBatches in this batch
 	delete(rbft.storeMgr.missingReqBatches, digest)
-	rbft.logger.Debugf("Primary received missing request: ", digest)
+	rbft.logger.Debugf("Primary %d received missing request batch: %s", rbft.id, digest)
 
 	//if receive all request batch
 	//if validatedBatchStore jump to processReqInNewView
@@ -914,7 +912,7 @@ func (rbft *rbftImpl) selectInitialCheckpoint(set []*VcBasis) (checkpoint Vc_C, 
 			}
 			checkpoints[*c] = append(checkpoints[*c], agree)
 			set[*c] = true
-			rbft.logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s", rbft.id, agree.ReplicaId, agree.H, c.SequenceNumber, c.Id)
+			rbft.logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s", rbft.id, agree.ReplicaId, c.SequenceNumber, agree.H, c.Id)
 		}
 	}
 
@@ -1171,6 +1169,15 @@ func (rbft *rbftImpl) rebuildCertStoreForVC() {
 // So that, all correct peers will reach the seq that select in view change
 func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 
+	// Clear the cert of old view
+	for idx := range rbft.storeMgr.certStore {
+		if idx.v < rbft.view {
+			delete(rbft.storeMgr.certStore, idx)
+			rbft.persistDelQPCSet(idx.v, idx.n, idx.d)
+		}
+	}
+
+	// Rebuild the certStore according to xset
 	for n, d := range xset {
 		if n <= rbft.h || n > rbft.exec.lastExec {
 			continue

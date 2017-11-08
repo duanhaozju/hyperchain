@@ -28,7 +28,7 @@ type BlockResult struct {
 	AvgTime      *Number       `json:"avgTime"`
 	TxCounts     *Number       `json:"txcounts"`
 	MerkleRoot   common.Hash   `json:"merkleRoot"`
-	Transactions []interface{} `json:"transactions"`
+	Transactions []interface{} `json:"transactions,omitempty"`
 }
 
 type StatisticResult struct {
@@ -50,17 +50,7 @@ func (blk *Block) GetBlocks(args IntervalArgs) ([]*BlockResult, error) {
 	if err != nil {
 		return nil, err
 	} else {
-		return getBlocks(trueArgs, blk.namespace, false)
-	}
-}
-
-// GetPlainBlocks returns all the block for given block number without transactions.
-func (blk *Block) GetPlainBlocks(args IntervalArgs) ([]*BlockResult, error) {
-	trueArgs, err := prepareIntervalArgs(args, blk.namespace)
-	if err != nil {
-		return nil, err
-	} else {
-		return getBlocks(trueArgs, blk.namespace, true)
+		return getBlocks(trueArgs, blk.namespace, args.IsPlain)
 	}
 }
 
@@ -69,33 +59,22 @@ func (blk *Block) LatestBlock() (*BlockResult, error) {
 	return latestBlock(blk.namespace)
 }
 
-// GetBlockByHash returns the block for the given block hash.
-func (blk *Block) GetBlockByHash(hash common.Hash) (*BlockResult, error) {
-	return getBlockByHash(blk.namespace, hash, false)
+// GetBlockByHash returns the block for the given block hash. If the param isPlain
+// value is true, it returns block excluding transactions. If false, it returns block
+// including transactions.
+func (blk *Block) GetBlockByHash(hash common.Hash, isPlain bool) (*BlockResult, error) {
+	return getBlockByHash(blk.namespace, hash, isPlain)
 }
 
-// GetPlainBlockByHash returns the block for the given block hash.
-func (blk *Block) GetPlainBlockByHash(hash common.Hash) (*BlockResult, error) {
-	return getBlockByHash(blk.namespace, hash, true)
-}
-
-// GetBlockByNumber returns the block for the given block number.
-func (blk *Block) GetBlockByNumber(n BlockNumber) (*BlockResult, error) {
+// GetBlockByNumber returns the block for the given block number. If the param isPlain
+// value is true, it returns block excluding transactions. If false, it returns block
+// including transactions.
+func (blk *Block) GetBlockByNumber(n BlockNumber, isPlain bool) (*BlockResult, error) {
 	number, err := prepareBlockNumber(n, blk.namespace)
 	if err != nil {
 		return nil, err
 	} else {
-		return getBlockByNumber(blk.namespace, number, false)
-	}
-}
-
-// GetPlainBlockByNumber returns the block for the given block number without transactions.
-func (blk *Block) GetPlainBlockByNumber(n BlockNumber) (*BlockResult, error) {
-	number, err := prepareBlockNumber(n, blk.namespace)
-	if err != nil {
-		return nil, err
-	} else {
-		return getBlockByNumber(blk.namespace, number, true)
+		return getBlockByNumber(blk.namespace, number, isPlain)
 	}
 }
 
@@ -161,6 +140,44 @@ func (blk *Block) GetGenesisBlock() (*BlockNumber, error) {
 		return nil, &common.NoBlockGeneratedError{}
 	}
 	return uint64ToBlockNumber(genesis), nil
+}
+
+
+// GetBatchBlocksByNumber returns all the block for given block number list.
+func (blk *Block) GetBatchBlocksByNumber(args BatchArgs) ([]*BlockResult, error) {
+	if args.Numbers == nil {
+		return nil, &common.InvalidParamsError{Message: "invalid parameter, please specify block number list"}
+	}
+
+	var blocks []*BlockResult = make([]*BlockResult, 0)
+
+	for _, number := range args.Numbers {
+		if block, err := blk.GetBlockByNumber(number, args.IsPlain); err != nil {
+			return nil, err
+		} else {
+			blocks = append(blocks, block)
+		}
+	}
+	return blocks, nil
+}
+
+// GetBatchBlocksByHash returns all the block for given block hash list.
+func (blk *Block) GetBatchBlocksByHash(args BatchArgs) ([]*BlockResult, error) {
+	blk.log.Error(args.Hashes)
+	if args.Hashes == nil {
+		return nil, &common.InvalidParamsError{Message: "invalid parameter, please specify block hash list"}
+	}
+
+	var blocks []*BlockResult = make([]*BlockResult, 0)
+
+	for _, blockHash := range args.Hashes {
+		if block, err := blk.GetBlockByHash(blockHash, args.IsPlain); err != nil {
+			return nil, err
+		} else {
+			blocks = append(blocks, block)
+		}
+	}
+	return blocks, nil
 }
 
 func latestBlock(namespace string) (*BlockResult, error) {

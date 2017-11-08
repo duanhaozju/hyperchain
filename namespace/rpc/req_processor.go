@@ -241,7 +241,7 @@ func (jrpi *JsonRpcProcessorImpl) parsePositionalArguments(args json.RawMessage,
 	for i, p := range params {
 		// verify that JSON null values are only supplied for optional arguments (ptr types)
 		if p == nil && callbackArgs[i].Kind() != reflect.Ptr {
-			errMsg := fmt.Sprintf("invalid or missing value for params[%d], %v---%v", i, p, callbackArgs[i].Kind())
+			errMsg := fmt.Sprintf("invalid or missing value for params[%d]", i)
 			jrpi.logger.Info(errMsg)
 			return nil, &common.InvalidParamsError{Message: errMsg}
 		}

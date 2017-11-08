@@ -252,7 +252,7 @@ func (rbft *rbftImpl) handleNullRequestTimerEvent() {
 		rbft.logger.Warningf("Replica %d null request timer expired, sending viewChange", rbft.id)
 		rbft.sendViewChange()
 	} else {
-		rbft.logger.Debugf("Primary %d null request timer expired, sending null request", rbft.id)
+		rbft.logger.Infof("Primary %d null request timer expired, sending null request", rbft.id)
 		rbft.sendNullRequest()
 	}
 }
@@ -275,7 +275,7 @@ func (rbft *rbftImpl) sendPendingPrePrepares() {
 	// if we find a batch in findNextPrePrepareBatch, currentVid would be set.
 	// And currentVid would be set to nil after send a pre-prepare message.
 	if rbft.batchVdr.currentVid != nil {
-		rbft.logger.Debugf("Replica %d not attempting to send prePrepare bacause it is currently send %d, retry.", rbft.id, *rbft.batchVdr.currentVid)
+		rbft.logger.Debugf("Replica %d not attempting to send prePrepare because it is currently send %d, retry.", rbft.id, *rbft.batchVdr.currentVid)
 		return
 	}
 
@@ -283,8 +283,12 @@ func (rbft *rbftImpl) sendPendingPrePrepares() {
 
 	for stop := false; !stop; {
 		if find, digest, resultHash := rbft.findNextPrePrepareBatch(); find {
-			waitingBatch := rbft.storeMgr.outstandingReqBatches[digest]
-			rbft.sendPrePrepare(*rbft.batchVdr.currentVid, digest, resultHash, waitingBatch)
+			if waitingBatch, ok := rbft.storeMgr.outstandingReqBatches[digest]; !ok {
+				rbft.logger.Errorf("Replica %d finds batch with hash: %s in cacheValidatedBatch, but can't find it in outstandingReqBatches", rbft.id, digest)
+				return
+			} else {
+				rbft.sendPrePrepare(*rbft.batchVdr.currentVid, digest, resultHash, waitingBatch)
+			}
 		} else {
 			stop = true
 		}
@@ -294,8 +298,9 @@ func (rbft *rbftImpl) sendPendingPrePrepares() {
 // findNextPrePrepareBatch find next validated batch to send preprepare msg.
 func (rbft *rbftImpl) findNextPrePrepareBatch() (find bool, digest string, resultHash string) {
 
-	for digest = range rbft.batchVdr.cacheValidatedBatch {
-		cache := rbft.batchVdr.getCacheBatchFromCVB(digest)
+	var cache *cacheBatch
+
+	for digest, cache = range rbft.batchVdr.cacheValidatedBatch {
 		if cache == nil {
 			rbft.logger.Debugf("Primary %d already call sendPrePrepare for batch: %s",
 				rbft.id, digest)
@@ -337,7 +342,7 @@ func (rbft *rbftImpl) findNextPrePrepareBatch() (find bool, digest string, resul
 // sendPrePrepare send prePrepare message.
 func (rbft *rbftImpl) sendPrePrepare(seqNo uint64, digest string, hash string, reqBatch *TransactionBatch) {
 
-	rbft.logger.Debugf("Primary %d sending prePrepare for view=%d/seqNo=%d/digest=%s",
+	rbft.logger.Debugf("Primary %d sending prePrepare for view=%d/seqNo=%d/currentVid=%d/digest=%s",
 		rbft.id, rbft.view, seqNo, *rbft.batchVdr.currentVid, digest)
 
 	hashBatch := &HashBatch{
@@ -362,7 +367,6 @@ func (rbft *rbftImpl) sendPrePrepare(seqNo uint64, digest string, hash string, r
 	rbft.batchVdr.deleteCacheFromCVB(digest)
 	rbft.persistQSet(preprepare)
 
-	reqBatch.SeqNo = seqNo
 	reqBatch.ResultHash = hash
 	rbft.storeMgr.outstandingReqBatches[digest] = reqBatch
 	rbft.storeMgr.txBatchStore[digest] = reqBatch
@@ -809,12 +813,10 @@ func (rbft *rbftImpl) afterCommitBlock(idx msgID) {
 			height := bcInfo.Height
 			if height == rbft.exec.lastExec {
 				rbft.logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", rbft.exec.lastExec, height)
-				//time.Sleep(3*time.Millisecond)
 				rbft.checkpoint(rbft.exec.lastExec, bcInfo)
 			} else {
 				// reqBatch call execute but have not done with execute
 				rbft.logger.Errorf("Fail to call the checkpoint, seqNo=%d, block height=%d", rbft.exec.lastExec, height)
-				//rbft.retryCheckpoint(rbft.lastExec)
 			}
 		}
 	} else {
@@ -956,7 +958,7 @@ func (rbft *rbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 		rbft.primaryValidateBatch(reqBatch.BatchHash, txBatch, 0)
 	} else {
 		rbft.logger.Debugf("Replica %d is backup, not sending prePrepare for request batch %s", rbft.id, reqBatch.BatchHash)
-		rbft.batchMgr.txPool.GetOneTxsBack(reqBatch.BatchHash)
+		rbft.batchMgr.txPool.GetOneBatchBack(reqBatch.BatchHash)
 	}
 
 	return nil
@@ -1193,10 +1195,9 @@ func (rbft *rbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 					return true
 				}
 				rbft.logger.Warningf("Replica %d is out of date, f+1 nodes agree checkpoint with seqNo %d exists but our high water mark is %d", rbft.id, chkpt.SequenceNumber, H)
-				// Discard all our requests, as we will never know which were executed, to be addressed in #394
 				rbft.storeMgr.txBatchStore = make(map[string]*TransactionBatch)
-				rbft.moveWatermarks(m)
 				rbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
+				rbft.moveWatermarks(m)
 				rbft.on(skipInProgress)
 				rbft.stopNewViewTimer()
 				return true
@@ -1243,7 +1244,6 @@ func (rbft *rbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 	if rbft.in(skipInProgress) {
 		rbft.logger.Infof("Replica %d is catching up and witnessed a weak certificate for checkpoint %d, weak cert attested to by %d of %d (%v)",
 			rbft.id, chkpt.SequenceNumber, i, rbft.N, checkpointMembers)
-		// The view should not be set to active, this should be handled by the yet unimplemented SUSPECT, see https://github.com/hyperledger/fabric/issues/1120
 		rbft.retryStateTransfer(target)
 	}
 }
@@ -1265,6 +1265,7 @@ func (rbft *rbftImpl) moveWatermarks(n uint64) {
 			rbft.logger.Debugf("Replica %d cleaning quorum certificate for view=%d/seqNo=%d",
 				rbft.id, idx.v, idx.n)
 			delete(rbft.storeMgr.certStore, idx)
+			delete(rbft.storeMgr.outstandingReqBatches, idx.d)
 			rbft.persistDelQPCSet(idx.v, idx.n, idx.d)
 		}
 	}
@@ -1278,13 +1279,13 @@ func (rbft *rbftImpl) moveWatermarks(n uint64) {
 
 	var digestList []string
 	for digest, batch := range rbft.storeMgr.txBatchStore {
-		if batch.SeqNo <= target && batch.SeqNo != 0 {
+		if batch.SeqNo <= target {
 			delete(rbft.storeMgr.txBatchStore, digest)
 			rbft.persistDelTxBatch(digest)
 			digestList = append(digestList, digest)
 		}
 	}
-	rbft.batchMgr.txPool.RemoveBatchedTxs(digestList)
+	rbft.batchMgr.txPool.RemoveBatches(digestList)
 
 	if !rbft.batchMgr.txPool.IsPoolFull() {
 		rbft.setNotFull()
@@ -1470,9 +1471,11 @@ func (rbft *rbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 		}
 		if result.Hash == cert.resultHash {
 			cert.validated = true
-			batch := rbft.storeMgr.outstandingReqBatches[result.Digest]
-			rbft.storeMgr.outstandingReqBatches[result.Digest] = batch
-			rbft.storeMgr.txBatchStore[result.Digest] = batch
+			_, ok := rbft.storeMgr.outstandingReqBatches[result.Digest]
+			if !ok {
+				rbft.logger.Warningf("Replica %d cannot find the corresponding batch with digest %s", rbft.id, result.Digest)
+				return nil
+			}
 			rbft.persistTxBatch(result.Digest)
 			rbft.sendCommit(result.Digest, result.View, result.SeqNo)
 		} else {
