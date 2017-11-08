@@ -174,7 +174,6 @@ func (pool *txPoolImpl) addTxs(txs []*types.Transaction) error {
 	pool.txPool = tmpPool
 	pool.txPoolHash = tmpPoolHash
 	pool.logger.Debugf("Replica add transactions, and there are %d transactions in txPool", len(pool.txPool))
-	pool.logger.Debugf("There are %d txHash in txPool", len(pool.txPoolHash))
 	return nil
 }
 
@@ -254,7 +253,6 @@ func (pool *txPoolImpl) GetTxsByHashList(id string, hashList []string) (txs []*t
 		}
 		pool.logger.Debugf("Replica generate a transaction batch by hash list, which digest is %s, and now there are %d "+
 			"pending transactions and %d batches in txPool", id, len(pool.txPool), len(pool.batchStore))
-		pool.logger.Debugf("There are %d txHash in txPool", len(pool.txPoolHash))
 		missingTxsHash = nil
 		return
 	}
@@ -566,10 +564,8 @@ func (pool *txPoolImpl) postTxBatchIfHasPending() bool {
 
 	if len(pool.pendingBatches) > 0 {
 		batch := pool.pendingBatches[0]
-		// remove batch from pendingBatches
-		newPending := make([]*TxHashBatch, len(pool.pendingBatches)-1)
-		copy(newPending, pool.pendingBatches[1:])
-		pool.pendingBatches = newPending
+		// remove the first batch from pendingBatches
+		pool.pendingBatches = pool.pendingBatches[1:]
 
 		// add batch into batchStore
 		pool.batchStore = append(pool.batchStore, batch)
