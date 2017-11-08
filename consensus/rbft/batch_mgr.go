@@ -211,6 +211,7 @@ func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 	rbft.seqNo = n
 	rbft.batchVdr.validateCount++
 
+	batch.SeqNo = n
 	// store batch to outstandingReqBatches until execute this batch
 	rbft.storeMgr.outstandingReqBatches[digest] = batch
 	rbft.storeMgr.txBatchStore[digest] = batch
