@@ -367,7 +367,6 @@ func (rbft *rbftImpl) sendPrePrepare(seqNo uint64, digest string, hash string, r
 	rbft.batchVdr.deleteCacheFromCVB(digest)
 	rbft.persistQSet(preprepare)
 
-	reqBatch.SeqNo = seqNo
 	reqBatch.ResultHash = hash
 	rbft.storeMgr.outstandingReqBatches[digest] = reqBatch
 	rbft.storeMgr.txBatchStore[digest] = reqBatch
@@ -1196,10 +1195,9 @@ func (rbft *rbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 					return true
 				}
 				rbft.logger.Warningf("Replica %d is out of date, f+1 nodes agree checkpoint with seqNo %d exists but our high water mark is %d", rbft.id, chkpt.SequenceNumber, H)
-				// Discard all our requests, as we will never know which were executed, to be addressed in #394
 				rbft.storeMgr.txBatchStore = make(map[string]*TransactionBatch)
-				rbft.moveWatermarks(m)
 				rbft.storeMgr.outstandingReqBatches = make(map[string]*TransactionBatch)
+				rbft.moveWatermarks(m)
 				rbft.on(skipInProgress)
 				rbft.stopNewViewTimer()
 				return true
@@ -1246,7 +1244,6 @@ func (rbft *rbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 	if rbft.in(skipInProgress) {
 		rbft.logger.Infof("Replica %d is catching up and witnessed a weak certificate for checkpoint %d, weak cert attested to by %d of %d (%v)",
 			rbft.id, chkpt.SequenceNumber, i, rbft.N, checkpointMembers)
-		// The view should not be set to active, this should be handled by the yet unimplemented SUSPECT, see https://github.com/hyperledger/fabric/issues/1120
 		rbft.retryStateTransfer(target)
 	}
 }
@@ -1268,6 +1265,7 @@ func (rbft *rbftImpl) moveWatermarks(n uint64) {
 			rbft.logger.Debugf("Replica %d cleaning quorum certificate for view=%d/seqNo=%d",
 				rbft.id, idx.v, idx.n)
 			delete(rbft.storeMgr.certStore, idx)
+			delete(rbft.storeMgr.outstandingReqBatches, idx.d)
 			rbft.persistDelQPCSet(idx.v, idx.n, idx.d)
 		}
 	}
@@ -1281,7 +1279,7 @@ func (rbft *rbftImpl) moveWatermarks(n uint64) {
 
 	var digestList []string
 	for digest, batch := range rbft.storeMgr.txBatchStore {
-		if batch.SeqNo <= target && batch.SeqNo != 0 {
+		if batch.SeqNo <= target {
 			delete(rbft.storeMgr.txBatchStore, digest)
 			rbft.persistDelTxBatch(digest)
 			digestList = append(digestList, digest)
@@ -1473,9 +1471,11 @@ func (rbft *rbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 		}
 		if result.Hash == cert.resultHash {
 			cert.validated = true
-			batch := rbft.storeMgr.outstandingReqBatches[result.Digest]
-			rbft.storeMgr.outstandingReqBatches[result.Digest] = batch
-			rbft.storeMgr.txBatchStore[result.Digest] = batch
+			_, ok := rbft.storeMgr.outstandingReqBatches[result.Digest]
+			if !ok {
+				rbft.logger.Warningf("Replica %d cannot find the corresponding batch with digest %s", rbft.id, result.Digest)
+				return nil
+			}
 			rbft.persistTxBatch(result.Digest)
 			rbft.sendCommit(result.Digest, result.View, result.SeqNo)
 		} else {
