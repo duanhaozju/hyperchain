@@ -1,17 +1,17 @@
-package manager
+package controller
 
 import (
 	"github.com/op/go-logging"
 	"hyperchain/admittance"
 	hapi "hyperchain/api"
 	"hyperchain/common"
-	"hyperchain/common/service/client"
 	pb "hyperchain/common/protos"
+	"hyperchain/common/service/client"
 	"hyperchain/core/executor"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/hyperdb"
 	"hyperchain/namespace/rpc"
-	"hyperchain/service/executor/handler"
+	"hyperchain/service/hypexec/handler"
 	"sync"
 )
 
@@ -122,7 +122,7 @@ func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
 }
 
 func (es *executorServiceImpl) init() error {
-	es.logger.Criticalf("Init executor service for namespace %s", es.namespace)
+	es.logger.Infof("init executor service for namespace %s", es.namespace)
 
 	// 1. init DB for current executor service.
 	err := chain.InitExecutorDBForNamespace(es.conf, es.namespace)
@@ -180,7 +180,7 @@ func (es *executorServiceImpl) Start() error {
 	// 1. start executor and service client
 	//err = hyperdb.StartDatabase(es.conf, es.namespace)
 	//if err != nil {
-	//    es.logger.Errorf("Start database for namespace %s error, %v", es.namespace, err)
+	//    es.logger.Errorf("StartExecutorServiceByName database for namespace %s error, %v", es.namespace, err)
 	//    return err
 	//}
 	//es.logger.Noticef("start db for namespace: %s successful", es.namespace)
@@ -188,7 +188,7 @@ func (es *executorServiceImpl) Start() error {
 	// 2. start executor
 	err := es.executor.Start()
 	if err != nil {
-		es.logger.Errorf("Start executor for namespace %s error, %v", es.namespace, err)
+		es.logger.Errorf("StartExecutorServiceByName executor for namespace %s error, %v", es.namespace, err)
 		return err
 	}
 
@@ -234,14 +234,14 @@ func (es *executorServiceImpl) Stop() error {
 	// 1. stop executor.
 	err := es.executor.Stop()
 	if err != nil {
-		es.logger.Errorf("Stop executor for namespace %s error, %v", es.namespace, err)
+		es.logger.Errorf("StopExecutorServiceByName executor for namespace %s error, %v", es.namespace, err)
 		return err
 	}
 
 	// 2. close related database.
 	err = hyperdb.StopDatabase(es.namespace)
 	if err != nil {
-		es.logger.Errorf("Stop database for namespace %s error, %v", es.namespace, err)
+		es.logger.Errorf("StopExecutorServiceByName database for namespace %s error, %v", es.namespace, err)
 		return err
 	}
 
@@ -299,15 +299,6 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Service: hapi.NewContarctExAPI(namespace, es.conf),
 			Public:  true,
 		},
-		//"cert": {
-		//	Svcname: "cert",
-		//	Version: "1.5",
-		//	Service: hapi.NewCertAPI(namespace, es.caManager),
-		//	Public:  true,
-		//},
-		//"sub": {
-		//	//TODO: Inplements the webSocket subscription
-		//},
 		"archive": {
 			Svcname: "archive",
 			Version: "1.5",

@@ -1,4 +1,4 @@
-package apiserver
+package api
 
 import (
 	"encoding/json"
@@ -8,12 +8,12 @@ import (
 	admin "hyperchain/api/admin"
 	"hyperchain/common"
 	"hyperchain/namespace"
+	hrpc "hyperchain/rpc"
+	hm "hyperchain/service/hypexec/controller"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
-	hm "hyperchain/service/executor/manager"
-	hrpc "hyperchain/rpc"
 )
 
 /**
@@ -30,19 +30,19 @@ type ServerEx struct {
 	run          int32
 	codecsMu     sync.Mutex
 	codecs       *set.Set
-	er           hm.ExecutorManager
+	er           hm.ExecutorController
 	admin        *admin.Administrator
 	requestMgrMu sync.Mutex
 	requestMgr   map[string]*hrpc.RequestManager
 }
 
 // NewServer will create a new server instance with no registered handlers.
-func NewServerEx(er hm.ExecutorManager, config *common.Config) *ServerEx {
+func NewServerEx(er hm.ExecutorController, config *common.Config) *ServerEx {
 	server := &ServerEx{
-		codecs:       set.New(),
-		run:          1,
-		er:           er,
-		requestMgr:   make(map[string]*hrpc.RequestManager),
+		codecs:     set.New(),
+		run:        1,
+		er:         er,
+		requestMgr: make(map[string]*hrpc.RequestManager),
 	}
 	return server
 }
@@ -160,7 +160,7 @@ func (s *ServerEx) serveRequest(codec ServerCodec, singleShot bool, options hrpc
 	return nil
 }
 
-// Stop will stop reading new requests, wait for stopPendingRequestTimeout to allow pending requests to finish,
+// StopExecutorServiceByName will stop reading new requests, wait for stopPendingRequestTimeout to allow pending requests to finish,
 // close all codecs which will cancels pending requests/subscriptions.
 func (s *ServerEx) Stop() {
 	if atomic.CompareAndSwapInt32(&s.run, 1, 0) {
@@ -224,7 +224,7 @@ func (s *ServerEx) handleReqs(ctx context.Context, codec ServerCodec, reqs []*co
 		//	if _, ok := s.requestMgr[name]; !ok {
 		//		rm = NewRequestManager(name, s, codec)
 		//		s.requestMgr[name] = rm
-		//		rm.Start()
+		//		rm.StartExecutorServiceByName()
 		//	} else {
 		//		s.requestMgr[name].codec = codec
 		//		rm = s.requestMgr[name]
@@ -333,4 +333,3 @@ func (s *ServerEx) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.
 	return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Reply: rs.Result}
 
 }
-

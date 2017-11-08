@@ -185,7 +185,7 @@ func (cache *BloomFilterCache) loop() {
 		case msg := <-cache.writeCh:
 			var filter *bloom.BloomFilter
 			cache.lock.RLock()
-			filter = cache.bloomMap[msg.namespace].Copy()
+			filter = cache.bloomMap[msg.namespace].Copy() //TODO: what if msg.namespace == nil or no bloom for this namespace
 			cache.lock.RUnlock()
 			// create a copy of filter, so that the computation procedure won't affect the online filter
 			go func() {

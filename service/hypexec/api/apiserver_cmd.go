@@ -1,4 +1,4 @@
-package apiserver
+package api
 
 import (
 	"fmt"
@@ -143,4 +143,3 @@ func (asi *APIServerImpl) Command(args []string, ret *[]string) error {
 	}
 	return nil
 }
-

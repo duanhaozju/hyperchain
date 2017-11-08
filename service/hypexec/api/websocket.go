@@ -1,4 +1,4 @@
-package apiserver
+package api
 
 import (
 	"context"
@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"hyperchain/common"
+	hrpc "hyperchain/rpc"
+	hm "hyperchain/service/hypexec/controller"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
-	hm "hyperchain/service/executor/manager"
-	hrpc "hyperchain/rpc"
 )
 
 const (
@@ -25,7 +25,7 @@ var (
 )
 
 type wsServerImpl struct {
-	er     hm.ExecutorManager
+	er     hm.ExecutorController
 	port   int
 	config *common.Config
 
@@ -41,7 +41,7 @@ type httpReadWriteCloser struct {
 }
 
 // GetWSServer creates and returns a new wsServerImpl instance implements internalRPCServer interface.
-func GetWSServer(er hm.ExecutorManager, config *common.Config) internalRPCServer {
+func GetWSServer(er hm.ExecutorController, config *common.Config) internalRPCServer {
 	if wsS == nil {
 		wsS = &wsServerImpl{
 			er:      er,
@@ -219,4 +219,3 @@ func (wssi *wsServerImpl) closeConnection(notifier *hrpc.Notifier, conn *websock
 	delete(wssi.wsConns, conn)
 	wssi.wsConnsMux.Unlock()
 }
-

@@ -6,6 +6,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
+	"hyperchain/common"
 	pb "hyperchain/common/protos"
 	"hyperchain/common/service/util"
 	"sync"
@@ -34,11 +35,11 @@ type ServiceClient struct {
 	slock   sync.RWMutex
 	client  pb.Dispatcher_RegisterClient
 
-	logger *logging.Logger
-	h      Handler
-	closed int32
-	ctx    context.Context
-	cf     context.CancelFunc
+	logger     *logging.Logger
+	h          Handler
+	closed     int32
+	ctx        context.Context
+	cf         context.CancelFunc
 	rspAuxMap  map[uint64]chan *pb.IMessage
 	rspAuxLock sync.RWMutex
 	syncReqId  *util.ID
@@ -53,8 +54,8 @@ func New(port int, host, sid, domain string) (*ServiceClient, error) {
 		host:    host,
 		port:    port,
 		msgRecv: make(chan *pb.IMessage, 1024),
-		logger:  logging.MustGetLogger("service_client"),
-		// TODO: replace this logger with hyperlogger ?
+		logger:  common.GetLogger(domain, "service_client"),
+
 		sid:    sid,
 		domain: domain,
 		closed: 0,
@@ -110,7 +111,7 @@ func (sc *ServiceClient) reconnect() error {
 	for i := 0; i < maxRetryT; i++ {
 		err := sc.Connect()
 		if err == nil {
-			err = sc.Register(0, getFrom(sc.sid), sc.getRegMessage(sc.sid))//TODO: Fix id
+			err = sc.Register(0, getFrom(sc.sid), sc.getRegMessage(sc.sid)) //TODO: Fix id
 			if err != nil {
 				sc.logger.Error(err)
 				return err
@@ -290,6 +291,7 @@ func getFrom(sid string) pb.FROM {
 		return pb.FROM_APISERVER
 	case ADMINISTRATOR:
 		return pb.FROM_ADMINISTRATOR
+
 	}
 	return -1
 }
@@ -310,6 +312,7 @@ func (sc *ServiceClient) getRegMessage(sid string) *pb.RegisterMessage {
 		return &pb.RegisterMessage{
 			Address: sc.domain,
 		}
+
 	}
 	return nil
 }

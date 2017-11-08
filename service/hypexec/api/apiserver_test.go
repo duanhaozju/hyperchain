@@ -1,11 +1,11 @@
-package apiserver
+package api
 
 import (
-	"testing"
-	"hyperchain/service/executor/manager"
 	"hyperchain/common"
-	"hyperchain/rpc"
 	"hyperchain/namespace"
+	"hyperchain/rpc"
+	"hyperchain/service/executor/manager"
+	"testing"
 )
 
 func TestAPIServerImpl_Restart(t *testing.T) {

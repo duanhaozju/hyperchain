@@ -5,7 +5,7 @@ import (
 	"github.com/op/go-logging"
 	pb "hyperchain/common/protos"
 	"hyperchain/manager/event"
-	"hyperchain/service/executor/manager"
+	"hyperchain/service/hypexec/controller"
 )
 
 var logger *logging.Logger
@@ -15,7 +15,7 @@ func init() {
 }
 
 type AdminHandler struct {
-	ecMgr manager.ExecutorManager
+	ecMgr controller.ExecutorController
 	Ch    chan *ResponseEventWrapper
 }
 
@@ -24,7 +24,7 @@ type ResponseEventWrapper struct { //TODO: Fix it
 	are   *event.AdminResponseEvent
 }
 
-func NewAdminHandler(ecMgr manager.ExecutorManager) *AdminHandler {
+func NewAdminHandler(ecMgr controller.ExecutorController) *AdminHandler {
 	return &AdminHandler{
 		ecMgr: ecMgr,
 		Ch:    make(chan *ResponseEventWrapper),
@@ -41,10 +41,10 @@ func (ah *AdminHandler) Handle(client pb.Dispatcher_RegisterClient, msg *pb.IMes
 			return
 		}
 		namespace := e.GetNamespace()
-		err = ah.ecMgr.Start(namespace)
+		err = ah.ecMgr.StartExecutorServiceByName(namespace)
 		es := &event.AdminResponseEvent{}
 		if err != nil {
-			logger.Errorf("Start namespce %s failed, error is %s", namespace, err)
+			logger.Errorf("StartExecutorServiceByName namespce %s failed, error is %s", namespace, err)
 			es.Ok = false
 			es.Msg = err.Error()
 		} else {
@@ -62,10 +62,10 @@ func (ah *AdminHandler) Handle(client pb.Dispatcher_RegisterClient, msg *pb.IMes
 			return
 		}
 		namespace := e.GetNamespace()
-		err = ah.ecMgr.Stop(namespace)
+		err = ah.ecMgr.StopExecutorServiceByName(namespace)
 		es := &event.AdminResponseEvent{}
 		if err != nil {
-			logger.Errorf("Stop namespce%s filed, error is %s", namespace, err)
+			logger.Errorf("StopExecutorServiceByName namespce%s filed, error is %s", namespace, err)
 			es.Ok = false
 			es.Msg = err.Error()
 		} else {

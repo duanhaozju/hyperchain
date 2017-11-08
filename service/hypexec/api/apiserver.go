@@ -1,24 +1,23 @@
-package apiserver
+package api
 
-import(
-	"hyperchain/common"
-	"sync"
+import (
 	"github.com/op/go-logging"
-	hm "hyperchain/service/executor/manager"
+	"hyperchain/common"
 	"hyperchain/ipc"
 	hrpc "hyperchain/rpc"
+	hm "hyperchain/service/hypexec/controller"
+	"sync"
 )
 
 var (
-	once sync.Once
-	log  *logging.Logger // package-level logger
+	once      sync.Once
+	log       *logging.Logger // package-level logger
 	apiserver APIServer
 )
 
 type APIServer interface {
 	Start() error
 	Stop() error
-
 }
 
 type internalRPCServer interface {
@@ -62,21 +61,20 @@ type receiver interface {
 	handleChannelReq(codec ServerCodec, rq *common.RPCRequest) interface{}
 }
 
-
-type APIServerImpl struct{
+type APIServerImpl struct {
 	httpServer internalRPCServer
 	wsServer   internalRPCServer
 }
 
-func GetAPIServer(er hm.ExecutorManager, config *common.Config) APIServer {
+func GetAPIServer(er hm.ExecutorController, config *common.Config) APIServer {
 	log = common.GetLogger(common.DEFAULT_LOG, "executor_api")
-	once.Do(func(){
+	once.Do(func() {
 		apiserver = NewAPIServer(er, config)
 	})
 	return apiserver
 }
 
-func NewAPIServer(er hm.ExecutorManager, config *common.Config) *APIServerImpl{
+func NewAPIServer(er hm.ExecutorController, config *common.Config) *APIServerImpl {
 	apiserver := &APIServerImpl{}
 	apiserver.httpServer = GetHttpServer(er, config)
 	apiserver.wsServer = GetWSServer(er, config)
@@ -85,7 +83,7 @@ func NewAPIServer(er hm.ExecutorManager, config *common.Config) *APIServerImpl{
 	return apiserver
 }
 
-func(asi *APIServerImpl) Start() error{
+func (asi *APIServerImpl) Start() error {
 	// start http server
 	if err := asi.httpServer.start(); err != nil {
 		log.Error(err)
@@ -101,7 +99,7 @@ func(asi *APIServerImpl) Start() error{
 	return nil
 }
 
-func(asi *APIServerImpl) Stop() error{
+func (asi *APIServerImpl) Stop() error {
 	// stop http server
 	if err := asi.httpServer.stop(); err != nil {
 		return err

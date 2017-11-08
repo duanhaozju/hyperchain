@@ -1,4 +1,4 @@
-package apiserver
+package api
 
 import (
 	"crypto/tls"
@@ -8,13 +8,13 @@ import (
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"hyperchain/common"
+	hrpc "hyperchain/rpc"
+	hm "hyperchain/service/hypexec/controller"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"time"
-	hm "hyperchain/service/executor/manager"
-	hrpc "hyperchain/rpc"
 )
 
 const (
@@ -27,7 +27,7 @@ var (
 )
 
 type httpServerImpl struct {
-	er     hm.ExecutorManager
+	er     hm.ExecutorController
 	port   int
 	config *common.Config
 
@@ -36,7 +36,7 @@ type httpServerImpl struct {
 }
 
 // GetHttpServer creates and returns a new httpServerImpl instance implements internalRPCServer interface.
-func GetHttpServer(er hm.ExecutorManager, config *common.Config) internalRPCServer {
+func GetHttpServer(er hm.ExecutorController, config *common.Config) internalRPCServer {
 	if hs == nil {
 		hs = &httpServerImpl{
 			er:     er,
@@ -233,4 +233,3 @@ func (srv *ServerEx) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer codec.Close()
 	srv.ServeSingleRequest(codec, hrpc.OptionMethodInvocation)
 }
-

@@ -5,13 +5,13 @@ import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
 	"hyperchain/hyperdb"
-	"hyperchain/service/executor/admin"
-	"hyperchain/service/executor/manager"
 	"hyperchain/rpc"
+	"hyperchain/service/hypexec/admin"
+	"hyperchain/service/hypexec/controller"
 )
 
-type executorGlobal struct {
-	exeMgr      manager.ExecutorManager
+type HyperExecutor struct {
+	exeCtl      controller.ExecutorController
 	admin       *admin.Administrator
 	apiServer   jsonrpc.RPCServer
 	stopFlag    chan bool
@@ -19,75 +19,66 @@ type executorGlobal struct {
 	args        *argT
 }
 
-func newExecutorGlobal(argV *argT) *executorGlobal {
-	eg := &executorGlobal{
+func newHyperExecutor(argV *argT) *HyperExecutor {
+	he := &HyperExecutor{
 		stopFlag:    make(chan bool),
 		restartFlag: make(chan bool),
 		args:        argV,
 	}
-	globalConfig := common.NewConfig(eg.args.ConfigPath)
-	globalConfig.Set(common.GLOBAL_CONFIG_PATH, eg.args.ConfigPath)
+	globalConfig := common.NewConfig(he.args.ConfigPath)
+	globalConfig.Set(common.GLOBAL_CONFIG_PATH, he.args.ConfigPath)
 	common.InitHyperLoggerManager(globalConfig)
-	logger = common.GetLogger(common.DEFAULT_LOG, "main")
+
+	logger = common.GetLogger(common.DEFAULT_LOG, "hypexec")
 	hyperdb.InitDBMgr(globalConfig)
 
-	eg.exeMgr = manager.GetExecutorMgr(globalConfig, eg.stopFlag, eg.restartFlag)
-	eg.admin = admin.NewAdministrator(eg.exeMgr, globalConfig)
+	he.exeCtl = controller.GetExecutorCtl(globalConfig, he.stopFlag, he.restartFlag)
+	he.admin = admin.NewAdministrator(he.exeCtl, globalConfig)
 
-	eg.apiServer = jsonrpc.GetRPCServer(eg.exeMgr,globalConfig, true)
-	//TODO provides params to create a APIServer
-
-	return eg
+	he.apiServer = jsonrpc.GetRPCServer(he.exeCtl, globalConfig, true)
+	return he
 }
 
 func main() {
 	/**
 	1. get config file
-
 	2. get the executorManager instance and start all executor
-
-	3. run APIServer to provide service
-
+	3. run APIServer to provide open service
 	*/
-
 	cli.Run(new(argT), func(ctx *cli.Context) error {
-		//defer func() {
-		//	if r := recover(); r != nil {
-		//		fmt.Println("Panic: ", r)
-		//	}
-		//}()
-
 		argv := ctx.Argv().(*argT)
-
-		//start services, include executor manager and apiServer
-		eg := newExecutorGlobal(argv)
+		eg := newHyperExecutor(argv)
 		run(eg, argv)
-
 		return nil
 	})
 }
 
-func (h *executorGlobal) start() error {
-	//err := h.exeMgr.Start()
-	//if err != nil {
-	//	return err
-	//}
-	err := h.admin.Start()
-	if err != nil {
-		return err
+func (h *HyperExecutor) start() error {
+	if err := h.admin.Start(); err != nil {
+		panic(err)
 	}
 
-	//h.apiServer.Start()
-	go h.apiServer.Start()
+	if err := h.exeCtl.Start(); err != nil {
+		panic(err)
+	}
+
+	go func() {
+		err := h.apiServer.Start()
+		if err != nil {
+			panic(err)
+		}
+	}()
 	return nil
 
 }
 
-func (h *executorGlobal) stop() {
-
+func (h *HyperExecutor) stop() {
+	go h.admin.Stop()
+	go h.exeCtl.Stop()
+	go h.apiServer.Stop()
 }
 
-func (h *executorGlobal) restart() {
+func (h *HyperExecutor) restart() {
 	logger.Critical("executor server restart...")
 	h.stop()
 	h.start()
@@ -95,7 +86,7 @@ func (h *executorGlobal) restart() {
 
 type argT struct {
 	cli.Helper
-	Version       bool   `cli:"v,version" usage:"get the version of hyperchain"`
+	Version       bool   `cli:"v,version" usage:"get the version of executor"`
 	RestoreEnable bool   `cli:"r,restore" usage:"enable restore system status from dumpfile"`
 	SId           string `cli:"sid" usage:"use to specify snapshot" dft:""`
 	Namespace     string `cli:"n,namespace" usage:"use to specify namspace" dft:"global"`
@@ -110,7 +101,7 @@ var (
 	logger *logging.Logger
 )
 
-func run(inst *executorGlobal, argv *argT) {
+func run(inst *HyperExecutor, argv *argT) {
 	inst.start()
 	for {
 		select {

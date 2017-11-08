@@ -1,4 +1,4 @@
-package apiserver
+package api
 
 import (
 	"crypto/ecdsa"
@@ -8,14 +8,14 @@ import (
 	"github.com/pkg/errors"
 	"hyperchain/common"
 	"hyperchain/crypto/primitives"
+	hrpc "hyperchain/rpc"
+	hm "hyperchain/service/hypexec/controller"
 	"io"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
-	hm "hyperchain/service/executor/manager"
-	hrpc "hyperchain/rpc"
 )
 
 const (
@@ -67,12 +67,12 @@ type jsonCodecImpl struct {
 	e      *json.Encoder      // encodes responses
 	rw     io.ReadWriteCloser // connection
 	req    *http.Request
-	er     hm.ExecutorManager
+	er     hm.ExecutorController
 	conn   *websocket.Conn
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, er hm.ExecutorManager, conn *websocket.Conn) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, er hm.ExecutorController, conn *websocket.Conn) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
 	return &jsonCodecImpl{
@@ -348,4 +348,3 @@ func (c *jsonCodecImpl) Close() {
 func (c *jsonCodecImpl) Closed() <-chan interface{} {
 	return c.closed
 }
-

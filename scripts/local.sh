@@ -266,7 +266,7 @@ GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/namespace.toml"
 CLI_PATH="${PROJECT_PATH}/hypercli"
 
 # executor root path
-EXECUTOR_PATH="${PROJECT_PATH}/service/executor"
+EXECUTOR_PATH="${PROJECT_PATH}/service/hypexec"
 
 # peerconfig
 PEER_CONFIG_FILE_NAME=`confer read ${GLOBAL_CONFIG} global.configs.peers |sed 's/"//g'`
