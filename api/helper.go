@@ -12,6 +12,9 @@ import (
 	"math/big"
 	"path"
 	"time"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
+	"fmt"
 )
 
 const (
@@ -36,6 +39,11 @@ const (
 	CONTRACT                = "contract"
 	DEFAULT_GAS       int64 = 100000000
 	DEFAULT_GAS_PRICE int64 = 10000
+)
+
+var (
+	kec256Hash         = crypto.NewKeccak256Hash("keccak256")
+	db_not_found_error = db.DB_NOT_FOUND.Error()
 )
 
 // getRateLimitEnable returns rate limit switch value.
@@ -161,19 +169,19 @@ type intArgs struct {
 // 2 means invoking contract, 3 means signing hash, 4 means maintaining contract.
 func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	if args.From.Hex() == (common.Address{}).Hex() {
-		return SendTxArgs{}, &common.InvalidParamsError{Message: "address 'from' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "address `from` is invalid"}
 	}
 	if (txType == 0 || txType == 2 || txType == 4) && args.To == nil {
-		return SendTxArgs{}, &common.InvalidParamsError{Message: "address 'to' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "address `to` is invalid"}
 	}
 	if args.Timestamp <= 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
-		return SendTxArgs{}, &common.InvalidParamsError{Message: "'timestamp' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "`timestamp` is invalid"}
 	}
 	if txType != 3 && args.Signature == "" {
-		return SendTxArgs{}, &common.InvalidParamsError{Message: "'signature' can't be empty"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "missing params `signature`"}
 	}
 	if args.Nonce <= 0 {
-		return SendTxArgs{}, &common.InvalidParamsError{Message: "'nonce' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "`nonce` is invalid"}
 	}
 	if txType == 4 && args.Opcode == 1 && (args.Payload == "" || args.Payload == "0x") {
 		return SendTxArgs{}, &common.InvalidParamsError{Message: "contract code is empty"}
@@ -196,7 +204,7 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 // If client sends BlockNumber 0, error will be returned.
 func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) {
 	if args.From == nil || args.To == nil {
-		return nil, &common.InvalidParamsError{Message: "missing params 'from' or 'to'"}
+		return nil, &common.InvalidParamsError{Message: "missing params `from` or `to`"}
 	} else if chain, err := edb.GetChain(namespace); err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
 	} else {
@@ -211,7 +219,7 @@ func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) 
 		}
 
 		if from > to || from < 1 || to < 1 {
-			return nil, &common.InvalidParamsError{Message: "invalid params from or to"}
+			return nil, &common.InvalidParamsError{Message: fmt.Sprintf("invalid params, from = %v, to = %v", from, to)}
 		} else {
 			return &intArgs{from: from, to: to}, nil
 		}
@@ -235,13 +243,13 @@ func prepareBlockNumber(n BlockNumber, namespace string) (uint64, error) {
 // preparePagingArgs checks whether paging arguments are valid.
 func preparePagingArgs(args PagingArgs) (PagingArgs, error) {
 	if args.PageSize == 0 {
-		return PagingArgs{}, &common.InvalidParamsError{Message: "'pageSize' can't be zero or empty"}
+		return PagingArgs{}, &common.InvalidParamsError{Message: "invalid params, '`ageSize` value shouldn't be 0"}
 	} else if args.Separated%args.PageSize != 0 {
-		return PagingArgs{}, &common.InvalidParamsError{Message: "invalid 'pageSize' or 'separated'"}
+		return PagingArgs{}, &common.InvalidParamsError{Message: "invalid params, `separated` value should be a multiple of `pageSize` value"}
 	} else if args.MaxBlkNumber == BlockNumber(0) || args.MinBlkNumber == BlockNumber(0) {
-		return PagingArgs{}, &common.InvalidParamsError{Message: "'minBlkNumber' or 'maxBlkNumber' can't be zero or empty"}
+		return PagingArgs{}, &common.InvalidParamsError{Message: "invalid params, `minBlkNumber` or `maxBlkNumber` value shouldn't be 0"}
 	} else if args.ContractAddr == nil {
-		return PagingArgs{}, &common.InvalidParamsError{Message: "'address' can't be empty"}
+		return PagingArgs{}, &common.InvalidParamsError{Message: "invalid params, missing params `address`"}
 	}
 
 	return args, nil

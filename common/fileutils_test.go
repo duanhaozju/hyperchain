@@ -26,8 +26,8 @@ func TestGetPath(t *testing.T) {
 }
 
 func TestSeekAndAppend(t *testing.T) {
-	filePath := "./testhelper/resources/global.toml"
-	err := SeekAndAppend("[namespace.start]", filePath, fmt.Sprintf("    %s", "ns1 = true"))
+	filePath := "./testhelper/resources/namespace.toml"
+	err := SeekAndAppend("[consensus.rbft]", filePath, fmt.Sprintf("    %s", "test = 100"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -41,5 +41,5 @@ func TestSeekAndAppend(t *testing.T) {
 		t.Error(err)
 	}
 
-	assert.Equal(t, true, strings.Contains(string(data), "ns1 = true"), "The config file should contain this message")
+	assert.Equal(t, true, strings.Contains(string(data), "test = 100"), "The config file should contain this message")
 }

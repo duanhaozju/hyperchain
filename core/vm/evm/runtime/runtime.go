@@ -10,6 +10,7 @@ import (
 	"github.com/hyperchain/hyperchain/crypto"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"math/big"
+	"reflect"
 	"time"
 )
 
@@ -141,9 +142,8 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, error) {
 	setDefaults(cfg)
 
 	vmenv := NewEnv(cfg, cfg.State)
-
 	sender = cfg.State.GetStateObject(cfg.Origin)
-	if sender == nil {
+	if reflect.ValueOf(sender).IsNil() {
 		sender = cfg.State.CreateAccount(cfg.Origin)
 	}
 	// Call the code with the given configuration.

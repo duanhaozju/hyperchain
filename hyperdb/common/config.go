@@ -14,8 +14,8 @@ const (
 	DB_TYPE           = "database.type"
 
 	// database types
-	LDB_DB         = 0001
-	MEMORY_DB      = 0010
+	LDB_DB    = 0001
+	MEMORY_DB = 0010
 )
 
 const (
@@ -34,6 +34,18 @@ const (
 	DBPATH_BLOCKCHAIN = "database.dbpath.blockchain"
 	DBPATH_CONSENSUS  = "database.dbpath.consensus"
 	DBPATH_ARCHIVE    = "database.dbpath.archive"
+)
+
+const (
+	// whether encrypt data
+	DATA_ENCRYPTION = "database.leveldb.data_encryption"
+
+	// encryption function in secimpl requires the length of key to be 24
+	ENCRYPTED_KEY_LEN = 24
+
+	// to append the key if its length is less than "ENCRYPTED_KEY_LEN"
+	// it doesn't matter what the value here is.
+	ENCRYPTED_KEY_APPENDER = 55
 )
 
 const (

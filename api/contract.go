@@ -75,6 +75,8 @@ func (contract *Contract) MaintainContract(args SendTxArgs) (common.Hash, error)
 
 // postContract will create a new transaction instance and post a NewTxEvent event.
 func (contract *Contract) postContract(args SendTxArgs, txType int) (common.Hash, error) {
+	log := common.GetLogger(contract.namespace, "api")
+
 	consentor := contract.eh.GetConsentor()
 	normal, full := consentor.GetStatus()
 	if !normal || full {
@@ -88,6 +90,7 @@ func (contract *Contract) postContract(args SendTxArgs, txType int) (common.Hash
 	}
 
 	// 2. post a event.NewTxEvent event
+	log.Debugf("[ %v ] post event NewTxEvent", contract.namespace)
 	err = postNewTxEvent(args, tx, contract.eh)
 	if err != nil {
 		return common.Hash{}, err
@@ -244,7 +247,7 @@ type HmCheckResult struct {
 // CheckHmValue returns verification result that account B verifies transaction amount that account A transfers to B.
 func (contract *Contract) CheckHmValue(args CheckArgs) (*HmCheckResult, error) {
 	if len(args.RawValue) != len(args.EncryValue) {
-		return nil, &common.InvalidParamsError{Message: "Invalid params, the length of rawValue is " +
+		return nil, &common.InvalidParamsError{Message: "invalid params, the length of rawValue is " +
 			strconv.Itoa(len(args.RawValue)) + ", but the length of encryValue is " +
 			strconv.Itoa(len(args.EncryValue))}
 	}

@@ -11,17 +11,17 @@ import (
 	"math/big"
 )
 
-// ECDSASignature represents an ECDSA signature
+// ECDSASignature represents an ECDSA signature.
 type ECDSASignature struct {
 	R, S *big.Int
 }
 
-// NewECDSAKey generates a new ECDSA Key
+// NewECDSAKey generates a new ECDSA Key.
 func NewECDSAKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(GetDefaultCurve(), rand.Reader)
 }
 
-// ECDSASign signs
+// ECDSASign sign a msg by keccak256 hasher.
 func ECDSASign(signKey interface{}, msg []byte) ([]byte, error) {
 	temp := signKey.(*ecdsa.PrivateKey)
 
@@ -41,7 +41,7 @@ func ECDSASign(signKey interface{}, msg []byte) ([]byte, error) {
 	return raw, nil
 }
 
-// ECDSAVerify verifies
+// ECDSAVerify verifies signature by keccak256 hasher.
 func ECDSAVerify(verKey interface{}, msg, signature []byte) (bool, error) {
 	ecdsaSignature := new(ECDSASignature)
 	_, err := asn1.Unmarshal(signature, ecdsaSignature)
@@ -55,6 +55,7 @@ func ECDSAVerify(verKey interface{}, msg, signature []byte) (bool, error) {
 	return ecdsa.Verify(&temp, h, ecdsaSignature.R, ecdsaSignature.S), nil
 }
 
+// ECDSAVerifyTransport verify siganture from sdk by sha256 hasher.
 func ECDSAVerifyTransport(verKey *ecdsa.PublicKey, msg, signature []byte) (bool, error) {
 	ecdsaSignature := new(ECDSASignature)
 	_, err := asn1.Unmarshal(signature, ecdsaSignature)

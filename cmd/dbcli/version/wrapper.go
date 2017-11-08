@@ -10,7 +10,7 @@ import (
 	"github.com/hyperchain/hyperchain/cmd/dbcli/version/versionAccount"
 	"github.com/hyperchain/hyperchain/cmd/dbcli/version/wrapper"
 	"github.com/hyperchain/hyperchain/common"
-	"github.com/hyperchain/hyperchain/core/state"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
 	"github.com/hyperchain/hyperchain/hyperdb"
 	"os"
 	"regexp"
@@ -653,7 +653,7 @@ func (self *Version) RevertDB(ns, globalConf, path string, number uint64, parame
 		fmt.Println(constant.ErrQuery.Error(), err.Error())
 		return
 	}
-	stateDb, err := state.New(root, db, nil, config, uint64(height), ns)
+	stateDb, err := state.New(root, db, nil, config, uint64(height))
 	if err != nil {
 		fmt.Println(constant.ErrQuery.Error(), err.Error())
 		return
@@ -676,18 +676,15 @@ func (self *Version) RevertDB(ns, globalConf, path string, number uint64, parame
 
 func DefaultConfig() *common.Config {
 	config := common.NewRawConfig()
-	config.Set(state.GlobalDataNodeCacheSize, 10000)
-	config.Set(state.GlobalDataNodeCacheLength, 20)
-
-	config.Set(state.StateBucketSize, 1000003)
-	config.Set(state.StateBucketLevelGroup, 5)
+	config.Set(state.StateCapacity, 1000003)
+	config.Set(state.StateAggreation, 5)
+	config.Set(state.StateMerkleCacheSize, 100000)
 	config.Set(state.StateBucketCacheSize, 100000)
-	config.Set(state.StateDataNodeCacheSize, 100000)
 
-	config.Set(state.StateObjectBucketSize, 1000003)
-	config.Set(state.StateObjectBucketLevelGroup, 5)
+	config.Set(state.StateObjectCapacity, 1000003)
+	config.Set(state.StateObjectAggreation, 5)
+	config.Set(state.StateObjectMerkleCacheSize, 100000)
 	config.Set(state.StateObjectBucketCacheSize, 100000)
-	config.Set(state.StateObjectDataNodeCacheSize, 100000)
 
 	config.Set(common.LOG_BASE_LOG_LEVEL, "NOTICE")
 	return config

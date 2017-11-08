@@ -162,6 +162,13 @@ type ArchiveEvent struct {
 	Sync     bool
 }
 
+type ArchiveRestoreEvent struct {
+	FilterId string
+	Ack      chan error
+	Sync     bool
+	All      bool
+}
+
 // receive tx from a nvp
 type NvpRelayTxEvent struct {
 	Payload []byte

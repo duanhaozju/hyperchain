@@ -151,6 +151,40 @@ func (admin *Archive) Archive(filterId string, sync bool) (bool, error) {
 	}
 }
 
+func (admin *Archive) Restore(filterId string, sync bool) (bool, error) {
+	log := common.GetLogger(admin.namespace, "api")
+	log.Debugf("receive restore command, params: filterId: (%s)", filterId)
+	cont := make(chan error)
+	admin.eh.GetEventObject().Post(event.ArchiveRestoreEvent{
+		FilterId: filterId,
+		Ack:      cont,
+		Sync:     sync,
+	})
+	err := <-cont
+	if err != nil {
+		return false, &common.SnapshotErr{Message: err.Error()}
+	} else {
+		return true, nil
+	}
+}
+
+func (admin *Archive) RestoreAll(sync bool) (bool, error) {
+	log := common.GetLogger(admin.namespace, "api")
+	log.Debugf("receive restore all command")
+	cont := make(chan error)
+	admin.eh.GetEventObject().Post(event.ArchiveRestoreEvent{
+		All: true,
+		Ack: cont,
+	})
+	err := <-cont
+	if err != nil {
+		return false, &common.SnapshotErr{Message: err.Error()}
+	} else {
+		return true, nil
+	}
+
+}
+
 // QueryArchiveExist checks if the given snapshot has been archived.
 func (admin *Archive) QueryArchiveExist(filterId string) (bool, error) {
 	manifestHandler := com.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))

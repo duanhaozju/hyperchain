@@ -199,7 +199,7 @@ func (hub *EventHub) Subscribe() {
 
 	// other messages.
 	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InformPrimaryEvent{}, event.VCResetEvent{},
-		event.ChainSyncReqEvent{}, event.SnapshotEvent{}, event.DeleteSnapshotEvent{}, event.ArchiveEvent{})
+		event.ChainSyncReqEvent{}, event.SnapshotEvent{}, event.DeleteSnapshotEvent{}, event.ArchiveEvent{}, event.ArchiveRestoreEvent{})
 }
 
 // Unsubscribe unsubscribes all events registered to system.
@@ -457,7 +457,10 @@ func (hub *EventHub) listenMiscellaneousEvent() {
 				hub.executor.DeleteSnapshot(ev)
 			case event.ArchiveEvent:
 				hub.logger.Debugf("message middleware: [archive request]")
-				hub.executor.Archive(ev)
+				go hub.executor.Archive(ev)
+			case event.ArchiveRestoreEvent:
+				hub.logger.Debugf("message middleware: [archive restore]")
+				go hub.executor.ArchiveRestore(ev)
 			}
 		}
 	}
@@ -499,6 +502,10 @@ func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEve
 
 // dispatchExecutorToP2P dispatches executor event to p2p module by its type.
 func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
+	defer func() {
+		hub.logger.Debugf("send session event %d finish", ev.Type)
+	}()
+	hub.logger.Debugf("begin to send session event %d", ev.Type)
 	switch ev.Type {
 	case executor.NOTIFY_BROADCAST_DEMAND:
 		hub.logger.Debugf("message middleware: [broadcast demand]")
@@ -614,6 +621,11 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 		hub.logger.Error("unmarshal session message failed")
 		return
 	}
+	defer func() {
+		hub.logger.Debugf("dispatch session event %s finish", message.Type.String())
+	}()
+
+	hub.logger.Debugf("handle session event %s", message.Type.String())
 
 	switch message.Type {
 	case m.SessionMessage_CONSENSUS:
@@ -647,7 +659,6 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 	case m.SessionMessage_SYNC_REQ:
 		hub.executor.ReceiveSyncRequest(message.Payload)
 	case m.SessionMessage_SYNC_WORLD_STATE:
-		hub.logger.Debug("receive SessionMessage_SYNC_WORLD_STATE")
 		hub.executor.ReceiveWorldStateSyncRequest(message.Payload)
 	case m.SessionMessage_SEND_WORLD_STATE:
 		hub.executor.ReceiveWorldState(message.Payload)

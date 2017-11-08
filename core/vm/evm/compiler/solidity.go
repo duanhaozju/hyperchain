@@ -118,7 +118,6 @@ func NewCompiler(solcPath string) (sol *Solidity, err error) {
 		sol.isSolcjs = true
 	}
 
-	//glog.V(logger.Info).Infoln(sol.Info())
 	return
 }
 

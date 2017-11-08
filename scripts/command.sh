@@ -154,5 +154,8 @@ curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"arch
 
 # Archive: archive data
 curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"archive_archive","params":["<filterId>"],"id":1}'
-
+# 基于归档数据复原
+curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"archive_restore","params":["<filterId>", bool],"id":1}'
+# 恢复至创世状态
+curl localhost:8081 --data '{"jsonrpc":"2.0","namespace":"global","method":"archive_restoreAll","params":[bool],"id":1}'
 

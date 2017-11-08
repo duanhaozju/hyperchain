@@ -19,7 +19,7 @@ func init() {
 func TestSectionReader_ReatAt(t *testing.T) {
 	var filesize int64 = 10005
 	var shardLen int64 = 100
-	buf := RandBytes(filesize)
+	buf := RandBytes(int(filesize))
 	ioutil.WriteFile("tmp", buf, 0644)
 	defer os.Remove("tmp")
 
