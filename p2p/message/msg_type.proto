@@ -39,4 +39,6 @@ enum MsgType{
     NVPDELETE                 = 15;
     NVPEXIT                   = 16;
 
+    VPDELETE                  = 17;
+
 }

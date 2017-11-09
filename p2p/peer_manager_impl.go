@@ -189,7 +189,7 @@ func (pmgr *peerManagerImpl) Start() error {
 func (pmgr *peerManagerImpl) Stop() {
 	select {
 	case <-pmgr.peerMgrEvClose:
-		pmgr.logger.Infof("the peer manager channel already closed.")
+		pmgr.logger.Info("the peer manager channel already closed.")
 	default:
 		close(pmgr.peerMgrEvClose)
 
@@ -310,11 +310,22 @@ func (pmgr *peerManagerImpl) DeleteNode(hash string) error {
 		pmgr.delchan <- true
 
 	}
-	err := pmgr.peerPool.DeleteVPPeerByHash(hash)
-	if err != nil {
-		return err
+
+	if !pmgr.IsVP() {
+		// notify VP peer to disconnect
+		ev := peerevent.S_DELETE_NVP{
+			Hash: pmgr.node.info.Hash,
+			VPHash: hash,
+		}
+		pmgr.peerMgrEv.Post(ev)
+		return nil
+	} else {
+		err := pmgr.peerPool.DeleteVPPeerByHash(hash)
+		if err != nil {
+			return err
+		}
+		return pmgr.peerPool.PersistList()
 	}
-	return pmgr.peerPool.PersistList()
 }
 
 // DeleteNVPNode deletes NVP node which connects to current VP node.
@@ -504,6 +515,9 @@ func (pmgr *peerManagerImpl) prepare() error {
 	nvpDeleteHandler := msg.NewNVPDeleteHandler(pmgr.blackHole, pmgr.eventHub, pmgr.peerMgrEv, serverHTS)
 	pmgr.node.Bind(pb.MsgType_NVPDELETE, nvpDeleteHandler)
 
+	vpDeleteHandler := msg.NewVPDeleteHandler(pmgr.blackHole, pmgr.eventHub, pmgr.peerMgrEv, serverHTS)
+	pmgr.node.Bind(pb.MsgType_VPDELETE, vpDeleteHandler)
+
 	nvpExitHandler := msg.NewNVPExitHandler(pmgr.blackHole, pmgr.peerMgrEv, serverHTS)
 	pmgr.node.Bind(pb.MsgType_NVPEXIT, nvpExitHandler)
 
@@ -583,20 +597,40 @@ func (pmgr *peerManagerImpl) distribute(t string, ev interface{}) {
 	case peerevent.S_DELETE_NVP:
 		{
 			conev := ev.(peerevent.S_DELETE_NVP)
-			pmgr.logger.Info("Got a EV_DELETE_NVP for %s", conev.Hash)
-			peer := pmgr.peerPool.GetNVPByHash(conev.Hash)
-			if peer == nil {
-				pmgr.logger.Warningf("This NVP(%s) not connect to this VP ignored.", conev.Hash)
-				return
-			}
-			pmgr.logger.Critical("SEND TO NVP=>>", pmgr.node.info.Hash)
-			m := pb.NewMsg(pb.MsgType_NVPDELETE, common.Hex2Bytes(pmgr.node.info.Hash))
-			_, err := peer.Chat(m)
-			if err != nil {
-				pmgr.logger.Errorf("cannot delete NVP peer, reason: %s ", err.Error())
+
+			var peer *Peer
+			if !pmgr.isVP {
+				pmgr.logger.Noticef("Send a message to VP(%s) to disconnect to NVP(%s)", conev.VPHash, conev.Hash)
+				peer = pmgr.peerPool.GetPeerByHash(conev.VPHash)
+				//close(conev.Ch)
+
+				if peer == nil {
+					pmgr.logger.Warningf("This NVP(%s) not connect to this VP ignored.", conev.Hash)
+					return
+				}
+
+				m := pb.NewMsg(pb.MsgType_VPDELETE, common.Hex2Bytes(pmgr.node.info.Hash))
+				_, err := peer.Chat(m)
+				if err != nil {
+					pmgr.logger.Errorf("cannot delete VP peer, reason: %s ", err.Error())
+				}
 			} else {
-				pmgr.peerPool.DeleteNVPPeer(conev.Hash)
-				pmgr.logger.Noticef("delete NVP peer, hash %s, vp pool size(%d) nvp pool size(%d)", conev.Hash, pmgr.peerPool.GetVPNum(), pmgr.peerPool.GetNVPNum())
+				pmgr.logger.Infof("Got a EV_DELETE_NVP for %s", conev.Hash)
+				peer = pmgr.peerPool.GetNVPByHash(conev.Hash)
+
+				if peer == nil {
+					pmgr.logger.Warningf("This NVP(%s) not connect to this VP ignored.", conev.Hash)
+					return
+				}
+				pmgr.logger.Critical("SEND TO NVP=>>", pmgr.node.info.Hash)
+				m := pb.NewMsg(pb.MsgType_NVPDELETE, common.Hex2Bytes(pmgr.node.info.Hash))
+				_, err := peer.Chat(m)
+				if err != nil {
+					pmgr.logger.Errorf("cannot delete NVP peer, reason: %s ", err.Error())
+				} else {
+					pmgr.peerPool.DeleteNVPPeer(conev.Hash)
+					pmgr.logger.Noticef("delete NVP peer, hash %s, vp pool size(%d) nvp pool size(%d)", conev.Hash, pmgr.peerPool.GetVPNum(), pmgr.peerPool.GetNVPNum())
+				}
 			}
 		}
 	case peerevent.S_DELETE_VP:

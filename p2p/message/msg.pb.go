@@ -13,13 +13,13 @@ var _ = fmt.Errorf
 var _ = math.Inf
 
 type Message struct {
-	Version     int64     `protobuf:"varint,1,opt,name=Version" json:"Version,omitempty"`
+	Version     int64              `protobuf:"varint,1,opt,name=Version" json:"Version,omitempty"`
 	MessageType MsgType   `protobuf:"varint,2,opt,name=MessageType,enum=message.MsgType" json:"MessageType,omitempty"`
 	From        *Endpoint `protobuf:"bytes,3,opt,name=From" json:"From,omitempty"`
-	Payload     []byte    `protobuf:"bytes,4,opt,name=Payload,proto3" json:"Payload,omitempty"`
-	TimeStamp   int64     `protobuf:"varint,5,opt,name=TimeStamp" json:"TimeStamp,omitempty"`
-	Extendend   []byte    `protobuf:"bytes,6,opt,name=Extendend,proto3" json:"Extendend,omitempty"`
-	ReferAddr   []byte    `protobuf:"bytes,7,opt,name=ReferAddr,proto3" json:"ReferAddr,omitempty"`
+	Payload     []byte             `protobuf:"bytes,4,opt,name=Payload,proto3" json:"Payload,omitempty"`
+	TimeStamp   int64              `protobuf:"varint,5,opt,name=TimeStamp" json:"TimeStamp,omitempty"`
+	Extendend   []byte             `protobuf:"bytes,6,opt,name=Extendend,proto3" json:"Extendend,omitempty"`
+	ReferAddr   []byte             `protobuf:"bytes,7,opt,name=ReferAddr,proto3" json:"ReferAddr,omitempty"`
 }
 
 func (m *Message) Reset()                    { *m = Message{} }
@@ -84,7 +84,7 @@ func init() { proto.RegisterFile("msg.proto", fileDescriptor1) }
 
 var fileDescriptor1 = []byte{
 	// 222 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x4c, 0x8f, 0xcd, 0x4a, 0x03, 0x31,
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x4c, 0x8f, 0xcd, 0x4a, 0x03, 0x31,
 	0x14, 0x85, 0x89, 0xad, 0x1d, 0x9a, 0xca, 0xa0, 0x59, 0x5d, 0x8a, 0x8b, 0x41, 0x10, 0xb2, 0x9a,
 	0xc5, 0xf8, 0x04, 0x2e, 0xea, 0xae, 0x20, 0xb1, 0xb8, 0x95, 0x48, 0xae, 0x61, 0xc0, 0xfc, 0x90,
 	0x64, 0xe1, 0xbc, 0xb6, 0x4f, 0x20, 0x49, 0xa6, 0x1d, 0x97, 0xe7, 0x7c, 0x5f, 0xb8, 0x27, 0x74,
