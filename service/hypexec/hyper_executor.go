@@ -22,7 +22,7 @@ type HyperExecutor struct {
 func newHyperExecutor(argV *argT) *HyperExecutor {
 	he := &HyperExecutor{
 		stopFlag:    make(chan bool),
-		restartFlag: make(chan bool),
+		restartFlag: make(chan bool, 1),
 		args:        argV,
 	}
 	globalConfig := common.NewConfig(he.args.ConfigPath)
@@ -54,13 +54,14 @@ func main() {
 }
 
 func (h *HyperExecutor) start() error {
+	if err := h.exeCtl.Start(); err != nil {
+		panic(err)
+	}
+
 	if err := h.admin.Start(); err != nil {
 		panic(err)
 	}
 
-	if err := h.exeCtl.Start(); err != nil {
-		panic(err)
-	}
 
 	go func() {
 		err := h.apiServer.Start()

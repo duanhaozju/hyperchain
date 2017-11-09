@@ -204,7 +204,7 @@ func (es *executorServiceImpl) Start() error {
 		return err
 	}
 
-	err = es.service.Register(0, pb.FROM_EXECUTOR, &pb.RegisterMessage{ // TODO: Fix id
+	_, err = es.service.Register(0, pb.FROM_EXECUTOR, &pb.RegisterMessage{ // TODO: Fix id
 		Namespace: es.namespace,
 	})
 	if err != nil {

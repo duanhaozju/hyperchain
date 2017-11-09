@@ -26,6 +26,8 @@ type ExecutorController interface {
 
 	Stop() error
 
+	StartAllExecutorSrvs() error
+
 	StartExecutorServiceByName(namespace string) error
 
 	StopExecutorServiceByName(namespace string) error
@@ -233,4 +235,9 @@ func (ec *execControllerImpl) Stop() error {
 	// close bloom filter
 	ec.bloomFilter.Close()
 	return nil
+}
+
+func (ec *execControllerImpl) StartAllExecutorSrvs() error {
+	//TODO:start all executor service by config
+	return ec.StartExecutorServiceByName("global")
 }

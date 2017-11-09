@@ -11,16 +11,16 @@ import (
 )
 
 type Administrator struct {
-	ecMgr       controller.ExecutorController
+	exeCtl      controller.ExecutorController
 	adminClient *client.ServiceClient
 	conf        *common.Config
 	logger      *logging.Logger
 	stop        chan struct{}
 }
 
-func NewAdministrator(ecMgr controller.ExecutorController, conf *common.Config) *Administrator {
+func NewAdministrator(exeCtl controller.ExecutorController, conf *common.Config) *Administrator {
 	return &Administrator{
-		ecMgr:  ecMgr,
+		exeCtl: exeCtl,
 		conf:   conf,
 		logger: common.GetLogger(common.DEFAULT_LOG, "admin"),
 		stop:   make(chan struct{}, 2),
@@ -48,15 +48,23 @@ func (admin *Administrator) Start() error {
 		time.Sleep(time.Second)
 	}
 
-	err = adminClient.Register(0, pb.FROM_ADMINISTRATOR, &pb.RegisterMessage{
+	rsp, err := adminClient.Register(0, pb.FROM_ADMINISTRATOR, &pb.RegisterMessage{
 		Address: address,
 	})
+
 	if err != nil {
 		return err
 	}
+
+	if len(rsp.Payload) != 0 {
+		if err := admin.exeCtl.StartAllExecutorSrvs(); err != nil {
+			return err
+		}
+	}
+
 	admin.logger.Info("connect to hyperchain successful! ")
 
-	h := NewAdminHandler(admin.ecMgr)
+	h := NewAdminHandler(admin.exeCtl)
 	adminClient.AddHandler(h)
 	admin.adminClient = adminClient
 	go admin.listenSendResponse(h, adminClient)

@@ -27,8 +27,8 @@ type ServiceRegistry interface {
 	// AdminService fetch admin service.
 	AdminService(aid string) Service
 
-	// AddAdminService add admin service.
-	AddAdminService(adminSrv Service)
+	// AddAdminService add admin service, if adminSrv exists means adminSrv is restart and return true.
+	AddAdminService(adminSrv Service) bool
 }
 
 func NewServiceRegistry() ServiceRegistry {
@@ -110,10 +110,15 @@ func (sri *serviceRegistryImpl) AdminService(aid string) Service {
 	return sri.admins[aid]
 }
 
-func (sri *serviceRegistryImpl) AddAdminService(adminSrv Service) {
+func (sri *serviceRegistryImpl) AddAdminService(adminSrv Service) bool {
+	adminSrvRestart := false
 	sri.adlock.Lock()
 	defer sri.adlock.Unlock()
+	if _, ok := sri.admins[adminSrv.Id()]; ok {
+		adminSrvRestart = true
+	}
 	sri.admins[adminSrv.Id()] = adminSrv
+	return adminSrvRestart
 }
 
 // Init init the service registry.

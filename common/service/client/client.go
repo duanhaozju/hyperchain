@@ -111,7 +111,7 @@ func (sc *ServiceClient) reconnect() error {
 	for i := 0; i < maxRetryT; i++ {
 		err := sc.Connect()
 		if err == nil {
-			err = sc.Register(0, getFrom(sc.sid), sc.getRegMessage(sc.sid)) //TODO: Fix id
+			_, err = sc.Register(0, getFrom(sc.sid), sc.getRegMessage(sc.sid)) //TODO: Fix id
 			if err != nil {
 				sc.logger.Error(err)
 				return err
@@ -127,12 +127,12 @@ func (sc *ServiceClient) reconnect() error {
 	return fmt.Errorf("Recoonect error, exceed retry times: %d ", maxRetryT)
 }
 
-func (sc *ServiceClient) Register(cid uint64, serviceType pb.FROM, rm *pb.RegisterMessage) error {
+func (sc *ServiceClient) Register(cid uint64, serviceType pb.FROM, rm *pb.RegisterMessage) (*pb.IMessage, error) {
 	sc.slock.RLock()
 	defer sc.slock.RUnlock()
 	payload, err := proto.Marshal(rm)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if rsp, err := sc.SyncSend(&pb.IMessage{
@@ -141,15 +141,15 @@ func (sc *ServiceClient) Register(cid uint64, serviceType pb.FROM, rm *pb.Regist
 		Payload: payload,
 		Cid:     cid,
 	}); err != nil {
-		return err
+		return nil, err
 	} else {
 		sc.logger.Debugf("%s connect successful", sc.string())
 
 		if rsp.Type == pb.Type_RESPONSE && rsp.Ok == true {
 			sc.logger.Infof("%s register successful", sc.string())
-			return nil
+			return rsp, nil
 		} else {
-			return fmt.Errorf("%s register failed", sc.string())
+			return nil, fmt.Errorf("%s register failed", sc.string())
 		}
 	}
 }

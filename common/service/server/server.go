@@ -126,13 +126,18 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 		// the admin stream register
 		service := NewRemoteService(rm.Namespace, adminId(&rm), stream, is)
 		is.logger.Debugf("admin addr %v", rm.Address)
-		is.sr.AddAdminService(service)
+		restart := is.sr.AddAdminService(service)
 		is.logger.Debug("Send admin register ok response!")
+		var payload []byte
+		if restart {
+			payload = []byte("restart")
+		}
 
 		if err := stream.Send(&pb.IMessage{
-			Id:   msg.Id,
-			Type: pb.Type_RESPONSE,
-			Ok:   true,
+			Id:      msg.Id,
+			Type:    pb.Type_RESPONSE,
+			Ok:      true,
+			Payload: payload,
 		}); err != nil {
 			is.logger.Error(err)
 		}
