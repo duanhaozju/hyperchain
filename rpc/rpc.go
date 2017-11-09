@@ -50,7 +50,7 @@ func GetRPCServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, is
 func newRPCServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, is_executor bool) *RPCServerImpl {
 	rsi := &RPCServerImpl{}
 	rsi.httpServer = GetHttpServer(nsMgrProcessor, config, is_executor)
-	//rsi.wsServer = GetWSServer(nsMgrProcessor, config, forExe)
+	rsi.wsServer = GetWSServer(nsMgrProcessor, config, is_executor)
 
 	ipc.RegisterFunc("service", rsi.Command)
 	return rsi
@@ -67,10 +67,10 @@ func (rsi *RPCServerImpl) Start() error {
 	}
 
 	// start websocket server
-	//if err := rsi.wsServer.start(); err != nil {
-	//	log.Error(err)
-	//	return err
-	//}
+	if err := rsi.wsServer.start(); err != nil {
+		log.Error(err)
+		return err
+	}
 	return nil
 }
 

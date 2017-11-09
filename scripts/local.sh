@@ -129,7 +129,8 @@ do
         sed -i "" "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "" "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "" "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "" "s/10001/1000${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/10011/1001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "" "s/10021/1002${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "" "s/50061/5006${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "" "s/50071/5007${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "" "s/50071/5007${j}/g" ${DUMP_PATH}/node${j}/namespaces/global/config/namespace.toml
@@ -140,7 +141,8 @@ do
         sed -i "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "s/10001/1000${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/10011/1001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+        sed -i "s/10021/1002${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/50061/5006${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/50071/5007${j}/g" ${DUMP_PATH}/node${j}/global.toml
         sed -i "s/50071/5007${j}/g" ${DUMP_PATH}/node${j}/namespaces/global/config/namespace.toml

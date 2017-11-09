@@ -14,9 +14,9 @@ import (
 	"hyperchain/service/hypexec/handler"
 	"sync"
 	"hyperchain/manager/filter"
+
 	"hyperchain/manager/event"
 )
-
 
 type executorService interface {
 	Start() error
@@ -45,6 +45,7 @@ type executorServiceImpl struct {
 	logger *logging.Logger
 
 	//executorApi *api.ExecutorApi
+
 	status *Status
 
 	rpc rpc.RequestProcessor
@@ -267,7 +268,7 @@ func (es *executorServiceImpl) Stop() error {
 func (es *executorServiceImpl) ProcessRequest(request interface{}) interface{} {
 	//TODO Check finish logic
 	es.logger.Critical("request : %v", request)
-	es.logger.Critical("executor stauts: %v", es.status.getState())
+	es.logger.Critical("executor status: %v", es.status.getState())
 	if es.status.getState() == running {
 		if request != nil {
 			switch r := request.(type) {

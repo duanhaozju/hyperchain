@@ -42,12 +42,12 @@ type httpReadWriteCloser struct {
 
 // GetWSServer creates and returns a new wsServerImpl instance implements internalRPCServer interface.
 func GetWSServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, forExe bool) internalRPCServer {
-	if config.GetBool(common.EXECUTOR_EMBEDDED) && forExe {
+	if !config.GetBool(common.EXECUTOR_EMBEDDED) && forExe {
 		if wsS == nil {
 			wsS = &wsServerImpl{
 				nsMgrProcessor: nsMgrProcessor,
 				wsConns:        make(map[*websocket.Conn]*Notifier),
-				port:           config.GetInt(common.JSON_RPC_PORT_EXECUTOR),
+				port:           config.GetInt(common.WEBSOCKET_PORT_EXECUTOR),
 				config:         config,
 				forExe: 	forExe,
 			}
@@ -57,7 +57,7 @@ func GetWSServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, for
 			wsS = &wsServerImpl{
 				nsMgrProcessor: nsMgrProcessor,
 				wsConns:        make(map[*websocket.Conn]*Notifier),
-				port:           config.GetInt(common.JSON_RPC_PORT),
+				port:           config.GetInt(common.WEBSOCKET_PORT),
 				config:         config,
 				forExe: 	forExe,
 			}

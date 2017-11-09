@@ -93,7 +93,7 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 			Public:  true,
 		},
 		"subh": {
-			Svcname: "sub",
+			Svcname: "subh",
 			Version: "1.5",
 			Service: api.NewHpcFilterAPI(namespace, ns.eh, ns.conf),
 		},
