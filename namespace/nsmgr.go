@@ -360,7 +360,6 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return err
 	}
 	nsConfig.Set(common.JSON_RPC_PORT, "8081")
-	nsConfig.Set(common.EXECUTOR_HOST_ADDR, "127.0.0.1")
 	delFlag := make(chan bool)
 	ns, err := GetNamespace(name, nsConfig, delFlag, nr.is)
 	if nr.conf.GetBool(common.EXECUTOR_EMBEDDED) == false {

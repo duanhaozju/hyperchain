@@ -170,8 +170,9 @@ func deploy(c *cli.Context) error {
 		deployParams := []string{"from", "payload"}
 		deployCmd = getCmd(method, deployParams, 0, c)
 	}
-	//fmt.Println(deployCmd)
+	fmt.Println(deployCmd)
 	result, err := client.Call(deployCmd, method)
+	fmt.Println(result,"$$$$$$$$$$$$$$$$$$$$$$$$$$")
 	if err != nil {
 		fmt.Println("Error in call deploy cmd request")
 		fmt.Println(err)

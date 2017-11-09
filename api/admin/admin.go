@@ -393,8 +393,7 @@ func (admin *Administrator) startJvmServer(cmd *Command) *CommandResult {
 		Type:	 pb.Type_ADMIN,
 		Event:   pb.Event_StartJVMEvent,
 	}
-	adminService.Send(msg)
-	rsp := <-adminService.Response()
+	rsp,_ := adminService.SyncSend(msg)
 	rspEvent := &event.AdminResponseEvent{}
 	err := proto.Unmarshal(rsp.Payload, rspEvent)
 	if err != nil{
@@ -425,8 +424,7 @@ func (admin *Administrator) stopJvmServer(cmd *Command) *CommandResult {
 		Type:	 pb.Type_ADMIN,
 		Event:   pb.Event_StopJVMEvent,
 	}
-	adminService.Send(msg)
-	rsp := <-adminService.Response()
+	rsp,_ := adminService.SyncSend(msg)
 	rspEvent := &event.AdminResponseEvent{}
 	err := proto.Unmarshal(rsp.Payload, rspEvent)
 	if err != nil{
@@ -456,8 +454,7 @@ func (admin *Administrator) restartJvmServer(cmd *Command) *CommandResult {
 		Type:	 pb.Type_ADMIN,
 		Event:   pb.Event_RestartJVMEvent,
 	}
-	adminService.Send(msg)
-	rsp := <-adminService.Response()
+	rsp,_ := adminService.SyncSend(msg)
 	rspEvent := &event.AdminResponseEvent{}
 	err := proto.Unmarshal(rsp.Payload, rspEvent)
 	if err != nil{

@@ -3,8 +3,8 @@ package bloom
 import (
 	"hyperchain/common"
 	"hyperchain/core/types"
-	"github.com/pkg/errors"
-	"hyperchain/manager/event"
+	//"github.com/pkg/errors"
+	//"hyperchain/manager/event"
 )
 
 func LookupTransaction(namespace string, txHash common.Hash) (bool, error) {
@@ -26,16 +26,16 @@ type BloomFilterEvent struct {
 	Transactions []*types.Transaction `protobuf:"bytes,2,rep,name=Transactions" json:"Transactions,omitempty"`
 }
 
-func WriteTxBloomFilterByEvent(ev event.BloomEvent) {
-	if bloomFilterCache == nil {
-		return false, ErrBloomCacheFailure
-	}
-	bol,err := bloomFilterCache.Write(ev.Namespace, ev.Transactions)
-	if !bol {
-		ev.Cont <- errors.New("Write failed!")
-	}
-	if err != nil {
-		ev.Cont <- err
-	}
-	close(ev.Cont)
-}
+//func WriteTxBloomFilterByEvent(ev event.BloomEvent) {
+//	if bloomFilterCache == nil {
+//		return false, ErrBloomCacheFailure
+//	}
+//	bol,err := bloomFilterCache.Write(ev.Namespace, ev.Transactions)
+//	if !bol {
+//		ev.Cont <- errors.New("Write failed!")
+//	}
+//	if err != nil {
+//		ev.Cont <- err
+//	}
+//	close(ev.Cont)
+//}
