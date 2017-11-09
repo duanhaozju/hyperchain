@@ -36,6 +36,15 @@ type ExecutorController interface {
 
 	// GetNamespaceProcessor returns the namespace processor by namespace.
 	GetNamespaceProcessor(namespace string) intfc.NamespaceProcessor
+
+	//start JVM
+	StartJVM() error
+
+	//start JVM
+	StopJVM() error
+
+	//start JVM
+	RestartJVM() error
 }
 
 type execControllerImpl struct {
@@ -133,6 +142,25 @@ func (ec *execControllerImpl) StartExecutorServiceByName(namespace string) error
 	ec.logger.Criticalf("start executor for namespace %s successful ", namespace)
 
 	return nil
+}
+
+//ledger register is seperated from the start-JVM.
+//start part can only focus on the JVMManager start.
+func (ec *execControllerImpl) StartJVM() error {
+	err := ec.jvmManager.Start();
+	return err
+}
+
+func (ec *execControllerImpl) StopJVM() error {
+	err := ec.jvmManager.Stop();
+	return err
+}
+
+func (ec *execControllerImpl) RestartJVM() error {
+	ec.jvmManager.Stop()
+
+	err := ec.jvmManager.Start();
+	return err
 }
 
 func (ec *execControllerImpl) getConfig(name string) (*common.Config, error) {

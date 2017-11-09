@@ -4,8 +4,8 @@ import (
 	"hyperchain/common"
 	"hyperchain/namespace"
 	"hyperchain/rpc"
-	"hyperchain/service/executor/manager"
 	"testing"
+	"hyperchain/service/hypexec/controller"
 )
 
 func TestAPIServerImpl_Restart(t *testing.T) {
@@ -21,8 +21,8 @@ func TestAPIServerImpl_Restart(t *testing.T) {
 	conf.Set(common.EXECUTOR_EMBEDDED, true)
 	conf.Set(namespace.NS_CONFIG_DIR_ROOT, "/Users/guowei/go/src/hyperchain/configuration/namespaces")
 	conf.Set(common.JSON_RPC_PORT_EXECUTOR, "9091")
-	ecMgr := manager.GetExecutorMgr(conf, make(chan bool), make(chan bool))
-	ecMgr.Start("global")
+	ecMgr := controller.GetExecutorCtl(conf, make(chan bool), make(chan bool))
+	ecMgr.Start()
 	api := jsonrpc.GetRPCServer(ecMgr, conf, true)
 	go api.Start()
 	c := make(chan bool)

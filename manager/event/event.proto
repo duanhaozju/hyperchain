@@ -82,7 +82,7 @@ message DeleteNamespaceEvent {
 
 message AdminResponseEvent {
     bool Ok = 1;
-    string msg = 2;
+    string Msg = 2;
 }
 
 message MemChainEvent {

@@ -414,7 +414,7 @@ func (m *DeleteNamespaceEvent) GetNamespace() string {
 
 type AdminResponseEvent struct {
 	Ok      bool   `protobuf:"varint,1,opt,name=Ok" json:"Ok,omitempty"`
-	Payload []byte `protobuf:"bytes,2,opt,name=Payload,proto3" json:"Payload,omitempty"`
+	Msg string `protobuf:"string,2,opt,name=Msg,proto3" json:"Msg,omitempty"`
 }
 
 func (m *AdminResponseEvent) Reset()                    { *m = AdminResponseEvent{} }
@@ -429,9 +429,9 @@ func (m *AdminResponseEvent) GetOk() bool {
 	return false
 }
 
-func (m *AdminResponseEvent) GetPayload() []byte {
+func (m *AdminResponseEvent) GetMsg() []byte {
 	if m != nil {
-		return m.Payload
+		return m.Msg
 	}
 	return nil
 }
