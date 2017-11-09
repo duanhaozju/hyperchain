@@ -380,10 +380,13 @@ func (admin *Administrator) setLevel(cmd *Command) *CommandResult {
 // successfully.
 func (admin *Administrator) startJvmServer(cmd *Command) *CommandResult {
 	admin.logger.Noticef("process cmd %v", cmd.MethodName)
-	//if err := admin.nsMgr.StartJvm(); err != nil {
-	//	admin.logger.Noticef("start jvm server failed: %v", err)
-	//	return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
-	//}
+	if admin.config.GetBool(common.EXECUTOR_EMBEDDED) {
+		if err := admin.nsMgr.StartJvm(); err != nil {
+			admin.logger.Noticef("start jvm server failed: %v", err)
+			return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+		}
+		return &CommandResult{Ok: true, Result: "start jvm successful."}
+	}
 	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
 	msg := pb.IMessage{
 		From: 	 pb.FROM_ADMINISTRATOR,
@@ -408,11 +411,13 @@ func (admin *Administrator) startJvmServer(cmd *Command) *CommandResult {
 // successfully.
 func (admin *Administrator) stopJvmServer(cmd *Command) *CommandResult {
 	admin.logger.Noticef("process cmd %v", cmd.MethodName)
-	//if err := admin.nsMgr.StopJvm(); err != nil {
-	//	admin.logger.Noticef("stop jvm server failed: %v", err)
-	//	return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
-	//}
-	//return &CommandResult{Ok: true, Result: "stop jvm successful."}
+	if admin.config.GetBool(common.EXECUTOR_EMBEDDED) {
+		if err := admin.nsMgr.StopJvm(); err != nil {
+			admin.logger.Noticef("stop jvm server failed: %v", err)
+			return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+		}
+		return &CommandResult{Ok: true, Result: "stop jvm successful."}
+	}
 	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
 
 	msg := pb.IMessage{
@@ -437,11 +442,13 @@ func (admin *Administrator) stopJvmServer(cmd *Command) *CommandResult {
 // successfully.
 func (admin *Administrator) restartJvmServer(cmd *Command) *CommandResult {
 	admin.logger.Noticef("process cmd %v", cmd.MethodName)
-	//if err := admin.nsMgr.RestartJvm(); err != nil {
-	//	admin.logger.Noticef("restart jvm server failed: %v", err)
-	//	return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
-	//}
-	//return &CommandResult{Ok: true, Result: "restart jvm successful."}
+	if admin.config.GetBool(common.EXECUTOR_EMBEDDED) {
+		if err := admin.nsMgr.RestartJvm(); err != nil {
+			admin.logger.Noticef("restart jvm server failed: %v", err)
+			return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+		}
+		return &CommandResult{Ok: true, Result: "restart jvm successful."}
+	}
 	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
 
 	msg := pb.IMessage{

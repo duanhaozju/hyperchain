@@ -24,6 +24,11 @@ func GetCmdClient(c *cli.Context) *CmdClient {
 	return client
 }
 
+func GetCmdRemoteClient(c *cli.Context) *CmdClient {
+	client := NewRpcClient(c.GlobalString("exehost"), c.GlobalString("exeport"))
+	return client
+}
+
 type CmdClient struct {
 	host   string
 	port   string
