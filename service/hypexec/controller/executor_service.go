@@ -5,14 +5,17 @@ import (
 	"hyperchain/admittance"
 	hapi "hyperchain/api"
 	"hyperchain/common"
-	pb "hyperchain/common/protos"
 	"hyperchain/common/service/client"
+	pb "hyperchain/common/protos"
 	"hyperchain/core/executor"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/hyperdb"
 	"hyperchain/namespace/rpc"
 	"hyperchain/service/hypexec/handler"
 	"sync"
+	"hyperchain/manager/filter"
+
+	"hyperchain/manager/event"
 )
 
 type executorService interface {
@@ -48,6 +51,13 @@ type executorServiceImpl struct {
 	rpc rpc.RequestProcessor
 
 	caManager *admittance.CAManager
+
+	eventMux  *event.TypeMux
+
+	filterMux *event.TypeMux
+
+	// filter system for subscription
+	filterSystem *filter.EventSystem
 }
 
 type EsState int
@@ -118,6 +128,8 @@ func NewExecutorService(ns string, conf *common.Config) *executorServiceImpl {
 		conf:      conf,
 		logger:    common.GetLogger(ns, "executor_service"),
 		status:    status,
+		eventMux:  new(event.TypeMux),
+		filterMux: new(event.TypeMux),
 	}
 }
 
@@ -139,8 +151,11 @@ func (es *executorServiceImpl) init() error {
 	}
 	es.service = service
 
-	// 3. initial executor
-	executor, err := executor.NewExecutor(es.namespace, es.conf, nil, nil, es.service)
+	// 3. filter system
+	es.filterSystem = filter.NewEventSystem(es.filterMux)
+
+	// 4. initial executor
+	executor, err := executor.NewExecutor(es.namespace, es.conf, es.eventMux, es.filterMux, es.service)
 	if err != nil {
 		es.logger.Errorf("Init executor service for namespace %s error, %v", es.namespace, err)
 		return err
@@ -151,10 +166,10 @@ func (es *executorServiceImpl) init() error {
 	h := handler.New(executor)
 	service.AddHandler(h)
 
-	// 4. add jsonrpc processor
+	// 5. add jsonrpc processor
 	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace))
 
-	// 5. initialized status
+	// 6. initialized status
 	es.status.setState(initialized)
 
 	return nil
@@ -253,7 +268,7 @@ func (es *executorServiceImpl) Stop() error {
 func (es *executorServiceImpl) ProcessRequest(request interface{}) interface{} {
 	//TODO Check finish logic
 	es.logger.Critical("request : %v", request)
-	es.logger.Critical("executor stauts: %v", es.status.getState())
+	es.logger.Critical("executor status: %v", es.status.getState())
 	if es.status.getState() == running {
 		if request != nil {
 			switch r := request.(type) {
@@ -298,6 +313,17 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 			Version: "1.5",
 			Service: hapi.NewContarctExAPI(namespace, es.conf),
 			Public:  true,
+		},
+		//"cert": {
+		//	Svcname: "cert",
+		//	Version: "1.5",
+		//	Service: hapi.NewCertAPI(namespace, es.caManager),
+		//	Public:  true,
+		//},
+		"sub": {
+			Svcname: "sub",
+			Version: "1.5",
+			Service: hapi.NewFilterAPI(namespace, es.filterSystem, es.conf),
 		},
 		"archive": {
 			Svcname: "archive",

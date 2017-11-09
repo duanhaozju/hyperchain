@@ -50,6 +50,7 @@ const (
 	LEDGER_PORT            = "port.ledger"
 	P2P_PORT               = "port.grpc"
 	WEBSOCKET_PORT         = "port.websocket"
+	WEBSOCKET_PORT_EXECUTOR = "port.websocket_executor"
 	INTERNAL_PORT          = "port.internal"
 	EXECUTOR_PORT          = "port.executor"
 )

@@ -6,7 +6,6 @@ import (
 	"hyperchain/common"
 	edb "hyperchain/core/ledger/chain"
 	"hyperchain/core/types"
-	"hyperchain/manager"
 	"hyperchain/manager/event"
 	flt "hyperchain/manager/filter"
 	"sync"
@@ -14,23 +13,21 @@ import (
 )
 
 type PublicFilterAPI struct {
-	namespace string
-	eh        *manager.EventHub
-	config    *common.Config
-	log       *logging.Logger
-	events    *flt.EventSystem
-	filtersMu sync.Mutex
-	filters   map[string]*flt.Filter
+	namespace 	string
+	config    	*common.Config
+	log       	*logging.Logger
+	events   	*flt.EventSystem
+	filtersMu 	sync.Mutex
+	filters   	map[string]*flt.Filter
 }
 
-func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config) *PublicFilterAPI {
+func NewFilterAPI(namespace string,eventSystem  *flt.EventSystem, config *common.Config) *PublicFilterAPI {
 	log := common.GetLogger(namespace, "api")
 	api := &PublicFilterAPI{
 		namespace: namespace,
-		eh:        eh,
 		config:    config,
 		log:       log,
-		events:    eh.GetFilterSystem(),
+		events:    eventSystem,
 		filters:   make(map[string]*flt.Filter),
 	}
 	go api.timeoutLoop()

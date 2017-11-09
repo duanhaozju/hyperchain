@@ -69,6 +69,14 @@ func (helper *Helper) handlePost(ev interface{}) *pb.IMessage {
 	return msg
 }
 
+func (helper *Helper) isFilterEvent(ev interface{}) bool {
+	switch ev.(type) {
+	case event.FilterNewBlockEvent, event.FilterNewLogEvent, event.FilterArchive, event.FilterSystemStatusEvent:
+		return true
+	default:
+		return false
+	}
+}
 
 // PostInner post event to inner event mux
 func (helper *Helper) PostInner(ev interface{}) {
@@ -82,7 +90,7 @@ func (helper *Helper) PostInner(ev interface{}) {
 
 // PostExternal post event to outer event mux
 func (helper *Helper) PostExternal(ev interface{}) {
-	if !helper.conf.GetBool(common.EXECUTOR_EMBEDDED) {
+	if !helper.conf.GetBool(common.EXECUTOR_EMBEDDED) && !helper.isFilterEvent(ev) {
 		msg := helper.handlePost(ev)
 		helper.client.Send(msg)
 	} else {
