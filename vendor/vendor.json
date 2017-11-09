@@ -304,6 +304,12 @@
 			"revisionTime": "2017-05-23T01:21:41Z"
 		},
 		{
+			"checksumSHA1": "jdmR4gyo5/dXiQh9H8h/c7YAvik=",
+			"path": "github.com/k0kubun/pp",
+			"revision": "e057ee7a28277be4d2af303443b6da377768181f",
+			"revisionTime": "2017-09-26T22:57:54Z"
+		},
+		{
 			"checksumSHA1": "R6DzcBLEP0BONPpsyr+11N7xh5w=",
 			"path": "github.com/labstack/gommon/color",
 			"revision": "779b8a8b9850a97acba6a3fe20feb628c39e17c1",
@@ -598,6 +604,12 @@
 			"path": "github.com/rs/cors",
 			"revision": "eabcc6af4bbe5ad3a949d36450326a2b0b9894b8",
 			"revisionTime": "2017-08-01T07:32:01Z"
+		},
+		{
+			"checksumSHA1": "UwtyqB7CaUWPlw0DVJQvw0IFQZs=",
+			"path": "github.com/sergi/go-diff/diffmatchpatch",
+			"revision": "2fc9cd33b5f86077aa3e0f442fa0476a9fa9a1dc",
+			"revisionTime": "2017-11-04T09:03:01Z"
 		},
 		{
 			"checksumSHA1": "AikWjAOvWHSJ8G1iU+wNReZnyCk=",
