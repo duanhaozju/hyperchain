@@ -220,7 +220,6 @@ func (TH *TestHelp) UpdateState(myId uint64, height uint64, blockHash []byte, re
 }
 
 func (TH *TestHelp) VcReset(seqNo uint64) error {
-	//TODO vcReset
 	event := &LocalEvent{
 		Service:   VIEW_CHANGE_SERVICE,
 		EventType: VIEW_CHANGE_VC_RESET_DONE_EVENT,

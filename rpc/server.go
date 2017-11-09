@@ -199,7 +199,8 @@ func (s *Server) readRequest(codec ServerCodec, options CodecOption) ([]*common.
 	reqLen := len(reqs)
 	for i := 0; i < reqLen; i += 1 {
 		if reqs[i].Namespace == "" {
-			reqs[i].Namespace = namespace.DEFAULT_NAMESPACE
+			// set namespace to "global" as default
+			reqs[i].Namespace = namespace.GLOBAL_NAMESPACE
 		}
 	}
 

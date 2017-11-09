@@ -3,15 +3,17 @@ package namespace
 import (
 	"bytes"
 	"fmt"
-	"github.com/hyperchain/hyperchain/common"
-	"github.com/hyperchain/hyperchain/core/vm/jcee/go"
-	ledger "github.com/hyperchain/hyperchain/core/vm/jcee/go/ledger"
-	"github.com/op/go-logging"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
 	"time"
+
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/vm/jcee/go"
+	ledger "github.com/hyperchain/hyperchain/core/vm/jcee/go/ledger"
+
+	"github.com/op/go-logging"
 )
 
 // This file defines JVM related functions. In hyperchain, we use two
@@ -67,7 +69,7 @@ func (mgr *JvmManager) Start() error {
 	return nil
 }
 
-// Start turns off jvm service.
+// Stop turns off jvm service.
 func (mgr *JvmManager) Stop() error {
 	if err := mgr.stopLedgerServer(); err != nil {
 		return err
@@ -97,7 +99,8 @@ func (mgr *JvmManager) startJvmServer() error {
 	}
 
 	if !common.FileExist(binHome) {
-		return fmt.Errorf("Hyperjvm bin is not found, path: %s is not existed!", binHome)
+		mgr.logger.Errorf("Hyperjvm bin is not found, path: %s is not existed!", binHome)
+		return ErrBinNotFound
 	}
 
 	cmd := exec.Command(path.Join(binHome, StartShell), strconv.Itoa(mgr.conf.GetInt(common.JVM_PORT)), strconv.Itoa(mgr.conf.GetInt(common.LEDGER_PORT)))
@@ -109,14 +112,14 @@ func (mgr *JvmManager) startJvmServer() error {
 		mgr.logger.Error(out.String())
 		return err
 	}
-	mgr.logger.Info("executor start hyperjvm command successful")
+	mgr.logger.Info("Execute start hyperjvm command successfully")
 	return nil
 }
 
 // stopLedgerServer stops the ledger server.
 func (mgr *JvmManager) stopLedgerServer() error {
 	mgr.ledgerProxy.StopServer()
-	mgr.logger.Info("stop ledger server success")
+	mgr.logger.Info("Stop ledger server successfully")
 	return nil
 }
 
@@ -132,7 +135,7 @@ func (mgr *JvmManager) stopJvmServer() error {
 		mgr.logger.Error(err)
 		return err
 	}
-	mgr.logger.Info("execute stop hyperjvm successful")
+	mgr.logger.Info("Execute stop hyperjvm successfully")
 	return nil
 }
 
@@ -156,10 +159,10 @@ func (mgr *JvmManager) startJvmServerDaemon() {
 
 // restartJvmServer restarts the Jvm server.
 func (mgr *JvmManager) restartJvmServer() {
-	mgr.logger.Info("try to restart jvm server")
+	mgr.logger.Info("Try to restart jvm server")
 	err := mgr.startJvmServer()
 	if err != nil {
-		mgr.logger.Errorf("start jvm server failed. %v", err.Error())
+		mgr.logger.Errorf("Start jvm server failed: %s", err)
 	}
 }
 

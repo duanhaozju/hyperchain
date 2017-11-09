@@ -1,8 +1,9 @@
 package rpc
 
 import (
-	"github.com/hyperchain/hyperchain/common"
 	"reflect"
+
+	"github.com/hyperchain/hyperchain/common"
 )
 
 // ----------------------------API------------------------------
