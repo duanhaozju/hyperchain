@@ -252,8 +252,8 @@ func (es *executorServiceImpl) Stop() error {
 
 func (es *executorServiceImpl) ProcessRequest(request interface{}) interface{} {
 	//TODO Check finish logic
-	logger.Critical("request : %v", request)
-	logger.Critical("executor stauts: %v", es.status.getState())
+	es.logger.Critical("request : %v", request)
+	es.logger.Critical("executor stauts: %v", es.status.getState())
 	if es.status.getState() == running {
 		if request != nil {
 			switch r := request.(type) {

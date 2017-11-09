@@ -14,8 +14,6 @@ import (
 	"sync"
 )
 
-var logger *logging.Logger
-
 const (
 	default_namespace  = "global"
 	ns_config_dir_root = "namespace.config_root_dir"
@@ -103,30 +101,30 @@ func (ec *execControllerImpl) StartExecutorServiceByName(namespace string) error
 					return true, name
 				}
 			} else {
-				logger.Errorf("Invalid folder %v", d)
+				ec.logger.Errorf("Invalid folder %v", d)
 			}
 		}
-		logger.Errorf("No config file for namespace %s", namespace)
+		ec.logger.Errorf("No config file for namespace %s", namespace)
 		return false, ""
 	}
 
 	// start executor service
 	if ok, name := hasConfig(dirs, namespace); ok {
 		if _, ok = ec.services[name]; ok {
-			logger.Warning("Namespace %s for executor already exist.", name)
+			ec.logger.Warning("Namespace %s for executor already exist.", name)
 			return nil
 		}
 		conf, err := ec.getConfig(name)
 		service := NewExecutorService(name, conf)
 		err = service.Start()
 		if err != nil {
-			logger.Error(err)
+			ec.logger.Error(err)
 			return err
 		}
 		ec.jvmManager.LedgerProxy().RegisterDB(name, service.executor.FetchStateDb())
 		ec.services[name] = service
 		if err := ec.bloomFilter.Register(name); err != nil {
-			logger.Error("register bloom filter failed", err.Error())
+			ec.logger.Error("register bloom filter failed", err.Error())
 			return err
 		}
 	} else {

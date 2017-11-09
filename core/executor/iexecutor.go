@@ -11,6 +11,7 @@ import (
 	"hyperchain/core/types"
 	"hyperchain/core/vm"
 	"hyperchain/manager/event"
+	"time"
 )
 
 type IExecutor interface {
@@ -99,14 +100,6 @@ func (re *remoteExecutorProxy) Start() error {
 	}
 
 	rsp, err := adminSrv.SyncSend(msg)
-
-	//err := adminSrv.Send(msg)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//rsp := <-adminSrv.Response()
-
 	if err != nil {
 		return err
 	}
@@ -426,22 +419,31 @@ func (re *remoteExecutorProxy) sendToExecutor(namespace string, msg *pb.IMessage
 	var err error
 	defer func() { re.handleError(err) }()
 
-	ns := re.is.ServerRegistry().Namespace(namespace)
-	if ns == nil {
-		return fmt.Errorf("No services found for namespace %s ", namespace)
-	}
+	go func() error {
+		for {
+			re.logger.Criticalf("retry send ...")
+			ns := re.is.ServerRegistry().Namespace(namespace)
+			if ns == nil {
+				return fmt.Errorf("No services found for namespace %s ", namespace)
+			}
 
-	srv := ns.Service(fmt.Sprintf("EXECUTOR-%d", 0))
-	// TODO: fix it, executor should be config in the config file
-	if srv == nil {
-		return fmt.Errorf("No service found for %s ", service.EXECUTOR)
-	}
+			srv := ns.Service(fmt.Sprintf("EXECUTOR-%d", 0))
+			// TODO: fix it, executor should be config in the config file
+			if srv == nil {
+				return fmt.Errorf("No service found for %s ", service.EXECUTOR)
+			}
 
-	if err = srv.Send(msg); err != nil {
-		return err
-	}else {
-		return nil
-	}
+			if err = srv.Send(msg); err != nil {
+				//return err
+				re.logger.Error(err)
+				time.Sleep(time.Second)
+				continue
+			} else {
+				return nil
+			}
+		}
+	}()
+	return nil
 }
 
 //handleError handle all kind of errors here.
