@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	default_namespace  = "global"
-	ns_config_dir_root = "namespace.config_root_dir"
+	NS_CONFIG_DIR_ROOT = "namespace.config_root_dir"
 )
 
 type ExecutorController interface {
@@ -81,9 +80,9 @@ func GetExecutorCtl(conf *common.Config, stopEm chan bool, restartEM chan bool) 
 }
 
 func (ec *execControllerImpl) StartExecutorServiceByName(namespace string) error {
-	ec.logger.Infof("try to start executor service for namespace %s", namespace)
+	ec.logger.Criticalf("Try to start executor service for namespace %s", namespace)
 
-	configRootDir := ec.conf.GetString(ns_config_dir_root)
+	configRootDir := ec.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
 		return errors.New("Namespace config root dir is not valid ")
 	}
@@ -111,7 +110,7 @@ func (ec *execControllerImpl) StartExecutorServiceByName(namespace string) error
 	// start executor service
 	if ok, name := hasConfig(dirs, namespace); ok {
 		if _, ok = ec.services[name]; ok {
-			ec.logger.Warning("Namespace %s for executor already exist.", name)
+			ec.logger.Warningf("Namespace %s for executor already exist.", name)
 			return nil
 		}
 		conf, err := ec.getConfig(name)
@@ -131,13 +130,13 @@ func (ec *execControllerImpl) StartExecutorServiceByName(namespace string) error
 		return er.ConfigNotFoundErr("config not found for namespace %s.", namespace)
 	}
 
-	ec.logger.Info("start executor for namespace %s successful ", namespace)
+	ec.logger.Criticalf("start executor for namespace %s successful ", namespace)
 
 	return nil
 }
 
 func (ec *execControllerImpl) getConfig(name string) (*common.Config, error) {
-	configRootDir := ec.conf.GetString(ns_config_dir_root)
+	configRootDir := ec.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
 		return nil, errors.New("Namespace config root dir is not valid ")
 	}
@@ -236,6 +235,41 @@ func (ec *execControllerImpl) Stop() error {
 }
 
 func (ec *execControllerImpl) StartAllExecutorSrvs() error {
-	//TODO:start all executor service by config
-	return ec.StartExecutorServiceByName("global")
+	configRootDir := ec.conf.GetString(NS_CONFIG_DIR_ROOT)
+	if configRootDir == "" {
+		return errors.New("Namespace config root dir is not valid")
+	}
+	dirs, err := ioutil.ReadDir(configRootDir)
+	if err != nil {
+		return err
+	}
+	for _, d := range dirs {
+		if d.IsDir() {
+			name := d.Name()
+			start := ec.conf.GetBool(common.START_NAMESPACE + name)
+			if !start {
+				continue
+			}
+
+			if _, ok := ec.services[name]; ok {
+				ec.logger.Warningf("Namespace %s for executor already exist.", name)
+				continue
+			}
+			conf, err := ec.getConfig(name)
+			service := NewExecutorService(name, conf)
+			err = service.Start()
+			if err != nil {
+				ec.logger.Error(err)
+				continue
+			}
+			ec.jvmManager.LedgerProxy().RegisterDB(name, service.executor.FetchStateDb())
+			ec.services[name] = service
+			if err := ec.bloomFilter.Register(name); err != nil {
+				ec.logger.Errorf("register bloom filter for namespace %s failed", name, err.Error())
+			}
+		} else {
+			ec.logger.Errorf("Invalid folder %v", d)
+		}
+	}
+	return nil
 }

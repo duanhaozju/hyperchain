@@ -9,6 +9,7 @@ import (
 	"hyperchain/common"
 	pb "hyperchain/common/protos"
 	"hyperchain/common/service/util"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -50,11 +51,15 @@ func New(port int, host, sid, domain string) (*ServiceClient, error) {
 	if len(host) == 0 || port < 0 {
 		return nil, fmt.Errorf("Invalid host or port, %s:%d ", host, port)
 	}
+	logName := domain
+	if strings.Contains(domain, ":") {
+		logName = common.DEFAULT_LOG
+	}
 	sc := &ServiceClient{
 		host:    host,
 		port:    port,
 		msgRecv: make(chan *pb.IMessage, 1024),
-		logger:  common.GetLogger(domain, "service_client"),
+		logger:  common.GetLogger(logName, "service_client"),
 
 		sid:    sid,
 		domain: domain,
@@ -119,7 +124,7 @@ func (sc *ServiceClient) reconnect() error {
 			return nil
 		} else {
 			d, _ := time.ParseDuration(fmt.Sprintf("%ds", sleepT))
-			sc.logger.Debugf("Reconnect error %v, sleep %v then try to reconnect", err, d)
+			sc.logger.Noticef("Reconnect error %v, sleep %v then try to reconnect", err, d)
 			time.Sleep(d)
 			sleepT *= 2
 		}
@@ -146,7 +151,7 @@ func (sc *ServiceClient) Register(cid uint64, serviceType pb.FROM, rm *pb.Regist
 		sc.logger.Debugf("%s connect successful", sc.string())
 
 		if rsp.Type == pb.Type_RESPONSE && rsp.Ok == true {
-			sc.logger.Infof("%s register successful", sc.string())
+			sc.logger.Noticef("%s register successful", sc.string())
 			return rsp, nil
 		} else {
 			return nil, fmt.Errorf("%s register failed", sc.string())

@@ -5,15 +5,15 @@ import (
 	"hyperchain/admittance"
 	hapi "hyperchain/api"
 	"hyperchain/common"
-	"hyperchain/common/service/client"
 	pb "hyperchain/common/protos"
+	"hyperchain/common/service/client"
 	"hyperchain/core/executor"
 	"hyperchain/core/ledger/chain"
 	"hyperchain/hyperdb"
+	"hyperchain/manager/filter"
 	"hyperchain/namespace/rpc"
 	"hyperchain/service/hypexec/handler"
 	"sync"
-	"hyperchain/manager/filter"
 
 	"hyperchain/manager/event"
 )
@@ -52,7 +52,7 @@ type executorServiceImpl struct {
 
 	caManager *admittance.CAManager
 
-	eventMux  *event.TypeMux
+	eventMux *event.TypeMux
 
 	filterMux *event.TypeMux
 
@@ -163,7 +163,7 @@ func (es *executorServiceImpl) init() error {
 	executor.CreateInitBlock(es.conf)
 	es.executor = executor
 
-	h := handler.New(executor)
+	h := handler.New(es.namespace, executor)
 	service.AddHandler(h)
 
 	// 5. add jsonrpc processor
@@ -176,7 +176,7 @@ func (es *executorServiceImpl) init() error {
 }
 
 func (es *executorServiceImpl) Start() error {
-	es.logger.Noticef("Try to start executor service for namespace: %s", es.namespace)
+	es.logger.Noticef("Start executor service for namespace: %s", es.namespace)
 
 	state := es.status.getState()
 	if state < initialized {

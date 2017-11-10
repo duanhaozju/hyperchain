@@ -3,16 +3,13 @@ package admin
 import (
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"hyperchain/common"
 	pb "hyperchain/common/protos"
 	"hyperchain/manager/event"
 	"hyperchain/service/hypexec/controller"
 )
 
 var logger *logging.Logger
-
-func init() {
-	logger = logging.MustGetLogger("handler")
-}
 
 type AdminHandler struct {
 	ecMgr controller.ExecutorController
@@ -25,6 +22,7 @@ type ResponseEventWrapper struct { //TODO: Fix it
 }
 
 func NewAdminHandler(ecMgr controller.ExecutorController) *AdminHandler {
+	logger = common.GetLogger(common.DEFAULT_NAMESPACE, "admin")
 	return &AdminHandler{
 		ecMgr: ecMgr,
 		Ch:    make(chan *ResponseEventWrapper),
