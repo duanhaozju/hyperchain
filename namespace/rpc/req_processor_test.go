@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"testing"
+
 	"github.com/hyperchain/hyperchain/api"
 	"github.com/hyperchain/hyperchain/common"
+
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 var (

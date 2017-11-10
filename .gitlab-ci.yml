@@ -1,4 +1,5 @@
 before_script:
+  - source /etc/profile
   - ORG_DIR="$GOPATH/src/github.com/hyperchain"
   - HYPERCHAIN_DIR="$ORG_DIR/$CI_PROJECT_NAME"
   - echo $ORG_DIR
@@ -27,7 +28,8 @@ unit-test:
   script:
     - pwd
     - go env
-    - go test ./...
+    - go test ./core/...
+    - go test ./consensus/...
   only:
     -  /^release1.4.*$/ # ignore all release1.2* branches
     - opensource

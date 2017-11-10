@@ -4,11 +4,12 @@ package rpc
 
 import (
 	"context"
-	"github.com/hyperchain/hyperchain/common"
 	"reflect"
 	"strconv"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/hyperchain/hyperchain/common"
 )
 
 // Is this an exported - upper case - name?

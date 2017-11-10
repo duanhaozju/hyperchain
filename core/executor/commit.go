@@ -191,7 +191,8 @@ func (executor *Executor) constructBlock(ev event.CommitEvent, record *Validatio
 		copy(newBlock.Transactions, record.ValidTxs)
 	}
 	executor.logger.Debugf("ParentHash: %v, Number: %v, Timestamp: %v, TxRoot: %v, ReceiptRoot: %v, MerkleRoot: %v",
-		newBlock.ParentHash, newBlock.Number, newBlock.Timestamp, newBlock.TxRoot, newBlock.ReceiptRoot, newBlock.MerkleRoot)
+		common.Bytes2Hex(newBlock.ParentHash), newBlock.Number, newBlock.Timestamp,
+		common.Bytes2Hex(newBlock.TxRoot), common.Bytes2Hex(newBlock.ReceiptRoot), common.Bytes2Hex(newBlock.MerkleRoot))
 	newBlock.BlockHash = newBlock.Hash().Bytes()
 	return newBlock
 }

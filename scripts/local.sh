@@ -86,7 +86,7 @@ if [ -d ${DUMP_PATH} ]; then
 fi
 mkdir -p ${DUMP_PATH}
 
-./build.sh ${PROJECT_PATH}
+${PROJECT_PATH}/scripts/build.sh ${PROJECT_PATH}
 
 mv ${PROJECT_PATH}/hyperchain ${DUMP_PATH}/
 }

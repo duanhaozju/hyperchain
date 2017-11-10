@@ -4,15 +4,13 @@ package namespace
 
 import (
 	"errors"
+	"os"
+
 	"github.com/hyperchain/hyperchain/api"
 	"github.com/hyperchain/hyperchain/common"
-	"os"
 )
 
 var (
-	// ErrNoSuchNamespace returns when de-register a non-exist namespace.
-	ErrNoSuchNamespace = errors.New("namespace/nsmgr: no such namespace found")
-
 	// ErrInvalidNs returns when no namespace instance found.
 	ErrInvalidNs = errors.New("namespace/nsmgr: invalid namespace")
 
@@ -22,14 +20,20 @@ var (
 	// ErrRegistered returns when register a registered namespace.
 	ErrRegistered = errors.New("namespace/nsmgr: namespace has been registered")
 
+	// ErrNonExistConfig returns when specified config file doesn't exist.
+	ErrNonExistConfig = errors.New("namespace/nsmgr: namespace config file doesn't exist")
+
+	// ErrNoRootDir when namespace root dir is not set in global.toml.
+	ErrNoRootDir = errors.New("namespace/nsmgr: namespace config root dir is not set in config")
+
 	// ErrNodeNotFound returns when cannot find node by id.
 	ErrNodeNotFound = errors.New("namespace/node: nod not found")
 
 	// ErrIllegalNodeConfig returns when add an illegal node config.
 	ErrIllegalNodeConfig = errors.New("namespace/node: illegal node config")
 
-	// ErrNonExistConfig returns when specified config file doesn't exist.
-	ErrNonExistConfig = errors.New("namespace/nsmgr: namespace config file doesn't exist")
+	// ErrBinNotFound returns when specified hyperjvm bin is not existed.
+	ErrBinNotFound = errors.New("namespace/hyperjvm: hyperjvm bin is not found")
 )
 
 // constructConfigFromDir constructs namespace's config from specified config path.
@@ -38,7 +42,7 @@ func (nr *nsManagerImpl) constructConfigFromDir(namespace, path string) (*common
 	// init namespace configuration(namespace.toml)
 	nsConfigPath := path + "/namespace.toml"
 	if _, err := os.Stat(nsConfigPath); os.IsNotExist(err) {
-		logger.Error("namespace config file doesn't exist!")
+		logger.Error("Namespace config file doesn't exist!")
 		return nil, ErrNonExistConfig
 	}
 	conf = common.NewConfig(nsConfigPath)

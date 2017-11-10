@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/hyperchain/hyperchain/api"
-	"github.com/hyperchain/hyperchain/common"
-	"github.com/op/go-logging"
 	"reflect"
 	"strings"
+
+	"github.com/hyperchain/hyperchain/api"
+	"github.com/hyperchain/hyperchain/common"
+
+	"github.com/op/go-logging"
 )
 
 type RequestProcessor interface {
@@ -76,7 +78,7 @@ func (jrpi *JsonRpcProcessorImpl) registerAllAPIService() error {
 	}
 	for _, api := range jrpi.apis {
 		if err := jrpi.registerAPIService(api.Svcname, api.Service); err != nil {
-			jrpi.logger.Errorf("registerAPIService error: %v ", err)
+			jrpi.logger.Errorf("registerAPIService error: %s", err)
 			return err
 		}
 	}
