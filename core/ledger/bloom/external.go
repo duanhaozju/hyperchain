@@ -3,8 +3,6 @@ package bloom
 import (
 	"hyperchain/common"
 	"hyperchain/core/types"
-	//"github.com/pkg/errors"
-	//"hyperchain/manager/event"
 )
 
 func LookupTransaction(namespace string, txHash common.Hash) (bool, error) {
