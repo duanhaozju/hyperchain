@@ -284,3 +284,22 @@ func (pool *PeersPool) Serialize() ([]byte, error) {
 	b, e := json.Marshal(pools)
 	return b, e
 }
+
+// GetVPById returns VP peer for given peer id.
+func (pool *PeersPool) GetVPById(id int) *Peer {
+	if pool.vpPool == nil {
+		return nil
+	}
+
+	l := pool.vpPool.Sort()
+	for _, item := range l {
+		p := item.(*Peer)
+		if p.info.Id != id {
+			continue
+		} else {
+			return p
+		}
+	}
+
+	return nil
+}

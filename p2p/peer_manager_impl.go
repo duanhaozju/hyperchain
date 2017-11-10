@@ -601,9 +601,8 @@ func (pmgr *peerManagerImpl) distribute(t string, ev interface{}) {
 			var peer *Peer
 			if !pmgr.isVP {
 				pmgr.logger.Noticef("Send a message to VP(%s) to disconnect to NVP(%s)", conev.VPHash, conev.Hash)
-				peer = pmgr.peerPool.GetPeerByHash(conev.VPHash)
-				//close(conev.Ch)
 
+				peer = pmgr.peerPool.GetPeerByHash(conev.VPHash)
 				if peer == nil {
 					pmgr.logger.Warningf("This NVP(%s) not connect to this VP ignored.", conev.Hash)
 					return
@@ -865,43 +864,60 @@ func (pmgr *peerManagerImpl) sendMsg(msgType pb.MsgType, payload []byte, peers [
 	peerList := pmgr.peerPool.GetPeers()
 	size := len(peerList)
 	for _, id := range peers {
-		//REVIEW here should ensure `>=` to avoid index out of range
-		if int(id-1) >= size {
-			continue
-		}
-		// this judge is for judge the max id is out of range or not
-		if int(id) > pmgr.peerPool.MaxID() || id <= 0 {
-			return
-		}
-		// REVIEW here should compare with local node id, shouldn't sub one
-		if id == uint64(pmgr.node.info.GetID()) {
-			pmgr.logger.Debugf("skip message send to self", pmgr.node.info.GetID())
-			continue
-		}
-		// REVIEW  peers pool low layer struct is priority queue,
-		// REVIEW this can ensure the node id order.
-		// REVIEW avoid out of range
-		// REVIEW here may cause a bug:
-		// if a node hasn't connect such as node 3 connect before than node2
-		// the peer list will  be [1,,3,4]
-		// if send message to 2, the message will be send to node 3 actually
-		//peer := peerList[int(id)-1]
-		for _, peer := range peerList {
-			// here do not need to judge peer is self, because self node has been skipped.
-			if peer.info.Id != int(id) {
+
+		if pmgr.IsVP() {
+			//REVIEW here should ensure `>=` to avoid index out of range
+			if int(id-1) >= size {
 				continue
 			}
-			m := pb.NewMsg(msgType, payload)
-			go func(p *Peer) {
-				pmgr.logger.Debug("send message to", p.info.Id, p.info.Hostname)
-				_, err := p.Chat(m)
-				if err != nil {
-					if ok, _ := regexp.MatchString("cannot get session Key", err.Error()); ok {
-						go pmgr.peerMgrEv.Post(peerevent.S_UPDATE_SESSION_KEY{NodeHash: peer.info.Hash})
-					}
-					pmgr.logger.Warningf("Send Messahge failed, to (%s), reason: %s", p.hostname, err.Error())
+			// this judge is for judge the max id is out of range or not
+			if int(id) > pmgr.peerPool.MaxID() || id <= 0 {
+				pmgr.logger.Errorf("invalid peer id, current max peer id is %v, but receive id %d", pmgr.peerPool.MaxID(), id)
+				return
+			}
+			// REVIEW here should compare with local node id, shouldn't sub one
+			if id == uint64(pmgr.node.info.GetID()) {
+				pmgr.logger.Debugf("skip message send to self", pmgr.node.info.GetID())
+				continue
+			}
+
+			// REVIEW  peers pool low layer struct is priority queue,
+			// REVIEW this can ensure the node id order.
+			// REVIEW avoid out of range
+			// REVIEW here may cause a bug:
+			// if a node hasn't connect such as node 3 connect before than node2
+			// the peer list will  be [1,,3,4]
+			// if send message to 2, the message will be send to node 3 actually
+			//peer := peerList[int(id)-1]
+			for _, peer := range peerList {
+				// here do not need to judge peer is self, because self node has been skipped.
+				if peer.info.Id != int(id) {
+					continue
 				}
-			}(peer)
+				m := pb.NewMsg(msgType, payload)
+
+				go func(p *Peer) {
+					pmgr.logger.Debug("send message to", p.info.Id, p.info.Hostname)
+					_, err := p.Chat(m)
+					if err != nil {
+						if ok, _ := regexp.MatchString("cannot get session Key", err.Error()); ok {
+							go pmgr.peerMgrEv.Post(peerevent.S_UPDATE_SESSION_KEY{NodeHash: peer.info.Hash})
+						}
+						pmgr.logger.Warningf("Send Message failed, to (%s), reason: %s", p.hostname, err.Error())
+					}
+				}(peer)
+			}
+		} else {
+			peer := pmgr.peerPool.GetVPById(int(id))
+			if peer == nil {
+				continue
+			}
+
+			m := pb.NewMsg(msgType, payload)
+			_, err := peer.Chat(m)
+			if err != nil {
+				pmgr.logger.Warningf("Send Message failed, to (%s), reason: %s", peer.hostname, err.Error())
+			}
 		}
 	}
 }
