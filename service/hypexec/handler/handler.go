@@ -11,21 +11,15 @@ import (
 	"hyperchain/manager/event"
 )
 
-var logger *logging.Logger
-
-func init() {
-	logger = logging.MustGetLogger("handler")
-}
-
 type ExecutorHandler struct {
 	logger   *logging.Logger
 	executor *executor.Executor
 }
 
-func New(executor *executor.Executor) client.Handler {
+func New(namespace string, executor *executor.Executor) client.Handler {
 	return &ExecutorHandler{
 		executor: executor,
-		logger:   common.GetLogger("global", "executor"),
+		logger:   common.GetLogger(namespace, "executor"),
 	}
 }
 
@@ -60,7 +54,7 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 		e := &event.ValidationEvent{}
 		err := proto.Unmarshal(msg.Payload, e)
 		if err != nil {
-			logger.Error(err)
+			eh.logger.Error(err)
 			return
 		}
 		eh.executor.Validate(*e)
@@ -68,7 +62,7 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 		e := &event.CommitEvent{}
 		err := proto.Unmarshal(msg.Payload, e)
 		if err != nil {
-			logger.Error(err)
+			eh.logger.Error(err)
 			return
 		}
 		eh.executor.CommitBlock(*e)
@@ -76,7 +70,7 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 		e := &event.VCResetEvent{}
 		err := proto.Unmarshal(msg.Payload, e)
 		if err != nil {
-			logger.Error(err)
+			eh.logger.Error(err)
 			return
 		}
 		eh.executor.Rollback(*e)
@@ -84,7 +78,7 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 		e := &event.ChainSyncReqEvent{}
 		err := proto.Unmarshal(msg.Payload, e)
 		if err != nil {
-			logger.Error(err)
+			eh.logger.Error(err)
 			return
 		}
 		eh.executor.SyncChain(*e)
@@ -105,7 +99,7 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 	case pb.Event_ReceiveWsAckEvent:
 		eh.executor.ReceiveWsAck(msg.Payload)
 	default:
-		logger.Errorf("Undefined event %v", msg)
+		eh.logger.Errorf("Undefined event %v", msg)
 	}
 }
 
