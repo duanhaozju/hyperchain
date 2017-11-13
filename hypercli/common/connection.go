@@ -75,8 +75,6 @@ func (cc *CmdClient) Call(cmd string, method string) (string, error) {
 	req.Header.Set("Method", method)
 
 	rs, err := cc.client.Do(req)
-	fmt.Println(rs,"@@@@@@")
-	fmt.Println(err, "#######")
 	if err != nil {
 		return "", err
 	}

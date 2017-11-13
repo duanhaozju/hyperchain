@@ -262,8 +262,14 @@ func (ns *namespaceImpl) init() error {
 	if ns.conf.GetBool(common.EXECUTOR_EMBEDDED) {
 		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetAllApis(ns.Name()), nil, "", 0)
 	}else{
+		//TODO spilt executor address and port
+		adds := strings.Split(ns.conf.GetString(common.EXECUTOR_HOST_ADDR),":")
+		if len(adds) != 2 {
+			logger.Errorf("Json Rpc Process init error ,the executor address is %v .",ns.conf.GetString(common.EXECUTOR_HOST_ADDR))
+			ns.rpc = nil
+		}
 		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()), ns.GetRemoteApis(ns.Name()),
-		strings.Split(ns.conf.GetString(common.EXECUTOR_HOST_ADDR),":")[0], ns.conf.GetInt(common.JSON_RPC_PORT_EXECUTOR))
+		adds[0],ns.conf.GetInt(common.JSON_RPC_PORT_EXECUTOR))
 	}
 
 	ns.status.setState(initialized)
