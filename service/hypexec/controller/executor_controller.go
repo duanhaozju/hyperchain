@@ -2,12 +2,12 @@ package controller
 
 import (
 	"errors"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/common/interface"
+	"github.com/hyperchain/hyperchain/core/ledger/bloom"
+	"github.com/hyperchain/hyperchain/namespace"
+	er "github.com/hyperchain/hyperchain/service/hypexec/errors"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/common/interface"
-	"hyperchain/core/ledger/bloom"
-	"hyperchain/namespace"
-	er "hyperchain/service/hypexec/errors"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -147,19 +147,19 @@ func (ec *execControllerImpl) StartExecutorServiceByName(namespace string) error
 //ledger register is seperated from the start-JVM.
 //start part can only focus on the JVMManager start.
 func (ec *execControllerImpl) StartJVM() error {
-	err := ec.jvmManager.Start();
+	err := ec.jvmManager.Start()
 	return err
 }
 
 func (ec *execControllerImpl) StopJVM() error {
-	err := ec.jvmManager.Stop();
+	err := ec.jvmManager.Stop()
 	return err
 }
 
 func (ec *execControllerImpl) RestartJVM() error {
 	ec.jvmManager.Stop()
 
-	err := ec.jvmManager.Start();
+	err := ec.jvmManager.Start()
 	return err
 }
 

@@ -2,11 +2,11 @@ package admin
 
 import (
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
+	pb "github.com/hyperchain/hyperchain/common/protos"
+	"github.com/hyperchain/hyperchain/common/service/client"
+	"github.com/hyperchain/hyperchain/service/hypexec/controller"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	pb "hyperchain/common/protos"
-	"hyperchain/common/service/client"
-	"hyperchain/service/hypexec/controller"
 	"time"
 )
 

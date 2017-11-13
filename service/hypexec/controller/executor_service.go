@@ -1,21 +1,21 @@
 package controller
 
 import (
+	"github.com/hyperchain/hyperchain/admittance"
+	hapi "github.com/hyperchain/hyperchain/api"
+	"github.com/hyperchain/hyperchain/common"
+	pb "github.com/hyperchain/hyperchain/common/protos"
+	"github.com/hyperchain/hyperchain/common/service/client"
+	"github.com/hyperchain/hyperchain/core/executor"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/manager/filter"
+	"github.com/hyperchain/hyperchain/namespace/rpc"
+	"github.com/hyperchain/hyperchain/service/hypexec/handler"
 	"github.com/op/go-logging"
-	"hyperchain/admittance"
-	hapi "hyperchain/api"
-	"hyperchain/common"
-	pb "hyperchain/common/protos"
-	"hyperchain/common/service/client"
-	"hyperchain/core/executor"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/hyperdb"
-	"hyperchain/manager/filter"
-	"hyperchain/namespace/rpc"
-	"hyperchain/service/hypexec/handler"
 	"sync"
 
-	"hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/manager/event"
 	"strings"
 )
 
@@ -167,7 +167,7 @@ func (es *executorServiceImpl) init() error {
 	h := handler.New(es.namespace, executor)
 	service.AddHandler(h)
 
-	es.caManager,err = admittance.NewCAManager(es.conf)
+	es.caManager, err = admittance.NewCAManager(es.conf)
 	if err != nil {
 		es.logger.Errorf("Init executor service for camanager %s error, %v", es.namespace, err)
 		return err
@@ -175,7 +175,7 @@ func (es *executorServiceImpl) init() error {
 
 	// 5. add jsonrpc processor
 	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace), es.GetHyperchainApis(es.namespace),
-	strings.Split(es.conf.GetString(common.EXECUTOR_HOST_ADDR), ":")[0], es.conf.GetInt(common.JSON_RPC_PORT))
+		strings.Split(es.conf.GetString(common.EXECUTOR_HOST_ADDR), ":")[0], es.conf.GetInt(common.JSON_RPC_PORT))
 
 	// 6. initialized status
 	es.status.setState(initialized)
@@ -383,8 +383,7 @@ func (es *executorServiceImpl) GetHyperchainApis(namespace string) map[string]*h
 	}
 }
 
-
-func (es *executorServiceImpl) GetCAManager() *admittance.CAManager{
+func (es *executorServiceImpl) GetCAManager() *admittance.CAManager {
 	return es.caManager
 }
 

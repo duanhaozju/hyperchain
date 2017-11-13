@@ -2,13 +2,13 @@ package handler
 
 import (
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
+	pb "github.com/hyperchain/hyperchain/common/protos"
+	"github.com/hyperchain/hyperchain/common/service/client"
+	"github.com/hyperchain/hyperchain/core/executor"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	pb "hyperchain/common/protos"
-	"hyperchain/common/service/client"
-	"hyperchain/core/executor"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/manager/event"
 )
 
 type ExecutorHandler struct {

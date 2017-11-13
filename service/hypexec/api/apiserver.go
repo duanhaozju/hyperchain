@@ -1,11 +1,11 @@
 package api
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/ipc"
+	hrpc "github.com/hyperchain/hyperchain/rpc"
+	hm "github.com/hyperchain/hyperchain/service/hypexec/controller"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/ipc"
-	hrpc "hyperchain/rpc"
-	hm "hyperchain/service/hypexec/controller"
 	"sync"
 )
 
