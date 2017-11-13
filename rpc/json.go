@@ -3,12 +3,15 @@
 package jsonrpc
 
 import (
-	"crypto/ecdsa"
+	//"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
 	"hyperchain/common"
+	//"hyperchain/crypto/primitives"
+	"crypto/ecdsa"
+	"hyperchain/common/interface"
 	"hyperchain/crypto/primitives"
 	"io"
 	"net/http"
@@ -16,7 +19,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"hyperchain/common/interface"
 )
 
 const (
@@ -60,16 +62,16 @@ type jsonNotification struct {
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It
 // also has support for parsing arguments and serializing (result) objects.
 type jsonCodecImpl struct {
-	closer sync.Once          // close closed channel once
-	closed chan interface{}   // closed on Close
-	decMu  sync.Mutex         // guards d
-	d      *json.Decoder      // decodes incoming requests
-	encMu  sync.Mutex         // guards e
-	e      *json.Encoder      // encodes responses
-	rw     io.ReadWriteCloser // connection
-	req    *http.Request
+	closer         sync.Once          // close closed channel once
+	closed         chan interface{}   // closed on Close
+	decMu          sync.Mutex         // guards d
+	d              *json.Decoder      // decodes incoming requests
+	encMu          sync.Mutex         // guards e
+	e              *json.Encoder      // encodes responses
+	rw             io.ReadWriteCloser // connection
+	req            *http.Request
 	nsMgrProcessor intfc.NsMgrProcessor
-	conn   *websocket.Conn
+	conn           *websocket.Conn
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
@@ -77,13 +79,13 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nsMgrProcessor intf
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
 	return &jsonCodecImpl{
-		closed: 	make(chan interface{}),
-		d:     		d,
-		e:      	json.NewEncoder(rwc),
-		rw:     	rwc,
-		req:    	req,
+		closed:         make(chan interface{}),
+		d:              d,
+		e:              json.NewEncoder(rwc),
+		rw:             rwc,
+		req:            req,
 		nsMgrProcessor: nsMgrProcessor,
-		conn:   	conn,
+		conn:           conn,
 	}
 }
 
@@ -123,12 +125,12 @@ func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common
 		return &common.UnauthorizedError{}
 	}
 
-	//// verfiy tcert
-	//verifyTcert, err := cm.VerifyTCert(tcertPem, method)
-	//if verifyTcert == false || err != nil {
-	//	log.Error("Fail to verify tcert!", err)
-	//	return &common.UnauthorizedError{}
-	//}
+	// verfiy tcert
+	verifyTcert, err := cm.VerifyTCert(tcertPem, method)
+	if verifyTcert == false || err != nil {
+		log.Error("Fail to verify tcert!", err)
+		return &common.UnauthorizedError{}
+	}
 	return nil
 }
 

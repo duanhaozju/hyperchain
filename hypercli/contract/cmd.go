@@ -161,6 +161,7 @@ func NewContractCMD() []cli.Command {
 // deploy implements deploy contract and return the transaction receipt
 func deploy(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+	ExecutorClient := common.NewRpcClient(c.GlobalString("exehost"), c.GlobalString("exeport"))
 	var deployCmd string
 	method := "contract_deployContract"
 	if c.String("deploycmd") != "" {
@@ -169,7 +170,7 @@ func deploy(c *cli.Context) error {
 		deployParams := []string{"from", "payload"}
 		deployCmd = getCmd(method, deployParams, 0, c)
 	}
-	//fmt.Println(deployCmd)
+	fmt.Println(deployCmd)
 	result, err := client.Call(deployCmd, method)
 	if err != nil {
 		fmt.Println("Error in call deploy cmd request")
@@ -180,6 +181,12 @@ func deploy(c *cli.Context) error {
 
 	txHash := getTransactionHash(result)
 	err = common.GetTransactionReceipt(txHash, c.String("namespace"), client)
+	if err != nil {
+		if strings.Contains(err.Error(), "is served at") {
+			err = common.GetTransactionReceipt(txHash, c.String("namespace"), ExecutorClient)
+		}
+	}
+
 	if err != nil {
 		fmt.Println("Error in call get transaction receipt")
 		fmt.Println(err)
@@ -192,6 +199,7 @@ func deploy(c *cli.Context) error {
 // invoke implements invoke contract and return the transaction receipt
 func invoke(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+	remoteClient := common.NewRpcClient(c.GlobalString("exehost"), c.GlobalString("exeport"))
 	var invokeCmd string
 	method := "contract_invokeContract"
 	if c.String("invokecmd") != "" {
@@ -211,6 +219,12 @@ func invoke(c *cli.Context) error {
 
 	txHash := getTransactionHash(result)
 	err = common.GetTransactionReceipt(txHash, c.String("namespace"), client)
+	if err != nil {
+		if strings.Contains(err.Error(), "is served at") {
+			err = common.GetTransactionReceipt(txHash, c.String("namespace"), remoteClient)
+		}
+	}
+
 	if err != nil {
 		fmt.Println("Error in call get transaction receipt")
 		fmt.Println(err)
@@ -263,6 +277,8 @@ func destroy(c *cli.Context) error {
 // maintain implements maintain methods with specified opcode and return the transaction receipt
 func maintain(c *cli.Context, opcode int32, maintainMethod string) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
+	remoteClient := common.NewRpcClient(c.GlobalString("exehost"), c.GlobalString("exeport"))
+
 	var maintainCmd string
 	method := "contract_maintainContract"
 	if c.String(maintainMethod) != "" {
@@ -282,8 +298,15 @@ func maintain(c *cli.Context, opcode int32, maintainMethod string) error {
 	txHash := getTransactionHash(result)
 	err = common.GetTransactionReceipt(txHash, c.String("namespace"), client)
 	if err != nil {
+		if strings.Contains(err.Error(), "is served at") {
+			err = common.GetTransactionReceipt(txHash, c.String("namespace"), remoteClient)
+		}
+	}
+
+	if err != nil {
 		fmt.Println("Error in call get transaction receipt")
-		return err
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	return nil

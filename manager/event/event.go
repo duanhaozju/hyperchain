@@ -102,3 +102,9 @@ type ArchiveEvent struct {
 type NvpRelayTxEvent struct {
 	Payload []byte
 }
+
+type BloomEvent struct {
+	Namespace string
+	Cont     chan error
+	Transactions []*types.Transaction
+}

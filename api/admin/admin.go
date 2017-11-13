@@ -10,6 +10,9 @@ import (
 	"time"
 	"hyperchain/namespace"
 	"hyperchain/common/interface"
+	"hyperchain/manager/event"
+	"github.com/golang/protobuf/proto"
+	pb "hyperchain/common/protos"
 )
 
 // This file defines the hypercli admin interface. Users invoke
@@ -377,33 +380,90 @@ func (admin *Administrator) setLevel(cmd *Command) *CommandResult {
 // successfully.
 func (admin *Administrator) startJvmServer(cmd *Command) *CommandResult {
 	admin.logger.Noticef("process cmd %v", cmd.MethodName)
-	if err := admin.nsMgr.StartJvm(); err != nil {
-		admin.logger.Noticef("start jvm server failed: %v", err)
-		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	if admin.config.GetBool(common.EXECUTOR_EMBEDDED) {
+		if err := admin.nsMgr.StartJvm(); err != nil {
+			admin.logger.Noticef("start jvm server failed: %v", err)
+			return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+		}
+		return &CommandResult{Ok: true, Result: "start jvm successful."}
 	}
-	return &CommandResult{Ok: true, Result: "start jvm successful."}
+	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
+	msg := pb.IMessage{
+		From: 	 pb.FROM_ADMINISTRATOR,
+		Type:	 pb.Type_ADMIN,
+		Event:   pb.Event_StartJVMEvent,
+	}
+	rsp,_ := adminService.SyncSend(msg)
+	rspEvent := &event.AdminResponseEvent{}
+	err := proto.Unmarshal(rsp.Payload, rspEvent)
+	if err != nil{
+		return &CommandResult{Ok: false, Result: "start jvm failed."}
+	}else if rspEvent.Ok {
+		return &CommandResult{Ok: true, Result: "start jvm successful."}
+	}else {
+		return &CommandResult{Ok: false, Result: "start jvm failed."}
+	}
+
 }
 
 // stopJvmServer stops the JVM service, waiting for the command to be executed
 // successfully.
 func (admin *Administrator) stopJvmServer(cmd *Command) *CommandResult {
 	admin.logger.Noticef("process cmd %v", cmd.MethodName)
-	if err := admin.nsMgr.StopJvm(); err != nil {
-		admin.logger.Noticef("stop jvm server failed: %v", err)
-		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	if admin.config.GetBool(common.EXECUTOR_EMBEDDED) {
+		if err := admin.nsMgr.StopJvm(); err != nil {
+			admin.logger.Noticef("stop jvm server failed: %v", err)
+			return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+		}
+		return &CommandResult{Ok: true, Result: "stop jvm successful."}
 	}
-	return &CommandResult{Ok: true, Result: "stop jvm successful."}
+	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
+
+	msg := pb.IMessage{
+		From: 	 pb.FROM_ADMINISTRATOR,
+		Type:	 pb.Type_ADMIN,
+		Event:   pb.Event_StopJVMEvent,
+	}
+	rsp,_ := adminService.SyncSend(msg)
+	rspEvent := &event.AdminResponseEvent{}
+	err := proto.Unmarshal(rsp.Payload, rspEvent)
+	if err != nil{
+		return &CommandResult{Ok: false, Result: "start jvm failed."}
+	}else if rspEvent.Ok {
+		return &CommandResult{Ok: true, Result: "start jvm successful."}
+	}else {
+		return &CommandResult{Ok: false, Result: "start jvm failed."}
+	}
 }
 
 // restartJvmServer restarts the JVM service, waiting for the command to be executed
 // successfully.
 func (admin *Administrator) restartJvmServer(cmd *Command) *CommandResult {
 	admin.logger.Noticef("process cmd %v", cmd.MethodName)
-	if err := admin.nsMgr.RestartJvm(); err != nil {
-		admin.logger.Noticef("restart jvm server failed: %v", err)
-		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+	if admin.config.GetBool(common.EXECUTOR_EMBEDDED) {
+		if err := admin.nsMgr.RestartJvm(); err != nil {
+			admin.logger.Noticef("restart jvm server failed: %v", err)
+			return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
+		}
+		return &CommandResult{Ok: true, Result: "restart jvm successful."}
 	}
-	return &CommandResult{Ok: true, Result: "restart jvm successful."}
+	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
+
+	msg := pb.IMessage{
+		From: 	 pb.FROM_ADMINISTRATOR,
+		Type:	 pb.Type_ADMIN,
+		Event:   pb.Event_RestartJVMEvent,
+	}
+	rsp,_ := adminService.SyncSend(msg)
+	rspEvent := &event.AdminResponseEvent{}
+	err := proto.Unmarshal(rsp.Payload, rspEvent)
+	if err != nil{
+		return &CommandResult{Ok: false, Result: "start jvm failed."}
+	}else if rspEvent.Ok {
+		return &CommandResult{Ok: true, Result: "start jvm successful."}
+	}else {
+		return &CommandResult{Ok: false, Result: "start jvm failed."}
+	}
 }
 
 // grantPermission grants the modular permissions to the given user.

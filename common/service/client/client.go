@@ -266,7 +266,7 @@ func (sc *ServiceClient) listenProcessMsg() {
 		for {
 			select {
 			case msg := <-sc.msgRecv:
-				//sc.logger.Infof("handle receive msg: %v ", msg)
+			//sc.logger.Infof("handle receive msg: %v ", msg)
 				if sc.h == nil {
 					sc.logger.Debugf("No handler to handle message: %v", msg)
 				} else {

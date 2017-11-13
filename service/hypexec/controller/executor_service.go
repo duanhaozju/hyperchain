@@ -16,6 +16,7 @@ import (
 	"sync"
 
 	"hyperchain/manager/event"
+	"strings"
 )
 
 type executorService interface {
@@ -166,8 +167,15 @@ func (es *executorServiceImpl) init() error {
 	h := handler.New(es.namespace, executor)
 	service.AddHandler(h)
 
+	es.caManager,err = admittance.NewCAManager(es.conf)
+	if err != nil {
+		es.logger.Errorf("Init executor service for camanager %s error, %v", es.namespace, err)
+		return err
+	}
+
 	// 5. add jsonrpc processor
-	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace))
+	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace), es.GetHyperchainApis(es.namespace),
+	strings.Split(es.conf.GetString(common.EXECUTOR_HOST_ADDR), ":")[0], es.conf.GetInt(common.JSON_RPC_PORT))
 
 	// 6. initialized status
 	es.status.setState(initialized)
@@ -335,15 +343,49 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 	}
 }
 
-func (es *executorServiceImpl) GetCAManager() *admittance.CAManager {
-	//TODO: add CAManager to the struct.
-	cm, err := admittance.NewCAManager(es.conf)
-	if err != nil {
-		es.logger.Error(err)
-		panic("Cannot initialize the CAManager!")
+func (es *executorServiceImpl) GetHyperchainApis(namespace string) map[string]*hapi.API {
+	return map[string]*hapi.API{
+		"tx": {
+			Svcname: "tx",
+			Version: "1.5",
+			Service: hapi.NewPublicTransactionAPI(namespace, nil, es.conf),
+			Public:  true,
+		},
+		"node": {
+			Svcname: "node",
+			Version: "1.5",
+			Service: hapi.NewPublicNodeAPI(namespace, nil),
+			Public:  true,
+		},
+		"account": {
+			Svcname: "account",
+			Version: "1.5",
+			Service: hapi.NewPublicAccountAPI(namespace, nil, es.conf),
+			Public:  true,
+		},
+		"contract": {
+			Svcname: "contract",
+			Version: "1.5",
+			Service: hapi.NewPublicContractAPI(namespace, nil, es.conf),
+			Public:  true,
+		},
+		"cert": {
+			Svcname: "cert",
+			Version: "1.5",
+			Service: hapi.NewCertAPI(namespace, es.caManager),
+			Public:  true,
+		},
+		"sub": {
+			Svcname: "sub",
+			Version: "1.5",
+			Service: hapi.NewFilterAPI(namespace, nil, es.conf),
+		},
 	}
-	es.caManager = cm
-	return cm
+}
+
+
+func (es *executorServiceImpl) GetCAManager() *admittance.CAManager{
+	return es.caManager
 }
 
 func (es *executorServiceImpl) Name() string {

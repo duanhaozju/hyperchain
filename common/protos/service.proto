@@ -73,4 +73,10 @@ enum Event {
 
     // 4.Miscellaneous event
     MemChainEvent = 20;
+
+    // 5. hypercli passed event
+    StartJVMEvent = 21;
+    StopJVMEvent = 22;
+    RestartJVMEvent = 23;
+
 }

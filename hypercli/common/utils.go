@@ -114,7 +114,8 @@ func GenSignature(from string, to string, timestamp int64, amount int64, payload
 
 // getTransactionReceiptCmd returns the jsonrpc command of getTransactionReceipt
 func getTransactionReceiptCmd(txHash string, namespace string) string {
-	method := "tx_getTransactionReceipt"
+	//TODO modify func name.
+	method := "txdb_getTransactionReceipt"
 
 	return fmt.Sprintf(
 		"{\"jsonrpc\":\"2.0\",\"namespace\":\"%s\",\"method\":\"%s\",\"params\":[\"%s\"],\"id\":1}",
@@ -124,7 +125,7 @@ func getTransactionReceiptCmd(txHash string, namespace string) string {
 // getTransactionReceipt try to get the transaction receipt 10 times, with 1s interval
 func GetTransactionReceipt(txHash string, namespace string, client *CmdClient) error {
 	cmd := getTransactionReceiptCmd(txHash, namespace)
-	method := "tx_getTransactionReceipt"
+	method := "txdb_getTransactionReceipt"
 
 	for i := 1; i <= frequency; i++ {
 		response, err := client.Call(cmd, method)

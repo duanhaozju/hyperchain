@@ -115,8 +115,10 @@ type NamespaceManager interface {
 	// with the certain namespace.
 	ProcessRequest(namespace string, request interface{}) interface{}
 
-	// GetNamespaceProcessorName returns the namespace instance by name.
+	// GetNamespaceProcessor returns the namespace instance by name.
 	GetNamespaceProcessor(name string) intfc.NamespaceProcessor
+
+	InternalServer() *server.InternalServer
 }
 
 
@@ -183,15 +185,14 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 		namespaces:  make(map[string]Namespace),
 		conf:        conf,
 		jvmManager:  NewJvmManager(conf),
-		bloomFilter: bloom.NewBloomFilterCache(conf),
 		status:      status,
 		stopHp:      stopHp,
 		restartHp:   restartHp,
 		is:          s,
 	}
-
-	nr.rwLock = new(sync.RWMutex)
+	nr.bloomFilter = bloom.NewBloomFilterCache(conf)
 	nr.bloomFilter.Start()
+	nr.rwLock = new(sync.RWMutex)
 	return nr
 }
 
@@ -358,6 +359,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 	if err != nil {
 		return err
 	}
+	nsConfig.Set(common.JSON_RPC_PORT, "8081")
 	delFlag := make(chan bool)
 	ns, err := GetNamespace(name, nsConfig, delFlag, nr.is)
 	if nr.conf.GetBool(common.EXECUTOR_EMBEDDED) == false {
@@ -397,7 +399,7 @@ func (nr *nsManagerImpl) DeRegister(name string) error {
 	}
 	nr.bloomFilter.UnRegister(name)
 	logger.Criticalf("namespace: %s stopped", name)
-	//TODO: need to delete the data and stop listen del node.
+	//TODO: need to delete the data and stop listen del rnode.
 	return nil
 }
 
@@ -551,4 +553,8 @@ func (nr *nsManagerImpl) GetStopFlag() chan bool {
 // GetRestartFlag returns the flag of restart hyperchain server
 func (nr *nsManagerImpl) GetRestartFlag() chan bool {
 	return nr.restartHp
+}
+
+func (nr *nsManagerImpl) InternalServer() *server.InternalServer {
+	return nr.is
 }

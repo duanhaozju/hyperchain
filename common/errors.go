@@ -27,6 +27,7 @@ const (
 	custom_UnauthorizedError int = -32098
 	custom_CertError         int = -32099
 )
+
 const (
 	custom_DBNotFoundError int = -32001 - iota
 	custom_OutofBalanceError
@@ -41,6 +42,7 @@ const (
 	custom_NoBlockGeneratedError
 	custom_SubNotExistError
 	custom_SnapshotError
+	custom_APINotFoundError
 )
 
 // RPCError implements RPC error, is add support for error codec over regular go errors
@@ -215,3 +217,16 @@ type CertError struct {
 
 func (e *CertError) Code() int     { return custom_CertError }
 func (e *CertError) Error() string { return e.Message }
+
+type APINotFoundError struct {
+	Port 	int
+	Ip   	string
+	Message string
+	Service string
+	Method  string
+}
+
+func (e *APINotFoundError) Code() int {return custom_APINotFoundError}
+func (e *APINotFoundError) Error() string {
+	return fmt.Sprintf("%s_%s is served at %s:%d", e.Service, e.Method, e.Ip, e.Port)
+}

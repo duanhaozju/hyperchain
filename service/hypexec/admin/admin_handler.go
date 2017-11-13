@@ -73,6 +73,51 @@ func (ah *AdminHandler) Handle(client pb.Dispatcher_RegisterClient, msg *pb.IMes
 			rspId: msg.Id,
 			are:   es,
 		}
+
+	//add 3 methods respectively cresponds to hypercli JVM-ops.
+	//TODO: generate new service.proto file.
+	case pb.Event_StartJVMEvent:
+		err := ah.ecMgr.StartJVM()
+		es := &event.AdminResponseEvent{}
+		if err != nil {
+			logger.Errorf("Start JVM manager failed, error is %s", err)
+			es.Ok = false
+			es.Msg = err.Error()
+		} else {
+			es.Ok = true
+		}
+		ah.Ch <- &ResponseEventWrapper{
+			rspId: msg.Id,
+			are:   es,
+		}
+	case pb.Event_StopJVMEvent:
+		err := ah.ecMgr.StopJVM()
+		es := &event.AdminResponseEvent{}
+		if err != nil {
+			logger.Errorf("Stop JVM manager failed, error is %s", err)
+			es.Ok = false
+			es.Msg = err.Error()
+		} else {
+			es.Ok = true
+		}
+		ah.Ch <- &ResponseEventWrapper{
+			rspId: msg.Id,
+			are:   es,
+		}
+	case pb.Event_RestartJVMEvent:
+		err := ah.ecMgr.RestartJVM()
+		es := &event.AdminResponseEvent{}
+		if err != nil {
+			logger.Errorf("Stop JVM manager failed, error is %s", err)
+			es.Ok = false
+			es.Msg = err.Error()
+		} else {
+			es.Ok = true
+		}
+		ah.Ch <- &ResponseEventWrapper{
+			rspId: msg.Id,
+			are:   es,
+		}
 	default:
 		logger.Error("Undefined event.")
 	}

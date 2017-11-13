@@ -38,6 +38,16 @@ func initApp() {
 			Value: "8081",
 			Usage: "setting the host port",
 		},
+		cli.StringFlag{
+			Name:  "exehost, EH",
+			Value: "127.0.0.1",
+			Usage: "setting the host ip",
+		},
+		cli.StringFlag{
+			Name:  "exeport, EP",
+			Value: "9091",
+			Usage: "setting the host port",
+		},
 	}
 
 	app.Commands = []cli.Command{

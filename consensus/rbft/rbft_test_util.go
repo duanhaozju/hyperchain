@@ -206,7 +206,7 @@ func (TH *TestHelp) Execute(seqNo uint64, hashS string, flag bool, isPrimary boo
 	return nil
 }
 
-func (TH *TestHelp) UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error {
+func (TH *TestHelp) UpdateState(myId uint64, height uint64, blockHash []byte, replicas []*event.SyncReplica) error {
 	return nil
 }
 
