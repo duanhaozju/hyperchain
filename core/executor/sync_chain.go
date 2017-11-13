@@ -498,7 +498,6 @@ func (executor *Executor) processSyncBlocks() {
 	if executor.context.syncCtx.demandBlockNum <= edb.GetHeightOfChain(executor.namespace) || executor.context.syncCtx.getTranstioned() {
 		// get the first of SyncBlocks
 		executor.waitUtilSyncAvailable()
-		defer executor.syncDone()
 		// execute all received block at one time
 		var low uint64
 		if executor.context.syncCtx.updateGenesis {
@@ -515,6 +514,7 @@ func (executor *Executor) processSyncBlocks() {
 			if err != nil {
 				executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
 					executor.namespace, executor.context.syncCtx.demandBlockNum+1, executor.context.syncCtx.target, edb.GetHeightOfChain(executor.namespace))
+				executor.syncDone()
 				executor.reject()
 				return
 			} else {
@@ -528,11 +528,13 @@ func (executor *Executor) processSyncBlocks() {
 					if err != nil {
 						executor.logger.Errorf("detail error %s", err.Error())
 					}
+					executor.syncDone()
 					executor.reject()
 					return
 				} else {
 					// commit modified changes in this block and update chain.
 					if err := executor.accpet(blk.Number, blk, result); err != nil {
+						executor.syncDone()
 						executor.reject()
 						return
 					}
@@ -543,6 +545,8 @@ func (executor *Executor) processSyncBlocks() {
 		executor.context.syncCtx.finishProgress(BlockExecuteProgress)
 		executor.context.initDemand(executor.context.syncCtx.target + 1)
 		executor.clearSyncFlag()
+		// Note, turn on validation before inform consensus state update result.
+		executor.syncDone()
 		executor.sendStateUpdatedEvent()
 	}
 }
