@@ -118,7 +118,7 @@ type NamespaceManager interface {
 	// GetNamespaceProcessor returns the namespace instance by name.
 	GetNamespaceProcessor(name string) intfc.NamespaceProcessor
 
-	InternalServer() server.InternalServer
+	InternalServer() *server.InternalServer
 }
 
 
