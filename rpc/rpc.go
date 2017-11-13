@@ -3,9 +3,9 @@ package jsonrpc
 import (
 	"github.com/op/go-logging"
 	"hyperchain/common"
+	"hyperchain/common/interface"
 	"hyperchain/ipc"
 	"sync"
-	"hyperchain/common/interface"
 )
 
 var (

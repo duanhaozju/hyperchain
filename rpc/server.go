@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
-	admin"hyperchain/api/admin"
+	admin "hyperchain/api/admin"
 	"hyperchain/common"
+	"hyperchain/common/interface"
 	"hyperchain/namespace"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
-	"hyperchain/common/interface"
 )
 
 // CodecOption specifies which type of messages this codec supports
@@ -35,13 +35,13 @@ const (
 
 // Server represents a RPC server
 type Server struct {
-	run          int32
-	codecsMu        sync.Mutex
-	codecs          *set.Set
-	nsMgrProcessor  intfc.NsMgrProcessor
-	admin           *admin.Administrator
-	requestMgrMu    sync.Mutex
-	requestMgr      map[string]*RequestManager
+	run            int32
+	codecsMu       sync.Mutex
+	codecs         *set.Set
+	nsMgrProcessor intfc.NsMgrProcessor
+	admin          *admin.Administrator
+	requestMgrMu   sync.Mutex
+	requestMgr     map[string]*RequestManager
 }
 
 // NewServer will create a new server instance with no registered handlers.

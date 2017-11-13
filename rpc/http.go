@@ -10,12 +10,12 @@ import (
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"hyperchain/common"
+	"hyperchain/common/interface"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"time"
-	"hyperchain/common/interface"
 )
 
 const (
@@ -23,32 +23,31 @@ const (
 	ReadTimeout                 = 5 * time.Second
 )
 
-
 type httpServerImpl struct {
-	nsMgrProcessor  intfc.NsMgrProcessor
-	port   		int
-	config 		*common.Config
-	httpListener 	net.Listener
-	httpHandler  	*Server
-	is_executor 	bool
+	nsMgrProcessor intfc.NsMgrProcessor
+	port           int
+	config         *common.Config
+	httpListener   net.Listener
+	httpHandler    *Server
+	is_executor    bool
 }
 
 // GetHttpServer creates and returns a new httpServerImpl instance implements internalRPCServer interface.
-func GetHttpServer(nsMgrProcessor intfc.NsMgrProcessor,config *common.Config, is_executor bool) internalRPCServer {
-	if !config.GetBool(common.EXECUTOR_EMBEDDED) && is_executor{
+func GetHttpServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, is_executor bool) internalRPCServer {
+	if !config.GetBool(common.EXECUTOR_EMBEDDED) && is_executor {
 		hs := &httpServerImpl{
 			nsMgrProcessor: nsMgrProcessor,
-			port:   	config.GetInt(common.JSON_RPC_PORT_EXECUTOR),
-			config: 	config,
-			is_executor: 	is_executor,
+			port:           config.GetInt(common.JSON_RPC_PORT_EXECUTOR),
+			config:         config,
+			is_executor:    is_executor,
 		}
 		return hs
-	}else {
+	} else {
 		hs := &httpServerImpl{
 			nsMgrProcessor: nsMgrProcessor,
-			port:        config.GetInt(common.JSON_RPC_PORT),
-			config:        config,
-			is_executor:		is_executor,
+			port:           config.GetInt(common.JSON_RPC_PORT),
+			config:         config,
+			is_executor:    is_executor,
 		}
 		return hs
 	}
