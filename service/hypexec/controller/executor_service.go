@@ -167,6 +167,12 @@ func (es *executorServiceImpl) init() error {
 	h := handler.New(es.namespace, executor)
 	service.AddHandler(h)
 
+	es.caManager,err = admittance.NewCAManager(es.conf)
+	if err != nil {
+		es.logger.Errorf("Init executor service for camanager %s error, %v", es.namespace, err)
+		return err
+	}
+
 	// 5. add jsonrpc processor
 	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace), es.GetRemoteApis(es.namespace),
 	strings.Split(es.conf.GetString(common.EXECUTOR_HOST_ADDR), ":")[0], es.conf.GetInt(common.JSON_RPC_PORT))
