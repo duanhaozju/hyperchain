@@ -2,9 +2,9 @@ package server
 
 import (
 	"github.com/gogo/protobuf/proto"
-	pb "hyperchain/common/protos"
-	"hyperchain/common/service"
-	"hyperchain/manager/event"
+	pb "github.com/hyperchain/hyperchain/common/protos"
+	"github.com/hyperchain/hyperchain/common/service"
+	"github.com/hyperchain/hyperchain/manager/event"
 )
 
 func (is *InternalServer) DispatchConsensusMsg(namespace string, msg *pb.IMessage) {

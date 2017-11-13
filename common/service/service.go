@@ -1,7 +1,7 @@
 package service
 
 import (
-	pb "hyperchain/common/protos"
+	pb "github.com/hyperchain/hyperchain/common/protos"
 )
 
 //Service interface to be implemented by component.

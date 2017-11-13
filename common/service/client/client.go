@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
+	pb "github.com/hyperchain/hyperchain/common/protos"
+	"github.com/hyperchain/hyperchain/common/service/util"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
-	"hyperchain/common"
-	pb "hyperchain/common/protos"
-	"hyperchain/common/service/util"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -266,7 +266,7 @@ func (sc *ServiceClient) listenProcessMsg() {
 		for {
 			select {
 			case msg := <-sc.msgRecv:
-			//sc.logger.Infof("handle receive msg: %v ", msg)
+				//sc.logger.Infof("handle receive msg: %v ", msg)
 				if sc.h == nil {
 					sc.logger.Debugf("No handler to handle message: %v", msg)
 				} else {

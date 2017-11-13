@@ -1,6 +1,6 @@
 package intfc
 
-import "hyperchain/admittance"
+import "github.com/hyperchain/hyperchain/admittance"
 
 type NsMgrProcessor interface {
 

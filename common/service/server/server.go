@@ -3,9 +3,9 @@ package server
 import (
 	"fmt"
 	"github.com/gogo/protobuf/proto"
+	pb "github.com/hyperchain/hyperchain/common/protos"
+	"github.com/hyperchain/hyperchain/common/service"
 	"github.com/op/go-logging"
-	pb "hyperchain/common/protos"
-	"hyperchain/common/service"
 	"sync"
 )
 

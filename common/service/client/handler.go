@@ -1,7 +1,7 @@
 package client
 
 import (
-	pb "hyperchain/common/protos"
+	pb "github.com/hyperchain/hyperchain/common/protos"
 )
 
 type Handler interface {

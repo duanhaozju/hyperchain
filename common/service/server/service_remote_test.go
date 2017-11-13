@@ -2,10 +2,10 @@ package server
 
 import (
 	"fmt"
+	pb "github.com/hyperchain/hyperchain/common/protos"
+	"github.com/hyperchain/hyperchain/common/service/client"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
-	"hyperchain/common/service/client"
-	pb "hyperchain/common/protos"
 	"net"
 	"sync"
 	"testing"

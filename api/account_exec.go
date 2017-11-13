@@ -2,8 +2,8 @@ package api
 
 import (
 	"fmt"
+	"github.com/hyperchain/common"
 	"github.com/op/go-logging"
-	"hyperchain/common"
 )
 
 type AccountDB struct {

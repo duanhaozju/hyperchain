@@ -2,11 +2,11 @@ package local
 
 import (
 	"fmt"
-	"hyperchain/common"
-	pb "hyperchain/common/protos"
-	"hyperchain/common/service"
-	"hyperchain/manager"
-	"hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/common"
+	pb "github.com/hyperchain/hyperchain/common/protos"
+	"github.com/hyperchain/hyperchain/common/service"
+	"github.com/hyperchain/hyperchain/manager"
+	"github.com/hyperchain/hyperchain/manager/event"
 )
 
 //localServiceImpl local service dispatch msg to local eventhub
