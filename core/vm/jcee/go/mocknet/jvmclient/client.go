@@ -4,9 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	pb "github.com/hyperchain/hyperchain/core/vm/jcee/protos"
 	"github.com/opentracing/opentracing-go/log"
 	"google.golang.org/grpc"
-	pb "hyperchain/core/vm/jcee/protos"
 	"io"
 	"time"
 )

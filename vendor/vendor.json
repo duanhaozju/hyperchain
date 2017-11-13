@@ -27,10 +27,10 @@
 			"revisionTime": "2017-05-30T17:17:52Z"
 		},
 		{
-			"checksumSHA1": "vOVK+3/6ip7qo5xIhgtGGWMVDvo=",
+			"checksumSHA1": "P/YiamlyGvQBE5kb9fgp3a+CckI=",
 			"path": "github.com/astaxie/beego",
-			"revision": "cab8458c1c4a5a3b4bf5192922be620e6dede15b",
-			"revisionTime": "2017-05-19T13:19:18Z"
+			"revision": "c5118e9535f237996bae7c7baebe4ed4247cb2c6",
+			"revisionTime": "2017-10-14T08:28:56Z"
 		},
 		{
 			"checksumSHA1": "bwz/1vy/v5db0uhkckArS/KZ5xI=",
@@ -57,10 +57,10 @@
 			"revisionTime": "2017-05-19T13:19:18Z"
 		},
 		{
-			"checksumSHA1": "+MEWMsS4mJ9jNhwfVeyBMpdyVCQ=",
+			"checksumSHA1": "aNA3HBmv8A9mezI/ZW92Po9I5GE=",
 			"path": "github.com/astaxie/beego/logs",
-			"revision": "cab8458c1c4a5a3b4bf5192922be620e6dede15b",
-			"revisionTime": "2017-05-19T13:19:18Z"
+			"revision": "c5118e9535f237996bae7c7baebe4ed4247cb2c6",
+			"revisionTime": "2017-10-14T08:28:56Z"
 		},
 		{
 			"checksumSHA1": "qGvZUP7mTKGvMa3ui7kqLJQiXNc=",
@@ -334,6 +334,12 @@
 			"revisionTime": "2017-05-23T01:21:41Z"
 		},
 		{
+			"checksumSHA1": "jdmR4gyo5/dXiQh9H8h/c7YAvik=",
+			"path": "github.com/k0kubun/pp",
+			"revision": "e057ee7a28277be4d2af303443b6da377768181f",
+			"revisionTime": "2017-09-26T22:57:54Z"
+		},
+		{
 			"checksumSHA1": "R6DzcBLEP0BONPpsyr+11N7xh5w=",
 			"path": "github.com/labstack/gommon/color",
 			"revision": "779b8a8b9850a97acba6a3fe20feb628c39e17c1",
@@ -586,6 +592,12 @@
 			"revisionTime": "2016-03-15T20:05:05Z"
 		},
 		{
+			"checksumSHA1": "tnkdNJbJxNKuPZMWapP1xhKIIGw=",
+			"path": "github.com/opentracing/opentracing-go/log",
+			"revision": "1361b9cd60be79c4c3a7fa9841b3c132e40066a7",
+			"revisionTime": "2017-10-03T13:35:19Z"
+		},
+		{
 			"checksumSHA1": "70JYmBNhbn7E46Bk1F6zRppWnDg=",
 			"path": "github.com/orcaman/concurrent-map",
 			"revision": "2ae17bc4c860c83513ee50feb9746f3e50d7515d",
@@ -622,6 +634,12 @@
 			"path": "github.com/rs/cors",
 			"revision": "eabcc6af4bbe5ad3a949d36450326a2b0b9894b8",
 			"revisionTime": "2017-08-01T07:32:01Z"
+		},
+		{
+			"checksumSHA1": "UwtyqB7CaUWPlw0DVJQvw0IFQZs=",
+			"path": "github.com/sergi/go-diff/diffmatchpatch",
+			"revision": "2fc9cd33b5f86077aa3e0f442fa0476a9fa9a1dc",
+			"revisionTime": "2017-11-04T09:03:01Z"
 		},
 		{
 			"checksumSHA1": "AikWjAOvWHSJ8G1iU+wNReZnyCk=",
@@ -1134,6 +1152,12 @@
 			"revisionTime": "2017-07-26T17:50:56Z"
 		},
 		{
+			"checksumSHA1": "CEFTYXtWmgSh+3Ik1NmDaJcz4E0=",
+			"path": "gopkg.in/check.v1",
+			"revision": "20d25e2804050c1cd24a7eea1e7a6447dd0e74ec",
+			"revisionTime": "2016-12-08T18:13:25Z"
+		},
+		{
 			"checksumSHA1": "NGg7/qIJVUfXi7xnEyyDLocdi6Y=",
 			"path": "gopkg.in/fatih/set.v0",
 			"revision": "27c40922c40b43fe04554d8223a402af3ea333f3",
@@ -1152,5 +1176,5 @@
 			"revisionTime": "2016-09-28T15:37:09Z"
 		}
 	],
-	"rootPath": "hyperchain"
+	"rootPath": "github.com/hyperchain/hyperchain"
 }

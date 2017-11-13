@@ -3,8 +3,8 @@ package version1_3
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/willf/bloom"
-	"hyperchain/common"
 	"math/big"
 )
 

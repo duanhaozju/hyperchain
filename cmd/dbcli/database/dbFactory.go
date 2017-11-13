@@ -1,7 +1,7 @@
 package database
 
 import (
-	"hyperchain/cmd/dbcli/constant"
+	"github.com/hyperchain/hyperchain/cmd/dbcli/constant"
 )
 
 func DBFactory(db, path string) (Database, error) {

@@ -16,7 +16,7 @@
 package evm
 
 import (
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"math/big"
 	"reflect"
 	"testing"

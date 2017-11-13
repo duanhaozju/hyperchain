@@ -3,8 +3,8 @@ package versionAccount
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/common"
-	"hyperchain/core/state"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
 	"math/big"
 	"strings"
 )
@@ -55,9 +55,9 @@ func (account *Account) Encode(address string) string {
 		Creator:           account.Creator.Hex(),
 		CreateTime:        account.CreateTime,
 	}
-	if account.Status == state.STATEOBJECT_STATUS_NORMAL {
+	if account.Status == state.OBJ_NORMAL {
 		accountView.Status = "normal"
-	} else if account.Status == state.STATEOBJECT_STATUS_FROZON {
+	} else if account.Status == state.OBJ_FROZON {
 		accountView.Status = "frozen"
 	}
 	accounts[address] = accountView
@@ -81,9 +81,9 @@ func (account *Account) EncodeVerbose(address string, code string) string {
 		CreateTime:        account.CreateTime,
 		Code:              code,
 	}
-	if account.Status == state.STATEOBJECT_STATUS_NORMAL {
+	if account.Status == state.OBJ_NORMAL {
 		accountVerboseView.Status = "normal"
-	} else if account.Status == state.STATEOBJECT_STATUS_FROZON {
+	} else if account.Status == state.OBJ_FROZON {
 		accountVerboseView.Status = "frozen"
 	}
 	accountVerboseView.Storage = make(map[string]string)

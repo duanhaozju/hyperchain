@@ -2,10 +2,10 @@ package msg
 
 import "fmt"
 import (
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p/hts"
+	pb "github.com/hyperchain/hyperchain/p2p/message"
 	"github.com/pkg/errors"
-	"hyperchain/manager/event"
-	"hyperchain/p2p/hts"
-	pb "hyperchain/p2p/message"
 )
 
 type AttendMsgHandler struct {

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math/big"
 	"testing"
-	//"hyperchain/crypto"
+	//"github.com/hyperchain/hyperchain/crypto"
 	//"github.com/astaxie/beego/toolbox"
 )
 
@@ -198,23 +198,6 @@ func Test_hmencryption(t *testing.T) {
 }
 
 func Test_Big(t *testing.T) {
-	//old := big.NewInt(500)
-	//fmt.Println(old)
-	//
-	//old_byte := old.Bytes()
-	////将byte[]转为大整数
-	//big := new(big.Int)
-	//big.SetBytes(old_byte)
-	//fmt.Println(big)
-	//
-	////bigint类型转字符串类型，10进制
-	//ss := old.String()
-	////将字符串类型按10进制转为大整数类型
-	//
-	//bigint,_:=big.SetString(ss,10)
-	//fmt.Println(ss)
-	//fmt.Println(bigint)
-
 	transfer := new(big.Int)
 
 	transfer.SetString("183003357837956770250501280563466144409", 10)
@@ -236,11 +219,3 @@ func Test_Big(t *testing.T) {
 	fmt.Println(len(mul.String()))
 	fmt.Println(mod)
 }
-
-//func Test_createccpub(t *testing.T){
-//	x := new(big.Int)
-//	y := new(big.Int)
-//
-//
-//
-//}

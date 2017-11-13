@@ -47,7 +47,7 @@ package rbft
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import types "hyperchain/core/types"
+import types "github.com/hyperchain/hyperchain/core/types"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal

@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/op/go-logging"
-	"hyperchain/api"
-	"hyperchain/common"
 	"reflect"
 	"strings"
+
+	"github.com/hyperchain/hyperchain/api"
+	"github.com/hyperchain/hyperchain/common"
+
+	"github.com/op/go-logging"
 )
 
 type RequestProcessor interface {
@@ -27,40 +29,23 @@ type JsonRpcProcessorImpl struct {
 	namespace string
 
 	// apis this namespace provides.
-	apis      map[string]*api.API
-
-	// remote apis, registered at the creation
-	rapis	  map[string]*api.API
+	apis map[string]*api.API
 
 	// register the apis of this namespace to this processor.
-	services  serviceRegistry
-
-	// remote services
-	rservices serviceRegistry
+	services serviceRegistry
 
 	// logger implementation
-	logger    *logging.Logger
-
-	//remote ip
-	rip  	  string
-
-	//remote port
-	rport 	  int
+	logger *logging.Logger
 }
 
 // NewJsonRpcProcessorImpl creates a new JsonRpcProcessorImpl instance for given namespace and apis.
-func NewJsonRpcProcessorImpl(namespace string, apis map[string]*api.API, rapis map[string]*api.API, rip string, rport int) *JsonRpcProcessorImpl {
+func NewJsonRpcProcessorImpl(namespace string, apis map[string]*api.API) *JsonRpcProcessorImpl {
 	jpri := &JsonRpcProcessorImpl{
 		namespace: namespace,
 		apis:      apis,
-		rapis: 	   rapis,
 		services:  make(serviceRegistry),
-		rservices: make(serviceRegistry),
 		logger:    common.GetLogger(namespace, "rpc"),
-		rip:       rip,
-		rport: 	   rport,
 	}
-	jpri.logger.Critical(rport)
 	return jpri
 }
 
@@ -68,12 +53,6 @@ func NewJsonRpcProcessorImpl(namespace string, apis map[string]*api.API, rapis m
 func (jrpi *JsonRpcProcessorImpl) Start() error {
 	err := jrpi.registerAllAPIService()
 	if err != nil {
-		jrpi.logger.Errorf("Failed to start JSON-RPC processor of namespace %s .", jrpi.namespace)
-		return err
-	}
-
-	err = jrpi.registerAllRemoteAPIService()
-	if err != nil && err != ErrNoRemoteApis {
 		jrpi.logger.Errorf("Failed to start JSON-RPC processor of namespace %s .", jrpi.namespace)
 		return err
 	}
@@ -98,23 +77,8 @@ func (jrpi *JsonRpcProcessorImpl) registerAllAPIService() error {
 		return ErrNoApis
 	}
 	for _, api := range jrpi.apis {
-		if err := jrpi.registerAPIService(api.Svcname, api.Service, false); err != nil {
-			jrpi.logger.Errorf("registerAPIService error: %v ", err)
-			return err
-		}
-	}
-
-	return nil
-}
-
-//register all remote apis.
-func (jrpi *JsonRpcProcessorImpl) registerAllRemoteAPIService() error {
-	if jrpi.rapis == nil || len(jrpi.rapis) == 0 {
-		return ErrNoRemoteApis
-	}
-	for _, rapi := range jrpi.rapis {
-		if err := jrpi.registerAPIService(rapi.Svcname, rapi.Service, true); err != nil {
-			jrpi.logger.Errorf("registerRemoteAPIService error: %v ", err)
+		if err := jrpi.registerAPIService(api.Svcname, api.Service); err != nil {
+			jrpi.logger.Errorf("registerAPIService error: %s", err)
 			return err
 		}
 	}
@@ -126,7 +90,7 @@ func (jrpi *JsonRpcProcessorImpl) registerAllRemoteAPIService() error {
 // When no methods on the given rcvr match the criteria to be either a RPC method or a
 // subscription, then an error is returned. Otherwise a new service is created and added to
 // the service collection this server instance serves.
-func (jrpi *JsonRpcProcessorImpl) registerAPIService(svcname string, rcvr interface{}, remote bool) error {
+func (jrpi *JsonRpcProcessorImpl) registerAPIService(svcname string, rcvr interface{}) error {
 	svc := new(service)
 	svc.typ = reflect.TypeOf(rcvr)
 	rcvrVal := reflect.ValueOf(rcvr)
@@ -162,11 +126,7 @@ func (jrpi *JsonRpcProcessorImpl) registerAPIService(svcname string, rcvr interf
 	}
 
 	svc.callbacks, svc.subscriptions = callbacks, subscriptions
-	if(remote) {
-		jrpi.rservices[svc.name] = svc
-	}else{
-		jrpi.services[svc.name] = svc
-	}
+	jrpi.services[svc.name] = svc
 	return nil
 }
 
@@ -192,27 +152,9 @@ func (jrpi *JsonRpcProcessorImpl) checkRequestParams(req *common.RPCRequest) *se
 
 	// If the given rpc method isn't available, return error.
 	if svc, ok = jrpi.services[req.Service]; !ok {
-		//justice whether the service is in another module.
-		if svc, ok = jrpi.rservices[req.Service]; !ok {
-			jrpi.logger.Debugf("No service named %s was found.", req.Service)
-			sr = &serverRequest{id: req.Id, err: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
-			return sr
-		}else {
-			if _, ok := svc.callbacks[req.Method]; ok {//justice whether the method is in the other module.
-				dispatherRequest := &common.APIInAnotherModule{
-					Port: jrpi.rport,
-					Ip: jrpi.rip,
-					Service: req.Service,
-					Method: req.Method,
-				}
-				jrpi.logger.Debugf("Service %s_%s is served in another module.", req.Service, req.Method)
-				sr = &serverRequest{id: req.Id, err: dispatherRequest}
-				return sr
-			}else {
-				sr = &serverRequest{id: req.Id, err: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
-				return sr
-			}
-		}
+		jrpi.logger.Debugf("No service named %s was found.", req.Service)
+		sr = &serverRequest{id: req.Id, err: &common.MethodNotFoundError{Service: req.Service, Method: req.Method}}
+		return sr
 	}
 
 	// For sub_subscribe, req.method contains the subscription method name.
@@ -301,7 +243,7 @@ func (jrpi *JsonRpcProcessorImpl) parsePositionalArguments(args json.RawMessage,
 	for i, p := range params {
 		// verify that JSON null values are only supplied for optional arguments (ptr types)
 		if p == nil && callbackArgs[i].Kind() != reflect.Ptr {
-			errMsg := fmt.Sprintf("invalid or missing value for params[%d], %v---%v", i, p, callbackArgs[i].Kind())
+			errMsg := fmt.Sprintf("invalid or missing value for params[%d]", i)
 			jrpi.logger.Info(errMsg)
 			return nil, &common.InvalidParamsError{Message: errMsg}
 		}
@@ -341,8 +283,7 @@ func (jrpi *JsonRpcProcessorImpl) handle(ctx context.Context, req *serverRequest
 
 			return cres, nil
 		}
-		return jrpi.CreateErrorResponse(&req.id, &common.InvalidParamsError{Message:
-			"Expected subscription id as first argument"}), nil
+		return jrpi.CreateErrorResponse(&req.id, &common.InvalidParamsError{Message: "Expected subscription id as first argument"}), nil
 	}
 
 	if req.callb.isSubscribe {

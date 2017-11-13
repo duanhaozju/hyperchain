@@ -11,15 +11,18 @@ import (
 
 func TestGetStatus(t *testing.T) {
 	ast := assert.New(t)
-	rbft := new(rbftImpl)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
 
-	rbft.normal = uint32(1)
-	rbft.poolFull = uint32(1)
+	rbft.setNormal()
+	rbft.setFull()
 	n, f := rbft.GetStatus()
 	ast.Equal(true, n, "GetStatus failed")
 	ast.Equal(true, f, "GetStatus failed")
 
-	rbft.poolFull = uint32(0)
+	rbft.setNotFull()
 	_, f = rbft.GetStatus()
 	ast.Equal(false, f, "GetStatus failed")
 }

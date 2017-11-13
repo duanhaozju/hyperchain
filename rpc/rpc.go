@@ -1,10 +1,10 @@
 package jsonrpc
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/ipc"
+	"github.com/hyperchain/hyperchain/namespace"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/common/interface"
-	"hyperchain/ipc"
 	"sync"
 )
 
@@ -40,17 +40,18 @@ type RPCServerImpl struct {
 }
 
 // GetRPCServer creates and returns a new RPCServerImpl instance implements RPCServer interface.
-func GetRPCServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, is_executor bool) RPCServer {
-	//TODO: implements singleton
+func GetRPCServer(nr namespace.NamespaceManager, config *common.Config) RPCServer {
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
-	rpcs = newRPCServer(nsMgrProcessor, config, is_executor)
+	once.Do(func() {
+		rpcs = newRPCServer(nr, config)
+	})
 	return rpcs
 }
 
-func newRPCServer(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, is_executor bool) *RPCServerImpl {
+func newRPCServer(nr namespace.NamespaceManager, config *common.Config) *RPCServerImpl {
 	rsi := &RPCServerImpl{}
-	rsi.httpServer = GetHttpServer(nsMgrProcessor, config, is_executor)
-	rsi.wsServer = GetWSServer(nsMgrProcessor, config, is_executor)
+	rsi.httpServer = GetHttpServer(nr, config)
+	rsi.wsServer = GetWSServer(nr, config)
 
 	ipc.RegisterFunc("service", rsi.Command)
 	return rsi

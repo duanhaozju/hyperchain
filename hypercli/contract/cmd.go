@@ -1,25 +1,29 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package contract
 
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	"github.com/urfave/cli"
-	"hyperchain/core/types"
-	"hyperchain/hypercli/common"
 	"io/ioutil"
 	"math/rand"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hypercli/common"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/urfave/cli"
 )
 
+// commonFlags defines some common flags used in contract cmd.
 var commonFlags = []cli.Flag{
 	cli.BoolFlag{
 		Name:  "jvm, j",
-		Usage: "specify how the contract is generated, false is solidity, true is jvm",
+		Usage: "specify how the contract is generated, false is evm, true is jvm",
 	},
 	cli.StringFlag{
 		Name:  "namespace, n",
@@ -36,9 +40,14 @@ var commonFlags = []cli.Flag{
 		Value: "",
 		Usage: "specify the contract payload",
 	},
+	cli.StringFlag{
+		Name:  "extra, e",
+		Value: "",
+		Usage: "specify the extra information",
+	},
 }
 
-//NewContractCMD new contract related commands.
+// NewContractCMD new contract related commands.
 func NewContractCMD() []cli.Command {
 	return []cli.Command{
 		{
@@ -158,10 +167,9 @@ func NewContractCMD() []cli.Command {
 	}
 }
 
-// deploy implements deploy contract and return the transaction receipt
+// deploy implements deploy contract and prints the transaction receipt.
 func deploy(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
-	ExecutorClient := common.NewRpcClient(c.GlobalString("exehost"), c.GlobalString("exeport"))
 	var deployCmd string
 	method := "contract_deployContract"
 	if c.String("deploycmd") != "" {
@@ -170,23 +178,16 @@ func deploy(c *cli.Context) error {
 		deployParams := []string{"from", "payload"}
 		deployCmd = getCmd(method, deployParams, 0, c)
 	}
-	fmt.Println(deployCmd)
+
 	result, err := client.Call(deployCmd, method)
 	if err != nil {
 		fmt.Println("Error in call deploy cmd request")
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	//fmt.Println(result.Result)
 
 	txHash := getTransactionHash(result)
 	err = common.GetTransactionReceipt(txHash, c.String("namespace"), client)
-	if err != nil {
-		if strings.Contains(err.Error(), "is served at") {
-			err = common.GetTransactionReceipt(txHash, c.String("namespace"), ExecutorClient)
-		}
-	}
-
 	if err != nil {
 		fmt.Println("Error in call get transaction receipt")
 		fmt.Println(err)
@@ -196,10 +197,9 @@ func deploy(c *cli.Context) error {
 	return nil
 }
 
-// invoke implements invoke contract and return the transaction receipt
+// invoke implements invoke contract and prints the transaction receipt.
 func invoke(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
-	remoteClient := common.NewRpcClient(c.GlobalString("exehost"), c.GlobalString("exeport"))
 	var invokeCmd string
 	method := "contract_invokeContract"
 	if c.String("invokecmd") != "" {
@@ -208,23 +208,16 @@ func invoke(c *cli.Context) error {
 		invokeParams := []string{"from", "to", "payload", "args"}
 		invokeCmd = getCmd(method, invokeParams, 0, c)
 	}
-	//fmt.Println(invokeCmd)
+
 	result, err := client.Call(invokeCmd, method)
 	if err != nil {
 		fmt.Println("Error in call invoke cmd request")
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	//fmt.Println(result.Result)
 
 	txHash := getTransactionHash(result)
 	err = common.GetTransactionReceipt(txHash, c.String("namespace"), client)
-	if err != nil {
-		if strings.Contains(err.Error(), "is served at") {
-			err = common.GetTransactionReceipt(txHash, c.String("namespace"), remoteClient)
-		}
-	}
-
 	if err != nil {
 		fmt.Println("Error in call get transaction receipt")
 		fmt.Println(err)
@@ -234,7 +227,7 @@ func invoke(c *cli.Context) error {
 	return nil
 }
 
-// update updates the contract
+// update updates the contract.
 func update(c *cli.Context) error {
 	if err := maintain(c, 1, "updatecmd"); err != nil {
 		fmt.Println("Error in update contract!")
@@ -244,7 +237,7 @@ func update(c *cli.Context) error {
 	return nil
 }
 
-// frozen frozen the contract
+// frozen frozen the contract.
 func frozen(c *cli.Context) error {
 	if err := maintain(c, 2, "frozencmd"); err != nil {
 		fmt.Println("Error in frozen contract!")
@@ -254,7 +247,7 @@ func frozen(c *cli.Context) error {
 	return nil
 }
 
-// unfrozen unfrozen the contract
+// unfrozen unfrozen the contract.
 func unfrozen(c *cli.Context) error {
 	if err := maintain(c, 3, "unfrozencmd"); err != nil {
 		fmt.Println("Error in unfrozen contract!")
@@ -264,7 +257,7 @@ func unfrozen(c *cli.Context) error {
 	return nil
 }
 
-// destroy destroys the contract
+// destroy destroys the contract.
 func destroy(c *cli.Context) error {
 	if err := maintain(c, 4, "destroycmd"); err != nil {
 		fmt.Println("Error in destroy contract!")
@@ -274,11 +267,9 @@ func destroy(c *cli.Context) error {
 	return nil
 }
 
-// maintain implements maintain methods with specified opcode and return the transaction receipt
+// maintain implements maintain methods with specified opcode and prints the transaction receipt.
 func maintain(c *cli.Context, opcode int32, maintainMethod string) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
-	remoteClient := common.NewRpcClient(c.GlobalString("exehost"), c.GlobalString("exeport"))
-
 	var maintainCmd string
 	method := "contract_maintainContract"
 	if c.String(maintainMethod) != "" {
@@ -287,31 +278,24 @@ func maintain(c *cli.Context, opcode int32, maintainMethod string) error {
 		maintainParams := []string{"from", "to", "payload", "opcode"}
 		maintainCmd = getCmd(method, maintainParams, opcode, c)
 	}
-	//fmt.Println(maintainCmd)
+
 	result, err := client.Call(maintainCmd, method)
 	if err != nil {
 		fmt.Printf("Error in call %s request\n", maintainCmd)
 		return err
 	}
-	//fmt.Print(result.Result)
 
 	txHash := getTransactionHash(result)
 	err = common.GetTransactionReceipt(txHash, c.String("namespace"), client)
 	if err != nil {
-		if strings.Contains(err.Error(), "is served at") {
-			err = common.GetTransactionReceipt(txHash, c.String("namespace"), remoteClient)
-		}
-	}
-
-	if err != nil {
 		fmt.Println("Error in call get transaction receipt")
-		fmt.Println(err)
-		os.Exit(1)
+		return err
 	}
 
 	return nil
 }
 
+// getCmd returns the jsonrpc string with the given params...
 func getCmd(method string, need_params []string, opcode int32, c *cli.Context) string {
 	namespace := c.String("namespace")
 	var from, to, invokemethod, arg string
@@ -330,6 +314,9 @@ func getCmd(method string, need_params []string, opcode int32, c *cli.Context) s
 			params = params + ","
 		}
 		switch param {
+		// For evm contract, user must directly input the complete contract payload
+		// For jvm contract, user must input a contract directory which can be used
+		// to generate jvm contract payload.
 		case "payload":
 			if c.Bool("jvm") {
 				if method == "contract_deployContract" || opcode == 1 {
@@ -346,18 +333,27 @@ func getCmd(method string, need_params []string, opcode int32, c *cli.Context) s
 				code = []byte(common.GetNonEmptyValueByName(c, "payload"))
 			}
 
+		// from is the sender of the contract, user can input a useful account
+		// address, or we will use the default account.
 		case "from":
 			from = c.String("from")
 			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, from)
 
-		//below params must be input by user
+		// below params must be input by user.
+
+		// to specifies the contract address we will invoke to.
 		case "to":
 			to = common.GetNonEmptyValueByName(c, "to")
 			params = params + fmt.Sprintf("\"%s\":\"%s\"", param, to)
 
+		// opcode is the identification of contract maintain:
+		// 1 for update
+		// 2 for frozen
+		// 3 for unfrozen
 		case "opcode":
 			params = params + fmt.Sprintf("\"%s\":%d", param, opcode)
 
+		// args is only used in contract invoke which specifies the invoke args.
 		case "args":
 			if c.Bool("jvm") {
 				arg = common.GetNonEmptyValueByName(c, "args")
@@ -372,6 +368,7 @@ func getCmd(method string, need_params []string, opcode int32, c *cli.Context) s
 			os.Exit(1)
 		}
 	}
+	// jvm contract
 	if c.Bool("jvm") {
 		params = params + "," + fmt.Sprint("\"type\":\"jvm\"")
 	}
@@ -412,14 +409,22 @@ func getCmd(method string, need_params []string, opcode int32, c *cli.Context) s
 	signature := "00" + hex.EncodeToString(sig)
 	params = params + "," + fmt.Sprintf("\"signature\":\"%s\"", signature)
 
+	// extra string
+	if c.String("extra") != "" {
+		params = params + "," + fmt.Sprintf("\"extra\":\"%s\"", c.String("extra"))
+	}
+
 	// end of params
 	params = params + "}]"
 
-	return fmt.Sprintf(
+	cmd := fmt.Sprintf(
 		"{\"jsonrpc\":\"2.0\",\"namespace\":\"%s\",\"method\":\"%s\",\"params\":%s,\"id\":1}",
 		namespace, method, params)
+	return cmd
 }
 
+// getPayloadFromPath firsts compresses the given dir, and then reads into
+// the archive to []byte.
 func getPayloadFromPath(dir string) []byte {
 	target := "contract.tar.gz"
 	common.Compress(dir, target)
@@ -434,6 +439,7 @@ func getPayloadFromPath(dir string) []byte {
 	return buf
 }
 
+// getTransactionHash returns the transaction hash using the given http response.
 func getTransactionHash(result string) string {
 	response, err := common.GetJSONResponse(result)
 	if err != nil {

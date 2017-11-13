@@ -1,8 +1,8 @@
 package csprng
 
 import (
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/stretchr/testify/assert"
-	"hyperchain/common"
 	"testing"
 )
 

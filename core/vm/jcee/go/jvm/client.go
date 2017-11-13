@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
+	pb "github.com/hyperchain/hyperchain/core/vm/jcee/protos"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
-	"hyperchain/common"
-	pb "hyperchain/core/vm/jcee/protos"
 	"time"
 )
 
@@ -31,7 +31,7 @@ func (c *Client) Connect() error {
 	retryTime := 10
 	for ; c.stream == nil && retryTime > 0; retryTime-- {
 		c.addr = fmt.Sprintf("localhost:%s", c.config.GetString(common.JVM_PORT))
-		c.logger.Criticalf("%d times try to connect to %s", retryTime, c.addr)
+		c.logger.Debugf("%d times try to connect to %s", retryTime, c.addr)
 		conn, err := grpc.Dial(c.addr, grpc.WithInsecure())
 		if err != nil {
 			continue
@@ -49,8 +49,12 @@ func (c *Client) Connect() error {
 		}
 		return nil
 	}
-	c.stream = nil
-	return fmt.Errorf("jvm client connect to server failed")
+	if c.stream == nil {
+		return nil
+	} else {
+		c.stream = nil
+		return fmt.Errorf("jvm client connect to server failed")
+	}
 }
 
 func (c *Client) sendMsg(msg *pb.Message) error {

@@ -14,12 +14,14 @@
 package executor
 
 import (
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
 	"sync/atomic"
+
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/event"
 )
 
+// Cache represents the caches that used in executor.
 type Cache struct {
 	validationEventC        chan event.ValidationEvent // validation event buffer
 	commitEventC            chan event.CommitEvent     // commit event buffer
@@ -29,39 +31,44 @@ type Cache struct {
 	replicaInfoCache        *common.Cache              // cache for storing replica info
 }
 
+// Peer stores the ip and port of a peer that used in replicaInCache.
 type Peer struct {
 	Ip   string
 	Port int32
 }
 
-func initializeExecutorCache(executor *Executor) error {
+// newExecutorCache creates the cache for executor.
+func newExecutorCache() *Cache {
+	cache := &Cache{
+		validationEventC: make(chan event.ValidationEvent, VALIDATEQUEUESIZE),
+		commitEventC:     make(chan event.CommitEvent, COMMITQUEUESIZE),
+	}
 	validationResC, _ := common.NewCache()
-	executor.cache.validationResultCache = validationResC
+	cache.validationResultCache = validationResC
 	validationEventQ, _ := common.NewCache()
-	executor.cache.pendingValidationEventQ = validationEventQ
+	cache.pendingValidationEventQ = validationEventQ
 	syncCache, _ := common.NewCache()
-	executor.cache.syncCache = syncCache
+	cache.syncCache = syncCache
 	replicaCache, _ := common.NewCache()
-	executor.cache.replicaInfoCache = replicaCache
-	executor.cache.validationEventC = make(chan event.ValidationEvent, VALIDATEQUEUESIZE)
-	executor.cache.commitEventC = make(chan event.CommitEvent, COMMITQUEUESIZE)
-	return nil
+	cache.replicaInfoCache = replicaCache
+
+	return cache
 }
 
-// PurgeCache - purge executor cache.
-func (executor *Executor) PurgeCache() {
+// purgeCache purges executor cache.
+func (executor *Executor) purgeCache() {
 	executor.cache.validationResultCache.Purge()
 	executor.clearPendingValidationEventQ()
 	executor.logger.Debugf("[Namespace = %s] purge validation result cache and validation event cache success", executor.namespace)
 }
 
-// addPendingValidationEvent - push a validation event to pending queue.
+// addPendingValidationEvent pushes a validation event to pending queue.
 func (executor *Executor) addPendingValidationEvent(validationEvent event.ValidationEvent) {
-	executor.logger.Warningf("[Namespace = %s] receive validation event %d while %d is required, save into cache temporarily.", executor.namespace, validationEvent.SeqNo, executor.getDemand(DemandSeqNo))
+	executor.logger.Warningf("[Namespace = %s] receive validation event %d while %d is required, save into cache temporarily.", executor.namespace, validationEvent.SeqNo, executor.context.getDemand(DemandSeqNo))
 	executor.cache.pendingValidationEventQ.Add(validationEvent.SeqNo, validationEvent)
 }
 
-// fetchPendingValidationEvent - fetch a validation event in pending queue via seqNo, return false if not exist.
+// fetchPendingValidationEvent fetches a validation event in pending queue via seqNo, return false if not exist.
 func (executor *Executor) fetchPendingValidationEvent(seqNo uint64) (event.ValidationEvent, bool) {
 	res, existed := executor.cache.pendingValidationEventQ.Get(seqNo)
 	if existed == false {
@@ -71,24 +78,24 @@ func (executor *Executor) fetchPendingValidationEvent(seqNo uint64) (event.Valid
 	return ev, true
 }
 
-// pendingValidationEventQLen - retrieve pending validation event queue length.
+// pendingValidationEventQLen retrieves the length of pending validation event queue.
 func (executor *Executor) pendingValidationEventQLen() int {
 	return executor.cache.pendingValidationEventQ.Len()
 }
 
-// clearPendingValidationEventQ - purge validation event q.
+// clearPendingValidationEventQ purges validation event queue.
 func (executor *Executor) clearPendingValidationEventQ() {
 	length := executor.pendingValidationEventQLen()
 	executor.cache.pendingValidationEventQ.Purge()
 	atomic.AddInt32(&executor.context.validateQueueLen, -1*int32(length))
 }
 
-// addValidationResult - save a validation result to cache.
+// addValidationResult saves a validation result to cache.
 func (executor *Executor) addValidationResult(tag ValidationTag, res *ValidationResultRecord) {
 	executor.cache.validationResultCache.Add(tag, res)
 }
 
-// fetchValidationResult - fetch a validation result via hash.
+// fetchValidationResult fetches the validation result with given hash.
 func (executor *Executor) fetchValidationResult(tag ValidationTag) (*ValidationResultRecord, bool) {
 	v, existed := executor.cache.validationResultCache.Get(tag)
 	if existed == false {
@@ -97,41 +104,41 @@ func (executor *Executor) fetchValidationResult(tag ValidationTag) (*ValidationR
 	return v.(*ValidationResultRecord), true
 }
 
-// addValidationEvent - push a validation event to channel buffer.
+// addValidationEvent pushes a validation event to channel buffer.
 func (executor *Executor) addValidationEvent(ev event.ValidationEvent) {
 	executor.cache.validationEventC <- ev
 	atomic.AddInt32(&executor.context.validateQueueLen, 1)
 	executor.logger.Debugf("[Namespace = %s] receive a validation event #%d", executor.namespace, ev.SeqNo)
 }
 
-// fetchValidationEvent - got a validation event from channel buffer.
+// fetchValidationEvent fetches a validation event from channel buffer.
 func (executor *Executor) fetchValidationEvent() chan event.ValidationEvent {
 	return executor.cache.validationEventC
 }
 
-// processValidationDone - validation finish callback.
+// processValidationDone is the callback func after validation process finished.
 func (executor *Executor) processValidationDone() {
 	atomic.AddInt32(&executor.context.validateQueueLen, -1)
 }
 
-// addCommitEvent - push a commit event to channel buffer.
+// addCommitEvent pushes a commit event to channel buffer.
 func (executor *Executor) addCommitEvent(ev event.CommitEvent) {
 	executor.cache.commitEventC <- ev
 	atomic.AddInt32(&executor.context.commitQueueLen, 1)
 	executor.logger.Debugf("[Namespace = %s] receive a commit event #%d", executor.namespace, ev.SeqNo)
 }
 
-// fetchCommitEvent - got a commit event from channel buffer.
+// fetchCommitEvent fetches a commit event from channel buffer.
 func (executor *Executor) fetchCommitEvent() chan event.CommitEvent {
 	return executor.cache.commitEventC
 }
 
-// processCommitDone - commit process finish callback.
+// processCommitDone is the callback func after commit process finished.
 func (executor *Executor) processCommitDone() {
 	atomic.AddInt32(&executor.context.commitQueueLen, -1)
 }
 
-// addToSyncCache - add a block to cache which arrives earlier than expect.
+// addToSyncCache adds a block to cache which arrives earlier than expect.
 func (executor *Executor) addToSyncCache(block *types.Block) {
 	blks, existed := executor.fetchFromSyncCache(block.Number)
 	if existed {
@@ -149,7 +156,7 @@ func (executor *Executor) addToSyncCache(block *types.Block) {
 	}
 }
 
-// fetchFromSyncCache - fetch blocks from sync cache.
+// fetchFromSyncCache fetches blocks from sync cache.
 func (executor *Executor) fetchFromSyncCache(number uint64) (map[string]types.Block, bool) {
 	ret, existed := executor.cache.syncCache.Get(number)
 	if !existed {
@@ -159,7 +166,7 @@ func (executor *Executor) fetchFromSyncCache(number uint64) (map[string]types.Bl
 	return blks, true
 }
 
-// addToReplicaCache - push a replica status to cache with ip and port as flag.
+// addToReplicaCache pushes a replica status to cache with ip and port as flag.
 func (executor *Executor) addToReplicaCache(ip string, port int32, chain *types.Chain) {
 	executor.cache.replicaInfoCache.Add(Peer{
 		Ip:   ip,
@@ -167,7 +174,7 @@ func (executor *Executor) addToReplicaCache(ip string, port int32, chain *types.
 	}, chain)
 }
 
-// fetchFromReplicaCache - fetch a replica's status from cache with ip and port as key.
+// fetchFromReplicaCache fetches a replica's status from cache with ip and port as key.
 func (executor *Executor) fetchFromReplicaCache(ip string, port int32) (*types.Chain, bool) {
 	v, existed := executor.cache.replicaInfoCache.Get(Peer{
 		Ip:   ip,

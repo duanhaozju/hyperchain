@@ -11,46 +11,48 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
+// Snapshot manger manages all state snapshots of the local node.
+// 1. What is snapshot?
+// Snapshot refers to a file backup of the local world state(All account status collection)
+// 2. Why we need snapshot?
+// In hyperchain, data archives are based on state snapshots. So before the blockchain archive,
+// a valid state snapshot is required.
 package executor
 
 import (
-	"github.com/op/go-logging"
-	"hyperchain/common"
-	cm "hyperchain/core/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/ledger/state"
-	"hyperchain/hyperdb"
-	"hyperchain/manager/event"
 	"os"
 	cmd "os/exec"
 	"path"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"github.com/hyperchain/hyperchain/common"
+	cm "github.com/hyperchain/hyperchain/core/common"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/manager/event"
+
+	"github.com/op/go-logging"
 )
 
-// snapshot service's entry point
+// Snapshot creates a state snapshot in the specified block height.
+// Note, the specified block height must not less than current chain height.
 func (executor *Executor) Snapshot(ev event.SnapshotEvent) {
 	executor.snapshotReg.Snapshot(ev)
 }
 
-func (executor *Executor) DeleteSnapshot(ev event.DeleteSnapEvent) error {
-	cont := make(chan error)
-	even :=  event.DeleteSnapshotEvent{
-			FilterId: ev.FilterId,
-			Cont:     cont,
-		}
-	executor.snapshotReg.DeleteSnapshot(even)
-	err := <-cont
-	if err != nil {
-		return err
-	} else {
-		return nil
-	}
+// DeleteSnapshot deletes a snapshot with specified snapshot name.
+// Note, if the specified snapshot is current genesis, the deletion will been regarded
+// as an invalid operation.
+func (executor *Executor) DeleteSnapshot(ev event.DeleteSnapshotEvent) {
+	executor.snapshotReg.DeleteSnapshot(ev)
 }
 
-// Insert a snapshot to local registry.(may receive from the network)
-func (executor *Executor) InsertSnapshot(meta common.Manifest) {
+// InsertSnapshot inserts a snapshot to local storage. The snapshot may received from network.
+func (executor *Executor) InsertSnapshot(meta cm.Manifest) {
 	executor.snapshotReg.Insert(meta)
 }
 
@@ -64,7 +66,7 @@ type SnapshotRegistry struct {
 	exitC     chan struct{}
 	executor  *Executor
 	mu        sync.Mutex
-	rwc       common.ManifestRWC
+	rw        cm.ManifestRW
 }
 
 func NewSnapshotRegistry(namespace string, logger *logging.Logger, executor *Executor) *SnapshotRegistry {
@@ -75,7 +77,7 @@ func NewSnapshotRegistry(namespace string, logger *logging.Logger, executor *Exe
 		newBlockC: make(chan uint64),
 		exitC:     make(chan struct{}),
 		executor:  executor,
-		rwc:       common.NewManifestHandler(executor.conf.GetManifestPath()),
+		rw:        cm.NewManifestHandler(executor.conf.GetManifestPath()),
 	}
 }
 
@@ -112,7 +114,7 @@ func (registry *SnapshotRegistry) DeleteSnapshot(event event.DeleteSnapshotEvent
 		event.Cont <- InvalidSnapshotDeletionErr
 		return
 	} else {
-		if !registry.rwc.Contain(event.FilterId) {
+		if !registry.rw.Contain(event.FilterId) {
 			registry.feedback(FILTER_DELETE_SNAPSHOT, false, event.FilterId, SnapshotNotExistMsg)
 			event.Cont <- SnapshotDoesntExistErr
 			return
@@ -123,7 +125,7 @@ func (registry *SnapshotRegistry) DeleteSnapshot(event event.DeleteSnapshotEvent
 				event.Cont <- DeleteSnapshotFailedErr
 				return
 			}
-			if err := registry.rwc.Delete(event.FilterId); err != nil {
+			if err := registry.rw.Delete(event.FilterId); err != nil {
 				registry.feedback(FILTER_DELETE_SNAPSHOT, false, event.FilterId, DeleteSnapshotMsg)
 				event.Cont <- DeleteSnapshotFailedErr
 				return
@@ -142,7 +144,7 @@ func (registry *SnapshotRegistry) CompressedSnapshotPath(filterId string) string
 	return path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf.conf), "snapshots", registry.snapshotId(filterId)+".tar.gz")
 }
 
-func (registry *SnapshotRegistry) Insert(meta common.Manifest) {
+func (registry *SnapshotRegistry) Insert(meta cm.Manifest) {
 	sdir := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf.conf), "snapshots")
 	if _, err := os.Stat(sdir); os.IsNotExist(err) {
 		c := cmd.Command("mkdir", "-p", sdir)
@@ -161,7 +163,7 @@ func (registry *SnapshotRegistry) Insert(meta common.Manifest) {
 		return
 	}
 
-	if err := registry.rwc.Write(meta); err != nil {
+	if err := registry.rw.Write(meta); err != nil {
 		registry.logger.Warningf("insert snapshost %s failed. reason %s", meta.FilterId, err.Error())
 	}
 	registry.logger.Noticef("insert snapshost %s success", meta.FilterId)
@@ -181,7 +183,8 @@ func (registry *SnapshotRegistry) executeImmediately(ev event.SnapshotEvent) {
 	}
 }
 
-// addRequest save snapshot request into pending queue, wait for condition trigger.
+// addRequest saves snapshot request into pending queue, wait for condition trigger.
+// TODO write journal first to avoid request missing if process crash down.
 func (registry *SnapshotRegistry) addRequest(event event.SnapshotEvent) {
 	registry.rqLock.Lock()
 	defer registry.rqLock.Unlock()
@@ -229,9 +232,7 @@ func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) (
 	registry.mu.Lock()
 	defer registry.mu.Unlock()
 	// Remove snapshot file if error occur
-	var (
-		begin time.Time = time.Now()
-	)
+	var begin time.Time = time.Now()
 
 	defer func() {
 		if err == nil {
@@ -245,7 +246,7 @@ func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) (
 		}
 	}()
 
-	if err = registry.duplicate(filterId); err != nil {
+	if err = registry.backupStatus(filterId); err != nil {
 		return err
 	}
 	if err = registry.pushBlock(filterId, number); err != nil {
@@ -257,7 +258,8 @@ func (registry *SnapshotRegistry) makeSnapshot(filterId string, number uint64) (
 	return nil
 }
 
-func (registry *SnapshotRegistry) duplicate(filterId string) error {
+// backupStatus creates a world state backup file.
+func (registry *SnapshotRegistry) backupStatus(filterId string) error {
 	sPath := path.Join("snapshots", registry.snapshotId(filterId))
 	if err := registry.executor.db.MakeSnapshot(sPath, cm.RetrieveSnapshotFileds()); err != nil {
 		return err
@@ -265,6 +267,7 @@ func (registry *SnapshotRegistry) duplicate(filterId string) error {
 	return nil
 }
 
+// pushBlock writes the block to snapshot file.
 func (registry *SnapshotRegistry) pushBlock(filterId string, number uint64) error {
 	blk, err := edb.GetBlockByNumber(registry.namespace, number)
 	if err != nil {
@@ -277,13 +280,14 @@ func (registry *SnapshotRegistry) pushBlock(filterId string, number uint64) erro
 	}
 	defer sdb.Close()
 	wb := sdb.NewBatch()
-	err, _ = edb.PersistBlock(wb, blk, true, true)
+	_, err = edb.PersistBlock(wb, blk, true, true)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+// writeMeta writes snapshot meta info.
 func (registry *SnapshotRegistry) writeMeta(filterId string, number uint64) error {
 	blk, err := edb.GetBlockByNumber(registry.namespace, number)
 	if err != nil {
@@ -294,15 +298,17 @@ func (registry *SnapshotRegistry) writeMeta(filterId string, number uint64) erro
 		return SnapshotContentInvalidErr
 	}
 	d := time.Unix(time.Now().Unix(), 0).Format("2006-01-02-15:04:05")
-	manifest := common.Manifest{
+	genesis, _ := edb.GetGenesisTag(registry.namespace)
+	manifest := cm.Manifest{
 		Height:     number,
+		Genesis:    genesis,
 		BlockHash:  common.Bytes2Hex(blk.BlockHash),
 		FilterId:   filterId,
 		MerkleRoot: hash.Hex(),
 		Date:       d,
 		Namespace:  registry.namespace,
 	}
-	if err := registry.rwc.Write(manifest); err != nil {
+	if err := registry.rw.Write(manifest); err != nil {
 		return err
 	}
 
@@ -352,7 +358,7 @@ func (registry *SnapshotRegistry) deleteSnapshot(filterId string) error {
 
 // compress compress snapshot data for network transport.
 func (registry *SnapshotRegistry) compress(filterId string) (error, int64) {
-	if !registry.rwc.Contain(filterId) {
+	if !registry.rw.Contain(filterId) {
 		return SnapshotDoesntExistErr, 0
 	}
 	spath := path.Join(cm.GetDatabaseHome(registry.namespace, registry.executor.conf.conf), "snapshots", registry.snapshotId(filterId))
@@ -364,6 +370,7 @@ func (registry *SnapshotRegistry) compress(filterId string) (error, int64) {
 	if err != nil {
 		return err, 0
 	}
+	defer fd.Close()
 	stat, err := fd.Stat()
 	if err != nil {
 		return err, 0
@@ -378,10 +385,10 @@ func (registry *SnapshotRegistry) checkSnapshotRequest(event event.SnapshotEvent
 	if event.BlockNumber < chainHeight && event.BlockNumber != LatestBlockNumber {
 		return false
 	}
-	if _, meta := registry.rwc.Search(chainHeight); (meta != common.Manifest{}) && event.BlockNumber == LatestBlockNumber {
+	if _, meta := registry.rw.Search(chainHeight); (meta != cm.Manifest{}) && event.BlockNumber == LatestBlockNumber {
 		return false
 	}
-	if _, meta := registry.rwc.Search(event.BlockNumber); (meta != common.Manifest{}) && event.BlockNumber != LatestBlockNumber {
+	if _, meta := registry.rw.Search(event.BlockNumber); (meta != cm.Manifest{}) && event.BlockNumber != LatestBlockNumber {
 		return false
 	}
 	return true
@@ -390,7 +397,7 @@ func (registry *SnapshotRegistry) checkSnapshotRequest(event event.SnapshotEvent
 // checkDeletionRequest check whether the deletion request is satisfied.
 // If the snapshot required to delete is the current genesis, the delete operation is invalid.
 func (registry *SnapshotRegistry) checkDeletionRequest(event event.DeleteSnapshotEvent) bool {
-	err, manifest := registry.rwc.Read(event.FilterId)
+	err, manifest := registry.rw.Read(event.FilterId)
 	if err != nil {
 		return false
 	}

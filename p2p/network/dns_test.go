@@ -1,31 +1,77 @@
 package network
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
-	"hyperchain/p2p/utils"
-	"testing"
+	"github.com/hyperchain/hyperchain/p2p/utils"
+	"github.com/hyperchain/hyperchain/common"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"fmt"
 )
 
-func TestDNSResolver_ListHosts(t *testing.T) {
-	Convey("Dns Reslover list all dns items", t, func() {
-		dnsr, err := NewDNSResolver(utils.GetProjectPath() + "/p2p/test/conf/hosts.yaml")
-		So(err, ShouldBeNil)
-		dnsList := dnsr.ListHosts()
-		So(len(dnsList), ShouldEqual, 4)
+var _ = Describe("DNS", func() {
+	Describe("create a new DNSResolver", func() {
+		logger = common.GetLogger(common.DEFAULT_NAMESPACE, "network")
+		Context("with a correct config file", func() {
+			var dnsr *DNSResolver
+			It("should create successfully", func() {
+				var err error
+				dnsr, err = NewDNSResolver(utils.GetProjectPath() + "/p2p/test/hosts.toml")
+				Expect(err).To(BeNil())
+				Expect(len(dnsr.DNSItems)).Should(Equal(4))
+			})
+
+			Context("to add a item", func() {
+				It("should add successfully", func() {
+					err := dnsr.AddItem("node5", "127.0.0.1:50015", false)
+					Expect(err).To(BeNil())
+				})
+
+				Context("which existed", func() {
+					It("should add failed", func() {
+						err := dnsr.AddItem("node4", "127.0.0.1:50014", false)
+						Expect(err).To(BeNil())
+					})
+				})
+			})
+
+			Context("to get a item", func() {
+				It("should get successfully", func() {
+					addr, err :=  dnsr.GetDNS("node5")
+					Expect(err).To(BeNil())
+					Expect(len(dnsr.DNSItems)).Should(Equal(5))
+					Expect(addr).Should(Equal("127.0.0.1:50015"))
+				})
+			})
+
+			Context("to cover a existing item", func() {
+				It("should cover successfully", func() {
+					err := dnsr.AddItem("node4", "127.0.0.1:50018", true)
+					Expect(err).To(BeNil())
+					addr, err :=  dnsr.GetDNS("node4")
+					Expect(err).To(BeNil())
+					Expect(addr).Should(Equal("127.0.0.1:50018"))
+				})
+			})
+
+			Context("to delete a item", func() {
+				It("should delete successfully", func() {
+					err := dnsr.DelItem("node5")
+					Expect(err).To(BeNil())
+					Expect(len(dnsr.DNSItems)).Should(Equal(4))
+				})
+			})
+
+			Context("to list host and hostname", func() {
+				It("should list successfully", func() {
+					hosts := dnsr.ListHosts()
+					Expect(len(hosts)).Should(Equal(4))
+					By(fmt.Sprintf("%v", hosts))
+
+					names := dnsr.listHostnames()
+					Expect(len(names)).Should(Equal(4))
+					By(fmt.Sprintf("%v", names))
+				})
+			})
+		})
 	})
-
-}
-
-func TestDNSResolver_ListHosts2(t *testing.T) {
-	Convey("Parse DNS Item", t, func() {
-		dnsr, err1 := NewDNSResolver(utils.GetProjectPath() + "/p2p/test/conf/hosts.yaml")
-		So(err1, ShouldBeNil)
-		ip, err2 := dnsr.GetDNS("node1")
-		So(err2, ShouldBeNil)
-		So(ip, ShouldEqual, "127.0.0.1:50012")
-		ip2, err3 := dnsr.GetDNS("node2")
-		So(err3, ShouldBeNil)
-		So(ip2, ShouldEqual, "localhost:50012")
-	})
-
-}
+})

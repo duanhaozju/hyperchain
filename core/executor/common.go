@@ -15,7 +15,11 @@ package executor
 
 import (
 	"bytes"
-	"hyperchain/core/types"
+	"encoding/binary"
+	"strconv"
+
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
 )
 
 var RemoveLessThan = func(key interface{}, iterKey interface{}) bool {
@@ -32,4 +36,15 @@ func VerifyBlockIntegrity(block *types.Block) bool {
 		return true
 	}
 	return false
+}
+
+// hashId may contains a 32 length hash or a uint64.
+// Returns a string representation.
+func HashOrIdString(hashId []byte) string {
+	if len(hashId) > binary.MaxVarintLen64 {
+		return common.Bytes2Hex(hashId)
+	} else {
+		v, _ := binary.Varint(hashId)
+		return strconv.Itoa(int(v))
+	}
 }

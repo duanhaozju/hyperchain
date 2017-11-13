@@ -1,12 +1,26 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package chain
 
 import (
 	"encoding/json"
+	com "github.com/hyperchain/hyperchain/core/common"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"strconv"
-
-	"hyperchain/common"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
 )
 
 // DeleteAllJournals deletes all the journals in database.
@@ -48,7 +62,7 @@ func DeleteJournalInRange(batch db.Batch, start uint64, end uint64, flush, sync 
 }
 
 // PersistSnapshotMeta persists the snapshot meta into database.
-func PersistSnapshotMeta(batch db.Batch, meta *common.Manifest, flush, sync bool) error {
+func PersistSnapshotMeta(batch db.Batch, meta *com.Manifest, flush, sync bool) error {
 	if batch == nil || meta == nil {
 		return ErrEmptyPointer
 	}
@@ -70,8 +84,8 @@ func PersistSnapshotMeta(batch db.Batch, meta *common.Manifest, flush, sync bool
 }
 
 // GetSnapshotMeta gets the snapshot meta with given namespace.
-func GetSnapshotMeta(namespace string) (*common.Manifest, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+func GetSnapshotMeta(namespace string) (*com.Manifest, error) {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
@@ -79,12 +93,12 @@ func GetSnapshotMeta(namespace string) (*common.Manifest, error) {
 }
 
 // GetSnapshotMetaFunc gets the snapshot meta with given db handler.
-func GetSnapshotMetaFunc(db db.Database) (*common.Manifest, error) {
+func GetSnapshotMetaFunc(db db.Database) (*com.Manifest, error) {
 	blob, err := db.Get([]byte(SnapshotPrefix))
 	if err != nil || len(blob) == 0 {
 		return nil, err
 	}
-	var meta common.Manifest
+	var meta com.Manifest
 	err = json.Unmarshal(blob, &meta)
 	if err != nil {
 		return nil, err

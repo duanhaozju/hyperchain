@@ -98,6 +98,7 @@ func TestMultiNamespaceLoggerWithDump(t *testing.T) {
 	conf := NewConfig("../configuration/namespaces/global/config/namespace.toml")
 	conf.Set(LOG_DUMP_FILE, true)
 	conf.Set(LOG_BASE_LOG_LEVEL, "DEBUG")
+	defer os.RemoveAll("./namespaces")
 
 	namespaces := []string{"namespace1", "namespace2", "namespace3"}
 	wg := &sync.WaitGroup{}
@@ -134,6 +135,7 @@ func TestHyperLoggerSplitByInterval(t *testing.T) {
 	conf.Set(LOG_DUMP_FILE_DIR, "/tmp/hyperlogger/split")
 	os.RemoveAll("/tmp/hyperlogger/split")
 	InitHyperLogger("test", conf)
+	defer os.RemoveAll("./namespaces")
 	logger := GetLogger("test", "module1")
 	for i := 1; i < 8; i++ {
 		logger.Criticalf("test write log %d", i)

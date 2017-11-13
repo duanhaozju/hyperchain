@@ -3,26 +3,23 @@
 package namespace
 
 import (
-	"github.com/op/go-logging"
-	"hyperchain/accounts"
-	"hyperchain/admittance"
-	"hyperchain/common"
-	"hyperchain/common/service"
-	"hyperchain/common/service/local"
-	"hyperchain/common/service/server"
-	"hyperchain/consensus"
-	"hyperchain/consensus/csmgr"
-	"hyperchain/core/executor"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/hyperdb"
-	"hyperchain/manager"
-	"hyperchain/manager/event"
-	"hyperchain/manager/protos"
-	"hyperchain/namespace/rpc"
-	"hyperchain/p2p"
 	"sync"
 	"time"
-	"strings"
+
+	"github.com/hyperchain/hyperchain/admittance"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus"
+	"github.com/hyperchain/hyperchain/consensus/csmgr"
+	"github.com/hyperchain/hyperchain/core/executor"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/manager"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/namespace/rpc"
+	"github.com/hyperchain/hyperchain/p2p"
+
+	"github.com/op/go-logging"
 )
 
 // This file defines the Namespace interface, which manages all the
@@ -64,22 +61,17 @@ type Namespace interface {
 	// 4. closed: after Close
 	Status() *Status
 
-	// Info returns the basic information of current namespace.
-	Info() *NamespaceInfo
+	// ProcessRequest process request under this namespace.
+	ProcessRequest(request interface{}) interface{}
 
 	// Name returns the name of current namespace.
 	Name() string
 
-	// GetExecutor returns the executor module of current namespace.
-	GetExecutor() executor.IExecutor
-
-	//LocalService return local service
-	LocalService() service.Service
-
+	// GetCAManager returns the CAManager of current namespace.
 	GetCAManager() *admittance.CAManager
 
-	// ProcessRequest process request under this namespace.
-	ProcessRequest(request interface{}) interface{}
+	// GetExecutor returns the executor module of current namespace.
+	GetExecutor() *executor.Executor
 }
 
 type NsState int
@@ -140,25 +132,21 @@ type namespaceImpl struct {
 
 	consenter consensus.Consenter
 	caMgr     *admittance.CAManager
-	am        *accounts.AccountManager
 	eh        *manager.EventHub
 	peerMgr   p2p.PeerManager
-	executor  executor.IExecutor
+	executor  *executor.Executor
 	rpc       rpc.RequestProcessor
 
-	nsInfo *NamespaceInfo
-	status *Status
-	conf   *common.Config
-	ls     service.Service
-
-	is      *server.InternalServer
+	name    string
+	status  *Status
+	conf    *common.Config
 	restart bool
 	delFlag chan bool
 }
 
 // newNamespaceImpl returns a newed Namespace instance with
 // the given name and config
-func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool, is *server.InternalServer) (*namespaceImpl, error) {
+func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool) (*namespaceImpl, error) {
 	conf.Set(common.NAMESPACE, namespace)
 	if err := common.InitHyperLogger(namespace, conf); err != nil {
 		return nil, err
@@ -169,23 +157,16 @@ func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool, 
 		desc:  "newed",
 		lock:  new(sync.RWMutex),
 	}
-	ppath := common.GetPath(namespace, conf.GetString(common.PEER_CONFIG_PATH))
-	nsInfo, err := NewNamespaceInfo(ppath, namespace, common.GetLogger(namespace, "namespace"))
 
-	if err != nil {
-		return nil, err
-	}
 	ns := &namespaceImpl{
-		nsInfo:    nsInfo,
+		name:      namespace,
 		status:    status,
 		conf:      conf,
 		eventMux:  new(event.TypeMux),
 		filterMux: new(event.TypeMux),
 		restart:   false,
 		delFlag:   delFlag,
-		is:        is,
 	}
-	ns.ls = local.NewLocalService(namespace, service.EVENTHUB, ns.eh)
 	ns.logger = common.GetLogger(namespace, "namespace")
 	return ns, nil
 }
@@ -196,30 +177,29 @@ func (ns *namespaceImpl) init() error {
 	ns.logger.Criticalf("Init namespace %s", ns.Name())
 
 	// 1. init DB for current namespace.
-	err := chain.InitDBForNamespace(ns.conf, ns.Name(), ns.is)
+	err := chain.InitDBForNamespace(ns.conf, ns.Name())
 	if err != nil {
-		ns.logger.Errorf("Init db for namespace: %s error, %v", ns.Name(), err)
+		ns.logger.Errorf("Init db for namespace %s error: %s", ns.Name(), err)
 		return err
 	}
 
 	// 2. init CaManager to manage account identity.
 	cm, err := admittance.NewCAManager(ns.conf)
 	if err != nil {
-		ns.logger.Error(err)
-		panic("Cannot initialize the CAManager!")
+		ns.logger.Errorf("Init CA manager failed: %s", err)
+		return err
 	}
 	ns.caMgr = cm
 
+	// 3. init peerManager to start grpc server and client.
 	peerconf := common.GetPath(ns.Name(), ns.conf.GetString(common.PEER_CONFIG_PATH))
 	if !common.FileExist(peerconf) {
-		panic("Cannot find the peer config!")
+		ns.logger.Errorf("Cannot find the peer config for namespace: %s", ns.Name())
+		return ErrNonExistConfig
 	}
-
-	// 3. init peerManager to start grpc server and client.
-	ns.logger.Warning("GetPeerManager for", ns.Name())
 	peerMgr, err := p2p.GetPeerManager(ns.Name(), peerconf, ns.eventMux, ns.delFlag)
 	if err != nil {
-		ns.logger.Error(err)
+		ns.logger.Errorf("Get peer manager failed: %s", err)
 		return err
 	}
 	ns.peerMgr = peerMgr
@@ -227,60 +207,36 @@ func (ns *namespaceImpl) init() error {
 	// 4. init consensus module to order requests.
 	consenter, err := csmgr.Consenter(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, peerMgr.GetN())
 	if err != nil {
-		ns.logger.Errorf("init Consenter for namespace %s error, %v", ns.Name(), err)
+		ns.logger.Errorf("Init Consenter for namespace %s error: %s", ns.Name(), err)
 		return err
 	}
 	ns.consenter = consenter
 
-	// 5. init AccountManager.
-	am := accounts.NewAccountManager(ns.conf)
-	am.UnlockAllAccount(common.GetPath(ns.Name(), ns.conf.GetString(common.KEY_STORE_DIR)))
-	ns.am = am
-
-	// 6. init Executor to validate and commit block.
-	ns.logger.Debugf("executor embedded %v", ns.conf.GetBool(common.EXECUTOR_EMBEDDED))
-	if ns.conf.GetBool(common.EXECUTOR_EMBEDDED) {
-		er, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, nil)
-		if err != nil {
-			ns.logger.Errorf("init Executor for namespace %s error, %v", ns.Name(), err)
-			return err
-		}
-		er.CreateInitBlock(ns.conf)
-		ns.executor = er
-	} else {
-		er := executor.NewRemoteExecutorProxy(ns.is, ns.conf)
-		ns.executor = er
+	// 5. init Executor to validate and commit block.
+	executor, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, peerMgr.GetLocalNodeHash())
+	if err != nil {
+		ns.logger.Errorf("Init Executor for namespace %s error: %s", ns.Name(), err)
+		return err
 	}
-	// 7. init Eventhub to coordinate message delivery between local modules.
-	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, ns.executor, ns.peerMgr, consenter, am, cm)
+	executor.CreateInitBlock(ns.conf)
+	ns.executor = executor
+
+	// 6. init Eventhub to coordinate message delivery between local modules.
+	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, executor, ns.peerMgr, consenter, cm)
 	ns.eh = eh
 
-	ns.ls = local.NewLocalService(ns.Name(), service.EVENTHUB, ns.eh)
-
-	// 8. init JsonRpcProcessor to process incoming requests.
-
-	if ns.conf.GetBool(common.EXECUTOR_EMBEDDED) {
-		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetAllApis(ns.Name()), nil, "", 0)
-	}else{
-		//TODO spilt executor address and port
-		adds := strings.Split(ns.conf.GetString(common.EXECUTOR_HOST_ADDR),":")
-		if len(adds) != 2 {
-			logger.Errorf("Json Rpc Process init error ,the executor address is %v .",ns.conf.GetString(common.EXECUTOR_HOST_ADDR))
-			ns.rpc = nil
-		}
-		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()), ns.GetExecutorApis(ns.Name()),
-		adds[0],ns.conf.GetInt(common.JSON_RPC_PORT_EXECUTOR))
-	}
+	// 7. init JsonRpcProcessor to process incoming requests.
+	ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
 
 	ns.status.setState(initialized)
 	return nil
 }
 
 // GetNamespace returns the Namespace instance of the given name.
-func GetNamespace(name string, conf *common.Config, delFlag chan bool, is *server.InternalServer) (Namespace, error) {
-	ns, err := newNamespaceImpl(name, conf, delFlag, is)
+func GetNamespace(name string, conf *common.Config, delFlag chan bool) (Namespace, error) {
+	ns, err := newNamespaceImpl(name, conf, delFlag)
 	if err != nil {
-		ns.logger.Errorf("namespace %s init error", name)
+		ns.logger.Errorf("New namespace %s failed: %s", name, err)
 		return ns, err
 	}
 	err = ns.init()
@@ -289,7 +245,10 @@ func GetNamespace(name string, conf *common.Config, delFlag chan bool, is *serve
 
 // Start starts all services under this namespace.
 func (ns *namespaceImpl) Start() error {
-	ns.logger.Noticef("try to start namespace: %s", ns.Name())
+	ns.logger.Noticef("Try to start namespace %s", ns.Name())
+
+	var err error
+
 	state := ns.status.getState()
 	if state < initialized {
 		err := ns.init()
@@ -299,7 +258,7 @@ func (ns *namespaceImpl) Start() error {
 	}
 
 	if ns.status.getState() == running {
-		ns.logger.Criticalf("namespace: %s is already running", ns.Name())
+		ns.logger.Warningf("Namespace %s is already running", ns.Name())
 		return nil
 	}
 	// 1. start db service
@@ -309,22 +268,20 @@ func (ns *namespaceImpl) Start() error {
 			ns.logger.Error(err)
 			return err
 		}
-		ns.logger.Noticef("start db for namespace: %s successful", ns.Name())
+		ns.logger.Noticef("start db for namespace %s successfully", ns.Name())
 	}
 
-    // 3. start executor
-    err := ns.executor.Start()
-    if err != nil {
-    	ns.logger.Error(err)
-        return err
-    }
-
-    time.Sleep(5*time.Second)
-
 	// 2. start consenter
-	ns.consenter.Start()
+	err = ns.consenter.Start()
+	if err != nil {
+		return err
+	}
 
-
+	// 3. start executor
+	err = ns.executor.Start()
+	if err != nil {
+		return err
+	}
 
 	// 4. start event hub
 	ns.eh.Start()
@@ -348,35 +305,17 @@ func (ns *namespaceImpl) Start() error {
 		return err
 	}
 	ns.status.setState(running)
-	ns.logger.Noticef("namespace: %s start successful", ns.Name())
+	ns.logger.Noticef("Namespace %s start successfully", ns.Name())
 	ns.restart = true
 	return nil
 }
 
-// negotiateView sends negotiate view event to consensus module.
-func (ns *namespaceImpl) negotiateView() {
-	ns.logger.Debug("negotiate view")
-	negoView := &protos.Message{
-		Type:      protos.Message_NEGOTIATE_VIEW,
-		Timestamp: time.Now().UnixNano(),
-		Payload:   nil,
-		Id:        0,
-	}
-	ns.consenter.RecvLocal(negoView)
-}
-
-func (ns *namespaceImpl) passRouters() {
-	router := ns.peerMgr.GetRouters()
-	msg := protos.RoutersMessage{Routers: router}
-	ns.consenter.RecvLocal(msg)
-}
-
 // Stop stops all services under this namespace.
 func (ns *namespaceImpl) Stop() error {
-	ns.logger.Noticef("try to stop namespace: %s", ns.Name())
+	ns.logger.Noticef("Try to stop namespace %s", ns.Name())
 	state := ns.status.getState()
 	if state != running {
-		ns.logger.Criticalf("namespace: %s not running now, need not to stop", ns.Name())
+		ns.logger.Warningf("Namespace %s is not running now, need not to stop", ns.Name())
 		return nil
 	}
 	// 1. stop request processor.
@@ -395,7 +334,7 @@ func (ns *namespaceImpl) Stop() error {
 	}
 
 	// 4. stop consensus service.
-	ns.consenter.Close()
+	ns.consenter.Stop()
 
 	// 5. stop peerManager.
 	ns.peerMgr.Stop()
@@ -408,7 +347,7 @@ func (ns *namespaceImpl) Stop() error {
 		ns.logger.Error(err)
 	}
 
-	ns.logger.Noticef("namespace: %s stopped!", ns.Name())
+	ns.logger.Noticef("Namespace %s stopped!", ns.Name())
 	return nil
 }
 
@@ -426,14 +365,9 @@ func (ns *namespaceImpl) Status() *Status {
 	return ns.status
 }
 
-// Info returns basic information of this namespace.
-func (ns *namespaceImpl) Info() *NamespaceInfo {
-	return ns.nsInfo
-}
-
 // Name returns the name of this namespace.
 func (ns *namespaceImpl) Name() string {
-	return ns.nsInfo.name
+	return ns.name
 }
 
 // GetCAManager returns the CAManager of this namespace.
@@ -442,7 +376,7 @@ func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
 }
 
 // GetExecutor returns the executor of this namespace.
-func (ns namespaceImpl) GetExecutor() executor.IExecutor {
+func (ns namespaceImpl) GetExecutor() *executor.Executor {
 	return ns.executor
 }
 
@@ -455,14 +389,28 @@ func (ns *namespaceImpl) ProcessRequest(request interface{}) interface{} {
 			case *common.RPCRequest:
 				return ns.handleJsonRequest(r)
 			default:
-				ns.logger.Errorf("event not supported %v", r)
+				ns.logger.Errorf("Not supported event %v", r)
 			}
 		}
 	}
-	ns.logger.Errorf("Process request error, namespace %s is not running now!", ns.Name())
+	ns.logger.Errorf("Process request error: namespace %s is not running now!", ns.Name())
 	return nil
 }
 
-func (ns *namespaceImpl) LocalService() service.Service {
-	return ns.ls
+// negotiateView sends negotiate view event to consensus module.
+func (ns *namespaceImpl) negotiateView() {
+	negoView := &protos.Message{
+		Type:      protos.Message_NEGOTIATE_VIEW,
+		Timestamp: time.Now().UnixNano(),
+		Payload:   nil,
+		Id:        0,
+	}
+	ns.consenter.RecvLocal(negoView)
+}
+
+// passRouters passes network router to consensus module.
+func (ns *namespaceImpl) passRouters() {
+	router := ns.peerMgr.GetRouters()
+	msg := protos.RoutersMessage{Routers: router}
+	ns.consenter.RecvLocal(msg)
 }

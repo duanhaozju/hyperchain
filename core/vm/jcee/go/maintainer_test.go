@@ -1,10 +1,22 @@
 package jvm
 
-import "testing"
+import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/vm/jcee/go/jvm"
+	"github.com/op/go-logging"
+	"sync"
+	"testing"
+)
+
+var (
+	logger  *logging.Logger
+	logOnce sync.Once
+)
 
 func TestConnMaintainer_Transition(t *testing.T) {
-	maintainer := NewConnMaintainer(nil)
-	if maintainer.fsm.Current() != conn_init {
+
+	maintainer := NewConnMaintainer(NewFakeClient(), NewTestLog())
+	if maintainer.fsm.Current() != conn_health {
 		t.Error("invalid init status")
 	}
 	// initialize
@@ -56,4 +68,18 @@ func TestConnMaintainer_Transition(t *testing.T) {
 			t.Error("invalid ping counter value")
 		}
 	}
+}
+
+func NewTestLog() *logging.Logger {
+	logOnce.Do(func() {
+		conf := common.NewRawConfig()
+		common.InitHyperLogger(common.DEFAULT_NAMESPACE, conf)
+		logger = common.GetLogger(common.DEFAULT_NAMESPACE, "jvm")
+		common.SetLogLevel(common.DEFAULT_NAMESPACE, "jvm", "NOTICE")
+	})
+	return logger
+}
+
+func NewFakeClient() *contractExecutorImpl {
+	return &contractExecutorImpl{client: &jvm.Client{}}
 }

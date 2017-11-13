@@ -5,8 +5,8 @@ syntax = "proto3";
 
 package network;
 
-import "hyperchain/p2p/message/msg.proto";
-import "hyperchain/p2p/message/package.proto";
+import "github.com/hyperchain/hyperchain/p2p/message/msg.proto";
+import "github.com/hyperchain/hyperchain/p2p/message/package.proto";
 
 service Chat {
     // dibi data tranfer

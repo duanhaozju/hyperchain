@@ -4,13 +4,13 @@ Copyright Hyperchain Corp. 2016 All Rights Reserved.
 
 syntax = "proto3";
 
-import "hyperchain/core/types/transaction.proto";
+import "github.com/hyperchain/hyperchain/core/types/transaction.proto";
 
 package rbft;
 /*
  * mapping to RBFT paper names
  *
- * PBFT name: local name
+ * RBFT name: local name
  *
  * o: transaction
  * t: timestamp

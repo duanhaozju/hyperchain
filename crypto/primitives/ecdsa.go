@@ -3,28 +3,25 @@
 package primitives
 
 import (
-	//"crypto"
 	"crypto/ecdsa"
 	"crypto/rand"
-	"encoding/asn1"
-	"math/big"
-	//"github.com/op/go-logging"
-	hcrypto "hyperchain/crypto"
-	//"fmt"
 	"crypto/sha256"
+	"encoding/asn1"
+	hcrypto "github.com/hyperchain/hyperchain/crypto"
+	"math/big"
 )
 
-// ECDSASignature represents an ECDSA signature
+// ECDSASignature represents an ECDSA signature.
 type ECDSASignature struct {
 	R, S *big.Int
 }
 
-// NewECDSAKey generates a new ECDSA Key
+// NewECDSAKey generates a new ECDSA Key.
 func NewECDSAKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(GetDefaultCurve(), rand.Reader)
 }
 
-// ECDSASign signs
+// ECDSASign sign a msg by keccak256 hasher.
 func ECDSASign(signKey interface{}, msg []byte) ([]byte, error) {
 	temp := signKey.(*ecdsa.PrivateKey)
 
@@ -36,7 +33,6 @@ func ECDSASign(signKey interface{}, msg []byte) ([]byte, error) {
 		return nil, err
 	}
 
-
 	raw, err := asn1.Marshal(ECDSASignature{r, s})
 	if err != nil {
 		return nil, err
@@ -45,18 +41,13 @@ func ECDSASign(signKey interface{}, msg []byte) ([]byte, error) {
 	return raw, nil
 }
 
-// ECDSAVerify verifies
+// ECDSAVerify verifies signature by keccak256 hasher.
 func ECDSAVerify(verKey interface{}, msg, signature []byte) (bool, error) {
 	ecdsaSignature := new(ECDSASignature)
 	_, err := asn1.Unmarshal(signature, ecdsaSignature)
 	if err != nil {
 		return false, err
 	}
-
-	//	R, _ := ecdsaSignature.R.MarshalText()
-	//	S, _ := ecdsaSignature.S.MarshalText()
-	//	fmt.Printf("r [%s], s [%s]\n", R, S)
-
 	temp := verKey.(ecdsa.PublicKey)
 	hasher := hcrypto.NewKeccak256Hash("keccak256Hanse")
 	h := hasher.Hash(msg).Bytes()
@@ -64,6 +55,7 @@ func ECDSAVerify(verKey interface{}, msg, signature []byte) (bool, error) {
 	return ecdsa.Verify(&temp, h, ecdsaSignature.R, ecdsaSignature.S), nil
 }
 
+// ECDSAVerifyTransport verify siganture from sdk by sha256 hasher.
 func ECDSAVerifyTransport(verKey *ecdsa.PublicKey, msg, signature []byte) (bool, error) {
 	ecdsaSignature := new(ECDSASignature)
 	_, err := asn1.Unmarshal(signature, ecdsaSignature)

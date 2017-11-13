@@ -3,13 +3,14 @@
 package runtime
 
 import (
-	"hyperchain/common"
-	"hyperchain/core/ledger/state"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/evm"
-	"hyperchain/crypto"
-	"hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/core/vm/evm"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"math/big"
+	"reflect"
 	"time"
 )
 
@@ -141,9 +142,8 @@ func Call(address common.Address, input []byte, cfg *Config) ([]byte, error) {
 	setDefaults(cfg)
 
 	vmenv := NewEnv(cfg, cfg.State)
-
 	sender = cfg.State.GetStateObject(cfg.Origin)
-	if sender == nil {
+	if reflect.ValueOf(sender).IsNil() {
 		sender = cfg.State.CreateAccount(cfg.Origin)
 	}
 	// Call the code with the given configuration.

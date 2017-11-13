@@ -1,5 +1,5 @@
 /**
-author:张珂杰
+author:ZhangKejie
 date:16-12-18
 verify ecert and signature
 */
@@ -7,17 +7,18 @@ verify ecert and signature
 package primitives
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
-	"crypto/ecdsa"
-	"github.com/pkg/errors"
 	"github.com/op/go-logging"
-	"crypto/elliptic"
+	"github.com/pkg/errors"
+	"io/ioutil"
+	"time"
 )
 
 var (
-	log = logging.MustGetLogger("crypto")
+	log          = logging.MustGetLogger("crypto")
 	defaultCurve elliptic.Curve
 )
 
@@ -26,12 +27,10 @@ func GetDefaultCurve() elliptic.Curve {
 	return defaultCurve
 }
 
-//读取config文件
 func GetConfig(path string) (string, error) {
 	content, err := ioutil.ReadFile(path)
 
 	if err != nil {
-		//fmt.Println()
 		return "", err
 	}
 
@@ -39,7 +38,6 @@ func GetConfig(path string) (string, error) {
 
 }
 
-//解析证书
 func ParseCertificate(cert []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode(cert)
 
@@ -56,9 +54,19 @@ func ParseCertificate(cert []byte) (*x509.Certificate, error) {
 	return x509Cert, nil
 }
 
-//验证证书中的签名
 func VerifyCert(cert *x509.Certificate, ca *x509.Certificate) (bool, error) {
 	err := cert.CheckSignatureFrom(ca)
+
+	endTime := cert.NotAfter
+	startTime := cert.NotBefore
+
+	today := time.Now()
+
+	if startTime.After(today) || endTime.Before(today) {
+		log.Error("This Cert is overdue.Please check it!")
+		return false, errors.New("This Cert is overdue.Please check it!")
+	}
+
 	if err != nil {
 		log.Error("verified the cert failed", err)
 		return false, err
@@ -66,7 +74,6 @@ func VerifyCert(cert *x509.Certificate, ca *x509.Certificate) (bool, error) {
 	return true, nil
 
 }
-
 
 func ParseKey(derPri []byte) (interface{}, error) {
 	block, _ := pem.Decode(derPri)

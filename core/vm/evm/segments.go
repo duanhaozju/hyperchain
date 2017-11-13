@@ -16,7 +16,7 @@
 package evm
 
 import (
-	"hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/core/vm"
 	"math/big"
 )
 

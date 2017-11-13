@@ -1,5 +1,6 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package rbft
 
 import (
@@ -8,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/types"
 )
 
 func TestHash(t *testing.T) {

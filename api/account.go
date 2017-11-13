@@ -3,10 +3,10 @@
 package api
 
 import (
+	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager"
 	"github.com/op/go-logging"
-	"hyperchain/accounts"
-	"hyperchain/common"
-	"hyperchain/manager"
 )
 
 // This file implements the handler of Account service API which
@@ -17,6 +17,11 @@ type Account struct {
 	namespace string
 	config    *common.Config
 	log       *logging.Logger
+}
+
+type AccountResult struct {
+	Account string `json:"account"`
+	Balance string `json:"balance"`
 }
 
 type UnlockParas struct {
@@ -34,37 +39,36 @@ func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.
 	}
 }
 
-// NewAccount creates a new account under the given password.
-func (acc *Account) NewAccount(password string) (common.Address, error) {
-	am := acc.eh.GetAccountManager()
-	ac, err := am.NewAccount(password)
+// GetAccounts returns all account's balance in the ledger.
+func (acc *Account) GetAccounts() ([]*AccountResult, error) {
+	var acts []*AccountResult
+	stateDB, err := NewStateDb(acc.config, acc.namespace)
 	if err != nil {
-		acc.log.Errorf("New Account error, %v", err)
-		return common.Address{}, &common.CallbackError{Message: err.Error()}
+		acc.log.Errorf("Get stateDB error, %v", err)
+		return nil, &common.CallbackError{Message: err.Error()}
 	}
-	return ac.Address, nil
+	ctx := stateDB.GetAccounts()
+
+	for k, v := range ctx {
+		var act = &AccountResult{
+			Account: k,
+			Balance: v.Balance().String(),
+		}
+		acts = append(acts, act)
+	}
+	return acts, nil
 }
 
-// UnlockAccount unlocks account for given account address and password, if success, return true.
-func (acc *Account) UnlockAccount(args UnlockParas) (bool, error) {
-
-	am := acc.eh.GetAccountManager()
-
-	s := args.Address.Hex()
-	if len(s) > 1 {
-		if s[0:2] == "0x" {
-			s = s[2:]
-		}
-		if len(s)%2 == 1 {
-			s = "0" + s
+// GetBalance returns account balance for given account address.
+func (acc *Account) GetBalance(addr common.Address) (string, error) {
+	if stateDB, err := NewStateDb(acc.config, acc.namespace); err != nil {
+		return "", &common.CallbackError{Message: err.Error()}
+	} else {
+		if stateobject := stateDB.GetAccount(addr); stateobject != nil {
+			return fmt.Sprintf(`0x%x`, stateobject.Balance()), nil
+		} else {
+			return "", &common.AccountNotExistError{Address: addr.Hex()}
 		}
 	}
-	ac := accounts.Account{Address: args.Address, File: am.KeyStore.JoinPath(s)}
-	err := am.Unlock(ac, args.Password)
-	if err != nil {
-		return false, &common.InvalidParamsError{Message: "Incorrect address or password!"}
-	}
-	return true, nil
+
 }
-
-

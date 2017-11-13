@@ -15,8 +15,8 @@ package bucket
 
 import (
 	"errors"
+	hdb "github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
-	hdb "hyperchain/hyperdb/db"
 )
 
 const (

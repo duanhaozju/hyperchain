@@ -1,8 +1,8 @@
 package msg
 
 import (
-	"hyperchain/manager/event"
-	pb "hyperchain/p2p/message"
+	"github.com/hyperchain/hyperchain/manager/event"
+	pb "github.com/hyperchain/hyperchain/p2p/message"
 )
 
 type MsgRouter interface {

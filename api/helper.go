@@ -2,15 +2,19 @@ package api
 
 import (
 	"errors"
-	"hyperchain/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/ledger/state"
-	"hyperchain/core/vm"
-	"hyperchain/crypto/hmEncryption"
-	"hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/common"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/crypto/hmEncryption"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"math/big"
 	"path"
 	"time"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
+	"fmt"
 )
 
 const (
@@ -18,9 +22,9 @@ const (
 
 	BLOCK               = "block"
 	TRANSACTION         = "transaction"
+	TRANSACTIONS        = "transactions"
 	RECEIPT             = "receipt"
 	DISCARDTXS          = "discard transactions"
-	DISCARDTX           = "discard transaction"
 	transactionPeak     = "flow.control.ratelimit.txRatePeak"
 	transactionFillRate = "flow.control.ratelimit.txFillRate"
 
@@ -35,6 +39,11 @@ const (
 	CONTRACT                = "contract"
 	DEFAULT_GAS       int64 = 100000000
 	DEFAULT_GAS_PRICE int64 = 10000
+)
+
+var (
+	kec256Hash         = crypto.NewKeccak256Hash("keccak256")
+	db_not_found_error = db.DB_NOT_FOUND.Error()
 )
 
 // getRateLimitEnable returns rate limit switch value.
@@ -101,11 +110,11 @@ func NewStateDb(conf *common.Config, namespace string) (vm.Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
-	archiveDb, err := hyperdb.GetArchiveDbByNamespace(namespace)
+	archiveDb, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_ARCHIVE)
 	if err != nil {
 		return nil, err
 	}
@@ -131,11 +140,18 @@ func substr(str string, start int, end int) string {
 	return string(rs[start:end])
 }
 
+type BatchArgs struct {
+	Hashes  []common.Hash `json:"hashes"`
+	Numbers []BlockNumber `json:"numbers"`
+	IsPlain bool		  `json:"isPlain"`			// whether returns block excluding transactions or not
+}
+
 type IntervalArgs struct {
 	From         *BlockNumber    `json:"from"` // start block number
 	To           *BlockNumber    `json:"to"`   // end block number
 	ContractAddr *common.Address `json:"address"`
 	MethodID     string          `json:"methodID"`
+	IsPlain	 bool			 	 `json:"isPlain"`	// whether returns block excluding transactions or not
 }
 
 type IntervalTime struct {
@@ -153,19 +169,19 @@ type intArgs struct {
 // 2 means invoking contract, 3 means signing hash, 4 means maintaining contract.
 func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 	if args.From.Hex() == (common.Address{}).Hex() {
-		return SendTxArgs{}, &common.InvalidParamsError{Message: "address 'from' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "address `from` is invalid"}
 	}
 	if (txType == 0 || txType == 2 || txType == 4) && args.To == nil {
-		return SendTxArgs{}, &common.InvalidParamsError{Message: "address 'to' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "address `to` is invalid"}
 	}
 	if args.Timestamp <= 0 || (5*int64(time.Minute)+time.Now().UnixNano()) < args.Timestamp {
-		return SendTxArgs{}, &common.InvalidParamsError{Message: "'timestamp' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "`timestamp` is invalid"}
 	}
 	if txType != 3 && args.Signature == "" {
-		return SendTxArgs{}, &common.InvalidParamsError{Message: "'signature' can't be empty"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "missing params `signature`"}
 	}
 	if args.Nonce <= 0 {
-		return SendTxArgs{}, &common.InvalidParamsError{Message: "'nonce' is invalid"}
+		return SendTxArgs{}, &common.InvalidParamsError{Message: "`nonce` is invalid"}
 	}
 	if txType == 4 && args.Opcode == 1 && (args.Payload == "" || args.Payload == "0x") {
 		return SendTxArgs{}, &common.InvalidParamsError{Message: "contract code is empty"}
@@ -188,7 +204,7 @@ func prepareExcute(args SendTxArgs, txType int) (SendTxArgs, error) {
 // If client sends BlockNumber 0, error will be returned.
 func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) {
 	if args.From == nil || args.To == nil {
-		return nil, &common.InvalidParamsError{Message: "missing params 'from' or 'to'"}
+		return nil, &common.InvalidParamsError{Message: "missing params `from` or `to`"}
 	} else if chain, err := edb.GetChain(namespace); err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
 	} else {
@@ -203,7 +219,7 @@ func prepareIntervalArgs(args IntervalArgs, namespace string) (*intArgs, error) 
 		}
 
 		if from > to || from < 1 || to < 1 {
-			return nil, &common.InvalidParamsError{Message: "invalid params from or to"}
+			return nil, &common.InvalidParamsError{Message: fmt.Sprintf("invalid params, from = %v, to = %v", from, to)}
 		} else {
 			return &intArgs{from: from, to: to}, nil
 		}
@@ -227,13 +243,13 @@ func prepareBlockNumber(n BlockNumber, namespace string) (uint64, error) {
 // preparePagingArgs checks whether paging arguments are valid.
 func preparePagingArgs(args PagingArgs) (PagingArgs, error) {
 	if args.PageSize == 0 {
-		return PagingArgs{}, &common.InvalidParamsError{Message: "'pageSize' can't be zero or empty"}
+		return PagingArgs{}, &common.InvalidParamsError{Message: "invalid params, '`ageSize` value shouldn't be 0"}
 	} else if args.Separated%args.PageSize != 0 {
-		return PagingArgs{}, &common.InvalidParamsError{Message: "invalid 'pageSize' or 'separated'"}
+		return PagingArgs{}, &common.InvalidParamsError{Message: "invalid params, `separated` value should be a multiple of `pageSize` value"}
 	} else if args.MaxBlkNumber == BlockNumber(0) || args.MinBlkNumber == BlockNumber(0) {
-		return PagingArgs{}, &common.InvalidParamsError{Message: "'minBlkNumber' or 'maxBlkNumber' can't be zero or empty"}
+		return PagingArgs{}, &common.InvalidParamsError{Message: "invalid params, `minBlkNumber` or `maxBlkNumber` value shouldn't be 0"}
 	} else if args.ContractAddr == nil {
-		return PagingArgs{}, &common.InvalidParamsError{Message: "'address' can't be empty"}
+		return PagingArgs{}, &common.InvalidParamsError{Message: "invalid params, missing params `address`"}
 	}
 
 	return args, nil

@@ -3,8 +3,8 @@ package v1_2
 import (
 	"errors"
 
-	v1_2_types "hyperchain/core/ledger/codec/v1_2/types"
-	"hyperchain/core/types"
+	v1_2_types "github.com/hyperchain/hyperchain/core/ledger/codec/v1_2/types"
+	"github.com/hyperchain/hyperchain/core/types"
 
 	"github.com/golang/protobuf/proto"
 )

@@ -2,7 +2,7 @@ package msg
 
 import "fmt"
 import (
-	pb "hyperchain/p2p/message"
+	pb "github.com/hyperchain/hyperchain/p2p/message"
 )
 
 type KeepaliveMsgHandler struct {

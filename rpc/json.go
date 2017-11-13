@@ -3,16 +3,14 @@
 package jsonrpc
 
 import (
-	//"crypto/ecdsa"
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/websocket"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto/primitives"
+	"github.com/hyperchain/hyperchain/namespace"
 	"github.com/pkg/errors"
-	"hyperchain/common"
-	//"hyperchain/crypto/primitives"
-	"crypto/ecdsa"
-	"hyperchain/common/interface"
-	"hyperchain/crypto/primitives"
 	"io"
 	"net/http"
 	"reflect"
@@ -62,37 +60,37 @@ type jsonNotification struct {
 // jsonCodec reads and writes JSON-RPC messages to the underlying connection. It
 // also has support for parsing arguments and serializing (result) objects.
 type jsonCodecImpl struct {
-	closer         sync.Once          // close closed channel once
-	closed         chan interface{}   // closed on Close
-	decMu          sync.Mutex         // guards d
-	d              *json.Decoder      // decodes incoming requests
-	encMu          sync.Mutex         // guards e
-	e              *json.Encoder      // encodes responses
-	rw             io.ReadWriteCloser // connection
-	req            *http.Request
-	nsMgrProcessor intfc.NsMgrProcessor
-	conn           *websocket.Conn
+	closer sync.Once          // close closed channel once
+	closed chan interface{}   // closed on Close
+	decMu  sync.Mutex         // guards d
+	d      *json.Decoder      // decodes incoming requests
+	encMu  sync.Mutex         // guards e
+	e      *json.Encoder      // encodes responses
+	rw     io.ReadWriteCloser // connection
+	req    *http.Request
+	nr     namespace.NamespaceManager
+	conn   *websocket.Conn
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nsMgrProcessor intfc.NsMgrProcessor, conn *websocket.Conn) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.NamespaceManager, conn *websocket.Conn) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
 	return &jsonCodecImpl{
-		closed:         make(chan interface{}),
-		d:              d,
-		e:              json.NewEncoder(rwc),
-		rw:             rwc,
-		req:            req,
-		nsMgrProcessor: nsMgrProcessor,
-		conn:           conn,
+		closed: make(chan interface{}),
+		d:      d,
+		e:      json.NewEncoder(rwc),
+		rw:     rwc,
+		req:    req,
+		nr:     nr,
+		conn:   conn,
 	}
 }
 
 // CheckHttpHeaders will check http header. If it is verified, client has access to interact with the server,
 // otherwise, unauthorized error will be returned.
 func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common.RPCError {
-	ns := c.nsMgrProcessor.GetNamespaceProcessor(namespace)
+	ns := c.nr.GetNamespaceByName(namespace)
 	if ns == nil {
 		return &common.NamespaceNotFound{Name: namespace}
 	}
@@ -128,7 +126,7 @@ func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common
 	// verfiy tcert
 	verifyTcert, err := cm.VerifyTCert(tcertPem, method)
 	if verifyTcert == false || err != nil {
-		log.Error("Fail to verify tcert!", err)
+		log.Errorf("Fail to verify tcert! %v", err)
 		return &common.UnauthorizedError{}
 	}
 	return nil
@@ -274,7 +272,7 @@ func parseBatchRequest(incomingMsg json.RawMessage) ([]*common.RPCRequest, bool,
 
 // CreateResponse will create a JSON-RPC success response with the given id and reply as result.
 func (c *jsonCodecImpl) CreateResponse(id interface{}, namespace string, reply interface{}) interface{} {
-	if IsHexNum(reflect.TypeOf(reply)) {
+	if isHexNum(reflect.TypeOf(reply)) {
 		return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: 0, Message: "SUCCESS", Result: fmt.Sprintf(`%#x`, reply)}
 	}
 	return &JSONResponse{Version: JSONRPCVersion, Namespace: namespace, Id: id, Code: 0, Message: "SUCCESS", Result: reply}
@@ -293,7 +291,7 @@ func (c *jsonCodecImpl) CreateErrorResponseWithInfo(id interface{}, namespace st
 
 // CreateNotification will create a JSON-RPC notification with the given subscription id and event as params.
 func (s *jsonCodecImpl) CreateNotification(subid common.ID, service, method, namespace string, event interface{}) interface{} {
-	if IsHexNum(reflect.TypeOf(event)) {
+	if isHexNum(reflect.TypeOf(event)) {
 		return &jsonNotification{Version: JSONRPCVersion, Namespace: namespace,
 			Result: jsonSubscription{Subscription: fmt.Sprintf(`%s`, subid), Data: fmt.Sprintf(`%#x`, event)}}
 	}

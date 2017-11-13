@@ -4,15 +4,15 @@ package jsonrpc
 
 import (
 	"fmt"
+	"github.com/hyperchain/github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/common/interface"
+	pb "github.com/hyperchain/hyperchain/common/protos"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/namespace"
 	"github.com/op/go-logging"
-	"hyperchain/common"
 	"strings"
 	"time"
-	"hyperchain/namespace"
-	"hyperchain/common/interface"
-	"hyperchain/manager/event"
-	"github.com/golang/protobuf/proto"
-	pb "hyperchain/common/protos"
 )
 
 // This file defines the hypercli admin interface. Users invoke
@@ -72,7 +72,7 @@ type Administrator struct {
 
 	// nsMgr is the global namespace Manager, used to get the system
 	// level interface.
-	nsMgr	       namespace.NamespaceManager
+	nsMgr namespace.NamespaceManager
 
 	nsMgrProcessor intfc.NsMgrProcessor
 
@@ -87,24 +87,23 @@ type Administrator struct {
 
 	config *common.Config
 	logger *logging.Logger
-
 }
 
 // NewAdministrator news a raw administrator with default settings.
-func NewAdministrator(nsMgrProcessor intfc.NsMgrProcessor,config *common.Config, is_executor bool) *Administrator {
+func NewAdministrator(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, is_executor bool) *Administrator {
 	if is_executor {
-		return nil;
+		return nil
 	}
 	adm := &Administrator{
-		CmdExecutor:		make(map[string]func(command *Command) *CommandResult),
-		valid_user:  		make(map[string]string),
-		user_scope:  		make(map[string]permissionSet),
-		user_opTime: 		make(map[string]int64),
-		check:       		config.GetBool(common.ADMIN_CHECK),
-		expiration:  		config.GetDuration(common.ADMIN_EXPIRATION),
-		nsMgrProcessor:         nsMgrProcessor,
-		config:      		config,
-		nsMgr:			nsMgrProcessor.(namespace.NamespaceManager),
+		CmdExecutor:    make(map[string]func(command *Command) *CommandResult),
+		valid_user:     make(map[string]string),
+		user_scope:     make(map[string]permissionSet),
+		user_opTime:    make(map[string]int64),
+		check:          config.GetBool(common.ADMIN_CHECK),
+		expiration:     config.GetDuration(common.ADMIN_EXPIRATION),
+		nsMgrProcessor: nsMgrProcessor,
+		config:         config,
+		nsMgr:          nsMgrProcessor.(namespace.NamespaceManager),
 	}
 	adm.init()
 	return adm
@@ -389,18 +388,18 @@ func (admin *Administrator) startJvmServer(cmd *Command) *CommandResult {
 	}
 	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
 	msg := pb.IMessage{
-		From: 	 pb.FROM_ADMINISTRATOR,
-		Type:	 pb.Type_ADMIN,
-		Event:   pb.Event_StartJVMEvent,
+		From:  pb.FROM_ADMINISTRATOR,
+		Type:  pb.Type_ADMIN,
+		Event: pb.Event_StartJVMEvent,
 	}
-	rsp,_ := adminService.SyncSend(msg)
+	rsp, _ := adminService.SyncSend(msg)
 	rspEvent := &event.AdminResponseEvent{}
 	err := proto.Unmarshal(rsp.Payload, rspEvent)
-	if err != nil{
+	if err != nil {
 		return &CommandResult{Ok: false, Result: "start jvm failed."}
-	}else if rspEvent.Ok {
+	} else if rspEvent.Ok {
 		return &CommandResult{Ok: true, Result: "start jvm successful."}
-	}else {
+	} else {
 		return &CommandResult{Ok: false, Result: "start jvm failed."}
 	}
 
@@ -420,18 +419,18 @@ func (admin *Administrator) stopJvmServer(cmd *Command) *CommandResult {
 	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
 
 	msg := pb.IMessage{
-		From: 	 pb.FROM_ADMINISTRATOR,
-		Type:	 pb.Type_ADMIN,
-		Event:   pb.Event_StopJVMEvent,
+		From:  pb.FROM_ADMINISTRATOR,
+		Type:  pb.Type_ADMIN,
+		Event: pb.Event_StopJVMEvent,
 	}
-	rsp,_ := adminService.SyncSend(msg)
+	rsp, _ := adminService.SyncSend(msg)
 	rspEvent := &event.AdminResponseEvent{}
 	err := proto.Unmarshal(rsp.Payload, rspEvent)
-	if err != nil{
+	if err != nil {
 		return &CommandResult{Ok: false, Result: "start jvm failed."}
-	}else if rspEvent.Ok {
+	} else if rspEvent.Ok {
 		return &CommandResult{Ok: true, Result: "start jvm successful."}
-	}else {
+	} else {
 		return &CommandResult{Ok: false, Result: "start jvm failed."}
 	}
 }
@@ -450,18 +449,18 @@ func (admin *Administrator) restartJvmServer(cmd *Command) *CommandResult {
 	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
 
 	msg := pb.IMessage{
-		From: 	 pb.FROM_ADMINISTRATOR,
-		Type:	 pb.Type_ADMIN,
-		Event:   pb.Event_RestartJVMEvent,
+		From:  pb.FROM_ADMINISTRATOR,
+		Type:  pb.Type_ADMIN,
+		Event: pb.Event_RestartJVMEvent,
 	}
-	rsp,_ := adminService.SyncSend(msg)
+	rsp, _ := adminService.SyncSend(msg)
 	rspEvent := &event.AdminResponseEvent{}
 	err := proto.Unmarshal(rsp.Payload, rspEvent)
-	if err != nil{
+	if err != nil {
 		return &CommandResult{Ok: false, Result: "start jvm failed."}
-	}else if rspEvent.Ok {
+	} else if rspEvent.Ok {
 		return &CommandResult{Ok: true, Result: "start jvm successful."}
-	}else {
+	} else {
 		return &CommandResult{Ok: false, Result: "start jvm failed."}
 	}
 }

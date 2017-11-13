@@ -6,12 +6,29 @@ package rbft
 import (
 	"testing"
 
-	"hyperchain/common"
-	"hyperchain/consensus/helper/persist"
-	mdb "hyperchain/hyperdb/mdb"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus/helper/persist"
+	mdb "github.com/hyperchain/hyperchain/hyperdb/mdb"
 
 	"github.com/stretchr/testify/assert"
 )
+
+func TestNewStoreMgr(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+
+	storeMgr := newStoreMgr(rbft.logger)
+	structName, nilElems, err := checkNilElems(storeMgr)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if nilElems != nil {
+		t.Errorf("There exists some nil elements: %v in struct: %s", nilElems, structName)
+	}
+}
 
 func TestMoveWatermarks(t *testing.T) {
 	ast := assert.New(t)

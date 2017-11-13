@@ -225,7 +225,7 @@ HPC_OTHER_HYPERCHAIN_DIR="/home/${USERNAME}"
 fs_distribute_the_binary(){
     echo "Send the project to primary:"
     cd ${GOPATH}/src/
-    if [ -d "hyperchain/build" ]; then
+    if [ -d "github.com/hyperchain/hyperchain/build" ]; then
         rm -rf hyperchain/build
     fi
     if [ -d "hyperchain.tar.gz" ]; then

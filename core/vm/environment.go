@@ -14,9 +14,9 @@
 package vm
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/core/types"
 	"math/big"
 )
 

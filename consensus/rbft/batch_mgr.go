@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"time"
 
-	"hyperchain/consensus/txpool"
-	"hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus/txpool"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/op/go-logging"
 )
 
 // batchManager manages basic batch issues, including:
-// 1. txPool which manages all transactions received from client or
+// 1. txPool which manages all transactions received from client or rpc layer
 // 2. batch events timer management
 type batchManager struct {
 	txPool           txpool.TxPool
@@ -21,12 +23,14 @@ type batchManager struct {
 	close            chan bool
 	rbftQueue        *event.TypeMux
 	batchTimerActive bool // track the batch timer event, true means there exists an undergoing batch timer event
+	logger           *logging.Logger
 }
 
 // batchValidator manages batch validate issues
 type batchValidator struct {
 	lastVid             uint64                 // track the last validate batch seqNo
 	currentVid          *uint64                // track the current validate batch seqNo
+	validateCount       uint64                 // track the validate event which has been sent to executor module but hasn't been committed
 	cacheValidatedBatch map[string]*cacheBatch // track the cached validated batch
 
 	validateTimeout time.Duration
@@ -80,41 +84,43 @@ func newBatchValidator() *batchValidator {
 	bv := &batchValidator{}
 	bv.cacheValidatedBatch = make(map[string]*cacheBatch)
 	bv.preparedCert = make(map[vidx]string)
+	bv.validateCount = 0
 	return bv
 }
 
 // newBatchManager initializes an instance of batchManager. batchManager subscribes TxHashBatch from txPool module
 // and push it to rbftQueue for primary to construct TransactionBatch for consensus
-func newBatchManager(rbft *rbftImpl) *batchManager {
+func newBatchManager(namespace string, config *common.Config, logger *logging.Logger) (*batchManager, error) {
 	bm := &batchManager{}
+	bm.logger = logger
 
 	// subscribe TxHashBatch
 	bm.eventMux = new(event.TypeMux)
 	bm.batchSub = bm.eventMux.Subscribe(txpool.TxHashBatch{})
 	bm.close = make(chan bool)
 
-	batchSize := rbft.config.GetInt(RBFT_BATCH_SIZE)
-	poolSize := rbft.config.GetInt(RBFT_POOL_SIZE)
-
-	batchTimeout, err := time.ParseDuration(rbft.config.GetString(RBFT_BATCH_TIMEOUT))
-	if err != nil {
-		rbft.logger.Criticalf("Cannot parse batch timeout: %s", err)
+	batchSize := config.GetInt(RBFT_BATCH_SIZE)
+	if batchSize <= 0 {
+		bm.logger.Warning("Batch size must be larger than 0!")
+		return nil, fmt.Errorf("batch size must be larger than 0")
 	}
-	if batchTimeout >= rbft.timerMgr.requestTimeout {
-		rbft.timerMgr.requestTimeout = 3 * batchTimeout / 2
-		rbft.logger.Warningf("Configured request timeout must be greater than batch timeout, setting to %v", rbft.timerMgr.requestTimeout)
+	poolSize := config.GetInt(RBFT_POOL_SIZE)
+	if poolSize <= 0 {
+		bm.logger.Warning("Tx pool size must be larger than 0!")
+		return nil, fmt.Errorf("tx pool size must be larger than 0")
 	}
+	logger.Infof("RBFT batch size = %d", batchSize)
+	logger.Infof("RBFT tx pool size = %d", poolSize)
 
 	// new instance for txPool
-	bm.txPool, err = txpool.NewTxPool(rbft.namespace, poolSize, bm.eventMux, batchSize)
+	var err error
+	bm.txPool, err = txpool.NewTxPool(namespace, poolSize, bm.eventMux, batchSize)
 	if err != nil {
-		panic(fmt.Errorf("Cannot create txpool: %s", err))
+		bm.logger.Warningf("cannot create txpool: %s", err)
+		return nil, fmt.Errorf("cannot create txpool: %s", err)
 	}
 
-	rbft.logger.Infof("RBFT Batch size = %d", batchSize)
-	rbft.logger.Infof("RBFT Batch timeout = %v", batchTimeout)
-
-	return bm
+	return bm, nil
 }
 
 // start starts a go-routine to listen TxPool Event which continuously waits for TxHashBatch
@@ -154,12 +160,12 @@ func (bm *batchManager) isBatchTimerActive() bool {
 
 // startBatchTimer starts the batch timer and sets the batchTimerActive to true
 func (rbft *rbftImpl) startBatchTimer() {
-	event := &LocalEvent{
+	localEvent := &LocalEvent{
 		Service:   CORE_RBFT_SERVICE,
 		EventType: CORE_BATCH_TIMER_EVENT,
 	}
 
-	rbft.timerMgr.startTimer(BATCH_TIMER, event, rbft.eventMux)
+	rbft.timerMgr.startTimer(BATCH_TIMER, localEvent, rbft.eventMux)
 	rbft.batchMgr.batchTimerActive = true
 	rbft.logger.Debugf("Primary %d started the batch timer", rbft.id)
 }
@@ -175,20 +181,19 @@ func (rbft *rbftImpl) stopBatchTimer() {
 func (rbft *rbftImpl) restartBatchTimer() {
 	rbft.timerMgr.stopTimer(BATCH_TIMER)
 
-	event := &LocalEvent{
+	localEvent := &LocalEvent{
 		Service:   CORE_RBFT_SERVICE,
 		EventType: CORE_BATCH_TIMER_EVENT,
 	}
 
-	rbft.timerMgr.startTimer(BATCH_TIMER, event, rbft.eventMux)
+	rbft.timerMgr.startTimer(BATCH_TIMER, localEvent, rbft.eventMux)
 	rbft.batchMgr.batchTimerActive = true
 	rbft.logger.Debugf("Primary %d restarted the batch timer", rbft.id)
 }
 
 // primaryValidateBatch used by primary helps primary pre-validate the batch and stores this TransactionBatch
 func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatch, seqNo uint64) {
-	// for keep the previous vid before viewchange
-	// will specifies the vid to start validate batch)
+	// for keep the previous vid before viewchange, we may need to specify the vid to start validate batch
 	var n uint64
 	if seqNo != 0 {
 		n = seqNo
@@ -196,26 +201,42 @@ func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 		n = rbft.seqNo + 1
 	}
 
-	rbft.seqNo = n
+	// ignore too many validated batch as we limited the high watermark in send pre-prepare
+	if rbft.batchVdr.validateCount >= rbft.L {
+		rbft.logger.Warningf("Primary %d try to validate batch for vid = %d, but we had already send %d ValidateEvent", rbft.id, n, rbft.batchVdr.validateCount)
+		rbft.batchMgr.txPool.PutBatchIntoPending(digest)
+		return
+	}
 
+	rbft.seqNo = n
+	rbft.batchVdr.validateCount++
+
+	batch.SeqNo = n
 	// store batch to outstandingReqBatches until execute this batch
 	rbft.storeMgr.outstandingReqBatches[digest] = batch
 	rbft.storeMgr.txBatchStore[digest] = batch
 
-	rbft.logger.Debugf("Primary %d try to validate batch for view=%d/seqNo=%d, batch size: %d", rbft.id, rbft.view, n, len(batch.HashList))
+	rbft.logger.Debugf("Primary %d try to validate batch for view=%d/seqNo=%d, batch size: %d, timestamp: %d",
+		rbft.id, rbft.view, n, len(batch.HashList), batch.Timestamp)
 	// here we soft start a new view timer with requestTimeout+validateTimeout, if primary cannot execute this batch
 	// during that timeout, we think there may exist some problems with this primary which will trigger viewchange
-	rbft.softStartNewViewTimer(rbft.timerMgr.requestTimeout+rbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
-		fmt.Sprintf("new request batch for view=%d/seqNo=%d", rbft.view, n))
+	rbft.softStartNewViewTimer(rbft.timerMgr.getTimeoutValue(REQUEST_TIMER)+rbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
+		fmt.Sprintf("New request batch for view=%d/seqNo=%d", rbft.view, n))
 	rbft.helper.ValidateBatch(digest, batch.TxList, batch.Timestamp, n, rbft.view, true)
 
 }
 
 // validatePending used by backup nodes validates pending batched stored in preparedCert
 func (rbft *rbftImpl) validatePending() {
+
+	if rbft.in(inUpdatingN) {
+		rbft.logger.Debugf("Replica %d not try to validate because it is currently in updatingN.")
+		return
+	}
+
 	// avoid validate multi batches simultaneously
 	if rbft.batchVdr.currentVid != nil {
-		rbft.logger.Debugf("Backup %d not attempting to send validate because it is currently validate %d", rbft.id, *rbft.batchVdr.currentVid)
+		rbft.logger.Debugf("Replica %d not try to validate because it is currently validate %d", rbft.id, *rbft.batchVdr.currentVid)
 		return
 	}
 
@@ -236,13 +257,18 @@ func (rbft *rbftImpl) findNextValidateBatch() (find bool, digest string, txBatch
 	for idx, digest = range rbft.batchVdr.preparedCert {
 		cert := rbft.storeMgr.getCert(idx.view, idx.seqNo, digest)
 
+		if idx.view != rbft.view {
+			rbft.logger.Debugf("Replica %d find incorrect view in prepared cert with view=%d/seqNo=%d", rbft.id, idx.view, idx.seqNo)
+			continue
+		}
+
 		if idx.seqNo != rbft.batchVdr.lastVid+1 {
-			rbft.logger.Debugf("Backup %d gets validateBatch seqNo=%d, but expect seqNo=%d", rbft.id, idx.seqNo, rbft.batchVdr.lastVid+1)
+			rbft.logger.Debugf("Replica %d get validate batch seqNo=%d, but expect seqNo=%d", rbft.id, idx.seqNo, rbft.batchVdr.lastVid+1)
 			continue
 		}
 
 		if cert.prePrepare == nil {
-			rbft.logger.Warningf("Replica %d get pre-prepare failed for view=%d/seqNo=%d/digest=%s",
+			rbft.logger.Errorf("Replica %d get prePrepare failed for view=%d/seqNo=%d/digest=%s",
 				rbft.id, idx.view, idx.seqNo, digest)
 			continue
 		}
@@ -250,7 +276,7 @@ func (rbft *rbftImpl) findNextValidateBatch() (find bool, digest string, txBatch
 
 		batch, missing, err := rbft.batchMgr.txPool.GetTxsByHashList(digest, preprep.HashBatch.List)
 		if err != nil {
-			rbft.logger.Warningf("Replica %d get error when get txlist, err: %v", rbft.id, err)
+			rbft.logger.Warningf("Replica %d get error when get txList, err: %v", rbft.id, err)
 			rbft.sendViewChange()
 			return
 		}
@@ -281,7 +307,7 @@ func (rbft *rbftImpl) findNextValidateBatch() (find bool, digest string, txBatch
 // execValidate used by backup nodes actually sends validate event
 func (rbft *rbftImpl) execValidate(digest string, txBatch *TransactionBatch, idx vidx) {
 
-	rbft.logger.Debugf("Backup %d try to validate batch for view=%d/seqNo=%d, batch size: %d", rbft.id, idx.view, idx.seqNo, len(txBatch.TxList))
+	rbft.logger.Debugf("Replica %d try to validate batch for view=%d/seqNo=%d, batch size: %d", rbft.id, idx.view, idx.seqNo, len(txBatch.TxList))
 
 	rbft.helper.ValidateBatch(digest, txBatch.TxList, txBatch.Timestamp, idx.seqNo, idx.view, false)
 	delete(rbft.batchVdr.preparedCert, idx)
@@ -290,11 +316,17 @@ func (rbft *rbftImpl) execValidate(digest string, txBatch *TransactionBatch, idx
 }
 
 // handleTransactionsAfterAbnormal handles the transactions put in txPool during
-// viewChange, updateN and recovery
+// viewChange, updateN and recovery if current node is new primary, else, validate
+// pending transactions
 func (rbft *rbftImpl) handleTransactionsAfterAbnormal() {
 
-	// backup does not need to process it
 	if !rbft.isPrimary(rbft.id) {
+		// after abnormal cases, such as recovery, viewchange or updatingN, execute pending
+		// using the PQC information received during that process.
+		// NOTICE: these PQC are not the PQC fetched using fetchPQC() because fetched PQC are
+		// executed after recvRecoveryReturnPQC, these PQC are received during abnormal cases
+		// whose seqNo may be higher than lastExec.
+		rbft.executeAfterStateUpdate()
 		return
 	}
 

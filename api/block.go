@@ -4,10 +4,10 @@ package api
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
 )
 
 // This file implements the handler of Block service API which
@@ -28,7 +28,7 @@ type BlockResult struct {
 	AvgTime      *Number       `json:"avgTime"`
 	TxCounts     *Number       `json:"txcounts"`
 	MerkleRoot   common.Hash   `json:"merkleRoot"`
-	Transactions []interface{} `json:"transactions"`
+	Transactions []interface{} `json:"transactions,omitempty"`
 }
 
 type StatisticResult struct {
@@ -50,17 +50,7 @@ func (blk *Block) GetBlocks(args IntervalArgs) ([]*BlockResult, error) {
 	if err != nil {
 		return nil, err
 	} else {
-		return getBlocks(trueArgs, blk.namespace, false)
-	}
-}
-
-// GetPlainBlocks returns all the block for given block number without transactions.
-func (blk *Block) GetPlainBlocks(args IntervalArgs) ([]*BlockResult, error) {
-	trueArgs, err := prepareIntervalArgs(args, blk.namespace)
-	if err != nil {
-		return nil, err
-	} else {
-		return getBlocks(trueArgs, blk.namespace, true)
+		return getBlocks(trueArgs, blk.namespace, args.IsPlain)
 	}
 }
 
@@ -69,39 +59,22 @@ func (blk *Block) LatestBlock() (*BlockResult, error) {
 	return latestBlock(blk.namespace)
 }
 
-// GetBlockByHash returns the block for the given block hash.
-func (blk *Block) GetBlockByHash(hash common.Hash) (*BlockResult, error) {
-	return getBlockByHash(blk.namespace, hash, false)
+// GetBlockByHash returns the block for the given block hash. If the param isPlain
+// value is true, it returns block excluding transactions. If false, it returns block
+// including transactions.
+func (blk *Block) GetBlockByHash(hash common.Hash, isPlain bool) (*BlockResult, error) {
+	return getBlockByHash(blk.namespace, hash, isPlain)
 }
 
-// GenesisBlock returns current genesis block number.
-func (blk *Block) GenesisBlock() (uint64, error) {
-	genesis, err := edb.GetGenesisTag(blk.namespace)
-	return genesis, &common.CallbackError{Message: err.Error()}
-}
-
-// GetPlainBlockByHash returns the block for the given block hash.
-func (blk *Block) GetPlainBlockByHash(hash common.Hash) (*BlockResult, error) {
-	return getBlockByHash(blk.namespace, hash, true)
-}
-
-// GetBlockByNumber returns the block for the given block number.
-func (blk *Block) GetBlockByNumber(n BlockNumber) (*BlockResult, error) {
+// GetBlockByNumber returns the block for the given block number. If the param isPlain
+// value is true, it returns block excluding transactions. If false, it returns block
+// including transactions.
+func (blk *Block) GetBlockByNumber(n BlockNumber, isPlain bool) (*BlockResult, error) {
 	number, err := prepareBlockNumber(n, blk.namespace)
 	if err != nil {
 		return nil, err
 	} else {
-		return getBlockByNumber(blk.namespace, number, false)
-	}
-}
-
-// GetPlainBlockByNumber returns the block for the given block number without transactions.
-func (blk *Block) GetPlainBlockByNumber(n BlockNumber) (*BlockResult, error) {
-	number, err := prepareBlockNumber(n, blk.namespace)
-	if err != nil {
-		return nil, err
-	} else {
-		return getBlockByNumber(blk.namespace, number, true)
+		return getBlockByNumber(blk.namespace, number, isPlain)
 	}
 }
 
@@ -114,8 +87,9 @@ type BlocksIntervalResult struct {
 // GetBlocksByTime returns the number of blocks, starting block and ending block for the given time duration.
 func (blk *Block) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, error) {
 
-	if args.StartTime > args.Endtime {
-		return nil, &common.InvalidParamsError{Message: "Invalid params"}
+	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0 {
+		return nil, &common.InvalidParamsError{Message: "invalid params, both startTime and endTime must be positive, " +
+			"startTime must be less than endTime"}
 	}
 
 	sumOfBlocks, startBlock, endBlock, err := getBlocksByTime(blk.namespace, args.StartTime, args.Endtime)
@@ -157,10 +131,53 @@ func (blk *Block) GetChainHeight() (*BlockNumber, error) {
 	return uint64ToBlockNumber(chain.Height), nil
 }
 
-// GetGenesisBlock returns genesis block number.
-func (blk *Block) GetGenesisBlock() (uint64, error) {
-	number, err := edb.GetGenesisTag(blk.namespace)
-	return number, err
+// GetGenesisBlock returns current genesis block number.
+func (blk *Block) GetGenesisBlock() (*BlockNumber, error) {
+	genesis, err := edb.GetGenesisTag(blk.namespace)
+	if err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	} else if genesis == 0 {
+		return nil, &common.NoBlockGeneratedError{}
+	}
+	return uint64ToBlockNumber(genesis), nil
+}
+
+
+// GetBatchBlocksByNumber returns all the block for given block number list.
+func (blk *Block) GetBatchBlocksByNumber(args BatchArgs) ([]*BlockResult, error) {
+	if args.Numbers == nil {
+		return nil, &common.InvalidParamsError{Message: "invalid parameter, please specify block number list"}
+	}
+
+	var blocks []*BlockResult = make([]*BlockResult, 0)
+
+	for _, number := range args.Numbers {
+		if block, err := blk.GetBlockByNumber(number, args.IsPlain); err != nil {
+			return nil, err
+		} else {
+			blocks = append(blocks, block)
+		}
+	}
+	return blocks, nil
+}
+
+// GetBatchBlocksByHash returns all the block for given block hash list.
+func (blk *Block) GetBatchBlocksByHash(args BatchArgs) ([]*BlockResult, error) {
+	blk.log.Error(args.Hashes)
+	if args.Hashes == nil {
+		return nil, &common.InvalidParamsError{Message: "invalid parameter, please specify block hash list"}
+	}
+
+	var blocks []*BlockResult = make([]*BlockResult, 0)
+
+	for _, blockHash := range args.Hashes {
+		if block, err := blk.GetBlockByHash(blockHash, args.IsPlain); err != nil {
+			return nil, err
+		} else {
+			blocks = append(blocks, block)
+		}
+	}
+	return blocks, nil
 }
 
 func latestBlock(namespace string) (*BlockResult, error) {
@@ -222,6 +239,43 @@ func getBlocksByTime(namespace string, startTime, endTime int64) (sumOfBlocks ui
 	return sumOfBlocks, startBlock, endBlock, nil
 }
 
+func getBlockByHash(namespace string, hash common.Hash, isPlain bool) (*BlockResult, error) {
+
+	if common.EmptyHash(hash) == true {
+		return nil, &common.InvalidParamsError{Message: "invalid params, missing block hash"}
+	}
+
+	block, err := edb.GetBlock(namespace, hash[:])
+	if err != nil && err.Error() == db_not_found_error {
+		return nil, &common.DBNotFoundError{Type: BLOCK, Id: hash.Hex()}
+	} else if err != nil {
+		return nil, &common.CallbackError{Message: err.Error()}
+	}
+
+	return outputBlockResult(namespace, block, isPlain)
+}
+
+func getBlocks(args *intArgs, namespace string, isPlain bool) ([]*BlockResult, error) {
+	var blocks []*BlockResult
+
+	from := args.from
+	to := args.to
+
+	for from <= to {
+		b, err := getBlockByNumber(namespace, to, isPlain)
+		if err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, b)
+		if to == 1 {
+			break
+		}
+		to--
+	}
+
+	return blocks, nil
+}
+
 // outputBlockResult makes type conversion.
 func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*BlockResult, error) {
 
@@ -260,43 +314,6 @@ func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*Blo
 		MerkleRoot:   common.BytesToHash(block.MerkleRoot),
 		Transactions: transactions,
 	}, nil
-}
-
-func getBlockByHash(namespace string, hash common.Hash, isPlain bool) (*BlockResult, error) {
-
-	if common.EmptyHash(hash) == true {
-		return nil, &common.InvalidParamsError{Message: "Invalid hash"}
-	}
-
-	block, err := edb.GetBlock(namespace, hash[:])
-	if err != nil && err.Error() == db_not_found_error {
-		return nil, &common.DBNotFoundError{Type: BLOCK, Id: hash.Hex()}
-	} else if err != nil {
-		return nil, &common.CallbackError{Message: err.Error()}
-	}
-
-	return outputBlockResult(namespace, block, isPlain)
-}
-
-func getBlocks(args *intArgs, namespace string, isPlain bool) ([]*BlockResult, error) {
-	var blocks []*BlockResult
-
-	from := args.from
-	to := args.to
-
-	for from <= to {
-		b, err := getBlockByNumber(namespace, to, isPlain)
-		if err != nil {
-			return nil, err
-		}
-		blocks = append(blocks, b)
-		if to == 1 {
-			break
-		}
-		to--
-	}
-
-	return blocks, nil
 }
 
 type BatchTimeResult struct {

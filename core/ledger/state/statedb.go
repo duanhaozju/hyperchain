@@ -24,15 +24,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/deckarep/golang-set"
+	"github.com/hyperchain/hyperchain/common"
+	cm "github.com/hyperchain/hyperchain/core/common"
+	"github.com/hyperchain/hyperchain/core/ledger/tree/bucket"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
-	"hyperchain/common"
-	cm "hyperchain/core/common"
-	"hyperchain/core/ledger/tree/bucket"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	"hyperchain/crypto"
-	"hyperchain/hyperdb/db"
 	"sync/atomic"
 )
 
@@ -83,7 +83,7 @@ type StateDB struct {
 // New creates a new state with the given root and height.
 func New(root common.Hash, db, archiveDb db.Database, conf *common.Config, height uint64) (*StateDB, error) {
 	// initialize bucket tree
-	bucketTree := bucket.NewBucketTree(db, string(compositeStateBucketPrefix()))
+	bucketTree := bucket.NewBucketTree(db, string(CompositeStateBucketPrefix()))
 	// initialize cache
 	batchCache, _ := common.NewCache()
 	contentCache, _ := common.NewCache()
@@ -312,7 +312,7 @@ func (self *StateDB) GetAccounts() map[string]vm.Account {
 	ret := make(map[string]vm.Account)
 	iter := self.db.NewIterator([]byte(accountPrefix))
 	for iter.Next() {
-		addr, ok := splitCompositeAccountKey(iter.Key())
+		addr, ok := SplitCompositeAccountKey(iter.Key())
 		if ok == false {
 			continue
 		}
@@ -424,7 +424,7 @@ func (self *StateDB) GetState(a common.Address, b common.Hash) (bool, []byte) {
 		if liveObj == nil {
 			self.logger.Debugf("get state for %s in database, key %s, value %s, add to live state object's storage cache", a.Hex(), b.Hex(), common.Bytes2Hex(value))
 			// Load the object from the database.
-			data, err := self.db.Get(compositeAccountKey(a.Bytes()))
+			data, err := self.db.Get(CompositeAccountKey(a.Bytes()))
 			if err != nil {
 				return false, nil
 			}
@@ -616,7 +616,7 @@ func (self *StateDB) updateStateObject(batch db.Batch, stateObject *StateObject)
 	if err != nil {
 		self.logger.Error("marshal stateobject failed", addr.Hex())
 	}
-	batch.Put(compositeAccountKey(addr.Bytes()), data)
+	batch.Put(CompositeAccountKey(addr.Bytes()), data)
 	return data
 }
 
@@ -625,9 +625,9 @@ func (self *StateDB) deleteStateObject(batch db.Batch, stateObject *StateObject)
 	self.logger.Debugf("delete state object %s during state commit, seqNo #%d", stateObject.address.Hex(), self.curSeqNo)
 	stateObject.deleted = true
 	addr := stateObject.Address()
-	batch.Delete(compositeAccountKey(addr.Bytes()))
+	batch.Delete(CompositeAccountKey(addr.Bytes()))
 	// delete related storage content
-	iter := self.db.NewIterator(getStorageKeyPrefix(stateObject.address.Bytes()))
+	iter := self.db.NewIterator(GetStorageKeyPrefix(stateObject.address.Bytes()))
 	for iter.Next() {
 		batch.Delete(iter.Key())
 	}
@@ -666,7 +666,7 @@ func (self *StateDB) GetStateObject(addr common.Address) *StateObject {
 		}
 	}
 	// Load the object from the database.
-	data, err := self.db.Get(compositeAccountKey(addr.Bytes()))
+	data, err := self.db.Get(CompositeAccountKey(addr.Bytes()))
 	if err != nil {
 		self.logger.Debugf("no state object been find")
 		return nil
@@ -774,7 +774,7 @@ func (self *StateDB) RevertToJournal(target uint64, current uint64, targetRoot [
 	journalCache := NewJournalCache(self.db, self.logger)
 	for i := current; i >= target+1; i -= 1 {
 		self.logger.Debugf("undo changes for #%d", i)
-		j, err := self.db.Get(compositeJournalKey(uint64(i)))
+		j, err := self.db.Get(CompositeJournalKey(uint64(i)))
 		if err != nil {
 			self.logger.Debugf("get journal in database for #%d failed. make sure #%d doesn't have state change",
 				i, i)
@@ -796,7 +796,7 @@ func (self *StateDB) RevertToJournal(target uint64, current uint64, targetRoot [
 			}
 		}
 		// remove persisted journals
-		batch.Delete(compositeJournalKey(uint64(i)))
+		batch.Delete(CompositeJournalKey(uint64(i)))
 	}
 
 	if err := journalCache.Flush(batch); err != nil {
@@ -806,7 +806,7 @@ func (self *StateDB) RevertToJournal(target uint64, current uint64, targetRoot [
 	// revert related stateObject storage bucket tree
 	for addr := range dirtyObjects.Iter() {
 		address := addr.(common.Address)
-		bucketTree := bucket.NewBucketTree(self.db, string(compositeStorageBucketPrefix(address.Hex())))
+		bucketTree := bucket.NewBucketTree(self.db, string(CompositeStorageBucketPrefix(address.Hex())))
 		bucketTree.Initialize(initTreeConfig(self.getCapacity(STATEOBJ), self.getAggreation(STATEOBJ),
 			self.getMerkleCacheSize(STATEOBJ), self.getBucketCacheSize(STATEOBJ)))
 		// clear out cached stuff in global cache.
@@ -877,7 +877,7 @@ func (s *StateDB) clearJournalAndRefund() {
 		if err != nil {
 			s.logger.Errorf("marshal seqNo [%d] journal failed", curSeqNo)
 		}
-		batch.Put(compositeJournalKey(curSeqNo), journal)
+		batch.Put(CompositeJournalKey(curSeqNo), journal)
 	}
 	// 2. clear journal
 	s.journal = Journal{}
@@ -908,7 +908,7 @@ func (s *StateDB) commit(dbw db.Batch, archieveDb db.Batch, deleteEmptyObjects b
 			// Write any contract code associated with the state object
 			s.logger.Debugf("seqNo #%d, state object %s been updated", s.curSeqNo, stateObject.address.Hex())
 			if stateObject.code != nil && stateObject.dirtyCode {
-				if err := dbw.Put(compositeCodeHash(stateObject.Address().Bytes(), stateObject.CodeHash()), stateObject.code); err != nil {
+				if err := dbw.Put(CompositeCodeHash(stateObject.Address().Bytes(), stateObject.CodeHash()), stateObject.code); err != nil {
 					return common.Hash{}, err
 				}
 				stateObject.dirtyCode = false
@@ -965,7 +965,7 @@ func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
 	)
 	defer accountIter.Release()
 	for accountIter.Next() {
-		addr, ok := splitCompositeAccountKey(accountIter.Key())
+		addr, ok := SplitCompositeAccountKey(accountIter.Key())
 		if ok == false {
 			continue
 		}
@@ -977,9 +977,9 @@ func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
 		}
 		stateObject := newObject(s, address, account, s.MarkStateObjectDirty, true, initTreeConfig(s.getCapacity(STATEOBJ), s.getAggreation(STATEOBJ), s.getMerkleCacheSize(STATEOBJ), s.getBucketCacheSize(STATEOBJ)), s.logger)
 		dirtyStorage := bucket.NewEntries()
-		iter := stateObject.db.db.NewIterator(getStorageKeyPrefix(stateObject.address.Bytes()))
+		iter := stateObject.db.db.NewIterator(GetStorageKeyPrefix(stateObject.address.Bytes()))
 		for iter.Next() {
-			key, ok := splitCompositeStorageKey(stateObject.address.Bytes(), iter.Key())
+			key, ok := SplitCompositeStorageKey(stateObject.address.Bytes(), iter.Key())
 			if ok == false {
 				continue
 			}
@@ -1013,7 +1013,7 @@ func (s *StateDB) RecomputeCryptoHash() (common.Hash, error) {
 // Note, during the merge, account meta data should be merged first.
 func (s *StateDB) Merge(db db.Database, batch db.Batch, expect common.Hash) error {
 	applyAccount := func(k, v []byte) {
-		blob, success := splitCompositeAccountKey(k)
+		blob, success := SplitCompositeAccountKey(k)
 		if !success {
 			return
 		}
@@ -1028,12 +1028,12 @@ func (s *StateDB) Merge(db db.Database, batch db.Batch, expect common.Hash) erro
 		obj.onDirty(addr)
 	}
 	applyStorage := func(k, v []byte) {
-		blob, success := retrieveAddrFromStorageKey(k)
+		blob, success := RetrieveAddrFromStorageKey(k)
 		if !success {
 			return
 		}
 		addr := common.BytesToAddress(blob)
-		blob, success = splitCompositeStorageKey(addr.Bytes(), k)
+		blob, success = SplitCompositeStorageKey(addr.Bytes(), k)
 		if !success {
 			return
 		}
@@ -1043,12 +1043,12 @@ func (s *StateDB) Merge(db db.Database, batch db.Batch, expect common.Hash) erro
 		s.SetState(addr, key, val, 0)
 	}
 	applyCode := func(k, v []byte) {
-		blob, success := retrieveAddrFromCodeHash(k)
+		blob, success := RetrieveAddrFromCodeHash(k)
 		if !success {
 			return
 		}
 		addr := common.BytesToAddress(blob)
-		blob, success = splitCompositeCodeHash(addr.Bytes(), k)
+		blob, success = SplitCompositeCodeHash(addr.Bytes(), k)
 		if !success {
 			return
 		}

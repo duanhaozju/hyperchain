@@ -3,9 +3,9 @@ package manager
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/consensus/rbft"
+	m "github.com/hyperchain/hyperchain/manager/message"
 	"github.com/syndtr/goleveldb/leveldb/errors"
-	"hyperchain/consensus/rbft"
-	m "hyperchain/manager/message"
 )
 
 // invokeRbftLocal helps wrapper event to consensus event type and then
@@ -42,7 +42,7 @@ func (hub *EventHub) broadcast(bType int, t m.SessionMessage_Type, message []byt
 
 // send helps send message to a specified node.
 func (hub *EventHub) send(t m.SessionMessage_Type, message []byte, peers []uint64) {
-	hub.logger.Debugf("send session message %s", t.String())
+	hub.logger.Debugf("send session message %s to %v", t.String(), peers)
 	if ctx, err := proto.Marshal(&m.SessionMessage{
 		Type:    t,
 		Payload: message,
@@ -71,7 +71,7 @@ func (hub *EventHub) sendToRandomVP(t m.SessionMessage_Type, message []byte) err
 
 // sendToNVP helps send messages to specified NVPs.
 func (hub *EventHub) sendToNVP(t m.SessionMessage_Type, message []byte, peers []string) {
-	hub.logger.Debugf("send session message %s", t.String())
+	hub.logger.Debugf("send session message %s to %v", t.String(), peers)
 	if ctx, err := proto.Marshal(&m.SessionMessage{
 		Type:    t,
 		Payload: message,

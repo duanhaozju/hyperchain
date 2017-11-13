@@ -1,8 +1,8 @@
 package jvm
 
 import (
-	"hyperchain/common"
-	pb "hyperchain/core/vm/jcee/protos"
+	"github.com/hyperchain/hyperchain/common"
+	pb "github.com/hyperchain/hyperchain/core/vm/jcee/protos"
 	"testing"
 )
 
@@ -17,6 +17,7 @@ func NewJvmClient() *Client {
 }
 
 func TestClient_SyncExecute(t *testing.T) {
+	t.Skip("@Wangxiaoyi")
 	client := NewJvmClient()
 	err := client.Connect()
 

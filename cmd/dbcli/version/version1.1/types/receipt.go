@@ -3,8 +3,8 @@ package version1_1
 import (
 	"encoding/json"
 	"fmt"
-	"hyperchain/common"
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
 	"math/big"
 	"strconv"
 )

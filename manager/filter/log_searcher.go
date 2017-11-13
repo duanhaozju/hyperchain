@@ -1,10 +1,10 @@
 package filter
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/willf/bloom"
-	"hyperchain/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
 )
 
 type Searcher struct {

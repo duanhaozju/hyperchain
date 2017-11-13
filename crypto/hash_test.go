@@ -5,7 +5,7 @@ package crypto
 import (
 	"bytes"
 	"encoding/hex"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"math/big"
 	"testing"
 )

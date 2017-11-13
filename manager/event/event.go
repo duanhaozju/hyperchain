@@ -3,7 +3,7 @@
 package event
 
 import (
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/types"
 )
 
 type AliveEvent struct{ Payload bool }
@@ -96,6 +96,13 @@ type ArchiveEvent struct {
 	FilterId string
 	Cont     chan error //TODO: need to fix
 	Sync     bool
+}
+
+type ArchiveRestoreEvent struct {
+	FilterId string
+	Ack      chan error
+	Sync     bool
+	All      bool
 }
 
 // receive tx from a nvp

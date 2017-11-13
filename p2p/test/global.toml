@@ -1,0 +1,142 @@
+###########################################################
+#  _   _                        ____ _           _        #
+# | | | |_   _ _ __   ___ _ __ / ___| |__   __ _(_)_ __   #
+# | |_| | | | | '_ \ / _ \ '__| |   | '_ \ / _\` | | '_ \ #
+# |  _  | |_| | |_) |  __/ |  | |___| | | | (_| | | | | | #
+# |_| |_|\__, | .__/ \___|_|   \____|_| |_|\__,_|_|_| |_| #
+#        |___/|_|                                         #
+###########################################################
+
+title = "Hyperchain global configurations"
+##########################################################
+#
+# Logger section
+# config log's level by module
+# CRITICAL ERROR WARNING NOTICE INFO DEBUG
+# high <------------- log level -------> low
+#
+##########################################################
+
+[log]
+dump_file       = true # dump the log file or not
+dump_interval   = "24h"  # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h". such as "300ms", "2h45m".
+log_dir         = "./logs"
+log_level       = "NOTICE" # default loglevel for all modules which can be override by module level log setting
+file_format     = "[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message}"
+console_format  = "%{color}[%{module}][%{level:.5s}] %{time:15:04:05.000} %{shortfile} %{message} %{color:reset}"
+
+    [log.module] #set log level by module
+    p2p         = "DEBUG"
+    consensus   = "NOTICE"
+    core        = "NOTICE"
+    hyperdb     = "NOTICE"
+    eventhub    = "NOTICE"
+    jsonrpc     = "NOTICE"
+
+##########################################################
+#
+#  JSONRPC section
+#
+##########################################################
+[http]
+# allowedOrigins should be a comma-separated list of allowed origin URLs
+# to allow connections with any origin, pass "*".
+allowedOrigins=["*"]
+# if true, it will enable secure http connection(https).
+security    = false
+# if true, use http/2, otherwise use http/1.1.
+# WARN: if version_2 is true, option sercurity must be true, otherwise use default http/1.1 without https.
+http_2   = false
+
+##########################################################
+#
+# P2P section
+#
+##########################################################
+[p2p]
+servername              = "hyperchainServer1"
+retrytime               = "3s"
+ipc                     = "hpc_1.ipc"
+enableTLS               = true
+tlsCA                   = "test/tls/tlsca.ca"
+tlsServerHostOverride   = "hyperchain.cn"
+tlsCert                 = "test/tls/tls_peer.cert"
+tlsCertPriv             = "test/tls/tls_peer.priv"
+
+hosts                   = "test/hosts.toml"
+addr                    = "test/addr.toml"
+
+# connection control configurations
+# keepalive configuration
+keepAliveDuration = "3s"
+keepAliveFailTimes = 3
+# pending configuration
+pendingDuration = "10s"
+pendingFailTimes = 3
+# connection pool init capacity
+connInitCap = 1
+# connection pool upper limit
+connUpperlimit = 1
+# to avoid the EOF set the time
+connIdleTime = "15s"
+
+##########################################################
+#
+# hypervm section
+#
+##########################################################
+[hypervm]
+jvm = true
+
+##########################################################
+#
+# key ports section
+#
+##########################################################
+[port]
+jsonrpc     = 8081
+restful     = 9001
+websocket   = 10001
+jvm         = 50081
+ledger      = 50051
+grpc        = 50011 # p2p
+
+##########################################################
+#
+# namespace section
+#
+##########################################################
+[namespace]
+config_root_dir = "./namespaces"
+
+    [namespace.start] # define start which namespaces when node starts
+    global          = true
+    ns_2e6160583867 = false
+
+##########################################################
+#
+# administrator section
+#
+##########################################################
+[admin]
+check      = false
+expiration = "300s"
+
+##########################################################
+#
+# other configurations section
+#
+##########################################################
+
+[flow.control.ratelimit]
+ enable            = true
+ txRatePeak        = 100
+ txFillRate        = "0.5ms"
+ contractRatePeak  = 100
+ contractFillRate  = "0.5ms"
+
+[duplicate.remove.bloomfilter] # bloom filter used in tx duplication checking
+ interval          = 24
+ rebuild_time      = 3
+ bloombit          = 100000000
+ active_time       = "24h"

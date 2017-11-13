@@ -4,11 +4,11 @@ package jvm
 
 import (
 	"errors"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/core/vm/jcee/go/jvm"
+	pb "github.com/hyperchain/hyperchain/core/vm/jcee/protos"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/jcee/go/jvm"
-	pb "hyperchain/core/vm/jcee/protos"
 	"sync/atomic"
 	"time"
 )

@@ -48,6 +48,7 @@ const (
 	NOTIFY_SYNC_REPLICA
 	NOTIFY_TRANSIT_BLOCK
 	NOTIFY_NVP_SYNC
+	NOTIFY_NVP_CONSULT
 )
 
 // Subscription type definitions
@@ -66,6 +67,11 @@ const (
 )
 
 const (
+	VP = iota
+	NVP
+)
+
+const (
 	LatestBlockNumber     uint64 = 0
 	MaxPendingSnapshotReq        = 1024
 )
@@ -80,7 +86,9 @@ const (
 	SnapshotNotExistMsg   = "snapshot doesn't exist"
 	DeleteSnapshotMsg     = "delete snapshot failed"
 	ArchiveFailedMsg      = "archive failed"
+	ArchiveStoreFailedMsg = "archive store failed"
 	ApplyWsErrMsg         = "apply world state failed"
+	ParentGenesisMissMsg  = "miss parent genesis"
 	EmptyMessage          = ""
 )
 
@@ -93,4 +101,5 @@ var (
 	DeleteSnapshotFailedErr       = errors.New(DeleteSnapshotMsg)
 	ArchiveFailedErr              = errors.New(ArchiveFailedMsg)
 	ApplyWsErr                    = errors.New(ApplyWsErrMsg)
+	NonAvailableParentGenesisErr  = errors.New(ParentGenesisMissMsg)
 )

@@ -1,7 +1,7 @@
 package msg
 
 import (
-	pb "hyperchain/p2p/message"
+	pb "github.com/hyperchain/hyperchain/p2p/message"
 )
 
 type MsgHandler interface {

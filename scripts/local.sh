@@ -81,7 +81,15 @@ echo "Rebuild the project..."
 if [ -s "${DUMP_PATH}/hyperchain" ]; then
     rm ${DUMP_PATH}/hyperchain
 fi
-cd ${PROJECT_PATH} && govendor build -ldflags -s -o ${DUMP_PATH}/hyperchain -tags=embed
+
+if [ -d ${DUMP_PATH} ]; then
+    rm -r ${DUMP_PATH}
+fi
+mkdir -p ${DUMP_PATH}
+
+${PROJECT_PATH}/scripts/build.sh ${PROJECT_PATH}
+
+mv ${PROJECT_PATH}/hyperchain ${DUMP_PATH}/
 }
 
 # rebuild hypercli
@@ -250,7 +258,7 @@ f_sleep(){
 # system type
 _SYSTYPE="MAC"
 
-PROJECT_PATH="${GOPATH}/src/hyperchain"
+PROJECT_PATH="${GOPATH}/src/github.com/hyperchain/hyperchain"
 
 # work path
 CURRENT_PATH=`pwd`
@@ -316,7 +324,7 @@ do
     -c|--hypercli)
         HYPERCLI=true; shift;;
     -j|--jvm)
-        HYPERJVM=true; shift;;
+        HYPERJVM=false; shift;;
     -m|--mode)
         MODE=true; shift;;
     -n|--run)

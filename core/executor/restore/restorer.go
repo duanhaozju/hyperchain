@@ -3,15 +3,16 @@ package restore
 import (
 	"errors"
 	"fmt"
-	"hyperchain/common"
-	cm "hyperchain/core/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/ledger/state"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/hyperchain/hyperchain/common"
+	cm "github.com/hyperchain/hyperchain/core/common"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 )
 
 var (
@@ -45,7 +46,7 @@ func (handler *Handler) Restore(sid string) error {
 	}
 	defer sdb.Close()
 
-	meta, err := edb.GetSnapshotMetaFunc(sdb)
+	meta, err := chain.GetSnapshotMetaFunc(sdb)
 	if err != nil {
 		return err
 	}
@@ -72,7 +73,7 @@ func (handler *Handler) Restore(sid string) error {
 		iter.Release()
 	}
 
-	blk, err := edb.GetBlockFunc(sdb, common.Hex2Bytes(meta.BlockHash))
+	blk, err := chain.GetBlockFunc(sdb, common.Hex2Bytes(meta.BlockHash))
 	if err != nil {
 		return err
 	}
@@ -84,19 +85,19 @@ func (handler *Handler) Restore(sid string) error {
 
 	// apply blk and chain
 	writeBatch := handler.db.NewBatch()
-	if err, _ := edb.PersistBlock(writeBatch, blk, false, false); err != nil {
+	if _, err := chain.PersistBlock(writeBatch, blk, false, false); err != nil {
 		return err
 	}
-	if err := edb.UpdateChain(meta.Namespace, writeBatch, blk, false, false, false); err != nil {
+	if err := chain.UpdateChain(meta.Namespace, writeBatch, blk, false, false, false); err != nil {
 		return err
 	}
-	if err := edb.UpdateGenesisTag(meta.Namespace, meta.Height, writeBatch, false, false); err != nil {
+	if err := chain.UpdateGenesisTag(meta.Namespace, meta.Height, writeBatch, false, false); err != nil {
 		return err
 	}
 	if err := writeBatch.Write(); err != nil {
 		return err
 	}
-	_, tag := edb.GetGenesisTag(meta.Namespace)
+	_, tag := chain.GetGenesisTag(meta.Namespace)
 	fmt.Println("current genesis tag, ", tag)
 	return nil
 }

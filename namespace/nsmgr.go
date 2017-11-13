@@ -5,20 +5,16 @@
 package namespace
 
 import (
-	"errors"
 	"fmt"
-	"github.com/op/go-logging"
-	"google.golang.org/grpc"
-	"hyperchain/common"
-	pb "hyperchain/common/protos"
-	"hyperchain/common/service/server"
-	"hyperchain/core/ledger/bloom"
 	"io/ioutil"
-	"net"
 	"os"
 	"strings"
 	"sync"
-	"hyperchain/common/interface"
+
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/bloom"
+
+	"github.com/op/go-logging"
 )
 
 // This file defines the Namespace Manager interface, which managers all
@@ -38,12 +34,8 @@ import (
 
 var logger *logging.Logger
 
-func init() {
-	logger = common.GetLogger(common.DEFAULT_LOG, "nsmgr")
-}
-
 const (
-	DEFAULT_NAMESPACE  = "global"
+	GLOBAL_NAMESPACE   = "global"
 	NS_CONFIG_DIR_ROOT = "namespace.config_root_dir"
 )
 
@@ -75,6 +67,12 @@ type NamespaceManager interface {
 
 	// GetNamespaceByName returns the namespace instance by name.
 	GetNamespaceByName(name string) Namespace
+
+	// ProcessRequest dispatches received requests to corresponding namespace
+	// processor.
+	// Requests are sent from RPC layer, so responses are returned to RPC layer
+	// with the certain namespace.
+	ProcessRequest(namespace string, request interface{}) interface{}
 
 	// StartNamespace starts namespace by name. This should only be called by
 	// hypercli admin interface.
@@ -108,20 +106,7 @@ type NamespaceManager interface {
 
 	// GetRestartFlag returns the flag of restart hyperchain server
 	GetRestartFlag() chan bool
-
-	// ProcessRequest dispatches received requests to corresponding namespace
-	// processor.
-	// Requests are sent from RPC layer, so responses are returned to RPC layer
-	// with the certain namespace.
-	ProcessRequest(namespace string, request interface{}) interface{}
-
-	// GetNamespaceProcessor returns the namespace instance by name.
-	GetNamespaceProcessor(name string) intfc.NamespaceProcessor
-
-	InternalServer() *server.InternalServer
 }
-
-
 
 // nsManagerImpl implements the NamespaceManager interface.
 type nsManagerImpl struct {
@@ -147,8 +132,6 @@ type nsManagerImpl struct {
 
 	status *Status
 
-	is *server.InternalServer
-
 	stopHp    chan bool
 	restartHp chan bool
 }
@@ -161,38 +144,17 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 		lock:  new(sync.RWMutex),
 	}
 
-	//TODO: refactor this later
-	var s *server.InternalServer
-	if !conf.GetBool(common.EXECUTOR_EMBEDDED) {
-		srv, err := server.NewInternalServer(conf.GetInt(common.INTERNAL_PORT), "0.0.0.0")
-		if err != nil {
-			panic(err)
-		}
-		lis, err := net.Listen("tcp", srv.Addr())
-		if err != nil {
-			panic(lis)
-		}
-
-		grpcServer := grpc.NewServer()
-		pb.RegisterDispatcherServer(grpcServer, srv)
-
-		logger.Criticalf("InternalServer start successful on %v !", srv.Addr())
-		go grpcServer.Serve(lis)
-		s = srv
-	}
-
 	nr := &nsManagerImpl{
 		namespaces:  make(map[string]Namespace),
 		conf:        conf,
 		jvmManager:  NewJvmManager(conf),
+		bloomFilter: bloom.NewBloomFilterCache(conf),
 		status:      status,
 		stopHp:      stopHp,
 		restartHp:   restartHp,
-		is:          s,
 	}
-	nr.bloomFilter = bloom.NewBloomFilterCache(conf)
-	nr.bloomFilter.Start()
 	nr.rwLock = new(sync.RWMutex)
+	nr.bloomFilter.Start()
 	return nr
 }
 
@@ -207,7 +169,6 @@ func GetNamespaceManager(conf *common.Config, stopHp chan bool, restartHp chan b
 	return nr
 }
 
-
 // init initializes the nsManagerImpl and retrieves the namespaces
 // with the name of dirs under the NS_CONFIG_DIR_ROOT path, if the
 // namespace name has been set true in config file, register the
@@ -215,7 +176,7 @@ func GetNamespaceManager(conf *common.Config, stopHp chan bool, restartHp chan b
 func (nr *nsManagerImpl) init() error {
 	configRootDir := nr.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
-		return errors.New("Namespace config root dir is not valid ")
+		return ErrNoRootDir
 	}
 	dirs, err := ioutil.ReadDir(configRootDir)
 	if err != nil {
@@ -230,10 +191,7 @@ func (nr *nsManagerImpl) init() error {
 			}
 			// only register namespace whose name has been set true
 			// in config file.
-			if err := nr.Register(name); err != nil {
-				logger.Error(err)
-				return err
-			}
+			nr.Register(name)
 		} else {
 			logger.Errorf("Invalid folder %v", d)
 		}
@@ -249,38 +207,33 @@ func (nr *nsManagerImpl) Start() error {
 	if state < initialized {
 		err := nr.init()
 		if err != nil {
-			logger.Errorf("Init namespace manager failed: %v", err)
+			logger.Errorf("Init namespace manager failed: %s", err)
 			return err
 		}
 	}
 	if nr.status.getState() == running {
-		logger.Critical("namespace manager is already running")
+		logger.Notice("Namespace manager is already running")
 		return nil
 	}
 
-	if !nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
-		logger.Criticalf("waitting for executor admin to connect ...")
-		//TODO: add timeout detect
-		admin := <-nr.is.AdminRegister()
-		logger.Criticalf("executor admin at %v connected", admin)
-	}
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	for name := range nr.namespaces {
 		go func(name string) {
 			err := nr.StartNamespace(name)
 			if err != nil {
-				logger.Errorf("namespace %s start failed, %v", name, err)
+				logger.Errorf("Start namespace %s failed: %s", name, err)
 			}
 		}(name)
 	}
-	if nr.conf.GetBool(common.C_JVM_START) == true && nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
+	if nr.conf.GetBool(common.C_JVM_START) == true {
 		if err := nr.jvmManager.Start(); err != nil {
 			logger.Error(err)
 			return err
 		}
 	}
 	nr.status.setState(running)
+	logger.Noticef("Namespace manager started!")
 	return nil
 }
 
@@ -289,26 +242,26 @@ func (nr *nsManagerImpl) Start() error {
 func (nr *nsManagerImpl) Stop() error {
 	state := nr.status.getState()
 	if state != running {
-		logger.Critical("namespace manager is not running now, need not to stop")
+		logger.Notice("Namespace manager is not running now, need not to stop")
 		return nil
 	}
 
-	logger.Noticef("Try to stop NamespaceManager ...")
+	logger.Notice("Try to stop NamespaceManager ...")
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	for name := range nr.namespaces {
 		err := nr.StopNamespace(name)
 		if err != nil {
-			logger.Errorf("namespace %s stop failed, %v", name, err)
+			logger.Errorf("Stop namespace %s failed: %s", name, err)
 			return err
 		}
 	}
 	if err := nr.jvmManager.Stop(); err != nil {
-		logger.Errorf("Stop hyperjvm error %v", err)
+		logger.Errorf("Stop hyperjvm failed: %s", err)
 	}
 	nr.bloomFilter.Close()
 	nr.status.setState(closed)
-	logger.Noticef("NamespaceManager stopped!")
+	logger.Noticef("Namespace manager stopped!")
 	return nil
 }
 
@@ -335,23 +288,21 @@ func (nr *nsManagerImpl) checkNamespaceName(name string) bool {
 	return false
 }
 
-
-
 // Register registers a newed namespace to system by the newed namespace
 // config dir and update the config file if needed.
 func (nr *nsManagerImpl) Register(name string) error {
-	logger.Noticef("Register namespace: %s", name)
+	logger.Noticef("Register namespace %s", name)
 	if _, ok := nr.namespaces[name]; ok {
-		logger.Warningf("namespace [%s] has been registered", name)
+		logger.Warningf("Namespace %s has been registered", name)
 		return ErrRegistered
 	}
 	configRootDir := nr.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
-		return errors.New("Namespace config root dir is not valid ")
+		return ErrNoRootDir
 	}
 	nsRootPath := configRootDir + "/" + name
 	if _, err := os.Stat(nsRootPath); os.IsNotExist(err) {
-		logger.Errorf("namespace [%s] root path doesn't exist!", name)
+		logger.Errorf("Namespace %s root path doesn't exist!", name)
 		return ErrNonExistConfig
 	}
 	nsConfigDir := nsRootPath + "/config"
@@ -359,24 +310,17 @@ func (nr *nsManagerImpl) Register(name string) error {
 	if err != nil {
 		return err
 	}
-	nsConfig.Set(common.JSON_RPC_PORT, "8081")
 	delFlag := make(chan bool)
-	ns, err := GetNamespace(name, nsConfig, delFlag, nr.is)
-	if nr.conf.GetBool(common.EXECUTOR_EMBEDDED) == false {
-		nr.is.RegisterLocal(ns.LocalService()) // register local service
-	}
+	ns, err := GetNamespace(name, nsConfig, delFlag)
 	if err != nil {
-		logger.Errorf("Construct namespace %s error, %v", name, err)
+		logger.Errorf("Construct namespace %s error: %s", name, err)
 		return ErrCannotNewNs
 	}
 	nr.addNamespace(ns)
-	if nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
-		if err := nr.bloomFilter.Register(name); err != nil {
-			logger.Error("register bloom filter failed", err.Error())
-			return err
-		}
+	if err := nr.bloomFilter.Register(name); err != nil {
+		logger.Errorf("Register bloom filter failed: %s", err)
+		return err
 	}
-
 	if err = updateNamespaceStartConfig(name, nr.conf); err != nil {
 		logger.Criticalf("Update namespace start for [%s] config failed", name)
 	}
@@ -386,20 +330,23 @@ func (nr *nsManagerImpl) Register(name string) error {
 
 // DeRegister de-registers namespace from system by name.
 func (nr *nsManagerImpl) DeRegister(name string) error {
-	logger.Criticalf("Try to deregister the namespace:%s ", name)
-	if ns, ok := nr.namespaces[name]; ok {
-		if ns.Status().state == running {
-			logger.Noticef("namespace: %s is running, stop it first", name)
-			ns.Stop()
-		}
-		nr.removeNamespace(name)
-	} else {
-		logger.Warningf("namespace %s not exist, please register first.", name)
-		return ErrNoSuchNamespace
+	logger.Noticef("Try to deregister namespace %s", name)
+
+	ns := nr.GetNamespaceByName(name)
+	if ns == nil {
+		logger.Warningf("No namespace instance found for name: %s", name)
+		return ErrInvalidNs
 	}
+
+	if ns.Status().state == running {
+		logger.Noticef("Namespace %s is running, stop it first", name)
+		ns.Stop()
+	}
+	nr.removeNamespace(name)
+
 	nr.bloomFilter.UnRegister(name)
-	logger.Criticalf("namespace: %s stopped", name)
-	//TODO: need to delete the data and stop listen del rnode.
+	logger.Criticalf("Namespace %s stopped", name)
+
 	return nil
 }
 
@@ -437,69 +384,60 @@ func (nr *nsManagerImpl) GetNamespaceByName(name string) Namespace {
 	return nil
 }
 
-func (nr *nsManagerImpl)  GetNamespaceProcessor(name string) intfc.NamespaceProcessor {
-	nr.rwLock.RLock()
-	defer nr.rwLock.RUnlock()
-	if ns, ok := nr.namespaces[name]; ok {
-		return ns
-	}
-	return nil
-}
-
 // ProcessRequest dispatches the request to the specified namespace processor.
 func (nr *nsManagerImpl) ProcessRequest(namespace string, request interface{}) interface{} {
-	np := nr.GetNamespaceProcessor(namespace)
-	if np == nil {
-		logger.Noticef("no namespace found for name: %s", namespace)
+	ns := nr.GetNamespaceByName(namespace)
+	if ns == nil {
+		logger.Warningf("No namespace instance found for name: %s", namespace)
 		return nil
 	}
-	return np.ProcessRequest(request)
+	return ns.ProcessRequest(request)
 }
 
 // StartNamespace starts namespace instance by name.
 func (nr *nsManagerImpl) StartNamespace(name string) error {
-	nr.rwLock.RLock()
-	defer nr.rwLock.RUnlock()
-	if ns, ok := nr.namespaces[name]; ok {
-		if err := ns.Start(); err != nil {
-			ns.Stop() //start failed, try to stop some started components
-			return err
-		} else {
-			if nr.conf.GetBool(common.EXECUTOR_EMBEDDED) {
-				nr.jvmManager.ledgerProxy.RegisterDB(name, ns.GetExecutor().FetchStateDb())
-			}
-			return nil
-		}
+	ns := nr.GetNamespaceByName(name)
+	if ns == nil {
+		logger.Warningf("No namespace instance found for name: %s", name)
+		return ErrInvalidNs
 	}
-	logger.Errorf("No namespace instance for %s found", name)
-	return ErrInvalidNs
+
+	if err := ns.Start(); err != nil {
+		//start failed, try to stop some started components
+		ns.Stop()
+		return err
+	} else {
+		nr.jvmManager.ledgerProxy.RegisterDB(name, ns.GetExecutor().FetchStateDb())
+		return nil
+	}
+
 }
 
 // StopNamespace stops namespace instance by name.
 func (nr *nsManagerImpl) StopNamespace(name string) error {
-	nr.rwLock.RLock()
-	defer nr.rwLock.RUnlock()
-	if ns, ok := nr.namespaces[name]; ok {
-		if err := ns.Stop(); err != nil {
-			return err
-		} else {
-			nr.jvmManager.ledgerProxy.UnRegister(name)
-			return nil
-		}
+	ns := nr.GetNamespaceByName(name)
+	if ns == nil {
+		logger.Warningf("No namespace instance found for name: %s", name)
+		return ErrInvalidNs
 	}
-	logger.Errorf("No namespace instance for %s found")
-	return ErrInvalidNs
+
+	if err := ns.Stop(); err != nil {
+		return err
+	} else {
+		nr.jvmManager.ledgerProxy.UnRegister(name)
+		return nil
+	}
 }
 
 // RestartNamespace restarts namespace by name.
 func (nr *nsManagerImpl) RestartNamespace(name string) error {
-	nr.rwLock.RLock()
-	defer nr.rwLock.RUnlock()
-	if ns, ok := nr.namespaces[name]; ok {
-		return ns.Restart()
+	ns := nr.GetNamespaceByName(name)
+	if ns == nil {
+		logger.Warningf("No namespace instance found for name: %s", name)
+		return ErrInvalidNs
 	}
-	logger.Errorf("No namespace instance for %s found")
-	return ErrInvalidNs
+
+	return ns.Restart()
 }
 
 // GlobalConfig returns the global configuration of the system.
@@ -539,7 +477,6 @@ func (nr *nsManagerImpl) ListenDelNode(name string, delFlag chan bool) {
 	for {
 		select {
 		case <-delFlag:
-			nr.StopNamespace(name)
 			nr.DeRegister(name)
 		}
 	}
@@ -553,8 +490,4 @@ func (nr *nsManagerImpl) GetStopFlag() chan bool {
 // GetRestartFlag returns the flag of restart hyperchain server
 func (nr *nsManagerImpl) GetRestartFlag() chan bool {
 	return nr.restartHp
-}
-
-func (nr *nsManagerImpl) InternalServer() *server.InternalServer {
-	return nr.is
 }

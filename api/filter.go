@@ -2,32 +2,35 @@ package api
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager"
+	"github.com/hyperchain/hyperchain/manager/event"
+	flt "github.com/hyperchain/hyperchain/manager/filter"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
-	flt "hyperchain/manager/filter"
 	"sync"
 	"time"
 )
 
 type PublicFilterAPI struct {
-	namespace 	string
-	config    	*common.Config
-	log       	*logging.Logger
-	events   	*flt.EventSystem
-	filtersMu 	sync.Mutex
-	filters   	map[string]*flt.Filter
+	namespace string
+	eh        *manager.EventHub
+	config    *common.Config
+	log       *logging.Logger
+	events    *flt.EventSystem
+	filtersMu sync.Mutex
+	filters   map[string]*flt.Filter
 }
 
-func NewFilterAPI(namespace string,eventSystem  *flt.EventSystem, config *common.Config) *PublicFilterAPI {
+func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config) *PublicFilterAPI {
 	log := common.GetLogger(namespace, "api")
 	api := &PublicFilterAPI{
 		namespace: namespace,
+		eh:        eh,
 		config:    config,
 		log:       log,
-		events:    eventSystem,
+		events:    eh.GetFilterSystem(),
 		filters:   make(map[string]*flt.Filter),
 	}
 	go api.timeoutLoop()
@@ -245,15 +248,15 @@ func (api *PublicFilterAPI) GetSubscriptionChanges(id string) (interface{}, erro
 }
 
 // UnSubscription unsubscribes a given event.
-func (api *PublicFilterAPI) UnSubscription(id string) error {
+func (api *PublicFilterAPI) UnSubscription(id string) (bool, error) {
 	api.filtersMu.Lock()
 	defer api.filtersMu.Unlock()
 	if f, found := api.filters[id]; found {
 		f.GetSubsctiption().Unsubscribe()
 		delete(api.filters, id)
-		return nil
+		return true, nil
 	}
-	return &common.SubNotExistError{Message: "required subscription does not existed or has expired"}
+	return false, &common.SubNotExistError{Message: "required subscription does not existed or has expired"}
 }
 
 // GetLogs returns eligible vm event logs.

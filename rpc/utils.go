@@ -4,7 +4,7 @@ package jsonrpc
 
 import (
 	"encoding/json"
-	admin "hyperchain/api/admin"
+	admin "github.com/hyperchain/hyperchain/api/admin"
 	"math/big"
 	"reflect"
 	"strings"

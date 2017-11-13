@@ -1,16 +1,50 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package rbft
 
 import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"strconv"
+
+	ndb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
-	"strconv"
 )
+
+// GetBlockchainInfo waits until the executor module executes to a checkpoint then returns the blockchain info with the
+// given namespace
+func (rbft *rbftImpl) GetBlockchainInfo(namespace string) *types.Chain {
+	bcInfo := ndb.GetChainUntil(namespace)
+	return bcInfo
+}
+
+// GetCurrentBlockInfo returns the current blockchain info with the given namespace immediately
+func (rbft *rbftImpl) GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte) {
+	info := ndb.GetChainCopy(namespace)
+	return info.Height, info.LatestBlockHash, info.ParentBlockHash
+}
+
+// GetBlockHeightAndHash returns the current block height and hash with the given namespace immediately
+func (rbft *rbftImpl) GetBlockHeightAndHash(namespace string) (uint64, string) {
+	bcInfo := ndb.GetChainCopy(namespace)
+	hash := base64.StdEncoding.EncodeToString(bcInfo.LatestBlockHash)
+	return bcInfo.Height, hash
+}
+
+// GetHeightOfChain returns the current block height with the given namespace immediately
+func (rbft *rbftImpl) GetHeightOfChain(namespace string) uint64 {
+	return ndb.GetHeightOfChain(namespace)
+}
+
+// GetGenesisOfChain returns the genesis block info of the ledger with the given namespace
+func (rbft *rbftImpl) GetGenesisOfChain(namespace string) (uint64, error) {
+	return ndb.GetGenesisTag(namespace)
+}
 
 // persistQSet persists marshaled pre-prepare message to database
 func (rbft *rbftImpl) persistQSet(preprep *PrePrepare) {
@@ -104,7 +138,7 @@ func (rbft *rbftImpl) restoreQSet() (map[msgID]*PrePrepare, error) {
 					idx := msgID{v, n, d}
 					qset[idx] = preprep
 				} else {
-					rbft.logger.Warningf("Replica %d could not restore pre-prepare key %v, err: %v", rbft.id, set, err)
+					rbft.logger.Warningf("Replica %d could not restore prePrepare key %v, err: %v", rbft.id, set, err)
 				}
 			}
 		}
@@ -391,7 +425,7 @@ func (rbft *rbftImpl) restoreTxBatchStore() {
 
 // restoreState restores lastExec, certStore, view, transaction batches, checkpoints, h and other add/del node related
 // params from database
-func (rbft *rbftImpl) restoreState() {
+func (rbft *rbftImpl) restoreState() error {
 	rbft.restoreLastSeqNo()
 	if rbft.seqNo < rbft.exec.lastExec {
 		rbft.seqNo = rbft.exec.lastExec
@@ -424,7 +458,8 @@ func (rbft *rbftImpl) restoreState() {
 	} else {
 		h, err := strconv.ParseUint(string(hstr), 10, 64)
 		if err != nil {
-			panic("transfer rbft.h from string to uint64 failed with err: " + err.Error())
+			rbft.logger.Warningf("transfer rbft.h from string to uint64 failed with err: %s", err)
+			return err
 		}
 		rbft.moveWatermarks(h)
 	}
@@ -441,7 +476,7 @@ func (rbft *rbftImpl) restoreState() {
 	if err == nil {
 		newNode := binary.LittleEndian.Uint64(new)
 		if newNode == 1 {
-			rbft.status.activeState(&rbft.status.isNewNode)
+			rbft.on(isNewNode)
 		}
 	}
 
@@ -452,6 +487,8 @@ func (rbft *rbftImpl) restoreState() {
 
 	rbft.logger.Infof("Replica %d restored state: view: %d, seqNo: %d, reqBatches: %d, chkpts: %d",
 		rbft.id, rbft.view, rbft.seqNo, len(rbft.storeMgr.txBatchStore), len(rbft.storeMgr.chkpts))
+
+	return nil
 }
 
 // restoreLastSeqNo restores lastExec from database
@@ -467,7 +504,7 @@ func (rbft *rbftImpl) restoreLastSeqNo() {
 // getLastSeqNo retrieves database and returns the last block number
 func (rbft *rbftImpl) getLastSeqNo() (uint64, error) {
 	var err error
-	h := rbft.persister.GetHeightOfChain(rbft.namespace)
+	h := rbft.GetHeightOfChain(rbft.namespace)
 	if h == 0 {
 		err = errors.Errorf("Height of chain is 0")
 		return h, err

@@ -1,14 +1,14 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package rbft
 
 import (
 	"fmt"
 	"math"
-	"sync/atomic"
 	"time"
 
-	"hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -113,10 +113,10 @@ func (rbft *rbftImpl) getAddNV() (n int64, v uint64) {
 // getDelNV calculates the new N and view after delete a new node
 func (rbft *rbftImpl) getDelNV(del uint64) (n int64, v uint64) {
 	n = int64(rbft.N) - 1
+	rbft.logger.Debugf("N: %d, view: %d, delID: %d", rbft.N, rbft.view, del)
 	if rbft.primary(rbft.view) > del {
 		v = rbft.view%uint64(rbft.N) - 1 + (uint64(rbft.N)-1)*(rbft.view/uint64(rbft.N)+1)
 	} else {
-		rbft.logger.Debug("N: ", rbft.N, " view: ", rbft.view, " del: ", del)
 		v = rbft.view%uint64(rbft.N) + (uint64(rbft.N)-1)*(rbft.view/uint64(rbft.N)+1)
 	}
 
@@ -153,7 +153,7 @@ func (rbft *rbftImpl) commonCaseQuorum() int {
 
 // oneCorrectQuorum returns the number of replicas in which correct numbers must be bigger than incorrect number
 func (rbft *rbftImpl) allCorrectReplicasQuorum() int {
-	return (rbft.N - rbft.f)
+	return rbft.N - rbft.f
 }
 
 // oneCorrectQuorum returns the number of replicas in which there must exist at least one correct replica
@@ -181,7 +181,7 @@ func (rbft *rbftImpl) prePrepared(digest string, v uint64, n uint64) bool {
 		}
 	}
 
-	rbft.logger.Debugf("Replica %d does not have view=%d/seqNo=%d pre-prepared",
+	rbft.logger.Debugf("Replica %d does not have view=%d/seqNo=%d prePrepared",
 		rbft.id, v, n)
 
 	return false
@@ -267,7 +267,7 @@ func nullRequestMsgToPbMsg(id uint64) *protos.Message {
 // getBlockchainInfo used after commit gets the current blockchain information from database when our lastExec reached
 // the checkpoint, so here we wait until the executor module executes to a checkpoint to return the current BlockchainInfo
 func (rbft *rbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
-	bcInfo := rbft.persister.GetBlockchainInfo(rbft.namespace)
+	bcInfo := rbft.GetBlockchainInfo(rbft.namespace)
 
 	height := bcInfo.Height
 	curBlkHash := bcInfo.LatestBlockHash
@@ -284,7 +284,7 @@ func (rbft *rbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
 // waiting until the executor module executes to a checkpoint as the current height must be a checkpoint if we reach the
 // checkpoint after state update
 func (rbft *rbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
-	height, curHash, prevHash := rbft.persister.GetCurrentBlockInfo(rbft.namespace)
+	height, curHash, prevHash := rbft.GetCurrentBlockInfo(rbft.namespace)
 	return &protos.BlockchainInfo{
 		Height:            height,
 		CurrentBlockHash:  curHash,
@@ -294,7 +294,7 @@ func (rbft *rbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 
 // getGenesisInfo returns the genesis block information of the current namespace
 func (rbft *rbftImpl) getGenesisInfo() uint64 {
-	genesis, _ := rbft.persister.GetGenesisOfChain(rbft.namespace)
+	genesis, _ := rbft.GetGenesisOfChain(rbft.namespace)
 	return genesis
 }
 
@@ -305,7 +305,7 @@ func (rbft *rbftImpl) getGenesisInfo() uint64 {
 // startTimerIfOutstandingRequests soft starts a new view timer if there exists some outstanding request batches,
 // else reset the null request timer
 func (rbft *rbftImpl) startTimerIfOutstandingRequests() {
-	if rbft.status.getState(&rbft.status.skipInProgress) || rbft.exec.currentExec != nil {
+	if rbft.in(skipInProgress) || rbft.exec.currentExec != nil {
 		// Do not start the view change timer if we are executing or state transferring, these take arbitrarily long amounts of time
 		return
 	}
@@ -318,7 +318,7 @@ func (rbft *rbftImpl) startTimerIfOutstandingRequests() {
 			}
 			return digests
 		}()
-		rbft.softStartNewViewTimer(rbft.timerMgr.requestTimeout, fmt.Sprintf("outstanding request batches num=%v, batches: %v", len(getOutstandingDigests), getOutstandingDigests))
+		rbft.softStartNewViewTimer(rbft.timerMgr.getTimeoutValue(REQUEST_TIMER), fmt.Sprintf("outstanding request batches num=%v, batches: %v", len(getOutstandingDigests), getOutstandingDigests))
 	} else if rbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER) > 0 {
 		rbft.nullReqTimerReset()
 	}
@@ -332,7 +332,7 @@ func (rbft *rbftImpl) nullReqTimerReset() {
 	timeout := rbft.timerMgr.getTimeoutValue(NULL_REQUEST_TIMER)
 	if !rbft.isPrimary(rbft.id) {
 		// we're waiting for the primary to deliver a null request - give it a bit more time
-		timeout = 3*timeout + rbft.timerMgr.requestTimeout
+		timeout = 3*timeout + rbft.timerMgr.getTimeoutValue(REQUEST_TIMER)
 	}
 
 	event := &LocalEvent{
@@ -353,17 +353,6 @@ func (rbft *rbftImpl) stopFirstRequestTimer() {
 // =============================================================================
 // helper functions for validateState
 // =============================================================================
-// invalidateState is invoked to tell us that consensus module has realized the ledger is out of sync
-func (rbft *rbftImpl) invalidateState() {
-	rbft.logger.Debug("Invalidating the current state")
-	rbft.status.inActiveState(&rbft.status.valid)
-}
-
-// validateState is invoked to tell us that consensus module has realized the ledger is back in sync
-func (rbft *rbftImpl) validateState() {
-	rbft.logger.Debug("Validating the current state")
-	rbft.status.activeState(&rbft.status.valid)
-}
 
 // deleteExistedTx delete batch with the given digest from cacheValidatedBatch and outstandingReqBatches
 func (rbft *rbftImpl) deleteExistedTx(digest string) {
@@ -378,31 +367,31 @@ func (rbft *rbftImpl) deleteExistedTx(digest string) {
 // isPrePrepareLegal firstly checks if current status can receive pre-prepare or not, then checks pre-prepare message
 // itself is legal or not
 func (rbft *rbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
-	if rbft.status.getState(&rbft.status.inNegoView) {
-		rbft.logger.Debugf("Replica %d try recvPrePrepare, but it's in nego-view", rbft.id)
+	if rbft.in(inNegotiateView) {
+		rbft.logger.Debugf("Replica %d try to receive prePrepare, but it's in negotiateView", rbft.id)
 		return false
 	}
 
-	if atomic.LoadUint32(&rbft.activeView) == 0 {
-		rbft.logger.Debugf("Replica %d ignoring pre-prepare as we are in view change", rbft.id)
+	if rbft.in(inViewChange) {
+		rbft.logger.Debugf("Replica %d try to receive prePrepare, but it's in viewChange", rbft.id)
 		return false
 	}
 
 	if !rbft.isPrimary(preprep.ReplicaId) {
-		rbft.logger.Warningf("Pre-prepare from other than primary: got %d, should be %d",
-			preprep.ReplicaId, rbft.primary(rbft.view))
+		rbft.logger.Warningf("Replica %d received prePrepare from non-primary: got %d, should be %d",
+			rbft.id, preprep.ReplicaId, rbft.primary(rbft.view))
 		return false
 	}
 
 	if !rbft.inWV(preprep.View, preprep.SequenceNumber) {
-		if preprep.SequenceNumber != rbft.h && !rbft.status.getState(&rbft.status.skipInProgress) {
-			rbft.logger.Warningf("Replica %d pre-prepare view different, or sequence number outside "+
-				"watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
+		if preprep.SequenceNumber != rbft.h && !rbft.in(skipInProgress) {
+			rbft.logger.Warningf("Replica %d received prePrepare with a different view or sequence "+
+				"number outside watermarks: prePrep.View %d, expected.View %d, seqNo %d, low water mark %d",
 				rbft.id, preprep.View, rbft.view, preprep.SequenceNumber, rbft.h)
 		} else {
 			// This is perfectly normal
-			rbft.logger.Debugf("Replica %d pre-prepare view different, or sequence number outside "+
-				"watermarks: preprep.View %d, expected.View %d, seqNo %d, low-mark %d",
+			rbft.logger.Debugf("Replica %d received prePrepare with a different view or sequence "+
+				"number outside watermarks: preprep.View %d, expected.View %d, seqNo %d, low water mark %d",
 				rbft.id, preprep.View, rbft.view, preprep.SequenceNumber, rbft.h)
 		}
 		return false
@@ -413,26 +402,26 @@ func (rbft *rbftImpl) isPrePrepareLegal(preprep *PrePrepare) bool {
 // isPrepareLegal firstly checks if current status can receive prepare or not, then checks prepare message itself is
 // legal or not
 func (rbft *rbftImpl) isPrepareLegal(prep *Prepare) bool {
-	if rbft.status.getState(&rbft.status.inNegoView) {
-		rbft.logger.Debugf("Replica %d try to recvPrepare, but it's in nego-view", rbft.id)
+	if rbft.in(inNegotiateView) {
+		rbft.logger.Debugf("Replica %d try to receive prepare, but it's in negotiateView", rbft.id)
 		return false
 	}
 
 	// if we are not in recovery, but receive prepare from primary, which means primary behavior as a byzantine,
 	// we don't send viewchange here, because in this case, replicas will eventually find primary abnormal in other
 	// cases, such as inconsistent validate result or others
-	if rbft.isPrimary(prep.ReplicaId) && !rbft.status.getState(&rbft.status.inRecovery) {
-		rbft.logger.Warningf("Replica %d received prepare from primary, ignoring", rbft.id)
+	if rbft.isPrimary(prep.ReplicaId) && !rbft.in(inRecovery) {
+		rbft.logger.Warningf("Replica %d received prepare from primary, ignore it", rbft.id)
 		return false
 	}
 
 	if !rbft.inWV(prep.View, prep.SequenceNumber) {
-		if prep.SequenceNumber != rbft.h && !rbft.status.getState(&rbft.status.skipInProgress) {
-			rbft.logger.Warningf("Replica %d ignoring prepare from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
+		if prep.SequenceNumber != rbft.h && !rbft.in(skipInProgress) {
+			rbft.logger.Warningf("Replica %d ignore prepare from replica %d for view=%d/seqNo=%d: not inWv, in view: %d, h: %d",
 				rbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber, rbft.view, rbft.h)
 		} else {
 			// This is perfectly normal
-			rbft.logger.Debugf("Replica %d ignoring prepare from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d",
+			rbft.logger.Debugf("Replica %d ignore prepare from replica %d for view=%d/seqNo=%d: not inWv, in view: %d, h: %d",
 				rbft.id, prep.ReplicaId, prep.View, prep.SequenceNumber, rbft.view, rbft.h)
 		}
 
@@ -444,17 +433,17 @@ func (rbft *rbftImpl) isPrepareLegal(prep *Prepare) bool {
 // isCommitLegal firstly checks if current status can receive commit or not, then checks commit message itself is legal
 // or not
 func (rbft *rbftImpl) isCommitLegal(commit *Commit) bool {
-	if rbft.status.getState(&rbft.status.inNegoView) {
-		rbft.logger.Debugf("Replica %d try to recvCommit, but it's in nego-view", rbft.id)
+	if rbft.in(inNegotiateView) {
+		rbft.logger.Debugf("Replica %d try to receive commit, but it's in negotiateView", rbft.id)
 		return false
 	}
 
 	if !rbft.inWV(commit.View, commit.SequenceNumber) {
-		if commit.SequenceNumber != rbft.h && !rbft.status.getState(&rbft.status.skipInProgress) {
-			rbft.logger.Warningf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", rbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, rbft.view, rbft.h)
+		if commit.SequenceNumber != rbft.h && !rbft.in(skipInProgress) {
+			rbft.logger.Warningf("Replica %d ignore commit from replica %d for view=%d/seqNo=%d: not inWv, in view: %d, h: %d", rbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, rbft.view, rbft.h)
 		} else {
 			// This is perfectly normal
-			rbft.logger.Debugf("Replica %d ignoring commit from replica %d for view=%d/seqNo=%d: not in-wv, in view %d, low water mark %d", rbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, rbft.view, rbft.h)
+			rbft.logger.Debugf("Replica %d ignore commit from replica %d for view=%d/seqNo=%d: not inWv, in view: %d, h: %d", rbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber, rbft.view, rbft.h)
 		}
 		return false
 	}

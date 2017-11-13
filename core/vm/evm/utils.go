@@ -17,7 +17,7 @@ package evm
 
 import (
 	"fmt"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"math/big"
 )
 

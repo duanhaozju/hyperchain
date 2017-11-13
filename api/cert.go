@@ -1,8 +1,8 @@
 package api
 
 import (
-	"hyperchain/admittance"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/admittance"
+	"github.com/hyperchain/hyperchain/common"
 	"regexp"
 )
 
@@ -38,19 +38,19 @@ func (node *Cert) GetTCert(args CertArgs) (*TCertReturn, error) {
 
 	reg := regexp.MustCompile(`^[0-9a-fA-F]+$`)
 	if !reg.MatchString(args.Pubkey) {
-		return nil, &common.InvalidParamsError{Message: "Invalid params, please use hex string"}
+		return nil, &common.InvalidParamsError{Message: "invalid params, please use hex string"}
 	}
 
 	tcert, err := node.cm.GenTCert(args.Pubkey)
 	if err != nil {
-		log.Error(err)
-		return nil, &common.CertError{Message: "Signed tcert failed"}
+		log.Errorf("generate tcert error: %v", err)
+		return nil, &common.CertError{Message: "generated tcert failed"}
 	}
 
 	err = admittance.RegisterCert([]byte(tcert))
 	if err != nil {
-		log.Error(err)
-		return nil, &common.CertError{Message: "Register tcert failed"}
+		log.Errorf("register tcert error: %v", err)
+		return nil, &common.CertError{Message: "register tcert failed"}
 	}
 	tcert = common.TransportEncode(tcert)
 	return &TCertReturn{TCert: tcert}, nil

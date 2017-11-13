@@ -14,8 +14,8 @@
 package common
 
 import (
-	cm "hyperchain/common"
-	"hyperchain/hyperdb"
+	cm "github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/hyperdb"
 	"path"
 )
 
@@ -26,6 +26,7 @@ var precompiledAccount = map[string]struct{}{
 	cm.BytesToAddress(cm.LeftPadBytes([]byte{4}, 20)).Hex(): struct{}{}, // MEMCPY
 }
 
+// RetrieveSnapshotFileds returns all world state related key-prefixs
 func RetrieveSnapshotFileds() []string {
 	return []string{
 		// world state related

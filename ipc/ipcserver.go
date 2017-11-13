@@ -1,8 +1,8 @@
 package ipc
 
 import (
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/op/go-logging"
-	"hyperchain/common"
 	"net"
 	"net/http"
 	"net/rpc"
@@ -38,10 +38,6 @@ func (server *IPCServer) Start() error {
 
 	logger.Notice("interactive ipc shell server listening...")
 	if listener, err = server.listener(); err != nil {
-		logger.Errorf("some error occured: %s", err.Error())
-		return err
-	}
-	if err != nil {
 		logger.Errorf("some error occured: %s", err.Error())
 		return err
 	}

@@ -4,22 +4,21 @@ package manager
 
 import (
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/admittance"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus"
+	"github.com/hyperchain/hyperchain/consensus/rbft"
+	"github.com/hyperchain/hyperchain/core/executor"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/manager/event"
+	flt "github.com/hyperchain/hyperchain/manager/filter"
+	m "github.com/hyperchain/hyperchain/manager/message"
+	"github.com/hyperchain/hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/p2p"
 	"github.com/op/go-logging"
-	"hyperchain/accounts"
-	"hyperchain/admittance"
-	"hyperchain/common"
-	"hyperchain/consensus"
-	"hyperchain/consensus/rbft"
-	"hyperchain/core/executor"
-	"hyperchain/core/types"
-	"hyperchain/manager/event"
-	m "hyperchain/manager/message"
-	"hyperchain/manager/protos"
-	"hyperchain/p2p"
-	"time"
-
-	flt "hyperchain/manager/filter"
 	"sync"
+	"time"
 )
 
 // This file defines a transfer station called Eventhub which is used to deliver
@@ -83,11 +82,9 @@ type EventHub struct {
 	namespace string
 
 	// module services
-	//executor       *executor.Executor
-	executor       executor.IExecutor
-	peerManager    p2p.PeerManager
-	consenter      consensus.Consenter
-	accountManager *accounts.AccountManager
+	executor    *executor.Executor
+	peerManager p2p.PeerManager
+	consenter   consensus.Consenter
 
 	eventMux  *event.TypeMux
 	filterMux *event.TypeMux
@@ -103,22 +100,20 @@ type EventHub struct {
 }
 
 // New creates and returns a new Eventhub instance with the given namespace.
-func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor executor.IExecutor, peerManager p2p.PeerManager, consenter consensus.Consenter, am *accounts.AccountManager, cm *admittance.CAManager) *EventHub {
-	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, filterMux, consenter, am)
+func New(namespace string, eventMux *event.TypeMux, filterMux *event.TypeMux, executor *executor.Executor, peerManager p2p.PeerManager, consenter consensus.Consenter, cm *admittance.CAManager) *EventHub {
+	eventHub := NewEventHub(namespace, executor, peerManager, eventMux, filterMux, consenter)
 	return eventHub
 }
 
-func NewEventHub(namespace string, executor executor.IExecutor, peerManager p2p.PeerManager, eventMux *event.TypeMux, filterMux *event.TypeMux, consenter consensus.Consenter,
-	am *accounts.AccountManager) *EventHub {
+func NewEventHub(namespace string, executor *executor.Executor, peerManager p2p.PeerManager, eventMux *event.TypeMux, filterMux *event.TypeMux, consenter consensus.Consenter) *EventHub {
 	hub := &EventHub{
-		namespace:      namespace,
-		executor:       executor,
-		eventMux:       eventMux,
-		filterMux:      filterMux,
-		consenter:      consenter,
-		peerManager:    peerManager,
-		accountManager: am,
-		filterSystem:   flt.NewEventSystem(filterMux),
+		namespace:    namespace,
+		executor:     executor,
+		eventMux:     eventMux,
+		filterMux:    filterMux,
+		consenter:    consenter,
+		peerManager:  peerManager,
+		filterSystem: flt.NewEventSystem(filterMux),
 	}
 	hub.logger = common.GetLogger(namespace, "eventhub")
 	return hub
@@ -167,12 +162,8 @@ func (hub *EventHub) GetPeerManager() p2p.PeerManager {
 	return hub.peerManager
 }
 
-func (hub *EventHub) GetExecutor() executor.IExecutor {
+func (hub *EventHub) GetExecutor() *executor.Executor {
 	return hub.executor
-}
-
-func (hub *EventHub) GetAccountManager() *accounts.AccountManager {
-	return hub.accountManager
 }
 
 func (hub *EventHub) GetFilterSystem() *flt.EventSystem {
@@ -208,7 +199,7 @@ func (hub *EventHub) Subscribe() {
 
 	// other messages.
 	hub.subscriptions[SUB_MISCELLANEOUS] = hub.eventMux.Subscribe(event.InformPrimaryEvent{}, event.VCResetEvent{},
-		event.ChainSyncReqEvent{}, event.SnapshotEvent{}, event.DeleteSnapshotEvent{}, event.ArchiveEvent{})
+		event.ChainSyncReqEvent{}, event.SnapshotEvent{}, event.DeleteSnapshotEvent{}, event.ArchiveEvent{}, event.ArchiveRestoreEvent{})
 }
 
 // Unsubscribe unsubscribes all events registered to system.
@@ -263,7 +254,6 @@ func (hub *EventHub) listenConsensusEvent() {
 				hub.logger.Debugf("message middleware: [tx unicast]")
 				hub.send(m.SessionMessage_FOWARD_TX, ev.Payload, []uint64{ev.PeerId})
 			}
-
 		}
 	}
 }
@@ -385,9 +375,9 @@ func (hub *EventHub) listenExecutorEvent() {
 		case obj := <-hub.GetSubscription(SUB_EXEC).Chan():
 			switch ev := obj.Data.(type) {
 			case event.ExecutorToConsensusEvent:
-				hub.DispatchExecutorToConsensus(ev)
+				hub.dispatchExecutorToConsensus(ev)
 			case event.ExecutorToP2PEvent:
-				hub.DispatchExecutorToP2P(ev)
+				hub.dispatchExecutorToP2P(ev)
 			}
 
 		}
@@ -462,12 +452,15 @@ func (hub *EventHub) listenMiscellaneousEvent() {
 			case event.SnapshotEvent:
 				hub.logger.Debugf("message middleware: [snapshot request]")
 				hub.executor.Snapshot(ev)
-			case event.DeleteSnapEvent:
+			case event.DeleteSnapshotEvent:
 				hub.logger.Debugf("message middleware: [delete snapshot request]")
 				hub.executor.DeleteSnapshot(ev)
-			case event.ArchEvent:
+			case event.ArchiveEvent:
 				hub.logger.Debugf("message middleware: [archive request]")
-				hub.executor.Archive(ev)
+				go hub.executor.Archive(ev)
+			case event.ArchiveRestoreEvent:
+				hub.logger.Debugf("message middleware: [archive restore]")
+				go hub.executor.ArchiveRestore(ev)
 			}
 		}
 	}
@@ -492,43 +485,27 @@ func (hub *EventHub) NegotiateView() {
 	hub.consenter.RecvLocal(negoView)
 }
 
-// DispatchExecutorToConsensus dispatches executor event to consensus module by its type.
-func (hub *EventHub) DispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
+// dispatchExecutorToConsensus dispatches executor event to consensus module by its type.
+func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEvent) {
 	switch ev.Type {
 	case executor.NOTIFY_VC_DONE:
-		hub.logger.Criticalf("message middleware: [vc done]")
-		event := &protos.VcResetDone{}
-		err := proto.Unmarshal(ev.Payload, event)
-		if err != nil {
-			hub.logger.Error(err)
-			return
-		}
-		hub.invokeRbftLocal(rbft.VIEW_CHANGE_SERVICE, rbft.VIEW_CHANGE_VC_RESET_DONE_EVENT, *event)
+		hub.logger.Debugf("message middleware: [vc done]")
+		hub.invokeRbftLocal(rbft.VIEW_CHANGE_SERVICE, rbft.VIEW_CHANGE_VC_RESET_DONE_EVENT, ev.Payload)
 	case executor.NOTIFY_VALIDATION_RES:
 		hub.logger.Debugf("message middleware: [validation result]")
-
-		event := &protos.ValidatedTxs{}
-		err := proto.Unmarshal(ev.Payload, event)
-		if err != nil {
-			hub.logger.Error(err)
-			return
-		}
-		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_VALIDATED_TXS_EVENT, *event)
+		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_VALIDATED_TXS_EVENT, ev.Payload)
 	case executor.NOTIFY_SYNC_DONE:
 		hub.logger.Debugf("message middleware: [sync done]")
-
-		event := &protos.StateUpdatedMessage{}
-		err := proto.Unmarshal(ev.Payload, event)
-		if err != nil {
-			hub.logger.Error(err)
-			return
-		}
-		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_STATE_UPDATE_EVENT, *event)
+		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_STATE_UPDATE_EVENT, ev.Payload)
 	}
 }
 
-// DispatchExecutorToP2P dispatches executor event to p2p module by its type.
-func (hub *EventHub) DispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
+// dispatchExecutorToP2P dispatches executor event to p2p module by its type.
+func (hub *EventHub) dispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
+	defer func() {
+		hub.logger.Debugf("send session event %d finish", ev.Type)
+	}()
+	hub.logger.Debugf("begin to send session event %d", ev.Type)
 	switch ev.Type {
 	case executor.NOTIFY_BROADCAST_DEMAND:
 		hub.logger.Debugf("message middleware: [broadcast demand]")
@@ -573,28 +550,66 @@ func (hub *EventHub) DispatchExecutorToP2P(ev event.ExecutorToP2PEvent) {
 		hub.logger.Debug("message middleware: [transit block]")
 		hub.broadcast(BROADCAST_NVP, m.SessionMessage_TRANSIT_BLOCK, ev.Payload)
 	case executor.NOTIFY_NVP_SYNC:
-		hub.logger.Debug("message middleware: [NVP sync]")
+		hub.logger.Debug("message middleware: [nvp sync]")
 		syncMsg := &executor.ChainSyncRequest{}
 		proto.Unmarshal(ev.Payload, syncMsg)
 		syncMsg.PeerHash = hub.peerManager.GetLocalNodeHash()
 		payload, err := proto.Marshal(syncMsg)
 		if err != nil {
-			hub.logger.Error("message middleware: SendNVPSyncRequest marshal message failed")
+			hub.logger.Error("message middleware: marshal nvp sync message failed")
 			return
 		}
-		hub.sendToRandomVP(m.SessionMessage_SYNC_REQ, payload)
+		if ev.Peers != nil {
+			hub.send(m.SessionMessage_SYNC_REQ, payload, ev.Peers)
+		} else {
+			hub.sendToRandomVP(m.SessionMessage_SYNC_REQ, payload)
+		}
+	case executor.NOTIFY_NVP_CONSULT:
+		hub.logger.Debug("message middleware: [nvp consult]")
+		consult := &executor.Consult{
+			Height:   chain.GetHeightOfChain(hub.namespace),
+			NodeHash: hub.peerManager.GetLocalNodeHash(),
+		}
+		payload, err := proto.Marshal(consult)
+		if err != nil {
+			hub.logger.Error("message middleware: marshal nvp consult message failed")
+			return
+		}
+		hub.broadcast(BROADCAST_VP, m.SessionMessage_NVP_CONSULT, payload)
 	case executor.NOTIFY_REQUEST_WORLD_STATE:
 		hub.logger.Debugf("message middleware: [request world state]")
-		hub.send(m.SessionMessage_SYNC_WORLD_STATE, ev.Payload, ev.Peers)
+		if ev.Peers != nil {
+			go hub.send(m.SessionMessage_SYNC_WORLD_STATE, ev.Payload, ev.Peers)
+		} else {
+			// Actually this part code can never been access.
+			hub.sendToNVP(m.SessionMessage_SYNC_WORLD_STATE, ev.Payload, ev.PeersHash)
+		}
+		hub.logger.Debugf("message middleware: [request world state] done")
 	case executor.NOTIFY_SEND_WORLD_STATE_HANDSHAKE:
 		hub.logger.Debugf("message middleware: [send world state handshake packet]")
-		hub.send(m.SessionMessage_SEND_WS_HS, ev.Payload, ev.Peers)
+		if ev.Peers != nil {
+			// If initiator is a vp
+			hub.send(m.SessionMessage_SEND_WS_HS, ev.Payload, ev.Peers)
+		} else {
+			// If initiator is a nvp
+			hub.sendToNVP(m.SessionMessage_SEND_WS_HS, ev.Payload, ev.PeersHash)
+		}
 	case executor.NOTIFY_SEND_WORLD_STATE:
 		hub.logger.Debugf("message middleware: [request world state]")
-		hub.send(m.SessionMessage_SEND_WORLD_STATE, ev.Payload, ev.Peers)
+		if ev.Peers != nil {
+			hub.send(m.SessionMessage_SEND_WORLD_STATE, ev.Payload, ev.Peers)
+		} else {
+			hub.sendToNVP(m.SessionMessage_SEND_WORLD_STATE, ev.Payload, ev.PeersHash)
+		}
 	case executor.NOTIFY_SEND_WS_ACK:
 		hub.logger.Debugf("message middleware: [send ws ack]")
-		hub.send(m.SessionMessage_SEND_WS_ACK, ev.Payload, ev.Peers)
+		if ev.Peers != nil {
+			hub.send(m.SessionMessage_SEND_WS_ACK, ev.Payload, ev.Peers)
+		} else {
+			// Actually this part of code should never been access
+			// since nvp should not been allowed as a sync target peer.
+			hub.sendToNVP(m.SessionMessage_SEND_WS_ACK, ev.Payload, ev.PeersHash)
+		}
 	}
 }
 
@@ -606,6 +621,11 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 		hub.logger.Error("unmarshal session message failed")
 		return
 	}
+	defer func() {
+		hub.logger.Debugf("dispatch session event %s finish", message.Type.String())
+	}()
+
+	hub.logger.Debugf("handle session event %s", message.Type.String())
 
 	switch message.Type {
 	case m.SessionMessage_CONSENSUS:
@@ -620,7 +640,9 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 		if hub.NodeIdentification() == IdentificationVP {
 			hub.executor.ReceiveSyncBlocks(message.Payload)
 		} else {
-			hub.executor.GetNVP().ReceiveBlock(message.Payload)
+			// Thread out here since the goroutine may block here
+			// Reason: nvp may send consult message and will block util receive reply
+			go hub.executor.GetNVP().ReceiveBlock(message.Payload)
 		}
 	case m.SessionMessage_UNICAST_INVALID:
 		sendToNVP, hash := hub.isSendToNVP(message.Payload)
@@ -645,11 +667,44 @@ func (hub *EventHub) parseAndDispatch(ev event.SessionEvent) {
 	case m.SessionMessage_SEND_WS_ACK:
 		hub.executor.ReceiveWsAck(message.Payload)
 	case m.SessionMessage_TRANSIT_BLOCK:
-		hub.executor.GetNVP().ReceiveBlock(message.Payload)
+		// Thread out here since the goroutine may block here
+		// Reason: nvp may send consult message and will block util receive reply
+		go hub.executor.GetNVP().ReceiveBlock(message.Payload)
 	case m.SessionMessage_NVP_RELAY:
 		go hub.GetEventObject().Post(event.NvpRelayTxEvent{
 			Payload: message.Payload,
 		})
+	case m.SessionMessage_NVP_CONSULT:
+		consult := &executor.Consult{}
+		err := proto.Unmarshal(message.Payload, consult)
+		if err != nil {
+			hub.logger.Error("unmarshal consult failed", err.Error())
+		}
+		genesis, _ := chain.GetGenesisTag(hub.namespace)
+		blk, err := chain.GetBlockByNumber(hub.namespace, genesis)
+		if err != nil {
+			hub.logger.Errorf("get genesis block %d from database failed", genesis)
+		}
+		reply := &executor.ConsultReply{
+			PeerId:       uint64(hub.peerManager.GetNodeId()),
+			GenesisBlock: blk,
+		}
+		if genesis <= consult.Height+1 {
+			// state transition is not necessary
+			reply.Transition = false
+		} else {
+			// state transition is necessary
+			reply.Transition = true
+		}
+		payload, err := proto.Marshal(reply)
+		if err != nil {
+			hub.logger.Error("marshal consult reply failed", err.Error())
+		} else {
+			hub.sendToNVP(m.SessionMessage_NVP_CONSULT_REPLY, payload, []string{consult.NodeHash})
+		}
+		hub.logger.Debug("send nvp consult reply done")
+	case m.SessionMessage_NVP_CONSULT_REPLY:
+		hub.executor.GetNVP().ReceiveConsult(message.Payload, hub.peerManager.GetN())
 	default:
 		hub.logger.Error("receive a undefined session event")
 	}

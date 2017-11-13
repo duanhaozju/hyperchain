@@ -1,9 +1,8 @@
-package network_test
+package network
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
-	. "hyperchain/p2p/network"
-	"testing"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 type testCase struct {
@@ -12,28 +11,38 @@ type testCase struct {
 	wantport int
 }
 
-func TestParseRoute(t *testing.T) {
-	Convey("Net", t, func() {
-		var testcases1 = []testCase{
-			{"127.0.0.1:8081", "127.0.0.1", 8081},
-			{"localhost:8081", "localhost", 8081},
-			{"172.16.10.10:12121", "172.16.10.10", 12121},
-		}
-		_ = []testCase{
-			{"127.0.0.18081", "", 0},
-			{"hellow8081", "", 0},
-			{"hellow:whwe", "", 0},
-		}
-		Convey("parse the dns item", func() {
-			Convey("with some correctly items", func() {
+var _ = Describe("DNS", func() {
+	var testcases1 = []testCase{
+		{"127.0.0.1:8081", "127.0.0.1", 8081},
+		{"localhost:8081", "localhost", 8081},
+		{"172.16.10.10:12121", "172.16.10.10", 12121},
+	}
+	_ = []testCase{
+		{"127.0.0.18081", "", 0},
+		{"hellow8081", "", 0},
+		{"hellow:whwe", "", 0},
+	}
+
+	Describe("parse the dns item", func() {
+		Context("with some correct items", func() {
+			It("should parse successfully", func() {
 				for _, kase := range testcases1 {
 					hostname, port, err := ParseRoute(kase.src)
-					So(hostname, ShouldEqual, kase.want)
-					So(port, ShouldEqual, kase.wantport)
-					So(err, ShouldBeNil)
+					Expect(hostname).Should(Equal(kase.want))
+					Expect(port).Should(Equal(kase.wantport))
+					Expect(err).To(BeNil())
 				}
+			})
+		})
 
+		Context("with incorrect item", func() {
+			It("should parse successfully", func() {
+				_, _, err := ParseRoute("127.0.0.1")
+				Expect(err).Should(Equal(errInvalidRoute))
+
+				_, _, err = ParseRoute("127.0.0.1:aa")
+				Expect(err).NotTo(BeNil())
 			})
 		})
 	})
-}
+})

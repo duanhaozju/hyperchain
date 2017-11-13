@@ -4,10 +4,10 @@ package api
 
 import (
 	"fmt"
-	"hyperchain/common"
-	"hyperchain/manager"
-	"hyperchain/manager/event"
-	"hyperchain/p2p"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/manager"
+	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/p2p"
 )
 
 // This file implements the handler of Node service API which

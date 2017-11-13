@@ -1,26 +1,35 @@
 before_script:
-  - GO_NAMESPACE="$GOPATH/src"
-  - GO_DIR="$GO_NAMESPACE/$CI_PROJECT_NAME"
-  - echo $GO_NAMESPACE
-  - echo $GO_DIR
-  - mkdir -p $GO_NAMESPACE
-  - ln -sfv "$(pwd -P)" "$GO_DIR"
-  - cd "$GO_DIR"
+  - source /etc/profile
+  - ORG_DIR="$GOPATH/src/github.com/hyperchain"
+  - HYPERCHAIN_DIR="$ORG_DIR/$CI_PROJECT_NAME"
+  - echo $ORG_DIR
+  - echo $HYPERCHAIN_DIR
+  - mkdir -p $ORG_DIR
+  - ln -sfv "$(pwd -P)" "$HYPERCHAIN_DIR"
+  - cd "$HYPERCHAIN_DIR"
 
 stages:
-  - test
   - build
-  - deploy
+  - test
 
-job-test:
+project-build:
+  stage: build
+  script:
+    - pwd
+    - go env
+    - go build -ldflags -s
+  only:
+    -  /^release1.4.*$/ # ignore all release1.2* branches
+    - opensource
+
+
+unit-test:
   stage: test
   script:
     - pwd
     - go env
-    - go get -u github.com/kardianos/govendor
-    - govendor sync
-    - govendor test +local
+    - go test ./core/...
+    - go test ./consensus/...
   only:
-    - develop
-  tags:
-    - golang
+    -  /^release1.4.*$/ # ignore all release1.2* branches
+    - opensource

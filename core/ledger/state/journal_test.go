@@ -17,10 +17,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 	checker "gopkg.in/check.v1"
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/hyperdb/mdb"
 	"math"
 	"math/big"
 	"math/rand"
@@ -213,7 +213,7 @@ func newTestAction(addr common.Address, r *rand.Rand) testAction {
 		nameargs = append(nameargs, addr.Hex())
 	}
 	for _, i := range action.args {
-		action.args[i] = rand.Int63n(10000)
+		action.args[i] = r.Int63n(10000)
 		nameargs = append(nameargs, fmt.Sprint(action.args[i]))
 	}
 	action.name += "\t"

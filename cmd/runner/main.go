@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/cmd/common"
+	cm "github.com/hyperchain/hyperchain/common"
 	"github.com/urfave/cli"
-	"hyperchain/cmd/common"
-	cm "hyperchain/common"
 	"os"
 )
 

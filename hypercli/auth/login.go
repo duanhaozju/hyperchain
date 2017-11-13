@@ -1,15 +1,20 @@
+//Hyperchain License
+//Copyright (C) 2016 The Hyperchain Authors.
+
 package auth
 
 import (
 	"fmt"
-	"github.com/urfave/cli"
-	"hyperchain/hypercli/common"
 	"os"
+
+	"github.com/hyperchain/hyperchain/hypercli/common"
+
+	"github.com/urfave/cli"
 )
 
 const tokenpath = "./.token"
 
-// login implements the login logic in hypercli
+// login implements the login logic in hypercli.
 func login(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
 	username := common.GetNonEmptyValueByName(c, "username")
@@ -28,7 +33,7 @@ func login(c *cli.Context) error {
 	return nil
 }
 
-// logout implements the logout logic in hypercli
+// logout implements the logout logic in hypercli.
 func logout(c *cli.Context) {
 	err := os.Remove(tokenpath)
 	if err != nil {

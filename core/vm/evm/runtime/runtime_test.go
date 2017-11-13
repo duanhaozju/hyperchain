@@ -1,13 +1,12 @@
 package runtime
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/core/vm/evm"
+	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 	"math/big"
 	"testing"
-
-	"hyperchain/common"
-	"hyperchain/core/ledger/state"
-	"hyperchain/core/vm/evm"
-	"hyperchain/hyperdb/mdb"
 )
 
 func TestDefaults(t *testing.T) {
@@ -40,7 +39,7 @@ func TestEnvironment(t *testing.T) {
 			t.Fatalf("crashed with: %v", r)
 		}
 	}()
-
+	NewTestLog()
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	Execute(db, []byte{
 		byte(evm.DIFFICULTY),
@@ -54,6 +53,7 @@ func TestEnvironment(t *testing.T) {
 }
 
 func TestExecute(t *testing.T) {
+	NewTestLog()
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	ret, _, _, err := Execute(db, []byte{
 		byte(evm.PUSH1), 10,
@@ -74,6 +74,7 @@ func TestExecute(t *testing.T) {
 }
 
 func TestCall(t *testing.T) {
+	NewTestLog()
 	db, _ := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
 	s, _ := state.New(common.Hash{}, db, db, DefaultConf(), 0)
 	address := common.HexToAddress("0x0a")
@@ -86,8 +87,7 @@ func TestCall(t *testing.T) {
 		byte(evm.PUSH1), 0,
 		byte(evm.RETURN),
 	})
-
-	ret, err := Call(address, nil, &Config{State: s})
+	ret, err := Call(address, nil, &Config{State: s, Origin: common.HexToAddress("0x0b")})
 	if err != nil {
 		t.Fatal("didn't expect error", err)
 	}
@@ -96,4 +96,13 @@ func TestCall(t *testing.T) {
 	if num.Cmp(big.NewInt(10)) != 0 {
 		t.Error("Expected 10, got", num)
 	}
+}
+
+func NewTestLog() {
+	conf := common.NewRawConfig()
+	common.InitHyperLogger(common.DEFAULT_NAMESPACE, conf)
+	common.GetLogger(common.DEFAULT_NAMESPACE, "state")
+	common.SetLogLevel(common.DEFAULT_NAMESPACE, "state", "NOTICE")
+	common.GetLogger(common.DEFAULT_NAMESPACE, "buckettree")
+	common.SetLogLevel(common.DEFAULT_NAMESPACE, "buckettree", "NOTICE")
 }

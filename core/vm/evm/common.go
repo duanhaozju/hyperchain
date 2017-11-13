@@ -18,8 +18,8 @@ package evm
 import (
 	"errors"
 	"fmt"
-	"hyperchain/common"
-	"hyperchain/core/vm/evm/params"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/vm/evm/params"
 	"math/big"
 )
 

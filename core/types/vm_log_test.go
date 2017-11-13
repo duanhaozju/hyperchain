@@ -14,8 +14,8 @@
 package types
 
 import (
+	"github.com/hyperchain/hyperchain/common"
 	checker "gopkg.in/check.v1"
-	"hyperchain/common"
 	"testing"
 )
 

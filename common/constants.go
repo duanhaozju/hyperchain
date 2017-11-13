@@ -15,8 +15,6 @@ const (
 const (
 	NAMESPACE          = "namespace.name"
 	DEFAULT_NAMESPACE  = "system"
-	KEY_STORE_DIR      = "account.keystoredir"
-	KEY_NODE_DIR       = "account.keynodesdir"
 	PEER_CONFIG_PATH   = "config.path.peerconfig"
 	GLOBAL_CONFIG_PATH = "global.config.path"
 )

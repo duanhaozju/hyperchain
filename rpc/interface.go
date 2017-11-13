@@ -3,7 +3,7 @@
 package jsonrpc
 
 import (
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 // ServerCodec implements reading, parsing and writing RPC messages for the server side of

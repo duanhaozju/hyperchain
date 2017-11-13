@@ -1,9 +1,9 @@
 package vm
 
 import (
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"math/big"
 )
 

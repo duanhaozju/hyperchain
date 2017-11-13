@@ -1,13 +1,29 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package chain
 
 import (
 	"errors"
 	"sync"
 
-	"hyperchain/core/types"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
-    "github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // ChainNotExistErr is thrown by UpdateGenesisTag or GetGenesisTag call if chain is nil
@@ -43,32 +59,17 @@ func (chains *memChains) AddChain(namespace string, chain *memChain) error {
 	return nil
 }
 
-
-
 // GetChain returns the chain with given namespace.
-func (chains *memChains) GetChain(namespace string, checkpoint bool) *memChain {
+func (chains *memChains) GetChain(namespace string) *memChain {
 	chains.lock.RLock()
 	defer chains.lock.RUnlock()
 	return chains.chains[namespace]
 }
 
 var (
-	chains         iChain // Singleton chains of memChains
+	chains         *memChains // Singleton chains of memChains
 	chainsInitOnce sync.Once  // Ensure chains will only be created once
 )
-
-func GetMemChain(namespace string, checkpoint bool) *types.MemChain {
-    chain := chains.GetChain(namespace, checkpoint)
-    memChain := &types.MemChain{
-        Data: &chain.data,
-        TxDelta: chain.txDelta,
-    }
-    if checkpoint {
-        cpChan := <-chain.cpChan
-        memChain.RemoteChan = &cpChan
-    }
-    return memChain
-}
 
 // ==========================================================
 // Public functions that invoked by outer service
@@ -105,7 +106,7 @@ func InitializeChain(namespace string) *memChain {
 
 // GetHeightOfChain get height of chain.
 func GetHeightOfChain(namespace string) uint64 {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return 0
 	} else {
@@ -117,7 +118,7 @@ func GetHeightOfChain(namespace string) uint64 {
 
 // GetTxSumOfChain gets the sum of transactions in chain with given namespace.
 func GetTxSumOfChain(namespace string) uint64 {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return 0
 	} else {
@@ -129,7 +130,7 @@ func GetTxSumOfChain(namespace string) uint64 {
 
 // GetLatestBlockHash gets the latest blockHash with given namespace.
 func GetLatestBlockHash(namespace string) []byte {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return nil
 	} else {
@@ -141,7 +142,7 @@ func GetLatestBlockHash(namespace string) []byte {
 
 // GetParentBlockHash gets the latest block's parentHash with given namespace.
 func GetParentBlockHash(namespace string) []byte {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return nil
 	} else {
@@ -153,7 +154,7 @@ func GetParentBlockHash(namespace string) []byte {
 
 // GetTxDeltaOfMemChain gets the memChain's txDelta with given namespace.
 func GetTxDeltaOfMemChain(namespace string) uint64 {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return 0
 	} else {
@@ -165,7 +166,7 @@ func GetTxDeltaOfMemChain(namespace string) uint64 {
 
 // AddTxDeltaOfMemChain adds the memChain's txDelta with given namespace.
 func AddTxDeltaOfMemChain(namespace string, txDelta uint64) error {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return ErrEmptyPointer
 	} else {
@@ -178,7 +179,7 @@ func AddTxDeltaOfMemChain(namespace string, txDelta uint64) error {
 
 // GetChainCopy gets the copy of chain with given namespace.
 func GetChainCopy(namespace string) *types.Chain {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return nil
 	} else {
@@ -223,8 +224,8 @@ func UpdateChain(namespace string, batch db.Batch, block *types.Block, genesis b
 			}
 		}
 	}
-	chain := chains.GetChain(namespace, false)
-	return putChain(batch, &chain.data, flush, sync)
+	chain := chains.GetChain(namespace)
+	return PutChain(batch, &chain.data, flush, sync)
 }
 
 // PutChain persists chain with given data.
@@ -245,20 +246,40 @@ func UpdateChainByBlcokNum(namespace string, batch db.Batch, blockNumber uint64,
 
 // UpdateGenesisTag updates the genesis tag with given parameters.
 func UpdateGenesisTag(namespace string, genesis uint64, batch db.Batch, flush bool, sync bool) error {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return ChainNotExistErr
 	} else {
 		chain.lock.Lock()
 		defer chain.lock.Unlock()
 		chain.data.Genesis = genesis
-		return putChain(batch, &chain.data, flush, sync)
+		return PutChain(batch, &chain.data, flush, sync)
 	}
+}
+
+// putChain put chain into database
+func putChain(batch db.Batch, t *types.Chain, flush bool, sync bool) error {
+	// assign version tag
+	data, err := proto.Marshal(t)
+	if err != nil {
+		return err
+	}
+	if err := batch.Put(ChainKey, data); err != nil {
+		return err
+	}
+	if flush {
+		if sync {
+			batch.Write()
+		} else {
+			go batch.Write()
+		}
+	}
+	return nil
 }
 
 // GetGenesisTag gets the genesis tag of the chain with given namespace.
 func GetGenesisTag(namespace string) (uint64, error) {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return 0, ChainNotExistErr
 	} else {
@@ -283,19 +304,18 @@ func RemoveChain(batch db.Batch, flush bool, sync bool) error {
 	return nil
 }
 
-var embeded = false
 // GetChainUntil gets the chain from channel, if channel is empty, the func will be blocked.
 // It is used in the interaction between executor and consenter.
 func GetChainUntil(namespace string) *types.Chain {
-    chain := chains.GetChain(namespace, true)
-    data := <-chain.cpChan
-    return &data
+	chain := chains.GetChain(namespace)
+	data := <-chain.cpChan
+	return &data
 }
 
 // WriteChainChan writes the written chain to channel, if the channel is not read, will be blocked.
 func WriteChainChan(namespace string) {
-    chain := chains.GetChain(namespace, false)
-    chain.cpChan <- chain.data
+	chain := chains.GetChain(namespace)
+	chain.cpChan <- chain.data
 }
 
 // GetChain gets the chain with given namespace.
@@ -309,7 +329,7 @@ func GetChain(namespace string) (*types.Chain, error) {
 
 // setHeightOfChain sets the height of chain with given namespace.
 func setHeightOfChain(namespace string, height uint64) error {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return ErrEmptyPointer
 	} else {
@@ -322,7 +342,7 @@ func setHeightOfChain(namespace string, height uint64) error {
 
 // setHeightOfChain sets the sum of transactions in chain with given namespace.
 func setTxSumOfChain(namespace string, txNum uint64) error {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return ErrEmptyPointer
 	} else {
@@ -335,7 +355,7 @@ func setTxSumOfChain(namespace string, txNum uint64) error {
 
 // increaseTxSumOfChain increases the sum of transactions in chain with given namespace.
 func increaseTxSumOfChain(namespace string, delta uint64) error {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return ErrEmptyPointer
 	} else {
@@ -348,7 +368,7 @@ func increaseTxSumOfChain(namespace string, delta uint64) error {
 
 // decreaseTxSumOfChain decreases the sum of transactions in chain with given namespace.
 func decreaseTxSumOfChain(namespace string) error {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return ErrEmptyPointer
 	} else {
@@ -362,7 +382,7 @@ func decreaseTxSumOfChain(namespace string) error {
 
 // setLatestBlockHash sets latest blockHash in chain with given namespace.
 func setLatestBlockHash(namespace string, hash []byte) error {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return ErrEmptyPointer
 	} else {
@@ -375,7 +395,7 @@ func setLatestBlockHash(namespace string, hash []byte) error {
 
 // setParentBlockHash sets the latest block's parentHash in chain with given namespace.
 func setParentBlockHash(namespace string, hash []byte) error {
-	chain := chains.GetChain(namespace, false)
+	chain := chains.GetChain(namespace)
 	if chain == nil {
 		return ErrEmptyPointer
 	} else {
@@ -386,29 +406,9 @@ func setParentBlockHash(namespace string, hash []byte) error {
 	}
 }
 
-// putChain put chain into database
-func putChain(batch db.Batch, t *types.Chain, flush bool, sync bool) error {
-	// assign version tag
-	data, err := proto.Marshal(t)
-	if err != nil {
-		return err
-	}
-	if err := batch.Put(ChainKey, data); err != nil {
-		return err
-	}
-	if flush {
-		if sync {
-			batch.Write()
-		} else {
-			go batch.Write()
-		}
-	}
-	return nil
-}
-
 // getChain - get chain from database.
 func getChain(namespace string) (*types.Chain, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}

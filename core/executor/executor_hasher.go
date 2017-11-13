@@ -14,15 +14,15 @@
 package executor
 
 import (
-	"hyperchain/common"
-	er "hyperchain/core/errors"
-	"hyperchain/core/ledger/codec"
-	"hyperchain/core/ledger/codec/consensus"
-	"hyperchain/core/ledger/codec/v1_2"
-	"hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/errors"
+	"github.com/hyperchain/hyperchain/core/ledger/codec"
+	"github.com/hyperchain/hyperchain/core/ledger/codec/consensus"
+	"github.com/hyperchain/hyperchain/core/ledger/codec/v1_2"
+	"github.com/hyperchain/hyperchain/core/types"
 )
 
-// A tool use to calculate hash of transactions, receipts.
+// Hasher is the tool used to calculate hash of transactions, receipts.
 type Hasher struct {
 	transactionCalculator interface{} // a batch of transactions calculator
 	receiptCalculator     interface{} // a batch of receipts calculator
@@ -30,28 +30,29 @@ type Hasher struct {
 	receiptBuffer         [][]byte    // receipt buffer
 }
 
-// initTransactionHashCalculator - reset transaction buffer.
+// initTransactionHashCalculator inits the transaction buffer.
 func (executor *Executor) initTransactionHashCalculator() {
 	executor.hasher.transactionBuffer = nil
 }
 
-// initReceiptHashCalculator - reset receipt buffer.
+// initReceiptHashCalculator inits the receipt buffer.
 func (executor *Executor) initReceiptHashCalculator() {
 	executor.hasher.receiptBuffer = nil
 }
 
+// initCalculator inits the calculator of transactions and receipts.
 func (executor *Executor) initCalculator() {
 	executor.initTransactionHashCalculator()
 	executor.initReceiptHashCalculator()
 }
 
-// calculate a batch of transaction
+// calculateTransactionsFingerprint calculates a batch of transaction,
 // if flush flag is false, append serialized transaction data to the buffer,
 // otherwise, make the whole buffer content as the input to generate a hash as a fingerprint.
 func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Transaction, flush bool) (common.Hash, error) {
 	// short circuit if transaction pointer is empty
 	if transaction == nil && flush == false {
-		return common.Hash{}, er.EmptyPointerErr
+		return common.Hash{}, errors.EmptyPointerErr
 	}
 
 	if flush == false {
@@ -78,11 +79,11 @@ func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Tr
 			executor.logger.Errorf("[Namespace = %s] invalid receipt struct to marshal! error msg, ", executor.namespace, err.Error())
 			return common.Hash{}, err
 		}
-		// put transaction to buffer temporarily
+		// Put transaction to buffer temporarily
 		executor.hasher.transactionBuffer = append(executor.hasher.transactionBuffer, data)
 		return common.Hash{}, nil
 	} else {
-		// calculate hash together
+		// Calculate hash together
 		hash := executor.commonHash.Hash(executor.hasher.transactionBuffer)
 		executor.hasher.transactionBuffer = nil
 		return hash, nil
@@ -90,13 +91,13 @@ func (executor *Executor) calculateTransactionsFingerprint(transaction *types.Tr
 	return common.Hash{}, nil
 }
 
-// calculate a batch of receipt
+// calculateReceiptFingerprint calculates a batch of receipt,
 // if flush flag is false, append serialized receipt data to the buffer,
 // otherwise, make the whole buffer content as the input to generate a hash as a fingerprint.
 func (executor *Executor) calculateReceiptFingerprint(tx *types.Transaction, receipt *types.Receipt, flush bool) (common.Hash, error) {
-	// short circuit if receipt pointer is empty
+	// Short circuit if receipt pointer is empty
 	if receipt == nil && flush == false {
-		return common.Hash{}, er.EmptyPointerErr
+		return common.Hash{}, errors.EmptyPointerErr
 	}
 	if flush == false {
 		var (
@@ -122,11 +123,11 @@ func (executor *Executor) calculateReceiptFingerprint(tx *types.Transaction, rec
 			executor.logger.Errorf("[Namespace = %s] invalid receipt struct to marshal! error msg, ", executor.namespace, err.Error())
 			return common.Hash{}, err
 		}
-		// put transaction to buffer temporarily
+		// Put transaction to buffer temporarily
 		executor.hasher.receiptBuffer = append(executor.hasher.receiptBuffer, data)
 		return common.Hash{}, nil
 	} else {
-		// calculate hash together
+		// Calculate hash together
 		hash := executor.commonHash.Hash(executor.hasher.receiptBuffer)
 		executor.hasher.receiptBuffer = nil
 		return hash, nil
@@ -134,7 +135,7 @@ func (executor *Executor) calculateReceiptFingerprint(tx *types.Transaction, rec
 	return common.Hash{}, nil
 }
 
-// calculateValidationResultHash - calculate a hash to represent the validation result for consensus comparison.
+// calculateValidationResultHash calculates a hash to represent the validation result for consensus comparison.
 func (executor *Executor) calculateValidationResultHash(merkleRoot, txRoot, receiptRoot []byte) common.Hash {
 	return executor.commonHash.Hash([]interface{}{
 		merkleRoot,

@@ -19,12 +19,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/tree/bucket"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
-	"hyperchain/common"
-	"hyperchain/core/ledger/tree/bucket"
-	"hyperchain/crypto"
-	"hyperchain/hyperdb/db"
 	"math/big"
 	"sort"
 	"sync"
@@ -137,7 +137,7 @@ func newObject(db *StateDB, address common.Address, data Account, onDirty func(a
 	}
 	// Initialize bucket tree
 	if setup {
-		prefix := compositeStorageBucketPrefix(address.Hex())
+		prefix := CompositeStorageBucketPrefix(address.Hex())
 		obj.tree = bucket.NewBucketTree(db.db, string(prefix))
 		obj.tree.Initialize(conf)
 		obj.treeConfig = conf
@@ -224,7 +224,7 @@ func (self *StateObject) GetState(key common.Hash) (bool, []byte) {
 // GetState loads from database return a storage entry's value if existed
 func GetStateFromDB(db db.Database, address common.Address, key common.Hash) (bool, []byte) {
 	// Load from DB in case it is missing.
-	val, err := db.Get(compositeStorageKey(address.Bytes(), key.Bytes()))
+	val, err := db.Get(CompositeStorageKey(address.Bytes(), key.Bytes()))
 	if err != nil {
 		return false, nil
 	}
@@ -284,12 +284,12 @@ func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 		if len(value) == 0 {
 			// delete
 			self.logger.Debugf("flush dirty storage address [%s] delete item key: [%s]", self.address.Hex(), key.Hex())
-			if err := db.Delete(compositeStorageKey(self.address.Bytes(), key.Bytes())); err != nil {
+			if err := db.Delete(CompositeStorageKey(self.address.Bytes(), key.Bytes())); err != nil {
 				return err
 			}
 		} else {
 			self.logger.Debugf("flush dirty storage address [%s] put item key: [%s], value [%s]", self.address.Hex(), key.Hex(), common.Bytes2Hex(value))
-			if err := db.Put(compositeStorageKey(self.address.Bytes(), key.Bytes()), value); err != nil {
+			if err := db.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), value); err != nil {
 				return err
 			}
 		}
@@ -422,7 +422,7 @@ func (self *StateObject) Code(db db.Database) []byte {
 	if bytes.Equal(self.CodeHash(), emptyCodeHash) {
 		return nil
 	}
-	code, err := db.Get(compositeCodeHash(self.address.Bytes(), self.CodeHash()))
+	code, err := db.Get(CompositeCodeHash(self.address.Bytes(), self.CodeHash()))
 	if err != nil {
 		self.setError(fmt.Errorf("can't load code hash %x: %v", self.CodeHash(), err))
 	}
@@ -496,7 +496,7 @@ func (self *StateObject) SetCreator(addr common.Address) {
 
 func (self *StateObject) setCreator(addr common.Address) {
 	if bytes.Compare(self.data.Creator.Bytes(), addr.Bytes()) == 0 {
-		self.logger.Warningf("state object %s set creator, same with the origin, ignore.", self.address.Hex())
+		// self.logger.Debugf("state object %s set creator, same with the origin, ignore.", self.address.Hex())
 		return
 	}
 	self.data.Creator = addr
@@ -520,7 +520,7 @@ func (self *StateObject) SetCreateTime(time uint64) {
 
 func (self *StateObject) setCreateTime(time uint64) {
 	if self.data.CreateTime == time {
-		self.logger.Warningf("state object %s set create time, same with the origin, ignore.", self.address.Hex())
+		// self.logger.Debugf("state object %s set create time, same with the origin, ignore.", self.address.Hex())
 		return
 	}
 	self.data.CreateTime = time
@@ -543,7 +543,7 @@ func (self *StateObject) Status() int {
 // SetStatus - set the status of state object.
 func (self *StateObject) SetStatus(status int) {
 	if self.data.Status == status {
-		self.logger.Noticef("state object %s set status, same with the origin status, ignore.", self.address.Hex())
+		// self.logger.Noticef("state object %s set status, same with the origin status, ignore.", self.address.Hex())
 		return
 	}
 	self.db.journal.JournalList = append(self.db.journal.JournalList, &StatusChange{
@@ -575,10 +575,10 @@ func (self *StateObject) ForEachStorage(cb func(key common.Hash, value []byte) b
 		cb(h, value)
 		ret[h] = value
 	}
-	iter := self.db.db.NewIterator(getStorageKeyPrefix(self.address.Bytes()))
+	iter := self.db.db.NewIterator(GetStorageKeyPrefix(self.address.Bytes()))
 	defer iter.Release()
 	for iter.Next() {
-		k, ok := splitCompositeStorageKey(self.address.Bytes(), iter.Key())
+		k, ok := SplitCompositeStorageKey(self.address.Bytes(), iter.Key())
 		if ok == false {
 			continue
 		}
@@ -678,7 +678,7 @@ func (self *StateObject) doArchive(wg *sync.WaitGroup) {
 	for key, value := range self.archiveStorage {
 		if len(value) != 0 {
 			self.logger.Debugf("flush dirty storage address [%s] add key: [%s] to archieve db, value [%s]", self.address.Hex(), key.Hex(), common.BytesToHash(value).Hex())
-			batch.Put(compositeStorageKey(self.address.Bytes(), key.Bytes()), value)
+			batch.Put(CompositeStorageKey(self.address.Bytes(), key.Bytes()), value)
 		}
 	}
 	batch.Write()

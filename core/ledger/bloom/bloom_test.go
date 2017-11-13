@@ -16,13 +16,13 @@ package bloom
 
 import (
 	"crypto/rand"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	checker "gopkg.in/check.v1"
-	"hyperchain/common"
-	"hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
-	"hyperchain/hyperdb"
-	hcom "hyperchain/hyperdb/common"
-	"hyperchain/hyperdb/db"
 	"os"
 	"testing"
 	"time"
@@ -62,7 +62,7 @@ func (suite *BloomSuite) SetUpSuite(c *checker.C) {
 
 // Run before each test or benchmark starts running.
 func (suite *BloomSuite) SetUpTest(c *checker.C) {
-	db, _ := hyperdb.GetDBDatabaseByNamespace(ns)
+	db, _ := hyperdb.GetDBDatabaseByNamespace(ns, hcom.DBNAME_BLOCKCHAIN)
 	chain.PutChain(db.NewBatch(), &types.Chain{}, true, true)
 }
 
@@ -100,7 +100,7 @@ func (suite *BloomSuite) TestBuildInTimeScope(c *checker.C) {
 		another []*types.Transaction = RandomTxs()
 		db      db.Database
 	)
-	db, _ = hyperdb.GetDBDatabaseByNamespace(ns)
+	db, _ = hyperdb.GetDBDatabaseByNamespace(ns, hcom.DBNAME_BLOCKCHAIN)
 	cache := NewBloomFilterCache(config)
 	cache.Start()
 	defer cache.Close()
@@ -130,7 +130,7 @@ func (suite *BloomSuite) TestBuildOutTimeScope(c *checker.C) {
 		another []*types.Transaction = RandomTxs()
 		db      db.Database
 	)
-	db, _ = hyperdb.GetDBDatabaseByNamespace(ns)
+	db, _ = hyperdb.GetDBDatabaseByNamespace(ns, hcom.DBNAME_BLOCKCHAIN)
 	cache := NewBloomFilterCache(config)
 	cache.Start()
 	defer cache.Close()
@@ -162,7 +162,7 @@ func (suite *BloomSuite) TestBuildConcurrently(c *checker.C) {
 		another  []*types.Transaction = RandomTxs()
 		db       db.Database
 	)
-	db, _ = hyperdb.GetDBDatabaseByNamespace(ns)
+	db, _ = hyperdb.GetDBDatabaseByNamespace(ns, hcom.DBNAME_BLOCKCHAIN)
 	cache := NewBloomFilterCache(config)
 	cache.Start()
 	defer cache.Close()

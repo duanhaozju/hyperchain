@@ -14,11 +14,13 @@
 package executor
 
 import (
-	"github.com/golang/protobuf/proto"
-	"hyperchain/common"
-	edb "hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
 	"time"
+
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
+	"github.com/hyperchain/hyperchain/core/types"
+
+	"github.com/golang/protobuf/proto"
 )
 
 func (executor *Executor) syncReplica() {
@@ -36,7 +38,7 @@ func (executor *Executor) sendReplicaInfo() {
 			executor.logger.Notice("replica sync backend exit")
 			return
 		case <-ticker.C:
-			executor.informP2P(NOTIFY_SYNC_REPLICA, edb.GetChainCopy(executor.namespace))
+			executor.informP2P(NOTIFY_SYNC_REPLICA, chain.GetChainCopy(executor.namespace))
 		}
 	}
 }

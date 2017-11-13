@@ -15,7 +15,7 @@ package state
 
 import (
 	"bytes"
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 	"sort"
 	"strconv"
 )
@@ -50,7 +50,7 @@ const (
 )
 
 // CompositeStorageKey constructs contract storage entry's key.
-func compositeStorageKey(address []byte, key []byte) []byte {
+func CompositeStorageKey(address []byte, key []byte) []byte {
 	ret := append([]byte(storagePrefix), address...)
 	ret = append(ret, key...)
 	return ret
@@ -58,13 +58,13 @@ func compositeStorageKey(address []byte, key []byte) []byte {
 
 // GetStorageKeyPrefix constructs contract storage prefix by contract address.
 // It is offen used in database traverse.
-func getStorageKeyPrefix(address []byte) []byte {
+func GetStorageKeyPrefix(address []byte) []byte {
 	ret := append([]byte(storagePrefix), address...)
 	return ret
 }
 
 // SplitCompositeStorageKey splits the composite key to get the actual key.
-func splitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
+func SplitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
 	prefix := append([]byte(storagePrefix), address...)
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) {
@@ -75,7 +75,7 @@ func splitCompositeStorageKey(address []byte, key []byte) ([]byte, bool) {
 }
 
 // RetrieveAddrFromStorageKey splits the composite key to get address info.
-func retrieveAddrFromStorageKey(key []byte) ([]byte, bool) {
+func RetrieveAddrFromStorageKey(key []byte) ([]byte, bool) {
 	prefix := []byte(storagePrefix)
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen+common.AddressLength {
@@ -86,13 +86,13 @@ func retrieveAddrFromStorageKey(key []byte) ([]byte, bool) {
 }
 
 // CompositeCodeHash constructs code key with given address and codehash.
-func compositeCodeHash(address []byte, codeHash []byte) []byte {
+func CompositeCodeHash(address []byte, codeHash []byte) []byte {
 	ret := append([]byte(codePrefix), address...)
 	return append(ret, codeHash...)
 }
 
 // SplitCompositeCodeHash splits the composite key to retrieve codehash.
-func splitCompositeCodeHash(address []byte, key []byte) ([]byte, bool) {
+func SplitCompositeCodeHash(address []byte, key []byte) ([]byte, bool) {
 	prefix := append([]byte(codePrefix), address...)
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) && len(key) >= prefixLen {
@@ -103,7 +103,7 @@ func splitCompositeCodeHash(address []byte, key []byte) ([]byte, bool) {
 }
 
 // RetrieveAddrFromCodeHash splits the composite key to retrieve address.
-func retrieveAddrFromCodeHash(key []byte) ([]byte, bool) {
+func RetrieveAddrFromCodeHash(key []byte) ([]byte, bool) {
 	prefix := []byte(codePrefix)
 	prefixLen := len(prefix)
 	if bytes.HasPrefix(key, prefix) && len(key) > prefixLen+common.AddressLength {
@@ -114,12 +114,12 @@ func retrieveAddrFromCodeHash(key []byte) ([]byte, bool) {
 }
 
 // CompositeAccountKey constructs account key with given address.
-func compositeAccountKey(address []byte) []byte {
+func CompositeAccountKey(address []byte) []byte {
 	return append([]byte(accountPrefix), address...)
 }
 
 // SplitCompositeAccountKey splits composite key to retrieve address.
-func splitCompositeAccountKey(key []byte) ([]byte, bool) {
+func SplitCompositeAccountKey(key []byte) ([]byte, bool) {
 	identifierLen := len([]byte(accountPrefix))
 	if bytes.HasPrefix(key, []byte(accountPrefix)) {
 		return key[identifierLen:], true
@@ -128,11 +128,11 @@ func splitCompositeAccountKey(key []byte) ([]byte, bool) {
 	}
 }
 
-func compositeStateBucketPrefix() []byte {
+func CompositeStateBucketPrefix() []byte {
 	return append([]byte(treePrefix), []byte("-state")...)
 }
 
-func compositeStorageBucketPrefix(address string) []byte {
+func CompositeStorageBucketPrefix(address string) []byte {
 	return []byte(treePrefix + address)
 }
 
@@ -147,7 +147,7 @@ func initTreeConfig(cap, aggreation, msize, bsize int) map[string]interface{} {
 }
 
 // CompositeJournalKey constructs journal key with prefix and block number.
-func compositeJournalKey(blockNumber uint64) []byte {
+func CompositeJournalKey(blockNumber uint64) []byte {
 	s := strconv.FormatUint(blockNumber, 10)
 	return append([]byte(journalPrefix), []byte(s)...)
 }

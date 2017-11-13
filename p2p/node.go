@@ -1,10 +1,10 @@
 package p2p
 
 import (
-	"hyperchain/p2p/info"
-	"hyperchain/p2p/message"
-	"hyperchain/p2p/msg"
-	"hyperchain/p2p/network"
+	"github.com/hyperchain/hyperchain/p2p/info"
+	"github.com/hyperchain/hyperchain/p2p/message"
+	"github.com/hyperchain/hyperchain/p2p/msg"
+	"github.com/hyperchain/hyperchain/p2p/network"
 )
 
 type Node struct {
@@ -13,6 +13,7 @@ type Node struct {
 	net       *network.HyperNet
 }
 
+// NewNode creates and returns a new Node instance.
 func NewNode(namespace string, id int, hostname string, net *network.HyperNet) *Node {
 	node := &Node{
 		info:      info.NewInfo(id, hostname, namespace),
@@ -22,12 +23,12 @@ func NewNode(namespace string, id int, hostname string, net *network.HyperNet) *
 	return node
 }
 
-//Bind msgType and handler for this namespace
+// Bind binds msgType and its handler for this namespace.
 func (node *Node) Bind(msgType message.MsgType, handler msg.MsgHandler) {
 	node.net.RegisterHandler(node.namespace, msgType, handler)
 }
 
-// UnBindAll all handlers.
+// UnBindAll unbinds all handlers.
 func (node *Node) UnBindAll() {
 	node.net.DeRegisterHandlers(node.namespace)
 }

@@ -16,9 +16,9 @@ package state
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/pkg/errors"
-	"hyperchain/common"
-	"hyperchain/hyperdb/db"
 	"math/big"
 	"sort"
 )
@@ -432,9 +432,9 @@ func (ch *CodeChange) Undo(s *StateDB, cache *JournalCache, batch db.Batch, writ
 			s.logger.Warningf("missing state object %s, it may be a empty account or lost in database", ch.Account.Hex())
 			obj = cache.Create(*ch.Account, s)
 		}
-		batch.Delete(compositeCodeHash(ch.Account.Bytes(), obj.data.CodeHash))
+		batch.Delete(CompositeCodeHash(ch.Account.Bytes(), obj.data.CodeHash))
 		obj.data.CodeHash = ch.Prevhash
-		batch.Put(compositeCodeHash(ch.Account.Bytes(), ch.Prevhash), ch.Prevcode)
+		batch.Put(CompositeCodeHash(ch.Account.Bytes(), ch.Prevhash), ch.Prevcode)
 	}
 }
 func (ch *CodeChange) String() string {

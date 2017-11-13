@@ -7,15 +7,15 @@ import (
 	"testing"
 	"time"
 
-	"hyperchain/common"
-	"hyperchain/consensus/helper/persist"
-	mdb "hyperchain/hyperdb/mdb"
-	"hyperchain/manager/event"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/consensus/helper/persist"
+	mdb "github.com/hyperchain/hyperchain/hyperdb/mdb"
+	"github.com/hyperchain/hyperchain/manager/event"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPbftTimeFunctions(t *testing.T) {
+func TestRbftTimeFunctions(t *testing.T) {
 	ast := assert.New(t)
 	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 2, t)
 	defer CleanData(rbft.namespace)

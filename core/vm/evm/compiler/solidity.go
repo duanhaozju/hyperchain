@@ -27,8 +27,8 @@ import (
 	"regexp"
 	"strings"
 
-	"hyperchain/common"
-	"hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto"
 	"path"
 )
 
@@ -118,7 +118,6 @@ func NewCompiler(solcPath string) (sol *Solidity, err error) {
 		sol.isSolcjs = true
 	}
 
-	//glog.V(logger.Info).Infoln(sol.Info())
 	return
 }
 

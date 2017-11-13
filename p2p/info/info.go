@@ -2,14 +2,15 @@ package info
 
 import (
 	"encoding/json"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/p2p/utils"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/p2p/utils"
 	"sync"
 )
 
 var logger *logging.Logger
 
+// Info represents the basic information of a node.
 type Info struct {
 	rwmutex     *sync.RWMutex
 	Id          int `json:"id"`
@@ -22,6 +23,7 @@ type Info struct {
 	isReconnect bool   `json"isorg`
 }
 
+// NewInfo creates and returns a new Info instance.
 func NewInfo(id int, hostname string, namespcace string) *Info {
 	logger = common.GetLogger(common.DEFAULT_LOG, "p2p")
 	hash := utils.Sha3([]byte(hostname + namespcace))
@@ -37,6 +39,7 @@ func NewInfo(id int, hostname string, namespcace string) *Info {
 	}
 }
 
+// GetHash returns the node hash.
 func (i *Info) GetHash() string {
 	i.rwmutex.RLock()
 	defer i.rwmutex.RUnlock()
@@ -78,7 +81,6 @@ func (i *Info) GetHostName() string {
 	return i.Hostname
 }
 
-//get nodeID
 func (i *Info) SetID(id int) {
 	i.rwmutex.Lock()
 	defer i.rwmutex.Unlock()
@@ -92,14 +94,12 @@ func (i *Info) GetID() int {
 	return i.Id
 }
 
-//set node primary info
 func (i *Info) SetPrimary(flag bool) {
 	i.rwmutex.Lock()
 	defer i.rwmutex.Unlock()
 	i.isPrimary = flag
 }
 
-// get the node info primary info
 func (i *Info) GetPrimary() bool {
 	i.rwmutex.RLock()
 	defer i.rwmutex.RUnlock()

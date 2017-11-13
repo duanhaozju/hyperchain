@@ -3,12 +3,12 @@
 package runtime
 
 import (
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/ledger/state"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/core/vm"
+	"github.com/hyperchain/hyperchain/core/vm/evm"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/core/ledger/state"
-	"hyperchain/core/types"
-	"hyperchain/core/vm"
-	"hyperchain/core/vm/evm"
 	"math/big"
 )
 

@@ -2,11 +2,11 @@ package network
 
 import (
 	"crypto"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/pkg/errors"
 	"github.com/terasum/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"hyperchain/common"
 )
 
 type Sec struct {
@@ -16,14 +16,14 @@ type Sec struct {
 	tlsCert               string
 	tlsCertPriv           string
 
-	//client
+	// client private key
 	clientPriv *crypto.PrivateKey
 
-	//server
+	// server private key
 	serverPriv *crypto.PrivateKey
 }
 
-//NewSec return a new sec options
+// NewSec creates and returns a new Sec instances.
 func NewSec(config *viper.Viper) (*Sec, error) {
 	enableTLS := config.GetBool(common.P2P_ENABLE_TLS)
 	tlsCA := config.GetString(common.P2P_TLS_CA)
@@ -31,7 +31,7 @@ func NewSec(config *viper.Viper) (*Sec, error) {
 	tlsCert := config.GetString(common.P2P_TLS_CERT)
 	tlsCertPriv := config.GetString(common.P2P_TLS_CERT_PRIV)
 
-	//check the file is exist or not
+	// check if the file exists
 	if enableTLS && !common.FileExist(tlsCA) {
 		return nil, errors.New("tlsCA file not exist")
 	}
@@ -53,11 +53,7 @@ func NewSec(config *viper.Viper) (*Sec, error) {
 	return sec, nil
 }
 
-/**
-  tls ca get dial opts and server opts part
-*/
-
-//GetGrpcClientOpts get GrpcClient options
+// GetGrpcClientOpts returns grpc.DialOption for grpc client.
 func (s *Sec) GetGrpcClientOpts() []grpc.DialOption {
 	var opts []grpc.DialOption
 	if !s.enableTls {
@@ -74,7 +70,7 @@ func (s *Sec) GetGrpcClientOpts() []grpc.DialOption {
 	return opts
 }
 
-//GetGrpcServerOpts get server grpc options
+// GetGrpcServerOpts returns grpc.ServerOption for grpc server.
 func (s *Sec) GetGrpcServerOpts() []grpc.ServerOption {
 	var opts []grpc.ServerOption
 	if !s.enableTls {

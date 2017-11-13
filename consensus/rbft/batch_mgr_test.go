@@ -4,14 +4,40 @@
 package rbft
 
 import (
-	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/hyperchain/hyperchain/consensus/txpool"
+	"github.com/hyperchain/hyperchain/core/types"
+
 	"github.com/stretchr/testify/assert"
-	"hyperchain/consensus/txpool"
-	"hyperchain/core/types"
 )
+
+func TestNewBatchValidator(t *testing.T) {
+	batchVd := newBatchValidator()
+	structName, nilElems, err := checkNilElems(batchVd)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if nilElems != nil {
+		t.Errorf("There exists some nil elements: %v in struct: %s", nilElems, structName)
+	}
+}
+
+func TestNewBatchManager(t *testing.T) {
+	ast := assert.New(t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
+	defer CleanData(rbft.namespace)
+	ast.Equal(nil, err, err)
+	rbft.Start()
+	structName, nilElems, err := checkNilElems(rbft.batchMgr)
+	if err != nil {
+		t.Error(err.Error())
+	}
+	if nilElems != nil {
+		t.Errorf("There exists some nil elements: %v in struct: %s", nilElems, structName)
+	}
+}
 
 func TestVid(t *testing.T) {
 	bv := newBatchValidator()
@@ -49,7 +75,7 @@ func TestCVB(t *testing.T) {
 
 func TestBatchTimer(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	ast.Equal(false, rbft.batchMgr.isBatchTimerActive(), "batchTimer initialize failed")
@@ -69,7 +95,7 @@ func TestBatchTimer(t *testing.T) {
 
 func TestPrimaryValidateBatch(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	ast.Equal(false, rbft.batchMgr.isBatchTimerActive(), "batchTimer initialize failed")
@@ -97,12 +123,12 @@ func TestPrimaryValidateBatch(t *testing.T) {
 
 func TestFindNextValidateBatch(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inNegotiateView)
+	rbft.off(inRecovery)
 
 	cert1 := rbft.storeMgr.getCert(0, 1, "1")
 	idx1 := vidx{view: 0, seqNo: 1}
@@ -179,18 +205,18 @@ func TestFindNextValidateBatch(t *testing.T) {
 	rbft.batchMgr.txPool.GenerateTxBatch()
 	find, _, _, _ = rbft.findNextValidateBatch()
 	ast.Equal(false, find, "findNextValidateBatch failed")
-	ast.Equal(uint32(0), atomic.LoadUint32(&rbft.activeView), "sendViewChange failed")
+	ast.Equal(false, !rbft.in(inViewChange), "sendViewChange failed")
 
 }
 
 func TestValidatePending(t *testing.T) {
 	ast := assert.New(t)
-	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 0, t)
+	rbft, _, err := TNewRbft("./Testdatabase/", "../../configuration/namespaces/", "global", 1, t)
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inNegotiateView)
+	rbft.off(inRecovery)
 
 	cert1 := rbft.storeMgr.getCert(0, 1, "1")
 	idx1 := vidx{view: 0, seqNo: 1}
@@ -223,8 +249,8 @@ func TestHandleTransactionsAfterAbnormal(t *testing.T) {
 	defer CleanData(rbft.namespace)
 	ast.Equal(nil, err, err)
 	rbft.Start()
-	rbft.status.inActiveState(&rbft.status.inNegoView)
-	rbft.status.inActiveState(&rbft.status.inRecovery)
+	rbft.off(inNegotiateView)
+	rbft.off(inRecovery)
 	rbft.handleTransactionsAfterAbnormal()
 
 	rbft.id = 1

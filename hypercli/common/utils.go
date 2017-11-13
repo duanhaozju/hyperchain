@@ -1,25 +1,27 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
+
 package common
 
 import (
-	"bufio"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"github.com/golang/protobuf/proto"
-	"github.com/pkg/errors"
-	"github.com/urfave/cli"
-	"hyperchain/accounts"
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/crypto"
-	"hyperchain/rpc"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/rpc"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/pkg/errors"
+	"github.com/urfave/cli"
 )
 
 const (
@@ -28,29 +30,34 @@ const (
 	defaultGas      = 10000
 	defaultGasPrice = 10000
 	frequency       = 10
+	hexAddr         = "000f1a7a08ccc48e5d30f80850cf1cf283aa3abd"
 )
 
 var (
 	kec256Hash = crypto.NewKeccak256Hash("keccak256")
 )
 
+// UserInfo records the user's username and token.
 type UserInfo struct {
 	Username string
 	Token    string
 }
 
 // GetNonEmptyValueByName first finds the value from cli flags, if not found,
-// lets user input from stdin util user inputs an non-empty value
+// lets user input from stdin util user inputs an non-empty value.
 func GetNonEmptyValueByName(c *cli.Context, name string) string {
 	var value string
 	if c.String(name) != "" {
 		value = c.String(name)
 	} else {
-		userinfo := new(UserInfo)
-		err := ReadFile(tokenpath, userinfo)
-		if err == nil {
-			return userinfo.Username
+		// for username, first find username from token file, if found, return
+		// it, else lets user input.
+		if name == "username" {
+			if user := GetCurrentUser(); user != "" {
+				return user
+			}
 		}
+
 		for {
 			if name == "to" {
 				name = "contract address"
@@ -65,7 +72,7 @@ func GetNonEmptyValueByName(c *cli.Context, name string) string {
 	return value
 }
 
-// GetJSONResponse returns a JSONResponse from http response result
+// GetJSONResponse returns a JSONResponse from http response result.
 func GetJSONResponse(result string) (jsonrpc.JSONResponse, error) {
 	var response jsonrpc.JSONResponse
 	err := json.Unmarshal([]byte(result), &response)
@@ -75,6 +82,7 @@ func GetJSONResponse(result string) (jsonrpc.JSONResponse, error) {
 	return response, nil
 }
 
+// checkToken checks if given json-format response contains an invalid token error.
 func checkToken(result string) error {
 	tokenErr := &common.InvalidTokenError{}
 	response, err := GetJSONResponse(result)
@@ -86,14 +94,7 @@ func checkToken(result string) error {
 
 // GenSignature generates the transaction signature by many params ...
 func GenSignature(from string, to string, timestamp int64, amount int64, payload string, nonce int64, opcode int32, vmtype types.TransactionValue_VmType) ([]byte, error) {
-	conf := common.NewRawConfig()
-	conf.Set(common.KEY_NODE_DIR, "./keyconfigs/keynodes")
-	conf.Set(common.KEY_STORE_DIR, "./keyconfigs/keystore")
-
-	am := accounts.NewAccountManager(conf)
-
 	payload = common.StringToHex(payload)
-	// TODO ASK @DUANHAO ADD EXTRA SUPPORT
 	txValue := types.NewTransactionValue(int64(defaultGasPrice), int64(defaultGas), amount, common.FromHex(payload), opcode, nil, vmtype)
 	value, _ := proto.Marshal(txValue)
 	var tx *types.Transaction
@@ -103,16 +104,25 @@ func GenSignature(from string, to string, timestamp int64, amount int64, payload
 		tx = types.NewTransaction(common.HexToAddress(from).Bytes(), common.HexToAddress(to).Bytes(), value, timestamp, nonce)
 	}
 
-	signature, err := am.SignWithPassphrase(common.BytesToAddress(tx.From), tx.SignHash(kec256Hash).Bytes(), password)
+	hash := tx.SignHash(kec256Hash).Bytes()
+	file := path.Join("./keyconfigs/keystore", hexAddr)
+	privKey, err := getKey(file, password)
+	if err != nil {
+		fmt.Println("Get private key failed!, detail error message: ", err)
+		return nil, err
+	}
 
+	encryp := crypto.NewEcdsaEncrypto("ecdsa")
+	signature, err := encryp.Sign(hash, privKey)
 	if err != nil {
 		fmt.Println("Sign Transaction failed!, detail error message: ", err)
 		return nil, err
 	}
+
 	return signature, nil
 }
 
-// getTransactionReceiptCmd returns the jsonrpc command of getTransactionReceipt
+// getTransactionReceiptCmd returns the jsonrpc command of getTransactionReceipt.
 func getTransactionReceiptCmd(txHash string, namespace string) string {
 	//TODO modify func name.
 	method := "txdb_getTransactionReceipt"
@@ -122,7 +132,7 @@ func getTransactionReceiptCmd(txHash string, namespace string) string {
 		namespace, method, txHash)
 }
 
-// getTransactionReceipt try to get the transaction receipt 10 times, with 1s interval
+// getTransactionReceipt try to get the transaction receipt for 10 times, with 1s interval.
 func GetTransactionReceipt(txHash string, namespace string, client *CmdClient) error {
 	cmd := getTransactionReceiptCmd(txHash, namespace)
 	method := "txdb_getTransactionReceipt"
@@ -140,11 +150,12 @@ func GetTransactionReceipt(txHash string, namespace string, client *CmdClient) e
 		time.Sleep(1 * time.Second)
 	}
 
-	return fmt.Errorf("Cant't get transaction receipt after %v attempts", frequency)
+	return fmt.Errorf("cant't get transaction receipt after %v attempts", frequency)
 }
 
+// Compress compresses source directory to an archive with '.tar.gz' format.
 func Compress(source, target string) {
-	//source path must be absolute path, so first convert source path to an absolute path
+	// source path must be absolute path, so first convert source path to an absolute path
 	abs, err := filepath.Abs(source)
 	if err != nil {
 		fmt.Println(err)
@@ -161,6 +172,7 @@ func Compress(source, target string) {
 	}
 }
 
+// DelCompressedFile deletes useless archive.
 func DelCompressedFile(file string) {
 	command := exec.Command("rm", "-rf", file)
 	if err := command.Run(); err != nil {
@@ -170,9 +182,8 @@ func DelCompressedFile(file string) {
 	}
 }
 
+// ReadFile reads Userinfo from given file.
 func ReadFile(path string, object interface{}) error {
-	//token, err := ioutil.ReadFile(file)
-	//return string(token[:]), err
 	file, err := os.Open(path)
 	defer file.Close()
 	if err == nil {
@@ -182,6 +193,7 @@ func ReadFile(path string, object interface{}) error {
 	return err
 }
 
+// SaveToFile saves username and token to the given file.
 func SaveToFile(file, username, token string) error {
 	var f *os.File
 	if _, err := os.Stat(file); os.IsExist(err) {
@@ -197,41 +209,10 @@ func SaveToFile(file, username, token string) error {
 	userinfo := &UserInfo{Username: username, Token: token}
 	encoder := gob.NewEncoder(f)
 	return encoder.Encode(userinfo)
-	//f.WriteString(token)
 }
 
-func ReadPermissionsFromFile(file string) ([]string, error) {
-	var permissions []string
-	abs, err := filepath.Abs(file)
-	if err != nil {
-		return nil, err
-	}
-
-	// open a file
-	if file, err := os.Open(abs); err == nil {
-		// make sure it gets closed
-		defer file.Close()
-
-		// create a new scanner and read the file line by line
-		scanner := bufio.NewScanner(file)
-		for scanner.Scan() {
-			permission := scanner.Text()
-			if permission != "" {
-				permissions = append(permissions, permission)
-			}
-		}
-
-		// check for errors
-		if err = scanner.Err(); err != nil {
-			return nil, err
-		}
-		return permissions, nil
-	} else {
-		return nil, err
-	}
-	return nil, nil
-}
-
+// GetCurrentUser reads into token file, if existed a username, return it, else
+// return a blank string.
 func GetCurrentUser() string {
 	var username string
 	userinfo := new(UserInfo)

@@ -3,19 +3,19 @@ package inneraddr
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/pkg/errors"
 	"github.com/terasum/viper"
-	"hyperchain/common"
 	"strings"
 	"sync"
 )
 
 type InnerAddr struct {
-	//domain ipaddr
-	addrs map[string]string
+	addrs map[string]string // key is domain name, value is IP address
 	lock  *sync.RWMutex
 }
 
+// NewInnerAddr creates and returns a new InnerAddr instance.
 func NewInnerAddr() *InnerAddr {
 	return &InnerAddr{
 		addrs: make(map[string]string),
@@ -23,53 +23,8 @@ func NewInnerAddr() *InnerAddr {
 	}
 }
 
-//Get the domain matched ipaddr, if not exist return ""
-func (ia *InnerAddr) Get(domain string) string {
-	ia.lock.RLock()
-	defer ia.lock.RUnlock()
-	if ipaddr, ok := ia.addrs[domain]; ok {
-		return ipaddr
-	}
-	if ipaddr, ok := ia.addrs["default"]; ok {
-		return ipaddr
-	}
-	// if not exist return first one
-	for _, v := range ia.addrs {
-		return v
-	}
-	return ""
-}
-
-func (ia *InnerAddr) Add(domain, ipaddr string) {
-	ia.lock.Lock()
-	defer ia.lock.Unlock()
-	ia.addrs[domain] = ipaddr
-}
-
-func (ia *InnerAddr) Del(domain, ipaddr string) {
-	ia.lock.Lock()
-	defer ia.lock.Unlock()
-	delete(ia.addrs, domain)
-}
-
-func (ia *InnerAddr) Serialize() ([]byte, error) {
-	ia.lock.RLock()
-	defer ia.lock.RUnlock()
-	return json.Marshal(ia.addrs)
-}
-
-func InnerAddrUnSerialize(raw []byte) (*InnerAddr, error) {
-	tempMap := make(map[string]string)
-	err := json.Unmarshal(raw, &tempMap)
-	if err != nil {
-		return nil, err
-	}
-	return &InnerAddr{
-		addrs: tempMap,
-		lock:  new(sync.RWMutex),
-	}, nil
-}
-
+// GetInnerAddr create and returns a new InnerAddr instance for given
+// file addr.toml.
 func GetInnerAddr(addrFile string) (*InnerAddr, string, error) {
 	if !common.FileExist(addrFile) {
 		return nil, "default", errors.New("the addr file not exist!")
@@ -96,4 +51,52 @@ func GetInnerAddr(addrFile string) (*InnerAddr, string, error) {
 	}
 	domain := vip.GetString("domain")
 	return addrs, domain, nil
+}
+
+// Get returns IP address that the domain matches, if not exist returns the
+// first one. If there is without any IP address, return "".
+func (ia *InnerAddr) Get(domain string) string {
+	ia.lock.RLock()
+	defer ia.lock.RUnlock()
+	if ipaddr, ok := ia.addrs[domain]; ok {
+		return ipaddr
+	}
+	if ipaddr, ok := ia.addrs["default"]; ok {
+		return ipaddr
+	}
+	// if not exist return first one
+	for _, v := range ia.addrs {
+		return v
+	}
+	return ""
+}
+
+func (ia *InnerAddr) Add(domain, ipaddr string) {
+	ia.lock.Lock()
+	defer ia.lock.Unlock()
+	ia.addrs[domain] = ipaddr
+}
+
+func (ia *InnerAddr) Del(domain string) {
+	ia.lock.Lock()
+	defer ia.lock.Unlock()
+	delete(ia.addrs, domain)
+}
+
+func (ia *InnerAddr) Serialize() ([]byte, error) {
+	ia.lock.RLock()
+	defer ia.lock.RUnlock()
+	return json.Marshal(ia.addrs)
+}
+
+func InnerAddrUnSerialize(raw []byte) (*InnerAddr, error) {
+	tempMap := make(map[string]string)
+	err := json.Unmarshal(raw, &tempMap)
+	if err != nil {
+		return nil, err
+	}
+	return &InnerAddr{
+		addrs: tempMap,
+		lock:  new(sync.RWMutex),
+	}, nil
 }

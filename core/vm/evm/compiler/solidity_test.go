@@ -22,7 +22,7 @@ import (
 	"path"
 	"testing"
 
-	"hyperchain/common"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 const solcVersion = "0.1.1"
@@ -119,15 +119,6 @@ func TestCompileError(t *testing.T) {
 	if err == nil {
 		t.Errorf("error expected compiling source. got none. result %v", contracts)
 		return
-	}
-}
-
-func TestNoCompiler(t *testing.T) {
-	_, err := NewCompiler("/path/to/solc")
-	if err != nil {
-		t.Logf("solidity quits with error: %v", err)
-	} else {
-		t.Errorf("no solc installed, but got no error")
 	}
 }
 

@@ -27,16 +27,17 @@ title = "namespace configurations"
 [consensus]
 algo = "RBFT"
 
-    [consensus.rbft]        #PBFT configurations
+    [consensus.rbft]        #RBFT configurations
     batchsize       = 100   # How many transactions should the primary pack before sending pre-prepare
-    poolsize        = 50000  # How many transactions could the txPool stores in total
+    poolsize        = 50000 # How many transactions could the txPool stores in total
     vcresendlimit   = 10    # How many times of same vc from self before a replica start recovery
+    vcperiod        = 0     # After how many checkpoint periods( Blocks = 10 * vcperiod ) the primary gets cycled automatically. ( Set 0 to disable )
 
         [consensus.rbft.timeout]
             negoview        = "6s"  # How long to wait for N-f responses after send negotiate view
             recovery        = "15s" # How long to wait before recovery finished(This is for release1.2)
             firstrequest    = "30s" # How long to wait before first request should come
-            batch           = "0.5s"  # Primary send a pre-prepare if there are pending requests, although batchsize isn't reached yet,
+            batch           = "0.5s"# Primary send a pre-prepare if there are pending requests, although batchsize isn't reached yet,
             request         = "6s"  # How long may a request(transaction batch) take between reception and execution, must be greater than the batch timeout
             validate        = "1s"  # How long may a validate (transaction batch) process will take by local Validation
             nullrequest     = "6s"  # Primary send it to inform aliveness, must be greater than request timeout
@@ -88,11 +89,24 @@ algo = "RBFT"
 ############################################################################################################
 [database]
     type = 0001
-    [database.leveldb]
-    root_dir    = "data/leveldb" #leveldb table root dir
-    log_status  = false
-    log_path    = "data/db.log"
 
+    [database.leveldb]
+    root_dir           = "data/leveldb" #leveldb table root dir
+    log_path           = "data/db.log"
+    measurement_enable = false
+    data_encryption    = false
+
+    [database.leveldb.options]
+    block_cache_capacity      = "8mb" # "mb", "kb"
+    block_size                = "4kb" # "mb", "kb"
+    write_buffer              = "4mb" # "mb", "kb"
+    write_l0_pause_trigger    = 12
+    write_l0_slowdown_trigger = 8
+
+    [database.dbpath]
+    archive    = "data/leveldb/archive"
+    blockchain = "data/leveldb/blockchain"
+    consensus  = "data/leveldb/consensus"
 
 ############################################################################################################
 #
@@ -152,7 +166,7 @@ max_log_size    = "200mb"  # "mb", "kb"
 
     [log.module] #set log level by module
     p2p         = "NOTICE"
-    consensus   = "NOTICE"
+    consensus   = "INFO"
     hyperdb     = "NOTICE"
     eventhub    = "NOTICE"
     executor    = "NOTICE"
@@ -163,9 +177,6 @@ max_log_size    = "200mb"  # "mb", "kb"
 # other configurations
 #
 ############################################################################################################
-[account]
-keystoredir = "config/keystore"
-keynodesdir = "config/keynodes"
 
 [config.path]
 caconfig        = "config/namespace.toml"

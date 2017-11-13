@@ -5,12 +5,11 @@ package jsonrpc
 import (
 	"encoding/json"
 	"fmt"
+	admin "github.com/hyperchain/hyperchain/api/admin"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/namespace"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
-	admin "hyperchain/api/admin"
-	"hyperchain/common"
-	"hyperchain/common/interface"
-	"hyperchain/namespace"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -35,24 +34,22 @@ const (
 
 // Server represents a RPC server
 type Server struct {
-	run            int32
-	codecsMu       sync.Mutex
-	codecs         *set.Set
-	nsMgrProcessor intfc.NsMgrProcessor
-	admin          *admin.Administrator
-	requestMgrMu   sync.Mutex
-	requestMgr     map[string]*RequestManager
+	run          int32
+	codecsMu     sync.Mutex
+	codecs       *set.Set
+	namespaceMgr namespace.NamespaceManager
+	admin        *admin.Administrator
+	requestMgrMu sync.Mutex
 }
 
 // NewServer will create a new server instance with no registered handlers.
-func NewServer(np intfc.NsMgrProcessor, config *common.Config, is_executor bool) *Server {
+func NewServer(nr namespace.NamespaceManager, config *common.Config) *Server {
 	server := &Server{
-		codecs:         set.New(),
-		run:            1,
-		nsMgrProcessor: np,
-		requestMgr:     make(map[string]*RequestManager),
+		codecs:       set.New(),
+		run:          1,
+		namespaceMgr: nr,
 	}
-	server.admin = admin.NewAdministrator(np, config, is_executor)
+	server.admin = admin.NewAdministrator(nr, config)
 	return server
 }
 
@@ -131,23 +128,22 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 				for i, r := range reqs {
 					resps[i] = codec.CreateErrorResponse(r.Id, r.Namespace, err)
 				}
-				codec.Write(resps)
+				return codec.Write(resps)
 			} else {
-				codec.Write(codec.CreateErrorResponse(reqs[0].Id, reqs[0].Namespace, err))
+				return codec.Write(codec.CreateErrorResponse(reqs[0].Id, reqs[0].Namespace, err))
 			}
-			return nil
 		}
 		if reqs[0].Service == adminService {
 			response := s.handleCMD(reqs[0], codec)
 			if response.Error != nil {
-				codec.Write(codec.CreateErrorResponse(response.Id, response.Namespace, response.Error))
+				return codec.Write(codec.CreateErrorResponse(response.Id, response.Namespace, response.Error))
 			} else if response.Reply != nil {
 				if err := codec.Write(codec.CreateResponse(response.Id, response.Namespace, response.Reply)); err != nil {
 					log.Errorf("%v\n", err)
 					codec.Close()
 				}
 			} else {
-				codec.Write(codec.CreateResponse(response.Id, response.Namespace, nil))
+				return codec.Write(codec.CreateResponse(response.Id, response.Namespace, nil))
 			}
 			return nil
 		}
@@ -169,8 +165,9 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 	return nil
 }
 
-// Stop will stop reading new requests, wait for stopPendingRequestTimeout to allow pending requests to finish,
-// close all codecs which will cancels pending requests/subscriptions.
+// Stop will stop reading new requests, wait for stopPendingRequestTimeout to
+// allow pending requests to finish, close all codecs which will cancels pending
+// requests/subscriptions.
 func (s *Server) Stop() {
 	if atomic.CompareAndSwapInt32(&s.run, 1, 0) {
 		log.Notice("RPC Server shutdown initiatied")
@@ -202,7 +199,8 @@ func (s *Server) readRequest(codec ServerCodec, options CodecOption) ([]*common.
 	reqLen := len(reqs)
 	for i := 0; i < reqLen; i += 1 {
 		if reqs[i].Namespace == "" {
-			reqs[i].Namespace = namespace.DEFAULT_NAMESPACE
+			// set namespace to "global" as default
+			reqs[i].Namespace = namespace.GLOBAL_NAMESPACE
 		}
 	}
 
@@ -211,39 +209,12 @@ func (s *Server) readRequest(codec ServerCodec, options CodecOption) ([]*common.
 
 // handleReqs will handle RPC request array and write result then send to client
 func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*common.RPCRequest) {
-	//log.Error("-----------enter handle batch req---------------")
 	number := len(reqs)
 	response := make([]interface{}, number)
-	//result := make(chan interface{}, number)
 
 	i := 0
 	for _, req := range reqs {
 		req.Ctx = ctx
-
-		//go func(s *Server, request *common.RPCRequest, codec ServerCodec, result chan interface{}) {
-		//	name := request.Namespace
-		//	if err := codec.CheckHttpHeaders(name, request.Method); err != nil {
-		//		log.Errorf("CheckHttpHeaders error: %v", err)
-		//		result <- codec.CreateErrorResponse(request.Id, request.Namespace, &common.CertError{Message: err.Error()})
-		//		return
-		//	}
-		//	var rm *requestManager
-		//
-		//	s.requestMgrMu.Lock()
-		//	if _, ok := s.requestMgr[name]; !ok {
-		//		rm = NewRequestManager(name, s, codec)
-		//		s.requestMgr[name] = rm
-		//		rm.Start()
-		//	} else {
-		//		s.requestMgr[name].codec = codec
-		//		rm = s.requestMgr[name]
-		//	}
-		//	s.requestMgrMu.Unlock()
-		//
-		//	rm.requests <- request
-		//	result <- <-rm.response
-		//	return
-		//}(s, req, codec, result)
 		if err := codec.CheckHttpHeaders(req.Namespace, req.Method); err != nil {
 			log.Errorf("CheckHttpHeaders error: %v", err)
 			response[i] = codec.CreateErrorResponse(req.Id, req.Namespace, &common.CertError{Message: err.Error()})
@@ -252,10 +223,6 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 		response[i] = s.handleChannelReq(codec, req)
 		i++
 	}
-
-	//for i := 0; i < number; i++ {
-	//	response[i] = <-result
-	//}
 
 	if number == 1 {
 		if err := codec.Write(response[0]); err != nil {
@@ -270,9 +237,10 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 	}
 }
 
-// handleChannelReq implements receiver.handleChannelReq interface to handle request in channel and return jsonrpc response.
+// handleChannelReq implements receiver.handleChannelReq interface to handle
+// request in channel and return jsonrpc response.
 func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) interface{} {
-	r := s.nsMgrProcessor.ProcessRequest(req.Namespace, req)
+	r := s.namespaceMgr.ProcessRequest(req.Namespace, req)
 	if r == nil {
 		log.Debug("No process result")
 		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message: "no process result"})
@@ -306,8 +274,6 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 		} else {
 			return codec.CreateResponse(response.Id, response.Namespace, nil)
 		}
-		//} else if response, ok := r.(*common.RPCNotification); ok{
-		//	return s.CreateNotification(response.SubId, response.Service, response.Namespace, nil)
 	} else {
 		log.Errorf("response type invalid, resp: %v\n")
 		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message: "response type invalid!"})
@@ -315,6 +281,7 @@ func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) int
 }
 
 func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RPCResponse {
+	req.Namespace = common.DEFAULT_NAMESPACE
 	token, method := codec.GetAuthInfo()
 	err := s.admin.PreHandle(token, method)
 	if err != nil {
@@ -326,7 +293,7 @@ func (s *Server) handleCMD(req *common.RPCRequest, codec ServerCodec) *common.RP
 		log.Notice("nil parms in json")
 		cmd.Args = nil
 	} else {
-		args, err := SplitRawMessage(args)
+		args, err := splitRawMessage(args)
 		if err != nil {
 			return &common.RPCResponse{Id: req.Id, Namespace: req.Namespace, Error: &common.InvalidParamsError{Message: err.Error()}}
 		}

@@ -4,33 +4,28 @@ package main
 
 import (
 	"fmt"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/ipc"
+	"github.com/hyperchain/hyperchain/namespace"
+	"github.com/hyperchain/hyperchain/p2p"
+	"github.com/hyperchain/hyperchain/rpc"
 	"github.com/mkideal/cli"
 	"github.com/op/go-logging"
 	"github.com/terasum/viper"
-	"google.golang.org/grpc"
-	"hyperchain/common"
-	"hyperchain/hyperdb"
-	"hyperchain/ipc"
-	"hyperchain/namespace"
-	"hyperchain/p2p"
-	"hyperchain/rpc"
 	_ "net/http/pprof"
 	"time"
-	//"net"
 )
 
-const HyperchainVersion = "Hyperchain Version:\nRelease1.4-20171012-f415e9"
+var branch, commitID, date string
 
 type hyperchain struct {
-	nsMgr          namespace.NamespaceManager
-	hs             jsonrpc.RPCServer
-	ipcShell       *ipc.IPCServer
-	p2pmgr         p2p.P2PManager
-	internalServer *grpc.Server //server used to handle internal service connection
-	stopFlag       chan bool
-	restartFlag    chan bool
-	args           *argT
-	conf           *common.Config
+	nsMgr       namespace.NamespaceManager
+	hs          jsonrpc.RPCServer
+	ipcShell    *ipc.IPCServer
+	p2pmgr      p2p.P2PManager
+	stopFlag    chan bool
+	restartFlag chan bool
+	args        *argT
 }
 
 func newHyperchain(argV *argT) *hyperchain {
@@ -44,7 +39,6 @@ func newHyperchain(argV *argT) *hyperchain {
 	globalConfig.Set(common.GLOBAL_CONFIG_PATH, hp.args.ConfigPath)
 	common.InitHyperLoggerManager(globalConfig)
 	logger = common.GetLogger(common.DEFAULT_LOG, "main")
-	hyperdb.InitDBMgr(globalConfig)
 	//P2P module MUST Start before namespace server
 	vip := viper.New()
 	vip.SetConfigFile(hp.args.ConfigPath)
@@ -53,7 +47,6 @@ func newHyperchain(argV *argT) *hyperchain {
 		panic(err)
 	}
 
-	hp.internalServer = grpc.NewServer()
 	hp.ipcShell = ipc.NEWIPCServer(globalConfig.GetString(common.P2P_IPC))
 	p2pManager, err := p2p.GetP2PManager(vip)
 	if err != nil {
@@ -61,19 +54,17 @@ func newHyperchain(argV *argT) *hyperchain {
 	}
 	hp.p2pmgr = p2pManager
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig, hp.stopFlag, hp.restartFlag)
-	hp.hs = jsonrpc.GetRPCServer(hp.nsMgr, hp.nsMgr.GlobalConfig(), false)
-	hp.conf = hp.nsMgr.GlobalConfig()
+	hp.hs = jsonrpc.GetRPCServer(hp.nsMgr, hp.nsMgr.GlobalConfig())
+
 	return hp
 }
 
 func (h *hyperchain) start() {
 	logger.Notice("Hyperchain server starting...")
-	hyperdb.InitDBMgr(h.nsMgr.GlobalConfig())
 	go h.nsMgr.Start()
 	go h.hs.Start()
 	go CheckLicense(h.stopFlag)
 	go h.ipcShell.Start()
-	//go h.internalServer.Serve(lis)//TODO: when should this serve, when should we try to make consensus
 }
 
 func (h *hyperchain) stop() {
@@ -81,7 +72,6 @@ func (h *hyperchain) stop() {
 	h.nsMgr.Stop()
 	time.Sleep(3 * time.Second)
 	h.hs.Stop()
-	hyperdb.Close()
 	logger.Critical("Hyperchain server stopped")
 }
 
@@ -119,7 +109,13 @@ func main() {
 		argv := ctx.Argv().(*argT)
 
 		if argv.Version {
-			fmt.Println(HyperchainVersion)
+			if branch == "" || date == "" || commitID == "" {
+				fmt.Println("Please run ./scripts/build.sh to build hyperchain with version information.")
+				return nil
+			}
+			version := fmt.Sprintf("Hyperchain Version:\n%s-%s-%s", branch, date, commitID)
+			fmt.Println(version)
+
 			return nil
 		}
 

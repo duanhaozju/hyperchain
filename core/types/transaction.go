@@ -16,13 +16,13 @@ package types
 import (
 	"fmt"
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/crypto"
+	"github.com/hyperchain/hyperchain/crypto/guomi"
+	"github.com/hyperchain/hyperchain/crypto/sha3"
 	"github.com/op/go-logging"
-	"hyperchain/common"
-	"hyperchain/crypto"
-	"hyperchain/crypto/guomi"
-	"hyperchain/crypto/sha3"
-	"strconv"
 	"math/big"
+	"strconv"
 )
 
 var log *logging.Logger // package-level logger
@@ -50,13 +50,6 @@ func (self *Transaction) GetHash() common.Hash {
 }
 
 func (self *Transaction) SignHash(ch crypto.CommonHash) common.Hash {
-	/*
-		from=0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
-		&to=0x80958818f0a025273111fba92ed14c3dd483caeb
-		&value=0x08904e10904e1835
-		&timestamp=0x14a31c7e4883b166
-		&nonce=0x179a44e05e42f7
-	*/
 	value := new(TransactionValue)
 	hashErr := proto.Unmarshal(self.Value, value)
 	if hashErr != nil {
@@ -74,13 +67,6 @@ func (self *Transaction) SignHash(ch crypto.CommonHash) common.Hash {
 }
 
 func (self *Transaction) SignHashSM3(pubX, pubY []byte) []byte {
-	/*
-		from=0x000f1a7a08ccc48e5d30f80850cf1cf283aa3abd
-		&to=0x80958818f0a025273111fba92ed14c3dd483caeb
-		&value=0x08904e10904e1835
-		&timestamp=0x14a31c7e4883b166
-		&nonce=0x179a44e05e42f7
-	*/
 	h := guomi.New()
 	ENTL1 := "00"
 	h.Write(common.Hex2Bytes(ENTL1))
@@ -114,10 +100,9 @@ func (self *Transaction) SignHashSM3(pubX, pubY []byte) []byte {
 	if value.Payload == nil {
 		needHash = "from=" + common.ToHex(self.From) + "&to=" + common.ToHex(self.To) + "&value=0x" + strconv.FormatInt(value.Amount, 16) + "&timestamp=0x" + strconv.FormatInt(self.Timestamp, 16) + "&nonce=0x" + strconv.FormatInt(self.Nonce, 16)
 	} else {
-		log.Debug("x: ", common.ToHex(value.Payload))
+		needHash = "from=" + common.ToHex(self.From) + "&to=" + common.ToHex(self.To) + "&value=" + common.ToHex(value.Payload) + "&timestamp=0x" + strconv.FormatInt(self.Timestamp, 16) + "&nonce=0x" + strconv.FormatInt(self.Nonce, 16)
 		needHash = "from=" + common.ToHex(self.From) + "&to=" + common.ToHex(self.To) + "&value=" + common.ToHex(value.Payload) + "&timestamp=0x" + strconv.FormatInt(self.Timestamp, 16) + "&nonce=0x" + strconv.FormatInt(self.Nonce, 16)
 	}
-	log.Debug(needHash)
 	h2.Write(res)
 	h2.Write([]byte(needHash))
 	hashResult := h2.Sum(nil)
@@ -156,9 +141,6 @@ func (self *Transaction) ValidateSign(encryption crypto.Encryption, ch crypto.Co
 		copy(addr[:], Keccak256(pub[0:])[12:])
 		from := common.BytesToAddress(self.From)
 		if from != addr {
-			log.Error("From :", from.Hex())
-			log.Error("Address :", addr.Hex())
-			log.Error("Puk:", common.ToHex(pub))
 			log.Error("From address is wrong , please check it!")
 			return false
 		}

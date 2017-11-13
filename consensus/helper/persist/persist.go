@@ -7,10 +7,7 @@ import (
 	"errors"
 	"fmt"
 
-	"encoding/base64"
-	ndb "hyperchain/core/ledger/chain"
-	"hyperchain/core/types"
-	"hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 )
 
 type Persister interface {
@@ -18,11 +15,6 @@ type Persister interface {
 	DelState(key string) error
 	ReadState(key string) ([]byte, error)
 	ReadStateSet(prefix string) (map[string][]byte, error)
-	GetBlockchainInfo(namespace string) *types.Chain
-	GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte)
-	GetBlockHeightAndHash(namespace string) (uint64, string)
-	GetHeightOfChain(namespace string) uint64
-	GetGenesisOfChain(namespace string) (uint64, error)
 }
 
 type persisterImpl struct {
@@ -75,34 +67,4 @@ func (persister *persisterImpl) ReadStateSet(prefix string) (map[string][]byte, 
 	}
 	it.Release()
 	return ret, nil
-}
-
-// GetBlockchainInfo waits until the executor module executes to a checkpoint then returns the blockchain info with the
-// given namespace
-func (persister *persisterImpl) GetBlockchainInfo(namespace string) *types.Chain {
-	bcInfo := ndb.GetChainUntil(namespace)
-	return bcInfo
-}
-
-// GetCurrentBlockInfo returns the current blockchain info with the given namespace immediately
-func (persister *persisterImpl) GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte) {
-	info := ndb.GetChainCopy(namespace)
-	return info.Height, info.LatestBlockHash, info.ParentBlockHash
-}
-
-// GetBlockHeightAndHash returns the current block height and hash with the given namespace immediately
-func (persister *persisterImpl) GetBlockHeightAndHash(namespace string) (uint64, string) {
-	bcInfo := ndb.GetChainCopy(namespace)
-	hash := base64.StdEncoding.EncodeToString(bcInfo.LatestBlockHash)
-	return bcInfo.Height, hash
-}
-
-// GetHeightOfChain returns the current block height with the given namespace immediately
-func (persister *persisterImpl) GetHeightOfChain(namespace string) uint64 {
-	return ndb.GetHeightOfChain(namespace)
-}
-
-// GetGenesisOfChain returns the genesis block info of the ledger with the given namespace
-func (persister *persisterImpl) GetGenesisOfChain(namespace string) (uint64, error) {
-	return ndb.GetGenesisTag(namespace)
 }

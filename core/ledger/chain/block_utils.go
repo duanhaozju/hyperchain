@@ -1,3 +1,17 @@
+// Copyright 2016-2017 Hyperchain Corp.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package chain
 
 import (
@@ -5,10 +19,11 @@ import (
 	"strconv"
 	"time"
 
-	"hyperchain/common"
-	"hyperchain/core/types"
-	"hyperchain/hyperdb"
-	"hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/types"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -18,30 +33,30 @@ import (
 // ==========================================================
 
 // PersistBlock persists a block, using param to control whether flush to disk immediately.
-func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool, extra ...interface{}) (error, []byte) {
+func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool, extra ...interface{}) ([]byte, error) {
 	if hyperdb.IfLogStatus() {
 		go blockTime(block)
 	}
 	// Check pointer value
 	if block == nil || batch == nil {
-		return ErrEmptyPointer, nil
+		return nil, ErrEmptyPointer
 	}
 
 	// Encapsulates block for specify block structure version
-	err, data := encapsulateBlock(block, extra...)
+	data, err := encapsulateBlock(block, extra...)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// Batch-Put the block in db
 	if err := batch.Put(append(BlockPrefix, block.BlockHash...), data); err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// save number <-> hash associate
 	keyNum := strconv.FormatUint(block.Number, 10)
 	if err := batch.Put(append(BlockNumPrefix, []byte(keyNum)...), block.BlockHash); err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	// flush to disk immediately
@@ -53,12 +68,12 @@ func PersistBlock(batch db.Batch, block *types.Block, flush bool, sync bool, ext
 		}
 	}
 
-	return nil, data
+	return data, nil
 }
 
 // GetBlock retrieves block with block hash.
 func GetBlock(namespace string, key []byte) (*types.Block, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
@@ -94,17 +109,30 @@ func GetBlockFunc(db db.Database, key []byte) (*types.Block, error) {
 
 // GetBlockByNumber retrieves block via block number.
 func GetBlockByNumber(namespace string, blockNumber uint64) (*types.Block, error) {
-	hash, err := getBlockHash(namespace, blockNumber)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
-	return GetBlock(namespace, hash)
+	return getBlockByNumberFunc(db, blockNumber)
+}
+
+func GetBlockByNumberFunc(db db.Database, blockNumber uint64) (*types.Block, error) {
+	return getBlockByNumberFunc(db, blockNumber)
 }
 
 // GetLatestBlock retrieves current head block.
 func GetLatestBlock(namespace string) (*types.Block, error) {
 	height := GetHeightOfChain(namespace)
 	return GetBlockByNumber(namespace, height)
+}
+
+// BlockExist returns a bool to indicates the specific block is existed or not.
+func BlockExist(namespace string, height uint64) bool {
+	if blk, _ := GetBlockByNumber(namespace, height); blk == nil {
+		return false
+	} else {
+		return true
+	}
 }
 
 // DeleteBlockByNum deletes block data and block.num <---> block.hash
@@ -114,6 +142,11 @@ func DeleteBlockByNum(namepspace string, batch db.Batch, blockNum uint64, flush,
 		return err
 	}
 	return deleteBlock(namepspace, batch, hash, flush, sync)
+}
+
+// DeleteBlockByNumberFunc deletes block data and block index with given db.
+func DeleteBlockByNumberFunc(db db.Database, batch db.Batch, blockNum uint64, flush, sync bool) error {
+	return deleteBlockByNumFunc(db, batch, blockNum, flush, sync)
 }
 
 // IsGenesisFinish checks whether genesis block has been mined into blockchain
@@ -138,14 +171,14 @@ func IsGenesisFinish(namespace string) bool {
 // ==========================================================
 
 // encapsulateBlock encapsulates block with a wrapper for specify block structure version.
-func encapsulateBlock(block *types.Block, extra ...interface{}) (error, []byte) {
+func encapsulateBlock(block *types.Block, extra ...interface{}) ([]byte, error) {
 	var (
 		blkVersion string = BlockVersion
 		txVersion  string = TransactionVersion
 	)
 
 	if block == nil {
-		return ErrEmptyPointer, nil
+		return nil, ErrEmptyPointer
 	}
 
 	// Parse block and transaction version
@@ -169,7 +202,7 @@ func encapsulateBlock(block *types.Block, extra ...interface{}) (error, []byte) 
 	}
 	data, err := proto.Marshal(block)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
 	wrapper := &types.BlockWrapper{
@@ -178,15 +211,15 @@ func encapsulateBlock(block *types.Block, extra ...interface{}) (error, []byte) 
 	}
 	data, err = proto.Marshal(wrapper)
 	if err != nil {
-		return err, nil
+		return nil, err
 	}
 
-	return nil, data
+	return data, nil
 }
 
 // getBlockHash retrieves block hash with related block number.
 func getBlockHash(namespace string, blockNumber uint64) ([]byte, error) {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +243,7 @@ func getBlockByNumberFunc(db db.Database, blockNumber uint64) (*types.Block, err
 
 // deleteBlock deletes a block via hash.
 func deleteBlock(namespace string, batch db.Batch, key []byte, flush, sync bool) error {
-	db, err := hyperdb.GetDBDatabaseByNamespace(namespace)
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
 	if err != nil {
 		return err
 	}

@@ -20,6 +20,8 @@ message SessionMessage {
         DEL_PEER = 13;
         TRANSIT_BLOCK = 14;
         NVP_RELAY = 15;
+        NVP_CONSULT = 16;
+        NVP_CONSULT_REPLY = 17;
     }
     Type type = 1;
     bytes payload = 2;
