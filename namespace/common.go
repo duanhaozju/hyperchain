@@ -105,7 +105,7 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 	}
 }
 
-func (ns *namespaceImpl) GetRemoteApis(namespace string) map[string]*api.API {
+func (ns *namespaceImpl) GetExecutorApis(namespace string) map[string]*api.API {
 	return map[string]*api.API{
 		"block": {
 			Svcname: "block",

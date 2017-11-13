@@ -268,7 +268,7 @@ func (ns *namespaceImpl) init() error {
 			logger.Errorf("Json Rpc Process init error ,the executor address is %v .",ns.conf.GetString(common.EXECUTOR_HOST_ADDR))
 			ns.rpc = nil
 		}
-		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()), ns.GetRemoteApis(ns.Name()),
+		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()), ns.GetExecutorApis(ns.Name()),
 		adds[0],ns.conf.GetInt(common.JSON_RPC_PORT_EXECUTOR))
 	}
 

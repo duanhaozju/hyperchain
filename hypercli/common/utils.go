@@ -114,6 +114,7 @@ func GenSignature(from string, to string, timestamp int64, amount int64, payload
 
 // getTransactionReceiptCmd returns the jsonrpc command of getTransactionReceipt
 func getTransactionReceiptCmd(txHash string, namespace string) string {
+	//TODO modify func name.
 	method := "txdb_getTransactionReceipt"
 
 	return fmt.Sprintf(

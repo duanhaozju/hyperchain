@@ -29,10 +29,6 @@ const (
 )
 
 const (
-	API_in_Another_Module    int = 301
-)
-
-const (
 	custom_DBNotFoundError int = -32001 - iota
 	custom_OutofBalanceError
 	custom_SignatureInvalidError
@@ -46,6 +42,7 @@ const (
 	custom_NoBlockGeneratedError
 	custom_SubNotExistError
 	custom_SnapshotError
+	custom_APINotFoundError
 )
 
 // RPCError implements RPC error, is add support for error codec over regular go errors
@@ -221,7 +218,7 @@ type CertError struct {
 func (e *CertError) Code() int     { return custom_CertError }
 func (e *CertError) Error() string { return e.Message }
 
-type APIInAnotherModule struct {
+type APINotFoundError struct {
 	Port 	int
 	Ip   	string
 	Message string
@@ -229,7 +226,7 @@ type APIInAnotherModule struct {
 	Method  string
 }
 
-func (e *APIInAnotherModule) Code() int {return API_in_Another_Module}
-func (e *APIInAnotherModule) Error() string {
+func (e *APINotFoundError) Code() int {return custom_APINotFoundError}
+func (e *APINotFoundError) Error() string {
 	return fmt.Sprintf("%s_%s is served at %s:%d", e.Service, e.Method, e.Ip, e.Port)
 }

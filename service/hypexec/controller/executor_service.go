@@ -174,7 +174,7 @@ func (es *executorServiceImpl) init() error {
 	}
 
 	// 5. add jsonrpc processor
-	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace), es.GetRemoteApis(es.namespace),
+	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace), es.GetHyperchainApis(es.namespace),
 	strings.Split(es.conf.GetString(common.EXECUTOR_HOST_ADDR), ":")[0], es.conf.GetInt(common.JSON_RPC_PORT))
 
 	// 6. initialized status
@@ -343,7 +343,7 @@ func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 	}
 }
 
-func (es *executorServiceImpl) GetRemoteApis(namespace string) map[string]*hapi.API {
+func (es *executorServiceImpl) GetHyperchainApis(namespace string) map[string]*hapi.API {
 	return map[string]*hapi.API{
 		"tx": {
 			Svcname: "tx",

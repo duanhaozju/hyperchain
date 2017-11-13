@@ -161,7 +161,7 @@ func NewContractCMD() []cli.Command {
 // deploy implements deploy contract and return the transaction receipt
 func deploy(c *cli.Context) error {
 	client := common.NewRpcClient(c.GlobalString("host"), c.GlobalString("port"))
-	remoteClient := common.NewRpcClient(c.GlobalString("exehost"), c.GlobalString("exeport"))
+	ExecutorClient := common.NewRpcClient(c.GlobalString("exehost"), c.GlobalString("exeport"))
 	var deployCmd string
 	method := "contract_deployContract"
 	if c.String("deploycmd") != "" {
@@ -183,7 +183,7 @@ func deploy(c *cli.Context) error {
 	err = common.GetTransactionReceipt(txHash, c.String("namespace"), client)
 	if err != nil {
 		if strings.Contains(err.Error(), "is served at") {
-			err = common.GetTransactionReceipt(txHash, c.String("namespace"), remoteClient)
+			err = common.GetTransactionReceipt(txHash, c.String("namespace"), ExecutorClient)
 		}
 	}
 
