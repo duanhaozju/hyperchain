@@ -621,7 +621,7 @@ func (pmgr *peerManagerImpl) distribute(t string, ev interface{}) {
 					pmgr.logger.Warningf("This NVP(%s) not connect to this VP ignored.", conev.Hash)
 					return
 				}
-				pmgr.logger.Critical("SEND TO NVP=>>", pmgr.node.info.Hash)
+				pmgr.logger.Noticef("Send a message to NVP(%s) to disconnect to VP(%s)", conev.Hash, pmgr.node.info.Hash)
 				m := pb.NewMsg(pb.MsgType_NVPDELETE, common.Hex2Bytes(pmgr.node.info.Hash))
 				_, err := peer.Chat(m)
 				if err != nil {
@@ -639,7 +639,7 @@ func (pmgr *peerManagerImpl) distribute(t string, ev interface{}) {
 				return
 			}
 			conev := ev.(peerevent.S_DELETE_VP)
-			pmgr.logger.Noticef("GOT a EV_DELETE_VP %s", conev.Hash)
+			pmgr.logger.Infof("GOT a EV_DELETE_VP %s", conev.Hash)
 			err := pmgr.peerPool.DeleteVPPeerByHash(conev.Hash)
 			if err != nil {
 				pmgr.logger.Errorf("cannot delete vp peer, reason: %s", err.Error())
