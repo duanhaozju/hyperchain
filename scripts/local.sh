@@ -64,34 +64,24 @@ f_kill_process(){
 
 # clear data
 f_delete_data(){
-echo "Delete old node data"
-for (( j=1; j<=$MAXPEERNUM; j++ ))
-do
-    # Clear the old data
-    if [ -d "${DUMP_PATH}/node${j}" ];then
-        rm -rf "${DUMP_PATH}/node${j}"
-    fi
-done
+    echo "Delete old node data"
+    for (( j=1; j<=$MAXPEERNUM; j++ ))
+    do
+        # Clear the old data
+        if [ -d "${DUMP_PATH}/node${j}" ];then
+            rm -rf "${DUMP_PATH}/node${j}"
+        fi
+    done
 }
 
 # rebuild the function
-f_rebuild(){
-# Build the project
-echo "Rebuild the project..."
-if [ -d ${DUMP_PATH} ]; then
-    rm -r ${DUMP_PATH}
-fi
-mkdir -p ${DUMP_PATH}
-
-${PROJECT_PATH}/scripts/build.sh ${PROJECT_PATH}/service/order
-
-mv ${PROJECT_PATH}/hyperchain ${DUMP_PATH}/
-}
-
-# rebuild hypercli
-f_rebuild_hypercli(){
-echo "Rebuild hypercli ..."
-cd ${CLI_PATH} && govendor build
+f_rebuild_order(){
+    echo "Rebuild the order..."
+    if [ -d ${DUMP_PATH} ]; then
+        rm -r ${DUMP_PATH}
+    fi
+    mkdir -p ${DUMP_PATH}
+    cd ${ORDER_PATH} && govendor build -ldflags -s -o ${DUMP_PATH}/order -tags=embed
 }
 
 # rebuild executor
@@ -103,96 +93,103 @@ f_rebuild_executor(){
     cd ${EXECUTOR_PATH} && govendor build -ldflags -s -o ${DUMP_PATH}/executor -tags=embed
 }
 
+# rebuild hypercli
+f_rebuild_hypercli(){
+    echo "Rebuild hypercli ..."
+    cd ${CLI_PATH} && govendor build
+}
+
 
 # distribute node package
 f_distribute(){
-# cp the config files into nodes
-for (( j=1; j<=$1; j++ ))
-do
-    # distribute the project
-    if [ ! -d "${DUMP_PATH}/node${j}" ];then
-        mkdir -p ${DUMP_PATH}/node${j}
-    fi
-    if [ -d "${DUMP_PATH}/node${j}/namespaces" ];then
+    # cp the config files into nodes
+    for (( j=1; j<=$1; j++ ))
+    do
+        # distribute the project
+        if [ ! -d "${DUMP_PATH}/node${j}" ];then
+            mkdir -p ${DUMP_PATH}/node${j}
+        fi
+        if [ -d "${DUMP_PATH}/node${j}/namespaces" ];then
         rm -rf ${DUMP_PATH}/node${j}/namespaces
-    fi
+        fi
 
-    cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
-    rm -rf ${DUMP_PATH}/node${j}/peerconfigs
-    rm -rf ${DUMP_PATH}/node${j}/tls
-    #peerconfig.toml
-    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.toml
-    cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/ns_2e6160583867/config/peerconfig.toml
-    #namespace's global
+        cp -rf  ${CONF_PATH}/* ${DUMP_PATH}/node${j}/
+        rm -rf ${DUMP_PATH}/node${j}/peerconfigs
+        rm -rf ${DUMP_PATH}/node${j}/tls
+        #peerconfig.toml
+        cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/global/config/peerconfig.toml
+        cp -rf  ${CONF_PATH}/peerconfigs/peerconfig_${j}.toml ${DUMP_PATH}/node${j}/namespaces/ns_2e6160583867/config/peerconfig.toml
+        #namespace's global
 
-    cp -rf  ${CONF_PATH}/global.toml ${DUMP_PATH}/node${j}/global.toml
-    if [ ${_SYSTYPE} = "MAC" ]; then
-        sed -i "" "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "" "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "" "s/9091/909${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "" "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "" "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "" "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "" "s/10011/1001${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "" "s/10021/1002${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "" "s/50061/5006${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "" "s/50071/5007${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "" "s/50071/5007${j}/g" ${DUMP_PATH}/node${j}/namespaces/global/config/namespace.toml
-    else
-        sed -i "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "s/9091/909${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "s/10011/1001${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "s/10021/1002${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "s/50061/5006${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "s/50071/5007${j}/g" ${DUMP_PATH}/node${j}/global.toml
-        sed -i "s/50071/5007${j}/g" ${DUMP_PATH}/node${j}/namespaces/global/config/namespace.toml
-    fi
+        cp -rf  ${CONF_PATH}/global.toml ${DUMP_PATH}/node${j}/global.toml
+        if [ ${_SYSTYPE} = "MAC" ]; then
+            sed -i "" "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "" "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "" "s/9091/909${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "" "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "" "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "" "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "" "s/10011/1001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "" "s/10021/1002${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "" "s/50061/5006${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "" "s/50071/5007${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "" "s/50071/5007${j}/g" ${DUMP_PATH}/node${j}/namespaces/global/config/namespace.toml
+        else
+            sed -i "s/8081/808${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "s/9001/900${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "s/9091/909${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "s/50081/5008${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "s/50051/5005${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "s/50011/5001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "s/10011/1001${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "s/10021/1002${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "s/50061/5006${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "s/50071/5007${j}/g" ${DUMP_PATH}/node${j}/global.toml
+            sed -i "s/50071/5007${j}/g" ${DUMP_PATH}/node${j}/namespaces/global/config/namespace.toml
+        fi
 
-    cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.toml ${DUMP_PATH}/node${j}/addr.toml
-    cp -rf  ${DUMP_PATH}/hyperchain ${DUMP_PATH}/node${j}/
-    #tls configuration
-    cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/certs/
-    cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/ns_2e6160583867/config/certs/
+        cp -rf  ${CONF_PATH}/peerconfigs/addr_${j}.toml ${DUMP_PATH}/node${j}/addr.toml
+        #tls configuration
+        cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/global/config/certs/
+        cp -rf  ${CONF_PATH}/peerconfigs/cert${j}/* ${DUMP_PATH}/node${j}/namespaces/ns_2e6160583867/config/certs/
 
-    #certs
-    mkdir ${DUMP_PATH}/node${j}/tls
-    cp -rf  ${CONF_PATH}/tls/tls_peer${j}.cert ${DUMP_PATH}/node${j}/tls/tls_peer.cert
-    cp -rf  ${CONF_PATH}/tls/tls_peer${j}.priv ${DUMP_PATH}/node${j}/tls/tls_peer.priv
-    cp -rf  ${CONF_PATH}/tls/tlsca.ca ${DUMP_PATH}/node${j}/tls/tlsca.ca
+        #certs
+        mkdir ${DUMP_PATH}/node${j}/tls
+        cp -rf  ${CONF_PATH}/tls/tls_peer${j}.cert ${DUMP_PATH}/node${j}/tls/tls_peer.cert
+        cp -rf  ${CONF_PATH}/tls/tls_peer${j}.priv ${DUMP_PATH}/node${j}/tls/tls_peer.priv
+        cp -rf  ${CONF_PATH}/tls/tlsca.ca ${DUMP_PATH}/node${j}/tls/tlsca.ca
 
-    # distribute hypercli
-    if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
-        mkdir ${DUMP_PATH}/node${j}/hypercli
-    fi
-    if [ ! -e "${CLI_PATH}/hypercli" ]; then
-        f_rebuild_hypercli
-    fi
-    cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
-    cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
+        # distribute hypercli
+        if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
+            mkdir ${DUMP_PATH}/node${j}/hypercli
+        fi
+        if [ ! -e "${CLI_PATH}/hypercli" ]; then
+            f_rebuild_hypercli
+        fi
+        cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
+        cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
 
-    # distribute executor
-    cp -rf ${DUMP_PATH}/executor ${DUMP_PATH}/node${j}/
+        # distribute executor
+        cp -rf ${DUMP_PATH}/executor ${DUMP_PATH}/node${j}/
+        cp -rf ${DUMP_PATH}/order ${DUMP_PATH}/node${j}/
 
-    BIN_PATH=${DUMP_PATH}/node${j}/bin
+        BIN_PATH=${DUMP_PATH}/node${j}/bin
 
-    # distribute bin
-    if [ -d ${BIN_PATH} ];then
-        rm -rf ${BIN_PATH}
-    fi
-    mkdir -p ${BIN_PATH}
-    cp ${PROJECT_PATH}/scripts/sub_scripts/start.sh ${BIN_PATH}
-    cp ${PROJECT_PATH}/scripts/sub_scripts/stop.sh ${BIN_PATH}
-    cp ${PROJECT_PATH}/scripts/sub_scripts/stop.sh ${BIN_PATH}/stop_local.sh
-    if [ ${_SYSTYPE} = "MAC" ]; then
-        sed -i "" "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
-    else
-        sed -i "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
-    fi
-done
+        # distribute bin
+        if [ -d ${BIN_PATH} ];then
+            rm -rf ${BIN_PATH}
+        fi
+        mkdir -p ${BIN_PATH}
+        cp ${PROJECT_PATH}/scripts/sub_scripts/start_order.sh ${BIN_PATH}
+        cp ${PROJECT_PATH}/scripts/sub_scripts/start_executor.sh ${BIN_PATH}
+        cp ${PROJECT_PATH}/scripts/sub_scripts/stop.sh ${BIN_PATH}
+        cp ${PROJECT_PATH}/scripts/sub_scripts/stop.sh ${BIN_PATH}/stop_local.sh
+        if [ ${_SYSTYPE} = "MAC" ]; then
+            sed -i "" "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
+        else
+            sed -i "s/8081/808${j}/g" ${BIN_PATH}/stop_local.sh
+        fi
+    done
 }
 
 f_all_in_one_cmd(){
@@ -265,7 +262,7 @@ DUMP_PATH="${PROJECT_PATH}/build"
 # config file path
 CONF_PATH="${PROJECT_PATH}/configuration"
 
-# global config path
+# global namespace config file
 GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/namespace.toml"
 
 # hypercli root path
@@ -342,16 +339,16 @@ if  $DELETEDATA ; then
 fi
 
 # handle rebuild issues
-
 if  $REBUILD ; then
-    f_rebuild
+    f_rebuild_order
     f_rebuild_executor
 fi
 
 if [[ $? != 0 ]]; then
-echo "compile failed, script stopped."
-exit 1
+    echo "compile failed, script stopped."
+    exit 1
 fi
+
 if $HYPERCLI ; then
     f_rebuild_hypercli
 fi
