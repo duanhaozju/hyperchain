@@ -149,10 +149,11 @@ func TestVcReset(t *testing.T) {
 	h := NewHelper(im, em)
 	vcResetEvent := event.VCResetEvent{
 		SeqNo: 12345,
+		View: 1,
 	}
 	sub := im.Subscribe(vcResetEvent)
 
-	go h.VcReset(12345)
+	go h.VcReset(12345, 1)
 
 	select {
 	case e := <-sub.Chan():

@@ -401,7 +401,7 @@ func (rbft *rbftImpl) recvRecoveryRsp(rsp *RecoveryResponse) consensusEvent {
 	} else if !rbft.inOne(skipInProgress, inVcReset) {
 		// if we are not behind by checkpoint, just VcReset to delete the useless tmp validate result, after
 		// VcResetDone, we will finish recovery or come into stateUpdate
-		rbft.helper.VcReset(rbft.exec.lastExec + 1)
+		rbft.helper.VcReset(rbft.exec.lastExec+1, rbft.view)
 		rbft.on(inVcReset)
 	} else {
 		// if we are state transferring, just continue

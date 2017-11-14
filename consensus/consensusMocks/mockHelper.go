@@ -44,7 +44,7 @@ func (m *MockHelper) ValidateBatch(digest string, txs []*types.Transaction, time
 	return args.Error(0)
 }
 
-func (m *MockHelper) VcReset(seqNo uint64) error {
+func (m *MockHelper) VcReset(seqNo uint64, view uint64) error {
 	args := m.Called()
 	return args.Error(0)
 }

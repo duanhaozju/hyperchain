@@ -23,8 +23,8 @@ type vcManager struct {
 	lastNewViewTimeout time.Duration // last timeout we used during this view change
 	newViewTimerReason string        // what triggered the timer
 
-	qlist map[qidx]*Vc_PQ   //store Pre-Prepares  for view change
-	plist map[uint64]*Vc_PQ //store Prepares for view change
+	qlist map[qidx]*Vc_PQ   // store Pre-Prepares for view change
+	plist map[uint64]*Vc_PQ // store Prepares for view change
 
 	newViewStore    map[uint64]*NewView    // track last new-view we received or sent
 	viewChangeStore map[vcidx]*ViewChange  // track view-change messages
@@ -460,18 +460,15 @@ func (rbft *rbftImpl) resetStateForNewView() consensusEvent {
 	rbft.seqNo = rbft.exec.lastExec
 	rbft.batchVdr.setLastVid(rbft.exec.lastExec)
 
-	//if state not in stateTransfer and not inVcReset
-	//jump into VCReset
-	//VcReset will exec sync and jump sendFinishVcReset after vcReset success
-	//else if in stateTransfe or inVcReset
-	//if it is primary, we should not sendFinishVcReset
-	//else jump into sendFinishVcReset
-	if !rbft.in(skipInProgress) &&
-		!rbft.in(inVcReset) {
-		rbft.helper.VcReset(backendVid)
+	// if state not in stateTransfer and not inVcReset, jump into VCReset
+	// VcReset will exec sync and jump sendFinishVcReset after vcReset success
+	// else if in stateTransfer or inVcReset and it is primary, we should not
+	// sendFinishVcReset, else jump into sendFinishVcReset
+	if !rbft.in(skipInProgress) && !rbft.in(inVcReset) {
+		rbft.helper.VcReset(backendVid, rbft.view)
 		rbft.on(inVcReset)
 	} else if rbft.isPrimary(rbft.id) {
-		rbft.logger.Infof("New primary %d need to catch up other, wating", rbft.id)
+		rbft.logger.Infof("New primary %d need to catch up other, waiting", rbft.id)
 	} else {
 		rbft.logger.Infof("Replica %d cannot process local vcReset, but also send finishVcReset", rbft.id)
 		rbft.sendFinishVcReset()
@@ -651,7 +648,7 @@ func (rbft *rbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) consensu
 
 	digest := batch.BatchDigest
 	if _, ok := rbft.storeMgr.missingReqBatches[digest]; !ok {
-		rbft.logger.Debugf("Primary %d received missing request: %s, but we don't miss this request, ignore it", digest)
+		rbft.logger.Debugf("Primary %d received missing request: %s, but we don't miss this request, ignore it", rbft.id, digest)
 		return nil // either the wrong digest, or we got it already from someone else
 	}
 	//stored into validatedBatchStore
@@ -691,7 +688,7 @@ func (rbft *rbftImpl) recvReturnRequestBatch(batch *ReturnRequestBatch) consensu
 
 // calcQSet selects Pre-prepares which satisfy the following conditions
 // 1. Pre-prepares in previous qlist
-// 2. Pre-prepares from certStore which is preprepared and (its view <= its idx.v or not in qlist
+// 2. Pre-prepares from certStore which is preprepared and its view <= its idx.v or not in qlist
 func (rbft *rbftImpl) calcQSet() map[qidx]*Vc_PQ {
 
 	qset := make(map[qidx]*Vc_PQ)
@@ -700,10 +697,7 @@ func (rbft *rbftImpl) calcQSet() map[qidx]*Vc_PQ {
 		qset[n] = q
 	}
 
-	for idx, cert := range rbft.storeMgr.certStore {
-		if cert.prePrepare == nil {
-			continue
-		}
+	for idx := range rbft.storeMgr.certStore {
 
 		if !rbft.prePrepared(idx.d, idx.v, idx.n) {
 			continue
@@ -735,10 +729,7 @@ func (rbft *rbftImpl) calcPSet() map[uint64]*Vc_PQ {
 		pset[n] = p
 	}
 
-	for idx, cert := range rbft.storeMgr.certStore {
-		if cert.prePrepare == nil {
-			continue
-		}
+	for idx := range rbft.storeMgr.certStore {
 
 		if !rbft.prepared(idx.d, idx.v, idx.n) {
 			continue
@@ -904,18 +895,18 @@ func (rbft *rbftImpl) gatherPQC() (cset []*Vc_C, pset []*Vc_PQ, qset []*Vc_PQ) {
 // peers and greater then low waterMark in at least commonCaseQuorum.
 func (rbft *rbftImpl) selectInitialCheckpoint(set []*VcBasis) (checkpoint Vc_C, find bool, replicas []replicaInfo) {
 
-	// For the checkpoint as key, find the corresponding AgreeUpdateN messages
+	// For the checkpoint as key, find the corresponding basis messages
 	checkpoints := make(map[Vc_C][]*VcBasis)
-	for _, agree := range set {
+	for _, basis := range set {
 		// Verify that we strip duplicate checkpoints from this Cset
 		set := make(map[Vc_C]bool)
-		for _, c := range agree.Cset {
+		for _, c := range basis.Cset {
 			if ok := set[*c]; ok {
 				continue
 			}
-			checkpoints[*c] = append(checkpoints[*c], agree)
+			checkpoints[*c] = append(checkpoints[*c], basis)
 			set[*c] = true
-			rbft.logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s", rbft.id, agree.ReplicaId, c.SequenceNumber, agree.H, c.Id)
+			rbft.logger.Debugf("Replica %d appending checkpoint from replica %d with seqNo=%d, h=%d, and checkpoint digest %s", rbft.id, basis.ReplicaId, c.SequenceNumber, basis.H, c.Id)
 		}
 	}
 
@@ -1145,7 +1136,7 @@ func (rbft *rbftImpl) primaryResendBatch(xset Xset) {
 		} else {
 			batch, ok := rbft.storeMgr.txBatchStore[d]
 			if !ok {
-				rbft.logger.Errorf("in Xset %s exists, but in Replica %d validatedBatchStore there is no such batch digest", d, rbft.id)
+				rbft.logger.Errorf("in Xset %s exists, but in Replica %d txBatchStore there is no such batch digest", d, rbft.id)
 			} else if i > rbft.exec.lastExec {
 				rbft.primaryValidateBatch(d, batch, i)
 			}
@@ -1180,6 +1171,10 @@ func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 		}
 	}
 
+	// rebuild pqlist according to xset
+	rbft.vcMgr.qlist = make(map[qidx]*Vc_PQ)
+	rbft.vcMgr.plist = make(map[uint64]*Vc_PQ)
+
 	// Rebuild the certStore according to xset
 	for n, d := range xset {
 		if n <= rbft.h || n > rbft.exec.lastExec {
@@ -1198,6 +1193,9 @@ func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 		cert := rbft.storeMgr.getCert(rbft.view, n, d)
 		//if peer is primary ,it rebuild PrePrepare , persist it and broadcast PrePrepare
 		if rbft.isPrimary(rbft.id) && ok {
+			rbft.logger.Debugf("New primary %d sending prePrepare for view=%d/seqNo=%d/digest=%s after rebuild certStore",
+				rbft.id, rbft.view, n, d)
+
 			preprep := &PrePrepare{
 				View:           rbft.view,
 				SequenceNumber: n,
@@ -1225,7 +1223,10 @@ func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 			msg := cMsgToPbMsg(consensusMsg, rbft.id)
 			rbft.helper.InnerBroadcast(msg)
 		} else {
-			//else rebuild Prepare and broadcast Prepare
+			//else rebuild and broadcast Prepare for non-primary
+			rbft.logger.Debugf("Replica %d sending prepare for view=%d/seqNo=%d/digest=%s after rebuild certStore",
+				rbft.id, rbft.view, n, d)
+
 			prep := &Prepare{
 				View:           rbft.view,
 				SequenceNumber: n,
@@ -1250,7 +1251,10 @@ func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 			msg := cMsgToPbMsg(consensusMsg, rbft.id)
 			rbft.helper.InnerBroadcast(msg)
 		}
-		//Broadcast commit
+		//rebuild and broadcast Commit for all replicas
+		rbft.logger.Debugf("Replica %d sending commit for view=%d/seqNo=%d/digest=%s after rebuild certStore",
+			rbft.id, rbft.view, n, d)
+
 		cmt := &Commit{
 			View:           rbft.view,
 			SequenceNumber: n,
@@ -1277,9 +1281,6 @@ func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 		}
 		msg := cMsgToPbMsg(consensusMsg, rbft.id)
 		rbft.helper.InnerBroadcast(msg)
-		// rebuild pqlist according to xset
-		rbft.vcMgr.qlist = make(map[qidx]*Vc_PQ)
-		rbft.vcMgr.plist = make(map[uint64]*Vc_PQ)
 
 		id := qidx{d, n}
 		pqItem := &Vc_PQ{

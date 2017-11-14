@@ -349,7 +349,7 @@ func (pool *txPoolImpl) RemoveBatches(hashList []string) error {
 // GetBatchesBackExcept move some uncommitted batch in batchStore to txPool in viewchange and updatingN
 func (pool *txPoolImpl) GetBatchesBackExcept(hashList []string) error {
 
-	pool.logger.Debugf("Before put back txs except %d batches, there are %d batches in batchStore, " +
+	pool.logger.Debugf("Before put back txs except %d batches, there are %d batches in batchStore, "+
 		"%d batches in pendingBatches", len(hashList), len(pool.batchStore), len(pool.pendingBatches))
 
 	var (
@@ -391,8 +391,8 @@ func (pool *txPoolImpl) GetBatchesBackExcept(hashList []string) error {
 	// clear missingTxs in viewchange or updatingN
 	pool.missingTxs = make(map[string]map[uint64]string)
 
-	pool.logger.Debugf("After put back txs, there are %d batches in batchStore, " +
-		"%d batches in pendingBatches", len(hashList), len(pool.batchStore), len(pool.pendingBatches))
+	pool.logger.Debugf("After put back txs, there are %d batches in batchStore, "+
+		"%d batches in pendingBatches", len(pool.batchStore), len(pool.pendingBatches))
 
 	return nil
 }
@@ -554,7 +554,7 @@ func (pool *txPoolImpl) generateTxBatch() error {
 // order.
 func (pool *txPoolImpl) postTxBatch(msg TxHashBatch) error {
 
-	pool.queue.Post(msg)
+	go pool.queue.Post(msg)
 	return nil
 }
 
@@ -569,8 +569,8 @@ func (pool *txPoolImpl) postTxBatchIfHasPending() bool {
 
 		// add batch into batchStore
 		pool.batchStore = append(pool.batchStore, batch)
-		pool.queue.Post(*batch)
-		pool.logger.Debugf("After post a batch in pending batches, there are %d pending " +
+		pool.postTxBatch(*batch)
+		pool.logger.Debugf("After post a batch in pending batches, there are %d pending "+
 			"batches", len(pool.pendingBatches))
 		return true
 	}
