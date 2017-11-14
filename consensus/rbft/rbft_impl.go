@@ -438,7 +438,6 @@ func (rbft *rbftImpl) sendPrepare(preprep *PrePrepare) error {
 		ResultHash:     preprep.ResultHash,
 		ReplicaId:      rbft.id,
 	}
-	rbft.recvPrepare(prep) // send to itself
 	payload, err := proto.Marshal(prep)
 	if err != nil {
 		rbft.logger.Errorf("ConsensusMessage_PREPARE Marshal Error", err)
@@ -449,7 +448,9 @@ func (rbft *rbftImpl) sendPrepare(preprep *PrePrepare) error {
 		Payload: payload,
 	}
 	msg := cMsgToPbMsg(consensusMsg, rbft.id)
-	return rbft.helper.InnerBroadcast(msg)
+	rbft.helper.InnerBroadcast(msg)
+	// send to itself
+	return rbft.recvPrepare(prep)
 }
 
 // recvPrepare process logic after receive prepare message
@@ -541,9 +542,11 @@ func (rbft *rbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 			Type:    ConsensusMessage_COMMIT,
 			Payload: payload,
 		}
-		go rbft.eventMux.Post(consensusMsg)
 		msg := cMsgToPbMsg(consensusMsg, rbft.id)
-		return rbft.helper.InnerBroadcast(msg)
+		rbft.helper.InnerBroadcast(msg)
+
+		// send commit to itself
+		rbft.recvCommit(commit)
 	}
 
 	return nil
@@ -977,7 +980,7 @@ func (rbft *rbftImpl) executeAfterStateUpdate() {
 	for idx, cert := range rbft.storeMgr.certStore {
 		// If this node is not primary, it would validate pending transactions.
 		if idx.n > rbft.seqNo && rbft.prepared(idx.d, idx.v, idx.n) && !cert.validated {
-			rbft.logger.Debugf("Replica %d try to vaidate batch %s", rbft.id, idx.d)
+			rbft.logger.Debugf("Replica %d try to validate batch %s", rbft.id, idx.d)
 			id := vidx{idx.v, idx.n}
 			rbft.batchVdr.preparedCert[id] = idx.d
 			rbft.validatePending()
@@ -1399,8 +1402,6 @@ func (rbft *rbftImpl) skipTo(seqNo uint64, id []byte, replicas []replicaInfo) {
 		rbft.logger.Error(fmt.Sprintf("Error unmarshaling: %s", err))
 		return
 	}
-	//rbft.UpdateState(&checkpointMessage{seqNo, id}, info, replicas)
-	rbft.logger.Debug("seqNo: ", seqNo, "id: ", id, "replicas: ", replicas)
 	rbft.updateState(seqNo, info, replicas)
 }
 

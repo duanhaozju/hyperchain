@@ -67,6 +67,7 @@ type CommitEvent struct {
 // reset blockchain to a stable checkpoint status when `viewchange` occur
 type VCResetEvent struct {
 	SeqNo uint64
+	View  uint64
 }
 
 //set primary in peerManager when new view and primary
