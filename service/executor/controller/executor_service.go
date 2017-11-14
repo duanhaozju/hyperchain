@@ -7,16 +7,13 @@ import (
 	pb "github.com/hyperchain/hyperchain/common/protos"
 	"github.com/hyperchain/hyperchain/common/service/client"
 	"github.com/hyperchain/hyperchain/core/executor"
-	"github.com/hyperchain/hyperchain/core/ledger/chain"
 	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/hyperchain/hyperchain/manager/filter"
 	"github.com/hyperchain/hyperchain/namespace/rpc"
-	"github.com/hyperchain/hyperchain/service/executor/handler"
+
 	"github.com/op/go-logging"
 	"sync"
-
-	"github.com/hyperchain/hyperchain/manager/event"
-	"strings"
 )
 
 type executorService interface {
@@ -156,16 +153,16 @@ func (es *executorServiceImpl) init() error {
 	es.filterSystem = filter.NewEventSystem(es.filterMux)
 
 	// 4. initial executor
-	executor, err := executor.NewExecutor(es.namespace, es.conf, es.eventMux, es.filterMux, es.service)
-	if err != nil {
-		es.logger.Errorf("Init executor service for namespace %s error, %v", es.namespace, err)
-		return err
-	}
-	executor.CreateInitBlock(es.conf)
-	es.executor = executor
-
-	h := handler.New(es.namespace, executor)
-	service.AddHandler(h)
+	//executor, err := executor.NewExecutor(es.namespace, es.conf, es.eventMux, es.filterMux, es.service)
+	//if err != nil {
+	//	es.logger.Errorf("Init executor service for namespace %s error, %v", es.namespace, err)
+	//	return err
+	//}
+	//executor.CreateInitBlock(es.conf)
+	//es.executor = executor
+	//
+	//h := handler.New(es.namespace, executor)
+	//service.AddHandler(h)
 
 	es.caManager, err = admittance.NewCAManager(es.conf)
 	if err != nil {
@@ -174,8 +171,9 @@ func (es *executorServiceImpl) init() error {
 	}
 
 	// 5. add jsonrpc processor
-	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace), es.GetHyperchainApis(es.namespace),
-		strings.Split(es.conf.GetString(common.EXECUTOR_HOST_ADDR), ":")[0], es.conf.GetInt(common.JSON_RPC_PORT))
+	// TODO: fix it
+	//es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace), es.GetHyperchainApis(es.namespace),
+	//	strings.Split(es.conf.GetString(common.EXECUTOR_HOST_ADDR), ":")[0], es.conf.GetInt(common.JSON_RPC_PORT))
 
 	// 6. initialized status
 	es.status.setState(initialized)
@@ -274,7 +272,6 @@ func (es *executorServiceImpl) Stop() error {
 }
 
 func (es *executorServiceImpl) ProcessRequest(request interface{}) interface{} {
-	//TODO Check finish logic
 	es.logger.Critical("request : %v", request)
 	es.logger.Critical("executor status: %v", es.status.getState())
 	if es.status.getState() == running {
@@ -298,48 +295,41 @@ func (es *executorServiceImpl) handleJsonRequest(request *common.RPCRequest) *co
 func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
 	//TODO need to add more APIS
 	return map[string]*hapi.API{
-		"block": {
-			Svcname: "block",
-			Version: "1.5",
-			Service: hapi.NewPublicBlockAPI(namespace),
-			Public:  true,
-		},
-		"txdb": {
-			Svcname: "txdb",
-			Version: "1.5",
-			Service: hapi.NewDBTransactionAPI(namespace, es.conf),
-			Public:  true,
-		},
-		"accountdb": {
-			Svcname: "accountdb",
-			Version: "1.5",
-			Service: hapi.NewPublicAccountExecutorAPI(namespace, es.conf),
-			Public:  true,
-		},
-		"contractExe": {
-			Svcname: "contractExe",
-			Version: "1.5",
-			Service: hapi.NewContarctExAPI(namespace, es.conf),
-			Public:  true,
-		},
-		//"cert": {
-		//	Svcname: "cert",
-		//	Version: "1.5",
-		//	Service: hapi.NewCertAPI(namespace, es.caManager),
-		//	Public:  true,
-		//},
-		"sub": {
-			Svcname: "sub",
-			Version: "1.5",
-			Service: hapi.NewFilterAPI(namespace, es.filterSystem, es.conf),
-		},
-		"archive": {
-			Svcname: "archive",
-			Version: "1.5",
-			Service: hapi.NewPublicArchiveAPI(namespace, es.conf),
-			Public:  true,
-		},
-		//TODO: implements cert API for module2
+	//"block": {
+	//	Svcname: "block",
+	//	Version: "1.5",
+	//	Service: hapi.NewPublicBlockAPI(namespace),
+	//	Public:  true,
+	//},
+	//"txdb": {
+	//	Svcname: "txdb",
+	//	Version: "1.5",
+	//	Service: hapi.NewDBTransactionAPI(namespace, es.conf),
+	//	Public:  true,
+	//},
+	//"accountdb": {
+	//	Svcname: "accountdb",
+	//	Version: "1.5",
+	//	Service: hapi.NewPublicAccountExecutorAPI(namespace, es.conf),
+	//	Public:  true,
+	//},
+	//"contractExe": {
+	//	Svcname: "contractExe",
+	//	Version: "1.5",
+	//	Service: hapi.NewContarctExAPI(namespace, es.conf),
+	//	Public:  true,
+	//},
+	//"sub": {
+	//	Svcname: "sub",
+	//	Version: "1.5",
+	//	Service: hapi.NewFilterAPI(namespace, es.filterSystem, es.conf),
+	//},
+	//"archive": {
+	//	Svcname: "archive",
+	//	Version: "1.5",
+	//	Service: hapi.NewPublicArchiveAPI(namespace, es.conf),
+	//	Public:  true,
+	//},
 	}
 }
 

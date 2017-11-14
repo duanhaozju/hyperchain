@@ -1,76 +1,6 @@
 syntax = "proto3";
 
-import "hyperchain/core/types/transaction.proto";
 package event;
-
-message InformPrimaryEvent {
-    uint64 Primary = 1;
-}
-
-// if the CommitStatus is true, we will commit the blocks and save the statedb
-// or we will rollback the statedb
-// Flag == true, commit; Flag == false, rollback
-message CommitEvent {
-    uint64 SeqNo = 1;
-    int64 Timestamp = 2;
-    int64 CommitTime = 3;
-    bool Flag = 4;
-    string Hash = 5;
-    bool IsPrimary = 6;
-}
-
-message BloomFilterEvent {
-    string namespace = 1;
-    repeated types.Transaction Transactions = 2;
-}
-
-//receive new block event from node consensus event for consensus module
-message ValidationEvent {
-    string Digest = 1;
-    repeated types.Transaction Transactions = 2;
-    uint64 SeqNo = 3;
-    uint64 View = 4;
-    bool IsPrimary = 5;
-    int64 Timestamp = 6;
-}
-
-// reset blockchain to a stable checkpoint status when `viewchange` occur.
-message VCResetEvent {
-    uint64 SeqNo = 1;
-}
-
-//event send from executor to consensus.
-message ExecutorToConsensusEvent {
-    bytes Payload = 1; //TODO: changed from interface to bytes, should modify the related code
-    int32 Type = 2;
-}
-
-//event send from executor to p2p.
-message ExecutorToP2PEvent {
-    bytes Payload = 1;
-    int32 Type = 2;
-    repeated uint64 Peers = 3;
-    repeated string PeersHash = 4;
-}
-
-//node receive checkpoint sync event and then,check db and send block require request to peers
-message SyncReplica {
-    uint64 Id = 1;
-    uint64 Height = 2;
-    uint64 Genesis = 3;
-}
-
-message ChainSyncReqEvent {
-    uint64 Id = 1;
-    uint64 TargetHeight = 2;
-    bytes  TargetBlockHash = 3;
-    repeated SyncReplica Replicas = 4;
-}
-
-message SnapshotEvent {
-    string FilterId = 1;
-    uint64 BlockNumber = 2;
-}
 
 message AddNamespaceEvent {
     string namespace  = 1;
@@ -83,18 +13,4 @@ message DeleteNamespaceEvent {
 message AdminResponseEvent {
     bool Ok = 1;
     string Msg = 2;
-}
-
-message MemChainEvent {
-    string namespace = 1;
-    bool checkpoint = 2;
-}
-
-message DeleteSnapEvent{
-    string FilterId = 1;
-}
-
-message ArchEvent{
-    string FilterId = 1;
-    bool Sync = 2;
 }

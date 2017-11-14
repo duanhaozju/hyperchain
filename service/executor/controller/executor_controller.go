@@ -3,10 +3,10 @@ package controller
 import (
 	"errors"
 	"github.com/hyperchain/hyperchain/common"
-	"github.com/hyperchain/hyperchain/common/interface"
+	"github.com/hyperchain/hyperchain/common/processor"
 	"github.com/hyperchain/hyperchain/core/ledger/bloom"
 	"github.com/hyperchain/hyperchain/namespace"
-	er "github.com/hyperchain/hyperchain/service/hypexec/errors"
+	er "github.com/hyperchain/hyperchain/service/executor/errors"
 	"github.com/op/go-logging"
 	"io/ioutil"
 	"os"
@@ -35,7 +35,7 @@ type ExecutorController interface {
 	ProcessRequest(namespace string, request interface{}) interface{}
 
 	// GetNamespaceProcessor returns the namespace processor by namespace.
-	GetNamespaceProcessor(namespace string) intfc.NamespaceProcessor
+	GetNamespaceProcessor(namespace string) processor.NamespaceProcessor
 
 	//start JVM
 	StartJVM() error
@@ -210,7 +210,7 @@ func (ec *execControllerImpl) ProcessRequest(namespace string, request interface
 	return np.ProcessRequest(request)
 }
 
-func (ec *execControllerImpl) GetNamespaceProcessor(name string) intfc.NamespaceProcessor {
+func (ec *execControllerImpl) GetNamespaceProcessor(name string) processor.NamespaceProcessor {
 	ec.rwLock.RLock()
 	defer ec.rwLock.RUnlock()
 	ec.logger.Debugf("services : %v", ec.services)
@@ -265,7 +265,7 @@ func (ec *execControllerImpl) Stop() error {
 func (ec *execControllerImpl) StartAllExecutorSrvs() error {
 	configRootDir := ec.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
-		return errors.New("Namespace config root dir is not valid")
+		return errors.New("Namespace config root dir is not valid ")
 	}
 	dirs, err := ioutil.ReadDir(configRootDir)
 	if err != nil {

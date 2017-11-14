@@ -33,7 +33,7 @@ func newHyperExecutor(argV *argT) *HyperExecutor {
 	he.exeCtl = controller.GetExecutorCtl(globalConfig, he.stopFlag, he.restartFlag)
 	he.admin = admin.NewAdministrator(he.exeCtl, globalConfig)
 
-	he.apiServer = jsonrpc.GetRPCServer(he.exeCtl, globalConfig, true)
+	//he.apiServer = jsonrpc.GetRPCServer(he.exeCtl, globalConfig, true)
 	return he
 }
 

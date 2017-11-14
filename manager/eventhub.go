@@ -324,15 +324,22 @@ func (hub *EventHub) listenPeerMaintainEvent() {
 				hub.broadcast(BROADCAST_VP, m.SessionMessage_ADD_PEER, ev.Payload)
 			case event.DelVPEvent:
 				hub.logger.Debugf("message middleware: [delete peer]")
-				payload := ev.Payload
-				routerHash, id, del := hub.peerManager.GetRouterHashifDelete(string(payload))
-				msg := &protos.DelNodeMessage{
-					DelPayload: payload,
-					RouterHash: routerHash,
-					Id:         id,
-					Del:        del,
+
+				if hub.GetPeerManager().IsVP() {
+					payload := ev.Payload
+					routerHash, id, del := hub.peerManager.GetRouterHashifDelete(string(payload))
+					msg := &protos.DelNodeMessage{
+						DelPayload: payload,
+						RouterHash: routerHash,
+						Id:         id,
+						Del:        del,
+					}
+
+					hub.invokeRbftLocal(rbft.NODE_MGR_SERVICE, rbft.NODE_MGR_DEL_NODE_EVENT, msg)
+				} else {
+					hub.GetPeerManager().DeleteNode(string(ev.Payload))
 				}
-				hub.invokeRbftLocal(rbft.NODE_MGR_SERVICE, rbft.NODE_MGR_DEL_NODE_EVENT, msg)
+
 			case event.DelNVPEvent:
 				hub.logger.Debugf("message middleware: [delete nvp peer]")
 				hub.peerManager.DeleteNVPNode(string(ev.Payload))

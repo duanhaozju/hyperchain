@@ -25,8 +25,8 @@ f_build_hyperchain(){
     commitID=`git log --pretty=format:"%h" -1`
     date=`date +%Y%m%d`
 
-    if [ -f ${1}/hyperchain ]; then
-        rm ${1}/hyperchain
+    if [ -f ${1}/order ]; then
+        rm ${1}/order
     fi
 
     cd ${1} && govendor build -ldflags "-X main.branch=${branch} -X main.commitID=${commitID} -X main.date=${date}"
@@ -35,7 +35,7 @@ f_build_hyperchain(){
 f_check_local_env
 
 if [ $# -eq 0 ]; then
-    f_build_hyperchain ${GOPATH}/src/github.com/hyperchain/hyperchain
+    f_build_hyperchain ${GOPATH}/src/github.com/hyperchain/hyperchain/service/hyper_order
 elif [ $# -eq 1 ]; then
     f_build_hyperchain ${1}
 else

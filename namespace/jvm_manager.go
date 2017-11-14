@@ -175,6 +175,10 @@ func (mgr *JvmManager) notifyToExit() {
 	mgr.exit <- true
 }
 
+func (mgr *JvmManager) LedgerProxy() *ledger.LedgerProxy {
+	return mgr.ledgerProxy
+}
+
 // checkJvmExist checks if Jvm server is running.
 func (mgr *JvmManager) checkJvmExist() bool {
 	noLsof := true

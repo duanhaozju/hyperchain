@@ -58,7 +58,7 @@ f_check_local_env(){
 
 # kill hyperchain process
 f_kill_process(){
-	pkill hyperchain
+	pkill order
 	pkill executor
 }
 
@@ -78,16 +78,12 @@ done
 f_rebuild(){
 # Build the project
 echo "Rebuild the project..."
-if [ -s "${DUMP_PATH}/hyperchain" ]; then
-    rm ${DUMP_PATH}/hyperchain
-fi
-
 if [ -d ${DUMP_PATH} ]; then
     rm -r ${DUMP_PATH}
 fi
 mkdir -p ${DUMP_PATH}
 
-${PROJECT_PATH}/scripts/build.sh ${PROJECT_PATH}
+${PROJECT_PATH}/scripts/build.sh ${PROJECT_PATH}/service/order
 
 mv ${PROJECT_PATH}/hyperchain ${DUMP_PATH}/
 }
@@ -200,7 +196,7 @@ done
 }
 
 f_all_in_one_cmd(){
-    cd $DUMP_PATH/node${1} && ./hyperchain -o ${1} -l 800${1} -t 808${1} -f 900${1} &
+    cd $DUMP_PATH/node${1} && ./order -o ${1} -l 800${1} -t 808${1} -f 900${1} &
 }
 
 f_x_in_linux_cmd(){
@@ -209,8 +205,8 @@ f_x_in_linux_cmd(){
 }
 
 f_x_in_mac_cmd(){
-    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/bin' && ./start.sh"'
-    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}' && ./executor"'
+    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/bin' && ./start_order.sh"'
+    osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/bin' && ./start_executor.sh"'
 }
 
 # run process by os type
@@ -276,7 +272,9 @@ GLOBAL_CONFIG="${CONF_PATH}/namespaces/global/config/namespace.toml"
 CLI_PATH="${PROJECT_PATH}/hypercli"
 
 # executor root path
-EXECUTOR_PATH="${PROJECT_PATH}/service/hypexec"
+EXECUTOR_PATH="${PROJECT_PATH}/service/executor"
+
+ORDER_PATH="${PROJECT_PATH}/service/order"
 
 # peerconfig
 PEER_CONFIG_FILE_NAME=`confer read ${GLOBAL_CONFIG} global.configs.peers |sed 's/"//g'`

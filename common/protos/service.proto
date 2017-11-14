@@ -48,35 +48,4 @@ enum Event {
     AddNamespaceEvent = 0;
     DeleteNamespaceEvent = 1;
     AdminResponseEvent = 2;
-
-    // 2.Executor event
-    VCResetEvent = 3;
-    ValidationEvent = 4;
-    CommitEvent = 5;
-    ChainSyncReqEvent = 6;
-    ExecutorToP2PEvent = 7;
-    ExecutorToConsensusEvent = 8;
-
-    SnapshotEvent = 9;
-    DeleteSnapshotEvent = 10;
-    ArchiveEvent = 11;
-
-    //3.Self defined event
-    StoreInvalidTransactionEvent = 12;
-    ReceiveReplicaInfoEvent = 13;
-    ReceiveSyncBlocksEvent = 14;
-    ReceiveSyncRequestEvent = 15;
-    ReceiveWorldStateSyncRequestEvent = 16;
-    ReceiveWorldStateEvent = 17;
-    ReceiveWsHandshakeEvent = 18;
-    ReceiveWsAckEvent = 19;
-
-    // 4.Miscellaneous event
-    MemChainEvent = 20;
-
-    // 5. hypercli passed event
-    StartJVMEvent = 21;
-    StopJVMEvent = 22;
-    RestartJVMEvent = 23;
-
 }

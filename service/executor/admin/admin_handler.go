@@ -5,7 +5,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	pb "github.com/hyperchain/hyperchain/common/protos"
 	"github.com/hyperchain/hyperchain/manager/event"
-	"github.com/hyperchain/hyperchain/service/hypexec/controller"
+	"github.com/hyperchain/hyperchain/service/executor/controller"
 	"github.com/op/go-logging"
 )
 
@@ -64,51 +64,6 @@ func (ah *AdminHandler) Handle(client pb.Dispatcher_RegisterClient, msg *pb.IMes
 		es := &event.AdminResponseEvent{}
 		if err != nil {
 			logger.Errorf("StopExecutorServiceByName namespce%s filed, error is %s", namespace, err)
-			es.Ok = false
-			es.Msg = err.Error()
-		} else {
-			es.Ok = true
-		}
-		ah.Ch <- &ResponseEventWrapper{
-			rspId: msg.Id,
-			are:   es,
-		}
-
-	//add 3 methods respectively cresponds to hypercli JVM-ops.
-	//TODO: generate new service.proto file.
-	case pb.Event_StartJVMEvent:
-		err := ah.ecMgr.StartJVM()
-		es := &event.AdminResponseEvent{}
-		if err != nil {
-			logger.Errorf("Start JVM manager failed, error is %s", err)
-			es.Ok = false
-			es.Msg = err.Error()
-		} else {
-			es.Ok = true
-		}
-		ah.Ch <- &ResponseEventWrapper{
-			rspId: msg.Id,
-			are:   es,
-		}
-	case pb.Event_StopJVMEvent:
-		err := ah.ecMgr.StopJVM()
-		es := &event.AdminResponseEvent{}
-		if err != nil {
-			logger.Errorf("Stop JVM manager failed, error is %s", err)
-			es.Ok = false
-			es.Msg = err.Error()
-		} else {
-			es.Ok = true
-		}
-		ah.Ch <- &ResponseEventWrapper{
-			rspId: msg.Id,
-			are:   es,
-		}
-	case pb.Event_RestartJVMEvent:
-		err := ah.ecMgr.RestartJVM()
-		es := &event.AdminResponseEvent{}
-		if err != nil {
-			logger.Errorf("Stop JVM manager failed, error is %s", err)
 			es.Ok = false
 			es.Msg = err.Error()
 		} else {
