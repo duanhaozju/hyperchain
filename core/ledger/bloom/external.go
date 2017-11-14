@@ -32,22 +32,3 @@ func WriteTxBloomFilter(namespace string, txs []*types.Transaction) (bool, error
 	}
 	return bloomFilterCache.Write(namespace, txs)
 }
-
-type BloomFilterEvent struct {
-	Namespace    string               `protobuf:"bytes,1,opt,name=namespace" json:"namespace,omitempty"`
-	Transactions []*types.Transaction `protobuf:"bytes,2,rep,name=Transactions" json:"Transactions,omitempty"`
-}
-
-//func WriteTxBloomFilterByEvent(ev event.BloomEvent) {
-//	if bloomFilterCache == nil {
-//		return false, ErrBloomCacheFailure
-//	}
-//	bol,err := bloomFilterCache.Write(ev.Namespace, ev.Transactions)
-//	if !bol {
-//		ev.Cont <- errors.New("Write failed!")
-//	}
-//	if err != nil {
-//		ev.Cont <- err
-//	}
-//	close(ev.Cont)
-//}

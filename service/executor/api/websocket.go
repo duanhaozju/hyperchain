@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/hyperchain/hyperchain/common"
 	hrpc "github.com/hyperchain/hyperchain/rpc"
-	hm "github.com/hyperchain/hyperchain/service/hypexec/controller"
+	hm "github.com/hyperchain/hyperchain/service/executor/controller"
 	"io"
 	"net"
 	"net/http"

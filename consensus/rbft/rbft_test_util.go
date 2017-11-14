@@ -72,7 +72,7 @@ func TNewRbft(dbpath, path, namespace string, nodeId int, t *testing.T) (*rbftIm
 	if dbpath != "" {
 		conf.Set("database.leveldb.path", dbpath)
 	}
-	err := chain.InitDBForNamespace(conf, namespace, nil)
+	err := chain.InitDBForNamespace(conf, namespace)
 	if err != nil {
 		t.Errorf("init db for namespace: %s error, %v", namespace, err)
 	}
@@ -215,7 +215,7 @@ func (TH *TestHelp) Execute(seqNo uint64, hashS string, flag bool, isPrimary boo
 	return nil
 }
 
-func (TH *TestHelp) UpdateState(myId uint64, height uint64, blockHash []byte, replicas []*event.SyncReplica) error {
+func (TH *TestHelp) UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error {
 	return nil
 }
 

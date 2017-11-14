@@ -8,7 +8,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/crypto/primitives"
 	hrpc "github.com/hyperchain/hyperchain/rpc"
-	hm "github.com/hyperchain/hyperchain/service/hypexec/controller"
+	hm "github.com/hyperchain/hyperchain/service/executor/controller"
 	"github.com/pkg/errors"
 	"io"
 	"net/http"

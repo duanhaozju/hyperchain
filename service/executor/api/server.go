@@ -7,7 +7,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/namespace"
 	hrpc "github.com/hyperchain/hyperchain/rpc"
-	hm "github.com/hyperchain/hyperchain/service/hypexec/controller"
+	hm "github.com/hyperchain/hyperchain/service/executor/controller"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
 	"runtime"

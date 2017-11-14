@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/hyperchain/hyperchain/common"
 	hrpc "github.com/hyperchain/hyperchain/rpc"
-	hm "github.com/hyperchain/hyperchain/service/hypexec/controller"
+	hm "github.com/hyperchain/hyperchain/service/executor/controller"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"io"

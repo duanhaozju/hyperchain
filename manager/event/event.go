@@ -24,11 +24,55 @@ type TxUniqueCastEvent struct {
 	PeerId  uint64
 }
 
+//node receive checkpoint sync event and then,check db and send block require request to peers
+type SyncReplica struct {
+	Id      uint64
+	Height  uint64
+	Genesis uint64
+}
+
+type ChainSyncReqEvent struct {
+	Id              uint64
+	TargetHeight    uint64
+	TargetBlockHash []byte
+	Replicas        []SyncReplica
+}
+
 type SessionEvent struct {
 	Message []byte
 }
 
-//TODO:transfer all this event to proto defined
+//receive new block event from node consensus event for consensus module
+type ValidationEvent struct {
+	Digest       string
+	Transactions []*types.Transaction
+	SeqNo        uint64
+	View         uint64
+	IsPrimary    bool
+	Timestamp    int64
+}
+
+// if the CommitStatus is true, we will commit the blocks and save the statedb
+// or we will rollback the statedb
+// Flag == true, commit; Flag == false, rollback
+type CommitEvent struct {
+	SeqNo      uint64
+	Timestamp  int64
+	CommitTime int64
+	Flag       bool
+	Hash       string
+	IsPrimary  bool
+}
+
+// reset blockchain to a stable checkpoint status when `viewchange` occur
+type VCResetEvent struct {
+	SeqNo uint64
+}
+
+//set primary in peerManager when new view and primary
+type InformPrimaryEvent struct {
+	Primary uint64
+}
 
 /* Peer Maintain Event */
 //a new peer past ca validation
@@ -84,17 +128,37 @@ type CommitedBlockEvent struct {
 }
 
 /*
+	Executor events
+*/
+type ExecutorToConsensusEvent struct {
+	Payload interface{}
+	Type    int
+}
+
+type ExecutorToP2PEvent struct {
+	Payload   []byte
+	Type      int
+	Peers     []uint64
+	PeersHash []string
+}
+
+/*
 	Admin events
 */
 
+type SnapshotEvent struct {
+	FilterId    string
+	BlockNumber uint64
+}
+
 type DeleteSnapshotEvent struct {
 	FilterId string
-	Cont     chan error //TODO: need to fix
+	Cont     chan error
 }
 
 type ArchiveEvent struct {
 	FilterId string
-	Cont     chan error //TODO: need to fix
+	Cont     chan error
 	Sync     bool
 }
 
@@ -108,10 +172,4 @@ type ArchiveRestoreEvent struct {
 // receive tx from a nvp
 type NvpRelayTxEvent struct {
 	Payload []byte
-}
-
-type BloomEvent struct {
-	Namespace string
-	Cont     chan error
-	Transactions []*types.Transaction
 }

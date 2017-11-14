@@ -21,7 +21,6 @@ import (
 	"github.com/hyperchain/hyperchain/hyperdb"
 
 	"github.com/op/go-logging"
-    "hyperchain/common/service/server"
 )
 
 var (
@@ -53,33 +52,14 @@ var (
 )
 
 // InitDBForNamespace inits the database with given namespace
-func InitDBForNamespace(conf *common.Config, namespace string, is *server.InternalServer) error {
+func InitDBForNamespace(conf *common.Config, namespace string) error {
 	err := hyperdb.InitDatabase(conf, namespace)
 	if err != nil {
 		return err
 	}
-    if conf.GetBool(common.EXECUTOR_EMBEDDED) {
-        InitializeChain(namespace)
-    } else {
-        logger(namespace).Criticalf("InitializeRemoteChain")
-        InitializeRemoteChain(is, namespace)
-    }
+	InitializeChain(namespace)
 	return err
 }
-
-func InitExecutorDBForNamespace(conf *common.Config, namespace string) error {
-    err := hyperdb.InitBlockDatabase(conf, namespace)
-    if err != nil {
-        return err
-    }
-    err = hyperdb.InitArchiveDatabase(conf, namespace)
-    if err != nil {
-        return err
-    }
-    InitializeChain(namespace)
-    return err
-}
-
 
 // logger returns the logger with given namespace
 func logger(namespace string) *logging.Logger {

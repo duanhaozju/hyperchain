@@ -172,14 +172,6 @@ func (n *Notifier) Activate(id common.ID, service, method, namespace string) {
 	}
 }
 
-func (n *Notifier) SetSubChs(subChs *common.SubChs) {
-	n.subChs = subChs
-}
-
-func (n *Notifier) SetCodec(codec ServerCodec) {
-	n.codec = codec
-}
-
 // idGenerator helper utility that generates a (pseudo) random sequence of
 // bytes that are used to generate identifiers.
 func idGenerator() *rand.Rand {

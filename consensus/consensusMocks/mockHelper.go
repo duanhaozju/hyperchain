@@ -34,7 +34,7 @@ func (m *MockHelper) Execute(seqNo uint64, hash string, flag bool, isPrimary boo
 	return args.Error(0)
 }
 
-func (m *MockHelper) UpdateState(myId uint64, height uint64, blockHash []byte, replicas []*event.SyncReplica) error {
+func (m *MockHelper) UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error {
 	args := m.Called()
 	return args.Error(0)
 }

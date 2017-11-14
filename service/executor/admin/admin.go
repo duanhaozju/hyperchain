@@ -5,7 +5,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	pb "github.com/hyperchain/hyperchain/common/protos"
 	"github.com/hyperchain/hyperchain/common/service/client"
-	"github.com/hyperchain/hyperchain/service/hypexec/controller"
+	"github.com/hyperchain/hyperchain/service/executor/controller"
 	"github.com/op/go-logging"
 	"time"
 )

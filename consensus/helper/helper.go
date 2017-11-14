@@ -34,7 +34,7 @@ type Stack interface {
 	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
 
 	// UpdateState transfers the UpdateStateEvent to outer
-	UpdateState(myId uint64, height uint64, blockHash []byte, replicas []*event.SyncReplica) error
+	UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error
 
 	// ValidateBatch transfers the ValidationEvent to outer
 	ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
@@ -128,7 +128,7 @@ func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, t
 }
 
 // UpdateState transfers the UpdateStateEvent to outer
-func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, replicas []*event.SyncReplica) error {
+func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error {
 	updateStateEvent := event.ChainSyncReqEvent{
 		Id:              myId,
 		TargetHeight:    height,

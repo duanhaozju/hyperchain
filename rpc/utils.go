@@ -13,7 +13,7 @@ import (
 var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
 
 // Indication if this type should be serialized in hex
-func IsHexNum(t reflect.Type) bool {
+func isHexNum(t reflect.Type) bool {
 	if t == nil {
 		return false
 	}
@@ -24,7 +24,7 @@ func IsHexNum(t reflect.Type) bool {
 	return t == bigIntType
 }
 
-func SplitRawMessage(args json.RawMessage) ([]string, error) {
+func splitRawMessage(args json.RawMessage) ([]string, error) {
 	str := string(args[:])
 	length := len(str)
 	if length < 2 {

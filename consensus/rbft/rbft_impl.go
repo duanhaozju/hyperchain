@@ -1406,9 +1406,9 @@ func (rbft *rbftImpl) skipTo(seqNo uint64, id []byte, replicas []replicaInfo) {
 
 // updateState attempts to synchronize state to a particular target, implicitly calls rollback if needed
 func (rbft *rbftImpl) updateState(seqNo uint64, info *protos.BlockchainInfo, replicas []replicaInfo) {
-	var targets []*event.SyncReplica
+	var targets []event.SyncReplica
 	for _, replica := range replicas {
-		target := &event.SyncReplica{
+		target := event.SyncReplica{
 			Id:      replica.id,
 			Height:  replica.height,
 			Genesis: replica.genesis,

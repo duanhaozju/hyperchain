@@ -11,7 +11,7 @@ import (
 	"github.com/hyperchain/hyperchain/hyperdb"
 	"github.com/hyperchain/hyperchain/manager/filter"
 	"github.com/hyperchain/hyperchain/namespace/rpc"
-	"github.com/hyperchain/hyperchain/service/hypexec/handler"
+	"github.com/hyperchain/hyperchain/service/executor/handler"
 	"github.com/op/go-logging"
 	"sync"
 
@@ -138,7 +138,7 @@ func (es *executorServiceImpl) init() error {
 	es.logger.Infof("init executor service for namespace %s", es.namespace)
 
 	// 1. init DB for current executor service.
-	err := chain.InitExecutorDBForNamespace(es.conf, es.namespace)
+	err := hyperdb.InitDatabase(es.conf, es.namespace)
 	if err != nil {
 		es.logger.Errorf("Init db for namespace: %s error, %v", es.namespace, err)
 		return err

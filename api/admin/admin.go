@@ -1,14 +1,11 @@
 //Hyperchain License
 //Copyright (C) 2016 The Hyperchain Authors.
-package jsonrpc
+
+package admin
 
 import (
 	"fmt"
-	"github.com/hyperchain/github.com/golang/protobuf/proto"
 	"github.com/hyperchain/hyperchain/common"
-	"github.com/hyperchain/hyperchain/common/interface"
-	pb "github.com/hyperchain/hyperchain/common/protos"
-	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/hyperchain/hyperchain/namespace"
 	"github.com/op/go-logging"
 	"strings"
@@ -74,8 +71,6 @@ type Administrator struct {
 	// level interface.
 	nsMgr namespace.NamespaceManager
 
-	nsMgrProcessor intfc.NsMgrProcessor
-
 	// valid_user records the current valid users with its password.
 	valid_user map[string]string
 
@@ -90,20 +85,16 @@ type Administrator struct {
 }
 
 // NewAdministrator news a raw administrator with default settings.
-func NewAdministrator(nsMgrProcessor intfc.NsMgrProcessor, config *common.Config, is_executor bool) *Administrator {
-	if is_executor {
-		return nil
-	}
+func NewAdministrator(nr namespace.NamespaceManager, config *common.Config) *Administrator {
 	adm := &Administrator{
-		CmdExecutor:    make(map[string]func(command *Command) *CommandResult),
-		valid_user:     make(map[string]string),
-		user_scope:     make(map[string]permissionSet),
-		user_opTime:    make(map[string]int64),
-		check:          config.GetBool(common.ADMIN_CHECK),
-		expiration:     config.GetDuration(common.ADMIN_EXPIRATION),
-		nsMgrProcessor: nsMgrProcessor,
-		config:         config,
-		nsMgr:          nsMgrProcessor.(namespace.NamespaceManager),
+		CmdExecutor: make(map[string]func(command *Command) *CommandResult),
+		valid_user:  make(map[string]string),
+		user_scope:  make(map[string]permissionSet),
+		user_opTime: make(map[string]int64),
+		check:       config.GetBool(common.ADMIN_CHECK),
+		expiration:  config.GetDuration(common.ADMIN_EXPIRATION),
+		nsMgr:       nr,
+		config:      config,
 	}
 	adm.init()
 	return adm
@@ -379,90 +370,33 @@ func (admin *Administrator) setLevel(cmd *Command) *CommandResult {
 // successfully.
 func (admin *Administrator) startJvmServer(cmd *Command) *CommandResult {
 	admin.logger.Noticef("process cmd %v", cmd.MethodName)
-	if admin.config.GetBool(common.EXECUTOR_EMBEDDED) {
-		if err := admin.nsMgr.StartJvm(); err != nil {
-			admin.logger.Noticef("start jvm server failed: %v", err)
-			return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
-		}
-		return &CommandResult{Ok: true, Result: "start jvm successful."}
+	if err := admin.nsMgr.StartJvm(); err != nil {
+		admin.logger.Noticef("start jvm server failed: %v", err)
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
-	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
-	msg := pb.IMessage{
-		From:  pb.FROM_ADMINISTRATOR,
-		Type:  pb.Type_ADMIN,
-		Event: pb.Event_StartJVMEvent,
-	}
-	rsp, _ := adminService.SyncSend(msg)
-	rspEvent := &event.AdminResponseEvent{}
-	err := proto.Unmarshal(rsp.Payload, rspEvent)
-	if err != nil {
-		return &CommandResult{Ok: false, Result: "start jvm failed."}
-	} else if rspEvent.Ok {
-		return &CommandResult{Ok: true, Result: "start jvm successful."}
-	} else {
-		return &CommandResult{Ok: false, Result: "start jvm failed."}
-	}
-
+	return &CommandResult{Ok: true, Result: "start jvm successful."}
 }
 
 // stopJvmServer stops the JVM service, waiting for the command to be executed
 // successfully.
 func (admin *Administrator) stopJvmServer(cmd *Command) *CommandResult {
 	admin.logger.Noticef("process cmd %v", cmd.MethodName)
-	if admin.config.GetBool(common.EXECUTOR_EMBEDDED) {
-		if err := admin.nsMgr.StopJvm(); err != nil {
-			admin.logger.Noticef("stop jvm server failed: %v", err)
-			return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
-		}
-		return &CommandResult{Ok: true, Result: "stop jvm successful."}
+	if err := admin.nsMgr.StopJvm(); err != nil {
+		admin.logger.Noticef("stop jvm server failed: %v", err)
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
-	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
-
-	msg := pb.IMessage{
-		From:  pb.FROM_ADMINISTRATOR,
-		Type:  pb.Type_ADMIN,
-		Event: pb.Event_StopJVMEvent,
-	}
-	rsp, _ := adminService.SyncSend(msg)
-	rspEvent := &event.AdminResponseEvent{}
-	err := proto.Unmarshal(rsp.Payload, rspEvent)
-	if err != nil {
-		return &CommandResult{Ok: false, Result: "start jvm failed."}
-	} else if rspEvent.Ok {
-		return &CommandResult{Ok: true, Result: "start jvm successful."}
-	} else {
-		return &CommandResult{Ok: false, Result: "start jvm failed."}
-	}
+	return &CommandResult{Ok: true, Result: "stop jvm successful."}
 }
 
 // restartJvmServer restarts the JVM service, waiting for the command to be executed
 // successfully.
 func (admin *Administrator) restartJvmServer(cmd *Command) *CommandResult {
 	admin.logger.Noticef("process cmd %v", cmd.MethodName)
-	if admin.config.GetBool(common.EXECUTOR_EMBEDDED) {
-		if err := admin.nsMgr.RestartJvm(); err != nil {
-			admin.logger.Noticef("restart jvm server failed: %v", err)
-			return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
-		}
-		return &CommandResult{Ok: true, Result: "restart jvm successful."}
+	if err := admin.nsMgr.RestartJvm(); err != nil {
+		admin.logger.Noticef("restart jvm server failed: %v", err)
+		return &CommandResult{Ok: false, Error: &common.CallbackError{Message: err.Error()}}
 	}
-	adminService := admin.nsMgr.InternalServer().ServerRegistry().AdminService(cmd.Args[0])
-
-	msg := pb.IMessage{
-		From:  pb.FROM_ADMINISTRATOR,
-		Type:  pb.Type_ADMIN,
-		Event: pb.Event_RestartJVMEvent,
-	}
-	rsp, _ := adminService.SyncSend(msg)
-	rspEvent := &event.AdminResponseEvent{}
-	err := proto.Unmarshal(rsp.Payload, rspEvent)
-	if err != nil {
-		return &CommandResult{Ok: false, Result: "start jvm failed."}
-	} else if rspEvent.Ok {
-		return &CommandResult{Ok: true, Result: "start jvm successful."}
-	} else {
-		return &CommandResult{Ok: false, Result: "start jvm failed."}
-	}
+	return &CommandResult{Ok: true, Result: "restart jvm successful."}
 }
 
 // grantPermission grants the modular permissions to the given user.

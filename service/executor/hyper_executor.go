@@ -2,10 +2,9 @@ package main
 
 import (
 	"github.com/hyperchain/hyperchain/common"
-	"github.com/hyperchain/hyperchain/hyperdb"
 	"github.com/hyperchain/hyperchain/rpc"
-	"github.com/hyperchain/hyperchain/service/hypexec/admin"
-	"github.com/hyperchain/hyperchain/service/hypexec/controller"
+	"github.com/hyperchain/hyperchain/service/executor/admin"
+	"github.com/hyperchain/hyperchain/service/executor/controller"
 	"github.com/mkideal/cli"
 	"github.com/op/go-logging"
 )
@@ -30,7 +29,6 @@ func newHyperExecutor(argV *argT) *HyperExecutor {
 	common.InitHyperLoggerManager(globalConfig)
 
 	logger = common.GetLogger(common.DEFAULT_LOG, "hypexec")
-	hyperdb.InitDBMgr(globalConfig)
 
 	he.exeCtl = controller.GetExecutorCtl(globalConfig, he.stopFlag, he.restartFlag)
 	he.admin = admin.NewAdministrator(he.exeCtl, globalConfig)

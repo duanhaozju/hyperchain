@@ -1,10 +1,11 @@
-//Hyperchain License
-//Copyright (C) 2016 The Hyperchain Authors.
 package main
 
 import (
 	"fmt"
 	"github.com/hyperchain/hyperchain/common"
+	res "github.com/hyperchain/hyperchain/core/executor/restore"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/ipc"
 	"github.com/hyperchain/hyperchain/namespace"
 	"github.com/hyperchain/hyperchain/p2p"
@@ -12,13 +13,14 @@ import (
 	"github.com/mkideal/cli"
 	"github.com/op/go-logging"
 	"github.com/terasum/viper"
+	"net/http"
 	_ "net/http/pprof"
 	"time"
 )
 
 var branch, commitID, date string
 
-type hyperchain struct {
+type HyperOrder struct {
 	nsMgr       namespace.NamespaceManager
 	hs          jsonrpc.RPCServer
 	ipcShell    *ipc.IPCServer
@@ -28,8 +30,8 @@ type hyperchain struct {
 	args        *argT
 }
 
-func newHyperchain(argV *argT) *hyperchain {
-	hp := &hyperchain{
+func newHyperOrder(argV *argT) *HyperOrder {
+	hp := &HyperOrder{
 		stopFlag:    make(chan bool),
 		restartFlag: make(chan bool),
 		args:        argV,
@@ -59,24 +61,24 @@ func newHyperchain(argV *argT) *hyperchain {
 	return hp
 }
 
-func (h *hyperchain) start() {
-	logger.Notice("Hyperchain server starting...")
+func (h *HyperOrder) start() {
+	logger.Notice("Hyperchain order starting...")
 	go h.nsMgr.Start()
 	go h.hs.Start()
-	go CheckLicense(h.stopFlag)
+	//go CheckLicense(h.stopFlag) TODO: add license check
 	go h.ipcShell.Start()
 }
 
-func (h *hyperchain) stop() {
-	logger.Critical("Hyperchain server stop...")
+func (h *HyperOrder) stop() {
+	logger.Critical("Order stop...")
 	h.nsMgr.Stop()
 	time.Sleep(3 * time.Second)
 	h.hs.Stop()
-	logger.Critical("Hyperchain server stopped")
+	logger.Critical("Hyperchain order stopped")
 }
 
-func (h *hyperchain) restart() {
-	logger.Critical("Hyperchain server restart...")
+func (h *HyperOrder) restart() {
+	logger.Critical("Hyperchain order restart...")
 	h.stop()
 	h.start()
 }
@@ -131,14 +133,14 @@ func main() {
 			ipc.IPCShell(argv.IPCEndpoint)
 		default:
 			// Start hyperchain service
-			hp := newHyperchain(argv)
+			hp := newHyperOrder(argv)
 			run(hp, argv)
 		}
 		return nil
 	})
 }
 
-func run(inst *hyperchain, argv *argT) {
+func run(inst *HyperOrder, argv *argT) {
 	if argv.PProfEnable {
 		setupPProf(argv.PPort)
 	}
@@ -151,4 +153,28 @@ func run(inst *hyperchain, argv *argT) {
 			inst.restart()
 		}
 	}
+}
+
+//TODO: restore may not be here.
+func restore(conf *common.Config, sid string, namespace string) {
+	db, err := hyperdb.GetDBDatabaseByNamespace(namespace, hcom.DBNAME_BLOCKCHAIN)
+	if err != nil {
+		fmt.Println("[RESTORE] init db failed.")
+		fmt.Println("[RESTORE] detail reason: ", err.Error())
+		return
+	}
+	handler := res.NewRestorer(conf, db, namespace)
+	if err := handler.Restore(sid); err != nil {
+		fmt.Printf("[RESTORE] restore from snapshot %s failed.\n", sid)
+		fmt.Println("[RESTORE] detail reason: ", err.Error())
+		return
+	}
+	fmt.Printf("[RESTORE] restore from snapshot %s success.\n", sid)
+}
+
+func setupPProf(port string) {
+	addr := "0.0.0.0:" + port
+	go func() {
+		http.ListenAndServe(addr, nil)
+	}()
 }
