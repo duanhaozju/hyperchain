@@ -184,7 +184,7 @@ func (mgr *JvmManager) checkJvmExist() bool {
 	noLsof := true
 	if len(mgr.lsofPath) == 0 {
 		path, err := exec.LookPath("lsof")
-		logger.Debugf(path)
+		mgr.logger.Debugf(path)
 		if err != nil {
 			paths := []string{"/usr/sbin/lsof", "/usr/bin/lsof"}
 			for _, p := range paths {
@@ -198,7 +198,7 @@ func (mgr *JvmManager) checkJvmExist() bool {
 			noLsof = false
 		}
 		if len(path) == 0 || noLsof {
-			logger.Errorf("No lsof command found")
+			mgr.logger.Errorf("No lsof command found")
 			return true
 		}
 		mgr.lsofPath = path

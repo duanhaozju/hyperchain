@@ -16,6 +16,7 @@ type HyperExecutor struct {
 	stopFlag    chan bool
 	restartFlag chan bool
 	args        *argT
+	logger      *logging.Logger
 }
 
 func newHyperExecutor(argV *argT) *HyperExecutor {
@@ -24,34 +25,30 @@ func newHyperExecutor(argV *argT) *HyperExecutor {
 		restartFlag: make(chan bool, 1),
 		args:        argV,
 	}
-	globalConfig := common.NewConfig(he.args.ConfigPath)
-	globalConfig.Set(common.GLOBAL_CONFIG_PATH, he.args.ConfigPath)
-	common.InitHyperLoggerManager(globalConfig)
+	gc := common.NewConfig(he.args.ConfigPath)
 
-	logger = common.GetLogger(common.DEFAULT_LOG, "hypexec")
+	gc.Set(common.GLOBAL_CONFIG_PATH, he.args.ConfigPath)
+	common.InitHyperLoggerManager(gc)
 
-	he.exeCtl = controller.GetExecutorCtl(globalConfig, he.stopFlag, he.restartFlag)
-	he.admin = admin.NewAdministrator(he.exeCtl, globalConfig)
+	he.logger = common.GetLogger(common.DEFAULT_LOG, "hypexec")
+	he.exeCtl = controller.GetExecutorCtl(gc, he.stopFlag, he.restartFlag)
+	he.admin = admin.NewAdministrator(he.exeCtl, gc)
 
-	//he.apiServer = jsonrpc.GetRPCServer(he.exeCtl, globalConfig, true)
+	//TODO: fix api compatible he.apiServer = jsonrpc.GetRPCServer(he.exeCtl, gc, true)
 	return he
 }
 
 func main() {
-	/**
-	1. get config file
-	2. get the executorManager instance and start all executor
-	3. run APIServer to provide open service
-	*/
 	cli.Run(new(argT), func(ctx *cli.Context) error {
 		argv := ctx.Argv().(*argT)
-		eg := newHyperExecutor(argv)
-		run(eg, argv)
+		he := newHyperExecutor(argv)
+		run(he, argv)
 		return nil
 	})
 }
 
 func (h *HyperExecutor) start() error {
+	h.logger.Notice("try to start hyper-executor!")
 	if err := h.exeCtl.Start(); err != nil {
 		panic(err)
 	}
@@ -61,11 +58,13 @@ func (h *HyperExecutor) start() error {
 	}
 
 	go func() {
-		err := h.apiServer.Start()
-		if err != nil {
-			panic(err)
-		}
+		//TODO: fix api server problem
+		//err := h.apiServer.Start()
+		//if err != nil {
+		//	panic(err)
+		//}
 	}()
+	h.logger.Notice("hyper-executor start successful!")
 	return nil
 
 }
@@ -77,7 +76,7 @@ func (h *HyperExecutor) stop() {
 }
 
 func (h *HyperExecutor) restart() {
-	logger.Critical("executor server restart...")
+	h.logger.Critical("executor server restart...")
 	h.stop()
 	h.start()
 }
@@ -94,10 +93,6 @@ type argT struct {
 	PProfEnable   bool   `cli:"pprof" usage:"use to specify whether to turn on pprof monitor or not"`
 	PPort         string `cli:"pport" usage:"use to specify pprof http port"`
 }
-
-var (
-	logger *logging.Logger
-)
 
 func run(inst *HyperExecutor, argv *argT) {
 	inst.start()

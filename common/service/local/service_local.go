@@ -38,10 +38,10 @@ func (lsi *localServiceImpl) Send(se service.ServiceEvent) error {
 	logger := common.GetLogger("global", "localservice")
 	switch e := se.(type) {
 	case *event.ExecutorToConsensusEvent:
-		lsi.hub.DispatchExecutorToConsensus(*e)
+		//lsi.hub.DispatchExecutorToConsensus(*e)
 		return nil
 	case *event.ExecutorToP2PEvent:
-		lsi.hub.DispatchExecutorToP2P(*e)
+		//lsi.hub.DispatchExecutorToP2P(*e)
 		return nil
 	default:
 		logger.Criticalf("Send default %v", e)

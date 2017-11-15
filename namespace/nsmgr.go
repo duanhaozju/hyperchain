@@ -14,7 +14,11 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/core/ledger/bloom"
 
+	pb "github.com/hyperchain/hyperchain/common/protos"
+	"github.com/hyperchain/hyperchain/common/service/server"
 	"github.com/op/go-logging"
+	"google.golang.org/grpc"
+	"net"
 )
 
 // This file defines the Namespace Manager interface, which managers all
@@ -86,18 +90,6 @@ type NamespaceManager interface {
 	// by hypercli admin interface.
 	RestartNamespace(name string) error
 
-	// StartJvm starts jvm manager. This should only be called by hypercli
-	// admin interface.
-	StartJvm() error
-
-	// StopJvm stops jvm manager. This should only be called by hypercli
-	// admin interface.
-	StopJvm() error
-
-	// RestartJvm restarts jvm manager. This should only be called by
-	// hypercli admin interface.
-	RestartJvm() error
-
 	// GlobalConfig returns the global configuration of the system.
 	GlobalConfig() *common.Config
 
@@ -106,6 +98,8 @@ type NamespaceManager interface {
 
 	// GetRestartFlag returns the flag of restart hyperchain server
 	GetRestartFlag() chan bool
+
+	InternalServer() *server.InternalServer
 }
 
 // nsManagerImpl implements the NamespaceManager interface.
@@ -134,6 +128,8 @@ type nsManagerImpl struct {
 
 	stopHp    chan bool
 	restartHp chan bool
+
+	is *server.InternalServer
 }
 
 // newNsManager news a namespace manager implement and init.
@@ -144,14 +140,33 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 		lock:  new(sync.RWMutex),
 	}
 
+	var s *server.InternalServer
+	if !conf.GetBool(common.EXECUTOR_EMBEDDED) {
+		srv, err := server.NewInternalServer(conf.GetInt(common.INTERNAL_PORT), "0.0.0.0")
+		if err != nil {
+			panic(err)
+		}
+		lis, err := net.Listen("tcp", srv.Addr())
+		if err != nil {
+			panic(lis)
+		}
+
+		grpcServer := grpc.NewServer()
+		pb.RegisterDispatcherServer(grpcServer, srv)
+
+		logger.Criticalf("InternalServer start successful on %v !", srv.Addr())
+		go grpcServer.Serve(lis)
+		s = srv
+	}
+
 	nr := &nsManagerImpl{
 		namespaces:  make(map[string]Namespace),
 		conf:        conf,
-		jvmManager:  NewJvmManager(conf),
 		bloomFilter: bloom.NewBloomFilterCache(conf),
 		status:      status,
 		stopHp:      stopHp,
 		restartHp:   restartHp,
+		is:          s,
 	}
 	nr.rwLock = new(sync.RWMutex)
 	nr.bloomFilter.Start()
@@ -226,12 +241,6 @@ func (nr *nsManagerImpl) Start() error {
 			}
 		}(name)
 	}
-	if nr.conf.GetBool(common.C_JVM_START) == true {
-		if err := nr.jvmManager.Start(); err != nil {
-			logger.Error(err)
-			return err
-		}
-	}
 	nr.status.setState(running)
 	logger.Noticef("Namespace manager started!")
 	return nil
@@ -255,9 +264,6 @@ func (nr *nsManagerImpl) Stop() error {
 			logger.Errorf("Stop namespace %s failed: %s", name, err)
 			return err
 		}
-	}
-	if err := nr.jvmManager.Stop(); err != nil {
-		logger.Errorf("Stop hyperjvm failed: %s", err)
 	}
 	nr.bloomFilter.Close()
 	nr.status.setState(closed)
@@ -407,10 +413,8 @@ func (nr *nsManagerImpl) StartNamespace(name string) error {
 		ns.Stop()
 		return err
 	} else {
-		nr.jvmManager.ledgerProxy.RegisterDB(name, ns.GetExecutor().FetchStateDb())
 		return nil
 	}
-
 }
 
 // StopNamespace stops namespace instance by name.
@@ -490,4 +494,8 @@ func (nr *nsManagerImpl) GetStopFlag() chan bool {
 // GetRestartFlag returns the flag of restart hyperchain server
 func (nr *nsManagerImpl) GetRestartFlag() chan bool {
 	return nr.restartHp
+}
+
+func (nr *nsManagerImpl) InternalServer() *server.InternalServer {
+	return nr.is
 }

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperchain/hyperchain/common"
 	pb "github.com/hyperchain/hyperchain/common/protos"
@@ -23,14 +24,13 @@ func NewAdministrator(exeCtl controller.ExecutorController, conf *common.Config)
 		exeCtl: exeCtl,
 		conf:   conf,
 		logger: common.GetLogger(common.DEFAULT_LOG, "admin"),
-		stop:   make(chan struct{}, 2),
+		stop:   make(chan struct{}, 1),
 	}
 }
 
 func (admin *Administrator) Start() error {
 	//client address for mark this admin connect
 	address := admin.conf.GetString(common.EXECUTOR_HOST_ADDR)
-
 	adminClient, err := client.New(admin.conf.GetInt(common.INTERNAL_PORT),
 		admin.conf.GetString(common.EXECUTOR_SERVER_IP), client.ADMINISTRATOR, address)
 
@@ -39,13 +39,25 @@ func (admin *Administrator) Start() error {
 	}
 
 	admin.logger.Info("try connect to hyperchain...")
+	retryTimes := 0
+	var exp uint64 = 1
 	for {
-		//TODO: add retry times limit
+		if retryTimes > 0 {
+			admin.logger.Criticalf("admin stream try to connect to hyperchain ...")
+		}
 		err = adminClient.Connect()
 		if err == nil {
 			break
 		}
-		time.Sleep(time.Second)
+		retryTimes++
+		if retryTimes > 10 {
+			exp = exp << 1
+			t, _ := time.ParseDuration(fmt.Sprintf("%ds", exp))
+			time.Sleep(t)
+		} else {
+			time.Sleep(1 * time.Second)
+		}
+
 	}
 
 	rsp, err := adminClient.Register(0, pb.FROM_ADMINISTRATOR, &pb.RegisterMessage{
@@ -91,6 +103,7 @@ func (admin *Administrator) listenSendResponse(e *AdminHandler, adminConnect *cl
 				// TODO : how to deal with the send failed?
 			}
 		case <-admin.stop:
+			admin.stop <- struct{}{}
 			return
 		}
 	}

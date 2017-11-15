@@ -41,12 +41,15 @@ func connectToServer(id uint64, t *testing.T) (*client.ServiceClient, error) {
 	if err := c.Connect(); err != nil {
 		return nil, err
 	}
-	if err := c.Register(id, pb.FROM_EXECUTOR, &pb.RegisterMessage{
+	_, err = c.Register(id, pb.FROM_EXECUTOR, &pb.RegisterMessage{
 		Address:   "localhost:9001",
 		Namespace: "global",
-	}); err != nil {
+	})
+
+	if err != nil {
 		return nil, err
 	}
+
 	return c, nil
 }
 
