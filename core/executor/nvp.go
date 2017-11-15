@@ -189,6 +189,12 @@ func (nvp *nvp) handleUndemand(block *types.Block) error {
 				nvp.clearSyncContext()
 				return err
 			}
+			// If the received block is the demand one after state transition,
+			// skip block synchronization.
+			if block.Number == nvp.demandNumber {
+				nvp.executor.context.syncCtx = nil
+				return nvp.handleDemand(block)
+			}
 		}
 		nvp.sendSyncRequest(nvp.calUpper(), nvp.getSyncContext().getDown(), nvp.getSyncContext().remote)
 		go nvp.resendBackend()
@@ -275,8 +281,7 @@ func (nvp *nvp) applyRemainBlock(number uint64) error {
 
 // process applys given block to make blockchain status transition.
 func (nvp *nvp) process(block *types.Block) error {
-	nvp.executor.stateTransition(block.Number+1, common.BytesToHash(block.MerkleRoot))
-	err, result := nvp.getExecutor().ApplyBlock(block, block.Number)
+	err, result := nvp.getExecutor().ApplyBlock(block)
 	if err != nil {
 		return err
 	}
@@ -325,7 +330,7 @@ func (nvp *nvp) resendBackend() {
 			curUp := nvp.getSyncContext().getUpper()
 			curDown := nvp.getSyncContext().getDown()
 			if curUp == up && curDown == down {
-				nvp.logger.Noticef("resend sync request, want [%d] - [%d]", down, up)
+				nvp.logger.Noticef("resend sync request, want (%d, %d]", down, up)
 				nvp.sendSyncRequest(up, down, nvp.getSyncContext().remote)
 			} else {
 				up = curUp
