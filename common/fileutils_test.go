@@ -8,15 +8,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
+	"path"
 	"strings"
 	"testing"
 )
 
 func TestFileExist(t *testing.T) {
-	directoryPath := os.Getenv("GOPATH") + "/src/hyperchain/common/testhelper/resources"
-	assert.Equal(t, true, FileExist(directoryPath+"/global.toml"), "This file should exist")
-
-	assert.Equal(t, false, FileExist(directoryPath+"/gl.toml"), "This file should not exist")
+	assert.Equal(t, true, FileExist(path.Join(testResourcePrefix, "global.toml")), "This file should exist")
+	assert.Equal(t, false, FileExist(path.Join(testResourcePrefix, "gl.toml")), "This file should not exist")
 }
 
 func TestGetPath(t *testing.T) {
