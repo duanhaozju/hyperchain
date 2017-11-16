@@ -10,7 +10,7 @@ import (
 	"math/big"
 )
 
-func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, logger *logging.Logger, namespace string, jvmCli ContractExecutor) (*types.Receipt, []byte, common.Address, error) {
+func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, timestamp int64, logger *logging.Logger, namespace string, jvmCli ContractExecutor) (*types.Receipt, []byte, common.Address, error) {
 	var (
 		from   = common.BytesToAddress(tx.From)
 		to     = common.BytesToAddress(tx.To)
@@ -19,7 +19,7 @@ func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber
 		amount = tv.RetrieveAmount()
 		op     = tv.GetOp()
 	)
-	env := initEnvironment(db, blockNumber, logger, namespace, tx.GetHash(), jvmCli)
+	env := initEnvironment(db, blockNumber, timestamp, logger, namespace, tx.GetHash(), jvmCli)
 	if env == nil {
 		return nil, nil, common.Address{}, er.ExecContractErr(1, "init environment failed")
 	}
@@ -68,8 +68,8 @@ func Exec(vmenv vm.Environment, from, to *common.Address, value *big.Int, data [
 	return ret, addr, err
 }
 
-func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger, namespace string, txHash common.Hash, jvmCli ContractExecutor) vm.Environment {
-	vmenv := NewEnv(state, int64(seqNo), 0, logger, namespace, txHash, jvmCli)
+func initEnvironment(state vm.Database, seqNo uint64, timestamp int64, logger *logging.Logger, namespace string, txHash common.Hash, jvmCli ContractExecutor) vm.Environment {
+	vmenv := NewEnv(state, int64(seqNo), timestamp, logger, namespace, txHash, jvmCli)
 	if vmenv == nil {
 		return nil
 	}

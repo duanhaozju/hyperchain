@@ -441,7 +441,7 @@ func (executor *Executor) ApplyBlock(block *types.Block) (error, *ValidationResu
 	executor.stateTransition(block.Number, common.BytesToHash(parent.MerkleRoot))
 
 	var filterLogs []*types.Log
-	err, result := executor.applyTransactions(block.Transactions, nil, block.Number)
+	err, result := executor.applyTransactions(block.Transactions, nil, block.Number, block.Timestamp)
 	if err != nil {
 		return err, nil
 	}
