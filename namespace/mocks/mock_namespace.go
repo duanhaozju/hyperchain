@@ -31,11 +31,6 @@ func (m *MockNS) Status() *namespace.Status {
 	return args.Get(0).(*namespace.Status)
 }
 
-func (m *MockNS) Info() *namespace.NamespaceInfo {
-	args := m.Called()
-	return args.Get(0).(*namespace.NamespaceInfo)
-}
-
 func (m *MockNS) ProcessRequest(request interface{}) interface{} {
 	args := m.Called(request)
 	return args.Get(0)

@@ -23,15 +23,15 @@ import (
 )
 
 // ExecTransaction executes the single transaction in evm or jvm.
-func (executor *Executor) ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64) (*types.Receipt, []byte, common.Address, error) {
+func (executor *Executor) ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, timestamp int64) (*types.Receipt, []byte, common.Address, error) {
 	tv := tx.GetTransactionValue()
 	switch tv.GetVmType() {
 	case types.TransactionValue_EVM:
 		executor.logger.Debug("execute in evm")
-		return evm.ExecTransaction(db, tx, idx, blockNumber, executor.logger, executor.namespace)
+		return evm.ExecTransaction(db, tx, idx, blockNumber, timestamp, executor.logger, executor.namespace)
 	case types.TransactionValue_JVM:
 		executor.logger.Debug("execute in jvm")
-		return jvm.ExecTransaction(db, tx, idx, blockNumber, executor.logger, executor.namespace, executor.jvmCli)
+		return jvm.ExecTransaction(db, tx, idx, blockNumber, timestamp, executor.logger, executor.namespace, executor.jvmCli)
 	default:
 		executor.logger.Warningf("try to execute a transaction with undefined vm type %s", tv.GetVmType().String())
 		return nil, nil, common.Address{}, errors.ExecContractErr(1, "undefined vm type")
