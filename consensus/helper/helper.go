@@ -40,7 +40,7 @@ type Stack interface {
 	ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
 
 	// VcReset reset vid when view change is done, clear the validate cache larger than seqNo
-	VcReset(seqNo uint64) error
+	VcReset(seqNo uint64, view uint64) error
 
 	// InformPrimary send the primary id to update info after negotiate view or view change
 	InformPrimary(primary uint64) error
@@ -161,10 +161,11 @@ func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStam
 }
 
 // VcReset resets vid after in recovery, viewchange or add/delete nodes
-func (h *helper) VcReset(seqNo uint64) error {
+func (h *helper) VcReset(seqNo uint64, view uint64) error {
 
 	vcResetEvent := event.VCResetEvent{
 		SeqNo: seqNo,
+		View:  view,
 	}
 
 	// No need to "go h.msgQ.Post...", we'll wait for it to return

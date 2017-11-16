@@ -176,9 +176,6 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 	case VIEW_CHANGE_VC_RESET_DONE_EVENT:
 		rbft.off(inVcReset)
 		rbft.logger.Infof("Replica %d received local vcResetDone", rbft.id)
-		if rbft.in(inUpdatingN) {
-			return rbft.sendFinishUpdate()
-		}
 		var seqNo uint64
 		var event protos.VcResetDone
 		var ok bool
@@ -186,7 +183,19 @@ func (rbft *rbftImpl) handleViewChangeEvent(e *LocalEvent) consensusEvent {
 			rbft.logger.Error("Type assert error!")
 			return nil
 		}
+		// if we received a vcResetDone whose VcReset was sent in earlier view(such as an earlier
+		// viewchange), we will ignore this vcResetDone event
+		if event.View < rbft.view {
+			rbft.logger.Debugf("Replica %d in view %d received an old "+
+				"vcResetDone with view=%d/seqNo=%d", rbft.id, rbft.view, event.View, event.SeqNo)
+			return nil
+		}
 		seqNo = event.SeqNo
+
+		// if we start VcReset in updatingN, send finishUpdate directly
+		if rbft.in(inUpdatingN) {
+			return rbft.sendFinishUpdate()
+		}
 		// if we start VcReset in recovery, we may encounter 2 cases such as:
 		// 1. in recovery, we have executed to 25, but others only executed to 28, so our recoveryToSeqNo == 20,
 		// and lastExec == 25, need to VcReset to 25, after VcResetDone quickly, we can return recovery done directly

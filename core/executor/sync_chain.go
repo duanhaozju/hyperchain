@@ -25,6 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/hyperchain/hyperchain/common"
 	cm "github.com/hyperchain/hyperchain/core/common"
 	"github.com/hyperchain/hyperchain/core/ledger/bloom"
@@ -34,8 +35,6 @@ import (
 	"github.com/hyperchain/hyperchain/hyperdb"
 	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/hyperchain/hyperchain/manager/protos"
-
-	"github.com/golang/protobuf/proto"
 )
 
 /*
@@ -433,17 +432,24 @@ func (executor *Executor) SendSyncRequest(upstream, downstream uint64) {
 	executor.context.syncCtx.recordRequest(upstream, downstream)
 }
 
-func (executor *Executor) ApplyBlock(block *types.Block, seqNo uint64) (error, *ValidationResultRecord) {
-	var filterLogs []*types.Log
-	err, result := executor.applyTransactions(block.Transactions, nil, seqNo)
+func (executor *Executor) ApplyBlock(block *types.Block) (error, *ValidationResultRecord) {
+	// reset state status(oldest, root)
+	parent, err := edb.GetBlockByNumber(executor.namespace, block.Number-1)
 	if err != nil {
 		return err, nil
 	}
-	batch := executor.statedb.FetchBatch(seqNo, state.BATCH_NORMAL)
-	if err := executor.persistTransactions(batch, block.Transactions, seqNo); err != nil {
+	executor.stateTransition(block.Number, common.BytesToHash(parent.MerkleRoot))
+
+	var filterLogs []*types.Log
+	err, result := executor.applyTransactions(block.Transactions, nil, block.Number, block.Timestamp)
+	if err != nil {
 		return err, nil
 	}
-	if logs, err := executor.persistReceipts(batch, block.Transactions, result.Receipts, seqNo, common.BytesToHash(block.BlockHash)); err != nil {
+	batch := executor.statedb.FetchBatch(block.Number, state.BATCH_NORMAL)
+	if err := executor.persistTransactions(batch, block.Transactions, block.Number); err != nil {
+		return err, nil
+	}
+	if logs, err := executor.persistReceipts(batch, block.Transactions, result.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
 		return err, nil
 	} else {
 		filterLogs = logs
@@ -520,8 +526,7 @@ func (executor *Executor) processSyncBlocks() {
 			} else {
 				// set temporary block number as block number since block number is already here
 				executor.context.initDemand(blk.Number)
-				executor.stateTransition(blk.Number+1, common.BytesToHash(blk.MerkleRoot))
-				err, result := executor.ApplyBlock(blk, blk.Number)
+				err, result := executor.ApplyBlock(blk)
 				if err != nil || executor.assertApplyResult(blk, result) == false {
 					executor.logger.Errorf("[Namespace = %s] state update from #%d to #%d failed. current chain height #%d",
 						executor.namespace, executor.context.syncCtx.demandBlockNum+1, executor.context.syncCtx.target, edb.GetHeightOfChain(executor.namespace))

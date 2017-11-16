@@ -146,7 +146,7 @@ func (executor *Executor) process(validationEvent event.ValidationEvent, done fu
 	)
 
 	invalidtxs, validtxs = executor.checkSign(validationEvent.Transactions)
-	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo)
+	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo, validationEvent.Timestamp)
 	if err != nil {
 		// short circuit if error occur during the transaction execution
 		executor.logger.Errorf("[Namespace = %s] process transaction batch #%d failed.", executor.namespace, validationEvent.SeqNo)
@@ -207,7 +207,7 @@ func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidT
 }
 
 // applyTransactions executes transaction sequentially.
-func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64) (error, *ValidationResultRecord) {
+func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64, timestamp int64) (error, *ValidationResultRecord) {
 	var (
 		validtxs []*types.Transaction
 		receipts []*types.Receipt
@@ -218,7 +218,7 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 
 	// Execute transaction one by one
 	for i, tx := range txs {
-		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, seqNo)
+		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, seqNo, timestamp)
 		if err != nil {
 			errType := executor.classifyInvalid(err)
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{

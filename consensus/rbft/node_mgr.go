@@ -821,7 +821,7 @@ func (rbft *rbftImpl) resetStateForUpdate(update *UpdateN) consensusEvent {
 	resetTarget := rbft.exec.lastExec + 1
 	if !rbft.inOne(skipInProgress, inVcReset) {
 		// in most common case, do VcReset
-		rbft.helper.VcReset(resetTarget)
+		rbft.helper.VcReset(resetTarget, rbft.view)
 		rbft.on(inVcReset)
 	} else if rbft.isPrimary(rbft.id) {
 		// Primary cannot do VcReset then we just let others choose next primary

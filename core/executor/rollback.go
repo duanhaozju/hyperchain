@@ -46,7 +46,7 @@ func (executor *Executor) Rollback(ev event.VCResetEvent) {
 	chain.UpdateChainByBlcokNum(executor.namespace, batch, ev.SeqNo-1, false, false)
 	batch.Write()
 	executor.context.initDemand(ev.SeqNo)
-	executor.informConsensus(NOTIFY_VC_DONE, protos.VcResetDone{SeqNo: ev.SeqNo})
+	executor.informConsensus(NOTIFY_VC_DONE, protos.VcResetDone{SeqNo: ev.SeqNo, View: ev.View})
 	NotifyViewChange(executor.helper, ev.SeqNo)
 }
 

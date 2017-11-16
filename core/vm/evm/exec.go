@@ -37,9 +37,9 @@ type Message struct {
 	Op       types.TransactionValue_Opcode
 }
 
-func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, logger *logging.Logger, namespace string) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
+func ExecTransaction(db vm.Database, tx *types.Transaction, idx int, blockNumber uint64, timestamp int64, logger *logging.Logger, namespace string) (receipt *types.Receipt, ret []byte, addr common.Address, err error) {
 	message := setDefaults(tx)
-	env := initEnvironment(db, blockNumber, logger, namespace, tx.GetHash())
+	env := initEnvironment(db, blockNumber, timestamp, logger, namespace, tx.GetHash())
 	env.Db().StartRecord(tx.GetHash(), common.Hash{}, idx)
 	if valid := checkPermission(env, message.From, message.To, message.Op); !valid {
 		return nil, nil, common.Address{}, er.InvalidInvokePermissionErr("not enough permission to invocation")
@@ -127,9 +127,8 @@ func makeReceipt(env vm.Environment, addr common.Address, txHash common.Hash, ga
 }
 
 // initEnvironment creates a transaction environment with given env info.
-func initEnvironment(state vm.Database, seqNo uint64, logger *logging.Logger, namespace string, txHash common.Hash) vm.Environment {
-	// TODO pass block package time to env
-	vmenv := NewEnv(state, int64(seqNo), 0, logger, namespace, txHash)
+func initEnvironment(state vm.Database, seqNo uint64, timestamp int64, logger *logging.Logger, namespace string, txHash common.Hash) vm.Environment {
+	vmenv := NewEnv(state, int64(seqNo), timestamp, logger, namespace, txHash)
 	return vmenv
 }
 

@@ -19,6 +19,7 @@ import (
 	"github.com/hyperchain/hyperchain/core/vm"
 
 	"github.com/golang/protobuf/proto"
+	"time"
 )
 
 // RunInSandBox is used to run transaction in a simulator,
@@ -46,7 +47,7 @@ func (executor *Executor) RunInSandBox(tx *types.Transaction, snapshotId string)
 	// Init execution environment
 	fakeBlockNumber := chain.GetHeightOfChain(executor.namespace) + 1
 	// Execute the tx
-	receipt, _, _, err := executor.ExecTransaction(statedb, tx, 0, fakeBlockNumber)
+	receipt, _, _, err := executor.ExecTransaction(statedb, tx, 0, fakeBlockNumber, time.Now().Unix())
 	if err != nil {
 		errType := executor.classifyInvalid(err)
 		t := &types.InvalidTransactionRecord{

@@ -85,18 +85,6 @@ func TNewRbft(dbpath, path, namespace string, nodeId int, t *testing.T) (*rbftIm
 ////implement new helper for Test		 ////
 ////////////////////////////////////////////////////
 
-//InnerBroadcast(msg *pb.Message) error
-//InnerUnicast(msg *pb.Message, to uint64) error
-//Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
-//UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error
-//ValidateBatch(txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
-//VcReset(seqNo uint64) error
-//InformPrimary(primary uint64) error
-//BroadcastAddNode(msg *pb.Message) error
-//BroadcastDelNode(msg *pb.Message) error
-//UpdateTable(payload []byte, flag bool) error
-//SendFilterEvent(informType int, message ...interface{}) error
-
 type MessageChanel struct {
 	MsgChan chan *pb.Message
 }
@@ -219,7 +207,7 @@ func (TH *TestHelp) UpdateState(myId uint64, height uint64, blockHash []byte, re
 	return nil
 }
 
-func (TH *TestHelp) VcReset(seqNo uint64) error {
+func (TH *TestHelp) VcReset(seqNo uint64, view uint64) error {
 	event := &LocalEvent{
 		Service:   VIEW_CHANGE_SERVICE,
 		EventType: VIEW_CHANGE_VC_RESET_DONE_EVENT,

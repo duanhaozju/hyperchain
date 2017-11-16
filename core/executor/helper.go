@@ -355,6 +355,7 @@ func (executor *Executor) informP2P(informType int, message ...interface{}) erro
 			RequiredNumber: message[0].(uint64),
 			CurrentNumber:  message[1].(uint64),
 		}
+		executor.logger.Debugf("required to fetch (%d - %d]", required.CurrentNumber, required.RequiredNumber)
 		payload, err := proto.Marshal(&required)
 		if err != nil {
 			executor.logger.Errorf("sync chain request marshal message failed of NVP")
