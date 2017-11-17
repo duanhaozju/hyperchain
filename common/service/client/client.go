@@ -33,7 +33,6 @@ type ServiceClient struct {
 	domain string // for admin is address, others is namespace
 
 	msgRecv chan *pb.IMessage //received messages from server
-	slock   sync.RWMutex
 	client  pb.Dispatcher_RegisterClient
 
 	logger     *logging.Logger
@@ -45,6 +44,8 @@ type ServiceClient struct {
 	rspAuxLock sync.RWMutex
 	syncReqId  *util.ID
 	rspAuxPool sync.Pool
+
+	sync.Mutex
 }
 
 func New(port int, host, sid, domain string) (*ServiceClient, error) {
@@ -79,14 +80,14 @@ func New(port int, host, sid, domain string) (*ServiceClient, error) {
 }
 
 func (sc *ServiceClient) stream() pb.Dispatcher_RegisterClient {
-	sc.slock.RLock()
-	defer sc.slock.RUnlock()
+	sc.Lock()
+	defer sc.Unlock()
 	return sc.client
 }
 
 func (sc *ServiceClient) setStream(client pb.Dispatcher_RegisterClient) {
-	sc.slock.Lock()
-	defer sc.slock.Unlock()
+	sc.Lock()
+	defer sc.Unlock()
 	sc.client = client
 }
 
@@ -133,8 +134,6 @@ func (sc *ServiceClient) reconnect() error {
 }
 
 func (sc *ServiceClient) Register(cid uint64, serviceType pb.FROM, rm *pb.RegisterMessage) (*pb.IMessage, error) {
-	sc.slock.RLock()
-	defer sc.slock.RUnlock()
 	payload, err := proto.Marshal(rm)
 	if err != nil {
 		return nil, err
@@ -160,6 +159,8 @@ func (sc *ServiceClient) Register(cid uint64, serviceType pb.FROM, rm *pb.Regist
 }
 
 func (sc *ServiceClient) Close() {
+	sc.Lock()
+	defer sc.Unlock()
 	atomic.StoreInt32(&sc.closed, 1)
 	sc.cf()
 	if sc.client != nil {
@@ -176,18 +177,22 @@ func (sc *ServiceClient) isClosed() bool {
 
 //Send msg asynchronous
 func (sc *ServiceClient) Send(msg *pb.IMessage) error {
-	//TODO: Add msg format check
-	if sc.stream == nil {
+	if sc.client == nil {
+		sc.logger.Noticef("service client is nil, try to reconnect")
 		sc.reconnect()
 	}
-	err := sc.stream().Send(msg)
+	sc.Lock()
+	err := sc.client.Send(msg)
+	sc.Unlock()
 	if err != nil {
 		err = sc.reconnect()
 		if err != nil {
 			sc.Close()
 			return err
 		}
-		return sc.stream().Send(msg)
+		sc.Lock()
+		defer sc.Unlock()
+		return sc.client.Send(msg)
 	}
 	return nil
 }
@@ -203,6 +208,8 @@ func (sc *ServiceClient) SyncSend(msg *pb.IMessage) (*pb.IMessage, error) {
 	sc.rspAuxMap[msg.Id] = rspCh
 	sc.rspAuxLock.Unlock()
 	//TODO: add recovery if stream == nil or stream is closed
+	sc.Lock()
+	defer sc.Unlock()
 	if err := sc.client.Send(msg); err != nil {
 		sc.rspAuxLock.Lock()
 		delete(sc.rspAuxMap, msg.Id)

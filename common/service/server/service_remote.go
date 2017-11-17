@@ -20,6 +20,8 @@ type remoteServiceImpl struct {
 	logger    *logging.Logger
 	syncReqId *util.ID
 
+	msg chan *pb.IMessage
+
 	rspAuxMap  map[uint64]chan *pb.IMessage
 	rspAuxLock sync.RWMutex
 	rspAuxPool sync.Pool
@@ -34,6 +36,7 @@ func NewRemoteService(namespace, id string, stream pb.Dispatcher_RegisterServer,
 		logger:    logging.MustGetLogger("service"),
 		ds:        ds,
 		r:         make(chan *pb.IMessage),
+		msg:       make(chan *pb.IMessage),
 		syncReqId: util.NewId(uint64(time.Now().UnixNano())),
 		rspAuxMap: make(map[uint64]chan *pb.IMessage),
 		rspAuxPool: sync.Pool{
@@ -94,6 +97,9 @@ func (rsi *remoteServiceImpl) Serve() error {
 			rsi.ds.HandleSyncRequest(rsi.namespace, msg)
 		case pb.Type_RESPONSE:
 			rsi.r <- msg
+		default:
+			rsi.msg <- msg
+
 		}
 		//rsi.logger.Debugf("%s, %s service serve", rsi.namespace, rsi.id)
 	}

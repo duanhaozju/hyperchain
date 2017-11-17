@@ -2,14 +2,18 @@ package server
 
 import (
 	"fmt"
+	"github.com/gogo/protobuf/proto"
 	pb "github.com/hyperchain/hyperchain/common/protos"
 	"github.com/hyperchain/hyperchain/common/service/client"
+	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 	"net"
 	"sync"
 	"testing"
 )
+
+const content = "This is a test event"
 
 func startServer(t *testing.T) *InternalServer {
 	is, err := NewInternalServer(60061, "localhost")
@@ -72,7 +76,7 @@ func (ah *AuxHandler) Handle(client pb.Dispatcher_RegisterClient, msg *pb.IMessa
 		}
 
 	} else {
-		ah.t.Error("Invalid msg type, %s ", msg.Type)
+		fmt.Printf("%d", msg.Payload)
 	}
 }
 
@@ -113,7 +117,6 @@ func testOneConnection(id uint64, is *InternalServer, t *testing.T) {
 }
 
 func TestSyncSend(t *testing.T) {
-	//TODO: clear the connection info
 	is := startServer(t)
 	wgg := sync.WaitGroup{}
 	for i := 0; i < 10; i++ {
@@ -125,4 +128,67 @@ func TestSyncSend(t *testing.T) {
 	}
 	wgg.Wait()
 	t.Log(is.Addr())
+}
+
+func TestMultiThreadOneStreamSend(t *testing.T) {
+
+	is := startServer(t)
+	if is != nil {
+		c, err := connectToServer(1, t)
+		if err != nil {
+			t.Error(err)
+		}
+
+		go func() {
+			srv := is.ServerRegistry().Namespace("global").Service(
+				fmt.Sprintf("EXECUTOR-%d", 1))
+			//go srv.Serve()
+
+			s, ok := srv.(*remoteServiceImpl)
+			if !ok {
+				t.Error("service can not type assert")
+			}
+			rspCh := s.msg
+			for {
+				select {
+				case rsp := <-rspCh:
+					event := &event.TestEvent{}
+					err := proto.Unmarshal(rsp.Payload, event)
+					if err != nil {
+						t.Error(err)
+					}
+					fmt.Printf("%v\n", event)
+				}
+			}
+		}()
+
+		wg := sync.WaitGroup{}
+		n := 1000
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func() {
+				for j := 0; j < n; j++ {
+					fmt.Printf("Try to send msg: %d\n", j)
+
+					payload, err := proto.Marshal(&event.TestEvent{
+						Id:  uint64(j),
+						Msg: content,
+					})
+
+					if err != nil {
+						t.Error(err)
+					}
+
+					c.Send(&pb.IMessage{
+						From:    pb.FROM_EXECUTOR,
+						Payload: payload,
+					})
+				}
+
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+	}
+
 }

@@ -14,3 +14,8 @@ message AdminResponseEvent {
     bool Ok = 1;
     string Msg = 2;
 }
+
+message TestEvent {
+    uint64 id = 1;
+    string msg = 2;
+}
