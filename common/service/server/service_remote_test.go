@@ -15,11 +15,20 @@ import (
 
 const content = "This is a test event"
 
+var (
+	is         *InternalServer
+	grpcServer *grpc.Server
+)
+
 func startServer(t *testing.T) *InternalServer {
-	is, err := NewInternalServer(60061, "localhost")
+	if is != nil {
+		return is
+	}
+	iss, err := NewInternalServer(60061, "localhost")
 	if err != nil {
 		return nil
 	}
+	is = iss
 	grpcServer := grpc.NewServer()
 
 	pb.RegisterDispatcherServer(grpcServer, is)
@@ -49,11 +58,9 @@ func connectToServer(id uint64, t *testing.T) (*client.ServiceClient, error) {
 		Address:   "localhost:9001",
 		Namespace: "global",
 	})
-
 	if err != nil {
 		return nil, err
 	}
-
 	return c, nil
 }
 
@@ -96,6 +103,7 @@ func testOneConnection(id uint64, is *InternalServer, t *testing.T) {
 			len := 1000
 			var pre uint64 = 0
 			for i := 1; i < len; i++ {
+				fmt.Printf("service client try to send msg %d\n ", i)
 				rsp, err := srv.SyncSend(&pb.IMessage{
 					Type: pb.Type_SYNC_REQUEST,
 				})
@@ -128,6 +136,8 @@ func TestSyncSend(t *testing.T) {
 	}
 	wgg.Wait()
 	t.Log(is.Addr())
+
+	//TODO: add network resources collection method
 }
 
 func TestMultiThreadOneStreamSend(t *testing.T) {
@@ -181,6 +191,7 @@ func TestMultiThreadOneStreamSend(t *testing.T) {
 
 					c.Send(&pb.IMessage{
 						From:    pb.FROM_EXECUTOR,
+						Type:    pb.Type_NORMAL,
 						Payload: payload,
 					})
 				}
@@ -190,5 +201,4 @@ func TestMultiThreadOneStreamSend(t *testing.T) {
 		}
 		wg.Wait()
 	}
-
 }

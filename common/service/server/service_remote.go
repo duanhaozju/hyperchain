@@ -12,7 +12,6 @@ import (
 
 //remoteServiceImpl represent a remote service.
 type remoteServiceImpl struct {
-	ds        *InternalServer
 	namespace string
 	id        string
 	stream    pb.Dispatcher_RegisterServer
@@ -26,15 +25,16 @@ type remoteServiceImpl struct {
 	rspAuxLock sync.RWMutex
 	rspAuxPool sync.Pool
 	close      chan struct{}
+
+	sync.Mutex
 }
 
-func NewRemoteService(namespace, id string, stream pb.Dispatcher_RegisterServer, ds *InternalServer) service.Service {
+func NewRemoteService(namespace, id string, stream pb.Dispatcher_RegisterServer) service.Service {
 	return &remoteServiceImpl{
 		namespace: namespace,
 		id:        id,
 		stream:    stream,
 		logger:    logging.MustGetLogger("service"),
-		ds:        ds,
 		r:         make(chan *pb.IMessage),
 		msg:       make(chan *pb.IMessage),
 		syncReqId: util.NewId(uint64(time.Now().UnixNano())),
@@ -68,6 +68,8 @@ func (rsi *remoteServiceImpl) Send(event service.ServiceEvent) error {
 		if rsi.stream == nil {
 			return fmt.Errorf("[%s:%s]stream is empty, wait for this component to reconnect", rsi.namespace, rsi.id)
 		}
+		rsi.Lock()
+		defer rsi.Unlock()
 		return rsi.stream.Send(msg)
 	}
 }
@@ -80,7 +82,6 @@ func (rsi *remoteServiceImpl) Close() {
 func (rsi *remoteServiceImpl) Serve() error {
 	//dispatch responses
 	go rsi.dispatchResponse()
-
 	for {
 		msg, err := rsi.stream.Recv()
 		if err != nil {
@@ -89,19 +90,15 @@ func (rsi *remoteServiceImpl) Serve() error {
 		switch msg.Type {
 		case pb.Type_REGISTER:
 			rsi.logger.Errorf("No register message should be here! msg: %v", msg)
-		case pb.Type_DISPATCH:
-			rsi.ds.HandleDispatch(rsi.namespace, msg)
-		case pb.Type_ADMIN:
-			rsi.ds.HandleAdmin(rsi.namespace, msg)
+		case pb.Type_NORMAL:
+			rsi.msg <- msg
 		case pb.Type_SYNC_REQUEST:
-			rsi.ds.HandleSyncRequest(rsi.namespace, msg)
+			rsi.msg <- msg
 		case pb.Type_RESPONSE:
 			rsi.r <- msg
 		default:
-			rsi.msg <- msg
-
+			rsi.logger.Errorf("Invalid message type, %v", msg.Type)
 		}
-		//rsi.logger.Debugf("%s, %s service serve", rsi.namespace, rsi.id)
 	}
 }
 
@@ -128,6 +125,8 @@ func (rsi *remoteServiceImpl) SyncSend(se service.ServiceEvent) (*pb.IMessage, e
 		rsi.rspAuxMap[msg.Id] = rspCh
 		rsi.rspAuxLock.Unlock()
 		//TODO: add recovery if stream == nil or stream is closed
+		rsi.Lock()
+		defer rsi.Unlock()
 		if err := rsi.stream.Send(msg); err != nil {
 			rsi.rspAuxLock.Lock()
 			delete(rsi.rspAuxMap, msg.Id)

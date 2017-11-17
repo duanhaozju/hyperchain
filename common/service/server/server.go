@@ -88,31 +88,6 @@ func (is *InternalServer) RegisterLocal(s service.Service) {
 	is.sr.Register(s)
 }
 
-//handleDispatch handleDispatch messages
-func (is *InternalServer) HandleDispatch(namespace string, msg *pb.IMessage) {
-	//is.logger.Debugf("try to handle dispatch message: %v for namespace: %s", msg, namespace)
-	switch msg.From {
-	case pb.FROM_APISERVER:
-		is.DispatchAPIServerMsg(namespace, msg)
-	case pb.FROM_CONSENSUS:
-		is.DispatchConsensusMsg(namespace, msg)
-	case pb.FROM_EXECUTOR:
-		is.DispatchExecutorMsg(namespace, msg)
-	case pb.FROM_NETWORK:
-		is.DispatchNetworkMsg(namespace, msg)
-	default:
-		is.logger.Errorf("Undefined message: %v", msg)
-	}
-}
-
-func (is *InternalServer) HandleAdmin(namespace string, msg *pb.IMessage) {
-	//TODO: handle admin messages
-}
-
-func (is *InternalServer) HandleSyncRequest(namespace string, msg *pb.IMessage) {
-	//TODO: handle sync request messages
-}
-
 //handleRegister parse msg and register this stream
 func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_RegisterServer) service.Service {
 	is.logger.Debugf("handle register msg: %v", msg)
@@ -124,16 +99,15 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 	}
 	if msg.From == pb.FROM_ADMINISTRATOR {
 		// the admin stream register
-		service := NewRemoteService(rm.Namespace, adminId(&rm), stream, is)
+		service := NewRemoteService(rm.Namespace, adminId(&rm), stream)
 		is.logger.Debugf("admin addr %v", rm.Address)
 		restart := is.sr.AddAdminService(service)
-		is.logger.Debug("Send admin register ok response!")
 		var payload []byte
 		if restart {
 			payload = []byte("restart")
 		}
 
-		if err := stream.Send(&pb.IMessage{
+		if err := service.Send(&pb.IMessage{
 			Id:      msg.Id,
 			Type:    pb.Type_RESPONSE,
 			Ok:      true,
@@ -141,6 +115,7 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 		}); err != nil {
 			is.logger.Error(err)
 		}
+		is.logger.Debug("Send admin register ok response!")
 		go service.Serve()
 		return service
 	} else {
@@ -150,16 +125,16 @@ func (is *InternalServer) handleRegister(msg *pb.IMessage, stream pb.Dispatcher_
 			is.logger.Error("namespace error, no namespace specified, using global instead")
 			rm.Namespace = "global"
 		}
-		service := NewRemoteService(rm.Namespace, serviceId(msg), stream, is)
+		service := NewRemoteService(rm.Namespace, serviceId(msg), stream)
 		is.sr.Register(service)
-		is.logger.Debug("Send register ok response!")
-		if err := stream.Send(&pb.IMessage{
+		if err := service.Send(&pb.IMessage{
 			Id:   msg.Id,
 			Type: pb.Type_RESPONSE,
 			Ok:   true,
 		}); err != nil {
 			is.logger.Error(err)
 		}
+		is.logger.Debug("Send register ok response!")
 		return service
 	}
 }

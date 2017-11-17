@@ -27,7 +27,7 @@ message RegisterMessage {
 enum Type {
     UNDEFINED = 0;
     REGISTER = 1;
-    DISPATCH = 2;
+    NORMAL = 2;
     ADMIN = 3;
     RESPONSE = 4;
     EVENT = 5;

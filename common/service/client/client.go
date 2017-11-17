@@ -20,9 +20,10 @@ const (
 	APISERVER     = "apiserver"
 	EXECUTOR      = "executor"
 	NETWORK       = "network"
-	EVENTHUB      = "eventhub"
 	ADMINISTRATOR = "administrator"
 )
+
+const maxReceiveBufferSize = 1024
 
 // ServiceClient used to send messages to eventhub or receive message
 // from the event hub.
@@ -45,7 +46,7 @@ type ServiceClient struct {
 	syncReqId  *util.ID
 	rspAuxPool sync.Pool
 
-	sync.Mutex
+	sync.RWMutex
 }
 
 func New(port int, host, sid, domain string) (*ServiceClient, error) {
@@ -59,7 +60,7 @@ func New(port int, host, sid, domain string) (*ServiceClient, error) {
 	sc := &ServiceClient{
 		host:    host,
 		port:    port,
-		msgRecv: make(chan *pb.IMessage, 1024),
+		msgRecv: make(chan *pb.IMessage, maxReceiveBufferSize),
 		logger:  common.GetLogger(logName, "service_client"),
 
 		sid:    sid,
@@ -80,8 +81,8 @@ func New(port int, host, sid, domain string) (*ServiceClient, error) {
 }
 
 func (sc *ServiceClient) stream() pb.Dispatcher_RegisterClient {
-	sc.Lock()
-	defer sc.Unlock()
+	sc.RLock()
+	defer sc.RUnlock()
 	return sc.client
 }
 
@@ -147,8 +148,6 @@ func (sc *ServiceClient) Register(cid uint64, serviceType pb.FROM, rm *pb.Regist
 	}); err != nil {
 		return nil, err
 	} else {
-		sc.logger.Debugf("%s connect successful", sc.string())
-
 		if rsp.Type == pb.Type_RESPONSE && rsp.Ok == true {
 			sc.logger.Noticef("%s register successful", sc.string())
 			return rsp, nil
@@ -209,14 +208,15 @@ func (sc *ServiceClient) SyncSend(msg *pb.IMessage) (*pb.IMessage, error) {
 	sc.rspAuxLock.Unlock()
 	//TODO: add recovery if stream == nil or stream is closed
 	sc.Lock()
-	defer sc.Unlock()
 	if err := sc.client.Send(msg); err != nil {
 		sc.rspAuxLock.Lock()
 		delete(sc.rspAuxMap, msg.Id)
 		sc.rspAuxLock.Unlock()
+		sc.Unlock()
 		return nil, err
 	}
 	//TODO: add timeout detection
+	sc.Unlock()
 	rsp := <-rspCh
 	return rsp, nil
 }
@@ -232,7 +232,7 @@ func (sc *ServiceClient) listenProcessMsg() {
 			if atomic.LoadInt32(&sc.closed) == 1 {
 				return
 			}
-			msg, err := sc.stream().Recv()
+			msg, err := sc.stream().Recv() //TODO: how to get latest client, if reconnect happened
 
 			if err != nil {
 				sc.logger.Error(err)
