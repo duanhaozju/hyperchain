@@ -32,6 +32,7 @@ enum Type {
     RESPONSE = 4;
     EVENT = 5;
     SYNC_REQUEST = 6;
+    OP_LOG = 7;
 }
 
 enum FROM {
@@ -41,6 +42,7 @@ enum FROM {
     NETWORK   = 3;
     EVENTHUB  = 4;
     ADMINISTRATOR = 5;
+    ORDER = 6;
 }
 
 enum Event {

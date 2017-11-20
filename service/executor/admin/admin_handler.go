@@ -3,7 +3,7 @@ package admin
 import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperchain/hyperchain/common"
-	pb "github.com/hyperchain/hyperchain/common/protos"
+	pb "github.com/hyperchain/hyperchain/common/service/protos"
 	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/hyperchain/hyperchain/service/executor/controller"
 	"github.com/op/go-logging"

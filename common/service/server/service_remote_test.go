@@ -3,8 +3,8 @@ package server
 import (
 	"fmt"
 	"github.com/gogo/protobuf/proto"
-	pb "github.com/hyperchain/hyperchain/common/protos"
 	"github.com/hyperchain/hyperchain/common/service/client"
+	pb "github.com/hyperchain/hyperchain/common/service/protos"
 	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/hyperchain/hyperchain/common"
-	pb "github.com/hyperchain/hyperchain/common/protos"
+	pb "github.com/hyperchain/hyperchain/common/service/protos"
 	"github.com/hyperchain/hyperchain/common/service/util"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"

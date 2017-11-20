@@ -14,7 +14,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/core/ledger/bloom"
 
-	pb "github.com/hyperchain/hyperchain/common/protos"
+	pb "github.com/hyperchain/hyperchain/common/service/protos"
 	"github.com/hyperchain/hyperchain/common/service/server"
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"

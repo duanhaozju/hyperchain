@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+message LogEntry{
+    enum Type {
+        TransactionList = 0;
+        RollBack = 1;
+        StateUpdate = 3;
+    }
+    uint64 lid = 1; //log id
+    Type type = 2; // log type
+    bytes payload = 3;// log content
+}

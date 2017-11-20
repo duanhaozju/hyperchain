@@ -2,8 +2,8 @@ package server
 
 import (
 	"fmt"
-	pb "github.com/hyperchain/hyperchain/common/protos"
 	"github.com/hyperchain/hyperchain/common/service"
+	pb "github.com/hyperchain/hyperchain/common/service/protos"
 	"github.com/hyperchain/hyperchain/common/service/util"
 	"github.com/op/go-logging"
 	"sync"
