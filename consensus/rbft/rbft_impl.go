@@ -746,7 +746,15 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 			if isPrimary {
 				rbft.batchVdr.validateCount--
 			}
-			rbft.helper.Execute(idx.n, cert.resultHash, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)
+			//rbft.helper.Execute(idx.n, cert.resultHash, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)
+			var batch *TransactionBatch
+			var ok bool
+			batchId := cert.prePrepare.BatchDigest
+			if batch, ok= rbft.storeMgr.txBatchStore[batchId]; !ok {
+				rbft.logger.Warningf("Replica %d cannot find batch with result id:%s in txBatchStore", rbft.id, batchId)
+				return
+			}
+			rbft.exec.commit(batch)
 			cert.sentExecute = true
 			rbft.afterCommitBlock(idx)
 		} else {

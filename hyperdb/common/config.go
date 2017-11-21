@@ -11,6 +11,7 @@ import (
 
 const (
 	LEVEL_DB_ROOT_DIR = "database.leveldb.root_dir"
+	LEVEL_DB_LOG_DIR  = "database.leveldb.log_path"
 	DB_TYPE           = "database.type"
 
 	// database types
@@ -29,6 +30,8 @@ const (
 	DBNAME_BLOCKCHAIN = "blockchain"
 	DBNAME_CONSENSUS  = "consensus"
 	DBNAME_ARCHIVE    = "archive"
+	DBNAME_META       = "meta"
+	DBNAME_OPLOG      = "oplog"
 
 	// database storage directories
 	DBPATH_BLOCKCHAIN = "database.dbpath.blockchain"
@@ -54,6 +57,7 @@ const (
 	LdbWriteBuffer            = "database.leveldb.options.write_buffer"
 	LdbWriteL0PauseTrigger    = "database.leveldb.options.write_l0_pause_trigger"
 	LdbWriteL0SlowdownTrigger = "database.leveldb.options.write_l0_slowdown_trigger"
+	LdbMeasurement            = "database.leveldb.measurement_enable"
 )
 
 func GetLdbDefaultConfig() *opt.Options {

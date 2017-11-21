@@ -91,12 +91,12 @@ func (rbft *rbftImpl) Start() error {
 
 	var err error
 
-	db, err := hyperdb.GetDBDatabaseByNamespace(rbft.namespace, hcom.DBNAME_CONSENSUS)
+	metaDb, err := hyperdb.GetOrCreateDatabase(rbft.config, rbft.namespace, hcom.DBNAME_META)
 	if err != nil {
-		rbft.logger.Errorf("get db by namespace: %s failed.", rbft.namespace)
-		return fmt.Errorf("get db by namespace: %s failed", rbft.namespace)
+		rbft.logger.Errorf("get meta db by namespace: %s failed.", rbft.namespace)
+		return fmt.Errorf("get meta db by namespace: %s failed", rbft.namespace)
 	}
-	rbft.persister = persist.New(db)
+	rbft.persister = persist.New(metaDb)
 
 	// new timer manager
 	rbft.timerMgr = newTimerMgr(rbft.logger)
@@ -107,7 +107,12 @@ func (rbft *rbftImpl) Start() error {
 	rbft.initStatus()
 
 	// new executor
-	rbft.exec = newExecutor()
+	opLog, err := hyperdb.GetOrCreateDatabase(rbft.config, rbft.namespace, hcom.DBNAME_OPLOG)
+	if err != nil {
+		rbft.logger.Errorf("get opLog db by namespace: %s failed.", rbft.namespace)
+		return fmt.Errorf("get opLog db by namespace: %s failed", rbft.namespace)
+	}
+	rbft.exec = newExecutor(opLog, rbft.logger)
 
 	// new store manager
 	rbft.storeMgr = newStoreMgr(rbft.logger)

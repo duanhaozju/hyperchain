@@ -96,6 +96,44 @@ func InitDatabase(conf *common.Config, namespace string) error {
 	return nil
 }
 
+// InitDatabase initiates databases by a specific namespace
+func GetOrCreateDatabase(conf *common.Config, namespace, dbname string) (db.Database, error) {
+	dbType = conf.GetInt(hcom.DB_TYPE)
+	measurementEnable = conf.GetBool(hcom.LdbMeasurement)
+	logPath = common.GetPath(namespace, conf.GetString(hcom.LEVEL_DB_LOG_DIR))
+
+	name := getDbNameByNamespace(namespace, dbname)
+	if hdb, ok := dbMgr.dbMap[name]; ok {
+		return hdb.db, nil
+	}
+
+	log := getLogger(namespace)
+	log.Criticalf("create db %s for namespace %s", dbname, namespace)
+
+	newDb, err := NewDatabase(conf, dbname, dbType, namespace)
+	if err != nil {
+		log.Errorf("InitDatabase(%v):%v failed because it can't get a new database\n", namespace, dbname)
+		return nil, err
+	}
+	dbInstance := &DBInstance{
+		state: opened,
+		db:    newDb,
+	}
+	dbMgr.dbMap[name] = dbInstance
+
+	return newDb, nil
+}
+
+func CloseDatabase(namespace, dbname string) {
+	name := getDbNameByNamespace(namespace, dbname)
+	if hdb, ok := dbMgr.dbMap[name]; ok {
+		hdb.db.Close()
+		delete(dbMgr.dbMap, name)
+		return
+	}
+	return
+}
+
 // NewDatabase returns a new database instance with a dbname, a dbType and a namespace.
 func NewDatabase(conf *common.Config, dbname string, dbType int, namespace string) (db.Database, error) {
 	switch dbType {

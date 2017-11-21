@@ -8,19 +8,29 @@ import (
 
 	"github.com/hyperchain/hyperchain/consensus"
 	"github.com/hyperchain/hyperchain/manager/protos"
+	"github.com/hyperchain/hyperchain/core/oplog"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/core/oplog/kvlog"
+	opLog "github.com/hyperchain/hyperchain/core/oplog/proto"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/op/go-logging"
 )
 
 // executor manages exec related params
 type executor struct {
 	lastExec    uint64
 	currentExec *uint64
+	storage     oplog.OpLog
+	logger      *logging.Logger
 }
 
 // newExecutor initializes an instance of executor
-func newExecutor() *executor {
-	exec := &executor{}
+func newExecutor(db db.Database, logger *logging.Logger) *executor {
+	exec := &executor{
+		storage: kvlog.New(db),
+		logger:  logger,
+	}
 	return exec
 }
 
@@ -32,6 +42,25 @@ func (e *executor) setLastExec(l uint64) {
 // setCurrentExec sets the value of pointer currentExec
 func (e *executor) setCurrentExec(c *uint64) {
 	e.currentExec = c
+}
+
+// commit writes block into operation log
+func (e *executor) commit(batch *TransactionBatch) {
+	payload, err := proto.Marshal(batch)
+	if err != nil {
+		e.logger.Errorf("TransactionBatch Marshal Error", err)
+		return
+	}
+
+	entry := &opLog.LogEntry{
+		Lid:     batch.SeqNo,
+		Type:    opLog.LogEntry_TransactionList,
+		Payload: payload,
+	}
+	if err := e.storage.Append(entry); err != nil {
+		e.logger.Error(err)
+		return
+	}
 }
 
 // msgToEvent converts ConsensusMessage to the corresponding consensus event.
