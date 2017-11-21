@@ -6,12 +6,12 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/common/service/client"
 	pb "github.com/hyperchain/hyperchain/common/service/protos"
-	"github.com/hyperchain/hyperchain/core/executor"
 	"github.com/hyperchain/hyperchain/hyperdb"
 	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/hyperchain/hyperchain/manager/filter"
 	"github.com/hyperchain/hyperchain/namespace/rpc"
 
+	"github.com/hyperchain/hyperchain/service/executor/controller/executor"
 	"github.com/op/go-logging"
 	"sync"
 )
@@ -43,15 +43,12 @@ type executorServiceImpl struct {
 	logger *logging.Logger
 
 	//executorApi *api.ExecutorApi
-
 	status *Status
 
-	rpc rpc.RequestProcessor
-
+	rpc       rpc.RequestProcessor
 	caManager *admittance.CAManager
 
-	eventMux *event.TypeMux
-
+	eventMux  *event.TypeMux
 	filterMux *event.TypeMux
 
 	// filter system for subscription
@@ -150,7 +147,7 @@ func (es *executorServiceImpl) init() error {
 	es.service = service
 
 	// 3. filter system
-	es.filterSystem = filter.NewEventSystem(es.filterMux)
+	//es.filterSystem = filter.NewEventSystem(es.filterMux)
 
 	// 4. initial executor
 	//executor, err := executor.NewExecutor(es.namespace, es.conf, es.eventMux, es.filterMux, es.service)
@@ -160,15 +157,15 @@ func (es *executorServiceImpl) init() error {
 	//}
 	//executor.CreateInitBlock(es.conf)
 	//es.executor = executor
-	//
+
 	//h := handler.New(es.namespace, executor)
 	//service.AddHandler(h)
 
-	es.caManager, err = admittance.NewCAManager(es.conf)
-	if err != nil {
-		es.logger.Errorf("Init executor service for camanager %s error, %v", es.namespace, err)
-		return err
-	}
+	//es.caManager, err = admittance.NewCAManager(es.conf)
+	//if err != nil {
+	//	es.logger.Errorf("Init executor service for camanager %s error, %v", es.namespace, err)
+	//	return err
+	//}
 
 	// 5. add jsonrpc processor
 	// TODO: fix it

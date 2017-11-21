@@ -58,6 +58,7 @@ func init() {
 
 // InitDatabase initiates databases by a specific namespace
 func InitDatabase(conf *common.Config, namespace string) error {
+	//TODO: refactor this
 	dbType = conf.GetInt(hcom.DB_TYPE)
 	measurementEnable = conf.GetBool("database.leveldb.measurement_enable")
 	logPath = common.GetPath(namespace, conf.GetString("database.leveldb.log_path"))
