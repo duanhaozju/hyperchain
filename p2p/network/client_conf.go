@@ -1,8 +1,8 @@
 package network
 
 import (
-	"github.com/terasum/viper"
 	"time"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 type clientConf struct {
@@ -21,15 +21,15 @@ type clientConf struct {
 	connIdleTime time.Duration
 }
 
-func NewClientConf(vip *viper.Viper) *clientConf {
+func NewClientConf(common *common.Config) *clientConf {
 	cconf := &clientConf{
-		keepAliveDuration:  vip.GetDuration("p2p.keepAliveDuration"),
-		keepAliveFailTimes: vip.GetInt("p2p.keepAliveFailTimes"),
-		pendingDuration:    vip.GetDuration("p2p.pendingDuration"),
-		pendingFailTimes:   vip.GetInt("p2p.pendingFailTimes"),
-		connInitCap:        vip.GetInt("p2p.connInitCap"),
-		connUpperlimit:     vip.GetInt("p2p.connUpperlimit"),
-		connIdleTime:       vip.GetDuration("p2p.connIdleTime"),
+		keepAliveDuration:  common.GetDuration("p2p.keepAliveDuration"),
+		keepAliveFailTimes: common.GetInt("p2p.keepAliveFailTimes"),
+		pendingDuration:    common.GetDuration("p2p.pendingDuration"),
+		pendingFailTimes:   common.GetInt("p2p.pendingFailTimes"),
+		connInitCap:        common.GetInt("p2p.connInitCap"),
+		connUpperlimit:     common.GetInt("p2p.connUpperlimit"),
+		connIdleTime:       common.GetDuration("p2p.connIdleTime"),
 	}
 	return cconf
 }

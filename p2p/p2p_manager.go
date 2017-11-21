@@ -35,16 +35,16 @@ type P2PManager interface {
 // p2pManagerImpl implements the P2PManager interface.
 type p2pManagerImpl struct {
 	hypernet *network.HyperNet
-	conf     *viper.Viper
+	conf     *common.Config
 	ipcShell *ipc.IPCServer
 }
 
 // GetP2PManager creates a new p2pManagerImpl instance for config file global.toml
 // and starts p2pManager service. If p2pManagerImpl instance existed, returns it.
-func GetP2PManager(vip *viper.Viper) (P2PManager, error) {
+func GetP2PManager(config *common.Config) (P2PManager, error) {
 	glogger = common.GetLogger(common.DEFAULT_LOG, "p2p")
 	if globalP2PManager == nil {
-		p2pManager, err := newP2PManager(vip)
+		p2pManager, err := newP2PManager(config)
 		if err != nil {
 			glogger.Errorf("fatal error %s", err.Error())
 			return nil, errors.New(fmt.Sprintf("there are something wrong when get p2pmanager: %s", err.Error()))
@@ -59,15 +59,15 @@ func ClearP2PManager() {
 }
 
 // newP2PManager creates and returns a new p2pManagerImpl instance, starts p2pManager service.
-func newP2PManager(vip *viper.Viper) (*p2pManagerImpl, error) {
-	sname := vip.GetString(common.P2P_SERVERNAME)
-	net, err := network.NewHyperNet(vip, sname)
+func newP2PManager(config *common.Config) (*p2pManagerImpl, error) {
+	sname := config.GetString(common.P2P_SERVERNAME)
+	net, err := network.NewHyperNet(config, sname)
 	if err != nil {
 		return nil, err
 	}
 	p2pmgr := &p2pManagerImpl{
 		hypernet: net,
-		conf:     vip,
+		conf:     config,
 	}
 
 	if err := p2pmgr.Start(); err != nil {

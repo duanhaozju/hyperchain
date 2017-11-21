@@ -11,7 +11,6 @@ import (
 	"github.com/op/go-logging"
 	"github.com/orcaman/concurrent-map"
 	"github.com/pkg/errors"
-	"github.com/terasum/viper"
 	"strconv"
 	"strings"
 	"time"
@@ -20,7 +19,7 @@ import (
 var logger *logging.Logger
 
 type HyperNet struct {
-	conf *viper.Viper
+	conf *common.Config
 
 	server        *Server
 	hostClientMap cmap.ConcurrentMap
@@ -47,10 +46,10 @@ type HyperNet struct {
 }
 
 // NewHyperNet creates and returns a new HyperNet instance.
-func NewHyperNet(config *viper.Viper, identifier string) (*HyperNet, error) {
+func NewHyperNet(config *common.Config, identifier string) (*HyperNet, error) {
 	logger = common.GetLogger(common.DEFAULT_LOG, "hypernet")
 	if config == nil {
-		return nil, errors.New("Readin host config failed, the viper instance is nil")
+		return nil, errors.New("Read in host config failed, the viper instance is nil")
 	}
 
 	// check grpc port

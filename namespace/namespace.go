@@ -10,9 +10,6 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/consensus"
 	"github.com/hyperchain/hyperchain/consensus/csmgr"
-	"github.com/hyperchain/hyperchain/core/executor"
-	"github.com/hyperchain/hyperchain/core/ledger/chain"
-	"github.com/hyperchain/hyperchain/hyperdb"
 	"github.com/hyperchain/hyperchain/manager"
 	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/hyperchain/hyperchain/manager/protos"
@@ -24,18 +21,16 @@ import (
 
 // This file defines the Namespace interface, which manages all the
 // operations related to a certain namespace.
-// There are 7 components in one namespace:
-// 1. DB: Database is used to store data about this namespace.
-// 2. CAManager: Authority management is used to authenticate identity
+// There are 5 components in one namespace:
+// 1. CAManager: Authority management is used to authenticate identity
 //    in network.
-// 3. PeerManager: Network p2p management is used to establish connection
+// 2. PeerManager: Network p2p management is used to establish connection
 // 	  then deliver connection and consensus messages.
-// 4. Consenter: Consensus component is used to order the coming requests
+// 3. Consenter: Consensus component is used to order the coming requests
 //    and guarantee the consistency of all consensus nodes.
-// 5. Executor: Executor is mainly used to validate and commit blocks.
-// 6. EventHub: The component is used to help internal components to
+// 4. EventHub: The component is used to help internal components to
 //    interact with each other.
-// 7. JsonRpcProcess: Requests sent from clients are dispatched by
+// 5. JsonRpcProcess: Requests sent from clients are dispatched by
 //    NamespaceManager to corresponding namespace processor first, then
 //    JsonRpcProcess will actually process the request.
 
@@ -70,8 +65,6 @@ type Namespace interface {
 	// GetCAManager returns the CAManager of current namespace.
 	GetCAManager() *admittance.CAManager
 
-	// GetExecutor returns the executor module of current namespace.
-	GetExecutor() *executor.Executor
 }
 
 type NsState int
@@ -134,7 +127,6 @@ type namespaceImpl struct {
 	caMgr     *admittance.CAManager
 	eh        *manager.EventHub
 	peerMgr   p2p.PeerManager
-	executor  *executor.Executor
 	rpc       rpc.RequestProcessor
 
 	name    string
@@ -176,14 +168,7 @@ func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool) 
 func (ns *namespaceImpl) init() error {
 	ns.logger.Criticalf("Init namespace %s", ns.Name())
 
-	// 1. init DB for current namespace.
-	err := chain.InitDBForNamespace(ns.conf, ns.Name())
-	if err != nil {
-		ns.logger.Errorf("Init db for namespace %s error: %s", ns.Name(), err)
-		return err
-	}
-
-	// 2. init CaManager to manage account identity.
+	// 1. init CaManager to manage account identity.
 	cm, err := admittance.NewCAManager(ns.conf)
 	if err != nil {
 		ns.logger.Errorf("Init CA manager failed: %s", err)
@@ -191,20 +176,20 @@ func (ns *namespaceImpl) init() error {
 	}
 	ns.caMgr = cm
 
-	// 3. init peerManager to start grpc server and client.
-	peerconf := common.GetPath(ns.Name(), ns.conf.GetString(common.PEER_CONFIG_PATH))
-	if !common.FileExist(peerconf) {
+	// 2. init peerManager to start grpc server and client.
+	peerConfPath := common.GetPath(ns.Name(), ns.conf.GetString(common.PEER_CONFIG_PATH))
+	if !common.FileExist(peerConfPath) {
 		ns.logger.Errorf("Cannot find the peer config for namespace: %s", ns.Name())
 		return ErrNonExistConfig
 	}
-	peerMgr, err := p2p.GetPeerManager(ns.Name(), peerconf, ns.eventMux, ns.delFlag)
+	peerMgr, err := p2p.GetPeerManager(ns.Name(), peerConfPath, ns.eventMux, ns.delFlag)
 	if err != nil {
 		ns.logger.Errorf("Get peer manager failed: %s", err)
 		return err
 	}
 	ns.peerMgr = peerMgr
 
-	// 4. init consensus module to order requests.
+	// 3. init consensus module to order requests.
 	consenter, err := csmgr.Consenter(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, peerMgr.GetN())
 	if err != nil {
 		ns.logger.Errorf("Init Consenter for namespace %s error: %s", ns.Name(), err)
@@ -212,20 +197,11 @@ func (ns *namespaceImpl) init() error {
 	}
 	ns.consenter = consenter
 
-	// 5. init Executor to validate and commit block.
-	executor, err := executor.NewExecutor(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, peerMgr.GetLocalNodeHash())
-	if err != nil {
-		ns.logger.Errorf("Init Executor for namespace %s error: %s", ns.Name(), err)
-		return err
-	}
-	executor.CreateInitBlock(ns.conf)
-	ns.executor = executor
-
-	// 6. init Eventhub to coordinate message delivery between local modules.
-	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, executor, ns.peerMgr, consenter, cm)
+	// 4. init Eventhub to coordinate message delivery between local modules.
+	eh := manager.New(ns.Name(), ns.eventMux, ns.filterMux, ns.peerMgr, consenter, cm)
 	ns.eh = eh
 
-	// 7. init JsonRpcProcessor to process incoming requests.
+	// 5. init JsonRpcProcessor to process incoming requests.
 	ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
 
 	ns.status.setState(initialized)
@@ -261,46 +237,31 @@ func (ns *namespaceImpl) Start() error {
 		ns.logger.Warningf("Namespace %s is already running", ns.Name())
 		return nil
 	}
-	// 1. start db service
-	if ns.restart {
-		err := hyperdb.StartDatabase(ns.conf, ns.Name())
-		if err != nil {
-			ns.logger.Error(err)
-			return err
-		}
-		ns.logger.Noticef("start db for namespace %s successfully", ns.Name())
-	}
 
-	// 2. start consenter
+	// 1. start consenter
 	err = ns.consenter.Start()
 	if err != nil {
 		return err
 	}
 
-	// 3. start executor
-	err = ns.executor.Start()
-	if err != nil {
-		return err
-	}
-
-	// 4. start event hub
+	// 2. start event hub
 	ns.eh.Start()
 
-	// 5. start grpc manager
+	// 3. start peer manager
 	err = ns.peerMgr.Start()
 	if err != nil {
 		return err
 	}
 
-	// 6. consensus the routers
+	// 4. consensus the routers
 	ns.passRouters()
 
-	// 7. start negotiateView
+	// 5. start negotiateView
 	if ns.peerMgr.IsVP() {
 		ns.negotiateView()
 	}
 
-	// 8. start rpc processor
+	// 6. start rpc processor
 	if err = ns.rpc.Start(); err != nil {
 		return err
 	}
@@ -327,26 +288,13 @@ func (ns *namespaceImpl) Stop() error {
 	// 2. stop eventhub.
 	ns.eh.Stop()
 
-	// 3. stop executor.
-	err = ns.executor.Stop()
-	if err != nil {
-		ns.logger.Error(err)
-	}
-
-	// 4. stop consensus service.
+	// 3. stop consensus service.
 	ns.consenter.Stop()
 
-	// 5. stop peerManager.
+	// 4. stop peerManager.
 	ns.peerMgr.Stop()
 
 	ns.status.setState(closed)
-
-	// 6. close related database.
-	err = hyperdb.StopDatabase(ns.Name())
-	if err != nil {
-		ns.logger.Error(err)
-	}
-
 	ns.logger.Noticef("Namespace %s stopped!", ns.Name())
 	return nil
 }
@@ -373,11 +321,6 @@ func (ns *namespaceImpl) Name() string {
 // GetCAManager returns the CAManager of this namespace.
 func (ns namespaceImpl) GetCAManager() *admittance.CAManager {
 	return ns.caMgr
-}
-
-// GetExecutor returns the executor of this namespace.
-func (ns namespaceImpl) GetExecutor() *executor.Executor {
-	return ns.executor
 }
 
 // ProcessRequest processes request under this namespace, and dispatch request

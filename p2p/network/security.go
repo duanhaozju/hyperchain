@@ -4,7 +4,6 @@ import (
 	"crypto"
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/pkg/errors"
-	"github.com/terasum/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -24,7 +23,7 @@ type Sec struct {
 }
 
 // NewSec creates and returns a new Sec instances.
-func NewSec(config *viper.Viper) (*Sec, error) {
+func NewSec(config *common.Config) (*Sec, error) {
 	enableTLS := config.GetBool(common.P2P_ENABLE_TLS)
 	tlsCA := config.GetString(common.P2P_TLS_CA)
 	tlsServerHostOverride := config.GetString(common.P2P_TLS_SERVER_HOST_OVERRIDE)
