@@ -47,3 +47,18 @@ func TestLogAppendAndFetch(t *testing.T) {
 	err = logger.Reset(1)
 	ast.Nil(err, "The appropriate lid, should not return any error")
 }
+
+func TestLastSet(t *testing.T) {
+	ast := assert.New(t)
+	db, err := mdb.NewMemDatabase(common.DEFAULT_NAMESPACE)
+	ast.Equal(nil, err, err)
+	logger := New(db)
+
+	logger.lastSet = 100
+	logger.storeLastSet()
+
+	logger.lastSet = 9
+	logger.restoreLastSet()
+
+	ast.Equal(uint64(100), logger.lastSet)
+}
