@@ -757,11 +757,15 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 				rbft.logger.Warningf("Replica %d cannot find valid txs record in validBatch", rbft.id)
 				return
 			}
-			batch := &TransactionBatch{
-				TxList:    validTxs,
-				Timestamp: time.Now().UnixNano(),
+			validationEvent := &event.ValidationEvent{
+				Digest:       idx.d,
+				Transactions: validTxs,
+				SeqNo:        idx.n,
+				View:         idx.v,
+				IsPrimary:    isPrimary,
+				Timestamp:    time.Now().UnixNano(),
 			}
-			rbft.exec.commit(batch)
+			rbft.exec.commit(validationEvent)
 			cert.sentExecute = true
 			rbft.afterCommitBlock(idx)
 		} else {

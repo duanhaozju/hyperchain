@@ -168,6 +168,11 @@ func (rbft *rbftImpl) Start() error {
 func (rbft *rbftImpl) Stop() {
 	rbft.logger.Notice("RBFT stopping...")
 
+	// resource database
+	// TODO how to close this shared database
+	//hyperdb.CloseDatabase(rbft.namespace, hcom.DBNAME_META)
+	hyperdb.CloseDatabase(rbft.namespace, hcom.DBNAME_OPLOG)
+
 	// stop listen consensus event
 	if rbft.close != nil {
 		close(rbft.close)

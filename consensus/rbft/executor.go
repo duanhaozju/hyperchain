@@ -15,6 +15,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"github.com/hyperchain/hyperchain/manager/event"
 )
 
 // executor manages exec related params
@@ -45,15 +46,16 @@ func (e *executor) setCurrentExec(c *uint64) {
 }
 
 // commit writes block into operation log
-func (e *executor) commit(batch *TransactionBatch) {
-	payload, err := proto.Marshal(batch)
+func (e *executor) commit(event *event.ValidationEvent) {
+
+	payload, err := proto.Marshal(event)
 	if err != nil {
 		e.logger.Errorf("TransactionBatch Marshal Error", err)
 		return
 	}
 
 	entry := &opLog.LogEntry{
-		Lid:     batch.SeqNo,
+		Lid:     event.SeqNo,
 		Type:    opLog.LogEntry_TransactionList,
 		Payload: payload,
 	}
