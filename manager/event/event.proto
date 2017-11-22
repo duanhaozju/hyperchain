@@ -1,5 +1,6 @@
 syntax = "proto3";
 
+import "hyperchain/core/types/transaction.proto";
 package event;
 
 message AddNamespaceEvent {
@@ -18,4 +19,14 @@ message AdminResponseEvent {
 message TestEvent {
     uint64 id = 1;
     string msg = 2;
+}
+
+//receive new block event from node consensus event for consensus module
+message ValidationEvent {
+    string Digest = 1;
+    repeated types.Transaction Transactions = 2;
+    uint64 SeqNo = 3;
+    uint64 View = 4;
+    bool IsPrimary = 5;
+    int64 Timestamp = 6;
 }

@@ -57,6 +57,10 @@ func (h *HyperExecutor) start() error {
 		panic(err)
 	}
 
+	if err := h.exeCtl.StartAllExecutorSrvs(); err != nil {
+		panic(err)
+	}
+
 	go func() {
 		//TODO: fix api server problem
 		//err := h.apiServer.Start()
@@ -66,7 +70,6 @@ func (h *HyperExecutor) start() error {
 	}()
 	h.logger.Notice("hyper-executor start successful!")
 	return nil
-
 }
 
 func (h *HyperExecutor) stop() {

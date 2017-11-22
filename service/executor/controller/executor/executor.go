@@ -30,9 +30,7 @@ import (
 
 // Executor represents a hyperchain executor implementation
 type Executor struct {
-	// Namespace should contain the official namespace name,
-	// often a fixed size random word.
-	namespace  string
+	namespace  string            // Namespace should contain the official namespace name, often a fixed size random word.
 	db         db.Database       // Db refers a blockchain online database handler
 	commonHash crypto.CommonHash // Keccak256 hasher
 	encryption crypto.Encryption // ECDSA encrypter
@@ -46,13 +44,10 @@ type Executor struct {
 	jvmCli     jvm.ContractExecutor // Jvm client
 }
 
-// NewExecutor creates a new Hyperchain object (including the
-// initialisation of the common hyperchain object)
 func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) (*Executor, error) {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
 	helper := newHelper(eventMux, filterMux)
-
 	executor := &Executor{
 		namespace:  namespace,
 		conf:       &Config{conf, namespace},

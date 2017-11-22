@@ -4,7 +4,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/common/service/client"
 	pb "github.com/hyperchain/hyperchain/common/service/protos"
-	"github.com/hyperchain/hyperchain/core/executor"
+	"github.com/hyperchain/hyperchain/service/executor/controller/executor"
 	"github.com/op/go-logging"
 )
 
@@ -45,7 +45,6 @@ func (eh *ExecutorHandler) handleSyncMsg(client pb.Dispatcher_RegisterClient, ms
 }
 
 func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, msg *pb.IMessage) {
-
 	switch msg.Event {
 	default:
 		eh.logger.Errorf("Undefined event %v", msg)

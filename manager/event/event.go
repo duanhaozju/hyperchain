@@ -42,16 +42,6 @@ type SessionEvent struct {
 	Message []byte
 }
 
-//receive new block event from node consensus event for consensus module
-type ValidationEvent struct {
-	Digest       string
-	Transactions []*types.Transaction
-	SeqNo        uint64
-	View         uint64
-	IsPrimary    bool
-	Timestamp    int64
-}
-
 // if the CommitStatus is true, we will commit the blocks and save the statedb
 // or we will rollback the statedb
 // Flag == true, commit; Flag == false, rollback

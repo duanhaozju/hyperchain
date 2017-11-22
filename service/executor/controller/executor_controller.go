@@ -19,16 +19,22 @@ const (
 )
 
 type ExecutorController interface {
+	//Start start executor controller client.
 	Start() error
 
+	//Stop stop executor controller client.
 	Stop() error
 
+	//StartAllExecutorSrvs start all executor services.
 	StartAllExecutorSrvs() error
 
+	//StartExecutorServiceByName
 	StartExecutorServiceByName(namespace string) error
 
+	//StopExecutorServiceByName
 	StopExecutorServiceByName(namespace string) error
 
+	//GetExecutorServiceByName
 	GetExecutorServiceByName(namespace string) executorService
 
 	//ProcessRequest process request by namespace
@@ -51,9 +57,10 @@ type execControllerImpl struct {
 	rwLock   *sync.RWMutex
 	services map[string]executorService
 
-	jvmManager  *namespace.JvmManager
-	jvmStatus   *Status
-	bloomFilter bloom.TxBloomFilter
+	jvmManager *namespace.JvmManager
+	jvmStatus  *Status
+
+	bloomFilter bloom.TxBloomFilter //TODO: need bloomFilter here?
 
 	conf *common.Config
 
@@ -89,7 +96,7 @@ func GetExecutorCtl(conf *common.Config, stopEm chan bool, restartEM chan bool) 
 }
 
 func (ec *execControllerImpl) StartExecutorServiceByName(namespace string) error {
-	ec.logger.Criticalf("Try to start executor service for namespace %s", namespace)
+	ec.logger.Criticalf("Try to start executor client for namespace %s", namespace)
 
 	configRootDir := ec.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
@@ -116,13 +123,13 @@ func (ec *execControllerImpl) StartExecutorServiceByName(namespace string) error
 		return false, ""
 	}
 
-	// start executor service
+	// start executor client
 	if ok, name := hasConfig(dirs, namespace); ok {
 		if _, ok = ec.services[name]; ok {
 			ec.logger.Warningf("Namespace %s for executor already exist.", name)
 			return nil
 		}
-		conf, err := ec.getConfig(name)
+		conf, err := ec.readConfig(name)
 		service := NewExecutorService(name, conf)
 		err = service.Start()
 		if err != nil {
@@ -163,7 +170,7 @@ func (ec *execControllerImpl) RestartJVM() error {
 	return err
 }
 
-func (ec *execControllerImpl) getConfig(name string) (*common.Config, error) {
+func (ec *execControllerImpl) readConfig(name string) (*common.Config, error) {
 	configRootDir := ec.conf.GetString(NS_CONFIG_DIR_ROOT)
 	if configRootDir == "" {
 		return nil, errors.New("Namespace config root dir is not valid ")
@@ -283,7 +290,7 @@ func (ec *execControllerImpl) StartAllExecutorSrvs() error {
 				ec.logger.Warningf("Namespace %s for executor already exist.", name)
 				continue
 			}
-			conf, err := ec.getConfig(name)
+			conf, err := ec.readConfig(name)
 			service := NewExecutorService(name, conf)
 			err = service.Start()
 			if err != nil {
