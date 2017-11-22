@@ -19,15 +19,19 @@ const (
 	lastSetPrefix = "lastSet"
 )
 
+// kvLoggerImpl implements the OpLog interface
 type kvLoggerImpl struct {
-	lastSet	uint64
-	db		db.Database
+	lastSet	uint64 // The last set entry's index
+	cache	map[uint64]*oplog.LogEntry // A cache to store some entry in memory
+	db		db.Database // A database to store entries
 }
 
+// New initiate a kvLoggerImpl
 func New(db db.Database) *kvLoggerImpl {
 	
 	logger := &kvLoggerImpl{
-		db: db,
+		db:		db,
+		cache:	make(map[uint64]*oplog.LogEntry),
 	}
 	err := logger.restoreLastSet()
 	if err != nil {
@@ -36,6 +40,7 @@ func New(db db.Database) *kvLoggerImpl {
 	return logger
 }
 
+// Append add an entry to logger
 func (logger *kvLoggerImpl) Append(entry *oplog.LogEntry) error {
 
 	lastSet := atomic.LoadUint64(&logger.lastSet)
@@ -47,14 +52,24 @@ func (logger *kvLoggerImpl) Append(entry *oplog.LogEntry) error {
 	if err != nil {
 		return err
 	}
-	key := fmt.Sprintf("%s%s%d", modulePrefix, entryPrefix, lastSet + 1)
+	key := fmt.Sprintf("%s%s%d", modulePrefix, entryPrefix, entry.Lid)
 	if err = logger.db.Put([]byte(key), raw); err == nil {
+		logger.cache[entry.Lid] = entry
+
+		// TODO How to delete these massage in cache
+		if entry.Lid % 10 == 0 {
+			for i := entry.Lid - 49; i <= entry.Lid - 40 && i > 0; i++ {
+				delete(logger.cache, i)
+			}
+		}
+
 		atomic.AddUint64(&logger.lastSet, 1)
 		logger.storeLastSet()
 	}
 	return err
 }
 
+// Fetch get an entry by lid. If this entry is in memory, it can be read in cache.
 func (logger *kvLoggerImpl) Fetch(lid uint64) (*oplog.LogEntry, error) {
 
 	lastSet := atomic.LoadUint64(&logger.lastSet)
@@ -62,6 +77,9 @@ func (logger *kvLoggerImpl) Fetch(lid uint64) (*oplog.LogEntry, error) {
 		return nil, errors.New(fmt.Sprint("lid is too large"))
 	}
 
+	if entry, ok := logger.cache[lid]; ok {
+		return entry, nil
+	}
 	key := fmt.Sprintf("%s%s%d", modulePrefix, entryPrefix, lid)
 	raw, err := logger.db.Get([]byte(key))
 	if err != nil {
@@ -76,6 +94,7 @@ func (logger *kvLoggerImpl) Fetch(lid uint64) (*oplog.LogEntry, error) {
 	}
 }
 
+// Reset set lastSet to a previous number, and later entry would be appended from here.
 func (logger *kvLoggerImpl) Reset(lid uint64) error {
 
 	lastSet := atomic.LoadUint64(&logger.lastSet)
@@ -88,6 +107,7 @@ func (logger *kvLoggerImpl) Reset(lid uint64) error {
 	return nil
 }
 
+//
 func (logger *kvLoggerImpl) storeLastSet() error {
 
 	b := make([]byte, 8)
@@ -112,7 +132,7 @@ func (logger *kvLoggerImpl) restoreLastSet() error {
 	return nil
 }
 
-// Iterator implements the Iterator interface.
+// Iterator implements the Iterator interface, could traverse the logger.
 type Iterator struct {
 	it db.Iterator
 }
