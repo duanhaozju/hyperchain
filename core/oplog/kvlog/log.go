@@ -107,7 +107,12 @@ func (logger *kvLoggerImpl) Reset(lid uint64) error {
 	return nil
 }
 
-//
+// GetLastSet returns lastSet
+func (logger *kvLoggerImpl) GetLastSet() uint64 {
+	lastSet := atomic.LoadUint64(&logger.lastSet)
+	return lastSet
+}
+
 func (logger *kvLoggerImpl) storeLastSet() error {
 
 	b := make([]byte, 8)

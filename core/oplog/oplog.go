@@ -15,6 +15,7 @@ type OpLog interface {
 	Log
 	Reset(lid uint64) error //reset committed log id to target lid.
 	Iterator(prefix []byte) Iterator
+	GetLastSet() uint64
 }
 
 type Iterator interface {
