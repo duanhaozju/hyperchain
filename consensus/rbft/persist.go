@@ -217,7 +217,6 @@ func (rbft *rbftImpl) restoreCert() {
 		}
 		cert := rbft.storeMgr.getCert(idx.v, idx.n, idx.d)
 		cert.prePrepare = q
-		cert.resultHash = q.ResultHash
 	}
 
 	pset, _ := rbft.restorePSet()

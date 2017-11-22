@@ -1069,7 +1069,7 @@ nLoop:
 		keys[i] = n
 		i++
 	}
-	sort.Sort(sortableUint64Slice(keys))
+	sort.Sort(common.SortableUint64Slice(keys))
 	x := h + 1
 	list := make(map[uint64]string)
 	for _, n := range keys {
@@ -1200,7 +1200,6 @@ func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 				View:           rbft.view,
 				SequenceNumber: n,
 				BatchDigest:    d,
-				ResultHash:     batch.ResultHash,
 				HashBatch:      hashBatch,
 				ReplicaId:      rbft.id,
 			}
@@ -1231,7 +1230,6 @@ func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 				View:           rbft.view,
 				SequenceNumber: n,
 				BatchDigest:    d,
-				ResultHash:     batch.ResultHash,
 				ReplicaId:      rbft.id,
 			}
 			cert.prepare[*prep] = true
@@ -1259,7 +1257,6 @@ func (rbft *rbftImpl) rebuildCertStore(xset Xset) {
 			View:           rbft.view,
 			SequenceNumber: n,
 			BatchDigest:    d,
-			ResultHash:     batch.ResultHash,
 			ReplicaId:      rbft.id,
 		}
 		cert.commit[*cmt] = true

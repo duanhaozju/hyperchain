@@ -92,24 +92,22 @@ message pre_prepare {
     uint64 view = 1;
     uint64 sequence_number = 2;
     string batch_digest = 3;
-    string result_hash = 4;
-    hash_batch hash_batch = 5;
-    uint64 replica_id = 6;
+    hash_batch hash_batch = 4;
+    uint64 replica_id = 5;
 }
 
 message prepare {
     uint64 view = 1;
     uint64 sequence_number = 2;
     string batch_digest = 3;
-    string result_hash = 4;
-    uint64 replica_id = 5;
+    uint64 replica_id = 4;
 }
 
 message commit {
     uint64 view = 1;
     uint64 sequence_number = 2;
     string batch_digest = 3;
-    string result_hash = 4;
+    string invalid_txs_hash = 4;
     uint64 replica_id = 5;
 }
 

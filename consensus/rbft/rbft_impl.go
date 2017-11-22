@@ -354,7 +354,6 @@ func (rbft *rbftImpl) sendPrePrepare(seqNo uint64, digest string, hash string, r
 		View:           rbft.view,
 		SequenceNumber: seqNo,
 		BatchDigest:    digest,
-		ResultHash:     hash,
 		HashBatch:      hashBatch,
 		ReplicaId:      rbft.id,
 	}
@@ -408,7 +407,6 @@ func (rbft *rbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 	cert := rbft.storeMgr.getCert(preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
 
 	cert.prePrepare = preprep
-	cert.resultHash = preprep.ResultHash
 
 	if !rbft.inOne(skipInProgress, inRecovery) &&
 		preprep.SequenceNumber > rbft.exec.lastExec {
@@ -435,7 +433,6 @@ func (rbft *rbftImpl) sendPrepare(preprep *PrePrepare) error {
 		View:           preprep.View,
 		SequenceNumber: preprep.SequenceNumber,
 		BatchDigest:    preprep.BatchDigest,
-		ResultHash:     preprep.ResultHash,
 		ReplicaId:      rbft.id,
 	}
 	payload, err := proto.Marshal(prep)
@@ -504,30 +501,38 @@ func (rbft *rbftImpl) maybeSendCommit(digest string, v uint64, n uint64) error {
 		return nil
 	}
 
-	if rbft.isPrimary(rbft.id) {
-		return rbft.sendCommit(digest, v, n)
-	} else {
-		idx := vidx{view: v, seqNo: n}
-		if !cert.sentValidate {
-			rbft.batchVdr.preparedCert[idx] = digest
-			rbft.validatePending()
-		}
-		return nil
-	}
+	//if rbft.isPrimary(rbft.id) {
+	//	return rbft.sendCommit(digest, v, n)
+	//} else {
+	//	idx := vidx{view: v, seqNo: n}
+	//	if !cert.sentValidate {
+	//		rbft.batchVdr.preparedCert[idx] = digest
+	//		rbft.validatePending()
+	//	}
+	//	return nil
+	//}
+	return rbft.sendCommit(digest, v, n)
 }
 
 // sendCommit send commit message.
 func (rbft *rbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 
 	cert := rbft.storeMgr.getCert(v, n, digest)
+	idx := msgID{v, n, digest}
+	validTxs, invalidRecord, invalidTxsHash := rbft.batchMgr.txPool.Validate(cert.prePrepare.BatchDigest)
+	rbft.batchVdr.validBatch[idx] = validTxs
+	// TODO record invalid in txPool?
+	rbft.batchVdr.inValidRecord[idx] = invalidRecord
+
+	cert.validated = true
 
 	if !cert.sentCommit {
 		rbft.logger.Debugf("Replica %d sending commit for view=%d/seqNo=%d", rbft.id, v, n)
 		commit := &Commit{
 			View:           v,
 			SequenceNumber: n,
-			ResultHash:     cert.resultHash,
 			BatchDigest:    digest,
+			InvalidTxsHash: invalidTxsHash,
 			ReplicaId:      rbft.id,
 		}
 		cert.sentCommit = true
@@ -747,12 +752,14 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 				rbft.batchVdr.validateCount--
 			}
 			//rbft.helper.Execute(idx.n, cert.resultHash, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)
-			var batch *TransactionBatch
-			var ok bool
-			batchId := cert.prePrepare.BatchDigest
-			if batch, ok= rbft.storeMgr.txBatchStore[batchId]; !ok {
-				rbft.logger.Warningf("Replica %d cannot find batch with result id:%s in txBatchStore", rbft.id, batchId)
+			validTxs, ok := rbft.batchVdr.validBatch[idx]
+			if !ok {
+				rbft.logger.Warningf("Replica %d cannot find valid txs record in validBatch", rbft.id)
 				return
+			}
+			batch := &TransactionBatch{
+				TxList:    validTxs,
+				Timestamp: time.Now().UnixNano(),
 			}
 			rbft.exec.commit(batch)
 			cert.sentExecute = true
@@ -1195,7 +1202,7 @@ func (rbft *rbftImpl) weakCheckpointSetOutOfRange(chkpt *Checkpoint) bool {
 					delete(rbft.storeMgr.hChkpts, replicaID)
 				}
 			}
-			sort.Sort(sortableUint64Slice(chkptSeqNumArray))
+			sort.Sort(common.SortableUint64Slice(chkptSeqNumArray))
 
 			// If f+1 nodes have issued checkpoints above our high water mark, then
 			// we will never record 2f+1 checkpoints for that sequence number, we are out of date

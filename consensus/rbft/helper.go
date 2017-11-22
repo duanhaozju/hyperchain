@@ -14,21 +14,6 @@ import (
 )
 
 // =============================================================================
-// helper functions for sort
-// =============================================================================
-type sortableUint64Slice []uint64
-
-func (a sortableUint64Slice) Len() int {
-	return len(a)
-}
-func (a sortableUint64Slice) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
-}
-func (a sortableUint64Slice) Less(i, j int) bool {
-	return a[i] < a[j]
-}
-
-// =============================================================================
 // helper functions for RBFT
 // =============================================================================
 

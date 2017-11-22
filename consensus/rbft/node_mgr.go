@@ -12,6 +12,7 @@ import (
 	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 /**
@@ -962,7 +963,7 @@ func (rbft *rbftImpl) putBackTxBatches(xset Xset) {
 	for no := range xset {
 		keys = append(keys, no)
 	}
-	sort.Sort(sortableUint64Slice(keys))
+	sort.Sort(common.SortableUint64Slice(keys))
 
 	// Remove all the batches that smaller than initial checkpoint.
 	// Those batches are the dependency of duplicator,

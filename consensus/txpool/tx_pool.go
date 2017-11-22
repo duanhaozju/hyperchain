@@ -79,6 +79,10 @@ type TxPool interface {
 
 	// GotMissingTxs receives txs fetched from primary and add txs to txPool
 	GotMissingTxs(id string, txs map[uint64]*types.Transaction) error
+
+	// Validate checks the validity of the given transactions and returns the
+	// invalid transaction set and valid transaction set.
+	Validate(id string) (validTxs []*types.Transaction, invalidRecord []*types.InvalidTransactionRecord, invalidTxsHash string)
 }
 
 // TxHashBatch contains transactions that batched by primary.
@@ -611,7 +615,7 @@ func (pool *txPoolImpl) newTxBatch() *TxHashBatch {
 		TxHashList: hashList,
 		TxList:     txList,
 	}
-	batchHash := hash(txbatch)
+	batchHash := hash(txbatch.TxHashList)
 	txbatch.BatchHash = batchHash
 	pool.batchStore = append(pool.batchStore, txbatch)
 	pool.logger.Debugf("Primary generate a transaction batch with %d txs, which hash is %s, and now there are %d "+
@@ -670,10 +674,10 @@ func (pool *txPoolImpl) removeBatchById(id string) (*TxHashBatch, error) {
 	return batch, nil
 }
 
-func hash(batch *TxHashBatch) string {
+func hash(hashList []string) string {
 
 	h := md5.New()
-	for _, hash := range batch.TxHashList {
+	for _, hash := range hashList {
 		h.Write([]byte(hash))
 	}
 	return hex.EncodeToString(h.Sum(nil))

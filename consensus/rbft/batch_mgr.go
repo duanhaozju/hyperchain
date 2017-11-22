@@ -11,6 +11,7 @@ import (
 	"github.com/hyperchain/hyperchain/consensus/txpool"
 	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/op/go-logging"
+	"github.com/hyperchain/hyperchain/core/types"
 )
 
 // batchManager manages basic batch issues, including:
@@ -32,6 +33,8 @@ type batchValidator struct {
 	currentVid          *uint64                // track the current validate batch seqNo
 	validateCount       uint64                 // track the validate event which has been sent to executor module but hasn't been committed
 	cacheValidatedBatch map[string]*cacheBatch // track the cached validated batch
+	validBatch          map[msgID][]*types.Transaction
+	inValidRecord       map[msgID][]*types.InvalidTransactionRecord
 
 	validateTimeout time.Duration
 	preparedCert    map[vidx]string // track the prepared cert to help validate
@@ -222,7 +225,8 @@ func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 	// during that timeout, we think there may exist some problems with this primary which will trigger viewchange
 	rbft.softStartNewViewTimer(rbft.timerMgr.getTimeoutValue(REQUEST_TIMER)+rbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
 		fmt.Sprintf("New request batch for view=%d/seqNo=%d", rbft.view, n))
-	rbft.helper.ValidateBatch(digest, batch.TxList, batch.Timestamp, n, rbft.view, true)
+	//rbft.helper.ValidateBatch(digest, batch.TxList, batch.Timestamp, n, rbft.view, true)
+	rbft.sendPrePrepare(n, digest, "", batch)
 
 }
 
@@ -293,7 +297,6 @@ func (rbft *rbftImpl) findNextValidateBatch() (find bool, digest string, txBatch
 			HashList:   preprep.HashBatch.List,
 			Timestamp:  preprep.HashBatch.Timestamp,
 			SeqNo:      preprep.SequenceNumber,
-			ResultHash: preprep.ResultHash,
 		}
 		rbft.storeMgr.txBatchStore[preprep.BatchDigest] = txBatch
 		rbft.storeMgr.outstandingReqBatches[preprep.BatchDigest] = txBatch
