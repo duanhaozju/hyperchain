@@ -18,6 +18,7 @@ type OpLog interface {
 	GetLastSet() uint64
 	GetLastCommit() uint64
 	SetLastCheckpoint(checkpoint uint64)
+	GetHeightAndDigest() (uint64, string, error)
 }
 
 type Iterator interface {

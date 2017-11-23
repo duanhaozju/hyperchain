@@ -157,7 +157,7 @@ func (kvLogger *kvLoggerImpl) Reset(seqNo uint64) error {
 	return nil
 }
 
-func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64 ,*oplog.LogEntry, error) {
+func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64 , *oplog.LogEntry, error) {
 
 	checkpoint := uint64((int(seqNo / kvLogger.checkpointPeriod) + 1) * int(kvLogger.checkpointPeriod))
 	var earlistLid uint64
@@ -234,6 +234,19 @@ func (kvLogger *kvLoggerImpl) SetLastCheckpoint(id uint64) {
 func (kvLogger *kvLoggerImpl) GetLastCheckpoint() uint64 {
 	lastCheckpoint := atomic.LoadUint64(&kvLogger.lastCheckpoint)
 	return lastCheckpoint
+}
+
+func (kvLogger *kvLoggerImpl) GetHeightAndDigest() (uint64, string, error) {
+	_, entry, err := kvLogger.getBySeqNo(kvLogger.lastCommit)
+	if err != nil {
+		return 0, "", err
+	}
+	event := &event.ValidationEvent{}
+	if err := proto.Unmarshal(entry.Payload, event); err != nil{
+		kvLogger.logger.Errorf("find, unmarshal error: can not unmarshal ValidationEvent", err)
+		return 0, "", err
+	}
+	return kvLogger.lastCommit, event.Digest, nil
 }
 
 func (kvLogger *kvLoggerImpl) storeLastSet() error {
