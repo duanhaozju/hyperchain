@@ -227,7 +227,6 @@ func TestSendPrePrepare(t *testing.T) {
 
 	seqNo := uint64(10)
 	digest := "10"
-	hash := "10"
 
 	go func() {
 		event := <-eChan
@@ -249,7 +248,7 @@ func TestSendPrePrepare(t *testing.T) {
 		Timestamp: time.Now().UnixNano(),
 	}
 	rbft.batchVdr.setCurrentVid(&seqNo)
-	rbft.sendPrePrepare(seqNo, digest, hash, reqBatch)
+	rbft.sendPrePrepare(seqNo, digest, reqBatch)
 	ast.Nil(rbft.batchVdr.currentVid, "sendPrePrepare failed")
 	ast.Equal(seqNo, rbft.batchVdr.lastVid, "sendPrePrepare failed")
 }

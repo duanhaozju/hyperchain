@@ -1,11 +1,11 @@
 package txpool
 
 import (
-	"sync"
-	"sort"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/crypto"
-	"github.com/hyperchain/hyperchain/common"
+	"sort"
+	"sync"
 )
 
 // Validate checks validity of transactions in given batch.

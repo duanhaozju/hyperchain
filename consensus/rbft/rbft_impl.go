@@ -282,12 +282,12 @@ func (rbft *rbftImpl) sendPendingPrePrepares() {
 	rbft.logger.Debugf("Replica %d attempting to call sendPrePrepare", rbft.id)
 
 	for stop := false; !stop; {
-		if find, digest, resultHash := rbft.findNextPrePrepareBatch(); find {
+		if find, digest, _ := rbft.findNextPrePrepareBatch(); find {
 			if waitingBatch, ok := rbft.storeMgr.outstandingReqBatches[digest]; !ok {
 				rbft.logger.Errorf("Replica %d finds batch with hash: %s in cacheValidatedBatch, but can't find it in outstandingReqBatches", rbft.id, digest)
 				return
 			} else {
-				rbft.sendPrePrepare(*rbft.batchVdr.currentVid, digest, resultHash, waitingBatch)
+				rbft.sendPrePrepare(*rbft.batchVdr.currentVid, digest, waitingBatch)
 			}
 		} else {
 			stop = true
@@ -340,10 +340,10 @@ func (rbft *rbftImpl) findNextPrePrepareBatch() (find bool, digest string, resul
 }
 
 // sendPrePrepare send prePrepare message.
-func (rbft *rbftImpl) sendPrePrepare(seqNo uint64, digest string, hash string, reqBatch *TransactionBatch) {
+func (rbft *rbftImpl) sendPrePrepare(seqNo uint64, digest string, reqBatch *TransactionBatch) {
 
-	rbft.logger.Debugf("Primary %d sending prePrepare for view=%d/seqNo=%d/currentVid=%d/digest=%s",
-		rbft.id, rbft.view, seqNo, *rbft.batchVdr.currentVid, digest)
+	rbft.logger.Debugf("Primary %d sending prePrepare for view=%d/seqNo=%d/digest=%s",
+		rbft.id, rbft.view, seqNo, digest)
 
 	hashBatch := &HashBatch{
 		List:      reqBatch.HashList,
@@ -360,21 +360,14 @@ func (rbft *rbftImpl) sendPrePrepare(seqNo uint64, digest string, hash string, r
 
 	cert := rbft.storeMgr.getCert(rbft.view, seqNo, digest)
 	cert.prePrepare = preprepare
-	cert.resultHash = hash
-	cert.sentValidate = true
-	cert.validated = true
-	rbft.batchVdr.deleteCacheFromCVB(digest)
 	rbft.persistQSet(preprepare)
 
-	reqBatch.ResultHash = hash
-	rbft.storeMgr.outstandingReqBatches[digest] = reqBatch
 	rbft.storeMgr.txBatchStore[digest] = reqBatch
 	rbft.persistTxBatch(digest)
 
 	payload, err := proto.Marshal(preprepare)
 	if err != nil {
 		rbft.logger.Errorf("ConsensusMessage_PRE_PREPARE Marshal Error", err)
-		rbft.batchVdr.updateLCVid()
 		return
 	}
 
@@ -384,7 +377,6 @@ func (rbft *rbftImpl) sendPrePrepare(seqNo uint64, digest string, hash string, r
 	}
 	msg := cMsgToPbMsg(consensusMsg, rbft.id)
 	rbft.helper.InnerBroadcast(msg)
-	rbft.batchVdr.updateLCVid()
 }
 
 // recvPrePrepare process logic for PrePrepare msg.
@@ -405,13 +397,12 @@ func (rbft *rbftImpl) recvPrePrepare(preprep *PrePrepare) error {
 	}
 
 	cert := rbft.storeMgr.getCert(preprep.View, preprep.SequenceNumber, preprep.BatchDigest)
-
 	cert.prePrepare = preprep
 
 	if !rbft.inOne(skipInProgress, inRecovery) &&
 		preprep.SequenceNumber > rbft.exec.lastExec {
 		rbft.softStartNewViewTimer(rbft.timerMgr.getTimeoutValue(REQUEST_TIMER),
-			fmt.Sprintf("new prePrepare for request batch view=%d/seqNo=%d, hash=%s",
+			fmt.Sprintf("new prePrepare for request batch view=%d/seqNo=%d/hash=%s",
 				preprep.View, preprep.SequenceNumber, preprep.BatchDigest))
 	}
 
@@ -501,16 +492,6 @@ func (rbft *rbftImpl) maybeSendCommit(digest string, v uint64, n uint64) error {
 		return nil
 	}
 
-	//if rbft.isPrimary(rbft.id) {
-	//	return rbft.sendCommit(digest, v, n)
-	//} else {
-	//	idx := vidx{view: v, seqNo: n}
-	//	if !cert.sentValidate {
-	//		rbft.batchVdr.preparedCert[idx] = digest
-	//		rbft.validatePending()
-	//	}
-	//	return nil
-	//}
 	return rbft.sendCommit(digest, v, n)
 }
 
@@ -523,7 +504,7 @@ func (rbft *rbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 	rbft.batchVdr.validBatch[idx] = validTxs
 	// TODO record invalid in txPool?
 	rbft.batchVdr.inValidRecord[idx] = invalidRecord
-
+	cert.invalidTxsHash = invalidTxsHash
 	cert.validated = true
 
 	if !cert.sentCommit {
@@ -582,10 +563,16 @@ func (rbft *rbftImpl) recvCommit(commit *Commit) error {
 				rbft.id, commit.ReplicaId, commit.View, commit.SequenceNumber)
 			return nil
 		}
-
 	}
 
+	// store this commit first
 	cert.commit[*commit] = true
+	// if replica itself hasn't validated, we need to wait for validated result(invalid txs' hash)
+	// to compare with others'
+	if !cert.validated {
+		rbft.logger.Debugf("Replica %d itself hasn't sent this commit, waiting...", rbft.id)
+		return nil
+	}
 
 	if rbft.committed(commit.BatchDigest, commit.View, commit.SequenceNumber) {
 		rbft.stopNewViewTimer() // stop new view timer which was started when recv prePrepare
@@ -748,9 +735,6 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 			rbft.logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", rbft.id, idx.v, idx.n)
 			rbft.persistCSet(idx.v, idx.n, idx.d)
 			isPrimary := rbft.isPrimary(rbft.id)
-			if isPrimary {
-				rbft.batchVdr.validateCount--
-			}
 			//rbft.helper.Execute(idx.n, cert.resultHash, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)
 			validTxs, ok := rbft.batchVdr.validBatch[idx]
 			if !ok {
@@ -783,33 +767,27 @@ func (rbft *rbftImpl) findNextCommitTx() (find bool, idx msgID, cert *msgCert) {
 
 		if cert == nil || cert.prePrepare == nil {
 			rbft.logger.Debugf("Replica %d already checkpoint for view=%d/seqNo=%d", rbft.id, idx.v, idx.n)
-			//break
 			continue
 		}
 
 		// check if already executed
 		if cert.sentExecute == true {
 			rbft.logger.Debugf("Replica %d already execute for view=%d/seqNo=%d", rbft.id, idx.v, idx.n)
-			//break
 			continue
 		}
 
 		if idx.n != rbft.exec.lastExec+1 {
 			rbft.logger.Debugf("Replica %d expects to execute seq=%d, but get seq=%d", rbft.id, rbft.exec.lastExec+1, idx.n)
-			//break
 			continue
 		}
 
-		// skipInProgress == true, then this replica is in viewchange, not reply or execute
 		if rbft.in(skipInProgress) {
 			rbft.logger.Warningf("Replica %d currently picking a starting point to resume, will not execute", rbft.id)
-			//break
 			continue
 		}
 
 		// check if committed
 		if !rbft.committed(idx.d, idx.v, idx.n) {
-			//break
 			continue
 		}
 
@@ -827,20 +805,21 @@ func (rbft *rbftImpl) findNextCommitTx() (find bool, idx msgID, cert *msgCert) {
 // and generate checkpoint when lastExec % K == 0
 func (rbft *rbftImpl) afterCommitBlock(idx msgID) {
 	if rbft.exec.currentExec != nil {
-		rbft.logger.Debugf("Replica %d finished execution %d, trying next", rbft.id, *rbft.exec.currentExec)
+		rbft.logger.Debugf("Replica %d finished execution %d", rbft.id, *rbft.exec.currentExec)
 		rbft.exec.lastExec = *rbft.exec.currentExec
 		delete(rbft.storeMgr.committedCert, idx)
-		if rbft.exec.lastExec%rbft.K == 0 {
-			bcInfo := rbft.getBlockchainInfo()
-			height := bcInfo.Height
-			if height == rbft.exec.lastExec {
-				rbft.logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", rbft.exec.lastExec, height)
-				rbft.checkpoint(rbft.exec.lastExec, bcInfo)
-			} else {
-				// reqBatch call execute but have not done with execute
-				rbft.logger.Errorf("Fail to call the checkpoint, seqNo=%d, block height=%d", rbft.exec.lastExec, height)
-			}
-		}
+		//TODO get checkpoint from executor module
+		//if rbft.exec.lastExec%rbft.K == 0 {
+		//	bcInfo := rbft.getBlockchainInfo()
+		//	height := bcInfo.Height
+		//	if height == rbft.exec.lastExec {
+		//		rbft.logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", rbft.exec.lastExec, height)
+		//		rbft.checkpoint(rbft.exec.lastExec, bcInfo)
+		//	} else {
+		//		// reqBatch call execute but have not done with execute
+		//		rbft.logger.Errorf("Fail to call the checkpoint, seqNo=%d, block height=%d", rbft.exec.lastExec, height)
+		//	}
+		//}
 	} else {
 		rbft.logger.Warningf("Replica %d had execDoneSync called, flagging ourselves as out of data", rbft.id)
 		rbft.on(skipInProgress)
@@ -914,10 +893,11 @@ func (rbft *rbftImpl) recvStateUpdatedEvent(et protos.StateUpdatedMessage) error
 	rbft.exec.setLastExec(et.SeqNo)
 	rbft.batchVdr.setLastVid(et.SeqNo)
 	rbft.off(skipInProgress)
-	if et.SeqNo%rbft.K == 0 {
-		bcInfo := rbft.getCurrentBlockInfo()
-		rbft.checkpoint(et.SeqNo, bcInfo)
-	}
+	//TODO receive checkpoint from executor module
+	//if et.SeqNo%rbft.K == 0 {
+	//	bcInfo := rbft.getCurrentBlockInfo()
+	//	rbft.checkpoint(et.SeqNo, bcInfo)
+	//}
 
 	if !rbft.inOne(inViewChange, inUpdatingN, inNegotiateView) {
 		rbft.setNormal()
@@ -977,7 +957,7 @@ func (rbft *rbftImpl) recvRequestBatch(reqBatch txpool.TxHashBatch) error {
 		!rbft.inOne(inNegotiateView, inRecovery) {
 		rbft.restartBatchTimer()
 		rbft.timerMgr.stopTimer(NULL_REQUEST_TIMER)
-		rbft.primaryValidateBatch(reqBatch.BatchHash, txBatch, 0)
+		rbft.trySendPrePrepare(reqBatch.BatchHash, txBatch, 0)
 	} else {
 		rbft.logger.Debugf("Replica %d is backup, not sending prePrepare for request batch %s", rbft.id, reqBatch.BatchHash)
 		rbft.batchMgr.txPool.GetOneBatchBack(reqBatch.BatchHash)
@@ -1358,10 +1338,11 @@ func (rbft *rbftImpl) moveWatermarks(n uint64) {
 	rbft.logger.Infof("Replica %d updated low water mark to %d",
 		rbft.id, rbft.h)
 
-	primary := rbft.primary(rbft.view)
-	if primary == rbft.id {
-		rbft.sendPendingPrePrepares()
-	}
+	// TODO do we need to trigger sending preprepare
+	//primary := rbft.primary(rbft.view)
+	//if primary == rbft.id {
+	//	rbft.sendPendingPrePrepares()
+	//}
 }
 
 // updateHighStateTarget updates high state target
@@ -1457,23 +1438,7 @@ func (rbft *rbftImpl) recvValidatedResult(result protos.ValidatedTxs) error {
 
 	primary := rbft.primary(rbft.view)
 	if primary == rbft.id {
-		rbft.logger.Debugf("Primary %d received validated batch for view=%d/seqNo=%d, batch size: %d, hash: %s", rbft.id, result.View, result.SeqNo, len(result.Transactions), result.Hash)
 
-		if !rbft.inV(result.View) {
-			rbft.logger.Debugf("Replica %d receives validated result whose view is in old view, now view=%v", rbft.id, rbft.view)
-			return nil
-		}
-		batch := &TransactionBatch{
-			TxList:    result.Transactions,
-			Timestamp: result.Timestamp,
-		}
-		cache := &cacheBatch{
-			batch:      batch,
-			seqNo:      result.SeqNo,
-			resultHash: result.Hash,
-		}
-		rbft.batchVdr.saveToCVB(result.Digest, cache)
-		rbft.sendPendingPrePrepares()
 	} else {
 		rbft.logger.Debugf("Replica %d received validated batch for view=%d/seqNo=%d, batch size: %d, hash: %s",
 			rbft.id, result.View, result.SeqNo, len(result.Transactions), result.Hash)

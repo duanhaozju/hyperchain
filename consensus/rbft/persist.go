@@ -31,19 +31,21 @@ func (rbft *rbftImpl) GetCurrentBlockInfo(namespace string) (uint64, []byte, []b
 
 // GetBlockHeightAndHash returns the current block height and hash with the given namespace immediately
 func (rbft *rbftImpl) GetBlockHeightAndHash(namespace string) (uint64, string) {
-	bcInfo := ndb.GetChainCopy(namespace)
-	hash := base64.StdEncoding.EncodeToString(bcInfo.LatestBlockHash)
-	return bcInfo.Height, hash
+	//bcInfo := ndb.GetChainCopy(namespace)
+	//hash := base64.StdEncoding.EncodeToString(bcInfo.LatestBlockHash)
+	//return bcInfo.Height, hash
+	return 1, "XXX"
 }
 
 // GetHeightOfChain returns the current block height with the given namespace immediately
 func (rbft *rbftImpl) GetHeightOfChain(namespace string) uint64 {
-	return ndb.GetHeightOfChain(namespace)
+	return rbft.exec.storage.GetLastSet()
 }
 
 // GetGenesisOfChain returns the genesis block info of the ledger with the given namespace
 func (rbft *rbftImpl) GetGenesisOfChain(namespace string) (uint64, error) {
-	return ndb.GetGenesisTag(namespace)
+	//return ndb.GetGenesisTag(namespace)
+	return 1, nil
 }
 
 // persistQSet persists marshaled pre-prepare message to database

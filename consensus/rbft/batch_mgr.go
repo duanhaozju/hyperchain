@@ -9,9 +9,9 @@ import (
 
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/consensus/txpool"
+	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/op/go-logging"
-	"github.com/hyperchain/hyperchain/core/types"
 )
 
 // batchManager manages basic batch issues, including:
@@ -70,16 +70,6 @@ func (bv *batchValidator) setCurrentVid(cvid *uint64) {
 // getCVB gets cacheValidatedBatch
 func (bv *batchValidator) getCVB() map[string]*cacheBatch {
 	return bv.cacheValidatedBatch
-}
-
-// getCacheBatchFromCVB gets cacheBatch from cacheValidatedBatch with specified digest
-func (bv *batchValidator) getCacheBatchFromCVB(digest string) *cacheBatch {
-	return bv.cacheValidatedBatch[digest]
-}
-
-// deleteCacheFromCVB deletes cacheBatch from cachedValidatedBatch with specified digest
-func (bv *batchValidator) deleteCacheFromCVB(digest string) {
-	delete(bv.cacheValidatedBatch, digest)
 }
 
 // newBatchValidator initializes an instance of batchValidator
@@ -194,8 +184,8 @@ func (rbft *rbftImpl) restartBatchTimer() {
 	rbft.logger.Debugf("Primary %d restarted the batch timer", rbft.id)
 }
 
-// primaryValidateBatch used by primary helps primary pre-validate the batch and stores this TransactionBatch
-func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatch, seqNo uint64) {
+// trySendPrePrepare used by primary helps primary update seqNo ans then send prePrepare
+func (rbft *rbftImpl) trySendPrePrepare(digest string, batch *TransactionBatch, seqNo uint64) {
 	// for keep the previous vid before viewchange, we may need to specify the vid to start validate batch
 	var n uint64
 	if seqNo != 0 {
@@ -203,19 +193,10 @@ func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 	} else {
 		n = rbft.seqNo + 1
 	}
-
-	// ignore too many validated batch as we limited the high watermark in send pre-prepare
-	if rbft.batchVdr.validateCount >= rbft.L {
-		rbft.logger.Warningf("Primary %d try to validate batch for vid = %d, but we had already send %d ValidateEvent", rbft.id, n, rbft.batchVdr.validateCount)
-		rbft.batchMgr.txPool.PutBatchIntoPending(digest)
-		return
-	}
-
 	rbft.seqNo = n
-	rbft.batchVdr.validateCount++
 
-	batch.SeqNo = n
 	// store batch to outstandingReqBatches until execute this batch
+	batch.SeqNo = n
 	rbft.storeMgr.outstandingReqBatches[digest] = batch
 	rbft.storeMgr.txBatchStore[digest] = batch
 
@@ -223,10 +204,9 @@ func (rbft *rbftImpl) primaryValidateBatch(digest string, batch *TransactionBatc
 		rbft.id, rbft.view, n, len(batch.HashList), batch.Timestamp)
 	// here we soft start a new view timer with requestTimeout+validateTimeout, if primary cannot execute this batch
 	// during that timeout, we think there may exist some problems with this primary which will trigger viewchange
-	rbft.softStartNewViewTimer(rbft.timerMgr.getTimeoutValue(REQUEST_TIMER)+rbft.timerMgr.getTimeoutValue(VALIDATE_TIMER),
+	rbft.softStartNewViewTimer(rbft.timerMgr.getTimeoutValue(REQUEST_TIMER),
 		fmt.Sprintf("New request batch for view=%d/seqNo=%d", rbft.view, n))
-	//rbft.helper.ValidateBatch(digest, batch.TxList, batch.Timestamp, n, rbft.view, true)
-	rbft.sendPrePrepare(n, digest, "", batch)
+	rbft.sendPrePrepare(n, digest, batch)
 
 }
 
@@ -293,10 +273,10 @@ func (rbft *rbftImpl) findNextValidateBatch() (find bool, digest string, txBatch
 		rbft.batchVdr.setCurrentVid(&currentVid)
 
 		txBatch = &TransactionBatch{
-			TxList:     batch,
-			HashList:   preprep.HashBatch.List,
-			Timestamp:  preprep.HashBatch.Timestamp,
-			SeqNo:      preprep.SequenceNumber,
+			TxList:    batch,
+			HashList:  preprep.HashBatch.List,
+			Timestamp: preprep.HashBatch.Timestamp,
+			SeqNo:     preprep.SequenceNumber,
 		}
 		rbft.storeMgr.txBatchStore[preprep.BatchDigest] = txBatch
 		rbft.storeMgr.outstandingReqBatches[preprep.BatchDigest] = txBatch

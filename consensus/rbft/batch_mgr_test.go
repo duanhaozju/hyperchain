@@ -68,9 +68,6 @@ func TestCVB(t *testing.T) {
 	CVB := make(map[string]*cacheBatch)
 	CVB[cb1.resultHash] = cb1
 	ast.Equal(CVB, bv.getCVB(), "getCVB failed")
-	ast.Equal(cb1, bv.getCacheBatchFromCVB(cb1.resultHash), "getCacheBatchFromCVB failed")
-	bv.deleteCacheFromCVB(cb1.resultHash)
-	ast.Equal(0, len(bv.getCVB()), "deleteCacheFromCVB failed")
 }
 
 func TestBatchTimer(t *testing.T) {
@@ -115,9 +112,9 @@ func TestPrimaryValidateBatch(t *testing.T) {
 		HashList:  []string{"txHash1"},
 		Timestamp: time.Now().UnixNano(),
 	}
-	rbft.primaryValidateBatch("test1", txBatch, 0)
+	rbft.trySendPrePrepare("test1", txBatch, 0)
 	ast.Equal(uint64(1), rbft.seqNo, "seqNo increase failed")
-	rbft.primaryValidateBatch("test2", txBatch, 100)
+	rbft.trySendPrePrepare("test2", txBatch, 100)
 	ast.Equal(uint64(100), rbft.seqNo, "seqNo increase failed")
 }
 

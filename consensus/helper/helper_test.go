@@ -149,7 +149,7 @@ func TestVcReset(t *testing.T) {
 	h := NewHelper(im, em)
 	vcResetEvent := event.VCResetEvent{
 		SeqNo: 12345,
-		View: 1,
+		View:  1,
 	}
 	sub := im.Subscribe(vcResetEvent)
 

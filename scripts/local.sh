@@ -163,11 +163,11 @@ f_distribute(){
         if [ ! -d "${DUMP_PATH}/node${j}/hypercli" ];then
             mkdir ${DUMP_PATH}/node${j}/hypercli
         fi
-        if [ ! -e "${CLI_PATH}/hypercli" ]; then
-            f_rebuild_hypercli
-        fi
-        cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
-        cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
+#        if [ ! -e "${CLI_PATH}/hypercli" ]; then
+#            f_rebuild_hypercli
+#        fi
+#        cp -rf  ${CLI_PATH}/hypercli ${DUMP_PATH}/node${j}/hypercli
+#        cp -rf  ${CLI_PATH}/keyconfigs ${DUMP_PATH}/node${j}/hypercli
 
         # distribute executor
         cp -rf ${DUMP_PATH}/executor ${DUMP_PATH}/node${j}/

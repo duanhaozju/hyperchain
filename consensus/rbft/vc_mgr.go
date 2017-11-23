@@ -1138,7 +1138,7 @@ func (rbft *rbftImpl) primaryResendBatch(xset Xset) {
 			if !ok {
 				rbft.logger.Errorf("in Xset %s exists, but in Replica %d txBatchStore there is no such batch digest", d, rbft.id)
 			} else if i > rbft.exec.lastExec {
-				rbft.primaryValidateBatch(d, batch, i)
+				rbft.trySendPrePrepare(d, batch, i)
 			}
 		}
 	}

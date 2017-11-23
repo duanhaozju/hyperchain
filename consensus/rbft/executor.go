@@ -7,15 +7,15 @@ import (
 	"fmt"
 
 	"github.com/hyperchain/hyperchain/consensus"
-	"github.com/hyperchain/hyperchain/manager/protos"
 	"github.com/hyperchain/hyperchain/core/oplog"
-	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/hyperchain/hyperchain/core/oplog/kvlog"
 	opLog "github.com/hyperchain/hyperchain/core/oplog/proto"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/op/go-logging"
 	"github.com/hyperchain/hyperchain/manager/event"
+	"github.com/op/go-logging"
 )
 
 // executor manages exec related params

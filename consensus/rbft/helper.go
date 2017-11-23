@@ -208,7 +208,15 @@ func (rbft *rbftImpl) committed(digest string, v uint64, n uint64) bool {
 		return false
 	}
 
-	cmtCount := len(cert.commit)
+	cmtCount := 0
+	for cmt := range cert.commit {
+		if cmt.InvalidTxsHash != cert.invalidTxsHash {
+			rbft.logger.Warningf("Replica %d received commit from replica %d with the same index but different "+
+				"invalidHash, self: %s, received: %s", rbft.id, cmt.ReplicaId, cert.invalidTxsHash, cmt.InvalidTxsHash)
+			// TODO send viewchange?
+		}
+		cmtCount++
+	}
 
 	rbft.logger.Debugf("Replica %d commit count for view=%d/seqNo=%d: %d",
 		rbft.id, v, n, cmtCount)
@@ -342,7 +350,6 @@ func (rbft *rbftImpl) stopFirstRequestTimer() {
 // deleteExistedTx delete batch with the given digest from cacheValidatedBatch and outstandingReqBatches
 func (rbft *rbftImpl) deleteExistedTx(digest string) {
 	rbft.batchVdr.updateLCVid()
-	rbft.batchVdr.deleteCacheFromCVB(digest)
 	delete(rbft.storeMgr.outstandingReqBatches, digest)
 }
 

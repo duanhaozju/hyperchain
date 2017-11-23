@@ -25,15 +25,16 @@ type msgID struct {
 
 // cached consensus msgs related to batch
 type msgCert struct {
-	resultHash   string           // validated result hash of primary
-	prePrepare   *PrePrepare      // pre-prepare msg
-	sentPrepare  bool             // track whether broadcast prepare for this batch before or not
-	prepare      map[Prepare]bool // prepare msgs received from other nodes
-	sentValidate bool             // track whether sent validate event to executor module before or not
-	validated    bool             // track whether received the validated result of this batch or not
-	sentCommit   bool             // track whether broadcast commit for this batch before or not
-	commit       map[Commit]bool  // commit msgs received from other nodes
-	sentExecute  bool             // track whether sent execute event to executor module before or not
+	resultHash     string           // validated result hash
+	prePrepare     *PrePrepare      // pre-prepare msg
+	sentPrepare    bool             // track whether broadcast prepare for this batch before or not
+	prepare        map[Prepare]bool // prepare msgs received from other nodes
+	sentValidate   bool             // track whether sent validate event to executor module before or not
+	validated      bool             // track whether received the validated result of this batch or not
+	sentCommit     bool             // track whether broadcast commit for this batch before or not
+	commit         map[Commit]bool  // commit msgs received from other nodes
+	invalidTxsHash string           // record invalid txs' hash of this batch
+	sentExecute    bool             // track whether sent execute event to executor module before or not
 }
 
 // -----------checkpoint related structs-----------------
