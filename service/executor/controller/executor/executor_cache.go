@@ -24,7 +24,7 @@ import (
 // Cache represents the caches that used in executor.
 type Cache struct {
 	validationEventC        chan *event.ValidationEvent // validation event buffer
-	commitEventC            chan event.CommitEvent      // commit event buffer
+	commitEventC            chan *event.CommitEvent     // commit event buffer
 	validationResultCache   *common.Cache               // cache for validation result
 	pendingValidationEventQ *common.Cache               // cache for storing validation event
 	syncCache               *common.Cache               // cache for storing stuff in sync
@@ -41,7 +41,7 @@ type Peer struct {
 func newExecutorCache() *Cache {
 	cache := &Cache{
 		validationEventC: make(chan *event.ValidationEvent, VALIDATEQUEUESIZE),
-		commitEventC:     make(chan event.CommitEvent, COMMITQUEUESIZE),
+		commitEventC:     make(chan *event.CommitEvent, COMMITQUEUESIZE),
 	}
 	validationResC, _ := common.NewCache()
 	cache.validationResultCache = validationResC
@@ -105,15 +105,15 @@ func (executor *Executor) fetchValidationResult(tag ValidationTag) (*ValidationR
 }
 
 // addValidationEvent pushes a validation event to channel buffer.
-func (executor *Executor) addValidationEvent(ev *event.ValidationEvent) {
-	executor.cache.validationEventC <- ev
-	atomic.AddInt32(&executor.context.validateQueueLen, 1)
-	executor.logger.Debugf("[Namespace = %s] receive a validation event #%d", executor.namespace, ev.SeqNo)
+func (e *Executor) addValidationEvent(ev *event.ValidationEvent) {
+	e.cache.validationEventC <- ev
+	atomic.AddInt32(&e.context.validateQueueLen, 1)
+	e.logger.Debugf("receive a validation event #%d", e.namespace, ev.SeqNo)
 }
 
 // fetchValidationEvent fetches a validation event from channel buffer.
-func (executor *Executor) fetchValidationEvent() chan *event.ValidationEvent {
-	return executor.cache.validationEventC
+func (e *Executor) fetchValidationEvent() chan *event.ValidationEvent {
+	return e.cache.validationEventC
 }
 
 // processValidationDone is the callback func after validation process finished.
@@ -122,20 +122,20 @@ func (executor *Executor) processValidationDone() {
 }
 
 // addCommitEvent pushes a commit event to channel buffer.
-func (executor *Executor) addCommitEvent(ev event.CommitEvent) {
-	executor.cache.commitEventC <- ev
-	atomic.AddInt32(&executor.context.commitQueueLen, 1)
-	executor.logger.Debugf("[Namespace = %s] receive a commit event #%d", executor.namespace, ev.SeqNo)
+func (e *Executor) addCommitEvent(ev *event.CommitEvent) {
+	e.cache.commitEventC <- ev
+	atomic.AddInt32(&e.context.commitQueueLen, 1)
+	e.logger.Debugf("receive a commit event #%d", e.namespace, ev.SeqNo)
 }
 
 // fetchCommitEvent fetches a commit event from channel buffer.
-func (executor *Executor) fetchCommitEvent() chan event.CommitEvent {
-	return executor.cache.commitEventC
+func (e *Executor) fetchCommitEvent() chan *event.CommitEvent {
+	return e.cache.commitEventC
 }
 
 // processCommitDone is the callback func after commit process finished.
-func (executor *Executor) processCommitDone() {
-	atomic.AddInt32(&executor.context.commitQueueLen, -1)
+func (e *Executor) processCommitDone() {
+	atomic.AddInt32(&e.context.commitQueueLen, -1)
 }
 
 // addToSyncCache adds a block to cache which arrives earlier than expect.

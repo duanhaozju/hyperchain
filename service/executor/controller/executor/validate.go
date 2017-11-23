@@ -21,7 +21,7 @@ import (
 	"github.com/hyperchain/hyperchain/core/errors"
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/manager/event"
-	"github.com/hyperchain/hyperchain/manager/protos"
+	"time"
 )
 
 // ValidationTag unique identification for validation result,
@@ -53,36 +53,36 @@ type SubscriptionData struct {
 // Validate - the entry function of the validation process.
 // Receive the validation event as a parameter and cached them in the channel
 // if the pressure is too high.
-func (executor *Executor) Validate(validationEvent *event.ValidationEvent) {
-	executor.addValidationEvent(validationEvent)
+func (e *Executor) Validate(validationEvent *event.ValidationEvent) {
+	e.addValidationEvent(validationEvent)
 }
 
 // listenValidationEvent starts the validation backend process,
 // use to listen new validation event and dispatch it to the processor.
-func (executor *Executor) listenValidationEvent() {
-	executor.logger.Notice("validation backend start")
+func (e *Executor) listenValidationEvent() {
+	e.logger.Notice("validation backend start")
 	for {
 		select {
-		case <-executor.context.exit:
+		case <-e.context.exit:
 			// Tell to Exit
-			executor.logger.Notice("validation backend exit")
+			e.logger.Notice("validation backend exit")
 			return
-		case v := <-executor.getSuspend(IDENTIFIER_VALIDATION):
+		case v := <-e.getSuspend(IDENTIFIER_VALIDATION):
 			// Tell to pause
 			if v {
-				executor.logger.Notice("pause validation process")
-				executor.pauseValidation()
+				e.logger.Notice("pause validation process")
+				e.pauseValidation()
 			}
-		case ev := <-executor.fetchValidationEvent():
+		case ev := <-e.fetchValidationEvent():
 			// Handle the received validation event
-			if executor.isReadyToValidation() {
+			if e.isReadyToValidation() {
 				// Normally process the event
-				if success := executor.processValidationEvent(ev, executor.processValidationDone); success == false {
-					executor.logger.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
+				if success := e.processValidationEvent(ev, e.processValidationDone); success == false {
+					e.logger.Errorf("validate #%d failed, system crush down.", ev.SeqNo)
 				}
 			} else {
 				// Drop the event if needed
-				executor.dropValdiateEvent(ev, executor.processValidationDone)
+				e.dropValdiateEvent(ev, e.processValidationDone)
 			}
 		}
 	}
@@ -90,36 +90,36 @@ func (executor *Executor) listenValidationEvent() {
 
 // processValidationEvent processes validation event,
 // return true if process successfully, otherwise false will been returned.
-func (executor *Executor) processValidationEvent(validationEvent *event.ValidationEvent, done func()) bool {
+func (e *Executor) processValidationEvent(validationEvent *event.ValidationEvent, done func()) bool {
 	// Mark the busy of validation, and mark idle after finishing processing
 	// This process cannot be stopped
-	executor.markValidationBusy()
-	defer executor.markValidationIdle()
+	e.markValidationBusy()
+	defer e.markValidationIdle()
 
 	// If the event is not the current demand one, pending it
-	if !executor.context.isDemand(DemandSeqNo, validationEvent.SeqNo) {
-		executor.addPendingValidationEvent(validationEvent)
+	if !e.context.isDemand(DemandSeqNo, validationEvent.SeqNo) {
+		e.addPendingValidationEvent(validationEvent)
 		return true
 	}
-	if _, success := executor.process(validationEvent, done); success == false {
+	if _, success := e.process(validationEvent, done); success == false {
 		return false
 	}
-	executor.context.incDemand(DemandSeqNo)
+	e.context.incDemand(DemandSeqNo)
 	// Process all the pending events
-	return executor.processPendingValidationEvent(done)
+	return e.processPendingValidationEvent(done)
 }
 
 // processPendingValidationEvent handles all the validation events that is cached in the queue.
-func (executor *Executor) processPendingValidationEvent(done func()) bool {
-	if executor.cache.pendingValidationEventQ.Len() > 0 {
+func (e *Executor) processPendingValidationEvent(done func()) bool {
+	if e.cache.pendingValidationEventQ.Len() > 0 {
 		// Handle all the remain events sequentially
-		for executor.cache.pendingValidationEventQ.Contains(executor.context.getDemand(DemandSeqNo)) {
-			ev, _ := executor.fetchPendingValidationEvent(executor.context.getDemand(DemandSeqNo))
-			if _, success := executor.process(ev, done); success == false {
+		for e.cache.pendingValidationEventQ.Contains(e.context.getDemand(DemandSeqNo)) {
+			ev, _ := e.fetchPendingValidationEvent(e.context.getDemand(DemandSeqNo))
+			if _, success := e.process(ev, done); success == false {
 				return false
 			} else {
-				executor.context.incDemand(DemandSeqNo)
-				executor.cache.pendingValidationEventQ.RemoveWithCond(ev.SeqNo, RemoveLessThan)
+				e.context.incDemand(DemandSeqNo)
+				e.cache.pendingValidationEventQ.RemoveWithCond(ev.SeqNo, RemoveLessThan)
 			}
 		}
 	}
@@ -136,7 +136,7 @@ func (executor *Executor) dropValdiateEvent(validationEvent *event.ValidationEve
 
 // process specific implementation logic, including the signature checking,
 // the execution of transactions, ledger hash re-computation and etc.
-func (executor *Executor) process(validationEvent *event.ValidationEvent, done func()) (error, bool) {
+func (e *Executor) process(validationEvent *event.ValidationEvent, done func()) (error, bool) {
 	// Invoke the callback no matter success or fail
 	defer done()
 
@@ -145,19 +145,19 @@ func (executor *Executor) process(validationEvent *event.ValidationEvent, done f
 		invalidtxs []*types.InvalidTransactionRecord
 	)
 
-	invalidtxs, validtxs = executor.checkSign(validationEvent.Transactions)
-	err, validateResult := executor.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo, validationEvent.Timestamp)
+	invalidtxs, validtxs = e.checkSign(validationEvent.Transactions)
+	err, validateResult := e.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo, validationEvent.Timestamp)
 	if err != nil {
 		// short circuit if error occur during the transaction execution
-		executor.logger.Errorf("[Namespace = %s] process transaction batch #%d failed.", executor.namespace, validationEvent.SeqNo)
+		e.logger.Errorf("process transaction batch #%d failed.", e.namespace, validationEvent.SeqNo)
 		return err, false
 	}
 	// calculate validation result hash for comparison
-	hash := executor.calculateValidationResultHash(validateResult.MerkleRoot, validateResult.TxRoot, validateResult.ReceiptRoot)
-	executor.logger.Debugf("[Namespace = %s] invalid transaction number %d", executor.namespace, len(validateResult.InvalidTxs))
-	executor.logger.Debugf("[Namespace = %s] valid transaction number %d", executor.namespace, len(validateResult.ValidTxs))
-	executor.saveValidationResult(validateResult, validationEvent.SeqNo, hash)
-	executor.sendValidationResult(validateResult, validationEvent, hash)
+	hash := e.calculateValidationResultHash(validateResult.MerkleRoot, validateResult.TxRoot, validateResult.ReceiptRoot)
+	e.logger.Debugf("invalid transaction number %d", e.namespace, len(validateResult.InvalidTxs))
+	e.logger.Debugf("valid transaction number %d", e.namespace, len(validateResult.ValidTxs))
+	e.saveValidationResult(validateResult, validationEvent.SeqNo, hash)
+	e.sendValidationResult(validateResult, validationEvent, hash)
 	return nil, true
 }
 
@@ -306,14 +306,14 @@ func (executor *Executor) saveValidationResult(res *ValidationResultRecord, seqN
 }
 
 // sendValidationResult sends validation result to consensus module.
-func (executor *Executor) sendValidationResult(res *ValidationResultRecord, ev *event.ValidationEvent, hash common.Hash) {
-	executor.informConsensus(NOTIFY_VALIDATION_RES, protos.ValidatedTxs{
-		Transactions: res.ValidTxs,
-		SeqNo:        ev.SeqNo,
-		View:         ev.View,
-		Hash:         hash.Hex(),
-		Timestamp:    ev.Timestamp,
-		Digest:       ev.Digest,
+func (e *Executor) sendValidationResult(res *ValidationResultRecord, ev *event.ValidationEvent, hash common.Hash) {
+	e.CommitBlock(&event.CommitEvent{
+		SeqNo:      ev.SeqNo,
+		Timestamp:  ev.Timestamp,
+		CommitTime: time.Now().UnixNano(),
+		Flag:       true,
+		Hash:       hash.Hex(),
+		IsPrimary:  true,
 	})
 }
 

@@ -32,26 +32,26 @@ import (
 // CommitBlock is the entry function of the commit process.
 // Receive the commit event as a parameter and cached them in the channel
 // if the pressure is too high.
-func (executor *Executor) CommitBlock(ev event.CommitEvent) {
-	executor.addCommitEvent(ev)
+func (e *Executor) CommitBlock(ev *event.CommitEvent) {
+	e.addCommitEvent(ev)
 }
 
 // listenCommitEvent is commit backend process, use to listen new commit event and dispatch it to the processor.
-func (executor *Executor) listenCommitEvent() {
-	executor.logger.Notice("commit backend start")
+func (e *Executor) listenCommitEvent() {
+	e.logger.Notice("commit backend start")
 	for {
 		select {
-		case <-executor.context.exit:
-			executor.logger.Notice("commit backend exit")
+		case <-e.context.exit:
+			e.logger.Notice("commit backend exit")
 			return
-		case v := <-executor.getSuspend(IDENTIFIER_COMMIT):
+		case v := <-e.getSuspend(IDENTIFIER_COMMIT):
 			if v {
-				executor.logger.Notice("pause commit process")
-				executor.pauseCommit()
+				e.logger.Notice("pause commit process")
+				e.pauseCommit()
 			}
-		case ev := <-executor.fetchCommitEvent():
-			if success := executor.processCommitEvent(ev); success == false {
-				executor.logger.Errorf("commit block #%d failed, system crush down.", ev.SeqNo)
+		case ev := <-e.fetchCommitEvent():
+			if success := e.processCommitEvent(ev); success == false {
+				e.logger.Errorf("commit block #%d failed, system crush down.", ev.SeqNo)
 			}
 		}
 	}
@@ -60,40 +60,41 @@ func (executor *Executor) listenCommitEvent() {
 // processCommitEvent is the handler of the commit process,
 // consumes commit event from the channel, executes the commit logic
 // and notifies backend via callback function.
-func (executor *Executor) processCommitEvent(ev event.CommitEvent) bool {
-	executor.markCommitBusy()
-	defer executor.markCommitIdle()
+func (e *Executor) processCommitEvent(ev *event.CommitEvent) bool {
+	e.markCommitBusy()
+	defer e.markCommitIdle()
 
 	// Legitimacy validation
-	if !executor.commitValidationCheck(ev) {
-		executor.logger.Errorf("commit event %d not satisfy the demand", ev.SeqNo)
+	if !e.commitValidationCheck(ev) {
+		e.logger.Errorf("commit event %d not satisfy the demand", ev.SeqNo)
 		return false
 	}
-	record := executor.getValidateRecord(ValidationTag{ev.Hash, ev.SeqNo})
+	record := e.getValidateRecord(ValidationTag{ev.Hash, ev.SeqNo})
 	if record == nil {
-		executor.logger.Errorf("no validation record for #%d found", ev.SeqNo)
+		e.logger.Errorf("no validation record for #%d found", ev.SeqNo)
 		return false
 	}
 	// Construct the Block with given CommitEvent
-	block := executor.constructBlock(ev, record)
+	block := e.constructBlock(ev, record)
 	if block == nil {
-		executor.logger.Errorf("construct new block for %d commit event failed.", ev.SeqNo)
+		e.logger.Errorf("construct new block for %d commit event failed.", ev.SeqNo)
 		return false
 	}
 	// Write block data to database in an atomic operation
-	if err := executor.writeBlock(block, record); err != nil {
-		executor.logger.Errorf("write block for #%d failed. err %s", ev.SeqNo, err.Error())
+	if err := e.writeBlock(block, record); err != nil {
+		e.logger.Errorf("write block for #%d failed. err %s", ev.SeqNo, err.Error())
 		return false
 	}
 	// Throw all invalid transactions back.
 	if ev.IsPrimary {
 		// TODO save invalid transaction by itself
-		executor.throwInvalidTransactionBack(record.InvalidTxs)
+		// TODO(Xiaoyi Wang): handle invalid transaction
+		e.throwInvalidTransactionBack(record.InvalidTxs)
 	}
 
-	executor.cache.validationResultCache.Remove(ValidationTag{ev.Hash, ev.SeqNo})
-	executor.context.incDemand(DemandNumber)
-	executor.processCommitDone()
+	e.cache.validationResultCache.Remove(ValidationTag{ev.Hash, ev.SeqNo})
+	e.context.incDemand(DemandNumber)
+	e.processCommitDone()
 
 	return true
 }
@@ -167,7 +168,7 @@ func (executor *Executor) getValidateRecord(tag ValidationTag) *ValidationResult
 }
 
 // constructBlock constructs a block with given data.
-func (executor *Executor) constructBlock(ev event.CommitEvent, record *ValidationResultRecord) *types.Block {
+func (e *Executor) constructBlock(ev *event.CommitEvent, record *ValidationResultRecord) *types.Block {
 	// Generate a new block with the argument in cache
 	bloom, err := types.CreateBloom(record.Receipts)
 	if err != nil {
@@ -175,7 +176,7 @@ func (executor *Executor) constructBlock(ev event.CommitEvent, record *Validatio
 	}
 	newBlock := &types.Block{
 		Transactions: nil,
-		ParentHash:   chain.GetLatestBlockHash(executor.namespace),
+		ParentHash:   chain.GetLatestBlockHash(e.namespace),
 		MerkleRoot:   record.MerkleRoot,
 		TxRoot:       record.TxRoot,
 		ReceiptRoot:  record.ReceiptRoot,
@@ -190,7 +191,7 @@ func (executor *Executor) constructBlock(ev event.CommitEvent, record *Validatio
 		newBlock.Transactions = make([]*types.Transaction, len(record.ValidTxs))
 		copy(newBlock.Transactions, record.ValidTxs)
 	}
-	executor.logger.Debugf("ParentHash: %v, Number: %v, Timestamp: %v, TxRoot: %v, ReceiptRoot: %v, MerkleRoot: %v",
+	e.logger.Debugf("ParentHash: %v, Number: %v, Timestamp: %v, TxRoot: %v, ReceiptRoot: %v, MerkleRoot: %v",
 		common.Bytes2Hex(newBlock.ParentHash), newBlock.Number, newBlock.Timestamp,
 		common.Bytes2Hex(newBlock.TxRoot), common.Bytes2Hex(newBlock.ReceiptRoot), common.Bytes2Hex(newBlock.MerkleRoot))
 	newBlock.BlockHash = newBlock.Hash().Bytes()
@@ -198,20 +199,20 @@ func (executor *Executor) constructBlock(ev event.CommitEvent, record *Validatio
 }
 
 // commitValidationCheck checks whether this commit event is the demand one.
-func (executor *Executor) commitValidationCheck(ev event.CommitEvent) bool {
+func (e *Executor) commitValidationCheck(ev *event.CommitEvent) bool {
 	// 1. Verify that the block height is consistent
-	if !executor.context.isDemand(DemandNumber, ev.SeqNo) {
-		executor.logger.Errorf("receive a commit event %d which is not demand, drop it.", ev.SeqNo)
+	if !e.context.isDemand(DemandNumber, ev.SeqNo) {
+		e.logger.Errorf("receive a commit event %d which is not demand, drop it.", ev.SeqNo)
 		return false
 	}
 	// 2. Verify whether validation result exists
-	record := executor.getValidateRecord(ValidationTag{ev.Hash, ev.SeqNo})
+	record := e.getValidateRecord(ValidationTag{ev.Hash, ev.SeqNo})
 	if record == nil {
 		return false
 	}
 	// 3. Verify whether ev's seqNo equal to record's seqNo which acts as block number
 	if record.SeqNo != ev.SeqNo {
-		executor.logger.Errorf("miss match validation seqNo<#%d>and commit seqNo<#%d>  commit for block failed",
+		e.logger.Errorf("miss match validation seqNo<#%d>and commit seqNo<#%d>  commit for block failed",
 			record.SeqNo, ev.SeqNo)
 		return false
 	}

@@ -7,6 +7,7 @@ import (
 )
 
 func (e *Executor) Dispatch(ol *oplog.LogEntry) {
+	//TODO(Xiaoyi): this tod is very very important !!!, we should dispatch oplog by ol.lid order
 	if ol == nil {
 		e.logger.Errorf("Invalid oplog entry %v", ol)
 	}
