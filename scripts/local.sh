@@ -202,7 +202,22 @@ f_x_in_linux_cmd(){
 }
 
 f_x_in_mac_cmd(){
+
+    if ${START_ORDER} ; then
+        f_start_order_mac ${1}
+    elif ${START_EXECUTOR} ; then
+        f_start_executor_mac ${1}
+    else
+        f_start_order_mac ${1}
+        f_start_executor_mac ${1}
+    fi
+}
+
+f_start_order_mac(){
     osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/bin' && ./start_order.sh"'
+}
+
+f_start_executor_mac(){
     osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/bin' && ./start_executor.sh"'
 }
 
@@ -298,6 +313,9 @@ HYPERJVM=true
 # run process or not? default = true
 RUN=true
 
+START_ORDER=false
+START_EXECUTOR=false
+
 # 1.check local env
 f_check_local_env
 
@@ -324,6 +342,10 @@ do
         MODE=true; shift;;
     -n|--run)
         RUN=false; shift;;
+    -o|--order)
+        START_ORDER=true; shift;;
+    -e|--executor)
+        START_EXECUTOR=true; shift;;
     --) shift; break;;
     -*) help; exit 1;;
     *) break;;

@@ -11,6 +11,7 @@ import (
 	"github.com/hyperchain/hyperchain/manager/filter"
 	"github.com/hyperchain/hyperchain/namespace/rpc"
 
+	"github.com/hyperchain/hyperchain/core/ledger/chain"
 	"github.com/hyperchain/hyperchain/service/executor/controller/executor"
 	"github.com/hyperchain/hyperchain/service/executor/handler"
 	"github.com/op/go-logging"
@@ -129,7 +130,7 @@ func (es *executorServiceImpl) init() error {
 	es.logger.Infof("init executor client for namespace %s", es.namespace)
 
 	// 1. init DB for current executor client.
-	err := hyperdb.InitDatabase(es.conf, es.namespace)
+	err := chain.InitDBForNamespace(es.conf, es.namespace)
 	if err != nil {
 		es.logger.Errorf("Init db for namespace: %s error, %v", es.namespace, err)
 		return err
@@ -191,25 +192,23 @@ func (es *executorServiceImpl) Start() error {
 		return nil
 	}
 
-	// 1. start executor and client client
-	err := hyperdb.StartDatabase(es.conf, es.namespace)
-	if err != nil {
-		es.logger.Errorf("StartExecutorServiceByName database for namespace %s error, %v", es.namespace, err)
-		return err
-	}
+	//TODO(Xiaoyi Wang): add restart flag judge.
+	//err := chain.InitDBForNamespace(es.conf, es.namespace)
+	//if err != nil {
+	//	es.logger.Errorf("Init db for namespace: %s error, %v", es.namespace, err)
+	//	return err
+	//}
+
 	es.logger.Noticef("start db for namespace: %s successful", es.namespace)
 
 	// 2. start executor
-	err = es.executor.Start()
+	err := es.executor.Start()
 	if err != nil {
 		es.logger.Errorf("StartExecutorServiceByName executor for namespace %s error, %v", es.namespace, err)
 		return err
 	}
 
-	//append: to satisfy apiserver tests.
 	es.status.setState(running)
-
-	//es.executorApi = api.NewExecutorApi(es.executor, es.namespace)
 
 	// 3. establish connection
 	err = es.client.Connect()
@@ -228,10 +227,10 @@ func (es *executorServiceImpl) Start() error {
 
 	es.status.setState(running)
 
-	// 8. start rpc processor
-	if err = es.rpc.Start(); err != nil {
-		return err
-	}
+	//// 8. start rpc processor
+	//if err = es.rpc.Start(); err != nil {
+	//	return err
+	//}
 
 	return nil
 

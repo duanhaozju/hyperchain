@@ -74,7 +74,7 @@ func InitDatabase(conf *common.Config, namespace string) error {
 	if exists {
 		msg := "Try to init an inited db " + namespace
 		log.Notice(msg)
-		return errors.New(msg)
+		return nil
 	}
 
 	for idx := 0; idx < hcom.DBINDEX_MAX; idx++ {
