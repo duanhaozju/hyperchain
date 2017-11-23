@@ -10,3 +10,7 @@ message LogEntry{
     Type type = 2; // log type
     bytes payload = 3;// log content
 }
+
+message cMap{
+    map<uint64, uint64> Map = 1;
+}
