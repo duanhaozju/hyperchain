@@ -25,7 +25,6 @@ const (
 	entryPrefix          = "entry."
 	lastSetPrefix        = "lastSet"
 	lastCommitPrefix     = "lastCommit"
-	lastCheckpointPrefix = "lastCheckpoint"
 	checkpointMapPrefix  = "checkpointMap"
 )
 
@@ -33,7 +32,6 @@ const (
 type kvLoggerImpl struct {
 	lastSet				uint64 // The last set entry's index
 	lastCommit			uint64 // The last set entry's index
-	lastCheckpoint		uint64 // The last set entry's index
 	checkpointPeriod	uint64
 	checkpointMap 		map[uint64]uint64
 
@@ -215,28 +213,28 @@ func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64 , *oplog.LogEntry
 	return 0, nil, err
 }
 
-// GetLastSet returns lastSet
-func (kvLogger *kvLoggerImpl) GetLastSet() uint64 {
-	lastSet := atomic.LoadUint64(&kvLogger.lastSet)
-	return lastSet
-}
-
 func (kvLogger *kvLoggerImpl) GetLastCommit() uint64 {
-	lastCommit := atomic.LoadUint64(&kvLogger.lastCommit)
-	return lastCommit
+	kvLogger.mu.Lock()
+	defer kvLogger.mu.Unlock()
+
+	return kvLogger.lastCommit
 }
 
-func (kvLogger *kvLoggerImpl) SetLastCheckpoint(id uint64) {
-	atomic.StoreUint64(&kvLogger.lastCheckpoint, id)
-	kvLogger.storeLastCheckpoint()
-}
+func (kvLogger *kvLoggerImpl) SetStableCheckpoint(id uint64) {
+	kvLogger.mu.Lock()
+	defer kvLogger.mu.Unlock()
 
-func (kvLogger *kvLoggerImpl) GetLastCheckpoint() uint64 {
-	lastCheckpoint := atomic.LoadUint64(&kvLogger.lastCheckpoint)
-	return lastCheckpoint
+	for i := range kvLogger.checkpointMap {
+		if i <= id {
+			delete(kvLogger.checkpointMap, i)
+		}
+	}
 }
 
 func (kvLogger *kvLoggerImpl) GetHeightAndDigest() (uint64, string, error) {
+	kvLogger.mu.Lock()
+	defer kvLogger.mu.Unlock()
+
 	_, entry, err := kvLogger.getBySeqNo(kvLogger.lastCommit)
 	if err != nil {
 		return 0, "", err
@@ -299,31 +297,6 @@ func (kvLogger *kvLoggerImpl) restoreLastCommit() error {
 	return nil
 }
 
-func (kvLogger *kvLoggerImpl) storeLastCheckpoint() error {
-
-	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, kvLogger.lastCheckpoint)
-	key := fmt.Sprintf("%s%s", modulePrefix, lastCheckpointPrefix)
-	if err := kvLogger.db.Put([]byte(key), b); err != nil {
-		kvLogger.logger.Errorf("Cannot store lastCheckpoint in database.")
-		return err
-	} else {
-		return nil
-	}
-}
-
-func (kvLogger *kvLoggerImpl) restoreLastCheckpoint() error {
-
-	key := fmt.Sprintf("%s%s", modulePrefix, lastCheckpointPrefix)
-	raw, err := kvLogger.db.Get([]byte(key))
-	if err != nil {
-		kvLogger.logger.Errorf("Cannot restore lastCheckpoint from database.")
-		return err
-	}
-	kvLogger.lastCheckpoint = binary.LittleEndian.Uint64(raw)
-	return nil
-}
-
 func (kvLogger *kvLoggerImpl) storeCheckpointMap() error {
 
 	checkpointMap := &oplog.CMap{Map: kvLogger.checkpointMap}
@@ -366,10 +339,6 @@ func (kvLogger *kvLoggerImpl) restoreKvLogger() {
 	err = kvLogger.restoreLastCommit()
 	if err != nil {
 		kvLogger.lastCommit = uint64(0)
-	}
-	err = kvLogger.restoreLastCheckpoint()
-	if err != nil {
-		kvLogger.lastCheckpoint = uint64(0)
 	}
 	err = kvLogger.restoreCheckpointMap()
 	if err != nil {

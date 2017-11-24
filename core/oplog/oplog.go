@@ -15,9 +15,8 @@ type OpLog interface {
 	Log
 	Reset(lid uint64) error //reset committed log id to target lid.
 	Iterator() Iterator
-	GetLastSet() uint64
 	GetLastCommit() uint64
-	SetLastCheckpoint(checkpoint uint64)
+	SetStableCheckpoint(checkpoint uint64)
 	GetHeightAndDigest() (uint64, string, error)
 }
 
