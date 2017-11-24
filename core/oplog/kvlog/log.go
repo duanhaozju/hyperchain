@@ -2,8 +2,6 @@ package kvlog
 
 import (
 	"fmt"
-	"errors"
-	"sync/atomic"
 	"sync"
 	"encoding/binary"
 
@@ -75,7 +73,7 @@ func (kvLogger *kvLoggerImpl) Append(entry *oplog.LogEntry) error {
 	raw, err := proto.Marshal(entry)
 	if err != nil {
 		kvLogger.logger.Errorf("Append, marshal error: can not marshal oplog.LogEntry", err)
-		return err
+		return ErrMarshal
 	}
 	key := fmt.Sprintf("%s%s%020d", modulePrefix, entryPrefix, entry.Lid)
 	if err = kvLogger.db.Put([]byte(key), raw); err == nil {
@@ -100,7 +98,7 @@ func (kvLogger *kvLoggerImpl) Append(entry *oplog.LogEntry) error {
 		return nil
 	}
 	kvLogger.logger.Errorf("Cannot append entry in opLog", err)
-	return err
+	return ErrAppendFail
 }
 
 // Fetch get an entry by lid. If this entry is in memory, it can be read in cache.
@@ -110,7 +108,7 @@ func (kvLogger *kvLoggerImpl) Fetch(lid uint64) (*oplog.LogEntry, error) {
 	defer kvLogger.mu.Unlock()
 	if lid > kvLogger.lastSet {
 		kvLogger.logger.Errorf("lid is too large")
-		return nil, errors.New(fmt.Sprint("lid is too large"))
+		return nil, ErrLidTooLarge
 	}
 
 	if entry, ok := kvLogger.cache[lid]; ok {
@@ -120,13 +118,13 @@ func (kvLogger *kvLoggerImpl) Fetch(lid uint64) (*oplog.LogEntry, error) {
 	raw, err := kvLogger.db.Get([]byte(key))
 	if err != nil {
 		kvLogger.logger.Errorf("Cannot fetch entry from opLog, lid : %d", lid)
-		return nil, err
+		return nil, ErrNoLid
 	}
 
 	entry := &oplog.LogEntry{}
 	if err = proto.Unmarshal(raw, entry); err != nil{
 		kvLogger.logger.Errorf("Fetch, unmarshal error: can not unmarshal oplog.LogEntry", err)
-		return nil, err
+		return nil, ErrUnmarshal
 	} else {
 		return entry, nil
 	}
@@ -140,7 +138,7 @@ func (kvLogger *kvLoggerImpl) Reset(seqNo uint64) error {
 
 	if kvLogger.lastCommit < seqNo {
 		kvLogger.logger.Errorf("This seqNo is to large")
-		return errors.New("This seqNo is to large")
+		return ErrSeqNoTooLarge
 	}
 	lid, _, err := kvLogger.getBySeqNo(seqNo)
 	if err != nil {
@@ -175,8 +173,7 @@ func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64 , *oplog.LogEntry
 
 	if !it.Seek(earlistLid) {
 		kvLogger.logger.Errorf("Cannot find lid with %d in database", earlistLid)
-		err := errors.New(fmt.Sprintf("Cannot find lid with %d in database", earlistLid))
-		return 0, nil, err
+		return 0, nil, ErrNoLid
 	}
 	for true {
 		if earlistSeqNo < seqNo {
@@ -185,18 +182,17 @@ func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64 , *oplog.LogEntry
 		entry := &oplog.LogEntry{}
 		if err := proto.Unmarshal(it.Value(), entry); err != nil{
 			kvLogger.logger.Errorf("find, unmarshal error: can not unmarshal oplog.LogEntry", err)
-			return 0, nil, err
+			return 0, nil, ErrUnmarshal
 		} else {
 			if entry.Type == oplog.LogEntry_TransactionList {
 				event := &event.ValidationEvent{}
 				if err := proto.Unmarshal(entry.Payload, event); err != nil{
 					kvLogger.logger.Errorf("find, unmarshal error: can not unmarshal ValidationEvent", err)
-					return 0, nil, err
+					return 0, nil, ErrUnmarshal
 				}
 				if earlistSeqNo != event.SeqNo {
 					kvLogger.logger.Errorf("find, seqNo didn't match")
-					err = errors.New("find, seqNo didn't match")
-					return 0, nil, err
+					return 0, nil, ErrMismatch
 				}
 				if event.SeqNo == seqNo {
 					return earlistLid, entry, nil
@@ -209,8 +205,7 @@ func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64 , *oplog.LogEntry
 			break
 		}
 	}
-	err := errors.New("find, cannot find this seqNo")
-	return 0, nil, err
+	return 0, nil, ErrNoSeqNo
 }
 
 func (kvLogger *kvLoggerImpl) GetLastCommit() uint64 {
@@ -242,7 +237,7 @@ func (kvLogger *kvLoggerImpl) GetHeightAndDigest() (uint64, string, error) {
 	event := &event.ValidationEvent{}
 	if err := proto.Unmarshal(entry.Payload, event); err != nil{
 		kvLogger.logger.Errorf("find, unmarshal error: can not unmarshal ValidationEvent", err)
-		return 0, "", err
+		return 0, "", ErrUnmarshal
 	}
 	return kvLogger.lastCommit, event.Digest, nil
 }
