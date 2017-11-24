@@ -3,9 +3,9 @@ package jsonrpc
 import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/ipc"
-	"github.com/hyperchain/hyperchain/namespace"
 	"github.com/op/go-logging"
 	"sync"
+	"github.com/hyperchain/hyperchain/common/processor"
 )
 
 var (
@@ -40,18 +40,18 @@ type RPCServerImpl struct {
 }
 
 // GetRPCServer creates and returns a new RPCServerImpl instance implements RPCServer interface.
-func GetRPCServer(nr namespace.NamespaceManager, config *common.Config) RPCServer {
+func GetRPCServer(nmp processor.NsMgrProcessor, config *common.Config, isExecutor bool) RPCServer {
 	log = common.GetLogger(common.DEFAULT_LOG, "jsonrpc")
 	once.Do(func() {
-		rpcs = newRPCServer(nr, config)
+		rpcs = newRPCServer(nmp, config, isExecutor)
 	})
 	return rpcs
 }
 
-func newRPCServer(nr namespace.NamespaceManager, config *common.Config) *RPCServerImpl {
+func newRPCServer(nmp processor.NsMgrProcessor, config *common.Config, isExecutor bool) *RPCServerImpl {
 	rsi := &RPCServerImpl{}
-	rsi.httpServer = GetHttpServer(nr, config)
-	rsi.wsServer = GetWSServer(nr, config)
+	rsi.httpServer = GetHttpServer(nmp, config, isExecutor)
+	rsi.wsServer = GetWSServer(nmp, config, isExecutor)
 
 	ipc.RegisterFunc("service", rsi.Command)
 	return rsi

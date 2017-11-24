@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hyperchain/hyperchain/common"
-	"github.com/hyperchain/hyperchain/namespace"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"io"
@@ -16,6 +15,7 @@ import (
 	"net"
 	"net/http"
 	"time"
+	"github.com/hyperchain/hyperchain/common/processor"
 )
 
 const (
@@ -28,24 +28,34 @@ var (
 )
 
 type httpServerImpl struct {
-	nr     namespace.NamespaceManager
+	nmp    processor.NsMgrProcessor
 	port   int
 	config *common.Config
 
 	httpListener net.Listener
 	httpHandler  *Server
+	isExecutor   bool
 }
 
 // GetHttpServer creates and returns a new httpServerImpl instance implements internalRPCServer interface.
-func GetHttpServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
-	if hs == nil {
-		hs = &httpServerImpl{
-			nr:     nr,
-			port:   config.GetInt(common.JSON_RPC_PORT),
-			config: config,
+func GetHttpServer(nmp processor.NsMgrProcessor, config *common.Config, isExecutor bool) internalRPCServer {
+	if !config.GetBool(common.EXECUTOR_EMBEDDED) && isExecutor {
+		hs := &httpServerImpl{
+			nmp:        nmp,
+			port:       config.GetInt(common.JSON_RPC_PORT_EXECUTOR),
+			config:     config,
+			isExecutor: isExecutor,
 		}
+		return hs
+	} else {
+		hs := &httpServerImpl{
+			nmp:        nmp,
+			port:       config.GetInt(common.JSON_RPC_PORT),
+			config:     config,
+			isExecutor: isExecutor,
+		}
+		return hs
 	}
-	return hs
 }
 
 // start starts the http RPC endpoint. It will start the appropriate server based on the parameters of the configuration file.
@@ -57,7 +67,7 @@ func (hsi *httpServerImpl) start() error {
 		err      error
 	)
 
-	handler := NewServer(hsi.nr, hsi.config)
+	handler := NewServer(hsi.nmp, hsi.config, hsi.isExecutor)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", handler.admin.LoginServer)
@@ -230,7 +240,7 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("content-type", "application/json")
-	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr, nil)
+	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.nmp, nil)
 	defer codec.Close()
 	srv.ServeSingleRequest(codec, OptionMethodInvocation)
 }

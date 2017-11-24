@@ -10,6 +10,7 @@ import (
 	"github.com/op/go-logging"
 	"strings"
 	"time"
+	"github.com/hyperchain/hyperchain/common/processor"
 )
 
 // This file defines the hypercli admin interface. Users invoke
@@ -85,7 +86,10 @@ type Administrator struct {
 }
 
 // NewAdministrator news a raw administrator with default settings.
-func NewAdministrator(nr namespace.NamespaceManager, config *common.Config) *Administrator {
+func NewAdministrator(nmp processor.NsMgrProcessor, config *common.Config, isExecutor bool) *Administrator {
+	if isExecutor {
+		return nil
+	}
 	adm := &Administrator{
 		CmdExecutor: make(map[string]func(command *Command) *CommandResult),
 		valid_user:  make(map[string]string),
@@ -93,7 +97,7 @@ func NewAdministrator(nr namespace.NamespaceManager, config *common.Config) *Adm
 		user_opTime: make(map[string]int64),
 		check:       config.GetBool(common.ADMIN_CHECK),
 		expiration:  config.GetDuration(common.ADMIN_EXPIRATION),
-		nsMgr:       nr,
+		nsMgr:       nmp.(namespace.NamespaceManager),
 		config:      config,
 	}
 	adm.init()

@@ -34,7 +34,8 @@ func newHyperExecutor(argV *argT) *HyperExecutor {
 	he.exeCtl = controller.GetExecutorCtl(gc, he.stopFlag, he.restartFlag)
 	he.admin = admin.NewAdministrator(he.exeCtl, gc)
 
-	//TODO: fix api compatible he.apiServer = jsonrpc.GetRPCServer(he.exeCtl, gc, true)
+	//TODO: fix api compatible
+	he.apiServer = jsonrpc.GetRPCServer(he.exeCtl, gc, true)
 	return he
 }
 
@@ -63,10 +64,10 @@ func (h *HyperExecutor) start() error {
 
 	go func() {
 		//TODO: fix api server problem
-		//err := h.apiServer.Start()
-		//if err != nil {
-		//	panic(err)
-		//}
+		err := h.apiServer.Start()
+		if err != nil {
+			panic(err)
+		}
 	}()
 	h.logger.Notice("hyper-executor start successful!")
 	return nil

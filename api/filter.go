@@ -5,7 +5,6 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
 	"github.com/hyperchain/hyperchain/core/types"
-	"github.com/hyperchain/hyperchain/manager"
 	"github.com/hyperchain/hyperchain/manager/event"
 	flt "github.com/hyperchain/hyperchain/manager/filter"
 	"github.com/op/go-logging"
@@ -15,7 +14,6 @@ import (
 
 type PublicFilterAPI struct {
 	namespace string
-	eh        *manager.EventHub
 	config    *common.Config
 	log       *logging.Logger
 	events    *flt.EventSystem
@@ -23,14 +21,13 @@ type PublicFilterAPI struct {
 	filters   map[string]*flt.Filter
 }
 
-func NewFilterAPI(namespace string, eh *manager.EventHub, config *common.Config) *PublicFilterAPI {
+func NewFilterAPI(namespace string, eventSystem  *flt.EventSystem, config *common.Config) *PublicFilterAPI {
 	log := common.GetLogger(namespace, "api")
 	api := &PublicFilterAPI{
 		namespace: namespace,
-		eh:        eh,
 		config:    config,
 		log:       log,
-		events:    eh.GetFilterSystem(),
+		events:    eventSystem,
 		filters:   make(map[string]*flt.Filter),
 	}
 	go api.timeoutLoop()

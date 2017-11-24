@@ -5,8 +5,9 @@ package jsonrpc
 import (
 	"encoding/json"
 	"fmt"
-	admin "github.com/hyperchain/hyperchain/api/admin"
+	"github.com/hyperchain/hyperchain/api/admin"
 	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/common/processor"
 	"github.com/hyperchain/hyperchain/namespace"
 	"golang.org/x/net/context"
 	"gopkg.in/fatih/set.v0"
@@ -37,19 +38,19 @@ type Server struct {
 	run          int32
 	codecsMu     sync.Mutex
 	codecs       *set.Set
-	namespaceMgr namespace.NamespaceManager
+	nmp          processor.NsMgrProcessor
 	admin        *admin.Administrator
 	requestMgrMu sync.Mutex
 }
 
 // NewServer will create a new server instance with no registered handlers.
-func NewServer(nr namespace.NamespaceManager, config *common.Config) *Server {
+func NewServer(nmp processor.NsMgrProcessor, config *common.Config, isExecutor bool) *Server {
 	server := &Server{
-		codecs:       set.New(),
-		run:          1,
-		namespaceMgr: nr,
+		codecs: set.New(),
+		run:    1,
+		nmp:    nmp,
 	}
-	server.admin = admin.NewAdministrator(nr, config)
+	server.admin = admin.NewAdministrator(nmp, config, isExecutor)
 	return server
 }
 
@@ -240,7 +241,7 @@ func (s *Server) handleReqs(ctx context.Context, codec ServerCodec, reqs []*comm
 // handleChannelReq implements receiver.handleChannelReq interface to handle
 // request in channel and return jsonrpc response.
 func (s *Server) handleChannelReq(codec ServerCodec, req *common.RPCRequest) interface{} {
-	r := s.namespaceMgr.ProcessRequest(req.Namespace, req)
+	r := s.nmp.ProcessRequest(req.Namespace, req)
 	if r == nil {
 		log.Debug("No process result")
 		return codec.CreateErrorResponse(req.Id, req.Namespace, &common.CallbackError{Message: "no process result"})

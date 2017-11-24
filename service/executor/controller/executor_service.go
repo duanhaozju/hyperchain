@@ -2,7 +2,7 @@ package controller
 
 import (
 	"github.com/hyperchain/hyperchain/admittance"
-	hapi "github.com/hyperchain/hyperchain/api"
+	"github.com/hyperchain/hyperchain/api"
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/common/service/client"
 	pb "github.com/hyperchain/hyperchain/common/service/protos"
@@ -145,7 +145,7 @@ func (es *executorServiceImpl) init() error {
 	}
 
 	// 3. filter system
-	//es.filterSystem = filter.NewEventSystem(es.filterMux)
+	es.filterSystem = filter.NewEventSystem(es.filterMux)
 
 	// 4. initial executor
 	executor, err := executor.NewExecutor(es.namespace, es.conf, es.eventMux, es.filterMux)
@@ -166,9 +166,7 @@ func (es *executorServiceImpl) init() error {
 	}
 
 	// 5. add jsonrpc processor
-	// TODO: fix it
-	//es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace), es.GetHyperchainApis(es.namespace),
-	//	strings.Split(es.conf.GetString(common.EXECUTOR_HOST_ADDR), ":")[0], es.conf.GetInt(common.JSON_RPC_PORT))
+	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetExecutorApis(es.namespace))
 
 	// 6. initialized status
 	es.status.setState(initialized)
@@ -228,9 +226,9 @@ func (es *executorServiceImpl) Start() error {
 	es.status.setState(running)
 
 	//// 8. start rpc processor
-	//if err = es.rpc.Start(); err != nil {
-	//	return err
-	//}
+	if err = es.rpc.Start(); err != nil {
+		return err
+	}
 
 	return nil
 
@@ -284,91 +282,56 @@ func (es *executorServiceImpl) handleJsonRequest(request *common.RPCRequest) *co
 	return es.rpc.ProcessRequest(request)
 }
 
-func (es *executorServiceImpl) GetApis(namespace string) map[string]*hapi.API {
-	//TODO need to add more APIS
-	return map[string]*hapi.API{
-	//"block": {
-	//	Svcname: "block",
-	//	Version: "1.5",
-	//	Service: hapi.NewPublicBlockAPI(namespace),
-	//	Public:  true,
-	//},
-	//"txdb": {
-	//	Svcname: "txdb",
-	//	Version: "1.5",
-	//	Service: hapi.NewDBTransactionAPI(namespace, es.conf),
-	//	Public:  true,
-	//},
-	//"accountdb": {
-	//	Svcname: "accountdb",
-	//	Version: "1.5",
-	//	Service: hapi.NewPublicAccountExecutorAPI(namespace, es.conf),
-	//	Public:  true,
-	//},
-	//"contractExe": {
-	//	Svcname: "contractExe",
-	//	Version: "1.5",
-	//	Service: hapi.NewContarctExAPI(namespace, es.conf),
-	//	Public:  true,
-	//},
-	//"sub": {
-	//	Svcname: "sub",
-	//	Version: "1.5",
-	//	Service: hapi.NewFilterAPI(namespace, es.filterSystem, es.conf),
-	//},
-	//"archive": {
-	//	Svcname: "archive",
-	//	Version: "1.5",
-	//	Service: hapi.NewPublicArchiveAPI(namespace, es.conf),
-	//	Public:  true,
-	//},
-	}
-}
-
-func (es *executorServiceImpl) GetHyperchainApis(namespace string) map[string]*hapi.API {
-	return map[string]*hapi.API{
-		"tx": {
-			Svcname: "tx",
-			Version: "1.5",
-			Service: hapi.NewPublicTransactionAPI(namespace, nil, es.conf),
-			Public:  true,
-		},
-		"node": {
-			Svcname: "node",
-			Version: "1.5",
-			Service: hapi.NewPublicNodeAPI(namespace, nil),
-			Public:  true,
-		},
-		"account": {
-			Svcname: "account",
-			Version: "1.5",
-			Service: hapi.NewPublicAccountAPI(namespace, nil, es.conf),
-			Public:  true,
-		},
-		"contract": {
-			Svcname: "contract",
-			Version: "1.5",
-			Service: hapi.NewPublicContractAPI(namespace, nil, es.conf),
-			Public:  true,
-		},
-		"cert": {
-			Svcname: "cert",
-			Version: "1.5",
-			Service: hapi.NewCertAPI(namespace, es.caManager),
-			Public:  true,
-		},
-		"sub": {
-			Svcname: "sub",
-			Version: "1.5",
-			Service: hapi.NewFilterAPI(namespace, nil, es.conf),
-		},
-	}
-}
-
 func (es *executorServiceImpl) GetCAManager() *admittance.CAManager {
 	return es.caManager
 }
 
 func (es *executorServiceImpl) Name() string {
 	return es.namespace
+}
+
+// GetExecutorApis returns the RPC api of specified namespace.
+func (es *executorServiceImpl) GetExecutorApis(namespace string) map[string]*api.API {
+	return map[string]*api.API{
+		"execTx": {
+			Svcname: "tx",
+			Version: "1.5",
+			Service: api.NewPublicTransactionExecAPI(namespace, es.conf),
+			Public:  true,
+		},
+		"execBlock": {
+			Svcname: "block",
+			Version: "1.5",
+			Service: api.NewPublicBlockAPI(namespace),
+			Public:  true,
+		},
+		"execAccount": {
+			Svcname: "account",
+			Version: "1.5",
+			Service: api.NewPublicAccountAPI(namespace, nil, es.conf),
+			Public:  true,
+		},
+		"execContract": {
+			Svcname: "contract",
+			Version: "1.5",
+			Service: api.NewPublicContractExecAPI(namespace, es.conf),
+			Public:  true,
+		},
+		"execCert": {
+			Svcname: "cert",
+			Version: "1.5",
+			Service: api.NewCertAPI(namespace, es.caManager),
+			Public:  true,
+		},
+		"execSub": {
+			Svcname: "sub",
+			Version: "1.5",
+			Service: api.NewFilterAPI(namespace, es.filterSystem, es.conf),
+		},
+		"execArchive": {
+			Svcname: "archive",
+			Version: "1.5",
+			Service: api.NewPublicArchiveAPI(namespace, nil, es.conf),
+		},
+	}
 }

@@ -51,6 +51,7 @@ func (nr *nsManagerImpl) constructConfigFromDir(namespace, path string) (*common
 	conf.Set(common.P2P_PORT, nr.conf.GetInt(common.P2P_PORT))
 	conf.Set(common.JVM_PORT, nr.conf.GetInt(common.JVM_PORT))
 	conf.Set(common.C_JVM_START, nr.conf.GetBool(common.C_JVM_START))
+	conf.Set(common.EXECUTOR_EMBEDDED, nr.conf.GetBool(common.EXECUTOR_EMBEDDED))
 	// ns part, merge peer configuration(peerconfig.toml) to get node id.
 	peerConfigPath := common.GetPath(namespace, conf.GetString(common.PEER_CONFIG_PATH))
 	conf.MergeConfig(peerConfigPath)
@@ -70,12 +71,6 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 			Svcname: "node",
 			Version: "1.5",
 			Service: api.NewPublicNodeAPI(namespace, ns.eh),
-			Public:  true,
-		},
-		"block": {
-			Svcname: "block",
-			Version: "1.5",
-			Service: api.NewPublicBlockAPI(namespace),
 			Public:  true,
 		},
 		"account": {
@@ -99,12 +94,91 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 		"sub": {
 			Svcname: "sub",
 			Version: "1.5",
-			Service: api.NewFilterAPI(namespace, ns.eh, ns.conf),
+			Service: api.NewFilterAPI(namespace, nil, ns.conf),
+		},
+		"block": {
+			Svcname: "block",
+			Version: "1.5",
+			Service: api.NewPublicBlockAPI(namespace),
+			Public:  true,
 		},
 		"archive": {
 			Svcname: "archive",
 			Version: "1.5",
 			Service: api.NewPublicArchiveAPI(namespace, ns.eh, ns.conf),
 		},
+		"execTx": {
+			Svcname: "tx",
+			Version: "1.5",
+			Service: api.NewPublicTransactionExecAPI(namespace, ns.conf),
+			Public:  true,
+		},
+		"execBlock": {
+			Svcname: "block",
+			Version: "1.5",
+			Service: api.NewPublicBlockAPI(namespace),
+			Public:  true,
+		},
+		"execAccount": {
+			Svcname: "account",
+			Version: "1.5",
+			Service: api.NewPublicAccountAPI(namespace, nil, ns.conf),
+			Public:  true,
+		},
+		"execContract": {
+			Svcname: "contract",
+			Version: "1.5",
+			Service: api.NewPublicContractExecAPI(namespace, ns.conf),
+			Public:  true,
+		},
+		"execCert": {
+			Svcname: "cert",
+			Version: "1.5",
+			Service: api.NewCertAPI(namespace, ns.caMgr),
+			Public:  true,
+		},
+		"execSub": {
+			Svcname: "sub",
+			Version: "1.5",
+			Service: api.NewFilterAPI(namespace, nil, ns.conf),
+		},
+		"execArchive": {
+			Svcname: "archive",
+			Version: "1.5",
+			Service: api.NewPublicArchiveAPI(namespace, nil, ns.conf),
+		},
+	}
+
+}
+
+// GetApis returns the RPC api of specified namespace.
+func (ns *namespaceImpl) GetOrderApis(namespace string) map[string]*api.API {
+	return map[string]*api.API{
+		"tx": {
+			Svcname: "tx",
+			Version: "1.5",
+			Service: api.NewPublicTransactionAPI(namespace, ns.eh, ns.conf),
+			Public:  true,
+		},
+		"node": {
+			Svcname: "node",
+			Version: "1.5",
+			Service: api.NewPublicNodeAPI(namespace, ns.eh),
+			Public:  true,
+		},
+		"contract": {
+			Svcname: "contract",
+			Version: "1.5",
+			Service: api.NewPublicContractAPI(namespace, ns.eh, ns.conf),
+			Public:  true,
+		},
+		"cert": {
+			Svcname: "cert",
+			Version: "1.5",
+			Service: api.NewCertAPI(namespace, ns.caMgr),
+			Public:  true,
+		},
 	}
 }
+
+

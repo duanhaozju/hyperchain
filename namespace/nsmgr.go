@@ -19,6 +19,7 @@ import (
 	"github.com/op/go-logging"
 	"google.golang.org/grpc"
 	"net"
+	"github.com/hyperchain/hyperchain/common/processor"
 )
 
 // This file defines the Namespace Manager interface, which managers all
@@ -71,6 +72,9 @@ type NamespaceManager interface {
 
 	// GetNamespaceByName returns the namespace instance by name.
 	GetNamespaceByName(name string) Namespace
+
+	// GetNamespaceProcessor returns the namespace processor instance by name.
+	GetNamespaceProcessor(name string) processor.NamespaceProcessor
 
 	// ProcessRequest dispatches received requests to corresponding namespace
 	// processor.
@@ -382,6 +386,15 @@ func (nr *nsManagerImpl) addNamespace(ns Namespace) {
 
 // GetNamespaceByName get namespace instance by name.
 func (nr *nsManagerImpl) GetNamespaceByName(name string) Namespace {
+	nr.rwLock.RLock()
+	defer nr.rwLock.RUnlock()
+	if ns, ok := nr.namespaces[name]; ok {
+		return ns
+	}
+	return nil
+}
+
+func (nr *nsManagerImpl)  GetNamespaceProcessor(name string) processor.NamespaceProcessor {
 	nr.rwLock.RLock()
 	defer nr.rwLock.RUnlock()
 	if ns, ok := nr.namespaces[name]; ok {

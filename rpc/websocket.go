@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/hyperchain/hyperchain/common"
-	"github.com/hyperchain/hyperchain/namespace"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"sync"
+	"github.com/hyperchain/hyperchain/common/processor"
 )
 
 const (
@@ -24,7 +24,7 @@ var (
 )
 
 type wsServerImpl struct {
-	nr     namespace.NamespaceManager
+	nmp    processor.NsMgrProcessor
 	port   int
 	config *common.Config
 
@@ -32,6 +32,7 @@ type wsServerImpl struct {
 	wsConnsMux sync.Mutex
 	wsHandler  *Server
 	wsListener net.Listener
+	isExecutor bool
 }
 
 type httpReadWriteCloser struct {
@@ -40,16 +41,26 @@ type httpReadWriteCloser struct {
 }
 
 // GetWSServer creates and returns a new wsServerImpl instance implements internalRPCServer interface.
-func GetWSServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
-	if wsS == nil {
-		wsS = &wsServerImpl{
-			nr:      nr,
-			wsConns: make(map[*websocket.Conn]*Notifier),
-			port:    config.GetInt(common.WEBSOCKET_PORT),
-			config:  config,
+func GetWSServer(nmp processor.NsMgrProcessor, config *common.Config, isExecutor bool) internalRPCServer {
+	if !config.GetBool(common.EXECUTOR_EMBEDDED) && isExecutor {
+		wsS := &wsServerImpl{
+			nmp:        nmp,
+			wsConns:    make(map[*websocket.Conn]*Notifier),
+			port:       config.GetInt(common.WEBSOCKET_PORT_EXECUTOR),
+			config:     config,
+			isExecutor: isExecutor,
 		}
+		return wsS
+	} else {
+		wsS := &wsServerImpl{
+			nmp:        nmp,
+			wsConns:    make(map[*websocket.Conn]*Notifier),
+			port:       config.GetInt(common.WEBSOCKET_PORT),
+			config:     config,
+			isExecutor: isExecutor,
+		}
+		return wsS
 	}
-	return wsS
 }
 
 // start starts the websocket RPC endpoint.
@@ -62,7 +73,7 @@ func (wssi *wsServerImpl) start() error {
 	)
 
 	// start websocket listener
-	handler := NewServer(wssi.nr, wssi.config)
+	handler := NewServer(wssi.nmp, wssi.config, wssi.isExecutor)
 	if listener, err = net.Listen("tcp", fmt.Sprintf(":%d", wssi.port)); err != nil {
 		return err
 	}
@@ -179,7 +190,7 @@ func (wssi *wsServerImpl) newWebsocketHandler(srv *Server) http.HandlerFunc {
 				break
 			}
 
-			codec := NewJSONCodec(&httpReadWriteCloser{nr, nw}, r, srv.namespaceMgr, conn)
+			codec := NewJSONCodec(&httpReadWriteCloser{nr, nw}, r, srv.nmp, conn)
 			notifier.codec = codec
 			srv.ServeCodec(codec, OptionMethodInvocation|OptionSubscriptions, ctx)
 		}

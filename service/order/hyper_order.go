@@ -58,7 +58,7 @@ func newHyperOrder(configPath string) *HyperOrder {
 	hp.nsMgr = namespace.GetNamespaceManager(globalConfig, hp.stopFlag, hp.restartFlag)
 
 	// start RPC server to listen requests sent from client
-	hp.rpcServer = jsonrpc.GetRPCServer(hp.nsMgr, hp.nsMgr.GlobalConfig())
+	hp.rpcServer = jsonrpc.GetRPCServer(hp.nsMgr, hp.nsMgr.GlobalConfig(), false)
 
 	return hp
 }
