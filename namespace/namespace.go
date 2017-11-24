@@ -17,6 +17,8 @@ import (
 	"github.com/hyperchain/hyperchain/p2p"
 
 	"github.com/op/go-logging"
+	"github.com/hyperchain/hyperchain/core/oplog"
+	"github.com/hyperchain/hyperchain/core/oplog/kvlog"
 )
 
 // This file defines the Namespace interface, which manages all the
@@ -128,6 +130,7 @@ type namespaceImpl struct {
 	eh        *manager.EventHub
 	peerMgr   p2p.PeerManager
 	rpc       rpc.RequestProcessor
+	opLog     oplog.OpLog
 
 	name    string
 	status  *Status
@@ -189,8 +192,11 @@ func (ns *namespaceImpl) init() error {
 	}
 	ns.peerMgr = peerMgr
 
+	// init opLog
+	ns.opLog = kvlog.New(ns.conf)
+
 	// 3. init consensus module to order requests.
-	consenter, err := csmgr.Consenter(ns.Name(), ns.conf, ns.eventMux, ns.filterMux, peerMgr.GetN())
+	consenter, err := csmgr.Consenter(ns.Name(), ns.conf, ns.opLog, ns.eventMux, ns.filterMux, peerMgr.GetN())
 	if err != nil {
 		ns.logger.Errorf("Init Consenter for namespace %s error: %s", ns.Name(), err)
 		return err

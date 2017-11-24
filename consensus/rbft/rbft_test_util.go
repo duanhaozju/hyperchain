@@ -28,6 +28,7 @@ import (
 	"github.com/facebookgo/ensure"
 	"github.com/golang/protobuf/proto"
 	"github.com/spf13/viper"
+	"github.com/hyperchain/hyperchain/core/oplog/proto"
 )
 
 //path struct should match
@@ -76,7 +77,8 @@ func TNewRbft(dbpath, path, namespace string, nodeId int, t *testing.T) (*rbftIm
 	if err != nil {
 		t.Errorf("init db for namespace: %s error, %v", namespace, err)
 	}
-	h := helper.NewHelper(new(event.TypeMux), new(event.TypeMux))
+	// TODO how to new opLog for test ?
+	h := helper.NewHelper(new(event.TypeMux), new(event.TypeMux), nil)
 	rbft, err := newRBFT(namespace, conf, h, conf.GetInt("self.N"))
 	return rbft, conf, err
 }
@@ -221,7 +223,9 @@ func (TH *TestHelp) BroadcastAddNode(msg *pb.Message) error                     
 func (TH *TestHelp) BroadcastDelNode(msg *pb.Message) error                       { return nil }
 func (TH *TestHelp) UpdateTable(payload []byte, flag bool) error                  { return nil }
 func (TH *TestHelp) SendFilterEvent(informType int, message ...interface{}) error { return nil }
-
+func (TH *TestHelp) GetLatestCommitNumber() uint64 { return 0 }
+func (TH *TestHelp) GetLatestCommitHeightAndHash() (uint64, string, error) { return 0,"",nil }
+func (TH *TestHelp) FetchCommit(lid uint64) (*oplog.LogEntry) { return nil }
 type RBFTNode struct {
 	nodeId    int
 	dbPath    string

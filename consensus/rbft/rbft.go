@@ -107,12 +107,7 @@ func (rbft *rbftImpl) Start() error {
 	rbft.initStatus()
 
 	// new executor
-	opLog, err := hyperdb.GetOrCreateDatabase(rbft.config, rbft.namespace, hcom.DBNAME_OPLOG)
-	if err != nil {
-		rbft.logger.Errorf("get opLog db by namespace: %s failed.", rbft.namespace)
-		return fmt.Errorf("get opLog db by namespace: %s failed", rbft.namespace)
-	}
-	rbft.exec = newExecutor(opLog, rbft.logger)
+	rbft.exec = newExecutor(rbft.logger)
 
 	// new store manager
 	rbft.storeMgr = newStoreMgr(rbft.logger)

@@ -21,7 +21,7 @@ func (pool *txPoolImpl) Validate(id string) (validTxs []*types.Transaction, inva
 
 	batch, _, err := pool.getBatchById(id)
 	if err != nil {
-		pool.logger.Error("Cannot find batch in batchStore with id: %s", id)
+		pool.logger.Errorf("Cannot find batch in batchStore with id: %s", id)
 		// TODO return err?
 		return
 	}

@@ -76,6 +76,8 @@ func (bv *batchValidator) getCVB() map[string]*cacheBatch {
 func newBatchValidator() *batchValidator {
 	bv := &batchValidator{}
 	bv.cacheValidatedBatch = make(map[string]*cacheBatch)
+	bv.validBatch = make(map[msgID][]*types.Transaction)
+	bv.inValidRecord = make(map[msgID][]*types.InvalidTransactionRecord)
 	bv.preparedCert = make(map[vidx]string)
 	bv.validateCount = 0
 	return bv

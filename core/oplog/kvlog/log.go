@@ -9,11 +9,11 @@ import (
 
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
-	"github.com/hyperchain/hyperchain/hyperdb/mdb"
+	//"github.com/hyperchain/hyperchain/hyperdb/mdb"
 	"github.com/hyperchain/hyperchain/core/oplog/proto"
 	op "github.com/hyperchain/hyperchain/core/oplog"
-	//"github.com/hyperchain/hyperchain/hyperdb"
-	//hcom "github.com/hyperchain/hyperchain/hyperdb/common"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/manager/event"
 
 	"github.com/golang/protobuf/proto"
@@ -53,8 +53,8 @@ func New(config *common.Config) *kvLoggerImpl {
 		mu:					new(sync.Mutex),
 		cache:				make(map[uint64]*oplog.LogEntry),
 	}
-	//db, err := hyperdb.GetOrCreateDatabase(config, kvLogger.namespace, hcom.DBNAME_OPLOG)
-	db, err := mdb.NewMemDatabase(kvLogger.namespace)
+	db, err := hyperdb.GetOrCreateDatabase(config, kvLogger.namespace, hcom.DBNAME_OPLOG)
+	//db, err := mdb.NewMemDatabase(kvLogger.namespace)
 	if err != nil {
 		kvLogger.logger.Errorf("get opLog db by namespace: %s failed.", kvLogger.namespace)
 		return nil

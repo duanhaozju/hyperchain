@@ -12,9 +12,12 @@ import (
 	pb "github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/core/oplog"
+	opLog2 "github.com/hyperchain/hyperchain/core/oplog/proto"
 )
 
 type helper struct {
+	opLog       oplog.OpLog
 	innerMux    *event.TypeMux
 	externalMux *event.TypeMux
 }
@@ -56,14 +59,23 @@ type Stack interface {
 
 	// SendFilterEvent sends event to subscription system, then the system would return message to clients which subscribe this message.
 	SendFilterEvent(informType int, message ...interface{}) error
+
+	// GetLatestCommitNumber queries and returns latest committed block number from opLog
+	GetLatestCommitNumber() uint64
+
+	// GetLatestCommitHeightAndHash queries and returns latest committed block number and hash from opLog
+	GetLatestCommitHeightAndHash() (uint64, string, error)
+
+	FetchCommit(lid uint64) *opLog2.LogEntry
 }
 
 // NewHelper initializes a helper object
-func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *helper {
+func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux, opLog oplog.OpLog) *helper {
 
 	h := &helper{
 		innerMux:    innerMux,
 		externalMux: externalMux,
+		opLog:       opLog,
 	}
 
 	return h
@@ -145,17 +157,28 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 // ValidateBatch transfers the ValidateEvent to outer
 func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error {
 
-	validateEvent := event.ValidationEvent{
+	validationEvent := &event.ValidationEvent{
 		Digest:       digest,
 		Transactions: txs,
-		Timestamp:    timeStamp,
 		SeqNo:        seqNo,
 		View:         view,
 		IsPrimary:    isPrimary,
+		Timestamp:    timeStamp,
 	}
 
-	// Post the event to outer
-	h.innerMux.Post(validateEvent)
+	payload, err := proto.Marshal(validationEvent)
+	if err != nil {
+		return err
+	}
+
+	entry := &opLog2.LogEntry{
+		Type:    opLog2.LogEntry_TransactionList,
+		Payload: payload,
+	}
+
+	if err = h.opLog.Append(entry); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -264,4 +287,17 @@ func (h *helper) SendFilterEvent(informType int, message ...interface{}) error {
 	default:
 		return nil
 	}
+}
+
+func (h *helper) GetLatestCommitNumber() uint64 {
+	return h.opLog.GetLastCommit()
+}
+
+func (h *helper) GetLatestCommitHeightAndHash() (uint64, string, error) {
+	return h.opLog.GetHeightAndDigest()
+}
+
+func (h *helper) FetchCommit(lid uint64) *opLog2.LogEntry {
+	entry, _ := h.opLog.Fetch(lid)
+	return entry
 }

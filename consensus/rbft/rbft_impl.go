@@ -741,15 +741,13 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 				rbft.logger.Warningf("Replica %d cannot find valid txs record in validBatch", rbft.id)
 				return
 			}
-			validationEvent := &event.ValidationEvent{
-				Digest:       idx.d,
-				Transactions: validTxs,
-				SeqNo:        idx.n,
-				View:         idx.v,
-				IsPrimary:    isPrimary,
-				Timestamp:    time.Now().UnixNano(),
+
+			if err := rbft.helper.ValidateBatch(idx.d, validTxs, time.Now().UnixNano(), idx.n, idx.v, isPrimary); err != nil {
+				rbft.logger.Error("Replica %d failed to commit block of view=%d/seqNo=%d", rbft.id, idx.v, idx.n)
+				return
 			}
-			rbft.exec.commit(validationEvent)
+			cmt := rbft.helper.FetchCommit(idx.n)
+			rbft.logger.Errorf("lid is: %d", cmt.Lid)
 			cert.sentExecute = true
 			rbft.afterCommitBlock(idx)
 		} else {

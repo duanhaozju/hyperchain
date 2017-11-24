@@ -31,15 +31,17 @@ func (rbft *rbftImpl) GetCurrentBlockInfo(namespace string) (uint64, []byte, []b
 
 // GetBlockHeightAndHash returns the current block height and hash with the given namespace immediately
 func (rbft *rbftImpl) GetBlockHeightAndHash(namespace string) (uint64, string) {
-	//bcInfo := ndb.GetChainCopy(namespace)
-	//hash := base64.StdEncoding.EncodeToString(bcInfo.LatestBlockHash)
-	//return bcInfo.Height, hash
-	return 1, "XXX"
+	if height, hash, err := rbft.helper.GetLatestCommitHeightAndHash(); err != nil {
+		rbft.logger.Errorf("Replica %d failed to get latest commit height and hash: %s", rbft.id, err)
+		return 0, ""
+	} else {
+		return height, hash
+	}
 }
 
 // GetHeightOfChain returns the current block height with the given namespace immediately
 func (rbft *rbftImpl) GetHeightOfChain(namespace string) uint64 {
-	return rbft.exec.storage.GetLastSet()
+	return rbft.helper.GetLatestCommitNumber()
 }
 
 // GetGenesisOfChain returns the genesis block info of the ledger with the given namespace
