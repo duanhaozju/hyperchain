@@ -16,9 +16,12 @@ import (
 	"github.com/hyperchain/hyperchain/namespace/rpc"
 	"github.com/hyperchain/hyperchain/p2p"
 
-	"github.com/op/go-logging"
+	"github.com/hyperchain/hyperchain/common/service/server"
+	"github.com/hyperchain/hyperchain/core/fiber"
+	"github.com/hyperchain/hyperchain/core/fiber/executor"
 	"github.com/hyperchain/hyperchain/core/oplog"
 	"github.com/hyperchain/hyperchain/core/oplog/kvlog"
+	"github.com/op/go-logging"
 )
 
 // This file defines the Namespace interface, which manages all the
@@ -66,7 +69,6 @@ type Namespace interface {
 
 	// GetCAManager returns the CAManager of current namespace.
 	GetCAManager() *admittance.CAManager
-
 }
 
 type NsState int
@@ -132,6 +134,8 @@ type namespaceImpl struct {
 	rpc       rpc.RequestProcessor
 	opLog     oplog.OpLog
 
+	fiber   fiber.Fiber
+	is      *server.InternalServer
 	name    string
 	status  *Status
 	conf    *common.Config
@@ -141,7 +145,7 @@ type namespaceImpl struct {
 
 // newNamespaceImpl returns a newed Namespace instance with
 // the given name and config
-func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool) (*namespaceImpl, error) {
+func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool, is *server.InternalServer) (*namespaceImpl, error) {
 	conf.Set(common.NAMESPACE, namespace)
 	if err := common.InitHyperLogger(namespace, conf); err != nil {
 		return nil, err
@@ -161,6 +165,7 @@ func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool) 
 		filterMux: new(event.TypeMux),
 		restart:   false,
 		delFlag:   delFlag,
+		is:        is,
 	}
 	ns.logger = common.GetLogger(namespace, "namespace")
 	return ns, nil
@@ -169,7 +174,7 @@ func newNamespaceImpl(namespace string, conf *common.Config, delFlag chan bool) 
 // init initializes the namespace by init all the components
 // one by one.
 func (ns *namespaceImpl) init() error {
-	ns.logger.Criticalf("Init namespace %s", ns.Name())
+	ns.logger.Noticef("Init namespace %s", ns.Name())
 
 	// 1. init CaManager to manage account identity.
 	cm, err := admittance.NewCAManager(ns.conf)
@@ -195,6 +200,11 @@ func (ns *namespaceImpl) init() error {
 	// init opLog
 	ns.opLog = kvlog.New(ns.conf)
 
+	nss := ns.is.ServerRegistry().Namespace(ns.name)
+	if ns.fiber, err = executor.NewFiber(ns.conf, nss, ns.opLog); err != nil {
+		return err
+	}
+
 	// 3. init consensus module to order requests.
 	consenter, err := csmgr.Consenter(ns.Name(), ns.conf, ns.opLog, ns.eventMux, ns.filterMux, peerMgr.GetN())
 	if err != nil {
@@ -215,8 +225,8 @@ func (ns *namespaceImpl) init() error {
 }
 
 // GetNamespace returns the Namespace instance of the given name.
-func GetNamespace(name string, conf *common.Config, delFlag chan bool) (Namespace, error) {
-	ns, err := newNamespaceImpl(name, conf, delFlag)
+func GetNamespace(name string, conf *common.Config, delFlag chan bool, is *server.InternalServer) (Namespace, error) {
+	ns, err := newNamespaceImpl(name, conf, delFlag, is)
 	if err != nil {
 		ns.logger.Errorf("New namespace %s failed: %s", name, err)
 		return ns, err
@@ -274,6 +284,8 @@ func (ns *namespaceImpl) Start() error {
 	ns.status.setState(running)
 	ns.logger.Noticef("Namespace %s start successfully", ns.Name())
 	ns.restart = true
+
+	go ns.fiber.Start()
 	return nil
 }
 

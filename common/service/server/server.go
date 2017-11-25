@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"github.com/gogo/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/common/service"
 	pb "github.com/hyperchain/hyperchain/common/service/protos"
 	"github.com/op/go-logging"
@@ -23,7 +24,7 @@ func NewInternalServer(port int, host string) (*InternalServer, error) {
 		port:          port,
 		host:          host,
 		sr:            service.NewServiceRegistry(),
-		logger:        logging.MustGetLogger("dispatcher"),
+		logger:        common.GetLogger(common.DEFAULT_LOG, "InternalServer"),
 		adminRegister: make(chan struct{}, 100),
 	}
 

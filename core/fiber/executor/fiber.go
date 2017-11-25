@@ -7,6 +7,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/common/service"
 	pb "github.com/hyperchain/hyperchain/common/service/protos"
+	"github.com/hyperchain/hyperchain/core/fiber"
 	"github.com/hyperchain/hyperchain/core/oplog"
 	"github.com/hyperchain/hyperchain/hyperdb"
 	hc "github.com/hyperchain/hyperchain/hyperdb/common"
@@ -19,7 +20,7 @@ import (
 const (
 	consumeIndexPrefix = "last.consume.index."
 	commitIndexPrefix  = "last.commit.index."
-	executorId         = "executor"
+	executorId         = "EXECUTOR-0"
 )
 
 //Fiber response for log data transfer.
@@ -27,22 +28,23 @@ type ExeFiber struct {
 	md               db.Database //meta data
 	lastConsumeIndex uint64
 	lastCommitIndex  uint64
-	ns               service.NamespaceServices
+	ns               *service.NamespaceServices
 	ol               oplog.OpLog
 	conf             *common.Config
 	logger           *logging.Logger
 }
 
-func NewFiber(conf *common.Config, ns service.NamespaceServices, ol oplog.OpLog) (*ExeFiber, error) {
+func NewFiber(conf *common.Config, ns *service.NamespaceServices, ol oplog.OpLog) (fiber.Fiber, error) {
 	namespace := conf.GetString(common.NAMESPACE)
 	if len(namespace) == 0 {
 		return nil, fmt.Errorf("no namespace field found in config")
 	}
 
 	fr := &ExeFiber{
-		conf: conf,
-		ns:   ns,
-		ol:   ol,
+		conf:   conf,
+		ns:     ns,
+		ol:     ol,
+		logger: common.GetLogger(namespace, "fiber"),
 	}
 	var err error
 	fr.md, err = hyperdb.GetOrCreateDatabase(conf, namespace, hc.DBNAME_META)
@@ -86,13 +88,13 @@ func (f *ExeFiber) Start() error {
 	var es service.Service
 	for { //TODO(Xiaoyi Wang): add close related control
 		es = f.ns.Service(executorId)
-		if es != nil {
-			if e, err := f.ol.Fetch(f.lastConsumeIndex); err == nil {
-
+		f.logger.Debugf("%v executor service == nil? %v", f.ol.GetLastCommit(), es == nil)
+		if es != nil && (f.lastConsumeIndex+1 <= f.ol.GetLastCommit()) {
+			if e, err := f.ol.Fetch(f.lastConsumeIndex + 1); err == nil { //如果fetch不到应该阻塞该线程
 				if payload, err := proto.Marshal(e); err != nil {
 					f.logger.Errorf("unmarshal [%v] error %v", e, err)
 				} else {
-					logMsg := pb.IMessage{
+					logMsg := &pb.IMessage{
 						Type:    pb.Type_OP_LOG,
 						Payload: payload,
 					}
@@ -104,6 +106,8 @@ func (f *ExeFiber) Start() error {
 					}
 				}
 
+			} else {
+				time.Sleep(time.Second)
 			}
 		} else {
 			time.Sleep(time.Second)

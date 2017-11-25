@@ -138,6 +138,7 @@ func (executor *Executor) dropValdiateEvent(validationEvent *event.ValidationEve
 // the execution of transactions, ledger hash re-computation and etc.
 func (e *Executor) process(validationEvent *event.ValidationEvent, done func()) (error, bool) {
 	// Invoke the callback no matter success or fail
+	e.logger.Noticef("try to execute block %d", validationEvent.SeqNo)
 	defer done()
 
 	var (
@@ -156,6 +157,7 @@ func (e *Executor) process(validationEvent *event.ValidationEvent, done func()) 
 	hash := e.calculateValidationResultHash(validateResult.MerkleRoot, validateResult.TxRoot, validateResult.ReceiptRoot)
 	e.logger.Debugf("invalid transaction number %d", e.namespace, len(validateResult.InvalidTxs))
 	e.logger.Debugf("valid transaction number %d", e.namespace, len(validateResult.ValidTxs))
+	e.logger.Noticef("execute block %d done", validationEvent.SeqNo)
 	e.saveValidationResult(validateResult, validationEvent.SeqNo, hash)
 	e.sendValidationResult(validateResult, validationEvent, hash)
 	return nil, true

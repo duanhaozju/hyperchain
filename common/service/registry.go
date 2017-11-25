@@ -179,6 +179,12 @@ func (sri *serviceRegistryImpl) ContainsNamespace(namespace string) bool {
 
 func (sri *serviceRegistryImpl) Namespace(name string) *NamespaceServices {
 	sri.lock.RLock()
-	defer sri.lock.RUnlock()
-	return sri.namespaces[name]
+	if nss, ok := sri.namespaces[name]; ok {
+		defer sri.lock.RUnlock()
+		return nss
+	} else {
+		sri.lock.RUnlock()
+		sri.AddNamespace(name)
+		return sri.namespaces[name]
+	}
 }

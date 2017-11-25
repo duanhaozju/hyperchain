@@ -87,10 +87,10 @@ f_rebuild_order(){
 # rebuild executor
 f_rebuild_executor(){
     echo "Rebuild executor ..."
-#    if [ -s "${DUMP_PATH}/executor" ]; then
-#        rm ${DUMP_PATH}/executor
-#    fi
-#    cd ${EXECUTOR_PATH} && govendor build -ldflags -s -o ${DUMP_PATH}/executor -tags=embed
+    if [ -s "${DUMP_PATH}/executor" ]; then
+        rm ${DUMP_PATH}/executor
+    fi
+    cd ${EXECUTOR_PATH} && govendor build -ldflags -s -o ${DUMP_PATH}/executor -tags=embed
 }
 
 # rebuild hypercli

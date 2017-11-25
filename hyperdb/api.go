@@ -108,7 +108,7 @@ func GetOrCreateDatabase(conf *common.Config, namespace, dbname string) (db.Data
 	}
 
 	log := getLogger(namespace)
-	log.Criticalf("create db %s for namespace %s", dbname, namespace)
+	log.Noticef("create db %s for namespace %s", dbname, namespace)
 
 	newDb, err := NewDatabase(conf, dbname, dbType, namespace)
 	if err != nil {

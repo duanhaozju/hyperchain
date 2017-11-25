@@ -71,5 +71,7 @@ func (eh *ExecutorHandler) Handle(client pb.Dispatcher_RegisterClient, msg *pb.I
 }
 
 func (eh *ExecutorHandler) handleError(err error) {
-	eh.logger.Error(err)
+	if err != nil {
+		eh.logger.Error(err)
+	}
 }

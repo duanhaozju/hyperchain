@@ -1,56 +1,57 @@
 package kvlog
 
 import (
+	"encoding/binary"
 	"fmt"
 	"sync"
-	"encoding/binary"
 
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 	//"github.com/hyperchain/hyperchain/hyperdb/mdb"
-	"github.com/hyperchain/hyperchain/core/oplog/proto"
 	op "github.com/hyperchain/hyperchain/core/oplog"
-	"github.com/hyperchain/hyperchain/hyperdb"
-	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
+	"github.com/hyperchain/hyperchain/core/oplog/proto"
+	//"github.com/hyperchain/hyperchain/hyperdb"
+	//hcom "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/manager/event"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 	"github.com/op/go-logging"
 )
 
 const (
-	modulePrefix         = "kvlog."
-	entryPrefix          = "entry."
-	lastSetPrefix        = "lastSet"
-	lastCommitPrefix     = "lastCommit"
-	checkpointMapPrefix  = "checkpointMap"
+	modulePrefix        = "kvlog."
+	entryPrefix         = "entry."
+	lastSetPrefix       = "lastSet"
+	lastCommitPrefix    = "lastCommit"
+	checkpointMapPrefix = "checkpointMap"
 )
 
 // kvLoggerImpl implements the OpLog interface
 type kvLoggerImpl struct {
-	lastSet				uint64 // The last set entry's index
-	lastCommit			uint64 // The last set entry's index
-	checkpointPeriod	uint64
-	checkpointMap 		map[uint64]uint64
+	lastSet          uint64 // The last set entry's index
+	lastCommit       uint64 // The last set entry's index
+	checkpointPeriod uint64
+	checkpointMap    map[uint64]uint64
 
-	namespace			string
-	mu					*sync.Mutex
-	cache				map[uint64]*oplog.LogEntry // A cache to store some entry in memory
-	db					db.Database // A database to store entries
-	logger				*logging.Logger
+	namespace string
+	mu        *sync.Mutex
+	cache     map[uint64]*oplog.LogEntry // A cache to store some entry in memory
+	db        db.Database                // A database to store entries
+	logger    *logging.Logger
 }
 
 // New initiate a kvLoggerImpl
 func New(config *common.Config) *kvLoggerImpl {
-	
+
 	kvLogger := &kvLoggerImpl{
-		namespace:			config.GetString(common.NAMESPACE),
-		checkpointPeriod:	uint64(config.GetInt64("consensus.rbft.k")),
-		mu:					new(sync.Mutex),
-		cache:				make(map[uint64]*oplog.LogEntry),
+		namespace:        config.GetString(common.NAMESPACE),
+		checkpointPeriod: uint64(config.GetInt64("consensus.rbft.k")),
+		mu:               new(sync.Mutex),
+		cache:            make(map[uint64]*oplog.LogEntry),
 	}
-	db, err := hyperdb.GetOrCreateDatabase(config, kvLogger.namespace, hcom.DBNAME_OPLOG)
-	//db, err := mdb.NewMemDatabase(kvLogger.namespace)
+	//db, err := hyperdb.GetOrCreateDatabase(config, kvLogger.namespace, hcom.DBNAME_OPLOG)
+	db, err := mdb.NewMemDatabase(kvLogger.namespace)
 	if err != nil {
 		kvLogger.logger.Errorf("get opLog db by namespace: %s failed.", kvLogger.namespace)
 		return nil
@@ -77,20 +78,20 @@ func (kvLogger *kvLoggerImpl) Append(entry *oplog.LogEntry) error {
 	}
 	key := fmt.Sprintf("%s%s%020d", modulePrefix, entryPrefix, entry.Lid)
 	if err = kvLogger.db.Put([]byte(key), raw); err == nil {
-		kvLogger.lastSet ++
+		kvLogger.lastSet++
 		kvLogger.storeLastSet()
 		kvLogger.cache[entry.Lid] = entry
 
 		// TODO How to delete these massage in cache
-		if entry.Lid % kvLogger.checkpointPeriod == 0 {
-			for i := entry.Lid - 5 * kvLogger.checkpointPeriod + 1; i <= entry.Lid - 4 * kvLogger.checkpointPeriod && i > 0; i++ {
+		if entry.Lid%kvLogger.checkpointPeriod == 0 {
+			for i := entry.Lid - 5*kvLogger.checkpointPeriod + 1; i <= entry.Lid-4*kvLogger.checkpointPeriod && i > 0; i++ {
 				delete(kvLogger.cache, i)
 			}
 		}
 		if entry.Type == oplog.LogEntry_TransactionList {
 			kvLogger.lastCommit++
 			kvLogger.storeLastCommit()
-			if kvLogger.lastCommit % kvLogger.checkpointPeriod == 0 {
+			if kvLogger.lastCommit%kvLogger.checkpointPeriod == 0 {
 				kvLogger.checkpointMap[kvLogger.lastCommit] = kvLogger.lastSet
 				kvLogger.storeCheckpointMap()
 			}
@@ -107,7 +108,7 @@ func (kvLogger *kvLoggerImpl) Fetch(lid uint64) (*oplog.LogEntry, error) {
 	kvLogger.mu.Lock()
 	defer kvLogger.mu.Unlock()
 	if lid > kvLogger.lastSet {
-		kvLogger.logger.Errorf("lid is too large")
+		kvLogger.logger.Debugf("lid %d is too large", lid)
 		return nil, ErrLidTooLarge
 	}
 
@@ -122,7 +123,7 @@ func (kvLogger *kvLoggerImpl) Fetch(lid uint64) (*oplog.LogEntry, error) {
 	}
 
 	entry := &oplog.LogEntry{}
-	if err = proto.Unmarshal(raw, entry); err != nil{
+	if err = proto.Unmarshal(raw, entry); err != nil {
 		kvLogger.logger.Errorf("Fetch, unmarshal error: can not unmarshal oplog.LogEntry", err)
 		return nil, ErrUnmarshal
 	} else {
@@ -147,15 +148,14 @@ func (kvLogger *kvLoggerImpl) Reset(seqNo uint64) error {
 	kvLogger.lastCommit = seqNo
 	kvLogger.lastSet = lid
 
-
 	kvLogger.storeLastSet()
 	kvLogger.storeLastCommit()
 	return nil
 }
 
-func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64 , *oplog.LogEntry, error) {
+func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64, *oplog.LogEntry, error) {
 
-	checkpoint := uint64((int(seqNo / kvLogger.checkpointPeriod) + 1) * int(kvLogger.checkpointPeriod))
+	checkpoint := uint64((int(seqNo/kvLogger.checkpointPeriod) + 1) * int(kvLogger.checkpointPeriod))
 	var earlistLid uint64
 	var earlistSeqNo uint64
 	if checkpoint < kvLogger.lastCommit {
@@ -180,13 +180,13 @@ func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64 , *oplog.LogEntry
 			break
 		}
 		entry := &oplog.LogEntry{}
-		if err := proto.Unmarshal(it.Value(), entry); err != nil{
+		if err := proto.Unmarshal(it.Value(), entry); err != nil {
 			kvLogger.logger.Errorf("find, unmarshal error: can not unmarshal oplog.LogEntry", err)
 			return 0, nil, ErrUnmarshal
 		} else {
 			if entry.Type == oplog.LogEntry_TransactionList {
 				event := &event.ValidationEvent{}
-				if err := proto.Unmarshal(entry.Payload, event); err != nil{
+				if err := proto.Unmarshal(entry.Payload, event); err != nil {
 					kvLogger.logger.Errorf("find, unmarshal error: can not unmarshal ValidationEvent", err)
 					return 0, nil, ErrUnmarshal
 				}
@@ -235,7 +235,7 @@ func (kvLogger *kvLoggerImpl) GetHeightAndDigest() (uint64, string, error) {
 		return 0, "", err
 	}
 	event := &event.ValidationEvent{}
-	if err := proto.Unmarshal(entry.Payload, event); err != nil{
+	if err := proto.Unmarshal(entry.Payload, event); err != nil {
 		kvLogger.logger.Errorf("find, unmarshal error: can not unmarshal ValidationEvent", err)
 		return 0, "", ErrUnmarshal
 	}
@@ -340,7 +340,6 @@ func (kvLogger *kvLoggerImpl) restoreKvLogger() {
 		kvLogger.checkpointMap = make(map[uint64]uint64)
 	}
 }
-
 
 // Iterator implements the Iterator interface, could traverse the logger.
 type Iterator struct {

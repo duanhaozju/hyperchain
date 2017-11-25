@@ -154,7 +154,7 @@ func newNsManager(conf *common.Config, stopHp chan bool, restartHp chan bool) *n
 		grpcServer := grpc.NewServer()
 		pb.RegisterDispatcherServer(grpcServer, srv)
 
-		logger.Criticalf("InternalServer start successful on %v !", srv.Addr())
+		logger.Noticef("InternalServer start successful on %v !", srv.Addr())
 		go grpcServer.Serve(lis)
 		s = srv
 	}
@@ -317,7 +317,7 @@ func (nr *nsManagerImpl) Register(name string) error {
 		return err
 	}
 	delFlag := make(chan bool)
-	ns, err := GetNamespace(name, nsConfig, delFlag)
+	ns, err := GetNamespace(name, nsConfig, delFlag, nr.is)
 	if err != nil {
 		logger.Errorf("Construct namespace %s error: %s", name, err)
 		return ErrCannotNewNs
