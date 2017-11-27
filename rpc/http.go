@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hyperchain/hyperchain/common"
-	"github.com/hyperchain/hyperchain/namespace"
+	"github.com/hyperchain/hyperchain/common/processor"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"io"
@@ -28,7 +28,7 @@ var (
 )
 
 type httpServerImpl struct {
-	nr     namespace.NamespaceManager
+	nmp    processor.NsMgrProcessor
 	port   int
 	config *common.Config
 
@@ -37,10 +37,10 @@ type httpServerImpl struct {
 }
 
 // GetHttpServer creates and returns a new httpServerImpl instance implements internalRPCServer interface.
-func GetHttpServer(nr namespace.NamespaceManager, config *common.Config) internalRPCServer {
+func GetHttpServer(nmp processor.NsMgrProcessor, config *common.Config) internalRPCServer {
 	if hs == nil {
 		hs = &httpServerImpl{
-			nr:     nr,
+			nmp:    nmp,
 			port:   config.GetInt(common.JSON_RPC_PORT),
 			config: config,
 		}
@@ -57,7 +57,7 @@ func (hsi *httpServerImpl) start() error {
 		err      error
 	)
 
-	handler := NewServer(hsi.nr, hsi.config)
+	handler := NewServer(hsi.nmp, hsi.config)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", handler.admin.LoginServer)
@@ -230,7 +230,7 @@ func (srv *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("content-type", "application/json")
-	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.namespaceMgr, nil)
+	codec := NewJSONCodec(&httpReadWrite{r.Body, w}, r, srv.nmp, nil)
 	defer codec.Close()
 	srv.ServeSingleRequest(codec, OptionMethodInvocation)
 }

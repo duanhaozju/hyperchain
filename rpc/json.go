@@ -9,7 +9,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/crypto/primitives"
-	"github.com/hyperchain/hyperchain/namespace"
 	"github.com/pkg/errors"
 	"io"
 	"net/http"
@@ -17,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"github.com/hyperchain/hyperchain/common/processor"
 )
 
 const (
@@ -68,12 +68,12 @@ type jsonCodecImpl struct {
 	e      *json.Encoder      // encodes responses
 	rw     io.ReadWriteCloser // connection
 	req    *http.Request
-	nr     namespace.NamespaceManager
+	nmp    processor.NsMgrProcessor
 	conn   *websocket.Conn
 }
 
 // NewJSONCodec creates a new RPC server codec with support for JSON-RPC 2.0
-func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.NamespaceManager, conn *websocket.Conn) ServerCodec {
+func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nmp processor.NsMgrProcessor, conn *websocket.Conn) ServerCodec {
 	d := json.NewDecoder(rwc)
 	d.UseNumber()
 	return &jsonCodecImpl{
@@ -82,7 +82,7 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 		e:      json.NewEncoder(rwc),
 		rw:     rwc,
 		req:    req,
-		nr:     nr,
+		nmp:     nmp,
 		conn:   conn,
 	}
 }
@@ -90,7 +90,7 @@ func NewJSONCodec(rwc io.ReadWriteCloser, req *http.Request, nr namespace.Namesp
 // CheckHttpHeaders will check http header. If it is verified, client has access to interact with the server,
 // otherwise, unauthorized error will be returned.
 func (c *jsonCodecImpl) CheckHttpHeaders(namespace string, method string) common.RPCError {
-	ns := c.nr.GetNamespaceByName(namespace)
+	ns := c.nmp.GetNamespaceProcessor(namespace)
 	if ns == nil {
 		return &common.NamespaceNotFound{Name: namespace}
 	}

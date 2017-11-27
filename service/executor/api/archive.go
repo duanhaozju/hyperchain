@@ -33,7 +33,7 @@ func NewPublicArchiveAPI(namespace string, eh *manager.EventHub, config *common.
 // for the client to query.
 func (admin *Archive) Snapshot(blockNumber uint64) (string, error) {
 	log := common.GetLogger(admin.namespace, "api")
-	handler := com.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
+	handler := com.NewManifestHandler(common.GetPath(admin.namespace, GetManifestPath(admin.config)))
 
 	chainHeight := edb.GetHeightOfChain(admin.namespace)
 	if blockNumber < chainHeight && blockNumber != 0 {
@@ -58,7 +58,7 @@ func (admin *Archive) Snapshot(blockNumber uint64) (string, error) {
 // QuerySnapshotExist checks if the given snapshot existed, so you can confirm that
 // the last step Archive.Snapshot is successful.
 func (admin *Archive) QuerySnapshotExist(filterId string) bool {
-	manifestHandler := com.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
+	manifestHandler := com.NewManifestHandler(common.GetPath(admin.namespace, GetManifestPath(admin.config)))
 	if manifestHandler.Contain(filterId) {
 		return true
 	} else {
@@ -68,7 +68,7 @@ func (admin *Archive) QuerySnapshotExist(filterId string) bool {
 
 // ReadSnapshot returns the snapshot information for the given snapshot ID.
 func (admin *Archive) ReadSnapshot(filterId string) (interface{}, error) {
-	manifestHandler := com.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
+	manifestHandler := com.NewManifestHandler(common.GetPath(admin.namespace, GetManifestPath(admin.config)))
 	var manifest com.Manifest
 	var err error
 	if err, manifest = manifestHandler.Read(filterId); err != nil {
@@ -79,7 +79,7 @@ func (admin *Archive) ReadSnapshot(filterId string) (interface{}, error) {
 
 // ListSnapshot returns all the existed snapshot information.
 func (admin *Archive) ListSnapshot() (com.Manifests, error) {
-	manifestHandler := com.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
+	manifestHandler := com.NewManifestHandler(common.GetPath(admin.namespace, GetManifestPath(admin.config)))
 	if err, manifests := manifestHandler.List(); err != nil {
 		return nil, &common.SnapshotErr{Message: err.Error()}
 	} else {
@@ -107,7 +107,7 @@ func (admin *Archive) DeleteSnapshot(filterId string) (bool, error) {
 // CheckSnapshot will check that the snapshot is correct. If correct, returns true.
 // Otherwise, returns false.
 func (admin *Archive) CheckSnapshot(filterId string) (bool, error) {
-	manifestHandler := com.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
+	manifestHandler := com.NewManifestHandler(common.GetPath(admin.namespace, GetManifestPath(admin.config)))
 	var manifest com.Manifest
 	var err error
 	if err, manifest = manifestHandler.Read(filterId); err != nil {
@@ -187,7 +187,7 @@ func (admin *Archive) RestoreAll(sync bool) (bool, error) {
 
 // QueryArchiveExist checks if the given snapshot has been archived.
 func (admin *Archive) QueryArchiveExist(filterId string) (bool, error) {
-	manifestHandler := com.NewManifestHandler(common.GetPath(admin.namespace, getManifestPath(admin.config)))
+	manifestHandler := com.NewManifestHandler(common.GetPath(admin.namespace, GetManifestPath(admin.config)))
 	var manifest com.Manifest
 	var err error
 	if err, manifest = manifestHandler.Read(filterId); err != nil {

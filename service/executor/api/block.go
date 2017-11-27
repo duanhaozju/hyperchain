@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/hyperchain/hyperchain/common"
 	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
+	capi "github.com/hyperchain/hyperchain/api"
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/op/go-logging"
 )
@@ -25,8 +26,8 @@ type BlockResult struct {
 	Hash         common.Hash   `json:"hash"`
 	ParentHash   common.Hash   `json:"parentHash"`
 	WriteTime    int64         `json:"writeTime"`
-	AvgTime      *Number       `json:"avgTime"`
-	TxCounts     *Number       `json:"txcounts"`
+	AvgTime      *capi.Number       `json:"avgTime"`
+	TxCounts     *capi.Number       `json:"txcounts"`
 	MerkleRoot   common.Hash   `json:"merkleRoot"`
 	Transactions []interface{} `json:"transactions,omitempty"`
 }
@@ -79,7 +80,7 @@ func (blk *Block) GetBlockByNumber(n BlockNumber, isPlain bool) (*BlockResult, e
 }
 
 type BlocksIntervalResult struct {
-	SumOfBlocks *Number      `json:"sumOfBlocks"`
+	SumOfBlocks *capi.Number      `json:"sumOfBlocks"`
 	StartBlock  *BlockNumber `json:"startBlock"`
 	EndBlock    *BlockNumber `json:"endBlock"`
 }
@@ -98,14 +99,14 @@ func (blk *Block) GetBlocksByTime(args IntervalTime) (*BlocksIntervalResult, err
 	}
 
 	return &BlocksIntervalResult{
-		SumOfBlocks: uint64ToNumber(sumOfBlocks),
+		SumOfBlocks: capi.Uint64ToNumber(sumOfBlocks),
 		StartBlock:  startBlock,
 		EndBlock:    endBlock,
 	}, nil
 }
 
 // GetAvgGenerateTimeByBlockNumber calculates the average generation time of all blocks for the given block number.
-func (blk *Block) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, error) {
+func (blk *Block) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (capi.Number, error) {
 	intargs, err := prepareIntervalArgs(args, blk.namespace)
 	if err != nil {
 		return 0, err
@@ -116,7 +117,7 @@ func (blk *Block) GetAvgGenerateTimeByBlockNumber(args IntervalArgs) (Number, er
 	} else if err != nil {
 		return 0, &common.CallbackError{Message: err.Error()}
 	} else {
-		return *int64ToNumber(t), nil
+		return *capi.Int64ToNumber(t), nil
 	}
 }
 
@@ -297,8 +298,8 @@ func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*Blo
 			Hash:       common.BytesToHash(block.BlockHash),
 			ParentHash: common.BytesToHash(block.ParentHash),
 			WriteTime:  block.WriteTime,
-			AvgTime:    int64ToNumber(edb.CalcResponseAVGTime(namespace, block.Number, block.Number)),
-			TxCounts:   int64ToNumber(txCounts),
+			AvgTime:    capi.Int64ToNumber(edb.CalcResponseAVGTime(namespace, block.Number, block.Number)),
+			TxCounts:   capi.Int64ToNumber(txCounts),
 			MerkleRoot: common.BytesToHash(block.MerkleRoot),
 		}, nil
 	}
@@ -309,8 +310,8 @@ func outputBlockResult(namespace string, block *types.Block, isPlain bool) (*Blo
 		Hash:         common.BytesToHash(block.BlockHash),
 		ParentHash:   common.BytesToHash(block.ParentHash),
 		WriteTime:    block.WriteTime,
-		AvgTime:      int64ToNumber(edb.CalcResponseAVGTime(namespace, block.Number, block.Number)),
-		TxCounts:     int64ToNumber(txCounts),
+		AvgTime:      capi.Int64ToNumber(edb.CalcResponseAVGTime(namespace, block.Number, block.Number)),
+		TxCounts:     capi.Int64ToNumber(txCounts),
 		MerkleRoot:   common.BytesToHash(block.MerkleRoot),
 		Transactions: transactions,
 	}, nil

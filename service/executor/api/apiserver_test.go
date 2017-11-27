@@ -4,7 +4,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/namespace"
 	"github.com/hyperchain/hyperchain/rpc"
-	"github.com/hyperchain/hyperchain/service/hypexec/controller"
+	"github.com/hyperchain/hyperchain/service/executor/controller"
 	"testing"
 )
 

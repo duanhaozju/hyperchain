@@ -6,7 +6,8 @@ import (
 	"errors"
 	"os"
 
-	"github.com/hyperchain/hyperchain/api"
+	"github.com/hyperchain/hyperchain/service/order/api"
+	capi "github.com/hyperchain/hyperchain/api"
 	"github.com/hyperchain/hyperchain/common"
 )
 
@@ -58,8 +59,8 @@ func (nr *nsManagerImpl) constructConfigFromDir(namespace, path string) (*common
 }
 
 // GetApis returns the RPC api of specified namespace.
-func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
-	return map[string]*api.API{
+func (ns *namespaceImpl) GetApis(namespace string) map[string]*capi.API {
+	return map[string]*capi.API{
 		"tx": {
 			Svcname: "tx",
 			Version: "1.5",
@@ -72,18 +73,6 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 			Service: api.NewPublicNodeAPI(namespace, ns.eh),
 			Public:  true,
 		},
-		"block": {
-			Svcname: "block",
-			Version: "1.5",
-			Service: api.NewPublicBlockAPI(namespace),
-			Public:  true,
-		},
-		"account": {
-			Svcname: "account",
-			Version: "1.5",
-			Service: api.NewPublicAccountAPI(namespace, ns.eh, ns.conf),
-			Public:  true,
-		},
 		"contract": {
 			Svcname: "contract",
 			Version: "1.5",
@@ -93,18 +82,8 @@ func (ns *namespaceImpl) GetApis(namespace string) map[string]*api.API {
 		"cert": {
 			Svcname: "cert",
 			Version: "1.5",
-			Service: api.NewCertAPI(namespace, ns.caMgr),
+			Service: capi.NewCertAPI(namespace, ns.caMgr),
 			Public:  true,
-		},
-		"sub": {
-			Svcname: "sub",
-			Version: "1.5",
-			Service: api.NewFilterAPI(namespace, ns.eh, ns.conf),
-		},
-		"archive": {
-			Svcname: "archive",
-			Version: "1.5",
-			Service: api.NewPublicArchiveAPI(namespace, ns.eh, ns.conf),
 		},
 	}
 }
