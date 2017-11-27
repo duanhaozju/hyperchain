@@ -492,7 +492,11 @@ func (rbft *rbftImpl) maybeSendCommit(digest string, v uint64, n uint64) error {
 		return nil
 	}
 
-	return rbft.sendCommit(digest, v, n)
+	if rbft.isPrimary(rbft.id) {
+		return rbft.sendCommit(digest, v, n)
+	} else {
+		return rbft.replicaSendCommit(digest, v, n)
+	}
 }
 
 // sendCommit send commit message.
@@ -536,6 +540,39 @@ func (rbft *rbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 	}
 
 	return nil
+}
+
+func (rbft *rbftImpl) replicaSendCommit(digest string, v uint64, n uint64) error {
+
+	cert := rbft.storeMgr.getCert(v, n, digest)
+	if cert.prePrepare == nil {
+		rbft.logger.Errorf("Replica %d get prePrepare failed for view=%d/seqNo=%d/digest=%s",
+			rbft.id, v, n, digest)
+		return nil
+	}
+	preprep := cert.prePrepare
+
+	batch, missing, err := rbft.batchMgr.txPool.GetTxsByHashList(digest, preprep.HashBatch.List)
+	if err != nil {
+		rbft.logger.Warningf("Replica %d get error when get txList, err: %v", rbft.id, err)
+		rbft.sendViewChange()
+		return nil
+	}
+	if missing != nil {
+		rbft.fetchMissingTransaction(preprep, missing)
+		return nil
+	}
+
+	txBatch := &TransactionBatch{
+		TxList:    batch,
+		HashList:  preprep.HashBatch.List,
+		Timestamp: preprep.HashBatch.Timestamp,
+		SeqNo:     preprep.SequenceNumber,
+	}
+	rbft.storeMgr.txBatchStore[preprep.BatchDigest] = txBatch
+	rbft.storeMgr.outstandingReqBatches[preprep.BatchDigest] = txBatch
+
+	return rbft.sendCommit(digest, v, n)
 }
 
 // recvCommit process logic after receive commit message.
@@ -713,7 +750,7 @@ func (rbft *rbftImpl) recvReturnMissingTransaction(re *ReturnMissingTransaction)
 		return nil
 	}
 
-	rbft.validatePending()
+	rbft.replicaSendCommit(re.BatchDigest, re.View, re.SequenceNumber)
 	return nil
 }
 
