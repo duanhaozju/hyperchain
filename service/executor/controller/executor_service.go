@@ -2,7 +2,6 @@ package controller
 
 import (
 	"github.com/hyperchain/hyperchain/admittance"
-	"github.com/hyperchain/hyperchain/service/executor/api"
 	capi "github.com/hyperchain/hyperchain/api"
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/common/service/client"
@@ -11,6 +10,7 @@ import (
 	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/hyperchain/hyperchain/manager/filter"
 	"github.com/hyperchain/hyperchain/namespace/rpc"
+	"github.com/hyperchain/hyperchain/service/executor/api"
 
 	"github.com/hyperchain/hyperchain/core/ledger/chain"
 	"github.com/hyperchain/hyperchain/service/executor/controller/executor"
@@ -263,8 +263,7 @@ func (es *executorServiceImpl) Stop() error {
 }
 
 func (es *executorServiceImpl) ProcessRequest(request interface{}) interface{} {
-	es.logger.Critical("request : %v", request)
-	es.logger.Critical("executor status: %v", es.status.getState())
+	es.logger.Debugf("request : %v", request)
 	if es.status.getState() == running {
 		if request != nil {
 			switch r := request.(type) {
@@ -292,44 +291,44 @@ func (es *executorServiceImpl) Name() string {
 }
 
 // GetExecutorApis returns the RPC api of specified namespace.
-func (es *executorServiceImpl) GetApis(namespace string) map[string] *capi.API {
+func (es *executorServiceImpl) GetApis(namespace string) map[string]*capi.API {
 	return map[string]*capi.API{
-		"execTx": {
+		"tx": {
 			Svcname: "tx",
 			Version: "1.5",
 			Service: api.NewPublicTransactionAPI(namespace, es.conf),
 			Public:  true,
 		},
-		"execBlock": {
+		"block": {
 			Svcname: "block",
 			Version: "1.5",
 			Service: api.NewPublicBlockAPI(namespace),
 			Public:  true,
 		},
-		"execAccount": {
+		"account": {
 			Svcname: "account",
 			Version: "1.5",
 			Service: api.NewPublicAccountAPI(namespace, es.conf),
 			Public:  true,
 		},
-		"execContract": {
+		"contract": {
 			Svcname: "contract",
 			Version: "1.5",
 			Service: api.NewPublicContractAPI(namespace, es.conf),
 			Public:  true,
 		},
-		"execCert": {
+		"cert": {
 			Svcname: "cert",
 			Version: "1.5",
 			Service: capi.NewCertAPI(namespace, es.caManager),
 			Public:  true,
 		},
-		"execSub": {
+		"sub": {
 			Svcname: "sub",
 			Version: "1.5",
 			Service: api.NewFilterAPI(namespace, es.filterSystem, es.conf),
 		},
-		"execArchive": {
+		"archive": {
 			Svcname: "archive",
 			Version: "1.5",
 			Service: api.NewPublicArchiveAPI(namespace, nil, es.conf),

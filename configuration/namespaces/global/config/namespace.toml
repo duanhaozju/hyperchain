@@ -168,7 +168,7 @@ max_log_size    = "200mb"  # "mb", "kb"
     consensus   = "NOTICE"
     hyperdb     = "NOTICE"
     eventhub    = "NOTICE"
-    executor    = "NOTICE"
+    executor    = "DEBUG"
     buckettree  = "NOTICE"
 
 ############################################################################################################

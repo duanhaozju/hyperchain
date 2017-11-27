@@ -141,11 +141,12 @@ func (executor *Executor) writeBlock(block *types.Block, record *ValidationResul
 	}
 	// Reset state, notify to remove some cached stuff
 	executor.statedb.MarkProcessFinish(record.SeqNo)
-	executor.statedb.MakeArchive(record.SeqNo)
+	//TODO(Xiaoyi Wang): executor.statedb.MakeArchive(record.SeqNo)
 	// Notify consensus module if it is a checkpoint
-	if block.Number%10 == 0 && block.Number != 0 {
-		chain.WriteChainChan(executor.namespace)
-	}
+	//TODO(Xiaoyi Wang): Add checkpoint
+	//if block.Number%10 == 0 && block.Number != 0 {
+	//	chain.WriteChainChan(executor.namespace)
+	//}
 	executor.logger.Noticef("Block number %d", block.Number)
 	executor.logger.Noticef("Block hash %s", hex.EncodeToString(block.BlockHash))
 	//executor.TransitVerifiedBlock(block)

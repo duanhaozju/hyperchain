@@ -95,7 +95,6 @@ func (f *ExeFiber) Start() error {
 		f.logger.Debugf("%v executor service == nil? %v", f.ol.GetLastCommit(), es == nil)
 
 		nextConsumeIndex := atomic.LoadUint64(&f.lastConsumeIndex) + 1
-
 		if nextConsumeIndex <= f.ol.GetLastCommit() {
 			if e, err := f.ol.Fetch(nextConsumeIndex); err == nil {
 				if payload, err := proto.Marshal(e); err != nil {

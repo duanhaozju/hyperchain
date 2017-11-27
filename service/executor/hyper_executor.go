@@ -66,7 +66,6 @@ func (h *HyperExecutor) start() error {
 	}
 
 	go func() {
-		//TODO: fix api server problem
 		err := h.apiServer.Start()
 		if err != nil {
 			panic(err)

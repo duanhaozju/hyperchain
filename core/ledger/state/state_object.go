@@ -271,9 +271,9 @@ func (self *StateObject) removeState(key common.Hash) {
 
 func (self *StateObject) Flush(db db.Batch, archieveDb db.Batch) error {
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 	go self.onEvict(&wg)
-	go self.doArchive(&wg)
+	//TODO(Xiaoyi Wang):go self.doArchive(&wg)
 
 	// IMPORTANT root should calculate first
 	// otherwise dirty storage will be removed in persist phase

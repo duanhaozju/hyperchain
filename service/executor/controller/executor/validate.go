@@ -155,8 +155,8 @@ func (e *Executor) process(validationEvent *event.ValidationEvent, done func()) 
 	}
 	// calculate validation result hash for comparison
 	hash := e.calculateValidationResultHash(validateResult.MerkleRoot, validateResult.TxRoot, validateResult.ReceiptRoot)
-	e.logger.Debugf("invalid transaction number %d", e.namespace, len(validateResult.InvalidTxs))
-	e.logger.Debugf("valid transaction number %d", e.namespace, len(validateResult.ValidTxs))
+	e.logger.Debugf("invalid transaction number %d", len(validateResult.InvalidTxs))
+	e.logger.Debugf("valid transaction number %d", len(validateResult.ValidTxs))
 	e.logger.Noticef("execute block %d done", validationEvent.SeqNo)
 	e.saveValidationResult(validateResult, validationEvent.SeqNo, hash)
 	e.sendValidationResult(validateResult, validationEvent, hash)
