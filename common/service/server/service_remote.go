@@ -19,7 +19,7 @@ type remoteServiceImpl struct {
 	logger    *logging.Logger
 	syncReqId *util.ID
 
-	msg chan *pb.IMessage
+	msg chan *pb.IMessage // cache to store remote peer's messages.
 
 	rspAuxMap  map[uint64]chan *pb.IMessage
 	rspAuxLock sync.RWMutex
@@ -164,4 +164,8 @@ func (rsi *remoteServiceImpl) dispatchResponse() {
 
 func (rsi *remoteServiceImpl) String() string {
 	return fmt.Sprintf("RemoteService [%s:%s] ", rsi.namespace, rsi.id)
+}
+
+func (rsi *remoteServiceImpl) Receive() chan *pb.IMessage {
+	return rsi.msg
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/op/go-logging"
 	"strconv"
+	"sync/atomic"
 	"time"
 )
 
@@ -32,6 +33,7 @@ type ExeFiber struct {
 	ol               oplog.OpLog
 	conf             *common.Config
 	logger           *logging.Logger
+	stop             int32
 }
 
 func NewFiber(conf *common.Config, ns *service.NamespaceServices, ol oplog.OpLog) (fiber.Fiber, error) {
@@ -54,6 +56,7 @@ func NewFiber(conf *common.Config, ns *service.NamespaceServices, ol oplog.OpLog
 	if err = fr.recovery(); err != nil {
 		return nil, err
 	}
+	fr.stop = 0
 	return fr, nil
 }
 
@@ -64,9 +67,9 @@ func (f *ExeFiber) recovery() error {
 		if err != nil {
 			return err
 		}
-		f.lastConsumeIndex = i
+		atomic.StoreUint64(&f.lastConsumeIndex, i)
 	} else {
-		f.lastConsumeIndex = 0
+		atomic.StoreUint64(&f.lastConsumeIndex, 0)
 		f.logger.Warningf("no last consume index found, set lastConsumeIndex to 0")
 	}
 
@@ -76,9 +79,9 @@ func (f *ExeFiber) recovery() error {
 		if err != nil {
 			return err
 		}
-		f.lastCommitIndex = i
+		atomic.StoreUint64(&f.lastCommitIndex, i)
 	} else {
-		f.lastCommitIndex = 0
+		atomic.StoreUint64(&f.lastCommitIndex, 0)
 		f.logger.Warningf("no last commit index found, set lastCommitIndex to 0")
 	}
 	return nil
@@ -86,11 +89,15 @@ func (f *ExeFiber) recovery() error {
 
 func (f *ExeFiber) Start() error {
 	var es service.Service
-	for { //TODO(Xiaoyi Wang): add close related control
-		es = f.ns.Service(executorId)
+	atomic.StoreInt32(&f.stop, 0)
+
+	for atomic.LoadInt32(&f.stop) == 0 {
 		f.logger.Debugf("%v executor service == nil? %v", f.ol.GetLastCommit(), es == nil)
-		if es != nil && (f.lastConsumeIndex+1 <= f.ol.GetLastCommit()) {
-			if e, err := f.ol.Fetch(f.lastConsumeIndex + 1); err == nil { //如果fetch不到应该阻塞该线程
+
+		nextConsumeIndex := atomic.LoadUint64(&f.lastConsumeIndex) + 1
+
+		if nextConsumeIndex <= f.ol.GetLastCommit() {
+			if e, err := f.ol.Fetch(nextConsumeIndex); err == nil {
 				if payload, err := proto.Marshal(e); err != nil {
 					f.logger.Errorf("unmarshal [%v] error %v", e, err)
 				} else {
@@ -98,11 +105,19 @@ func (f *ExeFiber) Start() error {
 						Type:    pb.Type_OP_LOG,
 						Payload: payload,
 					}
+
+					es = f.ns.Service(executorId)
+					if es == nil {
+						f.logger.Error("no executor service connection found, continue")
+						time.Sleep(time.Second)
+						continue
+					}
+
 					if err := es.Send(logMsg); err != nil {
 						f.logger.Error(err)
 						continue
 					} else {
-						f.lastConsumeIndex++ //TODO(Xiaoyi Wang): make this run in atomic way
+						atomic.StoreUint64(&f.lastConsumeIndex, nextConsumeIndex)
 					}
 				}
 
@@ -113,9 +128,34 @@ func (f *ExeFiber) Start() error {
 			time.Sleep(time.Second)
 		}
 	}
+
+	return nil
+}
+
+func (f *ExeFiber) processExecutorRequest(exit chan bool) {
+	var es service.Service
+	atomic.StoreInt32(&f.stop, 0)
+	for atomic.LoadInt32(&f.stop) == 0 {
+		es = f.ns.Service(executorId)
+		if es == nil {
+			time.Sleep(time.Second)
+		} else {
+			select {
+			case <-exit:
+				return
+			case req := <-es.Receive():
+				f.handle(req)
+			}
+		}
+	}
+}
+
+func (f *ExeFiber) handle(req *pb.IMessage) {
+	//TODO(Xiaoyi Wang): add req handle logic
+	f.logger.Criticalf("handle message: %v", req)
 }
 
 func (f *ExeFiber) Stop() error {
-	//TODO
+	atomic.StoreInt32(&f.stop, 0)
 	return nil
 }

@@ -26,6 +26,9 @@ type Service interface {
 
 	//IsHealth judge whether the service is health.
 	IsHealth() bool
+
+	//Receive receive message from the remote peer.
+	Receive() chan *pb.IMessage
 }
 
 //common service event
