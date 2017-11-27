@@ -2,7 +2,8 @@ package controller
 
 import (
 	"github.com/hyperchain/hyperchain/admittance"
-	"github.com/hyperchain/hyperchain/api"
+	"github.com/hyperchain/hyperchain/service/executor/api"
+	capi "github.com/hyperchain/hyperchain/api"
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/common/service/client"
 	pb "github.com/hyperchain/hyperchain/common/service/protos"
@@ -166,7 +167,7 @@ func (es *executorServiceImpl) init() error {
 	}
 
 	// 5. add jsonrpc processor
-	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetExecutorApis(es.namespace))
+	es.rpc = rpc.NewJsonRpcProcessorImpl(es.namespace, es.GetApis(es.namespace))
 
 	// 6. initialized status
 	es.status.setState(initialized)
@@ -291,12 +292,12 @@ func (es *executorServiceImpl) Name() string {
 }
 
 // GetExecutorApis returns the RPC api of specified namespace.
-func (es *executorServiceImpl) GetExecutorApis(namespace string) map[string]*api.API {
-	return map[string]*api.API{
+func (es *executorServiceImpl) GetApis(namespace string) map[string] *capi.API {
+	return map[string]*capi.API{
 		"execTx": {
 			Svcname: "tx",
 			Version: "1.5",
-			Service: api.NewPublicTransactionExecAPI(namespace, es.conf),
+			Service: api.NewPublicTransactionAPI(namespace, es.conf),
 			Public:  true,
 		},
 		"execBlock": {
@@ -308,19 +309,19 @@ func (es *executorServiceImpl) GetExecutorApis(namespace string) map[string]*api
 		"execAccount": {
 			Svcname: "account",
 			Version: "1.5",
-			Service: api.NewPublicAccountAPI(namespace, nil, es.conf),
+			Service: api.NewPublicAccountAPI(namespace, es.conf),
 			Public:  true,
 		},
 		"execContract": {
 			Svcname: "contract",
 			Version: "1.5",
-			Service: api.NewPublicContractExecAPI(namespace, es.conf),
+			Service: api.NewPublicContractAPI(namespace, es.conf),
 			Public:  true,
 		},
 		"execCert": {
 			Svcname: "cert",
 			Version: "1.5",
-			Service: api.NewCertAPI(namespace, es.caManager),
+			Service: capi.NewCertAPI(namespace, es.caManager),
 			Public:  true,
 		},
 		"execSub": {

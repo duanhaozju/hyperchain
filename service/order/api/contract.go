@@ -9,10 +9,11 @@ import (
 	"github.com/hyperchain/hyperchain/crypto/hmEncryption"
 	"github.com/hyperchain/hyperchain/manager"
 	"github.com/juju/ratelimit"
-	"math/big"
-	"strconv"
-	"strings"
 	"time"
+	"math/big"
+	"strings"
+	capi "github.com/hyperchain/hyperchain/api"
+	"strconv"
 )
 
 // This file implements the handler of Contract service API which
@@ -28,12 +29,12 @@ type Contract struct {
 // NewPublicContractAPI creates and returns a new Contract instance for given namespace name.
 func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common.Config) *Contract {
 	log := common.GetLogger(namespace, "api")
-	fillrate, err := getFillRate(namespace, config, CONTRACT)
+	fillrate, err := capi.GetFillRate(namespace, config, capi.CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
 		fillrate = 10 * time.Millisecond
 	}
-	peak := getRateLimitPeak(namespace, config, CONTRACT)
+	peak := capi.GetRateLimitPeak(namespace, config, capi.CONTRACT)
 	if peak == 0 {
 		log.Errorf("got invalid ratelimit peak parameters as 0. use default peak parameters 500")
 		peak = 500
@@ -48,7 +49,7 @@ func NewPublicContractAPI(namespace string, eh *manager.EventHub, config *common
 
 // DeployContract deploys contract.
 func (contract *Contract) DeployContract(args SendTxArgs) (common.Hash, error) {
-	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
+	if capi.GetRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{}
 	}
 	return contract.postContract(args, 1)
@@ -56,7 +57,7 @@ func (contract *Contract) DeployContract(args SendTxArgs) (common.Hash, error) {
 
 // InvokeContract invokes contract.
 func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
-	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
+	if capi.GetRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{}
 	}
 	return contract.postContract(args, 2)
@@ -64,7 +65,7 @@ func (contract *Contract) InvokeContract(args SendTxArgs) (common.Hash, error) {
 
 // MaintainContract maintains contract, including upgrade contract, freeze contract and unfreeze contract.
 func (contract *Contract) MaintainContract(args SendTxArgs) (common.Hash, error) {
-	if getRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
+	if capi.GetRateLimitEnable(contract.config) && contract.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{}
 	}
 	return contract.postContract(args, 4)
@@ -121,10 +122,10 @@ func (contract *Contract) CompileContract(ct string) (*CompileCode, error) {
 type EncryptoArgs struct {
 
 	// The balance(plain text) of account A before transferring money to account B.
-	Balance Number `json:"balance"`
+	Balance capi.Number `json:"balance"`
 
 	// The amount(plain text) that account A will transfer to account B.
-	Amount Number `json:"amount"`
+	Amount capi.Number `json:"amount"`
 
 	// InvalidHmValue is optional. It represents invalid homomorphic encryption transaction amount of account A
 	// when a person transfers money(amount homomorphic encryption) to A that can't be verified by account A.
@@ -158,12 +159,12 @@ func (contract *Contract) EncryptoMessage(args EncryptoArgs) (*HmResult, error) 
 
 	if args.InvalidHmValue == "" {
 		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(),
-			amount_bigint.Bytes(), nil, getPaillierPublickey(contract.config))
+			amount_bigint.Bytes(), nil, capi.GetPaillierPublickey(contract.config))
 	} else {
 		hmBalance_bigint := new(big.Int)
 		hmBalance_bigint.SetString(args.InvalidHmValue, 10)
 		isValid, newBalance_hm, amount_hm = hmEncryption.PreHmTransaction(balance_bigint.Bytes(),
-			amount_bigint.Bytes(), hmBalance_bigint.Bytes(), getPaillierPublickey(contract.config))
+			amount_bigint.Bytes(), hmBalance_bigint.Bytes(), capi.GetPaillierPublickey(contract.config))
 	}
 
 	newBalance_hm_bigint := new(big.Int)
@@ -231,7 +232,7 @@ func (contract *Contract) CheckHmValue(args CheckArgs) (*HmCheckResult, error) {
 		rawValue_bigint := new(big.Int)
 		rawValue_bigint.SetInt64(v)
 		isvalid, sumIllegal = hmEncryption.DestinationVerify(illegalHmAmount, encryVlue_bigint.Bytes(),
-			rawValue_bigint.Bytes(), getPaillierPublickey(contract.config))
+			rawValue_bigint.Bytes(), capi.GetPaillierPublickey(contract.config))
 		illegalHmAmount = sumIllegal
 		result[i] = isvalid
 	}

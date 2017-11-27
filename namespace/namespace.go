@@ -218,11 +218,7 @@ func (ns *namespaceImpl) init() error {
 	ns.eh = eh
 
 	// 5. init JsonRpcProcessor to process incoming requests.
-	if !ns.conf.GetBool(common.EXECUTOR_EMBEDDED) {
-		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetOrderApis(ns.Name()))
-	} else {
-		ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
-	}
+	ns.rpc = rpc.NewJsonRpcProcessorImpl(ns.Name(), ns.GetApis(ns.Name()))
 
 	ns.status.setState(initialized)
 	return nil

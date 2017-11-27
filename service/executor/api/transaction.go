@@ -5,7 +5,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/op/go-logging"
 	edb "github.com/hyperchain/hyperchain/core/ledger/chain"
-
+	capi "github.com/hyperchain/hyperchain/api"
 	"time"
 	"github.com/hyperchain/hyperchain/core/types"
 	"fmt"
@@ -13,7 +13,7 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-type TransactionExec struct {
+type Transaction struct {
 	namespace   string
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
@@ -25,33 +25,33 @@ type TransactionResult struct {
 	Hash        common.Hash    `json:"hash"`                  // transaction hash
 	BlockNumber *BlockNumber   `json:"blockNumber,omitempty"` // block number that transaction belongs to
 	BlockHash   *common.Hash   `json:"blockHash,omitempty"`   // block hash that transaction belongs to
-	TxIndex     *Number        `json:"txIndex,omitempty"`     // the index of transaction in the block
+	TxIndex     *capi.Number        `json:"txIndex,omitempty"`     // the index of transaction in the block
 	From        common.Address `json:"from"`                  // transaction sender
 	To          common.Address `json:"to"`                    // transaction receiver
-	Amount      *Number        `json:"amount,omitempty"`      // the amount of transaction
+	Amount      *capi.Number        `json:"amount,omitempty"`      // the amount of transaction
 	Timestamp   int64          `json:"timestamp"`
 	Nonce       int64          `json:"nonce"`
 	Extra       string         `json:"extra"`
-	ExecuteTime *Number        `json:"executeTime,omitempty"` // the time it takes to execute the transaction
+	ExecuteTime *capi.Number        `json:"executeTime,omitempty"` // the time it takes to execute the transaction
 	Payload     string         `json:"payload,omitempty"`
 	Invalid     bool           `json:"invalid,omitempty"`    // indicate whether it is invalid or not
 	InvalidMsg  string         `json:"invalidMsg,omitempty"` // if Invalid is true, printing invalid message
 }
 
 // NewPublicTransactionAPI creates and returns a new Transaction instance for given namespace name.
-func NewPublicTransactionExecAPI(namespace string, config *common.Config) *TransactionExec {
+func NewPublicTransactionAPI(namespace string, config *common.Config) *Transaction {
 	log := common.GetLogger(namespace, "api")
-	fillrate, err := getFillRate(namespace, config, TRANSACTION)
+	fillrate, err := capi.GetFillRate(namespace, config, TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
 		fillrate = 10 * time.Millisecond
 	}
-	peak := getRateLimitPeak(namespace, config, TRANSACTION)
+	peak := capi.GetRateLimitPeak(namespace, config, TRANSACTION)
 	if peak == 0 {
 		log.Errorf("got invalid ratelimit peak parameters as 0. use default peak parameters 500")
 		peak = 500
 	}
-	return &TransactionExec {
+	return &Transaction {
 		namespace:   namespace,
 		config:      config,
 		tokenBucket: ratelimit.NewBucket(fillrate, peak),
@@ -69,7 +69,7 @@ type ReceiptResult struct {
 }
 
 // GetTransactionReceipt returns transaction's receipt for given transaction hash.
-func (tran *TransactionExec) GetTransactionReceipt(hash common.Hash) (*ReceiptResult, error) {
+func (tran *Transaction) GetTransactionReceipt(hash common.Hash) (*ReceiptResult, error) {
 	if errType, err := edb.GetInvaildTxErrType(tran.namespace, hash.Bytes()); errType == -1 {
 		receipt := edb.GetReceipt(tran.namespace, hash)
 		if receipt == nil {
@@ -107,7 +107,7 @@ func (tran *TransactionExec) GetTransactionReceipt(hash common.Hash) (*ReceiptRe
 }
 
 // GetBatchReceipt returns transaction's receipt for given hash list.
-func (tran *TransactionExec) GetBatchReceipt(args BatchArgs) ([]*ReceiptResult, error) {
+func (tran *Transaction) GetBatchReceipt(args BatchArgs) ([]*ReceiptResult, error) {
 	if args.Hashes == nil {
 		return nil, &common.InvalidParamsError{Message: "invalid parameter, please specify transaction hash list"}
 	}
@@ -128,7 +128,7 @@ func (tran *TransactionExec) GetBatchReceipt(args BatchArgs) ([]*ReceiptResult, 
 
 // GetTransactions returns all transactions in the given block number. Parameters include
 // start block number and end block number.
-func (tran *TransactionExec) GetTransactions(args IntervalArgs) ([]*TransactionResult, error) {
+func (tran *Transaction) GetTransactions(args IntervalArgs) ([]*TransactionResult, error) {
 	trueArgs, err := prepareIntervalArgs(args, tran.namespace)
 	if err != nil {
 		return nil, err
@@ -153,7 +153,7 @@ func (tran *TransactionExec) GetTransactions(args IntervalArgs) ([]*TransactionR
 }
 
 // GetBatchTransactions returns all transactions for given hash list.
-func (tran *TransactionExec) GetBatchTransactions(args BatchArgs) ([]*TransactionResult, error) {
+func (tran *Transaction) GetBatchTransactions(args BatchArgs) ([]*TransactionResult, error) {
 	if args.Hashes == nil {
 		return nil, &common.InvalidParamsError{Message: "invalid parameter, please specify transaction hash list"}
 	}
@@ -172,7 +172,7 @@ func (tran *TransactionExec) GetBatchTransactions(args BatchArgs) ([]*Transactio
 }
 
 // GetDiscardTransactions returns all invalid transactions that don't be saved in the ledger.
-func (tran *TransactionExec) GetDiscardTransactions() ([]*TransactionResult, error) {
+func (tran *Transaction) GetDiscardTransactions() ([]*TransactionResult, error) {
 
 	reds, err := edb.GetAllDiscardTransaction(tran.namespace)
 	if err != nil && err.Error() == db_not_found_error {
@@ -198,7 +198,7 @@ func (tran *TransactionExec) GetDiscardTransactions() ([]*TransactionResult, err
 }
 
 // GetDiscardTransactionsByTime returns the invalid transactions in the given time duration.
-func (tran *TransactionExec) GetDiscardTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
+func (tran *Transaction) GetDiscardTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
 	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0 {
 		return nil, &common.InvalidParamsError{Message: "invalid params, both startTime and endTime must be positive, startTime must be less than endTime"}
@@ -230,7 +230,7 @@ func (tran *TransactionExec) GetDiscardTransactionsByTime(args IntervalTime) ([]
 }
 
 // getDiscardTransactionByHash returns the invalid transaction for the given transaction hash.
-func (tran *TransactionExec) getDiscardTransactionByHash(hash common.Hash) (*TransactionResult, error) {
+func (tran *Transaction) getDiscardTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 
 	red, err := edb.GetDiscardTransaction(tran.namespace, hash.Bytes())
 	if err != nil && err.Error() == db_not_found_error {
@@ -244,7 +244,7 @@ func (tran *TransactionExec) getDiscardTransactionByHash(hash common.Hash) (*Tra
 }
 
 // GetTransactionByHash returns the transaction in the ledger for the given transaction hash.
-func (tran *TransactionExec) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
+func (tran *Transaction) GetTransactionByHash(hash common.Hash) (*TransactionResult, error) {
 	tx, err := edb.GetTransaction(tran.namespace, hash[:])
 	if err != nil && err == edb.ErrNotFindTxMeta {
 		return tran.getDiscardTransactionByHash(hash)
@@ -256,7 +256,7 @@ func (tran *TransactionExec) GetTransactionByHash(hash common.Hash) (*Transactio
 }
 
 // GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and transaction index.
-func (tran *TransactionExec) GetTransactionByBlockHashAndIndex(hash common.Hash, index Number) (*TransactionResult, error) {
+func (tran *Transaction) GetTransactionByBlockHashAndIndex(hash common.Hash, index capi.Number) (*TransactionResult, error) {
 	if common.EmptyHash(hash) == true {
 		return nil, &common.InvalidParamsError{Message: "invalid params, missing block hash"}
 	}
@@ -286,7 +286,7 @@ func (tran *TransactionExec) GetTransactionByBlockHashAndIndex(hash common.Hash,
 }
 
 // GetTransactionsByBlockNumberAndIndex returns the transaction for the given block number and transaction index.
-func (tran *TransactionExec) GetTransactionByBlockNumberAndIndex(n BlockNumber, index Number) (*TransactionResult, error) {
+func (tran *Transaction) GetTransactionByBlockNumberAndIndex(n BlockNumber, index capi.Number) (*TransactionResult, error) {
 	chain, err := edb.GetChain(tran.namespace)
 	if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
@@ -323,7 +323,7 @@ func (tran *TransactionExec) GetTransactionByBlockNumberAndIndex(n BlockNumber, 
 }
 
 // GetTransactionsByTime returns the transactions in the ledger in the given time duration.
-func (tran *TransactionExec) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
+func (tran *Transaction) GetTransactionsByTime(args IntervalTime) ([]*TransactionResult, error) {
 
 	if args.StartTime > args.Endtime || args.StartTime < 0 || args.Endtime < 0 {
 		return nil, &common.InvalidParamsError{Message: "invalid params, both startTime and endTime must be positive, startTime is less than endTime"}
@@ -366,7 +366,7 @@ func (tran *TransactionExec) GetTransactionsByTime(args IntervalTime) ([]*Transa
 }
 
 // GetBlockTransactionCountByHash returns the number of block transactions for given block hash.
-func (tran *TransactionExec) GetBlockTransactionCountByHash(hash common.Hash) (*Number, error) {
+func (tran *Transaction) GetBlockTransactionCountByHash(hash common.Hash) (*capi.Number, error) {
 
 	if common.EmptyHash(hash) == true {
 		return nil, &common.InvalidParamsError{Message: "invalid params, missing block hash"}
@@ -382,11 +382,11 @@ func (tran *TransactionExec) GetBlockTransactionCountByHash(hash common.Hash) (*
 
 	txCount := len(block.Transactions)
 
-	return intToNumber(txCount), nil
+	return capi.IntToNumber(txCount), nil
 }
 
 // GetBlockTransactionCountByNumber returns the number of block transactions for given block number.
-func (tran *TransactionExec) GetBlockTransactionCountByNumber(n BlockNumber) (*Number, error) {
+func (tran *Transaction) GetBlockTransactionCountByNumber(n BlockNumber) (*capi.Number, error) {
 	chain, err := edb.GetChain(tran.namespace)
 	if err != nil {
 		return nil, &common.CallbackError{Message: err.Error()}
@@ -408,11 +408,11 @@ func (tran *TransactionExec) GetBlockTransactionCountByNumber(n BlockNumber) (*N
 
 	txCount := len(block.Transactions)
 
-	return intToNumber(txCount), nil
+	return capi.IntToNumber(txCount), nil
 }
 
 // GetTransactionsCount returns the number of transaction in ledger.
-func (tran *TransactionExec) GetTransactionsCount() (interface{}, error) {
+func (tran *Transaction) GetTransactionsCount() (interface{}, error) {
 
 	chain, err := edb.GetChain(tran.namespace)
 	if err != nil {
@@ -420,17 +420,17 @@ func (tran *TransactionExec) GetTransactionsCount() (interface{}, error) {
 	}
 
 	return struct {
-		Count     *Number `json:"count,"`
+		Count     *capi.Number `json:"count,"`
 		Timestamp int64   `json:"timestamp"`
 	}{
-		Count:     uint64ToNumber(chain.CurrentTxSum),
+		Count:     capi.Uint64ToNumber(chain.CurrentTxSum),
 		Timestamp: time.Now().UnixNano(),
 	}, nil
 }
 
 // GetTxAvgTimeByBlockNumber calculates the average execution time of all transactions in the given block number.
 // Parameters include start block number and end block number.
-func (tran *TransactionExec) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Number, error) {
+func (tran *Transaction) GetTxAvgTimeByBlockNumber(args IntervalArgs) (capi.Number, error) {
 	intargs, err := prepareIntervalArgs(args, tran.namespace)
 	if err != nil {
 		return 0, err
@@ -442,13 +442,13 @@ func (tran *TransactionExec) GetTxAvgTimeByBlockNumber(args IntervalArgs) (Numbe
 		return 0, nil
 	}
 
-	return *int64ToNumber(exeTime), nil
+	return *capi.Int64ToNumber(exeTime), nil
 }
 
 // GetTransactionsCountByContractAddr returns the number of eligible transaction, the latest block number and
 // index of eligible last transaction in the latest block. Parameters include start block number, end block
 // number and contract address.
-func (tran *TransactionExec) GetTransactionsCountByContractAddr(args IntervalArgs) (interface{}, error) {
+func (tran *Transaction) GetTransactionsCountByContractAddr(args IntervalArgs) (interface{}, error) {
 	if args.ContractAddr == nil {
 		return nil, &common.InvalidParamsError{Message: "invalid params, missing params `address`"}
 	} else if args.MethodID != "" {
@@ -460,7 +460,7 @@ func (tran *TransactionExec) GetTransactionsCountByContractAddr(args IntervalArg
 // GetTransactionsCountByMethodID returns the number of eligible transaction, the latest block number and
 // index of eligible last transaction in the latest block. Parameters include start block number, end block
 // number and method ID. Method ID is contract method identifier in a contract.
-func (tran *TransactionExec) GetTransactionsCountByMethodID(args IntervalArgs) (interface{}, error) {
+func (tran *Transaction) GetTransactionsCountByMethodID(args IntervalArgs) (interface{}, error) {
 	if args.ContractAddr == nil {
 		return nil, &common.InvalidParamsError{Message: "invalid params, missing params `address`"}
 	} else if args.MethodID == "" {
@@ -473,7 +473,7 @@ func (tran *TransactionExec) GetTransactionsCountByMethodID(args IntervalArgs) (
 	return tran.getTransactionsCountByBlockNumber(args)
 }
 
-func (tran *TransactionExec) getTransactionsCountByBlockNumber(args IntervalArgs) (interface{}, error) {
+func (tran *Transaction) getTransactionsCountByBlockNumber(args IntervalArgs) (interface{}, error) {
 
 	realArgs, err := prepareIntervalArgs(args, tran.namespace)
 	if err != nil {
@@ -533,12 +533,12 @@ func (tran *TransactionExec) getTransactionsCountByBlockNumber(args IntervalArgs
 	}
 
 	return struct {
-		Count        *Number      `json:"count,"`
-		LastIndex    *Number      `json:"lastIndex"`
+		Count        *capi.Number      `json:"count,"`
+		LastIndex    *capi.Number      `json:"lastIndex"`
 		LastBlockNum *BlockNumber `json:"lastBlockNum"`
 	}{
-		Count:        intToNumber(txCounts),
-		LastIndex:    intToNumber(lastIndex),
+		Count:        capi.IntToNumber(txCounts),
+		LastIndex:    capi.IntToNumber(lastIndex),
 		LastBlockNum: uint64ToBlockNumber(lastBlockNum),
 	}, nil
 
@@ -554,9 +554,9 @@ type PagingArgs struct {
 	MaxBlkNumber BlockNumber `json:"maxBlkNumber"` // the maximum block number of allowing to query
 	MinBlkNumber BlockNumber `json:"minBlkNumber"` // the minimum block number of allowing to query
 	BlkNumber    BlockNumber `json:"blkNumber"`    // the current block number
-	TxIndex      Number      `json:"txIndex"`      // index of the transaction in the current block
-	Separated    Number      `json:"separated"`    // specify how many transactions to skip.
-	PageSize     Number      `json:"pageSize"`     // specify the number of transaction returned
+	TxIndex      capi.Number      `json:"txIndex"`      // index of the transaction in the current block
+	Separated    capi.Number      `json:"separated"`    // specify how many transactions to skip.
+	PageSize     capi.Number      `json:"pageSize"`     // specify the number of transaction returned
 
 	// specify if the returned transactions contain current transaction(BlkNumber and TxIndex)
 	// or if contain current transaction(BlkNumber and TxIndex) when calculating the number of transactions.
@@ -574,7 +574,7 @@ type pagingArgs struct {
 }
 
 // GetNextPageTransactions returns next page data.
-func (tran *TransactionExec) GetNextPageTransactions(args PagingArgs) ([]interface{}, error) {
+func (tran *Transaction) GetNextPageTransactions(args PagingArgs) ([]interface{}, error) {
 
 	// check paging parameters
 	realArgs, err := preparePagingArgs(args)
@@ -687,7 +687,7 @@ func (tran *TransactionExec) GetNextPageTransactions(args PagingArgs) ([]interfa
 }
 
 // GetNextPageTransactions returns previous page data.
-func (tran *TransactionExec) GetPrevPageTransactions(args PagingArgs) ([]interface{}, error) {
+func (tran *Transaction) GetPrevPageTransactions(args PagingArgs) ([]interface{}, error) {
 
 	// check paging parameters
 	realArgs, err := preparePagingArgs(args)
@@ -808,7 +808,7 @@ func (tran *TransactionExec) GetPrevPageTransactions(args PagingArgs) ([]interfa
 	})
 }
 
-func (tran *TransactionExec) getNextPagingTransactions(txs []interface{}, currentNumber uint64, currentIndex int, constant pagingArgs) ([]interface{}, error) {
+func (tran *Transaction) getNextPagingTransactions(txs []interface{}, currentNumber uint64, currentIndex int, constant pagingArgs) ([]interface{}, error) {
 	tran.log.Debugf("===== enter getNextPagingTransactions =======\n")
 	tran.log.Debugf("current transaction index = %v\n", currentIndex)
 	tran.log.Debugf("     current block number = %v\n", currentNumber)
@@ -876,7 +876,7 @@ func (tran *TransactionExec) getNextPagingTransactions(txs []interface{}, curren
 	}
 }
 
-func (tran *TransactionExec) getPrevPagingTransactions(txs []interface{}, currentNumber uint64, currentIndex int, constant pagingArgs) ([]interface{}, error) {
+func (tran *Transaction) getPrevPagingTransactions(txs []interface{}, currentNumber uint64, currentIndex int, constant pagingArgs) ([]interface{}, error) {
 
 	tran.log.Debug("===== enter getPrevPagingTransactions =======\n")
 	tran.log.Debugf("current transaction index = %v\n", currentIndex)
@@ -937,7 +937,7 @@ func (tran *TransactionExec) getPrevPagingTransactions(txs []interface{}, curren
 		return tran.getPrevPagingTransactions(txs, currentNumber, index-1, constant)
 	}
 }
-func (tran *TransactionExec) filterTransactionsByMethodID(txs []interface{}, methodID string) ([]interface{}, error) {
+func (tran *Transaction) filterTransactionsByMethodID(txs []interface{}, methodID string) ([]interface{}, error) {
 
 	result := make([]interface{}, 0)
 	for _, tx := range txs {
@@ -949,7 +949,7 @@ func (tran *TransactionExec) filterTransactionsByMethodID(txs []interface{}, met
 	return result, nil
 }
 
-func (tran *TransactionExec) filterTransactionsByAddress(txs []interface{}, address *common.Address) ([]interface{}, error) {
+func (tran *Transaction) filterTransactionsByAddress(txs []interface{}, address *common.Address) ([]interface{}, error) {
 
 	result := make([]interface{}, 0)
 	contractAddr := *address
@@ -992,14 +992,14 @@ func outputTransaction(trans interface{}, namespace string) (*TransactionResult,
 				Hash:        txHash,
 				BlockNumber: uint64ToBlockNumber(bn),
 				BlockHash:   &bHash,
-				TxIndex:     int64ToNumber(txIndex),
+				TxIndex:     capi.Int64ToNumber(txIndex),
 				From:        common.BytesToAddress(t.From),
 				To:          common.BytesToAddress(t.To),
-				Amount:      int64ToNumber(txValue.Amount),
+				Amount:      capi.Int64ToNumber(txValue.Amount),
 				Nonce:       t.Nonce,
 				Extra:       string(t.GetTransactionValue().GetExtra()),
 				Timestamp:   t.Timestamp,
-				ExecuteTime: int64ToNumber((blk.WriteTime - blk.Timestamp) / int64(time.Millisecond)),
+				ExecuteTime: capi.Int64ToNumber((blk.WriteTime - blk.Timestamp) / int64(time.Millisecond)),
 				Payload:     common.ToHex(txValue.Payload),
 			}
 		} else if err != nil && err.Error() == db_not_found_error {
@@ -1019,7 +1019,7 @@ func outputTransaction(trans interface{}, namespace string) (*TransactionResult,
 			Hash:       txHash,
 			From:       common.BytesToAddress(t.Tx.From),
 			To:         common.BytesToAddress(t.Tx.To),
-			Amount:     int64ToNumber(txValue.Amount),
+			Amount:     capi.Int64ToNumber(txValue.Amount),
 			Nonce:      t.Tx.Nonce,
 			Extra:      string(t.Tx.GetTransactionValue().GetExtra()),
 			Timestamp:  t.Tx.Timestamp,

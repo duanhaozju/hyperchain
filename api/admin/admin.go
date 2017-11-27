@@ -86,8 +86,8 @@ type Administrator struct {
 }
 
 // NewAdministrator news a raw administrator with default settings.
-func NewAdministrator(nmp processor.NsMgrProcessor, config *common.Config, isExecutor bool) *Administrator {
-	if isExecutor {
+func NewAdministrator(nmp processor.NsMgrProcessor, config *common.Config) *Administrator {
+	if config.GetBool("execute.isExecute") {
 		return nil
 	}
 	adm := &Administrator{

@@ -5,7 +5,6 @@ package api
 import (
 	"fmt"
 	"github.com/hyperchain/hyperchain/common"
-	"github.com/hyperchain/hyperchain/manager"
 	"github.com/op/go-logging"
 )
 
@@ -13,7 +12,6 @@ import (
 // can be invoked by client in JSON-RPC request.
 
 type Account struct {
-	eh        *manager.EventHub
 	namespace string
 	config    *common.Config
 	log       *logging.Logger
@@ -30,10 +28,9 @@ type UnlockParas struct {
 }
 
 // NewPublicAccountAPI creates and returns a new Account instance for given namespace name.
-func NewPublicAccountAPI(namespace string, eh *manager.EventHub, config *common.Config) *Account {
+func NewPublicAccountAPI(namespace string, config *common.Config) *Account {
 	return &Account{
 		namespace: namespace,
-		eh:        eh,
 		config:    config,
 		log:       common.GetLogger(namespace, "api"),
 	}

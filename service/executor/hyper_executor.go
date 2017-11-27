@@ -28,6 +28,9 @@ func newHyperExecutor(argV *argT) *HyperExecutor {
 	gc := common.NewConfig(he.args.ConfigPath)
 
 	gc.Set(common.GLOBAL_CONFIG_PATH, he.args.ConfigPath)
+	gc.Set(common.JSON_RPC_PORT, gc.GetInt(common.JSON_RPC_PORT_EXECUTOR))
+	gc.Set(common.WEBSOCKET_PORT, gc.GetInt(common.WEBSOCKET_PORT_EXECUTOR))
+	gc.Set("execute.isExecute", true)
 	common.InitHyperLoggerManager(gc)
 
 	he.logger = common.GetLogger(common.DEFAULT_LOG, "hypexec")
@@ -35,7 +38,7 @@ func newHyperExecutor(argV *argT) *HyperExecutor {
 	he.admin = admin.NewAdministrator(he.exeCtl, gc)
 
 	//TODO: fix api compatible
-	he.apiServer = jsonrpc.GetRPCServer(he.exeCtl, gc, true)
+	he.apiServer = jsonrpc.GetRPCServer(he.exeCtl, gc)
 	return he
 }
 

@@ -9,11 +9,15 @@ import (
 	"github.com/hyperchain/hyperchain/crypto"
 	"github.com/hyperchain/hyperchain/manager"
 	"github.com/hyperchain/hyperchain/manager/event"
+	capi "github.com/hyperchain/hyperchain/api"
 	"github.com/juju/ratelimit"
 	"github.com/op/go-logging"
 	"time"
 )
 
+var (
+	kec256Hash         = crypto.NewKeccak256Hash("keccak256")
+)
 // This file implements the handler of Transaction service API which
 // can be invoked by client in JSON-RPC request.
 
@@ -29,7 +33,7 @@ type Transaction struct {
 type SendTxArgs struct {
 	From      common.Address  `json:"from"`      // transaction sender address
 	To        *common.Address `json:"to"`        // transaction receiver address
-	Value     Number          `json:"value"`     // transaction amount
+	Value     capi.Number          `json:"value"`     // transaction amount
 	Payload   string          `json:"payload"`   // contract payload
 	Signature string          `json:"signature"` // signature of sender for the transaction
 	Timestamp int64           `json:"timestamp"` // timestamp of the transaction happened
@@ -50,12 +54,12 @@ type SendTxArgs struct {
 // NewPublicTransactionAPI creates and returns a new Transaction instance for given namespace name.
 func NewPublicTransactionAPI(namespace string, eh *manager.EventHub, config *common.Config) *Transaction {
 	log := common.GetLogger(namespace, "api")
-	fillrate, err := getFillRate(namespace, config, TRANSACTION)
+	fillrate, err := capi.GetFillRate(namespace, config, capi.TRANSACTION)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
 		fillrate = 10 * time.Millisecond
 	}
-	peak := getRateLimitPeak(namespace, config, TRANSACTION)
+	peak := capi.GetRateLimitPeak(namespace, config, capi.TRANSACTION)
 	if peak == 0 {
 		log.Errorf("got invalid ratelimit peak parameters as 0. use default peak parameters 500")
 		peak = 500
@@ -78,7 +82,7 @@ func (tran *Transaction) SendTransaction(args SendTxArgs) (common.Hash, error) {
 		return common.Hash{}, &common.SystemTooBusyError{}
 	}
 
-	if getRateLimitEnable(tran.config) && tran.tokenBucket.TakeAvailable(1) <= 0 {
+	if capi.GetRateLimitEnable(tran.config) && tran.tokenBucket.TakeAvailable(1) <= 0 {
 		return common.Hash{}, &common.SystemTooBusyError{}
 	}
 

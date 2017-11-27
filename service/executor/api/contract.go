@@ -7,32 +7,33 @@ import (
 	"time"
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/core/vm"
+	capi "github.com/hyperchain/hyperchain/api"
 )
 
 
 // This file implements the handler of Contract service API which
 // can be invoked by client in JSON-RPC request.
 
-type ContractExec struct {
+type Contract struct {
 	namespace   string
 	tokenBucket *ratelimit.Bucket
 	config      *common.Config
 }
 
 // NewPublicContractAPI creates and returns a new Contract instance for given namespace name.
-func NewPublicContractExecAPI(namespace string, config *common.Config) *ContractExec {
+func NewPublicContractAPI(namespace string, config *common.Config) *Contract {
 	log := common.GetLogger(namespace, "api")
-	fillRate, err := getFillRate(namespace, config, CONTRACT)
+	fillRate, err := capi.GetFillRate(namespace, config, capi.CONTRACT)
 	if err != nil {
 		log.Errorf("invalid ratelimit fill rate parameters.")
 		fillRate = 10 * time.Millisecond
 	}
-	peak := getRateLimitPeak(namespace, config, CONTRACT)
+	peak := capi.GetRateLimitPeak(namespace, config, capi.CONTRACT)
 	if peak == 0 {
 		log.Errorf("got invalid ratelimit peak parameters as 0. use default peak parameters 500")
 		peak = 500
 	}
-	return &ContractExec {
+	return &Contract {
 		namespace:   namespace,
 		tokenBucket: ratelimit.NewBucket(fillRate, peak),
 		config:      config,
@@ -40,7 +41,7 @@ func NewPublicContractExecAPI(namespace string, config *common.Config) *Contract
 }
 
 // GetCode returns the code from the given contract address.
-func (contract *ContractExec) GetCode(addr common.Address) (string, error) {
+func (contract *Contract) GetCode(addr common.Address) (string, error) {
 	log := common.GetLogger(contract.namespace, "api")
 
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
@@ -59,7 +60,7 @@ func (contract *ContractExec) GetCode(addr common.Address) (string, error) {
 
 // GetContractCountByAddr returns the number of contract that has been deployed by given account address.
 // If account doesn't exist, error will be returned.
-func (contract *ContractExec) GetContractCountByAddr(addr common.Address) (*Number, error) {
+func (contract *Contract) GetContractCountByAddr(addr common.Address) (*capi.Number, error) {
 
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
@@ -71,12 +72,12 @@ func (contract *ContractExec) GetContractCountByAddr(addr common.Address) (*Numb
 		return nil, &common.AccountNotExistError{Address: addr.Hex()}
 	}
 
-	return uint64ToNumber(stateDb.GetNonce(addr)), nil
+	return capi.Uint64ToNumber(stateDb.GetNonce(addr)), nil
 
 }
 
 // GetDeployedList returns all deployed contracts list (including destroyed).
-func (contract *ContractExec) GetDeployedList(addr common.Address) ([]string, error) {
+func (contract *Contract) GetDeployedList(addr common.Address) ([]string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
 		return nil, err
@@ -89,7 +90,7 @@ func (contract *ContractExec) GetDeployedList(addr common.Address) ([]string, er
 }
 
 // GetCreator returns contract creator address.
-func (contract *ContractExec) GetCreator(addr common.Address) (common.Address, error) {
+func (contract *Contract) GetCreator(addr common.Address) (common.Address, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
 		return common.Address{}, err
@@ -105,7 +106,7 @@ func (contract *ContractExec) GetCreator(addr common.Address) (common.Address, e
 }
 
 // GetStatus returns current contract status.
-func (contract *ContractExec) GetStatus(addr common.Address) (string, error) {
+func (contract *Contract) GetStatus(addr common.Address) (string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
 		return "", err
@@ -129,7 +130,7 @@ func (contract *ContractExec) GetStatus(addr common.Address) (string, error) {
 }
 
 // GetCreateTime returns contract creation time.
-func (contract *ContractExec) GetCreateTime(addr common.Address) (string, error) {
+func (contract *Contract) GetCreateTime(addr common.Address) (string, error) {
 	stateDb, err := getBlockStateDb(contract.namespace, contract.config)
 	if err != nil {
 		return "", err
@@ -143,7 +144,7 @@ func (contract *ContractExec) GetCreateTime(addr common.Address) (string, error)
 		blkNum := stateDb.GetCreateTime(addr)
 		blk, err := edb.GetBlockByNumber(contract.namespace, blkNum)
 		if err != nil {
-			return "", &common.DBNotFoundError{Type: BLOCK, Id: fmt.Sprintf("number %#x", blkNum)}
+			return "", &common.DBNotFoundError{Type: capi.BLOCK, Id: fmt.Sprintf("number %#x", blkNum)}
 		}
 		return time.Unix(blk.Timestamp/1e9, blk.Timestamp%1e9).String(), nil
 	}

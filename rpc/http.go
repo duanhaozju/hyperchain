@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/common/processor"
 	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"io"
@@ -15,7 +16,6 @@ import (
 	"net"
 	"net/http"
 	"time"
-	"github.com/hyperchain/hyperchain/common/processor"
 )
 
 const (
@@ -34,28 +34,18 @@ type httpServerImpl struct {
 
 	httpListener net.Listener
 	httpHandler  *Server
-	isExecutor   bool
 }
 
 // GetHttpServer creates and returns a new httpServerImpl instance implements internalRPCServer interface.
-func GetHttpServer(nmp processor.NsMgrProcessor, config *common.Config, isExecutor bool) internalRPCServer {
-	if !config.GetBool(common.EXECUTOR_EMBEDDED) && isExecutor {
-		hs := &httpServerImpl{
-			nmp:        nmp,
-			port:       config.GetInt(common.JSON_RPC_PORT_EXECUTOR),
-			config:     config,
-			isExecutor: isExecutor,
+func GetHttpServer(nmp processor.NsMgrProcessor, config *common.Config) internalRPCServer {
+	if hs == nil {
+		hs = &httpServerImpl{
+			nmp:    nmp,
+			port:   config.GetInt(common.JSON_RPC_PORT),
+			config: config,
 		}
-		return hs
-	} else {
-		hs := &httpServerImpl{
-			nmp:        nmp,
-			port:       config.GetInt(common.JSON_RPC_PORT),
-			config:     config,
-			isExecutor: isExecutor,
-		}
-		return hs
 	}
+	return hs
 }
 
 // start starts the http RPC endpoint. It will start the appropriate server based on the parameters of the configuration file.
@@ -67,7 +57,7 @@ func (hsi *httpServerImpl) start() error {
 		err      error
 	)
 
-	handler := NewServer(hsi.nmp, hsi.config, hsi.isExecutor)
+	handler := NewServer(hsi.nmp, hsi.config)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/login", handler.admin.LoginServer)

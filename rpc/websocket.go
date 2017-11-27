@@ -32,7 +32,6 @@ type wsServerImpl struct {
 	wsConnsMux sync.Mutex
 	wsHandler  *Server
 	wsListener net.Listener
-	isExecutor bool
 }
 
 type httpReadWriteCloser struct {
@@ -41,26 +40,14 @@ type httpReadWriteCloser struct {
 }
 
 // GetWSServer creates and returns a new wsServerImpl instance implements internalRPCServer interface.
-func GetWSServer(nmp processor.NsMgrProcessor, config *common.Config, isExecutor bool) internalRPCServer {
-	if !config.GetBool(common.EXECUTOR_EMBEDDED) && isExecutor {
-		wsS := &wsServerImpl{
-			nmp:        nmp,
-			wsConns:    make(map[*websocket.Conn]*Notifier),
-			port:       config.GetInt(common.WEBSOCKET_PORT_EXECUTOR),
-			config:     config,
-			isExecutor: isExecutor,
-		}
-		return wsS
-	} else {
-		wsS := &wsServerImpl{
-			nmp:        nmp,
-			wsConns:    make(map[*websocket.Conn]*Notifier),
-			port:       config.GetInt(common.WEBSOCKET_PORT),
-			config:     config,
-			isExecutor: isExecutor,
-		}
-		return wsS
+func GetWSServer(nmp processor.NsMgrProcessor, config *common.Config) internalRPCServer {
+	wsS := &wsServerImpl{
+		nmp:        nmp,
+		wsConns:    make(map[*websocket.Conn]*Notifier),
+		port:       config.GetInt(common.WEBSOCKET_PORT),
+		config:     config,
 	}
+	return wsS
 }
 
 // start starts the websocket RPC endpoint.
@@ -73,7 +60,7 @@ func (wssi *wsServerImpl) start() error {
 	)
 
 	// start websocket listener
-	handler := NewServer(wssi.nmp, wssi.config, wssi.isExecutor)
+	handler := NewServer(wssi.nmp, wssi.config)
 	if listener, err = net.Listen("tcp", fmt.Sprintf(":%d", wssi.port)); err != nil {
 		return err
 	}
