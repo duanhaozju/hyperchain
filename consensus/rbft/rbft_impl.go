@@ -547,7 +547,7 @@ func (rbft *rbftImpl) replicaSendCommit(digest string, v uint64, n uint64) error
 	cert := rbft.storeMgr.getCert(v, n, digest)
 
 	if cert.sentCommit {
-		rbft.logger.Errorf("Replica %d has already sent commit for view=%d/seqNo=%d/digest=%s",
+		rbft.logger.Debugf("Replica %d has already sent commit for view=%d/seqNo=%d/digest=%s",
 			rbft.id, v, n, digest)
 		return nil
 	}
@@ -561,11 +561,10 @@ func (rbft *rbftImpl) replicaSendCommit(digest string, v uint64, n uint64) error
 		return nil
 	}
 
-	prepCount := len(cert.prepare)
-
 	if missing != nil {
-		if prepCount == rbft.commonCaseQuorum() - 1 {
+		if !cert.sentFetch {
 			rbft.fetchMissingTransaction(preprep, missing)
+			cert.sentFetch = true
 		}
 		return nil
 	}

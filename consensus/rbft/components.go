@@ -35,6 +35,7 @@ type msgCert struct {
 	commit         map[Commit]bool  // commit msgs received from other nodes
 	invalidTxsHash string           // record invalid txs' hash of this batch
 	sentExecute    bool             // track whether sent execute event to executor module before or not
+	sentFetch      bool             // track whether fetch missing txs or not
 }
 
 // -----------checkpoint related structs-----------------
