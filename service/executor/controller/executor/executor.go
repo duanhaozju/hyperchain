@@ -25,7 +25,9 @@ import (
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/hyperchain/hyperchain/manager/event"
 
+	"fmt"
 	"github.com/op/go-logging"
+	"strconv"
 )
 
 // Executor represents a hyperchain executor implementation
@@ -35,7 +37,7 @@ type Executor struct {
 	commonHash crypto.CommonHash // Keccak256 hasher
 	encryption crypto.Encryption // ECDSA encrypter
 	conf       *Config           // Conf refers a configuration reader
-	context    *ExecutorContext
+	context    *Context
 	hasher     Hasher
 	cache      *Cache
 	helper     *Helper     // Helper refers a communication mux
@@ -63,7 +65,10 @@ func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux,
 	}
 
 	// Init several components.
-	executor.cache = newExecutorCache()
+	var err error
+	if executor.cache, err = newExecutorCache(); err != nil {
+		return nil, err
+	}
 	executor.context = newExecutorContext()
 
 	if err := executor.initDb(); err != nil {
@@ -108,15 +113,15 @@ func (executor *Executor) Stop() error {
 }
 
 // initialize init some components of executor and start the services.
-func (executor *Executor) initialize() error {
+func (e *Executor) initialize() error {
 
-	if err := executor.initExecutorContext(); err != nil {
-		executor.logger.Errorf("executor initialize status failed. %s", err.Error())
+	if err := e.initExecutorContext(); err != nil {
+		e.logger.Errorf("executor initialize status failed. %s", err.Error())
 		return err
 	}
 
-	if err := initStateDb(executor); err != nil {
-		executor.logger.Errorf("executor initialize state failed. %s", err.Error())
+	if err := initStateDb(e); err != nil {
+		e.logger.Errorf("executor initialize state failed. %s", err.Error())
 		return err
 	}
 
@@ -125,12 +130,14 @@ func (executor *Executor) initialize() error {
 	//	return err
 	//}
 
-	// Start to listen for process commit event or validation event
-	go executor.listenValidationEvent()
-	go executor.listenCommitEvent()
+	//Execute data flow: 1.dispatch oplog => 2.validate => 3.commit
+	go e.sequentialDispatch()
+	go e.listenValidationEvent()
+	go e.listenCommitEvent()
+
 	//go executor.syncReplica()
-	if executor.conf.isJvmEnable() {
-		executor.jvmCli.Start()
+	if e.conf.isJvmEnable() {
+		e.jvmCli.Start()
 	}
 	return nil
 }
@@ -147,17 +154,29 @@ func (executor *Executor) finalize() error {
 	return nil
 }
 
-// initExecutorContext inits the ExecutorContext
-func (executor *Executor) initExecutorContext() error {
-	currentChain := chain.GetChainCopy(executor.namespace)
-	blk, err := chain.GetBlockByNumber(executor.namespace, currentChain.Height)
+// initExecutorContext inits the Context
+func (e *Executor) initExecutorContext() error {
+	currentChain := chain.GetChainCopy(e.namespace)
+	blk, err := chain.GetBlockByNumber(e.namespace, currentChain.Height)
 	if err != nil {
-		executor.logger.Errorf("[Namespace = %s] get block #%d failed.", executor.namespace, currentChain.Height)
+		e.logger.Errorf("get block #%d failed.", e.namespace, currentChain.Height)
 		return err
 	}
-	executor.context.initDemand(currentChain.Height + 1)
-	executor.logger.Noticef("[Namespace = %s] initialize executor status success. demand block number %d, demand seqNo %d, latest state hash %s",
-		executor.namespace, executor.context.demandNumber, executor.context.demandSeqNo, common.Bytes2Hex(blk.MerkleRoot))
+	e.context.initDemand(currentChain.Height + 1)
+
+	data, err := e.db.Get([]byte(fmt.Sprintf("%s%d", OpLogCommitIndexPrefix, currentChain.Height)))
+	if err != nil {
+		e.logger.Warningf("no last commit log index id found, use default value 1 instead")
+		e.context.setDemandOpLogIndex(uint64(1))
+	} else {
+		i, err := strconv.ParseUint(string(data), 10, 64)
+		if err != nil {
+			return err
+		}
+		e.context.setDemandOpLogIndex(i + 1)
+	}
+
+	e.logger.Noticef("initialize executor status success. demand block number %d, demand seqNo %d, latest state hash %s", e.context.demandNumber, e.context.demandSeqNo, common.Bytes2Hex(blk.MerkleRoot))
 
 	return nil
 }

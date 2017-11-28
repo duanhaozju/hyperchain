@@ -21,8 +21,8 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 )
 
-// ExecutorContext a collection of all executor status.
-type ExecutorContext struct {
+// Context a collection of all executor status.
+type Context struct {
 	skipValidation     int32 // validation type, execute normally or just skip.
 	validateInProgress int32 // validation operation flag, validating or idle
 	commitInProgress   int32 // commit operation flag, committing or idle
@@ -31,6 +31,8 @@ type ExecutorContext struct {
 
 	demandNumber uint64 // demand number for commit
 	demandSeqNo  uint64 // demand seqNo for validation
+
+	demandOpLogIndex uint64 //demand index for OpLog
 
 	exit chan struct{} // executor exit flag
 
@@ -44,9 +46,9 @@ type ExecutorContext struct {
 }
 
 // newExecutorContext restores histrical status from db.
-func newExecutorContext() *ExecutorContext {
+func newExecutorContext() *Context {
 
-	context := &ExecutorContext{
+	context := &Context{
 		exit:               make(chan struct{}),
 		validationSuspend:  make(chan bool),
 		commitSuspend:      make(chan bool),
@@ -58,56 +60,64 @@ func newExecutorContext() *ExecutorContext {
 }
 
 // initDemand inits the demand of number and seqNo.
-func (context *ExecutorContext) initDemand(num uint64) {
-	context.demandNumber = num
-	context.demandSeqNo = num
+func (c *Context) initDemand(num uint64) {
+	c.demandNumber = num
+	c.demandSeqNo = num
+}
+
+func (c *Context) getDemandOpLogIndex() uint64 {
+	return atomic.LoadUint64(&c.demandOpLogIndex)
+}
+
+func (c *Context) setDemandOpLogIndex(i uint64) {
+	atomic.StoreUint64(&c.demandOpLogIndex, i)
 }
 
 // incDemand increases the demand by plussing one.
-func (context *ExecutorContext) incDemand(typ int) {
+func (c *Context) incDemand(typ int) {
 	if typ == DemandSeqNo {
-		context.demandSeqNo += 1
+		c.demandSeqNo += 1
 	} else {
-		context.demandNumber += 1
+		c.demandNumber += 1
 	}
 }
 
 // setDemand sets the demand with given num.
-func (context *ExecutorContext) setDemand(typ int, num uint64) {
+func (c *Context) setDemand(typ int, num uint64) {
 	if typ == DemandSeqNo {
-		context.demandSeqNo = num
+		c.demandSeqNo = num
 	} else {
-		context.demandNumber = num
+		c.demandNumber = num
 	}
 }
 
 // getDemand gets the demand seqNo.
-func (context *ExecutorContext) getDemand(typ int) uint64 {
+func (c *Context) getDemand(typ int) uint64 {
 	if typ == DemandSeqNo {
-		return context.demandSeqNo
+		return c.demandSeqNo
 	} else {
-		return context.demandNumber
+		return c.demandNumber
 	}
 }
 
 // isDemand returns true if given seqNo is the demand one.
-func (context *ExecutorContext) isDemand(typ int, num uint64) bool {
+func (c *Context) isDemand(typ int, num uint64) bool {
 	if typ == DemandSeqNo {
-		return context.demandSeqNo == num
+		return c.demandSeqNo == num
 	} else {
-		return context.demandNumber == num
+		return c.demandNumber == num
 	}
 }
 
 // turnOffValidationSwitch turns on validation switch, executor will process received event.
 func (executor *Executor) turnOnValidationSwitch() {
-	executor.logger.Debugf("[Namespace = %s] turn on validation switch", executor.namespace)
+	executor.logger.Debugf("turn on validation switch", executor.namespace)
 	atomic.StoreInt32(&executor.context.skipValidation, VALIDATION_NORMAL)
 }
 
 // turnOffValidationSwitch turns off validation switch, executor will drop all received event when the switch turn off.
 func (executor *Executor) turnOffValidationSwitch() {
-	executor.logger.Debugf("[Namespace = %s] turn off validation switch", executor.namespace)
+	executor.logger.Debugf("turn off validation switch", executor.namespace)
 	atomic.StoreInt32(&executor.context.skipValidation, VALIDATION_IGNORE)
 }
 
@@ -121,32 +131,32 @@ func (executor *Executor) isReadyToValidation() bool {
 
 // markValidationBusy marks executor is in validation.
 func (executor *Executor) markValidationBusy() {
-	executor.logger.Debugf("[Namespace = %s] mark validation busy", executor.namespace)
+	executor.logger.Debugf("mark validation busy", executor.namespace)
 	atomic.StoreInt32(&executor.context.validateInProgress, BUSY)
 }
 
 // markValidationBusy marks executor is idle.
 func (executor *Executor) markValidationIdle() {
-	executor.logger.Debugf("[Namespace = %s] mark validation idle", executor.namespace)
+	executor.logger.Debugf("mark validation idle", executor.namespace)
 	atomic.StoreInt32(&executor.context.validateInProgress, IDLE)
 }
 
 // markCommitBusy marks executor is in commit.
-func (executor *Executor) markCommitBusy() {
-	executor.logger.Debugf("[Namespace = %s] mark commit busy", executor.namespace)
-	atomic.StoreInt32(&executor.context.commitInProgress, BUSY)
+func (e *Executor) markCommitBusy() {
+	e.logger.Debugf("mark commit busy", e.namespace)
+	atomic.StoreInt32(&e.context.commitInProgress, BUSY)
 }
 
 // markCommitIdle marks executor is idle.
 func (executor *Executor) markCommitIdle() {
-	executor.logger.Debugf("[Namespace = %s] mark commit idle", executor.namespace)
+	executor.logger.Debugf("mark commit idle")
 	atomic.StoreInt32(&executor.context.commitInProgress, IDLE)
 }
 
 // waitUtilValidationIdle suspends thread util all validations event has been process done.
 func (executor *Executor) waitUtilValidationIdle() {
-	executor.logger.Debugf("[Namespace = %s] wait validation idle", executor.namespace)
-	defer executor.logger.Debugf("[Namespace = %s] validation idle", executor.namespace)
+	executor.logger.Debugf("wait validation idle", executor.namespace)
+	defer executor.logger.Debugf("validation idle", executor.namespace)
 	ticker := time.NewTicker(1 * time.Millisecond)
 	for {
 		select {

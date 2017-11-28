@@ -1,7 +1,6 @@
 package executor
 
 import (
-	"encoding/binary"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/hyperchain/hyperchain/common"
@@ -63,7 +62,6 @@ func NewFiber(conf *common.Config, ns *service.NamespaceServices, ol oplog.OpLog
 
 func (f *ExeFiber) recovery() error {
 	if data, err := f.md.Get([]byte(consumeIndexPrefix)); err == nil {
-		binary.Varint(data)
 		i, err := strconv.ParseUint(string(data), 10, 64)
 		if err != nil {
 			return err
@@ -75,7 +73,6 @@ func (f *ExeFiber) recovery() error {
 	}
 
 	if data, err := f.md.Get([]byte(commitIndexPrefix)); err == nil {
-		binary.Varint(data)
 		i, err := strconv.ParseUint(string(data), 10, 64)
 		if err != nil {
 			return err

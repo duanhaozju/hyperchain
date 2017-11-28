@@ -23,27 +23,6 @@ func New(namespace string, executor *executor.Executor) client.Handler {
 }
 
 func (eh *ExecutorHandler) handleSyncMsg(client pb.Dispatcher_RegisterClient, msg *pb.IMessage) {
-	//e := &event.MemChainEvent{} //TODO: fix it, parse event by msg.Event
-	//err := proto.Unmarshal(msg.Payload, e)
-	//if err != nil {
-	//	eh.logger.Criticalf("MemChainEvent unmarshal err: %v", err)
-	//}
-	//go func() {
-	//	m := chain.GetMemChain(e.Namespace, e.Checkpoint)
-	//	payload, err := proto.Marshal(m)
-	//	if err != nil {
-	//		eh.logger.Error(err)
-	//		return
-	//	}
-	//	msg := &pb.IMessage{
-	//		Type:    pb.Type_RESPONSE,
-	//		From:    pb.FROM_EXECUTOR,
-	//		Id:      msg.Id, // this id must be equal to the request message id.
-	//		Ok:      true,
-	//		Payload: payload,
-	//	}
-	//	client.Send(msg)
-	//}()
 }
 
 func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, msg *pb.IMessage) {

@@ -18,6 +18,7 @@ import "errors"
 const (
 	COMMITQUEUESIZE   = 1024
 	VALIDATEQUEUESIZE = 1024
+	OPLOG_CHAN_SIZE   = 1024
 
 	VALIDATION_NORMAL = 0
 	VALIDATION_IGNORE = 1
@@ -102,4 +103,8 @@ var (
 	ArchiveFailedErr              = errors.New(ArchiveFailedMsg)
 	ApplyWsErr                    = errors.New(ApplyWsErrMsg)
 	NonAvailableParentGenesisErr  = errors.New(ParentGenesisMissMsg)
+)
+
+const (
+	OpLogCommitIndexPrefix = "op.lo.id."
 )

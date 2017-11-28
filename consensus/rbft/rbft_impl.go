@@ -789,8 +789,7 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 				rbft.logger.Error("Replica %d failed to commit block of view=%d/seqNo=%d", rbft.id, idx.v, idx.n)
 				return
 			}
-			cmt := rbft.helper.FetchCommit(idx.n)
-			rbft.logger.Errorf("lid is: %d", cmt.Lid)
+			rbft.helper.FetchCommit(idx.n)
 			cert.sentExecute = true
 			rbft.afterCommitBlock(idx)
 		} else {

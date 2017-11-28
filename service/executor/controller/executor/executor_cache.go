@@ -17,12 +17,17 @@ import (
 	"sync/atomic"
 
 	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/oplog/proto"
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/manager/event"
 )
 
 // Cache represents the caches that used in executor.
 type Cache struct {
+	opLogC          chan *oplog.LogEntry // buffered oplog channel
+	pendingOpLogs   *common.Cache        // cache for storing oplogs
+	opLogIndexCache *common.Cache
+
 	validationEventC        chan *event.ValidationEvent // validation event buffer
 	commitEventC            chan *event.CommitEvent     // commit event buffer
 	validationResultCache   *common.Cache               // cache for validation result
@@ -38,21 +43,34 @@ type Peer struct {
 }
 
 // newExecutorCache creates the cache for executor.
-func newExecutorCache() *Cache {
+func newExecutorCache() (*Cache, error) {
+	var err error
 	cache := &Cache{
 		validationEventC: make(chan *event.ValidationEvent, VALIDATEQUEUESIZE),
 		commitEventC:     make(chan *event.CommitEvent, COMMITQUEUESIZE),
+		opLogC:           make(chan *oplog.LogEntry, OPLOG_CHAN_SIZE),
 	}
-	validationResC, _ := common.NewCache()
-	cache.validationResultCache = validationResC
-	validationEventQ, _ := common.NewCache()
-	cache.pendingValidationEventQ = validationEventQ
-	syncCache, _ := common.NewCache()
-	cache.syncCache = syncCache
-	replicaCache, _ := common.NewCache()
-	cache.replicaInfoCache = replicaCache
+	if cache.pendingOpLogs, err = common.NewCache(); err != nil {
+		return nil, err
+	}
+	if cache.validationResultCache, err = common.NewCache(); err != nil {
+		return nil, err
+	}
+	if cache.pendingValidationEventQ, err = common.NewCache(); err != nil {
+		return nil, err
+	}
+	if cache.syncCache, err = common.NewCache(); err != nil {
+		return nil, err
+	}
+	if cache.replicaInfoCache, err = common.NewCache(); err != nil {
+		return nil, err
+	}
 
-	return cache
+	if cache.opLogIndexCache, err = common.NewCache(); err != nil {
+		return nil, err
+	}
+
+	return cache, nil
 }
 
 // purgeCache purges executor cache.
@@ -108,7 +126,7 @@ func (executor *Executor) fetchValidationResult(tag ValidationTag) (*ValidationR
 func (e *Executor) addValidationEvent(ev *event.ValidationEvent) {
 	e.cache.validationEventC <- ev
 	atomic.AddInt32(&e.context.validateQueueLen, 1)
-	e.logger.Debugf("receive a validation event #%d", e.namespace, ev.SeqNo)
+	e.logger.Debugf("receive a validation event #%d", ev.SeqNo)
 }
 
 // fetchValidationEvent fetches a validation event from channel buffer.
@@ -125,7 +143,7 @@ func (executor *Executor) processValidationDone() {
 func (e *Executor) addCommitEvent(ev *event.CommitEvent) {
 	e.cache.commitEventC <- ev
 	atomic.AddInt32(&e.context.commitQueueLen, 1)
-	e.logger.Debugf("receive a commit event #%d", e.namespace, ev.SeqNo)
+	e.logger.Debugf("receive a commit event #%d", ev.SeqNo)
 }
 
 // fetchCommitEvent fetches a commit event from channel buffer.

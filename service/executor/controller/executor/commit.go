@@ -25,8 +25,10 @@ import (
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/hyperchain/hyperchain/manager/event"
 
+	"fmt"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
+	"strconv"
 )
 
 // CommitBlock is the entry function of the commit process.
@@ -100,60 +102,69 @@ func (e *Executor) processCommitEvent(ev *event.CommitEvent) bool {
 }
 
 // writeBlock flushes a block into database.
-func (executor *Executor) writeBlock(block *types.Block, record *ValidationResultRecord) error {
+func (e *Executor) writeBlock(block *types.Block, record *ValidationResultRecord) error {
 	var filterLogs []*types.Log
 	// Fetch the relative db batch obj from the batch buffer
 	// Attention: state changes has already been push into the batch obj
-	batch := executor.statedb.FetchBatch(record.SeqNo, state.BATCH_NORMAL)
+	batch := e.statedb.FetchBatch(record.SeqNo, state.BATCH_NORMAL)
 	// Persist transaction data
-	if err := executor.persistTransactions(batch, block.Transactions, block.Number); err != nil {
-		executor.logger.Errorf("persist transactions of #%d failed.", block.Number)
+	if err := e.persistTransactions(batch, block.Transactions, block.Number); err != nil {
+		e.logger.Errorf("persist transactions of #%d failed.", block.Number)
 		return err
 	}
 	// Persist receipt data
-	if ret, err := executor.persistReceipts(batch, record.ValidTxs, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
-		executor.logger.Errorf("persist receipts of #%d failed.", block.Number)
+	if ret, err := e.persistReceipts(batch, record.ValidTxs, record.Receipts, block.Number, common.BytesToHash(block.BlockHash)); err != nil {
+		e.logger.Errorf("persist receipts of #%d failed.", block.Number)
 		return err
 	} else {
 		filterLogs = ret
 	}
 	// Persist block data
 	if _, err := chain.PersistBlock(batch, block, false, false); err != nil {
-		executor.logger.Errorf("persist block #%d into database failed.", block.Number, err.Error())
+		e.logger.Errorf("persist block #%d into database failed.", block.Number, err.Error())
 		return err
 	}
 	// persist chain data
-	if err := chain.UpdateChain(executor.namespace, batch, block, false, false, false); err != nil {
-		executor.logger.Errorf("update chain to #%d failed.", block.Number, err.Error())
+	if err := chain.UpdateChain(e.namespace, batch, block, false, false, false); err != nil {
+		e.logger.Errorf("update chain to #%d failed.", block.Number, err.Error())
 		return err
 	}
 	// Write bloom filter first
-	if _, err := bloom.WriteTxBloomFilter(executor.namespace, block.Transactions); err != nil {
-		executor.logger.Warning("write tx to bloom filter failed", err.Error())
+	if _, err := bloom.WriteTxBloomFilter(e.namespace, block.Transactions); err != nil {
+		e.logger.Warning("write tx to bloom filter failed", err.Error())
+	}
+
+	if d, ok := e.cache.opLogIndexCache.Get(block.Number); ok {
+		if lid, ok := d.(uint64); ok {
+			buf := make([]byte, 0)
+			b := strconv.AppendUint(buf, lid, 10)
+			key := []byte(fmt.Sprintf("op.lo.id.%d", block.Number))
+			batch.Put(key, b)
+		}
 	}
 
 	// Flush the whole batch obj
 	// The database atomic operation of the guarantee is by leveldb batch,
 	// look the doc https://godoc.org/github.com/syndtr/goleveldb/leveldb#Batch for detail.
 	if err := batch.Write(); err != nil {
-		executor.logger.Errorf("commit #%d changes failed.", block.Number, err.Error())
+		e.logger.Errorf("commit #%d changes failed.", block.Number, err.Error())
 		return err
 	}
 	// Reset state, notify to remove some cached stuff
-	executor.statedb.MarkProcessFinish(record.SeqNo)
-	//TODO(Xiaoyi Wang): executor.statedb.MakeArchive(record.SeqNo)
+	e.statedb.MarkProcessFinish(record.SeqNo)
+	//TODO(Xiaoyi Wang): e.statedb.MakeArchive(record.SeqNo)
 	// Notify consensus module if it is a checkpoint
 	//TODO(Xiaoyi Wang): Add checkpoint
 	//if block.Number%10 == 0 && block.Number != 0 {
-	//	chain.WriteChainChan(executor.namespace)
+	//	chain.WriteChainChan(e.namespace)
 	//}
-	executor.logger.Noticef("Block number %d", block.Number)
-	executor.logger.Noticef("Block hash %s", hex.EncodeToString(block.BlockHash))
-	//executor.TransitVerifiedBlock(block)
+	e.logger.Noticef("Block number %d", block.Number)
+	e.logger.Noticef("Block hash %s", hex.EncodeToString(block.BlockHash))
+	//e.TransitVerifiedBlock(block)
 
 	// Push feed data to event system
 	// External subscribers can access these internal messages through a messaging subscription system.
-	go executor.filterFeedback(block, filterLogs)
+	go e.filterFeedback(block, filterLogs)
 	return nil
 }
 
@@ -220,7 +231,7 @@ func (e *Executor) commitValidationCheck(ev *event.CommitEvent) bool {
 	return true
 }
 
-func (executor *Executor) persistTransactions(batch db.Batch, transactions []*types.Transaction, blockNumber uint64) error {
+func (e *Executor) persistTransactions(batch db.Batch, transactions []*types.Transaction, blockNumber uint64) error {
 	for i, transaction := range transactions {
 		// persist transaction meta data
 		meta := &types.TransactionMeta{
