@@ -545,11 +545,13 @@ func (rbft *rbftImpl) sendCommit(digest string, v uint64, n uint64) error {
 func (rbft *rbftImpl) replicaSendCommit(digest string, v uint64, n uint64) error {
 
 	cert := rbft.storeMgr.getCert(v, n, digest)
-	if cert.prePrepare == nil {
-		rbft.logger.Errorf("Replica %d get prePrepare failed for view=%d/seqNo=%d/digest=%s",
+
+	if cert.sentCommit {
+		rbft.logger.Errorf("Replica %d has already sent commit for view=%d/seqNo=%d/digest=%s",
 			rbft.id, v, n, digest)
 		return nil
 	}
+
 	preprep := cert.prePrepare
 
 	batch, missing, err := rbft.batchMgr.txPool.GetTxsByHashList(digest, preprep.HashBatch.List)
@@ -564,7 +566,6 @@ func (rbft *rbftImpl) replicaSendCommit(digest string, v uint64, n uint64) error
 	if missing != nil {
 		if prepCount == rbft.commonCaseQuorum() - 1 {
 			rbft.fetchMissingTransaction(preprep, missing)
-			return nil
 		}
 		return nil
 	}
