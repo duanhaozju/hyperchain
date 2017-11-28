@@ -558,8 +558,14 @@ func (rbft *rbftImpl) replicaSendCommit(digest string, v uint64, n uint64) error
 		rbft.sendViewChange()
 		return nil
 	}
+
+	prepCount := len(cert.prepare)
+
 	if missing != nil {
-		rbft.fetchMissingTransaction(preprep, missing)
+		if prepCount == rbft.commonCaseQuorum() - 1 {
+			rbft.fetchMissingTransaction(preprep, missing)
+			return nil
+		}
 		return nil
 	}
 
@@ -769,7 +775,7 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 
 	for hasTxToExec := true; hasTxToExec; {
 		if find, idx, cert := rbft.findNextCommitTx(); find {
-			rbft.logger.Noticef("======== Replica %d Call execute, view=%d/seqNo=%d", rbft.id, idx.v, idx.n)
+			rbft.logger.Noticef("======== Replica %d Call append, view=%d/seqNo=%d", rbft.id, idx.v, idx.n)
 			rbft.persistCSet(idx.v, idx.n, idx.d)
 			isPrimary := rbft.isPrimary(rbft.id)
 			//rbft.helper.Execute(idx.n, cert.resultHash, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)

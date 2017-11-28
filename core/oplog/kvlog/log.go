@@ -17,7 +17,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 	"github.com/op/go-logging"
-	"sync/atomic"
 )
 
 const (
@@ -156,6 +155,10 @@ func (kvLogger *kvLoggerImpl) Reset(seqNo uint64) error {
 
 func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64, *oplog.LogEntry, error) {
 
+	if seqNo == 0 {
+		return 0, nil, nil
+	}
+
 	checkpoint := uint64((int(seqNo/kvLogger.checkpointPeriod) + 1) * int(kvLogger.checkpointPeriod))
 	var earlistLid uint64
 	var earlistSeqNo uint64
@@ -231,9 +234,11 @@ func (kvLogger *kvLoggerImpl) GetHeightAndDigest() (uint64, string, error) {
 	kvLogger.mu.Lock()
 	defer kvLogger.mu.Unlock()
 
-	_, entry, err := kvLogger.getBySeqNo(kvLogger.lastCommit)
+	n, entry, err := kvLogger.getBySeqNo(kvLogger.lastCommit)
 	if err != nil {
 		return 0, "", err
+	} else if n == 0 {
+		return 0, "", nil
 	}
 	event := &event.ValidationEvent{}
 	if err := proto.Unmarshal(entry.Payload, event); err != nil {
