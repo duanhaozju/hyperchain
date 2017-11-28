@@ -90,11 +90,11 @@ func (executor *Executor) initDb() error {
 }
 
 // Start starts the executor's services.
-func (executor *Executor) Start() error {
-	if err := executor.initialize(); err != nil {
+func (e *Executor) Start() error {
+	if err := e.initialize(); err != nil {
 		return err
 	}
-	executor.logger.Noticef("[Namespace = %s]  executor start", executor.namespace)
+	e.logger.Noticef("[Namespace = %s]  executor start", e.namespace)
 	return nil
 }
 

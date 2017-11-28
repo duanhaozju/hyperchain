@@ -12,6 +12,7 @@ import (
 	"github.com/hyperchain/hyperchain/hyperdb"
 	hc "github.com/hyperchain/hyperchain/hyperdb/common"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
+	"github.com/hyperchain/hyperchain/manager/event"
 	"github.com/op/go-logging"
 	"strconv"
 	"sync/atomic"
@@ -117,6 +118,11 @@ func (f *ExeFiber) Start() error {
 						continue
 					} else {
 						atomic.StoreUint64(&f.lastConsumeIndex, nextConsumeIndex)
+						if nextConsumeIndex%30 == 0 { //TODO(Xiaoyi Wang: how to store index effectively.
+							buf := make([]byte, 0)
+							b := strconv.AppendUint(buf, nextConsumeIndex, 10)
+							f.md.Put([]byte(consumeIndexPrefix), b)
+						}
 					}
 				}
 
@@ -150,8 +156,26 @@ func (f *ExeFiber) processExecutorRequest(exit chan bool) {
 }
 
 func (f *ExeFiber) handle(req *pb.IMessage) {
-	//TODO(Xiaoyi Wang): add req handle logic
-	f.logger.Criticalf("handle message: %v", req)
+	switch req.Event {
+	case pb.Event_OpLogAck:
+		ack := &event.OpLogAck{}
+		err := proto.Unmarshal(req.Payload, ack)
+		if err != nil {
+			f.logger.Error(err)
+		} else {
+			if ack.SeqNo > atomic.LoadUint64(&f.lastCommitIndex) {
+				atomic.StoreUint64(&f.lastCommitIndex, ack.SeqNo)
+				if ack.SeqNo%10 == 0 { // TODO(Xiaoyi Wang): make this more effectively
+					buf := make([]byte, 0)
+					b := strconv.AppendUint(buf, ack.SeqNo, 10)
+					f.md.Put([]byte(commitIndexPrefix), b)
+				}
+			}
+
+		}
+	default:
+		f.logger.Errorf("invalid request type, %v", req)
+	}
 }
 
 func (f *ExeFiber) Stop() error {

@@ -17,6 +17,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 	"github.com/op/go-logging"
+	"sync/atomic"
 )
 
 const (

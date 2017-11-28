@@ -46,7 +46,7 @@ type executorServiceImpl struct {
 	logger *logging.Logger
 	status *Status
 
-	rpc       rpc.RequestProcessor //TODO: for what
+	rpc       rpc.RequestProcessor
 	caManager *admittance.CAManager
 
 	eventMux  *event.TypeMux
@@ -138,8 +138,13 @@ func (es *executorServiceImpl) init() error {
 	}
 
 	// 2. initial client client
-	//TODO(Xiaoyi Wang): fix fixed host
-	es.client, err = client.New(es.conf.GetInt(common.INTERNAL_PORT), "127.0.0.1", client.EXECUTOR, es.namespace)
+
+	host := es.conf.GetString("executor.internalserver")
+	if len(host) == 0 {
+		host = "127.0.0.1"
+	}
+
+	es.client, err = client.New(es.conf.GetInt(common.INTERNAL_PORT), host, client.EXECUTOR, es.namespace)
 	if err != nil {
 		es.logger.Errorf("Init client client for namespace %s error, %v", es.namespace, err)
 		return err

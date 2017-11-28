@@ -50,4 +50,6 @@ enum Event {
     AddNamespaceEvent = 0;
     DeleteNamespaceEvent = 1;
     AdminResponseEvent = 2;
+
+    OpLogAck = 3;
 }

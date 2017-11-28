@@ -30,3 +30,8 @@ message ValidationEvent {
     bool IsPrimary = 5;
     int64 Timestamp = 6;
 }
+
+message OpLogAck {
+    bool executeOk = 1;
+    uint64 seqNo = 2;
+}
