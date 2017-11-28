@@ -6,12 +6,9 @@ import (
 	"sync"
 
 	"github.com/hyperchain/hyperchain/common"
-	"github.com/hyperchain/hyperchain/hyperdb/db"
-	//"github.com/hyperchain/hyperchain/hyperdb/mdb"
 	op "github.com/hyperchain/hyperchain/core/oplog"
 	"github.com/hyperchain/hyperchain/core/oplog/proto"
-	//"github.com/hyperchain/hyperchain/hyperdb"
-	//hcom "github.com/hyperchain/hyperchain/hyperdb/common"
+	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/hyperchain/hyperchain/manager/event"
 
 	"github.com/golang/protobuf/proto"
