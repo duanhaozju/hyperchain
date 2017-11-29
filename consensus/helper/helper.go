@@ -3,8 +3,6 @@
 package helper
 
 import (
-	"time"
-
 	"github.com/hyperchain/hyperchain/consensus"
 	"github.com/hyperchain/hyperchain/core/types"
 	"github.com/hyperchain/hyperchain/manager/appstat"
@@ -36,14 +34,11 @@ type Stack interface {
 	// InnerUnicast unicast the transaction message to a specific vp node
 	InnerUnicast(msg *pb.Message, to uint64) error
 
-	// Execute transfers the transactions decided by consensus to outer to execute these transactions
-	Execute(seqNo uint64, hash string, flag bool, isPrimary bool, time int64) error
-
 	// UpdateState transfers the UpdateStateEvent to outer
 	UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error
 
-	// ValidateBatch transfers the ValidationEvent to outer
-	ValidateBatch(lastExecHash string, digest string, txs []*types.Transaction, invalidTxsRecord []*types.InvalidTransactionRecord, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) (string, error)
+	// CommitBlock transfers the ValidationEvent to outer
+	CommitBlock(lastExecHash string, digest string, txs []*types.Transaction, invalidTxsRecord []*types.InvalidTransactionRecord, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) (string, error)
 
 	// VcReset reset vid when view change is done, clear the validate cache larger than seqNo
 	VcReset(seqNo uint64, view uint64) error
@@ -124,25 +119,6 @@ func (h *helper) InnerUnicast(msg *pb.Message, to uint64) error {
 	return nil
 }
 
-// Execute transfers the transactions decided by consensus to outer
-func (h *helper) Execute(seqNo uint64, hash string, flag bool, isPrimary bool, timestamp int64) error {
-
-	writeEvent := event.CommitEvent{
-		SeqNo:      seqNo,
-		Hash:       hash,
-		Timestamp:  timestamp,
-		CommitTime: time.Now().UnixNano(),
-		Flag:       flag,
-		IsPrimary:  isPrimary,
-	}
-
-	// Post the event to outer
-	// !!! CANNOT use go, it will result in concurrent problems when writing blocks
-	h.innerMux.Post(writeEvent)
-
-	return nil
-}
-
 // UpdateState transfers the UpdateStateEvent to outer
 func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error {
 	updateStateEvent := event.ChainSyncReqEvent{
@@ -158,11 +134,11 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 	return nil
 }
 
-// ValidateBatch transfers the ValidateEvent to outer
-func (h *helper) ValidateBatch(lastExecHash string, digest string, txs []*types.Transaction, invalidTxsRecord []*types.InvalidTransactionRecord, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) (string, error) {
+// CommitBlock transfers the ValidateEvent to outer
+func (h *helper) CommitBlock(lastExecHash string, digest string, txs []*types.Transaction, invalidTxsRecord []*types.InvalidTransactionRecord, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) (string, error) {
 
-	validationEvent := &event.ValidationEvent{
-		PreHash:             lastExecHash,
+	validationEvent := &event.CommitBlockEvent{
+		PreviousHash:        lastExecHash,
 		Digest:              digest,
 		Transactions:        txs,
 		InvalidTransactions: invalidTxsRecord,
@@ -198,7 +174,6 @@ func (h *helper) VcReset(seqNo uint64, view uint64) error {
 		View:  view,
 	}
 
-	// No need to "go h.msgQ.Post...", we'll wait for it to return
 	h.innerMux.Post(vcResetEvent)
 
 	return nil

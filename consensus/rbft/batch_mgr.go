@@ -294,7 +294,7 @@ func (rbft *rbftImpl) execValidate(digest string, txBatch *TransactionBatch, idx
 
 	rbft.logger.Debugf("Replica %d try to validate batch for view=%d/seqNo=%d, batch size: %d", rbft.id, idx.view, idx.seqNo, len(txBatch.TxList))
 
-	rbft.helper.ValidateBatch(digest, txBatch.TxList, txBatch.Timestamp, idx.seqNo, idx.view, false)
+	//rbft.helper.CommitBlock(digest, txBatch.TxList, txBatch.Timestamp, idx.seqNo, idx.view, false)
 	delete(rbft.batchVdr.preparedCert, idx)
 	rbft.batchVdr.updateLCVid()
 

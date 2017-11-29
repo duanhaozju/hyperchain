@@ -790,9 +790,11 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 			}
 			var lastHash string
 			if idx.n == 1 {
-				lastHash = ""
+				lastHash = "XXX"
+			} else {
+				lastHash = rbft.exec.lastExecHash
 			}
-			if hash, err := rbft.helper.ValidateBatch(rbft.exec.lastExecHash, idx.d, validTxs, invalidRecord, cert.prePrepare.HashBatch.Timestamp, idx.n, idx.v, isPrimary); err != nil {
+			if hash, err := rbft.helper.CommitBlock(lastHash, idx.d, validTxs, invalidRecord, cert.prePrepare.HashBatch.Timestamp, idx.n, idx.v, isPrimary); err != nil {
 				rbft.logger.Error("Replica %d failed to commit block for view=%d/seqNo=%d/digest=%s", rbft.id, idx.v, idx.n, idx.d)
 				return
 			} else {
@@ -856,18 +858,7 @@ func (rbft *rbftImpl) afterCommitBlock(idx msgID) {
 		rbft.logger.Debugf("Replica %d finished execution %d", rbft.id, *rbft.exec.currentExec)
 		rbft.exec.lastExec = *rbft.exec.currentExec
 		delete(rbft.storeMgr.committedCert, idx)
-		//TODO get checkpoint from executor module
-		//if rbft.exec.lastExec%rbft.K == 0 {
-		//	bcInfo := rbft.getBlockchainInfo()
-		//	height := bcInfo.Height
-		//	if height == rbft.exec.lastExec {
-		//		rbft.logger.Debugf("Call the checkpoint, seqNo=%d, block height=%d", rbft.exec.lastExec, height)
-		//		rbft.checkpoint(rbft.exec.lastExec, bcInfo)
-		//	} else {
-		//		// reqBatch call execute but have not done with execute
-		//		rbft.logger.Errorf("Fail to call the checkpoint, seqNo=%d, block height=%d", rbft.exec.lastExec, height)
-		//	}
-		//}
+
 	} else {
 		rbft.logger.Warningf("Replica %d had execDoneSync called, flagging ourselves as out of data", rbft.id)
 		rbft.on(skipInProgress)

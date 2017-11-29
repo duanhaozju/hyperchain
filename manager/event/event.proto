@@ -21,9 +21,8 @@ message TestEvent {
     string msg = 2;
 }
 
-//receive new block event from node consensus event for consensus module
-message ValidationEvent {
-    string PreHash = 1;
+message CommitBlockEvent {
+    string PreviousHash = 1;
     string Digest = 2;
     repeated types.Transaction Transactions = 3;
     repeated types.InvalidTransactionRecord InvalidTransactions = 4;
