@@ -5,6 +5,8 @@ import (
 	"github.com/hyperchain/hyperchain/core/oplog/proto"
 	"github.com/hyperchain/hyperchain/manager/event"
 )
+// TODO: configuration?
+const maxMissingLogEntry = 10
 
 //Dispatch receive oplog in random order, but should dispatch them in order
 func (e *Executor) Dispatch(ol *oplog.LogEntry) {
@@ -18,6 +20,7 @@ func (e *Executor) Dispatch(ol *oplog.LogEntry) {
 
 //dispatch oplog sequentially
 func (e *Executor) sequentialDispatch() {
+	counter := 0
 	for {
 		select {
 		case <-e.context.exit:
@@ -27,12 +30,28 @@ func (e *Executor) sequentialDispatch() {
 			e.logger.Debugf("fetch log with id %d", ol.Lid)
 			demandIndex := e.context.getDemandOpLogIndex()
 			if ol.Lid == demandIndex {
+				counter = 0
 				e.dispatch(ol)
 				e.context.setDemandOpLogIndex(demandIndex + 1)
 				e.dispatchPendingOpLogs()
 			} else if ol.Lid > demandIndex {
+				counter += 1
 				e.logger.Debugf("log id %d is bigger than demandIndex %d", ol.Lid, demandIndex)
 				e.cache.pendingOpLogs.Add(ol.Lid, ol)
+				if counter >= maxMissingLogEntry {
+					e.logger.Infof("fetchLogEntry with log id %v", demandIndex)
+					logEntry := e.helper.fetchLogEntry(demandIndex)
+					if logEntry != nil {
+						if logEntry.Lid == demandIndex {
+							e.dispatch(logEntry)
+							e.context.setDemandOpLogIndex(demandIndex + 1)
+							e.dispatchPendingOpLogs()
+						} else {
+							e.logger.Errorf("fetch log with %d but %d", demandIndex, logEntry.Lid)
+						}
+					}
+					counter = 0
+				}
 			} else {
 				e.logger.Criticalf("log entry id %d is less than demand index %d, discard this log %v",
 					ol.Lid, demandIndex, ol)
@@ -49,6 +68,11 @@ func (e *Executor) dispatchPendingOpLogs() {
 					e.dispatch(ol)
 					e.context.setDemandOpLogIndex(i + 1)
 					e.cache.pendingOpLogs.RemoveWithCond(e.context.demandOpLogIndex-1, RemoveLessThan)
+					i = e.context.getDemandOpLogIndex()
+				} else {
+					e.logger.Errorf("logEntry with id %v in pendingOpLogs, error", i)
+					e.cache.pendingOpLogs.Remove(e.context.demandOpLogIndex)
+					break
 				}
 			}
 		}

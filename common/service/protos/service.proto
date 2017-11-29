@@ -52,4 +52,5 @@ enum Event {
     AdminResponseEvent = 2;
 
     OpLogAck = 3;
+    OpLogFetch = 4;
 }

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "hyperchain/core/types/transaction.proto";
+import "github.com/hyperchain/hyperchain/core/types/transaction.proto";
 package event;
 
 message AddNamespaceEvent {
@@ -34,4 +34,8 @@ message ValidationEvent {
 message OpLogAck {
     bool executeOk = 1;
     uint64 seqNo = 2;
+}
+
+message OpLogFetch {
+    uint64 logID = 1;
 }

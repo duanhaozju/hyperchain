@@ -24,20 +24,27 @@ import (
 	"github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/common/service/client"
 	oldExe "github.com/hyperchain/hyperchain/core/executor"
+	pb "github.com/hyperchain/hyperchain/common/service/protos"
+
+	"github.com/hyperchain/hyperchain/core/oplog/proto"
+	"github.com/hyperchain/hyperchain/common"
 )
 
 // Helper implements the helper mux used in communication.
 type Helper struct {
 	innerMux    *event.TypeMux // System internal mux
 	externalMux *event.TypeMux // Subscription system mux
+	client      *client.ServiceClient
 }
 
 // newHelper creates the helper that manage the inner and external communications.
-func newHelper(innerMux *event.TypeMux, externalMux *event.TypeMux) *Helper {
+func newHelper(innerMux *event.TypeMux, externalMux *event.TypeMux, client *client.ServiceClient) *Helper {
 	return &Helper{
 		innerMux:    innerMux,
 		externalMux: externalMux,
+		client:      client,
 	}
 }
 
@@ -49,6 +56,36 @@ func (helper *Helper) PostInner(ev interface{}) {
 // PostExternal post event to outer event mux
 func (helper *Helper) PostExternal(ev interface{}) {
 	helper.externalMux.Post(ev)
+}
+
+// fetch missing transactionList
+func (helper *Helper) fetchLogEntry(id uint64) *oplog.LogEntry {
+	logger := common.GetLogger("global", "executor_helper")
+	lid := &event.OpLogFetch{
+		LogID:	id,
+	}
+	payload, err := proto.Marshal(lid)
+	if err != nil {
+		logger.Errorf("marshal error %v", err)
+		return nil
+	}
+	msg := &pb.IMessage{
+		Type: pb.Type_SYNC_REQUEST,
+		From: pb.FROM_EXECUTOR,
+		Event: pb.Event_OpLogFetch,
+		Payload: payload,
+	}
+	ret, err := helper.client.SyncSend(msg)
+	if err != nil {
+		logger.Errorf("sync send is %v", err)
+		return nil
+	}
+	le := &oplog.LogEntry{}
+	if err = proto.Unmarshal(ret.Payload, le); err != nil {
+		logger.Errorf("unmarshal error %v", err)
+		return nil
+	}
+	return le
 }
 
 // checkParams the checker of the parameters, check whether the parameters are satisfied

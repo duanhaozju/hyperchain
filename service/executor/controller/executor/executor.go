@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"github.com/op/go-logging"
 	"strconv"
+	"github.com/hyperchain/hyperchain/common/service/client"
 )
 
 // Executor represents a hyperchain executor implementation
@@ -46,10 +47,10 @@ type Executor struct {
 	jvmCli     jvm.ContractExecutor // Jvm client
 }
 
-func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux) (*Executor, error) {
+func NewExecutor(namespace string, conf *common.Config, eventMux *event.TypeMux, filterMux *event.TypeMux, client *client.ServiceClient) (*Executor, error) {
 	kec256Hash := crypto.NewKeccak256Hash("keccak256")
 	encryption := crypto.NewEcdsaEncrypto("ecdsa")
-	helper := newHelper(eventMux, filterMux)
+	helper := newHelper(eventMux, filterMux, client)
 	executor := &Executor{
 		namespace:  namespace,
 		conf:       &Config{conf, namespace},
