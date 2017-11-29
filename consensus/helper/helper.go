@@ -290,7 +290,7 @@ func (h *helper) SendFilterEvent(informType int, message ...interface{}) error {
 }
 
 func (h *helper) GetLatestCommitNumber() uint64 {
-	return h.opLog.GetLastCommit()
+	return h.opLog.GetLastBlockNum()
 }
 
 func (h *helper) GetLatestCommitHeightAndHash() (uint64, string, error) {

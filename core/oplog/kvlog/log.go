@@ -209,11 +209,17 @@ func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64, *oplog.LogEntry,
 	return 0, nil, ErrNoSeqNo
 }
 
+func (kvLogger *kvLoggerImpl) GetLastBlockNum() uint64 {
+	kvLogger.mu.Lock()
+	defer kvLogger.mu.Unlock()
+	return kvLogger.lastCommit
+}
+
 func (kvLogger *kvLoggerImpl) GetLastCommit() uint64 {
 	kvLogger.mu.Lock()
 	defer kvLogger.mu.Unlock()
 
-	return kvLogger.lastCommit
+	return kvLogger.lastSet
 }
 
 func (kvLogger *kvLoggerImpl) SetStableCheckpoint(id uint64) {

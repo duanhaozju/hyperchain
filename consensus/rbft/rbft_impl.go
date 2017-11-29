@@ -6,8 +6,6 @@ package rbft
 import (
 	"encoding/base64"
 	"fmt"
-	"sort"
-	"strconv"
 	"time"
 
 	"github.com/hyperchain/hyperchain/common"
@@ -20,6 +18,8 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/op/go-logging"
+	"sort"
+	"strconv"
 )
 
 // rbftImpl is the core struct of rbft module, which handles all functions about consensus

@@ -110,35 +110,35 @@ func (c *Context) isDemand(typ int, num uint64) bool {
 }
 
 // turnOffValidationSwitch turns on validation switch, executor will process received event.
-func (executor *Executor) turnOnValidationSwitch() {
-	executor.logger.Debugf("turn on validation switch", executor.namespace)
-	atomic.StoreInt32(&executor.context.skipValidation, VALIDATION_NORMAL)
+func (e *Executor) turnOnValidationSwitch() {
+	e.logger.Debug("turn on validation switch")
+	atomic.StoreInt32(&e.context.skipValidation, VALIDATION_NORMAL)
 }
 
 // turnOffValidationSwitch turns off validation switch, executor will drop all received event when the switch turn off.
-func (executor *Executor) turnOffValidationSwitch() {
-	executor.logger.Debugf("turn off validation switch", executor.namespace)
-	atomic.StoreInt32(&executor.context.skipValidation, VALIDATION_IGNORE)
+func (e *Executor) turnOffValidationSwitch() {
+	e.logger.Debug("turn off validation switch")
+	atomic.StoreInt32(&e.context.skipValidation, VALIDATION_IGNORE)
 }
 
 // isReadyToValidation checks whether executor is ready to process validation event.
-func (executor *Executor) isReadyToValidation() bool {
-	if atomic.LoadInt32(&executor.context.skipValidation) == VALIDATION_NORMAL {
+func (e *Executor) isReadyToValidation() bool {
+	if atomic.LoadInt32(&e.context.skipValidation) == VALIDATION_NORMAL {
 		return true
 	}
 	return false
 }
 
 // markValidationBusy marks executor is in validation.
-func (executor *Executor) markValidationBusy() {
-	executor.logger.Debugf("mark validation busy", executor.namespace)
-	atomic.StoreInt32(&executor.context.validateInProgress, BUSY)
+func (e *Executor) markValidationBusy() {
+	e.logger.Debug("mark validation busy")
+	atomic.StoreInt32(&e.context.validateInProgress, BUSY)
 }
 
 // markValidationBusy marks executor is idle.
-func (executor *Executor) markValidationIdle() {
-	executor.logger.Debugf("mark validation idle", executor.namespace)
-	atomic.StoreInt32(&executor.context.validateInProgress, IDLE)
+func (e *Executor) markValidationIdle() {
+	e.logger.Debug("mark validation idle")
+	atomic.StoreInt32(&e.context.validateInProgress, IDLE)
 }
 
 // markCommitBusy marks executor is in commit.
@@ -148,20 +148,19 @@ func (e *Executor) markCommitBusy() {
 }
 
 // markCommitIdle marks executor is idle.
-func (executor *Executor) markCommitIdle() {
-	executor.logger.Debugf("mark commit idle")
-	atomic.StoreInt32(&executor.context.commitInProgress, IDLE)
+func (e *Executor) markCommitIdle() {
+	e.logger.Debugf("mark commit idle")
+	atomic.StoreInt32(&e.context.commitInProgress, IDLE)
 }
 
 // waitUtilValidationIdle suspends thread util all validations event has been process done.
-func (executor *Executor) waitUtilValidationIdle() {
-	executor.logger.Debugf("wait validation idle", executor.namespace)
-	defer executor.logger.Debugf("validation idle", executor.namespace)
+func (e *Executor) waitUtilValidationIdle() {
+	e.logger.Debugf("wait validation idle")
 	ticker := time.NewTicker(1 * time.Millisecond)
 	for {
 		select {
 		case <-ticker.C:
-			if atomic.LoadInt32(&executor.context.validateQueueLen) == 0 && atomic.LoadInt32(&executor.context.validateInProgress) == IDLE {
+			if atomic.LoadInt32(&e.context.validateQueueLen) == 0 && atomic.LoadInt32(&e.context.validateInProgress) == IDLE {
 				return
 			} else {
 				continue
@@ -171,14 +170,13 @@ func (executor *Executor) waitUtilValidationIdle() {
 }
 
 // wailUtilCommitIdle suspends thread util all commit events has been process done.
-func (executor *Executor) wailUtilCommitIdle() {
-	executor.logger.Debugf("[Namespace = %s] wait commit idle", executor.namespace)
-	defer executor.logger.Debugf("[Namespace = %s] commit idle", executor.namespace)
+func (e *Executor) wailUtilCommitIdle() {
+	e.logger.Debug("wait commit idle")
 	ticker := time.NewTicker(1 * time.Millisecond)
 	for {
 		select {
 		case <-ticker.C:
-			if atomic.LoadInt32(&executor.context.commitQueueLen) == 0 && atomic.LoadInt32(&executor.context.commitInProgress) == IDLE {
+			if atomic.LoadInt32(&e.context.commitQueueLen) == 0 && atomic.LoadInt32(&e.context.commitInProgress) == IDLE {
 				return
 			} else {
 				continue
