@@ -33,7 +33,7 @@ type ExeFiber struct {
 	ol               oplog.OpLog
 	conf             *common.Config
 	logger           *logging.Logger
-	stop             int32
+	stop             chan struct{}
 }
 
 func NewFiber(conf *common.Config, ns *service.NamespaceServices, ol oplog.OpLog) (fiber.Fiber, error) {
@@ -47,6 +47,7 @@ func NewFiber(conf *common.Config, ns *service.NamespaceServices, ol oplog.OpLog
 		ns:     ns,
 		ol:     ol,
 		logger: common.GetLogger(namespace, "fiber"),
+		stop:  make(chan struct{}),
 	}
 	var err error
 	fr.md, err = hyperdb.GetOrCreateDatabase(conf, namespace, hc.DBNAME_META)
@@ -56,7 +57,6 @@ func NewFiber(conf *common.Config, ns *service.NamespaceServices, ol oplog.OpLog
 	if err = fr.recovery(); err != nil {
 		return nil, err
 	}
-	fr.stop = 0
 	return fr, nil
 }
 
@@ -86,64 +86,70 @@ func (f *ExeFiber) recovery() error {
 }
 
 func (f *ExeFiber) Start() error {
-	var es service.Service
-	atomic.StoreInt32(&f.stop, 0)
-	go f.processExecutorRequest(make(chan bool))
-	for atomic.LoadInt32(&f.stop) == 0 {
-		f.logger.Debugf("%v executor service == nil? %v", f.ol.GetLastCommit(), es == nil)
-
-		nextConsumeIndex := atomic.LoadUint64(&f.lastConsumeIndex) + 1
-		if nextConsumeIndex <= f.ol.GetLastCommit() {
-			if e, err := f.ol.Fetch(nextConsumeIndex); err == nil {
-				if payload, err := proto.Marshal(e); err != nil {
-					f.logger.Errorf("unmarshal [%v] error %v", e, err)
-				} else {
-					logMsg := &pb.IMessage{
-						Type:    pb.Type_OP_LOG,
-						Payload: payload,
-					}
-
-					es = f.ns.Service(executorId)
-					if es == nil {
-						f.logger.Error("no executor service connection found, continue")
-						time.Sleep(time.Second)
-						continue
-					}
-
-					if err := es.Send(logMsg); err != nil {
-						f.logger.Error(err)
-						continue
-					} else {
-						atomic.StoreUint64(&f.lastConsumeIndex, nextConsumeIndex)
-						if nextConsumeIndex%30 == 0 { //TODO(Xiaoyi Wang: how to store index effectively.
-							buf := make([]byte, 0)
-							b := strconv.AppendUint(buf, nextConsumeIndex, 10)
-							f.md.Put([]byte(consumeIndexPrefix), b)
-						}
-					}
-				}
-
-			} else {
-				time.Sleep(time.Second)
-			}
-		} else {
-			time.Sleep(time.Second)
+	go f.processExecutorRequest()
+	for {
+		select {
+		case <-f.stop:
+			f.logger.Notice("fiber exit")
+			return nil
+		default:
+			f.sendNextConsume()
 		}
 	}
 
 	return nil
 }
 
-func (f *ExeFiber) processExecutorRequest(exit chan bool) {
+func (f *ExeFiber) sendNextConsume() {
 	var es service.Service
-	atomic.StoreInt32(&f.stop, 0)
-	for atomic.LoadInt32(&f.stop) == 0 {
+	f.logger.Debugf("%v executor service == nil? %v", f.ol.GetLastCommit(), es == nil)
+	nextConsumeIndex := atomic.LoadUint64(&f.lastConsumeIndex) + 1
+	if nextConsumeIndex <= f.ol.GetLastCommit() {
+		if e, err := f.ol.Fetch(nextConsumeIndex); err == nil {
+			if payload, err := proto.Marshal(e); err != nil {
+				f.logger.Errorf("unmarshal [%v] error %v", e, err)
+			} else {
+				logMsg := &pb.IMessage{
+					Type:    pb.Type_OP_LOG,
+					Payload: payload,
+				}
+
+				es = f.ns.Service(executorId)
+				if es == nil {
+					f.logger.Error("no executor service connection found, continue")
+					time.Sleep(time.Second)
+					return
+				}
+
+				if err := es.Send(logMsg); err != nil {
+					f.logger.Error(err)
+					return
+				} else {
+					atomic.StoreUint64(&f.lastConsumeIndex, nextConsumeIndex)
+					if nextConsumeIndex%30 == 0 { //TODO(Xiaoyi Wang: how to store index effectively.
+						buf := make([]byte, 0)
+						b := strconv.AppendUint(buf, nextConsumeIndex, 10)
+						f.md.Put([]byte(consumeIndexPrefix), b)
+					}
+				}
+			}
+		} else {
+			time.Sleep(time.Second)
+		}
+	} else {
+		time.Sleep(time.Second)
+	}
+}
+
+func (f *ExeFiber) processExecutorRequest() {
+	var es service.Service
+	for {
 		es = f.ns.Service(executorId)
 		if es == nil {
 			time.Sleep(time.Second)
 		} else {
 			select {
-			case <-exit:
+			case <-f.stop:
 				return
 			case req := <-es.Receive():
 				f.handle(req)
@@ -197,7 +203,10 @@ func (f *ExeFiber) handle(req *pb.IMessage) {
 	}
 }
 
-func (f *ExeFiber) Stop() error {
-	atomic.StoreInt32(&f.stop, 0)
-	return nil
+func (f *ExeFiber) Stop() {
+	if f.stop != nil {
+		close(f.stop)
+	}
+	f.stop = nil
+	f.logger.Notice("stop fiber successfully")
 }

@@ -5,6 +5,8 @@ import (
 	"github.com/hyperchain/hyperchain/core/oplog/proto"
 	"github.com/hyperchain/hyperchain/manager/event"
 )
+// TODO: configuration?
+const maxMissingLogEntry = 10
 
 //Dispatch receive oplog in random order, but should dispatch them in order
 func (e *Executor) Dispatch(ol *oplog.LogEntry) {
@@ -27,9 +29,6 @@ func (e *Executor) sequentialDispatch() {
 		case ol := <-e.cache.opLogC:
 			e.logger.Debugf("fetch log with id %d", ol.Lid)
 			demandIndex := e.context.getDemandOpLogIndex()
-			if ol.Lid == 10 {
-				break
-			}
 			if ol.Lid == demandIndex {
 				counter = 0
 				e.dispatch(ol)
@@ -39,7 +38,7 @@ func (e *Executor) sequentialDispatch() {
 				counter += 1
 				e.logger.Debugf("log id %d is bigger than demandIndex %d", ol.Lid, demandIndex)
 				e.cache.pendingOpLogs.Add(ol.Lid, ol)
-				if counter >= 10 {
+				if counter >= maxMissingLogEntry {
 					e.logger.Infof("fetchLogEntry with log id %v", demandIndex)
 					logEntry := e.helper.fetchLogEntry(demandIndex)
 					if logEntry != nil {
@@ -63,19 +62,18 @@ func (e *Executor) sequentialDispatch() {
 
 func (e *Executor) dispatchPendingOpLogs() {
 	if e.cache.pendingOpLogs.Len() > 0 {
-		for i := e.context.getDemandOpLogIndex(); e.cache.pendingOpLogs.Contains(i); i++ {
+		for i := e.context.getDemandOpLogIndex(); e.cache.pendingOpLogs.Contains(i); {
 			if o, ok := e.cache.pendingOpLogs.Get(i); ok {
 				if ol, ok := o.(*oplog.LogEntry); ok {
 					e.dispatch(ol)
 					e.context.setDemandOpLogIndex(i + 1)
 					e.cache.pendingOpLogs.RemoveWithCond(e.context.demandOpLogIndex-1, RemoveLessThan)
+					i = e.context.getDemandOpLogIndex()
 				} else {
-					e.cache.pendingOpLogs.RemoveWithCond(e.context.demandOpLogIndex, RemoveLessThan)
+					e.logger.Errorf("logEntry with id %v in pendingOpLogs, error", i)
+					e.cache.pendingOpLogs.Remove(e.context.demandOpLogIndex)
 					break
 				}
-			} else {
-				e.logger.Errorf("get pending oplog with id %v error", i)
-				break
 			}
 		}
 	}
