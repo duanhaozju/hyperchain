@@ -778,21 +778,25 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 			rbft.logger.Noticef("======== Replica %d Call append, view=%d/seqNo=%d", rbft.id, idx.v, idx.n)
 			rbft.persistCSet(idx.v, idx.n, idx.d)
 			isPrimary := rbft.isPrimary(rbft.id)
-			//rbft.helper.Execute(idx.n, cert.resultHash, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)
 			validTxs, ok := rbft.batchVdr.validBatch[idx]
 			if !ok {
 				rbft.logger.Warningf("Replica %d cannot find valid txs for view=%d/seqNo=%d/digest=%s", rbft.id, idx.v, idx.n, idx.d)
 				return
 			}
-			//invalidRecord, ok := rbft.batchVdr.inValidRecord[idx]
-			//if !ok {
-			//	rbft.logger.Warningf("Replica %d cannot find invalid txs record for view=%d/seqNo=%d/digest=%s", rbft.id, idx.v, idx.n, idx.d)
-			//	return
-			//}
-
-			if err := rbft.helper.ValidateBatch(idx.d, validTxs, cert.prePrepare.HashBatch.Timestamp, idx.n, idx.v, isPrimary); err != nil {
-				rbft.logger.Error("Replica %d failed to commit block of view=%d/seqNo=%d", rbft.id, idx.v, idx.n)
+			invalidRecord, ok := rbft.batchVdr.inValidRecord[idx]
+			if !ok {
+				rbft.logger.Warningf("Replica %d cannot find invalid txs record for view=%d/seqNo=%d/digest=%s", rbft.id, idx.v, idx.n, idx.d)
 				return
+			}
+			var lastHash string
+			if idx.n == 1 {
+				lastHash = ""
+			}
+			if hash, err := rbft.helper.ValidateBatch(rbft.exec.lastExecHash, idx.d, validTxs, invalidRecord, cert.prePrepare.HashBatch.Timestamp, idx.n, idx.v, isPrimary); err != nil {
+				rbft.logger.Error("Replica %d failed to commit block for view=%d/seqNo=%d/digest=%s", rbft.id, idx.v, idx.n, idx.d)
+				return
+			} else {
+				rbft.exec.lastExecHash = hash
 			}
 			cert.sentExecute = true
 			rbft.afterCommitBlock(idx)

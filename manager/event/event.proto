@@ -23,17 +23,19 @@ message TestEvent {
 
 //receive new block event from node consensus event for consensus module
 message ValidationEvent {
-    string Digest = 1;
-    repeated types.Transaction Transactions = 2;
-    repeated types.InvalidTransactionRecord InvalidTransactions = 3;
-    uint64 SeqNo = 4;
-    uint64 View = 5;
-    bool IsPrimary = 6;
-    int64 Timestamp = 7;
+    string PreHash = 1;
+    string Digest = 2;
+    repeated types.Transaction Transactions = 3;
+    repeated types.InvalidTransactionRecord InvalidTransactions = 4;
+    uint64 SeqNo = 5;
+    uint64 View = 6;
+    bool IsPrimary = 7;
+    int64 Timestamp = 8;
 }
 
 message RollbackEvent {
     uint64 SeqNo = 1;
+    uint64 Lid = 2;
 }
 
 message OpLogAck {

@@ -16,10 +16,11 @@ import (
 
 // executor manages exec related params
 type executor struct {
-	lastExec    uint64
-	currentExec *uint64
-	storage     oplog.OpLog
-	logger      *logging.Logger
+	lastExec     uint64
+	lastExecHash string
+	currentExec  *uint64
+	storage      oplog.OpLog
+	logger       *logging.Logger
 }
 
 // newExecutor initializes an instance of executor

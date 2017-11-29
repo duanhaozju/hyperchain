@@ -15,6 +15,7 @@ import (
 	"github.com/hyperchain/hyperchain/core/oplog"
 	opLog2 "github.com/hyperchain/hyperchain/core/oplog/proto"
 	"github.com/hyperchain/hyperchain/core/fiber"
+	"github.com/hyperchain/hyperchain/crypto"
 )
 
 type helper struct {
@@ -42,7 +43,7 @@ type Stack interface {
 	UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error
 
 	// ValidateBatch transfers the ValidationEvent to outer
-	ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error
+	ValidateBatch(lastExecHash string, digest string, txs []*types.Transaction, invalidTxsRecord []*types.InvalidTransactionRecord, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) (string, error)
 
 	// VcReset reset vid when view change is done, clear the validate cache larger than seqNo
 	VcReset(seqNo uint64, view uint64) error
@@ -158,20 +159,22 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 }
 
 // ValidateBatch transfers the ValidateEvent to outer
-func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) error {
+func (h *helper) ValidateBatch(lastExecHash string, digest string, txs []*types.Transaction, invalidTxsRecord []*types.InvalidTransactionRecord, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) (string, error) {
 
 	validationEvent := &event.ValidationEvent{
-		Digest:       digest,
-		Transactions: txs,
-		SeqNo:        seqNo,
-		View:         view,
-		IsPrimary:    isPrimary,
-		Timestamp:    timeStamp,
+		PreHash:             lastExecHash,
+		Digest:              digest,
+		Transactions:        txs,
+		InvalidTransactions: invalidTxsRecord,
+		SeqNo:               seqNo,
+		View:                view,
+		IsPrimary:           isPrimary,
+		Timestamp:           timeStamp,
 	}
 
 	payload, err := proto.Marshal(validationEvent)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	entry := &opLog2.LogEntry{
@@ -180,10 +183,11 @@ func (h *helper) ValidateBatch(digest string, txs []*types.Transaction, timeStam
 	}
 
 	if err = h.opLog.Append(entry); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	currentHash := crypto.Keccak256Hash(payload).Hex()
+	return currentHash, nil
 }
 
 // VcReset resets vid after in recovery, viewchange or add/delete nodes
