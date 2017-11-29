@@ -154,7 +154,7 @@ func (es *executorServiceImpl) init() error {
 	es.filterSystem = filter.NewEventSystem(es.filterMux)
 
 	// 4. initial executor
-	executor, err := executor.NewExecutor(es.namespace, es.conf, es.eventMux, es.filterMux)
+	executor, err := executor.NewExecutor(es.namespace, es.conf, es.eventMux, es.filterMux, es.client)
 	if err != nil {
 		es.logger.Errorf("Init executor client for namespace %s error, %v", es.namespace, err)
 		return err

@@ -88,7 +88,7 @@ func (f *ExeFiber) recovery() error {
 func (f *ExeFiber) Start() error {
 	var es service.Service
 	atomic.StoreInt32(&f.stop, 0)
-
+	go f.processExecutorRequest(make(chan bool))
 	for atomic.LoadInt32(&f.stop) == 0 {
 		f.logger.Debugf("%v executor service == nil? %v", f.ol.GetLastCommit(), es == nil)
 
@@ -154,6 +154,28 @@ func (f *ExeFiber) processExecutorRequest(exit chan bool) {
 
 func (f *ExeFiber) handle(req *pb.IMessage) {
 	switch req.Event {
+	case pb.Event_OpLogFetch:
+		fetch := &event.OpLogFetch{}
+		err := proto.Unmarshal(req.Payload, fetch)
+		if err != nil {
+			f.logger.Error(err)
+		} else {
+			le, err := f.ol.Fetch(fetch.LogID)
+			f.logger.Infof("fiber fetch log entry id with %v", le.Lid)
+			if err != nil {
+				f.logger.Errorf("fetch log entry with id %v, error %v", fetch.LogID, err)
+			}
+			payload, err := proto.Marshal(le)
+			if err != nil {
+				f.logger.Errorf("marshal for log entry error: %v", err)
+			}
+			msg := &pb.IMessage{
+				Id: req.Id,
+				Type: pb.Type_RESPONSE,
+				Payload: payload,
+			}
+			f.ns.Service(executorId).Send(msg)
+		}
 	case pb.Event_OpLogAck:
 		ack := &event.OpLogAck{}
 		err := proto.Unmarshal(req.Payload, ack)
