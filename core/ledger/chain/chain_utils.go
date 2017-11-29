@@ -233,9 +233,9 @@ func PutChain(batch db.Batch, chain *types.Chain, flush, sync bool) error {
 	return putChain(batch, chain, flush, sync)
 }
 
-// UpdateChainByBlcokNum updates chain according block number, sets chain current height to the block number,
+// UpdateChainByBlockNum updates chain according block number, sets chain current height to the block number,
 // returns error if correspondent block missing.
-func UpdateChainByBlcokNum(namespace string, batch db.Batch, blockNumber uint64, flush bool, sync bool) error {
+func UpdateChainByBlockNum(namespace string, batch db.Batch, blockNumber uint64, flush bool, sync bool) error {
 	block, err := GetBlockByNumber(namespace, blockNumber)
 	if err != nil {
 		logger(namespace).Warning("no required block number")

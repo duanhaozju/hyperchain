@@ -36,8 +36,14 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 			return
 		}
 		eh.executor.Dispatch(le)
+	case pb.Type_EVENT:
+		if msg.Event == pb.Event_CheckPointAck {
+			//TODO: checkpoint ack mechanism
+			//1. ok => move water mark
+			//2. not ok => revert?
+		}
 	default:
-		eh.logger.Errorf("Undefined event %v", msg)
+		eh.logger.Errorf("undefined event %v", msg)
 	}
 }
 

@@ -186,22 +186,22 @@ func (e *Executor) wailUtilCommitIdle() {
 }
 
 // waitUtilRollbackAvailable waits validation processor and commit processor become idle.
-func (executor *Executor) waitUtilRollbackAvailable() {
-	executor.logger.Debugf("[Namespace = %s] wait util rollback available", executor.namespace)
-	defer executor.logger.Debugf("[Namespace = %s] rollback available", executor.namespace)
-	executor.clearPendingValidationEventQ()
-	executor.turnOffValidationSwitch()
-	executor.waitUtilValidationIdle()
-	executor.wailUtilCommitIdle()
+func (e *Executor) waitUtilRollbackAvailable() {
+	e.logger.Debugf("wait util rollback available")
+	defer e.logger.Debugf("rollback available")
+	e.clearPendingValidationEventQ()
+	e.turnOffValidationSwitch()
+	e.waitUtilValidationIdle()
+	e.wailUtilCommitIdle()
 
 	// clear all cached stuff
-	executor.statedb.Purge()
+	e.statedb.Purge()
 }
 
 // rollbackDone rollback callback function to notify rollback finish.
-func (executor *Executor) rollbackDone() {
-	executor.logger.Debugf("[Namespace = %s] roll back done", executor.namespace)
-	executor.turnOnValidationSwitch()
+func (e *Executor) rollbackDone() {
+	e.logger.Debugf("roll back done")
+	e.turnOnValidationSwitch()
 }
 
 /*

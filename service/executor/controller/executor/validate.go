@@ -14,9 +14,6 @@
 package executor
 
 import (
-	"sort"
-	"sync"
-
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/core/errors"
 	"github.com/hyperchain/hyperchain/core/types"
@@ -82,7 +79,7 @@ func (e *Executor) listenValidationEvent() {
 				}
 			} else {
 				// Drop the event if needed
-				e.dropValdiateEvent(ev, e.processValidationDone)
+				e.dropValidateEvent(ev, e.processValidationDone)
 			}
 		}
 	}
@@ -126,12 +123,12 @@ func (e *Executor) processPendingValidationEvent(done func()) bool {
 	return true
 }
 
-// dropValdiateEvent does nothing but consume a validation event.
-func (executor *Executor) dropValdiateEvent(validationEvent *event.ValidationEvent, done func()) {
-	executor.markValidationBusy()
-	defer executor.markValidationIdle()
+// dropValidateEvent does nothing but consume a validation event.
+func (e *Executor) dropValidateEvent(validationEvent *event.ValidationEvent, done func()) {
+	e.markValidationBusy()
+	defer e.markValidationIdle()
 	defer done()
-	executor.logger.Noticef("[Namespace = %s] drop validation event %d", executor.namespace, validationEvent.SeqNo)
+	e.logger.Noticef("drop validation event %d", validationEvent.SeqNo)
 }
 
 // process specific implementation logic, including the signature checking,
@@ -146,7 +143,7 @@ func (e *Executor) process(validationEvent *event.ValidationEvent, done func()) 
 		invalidtxs []*types.InvalidTransactionRecord
 	)
 
-	invalidtxs, validtxs = e.checkSign(validationEvent.Transactions)
+	validtxs, invalidtxs = validationEvent.Transactions, make([]*types.InvalidTransactionRecord, 0)
 	err, validateResult := e.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo, validationEvent.Timestamp)
 	if err != nil {
 		// short circuit if error occur during the transaction execution
@@ -158,54 +155,10 @@ func (e *Executor) process(validationEvent *event.ValidationEvent, done func()) 
 	e.logger.Debugf("invalid transaction number %d", len(validateResult.InvalidTxs))
 	e.logger.Debugf("valid transaction number %d", len(validateResult.ValidTxs))
 	e.logger.Noticef("execute block %d done", validationEvent.SeqNo)
+
 	e.saveValidationResult(validateResult, validationEvent.SeqNo, hash)
-	e.sendValidationResult(validateResult, validationEvent, hash)
+	e.tryToCommit(validationEvent, hash)
 	return nil, true
-}
-
-// checkSign checks the sender's signature validity.
-func (executor *Executor) checkSign(txs []*types.Transaction) ([]*types.InvalidTransactionRecord, []*types.Transaction) {
-	var (
-		invalidtxs []*types.InvalidTransactionRecord
-		wg         sync.WaitGroup
-		index      []int
-		mu         sync.Mutex
-	)
-
-	// Parallel check the signature of each transaction
-	for i := range txs {
-		wg.Add(1)
-		go func(i int) {
-			tx := txs[i]
-			if !tx.ValidateSign(executor.encryption, executor.commonHash) {
-				executor.logger.Warningf("[Namespace = %s] found invalid signature, send from : %v", executor.namespace, tx.Id)
-				mu.Lock()
-				invalidtxs = append(invalidtxs, &types.InvalidTransactionRecord{
-					Tx:      tx,
-					ErrType: types.InvalidTransactionRecord_SIGFAILED,
-					ErrMsg:  []byte("Invalid signature"),
-				})
-				index = append(index, i)
-				mu.Unlock()
-			}
-			wg.Done()
-		}(i)
-	}
-	wg.Wait()
-
-	// Remove invalid transaction from transaction list
-	// Keep the txs sequentially as origin
-	if len(index) > 0 {
-		sort.Ints(index)
-		count := 0
-		for _, idx := range index {
-			idx = idx - count
-			txs = append(txs[:idx], txs[idx+1:]...)
-			count++
-		}
-	}
-
-	return invalidtxs, txs
 }
 
 // applyTransactions executes transaction sequentially.
@@ -303,12 +256,12 @@ func (executor *Executor) throwInvalidTransactionBack(invalidtxs []*types.Invali
 }
 
 // saveValidationResult saves validation result to cache.
-func (executor *Executor) saveValidationResult(res *ValidationResultRecord, seqNo uint64, hash common.Hash) {
-	executor.addValidationResult(ValidationTag{hash.Hex(), seqNo}, res)
+func (e *Executor) saveValidationResult(res *ValidationResultRecord, seqNo uint64, hash common.Hash) {
+	e.addValidationResult(ValidationTag{hash.Hex(), seqNo}, res)
 }
 
-// sendValidationResult sends validation result to consensus module.
-func (e *Executor) sendValidationResult(res *ValidationResultRecord, ev *event.ValidationEvent, hash common.Hash) {
+// tryToCommit sends validation result to commit thread.
+func (e *Executor) tryToCommit(ev *event.ValidationEvent, hash common.Hash) {
 	e.CommitBlock(&event.CommitEvent{
 		SeqNo:      ev.SeqNo,
 		Timestamp:  ev.Timestamp,
@@ -321,10 +274,10 @@ func (e *Executor) sendValidationResult(res *ValidationResultRecord, ev *event.V
 
 // pauseValidation stops validation process for a while.
 // continue by a signal invocation.
-func (executor *Executor) pauseValidation() {
+func (e *Executor) pauseValidation() {
 	for {
-		if v := <-executor.getSuspend(IDENTIFIER_VALIDATION); !v {
-			executor.logger.Notice("un-pause validation process")
+		if v := <-e.getSuspend(IDENTIFIER_VALIDATION); !v {
+			e.logger.Notice("un-pause validation process")
 			return
 		}
 	}

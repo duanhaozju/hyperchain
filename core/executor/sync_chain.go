@@ -609,7 +609,7 @@ func (executor *Executor) sendStateUpdatedEvent() {
 // accpet accepts block synchronization result.
 func (executor *Executor) accpet(seqNo uint64, block *types.Block, result *ValidationResultRecord) error {
 	batch := executor.statedb.FetchBatch(seqNo, state.BATCH_NORMAL)
-	if err := edb.UpdateChainByBlcokNum(executor.namespace, batch, seqNo, false, false); err != nil {
+	if err := edb.UpdateChainByBlockNum(executor.namespace, batch, seqNo, false, false); err != nil {
 		executor.logger.Errorf("update chain to (#%d) failed, err: %s", err.Error())
 		return err
 	}
@@ -719,7 +719,7 @@ func (executor *Executor) applyWorldState(fPath string, filterId string, root co
 	}
 
 	// update current chain height equal with given world state height
-	if err := edb.UpdateChainByBlcokNum(executor.namespace, writeBatch, genesis, false, false); err != nil {
+	if err := edb.UpdateChainByBlockNum(executor.namespace, writeBatch, genesis, false, false); err != nil {
 		return err
 	}
 

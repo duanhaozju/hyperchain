@@ -43,7 +43,7 @@ func (executor *Executor) Rollback(ev event.VCResetEvent) {
 		return
 	}
 	// Reset chain
-	chain.UpdateChainByBlcokNum(executor.namespace, batch, ev.SeqNo-1, false, false)
+	chain.UpdateChainByBlockNum(executor.namespace, batch, ev.SeqNo-1, false, false)
 	batch.Write()
 	executor.context.initDemand(ev.SeqNo)
 	executor.informConsensus(NOTIFY_VC_DONE, protos.VcResetDone{SeqNo: ev.SeqNo, View: ev.View})
@@ -73,7 +73,7 @@ func (executor *Executor) CutdownBlock(number uint64) error {
 		return err
 	}
 	// Reset chain data
-	chain.UpdateChainByBlcokNum(executor.namespace, batch, number-1, false, false)
+	chain.UpdateChainByBlockNum(executor.namespace, batch, number-1, false, false)
 	// Flush all modified to disk
 	batch.Write()
 	executor.logger.Noticef("[Namespace = %s] cut down block #%d success. remove all related transactions, receipts, state changes and block together.", executor.namespace, number)
