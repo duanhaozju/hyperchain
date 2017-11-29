@@ -781,15 +781,19 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 			//rbft.helper.Execute(idx.n, cert.resultHash, true, isPrimary, cert.prePrepare.HashBatch.Timestamp)
 			validTxs, ok := rbft.batchVdr.validBatch[idx]
 			if !ok {
-				rbft.logger.Warningf("Replica %d cannot find valid txs record in validBatch", rbft.id)
+				rbft.logger.Warningf("Replica %d cannot find valid txs for view=%d/seqNo=%d/digest=%s", rbft.id, idx.v, idx.n, idx.d)
 				return
 			}
+			//invalidRecord, ok := rbft.batchVdr.inValidRecord[idx]
+			//if !ok {
+			//	rbft.logger.Warningf("Replica %d cannot find invalid txs record for view=%d/seqNo=%d/digest=%s", rbft.id, idx.v, idx.n, idx.d)
+			//	return
+			//}
 
-			if err := rbft.helper.ValidateBatch(idx.d, validTxs, time.Now().UnixNano(), idx.n, idx.v, isPrimary); err != nil {
+			if err := rbft.helper.ValidateBatch(idx.d, validTxs, cert.prePrepare.HashBatch.Timestamp, idx.n, idx.v, isPrimary); err != nil {
 				rbft.logger.Error("Replica %d failed to commit block of view=%d/seqNo=%d", rbft.id, idx.v, idx.n)
 				return
 			}
-			rbft.helper.FetchCommit(idx.n)
 			cert.sentExecute = true
 			rbft.afterCommitBlock(idx)
 		} else {
@@ -1168,6 +1172,7 @@ func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) consensusEvent {
 	if chkptID != chkpt.Id {
 		rbft.logger.Criticalf("Replica %d generated a checkpoint of %s, but a quorum of the network agrees on %s. This is almost definitely non-deterministic chaincode.",
 			rbft.id, chkptID, chkpt.Id)
+
 		rbft.stateTransfer(nil)
 	}
 

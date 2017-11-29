@@ -201,12 +201,12 @@ func (ns *namespaceImpl) init() error {
 	ns.opLog = kvlog.New(ns.conf)
 
 	nss := ns.is.ServerRegistry().Namespace(ns.name)
-	if ns.fiber, err = executor.NewFiber(ns.conf, nss, ns.opLog); err != nil {
+	if ns.fiber, err = executor.NewFiber(ns.conf, nss, ns.opLog, ns.eventMux); err != nil {
 		return err
 	}
 
 	// 3. init consensus module to order requests.
-	consenter, err := csmgr.Consenter(ns.Name(), ns.conf, ns.opLog, ns.eventMux, ns.filterMux, peerMgr.GetN())
+	consenter, err := csmgr.Consenter(peerMgr.GetN(), ns.Name(), ns.conf, ns.opLog, ns.eventMux, ns.filterMux, ns.fiber)
 	if err != nil {
 		ns.logger.Errorf("Init Consenter for namespace %s error: %s", ns.Name(), err)
 		return err

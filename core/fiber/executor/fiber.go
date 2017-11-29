@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"sync/atomic"
 	"time"
+	"github.com/hyperchain/hyperchain/consensus/rbft"
 )
 
 const (
@@ -24,7 +25,6 @@ const (
 	commitIndexPrefix  = "last.commit.index."
 	executorId         = "EXECUTOR-0"
 
-	checkpointSize = 1024
 )
 
 //Fiber response for log data transfer.
@@ -37,21 +37,22 @@ type ExeFiber struct {
 	conf             *common.Config
 	logger           *logging.Logger
 	stop             chan struct{}
-	checkPointC      chan *protos.BlockchainInfo
+	eventMux         *event.TypeMux
 }
 
-func NewFiber(conf *common.Config, ns *service.NamespaceServices, ol oplog.OpLog) (fiber.Fiber, error) {
+func NewFiber(conf *common.Config, ns *service.NamespaceServices, ol oplog.OpLog, eventMux *event.TypeMux) (fiber.Fiber, error) {
 	namespace := conf.GetString(common.NAMESPACE)
 	if len(namespace) == 0 {
 		return nil, fmt.Errorf("no namespace field found in config")
 	}
 
 	fr := &ExeFiber{
-		conf:   conf,
-		ns:     ns,
-		ol:     ol,
-		logger: common.GetLogger(namespace, "fiber"),
-		stop:   make(chan struct{}),
+		conf:     conf,
+		ns:       ns,
+		ol:       ol,
+		logger:   common.GetLogger(namespace, "fiber"),
+		stop:     make(chan struct{}),
+		eventMux: eventMux,
 	}
 	var err error
 	fr.md, err = hyperdb.GetOrCreateDatabase(conf, namespace, hc.DBNAME_META)
@@ -61,7 +62,6 @@ func NewFiber(conf *common.Config, ns *service.NamespaceServices, ol oplog.OpLog
 	if err = fr.recovery(); err != nil {
 		return nil, err
 	}
-	fr.checkPointC = make(chan *protos.BlockchainInfo, checkpointSize)
 	return fr, nil
 }
 
@@ -209,7 +209,17 @@ func (f *ExeFiber) handle(req *pb.IMessage) {
 			f.logger.Error(err)
 			return
 		}
-		f.checkPointC <- blki
+		payload, err := proto.Marshal(blki)
+		if err != nil {
+			f.logger.Errorf("Marshal AddNode Error!")
+			return
+		}
+		chkptEvent := &rbft.LocalEvent{
+			Service:   rbft.CORE_RBFT_SERVICE,
+			EventType: rbft.CORE_EXECUTOR_CHECKPOINT_EVENT,
+			Event:     payload,
+		}
+		go f.eventMux.Post(chkptEvent)
 	default:
 		f.logger.Errorf("invalid request type, %v", req)
 	}
@@ -221,11 +231,6 @@ func (f *ExeFiber) Stop() {
 	}
 	f.stop = nil
 	f.logger.Notice("stop fiber successfully")
-}
-
-//FetchBlockchainInfo
-func (f *ExeFiber) FetchBlockchainInfo() chan *protos.BlockchainInfo {
-	return f.checkPointC
 }
 
 //Send info to the remote peer

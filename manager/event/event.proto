@@ -25,10 +25,15 @@ message TestEvent {
 message ValidationEvent {
     string Digest = 1;
     repeated types.Transaction Transactions = 2;
-    uint64 SeqNo = 3;
-    uint64 View = 4;
-    bool IsPrimary = 5;
-    int64 Timestamp = 6;
+    repeated types.InvalidTransactionRecord InvalidTransactions = 3;
+    uint64 SeqNo = 4;
+    uint64 View = 5;
+    bool IsPrimary = 6;
+    int64 Timestamp = 7;
+}
+
+message RollbackEvent {
+    uint64 SeqNo = 1;
 }
 
 message OpLogAck {

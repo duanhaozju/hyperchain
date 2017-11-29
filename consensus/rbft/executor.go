@@ -96,6 +96,11 @@ func (rbft *rbftImpl) handleCoreRbftEvent(e *LocalEvent) consensusEvent {
 		rbft.recvValidatedResult(e.Event.(protos.ValidatedTxs))
 		return nil
 
+	case CORE_EXECUTOR_CHECKPOINT_EVENT:
+		checkpointInfo := e.Event.(*protos.BlockchainInfo)
+		rbft.checkpoint(checkpointInfo.Height, checkpointInfo)
+		return nil
+
 	default:
 		rbft.logger.Errorf("Invalid core rbft event: %v", e)
 		return nil

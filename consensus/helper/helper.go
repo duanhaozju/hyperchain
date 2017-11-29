@@ -14,10 +14,12 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperchain/hyperchain/core/oplog"
 	opLog2 "github.com/hyperchain/hyperchain/core/oplog/proto"
+	"github.com/hyperchain/hyperchain/core/fiber"
 )
 
 type helper struct {
 	opLog       oplog.OpLog
+	fiber       fiber.Fiber
 	innerMux    *event.TypeMux
 	externalMux *event.TypeMux
 }
@@ -66,18 +68,19 @@ type Stack interface {
 	// GetLatestCommitHeightAndHash queries and returns latest committed block number and hash from opLog
 	GetLatestCommitHeightAndHash() (uint64, string, error)
 
-	FetchCommit(lid uint64) *opLog2.LogEntry
+	// StableCheckpoint sends stable checkpoint ack to executor
+	StableCheckpoint(isStable bool, seqNo uint64)
 }
 
 // NewHelper initializes a helper object
-func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux, opLog oplog.OpLog) *helper {
+func NewHelper(innerMux *event.TypeMux, externalMux *event.TypeMux, opLog oplog.OpLog, fiber fiber.Fiber) *helper {
 
 	h := &helper{
 		innerMux:    innerMux,
 		externalMux: externalMux,
 		opLog:       opLog,
+		fiber:       fiber,
 	}
-
 	return h
 }
 
@@ -297,7 +300,16 @@ func (h *helper) GetLatestCommitHeightAndHash() (uint64, string, error) {
 	return h.opLog.GetHeightAndDigest()
 }
 
-func (h *helper) FetchCommit(lid uint64) *opLog2.LogEntry {
-	entry, _ := h.opLog.Fetch(lid)
-	return entry
+func (h *helper) StableCheckpoint(isStable bool, seqNo uint64) {
+	if isStable {
+		h.opLog.SetStableCheckpoint(seqNo)
+	} else {
+		// TODO
+	}
+
+	ack := event.CheckpointAck{
+		IsStableCkpt: isStable,
+		Cid:          seqNo,
+	}
+	h.fiber.Send(ack)
 }
