@@ -53,4 +53,6 @@ enum Event {
 
     OpLogAck = 3;
     OpLogFetch = 4;
+    CheckPointAck = 5;
+    Checkpoint = 6;
 }
