@@ -81,7 +81,7 @@ func (kv *kvLoggerImpl) Append(entry *oplog.LogEntry) (uint64, error) {
 			kv.logger.Errorf("Append, unmarshal error: can not unmarshal event.RollbackEvent", err)
 			return 0, ErrUnmarshal
 		}
-		rollback.Lid = entry.Lid + 1
+		rollback.Lid = entry.Lid
 		entry.Payload, err = proto.Marshal(rollback)
 		if err != nil {
 			kv.logger.Errorf("Append, marshal error: can not marshal event.RollbackEvent", err)
