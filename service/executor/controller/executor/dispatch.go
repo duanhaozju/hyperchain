@@ -5,6 +5,7 @@ import (
 	"github.com/hyperchain/hyperchain/core/oplog/proto"
 	"github.com/hyperchain/hyperchain/manager/event"
 )
+
 // TODO: configuration?
 const maxMissingLogEntry = 10
 
@@ -99,7 +100,7 @@ func (e *Executor) processTransactions(txs *oplog.LogEntry) {
 	if txs.Payload == nil || len(txs.Payload) == 0 {
 		e.logger.Error("Op log payload is nil")
 	}
-	ve := &event.ValidationEvent{}
+	ve := &event.TransactionBlock{}
 	if err := proto.Unmarshal(txs.Payload, ve); err != nil {
 		e.logger.Error(err)
 	}

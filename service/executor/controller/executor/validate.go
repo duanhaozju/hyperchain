@@ -50,7 +50,7 @@ type SubscriptionData struct {
 // Validate - the entry function of the validation process.
 // Receive the validation event as a parameter and cached them in the channel
 // if the pressure is too high.
-func (e *Executor) Validate(validationEvent *event.ValidationEvent) {
+func (e *Executor) Validate(validationEvent *event.TransactionBlock) {
 	e.addValidationEvent(validationEvent)
 }
 
@@ -87,7 +87,7 @@ func (e *Executor) listenValidationEvent() {
 
 // processValidationEvent processes validation event,
 // return true if process successfully, otherwise false will been returned.
-func (e *Executor) processValidationEvent(validationEvent *event.ValidationEvent, done func()) bool {
+func (e *Executor) processValidationEvent(validationEvent *event.TransactionBlock, done func()) bool {
 	// Mark the busy of validation, and mark idle after finishing processing
 	// This process cannot be stopped
 	e.markValidationBusy()
@@ -124,7 +124,7 @@ func (e *Executor) processPendingValidationEvent(done func()) bool {
 }
 
 // dropValidateEvent does nothing but consume a validation event.
-func (e *Executor) dropValidateEvent(validationEvent *event.ValidationEvent, done func()) {
+func (e *Executor) dropValidateEvent(validationEvent *event.TransactionBlock, done func()) {
 	e.markValidationBusy()
 	defer e.markValidationIdle()
 	defer done()
@@ -133,7 +133,7 @@ func (e *Executor) dropValidateEvent(validationEvent *event.ValidationEvent, don
 
 // process specific implementation logic, including the signature checking,
 // the execution of transactions, ledger hash re-computation and etc.
-func (e *Executor) process(validationEvent *event.ValidationEvent, done func()) (error, bool) {
+func (e *Executor) process(validationEvent *event.TransactionBlock, done func()) (error, bool) {
 	// Invoke the callback no matter success or fail
 	e.logger.Noticef("try to execute block %d", validationEvent.SeqNo)
 	defer done()
@@ -261,7 +261,7 @@ func (e *Executor) saveValidationResult(res *ValidationResultRecord, seqNo uint6
 }
 
 // tryToCommit sends validation result to commit thread.
-func (e *Executor) tryToCommit(ev *event.ValidationEvent, hash common.Hash) {
+func (e *Executor) tryToCommit(ev *event.TransactionBlock, hash common.Hash) {
 	e.CommitBlock(&event.CommitEvent{
 		SeqNo:      ev.SeqNo,
 		Timestamp:  ev.Timestamp,

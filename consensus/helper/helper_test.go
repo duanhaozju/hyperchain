@@ -123,7 +123,7 @@ func TestValidateBatch(t *testing.T) {
 	em := &event.TypeMux{}
 	h := NewHelper(im, em)
 	timestamp := time.Now().Unix()
-	validateEvent := event.ValidationEvent{
+	validateEvent := event.TransactionBlock{
 		Digest:       "something",
 		Transactions: nil,
 		Timestamp:    timestamp,
@@ -131,7 +131,7 @@ func TestValidateBatch(t *testing.T) {
 		View:         123,
 		IsPrimary:    true,
 	}
-	sub := im.Subscribe(event.ValidationEvent{})
+	sub := im.Subscribe(event.TransactionBlock{})
 
 	go h.ValidateBatch("something", nil, timestamp, 123, 123, true)
 

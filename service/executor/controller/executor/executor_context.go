@@ -143,7 +143,7 @@ func (e *Executor) markValidationIdle() {
 
 // markCommitBusy marks executor is in commit.
 func (e *Executor) markCommitBusy() {
-	e.logger.Debugf("mark commit busy", e.namespace)
+	e.logger.Debugf("mark commit busy")
 	atomic.StoreInt32(&e.context.commitInProgress, BUSY)
 }
 

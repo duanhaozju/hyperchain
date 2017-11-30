@@ -186,7 +186,7 @@ func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64, *oplog.LogEntry,
 			return 0, nil, ErrUnmarshal
 		} else {
 			if entry.Type == oplog.LogEntry_TransactionList {
-				event := &event.ValidationEvent{}
+				event := &event.TransactionBlock{}
 				if err := proto.Unmarshal(entry.Payload, event); err != nil {
 					kvLogger.logger.Errorf("find, unmarshal error: can not unmarshal ValidationEvent", err)
 					return 0, nil, ErrUnmarshal
@@ -243,7 +243,7 @@ func (kvLogger *kvLoggerImpl) GetHeightAndDigest() (uint64, string, error) {
 	} else if n == 0 {
 		return 0, "", nil
 	}
-	event := &event.ValidationEvent{}
+	event := &event.TransactionBlock{}
 	if err := proto.Unmarshal(entry.Payload, event); err != nil {
 		kvLogger.logger.Errorf("find, unmarshal error: can not unmarshal ValidationEvent", err)
 		return 0, "", ErrUnmarshal

@@ -10,9 +10,9 @@ import (
 	pb "github.com/hyperchain/hyperchain/manager/protos"
 
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperchain/hyperchain/core/fiber"
 	"github.com/hyperchain/hyperchain/core/oplog"
 	opLog2 "github.com/hyperchain/hyperchain/core/oplog/proto"
-	"github.com/hyperchain/hyperchain/core/fiber"
 	"github.com/hyperchain/hyperchain/crypto"
 )
 
@@ -37,7 +37,7 @@ type Stack interface {
 	// UpdateState transfers the UpdateStateEvent to outer
 	UpdateState(myId uint64, height uint64, blockHash []byte, replicas []event.SyncReplica) error
 
-	// CommitBlock transfers the ValidationEvent to outer
+	// CommitBlock transfers the TransactionBlock to outer
 	CommitBlock(lastExecHash string, digest string, txs []*types.Transaction, invalidTxsRecord []*types.InvalidTransactionRecord, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) (string, error)
 
 	// VcReset reset vid when view change is done, clear the validate cache larger than seqNo
@@ -137,7 +137,7 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 // CommitBlock transfers the ValidateEvent to outer
 func (h *helper) CommitBlock(lastExecHash string, digest string, txs []*types.Transaction, invalidTxsRecord []*types.InvalidTransactionRecord, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) (string, error) {
 
-	validationEvent := &event.CommitBlockEvent{
+	validationEvent := &event.TransactionBlock{
 		PreviousHash:        lastExecHash,
 		Digest:              digest,
 		Transactions:        txs,

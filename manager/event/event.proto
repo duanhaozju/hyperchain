@@ -21,7 +21,7 @@ message TestEvent {
     string msg = 2;
 }
 
-message CommitBlockEvent {
+message TransactionBlock {
     string PreviousHash = 1;
     string Digest = 2;
     repeated types.Transaction Transactions = 3;

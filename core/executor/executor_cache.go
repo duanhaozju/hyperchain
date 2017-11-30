@@ -23,12 +23,12 @@ import (
 
 // Cache represents the caches that used in executor.
 type Cache struct {
-	validationEventC        chan event.ValidationEvent // validation event buffer
-	commitEventC            chan event.CommitEvent     // commit event buffer
-	validationResultCache   *common.Cache              // cache for validation result
-	pendingValidationEventQ *common.Cache              // cache for storing validation event
-	syncCache               *common.Cache              // cache for storing stuff in sync
-	replicaInfoCache        *common.Cache              // cache for storing replica info
+	validationEventC        chan event.TransactionBlock // validation event buffer
+	commitEventC            chan event.CommitEvent      // commit event buffer
+	validationResultCache   *common.Cache               // cache for validation result
+	pendingValidationEventQ *common.Cache               // cache for storing validation event
+	syncCache               *common.Cache               // cache for storing stuff in sync
+	replicaInfoCache        *common.Cache               // cache for storing replica info
 }
 
 // Peer stores the ip and port of a peer that used in replicaInCache.
@@ -40,7 +40,7 @@ type Peer struct {
 // newExecutorCache creates the cache for executor.
 func newExecutorCache() *Cache {
 	cache := &Cache{
-		validationEventC: make(chan event.ValidationEvent, VALIDATEQUEUESIZE),
+		validationEventC: make(chan event.TransactionBlock, VALIDATEQUEUESIZE),
 		commitEventC:     make(chan event.CommitEvent, COMMITQUEUESIZE),
 	}
 	validationResC, _ := common.NewCache()
@@ -63,18 +63,18 @@ func (executor *Executor) purgeCache() {
 }
 
 // addPendingValidationEvent pushes a validation event to pending queue.
-func (executor *Executor) addPendingValidationEvent(validationEvent event.ValidationEvent) {
+func (executor *Executor) addPendingValidationEvent(validationEvent event.TransactionBlock) {
 	executor.logger.Warningf("[Namespace = %s] receive validation event %d while %d is required, save into cache temporarily.", executor.namespace, validationEvent.SeqNo, executor.context.getDemand(DemandSeqNo))
 	executor.cache.pendingValidationEventQ.Add(validationEvent.SeqNo, validationEvent)
 }
 
 // fetchPendingValidationEvent fetches a validation event in pending queue via seqNo, return false if not exist.
-func (executor *Executor) fetchPendingValidationEvent(seqNo uint64) (event.ValidationEvent, bool) {
+func (executor *Executor) fetchPendingValidationEvent(seqNo uint64) (event.TransactionBlock, bool) {
 	res, existed := executor.cache.pendingValidationEventQ.Get(seqNo)
 	if existed == false {
-		return event.ValidationEvent{}, false
+		return event.TransactionBlock{}, false
 	}
-	ev := res.(event.ValidationEvent)
+	ev := res.(event.TransactionBlock)
 	return ev, true
 }
 
@@ -105,14 +105,14 @@ func (executor *Executor) fetchValidationResult(tag ValidationTag) (*ValidationR
 }
 
 // addValidationEvent pushes a validation event to channel buffer.
-func (executor *Executor) addValidationEvent(ev event.ValidationEvent) {
+func (executor *Executor) addValidationEvent(ev event.TransactionBlock) {
 	executor.cache.validationEventC <- ev
 	atomic.AddInt32(&executor.context.validateQueueLen, 1)
 	executor.logger.Debugf("[Namespace = %s] receive a validation event #%d", executor.namespace, ev.SeqNo)
 }
 
 // fetchValidationEvent fetches a validation event from channel buffer.
-func (executor *Executor) fetchValidationEvent() chan event.ValidationEvent {
+func (executor *Executor) fetchValidationEvent() chan event.TransactionBlock {
 	return executor.cache.validationEventC
 }
 
