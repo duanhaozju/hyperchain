@@ -51,7 +51,7 @@ func TestLogAppendAndFetch(t *testing.T) {
 	err = kvLogger.Append(entry2)
 	ast.Nil(err, "The appropriate lid, should not return any error")
 	ast.Equal(kvLogger.lastSet, uint64(2))
-	ast.Equal(kvLogger.lastCommit, uint64(2))
+	ast.Equal(kvLogger.lastBlockNum, uint64(2))
 
 	entry3 := &oplog.LogEntry{
 		Type:    oplog.LogEntry_RollBack,
@@ -60,7 +60,7 @@ func TestLogAppendAndFetch(t *testing.T) {
 	err = kvLogger.Append(entry3)
 	ast.Nil(err, "The appropriate lid, should not return any error")
 	ast.Equal(kvLogger.lastSet, uint64(3))
-	ast.Equal(kvLogger.lastCommit, uint64(2))
+	ast.Equal(kvLogger.lastBlockNum, uint64(2))
 
 	lid, entry, err := kvLogger.getBySeqNo(uint64(2))
 	ast.Nil(err)
@@ -80,7 +80,7 @@ func TestLogAppendAndFetch(t *testing.T) {
 	err = kvLogger.Append(entry4)
 	ast.Nil(err, "The appropriate lid, should not return any error")
 	ast.Equal(kvLogger.lastSet, uint64(4))
-	ast.Equal(kvLogger.lastCommit, uint64(3))
+	ast.Equal(kvLogger.lastBlockNum, uint64(3))
 
 	lid, entry, err = kvLogger.getBySeqNo(uint64(3))
 	ast.Nil(err)

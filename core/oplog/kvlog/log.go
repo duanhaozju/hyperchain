@@ -10,9 +10,12 @@ import (
 	"github.com/hyperchain/hyperchain/core/oplog/proto"
 	"github.com/hyperchain/hyperchain/hyperdb/db"
 	"github.com/hyperchain/hyperchain/manager/event"
+	hcom "github.com/hyperchain/hyperchain/hyperdb/common"
+	"github.com/hyperchain/hyperchain/hyperdb"
+	"github.com/hyperchain/hyperchain/crypto"
+	//"github.com/hyperchain/hyperchain/hyperdb/mdb"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hyperchain/hyperchain/hyperdb/mdb"
 	"github.com/op/go-logging"
 )
 
@@ -20,14 +23,17 @@ const (
 	modulePrefix        = "kvlog."
 	entryPrefix         = "entry."
 	lastSetPrefix       = "lastSet"
-	lastCommitPrefix    = "lastCommit"
+	lastBlockNumPrefix  = "lastBlockNum"
+	lastBlockHashPrefix  = "lastBlockHash"
 	checkpointMapPrefix = "checkpointMap"
+	genesis             = "genesis"
 )
 
 // kvLoggerImpl implements the OpLog interface
 type kvLoggerImpl struct {
 	lastSet          uint64 // The last set entry's index
-	lastCommit       uint64 // The last set entry's index
+	lastBlockNum     uint64 // The last set entry's index
+	lastBlockHash    string
 	checkpointPeriod uint64
 	checkpointMap    map[uint64]uint64
 
@@ -47,8 +53,8 @@ func New(config *common.Config) *kvLoggerImpl {
 		mu:               new(sync.Mutex),
 		cache:            make(map[uint64]*oplog.LogEntry),
 	}
-	//db, err := hyperdb.GetOrCreateDatabase(config, kvLogger.namespace, hcom.DBNAME_OPLOG)
-	db, err := mdb.NewMemDatabase(kvLogger.namespace)
+	db, err := hyperdb.GetOrCreateDatabase(config, kvLogger.namespace, hcom.DBNAME_OPLOG)
+	//db, err := mdb.NewMemDatabase(kvLogger.namespace)
 	if err != nil {
 		kvLogger.logger.Errorf("get opLog db by namespace: %s failed.", kvLogger.namespace)
 		return nil
@@ -62,16 +68,31 @@ func New(config *common.Config) *kvLoggerImpl {
 }
 
 // Append add an entry to logger
-func (kvLogger *kvLoggerImpl) Append(entry *oplog.LogEntry) error {
+func (kvLogger *kvLoggerImpl) Append(entry *oplog.LogEntry) (uint64, error) {
 
 	kvLogger.mu.Lock()
 	defer kvLogger.mu.Unlock()
 
+	var err error
+	rollback := &event.RollbackEvent{}
 	entry.Lid = kvLogger.lastSet + 1
+	if entry.Type == oplog.LogEntry_RollBack {
+		if err := proto.Unmarshal(entry.Payload, rollback); err != nil {
+			kvLogger.logger.Errorf("Append, unmarshal error: can not unmarshal event.RollbackEvent", err)
+			return 0, ErrUnmarshal
+		}
+		rollback.Lid = entry.Lid + 1
+		entry.Payload, err = proto.Marshal(rollback)
+		if err != nil {
+			kvLogger.logger.Errorf("Append, marshal error: can not marshal event.RollbackEvent", err)
+			return 0, ErrMarshal
+		}
+	}
+
 	raw, err := proto.Marshal(entry)
 	if err != nil {
 		kvLogger.logger.Errorf("Append, marshal error: can not marshal oplog.LogEntry", err)
-		return ErrMarshal
+		return 0, ErrMarshal
 	}
 	key := fmt.Sprintf("%s%s%020d", modulePrefix, entryPrefix, entry.Lid)
 	if err = kvLogger.db.Put([]byte(key), raw); err == nil {
@@ -79,24 +100,37 @@ func (kvLogger *kvLoggerImpl) Append(entry *oplog.LogEntry) error {
 		kvLogger.storeLastSet()
 		kvLogger.cache[entry.Lid] = entry
 
-		// TODO How to delete these massage in cache
-		if entry.Lid%kvLogger.checkpointPeriod == 0 {
-			for i := entry.Lid - 5*kvLogger.checkpointPeriod + 1; i <= entry.Lid-4*kvLogger.checkpointPeriod && i > 0; i++ {
-				delete(kvLogger.cache, i)
-			}
-		}
 		if entry.Type == oplog.LogEntry_TransactionList {
-			kvLogger.lastCommit++
-			kvLogger.storeLastCommit()
-			if kvLogger.lastCommit%kvLogger.checkpointPeriod == 0 {
-				kvLogger.checkpointMap[kvLogger.lastCommit] = kvLogger.lastSet
+			kvLogger.lastBlockNum++
+			kvLogger.lastBlockHash = crypto.Keccak256Hash(entry.Payload).Hex()
+			kvLogger.storeLastBlockNum()
+			kvLogger.storeLastBlockHash()
+			if kvLogger.lastBlockNum % kvLogger.checkpointPeriod == 0 {
+				kvLogger.checkpointMap[kvLogger.lastBlockNum] = kvLogger.lastSet
 				kvLogger.storeCheckpointMap()
 			}
+		} else if entry.Type == oplog.LogEntry_RollBack {
+			kvLogger.lastBlockNum = rollback.SeqNo
+			_, entry2, err := kvLogger.getBySeqNo(rollback.SeqNo)
+			if err != nil {
+				kvLogger.logger.Errorf("cannot rollback to %d", rollback.SeqNo)
+				return 0, ErrRollback
+			}
+			kvLogger.lastBlockHash = crypto.Keccak256Hash(entry2.Payload).Hex()
+			kvLogger.storeLastBlockNum()
+			kvLogger.storeLastBlockHash()
+			h := kvLogger.lastBlockNum / kvLogger.checkpointPeriod * kvLogger.checkpointPeriod
+			for i := range kvLogger.checkpointMap {
+				if i > h {
+					delete(kvLogger.checkpointMap, i)
+				}
+			}
+			kvLogger.storeCheckpointMap()
 		}
-		return nil
+		return entry.Lid, nil
 	}
 	kvLogger.logger.Errorf("Cannot append entry in opLog", err)
-	return ErrAppendFail
+	return 0, ErrAppendFail
 }
 
 // Fetch get an entry by lid. If this entry is in memory, it can be read in cache.
@@ -131,35 +165,35 @@ func (kvLogger *kvLoggerImpl) Fetch(lid uint64) (*oplog.LogEntry, error) {
 // Reset set lastSet to a previous number, and later entry would be appended from here.
 func (kvLogger *kvLoggerImpl) Reset(seqNo uint64) error {
 
-	kvLogger.mu.Lock()
-	defer kvLogger.mu.Unlock()
-
-	if kvLogger.lastCommit < seqNo {
-		kvLogger.logger.Errorf("This seqNo is to large")
-		return ErrSeqNoTooLarge
-	}
-	lid, _, err := kvLogger.getBySeqNo(seqNo)
-	if err != nil {
-		return err
-	}
-	kvLogger.lastCommit = seqNo
-	kvLogger.lastSet = lid
-
-	kvLogger.storeLastSet()
-	kvLogger.storeLastCommit()
+	//kvLogger.mu.Lock()
+	//defer kvLogger.mu.Unlock()
+	//
+	//if kvLogger.lastBlockNum < seqNo {
+	//	kvLogger.logger.Errorf("This seqNo is to large")
+	//	return ErrSeqNoTooLarge
+	//}
+	//lid, _, err := kvLogger.getBySeqNo(seqNo)
+	//if err != nil {
+	//	return err
+	//}
+	//kvLogger.lastBlockNum = seqNo
+	//kvLogger.lastSet = lid
+	//
+	//kvLogger.storeLastSet()
+	//kvLogger.storeLastBlockNum()
 	return nil
 }
 
 func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64, *oplog.LogEntry, error) {
 
-	if seqNo == 0 {
+	if seqNo == 0 || seqNo > kvLogger.lastBlockNum {
 		return 0, nil, nil
 	}
 
 	checkpoint := uint64((int(seqNo/kvLogger.checkpointPeriod) + 1) * int(kvLogger.checkpointPeriod))
 	var earlistLid uint64
 	var earlistSeqNo uint64
-	if checkpoint < kvLogger.lastCommit {
+	if checkpoint < kvLogger.lastBlockNum {
 		lid, ok := kvLogger.checkpointMap[checkpoint]
 		if !ok {
 			kvLogger.logger.Errorf("Not contain this checkpoint: %d in opLog", checkpoint)
@@ -168,7 +202,7 @@ func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64, *oplog.LogEntry,
 		earlistSeqNo = checkpoint
 	} else {
 		earlistLid = kvLogger.lastSet
-		earlistSeqNo = kvLogger.lastCommit
+		earlistSeqNo = kvLogger.lastBlockNum
 	}
 	it := kvLogger.Iterator()
 
@@ -186,16 +220,16 @@ func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64, *oplog.LogEntry,
 			return 0, nil, ErrUnmarshal
 		} else {
 			if entry.Type == oplog.LogEntry_TransactionList {
-				event := &event.TransactionBlock{}
-				if err := proto.Unmarshal(entry.Payload, event); err != nil {
+				e := &event.TransactionBlock{}
+				if err := proto.Unmarshal(entry.Payload, e); err != nil {
 					kvLogger.logger.Errorf("find, unmarshal error: can not unmarshal ValidationEvent", err)
 					return 0, nil, ErrUnmarshal
 				}
-				if earlistSeqNo != event.SeqNo {
+				if earlistSeqNo != e.SeqNo {
 					kvLogger.logger.Errorf("find, seqNo didn't match")
 					return 0, nil, ErrMismatch
 				}
-				if event.SeqNo == seqNo {
+				if e.SeqNo == seqNo {
 					return earlistLid, entry, nil
 				}
 				earlistSeqNo--
@@ -212,10 +246,10 @@ func (kvLogger *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64, *oplog.LogEntry,
 func (kvLogger *kvLoggerImpl) GetLastBlockNum() uint64 {
 	kvLogger.mu.Lock()
 	defer kvLogger.mu.Unlock()
-	return kvLogger.lastCommit
+	return kvLogger.lastBlockNum
 }
 
-func (kvLogger *kvLoggerImpl) GetLastCommit() uint64 {
+func (kvLogger *kvLoggerImpl) GetLastSet() uint64 {
 	kvLogger.mu.Lock()
 	defer kvLogger.mu.Unlock()
 
@@ -226,6 +260,16 @@ func (kvLogger *kvLoggerImpl) SetStableCheckpoint(id uint64) {
 	kvLogger.mu.Lock()
 	defer kvLogger.mu.Unlock()
 
+	if lid, ok := kvLogger.checkpointMap[id]; ok {
+		for i := range kvLogger.cache {
+			if i < lid {
+				delete(kvLogger.cache, i)
+			}
+		}
+	} else {
+		kvLogger.logger.Errorf("Cannot find this checkpoint %d in SetStableCheckpoint", id)
+		return
+	}
 	for i := range kvLogger.checkpointMap {
 		if i <= id {
 			delete(kvLogger.checkpointMap, i)
@@ -237,18 +281,7 @@ func (kvLogger *kvLoggerImpl) GetHeightAndDigest() (uint64, string, error) {
 	kvLogger.mu.Lock()
 	defer kvLogger.mu.Unlock()
 
-	n, entry, err := kvLogger.getBySeqNo(kvLogger.lastCommit)
-	if err != nil {
-		return 0, "", err
-	} else if n == 0 {
-		return 0, "", nil
-	}
-	event := &event.TransactionBlock{}
-	if err := proto.Unmarshal(entry.Payload, event); err != nil {
-		kvLogger.logger.Errorf("find, unmarshal error: can not unmarshal ValidationEvent", err)
-		return 0, "", ErrUnmarshal
-	}
-	return kvLogger.lastCommit, event.Digest, nil
+	return kvLogger.lastBlockNum, kvLogger.lastBlockHash, nil
 }
 
 func (kvLogger *kvLoggerImpl) storeLastSet() error {
@@ -270,34 +303,57 @@ func (kvLogger *kvLoggerImpl) restoreLastSet() error {
 	raw, err := kvLogger.db.Get([]byte(key))
 	if err != nil {
 		kvLogger.logger.Errorf("Cannot restore lastSet from database.")
+		kvLogger.lastSet = uint64(0)
 		return err
 	}
 	kvLogger.lastSet = binary.LittleEndian.Uint64(raw)
 	return nil
 }
 
-func (kvLogger *kvLoggerImpl) storeLastCommit() error {
+func (kvLogger *kvLoggerImpl) storeLastBlockNum() error {
 
 	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, kvLogger.lastCommit)
-	key := fmt.Sprintf("%s%s", modulePrefix, lastCommitPrefix)
+	binary.LittleEndian.PutUint64(b, kvLogger.lastBlockNum)
+	key := fmt.Sprintf("%s%s", modulePrefix, lastBlockNumPrefix)
 	if err := kvLogger.db.Put([]byte(key), b); err != nil {
-		kvLogger.logger.Errorf("Cannot store lastCommit in database.")
+		kvLogger.logger.Errorf("Cannot store lastBlockNum in database.")
 		return err
-	} else {
-		return nil
 	}
+	return nil
 }
 
-func (kvLogger *kvLoggerImpl) restoreLastCommit() error {
+func (kvLogger *kvLoggerImpl) restoreLastBlockNum() error {
 
-	key := fmt.Sprintf("%s%s", modulePrefix, lastCommitPrefix)
+	key := fmt.Sprintf("%s%s", modulePrefix, lastBlockNumPrefix)
 	raw, err := kvLogger.db.Get([]byte(key))
 	if err != nil {
-		kvLogger.logger.Errorf("Cannot restore lastCommit from database.")
+		kvLogger.logger.Errorf("Cannot restore lastBlockNum from database.")
+		kvLogger.lastBlockNum = uint64(0)
 		return err
 	}
-	kvLogger.lastCommit = binary.LittleEndian.Uint64(raw)
+	kvLogger.lastBlockNum = binary.LittleEndian.Uint64(raw)
+	return nil
+}
+
+func (kvLogger *kvLoggerImpl) storeLastBlockHash() error {
+	key := fmt.Sprintf("%s%s",modulePrefix, lastBlockHashPrefix)
+	if err := kvLogger.db.Put([]byte(key), []byte(kvLogger.lastBlockHash)); err != nil {
+		kvLogger.logger.Errorf("Cannot store lastBlockHash in database.")
+		return err
+	}
+	return nil
+}
+
+func (kvLogger *kvLoggerImpl) restoreLastBlockHash() error {
+
+	key := fmt.Sprintf("%s%s", modulePrefix, lastBlockHashPrefix)
+	raw, err := kvLogger.db.Get([]byte(key))
+	if err != nil {
+		kvLogger.logger.Errorf("Cannot restore lastBlockHash from database.")
+		kvLogger.lastBlockHash = ""
+		return err
+	}
+	kvLogger.lastBlockHash = string(raw)
 	return nil
 }
 
@@ -323,12 +379,14 @@ func (kvLogger *kvLoggerImpl) restoreCheckpointMap() error {
 	raw, err := kvLogger.db.Get([]byte(key))
 	if err != nil {
 		kvLogger.logger.Error("Cannot restore checkpointMap from database.")
+		kvLogger.checkpointMap = make(map[uint64]uint64)
 		return err
 	}
 	checkpointMap := &oplog.CMap{}
 	err = proto.Unmarshal(raw, checkpointMap)
 	if err != nil {
 		kvLogger.logger.Errorf("restoreCheckpointMap, unmarshal error: can not unmarshal cMap", err)
+		kvLogger.checkpointMap = make(map[uint64]uint64)
 		return err
 	}
 	kvLogger.checkpointMap = checkpointMap.Map
@@ -336,18 +394,10 @@ func (kvLogger *kvLoggerImpl) restoreCheckpointMap() error {
 }
 
 func (kvLogger *kvLoggerImpl) restoreKvLogger() {
-	err := kvLogger.restoreLastSet()
-	if err != nil {
-		kvLogger.lastSet = uint64(0)
-	}
-	err = kvLogger.restoreLastCommit()
-	if err != nil {
-		kvLogger.lastCommit = uint64(0)
-	}
-	err = kvLogger.restoreCheckpointMap()
-	if err != nil {
-		kvLogger.checkpointMap = make(map[uint64]uint64)
-	}
+	kvLogger.restoreLastSet()
+	kvLogger.restoreLastBlockNum()
+	kvLogger.restoreLastBlockHash()
+	kvLogger.restoreCheckpointMap()
 }
 
 // Iterator implements the Iterator interface, could traverse the logger.

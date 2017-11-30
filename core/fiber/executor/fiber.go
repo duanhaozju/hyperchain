@@ -107,9 +107,9 @@ func (f *ExeFiber) Start() error {
 
 func (f *ExeFiber) sendNextConsume() {
 	var es service.Service
-	f.logger.Debugf("%v executor service == nil? %v", f.ol.GetLastCommit(), es == nil)
+	f.logger.Debugf("%v executor service == nil? %v", f.ol.GetLastSet(), es == nil)
 	nextConsumeIndex := atomic.LoadUint64(&f.lastConsumeIndex) + 1
-	if nextConsumeIndex <= f.ol.GetLastCommit() {
+	if nextConsumeIndex <= f.ol.GetLastSet() {
 		if e, err := f.ol.Fetch(nextConsumeIndex); err == nil {
 			if payload, err := proto.Marshal(e); err != nil {
 				f.logger.Errorf("unmarshal [%v] error %v", e, err)

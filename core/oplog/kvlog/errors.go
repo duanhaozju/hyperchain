@@ -19,4 +19,5 @@ var (
 
 	ErrUnmarshal = errors.New("cannot unmarshal")
 
+	ErrRollback = errors.New("rollback failed")
 )
