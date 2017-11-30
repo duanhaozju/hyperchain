@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/hyperchain/hyperchain/common"
+	"strconv"
 )
 
 // Context a collection of all executor status.
@@ -39,6 +40,8 @@ type Context struct {
 	validationSuspend  chan bool // validation suspend notifier
 	commitSuspend      chan bool // commit suspend notifier
 	syncReplicaSuspend chan bool // replica sync suspend notifier
+
+	low uint64 // low watermark
 
 	stateUpdated chan struct{}
 	closeW       sync.WaitGroup
@@ -109,6 +112,14 @@ func (c *Context) isDemand(typ int, num uint64) bool {
 	}
 }
 
+func (c *Context) setLowWatermark(n uint64) {
+	c.low = n
+}
+
+func (c *Context) getLowWatermark() uint64 {
+	return c.low
+}
+
 // turnOffValidationSwitch turns on validation switch, executor will process received event.
 func (e *Executor) turnOnValidationSwitch() {
 	e.logger.Debug("turn on validation switch")
@@ -177,6 +188,21 @@ func (e *Executor) wailUtilCommitIdle() {
 		select {
 		case <-ticker.C:
 			if atomic.LoadInt32(&e.context.commitQueueLen) == 0 && atomic.LoadInt32(&e.context.commitInProgress) == IDLE {
+				return
+			} else {
+				continue
+			}
+		}
+	}
+}
+
+func (e *Executor) waitForCheckpoint(seqNo uint64) {
+	e.logger.Noticef("wait for checkpoint")
+	ticker := time.NewTicker(1 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			if e.checkCpThreshold(seqNo) {
 				return
 			} else {
 				continue
@@ -273,5 +299,21 @@ func (executor *Executor) unsetSuspend(identifier int) {
 		executor.context.commitSuspend <- false
 	case IDENTIFIER_REPLICA_SYNC:
 		executor.context.syncReplicaSuspend <- false
+	}
+}
+
+func (executor *Executor) StoreCheckpoint(n uint64) {
+	executor.logger.Noticef("store checkpoint %v", n)
+	if n <= executor.context.getLowWatermark() {
+		return
+	}
+	executor.context.setLowWatermark(n)
+	buf := make([]byte, 0)
+	b := strconv.AppendUint(buf, n, 10)
+
+	// persist current checkpoint
+	err := executor.db.Put([]byte(currentCheckpointPrefix), b)
+	if err != nil {
+		executor.logger.Errorf("store current checkpoint info error %v", err)
 	}
 }

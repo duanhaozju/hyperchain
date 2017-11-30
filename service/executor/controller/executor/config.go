@@ -43,6 +43,10 @@ const (
 	ArchiveThreshold = "executor.archive.threshold"
 	// The non-verifying node exits when the block data is inconsistent
 	exitFlag = "executor.nvp.exitflag"
+	// Checkpoint threshold
+	cpThreshold = "executor.checkpoint.threshold"
+	//
+	maxMissingLog = "executor.oplog.max_missing_log"
 )
 
 // Config conf configuration reader.
@@ -97,4 +101,14 @@ func (conf *Config) GetStateFetchPacketSize() int {
 
 func (conf *Config) GetExitFlag() bool {
 	return conf.conf.GetBool(exitFlag)
+}
+
+// Get checkpoint threshold
+func (conf *Config) GetCpThreshold() int {
+	return conf.conf.GetInt(cpThreshold)
+}
+
+// Get max missing log entry
+func (conf *Config) GetMaxMissingLog() int {
+	return conf.conf.GetInt(maxMissingLog)
 }

@@ -177,6 +177,20 @@ func (e *Executor) initExecutorContext() error {
 		e.context.setDemandOpLogIndex(i + 1)
 	}
 
+	// init checkpoint
+	cp, err := e.db.Get([]byte(fmt.Sprintf("%s", currentCheckpointPrefix)))
+	if err != nil {
+		e.logger.Noticef("no checkpoint found, use default value 0 instead")
+		e.context.setLowWatermark(0)
+	} else {
+		i, err := strconv.ParseUint(string(cp), 10, 64)
+		if err != nil {
+			e.logger.Errorf("parse checkpoint error %v", err)
+			return err
+		}
+		e.context.setLowWatermark(i)
+	}
+
 	e.logger.Noticef("initialize executor status success. demand block number %d, demand seqNo %d, latest state hash %s", e.context.demandNumber, e.context.demandSeqNo, common.Bytes2Hex(blk.MerkleRoot))
 
 	return nil
