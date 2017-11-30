@@ -6,9 +6,6 @@ import (
 	"github.com/hyperchain/hyperchain/manager/event"
 )
 
-// TODO: configuration?
-const maxMissingLogEntry = 10
-
 //Dispatch receive oplog in random order, but should dispatch them in order
 func (e *Executor) Dispatch(ol *oplog.LogEntry) {
 	e.logger.Debugf("dispatch log id:%d", ol.Lid)
@@ -39,7 +36,7 @@ func (e *Executor) sequentialDispatch() {
 				counter += 1
 				e.logger.Debugf("log id %d is bigger than demandIndex %d", ol.Lid, demandIndex)
 				e.cache.pendingOpLogs.Add(ol.Lid, ol)
-				if counter >= maxMissingLogEntry {
+				if counter >= e.conf.GetMaxMissingLog() {
 					e.logger.Infof("fetchLogEntry with log id %v", demandIndex)
 					logEntry := e.helper.fetchLogEntry(demandIndex)
 					if logEntry != nil {

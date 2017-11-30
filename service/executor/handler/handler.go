@@ -8,6 +8,7 @@ import (
 	"github.com/hyperchain/hyperchain/core/oplog/proto"
 	"github.com/hyperchain/hyperchain/service/executor/controller/executor"
 	"github.com/op/go-logging"
+	"github.com/hyperchain/hyperchain/manager/event"
 )
 
 type ExecutorHandler struct {
@@ -38,9 +39,16 @@ func (eh *ExecutorHandler) handleAsyncMsg(client pb.Dispatcher_RegisterClient, m
 		eh.executor.Dispatch(le)
 	case pb.Type_EVENT:
 		if msg.Event == pb.Event_CheckPointAck {
-			//TODO: checkpoint ack mechanism
-			//1. ok => move water mark
-			//2. not ok => revert?
+			cp := &event.CheckpointAck{}
+			if err = proto.Unmarshal(msg.Payload, cp); err != nil {
+				return
+			}
+			if cp.IsStableCkpt {
+				eh.logger.Noticef("receive checkpoint height is %v", cp.Cid	)
+				eh.executor.StoreCheckpoint(cp.Cid)
+			} else {
+				// TODO: ROLLBACK?
+			}
 		}
 	default:
 		eh.logger.Errorf("undefined event %v", msg)

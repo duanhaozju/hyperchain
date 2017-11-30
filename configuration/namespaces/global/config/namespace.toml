@@ -146,6 +146,11 @@ algo = "RBFT"
      merklenode_cache = 100000
      bucket_cache     = 100000
 
+    [executor.checkpoint]
+     threshold         = -1
+
+    [executor.oplog]
+     max_missing_log = 10
 ############################################################################################################
 #
 # executor configuration section

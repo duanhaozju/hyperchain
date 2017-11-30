@@ -52,6 +52,9 @@ func (e *Executor) listenCommitEvent() {
 				e.pauseCommit()
 			}
 		case ev := <-e.fetchCommitEvent():
+			if !e.checkCpThreshold(ev.SeqNo) {
+				e.waitForCheckpoint(ev.SeqNo)
+			}
 			if success := e.processCommitEvent(ev); success == false {
 				e.logger.Errorf("commit block #%d failed, system crush down.", ev.SeqNo)
 			}
@@ -155,9 +158,10 @@ func (e *Executor) writeBlock(block *types.Block, record *ValidationResultRecord
 	//TODO(Xiaoyi Wang): e.statedb.MakeArchive(record.SeqNo)
 	// Notify consensus module if it is a checkpoint
 	//TODO(Xiaoyi Wang): Add checkpoint
-	//if block.Number%10 == 0 && block.Number != 0 {
-	//	chain.WriteChainChan(e.namespace)
-	//}
+	if block.Number%10 == 0 && block.Number != 0 {
+		go e.helper.sendCheckpoint(e.namespace)
+		chain.WriteChainChan(e.namespace)
+	}
 	e.logger.Noticef("Block number %d", block.Number)
 	e.logger.Noticef("Block hash %s", hex.EncodeToString(block.BlockHash))
 	//e.TransitVerifiedBlock(block)
@@ -313,5 +317,14 @@ func (executor *Executor) filterFeedback(block *types.Block, filterLogs []*types
 		if err := executor.sendFilterEvent(FILTER_NEW_LOG, filterLogs); err != nil {
 			executor.logger.Warningf("send new log event failed. error detail: %s", err.Error())
 		}
+	}
+}
+
+func (executor *Executor) checkCpThreshold(seqNo uint64) bool {
+	threshold := executor.conf.GetCpThreshold()
+	if threshold == -1 {
+		return true
+	} else {
+		return (executor.context.getLowWatermark() + uint64(threshold)) >= seqNo
 	}
 }

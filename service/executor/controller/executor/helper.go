@@ -25,11 +25,11 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperchain/hyperchain/common/service/client"
-	oldExe "github.com/hyperchain/hyperchain/core/executor"
 	pb "github.com/hyperchain/hyperchain/common/service/protos"
+	oldExe "github.com/hyperchain/hyperchain/core/executor"
 
-	"github.com/hyperchain/hyperchain/core/oplog/proto"
 	"github.com/hyperchain/hyperchain/common"
+	"github.com/hyperchain/hyperchain/core/oplog/proto"
 )
 
 // Helper implements the helper mux used in communication.
@@ -62,7 +62,7 @@ func (helper *Helper) PostExternal(ev interface{}) {
 func (helper *Helper) fetchLogEntry(id uint64) *oplog.LogEntry {
 	logger := common.GetLogger("global", "executor_helper")
 	lid := &event.OpLogFetch{
-		LogID:	id,
+		LogID: id,
 	}
 	payload, err := proto.Marshal(lid)
 	if err != nil {
@@ -70,9 +70,9 @@ func (helper *Helper) fetchLogEntry(id uint64) *oplog.LogEntry {
 		return nil
 	}
 	msg := &pb.IMessage{
-		Type: pb.Type_SYNC_REQUEST,
-		From: pb.FROM_EXECUTOR,
-		Event: pb.Event_OpLogFetch,
+		Type:    pb.Type_SYNC_REQUEST,
+		From:    pb.FROM_EXECUTOR,
+		Event:   pb.Event_OpLogFetch,
 		Payload: payload,
 	}
 	ret, err := helper.client.SyncSend(msg)
@@ -86,6 +86,36 @@ func (helper *Helper) fetchLogEntry(id uint64) *oplog.LogEntry {
 		return nil
 	}
 	return le
+}
+
+// send checkpoint
+func (helper *Helper) sendCheckpoint(namespace string) {
+	logger := common.GetLogger("global", "executor_helper")
+	chainInfo := chain.GetChainUntil(namespace)
+	height := chainInfo.Height
+	curBlkHash := chainInfo.LatestBlockHash
+	preBlkHash := chainInfo.ParentBlockHash
+
+	bcInfo := &protos.BlockchainInfo{
+		Height:            height,
+		CurrentBlockHash:  curBlkHash,
+		PreviousBlockHash: preBlkHash,
+	}
+	logger.Noticef("send checkpoint %v", bcInfo)
+	payload, err := proto.Marshal(bcInfo)
+	if err != nil {
+		logger.Errorf("marshal error %v", err)
+	}
+
+	msg := &pb.IMessage{
+		Type:    pb.Type_NORMAL,
+		Event:   pb.Event_Checkpoint,
+		Payload: payload,
+	}
+	err = helper.client.Send(msg)
+	if err != nil {
+		logger.Errorf("send checkpoint error %v", err)
+	}
 }
 
 // checkParams the checker of the parameters, check whether the parameters are satisfied

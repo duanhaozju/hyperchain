@@ -107,4 +107,5 @@ var (
 
 const (
 	OpLogCommitIndexPrefix = "op.lo.id."
+	currentCheckpointPrefix = "checkpoint.current"
 )
