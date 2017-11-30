@@ -188,19 +188,19 @@ func (self *StateDB) setLatest(seqNo uint64) {
 }
 
 // Purge clears out all uncommitted data.
-func (self *StateDB) Purge() {
-	self.batchCache.Purge()
-	self.contentCache.Purge()
-	self.archiveCache.Purge()
-	self.tree.Clear()
+func (s *StateDB) Purge() {
+	s.batchCache.Purge()
+	s.contentCache.Purge()
+	//TODO(Xiaoyi Wang): s.archiveCache.Purge()
+	s.tree.Clear()
 
-	self.stateObjects = make(map[common.Address]*StateObject)
-	self.stateObjectsDirty = make(map[common.Address]struct{})
-	self.thash = common.Hash{}
-	self.bhash = common.Hash{}
-	self.txIndex = 0
-	self.logs = make(map[common.Hash]types.Logs)
-	self.logSize = 0
+	s.stateObjects = make(map[common.Address]*StateObject)
+	s.stateObjectsDirty = make(map[common.Address]struct{})
+	s.thash = common.Hash{}
+	s.bhash = common.Hash{}
+	s.txIndex = 0
+	s.logs = make(map[common.Hash]types.Logs)
+	s.logSize = 0
 }
 
 // ResetToTarget resets oldest seqNo and root to target.

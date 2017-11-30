@@ -97,15 +97,15 @@ func (executor *Executor) fetchPendingValidationEvent(seqNo uint64) (*event.Tran
 }
 
 // pendingValidationEventQLen retrieves the length of pending validation event queue.
-func (executor *Executor) pendingValidationEventQLen() int {
-	return executor.cache.pendingValidationEventQ.Len()
+func (e *Executor) pendingValidationEventQLen() int {
+	return e.cache.pendingValidationEventQ.Len()
 }
 
 // clearPendingValidationEventQ purges validation event queue.
-func (executor *Executor) clearPendingValidationEventQ() {
-	length := executor.pendingValidationEventQLen()
-	executor.cache.pendingValidationEventQ.Purge()
-	atomic.AddInt32(&executor.context.validateQueueLen, -1*int32(length))
+func (e *Executor) clearPendingValidationEventQ() {
+	length := e.pendingValidationEventQLen()
+	e.cache.pendingValidationEventQ.Purge()
+	atomic.AddInt32(&e.context.validateQueueLen, -1*int32(length))
 }
 
 // addValidationResult saves a validation result to cache.
@@ -123,10 +123,10 @@ func (executor *Executor) fetchValidationResult(tag ValidationTag) (*ValidationR
 }
 
 // addValidationEvent pushes a validation event to channel buffer.
-func (e *Executor) addValidationEvent(ev *event.TransactionBlock) {
-	e.cache.validationEventC <- ev
+func (e *Executor) addValidationEvent(tb *event.TransactionBlock) {
+	e.cache.validationEventC <- tb
 	atomic.AddInt32(&e.context.validateQueueLen, 1)
-	e.logger.Debugf("receive a validation event #%d", ev.SeqNo)
+	e.logger.Debugf("receive a validation event #%d", tb.SeqNo)
 }
 
 // fetchValidationEvent fetches a validation event from channel buffer.

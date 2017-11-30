@@ -6,6 +6,7 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/common/service"
 	pb "github.com/hyperchain/hyperchain/common/service/protos"
+	"github.com/hyperchain/hyperchain/consensus/rbft"
 	"github.com/hyperchain/hyperchain/core/fiber"
 	"github.com/hyperchain/hyperchain/core/oplog"
 	"github.com/hyperchain/hyperchain/hyperdb"
@@ -17,7 +18,6 @@ import (
 	"strconv"
 	"sync/atomic"
 	"time"
-	"github.com/hyperchain/hyperchain/consensus/rbft"
 )
 
 const (
@@ -25,6 +25,9 @@ const (
 	commitIndexPrefix  = "last.commit.index."
 	executorId         = "EXECUTOR-0"
 
+	closed  = 0
+	running = 1
+	suspend = 2
 )
 
 //Fiber response for log data transfer.
@@ -38,6 +41,7 @@ type ExeFiber struct {
 	logger           *logging.Logger
 	stop             chan struct{}
 	eventMux         *event.TypeMux
+	state            int32
 }
 
 func NewFiber(conf *common.Config, ns *service.NamespaceServices, ol oplog.OpLog, eventMux *event.TypeMux) (fiber.Fiber, error) {
@@ -54,6 +58,7 @@ func NewFiber(conf *common.Config, ns *service.NamespaceServices, ol oplog.OpLog
 		stop:     make(chan struct{}),
 		eventMux: eventMux,
 	}
+	atomic.StoreInt32(&fr.state, closed)
 	var err error
 	fr.md, err = hyperdb.GetOrCreateDatabase(conf, namespace, hc.DBNAME_META)
 	if err != nil {
@@ -92,20 +97,23 @@ func (f *ExeFiber) recovery() error {
 
 func (f *ExeFiber) Start() error {
 	go f.processExecutorRequest()
-	for {
-		select {
-		case <-f.stop:
-			f.logger.Notice("fiber exit")
-			return nil
-		default:
-			f.sendNextConsume()
+	go func() {
+		for {
+			select {
+			case <-f.stop:
+				f.logger.Notice("fiber sending thread stop")
+			default:
+				if atomic.LoadInt32(&f.state) == running {
+					f.sendNextOpLog()
+				}
+			}
 		}
-	}
-
+	}()
+	atomic.StoreInt32(&f.state, running)
 	return nil
 }
 
-func (f *ExeFiber) sendNextConsume() {
+func (f *ExeFiber) sendNextOpLog() {
 	var es service.Service
 	f.logger.Debugf("%v executor service == nil? %v", f.ol.GetLastSet(), es == nil)
 	nextConsumeIndex := atomic.LoadUint64(&f.lastConsumeIndex) + 1
@@ -163,6 +171,7 @@ func (f *ExeFiber) processExecutorRequest() {
 	}
 }
 
+//handle handle received executor requests
 func (f *ExeFiber) handle(req *pb.IMessage) {
 	switch req.Event {
 	case pb.Event_OpLogFetch:
@@ -234,7 +243,61 @@ func (f *ExeFiber) Stop() {
 }
 
 //Send info to the remote peer
-func (f *ExeFiber) Send(interface{}) error {
-	//TODO(Xiaoyi Wang): send to remote peer
+func (f *ExeFiber) Send(ev interface{}) error {
+	switch e := ev.(type) {
+	case *event.CheckpointAck:
+		f.handleCheckpointAck(e)
+	default:
+		f.logger.Error("invalid event type, %v", e)
+	}
 	return nil
+}
+
+func (f *ExeFiber) Suspend() {
+	atomic.StoreInt32(&f.state, suspend)
+}
+
+func (f *ExeFiber) Resume() {
+	atomic.StoreInt32(&f.state, running)
+}
+
+func (f *ExeFiber) handleCheckpointAck(e *event.CheckpointAck) {
+	f.Suspend()
+
+	payload, err := proto.Marshal(e)
+	if err != nil {
+		f.logger.Error(err)
+		return
+	}
+
+	logMsg := &pb.IMessage{
+		Event:   pb.Event_CheckPointAck,
+		Payload: payload,
+	}
+
+	es := f.ns.Service(executorId)
+	if es == nil {
+		return
+		//TODO(Xiaoyi Wang): retry to send log message
+	} else {
+		if err := es.Send(logMsg); err != nil {
+			f.logger.Error(err)
+		}
+	}
+
+	r := &event.RollbackEvent{}
+	proto.Unmarshal(e.Payload, r)
+	atomic.StoreUint64(&f.lastConsumeIndex, r.Lid)
+	atomic.StoreUint64(&f.lastCommitIndex, r.SeqNo)
+	f.persistMetadata()
+}
+
+func (f *ExeFiber) persistMetadata() {
+	buf := make([]byte, 0)
+	b := strconv.AppendUint(buf, f.lastConsumeIndex, 10)
+	f.md.Put([]byte(consumeIndexPrefix), b)
+
+	buf = make([]byte, 0)
+	b = strconv.AppendUint(buf, f.lastCommitIndex, 10)
+	f.md.Put([]byte(commitIndexPrefix), b)
 }

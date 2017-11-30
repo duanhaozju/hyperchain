@@ -296,10 +296,8 @@ func (h *helper) StableCheckpoint(seqNo uint64) {
 	ack := &event.CheckpointAck{
 		IsStableCkpt: true,
 		Cid:          seqNo,
-
 	}
-	e, _ := proto.Marshal(ack)
-	h.fiber.Send(e)
+	h.fiber.Send(ack)
 }
 
 func (h *helper) RollbackBlock(seqNo uint64) error {
@@ -322,10 +320,6 @@ func (h *helper) RollbackBlock(seqNo uint64) error {
 		Cid:          seqNo,
 		Payload:      payload,
 	}
-	e, err := proto.Marshal(ack)
-	if err != nil {
-		return err
-	}
-	h.fiber.Send(e)
+	h.fiber.Send(ack)
 	return nil
 }

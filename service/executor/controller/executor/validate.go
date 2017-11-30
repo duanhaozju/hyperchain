@@ -50,8 +50,8 @@ type SubscriptionData struct {
 // Validate - the entry function of the validation process.
 // Receive the validation event as a parameter and cached them in the channel
 // if the pressure is too high.
-func (e *Executor) Validate(validationEvent *event.TransactionBlock) {
-	e.addValidationEvent(validationEvent)
+func (e *Executor) Validate(tb *event.TransactionBlock) {
+	e.addValidationEvent(tb)
 }
 
 // listenValidationEvent starts the validation backend process,
@@ -87,18 +87,18 @@ func (e *Executor) listenValidationEvent() {
 
 // processValidationEvent processes validation event,
 // return true if process successfully, otherwise false will been returned.
-func (e *Executor) processValidationEvent(validationEvent *event.TransactionBlock, done func()) bool {
+func (e *Executor) processValidationEvent(tb *event.TransactionBlock, done func()) bool {
 	// Mark the busy of validation, and mark idle after finishing processing
 	// This process cannot be stopped
 	e.markValidationBusy()
 	defer e.markValidationIdle()
 
 	// If the event is not the current demand one, pending it
-	if !e.context.isDemand(DemandSeqNo, validationEvent.SeqNo) {
-		e.addPendingValidationEvent(validationEvent)
+	if !e.context.isDemand(DemandSeqNo, tb.SeqNo) {
+		e.addPendingValidationEvent(tb)
 		return true
 	}
-	if _, success := e.process(validationEvent, done); success == false {
+	if _, success := e.process(tb, done); success == false {
 		return false
 	}
 	e.context.incDemand(DemandSeqNo)
@@ -124,58 +124,53 @@ func (e *Executor) processPendingValidationEvent(done func()) bool {
 }
 
 // dropValidateEvent does nothing but consume a validation event.
-func (e *Executor) dropValidateEvent(validationEvent *event.TransactionBlock, done func()) {
+func (e *Executor) dropValidateEvent(tb *event.TransactionBlock, done func()) {
 	e.markValidationBusy()
 	defer e.markValidationIdle()
 	defer done()
-	e.logger.Noticef("drop validation event %d", validationEvent.SeqNo)
+	e.logger.Noticef("drop validation event %d", tb.SeqNo)
 }
 
 // process specific implementation logic, including the signature checking,
 // the execution of transactions, ledger hash re-computation and etc.
-func (e *Executor) process(validationEvent *event.TransactionBlock, done func()) (error, bool) {
+func (e *Executor) process(tb *event.TransactionBlock, done func()) (error, bool) {
 	// Invoke the callback no matter success or fail
-	e.logger.Noticef("try to execute block %d", validationEvent.SeqNo)
+	e.logger.Noticef("try to execute block %d", tb.SeqNo)
 	defer done()
 
-	var (
-		validtxs   []*types.Transaction
-		invalidtxs []*types.InvalidTransactionRecord
-	)
-
-	validtxs, invalidtxs = validationEvent.Transactions, make([]*types.InvalidTransactionRecord, 0)
-	err, validateResult := e.applyTransactions(validtxs, invalidtxs, validationEvent.SeqNo, validationEvent.Timestamp)
+	validtxs, invalidtxs := tb.Transactions, tb.InvalidTransactions
+	err, validateResult := e.applyTransactions(validtxs, invalidtxs, tb.SeqNo, tb.Timestamp)
 	if err != nil {
 		// short circuit if error occur during the transaction execution
-		e.logger.Errorf("process transaction batch #%d failed.", e.namespace, validationEvent.SeqNo)
+		e.logger.Errorf("process transaction batch #%d failed.", e.namespace, tb.SeqNo)
 		return err, false
 	}
 	// calculate validation result hash for comparison
 	hash := e.calculateValidationResultHash(validateResult.MerkleRoot, validateResult.TxRoot, validateResult.ReceiptRoot)
 	e.logger.Debugf("invalid transaction number %d", len(validateResult.InvalidTxs))
 	e.logger.Debugf("valid transaction number %d", len(validateResult.ValidTxs))
-	e.logger.Noticef("execute block %d done", validationEvent.SeqNo)
+	e.logger.Noticef("execute block %d done", tb.SeqNo)
 
-	e.saveValidationResult(validateResult, validationEvent.SeqNo, hash)
-	e.tryToCommit(validationEvent, hash)
+	e.saveValidationResult(validateResult, tb.SeqNo, hash)
+	e.tryToCommit(tb, hash)
 	return nil, true
 }
 
 // applyTransactions executes transaction sequentially.
-func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64, timestamp int64) (error, *ValidationResultRecord) {
+func (e *Executor) applyTransactions(txs []*types.Transaction, invalidTxs []*types.InvalidTransactionRecord, seqNo uint64, timestamp int64) (error, *ValidationResultRecord) {
 	var (
 		validtxs []*types.Transaction
 		receipts []*types.Receipt
 	)
 
-	executor.initCalculator()
-	executor.statedb.MarkProcessStart(seqNo)
+	e.initCalculator()
+	e.statedb.MarkProcessStart(seqNo)
 
 	// Execute transaction one by one
 	for i, tx := range txs {
-		receipt, _, _, err := executor.ExecTransaction(executor.statedb, tx, i, seqNo, timestamp)
+		receipt, _, _, err := e.ExecTransaction(e.statedb, tx, i, seqNo, timestamp)
 		if err != nil {
-			errType := executor.classifyInvalid(err)
+			errType := e.classifyInvalid(err)
 			invalidTxs = append(invalidTxs, &types.InvalidTransactionRecord{
 				Tx:      tx,
 				ErrType: errType,
@@ -183,20 +178,20 @@ func (executor *Executor) applyTransactions(txs []*types.Transaction, invalidTxs
 			})
 			continue
 		}
-		executor.calculateTransactionsFingerprint(tx, false)
-		executor.calculateReceiptFingerprint(tx, receipt, false)
+		e.calculateTransactionsFingerprint(tx, false)
+		e.calculateReceiptFingerprint(tx, receipt, false)
 		receipts = append(receipts, receipt)
 		validtxs = append(validtxs, tx)
 	}
 
-	merkleRoot, txRoot, receiptRoot, err := executor.submitValidationResult()
+	merkleRoot, txRoot, receiptRoot, err := e.submitValidationResult()
 	if err != nil {
-		executor.logger.Errorf("[Namespace = %s] submit validation result failed.", executor.namespace, err.Error())
+		e.logger.Errorf("submit validation result failed.", err.Error())
 		return err, nil
 	}
-	executor.resetStateDb()
-	executor.logger.Debugf("[Namespace = %s] validate result seqNo #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
-		executor.namespace, seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
+	e.resetStateDb()
+	e.logger.Debugf("validate result seqNo #%d, merkle root [%s],  transaction root [%s],  receipt root [%s]",
+		seqNo, common.Bytes2Hex(merkleRoot), common.Bytes2Hex(txRoot), common.Bytes2Hex(receiptRoot))
 	return nil, &ValidationResultRecord{
 		TxRoot:      txRoot,
 		ReceiptRoot: receiptRoot,
@@ -228,17 +223,17 @@ func (executor *Executor) classifyInvalid(err error) types.InvalidTransactionRec
 
 // submitValidationResult submits state changes to batch,
 // and return the merkleRoot, txRoot, receiptRoot.
-func (executor *Executor) submitValidationResult() ([]byte, []byte, []byte, error) {
+func (e *Executor) submitValidationResult() ([]byte, []byte, []byte, error) {
 	// flush all state change
-	root, err := executor.statedb.Commit()
+	root, err := e.statedb.Commit()
 	if err != nil {
-		executor.logger.Errorf("[Namespace = %s] commit state db failed! error msg, ", executor.namespace, err.Error())
+		e.logger.Errorf("commit state db failed! error msg, ", err.Error())
 		return nil, nil, nil, err
 	}
 	merkleRoot := root.Bytes()
-	res, _ := executor.calculateTransactionsFingerprint(nil, true)
+	res, _ := e.calculateTransactionsFingerprint(nil, true)
 	txRoot := res.Bytes()
-	res, _ = executor.calculateReceiptFingerprint(nil, nil, true)
+	res, _ = e.calculateReceiptFingerprint(nil, nil, true)
 	receiptRoot := res.Bytes()
 	return merkleRoot, txRoot, receiptRoot, nil
 }
@@ -261,10 +256,10 @@ func (e *Executor) saveValidationResult(res *ValidationResultRecord, seqNo uint6
 }
 
 // tryToCommit sends validation result to commit thread.
-func (e *Executor) tryToCommit(ev *event.TransactionBlock, hash common.Hash) {
+func (e *Executor) tryToCommit(tb *event.TransactionBlock, hash common.Hash) {
 	e.CommitBlock(&event.CommitEvent{
-		SeqNo:      ev.SeqNo,
-		Timestamp:  ev.Timestamp,
+		SeqNo:      tb.SeqNo,
+		Timestamp:  tb.Timestamp,
 		CommitTime: time.Now().UnixNano(),
 		Flag:       true,
 		Hash:       hash.Hex(),

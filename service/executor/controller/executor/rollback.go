@@ -20,21 +20,21 @@ import (
 )
 
 // Rollback is called by manager to reset blockchain to a stable checkpoint status when `viewchange` occurs.
-// ev.SeqNo = previous stable checkpoint + 1
-func (e *Executor) Rollback(ev event.VCResetEvent) {
+// re.SeqNo = previous stable checkpoint + 1
+func (e *Executor) Rollback(re *event.RollbackEvent) {
 	// Wait util current validating and committing done
 	e.waitUtilRollbackAvailable() //TODO(Xiaoyi Wang): modify this to adapt new architecture
 	defer e.rollbackDone()
 
-	e.logger.Noticef("receive vc reset event, required revert to %d", ev.SeqNo-1)
+	e.logger.Noticef("receive vc reset event, required revert to %d", re.SeqNo-1)
 	batch := e.db.NewBatch()
 	// Revert state
-	if err := e.revertState(batch, ev.SeqNo-1); err != nil {
+	if err := e.revertState(batch, re.SeqNo-1); err != nil {
 		return
 	}
 	// Delete related transaction, receipt, txmeta, and block itself in a specific range
-	if err := e.cutdownChain(batch, ev.SeqNo-1); err != nil {
-		e.logger.Errorf("remove block && transaction in range %d to %d failed.", ev.SeqNo, chain.GetHeightOfChain(e.namespace))
+	if err := e.cutdownChain(batch, re.SeqNo-1); err != nil {
+		e.logger.Errorf("remove block && transaction in range %d to %d failed.", re.SeqNo, chain.GetHeightOfChain(e.namespace))
 		return
 	}
 	// Remove uncommitted data
@@ -43,13 +43,13 @@ func (e *Executor) Rollback(ev event.VCResetEvent) {
 		return
 	}
 	// Reset chain
-	chain.UpdateChainByBlockNum(e.namespace, batch, ev.SeqNo-1, false, false)
+	chain.UpdateChainByBlockNum(e.namespace, batch, re.SeqNo-1, false, false)
 	if err := batch.Write(); err != nil {
 		e.logger.Error(err)
 		return
 	}
-	e.context.initDemand(ev.SeqNo) //TODO(Xiaoyi Wang): reset the seqNo needed
-	//e.context.setDemandOpLogIndex(0)
+	e.context.initDemand(re.SeqNo)
+	e.context.setDemandOpLogIndex(re.Lid)
 }
 
 // cutdownChain cuts down the chain to the target height.

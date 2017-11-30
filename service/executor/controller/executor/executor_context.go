@@ -215,7 +215,9 @@ func (e *Executor) waitForCheckpoint(seqNo uint64) {
 func (e *Executor) waitUtilRollbackAvailable() {
 	e.logger.Debugf("wait util rollback available")
 	defer e.logger.Debugf("rollback available")
+
 	e.clearPendingValidationEventQ()
+
 	e.turnOffValidationSwitch()
 	e.waitUtilValidationIdle()
 	e.wailUtilCommitIdle()

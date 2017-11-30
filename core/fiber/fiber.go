@@ -6,6 +6,11 @@ type Fiber interface {
 	Start() error
 	//Stop the fiber system
 	Stop()
+
+	Suspend()
+
+	Resume()
+
 	//Send info to the remote peer
 	Send(msg interface{}) error
 }
