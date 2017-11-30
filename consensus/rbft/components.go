@@ -42,8 +42,16 @@ type msgCert struct {
 
 // chkptCertStore index
 type chkptID struct {
-	n  uint64 // seq num
-	id string // digest of checkpoint
+	// checkpoint sequence number
+	n              uint64
+
+	// blockchain hash received from executor which is only used to compare block hash
+	// when received checkpoint from executor module
+	blockchainHash string
+
+	// transaction block hash stored in opLog which is used to compare the consistency
+	// of opLog
+	txBlockHash    string
 }
 
 // checkpoints received from other nodes with same chkptID

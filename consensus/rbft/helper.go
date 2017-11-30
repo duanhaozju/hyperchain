@@ -257,22 +257,6 @@ func nullRequestMsgToPbMsg(id uint64) *protos.Message {
 	return pbMsg
 }
 
-// getBlockchainInfo used after commit gets the current blockchain information from database when our lastExec reached
-// the checkpoint, so here we wait until the executor module executes to a checkpoint to return the current BlockchainInfo
-func (rbft *rbftImpl) getBlockchainInfo() *protos.BlockchainInfo {
-	bcInfo := rbft.GetBlockchainInfo(rbft.namespace)
-
-	height := bcInfo.Height
-	curBlkHash := bcInfo.LatestBlockHash
-	preBlkHash := bcInfo.ParentBlockHash
-
-	return &protos.BlockchainInfo{
-		Height:            height,
-		CurrentBlockHash:  curBlkHash,
-		PreviousBlockHash: preBlkHash,
-	}
-}
-
 // getCurrentBlockInfo used after recvStateUpdatedEvent gets the current BlockchainInfo immediately rather than waiting
 // waiting until the executor module executes to a checkpoint as the current height must be a checkpoint if we reach the
 // checkpoint after state update
@@ -285,7 +269,10 @@ func (rbft *rbftImpl) getCurrentBlockInfo() *protos.BlockchainInfo {
 	}
 }
 
-// getGenesisInfo returns the genesis block information of the current namespace
+// getGenesisInfo returns the genesis block information used in two scenarios:
+// 1. When replica start recovery, get the genesis block info to consensus height
+// 2. After archiving, the genesis block height may go up, so genesis info should be
+//    included in Checkpoint used to update StateUpdateTarget
 func (rbft *rbftImpl) getGenesisInfo() uint64 {
 	genesis, _ := rbft.GetGenesisOfChain(rbft.namespace)
 	return genesis

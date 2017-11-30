@@ -34,9 +34,13 @@ type storeManager struct {
 
 	// ---------------checkpoint related--------------------
 	// checkpoints that we reached by ourselves after commit a block with a
-	// block number == integer multiple of K; map lastExec to a base64
-	// encoded BlockchainInfo
+	// block number == integer multiple of K; map lastExec to transaction
+	// block hash
 	chkpts map[uint64]string
+
+	// blockchainInfo stores the checkpoint blockchain info received from
+	// executor module
+	blockChainInfo map[uint64]string
 
 	// checkpoint numbers received from others which are bigger than our
 	// H(=h+L); map replicaID to the last checkpoint number received from
@@ -49,6 +53,9 @@ type storeManager struct {
 	// track quorum certificates for checkpoints with the same chkptID; map
 	// chkptID(seqNo and id) to chkptCert(all checkpoints with that chkptID)
 	chkptCertStore map[chkptID]*chkptCert
+
+	// chkptBlockHash records the transaction block hash of each checkpoint
+	chkptBlockHash map[uint64]string
 }
 
 // newStoreMgr news an instance of storeManager
@@ -65,6 +72,7 @@ func newStoreMgr(logger *logging.Logger) *storeManager {
 	sm.outstandingReqBatches = make(map[string]*TransactionBatch)
 	sm.txBatchStore = make(map[string]*TransactionBatch)
 	sm.missingReqBatches = make(map[string]bool)
+	sm.chkptBlockHash = make(map[uint64]string)
 
 	sm.logger = logger
 	return sm
@@ -120,8 +128,8 @@ func (sm *storeManager) getCert(v uint64, n uint64, d string) (cert *msgCert) {
 
 // Given a seqNo/id, is there an entry in the chkptCertStore?
 // If so, return it, else, create a new entry
-func (sm *storeManager) getChkptCert(n uint64, id string) (cert *chkptCert) {
-	idx := chkptID{n, id}
+func (sm *storeManager) getChkptCert(n uint64, blockchainHash string, txBlockHash string) (cert *chkptCert) {
+	idx := chkptID{n, blockchainHash, txBlockHash}
 	cert, ok := sm.chkptCertStore[idx]
 
 	if ok {

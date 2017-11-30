@@ -65,7 +65,12 @@ type Stack interface {
 	GetLatestCommitHeightAndHash() (uint64, string, error)
 
 	// StableCheckpoint sends stable checkpoint ack to executor
-	StableCheckpoint(isStable bool, seqNo uint64)
+	StableCheckpoint(seqNo uint64)
+
+	// FetchCommit helps fetch the latest block info stored in opLog
+	FetchCommit(lid uint64) (*opLog2.LogEntry, error)
+
+	RollbackBlock(seqNo uint64) error
 }
 
 // NewHelper initializes a helper object
@@ -158,7 +163,7 @@ func (h *helper) CommitBlock(lastExecHash string, digest string, txs []*types.Tr
 		Payload: payload,
 	}
 
-	if err = h.opLog.Append(entry); err != nil {
+	if _, err = h.opLog.Append(entry); err != nil {
 		return "", err
 	}
 
@@ -271,6 +276,10 @@ func (h *helper) SendFilterEvent(informType int, message ...interface{}) error {
 	}
 }
 
+func (h *helper) FetchCommit(lid uint64) (*opLog2.LogEntry, error) {
+	return h.opLog.Fetch(lid)
+}
+
 func (h *helper) GetLatestCommitNumber() uint64 {
 	return h.opLog.GetLastBlockNum()
 }
@@ -279,16 +288,44 @@ func (h *helper) GetLatestCommitHeightAndHash() (uint64, string, error) {
 	return h.opLog.GetHeightAndDigest()
 }
 
-func (h *helper) StableCheckpoint(isStable bool, seqNo uint64) {
-	if isStable {
-		h.opLog.SetStableCheckpoint(seqNo)
-	} else {
-		// TODO
+func (h *helper) StableCheckpoint(seqNo uint64) {
+	// notify opLog to clear cache
+	h.opLog.SetStableCheckpoint(seqNo)
+
+	// notify executor to clear cache
+	ack := &event.CheckpointAck{
+		IsStableCkpt: true,
+		Cid:          seqNo,
+
+	}
+	e, _ := proto.Marshal(ack)
+	h.fiber.Send(e)
+}
+
+func (h *helper) RollbackBlock(seqNo uint64) error {
+	lid, err := h.opLog.GetLidBySeqNo(seqNo)
+	if err != nil {
+		return err
 	}
 
-	ack := event.CheckpointAck{
-		IsStableCkpt: isStable,
-		Cid:          seqNo,
+	rollbackEvent := &event.RollbackEvent{
+		SeqNo: seqNo,
+		Lid:   lid,
 	}
-	h.fiber.Send(ack)
+	payload, err := proto.Marshal(rollbackEvent)
+	if err != nil {
+		return err
+	}
+
+	ack := &event.CheckpointAck{
+		IsStableCkpt: false,
+		Cid:          seqNo,
+		Payload:      payload,
+	}
+	e, err := proto.Marshal(ack)
+	if err != nil {
+		return err
+	}
+	h.fiber.Send(e)
+	return nil
 }

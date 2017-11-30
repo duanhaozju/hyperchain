@@ -47,5 +47,6 @@ message OpLogFetch {
 }
 message CheckpointAck {
     bool isStableCkpt = 1;
-    uint64 cid = 2; // checkpoint id
+    uint64 cid = 2; // checkpoint seqNo
+    bytes payload = 3;
 }

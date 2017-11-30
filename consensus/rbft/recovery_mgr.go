@@ -262,7 +262,12 @@ func (rbft *rbftImpl) initRecovery() consensusEvent {
 	rbft.timerMgr.startTimer(RECOVERY_RESTART_TIMER, event, rbft.eventMux)
 
 	// send RecoveryResponse to itself
-	height, curHash := rbft.GetBlockHeightAndHash(rbft.namespace)
+	height, curHash, err := rbft.GetBlockHeightAndHash()
+	if err != nil {
+		rbft.logger.Errorf("Replica %d cannot get latest block height and hash: %s", rbft.id, err)
+		return nil
+	}
+
 	genesis := rbft.getGenesisInfo()
 	rc := &RecoveryResponse{
 		ReplicaId:     rbft.id,
@@ -299,7 +304,10 @@ func (rbft *rbftImpl) recvRecovery(recoveryInit *RecoveryInit) consensusEvent {
 		return nil
 	}
 
-	height, curHash := rbft.GetBlockHeightAndHash(rbft.namespace)
+	height, curHash, err := rbft.GetBlockHeightAndHash()
+	if err != nil {
+		rbft.logger.Errorf("Replica %d cannot get latest block height and hash: %s", rbft.id, err)
+	}
 	genesis := rbft.getGenesisInfo()
 
 	rc := &RecoveryResponse{
@@ -423,8 +431,8 @@ func (rbft *rbftImpl) findHighestChkptQuorum() (chkptSeqNo uint64, chkptId strin
 	for from, rsp := range rbft.recoveryMgr.rcRspStore {
 		for chkptN, chkptD := range rsp.GetChkpts() {
 			chkptIdx := chkptID{
-				n:  chkptN,
-				id: chkptD,
+				n:           chkptN,
+				txBlockHash: chkptD,
 			}
 			peers, ok := chkpts[chkptIdx]
 			if ok {
@@ -459,7 +467,7 @@ func (rbft *rbftImpl) findHighestChkptQuorum() (chkptSeqNo uint64, chkptId strin
 			find = true
 			if ci.n >= chkptSeqNo {
 				chkptSeqNo = ci.n
-				chkptId = ci.id
+				chkptId = ci.txBlockHash
 				replicas = make([]replicaInfo, 0, len(peers))
 				for peer := range peers {
 					replicas = append(replicas, peer)

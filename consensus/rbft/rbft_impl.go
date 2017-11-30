@@ -796,9 +796,24 @@ func (rbft *rbftImpl) commitPendingBlocks() {
 			}
 			if hash, err := rbft.helper.CommitBlock(lastHash, idx.d, validTxs, invalidRecord, cert.prePrepare.HashBatch.Timestamp, idx.n, idx.v, isPrimary); err != nil {
 				rbft.logger.Error("Replica %d failed to commit block for view=%d/seqNo=%d/digest=%s", rbft.id, idx.v, idx.n, idx.d)
+				if _, err := rbft.helper.FetchCommit(idx.n); err != nil {
+					rbft.logger.Errorf("Replica %d cannot fetch block %d: %s", rbft.id, idx.n, err)
+					return
+				} else {
+					rbft.logger.Debugf("Replica %d fetched block %d", rbft.id, idx.n)
+				}
 				return
 			} else {
 				rbft.exec.lastExecHash = hash
+				if idx.n % rbft.K == 0 {
+					rbft.storeMgr.chkptBlockHash[idx.n] = hash
+				}
+				if _, err := rbft.helper.FetchCommit(idx.n); err != nil {
+					rbft.logger.Errorf("Replica %d cannot fetch block %d: %s", rbft.id, idx.n, err)
+					return
+				} else {
+					rbft.logger.Debugf("Replica %d fetched block %d", rbft.id, idx.n)
+				}
 			}
 			cert.sentExecute = true
 			rbft.afterCommitBlock(idx)
@@ -1030,8 +1045,13 @@ func (rbft *rbftImpl) executeAfterStateUpdate() {
 // checkpoint generate a checkpoint and broadcast it to outer.
 func (rbft *rbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 
-	if n%rbft.K != 0 {
+	if n % rbft.K != 0 {
 		rbft.logger.Errorf("Attempted to checkpoint a sequence number (%d) which is not a multiple of the checkpoint interval (%d)", n, rbft.K)
+		return
+	}
+	txBlockHash, ok := rbft.storeMgr.chkptBlockHash[n]
+	if !ok {
+		rbft.logger.Warningf("Replica %d cannot find transaction block hash of checkpoint %d", rbft.id, n)
 		return
 	}
 
@@ -1044,14 +1064,18 @@ func (rbft *rbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 		rbft.id, rbft.view, seqNo, idAsString, genesis)
 
 	chkpt := &Checkpoint{
-		SequenceNumber: seqNo,
-		ReplicaId:      rbft.id,
-		Id:             idAsString,
-		Genesis:        genesis,
+		SequenceNumber:       seqNo,
+		ReplicaId:            rbft.id,
+		BlockChainInfo:       idAsString,
+		TransactionBlockInfo: txBlockHash,
+		Genesis:              genesis,
 	}
-	rbft.storeMgr.saveCheckpoint(seqNo, idAsString)
+	rbft.storeMgr.blockChainInfo[n] = idAsString
+	// here we cache and persist txBlockHash rather than blockchain hash as consensus module need
+	// only ensure the consistency of opLog
+	rbft.storeMgr.saveCheckpoint(seqNo, txBlockHash)
+	rbft.persistCheckpoint(seqNo, []byte(txBlockHash))
 
-	rbft.persistCheckpoint(seqNo, id)
 	rbft.recvCheckpoint(chkpt) // send to itself
 	payload, err := proto.Marshal(chkpt)
 	if err != nil {
@@ -1070,7 +1094,7 @@ func (rbft *rbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) consensusEvent {
 
 	rbft.logger.Debugf("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
-		rbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.Id)
+		rbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.BlockChainInfo)
 
 	if rbft.in(inNegotiateView) {
 		rbft.logger.Debugf("Replica %d try to recvCheckpoint, but it's in negotiateView", rbft.id)
@@ -1097,7 +1121,7 @@ func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) consensusEvent {
 		return nil
 	}
 
-	cert := rbft.storeMgr.getChkptCert(chkpt.SequenceNumber, chkpt.Id)
+	cert := rbft.storeMgr.getChkptCert(chkpt.SequenceNumber, chkpt.BlockChainInfo, chkpt.TransactionBlockInfo)
 	ok := cert.chkpts[*chkpt]
 
 	if ok {
@@ -1110,7 +1134,7 @@ func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) consensusEvent {
 	rbft.storeMgr.checkpointStore[*chkpt] = true
 
 	rbft.logger.Debugf("Replica %d found %d matching checkpoints for seqNo %d, digest %s",
-		rbft.id, cert.chkptCount, chkpt.SequenceNumber, chkpt.Id)
+		rbft.id, cert.chkptCount, chkpt.SequenceNumber, chkpt.BlockChainInfo)
 
 	if cert.chkptCount == rbft.oneCorrectQuorum() {
 		// update state update target and state transfer to it if this node already fell behind
@@ -1131,10 +1155,10 @@ func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) consensusEvent {
 	// Note, this is not divergent from the paper, as the paper requires that
 	// the quorum certificate must contain 2f+1 messages, including its own
 
-	chkptID, ok := rbft.storeMgr.chkpts[chkpt.SequenceNumber]
+	txBlockHash, ok := rbft.storeMgr.chkpts[chkpt.SequenceNumber]
 	if !ok {
-		rbft.logger.Debugf("Replica %d found checkpoint quorum for seqNo %d, digest %s, but it has not reached this checkpoint itself yet",
-			rbft.id, chkpt.SequenceNumber, chkpt.Id)
+		rbft.logger.Debugf("Replica %d found checkpoint quorum for seqNo %d, digest %s in opLog, but it has not reached this checkpoint itself yet",
+			rbft.id, chkpt.SequenceNumber, chkpt.BlockChainInfo)
 		if rbft.in(skipInProgress) {
 			// When this node started state update, it would set h to the target, and finally it would receive a StateUpdatedEvent whose seqNo is this h.
 			if rbft.in(inRecovery) {
@@ -1160,16 +1184,32 @@ func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) consensusEvent {
 	}
 
 	rbft.logger.Infof("Replica %d found checkpoint quorum for seqNo %d, digest %s",
-		rbft.id, chkpt.SequenceNumber, chkpt.Id)
+		rbft.id, chkpt.SequenceNumber, chkpt.BlockChainInfo)
 
-	// if we found self checkpoint ID is not the same as the quorum checkpoint ID, we will fetch from others until
-	// self block hash is the same as other quorum replicas
-	if chkptID != chkpt.Id {
-		rbft.logger.Criticalf("Replica %d generated a checkpoint of %s, but a quorum of the network agrees on %s. This is almost definitely non-deterministic chaincode.",
-			rbft.id, chkptID, chkpt.Id)
-
+	// if we found self txBlockHash is not the same as the quorum checkpoint txBlockHash, we will fetch from others until
+	// self opLog is the same as other quorum replicas
+	if txBlockHash != chkpt.BlockChainInfo {
+		rbft.logger.Criticalf("Replica %d generated a checkpoint of %s in opLog, but a quorum of the network agrees on %s. " +
+			"This is almost definitely non-deterministic chaincode.",
+			rbft.id, txBlockHash, chkpt.BlockChainInfo)
 		rbft.stateTransfer(nil)
+		return nil
 	}
+
+	// here, we don't need to judge if executor module has reached this checkpoint as we judge the
+	// txBlockHash before
+	blockchainHash, _ := rbft.storeMgr.blockChainInfo[chkpt.SequenceNumber]
+	if blockchainHash != chkpt.BlockChainInfo {
+		rbft.logger.Criticalf("Replica %d generated a checkpoint of %s from executor, but a quorum of the network agrees on %s. " +
+			"This is almost definitely non-deterministic chaincode.",
+			rbft.id, txBlockHash, chkpt.BlockChainInfo)
+		if err := rbft.helper.RollbackBlock(chkpt.SequenceNumber); err != nil {
+			rbft.logger.Warningf("Replica %d failed to rollback block %d: %s", rbft.id, chkpt.SequenceNumber, err)
+			return nil
+		}
+	}
+
+	rbft.helper.StableCheckpoint(chkpt.SequenceNumber)
 
 	rbft.moveWatermarks(chkpt.SequenceNumber)
 
@@ -1257,7 +1297,7 @@ func (rbft *rbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 	checkpointMembers := make([]replicaInfo, rbft.oneCorrectQuorum())
 	i := 0
 	for testChkpt := range rbft.storeMgr.checkpointStore {
-		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.Id == chkpt.Id {
+		if testChkpt.SequenceNumber == chkpt.SequenceNumber && testChkpt.BlockChainInfo == chkpt.BlockChainInfo {
 			checkpointMembers[i] = replicaInfo{
 				id:      testChkpt.ReplicaId,
 				height:  testChkpt.SequenceNumber,
@@ -1268,9 +1308,9 @@ func (rbft *rbftImpl) witnessCheckpointWeakCert(chkpt *Checkpoint) {
 		}
 	}
 
-	snapshotID, err := base64.StdEncoding.DecodeString(chkpt.Id)
+	snapshotID, err := base64.StdEncoding.DecodeString(chkpt.BlockChainInfo)
 	if err != nil {
-		rbft.logger.Errorf("Replica %d received a weak checkpoint cert whose ID(%s) could not be decoded", rbft.id, chkpt.Id)
+		rbft.logger.Errorf("Replica %d received a weak checkpoint cert whose ID(%s) could not be decoded", rbft.id, chkpt.BlockChainInfo)
 		return
 	}
 
@@ -1348,15 +1388,15 @@ func (rbft *rbftImpl) moveWatermarks(n uint64) {
 	for testChkpt := range rbft.storeMgr.checkpointStore {
 		if testChkpt.SequenceNumber <= h {
 			rbft.logger.Debugf("Replica %d cleaning checkpoint message from replica %d, seqNo %d, b64 snapshot id %s",
-				rbft.id, testChkpt.ReplicaId, testChkpt.SequenceNumber, testChkpt.Id)
+				rbft.id, testChkpt.ReplicaId, testChkpt.SequenceNumber, testChkpt.BlockChainInfo)
 			delete(rbft.storeMgr.checkpointStore, testChkpt)
 		}
 	}
 
 	for cid := range rbft.storeMgr.chkptCertStore {
 		if cid.n <= h {
-			rbft.logger.Debugf("Replica %d cleaning checkpoint message, seqNo %d, b64 snapshot id %s",
-				rbft.id, cid.n, cid.id)
+			rbft.logger.Debugf("Replica %d cleaning checkpoint message, seqNo %d, txBlockHash %s, blockchainHash %s",
+				rbft.id, cid.n, cid.txBlockHash, cid.blockchainHash)
 			delete(rbft.storeMgr.chkptCertStore, cid)
 		}
 	}

@@ -4,24 +4,14 @@
 package rbft
 
 import (
-	"encoding/base64"
 	"encoding/binary"
 	"fmt"
 	"strconv"
 
 	ndb "github.com/hyperchain/hyperchain/core/ledger/chain"
-	"github.com/hyperchain/hyperchain/core/types"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/pkg/errors"
 )
-
-// GetBlockchainInfo waits until the executor module executes to a checkpoint then returns the blockchain info with the
-// given namespace
-func (rbft *rbftImpl) GetBlockchainInfo(namespace string) *types.Chain {
-	bcInfo := ndb.GetChainUntil(namespace)
-	return bcInfo
-}
 
 // GetCurrentBlockInfo returns the current blockchain info with the given namespace immediately
 func (rbft *rbftImpl) GetCurrentBlockInfo(namespace string) (uint64, []byte, []byte) {
@@ -30,24 +20,24 @@ func (rbft *rbftImpl) GetCurrentBlockInfo(namespace string) (uint64, []byte, []b
 }
 
 // GetBlockHeightAndHash returns the current block height and hash with the given namespace immediately
-func (rbft *rbftImpl) GetBlockHeightAndHash(namespace string) (uint64, string) {
+func (rbft *rbftImpl) GetBlockHeightAndHash() (uint64, string, error) {
 	if height, hash, err := rbft.helper.GetLatestCommitHeightAndHash(); err != nil {
 		rbft.logger.Errorf("Replica %d failed to get latest commit height and hash: %s", rbft.id, err)
-		return 0, ""
+		return 0, "", err
 	} else {
-		return height, hash
+		return height, hash, nil
 	}
 }
 
 // GetHeightOfChain returns the current block height with the given namespace immediately
-func (rbft *rbftImpl) GetHeightOfChain(namespace string) uint64 {
+func (rbft *rbftImpl) GetHeightOfChain() uint64 {
 	return rbft.helper.GetLatestCommitNumber()
 }
 
 // GetGenesisOfChain returns the genesis block info of the ledger with the given namespace
 func (rbft *rbftImpl) GetGenesisOfChain(namespace string) (uint64, error) {
 	//return ndb.GetGenesisTag(namespace)
-	return 1, nil
+	return 0, nil
 }
 
 // persistQSet persists marshaled pre-prepare message to database
@@ -447,9 +437,9 @@ func (rbft *rbftImpl) restoreState() error {
 			if _, err = fmt.Sscanf(key, "chkpt.%d", &seqNo); err != nil {
 				rbft.logger.Warningf("Replica %d could not restore checkpoint key %s", rbft.id, key)
 			} else {
-				idAsString := base64.StdEncoding.EncodeToString(id)
-				rbft.logger.Debugf("Replica %d found checkpoint %s for seqNo %d", rbft.id, idAsString, seqNo)
-				rbft.storeMgr.saveCheckpoint(seqNo, idAsString)
+				txBlockHash := string(id)
+				rbft.logger.Debugf("Replica %d found checkpoint %s for seqNo %d", rbft.id, txBlockHash, seqNo)
+				rbft.storeMgr.saveCheckpoint(seqNo, txBlockHash)
 			}
 		}
 	} else {
@@ -497,21 +487,13 @@ func (rbft *rbftImpl) restoreState() error {
 // restoreLastSeqNo restores lastExec from database
 func (rbft *rbftImpl) restoreLastSeqNo() {
 	var err error
-	if rbft.exec.lastExec, err = rbft.getLastSeqNo(); err != nil {
-		rbft.logger.Warningf("Replica %d could not restore lastExec: %s", rbft.id, err)
+	lastExec, lastExecHash, err := rbft.GetBlockHeightAndHash()
+	if err != nil {
+		rbft.logger.Warningf("Replica %d could not restore lastExec and lastExecHash: %s", rbft.id, err)
 		rbft.exec.lastExec = 0
+		rbft.exec.lastExecHash = ""
 	}
-	rbft.logger.Infof("Replica %d restored lastExec: %d", rbft.id, rbft.exec.lastExec)
-}
-
-// getLastSeqNo retrieves database and returns the last block number
-func (rbft *rbftImpl) getLastSeqNo() (uint64, error) {
-	var err error
-	h := rbft.GetHeightOfChain(rbft.namespace)
-	if h == 0 {
-		err = errors.Errorf("Height of chain is 0")
-		return h, err
-	}
-
-	return h, nil
+	rbft.exec.lastExec = lastExec
+	rbft.exec.lastExecHash = lastExecHash
+	rbft.logger.Infof("Replica %d restored lastExec: %d, lastExecHash: %s", rbft.id, rbft.exec.lastExec, rbft.exec.lastExecHash)
 }

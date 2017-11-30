@@ -739,7 +739,7 @@ func TestCheckpoint(t *testing.T) {
 		err = proto.Unmarshal(consensus.Payload, checkpoint)
 		ast.Nil(err, fmt.Sprint("processConsensus, unmarshal error: can not unmarshal ConsensusMessage", err))
 		ast.Equal(seqNo, checkpoint.SequenceNumber, "checkpoint failed")
-		ast.Equal(idAsString, checkpoint.Id, "checkpoint failed")
+		ast.Equal(idAsString, checkpoint.BlockChainInfo, "checkpoint failed")
 	}()
 
 	rbft.checkpoint(seqNo, bcInfo)
@@ -774,9 +774,9 @@ func TestRecvCheckpoint(t *testing.T) {
 	chkpt := &Checkpoint{
 		SequenceNumber: seqNo,
 		ReplicaId:      uint64(3),
-		Id:             idAsString,
+		BlockChainInfo: idAsString,
 	}
-	cert := rbft.storeMgr.getChkptCert(seqNo, chkpt.Id)
+	cert := rbft.storeMgr.getChkptCert(seqNo, chkpt.BlockChainInfo)
 	cert.chkptCount = rbft.commonCaseQuorum() - 1
 
 	rbft.storeMgr.chkpts[seqNo] = idAsString
@@ -789,7 +789,7 @@ func TestRecvCheckpoint(t *testing.T) {
 	ast.Equal(uint64(10), rbft.h, "should movewatermarks")
 
 	chkpt.SequenceNumber = 30
-	cert = rbft.storeMgr.getChkptCert(30, chkpt.Id)
+	cert = rbft.storeMgr.getChkptCert(30, chkpt.BlockChainInfo)
 	cert.chkptCount = rbft.commonCaseQuorum() - 1
 	rbft.off(inRecovery)
 	rbft.recvCheckpoint(chkpt)
@@ -817,7 +817,7 @@ func TestWeakCheckpointSetOutOfRange(t *testing.T) {
 	chkpt := &Checkpoint{
 		SequenceNumber: seqNo,
 		ReplicaId:      uint64(3),
-		Id:             idAsString,
+		BlockChainInfo: idAsString,
 	}
 	rbft.storeMgr.hChkpts[1] = uint64(50)
 	rbft.storeMgr.hChkpts[uint64(3)] = uint64(50)
@@ -864,13 +864,13 @@ func TestWitnessCheckpointWeakCert(t *testing.T) {
 	chkpt := &Checkpoint{
 		SequenceNumber: seqNo,
 		ReplicaId:      uint64(3),
-		Id:             idAsString,
+		BlockChainInfo: idAsString,
 	}
 	rbft.storeMgr.checkpointStore[*chkpt] = true
 	chkpt2 := &Checkpoint{
 		SequenceNumber: seqNo,
 		ReplicaId:      uint64(2),
-		Id:             idAsString,
+		BlockChainInfo: idAsString,
 	}
 	rbft.storeMgr.checkpointStore[*chkpt2] = true
 

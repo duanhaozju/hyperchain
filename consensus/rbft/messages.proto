@@ -119,8 +119,9 @@ message block_info {
 message checkpoint {
     uint64 sequence_number = 1;
     uint64 replica_id = 2;
-    string id = 3;
-    uint64 genesis = 4;
+    string block_chain_info = 3;
+    string transaction_block_info = 4;
+    uint64 genesis = 5;
 }
 
 /* This message should go away and become a checkpoint once replica_id is removed */
