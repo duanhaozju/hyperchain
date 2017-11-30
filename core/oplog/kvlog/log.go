@@ -243,6 +243,16 @@ func (kv *kvLoggerImpl) getBySeqNo(seqNo uint64) (uint64, *oplog.LogEntry, error
 	return 0, nil, ErrNoSeqNo
 }
 
+func (kv *kvLoggerImpl) GetLidBySeqNo(seqNo uint64) (uint64, error) {
+	kv.mu.Lock()
+	defer kv.mu.Unlock()
+	lid, _, err := kv.getBySeqNo(seqNo)
+	if err != nil {
+		return 0, err
+	}
+	return lid, nil
+}
+
 func (kv *kvLoggerImpl) GetLastBlockNum() uint64 {
 	kv.mu.Lock()
 	defer kv.mu.Unlock()

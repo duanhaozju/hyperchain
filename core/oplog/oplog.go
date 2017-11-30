@@ -19,6 +19,7 @@ type OpLog interface {
 	GetLastBlockNum() uint64 //GetLastBlockNum last stored block number.
 	SetStableCheckpoint(checkpoint uint64)
 	GetHeightAndDigest() (uint64, string, error)
+	GetLidBySeqNo(seqNo uint64) (uint64, error)
 }
 
 type Iterator interface {
