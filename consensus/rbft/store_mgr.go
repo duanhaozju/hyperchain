@@ -73,6 +73,7 @@ func newStoreMgr(logger *logging.Logger) *storeManager {
 	sm.txBatchStore = make(map[string]*TransactionBatch)
 	sm.missingReqBatches = make(map[string]bool)
 	sm.chkptBlockHash = make(map[uint64]string)
+	sm.blockChainInfo = make(map[uint64]string)
 
 	sm.logger = logger
 	return sm

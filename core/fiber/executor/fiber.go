@@ -6,7 +6,6 @@ import (
 	"github.com/hyperchain/hyperchain/common"
 	"github.com/hyperchain/hyperchain/common/service"
 	pb "github.com/hyperchain/hyperchain/common/service/protos"
-	"github.com/hyperchain/hyperchain/consensus/rbft"
 	"github.com/hyperchain/hyperchain/core/fiber"
 	"github.com/hyperchain/hyperchain/core/oplog"
 	"github.com/hyperchain/hyperchain/hyperdb"
@@ -18,6 +17,7 @@ import (
 	"strconv"
 	"sync/atomic"
 	"time"
+	"github.com/hyperchain/hyperchain/core/executor"
 )
 
 const (
@@ -213,22 +213,17 @@ func (f *ExeFiber) handle(req *pb.IMessage) {
 
 		}
 	case pb.Event_Checkpoint:
+		f.logger.Error("receive checkpoint from executor")
 		blki := &protos.BlockchainInfo{}
 		if err := proto.Unmarshal(req.Payload, blki); err != nil {
 			f.logger.Error(err)
 			return
 		}
-		payload, err := proto.Marshal(blki)
-		if err != nil {
-			f.logger.Errorf("Marshal AddNode Error!")
-			return
+		e := event.ExecutorToConsensusEvent{
+			Payload: blki,
+			Type: executor.NOTIFY_CHECKPOINT_BLOCKCHAIN_INFO,
 		}
-		chkptEvent := &rbft.LocalEvent{
-			Service:   rbft.CORE_RBFT_SERVICE,
-			EventType: rbft.CORE_EXECUTOR_CHECKPOINT_EVENT,
-			Event:     payload,
-		}
-		go f.eventMux.Post(chkptEvent)
+		go f.eventMux.Post(e)
 	default:
 		f.logger.Errorf("invalid request type, %v", req)
 	}

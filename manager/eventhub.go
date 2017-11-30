@@ -179,7 +179,7 @@ func (hub *EventHub) Subscribe() {
 		event.BroadcastDelPeerEvent{})
 
 	// executor messages sent to consensus or p2p module.
-	hub.subscriptions[SUB_EXEC] = hub.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{})
+	hub.subscriptions[SUB_EXEC] = hub.eventMux.Subscribe(event.ExecutorToConsensusEvent{}, event.ExecutorToP2PEvent{}, protos.BlockchainInfo{})
 
 	// transaction request sent from rpc module to internal module.
 	hub.subscriptions[SUB_TRANSACTION] = hub.eventMux.Subscribe(event.NewTxEvent{})
@@ -443,6 +443,9 @@ func (hub *EventHub) dispatchExecutorToConsensus(ev event.ExecutorToConsensusEve
 	case executor.NOTIFY_SYNC_DONE:
 		hub.logger.Debugf("message middleware: [sync done]")
 		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_STATE_UPDATE_EVENT, ev.Payload)
+	case executor.NOTIFY_CHECKPOINT_BLOCKCHAIN_INFO:
+		hub.logger.Debugf("message middleware: [checkpoint done]")
+		hub.invokeRbftLocal(rbft.CORE_RBFT_SERVICE, rbft.CORE_EXECUTOR_CHECKPOINT_EVENT, ev.Payload)
 	}
 }
 

@@ -28,8 +28,7 @@ message TransactionBlock {
     repeated types.InvalidTransactionRecord InvalidTransactions = 4;
     uint64 SeqNo = 5;
     uint64 View = 6;
-    bool IsPrimary = 7;
-    int64 Timestamp = 8;
+    int64 Timestamp = 7;
 }
 
 message RollbackEvent {

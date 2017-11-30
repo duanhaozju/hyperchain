@@ -190,13 +190,36 @@ f_distribute(){
     done
 }
 
-f_all_in_one_cmd(){
-    cd $DUMP_PATH/node${1} && ./order -o ${1} -l 800${1} -t 808${1} -f 900${1} &
+# run process by os type
+f_run_process(){
+    for((j=1;j<=$MAXPEERNUM;j++))
+    do
+        case "$_SYSTYPE" in
+          MAC*)
+             f_x_in_mac_cmd $j
+          ;;
+          LINUX*)
+             f_x_in_linux_cmd $j
+          ;;
+          *)
+            echo "unknow OS TYPE $OSTYPE"
+            exit -1
+          ;;
+        esac
+    done
 }
 
 f_x_in_linux_cmd(){
-    gnome-terminal -x bash -c "cd $DUMP_PATH/node${1}/bin && ./start.sh"
-    gnome-terminal -x bash -c "cd $DUMP_PATH/node${1} && ./executor"
+
+    if ${START_ORDER} ; then
+        f_start_order_linux ${1}
+    elif ${START_EXECUTOR} ; then
+        f_start_executor_linux ${1}
+    else
+        f_start_order_linux ${1}
+        f_start_executor_linux ${1}
+    fi
+
 }
 
 f_x_in_mac_cmd(){
@@ -219,26 +242,12 @@ f_start_executor_mac(){
     osascript -e 'tell app "Terminal" to do script "cd '$DUMP_PATH/node${1}/bin' && ./start_executor.sh"'
 }
 
-# run process by os type
-f_run_process(){
-    for((j=1;j<=$MAXPEERNUM;j++))
-    do
-        case "$_SYSTYPE" in
-          MAC*)
-             f_x_in_mac_cmd $j
-          ;;
-          LINUX*)
-             f_x_in_linux_cmd $j
-          ;;
-          ALLINONE*)
-            f_all_in_one_cmd $j
-          ;;
-          *)
-            echo "unknow OS TYPE $OSTYPE"
-            exit -1
-          ;;
-        esac
-    done
+f_start_order_linux(){
+    gnome-terminal -x bash -c "cd $DUMP_PATH/node${1}/bin && ./start_order.sh"
+}
+
+f_start_executor_linux(){
+    gnome-terminal -x bash -c "cd $DUMP_PATH/node${1}/bin && ./start_executor.sh"
 }
 
 start_hyperjvm() {

@@ -141,7 +141,6 @@ func (h *helper) UpdateState(myId uint64, height uint64, blockHash []byte, repli
 
 // CommitBlock transfers the ValidateEvent to outer
 func (h *helper) CommitBlock(lastExecHash string, digest string, txs []*types.Transaction, invalidTxsRecord []*types.InvalidTransactionRecord, timeStamp int64, seqNo uint64, view uint64, isPrimary bool) (string, error) {
-
 	validationEvent := &event.TransactionBlock{
 		PreviousHash:        lastExecHash,
 		Digest:              digest,
@@ -149,7 +148,6 @@ func (h *helper) CommitBlock(lastExecHash string, digest string, txs []*types.Tr
 		InvalidTransactions: invalidTxsRecord,
 		SeqNo:               seqNo,
 		View:                view,
-		IsPrimary:           isPrimary,
 		Timestamp:           timeStamp,
 	}
 

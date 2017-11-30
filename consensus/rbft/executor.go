@@ -99,6 +99,7 @@ func (rbft *rbftImpl) handleCoreRbftEvent(e *LocalEvent) consensusEvent {
 
 	case CORE_EXECUTOR_CHECKPOINT_EVENT:
 		checkpointInfo := e.Event.(*protos.BlockchainInfo)
+		rbft.logger.Debugf("Replica %d receive checkpoint event of seqNo %d from executor", rbft.id, checkpointInfo.Height)
 		rbft.checkpoint(checkpointInfo.Height, checkpointInfo)
 		return nil
 

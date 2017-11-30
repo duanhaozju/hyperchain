@@ -1056,21 +1056,21 @@ func (rbft *rbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 	}
 
 	id, _ := proto.Marshal(info)
-	idAsString := byteToString(id)
+	blockchainHash := byteToString(id)
 	seqNo := n
 	genesis := rbft.getGenesisInfo()
 
-	rbft.logger.Infof("Replica %d sending checkpoint for view=%d/seqNo=%d and b64Id=%s/genesis=%d",
-		rbft.id, rbft.view, seqNo, idAsString, genesis)
+	rbft.logger.Criticalf("Replica %d sending checkpoint for view=%d/seqNo=%d and txBlockHash=%s/blockchainHash=%s/genesis=%d",
+		rbft.id, rbft.view, seqNo, txBlockHash, blockchainHash, genesis)
 
 	chkpt := &Checkpoint{
 		SequenceNumber:       seqNo,
 		ReplicaId:            rbft.id,
-		BlockChainInfo:       idAsString,
+		BlockChainInfo:       blockchainHash,
 		TransactionBlockInfo: txBlockHash,
 		Genesis:              genesis,
 	}
-	rbft.storeMgr.blockChainInfo[n] = idAsString
+	rbft.storeMgr.blockChainInfo[n] = blockchainHash
 	// here we cache and persist txBlockHash rather than blockchain hash as consensus module need
 	// only ensure the consistency of opLog
 	rbft.storeMgr.saveCheckpoint(seqNo, txBlockHash)
@@ -1093,8 +1093,8 @@ func (rbft *rbftImpl) checkpoint(n uint64, info *protos.BlockchainInfo) {
 // recvCheckpoint processes logic after receive checkpoint.
 func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) consensusEvent {
 
-	rbft.logger.Debugf("Replica %d received checkpoint from replica %d, seqNo %d, digest %s",
-		rbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.BlockChainInfo)
+	rbft.logger.Criticalf("Replica %d received checkpoint from replica %d, seqNo %d, txBlockHash %s, blockchainHash %s",
+		rbft.id, chkpt.ReplicaId, chkpt.SequenceNumber, chkpt.TransactionBlockInfo, chkpt.BlockChainInfo)
 
 	if rbft.in(inNegotiateView) {
 		rbft.logger.Debugf("Replica %d try to recvCheckpoint, but it's in negotiateView", rbft.id)
@@ -1183,12 +1183,12 @@ func (rbft *rbftImpl) recvCheckpoint(chkpt *Checkpoint) consensusEvent {
 		return nil
 	}
 
-	rbft.logger.Infof("Replica %d found checkpoint quorum for seqNo %d, digest %s",
+	rbft.logger.Errorf("Replica %d found checkpoint quorum for seqNo %d, digest %s",
 		rbft.id, chkpt.SequenceNumber, chkpt.BlockChainInfo)
 
 	// if we found self txBlockHash is not the same as the quorum checkpoint txBlockHash, we will fetch from others until
 	// self opLog is the same as other quorum replicas
-	if txBlockHash != chkpt.BlockChainInfo {
+	if txBlockHash != chkpt.TransactionBlockInfo {
 		rbft.logger.Criticalf("Replica %d generated a checkpoint of %s in opLog, but a quorum of the network agrees on %s. " +
 			"This is almost definitely non-deterministic chaincode.",
 			rbft.id, txBlockHash, chkpt.BlockChainInfo)
@@ -1418,7 +1418,7 @@ func (rbft *rbftImpl) moveWatermarks(n uint64) {
 	rbft.logger.Infof("Replica %d updated low water mark to %d",
 		rbft.id, rbft.h)
 
-	// TODO do we need to trigger sending preprepare
+	// TODO(Duan Hao) do we need to trigger sending preprepare
 	//primary := rbft.primary(rbft.view)
 	//if primary == rbft.id {
 	//	rbft.sendPendingPrePrepares()
